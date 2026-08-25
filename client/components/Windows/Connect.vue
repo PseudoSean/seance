@@ -6,6 +6,48 @@
 		<form class="container" method="post" action="" @submit.prevent="onSubmit">
 			<h1 class="title">Connect to IRC</h1>
 
+			<h2>Saved networks</h2>
+			<div v-if="savedNetworks.length === 0" class="saved-networks-empty">
+				No saved networks yet. Networks you connect to are remembered here.
+			</div>
+			<ul v-else class="saved-networks" aria-label="Saved networks">
+				<li
+					v-for="net in savedNetworks"
+					:key="net.uuid"
+					:class="['saved-network', {selected: net.uuid === selectedUuid}]"
+				>
+					<button
+						type="button"
+						class="saved-network-pick"
+						:title="'Fill the form with ' + displayName(net)"
+						@click="prefill(net)"
+					>
+						<span class="saved-network-name">{{ displayName(net) }}</span>
+						<span class="saved-network-detail">
+							{{ net.host }}:{{ net.port }} · {{ net.nick }}
+							<template v-if="net.autoconnect"> · auto</template>
+						</span>
+					</button>
+					<button
+						type="button"
+						class="btn btn-small"
+						:disabled="isLive(net.uuid)"
+						@click="connectSaved(net)"
+					>
+						{{ isLive(net.uuid) ? "Connected" : "Connect" }}
+					</button>
+					<button
+						type="button"
+						class="btn btn-small saved-network-delete"
+						:aria-label="'Delete ' + displayName(net)"
+						title="Delete this saved network"
+						@click="removeSaved(net)"
+					>
+						✕
+					</button>
+				</li>
+			</ul>
+
 			<h2>Server</h2>
 			<div class="connect-row">
 				<label for="connect:host">Server</label>
@@ -99,6 +141,7 @@
 					>
 						<input
 							id="connect:saslPassword"
+							ref="passwordInput"
 							v-model="form.saslPassword"
 							class="input"
 							:type="slotProps.isVisible ? 'text' : 'password'"
@@ -109,8 +152,32 @@
 						/>
 					</RevealPassword>
 				</div>
+				<div class="connect-row">
+					<label></label>
+					<div class="input-wrap">
+						<label class="tls">
+							<input
+								v-model="rememberPassword"
+								type="checkbox"
+								name="rememberPassword"
+							/>
+							Remember password on this device
+						</label>
+					</div>
+				</div>
 			</template>
 
+			<div class="connect-row">
+				<label></label>
+				<div class="input-wrap">
+					<label class="tls">
+						<input v-model="autoconnect" type="checkbox" name="autoconnect" />
+						Connect automatically when the app starts
+					</label>
+				</div>
+			</div>
+
+			<div v-if="notice" class="connect-notice">{{ notice }}</div>
 			<div v-if="submitted" class="connect-notice">
 				Connecting as <strong>{{ submitted.nick }}</strong> to
 				<strong>{{ submitted.host }}:{{ submitted.port }}</strong
@@ -125,12 +192,75 @@
 </template>
 
 <style>
-#connect .connect-notice {
+#connect .connect-notice,
+#connect .saved-networks-empty {
 	padding: 10px;
 	margin-bottom: 10px;
 	border-radius: 2px;
 	background-color: #d9edf7;
 	color: #31708f;
+}
+
+#connect .saved-networks {
+	list-style: none;
+	margin: 0 0 10px;
+	padding: 0;
+}
+
+#connect .saved-network {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 6px;
+	border-radius: 3px;
+}
+
+#connect .saved-network.selected {
+	background-color: rgb(132 206 136 / 15%);
+}
+
+#connect .saved-network-pick {
+	flex-grow: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	text-align: left;
+	cursor: pointer;
+	padding: 4px 6px;
+	border: 0;
+	background: none;
+	color: inherit;
+	font: inherit;
+	min-width: 0;
+}
+
+#connect .saved-network-pick:hover,
+#connect .saved-network-pick:focus {
+	text-decoration: underline;
+}
+
+#connect .saved-network-name {
+	font-weight: bold;
+}
+
+#connect .saved-network-detail {
+	font-size: 12px;
+	opacity: 0.7;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 100%;
+}
+
+#connect .saved-network .btn {
+	width: auto;
+	margin: 0;
+	flex-shrink: 0;
+}
+
+#connect .saved-network-delete {
+	letter-spacing: 0;
+	word-spacing: 0;
 }
 </style>
 
@@ -138,17 +268,26 @@
 import {defineComponent, onMounted, reactive, ref, watch} from "vue";
 
 import {useStore} from "../../js/store";
-import {createNetwork} from "../../js/irc/manager";
+import {autoconnectSavedNetworks, clientForNetwork, createNetwork} from "../../js/irc/manager";
+import * as saved from "../../js/irc/saved-networks";
+import {defaultPort, displayName, SavedNetwork} from "../../js/irc/saved-networks";
 import type {ConnectOptions} from "../../js/irc/types";
 import RevealPassword from "../RevealPassword.vue";
 import SidebarToggle from "../SidebarToggle.vue";
 
 export type {ConnectOptions};
 
-/** nefarious2's WebSocket ports: 8443 for wss://, 8067 for ws://. */
-function defaultPort(tls: boolean): number {
-	return tls ? 8443 : 8067;
-}
+/** URL parameters that pre-fill the form (and so beat the last-used entry). */
+const CONNECT_PARAMS = [
+	"host",
+	"port",
+	"tls",
+	"nick",
+	"join",
+	"channels",
+	"saslAccount",
+	"saslPassword",
+];
 
 export default defineComponent({
 	name: "Connect",
@@ -176,7 +315,52 @@ export default defineComponent({
 			saslPassword: defaults?.saslPassword || "",
 		});
 
-		applyQueryParams(form, props.queryParams);
+		const showSasl = ref(false);
+		const rememberPassword = ref(false);
+		const autoconnect = ref(false);
+		/** The saved entry the form was filled from; its uuid is reused on connect. */
+		const selectedUuid = ref<string | null>(null);
+		const savedNetworks = ref<SavedNetwork[]>(saved.list());
+		const submitted = ref<ConnectOptions | null>(null);
+		const notice = ref("");
+		const passwordInput = ref<HTMLInputElement | null>(null);
+
+		const refreshSaved = () => {
+			savedNetworks.value = saved.list();
+		};
+
+		const prefill = (net: SavedNetwork) => {
+			form.host = net.host;
+			form.port = net.port;
+			form.tls = net.tls;
+			form.nick = net.nick;
+			form.join = net.join;
+			form.sasl = net.sasl;
+			form.saslAccount = net.saslAccount;
+			form.saslPassword = net.saslPassword;
+			showSasl.value = net.sasl === "plain";
+			rememberPassword.value = !!net.rememberPassword;
+			autoconnect.value = !!net.autoconnect;
+			selectedUuid.value = net.uuid;
+			notice.value = "";
+		};
+
+		const hasConnectParams = CONNECT_PARAMS.some(
+			(key) => props.queryParams && props.queryParams[key] !== undefined
+		);
+
+		if (hasConnectParams) {
+			applyQueryParams(form, props.queryParams);
+			showSasl.value = form.sasl === "plain" || !!form.saslAccount;
+		} else {
+			const last = saved.lastUsed();
+
+			if (last) {
+				prefill(last);
+			} else {
+				showSasl.value = form.sasl === "plain" || !!form.saslAccount;
+			}
+		}
 
 		// Follow the TLS checkbox while the port is still one of the defaults.
 		watch(
@@ -188,9 +372,6 @@ export default defineComponent({
 			}
 		);
 
-		const showSasl = ref(form.sasl === "plain" || !!form.saslAccount);
-		const submitted = ref<ConnectOptions | null>(null);
-
 		const onSubmit = () => {
 			form.sasl = showSasl.value ? "plain" : "";
 
@@ -200,20 +381,68 @@ export default defineComponent({
 			}
 
 			submitted.value = {...form};
-			createNetwork(submitted.value);
+			notice.value = "";
+			const client = createNetwork({
+				...submitted.value,
+				uuid: selectedUuid.value ?? undefined,
+				rememberPassword: showSasl.value && rememberPassword.value,
+				autoconnect: autoconnect.value,
+			});
+			selectedUuid.value = client.uuid;
+			refreshSaved();
 		};
+
+		/** Connect straight from the picker, unless a password still has to be typed. */
+		const connectSaved = (net: SavedNetwork) => {
+			prefill(net);
+
+			if (net.sasl === "plain" && !net.saslPassword) {
+				notice.value = `Enter the password for ${net.saslAccount} to connect.`;
+				void Promise.resolve().then(() => passwordInput.value?.focus());
+				return;
+			}
+
+			onSubmit();
+		};
+
+		const removeSaved = (net: SavedNetwork) => {
+			saved.remove(net.uuid);
+
+			if (selectedUuid.value === net.uuid) {
+				selectedUuid.value = null;
+			}
+
+			refreshSaved();
+		};
+
+		const isLive = (uuid: string) => clientForNetwork(uuid) !== undefined;
 
 		onMounted(() => {
 			// `?autoconnect=1` with a host and nick skips the form entirely.
 			if (isTruthyParam(props.queryParams?.autoconnect) && form.host && form.nick) {
 				onSubmit();
 			}
+
+			// Saved networks flagged autoconnect (once per page load).
+			autoconnectSavedNetworks();
+			refreshSaved();
 		});
 
 		return {
 			form,
 			showSasl,
+			rememberPassword,
+			autoconnect,
+			selectedUuid,
+			savedNetworks,
 			submitted,
+			notice,
+			passwordInput,
+			displayName,
+			prefill,
+			connectSaved,
+			removeSaved,
+			isLive,
 			onSubmit,
 		};
 	},

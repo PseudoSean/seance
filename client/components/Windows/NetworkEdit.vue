@@ -8,13 +8,20 @@
 </template>
 
 <script lang="ts">
-import {defineComponent, onMounted, ref, watch} from "vue";
+import {defineComponent, onMounted, reactive, ref, watch} from "vue";
 import {useRoute} from "vue-router";
-import {switchToChannel} from "../../js/router";
+import {navigate, switchToChannel} from "../../js/router";
 import socket from "../../js/socket";
 import {useStore} from "../../js/store";
+import type {SavedNetwork} from "../../js/irc/saved-networks";
 import NetworkForm, {NetworkFormDefaults} from "../NetworkForm.vue";
 
+/**
+ * Edit a network: `network:get` answers (synchronously, via the bus) with
+ * the saved entry merged with the live client's state; the form edits a
+ * local copy and `network:edit` writes it back to localStorage, renaming /
+ * re-nicking the live network where that applies.
+ */
 export default defineComponent({
 	name: "NetworkEdit",
 	components: {
@@ -28,22 +35,55 @@ export default defineComponent({
 		const networkData = ref<NetworkFormDefaults | null>(null);
 
 		const setNetworkData = () => {
-			socket.emit("network:get", String(route.params.uuid || ""));
-			networkData.value = store.getters.findNetwork(String(route.params.uuid || ""));
+			const uuid = String(route.params.uuid || "");
+			let received: NetworkFormDefaults | null = null;
+
+			const onInfo = (data: {uuid: string}) => {
+				if (data.uuid === uuid) {
+					received = reactive({...(data as NetworkFormDefaults)});
+				}
+			};
+
+			socket.on("network:info", onInfo);
+			socket.emit("network:get", uuid);
+			socket.off("network:info", onInfo);
+
+			if (!received) {
+				// Not saved and not live: nothing to edit.
+				const network = store.getters.findNetwork(uuid);
+				received = network
+					? reactive({
+							uuid,
+							name: network.name,
+							host: "",
+							port: 8443,
+							tls: network.status.secure,
+							nick: network.nick,
+							join: "",
+							sasl: "",
+							saslAccount: "",
+							saslPassword: "",
+							connected: network.status.connected,
+					  })
+					: null;
+			}
+
+			networkData.value = received;
 		};
 
-		const handleSubmit = (data: {uuid: string; name: string}) => {
+		const handleSubmit = (data: SavedNetwork) => {
 			disabled.value = true;
 			socket.emit("network:edit", data);
 
-			// TODO: move networks to vuex and update state when the network info comes in
 			const network = store.getters.findNetwork(data.uuid);
 
 			if (network) {
-				network.name = network.channels[0].name = data.name;
-
 				switchToChannel(network.channels[0]);
+			} else {
+				void navigate("Connect");
 			}
+
+			disabled.value = false;
 		};
 
 		watch(

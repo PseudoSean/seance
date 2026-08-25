@@ -134,10 +134,10 @@ No fixed order. Tackle items in whatever sequence the friction dictates.
 3. [x] **Remaining input commands** — port `/ban`, `/kick`, `/whois`, `/list`, `/mode`, `/notice`, `/ctcp`, `/away`, `/back`, `/invite`, `/kill`, `/rejoin`. `/ignore`/`/ignorelist`/`/mute` become localStorage-backed. `/connect`/`/disconnect` will need phase D.5 (saved networks). _Done 2026-08-25: all listed commands plus `/kickban /umode /op..devoice /server /cycle /invitelist`; WHOIS and LIST result handlers; ignore list in localStorage with hostmask matching. 46 tests._
 4. [x] **Channel info numerics**
    - [x] a. Ban list (367/368), invite exception list (346/347), ban exception list (348/349) into the existing special-channel UI. _Done 2026-08-24: `handlers/lists.ts`; +e lists reuse the BANLIST special view (no EXCEPTLIST enum/component yet — small follow-up). 14 tests._
-5. [ ] **Saved network configs**
-   - [ ] a. Persist the connect form's last-used values in localStorage; offer a "saved networks" picker on the connect screen.
-   - [ ] b. `Windows/NetworkEdit.vue` reads/writes this store. `network:get`/`network:edit`/`network:new` route through localStorage.
-   - [ ] c. Multi-network: one `IrcClient` per network, a `NetworkManager` aggregator dispatching by network UUID. Defer the UI side of "switch which network is active" until you actually need it.
+5. [x] **Saved network configs**
+   - [x] a. Persist the connect form _`client/js/irc/saved-networks.ts` (`thelounge.networks`), picker on Connect, remember-password + autoconnect opt-ins._'s last-used values in localStorage; offer a "saved networks" picker on the connect screen.
+   - [x] b. `Windows/NetworkEdit.vue` reads/writes this store _Done; unsupported fields dropped from the form._. `network:get`/`network:edit`/`network:new` route through localStorage.
+   - [x] c. Multi-network: one `IrcClient` per network _Registry already handled it; covered by `test/irc/multi-network.ts`. Open: the `connecting` banner is global._, a `NetworkManager` aggregator dispatching by network UUID. Defer the UI side of "switch which network is active" until you actually need it.
 6. [ ] **STS** — cache STS policy per host in localStorage; upgrade `ws://` to `wss://` when policy says so.
 7. [ ] **`event-playback` / read markers** — when nefarious2 supports them, use them for reconnect catch-up and unread tracking. Update `firstUnread` from MARKREAD on init.
 8. [x] **Search** — decide between: drop, in-memory search of loaded messages, or a small optional preview/search service URL configurable per deploy. _Decided + done 2026-08-24: in-memory over loaded messages (`client/js/search.ts`), reached via the header magnifier and `/search`; extend with a CHATHISTORY provider later. 17 tests._

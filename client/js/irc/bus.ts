@@ -7,6 +7,7 @@
 
 import type {EventBus} from "../socket";
 import type {IrcClient} from "./client";
+import * as saved from "./saved-networks";
 import type {ConnectOptions} from "./types";
 
 export interface ClientRegistry {
@@ -15,6 +16,32 @@ export interface ClientRegistry {
 	allClients(): IrcClient[];
 	createNetwork(options: ConnectOptions): IrcClient;
 	remove(uuid: string): void;
+}
+
+/**
+ * What `network:info` carries: the saved entry (what the next connect will
+ * use) merged over the live client's view, with the live nick and connection
+ * state on top. `undefined` when the uuid is unknown on both sides.
+ */
+export function networkInfo(
+	registry: ClientRegistry,
+	uuid: string
+): (Record<string, unknown> & {uuid: string}) | undefined {
+	const client = registry.clientForNetwork(uuid);
+	const stored = saved.get(uuid);
+
+	if (!client && !stored) {
+		return undefined;
+	}
+
+	return {
+		...(client?.editableInfo ?? {}),
+		...(stored ?? {}),
+		uuid,
+		name: stored?.name || client?.name || "",
+		nick: client?.nick ?? stored?.nick ?? "",
+		connected: client?.isConnected ?? false,
+	};
 }
 
 export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): void {
@@ -58,30 +85,45 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 	});
 
 	bus.handle("network:get", (uuid) => {
-		const client = registry.clientForNetwork(uuid);
+		const info = networkInfo(registry, uuid);
 
-		if (client) {
-			bus.dispatch("network:info", {...client.editableInfo, uuid});
+		if (info) {
+			bus.dispatch("network:info", info);
 		}
 	});
 
 	bus.handle("network:edit", (data) => {
-		const client = registry.clientForNetwork(String(data.uuid));
+		const uuid = String(data.uuid ?? "");
+		const client = registry.clientForNetwork(uuid);
+		const existing = saved.get(uuid);
 
-		if (!client) {
+		if (!uuid || (!client && !existing)) {
 			return;
 		}
 
-		if (typeof data.nick === "string" && data.nick.length > 0 && data.nick !== client.nick) {
-			client.input(client.lobby.id, `/nick ${data.nick}`);
+		// Unsaved live network (e.g. `/connect host`): seed from its options.
+		const base = existing ?? saved.normalize({...(client?.editableInfo ?? {}), uuid});
+		const next = saved.fromForm(data, base);
+		saved.save(next);
+
+		if (client) {
+			// Live-applicable fields: the nick (NICK when connected, local
+			// otherwise — `/nick` does both) and the display name. Host, port,
+			// TLS, channels and SASL take effect on the next connect.
+			if (next.nick && next.nick !== client.nick) {
+				client.input(client.lobby.id, `/nick ${next.nick}`);
+			}
+
+			if (next.name && next.name !== client.name) {
+				client.setNetworkName(next.name);
+			}
 		}
 
-		if (typeof data.name === "string" && data.name.length > 0) {
-			client.setNetworkName(data.name);
-		}
+		const info = networkInfo(registry, uuid);
 
-		// eslint-disable-next-line no-console
-		console.warn("[irc] network:edit: only nick and name are applied live for now");
+		if (info) {
+			bus.dispatch("network:info", info);
+		}
 	});
 
 	bus.handle("network:new", (data) => {
