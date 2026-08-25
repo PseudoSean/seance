@@ -8,6 +8,7 @@ Replace TheLounge's Node/Socket.IO server with the browser talking IRCv3 directl
 
 - **Single user, single device.** No multi-session sync, no user accounts on our side, no server-side state. SASL handles "auth" by going straight to NickServ/services on the IRC side.
 - **Single network at a time** for v1. Multi-network can come back later; it's a UI/storage concern, not a protocol concern.
+- **Target ircd is nefarious2's `ircv3.2-upgrade` branch** (`evilnet/nefarious2:ircv3.2-upgrade`, and its `ircv3.2-hardening` successor on MrLenin's fork), not `master`. Decided 2026-08-24. `master` has no WebSocket listener and none of the IRCv3.2 caps; see `docs/resources/nefarious2-websocket.md`. Local dev and the phase C prototype build from that branch.
 - **No parallel transports.** Socket.IO is not kept alive next to the new IRC client. Once a network is connected via WebSocket, the Node server is out of the picture entirely — you can't half-translate events.
 
 ## Strategy
