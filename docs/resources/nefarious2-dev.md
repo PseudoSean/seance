@@ -37,7 +37,7 @@ What the script does:
 Gotchas found on first run:
 
 - `Operator {}` blocks must carry `local = no;` (or `yes`) or the config fails with `... have no LOCAL setting`.
-- **Plain `ws://` on 8067 does not work** — the ircd corrupts the HTTP handshake on non-TLS websocket ports (see `nefarious2-websocket.md`, "Prototype status"). Use `wss://localhost:8443/` and trust the cert, or `--insecure` from the probe.
+- With the stock image (`NEFARIOUS_IMAGE=nefarious2:ircv3`) **plain `ws://` on 8067 does not work and no real browser can connect at all** (upstream #97/#99). The default image `nefarious2:ircv3-fixed` carries the local fix branch — see `nefarious2-websocket.md` "Local fix branch" — and both `ws://localhost:8067/` and browsers over `wss://localhost:8443/` (after trusting the cert) work.
 
 How the container config is assembled (`tools/docker/dockerentrypoint.sh`, `tools/docker/ircd.conf`):
 

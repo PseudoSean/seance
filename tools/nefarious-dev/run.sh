@@ -4,9 +4,15 @@
 #   tools/nefarious-dev/run.sh            # foreground, debug level 5
 #   tools/nefarious-dev/run.sh -d         # detached (docker logs -f nefarious-dev)
 #
-# Build the image first:
+# Images: nefarious2:ircv3 (stock ircv3.2-upgrade) and nefarious2:ircv3-fixed (stock +
+# the seance/websocket-fixes branch for upstream #97/#98/#99 — needed for browsers).
+# Override with NEFARIOUS_IMAGE=nefarious2:ircv3.
+#
+# Build the images first:
 #   git clone --branch ircv3.2-upgrade https://github.com/evilnet/nefarious2.git tmp/nefarious2
 #   (cd tmp/nefarious2 && docker build -t nefarious2:ircv3 .)
+#   (cd tmp/nefarious2 && git checkout seance/websocket-fixes && docker build -t nefarious2:ircv3-fixed .)
+#   or apply tmp/nefarious2-fixes.patch (format-patch series) to a fresh clone.
 #
 # Ports: 6667 plain IRC, 6697 IRC over TLS, 8067 ws://, 8443 wss://
 set -e
@@ -42,4 +48,4 @@ exec docker run --rm $DETACH --name nefarious-dev \
 	-v "$ROOT/tools/nefarious-dev/ircd.conf:/home/nefarious/ircd/ircd.conf:ro" \
 	-v "$ROOT/tools/nefarious-dev/local.conf:/home/nefarious/ircd/local.conf:ro" \
 	-v "$STATE/ircd.pem:/home/nefarious/ircd/ircd.pem:ro" \
-	nefarious2:ircv3
+	"${NEFARIOUS_IMAGE:-nefarious2:ircv3-fixed}"

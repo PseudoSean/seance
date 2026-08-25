@@ -295,11 +295,26 @@ Found during phase C headless verification (2026-08-24). A handcrafted upgrade r
 
 A registered client sending a single 600-byte `PRIVMSG` frame over `wss://` gets `ERROR :Closing Link: bigframe by irc.seance.test (WebSocket frame error)` and a 1006 close; a 400-byte frame is delivered normally. Matches the analysis under "Framing rules" above.
 
+## Local fix branch (2026-08-25)
+
+`seance/websocket-fixes` in `tmp/nefarious2` (4 commits on top of `ircv3.2-upgrade@3868b34`; series exported to `tmp/nefarious2-fixes.patch`; image `nefarious2:ircv3-fixed`, now the default in `tools/nefarious-dev/run.sh`). **Not pushed — needs a human to push and open the PR against `ircv3.2-upgrade`.**
+
+| Issue | Fix                                                                                                                                                                              | Verified                                                                                                                            |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| #97   | `s_auth.c` `sendheader()` goes through `sendrawto_one()`+`send_queued()` so the WS handshake hold applies (the TLS port only worked because `ssl_send()` already used the MsgQ). | `nc` shows `101` first; `irc-ws-probe.mjs ws://localhost:8067/` reaches `001`.                                                      |
+| #98   | Decode buffer sized to `WS_MAX_PAYLOAD`; receive loop feeds the full 60 KB `readbuf` through the per-connection frame buffer; frames over 16 KB get Close `1009`.                | 600 B and 2000 B single frames accepted; 17 KB → 1009.                                                                              |
+| #99   | `websocket_handshake_feed()` accumulates the request on the heap (cap 8 KB), autodetect preserved, bytes after `\r\n\r\n` kept.                                                  | 600/2000-byte padded requests → `101`; **headless Chromium's real 554-byte request connects directly**; `transport.live.ts` passes. |
+
+Plus 12 cmocka cases in `ircd/test/websocket_cmocka.c`. Two things learned on the way:
+
+- The branch's `recv_classify.c:46` caps every client's message _body_ at 512 bytes — a 600-byte plain `PRIVMSG` is killed as "Excess Flood: message region too large" on TCP and WS alike. That is the branch's normal over-length treatment (not a transport bug) but is stricter than `draft/multiline` and long client tags need; worth raising upstream separately. Seance keeps `MAX_LINE_BYTES = 500`.
+- The TLS listener requests a client certificate (`SSL_VERIFY_PEER|SSL_VERIFY_CLIENT_ONCE`, optional unless `SSL_REQUIRECLIENTCERT`). Interactive browsers cope; headless Chromium aborts (`ERR_SSL_CLIENT_AUTH_CERT_NEEDED`), so automated browser runs need a pass-through TLS proxy in front. A pre-existing unrelated cmocka failure (`ircd_string_cmocka` `test_ircd_strncpy_truncation`) is masked by the Makefile's `| tee`.
+
 ## Open questions for the ircd side
 
 1. ~~Which branch?~~ Decided 2026-08-24: Seance targets `ircv3.2-upgrade` (and `ircv3.2-hardening` as it lands). Still open: will it merge to `master`, and should we pin a tag? `ghcr.io/evilnet/nefarious2:latest` referenced by the compose example does not exist on GHCR (checked 2026-08-24); we build locally.
 2. ~~Report the 527-byte inbound frame cap~~ Filed as [evilnet/nefarious2#98](https://github.com/evilnet/nefarious2/issues/98) (label `ircv3-upgrade`, assigned MrLenin).
-   2b. ~~Report the ≥512-byte upgrade hang~~ Filed as [evilnet/nefarious2#99](https://github.com/evilnet/nefarious2/issues/99). A local fix branch for #97/#98/#99 (`seance/websocket-fixes` in `tmp/nefarious2`) is in progress; not pushed.
+   2b. ~~Report the ≥512-byte upgrade hang~~ Filed as [evilnet/nefarious2#99](https://github.com/evilnet/nefarious2/issues/99). See "Local fix branch" above.
    2a. ~~Report the plain-port handshake corruption~~ Filed as [evilnet/nefarious2#97](https://github.com/evilnet/nefarious2/issues/97) (label `ircv3-upgrade`, assigned MrLenin).
 3. Confirm `WEBSOCKET_ORIGIN` policy for packaged (non-browser) clients that send no Origin.
 4. `draft/event-playback` default is off; ask for it to be enabled on the dev/test server.
