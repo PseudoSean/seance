@@ -287,6 +287,10 @@ Sec-WebSocket-Protocol: text.ircv3.net
 
 The ident/DNS progress notices are written to the socket **before** the HTTP 101 response, as bare IRC lines. Cause: `s_auth.c:164-169` `sendheader()` writes straight to the fd with `ssl_send()`/`send()`, bypassing the MsgQ, so the guard in `s_bsd.c:318-325` that holds all output while `IsWSNeedHandshake` is set never sees them. On the TLS port the same notices happen to land after the 101 (presumably because `ssl_send` cannot write until the TLS handshake completes), which is why `wss://` works. No browser will accept a 101 preceded by garbage, so **plain-text WebSocket is unusable until this is fixed upstream**; dev must use `wss://` with a trusted local cert. Fix is on the ircd side: route `sendheader` through the MsgQ (or drop the notices for WS clients until the handshake completes).
 
+### Upgrade requests ≥ 512 bytes are never answered — **blocks every real browser**
+
+Found during phase C headless verification (2026-08-24). A handcrafted upgrade request of 500 bytes gets `101`; 512 and 528 bytes hang until the registration timeout. Chromium's real upgrade request is ~553 bytes (`User-Agent`, `Accept-*`, `Origin`, `Sec-WebSocket-Extensions`, `Sec-Fetch-*`), so no browser can connect even over `wss://`; Node's ~200-byte request is why the CLI probes worked. Through a local TLS proxy that strips those headers (553 → 211 bytes) the SPA works end to end. Likely cause: the handshake is only attempted when `\r\n\r\n` lands inside the 512-byte `BUFSIZE` input buffer. Filed as [evilnet/nefarious2#99](https://github.com/evilnet/nefarious2/issues/99). Also observed there: the TLS listener requests a client certificate, which headless Chromium answers with `ERR_SSL_CLIENT_AUTH_CERT_NEEDED` (interactive browsers may show a cert picker) — noted in the issue, not necessarily a bug.
+
 ### 528-byte inbound frame cap — **confirmed**
 
 A registered client sending a single 600-byte `PRIVMSG` frame over `wss://` gets `ERROR :Closing Link: bigframe by irc.seance.test (WebSocket frame error)` and a 1006 close; a 400-byte frame is delivered normally. Matches the analysis under "Framing rules" above.
@@ -295,6 +299,7 @@ A registered client sending a single 600-byte `PRIVMSG` frame over `wss://` gets
 
 1. ~~Which branch?~~ Decided 2026-08-24: Seance targets `ircv3.2-upgrade` (and `ircv3.2-hardening` as it lands). Still open: will it merge to `master`, and should we pin a tag? `ghcr.io/evilnet/nefarious2:latest` referenced by the compose example does not exist on GHCR (checked 2026-08-24); we build locally.
 2. ~~Report the 527-byte inbound frame cap~~ Filed as [evilnet/nefarious2#98](https://github.com/evilnet/nefarious2/issues/98) (label `ircv3-upgrade`, assigned MrLenin).
+   2b. ~~Report the ≥512-byte upgrade hang~~ Filed as [evilnet/nefarious2#99](https://github.com/evilnet/nefarious2/issues/99). A local fix branch for #97/#98/#99 (`seance/websocket-fixes` in `tmp/nefarious2`) is in progress; not pushed.
    2a. ~~Report the plain-port handshake corruption~~ Filed as [evilnet/nefarious2#97](https://github.com/evilnet/nefarious2/issues/97) (label `ircv3-upgrade`, assigned MrLenin).
 3. Confirm `WEBSOCKET_ORIGIN` policy for packaged (non-browser) clients that send no Origin.
 4. `draft/event-playback` default is off; ask for it to be enabled on the dev/test server.
