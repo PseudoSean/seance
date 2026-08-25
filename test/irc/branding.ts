@@ -210,4 +210,50 @@ describe("branding", function () {
 			expect(getBranding()).to.equal(DEFAULT_BRANDING);
 		});
 	});
+
+	describe("uploads", function () {
+		it("keeps a valid uploader config, filling nothing in", function () {
+			const config = normalizeBranding({
+				uploads: {
+					endpoint: "https://files.example.test/upload",
+					maxSizeBytes: "2048",
+					fieldName: "attachment",
+					responseUrlKey: "link",
+					withCredentials: true,
+					headers: {"X-Api-Key": "k", " ": "dropped", bad: 1},
+				},
+			});
+
+			expect(config.uploads).to.deep.equal({
+				endpoint: "https://files.example.test/upload",
+				maxSizeBytes: 2048,
+				fieldName: "attachment",
+				responseUrlKey: "link",
+				withCredentials: true,
+				headers: {"X-Api-Key": "k"},
+			});
+
+			expect(
+				normalizeBranding({uploads: {endpoint: "https://x.test/up", maxSizeBytes: -1}})
+					.uploads
+			).to.deep.equal({endpoint: "https://x.test/up"});
+		});
+
+		it("drops uploads unless the endpoint is an https URL", function () {
+			expect(normalizeBranding({})).to.not.have.property("uploads");
+			expect(normalizeBranding({uploads: {}})).to.not.have.property("uploads");
+			expect(normalizeBranding({uploads: "https://x.test/up"})).to.not.have.property(
+				"uploads"
+			);
+			expect(
+				normalizeBranding({uploads: {endpoint: "http://x.test/up"}})
+			).to.not.have.property("uploads");
+			expect(
+				normalizeBranding({uploads: {endpoint: "ftp://x.test/up"}})
+			).to.not.have.property("uploads");
+			expect(normalizeBranding({uploads: {endpoint: "https://"}})).to.not.have.property(
+				"uploads"
+			);
+		});
+	});
 });

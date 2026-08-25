@@ -41,6 +41,29 @@ export interface BrandingFeatures {
 	allowCustomServer?: boolean;
 }
 
+/**
+ * A network-provided file uploader. Seance has no server of its own, so
+ * uploads go straight from the browser to this endpoint; see the "Uploads"
+ * section of docs/resources/branding.md for the contract it must satisfy.
+ */
+export interface BrandingUploads {
+	/** Absolute `https:` URL that accepts a multipart `POST`. */
+	endpoint: string;
+	/** Client-side size limit in bytes. Default 10 MiB. */
+	maxSizeBytes?: number;
+	/** Multipart form field carrying the file. Default `"file"`. */
+	fieldName?: string;
+	/**
+	 * JSON key holding the public URL in the response. Default `"url"`. A
+	 * plain-text response body that is itself a URL is accepted too.
+	 */
+	responseUrlKey?: string;
+	/** Send cookies/credentials with the request. Default false. */
+	withCredentials?: boolean;
+	/** Extra request headers, e.g. an API key. */
+	headers?: Record<string, string>;
+}
+
 export interface BrandingConfig {
 	appName: string;
 	shortName?: string;
@@ -54,7 +77,12 @@ export interface BrandingConfig {
 	features?: BrandingFeatures;
 	/** Overrides for a small set of UI strings, keyed like `connect.title`. */
 	strings?: Record<string, string>;
+	/** File uploader endpoint. Absent means uploads are off. */
+	uploads?: BrandingUploads;
 }
+
+/** Upload size limit applied when `uploads.maxSizeBytes` is unset. */
+export const DEFAULT_UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
 
 /** Keys accepted in `strings`, with the copy used when not overridden. */
 export const BRANDING_STRINGS: Record<string, string> = {
@@ -231,6 +259,65 @@ function normalizeNetwork(value: unknown): BrandingNetwork | undefined {
 	return network;
 }
 
+function normalizeHeaders(value: unknown): Record<string, string> | undefined {
+	if (!isRecord(value)) {
+		return undefined;
+	}
+
+	const headers: Record<string, string> = {};
+
+	for (const [name, text] of Object.entries(value)) {
+		if (typeof text === "string" && name.trim().length > 0) {
+			headers[name.trim()] = text;
+		}
+	}
+
+	return Object.keys(headers).length > 0 ? headers : undefined;
+}
+
+function normalizeUploads(value: unknown): BrandingUploads | undefined {
+	if (!isRecord(value)) {
+		return undefined;
+	}
+
+	const endpoint = optionalString(value.endpoint);
+
+	// Uploads leave the app's origin, so only a real https URL counts.
+	if (endpoint === undefined || !/^https:\/\/[^/?#]+/i.test(endpoint)) {
+		return undefined;
+	}
+
+	const uploads: BrandingUploads = {endpoint};
+	const maxSizeBytes =
+		typeof value.maxSizeBytes === "string" ? Number(value.maxSizeBytes) : value.maxSizeBytes;
+	const fieldName = optionalString(value.fieldName);
+	const responseUrlKey = optionalString(value.responseUrlKey);
+	const withCredentials = optionalBoolean(value.withCredentials);
+	const headers = normalizeHeaders(value.headers);
+
+	if (typeof maxSizeBytes === "number" && Number.isFinite(maxSizeBytes) && maxSizeBytes > 0) {
+		uploads.maxSizeBytes = Math.floor(maxSizeBytes);
+	}
+
+	if (fieldName !== undefined) {
+		uploads.fieldName = fieldName;
+	}
+
+	if (responseUrlKey !== undefined) {
+		uploads.responseUrlKey = responseUrlKey;
+	}
+
+	if (withCredentials !== undefined) {
+		uploads.withCredentials = withCredentials;
+	}
+
+	if (headers !== undefined) {
+		uploads.headers = headers;
+	}
+
+	return uploads;
+}
+
 function normalizeStrings(value: unknown): Record<string, string> {
 	const strings: Record<string, string> = {};
 
@@ -288,6 +375,7 @@ export function normalizeBranding(
 	const description = optionalString(source.description) ?? defaults.description;
 	const theme = optionalString(source.theme) ?? defaults.theme;
 	const themeColor = optionalString(source.themeColor) ?? defaults.themeColor;
+	const uploads = normalizeUploads(source.uploads) ?? defaults.uploads;
 
 	if (shortName !== undefined) {
 		config.shortName = shortName;
@@ -303,6 +391,10 @@ export function normalizeBranding(
 
 	if (themeColor !== undefined && /^#[0-9a-f]{3,8}$/i.test(themeColor)) {
 		config.themeColor = themeColor;
+	}
+
+	if (uploads !== undefined) {
+		config.uploads = uploads;
 	}
 
 	return config;

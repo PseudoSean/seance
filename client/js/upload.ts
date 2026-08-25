@@ -1,19 +1,234 @@
+// File uploads.
+//
+// TheLounge uploaded to its own Node server (`POST /uploads/new/<token>`).
+// Seance has no server, so the file goes straight from the browser to an
+// uploader the network runs itself, configured per deploy through
+// `uploads` in `config.json` (see docs/resources/branding.md). Without that
+// entry the upload button stays hidden and dropped/pasted files are ignored
+// after a single "not configured" notice.
+
 import {update as updateCursor} from "undate";
 
-import {store} from "./store";
+import {BrandingUploads, DEFAULT_UPLOAD_MAX_BYTES} from "./branding";
+import type {TypedStore} from "./store";
 
-// File uploads need a server to receive the file and hand back a URL. There is
-// none in client-only mode: the drag/drop/paste plumbing is kept for when an
-// upload target exists, but any attempt to upload reports it as unconfigured.
-const UPLOADS_NOT_CONFIGURED = "File uploads are not configured in this client.";
+export const UPLOADS_NOT_CONFIGURED = "File uploads are not configured in this client.";
 
-class Uploader {
-	xhr: XMLHttpRequest | null = null;
+/** Everything the uploader needs from the app, so it can run without the store. */
+export interface UploadHost {
+	/** Uploader config from branding; `undefined` when uploads are off. */
+	uploads(): BrandingUploads | undefined;
+	isConnected(): boolean;
+	/** Re-encode images through a canvas before upload (strips EXIF). */
+	renderCanvas(): boolean;
+	showError(message: string): void;
+	insertUrl(url: string): void;
+}
+
+export class UploadError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "UploadError";
+	}
+}
+
+export interface UploadFileOptions {
+	/** Fetch implementation; defaults to the global `fetch`. */
+	fetch?: typeof fetch;
+	signal?: AbortSignal;
+}
+
+/** Effective size limit for a config, in bytes. */
+export function uploadMaxSize(config: BrandingUploads | undefined): number {
+	return config?.maxSizeBytes ?? DEFAULT_UPLOAD_MAX_BYTES;
+}
+
+/** Build the multipart `POST` for `file` as the configured endpoint expects it. */
+export function buildUploadRequest(file: File, config: BrandingUploads): RequestInit {
+	const body = new FormData();
+	body.append(config.fieldName ?? "file", file, file.name);
+
+	const headers: Record<string, string> = {};
+
+	for (const [name, value] of Object.entries(config.headers ?? {})) {
+		// The browser must set the multipart boundary itself.
+		if (name.toLowerCase() !== "content-type") {
+			headers[name] = value;
+		}
+	}
+
+	return {
+		method: "POST",
+		body,
+		headers,
+		credentials: config.withCredentials ? "include" : "omit",
+		mode: "cors",
+	};
+}
+
+function absoluteUrl(candidate: string, base: string): string | undefined {
+	try {
+		const url = new URL(candidate.trim(), base);
+		return /^https?:$/.test(url.protocol) ? url.href : undefined;
+	} catch (e) {
+		return undefined;
+	}
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Extract the public URL from an uploader response body: JSON with the
+ * configured key (default `url`), or a plain-text body that is a URL.
+ * Relative URLs resolve against the endpoint. Throws `UploadError` otherwise.
+ */
+export function parseUploadResponse(body: string, config: BrandingUploads): string {
+	const key = config.responseUrlKey ?? "url";
+	let parsed: unknown;
+
+	try {
+		parsed = JSON.parse(body);
+	} catch (e) {
+		parsed = undefined;
+	}
+
+	if (isRecord(parsed)) {
+		const value = parsed[key];
+
+		if (typeof value === "string") {
+			const url = absoluteUrl(value, config.endpoint);
+
+			if (url !== undefined) {
+				return url;
+			}
+		}
+
+		if (typeof parsed.error === "string" && parsed.error.length > 0) {
+			throw new UploadError(parsed.error);
+		}
+
+		throw new UploadError(`Upload failed: the uploader did not return a "${key}" URL`);
+	}
+
+	if (typeof parsed === "string") {
+		body = parsed;
+	}
+
+	const url = /^\s*https?:\/\/\S+\s*$/i.test(body)
+		? absoluteUrl(body, config.endpoint)
+		: undefined;
+
+	if (url === undefined) {
+		throw new UploadError("Upload failed: the uploader did not return a URL");
+	}
+
+	return url;
+}
+
+/** Upload one file and resolve with its public URL; rejects with `UploadError`. */
+export async function uploadFile(
+	file: File,
+	config: BrandingUploads,
+	options: UploadFileOptions = {}
+): Promise<string> {
+	const doFetch = options.fetch ?? (typeof fetch === "function" ? fetch : undefined);
+
+	if (doFetch === undefined) {
+		throw new UploadError("Upload failed: fetch is not available");
+	}
+
+	const init: RequestInit = {...buildUploadRequest(file, config), signal: options.signal};
+	let response: Response;
+
+	try {
+		response = await doFetch(config.endpoint, init);
+	} catch (e: unknown) {
+		if (e instanceof Error && e.name === "AbortError") {
+			throw new UploadError("Upload cancelled");
+		}
+
+		const reason = e instanceof Error ? e.message : String(e);
+		throw new UploadError(`Upload failed: ${reason}`);
+	}
+
+	let body = "";
+
+	try {
+		body = await response.text();
+	} catch (e) {
+		body = "";
+	}
+
+	if (!response.ok) {
+		let message = `Upload failed: HTTP ${response.status}`;
+
+		try {
+			const parsed: unknown = JSON.parse(body);
+
+			if (isRecord(parsed) && typeof parsed.error === "string" && parsed.error.length > 0) {
+				message = parsed.error;
+			}
+		} catch (e) {
+			// Not JSON; keep the status line.
+		}
+
+		throw new UploadError(message);
+	}
+
+	return parseUploadResponse(body, config);
+}
+
+/** Insert `url` at the cursor of the chat input, padded with spaces. */
+export function insertUploadUrl(url: string): void {
+	const textbox = document.getElementById("input");
+
+	if (!(textbox instanceof HTMLTextAreaElement)) {
+		throw new Error("Could not find textbox in upload");
+	}
+
+	const initStart = textbox.selectionStart;
+
+	// Get the text before the cursor, and add a space if it's not in the beginning
+	const headToCursor = initStart > 0 ? textbox.value.substring(0, initStart) + " " : "";
+
+	// Get the remaining text after the cursor
+	const cursorToTail = textbox.value.substring(initStart);
+
+	// Construct the value until the point where we want the cursor to be
+	const textBeforeTail = headToCursor + url + " ";
+
+	updateCursor(textbox, textBeforeTail + cursorToTail);
+
+	// Set the cursor after the link and a space
+	textbox.selectionStart = textbox.selectionEnd = textBeforeTail.length;
+}
+
+/** The app's `UploadHost`: branding, connection state and errors via the store. */
+export function storeUploadHost(store: TypedStore): UploadHost {
+	return {
+		uploads: () => store.state.branding.uploads,
+		isConnected: () => store.state.isConnected,
+		renderCanvas: () => store.state.settings.uploadCanvas,
+		showError: (message) => store.commit("currentUserVisibleError", message),
+		insertUrl: insertUploadUrl,
+	};
+}
+
+export class Uploader {
+	host: UploadHost | null;
 	fileQueue: File[] = [];
-	tokenKeepAlive: NodeJS.Timeout | null = null;
+	/** Controller of the upload in flight, if any. */
+	controller: AbortController | null = null;
+	fetchImpl: typeof fetch | undefined;
+	/** The "not configured" notice is shown once per page, not per drop. */
+	warnedUnconfigured = false;
 
 	overlay: HTMLDivElement | null = null;
 	uploadProgressbar: HTMLSpanElement | null = null;
+
+	private drain: Promise<void> | null = null;
 
 	onDragEnter = (e: DragEvent) => this.dragEnter(e);
 	onDragOver = (e: DragEvent) => this.dragOver(e);
@@ -21,11 +236,17 @@ class Uploader {
 	onDrop = (e: DragEvent) => this.drop(e);
 	onPaste = (e: ClipboardEvent) => this.paste(e);
 
-	init() {
-		// Nothing to subscribe to: there is no upload backend.
+	constructor(host: UploadHost | null = null, fetchImpl?: typeof fetch) {
+		this.host = host;
+		this.fetchImpl = fetchImpl;
 	}
 
-	mounted() {
+	init() {
+		// Nothing to subscribe to: uploads go straight to the configured endpoint.
+	}
+
+	mounted(host: UploadHost | null = this.host) {
+		this.host = host;
 		this.overlay = document.getElementById("upload-overlay") as HTMLDivElement;
 		this.uploadProgressbar = document.getElementById("upload-progressbar") as HTMLSpanElement;
 
@@ -58,7 +279,9 @@ class Uploader {
 		if (!event.relatedTarget && event.dataTransfer?.types.includes("Files")) {
 			event.preventDefault();
 
-			this.overlay?.classList.add("is-dragover");
+			if (this.host?.uploads()) {
+				this.overlay?.classList.add("is-dragover");
+			}
 		}
 	}
 
@@ -75,6 +298,8 @@ class Uploader {
 			return;
 		}
 
+		// Always swallow the drop: the browser would otherwise navigate away
+		// to the dropped file, configured uploader or not.
 		event.preventDefault();
 		this.overlay?.classList.remove("is-dragover");
 
@@ -88,7 +313,7 @@ class Uploader {
 			files = Array.from(event.dataTransfer.files);
 		}
 
-		this.triggerUpload(files);
+		void this.triggerUpload(files);
 	}
 
 	paste(event: ClipboardEvent) {
@@ -110,216 +335,166 @@ class Uploader {
 		}
 
 		event.preventDefault();
-		this.triggerUpload(files);
+		void this.triggerUpload(files);
 	}
 
-	triggerUpload(files: (File | null)[]) {
-		if (!files.length) {
-			return;
+	/**
+	 * Queue files for upload. Resolves once the queue has drained (every
+	 * file uploaded or reported), so callers can await the outcome.
+	 */
+	triggerUpload(files: (File | null)[]): Promise<void> {
+		if (!files.length || !this.host) {
+			return Promise.resolve();
 		}
 
-		if (!store.state.serverConfiguration?.fileUpload) {
-			this.handleResponse({error: UPLOADS_NOT_CONFIGURED});
-			return;
+		const config = this.host.uploads();
+
+		if (!config) {
+			if (!this.warnedUnconfigured) {
+				this.warnedUnconfigured = true;
+				this.host.showError(UPLOADS_NOT_CONFIGURED);
+			}
+
+			return Promise.resolve();
 		}
 
-		if (!store.state.isConnected) {
-			this.handleResponse({
-				error: `You are currently disconnected, unable to initiate upload process.`,
-			});
+		if (!this.host.isConnected()) {
+			this.host.showError(
+				"You are currently disconnected, unable to initiate upload process."
+			);
 
-			return;
+			return Promise.resolve();
 		}
 
-		const wasQueueEmpty = this.fileQueue.length === 0;
-		const maxFileSize = store.state.serverConfiguration?.fileUploadMaxFileSize || 0;
+		const maxFileSize = uploadMaxSize(config);
 
 		for (const file of files) {
 			if (!file) {
-				return;
+				continue;
 			}
 
-			if (maxFileSize > 0 && file.size > maxFileSize) {
-				this.handleResponse({
-					error: `File ${file.name} is over the maximum allowed size`,
-				});
-
+			if (file.size > maxFileSize) {
+				this.host.showError(`File ${file.name} is over the maximum allowed size`);
 				continue;
 			}
 
 			this.fileQueue.push(file);
 		}
 
-		// if the queue was empty and we added some files to it, and there currently
-		// is no upload in process, request a token to start the upload process
-		if (wasQueueEmpty && this.xhr === null && this.fileQueue.length > 0) {
-			this.requestToken();
+		if (this.fileQueue.length === 0) {
+			return this.drain ?? Promise.resolve();
+		}
+
+		if (this.drain === null) {
+			this.drain = this.drainQueue().finally(() => {
+				this.drain = null;
+			});
+		}
+
+		return this.drain;
+	}
+
+	private async drainQueue(): Promise<void> {
+		let file = this.fileQueue.shift();
+
+		while (file !== undefined) {
+			await this.uploadOne(file);
+			file = this.fileQueue.shift();
 		}
 	}
 
-	requestToken() {
-		// No backend to ask for an upload token; surface it to the user instead.
-		this.fileQueue = [];
-		this.handleResponse({error: UPLOADS_NOT_CONFIGURED});
+	private async uploadOne(file: File): Promise<void> {
+		const host = this.host;
+		const config = host?.uploads();
+
+		if (!host || !config) {
+			return;
+		}
+
+		this.controller = new AbortController();
+		this.setBusy(true);
+
+		try {
+			if (
+				host.renderCanvas() &&
+				file.type.startsWith("image/") &&
+				!file.type.includes("svg") &&
+				file.type !== "image/gif"
+			) {
+				file = await this.renderImage(file);
+			}
+
+			const url = await uploadFile(file, config, {
+				fetch: this.fetchImpl,
+				signal: this.controller.signal,
+			});
+
+			host.insertUrl(url);
+		} catch (e: unknown) {
+			host.showError(e instanceof Error ? e.message : String(e));
+		} finally {
+			this.controller = null;
+			this.setBusy(false);
+		}
 	}
 
-	setProgress(value: number) {
+	/**
+	 * `fetch` has no upload progress events, so the bar is a plain busy
+	 * indicator: fully lit while a request is in flight.
+	 */
+	setBusy(busy: boolean) {
 		if (!this.uploadProgressbar) {
 			return;
 		}
 
-		this.uploadProgressbar.classList.toggle("upload-progressbar-visible", value > 0);
-		this.uploadProgressbar.style.width = `${value}%`;
+		this.uploadProgressbar.classList.toggle("upload-progressbar-visible", busy);
+		this.uploadProgressbar.style.width = busy ? "100%" : "0%";
 	}
 
-	uploadNextFileInQueue(token: string) {
-		const file = this.fileQueue.shift();
+	/** Re-draw an image through a canvas; falls back to the original file. */
+	renderImage(file: File): Promise<File> {
+		return new Promise((resolve) => {
+			const fileReader = new FileReader();
 
-		if (!file) {
-			return;
-		}
+			fileReader.onabort = () => resolve(file);
+			fileReader.onerror = () => fileReader.abort();
 
-		if (
-			store.state.settings.uploadCanvas &&
-			file.type.startsWith("image/") &&
-			!file.type.includes("svg") &&
-			file.type !== "image/gif"
-		) {
-			this.renderImage(file, (newFile) => this.performUpload(token, newFile));
-		} else {
-			this.performUpload(token, file);
-		}
-	}
+			fileReader.onload = () => {
+				const img = new Image();
 
-	renderImage(file: File, callback: (file: File) => void) {
-		const fileReader = new FileReader();
+				img.onerror = () => resolve(file);
 
-		fileReader.onabort = () => callback(file);
-		fileReader.onerror = () => fileReader.abort();
+				img.onload = () => {
+					const canvas = document.createElement("canvas");
+					canvas.width = img.width;
+					canvas.height = img.height;
+					const ctx = canvas.getContext("2d");
 
-		fileReader.onload = () => {
-			const img = new Image();
+					if (!ctx) {
+						resolve(file);
+						return;
+					}
 
-			img.onerror = () => callback(file);
+					ctx.drawImage(img, 0, 0);
 
-			img.onload = () => {
-				const canvas = document.createElement("canvas");
-				canvas.width = img.width;
-				canvas.height = img.height;
-				const ctx = canvas.getContext("2d");
+					canvas.toBlob((blob) => {
+						resolve(blob ? new File([blob], file.name, {type: file.type}) : file);
+					}, file.type);
+				};
 
-				if (!ctx) {
-					throw new Error("Could not get canvas context in upload");
-				}
-
-				ctx.drawImage(img, 0, 0);
-
-				canvas.toBlob((blob) => {
-					callback(new File([blob!], file.name));
-				}, file.type);
+				img.src = String(fileReader.result);
 			};
 
-			img.src = String(fileReader.result);
-		};
-
-		fileReader.readAsDataURL(file);
+			fileReader.readAsDataURL(file);
+		});
 	}
 
-	performUpload(token: string, file: File) {
-		this.xhr = new XMLHttpRequest();
-
-		this.xhr.upload.addEventListener(
-			"progress",
-			(e) => {
-				const percent = Math.floor((e.loaded / e.total) * 1000) / 10;
-				this.setProgress(percent);
-			},
-			false
-		);
-
-		this.xhr.onreadystatechange = () => {
-			if (this.xhr?.readyState === XMLHttpRequest.DONE) {
-				let response;
-
-				try {
-					response = JSON.parse(this.xhr.responseText);
-				} catch (err) {
-					// This is just a safe guard and should not happen if server doesn't throw any errors.
-					// Browsers break the HTTP spec by aborting the request without reading any response data,
-					// if there is still data to be uploaded. Servers will only error in extreme cases like bad
-					// authentication or server-side errors.
-					response = {
-						error: `Upload aborted: ${this.xhr.statusText} (HTTP ${this.xhr.status})`,
-					};
-				}
-
-				this.handleResponse(response);
-
-				this.xhr = null;
-
-				// this file was processed, if we still have files in the queue, upload the next one
-				if (this.fileQueue.length > 0) {
-					this.requestToken();
-				}
-			}
-		};
-
-		const formData = new FormData();
-		formData.append("file", file);
-		this.xhr.open("POST", `uploads/new/${token}`);
-		this.xhr.send(formData);
-	}
-
-	handleResponse(response: {error?: string; url?: string}) {
-		this.setProgress(0);
-
-		if (this.tokenKeepAlive) {
-			clearInterval(this.tokenKeepAlive);
-			this.tokenKeepAlive = null;
-		}
-
-		if (response.error) {
-			store.commit("currentUserVisibleError", response.error);
-			return;
-		}
-
-		if (response.url) {
-			this.insertUploadUrl(response.url);
-		}
-	}
-
-	insertUploadUrl(url: string) {
-		const fullURL = new URL(url, location.toString()).toString();
-		const textbox = document.getElementById("input");
-
-		if (!(textbox instanceof HTMLTextAreaElement)) {
-			throw new Error("Could not find textbox in upload");
-		}
-
-		const initStart = textbox.selectionStart;
-
-		// Get the text before the cursor, and add a space if it's not in the beginning
-		const headToCursor = initStart > 0 ? textbox.value.substring(0, initStart) + " " : "";
-
-		// Get the remaining text after the cursor
-		const cursorToTail = textbox.value.substring(initStart);
-
-		// Construct the value until the point where we want the cursor to be
-		const textBeforeTail = headToCursor + fullURL + " ";
-
-		updateCursor(textbox, textBeforeTail + cursorToTail);
-
-		// Set the cursor after the link and a space
-		textbox.selectionStart = textbox.selectionEnd = textBeforeTail.length;
-	}
-
-	// TODO: This is a temporary hack while Vue porting is finalized
 	abort() {
 		this.fileQueue = [];
 
-		if (this.xhr) {
-			this.xhr.abort();
-			this.xhr = null;
+		if (this.controller) {
+			this.controller.abort();
+			this.controller = null;
 		}
 	}
 }
@@ -329,7 +504,8 @@ const instance = new Uploader();
 export default {
 	abort: () => instance.abort(),
 	initialize: () => instance.init(),
-	mounted: () => instance.mounted(),
+	/** Attach the drag/drop/paste listeners, reading config and state from `store`. */
+	mounted: (store: TypedStore) => instance.mounted(storeUploadHost(store)),
 	unmounted: () => instance.unmounted(),
-	triggerUpload: (files) => instance.triggerUpload(files),
+	triggerUpload: (files: (File | null)[]) => void instance.triggerUpload(files),
 };

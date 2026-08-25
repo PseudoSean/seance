@@ -323,9 +323,10 @@ export default defineComponent({
 				return false;
 			});
 
-			if (store.state.serverConfiguration?.fileUpload) {
-				upload.mounted();
-			}
+			// Always listen for drops and pastes: without a configured uploader
+			// the handler swallows them and shows a one-off notice instead of
+			// letting the browser navigate to the dropped file.
+			upload.mounted(store);
 		});
 
 		onUnmounted(() => {

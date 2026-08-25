@@ -9,7 +9,7 @@ Seance is a static SPA: `yarn build` writes everything to `public/`, and an IRC 
 
 Both read the **same file**: `client/config.json` is copied to `public/config.json` unchanged. A deploy that only edits `public/config.json` gets full runtime branding without rebuilding; the pre-JavaScript bits (browser tab title before boot, PWA manifest name, splash text) keep whatever was in `client/config.json` at build time. Rebuild (or overwrite those files, see below) to change them.
 
-`client/js/branding.ts` owns the schema, defaults and loader. `boot.ts` awaits `loadBranding()` before anything renders, commits the result to `store.state.branding`, sets `document.title`, and folds `theme` / `themeColor` into the configuration.
+`client/js/branding.ts` owns the schema, defaults and loader. `boot.ts` awaits `loadBranding()` before anything renders, commits the result to `store.state.branding`, sets `document.title`, and folds `theme` / `themeColor` / `uploads` into the configuration.
 
 ## `config.json` schema
 
@@ -42,6 +42,10 @@ Both read the **same file**: `client/config.json` is copied to `public/config.js
   "strings": {
     "connect.title": "Join TestNet",
     "connect.submit": "Join"
+  },
+  "uploads": {
+    "endpoint": "https://files.testnet.example/upload",
+    "maxSizeBytes": 10485760
   }
 }
 ```
@@ -67,8 +71,27 @@ Every field is optional; `{"appName": "Seance"}` (the shipped default) is a comp
 | `features.saveNetworks`                | boolean                 | `true`                                    | `false` hides the saved-networks picker, "remember password" and "connect automatically" on the connect form (see follow-ups).                                      |
 | `features.allowCustomServer`           | boolean                 | `true`                                    | `false` behaves like `lockHost` and also ignores hosts from saved networks and `?host=` URL parameters. Requires `defaultNetwork`.                                  |
 | `strings.<key>`                        | string                  | built-in copy                             | Keys: `connect.title`, `connect.savedNetworks`, `connect.savedNetworksEmpty`, `connect.submit`, `help.about`, `help.website`, `help.documentation`, `help.privacy`. |
+| `uploads`                              | object                  | none (uploads off)                        | Network-provided file uploader; see [Uploads](#uploads). Dropped unless `endpoint` is an `https:` URL.                                                              |
+| `uploads.endpoint`                     | `https` URL             | —                                         | Receives a multipart `POST` per file.                                                                                                                               |
+| `uploads.maxSizeBytes`                 | integer                 | 10485760 (10 MiB)                         | Client-side limit; larger files are refused with "File … is over the maximum allowed size".                                                                         |
+| `uploads.fieldName`                    | string                  | `"file"`                                  | Multipart form field carrying the file.                                                                                                                             |
+| `uploads.responseUrlKey`               | string                  | `"url"`                                   | JSON key holding the public URL in the response.                                                                                                                    |
+| `uploads.withCredentials`              | boolean                 | `false`                                   | Send cookies with the request (`credentials: "include"`).                                                                                                           |
+| `uploads.headers`                      | object of strings       | none                                      | Extra request headers, e.g. `{"X-Api-Key": "…"}`. `Content-Type` is ignored: the browser sets the multipart boundary.                                               |
 
 URL parameters (`?host=…&port=…&nick=…&join=…&autoconnect=1`, `?uri=irc://…`) still pre-fill the form and beat `defaultNetwork`, except for host/port/TLS when the host is locked.
+
+## Uploads
+
+Seance has no server of its own, so the file goes straight from the browser to an uploader the network runs. Running that service is the network's responsibility; Seance only needs it to honour this contract:
+
+- **Request**: `POST` to `uploads.endpoint` with a `multipart/form-data` body whose `uploads.fieldName` field (default `file`) holds the file, filename included. Any `uploads.headers` are sent along; cookies only when `uploads.withCredentials` is `true`.
+- **CORS**: the endpoint is on another origin, so it must answer the preflight and the `POST` with `Access-Control-Allow-Origin` for the app's origin (plus `Access-Control-Allow-Headers` for any custom headers, and `Access-Control-Allow-Credentials: true` when cookies are used).
+- **Response**: `2xx` with either a JSON object `{"url": "https://…"}` (the key is `uploads.responseUrlKey`) or a plain-text body that is the URL. Relative URLs resolve against the endpoint. On failure, a non-`2xx` status; a JSON `{"error": "…"}` body is shown to the user verbatim, otherwise "Upload failed: HTTP _status_".
+
+The client checks `uploads.maxSizeBytes` before sending; the uploader should enforce its own limit, authentication and retention rules, since anyone with the app can call it. With `uploads` absent the upload button is hidden and dropped or pasted files are ignored after a single "File uploads are not configured in this client." notice.
+
+A minimal uploader is a few dozen lines (an nginx `client_body` handler script, or a small web function that writes to object storage and returns its URL); those recipes are out of scope here.
 
 ## Files a rebranded deploy overwrites in `public/`
 

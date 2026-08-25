@@ -5,7 +5,9 @@
 // are baked in at build time. Per-deployment values (app name, default
 // network, default theme) come from `config.json` instead — see
 // `client/js/branding.ts`; `boot.ts` folds `branding.theme` into
-// `defaultTheme` below before the store sees this object.
+// `defaultTheme` below before the store sees this object, and turns on
+// `fileUpload` (with `fileUploadMaxFileSize`) when `branding.uploads` names
+// an uploader endpoint.
 
 import pkg from "../../package.json";
 import type {SharedConfiguration} from "../../shared/types/config";
@@ -14,6 +16,7 @@ const configuration: SharedConfiguration = {
 	public: false,
 	useHexIp: false,
 	prefetch: false,
+	// Off unless config.json provides `uploads` (see boot.ts).
 	fileUpload: false,
 	ldapEnabled: false,
 	isUpdateAvailable: false,

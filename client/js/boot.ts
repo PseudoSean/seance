@@ -8,7 +8,7 @@
 // unless the URL says otherwise).
 
 import configuration from "./configuration";
-import {loadBranding} from "./branding";
+import {DEFAULT_UPLOAD_MAX_BYTES, loadBranding} from "./branding";
 import {router, navigate} from "./router";
 import {store} from "./store";
 import parseIrcUri from "./helpers/parseIrcUri";
@@ -37,6 +37,11 @@ export async function boot(): Promise<void> {
 	if (branding.themeColor) {
 		setThemeColor(branding.themeColor);
 	}
+
+	// Uploads exist only when the deploy names an uploader endpoint.
+	configuration.fileUpload = branding.uploads !== undefined;
+	configuration.fileUploadMaxFileSize =
+		branding.uploads?.maxSizeBytes ?? DEFAULT_UPLOAD_MAX_BYTES;
 
 	store.commit("serverConfiguration", configuration);
 
