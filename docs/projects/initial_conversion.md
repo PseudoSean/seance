@@ -145,7 +145,7 @@ No fixed order. Tackle items in whatever sequence the friction dictates.
 10. [x] **Highlight keywords** — port the regex builder from `attic/server/client.ts` into `client/js/highlight.ts`. The settings UI already exists. _Done 2026-08-24: `isHighlight(text, nick, keywords, exceptions?)`, exceptions folded into the regex, IRC formatting stripped first; 28 tests._
 11. [ ] **Notifications and push** — keep the `Notification` API path (works in-browser today). Web push needs a tiny relay service; defer or drop.
 12. [ ] **File uploads** — point at a network-provided uploader endpoint (configurable per deploy) or drop.
-13. [ ] **Service worker** — audit `client/service-worker.js`, strip server-coordinated push registration, keep the offline shell.
+13. [x] **Service worker** — audit `client/service-worker.js`, strip server-coordinated push registration, keep the offline shell. _Done 2026-08-24: fetch handler scoped to same-origin GET, shell precache (index.html + manifest) with offline navigation fallback, `push` handler removed pending D.11, `notificationclick` kept._
 
 ## E. Cleanup and shipping
 

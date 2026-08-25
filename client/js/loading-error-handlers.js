@@ -105,14 +105,26 @@
 		//
 	}
 
-	// Trigger early service worker registration
-	if ("serviceWorker" in navigator) {
-		navigator.serviceWorker.register("service-worker.js");
+	// Trigger early service worker registration. Browsers only expose
+	// navigator.serviceWorker in secure contexts, but be explicit about it and
+	// never let a failed registration surface as an unhandled rejection: the
+	// app works without the worker, it just is not installable/offline-capable.
+	const isAllowedServiceWorkersHost =
+		location.protocol === "https:" ||
+		location.hostname === "localhost" ||
+		location.hostname === "127.0.0.1" ||
+		location.hostname === "[::1]";
+
+	if (isAllowedServiceWorkersHost && "serviceWorker" in navigator) {
+		navigator.serviceWorker.register("service-worker.js", {scope: "./"}).catch((e) => {
+			// eslint-disable-next-line no-console
+			console.error("Service worker registration failed:", e);
+		});
 
 		// Handler for messages coming from the service worker
 
 		const messageHandler = (/** @type {MessageEvent} */ event) => {
-			if (event.data.type === "fetch-error") {
+			if (event.data && event.data.type === "fetch-error") {
 				// @ts-expect-error Argument of type '{ message: string; }' is not assignable to parameter of type 'ErrorEvent'.
 				errorHandler({
 					message: `Service worker failed to fetch an url: ${event.data.message}`,

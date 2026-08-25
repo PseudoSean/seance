@@ -78,4 +78,23 @@ describe("public folder", function () {
 			done();
 		});
 	});
+
+	it("service worker precaches the app shell and has no server-side hooks", function (done) {
+		fs.readFile(path.join(publicFolder, "service-worker.js"), "utf8", function (err, contents) {
+			expect(err).to.be.null;
+
+			// Offline shell: index.html and the manifest are precached on install
+			expect(contents.includes('"index.html"')).to.be.true;
+			expect(contents.includes('"thelounge.webmanifest"')).to.be.true;
+			expect(contents.includes('addEventListener("notificationclick"')).to.be.true;
+
+			// Nothing is left that expects the old Node server
+			expect(contents.includes("socket.io")).to.be.false;
+			expect(contents.includes("uploads")).to.be.false;
+			expect(contents.includes("storage")).to.be.false;
+			expect(contents.includes('addEventListener("push"')).to.be.false;
+
+			done();
+		});
+	});
 });

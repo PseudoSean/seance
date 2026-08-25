@@ -1,13 +1,36 @@
 // @ts-nocheck
-// The Lounge - https://github.com/thelounge/thelounge
+// Seance service worker (derived from The Lounge - https://github.com/thelounge/thelounge)
 /* global clients */
 "use strict";
 
-const cacheName = "__HASH__";
-const excludedPathsFromCache = /^(?:socket\.io|storage|uploads|cdn-cgi)\//;
+// Seance is a static single-page app: everything under the registration scope
+// is a build artifact (index.html, js/, css/, themes/, img/, ...). IRC traffic
+// goes over WebSocket straight to the ircd and is never routed through here —
+// service workers do not receive fetch events for WebSocket handshakes, and the
+// same-origin/http(s) guards below make sure nothing else is intercepted either.
+//
+// Strategy: network-first with a cache fallback for the static bundle, plus a
+// precached copy of the app shell (index.html) so that navigations still
+// resolve when the host is unreachable and the PWA can open offline.
+//
+// There is no Web Push handler: push needs a server-side relay to hold the
+// subscription and send the pushes, and there is none in client-only mode.
+// In-page `Notification` requests are still routed through this worker (see
+// the "message" handler) so that clicks on them focus or reopen the app.
 
-self.addEventListener("install", function () {
-	self.skipWaiting();
+const cacheName = "__HASH__";
+const isDevBuild = cacheName === "dev";
+
+// The app shell is cached under the scope URL because, with hash-based
+// routing, every navigation request resolves to the scope root.
+const shellUrl = self.registration.scope;
+const shellPaths = ["", "index.html", "thelounge.webmanifest"];
+
+// Paths that must never be served from cache (Cloudflare challenge endpoints).
+const excludedPathsFromCache = /^cdn-cgi\//;
+
+self.addEventListener("install", function (event) {
+	event.waitUntil(precacheShell().then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", function (event) {
@@ -30,22 +53,59 @@ self.addEventListener("fetch", function (event) {
 	}
 
 	const url = event.request.url;
-	const scope = self.registration.scope;
 
-	// Skip cross-origin requests
-	if (!url.startsWith(scope)) {
+	// Only ever touch http(s) requests inside our own scope. Cross-origin
+	// requests (link previews, external images, ...) and anything that is not
+	// a plain http(s) URL are left entirely to the browser.
+	if (!/^https?:/i.test(url) || !url.startsWith(shellUrl)) {
 		return;
 	}
 
-	const path = url.substring(scope.length);
+	const path = url.substring(shellUrl.length);
 
-	// Skip ignored paths
 	if (excludedPathsFromCache.test(path)) {
 		return;
 	}
 
 	event.respondWith(networkOrCache(event));
 });
+
+async function precacheShell() {
+	if (isDevBuild) {
+		return;
+	}
+
+	try {
+		const cache = await caches.open(cacheName);
+
+		await Promise.all(
+			shellPaths.map(async (path) => {
+				const response = await fetch(new URL(path, shellUrl).href, {
+					cache: "no-cache",
+					redirect: "follow",
+				});
+
+				if (response.ok) {
+					await cache.put(cacheKeyFor(path), response);
+				}
+			})
+		);
+	} catch (e) {
+		// A failed precache must not prevent the worker from installing; the
+		// runtime cache will fill in on the first successful online load.
+		// eslint-disable-next-line no-console
+		console.warn("Failed to precache app shell:", e.message);
+	}
+}
+
+function cacheKeyFor(path) {
+	// index.html is the same document as the scope root; store it once.
+	return path === "index.html" ? shellUrl : new URL(path, shellUrl).href;
+}
+
+function isNavigation(request) {
+	return request.mode === "navigate" || request.destination === "document";
+}
 
 async function putInCache(request, response) {
 	const cache = await caches.open(cacheName);
@@ -68,8 +128,11 @@ async function cleanRedirect(response) {
 }
 
 async function networkOrCache(event) {
+	const request = event.request;
+	const navigation = isNavigation(request);
+
 	try {
-		let response = await fetch(event.request, {
+		let response = await fetch(request, {
 			cache: "no-cache",
 			redirect: "follow",
 		});
@@ -79,17 +142,30 @@ async function networkOrCache(event) {
 		}
 
 		if (response.ok) {
-			if (cacheName !== "dev") {
-				event.waitUntil(putInCache(event.request, response));
+			if (!isDevBuild) {
+				// Navigations are stored under the shell key so that offline
+				// opens of "/", "/index.html" and "/?anything" all find it.
+				event.waitUntil(putInCache(navigation ? shellUrl : request, response.clone()));
 			}
 
-			return response.clone();
+			return response;
 		}
 
 		throw new Error(`Request failed with HTTP ${response.status}`);
 	} catch (e) {
+		const cache = await caches.open(cacheName);
+		let matching = await cache.match(request, {ignoreSearch: navigation});
+
+		if (!matching && navigation) {
+			matching = await cache.match(shellUrl);
+		}
+
+		if (matching) {
+			return matching;
+		}
+
 		// eslint-disable-next-line no-console
-		console.error(e.message, event.request.url);
+		console.error(e.message, request.url);
 
 		if (event.clientId) {
 			const client = await clients.get(event.clientId);
@@ -102,30 +178,22 @@ async function networkOrCache(event) {
 			}
 		}
 
-		const cache = await caches.open(cacheName);
-		const matching = await cache.match(event.request);
-
-		return matching || Promise.reject("request-not-in-cache");
+		return Response.error();
 	}
 }
 
+// Notifications requested by the page. Routing them through the worker (rather
+// than `new Notification()` in the page) is what makes them work on Android and
+// lets "notificationclick" below reopen the app when the tab is gone.
 self.addEventListener("message", function (event) {
+	if (!event.data || event.data.type !== "notification") {
+		return;
+	}
+
 	showNotification(event, event.data);
 });
 
-self.addEventListener("push", function (event) {
-	if (!event.data) {
-		return;
-	}
-
-	showNotification(event, event.data.json());
-});
-
 function showNotification(event, payload) {
-	if (payload.type !== "notification") {
-		return;
-	}
-
 	// get current notification, close it, and draw new
 	event.waitUntil(
 		self.registration
