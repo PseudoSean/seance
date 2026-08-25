@@ -10,6 +10,7 @@ import type {Channel} from "../channel";
 import type {IrcMessage} from "../message";
 import {trailingLine} from "../wire";
 import type {Handler} from "../types";
+import {ignoreListFor} from "../../ignore";
 
 const nickRegExp = /(?:\x03[0-9]{1,2}(?:,[0-9]{1,2})?)?([\w[\]\\`^{|}-]+)/g;
 
@@ -63,6 +64,16 @@ function handleMessage(client: IrcClient, msg: IrcMessage, baseType: MessageType
 	let type = baseType;
 	const time = client.timeOf(msg);
 	const ctcp = parseCtcp(text);
+
+	// --- ignore list (client/js/ignore.ts): drop anything from a matching user
+	if (
+		!fromServer &&
+		!self &&
+		ignoreListFor(client.uuid).matches(nick, source.user, source.host)
+	) {
+		return;
+	}
+	// --- end ignore list
 
 	if (ctcp) {
 		if (ctcp.command === "ACTION" && baseType === MessageType.MESSAGE) {

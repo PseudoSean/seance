@@ -17,16 +17,57 @@ import {MessageType} from "../../../../shared/types/msg";
 import type {Channel} from "../channel";
 import type {IrcClient} from "../client";
 import type {Command} from "../types";
+import away from "./away";
+import ban from "./ban";
+import connect from "./connect";
+import ctcp from "./ctcp";
+import disconnect from "./disconnect";
+import ignore from "./ignore";
+import ignorelist from "./ignorelist";
+import invite from "./invite";
 import join from "./join";
+import kick from "./kick";
+import kill from "./kill";
+import list from "./list";
 import me from "./me";
+import mode from "./mode";
 import msg from "./msg";
+import mute from "./mute";
 import nick from "./nick";
+import notice from "./notice";
 import part from "./part";
 import quit from "./quit";
 import raw from "./raw";
+import rejoin from "./rejoin";
 import topic from "./topic";
+import whois from "./whois";
 
-const modules: Command[] = [join, me, msg, nick, part, quit, raw, topic];
+const modules: Command[] = [
+	away,
+	ban,
+	connect,
+	ctcp,
+	disconnect,
+	ignore,
+	ignorelist,
+	invite,
+	join,
+	kick,
+	kill,
+	list,
+	me,
+	mode,
+	msg,
+	mute,
+	nick,
+	notice,
+	part,
+	quit,
+	raw,
+	rejoin,
+	topic,
+	whois,
+];
 
 export const commands = new Map<string, Command>();
 

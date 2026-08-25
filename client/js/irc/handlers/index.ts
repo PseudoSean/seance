@@ -19,6 +19,7 @@ import error from "./error";
 import invite from "./invite";
 import join from "./join";
 import kick from "./kick";
+import list from "./list";
 import lists from "./lists";
 import mode from "./mode";
 import names from "./names";
@@ -29,6 +30,7 @@ import privmsg from "./privmsg";
 import quit from "./quit";
 import standardReplies from "./standard-replies";
 import topic from "./topic";
+import whois from "./whois";
 
 const modules: Record<string, Handler>[] = [
 	account,
@@ -40,6 +42,7 @@ const modules: Record<string, Handler>[] = [
 	invite,
 	join,
 	kick,
+	list,
 	lists,
 	mode,
 	names,
@@ -50,6 +53,7 @@ const modules: Record<string, Handler>[] = [
 	quit,
 	standardReplies,
 	topic,
+	whois,
 ];
 
 export const handlers = new Map<string, Handler>();

@@ -901,8 +901,8 @@ describe("IrcClient", function () {
 			const id = joined(h);
 			h.client.input(id, "/raw WHOIS bob");
 			h.client.input(id, "/quote  PING :x");
-			h.client.input(id, "/whois bob");
-			expect(h.sentAfter()).to.deep.equal(["WHOIS bob", " PING :x", "whois bob"]);
+			h.client.input(id, "/frobnicate bob");
+			expect(h.sentAfter()).to.deep.equal(["WHOIS bob", " PING :x", "frobnicate bob"]);
 		});
 
 		it("handles /join, /part, /topic and /nick", function () {

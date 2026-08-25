@@ -50,6 +50,8 @@ export interface IrcClientOptions extends ConnectOptions {
 	reconnect?: ReconnectOptions;
 	/** Custom highlight keywords (from the settings store). */
 	highlights?: () => HighlightKeywords;
+	/** Persist a channel's muted flag (`/mute`, `/unmute`); see client/js/mute.ts. */
+	setMuteStatus?: (chanId: number, muted: boolean) => void;
 	/**
 	 * Networks to send in `init`. The `init` listener replaces the store's
 	 * network list wholesale, so with several networks the manager supplies
