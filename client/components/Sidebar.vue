@@ -5,18 +5,18 @@
 				<img
 					:src="`img/logo-${isPublic() ? 'horizontal-' : ''}transparent-bg.svg`"
 					class="logo"
-					alt="The Lounge"
+					:alt="appName"
 					role="presentation"
 				/>
 				<img
 					:src="`img/logo-${isPublic() ? 'horizontal-' : ''}transparent-bg-inverted.svg`"
 					class="logo-inverted"
-					alt="The Lounge"
+					:alt="appName"
 					role="presentation"
 				/>
 				<span
 					v-if="isDevelopment"
-					title="The Lounge has been built in development mode"
+					:title="`${appName} has been built in development mode`"
 					:style="{
 						backgroundColor: '#ff9e18',
 						color: '#000',
@@ -31,6 +31,7 @@
 		</div>
 		<footer id="footer">
 			<span
+				v-if="canAddNetwork"
 				class="tooltipped tooltipped-n tooltipped-no-touch"
 				aria-label="Connect to network"
 				><router-link
@@ -90,9 +91,10 @@
 </template>
 
 <script lang="ts">
-import {defineComponent, nextTick, onMounted, onUnmounted, PropType, ref} from "vue";
+import {computed, defineComponent, nextTick, onMounted, onUnmounted, PropType, ref} from "vue";
 import {useRoute} from "vue-router";
 import {useStore} from "../js/store";
+import {brandingFeatures} from "../js/branding";
 import NetworkList from "./NetworkList.vue";
 
 export default defineComponent({
@@ -252,8 +254,18 @@ export default defineComponent({
 		});
 
 		const isPublic = () => document.body.classList.contains("public");
+		const appName = computed(() => store.state.branding.appName);
+		// With `features.multiNetwork: false` the connect button disappears once
+		// the (single) network exists.
+		const canAddNetwork = computed(
+			() =>
+				brandingFeatures(store.state.branding).multiNetwork ||
+				store.state.networks.length === 0
+		);
 
 		return {
+			appName,
+			canAddNetwork,
 			isDevelopment,
 			store,
 			route,

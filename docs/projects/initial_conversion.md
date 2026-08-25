@@ -154,8 +154,8 @@ No fixed order. Tackle items in whatever sequence the friction dictates.
    - [ ] b. `yarn install`, `yarn build`, `yarn lint`, `yarn test` all clean.
 2. [ ] **Bus contract reshape (optional, end-state)**
    - [ ] a. With everything on IRC, the `ServerToClientEvents`/`ClientToServerEvents` types are no longer the right contract. Consider migrating `socket-events/*` into `client/js/irc/handlers/` and reshaping the bus around an IRC-native store. Worth doing only after the dust settles.
-3. [ ] **Branding hooks**
-   - [ ] a. `config.json` fetched at boot for network name, default host/port, theme, branding strings. `manifest.json` parametrized. Audit and replace remaining "The Lounge" strings.
+3. [x] **Branding hooks**
+   - [x] a. `config.json` fetched at boot _Done 2026-08-25: `client/js/branding.ts` + `client/config.json`; runtime for the SPA, build-time for index.html/manifest; see `docs/resources/branding.md`. localStorage keys still `thelounge.*` (migration follow-up)._ for network name, default host/port, theme, branding strings. `manifest.json` parametrized. Audit and replace remaining "The Lounge" strings.
 4. [ ] **Native shells**
    - [ ] a. Electron wrapper.
    - [ ] b. Capacitor (or thin native shell + WebView) for iOS/Android. Note WebSocket + background-keep-alive caveats per platform.

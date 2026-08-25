@@ -8,7 +8,7 @@
 				class="btn"
 				@click.prevent="nativeInstallPrompt"
 			>
-				Add The Lounge to Home screen
+				Add {{ appName }} to Home screen
 			</button>
 			<button
 				v-if="canRegisterProtocol"
@@ -16,7 +16,7 @@
 				class="btn"
 				@click.prevent="registerProtocol"
 			>
-				Open irc:// URLs with The Lounge
+				Open irc:// URLs with {{ appName }}
 			</button>
 		</div>
 		<div v-if="store.state.serverConfiguration?.fileUpload">
@@ -50,7 +50,7 @@
 					type="text"
 					name="awayMessage"
 					class="input"
-					placeholder="Away message if The Lounge is not open"
+					:placeholder="`Away message if ${appName} is not open`"
 				/>
 			</label>
 		</div>
@@ -75,6 +75,7 @@ export default defineComponent({
 	name: "GeneralSettings",
 	setup() {
 		const store = useStore();
+		const appName = computed(() => store.state.branding.appName);
 		const canRegisterProtocol = ref(false);
 
 		const hasInstallPromptEvent = computed(() => {
@@ -107,12 +108,13 @@ export default defineComponent({
 			const uri = document.location.origin + document.location.pathname + "?uri=%s";
 			// @ts-expect-error
 			// the third argument is deprecated but recommended for compatibility: https://developer.mozilla.org/en-US/docs/Web/API/Navigator/registerProtocolHandler
-			window.navigator.registerProtocolHandler("irc", uri, "The Lounge");
+			window.navigator.registerProtocolHandler("irc", uri, appName.value);
 			// @ts-expect-error
-			window.navigator.registerProtocolHandler("ircs", uri, "The Lounge");
+			window.navigator.registerProtocolHandler("ircs", uri, appName.value);
 		};
 
 		return {
+			appName,
 			store,
 			canRegisterProtocol,
 			hasInstallPromptEvent,

@@ -6,11 +6,71 @@ import MiniCssExtractPlugin from "mini-css-extract-plugin";
 import {VueLoaderPlugin} from "vue-loader";
 import babelConfig from "./babel.config.cjs";
 import {createHash} from "crypto";
+import {readFileSync} from "fs";
 import pkg from "./package.json";
 
 // Short hash of the package version, appended to asset URLs so browsers
 // and the service worker refetch after a release.
 const cacheBust = createHash("sha256").update(`v${pkg.version}`).digest("hex").substring(0, 10);
+
+// Build-time branding. `client/config.json` is the same file the app fetches
+// at runtime (copied to `public/config.json`); the values below only feed the
+// parts of index.html and the manifest that exist before any script runs.
+// See docs/resources/branding.md.
+interface BuildBranding {
+	appName: string;
+	shortName: string;
+	description: string;
+	themeColor: string;
+}
+
+function readBranding(): BuildBranding {
+	let raw: Record<string, unknown> = {};
+
+	try {
+		raw = JSON.parse(readFileSync(path.resolve(__dirname, "client/config.json"), "utf8"));
+	} catch (e: any) {
+		throw new Error(`client/config.json is missing or not valid JSON: ${e.message}`);
+	}
+
+	const str = (value: unknown, fallback: string): string =>
+		typeof value === "string" && value.trim().length > 0 ? value.trim() : fallback;
+
+	const appName = str(raw.appName, "Seance");
+
+	return {
+		appName,
+		shortName: str(raw.shortName, appName),
+		description: str(raw.description, "IRC client"),
+		themeColor: str(raw.themeColor, "#415364"),
+	};
+}
+
+const branding = readBranding();
+
+function escapeHtml(text: string): string {
+	return text
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;");
+}
+
+function brandHtml(content: string): string {
+	return content
+		.replace(/__APP_NAME__/g, escapeHtml(branding.appName))
+		.replace(/__THEME_COLOR__/g, escapeHtml(branding.themeColor));
+}
+
+function brandManifest(content: string): string {
+	const manifest = JSON.parse(content);
+	manifest.name = branding.appName;
+	manifest.short_name = branding.shortName;
+	manifest.description = branding.description;
+	manifest.theme_color = branding.themeColor;
+	manifest.background_color = branding.themeColor;
+	return JSON.stringify(manifest, null, "\t") + "\n";
+}
 
 const tsCheckerPlugin = new ForkTsCheckerWebpackPlugin({
 	typescript: {
@@ -141,6 +201,7 @@ const config: webpack.Configuration = {
 						ignore: [
 							"**/index.html",
 							"**/service-worker.js",
+							"**/thelounge.webmanifest",
 							"**/*.d.ts",
 							"**/tsconfig.json",
 						],
@@ -150,9 +211,18 @@ const config: webpack.Configuration = {
 					from: path.resolve(__dirname, "./client/index.html"),
 					to: "[name][ext]",
 					transform(content) {
-						return content
-							.toString()
-							.replace(/__HASH__/g, isProduction ? cacheBust : "dev");
+						return brandHtml(
+							content
+								.toString()
+								.replace(/__HASH__/g, isProduction ? cacheBust : "dev")
+						);
+					},
+				},
+				{
+					from: path.resolve(__dirname, "./client/thelounge.webmanifest"),
+					to: "[name][ext]",
+					transform(content) {
+						return brandManifest(content.toString());
 					},
 				},
 				{

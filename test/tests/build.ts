@@ -17,6 +17,30 @@ describe("public folder", function () {
 		expect(fs.existsSync(path.join(publicFolder, "thelounge.webmanifest"))).to.be.true;
 	});
 
+	it("branding config.json is copied and parses", function () {
+		const file = path.join(publicFolder, "config.json");
+		expect(fs.existsSync(file)).to.be.true;
+
+		const config = JSON.parse(fs.readFileSync(file, "utf8"));
+		expect(config).to.be.an("object");
+		expect(config.appName).to.be.a("string").that.is.not.empty;
+	});
+
+	it("index HTML and manifest carry the build-time branding", function () {
+		const config = JSON.parse(fs.readFileSync(path.join(publicFolder, "config.json"), "utf8"));
+		const html = fs.readFileSync(path.join(publicFolder, "index.html"), "utf8");
+		const manifest = JSON.parse(
+			fs.readFileSync(path.join(publicFolder, "thelounge.webmanifest"), "utf8")
+		);
+
+		expect(html.includes("__APP_NAME__")).to.be.false;
+		expect(html.includes("__THEME_COLOR__")).to.be.false;
+		expect(html.includes(`<title>${config.appName}</title>`)).to.be.true;
+		expect(html.includes("The Lounge")).to.be.false;
+		expect(manifest.name).to.equal(config.appName);
+		expect(manifest.short_name).to.be.a("string").that.is.not.empty;
+	});
+
 	it("audio files are copied", function () {
 		expect(fs.existsSync(path.join(publicFolder, "audio", "pop.wav"))).to.be.true;
 	});

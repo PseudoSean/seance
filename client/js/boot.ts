@@ -2,15 +2,18 @@
 //
 // TheLounge drove this from a chain of server events (`auth:start` ->
 // `auth:success` -> `configuration` -> `init`). With no server, boot is
-// synchronous and purely local: install the static configuration, apply
-// stored settings, mark the app loaded, drop the loading splash and put the
-// router on a sensible route (the connect form unless the URL says otherwise).
+// purely local: fetch the deployment branding (`config.json`), install the
+// static configuration, apply stored settings, mark the app loaded, drop the
+// loading splash and put the router on a sensible route (the connect form
+// unless the URL says otherwise).
 
 import configuration from "./configuration";
+import {loadBranding} from "./branding";
 import {router, navigate} from "./router";
 import {store} from "./store";
 import parseIrcUri from "./helpers/parseIrcUri";
 import {loadMentions} from "./mentions";
+import storage from "./localStorage";
 // Registers the IRC layer's bus handlers (input, names, more, network:*).
 import "./irc/manager";
 
@@ -21,11 +24,33 @@ declare global {
 }
 
 export async function boot(): Promise<void> {
+	// Branding first: it decides the default theme and the document title,
+	// and the connect form reads its defaults from it.
+	const branding = await loadBranding();
+	store.commit("branding", branding);
+	document.title = branding.appName;
+
+	if (branding.theme && configuration.themes.some((t) => t.name === branding.theme)) {
+		configuration.defaultTheme = branding.theme;
+	}
+
+	if (branding.themeColor) {
+		setThemeColor(branding.themeColor);
+	}
+
 	store.commit("serverConfiguration", configuration);
 
 	// 'theme' setting depends on serverConfiguration.themes so
 	// settings cannot be applied before this point
 	void store.dispatch("settings/applyAll");
+
+	// The branded default theme applies until the user picks one themselves.
+	if (configuration.defaultTheme !== store.state.settings.theme && !hasStoredSetting("theme")) {
+		void store.dispatch("settings/update", {
+			name: "theme",
+			value: configuration.defaultTheme,
+		});
+	}
 
 	// If localStorage contains a theme that does not exist in this build, switch
 	// back to the default theme.
@@ -37,11 +62,7 @@ export async function boot(): Promise<void> {
 			value: configuration.defaultTheme,
 		});
 	} else if (currentTheme.themeColor) {
-		const meta = document.querySelector('meta[name="theme-color"]');
-
-		if (meta instanceof HTMLMetaElement) {
-			meta.content = currentTheme.themeColor;
-		}
+		setThemeColor(currentTheme.themeColor);
 	}
 
 	loadMentions();
@@ -101,6 +122,23 @@ async function handleQueryParams(): Promise<boolean> {
 	}
 
 	return false;
+}
+
+function hasStoredSetting(name: string): boolean {
+	try {
+		const stored: unknown = JSON.parse(storage.get("settings") || "{}");
+		return typeof stored === "object" && stored !== null && name in stored;
+	} catch (e) {
+		return false;
+	}
+}
+
+function setThemeColor(color: string): void {
+	const meta = document.querySelector('meta[name="theme-color"]');
+
+	if (meta instanceof HTMLMetaElement) {
+		meta.content = color;
+	}
 }
 
 // Remove query parameters from url without reloading the page

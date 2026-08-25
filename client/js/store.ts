@@ -8,8 +8,7 @@ import type {InjectionKey} from "vue";
 
 import {SettingsState} from "./settings";
 import {SharedConfiguration, LockedSharedConfiguration} from "../../shared/types/config";
-
-const appName = document.title;
+import {BrandingConfig, DEFAULT_BRANDING, brandingString} from "./branding";
 
 enum DesktopNotificationState {
 	Unsupported = "unsupported",
@@ -33,6 +32,7 @@ function detectDesktopNotificationState(): DesktopNotificationState {
 export type State = {
 	appLoaded: boolean;
 	activeChannel?: NetChan;
+	branding: BrandingConfig;
 	currentUserVisibleError: string | null;
 	desktopNotificationState: DesktopNotificationState;
 	isAutoCompleting: boolean;
@@ -51,6 +51,7 @@ export type State = {
 const state = (): State => ({
 	appLoaded: false,
 	activeChannel: undefined,
+	branding: DEFAULT_BRANDING,
 	currentUserVisibleError: null,
 	desktopNotificationState: detectDesktopNotificationState(),
 	isAutoCompleting: false,
@@ -66,6 +67,8 @@ const state = (): State => ({
 });
 
 type Getters = {
+	/** Branded UI copy: `strings` overrides from config.json, else the default text. */
+	brandingString: (state: State) => (key: string) => string;
 	findChannelOnCurrentNetwork: (state: State) => (name: string) => ClientChan | undefined;
 	findChannelOnNetwork: (state: State) => (
 		networkUuid: string,
@@ -89,6 +92,7 @@ export type CallableGetters = {
 };
 
 const getters: Getters = {
+	brandingString: (state) => (key: string) => brandingString(key, state.branding),
 	findChannelOnCurrentNetwork: (state) => (name: string) => {
 		name = name.toLowerCase();
 		return state.activeChannel?.network.channels.find((c) => c.name.toLowerCase() === name);
@@ -149,13 +153,14 @@ const getters: Getters = {
 			: "";
 		const channelname = state.activeChannel ? `${state.activeChannel.channel.name} — ` : "";
 
-		return alertEventCount + channelname + appName;
+		return alertEventCount + channelname + state.branding.appName;
 	},
 };
 
 type Mutations = {
 	appLoaded(state: State): void;
 	activeChannel(state: State, netChan: State["activeChannel"]): void;
+	branding(state: State, branding: State["branding"]): void;
 	currentUserVisibleError(state: State, error: State["currentUserVisibleError"]): void;
 	refreshDesktopNotificationState(state: State): void;
 	isAutoCompleting(state: State, isAutoCompleting: State["isAutoCompleting"]): void;
@@ -187,6 +192,9 @@ const mutations: Mutations = {
 	},
 	activeChannel(state, netChan) {
 		state.activeChannel = netChan;
+	},
+	branding(state, branding) {
+		state.branding = branding;
 	},
 	currentUserVisibleError(state, error) {
 		state.currentUserVisibleError = error;

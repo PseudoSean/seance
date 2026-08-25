@@ -4,13 +4,20 @@
 			<SidebarToggle />
 		</div>
 		<form class="container" method="post" action="" @submit.prevent="onSubmit">
-			<h1 class="title">Connect to IRC</h1>
+			<h1 class="title">{{ t("connect.title") }}</h1>
 
-			<h2>Saved networks</h2>
-			<div v-if="savedNetworks.length === 0" class="saved-networks-empty">
-				No saved networks yet. Networks you connect to are remembered here.
+			<h2 v-if="showSavedNetworks">{{ t("connect.savedNetworks") }}</h2>
+			<div
+				v-if="showSavedNetworks && savedNetworks.length === 0"
+				class="saved-networks-empty"
+			>
+				{{ t("connect.savedNetworksEmpty") }}
 			</div>
-			<ul v-else class="saved-networks" aria-label="Saved networks">
+			<ul
+				v-else-if="showSavedNetworks"
+				class="saved-networks"
+				:aria-label="t('connect.savedNetworks')"
+			>
 				<li
 					v-for="net in savedNetworks"
 					:key="net.uuid"
@@ -24,7 +31,8 @@
 					>
 						<span class="saved-network-name">{{ displayName(net) }}</span>
 						<span class="saved-network-detail">
-							{{ net.host }}:{{ net.port }} · {{ net.nick }}
+							<template v-if="!hostLocked">{{ net.host }}:{{ net.port }} · </template
+							>{{ net.nick }}
 							<template v-if="net.autoconnect"> · auto</template>
 						</span>
 					</button>
@@ -48,8 +56,14 @@
 				</li>
 			</ul>
 
-			<h2>Server</h2>
-			<div class="connect-row">
+			<h2 v-if="!hostLocked">Server</h2>
+			<div v-if="hostLocked" class="connect-row connect-network">
+				<label>Network</label>
+				<div class="input-wrap">
+					<strong>{{ networkLabel }}</strong>
+				</div>
+			</div>
+			<div v-if="!hostLocked" class="connect-row">
 				<label for="connect:host">Server</label>
 				<div class="input-wrap">
 					<input
@@ -76,7 +90,7 @@
 					/>
 				</div>
 			</div>
-			<div class="connect-row">
+			<div v-if="!hostLocked" class="connect-row">
 				<label></label>
 				<div class="input-wrap">
 					<label class="tls">
@@ -152,7 +166,7 @@
 						/>
 					</RevealPassword>
 				</div>
-				<div class="connect-row">
+				<div v-if="showSavedNetworks" class="connect-row">
 					<label></label>
 					<div class="input-wrap">
 						<label class="tls">
@@ -167,7 +181,7 @@
 				</div>
 			</template>
 
-			<div class="connect-row">
+			<div v-if="showSavedNetworks" class="connect-row">
 				<label></label>
 				<div class="input-wrap">
 					<label class="tls">
@@ -185,7 +199,7 @@
 			</div>
 
 			<div>
-				<button type="submit" class="btn">Connect</button>
+				<button type="submit" class="btn">{{ t("connect.submit") }}</button>
 			</div>
 		</form>
 	</div>
@@ -262,12 +276,17 @@
 	letter-spacing: 0;
 	word-spacing: 0;
 }
+
+#connect .connect-network .input-wrap {
+	padding: 6px 0;
+}
 </style>
 
 <script lang="ts">
 import {defineComponent, onMounted, reactive, ref, watch} from "vue";
 
 import {useStore} from "../../js/store";
+import {brandingFeatures, brandingString, expandNick} from "../../js/branding";
 import {autoconnectSavedNetworks, clientForNetwork, createNetwork} from "../../js/irc/manager";
 import * as saved from "../../js/irc/saved-networks";
 import {defaultPort, displayName, SavedNetwork} from "../../js/irc/saved-networks";
@@ -300,20 +319,44 @@ export default defineComponent({
 	},
 	setup(props) {
 		const store = useStore();
+		// Branding is loaded before the app renders, so a snapshot is enough.
+		const branding = store.state.branding;
+		const features = brandingFeatures(branding);
+		const network = branding.defaultNetwork;
 		const defaults = store.state.serverConfiguration?.defaults;
+		const t = (key: string) => brandingString(key, branding);
 
-		const tls = defaults?.tls ?? true;
-		const form = reactive<ConnectOptions>({
-			host: defaults?.host || "",
-			// 6697 is TheLounge's plain-IRC default; not meaningful over WebSocket.
-			port: defaults?.port && defaults.port !== 6697 ? defaults.port : defaultPort(tls),
+		const tls = network?.tls ?? defaults?.tls ?? true;
+		// The server the deploy points at. Pinned when the host is locked.
+		const server = {
+			host: network?.host || defaults?.host || "",
+			port:
+				network?.port ??
+				// 6697 is TheLounge's plain-IRC default; not meaningful over WebSocket.
+				(defaults?.port && defaults.port !== 6697 ? defaults.port : defaultPort(tls)),
 			tls,
-			nick: defaults?.nick || "",
-			join: defaults?.join || "",
+		};
+		const form = reactive<ConnectOptions>({
+			...server,
+			nick: network?.nick ? expandNick(network.nick) : defaults?.nick || "",
+			join: network?.channels?.join(", ") || defaults?.join || "",
 			sasl: defaults?.sasl === "plain" ? "plain" : "",
 			saslAccount: defaults?.saslAccount || "",
 			saslPassword: defaults?.saslPassword || "",
 		});
+
+		// `lockHost` hides the server fields; `allowCustomServer: false` does the
+		// same and additionally ignores any other host from saved networks or
+		// URL parameters.
+		const hostLocked = !!network && (network.lockHost === true || !features.allowCustomServer);
+		const networkLabel = network?.name || server.host;
+		const showSavedNetworks = features.saveNetworks;
+
+		const pinServer = () => {
+			if (hostLocked) {
+				Object.assign(form, server);
+			}
+		};
 
 		const showSasl = ref(false);
 		const rememberPassword = ref(false);
@@ -343,6 +386,7 @@ export default defineComponent({
 			autoconnect.value = !!net.autoconnect;
 			selectedUuid.value = net.uuid;
 			notice.value = "";
+			pinServer();
 		};
 
 		const hasConnectParams = CONNECT_PARAMS.some(
@@ -351,9 +395,10 @@ export default defineComponent({
 
 		if (hasConnectParams) {
 			applyQueryParams(form, props.queryParams);
+			pinServer();
 			showSasl.value = form.sasl === "plain" || !!form.saslAccount;
 		} else {
-			const last = saved.lastUsed();
+			const last = showSavedNetworks ? saved.lastUsed() : undefined;
 
 			if (last) {
 				prefill(last);
@@ -430,6 +475,10 @@ export default defineComponent({
 
 		return {
 			form,
+			t,
+			hostLocked,
+			networkLabel,
+			showSavedNetworks,
 			showSasl,
 			rememberPassword,
 			autoconnect,

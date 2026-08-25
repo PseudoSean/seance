@@ -2,9 +2,10 @@
 //
 // TheLounge received this object from its Node server on every connection
 // (`configuration` socket event). Seance has no such server, so the values
-// are baked in at build time. Anything that is genuinely per-deployment
-// (branding, default network) will move into a build-time config in a later
-// phase; for now this is the single place to change them.
+// are baked in at build time. Per-deployment values (app name, default
+// network, default theme) come from `config.json` instead — see
+// `client/js/branding.ts`; `boot.ts` folds `branding.theme` into
+// `defaultTheme` below before the store sees this object.
 
 import pkg from "../../package.json";
 import type {SharedConfiguration} from "../../shared/types/config";

@@ -7,7 +7,7 @@
 			<h1 class="title">Help</h1>
 
 			<h2 class="help-version-title">
-				<span>About The Lounge</span>
+				<span>{{ store.getters.brandingString("help.about") }} {{ appName }}</span>
 				<small>
 					v{{ store.state.serverConfiguration?.version }} (<router-link
 						id="view-changelog"
@@ -20,7 +20,7 @@
 			<div class="about">
 				<template v-if="store.state.serverConfiguration?.gitCommit">
 					<p>
-						The Lounge is running from source (<a
+						{{ appName }} is running from source (<a
 							:href="`https://github.com/thelounge/thelounge/tree/${store.state.serverConfiguration?.gitCommit}`"
 							target="_blank"
 							rel="noopener"
@@ -56,23 +56,24 @@
 					</ul>
 				</template>
 
-				<p>
-					<a
-						href="https://thelounge.chat/"
-						target="_blank"
-						rel="noopener"
-						class="website-link"
-						>Website</a
-					>
+				<p v-if="links.website">
+					<a :href="links.website" target="_blank" rel="noopener" class="website-link">{{
+						store.getters.brandingString("help.website")
+					}}</a>
 				</p>
-				<p>
+				<p v-if="links.help">
 					<a
-						href="https://thelounge.chat/docs/"
+						:href="links.help"
 						target="_blank"
 						rel="noopener"
 						class="documentation-link"
-						>Documentation</a
+						>{{ store.getters.brandingString("help.documentation") }}</a
 					>
+				</p>
+				<p v-if="links.privacy">
+					<a :href="links.privacy" target="_blank" rel="noopener" class="privacy-link">{{
+						store.getters.brandingString("help.privacy")
+					}}</a>
 				</p>
 				<p>
 					<a
@@ -638,7 +639,7 @@
 				</div>
 				<div class="description">
 					<p>
-						Send an action message to the current channel. The Lounge will display it
+						Send an action message to the current channel. {{ appName }} will display it
 						inline, as if the message was posted in the third person.
 					</p>
 				</div>
@@ -860,7 +861,7 @@
 </template>
 
 <script lang="ts">
-import {defineComponent, ref} from "vue";
+import {computed, defineComponent, ref} from "vue";
 import {useStore} from "../../js/store";
 import SidebarToggle from "../SidebarToggle.vue";
 
@@ -873,10 +874,14 @@ export default defineComponent({
 		const store = useStore();
 		const isApple = navigator.platform.match(/(Mac|iPhone|iPod|iPad)/i) || false;
 		const isTouch = navigator.maxTouchPoints > 0;
+		const appName = computed(() => store.state.branding.appName);
+		const links = computed(() => store.state.branding.links ?? {});
 
 		return {
+			appName,
 			isApple,
 			isTouch,
+			links,
 			store,
 		};
 	},
