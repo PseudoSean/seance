@@ -10,6 +10,12 @@
 export class IdAllocator {
 	private nextChan: number;
 	private nextMsg: number;
+	/**
+	 * Upper bound (exclusive) of the next history block; see {@link historyIds}.
+	 * Starts at -1 so that -1 itself is never handed out: the UI sends
+	 * `more.lastId = -1` to mean "no messages shown".
+	 */
+	private nextHistory = -1;
 
 	constructor(firstChanId = 1, firstMsgId = 1) {
 		this.nextChan = firstChanId;
@@ -23,6 +29,25 @@ export class IdAllocator {
 
 	msgId(): number {
 		return this.nextMsg++;
+	}
+
+	/**
+	 * Ids for `count` history messages that are prepended in front of what
+	 * the channel already shows: an ascending block, every id of which is
+	 * below every id handed out before (live ids are positive, history ids
+	 * negative). Assign them oldest-first, so ids keep increasing with time
+	 * and the unread marker / `more` cursor keep working.
+	 */
+	historyIds(count: number): number[] {
+		const ids: number[] = [];
+		const end = this.nextHistory;
+		this.nextHistory -= count;
+
+		for (let id = this.nextHistory; id < end; id++) {
+			ids.push(id);
+		}
+
+		return ids;
 	}
 }
 

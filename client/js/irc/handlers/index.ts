@@ -9,10 +9,11 @@
  */
 
 import {MessageType} from "../../../../shared/types/msg";
+import history, {chathistoryBatch} from "../history";
 import type {Handler} from "../types";
 import account from "./account";
 import away from "./away";
-import batch from "./batch";
+import batch, {registerBatchHandler} from "./batch";
 import cap from "./cap";
 import chghost from "./chghost";
 import error from "./error";
@@ -28,6 +29,7 @@ import numerics, {numericError} from "./numerics";
 import part from "./part";
 import privmsg from "./privmsg";
 import quit from "./quit";
+import sasl from "./sasl";
 import standardReplies from "./standard-replies";
 import topic from "./topic";
 import whois from "./whois";
@@ -39,6 +41,7 @@ const modules: Record<string, Handler>[] = [
 	cap,
 	chghost,
 	error,
+	history,
 	invite,
 	join,
 	kick,
@@ -51,12 +54,16 @@ const modules: Record<string, Handler>[] = [
 	part,
 	privmsg,
 	quit,
+	sasl,
 	standardReplies,
 	topic,
 	whois,
 ];
 
 export const handlers = new Map<string, Handler>();
+
+// Batch types delivered as a unit (everything else is unwrapped in order).
+registerBatchHandler("chathistory", chathistoryBatch);
 
 for (const mod of modules) {
 	for (const [command, handler] of Object.entries(mod)) {

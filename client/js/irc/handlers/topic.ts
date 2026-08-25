@@ -21,6 +21,11 @@ const topicChange: Handler = (client, msg) => {
 		text: topic,
 		self: client.isSelf(nick),
 	});
+
+	if (client.replaying) {
+		return; // history: the current topic came from 332
+	}
+
 	chan.shared.topic = topic;
 	client.dispatch("topic", {chan: chan.id, topic});
 };

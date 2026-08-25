@@ -31,9 +31,15 @@ export type ConnectOptions = {
 	nick: string;
 	/** Comma-separated channel list, optionally with keys (`#a key, #b`). */
 	join: string;
-	sasl: "" | "plain";
+	/** `external` is a stub: browsers cannot present client certificates over WebSocket. */
+	sasl: "" | "plain" | "external";
 	saslAccount: string;
 	saslPassword: string;
+	/**
+	 * Drop the connection when SASL fails instead of carrying on unauthenticated
+	 * (irc-framework's `sasl_disconnect_on_fail`; the old server left it off).
+	 */
+	saslDisconnectOnFail?: boolean;
 };
 
 /** Connection state as seen by the rest of the app. */

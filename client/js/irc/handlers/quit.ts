@@ -15,6 +15,23 @@ const quit: Handler = (client, msg) => {
 
 	const time = client.timeOf(msg);
 
+	if (client.replaying) {
+		// History (draft/event-playback): the batch's channel, no user-list change.
+		const chan = client.replayTarget;
+
+		if (chan) {
+			client.pushMessage(chan, {
+				type: MessageType.QUIT,
+				time,
+				from: chan.userRef(nick),
+				hostmask: `${msg.source?.user ?? ""}@${msg.source?.host ?? ""}`,
+				text: reason,
+			});
+		}
+
+		return;
+	}
+
 	for (const chan of client.channels) {
 		if (!chan.findUser(nick)) {
 			continue;

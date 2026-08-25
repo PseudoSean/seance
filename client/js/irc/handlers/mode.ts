@@ -116,6 +116,10 @@ const mode: Handler = (client, msg) => {
 		self,
 	});
 
+	if (client.replaying) {
+		return; // history: current modes came from 324 / NAMES
+	}
+
 	if (applyChanges(client, chan, parseChannelModes(client, modes, params))) {
 		client.usersChanged(chan);
 	}

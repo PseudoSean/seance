@@ -125,12 +125,12 @@ Goal: connect to nefarious2, join one channel, send and receive messages, see jo
 
 No fixed order. Tackle items in whatever sequence the friction dictates.
 
-1. [ ] **SASL**
-   - [ ] a. PLAIN (account + password) wired into CAP negotiation between `CAP REQ` and `CAP END`. Handle `AUTHENTICATE +`, base64 framing, success (903) / failure (904/905).
-   - [ ] b. EXTERNAL (for client cert / OAUTHBEARER flows) — leave as a stub until needed.
-2. [ ] **History (`more`)**
-   - [ ] a. Replace the existing `more` bus event consumer with a `CHATHISTORY BEFORE`/`BETWEEN` request and `batch` reassembly.
-   - [ ] b. Track `moreHistoryAvailable` from batch length.
+1. [x] **SASL**
+   - [x] a. PLAIN (account + password) wired into CAP negotiation _Done 2026-08-25: `client/js/irc/sasl.ts` state machine + `handlers/sasl.ts`; failure continues registration unless `disconnectOnSaslFail`._ between `CAP REQ` and `CAP END`. Handle `AUTHENTICATE +`, base64 framing, success (903) / failure (904/905).
+   - [x] b. EXTERNAL (for client cert / OAUTHBEARER flows) — leave as a stub until needed. _Stub present._
+2. [x] **History (`more`)**
+   - [x] a. Replace the existing `more` bus event consumer _Done: `client/js/irc/history.ts`; LATEST on first join, BEFORE on `more`, AFTER on re-join; batches in `handlers/batch.ts`; history ids are a negative block below live ids._ with a `CHATHISTORY BEFORE`/`BETWEEN` request and `batch` reassembly.
+   - [x] b. Track `moreHistoryAvailable` from batch length. _Full page ⇒ total+1, short page ⇒ total; 15 s timeout keeps the button._
 3. [x] **Remaining input commands** — port `/ban`, `/kick`, `/whois`, `/list`, `/mode`, `/notice`, `/ctcp`, `/away`, `/back`, `/invite`, `/kill`, `/rejoin`. `/ignore`/`/ignorelist`/`/mute` become localStorage-backed. `/connect`/`/disconnect` will need phase D.5 (saved networks). _Done 2026-08-25: all listed commands plus `/kickban /umode /op..devoice /server /cycle /invitelist`; WHOIS and LIST result handlers; ignore list in localStorage with hostmask matching. 46 tests._
 4. [x] **Channel info numerics**
    - [x] a. Ban list (367/368), invite exception list (346/347), ban exception list (348/349) into the existing special-channel UI. _Done 2026-08-24: `handlers/lists.ts`; +e lists reuse the BANLIST special view (no EXCEPTLIST enum/component yet — small follow-up). 14 tests._
@@ -139,7 +139,7 @@ No fixed order. Tackle items in whatever sequence the friction dictates.
    - [x] b. `Windows/NetworkEdit.vue` reads/writes this store _Done; unsupported fields dropped from the form._. `network:get`/`network:edit`/`network:new` route through localStorage.
    - [x] c. Multi-network: one `IrcClient` per network _Registry already handled it; covered by `test/irc/multi-network.ts`. Open: the `connecting` banner is global._, a `NetworkManager` aggregator dispatching by network UUID. Defer the UI side of "switch which network is active" until you actually need it.
 6. [ ] **STS** — cache STS policy per host in localStorage; upgrade `ws://` to `wss://` when policy says so.
-7. [ ] **`event-playback` / read markers** — when nefarious2 supports them, use them for reconnect catch-up and unread tracking. Update `firstUnread` from MARKREAD on init.
+7. [ ] **`event-playback` / read markers** _(event-playback lines render as JOIN/PART/QUIT/NICK/TOPIC/MODE/KICK without side effects — done with D.2; MARKREAD/read markers still open.)_ — when nefarious2 supports them, use them for reconnect catch-up and unread tracking. Update `firstUnread` from MARKREAD on init.
 8. [x] **Search** — decide between: drop, in-memory search of loaded messages, or a small optional preview/search service URL configurable per deploy. _Decided + done 2026-08-24: in-memory over loaded messages (`client/js/search.ts`), reached via the header magnifier and `/search`; extend with a CHATHISTORY provider later. 17 tests._
 9. [x] **Link previews** — decide between: drop, client-side `<img>`/`<video>` only for direct media URLs (no metadata fetch), or optional external service URL. _Decided + done 2026-08-24: client-side direct media only (`client/js/helpers/mediaPreview.ts`, https-only, ≤5/msg), `msg:preview` handler deleted, `ExternalPreviewResolver` hook left for a deploy-time service. 18 tests._
 10. [x] **Highlight keywords** — port the regex builder from `attic/server/client.ts` into `client/js/highlight.ts`. The settings UI already exists. _Done 2026-08-24: `isHighlight(text, nick, keywords, exceptions?)`, exceptions folded into the regex, IRC formatting stripped first; 28 tests._

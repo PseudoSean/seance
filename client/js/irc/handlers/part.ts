@@ -15,7 +15,7 @@ const part: Handler = (client, msg) => {
 		return;
 	}
 
-	if (client.isSelf(nick)) {
+	if (client.isSelf(nick) && !client.replaying) {
 		chan.autoJoin = false;
 		client.removeChannel(chan);
 		return;
@@ -27,8 +27,12 @@ const part: Handler = (client, msg) => {
 		from: chan.userRef(nick),
 		hostmask: `${msg.source?.user ?? ""}@${msg.source?.host ?? ""}`,
 		text: reason,
+		self: client.isSelf(nick),
 	});
-	chan.removeUser(nick);
+
+	if (!client.replaying) {
+		chan.removeUser(nick);
+	}
 };
 
 export default {PART: part};

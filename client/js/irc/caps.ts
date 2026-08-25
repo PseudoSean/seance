@@ -13,8 +13,9 @@
  *   4. keep calling `handle()` after registration for `CAP NEW` / `CAP DEL`
  *      (`cap-notify`); it may emit further `CAP REQ`s.
  *
- * Phase D (SASL) will run between the ACK and `CAP END` via {@link
- * CapNegotiator.beforeEnd}; that hook is declared but not yet consulted.
+ * SASL runs between the ACK and `CAP END` via {@link CapNegotiator.beforeEnd}:
+ * when that hook returns lines, they are sent instead of `CAP END` and the
+ * caller finishes later with {@link CapNegotiator.end}.
  */
 
 import {IrcMessage, MAX_LINE_BYTES, splitMessage} from "./message";
@@ -24,6 +25,11 @@ export interface CapNegotiatorOptions {
 	required: string[];
 	/** Caps to request if the server offers them. */
 	wanted: string[];
+	/**
+	 * Veto a wanted cap based on its CAP 302 value (e.g. only request `sasl`
+	 * when the mechanism list includes PLAIN). Absent = request everything.
+	 */
+	accept?: (name: string, value: string) => boolean;
 }
 
 export interface CapResult {
@@ -68,11 +74,12 @@ export const SEANCE_CAPS: CapNegotiatorOptions = {
 };
 
 /**
- * Caps that are never put in a `CAP REQ`: `sasl` is driven separately by the
- * SASL flow, `tls` (STARTTLS) is meaningless over a WebSocket and `sts` is
- * informational only.
+ * Caps that are never put in a `CAP REQ`: `tls` (STARTTLS) is meaningless
+ * over a WebSocket and `sts` is informational only. `sasl` is absent from
+ * {@link SEANCE_CAPS} and only added to `wanted` by the client when the user
+ * configured an account (see client.ts).
  */
-const NEVER_REQUEST: ReadonlySet<string> = new Set(["sasl", "tls", "sts"]);
+const NEVER_REQUEST: ReadonlySet<string> = new Set(["tls", "sts"]);
 
 const REQ_PREFIX = "CAP REQ :";
 
@@ -104,24 +111,40 @@ export class CapNegotiator {
 	readonly enabled = new Set<string>();
 
 	/**
-	 * Reserved for phase D: called once all REQs are answered and before
-	 * `CAP END` is emitted, returning lines to send first (e.g. the SASL
-	 * exchange). Not consulted yet.
+	 * Called once all REQs are answered, before `CAP END`. Lines it returns
+	 * (e.g. `AUTHENTICATE PLAIN`) are sent instead of `CAP END`, and the
+	 * caller must call {@link end} when that exchange completes. Returning
+	 * `[]` ends negotiation immediately.
 	 */
-	beforeEnd?: () => string[] | Promise<string[]>;
+	beforeEnd?: () => string[];
 
 	private readonly required: string[];
 	private readonly wanted: string[];
+	private readonly accept?: (name: string, value: string) => boolean;
 	/** Caps in flight in a `CAP REQ` that have not been ACKed/NAKed. */
 	private readonly outstanding = new Set<string>();
 	private lsComplete = false;
 	private ended = false;
+	/** `beforeEnd` took over; waiting for `end()`. */
+	private pendingEnd = false;
 	/** Set when a required cap is missing at LS time; negotiation halts. */
 	private failed = false;
 
 	constructor(options: CapNegotiatorOptions) {
 		this.required = [...options.required];
 		this.wanted = [...options.wanted];
+		this.accept = options.accept;
+	}
+
+	/** Finish a negotiation `beforeEnd` deferred: the `CAP END` line, or nothing if already sent. */
+	end(): string[] {
+		if (this.ended) {
+			return [];
+		}
+
+		this.ended = true;
+		this.pendingEnd = false;
+		return ["CAP END"];
 	}
 
 	/** True once `CAP END` has been emitted. */
@@ -282,12 +305,15 @@ export class CapNegotiator {
 		const names: string[] = [];
 
 		for (const name of [...this.required, ...this.wanted]) {
+			const value = this.available.get(name);
+
 			if (
-				this.available.has(name) &&
+				value !== undefined &&
 				!NEVER_REQUEST.has(name) &&
 				!this.enabled.has(name) &&
 				!this.outstanding.has(name) &&
-				!names.includes(name)
+				!names.includes(name) &&
+				(this.accept === undefined || this.accept(name, value))
 			) {
 				names.push(name);
 			}
@@ -312,7 +338,21 @@ export class CapNegotiator {
 	}
 
 	private maybeEnd(result: CapResult): void {
-		if (this.ended || this.failed || !this.lsComplete || this.outstanding.size > 0) {
+		if (
+			this.ended ||
+			this.pendingEnd ||
+			this.failed ||
+			!this.lsComplete ||
+			this.outstanding.size > 0
+		) {
+			return;
+		}
+
+		const first = this.beforeEnd?.() ?? [];
+
+		if (first.length > 0) {
+			this.pendingEnd = true;
+			result.send.push(...first);
 			return;
 		}
 

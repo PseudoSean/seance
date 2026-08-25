@@ -7,6 +7,7 @@
 
 import type {EventBus} from "../socket";
 import type {IrcClient} from "./client";
+import {requestMore} from "./history";
 import * as saved from "./saved-networks";
 import type {ConnectOptions} from "./types";
 
@@ -74,9 +75,17 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 		}
 	});
 
-	bus.handle("more", ({target}) => {
-		// No history yet: always answer, or the channel stays in `historyLoading`.
-		const chan = registry.clientForChannel(target)?.channelById(target);
+	bus.handle("more", ({target, lastId}) => {
+		const client = registry.clientForChannel(target);
+		const chan = client?.channelById(target);
+
+		// With draft/chathistory the reply follows when the batch closes (or
+		// on FAIL / timeout, history.ts). Otherwise answer now, or the channel
+		// stays in `historyLoading`.
+		if (client && chan && requestMore(client, chan, lastId)) {
+			return;
+		}
+
 		bus.dispatch("more", {
 			chan: target,
 			messages: [],

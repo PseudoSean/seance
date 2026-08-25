@@ -6,8 +6,14 @@
 import {ChanState, ChanType} from "../../../../shared/types/chan";
 import {MessageType, SharedMsg} from "../../../../shared/types/msg";
 import {newUser} from "../channel";
-import {formatLine} from "../message";
+import {formatLine, IrcMessage} from "../message";
 import type {Handler} from "../types";
+
+/** `{msgid}` when the line carries one (history dedupe / catch-up reference). */
+function msgidOf(msg: IrcMessage): {msgid?: string} {
+	const msgid = msg.tags.get("msgid");
+	return msgid ? {msgid} : {};
+}
 
 const join: Handler = (client, msg) => {
 	const [name, account, gecos] = msg.params;
@@ -19,6 +25,24 @@ const join: Handler = (client, msg) => {
 
 	const self = client.isSelf(nick);
 	let chan = client.findChannel(name);
+
+	if (client.replaying) {
+		// History (draft/event-playback): a message only, no state changes.
+		chan = chan ?? client.replayTarget;
+
+		if (chan) {
+			client.pushMessage(chan, {
+				type: MessageType.JOIN,
+				time: client.timeOf(msg),
+				from: chan.userRef(nick),
+				hostmask: `${msg.source?.user ?? ""}@${msg.source?.host ?? ""}`,
+				self,
+				...msgidOf(msg),
+			});
+		}
+
+		return;
+	}
 
 	if (!chan) {
 		if (!self) {
@@ -44,6 +68,7 @@ const join: Handler = (client, msg) => {
 		from: chan.userRef(nick),
 		hostmask: `${msg.source?.user ?? ""}@${msg.source?.host ?? ""}`,
 		self,
+		...msgidOf(msg),
 	};
 
 	if (account && account !== "*") {

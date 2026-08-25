@@ -13,12 +13,28 @@ const nick: Handler = (client, msg) => {
 		return;
 	}
 
+	const time = client.timeOf(msg);
+
+	if (client.replaying) {
+		// History (draft/event-playback): the batch's channel, no renames.
+		const chan = client.replayTarget;
+
+		if (chan) {
+			client.pushMessage(chan, {
+				type: MessageType.NICK,
+				time,
+				from: chan.userRef(oldNick),
+				new_nick: newNick,
+			});
+		}
+
+		return;
+	}
+
 	if (client.isSelf(oldNick)) {
 		client.setNick(newNick);
 		client.pushMessage(client.lobby, {text: `You're now known as ${newNick}`}, true);
 	}
-
-	const time = client.timeOf(msg);
 
 	for (const chan of client.channels) {
 		const user = chan.findUser(oldNick);

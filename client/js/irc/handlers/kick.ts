@@ -27,6 +27,10 @@ const kick: Handler = (client, msg) => {
 		self: client.isSelf(kicker),
 	});
 
+	if (client.replaying) {
+		return; // history: no state changes
+	}
+
 	if (kickedSelf) {
 		chan.users.clear();
 		chan.state = ChanState.PARTED;

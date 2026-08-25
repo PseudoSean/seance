@@ -79,6 +79,8 @@ function handleMessage(client: IrcClient, msg: IrcMessage, baseType: MessageType
 		if (ctcp.command === "ACTION" && baseType === MessageType.MESSAGE) {
 			type = MessageType.ACTION;
 			text = ctcp.arg;
+		} else if (client.replaying) {
+			return; // a historical CTCP request/reply: nothing to answer or show
 		} else if (baseType === MessageType.NOTICE) {
 			handleCtcpResponse(client, nick, ctcp, time);
 			return;
@@ -91,7 +93,14 @@ function handleMessage(client: IrcClient, msg: IrcMessage, baseType: MessageType
 	let chan: Channel | undefined;
 	let showInActive = false;
 
-	if (fromServer) {
+	if (client.replaying) {
+		// History replay: everything in the batch belongs to its target.
+		chan = client.replayTarget;
+
+		if (!chan) {
+			return;
+		}
+	} else if (fromServer) {
 		nick = nick || client.options.host;
 		chan = client.findChannel(target);
 
@@ -123,7 +132,7 @@ function handleMessage(client: IrcClient, msg: IrcMessage, baseType: MessageType
 	} else if (chan.type === ChanType.CHANNEL) {
 		const user = chan.findUser(nick);
 
-		if (user) {
+		if (user && !client.replaying) {
 			user.lastMessage = time.getTime();
 		}
 	}

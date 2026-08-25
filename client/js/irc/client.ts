@@ -21,12 +21,15 @@ import {MessageType, SharedMsg} from "../../../shared/types/msg";
 import type {SharedNetwork, SharedServerOptions} from "../../../shared/types/network";
 import {CapNegotiator, SEANCE_CAPS} from "./caps";
 import {casefold, namesEqual} from "./casemap";
-import {Channel} from "./channel";
+import {Channel, MsgRef} from "./channel";
 import {commandNames, dispatchInput} from "./commands";
 import {handlers, unhandled} from "./handlers";
+import {interceptBatchLine, resetBatches} from "./handlers/batch";
+import {abortHistory, requestChannelHistory} from "./history";
 import {IdAllocator, sharedIds} from "./ids";
 import {ISupport} from "./isupport";
 import {formatLine, IrcMessage, parseLine, splitMessage, utf8ByteLength} from "./message";
+import {mechanismOffered, SASL_TIMEOUT_MS, SaslAuth, SaslMechanism, SaslResult} from "./sasl";
 import {ReconnectOptions, TransportEvent, TransportOptions, WsTransport} from "./transport";
 import type {ConnectOptions, IrcClientState, Transport} from "./types";
 import {trailingLine} from "./wire";
@@ -34,6 +37,12 @@ import {trailingLine} from "./wire";
 export interface HighlightKeywords {
 	keywords: string[];
 	exceptions: string[];
+}
+
+/** A message produced while replaying history (see {@link IrcClient.collectReplay}). */
+export interface ReplayedMessage {
+	chan: Channel;
+	msg: SharedMsg;
 }
 
 export interface IrcClientOptions extends ConnectOptions {
@@ -82,7 +91,12 @@ export class IrcClient {
 	host = "";
 	/** MOTD lines being collected between 375 and 376. */
 	motdBuffer: string[] | null = null;
+	/** The SASL exchange in progress during registration, if any. */
+	sasl: SaslAuth | null = null;
+	/** Services account we are logged in as (900/901); "" when not. */
+	account = "";
 
+	private saslTimer: ReturnType<typeof setTimeout> | null = null;
 	private readonly bus: Pick<EventBus, "dispatch">;
 	private readonly ids: IdAllocator;
 	private readonly url: string;
@@ -92,6 +106,8 @@ export class IrcClient {
 	private announced = false;
 	private quitting = false;
 	private activeChanId = 0;
+	/** Set while a history batch is replayed through the handlers (see `collectReplay`). */
+	private replayContext: {target: Channel; collected: ReplayedMessage[]} | null = null;
 
 	constructor(options: IrcClientOptions) {
 		const host = options.host.trim();
@@ -282,10 +298,12 @@ export class IrcClient {
 	private onOpen(): void {
 		this._state = "registering";
 		this.connected = false;
-		this.caps = new CapNegotiator(SEANCE_CAPS);
+		this.caps = this.createCaps();
 		this.isupport.reset();
 		this.motdBuffer = null;
 		this.host = "";
+		this.account = "";
+		this.endSasl();
 
 		for (const line of this.caps.start()) {
 			this.send(line);
@@ -295,10 +313,120 @@ export class IrcClient {
 		this.send(trailingLine("USER", [this.ident, "0", "*", this.options.realname || this.nick]));
 	}
 
+	// ------------------------------------------------------------------ SASL
+
+	/** The mechanism the user configured, or null for none. */
+	private get saslMechanism(): SaslMechanism | null {
+		switch (this.options.sasl) {
+			case "plain":
+				return this.options.saslAccount && this.options.saslPassword ? "PLAIN" : null;
+			case "external":
+				return "EXTERNAL";
+			default:
+				return null;
+		}
+	}
+
+	/** A negotiator that also asks for `sasl` (when usable) and runs SASL before `CAP END`. */
+	private createCaps(): CapNegotiator {
+		const mechanism = this.saslMechanism;
+
+		if (!mechanism) {
+			return new CapNegotiator(SEANCE_CAPS);
+		}
+
+		const caps = new CapNegotiator({
+			...SEANCE_CAPS,
+			wanted: [...SEANCE_CAPS.wanted, "sasl"],
+			accept: (name, value) => name !== "sasl" || mechanismOffered(mechanism, value),
+		});
+		caps.beforeEnd = () => this.startSasl(mechanism);
+		return caps;
+	}
+
+	/** `beforeEnd` hook: open the exchange if the server enabled `sasl`, else nothing. */
+	private startSasl(mechanism: SaslMechanism): string[] {
+		if (!this.caps.hasCapability("sasl")) {
+			return [];
+		}
+
+		this.sasl = new SaslAuth(mechanism, {
+			account: this.options.saslAccount,
+			password: this.options.saslPassword,
+		});
+		this.armSaslTimer();
+		return this.sasl.start();
+	}
+
+	/** Apply what the state machine returned for one inbound line (called by handlers/sasl.ts). */
+	saslProgress(result: SaslResult): void {
+		for (const line of result.send) {
+			this.send(line);
+		}
+
+		if (result.info) {
+			this.pushMessage(this.lobby, {text: result.info}, true);
+		}
+
+		if (!result.done) {
+			this.armSaslTimer();
+			return;
+		}
+
+		this.endSasl();
+
+		if (!result.ok) {
+			this.pushMessage(
+				this.lobby,
+				{
+					type: MessageType.ERROR,
+					text: `SASL authentication failed: ${result.error ?? "unknown error"}`,
+				},
+				true
+			);
+
+			if (this.options.saslDisconnectOnFail) {
+				this.disconnect("SASL authentication failed");
+				return;
+			}
+		}
+
+		for (const line of this.caps.end()) {
+			this.send(line);
+		}
+	}
+
+	private armSaslTimer(): void {
+		this.clearSaslTimer();
+		this.saslTimer = setTimeout(() => {
+			this.saslTimer = null;
+
+			if (this.sasl && !this.sasl.done) {
+				this.saslProgress(this.sasl.abort("timed out waiting for the server"));
+			}
+		}, SASL_TIMEOUT_MS);
+	}
+
+	private clearSaslTimer(): void {
+		if (this.saslTimer !== null) {
+			clearTimeout(this.saslTimer);
+			this.saslTimer = null;
+		}
+	}
+
+	private endSasl(): void {
+		this.clearSaslTimer();
+		this.sasl = null;
+	}
+
 	private onClose(code: number, reason: string, willReconnect: boolean): void {
 		const wasUp = this._state !== "disconnected";
 		this._state = "disconnected";
 		this.connected = false;
+		this.endSasl();
+
+		resetBatches(this);
+		abortHistory(this);
 
 		for (const chan of this.channels) {
 			chan.users.clear();
@@ -471,6 +599,14 @@ export class IrcClient {
 			return; // the transport answers PING itself
 		}
 
+		this.handleMessage(msg);
+	}
+
+	/**
+	 * Route one parsed message: batch buffering first, then the handler for
+	 * its command. Also the entry point for replaying buffered batch lines.
+	 */
+	handleMessage(msg: IrcMessage): void {
 		// Learn our own ident@host from anything the server attributes to us.
 		if (msg.source?.user !== undefined && this.isSelf(msg.source.name)) {
 			this.ident = msg.source.user;
@@ -480,13 +616,37 @@ export class IrcClient {
 			}
 		}
 
+		if (interceptBatchLine(this, msg)) {
+			return;
+		}
+
+		// Our own JOIN (live, not replayed) is what triggers a history load;
+		// the reference for a catch-up is the newest message before the JOIN.
+		const selfJoin =
+			msg.command === "JOIN" &&
+			!this.replayContext &&
+			msg.source !== undefined &&
+			this.isSelf(msg.source.name);
+		const joinName = selfJoin ? msg.params[0] ?? "" : "";
+		const beforeJoin: MsgRef | undefined = selfJoin
+			? this.findChannel(joinName)?.newestRef
+			: undefined;
+
 		const handler = handlers.get(msg.command) ?? unhandled;
 
 		try {
 			handler(this, msg);
 		} catch (err: unknown) {
 			// eslint-disable-next-line no-console
-			console.error(`[irc] handler for ${msg.command} failed on: ${line}`, err);
+			console.error(`[irc] handler for ${msg.command} failed on: ${msg.raw}`, err);
+		}
+
+		if (selfJoin) {
+			const chan = this.findChannel(joinName);
+
+			if (chan) {
+				requestChannelHistory(this, chan, beforeJoin);
+			}
 		}
 	}
 
@@ -636,9 +796,18 @@ export class IrcClient {
 		const msg: SharedMsg = {
 			users: [],
 			...partial,
-			id: this.ids.msgId(),
+			id: 0,
 			time: partial.time ?? new Date(),
 		};
+
+		if (this.replayContext) {
+			// History replay: collect, the caller allocates ids and delivers.
+			this.replayContext.collected.push({chan, msg});
+			return msg;
+		}
+
+		msg.id = this.ids.msgId();
+		chan.newestRef = chan.remember(msg);
 		const shared = chan.shared;
 		shared.totalMessages++;
 
@@ -667,6 +836,40 @@ export class IrcClient {
 			highlight: shared.highlight,
 		});
 		return msg;
+	}
+
+	/**
+	 * Run `fn` with every `pushMessage` collected instead of dispatched, and
+	 * handlers told (via {@link replaying}) to skip state side effects. Used
+	 * to turn a chathistory batch into messages (history.ts).
+	 */
+	collectReplay(target: Channel, fn: () => void): ReplayedMessage[] {
+		const previous = this.replayContext;
+		const context = {target, collected: [] as ReplayedMessage[]};
+		this.replayContext = context;
+
+		try {
+			fn();
+		} finally {
+			this.replayContext = previous;
+		}
+
+		return context.collected;
+	}
+
+	/** True inside {@link collectReplay}: handlers must not touch channel state. */
+	get replaying(): boolean {
+		return this.replayContext !== null;
+	}
+
+	/** The channel whose history is being replayed (for QUIT/NICK, which name none). */
+	get replayTarget(): Channel | undefined {
+		return this.replayContext?.target;
+	}
+
+	/** Ids for `count` older messages, below everything shown so far (see ids.ts). */
+	historyIds(count: number): number[] {
+		return this.ids.historyIds(count);
 	}
 
 	/** Tell the UI a channel's user list changed (it will ask `names`). */
