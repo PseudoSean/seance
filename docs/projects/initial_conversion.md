@@ -91,10 +91,10 @@ Goal: app builds and renders the connect form. Nothing actually connects to anyt
 Goal: connect to nefarious2, join one channel, send and receive messages, see joins/parts/quits/nicks/topics/names. Everything you'd expect from a basic IRC client. No SASL yet (unless trivial), no history, no multi-network UI.
 
 1. [ ] **`client/js/irc/` skeleton**
-   - [ ] a. `transport.ts` — open WebSocket, `send(line)`, `onLine(cb)`, reconnect with exponential backoff, surface open/close/error to the bus as `network:status` / `connecting` / `error`.
-   - [ ] b. `parser.ts` — wraps the chosen library; produces `IrcMessage { tags, prefix: {nick, ident, host}, command, params }`.
-   - [ ] c. `cap.ts` — CAP LS 302, REQ for the set decided in §0.1b, CAP END. Track enabled caps. No SASL hookup in v1.
-   - [ ] d. `isupport.ts` — parse RPL_ISUPPORT (005) into `serverOptions` (PREFIX, CHANTYPES, STATUSMSG, CASEMAPPING, NETWORK, CHANMODES).
+   - [x] a. `transport.ts` — open WebSocket _`client/js/irc/transport.ts`; PING/PONG inside; 500-byte guard (#98); live test `test/irc/transport.live.ts` gated on `SEANCE_IRC_URL`._, `send(line)`, `onLine(cb)`, reconnect with exponential backoff, surface open/close/error to the bus as `network:status` / `connecting` / `error`.
+   - [x] b. `parser.ts` — wraps the chosen library _Hand-rolled as `message.ts` (+ `casemap.ts`), per §0.2._; produces `IrcMessage { tags, prefix: {nick, ident, host}, command, params }`.
+   - [x] c. `cap.ts` — CAP LS 302 _`caps.ts`: pure negotiator, handles `*` continuation, NEW/DEL, `SEANCE_CAPS` list._, REQ for the set decided in §0.1b, CAP END. Track enabled caps. No SASL hookup in v1.
+   - [x] d. `isupport.ts` — parse RPL*ISUPPORT \_Accepts both `EXTBAN`/`EXTBANS`.* (005) into `serverOptions` (PREFIX, CHANTYPES, STATUSMSG, CASEMAPPING, NETWORK, CHANMODES).
    - [ ] e. `client.ts` — `IrcClient` orchestrating transport+parser+cap+state, emitting bus events.
 2. [ ] **Connection lifecycle**
    - [ ] a. Form submit → `IrcClient.connect({host, port, tls, nick, channels})`.

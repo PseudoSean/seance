@@ -1,0 +1,250 @@
+/**
+ * WsTransport — IRCv3-over-WebSocket line transport (nefarious2 `ircv3.2-upgrade`,
+ * see docs/resources/nefarious2-websocket.md). One IRC line per WebSocket message,
+ * no CRLF; inbound frames split defensively; IRC PING answered here; reconnect with
+ * capped exponential backoff + jitter. Nothing else is interpreted — parsing, CAP,
+ * ISUPPORT etc. live above this. Uses only the global `WebSocket` (browsers,
+ * Node >= 22); inject a constructor via `WebSocketImpl` for tests.
+ */
+
+export interface ReconnectOptions {
+	enabled: boolean;
+	initialDelayMs: number;
+	maxDelayMs: number;
+	factor: number;
+	jitter: boolean;
+}
+
+export interface TransportOptions {
+	url: string;
+	/** Offered `Sec-WebSocket-Protocol` list. Default `["text.ircv3.net"]`. */
+	subprotocols?: string[];
+	/** Default: enabled, 1 s → 60 s, ×2, with jitter. */
+	reconnect?: ReconnectOptions;
+	/**
+	 * Max UTF-8 bytes per outbound line. Default 500: IRC's own limit is 512 and
+	 * nefarious2 drops the connection on inbound frames >= 528 bytes (#98).
+	 */
+	maxLineBytes?: number;
+	/** WebSocket constructor to use instead of `globalThis.WebSocket`. */
+	WebSocketImpl?: typeof WebSocket;
+}
+
+export type TransportEvent =
+	| {type: "open"; subprotocol: string}
+	| {type: "line"; line: string}
+	| {
+			type: "close";
+			code: number;
+			reason: string;
+			wasClean: boolean;
+			willReconnect: boolean;
+			delayMs?: number;
+	  }
+	| {type: "error"; message: string}
+	| {type: "reconnecting"; attempt: number; delayMs: number};
+
+export type TransportState = "closed" | "connecting" | "open" | "reconnect-wait";
+const DEFAULTS = {
+	subprotocols: ["text.ircv3.net"],
+	reconnect: {enabled: true, initialDelayMs: 1000, maxDelayMs: 60_000, factor: 2, jitter: true},
+	maxLineBytes: 500,
+};
+const STABLE_CONNECTION_MS = 30_000; // open at least this long → backoff resets
+const MAX_ATTEMPTS = 100; // the attempt counter stops growing here
+const PING_RE = /^(?:@\S+ )?(?::\S+ )?PING(?: (.*))?$/i; // [tags] [prefix] PING [params]
+
+export class WsTransport {
+	private readonly opts: Required<Omit<TransportOptions, "WebSocketImpl">> &
+		Pick<TransportOptions, "WebSocketImpl">;
+	private readonly listeners = new Set<(ev: TransportEvent) => void>();
+	private readonly decoder = new TextDecoder();
+	private ws: WebSocket | null = null;
+	private _state: TransportState = "closed";
+	private attempt = 0;
+	private timer: ReturnType<typeof setTimeout> | null = null;
+	private closedByUs = false;
+	private openedAt = 0;
+
+	constructor(opts: TransportOptions) {
+		this.opts = {...DEFAULTS, ...opts};
+	}
+
+	get state(): TransportState {
+		return this._state;
+	}
+
+	/** Subscribe to transport events; returns the unsubscribe function. */
+	on(listener: (ev: TransportEvent) => void): () => void {
+		this.listeners.add(listener);
+		return () => void this.listeners.delete(listener);
+	}
+
+	/** Open the socket. No-op while connecting/open; in reconnect-wait it retries now. */
+	connect(): void {
+		if (this._state === "connecting" || this._state === "open") {
+			return;
+		}
+
+		this.clearTimer();
+		this.closedByUs = false;
+		const Impl = this.opts.WebSocketImpl ?? globalThis.WebSocket;
+
+		if (typeof Impl !== "function") {
+			throw new Error("WsTransport: no WebSocket implementation available");
+		}
+
+		this._state = "connecting";
+		let ws: WebSocket;
+
+		try {
+			ws = new Impl(this.opts.url, this.opts.subprotocols);
+		} catch (err: unknown) {
+			// Synchronous failure (bad URL, blocked port): same path as a failed open.
+			this.emit({type: "error", message: errorMessage(err)});
+			this.handleClosed(1006, "", false);
+			return;
+		}
+
+		// Every handler checks `ws === this.ws` so a superseded socket stays silent.
+		this.ws = ws;
+		ws.binaryType = "arraybuffer";
+		ws.addEventListener("open", () => {
+			if (ws === this.ws) {
+				this._state = "open";
+				this.openedAt = Date.now();
+				this.emit({type: "open", subprotocol: ws.protocol});
+			}
+		});
+		ws.addEventListener("message", (ev: MessageEvent) => {
+			if (ws === this.ws) {
+				this.handleMessage(ev.data);
+			}
+		});
+		ws.addEventListener("error", (ev: Event) => {
+			if (ws === this.ws) {
+				this.emit({type: "error", message: errorMessage(ev)});
+			}
+		});
+		ws.addEventListener("close", (ev: CloseEvent) => {
+			if (ws === this.ws) {
+				this.ws = null;
+				this.handleClosed(ev.code, ev.reason, ev.wasClean);
+			}
+		});
+	}
+
+	/** Send one IRC line (no CRLF). RangeError on bad input, Error if not open. */
+	send(line: string): void {
+		if (/[\r\n\0]/.test(line)) {
+			throw new RangeError("WsTransport: line must not contain CR, LF or NUL");
+		}
+
+		const bytes = new TextEncoder().encode(line).byteLength;
+
+		if (bytes > this.opts.maxLineBytes) {
+			throw new RangeError(
+				`WsTransport: line is ${bytes} bytes, limit ${this.opts.maxLineBytes}`
+			);
+		}
+
+		if (this._state !== "open" || !this.ws) {
+			throw new Error("WsTransport: not open");
+		}
+
+		this.ws.send(line);
+	}
+
+	/** Close deliberately: no reconnect is scheduled for this closure. */
+	close(code = 1000, reason = ""): void {
+		this.closedByUs = true;
+		this.clearTimer();
+		this._state = "closed";
+		this.ws?.close(code, reason); // the "close" event follows asynchronously
+	}
+
+	/** Abort a pending reconnect (state becomes "closed"). */
+	cancelReconnect(): void {
+		this.clearTimer();
+
+		if (this._state === "reconnect-wait") {
+			this._state = "closed";
+		}
+	}
+
+	private handleMessage(data: unknown): void {
+		let text: string;
+
+		if (typeof data === "string") {
+			text = data;
+		} else if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
+			text = this.decoder.decode(data); // binary.ircv3.net is still UTF-8 IRC
+		} else {
+			return; // Blob cannot happen with binaryType = "arraybuffer"
+		}
+
+		// Spec says one line per frame; split defensively and drop empties.
+		for (const line of text.split(/\r\n|\r|\n/)) {
+			if (line.length === 0) {
+				continue;
+			}
+
+			const ping = PING_RE.exec(line);
+			const ws = this.ws;
+
+			if (ping && ws && ws.readyState === ws.OPEN) {
+				// Parameter is echoed verbatim, including a leading ":".
+				ws.send(ping[1] === undefined ? "PONG" : `PONG ${ping[1]}`);
+			}
+
+			this.emit({type: "line", line});
+		}
+	}
+
+	private handleClosed(code: number, reason: string, wasClean: boolean): void {
+		if (this.openedAt > 0 && Date.now() - this.openedAt >= STABLE_CONNECTION_MS) {
+			this.attempt = 0;
+		}
+
+		this.openedAt = 0;
+		const retry = !this.closedByUs && this.opts.reconnect.enabled;
+		const delayMs = retry ? this.nextDelay() : undefined;
+		this._state = retry ? "reconnect-wait" : "closed";
+		this.emit({type: "close", code, reason, wasClean, willReconnect: retry, delayMs});
+
+		if (delayMs !== undefined) {
+			this.emit({type: "reconnecting", attempt: this.attempt, delayMs});
+			this.timer = setTimeout(() => {
+				this.timer = null;
+				this.connect();
+			}, delayMs);
+		}
+	}
+
+	/** Exponential backoff; jitter picks uniformly from [base/2, base]. */
+	private nextDelay(): number {
+		const rc = this.opts.reconnect;
+		this.attempt = Math.min(this.attempt + 1, MAX_ATTEMPTS);
+		const base = Math.min(rc.maxDelayMs, rc.initialDelayMs * rc.factor ** (this.attempt - 1));
+		return Math.round(rc.jitter ? base * (0.5 + Math.random() / 2) : base);
+	}
+
+	private clearTimer(): void {
+		if (this.timer !== null) {
+			clearTimeout(this.timer);
+			this.timer = null;
+		}
+	}
+
+	private emit(ev: TransportEvent): void {
+		for (const listener of Array.from(this.listeners)) {
+			listener(ev);
+		}
+	}
+}
+
+/** Browser error events carry no message; `ws`/undici ones do. */
+function errorMessage(err: unknown): string {
+	const msg = (err as {message?: unknown} | null)?.message;
+	return typeof msg === "string" && msg.length > 0 ? msg : "WebSocket error";
+}
