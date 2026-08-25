@@ -294,7 +294,7 @@ A registered client sending a single 600-byte `PRIVMSG` frame over `wss://` gets
 ## Open questions for the ircd side
 
 1. ~~Which branch?~~ Decided 2026-08-24: Seance targets `ircv3.2-upgrade` (and `ircv3.2-hardening` as it lands). Still open: will it merge to `master`, and should we pin a tag? `ghcr.io/evilnet/nefarious2:latest` referenced by the compose example does not exist on GHCR (checked 2026-08-24); we build locally.
-2. Report the 527-byte inbound frame cap (`s_bsd.c:1126` vs `websocket.c:67`) — reproduced, see Prototype status.
-   2a. Report the plain-port handshake corruption (`s_auth.c:164-169` `sendheader` bypassing the `IsWSNeedHandshake` output hold) — reproduced, see Prototype status.
+2. ~~Report the 527-byte inbound frame cap~~ Filed as [evilnet/nefarious2#98](https://github.com/evilnet/nefarious2/issues/98) (label `ircv3-upgrade`, assigned MrLenin).
+   2a. ~~Report the plain-port handshake corruption~~ Filed as [evilnet/nefarious2#97](https://github.com/evilnet/nefarious2/issues/97) (label `ircv3-upgrade`, assigned MrLenin).
 3. Confirm `WEBSOCKET_ORIGIN` policy for packaged (non-browser) clients that send no Origin.
 4. `draft/event-playback` default is off; ask for it to be enabled on the dev/test server.
