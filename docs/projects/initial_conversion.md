@@ -22,15 +22,15 @@ The client-side event bus keeps the `socket.on` / `socket.emit` shape so the ~50
 
 (Independent of demolition — can happen in parallel with phase A or B; blocks phase C.)
 
-1. [ ] **Document the nefarious2 WebSocket binding**
-   - [ ] a. Confirm WS URL shape (path, subprotocol — `text.ircv3.net` vs custom), TLS expectations, framing rules.
-   - [ ] b. Capture the CAP set nefarious2 advertises and which ones we plan to require: `server-time`, `message-tags`, `account-tag`, `echo-message`, `away-notify`, `chghost`, `extended-join`, `multi-prefix`, `userhost-in-names`, `setname`, `cap-notify`, `batch`, `labeled-response`, `draft/chathistory`, `draft/event-playback`.
-   - [ ] c. Record nefarious2-specific quirks (custom numerics, ISUPPORT tokens, modes) the client must tolerate.
-2. [ ] **Pick an IRC parser/serializer for the browser**
-   - [ ] a. Evaluate `irc-framework` (does it bundle clean for the browser?), `irc-parser-ts`, `@ircv3/parser`, or hand-rolled. Criteria: tag/CAP/batch support, ISUPPORT parsing, no Node built-ins, tree-shakeable.
-   - [ ] b. Prototype a ~50-line WS-to-parser-to-console loop against a real nefarious2 instance to confirm the choice.
-3. [ ] **Document the local dev setup**
-   - [ ] a. Write `docs/resources/nefarious2-dev.md`: how to run nefarious2 locally, the test user, the test channel, TLS expectations.
+1. [x] **Document the nefarious2 WebSocket binding** → `docs/resources/nefarious2-websocket.md`. **Headline:** `master` has no WebSocket or IRCv3.2 support at all; it all lives on the unmerged upstream branch `evilnet/nefarious2:ircv3.2-upgrade` (PR #84, closed unmerged 2026-01-21, still moving). Seance must target that branch.
+   - [x] a. Confirm WS URL shape (path, subprotocol — `text.ircv3.net` vs custom), TLS expectations, framing rules.
+   - [x] b. Capture the CAP set nefarious2 advertises and which ones we plan to require: `server-time`, `message-tags`, `account-tag`, `echo-message`, `away-notify`, `chghost`, `extended-join`, `multi-prefix`, `userhost-in-names`, `setname`, `cap-notify`, `batch`, `labeled-response`, `draft/chathistory`, `draft/event-playback`.
+   - [x] c. Record nefarious2-specific quirks (custom numerics, ISUPPORT tokens, modes) the client must tolerate.
+2. [x] **Pick an IRC parser/serializer for the browser** → `docs/resources/browser-irc-parser.md`. **Decision:** hand-roll a ~250-line typed parser in `client/js/irc/`; none of the npm options fit.
+   - [x] a. Evaluate `irc-framework` (does it bundle clean for the browser?), `irc-parser-ts`, `@ircv3/parser`, or hand-rolled. Criteria: tag/CAP/batch support, ISUPPORT parsing, no Node built-ins, tree-shakeable.
+   - [ ] b. Prototype a ~50-line WS-to-parser-to-console loop against a real nefarious2 instance to confirm the choice. _Partial: `tools/irc-ws-probe.mjs` is written and syntax-checked but has not been run against a real server — needs a local `ircv3.2-upgrade` build (see 0.3a)._
+3. [x] **Document the local dev setup**
+   - [x] a. Write `docs/resources/nefarious2-dev.md` _Written from source and the branch's Dockerfile; not yet executed._: how to run nefarious2 locally, the test user, the test channel, TLS expectations.
 
 ## A. Demolish — move the Node server aside
 
