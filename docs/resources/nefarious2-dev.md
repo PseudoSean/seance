@@ -1,6 +1,6 @@
 # Running nefarious2 locally for Seance development
 
-Plan item 0.3a. Practical notes only; nothing here has been executed yet (no ircd was built as part of phase 0).
+Plan item 0.3a. Executed 2026-08-24: the Docker route below works and is what `tools/nefarious-dev/run.sh` automates.
 
 ## Which source to run
 
@@ -12,29 +12,37 @@ git fetch origin ircv3.2-upgrade
 git worktree add ../nefarious2-ircv3 origin/ircv3.2-upgrade
 ```
 
-## Option A: Docker (recommended)
+## Option A: Docker (recommended) — automated by `tools/nefarious-dev/run.sh`
 
-Both branches ship a `Dockerfile` and `tools/docker/`. The `ircv3.2-upgrade` one is multi-stage, runs the unit tests during build, and needs `librocksdb-dev`, `libzstd-dev`, `libcmocka-dev` and a prebuilt `ghcr.io/evilnet/libkc` image (all handled inside the Dockerfile; override with `--build-arg LIBKC_IMAGE=...` if GHCR is unreachable). A published image `ghcr.io/evilnet/nefarious2:latest` is referenced by `docker-compose.yml-example` on the branch; check which ref it was built from before trusting it to have WebSocket support.
+The native build needs `librocksdb-dev` (a hard `configure` requirement on the branch) which is not installed here, so Docker is the path. The branch's `Dockerfile` is multi-stage, runs the cmocka unit tests during the build, and pulls a prebuilt `ghcr.io/evilnet/libkc:sha-10aa335` (the `latest` tag does not exist; the pinned one does).
 
 ```sh
-cd /home/rubin/src/nefarious2-ircv3          # branch worktree
-docker build -t nefarious2:ircv3 .
-docker run --rm -it \
-  -p 6667:6667 -p 6697:6697 -p 8443:8443 \
-  -e IRCD_GENERAL_NAME=irc.seance.test \
-  -e IRCD_GENERAL_DESCRIPTION="Seance dev" \
-  -e IRCD_GENERAL_NUMERIC=1 \
-  -v "$PWD/dev/local.conf:/home/nefarious/ircd/local.conf" \
-  -v "$PWD/dev/ircd.pem:/home/nefarious/ircd/ircd.pem" \
-  nefarious2:ircv3
+# once (~5 min): the checkout in tmp/ is gitignored
+git clone --branch ircv3.2-upgrade https://github.com/evilnet/nefarious2.git tmp/nefarious2
+(cd tmp/nefarious2 && docker build -t nefarious2:ircv3 .)
+
+# every time
+tools/nefarious-dev/run.sh        # foreground, debug level 5, Ctrl-C to stop
+tools/nefarious-dev/run.sh -d     # detached; docker logs -f nefarious-dev
 ```
+
+What the script does:
+
+- Bind-mounts `tools/nefarious-dev/ircd.conf` **over the image's own `ircd.conf`**. The image's file `include`s `linesync.conf` and `gitsync/gitsync.conf`; the latter is never created in a standalone container and a missing include is a fatal parse error (`ircd_lexer.l:366-371`). Ours includes only `base.conf` and `local.conf`.
+- Bind-mounts `tools/nefarious-dev/local.conf` (test oper, plain WS port, features — see below).
+- Generates `tmp/nefarious-dev/ircd.pem` once with a SAN for `localhost`/`127.0.0.1`/`irc.seance.test` so it can be trusted by a browser, and mounts it read-only.
+- Publishes on 127.0.0.1 only: `6667` plain IRC, `6697` IRC/TLS, `8067` `ws://`, `8443` `wss://`. (`8080` was the original choice but another container on this host already owns it.)
+- Sets `IRCD_GENERAL_NAME=irc.seance.test`, network name `SeanceDev`.
+
+Gotchas found on first run:
+
+- `Operator {}` blocks must carry `local = no;` (or `yes`) or the config fails with `... have no LOCAL setting`.
+- **Plain `ws://` on 8067 does not work** — the ircd corrupts the HTTP handshake on non-TLS websocket ports (see `nefarious2-websocket.md`, "Prototype status"). Use `wss://localhost:8443/` and trust the cert, or `--insecure` from the probe.
 
 How the container config is assembled (`tools/docker/dockerentrypoint.sh`, `tools/docker/ircd.conf`):
 
-- `base.conf-dist` is templated with the `IRCD_*` env vars into `base.conf`. It already contains `General`, `Admin`, `Class` blocks (`Users` class has `usermode = "x"`, so everyone gets a cloaked host), an open `Client { ip = "*"; host = "*"; }` block, client ports `6667`, `7000`, `16667`, SSL `6697`, `9998`, server port `4497`, and on the branch a **WebSocket port `8443 ssl websocket`** (`tools/docker/base.conf-dist:122-127`). The branch's `Features {}` enables `CAP_draft_chathistory`, `CAP_draft_metadata_2`, `CHATHISTORY_PRIVATE`.
-- `ircd.conf` just `include`s `base.conf`, `local.conf` and `linesync.conf` (the branch also includes `gitsync/gitsync.conf` and ships an alternative `ircd-docker.conf`). **Put your additions in `local.conf`** and bind-mount it.
-- If `ircd.pem` is missing the entrypoint generates a self-signed cert with `openssl req -x509 -days 365 -newkey rsa:4096 -subj /CN=$IRCD_GENERAL_NAME/`. Bind-mount a file so it persists across container restarts.
-- The default `CMD` runs `ircd -n -x 9` on master and `ircd -n -x 5 -f ircd.conf` on the branch (foreground, debug level 9/5) — noisy but shows every WebSocket frame (`Debug((DEBUG_DEBUG, "WebSocket ..."))` lines in `s_bsd.c`), which is exactly what we want while bringing up the client.
+- `base.conf-dist` is templated with the `IRCD_*` env vars into `base.conf`. It already contains `General`, `Admin`, `Class` blocks (`Users` class has `usermode = "x"`, so everyone gets a cloaked host), an open `Client { ip = "*"; host = "*"; }` block, client ports `6667`, `7000`, `16667`, SSL `6697`, `9998`, server port `4497`, and a **WebSocket port `8443 ssl websocket`** (`tools/docker/base.conf-dist:122-127`). Its `Features {}` enables `CAP_draft_chathistory`, `CAP_draft_metadata_2`, `CHATHISTORY_PRIVATE`.
+- The default `CMD` runs `ircd -n -x 5 -f ircd.conf` (foreground, debug level 5); every WebSocket frame shows up as `Debug((DEBUG_DEBUG, "WebSocket ..."))` lines, which is what we want while bringing up the client.
 
 ## Option B: native build
 
@@ -64,11 +72,12 @@ Operator {
      host = "*@*";
      password = "$PLAIN$seance";
      class = "Opers";
+     local = no;
 };
 
 # Plain-text WebSocket for browser dev without cert hassle
 Port {
-     port = 8080;
+     port = 8067;
      websocket = yes;
 };
 
@@ -84,7 +93,7 @@ Features {
 
 Notes:
 
-- `websocket = yes` works on non-SSL ports as long as the ircd was **built** with OpenSSL (`websocket.c:438-441`). Use `ws://localhost:8080/` from `yarn dev` and skip certificate trust entirely. The path is ignored by the server.
+- `websocket = yes` works on non-SSL ports as long as the ircd was **built** with OpenSSL (`websocket.c:438-441`). Use `ws://localhost:8067/` from `yarn dev` and skip certificate trust entirely. The path is ignored by the server.
 - `Port { ... ssl = yes; websocket = yes; }` is what production looks like; test it too, see TLS below.
 - Password hashing: `ircd/umkpasswd` builds alongside `ircd` (`umkpasswd -l` lists mechanisms, `-m native <password>` produces the default hashed form). `$PLAIN$<password>` is accepted as-is, per `doc/example.conf:846`.
 - No services (X3) means no SASL, no account login, no `+r`. That is acceptable for phase 0/C; `~/src/x3` exists locally if account-tag/chathistory-auth paths need exercising later.
@@ -98,7 +107,7 @@ Notes:
 | Test nick     | `seance1` (`seance2` for a second tab; the probe defaults to `seance-probe`)                  |
 | Test channel  | `#seance`                                                                                     |
 | Oper          | `seanceop` / `seance`                                                                         |
-| WS (plain)    | `ws://localhost:8080/`                                                                        |
+| WS (plain)    | `ws://localhost:8067/` — **broken upstream**, see `nefarious2-websocket.md`                   |
 | WS (TLS)      | `wss://localhost:8443/`                                                                       |
 | Legacy TCP    | `localhost:6667` (for cross-checking with a normal client such as hexchat in `~/src/hexchat`) |
 
@@ -120,7 +129,9 @@ Notes:
 
 ## Sanity checklist once it is running
 
-1. `node tools/irc-ws-probe.mjs ws://localhost:8080/ seance-probe` — expect `CAP * LS` lines listing `message-tags server-time batch labeled-response draft/chathistory=...`, then `001`. Paste the transcript into `nefarious2-websocket.md`.
-2. Same over `wss://localhost:8443/` with `--insecure`.
-3. `--binary` variant: server should echo `Sec-WebSocket-Protocol: binary.ircv3.net` (visible as `-- open (subprotocol: binary.ircv3.net)`).
-4. Send a 600-byte PRIVMSG from the probe and confirm the 527-byte inbound frame issue described in `nefarious2-websocket.md` (expect disconnect `WebSocket frame error`) so the bug report to upstream is reproducible.
+Results 2026-08-24 (transcripts in `nefarious2-websocket.md`, "Prototype status"):
+
+1. `node tools/irc-ws-probe.mjs ws://localhost:8067/ seance-probe` — **fails** (`Parse Error: Expected HTTP/`): ident/DNS notices precede the HTTP 101 on plain ports. Upstream bug.
+2. `node tools/irc-ws-probe.mjs wss://localhost:8443/ seance-probe --insecure` — **works**: `CAP * LS` with the full cap set, then `001`.
+3. `--binary` — not yet exercised on the TLS port.
+4. 600-byte `PRIVMSG` in one frame over `wss://` — **disconnects** with `WebSocket frame error`; 400 bytes is fine. Confirms the 528-byte cap.

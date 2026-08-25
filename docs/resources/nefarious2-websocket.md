@@ -224,18 +224,77 @@ Branch additions include `FAIL`/`WARN`/`NOTE` (standard-replies), `BATCH`, `CHAT
 
 ## Prototype status
 
-`tools/irc-ws-probe.mjs` (this repo) passes `node --check` and implements the CAP LS 302 / NICK / USER / PING loop, but **has not been run against a real nefarious2 WebSocket endpoint**: no `ircv3.2-upgrade` build is available locally and no public endpoint was probed. Once a local build exists (see `nefarious2-dev.md`):
+Run 2026-08-24 against `nefarious2:ircv3` built from `ircv3.2-upgrade@3868b34` with `tools/nefarious-dev/run.sh` (see `nefarious2-dev.md`).
 
-```sh
-node tools/irc-ws-probe.mjs ws://localhost:8080/ seance-probe
-node tools/irc-ws-probe.mjs wss://localhost:8443/ seance-probe --insecure
+### `wss://localhost:8443/` — works
+
+`node tools/irc-ws-probe.mjs wss://localhost:8443/ seance2 --insecure`:
+
+```
+(node:182139) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+-- open (subprotocol: text.ircv3.net)
+>> CAP LS 302
+>> NICK seance2
+>> USER seance2 0 * :Seance WS probe
+<< NOTICE * :*** Looking up your hostname
+<< NOTICE * :*** Checking Ident
+<< NOTICE * :*** No ident response
+<< NOTICE * :*** Couldn't look up your hostname
+<< :irc.seance.test CAP * LS * :multi-prefix userhost-in-names extended-join away-notify account-notify cap-notify server-time echo-message account-tag chghost invite-notify labeled-response batch setname standard-replies message-tags no-implicit-names draft/no-implicit-names draft/extended-isupport draft/pre-away draft/multiline=max-bytes=16384,max-lines=100 draft/chathistory=100 draft/event-playback draft/metadata-2=before-connect,max-subs=50,max-keys=20,max-value-bytes=300 draft/bouncer draft/persistence
+<< :irc.seance.test CAP * LS : tls
+>> CAP END
+<< :irc.seance.test 001 seance2 :Welcome to the SeanceDev IRC Network, seance2
+-- registered
+<< :irc.seance.test 002 seance2 :Your host is irc.seance.test, running version u2.10.12.14+Nefarious(2.0.0)
+<< :irc.seance.test 003 seance2 :This server was created Tue Aug 25 2026 at 04:58:23 UTC
+<< :irc.seance.test 004 seance2 irc.seance.test u2.10.12.14+Nefarious(2.0.0) abdgiknoqswxyzBDHLMNORWXY abCcDdhHikLlMmNnOopPQRrSsTtvZz bkLlov
+<< :irc.seance.test 005 seance2 WHOX WALLCHOPS WALLHOPS WALLVOICES USERIP CPRIVMSG CNOTICE NAMESX UHNAMES SILENCE=25 WATCH=128 MONITOR=128 MODES=6 :are supported by this server
+<< :irc.seance.test 005 seance2 MAXCHANNELS=20 MAXBANS=50 NICKLEN=15 MAXNICKLEN=30 TOPICLEN=250 AWAYLEN=250 KICKLEN=250 CHANNELLEN=200 MAXCHANNELLEN=200 CHANTYPES=#& PREFIX=(ov)@+ STATUSMSG=@+ BOT=B :are supported by this server
+<< :irc.seance.test 005 seance2 CHANMODES=b,k,Ll,aCcDdHiMmNnOPpQRrSsTtZz CASEMAPPING=rfc1459 NETWORK=SeanceDev MAXLIST=b:50 ELIST=CT TARGMAX=PRIVMSG:20,NOTICE:20,JOIN:,PART: CHATHISTORY=100 MSGREFTYPES=timestamp,msgid :are supported by this server
+<< :irc.seance.test NOTICE seance2 :You are connected to irc.seance.test with TLSv1.3-TLS_AES_256_GCM_SHA384-256bits
+<< :irc.seance.test 251 seance2 :There are 1 users and 0 invisible on 1 servers
+<< :irc.seance.test 255 seance2 :I have 1 clients and 0 servers
+<< :irc.seance.test 265 seance2 :Current local users: 1 Max: 1
+<< :irc.seance.test 266 seance2 :Current global users: 1 Max: 1
+<< :irc.seance.test NOTICE seance2 :Highest connection count: 1 (1 clients)
+<< :irc.seance.test 422 seance2 :MOTD File is missing
+<< :irc.seance.test NOTICE seance2 :on 2 ca 5(4) ft 10(10) tr
+<< :seance2!seance2@172.17.0.1 MODE seance2 +xz
+>> QUIT :probe done
+<< ERROR :Closing Link: seance2 by seance2 (Quit: probe done)
+-- closed (1006 )
 ```
 
-and paste the transcript here.
+Every cap in the plan's list is advertised (`draft/event-playback` because `local.conf` turns it on). `CAP LS` is split across two frames with the `*` continuation marker, so the client's CAP accumulator must handle that. The trailing `closed (1006)` is the server dropping TCP after `QUIT` without sending a WebSocket Close frame — harmless, but the client should treat 1006-after-QUIT as a clean exit rather than a reconnectable failure.
+
+`--binary` on the TLS port was not exercised separately; the plain-port attempt below failed before subprotocol selection.
+
+### `ws://localhost:8067/` (plain port, `websocket = yes`) — **broken upstream**
+
+Node's HTTP parser rejects the upgrade with `Parse Error: Expected HTTP/, RTSP/ or ICE/`. Raw exchange (`printf 'GET / HTTP/1.1 ... Upgrade: websocket ...' | nc 127.0.0.1 8067`):
+
+```
+NOTICE * :*** Looking up your hostname
+NOTICE * :*** Checking Ident
+NOTICE * :*** No ident response
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
+Sec-WebSocket-Protocol: text.ircv3.net
+```
+
+The ident/DNS progress notices are written to the socket **before** the HTTP 101 response, as bare IRC lines. Cause: `s_auth.c:164-169` `sendheader()` writes straight to the fd with `ssl_send()`/`send()`, bypassing the MsgQ, so the guard in `s_bsd.c:318-325` that holds all output while `IsWSNeedHandshake` is set never sees them. On the TLS port the same notices happen to land after the 101 (presumably because `ssl_send` cannot write until the TLS handshake completes), which is why `wss://` works. No browser will accept a 101 preceded by garbage, so **plain-text WebSocket is unusable until this is fixed upstream**; dev must use `wss://` with a trusted local cert. Fix is on the ircd side: route `sendheader` through the MsgQ (or drop the notices for WS clients until the handshake completes).
+
+### 528-byte inbound frame cap — **confirmed**
+
+A registered client sending a single 600-byte `PRIVMSG` frame over `wss://` gets `ERROR :Closing Link: bigframe by irc.seance.test (WebSocket frame error)` and a 1006 close; a 400-byte frame is delivered normally. Matches the analysis under "Framing rules" above.
 
 ## Open questions for the ircd side
 
-1. Will `ircv3.2-upgrade` (or `ircv3.2-hardening`) be merged into `master`, or should Seance pin a branch/tag? Which ref does `ghcr.io/evilnet/nefarious2:latest` track (the compose example on the branch references it)?
-2. Report the 527-byte inbound frame cap (`s_bsd.c:1126` vs `websocket.c:67`).
+1. ~~Which branch?~~ Decided 2026-08-24: Seance targets `ircv3.2-upgrade` (and `ircv3.2-hardening` as it lands). Still open: will it merge to `master`, and should we pin a tag? `ghcr.io/evilnet/nefarious2:latest` referenced by the compose example does not exist on GHCR (checked 2026-08-24); we build locally.
+2. Report the 527-byte inbound frame cap (`s_bsd.c:1126` vs `websocket.c:67`) — reproduced, see Prototype status.
+   2a. Report the plain-port handshake corruption (`s_auth.c:164-169` `sendheader` bypassing the `IsWSNeedHandshake` output hold) — reproduced, see Prototype status.
 3. Confirm `WEBSOCKET_ORIGIN` policy for packaged (non-browser) clients that send no Origin.
 4. `draft/event-playback` default is off; ask for it to be enabled on the dev/test server.

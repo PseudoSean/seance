@@ -29,7 +29,7 @@ The client-side event bus keeps the `socket.on` / `socket.emit` shape so the ~50
    - [x] c. Record nefarious2-specific quirks (custom numerics, ISUPPORT tokens, modes) the client must tolerate.
 2. [x] **Pick an IRC parser/serializer for the browser** → `docs/resources/browser-irc-parser.md`. **Decision:** hand-roll a ~250-line typed parser in `client/js/irc/`; none of the npm options fit.
    - [x] a. Evaluate `irc-framework` (does it bundle clean for the browser?), `irc-parser-ts`, `@ircv3/parser`, or hand-rolled. Criteria: tag/CAP/batch support, ISUPPORT parsing, no Node built-ins, tree-shakeable.
-   - [ ] b. Prototype a ~50-line WS-to-parser-to-console loop against a real nefarious2 instance to confirm the choice. _Partial: `tools/irc-ws-probe.mjs` is written and syntax-checked but has not been run against a real server — needs a local `ircv3.2-upgrade` build (see 0.3a)._
+   - [x] b. Prototype a ~50-line WS-to-parser-to-console loop against a real nefarious2 instance to confirm the choice. _Run 2026-08-24 against a local Docker build of `ircv3.2-upgrade`: `wss://` registers and advertises the full cap set. Two upstream bugs reproduced: plain `ws://` handshake is corrupted by pre-101 auth notices, and inbound frames ≥ 528 bytes disconnect. Transcript in `docs/resources/nefarious2-websocket.md`._
 3. [x] **Document the local dev setup**
    - [x] a. Write `docs/resources/nefarious2-dev.md` _Written from source and the branch's Dockerfile; not yet executed._: how to run nefarious2 locally, the test user, the test channel, TLS expectations.
 
