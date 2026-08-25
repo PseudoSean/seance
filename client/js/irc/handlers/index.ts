@@ -19,6 +19,7 @@ import error from "./error";
 import invite from "./invite";
 import join from "./join";
 import kick from "./kick";
+import lists from "./lists";
 import mode from "./mode";
 import names from "./names";
 import nick from "./nick";
@@ -39,6 +40,7 @@ const modules: Record<string, Handler>[] = [
 	invite,
 	join,
 	kick,
+	lists,
 	mode,
 	names,
 	nick,

@@ -132,8 +132,8 @@ No fixed order. Tackle items in whatever sequence the friction dictates.
    - [ ] a. Replace the existing `more` bus event consumer with a `CHATHISTORY BEFORE`/`BETWEEN` request and `batch` reassembly.
    - [ ] b. Track `moreHistoryAvailable` from batch length.
 3. [ ] **Remaining input commands** — port `/ban`, `/kick`, `/whois`, `/list`, `/mode`, `/notice`, `/ctcp`, `/away`, `/back`, `/invite`, `/kill`, `/rejoin`. `/ignore`/`/ignorelist`/`/mute` become localStorage-backed. `/connect`/`/disconnect` will need phase D.5 (saved networks).
-4. [ ] **Channel info numerics**
-   - [ ] a. Ban list (367/368), invite exception list (346/347), ban exception list (348/349) into the existing special-channel UI.
+4. [x] **Channel info numerics**
+   - [x] a. Ban list (367/368), invite exception list (346/347), ban exception list (348/349) into the existing special-channel UI. _Done 2026-08-24: `handlers/lists.ts`; +e lists reuse the BANLIST special view (no EXCEPTLIST enum/component yet — small follow-up). 14 tests._
 5. [ ] **Saved network configs**
    - [ ] a. Persist the connect form's last-used values in localStorage; offer a "saved networks" picker on the connect screen.
    - [ ] b. `Windows/NetworkEdit.vue` reads/writes this store. `network:get`/`network:edit`/`network:new` route through localStorage.
