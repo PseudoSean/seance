@@ -30,6 +30,15 @@ import {IdAllocator, sharedIds} from "./ids";
 import {ISupport} from "./isupport";
 import {formatLine, IrcMessage, parseLine, splitMessage, utf8ByteLength} from "./message";
 import {mechanismOffered, SASL_TIMEOUT_MS, SaslAuth, SaslMechanism, SaslResult} from "./sasl";
+import {
+	applyDuration,
+	clearExpired,
+	getPolicy,
+	parseStsValue,
+	refreshPolicy,
+	StsUpgrade,
+	upgradeOptions,
+} from "./sts";
 import {ReconnectOptions, TransportEvent, TransportOptions, WsTransport} from "./transport";
 import type {ConnectOptions, IrcClientState, Transport} from "./types";
 import {trailingLine} from "./wire";
@@ -67,6 +76,11 @@ export interface IrcClientOptions extends ConnectOptions {
 	 * all of them here. Defaults to just this network.
 	 */
 	networksForInit?: () => SharedNetwork[];
+	/**
+	 * An STS policy upgraded this connect from `ws://` to `wss://` (see sts.ts).
+	 * The manager persists the new port/tls so the saved network stays secure.
+	 */
+	onStsUpgrade?: (change: StsUpgrade) => void;
 }
 
 export const NOT_CONNECTED_TEXT =
@@ -77,8 +91,10 @@ const CHANNEL_PREFIXES = "#&!+";
 
 export class IrcClient {
 	readonly uuid: string;
-	readonly options: Readonly<IrcClientOptions>;
-	readonly transport: Transport;
+	/** Replaced (not mutated) when an STS upgrade changes port/tls, see {@link reconfigure}. */
+	options: Readonly<IrcClientOptions>;
+	/** Swapped for a new one on an STS upgrade; always subscribed via {@link reconfigure}. */
+	transport: Transport;
 	readonly isupport = new ISupport();
 	readonly channels: Channel[] = [];
 	readonly lobby: Channel;
@@ -99,7 +115,10 @@ export class IrcClient {
 	private saslTimer: ReturnType<typeof setTimeout> | null = null;
 	private readonly bus: Pick<EventBus, "dispatch">;
 	private readonly ids: IdAllocator;
-	private readonly url: string;
+	private url: string;
+	private unsubscribeTransport: () => void = () => undefined;
+	/** One insecure → secure reconnect per connection; reset when the transport closes. */
+	private stsUpgradeTried = false;
 	private networkName: string;
 	private _state: IrcClientState = "disconnected";
 	private connected = false;
@@ -119,20 +138,8 @@ export class IrcClient {
 		this.bus = options.bus ?? socket;
 		this.ids = options.ids ?? sharedIds;
 		this.url = buildUrl(host, options.port, options.tls);
-
-		const transportOptions: TransportOptions = {
-			url: this.url,
-			subprotocols: ["text.ircv3.net", "binary.ircv3.net"],
-		};
-
-		if (options.reconnect) {
-			transportOptions.reconnect = options.reconnect;
-		}
-
-		this.transport = options.transportFactory
-			? options.transportFactory(transportOptions)
-			: new WsTransport(transportOptions);
-		this.transport.on((ev) => this.onTransportEvent(ev));
+		this.transport = this.createTransport();
+		this.unsubscribeTransport = this.transport.on((ev) => this.onTransportEvent(ev));
 
 		this.lobby = new Channel(this.ids.chanId(), this.networkName, ChanType.LOBBY, (s) =>
 			this.casefold(s)
@@ -218,7 +225,7 @@ export class IrcClient {
 			proxyPort: 0,
 			proxyUsername: "",
 			proxyPassword: "",
-			hasSTSPolicy: false,
+			hasSTSPolicy: getPolicy(o.host) !== undefined,
 		};
 	}
 
@@ -235,6 +242,7 @@ export class IrcClient {
 			return;
 		}
 
+		this.applyStsPolicy();
 		this.quitting = false;
 		this._state = "connecting";
 		this.bus.dispatch("connecting");
@@ -261,6 +269,94 @@ export class IrcClient {
 	quit(reason?: string): void {
 		this.bus.dispatch("quit", {network: this.uuid});
 		this.disconnect(reason);
+	}
+
+	// ------------------------------------------------------------------- STS
+
+	private createTransport(): Transport {
+		const transportOptions: TransportOptions = {
+			url: this.url,
+			subprotocols: ["text.ircv3.net", "binary.ircv3.net"],
+		};
+
+		if (this.options.reconnect) {
+			transportOptions.reconnect = this.options.reconnect;
+		}
+
+		return this.options.transportFactory
+			? this.options.transportFactory(transportOptions)
+			: new WsTransport(transportOptions);
+	}
+
+	/** Switch to `next` (port/tls) with a fresh transport; the old one is left to close. */
+	private reconfigure(next: IrcClientOptions): void {
+		this.unsubscribeTransport();
+		this.options = {...next};
+		this.url = buildUrl(next.host, next.port, next.tls);
+		this.transport = this.createTransport();
+		this.unsubscribeTransport = this.transport.on((ev) => this.onTransportEvent(ev));
+	}
+
+	/** Before connecting: a cached STS policy for the host turns `ws://` into `wss://`. */
+	private applyStsPolicy(): void {
+		clearExpired();
+		const upgraded = upgradeOptions(this.options);
+
+		if (upgraded === this.options) {
+			return;
+		}
+
+		this.reconfigure(upgraded);
+		this.pushMessage(
+			this.lobby,
+			{text: `Upgrading to TLS on port ${upgraded.port} (STS policy)`},
+			true
+		);
+		this.options.onStsUpgrade?.({port: upgraded.port, tls: true});
+	}
+
+	/**
+	 * After the final `CAP LS`: over `ws://` an `sts` with `port=` means drop
+	 * the connection and come back over `wss://` on that port (once); over
+	 * `wss://` a `duration=` caches / refreshes / removes the host's policy.
+	 */
+	private checkSts(msg: IrcMessage): void {
+		if (msg.command !== "CAP" || (msg.params[1] ?? "").toUpperCase() !== "LS") {
+			return;
+		}
+
+		if (msg.params[2] === "*" && msg.params.length > 3) {
+			return; // more LS lines follow
+		}
+
+		const raw = this.caps.value("sts");
+
+		if (raw === undefined) {
+			return;
+		}
+
+		const value = parseStsValue(raw);
+
+		if (this.options.tls) {
+			applyDuration(this.options.host, this.options.port, value);
+			return;
+		}
+
+		if (value.port === undefined || this.stsUpgradeTried) {
+			return;
+		}
+
+		this.stsUpgradeTried = true;
+		this.pushMessage(
+			this.lobby,
+			{
+				text: `Server requires a secure connection (STS): reconnecting on port ${value.port}…`,
+			},
+			true
+		);
+		this.disconnect("STS upgrade");
+		this.reconfigure({...this.options, tls: true, port: value.port});
+		this.connect();
 	}
 
 	private onTransportEvent(ev: TransportEvent): void {
@@ -423,7 +519,12 @@ export class IrcClient {
 		const wasUp = this._state !== "disconnected";
 		this._state = "disconnected";
 		this.connected = false;
+		this.stsUpgradeTried = false;
 		this.endSasl();
+
+		if (this.options.tls) {
+			refreshPolicy(this.options.host);
+		}
 
 		resetBatches(this);
 		abortHistory(this);
@@ -640,6 +741,8 @@ export class IrcClient {
 			// eslint-disable-next-line no-console
 			console.error(`[irc] handler for ${msg.command} failed on: ${msg.raw}`, err);
 		}
+
+		this.checkSts(msg);
 
 		if (selfJoin) {
 			const chan = this.findChannel(joinName);

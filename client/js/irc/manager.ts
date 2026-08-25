@@ -83,6 +83,14 @@ export function createNetwork(options: CreateNetworkOptions): IrcClient {
 			highlights: highlightKeywords,
 			networksForInit: allNetworks,
 			setMuteStatus,
+			// An STS upgrade at connect time is persisted so future connects go secure.
+			onStsUpgrade({port, tls}) {
+				const current = saved.get(entry.uuid);
+
+				if (current) {
+					saved.save({...current, port, tls});
+				}
+			},
 		});
 		clients.set(entry.uuid, client);
 
