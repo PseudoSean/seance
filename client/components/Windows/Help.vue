@@ -18,8 +18,6 @@
 			</h2>
 
 			<div class="about">
-				<VersionChecker />
-
 				<template v-if="store.state.serverConfiguration?.gitCommit">
 					<p>
 						The Lounge is running from source (<a
@@ -865,13 +863,11 @@
 import {defineComponent, ref} from "vue";
 import {useStore} from "../../js/store";
 import SidebarToggle from "../SidebarToggle.vue";
-import VersionChecker from "../VersionChecker.vue";
 
 export default defineComponent({
 	name: "Help",
 	components: {
 		SidebarToggle,
-		VersionChecker,
 	},
 	setup() {
 		const store = useStore();

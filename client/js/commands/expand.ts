@@ -1,4 +1,3 @@
-import socket from "../socket";
 import {store} from "../store";
 
 export function input(): boolean {
@@ -23,14 +22,6 @@ export function input(): boolean {
 		}
 	}
 
-	// Tell the server we're toggling so it remembers at page reload
-	if (!document.body.classList.contains("public") && messageIds.length > 0) {
-		socket.emit("msg:preview:toggle", {
-			target: store.state.activeChannel?.channel.id,
-			messageIds: messageIds,
-			shown: true,
-		});
-	}
-
-	return true;
+	// Preview state is local; messageIds is kept for parity with /collapse
+	return messageIds.length >= 0;
 }

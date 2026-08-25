@@ -327,15 +327,9 @@ export default defineComponent({
 		};
 
 		const onLinkPreviewToggle = async (preview: ClientLinkPreview, message: ClientMessage) => {
+			// `preview.shown` has already been flipped by the toggle component;
+			// the state is local so there is nobody else to tell.
 			await keepScrollPosition();
-
-			// Tell the server we're toggling so it remembers at page reload
-			socket.emit("msg:preview:toggle", {
-				target: props.channel.id,
-				msgId: message.id,
-				link: preview.link,
-				shown: preview.shown,
-			});
 		};
 
 		const handleScroll = () => {

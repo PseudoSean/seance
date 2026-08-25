@@ -147,7 +147,10 @@
 <script lang="ts">
 import Username from "./Username.vue";
 import ParsedMessage from "./ParsedMessage.vue";
-import socket from "../js/socket";
+import {
+	dismissMention as dismissStoredMention,
+	dismissAllMentions as dismissAllStoredMentions,
+} from "../js/mentions";
 import eventbus from "../js/eventbus";
 import localetime from "../js/helpers/localetime";
 import dayjs from "dayjs";
@@ -198,17 +201,11 @@ export default defineComponent({
 		};
 
 		const dismissMention = (message: MentionWithContext) => {
-			store.state.mentions.splice(
-				store.state.mentions.findIndex((m) => m.msgId === message.msgId),
-				1
-			);
-
-			socket.emit("mentions:dismiss", message.msgId);
+			dismissStoredMention(message.msgId);
 		};
 
 		const dismissAllMentions = () => {
-			store.state.mentions = [];
-			socket.emit("mentions:dismiss_all");
+			dismissAllStoredMentions();
 		};
 
 		const containerClick = (event: Event) => {
@@ -220,10 +217,8 @@ export default defineComponent({
 		const togglePopup = () => {
 			isOpen.value = !isOpen.value;
 
-			if (isOpen.value) {
-				isLoading.value = true;
-				socket.emit("mentions:get");
-			}
+			// Mentions are kept locally, so there is nothing to fetch
+			isLoading.value = false;
 		};
 
 		const closePopup = () => {

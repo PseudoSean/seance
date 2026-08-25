@@ -1,4 +1,6 @@
 import socket from "../socket";
+import {clearHistory} from "../history";
+import {setMuteStatus} from "../mute";
 import eventbus from "../eventbus";
 import type {ClientChan, ClientNetwork, ClientUser} from "../types";
 import {switchToChannel} from "../router";
@@ -192,9 +194,7 @@ export function generateChannelContextMenu(
 							return;
 						}
 
-						socket.emit("history:clear", {
-							target: channel.id,
-						});
+						clearHistory(channel.id);
 					}
 				);
 			},
@@ -218,10 +218,7 @@ export function generateChannelContextMenu(
 			type: "item",
 			class: "mute",
 			action() {
-				socket.emit("mute:change", {
-					target: channel.id,
-					setMutedTo: !channel.muted,
-				});
+				setMuteStatus(channel.id, !channel.muted);
 			},
 		});
 	}

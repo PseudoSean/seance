@@ -4,6 +4,8 @@ import {switchToChannel} from "../router";
 import {toClientChan} from "../chan";
 import {ClientNetwork} from "../types";
 import {ChanState} from "../../../shared/types/chan";
+import {applyStoredChannelOrder, applyStoredNetworkOrder} from "../sort";
+import {applyStoredMuteStatus} from "../mute";
 
 socket.on("network", function (data) {
 	const network: ClientNetwork = {
@@ -13,7 +15,10 @@ socket.on("network", function (data) {
 		isCollapsed: false,
 	};
 
+	applyStoredChannelOrder(network);
+	applyStoredMuteStatus(network);
 	store.commit("networks", [...store.state.networks, network]);
+	applyStoredNetworkOrder();
 
 	// Open last channel specified in `join`
 	switchToChannel(network.channels[network.channels.length - 1]);

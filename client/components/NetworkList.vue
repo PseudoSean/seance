@@ -214,7 +214,7 @@ import NetworkLobby from "./NetworkLobby.vue";
 import Channel from "./Channel.vue";
 import JoinChannel from "./JoinChannel.vue";
 
-import socket from "../js/socket";
+import {sortNetworks, sortChannels} from "../js/sort";
 import collapseNetworkHelper from "../js/helpers/collapseNetwork";
 import isIgnoredKeybind from "../js/helpers/isIgnoredKeybind";
 import distance from "../js/helpers/distance";
@@ -310,9 +310,7 @@ export default defineComponent({
 
 			moveItemInArray(store.state.networks, oldIndex, newIndex);
 
-			socket.emit("sort:networks", {
-				order: store.state.networks.map((n) => n.uuid),
-			});
+			sortNetworks(store.state.networks.map((n) => n.uuid));
 		};
 
 		const onChannelSort = (e: Sortable.SortableEvent) => {
@@ -341,10 +339,10 @@ export default defineComponent({
 
 			moveItemInArray(netChan.network.channels, oldIndex, newIndex);
 
-			socket.emit("sort:channels", {
-				network: netChan.network.uuid,
-				order: netChan.network.channels.map((c) => c.id),
-			});
+			sortChannels(
+				netChan.network.uuid,
+				netChan.network.channels.map((c) => c.id)
+			);
 		};
 
 		const isTouchEvent = (event: any): boolean => {

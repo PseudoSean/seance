@@ -40,38 +40,6 @@
 			</div>
 		</div>
 		<div v-if="!store.state.serverConfiguration?.public">
-			<h2>Settings synchronisation</h2>
-			<label class="opt">
-				<input
-					:checked="store.state.settings.syncSettings"
-					type="checkbox"
-					name="syncSettings"
-				/>
-				Synchronize settings with other clients
-			</label>
-			<template v-if="!store.state.settings.syncSettings">
-				<div v-if="store.state.serverHasSettings" class="settings-sync-panel">
-					<p>
-						<strong>Warning:</strong> Checking this box will override the settings of
-						this client with those stored on the server.
-					</p>
-					<p>
-						Use the button below to enable synchronization, and override any settings
-						already synced to the server.
-					</p>
-					<button type="button" class="btn btn-small" @click="onForceSyncClick">
-						Sync settings and enable
-					</button>
-				</div>
-				<div v-else class="settings-sync-panel">
-					<p>
-						<strong>Warning:</strong> No settings have been synced before. Enabling this
-						will sync all settings of this client as the base for other clients.
-					</p>
-				</div>
-			</template>
-		</div>
-		<div v-if="!store.state.serverConfiguration?.public">
 			<h2>Automatic away message</h2>
 
 			<label class="opt">
@@ -135,24 +103,6 @@ export default defineComponent({
 			installPromptEvent = null;
 		};
 
-		const onForceSyncClick = () => {
-			store.dispatch("settings/syncAll", true).catch((e) => {
-				// eslint-disable-next-line no-console
-				console.error(e);
-			});
-
-			store
-				.dispatch("settings/update", {
-					name: "syncSettings",
-					value: true,
-					sync: true,
-				})
-				.catch((e) => {
-					// eslint-disable-next-line no-console
-					console.error(e);
-				});
-		};
-
 		const registerProtocol = () => {
 			const uri = document.location.origin + document.location.pathname + "?uri=%s";
 			// @ts-expect-error
@@ -167,7 +117,6 @@ export default defineComponent({
 			canRegisterProtocol,
 			hasInstallPromptEvent,
 			nativeInstallPrompt,
-			onForceSyncClick,
 			registerProtocol,
 		};
 	},

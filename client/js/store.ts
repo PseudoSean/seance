@@ -3,11 +3,10 @@
 import {ActionContext, createStore, Store, useStore as baseUseStore} from "vuex";
 import {createSettingsStore} from "./store-settings";
 import storage from "./localStorage";
-import type {ClientChan, ClientNetwork, NetChan, ClientMention, ClientMessage} from "./types";
+import type {ClientChan, ClientNetwork, NetChan, ClientMention} from "./types";
 import type {InjectionKey} from "vue";
 
 import {SettingsState} from "./settings";
-import {SearchQuery} from "../../shared/types/storage";
 import {SharedConfiguration, LockedSharedConfiguration} from "../../shared/types/config";
 
 const appName = document.title;
@@ -31,15 +30,6 @@ function detectDesktopNotificationState(): DesktopNotificationState {
 	return DesktopNotificationState.Blocked;
 }
 
-export type ClientSession = {
-	current: boolean;
-	active: number;
-	lastUse: number;
-	ip: string;
-	agent: string;
-	token: string;
-};
-
 export type State = {
 	appLoaded: boolean;
 	activeChannel?: NetChan;
@@ -53,34 +43,9 @@ export type State = {
 	hasServiceWorker: boolean;
 	pushNotificationState: string;
 	serverConfiguration: SharedConfiguration | LockedSharedConfiguration | null;
-	sessions: ClientSession[];
 	sidebarOpen: boolean;
 	sidebarDragging: boolean;
 	userlistOpen: boolean;
-	versionData:
-		| null
-		| undefined
-		| {
-				latest?: {
-					version: string;
-					prerelease: boolean;
-					url: string;
-				};
-				current?: {
-					version: string;
-					prerelease: boolean;
-					url: string;
-					changelog?: string;
-				};
-		  };
-	versionStatus: "loading" | "new-version" | "new-packages" | "up-to-date" | "error";
-	versionDataExpired: boolean;
-	serverHasSettings: boolean;
-	messageSearchResults: {
-		results: ClientMessage[];
-	} | null;
-	messageSearchPendingQuery: SearchQuery | null;
-	searchEnabled: boolean;
 };
 
 const state = (): State => ({
@@ -95,17 +60,9 @@ const state = (): State => ({
 	hasServiceWorker: false,
 	pushNotificationState: "unsupported",
 	serverConfiguration: null,
-	sessions: [],
 	sidebarOpen: false,
 	sidebarDragging: false,
 	userlistOpen: storage.get("thelounge.state.userlist") !== "false",
-	versionData: null,
-	versionStatus: "loading",
-	versionDataExpired: false,
-	serverHasSettings: false,
-	messageSearchResults: null,
-	messageSearchPendingQuery: null,
-	searchEnabled: false,
 });
 
 type Getters = {
@@ -217,19 +174,11 @@ type Mutations = {
 		pushNotificationState: State["pushNotificationState"]
 	): void;
 	serverConfiguration(state: State, serverConfiguration: State["serverConfiguration"]): void;
-	sessions(state: State, payload: State["sessions"]): void;
 	sidebarOpen(state: State, payload: State["sidebarOpen"]): void;
 	sidebarDragging(state: State, payload: State["sidebarDragging"]): void;
 	toggleSidebar(state: State): void;
 	toggleUserlist(state: State): void;
 	userlistOpen(state: State, payload: State["userlistOpen"]): void;
-	versionData(state: State, payload: State["versionData"]): void;
-	versionStatus(state: State, payload: State["versionStatus"]): void;
-	versionDataExpired(state: State, payload: State["versionDataExpired"]): void;
-	serverHasSettings(state: State, value: State["serverHasSettings"]): void;
-	messageSearchPendingQuery(state: State, value: State["messageSearchPendingQuery"]): void;
-	messageSearchResults(state: State, value: State["messageSearchResults"]): void;
-	addMessageSearchResults(state: State, value: NonNullable<State["messageSearchResults"]>): void;
 };
 
 const mutations: Mutations = {
@@ -275,9 +224,6 @@ const mutations: Mutations = {
 	serverConfiguration(state, serverConfiguration) {
 		state.serverConfiguration = serverConfiguration;
 	},
-	sessions(state, payload) {
-		state.sessions = payload;
-	},
 	sidebarOpen(state, payload) {
 		state.sidebarOpen = payload;
 	},
@@ -292,40 +238,6 @@ const mutations: Mutations = {
 	},
 	userlistOpen(state, payload) {
 		state.userlistOpen = payload;
-	},
-	versionData(state, payload) {
-		state.versionData = payload;
-	},
-	versionStatus(state, payload) {
-		state.versionStatus = payload;
-	},
-	versionDataExpired(state, payload) {
-		state.versionDataExpired = payload;
-	},
-	serverHasSettings(state, value) {
-		state.serverHasSettings = value;
-	},
-	messageSearchPendingQuery(state, value) {
-		state.messageSearchPendingQuery = value;
-	},
-	messageSearchResults(state, value) {
-		state.messageSearchResults = value;
-	},
-	addMessageSearchResults(state, value) {
-		// Append the search results and add networks and channels to new messages
-		if (!state.messageSearchResults) {
-			state.messageSearchResults = {results: []};
-		}
-
-		if (!value) {
-			return;
-		}
-
-		const results = [...value.results, ...state.messageSearchResults.results];
-
-		state.messageSearchResults = {
-			results,
-		};
 	},
 };
 

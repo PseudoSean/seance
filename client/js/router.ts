@@ -1,7 +1,6 @@
 import constants from "./constants";
 
 import {createRouter, createWebHashHistory} from "vue-router";
-import SignIn from "../components/Windows/SignIn.vue";
 import Connect from "../components/Windows/Connect.vue";
 import Settings from "../components/Windows/Settings.vue";
 import Help from "../components/Windows/Help.vue";
@@ -22,18 +21,9 @@ const router = createRouter({
 	history: createWebHashHistory(),
 	routes: [
 		{
-			name: "SignIn",
+			// Kept so old bookmarks don't 404; there is no sign-in step any more
 			path: "/sign-in",
-			component: SignIn,
-			beforeEnter(to, from, next) {
-				// Prevent navigating to sign-in when already signed in
-				if (store.state.appLoaded) {
-					next(false);
-					return;
-				}
-
-				next();
-			},
+			redirect: {name: "Connect"},
 		},
 		{
 			name: "Connect",
@@ -105,9 +95,8 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-	// If user is not yet signed in, wait for appLoaded state to change
-	// unless they are trying to open SignIn (which can be triggered in auth.js)
-	if (!store.state.appLoaded && to.name !== "SignIn") {
+	// Wait for boot to finish before allowing any navigation
+	if (!store.state.appLoaded) {
 		store.watch(
 			(state) => state.appLoaded,
 			() => next()

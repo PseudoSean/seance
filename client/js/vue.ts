@@ -6,9 +6,9 @@ import {store, CallableGetters, key} from "./store";
 import App from "../components/App.vue";
 import storage from "./localStorage";
 import {router} from "./router";
-import socket from "./socket";
 import "./socket-events"; // this sets up all socket event listeners, do not remove
 import eventbus from "./eventbus";
+import {boot} from "./boot";
 
 import "./webpush";
 import "./keybinds";
@@ -24,7 +24,8 @@ VueApp.use(router);
 VueApp.use(store, key);
 
 VueApp.mount("#app");
-socket.open();
+
+void boot();
 
 store.watch(
 	(state) => state.sidebarOpen,

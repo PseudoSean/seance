@@ -1,36 +1,15 @@
 <template>
 	<div>
-		<template v-if="!store.state.serverConfiguration?.public">
-			<h2>Push Notifications</h2>
-			<div>
-				<button
-					id="pushNotifications"
-					type="button"
-					class="btn"
-					:disabled="
-						store.state.pushNotificationState !== 'supported' &&
-						store.state.pushNotificationState !== 'subscribed'
-					"
-					@click="onPushButtonClick"
-				>
-					<template v-if="store.state.pushNotificationState === 'subscribed'">
-						Unsubscribe from push notifications
-					</template>
-					<template v-else-if="store.state.pushNotificationState === 'loading'">
-						Loading…
-					</template>
-					<template v-else> Subscribe to push notifications </template>
-				</button>
-				<div v-if="store.state.pushNotificationState === 'nohttps'" class="error">
-					<strong>Warning</strong>: Push notifications are only supported over HTTPS
-					connections.
-				</div>
-				<div v-if="store.state.pushNotificationState === 'unsupported'" class="error">
-					<strong>Warning</strong>:
-					<span>Push notifications are not supported by your browser.</span>
-				</div>
+		<h2>Push Notifications</h2>
+		<div>
+			<button id="pushNotifications" type="button" class="btn" disabled>
+				Subscribe to push notifications
+			</button>
+			<div class="error">
+				Push notifications need a server to deliver them and are not available in
+				client-only mode.
 			</div>
-		</template>
+		</div>
 
 		<h2>Browser Notifications</h2>
 		<div>
@@ -144,7 +123,6 @@ your nickname or expressions defined in custom highlights."
 <script lang="ts">
 import {computed, defineComponent} from "vue";
 import {useStore} from "../../js/store";
-import webpush from "../../js/webpush";
 
 export default defineComponent({
 	name: "NotificationSettings",
@@ -173,15 +151,10 @@ export default defineComponent({
 			pop.play();
 		};
 
-		const onPushButtonClick = () => {
-			webpush.togglePushSubscription();
-		};
-
 		return {
 			isIOS,
 			store,
 			playNotification,
-			onPushButtonClick,
 		};
 	},
 });

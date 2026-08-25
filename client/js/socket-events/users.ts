@@ -3,9 +3,10 @@ import {store} from "../store";
 
 socket.on("users", function (data) {
 	if (store.state.activeChannel && store.state.activeChannel.channel.id === data.chan) {
-		return socket.emit("names", {
+		socket.emit("names", {
 			target: data.chan,
 		});
+		return;
 	}
 
 	const channel = store.getters.findChannel(data.chan);

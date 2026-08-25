@@ -1,5 +1,12 @@
+// Subscribes every server-to-client event handler to the bus. Nothing
+// dispatches these events yet (there is no transport); the handlers stay in
+// place so the IRC layer can start feeding them in the next phase.
+//
+// Removed for good (server-only concepts): auth, configuration,
+// sessions_list, changelog, sign_out. Moved to local modules (no bus
+// round-trip): setting, sync_sort, mute_changed, mentions, history_clear,
+// search.
 import "./connection";
-import "./auth";
 import "./commands";
 import "./init";
 import "./join";
@@ -13,15 +20,5 @@ import "./nick";
 import "./open";
 import "./part";
 import "./quit";
-import "./sync_sort";
 import "./topic";
 import "./users";
-import "./sign_out";
-import "./sessions_list";
-import "./configuration";
-import "./changelog";
-import "./setting";
-import "./history_clear";
-import "./mentions";
-import "./search";
-import "./mute_changed";

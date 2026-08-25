@@ -1,58 +1,34 @@
 import socket from "../socket";
 import storage from "../localStorage";
 import {toClientChan} from "../chan";
-import {router, switchToChannel, navigate} from "../router";
+import {switchToChannel} from "../router";
 import {store} from "../store";
-import parseIrcUri from "../helpers/parseIrcUri";
 import {ClientNetwork, ClientChan} from "../types";
 import {SharedNetwork, SharedNetworkChan} from "../../../shared/types/network";
+import {applyStoredNetworkOrder, applyStoredChannelOrder} from "../sort";
+import {applyStoredMuteStatus} from "../mute";
 
-socket.on("init", async function (data) {
+// `init` used to be the server's "here is everything you have" event after
+// authentication. The app-loaded / routing / query-param parts of it now run
+// at boot (see client/js/boot.ts); what is left is the network merge, which
+// the IRC layer will reuse when it (re)connects.
+socket.on("init", function (data) {
 	store.commit("networks", mergeNetworkData(data.networks));
+	applyStoredNetworkOrder();
+
+	for (const network of store.state.networks) {
+		applyStoredChannelOrder(network);
+		applyStoredMuteStatus(network);
+	}
+
 	store.commit("isConnected", true);
 	store.commit("currentUserVisibleError", null);
 
-	if (data.token) {
-		storage.set("token", data.token);
-	}
+	// Open the channel the sender asked for, if we are not already somewhere
+	const channel = store.getters.findChannel(data.active);
 
-	if (!store.state.appLoaded) {
-		store.commit("appLoaded");
-
-		socket.emit("setting:get");
-
-		try {
-			await router.isReady();
-		} catch (e: any) {
-			// if the router throws an error, it means the route isn't matched,
-			// so we can continue on.
-		}
-
-		if (window.g_TheLoungeRemoveLoading) {
-			window.g_TheLoungeRemoveLoading();
-		}
-
-		if (await handleQueryParams()) {
-			// If we handled query parameters like irc:// links or just general
-			// connect parameters in public mode, then nothing to do here
-			return;
-		}
-
-		// If we are on an unknown route or still on SignIn component
-		// then we can open last known channel on server, or Connect window if none
-		if (!router.currentRoute?.value?.name || router.currentRoute?.value?.name === "SignIn") {
-			const channel = store.getters.findChannel(data.active);
-
-			if (channel) {
-				switchToChannel(channel.channel);
-			} else if (store.state.networks.length > 0) {
-				// Server is telling us to open a channel that does not exist
-				// For example, it can be unset if you first open the page after server start
-				switchToChannel(store.state.networks[0].channels[0]);
-			} else {
-				await navigate("Connect");
-			}
-		}
+	if (channel && !store.state.activeChannel) {
+		switchToChannel(channel.channel);
 	}
 });
 
@@ -163,37 +139,4 @@ function emitNamesOrMarkUsersOudated(chan: ClientChan) {
 	// For all other channels, mark the user list as outdated
 	// so an update will be requested whenever user switches to these channels
 	chan.usersOutdated = true;
-}
-
-async function handleQueryParams() {
-	if (!("URLSearchParams" in window)) {
-		return false;
-	}
-
-	const params = new URLSearchParams(document.location.search);
-
-	if (params.has("uri")) {
-		// Set default connection settings from IRC protocol links
-		const uri = params.get("uri");
-		const queryParams = parseIrcUri(String(uri));
-		removeQueryParams();
-		await router.push({name: "Connect", query: queryParams});
-		return true;
-	}
-
-	if (document.body.classList.contains("public") && document.location.search) {
-		// Set default connection settings from url params
-		const queryParams = Object.fromEntries(params.entries());
-		removeQueryParams();
-		await router.push({name: "Connect", query: queryParams});
-		return true;
-	}
-
-	return false;
-}
-
-// Remove query parameters from url without reloading the page
-function removeQueryParams() {
-	const cleanUri = window.location.origin + window.location.pathname + window.location.hash;
-	window.history.replaceState(null, "", cleanUri);
 }

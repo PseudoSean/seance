@@ -5,6 +5,7 @@ import {switchToChannel} from "../router";
 import {ClientChan, NetChan, ClientMessage} from "../types";
 import {SharedMsg, MessageType} from "../../../shared/types/msg";
 import {ChanType} from "../../../shared/types/chan";
+import {addMention} from "../mentions";
 
 let pop;
 
@@ -67,6 +68,19 @@ socket.on("msg", function (data) {
 	}
 
 	channel.messages.push(data.msg);
+
+	// Highlights used to be collected server-side; keep the recent-mentions
+	// list locally instead.
+	if (data.msg.highlight && !data.msg.self && data.msg.from) {
+		addMention({
+			chanId: data.chan,
+			msgId: data.msg.id,
+			type: data.msg.type ?? MessageType.MESSAGE,
+			time: data.msg.time,
+			text: data.msg.text ?? "",
+			from: data.msg.from,
+		});
+	}
 
 	if (data.msg.self) {
 		channel.firstUnread = data.msg.id;

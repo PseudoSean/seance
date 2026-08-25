@@ -1,4 +1,3 @@
-import socket from "./socket";
 import type {TypedStore} from "./store";
 
 const defaultSettingConfig = {
@@ -8,16 +7,6 @@ const defaultSettingConfig = {
 };
 
 const defaultConfig = {
-	syncSettings: {
-		default: true,
-		sync: "never",
-		apply(store: TypedStore, value: boolean, auto = false) {
-			// If applied by settings/applyAll, do not emit to server
-			if (value && !auto) {
-				socket.emit("setting:get");
-			}
-		},
-	},
 	advanced: {
 		default: false,
 	},

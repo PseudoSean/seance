@@ -58,33 +58,33 @@ Goal: `yarn build` produces a static SPA from `client/` only. Nothing in `server
 
 Goal: app builds and renders the connect form. Nothing actually connects to anything. Everything that used to round-trip through the server now either returns local data or no-ops with a warning.
 
-1. [ ] **Replace `client/js/socket.ts` with a typed event bus**
-   - [ ] a. New module exporting an object with `on(event, cb)`, `off(event, cb)`, `emit(event, payload)`, `connect()`, `disconnect()` — typed against the current `ServerToClientEvents` / `ClientToServerEvents`.
-   - [ ] b. Internally just a `Map<event, Set<callback>>`. No transport.
-   - [ ] c. `emit` for unknown / unhandled events logs `console.warn("[bus] unhandled emit:", event, payload)` so we can spot regressions later.
-   - [ ] d. Remove `socket.io-client` from the import (leave in `package.json` for now).
-2. [ ] **Move localStorage-backed concepts off the bus**
-   - [ ] a. `setting:set` / `setting:get` / `setting:new` / `setting:all` — settings already have a localStorage store (`client/js/store-settings.ts`); make it the source of truth and stop emitting these.
-   - [ ] b. `sort:networks` / `sort:channels` / `sync_sort:*` — persist to localStorage; no server round-trip.
-   - [ ] c. `mute:change` / `mute:changed` — local channel state.
-   - [ ] d. `mentions:get` / `mentions:dismiss` / `mentions:dismiss_all` / `mentions:list` — back with localStorage (or IndexedDB if it grows).
-   - [ ] e. `history:clear` — local-only.
-   - [ ] f. `msg:preview:toggle` / `msg:preview` — local preview state, no server.
-3. [ ] **Stub the rest of the socket-events handlers**
-   - [ ] a. Leave the files in place; have them subscribe to the bus as before. Since the bus never fires server events yet, they're effectively dormant.
-   - [ ] b. Delete handlers that are 100% server-concept and won't come back: `sessions_list`, `changelog`, `sign_out`, `configuration` (replace with a static client-built configuration object).
-4. [ ] **Stub server-only UI**
-   - [ ] a. `Settings/Account.vue` (change password, sessions) — replace body with a "Not applicable in client-only mode" note. Keep the route so links don't 404.
-   - [ ] b. `Windows/Changelog.vue` — pull from a static JSON shipped with the build, or stub.
-   - [ ] c. `Windows/SearchResults.vue` — render "Search is not available yet" placeholder.
-   - [ ] d. Upload UI (`upload.ts`, file picker in `ChatInput.vue`) — disable; surface "uploads not configured."
-   - [ ] e. Push subscription UI in settings — disable.
-5. [ ] **Repurpose the connect / sign-in screen**
-   - [ ] a. `Windows/SignIn.vue` and `Windows/Connect.vue`: collapse into a single "Connect to IRC" form — host, port, TLS toggle, nick, optional channel(s) to auto-join, optional SASL account+password (can stay hidden until phase D).
-   - [ ] b. On submit, the form will eventually call `IrcClient.connect(...)`. For now, just stash the form values in component state and log them.
-6. [ ] **Verification**
-   - [ ] a. `yarn build` and `yarn dev` both succeed.
-   - [ ] b. Open the app, see the connect form. No console errors. Settings/sort/mute UI flows work entirely against localStorage.
+1. [x] **Replace `client/js/socket.ts` with a typed event bus**
+   - [x] a. New module exporting an object with `on(event, cb)`, `off(event, cb)`, `emit(event, payload)`, `connect()`, `disconnect()` — typed against the current `ServerToClientEvents` / `ClientToServerEvents`.
+   - [x] b. Internally just a `Map<event, Set<callback>>`. No transport.
+   - [x] c. `emit` for unknown / unhandled events logs `console.warn("[bus] unhandled emit:", event, payload)` so we can spot regressions later.
+   - [x] d. Remove `socket.io-client` from the import (leave in `package.json` for now).
+2. [x] **Move localStorage-backed concepts off the bus**
+   - [x] a. `setting:set` / `setting:get` / `setting:new` / `setting:all` — settings already have a localStorage store (`client/js/store-settings.ts`); make it the source of truth and stop emitting these.
+   - [x] b. `sort:networks` / `sort:channels` / `sync_sort:*` — persist to localStorage; no server round-trip.
+   - [x] c. `mute:change` / `mute:changed` — local channel state.
+   - [x] d. `mentions:get` / `mentions:dismiss` / `mentions:dismiss_all` / `mentions:list` — back with localStorage (or IndexedDB if it grows).
+   - [x] e. `history:clear` — local-only.
+   - [x] f. `msg:preview:toggle` / `msg:preview` — local preview state, no server.
+3. [x] **Stub the rest of the socket-events handlers**
+   - [x] a. Leave the files in place; have them subscribe to the bus as before. Since the bus never fires server events yet, they're effectively dormant.
+   - [x] b. Delete handlers that are 100% server-concept and won't come back: `sessions_list`, `changelog`, `sign_out`, `configuration` (replace with a static client-built configuration object). _Also deleted `auth`, `search`, `setting`, `sync_sort`, `mute_changed`, `mentions`, `history_clear`; `connection.ts` rewritten (its socket.io reconnect logic could not compile against the bus). Static config in `client/js/configuration.ts`; boot chain in `client/js/boot.ts`._
+4. [x] **Stub server-only UI**
+   - [x] a. `Settings/Account.vue` (change password, sessions) — replace body with a "Not applicable in client-only mode" note. Keep the route so links don't 404.
+   - [x] b. `Windows/Changelog.vue` — pull from a static JSON shipped with the build, or stub.
+   - [x] c. `Windows/SearchResults.vue` — render "Search is not available yet" placeholder.
+   - [x] d. Upload UI (`upload.ts`, file picker in `ChatInput.vue`) — disable; surface "uploads not configured."
+   - [x] e. Push subscription UI in settings — disable.
+5. [x] **Repurpose the connect / sign-in screen**
+   - [x] a. `Windows/SignIn.vue` and `Windows/Connect.vue`: collapse into a single "Connect to IRC" form — host, port, TLS toggle, nick, optional channel(s) to auto-join, optional SASL account+password (can stay hidden until phase D).
+   - [x] b. On submit, the form will eventually call `IrcClient.connect(...)`. For now, just stash the form values in component state and log them.
+6. [x] **Verification**
+   - [x] a. `yarn build` and `yarn dev` both succeed. _(`yarn dev` no longer exists; verified with `yarn build` + static serve.)_
+   - [x] b. Open the app, see the connect form. No console errors. Settings/sort/mute UI flows work entirely against localStorage. _Headless Chromium renders `#connect` with the splash removed and zero console output. Emits still routed through the bus and warning on use (the ones phase C must `handle()`): `input`, `open`, `names`, `more`, `network:get`, `network:edit`._
 
 ## C. Minimum IRC — make chatting work
 
@@ -168,7 +168,7 @@ No fixed order. Tackle items in whatever sequence the friction dictates.
 Each milestone is a state you can sit on without rushing to the next:
 
 1. [x] **M1 — Static SPA, no server.** End of phase A. App builds and renders the connect form (which doesn't connect yet). _Reached 2026-08-24. The splash shows while the client tries (and fails) to reach Socket.IO; the connect form appears once phase B stubs the transport._
-2. [ ] **M2 — Bus stubbed, localStorage features alive.** End of phase B. Settings/sort/mute/mentions all work locally. Connect form is wired to nothing.
+2. [x] **M2 — Bus stubbed, localStorage features alive.** End of phase B. Settings/sort/mute/mentions all work locally. Connect form is wired to nothing. _Reached 2026-08-24._
 3. [ ] **M3 — Chat works on one channel of one network.** End of phase C. The bare-minimum IRC client.
 4. [ ] **M4 — Daily-driver.** Several phase D items in — SASL, history, saved networks, the input commands you actually use. This is the milestone where you'd stop using whatever IRC client you use now and switch to this.
 5. [ ] **M5 — Shippable.** Dependency cleanup, branding hooks, at least one native shell built and installable.

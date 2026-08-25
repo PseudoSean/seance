@@ -1,9 +1,11 @@
 import storage from "./localStorage";
-import socket from "./socket";
 import {config, createState} from "./settings";
 import {Store} from "vuex";
 import {State} from "./store";
 
+// Settings live in localStorage only. TheLounge additionally synced them to
+// the server (`setting:set` / `setting:all`); there is no server any more, so
+// localStorage is the single source of truth.
 export function createSettingsStore(store: Store<State>) {
 	return {
 		namespaced: true,
@@ -14,57 +16,26 @@ export function createSettingsStore(store: Store<State>) {
 			},
 		},
 		actions: {
-			syncAll({state}, force = false) {
-				if (state.syncSettings === false && force === false) {
-					return;
-				}
-
-				store.commit("serverHasSettings", true);
-
-				for (const name in state) {
-					if (config[name].sync !== "never" || config[name].sync === "always") {
-						socket.emit("setting:set", {name, value: state[name]});
-					}
-				}
-			},
 			applyAll({state}) {
 				for (const settingName in config) {
 					config[settingName].apply(store, state[settingName], true);
 				}
 			},
-			update({state, commit}, {name, value, sync = false}) {
+			update({state, commit}, {name, value}) {
 				if (state[name] === value) {
 					return;
 				}
 
 				const settingConfig = config[name];
 
-				// Trying to update a non existing setting (e.g. server has an old key)
+				// Trying to update a non existing setting (e.g. a stale key)
 				if (!settingConfig) {
-					return;
-				}
-
-				if (
-					sync === false &&
-					(state.syncSettings === false || settingConfig.sync === "never")
-				) {
 					return;
 				}
 
 				commit("set", {name, value});
 				storage.set("settings", JSON.stringify(state));
 				settingConfig.apply(store, value);
-
-				if (!sync) {
-					return;
-				}
-
-				if (
-					(state.syncSettings && settingConfig.sync !== "never") ||
-					settingConfig.sync === "always"
-				) {
-					socket.emit("setting:set", {name, value});
-				}
 			},
 		},
 	};

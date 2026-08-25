@@ -1,7 +1,11 @@
 import {update as updateCursor} from "undate";
 
-import socket from "./socket";
 import {store} from "./store";
+
+// File uploads need a server to receive the file and hand back a URL. There is
+// none in client-only mode: the drag/drop/paste plumbing is kept for when an
+// upload target exists, but any attempt to upload reports it as unconfigured.
+const UPLOADS_NOT_CONFIGURED = "File uploads are not configured in this client.";
 
 class Uploader {
 	xhr: XMLHttpRequest | null = null;
@@ -18,7 +22,7 @@ class Uploader {
 	onPaste = (e: ClipboardEvent) => this.paste(e);
 
 	init() {
-		socket.on("upload:auth", (token) => this.uploadNextFileInQueue(token));
+		// Nothing to subscribe to: there is no upload backend.
 	}
 
 	mounted() {
@@ -114,6 +118,11 @@ class Uploader {
 			return;
 		}
 
+		if (!store.state.serverConfiguration?.fileUpload) {
+			this.handleResponse({error: UPLOADS_NOT_CONFIGURED});
+			return;
+		}
+
 		if (!store.state.isConnected) {
 			this.handleResponse({
 				error: `You are currently disconnected, unable to initiate upload process.`,
@@ -149,7 +158,9 @@ class Uploader {
 	}
 
 	requestToken() {
-		socket.emit("upload:auth");
+		// No backend to ask for an upload token; surface it to the user instead.
+		this.fileQueue = [];
+		this.handleResponse({error: UPLOADS_NOT_CONFIGURED});
 	}
 
 	setProgress(value: number) {
@@ -167,12 +178,6 @@ class Uploader {
 		if (!file) {
 			return;
 		}
-
-		// Tell the server that we are still upload to this token
-		// so it does not become invalidated and fail the upload.
-		// This issue only happens if The Lounge is proxied through other software
-		// as it may buffer the upload before the upload request will be processed by The Lounge.
-		this.tokenKeepAlive = setInterval(() => socket.emit("upload:ping", token), 40 * 1000);
 
 		if (
 			store.state.settings.uploadCanvas &&

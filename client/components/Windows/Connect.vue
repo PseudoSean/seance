@@ -1,117 +1,275 @@
 <template>
-	<NetworkForm :handle-submit="handleSubmit" :defaults="defaults" :disabled="disabled" />
+	<div id="connect" class="window" role="tabpanel" aria-label="Connect">
+		<div class="header">
+			<SidebarToggle />
+		</div>
+		<form class="container" method="post" action="" @submit.prevent="onSubmit">
+			<h1 class="title">Connect to IRC</h1>
+
+			<h2>Server</h2>
+			<div class="connect-row">
+				<label for="connect:host">Server</label>
+				<div class="input-wrap">
+					<input
+						id="connect:host"
+						v-model.trim="form.host"
+						class="input"
+						name="host"
+						aria-label="Server address"
+						placeholder="irc.example.org"
+						maxlength="255"
+						required
+					/>
+					<span id="connect:portseparator">:</span>
+					<input
+						id="connect:port"
+						v-model.number="form.port"
+						class="input"
+						type="number"
+						min="1"
+						max="65535"
+						name="port"
+						aria-label="Server port"
+						required
+					/>
+				</div>
+			</div>
+			<div class="connect-row">
+				<label></label>
+				<div class="input-wrap">
+					<label class="tls">
+						<input v-model="form.tls" type="checkbox" name="tls" />
+						Use secure connection (TLS)
+					</label>
+				</div>
+			</div>
+
+			<h2>User</h2>
+			<div class="connect-row">
+				<label for="connect:nick">Nick</label>
+				<input
+					id="connect:nick"
+					v-model.trim="form.nick"
+					class="input nick"
+					name="nick"
+					pattern="[^\s:!@]+"
+					maxlength="100"
+					required
+				/>
+			</div>
+			<div class="connect-row">
+				<label for="connect:channels">Channels</label>
+				<input
+					id="connect:channels"
+					v-model.trim="form.join"
+					class="input"
+					name="join"
+					placeholder="#channel, #another (optional)"
+				/>
+			</div>
+
+			<h2 id="label-auth">Authentication</h2>
+			<div class="connect-row">
+				<label></label>
+				<div class="input-wrap">
+					<label class="tls">
+						<input v-model="showSasl" type="checkbox" name="sasl" />
+						I have a services account (SASL)
+					</label>
+				</div>
+			</div>
+			<template v-if="showSasl">
+				<div class="connect-row">
+					<label for="connect:saslAccount">Account</label>
+					<input
+						id="connect:saslAccount"
+						v-model.trim="form.saslAccount"
+						class="input"
+						name="saslAccount"
+						maxlength="100"
+						autocomplete="username"
+						required
+					/>
+				</div>
+				<div class="connect-row">
+					<label for="connect:saslPassword">Password</label>
+					<RevealPassword
+						v-slot:default="slotProps"
+						class="input-wrap password-container"
+					>
+						<input
+							id="connect:saslPassword"
+							v-model="form.saslPassword"
+							class="input"
+							:type="slotProps.isVisible ? 'text' : 'password'"
+							name="saslPassword"
+							maxlength="300"
+							autocomplete="current-password"
+							required
+						/>
+					</RevealPassword>
+				</div>
+			</template>
+
+			<div v-if="submitted" class="connect-notice">
+				Connecting is not wired up yet. Your settings for
+				<strong>{{ submitted.nick }}</strong> on
+				<strong>{{ submitted.host }}:{{ submitted.port }}</strong> were captured and logged
+				to the browser console.
+			</div>
+
+			<div>
+				<button type="submit" class="btn">Connect</button>
+			</div>
+		</form>
+	</div>
 </template>
 
-<script lang="ts">
-import {defineComponent, ref} from "vue";
+<style>
+#connect .connect-notice {
+	padding: 10px;
+	margin-bottom: 10px;
+	border-radius: 2px;
+	background-color: #d9edf7;
+	color: #31708f;
+}
+</style>
 
-import socket from "../../js/socket";
+<script lang="ts">
+import {defineComponent, reactive, ref} from "vue";
+
 import {useStore} from "../../js/store";
-import NetworkForm, {NetworkFormDefaults} from "../NetworkForm.vue";
+import RevealPassword from "../RevealPassword.vue";
+import SidebarToggle from "../SidebarToggle.vue";
+
+/**
+ * Everything the future IRC layer needs to open a connection. Populated by
+ * the form; `IrcClient.connect(options)` will consume it in a later phase.
+ */
+export type ConnectOptions = {
+	host: string;
+	port: number;
+	tls: boolean;
+	nick: string;
+	join: string;
+	sasl: "" | "plain";
+	saslAccount: string;
+	saslPassword: string;
+};
 
 export default defineComponent({
 	name: "Connect",
 	components: {
-		NetworkForm,
+		RevealPassword,
+		SidebarToggle,
 	},
 	props: {
 		queryParams: Object,
 	},
 	setup(props) {
 		const store = useStore();
+		const defaults = store.state.serverConfiguration?.defaults;
 
-		const disabled = ref(false);
+		const form = reactive<ConnectOptions>({
+			host: defaults?.host || "",
+			port: defaults?.port || 6697,
+			tls: defaults?.tls ?? true,
+			nick: defaults?.nick || "",
+			join: defaults?.join || "",
+			sasl: defaults?.sasl === "plain" ? "plain" : "",
+			saslAccount: defaults?.saslAccount || "",
+			saslPassword: defaults?.saslPassword || "",
+		});
 
-		const handleSubmit = (data: Record<string, any>) => {
-			disabled.value = true;
-			socket.emit("network:new", data);
-		};
+		applyQueryParams(form, props.queryParams);
 
-		const parseOverrideParams = (params?: Record<string, string>) => {
-			if (!params) {
-				return {};
+		const showSasl = ref(form.sasl === "plain" || !!form.saslAccount);
+		const submitted = ref<ConnectOptions | null>(null);
+
+		const onSubmit = () => {
+			form.sasl = showSasl.value ? "plain" : "";
+
+			if (!showSasl.value) {
+				form.saslAccount = "";
+				form.saslPassword = "";
 			}
 
-			const parsedParams: Record<string, any> = {};
+			submitted.value = {...form};
 
-			for (let key of Object.keys(params)) {
-				let value = params[key];
-
-				// Param can contain multiple values in an array if its supplied more than once
-				if (Array.isArray(value)) {
-					value = value[0];
-				}
-
-				// Support `channels` as a compatibility alias with other clients
-				if (key === "channels") {
-					key = "join";
-				}
-
-				if (
-					!Object.prototype.hasOwnProperty.call(
-						store.state.serverConfiguration?.defaults,
-						key
-					)
-				) {
-					continue;
-				}
-
-				// When the network is locked, URL overrides should not affect disabled fields
-				if (
-					store.state.serverConfiguration?.lockNetwork &&
-					["name", "host", "port", "tls", "rejectUnauthorized"].includes(key)
-				) {
-					continue;
-				}
-
-				if (key === "join") {
-					value = value
-						.split(",")
-						.map((chan) => {
-							if (!chan.match(/^[#&!+]/)) {
-								return `#${chan}`;
-							}
-
-							return chan;
-						})
-						.join(", ");
-				}
-
-				// Override server provided defaults with parameters passed in the URL if they match the data type
-				switch (typeof store.state.serverConfiguration?.defaults[key]) {
-					case "boolean":
-						if (value === "0" || value === "false") {
-							parsedParams[key] = false;
-						} else {
-							parsedParams[key] = !!value;
-						}
-
-						break;
-					case "number":
-						parsedParams[key] = Number(value);
-						break;
-					case "string":
-						parsedParams[key] = String(value);
-						break;
-				}
-			}
-
-			return parsedParams;
+			// eslint-disable-next-line no-console
+			console.info("[connect] captured connection options (not connecting yet):", {
+				...submitted.value,
+				saslPassword: submitted.value.saslPassword ? "<redacted>" : "",
+			});
 		};
-
-		const defaults = ref<Partial<NetworkFormDefaults>>(
-			Object.assign(
-				{},
-				store.state.serverConfiguration?.defaults,
-				parseOverrideParams(props.queryParams)
-			)
-		);
 
 		return {
-			defaults,
-			disabled,
-			handleSubmit,
+			form,
+			showSasl,
+			submitted,
+			onSubmit,
 		};
 	},
 });
+
+/**
+ * Pre-fill the form from `?host=...&nick=...` style URL parameters or the
+ * output of `parseIrcUri` for `irc://` links. `channels` is accepted as an
+ * alias for `join` for compatibility with other clients.
+ */
+function applyQueryParams(form: ConnectOptions, params?: Record<string, any>) {
+	if (!params) {
+		return;
+	}
+
+	const first = (value: unknown): string | undefined => {
+		if (Array.isArray(value)) {
+			value = value[0];
+		}
+
+		return value === undefined || value === null ? undefined : String(value);
+	};
+
+	const host = first(params.host);
+	const port = first(params.port);
+	const tls = first(params.tls);
+	const nick = first(params.nick);
+	const join = first(params.join ?? params.channels);
+	const saslAccount = first(params.saslAccount);
+	const saslPassword = first(params.saslPassword);
+
+	if (host) {
+		form.host = host;
+	}
+
+	if (port && !Number.isNaN(Number(port))) {
+		form.port = Number(port);
+	}
+
+	if (tls !== undefined) {
+		form.tls = !(tls === "0" || tls === "false");
+	}
+
+	if (nick) {
+		form.nick = nick;
+	}
+
+	if (join) {
+		form.join = join
+			.split(",")
+			.map((chan) => chan.trim())
+			.filter((chan) => chan.length > 0)
+			.map((chan) => (chan.match(/^[#&!+]/) ? chan : `#${chan}`))
+			.join(", ");
+	}
+
+	if (saslAccount) {
+		form.saslAccount = saslAccount;
+		form.sasl = "plain";
+	}
+
+	if (saslPassword) {
+		form.saslPassword = saslPassword;
+	}
+}
 </script>
