@@ -112,10 +112,9 @@
 			</template>
 
 			<div v-if="submitted" class="connect-notice">
-				Connecting is not wired up yet. Your settings for
-				<strong>{{ submitted.nick }}</strong> on
-				<strong>{{ submitted.host }}:{{ submitted.port }}</strong> were captured and logged
-				to the browser console.
+				Connecting as <strong>{{ submitted.nick }}</strong> to
+				<strong>{{ submitted.host }}:{{ submitted.port }}</strong
+				>…
 			</div>
 
 			<div>
@@ -136,26 +135,20 @@
 </style>
 
 <script lang="ts">
-import {defineComponent, reactive, ref} from "vue";
+import {defineComponent, onMounted, reactive, ref, watch} from "vue";
 
 import {useStore} from "../../js/store";
+import {createNetwork} from "../../js/irc/manager";
+import type {ConnectOptions} from "../../js/irc/types";
 import RevealPassword from "../RevealPassword.vue";
 import SidebarToggle from "../SidebarToggle.vue";
 
-/**
- * Everything the future IRC layer needs to open a connection. Populated by
- * the form; `IrcClient.connect(options)` will consume it in a later phase.
- */
-export type ConnectOptions = {
-	host: string;
-	port: number;
-	tls: boolean;
-	nick: string;
-	join: string;
-	sasl: "" | "plain";
-	saslAccount: string;
-	saslPassword: string;
-};
+export type {ConnectOptions};
+
+/** nefarious2's WebSocket ports: 8443 for wss://, 8067 for ws://. */
+function defaultPort(tls: boolean): number {
+	return tls ? 8443 : 8067;
+}
 
 export default defineComponent({
 	name: "Connect",
@@ -170,10 +163,12 @@ export default defineComponent({
 		const store = useStore();
 		const defaults = store.state.serverConfiguration?.defaults;
 
+		const tls = defaults?.tls ?? true;
 		const form = reactive<ConnectOptions>({
 			host: defaults?.host || "",
-			port: defaults?.port || 6697,
-			tls: defaults?.tls ?? true,
+			// 6697 is TheLounge's plain-IRC default; not meaningful over WebSocket.
+			port: defaults?.port && defaults.port !== 6697 ? defaults.port : defaultPort(tls),
+			tls,
 			nick: defaults?.nick || "",
 			join: defaults?.join || "",
 			sasl: defaults?.sasl === "plain" ? "plain" : "",
@@ -182,6 +177,16 @@ export default defineComponent({
 		});
 
 		applyQueryParams(form, props.queryParams);
+
+		// Follow the TLS checkbox while the port is still one of the defaults.
+		watch(
+			() => form.tls,
+			(useTls) => {
+				if (form.port === defaultPort(!useTls)) {
+					form.port = defaultPort(useTls);
+				}
+			}
+		);
 
 		const showSasl = ref(form.sasl === "plain" || !!form.saslAccount);
 		const submitted = ref<ConnectOptions | null>(null);
@@ -195,13 +200,15 @@ export default defineComponent({
 			}
 
 			submitted.value = {...form};
-
-			// eslint-disable-next-line no-console
-			console.info("[connect] captured connection options (not connecting yet):", {
-				...submitted.value,
-				saslPassword: submitted.value.saslPassword ? "<redacted>" : "",
-			});
+			createNetwork(submitted.value);
 		};
+
+		onMounted(() => {
+			// `?autoconnect=1` with a host and nick skips the form entirely.
+			if (isTruthyParam(props.queryParams?.autoconnect) && form.host && form.nick) {
+				onSubmit();
+			}
+		});
 
 		return {
 			form,
@@ -211,6 +218,14 @@ export default defineComponent({
 		};
 	},
 });
+
+function isTruthyParam(value: unknown): boolean {
+	if (Array.isArray(value)) {
+		value = value[0];
+	}
+
+	return value === "" || value === "1" || value === "true" || value === true;
+}
 
 /**
  * Pre-fill the form from `?host=...&nick=...` style URL parameters or the

@@ -90,36 +90,36 @@ Goal: app builds and renders the connect form. Nothing actually connects to anyt
 
 Goal: connect to nefarious2, join one channel, send and receive messages, see joins/parts/quits/nicks/topics/names. Everything you'd expect from a basic IRC client. No SASL yet (unless trivial), no history, no multi-network UI.
 
-1. [ ] **`client/js/irc/` skeleton**
+1. [x] **`client/js/irc/` skeleton**
    - [x] a. `transport.ts` — open WebSocket _`client/js/irc/transport.ts`; PING/PONG inside; 500-byte guard (#98); live test `test/irc/transport.live.ts` gated on `SEANCE_IRC_URL`._, `send(line)`, `onLine(cb)`, reconnect with exponential backoff, surface open/close/error to the bus as `network:status` / `connecting` / `error`.
    - [x] b. `parser.ts` — wraps the chosen library _Hand-rolled as `message.ts` (+ `casemap.ts`), per §0.2._; produces `IrcMessage { tags, prefix: {nick, ident, host}, command, params }`.
    - [x] c. `cap.ts` — CAP LS 302 _`caps.ts`: pure negotiator, handles `*` continuation, NEW/DEL, `SEANCE_CAPS` list._, REQ for the set decided in §0.1b, CAP END. Track enabled caps. No SASL hookup in v1.
    - [x] d. `isupport.ts` — parse RPL*ISUPPORT \_Accepts both `EXTBAN`/`EXTBANS`.* (005) into `serverOptions` (PREFIX, CHANTYPES, STATUSMSG, CASEMAPPING, NETWORK, CHANMODES).
-   - [ ] e. `client.ts` — `IrcClient` orchestrating transport+parser+cap+state, emitting bus events.
-2. [ ] **Connection lifecycle**
-   - [ ] a. Form submit → `IrcClient.connect({host, port, tls, nick, channels})`.
-   - [ ] b. After CAP negotiation, send `NICK` and `USER`, wait for `001` (welcome). On `001`, fire synthetic `auth:success`.
-   - [ ] c. After `376`/`422` (end of MOTD), fire synthetic `init` with one `SharedNetwork` containing the configured channels as placeholder `SharedNetworkChan`s. Allocate ids from a monotonic counter owned by `IrcClient`.
-   - [ ] d. Auto-`JOIN` the configured channels. The JOIN handler (3.a) fills the rest in.
-3. [ ] **Inbound event translation**
-   - [ ] a. `PRIVMSG` / `NOTICE` / CTCP `ACTION` → bus `msg`. Time from `@time` tag or now. `msgid` from `@msgid`. `self` true if echo-message tags it as ours. Resolve `chan` id by channel name (or open a query on first PM from a new nick).
-   - [ ] b. `JOIN` — if self, allocate channel id (if not already) and emit `join`; otherwise push a JOIN message and add user to `chan.users`. Honor `extended-join`'s account+gecos.
-   - [ ] c. `PART` — if self, emit `part`; otherwise push PART message and remove user.
-   - [ ] d. `QUIT` — walk every channel that contains the user, push QUIT message and drop them.
-   - [ ] e. `KICK` — like PART but for the target nick.
-   - [ ] f. `NICK` — update `network.nick` if self; rename across all channels' user lists.
-   - [ ] g. `353` / `366` (NAMES) — accumulate during the burst, emit `names` on 366. Parse `multi-prefix` and `userhost-in-names`.
-   - [ ] h. `TOPIC`, `332`, `333` — set `chan.topic`, push a TOPIC message with setter/time.
-   - [ ] i. `MODE` — channel prefix changes (op/voice/etc.) update the user in `chan.users`. Other channel modes get a `MODE_CHANNEL` message; user modes get `MODE_USER`. Ban/exception/invite list numerics deferred to phase D.
-   - [ ] j. `PING` / `PONG` — handled in transport, never reaches the bus.
-4. [ ] **Outbound input dispatch**
-   - [ ] a. `client/js/irc/commands/` — port the minimum set from `attic/server/plugins/inputs/`: `/msg`, `/me` (action), `/join`, `/part`, `/nick`, `/topic`, `/quit`, `/raw`. Plain text becomes a `PRIVMSG` to the current channel.
-   - [ ] b. The dispatcher replaces the `socket.emit("input", {target, text})` consumer — every call site already exists; only the bus subscriber changes.
-   - [ ] c. The rest of the input commands (`/ban`, `/kick`, `/whois`, `/list`, `/mode`, `/notice`, `/ctcp`, `/away`, `/back`, `/connect`, `/disconnect`, `/rejoin`, `/invite`, `/kill`, `/ignore`, `/ignorelist`, `/mute`) are phase D.
-5. [ ] **Reconnect**
-   - [ ] a. On WS close, exponential backoff, re-open, re-register, rejoin the channels we believe we're in. Mark `chan.state = PARTED` while disconnected; clear `chan.users`.
-6. [ ] **Verification**
-   - [ ] a. Connect to nefarious2 from the SPA, join a channel, see the topic, see the names list, send a message, receive your own echo, receive someone else's reply, watch a join/part/quit happen, change your nick, get a "you are not registered" reply for something you typed and have it land in the lobby.
+   - [x] e. `client.ts` — `IrcClient` orchestrating transport+parser+cap+state, emitting bus events.
+2. [x] **Connection lifecycle**
+   - [x] a. Form submit → `IrcClient.connect({host, port, tls, nick, channels})`.
+   - [x] b. After CAP negotiation, send `NICK` and `USER`, wait for `001` (welcome). On `001`, fire synthetic `auth:success`. _No `auth:success` — nothing listens any more; `network` is dispatched at connect for immediate UI feedback._
+   - [x] c. After `376`/`422` (end of MOTD), fire synthetic `init` with one `SharedNetwork` containing the configured channels as placeholder `SharedNetworkChan`s. Allocate ids from a monotonic counter owned by `IrcClient`.
+   - [x] d. Auto-`JOIN` the configured channels. The JOIN handler (3.a) fills the rest in.
+3. [x] **Inbound event translation**
+   - [x] a. `PRIVMSG` / `NOTICE` / CTCP `ACTION` → bus `msg`. Time from `@time` tag or now. `msgid` from `@msgid`. `self` true if echo-message tags it as ours. Resolve `chan` id by channel name (or open a query on first PM from a new nick).
+   - [x] b. `JOIN` — if self, allocate channel id (if not already) and emit `join`; otherwise push a JOIN message and add user to `chan.users`. Honor `extended-join`'s account+gecos.
+   - [x] c. `PART` — if self, emit `part`; otherwise push PART message and remove user.
+   - [x] d. `QUIT` — walk every channel that contains the user, push QUIT message and drop them.
+   - [x] e. `KICK` — like PART but for the target nick.
+   - [x] f. `NICK` — update `network.nick` if self; rename across all channels' user lists.
+   - [x] g. `353` / `366` (NAMES) — accumulate during the burst, emit `names` on 366. Parse `multi-prefix` and `userhost-in-names`.
+   - [x] h. `TOPIC`, `332`, `333` — set `chan.topic`, push a TOPIC message with setter/time.
+   - [x] i. `MODE` — channel prefix changes (op/voice/etc.) update the user in `chan.users`. Other channel modes get a `MODE_CHANNEL` message; user modes get `MODE_USER`. Ban/exception/invite list numerics deferred to phase D.
+   - [x] j. `PING` / `PONG` — handled in transport, never reaches the bus.
+4. [x] **Outbound input dispatch**
+   - [x] a. `client/js/irc/commands/` — port the minimum set from `attic/server/plugins/inputs/`: `/msg`, `/me` (action), `/join`, `/part`, `/nick`, `/topic`, `/quit`, `/raw`. Plain text becomes a `PRIVMSG` to the current channel.
+   - [x] b. The dispatcher replaces the `socket.emit("input", {target, text})` consumer — every call site already exists; only the bus subscriber changes.
+   - [x] c. The rest of the input commands (`/ban`, `/kick`, `/whois`, `/list`, `/mode`, `/notice`, `/ctcp`, `/away`, `/back`, `/connect`, `/disconnect`, `/rejoin`, `/invite`, `/kill`, `/ignore`, `/ignorelist`, `/mute`) are phase D.
+5. [x] **Reconnect**
+   - [x] a. On WS close, exponential backoff, re-open, re-register, rejoin the channels we believe we're in. Mark `chan.state = PARTED` while disconnected; clear `chan.users`.
+6. [x] **Verification** _(2026-08-24: `test/irc/client.live.ts` against the dev ircd with a TCP peer covers the whole list; headless Chromium end-to-end works only through a header-stripping TLS proxy because of upstream bug #99 — see `docs/resources/nefarious2-websocket.md`.)_
+   - [x] a. Connect to nefarious2 from the SPA, join a channel, see the topic, see the names list, send a message, receive your own echo, receive someone else's reply, watch a join/part/quit happen, change your nick, get a "you are not registered" reply for something you typed and have it land in the lobby.
 
 ## D. Fill in — un-stub as it gets annoying
 
@@ -169,6 +169,6 @@ Each milestone is a state you can sit on without rushing to the next:
 
 1. [x] **M1 — Static SPA, no server.** End of phase A. App builds and renders the connect form (which doesn't connect yet). _Reached 2026-08-24. The splash shows while the client tries (and fails) to reach Socket.IO; the connect form appears once phase B stubs the transport._
 2. [x] **M2 — Bus stubbed, localStorage features alive.** End of phase B. Settings/sort/mute/mentions all work locally. Connect form is wired to nothing. _Reached 2026-08-24._
-3. [ ] **M3 — Chat works on one channel of one network.** End of phase C. The bare-minimum IRC client.
+3. [x] **M3 — Chat works on one channel of one network.** End of phase C. The bare-minimum IRC client. _Reached 2026-08-24 (verified headlessly + via live tests; real-browser use blocked on nefarious2#99)._
 4. [ ] **M4 — Daily-driver.** Several phase D items in — SASL, history, saved networks, the input commands you actually use. This is the milestone where you'd stop using whatever IRC client you use now and switch to this.
 5. [ ] **M5 — Shippable.** Dependency cleanup, branding hooks, at least one native shell built and installable.

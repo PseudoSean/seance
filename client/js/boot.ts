@@ -11,6 +11,8 @@ import {router, navigate} from "./router";
 import {store} from "./store";
 import parseIrcUri from "./helpers/parseIrcUri";
 import {loadMentions} from "./mentions";
+// Registers the IRC layer's bus handlers (input, names, more, network:*).
+import "./irc/manager";
 
 declare global {
 	interface Window {

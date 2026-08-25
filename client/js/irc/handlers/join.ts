@@ -1,0 +1,67 @@
+/**
+ * JOIN (with `extended-join`: `JOIN #chan account :realname`).
+ * Ported from attic/server/plugins/irc-events/join.ts.
+ */
+
+import {ChanState, ChanType} from "../../../../shared/types/chan";
+import {MessageType, SharedMsg} from "../../../../shared/types/msg";
+import {newUser} from "../channel";
+import {formatLine} from "../message";
+import type {Handler} from "../types";
+
+const join: Handler = (client, msg) => {
+	const [name, account, gecos] = msg.params;
+	const nick = msg.source?.name ?? "";
+
+	if (!name || !nick) {
+		return;
+	}
+
+	const self = client.isSelf(nick);
+	let chan = client.findChannel(name);
+
+	if (!chan) {
+		if (!self) {
+			return; // a JOIN for a channel we are not in: nothing to attach it to
+		}
+
+		chan = client.announceChannel(name, ChanType.CHANNEL, {state: ChanState.JOINED});
+	} else if (self && chan.state !== ChanState.JOINED) {
+		chan.state = ChanState.JOINED;
+		chan.users.clear();
+		client.dispatch("channel:state", {chan: chan.id, state: chan.state});
+	}
+
+	if (self) {
+		chan.autoJoin = true;
+		// Learn the channel modes (key, limit...) the way the old server did.
+		client.send(formatLine({command: "MODE", params: [chan.name]}));
+	}
+
+	const message: Partial<SharedMsg> = {
+		type: MessageType.JOIN,
+		time: client.timeOf(msg),
+		from: chan.userRef(nick),
+		hostmask: `${msg.source?.user ?? ""}@${msg.source?.host ?? ""}`,
+		self,
+	};
+
+	if (account && account !== "*") {
+		// The shared type says boolean but join.vue prints it as text.
+		(message as {account?: string}).account = account;
+	}
+
+	if (gecos) {
+		message.gecos = gecos;
+	}
+
+	client.pushMessage(chan, message);
+
+	if (!chan.findUser(nick)) {
+		chan.setUser(newUser(nick));
+	}
+
+	client.usersChanged(chan);
+};
+
+export default {JOIN: join};
