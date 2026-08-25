@@ -7,7 +7,6 @@
   // "exclude": [],
   "references": [
     {"path": "./client"},
-    {"path": "./server"},
     {"path": "./shared"}
   ] /* Referenced projects. Requires TypeScript version 3.0 or later. */,
   "compilerOptions": {

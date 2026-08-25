@@ -36,22 +36,22 @@ The client-side event bus keeps the `socket.on` / `socket.emit` shape so the ~50
 
 Goal: `yarn build` produces a static SPA from `client/` only. Nothing in `server/` is on the build path.
 
-1. [ ] **Relocate `server/`**
-   - [ ] a. `git mv server/ attic/server/`.
-   - [ ] b. Move root `index.ts` and any other server-only entry files (`scripts/generate-config-doc.js`, etc.) into `attic/` alongside it.
-   - [ ] c. Add `attic/README.md` explaining: "Reference only. Not built, not tested, not imported. Kept so we can look up how the old server handled things during the IRC migration."
-2. [ ] **Trim build configuration**
-   - [ ] a. Remove `server/` from `tsconfig.base.json` references and any project-references graph.
-   - [ ] b. Exclude `attic/` from ESLint, Prettier, and Stylelint globs.
-   - [ ] c. Strip server-targeted `package.json` scripts: `build:server`, `start`, server-bound dev variants. Keep `build:client`, `watch`, `lint`, `format:prettier`. Add a `build` alias that just runs `build:client`.
-   - [ ] d. Leave server-only dependencies in `package.json` for now — cleanup happens in phase E.
-3. [ ] **Tests**
-   - [ ] a. Move `test/server.ts`, `test/models/`, `test/plugins/`, `test/commands/` to `attic/test/`. Keep `test/client.ts`, `test/shared/`, `test/tests/`.
-   - [ ] b. Update `test/.mocharc.yml` and `test/tsconfig.json` so the remaining client/shared tests still run.
-4. [ ] **Verification**
-   - [ ] a. `yarn build` succeeds and produces `public/`.
-   - [ ] b. `yarn lint` passes (no stray imports from `attic/`).
-   - [ ] c. Open `public/index.html` against a static file server; confirm the page renders (even if it just shows a loading splash).
+1. [x] **Relocate `server/`**
+   - [x] a. `git mv server/ attic/server/`.
+   - [x] b. Move root `index.ts` and any other server-only entry files (`scripts/generate-config-doc.js`, etc.) into `attic/` alongside it. _Also moved `defaults/config.js` and `.thelounge_home`._
+   - [x] c. Add `attic/README.md` explaining: "Reference only. Not built, not tested, not imported. Kept so we can look up how the old server handled things during the IRC migration."
+2. [x] **Trim build configuration**
+   - [x] a. Remove `server/` from `tsconfig.base.json` references and any project-references graph.
+   - [x] b. Exclude `attic/` from ESLint, Prettier, and Stylelint globs.
+   - [x] c. Strip server-targeted `package.json` scripts: `build:server`, `start`, server-bound dev variants. Keep `build:client`, `watch`, `lint`, `format:prettier`. Add a `build` alias that just runs `build:client`.
+   - [x] d. Leave server-only dependencies in `package.json` for now — cleanup happens in phase E.
+3. [x] **Tests**
+   - [x] a. Move `test/server.ts`, `test/models/`, `test/plugins/`, `test/commands/` to `attic/test/`. Keep `test/client.ts`, `test/shared/`, `test/tests/`. _Turned out `test/client.ts`, `test/util.ts`, `test/fixtures/`, `test/src/`, and all of `test/tests/` except `build.ts` import from `server/`; those went to `attic/test/` too._
+   - [x] b. Update `test/.mocharc.yml` and `test/tsconfig.json` so the remaining client/shared tests still run.
+4. [x] **Verification**
+   - [x] a. `yarn build` succeeds and produces `public/`.
+   - [x] b. `yarn lint` passes (no stray imports from `attic/`).
+   - [x] c. Open `public/index.html` against a static file server; confirm the page renders (even if it just shows a loading splash). _`index.html` used to be rendered by the server from `client/index.html.tpl`; it is now a static `client/index.html` copied by webpack with only a `__HASH__` cache-bust substitution (theme fixed to `default`, no package stylesheets, no `public` mode)._
 
 ## B. Stub the bus — make the client compile against a no-op transport
 
@@ -166,7 +166,7 @@ No fixed order. Tackle items in whatever sequence the friction dictates.
 
 Each milestone is a state you can sit on without rushing to the next:
 
-1. [ ] **M1 — Static SPA, no server.** End of phase A. App builds and renders the connect form (which doesn't connect yet).
+1. [x] **M1 — Static SPA, no server.** End of phase A. App builds and renders the connect form (which doesn't connect yet). _Reached 2026-08-24. The splash shows while the client tries (and fails) to reach Socket.IO; the connect form appears once phase B stubs the transport._
 2. [ ] **M2 — Bus stubbed, localStorage features alive.** End of phase B. Settings/sort/mute/mentions all work locally. Connect form is wired to nothing.
 3. [ ] **M3 — Chat works on one channel of one network.** End of phase C. The bare-minimum IRC client.
 4. [ ] **M4 — Daily-driver.** Several phase D items in — SASL, history, saved networks, the input commands you actually use. This is the milestone where you'd stop using whatever IRC client you use now and switch to this.

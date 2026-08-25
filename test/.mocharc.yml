@@ -8,9 +8,6 @@ ignore:
 extension: ["ts", "js"]
 node-option:
   - "import=tsx"
-require:
-  # - "jsdom-global/register"
-  - "test/fixtures/env.ts"
 global:
   - "__VUE_PROD_DEVTOOLS__"
   - "__VUE__"

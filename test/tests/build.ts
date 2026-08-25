@@ -21,9 +21,17 @@ describe("public folder", function () {
 		expect(fs.existsSync(path.join(publicFolder, "audio", "pop.wav"))).to.be.true;
 	});
 
-	it("index HTML file is not copied", function () {
-		expect(fs.existsSync(path.join(publicFolder, "index.html"))).to.be.false;
+	it("index HTML file is copied with cache bust applied", function (done) {
 		expect(fs.existsSync(path.join(publicFolder, "index.html.tpl"))).to.be.false;
+
+		fs.readFile(path.join(publicFolder, "index.html"), "utf8", function (err, contents) {
+			expect(err).to.be.null;
+
+			expect(contents.includes('<div id="app"></div>')).to.be.true;
+			expect(contents.includes("__HASH__")).to.be.false;
+
+			done();
+		});
 	});
 
 	it("javascript files are built", function () {

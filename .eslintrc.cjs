@@ -6,7 +6,6 @@ const projects = defineConfig({
 		project: [
 			"./tsconfig.json",
 			"./client/tsconfig.json",
-			"./server/tsconfig.json",
 			"./shared/tsconfig.json",
 			"./test/tsconfig.json",
 		],

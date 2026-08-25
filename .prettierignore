@@ -1,10 +1,7 @@
 coverage/
 public/
 dist/
-test/fixtures/.thelounge/logs/
-test/fixtures/.thelounge/certificates/
-test/fixtures/.thelounge/storage/
-test/fixtures/.thelounge/sts-policies.json
+attic/
 *.log
 *.png
 *.svg
@@ -27,3 +24,4 @@ yarn.lock
 .node-version
 
 *.css
+.gitkeep

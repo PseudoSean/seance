@@ -4,9 +4,6 @@
   "version": "4.5.0-rc.3",
   "type": "commonjs",
   "preferGlobal": true,
-  "bin": {
-    "thelounge": "index.js"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/thelounge/thelounge.git"
@@ -14,18 +11,14 @@
   "homepage": "https://thelounge.chat/",
   "scripts": {
     "build:client": "webpack",
-    "build:server": "tsc -p server/tsconfig.json",
-    "build": "run-p --aggregate-output build:client build:server",
+    "build": "webpack",
     "coverage": "webpack --mode=development && cross-env NODE_ENV=test TS_NODE_PROJECT='./test/tsconfig.json' nyc --nycrc-path=test/.nycrc-mocha.json mocha --config=test/.mocharc.yml 'test/**/*.ts' && nyc --nycrc-path=test/.nycrc-report.json report",
-    "dev": "cross-env NODE_ENV=development ts-node --project server/tsconfig.json server/index.ts start --dev",
     "format:prettier": "prettier --write \"**/*.*\"",
-    "generate:config:doc": "ts-node scripts/generate-config-doc.js",
     "lint:check-eslint": "eslint-config-prettier .eslintrc.cjs",
     "lint:eslint": "eslint . --report-unused-disable-directives --color",
     "lint:prettier": "prettier --list-different \"**/*.*\"",
     "lint:stylelint": "stylelint --color \"client/**/*.css\"",
     "lint": "run-p --aggregate-output --continue-on-error lint:*",
-    "start": "node index start",
     "test": "run-p --aggregate-output --continue-on-error lint:* test:mocha",
     "test:mocha": "webpack --mode=development && cross-env NODE_ENV=test TS_NODE_PROJECT='./test/tsconfig.json' mocha --config=test/.mocharc.yml 'test/**/*.ts'",
     "test:nospec": "webpack --mode=development && cross-env NODE_ENV=test TS_NODE_PROJECT='./test/tsconfig.json' mocha --config=test/.mocharc.yml",
@@ -47,12 +40,7 @@
     "node": ">=22.0.0"
   },
   "files": [
-    "./.thelounge_home",
-    "./index.js",
-    "./yarn.lock",
-    "./client/index.html.tpl",
-    "./dist/package.json",
-    "./dist/**/*.js",
+    "./client/index.html",
     "./public/**"
   ],
   "dependencies": {

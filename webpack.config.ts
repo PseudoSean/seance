@@ -5,7 +5,12 @@ import ForkTsCheckerWebpackPlugin from "fork-ts-checker-webpack-plugin";
 import MiniCssExtractPlugin from "mini-css-extract-plugin";
 import {VueLoaderPlugin} from "vue-loader";
 import babelConfig from "./babel.config.cjs";
-import Helper from "./server/helper";
+import {createHash} from "crypto";
+import pkg from "./package.json";
+
+// Short hash of the package version, appended to asset URLs so browsers
+// and the service worker refetch after a release.
+const cacheBust = createHash("sha256").update(`v${pkg.version}`).digest("hex").substring(0, 10);
 
 const tsCheckerPlugin = new ForkTsCheckerWebpackPlugin({
 	typescript: {
@@ -134,11 +139,20 @@ const config: webpack.Configuration = {
 					to: "[name][ext]",
 					globOptions: {
 						ignore: [
-							"**/index.html.tpl",
+							"**/index.html",
 							"**/service-worker.js",
 							"**/*.d.ts",
 							"**/tsconfig.json",
 						],
+					},
+				},
+				{
+					from: path.resolve(__dirname, "./client/index.html"),
+					to: "[name][ext]",
+					transform(content) {
+						return content
+							.toString()
+							.replace(/__HASH__/g, isProduction ? cacheBust : "dev");
 					},
 				},
 				{
@@ -147,10 +161,7 @@ const config: webpack.Configuration = {
 					transform(content) {
 						return content
 							.toString()
-							.replace(
-								"__HASH__",
-								isProduction ? Helper.getVersionCacheBust() : "dev"
-							);
+							.replace("__HASH__", isProduction ? cacheBust : "dev");
 					},
 				},
 				{
