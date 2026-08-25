@@ -1,8 +1,11 @@
 import {store} from "../store";
 import {router} from "../router";
 
+// `/search <query>` — open the in-memory search window for the active channel.
 export function input(args: string[]): boolean {
-	if (!store.state.settings.searchEnabled) {
+	const channel = store.state.activeChannel?.channel;
+
+	if (!channel) {
 		return false;
 	}
 
@@ -10,7 +13,7 @@ export function input(args: string[]): boolean {
 		.push({
 			name: "SearchResults",
 			params: {
-				id: store.state.activeChannel?.channel.id,
+				id: channel.id,
 			},
 			query: {
 				q: args.join(" "),

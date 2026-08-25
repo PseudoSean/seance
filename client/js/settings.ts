@@ -131,8 +131,9 @@ const defaultConfig = {
 			}
 		},
 	},
+	// Search is local (client/js/search.ts) and always available.
 	searchEnabled: {
-		default: false,
+		default: true,
 	},
 };
 
