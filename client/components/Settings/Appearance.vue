@@ -27,21 +27,13 @@
 				Use 12-hour timestamps
 			</label>
 		</div>
-		<template v-if="store.state.serverConfiguration?.prefetch">
-			<h2>Link previews</h2>
-			<div>
-				<label class="opt">
-					<input :checked="store.state.settings.media" type="checkbox" name="media" />
-					Auto-expand media
-				</label>
-			</div>
-			<div>
-				<label class="opt">
-					<input :checked="store.state.settings.links" type="checkbox" name="links" />
-					Auto-expand websites
-				</label>
-			</div>
-		</template>
+		<h2>Link previews</h2>
+		<div>
+			<label class="opt">
+				<input :checked="store.state.settings.media" type="checkbox" name="media" />
+				Preview images, video and audio links inline
+			</label>
+		</div>
 		<h2 id="label-status-messages">
 			Status messages
 			<span

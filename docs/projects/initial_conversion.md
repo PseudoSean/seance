@@ -141,7 +141,7 @@ No fixed order. Tackle items in whatever sequence the friction dictates.
 6. [ ] **STS** — cache STS policy per host in localStorage; upgrade `ws://` to `wss://` when policy says so.
 7. [ ] **`event-playback` / read markers** — when nefarious2 supports them, use them for reconnect catch-up and unread tracking. Update `firstUnread` from MARKREAD on init.
 8. [ ] **Search** — decide between: drop, in-memory search of loaded messages, or a small optional preview/search service URL configurable per deploy.
-9. [ ] **Link previews** — decide between: drop, client-side `<img>`/`<video>` only for direct media URLs (no metadata fetch), or optional external service URL.
+9. [x] **Link previews** — decide between: drop, client-side `<img>`/`<video>` only for direct media URLs (no metadata fetch), or optional external service URL. _Decided + done 2026-08-24: client-side direct media only (`client/js/helpers/mediaPreview.ts`, https-only, ≤5/msg), `msg:preview` handler deleted, `ExternalPreviewResolver` hook left for a deploy-time service. 18 tests._
 10. [x] **Highlight keywords** — port the regex builder from `attic/server/client.ts` into `client/js/highlight.ts`. The settings UI already exists. _Done 2026-08-24: `isHighlight(text, nick, keywords, exceptions?)`, exceptions folded into the regex, IRC formatting stripped first; 28 tests._
 11. [ ] **Notifications and push** — keep the `Notification` API path (works in-browser today). Web push needs a tiny relay service; defer or drop.
 12. [ ] **File uploads** — point at a network-provided uploader endpoint (configurable per deploy) or drop.

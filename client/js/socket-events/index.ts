@@ -5,14 +5,14 @@
 // Removed for good (server-only concepts): auth, configuration,
 // sessions_list, changelog, sign_out. Moved to local modules (no bus
 // round-trip): setting, sync_sort, mute_changed, mentions, history_clear,
-// search.
+// search, msg_preview (previews are built client-side, see
+// helpers/mediaPreview.ts).
 import "./connection";
 import "./commands";
 import "./init";
 import "./join";
 import "./more";
 import "./msg";
-import "./msg_preview";
 import "./msg_special";
 import "./names";
 import "./network";

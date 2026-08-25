@@ -6,6 +6,7 @@ import {ClientChan, NetChan, ClientMessage} from "../types";
 import {SharedMsg, MessageType} from "../../../shared/types/msg";
 import {ChanType} from "../../../shared/types/chan";
 import {addMention} from "../mentions";
+import {buildMediaPreviews} from "../helpers/mediaPreview";
 
 let pop;
 
@@ -65,6 +66,15 @@ socket.on("msg", function (data) {
 		if (typeof data.unread !== "undefined") {
 			channel.unread = data.unread;
 		}
+	}
+
+	// Previews used to arrive from the server (`msg:preview`); they are now
+	// derived locally from the text for direct media URLs only.
+	if (data.msg.text && !data.msg.previews?.length) {
+		data.msg.previews = buildMediaPreviews(data.msg.text, {
+			media: store.state.settings.media,
+			allowHttp: window.location.protocol === "http:",
+		});
 	}
 
 	channel.messages.push(data.msg);
