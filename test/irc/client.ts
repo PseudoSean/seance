@@ -745,6 +745,42 @@ describe("IrcClient", function () {
 	});
 
 	describe("reconnect", function () {
+		it("reports a connection that never opened as 'could not connect', hint once", function () {
+			const h = setup();
+			h.client.connect();
+			h.transport.closed(1006, "", true);
+
+			const first = messages(1);
+			expect(
+				first.some(
+					(m) =>
+						m.type === MessageType.ERROR &&
+						m.text === "Could not connect to wss://irc.test:8443/."
+				)
+			).to.equal(true);
+			expect(first.some((m) => /accept the warning/.test(m.text ?? ""))).to.equal(true);
+
+			// The automatic retry fails too: headline again, but no second hint.
+			h.transport.closed(1006, "", true);
+			const hints = messages(1).filter((m) => /accept the warning/.test(m.text ?? ""));
+			expect(hints).to.have.length(1);
+		});
+
+		it("reports a drop before registration completed as such", function () {
+			const h = setup();
+			h.client.connect();
+			h.transport.open();
+			h.transport.closed(1006, "", false);
+
+			expect(
+				messages(1).some(
+					(m) =>
+						m.text ===
+						"Connection to irc.test closed during IRC registration (connection lost). Not reconnecting."
+				)
+			).to.equal(true);
+		});
+
 		it("marks everything parted on an unclean close and re-joins after re-registering", function () {
 			const h = setup();
 			const id = joined(h);

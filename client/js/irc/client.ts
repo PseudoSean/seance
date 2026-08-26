@@ -23,6 +23,7 @@ import {CapNegotiator, SEANCE_CAPS} from "./caps";
 import {casefold, namesEqual} from "./casemap";
 import {Channel, MsgRef} from "./channel";
 import {commandNames, dispatchInput} from "./commands";
+import {describeClose} from "./disconnect";
 import {handlers, unhandled} from "./handlers";
 import {interceptBatchLine, resetBatches} from "./handlers/batch";
 import {cancelMarkRead, fetchReadMarker, scheduleMarkRead} from "./handlers/markread";
@@ -200,6 +201,10 @@ export class IrcClient {
 	private connected = false;
 	private announced = false;
 	private quitting = false;
+	/** Last transport error text for the close report; browsers say nothing useful. */
+	private lastTransportError?: string;
+	/** The close report's hint is shown once per attempt series, not per retry. */
+	private closeHintShown = false;
 	private activeChanId = 0;
 	/** Set while a history batch is replayed through the handlers (see `collectReplay`). */
 	private replayContext: {target: Channel; collected: ReplayCollection} | null = null;
@@ -329,6 +334,7 @@ export class IrcClient {
 		this.applyPendingOptions();
 		this.applyStsPolicy();
 		this.quitting = false;
+		this.closeHintShown = false;
 		this._state = "connecting";
 		this.bus.dispatch("connecting");
 		this.bus.dispatch("network:status", {
@@ -560,6 +566,7 @@ export class IrcClient {
 				break;
 			case "error":
 				// Always followed by a close event, which is where we report.
+				this.lastTransportError = ev.message;
 				break;
 		}
 	}
@@ -568,6 +575,7 @@ export class IrcClient {
 	private onOpen(): void {
 		this._state = "registering";
 		this.connected = false;
+		this.closeHintShown = false;
 		this.caps = this.createCaps();
 		this.isupport.reset();
 		this.motdBuffer = null;
@@ -690,7 +698,8 @@ export class IrcClient {
 	}
 
 	private onClose(code: number, reason: string, willReconnect: boolean): void {
-		const wasUp = this._state !== "disconnected";
+		const phase = this._state;
+		const wasUp = phase !== "disconnected";
 		this._state = "disconnected";
 		this.connected = false;
 		this.stsUpgradeTried = false;
@@ -723,20 +732,29 @@ export class IrcClient {
 		});
 
 		if (wasUp) {
-			const why = reason ? `: ${reason}` : code === 1000 ? "" : ` (code ${code})`;
-			this.pushMessage(
-				this.lobby,
-				{
-					type: this.quitting ? undefined : MessageType.ERROR,
-					text: this.quitting
-						? "Disconnected."
-						: `Disconnected from ${this.options.host}${why}${
-								willReconnect ? "" : ". Not reconnecting."
-						  }`,
-				},
-				true
-			);
+			if (this.quitting) {
+				this.pushMessage(this.lobby, {text: "Disconnected."}, true);
+			} else {
+				const report = describeClose({
+					url: this.url,
+					host: this.options.host,
+					phase,
+					code,
+					reason,
+					errorMessage: this.lastTransportError,
+					pageProtocol: globalThis.location?.protocol,
+					willReconnect,
+				});
+				this.pushMessage(this.lobby, {type: MessageType.ERROR, text: report.text}, true);
+
+				if (report.hint && !this.closeHintShown) {
+					this.closeHintShown = true;
+					this.pushMessage(this.lobby, {text: report.hint}, true);
+				}
+			}
 		}
+
+		this.lastTransportError = undefined;
 
 		// Settings edited during this connection: reconnect with them instead
 		// of letting the transport retry the old address.

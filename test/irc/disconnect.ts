@@ -1,0 +1,89 @@
+import {expect} from "chai";
+
+import {describeClose} from "../../client/js/irc/disconnect";
+
+describe("describeClose", function () {
+	const base = {
+		url: "ws://localhost:8067/",
+		host: "localhost",
+		code: 1006,
+		reason: "",
+		willReconnect: true,
+	} as const;
+
+	it("explains a failed connection attempt instead of 'disconnected'", function () {
+		const report = describeClose({...base, phase: "connecting"});
+
+		expect(report.text).to.equal("Could not connect to ws://localhost:8067/.");
+		expect(report.hint).to.contain("does not accept WebSocket connections");
+	});
+
+	it("points at mixed content for ws:// from an https page", function () {
+		const report = describeClose({...base, phase: "connecting", pageProtocol: "https:"});
+
+		expect(report.hint).to.contain("blocks plain ws://");
+	});
+
+	it("suggests accepting the certificate for wss:// failures", function () {
+		const report = describeClose({
+			...base,
+			url: "wss://irc.example.org:8443/",
+			host: "irc.example.org",
+			phase: "connecting",
+		});
+
+		expect(report.hint).to.contain("open https://irc.example.org:8443/ in a new tab");
+	});
+
+	it("includes an informative transport error but not the browser stock one", function () {
+		const informative = describeClose({
+			...base,
+			phase: "connecting",
+			errorMessage: "connect ECONNREFUSED 127.0.0.1:8067",
+		});
+		const stock = describeClose({
+			...base,
+			phase: "connecting",
+			errorMessage: "WebSocket error",
+		});
+
+		expect(informative.text).to.contain("(connect ECONNREFUSED 127.0.0.1:8067)");
+		expect(stock.text).to.not.contain("WebSocket error");
+	});
+
+	it("reports a drop during registration separately", function () {
+		const report = describeClose({...base, phase: "registering", willReconnect: false});
+
+		expect(report.text).to.equal(
+			"Connection to localhost closed during IRC registration (connection lost). Not reconnecting."
+		);
+		expect(report.hint).to.contain("before registration");
+	});
+
+	it("names known close codes on a real disconnect", function () {
+		const report = describeClose({...base, phase: "registered"});
+
+		expect(report.text).to.equal("Disconnected from localhost (connection lost).");
+		expect(report.hint).to.equal(undefined);
+	});
+
+	it("prefers the server's reason and stays quiet on a clean close", function () {
+		const reasoned = describeClose({
+			...base,
+			phase: "registered",
+			code: 1011,
+			reason: "K-lined",
+			willReconnect: false,
+		});
+		const clean = describeClose({...base, phase: "registered", code: 1000});
+
+		expect(reasoned.text).to.equal("Disconnected from localhost (K-lined). Not reconnecting.");
+		expect(clean.text).to.equal("Disconnected from localhost.");
+	});
+
+	it("falls back to the numeric code for unknown codes", function () {
+		const report = describeClose({...base, phase: "registered", code: 4000});
+
+		expect(report.text).to.equal("Disconnected from localhost (code 4000).");
+	});
+});
