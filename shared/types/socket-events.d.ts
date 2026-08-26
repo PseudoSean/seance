@@ -1,7 +1,7 @@
 import {SharedMention} from "./mention";
 import {ChanState, SharedChan} from "./chan";
 import {SharedNetwork, SharedServerOptions} from "./network";
-import {SharedMsg, LinkPreview} from "./msg";
+import {SharedMsg, LinkPreview, TypingState} from "./msg";
 import {SharedUser} from "./user";
 import {SharedChangelogData} from "./changelog";
 import {SharedConfiguration, LockedSharedConfiguration} from "./config";
@@ -99,6 +99,8 @@ interface ServerToClientEvents {
 	"msg:redact": EventHandler<{chan: number; id: number; by: string; reason?: string; time: Date}>;
 	/** Message `id` (already delivered via `msg`) replaces message `replaces`. */
 	"msg:edit": EventHandler<{chan: number; id: number; replaces: number}>;
+	/** Someone else's `+typing` TAGMSG in a loaded channel/query (never our own). */
+	typing: EventHandler<{chan: number; nick: string; state: TypingState}>;
 	"msg:special": EventHandler<{chan: number; data?: Record<string, any>}>;
 	msg: EventHandler<{msg: SharedMsg; chan: number; highlight?: number; unread?: number}>;
 
@@ -156,6 +158,8 @@ interface ClientToServerEvents {
 	}>;
 	"msg:react": EventHandler<{target: number; msgid: string; text: string; remove?: boolean}>;
 	"msg:redact": EventHandler<{target: number; msgid: string; reason?: string}>;
+	/** The user's own input activity; the IRC layer throttles and sends `+typing` TAGMSGs. */
+	typing: EventHandler<{target: number; state: TypingState}>;
 
 	"upload:auth": NoPayloadEventHandler;
 	"upload:ping": (token: string) => void;

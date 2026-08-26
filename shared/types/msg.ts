@@ -59,6 +59,9 @@ export type LinkPreview = {
 	thumbActualUrl?: string;
 };
 
+/** `+typing` client tag states (https://ircv3.net/specs/client-tags/typing). */
+export type TypingState = "active" | "paused" | "done";
+
 /** One reaction text on a message and who sent it (each nick at most once). */
 export type MsgReaction = {
 	text: string;
