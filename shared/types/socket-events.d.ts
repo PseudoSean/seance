@@ -87,6 +87,18 @@ interface ServerToClientEvents {
 	more: EventHandler<{chan: number; messages: SharedMsg[]; totalMessages: number}>;
 
 	"msg:preview": EventHandler<{id: number; chan: number; preview: LinkPreview}>;
+	/** A `+draft/react` / `+draft/unreact` TAGMSG resolved to the message it targets. */
+	"msg:react": EventHandler<{
+		chan: number;
+		id: number;
+		text: string;
+		nick: string;
+		remove: boolean;
+	}>;
+	/** A REDACT resolved to the loaded message it targets. */
+	"msg:redact": EventHandler<{chan: number; id: number; by: string; reason?: string; time: Date}>;
+	/** Message `id` (already delivered via `msg`) replaces message `replaces`. */
+	"msg:edit": EventHandler<{chan: number; id: number; replaces: number}>;
 	"msg:special": EventHandler<{chan: number; data?: Record<string, any>}>;
 	msg: EventHandler<{msg: SharedMsg; chan: number; highlight?: number; unread?: number}>;
 
@@ -134,7 +146,16 @@ interface ClientToServerEvents {
 
 	names: EventHandler<{target: number}>;
 
-	input: EventHandler<{target: number; text: string}>;
+	input: EventHandler<{
+		target: number;
+		text: string;
+		/** msgid to reply to: plain text / `/me` get `+draft/reply`. */
+		reply?: string;
+		/** msgid of our own message to replace: REDACT (channels) + resend with `+seance/edit`. */
+		edit?: string;
+	}>;
+	"msg:react": EventHandler<{target: number; msgid: string; text: string; remove?: boolean}>;
+	"msg:redact": EventHandler<{target: number; msgid: string; reason?: string}>;
 
 	"upload:auth": NoPayloadEventHandler;
 	"upload:ping": (token: string) => void;

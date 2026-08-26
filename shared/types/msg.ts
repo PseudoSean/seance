@@ -59,10 +59,33 @@ export type LinkPreview = {
 	thumbActualUrl?: string;
 };
 
+/** One reaction text on a message and who sent it (each nick at most once). */
+export type MsgReaction = {
+	text: string;
+	nicks: string[];
+};
+
+/** A `REDACT` applied to a message; the original `text` is kept for reveal. */
+export type MsgRedaction = {
+	by: string;
+	reason?: string;
+	time: Date;
+};
+
 export type SharedMsg = {
 	from?: UserInMessage;
 	id: number;
 	msgid?: string;
+	/** msgid this message replies to (`+reply` / `+draft/reply`); may not be loaded. */
+	replyTo?: string;
+	/** Aggregated `+draft/react` reactions, in first-seen order. */
+	reactions?: MsgReaction[];
+	/** Set when a REDACT for this message arrived; rendered as a placeholder. */
+	redacted?: MsgRedaction;
+	/** msgid of the message this one replaces (`+seance/edit`); rendered as "(edited)". */
+	editOf?: string;
+	/** id of the newer message that replaced this one; hidden from the list. */
+	supersededBy?: number;
 	previews?: LinkPreview[];
 	text?: string;
 	type?: MessageType;
