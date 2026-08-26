@@ -44,7 +44,7 @@ SEANCE_IRC_URL=wss://localhost:8443/ npx cross-env NODE_ENV=test \
   TS_NODE_PROJECT='./test/tsconfig.json' npx mocha --config=test/.mocharc.yml test/irc/client.live.ts
 ```
 
-They relax TLS verification for `localhost` only (self-signed dev cert). Quick headless smoke check after a build (expects the connect form and no console errors):
+They relax TLS verification for `localhost` only (self-signed dev cert). Run live files **one at a time** — they share module singletons (the bus spy, the network manager, the id allocator) and time out waiting for `init` when several run in one mocha process (verified 2026-08-25: all pass individually, 4/6 fail combined; the ircd was not throttling). Making them coexist is an open follow-up. Quick headless smoke check after a build (expects the connect form and no console errors):
 
 ```sh
 chromium --headless=new --disable-gpu --virtual-time-budget=5000 \
