@@ -6,10 +6,12 @@
 // Layout rule (TypingIndicator.vue): the indicator line appears with the
 // first entry and its space stays reserved (`typingReserved`) after the
 // entries go, so the scrollback never shifts back down. The next message
-// appended to the channel releases the reservation in the same render, so
-// the new line simply fills the space. A message from the typist also ends
-// their entry early, as does their part/quit/kick, and a nick change follows
-// the rename — all of which arrive here as `msg` events.
+// rendered in the channel releases the reservation in the same render, so
+// the new line simply fills the space — MessageList.vue does that for the
+// channel on screen (a hidden status message must not release it); here we
+// only release for channels that are not being displayed. A message from
+// the typist also ends their entry early, as does their part/quit/kick, and
+// a nick change follows the rename — all of which arrive here as `msg`.
 import socket from "../socket";
 import {store} from "../store";
 import {MessageType} from "../../../shared/types/msg";
@@ -40,8 +42,9 @@ socket.on("msg", function (data) {
 	}
 
 	const {channel} = target;
+	const onScreen = store.state.activeChannel?.channel === channel;
 
-	if (channel.typingReserved) {
+	if (channel.typingReserved && !onScreen) {
 		channel.typingReserved = false;
 	}
 

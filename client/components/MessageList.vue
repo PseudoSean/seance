@@ -407,6 +407,21 @@ export default defineComponent({
 			}
 		);
 
+		// Release the typing indicator's reserved line when a new message is
+		// actually rendered (last rendered item changed — a history prepend
+		// does not count). This runs before the DOM update, so the new line
+		// fills the released space in the same paint and nothing bounces.
+		// Hidden status messages never render, so they never release it;
+		// socket-events/typing.ts handles channels that are not on screen.
+		watch(
+			() => condensedMessages.value[condensedMessages.value.length - 1]?.id,
+			(id, previous) => {
+				if (id !== undefined && id !== previous && props.channel.typingReserved) {
+					props.channel.typingReserved = false;
+				}
+			}
+		);
+
 		watch(
 			() => props.channel.typing.length > 0 || props.channel.typingReserved,
 			async () => {
