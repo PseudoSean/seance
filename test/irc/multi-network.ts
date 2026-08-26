@@ -241,8 +241,18 @@ describe("multiple networks", function () {
 		expect(inits[1].active).to.equal(b.findChannel("#two")!.id);
 
 		const status = payloads<{network: string; connected: boolean}>("network:status");
-		expect(status).to.deep.include({network: "net-a", connected: true, secure: true});
-		expect(status).to.deep.include({network: "net-b", connected: true, secure: true});
+		expect(status).to.deep.include({
+			network: "net-a",
+			connected: true,
+			connecting: false,
+			secure: true,
+		});
+		expect(status).to.deep.include({
+			network: "net-b",
+			connected: true,
+			connecting: false,
+			secure: true,
+		});
 	});
 
 	it("routes input, names, more and open by channel id to the owning client", function () {
@@ -308,8 +318,11 @@ describe("multiple networks", function () {
 		expect(manager.clientForChannel(one)).to.equal(a);
 		expect(manager.clientForChannel(two)).to.equal(undefined);
 
-		const statuses = payloads<{network: string; connected: boolean}>("network:status");
-		expect(statuses.filter((s) => s.network === "net-a" && !s.connected)).to.have.length(0);
+		const statuses =
+			payloads<{network: string; connected: boolean; connecting: boolean}>("network:status");
+		expect(
+			statuses.filter((s) => s.network === "net-a" && !s.connected && !s.connecting)
+		).to.have.length(0);
 
 		// A later (re)registration of the survivor no longer mentions the quitter.
 		ta.closed(1006, "gone");
@@ -333,10 +346,12 @@ describe("multiple networks", function () {
 		expect(b.isConnected).to.equal(true);
 		expect(b.findChannel("#two")!.users.size).to.equal(2);
 
-		const down = payloads<{network: string; connected: boolean}>("network:status").filter(
-			(s) => !s.connected
-		);
-		expect(down).to.deep.equal([{network: "net-a", connected: false, secure: true}]);
+		const down = payloads<{network: string; connected: boolean; connecting: boolean}>(
+			"network:status"
+		).filter((s) => !s.connected && !s.connecting);
+		expect(down).to.deep.equal([
+			{network: "net-a", connected: false, connecting: false, secure: true},
+		]);
 		expect(manager.clientForNetwork("net-a")).to.equal(a);
 
 		socket.emit("input", {target: two, text: "still here"});

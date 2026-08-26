@@ -345,8 +345,8 @@ p {
 #image-viewer .previous-image-btn::before,
 #image-viewer .next-image-btn::before,
 #image-viewer .open-btn::before,
-.channel-list-item .not-secure-icon::before,
 .channel-list-item .not-connected-icon::before,
+.channel-list-item .edit-network::before,
 .channel-list-item .parted-channel-icon::before,
 .jump-to-input::before,
 .password-container .reveal-password span,
@@ -379,10 +379,6 @@ p {
 .context-menu-edit::before { content: "\f303"; /* https://fontawesome.com/icons/pencil-alt?style=solid */ }
 .context-menu-clear-history::before { content: "\f1f8"; /* https://fontawesome.com/icons/trash?style=solid */ }
 .context-menu-mute::before { content: "\f6a9"; /* https://fontawesome.com/v5.15/icons/volume-mute?style=solid */ }
-
-.channel-list-item .not-secure-icon::before {
-	content: "\f071"; /* https://fontawesome.com/icons/exclamation-triangle?style=solid */
-}
 
 .channel-list-item .not-connected-icon::before,
 .channel-list-item .parted-channel-icon::before {
@@ -808,18 +804,8 @@ background on hover (unless active) */
 }
 
 .channel-list-item .not-connected-tooltip,
-.channel-list-item .not-secure-tooltip,
 .channel-list-item .parted-channel-tooltip {
 	margin: 0 8px;
-}
-
-.channel-list-item.not-secure {
-	color: #f39c12;
-}
-
-.channel-list-item.not-secure:hover,
-.channel-list-item.not-secure.active {
-	color: #f8c572;
 }
 
 .channel-list-item.not-connected,
@@ -859,6 +845,7 @@ background on hover (unless active) */
 
 .channel-list-item .badge,
 #sidebar .add-channel-tooltip,
+#sidebar .edit-network-tooltip,
 .channel-list-item .close-tooltip {
 	flex-shrink: 0;
 	line-height: 1;
@@ -933,6 +920,28 @@ background on hover (unless active) */
 .channel-list-item[data-type="lobby"] .add-channel.opened {
 	/* translateZ(0) enables hardware acceleration, this is to avoid jittering when animating */
 	transform: rotate(45deg) translateZ(0);
+}
+
+.channel-list-item[data-type="lobby"] .edit-network {
+	border-radius: 3px;
+	width: 18px;
+	height: 18px;
+	margin-right: 4px;
+	opacity: 0.4;
+	transition: opacity 0.2s, background-color 0.2s;
+}
+
+.channel-list-item[data-type="lobby"] .edit-network::before {
+	content: "\f013"; /* https://fontawesome.com/icons/cog?style=solid */
+	font-size: 13px;
+	display: inline-block;
+	line-height: 18px;
+	text-align: center;
+	color: #fff;
+}
+
+.channel-list-item[data-type="lobby"] .edit-network:hover {
+	opacity: 1;
 }
 
 #sidebar .network .collapse-network {

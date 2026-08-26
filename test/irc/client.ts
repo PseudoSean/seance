@@ -294,7 +294,8 @@ describe("IrcClient", function () {
 			expect(init.active).to.be.at.least(1);
 			expect(init.networks[0].status.connected).to.equal(true);
 			expect(payloads("network:status")).to.deep.equal([
-				{network: h.client.uuid, connected: true, secure: true},
+				{network: h.client.uuid, connected: false, connecting: true, secure: true},
+				{network: h.client.uuid, connected: true, connecting: false, secure: true},
 			]);
 			expect(h.transport.sent).to.include("JOIN #seance");
 			expect(h.client.isConnected).to.equal(true);
@@ -756,10 +757,11 @@ describe("IrcClient", function () {
 			h.transport.closed(1006, "", true);
 
 			expect(payloads("network:status").slice(-1)).to.deep.equal([
-				{network: h.client.uuid, connected: false, secure: true},
+				{network: h.client.uuid, connected: false, connecting: true, secure: true},
 			]);
 			expect(h.client.isConnected).to.equal(false);
 			expect(h.client.state).to.equal("connecting");
+			expect(h.client.network.status.connecting).to.equal(true);
 			expect(h.client.findChannel("#seance")!.state).to.equal(ChanState.PARTED);
 			expect(h.client.findChannel("#seance")!.users.size).to.equal(0);
 			expect(kept.state).to.equal(ChanState.PARTED);
@@ -788,6 +790,37 @@ describe("IrcClient", function () {
 			const chans = payloads<{networks: SharedNetwork[]}>("init")[1].networks[0].channels;
 			expect(chans.map((c) => c.name)).to.deep.equal(["SeanceDev", "#kept", "#seance"]);
 			expect(chans[2].id).to.equal(id); // ids survive the reconnect
+		});
+
+		it("disconnect() while waiting to reconnect cancels the retry and settles the state", function () {
+			const h = setup();
+			joined(h);
+			h.transport.closed(1006, "", true);
+			expect(h.client.state).to.equal("connecting");
+			expect(h.client.network.status).to.deep.equal({
+				connected: false,
+				connecting: true,
+				secure: true,
+			});
+
+			h.client.disconnect();
+
+			expect(h.transport.closeCalls).to.have.length(1);
+			expect(h.client.state).to.equal("disconnected");
+			expect(h.client.network.status).to.deep.equal({
+				connected: false,
+				connecting: false,
+				secure: true,
+			});
+			expect(payloads("network:status").slice(-1)).to.deep.equal([
+				{network: h.client.uuid, connected: false, connecting: false, secure: true},
+			]);
+			expect(lastMessage(1).text).to.equal("Reconnect cancelled.");
+
+			// /connect brings it back with a fresh attempt.
+			h.client.input(1, "/connect");
+			expect(h.transport.connectCalls).to.equal(2);
+			expect(h.client.network.status.connecting).to.equal(true);
 		});
 
 		it("reports an error instead of throwing on input while disconnected", function () {

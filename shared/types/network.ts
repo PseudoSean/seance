@@ -23,6 +23,8 @@ export type SharedServerOptions = {
 
 export type SharedNetworkStatus = {
 	connected: boolean;
+	/** A connection attempt is under way (including the wait before a retry). */
+	connecting: boolean;
 	secure: boolean;
 };
 

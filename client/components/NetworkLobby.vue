@@ -14,13 +14,6 @@
 		<div class="lobby-wrap">
 			<span :title="channel.name" class="name">{{ channel.name }}</span>
 			<span
-				v-if="network.status.connected && !network.status.secure"
-				class="not-secure-tooltip tooltipped tooltipped-w"
-				aria-label="Insecure connection"
-			>
-				<span class="not-secure-icon" />
-			</span>
-			<span
 				v-if="!network.status.connected"
 				class="not-connected-tooltip tooltipped tooltipped-w"
 				aria-label="Disconnected"
@@ -31,6 +24,16 @@
 				unreadCount
 			}}</span>
 		</div>
+		<span
+			aria-label="Edit this network…"
+			class="edit-network-tooltip tooltipped tooltipped-w tooltipped-no-touch"
+		>
+			<button
+				class="edit-network"
+				aria-label="Edit this network…"
+				@click.stop="editNetwork"
+			/>
+		</span>
 		<span
 			:aria-label="joinChannelLabel"
 			class="add-channel-tooltip tooltipped tooltipped-w tooltipped-no-touch"
@@ -47,6 +50,7 @@
 
 <script lang="ts">
 import {computed, defineComponent, PropType} from "vue";
+import {useRouter} from "vue-router";
 import collapseNetwork from "../js/helpers/collapseNetwork";
 import roundBadgeNumber from "../js/helpers/roundBadgeNumber";
 import ChannelWrapper from "./ChannelWrapper.vue";
@@ -69,9 +73,15 @@ export default defineComponent({
 	},
 	emits: ["toggle-join-channel"],
 	setup(props) {
+		const router = useRouter();
+
 		const channel = computed(() => {
 			return props.network.channels[0];
 		});
+
+		const editNetwork = () => {
+			void router.push(`/edit-network/${props.network.uuid}`);
+		};
 
 		const joinChannelLabel = computed(() => {
 			return props.isJoinChannelShown ? "Cancel" : "Join a channel…";
@@ -91,6 +101,7 @@ export default defineComponent({
 
 		return {
 			channel,
+			editNetwork,
 			joinChannelLabel,
 			unreadCount,
 			onCollapseClick,

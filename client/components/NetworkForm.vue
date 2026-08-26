@@ -17,6 +17,21 @@
 				certificates) and the STS lock — none of them apply to a browser
 				WebSocket connection, or they wait on later phases (STS: D.6).
 			-->
+			<div v-if="status" class="connect-row connect-status">
+				<label>Status</label>
+				<div class="input-wrap">
+					<span :class="['connection-status', statusClass]">{{ statusText }}</span>
+					<button
+						v-if="handleAction"
+						type="button"
+						class="btn btn-small connection-action"
+						@click="onAction"
+					>
+						{{ actionLabel }}
+					</button>
+				</div>
+			</div>
+
 			<h2>Network settings</h2>
 			<div class="connect-row">
 				<label for="connect:name">Name</label>
@@ -68,7 +83,10 @@
 					</label>
 				</div>
 			</div>
-			<div v-if="defaults.connected" class="connect-note">
+			<div
+				v-if="status ? status.connected || status.connecting : defaults.connected"
+				class="connect-note"
+			>
 				Server, port, TLS, channels and authentication changes apply the next time this
 				network connects (a network that is waiting to reconnect retries right away).
 			</div>
@@ -208,18 +226,51 @@ the server tab on new connection"
 	background-color: #d9edf7;
 	color: #31708f;
 }
+
+#connect .connect-status .input-wrap {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-top: 8px;
+}
+
+#connect .connection-status::before {
+	content: "●";
+	margin-right: 6px;
+}
+
+#connect .connection-status.is-connected::before {
+	color: #2ecc40;
+}
+
+#connect .connection-status.is-connecting::before {
+	color: #f39c12;
+}
+
+#connect .connection-status.is-disconnected::before {
+	color: #e74c3c;
+}
+
+#connect .btn.connection-action {
+	width: auto;
+	margin: 0;
+}
 </style>
 
 <script lang="ts">
 import RevealPassword from "./RevealPassword.vue";
 import SidebarToggle from "./SidebarToggle.vue";
-import {defineComponent, nextTick, onMounted, PropType, ref, watch} from "vue";
+import {computed, defineComponent, nextTick, onMounted, PropType, ref, watch} from "vue";
 import {displayName, parseCommands, SavedNetwork} from "../js/irc/saved-networks";
+import type {SharedNetworkStatus} from "../../shared/types/network";
 
 /** What the edit form binds to: a saved entry plus the live connection flag. */
 export type NetworkFormDefaults = SavedNetwork & {
 	connected?: boolean;
 };
+
+/** What the status button asks for; `connect` saves the form first. */
+export type ConnectionAction = "connect" | "disconnect";
 
 export default defineComponent({
 	name: "NetworkForm",
@@ -237,6 +288,16 @@ export default defineComponent({
 			required: true,
 		},
 		disabled: Boolean,
+		/** Live connection state; shows the status row when given. */
+		status: {
+			type: Object as PropType<SharedNetworkStatus | null>,
+			default: null,
+		},
+		/** Connect / cancel / disconnect from the status row. */
+		handleAction: {
+			type: Function as PropType<(action: ConnectionAction, network: SavedNetwork) => void>,
+			default: undefined,
+		},
 	},
 	setup(props) {
 		const commandsInput = ref<HTMLTextAreaElement | null>(null);
@@ -283,13 +344,48 @@ export default defineComponent({
 			}
 		);
 
-		const onSubmit = () => {
+		const formData = (): SavedNetwork => {
 			const data: SavedNetwork = {
 				...props.defaults,
 				commands: parseCommands(commandsText.value),
 			};
 			delete (data as NetworkFormDefaults).connected;
-			props.handleSubmit(data);
+			return data;
+		};
+
+		const onSubmit = () => {
+			props.handleSubmit(formData());
+		};
+
+		const statusText = computed(() => {
+			const s = props.status;
+
+			if (!s) {
+				return "";
+			}
+
+			if (s.connected) {
+				return s.secure ? "Connected (TLS)" : "Connected (not secure)";
+			}
+
+			return s.connecting ? "Connecting…" : "Disconnected";
+		});
+
+		const statusClass = computed(() =>
+			props.status?.connected
+				? "is-connected"
+				: props.status?.connecting
+				? "is-connecting"
+				: "is-disconnected"
+		);
+
+		const actionLabel = computed(() =>
+			props.status?.connected ? "Disconnect" : props.status?.connecting ? "Cancel" : "Connect"
+		);
+
+		const onAction = () => {
+			const busy = !!(props.status?.connected || props.status?.connecting);
+			props.handleAction?.(busy ? "disconnect" : "connect", formData());
 		};
 
 		return {
@@ -298,6 +394,10 @@ export default defineComponent({
 			resizeCommandsInput,
 			displayName,
 			onSubmit,
+			statusText,
+			statusClass,
+			actionLabel,
+			onAction,
 		};
 	},
 });

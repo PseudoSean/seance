@@ -205,7 +205,11 @@ export class IrcClient {
 			name: this.networkName,
 			nick: this.nick,
 			serverOptions: this.serverOptions,
-			status: {connected: this.connected, secure: this.options.tls},
+			status: {
+				connected: this.connected,
+				connecting: this._state === "connecting" || this._state === "registering",
+				secure: this.options.tls,
+			},
 			channels: this.channels.map((chan) => chan.snapshot()),
 		};
 	}
@@ -257,6 +261,12 @@ export class IrcClient {
 		this.quitting = false;
 		this._state = "connecting";
 		this.bus.dispatch("connecting");
+		this.bus.dispatch("network:status", {
+			network: this.uuid,
+			connected: false,
+			connecting: true,
+			secure: this.options.tls,
+		});
 		this.pushMessage(
 			this.lobby,
 			{text: `Connecting to ${this.options.host}:${this.options.port}…`},
@@ -265,15 +275,31 @@ export class IrcClient {
 		this.transport.connect();
 	}
 
-	/** Send QUIT and close without reconnecting; the network stays in the UI. */
+	/**
+	 * Send QUIT and close without reconnecting; the network stays in the UI.
+	 * Also cancels a pending reconnect.
+	 */
 	disconnect(reason?: string): void {
 		this.quitting = true;
+		const state = this.transport.state;
 
-		if (this.transport.state === "open") {
+		if (state === "open") {
 			this.transport.send(trailingLine("QUIT", [reason ?? "Seance"]));
 		}
 
 		this.transport.close();
+
+		if (state === "reconnect-wait") {
+			// The socket is already gone, so no close event follows: settle here.
+			this._state = "disconnected";
+			this.bus.dispatch("network:status", {
+				network: this.uuid,
+				connected: false,
+				connecting: false,
+				secure: this.options.tls,
+			});
+			this.pushMessage(this.lobby, {text: "Reconnect cancelled."}, true);
+		}
 	}
 
 	/** `/quit`: remove the network from the UI, then disconnect for good. */
@@ -620,6 +646,7 @@ export class IrcClient {
 		this.bus.dispatch("network:status", {
 			network: this.uuid,
 			connected: false,
+			connecting: willReconnect,
 			secure: this.options.tls,
 		});
 
@@ -668,6 +695,7 @@ export class IrcClient {
 		this.bus.dispatch("network:status", {
 			network: this.uuid,
 			connected: true,
+			connecting: false,
 			secure: this.options.tls,
 		});
 		this.bus.dispatch("commands", commandNames());

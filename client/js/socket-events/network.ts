@@ -40,6 +40,7 @@ socket.on("network:status", function (data) {
 	}
 
 	network.status.connected = data.connected;
+	network.status.connecting = data.connecting;
 	network.status.secure = data.secure;
 
 	if (!data.connected) {
