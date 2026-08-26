@@ -1,6 +1,7 @@
 <template>
 	<form id="form" method="post" action="" @submit.prevent="onSubmit">
 		<span id="upload-progressbar" />
+		<TypingIndicator :channel="channel" />
 		<div v-if="channel.editing || channel.replyTo" class="compose-bar" role="status">
 			<span v-if="channel.editing" class="compose-bar-label">
 				<span class="compose-bar-icon" aria-hidden="true">✎</span>
@@ -97,6 +98,8 @@ import type {ClientNetwork, ClientChan} from "../js/types";
 import {useStore} from "../js/store";
 import {ChanType} from "../../shared/types/chan";
 import {cancelCompose, findLastEditable, startEdit} from "../js/helpers/compose";
+import {TypingReporter} from "../js/helpers/typingReporter";
+import TypingIndicator from "./TypingIndicator.vue";
 
 const formattingHotkeys = {
 	"mod+k": "\x03",
@@ -125,6 +128,7 @@ const bracketWraps = {
 
 export default defineComponent({
 	name: "ChatInput",
+	components: {TypingIndicator},
 	props: {
 		network: {type: Object as PropType<ClientNetwork>, required: true},
 		channel: {type: Object as PropType<ClientChan>, required: true},
@@ -157,10 +161,27 @@ export default defineComponent({
 			});
 		};
 
+		// Own typing activity → client→server `typing` (bus-contract §1.5).
+		// The reporter tracks what was announced and the 5 s idle timer; the
+		// IRC layer throttles to the spec's 3 s rule. Never for the lobby, and
+		// silenced entirely by the sendTypingNotifications setting.
+		const typing = new TypingReporter((target, state) => {
+			if (store.state.settings.sendTypingNotifications) {
+				socket.emit("typing", {target, state});
+			}
+		});
+
+		const reportTyping = () => {
+			if (props.channel.type !== ChanType.LOBBY) {
+				typing.input(props.channel.id, props.channel.pendingMessage);
+			}
+		};
+
 		const setPendingMessage = (e: Event) => {
 			props.channel.pendingMessage = (e.target as HTMLInputElement).value;
 			props.channel.inputHistoryPosition = 0;
 			setInputSize();
+			reportTyping();
 		};
 
 		const getInputPlaceholder = (channel: ClientChan) => {
@@ -210,6 +231,7 @@ export default defineComponent({
 				cancelCompose(props.channel);
 				input.value.value = "";
 				setInputSize();
+				reportTyping(); // nothing was sent, so this is a real `done`
 				return false;
 			}
 
@@ -221,6 +243,13 @@ export default defineComponent({
 			props.channel.pendingMessage = "";
 			input.value.value = "";
 			setInputSize();
+
+			// No `done` on submit: the `input` emit below makes the IRC layer
+			// reset its typing state when it sends the PRIVMSG (the message
+			// itself ends typing on the receiver), so only forget the
+			// announcement here. Slash commands were already `done` when the
+			// leading "/" was typed.
+			typing.sent(target);
 
 			// Store new message in history if last message isn't already equal
 			if (props.channel.inputHistory[1] !== text) {
@@ -291,6 +320,9 @@ export default defineComponent({
 				if (autocompletionRef.value) {
 					autocompletionRef.value.hide();
 				}
+
+				// A draft left in the previous channel is reported `paused` there.
+				typing.switchTarget();
 			}
 		);
 
@@ -357,6 +389,8 @@ export default defineComponent({
 					input.value.value = props.channel.pendingMessage;
 					setInputSize();
 				}
+
+				reportTyping(); // cancelling an edit empties the input → `done`
 
 				return false;
 			});
@@ -444,6 +478,7 @@ export default defineComponent({
 
 			upload.unmounted();
 			upload.abort();
+			typing.dispose();
 		});
 
 		return {

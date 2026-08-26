@@ -407,6 +407,16 @@ export default defineComponent({
 			}
 		);
 
+		watch(
+			() => props.channel.typing.length > 0 || props.channel.typingReserved,
+			async () => {
+				// The typing indicator line above the input appears (and is later
+				// released by a new message): keep the list stuck to the bottom
+				// across that height change, like an input resize.
+				await keepScrollPosition();
+			}
+		);
+
 		onBeforeUpdate(() => {
 			unreadMarkerShown = false;
 		});

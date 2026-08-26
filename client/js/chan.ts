@@ -17,6 +17,8 @@ export function toClientChan(shared: SharedNetworkChan): ClientChan {
 		scrolledToBottom: true,
 		replyTo: null,
 		editing: null,
+		typing: [],
+		typingReserved: false,
 		users: [],
 		usersOutdated: shared.type === ChanType.CHANNEL ? true : false,
 		moreHistoryAvailable: shared.totalMessages > shared.messages.length,

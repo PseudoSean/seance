@@ -23,4 +23,5 @@ import "./open";
 import "./part";
 import "./quit";
 import "./topic";
+import "./typing";
 import "./users";

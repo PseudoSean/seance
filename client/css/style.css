@@ -3208,6 +3208,23 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	cursor: default;
 }
 
+/* "alice is typing…" strip, its own row at the top of #form. Fixed height:
+   it looks the same whether it shows text or is only reserved (empty) after
+   the typist stopped, so the scrollback never bounces (TypingIndicator.vue). */
+#form .typing-indicator {
+	flex: 1 0 100%;
+	height: 20px;
+	min-height: 20px;
+	margin: 0 5px;
+	color: var(--body-color-muted);
+	font-size: 12px;
+	font-style: italic;
+	line-height: 20px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
 /* Reply/edit bar above the input; #form has flex-wrap so the bar takes its own row */
 #form .compose-bar {
 	flex: 1 0 100%;

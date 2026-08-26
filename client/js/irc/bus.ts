@@ -66,6 +66,15 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 		}
 	});
 
+	bus.handle("typing", ({target, state}) => {
+		const client = registry.clientForChannel(target);
+		const chan = client?.channelById(target);
+
+		if (client && chan) {
+			client.typing(chan, state);
+		}
+	});
+
 	bus.handle("msg:redact", ({target, msgid, reason}) => {
 		const client = registry.clientForChannel(target);
 		const chan = client?.channelById(target);

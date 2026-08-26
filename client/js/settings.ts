@@ -119,6 +119,10 @@ const defaultConfig = {
 	uploadCanvas: {
 		default: true,
 	},
+	// Report own input activity as `+typing` TAGMSGs (IRCv3 typing client tag).
+	sendTypingNotifications: {
+		default: true,
+	},
 	userStyles: {
 		default: "",
 		apply(store: TypedStore, value: string) {

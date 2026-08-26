@@ -39,6 +39,25 @@
 				</label>
 			</div>
 		</div>
+		<div>
+			<h2>Typing notifications</h2>
+			<div>
+				<label class="opt">
+					<input
+						:checked="store.state.settings.sendTypingNotifications"
+						type="checkbox"
+						name="sendTypingNotifications"
+					/>
+					Send typing notifications
+					<span
+						class="tooltipped tooltipped-n tooltipped-no-delay"
+						aria-label="Lets people in the channel see when you are typing (IRCv3 +typing)."
+					>
+						<button class="extra-help" />
+					</span>
+				</label>
+			</div>
+		</div>
 		<div v-if="!store.state.serverConfiguration?.public">
 			<h2>Automatic away message</h2>
 

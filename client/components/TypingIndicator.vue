@@ -1,0 +1,74 @@
+<template>
+	<div v-if="visible" class="typing-indicator" role="status" aria-live="polite">
+		<span v-if="summary" class="typing-indicator-text">{{ summary }}</span>
+	</div>
+</template>
+
+<script lang="ts">
+import {computed, defineComponent, onUnmounted, PropType, ref, watch} from "vue";
+import type {ClientChan} from "../js/types";
+import {expireTyping, typingSummary} from "../js/helpers/typingState";
+
+// A one-line "alice is typing…" strip above the input, with a fixed height
+// (see #form .typing-indicator in style.css). It appears with the first
+// typing entry — the scrollback moves up once to make room — and once the
+// entries are gone the empty line stays (`channel.typingReserved`) so the
+// scrollback does not bounce back. The next message appended to the channel
+// releases the reservation (socket-events/typing.ts) in the same render, so
+// the new message fills the space and the view does not move again.
+// Expired entries are dropped by a 1 s ticker that only runs while the
+// channel has entries.
+export default defineComponent({
+	name: "TypingIndicator",
+	props: {
+		channel: {type: Object as PropType<ClientChan>, required: true},
+	},
+	setup(props) {
+		const now = ref(Date.now());
+		let ticker: ReturnType<typeof setInterval> | null = null;
+
+		const stopTicker = () => {
+			if (ticker !== null) {
+				clearInterval(ticker);
+				ticker = null;
+			}
+		};
+
+		const prune = () => {
+			now.value = Date.now();
+			props.channel.typing = expireTyping(props.channel.typing, now.value);
+		};
+
+		const startTicker = () => {
+			if (ticker === null) {
+				ticker = setInterval(prune, 1000);
+			}
+		};
+
+		watch(
+			() => props.channel.typing.length > 0,
+			(active) => {
+				if (active) {
+					prune();
+					startTicker();
+				} else {
+					stopTicker();
+				}
+			},
+			{immediate: true}
+		);
+
+		onUnmounted(stopTicker);
+
+		const visible = computed(
+			() => props.channel.typing.length > 0 || props.channel.typingReserved
+		);
+
+		const summary = computed(() =>
+			typingSummary(expireTyping(props.channel.typing, now.value))
+		);
+
+		return {visible, summary};
+	},
+});
+</script>

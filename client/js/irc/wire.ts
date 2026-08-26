@@ -2,6 +2,7 @@
  * Outbound line helpers on top of `formatLine`.
  */
 
+import type {TypingState} from "../../../shared/types/msg";
 import {formatLine, formatTags} from "./message";
 
 /** Client tags (`+name` keys) to put on an outbound line; values unescaped. */
@@ -16,6 +17,15 @@ export const REACT_TAG = "+draft/react";
 export const UNREACT_TAG = "+draft/unreact";
 /** The cap that gates REDACT in both directions. */
 export const REDACTION_CAP = "draft/message-redaction";
+/** Typing notification tag (https://ircv3.net/specs/client-tags/typing), on TAGMSG. */
+export const TYPING_TAG = "+typing";
+/** Minimum spacing between two `+typing` TAGMSGs to one target (the spec's 3 s). */
+export const TYPING_INTERVAL_MS = 3000;
+
+/** The `TypingState` a `+typing` tag value names, or undefined for anything else. */
+export function typingStateOf(value: string | undefined): TypingState | undefined {
+	return value === "active" || value === "paused" || value === "done" ? value : undefined;
+}
 
 /**
  * The `@tags ` block (trailing space included) an outbound line starts with,

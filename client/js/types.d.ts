@@ -6,6 +6,7 @@ import {SharedUser} from "../../shared/types/user";
 import {SharedMention} from "../../shared/types/mention";
 import {SharedConfiguration, LockedSharedConfiguration} from "../../shared/types/config";
 import {LinkPreview, SharedMsg} from "../../shared/types/msg";
+import {TypingEntry} from "./helpers/typingState";
 
 interface LoungeWindow extends Window {
 	g_TheLoungeRemoveLoading?: () => void;
@@ -33,6 +34,13 @@ type ClientChan = Omit<SharedChan, "messages"> & {
 	replyTo: ClientMessage | null;
 	/** Own message the next plain-text input replaces (`+seance/edit`). */
 	editing: ClientMessage | null;
+	/** Who is typing here right now (`+typing`), pruned by TypingIndicator.vue. */
+	typing: TypingEntry[];
+	/**
+	 * The indicator line stays reserved (empty) after the last entry goes so
+	 * the scrollback does not bounce; the next appended message releases it.
+	 */
+	typingReserved: boolean;
 
 	users: ClientUser[];
 };

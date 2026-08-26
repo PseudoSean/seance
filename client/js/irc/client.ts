@@ -17,7 +17,7 @@
 import socket, {EventBus} from "../socket";
 import {isHighlight} from "../highlight";
 import {ChanState, ChanType} from "../../../shared/types/chan";
-import {MessageType, SharedMsg} from "../../../shared/types/msg";
+import {MessageType, SharedMsg, TypingState} from "../../../shared/types/msg";
 import type {SharedNetwork, SharedServerOptions} from "../../../shared/types/network";
 import {CapNegotiator, SEANCE_CAPS} from "./caps";
 import {casefold, namesEqual} from "./casemap";
@@ -57,6 +57,8 @@ import {
 	REPLY_TAG,
 	tagPrefix,
 	trailingLine,
+	TYPING_INTERVAL_MS,
+	TYPING_TAG,
 	UNREACT_TAG,
 } from "./wire";
 
@@ -90,6 +92,22 @@ export interface SendMessageOptions {
 	tags?: ClientTags;
 	/** Client tags put on the first chunk only (`+seance/edit`). */
 	firstTags?: ClientTags;
+}
+
+/**
+ * Outbound `+typing` throttle state for one target (see {@link IrcClient.typing}).
+ * An entry exists only while a typing session is announced: it is created by
+ * the first `active` put on the wire and dropped when `done` goes out, when
+ * we send a message to the target, or when the connection closes.
+ */
+interface TypingEntry {
+	/** The last state put on the wire (`active` or `paused`). */
+	lastState?: TypingState;
+	lastSentAt: number;
+	/** Delivers `wanted` at `lastSentAt + TYPING_INTERVAL_MS`. */
+	timer?: ReturnType<typeof setTimeout>;
+	/** The transition waiting for the timer, replaced by later requests. */
+	wanted?: TypingState;
 }
 
 /** An edit waiting for the server to confirm the REDACT of the old message. */
@@ -187,6 +205,8 @@ export class IrcClient {
 	private replayContext: {target: Channel; collected: ReplayCollection} | null = null;
 	/** Edits whose REDACT is in flight, by the msgid being replaced. */
 	private readonly pendingEdits = new Map<string, PendingEdit>();
+	/** Announced typing sessions by casefolded target (see {@link typing}). */
+	private readonly typingState = new Map<string, TypingEntry>();
 
 	constructor(options: IrcClientOptions) {
 		const host = options.host.trim();
@@ -683,6 +703,7 @@ export class IrcClient {
 		resetBatches(this);
 		abortHistory(this);
 		this.clearPendingEdits();
+		this.clearTyping();
 
 		for (const chan of this.channels) {
 			chan.users.clear();
@@ -796,6 +817,9 @@ export class IrcClient {
 	 * echoed them.
 	 */
 	sendMessage(target: string, text: string, opts: SendMessageOptions = {}) {
+		// The message itself ends the typing session on the receiver's side:
+		// forget ours (no `done`), and let the next `active` go out at once.
+		this.resetTyping(target);
 		const command = opts.notice ? "NOTICE" : "PRIVMSG";
 		const firstTags: ClientTags | undefined =
 			opts.tags || opts.firstTags ? {...opts.firstTags, ...opts.tags} : undefined;
@@ -898,6 +922,121 @@ export class IrcClient {
 			[remove ? UNREACT_TAG : REACT_TAG]: text,
 			[REPLY_TAG]: msgid,
 		});
+	}
+
+	/**
+	 * Announce our typing `state` in `chan` with `@+typing=<state> TAGMSG`
+	 * (bus-contract §1.5). The UI reports unthrottled; this applies the
+	 * spec's rule that two notifications to one target are at least
+	 * {@link TYPING_INTERVAL_MS} apart:
+	 *
+	 * - `active` goes out at once when no typing session is announced (nothing
+	 *   sent yet, or `done` / a message went out) or the last send is ≥ 3 s
+	 *   old; otherwise it is dropped — the UI keeps reporting it, so the first
+	 *   report after the 3 s re-sends it. It also cancels a scheduled
+	 *   `paused`/`done`.
+	 * - `paused`/`done` need an announced session and are sent once per
+	 *   transition: at once when the last send is ≥ 3 s old, else scheduled
+	 *   for `lastSentAt + 3 s` with the latest requested state winning.
+	 *
+	 * Nothing is sent to the lobby, without `message-tags`, or while not
+	 * registered. `done` ends the session, as does {@link sendMessage} to the
+	 * same target (without a `done`) and the connection closing.
+	 */
+	typing(chan: Channel, state: TypingState): void {
+		if (
+			chan.type === ChanType.LOBBY ||
+			!this.connected ||
+			!this.caps.hasCapability("message-tags")
+		) {
+			return;
+		}
+
+		const key = this.casefold(chan.name);
+		const entry = this.typingState.get(key);
+		const wait = entry ? entry.lastSentAt + TYPING_INTERVAL_MS - Date.now() : 0;
+
+		if (state === "active") {
+			if (entry) {
+				this.cancelTypingTimer(entry);
+			}
+
+			if (wait <= 0) {
+				this.sendTyping(chan.name, key, state);
+			}
+
+			return;
+		}
+
+		// A transition needs an announced session and must change something:
+		// `paused` after `paused` or `done` after `done` is a no-op.
+		if (!entry || (entry.wanted ?? entry.lastState) === state) {
+			return;
+		}
+
+		if (wait <= 0) {
+			this.cancelTypingTimer(entry);
+			this.sendTyping(chan.name, key, state);
+			return;
+		}
+
+		entry.wanted = state;
+
+		if (!entry.timer) {
+			entry.timer = setTimeout(() => {
+				const wanted = entry.wanted;
+				entry.timer = undefined;
+				entry.wanted = undefined;
+
+				if (wanted && this.typingState.get(key) === entry) {
+					this.sendTyping(chan.name, key, wanted);
+				}
+			}, wait);
+		}
+	}
+
+	private sendTyping(target: string, key: string, state: TypingState): void {
+		if (!this.connected || !this.sendTagmsg(target, {[TYPING_TAG]: state})) {
+			return;
+		}
+
+		if (state === "done") {
+			this.typingState.delete(key);
+			return;
+		}
+
+		const entry = this.typingState.get(key) ?? {lastSentAt: 0};
+		entry.lastState = state;
+		entry.lastSentAt = Date.now();
+		this.typingState.set(key, entry);
+	}
+
+	private cancelTypingTimer(entry: TypingEntry): void {
+		if (entry.timer) {
+			clearTimeout(entry.timer);
+			entry.timer = undefined;
+		}
+
+		entry.wanted = undefined;
+	}
+
+	/** Forget the typing session with `target`, if any (no `done` goes out). */
+	private resetTyping(target: string): void {
+		const key = this.casefold(target);
+		const entry = this.typingState.get(key);
+
+		if (entry) {
+			this.cancelTypingTimer(entry);
+			this.typingState.delete(key);
+		}
+	}
+
+	private clearTyping(): void {
+		for (const entry of this.typingState.values()) {
+			this.cancelTypingTimer(entry);
+		}
+
+		this.typingState.clear();
 	}
 
 	/** Whether the server lets us send REDACT. */

@@ -144,7 +144,7 @@ function notifyMessage(
 		if (!document.hasFocus() || !activeChannel || activeChannel.channel !== channel) {
 			if (store.state.settings.notification) {
 				try {
-					pop.play();
+					void Promise.resolve(pop.play()).catch(() => undefined); // autoplay may be blocked
 				} catch (exception) {
 					// On mobile, sounds can not be played without user interaction.
 				}
