@@ -8,3 +8,14 @@ coverage/
 public/
 dist/
 tmp/
+
+# shells/capacitor: generated / synced native build artifacts
+shells/capacitor/node_modules/
+shells/capacitor/android/app/src/main/assets/public/
+shells/capacitor/android/.gradle/
+shells/capacitor/android/build/
+shells/capacitor/android/app/build/
+shells/capacitor/ios/App/App/public/
+shells/capacitor/ios/App/Pods/
+shells/electron/node_modules/
+shells/electron/dist/

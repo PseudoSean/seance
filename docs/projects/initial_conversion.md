@@ -157,7 +157,7 @@ No fixed order. Tackle items in whatever sequence the friction dictates.
 3. [x] **Branding hooks**
    - [x] a. `config.json` fetched at boot _Done 2026-08-25: `client/js/branding.ts` + `client/config.json`; runtime for the SPA, build-time for index.html/manifest; see `docs/resources/branding.md`. localStorage keys still `thelounge.*` (migration follow-up)._ for network name, default host/port, theme, branding strings. `manifest.json` parametrized. Audit and replace remaining "The Lounge" strings.
 4. [ ] **Native shells**
-   - [ ] a. Electron wrapper.
+   - [x] a. Electron wrapper. _Done 2026-08-25: `shells/electron/` (self-contained package; `app://` privileged scheme with CSP, sandboxed preload, irc:// handler, electron-builder; Linux pack + smoke verified; no signing/auto-update)._
    - [ ] b. Capacitor (or thin native shell + WebView) for iOS/Android. Note WebSocket + background-keep-alive caveats per platform.
 5. [ ] **Docs**
    - [x] a. Rewrite `CLAUDE.md` to reflect the static-SPA architecture and `attic/` policy. _Done 2026-08-25._
