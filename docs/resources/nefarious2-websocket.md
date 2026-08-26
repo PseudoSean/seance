@@ -297,7 +297,7 @@ A registered client sending a single 600-byte `PRIVMSG` frame over `wss://` gets
 
 ## Local fix branch (2026-08-25)
 
-`seance/websocket-fixes` in `tmp/nefarious2` (4 commits on top of `ircv3.2-upgrade@3868b34`; series exported to `tmp/nefarious2-fixes.patch`; image `nefarious2:ircv3-fixed`, now the default in `tools/nefarious-dev/run.sh`). **Not pushed — needs a human to push and open the PR against `ircv3.2-upgrade`.**
+`seance/websocket-fixes` in `tmp/nefarious2` (4 commits on top of `ircv3.2-upgrade@3868b34`; series exported to `tmp/nefarious2-fixes.patch`; image `nefarious2:ircv3-fixed`, now the default in `tools/nefarious-dev/run.sh`). **Pushed 2026-08-25 as [evilnet/nefarious2#100](https://github.com/evilnet/nefarious2/pull/100)** (base `ircv3.2-upgrade`, reviewer MrLenin).
 
 | Issue | Fix                                                                                                                                                                              | Verified                                                                                                                            |
 | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
@@ -318,7 +318,7 @@ Off by default (`CAP_draft_read_marker`); the dev config enables it. Unauthentic
 
 1. ~~Which branch?~~ Decided 2026-08-24: Seance targets `ircv3.2-upgrade` (and `ircv3.2-hardening` as it lands). Still open: will it merge to `master`, and should we pin a tag? `ghcr.io/evilnet/nefarious2:latest` referenced by the compose example does not exist on GHCR (checked 2026-08-24); we build locally.
 2. ~~Report the 527-byte inbound frame cap~~ Filed as [evilnet/nefarious2#98](https://github.com/evilnet/nefarious2/issues/98) (label `ircv3-upgrade`, assigned MrLenin).
-   2b. ~~Report the ≥512-byte upgrade hang~~ Filed as [evilnet/nefarious2#99](https://github.com/evilnet/nefarious2/issues/99). See "Local fix branch" above.
+   2b. ~~Report the ≥512-byte upgrade hang~~ Filed as [evilnet/nefarious2#99](https://github.com/evilnet/nefarious2/issues/99). Fix for all three: [PR #100](https://github.com/evilnet/nefarious2/pull/100).
    2a. ~~Report the plain-port handshake corruption~~ Filed as [evilnet/nefarious2#97](https://github.com/evilnet/nefarious2/issues/97) (label `ircv3-upgrade`, assigned MrLenin).
 3. Confirm `WEBSOCKET_ORIGIN` policy for packaged (non-browser) clients that send no Origin.
 4. `draft/event-playback` default is off; ask for it to be enabled on the dev/test server.
