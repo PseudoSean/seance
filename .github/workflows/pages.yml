@@ -1,0 +1,59 @@
+# Build the static client and publish it to GitHub Pages on every push to
+# develop: https://evilnet.github.io/seance/ always serves the latest build.
+# The SPA uses relative asset paths and a hash router, so it works under the
+# /seance/ subpath unchanged. Pages is HTTPS, so from there only wss://
+# servers are reachable (mixed content blocks ws://).
+name: Pages
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".node-version"
+
+      - name: Enable Yarn (classic) via corepack
+        run: corepack enable
+
+      - name: Install
+        run: yarn --frozen-lockfile --non-interactive
+
+      - name: Build
+        run: yarn build
+        env:
+          NODE_ENV: production
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
