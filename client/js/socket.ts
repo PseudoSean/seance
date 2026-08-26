@@ -5,14 +5,14 @@
 // `disconnect`, `open`) so existing call sites keep working unchanged.
 //
 // Direction of travel:
-//   - `on/once/off` subscribe to *server-to-client* events (things the
-//     transport layer will `dispatch` at us once one exists).
-//   - `emit` sends *client-to-server* events. There is no transport yet, so
-//     an emit is delivered to whatever `handle`r has been registered for that
-//     event (the future IRC layer will register those). Emits that nobody
+//   - `on/once/off` subscribe to *server-to-client* events, which the IRC
+//     layer (`client/js/irc/client.ts` and its handlers) `dispatch`es.
+//   - `emit` sends *client-to-server* events; each is delivered to the
+//     `handle`r registered for it by `client/js/irc/bus.ts`. Emits that nobody
 //     handles are logged with `console.warn` so regressions are easy to spot.
 //
-// There is deliberately no networking in here. See docs/projects/initial_conversion.md.
+// There is deliberately no networking in here — the WebSocket lives in
+// `client/js/irc/transport.ts`. See docs/resources/bus-contract.md.
 
 import type {ServerToClientEvents, ClientToServerEvents} from "../../shared/types/socket-events";
 

@@ -93,7 +93,7 @@ Features {
 
 Notes:
 
-- `websocket = yes` works on non-SSL ports as long as the ircd was **built** with OpenSSL (`websocket.c:438-441`). Use `ws://localhost:8067/` from `yarn dev` and skip certificate trust entirely. The path is ignored by the server.
+- `websocket = yes` works on non-SSL ports as long as the ircd was **built** with OpenSSL (`websocket.c:438-441`). Use `ws://localhost:8067/` from the built SPA and skip certificate trust entirely (works with the default `nefarious2:ircv3-fixed` image; the stock image has upstream #97). The path is ignored by the server.
 - `Port { ... ssl = yes; websocket = yes; }` is what production looks like; test it too, see TLS below.
 - Password hashing: `ircd/umkpasswd` builds alongside `ircd` (`umkpasswd -l` lists mechanisms, `-m native <password>` produces the default hashed form). `$PLAIN$<password>` is accepted as-is, per `doc/example.conf:846`.
 - No services (X3) means no SASL, no account login, no `+r`. That is acceptable for phase 0/C; `~/src/x3` exists locally if account-tag/chathistory-auth paths need exercising later.
@@ -107,7 +107,7 @@ Notes:
 | Test nick     | `seance1` (`seance2` for a second tab; the probe defaults to `seance-probe`)                  |
 | Test channel  | `#seance`                                                                                     |
 | Oper          | `seanceop` / `seance`                                                                         |
-| WS (plain)    | `ws://localhost:8067/` — **broken upstream**, see `nefarious2-websocket.md`                   |
+| WS (plain)    | `ws://localhost:8067/` (fixed image only — stock image has upstream #97)                      |
 | WS (TLS)      | `wss://localhost:8443/`                                                                       |
 | Legacy TCP    | `localhost:6667` (for cross-checking with a normal client such as hexchat in `~/src/hexchat`) |
 

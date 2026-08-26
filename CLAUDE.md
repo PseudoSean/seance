@@ -4,58 +4,124 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**Seance** — a new project starting from a TheLounge checkout. The plan is:
+**Seance** is TheLounge's Vue 3 client turned into a static, bouncer-less IRC client. The browser speaks IRCv3 directly to **nefarious2** (EvilNet's ircd) over a WebSocket — one IRC line per WS message, `text.ircv3.net` subprotocol — with no Node server in between. The target ircd is nefarious2's **`ircv3.2-upgrade` branch** (`master` has neither WebSocket nor the IRCv3.2 caps). Goal: a `public/` tree an IRC network can rebrand via `config.json` and ship as its own web/PWA/native client.
 
-- **Keep** TheLounge's Vue 3 frontend (`client/`).
-- **Replace** TheLounge's Node/Socket.IO backend (`server/`) with direct connections to **nefarious2** (EvilNet's ircd) using its new **IRCv3-over-websocket** capabilities — no bouncer-style server in the middle.
-- **Goal**: a codebase IRC networks can rebrand and ship as their own native client (iOS, Android, possibly Electron or installable PWA).
+**Status** (see `docs/projects/initial_conversion.md` for the checklist): phases 0 (discovery), A (server moved to `attic/`), B (bus stubbed), C (minimum IRC) are done; D (fill-in) is done except D.7 read markers/`MARKREAD` and D.11 web push (both deferred); E is in progress — E.3 branding is done, E.1 dependency purge is underway, E.2 bus-contract reshape is optional, E.4 native shells not started. Milestones M4 (daily-driver) and M5 (shippable) are not yet ticked.
 
-TheLounge's Node server has been moved to `attic/` (phase A of `docs/projects/initial_conversion.md`). It is **reference only** — not built, not linted, not tested, never imported. Look there for "how did the old server parse modes / handle kicks" when porting behaviour to the client. The biggest rewrite surface lives in `shared/types/socket-events.ts` (the Socket.IO contract being replaced) and `client/js/socket.ts` + `client/js/socket-events/` (where the frontend consumes it). Right now the client still tries to open a Socket.IO connection at boot and sits on the loading splash; phase B stubs that out.
-
-Upstream remains `github.com/thelounge/thelounge` for now; divergence will grow. The local checkout directory is `seance` but the package name in `package.json` is still `thelounge`. Node.js ≥ 22, Yarn 1 (classic) — if `yarn` is not on PATH use `corepack yarn`. MIT licensed.
+Upstream is still `github.com/thelounge/thelounge`; divergence only grows. The checkout is `seance` but `package.json` `name` is still `thelounge`, and localStorage keys are still `thelounge.*`. Node.js >= 22, Yarn 1 (classic), MIT licensed.
 
 ## Common commands
 
-All commands use Yarn.
+`yarn` is not on PATH on this machine — use `corepack yarn <cmd>` (or `npx` for one-offs).
 
-| Task                                            | Command                            |
-| ----------------------------------------------- | ---------------------------------- |
-| Install deps                                    | `yarn install`                     |
-| Production build (webpack → `public/`)          | `NODE_ENV=production yarn build`   |
-| Development build                               | `yarn build`                       |
-| Webpack watch                                   | `yarn watch`                       |
-| Serve the built SPA locally                     | `python3 -m http.server -d public` |
-| Lint everything (eslint + prettier + stylelint) | `yarn lint`                        |
-| Auto-format                                     | `yarn format:prettier`             |
-| Full test (lint + mocha)                        | `yarn test`                        |
-| Mocha only                                      | `yarn test:mocha`                  |
-| Coverage                                        | `yarn coverage`                    |
-| Install git pre-commit hook                     | `yarn githooks-install`            |
+| Task                                            | Command                                       |
+| ----------------------------------------------- | --------------------------------------------- |
+| Install deps                                    | `yarn install`                                |
+| Build the SPA (webpack → `public/`)             | `yarn build` (`NODE_ENV=production` for prod) |
+| Webpack watch                                   | `yarn watch`                                  |
+| Serve the built SPA                             | `python3 -m http.server -d public 8000`       |
+| Lint everything (eslint + prettier + stylelint) | `yarn lint`                                   |
+| Auto-format                                     | `yarn format:prettier`                        |
+| Full test (lint + mocha)                        | `yarn test`                                   |
+| Mocha only (builds first)                       | `yarn test:mocha`                             |
+| Mocha without the spec glob                     | `yarn test:nospec`                            |
+| Coverage                                        | `yarn coverage`                               |
+| Install git pre-commit hook                     | `yarn githooks-install`                       |
 
-Run a single test file:
+There is no `yarn dev`/`yarn start`; build and serve `public/` statically.
+
+Run a single mocha file:
 
 ```sh
-cross-env NODE_ENV=test TS_NODE_PROJECT='./test/tsconfig.json' \
-  mocha --config=test/.mocharc.yml test/path/to/file.ts
+npx cross-env NODE_ENV=test TS_NODE_PROJECT='./test/tsconfig.json' \
+  npx mocha --config=test/.mocharc.yml test/irc/client.ts
 ```
 
-Note: `yarn test:mocha` runs `webpack --mode=development` first because `test/tests/build.ts` checks the built output. Skip the build with `yarn test:nospec` only if you know the test doesn't need it.
+`yarn test:mocha` runs `webpack --mode=development` first because `test/tests/build.ts` inspects `public/`. Live tests (`test/irc/*.live.ts`) are `describe.skip` unless `SEANCE_IRC_URL` is set:
+
+```sh
+SEANCE_IRC_URL=wss://localhost:8443/ npx cross-env NODE_ENV=test \
+  TS_NODE_PROJECT='./test/tsconfig.json' npx mocha --config=test/.mocharc.yml test/irc/client.live.ts
+```
+
+They relax TLS verification for `localhost` only (self-signed dev cert). Quick headless smoke check after a build (expects the connect form and no console errors):
+
+```sh
+chromium --headless=new --disable-gpu --virtual-time-budget=5000 \
+  --dump-dom http://127.0.0.1:8000/ | grep -c 'id="connect"'
+```
+
+## Dev IRC server
+
+`tools/nefarious-dev/run.sh` runs nefarious2 in Docker (`-d` to detach; `docker logs -f nefarious-dev`). It bind-mounts `tools/nefarious-dev/ircd.conf` + `local.conf`, generates a SAN-bearing self-signed cert into `tmp/nefarious-dev/ircd.pem`, and publishes on 127.0.0.1: `6667` plain IRC, `6697` IRC/TLS, `8067` `ws://`, `8443` `wss://`. Server name `irc.seance.test`, network `SeanceDev`, test channel `#seance`, oper `seanceop`/`seance`. No services, so no SASL/accounts locally; `CHATHISTORY_REQUIRE_AUTH` is off and `IPCHECK_CLONE_LIMIT` is raised because the test suites reconnect a lot.
+
+Images (build once from the gitignored `tmp/nefarious2` checkout — see the header of `run.sh`):
+
+- `nefarious2:ircv3-fixed` (**default**) — `ircv3.2-upgrade` plus the local `seance/websocket-fixes` branch (also exported as `tmp/nefarious2-fixes.patch`). Required for real browsers.
+- `nefarious2:ircv3` (`NEFARIOUS_IMAGE=nefarious2:ircv3`) — stock branch. Plain `ws://` and every real browser fail against it.
+
+The three upstream bugs the fix branch addresses (details and transcripts in `docs/resources/nefarious2-websocket.md`): **#97** plain-port WS handshake corrupted by pre-101 auth notices; **#98** inbound frames >= 528 bytes disconnect; **#99** upgrade requests >= 512 bytes hang (browsers send ~550). The fix branch is not pushed upstream yet. The TLS listener also requests a client cert, which headless Chromium answers with `ERR_SSL_CLIENT_AUTH_CERT_NEEDED` — automated browser runs need a pass-through TLS proxy.
+
+`node tools/irc-ws-probe.mjs wss://localhost:8443/ nick [--insecure] [--binary] [--stay]` is a dependency-free CAP/NICK/USER probe that prints every line.
 
 ## Architecture
 
-Two TypeScript trees share `tsconfig.base.json`:
+Two TypeScript trees (`client/`, `shared/`) share `tsconfig.base.json`; `tsconfig.json` references only those.
 
-- **`client/`** — Vue 3 + Vuex + Vue Router SPA built by webpack. Components in `client/components/` (`.vue` SFCs), app logic in `client/js/` (`store.ts`, `router.ts`, `socket.ts`, `socket-events/`, `commands/`). Themes in `client/themes/`. Service worker at `client/service-worker.js`. `client/index.html` is copied to `public/` by webpack with `__HASH__` replaced by a cache-bust token (see `webpack.config.ts`). Webpack outputs to `public/`.
-- **`shared/`** — Cross-cutting type definitions and helpers. `shared/types/socket-events.ts` defines the typed Socket.IO contract between today's server and client — **this is the migration boundary**: the eventual replacement is raw IRCv3 frames over websocket to nefarious2.
-- **`attic/`** — Not a build target. TheLounge's old `server/` (Express + Socket.IO, `ClientManager`/`Client`/`Network` models wrapping `irc-framework`, `plugins/irc-events/` handlers, `plugins/inputs/` slash commands, message storage, auth, packages), its CLI entry `index.js`, `defaults/config.js`, and the server-side tests. See `attic/README.md`. Excluded from ESLint, Prettier, and `tsconfig.json` references — do not import from it.
+### `client/` — the app
+
+Vue 3 + Vuex + Vue Router SPA built by webpack (`webpack.config.ts`) into `public/`. Components in `client/components/` (`.vue` SFCs); app logic in `client/js/` (`store.ts`, `router.ts`, `store-settings.ts`, `commands/` for UI-only slash commands, `helpers/`); themes in `client/themes/`; service worker `client/service-worker.js` (offline shell, no push).
+
+- **`client/js/boot.ts`** — boot sequence: `loadBranding()` (`config.json`) → commit static `configuration.ts` → apply stored settings → `appLoaded` → drop splash → handle `?uri=`/query params → route to the last channel or `Connect`. Importing `./irc/manager` registers the IRC bus handlers.
+- **`client/js/socket.ts`** — `EventBus`, an in-process replacement for socket.io-client. `on/once/off` subscribe to server→client events, `dispatch(event, payload)` fires them; `emit(event, payload)` is routed to the single `handle(event, fn)` registered for it (unhandled emits `console.warn`). The `socket.on/emit` call-site shape across `socket-events/*` and components is kept **on purpose** so the IRC layer plugs in without touching ~50 call sites. No networking lives here.
+- **`client/js/socket-events/*`** — the bus consumers that mutate the store (`init`, `msg`, `join`, `names`, `network`, `more`, ...). `index.ts` lists them.
+- **`client/js/branding.ts`** + **`client/config.json`** — deploy branding schema/loader; `config.json` is copied to `public/` and fetched at runtime, and read by webpack for `index.html`/manifest.
+
+### `client/js/irc/` — the IRC layer
+
+Data flow: `transport.ts` (`WsTransport`: one line per frame, PING/PONG, reconnect backoff, 500-byte guard) → `message.ts` (hand-rolled parser/serialiser, `casemap.ts`) → `caps.ts` / `sasl.ts` / `isupport.ts` → `client.ts` (`IrcClient`: one per network, owns the `SharedNetwork` model and `channel.ts` state) → `handlers/` → `socket.dispatch(...)`. Typed input comes back via `bus.ts` (`socket.handle("input" | "open" | "names" | "more" | "network:*")`) → `commands/`.
+
+- **`handlers/`** — one file per command/numeric exporting `{COMMAND: handler}`; `handlers/index.ts` holds the `modules` list and the `unhandled` fallback. **To add a handler: add a file and one entry in `modules`.**
+- **`commands/`** — one file per slash command exporting a `Command`; `commands/index.ts` holds the `modules` list and `dispatchInput`. **To add a command: add a file and one entry in `modules`.** Unknown commands are sent raw.
+- `manager.ts` (`NetworkManager` registry, `createNetwork`), `bus.ts` (bus handlers, store-free), `history.ts` (`draft/chathistory` + batches; distinct from `client/js/history.ts`, the input history), `sts.ts`, `saved-networks.ts` (`thelounge.networks`), `ids.ts` (one shared id allocator across networks; history ids are negative), `errors.ts`, `hostmask.ts`, `wire.ts`, `types.ts`.
+
+### Working in the IRC layer
+
+- `Handler = (client: IrcClient, msg: IrcMessage) => void` (`types.ts`). Handlers mutate the client's model and emit through the client — `client.pushMessage(chan, partial, increasesUnread?)`, `client.findChannel(name)`, `client.isSelf(nick)`, `client.timeOf(msg)` (honours `@time`), `client.lobby`, `client.channels` — never the transport or the store directly. `handlers/away.ts` is a small model.
+- `Command = {commands: string[]; allowDisconnected?: boolean; input(ctx)}` with `ctx = {client, chan, cmd, args, rest}`. Build lines with `formatLine(...)` (`message.ts`) or `trailingLine(cmd, params)` (`wire.ts`) and call `client.send(line)`. `commands/away.ts` is a small model.
+- UI-only commands (`/collapse`, `/expand`, `/search`, `/join` of an already-listed channel) are intercepted in `client/js/commands/` before the bus sees them; service aliases (`/cs`, `/ns`, ...) pass through raw.
+- Event names, payload shapes and store expectations are fixed by `docs/resources/bus-contract.md`; when adding a new event, extend `shared/types/socket-events.ts` and a `socket-events/*` consumer together.
+
+### `shared/`
+
+Cross-cutting types and helpers. `shared/types/socket-events.ts` (`ServerToClientEvents` / `ClientToServerEvents`) is **still the bus contract** the IRC layer dispatches against; reshaping it around an IRC-native store is the optional E.2.
+
+### Everything else
+
+- **`attic/`** — TheLounge's old `server/`, CLI entry, defaults and server tests. **Reference only**: not built, linted, type-checked or tested; excluded from ESLint, Prettier and the TS references. Look there for "how did the old server do X"; never import from it. See `attic/README.md`.
+- **`tools/`** — `nefarious-dev/` (dev ircd) and `irc-ws-probe.mjs`.
+- **`docs/`** — PARA layout (`projects/`, `areas/`, `resources/`, `archives/`), see `docs/README.md`.
+- **`tmp/`** — gitignored scratch: the nefarious2 checkout, the fix patch, dev-server state.
+- **`test/`** — see Conventions.
 
 ## Conventions
 
-- Prettier formatting is enforced; a git hook runs it pre-commit if installed via `yarn githooks-install`. If linting fails, try `yarn format:prettier` first.
-- `noImplicitAny: false` is set in `server/tsconfig.json` and `test/tsconfig.json` with a "TODO: Remove eventually" — prefer adding explicit types in new code rather than relying on the loose setting.
-- When changing `client/js` or `client/components`, run `yarn build` (or `yarn watch` while iterating).
-- Tests live under `test/`: `test/shared/` (pure helpers from `shared/` and `client/js/helpers/`), `test/tests/build.ts` (checks the webpack output), and `test/client/` (browser-side specs bundled by webpack in development mode into `test/public/testclient.js`). Mocha config: `test/.mocharc.yml`; uses `tsx` as the loader.
+- Prettier is enforced (pre-commit hook via `yarn githooks-install`). If `yarn lint` fails, run `yarn format:prettier` first.
+- `client/` compiles with `strict: true`; `noImplicitAny: false` remains in the tsconfigs with a "TODO: Remove eventually" — write explicit types in new code. No Node built-ins in `client/` (it must bundle for the browser; `transport.ts` uses only the global `WebSocket`).
+- `MAX_LINE_BYTES = 500` (`client/js/irc/message.ts`) caps every outbound line, tags included: nefarious2 kills connections on inbound WS frames >= 528 bytes (#98) and the branch rejects message bodies over 512 bytes as excess flood, and browsers cannot control fragmentation. `splitMessage` chunks long text; do not raise the cap.
+- After changing `client/`, run `yarn build` (or `yarn watch`) — the mocha build test and the headless check both read `public/`.
+- Tests mirror the source under `test/`: `test/irc/*.ts` for the IRC layer, `test/shared/`, `test/tests/` (`build.ts`, `eventBus.ts`), `test/client/` (browser specs webpack bundles in development mode into `test/public/testclient.js`; ignored by mocha). Mocha config `test/.mocharc.yml` (tsx loader, `check-leaks`).
+- IRC unit tests use a `FakeTransport` injected through `transportFactory` and drive lines with `transport.line(...)`, asserting on a `sinon.spy(socket, "dispatch")`. **Gotcha:** `test/irc/client.ts` installs that spy in a root-level `beforeEach`, which mocha applies to every file in the run; other files (`multi-network.ts`, `history.ts`, ...) check `socket.dispatch.isSinonProxy` and only `restore()` a spy they own. Follow that pattern in new test files or the suite fails when run together.
+- Modules that must run under mocha (`irc/*`, `saved-networks.ts`, `sts.ts`) stay free of store/DOM imports; tests swap storage via `useStorageBackend`.
+- Live tests are gated on `SEANCE_IRC_URL` and need the dev ircd running.
+- localStorage keys are still `thelounge.*` (`thelounge.networks`, `thelounge.sts`, `thelounge.mentions`, `thelounge.muted`, `thelounge.sort.*`, ...). Do not rename without a migration.
 
 ## Documentation
 
-`docs/` uses PARA (`projects/`, `areas/`, `resources/`, `archives/`) for in-repo planning and notes — see `docs/README.md`. Public end-user docs live in a separate repo (`thelounge/thelounge.chat`).
+- `docs/projects/initial_conversion.md` — the conversion plan and its status; update checkboxes as work lands.
+- `docs/resources/bus-contract.md` — the spec for every bus event the IRC layer dispatches/handles and what the store expects (payload shapes, `SharedMsg`/`MessageType`, routing).
+- `docs/resources/nefarious2-websocket.md` — server behaviour: WS framing, CAP set, ISUPPORT/numeric quirks, upstream bugs and the local fix branch.
+- `docs/resources/nefarious2-dev.md` — running the dev ircd (Docker and native), test identities, TLS notes.
+- `docs/resources/browser-irc-parser.md` — why the parser is hand-rolled.
+- `docs/resources/branding.md` — `config.json` schema, runtime vs build-time branding, uploader contract.
+- Public end-user docs still live in the separate `thelounge/thelounge.chat` repo.

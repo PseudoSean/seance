@@ -1,6 +1,6 @@
-// Subscribes every server-to-client event handler to the bus. Nothing
-// dispatches these events yet (there is no transport); the handlers stay in
-// place so the IRC layer can start feeding them in the next phase.
+// Subscribes every server-to-client event handler to the bus. The IRC layer
+// (client/js/irc/) dispatches these events; the payload shapes are documented
+// in docs/resources/bus-contract.md.
 //
 // Removed for good (server-only concepts): auth, configuration,
 // sessions_list, changelog, sign_out. Moved to local modules (no bus

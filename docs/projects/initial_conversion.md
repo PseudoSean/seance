@@ -160,7 +160,7 @@ No fixed order. Tackle items in whatever sequence the friction dictates.
    - [ ] a. Electron wrapper.
    - [ ] b. Capacitor (or thin native shell + WebView) for iOS/Android. Note WebSocket + background-keep-alive caveats per platform.
 5. [ ] **Docs**
-   - [ ] a. Rewrite `CLAUDE.md` to reflect the static-SPA architecture and `attic/` policy.
+   - [x] a. Rewrite `CLAUDE.md` to reflect the static-SPA architecture and `attic/` policy. _Done 2026-08-25._
    - [ ] b. Move this file to `docs/archives/` when shipped.
 
 ## Sequencing checkpoints
