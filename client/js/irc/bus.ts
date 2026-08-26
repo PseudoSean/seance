@@ -116,9 +116,12 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 		saved.save(next);
 
 		if (client) {
+			// Host, port, TLS, channels and SASL: applied on the next connect,
+			// or right away when the client is idle / waiting to reconnect.
+			client.applySettings(saved.toConnectOptions(next));
+
 			// Live-applicable fields: the nick (NICK when connected, local
-			// otherwise — `/nick` does both) and the display name. Host, port,
-			// TLS, channels and SASL take effect on the next connect.
+			// otherwise — `/nick` does both) and the display name.
 			if (next.nick && next.nick !== client.nick) {
 				client.input(client.lobby.id, `/nick ${next.nick}`);
 			}

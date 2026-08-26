@@ -70,7 +70,7 @@
 			</div>
 			<div v-if="defaults.connected" class="connect-note">
 				Server, port, TLS, channels and authentication changes apply the next time this
-				network connects.
+				network connects (a network that is waiting to reconnect retries right away).
 			</div>
 
 			<h2>User preferences</h2>

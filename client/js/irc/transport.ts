@@ -212,7 +212,8 @@ export class WsTransport {
 		this._state = retry ? "reconnect-wait" : "closed";
 		this.emit({type: "close", code, reason, wasClean, willReconnect: retry, delayMs});
 
-		if (delayMs !== undefined) {
+		// A close listener may have called close(): then no retry is wanted.
+		if (delayMs !== undefined && this._state === "reconnect-wait") {
 			this.emit({type: "reconnecting", attempt: this.attempt, delayMs});
 			this.timer = setTimeout(() => {
 				this.timer = null;

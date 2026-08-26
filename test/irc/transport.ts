@@ -324,6 +324,21 @@ describe("WsTransport", function () {
 			clock.tick(10_000);
 			expect(FakeWebSocket.instances).to.have.length(1);
 		});
+
+		it("does not schedule a retry when a close listener closes the transport", function () {
+			const {t, events} = make({reconnect: fastReconnect});
+			t.on((ev) => {
+				if (ev.type === "close" && ev.willReconnect) {
+					t.close();
+				}
+			});
+			t.connect();
+			last().closed(1006, "", false);
+			expect(t.state).to.equal("closed");
+			expect(events.some((e) => e.type === "reconnecting")).to.equal(false);
+			clock.tick(10_000);
+			expect(FakeWebSocket.instances).to.have.length(1);
+		});
 	});
 
 	describe("reconnect", function () {

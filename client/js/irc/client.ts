@@ -127,6 +127,8 @@ export class IrcClient {
 	private unsubscribeTransport: () => void = () => undefined;
 	/** One insecure → secure reconnect per connection; reset when the transport closes. */
 	private stsUpgradeTried = false;
+	/** Settings edited while connected (`network:edit`); applied on the next connect. */
+	private pendingOptions: IrcClientOptions | null = null;
 	private networkName: string;
 	private _state: IrcClientState = "disconnected";
 	private connected = false;
@@ -250,6 +252,7 @@ export class IrcClient {
 			return;
 		}
 
+		this.applyPendingOptions();
 		this.applyStsPolicy();
 		this.quitting = false;
 		this._state = "connecting";
@@ -277,6 +280,73 @@ export class IrcClient {
 	quit(reason?: string): void {
 		this.bus.dispatch("quit", {network: this.uuid});
 		this.disconnect(reason);
+	}
+
+	/**
+	 * Take edited connection settings (`network:edit`). Host, port and TLS
+	 * need a fresh transport, so while a connection is up (or being opened)
+	 * they wait for the next connect — including the automatic reconnect
+	 * after that connection drops. An idle client switches at once; one that
+	 * is waiting to reconnect switches and retries right away, so a typo in
+	 * the port or TLS box does not keep it hammering the wrong address.
+	 * The nick is not touched here: `/nick` owns it.
+	 */
+	applySettings(next: ConnectOptions): void {
+		const merged: IrcClientOptions = {
+			...this.options,
+			host: next.host,
+			port: next.port,
+			tls: next.tls,
+			join: next.join,
+			sasl: next.sasl,
+			saslAccount: next.saslAccount,
+			saslPassword: next.saslPassword,
+		};
+		const state = this.transport.state;
+
+		if (state === "open" || state === "connecting") {
+			this.pendingOptions = merged;
+			return;
+		}
+
+		this.pendingOptions = null;
+
+		if (!this.endpointChanged(merged)) {
+			this.options = merged;
+			return;
+		}
+
+		this.transport.close(); // drops a pending reconnect
+		this.reconfigure(merged);
+
+		if (state === "reconnect-wait") {
+			this.connect();
+		}
+	}
+
+	private endpointChanged(next: IrcClientOptions): boolean {
+		const o = this.options;
+		return next.host !== o.host || next.port !== o.port || next.tls !== o.tls;
+	}
+
+	/** Swap in settings edited while connected, if any (before a connect). */
+	private applyPendingOptions(): boolean {
+		const next = this.pendingOptions;
+
+		if (!next) {
+			return false;
+		}
+
+		this.pendingOptions = null;
+
+		if (this.endpointChanged(next)) {
+			this.transport.close();
+			this.reconfigure(next);
+		} else {
+			this.options = next;
+		}
+
+		return true;
 	}
 
 	// ------------------------------------------------------------------- STS
@@ -567,6 +637,17 @@ export class IrcClient {
 				},
 				true
 			);
+		}
+
+		// Settings edited during this connection: reconnect with them instead
+		// of letting the transport retry the old address.
+		if (willReconnect && this.pendingOptions) {
+			const moved = this.endpointChanged(this.pendingOptions);
+			this.applyPendingOptions();
+
+			if (moved) {
+				this.connect(); // replaces the old transport's retry
+			}
 		}
 	}
 

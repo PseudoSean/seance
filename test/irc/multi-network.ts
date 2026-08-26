@@ -15,6 +15,8 @@ class FakeTransport implements Transport {
 	state: TransportState = "closed";
 	sent: string[] = [];
 	closeCalls = 0;
+	/** The URL the client built for this transport. */
+	url = "";
 	private listeners: ((ev: TransportEvent) => void)[] = [];
 
 	on(listener: (ev: TransportEvent) => void): () => void {
@@ -51,9 +53,9 @@ class FakeTransport implements Transport {
 		lines.forEach((line) => this.emit({type: "line", line}));
 	}
 
-	closed(code = 1006, reason = ""): void {
-		this.state = "closed";
-		this.emit({type: "close", code, reason, wasClean: false, willReconnect: false});
+	closed(code = 1006, reason = "", willReconnect = false): void {
+		this.state = willReconnect ? "reconnect-wait" : "closed";
+		this.emit({type: "close", code, reason, wasClean: false, willReconnect});
 	}
 
 	private emit(ev: TransportEvent): void {
@@ -88,7 +90,16 @@ class FakeManager implements ClientRegistry {
 	removed: string[] = [];
 
 	createNetwork(options: Partial<IrcClientOptions> & {uuid: string; nick: string}): IrcClient {
-		const transport = new FakeTransport();
+		// A fresh transport per factory call (like WsTransport), so a client
+		// that reconfigures its endpoint gets a new one; transportOf() = latest.
+		const transportFactory = (opts: {url: string}) => {
+			const transport = new FakeTransport();
+			transport.url = opts.url;
+			this.transports.set(options.uuid, transport);
+
+			return transport;
+		};
+
 		const client = new IrcClient({
 			host: `${options.uuid}.test`,
 			port: 8443,
@@ -98,12 +109,11 @@ class FakeManager implements ClientRegistry {
 			saslAccount: "",
 			saslPassword: "",
 			ids: this.ids,
-			transportFactory: () => transport,
+			transportFactory,
 			networksForInit: () => Array.from(this.clients.values()).map((c) => c.network),
 			...options,
 		});
 		this.clients.set(client.uuid, client);
-		this.transports.set(client.uuid, transport);
 		client.connect();
 		return client;
 	}
@@ -426,6 +436,94 @@ describe("multiple networks", function () {
 
 			const infos = payloads<Record<string, unknown>>("network:info");
 			expect(infos[infos.length - 1]).to.include({uuid: "net-a", name: "Home"});
+		});
+
+		it("network:edit switches host/port/TLS at once and retries while waiting to reconnect", function () {
+			stored();
+			const a = manager.createNetwork({uuid: "net-a", nick: "alice", join: "#one"});
+			const before = manager.transportOf(a);
+			expect(before.url).to.equal("wss://net-a.test:8443/");
+			before.closed(1006, "", true); // the transport is now in backoff
+
+			socket.emit("network:edit", {
+				uuid: "net-a",
+				host: "net-a.test",
+				port: "8067",
+				nick: "alice",
+				join: "#one",
+			});
+
+			const after = manager.transportOf(a);
+			expect(after).to.not.equal(before);
+			expect(before.closeCalls).to.equal(1);
+			expect(after.url).to.equal("ws://net-a.test:8067/");
+			expect(after.state).to.equal("connecting");
+			expect(a.options).to.include({host: "net-a.test", port: 8067, tls: false});
+
+			const texts = payloads<{chan: number; msg: {text?: string}}>("msg")
+				.filter((p) => p.chan === a.lobby.id)
+				.map((p) => p.msg.text);
+			expect(texts[texts.length - 1]).to.equal("Connecting to net-a.test:8067…");
+		});
+
+		it("network:edit while connected waits for the next connect, then uses the new endpoint", function () {
+			stored();
+			const a = manager.createNetwork({uuid: "net-a", nick: "alice", join: "#one"});
+			register(a);
+			const live = manager.transportOf(a);
+
+			socket.emit("network:edit", {
+				uuid: "net-a",
+				host: "other.test",
+				port: "8067",
+				nick: "alice",
+				join: "#one, #two",
+				sasl: "plain",
+				saslAccount: "alice",
+				saslPassword: "",
+			});
+
+			// Nothing happens to the live connection.
+			expect(manager.transportOf(a)).to.equal(live);
+			expect(live.state).to.equal("open");
+			expect(live.closeCalls).to.equal(0);
+			expect(a.options).to.include({host: "net-a.test", port: 8443, tls: true});
+
+			// The automatic reconnect after a drop goes to the new endpoint.
+			live.closed(1006, "connection reset", true);
+			const next = manager.transportOf(a);
+			expect(next).to.not.equal(live);
+			expect(live.closeCalls).to.equal(1);
+			expect(next.url).to.equal("ws://other.test:8067/");
+			expect(next.state).to.equal("connecting");
+			expect(a.options).to.include({
+				host: "other.test",
+				port: 8067,
+				tls: false,
+				join: "#one, #two",
+				saslPassword: "pw",
+			});
+		});
+
+		it("network:edit of non-endpoint fields never replaces the transport", function () {
+			stored();
+			const a = manager.createNetwork({uuid: "net-a", nick: "alice", join: "#one"});
+			const t = manager.transportOf(a);
+			t.closed(1006, "", true);
+
+			socket.emit("network:edit", {
+				uuid: "net-a",
+				host: "net-a.test",
+				port: "8443",
+				tls: "on",
+				nick: "alice",
+				join: "#one, #three",
+			});
+
+			expect(manager.transportOf(a)).to.equal(t);
+			expect(t.closeCalls).to.equal(0);
+			expect(t.state).to.equal("reconnect-wait");
+			expect(a.options).to.include({port: 8443, tls: true, join: "#one, #three"});
 		});
 
 		it("network:edit applies the nick locally when disconnected and seeds unsaved networks", function () {
