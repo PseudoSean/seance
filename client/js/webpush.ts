@@ -40,7 +40,11 @@ function togglePushSubscription() {
 }
 
 function isAllowedServiceWorkersHost() {
+	// Secure contexts cover https:, localhost, and privileged custom schemes
+	// such as the Electron shell's app://; the explicit hosts are a fallback
+	// for browsers that don't expose isSecureContext.
 	return (
+		window.isSecureContext === true ||
 		location.protocol === "https:" ||
 		location.hostname === "localhost" ||
 		location.hostname === "127.0.0.1" ||

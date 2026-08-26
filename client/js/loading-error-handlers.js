@@ -110,6 +110,7 @@
 	// never let a failed registration surface as an unhandled rejection: the
 	// app works without the worker, it just is not installable/offline-capable.
 	const isAllowedServiceWorkersHost =
+		window.isSecureContext === true ||
 		location.protocol === "https:" ||
 		location.hostname === "localhost" ||
 		location.hostname === "127.0.0.1" ||
