@@ -27,3 +27,5 @@ yarn.lock
 .gitkeep
 tmp/
 *.conf
+shells/capacitor/android/
+shells/capacitor/ios/

@@ -151,6 +151,22 @@ export function allClients(): IrcClient[] {
 	return Array.from(clients.values());
 }
 
+/**
+ * Poke every live connection: networks waiting out reconnect backoff retry
+ * now, open ones send a PING so a socket the OS silently killed surfaces its
+ * close (and then reconnects). Native shells call this when the app returns
+ * to the foreground; deliberately disconnected networks are left alone.
+ */
+export function reconnectAll(): void {
+	for (const client of clients.values()) {
+		if (client.transport.state === "reconnect-wait") {
+			client.connect();
+		} else if (client.transport.state === "open") {
+			client.transport.send("PING :resume");
+		}
+	}
+}
+
 registerBusHandlers(socket, {
 	clientForChannel,
 	clientForNetwork,

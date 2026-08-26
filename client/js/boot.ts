@@ -14,6 +14,7 @@ import {store} from "./store";
 import parseIrcUri from "./helpers/parseIrcUri";
 import {loadMentions} from "./mentions";
 import storage from "./localStorage";
+import {installNativeHooks} from "./native";
 // Registers the IRC layer's bus handlers (input, names, more, network:*).
 import "./irc/manager";
 
@@ -71,6 +72,7 @@ export async function boot(): Promise<void> {
 	}
 
 	loadMentions();
+	installNativeHooks();
 
 	store.commit("appLoaded");
 
