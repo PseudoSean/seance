@@ -29,6 +29,10 @@ type ClientChan = Omit<SharedChan, "messages"> & {
 	historyLoading: boolean;
 	scrolledToBottom: boolean;
 	usersOutdated: boolean;
+	/** Message the next plain-text/`/me` input replies to (`+draft/reply`). */
+	replyTo: ClientMessage | null;
+	/** Own message the next plain-text input replaces (`+seance/edit`). */
+	editing: ClientMessage | null;
 
 	users: ClientUser[];
 };

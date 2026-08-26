@@ -1,6 +1,28 @@
 <template>
 	<form id="form" method="post" action="" @submit.prevent="onSubmit">
 		<span id="upload-progressbar" />
+		<div v-if="channel.editing || channel.replyTo" class="compose-bar" role="status">
+			<span v-if="channel.editing" class="compose-bar-label">
+				<span class="compose-bar-icon" aria-hidden="true">✎</span>
+				Editing message
+				<span class="compose-bar-preview">{{ composePreview }}</span>
+			</span>
+			<span v-else class="compose-bar-label">
+				<span class="compose-bar-icon" aria-hidden="true">↩</span>
+				Replying to <strong class="compose-bar-nick">{{ composeNick }}</strong
+				>:
+				<span class="compose-bar-preview">{{ composePreview }}</span>
+			</span>
+			<button
+				type="button"
+				class="compose-bar-cancel"
+				aria-label="Cancel"
+				title="Cancel (Escape)"
+				@click="cancelCompose(channel)"
+			>
+				✕
+			</button>
+		</div>
 		<span id="nick">{{ network.nick }}</span>
 		<label for="input" class="sr-only">Message input</label>
 		<textarea
@@ -61,10 +83,20 @@ import {commands} from "../js/commands/index";
 import socket from "../js/socket";
 import upload from "../js/upload";
 import eventbus from "../js/eventbus";
-import {watch, defineComponent, nextTick, onMounted, PropType, ref, onUnmounted} from "vue";
+import {
+	watch,
+	computed,
+	defineComponent,
+	nextTick,
+	onMounted,
+	PropType,
+	ref,
+	onUnmounted,
+} from "vue";
 import type {ClientNetwork, ClientChan} from "../js/types";
 import {useStore} from "../js/store";
 import {ChanType} from "../../shared/types/chan";
+import {cancelCompose, findLastEditable, startEdit} from "../js/helpers/compose";
 
 const formattingHotkeys = {
 	"mod+k": "\x03",
@@ -139,6 +171,16 @@ export default defineComponent({
 			return "";
 		};
 
+		// Reply/edit compose bar (channel.replyTo / channel.editing).
+		const composeTarget = computed(() => props.channel.editing || props.channel.replyTo);
+
+		const composeNick = computed(() => composeTarget.value?.from?.nick ?? "");
+
+		const composePreview = computed(() => {
+			const text = (composeTarget.value?.text ?? "").replace(/\s+/g, " ").trim();
+			return text.length > 80 ? text.slice(0, 79) + "…" : text;
+		});
+
 		const onSubmit = () => {
 			if (!input.value) {
 				return;
@@ -157,6 +199,17 @@ export default defineComponent({
 			const text = props.channel.pendingMessage;
 
 			if (text.length === 0) {
+				return false;
+			}
+
+			const editing = props.channel.editing;
+			const replyTo = props.channel.replyTo;
+
+			// Editing to the identical text is a no-op: just leave edit mode.
+			if (editing && text === editing.text) {
+				cancelCompose(props.channel);
+				input.value.value = "";
+				setInputSize();
 				return false;
 			}
 
@@ -192,7 +245,20 @@ export default defineComponent({
 				}
 			}
 
-			socket.emit("input", {target, text});
+			// An edit keeps the parent of the message it replaces; the IRC layer
+			// only honours `reply`/`edit` for plain text (and `reply` for /me).
+			const reply = editing ? editing.replyTo : replyTo?.msgid;
+			const edit = editing?.msgid;
+
+			socket.emit("input", {
+				target,
+				text,
+				...(reply ? {reply} : {}),
+				...(edit ? {edit} : {}),
+			});
+
+			props.channel.replyTo = null;
+			props.channel.editing = null;
 		};
 
 		const onUploadInputChange = () => {
@@ -278,6 +344,23 @@ export default defineComponent({
 				}
 			});
 
+			// Escape cancels a pending reply/edit before anything else gets it
+			// (the global handler in App.vue blurs the input otherwise).
+			inputTrap.bind("esc", () => {
+				if (!props.channel.replyTo && !props.channel.editing) {
+					return;
+				}
+
+				cancelCompose(props.channel);
+
+				if (input.value) {
+					input.value.value = props.channel.pendingMessage;
+					setInputSize();
+				}
+
+				return false;
+			});
+
 			inputTrap.bind(["up", "down"], (e, key) => {
 				if (
 					store.state.isAutoCompleting ||
@@ -286,6 +369,28 @@ export default defineComponent({
 					!input.value
 				) {
 					return;
+				}
+
+				// ArrowUp in an EMPTY input edits your newest own message in this
+				// channel (the usual chat convention). Input history keeps ArrowUp
+				// whenever there is text in the box, when history is already being
+				// browsed, or when there is no own editable message here; Escape
+				// leaves edit mode and empties the input, so a second ArrowUp then
+				// browses history as before.
+				if (
+					key === "up" &&
+					props.channel.pendingMessage === "" &&
+					props.channel.inputHistoryPosition === 0 &&
+					!props.channel.editing
+				) {
+					const last = findLastEditable(props.channel);
+
+					if (last) {
+						startEdit(props.channel, last);
+						input.value.value = props.channel.pendingMessage;
+						setInputSize();
+						return false;
+					}
 				}
 
 				const onRow = (
@@ -354,6 +459,9 @@ export default defineComponent({
 			getInputPlaceholder,
 			onSubmit,
 			setPendingMessage,
+			cancelCompose,
+			composeNick,
+			composePreview,
 		};
 	},
 });

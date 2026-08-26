@@ -71,6 +71,7 @@ export const SEANCE_CAPS: CapNegotiatorOptions = {
 		"draft/chathistory",
 		"draft/event-playback",
 		"draft/read-marker",
+		"draft/message-redaction",
 	],
 };
 

@@ -2,18 +2,46 @@
  * Outbound line helpers on top of `formatLine`.
  */
 
-import {formatLine} from "./message";
+import {formatLine, formatTags} from "./message";
+
+/** Client tags (`+name` keys) to put on an outbound line; values unescaped. */
+export type ClientTags = Record<string, string>;
+
+/** Tag a reply carries on the wire (what poxchat reads; nefarious2 also takes `+reply`). */
+export const REPLY_TAG = "+draft/reply";
+/** Tag marking a resend that replaces one of our own messages (Seance-only). */
+export const EDIT_TAG = "+seance/edit";
+/** Reaction / reaction removal tags (poxchat / nefarious2 convention). */
+export const REACT_TAG = "+draft/react";
+export const UNREACT_TAG = "+draft/unreact";
+/** The cap that gates REDACT in both directions. */
+export const REDACTION_CAP = "draft/message-redaction";
+
+/**
+ * The `@tags ` block (trailing space included) an outbound line starts with,
+ * or "" for no tags. Exposed so senders can count it against
+ * `MAX_LINE_BYTES` before splitting a message body.
+ */
+export function tagPrefix(tags: ClientTags | undefined): string {
+	if (!tags) {
+		return "";
+	}
+
+	const body = formatTags(tags);
+	return body.length > 0 ? `@${body} ` : "";
+}
 
 /**
  * Serialise `command` with `params`, always writing the last parameter as a
  * trailing (`:`-prefixed) one. `formatLine` only adds the colon when the
  * text needs it; for free-text parameters (realname, reasons, message
  * bodies) the explicit form is what every other client sends and what
- * humans reading a transcript expect.
+ * humans reading a transcript expect. `tags` (client tags such as
+ * `+draft/reply`) are escaped and prepended as `@a=b;c=d `.
  */
-export function trailingLine(command: string, params: string[]): string {
+export function trailingLine(command: string, params: string[], tags?: ClientTags): string {
 	if (params.length === 0) {
-		return formatLine({command, params});
+		return formatLine({command, params, tags});
 	}
 
 	const last = params[params.length - 1];
@@ -22,5 +50,5 @@ export function trailingLine(command: string, params: string[]): string {
 		throw new Error("Trailing parameter contains CR, LF or NUL");
 	}
 
-	return `${formatLine({command, params: params.slice(0, -1)})} :${last}`;
+	return `${formatLine({command, params: params.slice(0, -1), tags})} :${last}`;
 }

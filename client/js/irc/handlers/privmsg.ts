@@ -8,7 +8,7 @@ import {MessageType, SharedMsg} from "../../../../shared/types/msg";
 import type {IrcClient} from "../client";
 import type {Channel} from "../channel";
 import type {IrcMessage} from "../message";
-import {trailingLine} from "../wire";
+import {EDIT_TAG, REPLY_TAG, trailingLine} from "../wire";
 import type {Handler} from "../types";
 import {ignoreListFor} from "../../ignore";
 
@@ -40,7 +40,10 @@ function parseCtcp(text: string): Ctcp | undefined {
 }
 
 /** Split a STATUSMSG target (`@#chan`) into the channel and its status prefix. */
-function splitStatusTarget(client: IrcClient, target: string): {target: string; group?: string} {
+export function splitStatusTarget(
+	client: IrcClient,
+	target: string
+): {target: string; group?: string} {
 	if (
 		target.length > 1 &&
 		!client.isChannelName(target) &&
@@ -174,7 +177,40 @@ function handleMessage(client: IrcClient, msg: IrcMessage, baseType: MessageType
 		message.statusmsgGroup = group;
 	}
 
-	client.pushMessage(chan, message, !self);
+	// Replies (`+reply` ratified, `+draft/reply` what poxchat sends) and our
+	// own edit marker, bus-contract §1.4. The parent may not be loaded; the
+	// UI resolves it when rendering.
+	const replyTo = replyTagOf(msg);
+	const editOf = msg.tags.get(EDIT_TAG);
+
+	if (replyTo) {
+		message.replyTo = replyTo;
+	}
+
+	if (editOf) {
+		message.editOf = editOf;
+	}
+
+	const pushed = client.pushMessage(chan, message, !self);
+
+	if (editOf) {
+		// `msg:edit` must follow the `msg` and carry resolved ids; in a
+		// history replay both only exist after the batch is delivered.
+		const into = chan;
+		client.afterReplay(() => {
+			const id = pushed.id || (pushed.msgid ? into.idOf(pushed.msgid) : undefined);
+			const replaces = into.idOf(editOf);
+
+			if (id && replaces !== undefined && replaces !== id) {
+				client.dispatch("msg:edit", {chan: into.id, id, replaces});
+			}
+		});
+	}
+}
+
+/** The msgid a PRIVMSG / TAGMSG refers to (`+draft/reply` preferred, `+reply` accepted). */
+export function replyTagOf(msg: IrcMessage): string | undefined {
+	return msg.tags.get(REPLY_TAG) || msg.tags.get("+reply") || undefined;
 }
 
 function handleCtcpResponse(client: IrcClient, nick: string, ctcp: Ctcp, time: Date): void {
@@ -244,7 +280,4 @@ const wallops: Handler = (client, msg) => {
 	);
 };
 
-// TAGMSG carries only tags (typing notifications etc.): nothing to show yet.
-const tagmsg: Handler = () => undefined;
-
-export default {PRIVMSG: privmsg, NOTICE: notice, WALLOPS: wallops, TAGMSG: tagmsg};
+export default {PRIVMSG: privmsg, NOTICE: notice, WALLOPS: wallops};

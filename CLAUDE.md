@@ -79,7 +79,7 @@ Vue 3 + Vuex + Vue Router SPA built by webpack (`webpack.config.ts`) into `publi
 
 ### `client/js/irc/` — the IRC layer
 
-Data flow: `transport.ts` (`WsTransport`: one line per frame, PING/PONG, reconnect backoff, 500-byte guard) → `message.ts` (hand-rolled parser/serialiser, `casemap.ts`) → `caps.ts` / `sasl.ts` / `isupport.ts` → `client.ts` (`IrcClient`: one per network, owns the `SharedNetwork` model and `channel.ts` state) → `handlers/` → `socket.dispatch(...)`. Typed input comes back via `bus.ts` (`socket.handle("input" | "open" | "names" | "more" | "network:*")`) → `commands/`.
+Data flow: `transport.ts` (`WsTransport`: one line per frame, PING/PONG, reconnect backoff, 500-byte guard) → `message.ts` (hand-rolled parser/serialiser, `casemap.ts`) → `caps.ts` / `sasl.ts` / `isupport.ts` → `client.ts` (`IrcClient`: one per network, owns the `SharedNetwork` model and `channel.ts` state) → `handlers/` → `socket.dispatch(...)`. Typed input comes back via `bus.ts` (`socket.handle("input" | "open" | "names" | "more" | "msg:react" | "msg:redact" | "network:*")`) → `commands/`.
 
 - **`handlers/`** — one file per command/numeric exporting `{COMMAND: handler}`; `handlers/index.ts` holds the `modules` list and the `unhandled` fallback. **To add a handler: add a file and one entry in `modules`.**
 - **`commands/`** — one file per slash command exporting a `Command`; `commands/index.ts` holds the `modules` list and `dispatchInput`. **To add a command: add a file and one entry in `modules`.** Unknown commands are sent raw.
@@ -91,6 +91,7 @@ Data flow: `transport.ts` (`WsTransport`: one line per frame, PING/PONG, reconne
 - `Command = {commands: string[]; allowDisconnected?: boolean; input(ctx)}` with `ctx = {client, chan, cmd, args, rest}`. Build lines with `formatLine(...)` (`message.ts`) or `trailingLine(cmd, params)` (`wire.ts`) and call `client.send(line)`. `commands/away.ts` is a small model.
 - UI-only commands (`/collapse`, `/expand`, `/search`, `/join` of an already-listed channel) are intercepted in `client/js/commands/` before the bus sees them; service aliases (`/cs`, `/ns`, ...) pass through raw.
 - Event names, payload shapes and store expectations are fixed by `docs/resources/bus-contract.md`; when adding a new event, extend `shared/types/socket-events.ts` and a `socket-events/*` consumer together.
+- Replies, reactions, deletion and edits (bus-contract §1.4): `Channel.idByMsgid` / `idOf()` is the msgid → id map; `client.react()` / `redact()` / `editMessage()` send, `handlers/tagmsg.ts` / `handlers/redact.ts` / `privmsg.ts` (`+seance/edit`) dispatch `msg:react` / `msg:redact` / `msg:edit`. Anything that refers to another message by msgid must go through `client.afterReplay(fn)` so that inside a chathistory replay it runs after the batch's messages have ids. Wire constants (`REPLY_TAG`, `EDIT_TAG`, `REACT_TAG`, `UNREACT_TAG`, `REDACTION_CAP`) live in `wire.ts`.
 
 ### `shared/`
 

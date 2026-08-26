@@ -15,6 +15,7 @@ import "./markread";
 import "./more";
 import "./msg";
 import "./msg_special";
+import "./msg_updates";
 import "./names";
 import "./network";
 import "./nick";

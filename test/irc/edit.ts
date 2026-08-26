@@ -1,0 +1,327 @@
+import {expect} from "chai";
+import sinon from "ts-sinon";
+import socket from "../../client/js/socket";
+import {registerBusHandlers} from "../../client/js/irc/bus";
+import {EDIT_TIMEOUT_MS} from "../../client/js/irc/client";
+import {MAX_LINE_BYTES, utf8ByteLength} from "../../client/js/irc/message";
+import {ChanType} from "../../shared/types/chan";
+import {MessageType} from "../../shared/types/msg";
+import {ALL_CAPS, batch, joined, labelOf, setup, stubStorage} from "./support";
+
+interface EditPayload {
+	chan: number;
+	id: number;
+	replaces: number;
+}
+
+const NO_REDACT = ALL_CAPS.replace(" draft/message-redaction", "");
+const NO_ECHO = ALL_CAPS.replace("echo-message ", "");
+
+describe("Message edits (REDACT + +seance/edit)", function () {
+	let clock: sinon.SinonFakeTimers;
+
+	beforeEach(function () {
+		stubStorage();
+		clock = sinon.useFakeTimers({
+			now: new Date("2026-08-25T12:00:00.000Z"),
+			toFake: ["setTimeout", "clearTimeout"],
+		});
+	});
+
+	afterEach(function () {
+		clock.restore();
+		sinon.restore();
+		socket.removeAllListeners();
+	});
+
+	/** Joined #seance with our own message m1 loaded (echoed by the server). */
+	function withOwnMessage(caps = ALL_CAPS) {
+		const h = setup();
+		const id = joined(h, caps);
+		h.transport.line(
+			"@msgid=m1;time=2026-08-25T12:00:01.000Z :alice!alice@host.example PRIVMSG #seance :teh text"
+		);
+		const oldId = h.lastMessage(id).id;
+		return {h, id, oldId};
+	}
+
+	describe("in a channel with draft/message-redaction", function () {
+		it("redacts first and sends the tagged resend once the REDACT is echoed", function () {
+			const {h, id, oldId} = withOwnMessage();
+			h.client.input(id, "the text", {edit: "m1"});
+
+			expect(h.sent()).to.deep.equal(["REDACT #seance m1 :edited"]);
+			expect(h.client.hasPendingEdit("m1")).to.equal(true);
+
+			h.transport.line(":alice!alice@host.example REDACT #seance m1 :edited");
+			expect(h.sent()).to.deep.equal(["@+seance/edit=m1 PRIVMSG #seance :the text"]);
+			expect(h.client.hasPendingEdit("m1")).to.equal(false);
+			// The old message is redacted like any other REDACT of a loaded message.
+			expect(h.payloads<{id: number}>("msg:redact").map((p) => p.id)).to.deep.equal([oldId]);
+
+			// The server echoes the resend: a normal msg with editOf, then msg:edit.
+			h.transport.line(
+				"@+seance/edit=m1;msgid=m2;time=2026-08-25T12:00:02.000Z :alice!alice@host.example PRIVMSG #seance :the text"
+			);
+			const msg = h.lastMessage(id);
+			expect(msg.editOf).to.equal("m1");
+			expect(msg.self).to.equal(true);
+			expect(h.payloads<EditPayload>("msg:edit")).to.deep.equal([
+				{chan: id, id: msg.id, replaces: oldId},
+			]);
+			const events = h.events();
+			expect(events.lastIndexOf("msg")).to.be.lessThan(events.indexOf("msg:edit"));
+		});
+
+		it("keeps the reply reference on the resend", function () {
+			const {h, id} = withOwnMessage();
+			h.client.input(id, "the text", {edit: "m1", reply: "p1"});
+			h.transport.line(":alice!alice@host.example REDACT #seance m1 :edited");
+
+			expect(h.sent()).to.deep.equal([
+				"REDACT #seance m1 :edited",
+				"@+seance/edit=m1;+draft/reply=p1 PRIVMSG #seance :the text",
+			]);
+		});
+
+		it("does not trigger on someone else's REDACT of the same msgid", function () {
+			const {h, id} = withOwnMessage();
+			h.client.input(id, "the text", {edit: "m1"});
+			h.sent();
+			h.transport.line(":bob!bob@host REDACT #seance m1 :mine now");
+
+			expect(h.sent()).to.deep.equal([]);
+			expect(h.client.hasPendingEdit("m1")).to.equal(true);
+		});
+
+		it("aborts on FAIL REDACT with an error in the channel", function () {
+			const {h, id} = withOwnMessage();
+			h.client.input(id, "the text", {edit: "m1"});
+			h.sent();
+			h.transport.line(
+				"FAIL REDACT REDACT_FORBIDDEN #seance m1 :You are not authorized to redact this message"
+			);
+
+			expect(h.sent()).to.deep.equal([]);
+			expect(h.client.hasPendingEdit("m1")).to.equal(false);
+			const msg = h.lastMessage(id);
+			expect(msg.type).to.equal(MessageType.ERROR);
+			expect(msg.text).to.equal("Edit not sent: You are not allowed to delete that message.");
+			expect(h.messages(h.client.lobby.id)).to.have.length(0);
+		});
+
+		it("aborts after the timeout", function () {
+			const {h, id} = withOwnMessage();
+			h.client.input(id, "the text", {edit: "m1"});
+			h.sent();
+			clock.tick(EDIT_TIMEOUT_MS - 1);
+			expect(h.client.hasPendingEdit("m1")).to.equal(true);
+			clock.tick(1);
+
+			expect(h.client.hasPendingEdit("m1")).to.equal(false);
+			expect(h.lastMessage(id).text).to.equal("Edit not sent: no reply from the server.");
+			h.transport.line(":alice!alice@host.example REDACT #seance m1 :edited");
+			expect(h.sent()).to.deep.equal([]); // a late echo sends nothing
+		});
+
+		it("refuses a second edit of the same message while one is pending", function () {
+			const {h, id} = withOwnMessage();
+			h.client.input(id, "one", {edit: "m1"});
+			h.client.input(id, "two", {edit: "m1"});
+
+			expect(h.sent()).to.deep.equal(["REDACT #seance m1 :edited"]);
+			expect(h.lastMessage(id).text).to.match(/^Edit not sent: an edit .* already waiting/);
+		});
+
+		it("forgets pending edits when the connection drops", function () {
+			const {h, id} = withOwnMessage();
+			h.client.input(id, "the text", {edit: "m1"});
+			h.transport.closed();
+
+			expect(h.client.hasPendingEdit("m1")).to.equal(false);
+			clock.tick(EDIT_TIMEOUT_MS);
+			expect(h.messages(id).some((m) => /Edit not sent/.test(m.text ?? ""))).to.equal(false);
+		});
+
+		it("sends the whole edit as one message: newlines collapse, chunks share the reply tag but only the first carries the edit tag", function () {
+			const {h, id} = withOwnMessage();
+			const words = Array.from({length: 150}, (_, i) => `wörd${i}`).join(" ");
+			h.client.input(id, `first line\nsecond ${words}`, {edit: "m1", reply: "p1"});
+			h.transport.line(":alice!alice@host.example REDACT #seance m1 :edited");
+
+			const [redact, ...sent] = h.sent();
+			expect(redact).to.equal("REDACT #seance m1 :edited");
+			expect(sent.length).to.be.greaterThan(1);
+			expect(sent[0]).to.match(
+				/^@\+seance\/edit=m1;\+draft\/reply=p1 PRIVMSG #seance :first line second /
+			);
+
+			for (const line of sent.slice(1)) {
+				expect(line).to.match(/^@\+draft\/reply=p1 PRIVMSG #seance :/);
+			}
+
+			for (const line of sent) {
+				expect(utf8ByteLength(line) + ":alice!alice@host.example ".length).to.be.at.most(
+					MAX_LINE_BYTES
+				);
+			}
+		});
+
+		it("never parses the replacement text as a command", function () {
+			const {h, id} = withOwnMessage();
+			h.client.input(id, "/me was here", {edit: "m1"});
+			expect(h.sent()).to.deep.equal(["REDACT #seance m1 :edited"]);
+		});
+
+		it("passes edit through the input bus emit", function () {
+			const {h, id} = withOwnMessage();
+			registerBusHandlers(socket, {
+				clientForChannel: (chanId) => (h.client.channelById(chanId) ? h.client : undefined),
+				clientForNetwork: () => h.client,
+				allClients: () => [h.client],
+				createNetwork: () => h.client,
+				remove: () => undefined,
+			});
+			socket.emit("input", {target: id, text: "via bus", edit: "m1"});
+			expect(h.sent()).to.deep.equal(["REDACT #seance m1 :edited"]);
+		});
+	});
+
+	describe("without REDACT", function () {
+		it("only sends the tagged resend in a query", function () {
+			const h = setup();
+			joined(h);
+			const query = h.client.announceChannel("bob", ChanType.QUERY);
+			h.client.input(query.id, "the text", {edit: "q1", reply: "p1"});
+
+			expect(h.sent()).to.deep.equal([
+				"@+seance/edit=q1;+draft/reply=p1 PRIVMSG bob :the text",
+			]);
+			expect(h.client.hasPendingEdit("q1")).to.equal(false);
+		});
+
+		it("only sends the tagged resend when the cap is missing", function () {
+			const {h, id} = withOwnMessage(NO_REDACT);
+			h.client.input(id, "the text", {edit: "m1"});
+
+			expect(h.sent()).to.deep.equal(["@+seance/edit=m1 PRIVMSG #seance :the text"]);
+			expect(h.payloads("msg:redact")).to.have.length(0);
+		});
+
+		it("does not wait for a REDACT echo without echo-message and applies the local echo", function () {
+			const {h, id, oldId} = withOwnMessage(NO_ECHO);
+			h.client.input(id, "the text", {edit: "m1"});
+
+			expect(h.sent()).to.deep.equal([
+				"REDACT #seance m1 :edited",
+				"@+seance/edit=m1 PRIVMSG #seance :the text",
+			]);
+			expect(h.client.hasPendingEdit("m1")).to.equal(false);
+			expect(h.payloads<{id: number; by: string}>("msg:redact")).to.have.length(1);
+			expect(h.payloads<{id: number; by: string}>("msg:redact")[0]).to.include({
+				id: oldId,
+				by: "alice",
+			});
+			const msg = h.lastMessage(id);
+			expect(msg.editOf).to.equal("m1");
+			expect(msg.text).to.equal("the text");
+			expect(h.payloads<EditPayload>("msg:edit")).to.deep.equal([
+				{chan: id, id: msg.id, replaces: oldId},
+			]);
+		});
+	});
+
+	describe("inbound +seance/edit", function () {
+		it("dispatches msg:edit for another client's edit when the old message is loaded", function () {
+			const h = setup();
+			const id = joined(h);
+			h.transport.line("@msgid=b1 :bob!bob@host PRIVMSG #seance :teh");
+			const oldId = h.lastMessage(id).id;
+			h.transport.line("@msgid=b2;+seance/edit=b1 :bob!bob@host PRIVMSG #seance :the");
+
+			const msg = h.lastMessage(id);
+			expect(msg.editOf).to.equal("b1");
+			expect(h.payloads<EditPayload>("msg:edit")).to.deep.equal([
+				{chan: id, id: msg.id, replaces: oldId},
+			]);
+		});
+
+		it("shows the message but no msg:edit when the old one is not loaded", function () {
+			const h = setup();
+			const id = joined(h);
+			h.transport.line("@msgid=b2;+seance/edit=gone :bob!bob@host PRIVMSG #seance :the");
+
+			expect(h.lastMessage(id).editOf).to.equal("gone");
+			expect(h.payloads("msg:edit")).to.have.length(0);
+		});
+
+		it("resolves edits inside a chathistory batch after delivery", function () {
+			const h = setup();
+			const id = joined(h);
+			registerBusHandlers(socket, {
+				clientForChannel: (chanId) => (h.client.channelById(chanId) ? h.client : undefined),
+				clientForNetwork: () => h.client,
+				allClients: () => [h.client],
+				createNetwork: () => h.client,
+				remove: () => undefined,
+			});
+			socket.emit("more", {target: id, lastId: -1, condensed: false});
+			const label = labelOf(h.sent());
+			batch(
+				h,
+				[
+					"@time=2026-08-25T11:00:00.000Z;msgid=h1 :bob!bob@host PRIVMSG #seance :teh",
+					"@time=2026-08-25T11:00:05.000Z;msgid=h2;+seance/edit=h1 :bob!bob@host PRIVMSG #seance :the",
+				],
+				{label}
+			);
+
+			const [more] = h.payloads<{messages: {id: number; msgid?: string}[]}>("more");
+			expect(more.messages.map((m) => m.msgid)).to.deep.equal(["h1", "h2"]);
+			expect(h.payloads<EditPayload>("msg:edit")).to.deep.equal([
+				{chan: id, id: more.messages[1].id, replaces: more.messages[0].id},
+			]);
+			const events = h.events();
+			expect(events.indexOf("more")).to.be.lessThan(events.indexOf("msg:edit"));
+		});
+
+		it("resolves edits appended by a catch-up (AFTER) replay", function () {
+			const h = setup();
+			const id = joined(h);
+			h.transport.line(
+				"@msgid=b1;time=2026-08-25T12:00:01.000Z :bob!bob@host PRIVMSG #seance :teh"
+			);
+			const oldId = h.lastMessage(id).id;
+
+			// Drop and come back: the re-JOIN asks for AFTER the newest message.
+			h.transport.closed();
+			h.client.connect();
+			h.transport.open();
+			h.transport.line(`:irc.test CAP * LS :${ALL_CAPS}`);
+			const req = h.transport.sent.filter((l) => l.startsWith("CAP REQ :")).pop() as string;
+			h.transport.line(`:irc.test CAP alice ACK :${req.slice("CAP REQ :".length)}`);
+			h.transport.lines(
+				":irc.test 001 alice :Welcome back",
+				":irc.test 005 alice CHANTYPES=#& PREFIX=(ov)@+ CASEMAPPING=rfc1459 CHATHISTORY=100 :are supported by this server",
+				":irc.test 422 alice :MOTD File is missing",
+				":alice!alice@host.example JOIN #seance",
+				":irc.test 366 alice #seance :End of /NAMES list."
+			);
+			const sent = h.sent();
+			expect(sent.some((l) => /CHATHISTORY AFTER #seance msgid=b1/.test(l))).to.equal(true);
+			batch(
+				h,
+				[
+					"@time=2026-08-25T12:00:05.000Z;msgid=b2;+seance/edit=b1 :bob!bob@host PRIVMSG #seance :the",
+				],
+				{label: labelOf(sent)}
+			);
+
+			const msg = h.lastMessage(id);
+			expect(msg.msgid).to.equal("b2");
+			expect(h.payloads<EditPayload>("msg:edit")).to.deep.equal([
+				{chan: id, id: msg.id, replaces: oldId},
+			]);
+		});
+	});
+});

@@ -44,8 +44,12 @@ export class Channel {
 	userAway: string | undefined = undefined;
 	/** Reference of every message handed to the UI, by id (`more` cursor lookup). */
 	readonly msgRefs = new Map<number, MsgRef>();
-	/** msgids already shown, so history replies can be deduplicated. */
-	readonly msgids = new Set<string>();
+	/**
+	 * Message id by msgid for every message handed to the UI. Used to
+	 * deduplicate history replies and to resolve reply / react / REDACT /
+	 * edit references (bus-contract §1.4: the IRC layer owns this map).
+	 */
+	readonly idByMsgid = new Map<string, number>();
 	/** The newest message we have seen; a reconnect asks for history AFTER it. */
 	newestRef: MsgRef | undefined = undefined;
 	/** History has been requested at least once (so `newestRef` is a valid catch-up reference). */
@@ -111,11 +115,42 @@ export class Channel {
 
 		if (msg.msgid) {
 			ref.msgid = msg.msgid;
-			this.msgids.add(msg.msgid);
+			this.idByMsgid.set(msg.msgid, msg.id);
 		}
 
 		this.msgRefs.set(msg.id, ref);
 		return ref;
+	}
+
+	/** Id of the loaded message with `msgid`, if we have shown it. */
+	idOf(msgid: string): number | undefined {
+		return this.idByMsgid.get(msgid);
+	}
+
+	/** msgids already shown (history deduplication). */
+	get msgids(): IterableIterator<string> {
+		return this.idByMsgid.keys();
+	}
+
+	/**
+	 * msgid of the newest message that has one (`/react` without an explicit
+	 * msgid). `newestRef` may be a local line without a msgid, so fall back
+	 * to the latest remembered reference that carries one.
+	 */
+	newestMsgid(): string | undefined {
+		if (this.newestRef?.msgid) {
+			return this.newestRef.msgid;
+		}
+
+		let best: MsgRef | undefined;
+
+		for (const ref of this.msgRefs.values()) {
+			if (ref.msgid && (!best || ref.time.getTime() >= best.time.getTime())) {
+				best = ref;
+			}
+		}
+
+		return best?.msgid;
 	}
 
 	/** Copy handed to the UI; `messages` is always empty (the store owns them). */

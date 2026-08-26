@@ -26,7 +26,7 @@
 import {ChanType} from "../../../shared/types/chan";
 import type {SharedMsg} from "../../../shared/types/msg";
 import type {Channel, MsgRef} from "./channel";
-import type {IrcClient, ReplayedMessage} from "./client";
+import type {IrcClient, ReplayCollection} from "./client";
 import type {BatchHandler} from "./handlers/batch";
 import {formatLine, IrcMessage} from "./message";
 import type {Handler} from "./types";
@@ -264,18 +264,29 @@ function findRequest(
 	return pending[0];
 }
 
+/** What {@link replay} turned a batch into. */
+interface Replayed {
+	messages: SharedMsg[];
+	/** Reaction / redaction / edit dispatches to run once `messages` are shown. */
+	after: (() => void)[];
+}
+
 /**
  * Run the batch's lines through the normal handlers in collect mode and
  * keep what landed in `chan`, minus messages the channel already shows.
+ * Work queued with `IrcClient.afterReplay` (TAGMSG reactions, REDACTs,
+ * `+seance/edit` resends) is returned separately: it needs the messages'
+ * ids, which only exist after delivery.
  */
-function replay(client: IrcClient, chan: Channel, lines: IrcMessage[]): SharedMsg[] {
+function replay(client: IrcClient, chan: Channel, lines: IrcMessage[]): Replayed {
 	const known = new Set(chan.msgids);
-	const collected: ReplayedMessage[] = [];
+	const collected: ReplayCollection = {messages: [], after: []};
 
 	for (const line of lines) {
 		const msgid = line.tags.get("msgid");
+		const result = client.collectReplay(chan, () => client.handleMessage(line));
 
-		for (const item of client.collectReplay(chan, () => client.handleMessage(line))) {
+		for (const item of result.messages) {
 			// Event-playback handlers (TOPIC, QUIT, MODE…) do not copy the tag
 			// themselves; every replayed message gets its line's msgid so it can
 			// be deduplicated and used as a BEFORE/AFTER reference.
@@ -283,13 +294,15 @@ function replay(client: IrcClient, chan: Channel, lines: IrcMessage[]): SharedMs
 				item.msg.msgid = msgid;
 			}
 
-			collected.push(item);
+			collected.messages.push(item);
 		}
+
+		collected.after.push(...result.after);
 	}
 
 	const messages: SharedMsg[] = [];
 
-	for (const {chan: target, msg} of collected) {
+	for (const {chan: target, msg} of collected.messages) {
 		if (target !== chan) {
 			continue;
 		}
@@ -302,7 +315,19 @@ function replay(client: IrcClient, chan: Channel, lines: IrcMessage[]): SharedMs
 		messages.push(msg);
 	}
 
-	return messages;
+	return {messages, after: collected.after};
+}
+
+/** Run the queued post-delivery work; one failure must not skip the rest. */
+function runAfter(after: (() => void)[]): void {
+	for (const fn of after) {
+		try {
+			fn();
+		} catch (err: unknown) {
+			// eslint-disable-next-line no-console
+			console.error("[irc] post-replay action failed", err);
+		}
+	}
 }
 
 /** Hand older messages to the UI as one `more` event. */
@@ -333,7 +358,9 @@ function deliverPrepend(
 /** Append catch-up messages as live ones, without highlight / unread effects. */
 function deliverAppend(client: IrcClient, chan: Channel, messages: SharedMsg[]): void {
 	for (const msg of messages) {
-		client.pushMessage(chan, msg);
+		// pushMessage copies; write the id back so post-replay work
+		// (`afterReplay` closures hold the collected objects) can find it.
+		msg.id = client.pushMessage(chan, msg).id;
 	}
 }
 
@@ -356,11 +383,13 @@ function resolve(
 	clearTimeout(request.timer);
 
 	const {chan} = request;
-	const messages = lines && lines.length > 0 ? replay(client, chan, lines) : [];
+	const {messages, after} =
+		lines && lines.length > 0 ? replay(client, chan, lines) : {messages: [], after: []};
 	const fullPage = lines !== null && lines.length >= request.limit;
 
 	if (request.mode === "append") {
 		deliverAppend(client, chan, messages);
+		runAfter(after);
 
 		if (fullPage && request.pagesLeft > 0 && chan.newestRef) {
 			requestHistory(client, chan, {
@@ -378,6 +407,7 @@ function resolve(
 	// A timeout may be transient: leave the "show older messages" button
 	// so the user can retry. FAIL / ACK / a short page mean there is no more.
 	deliverPrepend(client, chan, messages, fullPage || outcome === "timeout");
+	runAfter(after);
 }
 
 /** Closed `chathistory` batch: answer the request it belongs to. */
@@ -395,7 +425,9 @@ export const chathistoryBatch: BatchHandler = (client, batch) => {
 	const chan = target ? client.findChannel(target) : undefined;
 
 	if (chan && (chan.type === ChanType.CHANNEL || chan.type === ChanType.QUERY)) {
-		deliverPrepend(client, chan, replay(client, chan, batch.messages), false);
+		const {messages, after} = replay(client, chan, batch.messages);
+		deliverPrepend(client, chan, messages, false);
+		runAfter(after);
 	}
 };
 

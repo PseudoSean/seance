@@ -16,7 +16,7 @@ import {ChanType} from "../../../../shared/types/chan";
 import {MessageType} from "../../../../shared/types/msg";
 import type {Channel} from "../channel";
 import type {IrcClient} from "../client";
-import type {Command} from "../types";
+import type {Command, InputOptions} from "../types";
 import away from "./away";
 import ban from "./ban";
 import connect from "./connect";
@@ -38,6 +38,8 @@ import notice from "./notice";
 import part from "./part";
 import quit from "./quit";
 import raw from "./raw";
+import react from "./react";
+import redact from "./redact";
 import rejoin from "./rejoin";
 import topic from "./topic";
 import whois from "./whois";
@@ -64,6 +66,8 @@ const modules: Command[] = [
 	part,
 	quit,
 	raw,
+	react,
+	redact,
 	rejoin,
 	topic,
 	whois,
@@ -94,14 +98,39 @@ export function commandNames(): string[] {
 export const NOT_CONNECTED =
 	"You are not connected to the IRC network, unable to send your command.";
 
-/** Handle everything the user typed into `chan` (may span several lines). */
-export function dispatchInput(client: IrcClient, chan: Channel, text: string): void {
+/**
+ * Handle everything the user typed into `chan` (may span several lines).
+ *
+ * `opts.reply` applies to every line. `opts.edit` replaces one message, so
+ * the whole text is one logical message: it is always said (never parsed
+ * as a command — it is the replacement body of a message, and the message
+ * being edited is plain text by construction), line breaks become spaces,
+ * and `sendMessage` may still chunk it, putting the edit tag on the first
+ * chunk only and the reply tag on all of them.
+ */
+export function dispatchInput(
+	client: IrcClient,
+	chan: Channel,
+	text: string,
+	opts: InputOptions = {}
+): void {
+	if (opts.edit) {
+		inputLine(client, chan, text.replace(/\r?\n/g, " ").trim(), opts, true);
+		return;
+	}
+
 	for (const line of text.split("\n")) {
-		inputLine(client, chan, line.replace(/\r$/, ""));
+		inputLine(client, chan, line.replace(/\r$/, ""), opts);
 	}
 }
 
-function inputLine(client: IrcClient, chan: Channel, line: string): void {
+function inputLine(
+	client: IrcClient,
+	chan: Channel,
+	line: string,
+	opts: InputOptions,
+	forceSay = false
+): void {
 	if (line.length === 0) {
 		return;
 	}
@@ -109,7 +138,7 @@ function inputLine(client: IrcClient, chan: Channel, line: string): void {
 	let cmd: string;
 	let rest: string;
 
-	if (line.charAt(0) !== "/" || line.charAt(1) === "/") {
+	if (forceSay || line.charAt(0) !== "/" || line.charAt(1) === "/") {
 		if (chan.type === ChanType.LOBBY) {
 			client.pushMessage(chan, {
 				type: MessageType.ERROR,
@@ -119,7 +148,7 @@ function inputLine(client: IrcClient, chan: Channel, line: string): void {
 		}
 
 		cmd = "say";
-		rest = line.replace(/^\//, "");
+		rest = forceSay ? line : line.replace(/^\//, "");
 	} else {
 		const body = line.slice(1);
 		const space = body.indexOf(" ");
@@ -136,7 +165,7 @@ function inputLine(client: IrcClient, chan: Channel, line: string): void {
 			return;
 		}
 
-		command.input({client, chan, cmd, args, rest});
+		command.input({client, chan, cmd, args, rest, opts});
 		return;
 	}
 

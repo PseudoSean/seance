@@ -29,7 +29,14 @@ import {cancelMarkRead, fetchReadMarker, scheduleMarkRead} from "./handlers/mark
 import {abortHistory, requestChannelHistory} from "./history";
 import {IdAllocator, sharedIds} from "./ids";
 import {ISupport} from "./isupport";
-import {formatLine, IrcMessage, parseLine, splitMessage, utf8ByteLength} from "./message";
+import {
+	formatLine,
+	IrcMessage,
+	MAX_LINE_BYTES,
+	parseLine,
+	splitMessage,
+	utf8ByteLength,
+} from "./message";
 import {mechanismOffered, SASL_TIMEOUT_MS, SaslAuth, SaslMechanism, SaslResult} from "./sasl";
 import {
 	applyDuration,
@@ -41,8 +48,17 @@ import {
 	upgradeOptions,
 } from "./sts";
 import {ReconnectOptions, TransportEvent, TransportOptions, WsTransport} from "./transport";
-import type {ConnectOptions, IrcClientState, Transport} from "./types";
-import {trailingLine} from "./wire";
+import type {ConnectOptions, InputOptions, IrcClientState, Transport} from "./types";
+import {
+	ClientTags,
+	EDIT_TAG,
+	REACT_TAG,
+	REDACTION_CAP,
+	REPLY_TAG,
+	tagPrefix,
+	trailingLine,
+	UNREACT_TAG,
+} from "./wire";
 
 export interface HighlightKeywords {
 	keywords: string[];
@@ -54,6 +70,38 @@ export interface ReplayedMessage {
 	chan: Channel;
 	msg: SharedMsg;
 }
+
+/** What one {@link IrcClient.collectReplay} run produced. */
+export interface ReplayCollection {
+	messages: ReplayedMessage[];
+	/**
+	 * Work to do once the collected messages have ids and are shown: the
+	 * `msg:react` / `msg:redact` / `msg:edit` dispatches that refer to them
+	 * (see {@link IrcClient.afterReplay}).
+	 */
+	after: (() => void)[];
+}
+
+/** Options for {@link IrcClient.sendMessage}. */
+export interface SendMessageOptions {
+	notice?: boolean;
+	action?: boolean;
+	/** Client tags (`+name` keys, unescaped values) put on every chunk. */
+	tags?: ClientTags;
+	/** Client tags put on the first chunk only (`+seance/edit`). */
+	firstTags?: ClientTags;
+}
+
+/** An edit waiting for the server to confirm the REDACT of the old message. */
+interface PendingEdit {
+	chan: Channel;
+	text: string;
+	replyTo?: string;
+	timer: ReturnType<typeof setTimeout>;
+}
+
+/** How long an edit waits for the echoed REDACT before giving up. */
+export const EDIT_TIMEOUT_MS = 5000;
 
 export interface IrcClientOptions extends ConnectOptions {
 	/** Stable network id; derived from host/port/nick when omitted. */
@@ -136,7 +184,9 @@ export class IrcClient {
 	private quitting = false;
 	private activeChanId = 0;
 	/** Set while a history batch is replayed through the handlers (see `collectReplay`). */
-	private replayContext: {target: Channel; collected: ReplayedMessage[]} | null = null;
+	private replayContext: {target: Channel; collected: ReplayCollection} | null = null;
+	/** Edits whose REDACT is in flight, by the msgid being replaced. */
+	private readonly pendingEdits = new Map<string, PendingEdit>();
 
 	constructor(options: IrcClientOptions) {
 		const host = options.host.trim();
@@ -632,6 +682,7 @@ export class IrcClient {
 
 		resetBatches(this);
 		abortHistory(this);
+		this.clearPendingEdits();
 
 		for (const chan of this.channels) {
 			chan.users.clear();
@@ -740,16 +791,22 @@ export class IrcClient {
 
 	/**
 	 * PRIVMSG/NOTICE `text` to `target`, split into lines that fit the frame
-	 * cap. Without `echo-message` the lines are fed back through the inbound
-	 * handlers as if the server had echoed them.
+	 * cap (client tags counted in). Without `echo-message` the lines are fed
+	 * back through the inbound handlers, tags included, as if the server had
+	 * echoed them.
 	 */
-	sendMessage(target: string, text: string, opts: {notice?: boolean; action?: boolean} = {}) {
+	sendMessage(target: string, text: string, opts: SendMessageOptions = {}) {
 		const command = opts.notice ? "NOTICE" : "PRIVMSG";
+		const firstTags: ClientTags | undefined =
+			opts.tags || opts.firstTags ? {...opts.firstTags, ...opts.tags} : undefined;
 		// The server prepends our full source to the echo; budget for it even
 		// when the host is still unknown (63 is the usual hostname limit).
 		const hostLen = this.host.length || 63;
 		let prefixBytes = utf8ByteLength(`:${this.nick}!${this.ident}@`) + hostLen;
 		prefixBytes += utf8ByteLength(` ${command} ${target} :`);
+		// The frame cap applies to the whole line; the first chunk carries the
+		// most tags, so every chunk is budgeted as if it did.
+		prefixBytes += utf8ByteLength(tagPrefix(firstTags));
 
 		if (opts.action) {
 			prefixBytes += "\x01ACTION \x01".length;
@@ -767,16 +824,18 @@ export class IrcClient {
 
 		const echo = this.caps.hasCapability("echo-message");
 
-		for (const chunk of chunks) {
+		for (let i = 0; i < chunks.length; i++) {
+			const chunk = chunks[i];
 			const body = opts.action ? `\x01ACTION ${chunk}\x01` : chunk;
+			const tags = i === 0 ? firstTags : opts.tags;
 
-			if (!this.send(trailingLine(command, [target, body]))) {
+			if (!this.send(trailingLine(command, [target, body], tags))) {
 				return;
 			}
 
 			if (!echo) {
 				this.handleLine(
-					`:${this.nick}!${this.ident}@${
+					`${tagPrefix(tags)}:${this.nick}!${this.ident}@${
 						this.host || "localhost"
 					} ${command} ${target} :${body}`
 				);
@@ -784,16 +843,209 @@ export class IrcClient {
 		}
 	}
 
+	/**
+	 * `TAGMSG target` carrying only `tags`. Without `echo-message` the line is
+	 * fed back through the handlers so our own reaction shows up.
+	 */
+	sendTagmsg(target: string, tags: ClientTags): boolean {
+		const line = formatLine({tags, command: "TAGMSG", params: [target]});
+
+		if (utf8ByteLength(line) > MAX_LINE_BYTES) {
+			this.pushMessage(this.lobby, {
+				type: MessageType.ERROR,
+				text: "Not sent: the tags do not fit on one line",
+			});
+			return false;
+		}
+
+		if (!this.send(line)) {
+			return false;
+		}
+
+		if (!this.caps.hasCapability("echo-message")) {
+			this.handleLine(
+				`${tagPrefix(tags)}:${this.nick}!${this.ident}@${
+					this.host || "localhost"
+				} TAGMSG ${target}`
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * React to (or, with `remove`, take a reaction off) the message `msgid`
+	 * in `chan`: `@+draft/react=<text>;+draft/reply=<msgid> TAGMSG` (bus-contract §1.4).
+	 */
+	react(chan: Channel, msgid: string, text: string, remove = false): boolean {
+		if (!this.caps.hasCapability("message-tags")) {
+			this.pushMessage(chan, {
+				type: MessageType.ERROR,
+				text: "Reactions need the message-tags capability, which this server did not enable.",
+			});
+			return false;
+		}
+
+		if (chan.type !== ChanType.CHANNEL && chan.type !== ChanType.QUERY) {
+			this.pushMessage(chan, {
+				type: MessageType.ERROR,
+				text: "Reactions can only be sent in channels and queries.",
+			});
+			return false;
+		}
+
+		return this.sendTagmsg(chan.name, {
+			[remove ? UNREACT_TAG : REACT_TAG]: text,
+			[REPLY_TAG]: msgid,
+		});
+	}
+
+	/** Whether the server lets us send REDACT. */
+	get canRedact(): boolean {
+		return this.caps.hasCapability(REDACTION_CAP);
+	}
+
+	/**
+	 * `REDACT <chan> <msgid> [:reason]`. Channels only, and only with
+	 * `draft/message-redaction` negotiated; otherwise an error in `chan`.
+	 */
+	redact(chan: Channel, msgid: string, reason?: string): boolean {
+		if (!this.canRedact) {
+			this.pushMessage(chan, {
+				type: MessageType.ERROR,
+				text: "Deleting messages is not available: the server did not enable draft/message-redaction.",
+			});
+			return false;
+		}
+
+		if (chan.type !== ChanType.CHANNEL) {
+			this.pushMessage(chan, {
+				type: MessageType.ERROR,
+				text: "Messages can only be deleted in channels.",
+			});
+			return false;
+		}
+
+		return this.send(
+			reason
+				? trailingLine("REDACT", [chan.name, msgid, reason])
+				: formatLine({command: "REDACT", params: [chan.name, msgid]})
+		);
+	}
+
+	/**
+	 * Replace our own message `oldMsgid` with `text` (bus-contract §1.4).
+	 * There is no edit on the wire, so in a channel where REDACT works the
+	 * old message is redacted (`:edited`) first and the resend, tagged
+	 * `+seance/edit=<old>`, goes out once our own REDACT is echoed back
+	 * ({@link settleEdit}); `FAIL REDACT` ({@link rejectEdit}) or
+	 * {@link EDIT_TIMEOUT_MS} without an answer abort it. In queries, or
+	 * without the cap, only the tagged resend happens. Without
+	 * `echo-message` the server never echoes our REDACT, so there is
+	 * nothing to wait for: the REDACT is applied locally and the resend
+	 * follows at once (a late `FAIL REDACT` then only shows as an error).
+	 */
+	editMessage(chan: Channel, oldMsgid: string, text: string, replyTo?: string): void {
+		if (chan.type !== ChanType.CHANNEL || !this.canRedact) {
+			this.sendEdit(chan, oldMsgid, text, replyTo);
+			return;
+		}
+
+		if (!this.caps.hasCapability("echo-message")) {
+			if (this.redact(chan, oldMsgid, "edited")) {
+				this.handleLine(
+					`:${this.nick}!${this.ident}@${this.host || "localhost"} REDACT ${
+						chan.name
+					} ${oldMsgid} :edited`
+				);
+				this.sendEdit(chan, oldMsgid, text, replyTo);
+			}
+
+			return;
+		}
+
+		if (this.pendingEdits.has(oldMsgid)) {
+			this.pushMessage(chan, {
+				type: MessageType.ERROR,
+				text: "Edit not sent: an edit of that message is already waiting for the server.",
+			});
+			return;
+		}
+
+		if (!this.redact(chan, oldMsgid, "edited")) {
+			return;
+		}
+
+		const timer = setTimeout(() => {
+			if (this.pendingEdits.delete(oldMsgid)) {
+				this.pushMessage(chan, {
+					type: MessageType.ERROR,
+					text: "Edit not sent: no reply from the server.",
+				});
+			}
+		}, EDIT_TIMEOUT_MS);
+		this.pendingEdits.set(oldMsgid, {chan, text, replyTo, timer});
+	}
+
+	/** The tagged resend that completes an edit. */
+	private sendEdit(chan: Channel, oldMsgid: string, text: string, replyTo?: string): void {
+		const opts: SendMessageOptions = {firstTags: {[EDIT_TAG]: oldMsgid}};
+
+		if (replyTo) {
+			opts.tags = {[REPLY_TAG]: replyTo};
+		}
+
+		this.sendMessage(chan.name, text, opts);
+	}
+
+	/** Our REDACT of `msgid` was echoed: send the edit waiting on it, if any. */
+	settleEdit(msgid: string): void {
+		const pending = this.takePendingEdit(msgid);
+
+		if (pending) {
+			this.sendEdit(pending.chan, msgid, pending.text, pending.replyTo);
+		}
+	}
+
+	/** The REDACT of `msgid` failed: drop the edit waiting on it. Returns its channel. */
+	rejectEdit(msgid: string): Channel | undefined {
+		return this.takePendingEdit(msgid)?.chan;
+	}
+
+	/** Whether an edit of `msgid` is waiting for the server (tests / diagnostics). */
+	hasPendingEdit(msgid: string): boolean {
+		return this.pendingEdits.has(msgid);
+	}
+
+	private takePendingEdit(msgid: string): PendingEdit | undefined {
+		const pending = this.pendingEdits.get(msgid);
+
+		if (pending) {
+			clearTimeout(pending.timer);
+			this.pendingEdits.delete(msgid);
+		}
+
+		return pending;
+	}
+
+	private clearPendingEdits(): void {
+		for (const pending of this.pendingEdits.values()) {
+			clearTimeout(pending.timer);
+		}
+
+		this.pendingEdits.clear();
+	}
+
 	joinChannel(name: string, key = ""): void {
 		this.send(formatLine({command: "JOIN", params: key ? [name, key] : [name]}));
 	}
 
 	/** Handle a line of user input typed into channel `chanId`. */
-	input(chanId: number, text: string): void {
+	input(chanId: number, text: string, opts: InputOptions = {}): void {
 		const chan = this.channelById(chanId);
 
 		if (chan) {
-			dispatchInput(this, chan, text);
+			dispatchInput(this, chan, text, opts);
 		}
 	}
 
@@ -1025,7 +1277,7 @@ export class IrcClient {
 
 		if (this.replayContext) {
 			// History replay: collect, the caller allocates ids and delivers.
-			this.replayContext.collected.push({chan, msg});
+			this.replayContext.collected.messages.push({chan, msg});
 			return msg;
 		}
 
@@ -1080,9 +1332,9 @@ export class IrcClient {
 	 * handlers told (via {@link replaying}) to skip state side effects. Used
 	 * to turn a chathistory batch into messages (history.ts).
 	 */
-	collectReplay(target: Channel, fn: () => void): ReplayedMessage[] {
+	collectReplay(target: Channel, fn: () => void): ReplayCollection {
 		const previous = this.replayContext;
-		const context = {target, collected: [] as ReplayedMessage[]};
+		const context = {target, collected: {messages: [], after: []} as ReplayCollection};
 		this.replayContext = context;
 
 		try {
@@ -1092,6 +1344,20 @@ export class IrcClient {
 		}
 
 		return context.collected;
+	}
+
+	/**
+	 * Run `fn` once the messages of the current replay are delivered (ids
+	 * allocated, msgid map filled) — or right away when not replaying. This
+	 * is how `msg:react` / `msg:redact` / `msg:edit` keep the contract's
+	 * ordering guarantee: they always follow the `msg` they refer to.
+	 */
+	afterReplay(fn: () => void): void {
+		if (this.replayContext) {
+			this.replayContext.collected.after.push(fn);
+		} else {
+			fn();
+		}
 	}
 
 	/** True inside {@link collectReplay}: handlers must not touch channel state. */

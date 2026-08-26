@@ -314,6 +314,31 @@ Plus 12 cmocka cases in `ircd/test/websocket_cmocka.c`. Two things learned on th
 
 Off by default (`CAP_draft_read_marker`); the dev config enables it. Unauthenticated client: the fetch after JOIN answers `MARKREAD #chan timestamp=*` (note `timestamp=*`, not a bare `*`); a `MARKREAD #chan timestamp=<t>` set is accepted and stored per session but **not echoed back** because `m_markread.c` `notify_local_clients()` skips clients with an empty account (the ephemeral-path comment says otherwise) — a later fetch does return it, and an older set is answered with the stored newer value. Account-anchored sessions should get the spec's echo/broadcast (untested: no services). Candidate for a small upstream report.
 
+## REDACT / TAGMSG / client tags, observed 2026-08-26
+
+Verified against the dev image with two throwaway nicks (`ws://localhost:8067/`, caps `message-tags server-time echo-message batch labeled-response standard-replies draft/chathistory draft/message-redaction draft/event-playback`). What Seance does with each is in `docs/resources/bus-contract.md` §1.4.
+
+- **msgids** are 14 characters of P10 base64 — the alphabet includes `[` and `]` (`ABAAAAAaA8Iz[f`, `ABAACAAaA8Iz[a`); never assume `[A-Za-z0-9]`. nefarious2 reuses msgids after a restart, which is why poxchat keys its dedup on (msgid, time).
+- **Replies.** `+draft/reply=<msgid>` (what poxchat sends and reads) and the ratified `+reply` are both accepted and relayed unchanged, on PRIVMSG and TAGMSG alike. Seance sends `+draft/reply`, reads both.
+- **Reactions** are `@+draft/react=<text>;+draft/reply=<msgid> TAGMSG <target>`, removal `+draft/unreact=<text>`. Tag values go through the message-tags escapes (`a\sb\:c` came back as sent). The echo (with `echo-message`) and the relay both add `msgid` and `time`. `+typing=active` TAGMSGs are relayed with a msgid too but are **not** stored. Channel TAGMSGs are stored and come back inside `chathistory` batches with `batch;time;msgid` plus the client tags; a TAGMSG to a nick is delivered but never stored.
+- **REDACT** needs `CAP_draft_message_redaction` (default `FALSE`; `tools/nefarious-dev/local.conf` turns it on) and the client must have negotiated `draft/message-redaction` to _receive_ REDACT lines. `REDACT <channel> <msgid> [:reason]`, channels only. The live line is `:nick!user@host REDACT #chan <msgid> [:reason]` with **no tags at all** (no `time`, no `msgid`), sent to every member with the cap including the author (who only sees it with `echo-message`). Redacting the same msgid again is accepted and relayed again. Inside `chathistory` batches the REDACT line comes back tagged (`batch;time;msgid`, its own msgid) after the point where the deleted message was, and the deleted message itself is no longer replayed.
+- **Errors** are standard replies: `FAIL REDACT REDACT_FORBIDDEN #chan <msgid> :You are not authorized to redact this message` (someone else's message; the author may within `REDACT_WINDOW`/logged in, chanops within the window, opers always), `FAIL REDACT INVALID_TARGET <nick> :Cannot redact from this target` (not a channel), `FAIL REDACT UNKNOWN_MSGID #chan <msgid> :Message not found`, plus `DISABLED` and `REDACT_WINDOW_EXPIRED` from `m_redact.c`. `REDACT #chan` without a msgid is numeric `461 REDACT :Not enough parameters`.
+- **Edits** do not exist on the wire. Seance's emulation (REDACT with reason `edited`, then a PRIVMSG tagged `+seance/edit=<old msgid>`) relies on the server relaying unknown `+`-prefixed client tags — it does, live and in history (`@…;+seance/edit=ABAAAAAaA8Iz[f :… PRIVMSG #seance :hello from alice (edited)`).
+
+Transcript excerpt (bob reacting to alice's message, alice deleting it, carol replaying):
+
+```
+lbob   >> @+draft/react=👍;+draft/reply=ABAAAAAaA8Iz[f TAGMSG #seance
+lalice << @+draft/react=👍;+draft/reply=ABAAAAAaA8Iz[f;msgid=ABAAAAAaA8Iz[g;time=2026-08-26T03:38:20.291Z :lbob!lbob@172.17.0.1 TAGMSG #seance
+lbob   >> REDACT #seance ABAAAAAaA8Iz[f :not mine
+lbob   << @time=2026-08-26T03:38:22.601Z FAIL REDACT REDACT_FORBIDDEN #seance ABAAAAAaA8Iz[f :You are not authorized to redact this message
+lalice >> REDACT #seance ABAAAAAaA8Iz[f :edited
+lalice << :lalice!lalice@172.17.0.1 REDACT #seance ABAAAAAaA8Iz[f :edited
+lbob   << :lalice!lalice@172.17.0.1 REDACT #seance ABAAAAAaA8Iz[f :edited
+lcarol << @batch=hist7AAF;time=2026-08-26T03:38:20.292Z;msgid=ABAAAAAaA8Iz[g;+draft/react=👍;+draft/reply=ABAAAAAaA8Iz[f :lbob!lbob@172.17.0.1 TAGMSG #seance
+lcarol << @batch=hist7AAF;time=2026-08-26T03:38:23.204Z;msgid=ABAAAAAaA8Iz[n :lalice!lalice@172.17.0.1 REDACT #seance ABAAAAAaA8Iz[f :edited
+```
+
 ## Open questions for the ircd side
 
 1. ~~Which branch?~~ Decided 2026-08-24: Seance targets `ircv3.2-upgrade` (and `ircv3.2-hardening` as it lands). Still open: will it merge to `master`, and should we pin a tag? `ghcr.io/evilnet/nefarious2:latest` referenced by the compose example does not exist on GHCR (checked 2026-08-24); we build locally.

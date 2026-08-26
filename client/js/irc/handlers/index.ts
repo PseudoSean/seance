@@ -30,8 +30,10 @@ import numerics, {numericError} from "./numerics";
 import part from "./part";
 import privmsg from "./privmsg";
 import quit from "./quit";
+import redact from "./redact";
 import sasl from "./sasl";
 import standardReplies from "./standard-replies";
+import tagmsg from "./tagmsg";
 import topic from "./topic";
 import whois from "./whois";
 
@@ -56,8 +58,10 @@ const modules: Record<string, Handler>[] = [
 	part,
 	privmsg,
 	quit,
+	redact,
 	sasl,
 	standardReplies,
+	tagmsg,
 	topic,
 	whois,
 ];

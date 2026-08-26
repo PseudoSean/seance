@@ -177,28 +177,35 @@ export default defineComponent({
 			console.error("Error in new IntersectionObserver", e);
 		});
 
+		// Messages replaced by an edit (`msg:edit`) stay in the store, keyed by
+		// their id for history/reply lookups, but are never rendered. Filtering
+		// here rather than in Message.vue keeps date and unread markers in step.
+		const visibleMessages = computed(() =>
+			props.channel.messages.filter((message) => message.supersededBy === undefined)
+		);
+
 		const condensedMessages = computed(() => {
 			if (props.channel.type !== ChanType.CHANNEL && props.channel.type !== ChanType.QUERY) {
-				return props.channel.messages;
+				return visibleMessages.value;
 			}
 
 			// If actions are hidden, just return a message list with them excluded
 			if (store.state.settings.statusMessages === "hidden") {
-				return props.channel.messages.filter(
+				return visibleMessages.value.filter(
 					(message) => !condensedTypes.has(message.type || "")
 				);
 			}
 
 			// If actions are not condensed, just return raw message list
 			if (store.state.settings.statusMessages !== "condensed") {
-				return props.channel.messages;
+				return visibleMessages.value;
 			}
 
 			let lastCondensedContainer: CondensedMessageContainer | null = null;
 
 			const condensed: (ClientMessage | CondensedMessageContainer)[] = [];
 
-			for (const message of props.channel.messages) {
+			for (const message of visibleMessages.value) {
 				// If this message is not condensable, or its an action affecting our user,
 				// then just append the message to container and be done with it
 				if (message.self || message.highlight || !condensedTypes.has(message.type || "")) {

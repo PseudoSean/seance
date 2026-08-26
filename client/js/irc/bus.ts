@@ -46,14 +46,32 @@ export function networkInfo(
 }
 
 export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): void {
-	bus.handle("input", ({target, text}) => {
+	bus.handle("input", ({target, text, reply, edit}) => {
 		const client = registry.clientForChannel(target);
 
 		if (client) {
-			client.input(target, text);
+			client.input(target, text, {reply, edit});
 		} else {
 			// eslint-disable-next-line no-console
 			console.warn("[irc] input for unknown channel", target, text);
+		}
+	});
+
+	bus.handle("msg:react", ({target, msgid, text, remove}) => {
+		const client = registry.clientForChannel(target);
+		const chan = client?.channelById(target);
+
+		if (client && chan) {
+			client.react(chan, msgid, text, remove ?? false);
+		}
+	});
+
+	bus.handle("msg:redact", ({target, msgid, reason}) => {
+		const client = registry.clientForChannel(target);
+		const chan = client?.channelById(target);
+
+		if (client && chan) {
+			client.redact(chan, msgid, reason);
 		}
 	});
 

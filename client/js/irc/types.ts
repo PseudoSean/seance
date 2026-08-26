@@ -52,6 +52,16 @@ export type IrcClientState = "disconnected" | "connecting" | "registering" | "re
  */
 export type Handler = (client: IrcClient, msg: IrcMessage) => void;
 
+/**
+ * What the UI attached to a line of input (`input` emit, bus-contract §1.4):
+ * msgids to reply to and/or replace. Only plain text honours both; `/me`
+ * honours `reply`; every other command ignores them.
+ */
+export interface InputOptions {
+	reply?: string;
+	edit?: string;
+}
+
 /** The channel (or lobby/query) an input line was typed into. */
 export interface CommandContext {
 	client: IrcClient;
@@ -62,6 +72,8 @@ export interface CommandContext {
 	args: string[];
 	/** Everything after the command name, untrimmed. */
 	rest: string;
+	/** Reply / edit references attached by the UI (empty when none). */
+	opts?: InputOptions;
 }
 
 /** An outbound (slash) command, registered in `commands/index.ts`. */

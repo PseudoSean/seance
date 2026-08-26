@@ -34,13 +34,47 @@
 		<template v-else-if="message.type === 'action'">
 			<span class="from"><span class="only-copy">*&nbsp;</span></span>
 			<span class="content" dir="auto">
+				<button
+					v-if="message.replyTo"
+					type="button"
+					class="msg-reply-quote"
+					:class="{unknown: !quote}"
+					:aria-label="quoteLabel"
+					:title="quote ? quote.text : undefined"
+					@click="jumpToParent"
+				>
+					<span class="msg-reply-arrow" aria-hidden="true">↩</span>
+					<template v-if="quote"
+						><span class="msg-reply-nick">{{ quote.nick }}</span
+						>&#32;<span class="msg-reply-text">{{ quote.text }}</span></template
+					>
+					<span v-else class="msg-reply-text">(unknown message)</span>
+				</button>
 				<StatusmsgMarker :group="message.statusmsgGroup" />
 				<Username
 					:user="message.from"
 					:network="network"
 					:channel="channel"
 					dir="auto"
-				/>&#32;<ParsedMessage :message="message" />
+				/>&#32;<button
+					v-if="message.redacted && !revealed"
+					type="button"
+					class="msg-redacted"
+					aria-label="Deleted message, click to reveal"
+					@click="revealed = true"
+				>
+					{{ redactedLabel }}</button
+				><span
+					v-else-if="message.redacted"
+					class="msg-redacted-revealed"
+					title="Click to hide again"
+					@click="hideRevealed"
+					><ParsedMessage :message="message" />
+					<span class="msg-redacted-note">{{ redactedLabel }}</span></span
+				><ParsedMessage v-else :message="message" />
+				<span v-if="message.editOf" class="msg-edited" title="This message was edited"
+					>(edited)</span
+				>
 				<LinkPreview
 					v-for="preview in message.previews"
 					:key="preview.link"
@@ -48,6 +82,7 @@
 					:link="preview"
 					:channel="channel"
 				/>
+				<MessageReactions :message="message" :channel="channel" :network="network" />
 			</span>
 		</template>
 		<template v-else>
@@ -79,8 +114,42 @@
 					class="msg-shown-in-active tooltipped tooltipped-e"
 					><span></span
 				></span>
+				<button
+					v-if="message.replyTo"
+					type="button"
+					class="msg-reply-quote"
+					:class="{unknown: !quote}"
+					:aria-label="quoteLabel"
+					:title="quote ? quote.text : undefined"
+					@click="jumpToParent"
+				>
+					<span class="msg-reply-arrow" aria-hidden="true">↩</span>
+					<template v-if="quote"
+						><span class="msg-reply-nick">{{ quote.nick }}</span
+						>&#32;<span class="msg-reply-text">{{ quote.text }}</span></template
+					>
+					<span v-else class="msg-reply-text">(unknown message)</span>
+				</button>
 				<StatusmsgMarker :group="message.statusmsgGroup" />
-				<ParsedMessage :network="network" :message="message" />
+				<button
+					v-if="message.redacted && !revealed"
+					type="button"
+					class="msg-redacted"
+					aria-label="Deleted message, click to reveal"
+					@click="revealed = true"
+				>
+					{{ redactedLabel }}</button
+				><span
+					v-else-if="message.redacted"
+					class="msg-redacted-revealed"
+					title="Click to hide again"
+					@click="hideRevealed"
+					><ParsedMessage :network="network" :message="message" />
+					<span class="msg-redacted-note">{{ redactedLabel }}</span></span
+				><ParsedMessage v-else :network="network" :message="message" />
+				<span v-if="message.editOf" class="msg-edited" title="This message was edited"
+					>(edited)</span
+				>
 				<LinkPreview
 					v-for="preview in message.previews"
 					:key="preview.link"
@@ -88,13 +157,20 @@
 					:link="preview"
 					:channel="channel"
 				/>
+				<MessageReactions :message="message" :channel="channel" :network="network" />
 			</span>
 		</template>
+		<MessageActions
+			v-if="canAct && channel"
+			:message="message"
+			:channel="channel"
+			:network="network"
+		/>
 	</div>
 </template>
 
 <script lang="ts">
-import {computed, defineComponent, PropType} from "vue";
+import {computed, defineComponent, PropType, ref} from "vue";
 import dayjs from "dayjs";
 
 import constants from "../js/constants";
@@ -104,6 +180,10 @@ import LinkPreview from "./LinkPreview.vue";
 import ParsedMessage from "./ParsedMessage.vue";
 import MessageTypes from "./MessageTypes";
 import StatusmsgMarker from "./StatusmsgMarker.vue";
+import MessageActions from "./MessageActions.vue";
+import MessageReactions from "./MessageReactions.vue";
+import {replyQuote} from "../js/helpers/messageUpdates";
+import {MessageType} from "../../shared/types/msg";
 
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
 import {useStore} from "../js/store";
@@ -117,6 +197,8 @@ export default defineComponent({
 	components: {
 		...MessageTypes,
 		StatusmsgMarker,
+		MessageActions,
+		MessageReactions,
 	},
 	props: {
 		message: {type: Object as PropType<ClientMessage>, required: true},
@@ -161,12 +243,95 @@ export default defineComponent({
 			return typeof MessageTypes["message-" + props.message.type] !== "undefined";
 		};
 
+		// --- replies, reactions, deletion, edits (bus-contract §1.4) ---
+
+		// Parent of a reply, resolved from the loaded messages by msgid.
+		const quote = computed(() => {
+			if (!props.message.replyTo || !props.channel) {
+				return undefined;
+			}
+
+			return replyQuote(props.channel.messages, props.message.replyTo);
+		});
+
+		const quoteLabel = computed(() =>
+			quote.value
+				? `Replying to ${quote.value.nick}: ${quote.value.text}. Jump to that message.`
+				: "Replying to a message that is not loaded"
+		);
+
+		const jumpToParent = () => {
+			if (!quote.value) {
+				return;
+			}
+
+			const el = document.getElementById("msg-" + quote.value.id);
+
+			if (!el) {
+				return;
+			}
+
+			el.scrollIntoView({block: "center", inline: "nearest"});
+
+			if (typeof el.animate === "function") {
+				el.animate(
+					[
+						{backgroundColor: "var(--highlight-bg-color)"},
+						{backgroundColor: "transparent"},
+					],
+					{duration: 1500, easing: "ease-out"}
+				);
+			}
+		};
+
+		// Deleted messages keep their text; the placeholder toggles it.
+		const revealed = ref(false);
+
+		const redactedLabel = computed(() => {
+			const r = props.message.redacted;
+
+			if (!r) {
+				return "";
+			}
+
+			return r.reason
+				? `[Message deleted by ${r.by}: ${r.reason}]`
+				: `[Message deleted by ${r.by}]`;
+		});
+
+		const hideRevealed = (e: MouseEvent) => {
+			// Let links inside the revealed text keep working.
+			if ((e.target as HTMLElement | null)?.closest("a")) {
+				return;
+			}
+
+			revealed.value = false;
+		};
+
+		// Hover action bar: only for real chat lines we can address by msgid,
+		// and only while the network is connected.
+		const canAct = computed(
+			() =>
+				(props.message.type === MessageType.MESSAGE ||
+					props.message.type === MessageType.ACTION) &&
+				!!props.message.msgid &&
+				!props.message.redacted &&
+				props.network.status.connected
+		);
+
 		return {
 			timeFormat,
 			messageTime,
 			messageTimeLocale,
 			messageComponent,
 			isAction,
+			quote,
+			quoteLabel,
+			jumpToParent,
+			revealed,
+			redactedLabel,
+			hideRevealed,
+			canAct,
 		};
 	},
 });
