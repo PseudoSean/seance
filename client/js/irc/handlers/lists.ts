@@ -20,7 +20,7 @@ import type {IrcClient} from "../client";
 import type {IrcMessage} from "../message";
 import type {Handler} from "../types";
 
-/** Row shape `Special/ListBans.vue` renders (also used for +e lists). */
+/** Row shape `Special/ListBans.vue` and `Special/ListExcepts.vue` render. */
 export interface BanEntry {
 	hostmask: string;
 	banned_by: string;
@@ -74,11 +74,11 @@ const INVITES: ListKind = {
 	special: SpecialChanType.INVITELIST,
 	toRow: toInvite,
 };
-// There is no dedicated exception-list component; the ban table fits the data.
+// +e entries share the ban row shape; `ListExcepts.vue` only changes the headers.
 const EXCEPTS: ListKind = {
 	mode: "e",
 	label: "Exception list",
-	special: SpecialChanType.BANLIST,
+	special: SpecialChanType.EXCEPTLIST,
 	toRow: toBan,
 };
 

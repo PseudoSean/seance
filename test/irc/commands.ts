@@ -181,6 +181,7 @@ describe("irc commands", function () {
 			"/unban",
 			"/banlist",
 			"/kickban",
+			"/exceptlist",
 			"/kick",
 			"/whois",
 			"/list",
@@ -223,6 +224,7 @@ describe("irc commands", function () {
 			h.client.input(id, "/banlist");
 			h.client.input(id, "/kickban troll go away");
 			h.client.input(id, "/kickban troll");
+			h.client.input(id, "/exceptlist");
 			expect(h.sentAfter()).to.deep.equal([
 				"MODE #seance +b *!*@evil.example",
 				"MODE #seance -b *!*@evil.example",
@@ -231,7 +233,21 @@ describe("irc commands", function () {
 				"MODE #seance +b troll",
 				"KICK #seance troll",
 				"MODE #seance +b troll",
+				"MODE #seance e",
 			]);
+		});
+
+		it("uses the EXCEPTS mode letter for /exceptlist", function () {
+			const h = setup();
+			const id = joined(h, "EXCEPTS=X");
+			h.client.input(id, "/exceptlist");
+			expect(h.sentAfter()).to.deep.equal(["MODE #seance X"]);
+
+			h.client.input(1, "/exceptlist");
+			expect(lastMessage(1).text).to.equal(
+				"exceptlist command can only be used in channels."
+			);
+			expect(h.sentAfter()).to.deep.equal([]);
 		});
 
 		it("rejects use outside channels and missing arguments", function () {

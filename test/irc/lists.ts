@@ -356,7 +356,7 @@ describe("IRC channel list numerics (lists.ts)", function () {
 	});
 
 	describe("ban exception list (348/349)", function () {
-		it("opens an exception-list window rendered by the ban table", function () {
+		it("opens an exception-list window with its own special type", function () {
 			const {transport} = setup();
 
 			transport.lines(
@@ -367,7 +367,7 @@ describe("IRC channel list numerics (lists.ts)", function () {
 			const joins = specialJoins();
 			expect(joins).to.have.length(1);
 			expect(joins[0].chan.name).to.equal("Exception list for #seance");
-			expect(joins[0].chan.special).to.equal(SpecialChanType.BANLIST);
+			expect(joins[0].chan.special).to.equal(SpecialChanType.EXCEPTLIST);
 			expect(joins[0].chan.data).to.deep.equal([
 				{
 					hostmask: "*!*@trusted.example",

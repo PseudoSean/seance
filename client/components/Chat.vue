@@ -128,6 +128,7 @@ import SidebarToggle from "./SidebarToggle.vue";
 import MessageSearchForm from "./MessageSearchForm.vue";
 import ListBans from "./Special/ListBans.vue";
 import ListInvites from "./Special/ListInvites.vue";
+import ListExcepts from "./Special/ListExcepts.vue";
 import ListChannels from "./Special/ListChannels.vue";
 import ListIgnored from "./Special/ListIgnored.vue";
 import {defineComponent, PropType, ref, computed, watch, nextTick, onMounted, Component} from "vue";
@@ -176,6 +177,8 @@ export default defineComponent({
 					return ListBans as Component;
 				case SpecialChanType.INVITELIST:
 					return ListInvites as Component;
+				case SpecialChanType.EXCEPTLIST:
+					return ListExcepts as Component;
 				case SpecialChanType.CHANNELLIST:
 					return ListChannels as Component;
 				case SpecialChanType.IGNORELIST:

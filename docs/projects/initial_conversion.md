@@ -133,7 +133,7 @@ No fixed order. Tackle items in whatever sequence the friction dictates.
    - [x] b. Track `moreHistoryAvailable` from batch length. _Full page ⇒ total+1, short page ⇒ total; 15 s timeout keeps the button._
 3. [x] **Remaining input commands** — port `/ban`, `/kick`, `/whois`, `/list`, `/mode`, `/notice`, `/ctcp`, `/away`, `/back`, `/invite`, `/kill`, `/rejoin`. `/ignore`/`/ignorelist`/`/mute` become localStorage-backed. `/connect`/`/disconnect` will need phase D.5 (saved networks). _Done 2026-08-25: all listed commands plus `/kickban /umode /op..devoice /server /cycle /invitelist`; WHOIS and LIST result handlers; ignore list in localStorage with hostmask matching. 46 tests._
 4. [x] **Channel info numerics**
-   - [x] a. Ban list (367/368), invite exception list (346/347), ban exception list (348/349) into the existing special-channel UI. _Done 2026-08-24: `handlers/lists.ts`; +e lists reuse the BANLIST special view (no EXCEPTLIST enum/component yet — small follow-up). 14 tests._
+   - [x] a. Ban list (367/368), invite exception list (346/347), ban exception list (348/349) into the existing special-channel UI. _Done 2026-08-24: `handlers/lists.ts`; +e lists have their own EXCEPTLIST special view (`Special/ListExcepts.vue`) and `/exceptlist`. 14 tests._
 5. [x] **Saved network configs**
    - [x] a. Persist the connect form _`client/js/irc/saved-networks.ts` (`thelounge.networks`), picker on Connect, remember-password + autoconnect opt-ins._'s last-used values in localStorage; offer a "saved networks" picker on the connect screen.
    - [x] b. `Windows/NetworkEdit.vue` reads/writes this store _Done; unsupported fields dropped from the form._. `network:get`/`network:edit`/`network:new` route through localStorage.
