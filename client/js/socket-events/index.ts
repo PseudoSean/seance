@@ -11,6 +11,7 @@ import "./connection";
 import "./commands";
 import "./init";
 import "./join";
+import "./markread";
 import "./more";
 import "./msg";
 import "./msg_special";

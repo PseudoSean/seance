@@ -25,6 +25,7 @@ import {Channel, MsgRef} from "./channel";
 import {commandNames, dispatchInput} from "./commands";
 import {handlers, unhandled} from "./handlers";
 import {interceptBatchLine, resetBatches} from "./handlers/batch";
+import {cancelMarkRead, fetchReadMarker, scheduleMarkRead} from "./handlers/markread";
 import {abortHistory, requestChannelHistory} from "./history";
 import {IdAllocator, sharedIds} from "./ids";
 import {ISupport} from "./isupport";
@@ -88,6 +89,13 @@ export const NOT_CONNECTED_TEXT =
 
 /** Prefix characters a channel name may start with when the user omits one. */
 const CHANNEL_PREFIXES = "#&!+";
+
+/** Own messages of these types mean the user read the channel (draft/read-marker). */
+const SELF_READ_TYPES: ReadonlySet<MessageType> = new Set([
+	MessageType.MESSAGE,
+	MessageType.ACTION,
+	MessageType.NOTICE,
+]);
 
 export class IrcClient {
 	readonly uuid: string;
@@ -532,6 +540,7 @@ export class IrcClient {
 		for (const chan of this.channels) {
 			chan.users.clear();
 			chan.namesBuffer = null;
+			cancelMarkRead(chan);
 
 			if (chan.type === ChanType.CHANNEL) {
 				chan.state = ChanState.PARTED;
@@ -687,6 +696,7 @@ export class IrcClient {
 		if (chan) {
 			chan.shared.unread = 0;
 			chan.shared.highlight = 0;
+			scheduleMarkRead(this, chan);
 		}
 	}
 
@@ -749,6 +759,7 @@ export class IrcClient {
 
 			if (chan) {
 				requestChannelHistory(this, chan, beforeJoin);
+				fetchReadMarker(this, chan);
 			}
 		}
 	}
@@ -910,25 +921,39 @@ export class IrcClient {
 		}
 
 		msg.id = this.ids.msgId();
-		chan.newestRef = chan.remember(msg);
+		const ref = chan.remember(msg);
+		chan.newestRef = ref;
 		const shared = chan.shared;
 		shared.totalMessages++;
+		// Already read on another session (draft/read-marker), e.g. a catch-up.
+		const read =
+			chan.readMarker !== undefined && ref.time.getTime() <= chan.readMarker.getTime();
 
 		if (msg.self) {
 			shared.unread = 0;
 			shared.highlight = 0;
 			shared.firstUnread = msg.id;
-		} else if (chan.id !== this.activeChanId) {
+
+			// Something we said is read by definition; our own JOIN/MODE
+			// echoes are not (a reconnect must not advance the marker).
+			if (SELF_READ_TYPES.has(msg.type ?? MessageType.MESSAGE)) {
+				scheduleMarkRead(this, chan);
+			}
+		} else if (chan.id === this.activeChanId) {
+			scheduleMarkRead(this, chan);
+		} else if (!read) {
 			if (!shared.firstUnread) {
 				shared.firstUnread = msg.id;
 			}
 
 			if (increasesUnread || msg.highlight) {
 				shared.unread++;
+				ref.unread = true;
 			}
 
 			if (msg.highlight) {
 				shared.highlight++;
+				ref.highlight = true;
 			}
 		}
 

@@ -1,0 +1,405 @@
+import {expect} from "chai";
+import sinon from "ts-sinon";
+import socket from "../../client/js/socket";
+import {IrcClient} from "../../client/js/irc/client";
+import {IdAllocator} from "../../client/js/irc/ids";
+import {registerBusHandlers} from "../../client/js/irc/bus";
+import {SEANCE_CAPS} from "../../client/js/irc/caps";
+import {MARKREAD_DEBOUNCE_MS} from "../../client/js/irc/handlers/markread";
+import type {Transport} from "../../client/js/irc/types";
+import type {TransportEvent, TransportState} from "../../client/js/irc/transport";
+import type {SharedMsg} from "../../shared/types/msg";
+
+class FakeTransport implements Transport {
+	state: TransportState = "closed";
+	sent: string[] = [];
+	private listeners: ((ev: TransportEvent) => void)[] = [];
+
+	on(listener: (ev: TransportEvent) => void): () => void {
+		this.listeners.push(listener);
+
+		return () => {
+			this.listeners = this.listeners.filter((l) => l !== listener);
+		};
+	}
+
+	connect(): void {
+		this.state = "connecting";
+	}
+
+	send(line: string): void {
+		if (this.state !== "open") {
+			throw new Error("WsTransport: not open");
+		}
+
+		this.sent.push(line);
+	}
+
+	close(): void {
+		this.state = "closed";
+	}
+
+	open(): void {
+		this.state = "open";
+		this.emit({type: "open", subprotocol: "text.ircv3.net"});
+	}
+
+	line(line: string): void {
+		this.emit({type: "line", line});
+	}
+
+	lines(...lines: string[]): void {
+		lines.forEach((line) => this.line(line));
+	}
+
+	private emit(ev: TransportEvent): void {
+		for (const listener of [...this.listeners]) {
+			listener(ev);
+		}
+	}
+}
+
+interface MarkreadPayload {
+	chan: number;
+	firstUnread: number;
+	unread: number;
+	highlight: number;
+}
+
+interface MsgPayload {
+	chan: number;
+	msg: SharedMsg;
+	unread?: number;
+	highlight?: number;
+}
+
+let dispatch: sinon.SinonSpy;
+let ownsSpy = false;
+let clock: sinon.SinonFakeTimers;
+
+function installSpy(): void {
+	const current = (socket as unknown as Record<string, unknown>).dispatch;
+
+	if ((current as {isSinonProxy?: boolean}).isSinonProxy) {
+		dispatch = current as sinon.SinonSpy;
+		ownsSpy = false;
+		return;
+	}
+
+	dispatch = sinon.spy(socket, "dispatch");
+	ownsSpy = true;
+}
+
+function removeSpy(): void {
+	if (ownsSpy) {
+		dispatch.restore();
+	}
+
+	socket.removeAllListeners();
+}
+
+function payloads<T>(event: string): T[] {
+	return dispatch
+		.getCalls()
+		.filter((call) => call.args[0] === event)
+		.map((call) => call.args[1] as T);
+}
+
+interface Harness {
+	client: IrcClient;
+	transport: FakeTransport;
+	chan: () => number;
+	/** Lines sent since the last call. */
+	sent: () => string[];
+}
+
+const BASE_CAPS = "batch message-tags server-time echo-message extended-join draft/chathistory";
+
+/** A registered client (not yet in any channel). */
+function setup(opts: {readMarker?: boolean} = {}): Harness {
+	const transport = new FakeTransport();
+	const client = new IrcClient({
+		host: "irc.test",
+		port: 8443,
+		tls: true,
+		nick: "alice",
+		join: "#seance",
+		sasl: "",
+		saslAccount: "",
+		saslPassword: "",
+		ids: new IdAllocator(),
+		transportFactory: () => transport,
+		highlights: () => ({keywords: [], exceptions: []}),
+	});
+	let mark = 0;
+	const caps = opts.readMarker === false ? BASE_CAPS : `${BASE_CAPS} draft/read-marker`;
+
+	client.connect();
+	transport.open();
+	transport.line(`:irc.test CAP * LS :${caps}`);
+	const req = transport.sent.find((l) => l.startsWith("CAP REQ :"));
+	expect(req, "CAP REQ sent").to.be.a("string");
+	transport.line(`:irc.test CAP alice ACK :${(req as string).slice("CAP REQ :".length)}`);
+	transport.lines(
+		":irc.test 001 alice :Welcome to the SeanceDev IRC Network, alice",
+		":irc.test 005 alice CHANTYPES=#& PREFIX=(ov)@+ CHANMODES=b,k,l,imnpst CASEMAPPING=rfc1459 CHATHISTORY=100 MSGREFTYPES=timestamp,msgid :are supported by this server",
+		":irc.test 422 alice :MOTD File is missing"
+	);
+	registerBusHandlers(socket, {
+		clientForChannel: (chanId) => (client.channelById(chanId) ? client : undefined),
+		clientForNetwork: (uuid) => (uuid === client.uuid ? client : undefined),
+		allClients: () => [client],
+		createNetwork: () => client,
+		remove: () => undefined,
+	});
+	mark = transport.sent.length;
+
+	return {
+		client,
+		transport,
+		chan: () => client.findChannel("#seance")!.id,
+		sent() {
+			const result = transport.sent.slice(mark);
+			mark = transport.sent.length;
+			return result;
+		},
+	};
+}
+
+/** Server confirms our JOIN to #seance; returns the lines we sent in response. */
+function join(h: Harness): string[] {
+	h.transport.lines(
+		"@time=2026-08-25T12:00:00.000Z;msgid=join-1 :alice!alice@host JOIN #seance alice :Alice",
+		":irc.test 353 alice = #seance :@alice bob",
+		":irc.test 366 alice #seance :End of /NAMES list."
+	);
+	return h.sent();
+}
+
+/** Join, answer the automatic LATEST with nothing, and forget what was dispatched so far. */
+function joined(h: Harness): number {
+	const label = join(h)
+		.find((l) => l.includes("CHATHISTORY"))
+		?.match(/^@label=([^ ;]+)/)?.[1];
+	h.transport.line(
+		`${label ? `@label=${label} ` : ""}:irc.test BATCH +hist1 chathistory #seance`
+	);
+	h.transport.line(":irc.test BATCH -hist1");
+	dispatch.resetHistory();
+	h.sent();
+	return h.chan();
+}
+
+/** A live PRIVMSG from bob at 12:MM (message ids are allocated in order). */
+function live(h: Harness, minute: number, text = `message ${minute}`): number {
+	const mm = String(minute).padStart(2, "0");
+	h.transport.line(
+		`@time=2026-08-25T12:${mm}:00.000Z;msgid=m${minute} :bob!bob@host PRIVMSG #seance :${text}`
+	);
+	const all = payloads<MsgPayload>("msg");
+	return all[all.length - 1].msg.id;
+}
+
+function marker(h: Harness, stamp: string): void {
+	h.transport.line(`:irc.test MARKREAD #seance ${stamp}`);
+}
+
+describe("Read markers (handlers/markread.ts)", function () {
+	beforeEach(function () {
+		installSpy();
+		clock = sinon.useFakeTimers({
+			now: new Date("2026-08-25T12:30:00.000Z"),
+			toFake: ["setTimeout", "clearTimeout", "Date"],
+		});
+	});
+
+	afterEach(function () {
+		clock.restore();
+		removeSpy();
+	});
+
+	it("requests draft/read-marker when the server offers it", function () {
+		expect(SEANCE_CAPS.wanted).to.include("draft/read-marker");
+		const h = setup();
+		const req = h.transport.sent.find((l) => l.startsWith("CAP REQ :"))!;
+		expect(req).to.include("draft/read-marker");
+		expect(h.client.caps.hasCapability("draft/read-marker")).to.equal(true);
+	});
+
+	it("moves firstUnread to the last message at or before an inbound marker and recounts", function () {
+		const h = setup();
+		const chanId = joined(h);
+		const chan = h.client.findChannel("#seance")!;
+		const joinMsg = chan.shared.firstUnread; // our own JOIN line is the last one read
+		live(h, 1);
+		const m2 = live(h, 2);
+		live(h, 3, "alice: ping");
+		live(h, 4);
+		expect(chan.shared.unread).to.equal(4);
+		expect(chan.shared.highlight).to.equal(1);
+		expect(chan.shared.firstUnread).to.equal(joinMsg);
+
+		marker(h, "timestamp=2026-08-25T12:02:30.000Z");
+
+		expect(chan.shared.firstUnread).to.equal(m2);
+		expect(chan.shared.unread).to.equal(2);
+		expect(chan.shared.highlight).to.equal(1);
+		expect(chan.readMarker?.toISOString()).to.equal("2026-08-25T12:02:30.000Z");
+		expect(payloads<MarkreadPayload>("markread")).to.deep.equal([
+			{chan: chanId, firstUnread: m2, unread: 2, highlight: 1},
+		]);
+	});
+
+	it("marks everything read when the marker is at or after the newest message", function () {
+		const h = setup();
+		const chanId = joined(h);
+		const chan = h.client.findChannel("#seance")!;
+		live(h, 1);
+		live(h, 2, "alice: hi");
+		const m3 = live(h, 3);
+
+		marker(h, "timestamp=2026-08-25T12:03:00.000Z");
+
+		expect(chan.shared.firstUnread).to.equal(m3);
+		expect(chan.shared.unread).to.equal(0);
+		expect(chan.shared.highlight).to.equal(0);
+		expect(payloads<MarkreadPayload>("markread")).to.deep.equal([
+			{chan: chanId, firstUnread: m3, unread: 0, highlight: 0},
+		]);
+	});
+
+	it("ignores a marker older than everything shown, `timestamp=*` and `*`", function () {
+		const h = setup();
+		joined(h);
+		const chan = h.client.findChannel("#seance")!;
+		const before = chan.shared.firstUnread;
+		live(h, 5);
+		live(h, 6);
+
+		marker(h, "timestamp=2026-08-25T11:00:00.000Z");
+		marker(h, "timestamp=*");
+		marker(h, "*");
+		h.transport.line(":irc.test MARKREAD #seance");
+
+		expect(chan.shared.firstUnread).to.equal(before);
+		expect(chan.shared.unread).to.equal(2);
+		expect(payloads("markread")).to.have.length(0);
+	});
+
+	it("never moves the marker backwards", function () {
+		const h = setup();
+		joined(h);
+		const chan = h.client.findChannel("#seance")!;
+		live(h, 1);
+		live(h, 2);
+		const m3 = live(h, 3);
+		live(h, 4);
+
+		marker(h, "timestamp=2026-08-25T12:03:00.000Z");
+		expect(chan.shared.firstUnread).to.equal(m3);
+		expect(chan.shared.unread).to.equal(1);
+		dispatch.resetHistory();
+
+		marker(h, "timestamp=2026-08-25T12:01:00.000Z");
+		expect(chan.shared.firstUnread).to.equal(m3);
+		expect(chan.shared.unread).to.equal(1);
+		expect(payloads("markread")).to.have.length(0);
+
+		// Our own message is read by definition; an older marker stays behind it.
+		h.transport.line(
+			"@time=2026-08-25T12:05:00.000Z;msgid=m5 :alice!alice@host PRIVMSG #seance :mine"
+		);
+		const mine = chan.shared.firstUnread;
+		expect(mine).to.be.greaterThan(m3);
+		marker(h, "timestamp=2026-08-25T12:04:00.000Z");
+		expect(chan.shared.firstUnread).to.equal(mine);
+	});
+
+	it("sends MARKREAD with the newest message's time when the channel is opened, debounced", function () {
+		const h = setup();
+		const chanId = joined(h);
+		live(h, 1);
+		live(h, 2);
+
+		socket.emit("open", chanId);
+		socket.emit("open", chanId);
+		expect(h.sent()).to.deep.equal([]);
+
+		clock.tick(MARKREAD_DEBOUNCE_MS - 1);
+		expect(h.sent()).to.deep.equal([]);
+		clock.tick(1);
+		expect(h.sent()).to.deep.equal(["MARKREAD #seance timestamp=2026-08-25T12:02:00.000Z"]);
+
+		// Nothing newer: opening again sends nothing, even after the server echo.
+		h.transport.line(":irc.test MARKREAD #seance timestamp=2026-08-25T12:02:00.000Z");
+		socket.emit("open", chanId);
+		clock.tick(MARKREAD_DEBOUNCE_MS);
+		expect(h.sent()).to.deep.equal([]);
+		expect(payloads("markread")).to.have.length(0);
+	});
+
+	it("marks messages read as they arrive in the open channel, one send per second", function () {
+		const h = setup();
+		const chanId = joined(h);
+		const chan = h.client.findChannel("#seance")!;
+		socket.emit("open", chanId);
+		clock.tick(MARKREAD_DEBOUNCE_MS);
+		h.sent();
+
+		live(h, 10);
+		live(h, 11);
+		expect(chan.shared.unread).to.equal(0);
+		clock.tick(MARKREAD_DEBOUNCE_MS - 1);
+		live(h, 12);
+		clock.tick(1);
+		expect(h.sent()).to.deep.equal(["MARKREAD #seance timestamp=2026-08-25T12:12:00.000Z"]);
+	});
+
+	it("sends a marker for our own messages but not for our JOIN", function () {
+		const h = setup();
+		join(h);
+		clock.tick(MARKREAD_DEBOUNCE_MS * 2);
+		expect(h.sent()).to.deep.equal([]);
+
+		h.transport.line(
+			"@time=2026-08-25T12:07:00.000Z;msgid=m7 :alice!alice@host PRIVMSG #seance :mine"
+		);
+		clock.tick(MARKREAD_DEBOUNCE_MS);
+		expect(h.sent()).to.deep.equal(["MARKREAD #seance timestamp=2026-08-25T12:07:00.000Z"]);
+	});
+
+	it("does not count messages at or before a known marker as unread", function () {
+		const h = setup();
+		joined(h);
+		const chan = h.client.findChannel("#seance")!;
+		marker(h, "timestamp=2026-08-25T12:05:00.000Z");
+
+		live(h, 4); // e.g. a reconnect catch-up, already read elsewhere
+		live(h, 5);
+		expect(chan.shared.unread).to.equal(0);
+		live(h, 6);
+		expect(chan.shared.unread).to.equal(1);
+	});
+
+	it("sends nothing when the server does not offer the cap", function () {
+		const h = setup({readMarker: false});
+		const chanId = joined(h);
+		live(h, 1);
+		socket.emit("open", chanId);
+		clock.tick(MARKREAD_DEBOUNCE_MS * 2);
+		expect(h.sent()).to.deep.equal([]);
+		expect(h.transport.sent.some((l) => l.startsWith("MARKREAD"))).to.equal(false);
+	});
+
+	it("asks for the stored marker after our JOIN, after the history request", function () {
+		const h = setup();
+		const lines = join(h);
+		const history = lines.findIndex((l) => l.includes("CHATHISTORY LATEST #seance"));
+		const fetch = lines.indexOf("MARKREAD #seance");
+		expect(history, "CHATHISTORY LATEST").to.be.at.least(0);
+		expect(fetch, "MARKREAD fetch").to.be.greaterThan(history);
+
+		const without = setup({readMarker: false});
+		expect(join(without)).to.not.include("MARKREAD #seance");
+	});
+});

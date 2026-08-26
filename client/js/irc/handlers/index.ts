@@ -22,6 +22,7 @@ import join from "./join";
 import kick from "./kick";
 import list from "./list";
 import lists from "./lists";
+import markread from "./markread";
 import mode from "./mode";
 import names from "./names";
 import nick from "./nick";
@@ -47,6 +48,7 @@ const modules: Record<string, Handler>[] = [
 	kick,
 	list,
 	lists,
+	markread,
 	mode,
 	names,
 	nick,

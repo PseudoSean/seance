@@ -63,6 +63,8 @@ interface ServerToClientEvents {
 
 	open: (id: number) => void;
 
+	markread: EventHandler<{chan: number; firstUnread: number; unread: number; highlight: number}>;
+
 	part: EventHandler<{chan: number}>;
 
 	"sign-out": NoPayloadEventHandler;

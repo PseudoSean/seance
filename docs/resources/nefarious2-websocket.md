@@ -310,6 +310,10 @@ Plus 12 cmocka cases in `ircd/test/websocket_cmocka.c`. Two things learned on th
 - The branch's `recv_classify.c:46` caps every client's message _body_ at 512 bytes — a 600-byte plain `PRIVMSG` is killed as "Excess Flood: message region too large" on TCP and WS alike. That is the branch's normal over-length treatment (not a transport bug) but is stricter than `draft/multiline` and long client tags need; worth raising upstream separately. Seance keeps `MAX_LINE_BYTES = 500`.
 - The TLS listener requests a client certificate (`SSL_VERIFY_PEER|SSL_VERIFY_CLIENT_ONCE`, optional unless `SSL_REQUIRECLIENTCERT`). Interactive browsers cope; headless Chromium aborts (`ERR_SSL_CLIENT_AUTH_CERT_NEEDED`), so automated browser runs need a pass-through TLS proxy in front. A pre-existing unrelated cmocka failure (`ircd_string_cmocka` `test_ircd_strncpy_truncation`) is masked by the Makefile's `| tee`.
 
+## Read markers (`draft/read-marker`), observed 2026-08-25
+
+Off by default (`CAP_draft_read_marker`); the dev config enables it. Unauthenticated client: the fetch after JOIN answers `MARKREAD #chan timestamp=*` (note `timestamp=*`, not a bare `*`); a `MARKREAD #chan timestamp=<t>` set is accepted and stored per session but **not echoed back** because `m_markread.c` `notify_local_clients()` skips clients with an empty account (the ephemeral-path comment says otherwise) — a later fetch does return it, and an older set is answered with the stored newer value. Account-anchored sessions should get the spec's echo/broadcast (untested: no services). Candidate for a small upstream report.
+
 ## Open questions for the ircd side
 
 1. ~~Which branch?~~ Decided 2026-08-24: Seance targets `ircv3.2-upgrade` (and `ircv3.2-hardening` as it lands). Still open: will it merge to `master`, and should we pin a tag? `ghcr.io/evilnet/nefarious2:latest` referenced by the compose example does not exist on GHCR (checked 2026-08-24); we build locally.

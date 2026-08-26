@@ -15,6 +15,10 @@ export type Casefold = (s: string) => string;
 export interface MsgRef {
 	msgid?: string;
 	time: Date;
+	/** Bumped the channel's `unread` counter when pushed (recounted by MARKREAD). */
+	unread?: boolean;
+	/** Bumped the channel's `highlight` counter when pushed. */
+	highlight?: boolean;
 }
 
 /** A fresh user record; `mode` mirrors `modes[0]` and must be kept in sync. */
@@ -46,6 +50,14 @@ export class Channel {
 	newestRef: MsgRef | undefined = undefined;
 	/** History has been requested at least once (so `newestRef` is a valid catch-up reference). */
 	historyRequested = false;
+	/**
+	 * Read marker (`draft/read-marker`): the newest time we have sent or the
+	 * server has told us was read, on any of the account's sessions. Messages
+	 * at or before it never count as unread.
+	 */
+	readMarker: Date | undefined = undefined;
+	/** Pending debounced `MARKREAD` send (handlers/markread.ts). */
+	markReadTimer: ReturnType<typeof setTimeout> | null = null;
 	private readonly fold: Casefold;
 
 	constructor(

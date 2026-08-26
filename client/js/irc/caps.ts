@@ -70,6 +70,7 @@ export const SEANCE_CAPS: CapNegotiatorOptions = {
 		"message-tags",
 		"draft/chathistory",
 		"draft/event-playback",
+		"draft/read-marker",
 	],
 };
 
