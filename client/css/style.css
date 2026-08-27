@@ -346,6 +346,7 @@ p {
 #image-viewer .next-image-btn::before,
 #image-viewer .open-btn::before,
 .channel-list-item .not-connected-icon::before,
+.channel-list-item .connection-status-icon::before,
 .channel-list-item .edit-network::before,
 .channel-list-item .parted-channel-icon::before,
 .jump-to-input::before,
@@ -942,6 +943,56 @@ background on hover (unless active) */
 
 .channel-list-item[data-type="lobby"] .edit-network:hover {
 	opacity: 1;
+}
+
+.channel-list-item .connection-status-tooltip {
+	flex-shrink: 0;
+	line-height: 1;
+	margin: 0 8px;
+}
+
+.channel-list-item .connection-status-icon {
+	width: 18px;
+	height: 18px;
+	opacity: 0.7;
+	transition: opacity 0.2s;
+}
+
+.channel-list-item .connection-status-icon::before {
+	font-size: 12px;
+	display: inline-block;
+	line-height: 18px;
+	text-align: center;
+}
+
+.channel-list-item .connection-status-icon:hover {
+	opacity: 1;
+}
+
+.channel-list-item .connection-status-icon.is-connected {
+	cursor: default;
+}
+
+.channel-list-item .connection-status-icon.is-connected::before {
+	content: "\f0c1"; /* https://fontawesome.com/icons/link?style=solid */
+	color: #84ce88;
+}
+
+.channel-list-item .connection-status-icon.is-connecting::before {
+	content: "\f021"; /* https://fontawesome.com/icons/sync?style=solid */
+	color: #d59437;
+	animation: connection-status-spin 1.5s linear infinite;
+}
+
+.channel-list-item .connection-status-icon.is-disconnected::before {
+	content: "\f127"; /* https://fontawesome.com/icons/unlink?style=solid */
+	color: #e74c3c;
+}
+
+@keyframes connection-status-spin {
+	100% {
+		transform: rotate(360deg);
+	}
 }
 
 #sidebar .network .collapse-network {

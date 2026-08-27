@@ -14,11 +14,14 @@
 		<div class="lobby-wrap">
 			<span :title="channel.name" class="name">{{ channel.name }}</span>
 			<span
-				v-if="!network.status.connected"
-				class="not-connected-tooltip tooltipped tooltipped-w"
-				aria-label="Disconnected"
+				:aria-label="statusLabel"
+				class="connection-status-tooltip tooltipped tooltipped-w"
 			>
-				<span class="not-connected-icon" />
+				<button
+					:class="['connection-status-icon', statusClass]"
+					:aria-label="statusLabel"
+					@click.stop="onStatusClick"
+				/>
 			</span>
 			<span v-if="channel.unread" :class="{highlight: channel.highlight}" class="badge">{{
 				unreadCount
@@ -53,6 +56,7 @@ import {computed, defineComponent, PropType} from "vue";
 import {useRouter} from "vue-router";
 import collapseNetwork from "../js/helpers/collapseNetwork";
 import roundBadgeNumber from "../js/helpers/roundBadgeNumber";
+import socket from "../js/socket";
 import ChannelWrapper from "./ChannelWrapper.vue";
 
 import type {ClientChan, ClientNetwork} from "../js/types";
@@ -83,6 +87,33 @@ export default defineComponent({
 			void router.push(`/edit-network/${props.network.uuid}`);
 		};
 
+		const statusClass = computed(() =>
+			props.network.status.connected
+				? "is-connected"
+				: props.network.status.connecting
+				? "is-connecting"
+				: "is-disconnected"
+		);
+
+		const statusLabel = computed(() =>
+			props.network.status.connected
+				? "Connected"
+				: props.network.status.connecting
+				? "Connecting… (click to cancel)"
+				: "Disconnected (click to connect)"
+		);
+
+		const onStatusClick = () => {
+			if (props.network.status.connected) {
+				return; // no accidental disconnects; that lives on the edit page
+			}
+
+			socket.emit("input", {
+				target: channel.value.id,
+				text: props.network.status.connecting ? "/disconnect" : "/connect",
+			});
+		};
+
 		const joinChannelLabel = computed(() => {
 			return props.isJoinChannelShown ? "Cancel" : "Join a channel…";
 		});
@@ -102,6 +133,9 @@ export default defineComponent({
 		return {
 			channel,
 			editNetwork,
+			statusClass,
+			statusLabel,
+			onStatusClick,
 			joinChannelLabel,
 			unreadCount,
 			onCollapseClick,
