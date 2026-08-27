@@ -11,6 +11,7 @@ import eventbus from "./eventbus";
 import {boot} from "./boot";
 
 import "./webpush";
+import "./pwa";
 import "./keybinds";
 import {LoungeWindow} from "./types";
 

@@ -24,7 +24,27 @@ const isDevBuild = cacheName === "dev";
 // The app shell is cached under the scope URL because, with hash-based
 // routing, every navigation request resolves to the scope root.
 const shellUrl = self.registration.scope;
-const shellPaths = ["", "index.html", "thelounge.webmanifest"];
+
+// Everything a cold start needs, so that an installed app opens offline
+// straight after the first visit (rather than only after a second load has
+// filled the runtime cache). Versioned assets use the same `?v=` query as
+// index.html so the keys match the requests. Other themes, sounds and icons
+// are cached on first use.
+const shellPaths = [
+	"",
+	"index.html",
+	"thelounge.webmanifest",
+	"config.json",
+	"favicon.ico",
+	`js/loading-error-handlers.js?v=${cacheName}`,
+	`js/bundle.vendor.js?v=${cacheName}`,
+	`js/bundle.js?v=${cacheName}`,
+	`css/style.css?v=${cacheName}`,
+	"themes/default.css",
+	"fonts/fa-solid-900.woff2",
+	"img/logo-vertical-transparent-bg.svg",
+	"img/logo-vertical-transparent-bg-inverted.svg",
+];
 
 // Paths that must never be served from cache (Cloudflare challenge endpoints).
 const excludedPathsFromCache = /^cdn-cgi\//;

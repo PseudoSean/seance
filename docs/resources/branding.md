@@ -97,9 +97,9 @@ A minimal uploader is a few dozen lines (an nginx `client_body` handler script, 
 
 `config.json` covers the app itself. Icons and the manifest are static files; replace them with your own after building (or before, in `client/`, so the build copies them):
 
-- `thelounge.webmanifest` — the build already fills `name`, `short_name`, `description`, `theme_color`, `background_color` from `client/config.json`. Overwrite it to change the icon list. Keep the filename: `client/service-worker.js` precaches it by name and `index.html` links it.
+- `thelounge.webmanifest` — the build already fills `name`, `short_name`, `description`, `theme_color`, `background_color` from `client/config.json`. Overwrite it to change the icon list; keep `start_url`/`scope` (`./`), `launch_handler`, `protocol_handlers` and the separate `any`/`maskable` icon entries, which the installed-app behaviour depends on (see `pwa.md`). Keep the filename: `client/service-worker.js` precaches it by name and `index.html` links it.
 - `favicon.ico` and `img/favicon-alerted.ico` (the red "unread" variant).
-- `img/logo-grey-bg-120x120px.png`, `-152x152px.png`, `-167x167px.png`, `-180x180px.png`, `-192x192px.png`, `-512x512px.png`, `img/logo-grey-bg.svg` — manifest and Apple touch icons.
+- `img/logo-grey-bg-120x120px.png`, `-152x152px.png`, `-167x167px.png`, `-180x180px.png`, `-192x192px.png`, `-512x512px.png`, `img/logo-grey-bg.svg` — manifest and Apple touch icons. The 192 and 512 files are also declared `maskable`: keep the artwork inside the central 80% and the background full-bleed so Android/ChromeOS can round or circle-crop them.
 - `img/logo-transparent-bg.svg`, `img/logo-transparent-bg-inverted.svg`, `img/logo-horizontal-transparent-bg.svg`, `img/logo-horizontal-transparent-bg-inverted.svg` — the sidebar logo.
 - `img/logo-vertical-transparent-bg.svg`, `img/logo-vertical-transparent-bg-inverted.svg` — the loading splash.
 - `img/icon-black-transparent-bg.svg` — Safari pinned-tab icon.

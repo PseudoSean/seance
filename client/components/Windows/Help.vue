@@ -18,6 +18,16 @@
 			</h2>
 
 			<div class="about">
+				<p
+					v-if="store.state.serverConfiguration?.isUpdateAvailable"
+					class="update-available"
+				>
+					A newer version of {{ appName }} has been downloaded and is ready to use.
+					<button type="button" class="btn" @click="reloadForUpdate">
+						Reload to update
+					</button>
+				</p>
+
 				<template v-if="store.state.serverConfiguration?.gitCommit">
 					<p>
 						{{ appName }} is running from source (<a
@@ -877,11 +887,16 @@ export default defineComponent({
 		const appName = computed(() => store.state.branding.appName);
 		const links = computed(() => store.state.branding.links ?? {});
 
+		// Installed PWAs have no reload button; the service worker flags a
+		// newer build in the store (see pwa.ts) and this picks it up.
+		const reloadForUpdate = () => window.location.reload();
+
 		return {
 			appName,
 			isApple,
 			isTouch,
 			links,
+			reloadForUpdate,
 			store,
 		};
 	},

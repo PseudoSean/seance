@@ -1,14 +1,14 @@
 <template>
 	<div>
-		<div v-if="canRegisterProtocol || hasInstallPromptEvent">
+		<div v-if="canRegisterProtocol || store.state.installPromptAvailable">
 			<h2>Native app</h2>
 			<button
-				v-if="hasInstallPromptEvent"
+				v-if="store.state.installPromptAvailable"
 				type="button"
 				class="btn"
 				@click.prevent="nativeInstallPrompt"
 			>
-				Add {{ appName }} to Home screen
+				Install {{ appName }} as an app
 			</button>
 			<button
 				v-if="canRegisterProtocol"
@@ -81,14 +81,7 @@
 <script lang="ts">
 import {computed, defineComponent, onMounted, ref} from "vue";
 import {useStore} from "../../js/store";
-import {BeforeInstallPromptEvent} from "../../js/types";
-
-let installPromptEvent: BeforeInstallPromptEvent | null = null;
-
-window.addEventListener("beforeinstallprompt", (e) => {
-	e.preventDefault();
-	installPromptEvent = e as BeforeInstallPromptEvent;
-});
+import {promptInstall} from "../../js/pwa";
 
 export default defineComponent({
 	name: "GeneralSettings",
@@ -96,11 +89,6 @@ export default defineComponent({
 		const store = useStore();
 		const appName = computed(() => store.state.branding.appName);
 		const canRegisterProtocol = ref(false);
-
-		const hasInstallPromptEvent = computed(() => {
-			// TODO: This doesn't hide the button after clicking
-			return installPromptEvent !== null;
-		});
 
 		onMounted(() => {
 			// Enable protocol handler registration if supported,
@@ -111,16 +99,9 @@ export default defineComponent({
 		});
 
 		const nativeInstallPrompt = () => {
-			if (!installPromptEvent) {
-				return;
-			}
-
-			installPromptEvent.prompt().catch((e) => {
-				// eslint-disable-next-line no-console
-				console.error(e);
-			});
-
-			installPromptEvent = null;
+			// The store flag (and so the button) clears as soon as the prompt
+			// is shown; Chrome fires a new beforeinstallprompt if dismissed.
+			void promptInstall();
 		};
 
 		const registerProtocol = () => {
@@ -136,7 +117,6 @@ export default defineComponent({
 			appName,
 			store,
 			canRegisterProtocol,
-			hasInstallPromptEvent,
 			nativeInstallPrompt,
 			registerProtocol,
 		};

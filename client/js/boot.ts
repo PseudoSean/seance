@@ -10,11 +10,13 @@
 import configuration from "./configuration";
 import {DEFAULT_UPLOAD_MAX_BYTES, loadBranding} from "./branding";
 import {router, navigate} from "./router";
+import type {LocationQueryRaw} from "vue-router";
 import {store} from "./store";
 import parseIrcUri from "./helpers/parseIrcUri";
 import {loadMentions} from "./mentions";
 import storage from "./localStorage";
 import {installNativeHooks} from "./native";
+import {onLaunch} from "./pwa";
 // Registers the IRC layer's bus handlers (input, names, more, network:*).
 import "./irc/manager";
 
@@ -23,6 +25,11 @@ declare global {
 		g_TheLoungeRemoveLoading?: () => void;
 	}
 }
+
+// The URL the page was opened with, before handleQueryParams() strips it: the
+// Launch Handler API replays the initial launch too, and it must not be
+// applied twice.
+const initialHref = document.location.href;
 
 export async function boot(): Promise<void> {
 	// Branding first: it decides the default theme and the document title,
@@ -87,6 +94,15 @@ export async function boot(): Promise<void> {
 		window.g_TheLoungeRemoveLoading();
 	}
 
+	// Installed app (manifest `launch_handler: focus-existing`): later
+	// launches — irc:// links, ?uri= URLs — land here instead of reloading
+	// the window, which would drop the IRC connection.
+	onLaunch((url) => {
+		if (url.href !== initialHref) {
+			void handleQueryParams(url.search, false);
+		}
+	});
+
 	if (await handleQueryParams()) {
 		// irc:// links or connect parameters in the URL already put us on
 		// the connect form with those values pre-filled.
@@ -104,31 +120,35 @@ export async function boot(): Promise<void> {
 	}
 }
 
-async function handleQueryParams(): Promise<boolean> {
-	if (!("URLSearchParams" in window)) {
+/**
+ * Open the connect form pre-filled from `?uri=irc://...` or plain `?host=...`
+ * style parameters. Returns true when there was something to apply.
+ *
+ * @param search   the query string to read (defaults to the page URL's)
+ * @param clean    strip the query from the address bar afterwards (only
+ *                 meaningful for the page's own URL)
+ */
+async function handleQueryParams(
+	search: string = document.location.search,
+	clean: boolean = true
+): Promise<boolean> {
+	if (!("URLSearchParams" in window) || !search) {
 		return false;
 	}
 
-	const params = new URLSearchParams(document.location.search);
+	const params = new URLSearchParams(search);
+	const queryParams: LocationQueryRaw = params.has("uri")
+		? // Set default connection settings from IRC protocol links
+		  (parseIrcUri(String(params.get("uri"))) as LocationQueryRaw)
+		: // Set default connection settings from url params
+		  Object.fromEntries(params.entries());
 
-	if (params.has("uri")) {
-		// Set default connection settings from IRC protocol links
-		const uri = params.get("uri");
-		const queryParams = parseIrcUri(String(uri));
+	if (clean) {
 		removeQueryParams();
-		await router.push({name: "Connect", query: queryParams});
-		return true;
 	}
 
-	if (document.location.search) {
-		// Set default connection settings from url params
-		const queryParams = Object.fromEntries(params.entries());
-		removeQueryParams();
-		await router.push({name: "Connect", query: queryParams});
-		return true;
-	}
-
-	return false;
+	await router.push({name: "Connect", query: queryParams});
+	return true;
 }
 
 function hasStoredSetting(name: string): boolean {

@@ -92,6 +92,45 @@ describe("public folder", function () {
 			.true;
 	});
 
+	it("manifest carries the installed-app fields Chrome needs", function () {
+		type Icon = {src: string; sizes: string; purpose: string};
+		const manifest = JSON.parse(
+			fs.readFileSync(path.join(publicFolder, "thelounge.webmanifest"), "utf8")
+		) as {
+			start_url: string;
+			scope: string;
+			display: string;
+			launch_handler: unknown;
+			protocol_handlers: {protocol: string; url: string}[];
+			icons: Icon[];
+		};
+
+		expect(manifest.start_url).to.equal("./");
+		expect(manifest.scope).to.equal("./");
+		expect(manifest.display).to.equal("standalone");
+		// Launches while a window is open reuse it instead of reloading it
+		expect(manifest.launch_handler).to.deep.equal({client_mode: "focus-existing"});
+		// irc:// and ircs:// links open in the installed app via ?uri=
+		expect(manifest.protocol_handlers.map((p) => p.protocol)).to.have.members(["irc", "ircs"]);
+
+		for (const handler of manifest.protocol_handlers) {
+			expect(handler.url).to.equal("./?uri=%s");
+		}
+
+		// 192 + 512 png icons with purpose "any" (no mixed "maskable any")
+		const png = (size: string, purpose: string): Icon | undefined =>
+			manifest.icons.find((i) => i.sizes === size && i.purpose === purpose);
+		expect(png("192x192", "any")).to.exist;
+		expect(png("512x512", "any")).to.exist;
+		expect(png("192x192", "maskable")).to.exist;
+		expect(png("512x512", "maskable")).to.exist;
+		expect(manifest.icons.some((i) => i.purpose.includes(" "))).to.be.false;
+
+		for (const icon of manifest.icons) {
+			expect(fs.existsSync(path.join(publicFolder, icon.src))).to.be.true;
+		}
+	});
+
 	it("service worker has cacheName set", function (done) {
 		fs.readFile(path.join(publicFolder, "service-worker.js"), "utf8", function (err, contents) {
 			expect(err).to.be.null;
@@ -110,6 +149,9 @@ describe("public folder", function () {
 			// Offline shell: index.html and the manifest are precached on install
 			expect(contents.includes('"index.html"')).to.be.true;
 			expect(contents.includes('"thelounge.webmanifest"')).to.be.true;
+			// ...and the bundle, so an installed app opens offline right away
+			expect(contents.includes("js/bundle.js?v=")).to.be.true;
+			expect(contents.includes("css/style.css?v=")).to.be.true;
 			expect(contents.includes('addEventListener("notificationclick"')).to.be.true;
 
 			// Nothing is left that expects the old Node server

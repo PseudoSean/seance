@@ -41,6 +41,8 @@ export type State = {
 	// TODO: type
 	mentions: ClientMention[];
 	hasServiceWorker: boolean;
+	/** Chrome offered `beforeinstallprompt` and the app is not installed yet. */
+	installPromptAvailable: boolean;
 	pushNotificationState: string;
 	serverConfiguration: SharedConfiguration | LockedSharedConfiguration | null;
 	sidebarOpen: boolean;
@@ -59,6 +61,7 @@ const state = (): State => ({
 	networks: [],
 	mentions: [],
 	hasServiceWorker: false,
+	installPromptAvailable: false,
 	pushNotificationState: "unsupported",
 	serverConfiguration: null,
 	sidebarOpen: false,
@@ -174,6 +177,9 @@ type Mutations = {
 		sortFn: (a: State["networks"][0], b: State["networks"][0]) => number
 	): void;
 	hasServiceWorker(state: State): void;
+	installPromptAvailable(state: State, available: boolean): void;
+	/** A newer build's service worker took over; a reload picks it up. */
+	updateAvailable(state: State): void;
 	pushNotificationState(
 		state: State,
 		pushNotificationState: State["pushNotificationState"]
@@ -225,6 +231,14 @@ const mutations: Mutations = {
 	},
 	hasServiceWorker(state) {
 		state.hasServiceWorker = true;
+	},
+	installPromptAvailable(state, available) {
+		state.installPromptAvailable = available;
+	},
+	updateAvailable(state) {
+		if (state.serverConfiguration) {
+			state.serverConfiguration.isUpdateAvailable = true;
+		}
 	},
 	pushNotificationState(state, pushNotificationState) {
 		state.pushNotificationState = pushNotificationState;

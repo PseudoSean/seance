@@ -73,6 +73,7 @@ Two TypeScript trees (`client/`, `shared/`) share `tsconfig.base.json`; `tsconfi
 Vue 3 + Vuex + Vue Router SPA built by webpack (`webpack.config.ts`) into `public/`. Components in `client/components/` (`.vue` SFCs); app logic in `client/js/` (`store.ts`, `router.ts`, `store-settings.ts`, `commands/` for UI-only slash commands, `helpers/`); themes in `client/themes/`; service worker `client/service-worker.js` (offline shell, no push).
 
 - **`client/js/boot.ts`** — boot sequence: `loadBranding()` (`config.json`) → commit static `configuration.ts` → apply stored settings → `appLoaded` → drop splash → handle `?uri=`/query params → route to the last channel or `Connect`. Importing `./irc/manager` registers the IRC bus handlers.
+- **`client/js/pwa.ts`** — installed-app glue: registers `service-worker.js` (secure contexts only), captures `beforeinstallprompt` into `store.state.installPromptAvailable` (Settings → "Install … as an app"), consumes `window.launchQueue` so `irc:` links reuse the running window (manifest `launch_handler: focus-existing`), and flags a new build via `controllerchange` (Help offers a reload). `tools/pwa-check.mjs <url>` asks headless Chromium for its installability verdict; see `docs/resources/pwa.md`.
 - **`client/js/socket.ts`** — `EventBus`, an in-process replacement for socket.io-client. `on/once/off` subscribe to server→client events, `dispatch(event, payload)` fires them; `emit(event, payload)` is routed to the single `handle(event, fn)` registered for it (unhandled emits `console.warn`). The `socket.on/emit` call-site shape across `socket-events/*` and components is kept **on purpose** so the IRC layer plugs in without touching ~50 call sites. No networking lives here.
 - **`client/js/socket-events/*`** — the bus consumers that mutate the store (`init`, `msg`, `join`, `names`, `network`, `more`, ...). `index.ts` lists them.
 - **`client/js/branding.ts`** + **`client/config.json`** — deploy branding schema/loader; `config.json` is copied to `public/` and fetched at runtime, and read by webpack for `index.html`/manifest.
@@ -101,7 +102,7 @@ Cross-cutting types and helpers. `shared/types/socket-events.ts` (`ServerToClien
 ### Everything else
 
 - **`attic/`** — TheLounge's old `server/`, CLI entry, defaults and server tests. **Reference only**: not built, linted, type-checked or tested; excluded from ESLint, Prettier and the TS references. Look there for "how did the old server do X"; never import from it. See `attic/README.md`.
-- **`tools/`** — `nefarious-dev/` (dev ircd) and `irc-ws-probe.mjs`.
+- **`tools/`** — `nefarious-dev/` (dev ircd), `irc-ws-probe.mjs` and `pwa-check.mjs`.
 - **`docs/`** — PARA layout (`projects/`, `areas/`, `resources/`, `archives/`), see `docs/README.md`.
 - **`tmp/`** — gitignored scratch: the nefarious2 checkout, the fix patch, dev-server state.
 - **`test/`** — see Conventions.
@@ -126,4 +127,5 @@ Cross-cutting types and helpers. `shared/types/socket-events.ts` (`ServerToClien
 - `docs/resources/nefarious2-dev.md` — running the dev ircd (Docker and native), test identities, TLS notes.
 - `docs/resources/browser-irc-parser.md` — why the parser is hand-rolled.
 - `docs/resources/branding.md` — `config.json` schema, runtime vs build-time branding, uploader contract.
+- `docs/resources/pwa.md` — what makes the deploy installable in Chrome, launch/update/offline behaviour, how to verify.
 - Public end-user docs still live in the separate `thelounge/thelounge.chat` repo.

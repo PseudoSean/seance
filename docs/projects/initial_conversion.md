@@ -159,6 +159,7 @@ No fixed order. Tackle items in whatever sequence the friction dictates.
 4. [ ] **Native shells**
    - [x] a. Electron wrapper. _Done 2026-08-25: `shells/electron/` (self-contained package; `app://` privileged scheme with CSP, sandboxed preload, irc:// handler, electron-builder; Linux pack + smoke verified; no signing/auto-update)._
    - [x] b. Capacitor (or thin native shell + WebView) for iOS/Android. Note WebSocket + background-keep-alive caveats per platform. _Scaffolded 2026-08-25: `shells/capacitor/` (Capacitor 8, android/ + ios/ generated and synced; `client/js/native.ts` reconnects on foreground and handles the back button). Not compiled here (no Android SDK/Xcode); caveats in its README._
+   - [x] c. Chrome PWA. _Done 2026-08-27: manifest reshaped (`scope`, `launch_handler: focus-existing`, `irc:`/`ircs:` `protocol_handlers`, `any` + `maskable` icons), `client/js/pwa.ts` (service-worker registration, reactive install prompt, `launchQueue` consumer, update detection with a reload in Help), full-shell precache for offline cold starts, `tools/pwa-check.mjs` installability probe; see `docs/resources/pwa.md`._
 5. [ ] **Docs**
    - [x] a. Rewrite `CLAUDE.md` to reflect the static-SPA architecture and `attic/` policy. _Done 2026-08-25._
    - [ ] b. Move this file to `docs/archives/` when shipped.
