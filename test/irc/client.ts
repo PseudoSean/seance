@@ -75,6 +75,11 @@ class FakeTransport implements Transport {
 		}
 	}
 
+	retry(attempt: number): void {
+		this.state = "connecting";
+		this.emit({type: "retry", attempt});
+	}
+
 	private emit(ev: TransportEvent): void {
 		for (const listener of [...this.listeners]) {
 			listener(ev);
@@ -764,6 +769,16 @@ describe("IrcClient", function () {
 			h.transport.closed(1006, "", true);
 			const hints = messages(1).filter((m) => /accept the warning/.test(m.text ?? ""));
 			expect(hints).to.have.length(1);
+		});
+
+		it("announces the retry when its wait is over", function () {
+			const h = setup();
+			h.client.connect();
+			h.transport.closed(1006, "", true);
+			h.transport.retry(1);
+
+			expect(lastMessage(1).text).to.equal("Connecting to irc.test:8443… (attempt 1)");
+			expect(h.client.state).to.equal("connecting");
 		});
 
 		it("reports a drop before registration completed as such", function () {

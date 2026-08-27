@@ -42,7 +42,9 @@ export type TransportEvent =
 			delayMs?: number;
 	  }
 	| {type: "error"; message: string}
-	| {type: "reconnecting"; attempt: number; delayMs: number};
+	| {type: "reconnecting"; attempt: number; delayMs: number}
+	// The scheduled retry is starting now (its wait from "reconnecting" is over).
+	| {type: "retry"; attempt: number};
 
 export type TransportState = "closed" | "connecting" | "open" | "reconnect-wait";
 const DEFAULTS = {
@@ -217,6 +219,7 @@ export class WsTransport {
 			this.emit({type: "reconnecting", attempt: this.attempt, delayMs});
 			this.timer = setTimeout(() => {
 				this.timer = null;
+				this.emit({type: "retry", attempt: this.attempt});
 				this.connect();
 			}, delayMs);
 		}

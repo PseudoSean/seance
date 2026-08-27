@@ -564,6 +564,17 @@ export class IrcClient {
 					true
 				);
 				break;
+			case "retry":
+				// The scheduled retry is dialling now.
+				this._state = "connecting";
+				this.pushMessage(
+					this.lobby,
+					{
+						text: `Connecting to ${this.options.host}:${this.options.port}… (attempt ${ev.attempt})`,
+					},
+					true
+				);
+				break;
 			case "error":
 				// Always followed by a close event, which is where we report.
 				this.lastTransportError = ev.message;

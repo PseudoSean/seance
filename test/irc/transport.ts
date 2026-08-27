@@ -365,6 +365,8 @@ describe("WsTransport", function () {
 				clock.tick(1);
 				expect(FakeWebSocket.instances).to.have.length(i + 2);
 				expect(t.state).to.equal("connecting");
+				// The dial itself is announced when the wait is over.
+				expect(events[events.length - 1]).to.deep.equal({type: "retry", attempt: i + 1});
 			});
 		});
 
