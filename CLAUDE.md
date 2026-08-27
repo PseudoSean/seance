@@ -84,7 +84,7 @@ Data flow: `transport.ts` (`WsTransport`: one line per frame, PING/PONG, reconne
 
 - **`handlers/`** — one file per command/numeric exporting `{COMMAND: handler}`; `handlers/index.ts` holds the `modules` list and the `unhandled` fallback. **To add a handler: add a file and one entry in `modules`.**
 - **`commands/`** — one file per slash command exporting a `Command`; `commands/index.ts` holds the `modules` list and `dispatchInput`. **To add a command: add a file and one entry in `modules`.** Unknown commands are sent raw.
-- `manager.ts` (`NetworkManager` registry, `createNetwork`), `bus.ts` (bus handlers, store-free), `history.ts` (`draft/chathistory` + batches; distinct from `client/js/history.ts`, the input history), `sts.ts`, `saved-networks.ts` (`thelounge.networks`), `ids.ts` (one shared id allocator across networks; history ids are negative), `errors.ts`, `hostmask.ts`, `wire.ts`, `types.ts`.
+- `manager.ts` (`NetworkManager` registry, `createNetwork`), `bus.ts` (bus handlers, store-free), `history.ts` (`draft/chathistory` + batches; distinct from `client/js/history.ts`, the input history), `catchup.ts` (paced per-channel history/marker fetch after JOIN — the active channel at once, the rest one per 4 s, because ircu-family servers charge ~2 s of fake lag per command and stop reading at 10 s; see `docs/projects/connect-burst.md`), `sts.ts`, `saved-networks.ts` (`thelounge.networks`), `ids.ts` (one shared id allocator across networks; history ids are negative), `errors.ts`, `hostmask.ts`, `wire.ts`, `types.ts`.
 
 ### Working in the IRC layer
 
@@ -111,6 +111,7 @@ Cross-cutting types and helpers. `shared/types/socket-events.ts` (`ServerToClien
 
 - Prettier is enforced (pre-commit hook via `yarn githooks-install`). If `yarn lint` fails, run `yarn format:prettier` first.
 - `client/` compiles with `strict: true`; `noImplicitAny: false` remains in the tsconfigs with a "TODO: Remove eventually" — write explicit types in new code. No Node built-ins in `client/` (it must bundle for the browser; `transport.ts` uses only the global `WebSocket`).
+- **Don't add per-channel commands to the connect path.** Every command costs ~2 s of server-side fake lag and the socket is ignored past 10 s (`docs/resources/nefarious2-websocket.md` § Fake lag). Autojoin is one `JOIN a,b,c` (`joinChannels`), `MODE` is asked lazily on first open, and anything else per channel goes through `catchup.ts`.
 - `MAX_LINE_BYTES = 500` (`client/js/irc/message.ts`) caps every outbound line, tags included: nefarious2 kills connections on inbound WS frames >= 528 bytes (#98) and the branch rejects message bodies over 512 bytes as excess flood, and browsers cannot control fragmentation. `splitMessage` chunks long text; do not raise the cap.
 - After changing `client/`, run `yarn build` (or `yarn watch`) — the mocha build test and the headless check both read `public/`.
 - Tests mirror the source under `test/`: `test/irc/*.ts` for the IRC layer, `test/shared/`, `test/tests/` (`build.ts`, `eventBus.ts`), `test/client/` (browser specs webpack bundles in development mode into `test/public/testclient.js`; ignored by mocha). Mocha config `test/.mocharc.yml` (tsx loader, `check-leaks`).

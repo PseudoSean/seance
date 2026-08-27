@@ -323,7 +323,8 @@ describe("Read markers (handlers/markread.ts)", function () {
 
 		socket.emit("open", chanId);
 		socket.emit("open", chanId);
-		expect(h.sent()).to.deep.equal([]);
+		// Opening also asks for the channel modes once (catchup.ts); not a marker.
+		expect(h.sent()).to.deep.equal(["MODE #seance"]);
 
 		clock.tick(MARKREAD_DEBOUNCE_MS - 1);
 		expect(h.sent()).to.deep.equal([]);
@@ -387,7 +388,7 @@ describe("Read markers (handlers/markread.ts)", function () {
 		live(h, 1);
 		socket.emit("open", chanId);
 		clock.tick(MARKREAD_DEBOUNCE_MS * 2);
-		expect(h.sent()).to.deep.equal([]);
+		expect(h.sent()).to.deep.equal(["MODE #seance"]);
 		expect(h.transport.sent.some((l) => l.startsWith("MARKREAD"))).to.equal(false);
 	});
 

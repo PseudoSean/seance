@@ -341,6 +341,10 @@ lcarol << @batch=hist7AAF;time=2026-08-26T03:38:20.292Z;msgid=ABAAAAAaA8Iz[g;+dr
 lcarol << @batch=hist7AAF;time=2026-08-26T03:38:23.204Z;msgid=ABAAAAAaA8Iz[n :lalice!lalice@172.17.0.1 REDACT #seance ABAAAAAaA8Iz[f :edited
 ```
 
+## Fake lag / flood penalty, measured 2026-08-27
+
+ircu-family throttling applies to WebSocket clients exactly as to TCP ones. `ircd/parse.c` (~L1620) charges every command from a non-oper `lag = lagmin + len / lagfactor` seconds onto `cli_since` (defaults `2 + len/120`; `MFLG_SLOW` commands always), and `ircd/s_bsd.c` (~L1339) stops reading the socket while `cli_since - CurrentTime >= 10` (opers / `IsTrusted` exempt). Multiline batches are charged once at `BATCH -` instead of per line. So a client gets roughly five commands "for free" and is then held to one every 2 s; a burst of 65 commands (what Seance used to send for 15 autojoined channels) silenced the server for ~90 s and every later line, including the user's first message, waited behind it. Exceeding the recvq while held is "Excess Flood". Seance now sends one multi-target `JOIN`, no `MODE` on join, and paces history/marker fetches one channel per 4 s (`client/js/irc/catchup.ts`; `docs/projects/connect-burst.md`). Worth asking upstream whether read-only fetches (`CHATHISTORY`, `MARKREAD` query) could carry a smaller charge.
+
 ## Open questions for the ircd side
 
 1. ~~Which branch?~~ Decided 2026-08-24: Seance targets `ircv3.2-upgrade` (and `ircv3.2-hardening` as it lands). Still open: will it merge to `master`, and should we pin a tag? `ghcr.io/evilnet/nefarious2:latest` referenced by the compose example does not exist on GHCR (checked 2026-08-24); we build locally.

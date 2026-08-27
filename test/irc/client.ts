@@ -353,7 +353,7 @@ describe("IrcClient", function () {
 	});
 
 	describe("JOIN", function () {
-		it("turns our placeholder into a JOINED channel and asks for its modes", function () {
+		it("turns our placeholder into a JOINED channel; modes are asked on first open, not on JOIN", function () {
 			const h = setup();
 			register(h);
 			const chan = h.client.findChannel("#seance")!;
@@ -363,7 +363,11 @@ describe("IrcClient", function () {
 			expect(payloads("channel:state")).to.deep.equal([
 				{chan: chan.id, state: ChanState.JOINED},
 			]);
-			expect(h.sentAfter()).to.deep.equal(["MODE #seance"]);
+			expect(h.sentAfter().filter((l) => l.startsWith("MODE"))).to.deep.equal([]);
+			h.client.open(chan.id);
+			expect(h.sentAfter().filter((l) => l.startsWith("MODE"))).to.deep.equal([
+				"MODE #seance",
+			]);
 			const msg = lastMessage(chan.id);
 			expect(msg.type).to.equal(MessageType.JOIN);
 			expect(msg.self).to.equal(true);
@@ -834,9 +838,11 @@ describe("IrcClient", function () {
 			h.transport.lines(":irc.test 001 alice :Welcome back", ":irc.test 422 alice :No MOTD");
 
 			const sent = h.sentAfter();
-			expect(sent).to.include("JOIN #seance");
-			expect(sent).to.include("JOIN #kept");
-			expect(sent).to.not.include("JOIN #left");
+			// One JOIN for the whole autojoin list.
+			const joins = sent.filter((l) => l.startsWith("JOIN "));
+			expect(joins).to.have.length(1);
+			expect(joins[0].split(" ")[1].split(",")).to.have.members(["#seance", "#kept"]);
+			expect(joins[0]).to.not.include("#left");
 			expect(payloads("init")).to.have.length(2);
 			const chans = payloads<{networks: SharedNetwork[]}>("init")[1].networks[0].channels;
 			expect(chans.map((c) => c.name)).to.deep.equal(["SeanceDev", "#kept", "#seance"]);

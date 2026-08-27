@@ -6,7 +6,7 @@
 import {ChanState, ChanType} from "../../../../shared/types/chan";
 import {MessageType, SharedMsg} from "../../../../shared/types/msg";
 import {newUser} from "../channel";
-import {formatLine, IrcMessage} from "../message";
+import {IrcMessage} from "../message";
 import type {Handler} from "../types";
 
 /** `{msgid}` when the line carries one (history dedupe / catch-up reference). */
@@ -58,8 +58,11 @@ const join: Handler = (client, msg) => {
 
 	if (self) {
 		chan.autoJoin = true;
-		// Learn the channel modes (key, limit...) the way the old server did.
-		client.send(formatLine({command: "MODE", params: [chan.name]}));
+		// The channel modes are asked for lazily, the first time the channel
+		// is opened (IrcClient.open): one MODE per autojoined channel at
+		// connect time is part of the burst that trips the server's flood
+		// penalty (see catchup.ts).
+		chan.modesKnown = false;
 	}
 
 	const message: Partial<SharedMsg> = {

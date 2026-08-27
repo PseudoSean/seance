@@ -40,6 +40,8 @@ export class Channel {
 	namesBuffer: Map<string, SharedUser> | null = null;
 	/** JOIN this channel after (re)registration. */
 	autoJoin = false;
+	/** `MODE <chan>` has been asked for since the last JOIN (asked lazily, on first open). */
+	modesKnown = false;
 	/** Last away message seen for the peer of a query window. */
 	userAway: string | undefined = undefined;
 	/** Reference of every message handed to the UI, by id (`more` cursor lookup). */

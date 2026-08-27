@@ -26,8 +26,9 @@ import {commandNames, dispatchInput} from "./commands";
 import {describeClose} from "./disconnect";
 import {handlers, unhandled} from "./handlers";
 import {interceptBatchLine, resetBatches} from "./handlers/batch";
-import {cancelMarkRead, fetchReadMarker, scheduleMarkRead} from "./handlers/markread";
-import {abortHistory, requestChannelHistory} from "./history";
+import {cancelMarkRead, scheduleMarkRead} from "./handlers/markread";
+import {abortHistory} from "./history";
+import {cancelCatchup, dropFromCatchup, enqueueCatchup, prioritiseCatchup} from "./catchup";
 import {IdAllocator, sharedIds} from "./ids";
 import {ISupport} from "./isupport";
 import {
@@ -722,6 +723,7 @@ export class IrcClient {
 
 		resetBatches(this);
 		abortHistory(this);
+		cancelCatchup(this);
 		this.clearPendingEdits();
 		this.clearTyping();
 
@@ -809,15 +811,16 @@ export class IrcClient {
 			);
 		}
 
-		for (const chan of this.channels) {
-			if (
-				chan.type === ChanType.CHANNEL &&
-				chan.autoJoin &&
-				chan.state === ChanState.PARTED
-			) {
-				this.joinChannel(chan.name, chan.shared.key);
-			}
-		}
+		this.joinChannels(
+			this.channels
+				.filter(
+					(chan) =>
+						chan.type === ChanType.CHANNEL &&
+						chan.autoJoin &&
+						chan.state === ChanState.PARTED
+				)
+				.map((chan) => ({name: chan.name, key: chan.shared.key}))
+		);
 	}
 
 	// --------------------------------------------------------------- sending
@@ -1208,6 +1211,55 @@ export class IrcClient {
 		this.send(formatLine({command: "JOIN", params: key ? [name, key] : [name]}));
 	}
 
+	/**
+	 * JOIN several channels with as few lines as possible (`JOIN a,b,c k1,k2`):
+	 * every command costs fake lag on ircu-family servers, so the autojoin
+	 * list must not become one command per channel. Keys are positional, so
+	 * keyed channels go first; lines respect `MAX_LINE_BYTES` and a
+	 * `TARGMAX=JOIN:<n>` limit when the server advertises one.
+	 */
+	joinChannels(chans: {name: string; key?: string}[]): void {
+		const limit = this.isupport.targmax.get("JOIN");
+		const ordered = [...chans.filter((c) => c.key), ...chans.filter((c) => !c.key)];
+		let names: string[] = [];
+		let keys: string[] = [];
+
+		const lineFor = (n: string[], k: string[]) =>
+			formatLine({
+				command: "JOIN",
+				params: k.length ? [n.join(","), k.join(",")] : [n.join(",")],
+			});
+
+		const flush = () => {
+			if (names.length > 0) {
+				this.send(lineFor(names, keys));
+				names = [];
+				keys = [];
+			}
+		};
+
+		for (const chan of ordered) {
+			const nextNames = [...names, chan.name];
+			const nextKeys = chan.key ? [...keys, chan.key] : keys;
+			const tooMany = limit !== undefined && limit > 0 && nextNames.length > limit;
+
+			if (
+				names.length > 0 &&
+				(tooMany || utf8ByteLength(lineFor(nextNames, nextKeys)) > MAX_LINE_BYTES)
+			) {
+				flush();
+			}
+
+			names.push(chan.name);
+
+			if (chan.key) {
+				keys.push(chan.key);
+			}
+		}
+
+		flush();
+	}
+
 	/** Handle a line of user input typed into channel `chanId`. */
 	input(chanId: number, text: string, opts: InputOptions = {}): void {
 		const chan = this.channelById(chanId);
@@ -1217,7 +1269,16 @@ export class IrcClient {
 		}
 	}
 
-	/** The UI opened `chanId` (or 0 for none): unread counters restart there. */
+	/** Id of the channel the UI is showing (0 for none). */
+	get activeChannelId(): number {
+		return this.activeChanId;
+	}
+
+	/**
+	 * The UI opened `chanId` (or 0 for none): unread counters restart there,
+	 * a pending catch-up is served now, and the channel modes are asked for
+	 * the first time round.
+	 */
 	open(chanId: number): void {
 		this.activeChanId = chanId;
 		const chan = this.channelById(chanId);
@@ -1226,6 +1287,17 @@ export class IrcClient {
 			chan.shared.unread = 0;
 			chan.shared.highlight = 0;
 			scheduleMarkRead(this, chan);
+			prioritiseCatchup(this, chan);
+
+			if (
+				chan.type === ChanType.CHANNEL &&
+				chan.state === ChanState.JOINED &&
+				!chan.modesKnown &&
+				this.transport.state === "open"
+			) {
+				chan.modesKnown = true;
+				this.send(formatLine({command: "MODE", params: [chan.name]}));
+			}
 		}
 	}
 
@@ -1287,8 +1359,10 @@ export class IrcClient {
 			const chan = this.findChannel(joinName);
 
 			if (chan) {
-				requestChannelHistory(this, chan, beforeJoin);
-				fetchReadMarker(this, chan);
+				// History + read marker, paced (catchup.ts): the active channel
+				// now, the rest one at a time so the server's flood penalty
+				// never queues the user's own lines.
+				enqueueCatchup(this, chan, beforeJoin);
 			}
 		}
 	}
@@ -1428,6 +1502,7 @@ export class IrcClient {
 			this.activeChanId = 0;
 		}
 
+		dropFromCatchup(this, chan);
 		this.bus.dispatch("part", {chan: chan.id});
 	}
 
