@@ -50,6 +50,7 @@ Port {
 - Run time: WebSocket works on **both** `ssl = yes` and plain ports — the handshake and frame writers branch on `cli_socket(cptr).ssl` (`websocket.c:398-412`, `s_bsd.c:398-416`). `ws://` on a plain port is fine for local dev; production is `wss://`.
 - Certificate: standard `SSL_CERTFILE`/`SSL_KEYFILE` features (`doc/readme.features:1666-1672`). Self-signed for dev; see `nefarious2-dev.md`.
 - `sts` cap is defined but `CAPFL_PROHIBIT` and default-off (`include/capab.h`, `ircd_features.c:1307`); `STS_PORT` default 6697 (`:1308`). Not relevant over WS.
+- **Client-certificate request breaks Chromium** (found 2026-08-27 against Fractal:9998, fixed by PR #101): `ssl_init_server_ctx()` sets `SSL_VERIFY_PEER` for certfp, so every TLS listener sends a CertificateRequest. Firefox continues without a cert; **Chrome/Edge cancel JS-initiated WebSocket handshakes outright** ("WebSocket opening handshake was canceled") because there is no certificate picker for WebSockets. Upstream PR #101 stops the request on `websocket = yes` listeners (per-connection `SSL_set_verify(SSL_VERIFY_NONE)`, the paste listener's existing workaround); `websocket = auto` ports still send it — the request precedes any bytes that could identify a browser — so a wss:// port meant for browsers must be `websocket = yes`, and certfp does not apply there.
 
 ### Framing rules
 
