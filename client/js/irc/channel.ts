@@ -42,6 +42,8 @@ export class Channel {
 	autoJoin = false;
 	/** `MODE <chan>` has been asked for since the last JOIN (asked lazily, on first open). */
 	modesKnown = false;
+	/** History/marker were requested in the same flush as the JOIN (catchup.ts); the echo must not repeat them. */
+	catchupPrefetched = false;
 	/** Last away message seen for the peer of a query window. */
 	userAway: string | undefined = undefined;
 	/** Reference of every message handed to the UI, by id (`more` cursor lookup). */

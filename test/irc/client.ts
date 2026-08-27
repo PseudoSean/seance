@@ -240,7 +240,7 @@ describe("IrcClient", function () {
 			expect(h.client.state).to.equal("registering");
 		});
 
-		it("requests the offered caps and ends negotiation once ACKed", function () {
+		it("requests the offered caps and pipelines CAP END behind the REQ", function () {
 			const h = setup();
 			h.client.connect();
 			h.transport.open();
@@ -249,10 +249,12 @@ describe("IrcClient", function () {
 			const req = h.transport.sent[3];
 			expect(req).to.match(/^CAP REQ :multi-prefix /);
 			expect(req).to.include("echo-message");
-			expect(h.transport.sent).to.not.include("CAP END");
+			// No round trip spent waiting for the ACK (ibutsu's suggestion).
+			expect(h.transport.sent[4]).to.equal("CAP END");
+			expect(h.transport.sent).to.have.length(5);
 
 			h.transport.line(`:irc.test CAP alice ACK :${req.slice("CAP REQ :".length)}`);
-			expect(h.transport.sent[h.transport.sent.length - 1]).to.equal("CAP END");
+			expect(h.transport.sent).to.have.length(5);
 			expect(h.client.caps.hasCapability("echo-message")).to.equal(true);
 		});
 

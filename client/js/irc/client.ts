@@ -28,7 +28,13 @@ import {handlers, unhandled} from "./handlers";
 import {interceptBatchLine, resetBatches} from "./handlers/batch";
 import {cancelMarkRead, scheduleMarkRead} from "./handlers/markread";
 import {abortHistory} from "./history";
-import {cancelCatchup, dropFromCatchup, enqueueCatchup, prioritiseCatchup} from "./catchup";
+import {
+	cancelCatchup,
+	dropFromCatchup,
+	enqueueCatchup,
+	prefetchCatchup,
+	prioritiseCatchup,
+} from "./catchup";
 import {IdAllocator, sharedIds} from "./ids";
 import {ISupport} from "./isupport";
 import {
@@ -634,9 +640,13 @@ export class IrcClient {
 		return caps;
 	}
 
-	/** `beforeEnd` hook: open the exchange if the server enabled `sasl`, else nothing. */
+	/**
+	 * `beforeEnd` hook: open the exchange if the server enabled `sasl` — or is
+	 * about to (the opener is pipelined right behind the `CAP REQ`, which the
+	 * server has answered by the time it reads AUTHENTICATE) — else nothing.
+	 */
 	private startSasl(mechanism: SaslMechanism): string[] {
-		if (!this.caps.hasCapability("sasl")) {
+		if (!this.caps.hasCapability("sasl") && !this.caps.isRequesting("sasl")) {
 			return [];
 		}
 
@@ -683,6 +693,13 @@ export class IrcClient {
 
 		for (const line of this.caps.end()) {
 			this.send(line);
+		}
+	}
+
+	/** Give up on an exchange in progress (e.g. the server NAKed `sasl`) and finish CAP. */
+	abortSasl(reason: string): void {
+		if (this.sasl && !this.sasl.done) {
+			this.saslProgress(this.sasl.abort(reason));
 		}
 	}
 
@@ -811,16 +828,20 @@ export class IrcClient {
 			);
 		}
 
-		this.joinChannels(
-			this.channels
-				.filter(
-					(chan) =>
-						chan.type === ChanType.CHANNEL &&
-						chan.autoJoin &&
-						chan.state === ChanState.PARTED
-				)
-				.map((chan) => ({name: chan.name, key: chan.shared.key}))
+		const joining = this.channels.filter(
+			(chan) =>
+				chan.type === ChanType.CHANNEL && chan.autoJoin && chan.state === ChanState.PARTED
 		);
+		this.joinChannels(joining.map((chan) => ({name: chan.name, key: chan.shared.key})));
+
+		// Pipelined behind the JOIN: the server processes lines in order, so
+		// by the time it reads the history request we are a member. Saves a
+		// round trip on the channel the user is looking at.
+		const active = joining.find((chan) => chan.id === this.activeChanId);
+
+		if (active) {
+			prefetchCatchup(this, active);
+		}
 	}
 
 	// --------------------------------------------------------------- sending

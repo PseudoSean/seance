@@ -99,9 +99,13 @@ describe("Connect burst: batched JOIN, paced catch-up, lazy MODE (irc/catchup.ts
 		h.sent();
 		joinAll(h);
 
-		// Active channel: history + marker now. Nothing for the others yet, and no MODE.
+		// Active channel: history + marker (+ its modes) now. Nothing for the others yet.
 		const first = h.sent();
-		expect(commandsOf(first)).to.deep.equal(["CHATHISTORY LATEST", "MARKREAD #seance"]);
+		expect(commandsOf(first)).to.deep.equal([
+			"CHATHISTORY LATEST",
+			"MARKREAD #seance",
+			"MODE #seance",
+		]);
 		expect(first[0]).to.include("#seance");
 		expect(pendingCatchup(h.client).map((c) => c.name)).to.deep.equal([
 			"#two",
@@ -137,13 +141,13 @@ describe("Connect burst: batched JOIN, paced catch-up, lazy MODE (irc/catchup.ts
 		expect(h.sent().filter((l) => l.startsWith("MODE"))).to.deep.equal([]);
 
 		// A re-JOIN (after a reconnect: everything is PARTED, not removed)
-		// asks again on the next open.
+		// asks again — #two is the active channel now, so with its catch-up.
 		h.transport.closed();
 		register(h, CAPS);
 		h.transport.line(":alice!alice@host JOIN #two");
-		h.sent();
-		h.client.open(h.client.findChannel("#two")!.id);
 		expect(h.sent().filter((l) => l.startsWith("MODE"))).to.deep.equal(["MODE #two"]);
+		h.client.open(h.client.findChannel("#two")!.id);
+		expect(h.sent().filter((l) => l.startsWith("MODE"))).to.deep.equal([]);
 	});
 
 	it("opening a waiting channel serves it immediately and keeps pacing the rest", function () {
@@ -223,9 +227,17 @@ describe("Connect burst: batched JOIN, paced catch-up, lazy MODE (irc/catchup.ts
 		);
 		h.transport.closed();
 		h.sent();
+		const mark = h.transport.sent.length;
 		register(h, CAPS);
+		// The active channel's catch-up is pipelined right behind the JOIN,
+		// before the echo; the echo then only adds the modes.
+		const atRegistration = h.transport.sent.slice(mark);
+		const join = atRegistration.findIndex((l) => l.startsWith("JOIN "));
+		expect(join).to.be.greaterThan(-1);
+		expect(atRegistration[join + 1]).to.match(/CHATHISTORY AFTER #seance msgid=m1 \d+$/);
+		// The marker is already known from before the drop: not asked again.
+		expect(atRegistration).to.not.include("MARKREAD #seance");
 		h.transport.line(":alice!alice@host JOIN #seance");
-		const lines = h.sent();
-		expect(lines[0], lines.join(" | ")).to.match(/CHATHISTORY AFTER #seance msgid=m1 \d+$/);
+		expect(h.sent()).to.deep.equal(["MODE #seance"]);
 	});
 });

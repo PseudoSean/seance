@@ -40,7 +40,7 @@ describe("irc/caps", function () {
 	});
 
 	describe("nefarious2 ircv3.2-upgrade transcript", function () {
-		it("accumulates the continued LS, REQs once and ENDs after ACK", function () {
+		it("accumulates the continued LS, then REQs once and ENDs in the same flush", function () {
 			const neg = new CapNegotiator(SEANCE_CAPS);
 
 			const first = feed(neg, NEFARIOUS_LS_1);
@@ -50,10 +50,13 @@ describe("irc/caps", function () {
 			expect(neg.available.has("tls")).to.equal(false);
 
 			const second = feed(neg, NEFARIOUS_LS_2);
-			expect(second.done).to.equal(false);
+			// Pipelined: the REQ and CAP END go out together; the ACK is
+			// processed by the server before it reads the END.
+			expect(second.done).to.equal(true);
 			expect(second.missingRequired).to.deep.equal([]);
 			expect(second.error).to.equal(undefined);
-			expect(second.send).to.have.length(1);
+			expect(second.send).to.have.length(2);
+			expect(second.send[1]).to.equal("CAP END");
 			expect(neg.available.has("tls")).to.equal(true);
 
 			const requested = reqCaps(second.send[0]);
@@ -67,7 +70,7 @@ describe("irc/caps", function () {
 			expect(utf8ByteLength(second.send[0])).to.be.at.most(MAX_LINE_BYTES);
 
 			const ack = feed(neg, `:irc.seance.test CAP * ACK :${requested.join(" ")}`);
-			expect(ack.send).to.deep.equal(["CAP END"]);
+			expect(ack.send).to.deep.equal([]);
 			expect(ack.done).to.equal(true);
 			expect(neg.done).to.equal(true);
 
@@ -92,7 +95,7 @@ describe("irc/caps", function () {
 			expect(neg.value("nope")).to.equal(undefined);
 		});
 
-		it("does not emit CAP END until every REQ is answered", function () {
+		it("keeps tracking ACKs that arrive after the pipelined CAP END", function () {
 			const neg = new CapNegotiator(SEANCE_CAPS);
 			feed(neg, NEFARIOUS_LS_1);
 			const requested = reqCaps(feed(neg, NEFARIOUS_LS_2).send[0]);
@@ -102,11 +105,12 @@ describe("irc/caps", function () {
 
 			const partial = feed(neg, `:irc.seance.test CAP * ACK :${half.join(" ")}`);
 			expect(partial.send).to.deep.equal([]);
-			expect(partial.done).to.equal(false);
+			expect(half.every((c) => neg.hasCapability(c))).to.equal(true);
+			expect(rest.some((c) => neg.hasCapability(c))).to.equal(false);
 
 			const final = feed(neg, `:irc.seance.test CAP * ACK :${rest.join(" ")}`);
-			expect(final.send).to.deep.equal(["CAP END"]);
-			expect(final.done).to.equal(true);
+			expect(final.send).to.deep.equal([]);
+			expect(rest.every((c) => neg.hasCapability(c))).to.equal(true);
 		});
 	});
 
@@ -115,7 +119,8 @@ describe("irc/caps", function () {
 			const neg = new CapNegotiator(SEANCE_CAPS);
 			const ls = feed(neg, MASTER_LS);
 
-			expect(ls.send).to.have.length(1);
+			expect(ls.send).to.have.length(2);
+			expect(ls.send[1]).to.equal("CAP END");
 			const requested = reqCaps(ls.send[0]);
 			expect(requested).to.deep.equal([
 				"multi-prefix",
@@ -126,7 +131,7 @@ describe("irc/caps", function () {
 			]);
 
 			const ack = feed(neg, `:irc.example.org CAP * ACK :${requested.join(" ")}`);
-			expect(ack.send).to.deep.equal(["CAP END"]);
+			expect(ack.send).to.deep.equal([]);
 			expect(ack.done).to.equal(true);
 		});
 	});
@@ -154,29 +159,42 @@ describe("irc/caps", function () {
 			expect(reqCaps(res.send[0])).to.deep.equal(["server-time", "multi-prefix"]);
 		});
 
-		it("reports NAKed required caps but still finishes negotiation", function () {
+		it("retries a NAKed multi-cap REQ one cap at a time, then reports the required one", function () {
 			const neg = new CapNegotiator({required: ["server-time"], wanted: ["multi-prefix"]});
-			feed(neg, ":s CAP * LS :multi-prefix server-time");
+			const ls = feed(neg, ":s CAP * LS :multi-prefix server-time");
+			expect(ls.send).to.deep.equal(["CAP REQ :server-time multi-prefix", "CAP END"]);
 
+			// A REQ is atomic: one refused cap sinks the lot. Ask again singly.
 			const nak = feed(neg, ":s CAP * NAK :server-time multi-prefix");
-			expect(nak.missingRequired).to.deep.equal(["server-time"]);
-			expect(nak.error).to.be.a("string");
-			expect(nak.send).to.deep.equal(["CAP END"]);
-			expect(nak.done).to.equal(true);
-			expect(neg.enabled.size).to.equal(0);
+			expect(nak.send).to.deep.equal(["CAP REQ :server-time", "CAP REQ :multi-prefix"]);
+			expect(nak.missingRequired).to.deep.equal([]);
+			expect(nak.naked).to.deep.equal([]);
+
+			const nak2 = feed(neg, ":s CAP * NAK :server-time");
+			expect(nak2.send).to.deep.equal([]);
+			expect(nak2.missingRequired).to.deep.equal(["server-time"]);
+			expect(nak2.error).to.be.a("string");
+			expect(feed(neg, ":s CAP * ACK :multi-prefix").send).to.deep.equal([]);
+			expect(Array.from(neg.enabled)).to.deep.equal(["multi-prefix"]);
 		});
 	});
 
 	describe("NAK", function () {
-		it("treats NAK as an answer and does not enable the caps", function () {
+		it("treats a single-cap NAK as final and does not enable the cap", function () {
 			const neg = new CapNegotiator({required: [], wanted: ["a", "b"]});
 			feed(neg, ":s CAP * LS :a b c");
 
 			const nak = feed(neg, ":s CAP * NAK :a b");
-			expect(nak.send).to.deep.equal(["CAP END"]);
+			expect(nak.send).to.deep.equal(["CAP REQ :a", "CAP REQ :b"]);
 			expect(nak.done).to.equal(true);
 			expect(nak.missingRequired).to.deep.equal([]);
+
+			const again = feed(neg, ":s CAP * NAK :a");
+			expect(again.send).to.deep.equal([]);
+			expect(again.naked).to.deep.equal(["a"]);
 			expect(neg.hasCapability("a")).to.equal(false);
+			expect(neg.isRequesting("a")).to.equal(false);
+			expect(neg.isRequesting("b")).to.equal(true);
 		});
 
 		it("mixes ACK and NAK across replies", function () {
@@ -185,7 +203,7 @@ describe("irc/caps", function () {
 
 			expect(feed(neg, ":s CAP * NAK :b").send).to.deep.equal([]);
 			const ack = feed(neg, ":s CAP * ACK :a c");
-			expect(ack.send).to.deep.equal(["CAP END"]);
+			expect(ack.send).to.deep.equal([]);
 			expect(Array.from(neg.enabled)).to.deep.equal(["a", "c"]);
 		});
 	});
@@ -208,7 +226,7 @@ describe("irc/caps", function () {
 		it("ignores non-CAP messages", function () {
 			const neg = new CapNegotiator(SEANCE_CAPS);
 			const res = feed(neg, ":s NOTICE * :*** Looking up your hostname");
-			expect(res).to.deep.equal({send: [], done: false, missingRequired: []});
+			expect(res).to.deep.equal({send: [], done: false, missingRequired: [], naked: []});
 		});
 
 		it("ignores a CAP with too few params", function () {
@@ -218,14 +236,14 @@ describe("irc/caps", function () {
 
 		it("does not REQ twice on a duplicate final LS", function () {
 			const neg = new CapNegotiator({required: [], wanted: ["a"]});
-			expect(feed(neg, ":s CAP * LS :a").send).to.have.length(1);
+			expect(feed(neg, ":s CAP * LS :a").send).to.deep.equal(["CAP REQ :a", "CAP END"]);
 			expect(feed(neg, ":s CAP * LS :a").send).to.deep.equal([]);
 		});
 
 		it("does not emit CAP END twice", function () {
 			const neg = new CapNegotiator({required: [], wanted: ["a"]});
-			feed(neg, ":s CAP * LS :a");
-			expect(feed(neg, ":s CAP * ACK :a").send).to.deep.equal(["CAP END"]);
+			expect(feed(neg, ":s CAP * LS :a").send).to.deep.equal(["CAP REQ :a", "CAP END"]);
+			expect(feed(neg, ":s CAP * ACK :a").send).to.deep.equal([]);
 			expect(feed(neg, ":s CAP * ACK :a").send).to.deep.equal([]);
 		});
 
@@ -261,6 +279,7 @@ describe("irc/caps", function () {
 
 			const neg = new CapNegotiator({required: [], wanted});
 			const res = feed(neg, `:s CAP * LS :${wanted.join(" ")}`);
+			expect(res.send.pop()).to.equal("CAP END");
 			expect(res.send.length).to.be.greaterThan(1);
 
 			const all: string[] = [];
@@ -341,19 +360,15 @@ describe("irc/caps", function () {
 			expect(reqCaps(res.send[0])).to.deep.equal(["a", "b"]);
 		});
 
-		it("delays CAP END while a NEW-triggered REQ is outstanding", function () {
+		it("REQs a NEW cap after the pipelined END and enables it on ACK", function () {
 			const neg = new CapNegotiator({required: [], wanted: ["a", "b"]});
-			feed(neg, ":s CAP * LS :a");
+			expect(feed(neg, ":s CAP * LS :a").send).to.deep.equal(["CAP REQ :a", "CAP END"]);
 			const nw = feed(neg, ":s CAP * NEW :b");
 			expect(nw.send).to.deep.equal(["CAP REQ :b"]);
 
-			const ack1 = feed(neg, ":s CAP * ACK :a");
-			expect(ack1.send).to.deep.equal([]);
-			expect(ack1.done).to.equal(false);
-
-			const ack2 = feed(neg, ":s CAP * ACK :b");
-			expect(ack2.send).to.deep.equal(["CAP END"]);
-			expect(ack2.done).to.equal(true);
+			expect(feed(neg, ":s CAP * ACK :a").send).to.deep.equal([]);
+			expect(feed(neg, ":s CAP * ACK :b").send).to.deep.equal([]);
+			expect(neg.hasCapability("b")).to.equal(true);
 		});
 	});
 

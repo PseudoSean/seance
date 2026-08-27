@@ -39,6 +39,8 @@ export interface CapResult {
 	done: boolean;
 	/** Required caps the server did not offer, NAKed or removed. */
 	missingRequired: string[];
+	/** Caps the server refused in this message (after any per-cap retry was queued). */
+	naked: string[];
 	error?: string;
 }
 
@@ -131,6 +133,8 @@ export class CapNegotiator {
 	private pendingEnd = false;
 	/** Set when a required cap is missing at LS time; negotiation halts. */
 	private failed = false;
+	/** Caps re-requested one at a time after a multi-cap REQ was NAKed (once each). */
+	private readonly nakRetried = new Set<string>();
 
 	constructor(options: CapNegotiatorOptions) {
 		this.required = [...options.required];
@@ -168,9 +172,14 @@ export class CapNegotiator {
 		return this.enabled.has(cap);
 	}
 
+	/** True while `cap` is in a `CAP REQ` the server has not answered yet. */
+	isRequesting(cap: string): boolean {
+		return this.outstanding.has(cap);
+	}
+
 	/** Process one incoming message. Non-CAP messages are ignored. */
 	handle(msg: IrcMessage): CapResult {
-		const result: CapResult = {send: [], done: this.ended, missingRequired: []};
+		const result: CapResult = {send: [], done: this.ended, missingRequired: [], naked: []};
 
 		if (msg.command !== "CAP" || msg.params.length < 2) {
 			return result;
@@ -247,6 +256,33 @@ export class CapNegotiator {
 		}
 
 		this.request(this.desired(), result);
+		this.pipelineEnd(result);
+	}
+
+	/**
+	 * Pipelining: the server answers a REQ before it reads our next line, so
+	 * waiting for the ACK before sending what follows only costs a round
+	 * trip. Right after the REQ we send the SASL opener when `beforeEnd`
+	 * wants one (by the time AUTHENTICATE is read, the ACK has been
+	 * processed; a NAK of `sasl` is handled by the caller aborting SASL),
+	 * otherwise `CAP END` itself. ACK/NAK replies are still processed as
+	 * they arrive; a NAK re-requests caps one at a time (see onNak).
+	 */
+	private pipelineEnd(result: CapResult): void {
+		if (this.ended || this.pendingEnd || this.failed) {
+			return;
+		}
+
+		const first = this.beforeEnd?.() ?? [];
+
+		if (first.length > 0) {
+			this.pendingEnd = true;
+			result.send.push(...first);
+			return;
+		}
+
+		this.ended = true;
+		result.send.push("CAP END");
 	}
 
 	private onAck(caps: [string, string][]): void {
@@ -263,8 +299,27 @@ export class CapNegotiator {
 	}
 
 	private onNak(caps: [string, string][], result: CapResult): void {
+		// A REQ is all-or-nothing: a NAK of several caps says nothing about
+		// each one, so ask for them again one at a time (once). This also
+		// works after CAP END; caps may be requested at any time.
+		const retry = caps.length > 1;
+
 		for (const [name] of caps) {
 			this.outstanding.delete(name);
+
+			if (
+				retry &&
+				this.available.has(name) &&
+				!this.nakRetried.has(name) &&
+				(this.accept === undefined || this.accept(name, this.available.get(name) ?? ""))
+			) {
+				this.nakRetried.add(name);
+				this.outstanding.add(name);
+				result.send.push(REQ_PREFIX + name);
+				continue;
+			}
+
+			result.naked.push(name);
 
 			if (this.required.includes(name)) {
 				result.missingRequired.push(name);

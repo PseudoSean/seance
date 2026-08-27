@@ -53,6 +53,37 @@ is "Excess Flood" and a disconnect.
 - Tests: `test/irc/catchup.ts` (fake timers); `client.ts`/`markread.ts`
   expectations updated (no MODE on JOIN, MODE on first open, single JOIN).
 
+## Pipelining during registration (2026-08-27, suggested by ibutsu)
+
+The lag clock is reset when registration completes (`s_auth.c:1483`
+`cli_since = CurrentTime`), so commands sent before `001` are free — the
+only cost of the registration exchange is round trips, and each "wait for
+the reply before sending the next line" was one. The server processes
+lines in order, so anything whose precondition is established by the
+previous line can be sent in the same flush:
+
+- `CAP REQ …` → **`CAP END` in the same flush** (`caps.ts`
+  `pipelineEnd`). The ACK/NAK still arrive and are tracked; a NAKed
+  multi-cap REQ is atomic, so its caps are re-requested one at a time
+  (once each; works after `CAP END` too). With SASL configured the
+  `AUTHENTICATE <mech>` opener is what follows the REQ instead (the cap
+  is enabled by the time the server reads it); a NAK of `sasl` aborts the
+  exchange (`AUTHENTICATE *`) and sends `CAP END`.
+- `JOIN a,b,c` → **the active channel's `CHATHISTORY` + `MARKREAD` in the
+  same flush** (`catchup.ts` `prefetchCatchup`, called from the
+  registration hook): membership holds by the time the server reads them.
+  The JOIN echo then only adds `MODE` for that channel.
+- Not pipelined: the PLAIN payload behind `AUTHENTICATE PLAIN` (needs the
+  server to accept data before it sent `AUTHENTICATE +`; untestable here,
+  no services), and `CAP END` before the SASL result (registration must
+  not complete unauthenticated).
+
+Measured (localhost, 4 channels): socket open → history batch went from
+five round trips (LS · REQ · END→001 · JOIN · history) to three
+(LS · REQ+END→001 · JOIN+history), all commands for the visible channel
+out by 0.07 s. On a 100 ms link that is ~200 ms off every connect and
+reconnect.
+
 ## Follow-ups
 
 - **`CHATHISTORY TARGETS <t1> <t2> <limit>`** — nefarious2 implements it

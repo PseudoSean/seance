@@ -255,14 +255,23 @@ describe("IrcClient SASL", function () {
 		expect(transport.sent[transport.sent.length - 1]).to.equal("CAP END");
 	});
 
-	it("continues to CAP END when the server NAKs sasl", function () {
+	it("pipelines AUTHENTICATE behind the REQ, and aborts to CAP END when the server NAKs sasl", function () {
 		const {client, transport} = setup();
 		transport.line(`:irc.test CAP * LS :${OFFERED_CAPS} sasl=PLAIN`);
 		const req = transport.sent.find((l) => l.startsWith("CAP REQ :")) as string;
 		const names = req.slice("CAP REQ :".length).split(" ");
-		transport.line(`:irc.test CAP alice NAK :${names.join(" ")}`);
+		// The opener goes out with the REQ: no round trip waiting for the ACK.
+		expect(transport.sent[transport.sent.indexOf(req) + 1]).to.equal("AUTHENTICATE PLAIN");
+		expect(client.sasl).to.not.equal(null);
 
-		expect(transport.sent[transport.sent.length - 1]).to.equal("CAP END");
+		// A NAKed multi-cap REQ is retried one cap at a time...
+		transport.line(`:irc.test CAP alice NAK :${names.join(" ")}`);
+		expect(transport.sent.filter((l) => l === "CAP REQ :sasl")).to.have.length(1);
+		expect(transport.sent).to.not.include("CAP END");
+
+		// ...and a NAK of `sasl` itself ends the exchange.
+		transport.line(":irc.test CAP alice NAK :sasl");
+		expect(transport.sent.slice(-2)).to.deep.equal(["AUTHENTICATE *", "CAP END"]);
 		expect(client.sasl).to.equal(null);
 	});
 

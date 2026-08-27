@@ -24,6 +24,7 @@ import type {Channel, MsgRef} from "./channel";
 import type {IrcClient} from "./client";
 import {fetchReadMarker} from "./handlers/markread";
 import {requestChannelHistory} from "./history";
+import {formatLine} from "./message";
 
 /** Spacing between background catch-up steps (one channel each). */
 export const CATCHUP_INTERVAL_MS = 4000;
@@ -32,6 +33,8 @@ interface PendingCatchup {
 	chan: Channel;
 	/** The channel's newest known message before this JOIN (reconnect catch-up). */
 	before: MsgRef | undefined;
+	/** History + marker already went out with the JOIN; only the modes are left. */
+	prefetched: boolean;
 }
 
 interface CatchupState {
@@ -59,19 +62,40 @@ export function pendingCatchup(client: IrcClient): readonly Channel[] {
 }
 
 /**
+ * Send the history + marker fetch for `chan` right behind its JOIN, before
+ * the echo: the server processes lines in order, so membership holds by the
+ * time it reads them. Used for the active channel at connect time; the JOIN
+ * echo then only has the modes left to ask for.
+ */
+export function prefetchCatchup(client: IrcClient, chan: Channel): void {
+	const state = stateOf(client);
+	state.lastStepAt = Date.now();
+	chan.catchupPrefetched = true;
+	fetchFor(client, chan, chan.newestRef);
+}
+
+/**
  * Our JOIN to `chan` was confirmed: queue its history + read-marker fetch.
  * The active channel jumps the queue and is served now.
  */
 export function enqueueCatchup(client: IrcClient, chan: Channel, before: MsgRef | undefined): void {
 	const state = stateOf(client);
+	const prefetched = chan.catchupPrefetched;
+	chan.catchupPrefetched = false;
+
+	if (prefetched && (chan.id !== client.activeChannelId || chan.modesKnown)) {
+		return; // nothing left to ask for
+	}
+
 	const existing = state.queue.find((p) => p.chan === chan);
 
 	if (existing) {
 		existing.before = before;
+		existing.prefetched = prefetched;
 	} else if (chan.id === client.activeChannelId) {
-		state.queue.unshift({chan, before});
+		state.queue.unshift({chan, before, prefetched});
 	} else {
-		state.queue.push({chan, before});
+		state.queue.push({chan, before, prefetched});
 	}
 
 	if (chan.id === client.activeChannelId) {
@@ -160,13 +184,27 @@ function step(client: IrcClient, state: CatchupState): void {
 	}
 
 	state.lastStepAt = Date.now();
-	requestChannelHistory(client, next.chan, next.before);
 
-	// nefarious2 volunteers the marker after JOIN for logged-in accounts; only
-	// ask when we still have none.
-	if (!next.chan.readMarker) {
-		fetchReadMarker(client, next.chan);
+	if (!next.prefetched) {
+		fetchFor(client, next.chan, next.before);
+	}
+
+	// The modes line is cosmetic: other channels ask on first open
+	// (IrcClient.open); the one being looked at gets it with its catch-up.
+	if (next.chan.id === client.activeChannelId && !next.chan.modesKnown) {
+		next.chan.modesKnown = true;
+		client.send(formatLine({command: "MODE", params: [next.chan.name]}));
 	}
 
 	pump(client, state);
+}
+
+function fetchFor(client: IrcClient, chan: Channel, before: MsgRef | undefined): void {
+	requestChannelHistory(client, chan, before);
+
+	// nefarious2 volunteers the marker after JOIN for logged-in accounts; only
+	// ask when we still have none.
+	if (!chan.readMarker) {
+		fetchReadMarker(client, chan);
+	}
 }
