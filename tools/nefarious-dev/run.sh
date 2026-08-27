@@ -39,7 +39,7 @@ DETACH=""
 docker rm -f nefarious-dev >/dev/null 2>&1 || true
 exec docker run --rm $DETACH --name nefarious-dev \
 	-p 127.0.0.1:6667:6667 -p 127.0.0.1:6697:6697 \
-	-p 127.0.0.1:8067:8067 -p 127.0.0.1:8443:8443 \
+	-p 127.0.0.1:8067:8067 -p 127.0.0.1:8443:8443 -p 127.0.0.1:8444:8444 \
 	-e IRCD_GENERAL_NAME=irc.seance.test \
 	-e IRCD_GENERAL_DESCRIPTION="Seance dev" \
 	-e IRCD_GENERAL_NUMERIC=1 \
