@@ -39,10 +39,10 @@
 					<button
 						type="button"
 						class="btn btn-small"
-						:disabled="isLive(net.uuid)"
+						:disabled="savedNetworkBusy(net.uuid)"
 						@click="connectSaved(net)"
 					>
-						{{ isLive(net.uuid) ? "Connected" : "Connect" }}
+						{{ savedNetworkLabel(net.uuid) }}
 					</button>
 					<button
 						type="button"
@@ -287,7 +287,7 @@ import {defineComponent, onMounted, reactive, ref, watch} from "vue";
 
 import {useStore} from "../../js/store";
 import {brandingFeatures, brandingString, expandNick} from "../../js/branding";
-import {autoconnectSavedNetworks, clientForNetwork, createNetwork} from "../../js/irc/manager";
+import {autoconnectSavedNetworks, createNetwork} from "../../js/irc/manager";
 import * as saved from "../../js/irc/saved-networks";
 import {defaultPort, displayName, SavedNetwork} from "../../js/irc/saved-networks";
 import type {ConnectOptions} from "../../js/irc/types";
@@ -398,7 +398,13 @@ export default defineComponent({
 			pinServer();
 			showSasl.value = form.sasl === "plain" || !!form.saslAccount;
 		} else {
-			const last = showSavedNetworks ? saved.lastUsed() : undefined;
+			// Pre-fill from the last-used entry only while nothing is live yet:
+			// with networks up, this screen is "add another network" and starts
+			// blank (the picker above still reuses a saved entry in one click).
+			const last =
+				showSavedNetworks && store.state.networks.length === 0
+					? saved.lastUsed()
+					: undefined;
 
 			if (last) {
 				prefill(last);
@@ -460,7 +466,18 @@ export default defineComponent({
 			refreshSaved();
 		};
 
-		const isLive = (uuid: string) => clientForNetwork(uuid) !== undefined;
+		/** Live connection state of a saved entry, scoped to that network's uuid. */
+		const statusOf = (uuid: string) => store.getters.findNetwork(uuid)?.status ?? null;
+
+		const savedNetworkBusy = (uuid: string) => {
+			const status = statusOf(uuid);
+			return !!(status?.connected || status?.connecting);
+		};
+
+		const savedNetworkLabel = (uuid: string) => {
+			const status = statusOf(uuid);
+			return status?.connected ? "Connected" : status?.connecting ? "Connecting…" : "Connect";
+		};
 
 		onMounted(() => {
 			// `?autoconnect=1` with a host and nick skips the form entirely.
@@ -491,7 +508,8 @@ export default defineComponent({
 			prefill,
 			connectSaved,
 			removeSaved,
-			isLive,
+			savedNetworkBusy,
+			savedNetworkLabel,
 			onSubmit,
 		};
 	},

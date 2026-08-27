@@ -3,7 +3,7 @@
 		<div v-show="channel.moreHistoryAvailable" class="show-more">
 			<button
 				ref="loadMoreButton"
-				:disabled="channel.historyLoading || !store.state.isConnected"
+				:disabled="channel.historyLoading || !network.status.connected"
 				class="btn"
 				@click="onShowMoreClick"
 			>
@@ -126,7 +126,7 @@ export default defineComponent({
 		};
 
 		const onShowMoreClick = () => {
-			if (!store.state.isConnected) {
+			if (!props.network.status.connected) {
 				return;
 			}
 

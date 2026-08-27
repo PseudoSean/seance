@@ -97,6 +97,18 @@ export function createNetwork(options: CreateNetworkOptions): IrcClient {
 		if (entry.name) {
 			client.setNetworkName(entry.name);
 		}
+	} else {
+		// Reconnecting an existing network through the connect screen: the
+		// form's settings win, same rules as `network:edit` in bus.ts.
+		client.applySettings(saved.toConnectOptions(entry));
+
+		if (entry.nick && entry.nick !== client.nick) {
+			client.input(client.lobby.id, `/nick ${entry.nick}`);
+		}
+
+		if (entry.name && entry.name !== client.name) {
+			client.setNetworkName(entry.name);
+		}
 	}
 
 	client.connect();

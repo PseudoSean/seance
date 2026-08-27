@@ -58,7 +58,7 @@
 				id="upload"
 				type="button"
 				aria-label="Upload file"
-				:disabled="!store.state.isConnected"
+				:disabled="!network.status.connected"
 			/>
 		</span>
 		<span
@@ -66,12 +66,7 @@
 			class="tooltipped tooltipped-w tooltipped-no-touch"
 			data-tooltip="Send message"
 		>
-			<button
-				id="submit"
-				type="submit"
-				aria-label="Send message"
-				:disabled="!store.state.isConnected"
-			/>
+			<button id="submit" type="submit" aria-label="Send message" />
 		</span>
 	</form>
 </template>
@@ -212,10 +207,9 @@ export default defineComponent({
 			input.value.click();
 			input.value.focus();
 
-			if (!store.state.isConnected) {
-				return false;
-			}
-
+			// No global gate: `/connect` and friends must work from a
+			// disconnected network; plain text gets a proper error from
+			// the IRC layer (NOT_CONNECTED_TEXT).
 			const target = props.channel.id;
 			const text = props.channel.pendingMessage;
 
