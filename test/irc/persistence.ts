@@ -11,7 +11,8 @@ import {MessageType} from "../../shared/types/msg";
 import {ALL_CAPS, Harness, batch, labelOf, register, setup} from "./support";
 
 const CAPS = ALL_CAPS + " draft/persistence";
-const HOLD = [":irc.test PERSISTENCE STATUS ON"];
+// `STATUS <client-setting> <effective>`; the effective state is the last one.
+const HOLD = [":irc.test PERSISTENCE STATUS DEFAULT ON"];
 
 /** Types of the messages the UI got for `chanId`. */
 function types(h: Harness, chanId: number): MessageType[] {
@@ -73,9 +74,24 @@ describe("Session persistence and quiet re-joins (irc/persistence.ts)", function
 			);
 		});
 
+		it("reads the effective state, in either the one- or two-argument form", function () {
+			const two = setup();
+			register(two, CAPS, [":irc.test PERSISTENCE STATUS ON OFF"]);
+			expect(two.client.persistenceHold).to.equal(false);
+			expect(two.transport.sent.filter((l) => l.startsWith("JOIN"))).to.deep.equal([
+				"JOIN #seance",
+			]);
+
+			// nefarious2 before 7a47da1: the effective state on its own.
+			const one = setup();
+			register(one, CAPS, [":irc.test PERSISTENCE STATUS ON"]);
+			expect(one.client.persistenceHold).to.equal(true);
+			expect(awaitingRestoration(one.client)).to.equal(true);
+		});
+
 		it("STATUS OFF (or no STATUS) JOINs at once", function () {
 			const off = setup();
-			register(off, CAPS, [":irc.test PERSISTENCE STATUS OFF"]);
+			register(off, CAPS, [":irc.test PERSISTENCE STATUS DEFAULT OFF"]);
 			expect(off.client.persistenceHold).to.equal(false);
 			expect(off.transport.sent.filter((l) => l.startsWith("JOIN"))).to.deep.equal([
 				"JOIN #seance",
@@ -252,9 +268,16 @@ describe("Session persistence and quiet re-joins (irc/persistence.ts)", function
 			const h = setup();
 			register(h, CAPS, HOLD);
 			h.dispatch.resetHistory();
-			h.transport.line(":irc.test PERSISTENCE STATUS OFF");
+			h.transport.line(":irc.test PERSISTENCE STATUS DEFAULT OFF");
 			expect(h.client.persistenceHold).to.equal(false);
-			expect(h.lastMessage(h.client.lobby.id).text).to.match(/^Session persistence .*: OFF$/);
+			expect(h.lastMessage(h.client.lobby.id).text).to.match(
+				/^Session persistence .*: OFF \(your setting: DEFAULT\)$/
+			);
+
+			h.transport.line(":irc.test PERSISTENCE SET ON");
+			expect(h.lastMessage(h.client.lobby.id).text).to.equal(
+				"Session persistence set to: ON"
+			);
 		});
 
 		it("a close while waiting cancels the pending autojoin", function () {
