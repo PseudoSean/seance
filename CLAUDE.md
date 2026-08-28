@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Status** (see `docs/projects/initial_conversion.md` for the checklist): phases 0 (discovery), A (server moved to `attic/`), B (bus stubbed), C (minimum IRC) are done; D (fill-in) is done except D.7 read markers/`MARKREAD` and D.11 web push (both deferred); E is in progress — E.3 branding is done, E.1 dependency purge is underway, E.2 bus-contract reshape is optional, E.4 native shells not started. Milestones M4 (daily-driver) and M5 (shippable) are not yet ticked.
 
-Upstream is still `github.com/thelounge/thelounge`; divergence only grows. The checkout is `seance` but `package.json` `name` is still `thelounge`, and localStorage keys are still `thelounge.*`. Node.js >= 22, Yarn 1 (classic), MIT licensed.
+Upstream is still `github.com/thelounge/thelounge`; divergence only grows. localStorage keys are still `thelounge.*` (renaming needs a migration). Node.js >= 22, Yarn 1 (classic), MIT licensed.
 
 ## Common commands
 
@@ -130,4 +130,4 @@ Cross-cutting types and helpers. `shared/types/socket-events.ts` (`ServerToClien
 - `docs/resources/browser-irc-parser.md` — why the parser is hand-rolled.
 - `docs/resources/branding.md` — `config.json` schema, runtime vs build-time branding, uploader contract.
 - `docs/resources/pwa.md` — what makes the deploy installable in Chrome, launch/update/offline behaviour, how to verify.
-- Public end-user docs still live in the separate `thelounge/thelounge.chat` repo.
+- There are no public end-user docs yet; `branding.links` defaults point at this repository and its `docs/`.

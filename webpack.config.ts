@@ -201,7 +201,7 @@ const config: webpack.Configuration = {
 						ignore: [
 							"**/index.html",
 							"**/service-worker.js",
-							"**/thelounge.webmanifest",
+							"**/manifest.webmanifest",
 							"**/*.d.ts",
 							"**/tsconfig.json",
 						],
@@ -219,7 +219,7 @@ const config: webpack.Configuration = {
 					},
 				},
 				{
-					from: path.resolve(__dirname, "./client/thelounge.webmanifest"),
+					from: path.resolve(__dirname, "./client/manifest.webmanifest"),
 					to: "[name][ext]",
 					transform(content) {
 						return brandManifest(content.toString());

@@ -33,7 +33,7 @@ const shellUrl = self.registration.scope;
 const shellPaths = [
 	"",
 	"index.html",
-	"thelounge.webmanifest",
+	"manifest.webmanifest",
 	"config.json",
 	"favicon.ico",
 	`js/loading-error-handlers.js?v=${cacheName}`,

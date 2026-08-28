@@ -14,7 +14,7 @@ describe("public folder", function () {
 		expect(fs.existsSync(path.join(publicFolder, "favicon.ico"))).to.be.true;
 		expect(fs.existsSync(path.join(publicFolder, "robots.txt"))).to.be.true;
 		expect(fs.existsSync(path.join(publicFolder, "service-worker.js"))).to.be.true;
-		expect(fs.existsSync(path.join(publicFolder, "thelounge.webmanifest"))).to.be.true;
+		expect(fs.existsSync(path.join(publicFolder, "manifest.webmanifest"))).to.be.true;
 	});
 
 	it("branding config.json is copied and parses", function () {
@@ -30,7 +30,7 @@ describe("public folder", function () {
 		const config = JSON.parse(fs.readFileSync(path.join(publicFolder, "config.json"), "utf8"));
 		const html = fs.readFileSync(path.join(publicFolder, "index.html"), "utf8");
 		const manifest = JSON.parse(
-			fs.readFileSync(path.join(publicFolder, "thelounge.webmanifest"), "utf8")
+			fs.readFileSync(path.join(publicFolder, "manifest.webmanifest"), "utf8")
 		);
 
 		expect(html.includes("__APP_NAME__")).to.be.false;
@@ -95,7 +95,7 @@ describe("public folder", function () {
 	it("manifest carries the installed-app fields Chrome needs", function () {
 		type Icon = {src: string; sizes: string; purpose: string};
 		const manifest = JSON.parse(
-			fs.readFileSync(path.join(publicFolder, "thelounge.webmanifest"), "utf8")
+			fs.readFileSync(path.join(publicFolder, "manifest.webmanifest"), "utf8")
 		) as {
 			start_url: string;
 			scope: string;
@@ -148,7 +148,7 @@ describe("public folder", function () {
 
 			// Offline shell: index.html and the manifest are precached on install
 			expect(contents.includes('"index.html"')).to.be.true;
-			expect(contents.includes('"thelounge.webmanifest"')).to.be.true;
+			expect(contents.includes('"manifest.webmanifest"')).to.be.true;
 			// ...and the bundle, so an installed app opens offline right away
 			expect(contents.includes("js/bundle.js?v=")).to.be.true;
 			expect(contents.includes("css/style.css?v=")).to.be.true;

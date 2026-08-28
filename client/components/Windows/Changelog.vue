@@ -8,16 +8,10 @@
 
 			<h1 class="title">Release notes for {{ version }}</h1>
 
+			<p>Release notes are not bundled with this build yet.</p>
 			<p>
-				Release notes are not bundled with this client-only build yet. This build is based
-				on The Lounge {{ version }}.
-			</p>
-			<p>
-				<a
-					:href="`https://github.com/thelounge/thelounge/releases/tag/v${version}`"
-					target="_blank"
-					rel="noopener"
-					>View the upstream release notes for this version on GitHub</a
+				<a href="https://github.com/evilnet/seance/releases" target="_blank" rel="noopener"
+					>View releases on GitHub</a
 				>
 			</p>
 		</div>

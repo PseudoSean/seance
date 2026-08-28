@@ -12,14 +12,14 @@ Chrome's install criteria, and what satisfies them here:
 | Requirement                                | Where it comes from                                                                                                                                                      |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Served from a secure context               | **Your job**: `https://` with a certificate the browser trusts. `http://localhost` also counts (dev). A self-signed cert blocks service-worker registration and install. |
-| Web app manifest linked from the page      | `client/thelounge.webmanifest` → `public/thelounge.webmanifest`, `<link rel="manifest">` in `index.html`; `name`/`short_name`/colours filled from `config.json` at build |
+| Web app manifest linked from the page      | `client/manifest.webmanifest` → `public/manifest.webmanifest`, `<link rel="manifest">` in `index.html`; `name`/`short_name`/colours filled from `config.json` at build   |
 | `start_url`/`scope` inside the deploy path | Both `./`, relative to the manifest, so a deploy under `https://irc.example.org/chat/` scopes to `/chat/`                                                                |
 | 192×192 and 512×512 PNG icons, purpose any | `img/logo-grey-bg-*.png`; the same 192/512 files are declared `maskable` separately (Chrome warns on the combined `"maskable any"`)                                      |
 | `display` standalone/minimal-ui/fullscreen | `standalone`                                                                                                                                                             |
 | A service worker (offline fallback)        | `client/service-worker.js`, registered by `client/js/pwa.ts` in any secure context. Chrome no longer strictly requires one to install, but the offline shell needs it    |
 
 No server-side piece is needed. The static host must serve
-`thelounge.webmanifest` with a JSON content type (`application/manifest+json`
+`manifest.webmanifest` with a JSON content type (`application/manifest+json`
 or `application/json`) — most do by extension; nginx needs
 `types { application/manifest+json webmanifest; }` if it doesn't already.
 
@@ -91,7 +91,7 @@ resolved manifest, protocol handlers and launch handler.
 
 - `screenshots` (with `form_factor`) would give Chrome's richer install
   dialog; they are deploy-specific artwork, so a network adds them to its own
-  `thelounge.webmanifest` copy.
+  `manifest.webmanifest` copy.
 - No explicit manifest `id`: Chrome derives it from `start_url`, which is
   right per deploy path. Set one only if `start_url` must change later.
 - `display_override: ["window-controls-overlay"]` (custom title bar on

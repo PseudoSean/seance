@@ -47,8 +47,8 @@ describe("branding", function () {
 
 			expect(config.appName).to.equal("TestNet IRC");
 			expect(config.links).to.deep.equal({
-				website: "https://thelounge.chat/",
-				help: "https://thelounge.chat/docs/",
+				website: "https://github.com/evilnet/seance",
+				help: "https://github.com/evilnet/seance/tree/develop/docs",
 				privacy: "https://x.example/p",
 			});
 			expect(config.features).to.deep.equal({
@@ -71,8 +71,10 @@ describe("branding", function () {
 			expect(config.appName).to.equal("Seance");
 			expect(config.themeColor).to.equal(undefined);
 			expect(config.theme).to.equal(undefined);
-			expect(config.links?.help).to.equal("https://thelounge.chat/docs/");
-			expect(config.links?.website).to.equal("https://thelounge.chat/");
+			expect(config.links?.help).to.equal(
+				"https://github.com/evilnet/seance/tree/develop/docs"
+			);
+			expect(config.links?.website).to.equal("https://github.com/evilnet/seance");
 			expect(config.features).to.deep.equal({
 				multiNetwork: true,
 				saveNetworks: false,

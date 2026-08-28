@@ -1,13 +1,16 @@
 {
-  "name": "thelounge",
-  "description": "The self-hosted Web IRC client",
+  "name": "seance",
+  "description": "Static, bouncer-less web IRC client: IRCv3 over WebSocket, no server of its own",
   "version": "4.5.0-rc.3",
   "type": "commonjs",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/thelounge/thelounge.git"
+    "url": "git+https://github.com/evilnet/seance.git"
   },
-  "homepage": "https://thelounge.chat/",
+  "homepage": "https://github.com/evilnet/seance#readme",
+  "bugs": {
+    "url": "https://github.com/evilnet/seance/issues"
+  },
   "scripts": {
     "build:client": "webpack",
     "build": "webpack",
@@ -25,14 +28,12 @@
     "githooks-install": "git config core.hooksPath scripts/git-hooks"
   },
   "keywords": [
-    "lounge",
-    "browser",
-    "web",
-    "chat",
-    "client",
     "irc",
-    "server",
-    "thelounge"
+    "ircv3",
+    "websocket",
+    "client",
+    "pwa",
+    "seance"
   ],
   "license": "MIT",
   "engines": {

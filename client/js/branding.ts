@@ -101,10 +101,9 @@ export const DEFAULT_BRANDING: BrandingConfig = {
 	appName: "Seance",
 	defaultNetwork: undefined,
 	links: {
-		// Upstream attribution: the client is derived from The Lounge and its
-		// documentation still applies to most of the UI.
-		website: "https://thelounge.chat/",
-		help: "https://thelounge.chat/docs/",
+		// Deploys override these with the network's own pages.
+		website: "https://github.com/evilnet/seance",
+		help: "https://github.com/evilnet/seance/tree/develop/docs",
 	},
 	features: {
 		multiNetwork: true,
