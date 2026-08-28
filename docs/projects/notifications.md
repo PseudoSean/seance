@@ -82,6 +82,17 @@ nefarious2 `ircv3.2-upgrade` (`tmp/nefarious2/ircd/m_webpush.c`,
   Subscriptions are stored per **account**, not per connection, and synced
   network-wide over P10 (`WP V/R/U/B`). So push needs services + SASL — fine
   for a network's own client, but the dev ircd has no services.
+
+  > **Update 2026-08-28:** the missing trigger has landed upstream —
+  > `webpush_notify_pm()` (`414b147`, v1) and `webpush_notify_channel()`
+  > (`9fbcb3b`, v2, case-mapped word-boundary nick match with a per
+  > account/channel cooldown), both called from `ircd/ircd_relay.c`, with the
+  > payload tier taken from the account's `draft/webpush/payload` metadata
+  > (`ping` / `route` (default) / `full`). Pushes actually flow now, so the
+  > "no caller" blocker below is resolved and D.11 can start; the client work
+  > (VAPID key handling, `WEBPUSH REGISTER`, service-worker `push` handler)
+  > is unchanged.
+
 - Delivery exists (`webpush_notify_account()` iterates the account's
   subscriptions, prunes HTTP 410), **but nothing calls it**: as of this
   checkout there is no hook in PRIVMSG/NOTICE/INVITE delivery. Registration

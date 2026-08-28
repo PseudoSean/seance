@@ -114,6 +114,50 @@ server does not announce, so the rule is now about the _content_:
   chatter that would arrive on every switch back to the app. The same note
   later — or any other bouncer NOTE — is shown as before.
 
+## What the ircd offers next (read 2026-08-28)
+
+MrLenin's design guide — [gist 8d644eb…](https://gist.github.com/MrLenin/8d644eb37878d7bcaa91d1a68ae23d94),
+"Seamless Mobile Sessions Over Nefarious" — describes the intended shape of
+all this, and `origin/ircv3.2-upgrade` is **17 commits ahead** of our
+`tmp/nefarious2` checkout with the pieces already in it. What it changes for
+us, in the order it is worth doing:
+
+1. **`PERSISTENCE STATUS` is two arguments now** — done, see above; without
+   this fix the hold is never detected against a current server, which is
+   what let our JOIN land inside a reattach in the first place.
+2. **`PERSISTENCE ATTACH <profile> [<msgid>]`** (`9bc57d4`): the optional
+   trailing argument is the client's globally newest last-seen msgid. The
+   server resolves it through the global msgid index and replays the gap
+   itself — **one server-driven batch instead of our `TARGETS` + N ×
+   `CHATHISTORY AFTER`**, which is the whole reason `catchup.ts` paces. Send
+   it in the flush that carries `CAP END` (it is registration-only,
+   `IsUser()` rejects it after 001, and needs SASL to have succeeded, so the
+   window is exactly SASL-success → `CAP END`; ≤ 63 bytes). Feature-detect
+   on the `attach-cursor` token in the `draft/persistence` CAP value
+   (`draft/persistence=attach,detach,list,attach-cursor`, `ircd.c:1315`).
+   An unknown/evicted msgid is not an ATTACH failure: it comes later as
+   `FAIL PERSISTENCE CURSOR_UNKNOWN <msgid> :…` and the server replays from
+   its own derived point anyway.
+   Client work this needs: **persist the cursor** (we store nothing about
+   messages today, and the phone's PWA is killed between sessions, so it
+   must live in localStorage next to the network), and **deliver the replay
+   as newer messages** — `history.ts` currently sends an unsolicited
+   `chathistory` batch through `deliverPrepend`, i.e. renders it as _older_
+   history above the existing lines (fine on a cold start, wrong on a live
+   reconnect). Dedupe is already msgid-based, which is what the gist asks
+   for.
+3. **Web push is wired** (`414b147` PMs, `9fbcb3b` channel highlights, via
+   `ircd_relay.c`): the trigger our notifications note calls missing exists
+   now, with per-account payload tiers (`ping`/`route`/`full`). D.11 is
+   unblocked — see `notifications.md`.
+4. **Post-registration fake-lag grace** (`a1215e6`, `9c9c89a`): ~15 free
+   commands after registration for authenticated clients. It does not make
+   `catchup.ts` unnecessary (other ircds, and the burst is still charged),
+   but the 4 s pacing could start after a small free burst once we target a
+   server that has it.
+5. Our own WebSocket fixes were **merged upstream** (`fceb160`, PR #101), so
+   the dev image no longer needs the local patch — re-pull and rebuild.
+
 ## Follow-ups
 
 - **Settings toggle for the hold** (`PERSISTENCE SET ON|OFF|DEFAULT`): today
