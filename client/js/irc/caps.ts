@@ -47,9 +47,10 @@ export interface CapResult {
 /**
  * Caps Seance requests when offered. Everything is "wanted" for v1 so that a
  * plain ircd (nefarious2 master, which has no CAP 302 and only seven caps)
- * still registers. Deliberately absent: `draft/multiline` (blocked by the
- * 528-byte inbound frame bug, see message.ts), `draft/bouncer`,
- * `draft/persistence`, `draft/metadata-2`, `no-implicit-names`.
+ * still registers. `draft/persistence` only buys the `PERSISTENCE STATUS`
+ * line at registration (see persistence.ts). Deliberately absent:
+ * `draft/multiline` (blocked by the 528-byte inbound frame bug, see
+ * message.ts), `draft/bouncer`, `draft/metadata-2`, `no-implicit-names`.
  */
 export const SEANCE_CAPS: CapNegotiatorOptions = {
 	required: [],
@@ -74,6 +75,7 @@ export const SEANCE_CAPS: CapNegotiatorOptions = {
 		"draft/event-playback",
 		"draft/read-marker",
 		"draft/message-redaction",
+		"draft/persistence",
 	],
 };
 

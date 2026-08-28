@@ -341,6 +341,53 @@ describe("WsTransport", function () {
 		});
 	});
 
+	describe("probe()", function () {
+		it("sends a PING and, without any inbound data for 10 s, drops the socket as lost", function () {
+			const {t, events} = make({reconnect: fastReconnect});
+			t.connect();
+			const ws = last();
+			ws.open();
+			t.probe();
+			expect(ws.sent).to.deep.equal(["PING :probe"]);
+			t.probe(); // one at a time
+			expect(ws.sent).to.have.length(1);
+
+			clock.tick(9_999);
+			expect(t.state).to.equal("open");
+			clock.tick(1);
+			expect(ws.closeCalls).to.have.length(1);
+			expect(t.state).to.equal("reconnect-wait");
+			expect(events[events.length - 2]).to.include({
+				type: "close",
+				code: 1006,
+				reason: "no reply to PING",
+				willReconnect: true,
+			});
+
+			// The dead socket's own close event, whenever it comes, is ignored.
+			ws.closed(1006, "", false);
+			expect(events.filter((e) => e.type === "close")).to.have.length(1);
+			clock.tick(100);
+			expect(t.state).to.equal("connecting");
+			expect(FakeWebSocket.instances).to.have.length(2);
+		});
+
+		it("is satisfied by any inbound line, and is a no-op unless open", function () {
+			const {t} = make({reconnect: fastReconnect});
+			t.probe();
+			expect(FakeWebSocket.instances).to.have.length(0);
+			t.connect();
+			const ws = last();
+			ws.open();
+			t.probe();
+			clock.tick(5_000);
+			ws.message(":irc.test PONG irc.test :probe");
+			clock.tick(20_000);
+			expect(t.state).to.equal("open");
+			expect(ws.closeCalls).to.have.length(0);
+		});
+	});
+
 	describe("reconnect", function () {
 		it("schedules reconnects with exponential backoff capped at maxDelayMs", function () {
 			const {t, events} = make({reconnect: fastReconnect});

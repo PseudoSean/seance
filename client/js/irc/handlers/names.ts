@@ -61,6 +61,8 @@ const endOfNames: Handler = (client, msg) => {
 
 	chan.users = chan.namesBuffer ?? new Map();
 	chan.namesBuffer = null;
+	// The end of the JOIN burst: from here on the channel's lines are live.
+	chan.rejoining = false;
 	client.usersChanged(chan);
 };
 

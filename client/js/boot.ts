@@ -16,6 +16,7 @@ import parseIrcUri from "./helpers/parseIrcUri";
 import {loadMentions} from "./mentions";
 import storage from "./localStorage";
 import {installNativeHooks} from "./native";
+import {installForegroundHooks} from "./foreground";
 import {onLaunch} from "./pwa";
 // Registers the IRC layer's bus handlers (input, names, more, network:*).
 import "./irc/manager";
@@ -80,6 +81,7 @@ export async function boot(): Promise<void> {
 
 	loadMentions();
 	installNativeHooks();
+	installForegroundHooks();
 
 	store.commit("appLoaded");
 

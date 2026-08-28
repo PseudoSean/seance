@@ -39,6 +39,14 @@ const rplTopic: Handler = (client, msg) => {
 		return;
 	}
 
+	// The JOIN burst of a re-join / session restore repeats the topic we
+	// already show: say nothing unless it changed while we were away.
+	chan.topicQuiet = (chan.rejoining || client.restoring) && topic === chan.shared.topic;
+
+	if (chan.topicQuiet) {
+		return;
+	}
+
 	client.pushMessage(chan, {type: MessageType.TOPIC, time: client.timeOf(msg), text: topic});
 	chan.shared.topic = topic;
 	client.dispatch("topic", {chan: chan.id, topic});
@@ -52,6 +60,7 @@ const rplNoTopic: Handler = (client, msg) => {
 		return;
 	}
 
+	chan.topicQuiet = false;
 	chan.shared.topic = "";
 	client.dispatch("topic", {chan: chan.id, topic: ""});
 };
@@ -62,6 +71,11 @@ const rplTopicWhoTime: Handler = (client, msg) => {
 	const chan = name ? client.findChannel(name) : undefined;
 
 	if (!chan) {
+		return;
+	}
+
+	if (chan.topicQuiet) {
+		chan.topicQuiet = false;
 		return;
 	}
 

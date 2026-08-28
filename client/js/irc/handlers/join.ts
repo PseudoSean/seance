@@ -56,6 +56,10 @@ const join: Handler = (client, msg) => {
 		client.dispatch("channel:state", {chan: chan.id, state: chan.state});
 	}
 
+	// Re-joining after a drop, or the server restoring a held session
+	// (draft/persistence): membership is state, not something that happened.
+	const quiet = self && (chan.rejoining || client.restoring);
+
 	if (self) {
 		chan.autoJoin = true;
 		// The channel modes are asked for lazily, the first time the channel
@@ -83,7 +87,9 @@ const join: Handler = (client, msg) => {
 		message.gecos = gecos;
 	}
 
-	client.pushMessage(chan, message);
+	if (!quiet) {
+		client.pushMessage(chan, message);
+	}
 
 	if (!chan.findUser(nick)) {
 		chan.setUser(newUser(nick));

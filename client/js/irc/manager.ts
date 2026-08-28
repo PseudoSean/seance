@@ -163,18 +163,35 @@ export function allClients(): IrcClient[] {
 	return Array.from(clients.values());
 }
 
+/** Foreground signals arrive in clusters (visibility + focus + native); one poke per second is plenty. */
+const POKE_INTERVAL_MS = 1000;
+let lastPokeAt = 0;
+
 /**
  * Poke every live connection: networks waiting out reconnect backoff retry
- * now, open ones send a PING so a socket the OS silently killed surfaces its
- * close (and then reconnects). Native shells call this when the app returns
- * to the foreground; deliberately disconnected networks are left alone.
+ * now, open ones probe the socket (PING; silence means the OS killed it, and
+ * the transport then closes it and reconnects). Called when the app returns
+ * to the foreground — browsers from foreground.ts, native shells from
+ * native.ts; deliberately disconnected networks are left alone.
  */
 export function reconnectAll(): void {
+	const now = Date.now();
+
+	if (now - lastPokeAt < POKE_INTERVAL_MS) {
+		return;
+	}
+
+	lastPokeAt = now;
+
 	for (const client of clients.values()) {
 		if (client.transport.state === "reconnect-wait") {
 			client.connect();
 		} else if (client.transport.state === "open") {
-			client.transport.send("PING :resume");
+			if (client.transport.probe) {
+				client.transport.probe();
+			} else {
+				client.transport.send("PING :resume");
+			}
 		}
 	}
 }

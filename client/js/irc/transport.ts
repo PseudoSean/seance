@@ -2,8 +2,8 @@
  * WsTransport — IRCv3-over-WebSocket line transport (nefarious2 `ircv3.2-upgrade`,
  * see docs/resources/nefarious2-websocket.md). One IRC line per WebSocket message,
  * no CRLF; inbound frames split defensively; IRC PING answered here; reconnect with
- * capped exponential backoff + jitter. Nothing else is interpreted — parsing, CAP,
- * ISUPPORT etc. live above this. Uses only the global `WebSocket` (browsers,
+ * capped exponential backoff + jitter; `probe()` for sockets the OS may have killed
+ * silently. Nothing else is interpreted — parsing, CAP, ISUPPORT etc. live above this. Uses only the global `WebSocket` (browsers,
  * Node >= 22); inject a constructor via `WebSocketImpl` for tests.
  */
 
@@ -54,6 +54,7 @@ const DEFAULTS = {
 };
 const STABLE_CONNECTION_MS = 30_000; // open at least this long → backoff resets
 const MAX_ATTEMPTS = 100; // the attempt counter stops growing here
+const PROBE_TIMEOUT_MS = 10_000; // probe(): no inbound data for this long → the socket is dead
 const PING_RE = /^(?:@\S+ )?(?::\S+ )?PING(?: (.*))?$/i; // [tags] [prefix] PING [params]
 
 export class WsTransport {
@@ -67,6 +68,7 @@ export class WsTransport {
 	private timer: ReturnType<typeof setTimeout> | null = null;
 	private closedByUs = false;
 	private openedAt = 0;
+	private probeTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(opts: TransportOptions) {
 		this.opts = {...DEFAULTS, ...opts};
@@ -157,10 +159,35 @@ export class WsTransport {
 		this.ws.send(line);
 	}
 
+	/**
+	 * Ask the server for a sign of life. A backgrounded mobile browser's
+	 * socket is often gone without a close event; if nothing arrives within
+	 * PROBE_TIMEOUT_MS the socket is dropped and treated like an unclean
+	 * close (so the usual reconnect follows). No-op unless open.
+	 */
+	probe(): void {
+		if (this._state !== "open" || !this.ws || this.probeTimer !== null) {
+			return;
+		}
+
+		this.ws.send("PING :probe");
+		this.probeTimer = setTimeout(() => {
+			this.probeTimer = null;
+			const ws = this.ws;
+
+			if (ws && this._state === "open") {
+				this.ws = null; // its late close event is ignored
+				ws.close();
+				this.handleClosed(1006, "no reply to PING", false);
+			}
+		}, PROBE_TIMEOUT_MS);
+	}
+
 	/** Close deliberately: no reconnect is scheduled for this closure. */
 	close(code = 1000, reason = ""): void {
 		this.closedByUs = true;
 		this.clearTimer();
+		this.clearProbe();
 		this._state = "closed";
 		this.ws?.close(code, reason); // the "close" event follows asynchronously
 	}
@@ -175,6 +202,7 @@ export class WsTransport {
 	}
 
 	private handleMessage(data: unknown): void {
+		this.clearProbe(); // anything inbound is proof of life
 		let text: string;
 
 		if (typeof data === "string") {
@@ -204,6 +232,8 @@ export class WsTransport {
 	}
 
 	private handleClosed(code: number, reason: string, wasClean: boolean): void {
+		this.clearProbe();
+
 		if (this.openedAt > 0 && Date.now() - this.openedAt >= STABLE_CONNECTION_MS) {
 			this.attempt = 0;
 		}
@@ -237,6 +267,13 @@ export class WsTransport {
 		if (this.timer !== null) {
 			clearTimeout(this.timer);
 			this.timer = null;
+		}
+	}
+
+	private clearProbe(): void {
+		if (this.probeTimer !== null) {
+			clearTimeout(this.probeTimer);
+			this.probeTimer = null;
 		}
 	}
 

@@ -44,6 +44,14 @@ export class Channel {
 	modesKnown = false;
 	/** History/marker were requested in the same flush as the JOIN (catchup.ts); the echo must not repeat them. */
 	catchupPrefetched = false;
+	/**
+	 * We were in this channel when the connection dropped: the re-JOIN's
+	 * echo, unchanged topic and NAMES are state, not activity, and are not
+	 * shown (cleared by the end of that NAMES burst).
+	 */
+	rejoining = false;
+	/** The 332 just seen was hidden (unchanged topic); hide its 333 too. */
+	topicQuiet = false;
 	/** Last away message seen for the peer of a query window. */
 	userAway: string | undefined = undefined;
 	/** Reference of every message handed to the UI, by id (`more` cursor lookup). */

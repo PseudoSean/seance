@@ -64,7 +64,8 @@ describe("irc/caps", function () {
 			expect(requested).to.not.include("tls");
 			expect(requested).to.not.include("draft/multiline");
 			expect(requested).to.not.include("draft/bouncer");
-			expect(requested).to.not.include("draft/persistence");
+			expect(requested).to.not.include("draft/metadata-2");
+			expect(requested).to.include("draft/persistence");
 			expect(requested).to.not.include("draft/metadata-2");
 			expect(requested).to.not.include("no-implicit-names");
 			expect(utf8ByteLength(second.send[0])).to.be.at.most(MAX_LINE_BYTES);

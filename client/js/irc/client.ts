@@ -35,6 +35,7 @@ import {
 	prefetchCatchup,
 	prioritiseCatchup,
 } from "./catchup";
+import {awaitRestoration, cancelRestoration} from "./persistence";
 import {IdAllocator, sharedIds} from "./ids";
 import {ISupport} from "./isupport";
 import {
@@ -193,6 +194,10 @@ export class IrcClient {
 	sasl: SaslAuth | null = null;
 	/** Services account we are logged in as (900/901); "" when not. */
 	account = "";
+	/** The server holds our session across disconnects (`PERSISTENCE STATUS ON`, see persistence.ts). */
+	persistenceHold = false;
+	/** Set while a `draft/persistence` batch restores channel state: handlers update the model but show nothing. */
+	restoring = false;
 
 	private saslTimer: ReturnType<typeof setTimeout> | null = null;
 	private readonly bus: Pick<EventBus, "dispatch">;
@@ -599,6 +604,7 @@ export class IrcClient {
 		this.motdBuffer = null;
 		this.host = "";
 		this.account = "";
+		this.persistenceHold = false;
 		this.endSasl();
 
 		for (const line of this.caps.start()) {
@@ -741,6 +747,7 @@ export class IrcClient {
 		resetBatches(this);
 		abortHistory(this);
 		cancelCatchup(this);
+		cancelRestoration(this);
 		this.clearPendingEdits();
 		this.clearTyping();
 
@@ -750,6 +757,8 @@ export class IrcClient {
 			cancelMarkRead(chan);
 
 			if (chan.type === ChanType.CHANNEL) {
+				// Dropped, not our QUIT: the re-JOIN is state, not news (Channel.rejoining).
+				chan.rejoining = chan.state === ChanState.JOINED && !this.quitting;
 				chan.state = ChanState.PARTED;
 			}
 		}
@@ -828,15 +837,33 @@ export class IrcClient {
 			);
 		}
 
+		if (this.persistenceHold) {
+			// The server may be about to restore the channels of our held
+			// session (a draft/persistence batch right behind the MOTD): JOIN
+			// only what it does not restore, once that batch is in.
+			awaitRestoration(this);
+		} else {
+			this.autojoin();
+		}
+	}
+
+	/**
+	 * JOIN every autojoin channel we are not in, the active one's catch-up
+	 * pipelined behind it: the server processes lines in order, so by the
+	 * time it reads the history request we are a member. Saves a round trip
+	 * on the channel the user is looking at.
+	 */
+	autojoin(): void {
 		const joining = this.channels.filter(
 			(chan) =>
 				chan.type === ChanType.CHANNEL && chan.autoJoin && chan.state === ChanState.PARTED
 		);
-		this.joinChannels(joining.map((chan) => ({name: chan.name, key: chan.shared.key})));
 
-		// Pipelined behind the JOIN: the server processes lines in order, so
-		// by the time it reads the history request we are a member. Saves a
-		// round trip on the channel the user is looking at.
+		if (joining.length === 0) {
+			return;
+		}
+
+		this.joinChannels(joining.map((chan) => ({name: chan.name, key: chan.shared.key})));
 		const active = joining.find((chan) => chan.id === this.activeChanId);
 
 		if (active) {

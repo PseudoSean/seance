@@ -142,8 +142,11 @@ export function setup(overrides: Partial<IrcClientOptions> = {}): Harness {
 	};
 }
 
-/** Drive CAP / 001 / 005 / 422 with the server offering `caps`. */
-export function register(h: Harness, caps = ALL_CAPS): void {
+/**
+ * Drive CAP / 001 / 005 / 422 with the server offering `caps`; `beforeMotd`
+ * lines (e.g. `PERSISTENCE STATUS`) go out between 005 and 422.
+ */
+export function register(h: Harness, caps = ALL_CAPS, beforeMotd: string[] = []): void {
 	h.client.connect();
 	h.transport.open();
 	h.transport.line(`:irc.test CAP * LS :${caps}`);
@@ -157,6 +160,7 @@ export function register(h: Harness, caps = ALL_CAPS): void {
 	h.transport.lines(
 		":irc.test 001 alice :Welcome to the SeanceDev IRC Network, alice",
 		":irc.test 005 alice CHANTYPES=#& PREFIX=(ov)@+ CHANMODES=b,k,l,imnpst CASEMAPPING=rfc1459 STATUSMSG=@+ CHATHISTORY=100 MSGREFTYPES=timestamp,msgid :are supported by this server",
+		...beforeMotd,
 		":irc.test 422 alice :MOTD File is missing"
 	);
 	h.sent();
