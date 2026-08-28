@@ -1,6 +1,11 @@
 import {expect} from "chai";
 import sinon from "ts-sinon";
-import {RESTORE_WAIT_MS, awaitingRestoration} from "../../client/js/irc/persistence";
+import {
+	RESTORE_MAX_WAIT_MS,
+	RESTORE_QUIET_MS,
+	RESTORE_WAIT_MS,
+	awaitingRestoration,
+} from "../../client/js/irc/persistence";
 import {ChanState} from "../../shared/types/chan";
 import {MessageType} from "../../shared/types/msg";
 import {ALL_CAPS, Harness, batch, labelOf, register, setup} from "./support";
@@ -154,6 +159,79 @@ describe("Session persistence and quiet re-joins (irc/persistence.ts)", function
 			expect(h.transport.sent.filter((l) => l.startsWith("JOIN"))).to.deep.equal([]);
 		});
 
+		it("a second burst after an alias attach repeats nothing (the reported symptom)", function () {
+			const h = setup();
+			const seance = h.client.findChannel("#seance")!;
+			h.client.open(seance.id);
+			register(h, CAPS, HOLD);
+			restore(h, "Not Just Linux");
+
+			// Fresh page load: the topic is news the first time.
+			expect(types(h, seance.id)).to.deep.equal([
+				MessageType.TOPIC,
+				MessageType.TOPIC_SET_BY,
+			]);
+			h.dispatch.resetHistory();
+			const afterFirst = h.transport.sent.length;
+
+			// Attached as an alias because another client of the account holds
+			// the session: the note, then the whole burst a second time.
+			h.transport.line(
+				":irc.test NOTE BOUNCER ALIAS_ATTACHED :Attached to session AZ7 as alias on irc.test"
+			);
+			h.transport.lines(...joinBurst("Not Just Linux"));
+
+			expect(h.messages()).to.deep.equal([]);
+			// …and nothing is asked for again (history, marker, modes).
+			expect(h.transport.sent.slice(afterFirst)).to.deep.equal([]);
+			expect(seance.state).to.equal(ChanState.JOINED);
+			expect(seance.users.size).to.equal(2);
+		});
+
+		it("holds the autojoin through an unbatched burst and its bouncer note", function () {
+			const h = setup({join: "#seance,#other"});
+			register(h, CAPS, HOLD);
+
+			// No batch: the burst arrives line by line, the note in the middle.
+			clock.tick(RESTORE_WAIT_MS - RESTORE_QUIET_MS);
+			h.transport.line(
+				":irc.test NOTE BOUNCER ALIAS_ATTACHED :Attached to session AZ7 as alias on irc.test"
+			);
+			expect(h.messages().filter((m) => /BOUNCER/.test(m.text ?? ""))).to.deep.equal([]);
+			clock.tick(RESTORE_QUIET_MS - 1);
+			h.transport.lines(...joinBurst("Welcome"));
+			expect(h.sent().filter((l) => l.startsWith("JOIN"))).to.deep.equal([]);
+
+			clock.tick(RESTORE_QUIET_MS);
+			expect(awaitingRestoration(h.client)).to.equal(false);
+			// Only the channel the server did not give back.
+			expect(h.sent().filter((l) => l.startsWith("JOIN"))).to.deep.equal(["JOIN #other"]);
+		});
+
+		it("never holds the autojoin past RESTORE_MAX_WAIT_MS", function () {
+			const h = setup();
+			register(h, CAPS, HOLD);
+
+			for (let elapsed = 0; elapsed < RESTORE_MAX_WAIT_MS; elapsed += RESTORE_QUIET_MS - 1) {
+				clock.tick(RESTORE_QUIET_MS - 1);
+				h.transport.line(":alice!alice@host JOIN #seance");
+			}
+
+			clock.tick(RESTORE_MAX_WAIT_MS);
+			expect(awaitingRestoration(h.client)).to.equal(false);
+		});
+
+		it("reports a bouncer note that is not part of a reattach", function () {
+			const h = setup();
+			register(h, CAPS, HOLD);
+			clock.tick(RESTORE_MAX_WAIT_MS);
+			h.dispatch.resetHistory();
+			h.transport.line(
+				":irc.test NOTE BOUNCER ALIAS_ATTACHED :Attached to session AZ7 as alias on irc.test"
+			);
+			expect(h.lastMessage(h.client.lobby.id).text).to.match(/^BOUNCER: Attached to session/);
+		});
+
 		it("a channel the server restored that we did not know is announced", function () {
 			const h = setup();
 			register(h, CAPS, HOLD);
@@ -189,6 +267,46 @@ describe("Session persistence and quiet re-joins (irc/persistence.ts)", function
 		});
 	});
 
+	describe("/topic", function () {
+		it("shows the reply even when the topic has not changed", function () {
+			const h = setup();
+			register(h);
+			h.transport.lines(...joinBurst("Welcome"));
+			const seance = h.client.findChannel("#seance")!;
+			h.dispatch.resetHistory();
+
+			// An unasked-for repeat stays hidden…
+			h.transport.line(":irc.test 332 alice #seance :Welcome");
+			expect(h.messages(seance.id)).to.deep.equal([]);
+
+			// …but the answer to /topic is what the user asked for.
+			h.client.input(seance.id, "/topic");
+			expect(h.sent()).to.include("TOPIC #seance");
+			h.transport.lines(
+				":irc.test 332 alice #seance :Welcome",
+				":irc.test 333 alice #seance bob!bob@host 1756000000"
+			);
+			expect(types(h, seance.id)).to.deep.equal([
+				MessageType.TOPIC,
+				MessageType.TOPIC_SET_BY,
+			]);
+		});
+
+		it("says so when there is no topic", function () {
+			const h = setup();
+			register(h);
+			h.transport.lines(":alice!alice@host JOIN #seance");
+			const seance = h.client.findChannel("#seance")!;
+			h.dispatch.resetHistory();
+			h.transport.line(":irc.test 331 alice #seance :No topic is set");
+			expect(h.messages(seance.id)).to.deep.equal([]);
+
+			h.client.input(seance.id, "/topic");
+			h.transport.line(":irc.test 331 alice #seance :No topic is set");
+			expect(h.lastMessage(seance.id).text).to.equal("No topic is set.");
+		});
+	});
+
 	describe("re-join after a drop (no persistence)", function () {
 		function connectedWithTopic(): Harness {
 			const h = setup();
@@ -220,15 +338,12 @@ describe("Session persistence and quiet re-joins (irc/persistence.ts)", function
 			expect(seance.rejoining).to.equal(false);
 			expect(seance.topicQuiet).to.equal(false);
 
-			// Once the burst is over, the same replies (e.g. for /topic) are shown.
+			// A repeat stays hidden however it arrives; /topic has its own test.
 			h.transport.lines(
 				":irc.test 332 alice #seance :Welcome",
 				":irc.test 333 alice #seance bob!bob@host 1756000000"
 			);
-			expect(types(h, seance.id)).to.deep.equal([
-				MessageType.TOPIC,
-				MessageType.TOPIC_SET_BY,
-			]);
+			expect(h.messages(seance.id)).to.deep.equal([]);
 		});
 
 		it("shows a topic that changed while we were away", function () {
@@ -256,11 +371,8 @@ describe("Session persistence and quiet re-joins (irc/persistence.ts)", function
 			register(h);
 			h.dispatch.resetHistory();
 			h.transport.lines(...joinBurst("Welcome"));
-			expect(types(h, seance.id)).to.deep.equal([
-				MessageType.JOIN,
-				MessageType.TOPIC,
-				MessageType.TOPIC_SET_BY,
-			]);
+			// The JOIN is news (we left on purpose); the topic we still hold is not.
+			expect(types(h, seance.id)).to.deep.equal([MessageType.JOIN]);
 		});
 	});
 });

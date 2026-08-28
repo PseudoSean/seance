@@ -28,11 +28,17 @@
 import type {IrcClient} from "./client";
 import type {BatchHandler} from "./handlers/batch";
 
-/** How long after the MOTD end a held session's restoration batch is waited for. */
-export const RESTORE_WAIT_MS = 1000;
+/** How long after the MOTD end a held session's restoration is waited for. */
+export const RESTORE_WAIT_MS = 2000;
+/** …and how long after the last sign of one (an unbatched burst arriving line by line). */
+export const RESTORE_QUIET_MS = 750;
+/** Hard ceiling: the autojoin is never held longer than this. */
+export const RESTORE_MAX_WAIT_MS = 8000;
 
 interface RestoreState {
 	timer: ReturnType<typeof setTimeout> | null;
+	/** No extension past this point, whatever keeps arriving. */
+	deadline: number;
 }
 
 const states = new WeakMap<IrcClient, RestoreState>();
@@ -41,7 +47,7 @@ function stateOf(client: IrcClient): RestoreState {
 	let state = states.get(client);
 
 	if (!state) {
-		state = {timer: null};
+		state = {timer: null, deadline: 0};
 		states.set(client, state);
 	}
 
@@ -54,9 +60,19 @@ export function awaitingRestoration(client: IrcClient): boolean {
 }
 
 /**
+ * True while the connection is still settling into a held session: from the
+ * end of registration until RESTORE_MAX_WAIT_MS later, whether or not the
+ * autojoin is still waiting. What the bouncer says in that window is setup
+ * chatter, not news for the user.
+ */
+export function inRestorationWindow(client: IrcClient): boolean {
+	return Date.now() < stateOf(client).deadline;
+}
+
+/**
  * Registration completed with `PERSISTENCE STATUS ON`: hold the autojoin
- * until the server's restoration batch has been applied, or until
- * RESTORE_WAIT_MS pass without one (nothing was held after all).
+ * until the server's restoration has been applied, or until
+ * RESTORE_WAIT_MS pass without a sign of one (nothing was held after all).
  */
 export function awaitRestoration(client: IrcClient): void {
 	const state = stateOf(client);
@@ -65,16 +81,49 @@ export function awaitRestoration(client: IrcClient): void {
 		return;
 	}
 
+	state.deadline = Date.now() + RESTORE_MAX_WAIT_MS;
+	arm(client, state, RESTORE_WAIT_MS);
+}
+
+/**
+ * A sign that the server is restoring our session right now: one of its
+ * JOINs, or a bouncer NOTE. The batch is delivered as a unit, but an
+ * unbatched burst (no `batch` cap, or a second burst after an alias attach)
+ * arrives line by line, so the wait is extended to a quiet period instead —
+ * JOINing a channel the server is about to give back is what makes it
+ * answer with a second topic + NAMES burst.
+ */
+export function noteRestorationActivity(client: IrcClient): void {
+	const state = stateOf(client);
+
+	if (state.timer === null) {
+		return; // not waiting: a live join, or the autojoin already went out
+	}
+
+	arm(client, state, RESTORE_QUIET_MS);
+}
+
+function arm(client: IrcClient, state: RestoreState, delay: number): void {
+	if (state.timer !== null) {
+		clearTimeout(state.timer);
+	}
+
+	const wait = Math.max(0, Math.min(delay, state.deadline - Date.now()));
 	state.timer = setTimeout(() => {
 		state.timer = null;
 		client.autojoin();
-	}, RESTORE_WAIT_MS);
+	}, wait);
 }
 
 /** Transport closed: a pending autojoin dies with the connection. */
 export function cancelRestoration(client: IrcClient): void {
 	const state = stateOf(client);
+	state.deadline = 0;
+	clearWait(state);
+}
 
+/** Stop waiting, but stay in the settling window (see {@link inRestorationWindow}). */
+function clearWait(state: RestoreState): void {
 	if (state.timer !== null) {
 		clearTimeout(state.timer);
 		state.timer = null;
@@ -89,7 +138,7 @@ export function cancelRestoration(client: IrcClient): void {
 export const persistenceBatch: BatchHandler = (client, batch) => {
 	const state = stateOf(client);
 	const waiting = state.timer !== null;
-	cancelRestoration(client);
+	clearWait(state);
 	client.restoring = true;
 
 	try {

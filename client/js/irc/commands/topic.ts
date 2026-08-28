@@ -25,6 +25,9 @@ const topic: Command = {
 		}
 
 		if (args.every((arg) => arg.trim() === "")) {
+			// A query: show the reply even when it repeats the topic we
+			// already display (handlers/topic.ts hides join-burst repeats).
+			chan.topicAsked = true;
 			client.send(formatLine({command: "TOPIC", params: [chan.name]}));
 			return;
 		}

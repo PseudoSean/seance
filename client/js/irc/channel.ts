@@ -50,8 +50,10 @@ export class Channel {
 	 * shown (cleared by the end of that NAMES burst).
 	 */
 	rejoining = false;
-	/** The 332 just seen was hidden (unchanged topic); hide its 333 too. */
+	/** The 332 just seen was hidden (a topic we already show); hide its 333 too. */
 	topicQuiet = false;
+	/** The user asked for the topic (`/topic`): show the next 331/332 even if it is unchanged. */
+	topicAsked = false;
 	/** Last away message seen for the peer of a query window. */
 	userAway: string | undefined = undefined;
 	/** Reference of every message handed to the UI, by id (`more` cursor lookup). */

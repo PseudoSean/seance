@@ -7,6 +7,7 @@ import {ChanState, ChanType} from "../../../../shared/types/chan";
 import {MessageType, SharedMsg} from "../../../../shared/types/msg";
 import {newUser} from "../channel";
 import {IrcMessage} from "../message";
+import {noteRestorationActivity} from "../persistence";
 import type {Handler} from "../types";
 
 /** `{msgid}` when the line carries one (history dedupe / catch-up reference). */
@@ -44,6 +45,10 @@ const join: Handler = (client, msg) => {
 		return;
 	}
 
+	// Already in it: the server is repeating our membership (a session
+	// restore, or its answer to a JOIN for a channel we never left).
+	const wasJoined = self && chan?.state === ChanState.JOINED;
+
 	if (!chan) {
 		if (!self) {
 			return; // a JOIN for a channel we are not in: nothing to attach it to
@@ -56,17 +61,24 @@ const join: Handler = (client, msg) => {
 		client.dispatch("channel:state", {chan: chan.id, state: chan.state});
 	}
 
-	// Re-joining after a drop, or the server restoring a held session
-	// (draft/persistence): membership is state, not something that happened.
-	const quiet = self && (chan.rejoining || client.restoring);
+	// Re-joining after a drop, the server restoring a held session
+	// (draft/persistence), or a membership we already have: state, not
+	// something that happened.
+	const quiet = self && (wasJoined || chan.rejoining || client.restoring);
 
 	if (self) {
 		chan.autoJoin = true;
-		// The channel modes are asked for lazily, the first time the channel
-		// is opened (IrcClient.open): one MODE per autojoined channel at
-		// connect time is part of the burst that trips the server's flood
-		// penalty (see catchup.ts).
-		chan.modesKnown = false;
+
+		if (!wasJoined) {
+			// The channel modes are asked for lazily, the first time the
+			// channel is opened (IrcClient.open): one MODE per autojoined
+			// channel at connect time is part of the burst that trips the
+			// server's flood penalty (see catchup.ts).
+			chan.modesKnown = false;
+		}
+
+		// A restoration burst is arriving: keep the autojoin waiting for it.
+		noteRestorationActivity(client);
 	}
 
 	const message: Partial<SharedMsg> = {

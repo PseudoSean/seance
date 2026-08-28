@@ -8,6 +8,7 @@
 
 import {MessageType} from "../../../../shared/types/msg";
 import {chatHistoryFailed} from "../history";
+import {inRestorationWindow, noteRestorationActivity} from "../persistence";
 import type {Handler} from "../types";
 import type {IrcClient} from "../client";
 import type {IrcMessage} from "../message";
@@ -52,6 +53,19 @@ function reply(kind: "FAIL" | "WARN" | "NOTE"): Handler {
 		if (kind === "FAIL" && command.toUpperCase() === "REDACT") {
 			redactFailed(client, msg);
 			return;
+		}
+
+		if (kind === "NOTE" && command.toUpperCase() === "BOUNCER") {
+			// The bouncer talks to us while it reattaches us to a held
+			// session; its channel-state burst follows. Keep the autojoin
+			// waiting for that, and do not report the routine attach — on a
+			// phone it would arrive on every switch back to the app.
+			const routine = inRestorationWindow(client);
+			noteRestorationActivity(client);
+
+			if (routine && code.toUpperCase() === "ALIAS_ATTACHED") {
+				return;
+			}
 		}
 
 		const description = rest.length > 0 ? rest[rest.length - 1] : "";

@@ -1388,9 +1388,11 @@ export class IrcClient {
 			msg.source !== undefined &&
 			this.isSelf(msg.source.name);
 		const joinName = selfJoin ? msg.params[0] ?? "" : "";
-		const beforeJoin: MsgRef | undefined = selfJoin
-			? this.findChannel(joinName)?.newestRef
-			: undefined;
+		const joined = selfJoin ? this.findChannel(joinName) : undefined;
+		const beforeJoin: MsgRef | undefined = selfJoin ? joined?.newestRef : undefined;
+		// A JOIN for a channel we are already in repeats a membership we have
+		// (see handlers/join.ts): its history and modes are not asked again.
+		const alreadyJoined = joined?.state === ChanState.JOINED;
 
 		const handler = handlers.get(msg.command) ?? unhandled;
 
@@ -1403,7 +1405,7 @@ export class IrcClient {
 
 		this.checkSts(msg);
 
-		if (selfJoin) {
+		if (selfJoin && !alreadyJoined) {
 			const chan = this.findChannel(joinName);
 
 			if (chan) {

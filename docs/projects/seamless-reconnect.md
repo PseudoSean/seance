@@ -66,18 +66,69 @@ drop showed the same join/topic lines as well.
 - Tests: `test/irc/persistence.ts` (fake timers; both paths),
   `test/irc/transport.ts` § probe, `caps.ts` updated.
 
+## Round two: it was still repeated (2026-08-28)
+
+What a reconnect on the phone actually looked like after the first round
+(the JOIN lines were gone — the topic was not):
+
+```
+07:46 *** The topic is: Not Just Linux - All OS & Hardware. …
+07:46 ***  Topic set by Rubin on 28 May 2026, 10:19:49
+07:46 ***  Channel mode is +tn
+07:47 BOUNCER: Attached to session AZ7Rzi… as alias on FractalRealities.AfterNET.Org [NOTE ALIAS_ATTACHED]
+07:47 *** The topic is: Not Just Linux - All OS & Hardware. …
+07:47 ***  Topic set by Rubin on 28 May 2026, 10:19:49
+```
+
+So the reattach delivered **two** channel-state bursts: the first one
+restored the session (its JOIN was correctly silent, and the topic was news
+because the page had been reloaded — the app is killed in the background),
+then the bouncer attached this connection as an _alias_ of the account's
+session and sent the whole burst again behind its `NOTE BOUNCER ALIAS_ATTACHED`. The first round only silenced topics inside the
+`draft/persistence` batch, so the second burst printed the topic again.
+
+Anything that keys off "which burst is this" is guessing at a sequence the
+server does not announce, so the rule is now about the _content_:
+
+- **An unchanged topic is never printed** (`handlers/topic.ts`): a 332 is
+  shown when the topic differs from the one the channel already displays,
+  and its 333 follows it or is dropped with it. Whatever produces the
+  repeat — session restore, re-JOIN, the alias burst, a third burst — it is
+  silent. `/topic` sets `Channel.topicAsked` so a query still answers (and
+  now says "No topic is set." on 331 instead of nothing).
+- **A JOIN for a channel we are already in is a no-op**: no join line
+  (`handlers/join.ts`), and no second `CHATHISTORY`/`MARKREAD`/`MODE`
+  either (`IrcClient.handleMessage` only starts a catch-up when the JOIN
+  actually moved the channel from PARTED to JOINED). That is also what
+  stops the repeat burst from spending ~6 s of fake lag.
+- **The autojoin waits for a burst that is still arriving**: the wait after
+  `PERSISTENCE STATUS ON` is 2 s, but every sign of a restoration in
+  progress — one of the server's JOINs, a bouncer NOTE — extends it to
+  `RESTORE_QUIET_MS` (750 ms) of quiet, capped at `RESTORE_MAX_WAIT_MS`
+  (8 s) from registration. An unbatched burst (no `batch` cap, or the
+  second burst) is covered as well as a batched one, and a JOIN we send
+  into a restoration is what makes nefarious2 answer with the extra topic +
+  NAMES burst in the first place.
+- **The routine attach note is not shown**: `NOTE BOUNCER ALIAS_ATTACHED`
+  inside the settling window (`inRestorationWindow`, the same 8 s) is setup
+  chatter that would arrive on every switch back to the app. The same note
+  later — or any other bouncer NOTE — is shown as before.
+
 ## Follow-ups
 
 - **Settings toggle for the hold** (`PERSISTENCE SET ON|OFF|DEFAULT`): today
   `/persistence set off` works raw and the reply is shown; a switch in the
   network settings would be the friendly place, with the STATUS shown next
   to it.
-- **Batch later than 1 s after the MOTD.** Then the JOIN goes out anyway
-  and, attached as an alias, the duplicate topic/NAMES burst is back
-  (cosmetic; state stays right). The clean fix is server-side: an explicit
-  "resumed" signal before the MOTD end (a `NOTE` or the STATUS line saying
-  so), or sending the restoration batch before 376. Worth raising with
-  MrLenin with the WebSocket fixes.
+- **Restoration later than the 8 s cap.** Then the autojoin goes out anyway
+  and, attached as an alias, the server answers with another topic + NAMES
+  burst — now invisible and cheap, but still bytes. The clean fix is
+  server-side: an explicit "resumed / restoring N channels" signal before
+  the MOTD end (a `NOTE`, or the STATUS line saying so), or sending the
+  restoration before 376 so a client can simply not JOIN. Worth raising
+  with MrLenin with the WebSocket fixes.
+- **Why two bursts at all** (resume, then alias attach) is worth asking
+  about too: from the client's side one would do.
 - **`no-implicit-names`**: `Channel.rejoining` is cleared by 366. If that
   cap is ever requested, clear it elsewhere (the batch end, or MARKREAD).
 - **Lobby noise on every reconnect** (close report, "Reconnecting in…",

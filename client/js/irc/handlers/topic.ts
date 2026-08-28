@@ -39,9 +39,13 @@ const rplTopic: Handler = (client, msg) => {
 		return;
 	}
 
-	// The JOIN burst of a re-join / session restore repeats the topic we
-	// already show: say nothing unless it changed while we were away.
-	chan.topicQuiet = (chan.rejoining || client.restoring) && topic === chan.shared.topic;
+	// Every join burst repeats the topic, and one reconnect can bring
+	// several: the server restoring a held session, our own re-JOIN, and —
+	// while another client of the account holds the session and we are
+	// attached as an alias — nefarious2's answer to that JOIN (m_join.c,
+	// "already a member"). Say it when it is news, or when asked (/topic).
+	chan.topicQuiet = topic === chan.shared.topic && !chan.topicAsked;
+	chan.topicAsked = false;
 
 	if (chan.topicQuiet) {
 		return;
@@ -61,6 +65,12 @@ const rplNoTopic: Handler = (client, msg) => {
 	}
 
 	chan.topicQuiet = false;
+
+	if (chan.topicAsked) {
+		chan.topicAsked = false;
+		client.pushMessage(chan, {time: client.timeOf(msg), text: "No topic is set."});
+	}
+
 	chan.shared.topic = "";
 	client.dispatch("topic", {chan: chan.id, topic: ""});
 };
