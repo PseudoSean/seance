@@ -34,7 +34,7 @@ type ClientChan = Omit<SharedChan, "messages"> & {
 	replyTo: ClientMessage | null;
 	/** Own message the next plain-text input replaces (`+seance/edit`). */
 	editing: ClientMessage | null;
-	/** Who is typing here right now (`+typing`), pruned by TypingIndicator.vue. */
+	/** Who is typing here right now (`+typing`), pruned by helpers/typingExpiry.ts. */
 	typing: TypingEntry[];
 	/**
 	 * The indicator line stays reserved (empty) after the last entry goes so

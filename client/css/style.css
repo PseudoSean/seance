@@ -46,6 +46,9 @@
 
 	/* Color of the progress bar that appears as a file is being uploaded to the server. Defaults to button color */
 	--upload-progressbar-color: var(--button-color);
+
+	/* Color the sidebar channel icon pulses to while someone is typing there */
+	--channel-typing-color: #84ce88;
 }
 
 ::placeholder {
@@ -829,6 +832,33 @@ background on hover (unless active) */
 	width: 14px;
 	margin-right: 12px;
 	line-height: 18px;
+}
+
+/* Someone is typing in this channel: breathe its icon between the color the
+row already shows and the typing color. `currentcolor` on the `color` property
+resolves to the inherited value, so the pulse rides on top of the hover, active,
+lobby and parted colors instead of clobbering any of them. */
+.channel-list-item.is-typing::before {
+	animation: channel-typing-pulse 1.3s ease-in-out infinite;
+}
+
+@keyframes channel-typing-pulse {
+	0%,
+	100% {
+		color: currentcolor;
+	}
+
+	50% {
+		color: var(--channel-typing-color);
+	}
+}
+
+/* Keep the cue, drop the motion */
+@media (prefers-reduced-motion: reduce) {
+	.channel-list-item.is-typing::before {
+		animation: none;
+		color: var(--channel-typing-color);
+	}
 }
 
 .channel-list-item .name {

@@ -12,6 +12,7 @@
 			{'has-highlight': channel.highlight},
 			{'not-connected': channel.type === 'lobby' && !network.status.connected},
 			{'is-muted': channel.muted},
+			{'is-typing': isTyping},
 		]"
 		:aria-label="getAriaLabel()"
 		:title="getAriaLabel()"
@@ -57,6 +58,18 @@ export default defineComponent({
 			() => props.isFiltering || !isChannelCollapsed(props.network, props.channel)
 		);
 
+		// Someone else is composing here: pulse the row's icon (see
+		// .channel-list-item.is-typing::before in style.css). Only `active`
+		// entries count — `paused` lives for 30 s, far too long to keep a sidebar
+		// icon moving — and muted channels stay still, as they do for unread
+		// counts and notifications. The shared sweep in helpers/typingExpiry.ts
+		// drops stale entries, so this needs no timer of its own to stay honest.
+		const isTyping = computed(
+			() =>
+				!props.channel.muted &&
+				props.channel.typing.some((entry) => entry.state === "active")
+		);
+
 		const getAriaLabel = () => {
 			const extra: string[] = [];
 			const type = props.channel.type;
@@ -99,6 +112,7 @@ export default defineComponent({
 		return {
 			activeChannel,
 			isChannelVisible,
+			isTyping,
 			getAriaLabel,
 			click,
 			openContextMenu,
