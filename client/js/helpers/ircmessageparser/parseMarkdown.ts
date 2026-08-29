@@ -1,4 +1,5 @@
 import {findLinks} from "../../../../shared/linkify";
+import type {ParsedStyle} from "./parseStyle";
 
 export type Range = {start: number; end: number};
 
@@ -293,4 +294,122 @@ function findLastIndex<T>(list: T[], pred: (item: T) => boolean): number {
 	}
 
 	return -1;
+}
+
+// Style-affecting keys compared when merging adjacent fragments
+const STYLE_KEYS: (keyof ParsedStyle)[] = [
+	"bold",
+	"textColor",
+	"bgColor",
+	"hexColor",
+	"hexBgColor",
+	"italic",
+	"underline",
+	"strikethrough",
+	"monospace",
+	"code",
+	"codeBlock",
+	"quote",
+	"spoiler",
+	"href",
+];
+
+const sameStyle = (a: ParsedStyle, b: ParsedStyle) => STYLE_KEYS.every((key) => a[key] === b[key]);
+
+const covers = (range: Range, start: number, end: number) =>
+	range.start <= start && end <= range.end;
+
+// Applies Markdown to the fragments produced by parseStyle: marker characters
+// are dropped, flags are set, offsets are renumbered and equal neighbours merged.
+export function applyMarkdown(fragments: ParsedStyle[]): ParsedStyle[] {
+	if (fragments.length === 0) {
+		return fragments;
+	}
+
+	const text = fragments.map((f) => f.text).join("");
+	const {removals, ranges} = tokenize(text);
+
+	if (removals.length === 0 && ranges.length === 0) {
+		return fragments;
+	}
+
+	const cuts = new Set<number>([0, text.length]);
+
+	for (const item of [...fragments, ...removals, ...ranges]) {
+		cuts.add(item.start);
+		cuts.add(item.end);
+	}
+
+	const points = [...cuts].sort((a, b) => a - b);
+	const result: ParsedStyle[] = [];
+	let offset = 0;
+
+	for (let k = 0; k < points.length - 1; k++) {
+		const start = points[k];
+		const end = points[k + 1];
+
+		if (removals.some((r) => covers(r, start, end))) {
+			continue;
+		}
+
+		const source = fragments.find((f) => covers(f, start, end));
+
+		if (!source) {
+			continue;
+		}
+
+		const fragment: ParsedStyle = {
+			...source,
+			text: text.slice(start, end),
+			start: offset,
+			end: offset + (end - start),
+		};
+
+		for (const range of ranges) {
+			if (!covers(range, start, end)) {
+				continue;
+			}
+
+			if (range.flag === "href") {
+				fragment.href = range.href;
+			} else {
+				fragment[range.flag] = true;
+			}
+		}
+
+		offset = fragment.end;
+		const last = result[result.length - 1];
+
+		if (last && sameStyle(last, fragment)) {
+			last.text += fragment.text;
+			last.end = fragment.end;
+		} else {
+			result.push(fragment);
+		}
+	}
+
+	return result;
+}
+
+// Plain text with the Markdown markers removed (for title attributes etc.)
+export function stripMarkdown(text: string): string {
+	const {removals} = tokenize(text);
+
+	if (removals.length === 0) {
+		return text;
+	}
+
+	const sorted = [...removals].sort((a, b) => a.start - b.start);
+	let out = "";
+	let pos = 0;
+
+	for (const r of sorted) {
+		if (r.start > pos) {
+			out += text.slice(pos, r.start);
+		}
+
+		pos = Math.max(pos, r.end);
+	}
+
+	return out + text.slice(pos);
 }

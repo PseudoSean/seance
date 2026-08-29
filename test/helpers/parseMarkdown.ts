@@ -1,5 +1,10 @@
 import {expect} from "chai";
-import {tokenize} from "../../client/js/helpers/ircmessageparser/parseMarkdown";
+import {
+	applyMarkdown,
+	stripMarkdown,
+	tokenize,
+} from "../../client/js/helpers/ircmessageparser/parseMarkdown";
+import parseStyle from "../../client/js/helpers/ircmessageparser/parseStyle";
 
 describe("parseMarkdown tokenize — emphasis", () => {
 	it("returns nothing for plain text", () => {
@@ -202,5 +207,84 @@ describe("parseMarkdown tokenize — code, quotes, links", () => {
 		expect(tokenize("[x](javascript:alert(1))")).to.deep.equal({removals: [], ranges: []});
 		expect(tokenize("[x](ftp://e.com)")).to.deep.equal({removals: [], ranges: []});
 		expect(tokenize("[x] (https://e.com)").ranges).to.deep.equal([]);
+	});
+});
+
+describe("applyMarkdown", () => {
+	const frag = (text: string, start: number, extra: Record<string, unknown> = {}) => ({
+		bold: false,
+		textColor: undefined,
+		bgColor: undefined,
+		hexColor: undefined,
+		hexBgColor: undefined,
+		italic: false,
+		underline: false,
+		strikethrough: false,
+		monospace: false,
+		text,
+		start,
+		end: start + text.length,
+		...extra,
+	});
+
+	it("returns the same array when there is no markdown", () => {
+		const input = parseStyle("plain");
+		expect(applyMarkdown(input)).to.equal(input);
+	});
+
+	it("removes markers, sets flags and renumbers offsets", () => {
+		expect(applyMarkdown(parseStyle("a **b** c"))).to.deep.equal([
+			frag("a ", 0),
+			frag("b", 2, {bold: true}),
+			frag(" c", 3),
+		]);
+	});
+
+	it("composes with IRC control codes", () => {
+		// \x02 bold + markdown italic
+		expect(applyMarkdown(parseStyle("\x02x *y*\x02 z"))).to.deep.equal([
+			frag("x ", 0, {bold: true}),
+			frag("y", 2, {bold: true, italic: true}),
+			frag(" z", 3),
+		]);
+	});
+
+	it("splits a styled fragment around a marker", () => {
+		// One IRC fragment containing a markdown span in the middle
+		expect(applyMarkdown(parseStyle("\x1dab `c` d\x1d"))).to.deep.equal([
+			frag("ab ", 0, {italic: true}),
+			frag("c", 3, {italic: true, monospace: true, code: true}),
+			frag(" d", 4, {italic: true}),
+		]);
+	});
+
+	it("carries href, spoiler, quote and codeBlock flags", () => {
+		expect(applyMarkdown(parseStyle("[t](https://e.com) ||s||"))).to.deep.equal([
+			frag("t", 0, {href: "https://e.com"}),
+			frag(" ", 1),
+			frag("s", 2, {spoiler: true}),
+		]);
+		expect(applyMarkdown(parseStyle("> q\n```c```"))).to.deep.equal([
+			frag("q", 0, {quote: true}),
+			frag("c", 1, {codeBlock: true, code: true}),
+		]);
+	});
+
+	it("merges adjacent fragments that end up identical", () => {
+		expect(applyMarkdown(parseStyle("**a****b**"))).to.deep.equal([
+			frag("ab", 0, {bold: true}),
+		]);
+	});
+
+	it("handles empty input", () => {
+		expect(applyMarkdown([])).to.deep.equal([]);
+	});
+});
+
+describe("stripMarkdown", () => {
+	it("removes markers and keeps text", () => {
+		expect(stripMarkdown("**a** `b` > c [d](https://e.com)")).to.equal("a b > c d");
+		expect(stripMarkdown("> c")).to.equal("c");
+		expect(stripMarkdown("plain")).to.equal("plain");
 	});
 });
