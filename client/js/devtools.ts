@@ -14,7 +14,9 @@ let shown = false;
 
 /** Load eruda on first use and toggle its panel. No-op in production. */
 export async function toggleDevtools(): Promise<void> {
-	if (!devtoolsAvailable) {
+	// Spelled out (not `devtoolsAvailable`): webpack only treats the branch
+	// as dead when the DefinePlugin expression itself is the condition.
+	if (process.env.NODE_ENV === "production") {
 		return;
 	}
 
