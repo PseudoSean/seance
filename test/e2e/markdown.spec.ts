@@ -5,8 +5,9 @@ import {expect, Page, test} from "@playwright/test";
 // holding. The tree it renders from is unit-tested in `test/helpers/layout.ts`;
 // what only a browser can answer is whether the elements that tree names really
 // turn up. It only runs when SEANCE_E2E_IRC_URL points at a WebSocket ircd
-// (e.g. `wss://irc.example.org:9998/`), and it sends four lines to a real
-// channel, so keep it that way.
+// (e.g. `wss://irc.example.org:9998/`), and it sends four messages to a real
+// channel — five when SEANCE_E2E_MULTILINE adds the multi-line one below — so
+// keep it that way.
 const ircUrl = process.env.SEANCE_E2E_IRC_URL;
 const channel = process.env.SEANCE_E2E_CHANNEL ?? "#ps";
 
@@ -101,13 +102,67 @@ test("renders Markdown in own messages", async ({page}) => {
 	// characters alone").
 	await expect(quoted.locator(".md-code-block a")).toHaveCount(0);
 	// A code block is rows now, one per line, with the gutter counter only on
-	// blocks of two lines or more. One line is all this can assert: an IRC
-	// message holds no newline (`dispatchInput` sends one message per line), so
-	// neither a fence language tag — which is only a tag when the fence line
-	// ends in a newline — nor a second line is reachable from the input. The
-	// highlighter itself is covered by `test/helpers/highlighter.ts`.
+	// blocks of two lines or more. One row is all a single-line message can
+	// hold: a fence language tag is only a tag when the fence line ends in a
+	// newline, and a second row needs one too. Newlines reach the wire only
+	// where the server and the client both negotiate `draft/multiline` (a
+	// separate branch/PR), so the multi-line case is the gated test below
+	// rather than this one. The highlighter itself is covered by
+	// `test/helpers/highlighter.ts`.
 	await expect(quoted.locator(".md-code-block .md-line")).toHaveCount(1);
 	await expect(quoted.locator(".md-code-block")).not.toHaveClass(/md-code-block--numbered/);
+});
+
+// The other half of the code block: the fence language tag and the gutter, both
+// of which need a message with newlines in it. Only a client and server that
+// negotiate `draft/multiline` put one on the wire, and that lives on a separate
+// branch/PR — so this is gated on SEANCE_E2E_MULTILINE, and the rest of the
+// file still runs on a build without it.
+test("renders a fenced multi-line code block", async ({page}) => {
+	test.skip(
+		!process.env.SEANCE_E2E_MULTILINE,
+		"set SEANCE_E2E_MULTILINE=1 on a build that negotiates draft/multiline"
+	);
+
+	const nick = await connect(page);
+
+	// Composed the way a user does — Shift+Enter between the lines, Enter to
+	// send. `page.fill` would set the value in one go and never exercise the
+	// keyboard path, which is what puts the newlines there (`ChatInput.vue`
+	// submits on `@keypress.enter.exact`, so Shift+Enter falls through to the
+	// textarea).
+	await page.click("#input");
+	await page.keyboard.type("```js");
+	await page.keyboard.press("Shift+Enter");
+	await page.keyboard.type("const x = 1;");
+	await page.keyboard.press("Shift+Enter");
+	await page.keyboard.type("let y = x;");
+	await page.keyboard.press("Shift+Enter");
+	await page.keyboard.type("```");
+	await page.keyboard.press("Enter");
+
+	// The random nick is this run's token: nothing else in the channel comes
+	// from it, so every own message here belongs to that one send.
+	const msg = page.locator(`.msg[data-type="message"][data-from="${nick}"]`);
+	const block = msg.locator(".md-code-block");
+
+	// `data-lang` lands only once the lazy Prism chunk has resolved and the
+	// block has re-rendered with its tokens, so this is the assertion that
+	// waits for the highlighting — and `js` normalised to `javascript` is the
+	// fence tag having survived as a tag.
+	await expect(block).toHaveAttribute("data-lang", "javascript");
+
+	const keywords = await block.locator(".tok-keyword").allInnerTexts();
+
+	expect(keywords).toContain("const");
+	expect(keywords).toContain("let");
+
+	// Two code rows, so the block carries the gutter counter.
+	await expect(msg.locator(".md-code-block--numbered .md-line")).toHaveCount(2);
+	await expect(msg.locator(".content")).not.toContainText("```");
+	// Last, deliberately: a per-line send would have shown up as four separate
+	// messages long before the highlighted block above rendered.
+	await expect(msg).toHaveCount(1);
 });
 
 test("leaves the text alone when the setting is off, Alt+K toggles it", async ({page}) => {
