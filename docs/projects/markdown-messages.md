@@ -54,9 +54,12 @@ A code block is rows: `CodeBlock.vue` renders one `<span class="md-line">` per
 line inside the `<code class="md-code-block">`, and blocks of two lines or more
 also get `md-code-block--numbered`, whose CSS counter draws the gutter. The
 number is `::before` content, so selecting the block copies the code and not the
-numbers. The block renders its plain characters — a code block is a verbatim
-span, so IRC colour codes inside one do not style it and a URL inside one is not
-a link.
+numbers. The block renders its plain characters and nothing else: `parse.ts`
+builds it from `toPlainText` of the wrap's children, so IRC colour codes inside
+one do not style it and a URL inside one is not a link, as on Discord. Inline
+`` `code` `` is not flattened that way, so a URL there is still a link — the
+verbatim span suppresses the channel/nick/emoji finders in both, but `findLinks`
+runs on the whole message and it is the block that drops what it found.
 
 Highlighting is `highlighter.ts` (Vue-free, mocha loads it):
 
@@ -68,9 +71,10 @@ Highlighting is `highlighter.ts` (Vue-free, mocha loads it):
   `javascript`, `sh` → `bash`, plus the punctuation forms Prism has no alias for
   (`c++`, `c#`).
 - An untagged block of `MIN_GUESS_LINES` (2) lines or more is guessed with
-  flourite, and the guess is used only when it is `GUESS_MIN_CONFIDENCE` (0.5)
-  ahead of the runner-up — flourite's scores go negative, so "ahead of the
-  runner-up" is the only share that means anything.
+  flourite, and the guess is used only when it is strictly past
+  `GUESS_MIN_CONFIDENCE` (0.5), i.e. strictly ahead of the runner-up —
+  flourite's scores go negative, so "ahead of the runner-up" is the only share
+  that means anything.
 - `ensureLanguage` fetches the grammar and its dependencies, memoised per id;
   `highlight` then turns `Prism.tokenize`'s nested tokens into one plain
   `CodeToken` array per line (innermost type wins), which the component renders
@@ -80,7 +84,7 @@ Highlighting is `highlighter.ts` (Vue-free, mocha loads it):
   values in `themes/morning.css`.
 - Everything is lazy: `js/highlighter.js` (Prism's core and alias table),
   `js/prism-<lang>.js` (one per grammar; `webpackInclude` in `highlighter.ts`
-  picks the 71 this deploy ships, closed over Prism's own dependency links) and
+  picks the 72 this deploy ships, closed over Prism's own dependency links) and
   `js/flourite.js`. Only a block that names a language or is long enough to
   guess fetches anything at all. The service worker precaches the shell, not
   these, so the first block in an offline app stays plain — a failed import is
@@ -122,12 +126,14 @@ in the Help window's shortcut table.
   table, asserting the text and flags `applyMarkdown` produces. No offsets: a
   fragment boundary moving is not behaviour.
 - `test/helpers/layout.ts` — the tree a message renders as, wraps and parts
-  included.
+  included, and what the adapter is handed for a code block (its characters,
+  URL included).
 - `test/helpers/highlighter.ts` — tag normalisation, line splitting, the token
   → node mapping (against a stub grammar and a real one), and the guesser.
 - `test/e2e/markdown.spec.ts` — `SEANCE_E2E_IRC_URL=wss://host:port/ yarn test:e2e`
   drives the built client against a live ircd with Playwright. It covers what
   only a browser can answer: that the elements the tree names really appear,
-  that the spoiler toggles, and that a code block renders as one row. It cannot
+  that the spoiler toggles, that a code block renders as one row and that a URL
+  inside one is not an anchor. It cannot
   cover highlighting, for the reason above: no message it can send holds a
   newline.

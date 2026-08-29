@@ -17,7 +17,7 @@ A stretch of text the Markdown tokenizer never interprets, such as a URL, so its
 _Avoid_: skip range, protected region
 
 **Verbatim span**:
-A stretch of text rendered exactly as written — inline code and code blocks — where neither Markdown nor the finders apply.
+A stretch of text rendered exactly as written — inline code and code blocks — where neither Markdown nor the channel, nick and emoji finders apply. `findLinks` is the exception: it still runs, so a URL inside inline code is a link, while a code block renders only its characters and a URL inside one is not.
 _Avoid_: code range, suppression hint
 
 **Finder**:

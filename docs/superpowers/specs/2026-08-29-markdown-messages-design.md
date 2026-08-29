@@ -35,10 +35,15 @@ Rules:
 - Opening markers must be followed, and closing markers preceded, by a non-space
   character. Unmatched or malformed markers are literal text.
 - `*` works inside words; `_` and `__` only when the outer side is a word boundary.
-- Markers nest (`**bold *and italic***`), IRC control codes and Markdown compose.
+- Markers nest (`**bold *and italic***`), IRC control codes and Markdown
+  compose — everywhere except inside a code block, which shows its own
+  characters and nothing else, so an IRC colour code in one does not style it.
 - Inside inline code and code blocks nothing else is interpreted: no markdown,
-  and the nick/channel/emoji finders are suppressed. URL detection still runs.
-  The same holds for a whole `monospace_block` message such as the MOTD.
+  and the nick/channel/emoji finders are suppressed. `findLinks` still runs on
+  the whole message, so a URL inside inline `` `code` `` is still a link (in a
+  monospace pill). A code block is different: it renders only its own
+  characters, so a URL in one is not a link. The same holds for a whole
+  `monospace_block` message such as the MOTD.
 - URLs found by `findLinks` on the raw text are opaque to the tokenizer, so
   `https://x/a_b_c` or `https://x/**` survive intact.
 - No headers, lists, tables, images, or HTML.
@@ -78,7 +83,9 @@ The wraps become layout nodes, which `parse.ts` renders:
 - `spoiler` → `<span class="md-spoiler">` with an `onClick` that toggles
   `md-spoiler-shown` on `event.currentTarget` (no store state)
 - `quote` → `<span class="md-quote">`
-- `codeBlock` → `<code class="md-code-block">`
+- `codeBlock` → `<code class="md-code-block">`, built from `toPlainText` of
+  the wrap's children rather than from the children themselves, which is what
+  makes the block verbatim
 
 `parse(text, message, network, options?: {markdown?: boolean})` — `ParsedMessage.vue`
 passes `{markdown: store.state.settings.markdown}`. Parts inside a verbatim
@@ -156,3 +163,15 @@ Code blocks get syntax highlighting and, when multi-line, line numbers.
   instead of two. Both halves were monospace before and after; only the pill
   count changed. Covered by `test/helpers/parseMarkdown.ts` ("merges an IRC
   monospace run into the inline code beside it").
+- **Code blocks render their characters, and only those (2026-08-29).** The
+  Rules above said "URL detection still runs", which is true of the detection
+  and false of the result: `parse.ts` builds a code block from
+  `toPlainText(node.children)`, so a URL inside a fence is not an anchor and an
+  IRC colour code in one does not style it — the block is its characters, as on
+  Discord. Inline `` `code` `` is unaffected, because only the block is
+  flattened: a URL there is still a link. The layout tree keeps the `link` node
+  in both cases (`test/helpers/layout.ts`, "still finds a link inside a code
+  block"); it is the adapter that decides. Pinned by "renders a code block from
+  its characters alone" in `test/helpers/layout.ts` and by
+  `test/e2e/markdown.spec.ts` asserting a fenced block with a URL in it has no
+  `<a>`.
