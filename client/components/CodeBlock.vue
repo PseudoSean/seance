@@ -16,7 +16,7 @@ export default defineComponent({
 		lang: {type: String, default: undefined},
 	},
 	setup(props) {
-		// The Prism id in force, once something has resolved one
+		// The Prism id the block is being shown as, set only once it really is
 		const id = ref<string | undefined>(undefined);
 		const tokens = ref<Highlighted | undefined>(undefined);
 		const plain = computed(() => splitLines(props.code));
@@ -45,32 +45,42 @@ export default defineComponent({
 			{immediate: true}
 		);
 
+		// Nothing in here is worth a broken render, and nobody awaits the
+		// promise, so the whole body is guarded: offline, a chunk that is gone,
+		// a grammar that throws — the block simply stays plain.
 		async function resolve(mine: number) {
 			const code = props.code;
-			let highlighter;
 
 			try {
-				highlighter = await import(
+				const highlighter = await import(
 					/* webpackChunkName: "highlighter" */ "../js/helpers/ircmessageparser/highlighter"
 				);
+
+				// A tag is taken at its word; only an untagged block is guessed
+				const lang = props.lang
+					? highlighter.normalizeLang(props.lang)
+					: await highlighter.guessLanguage(code);
+
+				if (!lang || mine !== generation) {
+					return;
+				}
+
+				if (!(await highlighter.ensureLanguage(lang)) || mine !== generation) {
+					return;
+				}
+
+				const highlighted = highlighter.highlight(code, lang);
+
+				if (!highlighted) {
+					return;
+				}
+
+				tokens.value = highlighted;
+				// `data-lang` is what the block is shown as, so it goes up with
+				// the tokens and not before them
+				id.value = lang;
 			} catch {
-				// Offline, or the chunk is gone: the block stays plain
-				return;
-			}
-
-			// A tag is taken at its word; only an untagged block is guessed
-			const lang = props.lang
-				? highlighter.normalizeLang(props.lang)
-				: await highlighter.guessLanguage(code);
-
-			if (!lang || mine !== generation) {
-				return;
-			}
-
-			id.value = lang;
-
-			if ((await highlighter.ensureLanguage(lang)) && mine === generation) {
-				tokens.value = highlighter.highlight(code, lang);
+				// The block stays plain
 			}
 		}
 

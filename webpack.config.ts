@@ -123,7 +123,13 @@ const config: webpack.Configuration = {
 		// language guesser). `filename` carries the `js/` prefix in the entry
 		// name, so chunks have to say it here.
 		chunkFilename: "js/[name].js",
-		publicPath: "/",
+		// Not "/": a deploy may live under a subpath (https://host/chat/), and
+		// an absolute public path would send every `import()` to /js/… . "auto"
+		// derives it from the running script's own URL, undoing the entry's
+		// `js/` depth, so a chunk resolves to <page dir>/js/<name>.js wherever
+		// the tree is served from. Everything else (index.html, the service
+		// worker's precache list) is already scope-relative.
+		publicPath: "auto",
 	},
 	performance: {
 		hints: false,

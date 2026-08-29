@@ -11,7 +11,9 @@
 	--highlight-bg-color: #4d4332;
 	--highlight-border-color: #b08c4f;
 
-	/* Syntax highlighting, on this theme's dark `code` background */
+	/* Code blocks and their syntax highlighting, on this theme's dark `code`
+	 * background */
+	--md-code-color: #f3f3f3;
 	--tok-comment: #8b949e;
 	--tok-keyword: #ff7b72;
 	--tok-string: #a5d6ff;

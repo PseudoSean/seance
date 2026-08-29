@@ -88,13 +88,18 @@ test("renders Markdown in own messages", async ({page}) => {
 	await msg.locator(".md-spoiler").click();
 	await expect(msg.locator(".md-spoiler")).toHaveClass(/md-spoiler-shown/);
 
-	await say(page, `> ${token}b quoted \`\`\`block\`\`\``);
+	await say(page, `> ${token}b quoted \`\`\`block https://example.com/x\`\`\``);
 
 	const quoted = own(page, nick, `${token}b`);
 
 	await expect(quoted.locator(".md-quote")).toContainText("quoted");
-	await expect(quoted.locator(".md-code-block")).toHaveText("block");
+	await expect(quoted.locator(".md-code-block")).toHaveText("block https://example.com/x");
 	await expect(quoted.locator(".content")).not.toContainText(">");
+	// A code block renders its characters and nothing else, so the URL in it
+	// stays code: the layout tree does hold a link node there, and the adapter
+	// flattens it (`test/helpers/layout.ts`, "renders a code block from its
+	// characters alone").
+	await expect(quoted.locator(".md-code-block a")).toHaveCount(0);
 	// A code block is rows now, one per line, with the gutter counter only on
 	// blocks of two lines or more. One line is all this can assert: an IRC
 	// message holds no newline (`dispatchInput` sends one message per line), so
@@ -112,12 +117,15 @@ test("leaves the text alone when the setting is off, Alt+K toggles it", async ({
 	// socket, because the connect URL differs in path and query.
 	const chat = await page.evaluate(() => location.hash);
 
-	// Sent while the setting is still on, so the flip has to re-render it
-	await say(page, `${token}p **pre**`);
+	// Sent while the setting is still on, so the flip has to re-render it.
+	// The words are deliberately neutral: everyone else in the channel sees
+	// these lines rendered, so a payload that describes a look ("not bold")
+	// reads as a bug on their screen.
+	await say(page, `${token}p **toggle-probe**`);
 
 	const pre = own(page, nick, `${token}p`);
 
-	await expect(pre.locator(".irc-bold")).toHaveText("pre");
+	await expect(pre.locator(".irc-bold")).toHaveText("toggle-probe");
 
 	// Alt+K with the chat input focused, exactly like a user would use it
 	await page.click("#input");
@@ -138,13 +146,13 @@ test("leaves the text alone when the setting is off, Alt+K toggles it", async ({
 
 	// The message that was already on screen re-renders with the markers back
 	await expect(pre.locator(".irc-bold")).toHaveCount(0);
-	await expect(pre.locator(".content")).toContainText("**pre**");
+	await expect(pre.locator(".content")).toContainText("**toggle-probe**");
 
-	await say(page, `${token}c **not bold**`);
+	await say(page, `${token}c **markers-kept**`);
 
 	const msg = own(page, nick, `${token}c`);
 
-	await expect(msg.locator(".content")).toContainText("**not bold**");
+	await expect(msg.locator(".content")).toContainText("**markers-kept**");
 	await expect(msg.locator(".irc-bold")).toHaveCount(0);
 
 	// Alt+K again re-enables rendering, restoring both messages
@@ -162,6 +170,6 @@ test("leaves the text alone when the setting is off, Alt+K toggles it", async ({
 	}, chat);
 	await page.waitForSelector("#input");
 
-	await expect(pre.locator(".irc-bold")).toHaveText("pre");
-	await expect(msg.locator(".irc-bold")).toHaveText("not bold");
+	await expect(pre.locator(".irc-bold")).toHaveText("toggle-probe");
+	await expect(msg.locator(".irc-bold")).toHaveText("markers-kept");
 });

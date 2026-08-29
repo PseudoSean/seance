@@ -94,6 +94,24 @@ describe("layout — wraps", () => {
 		]);
 	});
 
+	// The other half of the rule above, and the one that decides what is on
+	// screen: `parse.ts` builds a code block from `toPlainText` of its
+	// children, so the link node never becomes an anchor. A code block renders
+	// its characters and nothing else — inline `` `code` `` keeps its link.
+	it("renders a code block from its characters alone", () => {
+		const nodes = layout("```see https://example.com/ ok```", markdown);
+		const block = nodes[0];
+
+		expect(nodes).to.have.lengthOf(1);
+		expect(block.kind).to.equal("wrap");
+
+		if (block.kind !== "wrap") {
+			return;
+		}
+
+		expect(toPlainText(block.children)).to.equal("see https://example.com/ ok");
+	});
+
 	it("says nothing extra in the plain text of a tagged block", () => {
 		expect(toPlainText(layout("```js\nlet x\n```", markdown))).to.equal("let x");
 	});

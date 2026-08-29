@@ -28,8 +28,12 @@
 	/* Links and link-looking buttons */
 	--link-color: #50a656;
 
-	/* Syntax highlighting in code blocks, on the light `code` background.
-	 * Dark values live in themes/morning.css. */
+	/* Code blocks. `code` is red, which is fine for an inline pill but wrong
+	 * for a whole block: the runs no grammar rule claimed would be red too, so
+	 * a block states a neutral text colour of its own.
+	 * Syntax highlighting sits on the light `code` background.
+	 * Dark values for both live in themes/morning.css. */
+	--md-code-color: #333;
 	--tok-comment: #6a737d;
 	--tok-keyword: #d73a49;
 	--tok-string: #032f62;
@@ -3139,6 +3143,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	padding: 4px 6px;
 	margin: 2px 0;
 	overflow-x: auto;
+	color: var(--md-code-color);
 }
 
 /* One row per line. The number is a CSS counter rather than text, so selecting
@@ -3153,7 +3158,10 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 .md-code-block--numbered .md-line::before {
 	display: inline-block;
-	width: 2.5em;
+
+	/* Not `width`: a block of 100 lines or more would spill its number out of
+	 * the gutter and into the code. */
+	min-width: 3.5em;
 	margin-right: 0.75em;
 	text-align: right;
 	opacity: 0.5;

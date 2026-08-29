@@ -157,7 +157,8 @@ export async function guessLanguage(code: string): Promise<string | undefined> {
 		return undefined;
 	}
 
-	if (confidence(guess.language, guess.statistics) < GUESS_MIN_CONFIDENCE) {
+	// A tie is 0.5 exactly, and a tie is not ahead of anything
+	if (confidence(guess.language, guess.statistics) <= GUESS_MIN_CONFIDENCE) {
 		return undefined;
 	}
 

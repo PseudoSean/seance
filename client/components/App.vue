@@ -115,6 +115,10 @@ export default defineComponent({
 				value: !store.state.settings.markdown,
 				sync: true,
 			});
+
+			// Mousetrap only calls `preventDefault` when the handler says false;
+			// without it ⌥K types ˚ on an Apple keyboard.
+			return false;
 		};
 
 		const msUntilNextDay = () => {
