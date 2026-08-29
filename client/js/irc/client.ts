@@ -26,6 +26,7 @@ import {commandNames, dispatchInput} from "./commands";
 import {describeClose} from "./disconnect";
 import {handlers, unhandled} from "./handlers";
 import {interceptBatchLine, resetBatches} from "./handlers/batch";
+import {MULTILINE_CAP, MultilineLimits, parseMultilineValue} from "./multiline";
 import {cancelMarkRead, scheduleMarkRead} from "./handlers/markread";
 import {abortHistory} from "./history";
 import {
@@ -654,20 +655,37 @@ export class IrcClient {
 		}
 	}
 
-	/** A negotiator that also asks for `sasl` (when usable) and runs SASL before `CAP END`. */
+	/**
+	 * A negotiator that also asks for `sasl` (when usable) and runs SASL
+	 * before `CAP END`. The `accept` hook drops a cap whose 302 value says
+	 * we cannot use it: a `sasl` without our mechanism, a `draft/multiline`
+	 * without both of its limits (multiline.ts).
+	 */
 	private createCaps(): CapNegotiator {
 		const mechanism = this.saslMechanism;
 
-		if (!mechanism) {
-			return new CapNegotiator(SEANCE_CAPS);
-		}
+		const accept = (name: string, value: string): boolean => {
+			if (name === MULTILINE_CAP) {
+				return parseMultilineValue(value) !== undefined;
+			}
+
+			if (name === "sasl") {
+				return mechanism !== null && mechanismOffered(mechanism, value);
+			}
+
+			return true;
+		};
 
 		const caps = new CapNegotiator({
 			...SEANCE_CAPS,
-			wanted: [...SEANCE_CAPS.wanted, "sasl"],
-			accept: (name, value) => name !== "sasl" || mechanismOffered(mechanism, value),
+			wanted: mechanism ? [...SEANCE_CAPS.wanted, "sasl"] : SEANCE_CAPS.wanted,
+			accept,
 		});
-		caps.beforeEnd = () => this.startSasl(mechanism);
+
+		if (mechanism) {
+			caps.beforeEnd = () => this.startSasl(mechanism);
+		}
+
 		return caps;
 	}
 
@@ -1164,6 +1182,19 @@ export class IrcClient {
 		}
 
 		this.typingState.clear();
+	}
+
+	/**
+	 * What one `draft/multiline` batch may carry, or undefined when
+	 * multi-line messages are not available: the cap has to be enabled with
+	 * a usable 302 value, and `batch` — which carries it — with it.
+	 */
+	multilineLimits(): MultilineLimits | undefined {
+		if (!this.caps.hasCapability(MULTILINE_CAP) || !this.caps.hasCapability("batch")) {
+			return undefined;
+		}
+
+		return parseMultilineValue(this.caps.value(MULTILINE_CAP));
 	}
 
 	/** Whether the server lets us send REDACT. */
