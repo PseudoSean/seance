@@ -10,6 +10,11 @@
 		src="https://github.com/evilnet/seance/actions/workflows/pages.yml/badge.svg"></a>
 </p>
 
+<p align="center">
+	<strong>Try it:</strong> <a href="https://evilnet.github.io/seance/">evilnet.github.io/seance</a>
+	— the latest build of <code>develop</code>, straight from GitHub Pages
+</p>
+
 ## Overview
 
 Seance is a browser IRC client with **no server of its own**. The page opens a
