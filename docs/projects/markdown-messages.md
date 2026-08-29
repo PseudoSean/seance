@@ -90,13 +90,14 @@ Highlighting is `highlighter.ts` (Vue-free, mocha loads it):
   these, so the first block in an offline app stays plain — a failed import is
   caught, and the block simply never highlights.
 
-**Not reachable from IRC yet.** Both paths need a newline in the message: a
-fence tag is only a tag before one, and a guess needs two lines. An IRC message
-carries no newline — `dispatchInput` sends one message per line and the client
-does not have `draft/multiline` (`client/js/irc/caps.ts`) — so today no message
-this client can send or receive produces a language tag or a gutter. The
-machinery is in place for when multiline lands; what ships now is the plain row
-layout for the single-line blocks people do send.
+**Reachable only with multiline.** Both paths need a newline in the message: a
+fence tag is only a tag before one, and a guess needs two lines. On this branch
+`dispatchInput` sends one message per line and the client does not negotiate
+`draft/multiline` (`client/js/irc/caps.ts`), so nothing it sends or receives
+produces a language tag or a gutter; the newlines arrive with the
+`multiline-messages` branch. The browser cover for the multi-line block is in
+`test/e2e/markdown.spec.ts`, gated on `SEANCE_E2E_MULTILINE=1` so it only runs
+where multiline is in.
 
 ## Licensing
 
