@@ -19,6 +19,12 @@ export type ParsedStyle = {
 	underline?: boolean;
 	strikethrough?: boolean;
 	monospace?: boolean;
+	// Markdown-only flags, set by parseMarkdown.ts
+	code?: boolean;
+	codeBlock?: boolean;
+	quote?: boolean;
+	spoiler?: boolean;
+	href?: string;
 	text: string;
 	start: number;
 	end: number;
