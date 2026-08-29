@@ -61,6 +61,11 @@ function own(page: Page, nick: string, token: string) {
 }
 
 test("renders Markdown in own messages", async ({page}) => {
+	// The copy button below reads the clipboard back. Chromium-only permission
+	// names, which is all the suite runs (`playwright.config.ts` names no other
+	// project), and the page is on 127.0.0.1, so `navigator.clipboard` is there.
+	await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+
 	const nick = await connect(page);
 	const token = `md${nick.slice(-4)}`;
 
@@ -88,6 +93,8 @@ test("renders Markdown in own messages", async ({page}) => {
 
 	await msg.locator(".md-spoiler").click();
 	await expect(msg.locator(".md-spoiler")).toHaveClass(/md-spoiler-shown/);
+	// Inline code is not a code block, so this message offers no copy action
+	await expect(msg.locator(".msg-action-copy")).toHaveCount(0);
 
 	await say(page, `> ${token}b quoted \`\`\`block https://example.com/x\`\`\``);
 
@@ -111,6 +118,23 @@ test("renders Markdown in own messages", async ({page}) => {
 	// `test/helpers/highlighter.ts`.
 	await expect(quoted.locator(".md-code-block .md-line")).toHaveCount(1);
 	await expect(quoted.locator(".md-code-block")).not.toHaveClass(/md-code-block--numbered/);
+
+	// "Copy code" lives in the message's own toolbar and only turns up on a
+	// message that renders a block. What it copies is the block's characters —
+	// no fence, no gutter.
+	const copy = quoted.locator(".msg-action-copy");
+
+	await expect(copy).toHaveAttribute("aria-label", "Copy code");
+	await expect(copy).toHaveAttribute("title", "Copy code");
+	await quoted.hover();
+	await copy.click();
+	// The label goes back to "Copy code" after a second and a half, so it is
+	// the only thing asserted between the click and the clipboard read
+	await expect(copy).toHaveAttribute("aria-label", "Copied");
+
+	const clipboard = await page.evaluate(() => navigator.clipboard.readText());
+
+	expect(clipboard).toBe("block https://example.com/x");
 });
 
 // The other half of the code block: the fence language tag and the gutter, both

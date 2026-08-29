@@ -61,6 +61,22 @@ one do not style it and a URL inside one is not a link, as on Discord. Inline
 verbatim span suppresses the channel/nick/emoji finders in both, but `findLinks`
 runs on the whole message and it is the block that drops what it found.
 
+A message that renders at least one code block gets a **Copy code** action in
+its own hover toolbar (`MessageActions.vue`, `.msg-action-copy`, next to
+reply/react/edit; the glyph turns into a check mark and the `aria-label`/`title`
+into "Copied" for 1.5 s). It is not a control on the block: the toolbar already
+appears on hover and works on touch (`.msg-actions.active`), and a second
+control in the same corner was neither reachable with a mouse nor with a thumb.
+Which blocks a message holds is decided on the layout tree, not on the DOM:
+`codeBlocksOf(nodes)` (`layout.ts`) returns each `codeBlock` wrap's
+`toPlainText`, so what is copied is the block's characters — newlines included,
+without the fence or the gutter — and several blocks are joined by a blank line.
+The `markdown` setting off means there are no blocks and no action. The copy
+itself is `writeClipboard` (`client/js/clipboard.ts`): `navigator.clipboard`
+where it works, an off-screen `<textarea>` and `document.execCommand("copy")`
+where it does not (a deploy served over plain http is not a secure context).
+Both paths fail silently, and a copy that did not happen leaves the label alone.
+
 Highlighting is `highlighter.ts` (Vue-free, mocha loads it):
 
 - The fence's language tag is kept by `applyMarkdown` as `lang` and carried on
@@ -127,14 +143,17 @@ table. The checkbox itself carries no hint — no other setting does.
   table, asserting the text and flags `applyMarkdown` produces. No offsets: a
   fragment boundary moving is not behaviour.
 - `test/helpers/layout.ts` — the tree a message renders as, wraps and parts
-  included, and what the adapter is handed for a code block (its characters,
-  URL included).
+  included, what the adapter is handed for a code block (its characters, URL
+  included), and what `codeBlocksOf` reads back out of it for the Copy code
+  action.
 - `test/helpers/highlighter.ts` — tag normalisation, line splitting, the token
   → node mapping (against a stub grammar and a real one), and the guesser.
 - `test/e2e/markdown.spec.ts` — `SEANCE_E2E_IRC_URL=wss://host:port/ yarn test:e2e`
   drives the built client against a live ircd with Playwright. It covers what
   only a browser can answer: that the elements the tree names really appear,
-  that the spoiler toggles, that a code block renders as one row and that a URL
-  inside one is not an anchor. It cannot
+  that the spoiler toggles, that a code block renders as one row, that a URL
+  inside one is not an anchor and that the toolbar's Copy code action puts the
+  block's characters on the clipboard (and is absent from a message without a
+  block). It cannot
   cover highlighting, for the reason above: no message it can send holds a
   newline.
