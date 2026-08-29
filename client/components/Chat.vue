@@ -136,6 +136,7 @@ import type {ClientNetwork, ClientChan} from "../js/types";
 import {useStore} from "../js/store";
 import {SpecialChanType, ChanType} from "../../shared/types/chan";
 import parseStyle from "../js/helpers/ircmessageparser/parseStyle";
+import {stripMarkdown} from "../js/helpers/ircmessageparser/parseMarkdown";
 
 export default defineComponent({
 	name: "Chat",
@@ -166,9 +167,11 @@ export default defineComponent({
 				return "";
 			}
 
-			return parseStyle(topic)
+			const plain = parseStyle(topic)
 				.map((fragment) => fragment.text)
 				.join("");
+
+			return store.state.settings.markdown ? stripMarkdown(plain) : plain;
 		});
 
 		const specialComponent = computed(() => {

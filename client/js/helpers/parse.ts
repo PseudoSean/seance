@@ -8,6 +8,8 @@ import {findLinks} from "../../../shared/linkify";
 import findEmoji from "./ircmessageparser/findEmoji";
 import findNames from "./ircmessageparser/findNames";
 import merge, {MergedParts} from "./ircmessageparser/merge";
+import {applyMarkdown} from "./ircmessageparser/parseMarkdown";
+import anyIntersection from "./ircmessageparser/anyIntersection";
 import emojiMap from "./fullnamemap.json";
 import LinkPreviewToggle from "../../components/LinkPreviewToggle.vue";
 import LinkPreviewFileSize from "../../components/LinkPreviewFileSize.vue";
@@ -33,7 +35,102 @@ type StyledFragment = Fragment & {
 	underline?: boolean;
 	monospace?: boolean;
 	strikethrough?: boolean;
+
+	code?: boolean;
+	codeBlock?: boolean;
+	quote?: boolean;
+	spoiler?: boolean;
+	href?: string;
 };
+
+export type ParseOptions = {
+	markdown?: boolean;
+};
+
+// Flags that wrap a run of neighbouring nodes in one element, outermost first
+const WRAP_KEYS = ["quote", "codeBlock", "spoiler", "href"] as const;
+type WrapKey = typeof WRAP_KEYS[number];
+type Wrap = Partial<Record<WrapKey, boolean | string>>;
+type Rendered = VNode | string | undefined | Rendered[];
+type WrappedNode = {node: Rendered; wrap: Wrap};
+
+function wrapOf(fragment: StyledFragment | undefined): Wrap {
+	const wrap: Wrap = {};
+
+	if (!fragment) {
+		return wrap;
+	}
+
+	for (const key of WRAP_KEYS) {
+		if (fragment[key]) {
+			wrap[key] = fragment[key];
+		}
+	}
+
+	return wrap;
+}
+
+function sameWrap(a: Wrap, b: Wrap) {
+	return WRAP_KEYS.every((key) => a[key] === b[key]);
+}
+
+function toggleSpoiler(event: Event) {
+	(event.currentTarget as HTMLElement).classList.toggle("md-spoiler-shown");
+}
+
+function wrapNode(key: WrapKey, value: boolean | string, children: Rendered[]): VNode {
+	switch (key) {
+		case "quote":
+			return createElement("span", {class: ["md-quote"]}, children);
+		case "codeBlock":
+			return createElement("code", {class: ["md-code-block"]}, children);
+		case "spoiler":
+			return createElement(
+				"span",
+				{class: ["md-spoiler"], role: "button", tabindex: 0, onClick: toggleSpoiler},
+				children
+			);
+		case "href":
+			return createElement(
+				"a",
+				{href: value, title: value, target: "_blank", rel: "noopener"},
+				children
+			);
+	}
+}
+
+// Groups neighbouring nodes that share a wrap flag under one element, nesting
+// quote > codeBlock > spoiler > href.
+function groupNodes(nodes: WrappedNode[], level = 0): Rendered[] {
+	if (level === WRAP_KEYS.length) {
+		return nodes.map((n) => n.node);
+	}
+
+	const key = WRAP_KEYS[level];
+	const out: Rendered[] = [];
+	let i = 0;
+
+	while (i < nodes.length) {
+		const value = nodes[i].wrap[key];
+		let j = i + 1;
+
+		while (j < nodes.length && nodes[j].wrap[key] === value) {
+			j += 1;
+		}
+
+		const children = groupNodes(nodes.slice(i, j), level + 1);
+
+		if (value) {
+			out.push(wrapNode(key, value, children));
+		} else {
+			out.push(...children);
+		}
+
+		i = j;
+	}
+
+	return out;
+}
 
 // Create an HTML `span` with styling information for a given fragment
 function createFragment(fragment: StyledFragment): VNode | string | undefined {
@@ -98,10 +195,25 @@ function createFragment(fragment: StyledFragment): VNode | string | undefined {
 
 // Transform an IRC message potentially filled with styling control codes, URLs,
 // nicknames, and channels into a string of HTML elements to display on the client.
-function parse(text: string, message?: ClientMessage, network?: ClientNetwork) {
+function parse(
+	text: string,
+	message?: ClientMessage,
+	network?: ClientNetwork,
+	options: ParseOptions = {}
+) {
 	// Extract the styling information and get the plain text version from it
-	const styleFragments = parseStyle(text);
+	let styleFragments = parseStyle(text);
+
+	if (options.markdown) {
+		styleFragments = applyMarkdown(styleFragments);
+	}
+
 	const cleanText = styleFragments.map((fragment) => fragment.text).join("");
+
+	// Nicks, channels and emoji are not looked up inside code
+	const codeRanges = styleFragments.filter((fragment) => fragment.code);
+	const outsideCode = (part: {start: number; end: number}) =>
+		!codeRanges.some((range) => anyIntersection(range, part));
 
 	// On the plain text, find channels and URLs, returned as "parts". Parts are
 	// arrays of objects containing start and end markers, as well as metadata
@@ -110,10 +222,10 @@ function parse(text: string, message?: ClientMessage, network?: ClientNetwork) {
 	const userModes = network
 		? network.serverOptions.PREFIX?.prefix?.map((pref) => pref.symbol)
 		: ["!", "@", "%", "+"];
-	const channelParts = findChannels(cleanText, channelPrefixes, userModes);
+	const channelParts = findChannels(cleanText, channelPrefixes, userModes).filter(outsideCode);
 	const linkParts = findLinks(cleanText);
-	const emojiParts = findEmoji(cleanText);
-	const nameParts = findNames(cleanText, message ? message.users || [] : []);
+	const emojiParts = findEmoji(cleanText).filter(outsideCode);
+	const nameParts = findNames(cleanText, message ? message.users || [] : []).filter(outsideCode);
 
 	const parts = (channelParts as MergedParts)
 		.concat(linkParts)
@@ -122,99 +234,136 @@ function parse(text: string, message?: ClientMessage, network?: ClientNetwork) {
 
 	// Merge the styling information with the channels / URLs / nicks / text objects and
 	// generate HTML strings with the resulting fragments
-	return merge(parts, styleFragments, cleanText).map((textPart) => {
-		const fragments = textPart.fragments.map((fragment) => createFragment(fragment));
+	const nodes: WrappedNode[] = [];
 
-		// Wrap these potentially styled fragments with links and channel buttons
-		if (textPart.link) {
-			const preview =
-				message &&
-				message.previews &&
-				message.previews.find((p) => p.link === textPart.link);
-			const link = createElement(
-				"a",
-				{
-					href: textPart.link,
-					dir: preview ? null : "auto",
-					target: "_blank",
-					rel: "noopener",
-				},
-				fragments
-			);
+	for (const textPart of merge(parts, styleFragments, cleanText)) {
+		const isPlain = !textPart.link && !textPart.channel && !textPart.emoji && !textPart.nick;
 
-			if (!preview) {
-				return link;
+		if (!isPlain || textPart.fragments.length === 0) {
+			nodes.push({
+				node: renderPart(
+					textPart,
+					textPart.fragments.map((fragment) => createFragment(fragment)),
+					message
+				),
+				wrap: wrapOf(textPart.fragments[0]),
+			});
+			continue;
+		}
+
+		// Plain text may cross a quote/code/spoiler/link boundary: split it there
+		let run: StyledFragment[] = [];
+		let runWrap = wrapOf(textPart.fragments[0]);
+
+		for (const fragment of textPart.fragments) {
+			const wrap = wrapOf(fragment);
+
+			if (!sameWrap(wrap, runWrap) && run.length) {
+				nodes.push({
+					node: run.map((item) => createFragment(item)),
+					wrap: runWrap,
+				});
+				run = [];
 			}
 
-			const linkEls = [link];
+			runWrap = wrap;
+			run.push(fragment);
+		}
 
-			if (preview.size > 0) {
-				linkEls.push(
-					createElement(LinkPreviewFileSize, {
-						size: preview.size,
-					})
-				);
-			}
+		nodes.push({node: run.map((item) => createFragment(item)), wrap: runWrap});
+	}
 
+	return options.markdown ? groupNodes(nodes) : nodes.map((n) => n.node);
+}
+
+// Wrap potentially styled fragments with links, channel buttons, emoji, nicks
+function renderPart(textPart, fragments: Rendered[], message?: ClientMessage): Rendered {
+	if (textPart.link) {
+		const preview =
+			message && message.previews && message.previews.find((p) => p.link === textPart.link);
+		const link = createElement(
+			"a",
+			{
+				href: textPart.link,
+				dir: preview ? null : "auto",
+				target: "_blank",
+				rel: "noopener",
+			},
+			fragments
+		);
+
+		if (!preview) {
+			return link;
+		}
+
+		const linkEls = [link];
+
+		if (preview.size > 0) {
 			linkEls.push(
-				createElement(LinkPreviewToggle, {
-					link: preview,
-					message: message,
+				createElement(LinkPreviewFileSize, {
+					size: preview.size,
 				})
-			);
-
-			// We wrap the link, size, and the toggle button into <span dir="auto">
-			// to correctly keep the left-to-right order of these elements
-			return createElement(
-				"span",
-				{
-					dir: "auto",
-				},
-				linkEls
-			);
-		} else if (textPart.channel) {
-			return createElement(
-				InlineChannel,
-				{
-					channel: textPart.channel,
-				},
-				{
-					default: () => fragments,
-				}
-			);
-		} else if (textPart.emoji) {
-			const emojiWithoutModifiers = textPart.emoji.replace(emojiModifiersRegex, "");
-			const title = emojiMap[emojiWithoutModifiers]
-				? `Emoji: ${emojiMap[emojiWithoutModifiers]}`
-				: null;
-
-			return createElement(
-				"span",
-				{
-					class: ["emoji"],
-					role: "img",
-					"aria-label": title,
-					title: title,
-				},
-				fragments
-			);
-		} else if (textPart.nick) {
-			return createElement(
-				Username,
-				{
-					user: {
-						nick: textPart.nick,
-					},
-					dir: "auto",
-				},
-				{
-					default: () => fragments,
-				}
 			);
 		}
 
-		return fragments;
-	});
+		linkEls.push(
+			createElement(LinkPreviewToggle, {
+				link: preview,
+				message: message,
+			})
+		);
+
+		// We wrap the link, size, and the toggle button into <span dir="auto">
+		// to correctly keep the left-to-right order of these elements
+		return createElement(
+			"span",
+			{
+				dir: "auto",
+			},
+			linkEls
+		);
+	} else if (textPart.channel) {
+		return createElement(
+			InlineChannel,
+			{
+				channel: textPart.channel,
+			},
+			{
+				default: () => fragments,
+			}
+		);
+	} else if (textPart.emoji) {
+		const emojiWithoutModifiers = textPart.emoji.replace(emojiModifiersRegex, "");
+		const title = emojiMap[emojiWithoutModifiers]
+			? `Emoji: ${emojiMap[emojiWithoutModifiers]}`
+			: null;
+
+		return createElement(
+			"span",
+			{
+				class: ["emoji"],
+				role: "img",
+				"aria-label": title,
+				title: title,
+			},
+			fragments
+		);
+	} else if (textPart.nick) {
+		return createElement(
+			Username,
+			{
+				user: {
+					nick: textPart.nick,
+				},
+				dir: "auto",
+			},
+			{
+				default: () => fragments,
+			}
+		);
+	}
+
+	return fragments;
 }
 
 export default parse;

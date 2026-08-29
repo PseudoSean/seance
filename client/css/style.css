@@ -2685,6 +2685,42 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	font-style: italic;
 }
 
+.md-quote {
+	display: block;
+	border-left: 3px solid var(--body-color-muted, #bbb);
+	padding-left: 8px;
+	margin: 2px 0;
+}
+
+.md-code-block {
+	display: block;
+	white-space: pre-wrap;
+	padding: 4px 6px;
+	margin: 2px 0;
+	overflow-x: auto;
+}
+
+.md-spoiler {
+	background-color: currentcolor;
+	color: transparent;
+	border-radius: 3px;
+	cursor: pointer;
+}
+
+.md-spoiler > * {
+	visibility: hidden;
+}
+
+.md-spoiler.md-spoiler-shown {
+	background-color: rgb(128 128 128 / 20%);
+	color: inherit;
+	cursor: text;
+}
+
+.md-spoiler.md-spoiler-shown > * {
+	visibility: visible;
+}
+
 .tooltipped::after {
 	font-size: 12px;
 }
