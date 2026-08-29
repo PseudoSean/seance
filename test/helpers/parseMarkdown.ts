@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {applyMarkdown, tokenize} from "../../client/js/helpers/ircmessageparser/parseMarkdown";
+import {applyMarkdown} from "../../client/js/helpers/ircmessageparser/parseMarkdown";
 import parseStyle, {ParsedStyle} from "../../client/js/helpers/ircmessageparser/parseStyle";
 
 // The Markdown flags a rendered fragment can carry.
@@ -286,6 +286,12 @@ describe("markdown — composition", () => {
 		]);
 	});
 
+	// `verbatim` is not a style key, so an IRC monospace run and the inline code
+	// next to it are one fragment and render as one `.irc-monospace` pill.
+	it("merges an IRC monospace run into the inline code beside it", () => {
+		expect(md("\x11a\x11`b`")).to.deep.equal([{text: "ab", monospace: true}]);
+	});
+
 	it("carries every wrap flag at once", () => {
 		expect(md("[t](https://e.com) ||s||")).to.deep.equal([
 			{text: "t", href: "https://e.com"},
@@ -307,34 +313,5 @@ describe("markdown — composition", () => {
 
 	it("handles empty input", () => {
 		expect(applyMarkdown([]).fragments).to.deep.equal([]);
-	});
-});
-
-describe("tokenize", () => {
-	it("emits marker-free pieces that join back into the message", () => {
-		const input = "a **b** `c` > d [e](https://e.test)";
-
-		expect(
-			tokenize(input)
-				.map((piece) => piece.text)
-				.join("")
-		).to.equal(plain(input));
-	});
-
-	it("carries only the flags that are set", () => {
-		expect(tokenize("a **b**")).to.deep.equal([
-			{text: "a ", flags: {}},
-			{text: "b", flags: {bold: true}},
-		]);
-	});
-
-	it("marks inline code monospace and verbatim", () => {
-		expect(tokenize("`a`")).to.deep.equal([
-			{text: "a", flags: {monospace: true, verbatim: true}},
-		]);
-	});
-
-	it("merges adjacent pieces with equal flags", () => {
-		expect(tokenize("**a****b**")).to.deep.equal([{text: "ab", flags: {bold: true}}]);
 	});
 });

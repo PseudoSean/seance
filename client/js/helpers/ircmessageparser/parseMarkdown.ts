@@ -1,3 +1,15 @@
+/**
+ * Discord-style Markdown for message text.
+ *
+ * `applyMarkdown` is the interface: it takes the fragments `parseStyle`
+ * produced, drops the marker characters, sets the Markdown flags and reports
+ * the verbatim spans. The scan itself (`scan`/`cutPieces`) is private — nothing
+ * outside this file needs the marker offsets.
+ *
+ * Imports nothing from Vue, the store or the DOM, so mocha loads it directly
+ * (`test/helpers/parseMarkdown.ts`).
+ */
+
 import {findLinks} from "../../../../shared/linkify";
 import {ParsedStyle, STYLE_KEYS} from "./parseStyle";
 
@@ -19,27 +31,10 @@ export type PieceFlags = {
 	href?: string;
 };
 
-// A run of marker-free text sharing one set of flags. Pieces are contiguous:
-// joining their text gives the message with the markers removed.
-export type Piece = {text: string; flags: PieceFlags};
-
 // What the Markdown stage makes of a message: the style fragments with the
 // markers gone and the flags set, plus the spans nothing is interpreted inside
 // (offsets into the marker-free text).
 export type Markdown = {fragments: ParsedStyle[]; verbatim: Range[]};
-
-const PIECE_FLAG_KEYS: (keyof PieceFlags)[] = [
-	"bold",
-	"italic",
-	"underline",
-	"strikethrough",
-	"monospace",
-	"codeBlock",
-	"quote",
-	"spoiler",
-	"verbatim",
-	"href",
-];
 
 // Characters a backslash can escape
 const MARKER_CHARS = "*_~|`>[]()\\";
@@ -83,32 +78,10 @@ type OpenDelimiter = {char: string; len: number; flag: ScanFlag; pos: number};
 const isWordChar = (c: string | undefined) => c !== undefined && /[\p{L}\p{N}_]/u.test(c);
 const isSpace = (c: string | undefined) => c === undefined || /\s/.test(c);
 
-const sameFlags = (a: PieceFlags, b: PieceFlags) =>
-	PIECE_FLAG_KEYS.every((key) => a[key] === b[key]);
-
 const sameStyle = (a: ParsedStyle, b: ParsedStyle) => STYLE_KEYS.every((key) => a[key] === b[key]);
 
 const covers = (range: Range, start: number, end: number) =>
 	range.start <= start && end <= range.end;
-
-// Splits `text` into marker-free pieces. Adjacent pieces with equal flags are
-// merged, so a piece is one run of text that renders the same way.
-export function tokenize(text: string): Piece[] {
-	const pieces: Piece[] = [];
-
-	for (const cut of cutPieces(text, scan(text), [])) {
-		const last = pieces[pieces.length - 1];
-
-		if (last && sameFlags(last.flags, cut.flags)) {
-			last.text += cut.text;
-			continue;
-		}
-
-		pieces.push({text: cut.text, flags: cut.flags});
-	}
-
-	return pieces;
-}
 
 // Applies Markdown to the fragments produced by parseStyle: marker characters
 // are dropped, flags are set, offsets are renumbered and equal neighbours

@@ -145,12 +145,12 @@ function parse(
 	options: ParseOptions = {}
 ) {
 	return toVNodes(
+		// The finder defaults live in `layout`: pass what ISUPPORT said, or
+		// nothing when the network has not said (or there is no network yet).
 		layout(text, {
 			markdown: options.markdown,
-			channelPrefixes: network ? network.serverOptions.CHANTYPES : ["#", "&"],
-			userModes: network
-				? network.serverOptions.PREFIX?.prefix?.map((pref) => pref.symbol)
-				: ["!", "@", "%", "+"],
+			channelPrefixes: network?.serverOptions.CHANTYPES,
+			userModes: network?.serverOptions.PREFIX?.prefix?.map((pref) => pref.symbol),
 			users: message ? message.users || [] : [],
 		}),
 		message
