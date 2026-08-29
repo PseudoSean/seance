@@ -9,6 +9,9 @@ public/
 dist/
 tmp/
 
+# Claude Code session scratch: agent worktrees, local settings
+.claude/
+
 # shells/capacitor: generated / synced native build artifacts
 shells/capacitor/node_modules/
 shells/capacitor/android/app/src/main/assets/public/
