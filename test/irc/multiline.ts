@@ -3,10 +3,11 @@ import sinon from "ts-sinon";
 import socket from "../../client/js/socket";
 import {IrcClient} from "../../client/js/irc/client";
 import {IdAllocator} from "../../client/js/irc/ids";
-import {parseMultilineValue} from "../../client/js/irc/multiline";
+import {joinMultiline, parseMultilineValue} from "../../client/js/irc/multiline";
 import type {Transport} from "../../client/js/irc/types";
 import type {TransportEvent, TransportState} from "../../client/js/irc/transport";
-import {SharedMsg} from "../../shared/types/msg";
+import {IrcMessage, parseLine} from "../../client/js/irc/message";
+import {MessageType, SharedMsg} from "../../shared/types/msg";
 
 class FakeTransport implements Transport {
 	state: TransportState = "closed";
@@ -226,5 +227,199 @@ describe("multiline cap", function () {
 			transport.line(":irc.test CAP alice DEL :draft/multiline");
 			expect(client.multilineLimits()).to.equal(undefined);
 		});
+	});
+});
+
+describe("multiline batches", function () {
+	beforeEach(function () {
+		installSpy();
+	});
+
+	afterEach(function () {
+		removeSpy();
+	});
+
+	function more(chanId: number): {messages: SharedMsg[]}[] {
+		return dispatch
+			.getCalls()
+			.filter((call) => call.args[0] === "more")
+			.map((call) => call.args[1] as {chan: number; messages: SharedMsg[]})
+			.filter((p) => p.chan === chanId);
+	}
+
+	function line(text: string, tags = "", nick = "bob"): string {
+		return `@batch=ml${tags} :${nick}!b@h PRIVMSG #seance :${text}`;
+	}
+
+	describe("joinMultiline", function () {
+		function parsed(...lines: string[]): IrcMessage[] {
+			return lines.map((l) => {
+				const msg = parseLine(l);
+
+				if (!msg) {
+					throw new Error(`bad test line: ${l}`);
+				}
+
+				return msg;
+			});
+		}
+
+		it("joins lines with a line feed", function () {
+			expect(joinMultiline(parsed(line("a"), line("b"), line("c")))).to.deep.equal({
+				command: "PRIVMSG",
+				target: "#seance",
+				text: "a\nb\nc",
+				source: "bob!b@h",
+			});
+		});
+
+		it("appends a draft/multiline-concat line without a separator", function () {
+			expect(
+				joinMultiline(parsed(line("a"), line("b", ";draft/multiline-concat"), line("c")))
+					?.text
+			).to.equal("ab\nc");
+		});
+
+		it("rewraps an ACTION batch around the joined text", function () {
+			expect(
+				joinMultiline(parsed(line("\x01ACTION a\x01"), line("\x01ACTION b\x01")))?.text
+			).to.equal("\x01ACTION a\nb\x01");
+		});
+
+		it("rejects an empty batch, mixed targets and mixed commands", function () {
+			expect(joinMultiline([])).to.equal(undefined);
+			expect(
+				joinMultiline(parsed(line("a"), "@batch=ml :bob!b@h PRIVMSG #other :b"))
+			).to.equal(undefined);
+			expect(
+				joinMultiline(parsed(line("a"), "@batch=ml :bob!b@h NOTICE #seance :b"))
+			).to.equal(undefined);
+			expect(joinMultiline(parsed(line("a"), "@batch=ml :bob!b@h TAGMSG #seance"))).to.equal(
+				undefined
+			);
+		});
+	});
+
+	it("delivers a multiline batch as one message", function () {
+		const {transport, chanId} = setup();
+
+		transport.lines(
+			":irc.test BATCH +ml draft/multiline #seance",
+			line("first"),
+			line("second"),
+			line("third")
+		);
+		expect(messages(chanId), "nothing before the batch closes").to.have.length(0);
+
+		transport.line(":irc.test BATCH -ml");
+
+		const shown = messages(chanId);
+		expect(shown).to.have.length(1);
+		expect(shown[0].text).to.equal("first\nsecond\nthird");
+		expect(shown[0].type).to.equal(MessageType.MESSAGE);
+		expect(shown[0].from?.nick).to.equal("bob");
+	});
+
+	it("takes msgid, time and the reply tag from the batch opener", function () {
+		const {transport, chanId} = setup();
+
+		transport.lines(
+			"@msgid=m1;time=2026-08-29T10:00:00.000Z;+draft/reply=parent :irc.test BATCH +ml draft/multiline #seance",
+			"@batch=ml;msgid=ignored :bob!b@h PRIVMSG #seance :one",
+			"@batch=ml :bob!b@h PRIVMSG #seance :two",
+			":irc.test BATCH -ml"
+		);
+
+		const [shown] = messages(chanId);
+		expect(shown.text).to.equal("one\ntwo");
+		expect(shown.msgid).to.equal("m1");
+		expect(shown.time.toISOString()).to.equal("2026-08-29T10:00:00.000Z");
+		expect(shown.replyTo).to.equal("parent");
+	});
+
+	it("joins an ACTION batch into one action", function () {
+		const {transport, chanId} = setup();
+
+		transport.lines(
+			":irc.test BATCH +ml draft/multiline #seance",
+			line("\x01ACTION waves\x01"),
+			line("\x01ACTION and bows\x01"),
+			":irc.test BATCH -ml"
+		);
+
+		const [shown] = messages(chanId);
+		expect(shown.type).to.equal(MessageType.ACTION);
+		expect(shown.text).to.equal("waves\nand bows");
+	});
+
+	it("keeps a NOTICE batch a notice", function () {
+		const {transport, chanId} = setup();
+
+		transport.lines(
+			":irc.test BATCH +ml draft/multiline #seance",
+			"@batch=ml :bob!b@h NOTICE #seance :one",
+			"@batch=ml :bob!b@h NOTICE #seance :two",
+			":irc.test BATCH -ml"
+		);
+
+		const [shown] = messages(chanId);
+		expect(shown.type).to.equal(MessageType.NOTICE);
+		expect(shown.text).to.equal("one\ntwo");
+	});
+
+	it("marks our own echoed batch as self", function () {
+		const {transport, chanId} = setup();
+
+		transport.lines(
+			":irc.test BATCH +ml draft/multiline #seance",
+			line("mine", "", "alice"),
+			line("too", "", "alice"),
+			":irc.test BATCH -ml"
+		);
+
+		const [shown] = messages(chanId);
+		expect(shown.self).to.equal(true);
+		expect(shown.text).to.equal("mine\ntoo");
+	});
+
+	it("delivers the lines individually when a target does not match", function () {
+		const {transport, chanId} = setup();
+
+		transport.lines(
+			":irc.test BATCH +ml draft/multiline #seance",
+			line("one"),
+			"@batch=ml :bob!b@h PRIVMSG #other :two",
+			":irc.test BATCH -ml"
+		);
+
+		expect(messages(chanId).map((m) => m.text)).to.deep.equal(["one"]);
+	});
+
+	it("shows nothing for an empty batch", function () {
+		const {transport, chanId} = setup();
+
+		transport.lines(":irc.test BATCH +ml draft/multiline #seance", ":irc.test BATCH -ml");
+
+		expect(messages(chanId)).to.have.length(0);
+	});
+
+	it("folds into an enclosing chathistory batch in its place", function () {
+		const {transport, chanId} = setup();
+
+		transport.lines(
+			":irc.test BATCH +hist chathistory #seance",
+			"@batch=hist;msgid=h1;time=2026-08-29T09:00:00.000Z :bob!b@h PRIVMSG #seance :before",
+			"@batch=hist;msgid=h2;time=2026-08-29T09:01:00.000Z :irc.test BATCH +ml draft/multiline #seance",
+			"@batch=ml :bob!b@h PRIVMSG #seance :one",
+			"@batch=ml :bob!b@h PRIVMSG #seance :two",
+			"@batch=hist :irc.test BATCH -ml",
+			"@batch=hist;msgid=h3;time=2026-08-29T09:02:00.000Z :bob!b@h PRIVMSG #seance :after",
+			":irc.test BATCH -hist"
+		);
+
+		const pages = more(chanId);
+		expect(pages).to.have.length(1);
+		expect(pages[0].messages.map((m) => m.text)).to.deep.equal(["before", "one\ntwo", "after"]);
+		expect(pages[0].messages[1].msgid).to.equal("h2");
 	});
 });

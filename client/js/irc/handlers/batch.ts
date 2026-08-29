@@ -60,7 +60,11 @@ function batchesOf(client: IrcClient): Map<string, OpenBatch> {
 	return map;
 }
 
-/** Open batches of `client` (tests / diagnostics). */
+/**
+ * Open batches of `client`. Used by tests and diagnostics, and by a batch
+ * handler checking that its parent is still open before folding into it
+ * (see {@link deliver} and multiline.ts).
+ */
 export function openBatchesOf(client: IrcClient): ReadonlyMap<string, OpenBatch> {
 	return batchesOf(client);
 }
