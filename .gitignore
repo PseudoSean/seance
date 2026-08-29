@@ -9,6 +9,13 @@ public/
 dist/
 tmp/
 
+# playwright (test/e2e)
+test-results/
+playwright-report/
+
+# agent scratch
+.superpowers/
+
 # shells/capacitor: generated / synced native build artifacts
 shells/capacitor/node_modules/
 shells/capacitor/android/app/src/main/assets/public/
