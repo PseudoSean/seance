@@ -47,22 +47,69 @@ export interface BrandingFeatures {
  * section of docs/resources/branding.md for the contract it must satisfy.
  */
 export interface BrandingUploads {
+	/**
+	 * Named service preset filling in the fields below; anything given
+	 * explicitly alongside it wins. See `UPLOAD_PRESETS`.
+	 */
+	preset?: string;
 	/** Absolute `https:` URL that accepts a multipart `POST`. */
 	endpoint: string;
 	/** Client-side size limit in bytes. Default 10 MiB. */
 	maxSizeBytes?: number;
 	/** Multipart form field carrying the file. Default `"file"`. */
 	fieldName?: string;
+	/** Extra multipart fields sent alongside the file, e.g. `strip_exif=1`. */
+	fields?: Record<string, string>;
+	/**
+	 * Names of `fields` that may be dropped for one retry when the uploader
+	 * answers with an error that names them — a server that cannot strip
+	 * metadata off this particular file should still take the upload.
+	 */
+	optionalFields?: string[];
 	/**
 	 * JSON key holding the public URL in the response. Default `"url"`. A
-	 * plain-text response body that is itself a URL is accepted too.
+	 * dotted path indexes into nested objects and arrays
+	 * (`"results.0.filePath"`). A plain-text response body that is itself a
+	 * URL is accepted too.
 	 */
 	responseUrlKey?: string;
+	/** Same, for the failure message. Default `"error"`. */
+	responseErrorKey?: string;
+	/**
+	 * MIME types the endpoint accepts. Anything else is refused before the
+	 * upload starts, so the user gets a clear message instead of the
+	 * service's own. Absent means "send whatever".
+	 */
+	accept?: string[];
 	/** Send cookies/credentials with the request. Default false. */
 	withCredentials?: boolean;
 	/** Extra request headers, e.g. an API key. */
 	headers?: Record<string, string>;
 }
+
+/**
+ * Ready-made uploader configurations, selected with `uploads.preset`.
+ *
+ * `boxlabs-paste` is the anonymous image staging endpoint of
+ * [PASTE](https://github.com/boxlabss/PASTE) that poxchat uploads to; no API
+ * key (the documented `api.php` needs one, but it only covers text pastes).
+ * It answers `{"results":[{"success":true,"filePath":"/img/img_x.png"}]}` or
+ * `{"results":[{"success":false,"error":"…"}]}`, and `filePath` is relative
+ * to the endpoint.
+ */
+export const UPLOAD_PRESETS: Record<string, BrandingUploads> = {
+	"boxlabs-paste": {
+		endpoint: "https://paste.boxlabs.uk/img/",
+		fieldName: "images[]",
+		fields: {strip_exif: "1"},
+		optionalFields: ["strip_exif"],
+		responseUrlKey: "results.0.filePath",
+		responseErrorKey: "results.0.error",
+		// The endpoint is `/img/`: it takes images, not video.
+		accept: ["image/png", "image/jpeg", "image/gif", "image/webp"],
+		maxSizeBytes: 10 * 1024 * 1024,
+	},
+};
 
 export interface BrandingConfig {
 	appName: string;
@@ -274,23 +321,87 @@ function normalizeHeaders(value: unknown): Record<string, string> | undefined {
 	return Object.keys(headers).length > 0 ? headers : undefined;
 }
 
+/** A map of plain strings, e.g. extra form fields; `undefined` when empty. */
+function normalizeStringMap(value: unknown): Record<string, string> | undefined {
+	if (!isRecord(value)) {
+		return undefined;
+	}
+
+	const map: Record<string, string> = {};
+
+	for (const [key, entry] of Object.entries(value)) {
+		const text = optionalString(entry);
+
+		if (key.trim().length > 0 && text !== undefined) {
+			map[key.trim()] = text;
+		}
+	}
+
+	return Object.keys(map).length > 0 ? map : undefined;
+}
+
+/** A list of non-empty strings, e.g. MIME types; `undefined` when empty. */
+function normalizeStringList(value: unknown): string[] | undefined {
+	if (!Array.isArray(value)) {
+		return undefined;
+	}
+
+	const list = value
+		.map((entry) => optionalString(entry))
+		.filter((entry): entry is string => entry !== undefined);
+
+	return list.length > 0 ? list : undefined;
+}
+
 function normalizeUploads(value: unknown): BrandingUploads | undefined {
 	if (!isRecord(value)) {
 		return undefined;
 	}
 
-	const endpoint = optionalString(value.endpoint);
+	// A preset supplies the endpoint and wire details; explicit keys win, so a
+	// deploy can point the preset at its own PASTE instance.
+	const presetName = optionalString(value.preset);
+	const preset = presetName !== undefined ? UPLOAD_PRESETS[presetName] : undefined;
+
+	if (presetName !== undefined && preset === undefined) {
+		return undefined;
+	}
+
+	const endpoint = optionalString(value.endpoint) ?? preset?.endpoint;
 
 	// Uploads leave the app's origin, so only a real https URL counts.
 	if (endpoint === undefined || !/^https:\/\/[^/?#]+/i.test(endpoint)) {
 		return undefined;
 	}
 
-	const uploads: BrandingUploads = {endpoint};
+	// Copy the preset's containers: the returned config must not alias the
+	// module-level constant.
+	const uploads: BrandingUploads = {...preset, endpoint};
+
+	if (preset?.fields) {
+		uploads.fields = {...preset.fields};
+	}
+
+	if (preset?.optionalFields) {
+		uploads.optionalFields = [...preset.optionalFields];
+	}
+
+	if (preset?.accept) {
+		uploads.accept = [...preset.accept];
+	}
+
+	if (presetName !== undefined) {
+		uploads.preset = presetName;
+	}
+
 	const maxSizeBytes =
 		typeof value.maxSizeBytes === "string" ? Number(value.maxSizeBytes) : value.maxSizeBytes;
 	const fieldName = optionalString(value.fieldName);
+	const fields = normalizeStringMap(value.fields);
+	const optionalFields = normalizeStringList(value.optionalFields);
 	const responseUrlKey = optionalString(value.responseUrlKey);
+	const responseErrorKey = optionalString(value.responseErrorKey);
+	const accept = normalizeStringList(value.accept);
 	const withCredentials = optionalBoolean(value.withCredentials);
 	const headers = normalizeHeaders(value.headers);
 
@@ -302,8 +413,24 @@ function normalizeUploads(value: unknown): BrandingUploads | undefined {
 		uploads.fieldName = fieldName;
 	}
 
+	if (fields !== undefined) {
+		uploads.fields = fields;
+	}
+
+	if (optionalFields !== undefined) {
+		uploads.optionalFields = optionalFields;
+	}
+
 	if (responseUrlKey !== undefined) {
 		uploads.responseUrlKey = responseUrlKey;
+	}
+
+	if (responseErrorKey !== undefined) {
+		uploads.responseErrorKey = responseErrorKey;
+	}
+
+	if (accept !== undefined) {
+		uploads.accept = accept;
 	}
 
 	if (withCredentials !== undefined) {

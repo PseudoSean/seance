@@ -83,15 +83,38 @@ URL parameters (`?host=…&port=…&nick=…&join=…&autoconnect=1`, `?uri=irc:
 
 ## Uploads
 
-Seance has no server of its own, so the file goes straight from the browser to an uploader the network runs. Running that service is the network's responsibility; Seance only needs it to honour this contract:
+Seance has no server of its own, so the file goes straight from the browser to an uploader the network runs. Files reach it by drag & drop anywhere on the page, by pasting an image into the input, or from the paperclip button. Running that service is the network's responsibility; Seance only needs it to honour this contract:
 
-- **Request**: `POST` to `uploads.endpoint` with a `multipart/form-data` body whose `uploads.fieldName` field (default `file`) holds the file, filename included. Any `uploads.headers` are sent along; cookies only when `uploads.withCredentials` is `true`.
-- **CORS**: the endpoint is on another origin, so it must answer the preflight and the `POST` with `Access-Control-Allow-Origin` for the app's origin (plus `Access-Control-Allow-Headers` for any custom headers, and `Access-Control-Allow-Credentials: true` when cookies are used).
-- **Response**: `2xx` with either a JSON object `{"url": "https://…"}` (the key is `uploads.responseUrlKey`) or a plain-text body that is the URL. Relative URLs resolve against the endpoint. On failure, a non-`2xx` status; a JSON `{"error": "…"}` body is shown to the user verbatim, otherwise "Upload failed: HTTP _status_".
+- **Request**: `POST` to `uploads.endpoint` with a `multipart/form-data` body whose `uploads.fieldName` field (default `file`) holds the file, filename included. Any `uploads.fields` are sent as extra form fields and any `uploads.headers` as headers; cookies only when `uploads.withCredentials` is `true`.
+- **CORS**: the endpoint is on another origin, so its `POST` response must carry `Access-Control-Allow-Origin` for the app's origin (plus `Access-Control-Allow-Headers` for any custom headers, `Access-Control-Allow-Credentials: true` when cookies are used, and an `OPTIONS` answer when either of those makes the request non-simple). Without that header the browser blocks the response even though the upload itself succeeded, so the user sees "Upload failed: Failed to fetch".
+- **Response**: `2xx` with either a JSON body holding the URL at `uploads.responseUrlKey` (default `url`) or a plain-text body that is the URL. Relative URLs resolve against the endpoint. The key may be a dotted path into nested objects and arrays, e.g. `results.0.filePath`. On failure, a non-`2xx` status or an error message at `uploads.responseErrorKey` (default `error`), which is shown to the user verbatim; otherwise "Upload failed: HTTP _status_".
 
-The client checks `uploads.maxSizeBytes` before sending; the uploader should enforce its own limit, authentication and retention rules, since anyone with the app can call it. With `uploads` absent the upload button is hidden and dropped or pasted files are ignored after a single "File uploads are not configured in this client." notice.
+The client checks `uploads.maxSizeBytes` before sending and refuses types outside `uploads.accept` (exact MIME types or `type/*` wildcards) without contacting the endpoint. The uploader should enforce its own limit, authentication and retention rules, since anyone with the app can call it. With `uploads` absent the upload button is hidden and dropped or pasted files are ignored after a single "File uploads are not configured in this client." notice.
+
+`uploads.optionalFields` names fields that may be dropped for one retry when the uploader's error message blames them — the fallback that lets an upload through when the service cannot strip metadata off that particular file.
 
 A minimal uploader is a few dozen lines (an nginx `client_body` handler script, or a small web function that writes to object storage and returns its URL); those recipes are out of scope here.
+
+### Presets
+
+`uploads.preset` fills in the wire details of a known service; anything given alongside it wins, so a deploy can point the same format at its own instance.
+
+| Preset          | Service                                                                                                                                                                                                                                                                         |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `boxlabs-paste` | The anonymous image staging endpoint of [PASTE](https://github.com/boxlabss/PASTE), `https://paste.boxlabs.uk/img/` — the one [poxchat](https://github.com/boxlabss) uploads pasted images to. No API key (the documented `api.php` needs one, but it only covers text pastes). |
+
+```json
+{
+  "appName": "ExampleNet",
+  "uploads": {"preset": "boxlabs-paste"}
+}
+```
+
+That expands to `images[]` as the file field, `strip_exif=1` as an extra field (dropped and retried once if the server says stripping is what failed), `results.0.filePath` / `results.0.error` as the response paths, a 10 MiB limit and PNG/JPEG/GIF/WebP as the accepted types. The endpoint is `/img/`: it takes images, not video, so a dropped video is refused with a message naming the types it does take.
+
+> **`paste.boxlabs.uk` does not send `Access-Control-Allow-Origin` today** (checked 2026-08-28: the `POST` response carries no CORS header and `OPTIONS` answers `405`). Until the operator adds it, uploads from a browser fail even though the file lands on the server. Self-hosted PASTE instances need the same header in their nginx or Apache config. Nothing in the client can work around it — the response body is unreadable without it.
+
+Because the service strips EXIF itself, the "Attempt to remove metadata from images before uploading" setting (which re-encodes through a canvas, and already skips GIF and SVG) is belt-and-braces with this preset rather than the only defence.
 
 ## Files a rebranded deploy overwrites in `public/`
 
