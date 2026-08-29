@@ -68,9 +68,9 @@ Tests: `test/irc/upload.ts` (preset request shape, nested response parsing,
 the strip retry and its non-retry cases, the video refusal, path lookup) and
 `test/irc/branding.ts` (preset expansion, overrides, aliasing, validation).
 
-## Blocked: the service sends no CORS header
+## Blocked: `/img/` sends no CORS header (but `api.php` does)
 
-Checked 2026-08-28 against the live endpoint:
+Checked 2026-08-28 against the live service. The image endpoint:
 
 ```console
 $ curl -i -X POST https://paste.boxlabs.uk/img/ -H 'Origin: https://chat.example.com' -F dummy=1
@@ -92,18 +92,51 @@ sent, the request goes through, the file lands — and then the browser
 poxchat is native and so never hits this.
 
 Nothing in the client can work around it: the URL is server-generated, so an
-opaque `no-cors` response is useless. The service must add the header (`*`
-is enough — the endpoint is anonymous and takes no cookies), and the
-`OPTIONS` 405 only matters if we ever send a custom header. **Ask in
-`#PASTE` on irc.afternet.org / boxlabss.** The same applies to self-hosted
-PASTE instances; documented in `branding.md` § Uploads.
+opaque `no-cors` response is useless, and there is nothing to guess.
 
-The probe above deliberately posted no file, so the check published nothing.
+### An API key is not the fix
+
+The tempting conclusion is "use the documented API instead". It does not
+help, for two independent reasons:
+
+1. **`api.php` cannot take images.** Its actions are `create`, `paste`,
+   `get`, `update`, `delete`, `list`, `search`, `languages`, `me`, `user` —
+   all text pastes, `content` is a string. The 659-line source contains no
+   reference to `$_FILES`, `multipart`, `upload` or `image`.
+2. **CORS is orthogonal to authentication.** A key would not make a response
+   readable; only the response header does. Sending `X-API-Key` would in
+   fact make the request non-simple and add a preflight, which `/img/`
+   answers with `405`.
+
+What the API _does_ prove is that the operator already does this correctly
+elsewhere — `api.php` lines 25-27:
+
+```php
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, X-API-Key');
+```
+
+So the ask is small and well-precedented: **send the same
+`Access-Control-Allow-Origin: *` from `/img/`.** `*` suffices — the endpoint
+is anonymous and takes no cookies — and nothing else needs to change,
+because our request is simple and never triggers a preflight.
+
+Worth noting for whoever asks: `/img/` is **not** in upstream
+[boxlabss/PASTE](https://github.com/boxlabss/PASTE) at all (the repo has no
+image upload handler), so it is boxlabs' own addition and they hold the
+source. **Ask in `#PASTE` on irc.afternet.org / boxlabss.** Self-hosted PASTE
+instances that add their own `/img/` need the same header; documented in
+`branding.md` § Uploads.
+
+The probes above deliberately posted no file, so the check published nothing.
 An end-to-end upload has therefore not been run against the live service.
 
 ## Still open
 
-- **CORS on `paste.boxlabs.uk/img/`** — the blocker above.
+- **CORS on `paste.boxlabs.uk/img/`** — the blocker above. One response
+  header, which `api.php` on the same host already sends. An API key is
+  not a workaround: the API is text-only.
 - **Retention and privacy wording.** PASTE expires text pastes; image
   retention is unknown. A `uploads.notice` string for the network's own
   wording is unimplemented.
