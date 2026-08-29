@@ -17,7 +17,7 @@ export type Range = {start: number; end: number};
 
 // What the markers made of a piece of text. `verbatim` means "nothing is
 // interpreted here" — the finders skip it; inline code also sets `monospace`,
-// a fenced block sets `codeBlock`.
+// a fenced block sets `codeBlock` and, when the fence named one, `lang`.
 export type PieceFlags = {
 	bold?: true;
 	italic?: true;
@@ -29,6 +29,7 @@ export type PieceFlags = {
 	spoiler?: true;
 	verbatim?: true;
 	href?: string;
+	lang?: string;
 };
 
 // What the Markdown stage makes of a message: the style fragments with the
@@ -41,14 +42,18 @@ const MARKER_CHARS = "*_~|`>[]()\\";
 
 const FENCE = "```";
 // Optional language tag is only a tag when it ends the fence line
-const fenceOpenRx = /^```(?:[\w+-]*\n)?/;
+const fenceOpenRx = /^```(?:([\w+-]*)\n)?/;
 // The URL part allows one level of balanced parentheses, so Wikipedia-style
 // links survive; the scheme is matched case-insensitively.
 const linkRx = /^\[([^\]\n]+)\]\(((?:https?:\/\/|web\+irc:)(?:[^\s()]|\([^\s()]*\))+)\)/i;
 
-type ScanFlag = keyof Omit<PieceFlags, "href">;
+type ScanFlag = keyof Omit<PieceFlags, "href" | "lang">;
 
-type ScanRange = (Range & {flag: ScanFlag}) | (Range & {flag: "href"; href: string});
+// The flags a range can carry: a bare one, or one of the two that name a value
+type ScanRange =
+	| (Range & {flag: ScanFlag})
+	| (Range & {flag: "href"; href: string})
+	| (Range & {flag: "lang"; lang: string});
 
 type Scan = {
 	// Marker characters to drop from the text
@@ -178,6 +183,8 @@ function cutPieces(text: string, {removals, ranges}: Scan, extraCuts: number[]):
 
 			if (range.flag === "href") {
 				flags.href = range.href;
+			} else if (range.flag === "lang") {
+				flags.lang = range.lang;
 			} else {
 				flags[range.flag] = true;
 			}
@@ -369,7 +376,10 @@ function codeBlock(text: string, i: number, removals: Range[], ranges: ScanRange
 		return -1;
 	}
 
-	const open = fenceOpenRx.exec(text.slice(i))?.[0].length ?? FENCE.length;
+	const fence = fenceOpenRx.exec(text.slice(i));
+	const open = fence?.[0].length ?? FENCE.length;
+	// Only a tag when the fence line ended in a newline and named something
+	let lang = fence?.[1] ? fence[1].toLowerCase() : undefined;
 	let contentStart = i + open;
 	let contentEnd = close;
 
@@ -381,6 +391,7 @@ function codeBlock(text: string, i: number, removals: Range[], ranges: ScanRange
 		// The "language tag" was the whole content
 		contentStart = i + FENCE.length;
 		contentEnd = close;
+		lang = undefined;
 	}
 
 	if (contentEnd <= contentStart) {
@@ -398,6 +409,10 @@ function codeBlock(text: string, i: number, removals: Range[], ranges: ScanRange
 	removals.push({start: removeStart, end: contentStart}, {start: contentEnd, end: removeEnd});
 	ranges.push({start: contentStart, end: contentEnd, flag: "codeBlock"});
 	ranges.push({start: contentStart, end: contentEnd, flag: "verbatim"});
+
+	if (lang) {
+		ranges.push({start: contentStart, end: contentEnd, flag: "lang", lang});
+	}
 
 	return removeEnd;
 }

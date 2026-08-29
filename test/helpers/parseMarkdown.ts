@@ -13,6 +13,7 @@ const FLAGS: (keyof ParsedStyle)[] = [
 	"quote",
 	"spoiler",
 	"href",
+	"lang",
 ];
 
 type Rendered = Record<string, unknown>;
@@ -133,12 +134,24 @@ describe("markdown — code block", () => {
 		expect(md("```code```")).to.deep.equal([{text: "code", codeBlock: true}]);
 	});
 
-	it("drops the language tag and the newlines around the fences", () => {
+	it("keeps the language tag and drops the newlines around the fences", () => {
 		expect(md("before\n```js\nlet x = 1;\n```\nafter")).to.deep.equal([
 			{text: "before"},
-			{text: "let x = 1;", codeBlock: true},
+			{text: "let x = 1;", codeBlock: true, lang: "js"},
 			{text: "after"},
 		]);
+	});
+
+	it("lower-cases the tag and accepts the `+`/`-` in one", () => {
+		expect(md("```C++\ncode```")).to.deep.equal([{text: "code", codeBlock: true, lang: "c++"}]);
+	});
+
+	it("carries no tag when the fence line holds none", () => {
+		expect(md("```\nlet x = 1;\n```")).to.deep.equal([{text: "let x = 1;", codeBlock: true}]);
+	});
+
+	it("carries no tag on a single-line block: the tag needs the newline", () => {
+		expect(md("```js let x = 1;```")).to.deep.equal([{text: "js let x = 1;", codeBlock: true}]);
 	});
 
 	it("reports the block as verbatim", () => {

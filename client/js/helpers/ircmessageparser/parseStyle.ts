@@ -24,6 +24,8 @@ export type ParsedStyle = {
 	quote?: boolean;
 	spoiler?: boolean;
 	href?: string;
+	// The code fence's language tag, when it had one
+	lang?: string;
 	text: string;
 	start: number;
 	end: number;
@@ -240,6 +242,7 @@ export const STYLE_KEYS: (keyof ParsedStyle)[] = [
 	"quote",
 	"spoiler",
 	"href",
+	"lang",
 ];
 
 function prepare(text: string) {

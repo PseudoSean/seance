@@ -15,11 +15,10 @@ const text = (value: string, style: Style = {}): LayoutNode => ({
 
 const quote = (children: LayoutNode[]): LayoutNode => ({kind: "wrap", wrap: "quote", children});
 
-const codeBlock = (children: LayoutNode[]): LayoutNode => ({
-	kind: "wrap",
-	wrap: "codeBlock",
-	children,
-});
+const codeBlock = (children: LayoutNode[], lang?: string): LayoutNode =>
+	lang === undefined
+		? {kind: "wrap", wrap: "codeBlock", children}
+		: {kind: "wrap", wrap: "codeBlock", lang, children};
 
 const spoiler = (children: LayoutNode[]): LayoutNode => ({kind: "wrap", wrap: "spoiler", children});
 
@@ -63,6 +62,23 @@ describe("layout — wraps", () => {
 
 	it("wraps a code block", () => {
 		expect(layout("```x```", markdown)).to.deep.equal([codeBlock([text("x")])]);
+	});
+
+	it("carries the fence's language tag on the code block wrap", () => {
+		expect(layout("```js\nlet x\n```", markdown)).to.deep.equal([
+			codeBlock([text("let x")], "js"),
+		]);
+	});
+
+	it("keeps two code blocks with different tags apart", () => {
+		expect(layout("```js\na\n```\n```python\nb\n```", markdown)).to.deep.equal([
+			codeBlock([text("a")], "js"),
+			codeBlock([text("b")], "python"),
+		]);
+	});
+
+	it("says nothing extra in the plain text of a tagged block", () => {
+		expect(toPlainText(layout("```js\nlet x\n```", markdown))).to.equal("let x");
 	});
 
 	it("wraps a spoiler", () => {

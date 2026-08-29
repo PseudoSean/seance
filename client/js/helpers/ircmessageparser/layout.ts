@@ -38,13 +38,17 @@ export type LayoutNode =
 	| {kind: "channel"; channel: string; children: LayoutNode[]}
 	| {kind: "emoji"; emoji: string; children: LayoutNode[]}
 	| {kind: "nick"; nick: string; children: LayoutNode[]}
-	| {kind: "wrap"; wrap: "quote" | "codeBlock" | "spoiler"; children: LayoutNode[]}
+	| {kind: "wrap"; wrap: "quote" | "spoiler"; children: LayoutNode[]}
+	// `lang` is the fence's language tag, when it named one
+	| {kind: "wrap"; wrap: "codeBlock"; lang?: string; children: LayoutNode[]}
 	| {kind: "wrap"; wrap: "href"; href: string; children: LayoutNode[]};
 
 // Flags that wrap a run of neighbouring nodes in one element, outermost first
 const WRAP_KEYS = ["quote", "codeBlock", "spoiler", "href"] as const;
 type WrapKey = typeof WRAP_KEYS[number];
-type Wrap = Partial<Record<WrapKey, boolean | string>>;
+// `lang` is not a wrap of its own: it qualifies `codeBlock`, so that two
+// blocks in different languages never end up under one element.
+type Wrap = Partial<Record<WrapKey, boolean | string>> & {lang?: string};
 // A part, or one run of a part's text, and the wraps it sits in
 type WrappedNodes = {nodes: LayoutNode[]; wrap: Wrap};
 
@@ -214,16 +218,26 @@ function wrapOf(fragment: ParsedStyle | undefined): Wrap {
 		}
 	}
 
+	if (fragment.codeBlock && fragment.lang) {
+		wrap.lang = fragment.lang;
+	}
+
 	return wrap;
 }
 
 function sameWrap(a: Wrap, b: Wrap) {
-	return WRAP_KEYS.every((key) => a[key] === b[key]);
+	return WRAP_KEYS.every((key) => a[key] === b[key]) && a.lang === b.lang;
 }
 
-function wrapNode(key: WrapKey, value: boolean | string, children: LayoutNode[]): LayoutNode {
+function wrapNode(key: WrapKey, wrap: Wrap, children: LayoutNode[]): LayoutNode {
 	if (key === "href") {
-		return {kind: "wrap", wrap: "href", href: String(value), children};
+		return {kind: "wrap", wrap: "href", href: String(wrap.href), children};
+	}
+
+	if (key === "codeBlock") {
+		return wrap.lang === undefined
+			? {kind: "wrap", wrap: "codeBlock", children}
+			: {kind: "wrap", wrap: "codeBlock", lang: wrap.lang, children};
 	}
 
 	return {kind: "wrap", wrap: key, children};
@@ -241,17 +255,24 @@ function groupNodes(nodes: WrappedNodes[], level = 0): LayoutNode[] {
 	let i = 0;
 
 	while (i < nodes.length) {
-		const value = nodes[i].wrap[key];
+		const wrap = nodes[i].wrap;
+		const value = wrap[key];
+		// A code block only continues while the language stays the same
+		const lang = key === "codeBlock" ? wrap.lang : undefined;
 		let j = i + 1;
 
-		while (j < nodes.length && nodes[j].wrap[key] === value) {
+		while (
+			j < nodes.length &&
+			nodes[j].wrap[key] === value &&
+			(key !== "codeBlock" || nodes[j].wrap.lang === lang)
+		) {
 			j += 1;
 		}
 
 		const children = groupNodes(nodes.slice(i, j), level + 1);
 
 		if (value) {
-			out.push(wrapNode(key, value, children));
+			out.push(wrapNode(key, wrap, children));
 		} else {
 			out.push(...children);
 		}
