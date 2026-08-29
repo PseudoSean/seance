@@ -854,3 +854,132 @@ describe("multiline sending", function () {
 		});
 	});
 });
+
+describe("multiline errors", function () {
+	beforeEach(function () {
+		installSpy();
+	});
+
+	afterEach(function () {
+		removeSpy();
+	});
+
+	// The lines below are the draft's own § Errors examples
+	// (https://ircv3.net/specs/extensions/multiline): MAX_BYTES and MAX_LINES
+	// carry the limit as their context, INVALID_TARGET carries
+	// `<batch-target> <provided-target>`, MULTILINE_INVALID carries nothing.
+	// The client splits proactively, so none of these should ever arrive —
+	// which is exactly why they must not arrive as raw protocol noise.
+	it("explains a max-lines failure in the active window", function () {
+		const {client, transport, chanId} = setup();
+
+		transport.line(
+			"@time=2026-08-29T12:00:00.000Z :irc.test FAIL BATCH MULTILINE_MAX_LINES 10 :Multiline batch max-lines exceeded"
+		);
+
+		const shown = messages(client.lobby.id);
+
+		expect(shown).to.have.length(1); // once: not also as a raw FAIL
+		expect(shown[0].type).to.equal(MessageType.ERROR);
+		expect(shown[0].text).to.match(/^Message not sent: /);
+		expect(shown[0].text).to.match(/too many lines/);
+		expect(shown[0].text).to.include("10");
+		expect(shown[0].showInActive).to.equal(true);
+		expect(shown[0].time).to.deep.equal(new Date("2026-08-29T12:00:00.000Z"));
+		expect(messages(chanId)).to.have.length(0);
+	});
+
+	it("explains a max-bytes failure in the active window", function () {
+		const {client, transport} = setup();
+
+		transport.line(
+			":irc.test FAIL BATCH MULTILINE_MAX_BYTES 40000 :Multiline batch max-bytes exceeded"
+		);
+
+		const shown = messages(client.lobby.id);
+
+		expect(shown).to.have.length(1);
+		expect(shown[0].type).to.equal(MessageType.ERROR);
+		expect(shown[0].text).to.match(/too long/);
+		expect(shown[0].text).to.include("40000");
+		expect(shown[0].showInActive).to.equal(true);
+	});
+
+	it("shows an invalid-target failure in the channel the batch named", function () {
+		const {client, transport, chanId} = setup();
+
+		transport.line(
+			":irc.test FAIL BATCH MULTILINE_INVALID_TARGET #seance #other :Invalid multiline target"
+		);
+
+		const shown = messages(chanId);
+
+		expect(shown).to.have.length(1);
+		expect(shown[0].type).to.equal(MessageType.ERROR);
+		expect(shown[0].text).to.match(/same target/);
+		expect(shown[0].showInActive).to.equal(false);
+		expect(messages(client.lobby.id)).to.have.length(0);
+	});
+
+	it("passes the server's own words on for MULTILINE_INVALID", function () {
+		const {client, transport} = setup();
+
+		transport.line(
+			":irc.test FAIL BATCH MULTILINE_INVALID :Invalid multiline batch with blank lines only"
+		);
+
+		const shown = messages(client.lobby.id);
+
+		expect(shown).to.have.length(1);
+		expect(shown[0].text).to.equal(
+			"Message not sent: Invalid multiline batch with blank lines only"
+		);
+		expect(shown[0].showInActive).to.equal(true);
+	});
+
+	it("uses the server's words for an unknown MULTILINE_ code too", function () {
+		const {client, transport} = setup();
+
+		transport.line(":irc.test FAIL BATCH MULTILINE_SOMETHING_NEW :Server says no");
+
+		expect(messages(client.lobby.id)[0].text).to.equal("Message not sent: Server says no");
+	});
+
+	// Not in the draft: nefarious2 answers every multi-line message that also
+	// reached a client without the capability with `WARN BATCH
+	// MULTILINE_FALLBACK <target> :Message truncated for N legacy recipients`
+	// (observed live 2026-08-29, docs/resources/nefarious2-websocket.md).
+	// It arrives once per message and names nothing the sender can do, so the
+	// generic WARN line would put a red error under every multi-line message.
+	it("says nothing about the server's MULTILINE_FALLBACK warning", function () {
+		const {client, transport, chanId} = setup();
+
+		transport.line(
+			":irc.test WARN BATCH MULTILINE_FALLBACK #seance :Message truncated for 2 legacy recipients"
+		);
+
+		expect(messages(client.lobby.id)).to.have.length(0);
+		expect(messages(chanId)).to.have.length(0);
+	});
+
+	it("still shows a BATCH warning it has never seen", function () {
+		const {client, transport} = setup();
+
+		transport.line(":irc.test WARN BATCH MULTILINE_SOMETHING_NEW #seance :Heads up");
+
+		expect(messages(client.lobby.id)[0].text).to.equal(
+			"BATCH: Heads up (#seance) [WARN MULTILINE_SOMETHING_NEW]"
+		);
+	});
+
+	it("leaves other BATCH failures to the generic standard-reply line", function () {
+		const {client, transport} = setup();
+
+		transport.line(":irc.test FAIL BATCH UNKNOWN_BATCH_TYPE :Not a multiline problem");
+
+		const shown = messages(client.lobby.id);
+
+		expect(shown).to.have.length(1);
+		expect(shown[0].text).to.equal("BATCH: Not a multiline problem [FAIL UNKNOWN_BATCH_TYPE]");
+	});
+});

@@ -351,6 +351,8 @@ Verified live against AfterNET (`wss://fractalrealities.afternet.org:9998/`, `u2
 - **A blank line in the middle is accepted** and relayed as `PRIVMSG #chan :` with an empty trailing parameter. (The draft forbids only a blank line carrying the concat tag and a message that is _nothing but_ blank lines; `planMultiline` drops trailing blanks and never concat-tags a blank.)
 - **A trailing space survives a concat join**, which is what makes the draft's recommended split ("leave the space at the end of the line") work: `alpha ` + `bravo` reads back as `alpha bravo`.
 - Fake lag charges the batch once, at `BATCH -` (see below), so a five-line burst costs one command's worth. Nothing was rejected and no `FAIL BATCH` was seen.
+- **`WARN BATCH MULTILINE_FALLBACK` follows every batch that also reached a client without the capability.** Not in the draft: `:server WARN BATCH MULTILINE_FALLBACK #ps :Message truncated for 3 legacy recipients`. It is a `WARN`, not a `FAIL` — the message went out — and it arrives once per multi-line message, which on any populated channel is every one of them. Seance swallows it (`handlers/standard-replies.ts`): shown through the generic standard-reply line it would put a red error under every multi-line message the user sends, about something they cannot act on.
+- **"Truncated" is a misnomer — nothing is lost.** A second connection that negotiated no capabilities at all, listening in the same channel, received the three lines as three ordinary `PRIVMSG`s, in order, with the same text. That is what the draft requires ("When delivering multiline batches to clients that have not negotiated the multiline capability, servers MUST deliver the component messages without using a multiline BATCH"), so the only difference for such a client is that the message is three timeline entries instead of one. `test/irc/multiline.live.ts` asserts this with a capability-less peer of its own, so a regression here is caught rather than assumed.
 
 Transcript (client `>>`, server `<<`; `<SOH>` is `\x01`):
 
@@ -388,6 +390,25 @@ Transcript (client `>>`, server `<<`; `<SOH>` is `\x01`):
 ```
 
 (The first line of batch A ends with a space, trimmed by this document's formatter; that space is what the concat join restores.)
+
+The fallback observation, from `test/irc/multiline.live.ts` (`mlleg8114` is the capability-less peer; its copy is shown as `legacy <<`):
+
+```
+>> BATCH +m1 draft/multiline #ps
+>> @batch=m1 PRIVMSG #ps :ml8114 line one
+>> @batch=m1 PRIVMSG #ps :line two
+>> @batch=m1 PRIVMSG #ps :line three
+>> BATCH -m1
+<< @time=2026-08-29T10:48:59.462Z;msgid=GkAAAAAaBMH3yQ :mlws8114!…IP BATCH +Gk1763771672 draft/multiline #ps
+<< @batch=Gk1763771672 :mlws8114!…IP PRIVMSG #ps :ml8114 line one
+<< @batch=Gk1763771672 :mlws8114!…IP PRIVMSG #ps :line two
+<< @batch=Gk1763771672 :mlws8114!…IP PRIVMSG #ps :line three
+<< :mlws8114!…IP BATCH -Gk1763771672
+<< @time=2026-08-29T10:48:59.462Z :FractalRealities.AfterNET.Org WARN BATCH MULTILINE_FALLBACK #ps :Message truncated for 3 legacy recipients
+legacy << :mlws8114!…IP PRIVMSG #ps :ml8114 line one
+legacy << :mlws8114!…IP PRIVMSG #ps :line two
+legacy << :mlws8114!…IP PRIVMSG #ps :line three
+```
 
 ## Fake lag / flood penalty, measured 2026-08-27
 

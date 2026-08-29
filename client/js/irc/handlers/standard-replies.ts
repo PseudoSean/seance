@@ -3,9 +3,11 @@
  *
  * `FAIL REDACT <code> [<target> [<msgid>]] :text` gets a friendly message in
  * the channel the context names (or the active window) and aborts an edit
- * waiting on that msgid (bus-contract §1.4). `FAIL PERSISTENCE` about the
- * catch-up cursor is silent (../persistence.ts). Everything else is shown
- * raw.
+ * waiting on that msgid (bus-contract §1.4). `FAIL BATCH MULTILINE_* …` says
+ * a multi-line message was dropped whole (../multiline.ts), and `WARN BATCH
+ * MULTILINE_FALLBACK` — one per multi-line message — is silent. `FAIL
+ * PERSISTENCE` about the catch-up cursor is silent too (../persistence.ts).
+ * Everything else is shown raw.
  */
 
 import {MessageType} from "../../../../shared/types/msg";
@@ -44,6 +46,63 @@ function redactFailed(client: IrcClient, msg: IrcMessage): void {
 	);
 }
 
+/**
+ * `FAIL BATCH MULTILINE_… :text` (the draft's § Errors): the server threw the
+ * whole `draft/multiline` batch away, so the message was not sent at all.
+ * `MULTILINE_MAX_BYTES`/`MULTILINE_MAX_LINES` carry the limit as their
+ * context, `MULTILINE_INVALID_TARGET` carries `<batch-target>
+ * <provided-target>`, `MULTILINE_INVALID` carries nothing. Seance plans its
+ * batches under the limits the capability advertised, so none of these should
+ * ever arrive — but a dropped message the user watched themselves type has to
+ * be reported where they typed it: the channel a context names, else the
+ * active window.
+ */
+function multilineFailed(client: IrcClient, msg: IrcMessage): void {
+	const [, code = "", ...rest] = msg.params;
+	const description = rest.length > 0 ? rest[rest.length - 1] : "";
+	const context = rest.slice(0, -1);
+	// A limit is all digits, so it is never mistaken for a target.
+	const limit = context.find((param) => /^\d+$/.test(param));
+	const chan =
+		context
+			.filter((param) => !/^\d+$/.test(param))
+			.map((param) => client.findChannel(param))
+			.find((found) => found !== undefined) ?? client.lobby;
+	let why: string;
+
+	switch (code.toUpperCase()) {
+		case "MULTILINE_MAX_BYTES":
+			why = `it was too long for one multi-line message${
+				limit ? ` (the server's limit is ${limit} bytes)` : ""
+			}.`;
+			break;
+
+		case "MULTILINE_MAX_LINES":
+			why = `it had too many lines for one multi-line message${
+				limit ? ` (the server's limit is ${limit})` : ""
+			}.`;
+			break;
+
+		case "MULTILINE_INVALID_TARGET":
+			why = "its lines did not all go to the same target.";
+			break;
+
+		default:
+			why = description || "the server rejected the multi-line batch.";
+	}
+
+	client.pushMessage(
+		chan,
+		{
+			type: MessageType.ERROR,
+			time: client.timeOf(msg),
+			text: `Message not sent: ${why}`,
+			showInActive: chan === client.lobby,
+		},
+		true
+	);
+}
+
 function reply(kind: "FAIL" | "WARN" | "NOTE"): Handler {
 	return (client, msg) => {
 		const [command = "*", code = "", ...rest] = msg.params;
@@ -54,6 +113,29 @@ function reply(kind: "FAIL" | "WARN" | "NOTE"): Handler {
 
 		if (kind === "FAIL" && command.toUpperCase() === "REDACT") {
 			redactFailed(client, msg);
+			return;
+		}
+
+		if (
+			kind === "FAIL" &&
+			command.toUpperCase() === "BATCH" &&
+			code.toUpperCase().startsWith("MULTILINE_")
+		) {
+			multilineFailed(client, msg);
+			return;
+		}
+
+		if (
+			kind === "WARN" &&
+			command.toUpperCase() === "BATCH" &&
+			code.toUpperCase() === "MULTILINE_FALLBACK"
+		) {
+			// nefarious2 warns once per multi-line message that some
+			// recipient without the capability got a truncated copy. It is
+			// not in the draft, it names nothing the sender can do about it,
+			// and on a busy channel it is every message — so it is swallowed
+			// (docs/projects/multiline-messages.md). Any *other* BATCH
+			// warning, seen or unseen, is still shown.
 			return;
 		}
 
