@@ -20,6 +20,11 @@ import "./prism-manual";
 import Prism from "prismjs/components/prism-core";
 import type {Token} from "prismjs";
 import components from "prismjs/components.json";
+import {MIN_GUESS_LINES, splitLines} from "./codeLines";
+
+// The block's shape is decided without any of this module; re-exported so the
+// highlighting interface still reads as one.
+export {MIN_GUESS_LINES, splitLines};
 
 // One run of code that renders the same way. `type` is Prism's token type
 // (`keyword`, `string`, ...) and is absent for text no rule matched.
@@ -27,9 +32,6 @@ export type CodeToken = {text: string; type?: string};
 
 // The tokens of a code block, one array per line.
 export type Highlighted = CodeToken[][];
-
-// Shorter blocks are never guessed: one line is as likely to be prose as code
-export const MIN_GUESS_LINES = 2;
 
 // How far ahead of the runner-up flourite's answer has to be, as
 // `points / (points + runner-up points)`. 0.5 means "strictly ahead".
@@ -93,18 +95,6 @@ export function normalizeLang(tag: string | undefined): string | undefined {
 	}
 
 	return idByTag.get(tag.trim().toLowerCase());
-}
-
-// The lines of a code block. A trailing newline ends the last line rather than
-// starting an empty one, which is what a fenced block usually carries.
-export function splitLines(code: string): string[] {
-	const lines = code.split("\n");
-
-	if (lines.length > 1 && lines[lines.length - 1] === "") {
-		lines.pop();
-	}
-
-	return lines;
 }
 
 // The block's tokens, or undefined while the grammar is not loaded — the
@@ -195,11 +185,19 @@ async function loadLanguage(id: string): Promise<boolean> {
 	}
 
 	try {
+		// One named chunk per grammar. The `webpackInclude` list is what this
+		// deploy ships: the languages worth carrying for a chat client, closed
+		// over Prism's own require/modify/optional links (`components.json`).
+		// All ~300 of Prism's grammars would be 1.3 MB of chunks and put a
+		// 300-entry filename map in the main bundle, which is what loading them
+		// on demand was for. A tag outside the list simply stays plain.
 		await import(
-			/* webpackChunkName: "[request]", webpackExclude: /\.min\.js$/ */
+			/* webpackChunkName: "[request]" */
+			/* webpackInclude: /prism-(actionscript|apacheconf|bash|batch|c|clike|clojure|cmake|coffeescript|cpp|csharp|csp|css|css-extras|dart|diff|docker|elixir|erlang|flow|fsharp|git|go|graphql|groovy|haskell|hpkp|hsts|http|ini|java|javadoclike|javascript|js-extras|js-templates|jsdoc|json|json5|jsx|julia|kotlin|lua|makefile|markdown|markup|markup-templating|matlab|n4js|nginx|objectivec|ocaml|perl|php|powershell|properties|protobuf|python|r|regex|rest|ruby|rust|scala|sql|swift|toml|tsx|typescript|uri|vim|yaml)\.js$/ */
 			`prismjs/components/prism-${id}`
 		);
 	} catch {
+		// Not shipped, not fetchable: the block stays plain
 		return false;
 	}
 

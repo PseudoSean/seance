@@ -28,6 +28,18 @@
 	/* Links and link-looking buttons */
 	--link-color: #50a656;
 
+	/* Syntax highlighting in code blocks, on the light `code` background.
+	 * Dark values live in themes/morning.css. */
+	--tok-comment: #6a737d;
+	--tok-keyword: #d73a49;
+	--tok-string: #032f62;
+	--tok-number: #005cc5;
+	--tok-function: #6f42c1;
+	--tok-operator: #b31d28;
+	--tok-punctuation: #586069;
+	--tok-tag: #22863a;
+	--tok-attr: #6f42c1;
+
 	/* Background color of the main window */
 	--window-bg-color: #fff;
 
@@ -2700,6 +2712,82 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	overflow-x: auto;
 }
 
+/* One row per line. The number is a CSS counter rather than text, so selecting
+ * the block copies the code and not the gutter. */
+.md-line {
+	display: block;
+}
+
+.md-code-block--numbered {
+	counter-reset: line;
+}
+
+.md-code-block--numbered .md-line::before {
+	display: inline-block;
+	width: 2.5em;
+	margin-right: 0.75em;
+	text-align: right;
+	opacity: 0.5;
+	user-select: none;
+	counter-increment: line;
+	content: counter(line);
+}
+
+/* Syntax highlighting. The classes are Prism's token types, grouped onto the
+ * palette in `:root` (dark values in `themes/morning.css`). */
+.tok-comment,
+.tok-prolog,
+.tok-doctype,
+.tok-cdata {
+	color: var(--tok-comment);
+}
+
+.tok-keyword,
+.tok-atrule,
+.tok-important {
+	color: var(--tok-keyword);
+}
+
+.tok-string,
+.tok-char,
+.tok-attr-value,
+.tok-regex {
+	color: var(--tok-string);
+}
+
+.tok-number,
+.tok-boolean,
+.tok-constant,
+.tok-symbol {
+	color: var(--tok-number);
+}
+
+.tok-function,
+.tok-class-name,
+.tok-builtin {
+	color: var(--tok-function);
+}
+
+.tok-operator,
+.tok-entity,
+.tok-url {
+	color: var(--tok-operator);
+}
+
+.tok-punctuation {
+	color: var(--tok-punctuation);
+}
+
+.tok-tag,
+.tok-selector {
+	color: var(--tok-tag);
+}
+
+.tok-attr-name,
+.tok-property {
+	color: var(--tok-attr);
+}
+
 .md-spoiler {
 	/* Not currentcolor: `color` is transparent here, so it would resolve to
 	 * transparent too and the spoiler would be invisible rather than blacked out. */
@@ -2726,11 +2814,16 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 /* The channel header is one clipped `white-space: nowrap` line, so the
  * block-level Markdown wrappers must not lay themselves out there. */
 .header .topic .md-quote,
-.header .topic .md-code-block {
+.header .topic .md-code-block,
+.header .topic .md-line {
 	display: inline;
 	margin: 0;
 	padding: 0;
 	border: 0;
+}
+
+.header .topic .md-code-block--numbered .md-line::before {
+	content: none;
 }
 
 .tooltipped::after {

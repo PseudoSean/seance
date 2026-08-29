@@ -1,8 +1,9 @@
 import {h as createElement, VNode} from "vue";
-import {layout, LayoutNode, Style} from "./ircmessageparser/layout";
+import {layout, LayoutNode, Style, toPlainText} from "./ircmessageparser/layout";
 import emojiMap from "./fullnamemap.json";
 import LinkPreviewToggle from "../../components/LinkPreviewToggle.vue";
 import LinkPreviewFileSize from "../../components/LinkPreviewFileSize.vue";
+import CodeBlock from "../../components/CodeBlock.vue";
 import InlineChannel from "../../components/InlineChannel.vue";
 import Username from "../../components/Username.vue";
 import {ClientMessage, ClientNetwork} from "../types";
@@ -42,7 +43,15 @@ function wrapNode(node: WrapNode, children: Rendered[]): VNode {
 		case "quote":
 			return createElement("span", {class: ["md-quote"]}, children);
 		case "codeBlock":
-			return createElement("code", {class: ["md-code-block"]}, children);
+			// The block's own characters, and only those: `CodeBlock` lays them
+			// out as numbered lines and asks the highlighter for tokens. Any
+			// part a finder made of the text (a URL is the one the verbatim
+			// spans do not suppress) is flattened back into it — inside a code
+			// block a link is code, like everything else there.
+			return createElement(CodeBlock, {
+				code: toPlainText(node.children),
+				lang: node.lang,
+			});
 		case "spoiler":
 			return createElement(
 				"span",

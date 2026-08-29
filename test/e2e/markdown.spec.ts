@@ -95,6 +95,14 @@ test("renders Markdown in own messages", async ({page}) => {
 	await expect(quoted.locator(".md-quote")).toContainText("quoted");
 	await expect(quoted.locator(".md-code-block")).toHaveText("block");
 	await expect(quoted.locator(".content")).not.toContainText(">");
+	// A code block is rows now, one per line, with the gutter counter only on
+	// blocks of two lines or more. One line is all this can assert: an IRC
+	// message holds no newline (`dispatchInput` sends one message per line), so
+	// neither a fence language tag — which is only a tag when the fence line
+	// ends in a newline — nor a second line is reachable from the input. The
+	// highlighter itself is covered by `test/helpers/highlighter.ts`.
+	await expect(quoted.locator(".md-code-block .md-line")).toHaveCount(1);
+	await expect(quoted.locator(".md-code-block")).not.toHaveClass(/md-code-block--numbered/);
 });
 
 test("leaves the text alone when the setting is off", async ({page}) => {

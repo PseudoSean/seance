@@ -77,6 +77,23 @@ describe("layout — wraps", () => {
 		]);
 	});
 
+	// The Vue adapter renders a code block from `toPlainText` of its children,
+	// so this link is flattened back into the code: the verbatim spans suppress
+	// the channel/nick/emoji finders inside a block, but not `findLinks`.
+	it("still finds a link inside a code block", () => {
+		expect(layout("```see https://example.com/ ok```", markdown)).to.deep.equal([
+			codeBlock([
+				text("see "),
+				{
+					kind: "link",
+					link: "https://example.com/",
+					children: [text("https://example.com/")],
+				},
+				text(" ok"),
+			]),
+		]);
+	});
+
 	it("says nothing extra in the plain text of a tagged block", () => {
 		expect(toPlainText(layout("```js\nlet x\n```", markdown))).to.equal("let x");
 	});

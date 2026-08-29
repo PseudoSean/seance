@@ -72,6 +72,26 @@ function brandManifest(content: string): string {
 	return JSON.stringify(manifest, null, "\t") + "\n";
 }
 
+// Third-party notices for the lazily loaded chunks. Prism's core carries a
+// `@license` comment terser extracts by itself, but not its copyright line, and
+// flourite's build carries nothing at all — so state both, in a `/*!` banner
+// that ends up in the chunk's `.LICENSE.txt`. Both are MIT; see
+// docs/projects/markdown-messages.md.
+const chunkNotices: Record<string, string> = {
+	"js/highlighter.js":
+		"/*! prismjs 1.30.0 (and the js/prism-*.js grammar chunks) | MIT | " +
+		"Copyright (c) 2012 Lea Verou | https://github.com/PrismJS/prism */\n",
+	"js/flourite.js":
+		"/*! flourite 1.3.0 | MIT | Copyright (c) 2015 Toni Sučić, " +
+		"Copyright (c) 2024 Teknologi Umum | https://github.com/teknologi-umum/flourite */\n",
+};
+
+const noticePlugin = new webpack.BannerPlugin({
+	raw: true,
+	test: /^js\/(highlighter|flourite)\.js$/,
+	banner: ({filename}) => chunkNotices[filename] ?? "",
+});
+
 const tsCheckerPlugin = new ForkTsCheckerWebpackPlugin({
 	typescript: {
 		diagnosticOptions: {
@@ -99,6 +119,10 @@ const config: webpack.Configuration = {
 		clean: true, // Clean the output directory before emit.
 		path: path.resolve(__dirname, "public"),
 		filename: "[name]",
+		// Lazily loaded chunks (the highlighter, its Prism grammars, the
+		// language guesser). `filename` carries the `js/` prefix in the entry
+		// name, so chunks have to say it here.
+		chunkFilename: "js/[name].js",
 		publicPath: "/",
 	},
 	performance: {
@@ -160,10 +184,19 @@ const config: webpack.Configuration = {
 	optimization: {
 		splitChunks: {
 			cacheGroups: {
+				// Webpack's own async vendor split would put Prism and its
+				// language table in a chunk named after a number, which is a
+				// stale-cache hazard (ids move between builds) for no gain:
+				// the highlighter chunk is their only consumer.
+				defaultVendors: false,
 				commons: {
 					test: /[\\/]node_modules[\\/]/,
 					name: "js/bundle.vendor.js",
-					chunks: "all",
+					// Initial chunks only: with "all", the dependencies of a
+					// lazily loaded chunk (Prism and its ~300 grammars) are
+					// hoisted into the vendor bundle, which is the opposite of
+					// what importing them on demand is for.
+					chunks: "initial",
 				},
 			},
 		},
@@ -174,6 +207,7 @@ const config: webpack.Configuration = {
 	plugins: [
 		tsCheckerPlugin,
 		vueLoaderPlugin,
+		noticePlugin,
 		new webpack.DefinePlugin({
 			__VUE_PROD_DEVTOOLS__: false,
 			__VUE_OPTIONS_API__: false,
