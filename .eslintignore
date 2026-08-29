@@ -4,3 +4,4 @@ dist/
 attic/
 tmp/
 shells/capacitor/
+.claude/

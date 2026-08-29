@@ -34,3 +34,4 @@ tmp/
 *.conf
 shells/capacitor/android/
 shells/capacitor/ios/
+.claude/

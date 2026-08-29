@@ -59,12 +59,23 @@ want a chatty, media-rich feel — and cover the links people actually paste
      click-to-load, a `#pics` channel on autoplay), stored with the other
      per-channel prefs (`thelounge.*` keys).
 4. **Privacy & safety.** Loading a preview discloses the reader's IP and
-   user-agent to the media host. Click-to-load as the default for
-   non-allow-listed hosts; `referrerpolicy="no-referrer"`; `loading="lazy"`;
-   never load previews for messages older than the viewport (history
-   replay); hide previews from ignored/muted users; optional blur-until-click
-   for images from unknown hosts. Note the existing `uploadCanvas` idea for
-   strip-metadata uploads is unrelated to previews.
+   user-agent to the media host. _Mostly done 2026-08-28:_ previews are
+   click-to-reveal by default (`mediaReveal` setting, `"click"` |
+   `"always"`): `LinkPreview.vue` renders a fixed-height placeholder card
+   (kind icon, "Image from i.imgur.com", file name) and mounts nothing that
+   fetches until the reader clicks it, or trusts a scope through the
+   "Always show ▾" menu: the host, the channel it was posted in, or the
+   sender's services account (from the `account-tag`; never the nick —
+   `client/js/helpers/mediaTrust.ts`, `mediaTrustMenu.ts`,
+   `thelounge.media.trusted`, managed in Settings → Appearance). Revealed
+   media has a hover toolbar (hide again, change that trust, open); own messages skip the veil; a
+   failed load falls back to the card; `ImageViewer` only steps through
+   revealed images; every media element carries
+   `referrerpolicy="no-referrer"`. Still open: `loading="lazy"`; a
+   deploy-level default / allow-list in `config.json`; hide previews from
+   ignored/muted users; blur-until-click as a middle ground. Note the
+   existing `uploadCanvas` idea for strip-metadata uploads is unrelated to
+   previews.
 5. **Layout.** Cap rendered height/width (CSS exists from TheLounge), show a
    fixed-size placeholder so history doesn't jump while media loads, keep
    the collapse toggle, and make the scroll-anchor logic in `MessageList.vue`

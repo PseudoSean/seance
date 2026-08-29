@@ -35,12 +35,83 @@
 				Use 12-hour timestamps
 			</label>
 		</div>
-		<h2>Link previews</h2>
-		<div>
+		<h2 id="label-media-previews">Media previews</h2>
+		<div role="group" aria-labelledby="label-media-previews">
 			<label class="opt">
 				<input :checked="store.state.settings.media" type="checkbox" name="media" />
 				Preview images, video and audio links inline
 			</label>
+			<div
+				role="group"
+				aria-label="When to load previews"
+				:class="['media-reveal-options', {disabled: !store.state.settings.media}]"
+			>
+				<label class="opt">
+					<input
+						:checked="store.state.settings.mediaReveal === 'click'"
+						:disabled="!store.state.settings.media"
+						type="radio"
+						name="mediaReveal"
+						value="click"
+					/>
+					Click to reveal — nothing is fetched from the media site until you ask to see it
+				</label>
+				<label class="opt">
+					<input
+						:checked="store.state.settings.mediaReveal === 'always'"
+						:disabled="!store.state.settings.media"
+						type="radio"
+						name="mediaReveal"
+						value="always"
+					/>
+					Show automatically — the media site sees your address as soon as a link appears
+				</label>
+			</div>
+			<div
+				v-if="store.state.settings.media && store.state.settings.mediaReveal === 'click'"
+				class="trusted-hosts"
+			>
+				<div class="trusted-hosts-head">
+					<span class="trusted-hosts-title">Always shown</span>
+					<button
+						v-if="trustedCount > 0"
+						type="button"
+						class="trusted-hosts-clear"
+						@click="clearTrusted()"
+					>
+						Clear all
+					</button>
+				</div>
+				<p class="trusted-hosts-help">
+					Media in these scopes loads without asking. Add one with
+					<em>Always show</em> on any preview.
+				</p>
+				<template v-for="group in trustedGroups" :key="group.kind">
+					<div v-if="group.entries.length > 0" class="trusted-group">
+						<span class="trusted-group-title">{{ group.title }}</span>
+						<ul class="trusted-host-list">
+							<li
+								v-for="entry in group.entries"
+								:key="entry.key"
+								:class="['trusted-host', 'trusted-' + group.kind]"
+							>
+								<span class="trusted-host-name">{{ entry.name }}</span>
+								<span v-if="entry.network" class="trusted-host-network">{{
+									entry.network
+								}}</span>
+								<button
+									type="button"
+									class="trusted-host-remove"
+									:aria-label="`Stop always showing ${group.verb} ${entry.name}`"
+									:title="`Stop always showing ${group.verb} ${entry.name}`"
+									@click="untrust(group.kind, entry.key)"
+								></button>
+							</li>
+						</ul>
+					</div>
+				</template>
+				<p v-if="trustedCount === 0" class="trusted-hosts-empty">Nothing yet.</p>
+			</div>
 		</div>
 		<h2 id="label-status-messages">
 			Status messages
@@ -163,8 +234,17 @@ textarea#user-specified-css-input {
 </style>
 
 <script lang="ts">
-import {defineComponent} from "vue";
+import {computed, defineComponent} from "vue";
 import {useStore} from "../../js/store";
+import {
+	clearTrusted,
+	splitKey,
+	trustedMedia,
+	untrust,
+	type TrustKind,
+} from "../../js/helpers/mediaTrust";
+
+type TrustedEntry = {key: string; name: string; network: string};
 
 export default defineComponent({
 	name: "AppearanceSettings",
@@ -172,9 +252,46 @@ export default defineComponent({
 		const store = useStore();
 		const isApple = navigator.platform.match(/(Mac|iPhone|iPod|iPad)/i) || false;
 
+		// Channel and account keys carry the network uuid; show its name.
+		const networkName = (uuid: string) =>
+			store.getters.findNetwork(uuid)?.name ?? uuid.slice(0, 8);
+
+		const entriesOf = (kind: TrustKind): TrustedEntry[] =>
+			trustedMedia(kind).map((key) => {
+				if (kind === "host") {
+					return {key, name: key, network: ""};
+				}
+
+				const {network, name} = splitKey(key);
+				return {key, name, network: network ? networkName(network) : ""};
+			});
+
+		const trustedGroups = computed(() => [
+			{kind: "host" as TrustKind, title: "Sites", verb: "from", entries: entriesOf("host")},
+			{
+				kind: "account" as TrustKind,
+				title: "People",
+				verb: "from",
+				entries: entriesOf("account"),
+			},
+			{
+				kind: "channel" as TrustKind,
+				title: "Channels",
+				verb: "in",
+				entries: entriesOf("channel"),
+			},
+		]);
+		const trustedCount = computed(() =>
+			trustedGroups.value.reduce((n, g) => n + g.entries.length, 0)
+		);
+
 		return {
 			store,
 			isApple,
+			trustedGroups,
+			trustedCount,
+			untrust,
+			clearTrusted,
 		};
 	},
 });

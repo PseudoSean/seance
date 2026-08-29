@@ -151,7 +151,7 @@ Notifications set `icon` but no `badge`. A badge must be a monochrome silhouette
 
 ## Follow-ups
 
-- **localStorage keys** still use the `thelounge.*` prefix (`thelounge.networks`, `thelounge.mentions`, `thelounge.sort.*`, `thelounge.state.*`, `thelounge.ignore.*`, `thelounge.muted`, `thelounge.networks.collapsed`, and `settings`). They are deliberately untouched: renaming them would drop every user's saved networks and settings. A rename needs a one-off migration.
+- **localStorage keys** still use the `thelounge.*` prefix (`thelounge.networks`, `thelounge.mentions`, `thelounge.sort.*`, `thelounge.state.*`, `thelounge.ignore.*`, `thelounge.muted`, `thelounge.networks.collapsed`, `thelounge.media.trusted`, and `settings`). They are deliberately untouched: renaming them would drop every user's saved networks and settings. A rename needs a one-off migration.
 - `features.saveNetworks: false` hides the saved-network UI, but `client/js/irc/manager.ts` still records the last-used network in localStorage. Make persistence conditional there.
-- The Changelog window still says "based on The Lounge x.y.z" on purpose (upstream attribution); the "Report an issue" link in Help still points at the upstream tracker.
+- The Changelog window still says "based on The Lounge x.y.z" on purpose (upstream attribution). The Help window's "Report an issue" link is hardcoded to `github.com/evilnet/seance/issues/new`, so a deploy cannot point it at the network's own tracker; make it a `branding.links` key if one asks.
 - Native shells (E.4) can call `setBranding()` from `client/js/branding.ts` instead of fetching, if they bundle the config.

@@ -119,6 +119,11 @@ const defaultConfig = {
 	media: {
 		default: true,
 	},
+	// "click": media previews show a placeholder until the reader reveals them
+	// (or trusts the host, helpers/mediaTrust.ts); "always": load at once.
+	mediaReveal: {
+		default: "click",
+	},
 	uploadCanvas: {
 		default: true,
 	},
