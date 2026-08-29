@@ -24,3 +24,6 @@ shells/capacitor/ios/App/App/public/
 shells/capacitor/ios/App/Pods/
 shells/electron/node_modules/
 shells/electron/dist/
+
+# agent scratch
+.superpowers/
