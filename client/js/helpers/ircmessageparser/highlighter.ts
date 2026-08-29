@@ -143,6 +143,13 @@ export async function guessLanguage(code: string): Promise<string | undefined> {
 		return undefined;
 	}
 
+	// A document that opens with a tag and closes it is not in doubt, and
+	// flourite is at its worst here: plain XML ties with C, a POM reads as
+	// Julia. Deciding by shape also spares the guesser's chunk.
+	if (looksLikeMarkup(code)) {
+		return "markup";
+	}
+
 	let detect;
 
 	try {
@@ -163,6 +170,23 @@ export async function guessLanguage(code: string): Promise<string | undefined> {
 	}
 
 	return normalizeLang(guess.language);
+}
+
+// How a markup document opens: an XML declaration, a doctype, a comment, or
+// an element. Leading blank lines are the writer's, not the block's.
+const MARKUP_HEAD = /^\s*<(\?xml[\s?]|!--|!doctype\s|[a-z][\w.:-]*[\s/>])/i;
+
+// ... and, somewhere in it, a tag that closes: `</name>` or `<name … />`.
+const MARKUP_CLOSE = /<\/[a-z][\w.:-]*\s*>|<[a-z][\w.:-]*(?:\s[^<>]*)?\/>/i;
+
+// Braces mean the tags are JSX inside JavaScript, or a template language
+// around another one — both of which flourite reads better than a shape does.
+const MARKUP_NOT = /[{}]/;
+
+// Whether the block is markup on the strength of its own structure, so that
+// the guesser is never asked about the one family it is unreliable on.
+function looksLikeMarkup(code: string): boolean {
+	return MARKUP_HEAD.test(code) && MARKUP_CLOSE.test(code) && !MARKUP_NOT.test(code);
 }
 
 async function loadLanguage(id: string): Promise<boolean> {

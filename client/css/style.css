@@ -3171,7 +3171,10 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 /* Syntax highlighting. The classes are Prism's token types, grouped onto the
- * palette in `:root` (dark values in `themes/morning.css`). */
+ * palette in `:root` (dark values in `themes/morning.css`). A type no group
+ * names — Prism has hundreds, most of them one grammar's own — inherits
+ * `--md-code-color` from the block, which is themed too, so it reads as code
+ * rather than as nothing. */
 .tok-comment,
 .tok-prolog,
 .tok-doctype,
@@ -3207,7 +3210,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 .tok-operator,
 .tok-entity,
-.tok-url {
+.tok-url,
+.tok-variable {
 	color: var(--tok-operator);
 }
 
