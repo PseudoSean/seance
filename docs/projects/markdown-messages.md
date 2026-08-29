@@ -18,7 +18,7 @@ Design: `docs/superpowers/specs/2026-08-29-markdown-messages-design.md`.
 ## How it works
 
 The pipeline is `parseStyle` → **`applyMarkdown`** → finders → `merge` →
-**layout tree** → `toVNodes` / `toPlainText`. Its vocabulary — fragment,
+**layout tree** → `parse()` / `toPlainText`. Its vocabulary — fragment,
 marker, opaque span, verbatim span, finder, part, layout tree, wrap, masked
 link, monospace block — is defined in `CONTEXT.md`; use those words.
 
@@ -26,8 +26,8 @@ link, monospace block — is defined in `CONTEXT.md`; use those words.
   removes the marker characters and sets the flags on the style fragments,
   handing back `{fragments, verbatim}` — the verbatim spans are the stretches
   nothing is interpreted inside, and the channel/nick/emoji finders skip them.
-  `tokenize(text)` is the same scan expressed as marker-free `Piece`s. URLs are
-  opaque to the scanner: `opaqueSpans` runs `findLinks` and
+  It is the module's only entry point; the marker scan behind it is private.
+  URLs are opaque to the scanner: `opaqueSpans` runs `findLinks` and
   `trimTrailingEmphasis` peels the trailing `**` linkify-it swallows back off,
   so the markers around a URL still close.
 - `layout(text, options)`
@@ -38,9 +38,10 @@ link, monospace block — is defined in `CONTEXT.md`; use those words.
   `href`, nested in that order). It imports no Vue, store or DOM, so the
   rendering decision is unit-testable.
 - The adapters walk that tree. `parse()` (`client/js/helpers/parse.ts`) is the
-  Vue one: `toVNodes(layout(...))`, which owns `createFragment`, the wrap
-  elements and the four `renderPart` branches. `toPlainText` is the other, used
-  by `Chat.vue`'s `plainTopic` for the window-title `title` attribute.
+  Vue one and the whole of its interface: inside it a private `toVNodes` walk
+  owns `createFragment`, the wrap elements and the four `renderPart` branches.
+  `toPlainText` is the other, used by `Chat.vue`'s `plainTopic` for the
+  window-title `title` attribute.
 
 A masked link is an `<a class="md-link" title="<url>">`; the class is what
 tells it apart from a linkified anchor. CSS for the wrapped elements

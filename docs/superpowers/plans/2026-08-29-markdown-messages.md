@@ -1,5 +1,11 @@
 # Markdown Messages Implementation Plan
 
+> **2026-08-29:** superseded in part. The layout refactor replaced the names
+> this plan documents — there is no exported `tokenize` and no `stripMarkdown`;
+> `applyMarkdown` is `parseMarkdown.ts`'s interface and `layout()` decides what
+> a message renders as. See `docs/projects/markdown-messages.md` for the shape
+> that shipped.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Optionally render Discord-style Markdown in everything `ParsedMessage` displays, controlled by a `markdown` setting that defaults to on.

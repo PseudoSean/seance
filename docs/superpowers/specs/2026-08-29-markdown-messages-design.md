@@ -145,3 +145,11 @@ Code blocks get syntax highlighting and, when multi-line, line numbers.
 - **Tests.** Unit: tag normalisation and the highlighter module's token → node
   mapping with a stub grammar; layout test for `lang` on the wrap; e2e: a
   tagged block renders `.tok-keyword` spans and a line-number gutter.
+- **Monospace runs merge into inline code (2026-08-29).** Not part of the
+  highlighting work, but accepted with the layout refactor that preceded it:
+  `verbatim` is no longer a style key, so an IRC monospace run immediately
+  abutting inline code — `\x11a\x11` followed by `` `b` `` — is now one
+  fragment `{text: "ab", monospace}` and renders as one `.irc-monospace` pill
+  instead of two. Both halves were monospace before and after; only the pill
+  count changed. Covered by `test/helpers/parseMarkdown.ts` ("merges an IRC
+  monospace run into the inline code beside it").
