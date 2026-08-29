@@ -10,7 +10,7 @@
 
 import {MessageType} from "../../../../shared/types/msg";
 import history, {chathistoryBatch} from "../history";
-import {persistenceBatch} from "../persistence";
+import {BOUNCER_REPLAY_BATCH, bouncerReplayBatch, persistenceBatch} from "../persistence";
 import type {Handler} from "../types";
 import account from "./account";
 import away from "./away";
@@ -74,6 +74,7 @@ export const handlers = new Map<string, Handler>();
 // Batch types delivered as a unit (everything else is unwrapped in order).
 registerBatchHandler("chathistory", chathistoryBatch);
 registerBatchHandler("draft/persistence", persistenceBatch);
+registerBatchHandler(BOUNCER_REPLAY_BATCH, bouncerReplayBatch);
 
 for (const mod of modules) {
 	for (const [command, handler] of Object.entries(mod)) {

@@ -3,12 +3,14 @@
  *
  * `FAIL REDACT <code> [<target> [<msgid>]] :text` gets a friendly message in
  * the channel the context names (or the active window) and aborts an edit
- * waiting on that msgid (bus-contract §1.4). Everything else is shown raw.
+ * waiting on that msgid (bus-contract §1.4). `FAIL PERSISTENCE` about the
+ * catch-up cursor is silent (../persistence.ts). Everything else is shown
+ * raw.
  */
 
 import {MessageType} from "../../../../shared/types/msg";
 import {chatHistoryFailed} from "../history";
-import {inRestorationWindow, noteRestorationActivity} from "../persistence";
+import {inRestorationWindow, noteRestorationActivity, persistenceFailed} from "../persistence";
 import type {Handler} from "../types";
 import type {IrcClient} from "../client";
 import type {IrcMessage} from "../message";
@@ -53,6 +55,14 @@ function reply(kind: "FAIL" | "WARN" | "NOTE"): Handler {
 		if (kind === "FAIL" && command.toUpperCase() === "REDACT") {
 			redactFailed(client, msg);
 			return;
+		}
+
+		if (
+			kind === "FAIL" &&
+			command.toUpperCase() === "PERSISTENCE" &&
+			persistenceFailed(client, msg)
+		) {
+			return; // a refused / unknown catch-up cursor: nothing for the user
 		}
 
 		if (kind === "NOTE" && command.toUpperCase() === "BOUNCER") {

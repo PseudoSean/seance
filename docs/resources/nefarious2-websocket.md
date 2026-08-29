@@ -298,7 +298,7 @@ A registered client sending a single 600-byte `PRIVMSG` frame over `wss://` gets
 
 ## Local fix branch (2026-08-25)
 
-`seance/websocket-fixes` in `tmp/nefarious2` (4 commits on top of `ircv3.2-upgrade@3868b34`; series exported to `tmp/nefarious2-fixes.patch`; image `nefarious2:ircv3-fixed`, now the default in `tools/nefarious-dev/run.sh`). **Pushed 2026-08-25 as [evilnet/nefarious2#100](https://github.com/evilnet/nefarious2/pull/100)** (base `ircv3.2-upgrade`, reviewer MrLenin), and **merged 2026-08-28** together with the client-cert follow-up as [#101](https://github.com/evilnet/nefarious2/pull/101) (`fceb160`). Current `ircv3.2-upgrade` therefore needs no local patch; the sections below are kept for the reasoning.
+`seance/websocket-fixes` in `tmp/nefarious2` (4 commits on top of `ircv3.2-upgrade@3868b34`; series exported to `tmp/nefarious2-fixes.patch`). **Pushed 2026-08-25 as [evilnet/nefarious2#100](https://github.com/evilnet/nefarious2/pull/100)** (base `ircv3.2-upgrade`, reviewer MrLenin), and **merged 2026-08-28** together with the client-cert follow-up as [#101](https://github.com/evilnet/nefarious2/pull/101) (`fceb160`). The branch is history: `tmp/nefarious2` now tracks stock `ircv3.2-upgrade` (at `3ab3038`, 2026-08-28) and `nefarious2:ircv3-fixed` is only a tag alias for the same stock build, kept so `tools/nefarious-dev/run.sh`'s default still resolves. The sections below are kept for the reasoning.
 
 | Issue | Fix                                                                                                                                                                              | Verified                                                                                                                            |
 | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
@@ -309,7 +309,7 @@ A registered client sending a single 600-byte `PRIVMSG` frame over `wss://` gets
 Plus 12 cmocka cases in `ircd/test/websocket_cmocka.c`. Two things learned on the way:
 
 - The branch's `recv_classify.c:46` caps every client's message _body_ at 512 bytes — a 600-byte plain `PRIVMSG` is killed as "Excess Flood: message region too large" on TCP and WS alike. That is the branch's normal over-length treatment (not a transport bug) but is stricter than `draft/multiline` and long client tags need; worth raising upstream separately. Seance keeps `MAX_LINE_BYTES = 500`.
-- The TLS listener requests a client certificate (`SSL_VERIFY_PEER|SSL_VERIFY_CLIENT_ONCE`, optional unless `SSL_REQUIRECLIENTCERT`). Interactive browsers cope; headless Chromium aborts (`ERR_SSL_CLIENT_AUTH_CERT_NEEDED`), so automated browser runs need a pass-through TLS proxy in front. A pre-existing unrelated cmocka failure (`ircd_string_cmocka` `test_ircd_strncpy_truncation`) is masked by the Makefile's `| tee`.
+- The TLS listener used to request a client certificate (`SSL_VERIFY_PEER|SSL_VERIFY_CLIENT_ONCE`, optional unless `SSL_REQUIRECLIENTCERT`), which headless Chromium aborted on with `ERR_SSL_CLIENT_AUTH_CERT_NEEDED`. **Fixed in the same merge (#101):** dedicated WebSocket ports no longer ask for one and `websocket=autodetect` ports use ALPN to spot browsers, so automated browser runs no longer need a pass-through TLS proxy. A pre-existing unrelated cmocka failure (`ircd_string_cmocka` `test_ircd_strncpy_truncation`) is masked by the Makefile's `| tee`.
 
 ## Read markers (`draft/read-marker`), observed 2026-08-25
 
@@ -357,9 +357,55 @@ The branch has a built-in bouncer (`ircd/bouncer_session.c`, `m_bouncer.c`, `m_p
 - **`PERSISTENCE STATUS` takes two arguments** since `7a47da1`: `STATUS <client-setting> <effective>`, the first `ON|OFF|DEFAULT` (what the user asked for), the second `ON|OFF` (what the server will actually do — `94e4fbf` makes it consult the real hold decision, so a bouncer-class connection reports `DEFAULT ON`). Read the _last_ parameter; older builds send the effective state alone. `PERSISTENCE SET <value>` is only an ack — a STATUS follows it.
 - **A single reconnect never sends the channel-state burst twice from the server's own paths.** The three call sites of `bounce_send_channel_state()` — ghost revive (`s_user.c:587`), plain resume (`:812`, gated on `auto_resumed == 1`) and alias attach (`bouncer_session.c:7582`) — are mutually exclusive by control flow within one `register_user()`. A second burst therefore means either our own JOIN into a channel the session already holds (the alias answer in `m_join.c`), or a second connection. What _can_ repeat a channel later is `bounce_sync_alias_join()` (`bouncer_session.c:6254`): when the primary joins a channel after an alias was set up, the alias gets an **unbatched** JOIN/332/333/MARKREAD/353/366 for it, carrying the primary's JOIN msgid.
 - **`MARKREAD` inside the `draft/persistence` batch is not tagged** with `@batch` (`m_markread.c` uses `sendrawto_one`), so it is processed live, before the batch closes.
-- **The catch-up replay an ATTACH cursor triggers** is nested: an outer `BATCH +<id> evilnet.github.io/bouncer-replay` containing one inner `BATCH +<id> chathistory <target>` per channel and then per PM counterparty, messages tagged `@batch/@time/@msgid/@account`; the outer close is followed by a plain `NOTICE … :Session resumed. Replayed N message(s)…` (the only end marker — no numeric, no `draft/chathistory-end`). An empty replay sends no batch at all. Inner-batch openers carry a stray trailing `;` in their tag (`@batch=<outer>; :server BATCH …`, `replay.c:195`) — our parser tolerates it.
+- **`PERSISTENCE ATTACH <profile> [<msgid>]`** (`9bc57d4`, `m_persistence.c` `persistence_cmd_attach`) pins the connection's persistence profile and, with the optional second argument, hands the server the client's globally newest last-seen msgid as a catch-up anchor. Feature-detect on the `attach-cursor` token in the CAP 302 value: `draft/persistence=attach,detach,list,attach-cursor` (`ircd.c:1315`, a static inventory — unknown tokens must be tolerated). Constraints, all enforced server-side:
+  - **registration-only** — `IsUser()` gets `FAIL PERSISTENCE INVALID_PARAMETERS ATTACH :PERSISTENCE ATTACH is only valid during registration`. The command table lets unregistered clients through explicitly (`parse.c`, `m_persistence` in the UNREG slot);
+  - **account-only** — without SASL success, `FAIL PERSISTENCE ACCOUNT_REQUIRED ATTACH :You must SASL-authenticate before PERSISTENCE ATTACH`. So the window is exactly SASL-success → `CAP END`;
+  - profile `default` always exists implicitly (`persistence_profile.c` `persistence_profile_exists`); anything else needs a `PROFILE CREATE` first, else `FAIL PERSISTENCE INVALID_PARAMETERS ATTACH <name> :No such profile`;
+  - the msgid must fit `con_attach_cursor[64]`, i.e. **≤ 63 bytes**, else `FAIL PERSISTENCE INVALID_PARAMETERS ATTACH <name> :Cursor msgid too long`.
+- **Success is `:<server> PERSISTENCE ATTACH <profile>`** (`send_persistence_reply`, the same shape as the STATUS/SET replies) — no numeric, no echo of the cursor. Seance sends `PERSISTENCE ATTACH default <msgid>` immediately before `CAP END` in the same flush; see `client/js/irc/persistence.ts`.
+- **What the cursor changes.** At revive (`s_user.c:812`), post-registration resume and alias attach (`bouncer_session.c:7597`) the auto-replay is normally skipped for clients holding `draft/chathistory` — `|| cli_attach_cursor(sptr)[0]` turns it back on, so a chathistory-capable client that offered a cursor gets the server-driven replay too (it deduplicates by msgid). `replay_start_catchup` (`replay.c:784`) resolves the msgid through the global index to a `sec.msec` timestamp and calls `replay_start_bouncer_at`; an unknown/evicted msgid is **not** an ATTACH failure — it comes later as `FAIL PERSISTENCE CURSOR_UNKNOWN <msgid> :Cursor msgid not found; replaying from last activity` and the replay runs from the server's own derived since-time anyway.
+- **The catch-up replay an ATTACH cursor triggers** is nested: an outer `BATCH +<id> evilnet.github.io/bouncer-replay` (gated on the `batch` cap and emitted lazily on the first inner batch, so an empty replay sends no wrapper) containing one inner `BATCH +<id> chathistory <target>` per channel and then per PM counterparty, messages tagged `@batch/@time/@msgid/@account`; the outer close is followed by a plain `NOTICE … :Session resumed. Replayed N message(s) from M channel(s)…` — or `…You are in N channel(s). No missed messages.` when nothing was replayed. That NOTICE is deliberately sent **after** `BATCH -<outer>` (`replay.c:602`) and is the only end marker: no numeric, no `draft/chathistory-end` on these batches. Inner-batch openers carry a stray trailing `;` in their tag (`@batch=<outer>; :server BATCH …`, `replay.c:195`) — our parser tolerates it; the inner close is `@batch=<outer> :server BATCH -<inner>` without one.
+- **The replay is capped per target, not in total, and never says it truncated.** `replay_next_channel` / `replay_next_pm` each ask `history_query_latest_after` for at most `FEAT_BOUNCER_AUTO_REPLAY_LIMIT` (default 100, floor 100 if the feature is ≤ 0) messages, PM counterparties are enumerated 50 at a time, and per channel a `draft/read-marker` newer than the cursor wins over it (a channel read on another device replays less). Nothing on the wire distinguishes a complete replay from a truncated one.
 - **Fake lag has a post-registration grace** since `a1215e6`: `cli_since` starts `FEAT_POSTREG_GRACE` seconds (default 20 → ~15 commands) in surplus, on all three welcome paths, for authenticated clients (`9c9c89a`). Credit, not exemption.
-- Seance's side: `client/js/irc/persistence.ts` (request the cap, hold the autojoin back after `STATUS ON` until the batch — or 1 s — is in, apply the batch as state only) and `Channel.rejoining` for the non-persistence re-join. See `docs/projects/seamless-reconnect.md`.
+- **Verified live 2026-08-29** against the AfterNET e-testnet (nefarious2 `3ab3038`, `BOUNCER_ENABLE`/`BOUNCER_AUTO_REPLAY` on, `BOUNCER_AUTO_REPLAY_LIMIT` unset → 100, chathistory store on) with `tools/`-external probes in `~/afternet/e-testnet/tmp-cursor-probe.mjs` and `test/irc/attach-cursor.live.ts`. Everything above holds on the wire, verbatim:
+
+  ```
+  >> PERSISTENCE ATTACH default BjAAAAAaBKI5o[
+  >> CAP END
+  << :irc.testnet.loxxin.net PERSISTENCE ATTACH default          (before 001)
+  << :irc.testnet.loxxin.net BATCH +AAC0 draft/persistence       (JOIN, 332, 333, 353, 366)
+  << :irc.testnet.loxxin.net MARKREAD #seance timestamp=*        (untagged, inside the burst)
+  << :irc.testnet.loxxin.net BATCH -AAC0
+  << :irc.testnet.loxxin.net BATCH +hist2AAC evilnet.github.io/bouncer-replay
+  << @batch=hist2AAC; :irc.testnet.loxxin.net BATCH +hist1AAC chathistory #seance
+  << @batch=hist1AAC;time=…;msgid=…;account=seance2 :seance2!… PRIVMSG #seance :gap one
+  << @batch=hist2AAC :irc.testnet.loxxin.net BATCH -hist1AAC
+  << @batch=hist2AAC; :irc.testnet.loxxin.net BATCH +hist3AAC chathistory seance2
+  << @batch=hist2AAC :irc.testnet.loxxin.net BATCH -hist3AAC
+  << :irc.testnet.loxxin.net BATCH -hist2AAC
+  << :irc.testnet.loxxin.net NOTICE seance1 :Session resumed. Replayed 4 message(s) from 1 channel(s) and 1 PM(s).
+  ```
+
+  The replay starts strictly _after_ the cursor; PM counterparties get their own inner batch named after the nick. With a bogus msgid the `FAIL PERSISTENCE CURSOR_UNKNOWN <msgid> :Cursor msgid not found; replaying from last activity` arrives **between** the `draft/persistence` batch and the replay wrapper, and the replay then runs from the session's own start — including replayed JOIN/QUIT events (`draft/event-playback`) and messages the client already holds, which is what the msgid dedupe in history.ts is for. Nothing missed gives no wrapper at all and only `NOTICE … :Session resumed. You are in 1 channel(s). No missed messages.`. Holding `draft/chathistory` and sending no cursor still skips the replay entirely.
+
+- **`PERSISTENCE LIST` does not exist** even though the CAP 302 value advertises it: `FAIL PERSISTENCE INVALID_PARAMETERS LIST :Unknown PERSISTENCE subcommand` (the token list in `ircd.c` is a static inventory). Only `ATTACH`, `DETACH`, `SET`, `STATUS`, `GET` and `PROFILE` answer.
+- Seance's side: `client/js/irc/persistence.ts` (request the cap, hold the autojoin back after `STATUS ON` until the batch — or 1 s — is in, apply the batch as state only, offer the `attach-cursor` after SASL and take the replay as new messages) and `Channel.rejoining` for the non-persistence re-join. See `docs/projects/seamless-reconnect.md`.
+
+## Bouncer ghost revive loses the WebSocket flag — **blocks every browser** (2026-08-29)
+
+On a server with `BOUNCER_ENABLE`, a SASL login completes through `bounce_revive_ghost()` (`ircd/bouncer_session.c`): the new connection's fd (and SSL object) are transplanted onto the account's persisted "ghost" `struct Client`, and the temp client is freed — `Bouncer: reviving ghost seance1 with socket from temp seance1 (fd 57)` in the debug log. The function transfers the fd, IP, sockhost, listener, confs and `FLAG_SSL`, but **not `FLAG_WEBSOCKET`**, which `websocket.c:412` only ever sets on the temp client. `send_queued()` (`ircd/s_bsd.c:331`) frames output only `if (IsWebSocket(cptr))`, so whenever the ghost was last created by a _non_-WebSocket login, everything from 001 onward is written to the WebSocket as raw IRC text.
+
+Symptom, reproducible with plain `node`:
+
+```
+>> CAP END
+<< [len=92] @time=… :irc… 903 * :SASL authentication successful
+!!! BAD FRAME HEADER b0=0x40   ("@" of "@time=…001…Welcome")
+```
+
+undici / Node's global `WebSocket` (and every browser) aborts with `Expected RSV1 to be clear.` and close code 1006 — 0x40 is the RSV1 bit. Seance then reconnects forever, one aborted registration per attempt. It is per account and sticky: once _one_ plain-TCP login for the account has created the ghost, every later WebSocket login for it is broken until the session is destroyed (a clean `QUIT`/close **plus** `PERSISTENCE SET OFF`, or letting `BOUNCER_SESSION_HOLD` expire) and the next login is a WebSocket one. Non-SASL WebSocket clients never hit it (no account, no ghost). Not to be confused with the fixed #97/#98/#99 — this one is in the bouncer, not the WS layer.
+
+Practical consequence for testing: never log an account in over plain TCP if a browser/Seance is going to use it over `ws://`; `test/irc/attach-cursor.live.ts` resets the held session over a WebSocket for exactly this reason.
 
 ## Open questions for the ircd side
 
@@ -369,3 +415,4 @@ The branch has a built-in bouncer (`ircd/bouncer_session.c`, `m_bouncer.c`, `m_p
    2a. ~~Report the plain-port handshake corruption~~ Filed as [evilnet/nefarious2#97](https://github.com/evilnet/nefarious2/issues/97) (label `ircv3-upgrade`, assigned MrLenin).
 3. Confirm `WEBSOCKET_ORIGIN` policy for packaged (non-browser) clients that send no Origin.
 4. `draft/event-playback` default is off; ask for it to be enabled on the dev/test server.
+5. Report the bouncer ghost revive dropping `FLAG_WEBSOCKET` (see the section above) — it makes any account that has ever logged in over plain TCP unusable from a browser on a bouncer-enabled server.

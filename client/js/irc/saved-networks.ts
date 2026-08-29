@@ -20,6 +20,18 @@ import type {ConnectOptions} from "./types";
 
 export const STORAGE_KEY = "thelounge.networks";
 
+/**
+ * The newest message the client has shown on a network: the catch-up
+ * cursor offered to nefarious2 as `PERSISTENCE ATTACH <profile> <msgid>`
+ * (see irc/persistence.ts). It has to survive the page being killed, which
+ * is why it lives next to the network rather than in memory.
+ */
+export interface NetworkCursor {
+	msgid: string;
+	/** Epoch ms of that message; the newest one wins, whatever order they arrive in. */
+	time: number;
+}
+
 export type SavedNetwork = ConnectOptions & {
 	uuid: string;
 	/** Display name; empty means "use the host name / ISUPPORT NETWORK". */
@@ -32,6 +44,8 @@ export type SavedNetwork = ConnectOptions & {
 	commands?: string[];
 	/** Epoch ms of the last connect; the picker lists most recent first. */
 	lastUsed?: number;
+	/** Newest message seen on this network (see {@link NetworkCursor}). */
+	cursor?: NetworkCursor;
 };
 
 /** The subset of the localStorage wrapper this module needs. */
@@ -113,6 +127,23 @@ function asPort(value: unknown, tls: boolean): number {
 	return Number.isInteger(port) && port > 0 && port <= 65535 ? port : defaultPort(tls);
 }
 
+/** A stored / incoming cursor, or undefined when there is nothing usable in it. */
+function asCursor(value: unknown): NetworkCursor | undefined {
+	if (!value || typeof value !== "object") {
+		return undefined;
+	}
+
+	const raw = value as {msgid?: unknown; time?: unknown};
+	const msgid = asString(raw.msgid);
+
+	if (!msgid) {
+		return undefined;
+	}
+
+	const time = typeof raw.time === "number" && Number.isFinite(raw.time) ? raw.time : 0;
+	return {msgid, time};
+}
+
 /** Accepts a newline-separated string (textarea) or an array. */
 export function parseCommands(value: unknown): string[] {
 	const lines: string[] = Array.isArray(value)
@@ -155,6 +186,12 @@ export function normalize(raw: Record<string, unknown>): SavedNetwork | undefine
 
 	if (typeof raw.lastUsed === "number" && Number.isFinite(raw.lastUsed)) {
 		net.lastUsed = raw.lastUsed;
+	}
+
+	const cursor = asCursor(raw.cursor);
+
+	if (cursor) {
+		net.cursor = cursor;
 	}
 
 	return net;
@@ -282,6 +319,7 @@ export function save(net: SavedNetwork): SavedNetwork {
 		all.push(stored);
 	} else {
 		stored.lastUsed = stored.lastUsed ?? all[idx].lastUsed;
+		stored.cursor = stored.cursor ?? all[idx].cursor;
 		all[idx] = stored;
 	}
 
@@ -305,6 +343,21 @@ export function touchLastUsed(uuid: string, now: number = Date.now()): void {
 
 	if (net) {
 		net.lastUsed = now;
+		write(all);
+	}
+}
+
+/**
+ * Record the newest message seen on a network (the `PERSISTENCE ATTACH`
+ * cursor). Silently does nothing when the network was never saved — a
+ * deployment with `features.saveNetworks` off simply gets no cursor.
+ */
+export function setCursor(uuid: string, cursor: NetworkCursor): void {
+	const all = read();
+	const net = all.find((n) => n.uuid === uuid);
+
+	if (net) {
+		net.cursor = cursor;
 		write(all);
 	}
 }

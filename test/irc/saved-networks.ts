@@ -104,6 +104,30 @@ describe("saved-networks", function () {
 		expect(saved.get(entry().uuid)).to.include({nick: "alice2", name: "Home", lastUsed: 1000});
 	});
 
+	it("keeps the catch-up cursor across saves and drops it with the entry", function () {
+		saved.save(entry());
+		saved.setCursor(entry().uuid, {msgid: "abc123", time: 1700});
+		expect(saved.get(entry().uuid)?.cursor).to.deep.equal({msgid: "abc123", time: 1700});
+
+		// An edit that knows nothing about the cursor must not lose it.
+		saved.save(entry({name: "Home"}));
+		expect(saved.get(entry().uuid)?.cursor).to.deep.equal({msgid: "abc123", time: 1700});
+
+		// Junk in storage is dropped, and a missing time is 0.
+		expect(saved.normalize({...entry(), cursor: {msgid: "", time: 5}})?.cursor).to.equal(
+			undefined
+		);
+		expect(saved.normalize({...entry(), cursor: "nope"})?.cursor).to.equal(undefined);
+		expect(saved.normalize({...entry(), cursor: {msgid: "x"}})?.cursor).to.deep.equal({
+			msgid: "x",
+			time: 0,
+		});
+
+		saved.setCursor("unknown", {msgid: "z", time: 1}); // no throw, no entry
+		saved.remove(entry().uuid);
+		expect(saved.get(entry().uuid)).to.equal(undefined);
+	});
+
 	it("removes entries", function () {
 		saved.save(entry());
 		saved.save(entry({uuid: "22222222-2222-4222-8222-222222222222", host: "other.example"}));

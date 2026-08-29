@@ -15,7 +15,11 @@
  *   unread.
  * - **Catch-up** (re-JOIN after a reconnect): `CHATHISTORY AFTER <newest>`;
  *   the lines are appended as ordinary `msg` events, again without
- *   highlight / unread side effects, paging until a short page.
+ *   highlight / unread side effects, paging until a short page. The server
+ *   can drive the same thing itself off a `PERSISTENCE ATTACH` cursor, in
+ *   which case its `chathistory` batches arrive unasked inside a
+ *   `evilnet.github.io/bouncer-replay` wrapper and take the same path
+ *   (persistence.ts).
  *
  * Requests are matched to replies by `labeled-response` label when that
  * cap is on, else by target. `FAIL CHATHISTORY`, a labeled `ACK` or a
@@ -29,6 +33,7 @@ import type {Channel, MsgRef} from "./channel";
 import type {IrcClient, ReplayCollection} from "./client";
 import type {BatchHandler} from "./handlers/batch";
 import {formatLine, IrcMessage} from "./message";
+import {inBouncerReplay, inServerCatchup} from "./persistence";
 import type {Handler} from "./types";
 
 /** How long to wait for the server before answering `more` with nothing. */
@@ -343,6 +348,9 @@ function deliverPrepend(
 	messages.forEach((msg, i) => {
 		msg.id = ids[i];
 		lastRef = chan.remember(msg);
+		// Older by definition, but a LATEST fill can still hold the newest
+		// line we have seen; noteCursor only ever moves forward.
+		client.noteCursor(msg);
 	});
 
 	if (!chan.newestRef && lastRef) {
@@ -412,8 +420,17 @@ function resolve(
 
 /** Closed `chathistory` batch: answer the request it belongs to. */
 export const chathistoryBatch: BatchHandler = (client, batch) => {
-	const label = batch.tags.get("label") ?? batch.parent?.tags.get("label");
 	const target = batch.params[0] ?? "";
+
+	// The server's ATTACH-cursor catch-up: messages from *after* what we
+	// hold, so they are appended as live ones. Checked before findRequest,
+	// which would otherwise match one to a pending request by target alone.
+	if (inBouncerReplay(batch)) {
+		deliverCatchup(client, target, batch.messages);
+		return;
+	}
+
+	const label = batch.tags.get("label") ?? batch.parent?.tags.get("label");
 	const request = findRequest(client, label, target ? [target] : []);
 
 	if (request) {
@@ -421,7 +438,14 @@ export const chathistoryBatch: BatchHandler = (client, batch) => {
 		return;
 	}
 
-	// Unsolicited replay (server-initiated): show it as older history.
+	// Unsolicited: part of the cursor's catch-up when one is running (a
+	// server that replays without the wrapper), else older history — which
+	// is what a cold start on any other ircd wants.
+	if (inServerCatchup(client)) {
+		deliverCatchup(client, target, batch.messages);
+		return;
+	}
+
 	const chan = target ? client.findChannel(target) : undefined;
 
 	if (chan && (chan.type === ChanType.CHANNEL || chan.type === ChanType.QUERY)) {
@@ -430,6 +454,32 @@ export const chathistoryBatch: BatchHandler = (client, batch) => {
 		runAfter(after);
 	}
 };
+
+/**
+ * One inner batch of the server-driven catch-up (persistence.ts): appended
+ * like the AFTER pages of our own catch-up — no highlight, no unread, msgid
+ * dedupe against what the channel already shows. A PM from someone we have
+ * no window for opens one, as a live message would.
+ */
+function deliverCatchup(client: IrcClient, target: string, lines: IrcMessage[]): void {
+	if (!target) {
+		return;
+	}
+
+	let chan = client.findChannel(target);
+
+	if (!chan && !client.isChannelName(target)) {
+		chan = client.announceChannel(target, ChanType.QUERY);
+	}
+
+	if (!chan || (chan.type !== ChanType.CHANNEL && chan.type !== ChanType.QUERY)) {
+		return;
+	}
+
+	const {messages, after} = replay(client, chan, lines);
+	deliverAppend(client, chan, messages);
+	runAfter(after);
+}
 
 /** `FAIL CHATHISTORY <code> [subcommand|target…] :text` (called by standard-replies.ts). */
 export function chatHistoryFailed(client: IrcClient, msg: IrcMessage): void {

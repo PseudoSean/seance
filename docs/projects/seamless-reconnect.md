@@ -114,6 +114,63 @@ server does not announce, so the rule is now about the _content_:
   chatter that would arrive on every switch back to the app. The same note
   later — or any other bouncer NOTE — is shown as before.
 
+## Round three: the server does the catch-up (2026-08-28)
+
+`PERSISTENCE ATTACH <profile> [<msgid>]` (nefarious2 `9bc57d4`) replaces our
+`TARGETS` + N × `CHATHISTORY AFTER` with one server-driven replay. What the
+client does now:
+
+- **Track the cursor.** `IrcClient.cursor` is the newest msgid we have shown
+  on the network, over every channel and query, picked by `@time`
+  (`IrcClient.noteCursor`, called wherever a message gets its id — live,
+  appended catch-up, and the prepended history pages, which by definition
+  cannot move it backwards). Only messages that carry a msgid count.
+- **Persist it.** `saved-networks.ts` keeps `cursor: {msgid, time}` next to
+  the network in `thelounge.networks` (`setCursor`, normalised and preserved
+  by `save()` like `lastUsed`), written at most once a second and flushed
+  synchronously when the transport closes. The phone's PWA is killed between
+  sessions, so memory is not enough. A network the user never saved simply
+  gets no cursor.
+- **Offer it.** After a _successful_ SASL, in the same flush as `CAP END` and
+  before it (`client.ts` `offerAttachCursor` → `persistence.ts`
+  `attachCursorLine`): `PERSISTENCE ATTACH default <msgid>`. Only when the
+  `draft/persistence` CAP 302 value carries the `attach-cursor` token and the
+  msgid fits the server's 64-byte buffer. Never without SASL — the server
+  answers `FAIL PERSISTENCE ACCOUNT_REQUIRED` — and never after 001.
+- **Read the answer.** `:server PERSISTENCE ATTACH default` sets
+  `client.serverReplay`; every `FAIL PERSISTENCE … ATTACH …` clears it
+  silently and the old dance takes over. `FAIL PERSISTENCE CURSOR_UNKNOWN <msgid>` is _not_ a failure: the msgid aged out of the server's index and it
+  replays from its own derived point instead, so it is swallowed too
+  (`console.debug` at most).
+- **Take the replay as news.** The server wraps it in an outer
+  `BATCH +ref evilnet.github.io/bouncer-replay` around one
+  `BATCH +ref chathistory <target>` per channel and then per PM counterparty.
+  `history.ts` `chathistoryBatch` recognises an inner batch inside that
+  wrapper — or an unsolicited one arriving while `serverReplay` is set, for a
+  server that replays without the wrapper — and **appends** it as
+  ordinary `msg` events — no `more`, no highlight, no unread — instead of
+  prepending it as older history, deduplicating on msgid against what the
+  channel already shows. A PM from someone we have no window for opens one.
+- **Stand down.** With the cursor accepted, a channel the server restores
+  does not get a `CHATHISTORY AFTER` of its own (`persistence.ts`
+  `serverReplayCovers`, consulted by `IrcClient.handleMessage` before
+  `enqueueCatchup`): that is exactly what the cursor replaces. A channel this
+  page load holds nothing for still gets its `CHATHISTORY LATEST` fill — the
+  replay only carries the gap, which is often empty — and a channel the
+  autojoin had to JOIN itself was not in the session when the replay ran, so
+  it catches up as before. `MARKREAD` comes from the server inside the
+  restoration batch; `MODE` stays lazy.
+- **Hide the closing chatter.** The replay ends with a plain
+  `NOTICE … :Session resumed. Replayed N message(s) …` outside the wrapper.
+  Inside the settling window (`inRestorationWindow`, the same 8 s that hides
+  `NOTE BOUNCER ALIAS_ATTACHED`) it is not shown; the same text later is.
+- Tests: `test/irc/attach-cursor.ts` (20, fake timers + an in-memory storage
+  backend).
+
+Nothing changes when the server does not offer the token, SASL is not
+configured or fails, or there is no stored cursor: the paced per-channel
+catch-up of `catchup.ts` runs exactly as before.
+
 ## What the ircd offers next (read 2026-08-28)
 
 MrLenin's design guide — [gist 8d644eb…](https://gist.github.com/MrLenin/8d644eb37878d7bcaa91d1a68ae23d94),
@@ -125,27 +182,10 @@ us, in the order it is worth doing:
 1. **`PERSISTENCE STATUS` is two arguments now** — done, see above; without
    this fix the hold is never detected against a current server, which is
    what let our JOIN land inside a reattach in the first place.
-2. **`PERSISTENCE ATTACH <profile> [<msgid>]`** (`9bc57d4`): the optional
-   trailing argument is the client's globally newest last-seen msgid. The
-   server resolves it through the global msgid index and replays the gap
-   itself — **one server-driven batch instead of our `TARGETS` + N ×
-   `CHATHISTORY AFTER`**, which is the whole reason `catchup.ts` paces. Send
-   it in the flush that carries `CAP END` (it is registration-only,
-   `IsUser()` rejects it after 001, and needs SASL to have succeeded, so the
-   window is exactly SASL-success → `CAP END`; ≤ 63 bytes). Feature-detect
-   on the `attach-cursor` token in the `draft/persistence` CAP value
-   (`draft/persistence=attach,detach,list,attach-cursor`, `ircd.c:1315`).
-   An unknown/evicted msgid is not an ATTACH failure: it comes later as
-   `FAIL PERSISTENCE CURSOR_UNKNOWN <msgid> :…` and the server replays from
-   its own derived point anyway.
-   Client work this needs: **persist the cursor** (we store nothing about
-   messages today, and the phone's PWA is killed between sessions, so it
-   must live in localStorage next to the network), and **deliver the replay
-   as newer messages** — `history.ts` currently sends an unsolicited
-   `chathistory` batch through `deliverPrepend`, i.e. renders it as _older_
-   history above the existing lines (fine on a cold start, wrong on a live
-   reconnect). Dedupe is already msgid-based, which is what the gist asks
-   for.
+2. **`PERSISTENCE ATTACH <profile> [<msgid>]`** (`9bc57d4`) — done, see
+   "Round three" above: the cursor is tracked, persisted, offered in the
+   `CAP END` flush after SASL, and the server's replay is appended instead
+   of being asked for channel by channel.
 3. **Web push is wired** (`414b147` PMs, `9fbcb3b` channel highlights, via
    `ircd_relay.c`): the trigger our notifications note calls missing exists
    now, with per-account payload tiers (`ping`/`route`/`full`). D.11 is
@@ -160,6 +200,24 @@ us, in the order it is worth doing:
 
 ## Follow-ups
 
+- **The replay is capped and says so to nobody.** `replay_next_channel` /
+  `replay_next_pm` ask the store for at most `FEAT_BOUNCER_AUTO_REPLAY_LIMIT`
+  (default 100) messages **per target**, and the closing NOTICE only counts
+  what was sent — there is no truncation marker, no `draft/chathistory-end`
+  on those batches, nothing a client can test. A busy gap therefore comes
+  back silently short, and the client cannot tell "you missed 40 lines" from
+  "you missed 40 of 900". Worth asking MrLenin for a signal (a gap marker at
+  the head of a truncated batch, or a `WARN`/`NOTE` with the count); until
+  then the user's escape hatch is the ordinary "show older messages" button.
+  Per-channel read markers can also move the start point forward
+  (`replay_next_channel` prefers a marker newer than the cursor), so a
+  channel read on another device replays less than the cursor asks for — by
+  design, but worth remembering when a gap looks too small.
+- **Cold start still trickles.** With the cursor accepted, channels the page
+  holds nothing for are filled with the usual paced `CHATHISTORY LATEST`
+  (one per 4 s) so a quiet channel is not empty on a fresh load. That is the
+  one case the cursor does not make cheaper; a server-side "replay N latest
+  per channel as well as the gap" option would.
 - **Settings toggle for the hold** (`PERSISTENCE SET ON|OFF|DEFAULT`): today
   `/persistence set off` works raw and the reply is shown; a switch in the
   network settings would be the friendly place, with the STATUS shown next

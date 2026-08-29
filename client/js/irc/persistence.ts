@@ -14,19 +14,41 @@
  * - the replayed JOIN / topic / NAMES update the model without producing
  *   lines (`IrcClient.restoring`, honoured by join.ts and topic.ts) and each
  *   restored JOIN starts the usual paced `CHATHISTORY AFTER` catch-up
- *   (catchup.ts), which is what actually fills the gap;
+ *   (catchup.ts), which is what actually fills the gap — unless the server
+ *   is filling it itself, see {@link serverReplayCovers};
  * - after `STATUS ON` the autojoin `JOIN` waits for that batch (or
  *   {@link RESTORE_WAIT_MS}, whichever is first) and then covers only the
  *   channels the server did not restore. JOINing a channel the server is
  *   restoring anyway is ignored at best and, while another client of the
  *   account is attached, answered with a second topic + NAMES burst.
  *
+ * On a server that offers the `attach-cursor` token the whole per-channel
+ * dance is replaced by one line: `PERSISTENCE ATTACH default <msgid>` in the
+ * flush that carries `CAP END` hands the server the newest msgid we hold, and
+ * it replays the gap itself (see {@link attachCursorLine} and
+ * {@link bouncerReplayBatch}).
+ *
  * Without the cap (another ircd, hold off, not logged in) nothing here runs
  * and a re-JOIN is quiet by `Channel.rejoining` alone.
  */
 
+import type {CapNegotiator} from "./caps";
+import type {Channel, MsgRef} from "./channel";
 import type {IrcClient} from "./client";
-import type {BatchHandler} from "./handlers/batch";
+import type {BatchHandler, OpenBatch} from "./handlers/batch";
+import {formatLine, IrcMessage, utf8ByteLength} from "./message";
+
+/** The persistence cap, and the profile every account has implicitly. */
+export const PERSISTENCE_CAP = "draft/persistence";
+export const PERSISTENCE_PROFILE = "default";
+/** CAP 302 token that says `PERSISTENCE ATTACH` takes a catch-up cursor. */
+export const ATTACH_CURSOR_TOKEN = "attach-cursor";
+/** nefarious2 stores the cursor in `con_attach_cursor[64]`, so 63 bytes fit. */
+export const MAX_CURSOR_BYTES = 63;
+/** Outer batch type wrapping the server-driven catch-up (`ircd/replay.c`). */
+export const BOUNCER_REPLAY_BATCH = "evilnet.github.io/bouncer-replay";
+/** The NOTICE `replay_send_summary` closes that replay with. */
+const REPLAY_SUMMARY = /^Session resumed\. (?:Replayed \d+ message|You are in \d+ channel)/;
 
 /** How long after the MOTD end a held session's restoration is waited for. */
 export const RESTORE_WAIT_MS = 2000;
@@ -153,3 +175,153 @@ export const persistenceBatch: BatchHandler = (client, batch) => {
 		client.autojoin();
 	}
 };
+
+// ------------------------------------------------------- the ATTACH cursor
+
+/**
+ * True when the server takes a catch-up cursor on `PERSISTENCE ATTACH`
+ * (`draft/persistence=attach,detach,list,attach-cursor`, `ircd.c`). The
+ * value is a comma-separated token list and unknown tokens are expected, so
+ * only the exact token counts.
+ */
+export function supportsAttachCursor(caps: CapNegotiator): boolean {
+	const value = caps.value(PERSISTENCE_CAP);
+
+	if (value === undefined) {
+		return false;
+	}
+
+	return value.split(",").some((token) => token.trim() === ATTACH_CURSOR_TOKEN);
+}
+
+/**
+ * The `PERSISTENCE ATTACH <profile> <msgid>` line to send in the flush that
+ * carries `CAP END`, or undefined when there is nothing to offer.
+ *
+ * The window is exactly "SASL succeeded → `CAP END`": the server refuses the
+ * command once the client is registered (`IsUser`) and without an account
+ * (`FAIL PERSISTENCE ACCOUNT_REQUIRED`), so it is never sent on the
+ * no-SASL path. The msgid must fit `con_attach_cursor[64]`.
+ */
+export function attachCursorLine(client: IrcClient): string | undefined {
+	const cursor = client.cursor;
+
+	if (!cursor || !supportsAttachCursor(client.caps)) {
+		return undefined;
+	}
+
+	if (utf8ByteLength(cursor.msgid) > MAX_CURSOR_BYTES) {
+		return undefined; // the server would answer FAIL … "Cursor msgid too long"
+	}
+
+	return formatLine({
+		command: "PERSISTENCE",
+		params: ["ATTACH", PERSISTENCE_PROFILE, cursor.msgid],
+	});
+}
+
+/**
+ * `FAIL PERSISTENCE <code> [<context>…] :<text>` about our cursor. Both
+ * outcomes are silent: a refused ATTACH just means the gap is filled the old
+ * way (catchup.ts), and `CURSOR_UNKNOWN` is not a failure at all — the
+ * server replays from its own derived point and tells us so. Returns true
+ * when standard-replies.ts must not show the line.
+ */
+export function persistenceFailed(client: IrcClient, msg: IrcMessage): boolean {
+	// `FAIL PERSISTENCE <code> [<context>…] :<description>`.
+	const code = (msg.params[1] ?? "").toUpperCase();
+	const context = (msg.params[2] ?? "").toUpperCase();
+
+	if (code === "CURSOR_UNKNOWN") {
+		// The msgid aged out of the server's index; the replay still happens.
+		// eslint-disable-next-line no-console
+		console.debug(`[irc] attach cursor unknown to the server: ${msg.params[2] ?? ""}`);
+		return true;
+	}
+
+	if (context === "ATTACH" && client.attachCursor !== undefined) {
+		client.attachCursor = undefined;
+		client.serverReplay = false;
+		// eslint-disable-next-line no-console
+		console.debug(`[irc] PERSISTENCE ATTACH refused (${code}); catching up ourselves`);
+		return true;
+	}
+
+	return false;
+}
+
+/** True when `batch` is, or is nested in, the server's bouncer-replay wrapper. */
+export function inBouncerReplay(batch: OpenBatch): boolean {
+	for (let b: OpenBatch | undefined = batch; b; b = b.parent) {
+		if (b.type.toLowerCase() === BOUNCER_REPLAY_BATCH) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * True while the server is running the catch-up our cursor asked for. Used
+ * for a replay that arrives without the outer batch (an older build, or the
+ * `batch` cap turned off), where nothing else identifies it.
+ */
+export function inServerCatchup(client: IrcClient): boolean {
+	return client.serverReplay && inRestorationWindow(client);
+}
+
+/**
+ * The outer `evilnet.github.io/bouncer-replay` batch closed. Its inner
+ * `chathistory` batches have their own handler and were delivered when they
+ * closed (handlers/batch.ts), so normally there is nothing left in the
+ * wrapper; anything the server did put there directly is handled normally.
+ * The replay is also a sign that the session is still being restored.
+ */
+export const bouncerReplayBatch: BatchHandler = (client, batch) => {
+	noteRestorationActivity(client);
+
+	for (const msg of batch.messages) {
+		client.handleMessage(msg);
+	}
+};
+
+/**
+ * The `Session resumed…` NOTICE that closes a server-driven replay
+ * (`replay.c` `replay_send_summary`, sent just after the outer batch). Inside
+ * the settling window it is setup chatter like `NOTE BOUNCER ALIAS_ATTACHED`
+ * and is hidden; the same text later is shown as any other server notice.
+ */
+export function isRoutineReplayNotice(client: IrcClient, msg: IrcMessage): boolean {
+	return (
+		msg.source?.user === undefined &&
+		REPLAY_SUMMARY.test(msg.params[1] ?? "") &&
+		inRestorationWindow(client)
+	);
+}
+
+/**
+ * True when the server's cursor replay already covers this JOIN's gap, so
+ * the per-channel `CHATHISTORY AFTER` (catchup.ts) would only ask for what
+ * is already on its way. That is the point of the cursor: one server-driven
+ * batch instead of `TARGETS` + N × `CHATHISTORY`.
+ *
+ * Only for the server's own restoration JOINs (inside the `draft/persistence`
+ * batch, or while the autojoin is still held for an unbatched burst) and only
+ * for a channel we already hold messages for. A channel the autojoin had to
+ * JOIN itself was not in the session when the replay ran, and a channel we
+ * have nothing for (a fresh page load) still needs its `CHATHISTORY LATEST`
+ * fill — the replay only carries the gap since the cursor, which can be
+ * empty.
+ */
+export function serverReplayCovers(
+	client: IrcClient,
+	chan: Channel,
+	before: MsgRef | undefined
+): boolean {
+	return (
+		client.serverReplay &&
+		(client.restoring || awaitingRestoration(client)) &&
+		chan.historyRequested &&
+		before !== undefined
+	);
+}

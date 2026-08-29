@@ -8,6 +8,7 @@ import {MessageType, SharedMsg} from "../../../../shared/types/msg";
 import type {IrcClient} from "../client";
 import type {Channel} from "../channel";
 import type {IrcMessage} from "../message";
+import {isRoutineReplayNotice} from "../persistence";
 import {EDIT_TAG, REPLY_TAG, trailingLine} from "../wire";
 import type {Handler} from "../types";
 import {ignoreListFor} from "../../ignore";
@@ -264,7 +265,17 @@ function handleCtcpRequest(
 }
 
 const privmsg: Handler = (client, msg) => handleMessage(client, msg, MessageType.MESSAGE);
-const notice: Handler = (client, msg) => handleMessage(client, msg, MessageType.NOTICE);
+
+const notice: Handler = (client, msg) => {
+	// "Session resumed. Replayed N message(s)…" closes the server-driven
+	// catch-up; inside the settling window that is setup chatter, like the
+	// bouncer's attach note (../persistence.ts).
+	if (isRoutineReplayNotice(client, msg)) {
+		return;
+	}
+
+	handleMessage(client, msg, MessageType.NOTICE);
+};
 
 const wallops: Handler = (client, msg) => {
 	client.pushMessage(

@@ -9,11 +9,14 @@
  *          the effective state is read as the *last* parameter.
  *   :server PERSISTENCE SET ON|OFF|DEFAULT      (the ack; a STATUS follows)
  *   :server PERSISTENCE REPLAY STATUS <client-setting> <effective>
- *   :server PERSISTENCE ATTACH|DETACH|PROFILE …
+ *   :server PERSISTENCE ATTACH <profile>        (the ack of our ATTACH)
+ *   :server PERSISTENCE DETACH|PROFILE …
  *
  * Only the effective state matters to us ({@link IrcClient.persistenceHold},
  * read at the end of registration by ../persistence.ts). The registration
- * line is not shown; anything the user asked for is.
+ * line is not shown; anything the user asked for is. The `ATTACH` ack of the
+ * catch-up cursor we offered before `CAP END` is silent too — it only says
+ * the server will replay the gap itself.
  */
 
 import type {Handler} from "../types";
@@ -38,6 +41,13 @@ const persistence: Handler = (client, msg) => {
 					setting && setting !== effective ? ` (your setting: ${setting})` : ""
 				}`,
 		});
+		return;
+	}
+
+	if (what === "ATTACH" && client.attachCursor !== undefined && client.state === "registering") {
+		// Our cursor was taken: the server drives the catch-up from it, so
+		// catchup.ts stands down for the channels it restores.
+		client.serverReplay = true;
 		return;
 	}
 

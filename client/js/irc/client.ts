@@ -35,7 +35,12 @@ import {
 	prefetchCatchup,
 	prioritiseCatchup,
 } from "./catchup";
-import {awaitRestoration, cancelRestoration} from "./persistence";
+import {
+	attachCursorLine,
+	awaitRestoration,
+	cancelRestoration,
+	serverReplayCovers,
+} from "./persistence";
 import {IdAllocator, sharedIds} from "./ids";
 import {ISupport} from "./isupport";
 import {
@@ -56,6 +61,7 @@ import {
 	StsUpgrade,
 	upgradeOptions,
 } from "./sts";
+import {get as getSavedNetwork, NetworkCursor, setCursor} from "./saved-networks";
 import {ReconnectOptions, TransportEvent, TransportOptions, WsTransport} from "./transport";
 import type {ConnectOptions, InputOptions, IrcClientState, Transport} from "./types";
 import {
@@ -130,6 +136,9 @@ interface PendingEdit {
 /** How long an edit waits for the echoed REDACT before giving up. */
 export const EDIT_TIMEOUT_MS = 5000;
 
+/** Trailing throttle on writing the catch-up cursor to localStorage. */
+export const CURSOR_SAVE_INTERVAL_MS = 1000;
+
 export interface IrcClientOptions extends ConnectOptions {
 	/** Stable network id; derived from host/port/nick when omitted. */
 	uuid?: string;
@@ -198,6 +207,17 @@ export class IrcClient {
 	persistenceHold = false;
 	/** Set while a `draft/persistence` batch restores channel state: handlers update the model but show nothing. */
 	restoring = false;
+	/**
+	 * Newest message we have shown on this network, over every channel and
+	 * query: the catch-up cursor offered as `PERSISTENCE ATTACH default
+	 * <msgid>` (persistence.ts). Loaded from the saved network so it survives
+	 * the page being killed, and written back throttled.
+	 */
+	cursor: NetworkCursor | undefined;
+	/** The msgid offered in this registration's `PERSISTENCE ATTACH`, if any. */
+	attachCursor: string | undefined;
+	/** The server took that cursor: it replays the gap, so catchup.ts stands down. */
+	serverReplay = false;
 
 	private saslTimer: ReturnType<typeof setTimeout> | null = null;
 	private readonly bus: Pick<EventBus, "dispatch">;
@@ -224,6 +244,8 @@ export class IrcClient {
 	private readonly pendingEdits = new Map<string, PendingEdit>();
 	/** Announced typing sessions by casefolded target (see {@link typing}). */
 	private readonly typingState = new Map<string, TypingEntry>();
+	/** Pending throttled write of {@link cursor} (see {@link noteCursor}). */
+	private cursorTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(options: IrcClientOptions) {
 		const host = options.host.trim();
@@ -238,6 +260,7 @@ export class IrcClient {
 		this.transport = this.createTransport();
 		this.unsubscribeTransport = this.transport.on((ev) => this.onTransportEvent(ev));
 
+		this.cursor = savedCursor(this.uuid);
 		this.lobby = new Channel(this.ids.chanId(), this.networkName, ChanType.LOBBY, (s) =>
 			this.casefold(s)
 		);
@@ -605,6 +628,8 @@ export class IrcClient {
 		this.host = "";
 		this.account = "";
 		this.persistenceHold = false;
+		this.attachCursor = undefined;
+		this.serverReplay = false;
 		this.endSasl();
 
 		for (const line of this.caps.start()) {
@@ -695,10 +720,30 @@ export class IrcClient {
 				this.disconnect("SASL authentication failed");
 				return;
 			}
+		} else {
+			// The one window `PERSISTENCE ATTACH` fits in: the server refuses
+			// it without an account and again once we are registered. It goes
+			// out in the same flush as `CAP END`, before it (persistence.ts).
+			this.offerAttachCursor();
 		}
 
 		for (const line of this.caps.end()) {
 			this.send(line);
+		}
+	}
+
+	/**
+	 * Hand the server the newest msgid we hold so it replays the gap itself
+	 * (`PERSISTENCE ATTACH default <msgid>`). Nothing is sent when the server
+	 * does not advertise the `attach-cursor` token or we have no cursor, and
+	 * the reply (or its absence) decides whether catchup.ts stands down —
+	 * see handlers/persistence.ts.
+	 */
+	private offerAttachCursor(): void {
+		const line = attachCursorLine(this);
+
+		if (line && this.send(line)) {
+			this.attachCursor = this.cursor?.msgid;
 		}
 	}
 
@@ -748,6 +793,8 @@ export class IrcClient {
 		abortHistory(this);
 		cancelCatchup(this);
 		cancelRestoration(this);
+		this.saveCursor(); // the newest one must not die with the connection
+		this.serverReplay = false;
 		this.clearPendingEdits();
 		this.clearTyping();
 
@@ -1408,7 +1455,10 @@ export class IrcClient {
 		if (selfJoin && !alreadyJoined) {
 			const chan = this.findChannel(joinName);
 
-			if (chan) {
+			// The ATTACH cursor's server-driven replay already covers the gap
+			// of a channel the server restored; asking again per channel is
+			// exactly what the cursor replaces (persistence.ts).
+			if (chan && !serverReplayCovers(this, chan, beforeJoin)) {
 				// History + read marker, paced (catchup.ts): the active channel
 				// now, the rest one at a time so the server's flood penalty
 				// never queues the user's own lines.
@@ -1577,6 +1627,7 @@ export class IrcClient {
 		msg.id = this.ids.msgId();
 		const ref = chan.remember(msg);
 		chan.newestRef = ref;
+		this.noteCursor(msg);
 		const shared = chan.shared;
 		shared.totalMessages++;
 		// Already read on another session (draft/read-marker), e.g. a catch-up.
@@ -1668,6 +1719,50 @@ export class IrcClient {
 		return this.ids.historyIds(count);
 	}
 
+	/**
+	 * Remember `msg` as the newest thing we have shown, if it is. The
+	 * catch-up cursor is the globally newest msgid over every channel and
+	 * query, picked by time so a page of older history (`more`, the LATEST
+	 * fill) can never move it backwards. Called wherever a message gets its
+	 * id: {@link pushMessage} for live and appended messages, history.ts for
+	 * prepended ones.
+	 */
+	noteCursor(msg: SharedMsg): void {
+		if (!msg.msgid) {
+			return;
+		}
+
+		const time = (msg.time instanceof Date ? msg.time : new Date(msg.time)).getTime();
+
+		if (Number.isNaN(time) || (this.cursor && this.cursor.time >= time)) {
+			return;
+		}
+
+		this.cursor = {msgid: msg.msgid, time};
+
+		if (this.cursorTimer === null) {
+			// Trailing throttle: a busy channel must not write localStorage
+			// once per line.
+			this.cursorTimer = setTimeout(() => {
+				this.cursorTimer = null;
+				this.saveCursor();
+			}, CURSOR_SAVE_INTERVAL_MS);
+		}
+	}
+
+	/** Write the cursor now, throttle or not (the connection is going away). */
+	private saveCursor(): void {
+		if (this.cursorTimer !== null) {
+			clearTimeout(this.cursorTimer);
+			this.cursorTimer = null;
+		}
+
+		if (this.cursor) {
+			// A network the user never saved has nowhere to keep it: skip.
+			setCursor(this.uuid, this.cursor);
+		}
+	}
+
 	/** Tell the UI a channel's user list changed (it will ask `names`). */
 	usersChanged(chan: Channel): void {
 		this.bus.dispatch("users", {chan: chan.id});
@@ -1703,6 +1798,15 @@ export function buildUrl(host: string, port: number, tls: boolean): string {
 	}
 
 	return `${tls ? "wss" : "ws"}://${hostname}:${port}${path}`;
+}
+
+/** The cursor stored for `uuid`, if the network was saved and has one. */
+function savedCursor(uuid: string): NetworkCursor | undefined {
+	try {
+		return getSavedNetwork(uuid)?.cursor;
+	} catch (err: unknown) {
+		return undefined;
+	}
 }
 
 /** A readable, stable id so per-network preferences survive reloads. */
