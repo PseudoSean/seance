@@ -119,7 +119,7 @@ Cross-cutting types and helpers. `shared/types/socket-events.ts` (`ServerToClien
 - IRC unit tests use a `FakeTransport` injected through `transportFactory` and drive lines with `transport.line(...)`, asserting on a `sinon.spy(socket, "dispatch")`. **Gotcha:** `test/irc/client.ts` installs that spy in a root-level `beforeEach`, which mocha applies to every file in the run; other files (`multi-network.ts`, `history.ts`, ...) check `socket.dispatch.isSinonProxy` and only `restore()` a spy they own. Follow that pattern in new test files or the suite fails when run together.
 - Modules that must run under mocha (`irc/*`, `saved-networks.ts`, `sts.ts`) stay free of store/DOM imports; tests swap storage via `useStorageBackend`.
 - Live tests are gated on `SEANCE_IRC_URL` and need the dev ircd running.
-- localStorage keys are still `thelounge.*` (`thelounge.networks`, `thelounge.sts`, `thelounge.mentions`, `thelounge.muted`, `thelounge.sort.*`, ...). Do not rename without a migration.
+- localStorage keys are still `thelounge.*` (`thelounge.networks`, `thelounge.sts`, `thelounge.mentions`, `thelounge.muted`, `thelounge.media.trusted`, `thelounge.sort.*`, ...). Do not rename without a migration.
 
 ## Documentation
 

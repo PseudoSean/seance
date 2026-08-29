@@ -28,6 +28,7 @@
 			<img
 				ref="image"
 				:src="link.thumb"
+				referrerpolicy="no-referrer"
 				alt=""
 				:style="computeImageStyles"
 				@load="onImageLoad"
@@ -42,12 +43,15 @@
 import Mousetrap from "mousetrap";
 import {computed, defineComponent, ref, watch} from "vue";
 import eventbus from "../js/eventbus";
+import {useStore} from "../js/store";
+import {isPreviewRevealed} from "../js/helpers/mediaTrust";
 import {ClientChan, ClientLinkPreview} from "../js/types";
 import {SharedMsg} from "../../shared/types/msg";
 
 export default defineComponent({
 	name: "ImageViewer",
 	setup() {
+		const store = useStore();
 		const viewer = ref<HTMLDivElement>();
 		const image = ref<HTMLImageElement>();
 
@@ -103,10 +107,16 @@ export default defineComponent({
 				return null;
 			}
 
+			// Only images the reader has revealed: stepping through the
+			// viewer must not load media they chose not to see.
+			const autoReveal = store.state.settings.mediaReveal === "always";
 			const links = channel.value.messages
 				.map((msg: SharedMsg) => msg.previews)
 				.flat()
-				.filter((preview) => preview && preview.thumb);
+				.filter(
+					(preview): preview is ClientLinkPreview =>
+						!!preview && !!preview.thumb && isPreviewRevealed(preview, autoReveal)
+				);
 
 			const currentIndex = links.indexOf(link.value);
 

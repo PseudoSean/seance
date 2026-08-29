@@ -6,15 +6,17 @@ import {extractInputHistory} from "../helpers/inputHistory";
 import {attachMediaPreviews} from "../helpers/messagePreviews";
 
 socket.on("more", async (data) => {
-	const channel = store.getters.findChannel(data.chan)?.channel;
+	const found = store.getters.findChannel(data.chan);
 
-	if (!channel) {
+	if (!found) {
 		return;
 	}
 
+	const {network, channel} = found;
+
 	// History arrives as a batch rather than through `msg`, so it needs the
 	// same client-side previews the live path gets.
-	data.messages.forEach(attachMediaPreviews);
+	data.messages.forEach((msg) => attachMediaPreviews(msg, network, channel));
 
 	channel.inputHistory = channel.inputHistory.concat(
 		extractInputHistory(data.messages, 100 - channel.inputHistory.length)
