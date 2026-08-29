@@ -35,8 +35,3 @@ tmp/
 shells/capacitor/android/
 shells/capacitor/ios/
 .claude/
-
-# agent scratch / local session state
-.superpowers/
-.claude-config/
-.mcp-memory/

@@ -231,6 +231,18 @@ describe("multiline cap", function () {
 			expect(client.multilineLimits()).to.equal(undefined);
 		});
 
+		it("has no limits without message-tags", function () {
+			// The draft depends on `batch` *and* `message-tags`: without the
+			// latter the server strips the `batch` tag off our lines and the
+			// batch has no contents.
+			const {client, requested} = setup(
+				`batch server-time draft/multiline=${MULTILINE_VALUE}`
+			);
+
+			expect(requested).to.include("draft/multiline");
+			expect(client.multilineLimits()).to.equal(undefined);
+		});
+
 		it("drops the limits when the cap is removed again", function () {
 			const {client, transport} = setup();
 
@@ -405,6 +417,28 @@ describe("multiline batches", function () {
 		const [shown] = messages(chanId);
 		expect(shown.type).to.equal(MessageType.NOTICE);
 		expect(shown.text).to.equal("one\ntwo");
+	});
+
+	it("answers no CTCP whose reply would carry a line feed", function () {
+		const {client, transport, chanId} = setup();
+
+		transport.lines(
+			":irc.test BATCH +ml draft/multiline #seance",
+			line("\x01PING abc"),
+			line("def\x01"),
+			":irc.test BATCH -ml"
+		);
+
+		// `PING` echoes its argument, which here spans lines. The request is
+		// still shown: building the NOTICE would throw out of the handler,
+		// and `IrcClient.handleMessage` only logs that — the message would be
+		// lost with it.
+		const shown = messages(client.lobby.id);
+
+		expect(shown).to.have.length(1);
+		expect(shown[0].type).to.equal(MessageType.CTCP_REQUEST);
+		expect(transport.sent).to.deep.equal([]);
+		expect(messages(chanId)).to.have.length(0);
 	});
 
 	it("marks our own echoed batch as self", function () {
@@ -766,6 +800,79 @@ describe("multiline sending", function () {
 			expect(transport.sent).to.deep.equal(["PRIVMSG #seance :\x01ACTION waves\x01"]);
 		});
 
+		it("normalises CRLF before the command name is taken", function () {
+			const {client, transport, chanId} = setup();
+
+			// Regression: the command name used to be `me\r`, which is no
+			// command, so the whole thing went out through the raw fallback
+			// and `formatLine` threw on the line feed.
+			client.input(chanId, "/me\r\nwaves");
+
+			expect(transport.sent).to.deep.equal(["PRIVMSG #seance :\x01ACTION waves\x01"]);
+		});
+
+		it("normalises CRLF before the target is taken", function () {
+			const {client, transport, chanId} = setup();
+
+			// Regression: `splitTarget` splits at a space or a line feed, so
+			// `bob\r` matched neither and the message was silently dropped.
+			client.input(chanId, "/msg bob\r\nhi");
+
+			expect(transport.sent).to.deep.equal(["PRIVMSG bob :hi"]);
+		});
+
+		it("batches a CRLF action like any other multi-line one", function () {
+			const {client, transport, chanId} = setup();
+
+			client.input(chanId, "/me waves\r\nand bows");
+
+			expect(transport.sent).to.deep.equal([
+				"BATCH +m1 draft/multiline #seance",
+				"@batch=m1 PRIVMSG #seance :\x01ACTION waves\x01",
+				"@batch=m1 PRIVMSG #seance :\x01ACTION and bows\x01",
+				"BATCH -m1",
+			]);
+		});
+
+		it("treats a lone CR as a line separator too", function () {
+			const {client, transport, chanId} = setup();
+
+			// A paste can carry classic-Mac line endings; a CR is a separator,
+			// never message content (`planMultiline` would make it a space).
+			client.input(chanId, "/msg bob\rhi\rthere");
+
+			expect(transport.sent).to.deep.equal([
+				"BATCH +m1 draft/multiline bob",
+				"@batch=m1 PRIVMSG bob :hi",
+				"@batch=m1 PRIVMSG bob :there",
+				"BATCH -m1",
+			]);
+		});
+
+		it("normalises CR in an edit too", function () {
+			const {client, transport, chanId} = setup();
+
+			// The edit branch reads the same normalised text, so a CR is a
+			// line break there as well — not the space `planMultiline` would
+			// have made of it.
+			client.input(chanId, "one\rtwo", {edit: "old"});
+
+			expect(transport.sent).to.deep.equal([
+				"@+seance/edit=old BATCH +m1 draft/multiline #seance",
+				"@batch=m1 PRIVMSG #seance :one",
+				"@batch=m1 PRIVMSG #seance :two",
+				"BATCH -m1",
+			]);
+		});
+
+		it("runs CRLF command lines one by one", function () {
+			const {client, transport, chanId} = setup();
+
+			client.input(chanId, "/away gone\r\n/nick bobby");
+
+			expect(transport.sent).to.deep.equal(["AWAY :gone", "NICK bobby"]);
+		});
+
 		it("takes a /msg target up to the line feed", function () {
 			const {client, transport, chanId} = setup();
 
@@ -852,6 +959,90 @@ describe("multiline sending", function () {
 			expect(shown.every((m) => m.type === MessageType.ACTION)).to.equal(true);
 			expect(shown.every((m) => m.self === true)).to.equal(true);
 		});
+	});
+});
+
+describe("commands without the cap", function () {
+	beforeEach(function () {
+		installSpy();
+	});
+
+	afterEach(function () {
+		removeSpy();
+	});
+
+	/** No `draft/multiline`: every line is its own input, as it always was. */
+	function plain(): Harness {
+		return setup("batch message-tags server-time echo-message");
+	}
+
+	it("sends a plain /msg unchanged", function () {
+		const {client, transport, chanId} = plain();
+
+		client.input(chanId, "/msg bob hi");
+
+		expect(transport.sent).to.deep.equal(["PRIVMSG bob :hi"]);
+	});
+
+	it("keeps the space a /msg body starts with", function () {
+		const {client, transport, chanId} = plain();
+
+		// Characterisation of the `splitTarget` rewrite: the target comes off
+		// at *one* space, so a second one is body. The old `rest.split(" ")`
+		// plus `args.join(" ")` produced the same line — `["", "hi"]` joins to
+		// `" hi"` — but nothing pinned it. (`/notice` below did change.)
+		client.input(chanId, "/msg #c  hi");
+
+		expect(transport.sent).to.deep.equal(["PRIVMSG #c : hi"]);
+	});
+
+	it("keeps the space a /notice body starts with", function () {
+		const {client, transport, chanId} = plain();
+
+		// The one accepted change without the cap: the old `/notice` refused
+		// to send when `args[1]` was falsy, and the empty token between the
+		// two spaces is exactly that, so the message was dropped. Verified
+		// against the pre-`splitTarget` command (848075ab).
+		client.input(chanId, "/notice #c  hi");
+
+		expect(transport.sent).to.deep.equal(["NOTICE #c : hi"]);
+	});
+
+	it("sends nothing for a /msg without a body", function () {
+		const {client, transport, chanId} = plain();
+
+		client.input(chanId, "/msg #c");
+
+		expect(transport.sent).to.deep.equal([]);
+	});
+
+	it("opens a /query without a body and sends nothing", function () {
+		const {client, transport, chanId} = plain();
+
+		client.input(chanId, "/query nick");
+
+		expect(transport.sent).to.deep.equal([]);
+		expect(client.channels.map((c) => c.name)).to.include("nick");
+	});
+
+	it("refuses a /query target with a tab in it", function () {
+		const {client, transport, chanId} = plain();
+
+		// A tab is the other shape the target split changed, deliberately:
+		// `args.shift()` made `bob\thi` the whole target and `openQuery`
+		// announced a channel by that name (verified against 848075ab);
+		// `splitTarget` splits at a space or a line feed only, so a tab
+		// leaves no target at all and `openQuery` refuses whitespace anyway.
+		client.input(chanId, "/query bob\thi");
+
+		expect(transport.sent).to.deep.equal([]);
+		expect(
+			client.channels.every((c) => !/\s/.test(c.name)),
+			"no garbage channel"
+		).to.equal(true);
+		expect(messages(chanId).map((m) => m.text)).to.deep.equal([
+			"You cannot open a query window without an argument.",
+		]);
 	});
 });
 

@@ -254,8 +254,17 @@ function handleCtcpRequest(
 	const respond = ctcpResponses[ctcp.command];
 
 	if (respond && nick) {
-		const reply = `\x01${ctcp.command}${respond(ctcp.arg) ? ` ${respond(ctcp.arg)}` : ""}\x01`;
-		client.send(trailingLine("NOTICE", [nick, reply]));
+		const answer = respond(ctcp.arg);
+		const reply = `\x01${ctcp.command}${answer ? ` ${answer}` : ""}\x01`;
+
+		// `PING` echoes its argument, and a `draft/multiline` batch joins into
+		// text with line feeds in it: `formatLine` throws on a parameter
+		// carrying CR, LF or NUL, and that throw would escape into
+		// `handleMessage`, which only logs it — losing the request line the
+		// user should still see. Nothing to answer, then; show it and move on.
+		if (!/[\r\n\0]/.test(reply)) {
+			client.send(trailingLine("NOTICE", [nick, reply]));
+		}
 	}
 
 	client.pushMessage(

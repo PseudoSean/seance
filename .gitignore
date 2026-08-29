@@ -32,5 +32,6 @@ shells/capacitor/ios/App/Pods/
 shells/electron/node_modules/
 shells/electron/dist/
 
-# agent scratch
-.superpowers/
+# agent scratch (local session state)
+.claude-config/
+.mcp-memory/

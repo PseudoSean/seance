@@ -120,6 +120,15 @@ const multilineCommands = new Set(["me", "notice", "msg", "query", "say"]);
  * anything else is still one command per line, as it always was. Without
  * the capability nothing changes — every line is its own input, and an edit
  * collapses its line breaks to spaces.
+ *
+ * A CR is a line separator, never message content: under the capability
+ * `\r\n` and a lone `\r` (a paste of classic-Mac line endings) both become
+ * `\n` before anything looks at the text, because everything below splits on
+ * `\n` alone — {@link isOneMessage}, the command-name search in
+ * {@link inputLine} and `splitTarget`, whose target must not swallow one.
+ * `planMultiline` still turns any CR that reaches it into a space; that is
+ * the guard for text arriving from elsewhere. Without the capability the
+ * text is untouched, so that path stays byte for byte what it was.
  */
 export function dispatchInput(
 	client: IrcClient,
@@ -128,19 +137,20 @@ export function dispatchInput(
 	opts: InputOptions = {}
 ): void {
 	const multiline = client.multilineLimits() !== undefined;
+	const input = multiline ? text.replace(/\r\n?/g, "\n") : text;
 
 	if (opts.edit) {
-		const body = multiline ? text : text.replace(/\r?\n/g, " ");
+		const body = multiline ? input : input.replace(/\r?\n/g, " ");
 		inputLine(client, chan, body.trim(), opts, true);
 		return;
 	}
 
-	if (multiline && text.includes("\n") && isOneMessage(text)) {
-		inputLine(client, chan, text, opts);
+	if (multiline && input.includes("\n") && isOneMessage(input)) {
+		inputLine(client, chan, input, opts);
 		return;
 	}
 
-	for (const line of text.split("\n")) {
+	for (const line of input.split("\n")) {
 		inputLine(client, chan, line.replace(/\r$/, ""), opts);
 	}
 }
