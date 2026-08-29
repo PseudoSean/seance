@@ -1244,10 +1244,16 @@ export class IrcClient {
 	/**
 	 * What one `draft/multiline` batch may carry, or undefined when
 	 * multi-line messages are not available: the cap has to be enabled with
-	 * a usable 302 value, and `batch` — which carries it — with it.
+	 * a usable 302 value, and the two the draft depends on with it — `batch`,
+	 * which carries the message, and `message-tags`, without which the
+	 * `batch` tag never reaches the server and the batch has no lines.
 	 */
 	multilineLimits(): MultilineLimits | undefined {
-		if (!this.caps.hasCapability(MULTILINE_CAP) || !this.caps.hasCapability("batch")) {
+		if (
+			!this.caps.hasCapability(MULTILINE_CAP) ||
+			!this.caps.hasCapability("batch") ||
+			!this.caps.hasCapability("message-tags")
+		) {
 			return undefined;
 		}
 

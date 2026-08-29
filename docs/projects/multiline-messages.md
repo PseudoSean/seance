@@ -23,7 +23,9 @@ in `SEANCE_CAPS.wanted`. Its CAP 302 value (`max-bytes=16384,max-lines=100`)
 is parsed by `parseMultilineValue`; `max-bytes` is REQUIRED by the draft, so a
 value without a usable one is vetoed through the negotiator's `accept()` hook
 and the capability is treated as absent. `max-lines` is only RECOMMENDED —
-missing, it means "no line limit". `batch` must be active too:
+missing, it means "no line limit". The two capabilities the draft depends on
+must be active too — `batch`, which carries the message, and `message-tags`,
+without which the `batch` tag never reaches the server:
 `IrcClient.multilineLimits()` returns `undefined` otherwise, and that one call
 is the gate every other part of the feature is behind.
 
@@ -69,8 +71,10 @@ Everything below was observed live against AfterNET
 `docs/resources/nefarious2-websocket.md` § Multi-line messages.
 
 - Tags sit on the opener exactly as the draft says, and the batch reference is
-  rewritten **and reused** across a session — a reference is unique only among
-  _open_ batches, which is why batches are sent one at a time.
+  rewritten **and reused sequentially** — the server hands the same reference
+  out again for the next batch, but only once the previous one has closed,
+  never while it is open. A reference is unique only among _open_ batches,
+  which is why batches are sent one whole batch at a time.
 - CTCP is not interpreted inside a batch, so `\x01ACTION …\x01` is framed per
   line: a client without the capability then sees one action per line rather
   than one action followed by junk.
@@ -97,7 +101,21 @@ Everything below was observed live against AfterNET
   would be caught by `WsTransport`'s own guard and surface as "Not sent: …"
   rather than truncate silently.
 - Anything that ever wants two batches open at once has to allocate its own
-  references carefully: the server reuses one per client.
+  references carefully: the server reuses one per client, and `handlers/batch.ts`
+  replaces the buffer if a reference that is still open is opened again.
+- A CR is a line separator, never message content. Under the capability
+  `dispatchInput` turns `\r\n` **and a lone `\r`** into `\n` before it looks at
+  the text, because the command name, `splitTarget` and `isOneMessage` all
+  split on `\n` alone: `/msg bob\r\nhi` used to split no target and send
+  nothing, and `/me\r\nwaves` used to leave `me\r` as the command name and fall
+  through to the raw send. `planMultiline` still maps any CR that reaches it to
+  a space — that is the guard for text arriving from anywhere else. Without the
+  capability the input is untouched, so that path is byte for byte what it was.
+- A CTCP request whose answer would carry a line feed is not answered
+  (`handlers/privmsg.ts`): a multiline `\x01PING …\x01` batch joins into text
+  with `\n` in it, and `formatLine` throws on such a parameter — out of the
+  handler, where `handleMessage` only logs it and the request line the user
+  should see is lost with it. The request is shown; nothing is sent back.
 - `client.input` may only be handed multi-line text from the composer. The
   connect-commands loop (`manager.ts`) dispatches one entry per call, which is
   what keeps `/msg nickserv identify …` from being glued to the next line.
@@ -107,8 +125,9 @@ Everything below was observed live against AfterNET
 - `test/irc/multiline.ts` — the capability value, receiving (concat, opener
   tags, ACTION, NOTICE, malformed, nested in `chathistory`), planning and
   sending (line shape, tag placement, chunking, batch splitting, per-command
-  behaviour, no-capability fallback, no-echo synthesis) and the FAIL/WARN
-  replies.
+  behaviour, CRLF normalisation, no-capability fallback, no-echo synthesis),
+  the FAIL/WARN replies, and `commands without the cap` — characterisation of
+  `/msg`, `/notice` and `/query` target splitting with `draft/multiline` off.
 - `test/irc/multiline.live.ts` — one three-line message through a real ircd,
   with a capability-less peer listening. Gated on `SEANCE_IRC_URL`;
   `SEANCE_IRC_CHANNEL` picks the channel. The FAIL paths are deliberately not
