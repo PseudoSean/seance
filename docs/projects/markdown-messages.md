@@ -118,8 +118,8 @@ highlighter chunk's notice says so.
 
 `Alt+K` (`⌥K` on Apple) toggles the `markdown` setting, same as the
 Settings → Appearance → Messages checkbox — bound in `client/components/App.vue`
-alongside the other `Alt+<key>` toggles, hinted next to the checkbox and listed
-in the Help window's shortcut table.
+alongside the other `Alt+<key>` toggles and listed in the Help window's shortcut
+table. The checkbox itself carries no hint — no other setting does.
 
 ## Tests
 
