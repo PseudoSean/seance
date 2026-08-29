@@ -2,7 +2,9 @@ import {expect, Page, test} from "@playwright/test";
 
 // Live end-to-end cover for Markdown rendering: the built `public/` tree in a
 // real browser, talking to a real ircd, asserting on what the DOM ends up
-// holding. It only runs when SEANCE_E2E_IRC_URL points at a WebSocket ircd
+// holding. The tree it renders from is unit-tested in `test/helpers/layout.ts`;
+// what only a browser can answer is whether the elements that tree names really
+// turn up. It only runs when SEANCE_E2E_IRC_URL points at a WebSocket ircd
 // (e.g. `wss://irc.example.org:9998/`), and it sends four lines to a real
 // channel, so keep it that way.
 const ircUrl = process.env.SEANCE_E2E_IRC_URL;
@@ -74,9 +76,12 @@ test("renders Markdown in own messages", async ({page}) => {
 	await expect(msg.locator(".irc-strikethrough")).toHaveText("st");
 	await expect(msg.locator(".irc-monospace")).toHaveText("co");
 	await expect(msg.locator(".md-spoiler")).toHaveText("sp");
-	// A Markdown link carries `title=`; one produced by linkify carries
-	// `dir="auto"` instead, so this asserts where the anchor came from.
-	await expect(msg.locator('a[title="https://example.com/"]')).toHaveText("lnk");
+	// A masked link is the anchor carrying `md-link` and the destination in
+	// its title, which is what tells it apart from a linkified one.
+	const masked = msg.locator("a.md-link");
+
+	await expect(masked).toHaveText("lnk");
+	await expect(masked).toHaveAttribute("title", "https://example.com/");
 	await expect(msg.locator(".content")).not.toContainText("**");
 	await expect(msg.locator(".content")).not.toContainText("||");
 

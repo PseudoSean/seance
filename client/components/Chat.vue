@@ -135,8 +135,7 @@ import {defineComponent, PropType, ref, computed, watch, nextTick, onMounted, Co
 import type {ClientNetwork, ClientChan} from "../js/types";
 import {useStore} from "../js/store";
 import {SpecialChanType, ChanType} from "../../shared/types/chan";
-import parseStyle from "../js/helpers/ircmessageparser/parseStyle";
-import {applyMarkdown} from "../js/helpers/ircmessageparser/parseMarkdown";
+import {layout, toPlainText} from "../js/helpers/ircmessageparser/layout";
 
 export default defineComponent({
 	name: "Chat",
@@ -167,12 +166,7 @@ export default defineComponent({
 				return "";
 			}
 
-			const styled = parseStyle(topic);
-			const fragments = store.state.settings.markdown
-				? applyMarkdown(styled).fragments
-				: styled;
-
-			return fragments.map((fragment) => fragment.text).join("");
+			return toPlainText(layout(topic, {markdown: store.state.settings.markdown}));
 		});
 
 		const specialComponent = computed(() => {
