@@ -9,11 +9,13 @@
 					rel="noopener"
 					@click="onThumbnailClick"
 				>
+					<!-- No loading="lazy" here: v-show hides the element until it
+					has loaded, and a lazy image with no box never becomes
+					eligible to load, so @load would never fire. -->
 					<img
 						v-show="link.sourceLoaded"
 						:src="link.thumb"
 						decoding="async"
-						loading="lazy"
 						alt=""
 						@load="onPreviewReady"
 						@error="onPreviewError"
