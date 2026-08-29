@@ -296,7 +296,8 @@ function splitConcat(text: string, budget: number): string[] {
  * Plan `text` as `draft/multiline` batches.
  *
  * Every line feed starts a new line; a paragraph longer than the line budget
- * (`MAX_LINE_BYTES - prefixBytes`) is split into {@link CONCAT_TAG} chunks.
+ * (`MAX_LINE_BYTES - prefixBytes`, never more than one message's `max-bytes`)
+ * is split into {@link CONCAT_TAG} chunks.
  * The lines are then packed into batches under the server's `max-lines` and
  * `max-bytes` — which count the message bodies (`bodyOverhead` is what each
  * body carries beyond its text, i.e. the `\x01ACTION …\x01` framing) plus one
@@ -316,11 +317,14 @@ export function planMultiline(
 	limits: MultilineLimits,
 	bodyOverhead = 0
 ): MultilinePlan {
-	const budget = MAX_LINE_BYTES - prefixBytes;
+	// A line must fit the frame *and* the whole message must fit `max-bytes`:
+	// a chunk larger than the latter could never be sent at all.
+	const budget = Math.min(MAX_LINE_BYTES - prefixBytes, limits.maxBytes - bodyOverhead);
 
 	if (budget <= 0) {
 		throw new RangeError(
-			`No room for message text: prefix is ${prefixBytes} of ${MAX_LINE_BYTES} bytes`
+			`No room for message text: ${prefixBytes} bytes of line prefix, ` +
+				`${limits.maxBytes} bytes per message`
 		);
 	}
 
@@ -390,8 +394,11 @@ function joinPlan(batch: MultilineLine[]): string {
 /**
  * Put `plan` on the wire: one `BATCH +<ref> draft/multiline <target>` per
  * inner array, its lines tagged `batch` (and {@link CONCAT_TAG}), then
- * `BATCH -<ref>`. `openerTags` are the message's client-only tags (reply,
- * edit): the draft requires them on the opener and forbids any tag but
+ * `BATCH -<ref>`. `openerTags` are the client-only tags every batch carries
+ * (a reply reference applies to each of them); `firstOpenerTags` are the ones
+ * only the first batch may carry (`+seance/edit` replaces *one* message, so
+ * a plan that needs several batches must not claim to replace it several
+ * times). The draft requires those tags on the opener and forbids any tag but
  * `batch`/`concat` on the lines. An action is framed per line, which is what
  * nefarious2 relays verbatim and what a client without the cap sees as one
  * action per line.
@@ -406,14 +413,16 @@ export function sendMultiline(
 	command: "PRIVMSG" | "NOTICE",
 	plan: MultilinePlan,
 	openerTags: ClientTags,
-	action: boolean
+	action: boolean,
+	firstOpenerTags: ClientTags = {}
 ): void {
 	const echo = client.caps.hasCapability("echo-message");
 
-	for (const batch of plan) {
+	for (const [index, batch] of plan.entries()) {
 		const ref = client.nextBatchRef();
+		const tags: ClientTags = index === 0 ? {...firstOpenerTags, ...openerTags} : openerTags;
 		const opener = formatLine({
-			tags: openerTags,
+			tags,
 			command: "BATCH",
 			params: [`+${ref}`, MULTILINE_CAP, target],
 		});
@@ -423,15 +432,15 @@ export function sendMultiline(
 		}
 
 		for (const line of batch) {
-			const tags: ClientTags = {batch: ref};
+			const lineTags: ClientTags = {batch: ref};
 
 			if (line.concat) {
-				tags[CONCAT_TAG] = "";
+				lineTags[CONCAT_TAG] = "";
 			}
 
 			const body = action ? `${ACTION_PREFIX}${line.text}\x01` : line.text;
 
-			if (!client.send(trailingLine(command, [target, body], tags))) {
+			if (!client.send(trailingLine(command, [target, body], lineTags))) {
 				return;
 			}
 		}
@@ -445,7 +454,7 @@ export function sendMultiline(
 			const body = action ? `${ACTION_PREFIX}${text}\x01` : text;
 
 			client.handleMessage({
-				tags: new Map(Object.entries(openerTags)),
+				tags: new Map(Object.entries(tags)),
 				source: {name: client.nick, user: client.ident, host: client.host || "localhost"},
 				command,
 				params: [target, body],

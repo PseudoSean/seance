@@ -577,8 +577,20 @@ describe("multiline sending", function () {
 		it("counts the per-line body overhead against max-bytes", function () {
 			// Each \x01ACTION …\x01 costs 9 bytes the server counts too.
 			expect(
-				texts(planMultiline("aaa\nbbb", 0, {maxBytes: 8, maxLines: 100}, 9))
+				texts(planMultiline("aaa\nbbb", 0, {maxBytes: 20, maxLines: 100}, 9))
 			).to.deep.equal([["aaa"], ["bbb"]]);
+		});
+
+		it("never plans a line larger than one message may be", function () {
+			// The line budget is clamped to max-bytes: a chunk over it could
+			// never be sent, whatever the frame allows.
+			const plan = planMultiline("abcdefghij\nz", 0, {maxBytes: 4, maxLines: 100});
+
+			expect(texts(plan)).to.deep.equal([["abcd"], ["efgh"], ["ij", "z"]]);
+
+			for (const line of plan.flat()) {
+				expect(utf8ByteLength(line.text)).to.be.at.most(4);
+			}
 		});
 	});
 
@@ -752,6 +764,93 @@ describe("multiline sending", function () {
 			client.input(chanId, "/me\nwaves");
 
 			expect(transport.sent).to.deep.equal(["PRIVMSG #seance :\x01ACTION waves\x01"]);
+		});
+
+		it("takes a /msg target up to the line feed", function () {
+			const {client, transport, chanId} = setup();
+
+			// Regression: the target used to be split on spaces only, so it
+			// swallowed the line feed and `formatLine` threw out of `input`.
+			client.input(chanId, "/msg bob\nhello world");
+
+			expect(transport.sent).to.deep.equal(["PRIVMSG bob :hello world"]);
+		});
+
+		it("sends a /msg whose whole body is the second line", function () {
+			const {client, transport, chanId} = setup();
+
+			client.input(chanId, "/msg bob\nhello");
+
+			expect(transport.sent).to.deep.equal(["PRIVMSG bob :hello"]);
+		});
+
+		it("batches a /msg body that spans lines of its own", function () {
+			const {client, transport, chanId} = setup();
+
+			client.input(chanId, "/msg bob\none\ntwo");
+
+			expect(transport.sent).to.deep.equal([
+				"BATCH +m1 draft/multiline bob",
+				"@batch=m1 PRIVMSG bob :one",
+				"@batch=m1 PRIVMSG bob :two",
+				"BATCH -m1",
+			]);
+		});
+
+		it("opens a /query for the target alone, never the whole line", function () {
+			const {client, transport, chanId} = setup();
+
+			client.input(chanId, "/query bob\nhello world");
+
+			expect(transport.sent).to.deep.equal(["PRIVMSG bob :hello world"]);
+			expect(client.channels.map((c) => c.name)).to.include("bob");
+			expect(
+				client.channels.every((c) => !/[\s]/.test(c.name)),
+				"no garbage channel"
+			).to.equal(true);
+		});
+
+		it("takes a /notice target up to the line feed", function () {
+			const {client, transport, chanId} = setup();
+
+			client.input(chanId, "/notice #other\nhello");
+
+			expect(transport.sent).to.deep.equal(["NOTICE #other :hello"]);
+		});
+
+		it("puts the edit tag on the first opener only", function () {
+			const {client, transport, chanId} = setup(offering("max-bytes=16384,max-lines=2"));
+
+			// One edit replaces one message: the second batch is a new one.
+			client.input(chanId, "one\ntwo\nthree", {edit: "old", reply: "parent"});
+
+			expect(transport.sent[0]).to.equal(
+				"@+seance/edit=old;+draft/reply=parent BATCH +m1 draft/multiline #seance"
+			);
+			expect(transport.sent[4]).to.equal(
+				"@+draft/reply=parent BATCH +m2 draft/multiline #seance"
+			);
+		});
+
+		it("synthesises one action per batch without echo-message", function () {
+			const {client, transport, chanId} = setup(offering("max-bytes=16384,max-lines=2", ""));
+
+			client.input(chanId, "/me one\ntwo\nthree");
+
+			expect(transport.sent).to.deep.equal([
+				"BATCH +m1 draft/multiline #seance",
+				"@batch=m1 PRIVMSG #seance :\x01ACTION one\x01",
+				"@batch=m1 PRIVMSG #seance :\x01ACTION two\x01",
+				"BATCH -m1",
+				"BATCH +m2 draft/multiline #seance",
+				"@batch=m2 PRIVMSG #seance :\x01ACTION three\x01",
+				"BATCH -m2",
+			]);
+
+			const shown = messages(chanId);
+			expect(shown.map((m) => m.text)).to.deep.equal(["one\ntwo", "three"]);
+			expect(shown.every((m) => m.type === MessageType.ACTION)).to.equal(true);
+			expect(shown.every((m) => m.self === true)).to.equal(true);
 		});
 	});
 });

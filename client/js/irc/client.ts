@@ -1017,7 +1017,17 @@ export class IrcClient {
 			}
 
 			if (count > 1) {
-				sendMultiline(this, target, command, plan, firstTags ?? {}, opts.action === true);
+				// `opts.tags` (a reply) belongs on every batch, `opts.firstTags`
+				// (an edit) only on the first — one edit replaces one message.
+				sendMultiline(
+					this,
+					target,
+					command,
+					plan,
+					opts.tags ?? {},
+					opts.action === true,
+					opts.firstTags ?? {}
+				);
 				return;
 			}
 

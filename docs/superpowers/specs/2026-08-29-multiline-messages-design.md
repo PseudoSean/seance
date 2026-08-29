@@ -54,8 +54,10 @@ Reference: https://ircv3.net/specs/extensions/multiline (draft). nefarious2
 - `dispatchInput` (commands/index.ts): when multiline is available and the
   text contains `\n`:
   - first line is not a command → the whole text is one `say`;
-  - first line is `/me`, `/notice`, `/msg` or `/query` → that command receives
-    the multi-line rest (multi-line action / notice / private message);
+  - first line is `/me`, `/notice`, `/msg`, `/query` or `/say` → that command
+    receives the multi-line rest (multi-line action / notice / private
+    message). Those commands take their target off the front of the rest at a
+    space **or a line feed**, so a target never swallows one;
   - any other command → today's per-line loop.
     Without multiline: today's behaviour, unchanged.
 - `IrcClient.sendMessage(target, text, opts)`: if `text` contains `\n` and
@@ -67,7 +69,9 @@ Reference: https://ircv3.net/specs/extensions/multiline (draft). nefarious2
   @batch=<ref> PRIVMSG <target> :line 2
   BATCH -<ref>
   ```
-  Client-only tags (reply, edit, label) go on the opener only. Lines longer
+  Client-only tags (reply, edit, label) go on the opener only; a reply
+  reference repeats on every batch of a multi-batch plan, an edit only on the
+  first (one edit replaces one message). Lines longer
   than the 500-byte line budget are split with `splitMessage` and every chunk
   after the first carries `draft/multiline-concat`. `ref` comes from a
   per-client allocator (`m1`, `m2`, …). Action messages wrap each line in
