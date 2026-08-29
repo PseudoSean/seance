@@ -208,6 +208,11 @@ export default defineComponent({
 			open(data.event, newItems);
 		};
 
+		// Any caller with ready-made items (media preview "Always show…" menu).
+		const openItemsContextMenu = (data: {event: MouseEvent; items: ContextMenuItem[]}) => {
+			open(data.event, data.items);
+		};
+
 		const openUserContextMenu = (data: {
 			user: Pick<ClientUser, "nick" | "modes">;
 			event: MouseEvent;
@@ -255,6 +260,7 @@ export default defineComponent({
 			eventbus.on("contextmenu:user", openUserContextMenu);
 			eventbus.on("contextmenu:channel", openChannelContextMenu);
 			eventbus.on("contextmenu:inline-channel", openInlineChannelContextMenu);
+			eventbus.on("contextmenu:items", openItemsContextMenu);
 		});
 
 		onUnmounted(() => {
@@ -263,6 +269,7 @@ export default defineComponent({
 			eventbus.off("contextmenu:user", openUserContextMenu);
 			eventbus.off("contextmenu:channel", openChannelContextMenu);
 			eventbus.off("contextmenu:inline-channel", openInlineChannelContextMenu);
+			eventbus.off("contextmenu:items", openItemsContextMenu);
 
 			close();
 		});

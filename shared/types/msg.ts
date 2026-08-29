@@ -90,6 +90,8 @@ export type SharedMsg = {
 	/** id of the newer message that replaced this one; hidden from the list. */
 	supersededBy?: number;
 	previews?: LinkPreview[];
+	/** Sender's services account, from the `account-tag` on PRIVMSG/NOTICE. */
+	fromAccount?: string;
 	text?: string;
 	type?: MessageType;
 	self?: boolean;

@@ -70,7 +70,7 @@ socket.on("msg", function (data) {
 
 	// Previews used to arrive from the server (`msg:preview`); they are now
 	// derived locally from the text for direct media URLs only.
-	attachMediaPreviews(data.msg);
+	attachMediaPreviews(data.msg, receivingChannel.network, channel);
 
 	channel.messages.push(data.msg);
 

@@ -41,6 +41,12 @@ type ClientChan = Omit<SharedChan, "messages"> & {
 	 * the scrollback does not bounce; the next appended message releases it.
 	 */
 	typingReserved: boolean;
+	/**
+	 * Epoch ms until which the sidebar icon pulses because somebody spoke here
+	 * (0 = quiet), set by socket-events/activity.ts and swept by
+	 * helpers/activityPulse.ts.
+	 */
+	activityUntil: number;
 
 	users: ClientUser[];
 };
@@ -66,6 +72,14 @@ type ClientMention = SharedMention;
 
 type ClientLinkPreview = LinkPreview & {
 	sourceLoaded?: boolean;
+	/**
+	 * Click-to-reveal state (helpers/mediaTrust.ts): `true` once the reader
+	 * revealed it (or posted it), `false` after they hid it, unset to follow
+	 * the `mediaReveal` setting and the trusted hosts.
+	 */
+	revealed?: boolean;
+	/** Where it was posted, as trust keys (helpers/mediaTrust.ts `MediaScope`). */
+	scope?: {channel?: string; channelName?: string; account?: string; accountName?: string};
 };
 
 interface BeforeInstallPromptEvent extends Event {
