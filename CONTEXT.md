@@ -40,6 +40,12 @@ _Avoid_: container, block, group
 A `[text](url)` link whose visible text differs from its destination. Rendered with the destination in the title and a distinguishing class.
 _Avoid_: markdown link, labelled link
 
+**Code block**:
+A verbatim span rendered as rows, one per line: numbered from a CSS counter
+once there are two or more, and syntax-highlighted when the fence named a
+language or the guesser recognised one.
+_Avoid_: fenced block, pre, snippet
+
 **Monospace block**:
 A server-produced multi-line message rendered verbatim in a monospace face — the MOTD. Never interpreted as Markdown.
 _Avoid_: MOTD block, preformatted message

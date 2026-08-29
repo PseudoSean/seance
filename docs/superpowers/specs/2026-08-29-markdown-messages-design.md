@@ -140,8 +140,11 @@ Code blocks get syntax highlighting and, when multi-line, line numbers.
   (comment, keyword, string, number, function, operator, punctuation, tag,
   attribute) with light and dark values, not a bundled Prism theme.
 - **Licensing.** Prism and flourite are MIT. Their copyright notices ship in
-  `public/js/bundle.vendor.js.LICENSE.txt` (webpack's extracted `@license`
-  comments) and are listed in `docs/projects/markdown-messages.md`.
+  `public/js/highlighter.js.LICENSE.txt` and `public/js/flourite.js.LICENSE.txt`
+  — not the vendor bundle, since neither package is in it — and are listed in
+  `docs/projects/markdown-messages.md`. (Terser extracts Prism's own `@license`
+  comment but that carries no copyright line, and flourite's build carries no
+  comment at all, so a `BannerPlugin` states both.)
 - **Tests.** Unit: tag normalisation and the highlighter module's token → node
   mapping with a stub grammar; layout test for `lang` on the wrap; e2e: a
   tagged block renders `.tok-keyword` spans and a line-number gutter.
