@@ -20,12 +20,20 @@ type Fragment = {
 	text: string;
 };
 
-type PartWithFragments = Part & {
-	fragments: Fragment[];
+// A merged part carries at most one of the finder keys; which one says what the
+// part is. Keeping them optional on one record is what lets a caller ask
+// without narrowing a union first.
+export type PartWithFragments<F extends Fragment = Fragment> = Part & {
+	fragments: F[];
+	text?: string;
+	link?: string;
+	channel?: string;
+	emoji?: string;
+	nick?: string;
 };
 
 // Merge text part information within a styling fragment
-function assign(textPart: Part, fragment: Fragment) {
+function assign<F extends Fragment>(textPart: Part, fragment: F): F {
 	const fragStart = fragment.start;
 	const start = Math.max(fragment.start, textPart.start);
 	const end = Math.min(fragment.end, textPart.end);
@@ -47,11 +55,11 @@ export type MergedParts = (TextPart | NamePart | EmojiPart | ChannelPart | LinkP
 // different styles, the first resulting part will contain fragments "fo" and
 // "o", and the second resulting part will contain "b" and "ar". "o" and "b"
 // fragments will contain duplicate styling attributes.
-function merge(
+function merge<F extends Fragment>(
 	parts: MergedParts,
-	styleFragments: Fragment[],
+	styleFragments: F[],
 	cleanText: string
-): PartWithFragments[] {
+): PartWithFragments<F>[] {
 	// Remove overlapping parts
 	parts = parts.sort(sortParts).reduce<MergedParts>((prev, curr) => {
 		const intersection = prev.some((p) => anyIntersection(p, curr));
@@ -76,7 +84,7 @@ function merge(
 			.filter((fragment) => anyIntersection(part, fragment))
 			.map((fragment) => assign(part, fragment));
 
-		return part as PartWithFragments;
+		return part as PartWithFragments<F>;
 	});
 }
 

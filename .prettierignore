@@ -4,6 +4,9 @@ dist/
 attic/
 test-results/
 playwright-report/
+.superpowers/
+.claude-config/
+.mcp-memory/
 *.log
 *.png
 *.svg

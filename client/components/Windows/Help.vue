@@ -260,6 +260,16 @@
 
 			<div class="help-item">
 				<div class="subject">
+					<span v-if="!isApple"><kbd>Alt</kbd> <kbd>K</kbd></span>
+					<span v-else><kbd>⌥</kbd> <kbd>K</kbd></span>
+				</div>
+				<div class="description">
+					<p>Toggle Markdown rendering.</p>
+				</div>
+			</div>
+
+			<div class="help-item">
+				<div class="subject">
 					<span v-if="!isApple"><kbd>Alt</kbd> <kbd>/</kbd></span>
 					<span v-else><kbd>⌥</kbd> <kbd>/</kbd></span>
 				</div>

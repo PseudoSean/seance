@@ -19,6 +19,13 @@ export type ParsedStyle = {
 	underline?: boolean;
 	strikethrough?: boolean;
 	monospace?: boolean;
+	// Markdown-only flags, set by parseMarkdown.ts
+	codeBlock?: boolean;
+	quote?: boolean;
+	spoiler?: boolean;
+	href?: string;
+	// The code fence's language tag, when it had one
+	lang?: string;
 	text: string;
 	start: number;
 	end: number;
@@ -214,7 +221,8 @@ function parseStyle(text: string) {
 	return result;
 }
 
-const properties = [
+// The style keys parseStyle itself sets
+const properties: (keyof ParsedStyle)[] = [
 	"bold",
 	"textColor",
 	"bgColor",
@@ -224,6 +232,17 @@ const properties = [
 	"underline",
 	"strikethrough",
 	"monospace",
+];
+
+// Every key that decides whether two fragments look the same, the Markdown
+// flags included. parseMarkdown.ts compares fragments with this.
+export const STYLE_KEYS: (keyof ParsedStyle)[] = [
+	...properties,
+	"codeBlock",
+	"quote",
+	"spoiler",
+	"href",
+	"lang",
 ];
 
 function prepare(text: string) {

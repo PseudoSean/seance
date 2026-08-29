@@ -59,6 +59,8 @@ const motdLine: Handler = (client, msg) => {
 
 const motdEnd: Handler = (client, msg) => {
 	if (client.motdBuffer && client.motdBuffer.length > 0) {
+		// MONOSPACE_BLOCK renders verbatim (no Markdown) — MOTD banners are
+		// ASCII art. See client/components/MessageTypes/monospace_block.vue.
 		client.pushMessage(client.lobby, {
 			type: MessageType.MONOSPACE_BLOCK,
 			command: "motd",
