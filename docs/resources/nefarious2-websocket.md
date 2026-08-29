@@ -341,6 +341,54 @@ lcarol << @batch=hist7AAF;time=2026-08-26T03:38:20.292Z;msgid=ABAAAAAaA8Iz[g;+dr
 lcarol << @batch=hist7AAF;time=2026-08-26T03:38:23.204Z;msgid=ABAAAAAaA8Iz[n :lalice!lalice@172.17.0.1 REDACT #seance ABAAAAAaA8Iz[f :edited
 ```
 
+## Multi-line messages (`draft/multiline`), observed 2026-08-29
+
+Verified live against AfterNET (`wss://fractalrealities.afternet.org:9998/`, `u2.10.12.14+Nefarious(2.0.0)`), which advertises `draft/multiline=max-bytes=16384,max-lines=100`, with `echo-message` on so the server's own relay shape is visible. What Seance sends is in `client/js/irc/multiline.ts`; the draft is https://ircv3.net/specs/extensions/multiline.
+
+- **The echo matches the draft exactly.** `msgid`, `time` and our client-only tags are on the **opening** `BATCH` line and nowhere else; the lines carry `batch` (plus `draft/multiline-concat`) and nothing more. Seance's receive side reads the message's tags off the opener for that reason (it falls back to the first line's `msgid`/`time`/`account` only for servers that do not).
+- **The reference is rewritten and reused.** Our `+m1` came back as `+Gk1764665368` — and the _same_ server reference was used for all three of our batches in one session, one after the other. Anything keyed on the reference must therefore only assume uniqueness among _open_ batches, which is what `handlers/batch.ts` does. Seance sends one whole batch at a time for the same reason.
+- **CTCP is not interpreted inside a batch.** `\x01ACTION …\x01` on every line is relayed verbatim, line by line; the server neither strips nor re-frames it. The draft says nothing about CTCP, so per-line framing is what Seance sends: it is what a client without the capability sees as one action per line, and `joinMultiline` strips the framing from every line and puts it back around the joined text.
+- **A blank line in the middle is accepted** and relayed as `PRIVMSG #chan :` with an empty trailing parameter. (The draft forbids only a blank line carrying the concat tag and a message that is _nothing but_ blank lines; `planMultiline` drops trailing blanks and never concat-tags a blank.)
+- **A trailing space survives a concat join**, which is what makes the draft's recommended split ("leave the space at the end of the line") work: `alpha ` + `bravo` reads back as `alpha bravo`.
+- Fake lag charges the batch once, at `BATCH -` (see below), so a five-line burst costs one command's worth. Nothing was rejected and no `FAIL BATCH` was seen.
+
+Transcript (client `>>`, server `<<`; `<SOH>` is `\x01`):
+
+```
+>> @+seance/probe=1 BATCH +m1 draft/multiline #ps
+>> @batch=m1 PRIVMSG #ps :seance multiline probe: alpha
+>> @batch=m1;draft/multiline-concat PRIVMSG #ps :bravo
+>> @batch=m1 PRIVMSG #ps :charlie
+>> BATCH -m1
+<< @time=2026-08-29T10:07:28.075Z;msgid=GkAAAAAaBMH3sn;+seance/probe=1 :seancemlp!seancemlp@1A6901.11D8D5.AA5A5A.AE1570.IP BATCH +Gk1764665368 draft/multiline #ps
+<< @batch=Gk1764665368 :seancemlp!…IP PRIVMSG #ps :seance multiline probe: alpha
+<< @batch=Gk1764665368;draft/multiline-concat :seancemlp!…IP PRIVMSG #ps :bravo
+<< @batch=Gk1764665368 :seancemlp!…IP PRIVMSG #ps :charlie
+<< :seancemlp!…IP BATCH -Gk1764665368
+
+>> BATCH +m2 draft/multiline #ps
+>> @batch=m2 PRIVMSG #ps :<SOH>ACTION waves once<SOH>
+>> @batch=m2 PRIVMSG #ps :<SOH>ACTION and bows twice<SOH>
+>> BATCH -m2
+<< @time=2026-08-29T10:07:43.113Z;msgid=GkAAAAAaBMH3sq :seancemlp!…IP BATCH +Gk1764665368 draft/multiline #ps
+<< @batch=Gk1764665368 :seancemlp!…IP PRIVMSG #ps :<SOH>ACTION waves once<SOH>
+<< @batch=Gk1764665368 :seancemlp!…IP PRIVMSG #ps :<SOH>ACTION and bows twice<SOH>
+<< :seancemlp!…IP BATCH -Gk1764665368
+
+>> BATCH +m3 draft/multiline #ps
+>> @batch=m3 PRIVMSG #ps :delta
+>> @batch=m3 PRIVMSG #ps :
+>> @batch=m3 PRIVMSG #ps :echo
+>> BATCH -m3
+<< @time=2026-08-29T10:07:58.197Z;msgid=GkAAAAAaBMH3sr :seancemlp!…IP BATCH +Gk1764665368 draft/multiline #ps
+<< @batch=Gk1764665368 :seancemlp!…IP PRIVMSG #ps :delta
+<< @batch=Gk1764665368 :seancemlp!…IP PRIVMSG #ps :
+<< @batch=Gk1764665368 :seancemlp!…IP PRIVMSG #ps :echo
+<< :seancemlp!…IP BATCH -Gk1764665368
+```
+
+(The first line of batch A ends with a space, trimmed by this document's formatter; that space is what the concat join restores.)
+
 ## Fake lag / flood penalty, measured 2026-08-27
 
 ircu-family throttling applies to WebSocket clients exactly as to TCP ones. `ircd/parse.c` (~L1620) charges every command from a non-oper `lag = lagmin + len / lagfactor` seconds onto `cli_since` (defaults `2 + len/120`; `MFLG_SLOW` commands always), and `ircd/s_bsd.c` (~L1339) stops reading the socket while `cli_since - CurrentTime >= 10` (opers / `IsTrusted` exempt). Multiline batches are charged once at `BATCH -` instead of per line. The clock is reset when registration completes (`ircd/s_auth.c:1483`), so the CAP/NICK/USER/SASL exchange itself is free and only costs round trips — Seance pipelines it (`caps.ts`). So a client gets roughly five commands "for free" and is then held to one every 2 s; a burst of 65 commands (what Seance used to send for 15 autojoined channels) silenced the server for ~90 s and every later line, including the user's first message, waited behind it. Exceeding the recvq while held is "Excess Flood". Seance now sends one multi-target `JOIN`, no `MODE` on join, and paces history/marker fetches one channel per 4 s (`client/js/irc/catchup.ts`; `docs/projects/connect-burst.md`). Worth asking upstream whether read-only fetches (`CHATHISTORY`, `MARKREAD` query) could carry a smaller charge.

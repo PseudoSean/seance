@@ -26,7 +26,15 @@ import {commandNames, dispatchInput} from "./commands";
 import {describeClose} from "./disconnect";
 import {handlers, unhandled} from "./handlers";
 import {interceptBatchLine, resetBatches} from "./handlers/batch";
-import {MULTILINE_CAP, MultilineLimits, parseMultilineValue} from "./multiline";
+import {
+	CONCAT_LINE_TAG_BYTES,
+	MULTILINE_CAP,
+	MultilineLimits,
+	MultilinePlan,
+	parseMultilineValue,
+	planMultiline,
+	sendMultiline,
+} from "./multiline";
 import {cancelMarkRead, scheduleMarkRead} from "./handlers/markread";
 import {abortHistory} from "./history";
 import {
@@ -200,6 +208,8 @@ export class IrcClient {
 	host = "";
 	/** MOTD lines being collected between 375 and 376. */
 	motdBuffer: string[] | null = null;
+	/** Counter behind {@link nextBatchRef}. */
+	private batchRefs = 0;
 	/** The SASL exchange in progress during registration, if any. */
 	sasl: SaslAuth | null = null;
 	/** Services account we are logged in as (900/901); "" when not. */
@@ -971,20 +981,57 @@ export class IrcClient {
 		// The server prepends our full source to the echo; budget for it even
 		// when the host is still unknown (63 is the usual hostname limit).
 		const hostLen = this.host.length || 63;
-		let prefixBytes = utf8ByteLength(`:${this.nick}!${this.ident}@`) + hostLen;
-		prefixBytes += utf8ByteLength(` ${command} ${target} :`);
-		// The frame cap applies to the whole line; the first chunk carries the
-		// most tags, so every chunk is budgeted as if it did.
-		prefixBytes += utf8ByteLength(tagPrefix(firstTags));
+		const sourceBytes =
+			utf8ByteLength(`:${this.nick}!${this.ident}@`) +
+			hostLen +
+			utf8ByteLength(` ${command} ${target} :`);
+		const actionBytes = opts.action ? "\x01ACTION \x01".length : 0;
+		const limits = this.multilineLimits();
+		let plain = text;
 
-		if (opts.action) {
-			prefixBytes += "\x01ACTION \x01".length;
+		if (limits && text.includes("\n")) {
+			let plan: MultilinePlan;
+
+			try {
+				// Inside a batch a line carries `batch` (+ concat) and nothing
+				// else; the client tags go on the opener.
+				plan = planMultiline(
+					text,
+					sourceBytes + actionBytes + CONCAT_LINE_TAG_BYTES,
+					limits,
+					actionBytes
+				);
+			} catch (err: unknown) {
+				const message = err instanceof Error ? err.message : String(err);
+				this.pushMessage(this.lobby, {
+					type: MessageType.ERROR,
+					text: `Not sent: ${message}`,
+				});
+				return;
+			}
+
+			const count = plan.reduce((n, batch) => n + batch.length, 0);
+
+			if (count === 0) {
+				return; // nothing but blank lines
+			}
+
+			if (count > 1) {
+				sendMultiline(this, target, command, plan, firstTags ?? {}, opts.action === true);
+				return;
+			}
+
+			// One line once the blanks are gone: an ordinary message.
+			plain = plan[0][0].text;
 		}
 
+		// The frame cap applies to the whole line; the first chunk carries the
+		// most tags, so every chunk is budgeted as if it did.
+		const prefixBytes = sourceBytes + actionBytes + utf8ByteLength(tagPrefix(firstTags));
 		let chunks: string[];
 
 		try {
-			chunks = splitMessage(prefixBytes, text.replace(/[\r\n\0]/g, " "));
+			chunks = splitMessage(prefixBytes, plain.replace(/[\r\n\0]/g, " "));
 		} catch (err: unknown) {
 			const message = err instanceof Error ? err.message : String(err);
 			this.pushMessage(this.lobby, {type: MessageType.ERROR, text: `Not sent: ${message}`});
@@ -1195,6 +1242,15 @@ export class IrcClient {
 		}
 
 		return parseMultilineValue(this.caps.value(MULTILINE_CAP));
+	}
+
+	/**
+	 * A reference for our next outbound batch (`m1`, `m2`, …). Only has to be
+	 * unique among the batches we have open, which is at most one at a time.
+	 */
+	nextBatchRef(): string {
+		this.batchRefs++;
+		return `m${this.batchRefs}`;
 	}
 
 	/** Whether the server lets us send REDACT. */

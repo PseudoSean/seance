@@ -3,10 +3,10 @@ import sinon from "ts-sinon";
 import socket from "../../client/js/socket";
 import {IrcClient} from "../../client/js/irc/client";
 import {IdAllocator} from "../../client/js/irc/ids";
-import {joinMultiline, parseMultilineValue} from "../../client/js/irc/multiline";
+import {joinMultiline, parseMultilineValue, planMultiline} from "../../client/js/irc/multiline";
 import type {Transport} from "../../client/js/irc/types";
 import type {TransportEvent, TransportState} from "../../client/js/irc/transport";
-import {IrcMessage, parseLine} from "../../client/js/irc/message";
+import {IrcMessage, MAX_LINE_BYTES, parseLine, utf8ByteLength} from "../../client/js/irc/message";
 import {MessageType, SharedMsg} from "../../shared/types/msg";
 
 class FakeTransport implements Transport {
@@ -461,5 +461,297 @@ describe("multiline batches", function () {
 		expect(pages).to.have.length(1);
 		expect(pages[0].messages.map((m) => m.text)).to.deep.equal(["before", "one\ntwo", "after"]);
 		expect(pages[0].messages[1].msgid).to.equal("h2");
+	});
+});
+
+describe("multiline sending", function () {
+	beforeEach(function () {
+		installSpy();
+	});
+
+	afterEach(function () {
+		removeSpy();
+	});
+
+	/** The text a plan stands for, joined the way a receiver would join it. */
+	function rejoin(lines: {text: string; concat: boolean}[]): string {
+		return lines.map((l, i) => (i > 0 && !l.concat ? `\n${l.text}` : l.text)).join("");
+	}
+
+	function texts(plan: {text: string; concat: boolean}[][]): string[][] {
+		return plan.map((batch) => batch.map((l) => l.text));
+	}
+
+	/** The offered caps with `draft/multiline` carrying `value`. */
+	function offering(value: string, extra = "echo-message "): string {
+		return `batch message-tags server-time ${extra}draft/multiline=${value}`;
+	}
+
+	describe("planMultiline", function () {
+		const LIMITS = {maxBytes: 16384, maxLines: 100};
+
+		it("makes one line per line feed", function () {
+			expect(planMultiline("a\nb", 0, LIMITS)).to.deep.equal([
+				[
+					{text: "a", concat: false},
+					{text: "b", concat: false},
+				],
+			]);
+		});
+
+		it("keeps blank lines inside the message and drops trailing ones", function () {
+			expect(texts(planMultiline("a\n\nb\n\n", 0, LIMITS))).to.deep.equal([["a", "", "b"]]);
+		});
+
+		it("plans nothing for a message of blank lines only", function () {
+			expect(planMultiline("\n\n", 0, LIMITS)).to.deep.equal([]);
+			expect(planMultiline("", 0, LIMITS)).to.deep.equal([]);
+		});
+
+		it("normalises CRLF and keeps CR and NUL off the wire", function () {
+			expect(texts(planMultiline("a\r\nb\rc\0d", 0, LIMITS))).to.deep.equal([["a", "b c d"]]);
+		});
+
+		it("splits an over-long line into concat chunks that rejoin exactly", function () {
+			const long = Array.from({length: 200}, (_, i) => `word${i}`).join(" ");
+			const text = `${long}\ntail`;
+			const plan = planMultiline(text, 100, LIMITS);
+
+			expect(plan).to.have.length(1);
+
+			const [batch] = plan;
+			expect(batch.length).to.be.greaterThan(2);
+			expect(batch[0].concat).to.equal(false);
+			expect(batch[1].concat).to.equal(true);
+			expect(batch[batch.length - 1]).to.deep.equal({text: "tail", concat: false});
+			expect(rejoin(batch), "a plan rejoins to exactly what was typed").to.equal(text);
+
+			for (const line of batch) {
+				expect(utf8ByteLength(line.text)).to.be.at.most(MAX_LINE_BYTES - 100);
+			}
+		});
+
+		it("splits a line with no spaces at the byte budget", function () {
+			const text = `${"x".repeat(30)}\ny`;
+			const plan = planMultiline(text, MAX_LINE_BYTES - 10, {maxBytes: 16384, maxLines: 100});
+
+			expect(texts(plan)).to.deep.equal([
+				["x".repeat(10), "x".repeat(10), "x".repeat(10), "y"],
+			]);
+			expect(rejoin(plan[0])).to.equal(text);
+		});
+
+		it("opens a new batch past max-lines", function () {
+			const text = ["l0", "l1", "l2", "l3", "l4", "l5", "l6"].join("\n");
+			const plan = planMultiline(text, 0, {maxBytes: 16384, maxLines: 3});
+
+			expect(texts(plan)).to.deep.equal([["l0", "l1", "l2"], ["l3", "l4", "l5"], ["l6"]]);
+		});
+
+		it("opens a new batch past max-bytes, line feeds counted", function () {
+			// "aaa" + LF + "bbb" is 7 of 8 bytes; "ccc" needs 4 more.
+			expect(
+				texts(planMultiline("aaa\nbbb\nccc", 0, {maxBytes: 8, maxLines: 100}))
+			).to.deep.equal([["aaa", "bbb"], ["ccc"]]);
+		});
+
+		it("starts a batch with a non-concat line even mid-paragraph", function () {
+			const text = "abcdef";
+			const plan = planMultiline(`${text}\nz`, MAX_LINE_BYTES - 2, {
+				maxBytes: 16384,
+				maxLines: 2,
+			});
+
+			expect(plan).to.deep.equal([
+				[
+					{text: "ab", concat: false},
+					{text: "cd", concat: true},
+				],
+				[
+					{text: "ef", concat: false},
+					{text: "z", concat: false},
+				],
+			]);
+		});
+
+		it("counts the per-line body overhead against max-bytes", function () {
+			// Each \x01ACTION …\x01 costs 9 bytes the server counts too.
+			expect(
+				texts(planMultiline("aaa\nbbb", 0, {maxBytes: 8, maxLines: 100}, 9))
+			).to.deep.equal([["aaa"], ["bbb"]]);
+		});
+	});
+
+	describe("sendMessage", function () {
+		it("sends a multi-line message as one batch", function () {
+			const {client, transport, chanId} = setup();
+
+			client.input(chanId, "one\ntwo\nthree");
+
+			expect(transport.sent).to.deep.equal([
+				"BATCH +m1 draft/multiline #seance",
+				"@batch=m1 PRIVMSG #seance :one",
+				"@batch=m1 PRIVMSG #seance :two",
+				"@batch=m1 PRIVMSG #seance :three",
+				"BATCH -m1",
+			]);
+		});
+
+		it("puts the reply tag on the opener only", function () {
+			const {client, transport, chanId} = setup();
+
+			client.input(chanId, "one\ntwo", {reply: "parent"});
+
+			expect(transport.sent).to.deep.equal([
+				"@+draft/reply=parent BATCH +m1 draft/multiline #seance",
+				"@batch=m1 PRIVMSG #seance :one",
+				"@batch=m1 PRIVMSG #seance :two",
+				"BATCH -m1",
+			]);
+		});
+
+		it("puts the edit tag on the opener of a multi-line edit", function () {
+			const {client, transport, chanId} = setup();
+
+			client.input(chanId, "one\ntwo", {edit: "old"});
+
+			expect(transport.sent[0]).to.equal(
+				"@+seance/edit=old BATCH +m1 draft/multiline #seance"
+			);
+			expect(transport.sent[1]).to.equal("@batch=m1 PRIVMSG #seance :one");
+		});
+
+		it("tags continuation chunks with draft/multiline-concat", function () {
+			const {client, transport, chanId} = setup();
+			const long = Array.from({length: 200}, (_, i) => `word${i}`).join(" ");
+
+			client.input(chanId, `${long}\ntail`);
+
+			expect(transport.sent[0]).to.equal("BATCH +m1 draft/multiline #seance");
+			expect(transport.sent[1]).to.match(/^@batch=m1 PRIVMSG #seance :word0 /);
+			expect(transport.sent[2]).to.match(
+				/^@batch=m1;draft\/multiline-concat PRIVMSG #seance :/
+			);
+			expect(transport.sent[transport.sent.length - 2]).to.equal(
+				"@batch=m1 PRIVMSG #seance :tail"
+			);
+			expect(transport.sent[transport.sent.length - 1]).to.equal("BATCH -m1");
+
+			for (const line of transport.sent) {
+				expect(utf8ByteLength(line)).to.be.at.most(MAX_LINE_BYTES);
+			}
+		});
+
+		it("opens a second batch when the message does not fit one", function () {
+			const {client, transport, chanId} = setup(offering("max-bytes=16384,max-lines=2"));
+
+			client.input(chanId, "one\ntwo\nthree");
+
+			expect(transport.sent).to.deep.equal([
+				"BATCH +m1 draft/multiline #seance",
+				"@batch=m1 PRIVMSG #seance :one",
+				"@batch=m1 PRIVMSG #seance :two",
+				"BATCH -m1",
+				"BATCH +m2 draft/multiline #seance",
+				"@batch=m2 PRIVMSG #seance :three",
+				"BATCH -m2",
+			]);
+		});
+
+		it("sends one line without a batch", function () {
+			const {client, transport, chanId} = setup();
+
+			client.input(chanId, "one\n");
+
+			expect(transport.sent).to.deep.equal(["PRIVMSG #seance :one"]);
+		});
+
+		it("keeps the per-line behaviour without the capability", function () {
+			const {client, transport, chanId} = setup(
+				"batch message-tags server-time echo-message"
+			);
+
+			client.input(chanId, "one\ntwo\r\n\nthree");
+
+			expect(transport.sent).to.deep.equal([
+				"PRIVMSG #seance :one",
+				"PRIVMSG #seance :two",
+				"PRIVMSG #seance :three",
+			]);
+		});
+
+		it("shows one local message when echo-message is off", function () {
+			const {client, transport, chanId} = setup(
+				offering("max-bytes=16384,max-lines=100", "")
+			);
+
+			client.input(chanId, "one\ntwo");
+
+			expect(transport.sent).to.have.length(4);
+
+			const shown = messages(chanId);
+			expect(shown).to.have.length(1);
+			expect(shown[0].text).to.equal("one\ntwo");
+			expect(shown[0].self).to.equal(true);
+			expect(shown[0].type).to.equal(MessageType.MESSAGE);
+		});
+	});
+
+	describe("dispatchInput", function () {
+		it("sends a multi-line action framed on every line", function () {
+			const {client, transport, chanId} = setup();
+
+			client.input(chanId, "/me waves\nand bows");
+
+			expect(transport.sent).to.deep.equal([
+				"BATCH +m1 draft/multiline #seance",
+				"@batch=m1 PRIVMSG #seance :\x01ACTION waves\x01",
+				"@batch=m1 PRIVMSG #seance :\x01ACTION and bows\x01",
+				"BATCH -m1",
+			]);
+		});
+
+		it("sends a multi-line notice as a NOTICE batch", function () {
+			const {client, transport, chanId} = setup();
+
+			client.input(chanId, "/notice #other one\ntwo");
+
+			expect(transport.sent).to.deep.equal([
+				"BATCH +m1 draft/multiline #other",
+				"@batch=m1 NOTICE #other :one",
+				"@batch=m1 NOTICE #other :two",
+				"BATCH -m1",
+			]);
+		});
+
+		it("sends a multi-line /msg to the named target", function () {
+			const {client, transport, chanId} = setup();
+
+			client.input(chanId, "/msg bob one\ntwo");
+
+			expect(transport.sent).to.deep.equal([
+				"BATCH +m1 draft/multiline bob",
+				"@batch=m1 PRIVMSG bob :one",
+				"@batch=m1 PRIVMSG bob :two",
+				"BATCH -m1",
+			]);
+		});
+
+		it("runs any other command line by line", function () {
+			const {client, transport, chanId} = setup();
+
+			client.input(chanId, "/away gone\n/nick bobby");
+
+			expect(transport.sent).to.deep.equal(["AWAY :gone", "NICK bobby"]);
+		});
+
+		it("takes the command name from the first line only", function () {
+			const {client, transport, chanId} = setup();
+
+			// Regression: `/me\nwaves` must not put a line feed on the wire.
+			client.input(chanId, "/me\nwaves");
+
+			expect(transport.sent).to.deep.equal(["PRIVMSG #seance :\x01ACTION waves\x01"]);
+		});
 	});
 });

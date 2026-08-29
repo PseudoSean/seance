@@ -12,12 +12,21 @@
 
 import type {IrcClient} from "./client";
 import {BatchHandler, OpenBatch, openBatchesOf} from "./handlers/batch";
-import type {IrcMessage, IrcSource} from "./message";
+import {formatLine, IrcMessage, IrcSource, MAX_LINE_BYTES, utf8ByteLength} from "./message";
+import {ClientTags, trailingLine} from "./wire";
 
 /** The capability name, whose CAP 302 value carries the limits. */
 export const MULTILINE_CAP = "draft/multiline";
 /** Tag on a line that continues the previous one without a line feed. */
 export const CONCAT_TAG = "draft/multiline-concat";
+
+/**
+ * Bytes the tags of a line inside a batch take: `batch` plus, at worst,
+ * {@link CONCAT_TAG}. The reference is budgeted at ten characters, well past
+ * what {@link IrcClient.nextBatchRef} needs. Inside a batch that is *all* the
+ * tags there may be — the draft puts the message's own tags on the opener.
+ */
+export const CONCAT_LINE_TAG_BYTES = `@batch=0123456789;${CONCAT_TAG} `.length;
 
 /** What one batch may carry, from the cap's 302 value. */
 export type MultilineLimits = {
@@ -223,3 +232,227 @@ export const multilineBatch: BatchHandler = (client, batch) => {
 		},
 	]);
 };
+
+/** One `PRIVMSG`/`NOTICE` inside a batch: `concat` continues the line before it. */
+export type MultilineLine = {text: string; concat: boolean};
+
+/** A planned multi-line message: one inner array per batch, one batch per message. */
+export type MultilinePlan = MultilineLine[][];
+
+/**
+ * Split one paragraph into chunks of at most `budget` bytes, leaving the
+ * space a break lands on at the **end** of the chunk. That is the draft's
+ * recommended method ("leave the space character at the end of the line"),
+ * and the only one under which concatenating the chunks reproduces the
+ * paragraph byte for byte — `splitMessage` drops the whitespace run around
+ * the break instead, which is right for separate lines and wrong here.
+ */
+function splitConcat(text: string, budget: number): string[] {
+	const chunks: string[] = [];
+	let start = 0;
+
+	while (start < text.length) {
+		let pos = start;
+		let bytes = 0;
+		// Index just past the last space that still fits.
+		let afterSpace = -1;
+
+		while (pos < text.length) {
+			const cp = text.codePointAt(pos) as number;
+			const units = cp > 0xffff ? 2 : 1;
+			const size = utf8ByteLength(text.slice(pos, pos + units));
+
+			if (bytes + size > budget) {
+				break;
+			}
+
+			bytes += size;
+			pos += units;
+
+			if (cp === 0x20 || cp === 0x09) {
+				afterSpace = pos;
+			}
+		}
+
+		if (pos >= text.length) {
+			chunks.push(text.slice(start));
+			break;
+		}
+
+		if (pos === start) {
+			// One character does not fit the budget; emit it rather than spin.
+			pos = start + ((text.codePointAt(start) as number) > 0xffff ? 2 : 1);
+		}
+
+		const end = afterSpace > start ? afterSpace : pos;
+		chunks.push(text.slice(start, end));
+		start = end;
+	}
+
+	return chunks;
+}
+
+/**
+ * Plan `text` as `draft/multiline` batches.
+ *
+ * Every line feed starts a new line; a paragraph longer than the line budget
+ * (`MAX_LINE_BYTES - prefixBytes`) is split into {@link CONCAT_TAG} chunks.
+ * The lines are then packed into batches under the server's `max-lines` and
+ * `max-bytes` — which count the message bodies (`bodyOverhead` is what each
+ * body carries beyond its text, i.e. the `\x01ACTION …\x01` framing) plus one
+ * byte per joining line feed. Each batch is one message, so a text too big
+ * for one batch arrives as consecutive messages.
+ *
+ * Trailing blank lines are dropped: they are invisible, and the draft forbids
+ * a message that is nothing but blank lines (which then plans as no batch at
+ * all). Blank lines inside the message are kept — those are content.
+ * `\r` and NUL cannot go on the wire and become spaces.
+ *
+ * Throws `RangeError` when the prefix leaves no room for text at all.
+ */
+export function planMultiline(
+	text: string,
+	prefixBytes: number,
+	limits: MultilineLimits,
+	bodyOverhead = 0
+): MultilinePlan {
+	const budget = MAX_LINE_BYTES - prefixBytes;
+
+	if (budget <= 0) {
+		throw new RangeError(
+			`No room for message text: prefix is ${prefixBytes} of ${MAX_LINE_BYTES} bytes`
+		);
+	}
+
+	const paragraphs = text
+		.replace(/\r\n/g, "\n")
+		.replace(/[\r\0]/g, " ")
+		.split("\n");
+
+	while (paragraphs.length > 0 && paragraphs[paragraphs.length - 1] === "") {
+		paragraphs.pop();
+	}
+
+	const lines: MultilineLine[] = [];
+
+	for (const paragraph of paragraphs) {
+		if (utf8ByteLength(paragraph) <= budget) {
+			lines.push({text: paragraph, concat: false});
+			continue;
+		}
+
+		for (const [i, chunk] of splitConcat(paragraph, budget).entries()) {
+			lines.push({text: chunk, concat: i > 0});
+		}
+	}
+
+	const plan: MultilinePlan = [];
+	let batch: MultilineLine[] = [];
+	let bytes = 0;
+
+	for (const line of lines) {
+		const size = utf8ByteLength(line.text) + bodyOverhead;
+		const feed = batch.length > 0 && !line.concat ? 1 : 0;
+
+		if (
+			batch.length > 0 &&
+			(batch.length >= limits.maxLines || bytes + feed + size > limits.maxBytes)
+		) {
+			plan.push(batch);
+			batch = [];
+			bytes = 0;
+		}
+
+		if (batch.length === 0) {
+			// The first line of a batch starts a message: it continues nothing.
+			// (A single line over `max-bytes` goes out anyway — the server's
+			// FAIL is a better answer than dropping the message here.)
+			batch.push({text: line.text, concat: false});
+			bytes = size;
+		} else {
+			batch.push(line);
+			bytes += feed + size;
+		}
+	}
+
+	if (batch.length > 0) {
+		plan.push(batch);
+	}
+
+	return plan;
+}
+
+/** The text one planned batch stands for, joined as a receiver joins it. */
+function joinPlan(batch: MultilineLine[]): string {
+	return batch.map((line, i) => (i > 0 && !line.concat ? `\n${line.text}` : line.text)).join("");
+}
+
+/**
+ * Put `plan` on the wire: one `BATCH +<ref> draft/multiline <target>` per
+ * inner array, its lines tagged `batch` (and {@link CONCAT_TAG}), then
+ * `BATCH -<ref>`. `openerTags` are the message's client-only tags (reply,
+ * edit): the draft requires them on the opener and forbids any tag but
+ * `batch`/`concat` on the lines. An action is framed per line, which is what
+ * nefarious2 relays verbatim and what a client without the cap sees as one
+ * action per line.
+ *
+ * Batches go out one whole batch at a time, so a plan of several never
+ * interleaves. Without `echo-message` each batch is fed back through the
+ * handlers as one joined message, as the single-line path does.
+ */
+export function sendMultiline(
+	client: IrcClient,
+	target: string,
+	command: "PRIVMSG" | "NOTICE",
+	plan: MultilinePlan,
+	openerTags: ClientTags,
+	action: boolean
+): void {
+	const echo = client.caps.hasCapability("echo-message");
+
+	for (const batch of plan) {
+		const ref = client.nextBatchRef();
+		const opener = formatLine({
+			tags: openerTags,
+			command: "BATCH",
+			params: [`+${ref}`, MULTILINE_CAP, target],
+		});
+
+		if (!client.send(opener)) {
+			return;
+		}
+
+		for (const line of batch) {
+			const tags: ClientTags = {batch: ref};
+
+			if (line.concat) {
+				tags[CONCAT_TAG] = "";
+			}
+
+			const body = action ? `${ACTION_PREFIX}${line.text}\x01` : line.text;
+
+			if (!client.send(trailingLine(command, [target, body], tags))) {
+				return;
+			}
+		}
+
+		if (!client.send(formatLine({command: "BATCH", params: [`-${ref}`]}))) {
+			return;
+		}
+
+		if (!echo) {
+			const text = joinPlan(batch);
+			const body = action ? `${ACTION_PREFIX}${text}\x01` : text;
+
+			client.handleMessage({
+				tags: new Map(Object.entries(openerTags)),
+				source: {name: client.nick, user: client.ident, host: client.host || "localhost"},
+				command,
+				params: [target, body],
+				// Not a line that could have been received (the text has line
+				// feeds in it); it exists for diagnostics.
+				raw: `${command} ${target} :${body}`,
+			});
+		}
+	}
+}
