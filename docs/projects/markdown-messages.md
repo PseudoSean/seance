@@ -109,6 +109,13 @@ the copyright line, and flourite's build carries no comment at all, so
 then extracts. The `js/prism-*.js` grammar chunks are Prism's too; the
 highlighter chunk's notice says so.
 
+## Shortcuts
+
+`Alt+K` (`⌥K` on Apple) toggles the `markdown` setting, same as the
+Settings → Appearance → Messages checkbox — bound in `client/components/App.vue`
+alongside the other `Alt+<key>` toggles, hinted next to the checkbox and listed
+in the Help window's shortcut table.
+
 ## Tests
 
 - `test/helpers/parseMarkdown.ts` — one `describe` per row of the spec's syntax

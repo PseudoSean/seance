@@ -105,7 +105,7 @@ test("renders Markdown in own messages", async ({page}) => {
 	await expect(quoted.locator(".md-code-block")).not.toHaveClass(/md-code-block--numbered/);
 });
 
-test("leaves the text alone when the setting is off", async ({page}) => {
+test("leaves the text alone when the setting is off, Alt+K toggles it", async ({page}) => {
 	const nick = await connect(page);
 	const token = `md${nick.slice(-4)}`;
 	// Navigate by hash only: `page.goto` would reload the SPA and drop the
@@ -119,14 +119,16 @@ test("leaves the text alone when the setting is off", async ({page}) => {
 
 	await expect(pre.locator(".irc-bold")).toHaveText("pre");
 
+	// Alt+K with the chat input focused, exactly like a user would use it
+	await page.click("#input");
+	await page.keyboard.press("Alt+K");
+
 	await page.evaluate(() => {
 		location.hash = "#/settings/appearance";
 	});
 
 	const markdown = page.locator('input[name="markdown"]');
 
-	await expect(markdown).toBeChecked();
-	await markdown.click();
 	await expect(markdown).not.toBeChecked();
 
 	await page.evaluate((hash) => {
@@ -144,4 +146,22 @@ test("leaves the text alone when the setting is off", async ({page}) => {
 
 	await expect(msg.locator(".content")).toContainText("**not bold**");
 	await expect(msg.locator(".irc-bold")).toHaveCount(0);
+
+	// Alt+K again re-enables rendering, restoring both messages
+	await page.click("#input");
+	await page.keyboard.press("Alt+K");
+
+	await page.evaluate(() => {
+		location.hash = "#/settings/appearance";
+	});
+
+	await expect(markdown).toBeChecked();
+
+	await page.evaluate((hash) => {
+		location.hash = hash;
+	}, chat);
+	await page.waitForSelector("#input");
+
+	await expect(pre.locator(".irc-bold")).toHaveText("pre");
+	await expect(msg.locator(".irc-bold")).toHaveText("not bold");
 });

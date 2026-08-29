@@ -11,6 +11,8 @@
 			<label class="opt">
 				<input :checked="store.state.settings.markdown" type="checkbox" name="markdown" />
 				Render Markdown formatting (bold, code, spoilers…)
+				<span v-if="!isApple"><kbd>Alt</kbd> <kbd>K</kbd></span>
+				<span v-else><kbd>⌥</kbd> <kbd>K</kbd></span>
 			</label>
 		</div>
 		<div>
@@ -168,9 +170,11 @@ export default defineComponent({
 	name: "AppearanceSettings",
 	setup() {
 		const store = useStore();
+		const isApple = navigator.platform.match(/(Mac|iPhone|iPod|iPad)/i) || false;
 
 		return {
 			store,
+			isApple,
 		};
 	},
 });
