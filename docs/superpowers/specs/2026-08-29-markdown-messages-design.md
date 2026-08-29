@@ -111,3 +111,37 @@ CSS in `client/css/style.css` next to the `irc-*` classes: `.md-spoiler`
 
 Input helpers (Ctrl+B), persisting spoiler reveal state, headers/lists/tables,
 rendering libraries (`markdown-it`, `DOMPurify`).
+
+## Addendum (2026-08-29): syntax highlighting and line numbers
+
+Code blocks get syntax highlighting and, when multi-line, line numbers.
+
+- **Language.** The fence's language tag (` ```js `) is kept (today it is
+  dropped) and normalised through Prism's alias table (`js` → `javascript`,
+  `sh`/`shell` → `bash`, `ts` → `typescript`, `yml` → `yaml`, …). An untagged
+  block of two or more lines is guessed with `flourite`; the guess is used only
+  above a confidence threshold, otherwise the block is plain. Single-line
+  untagged blocks are never guessed.
+- **Highlighter.** Prism (MIT). `Prism.tokenize()` gives a token tree that the
+  Vue adapter turns into `<span class="tok-<type>">` nodes — no HTML strings,
+  no sanitizer, same XSS-by-construction property as the rest of the pipeline.
+- **Footprint.** Only Prism core lives in the main bundle. Each grammar and
+  `flourite` are separate webpack chunks loaded with `import()` on first use;
+  until a chunk arrives (or if it cannot be fetched — offline PWA, unknown
+  language) the block renders as plain monospace and re-renders when it lands.
+  Grammars are cached in memory per session.
+- **Line numbers.** Blocks with two or more lines render one row per line with
+  a gutter counter that is not part of the text selection (CSS `::before`
+  counter), so copy/paste yields only the code. Single-line blocks have none.
+- **Layout tree.** The `codeBlock` wrap gains `lang?: string` (the raw tag).
+  Highlighting is an adapter concern: `layout()` stays synchronous and
+  Vue-free; the Vue adapter asks a `highlighter` module for tokens.
+- **Theme.** Token colours are defined as a small palette in `style.css`
+  (comment, keyword, string, number, function, operator, punctuation, tag,
+  attribute) with light and dark values, not a bundled Prism theme.
+- **Licensing.** Prism and flourite are MIT. Their copyright notices ship in
+  `public/js/bundle.vendor.js.LICENSE.txt` (webpack's extracted `@license`
+  comments) and are listed in `docs/projects/markdown-messages.md`.
+- **Tests.** Unit: tag normalisation and the highlighter module's token → node
+  mapping with a stub grammar; layout test for `lang` on the wrap; e2e: a
+  tagged block renders `.tok-keyword` spans and a line-number gutter.
