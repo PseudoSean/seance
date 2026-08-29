@@ -14,8 +14,11 @@ Reference: https://ircv3.net/specs/extensions/multiline (draft). nefarious2
 ## Capability
 
 - `draft/multiline` joins `SEANCE_CAPS.wanted`. The CAP 302 value is parsed
-  into `{maxBytes, maxLines}`; a value missing either number is vetoed through
-  the negotiator's `accept()` hook (the cap is then treated as absent).
+  into `{maxBytes, maxLines}`; a value without a usable `max-bytes` (the one
+  token the draft makes REQUIRED) is vetoed through the negotiator's
+  `accept()` hook and the cap is then treated as absent. `max-lines` is only
+  RECOMMENDED: when it is missing or unusable the batch is bounded by
+  `max-bytes` alone (`maxLines: Infinity`).
 - Requires `batch` and `message-tags` (both already wanted); if the server
   ACKs `draft/multiline` without `batch`, multiline is treated as absent.
 - The stale "blocked by the 528-byte inbound frame bug" notes in `caps.ts` and

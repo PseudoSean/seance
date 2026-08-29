@@ -23,7 +23,11 @@ export const CONCAT_TAG = "draft/multiline-concat";
 export type MultilineLimits = {
 	/** Maximum total byte length of the joined message. */
 	maxBytes: number;
-	/** Maximum number of `PRIVMSG`/`NOTICE` lines in one batch. */
+	/**
+	 * Maximum number of `PRIVMSG`/`NOTICE` lines in one batch, or `Infinity`
+	 * when the server named none: the draft makes `max-lines` RECOMMENDED,
+	 * not REQUIRED, so only `max-bytes` bounds such a batch.
+	 */
 	maxLines: number;
 };
 
@@ -38,10 +42,11 @@ function positiveInt(value: string | undefined): number | undefined {
 }
 
 /**
- * `"max-bytes=16384,max-lines=100"` → the limits. The spec requires the
- * value, so anything without both usable numbers means the server cannot
- * tell us what it accepts and the cap is treated as absent (unknown tokens
- * are ignored, as future ones must be).
+ * `"max-bytes=16384,max-lines=100"` → the limits. `max-bytes` is REQUIRED by
+ * the draft: without a usable one the server cannot tell us what it accepts
+ * and the cap is treated as absent. `max-lines` is only RECOMMENDED, so a
+ * missing (or unusable) one means "no line limit". Unknown tokens are
+ * ignored, as future ones must be.
  */
 export function parseMultilineValue(value: string | undefined): MultilineLimits | undefined {
 	if (!value) {
@@ -59,13 +64,12 @@ export function parseMultilineValue(value: string | undefined): MultilineLimits 
 	}
 
 	const maxBytes = positiveInt(tokens.get("max-bytes"));
-	const maxLines = positiveInt(tokens.get("max-lines"));
 
-	if (maxBytes === undefined || maxLines === undefined) {
+	if (maxBytes === undefined) {
 		return undefined;
 	}
 
-	return {maxBytes, maxLines};
+	return {maxBytes, maxLines: positiveInt(tokens.get("max-lines")) ?? Infinity};
 }
 
 /** `nick!user@host`, as much of it as the line carried. */
@@ -112,8 +116,14 @@ export interface JoinedMultiline {
  * the raw parameters would leave `\x01`s in the middle of the text, so the
  * framing is stripped from every line and put back around the joined text.
  * That also accepts a sender that framed only the first and last line.
+ *
+ * `casefold` compares the lines' targets the way the network does (the
+ * batch handler passes the client's); the default compares them literally.
  */
-export function joinMultiline(lines: IrcMessage[]): JoinedMultiline | undefined {
+export function joinMultiline(
+	lines: IrcMessage[],
+	casefold: (s: string) => string = (s) => s
+): JoinedMultiline | undefined {
 	const first = lines[0];
 
 	if (!first || (first.command !== "PRIVMSG" && first.command !== "NOTICE")) {
@@ -128,7 +138,7 @@ export function joinMultiline(lines: IrcMessage[]): JoinedMultiline | undefined 
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
 
-		if (line.command !== command || (line.params[0] ?? "") !== target) {
+		if (line.command !== command || casefold(line.params[0] ?? "") !== casefold(target)) {
 			return undefined;
 		}
 
@@ -174,7 +184,7 @@ function passOn(client: IrcClient, batch: OpenBatch, lines: IrcMessage[]): void 
  * negotiated: what the server sends, the server sends.
  */
 export const multilineBatch: BatchHandler = (client, batch) => {
-	const joined = joinMultiline(batch.messages);
+	const joined = joinMultiline(batch.messages, (s) => client.casefold(s));
 	const target = batch.params[0] ?? "";
 
 	// The lines must address the batch's target. An opener without one is
@@ -187,6 +197,17 @@ export const multilineBatch: BatchHandler = (client, batch) => {
 	const tags = new Map(batch.tags);
 	// `batch` names the parent, which the synthetic message is not part of.
 	tags.delete("batch");
+
+	// The draft puts the message's own tags on the opener, but a server that
+	// tags the first line instead (the shape of its non-multiline fallback)
+	// must not leave the message without a msgid, a time or an account.
+	for (const key of ["msgid", "time", "account"]) {
+		const value = batch.messages[0].tags.get(key);
+
+		if (value !== undefined && !tags.has(key)) {
+			tags.set(key, value);
+		}
+	}
 
 	const prefix = joined.source ? `:${joined.source} ` : "";
 

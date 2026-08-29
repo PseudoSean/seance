@@ -170,16 +170,27 @@ describe("multiline cap", function () {
 			});
 		});
 
-		it("rejects a value missing either number", function () {
-			expect(parseMultilineValue("max-bytes=16384")).to.equal(undefined);
+		it("treats a missing or unusable max-lines as no line limit", function () {
+			// The draft makes max-lines RECOMMENDED, not REQUIRED.
+			expect(parseMultilineValue("max-bytes=16384")).to.deep.equal({
+				maxBytes: 16384,
+				maxLines: Infinity,
+			});
+			expect(parseMultilineValue("max-bytes=16384,max-lines=0")).to.deep.equal({
+				maxBytes: 16384,
+				maxLines: Infinity,
+			});
+			expect(parseMultilineValue("max-bytes=16384,max-lines=lots")).to.deep.equal({
+				maxBytes: 16384,
+				maxLines: Infinity,
+			});
+		});
+
+		it("rejects a value without a usable max-bytes", function () {
 			expect(parseMultilineValue("max-lines=100")).to.equal(undefined);
 			expect(parseMultilineValue("")).to.equal(undefined);
 			expect(parseMultilineValue(undefined)).to.equal(undefined);
-		});
-
-		it("rejects zero, negative and non-numeric limits", function () {
 			expect(parseMultilineValue("max-bytes=0,max-lines=100")).to.equal(undefined);
-			expect(parseMultilineValue("max-bytes=16384,max-lines=0")).to.equal(undefined);
 			expect(parseMultilineValue("max-bytes=-1,max-lines=100")).to.equal(undefined);
 			expect(parseMultilineValue("max-bytes=lots,max-lines=100")).to.equal(undefined);
 			expect(parseMultilineValue("max-bytes,max-lines")).to.equal(undefined);
@@ -197,7 +208,7 @@ describe("multiline cap", function () {
 
 		it("does not request the cap when its value is unusable", function () {
 			const {client, requested} = setup(
-				"batch message-tags server-time draft/multiline=max-bytes=16384"
+				"batch message-tags server-time draft/multiline=max-lines=100"
 			);
 
 			expect(requested).to.not.include("draft/multiline");
@@ -221,9 +232,8 @@ describe("multiline cap", function () {
 		});
 
 		it("drops the limits when the cap is removed again", function () {
-			const {client, transport, chanId} = setup();
+			const {client, transport} = setup();
 
-			expect(messages(chanId)).to.have.length(0);
 			transport.line(":irc.test CAP alice DEL :draft/multiline");
 			expect(client.multilineLimits()).to.equal(undefined);
 		});
@@ -335,6 +345,36 @@ describe("multiline batches", function () {
 		expect(shown.msgid).to.equal("m1");
 		expect(shown.time.toISOString()).to.equal("2026-08-29T10:00:00.000Z");
 		expect(shown.replyTo).to.equal("parent");
+	});
+
+	it("falls back to the first line's msgid, time and account", function () {
+		const {transport, chanId} = setup();
+
+		transport.lines(
+			":irc.test BATCH +ml draft/multiline #seance",
+			"@batch=ml;msgid=l1;time=2026-08-29T10:00:00.000Z;account=bobby :bob!b@h PRIVMSG #seance :one",
+			"@batch=ml :bob!b@h PRIVMSG #seance :two",
+			":irc.test BATCH -ml"
+		);
+
+		const [shown] = messages(chanId);
+		expect(shown.text).to.equal("one\ntwo");
+		expect(shown.msgid).to.equal("l1");
+		expect(shown.time.toISOString()).to.equal("2026-08-29T10:00:00.000Z");
+		expect(shown.fromAccount).to.equal("bobby");
+	});
+
+	it("compares the lines' targets with the network's casemapping", function () {
+		const {transport, chanId} = setup();
+
+		transport.lines(
+			":irc.test BATCH +ml draft/multiline #seance",
+			line("one"),
+			"@batch=ml :bob!b@h PRIVMSG #SEANCE :two",
+			":irc.test BATCH -ml"
+		);
+
+		expect(messages(chanId).map((m) => m.text)).to.deep.equal(["one\ntwo"]);
 	});
 
 	it("joins an ACTION batch into one action", function () {
