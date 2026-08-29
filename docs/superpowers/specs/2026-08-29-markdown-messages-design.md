@@ -11,18 +11,18 @@ setting `markdown` (default **on**) under Settings → Appearance → Messages.
 
 ## Syntax
 
-| Markup                              | Result                                     |
-| ----------------------------------- | ------------------------------------------ |
-| `**text**`                          | bold (`.irc-bold`)                         |
-| `*text*`, `_text_`                  | italic (`.irc-italic`); `_` only at word boundaries |
-| `__text__`                          | underline (`.irc-underline`)               |
-| `~~text~~`                          | strikethrough (`.irc-strikethrough`)       |
-| `` `code` ``                        | inline code (`.irc-monospace`)             |
-| ```` ```[lang]⏎code``` ````         | code block (`<code class="md-code-block">`, block-level, lang tag dropped, single-line allowed) |
-| `\|\|text\|\|`                      | spoiler (`<span class="md-spoiler">`, click toggles `.md-spoiler-shown`) |
-| `> text` at start of a line         | quote (`<span class="md-quote">`, block-level, `> ` removed) |
-| `[text](url)`                       | link (`<a href target=_blank rel=noopener title=url>`), schemes `http:`, `https:`, `web+irc:` only |
-| `\*` etc.                           | backslash escapes any marker character     |
+| Markup                      | Result                                                                                             |
+| --------------------------- | -------------------------------------------------------------------------------------------------- |
+| `**text**`                  | bold (`.irc-bold`)                                                                                 |
+| `*text*`, `_text_`          | italic (`.irc-italic`); `_` only at word boundaries                                                |
+| `__text__`                  | underline (`.irc-underline`)                                                                       |
+| `~~text~~`                  | strikethrough (`.irc-strikethrough`)                                                               |
+| `` `code` ``                | inline code (`.irc-monospace`)                                                                     |
+| ` ```[lang]⏎code``` `       | code block (`<code class="md-code-block">`, block-level, lang tag dropped, single-line allowed)    |
+| `\|\|text\|\|`              | spoiler (`<span class="md-spoiler">`, click toggles `.md-spoiler-shown`)                           |
+| `> text` at start of a line | quote (`<span class="md-quote">`, block-level, `> ` removed)                                       |
+| `[text](url)`               | link (`<a href target=_blank rel=noopener title=url>`), schemes `http:`, `https:`, `web+irc:` only |
+| `\*` etc.                   | backslash escapes any marker character                                                             |
 
 Rules:
 
