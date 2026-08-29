@@ -9,8 +9,10 @@ public/
 dist/
 tmp/
 
-# Claude Code session scratch: agent worktrees, local settings
-.claude/
+# Claude Code session scratch (agent worktrees, local settings) — but the
+# project's committed skills under .claude/skills/ are source.
+.claude/*
+!.claude/skills/
 
 # shells/capacitor: generated / synced native build artifacts
 shells/capacitor/node_modules/

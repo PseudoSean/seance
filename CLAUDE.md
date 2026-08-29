@@ -102,7 +102,7 @@ Cross-cutting types and helpers. `shared/types/socket-events.ts` (`ServerToClien
 ### Everything else
 
 - **`attic/`** — TheLounge's old `server/`, CLI entry, defaults and server tests. **Reference only**: not built, linted, type-checked or tested; excluded from ESLint, Prettier and the TS references. Look there for "how did the old server do X"; never import from it. See `attic/README.md`.
-- **`tools/`** — `nefarious-dev/` (dev ircd), `irc-ws-probe.mjs` and `pwa-check.mjs`.
+- **`tools/`** — `nefarious-dev/` (dev ircd), `irc-ws-probe.mjs`, `pwa-check.mjs`, and `browser-drive.mjs` + `scenarios/` (drives a real Chromium over the DevTools protocol: WebSocket frames with byte sizes for the nefarious2 framing bugs, or a scenario that clicks/asserts/screenshots — nothing in `yarn test` touches the DOM or a browser). See `docs/resources/browser-testing.md` and the `browser-check` skill.
 - **`docs/`** — PARA layout (`projects/`, `areas/`, `resources/`, `archives/`), see `docs/README.md`.
 - **`tmp/`** — gitignored scratch: the nefarious2 checkout, the fix patch, dev-server state.
 - **`test/`** — see Conventions.
@@ -114,7 +114,8 @@ Cross-cutting types and helpers. `shared/types/socket-events.ts` (`ServerToClien
 - **Pipeline the registration exchange.** Lines are processed in order and pre-registration commands are not charged fake lag, so never wait for a reply whose outcome the server already knows: `CAP END` (or the SASL opener) goes out in the same flush as `CAP REQ`, and the active channel's history/marker in the same flush as the `JOIN` (`caps.ts` `pipelineEnd`, `catchup.ts` `prefetchCatchup`).
 - **Don't add per-channel commands to the connect path.** Every command costs ~2 s of server-side fake lag and the socket is ignored past 10 s (`docs/resources/nefarious2-websocket.md` § Fake lag). Autojoin is one `JOIN a,b,c` (`joinChannels`), `MODE` is asked lazily on first open, and anything else per channel goes through `catchup.ts`.
 - `MAX_LINE_BYTES = 500` (`client/js/irc/message.ts`) caps every outbound line, tags included: nefarious2 kills connections on inbound WS frames >= 528 bytes (#98) and the branch rejects message bodies over 512 bytes as excess flood, and browsers cannot control fragmentation. `splitMessage` chunks long text; do not raise the cap.
-- After changing `client/`, run `yarn build` (or `yarn watch`) — the mocha build test and the headless check both read `public/`.
+- After changing `client/`, run `yarn build` (or `yarn watch`) — the mocha build test and the headless check both read `public/`. `public/` is gitignored and shared by every branch, so it does not change on checkout: rebuild after switching branches.
+- **The suite has no browser and no DOM.** No component is ever mounted, so a change under `client/components/`, `client/css/` or the store is unverified by `yarn test` however green it is. Check those in a real browser (`docs/resources/browser-testing.md`).
 - Tests mirror the source under `test/`: `test/irc/*.ts` for the IRC layer, `test/shared/`, `test/tests/` (`build.ts`, `eventBus.ts`), `test/client/` (browser specs webpack bundles in development mode into `test/public/testclient.js`; ignored by mocha). Mocha config `test/.mocharc.yml` (tsx loader, `check-leaks`).
 - IRC unit tests use a `FakeTransport` injected through `transportFactory` and drive lines with `transport.line(...)`, asserting on a `sinon.spy(socket, "dispatch")`. **Gotcha:** `test/irc/client.ts` installs that spy in a root-level `beforeEach`, which mocha applies to every file in the run; other files (`multi-network.ts`, `history.ts`, ...) check `socket.dispatch.isSinonProxy` and only `restore()` a spy they own. Follow that pattern in new test files or the suite fails when run together.
 - Modules that must run under mocha (`irc/*`, `saved-networks.ts`, `sts.ts`) stay free of store/DOM imports; tests swap storage via `useStorageBackend`.
@@ -131,5 +132,6 @@ Cross-cutting types and helpers. `shared/types/socket-events.ts` (`ServerToClien
 - `docs/resources/branding.md` — `config.json` schema, runtime vs build-time branding, uploader contract.
 - `docs/resources/logo.md` — how the ghost artwork was prepared, what each icon file is for, and where it falls short (16px, Safari pinned tab, notification badge).
 - `docs/resources/pwa.md` — what makes the deploy installable in Chrome, launch/update/offline behaviour, how to verify.
+- `docs/resources/browser-testing.md` — `tools/browser-drive.mjs`: watching the IRC WebSocket frame by frame, writing scenarios, and the traps (scrollback, profile reuse, synthetic clicks).
 - `docs/resources/irc-links.md` — the `web+irc://` link scheme (why not `irc:`/`ircs:`), its grammar and everywhere it is wired.
 - There are no public end-user docs yet; `branding.links` defaults point at this repository and its `docs/`.
