@@ -1,14 +1,14 @@
-# Share images and video via paste.boxlabs.uk (like poxchat)
+# Share images via paste.boxlabs.uk (like poxchat)
 
-_Noted 2026-08-27. Status: idea, mostly configuration on top of the existing
-uploader. Related: `inline-media-preview.md` (the other half — showing what
-was shared), `docs/resources/branding.md` § Uploads._
+_Noted 2026-08-27. Status: **client done, blocked on the service's CORS
+header** (see below). Related: `inline-media-preview.md` (the other half —
+showing what was shared), `docs/resources/branding.md` § Uploads._
 
 ## Idea
 
-Let users paste/drop/pick an image or a video and have Seance upload it to
-the paste.boxlabs.uk media staging service (the AfterNET-adjacent paste
-site, [boxlabss/PASTE](https://github.com/boxlabss/PASTE)), then insert the
+Let users paste/drop/pick an image and have Seance upload it to the
+paste.boxlabs.uk media staging service (the AfterNET-adjacent paste site,
+[boxlabss/PASTE](https://github.com/boxlabss/PASTE)), then insert the
 resulting URL into the input — the way poxchat does today — so any network
 can offer sharing without running its own uploader.
 
@@ -36,62 +36,157 @@ can offer sharing without running its own uploader.
   an `X-API-Key`; see https://paste.boxlabs.uk/api-docs.php — file uploads
   are not covered there).
 
-## What Seance has
+## What landed
 
-`client/js/upload.ts` + `branding.uploads` (`docs/resources/branding.md`):
-multipart POST to `uploads.endpoint`, field `uploads.fieldName` (default
-`file`), optional `uploads.headers` / `withCredentials`, response either a
-**top-level** JSON key (`uploads.responseUrlKey`, default `url`) or a
-plain-text URL, relative URLs resolved against the endpoint,
-`uploads.maxSizeBytes` (default 10 MiB), client-side EXIF strip via canvas
-(`uploadCanvas` setting), paste/drop/file-picker wiring in `ChatInput.vue`.
-The upload button is hidden when `uploads` is absent.
+Drag & drop, clipboard paste and the file picker were already wired to the
+generic uploader (`client/js/upload.ts`, `ChatInput.vue`); what was missing
+was a configuration able to describe this service. `config.json`:
 
-## Gap between the two
+```json
+{"uploads": {"preset": "boxlabs-paste"}}
+```
 
-1. **Response shape.** boxlabs answers `results[0].filePath` (nested, with a
-   `success` flag and `error`), which `responseUrlKey` cannot address. Add
-   either a dotted/array path (`"responseUrlKey": "results.0.filePath"`) plus
-   an optional `responseErrorKey`, or a named preset
-   (`"uploads": {"preset": "boxlabs-paste"}`) that fills in endpoint, field
-   name, keys and the `strip_exif` form field. A preset is friendlier for
-   networks; the path syntax keeps the contract generic. Do both: preset
-   expands to the generic fields.
-2. **Extra form fields.** `strip_exif=1` needs a `uploads.fields` map
-   (`{"strip_exif": "1"}`). Decide the interplay with the client-side canvas
-   strip: canvas already removes EXIF (and re-encodes, losing GIF animation
-   and alpha in JPEG), so with a server that strips, default `uploadCanvas`
-   off for this preset; mirror poxchat's retry-without-strip on a strip
-   error.
-3. **CORS.** poxchat is native; the browser is not. `paste.boxlabs.uk/img/`
-   must send `Access-Control-Allow-Origin` for the client's origin (or `*`)
-   on the POST response, and answer the `OPTIONS` preflight (multipart POST
-   with no custom headers is a "simple request", so only the response
-   header is needed if we send no `X-*` headers). **Ask in `#PASTE` on
-   irc.afternet.org / boxlabss** before building anything; without it the
-   upload fails silently in every browser. Self-hosted PASTE instances need
-   the same in their nginx/Apache config — document it.
-4. **Video.** The user story says images _and_ movies. poxchat only sends
-   image MIME types and the endpoint is `/img/`; whether PASTE accepts
-   `video/mp4`/`webm` (and at what size — 10 MB is small for video) is an
-   open question for boxlabs. If not, video needs a different target
-   (the generic `uploads` contract already allows any endpoint).
-5. **Naming and privacy.** Pasted screenshots get `pasted.png`; keep that.
-   Warn once that uploads are public URLs on a third-party host and
-   possibly retained indefinitely (PASTE has expiry for text pastes; image
-   retention unknown). Optional `uploads.notice` string in branding for the
-   network's own wording.
-6. **Progress / cancel.** `upload.ts` supports `AbortSignal`; surface a
-   progress bar for video-sized files (fetch has no upload progress —
-   switch to `XMLHttpRequest` for the progress event, or accept a spinner).
+`UPLOAD_PRESETS` in `client/js/branding.ts` expands that to the endpoint,
+`images[]`, `strip_exif=1`, the `results.0.filePath` / `results.0.error`
+response paths, 10 MiB and the four image types. Explicit keys alongside the
+preset win, so a deploy can aim the same wire format at its own PASTE
+instance. The generic additions that make it expressible:
 
-## Done when
+- `uploads.responseUrlKey` / `responseErrorKey` accept **dotted paths**
+  through objects and arrays (`results.0.filePath`). A literal top-level key
+  is still tried first, so existing configs are unaffected.
+- `uploads.fields` — extra multipart form fields.
+- `uploads.optionalFields` — fields dropped for **one retry** when the
+  uploader's error message names them by one of its words ("strip", "exif"),
+  reproducing poxchat's EXIF fallback.
+- `uploads.accept` — MIME allowlist (exact or `type/*`) checked before the
+  request, so a dropped **video** is refused with a message naming the types
+  the endpoint does take. `/img/` is images-only; video needs a different
+  target, which the generic contract already allows.
 
-- `config.json` `"uploads": {"preset": "boxlabs-paste"}` (or the equivalent
-  explicit fields) makes paste/drop/pick of an image upload to
-  paste.boxlabs.uk and insert the absolute URL; errors from `results[0].error`
-  are shown; strip-EXIF retry works; CORS confirmed with boxlabs and the
-  needed server header documented in `branding.md`; video either works
-  end-to-end or is explicitly refused with a clear message; unit tests for
-  the response-path parsing and preset expansion (`test/client/` or a
-  store-free `test/upload.ts`).
+Tests: `test/irc/upload.ts` (preset request shape, nested response parsing,
+the strip retry and its non-retry cases, the video refusal, path lookup) and
+`test/irc/branding.ts` (preset expansion, overrides, aliasing, validation).
+
+## Blocked: `/img/` sends no CORS header (but `api.php` does)
+
+Checked 2026-08-28 against the live service. The image endpoint:
+
+```console
+$ curl -i -X POST https://paste.boxlabs.uk/img/ -H 'Origin: https://chat.example.com' -F dummy=1
+HTTP/2 200
+server: nginx
+content-type: application/json
+… no access-control-allow-origin …
+{"results":[{"success":false,"error":"No files received or upload exceeded server limits."}]}
+
+$ curl -i -X OPTIONS https://paste.boxlabs.uk/img/ -H 'Origin: …' -H 'Access-Control-Request-Method: POST'
+HTTP/2 405
+```
+
+The response shape matches poxchat exactly, so the client side is right. But
+a multipart `POST` from a browser is a _simple request_ — no preflight is
+sent, the request goes through, the file lands — and then the browser
+**blocks the response** because it carries no `Access-Control-Allow-Origin`.
+`fetch` rejects with "Failed to fetch" and the client never sees `filePath`.
+poxchat is native and so never hits this.
+
+Nothing in the client can work around it: the URL is server-generated, so an
+opaque `no-cors` response is useless, and there is nothing to guess.
+
+### An API key is not the fix
+
+The tempting conclusion is "use the documented API instead". It does not
+help, for two independent reasons:
+
+1. **`api.php` cannot take images.** Its actions are `create`, `paste`,
+   `get`, `update`, `delete`, `list`, `search`, `languages`, `me`, `user` —
+   all text pastes, `content` is a string. The 659-line source contains no
+   reference to `$_FILES`, `multipart`, `upload` or `image`.
+2. **CORS is orthogonal to authentication.** A key would not make a response
+   readable; only the response header does. Sending `X-API-Key` would in
+   fact make the request non-simple and add a preflight, which `/img/`
+   answers with `405`.
+
+What the API _does_ prove is that the operator already does this correctly
+elsewhere — `api.php` lines 25-27:
+
+```php
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, X-API-Key');
+```
+
+So the ask is small and well-precedented: **send the same
+`Access-Control-Allow-Origin: *` from `/img/`.** `*` suffices — the endpoint
+is anonymous and takes no cookies — and nothing else needs to change,
+because our request is simple and never triggers a preflight.
+
+Worth noting for whoever asks: `/img/` is **not** in upstream
+[boxlabss/PASTE](https://github.com/boxlabss/PASTE) at all (the repo has no
+image upload handler), so it is boxlabs' own addition and they hold the
+source. **Ask in `#PASTE` on irc.afternet.org / boxlabss.** Self-hosted PASTE
+instances that add their own `/img/` need the same header; documented in
+`branding.md` § Uploads.
+
+The probes above deliberately posted no file, so the check published nothing.
+An end-to-end upload has therefore not been run against the live service.
+
+## Survey: which services work from a browser at all
+
+Probed 2026-08-28 with a POST carrying an `Origin` header and no file, so
+nothing was published. The only question that matters is whether the
+**response** carries `Access-Control-Allow-Origin` — without it the upload
+succeeds and the browser throws the answer away. Features, limits and API
+keys are all secondary to that.
+
+| Service                               | CORS          | Notes                                                                                                                                                                       |
+| ------------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **litterbox.catbox.moe**              | **yes** (`*`) | Anonymous, no key. Plain-text URL. Images **and video**, 1 GB. Expires in 1h–72h. → preset `catbox-litterbox`                                                               |
+| **tmpfiles.org**                      | **yes** (`*`) | JSON, preflight answered. But returns a _viewer page_ URL; the direct link needs `/dl/` spliced in, which the contract cannot express today. ~1 h retention, `http:` links. |
+| **kappa.lol**                         | **yes** (`*`) | JSON, full preflight. Response shape unverified.                                                                                                                            |
+| paste.boxlabs.uk/img                  | no            | The blocker above.                                                                                                                                                          |
+| catbox.moe (permanent)                | no            | Same operator as litterbox, but the permanent endpoint omits the header.                                                                                                    |
+| uguu.se                               | no            | JSON error shape is fine; no header.                                                                                                                                        |
+| 0x0.st                                | no            | Also returns `503`: uploads disabled indefinitely ("AI botnet spam").                                                                                                       |
+| x0.at, envs.sh, file.io, pomf.lain.la | no            | —                                                                                                                                                                           |
+
+So the practical set today is one service, `catbox-litterbox`, plus two
+candidates that would need small features (a URL rewrite for tmpfiles) or
+verification (kappa.lol). Note that litterbox is _temporary_ storage: good
+for privacy, bad for scrollback, and worth saying out loud in a deploy's
+own wording.
+
+## The IRC-native alternative: `FILEHOST`
+
+Worth knowing before adding more third-party presets. soju advertises an
+upload endpoint through ISUPPORT as `soju.im/FILEHOST`, and goguma uses it
+(`~/src/goguma/lib/irc/isupport.dart:48`,
+`lib/widget/composer.dart:500-560`): `POST` the raw file body — not
+multipart — with `Content-Type` and `Content-Disposition: attachment; filename=…`, expect **201** and read the URL from the `Location` response
+header, resolved against the filehost URL. Auth is HTTP Basic reusing the
+SASL PLAIN credentials.
+
+That fits Seance far better than any third party: zero configuration, the
+network names its own uploader, and the file never leaves the network's
+control. Two caveats: nefarious2 does not advertise the token today (EvilNet
+controls the ircd, so it could), and reading `Location` cross-origin needs
+`Access-Control-Expose-Headers: Location` on top of the usual header — the
+same class of server-side requirement, just better specified.
+
+Supporting it means reading ISUPPORT, a raw-body request mode and a
+header-sourced URL, none of which the current `uploads` contract has. A
+separate piece of work, not a preset.
+
+## Still open
+
+- **CORS on `paste.boxlabs.uk/img/`** — the blocker above. One response
+  header, which `api.php` on the same host already sends. An API key is
+  not a workaround: the API is text-only.
+- **Retention and privacy wording.** PASTE expires text pastes; image
+  retention is unknown. A `uploads.notice` string for the network's own
+  wording is unimplemented.
+- **Video.** Refused cleanly rather than supported; whether PASTE would take
+  `video/mp4`/`webm`, and at what size, is a question for boxlabs.
+- **Progress.** `fetch` has no upload-progress event, so the bar is a busy
+  indicator; video-sized files would want `XMLHttpRequest`.

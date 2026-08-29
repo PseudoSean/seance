@@ -5,13 +5,33 @@ import {
 	UPLOADS_NOT_CONFIGURED,
 	UploadHost,
 	Uploader,
+	acceptsType,
 	buildUploadRequest,
+	fieldsBlamedBy,
+	lookupResponsePath,
 	parseUploadResponse,
 	uploadFile,
 	uploadMaxSize,
 } from "../../client/js/upload";
 
 const ENDPOINT = "https://files.example.test/upload";
+
+/** The `boxlabs-paste` preset as `normalizeBranding` expands it. */
+const BOXLABS: BrandingUploads = {
+	preset: "boxlabs-paste",
+	endpoint: "https://paste.boxlabs.uk/img/",
+	fieldName: "images[]",
+	fields: {strip_exif: "1"},
+	optionalFields: ["strip_exif"],
+	responseUrlKey: "results.0.filePath",
+	responseErrorKey: "results.0.error",
+	accept: ["image/png", "image/jpeg", "image/gif", "image/webp"],
+	maxSizeBytes: 10 * 1024 * 1024,
+};
+
+function imageFile(name = "pasted.png", type = "image/png"): File {
+	return new File(["\u0089PNG"], name, {type});
+}
 
 function textFile(name = "hello.txt", content = "hello", type = "text/plain"): File {
 	return new File([content], name, {type});
@@ -190,6 +210,213 @@ describe("upload", function () {
 			expect(await rejectionMessage(uploadFile(textFile(), {endpoint: ENDPOINT}))).to.equal(
 				"Upload failed: Failed to fetch"
 			);
+		});
+	});
+
+	describe("boxlabs-paste preset", function () {
+		it("sends the file as images[] with strip_exif", function () {
+			const body = buildUploadRequest(imageFile(), BOXLABS).body as FormData;
+
+			const file = body.get("images[]");
+			expect(file).to.be.instanceOf(File);
+			expect((file as File).name).to.equal("pasted.png");
+			expect(body.get("strip_exif")).to.equal("1");
+			expect(body.get("file")).to.equal(null);
+		});
+
+		it("omits the fields it is told to leave out", function () {
+			const body = buildUploadRequest(imageFile(), BOXLABS, new Set(["strip_exif"]))
+				.body as FormData;
+
+			expect(body.get("images[]")).to.be.instanceOf(File);
+			expect(body.get("strip_exif")).to.equal(null);
+		});
+
+		it("resolves the relative filePath the service returns", function () {
+			expect(
+				parseUploadResponse(
+					'{"results":[{"success":true,"filePath":"/img/img_abc.png"}]}',
+					BOXLABS
+				)
+			).to.equal("https://paste.boxlabs.uk/img/img_abc.png");
+		});
+
+		it("surfaces the nested error the service returns with HTTP 200", async function () {
+			stubFetch(
+				jsonResponse({
+					results: [
+						{
+							success: false,
+							error: "No files received or upload exceeded server limits.",
+						},
+					],
+				})
+			);
+
+			expect(await rejectionMessage(uploadFile(imageFile(), BOXLABS))).to.equal(
+				"No files received or upload exceeded server limits."
+			);
+		});
+
+		it("retries once without strip_exif when stripping is what failed", async function () {
+			const fetchStub = stubFetch(
+				jsonResponse({results: [{success: false, error: "Failed to strip EXIF data"}]}),
+				jsonResponse({results: [{success: true, filePath: "/img/img_z.png"}]})
+			);
+
+			expect(await uploadFile(imageFile(), BOXLABS)).to.equal(
+				"https://paste.boxlabs.uk/img/img_z.png"
+			);
+
+			expect(fetchStub.callCount).to.equal(2);
+			expect(
+				((fetchStub.firstCall.args[1] as RequestInit).body as FormData).get("strip_exif")
+			).to.equal("1");
+			expect(
+				((fetchStub.secondCall.args[1] as RequestInit).body as FormData).get("strip_exif")
+			).to.equal(null);
+		});
+
+		it("does not retry an error that has nothing to do with the field", async function () {
+			const fetchStub = stubFetch(
+				jsonResponse({results: [{success: false, error: "File type not allowed"}]})
+			);
+
+			expect(await rejectionMessage(uploadFile(imageFile(), BOXLABS))).to.equal(
+				"File type not allowed"
+			);
+			expect(fetchStub.callCount).to.equal(1);
+		});
+
+		it("gives up after dropping every optional field", async function () {
+			const fetchStub = stubFetch(
+				jsonResponse({results: [{success: false, error: "exif strip broke"}]}),
+				jsonResponse({results: [{success: false, error: "exif strip broke"}]})
+			);
+
+			expect(await rejectionMessage(uploadFile(imageFile(), BOXLABS))).to.equal(
+				"exif strip broke"
+			);
+			expect(fetchStub.callCount).to.equal(2);
+		});
+
+		it("refuses a video before contacting the endpoint", async function () {
+			const fetchStub = stubFetch();
+			const host = fakeHost(BOXLABS);
+
+			await new Uploader(host).triggerUpload([
+				new File(["x"], "clip.mp4", {type: "video/mp4"}),
+			]);
+
+			expect(host.errors).to.deep.equal([
+				"File clip.mp4 is not a type this uploader accepts " +
+					"(image/png, image/jpeg, image/gif, image/webp)",
+			]);
+			expect(fetchStub.called).to.be.false;
+		});
+
+		it("uploads a pasted image end to end", async function () {
+			const fetchStub = stubFetch(
+				jsonResponse({results: [{success: true, filePath: "/img/img_1.png"}]})
+			);
+			const host = fakeHost(BOXLABS);
+
+			await new Uploader(host).triggerUpload([imageFile()]);
+
+			expect(host.errors).to.deep.equal([]);
+			expect(host.urls).to.deep.equal(["https://paste.boxlabs.uk/img/img_1.png"]);
+			expect(fetchStub.firstCall.args[0]).to.equal("https://paste.boxlabs.uk/img/");
+		});
+	});
+
+	describe("catbox-litterbox preset", function () {
+		const LITTERBOX: BrandingUploads = {
+			preset: "catbox-litterbox",
+			endpoint: "https://litterbox.catbox.moe/resources/internals/api.php",
+			fieldName: "fileToUpload",
+			fields: {reqtype: "fileupload", time: "72h"},
+			maxSizeBytes: 1024 * 1024 * 1024,
+		};
+
+		it("sends fileToUpload with the reqtype and retention fields", function () {
+			const body = buildUploadRequest(imageFile(), LITTERBOX).body as FormData;
+
+			expect(body.get("fileToUpload")).to.be.instanceOf(File);
+			expect(body.get("reqtype")).to.equal("fileupload");
+			expect(body.get("time")).to.equal("72h");
+		});
+
+		it("takes the plain-text URL the service answers with", async function () {
+			stubFetch(new Response("https://litter.catbox.moe/abc123.png", {status: 200}));
+			const host = fakeHost(LITTERBOX);
+
+			await new Uploader(host).triggerUpload([imageFile()]);
+
+			expect(host.errors).to.deep.equal([]);
+			expect(host.urls).to.deep.equal(["https://litter.catbox.moe/abc123.png"]);
+		});
+
+		it("accepts video, having no accept list", async function () {
+			stubFetch(new Response("https://litter.catbox.moe/clip.mp4", {status: 200}));
+			const host = fakeHost(LITTERBOX);
+
+			await new Uploader(host).triggerUpload([
+				new File(["x"], "clip.mp4", {type: "video/mp4"}),
+			]);
+
+			expect(host.errors).to.deep.equal([]);
+			expect(host.urls).to.deep.equal(["https://litter.catbox.moe/clip.mp4"]);
+		});
+	});
+
+	describe("lookupResponsePath", function () {
+		it("prefers a literal top-level key over the dotted path", function () {
+			expect(lookupResponsePath({"a.b": "literal", a: {b: "walked"}}, "a.b")).to.equal(
+				"literal"
+			);
+			expect(lookupResponsePath({a: {b: "walked"}}, "a.b")).to.equal("walked");
+		});
+
+		it("walks arrays by index and gives up on anything else", function () {
+			expect(lookupResponsePath({r: [{u: "x"}]}, "r.0.u")).to.equal("x");
+			expect(lookupResponsePath({r: [{u: "x"}]}, "r.1.u")).to.equal(undefined);
+			expect(lookupResponsePath({r: [{u: "x"}]}, "r.nope.u")).to.equal(undefined);
+			expect(lookupResponsePath({r: {u: 7}}, "r.u")).to.equal(undefined);
+			expect(lookupResponsePath("plain", "a")).to.equal(undefined);
+		});
+	});
+
+	describe("acceptsType", function () {
+		it("takes anything without an accept list", function () {
+			expect(acceptsType({endpoint: ENDPOINT}, "video/mp4")).to.be.true;
+			expect(acceptsType({endpoint: ENDPOINT, accept: []}, "video/mp4")).to.be.true;
+		});
+
+		it("matches exact types and type/* wildcards", function () {
+			const config = {endpoint: ENDPOINT, accept: ["image/png", "video/*"]};
+
+			expect(acceptsType(config, "image/png")).to.be.true;
+			expect(acceptsType(config, "IMAGE/PNG")).to.be.true;
+			expect(acceptsType(config, "video/webm")).to.be.true;
+			expect(acceptsType(config, "image/gif")).to.be.false;
+			expect(acceptsType(config, "")).to.be.false;
+		});
+	});
+
+	describe("fieldsBlamedBy", function () {
+		it("blames a field the message names by one of its words", function () {
+			expect(fieldsBlamedBy("Could not strip metadata", BOXLABS)).to.deep.equal([
+				"strip_exif",
+			]);
+			expect(fieldsBlamedBy("EXIF failure", BOXLABS)).to.deep.equal(["strip_exif"]);
+			expect(fieldsBlamedBy("quota exceeded", BOXLABS)).to.deep.equal([]);
+		});
+
+		it("ignores fields already dropped or never sent", function () {
+			expect(fieldsBlamedBy("exif", BOXLABS, new Set(["strip_exif"]))).to.deep.equal([]);
+			expect(
+				fieldsBlamedBy("exif", {...BOXLABS, fields: {}, optionalFields: ["strip_exif"]})
+			).to.deep.equal([]);
 		});
 	});
 

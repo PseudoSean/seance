@@ -83,15 +83,49 @@ URL parameters (`?host=…&port=…&nick=…&join=…&autoconnect=1`, `?uri=web+
 
 ## Uploads
 
-Seance has no server of its own, so the file goes straight from the browser to an uploader the network runs. Running that service is the network's responsibility; Seance only needs it to honour this contract:
+Seance has no server of its own, so the file goes straight from the browser to an uploader the network runs. Files reach it by drag & drop anywhere on the page, by pasting an image into the input, or from the paperclip button. Running that service is the network's responsibility; Seance only needs it to honour this contract:
 
-- **Request**: `POST` to `uploads.endpoint` with a `multipart/form-data` body whose `uploads.fieldName` field (default `file`) holds the file, filename included. Any `uploads.headers` are sent along; cookies only when `uploads.withCredentials` is `true`.
-- **CORS**: the endpoint is on another origin, so it must answer the preflight and the `POST` with `Access-Control-Allow-Origin` for the app's origin (plus `Access-Control-Allow-Headers` for any custom headers, and `Access-Control-Allow-Credentials: true` when cookies are used).
-- **Response**: `2xx` with either a JSON object `{"url": "https://…"}` (the key is `uploads.responseUrlKey`) or a plain-text body that is the URL. Relative URLs resolve against the endpoint. On failure, a non-`2xx` status; a JSON `{"error": "…"}` body is shown to the user verbatim, otherwise "Upload failed: HTTP _status_".
+- **Request**: `POST` to `uploads.endpoint` with a `multipart/form-data` body whose `uploads.fieldName` field (default `file`) holds the file, filename included. Any `uploads.fields` are sent as extra form fields and any `uploads.headers` as headers; cookies only when `uploads.withCredentials` is `true`.
+- **CORS**: the endpoint is on another origin, so its `POST` response must carry `Access-Control-Allow-Origin` for the app's origin (plus `Access-Control-Allow-Headers` for any custom headers, `Access-Control-Allow-Credentials: true` when cookies are used, and an `OPTIONS` answer when either of those makes the request non-simple). Without that header the browser blocks the response even though the upload itself succeeded, so the user sees "Upload failed: Failed to fetch".
+- **Response**: `2xx` with either a JSON body holding the URL at `uploads.responseUrlKey` (default `url`) or a plain-text body that is the URL. Relative URLs resolve against the endpoint. The key may be a dotted path into nested objects and arrays, e.g. `results.0.filePath`. On failure, a non-`2xx` status or an error message at `uploads.responseErrorKey` (default `error`), which is shown to the user verbatim; otherwise "Upload failed: HTTP _status_".
 
-The client checks `uploads.maxSizeBytes` before sending; the uploader should enforce its own limit, authentication and retention rules, since anyone with the app can call it. With `uploads` absent the upload button is hidden and dropped or pasted files are ignored after a single "File uploads are not configured in this client." notice.
+The client checks `uploads.maxSizeBytes` before sending and refuses types outside `uploads.accept` (exact MIME types or `type/*` wildcards) without contacting the endpoint. The uploader should enforce its own limit, authentication and retention rules, since anyone with the app can call it. With `uploads` absent the upload button is hidden and dropped or pasted files are ignored after a single "File uploads are not configured in this client." notice. **The stock `config.json` ships `catbox-litterbox` enabled**, so the reference deploy at [evilnet.github.io/seance](https://evilnet.github.io/seance/) can share files out of the box; a network that does not want a third-party host removes the `uploads` key. It lives in `config.json` rather than in the code defaults precisely so that deleting it works — a default in `DEFAULT_BRANDING` would be inherited by every deploy with no way to opt out.
+
+`uploads.optionalFields` names fields that may be dropped for one retry when the uploader's error message blames them — the fallback that lets an upload through when the service cannot strip metadata off that particular file.
 
 A minimal uploader is a few dozen lines (an nginx `client_body` handler script, or a small web function that writes to object storage and returns its URL); those recipes are out of scope here.
+
+### Presets
+
+`uploads.preset` fills in the wire details of a known service; anything given alongside it wins, so a deploy can point the same format at its own instance.
+
+The binding constraint on a third-party uploader is not its feature list but **CORS**: the browser discards the response unless it carries `Access-Control-Allow-Origin`, however well the upload itself went. Most such services are built for curl and ShareX, which never have to meet that rule, so a preset is only worth adding for an endpoint checked against it. `docs/projects/boxlabs-paste-uploads.md` § Survey records what was tested and when.
+
+| Preset             | Service                                                                                                                                                                                                                                 | Works from a browser                             |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `catbox-litterbox` | [Litterbox](https://litterbox.catbox.moe/), catbox's temporary sibling. Anonymous, no account or userhash; answers with the URL as plain text. Images **and video**, up to 1 GB. Uploads expire: `time` is `1h`, `12h`, `24h` or `72h`. | **Yes** — sends `Access-Control-Allow-Origin: *` |
+| `boxlabs-paste`    | The anonymous image staging endpoint of [PASTE](https://github.com/boxlabss/PASTE), `https://paste.boxlabs.uk/img/` — the one poxchat uploads pasted images to. No API key. Images only, 10 MiB.                                        | **Not yet** — no CORS header, see below          |
+
+```json
+{
+  "appName": "ExampleNet",
+  "uploads": {"preset": "catbox-litterbox"}
+}
+```
+
+`fields` merges with the preset's per key, so one can be changed on its own — a shorter retention, say, without restating `reqtype`:
+
+```json
+{"uploads": {"preset": "catbox-litterbox", "fields": {"time": "1h"}, "maxSizeBytes": 33554432}}
+```
+
+Capping `maxSizeBytes` below the service's own limit is usually wise: the progress bar is only a busy indicator, so a gigabyte is a long silence. Overriding `endpoint` is how a deploy aims a preset's wire format at its own instance.
+
+`boxlabs-paste` expands to `images[]` as the file field, `strip_exif=1` as an extra field (dropped and retried once if the server says stripping is what failed), `results.0.filePath` / `results.0.error` as the response paths, a 10 MiB limit and PNG/JPEG/GIF/WebP as the accepted types. The endpoint is `/img/`: it takes images, not video, so a dropped video is refused with a message naming the types it does take.
+
+> **`paste.boxlabs.uk/img/` does not send `Access-Control-Allow-Origin` today** (checked 2026-08-28: the `POST` response carries no CORS header and `OPTIONS` answers `405`). Until the operator adds it, uploads from a browser fail even though the file lands on the server. Nothing in the client can work around it — the response body is unreadable without it, and the URL is server-generated, so there is nothing to guess. An API key is _not_ a workaround: `api.php` on the same host does send CORS headers, but it only handles text pastes, and CORS is orthogonal to authentication. Self-hosted PASTE instances that add their own `/img/` need the same header in their nginx or Apache config.
+
+Because that service strips EXIF itself, the "Attempt to remove metadata from images before uploading" setting (which re-encodes through a canvas, and already skips GIF and SVG) is belt-and-braces with `boxlabs-paste` rather than the only defence. With `catbox-litterbox` nothing strips metadata server-side, so the setting is the only thing removing EXIF from a pasted photo.
 
 ## Files a rebranded deploy overwrites in `public/`
 

@@ -36,6 +36,8 @@ export interface UploadFileOptions {
 	/** Fetch implementation; defaults to the global `fetch`. */
 	fetch?: typeof fetch;
 	signal?: AbortSignal;
+	/** Names of `config.fields` to leave out of this attempt. */
+	omitFields?: ReadonlySet<string>;
 }
 
 /** Effective size limit for a config, in bytes. */
@@ -43,10 +45,40 @@ export function uploadMaxSize(config: BrandingUploads | undefined): number {
 	return config?.maxSizeBytes ?? DEFAULT_UPLOAD_MAX_BYTES;
 }
 
+/**
+ * Whether `type` is one the endpoint takes. Entries are exact MIME types or
+ * `type/*` wildcards; no `accept` list at all means anything goes.
+ */
+export function acceptsType(config: BrandingUploads, type: string): boolean {
+	if (!config.accept?.length) {
+		return true;
+	}
+
+	const actual = type.toLowerCase();
+
+	return config.accept.some((entry) => {
+		const allowed = entry.trim().toLowerCase();
+
+		return allowed.endsWith("/*")
+			? actual.startsWith(allowed.slice(0, -1))
+			: allowed === actual;
+	});
+}
+
 /** Build the multipart `POST` for `file` as the configured endpoint expects it. */
-export function buildUploadRequest(file: File, config: BrandingUploads): RequestInit {
+export function buildUploadRequest(
+	file: File,
+	config: BrandingUploads,
+	omitFields: ReadonlySet<string> = new Set()
+): RequestInit {
 	const body = new FormData();
 	body.append(config.fieldName ?? "file", file, file.name);
+
+	for (const [name, value] of Object.entries(config.fields ?? {})) {
+		if (!omitFields.has(name)) {
+			body.append(name, value);
+		}
+	}
 
 	const headers: Record<string, string> = {};
 
@@ -80,8 +112,44 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Extract the public URL from an uploader response body: JSON with the
- * configured key (default `url`), or a plain-text body that is a URL.
+ * The string at `path` in a parsed JSON body, or `undefined`.
+ *
+ * A plain top-level key is tried first, so a key that happens to contain a
+ * dot keeps working; otherwise the path is split and walked through objects
+ * and arrays alike (`results.0.filePath`).
+ */
+export function lookupResponsePath(body: unknown, path: string): string | undefined {
+	const literal: unknown = isRecord(body) ? body[path] : undefined;
+
+	if (typeof literal === "string") {
+		return literal;
+	}
+
+	let value: unknown = body;
+
+	for (const segment of path.split(".")) {
+		if (Array.isArray(value)) {
+			const index = Number(segment);
+			value = Number.isInteger(index) ? value[index] : undefined;
+		} else if (isRecord(value)) {
+			value = value[segment];
+		} else {
+			return undefined;
+		}
+	}
+
+	return typeof value === "string" ? value : undefined;
+}
+
+/** The uploader's own failure message for a parsed body, if it gave one. */
+function responseError(body: unknown, config: BrandingUploads): string | undefined {
+	const message = lookupResponsePath(body, config.responseErrorKey ?? "error");
+	return message !== undefined && message.length > 0 ? message : undefined;
+}
+
+/**
+ * Extract the public URL from an uploader response body: JSON at the
+ * configured key or path (default `url`), or a plain-text body that is a URL.
  * Relative URLs resolve against the endpoint. Throws `UploadError` otherwise.
  */
 export function parseUploadResponse(body: string, config: BrandingUploads): string {
@@ -94,10 +162,10 @@ export function parseUploadResponse(body: string, config: BrandingUploads): stri
 		parsed = undefined;
 	}
 
-	if (isRecord(parsed)) {
-		const value = parsed[key];
+	if (isRecord(parsed) || Array.isArray(parsed)) {
+		const value = lookupResponsePath(parsed, key);
 
-		if (typeof value === "string") {
+		if (value !== undefined) {
 			const url = absoluteUrl(value, config.endpoint);
 
 			if (url !== undefined) {
@@ -105,8 +173,10 @@ export function parseUploadResponse(body: string, config: BrandingUploads): stri
 			}
 		}
 
-		if (typeof parsed.error === "string" && parsed.error.length > 0) {
-			throw new UploadError(parsed.error);
+		const message = responseError(parsed, config);
+
+		if (message !== undefined) {
+			throw new UploadError(message);
 		}
 
 		throw new UploadError(`Upload failed: the uploader did not return a "${key}" URL`);
@@ -127,11 +197,69 @@ export function parseUploadResponse(body: string, config: BrandingUploads): stri
 	return url;
 }
 
-/** Upload one file and resolve with its public URL; rejects with `UploadError`. */
+/**
+ * Which of the config's `optionalFields` this error message blames, so the
+ * upload can be retried without them.
+ *
+ * The name is matched by its words, since a service complains about "EXIF
+ * metadata" rather than about `strip_exif` — the same heuristic poxchat uses
+ * for its own strip fallback.
+ */
+export function fieldsBlamedBy(
+	message: string,
+	config: BrandingUploads,
+	alreadyOmitted: ReadonlySet<string> = new Set()
+): string[] {
+	const text = message.toLowerCase();
+
+	return (config.optionalFields ?? []).filter((name) => {
+		if (alreadyOmitted.has(name) || config.fields?.[name] === undefined) {
+			return false;
+		}
+
+		return name
+			.toLowerCase()
+			.split(/[^a-z0-9]+/)
+			.some((word) => word.length >= 3 && text.includes(word));
+	});
+}
+
+/**
+ * Upload one file and resolve with its public URL; rejects with
+ * `UploadError`. An upload the server refuses on account of an optional form
+ * field is retried without it.
+ */
 export async function uploadFile(
 	file: File,
 	config: BrandingUploads,
 	options: UploadFileOptions = {}
+): Promise<string> {
+	const omitFields = new Set(options.omitFields ?? []);
+
+	for (;;) {
+		try {
+			return await uploadAttempt(file, config, {...options, omitFields});
+		} catch (e: unknown) {
+			// Each pass drops at least one field, so this terminates.
+			const blamed =
+				e instanceof UploadError ? fieldsBlamedBy(e.message, config, omitFields) : [];
+
+			if (blamed.length === 0) {
+				throw e;
+			}
+
+			for (const name of blamed) {
+				omitFields.add(name);
+			}
+		}
+	}
+}
+
+/** One `POST` of `file`, without the retry. */
+async function uploadAttempt(
+	file: File,
+	config: BrandingUploads,
+	options: UploadFileOptions
 ): Promise<string> {
 	const doFetch = options.fetch ?? (typeof fetch === "function" ? fetch : undefined);
 
@@ -139,7 +267,10 @@ export async function uploadFile(
 		throw new UploadError("Upload failed: fetch is not available");
 	}
 
-	const init: RequestInit = {...buildUploadRequest(file, config), signal: options.signal};
+	const init: RequestInit = {
+		...buildUploadRequest(file, config, options.omitFields),
+		signal: options.signal,
+	};
 	let response: Response;
 
 	try {
@@ -165,11 +296,7 @@ export async function uploadFile(
 		let message = `Upload failed: HTTP ${response.status}`;
 
 		try {
-			const parsed: unknown = JSON.parse(body);
-
-			if (isRecord(parsed) && typeof parsed.error === "string" && parsed.error.length > 0) {
-				message = parsed.error;
-			}
+			message = responseError(JSON.parse(body), config) ?? message;
 		} catch (e) {
 			// Not JSON; keep the status line.
 		}
@@ -375,6 +502,17 @@ export class Uploader {
 
 			if (file.size > maxFileSize) {
 				this.host.showError(`File ${file.name} is over the maximum allowed size`);
+				continue;
+			}
+
+			// Refuse here rather than letting the endpoint answer: the boxlabs
+			// preset points at an image staging service, so a dropped video
+			// should say so plainly.
+			if (!acceptsType(config, file.type)) {
+				const accepted = (config.accept ?? []).join(", ");
+				this.host.showError(
+					`File ${file.name} is not a type this uploader accepts (${accepted})`
+				);
 				continue;
 			}
 

@@ -241,6 +241,95 @@ describe("branding", function () {
 			).to.deep.equal({endpoint: "https://x.test/up"});
 		});
 
+		it("expands a named preset, letting explicit keys win", function () {
+			const uploads = normalizeBranding({uploads: {preset: "boxlabs-paste"}}).uploads;
+
+			expect(uploads).to.deep.equal({
+				preset: "boxlabs-paste",
+				endpoint: "https://paste.boxlabs.uk/img/",
+				fieldName: "images[]",
+				fields: {strip_exif: "1"},
+				optionalFields: ["strip_exif"],
+				responseUrlKey: "results.0.filePath",
+				responseErrorKey: "results.0.error",
+				accept: ["image/png", "image/jpeg", "image/gif", "image/webp"],
+				maxSizeBytes: 10 * 1024 * 1024,
+			});
+
+			// A deploy can aim the same wire format at its own PASTE instance.
+			const own = normalizeBranding({
+				uploads: {
+					preset: "boxlabs-paste",
+					endpoint: "https://paste.example.test/img/",
+					maxSizeBytes: 4096,
+				},
+			}).uploads;
+
+			expect(own?.endpoint).to.equal("https://paste.example.test/img/");
+			expect(own?.maxSizeBytes).to.equal(4096);
+			expect(own?.fieldName).to.equal("images[]");
+		});
+
+		it("does not let a preset config alias the preset constant", function () {
+			const first = normalizeBranding({uploads: {preset: "boxlabs-paste"}}).uploads;
+			first?.accept?.push("video/mp4");
+
+			if (first?.fields) {
+				first.fields.strip_exif = "0";
+			}
+
+			const second = normalizeBranding({uploads: {preset: "boxlabs-paste"}}).uploads;
+
+			expect(second?.accept).to.not.include("video/mp4");
+			expect(second?.fields).to.deep.equal({strip_exif: "1"});
+		});
+
+		it("keeps the extra upload fields a deploy sets by hand", function () {
+			const uploads = normalizeBranding({
+				uploads: {
+					endpoint: "https://x.test/up",
+					fields: {strip_exif: "1", note: "  hi  ", "  ": "dropped", bad: []},
+					optionalFields: ["strip_exif", 7],
+					accept: ["image/png", "video/*"],
+					responseErrorKey: "results.0.error",
+				},
+			}).uploads;
+
+			expect(uploads?.fields).to.deep.equal({strip_exif: "1", note: "hi"});
+			expect(uploads?.optionalFields).to.deep.equal(["strip_exif"]);
+			expect(uploads?.accept).to.deep.equal(["image/png", "video/*"]);
+			expect(uploads?.responseErrorKey).to.equal("results.0.error");
+		});
+
+		it("expands the litterbox preset, whose URL comes back as plain text", function () {
+			const uploads = normalizeBranding({uploads: {preset: "catbox-litterbox"}}).uploads;
+
+			expect(uploads).to.deep.equal({
+				preset: "catbox-litterbox",
+				endpoint: "https://litterbox.catbox.moe/resources/internals/api.php",
+				fieldName: "fileToUpload",
+				fields: {reqtype: "fileupload", time: "72h"},
+				maxSizeBytes: 1024 * 1024 * 1024,
+			});
+
+			// No accept list: litterbox takes video too.
+			expect(uploads).to.not.have.property("accept");
+		});
+
+		it("merges fields per key so one can be changed alone", function () {
+			const uploads = normalizeBranding({
+				uploads: {preset: "catbox-litterbox", fields: {time: "1h"}},
+			}).uploads;
+
+			expect(uploads?.fields).to.deep.equal({reqtype: "fileupload", time: "1h"});
+		});
+
+		it("drops uploads naming a preset that does not exist", function () {
+			expect(
+				normalizeBranding({uploads: {preset: "nope", endpoint: "https://x.test/up"}})
+			).to.not.have.property("uploads");
+		});
+
 		it("drops uploads unless the endpoint is an https URL", function () {
 			expect(normalizeBranding({})).to.not.have.property("uploads");
 			expect(normalizeBranding({uploads: {}})).to.not.have.property("uploads");
