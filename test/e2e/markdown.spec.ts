@@ -3,7 +3,7 @@ import {expect, Page, test} from "@playwright/test";
 // Live end-to-end cover for Markdown rendering: the built `public/` tree in a
 // real browser, talking to a real ircd, asserting on what the DOM ends up
 // holding. It only runs when SEANCE_E2E_IRC_URL points at a WebSocket ircd
-// (e.g. `wss://irc.example.org:9998/`), and it sends three lines to a real
+// (e.g. `wss://irc.example.org:9998/`), and it sends four lines to a real
 // channel, so keep it that way.
 const ircUrl = process.env.SEANCE_E2E_IRC_URL;
 const channel = process.env.SEANCE_E2E_CHANNEL ?? "#ps";
@@ -99,6 +99,13 @@ test("leaves the text alone when the setting is off", async ({page}) => {
 	// socket, because the connect URL differs in path and query.
 	const chat = await page.evaluate(() => location.hash);
 
+	// Sent while the setting is still on, so the flip has to re-render it
+	await say(page, `${token}p **pre**`);
+
+	const pre = own(page, nick, `${token}p`);
+
+	await expect(pre.locator(".irc-bold")).toHaveText("pre");
+
 	await page.evaluate(() => {
 		location.hash = "#/settings/appearance";
 	});
@@ -113,6 +120,10 @@ test("leaves the text alone when the setting is off", async ({page}) => {
 		location.hash = hash;
 	}, chat);
 	await page.waitForSelector("#input");
+
+	// The message that was already on screen re-renders with the markers back
+	await expect(pre.locator(".irc-bold")).toHaveCount(0);
+	await expect(pre.locator(".content")).toContainText("**pre**");
 
 	await say(page, `${token}c **not bold**`);
 

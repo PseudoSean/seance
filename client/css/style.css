@@ -2723,6 +2723,16 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	visibility: visible;
 }
 
+/* The channel header is one clipped `white-space: nowrap` line, so the
+ * block-level Markdown wrappers must not lay themselves out there. */
+.header .topic .md-quote,
+.header .topic .md-code-block {
+	display: inline;
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
 .tooltipped::after {
 	font-size: 12px;
 }

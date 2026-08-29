@@ -78,6 +78,21 @@ function toggleSpoiler(event: Event) {
 	(event.currentTarget as HTMLElement).classList.toggle("md-spoiler-shown");
 }
 
+// The spoiler is a role="button" in the tab order, so it has to answer Enter
+// and Space the way a real button does.
+function spoilerKeydown(event: KeyboardEvent) {
+	if (event.key !== "Enter" && event.key !== " ") {
+		return;
+	}
+
+	if (event.key === " ") {
+		// Otherwise Space scrolls the message list
+		event.preventDefault();
+	}
+
+	toggleSpoiler(event);
+}
+
 function wrapNode(key: WrapKey, value: boolean | string, children: Rendered[]): VNode {
 	switch (key) {
 		case "quote":
@@ -87,10 +102,20 @@ function wrapNode(key: WrapKey, value: boolean | string, children: Rendered[]): 
 		case "spoiler":
 			return createElement(
 				"span",
-				{class: ["md-spoiler"], role: "button", tabindex: 0, onClick: toggleSpoiler},
+				{
+					class: ["md-spoiler"],
+					role: "button",
+					tabindex: 0,
+					onClick: toggleSpoiler,
+					onKeydown: spoilerKeydown,
+				},
 				children
 			);
 		case "href":
+			// A masked link deliberately carries `title=url` and, unlike the
+			// linkify anchors built in renderPart(), no `dir="auto"`. That is
+			// what lets `test/e2e/markdown.spec.ts` pick the Markdown anchor out
+			// with `a[title="https://example.com/"]` — keep both as they are.
 			return createElement(
 				"a",
 				{href: value, title: value, target: "_blank", rel: "noopener"},
