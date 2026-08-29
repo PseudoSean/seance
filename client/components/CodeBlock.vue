@@ -20,6 +20,10 @@ export default defineComponent({
 		const id = ref<string | undefined>(undefined);
 		const tokens = ref<Highlighted | undefined>(undefined);
 		const plain = computed(() => splitLines(props.code));
+		// Both from the plain text, never from the tokens: the gutter must not
+		// jitter when highlighting lands.
+		const numbered = computed(() => plain.value.length >= 2);
+		const gutter = computed(() => `${String(plain.value.length).length}ch`);
 		const lines = computed<Highlighted>(
 			() => tokens.value ?? plain.value.map((text) => (text ? [{text}] : []))
 		);
@@ -90,8 +94,9 @@ export default defineComponent({
 				{
 					class: [
 						"md-code-block",
-						plain.value.length >= 2 ? "md-code-block--numbered" : undefined,
+						numbered.value ? "md-code-block--numbered" : undefined,
 					],
+					style: numbered.value ? {"--md-gutter": gutter.value} : undefined,
 					"data-lang": id.value,
 				},
 				lines.value.map((line) =>

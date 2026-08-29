@@ -3159,10 +3159,13 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 .md-code-block--numbered .md-line::before {
 	display: inline-block;
 
-	/* Not `width`: a block of 100 lines or more would spill its number out of
-	 * the gutter and into the code. */
-	min-width: 3.5em;
-	margin-right: 0.75em;
+	/* As wide as the block's widest line number and no wider: `CodeBlock` sets
+	 * `--md-gutter` from the digit count. Not `width`, so a number that
+	 * outgrows the guess still gets its room instead of spilling into the
+	 * code; `tabular-nums` keeps the digits in one column. */
+	min-width: var(--md-gutter, 1ch);
+	margin-right: 0.6em;
+	font-variant-numeric: tabular-nums;
 	text-align: right;
 	opacity: 0.5;
 	user-select: none;
