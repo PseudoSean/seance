@@ -2701,7 +2701,9 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 .md-spoiler {
-	background-color: currentcolor;
+	/* Not currentcolor: `color` is transparent here, so it would resolve to
+	 * transparent too and the spoiler would be invisible rather than blacked out. */
+	background-color: var(--body-color);
 	color: transparent;
 	border-radius: 3px;
 	cursor: pointer;
