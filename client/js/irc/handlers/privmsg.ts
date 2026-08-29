@@ -170,6 +170,14 @@ function handleMessage(client: IrcClient, msg: IrcMessage, baseType: MessageType
 		message.msgid = msgid;
 	}
 
+	// `account-tag`: the sender's services account, when logged in. Trusting
+	// media "from alice" keys on this, never on the nick.
+	const account = msg.tags.get("account");
+
+	if (account) {
+		message.fromAccount = account;
+	}
+
 	if (showInActive) {
 		message.showInActive = true;
 	}

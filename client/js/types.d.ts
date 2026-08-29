@@ -66,6 +66,14 @@ type ClientMention = SharedMention;
 
 type ClientLinkPreview = LinkPreview & {
 	sourceLoaded?: boolean;
+	/**
+	 * Click-to-reveal state (helpers/mediaTrust.ts): `true` once the reader
+	 * revealed it (or posted it), `false` after they hid it, unset to follow
+	 * the `mediaReveal` setting and the trusted hosts.
+	 */
+	revealed?: boolean;
+	/** Where it was posted, as trust keys (helpers/mediaTrust.ts `MediaScope`). */
+	scope?: {channel?: string; channelName?: string; account?: string; accountName?: string};
 };
 
 interface BeforeInstallPromptEvent extends Event {
