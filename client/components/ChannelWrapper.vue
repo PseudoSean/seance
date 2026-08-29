@@ -13,6 +13,7 @@
 			{'not-connected': channel.type === 'lobby' && !network.status.connected},
 			{'is-muted': channel.muted},
 			{'is-typing': isTyping},
+			{'has-activity': hasActivity},
 		]"
 		:aria-label="getAriaLabel()"
 		:title="getAriaLabel()"
@@ -70,6 +71,14 @@ export default defineComponent({
 				props.channel.typing.some((entry) => entry.state === "active")
 		);
 
+		// Somebody just spoke here: pulse the row's icon for a few seconds (see
+		// .channel-list-item.has-activity::before in style.css). The deadline is
+		// set by socket-events/activity.ts — which is also where the "messages,
+		// not joins and modes" filter and the muted/active-channel rules live —
+		// and cleared by the shared sweep in helpers/activityPulse.ts, so a
+		// non-zero value here always means a pulse that is still running.
+		const hasActivity = computed(() => props.channel.activityUntil > 0);
+
 		const getAriaLabel = () => {
 			const extra: string[] = [];
 			const type = props.channel.type;
@@ -113,6 +122,7 @@ export default defineComponent({
 			activeChannel,
 			isChannelVisible,
 			isTyping,
+			hasActivity,
 			getAriaLabel,
 			click,
 			openContextMenu,

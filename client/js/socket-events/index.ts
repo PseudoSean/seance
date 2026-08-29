@@ -14,6 +14,10 @@ import "./join";
 import "./markread";
 import "./more";
 import "./msg";
+// Out of alphabetical order on purpose: it reads the message *after* ./msg
+// has pushed it and re-routed a `showInActive` notice. ./typing below
+// relies on the same ordering.
+import "./activity";
 import "./msg_special";
 import "./msg_updates";
 import "./names";

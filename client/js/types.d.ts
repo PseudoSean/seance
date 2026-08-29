@@ -41,6 +41,12 @@ type ClientChan = Omit<SharedChan, "messages"> & {
 	 * the scrollback does not bounce; the next appended message releases it.
 	 */
 	typingReserved: boolean;
+	/**
+	 * Epoch ms until which the sidebar icon pulses because somebody spoke here
+	 * (0 = quiet), set by socket-events/activity.ts and swept by
+	 * helpers/activityPulse.ts.
+	 */
+	activityUntil: number;
 
 	users: ClientUser[];
 };

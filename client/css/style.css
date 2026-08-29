@@ -49,6 +49,9 @@
 
 	/* Color the sidebar channel icon pulses to while someone is typing there */
 	--channel-typing-color: #84ce88;
+
+	/* Color the sidebar channel icon pulses to just after someone spoke there */
+	--channel-activity-color: #7fb8e8;
 }
 
 ::placeholder {
@@ -859,11 +862,35 @@ lobby and parted colors instead of clobbering any of them. */
 	}
 }
 
+/* Someone just spoke here: the same breath in a different color and at a calmer
+pace, so the two cues stay apart even for a reader who cannot tell them apart by
+hue. Typing wins while both apply — it is the live state, activity only an echo
+of one that has already passed — and only one `animation` can hold the icon. */
+.channel-list-item.has-activity:not(.is-typing)::before {
+	animation: channel-activity-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes channel-activity-pulse {
+	0%,
+	100% {
+		color: currentcolor;
+	}
+
+	50% {
+		color: var(--channel-activity-color);
+	}
+}
+
 /* Keep the cue, drop the motion */
 @media (prefers-reduced-motion: reduce) {
 	.channel-list-item.is-typing::before {
 		animation: none;
 		color: var(--channel-typing-color);
+	}
+
+	.channel-list-item.has-activity:not(.is-typing)::before {
+		animation: none;
+		color: var(--channel-activity-color);
 	}
 }
 
