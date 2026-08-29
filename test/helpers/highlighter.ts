@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import {expect} from "chai";
 import Prism from "prismjs/components/prism-core";
 import {
@@ -123,5 +125,115 @@ describe("highlighter — guessLanguage", () => {
 	it("says nothing when nothing looks like code", async () => {
 		expect(GUESS_MIN_CONFIDENCE).to.be.within(0, 1);
 		expect(await guessLanguage("hello there\nnothing to see here\n")).to.equal(undefined);
+	});
+});
+
+describe("highlighter — markup", () => {
+	// `markup` pulls in no other grammar, so loading it here cannot satisfy
+	// the "not loaded yet" assertions the `ensureLanguage` block makes.
+	before(async () => {
+		expect(await ensureLanguage("xml")).to.be.true;
+	});
+
+	it("names the token types the stylesheet colours", () => {
+		const lines = highlight('<note id="1">\n  <to>Tove</to>\n</note>', "markup");
+
+		expect(lines).to.have.lengthOf(3);
+		expect(lines![0].slice(0, 2)).to.deep.equal([
+			{text: "<", type: "punctuation"},
+			{text: "note", type: "tag"},
+		]);
+
+		const types = new Set(lines!.flat().map((item) => item.type));
+
+		for (const type of ["tag", "attr-name", "attr-value", "punctuation"]) {
+			expect(types).to.include(type);
+		}
+	});
+
+	it("keeps the prolog of an XML declaration whole", () => {
+		const lines = highlight('<?xml version="1.0"?>\n<root/>', "markup");
+
+		expect(lines![0]).to.deep.equal([{text: '<?xml version="1.0"?>', type: "prolog"}]);
+	});
+});
+
+describe("highlighter — guessLanguage sees markup by its shape", () => {
+	// flourite scores markup badly: these all used to come back undefined or,
+	// worse, confidently wrong.
+	const markup: Record<string, string> = {
+		"attributes and no text": '<config debug="true">\n  <path value="/tmp"/>\n</config>',
+		"a namespace URL": '<svg xmlns="http://www.w3.org/2000/svg">\n  <rect width="1"/>\n</svg>',
+		"self-closing tags only": "<a/>\n<b/>",
+		"one element over two lines": "<root>\n</root>",
+		"a POM fragment": "<dependency>\n  <groupId>org.foo</groupId>\n</dependency>",
+		"an XML declaration": '<?xml version="1.0"?>\n<root>ok</root>',
+		"a leading comment": "<!-- a note -->\n<root>ok</root>",
+	};
+
+	for (const [name, code] of Object.entries(markup)) {
+		it(`guesses markup for ${name}`, async () => {
+			expect(await guessLanguage(code)).to.equal("markup");
+		});
+	}
+
+	it("still needs MIN_GUESS_LINES lines", async () => {
+		expect(await guessLanguage("<a>b</a>")).to.equal(undefined);
+	});
+
+	it("leaves braces to the guesser, so JSX is not markup by shape", async () => {
+		const code = "const App = () => (\n  <div className={cls}>\n    <Hi />\n  </div>\n);";
+
+		expect(await guessLanguage(code)).to.not.equal("markup");
+	});
+
+	it("does not turn other languages into markup", async () => {
+		expect(await guessLanguage("def add(a, b):\n    return a + b\n")).to.equal("python");
+		expect(await guessLanguage("hello there\nnothing to see here\n")).to.equal(undefined);
+	});
+});
+
+describe("highlighter — the token palette", () => {
+	const css = fs.readFileSync(path.join(process.cwd(), "client", "css", "style.css"), "utf8");
+
+	// The Prism token types the shipped grammars emit often enough that a
+	// block would read as half-highlighted without them.
+	const types = [
+		"attr-name",
+		"attr-value",
+		"boolean",
+		"builtin",
+		"class-name",
+		"comment",
+		"function",
+		"keyword",
+		"number",
+		"operator",
+		"property",
+		"punctuation",
+		"regex",
+		"selector",
+		"string",
+		"tag",
+		"variable",
+	];
+
+	it("colours every type a shipped grammar commonly emits", () => {
+		// A selector ends at a comma, a brace or space, so `.tok-attr` cannot
+		// stand in for `.tok-attr-name`.
+		const missing = types.filter((type) => !new RegExp(`\\.tok-${type}(?=[\\s,{])`).test(css));
+
+		expect(missing).to.deep.equal([]);
+	});
+
+	it("leaves an unmapped type the block's own colour, in both themes", () => {
+		const morning = fs.readFileSync(
+			path.join(process.cwd(), "client", "themes", "morning.css"),
+			"utf8"
+		);
+
+		expect(css).to.match(/--md-code-color:/);
+		expect(morning).to.match(/--md-code-color:/);
+		expect(css).to.match(/\.md-code-block\s*\{[^}]*color: var\(--md-code-color\)/);
 	});
 });

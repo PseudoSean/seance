@@ -5,9 +5,9 @@ import {expect, Page, test} from "@playwright/test";
 // holding. The tree it renders from is unit-tested in `test/helpers/layout.ts`;
 // what only a browser can answer is whether the elements that tree names really
 // turn up. It only runs when SEANCE_E2E_IRC_URL points at a WebSocket ircd
-// (e.g. `wss://irc.example.org:9998/`), and it sends five lines to a real
-// channel, so keep it that way. The last of those needs newlines in the
-// message, so it is gated on SEANCE_E2E_MULTILINE as well — see below.
+// (e.g. `wss://irc.example.org:9998/`), and it sends four messages to a real
+// channel — five when SEANCE_E2E_MULTILINE adds the multi-line one below — so
+// keep it that way.
 const ircUrl = process.env.SEANCE_E2E_IRC_URL;
 const channel = process.env.SEANCE_E2E_CHANNEL ?? "#ps";
 
