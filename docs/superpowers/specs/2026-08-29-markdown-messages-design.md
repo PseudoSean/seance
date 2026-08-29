@@ -45,12 +45,18 @@ Rules:
 
 ## Architecture
 
+Note (2026-08-29, after implementation): the pipeline below was deepened —
+the rendering decision moved into a Vue-free layout tree
+(`client/js/helpers/ircmessageparser/layout.ts`) with `parse.ts` and
+`toPlainText` as its adapters. See `docs/projects/markdown-messages.md`; the
+syntax table above still holds exactly.
+
 `parse()` (`client/js/helpers/parse.ts`) currently does
 `parseStyle → cleanText → finders → merge → createFragment`. Markdown becomes one
 extra stage inserted after `parseStyle`:
 
 ```
-applyMarkdown(fragments: ParsedStyle[], opaque: {start,end}[]): ParsedStyle[]
+applyMarkdown(fragments: ParsedStyle[]): {fragments: ParsedStyle[]; verbatim: Range[]}
 ```
 
 in a new dependency-free module `client/js/helpers/ircmessageparser/parseMarkdown.ts`
@@ -59,13 +65,14 @@ fragment text, splits fragments at marker boundaries, drops the marker
 characters and sets flags on `ParsedStyle`:
 
 - existing: `bold`, `italic`, `underline`, `strikethrough`, `monospace`
-- new (optional): `spoiler`, `quote`, `codeBlock`, `href`, `code` (suppresses finders)
+- new (optional): `spoiler`, `quote`, `codeBlock`, `href`
 
-Downstream stages are unchanged and run on marker-free text. Also exported:
-`stripMarkdown(text: string): string` for plain-text contexts (`Chat.vue`
-`plainTopic` title attribute).
+Downstream stages are unchanged and run on marker-free text. The stretches
+nothing is interpreted inside come back as the `verbatim` ranges rather than as
+a flag. Plain-text contexts (`Chat.vue` `plainTopic`) go through `toPlainText`,
+the text adapter for the layout tree.
 
-`createFragment` renders the new flags:
+The wraps become layout nodes, which `parse.ts` renders:
 
 - `href` → `<a>` wrapper (outermost)
 - `spoiler` → `<span class="md-spoiler">` with an `onClick` that toggles
@@ -74,8 +81,8 @@ Downstream stages are unchanged and run on marker-free text. Also exported:
 - `codeBlock` → `<code class="md-code-block">`
 
 `parse(text, message, network, options?: {markdown?: boolean})` — `ParsedMessage.vue`
-passes `{markdown: store.state.settings.markdown}`. Parts inside `code` fragments
-are filtered out of the channel/nick/emoji finder results before `merge`.
+passes `{markdown: store.state.settings.markdown}`. Parts inside a verbatim
+range are filtered out of the channel/nick/emoji finder results before `merge`.
 
 Setting: `markdown: {default: true}` in `client/js/settings.ts`; checkbox
 "Render Markdown formatting (bold, code, spoilers…)" in
@@ -88,11 +95,11 @@ CSS in `client/css/style.css` next to the `irc-*` classes: `.md-spoiler`
 
 ## Testing
 
-- Unit: `test/helpers/parseMarkdown.ts` (mocha globs `test/**/*.ts`;
-  `test/client/**` and `test/e2e/**` are ignored by `.mocharc.yml`). Covers
-  every marker, nesting, escapes, unmatched markers, word-boundary `_`, opaque
-  URLs, code suppression, multi-line quote/fence, composition with IRC codes,
-  `stripMarkdown`.
+- Unit: `test/helpers/parseMarkdown.ts` and `test/helpers/layout.ts` (mocha
+  globs `test/**/*.ts`; `test/client/**` and `test/e2e/**` are ignored by
+  `.mocharc.yml`). Cover every marker, nesting, escapes, unmatched markers,
+  word-boundary `_`, opaque URLs, verbatim suppression, multi-line quote/fence,
+  composition with IRC codes, and the tree each message renders as.
 - E2E: `@playwright/test` devDependency, `test/e2e/markdown.spec.ts`, script
   `yarn test:e2e` (`webpack && playwright test`, so it never runs against a
   stale `public/`). Skipped unless `SEANCE_E2E_IRC_URL` is set; serves
