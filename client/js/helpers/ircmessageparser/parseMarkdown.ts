@@ -29,7 +29,9 @@ const MARKER_CHARS = "*_~|`>[]()\\";
 const FENCE = "```";
 // Optional language tag is only a tag when it ends the fence line
 const fenceOpenRx = /^```(?:[\w+-]*\n)?/;
-const linkRx = /^\[([^\]\n]+)\]\(((?:https?:\/\/|web\+irc:)[^\s)]+)\)/;
+// The URL part allows one level of balanced parentheses, so Wikipedia-style
+// links survive; the scheme is matched case-insensitively.
+const linkRx = /^\[([^\]\n]+)\]\(((?:https?:\/\/|web\+irc:)(?:[^\s()]|\([^\s()]*\))+)\)/i;
 
 type EmphasisToken = {len: number; flag: MarkdownFlag};
 
@@ -76,8 +78,11 @@ export function tokenize(text: string, opaque?: Range[]): MarkdownTokens {
 		}
 
 		const c = text[i];
+		const escaped = text[i + 1];
 
-		if (c === "\\" && MARKER_CHARS.includes(text[i + 1] ?? "")) {
+		// Not `MARKER_CHARS.includes(escaped ?? "")`: every string contains the
+		// empty string, so a backslash ending the text would swallow itself.
+		if (c === "\\" && escaped !== undefined && MARKER_CHARS.includes(escaped)) {
 			removals.push({start: i, end: i + 1});
 			i += 2;
 			continue;
@@ -259,9 +264,13 @@ function quote(text: string, i: number, removals: Range[], ranges: MarkdownRange
 
 	removals.push({start: i, end: i + 2});
 
-	const last = ranges[ranges.length - 1];
+	// Not just the last range: inline markup on the previous quote line pushes
+	// its own ranges after that line's quote range, so search backwards for the
+	// quote block that ends on the newline right before this line.
+	const idx = findLastIndex(ranges, (r) => r.flag === "quote" && r.end === i - 1);
+	const last = idx === -1 ? undefined : ranges[idx];
 
-	if (last && last.flag === "quote" && last.end === i - 1) {
+	if (last) {
 		last.end = lineEnd;
 	} else {
 		ranges.push({start: i + 2, end: lineEnd, flag: "quote"});

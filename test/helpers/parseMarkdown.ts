@@ -86,6 +86,10 @@ describe("parseMarkdown tokenize — emphasis", () => {
 		expect(tokenize("a\\b")).to.deep.equal({removals: [], ranges: []});
 	});
 
+	it("keeps a backslash at the end of the text", () => {
+		expect(tokenize("a\\")).to.deep.equal({removals: [], ranges: []});
+	});
+
 	it("treats URLs as opaque", () => {
 		expect(tokenize("see https://example.com/a_b_c_d ok")).to.deep.equal({
 			removals: [],
@@ -178,6 +182,18 @@ describe("parseMarkdown tokenize — code, quotes, links", () => {
 		});
 	});
 
+	it("merges consecutive quote lines when the first one holds inline markup", () => {
+		const text = "> a *b*\n> c";
+		expect(tokenize(text).ranges.filter((r) => r.flag === "quote")).to.deep.equal([
+			{start: 2, end: 11, flag: "quote"},
+		]);
+		// The newline joining the two lines belongs to the quote, so no bare
+		// "\n" fragment escapes the block
+		expect(
+			applyMarkdown(parseStyle(text)).filter((f) => f.text === "\n" && !f.quote)
+		).to.deep.equal([]);
+	});
+
 	it("does not treat > mid-line or without a space as a quote", () => {
 		expect(tokenize("a > b")).to.deep.equal({removals: [], ranges: []});
 		expect(tokenize(">b")).to.deep.equal({removals: [], ranges: []});
@@ -193,6 +209,30 @@ describe("parseMarkdown tokenize — code, quotes, links", () => {
 		});
 		expect(tokenize("[c](web+irc://irc.example.org/#chan)").ranges).to.deep.equal([
 			{start: 1, end: 2, flag: "href", href: "web+irc://irc.example.org/#chan"},
+		]);
+	});
+
+	it("allows one level of balanced parentheses in the URL", () => {
+		const text = "[wiki](https://en.wikipedia.org/wiki/Foo_(bar))";
+		expect(tokenize(text)).to.deep.equal({
+			removals: [
+				{start: 0, end: 1},
+				{start: 5, end: text.length},
+			],
+			ranges: [
+				{
+					start: 1,
+					end: 5,
+					flag: "href",
+					href: "https://en.wikipedia.org/wiki/Foo_(bar)",
+				},
+			],
+		});
+	});
+
+	it("matches the URL scheme case-insensitively", () => {
+		expect(tokenize("[x](HTTPS://e.test)").ranges).to.deep.equal([
+			{start: 1, end: 2, flag: "href", href: "HTTPS://e.test"},
 		]);
 	});
 
@@ -286,5 +326,9 @@ describe("stripMarkdown", () => {
 		expect(stripMarkdown("**a** `b` > c [d](https://e.com)")).to.equal("a b > c d");
 		expect(stripMarkdown("> c")).to.equal("c");
 		expect(stripMarkdown("plain")).to.equal("plain");
+	});
+
+	it("keeps a trailing backslash", () => {
+		expect(stripMarkdown("C:\\")).to.equal("C:\\");
 	});
 });
