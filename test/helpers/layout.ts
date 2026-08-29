@@ -1,5 +1,6 @@
 import {expect} from "chai";
 import {
+	codeBlocksOf,
 	layout,
 	LayoutNode,
 	Style,
@@ -214,5 +215,40 @@ describe("toPlainText", () => {
 		expect(
 			toPlainText(layout("see #chan", {channelPrefixes: ["#"], userModes: ["@"]}))
 		).to.equal("see #chan");
+	});
+});
+
+// What the message toolbar's "Copy code" action puts on the clipboard: the
+// blocks a message renders, each as its own characters.
+describe("codeBlocksOf", () => {
+	it("finds nothing in a message without a block", () => {
+		expect(codeBlocksOf(layout("plain `inline` text", markdown))).to.deep.equal([]);
+	});
+
+	it("finds nothing when Markdown is off", () => {
+		expect(codeBlocksOf(layout("```let x = 1;```"))).to.deep.equal([]);
+	});
+
+	it("returns a block's characters, fence and tag gone", () => {
+		expect(codeBlocksOf(layout("```js\nlet x = 1;\n```", markdown))).to.deep.equal([
+			"let x = 1;",
+		]);
+	});
+
+	it("keeps a URL inside a block as text", () => {
+		expect(codeBlocksOf(layout("```see https://example.com/```", markdown))).to.deep.equal([
+			"see https://example.com/",
+		]);
+	});
+
+	it("returns several blocks in the order they render", () => {
+		expect(codeBlocksOf(layout("```one``` between ```two```", markdown))).to.deep.equal([
+			"one",
+			"two",
+		]);
+	});
+
+	it("reads a block out of the wrap it sits in", () => {
+		expect(codeBlocksOf(layout("> quoted ```inside```", markdown))).to.deep.equal(["inside"]);
 	});
 });

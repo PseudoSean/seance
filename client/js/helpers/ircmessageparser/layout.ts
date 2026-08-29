@@ -138,6 +138,29 @@ export function toPlainText(nodes: LayoutNode[]): string {
 	return out;
 }
 
+// Every code block in a tree, outermost first and in the order they render,
+// as the characters each one holds — what a copy of a message's code is made
+// of. A block's own children are text and (flattened) parts, never another
+// block, so nothing recurses into one.
+export function codeBlocksOf(nodes: LayoutNode[]): string[] {
+	const blocks: string[] = [];
+
+	for (const node of nodes) {
+		if (node.kind === "text") {
+			continue;
+		}
+
+		if (node.kind === "wrap" && node.wrap === "codeBlock") {
+			blocks.push(toPlainText(node.children));
+			continue;
+		}
+
+		blocks.push(...codeBlocksOf(node.children));
+	}
+
+	return blocks;
+}
+
 // The node a finder asked for, or undefined when the part is plain text.
 function partNode(part: PartWithFragments<ParsedStyle>): LayoutNode | undefined {
 	const children = part.fragments.map(textNode);
