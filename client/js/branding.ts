@@ -90,14 +90,26 @@ export interface BrandingUploads {
 /**
  * Ready-made uploader configurations, selected with `uploads.preset`.
  *
- * `boxlabs-paste` is the anonymous image staging endpoint of
- * [PASTE](https://github.com/boxlabss/PASTE) that poxchat uploads to; no API
- * key (the documented `api.php` needs one, but it only covers text pastes).
- * It answers `{"results":[{"success":true,"filePath":"/img/img_x.png"}]}` or
- * `{"results":[{"success":false,"error":"…"}]}`, and `filePath` is relative
- * to the endpoint.
+ * The binding constraint on a third-party uploader is not its feature list
+ * but CORS: the browser discards a response that carries no
+ * `Access-Control-Allow-Origin`, however well the upload itself went. Most
+ * of these services are built for curl and ShareX, which never meet that
+ * rule, so only endpoints checked against it belong here. See
+ * docs/projects/boxlabs-paste-uploads.md § Survey.
  */
 export const UPLOAD_PRESETS: Record<string, BrandingUploads> = {
+	/**
+	 * The anonymous image staging endpoint of
+	 * [PASTE](https://github.com/boxlabss/PASTE) that poxchat uploads to; no
+	 * API key (the documented `api.php` needs one, but it only covers text
+	 * pastes). It answers
+	 * `{"results":[{"success":true,"filePath":"/img/img_x.png"}]}` or
+	 * `{"results":[{"success":false,"error":"…"}]}`, and `filePath` is
+	 * relative to the endpoint.
+	 *
+	 * **Sends no CORS header as of 2026-08-28, so it does not work from a
+	 * browser yet.** Kept because the fix is one header on boxlabs' side.
+	 */
 	"boxlabs-paste": {
 		endpoint: "https://paste.boxlabs.uk/img/",
 		fieldName: "images[]",
@@ -108,6 +120,25 @@ export const UPLOAD_PRESETS: Record<string, BrandingUploads> = {
 		// The endpoint is `/img/`: it takes images, not video.
 		accept: ["image/png", "image/jpeg", "image/gif", "image/webp"],
 		maxSizeBytes: 10 * 1024 * 1024,
+	},
+
+	/**
+	 * Catbox's temporary sibling: anonymous, no account or userhash, answers
+	 * with the URL as plain text, and — unlike catbox.moe proper — sends
+	 * `Access-Control-Allow-Origin: *`. Takes video as well as images, up to
+	 * 1 GB.
+	 *
+	 * Uploads **expire**: `time` is one of `1h`, `12h`, `24h`, `72h`, and a
+	 * deploy can pick a shorter one by setting just that key. A deploy that
+	 * wants a smaller cap than the service's own should set `maxSizeBytes` —
+	 * the progress bar is only a busy indicator, so a gigabyte is a long
+	 * silence.
+	 */
+	"catbox-litterbox": {
+		endpoint: "https://litterbox.catbox.moe/resources/internals/api.php",
+		fieldName: "fileToUpload",
+		fields: {reqtype: "fileupload", time: "72h"},
+		maxSizeBytes: 1024 * 1024 * 1024,
 	},
 };
 
@@ -413,8 +444,10 @@ function normalizeUploads(value: unknown): BrandingUploads | undefined {
 		uploads.fieldName = fieldName;
 	}
 
+	// Fields merge per key, so a deploy can change one of a preset's without
+	// having to restate the rest (litterbox's `time`, say).
 	if (fields !== undefined) {
-		uploads.fields = fields;
+		uploads.fields = {...uploads.fields, ...fields};
 	}
 
 	if (optionalFields !== undefined) {

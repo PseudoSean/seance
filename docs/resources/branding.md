@@ -99,22 +99,33 @@ A minimal uploader is a few dozen lines (an nginx `client_body` handler script, 
 
 `uploads.preset` fills in the wire details of a known service; anything given alongside it wins, so a deploy can point the same format at its own instance.
 
-| Preset          | Service                                                                                                                                                                                                                                                                         |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `boxlabs-paste` | The anonymous image staging endpoint of [PASTE](https://github.com/boxlabss/PASTE), `https://paste.boxlabs.uk/img/` — the one [poxchat](https://github.com/boxlabss) uploads pasted images to. No API key (the documented `api.php` needs one, but it only covers text pastes). |
+The binding constraint on a third-party uploader is not its feature list but **CORS**: the browser discards the response unless it carries `Access-Control-Allow-Origin`, however well the upload itself went. Most such services are built for curl and ShareX, which never have to meet that rule, so a preset is only worth adding for an endpoint checked against it. `docs/projects/boxlabs-paste-uploads.md` § Survey records what was tested and when.
+
+| Preset             | Service                                                                                                                                                                                                                                 | Works from a browser                             |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `catbox-litterbox` | [Litterbox](https://litterbox.catbox.moe/), catbox's temporary sibling. Anonymous, no account or userhash; answers with the URL as plain text. Images **and video**, up to 1 GB. Uploads expire: `time` is `1h`, `12h`, `24h` or `72h`. | **Yes** — sends `Access-Control-Allow-Origin: *` |
+| `boxlabs-paste`    | The anonymous image staging endpoint of [PASTE](https://github.com/boxlabss/PASTE), `https://paste.boxlabs.uk/img/` — the one poxchat uploads pasted images to. No API key. Images only, 10 MiB.                                        | **Not yet** — no CORS header, see below          |
 
 ```json
 {
   "appName": "ExampleNet",
-  "uploads": {"preset": "boxlabs-paste"}
+  "uploads": {"preset": "catbox-litterbox"}
 }
 ```
 
-That expands to `images[]` as the file field, `strip_exif=1` as an extra field (dropped and retried once if the server says stripping is what failed), `results.0.filePath` / `results.0.error` as the response paths, a 10 MiB limit and PNG/JPEG/GIF/WebP as the accepted types. The endpoint is `/img/`: it takes images, not video, so a dropped video is refused with a message naming the types it does take.
+`fields` merges with the preset's per key, so one can be changed on its own — a shorter retention, say, without restating `reqtype`:
 
-> **`paste.boxlabs.uk/img/` does not send `Access-Control-Allow-Origin` today** (checked 2026-08-28: the `POST` response carries no CORS header and `OPTIONS` answers `405`). Until the operator adds it, uploads from a browser fail even though the file lands on the server. Nothing in the client can work around it — the response body is unreadable without it, and the URL is server-generated, so there is nothing to guess. Note that an API key is _not_ a workaround: `api.php` on the same host does send CORS headers, but it only handles text pastes, and CORS is orthogonal to authentication. Self-hosted PASTE instances that add their own `/img/` need the same header in their nginx or Apache config.
+```json
+{"uploads": {"preset": "catbox-litterbox", "fields": {"time": "1h"}, "maxSizeBytes": 33554432}}
+```
 
-Because the service strips EXIF itself, the "Attempt to remove metadata from images before uploading" setting (which re-encodes through a canvas, and already skips GIF and SVG) is belt-and-braces with this preset rather than the only defence.
+Capping `maxSizeBytes` below the service's own limit is usually wise: the progress bar is only a busy indicator, so a gigabyte is a long silence. Overriding `endpoint` is how a deploy aims a preset's wire format at its own instance.
+
+`boxlabs-paste` expands to `images[]` as the file field, `strip_exif=1` as an extra field (dropped and retried once if the server says stripping is what failed), `results.0.filePath` / `results.0.error` as the response paths, a 10 MiB limit and PNG/JPEG/GIF/WebP as the accepted types. The endpoint is `/img/`: it takes images, not video, so a dropped video is refused with a message naming the types it does take.
+
+> **`paste.boxlabs.uk/img/` does not send `Access-Control-Allow-Origin` today** (checked 2026-08-28: the `POST` response carries no CORS header and `OPTIONS` answers `405`). Until the operator adds it, uploads from a browser fail even though the file lands on the server. Nothing in the client can work around it — the response body is unreadable without it, and the URL is server-generated, so there is nothing to guess. An API key is _not_ a workaround: `api.php` on the same host does send CORS headers, but it only handles text pastes, and CORS is orthogonal to authentication. Self-hosted PASTE instances that add their own `/img/` need the same header in their nginx or Apache config.
+
+Because that service strips EXIF itself, the "Attempt to remove metadata from images before uploading" setting (which re-encodes through a canvas, and already skips GIF and SVG) is belt-and-braces with `boxlabs-paste` rather than the only defence. With `catbox-litterbox` nothing strips metadata server-side, so the setting is the only thing removing EXIF from a pasted photo.
 
 ## Files a rebranded deploy overwrites in `public/`
 

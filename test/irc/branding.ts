@@ -301,6 +301,29 @@ describe("branding", function () {
 			expect(uploads?.responseErrorKey).to.equal("results.0.error");
 		});
 
+		it("expands the litterbox preset, whose URL comes back as plain text", function () {
+			const uploads = normalizeBranding({uploads: {preset: "catbox-litterbox"}}).uploads;
+
+			expect(uploads).to.deep.equal({
+				preset: "catbox-litterbox",
+				endpoint: "https://litterbox.catbox.moe/resources/internals/api.php",
+				fieldName: "fileToUpload",
+				fields: {reqtype: "fileupload", time: "72h"},
+				maxSizeBytes: 1024 * 1024 * 1024,
+			});
+
+			// No accept list: litterbox takes video too.
+			expect(uploads).to.not.have.property("accept");
+		});
+
+		it("merges fields per key so one can be changed alone", function () {
+			const uploads = normalizeBranding({
+				uploads: {preset: "catbox-litterbox", fields: {time: "1h"}},
+			}).uploads;
+
+			expect(uploads?.fields).to.deep.equal({reqtype: "fileupload", time: "1h"});
+		});
+
 		it("drops uploads naming a preset that does not exist", function () {
 			expect(
 				normalizeBranding({uploads: {preset: "nope", endpoint: "https://x.test/up"}})

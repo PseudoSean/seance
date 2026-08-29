@@ -329,6 +329,46 @@ describe("upload", function () {
 		});
 	});
 
+	describe("catbox-litterbox preset", function () {
+		const LITTERBOX: BrandingUploads = {
+			preset: "catbox-litterbox",
+			endpoint: "https://litterbox.catbox.moe/resources/internals/api.php",
+			fieldName: "fileToUpload",
+			fields: {reqtype: "fileupload", time: "72h"},
+			maxSizeBytes: 1024 * 1024 * 1024,
+		};
+
+		it("sends fileToUpload with the reqtype and retention fields", function () {
+			const body = buildUploadRequest(imageFile(), LITTERBOX).body as FormData;
+
+			expect(body.get("fileToUpload")).to.be.instanceOf(File);
+			expect(body.get("reqtype")).to.equal("fileupload");
+			expect(body.get("time")).to.equal("72h");
+		});
+
+		it("takes the plain-text URL the service answers with", async function () {
+			stubFetch(new Response("https://litter.catbox.moe/abc123.png", {status: 200}));
+			const host = fakeHost(LITTERBOX);
+
+			await new Uploader(host).triggerUpload([imageFile()]);
+
+			expect(host.errors).to.deep.equal([]);
+			expect(host.urls).to.deep.equal(["https://litter.catbox.moe/abc123.png"]);
+		});
+
+		it("accepts video, having no accept list", async function () {
+			stubFetch(new Response("https://litter.catbox.moe/clip.mp4", {status: 200}));
+			const host = fakeHost(LITTERBOX);
+
+			await new Uploader(host).triggerUpload([
+				new File(["x"], "clip.mp4", {type: "video/mp4"}),
+			]);
+
+			expect(host.errors).to.deep.equal([]);
+			expect(host.urls).to.deep.equal(["https://litter.catbox.moe/clip.mp4"]);
+		});
+	});
+
 	describe("lookupResponsePath", function () {
 		it("prefers a literal top-level key over the dotted path", function () {
 			expect(lookupResponsePath({"a.b": "literal", a: {b: "walked"}}, "a.b")).to.equal(

@@ -132,6 +132,52 @@ instances that add their own `/img/` need the same header; documented in
 The probes above deliberately posted no file, so the check published nothing.
 An end-to-end upload has therefore not been run against the live service.
 
+## Survey: which services work from a browser at all
+
+Probed 2026-08-28 with a POST carrying an `Origin` header and no file, so
+nothing was published. The only question that matters is whether the
+**response** carries `Access-Control-Allow-Origin` — without it the upload
+succeeds and the browser throws the answer away. Features, limits and API
+keys are all secondary to that.
+
+| Service                               | CORS          | Notes                                                                                                                                                                       |
+| ------------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **litterbox.catbox.moe**              | **yes** (`*`) | Anonymous, no key. Plain-text URL. Images **and video**, 1 GB. Expires in 1h–72h. → preset `catbox-litterbox`                                                               |
+| **tmpfiles.org**                      | **yes** (`*`) | JSON, preflight answered. But returns a _viewer page_ URL; the direct link needs `/dl/` spliced in, which the contract cannot express today. ~1 h retention, `http:` links. |
+| **kappa.lol**                         | **yes** (`*`) | JSON, full preflight. Response shape unverified.                                                                                                                            |
+| paste.boxlabs.uk/img                  | no            | The blocker above.                                                                                                                                                          |
+| catbox.moe (permanent)                | no            | Same operator as litterbox, but the permanent endpoint omits the header.                                                                                                    |
+| uguu.se                               | no            | JSON error shape is fine; no header.                                                                                                                                        |
+| 0x0.st                                | no            | Also returns `503`: uploads disabled indefinitely ("AI botnet spam").                                                                                                       |
+| x0.at, envs.sh, file.io, pomf.lain.la | no            | —                                                                                                                                                                           |
+
+So the practical set today is one service, `catbox-litterbox`, plus two
+candidates that would need small features (a URL rewrite for tmpfiles) or
+verification (kappa.lol). Note that litterbox is _temporary_ storage: good
+for privacy, bad for scrollback, and worth saying out loud in a deploy's
+own wording.
+
+## The IRC-native alternative: `FILEHOST`
+
+Worth knowing before adding more third-party presets. soju advertises an
+upload endpoint through ISUPPORT as `soju.im/FILEHOST`, and goguma uses it
+(`~/src/goguma/lib/irc/isupport.dart:48`,
+`lib/widget/composer.dart:500-560`): `POST` the raw file body — not
+multipart — with `Content-Type` and `Content-Disposition: attachment; filename=…`, expect **201** and read the URL from the `Location` response
+header, resolved against the filehost URL. Auth is HTTP Basic reusing the
+SASL PLAIN credentials.
+
+That fits Seance far better than any third party: zero configuration, the
+network names its own uploader, and the file never leaves the network's
+control. Two caveats: nefarious2 does not advertise the token today (EvilNet
+controls the ircd, so it could), and reading `Location` cross-origin needs
+`Access-Control-Expose-Headers: Location` on top of the usual header — the
+same class of server-side requirement, just better specified.
+
+Supporting it means reading ISUPPORT, a raw-body request mode and a
+header-sourced URL, none of which the current `uploads` contract has. A
+separate piece of work, not a preset.
+
 ## Still open
 
 - **CORS on `paste.boxlabs.uk/img/`** — the blocker above. One response
