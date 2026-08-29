@@ -1,7 +1,7 @@
 // Consumer for the `typing` event of docs/resources/bus-contract.md §1.5:
 // someone else's `+typing` TAGMSG in a loaded channel or query. Entries live
-// in `ClientChan.typing` with an expiry; TypingIndicator.vue prunes expired
-// ones while it is showing them.
+// in `ClientChan.typing` with an expiry, pruned in every channel by the shared
+// sweep below.
 //
 // Layout rule (TypingIndicator.vue): the indicator line appears with the
 // first entry and its space stays reserved (`typingReserved`) after the
@@ -16,6 +16,12 @@ import socket from "../socket";
 import {store} from "../store";
 import {MessageType} from "../../../shared/types/msg";
 import {applyTyping, removeTyping, renameTyping} from "../helpers/typingState";
+import {TypingExpiry} from "../helpers/typingExpiry";
+
+// One ticker prunes expired entries in every channel, not just the one on
+// screen (helpers/typingExpiry.ts explains why that matters). It runs only
+// while someone somewhere is still typing and stops itself when nobody is.
+const expiry = new TypingExpiry(() => store.state.networks.flatMap((network) => network.channels));
 
 socket.on("typing", function (data) {
 	const target = store.getters.findChannel(data.chan);
@@ -27,8 +33,9 @@ socket.on("typing", function (data) {
 	const {channel} = target;
 	channel.typing = applyTyping(channel.typing, data.nick, data.state, Date.now());
 
-	if (channel.typing.length > 0 && !channel.typingReserved) {
+	if (channel.typing.length > 0) {
 		channel.typingReserved = true;
+		expiry.schedule();
 	}
 });
 
