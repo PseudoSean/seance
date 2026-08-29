@@ -4,15 +4,16 @@
 #   tools/nefarious-dev/run.sh            # foreground, debug level 5
 #   tools/nefarious-dev/run.sh -d         # detached (docker logs -f nefarious-dev)
 #
-# Images: nefarious2:ircv3 (stock ircv3.2-upgrade) and nefarious2:ircv3-fixed (stock +
-# the seance/websocket-fixes branch for upstream #97/#98/#99 — needed for browsers).
-# Override with NEFARIOUS_IMAGE=nefarious2:ircv3.
+# Image: one build of stock ircv3.2-upgrade, no patch needed — the WebSocket
+# fixes (#97/#98/#99) and the client-cert/ALPN follow-up were merged upstream on
+# 2026-08-28 (PR #101).  nefarious2:ircv3-fixed is only an alias tag for that
+# same image, kept so older instructions and NEFARIOUS_IMAGE settings keep
+# working.  Override with NEFARIOUS_IMAGE=<tag>.
 #
-# Build the images first:
+# Build it first:
 #   git clone --branch ircv3.2-upgrade https://github.com/evilnet/nefarious2.git tmp/nefarious2
 #   (cd tmp/nefarious2 && docker build -t nefarious2:ircv3 .)
-#   (cd tmp/nefarious2 && git checkout seance/websocket-fixes && docker build -t nefarious2:ircv3-fixed .)
-#   or apply tmp/nefarious2-fixes.patch (format-patch series) to a fresh clone.
+#   docker tag nefarious2:ircv3 nefarious2:ircv3-fixed
 #
 # Ports: 6667 plain IRC, 6697 IRC over TLS, 8067 ws://, 8443 wss://
 set -e

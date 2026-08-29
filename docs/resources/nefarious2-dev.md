@@ -20,6 +20,7 @@ The native build needs `librocksdb-dev` (a hard `configure` requirement on the b
 # once (~5 min): the checkout in tmp/ is gitignored
 git clone --branch ircv3.2-upgrade https://github.com/evilnet/nefarious2.git tmp/nefarious2
 (cd tmp/nefarious2 && docker build -t nefarious2:ircv3 .)
+docker tag nefarious2:ircv3 nefarious2:ircv3-fixed   # alias the run.sh default expects
 
 # every time
 tools/nefarious-dev/run.sh        # foreground, debug level 5, Ctrl-C to stop
@@ -37,7 +38,7 @@ What the script does:
 Gotchas found on first run:
 
 - `Operator {}` blocks must carry `local = no;` (or `yes`) or the config fails with `... have no LOCAL setting`.
-- The WebSocket fixes (#97/#98/#99) were merged upstream on 2026-08-28, so **a stock build of current `ircv3.2-upgrade` needs no patch**: re-pull `tmp/nefarious2` and rebuild, and `nefarious2:ircv3` is enough. The `nefarious2:ircv3-fixed` distinction only matters for an image built from a checkout older than `fceb160` — with a pre-merge stock image, plain `ws://` on 8067 does not work and no real browser can connect at all.
+- The WebSocket fixes (#97/#98/#99) and the client-cert/ALPN follow-up were merged upstream on 2026-08-28 (PR [#101](https://github.com/evilnet/nefarious2/pull/101), `fceb160`), so **a stock build of current `ircv3.2-upgrade` needs no patch**. There is now only one image: `nefarious2:ircv3`, built from stock `ircv3.2-upgrade`, and `nefarious2:ircv3-fixed` is just an alias tag for it (`docker tag nefarious2:ircv3 nefarious2:ircv3-fixed`) so that the script default and older notes keep working. Rebuilt 2026-08-28 from `3ab3038`. The old distinction only matters for an image built from a checkout older than `fceb160` — with such a pre-merge stock image, plain `ws://` on 8067 does not work and no real browser can connect at all.
 
 How the container config is assembled (`tools/docker/dockerentrypoint.sh`, `tools/docker/ircd.conf`):
 
@@ -93,7 +94,7 @@ Features {
 
 Notes:
 
-- `websocket = yes` works on non-SSL ports as long as the ircd was **built** with OpenSSL (`websocket.c:438-441`). Use `ws://localhost:8067/` from the built SPA and skip certificate trust entirely (works with the default `nefarious2:ircv3-fixed` image; the stock image has upstream #97). The path is ignored by the server.
+- `websocket = yes` works on non-SSL ports as long as the ircd was **built** with OpenSSL (`websocket.c:438-441`). Use `ws://localhost:8067/` from the built SPA and skip certificate trust entirely (works with any image built from `ircv3.2-upgrade` at `fceb160` or later; images built before that merge have upstream #97). The path is ignored by the server.
 - `Port { ... ssl = yes; websocket = yes; }` is what production looks like; test it too, see TLS below.
 - Password hashing: `ircd/umkpasswd` builds alongside `ircd` (`umkpasswd -l` lists mechanisms, `-m native <password>` produces the default hashed form). `$PLAIN$<password>` is accepted as-is, per `doc/example.conf:846`.
 - No services (X3) means no SASL, no account login, no `+r`. That is acceptable for phase 0/C; `~/src/x3` exists locally if account-tag/chathistory-auth paths need exercising later.
