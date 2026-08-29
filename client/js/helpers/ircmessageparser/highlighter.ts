@@ -187,13 +187,15 @@ async function loadLanguage(id: string): Promise<boolean> {
 	try {
 		// One named chunk per grammar. The `webpackInclude` list is what this
 		// deploy ships: the languages worth carrying for a chat client, closed
-		// over Prism's own require/modify/optional links (`components.json`).
+		// over Prism's own require/modify/optional links (`components.json`) —
+		// every language flourite can name included, since the guess is the
+		// path nobody types.
 		// All ~300 of Prism's grammars would be 1.3 MB of chunks and put a
 		// 300-entry filename map in the main bundle, which is what loading them
 		// on demand was for. A tag outside the list simply stays plain.
 		await import(
 			/* webpackChunkName: "[request]" */
-			/* webpackInclude: /prism-(actionscript|apacheconf|bash|batch|c|clike|clojure|cmake|coffeescript|cpp|csharp|csp|css|css-extras|dart|diff|docker|elixir|erlang|flow|fsharp|git|go|graphql|groovy|haskell|hpkp|hsts|http|ini|java|javadoclike|javascript|js-extras|js-templates|jsdoc|json|json5|jsx|julia|kotlin|lua|makefile|markdown|markup|markup-templating|matlab|n4js|nginx|objectivec|ocaml|perl|php|powershell|properties|protobuf|python|r|regex|rest|ruby|rust|scala|sql|swift|toml|tsx|typescript|uri|vim|yaml)\.js$/ */
+			/* webpackInclude: /prism-(actionscript|apacheconf|bash|batch|c|clike|clojure|cmake|coffeescript|cpp|csharp|csp|css|css-extras|dart|diff|docker|elixir|erlang|flow|fsharp|git|go|graphql|groovy|haskell|hpkp|hsts|http|ini|java|javadoclike|javascript|js-extras|js-templates|jsdoc|json|json5|jsx|julia|kotlin|lua|makefile|markdown|markup|markup-templating|matlab|n4js|nginx|objectivec|ocaml|pascal|perl|php|powershell|properties|protobuf|python|r|regex|rest|ruby|rust|scala|sql|swift|toml|tsx|typescript|uri|vim|yaml)\.js$/ */
 			`prismjs/components/prism-${id}`
 		);
 	} catch {

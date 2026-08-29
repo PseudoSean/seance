@@ -1,5 +1,5 @@
 <script lang="ts">
-import {computed, defineComponent, h, onMounted, ref, VNode} from "vue";
+import {computed, defineComponent, h, ref, VNode, watch} from "vue";
 import {MIN_GUESS_LINES, splitLines} from "../js/helpers/ircmessageparser/codeLines";
 import type {Highlighted} from "../js/helpers/ircmessageparser/highlighter";
 
@@ -24,14 +24,29 @@ export default defineComponent({
 			() => tokens.value ?? plain.value.map((text) => (text ? [{text}] : []))
 		);
 
-		onMounted(() => {
-			// A tagless one-liner is never guessed, so it needs nothing fetched
-			if (props.lang || plain.value.length >= MIN_GUESS_LINES) {
-				void resolve();
-			}
-		});
+		// An edit replaces the text under the same component instance, so this
+		// is a watch and not `onMounted`: the tokens of the text before it must
+		// not stay on screen. `resolve` awaits chunk fetches, so a run that
+		// started for text that is gone drops what it found.
+		let generation = 0;
 
-		async function resolve() {
+		watch(
+			[() => props.code, () => props.lang],
+			() => {
+				generation += 1;
+				tokens.value = undefined;
+				id.value = undefined;
+
+				// A tagless one-liner is never guessed: nothing to fetch
+				if (props.lang || plain.value.length >= MIN_GUESS_LINES) {
+					void resolve(generation);
+				}
+			},
+			{immediate: true}
+		);
+
+		async function resolve(mine: number) {
+			const code = props.code;
 			let highlighter;
 
 			try {
@@ -46,16 +61,16 @@ export default defineComponent({
 			// A tag is taken at its word; only an untagged block is guessed
 			const lang = props.lang
 				? highlighter.normalizeLang(props.lang)
-				: await highlighter.guessLanguage(props.code);
+				: await highlighter.guessLanguage(code);
 
-			if (!lang) {
+			if (!lang || mine !== generation) {
 				return;
 			}
 
 			id.value = lang;
 
-			if (await highlighter.ensureLanguage(lang)) {
-				tokens.value = highlighter.highlight(props.code, lang);
+			if ((await highlighter.ensureLanguage(lang)) && mine === generation) {
+				tokens.value = highlighter.highlight(code, lang);
 			}
 		}
 
