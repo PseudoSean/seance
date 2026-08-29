@@ -82,14 +82,16 @@ CSS in `client/css/style.css` next to the `irc-*` classes: `.md-spoiler`
 ## Testing
 
 - Unit: `test/helpers/parseMarkdown.ts` (mocha globs `test/**/*.ts`;
-  `test/client/**` is ignored by `.mocharc.yml`). Covers every marker, nesting,
-  escapes, unmatched markers, word-boundary `_`, opaque URLs, code suppression,
-  multi-line quote/fence, composition with IRC codes, `stripMarkdown`.
+  `test/client/**` and `test/e2e/**` are ignored by `.mocharc.yml`). Covers
+  every marker, nesting, escapes, unmatched markers, word-boundary `_`, opaque
+  URLs, code suppression, multi-line quote/fence, composition with IRC codes,
+  `stripMarkdown`.
 - E2E: `@playwright/test` devDependency, `test/e2e/markdown.spec.ts`, script
-  `yarn test:e2e`. Skipped unless `SEANCE_E2E_IRC_URL` is set; serves `public/`
-  and connects a random `seance-e2e-NNNN` nick to `#ps`, sends marked-up lines,
-  asserts the rendered DOM, toggles the setting off and asserts plain text.
-  Target: `wss://fractalrealities.afternet.org:9998/`.
+  `yarn test:e2e` (`webpack && playwright test`, so it never runs against a
+  stale `public/`). Skipped unless `SEANCE_E2E_IRC_URL` is set; serves
+  `public/` and connects a random `seance-e2e-NNNN` nick to `SEANCE_E2E_CHANNEL`
+  (default `#ps`), sends marked-up lines, asserts the rendered DOM, toggles the
+  setting off and asserts plain text. Target: `wss://fractalrealities.afternet.org:9998/`.
 
 ## Out of scope
 

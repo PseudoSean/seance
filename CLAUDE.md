@@ -14,20 +14,20 @@ Upstream is still `github.com/thelounge/thelounge`; divergence only grows. local
 
 `yarn` is not on PATH on this machine — use `corepack yarn <cmd>` (or `npx` for one-offs).
 
-| Task                                                            | Command                                       |
-| --------------------------------------------------------------- | --------------------------------------------- |
-| Install deps                                                    | `yarn install`                                |
-| Build the SPA (webpack → `public/`)                             | `yarn build` (`NODE_ENV=production` for prod) |
-| Webpack watch                                                   | `yarn watch`                                  |
-| Serve the built SPA                                             | `python3 -m http.server -d public 8000`       |
-| Lint everything (eslint + prettier + stylelint)                 | `yarn lint`                                   |
-| Auto-format                                                     | `yarn format:prettier`                        |
-| Full test (lint + mocha)                                        | `yarn test`                                   |
-| Mocha only (builds first)                                       | `yarn test:mocha`                             |
-| Mocha without the spec glob                                     | `yarn test:nospec`                            |
-| Coverage                                                        | `yarn coverage`                               |
-| Install git pre-commit hook                                     | `yarn githooks-install`                       |
-| Playwright e2e (webpack build, then needs `SEANCE_E2E_IRC_URL`) | `yarn test:e2e`                               |
+| Task                                                      | Command                                       |
+| --------------------------------------------------------- | --------------------------------------------- |
+| Install deps                                              | `yarn install`                                |
+| Build the SPA (webpack → `public/`)                       | `yarn build` (`NODE_ENV=production` for prod) |
+| Webpack watch                                             | `yarn watch`                                  |
+| Serve the built SPA                                       | `python3 -m http.server -d public 8000`       |
+| Lint everything (eslint + prettier + stylelint)           | `yarn lint`                                   |
+| Auto-format                                               | `yarn format:prettier`                        |
+| Full test (lint + mocha)                                  | `yarn test`                                   |
+| Mocha only (builds first)                                 | `yarn test:mocha`                             |
+| Mocha without the spec glob                               | `yarn test:nospec`                            |
+| Coverage                                                  | `yarn coverage`                               |
+| Install git pre-commit hook                               | `yarn githooks-install`                       |
+| Playwright e2e (builds first, needs `SEANCE_E2E_IRC_URL`) | `yarn test:e2e`                               |
 
 There is no `yarn dev`/`yarn start`; build and serve `public/` statically.
 

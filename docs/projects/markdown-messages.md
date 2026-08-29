@@ -15,8 +15,14 @@ Design: `docs/superpowers/specs/2026-08-29-markdown-messages-design.md`.
 (`client/js/helpers/ircmessageparser/parseMarkdown.ts`) removes the marker
 characters and sets flags on the style fragments; `groupNodes` (`parse.ts`)
 wraps runs of nodes sharing a `quote`/`codeBlock`/`spoiler`/`href` flag in one
-element. URLs are opaque to the tokenizer, and nick/channel/emoji finders are
-suppressed inside code.
+element. URLs are opaque to the tokenizer — `trimTrailingMarkers` peels
+trailing emphasis characters (`**`, etc.) back off an opaque range afterwards,
+because linkify-it greedily swallows them into the link — and nick/channel/
+emoji finders are suppressed inside code. `stripMarkdown` (same file) removes
+the syntax without rendering it; `Chat.vue`'s `plainTopic` uses it for the
+window-title `title` attribute. CSS for the wrapped elements (`.md-quote`,
+`.md-code-block`, `.md-spoiler`/`.md-spoiler-shown`) lives in
+`client/css/style.css`, after `.irc-italic`.
 
 ## Tests
 
