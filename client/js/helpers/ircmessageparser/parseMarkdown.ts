@@ -1,27 +1,45 @@
 import {findLinks} from "../../../../shared/linkify";
-import type {ParsedStyle} from "./parseStyle";
+import {ParsedStyle, STYLE_KEYS} from "./parseStyle";
 
 export type Range = {start: number; end: number};
 
-export type MarkdownFlag =
-	| "bold"
-	| "italic"
-	| "underline"
-	| "strikethrough"
-	| "monospace"
-	| "code"
-	| "codeBlock"
-	| "quote"
-	| "spoiler";
-
-export type MarkdownRange = (Range & {flag: MarkdownFlag}) | (Range & {flag: "href"; href: string});
-
-export type MarkdownTokens = {
-	// Marker characters to drop from the text
-	removals: Range[];
-	// Styled spans; may cover removed characters, which is harmless
-	ranges: MarkdownRange[];
+// What the markers made of a piece of text. `verbatim` means "nothing is
+// interpreted here" — the finders skip it; inline code also sets `monospace`,
+// a fenced block sets `codeBlock`.
+export type PieceFlags = {
+	bold?: true;
+	italic?: true;
+	underline?: true;
+	strikethrough?: true;
+	monospace?: true;
+	codeBlock?: true;
+	quote?: true;
+	spoiler?: true;
+	verbatim?: true;
+	href?: string;
 };
+
+// A run of marker-free text sharing one set of flags. Pieces are contiguous:
+// joining their text gives the message with the markers removed.
+export type Piece = {text: string; flags: PieceFlags};
+
+// What the Markdown stage makes of a message: the style fragments with the
+// markers gone and the flags set, plus the spans nothing is interpreted inside
+// (offsets into the marker-free text).
+export type Markdown = {fragments: ParsedStyle[]; verbatim: Range[]};
+
+const PIECE_FLAG_KEYS: (keyof PieceFlags)[] = [
+	"bold",
+	"italic",
+	"underline",
+	"strikethrough",
+	"monospace",
+	"codeBlock",
+	"quote",
+	"spoiler",
+	"verbatim",
+	"href",
+];
 
 // Characters a backslash can escape
 const MARKER_CHARS = "*_~|`>[]()\\";
@@ -33,7 +51,18 @@ const fenceOpenRx = /^```(?:[\w+-]*\n)?/;
 // links survive; the scheme is matched case-insensitively.
 const linkRx = /^\[([^\]\n]+)\]\(((?:https?:\/\/|web\+irc:)(?:[^\s()]|\([^\s()]*\))+)\)/i;
 
-type EmphasisToken = {len: number; flag: MarkdownFlag};
+type ScanFlag = keyof Omit<PieceFlags, "href">;
+
+type ScanRange = (Range & {flag: ScanFlag}) | (Range & {flag: "href"; href: string});
+
+type Scan = {
+	// Marker characters to drop from the text
+	removals: Range[];
+	// Flagged spans; may cover removed characters, which is harmless
+	ranges: ScanRange[];
+};
+
+type EmphasisToken = {len: number; flag: ScanFlag};
 
 // Emphasis delimiters, longest token first
 const EMPHASIS: Record<string, EmphasisToken[]> = {
@@ -49,23 +78,150 @@ const EMPHASIS: Record<string, EmphasisToken[]> = {
 	"|": [{len: 2, flag: "spoiler"}],
 };
 
-type OpenDelimiter = {char: string; len: number; flag: MarkdownFlag; pos: number};
+type OpenDelimiter = {char: string; len: number; flag: ScanFlag; pos: number};
 
 const isWordChar = (c: string | undefined) => c !== undefined && /[\p{L}\p{N}_]/u.test(c);
 const isSpace = (c: string | undefined) => c === undefined || /\s/.test(c);
 
+const sameFlags = (a: PieceFlags, b: PieceFlags) =>
+	PIECE_FLAG_KEYS.every((key) => a[key] === b[key]);
+
+const sameStyle = (a: ParsedStyle, b: ParsedStyle) => STYLE_KEYS.every((key) => a[key] === b[key]);
+
+const covers = (range: Range, start: number, end: number) =>
+	range.start <= start && end <= range.end;
+
+// Splits `text` into marker-free pieces. Adjacent pieces with equal flags are
+// merged, so a piece is one run of text that renders the same way.
+export function tokenize(text: string): Piece[] {
+	const pieces: Piece[] = [];
+
+	for (const cut of cutPieces(text, scan(text), [])) {
+		const last = pieces[pieces.length - 1];
+
+		if (last && sameFlags(last.flags, cut.flags)) {
+			last.text += cut.text;
+			continue;
+		}
+
+		pieces.push({text: cut.text, flags: cut.flags});
+	}
+
+	return pieces;
+}
+
+// Applies Markdown to the fragments produced by parseStyle: marker characters
+// are dropped, flags are set, offsets are renumbered and equal neighbours
+// merged. Returns the input untouched when the message holds no Markdown.
+export function applyMarkdown(fragments: ParsedStyle[]): Markdown {
+	if (fragments.length === 0) {
+		return {fragments, verbatim: []};
+	}
+
+	const text = fragments.map((fragment) => fragment.text).join("");
+	const scanned = scan(text);
+
+	if (scanned.removals.length === 0 && scanned.ranges.length === 0) {
+		return {fragments, verbatim: []};
+	}
+
+	// Fragment boundaries are cut points too: a piece must never straddle two
+	// styles, or it would lose one of them
+	const boundaries = fragments.flatMap((fragment) => [fragment.start, fragment.end]);
+	const result: ParsedStyle[] = [];
+	const verbatim: Range[] = [];
+	let offset = 0;
+
+	for (const cut of cutPieces(text, scanned, boundaries)) {
+		const source = fragments.find((fragment) => covers(fragment, cut.start, cut.end));
+
+		if (!source) {
+			continue;
+		}
+
+		const {verbatim: isVerbatim, ...flags} = cut.flags;
+		const fragment: ParsedStyle = {
+			...source,
+			...flags,
+			text: cut.text,
+			start: offset,
+			end: offset + cut.text.length,
+		};
+
+		if (isVerbatim) {
+			const span = verbatim[verbatim.length - 1];
+
+			if (span && span.end === fragment.start) {
+				span.end = fragment.end;
+			} else {
+				verbatim.push({start: fragment.start, end: fragment.end});
+			}
+		}
+
+		offset = fragment.end;
+		const last = result[result.length - 1];
+
+		if (last && sameStyle(last, fragment)) {
+			last.text += fragment.text;
+			last.end = fragment.end;
+		} else {
+			result.push(fragment);
+		}
+	}
+
+	return {fragments: result, verbatim};
+}
+
+type Cut = Range & {text: string; flags: PieceFlags};
+
+// Cuts `text` at every marker and flagged-span boundary (plus `extraCuts`),
+// drops the marker characters and hands back the surviving segments with the
+// flags covering them. Offsets are into `text`, markers included.
+function cutPieces(text: string, {removals, ranges}: Scan, extraCuts: number[]): Cut[] {
+	const points = new Set<number>([0, text.length, ...extraCuts]);
+
+	for (const item of [...removals, ...ranges]) {
+		points.add(item.start);
+		points.add(item.end);
+	}
+
+	const sorted = [...points].sort((a, b) => a - b);
+	const cuts: Cut[] = [];
+
+	for (let k = 0; k < sorted.length - 1; k++) {
+		const start = sorted[k];
+		const end = sorted[k + 1];
+
+		if (removals.some((removal) => covers(removal, start, end))) {
+			continue;
+		}
+
+		const flags: PieceFlags = {};
+
+		for (const range of ranges) {
+			if (!covers(range, start, end)) {
+				continue;
+			}
+
+			if (range.flag === "href") {
+				flags.href = range.href;
+			} else {
+				flags[range.flag] = true;
+			}
+		}
+
+		cuts.push({start, end, text: text.slice(start, end), flags});
+	}
+
+	return cuts;
+}
+
 // Scans `text` for Discord-style Markdown. Offsets in the result are into
-// `text`. Ranges listed in `opaque` (URLs by default) are never interpreted.
-export function tokenize(text: string, opaque?: Range[]): MarkdownTokens {
+// `text`; opaque spans (URLs) are never interpreted.
+function scan(text: string): Scan {
 	const removals: Range[] = [];
-	const ranges: MarkdownRange[] = [];
-	// findLinks() can greedily swallow trailing emphasis markers into the
-	// URL (e.g. "**https://x**" matches "https://x**"); trim those back off
-	// so the markers stay available to the tokenizer. Explicitly passed
-	// opaque ranges are trusted as-is.
-	const skips: Range[] = (opaque ?? findLinks(text)).map((r) =>
-		opaque ? {start: r.start, end: r.end} : trimTrailingMarkers(text, r)
-	);
+	const ranges: ScanRange[] = [];
+	const skips = opaqueSpans(text);
 	const stack: OpenDelimiter[] = [];
 	let i = 0;
 
@@ -106,7 +262,7 @@ export function tokenize(text: string, opaque?: Range[]): MarkdownTokens {
 			if (close > i + 1) {
 				removals.push({start: i, end: i + 1}, {start: close, end: close + 1});
 				ranges.push({start: i + 1, end: close, flag: "monospace"});
-				ranges.push({start: i + 1, end: close, flag: "code"});
+				ranges.push({start: i + 1, end: close, flag: "verbatim"});
 				i = close + 1;
 				continue;
 			}
@@ -151,6 +307,25 @@ export function tokenize(text: string, opaque?: Range[]): MarkdownTokens {
 	return {removals, ranges};
 }
 
+// The stretches the scanner never looks inside: URLs, so that
+// "https://x/a_b_c" or "https://x/**" survive intact.
+function opaqueSpans(text: string): Range[] {
+	return findLinks(text).map((link) => trimTrailingEmphasis(text, link));
+}
+
+// linkify-it greedily swallows a trailing run of emphasis characters into the
+// URL ("**https://x**" matches "https://x**"), which would leave the opening
+// marker unclosed. Peel them back off so the tokenizer still sees them.
+function trimTrailingEmphasis(text: string, span: Range): Range {
+	let end = span.end;
+
+	while (end > span.start && text[end - 1] in EMPHASIS) {
+		end -= 1;
+	}
+
+	return {start: span.start, end};
+}
+
 // Handles a run of identical emphasis characters starting at `i`; returns the
 // index after the run.
 function emphasis(
@@ -158,7 +333,7 @@ function emphasis(
 	i: number,
 	stack: OpenDelimiter[],
 	removals: Range[],
-	ranges: MarkdownRange[]
+	ranges: ScanRange[]
 ): number {
 	const c = text[i];
 	let n = 1;
@@ -214,7 +389,7 @@ function emphasis(
 
 // A fenced code block starting at `i`. Returns the index after the block, or
 // -1 when the fence is not closed or empty.
-function codeBlock(text: string, i: number, removals: Range[], ranges: MarkdownRange[]): number {
+function codeBlock(text: string, i: number, removals: Range[], ranges: ScanRange[]): number {
 	const close = text.indexOf(FENCE, i + FENCE.length);
 
 	if (close === -1) {
@@ -249,13 +424,13 @@ function codeBlock(text: string, i: number, removals: Range[], ranges: MarkdownR
 
 	removals.push({start: removeStart, end: contentStart}, {start: contentEnd, end: removeEnd});
 	ranges.push({start: contentStart, end: contentEnd, flag: "codeBlock"});
-	ranges.push({start: contentStart, end: contentEnd, flag: "code"});
+	ranges.push({start: contentStart, end: contentEnd, flag: "verbatim"});
 
 	return removeEnd;
 }
 
 // A "> " quote line starting at `i`. Consecutive quote lines share one range.
-function quote(text: string, i: number, removals: Range[], ranges: MarkdownRange[]) {
+function quote(text: string, i: number, removals: Range[], ranges: ScanRange[]) {
 	let lineEnd = text.indexOf("\n", i);
 
 	if (lineEnd === -1) {
@@ -283,18 +458,6 @@ function quote(text: string, i: number, removals: Range[], ranges: MarkdownRange
 	}
 }
 
-// Trims a trailing run of emphasis marker characters off an opaque range's
-// end, so they remain available to the tokenizer.
-function trimTrailingMarkers(text: string, r: Range): Range {
-	let end = r.end;
-
-	while (end > r.start && text[end - 1] in EMPHASIS) {
-		end -= 1;
-	}
-
-	return {start: r.start, end};
-}
-
 function findLastIndex<T>(list: T[], pred: (item: T) => boolean): number {
 	for (let k = list.length - 1; k >= 0; k--) {
 		if (pred(list[k])) {
@@ -303,122 +466,4 @@ function findLastIndex<T>(list: T[], pred: (item: T) => boolean): number {
 	}
 
 	return -1;
-}
-
-// Style-affecting keys compared when merging adjacent fragments
-const STYLE_KEYS: (keyof ParsedStyle)[] = [
-	"bold",
-	"textColor",
-	"bgColor",
-	"hexColor",
-	"hexBgColor",
-	"italic",
-	"underline",
-	"strikethrough",
-	"monospace",
-	"code",
-	"codeBlock",
-	"quote",
-	"spoiler",
-	"href",
-];
-
-const sameStyle = (a: ParsedStyle, b: ParsedStyle) => STYLE_KEYS.every((key) => a[key] === b[key]);
-
-const covers = (range: Range, start: number, end: number) =>
-	range.start <= start && end <= range.end;
-
-// Applies Markdown to the fragments produced by parseStyle: marker characters
-// are dropped, flags are set, offsets are renumbered and equal neighbours merged.
-export function applyMarkdown(fragments: ParsedStyle[]): ParsedStyle[] {
-	if (fragments.length === 0) {
-		return fragments;
-	}
-
-	const text = fragments.map((f) => f.text).join("");
-	const {removals, ranges} = tokenize(text);
-
-	if (removals.length === 0 && ranges.length === 0) {
-		return fragments;
-	}
-
-	const cuts = new Set<number>([0, text.length]);
-
-	for (const item of [...fragments, ...removals, ...ranges]) {
-		cuts.add(item.start);
-		cuts.add(item.end);
-	}
-
-	const points = [...cuts].sort((a, b) => a - b);
-	const result: ParsedStyle[] = [];
-	let offset = 0;
-
-	for (let k = 0; k < points.length - 1; k++) {
-		const start = points[k];
-		const end = points[k + 1];
-
-		if (removals.some((r) => covers(r, start, end))) {
-			continue;
-		}
-
-		const source = fragments.find((f) => covers(f, start, end));
-
-		if (!source) {
-			continue;
-		}
-
-		const fragment: ParsedStyle = {
-			...source,
-			text: text.slice(start, end),
-			start: offset,
-			end: offset + (end - start),
-		};
-
-		for (const range of ranges) {
-			if (!covers(range, start, end)) {
-				continue;
-			}
-
-			if (range.flag === "href") {
-				fragment.href = range.href;
-			} else {
-				fragment[range.flag] = true;
-			}
-		}
-
-		offset = fragment.end;
-		const last = result[result.length - 1];
-
-		if (last && sameStyle(last, fragment)) {
-			last.text += fragment.text;
-			last.end = fragment.end;
-		} else {
-			result.push(fragment);
-		}
-	}
-
-	return result;
-}
-
-// Plain text with the Markdown markers removed (for title attributes etc.)
-export function stripMarkdown(text: string): string {
-	const {removals} = tokenize(text);
-
-	if (removals.length === 0) {
-		return text;
-	}
-
-	const sorted = [...removals].sort((a, b) => a.start - b.start);
-	let out = "";
-	let pos = 0;
-
-	for (const r of sorted) {
-		if (r.start > pos) {
-			out += text.slice(pos, r.start);
-		}
-
-		pos = Math.max(pos, r.end);
-	}
-
-	return out + text.slice(pos);
 }

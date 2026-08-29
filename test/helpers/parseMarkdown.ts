@@ -1,334 +1,340 @@
 import {expect} from "chai";
-import {
-	applyMarkdown,
-	stripMarkdown,
-	tokenize,
-} from "../../client/js/helpers/ircmessageparser/parseMarkdown";
-import parseStyle from "../../client/js/helpers/ircmessageparser/parseStyle";
+import {applyMarkdown, tokenize} from "../../client/js/helpers/ircmessageparser/parseMarkdown";
+import parseStyle, {ParsedStyle} from "../../client/js/helpers/ircmessageparser/parseStyle";
 
-describe("parseMarkdown tokenize — emphasis", () => {
-	it("returns nothing for plain text", () => {
-		expect(tokenize("hello world")).to.deep.equal({removals: [], ranges: []});
+// The Markdown flags a rendered fragment can carry.
+const FLAGS: (keyof ParsedStyle)[] = [
+	"bold",
+	"italic",
+	"underline",
+	"strikethrough",
+	"monospace",
+	"codeBlock",
+	"quote",
+	"spoiler",
+	"href",
+];
+
+type Rendered = Record<string, unknown>;
+
+// What the Markdown stage makes of `input`: the text with the markers removed,
+// split into fragments, each carrying only the flags that are set. Reads like
+// the spec's syntax table, and says nothing about offsets — where the tokenizer
+// happens to put a fragment boundary is not behaviour.
+function md(input: string): Rendered[] {
+	const {fragments} = applyMarkdown(parseStyle(input));
+
+	return fragments.map((fragment) => {
+		const rendered: Rendered = {text: fragment.text};
+
+		for (const flag of FLAGS) {
+			if (fragment[flag]) {
+				rendered[flag] = fragment[flag];
+			}
+		}
+
+		return rendered;
 	});
+}
 
-	it("parses **bold**", () => {
-		expect(tokenize("a **b** c")).to.deep.equal({
-			removals: [
-				{start: 2, end: 4},
-				{start: 5, end: 7},
-			],
-			ranges: [{start: 4, end: 5, flag: "bold"}],
-		});
-	});
+// The message as the user sees it, markers gone.
+function plain(input: string): string {
+	return applyMarkdown(parseStyle(input))
+		.fragments.map((fragment) => fragment.text)
+		.join("");
+}
 
-	it("parses *italic* and _italic_", () => {
-		expect(tokenize("*a*").ranges).to.deep.equal([{start: 1, end: 2, flag: "italic"}]);
-		expect(tokenize("_a_").ranges).to.deep.equal([{start: 1, end: 2, flag: "italic"}]);
-	});
+// The stretches nothing is interpreted inside, as text rather than as offsets.
+function verbatimText(input: string): string[] {
+	const {fragments, verbatim} = applyMarkdown(parseStyle(input));
+	const text = fragments.map((fragment) => fragment.text).join("");
 
-	it("parses __underline__, ~~strike~~ and ||spoiler||", () => {
-		expect(tokenize("__a__").ranges).to.deep.equal([{start: 2, end: 3, flag: "underline"}]);
-		expect(tokenize("~~a~~").ranges).to.deep.equal([{start: 2, end: 3, flag: "strikethrough"}]);
-		expect(tokenize("||a||").ranges).to.deep.equal([{start: 2, end: 3, flag: "spoiler"}]);
-	});
+	return verbatim.map((range) => text.slice(range.start, range.end));
+}
 
-	it("nests ***bold italic***", () => {
-		const {ranges, removals} = tokenize("***a***");
-		expect(ranges).to.have.deep.members([
-			{start: 3, end: 4, flag: "italic"},
-			{start: 2, end: 5, flag: "bold"},
-		]);
-		expect(removals).to.have.deep.members([
-			{start: 0, end: 2},
-			{start: 2, end: 3},
-			{start: 4, end: 5},
-			{start: 5, end: 7},
-		]);
-	});
-
-	it("nests **bold *and italic* text**", () => {
-		const {ranges} = tokenize("**bold *and italic* text**");
-		expect(ranges).to.have.deep.members([
-			{start: 8, end: 18, flag: "italic"},
-			{start: 2, end: 24, flag: "bold"},
-		]);
-	});
-
-	it("leaves unmatched and malformed markers literal", () => {
-		expect(tokenize("**a")).to.deep.equal({removals: [], ranges: []});
-		expect(tokenize("a**")).to.deep.equal({removals: [], ranges: []});
-		expect(tokenize("** a **")).to.deep.equal({removals: [], ranges: []});
-		expect(tokenize("~a~")).to.deep.equal({removals: [], ranges: []});
-		expect(tokenize("|a|")).to.deep.equal({removals: [], ranges: []});
-		expect(tokenize("2 * 3 * 4")).to.deep.equal({removals: [], ranges: []});
-	});
-
-	it("does not italicise underscores inside words", () => {
-		expect(tokenize("snake_case_name")).to.deep.equal({removals: [], ranges: []});
-		expect(tokenize("foo__bar__baz")).to.deep.equal({removals: [], ranges: []});
-	});
-
-	it("does italicise asterisks inside words", () => {
-		expect(tokenize("un*believ*able").ranges).to.deep.equal([
-			{start: 3, end: 9, flag: "italic"},
+describe("markdown — bold", () => {
+	it("renders **text** bold", () => {
+		expect(md("a **b** c")).to.deep.equal([
+			{text: "a "},
+			{text: "b", bold: true},
+			{text: " c"},
 		]);
 	});
 
-	it("honours backslash escapes", () => {
-		expect(tokenize("\\*not italic\\*")).to.deep.equal({
-			removals: [
-				{start: 0, end: 1},
-				{start: 12, end: 13},
-			],
-			ranges: [],
-		});
-		expect(tokenize("\\\\")).to.deep.equal({removals: [{start: 0, end: 1}], ranges: []});
-		expect(tokenize("a\\b")).to.deep.equal({removals: [], ranges: []});
-	});
-
-	it("keeps a backslash at the end of the text", () => {
-		expect(tokenize("a\\")).to.deep.equal({removals: [], ranges: []});
-	});
-
-	it("treats URLs as opaque", () => {
-		expect(tokenize("see https://example.com/a_b_c_d ok")).to.deep.equal({
-			removals: [],
-			ranges: [],
-		});
-		expect(tokenize("**https://example.com/x**").ranges).to.deep.equal([
-			{start: 2, end: 23, flag: "bold"},
-		]);
-	});
-
-	it("accepts explicit opaque ranges", () => {
-		expect(tokenize("*a* *b*", [{start: 0, end: 3}]).ranges).to.deep.equal([
-			{start: 5, end: 6, flag: "italic"},
-		]);
+	it("leaves an unmatched ** literal", () => {
+		expect(md("**a")).to.deep.equal([{text: "**a"}]);
+		expect(md("a**")).to.deep.equal([{text: "a**"}]);
 	});
 });
 
-describe("parseMarkdown tokenize — code, quotes, links", () => {
-	it("parses inline code and suppresses markdown inside it", () => {
-		expect(tokenize("`**x**`")).to.deep.equal({
-			removals: [
-				{start: 0, end: 1},
-				{start: 6, end: 7},
-			],
-			ranges: [
-				{start: 1, end: 6, flag: "monospace"},
-				{start: 1, end: 6, flag: "code"},
-			],
-		});
+describe("markdown — italic", () => {
+	it("renders *text* and _text_ italic", () => {
+		expect(md("*a*")).to.deep.equal([{text: "a", italic: true}]);
+		expect(md("_a_")).to.deep.equal([{text: "a", italic: true}]);
+	});
+
+	it("italicises asterisks inside words", () => {
+		expect(md("un*believ*able")).to.deep.equal([
+			{text: "un"},
+			{text: "believ", italic: true},
+			{text: "able"},
+		]);
+	});
+
+	it("leaves underscores inside words alone", () => {
+		expect(md("snake_case_name")).to.deep.equal([{text: "snake_case_name"}]);
+		expect(md("foo__bar__baz")).to.deep.equal([{text: "foo__bar__baz"}]);
+	});
+});
+
+describe("markdown — underline and strikethrough", () => {
+	it("renders __text__ underlined", () => {
+		expect(md("__a__")).to.deep.equal([{text: "a", underline: true}]);
+	});
+
+	it("renders ~~text~~ struck through", () => {
+		expect(md("~~a~~")).to.deep.equal([{text: "a", strikethrough: true}]);
+	});
+
+	it("needs both tildes", () => {
+		expect(md("~a~")).to.deep.equal([{text: "~a~"}]);
+	});
+});
+
+describe("markdown — spoiler", () => {
+	it("renders ||text|| as a spoiler", () => {
+		expect(md("||a||")).to.deep.equal([{text: "a", spoiler: true}]);
+	});
+
+	it("needs both bars", () => {
+		expect(md("|a|")).to.deep.equal([{text: "|a|"}]);
+	});
+});
+
+describe("markdown — inline code", () => {
+	it("renders `text` monospace and interprets nothing inside it", () => {
+		expect(md("`a`")).to.deep.equal([{text: "a", monospace: true}]);
+		expect(md("`**x**`")).to.deep.equal([{text: "**x**", monospace: true}]);
+	});
+
+	it("reports the code as verbatim, so the finders skip it", () => {
+		expect(verbatimText("a `#chan` b")).to.deep.equal(["#chan"]);
+		expect(verbatimText("a #chan b")).to.deep.equal([]);
 	});
 
 	it("leaves empty or unmatched backticks literal", () => {
-		expect(tokenize("``")).to.deep.equal({removals: [], ranges: []});
-		expect(tokenize("a ` b")).to.deep.equal({removals: [], ranges: []});
-	});
-
-	it("parses a single-line code block", () => {
-		expect(tokenize("```code```")).to.deep.equal({
-			removals: [
-				{start: 0, end: 3},
-				{start: 7, end: 10},
-			],
-			ranges: [
-				{start: 3, end: 7, flag: "codeBlock"},
-				{start: 3, end: 7, flag: "code"},
-			],
-		});
-	});
-
-	it("parses a fenced block with a language tag and drops surrounding newlines", () => {
-		const text = "before\n```js\nlet x = 1;\n```\nafter";
-		expect(tokenize(text)).to.deep.equal({
-			removals: [
-				{start: 6, end: 13},
-				{start: 23, end: 28},
-			],
-			ranges: [
-				{start: 13, end: 23, flag: "codeBlock"},
-				{start: 13, end: 23, flag: "code"},
-			],
-		});
-	});
-
-	it("leaves an unclosed fence literal", () => {
-		expect(tokenize("```nope")).to.deep.equal({removals: [], ranges: []});
-	});
-
-	it("parses a quote line", () => {
-		expect(tokenize("> hi *there*")).to.deep.equal({
-			removals: [
-				{start: 0, end: 2},
-				{start: 5, end: 6},
-				{start: 11, end: 12},
-			],
-			ranges: [
-				{start: 2, end: 12, flag: "quote"},
-				{start: 6, end: 11, flag: "italic"},
-			],
-		});
-	});
-
-	it("merges consecutive quote lines and drops the newline after the block", () => {
-		expect(tokenize("> a\n> b\nc")).to.deep.equal({
-			removals: [
-				{start: 0, end: 2},
-				{start: 4, end: 6},
-				{start: 7, end: 8},
-			],
-			ranges: [{start: 2, end: 7, flag: "quote"}],
-		});
-	});
-
-	it("merges consecutive quote lines when the first one holds inline markup", () => {
-		const text = "> a *b*\n> c";
-		expect(tokenize(text).ranges.filter((r) => r.flag === "quote")).to.deep.equal([
-			{start: 2, end: 11, flag: "quote"},
-		]);
-		// The newline joining the two lines belongs to the quote, so no bare
-		// "\n" fragment escapes the block
-		expect(
-			applyMarkdown(parseStyle(text)).filter((f) => f.text === "\n" && !f.quote)
-		).to.deep.equal([]);
-	});
-
-	it("does not treat > mid-line or without a space as a quote", () => {
-		expect(tokenize("a > b")).to.deep.equal({removals: [], ranges: []});
-		expect(tokenize(">b")).to.deep.equal({removals: [], ranges: []});
-	});
-
-	it("parses [text](url) links", () => {
-		expect(tokenize("[site](https://example.com/a)")).to.deep.equal({
-			removals: [
-				{start: 0, end: 1},
-				{start: 5, end: 29},
-			],
-			ranges: [{start: 1, end: 5, flag: "href", href: "https://example.com/a"}],
-		});
-		expect(tokenize("[c](web+irc://irc.example.org/#chan)").ranges).to.deep.equal([
-			{start: 1, end: 2, flag: "href", href: "web+irc://irc.example.org/#chan"},
-		]);
-	});
-
-	it("allows one level of balanced parentheses in the URL", () => {
-		const text = "[wiki](https://en.wikipedia.org/wiki/Foo_(bar))";
-		expect(tokenize(text)).to.deep.equal({
-			removals: [
-				{start: 0, end: 1},
-				{start: 5, end: text.length},
-			],
-			ranges: [
-				{
-					start: 1,
-					end: 5,
-					flag: "href",
-					href: "https://en.wikipedia.org/wiki/Foo_(bar)",
-				},
-			],
-		});
-	});
-
-	it("matches the URL scheme case-insensitively", () => {
-		expect(tokenize("[x](HTTPS://e.test)").ranges).to.deep.equal([
-			{start: 1, end: 2, flag: "href", href: "HTTPS://e.test"},
-		]);
-	});
-
-	it("allows emphasis inside link text", () => {
-		expect(tokenize("[**b**](https://e.com)").ranges).to.have.deep.members([
-			{start: 1, end: 6, flag: "href", href: "https://e.com"},
-			{start: 3, end: 4, flag: "bold"},
-		]);
-	});
-
-	it("rejects links with other schemes or malformed syntax", () => {
-		expect(tokenize("[x](javascript:alert(1))")).to.deep.equal({removals: [], ranges: []});
-		expect(tokenize("[x](ftp://e.com)")).to.deep.equal({removals: [], ranges: []});
-		expect(tokenize("[x] (https://e.com)").ranges).to.deep.equal([]);
+		expect(md("``")).to.deep.equal([{text: "``"}]);
+		expect(md("a ` b")).to.deep.equal([{text: "a ` b"}]);
 	});
 });
 
-describe("applyMarkdown", () => {
-	const frag = (text: string, start: number, extra: Record<string, unknown> = {}) => ({
-		bold: false,
-		textColor: undefined,
-		bgColor: undefined,
-		hexColor: undefined,
-		hexBgColor: undefined,
-		italic: false,
-		underline: false,
-		strikethrough: false,
-		monospace: false,
-		text,
-		start,
-		end: start + text.length,
-		...extra,
+describe("markdown — code block", () => {
+	it("renders a single-line ```block```", () => {
+		expect(md("```code```")).to.deep.equal([{text: "code", codeBlock: true}]);
 	});
 
-	it("returns the same array when there is no markdown", () => {
-		const input = parseStyle("plain");
-		expect(applyMarkdown(input)).to.equal(input);
-	});
-
-	it("removes markers, sets flags and renumbers offsets", () => {
-		expect(applyMarkdown(parseStyle("a **b** c"))).to.deep.equal([
-			frag("a ", 0),
-			frag("b", 2, {bold: true}),
-			frag(" c", 3),
+	it("drops the language tag and the newlines around the fences", () => {
+		expect(md("before\n```js\nlet x = 1;\n```\nafter")).to.deep.equal([
+			{text: "before"},
+			{text: "let x = 1;", codeBlock: true},
+			{text: "after"},
 		]);
 	});
 
+	it("reports the block as verbatim", () => {
+		expect(verbatimText("```code```")).to.deep.equal(["code"]);
+	});
+
+	it("leaves an unclosed fence literal", () => {
+		expect(md("```nope")).to.deep.equal([{text: "```nope"}]);
+	});
+});
+
+describe("markdown — quote", () => {
+	it("renders a `> ` line as a quote without its marker", () => {
+		expect(md("> hi *there*")).to.deep.equal([
+			{text: "hi ", quote: true},
+			{text: "there", italic: true, quote: true},
+		]);
+	});
+
+	it("merges consecutive quote lines and ends the block at the blank line", () => {
+		expect(md("> a\n> b\nc")).to.deep.equal([{text: "a\nb", quote: true}, {text: "c"}]);
+	});
+
+	it("merges consecutive quote lines when the first one holds inline markup", () => {
+		// Regression: the newline joining the lines used to escape the block
+		expect(md("> a *b*\n> c")).to.deep.equal([
+			{text: "a ", quote: true},
+			{text: "b", italic: true, quote: true},
+			{text: "\nc", quote: true},
+		]);
+	});
+
+	it("only quotes a `> ` at the start of a line", () => {
+		expect(md("a > b")).to.deep.equal([{text: "a > b"}]);
+		expect(md(">b")).to.deep.equal([{text: ">b"}]);
+	});
+});
+
+describe("markdown — masked links", () => {
+	it("renders [text](url) with the url behind the text", () => {
+		expect(md("[site](https://example.com/a)")).to.deep.equal([
+			{text: "site", href: "https://example.com/a"},
+		]);
+	});
+
+	it("accepts web+irc: links", () => {
+		expect(md("[c](web+irc://irc.example.org/#chan)")).to.deep.equal([
+			{text: "c", href: "web+irc://irc.example.org/#chan"},
+		]);
+	});
+
+	it("allows one level of balanced parentheses in the url", () => {
+		expect(md("[wiki](https://en.wikipedia.org/wiki/Foo_(bar))")).to.deep.equal([
+			{text: "wiki", href: "https://en.wikipedia.org/wiki/Foo_(bar)"},
+		]);
+	});
+
+	it("matches the scheme case-insensitively", () => {
+		expect(md("[x](HTTPS://e.test)")).to.deep.equal([{text: "x", href: "HTTPS://e.test"}]);
+	});
+
+	it("interprets markup in the link text", () => {
+		expect(md("[**b**](https://e.com)")).to.deep.equal([
+			{text: "b", bold: true, href: "https://e.com"},
+		]);
+	});
+
+	it("rejects other schemes and malformed syntax", () => {
+		expect(md("[x](javascript:alert(1))")).to.deep.equal([{text: "[x](javascript:alert(1))"}]);
+		expect(md("[x](ftp://e.com)")).to.deep.equal([{text: "[x](ftp://e.com)"}]);
+		expect(md("[x] (https://e.com)")).to.deep.equal([{text: "[x] (https://e.com)"}]);
+	});
+});
+
+describe("markdown — escapes", () => {
+	it("takes a backslash-escaped marker literally", () => {
+		expect(md("\\*not italic\\*")).to.deep.equal([{text: "*not italic*"}]);
+		expect(md("\\\\")).to.deep.equal([{text: "\\"}]);
+	});
+
+	it("leaves a backslash before an ordinary character alone", () => {
+		expect(md("a\\b")).to.deep.equal([{text: "a\\b"}]);
+	});
+
+	it("keeps a backslash at the end of the text", () => {
+		// Regression: the trailing backslash used to swallow itself
+		expect(md("a\\")).to.deep.equal([{text: "a\\"}]);
+		expect(md("C:\\")).to.deep.equal([{text: "C:\\"}]);
+	});
+});
+
+describe("markdown — nesting and malformed markers", () => {
+	it("nests ***bold italic***", () => {
+		expect(md("***a***")).to.deep.equal([{text: "a", bold: true, italic: true}]);
+	});
+
+	it("nests italic inside bold", () => {
+		expect(md("**bold *and italic* text**")).to.deep.equal([
+			{text: "bold ", bold: true},
+			{text: "and italic", bold: true, italic: true},
+			{text: " text", bold: true},
+		]);
+	});
+
+	it("needs a non-space next to the markers", () => {
+		expect(md("** a **")).to.deep.equal([{text: "** a **"}]);
+		expect(md("2 * 3 * 4")).to.deep.equal([{text: "2 * 3 * 4"}]);
+	});
+
+	it("merges neighbouring spans that end up identical", () => {
+		expect(md("**a****b**")).to.deep.equal([{text: "ab", bold: true}]);
+	});
+});
+
+describe("markdown — urls are opaque", () => {
+	it("never reads markers inside a url", () => {
+		expect(md("see https://example.com/a_b_c_d ok")).to.deep.equal([
+			{text: "see https://example.com/a_b_c_d ok"},
+		]);
+	});
+
+	it("still styles markup wrapped around a url", () => {
+		// linkify-it swallows the trailing "**" into the url; the tokenizer
+		// trims it back off so the bold span closes
+		expect(md("**https://example.com/x**")).to.deep.equal([
+			{text: "https://example.com/x", bold: true},
+		]);
+	});
+});
+
+describe("markdown — composition", () => {
 	it("composes with IRC control codes", () => {
-		// \x02 bold + markdown italic
-		expect(applyMarkdown(parseStyle("\x02x *y*\x02 z"))).to.deep.equal([
-			frag("x ", 0, {bold: true}),
-			frag("y", 2, {bold: true, italic: true}),
-			frag(" z", 3),
+		expect(md("\x02x *y*\x02 z")).to.deep.equal([
+			{text: "x ", bold: true},
+			{text: "y", bold: true, italic: true},
+			{text: " z"},
 		]);
 	});
 
 	it("splits a styled fragment around a marker", () => {
-		// One IRC fragment containing a markdown span in the middle
-		expect(applyMarkdown(parseStyle("\x1dab `c` d\x1d"))).to.deep.equal([
-			frag("ab ", 0, {italic: true}),
-			frag("c", 3, {italic: true, monospace: true, code: true}),
-			frag(" d", 4, {italic: true}),
+		expect(md("\x1dab `c` d\x1d")).to.deep.equal([
+			{text: "ab ", italic: true},
+			{text: "c", italic: true, monospace: true},
+			{text: " d", italic: true},
 		]);
 	});
 
-	it("carries href, spoiler, quote and codeBlock flags", () => {
-		expect(applyMarkdown(parseStyle("[t](https://e.com) ||s||"))).to.deep.equal([
-			frag("t", 0, {href: "https://e.com"}),
-			frag(" ", 1),
-			frag("s", 2, {spoiler: true}),
+	it("carries every wrap flag at once", () => {
+		expect(md("[t](https://e.com) ||s||")).to.deep.equal([
+			{text: "t", href: "https://e.com"},
+			{text: " "},
+			{text: "s", spoiler: true},
 		]);
-		expect(applyMarkdown(parseStyle("> q\n```c```"))).to.deep.equal([
-			frag("q", 0, {quote: true}),
-			frag("c", 1, {codeBlock: true, code: true}),
+		expect(md("> q\n```c```")).to.deep.equal([
+			{text: "q", quote: true},
+			{text: "c", codeBlock: true},
 		]);
 	});
 
-	it("merges adjacent fragments that end up identical", () => {
-		expect(applyMarkdown(parseStyle("**a****b**"))).to.deep.equal([
-			frag("ab", 0, {bold: true}),
-		]);
+	it("leaves plain text and its fragments untouched", () => {
+		const input = parseStyle("plain");
+
+		expect(applyMarkdown(input).fragments).to.equal(input);
+		expect(applyMarkdown(input).verbatim).to.deep.equal([]);
 	});
 
 	it("handles empty input", () => {
-		expect(applyMarkdown([])).to.deep.equal([]);
+		expect(applyMarkdown([]).fragments).to.deep.equal([]);
 	});
 });
 
-describe("stripMarkdown", () => {
-	it("removes markers and keeps text", () => {
-		expect(stripMarkdown("**a** `b` > c [d](https://e.com)")).to.equal("a b > c d");
-		expect(stripMarkdown("> c")).to.equal("c");
-		expect(stripMarkdown("plain")).to.equal("plain");
+describe("tokenize", () => {
+	it("emits marker-free pieces that join back into the message", () => {
+		const input = "a **b** `c` > d [e](https://e.test)";
+
+		expect(
+			tokenize(input)
+				.map((piece) => piece.text)
+				.join("")
+		).to.equal(plain(input));
 	});
 
-	it("keeps a trailing backslash", () => {
-		expect(stripMarkdown("C:\\")).to.equal("C:\\");
+	it("carries only the flags that are set", () => {
+		expect(tokenize("a **b**")).to.deep.equal([
+			{text: "a ", flags: {}},
+			{text: "b", flags: {bold: true}},
+		]);
+	});
+
+	it("marks inline code monospace and verbatim", () => {
+		expect(tokenize("`a`")).to.deep.equal([
+			{text: "a", flags: {monospace: true, verbatim: true}},
+		]);
+	});
+
+	it("merges adjacent pieces with equal flags", () => {
+		expect(tokenize("**a****b**")).to.deep.equal([{text: "ab", flags: {bold: true}}]);
 	});
 });

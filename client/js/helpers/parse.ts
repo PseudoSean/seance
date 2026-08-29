@@ -8,7 +8,7 @@ import {findLinks} from "../../../shared/linkify";
 import findEmoji from "./ircmessageparser/findEmoji";
 import findNames from "./ircmessageparser/findNames";
 import merge, {MergedParts} from "./ircmessageparser/merge";
-import {applyMarkdown} from "./ircmessageparser/parseMarkdown";
+import {applyMarkdown, Range} from "./ircmessageparser/parseMarkdown";
 import anyIntersection from "./ircmessageparser/anyIntersection";
 import emojiMap from "./fullnamemap.json";
 import LinkPreviewToggle from "../../components/LinkPreviewToggle.vue";
@@ -36,7 +36,6 @@ type StyledFragment = Fragment & {
 	monospace?: boolean;
 	strikethrough?: boolean;
 
-	code?: boolean;
 	codeBlock?: boolean;
 	quote?: boolean;
 	spoiler?: boolean;
@@ -228,17 +227,19 @@ function parse(
 ) {
 	// Extract the styling information and get the plain text version from it
 	let styleFragments = parseStyle(text);
+	let verbatim: Range[] = [];
 
 	if (options.markdown) {
-		styleFragments = applyMarkdown(styleFragments);
+		const markdown = applyMarkdown(styleFragments);
+		styleFragments = markdown.fragments;
+		verbatim = markdown.verbatim;
 	}
 
 	const cleanText = styleFragments.map((fragment) => fragment.text).join("");
 
 	// Nicks, channels and emoji are not looked up inside code
-	const codeRanges = styleFragments.filter((fragment) => fragment.code);
-	const outsideCode = (part: {start: number; end: number}) =>
-		!codeRanges.some((range) => anyIntersection(range, part));
+	const outsideVerbatim = (part: {start: number; end: number}) =>
+		!verbatim.some((range) => anyIntersection(range, part));
 
 	// On the plain text, find channels and URLs, returned as "parts". Parts are
 	// arrays of objects containing start and end markers, as well as metadata
@@ -247,10 +248,14 @@ function parse(
 	const userModes = network
 		? network.serverOptions.PREFIX?.prefix?.map((pref) => pref.symbol)
 		: ["!", "@", "%", "+"];
-	const channelParts = findChannels(cleanText, channelPrefixes, userModes).filter(outsideCode);
+	const channelParts = findChannels(cleanText, channelPrefixes, userModes).filter(
+		outsideVerbatim
+	);
 	const linkParts = findLinks(cleanText);
-	const emojiParts = findEmoji(cleanText).filter(outsideCode);
-	const nameParts = findNames(cleanText, message ? message.users || [] : []).filter(outsideCode);
+	const emojiParts = findEmoji(cleanText).filter(outsideVerbatim);
+	const nameParts = findNames(cleanText, message ? message.users || [] : []).filter(
+		outsideVerbatim
+	);
 
 	const parts = (channelParts as MergedParts)
 		.concat(linkParts)
