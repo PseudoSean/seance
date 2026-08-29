@@ -5,9 +5,15 @@ Date: 2026-08-29. Branch: `markdown-messages-development`.
 ## Goal
 
 Optionally render Discord-style Markdown in everything `ParsedMessage` displays
-(chat messages, notices, actions, channel topics, the MOTD, status lines, list
-windows). Display-only: nothing changes on the wire. Controlled by a boolean
-setting `markdown` (default **on**) under Settings → Appearance → Messages.
+(chat messages, notices, actions, channel topics, status lines, list windows).
+Display-only: nothing changes on the wire. Controlled by a boolean setting
+`markdown` (default **on**) under Settings → Appearance → Messages.
+
+One exemption: the MOTD is a monospace block, and a monospace block is a code
+block — by the "nothing is interpreted inside code blocks" rule below it is
+rendered verbatim, whatever the setting says. `ParsedMessage` takes a
+`markdown` prop (default `true`) and `MessageTypes/monospace_block.vue` passes
+`:markdown="false"`, so MOTD banners keep their `_____`, `\_` and `|...|`.
 
 ## Syntax
 
@@ -32,6 +38,7 @@ Rules:
 - Markers nest (`**bold *and italic***`), IRC control codes and Markdown compose.
 - Inside inline code and code blocks nothing else is interpreted: no markdown,
   and the nick/channel/emoji finders are suppressed. URL detection still runs.
+  The same holds for a whole `monospace_block` message such as the MOTD.
 - URLs found by `findLinks` on the raw text are opaque to the tokenizer, so
   `https://x/a_b_c` or `https://x/**` survive intact.
 - No headers, lists, tables, images, or HTML.

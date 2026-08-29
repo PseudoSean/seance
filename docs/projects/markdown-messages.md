@@ -6,6 +6,13 @@ Discord-style Markdown is rendered in everything `ParsedMessage` shows when
 the `markdown` setting (default on, Settings → Appearance → Messages) is set.
 Display-only; nothing changes on the wire.
 
+The MOTD is the exception. It is pushed as a `MONOSPACE_BLOCK`
+(`client/js/irc/handlers/numerics.ts`, `motdEnd`), and a monospace block is a
+code block — nothing is interpreted inside one, so it renders verbatim and its
+ASCII-art banners keep their `_____`, `\_` and `|...|`. `ParsedMessage` has a
+`markdown` prop (default `true`) that `MessageTypes/monospace_block.vue` sets
+to `false`; the setting can only ever turn Markdown off, never back on.
+
 Design: `docs/superpowers/specs/2026-08-29-markdown-messages-design.md`.
 
 ## How it works

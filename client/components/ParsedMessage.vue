@@ -11,6 +11,9 @@ export default defineComponent({
 		text: String,
 		message: {type: Object as PropType<ClientMessage | string>, required: false},
 		network: {type: Object as PropType<ClientNetwork>, required: false},
+		// Opt out of Markdown for text that must render verbatim (the MOTD, see
+		// MessageTypes/monospace_block.vue). The setting can only turn it off.
+		markdown: {type: Boolean, default: true},
 	},
 	setup(props) {
 		const store = useStore();
@@ -24,7 +27,7 @@ export default defineComponent({
 				props.network,
 				// Optional: mounted without a store (the browser specs in
 				// test/client do that), no store means no Markdown.
-				{markdown: store?.state.settings.markdown}
+				{markdown: props.markdown && store?.state.settings.markdown}
 			);
 	},
 });
