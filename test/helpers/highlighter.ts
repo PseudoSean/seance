@@ -169,6 +169,8 @@ describe("highlighter — guessLanguage sees markup by its shape", () => {
 		"a POM fragment": "<dependency>\n  <groupId>org.foo</groupId>\n</dependency>",
 		"an XML declaration": '<?xml version="1.0"?>\n<root>ok</root>',
 		"a leading comment": "<!-- a note -->\n<root>ok</root>",
+		// The block that started this: one element, one word of text
+		"an element around a word": "<xml>\ntest\n</xml>",
 	};
 
 	for (const [name, code] of Object.entries(markup)) {
