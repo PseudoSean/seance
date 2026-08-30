@@ -1,13 +1,16 @@
 /**
- * IrcClient + SASL: the CAP REQ/ACK → AUTHENTICATE → CAP END wiring. The
- * pure state machine is covered in test/irc/sasl.ts.
+ * IrcClient + SASL: the CAP REQ/ACK → AUTHENTICATE → CAP END wiring, and the
+ * "a login that was asked for must succeed" policy
+ * (`features.saslDisconnectOnFail`, on by default). The pure state machine is
+ * covered in test/irc/sasl.ts.
  */
 import {expect} from "chai";
 import sinon from "ts-sinon";
 import socket from "../../client/js/socket";
-import {IrcClient, IrcClientOptions} from "../../client/js/irc/client";
+import {IrcClient, IrcClientOptions, SASL_REQUIRED_HINT} from "../../client/js/irc/client";
 import {IdAllocator} from "../../client/js/irc/ids";
 import {encodePlain, SASL_TIMEOUT_MS} from "../../client/js/irc/sasl";
+import {DEFAULT_BRANDING, resetBranding, setBranding} from "../../client/js/branding";
 import type {Transport} from "../../client/js/irc/types";
 import type {TransportEvent, TransportState} from "../../client/js/irc/transport";
 import {MessageType, SharedMsg} from "../../shared/types/msg";
@@ -106,6 +109,28 @@ function errors(chanId: number): string[] {
 		.map((m) => m.text ?? "");
 }
 
+function texts(chanId: number): string[] {
+	return messages(chanId).map((m) => m.text ?? "");
+}
+
+/** The QUIT a required-SASL abort sends, and nothing after it. */
+function expectAborted(transport: FakeTransport, client: IrcClient): void {
+	expect(transport.sent).to.not.include("CAP END");
+	expect(transport.sent[transport.sent.length - 1]).to.equal("QUIT :SASL authentication failed");
+	expect(transport.closeCalls).to.equal(1);
+	expect(client.isQuitting).to.equal(true);
+	expect(client.isConnected).to.equal(false);
+	// The reason, why it is fatal, and what to do about it.
+	expect(errors(client.lobby.id)).to.have.length(2);
+	expect(errors(client.lobby.id)[1]).to.equal(
+		"Not connecting to irc.test without the login you asked for."
+	);
+	expect(texts(client.lobby.id)).to.include(SASL_REQUIRED_HINT);
+}
+
+/** Options for the deploys that keep the old "connect anyway" behaviour. */
+const CARRY_ON: Partial<IrcClientOptions> = {saslDisconnectOnFail: false};
+
 function setup(overrides: Partial<IrcClientOptions> = {}): {
 	client: IrcClient;
 	transport: FakeTransport;
@@ -150,7 +175,10 @@ function finishRegistration(transport: FakeTransport): void {
 
 describe("IrcClient SASL", function () {
 	beforeEach(installSpy);
-	afterEach(removeSpy);
+	afterEach(function () {
+		removeSpy();
+		resetBranding();
+	});
 
 	it("requests sasl, authenticates with PLAIN and then sends CAP END", function () {
 		const {client, transport} = setup();
@@ -184,8 +212,21 @@ describe("IrcClient SASL", function () {
 		expect(client.isConnected).to.equal(true);
 	});
 
-	it("reports a 904 in the lobby and still completes registration", function () {
+	it("aborts the connection on a 904, quoting what the server said", function () {
 		const {client, transport} = setup();
+		offer(transport, `${OFFERED_CAPS} sasl=PLAIN`);
+		transport.line("AUTHENTICATE +");
+		transport.line(":irc.test 904 alice :SASL authentication failed: invalid credentials");
+
+		expect(errors(client.lobby.id)[0]).to.equal(
+			"SASL authentication failed: SASL authentication failed: invalid credentials"
+		);
+		expectAborted(transport, client);
+		expect(client.account).to.equal("");
+	});
+
+	it("reports a 904 and still completes registration when the deploy allows it", function () {
+		const {client, transport} = setup(CARRY_ON);
 		offer(transport, `${OFFERED_CAPS} sasl=PLAIN`);
 		transport.line("AUTHENTICATE +");
 		transport.line(":irc.test 904 alice :SASL authentication failed");
@@ -202,37 +243,73 @@ describe("IrcClient SASL", function () {
 		expect(client.state).to.equal("registered");
 	});
 
-	it("disconnects on failure when saslDisconnectOnFail is set", function () {
-		const {client, transport} = setup({saslDisconnectOnFail: true});
+	it("takes features.saslDisconnectOnFail from the deploy config", function () {
+		setBranding({
+			...DEFAULT_BRANDING,
+			features: {...DEFAULT_BRANDING.features, saslDisconnectOnFail: false},
+		});
+
+		const {client, transport} = setup();
 		offer(transport, `${OFFERED_CAPS} sasl=PLAIN`);
 		transport.line("AUTHENTICATE +");
 		transport.line(":irc.test 904 alice :SASL authentication failed");
 
 		expect(errors(client.lobby.id)).to.have.length(1);
-		expect(transport.sent).to.not.include("CAP END");
-		expect(transport.sent[transport.sent.length - 1]).to.equal(
-			"QUIT :SASL authentication failed"
-		);
-		expect(transport.closeCalls).to.equal(1);
-		expect(client.isQuitting).to.equal(true);
+		expect(transport.sent[transport.sent.length - 1]).to.equal("CAP END");
+		expect(transport.closeCalls).to.equal(0);
 	});
 
-	it("skips SASL silently when the server does not offer the cap", function () {
+	it("aborts before CAP LS when SASL is on but there is nothing to log in with", function () {
+		const {client, transport} = setup({saslPassword: ""});
+
+		expect(errors(client.lobby.id)[0]).to.equal(
+			"SASL authentication failed: no account name or password is configured"
+		);
+		expect(transport.sent).to.not.include("CAP LS 302");
+		expectAborted(transport, client);
+	});
+
+	it("aborts when the server does not offer the sasl cap", function () {
 		const {client, transport} = setup();
+		// The failure happens while the negotiator is still building its
+		// reply, so not even the `CAP REQ` goes out: we QUIT instead.
+		transport.line(`:irc.test CAP * LS :${OFFERED_CAPS}`);
+
+		expect(transport.sent).to.not.include("AUTHENTICATE PLAIN");
+		expect(transport.sent.some((l) => l.startsWith("CAP REQ"))).to.equal(false);
+		expect(client.sasl).to.equal(null);
+		expect(errors(client.lobby.id)[0]).to.equal(
+			"SASL authentication failed: the server does not offer SASL"
+		);
+		expectAborted(transport, client);
+	});
+
+	it("reports the missing cap and connects anyway when the deploy allows it", function () {
+		const {client, transport} = setup(CARRY_ON);
 		const requested = offer(transport, OFFERED_CAPS);
 
 		expect(requested).to.not.include("sasl");
-		expect(transport.sent).to.not.include("AUTHENTICATE PLAIN");
 		expect(transport.sent[transport.sent.length - 1]).to.equal("CAP END");
-		expect(client.sasl).to.equal(null);
-		expect(messages(client.lobby.id).some((m) => /SASL/i.test(m.text ?? ""))).to.equal(false);
+		expect(errors(client.lobby.id)).to.deep.equal([
+			"SASL authentication failed: the server does not offer SASL",
+		]);
 
 		finishRegistration(transport);
 		expect(client.isConnected).to.equal(true);
 	});
 
-	it("does not request sasl when PLAIN is not among the advertised mechanisms", function () {
-		const {transport} = setup();
+	it("aborts, naming the mechanisms, when PLAIN is not among the advertised ones", function () {
+		const {client, transport} = setup();
+		transport.line(`:irc.test CAP * LS :${OFFERED_CAPS} sasl=EXTERNAL,SCRAM-SHA-256`);
+
+		expect(errors(client.lobby.id)[0]).to.equal(
+			"SASL authentication failed: the server offers SASL EXTERNAL,SCRAM-SHA-256, not PLAIN"
+		);
+		expectAborted(transport, client);
+	});
+
+	it("does not request sasl when PLAIN is not advertised, and may still connect", function () {
+		const {transport} = setup(CARRY_ON);
 		const requested = offer(transport, `${OFFERED_CAPS} sasl=EXTERNAL`);
 
 		expect(requested).to.not.include("sasl");
@@ -256,7 +333,7 @@ describe("IrcClient SASL", function () {
 	});
 
 	it("pipelines AUTHENTICATE behind the REQ, and aborts to CAP END when the server NAKs sasl", function () {
-		const {client, transport} = setup();
+		const {client, transport} = setup(CARRY_ON);
 		transport.line(`:irc.test CAP * LS :${OFFERED_CAPS} sasl=PLAIN`);
 		const req = transport.sent.find((l) => l.startsWith("CAP REQ :")) as string;
 		const names = req.slice("CAP REQ :".length).split(" ");
@@ -275,11 +352,26 @@ describe("IrcClient SASL", function () {
 		expect(client.sasl).to.equal(null);
 	});
 
+	it("aborts the connection when the server NAKs sasl", function () {
+		const {client, transport} = setup();
+		transport.line(`:irc.test CAP * LS :${OFFERED_CAPS} sasl=PLAIN`);
+		const req = transport.sent.find((l) => l.startsWith("CAP REQ :")) as string;
+		transport.line(`:irc.test CAP alice NAK :${req.slice("CAP REQ :".length)}`);
+		transport.line(":irc.test CAP alice NAK :sasl");
+
+		expect(errors(client.lobby.id)[0]).to.equal(
+			"SASL authentication failed: the server refused the sasl capability"
+		);
+		// The abort still goes out: the server is told before we quit.
+		expect(transport.sent).to.include("AUTHENTICATE *");
+		expectAborted(transport, client);
+	});
+
 	it("aborts with AUTHENTICATE * after the timeout and continues", function () {
 		const clock = sinon.useFakeTimers();
 
 		try {
-			const {client, transport} = setup();
+			const {client, transport} = setup(CARRY_ON);
 			offer(transport, `${OFFERED_CAPS} sasl=PLAIN`);
 			expect(transport.sent[transport.sent.length - 1]).to.equal("AUTHENTICATE PLAIN");
 
@@ -298,6 +390,25 @@ describe("IrcClient SASL", function () {
 
 			finishRegistration(transport);
 			expect(client.isConnected).to.equal(true);
+		} finally {
+			clock.restore();
+		}
+	});
+
+	it("drops the connection when the exchange times out", function () {
+		const clock = sinon.useFakeTimers();
+
+		try {
+			const {client, transport} = setup();
+			offer(transport, `${OFFERED_CAPS} sasl=PLAIN`);
+
+			clock.tick(SASL_TIMEOUT_MS + 1);
+
+			expect(errors(client.lobby.id)[0]).to.equal(
+				"SASL authentication failed: timed out waiting for the server"
+			);
+			expect(transport.sent).to.include("AUTHENTICATE *");
+			expectAborted(transport, client);
 		} finally {
 			clock.restore();
 		}

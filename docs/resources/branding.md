@@ -70,6 +70,7 @@ Every field is optional; `{"appName": "Seance"}` (the shipped default) is a comp
 | `features.multiNetwork`                | boolean                 | `true`                             | `false` hides the sidebar "connect" button once one network exists.                                                                                                 |
 | `features.saveNetworks`                | boolean                 | `true`                             | `false` hides the saved-networks picker, "remember password" and "connect automatically" on the connect form (see follow-ups).                                      |
 | `features.allowCustomServer`           | boolean                 | `true`                             | `false` behaves like `lockHost` and also ignores hosts from saved networks and `?host=` URL parameters. Requires `defaultNetwork`.                                  |
+| `features.saslDisconnectOnFail`        | boolean                 | `true`                             | Drop the connection when a network set to log in with SASL does not manage to; see [Failed SASL logins](#failed-sasl-logins).                                       |
 | `strings.<key>`                        | string                  | built-in copy                      | Keys: `connect.title`, `connect.savedNetworks`, `connect.savedNetworksEmpty`, `connect.submit`, `help.about`, `help.website`, `help.documentation`, `help.privacy`. |
 | `uploads`                              | object                  | none (uploads off)                 | Network-provided file uploader; see [Uploads](#uploads). Dropped unless `endpoint` is an `https:` URL.                                                              |
 | `uploads.endpoint`                     | `https` URL             | —                                  | Receives a multipart `POST` per file.                                                                                                                               |
@@ -80,6 +81,22 @@ Every field is optional; `{"appName": "Seance"}` (the shipped default) is a comp
 | `uploads.headers`                      | object of strings       | none                               | Extra request headers, e.g. `{"X-Api-Key": "…"}`. `Content-Type` is ignored: the browser sets the multipart boundary.                                               |
 
 URL parameters (`?host=…&port=…&nick=…&join=…&autoconnect=1`, `?uri=web+irc://…`) still pre-fill the form and beat `defaultNetwork`, except for host/port/TLS when the host is locked.
+
+## Failed SASL logins
+
+When a network is configured with "Username + password (SASL PLAIN)" and the login does not succeed, Seance reports why and **drops the connection** — it does not quietly register you as an unauthenticated stranger. `features.saslDisconnectOnFail: false` restores the old behaviour: the same report, but the connection carries on.
+
+"Does not succeed" is deliberately wide, because every one of these leaves the user logged out when they asked to be logged in:
+
+- no account name or password is configured (caught before `CAP LS`, so nothing is sent);
+- the server does not offer the `sasl` capability, or offers it without `PLAIN` (the message names what it does offer);
+- the server `NAK`s `sasl`;
+- the server answers `902`, `904`, `905`, `906` or `907` — its text is quoted verbatim, so "invalid credentials", "service unavailable" or nefarious2's `FAIL AUTHENTICATE VERIFICATION_REQUIRED` reach the user;
+- nothing arrives within 12 s, or the mechanism gets a challenge it cannot answer.
+
+The lobby then shows the reason, `Not connecting to <host> without the login you asked for.` and what to try; the client sends `QUIT` and does not reconnect, so credentials can be fixed in the network's settings without a reconnect loop. Nothing about this reaches the wire beyond the `QUIT`: the ircd decides on its own whether an unauthenticated client may register at all.
+
+Leave it on for a network whose users expect an account (channel access, host masks, a bouncer session keyed to the account); turn it off for a public deploy where connecting anyway is more useful than not connecting at all.
 
 ## Uploads
 

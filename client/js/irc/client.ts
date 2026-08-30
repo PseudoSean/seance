@@ -15,6 +15,7 @@
  */
 
 import socket, {EventBus} from "../socket";
+import {brandingFeatures} from "../branding";
 import {createHighlightTester} from "../highlight";
 import {ChanState, ChanType} from "../../../shared/types/chan";
 import {MessageType, SharedMsg, TypingState} from "../../../shared/types/msg";
@@ -181,6 +182,11 @@ export interface IrcClientOptions extends ConnectOptions {
 
 export const NOT_CONNECTED_TEXT =
 	"You are not connected to the IRC network, unable to send your command.";
+
+/** What to try after a SASL login the deploy insists on did not happen. */
+export const SASL_REQUIRED_HINT =
+	"Check the account name and password in this network's settings, or pick " +
+	'"No authentication" there to connect without logging in.';
 
 /** Prefix characters a channel name may start with when the user omits one. */
 const CHANNEL_PREFIXES = "#&!+";
@@ -635,7 +641,6 @@ export class IrcClient {
 		this._state = "registering";
 		this.connected = false;
 		this.closeHintShown = false;
-		this.caps = this.createCaps();
 		this.isupport.reset();
 		this.motdBuffer = null;
 		this.host = "";
@@ -644,6 +649,18 @@ export class IrcClient {
 		this.attachCursor = undefined;
 		this.serverReplay = false;
 		this.endSasl();
+
+		// SASL was picked for this network but there is nothing to log in
+		// with: say so before registering as a stranger.
+		if (
+			this.options.sasl &&
+			!this.saslMechanism &&
+			this.saslFailed("no account name or password is configured")
+		) {
+			return;
+		}
+
+		this.caps = this.createCaps();
 
 		for (const line of this.caps.start()) {
 			this.send(line);
@@ -665,6 +682,60 @@ export class IrcClient {
 			default:
 				return null;
 		}
+	}
+
+	/**
+	 * Deploy policy: when the user picked SASL, does the login have to
+	 * succeed for the connection to go ahead? `config.json`'s
+	 * `features.saslDisconnectOnFail` (default true) decides; a caller may
+	 * override it per network through {@link ConnectOptions}.
+	 */
+	private get saslRequired(): boolean {
+		return this.options.saslDisconnectOnFail ?? brandingFeatures().saslDisconnectOnFail;
+	}
+
+	/**
+	 * SASL was asked for and did not succeed. Always reported — silently
+	 * registering as a stranger when the user asked to log in hides
+	 * everything from a typo in the password to services being down — and,
+	 * unless the deploy turned {@link saslRequired} off, fatal: QUIT and stay
+	 * down instead of connecting unauthenticated.
+	 *
+	 * Returns true when it dropped the connection, so callers stop there.
+	 */
+	private saslFailed(reason: string): boolean {
+		this.pushMessage(
+			this.lobby,
+			{type: MessageType.ERROR, text: `SASL authentication failed: ${reason}`},
+			true
+		);
+
+		if (!this.saslRequired) {
+			return false;
+		}
+
+		this.pushMessage(
+			this.lobby,
+			{
+				type: MessageType.ERROR,
+				text: `Not connecting to ${this.options.host} without the login you asked for.`,
+			},
+			true
+		);
+		this.pushMessage(this.lobby, {text: SASL_REQUIRED_HINT}, true);
+		this.disconnect("SASL authentication failed");
+		return true;
+	}
+
+	/** Why the server's `sasl` cap cannot carry `mechanism`, for the report. */
+	private saslUnavailable(mechanism: SaslMechanism): string {
+		const offered = this.caps.value("sasl");
+
+		if (offered === undefined || offered === "") {
+			return "the server does not offer SASL";
+		}
+
+		return `the server offers SASL ${offered}, not ${mechanism}`;
 	}
 
 	/**
@@ -704,10 +775,13 @@ export class IrcClient {
 	/**
 	 * `beforeEnd` hook: open the exchange if the server enabled `sasl` — or is
 	 * about to (the opener is pipelined right behind the `CAP REQ`, which the
-	 * server has answered by the time it reads AUTHENTICATE) — else nothing.
+	 * server has answered by the time it reads AUTHENTICATE). A server that
+	 * offers no usable `sasl` is a SASL failure like any other: the user
+	 * asked to log in and will not be logged in.
 	 */
 	private startSasl(mechanism: SaslMechanism): string[] {
 		if (!this.caps.hasCapability("sasl") && !this.caps.isRequesting("sasl")) {
+			this.saslFailed(this.saslUnavailable(mechanism));
 			return [];
 		}
 
@@ -737,17 +811,7 @@ export class IrcClient {
 		this.endSasl();
 
 		if (!result.ok) {
-			this.pushMessage(
-				this.lobby,
-				{
-					type: MessageType.ERROR,
-					text: `SASL authentication failed: ${result.error ?? "unknown error"}`,
-				},
-				true
-			);
-
-			if (this.options.saslDisconnectOnFail) {
-				this.disconnect("SASL authentication failed");
+			if (this.saslFailed(result.error ?? "unknown error")) {
 				return;
 			}
 		} else {

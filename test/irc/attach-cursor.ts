@@ -303,7 +303,9 @@ describe("PERSISTENCE ATTACH catch-up cursor (irc/persistence.ts)", function () 
 
 		it("does not send it when SASL failed, or when there is no SASL at all", function () {
 			store({msgid: "m9", time: 123});
-			const failed = saslClient();
+			// A deploy that lets a failed login through anyway (otherwise the
+			// connection is dropped before `CAP END`, see client-sasl.ts).
+			const failed = saslClient({saslDisconnectOnFail: false});
 			authenticate(failed, SASL_CAPS, false);
 			expect(failed.transport.sent.some((l) => l.startsWith("PERSISTENCE"))).to.equal(false);
 			expect(failed.transport.sent).to.include("CAP END");
