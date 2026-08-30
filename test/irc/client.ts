@@ -651,6 +651,31 @@ describe("IrcClient", function () {
 			expect(chan.shared.key).to.equal("");
 		});
 
+		it("shows 324 once: a repeat after a reconnect is state, /mode asks again", function () {
+			const h = setup();
+			const id = joined(h);
+			const chan = h.client.findChannel("#seance")!;
+
+			h.transport.line(":irc.test 324 alice #seance +tn");
+			expect(lastMessage(id).type).to.equal(MessageType.MODE_CHANNEL);
+			expect(lastMessage(id).text).to.equal("+tn");
+
+			// Every (re)JOIN asks again; the same answer is not news.
+			const before = messages(id).length;
+			h.transport.line(":irc.test 324 alice #seance +tn");
+			expect(messages(id)).to.have.length(before);
+
+			// …but a change is, and so is an answer the user asked for.
+			h.transport.line(":irc.test 324 alice #seance +tnm");
+			expect(lastMessage(id).text).to.equal("+tnm");
+
+			h.client.input(id, "/mode");
+			expect(chan.modesAsked).to.equal(true);
+			h.transport.line(":irc.test 324 alice #seance +tnm");
+			expect(messages(id).slice(-1)[0].text).to.equal("+tnm");
+			expect(messages(id).filter((m) => m.text === "+tnm")).to.have.length(2);
+		});
+
 		it("puts our own user modes in the lobby", function () {
 			const h = setup();
 			register(h);

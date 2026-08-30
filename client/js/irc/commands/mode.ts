@@ -65,6 +65,16 @@ const mode: Command = {
 			);
 		}
 
+		if (params.length === 1) {
+			// A query: show the reply even when it repeats the modes we
+			// already display (handlers/mode.ts hides join-burst repeats).
+			const target = client.findChannel(params[0]);
+
+			if (target) {
+				target.modesAsked = true;
+			}
+		}
+
 		client.send(formatLine({command: "MODE", params}));
 	},
 };

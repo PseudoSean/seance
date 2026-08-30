@@ -1,7 +1,8 @@
 /**
  * MODE (channel and user), 324 (RPL_CHANNELMODEIS), 221 (RPL_UMODEIS).
  * Ported from attic/server/plugins/irc-events/mode.ts. Which modes take a
- * parameter comes from ISUPPORT CHANMODES/PREFIX.
+ * parameter comes from ISUPPORT CHANMODES/PREFIX. An unchanged 324 is state,
+ * not news, and is not shown (`Channel.modeText`, like topic.ts).
  */
 
 import {MessageType} from "../../../../shared/types/msg";
@@ -135,10 +136,24 @@ const channelModeIs: Handler = (client, msg) => {
 	}
 
 	applyChanges(client, chan, parseChannelModes(client, modes, params));
+
+	// The modes are asked for after every (re)JOIN — lazily on first open,
+	// or with the active channel's catch-up (catchup.ts) — so a reconnect
+	// brings the same line back each time. Say it when it is news, or when
+	// asked (/mode #chan).
+	const text = `${modes} ${params.join(" ")}`.trim();
+	const quiet = text === chan.modeText && !chan.modesAsked;
+	chan.modesAsked = false;
+	chan.modeText = text;
+
+	if (quiet) {
+		return;
+	}
+
 	client.pushMessage(chan, {
 		type: MessageType.MODE_CHANNEL,
 		time: client.timeOf(msg),
-		text: `${modes} ${params.join(" ")}`.trim(),
+		text,
 	});
 };
 

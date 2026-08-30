@@ -237,6 +237,20 @@ describe("Session persistence and quiet re-joins (irc/persistence.ts)", function
 			expect(awaitingRestoration(h.client)).to.equal(false);
 		});
 
+		it("hides the attach note on a server that sent no PERSISTENCE STATUS", function () {
+			// The unsolicited STATUS is not on every build's alias-attach
+			// path; the note behind the MOTD is routine either way (the
+			// reported symptom: one line per switch back to the app).
+			const h = setup();
+			register(h, CAPS);
+			expect(h.client.persistenceHold).to.equal(false);
+			h.dispatch.resetHistory();
+			h.transport.line(
+				":irc.test NOTE BOUNCER ALIAS_ATTACHED :Attached to session AZ7 as alias on irc.test"
+			);
+			expect(h.messages()).to.deep.equal([]);
+		});
+
 		it("reports a bouncer note that is not part of a reattach", function () {
 			const h = setup();
 			register(h, CAPS, HOLD);
