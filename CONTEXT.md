@@ -49,3 +49,7 @@ _Avoid_: fenced block, pre, snippet
 **Monospace block**:
 A server-produced multi-line message rendered verbatim in a monospace face — the MOTD. Never interpreted as Markdown.
 _Avoid_: MOTD block, preformatted message
+
+**Multi-line message**:
+One message whose text contains line feeds — one msgid, one timeline entry, one thing to reply to, react to, edit or delete, however many lines it shows. Only possible where the server and client have agreed to it; where they have not, each line is a message of its own.
+_Avoid_: multiline batch, paragraph, block message

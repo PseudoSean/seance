@@ -22,8 +22,9 @@ export interface TransportOptions {
 	/** Default: enabled, 1 s → 60 s, ×2, with jitter. */
 	reconnect?: ReconnectOptions;
 	/**
-	 * Max UTF-8 bytes per outbound line. Default 500: IRC's own limit is 512 and
-	 * nefarious2 drops the connection on inbound frames >= 528 bytes (#98).
+	 * Max UTF-8 bytes per outbound line. Default 500: IRC's own limit is 512
+	 * and nefarious2 rejects a longer message body as excess flood (it also
+	 * used to drop the connection on frames >= 528 bytes, #98, fixed 2026-08-28).
 	 */
 	maxLineBytes?: number;
 	/** WebSocket constructor to use instead of `globalThis.WebSocket`. */

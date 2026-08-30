@@ -702,7 +702,7 @@ describe("Chat history (history.ts)", function () {
 			expect(msgs(h.client.lobby.id)).to.have.length(0);
 		});
 
-		it("includes lines of a nested batch inside the chathistory batch", function () {
+		it("includes a nested batch inside the chathistory batch, joined, in its place", function () {
 			const h = setup();
 			const id = joined(h);
 
@@ -720,12 +720,14 @@ describe("Chat history (history.ts)", function () {
 			);
 
 			const [more] = mores(id);
+			// draft/multiline has a batch handler (client/js/irc/multiline.ts):
+			// its lines are one message, which keeps the batch's place here.
 			expect(more.messages.map((m) => m.text)).to.deep.equal([
 				"message 1",
-				"first line",
-				"second line",
+				"first line\nsecond line",
 				"message 3",
 			]);
+			expect(more.messages[1].msgid).to.equal("m2");
 		});
 
 		it("shows an unsolicited chathistory batch as older history", function () {
