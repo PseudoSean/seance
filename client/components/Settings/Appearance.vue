@@ -9,6 +9,12 @@
 		</div>
 		<div>
 			<label class="opt">
+				<input :checked="store.state.settings.markdown" type="checkbox" name="markdown" />
+				Render Markdown formatting (bold, code, spoilers…)
+			</label>
+		</div>
+		<div>
+			<label class="opt">
 				<input
 					:checked="store.state.settings.showSeconds"
 					type="checkbox"

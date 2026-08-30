@@ -1,6 +1,12 @@
 <template>
 	<span class="content">
-		<span class="text"><ParsedMessage :network="network" :text="cleanText" /></span>
+		<!-- A monospace block is a code block: nothing inside it is interpreted.
+		The MOTD (client/js/irc/handlers/numerics.ts, motdEnd) is pushed as one,
+		and its ASCII-art banners are full of `_`, `\` and `|` that Markdown
+		would otherwise eat. -->
+		<span class="text"
+			><ParsedMessage :markdown="false" :network="network" :text="cleanText"
+		/></span>
 	</span>
 </template>
 
