@@ -47,6 +47,7 @@ import {
 import {
 	attachCursorLine,
 	awaitRestoration,
+	beginSettling,
 	cancelRestoration,
 	serverReplayCovers,
 } from "./persistence";
@@ -912,10 +913,15 @@ export class IrcClient {
 			);
 		}
 
-		if (this.persistenceHold) {
+		// Whatever a bouncer says in the next few seconds is setup chatter,
+		// on any build (persistence.ts).
+		beginSettling(this);
+
+		if (this.persistenceHold || this.serverReplay) {
 			// The server may be about to restore the channels of our held
-			// session (a draft/persistence batch right behind the MOTD): JOIN
-			// only what it does not restore, once that batch is in.
+			// session (a draft/persistence batch right behind the MOTD, or
+			// the replay our ATTACH cursor asked for): JOIN only what it does
+			// not restore, once that batch is in.
 			awaitRestoration(this);
 		} else {
 			this.autojoin();

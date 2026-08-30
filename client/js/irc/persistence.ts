@@ -82,8 +82,8 @@ export function awaitingRestoration(client: IrcClient): boolean {
 }
 
 /**
- * True while the connection is still settling into a held session: from the
- * end of registration until RESTORE_MAX_WAIT_MS later, whether or not the
+ * True while the connection is still settling into its session: from the end
+ * of registration until RESTORE_MAX_WAIT_MS later, whether or not the
  * autojoin is still waiting. What the bouncer says in that window is setup
  * chatter, not news for the user.
  */
@@ -92,9 +92,21 @@ export function inRestorationWindow(client: IrcClient): boolean {
 }
 
 /**
- * Registration completed with `PERSISTENCE STATUS ON`: hold the autojoin
- * until the server's restoration has been applied, or until
- * RESTORE_WAIT_MS pass without a sign of one (nothing was held after all).
+ * Registration completed: open the settling window. Every connection gets
+ * one, not only the ones we know are held — the unsolicited `PERSISTENCE
+ * STATUS` is not sent on every build's alias-attach path, and without it the
+ * routine reattach chatter (`NOTE BOUNCER ALIAS_ATTACHED`, the replay
+ * summary) would be reported on every switch back to the app.
+ */
+export function beginSettling(client: IrcClient): void {
+	stateOf(client).deadline = Date.now() + RESTORE_MAX_WAIT_MS;
+}
+
+/**
+ * Registration completed and a session is being restored (`PERSISTENCE
+ * STATUS ON`, or a cursor the server took): hold the autojoin until the
+ * server's restoration has been applied, or until RESTORE_WAIT_MS pass
+ * without a sign of one (nothing was held after all).
  */
 export function awaitRestoration(client: IrcClient): void {
 	const state = stateOf(client);
@@ -103,7 +115,7 @@ export function awaitRestoration(client: IrcClient): void {
 		return;
 	}
 
-	state.deadline = Date.now() + RESTORE_MAX_WAIT_MS;
+	beginSettling(client);
 	arm(client, state, RESTORE_WAIT_MS);
 }
 

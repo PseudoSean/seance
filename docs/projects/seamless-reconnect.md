@@ -112,7 +112,8 @@ server does not announce, so the rule is now about the _content_:
 - **The routine attach note is not shown**: `NOTE BOUNCER ALIAS_ATTACHED`
   inside the settling window (`inRestorationWindow`, the same 8 s) is setup
   chatter that would arrive on every switch back to the app. The same note
-  later — or any other bouncer NOTE — is shown as before.
+  later — or any other bouncer NOTE — is shown as before. (Round four: that
+  window is opened by every registration, not only by `STATUS ON`.)
 
 ## Round three: the server does the catch-up (2026-08-28)
 
@@ -171,6 +172,33 @@ Nothing changes when the server does not offer the token, SASL is not
 configured or fails, or there is no stored cursor: the paced per-channel
 catch-up of `catchup.ts` runs exactly as before.
 
+## Round four: the leftovers on the phone (2026-08-30)
+
+Reported from the field: an hour of `#linux` on the phone showed five
+`BOUNCER: Attached to session … [NOTE ALIAS_ATTACHED]` lines and two
+`Channel mode is +tn`, all of them from switching back to the app. Two holes,
+both the same shape — a repeat silenced by _context_ that the context did not
+actually cover:
+
+- **The settling window depended on `PERSISTENCE STATUS`.** `inRestorationWindow`
+  only opened when the effective hold was known to be ON at the end of
+  registration, and `IrcClient.persistenceHold` is reset on every `onOpen`. On
+  the alias-attach path the unsolicited STATUS line only exists since
+  nefarious2 `41f34b7` (2026-05-21), so against a server without it — or any
+  future path that skips it — the window never opened and everything gated on
+  it (the attach note, the `Session resumed…` summary) was reported once per
+  foreground. `persistence.ts` `beginSettling` now runs on _every_
+  registration; `awaitRestoration` (which also holds the autojoin) is still
+  only for a session we know is being restored — now including one whose
+  `PERSISTENCE ATTACH` cursor the server took (`client.serverReplay`), which
+  previously autojoined straight into the replay.
+- **324 was printed unconditionally.** The modes are asked for after every
+  (re)JOIN — lazily on first open, or with the active channel's catch-up —
+  so every reconnect brought `Channel mode is +tn` back. `handlers/mode.ts`
+  now compares against `Channel.modeText` and only shows a 324 that differs,
+  with `Channel.modesAsked` (set by a bare `/mode [#chan]`) as the escape
+  hatch — the same shape as `topicAsked` for 332.
+
 ## What the ircd offers next (read 2026-08-28)
 
 MrLenin's design guide — [gist 8d644eb…](https://gist.github.com/MrLenin/8d644eb37878d7bcaa91d1a68ae23d94),
@@ -213,6 +241,22 @@ us, in the order it is worth doing:
   (`replay_next_channel` prefers a marker newer than the cursor), so a
   channel read on another device replays less than the cursor asks for — by
   design, but worth remembering when a gap looks too small.
+- **A reattach can still produce a real JOIN, and services greet it.** The
+  field report also showed one `-X3- (#Operations) <greeting>` line. X3 sends
+  a channel's greeting from `handle_join` whenever it sees a JOIN outside a
+  netburst (`send_message_type(4, user, chanserv, "(%s) %s", …)`,
+  `chanserv.c`), so that line means the network really saw us join. Neither
+  restore path broadcasts one — `bounce_send_channel_state` sends the JOIN to
+  the attaching client only, a held session keeps the membership (`s_bsd.c`,
+  "suppresses QUIT, keeps channels") and `m_join.c` returns early for a
+  channel we are already on — but **both skip `IsZombie`/`IsDelayedJoin`
+  memberships**: on a `+D` channel the alias is never added to the channel
+  (`bounce_setup_local_alias` step 7) and the client is never told about it,
+  so the autojoin JOINs it for real on every reattach, visibly to services
+  (greeting, autoop) and to the channel. The client cannot do anything about
+  a membership the server hides from it; worth asking MrLenin either to copy
+  delayed-join memberships to the alias (still delayed) or to name them in
+  the restoration batch so the autojoin can skip them.
 - **Cold start still trickles.** With the cursor accepted, channels the page
   holds nothing for are filled with the usual paced `CHATHISTORY LATEST`
   (one per 4 s) so a quiet channel is not empty on a fresh load. That is the
