@@ -5,6 +5,7 @@ attic/
 test-results/
 playwright-report/
 .superpowers/
+docs/superpowers/
 .claude-config/
 .mcp-memory/
 *.log

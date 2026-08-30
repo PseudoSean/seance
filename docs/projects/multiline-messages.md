@@ -1,7 +1,7 @@
 # Multi-line messages (`draft/multiline`): one message, many lines
 
 _Built 2026-08-29 on `multiline-messages`. Design spec:
-`docs/superpowers/specs/2026-08-29-multiline-messages-design.md`. The IRCv3
+`docs/archives/2026-08-29-multiline-messages-design.md`. The IRCv3
 draft is https://ircv3.net/specs/extensions/multiline._
 
 ## What it does
