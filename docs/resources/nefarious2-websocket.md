@@ -68,7 +68,7 @@ Client to server (`ircd/s_bsd.c:1118-1260`, `websocket.c:460-565`):
 - Fragmented messages (FIN=0 + continuation) are reassembled up to 16384 bytes (`:1178-1200`).
 - Text frames with invalid UTF-8 are sanitised to U+FFFD, not rejected (`:1233-1240`); reassembled fragments with invalid UTF-8 _are_ rejected (`:1193-1197`).
 - After decode, `recv_classify()` enforces client caps of tags ≤ 4095 bytes and message ≤ `FULL_MSG_SIZE` (`include/recv_classify.h:25-37`); overrun = `Excess Flood` disconnect.
-- **Bug to report upstream — inbound frame size is capped at 527 bytes.** `websocket_decode_frame()` allows up to `WS_MAX_PAYLOAD` (16384, `websocket.c:67`) but is called with a stack buffer `ws_payload[BUFSIZE + 16]` = 528 bytes (`s_bsd.c:1126`) and rejects any frame whose payload length ≥ buffer size (`websocket.c:551-554`). Any single frame or fragment of ≥ 528 bytes therefore kills the connection with `WebSocket frame error`. Browsers do not let a page control fragmentation, so **Seance must keep every outbound line under ~500 bytes** (tags included) until this is fixed. Ordinary PRIVMSG/TAGMSG lines fit; long `draft/multiline` batches and big client-tag payloads will not.
+- **Inbound frames used to be capped at 527 bytes (#98, fixed upstream 2026-08-28 in [#101](https://github.com/evilnet/nefarious2/pull/101)).** `websocket_decode_frame()` allows up to `WS_MAX_PAYLOAD` (16384, `websocket.c:67`) but was called with a stack buffer `ws_payload[BUFSIZE + 16]` = 528 bytes (`s_bsd.c:1126`) and rejected any frame whose payload length ≥ buffer size (`websocket.c:551-554`), killing the connection with `WebSocket frame error`. `MAX_LINE_BYTES = 500` stays regardless: `recv_classify.c` still rejects a message body over 512 bytes as excess flood, and browsers cannot control fragmentation. This never constrained `draft/multiline`, which is many short lines rather than one long one.
 - WS-level PING from the client is answered with PONG; CLOSE is echoed with the same status code (`websocket.c:637-682`). The server never initiates WS pings — liveness is IRC `PING` as usual, plus whatever keepalive the client wants.
 
 ### What the client should implement
@@ -110,7 +110,7 @@ Client to server (`ircd/s_bsd.c:1118-1260`, `websocket.c:460-565`):
 | `no-implicit-names` (+ `draft/`) | no     | yes (default on)                                    | `m_cap.c:339-340`, `ircd_features.c:1197`                                 | optional                                                                                                                   |
 | `draft/extended-isupport`        | no     | yes (default on)                                    | `m_cap.c:341`, `ircd/m_isupport.c`                                        | optional                                                                                                                   |
 | `draft/pre-away`                 | no     | yes (default on)                                    | `m_cap.c:342`, `ircd_features.c:1200`                                     | optional                                                                                                                   |
-| `draft/multiline`                | no     | yes (default on); 302 value `max-bytes=,max-lines=` | `m_cap.c:343`, `:527-531`                                                 | later (blocked by 527-byte inbound frame bug)                                                                              |
+| `draft/multiline`                | no     | yes (default on); 302 value `max-bytes=,max-lines=` | `m_cap.c:343`, `:527-531`                                                 | yes (#98 fixed upstream 2026-08-28); request when the 302 value parses                                                     |
 | `draft/chathistory`              | no     | yes (default on); 302 value = int                   | `m_cap.c:344`, `:537-541`, `ircd/m_chathistory.c`, `ircd_features.c:1202` | request; degrade gracefully. ISUPPORT `CHATHISTORY=<n>` and `MSGREFTYPES=timestamp,msgid` (`s_user.c:3307-3308`)           |
 | `draft/event-playback`           | no     | yes (**default off**)                               | `m_cap.c:345`, `ircd_features.c:1203`                                     | request if offered                                                                                                         |
 | `draft/message-redaction`        | no     | yes (default off)                                   | `m_cap.c:346`, `ircd_features.c:1204`, `ircd/m_redact.c`                  | optional                                                                                                                   |
@@ -339,6 +339,75 @@ lalice << :lalice!lalice@172.17.0.1 REDACT #seance ABAAAAAaA8Iz[f :edited
 lbob   << :lalice!lalice@172.17.0.1 REDACT #seance ABAAAAAaA8Iz[f :edited
 lcarol << @batch=hist7AAF;time=2026-08-26T03:38:20.292Z;msgid=ABAAAAAaA8Iz[g;+draft/react=👍;+draft/reply=ABAAAAAaA8Iz[f :lbob!lbob@172.17.0.1 TAGMSG #seance
 lcarol << @batch=hist7AAF;time=2026-08-26T03:38:23.204Z;msgid=ABAAAAAaA8Iz[n :lalice!lalice@172.17.0.1 REDACT #seance ABAAAAAaA8Iz[f :edited
+```
+
+## Multi-line messages (`draft/multiline`), observed 2026-08-29
+
+Verified live against AfterNET (`wss://fractalrealities.afternet.org:9998/`, `u2.10.12.14+Nefarious(2.0.0)`), which advertises `draft/multiline=max-bytes=16384,max-lines=100`, with `echo-message` on so the server's own relay shape is visible. What Seance sends is in `client/js/irc/multiline.ts`; the draft is https://ircv3.net/specs/extensions/multiline.
+
+- **The echo matches the draft exactly.** `msgid`, `time` and our client-only tags are on the **opening** `BATCH` line and nowhere else; the lines carry `batch` (plus `draft/multiline-concat`) and nothing more. Seance's receive side reads the message's tags off the opener for that reason (it falls back to the first line's `msgid`/`time`/`account` only for servers that do not).
+- **The reference is rewritten and reused.** Our `+m1` came back as `+Gk1764665368` — and the _same_ server reference was used for all three of our batches in one session, one after the other. Anything keyed on the reference must therefore only assume uniqueness among _open_ batches, which is what `handlers/batch.ts` does. Seance sends one whole batch at a time for the same reason.
+- **CTCP is not interpreted inside a batch.** `\x01ACTION …\x01` on every line is relayed verbatim, line by line; the server neither strips nor re-frames it. The draft says nothing about CTCP, so per-line framing is what Seance sends: it is what a client without the capability sees as one action per line, and `joinMultiline` strips the framing from every line and puts it back around the joined text.
+- **A blank line in the middle is accepted** and relayed as `PRIVMSG #chan :` with an empty trailing parameter. (The draft forbids only a blank line carrying the concat tag and a message that is _nothing but_ blank lines; `planMultiline` drops trailing blanks and never concat-tags a blank.)
+- **A trailing space survives a concat join**, which is what makes the draft's recommended split ("leave the space at the end of the line") work: `alpha ` + `bravo` reads back as `alpha bravo`.
+- Fake lag charges the batch once, at `BATCH -` (see below), so a five-line burst costs one command's worth. Nothing was rejected and no `FAIL BATCH` was seen.
+- **`WARN BATCH MULTILINE_FALLBACK` follows every batch that also reached a client without the capability.** Not in the draft: `:server WARN BATCH MULTILINE_FALLBACK #ps :Message truncated for 3 legacy recipients`. It is a `WARN`, not a `FAIL` — the message went out — and it arrives once per multi-line message, which on any populated channel is every one of them. Seance swallows it (`handlers/standard-replies.ts`): shown through the generic standard-reply line it would put a red error under every multi-line message the user sends, about something they cannot act on.
+- **"Truncated" is a misnomer — nothing is lost.** A second connection that negotiated no capabilities at all, listening in the same channel, received the three lines as three ordinary `PRIVMSG`s, in order, with the same text. That is what the draft requires ("When delivering multiline batches to clients that have not negotiated the multiline capability, servers MUST deliver the component messages without using a multiline BATCH"), so the only difference for such a client is that the message is three timeline entries instead of one. `test/irc/multiline.live.ts` asserts this with a capability-less peer of its own, so a regression here is caught rather than assumed.
+
+Transcript (client `>>`, server `<<`; `<SOH>` is `\x01`):
+
+```
+>> @+seance/probe=1 BATCH +m1 draft/multiline #ps
+>> @batch=m1 PRIVMSG #ps :seance multiline probe: alpha
+>> @batch=m1;draft/multiline-concat PRIVMSG #ps :bravo
+>> @batch=m1 PRIVMSG #ps :charlie
+>> BATCH -m1
+<< @time=2026-08-29T10:07:28.075Z;msgid=GkAAAAAaBMH3sn;+seance/probe=1 :seancemlp!seancemlp@1A6901.11D8D5.AA5A5A.AE1570.IP BATCH +Gk1764665368 draft/multiline #ps
+<< @batch=Gk1764665368 :seancemlp!…IP PRIVMSG #ps :seance multiline probe: alpha
+<< @batch=Gk1764665368;draft/multiline-concat :seancemlp!…IP PRIVMSG #ps :bravo
+<< @batch=Gk1764665368 :seancemlp!…IP PRIVMSG #ps :charlie
+<< :seancemlp!…IP BATCH -Gk1764665368
+
+>> BATCH +m2 draft/multiline #ps
+>> @batch=m2 PRIVMSG #ps :<SOH>ACTION waves once<SOH>
+>> @batch=m2 PRIVMSG #ps :<SOH>ACTION and bows twice<SOH>
+>> BATCH -m2
+<< @time=2026-08-29T10:07:43.113Z;msgid=GkAAAAAaBMH3sq :seancemlp!…IP BATCH +Gk1764665368 draft/multiline #ps
+<< @batch=Gk1764665368 :seancemlp!…IP PRIVMSG #ps :<SOH>ACTION waves once<SOH>
+<< @batch=Gk1764665368 :seancemlp!…IP PRIVMSG #ps :<SOH>ACTION and bows twice<SOH>
+<< :seancemlp!…IP BATCH -Gk1764665368
+
+>> BATCH +m3 draft/multiline #ps
+>> @batch=m3 PRIVMSG #ps :delta
+>> @batch=m3 PRIVMSG #ps :
+>> @batch=m3 PRIVMSG #ps :echo
+>> BATCH -m3
+<< @time=2026-08-29T10:07:58.197Z;msgid=GkAAAAAaBMH3sr :seancemlp!…IP BATCH +Gk1764665368 draft/multiline #ps
+<< @batch=Gk1764665368 :seancemlp!…IP PRIVMSG #ps :delta
+<< @batch=Gk1764665368 :seancemlp!…IP PRIVMSG #ps :
+<< @batch=Gk1764665368 :seancemlp!…IP PRIVMSG #ps :echo
+<< :seancemlp!…IP BATCH -Gk1764665368
+```
+
+(The first line of batch A ends with a space, trimmed by this document's formatter; that space is what the concat join restores.)
+
+The fallback observation, from `test/irc/multiline.live.ts` (`mlleg8114` is the capability-less peer; its copy is shown as `legacy <<`):
+
+```
+>> BATCH +m1 draft/multiline #ps
+>> @batch=m1 PRIVMSG #ps :ml8114 line one
+>> @batch=m1 PRIVMSG #ps :line two
+>> @batch=m1 PRIVMSG #ps :line three
+>> BATCH -m1
+<< @time=2026-08-29T10:48:59.462Z;msgid=GkAAAAAaBMH3yQ :mlws8114!…IP BATCH +Gk1763771672 draft/multiline #ps
+<< @batch=Gk1763771672 :mlws8114!…IP PRIVMSG #ps :ml8114 line one
+<< @batch=Gk1763771672 :mlws8114!…IP PRIVMSG #ps :line two
+<< @batch=Gk1763771672 :mlws8114!…IP PRIVMSG #ps :line three
+<< :mlws8114!…IP BATCH -Gk1763771672
+<< @time=2026-08-29T10:48:59.462Z :FractalRealities.AfterNET.Org WARN BATCH MULTILINE_FALLBACK #ps :Message truncated for 3 legacy recipients
+legacy << :mlws8114!…IP PRIVMSG #ps :ml8114 line one
+legacy << :mlws8114!…IP PRIVMSG #ps :line two
+legacy << :mlws8114!…IP PRIVMSG #ps :line three
 ```
 
 ## Fake lag / flood penalty, measured 2026-08-27

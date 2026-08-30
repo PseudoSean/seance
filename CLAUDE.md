@@ -14,19 +14,20 @@ Upstream is still `github.com/thelounge/thelounge`; divergence only grows. local
 
 `yarn` is not on PATH on this machine — use `corepack yarn <cmd>` (or `npx` for one-offs).
 
-| Task                                            | Command                                       |
-| ----------------------------------------------- | --------------------------------------------- |
-| Install deps                                    | `yarn install`                                |
-| Build the SPA (webpack → `public/`)             | `yarn build` (`NODE_ENV=production` for prod) |
-| Webpack watch                                   | `yarn watch`                                  |
-| Serve the built SPA                             | `python3 -m http.server -d public 8000`       |
-| Lint everything (eslint + prettier + stylelint) | `yarn lint`                                   |
-| Auto-format                                     | `yarn format:prettier`                        |
-| Full test (lint + mocha)                        | `yarn test`                                   |
-| Mocha only (builds first)                       | `yarn test:mocha`                             |
-| Mocha without the spec glob                     | `yarn test:nospec`                            |
-| Coverage                                        | `yarn coverage`                               |
-| Install git pre-commit hook                     | `yarn githooks-install`                       |
+| Task                                                      | Command                                       |
+| --------------------------------------------------------- | --------------------------------------------- |
+| Install deps                                              | `yarn install`                                |
+| Build the SPA (webpack → `public/`)                       | `yarn build` (`NODE_ENV=production` for prod) |
+| Webpack watch                                             | `yarn watch`                                  |
+| Serve the built SPA                                       | `python3 -m http.server -d public 8000`       |
+| Lint everything (eslint + prettier + stylelint)           | `yarn lint`                                   |
+| Auto-format                                               | `yarn format:prettier`                        |
+| Full test (lint + mocha)                                  | `yarn test`                                   |
+| Mocha only (builds first)                                 | `yarn test:mocha`                             |
+| Mocha without the spec glob                               | `yarn test:nospec`                            |
+| Coverage                                                  | `yarn coverage`                               |
+| Install git pre-commit hook                               | `yarn githooks-install`                       |
+| Playwright e2e (builds first, needs `SEANCE_E2E_IRC_URL`) | `yarn test:e2e`                               |
 
 There is no `yarn dev`/`yarn start`; build and serve `public/` statically.
 
@@ -44,7 +45,7 @@ SEANCE_IRC_URL=wss://localhost:8443/ npx cross-env NODE_ENV=test \
   TS_NODE_PROJECT='./test/tsconfig.json' npx mocha --config=test/.mocharc.yml test/irc/client.live.ts
 ```
 
-They relax TLS verification for `localhost` only (self-signed dev cert). Run live files **one at a time** — they share module singletons (the bus spy, the network manager, the id allocator) and time out waiting for `init` when several run in one mocha process (verified 2026-08-25: all pass individually, 4/6 fail combined; the ircd was not throttling). Making them coexist is an open follow-up. Quick headless smoke check after a build (expects the connect form and no console errors):
+`SEANCE_IRC_CHANNEL` overrides the channel the newer files join (default `#seance`), so they can be pointed at a public network. They relax TLS verification for `localhost` only (self-signed dev cert). Run live files **one at a time** — they share module singletons (the bus spy, the network manager, the id allocator) and time out waiting for `init` when several run in one mocha process (verified 2026-08-25: all pass individually, 4/6 fail combined; the ircd was not throttling). Making them coexist is an open follow-up. Quick headless smoke check after a build (expects the connect form and no console errors):
 
 ```sh
 chromium --headless=new --disable-gpu --virtual-time-budget=5000 \
@@ -82,6 +83,7 @@ Data flow: `transport.ts` (`WsTransport`: one line per frame, PING/PONG, reconne
 
 - **`handlers/`** — one file per command/numeric exporting `{COMMAND: handler}`; `handlers/index.ts` holds the `modules` list and the `unhandled` fallback. **To add a handler: add a file and one entry in `modules`.**
 - **`commands/`** — one file per slash command exporting a `Command`; `commands/index.ts` holds the `modules` list and `dispatchInput`. **To add a command: add a file and one entry in `modules`.** Unknown commands are sent raw.
+- **`multiline.ts`** — `draft/multiline`: `parseMultilineValue`/`IrcClient.multilineLimits()` (the one gate the whole feature is behind), `multilineBatch` (a received batch joined into one message, tags off the opener), `planMultiline`/`sendMultiline` (multi-line input as `BATCH … draft/multiline` with `draft/multiline-concat` chunks). `FAIL BATCH MULTILINE_*` and the server's per-message `WARN BATCH MULTILINE_FALLBACK` are in `handlers/standard-replies.ts`. See `docs/projects/multiline-messages.md`.
 - `manager.ts` (`NetworkManager` registry, `createNetwork`), `bus.ts` (bus handlers, store-free), `history.ts` (`draft/chathistory` + batches; distinct from `client/js/history.ts`, the input history), `catchup.ts` (paced per-channel history/marker fetch after JOIN — the active channel at once, the rest one per 4 s, because ircu-family servers charge ~2 s of fake lag per command and stop reading at 10 s; see `docs/projects/connect-burst.md`), `persistence.ts` (nefarious2's built-in bouncer, `draft/persistence`: after `PERSISTENCE STATUS ON` the autojoin waits for the server's restoration batch, which is applied as state only; also the `PERSISTENCE ATTACH default <msgid>` catch-up cursor — offered in the `CAP END` flush after a successful SASL, its `evilnet.github.io/bouncer-replay` batch appended as new messages, and `catchup.ts` stood down while it is accepted. See `docs/projects/seamless-reconnect.md`), `sts.ts`, `saved-networks.ts` (`thelounge.networks`), `ids.ts` (one shared id allocator across networks; history ids are negative), `errors.ts`, `hostmask.ts`, `wire.ts`, `types.ts`.
 
 ### Working in the IRC layer
@@ -116,10 +118,10 @@ Cross-cutting types and helpers. `shared/types/socket-events.ts` (`ServerToClien
 - `MAX_LINE_BYTES = 500` (`client/js/irc/message.ts`) caps every outbound line, tags included: nefarious2 kills connections on inbound WS frames >= 528 bytes (#98) and the branch rejects message bodies over 512 bytes as excess flood, and browsers cannot control fragmentation. `splitMessage` chunks long text; do not raise the cap.
 - After changing `client/`, run `yarn build` (or `yarn watch`) — the mocha build test and the headless check both read `public/`. `public/` is gitignored and shared by every branch, so it does not change on checkout: rebuild after switching branches.
 - **The suite has no browser and no DOM.** No component is ever mounted, so a change under `client/components/`, `client/css/` or the store is unverified by `yarn test` however green it is. Check those in a real browser (`docs/resources/browser-testing.md`).
-- Tests mirror the source under `test/`: `test/irc/*.ts` for the IRC layer, `test/shared/`, `test/tests/` (`build.ts`, `eventBus.ts`), `test/client/` (browser specs webpack bundles in development mode into `test/public/testclient.js`; ignored by mocha). Mocha config `test/.mocharc.yml` (tsx loader, `check-leaks`).
+- Tests mirror the source under `test/`: `test/irc/*.ts` for the IRC layer, `test/shared/`, `test/tests/` (`build.ts`, `eventBus.ts`), `test/client/` (browser specs webpack bundles in development mode into `test/public/testclient.js`; ignored by mocha), `test/e2e/` (Playwright, ignored by mocha, needs a built `public/` and `SEANCE_E2E_IRC_URL`). Mocha config `test/.mocharc.yml` (tsx loader, `check-leaks`).
 - IRC unit tests use a `FakeTransport` injected through `transportFactory` and drive lines with `transport.line(...)`, asserting on a `sinon.spy(socket, "dispatch")`. **Gotcha:** `test/irc/client.ts` installs that spy in a root-level `beforeEach`, which mocha applies to every file in the run; other files (`multi-network.ts`, `history.ts`, ...) check `socket.dispatch.isSinonProxy` and only `restore()` a spy they own. Follow that pattern in new test files or the suite fails when run together.
 - Modules that must run under mocha (`irc/*`, `saved-networks.ts`, `sts.ts`) stay free of store/DOM imports; tests swap storage via `useStorageBackend`.
-- Live tests are gated on `SEANCE_IRC_URL` and need the dev ircd running.
+- Live tests are gated on `SEANCE_IRC_URL` (and `SEANCE_IRC_CHANNEL`, default `#seance`) and need the dev ircd running.
 - localStorage keys are still `thelounge.*` (`thelounge.networks`, `thelounge.sts`, `thelounge.mentions`, `thelounge.muted`, `thelounge.media.trusted`, `thelounge.sort.*`, ...). Do not rename without a migration.
 
 ## Documentation

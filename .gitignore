@@ -9,6 +9,13 @@ public/
 dist/
 tmp/
 
+# playwright (test/e2e)
+test-results/
+playwright-report/
+
+# agent scratch
+.superpowers/
+
 # Claude Code session scratch (agent worktrees, local settings) — but the
 # project's committed skills under .claude/skills/ are source.
 .claude/*
@@ -24,3 +31,7 @@ shells/capacitor/ios/App/App/public/
 shells/capacitor/ios/App/Pods/
 shells/electron/node_modules/
 shells/electron/dist/
+
+# agent scratch (local session state)
+.claude-config/
+.mcp-memory/

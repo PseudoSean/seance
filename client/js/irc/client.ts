@@ -26,6 +26,15 @@ import {commandNames, dispatchInput} from "./commands";
 import {describeClose} from "./disconnect";
 import {handlers, unhandled} from "./handlers";
 import {interceptBatchLine, resetBatches} from "./handlers/batch";
+import {
+	CONCAT_LINE_TAG_BYTES,
+	MULTILINE_CAP,
+	MultilineLimits,
+	MultilinePlan,
+	parseMultilineValue,
+	planMultiline,
+	sendMultiline,
+} from "./multiline";
 import {cancelMarkRead, scheduleMarkRead} from "./handlers/markread";
 import {abortHistory} from "./history";
 import {
@@ -199,6 +208,8 @@ export class IrcClient {
 	host = "";
 	/** MOTD lines being collected between 375 and 376. */
 	motdBuffer: string[] | null = null;
+	/** Counter behind {@link nextBatchRef}. */
+	private batchRefs = 0;
 	/** The SASL exchange in progress during registration, if any. */
 	sasl: SaslAuth | null = null;
 	/** Services account we are logged in as (900/901); "" when not. */
@@ -654,20 +665,37 @@ export class IrcClient {
 		}
 	}
 
-	/** A negotiator that also asks for `sasl` (when usable) and runs SASL before `CAP END`. */
+	/**
+	 * A negotiator that also asks for `sasl` (when usable) and runs SASL
+	 * before `CAP END`. The `accept` hook drops a cap whose 302 value says
+	 * we cannot use it: a `sasl` without our mechanism, a `draft/multiline`
+	 * without both of its limits (multiline.ts).
+	 */
 	private createCaps(): CapNegotiator {
 		const mechanism = this.saslMechanism;
 
-		if (!mechanism) {
-			return new CapNegotiator(SEANCE_CAPS);
-		}
+		const accept = (name: string, value: string): boolean => {
+			if (name === MULTILINE_CAP) {
+				return parseMultilineValue(value) !== undefined;
+			}
+
+			if (name === "sasl") {
+				return mechanism !== null && mechanismOffered(mechanism, value);
+			}
+
+			return true;
+		};
 
 		const caps = new CapNegotiator({
 			...SEANCE_CAPS,
-			wanted: [...SEANCE_CAPS.wanted, "sasl"],
-			accept: (name, value) => name !== "sasl" || mechanismOffered(mechanism, value),
+			wanted: mechanism ? [...SEANCE_CAPS.wanted, "sasl"] : SEANCE_CAPS.wanted,
+			accept,
 		});
-		caps.beforeEnd = () => this.startSasl(mechanism);
+
+		if (mechanism) {
+			caps.beforeEnd = () => this.startSasl(mechanism);
+		}
+
 		return caps;
 	}
 
@@ -953,20 +981,67 @@ export class IrcClient {
 		// The server prepends our full source to the echo; budget for it even
 		// when the host is still unknown (63 is the usual hostname limit).
 		const hostLen = this.host.length || 63;
-		let prefixBytes = utf8ByteLength(`:${this.nick}!${this.ident}@`) + hostLen;
-		prefixBytes += utf8ByteLength(` ${command} ${target} :`);
-		// The frame cap applies to the whole line; the first chunk carries the
-		// most tags, so every chunk is budgeted as if it did.
-		prefixBytes += utf8ByteLength(tagPrefix(firstTags));
+		const sourceBytes =
+			utf8ByteLength(`:${this.nick}!${this.ident}@`) +
+			hostLen +
+			utf8ByteLength(` ${command} ${target} :`);
+		const actionBytes = opts.action ? "\x01ACTION \x01".length : 0;
+		const limits = this.multilineLimits();
+		let plain = text;
 
-		if (opts.action) {
-			prefixBytes += "\x01ACTION \x01".length;
+		if (limits && text.includes("\n")) {
+			let plan: MultilinePlan;
+
+			try {
+				// Inside a batch a line carries `batch` (+ concat) and nothing
+				// else; the client tags go on the opener.
+				plan = planMultiline(
+					text,
+					sourceBytes + actionBytes + CONCAT_LINE_TAG_BYTES,
+					limits,
+					actionBytes
+				);
+			} catch (err: unknown) {
+				const message = err instanceof Error ? err.message : String(err);
+				this.pushMessage(this.lobby, {
+					type: MessageType.ERROR,
+					text: `Not sent: ${message}`,
+				});
+				return;
+			}
+
+			const count = plan.reduce((n, batch) => n + batch.length, 0);
+
+			if (count === 0) {
+				return; // nothing but blank lines
+			}
+
+			if (count > 1) {
+				// `opts.tags` (a reply) belongs on every batch, `opts.firstTags`
+				// (an edit) only on the first — one edit replaces one message.
+				sendMultiline(
+					this,
+					target,
+					command,
+					plan,
+					opts.tags ?? {},
+					opts.action === true,
+					opts.firstTags ?? {}
+				);
+				return;
+			}
+
+			// One line once the blanks are gone: an ordinary message.
+			plain = plan[0][0].text;
 		}
 
+		// The frame cap applies to the whole line; the first chunk carries the
+		// most tags, so every chunk is budgeted as if it did.
+		const prefixBytes = sourceBytes + actionBytes + utf8ByteLength(tagPrefix(firstTags));
 		let chunks: string[];
 
 		try {
-			chunks = splitMessage(prefixBytes, text.replace(/[\r\n\0]/g, " "));
+			chunks = splitMessage(prefixBytes, plain.replace(/[\r\n\0]/g, " "));
 		} catch (err: unknown) {
 			const message = err instanceof Error ? err.message : String(err);
 			this.pushMessage(this.lobby, {type: MessageType.ERROR, text: `Not sent: ${message}`});
@@ -1164,6 +1239,34 @@ export class IrcClient {
 		}
 
 		this.typingState.clear();
+	}
+
+	/**
+	 * What one `draft/multiline` batch may carry, or undefined when
+	 * multi-line messages are not available: the cap has to be enabled with
+	 * a usable 302 value, and the two the draft depends on with it — `batch`,
+	 * which carries the message, and `message-tags`, without which the
+	 * `batch` tag never reaches the server and the batch has no lines.
+	 */
+	multilineLimits(): MultilineLimits | undefined {
+		if (
+			!this.caps.hasCapability(MULTILINE_CAP) ||
+			!this.caps.hasCapability("batch") ||
+			!this.caps.hasCapability("message-tags")
+		) {
+			return undefined;
+		}
+
+		return parseMultilineValue(this.caps.value(MULTILINE_CAP));
+	}
+
+	/**
+	 * A reference for our next outbound batch (`m1`, `m2`, …). Only has to be
+	 * unique among the batches we have open, which is at most one at a time.
+	 */
+	nextBatchRef(): string {
+		this.batchRefs++;
+		return `m${this.batchRefs}`;
 	}
 
 	/** Whether the server lets us send REDACT. */

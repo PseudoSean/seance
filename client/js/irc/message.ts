@@ -38,13 +38,12 @@ export interface IrcMessageInput {
  * tags included.
  *
  * Classic IRC allows 512 bytes including CRLF (plus up to 8191 bytes of
- * tags with `message-tags`). nefarious2 on the `ircv3.2-upgrade` branch,
- * however, decodes inbound WebSocket frames into a 528-byte stack buffer and
- * drops the connection with "WebSocket frame error" for any frame whose
- * payload is >= 528 bytes (upstream issue evilnet/nefarious2#98; see
- * docs/resources/nefarious2-websocket.md §"Framing rules"). Browsers do not
- * let a page control fragmentation, so every line is capped here with a
- * little headroom.
+ * tags with `message-tags`). nefarious2 used to drop the connection with
+ * "WebSocket frame error" for any inbound frame of >= 528 bytes (upstream
+ * issue evilnet/nefarious2#98, fixed 2026-08-28); the cap stays because the
+ * server still rejects a message body over 512 bytes as excess flood, and
+ * browsers cannot control fragmentation. See
+ * docs/resources/nefarious2-websocket.md §"Framing rules".
  */
 export const MAX_LINE_BYTES = 500;
 
