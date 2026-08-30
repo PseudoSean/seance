@@ -13,8 +13,11 @@ tmp/
 test-results/
 playwright-report/
 
-# agent scratch
+# agent scratch: the Superpowers skills' working state, and the specs and
+# plans they write. Anything worth keeping is moved into the PARA tree
+# (docs/README.md) when the work lands.
 .superpowers/
+docs/superpowers/
 
 # Claude Code session scratch (agent worktrees, local settings) — but the
 # project's committed skills under .claude/skills/ are source.
