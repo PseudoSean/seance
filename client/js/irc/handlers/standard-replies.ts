@@ -4,14 +4,17 @@
  * `FAIL REDACT <code> [<target> [<msgid>]] :text` gets a friendly message in
  * the channel the context names (or the active window) and aborts an edit
  * waiting on that msgid (bus-contract §1.4). `FAIL BATCH MULTILINE_* …` says
- * a multi-line message was dropped whole (../multiline.ts), and `WARN BATCH
- * MULTILINE_FALLBACK` — one per multi-line message — is silent. `FAIL
- * PERSISTENCE` about the catch-up cursor is silent too (../persistence.ts).
+ * a multi-line message was dropped whole (../multiline.ts) — except
+ * `MULTILINE_COOLDOWN`, which is the server pacing us: the batch goes out
+ * again when the cooldown is over, and nothing is said. `WARN BATCH
+ * MULTILINE_FALLBACK` — one per multi-line message — is silent, and so is
+ * `FAIL PERSISTENCE` about the catch-up cursor (../persistence.ts).
  * Everything else is shown raw.
  */
 
 import {MessageType} from "../../../../shared/types/msg";
 import {chatHistoryFailed} from "../history";
+import {multilineCooldown, multilineRejected} from "../multiline";
 import {inRestorationWindow, noteRestorationActivity, persistenceFailed} from "../persistence";
 import type {Handler} from "../types";
 import type {IrcClient} from "../client";
@@ -103,6 +106,17 @@ function multilineFailed(client: IrcClient, msg: IrcMessage): void {
 	);
 }
 
+/**
+ * The seconds `FAIL BATCH MULTILINE_COOLDOWN <seconds> :text` asks us to wait
+ * (`ircd/m_batch.c` counts them down in whole seconds). Zero when the server
+ * named none, which only costs one round trip to find out.
+ */
+function cooldownSeconds(rest: string[]): number {
+	const seconds = rest.slice(0, -1).find((param) => /^\d+$/.test(param));
+
+	return seconds === undefined ? 0 : Number(seconds);
+}
+
 function reply(kind: "FAIL" | "WARN" | "NOTE"): Handler {
 	return (client, msg) => {
 		const [command = "*", code = "", ...rest] = msg.params;
@@ -121,6 +135,18 @@ function reply(kind: "FAIL" | "WARN" | "NOTE"): Handler {
 			command.toUpperCase() === "BATCH" &&
 			code.toUpperCase().startsWith("MULTILINE_")
 		) {
+			// A cooldown is the server pacing us, not something the user can
+			// act on: the batch is re-sent when it expires and the message
+			// arrives late rather than not at all. Only when it cannot be
+			// re-sent does this become a failure worth reporting.
+			if (
+				code.toUpperCase() === "MULTILINE_COOLDOWN" &&
+				multilineCooldown(client, cooldownSeconds(rest))
+			) {
+				return;
+			}
+
+			multilineRejected(client);
 			multilineFailed(client, msg);
 			return;
 		}

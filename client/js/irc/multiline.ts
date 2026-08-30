@@ -7,6 +7,10 @@
  * with no separator (that is how a paragraph longer than the line budget is
  * split). One batch is one message: one msgid, one timeline entry.
  *
+ * Sending is paced: the server charges a cooldown per delivered batch and
+ * drops one opened inside it, so batches go out one at a time and a cooldown
+ * re-sends rather than loses them (see {@link MultilineQueue}).
+ *
  * This module is store- and DOM-free (it runs under mocha).
  */
 
@@ -218,6 +222,15 @@ export const multilineBatch: BatchHandler = (client, batch) => {
 		}
 	}
 
+	// Our own batch coming back live is the server saying it took it, so the
+	// next one of the message may go out (a nested batch is history, not an
+	// echo).
+	const from = batch.messages[0].source;
+
+	if (!batch.parent && from && client.isSelf(from.name)) {
+		multilineAccepted(client);
+	}
+
 	const prefix = joined.source ? `:${joined.source} ` : "";
 
 	passOn(client, batch, [
@@ -391,8 +404,74 @@ function joinPlan(batch: MultilineLine[]): string {
 	return batch.map((line, i) => (i > 0 && !line.concat ? `\n${line.text}` : line.text)).join("");
 }
 
+// -------------------------------------------------------------- the pacer
+
 /**
- * Put `plan` on the wire: one `BATCH +<ref> draft/multiline <target>` per
+ * How long a batch on the wire waits for the server's verdict.
+ *
+ * With `echo-message` the batch comes back when it is delivered, so this is
+ * only a safety net for an echo that never arrives. Without it a delivered
+ * batch says nothing at all, and silence for a settle period is the only
+ * "it went through" there is.
+ */
+export const MULTILINE_VERDICT_MS = 30000;
+/** @see {@link MULTILINE_VERDICT_MS} — the same wait, without `echo-message`. */
+export const MULTILINE_SETTLE_MS = 1500;
+/** Longest cooldown a message is held for rather than reported as failed. */
+export const MULTILINE_MAX_COOLDOWN_MS = 120000;
+
+/** A planned batch, and everything needed to put it on the wire again. */
+interface SentBatch {
+	target: string;
+	command: "PRIVMSG" | "NOTICE";
+	lines: MultilineLine[];
+	tags: ClientTags;
+	action: boolean;
+	/** Its local echo has been shown already (no `echo-message`). */
+	shown: boolean;
+}
+
+/**
+ * One batch at a time, per client.
+ *
+ * nefarious2 charges a cooldown for every multiline batch it delivers —
+ * `(2 + bytes/128) x MULTILINE_COOLDOWN_DISCOUNT` seconds, so at least one
+ * even for a short one — and answers a batch opened inside that window with
+ * `FAIL BATCH MULTILINE_COOLDOWN <seconds>`, dropping it whole
+ * (`ircd/m_batch.c`). A plan of several batches put on the wire in one flush
+ * would therefore lose everything after the first, and so would a second
+ * message typed a moment after the first.
+ *
+ * So a batch goes out only once the one before it has been answered, and a
+ * cooldown puts it back at the front of the queue for the seconds the server
+ * named: the message is late, never lost.
+ */
+interface MultilineQueue {
+	/** On the wire, waiting for the server's verdict. */
+	inFlight: SentBatch | null;
+	/** Planned and not sent yet, in order. */
+	waiting: SentBatch[];
+	/** Verdict timer for {@link inFlight}. */
+	verdict: ReturnType<typeof setTimeout> | null;
+	/** Cooldown timer; nothing goes out while it runs. */
+	retry: ReturnType<typeof setTimeout> | null;
+}
+
+const queues = new WeakMap<IrcClient, MultilineQueue>();
+
+function queueOf(client: IrcClient): MultilineQueue {
+	let queue = queues.get(client);
+
+	if (!queue) {
+		queue = {inFlight: null, waiting: [], verdict: null, retry: null};
+		queues.set(client, queue);
+	}
+
+	return queue;
+}
+
+/**
+ * Queue `plan` and start it: one `BATCH +<ref> draft/multiline <target>` per
  * inner array, its lines tagged `batch` (and {@link CONCAT_TAG}), then
  * `BATCH -<ref>`. `openerTags` are the client-only tags every batch carries
  * (a reply reference applies to each of them); `firstOpenerTags` are the ones
@@ -403,9 +482,10 @@ function joinPlan(batch: MultilineLine[]): string {
  * nefarious2 relays verbatim and what a client without the cap sees as one
  * action per line.
  *
- * Batches go out one whole batch at a time, so a plan of several never
- * interleaves. Without `echo-message` each batch is fed back through the
- * handlers as one joined message, as the single-line path does.
+ * Only the first batch goes out now; the rest follow as the server answers
+ * for the one before them (see {@link MultilineQueue}). Without
+ * `echo-message` each batch is fed back through the handlers as one joined
+ * message, as the single-line path does.
  */
 export function sendMultiline(
 	client: IrcClient,
@@ -416,52 +496,189 @@ export function sendMultiline(
 	action: boolean,
 	firstOpenerTags: ClientTags = {}
 ): void {
-	const echo = client.caps.hasCapability("echo-message");
+	const queue = queueOf(client);
 
-	for (const [index, batch] of plan.entries()) {
-		const ref = client.nextBatchRef();
-		const tags: ClientTags = index === 0 ? {...firstOpenerTags, ...openerTags} : openerTags;
-		const opener = formatLine({
-			tags,
-			command: "BATCH",
-			params: [`+${ref}`, MULTILINE_CAP, target],
+	for (const [index, lines] of plan.entries()) {
+		queue.waiting.push({
+			target,
+			command,
+			lines,
+			tags: index === 0 ? {...firstOpenerTags, ...openerTags} : openerTags,
+			action,
+			shown: false,
 		});
+	}
 
-		if (!client.send(opener)) {
-			return;
+	pump(client);
+}
+
+/** Put the next batch on the wire, if one may go now. */
+function pump(client: IrcClient): void {
+	const queue = queueOf(client);
+
+	if (queue.inFlight || queue.retry || queue.waiting.length === 0) {
+		return;
+	}
+
+	const batch = queue.waiting.shift() as SentBatch;
+
+	if (!transmit(client, batch)) {
+		// The transport is gone and `send` has reported it; the rest of the
+		// message goes with it.
+		resetMultiline(client);
+	}
+}
+
+/** Write one batch out and start waiting for the server's answer. */
+function transmit(client: IrcClient, batch: SentBatch): boolean {
+	const queue = queueOf(client);
+	const ref = client.nextBatchRef();
+	const opener = formatLine({
+		tags: batch.tags,
+		command: "BATCH",
+		params: [`+${ref}`, MULTILINE_CAP, batch.target],
+	});
+
+	if (!client.send(opener)) {
+		return false;
+	}
+
+	for (const line of batch.lines) {
+		const lineTags: ClientTags = {batch: ref};
+
+		if (line.concat) {
+			lineTags[CONCAT_TAG] = "";
 		}
 
-		for (const line of batch) {
-			const lineTags: ClientTags = {batch: ref};
+		const body = batch.action ? `${ACTION_PREFIX}${line.text}\x01` : line.text;
 
-			if (line.concat) {
-				lineTags[CONCAT_TAG] = "";
-			}
-
-			const body = action ? `${ACTION_PREFIX}${line.text}\x01` : line.text;
-
-			if (!client.send(trailingLine(command, [target, body], lineTags))) {
-				return;
-			}
-		}
-
-		if (!client.send(formatLine({command: "BATCH", params: [`-${ref}`]}))) {
-			return;
-		}
-
-		if (!echo) {
-			const text = joinPlan(batch);
-			const body = action ? `${ACTION_PREFIX}${text}\x01` : text;
-
-			client.handleMessage({
-				tags: new Map(Object.entries(tags)),
-				source: {name: client.nick, user: client.ident, host: client.host || "localhost"},
-				command,
-				params: [target, body],
-				// Not a line that could have been received (the text has line
-				// feeds in it); it exists for diagnostics.
-				raw: `${command} ${target} :${body}`,
-			});
+		if (!client.send(trailingLine(batch.command, [batch.target, body], lineTags))) {
+			return false;
 		}
 	}
+
+	if (!client.send(formatLine({command: "BATCH", params: [`-${ref}`]}))) {
+		return false;
+	}
+
+	const echo = client.caps.hasCapability("echo-message");
+
+	queue.inFlight = batch;
+	queue.verdict = setTimeout(
+		() => {
+			// Nothing came back: without `echo-message` that is what delivery
+			// looks like, and with it the echo was lost. Either way there is
+			// nothing left to wait for.
+			queue.verdict = null;
+			queue.inFlight = null;
+			pump(client);
+		},
+		echo ? MULTILINE_VERDICT_MS : MULTILINE_SETTLE_MS
+	);
+
+	// A re-sent batch has been on screen since its first attempt.
+	if (!echo && !batch.shown) {
+		batch.shown = true;
+
+		const text = joinPlan(batch.lines);
+		const body = batch.action ? `${ACTION_PREFIX}${text}\x01` : text;
+
+		client.handleMessage({
+			tags: new Map(Object.entries(batch.tags)),
+			source: {name: client.nick, user: client.ident, host: client.host || "localhost"},
+			command: batch.command,
+			params: [batch.target, body],
+			// Not a line that could have been received (the text has line
+			// feeds in it); it exists for diagnostics.
+			raw: `${batch.command} ${batch.target} :${body}`,
+		});
+	}
+
+	return true;
+}
+
+/** Take the batch off the wire; the caller decides what becomes of it. */
+function settle(client: IrcClient): SentBatch | null {
+	const queue = queueOf(client);
+	const batch = queue.inFlight;
+
+	if (queue.verdict) {
+		clearTimeout(queue.verdict);
+	}
+
+	queue.verdict = null;
+	queue.inFlight = null;
+
+	return batch;
+}
+
+/**
+ * Our own batch came back, so the server took it: the next one may go out.
+ * Called from {@link multilineBatch} for a live echo of ours — a nested batch
+ * is history, not an echo.
+ */
+export function multilineAccepted(client: IrcClient): void {
+	settle(client);
+	pump(client);
+}
+
+/**
+ * `FAIL BATCH MULTILINE_COOLDOWN <seconds>`: the server dropped the batch
+ * whole because it is still cooling down from the one before it. Put it back
+ * at the front of the queue and send it again once the cooldown is over.
+ *
+ * False when there is nothing on the wire this could be about, or the wait is
+ * too long to sit on quietly — then the failure is reported like any other.
+ */
+export function multilineCooldown(client: IrcClient, seconds: number): boolean {
+	const queue = queueOf(client);
+	const batch = settle(client);
+
+	if (!batch) {
+		return false;
+	}
+
+	if (seconds * 1000 > MULTILINE_MAX_COOLDOWN_MS) {
+		// Do not leave the rest of the message queued behind a batch that is
+		// not going out.
+		resetMultiline(client);
+		return false;
+	}
+
+	queue.waiting.unshift(batch);
+	// The server counts in whole seconds, so the one it names has already
+	// partly elapsed: a second of margin saves a wasted round trip.
+	queue.retry = setTimeout(() => {
+		queue.retry = null;
+		pump(client);
+	}, (Math.max(seconds, 0) + 1) * 1000);
+
+	return true;
+}
+
+/**
+ * Any other `FAIL BATCH MULTILINE_…`: the batch was dropped for a reason
+ * waiting will not mend, so the rest of the message goes with it rather than
+ * arriving on its own with the middle missing.
+ */
+export function multilineRejected(client: IrcClient): void {
+	resetMultiline(client);
+}
+
+/** Drop everything queued and on the wire (the transport closed). */
+export function resetMultiline(client: IrcClient): void {
+	const queue = queueOf(client);
+
+	if (queue.verdict) {
+		clearTimeout(queue.verdict);
+	}
+
+	if (queue.retry) {
+		clearTimeout(queue.retry);
+	}
+
+	queue.verdict = null;
+	queue.retry = null;
+	queue.inFlight = null;
+	queue.waiting.length = 0;
 }

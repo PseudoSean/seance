@@ -33,6 +33,7 @@ import {
 	MultilinePlan,
 	parseMultilineValue,
 	planMultiline,
+	resetMultiline,
 	sendMultiline,
 } from "./multiline";
 import {cancelMarkRead, scheduleMarkRead} from "./handlers/markread";
@@ -818,6 +819,7 @@ export class IrcClient {
 		}
 
 		resetBatches(this);
+		resetMultiline(this);
 		abortHistory(this);
 		cancelCatchup(this);
 		cancelRestoration(this);
