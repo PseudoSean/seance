@@ -60,7 +60,11 @@ function batchesOf(client: IrcClient): Map<string, OpenBatch> {
 	return map;
 }
 
-/** Open batches of `client` (tests / diagnostics). */
+/**
+ * Open batches of `client`. Used by tests and diagnostics, and by a batch
+ * handler checking that its parent is still open before folding into it
+ * (see {@link deliver} and multiline.ts).
+ */
 export function openBatchesOf(client: IrcClient): ReadonlyMap<string, OpenBatch> {
 	return batchesOf(client);
 }
@@ -131,6 +135,11 @@ const batch: Handler = (client, msg) => {
 		const parentRef = msg.tags.get("batch");
 		const parent = parentRef ? batches.get(parentRef) : undefined;
 
+		// Opening a reference that is somehow still open replaces its buffer,
+		// dropping the lines received so far. A reference is unique only among
+		// *open* batches and servers reuse them sequentially — the next batch
+		// takes one back only after the previous one closed — so a real server
+		// never gets here; this is long-standing behaviour, left as it is.
 		batches.set(ref, {
 			ref,
 			type: msg.params[1] ?? "",

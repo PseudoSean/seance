@@ -7,8 +7,19 @@ import {ChanType} from "../../../../shared/types/chan";
 import {MessageType} from "../../../../shared/types/msg";
 import {REPLY_TAG} from "../wire";
 import type {Command, CommandContext} from "../types";
+import {splitTarget} from "./target";
 
 function openQuery({client, chan}: CommandContext, targetName: string): boolean {
+	// `splitTarget` never produces one, but a query window is a lasting piece
+	// of state: never open one for a name that cannot be a nick.
+	if (/[\s\0]/.test(targetName)) {
+		client.pushMessage(chan, {
+			type: MessageType.ERROR,
+			text: "You can not open query windows for names containing spaces.",
+		});
+		return false;
+	}
+
 	if (client.findChannel(targetName)) {
 		return true;
 	}
@@ -36,8 +47,12 @@ function openQuery({client, chan}: CommandContext, targetName: string): boolean 
 const msg: Command = {
 	commands: ["query", "msg", "say"],
 	input(ctx) {
-		const {client, chan, cmd, args} = ctx;
-		const targetName = cmd === "say" ? chan.name : args.shift();
+		const {client, chan, cmd, rest} = ctx;
+		// `/say` (and plain text) is all body; `/msg` and `/query` take the
+		// target off the front — at a space or, under `draft/multiline`, at
+		// the line feed that starts the message's second line.
+		const {target: targetName, body} =
+			cmd === "say" ? {target: chan.name, body: rest} : splitTarget(rest);
 
 		if (cmd === "query") {
 			if (!targetName) {
@@ -53,13 +68,7 @@ const msg: Command = {
 			}
 		}
 
-		if (!targetName || args.length === 0) {
-			return;
-		}
-
-		const text = args.join(" ");
-
-		if (text.length === 0) {
+		if (!targetName || body.length === 0) {
 			return;
 		}
 
@@ -68,11 +77,11 @@ const msg: Command = {
 		const opts = cmd === "say" ? ctx.opts ?? {} : {};
 
 		if (opts.edit) {
-			client.editMessage(chan, opts.edit, text, opts.reply);
+			client.editMessage(chan, opts.edit, body, opts.reply);
 			return;
 		}
 
-		client.sendMessage(targetName, text, opts.reply ? {tags: {[REPLY_TAG]: opts.reply}} : {});
+		client.sendMessage(targetName, body, opts.reply ? {tags: {[REPLY_TAG]: opts.reply}} : {});
 	},
 };
 
