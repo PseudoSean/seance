@@ -1,69 +1,118 @@
-// TODO: type
-// @ts-nocheck
-
 import {h as createElement, VNode} from "vue";
-import parseStyle from "./ircmessageparser/parseStyle";
-import findChannels from "./ircmessageparser/findChannels";
-import {findLinks} from "../../../shared/linkify";
-import findEmoji from "./ircmessageparser/findEmoji";
-import findNames from "./ircmessageparser/findNames";
-import merge, {MergedParts} from "./ircmessageparser/merge";
+import {layout, LayoutNode, Style, toPlainText} from "./ircmessageparser/layout";
 import emojiMap from "./fullnamemap.json";
 import LinkPreviewToggle from "../../components/LinkPreviewToggle.vue";
 import LinkPreviewFileSize from "../../components/LinkPreviewFileSize.vue";
+import CodeBlock from "../../components/CodeBlock.vue";
 import InlineChannel from "../../components/InlineChannel.vue";
 import Username from "../../components/Username.vue";
 import {ClientMessage, ClientNetwork} from "../types";
 
 const emojiModifiersRegex = /[\u{1f3fb}-\u{1f3ff}]|\u{fe0f}/gu;
 
-type Fragment = {
-	class?: string[];
-	text?: string;
+export type ParseOptions = {
+	markdown?: boolean;
 };
 
-type StyledFragment = Fragment & {
-	textColor?: string;
-	bgColor?: string;
-	hexColor?: string;
-	hexBgColor?: string;
+type Rendered = VNode | string | undefined | Rendered[];
+type TextNode = Extract<LayoutNode, {kind: "text"}>;
+type WrapNode = Extract<LayoutNode, {kind: "wrap"}>;
+type PartNode = Extract<LayoutNode, {kind: "link" | "channel" | "emoji" | "nick"}>;
 
-	bold?: boolean;
-	italic?: boolean;
-	underline?: boolean;
-	monospace?: boolean;
-	strikethrough?: boolean;
-};
+function toggleSpoiler(event: Event) {
+	(event.currentTarget as HTMLElement).classList.toggle("md-spoiler-shown");
+}
 
-// Create an HTML `span` with styling information for a given fragment
-function createFragment(fragment: StyledFragment): VNode | string | undefined {
+// The spoiler is a role="button" in the tab order, so it has to answer Enter
+// and Space the way a real button does.
+function spoilerKeydown(event: KeyboardEvent) {
+	if (event.key !== "Enter" && event.key !== " ") {
+		return;
+	}
+
+	if (event.key === " ") {
+		// Otherwise Space scrolls the message list
+		event.preventDefault();
+	}
+
+	toggleSpoiler(event);
+}
+
+function wrapNode(node: WrapNode, children: Rendered[]): VNode {
+	switch (node.wrap) {
+		case "quote":
+			return createElement("span", {class: ["md-quote"]}, children);
+		case "codeBlock":
+			// The block's own characters, and only those: `CodeBlock` lays them
+			// out as numbered lines and asks the highlighter for tokens. Any
+			// part a finder made of the text (a URL is the one the verbatim
+			// spans do not suppress) is flattened back into it — inside a code
+			// block a link is code, like everything else there.
+			return createElement(CodeBlock, {
+				code: toPlainText(node.children),
+				lang: node.lang,
+			});
+		case "spoiler":
+			return createElement(
+				"span",
+				{
+					class: ["md-spoiler"],
+					role: "button",
+					tabindex: 0,
+					onClick: toggleSpoiler,
+					onKeydown: spoilerKeydown,
+				},
+				children
+			);
+		case "href":
+			// A masked link carries the destination in its title and the
+			// `md-link` class, which is what tells it apart from a linkified
+			// anchor (`test/e2e/markdown.spec.ts` picks it out that way).
+			return createElement(
+				"a",
+				{
+					class: ["md-link"],
+					href: node.href,
+					title: node.href,
+					dir: "auto",
+					target: "_blank",
+					rel: "noopener",
+				},
+				children
+			);
+	}
+}
+
+// Create an HTML `span` with styling information for a given text node
+function createFragment(node: TextNode): VNode | string {
+	const style: Style = node.style;
 	const classes: string[] = [];
 
-	if (fragment.bold) {
+	if (style.bold) {
 		classes.push("irc-bold");
 	}
 
-	if (fragment.textColor !== undefined) {
-		classes.push("irc-fg" + fragment.textColor);
+	if (style.textColor !== undefined) {
+		classes.push("irc-fg" + style.textColor);
 	}
 
-	if (fragment.bgColor !== undefined) {
-		classes.push("irc-bg" + fragment.bgColor);
+	if (style.bgColor !== undefined) {
+		classes.push("irc-bg" + style.bgColor);
 	}
 
-	if (fragment.italic) {
+	if (style.italic) {
 		classes.push("irc-italic");
 	}
 
-	if (fragment.underline) {
+	if (style.underline) {
 		classes.push("irc-underline");
 	}
 
-	if (fragment.strikethrough) {
+	if (style.strikethrough) {
 		classes.push("irc-strikethrough");
 	}
 
-	if (fragment.monospace) {
+	if (style.monospace) {
 		classes.push("irc-monospace");
 	}
 
@@ -82,59 +131,66 @@ function createFragment(fragment: StyledFragment): VNode | string | undefined {
 		data.class = classes;
 	}
 
-	if (fragment.hexColor) {
+	if (style.hexColor) {
 		hasData = true;
 		data.style = {
-			color: `#${fragment.hexColor}`,
+			color: `#${style.hexColor}`,
 		};
 
-		if (fragment.hexBgColor) {
-			data.style["background-color"] = `#${fragment.hexBgColor}`;
+		if (style.hexBgColor) {
+			data.style["background-color"] = `#${style.hexBgColor}`;
 		}
 	}
 
-	return hasData ? createElement("span", data, fragment.text) : fragment.text;
+	return hasData ? createElement("span", data, node.text) : node.text;
 }
 
 // Transform an IRC message potentially filled with styling control codes, URLs,
 // nicknames, and channels into a string of HTML elements to display on the client.
-function parse(text: string, message?: ClientMessage, network?: ClientNetwork) {
-	// Extract the styling information and get the plain text version from it
-	const styleFragments = parseStyle(text);
-	const cleanText = styleFragments.map((fragment) => fragment.text).join("");
+function parse(
+	text: string,
+	message?: ClientMessage,
+	network?: ClientNetwork,
+	options: ParseOptions = {}
+) {
+	return toVNodes(
+		// The finder defaults live in `layout`: pass what ISUPPORT said, or
+		// nothing when the network has not said (or there is no network yet).
+		layout(text, {
+			markdown: options.markdown,
+			channelPrefixes: network?.serverOptions.CHANTYPES,
+			userModes: network?.serverOptions.PREFIX?.prefix?.map((pref) => pref.symbol),
+			users: message ? message.users || [] : [],
+		}),
+		message
+	);
+}
 
-	// On the plain text, find channels and URLs, returned as "parts". Parts are
-	// arrays of objects containing start and end markers, as well as metadata
-	// depending on what was found (channel or link).
-	const channelPrefixes = network ? network.serverOptions.CHANTYPES : ["#", "&"];
-	const userModes = network
-		? network.serverOptions.PREFIX?.prefix?.map((pref) => pref.symbol)
-		: ["!", "@", "%", "+"];
-	const channelParts = findChannels(cleanText, channelPrefixes, userModes);
-	const linkParts = findLinks(cleanText);
-	const emojiParts = findEmoji(cleanText);
-	const nameParts = findNames(cleanText, message ? message.users || [] : []);
+// The Vue adapter: one element per layout node.
+function toVNodes(nodes: LayoutNode[], message?: ClientMessage): Rendered[] {
+	return nodes.map((node) => {
+		if (node.kind === "text") {
+			return createFragment(node);
+		}
 
-	const parts = (channelParts as MergedParts)
-		.concat(linkParts)
-		.concat(emojiParts)
-		.concat(nameParts);
+		const children = toVNodes(node.children, message);
 
-	// Merge the styling information with the channels / URLs / nicks / text objects and
-	// generate HTML strings with the resulting fragments
-	return merge(parts, styleFragments, cleanText).map((textPart) => {
-		const fragments = textPart.fragments.map((fragment) => createFragment(fragment));
+		return node.kind === "wrap"
+			? wrapNode(node, children)
+			: renderPart(node, children, message);
+	});
+}
 
-		// Wrap these potentially styled fragments with links and channel buttons
-		if (textPart.link) {
+// Wrap potentially styled fragments with links, channel buttons, emoji, nicks
+function renderPart(node: PartNode, fragments: Rendered[], message?: ClientMessage): Rendered {
+	switch (node.kind) {
+		case "link": {
 			const preview =
-				message &&
-				message.previews &&
-				message.previews.find((p) => p.link === textPart.link);
+				message && message.previews && message.previews.find((p) => p.link === node.link);
 			const link = createElement(
 				"a",
 				{
-					href: textPart.link,
+					href: node.link,
 					dir: preview ? null : "auto",
 					target: "_blank",
 					rel: "noopener",
@@ -172,18 +228,21 @@ function parse(text: string, message?: ClientMessage, network?: ClientNetwork) {
 				},
 				linkEls
 			);
-		} else if (textPart.channel) {
+		}
+
+		case "channel":
 			return createElement(
 				InlineChannel,
 				{
-					channel: textPart.channel,
+					channel: node.channel,
 				},
 				{
 					default: () => fragments,
 				}
 			);
-		} else if (textPart.emoji) {
-			const emojiWithoutModifiers = textPart.emoji.replace(emojiModifiersRegex, "");
+
+		case "emoji": {
+			const emojiWithoutModifiers = node.emoji.replace(emojiModifiersRegex, "");
 			const title = emojiMap[emojiWithoutModifiers]
 				? `Emoji: ${emojiMap[emojiWithoutModifiers]}`
 				: null;
@@ -198,12 +257,14 @@ function parse(text: string, message?: ClientMessage, network?: ClientNetwork) {
 				},
 				fragments
 			);
-		} else if (textPart.nick) {
+		}
+
+		case "nick":
 			return createElement(
 				Username,
 				{
 					user: {
-						nick: textPart.nick,
+						nick: node.nick,
 					},
 					dir: "auto",
 				},
@@ -211,10 +272,7 @@ function parse(text: string, message?: ClientMessage, network?: ClientNetwork) {
 					default: () => fragments,
 				}
 			);
-		}
-
-		return fragments;
-	});
+	}
 }
 
 export default parse;

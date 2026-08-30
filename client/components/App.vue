@@ -109,6 +109,18 @@ export default defineComponent({
 			}
 		};
 
+		const toggleMarkdown = () => {
+			void store.dispatch("settings/update", {
+				name: "markdown",
+				value: !store.state.settings.markdown,
+				sync: true,
+			});
+
+			// Mousetrap only calls `preventDefault` when the handler says false;
+			// without it ⌥K types ˚ on an Apple keyboard.
+			return false;
+		};
+
 		const msUntilNextDay = () => {
 			// Compute how many milliseconds are remaining until the next day starts
 			const today = new Date();
@@ -145,6 +157,7 @@ export default defineComponent({
 			Mousetrap.bind("alt+u", toggleUserList);
 			Mousetrap.bind("alt+s", toggleSidebar);
 			Mousetrap.bind("alt+m", toggleMentions);
+			Mousetrap.bind("alt+k", toggleMarkdown);
 
 			debouncedResize.value = throttle(() => {
 				eventbus.emit("resize");
@@ -167,6 +180,7 @@ export default defineComponent({
 			Mousetrap.unbind("alt+u");
 			Mousetrap.unbind("alt+s");
 			Mousetrap.unbind("alt+m");
+			Mousetrap.unbind("alt+k");
 
 			if (debouncedResize.value) {
 				window.removeEventListener("resize", debouncedResize.value);
@@ -183,6 +197,7 @@ export default defineComponent({
 			toggleSidebar,
 			toggleUserList,
 			toggleMentions,
+			toggleMarkdown,
 			store,
 			overlay,
 			loungeWindow,

@@ -52,6 +52,9 @@ const defaultConfig = {
 	links: {
 		default: true,
 	},
+	markdown: {
+		default: true,
+	},
 	motd: {
 		default: true,
 	},
