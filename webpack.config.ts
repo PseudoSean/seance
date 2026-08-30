@@ -161,7 +161,9 @@ const config: webpack.Configuration = {
 		splitChunks: {
 			cacheGroups: {
 				commons: {
-					test: /[\\/]node_modules[\\/]/,
+					// eruda (development-only devtools) stays its own lazy chunk,
+					// loaded on first click; see client/js/devtools.ts.
+					test: /[\\/]node_modules[\\/](?!eruda[\\/])/,
 					name: "js/bundle.vendor.js",
 					chunks: "all",
 				},

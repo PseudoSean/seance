@@ -15,6 +15,16 @@
 					}"
 					>DEVELOPER</span
 				>
+				<button
+					v-if="isDevelopment"
+					class="devtools-toggle"
+					type="button"
+					title="Toggle eruda devtools"
+					aria-label="Toggle eruda devtools"
+					@click="toggleDevtools"
+				>
+					🐞
+				</button>
 			</div>
 			<NetworkList />
 		</div>
@@ -85,6 +95,7 @@ import {useRoute} from "vue-router";
 import {useStore} from "../js/store";
 import {brandingFeatures} from "../js/branding";
 import NetworkList from "./NetworkList.vue";
+import {devtoolsAvailable, toggleDevtools} from "../js/devtools";
 
 export default defineComponent({
 	name: "Sidebar",
@@ -95,7 +106,7 @@ export default defineComponent({
 		overlay: {type: Object as PropType<HTMLElement | null>, required: true},
 	},
 	setup(props) {
-		const isDevelopment = process.env.NODE_ENV !== "production";
+		const isDevelopment = devtoolsAvailable;
 
 		const store = useStore();
 		const route = useRoute();
@@ -255,6 +266,7 @@ export default defineComponent({
 			appName,
 			canAddNetwork,
 			isDevelopment,
+			toggleDevtools,
 			store,
 			route,
 			sidebar,
