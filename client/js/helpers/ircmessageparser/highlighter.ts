@@ -220,7 +220,7 @@ async function loadLanguage(id: string): Promise<boolean> {
 		// on demand was for. A tag outside the list simply stays plain.
 		await import(
 			/* webpackChunkName: "[request]" */
-			/* webpackInclude: /prism-(actionscript|apacheconf|bash|batch|c|clike|clojure|cmake|coffeescript|cpp|csharp|csp|css|css-extras|dart|diff|docker|elixir|erlang|flow|fsharp|git|go|graphql|groovy|haskell|hpkp|hsts|http|ini|java|javadoclike|javascript|js-extras|js-templates|jsdoc|json|json5|jsx|julia|kotlin|lua|makefile|markdown|markup|markup-templating|matlab|n4js|nginx|objectivec|ocaml|pascal|perl|php|powershell|properties|protobuf|python|r|regex|rest|ruby|rust|scala|sql|swift|toml|tsx|typescript|uri|vim|yaml)\.js$/ */
+			/* webpackInclude: /prism-(actionscript|ansi|apacheconf|bash|batch|c|clike|clojure|cmake|coffeescript|cpp|csharp|csp|css|css-extras|dart|diff|docker|elixir|erlang|flow|fsharp|git|go|graphql|groovy|haskell|hpkp|hsts|http|ini|java|javadoclike|javascript|js-extras|js-templates|jsdoc|json|json5|jsx|julia|kotlin|lua|makefile|markdown|markup|markup-templating|matlab|n4js|nginx|objectivec|ocaml|pascal|perl|php|powershell|properties|protobuf|python|r|regex|rest|ruby|rust|scala|sql|swift|toml|tsx|typescript|uri|vim|yaml)\.js$/ */
 			`prismjs/components/prism-${id}`
 		);
 	} catch {

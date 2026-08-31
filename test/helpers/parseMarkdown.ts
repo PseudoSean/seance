@@ -14,7 +14,12 @@ const FLAGS: (keyof ParsedStyle)[] = [
 	"spoiler",
 	"href",
 	"lang",
+	"file",
 	"header",
+	"list",
+	"table",
+	"math",
+	"mathBlock",
 ];
 
 type Rendered = Record<string, unknown>;
@@ -130,6 +135,27 @@ describe("markdown — inline code", () => {
 	});
 });
 
+describe("markdown — inline code with longer runs", () => {
+	it("renders ``text`` and keeps a backtick inside it", () => {
+		expect(md("``a `b` c``")).to.deep.equal([{text: "a `b` c", monospace: true}]);
+	});
+
+	it("takes a run literally when nothing of the same length closes it", () => {
+		// As CommonMark: the unmatched `` is literal, and the lone `b` pair
+		// behind it still makes its own span
+		expect(md("``a `b`")).to.deep.equal([{text: "``a "}, {text: "b", monospace: true}]);
+	});
+
+	it("needs something between the delimiters", () => {
+		expect(md("````")).to.deep.equal([{text: "````"}]);
+		expect(md("`` ``")).to.deep.equal([{text: " ", monospace: true}]);
+	});
+
+	it("still reports the span as verbatim", () => {
+		expect(verbatimText("a ``#chan`` b")).to.deep.equal(["#chan"]);
+	});
+});
+
 describe("markdown — code block", () => {
 	it("renders a single-line ```block```", () => {
 		expect(md("```code```")).to.deep.equal([{text: "code", codeBlock: true}]);
@@ -161,6 +187,190 @@ describe("markdown — code block", () => {
 
 	it("leaves an unclosed fence literal", () => {
 		expect(md("```nope")).to.deep.equal([{text: "```nope"}]);
+	});
+
+	it("lets a longer fence hold a shorter one", () => {
+		expect(md("````\ncode with ``` inside\n````")).to.deep.equal([
+			{text: "code with ``` inside", codeBlock: true},
+		]);
+	});
+
+	it("closes a long fence only at a run as long or longer", () => {
+		expect(md("````\na\n```\n````")).to.deep.equal([{text: "a\n```", codeBlock: true}]);
+	});
+
+	it("carries the file a `lang:file` tag named", () => {
+		expect(md("```js:index.ts\nlet x = 1;\n```")).to.deep.equal([
+			{text: "let x = 1;", codeBlock: true, lang: "js", file: "index.ts"},
+		]);
+		expect(md("```:notes.txt\ntext\n```")).to.deep.equal([
+			{text: "text", codeBlock: true, file: "notes.txt"},
+		]);
+	});
+
+	it("makes no code block inside a table row", () => {
+		expect(md("| a |\n| - |\n| ``` |")).to.deep.equal([{text: "a\n```", table: "l"}]);
+	});
+});
+
+describe("markdown — quote-everything-after", () => {
+	it("quotes the rest of the message for `>>> `", () => {
+		expect(md(">>> a\nb\nc")).to.deep.equal([{text: "a\nb\nc", quote: true}]);
+	});
+
+	it("strips the `> ` markers of lines inside it", () => {
+		expect(md(">>> a\n> b")).to.deep.equal([{text: "a\nb", quote: true}]);
+	});
+
+	it("takes `>>>` only at the very start", () => {
+		expect(md("a\n>>> b")).to.deep.equal([{text: "a\n>>> b"}]);
+		expect(md(">>>b")).to.deep.equal([{text: ">>>b"}]);
+	});
+
+	it("still nests lists and styles inside the quote", () => {
+		expect(md(">>> a\n- b")).to.deep.equal([
+			{text: "a\n", quote: true},
+			{text: "b", quote: true, list: "ul"},
+		]);
+	});
+});
+
+describe("markdown — lists", () => {
+	it("renders `- ` lines as one unordered list", () => {
+		expect(md("- a\n- b")).to.deep.equal([{text: "a\nb", list: "ul"}]);
+	});
+
+	it("renders `1. ` lines as an ordered list starting at the first number", () => {
+		expect(md("3. a\n4. b")).to.deep.equal([{text: "a\nb", list: "ol:3"}]);
+		expect(md("1. a\n2. b")).to.deep.equal([{text: "a\nb", list: "ol:1"}]);
+	});
+
+	it("reads the markers inside an item", () => {
+		expect(md("- **b**")).to.deep.equal([{text: "b", list: "ul", bold: true}]);
+	});
+
+	it("ends the list at a line that is not an item", () => {
+		expect(md("- a\nb")).to.deep.equal([{text: "a", list: "ul"}, {text: "b"}]);
+		expect(md("- a\n\n- b")).to.deep.equal([
+			{text: "a", list: "ul"},
+			{text: "\n"},
+			{text: "b", list: "ul"},
+		]);
+	});
+
+	it("keeps unordered and ordered lists apart", () => {
+		expect(md("- a\n1. b")).to.deep.equal([
+			{text: "a", list: "ul"},
+			{text: "b", list: "ol:1"},
+		]);
+	});
+
+	it("only makes a list of a marker at the start of a line", () => {
+		expect(md("a - b")).to.deep.equal([{text: "a - b"}]);
+		expect(md("-5 degrees")).to.deep.equal([{text: "-5 degrees"}]);
+		expect(md("1.points")).to.deep.equal([{text: "1.points"}]);
+		expect(md("- ")).to.deep.equal([{text: "- "}]);
+	});
+
+	it("takes a backslash-escaped dash literally", () => {
+		expect(md("\\- not a list")).to.deep.equal([{text: "- not a list"}]);
+	});
+
+	it("makes no list inside a quote or a code block", () => {
+		expect(md("> - a")).to.deep.equal([{text: "- a", quote: true}]);
+		expect(md("```\n- a\n```")).to.deep.equal([{text: "- a", codeBlock: true}]);
+	});
+});
+
+describe("markdown — pipe tables", () => {
+	it("renders a table without its separator row", () => {
+		expect(md("| a | b |\n| --- | --- |\n| 1 | 2 |")).to.deep.equal([
+			{text: "a|b\n1|2", table: "ll"},
+		]);
+	});
+
+	it("makes outer pipes and their padding optional", () => {
+		expect(md("a | b\n--- | ---")).to.deep.equal([{text: "a|b", table: "ll"}]);
+	});
+
+	it("carries each column's alignment", () => {
+		expect(md("| a | b | c | d |\n| :--- | ---: | :---: | --- |")).to.deep.equal([
+			{text: "a|b|c|d", table: "lrcl"},
+		]);
+	});
+
+	it("keeps the pipes of the rows as cell boundaries", () => {
+		expect(plain("| a | b |\n| - | - |\n| 1 | 2 |")).to.equal("a|b\n1|2");
+	});
+
+	it("reads the markers and links inside a cell", () => {
+		// The newline that separates the rows is part of the table's text, so
+		// the header row here carries it
+		expect(md("| x |\n| --- |\n| **b** |")).to.deep.equal([
+			{text: "x\n", table: "l"},
+			{text: "b", table: "l", bold: true},
+		]);
+	});
+
+	it("needs a separator row of dashes, and as many cells as the header", () => {
+		expect(md("a | b\nc | d")).to.deep.equal([{text: "a | b\nc | d"}]);
+		// Not a table, and `- | - | -` is a `- ` list line, as on GitHub
+		expect(md("a | b\n- | - | -")).to.deep.equal([
+			{text: "a | b\n"},
+			{text: "| - | -", list: "ul"},
+		]);
+		expect(md("a | b\n---")).to.deep.equal([{text: "a | b\n---"}]);
+	});
+
+	it("takes no table inside a code fence", () => {
+		expect(md("```\n| a |\n| - |\n```")).to.deep.equal([
+			{text: "| a |\n| - |", codeBlock: true},
+		]);
+	});
+
+	it("makes no table of a spoiler's bars", () => {
+		expect(md("||a||")).to.deep.equal([{text: "a", spoiler: true}]);
+	});
+});
+
+describe("markdown — math", () => {
+	it("renders ``$`…`$`` inline, carrying the TeX", () => {
+		expect(md("$`E=mc^2`$ done")).to.deep.equal([
+			{text: "E=mc^2", math: "E=mc^2"},
+			{text: " done"},
+		]);
+	});
+
+	it("renders `$$…$$` display, dropping the newlines around it", () => {
+		expect(md("before\n$$\nx = y\n$$\nafter")).to.deep.equal([
+			{text: "before"},
+			{text: "x = y", mathBlock: "x = y"},
+			{text: "after"},
+		]);
+	});
+
+	it("reports the TeX as verbatim, so the finders skip it", () => {
+		expect(verbatimText("$`#chan`$")).to.deep.equal(["#chan"]);
+	});
+
+	it("leaves money alone", () => {
+		expect(md("$5 and 50 cents")).to.deep.equal([{text: "$5 and 50 cents"}]);
+		expect(md("costs $$")).to.deep.equal([{text: "costs $$"}]);
+	});
+
+	it("leaves an unclosed span literal", () => {
+		expect(md("$`x")).to.deep.equal([{text: "$`x"}]);
+		expect(md("$$\nx")).to.deep.equal([{text: "$$\nx"}]);
+	});
+
+	it("takes a backslash-escaped dollar literally", () => {
+		expect(md("\\$5")).to.deep.equal([{text: "$5"}]);
+	});
+
+	it("keeps two identical spans apart", () => {
+		const fragments = md("$`a`$$`a`$");
+
+		expect(fragments).to.have.lengthOf(2);
 	});
 });
 

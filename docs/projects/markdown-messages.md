@@ -2,7 +2,9 @@
 
 Status: implemented on `markdown-messages-development` (2026-08-29); headers
 and collapsing large code blocks added on `markdown-messages` (2026-08-31,
-plan in `docs/archives/2026-08-31-markdown-documents-plan.md`).
+plan in `docs/archives/2026-08-31-markdown-documents-plan.md`); lists, `>>>`
+quotes, multi-backtick code, pipe tables, TeX, emoji shortcodes and the
+code-block label added 2026-09-01.
 
 Discord-style Markdown is rendered in everything `ParsedMessage` shows when
 the `markdown` setting (default on, Settings → Appearance → Messages) is set.
@@ -22,19 +24,27 @@ Design: `docs/archives/2026-08-29-markdown-messages-design.md`.
 The whole of it — nothing outside this table is Markdown here. `\` before any
 marker character makes it literal.
 
-| Markup                             | Result                                                                                                               |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `**text**`                         | bold (`.irc-bold`)                                                                                                   |
-| `*text*`, `_text_`                 | italic (`.irc-italic`); `_` only at word boundaries                                                                  |
-| `__text__`                         | underline (`.irc-underline`)                                                                                         |
-| `~~text~~`                         | strikethrough (`.irc-strikethrough`)                                                                                 |
-| `` `code` ``                       | inline code (`.irc-monospace`), a verbatim span                                                                      |
-| ` ```[lang]⏎code``` `              | code block (`<code class="md-code-block">`, rows, gutter, `lang` kept as the highlighter's tag, single-line allowed) |
-| `\|\|text\|\|`                     | spoiler (`<span class="md-spoiler">`, click or Enter/Space toggles `.md-spoiler-shown`)                              |
-| `> text` at the start of a line    | quote (`<span class="md-quote">`, block-level, `> ` removed)                                                         |
-| `#`–`######` + space at line start | header (`<span class="md-header md-h1">`…`md-h6`, block-level, marker removed; `> # t` nests)                        |
-| `[text](url)`                      | masked link (`<a class="md-link" title=url target=_blank rel=noopener>`), schemes `http:`, `https:`, `web+irc:` only |
-| `\*` etc.                          | backslash escapes any marker character                                                                               |
+| Markup                             | Result                                                                                                                                                                                        |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `**text**`                         | bold (`.irc-bold`)                                                                                                                                                                            |
+| `*text*`, `_text_`                 | italic (`.irc-italic`); `_` only at word boundaries                                                                                                                                           |
+| `__text__`                         | underline (`.irc-underline`)                                                                                                                                                                  |
+| `~~text~~`                         | strikethrough (`.irc-strikethrough`)                                                                                                                                                          |
+| `` `code` ``, ` `code` `           | inline code (`.irc-monospace`), a verbatim span; the closing run must match the opening one, so ` `a `b` c` ` holds backticks                                                                 |
+| ` ```[lang][:file]⏎code``` `       | code block (`<code class="md-code-block">`, rows, gutter, `lang` kept as the highlighter's tag, a `lang:file` tag names the file the label shows, single-line allowed)                        |
+| 3+ backticks                       | a fence: the closing run must be at least as long as the opening one, so a ````` fence holds a ` `` `                                                                                         |
+| `- text`                           | unordered list (`.md-list`/`.md-ul`, one item per line, marker drawn by CSS)                                                                                                                  |
+| `1. text`–`9. text`                | ordered list (`.md-ol`), the CSS counter starting at the first item's number                                                                                                                  |
+| `\|\|text\|\|`                     | spoiler (`<span class="md-spoiler">`, click or Enter/Space toggles `.md-spoiler-shown`)                                                                                                       |
+| `> text` at the start of a line    | quote (`<span class="md-quote">`, block-level, `> ` removed)                                                                                                                                  |
+| `>>>` at the very start            | quote-everything-after: the rest of the message is one quote, inner `> ` markers still removed                                                                                                |
+| `#`–`######` + space at line start | header (`<span class="md-header md-h1">`…`md-h6`, block-level, marker removed; `> # t` nests)                                                                                                 |
+| pipe table                         | GFM: a row of cells, a `---` separator row (with `:---`/`---:`/`:---:` alignment), then rows until a line without a pipe; rendered as a real `<table class="md-table">`, first row the header |
+| `` $`tex`$ ``                      | inline TeX (`MathSpan`, KaTeX, one line only)                                                                                                                                                 |
+| `$$tex$$`                          | display TeX (`MathSpan`, block-level, may span lines)                                                                                                                                         |
+| `:name:`                           | emoji shortcode (gemoji aliases only — an unknown name is not emoji, so `10:30:45` stays a timestamp)                                                                                         |
+| `[text](url)`                      | masked link (`<a class="md-link" title=url target=_blank rel=noopener>`), schemes `http:`, `https:`, `web+irc:` only                                                                          |
+| `\*` etc.                          | backslash escapes any marker character (`-` and `$` included)                                                                                                                                 |
 
 ## How it works
 
@@ -145,6 +155,70 @@ The MOTD never collapses. It is a monospace block, and
 `:markdown="false"`, so there is no `codeBlock` wrap and `CodeBlock.vue` never
 mounts for it.
 
+A block **carries a label** when something is known about it: the file a
+`lang:file` tag named, else the language — the tag as typed until the tokens
+land (`js` becomes `javascript`), and the guesser's answer only once there is
+one. `CodeBlock.vue` rides it on the block as `data-lang`, which the
+stylesheet shows in the corner (`attr(data-lang)` in a `::after`, the block
+given the headroom for a row of its own, `user-select: none` like the gutter).
+```ansi` is in the shipped grammar list — terminal output is the paste chat
+gets.
+
+## Lists, quotes-everything-after, tables, TeX, shortcodes
+
+**Lists** are `- ` lines, or `1.`–`9. ` with a space (`* ` is not one: it is
+italic). Consecutive items share one `list` wrap, the way quote lines do; the
+wrap's value is `ul`, or `ol:<first item's number>` — the adapter sets the
+counter's start from it, so `3. …` counts 3, 4. The markers are removed and
+the bullet or number is drawn (a fixed-width `::before` column, the way the
+gutter works), so selecting a list yields the items. A line with nothing after
+the marker is not a list; lists do not nest, and a table's rows are never list
+lines.
+
+**`>>>`** at the very start of a message quotes everything after it: one
+`quote` range over the rest of the text, so `> ` lines inside it still lose
+their markers and lists and styles still nest inside. It is the only quote
+form that spans lines by itself; `> ` still needs one per line.
+
+**Tables** are found before the main scan, the way URLs are zoned: a row of
+cells, a separator row of `---` cells (as many as the header, `:` colon forms
+setting each column's alignment), then every following line that holds a pipe.
+The scan removes the separator row and the outer pipes with their padding, and
+zones every pipe it keeps, so `||` is never a spoiler inside a table. One
+`table` wrap spans the whole thing, its value the columns' alignment letters;
+the rows are the newlines it kept, the cells the pipes. `parse.ts` renders a
+real `<table>` — `thead` from the first row, `text-align` from the letters —
+and a `splitNodes` helper walks the wrap's children splitting them, cloning a
+spoiler that straddles a boundary around each side. A code fence, a header, a
+quote or a list can never start inside one. Escaped pipes are not supported:
+`\|` becomes a literal pipe, which is a cell boundary like any other.
+
+**TeX** is `$`…`$` inline and `$$…$$` display — Element's grammar, the
+dollar-backtick shape being what keeps `$5 and 50 cents` out of the maths.
+The spans are verbatim and carry the TeX on the wrap; `MathSpan.vue` renders
+it with **KaTeX** (MIT, `js/katex.js`, a chunk exactly like the highlighter —
+a message without math never fetches it) and shows the raw TeX until, unless,
+it lands. `throwOnError: false`, so a broken TeX renders as KaTeX's red error
+text rather than throwing. KaTeX's output is set as `innerHTML` — the one
+deliberate exception to the pipeline's no-HTML-strings rule: KaTeX escapes
+everything it is given and emits only its own markup, so the TeX reaches the
+DOM only as something KaTeX rendered. Its stylesheet and fonts are static
+files (`css/katex.min.css`, `css/fonts/`, copied by webpack — css-loader runs
+with `url: false`, so importing the stylesheet through webpack would strand
+the fonts); the first span that renders links the stylesheet, and nothing is
+fetched before. Offline the TeX stays text, like an unhighlighted block.
+
+**Shortcodes** are `:name:` for a name in `shortcodes.json` (generated from
+the `gemoji` package by `tools/generate-shortcode-map.mjs`, committed —
+regenerate when the dep is bumped). Gating the match on the map is what keeps
+`10:30:45` a timestamp: `30` is not an alias, so nothing fires. A match
+renders as the character — an `emoji` part whose text is the glyph, not the
+`:name:` typed — through the same `.emoji` span, `title` and all, that unicode
+emoji gets.
+
+The MOTD is unaffected by all of it: Markdown is off there, so there are no
+lists, tables, maths or shortcodes in one.
+
 Flipping it changes a height in the middle of the timeline, so `CodeBlock.vue`
 restores the scroll position around the change: a reader who was at the bottom
 of the channel stays at the bottom — `MessageList`'s own at-bottom formula,
@@ -195,12 +269,10 @@ Both are MIT, and their copyright notices ship with the chunks that carry them:
 | ---------- | ------- | ------- | ------------------------------------------ | -------------------------------------- |
 | `prismjs`  | 1.30.0  | MIT     | https://github.com/PrismJS/prism           | `public/js/highlighter.js.LICENSE.txt` |
 | `flourite` | 1.3.0   | MIT     | https://github.com/teknologi-umum/flourite | `public/js/flourite.js.LICENSE.txt`    |
+| `katex`    | 0.16.22 | MIT     | https://github.com/KaTeX/KaTeX             | `public/js/katex.js.LICENSE.txt`       |
 
-Terser extracts Prism's own `@license` comment, which names the author but not
-the copyright line, and flourite's build carries no comment at all, so
-`webpack.config.ts` states both in a `/*!` banner (`chunkNotices`) that terser
-then extracts. The `js/prism-*.js` grammar chunks are Prism's too; the
-highlighter chunk's notice says so.
+`gemoji` (MIT) is a devDependency only: `tools/generate-shortcode-map.mjs`
+reads it once and the generated `shortcodes.json` is what ships.
 
 ## Shortcuts
 
@@ -222,6 +294,8 @@ table. The checkbox itself carries no hint — no other setting does.
   → node mapping (against a stub grammar and a real one), and the guesser.
 - `test/helpers/codeLines.ts` — `excerptRange` and the two collapse constants,
   the decision a block makes before Prism is anywhere near it.
+- `test/helpers/math.ts` — the KaTeX path: inline and display renders, a
+  broken TeX coming back as error text, empty TeX coming back as nothing.
 - `test/e2e/markdown.spec.ts` — `SEANCE_E2E_IRC_URL=wss://host:port/ yarn test:e2e`
   drives the built client against a live ircd with Playwright. It covers what
   only a browser can answer: that the elements the tree names really appear,

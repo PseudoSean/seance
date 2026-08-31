@@ -30,7 +30,18 @@ export type PieceFlags = {
 	verbatim?: true;
 	href?: string;
 	lang?: string;
+	// The file a `lang:file` fence tag named
+	file?: string;
 	header?: HeaderLevel;
+	// The list the fragment is an item of: `ul`, or `ol:<first number>`
+	list?: string;
+	// The pipe table the fragment is a cell of: one alignment letter per
+	// column, `l`, `r` or `c`
+	table?: string;
+	// TeX for KaTeX. The id keeps two identical spans from merging into one
+	math?: string;
+	mathBlock?: string;
+	mathId?: number;
 };
 
 // What the Markdown stage makes of a message: the style fragments with the
@@ -39,23 +50,30 @@ export type PieceFlags = {
 export type Markdown = {fragments: ParsedStyle[]; verbatim: Range[]};
 
 // Characters a backslash can escape
-const MARKER_CHARS = "*_~|`>#[]()\\";
+const MARKER_CHARS = "*_~|`>#[]()\\-$";
 
-const FENCE = "```";
-// Optional language tag is only a tag when it ends the fence line
-const fenceOpenRx = /^```(?:([\w+-]*)\n)?/;
+// A fence is a run of three or more backticks; the closing one has to be at
+// least as long. A language tag — and a `lang:file` name — is only a tag when
+// the fence line ends in a newline.
+const fenceOpenRx = /^(`{3,})(?:([\w+.#-]*)(?::([^:\n]+))?)?\n/;
 // The URL part allows one level of balanced parentheses, so Wikipedia-style
 // links survive; the scheme is matched case-insensitively.
 const linkRx = /^\[([^\]\n]+)\]\(((?:https?:\/\/|web\+irc:)(?:[^\s()]|\([^\s()]*\))+)\)/i;
 
-type ScanFlag = keyof Omit<PieceFlags, "href" | "lang" | "header">;
+type ScanFlag = keyof Omit<
+	PieceFlags,
+	"href" | "lang" | "file" | "header" | "list" | "table" | "math" | "mathBlock" | "mathId"
+>;
 
-// The flags a range can carry: a bare one, or one of the two that name a value
+// The flags a range can carry: a bare one, or one of the kind that name a value
 type ScanRange =
 	| (Range & {flag: ScanFlag})
 	| (Range & {flag: "href"; href: string})
-	| (Range & {flag: "lang"; lang: string})
-	| (Range & {flag: "header"; level: HeaderLevel});
+	| (Range & {flag: "lang"; lang?: string; file?: string})
+	| (Range & {flag: "header"; level: HeaderLevel})
+	| (Range & {flag: "list"; list: "ul" | "ol"; num: number})
+	| (Range & {flag: "table"; table: string})
+	| (Range & {flag: "math" | "mathBlock"; tex: string; id: number});
 
 type Scan = {
 	// Marker characters to drop from the text
@@ -188,8 +206,19 @@ function cutPieces(text: string, {removals, ranges}: Scan, extraCuts: number[]):
 				flags.href = range.href;
 			} else if (range.flag === "lang") {
 				flags.lang = range.lang;
+
+				if (range.file) {
+					flags.file = range.file;
+				}
 			} else if (range.flag === "header") {
 				flags.header = range.level;
+			} else if (range.flag === "list") {
+				flags.list = range.list === "ol" ? `ol:${range.num}` : "ul";
+			} else if (range.flag === "table") {
+				flags.table = range.table;
+			} else if (range.flag === "math" || range.flag === "mathBlock") {
+				flags[range.flag] = range.tex;
+				flags.mathId = range.id;
 			} else {
 				flags[range.flag] = true;
 			}
@@ -202,13 +231,24 @@ function cutPieces(text: string, {removals, ranges}: Scan, extraCuts: number[]):
 }
 
 // Scans `text` for Discord-style Markdown. Offsets in the result are into
-// `text`; opaque spans (URLs) are never interpreted.
+// `text`; opaque spans (URLs) are never interpreted, and neither are the pipes
+// and padding of a pipe table, which a pre-pass claims before the main loop
+// runs.
 function scan(text: string): Scan {
 	const removals: Range[] = [];
 	const ranges: ScanRange[] = [];
-	const skips = opaqueSpans(text);
+	const tables = scanTables(text);
+
+	ranges.push(...tables.ranges);
+	removals.push(...tables.removals);
+
+	const skips: Range[] = [...opaqueSpans(text), ...tables.zones];
 	const stack: OpenDelimiter[] = [];
 	let i = 0;
+
+	// A table row is never also a fence, quote, header or list line: the
+	// line-level markup yields to the table that claimed the line
+	const inTable = (pos: number) => tables.ranges.some((r) => r.start <= pos && pos < r.end);
 
 	while (i < text.length) {
 		const skip = skips.find((r) => r.start <= i && i < r.end);
@@ -229,40 +269,86 @@ function scan(text: string): Scan {
 			continue;
 		}
 
-		if (text.startsWith(FENCE, i)) {
-			const after = codeBlock(text, i, removals, ranges);
-
-			if (after !== -1) {
-				i = after;
-				continue;
-			}
-
-			i += FENCE.length;
-			continue;
-		}
-
 		if (c === "`") {
-			const close = text.indexOf("`", i + 1);
+			const n = runAt(text, i);
 
-			if (close > i + 1) {
-				removals.push({start: i, end: i + 1}, {start: close, end: close + 1});
-				ranges.push({start: i + 1, end: close, flag: "monospace"});
-				ranges.push({start: i + 1, end: close, flag: "verbatim"});
-				i = close + 1;
+			// A run of three or more backticks is a fence — unless a table got
+			// the line first
+			if (n >= 3 && !inTable(i)) {
+				const after = codeBlock(text, i, removals, ranges);
+
+				if (after !== -1) {
+					i = after;
+					continue;
+				}
+
+				i += n;
 				continue;
 			}
 
-			i += 1;
+			// Inline code: a run of one or two backticks, closed by a run of
+			// exactly the same length, so ``a `b` c`` holds backticks
+			if (n <= 2) {
+				const close = findRun(text, i + n, n, false);
+
+				if (close > i + n) {
+					removals.push({start: i, end: i + n}, {start: close, end: close + n});
+					ranges.push({start: i + n, end: close, flag: "monospace"});
+					ranges.push({start: i + n, end: close, flag: "verbatim"});
+					i = close + n;
+					continue;
+				}
+			}
+
+			i += n;
 			continue;
 		}
 
-		if (c === ">" && text[i + 1] === " " && (i === 0 || text[i - 1] === "\n")) {
+		if (
+			c === ">" &&
+			i === 0 &&
+			text.startsWith(">>>", 0) &&
+			(text[3] === " " || text[3] === "\n")
+		) {
+			// Discord's quote-everything-after: the rest of the message is one
+			// quote, and "> " lines inside it lose their markers below
+			const end = text[3] === " " ? 4 : 3;
+
+			removals.push({start: 0, end});
+			ranges.push({start: end, end: text.length, flag: "quote"});
+			i = end;
+			continue;
+		}
+
+		if (c === ">" && text[i + 1] === " " && !inTable(i) && (i === 0 || text[i - 1] === "\n")) {
 			quote(text, i, removals, ranges);
 			i += 2;
 			continue;
 		}
 
-		if (c === "#") {
+		if (c === "-" && !inTable(i) && isLineStart(text, i) && text[i + 1] === " ") {
+			i = listLine(text, i, 2, false, 1, removals, ranges);
+			continue;
+		}
+
+		if (c >= "0" && c <= "9" && !inTable(i) && isLineStart(text, i)) {
+			const marker = /^\d{1,9}\. /.exec(text.slice(i, i + 12));
+
+			if (marker) {
+				i = listLine(
+					text,
+					i,
+					marker[0].length,
+					true,
+					Number.parseInt(marker[0], 10),
+					removals,
+					ranges
+				);
+				continue;
+			}
+		}
+
+		if (c === "#" && !inTable(i)) {
 			// A header may follow a quote marker, so that "> # t" nests one
 			const quoted = text[i - 1] === " " && text[i - 2] === ">" && isLineStart(text, i - 2);
 			const lineStart = quoted ? i - 2 : i;
@@ -291,6 +377,49 @@ function scan(text: string): Scan {
 				skips.push({start: textEnd, end});
 				i = textStart;
 				continue;
+			}
+
+			i += 1;
+			continue;
+		}
+
+		if (c === "$") {
+			// `$$…$$` is display TeX, block-level the way a fence is
+			if (text[i + 1] === "$") {
+				const close = text.indexOf("$$", i + 2);
+
+				if (close !== -1) {
+					const after = mathBlock(text, i, close, removals, ranges);
+
+					if (after !== -1) {
+						i = after;
+						continue;
+					}
+				}
+
+				i += 2;
+				continue;
+			}
+
+			// `$`…`$` is inline TeX, on one line: the dollar-backtick shape is
+			// what keeps "$5 and 50 cents" out of the maths
+			if (text[i + 1] === "`") {
+				const close = text.indexOf("`$", i + 2);
+				const lineEnd = text.indexOf("\n", i + 2);
+
+				if (close > i + 2 && (lineEnd === -1 || close < lineEnd)) {
+					ranges.push({
+						start: i + 2,
+						end: close,
+						flag: "math",
+						tex: text.slice(i + 2, close),
+						id: ranges.length,
+					});
+					ranges.push({start: i + 2, end: close, flag: "verbatim"});
+					removals.push({start: i, end: i + 2}, {start: close, end: close + 2});
+					i = close + 2;
+					continue;
+				}
 			}
 
 			i += 1;
@@ -388,31 +517,33 @@ function emphasis(
 	return i + n;
 }
 
-// A fenced code block starting at `i`. Returns the index after the block, or
-// -1 when the fence is not closed or empty.
+// A fenced code block starting at the run of `n` (3+) backticks at `i`.
+// Returns the index after the block, or -1 when the fence is not closed or
+// empty.
 function codeBlock(text: string, i: number, removals: Range[], ranges: ScanRange[]): number {
-	const close = text.indexOf(FENCE, i + FENCE.length);
+	const n = runAt(text, i);
+	const close = findRun(text, i + n, n, true);
 
 	if (close === -1) {
 		return -1;
 	}
 
+	// A tag only when the fence line ended in a newline; on one line the tag
+	// is content, as on Discord
 	const fence = fenceOpenRx.exec(text.slice(i));
-	const open = fence?.[0].length ?? FENCE.length;
-	// Only a tag when the fence line ended in a newline and named something
-	let lang = fence?.[1] ? fence[1].toLowerCase() : undefined;
-	let contentStart = i + open;
+	let contentStart = i + n;
 	let contentEnd = close;
+	let lang: string | undefined;
+	let file: string | undefined;
+
+	if (fence && i + fence[0].length <= close) {
+		lang = fence[2] ? fence[2].toLowerCase() : undefined;
+		file = fence[3];
+		contentStart = i + fence[0].length;
+	}
 
 	if (text[contentEnd - 1] === "\n" && contentEnd - 1 >= contentStart) {
 		contentEnd -= 1;
-	}
-
-	if (contentStart > close) {
-		// The "language tag" was the whole content
-		contentStart = i + FENCE.length;
-		contentEnd = close;
-		lang = undefined;
 	}
 
 	if (contentEnd <= contentStart) {
@@ -421,7 +552,7 @@ function codeBlock(text: string, i: number, removals: Range[], ranges: ScanRange
 
 	// Block-level: swallow the newline before the opening and after the closing fence
 	const removeStart = text[i - 1] === "\n" ? i - 1 : i;
-	let removeEnd = close + FENCE.length;
+	let removeEnd = close + runAt(text, close);
 
 	if (text[removeEnd] === "\n") {
 		removeEnd += 1;
@@ -431,11 +562,344 @@ function codeBlock(text: string, i: number, removals: Range[], ranges: ScanRange
 	ranges.push({start: contentStart, end: contentEnd, flag: "codeBlock"});
 	ranges.push({start: contentStart, end: contentEnd, flag: "verbatim"});
 
-	if (lang) {
-		ranges.push({start: contentStart, end: contentEnd, flag: "lang", lang});
+	if (lang || file) {
+		ranges.push({start: contentStart, end: contentEnd, flag: "lang", lang, file});
 	}
 
 	return removeEnd;
+}
+
+// The length of the run of backticks starting at `i`.
+function runAt(text: string, i: number): number {
+	let n = 0;
+
+	while (text[i + n] === "`") {
+		n += 1;
+	}
+
+	return n;
+}
+
+// The first run of backticks after `from` that is exactly `n` long (inline
+// code) or at least `n` long (fences). Returns the run's start, or -1.
+function findRun(text: string, from: number, n: number, atLeast: boolean): number {
+	for (let k = from; k < text.length; ) {
+		if (text[k] !== "`") {
+			k += 1;
+			continue;
+		}
+
+		const len = runAt(text, k);
+
+		if (len === n || (atLeast && len > n)) {
+			return k;
+		}
+
+		k += len;
+	}
+
+	return -1;
+}
+
+// A list item whose marker starts at `i` (`- ` or `1. `). Consecutive items
+// of one kind of list share a range, the way quote lines do, and an ordered
+// list keeps the number of its first item.
+function listLine(
+	text: string,
+	i: number,
+	markerLen: number,
+	ordered: boolean,
+	num: number,
+	removals: Range[],
+	ranges: ScanRange[]
+): number {
+	const nl = text.indexOf("\n", i);
+	const lineEnd = nl === -1 ? text.length : nl;
+
+	// An item with nothing after its marker is not a list, and not a licence
+	// to wipe the line out either
+	if (lineEnd <= i + markerLen) {
+		return i + markerLen;
+	}
+
+	removals.push({start: i, end: i + markerLen});
+
+	// Not just the last range: inline markup on the previous item pushes its
+	// own ranges after that item's list range, so search backwards
+	const kind = ordered ? "ol" : "ul";
+	const idx = findLastIndex(
+		ranges,
+		(r) => r.flag === "list" && r.list === kind && r.end === i - 1
+	);
+
+	if (idx === -1) {
+		ranges.push({start: i + markerLen, end: lineEnd, flag: "list", list: kind, num});
+	} else {
+		ranges[idx].end = lineEnd;
+	}
+
+	if (text[lineEnd] === "\n" && listMarkerAt(text, lineEnd + 1, ordered) === 0) {
+		removals.push({start: lineEnd, end: lineEnd + 1});
+	}
+
+	return i + markerLen;
+}
+
+// The list marker at `pos`: its length, or 0 when that line starts with
+// something else.
+function listMarkerAt(text: string, pos: number, ordered: boolean): number {
+	if (ordered) {
+		const marker = /^\d{1,9}\. /.exec(text.slice(pos, pos + 12));
+
+		return marker ? marker[0].length : 0;
+	}
+
+	return text.startsWith("- ", pos) ? 2 : 0;
+}
+
+// A `$$…$$` display-math span. Returns the index after the block, or -1 when
+// there is nothing between the markers.
+function mathBlock(
+	text: string,
+	i: number,
+	close: number,
+	removals: Range[],
+	ranges: ScanRange[]
+): number {
+	let contentStart = i + 2;
+	let contentEnd = close;
+
+	if (text[contentStart] === "\n") {
+		contentStart += 1;
+	}
+
+	if (text[contentEnd - 1] === "\n" && contentEnd - 1 >= contentStart) {
+		contentEnd -= 1;
+	}
+
+	if (contentEnd <= contentStart) {
+		return -1;
+	}
+
+	// Block-level: swallow the newline before the opening and after the
+	// closing marker
+	const removeStart = text[i - 1] === "\n" ? i - 1 : i;
+	let removeEnd = close + 2;
+
+	if (text[removeEnd] === "\n") {
+		removeEnd += 1;
+	}
+
+	removals.push({start: removeStart, end: contentStart}, {start: contentEnd, end: removeEnd});
+	ranges.push({
+		start: contentStart,
+		end: contentEnd,
+		flag: "mathBlock",
+		tex: text.slice(contentStart, contentEnd),
+		id: ranges.length,
+	});
+	ranges.push({start: contentStart, end: contentEnd, flag: "verbatim"});
+
+	return removeEnd;
+}
+
+// One source line, offsets into `text`: `stop` is the newline's index or the
+// text's end, `next` where the following line starts.
+type Line = {start: number; stop: number; next: number};
+
+function lineOf(text: string, start: number): Line {
+	const stop = text.indexOf("\n", start);
+
+	return stop === -1
+		? {start, stop: text.length, next: text.length}
+		: {start, stop, next: stop + 1};
+}
+
+// The tables in `text`, found before the main scan so their pipes are never
+// spoiler markers and their rows are never list, header or quote lines. Whole
+// fences are stepped over first, the same way `codeBlock` will consume them,
+// so a pipe inside one is never read as a table row.
+function scanTables(text: string): {ranges: ScanRange[]; removals: Range[]; zones: Range[]} {
+	const ranges: ScanRange[] = [];
+	const removals: Range[] = [];
+	const zones: Range[] = [];
+	let i = 0;
+
+	while (i < text.length) {
+		if (text[i] === "`") {
+			const n = runAt(text, i);
+
+			if (n >= 3) {
+				const close = findRun(text, i + n, n, true);
+
+				if (close === -1) {
+					i += n;
+				} else {
+					i = close + runAt(text, close);
+
+					if (text[i] === "\n") {
+						i += 1;
+					}
+				}
+
+				continue;
+			}
+
+			i += n;
+			continue;
+		}
+
+		const line = lineOf(text, i);
+		const table = tableAt(text, i, line, ranges, removals, zones);
+
+		if (table !== -1) {
+			i = table;
+			continue;
+		}
+
+		i = line.next;
+	}
+
+	return {ranges, removals, zones};
+}
+
+// A GFM pipe table whose header row starts at `line.start`: the next line is
+// a `---` separator row, and every line after it that holds a pipe is a body
+// row. Pushes one range for the whole table (its value is the columns'
+// alignment), removes the separator row and the outer pipes with their
+// padding, and zones every pipe it keeps — those are cell boundaries the
+// adapter splits on. Returns the position after the last row, or -1.
+function tableAt(
+	text: string,
+	start: number,
+	line: Line,
+	ranges: ScanRange[],
+	removals: Range[],
+	zones: Range[]
+): number {
+	const head = rowCells(text.slice(line.start, line.stop));
+
+	if (!head) {
+		return -1;
+	}
+
+	const sepLine = lineOf(text, line.next);
+	const sep = rowCells(text.slice(sepLine.start, sepLine.stop));
+
+	if (!sep || sep.length !== head.length || !sep.every((cell) => /^:?-+:?$/.test(cell))) {
+		return -1;
+	}
+
+	// Body rows: every following line that holds a pipe
+	const rows: Line[] = [line];
+	let cursor = lineOf(text, sepLine.next);
+
+	while (cursor.stop > cursor.start && rowCells(text.slice(cursor.start, cursor.stop))) {
+		rows.push(cursor);
+		cursor = lineOf(text, cursor.next);
+	}
+
+	const lastRow = rows[rows.length - 1];
+
+	// The separator row goes entirely, with the newline after it — but the
+	// header's own newline stays, inside the range: it is what the rows are
+	// split on once the markers are gone
+	removals.push({start: sepLine.start, end: Math.min(sepLine.stop + 1, text.length)});
+
+	for (const row of rows) {
+		// Leading and trailing pipe, with the cell padding around them
+		const raw = text.slice(row.start, row.stop);
+		const lead = /^\s*\|/.exec(raw);
+		let leadEnd = row.start;
+
+		if (lead) {
+			const pipe = row.start + lead[0].length - 1;
+			const after = /^\s*/.exec(text.slice(pipe + 1, row.stop))![0].length;
+
+			removals.push({start: row.start, end: pipe + 1 + after});
+			leadEnd = pipe + 1 + after;
+		}
+
+		const trail = /\|\s*$/.exec(raw);
+		let trailStart = row.stop;
+
+		if (trail && trail[0].length !== raw.length) {
+			const pipe = row.stop - trail[0].length;
+			const before = /\s*$/.exec(text.slice(row.start, pipe))![0].length;
+
+			removals.push({start: pipe - before, end: row.stop});
+			trailStart = pipe - before;
+		}
+
+		// Every pipe the row keeps is a cell boundary, never a marker — and the
+		// padding in front of one goes, the way the outer pipes' does, so a cell
+		// reads `Item` and not `Item `
+		for (let k = row.start; k < row.stop; k++) {
+			if (text[k] !== "|") {
+				continue;
+			}
+
+			if (k >= leadEnd && k < trailStart) {
+				const before = /\s*$/.exec(text.slice(row.start, k))![0].length;
+				const after = /^\s*/.exec(text.slice(k + 1, row.stop))![0].length;
+
+				// A cell is trimmed on both sides of the pipe that bounds it
+				if (before > 0) {
+					removals.push({start: k - before, end: k});
+				}
+
+				if (after > 0) {
+					removals.push({start: k + 1, end: k + 1 + after});
+				}
+			}
+
+			zones.push({start: k, end: k + 1});
+		}
+	}
+
+	// The newline after the last row goes with the table, the way a quote's
+	// final newline does
+	if (text[lastRow.stop] === "\n") {
+		removals.push({start: lastRow.stop, end: lastRow.stop + 1});
+	}
+
+	ranges.push({
+		start,
+		end: lastRow.stop,
+		flag: "table",
+		table: sep.map(sepAlign).join(""),
+	});
+
+	return lastRow.next;
+}
+
+// A row's cells: the line must hold a pipe; the outer pipes and the spaces
+// around them are padding, the rest splits at the pipes it kept.
+function rowCells(line: string): string[] | undefined {
+	if (!line.includes("|")) {
+		return undefined;
+	}
+
+	let inner = line.trim();
+
+	if (inner.startsWith("|")) {
+		inner = inner.slice(1);
+	}
+
+	if (inner.endsWith("|")) {
+		inner = inner.slice(0, -1);
+	}
+
+	return inner.split("|").map((cell) => cell.trim());
+}
+
+// What a separator cell asks of its column: `:---` left, `---:` right,
+// `:---:` centred, plain `---` left too.
+function sepAlign(cell: string): string {
+	const left = cell.startsWith(":");
+	const right = cell.endsWith(":");
+
+	return left && right ? "c" : right ? "r" : "l";
 }
 
 // The header the run of "#" at `i` opens: one to six of them, one space, and

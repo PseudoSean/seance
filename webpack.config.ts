@@ -75,7 +75,7 @@ function brandManifest(content: string): string {
 // Third-party notices for the lazily loaded chunks. Prism's core carries a
 // `@license` comment terser extracts by itself, but not its copyright line, and
 // flourite's build carries nothing at all — so state both, in a `/*!` banner
-// that ends up in the chunk's `.LICENSE.txt`. Both are MIT; see
+// that ends up in the chunk's `.LICENSE.txt`. All are MIT; see
 // docs/projects/markdown-messages.md.
 const chunkNotices: Record<string, string> = {
 	"js/highlighter.js":
@@ -84,11 +84,13 @@ const chunkNotices: Record<string, string> = {
 	"js/flourite.js":
 		"/*! flourite 1.3.0 | MIT | Copyright (c) 2015 Toni Sučić, " +
 		"Copyright (c) 2024 Teknologi Umum | https://github.com/teknologi-umum/flourite */\n",
+	"js/katex.js":
+		"/*! katex 0.16.22 | MIT | Copyright (c) 2013-2024 Khan Academy and other contributors | https://katex.org */\n",
 };
 
 const noticePlugin = new webpack.BannerPlugin({
 	raw: true,
-	test: /^js\/(highlighter|flourite)\.js$/,
+	test: /^js\/(highlighter|flourite|katex)\.js$/,
 	banner: ({filename}) => chunkNotices[filename] ?? "",
 });
 
@@ -231,6 +233,21 @@ const config: webpack.Configuration = {
 						)
 						.replace(/\\/g, "/"),
 					to: "fonts/[name][ext]",
+				},
+				{
+					// KaTeX's stylesheet and fonts, for the math spans: static
+					// files the first span links
+					// (client/js/helpers/ircmessageparser/math.ts injects the
+					// `<link>`), never part of css/style.css — css-loader runs
+					// with `url: false`, so importing it through webpack would
+					// strand the fonts. The stylesheet references `fonts/`
+					// relative to itself, so the fonts land beside it under css/.
+					from: path.resolve(__dirname, "node_modules/katex/dist/katex.min.css"),
+					to: "css/katex.min.css",
+				},
+				{
+					from: path.resolve(__dirname, "node_modules/katex/dist/fonts/*.woff2"),
+					to: "css/fonts/[name][ext]",
 				},
 				{
 					from: path.resolve(__dirname, "./client/js/loading-error-handlers.js"),

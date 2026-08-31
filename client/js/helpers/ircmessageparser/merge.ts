@@ -2,6 +2,7 @@ import anyIntersection from "./anyIntersection";
 import fill from "./fill";
 import {ChannelPart} from "./findChannels";
 import {EmojiPart} from "./findEmoji";
+import {ShortcodePart} from "./findShortcode";
 import {LinkPart} from "../../../../shared/linkify";
 import {NamePart} from "./findNames";
 
@@ -29,6 +30,8 @@ export type PartWithFragments<F extends Fragment = Fragment> = Part & {
 	link?: string;
 	channel?: string;
 	emoji?: string;
+	// The `:name:` an emoji shortcode was typed as, when the part is one
+	shortcode?: string;
 	nick?: string;
 };
 
@@ -46,7 +49,14 @@ function sortParts(a: Part, b: Part) {
 	return a.start - b.start || b.end - a.end;
 }
 
-export type MergedParts = (TextPart | NamePart | EmojiPart | ChannelPart | LinkPart)[];
+export type MergedParts = (
+	| TextPart
+	| NamePart
+	| EmojiPart
+	| ShortcodePart
+	| ChannelPart
+	| LinkPart
+)[];
 
 // Merge the style fragments within the text parts, taking into account
 // boundaries and text sections that have not matched to links or channels.
