@@ -33,8 +33,12 @@ What a message renders as, decided once and expressed as plain data: parts and f
 _Avoid_: render tree, VNode tree, AST
 
 **Wrap**:
-A block-ish Markdown container in the layout tree — quote, code block, spoiler, or masked link — that encloses a run of neighbouring nodes.
+A block-ish Markdown container in the layout tree — quote, header, code block, spoiler, or masked link — that encloses a run of neighbouring nodes.
 _Avoid_: container, block, group
+
+**Header**:
+A line-level wrap giving a line document-heading emphasis, at one of six levels: `#` to `######` and a space at the start of the line. The level is the wrap's value, so two neighbouring lines of one level share a wrap and two of different levels do not.
+_Avoid_: heading, title, hn
 
 **Masked link**:
 A `[text](url)` link whose visible text differs from its destination. Rendered with the destination in the title and a distinguishing class.
@@ -45,6 +49,10 @@ A verbatim span rendered as rows, one per line: numbered from a CSS counter
 once there are two or more, and syntax-highlighted when the fence named a
 language or the guesser recognised one.
 _Avoid_: fenced block, pre, snippet
+
+**Excerpt**:
+The visible head of a collapsed code block — the first lines of a block too long to show whole, with a toggle under them offering the rest. The lines it leaves out are not in the DOM.
+_Avoid_: preview, truncation, snippet, fold
 
 **Monospace block**:
 A server-produced multi-line message rendered verbatim in a monospace face — the MOTD. Never interpreted as Markdown.

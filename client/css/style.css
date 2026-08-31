@@ -3153,6 +3153,51 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	margin: 2px 0;
 }
 
+/* A header is a line of its own, sized and weighted by its level and no more
+ * than chat can carry: an h1 is a heading, not a banner.
+ *
+ * `pre-wrap` because two adjacent header lines of one level share a single
+ * wrap whose text holds the newline between them — the wrap's value *is* the
+ * level, so equal levels necessarily group — and without it the two headings
+ * collapse onto one line. In the timeline this restates what
+ * `#chat .msg[data-type="message"] .content` already inherits down; the rule is
+ * the wrap's own, so it holds wherever else a message is rendered. */
+.md-header {
+	display: block;
+	margin: 4px 0 2px;
+	font-weight: 600;
+	white-space: pre-wrap;
+}
+
+.md-h1 {
+	font-size: 1.5em;
+	font-weight: 700;
+}
+
+.md-h2 {
+	font-size: 1.3em;
+	font-weight: 700;
+}
+
+.md-h3 {
+	font-size: 1.15em;
+}
+
+.md-h4 {
+	font-size: 1em;
+}
+
+.md-h5 {
+	font-size: 0.95em;
+	color: var(--body-color-muted);
+}
+
+.md-h6 {
+	font-size: 0.85em;
+	color: var(--body-color-muted);
+	text-transform: uppercase;
+}
+
 .md-code-block {
 	display: block;
 	white-space: pre-wrap;
@@ -3187,6 +3232,31 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	user-select: none;
 	counter-increment: line;
 	content: counter(line);
+}
+
+/* The excerpt toggle under a long block: the dashed rule is where the code was
+ * cut, and the label says how much is behind it. `user-select: none` keeps it
+ * out of a copy of the block, the way the gutter numbers are kept out. */
+.md-code-toggle {
+	display: block;
+	width: 100%;
+	margin-top: 4px;
+	padding: 3px 0 1px;
+	border: 0;
+	border-top: 1px dashed rgb(128 128 128 / 40%);
+	background: transparent;
+	color: var(--body-color-muted);
+	font: inherit;
+	font-size: 0.9em;
+	text-align: left;
+	cursor: pointer;
+	user-select: none;
+}
+
+/* Hover lifts the colour; focus keeps the UA ring, as the spoiler does — the
+ * colour alone is not a focus indicator. */
+.md-code-toggle:hover {
+	color: var(--body-color);
 }
 
 /* Syntax highlighting. The classes are Prism's token types, grouped onto the
@@ -3284,6 +3354,25 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 .header .topic .md-code-block--numbered .md-line::before {
 	content: none;
+}
+
+/* A topic is one clipped line: there is nothing to collapse and nowhere to put
+ * the control. */
+.header .topic .md-code-toggle {
+	display: none;
+}
+
+/* A header in the topic is one word among others, and plain: no line of its
+ * own, no size, weight, colour or case of its own, and no `pre-wrap` inside a
+ * clipped `nowrap` line. */
+.header .topic .md-header {
+	display: inline;
+	margin: 0;
+	color: inherit;
+	font-size: inherit;
+	font-weight: inherit;
+	text-transform: none;
+	white-space: normal;
 }
 
 .tooltipped::after {

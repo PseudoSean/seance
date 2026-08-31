@@ -1,6 +1,8 @@
 # Markdown messages
 
-Status: implemented on `markdown-messages-development` (2026-08-29).
+Status: implemented on `markdown-messages-development` (2026-08-29); headers
+and collapsing large code blocks added on `markdown-messages` (2026-08-31,
+plan in `docs/archives/2026-08-31-markdown-documents-plan.md`).
 
 Discord-style Markdown is rendered in everything `ParsedMessage` shows when
 the `markdown` setting (default on, Settings → Appearance → Messages) is set.
@@ -14,6 +16,25 @@ ASCII-art banners keep their `_____`, `\_` and `|...|`. `ParsedMessage` has a
 to `false`; the setting can only ever turn Markdown off, never back on.
 
 Design: `docs/archives/2026-08-29-markdown-messages-design.md`.
+
+## Syntax
+
+The whole of it — nothing outside this table is Markdown here. `\` before any
+marker character makes it literal.
+
+| Markup                             | Result                                                                                                               |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `**text**`                         | bold (`.irc-bold`)                                                                                                   |
+| `*text*`, `_text_`                 | italic (`.irc-italic`); `_` only at word boundaries                                                                  |
+| `__text__`                         | underline (`.irc-underline`)                                                                                         |
+| `~~text~~`                         | strikethrough (`.irc-strikethrough`)                                                                                 |
+| `` `code` ``                       | inline code (`.irc-monospace`), a verbatim span                                                                      |
+| ` ```[lang]⏎code``` `              | code block (`<code class="md-code-block">`, rows, gutter, `lang` kept as the highlighter's tag, single-line allowed) |
+| `\|\|text\|\|`                     | spoiler (`<span class="md-spoiler">`, click or Enter/Space toggles `.md-spoiler-shown`)                              |
+| `> text` at the start of a line    | quote (`<span class="md-quote">`, block-level, `> ` removed)                                                         |
+| `#`–`######` + space at line start | header (`<span class="md-header md-h1">`…`md-h6`, block-level, marker removed; `> # t` nests)                        |
+| `[text](url)`                      | masked link (`<a class="md-link" title=url target=_blank rel=noopener>`), schemes `http:`, `https:`, `web+irc:` only |
+| `\*` etc.                          | backslash escapes any marker character                                                                               |
 
 ## How it works
 
@@ -34,9 +55,9 @@ link, monospace block — is defined in `CONTEXT.md`; use those words.
   (`client/js/helpers/ircmessageparser/layout.ts`) decides what a message
   renders as and says so as plain data: a `LayoutNode` tree of text nodes
   (presentational style only), the parts a finder made interactive
-  (link/channel/emoji/nick) and the wraps (`quote`, `codeBlock`, `spoiler`,
-  `href`, nested in that order). It imports no Vue, store or DOM, so the
-  rendering decision is unit-testable.
+  (link/channel/emoji/nick) and the wraps (`quote`, `header`, `codeBlock`,
+  `spoiler`, `href`, nested in that order). It imports no Vue, store or DOM, so
+  the rendering decision is unit-testable.
 - The adapters walk that tree. `parse()` (`client/js/helpers/parse.ts`) is the
   Vue one and the whole of its interface: inside it a private `toVNodes` walk
   owns `createFragment`, the wrap elements and the four `renderPart` branches.
@@ -45,8 +66,35 @@ link, monospace block — is defined in `CONTEXT.md`; use those words.
 
 A masked link is an `<a class="md-link" title="<url>">`; the class is what
 tells it apart from a linkified anchor. CSS for the wrapped elements
-(`.md-quote`, `.md-code-block`, `.md-spoiler`/`.md-spoiler-shown`) lives in
-`client/css/style.css`, after `.irc-italic`.
+(`.md-quote`, `.md-header`/`.md-h1`…`.md-h6`, `.md-code-block`,
+`.md-code-toggle`, `.md-spoiler`/`.md-spoiler-shown`) lives in
+`client/css/style.css`, after `.irc-italic`. The channel header's topic is one
+clipped `nowrap` line, so the block-level ones are overridden back to `inline`
+there — and the collapse toggle to `display: none`.
+
+## Headers
+
+`#` to `######` followed by one space at the start of a line makes that line a
+header, the way `> ` makes it a quote — a header is a **line-level** thing and
+ends at its newline, so `# Title` on the first line of a pasted document leaves
+the rest of it alone. `#chan` is not a header (no space), `\#` escapes, markers
+inside a header still work (`# **bold** title`) and `> # q` nests the header
+inside the quote. Nothing else of Markdown's header syntax is taken: no closing
+hashes, no `===` underline, no anchors.
+
+The level is the wrap's value (`{wrap: "header", level: 1…6}`), which is what
+keeps two adjacent lines of different levels in wraps of their own. It also
+means two adjacent lines of _one_ level necessarily share a single wrap, whose
+text holds the newline between them — hence `white-space: pre-wrap` on
+`.md-header`, without which the two headings would render as one line. The
+newlines a header line sits between are removed the way a fence's are, so a
+header leaves no blank row behind it.
+
+`parse.ts` renders the wrap as `<span class="md-header md-h<level>">`; the
+stylesheet does the rest, capped for chat rather than for a document: h1
+1.5em/700 down to h6 0.85em/600 uppercase and muted, h5 and h6 in
+`--body-color-muted`. Only the size, weight and colour are the level's — the
+element is the same in all six.
 
 ## Code blocks
 
@@ -77,6 +125,32 @@ where it works, an off-screen `<textarea>` and `document.execCommand("copy")`
 where it does not (a deploy served over plain http is not a secure context).
 Both paths fail silently, and a copy that did not happen leaves the label alone.
 
+A block of more than `COLLAPSE_THRESHOLD` (12) lines is **collapsed**: it
+renders its first `COLLAPSE_EXCERPT` (8) lines and a
+`<button class="md-code-toggle">` reading `Show all N lines`. The hidden lines
+are not in the DOM, so selecting a collapsed block copies what it shows; the
+toolbar's Copy code action is unaffected, because it reads the layout tree and
+not the rows. `excerptRange(lineCount)` in `codeLines.ts` is the whole decision
+— pure, and settled before Prism is fetched — and, like the gutter width, it is
+computed from the plain text, so neither moves when the tokens land. The
+highlighter still sees the whole code once; only the rendered rows are sliced,
+so the gutter counts 1…8 and then 1…N with nothing restarting mid-block. The
+state is the component's own: an edit keeps it (the text changes under the same
+instance, which is why the token reset is a `watch`), and the `markdown` setting
+flipping unmounts the block, so it comes back collapsed — as a shown spoiler
+comes back hidden.
+
+The MOTD never collapses. It is a monospace block, and
+`MessageTypes/monospace_block.vue` renders it through `ParsedMessage` with
+`:markdown="false"`, so there is no `codeBlock` wrap and `CodeBlock.vue` never
+mounts for it.
+
+Flipping it changes a height in the middle of the timeline, so `CodeBlock.vue`
+restores the scroll position around the change: a reader who was at the bottom
+of the channel stays at the bottom — `MessageList`'s own at-bottom formula,
+verbatim, so the two never disagree about the same scroller — and anyone else
+keeps the block's top edge exactly where it was on screen.
+
 Highlighting is `highlighter.ts` (Vue-free, mocha loads it):
 
 - The fence's language tag is kept by `applyMarkdown` as `lang` and carried on
@@ -106,14 +180,12 @@ Highlighting is `highlighter.ts` (Vue-free, mocha loads it):
   these, so the first block in an offline app stays plain — a failed import is
   caught, and the block simply never highlights.
 
-**Reachable only with multiline.** Both paths need a newline in the message: a
-fence tag is only a tag before one, and a guess needs two lines. On this branch
-`dispatchInput` sends one message per line and the client does not negotiate
-`draft/multiline` (`client/js/irc/caps.ts`), so nothing it sends or receives
-produces a language tag or a gutter; the newlines arrive with the
-`multiline-messages` branch. The browser cover for the multi-line block is in
-`test/e2e/markdown.spec.ts`, gated on `SEANCE_E2E_MULTILINE=1` so it only runs
-where multiline is in.
+**Needs multiline.** Both paths need a newline in the message: a fence tag is
+only a tag before one, and a guess needs two lines. So does a collapsed block,
+and so does a header. Newlines reach the wire where the client and the server
+both negotiate `draft/multiline` (`client/js/irc/caps.ts`, merged), and the
+browser cover for all of it is the multi-line cases in
+`test/e2e/markdown.spec.ts` — ungated now that it is.
 
 ## Licensing
 
@@ -148,12 +220,15 @@ table. The checkbox itself carries no hint — no other setting does.
   action.
 - `test/helpers/highlighter.ts` — tag normalisation, line splitting, the token
   → node mapping (against a stub grammar and a real one), and the guesser.
+- `test/helpers/codeLines.ts` — `excerptRange` and the two collapse constants,
+  the decision a block makes before Prism is anywhere near it.
 - `test/e2e/markdown.spec.ts` — `SEANCE_E2E_IRC_URL=wss://host:port/ yarn test:e2e`
   drives the built client against a live ircd with Playwright. It covers what
   only a browser can answer: that the elements the tree names really appear,
   that the spoiler toggles, that a code block renders as one row, that a URL
   inside one is not an anchor and that the toolbar's Copy code action puts the
   block's characters on the clipboard (and is absent from a message without a
-  block). It cannot
-  cover highlighting, for the reason above: no message it can send holds a
-  newline.
+  block). The multi-line cases cover what only a message with newlines can
+  show: the fence language tag, the gutter, headers of two levels in one
+  message, and a 16-line block collapsing to 8 rows, expanding, collapsing
+  again — with the Copy code action still yielding all sixteen lines.

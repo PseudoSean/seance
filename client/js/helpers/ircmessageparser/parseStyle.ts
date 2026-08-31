@@ -9,6 +9,9 @@ const UNDERLINE = "\x1f";
 const STRIKETHROUGH = "\x1e";
 const MONOSPACE = "\x11";
 
+// How deep a Markdown header is: "# " through "###### ".
+export type HeaderLevel = 1 | 2 | 3 | 4 | 5 | 6;
+
 export type ParsedStyle = {
 	bold?: boolean;
 	textColor?: string;
@@ -24,6 +27,8 @@ export type ParsedStyle = {
 	quote?: boolean;
 	spoiler?: boolean;
 	href?: string;
+	// The level of the header line this fragment sits on, when it is one
+	header?: HeaderLevel;
 	// The code fence's language tag, when it had one
 	lang?: string;
 	text: string;
@@ -243,6 +248,7 @@ export const STYLE_KEYS: (keyof ParsedStyle)[] = [
 	"spoiler",
 	"href",
 	"lang",
+	"header",
 ];
 
 function prepare(text: string) {

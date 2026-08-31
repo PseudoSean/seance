@@ -5,7 +5,7 @@ import findEmoji from "./findEmoji";
 import findNames from "./findNames";
 import merge, {MergedParts, Part, PartWithFragments} from "./merge";
 import {applyMarkdown, Range} from "./parseMarkdown";
-import parseStyle, {ParsedStyle} from "./parseStyle";
+import parseStyle, {HeaderLevel, ParsedStyle} from "./parseStyle";
 
 export type LayoutOptions = {
 	markdown?: boolean;
@@ -39,16 +39,20 @@ export type LayoutNode =
 	| {kind: "emoji"; emoji: string; children: LayoutNode[]}
 	| {kind: "nick"; nick: string; children: LayoutNode[]}
 	| {kind: "wrap"; wrap: "quote" | "spoiler"; children: LayoutNode[]}
+	// `level` is how many hashes the header line opened with
+	| {kind: "wrap"; wrap: "header"; level: HeaderLevel; children: LayoutNode[]}
 	// `lang` is the fence's language tag, when it named one
 	| {kind: "wrap"; wrap: "codeBlock"; lang?: string; children: LayoutNode[]}
 	| {kind: "wrap"; wrap: "href"; href: string; children: LayoutNode[]};
 
-// Flags that wrap a run of neighbouring nodes in one element, outermost first
-const WRAP_KEYS = ["quote", "codeBlock", "spoiler", "href"] as const;
+// Flags that wrap a run of neighbouring nodes in one element, outermost first:
+// a header sits inside the quote it was written in, never the other way round.
+const WRAP_KEYS = ["quote", "header", "codeBlock", "spoiler", "href"] as const;
 type WrapKey = typeof WRAP_KEYS[number];
 // `lang` is not a wrap of its own: it qualifies `codeBlock`, so that two
-// blocks in different languages never end up under one element.
-type Wrap = Partial<Record<WrapKey, boolean | string>> & {lang?: string};
+// blocks in different languages never end up under one element. A header's
+// value is its level, so two levels never end up under one element either.
+type Wrap = Partial<Record<WrapKey, boolean | string | number>> & {lang?: string};
 // A part, or one run of a part's text, and the wraps it sits in
 type WrappedNodes = {nodes: LayoutNode[]; wrap: Wrap};
 
@@ -257,6 +261,10 @@ function wrapNode(key: WrapKey, wrap: Wrap, children: LayoutNode[]): LayoutNode 
 		return {kind: "wrap", wrap: "href", href: String(wrap.href), children};
 	}
 
+	if (key === "header") {
+		return {kind: "wrap", wrap: "header", level: wrap.header as HeaderLevel, children};
+	}
+
 	if (key === "codeBlock") {
 		return wrap.lang === undefined
 			? {kind: "wrap", wrap: "codeBlock", children}
@@ -267,7 +275,7 @@ function wrapNode(key: WrapKey, wrap: Wrap, children: LayoutNode[]): LayoutNode 
 }
 
 // Groups neighbouring nodes that share a wrap flag under one node, nesting
-// quote > codeBlock > spoiler > href.
+// quote > header > codeBlock > spoiler > href.
 function groupNodes(nodes: WrappedNodes[], level = 0): LayoutNode[] {
 	if (level === WRAP_KEYS.length) {
 		return nodes.flatMap((wrappedNodes) => wrappedNodes.nodes);
