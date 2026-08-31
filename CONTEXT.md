@@ -33,7 +33,7 @@ What a message renders as, decided once and expressed as plain data: parts and f
 _Avoid_: render tree, VNode tree, AST
 
 **Wrap**:
-A block-ish Markdown container in the layout tree — quote, header, code block, spoiler, or masked link — that encloses a run of neighbouring nodes.
+A block-ish Markdown container in the layout tree — quote, header, list, table, code block, spoiler, math, or masked link — that encloses a run of neighbouring nodes.
 _Avoid_: container, block, group
 
 **Header**:
@@ -45,10 +45,24 @@ A `[text](url)` link whose visible text differs from its destination. Rendered w
 _Avoid_: markdown link, labelled link
 
 **Code block**:
-A verbatim span rendered as rows, one per line: numbered from a CSS counter
-once there are two or more, and syntax-highlighted when the fence named a
-language or the guesser recognised one.
+A verbatim span rendered as rows, one per line: numbered from a CSS counter once there are two or more, syntax-highlighted when the fence named a language or the guesser recognised one, and labelled in the corner with the file a `lang:file` tag named, else the language. A fence is a run of three or more backticks closed by a run at least as long.
 _Avoid_: fenced block, pre, snippet
+
+**List**:
+A run of `- ` or `1. `–`9. ` lines under one wrap, the markers removed and the bullet or number drawn by the stylesheet; the wrap's value is `ul` or `ol:` with the list's first number. They do not nest.
+_Avoid_: bullet points, ul, ol
+
+**Table**:
+A GFM pipe table under one wrap: cells separated by pipes the scanner keeps, rows by the newlines it keeps, the separator row removed and its colons carried as the columns' alignment. Rendered as a real `<table>`, first row the header.
+_Avoid_: grid, spreadsheet
+
+**Math**:
+A TeX span — `` $`…`$ `` inline, `$$…$$` display — rendered by KaTeX from a lazily loaded chunk, the raw TeX shown until it lands. The one place a library's HTML is set on the page directly, because KaTeX escapes everything it is given.
+_Avoid_: latex block, formula, equation
+
+**Shortcode**:
+An `:name:` the emoji map knows, rendered as the character it stands for through the same span unicode emoji gets. Only a known alias matches, which is what keeps timestamps out.
+_Avoid_: emoji name, smiley code
 
 **Excerpt**:
 The visible head of a collapsed code block — the first lines of a block too long to show whole, with a toggle under them offering the rest. The lines it leaves out are not in the DOM.

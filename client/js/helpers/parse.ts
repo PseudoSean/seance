@@ -5,6 +5,7 @@ import LinkPreviewToggle from "../../components/LinkPreviewToggle.vue";
 import LinkPreviewFileSize from "../../components/LinkPreviewFileSize.vue";
 import CodeBlock from "../../components/CodeBlock.vue";
 import InlineChannel from "../../components/InlineChannel.vue";
+import MathSpan from "../../components/MathSpan.vue";
 import Username from "../../components/Username.vue";
 import {ClientMessage, ClientNetwork} from "../types";
 
@@ -38,13 +39,82 @@ function spoilerKeydown(event: KeyboardEvent) {
 	toggleSpoiler(event);
 }
 
-function wrapNode(node: WrapNode, children: Rendered[]): VNode {
+function wrapNode(node: WrapNode, children: Rendered[], message?: ClientMessage): VNode {
 	switch (node.wrap) {
 		case "quote":
 			return createElement("span", {class: ["md-quote"]}, children);
 		case "header":
 			// Block-level, sized by level in the stylesheet
 			return createElement("span", {class: ["md-header", "md-h" + node.level]}, children);
+
+		case "list": {
+			// One item per line: the wrap's text holds the newlines between
+			// items, the way a header's does. The bullet or number is drawn by
+			// the stylesheet, so a copy of the list yields the items and not
+			// the markers that were typed.
+			const ordered = node.list.startsWith("ol:");
+			const items = splitNodes(node.children, "\n")
+				.filter((item) => item.length > 0)
+				.map((item) => createElement("span", {class: ["md-li"]}, toVNodes(item, message)));
+
+			return createElement(
+				"span",
+				{
+					class: ["md-list", ordered ? "md-ol" : "md-ul"],
+					style: ordered
+						? {counterReset: `md-oli ${Number.parseInt(node.list.slice(3), 10) - 1}`}
+						: undefined,
+				},
+				items
+			);
+		}
+
+		case "table": {
+			// Rows split at the newlines the range kept, cells at the pipes it
+			// kept; the first row is the header. `table` carries one alignment
+			// letter (`l`, `r`, `c`) per column, in order.
+			const alignOf = (column: number) =>
+				node.table[column] === "c"
+					? "center"
+					: node.table[column] === "r"
+					? "right"
+					: undefined;
+			const cell = (tag: string, column: number, nodes: LayoutNode[]) =>
+				createElement(tag, {style: {textAlign: alignOf(column)}}, toVNodes(nodes, message));
+			const [head, ...body] = splitNodes(node.children, "\n").filter((row) => row.length > 0);
+			const tableChildren: VNode[] = [];
+
+			if (head) {
+				tableChildren.push(
+					createElement(
+						"thead",
+						{},
+						createElement(
+							"tr",
+							{},
+							splitNodes(head, "|").map((nodes, column) => cell("th", column, nodes))
+						)
+					)
+				);
+			}
+
+			tableChildren.push(
+				createElement(
+					"tbody",
+					{},
+					body.map((row) =>
+						createElement(
+							"tr",
+							{},
+							splitNodes(row, "|").map((nodes, column) => cell("td", column, nodes))
+						)
+					)
+				)
+			);
+
+			return createElement("table", {class: ["md-table"]}, tableChildren);
+		}
+
 		case "codeBlock":
 			// The block's own characters, and only those: `CodeBlock` lays them
 			// out as numbered lines and asks the highlighter for tokens. Any
@@ -54,6 +124,15 @@ function wrapNode(node: WrapNode, children: Rendered[]): VNode {
 			return createElement(CodeBlock, {
 				code: toPlainText(node.children),
 				lang: node.lang,
+				file: node.file,
+			});
+		case "math":
+		case "mathBlock":
+			// The block's own characters are the TeX; `MathSpan` renders them
+			// with KaTeX once its chunk lands, and shows the TeX until then.
+			return createElement(MathSpan, {
+				tex: toPlainText(node.children),
+				display: node.wrap === "mathBlock",
 			});
 		case "spoiler":
 			return createElement(
@@ -179,9 +258,64 @@ function toVNodes(nodes: LayoutNode[], message?: ClientMessage): Rendered[] {
 		const children = toVNodes(node.children, message);
 
 		return node.kind === "wrap"
-			? wrapNode(node, children)
+			? wrapNode(node, children, message)
 			: renderPart(node, children, message);
 	});
+}
+
+// Splits a run of nodes at a separator character that lives in text nodes —
+// the newlines between a list's items, the pipes between a table row's cells —
+// so the adapter can make an element of each. A wrap spanning a split is
+// cloned around each side (a spoiler across two cells blacks both out); the
+// finder-made parts (links, channels, emoji, nicks) never contain a separator.
+function splitNodes(nodes: LayoutNode[], sep: string): LayoutNode[][] {
+	const out: LayoutNode[][] = [];
+	let run: LayoutNode[] = [];
+
+	const flush = () => {
+		out.push(run);
+		run = [];
+	};
+
+	for (const node of nodes) {
+		if (node.kind === "text") {
+			const pieces = node.text.split(sep);
+
+			run.push({kind: "text", text: pieces[0], style: node.style});
+
+			for (const piece of pieces.slice(1)) {
+				flush();
+
+				if (piece) {
+					run.push({kind: "text", text: piece, style: node.style});
+				}
+			}
+
+			continue;
+		}
+
+		if (node.kind === "wrap") {
+			const segments = splitNodes(node.children, sep);
+
+			run.push({...node, children: segments[0]});
+
+			for (const segment of segments.slice(1)) {
+				flush();
+
+				if (segment.length > 0) {
+					run.push({...node, children: segment});
+				}
+			}
+
+			continue;
+		}
+
+		run.push(node);
+	}
+
+	flush();
+
+	return out;
 }
 
 // Wrap potentially styled fragments with links, channel buttons, emoji, nicks

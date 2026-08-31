@@ -3208,11 +3208,30 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 .md-code-block {
 	display: block;
+	position: relative;
 	white-space: pre-wrap;
 	padding: 4px 6px;
 	margin: 2px 0;
 	overflow-x: auto;
 	color: var(--md-code-color);
+}
+
+/* What the block is shown as — the `lang:file` tag's file, the language, or
+ * the guesser's answer — in the corner. The label needs a row of its own, so
+ * a labelled block gains the headroom; `user-select: none` keeps it out of a
+ * copy, like the gutter numbers. */
+.md-code-block[data-lang] {
+	padding-top: 20px;
+}
+
+.md-code-block[data-lang]::after {
+	content: attr(data-lang);
+	position: absolute;
+	top: 2px;
+	right: 6px;
+	font-size: 0.85em;
+	color: var(--body-color-muted);
+	user-select: none;
 }
 
 /* One row per line. The number is a CSS counter rather than text, so selecting
@@ -3265,6 +3284,70 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
  * colour alone is not a focus indicator. */
 .md-code-toggle:hover {
 	color: var(--body-color);
+}
+
+/* A list is its own block, one item per line: the markers the user typed are
+ * gone, and the bullet or number is drawn, so selecting the list yields the
+ * items and not the "- " or "1. ". The marker lives in a fixed-width column
+ * (inline-block, pulled left out of the padding), so wrapped lines stay
+ * aligned under the text rather than under the marker. */
+.md-list {
+	display: block;
+	margin: 2px 0;
+}
+
+.md-list .md-li {
+	display: block;
+	padding-left: 1.5em;
+}
+
+.md-list .md-li::before {
+	display: inline-block;
+	width: 1.5em;
+	margin-left: -1.5em;
+	text-align: right;
+	user-select: none;
+}
+
+.md-ul .md-li::before {
+	content: "•";
+}
+
+/* An ordered list counts itself; the adapter sets `counter-reset` inline from
+ * the number of the list's first item, so "3. …" starts at 3. */
+.md-ol .md-li {
+	counter-increment: md-oli;
+}
+
+.md-ol .md-li::before {
+	content: counter(md-oli) ".";
+}
+
+/* A pipe table: real table elements, the first row the header, each column
+ * sitting the way its separator cell asked (`text-align` from the adapter). */
+.md-table {
+	display: table;
+	border-collapse: collapse;
+	margin: 2px 0;
+	font-variant-numeric: tabular-nums;
+}
+
+.md-table th,
+.md-table td {
+	border: 1px solid rgb(128 128 128 / 40%);
+	padding: 1px 6px;
+}
+
+.md-table th {
+	font-weight: 600;
+}
+
+/* Display TeX stands alone; inline TeX is no taller than its line. KaTeX's
+ * own stylesheet does the typesetting once the first span has linked it. */
+.md-math-block {
+	display: block;
+	margin: 2px 0;
+	overflow-x: auto;
 }
 
 /* Syntax highlighting. The classes are Prism's token types, grouped onto the
@@ -3353,7 +3436,13 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
  * block-level Markdown wrappers must not lay themselves out there. */
 .header .topic .md-quote,
 .header .topic .md-code-block,
-.header .topic .md-line {
+.header .topic .md-line,
+.header .topic .md-list,
+.header .topic .md-list .md-li,
+.header .topic .md-table,
+.header .topic .md-table th,
+.header .topic .md-table td,
+.header .topic .md-math-block {
 	display: inline;
 	margin: 0;
 	padding: 0;
@@ -3361,6 +3450,20 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 .header .topic .md-code-block--numbered .md-line::before {
+	content: none;
+}
+
+.header .topic .md-list .md-li::before {
+	content: none;
+}
+
+/* A labelled code block in the topic: no headroom for a corner label, and no
+ * label. */
+.header .topic .md-code-block[data-lang] {
+	padding-top: 4px;
+}
+
+.header .topic .md-code-block[data-lang]::after {
 	content: none;
 }
 

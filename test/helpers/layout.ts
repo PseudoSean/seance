@@ -24,8 +24,10 @@ const header = (level: HeaderLevel, children: LayoutNode[]): LayoutNode => ({
 	children,
 });
 
-const codeBlock = (children: LayoutNode[], lang?: string): LayoutNode =>
-	lang === undefined
+const codeBlock = (children: LayoutNode[], lang?: string, file?: string): LayoutNode =>
+	file !== undefined
+		? {kind: "wrap", wrap: "codeBlock", lang, file, children}
+		: lang === undefined
 		? {kind: "wrap", wrap: "codeBlock", children}
 		: {kind: "wrap", wrap: "codeBlock", lang, children};
 
@@ -229,6 +231,91 @@ describe("layout — parts", () => {
 		expect(layout("`#chan`", options)).to.deep.equal([text("#chan", {monospace: true})]);
 		expect(layout("#chan", options)).to.deep.equal([
 			{kind: "channel", channel: "#chan", children: [text("#chan")]},
+		]);
+	});
+
+	it("renders a known shortcode as the character it stands for", () => {
+		expect(layout("hi :smile:", markdown)).to.deep.equal([
+			text("hi "),
+			{kind: "emoji", emoji: "😄", children: [text("😄")]},
+		]);
+	});
+
+	it("leaves an unknown or code-spanned shortcode as text", () => {
+		expect(layout(":notanemoji:", markdown)).to.deep.equal([text(":notanemoji:")]);
+		expect(layout("`:smile:`", markdown)).to.deep.equal([text(":smile:", {monospace: true})]);
+		// A timestamp is not an alias, so nothing fires at all
+		expect(layout("at 10:30:45", markdown)).to.deep.equal([text("at 10:30:45")]);
+	});
+});
+
+describe("layout — lists, tables and math", () => {
+	const list = (kind: string, children: LayoutNode[]): LayoutNode => ({
+		kind: "wrap",
+		wrap: "list",
+		list: kind,
+		children,
+	});
+
+	const table = (align: string, children: LayoutNode[]): LayoutNode => ({
+		kind: "wrap",
+		wrap: "table",
+		table: align,
+		children,
+	});
+
+	it("wraps a list, carrying its kind", () => {
+		expect(layout("- a\n- b", markdown)).to.deep.equal([list("ul", [text("a\nb")])]);
+		expect(layout("3. a\n4. b", markdown)).to.deep.equal([list("ol:3", [text("a\nb")])]);
+	});
+
+	it("nests the styles and parts of an item inside the list", () => {
+		expect(layout("- **b** and #chan", {markdown: true, channelPrefixes: ["#"]})).to.deep.equal(
+			[
+				list("ul", [
+					text("b", {bold: true}),
+					text(" and "),
+					{kind: "channel", channel: "#chan", children: [text("#chan")]},
+				]),
+			]
+		);
+	});
+
+	it("wraps a table, carrying the columns' alignment", () => {
+		expect(layout("| a | b |\n| :--- | ---: |\n| 1 | 2 |", markdown)).to.deep.equal([
+			table("lr", [text("a|b\n1|2")]),
+		]);
+	});
+
+	it("wraps inline and display TeX, with the TeX as the text", () => {
+		expect(layout("$`a`$ b", markdown)).to.deep.equal([
+			{kind: "wrap", wrap: "math", children: [text("a")]},
+			text(" b"),
+		]);
+		expect(layout("$$\na\n$$", markdown)).to.deep.equal([
+			{kind: "wrap", wrap: "mathBlock", children: [text("a")]},
+		]);
+	});
+
+	it("carries the file of a `lang:file` fence tag", () => {
+		expect(layout("```js:index.ts\nlet x\n```", markdown)).to.deep.equal([
+			codeBlock([text("let x")], "js", "index.ts"),
+		]);
+	});
+
+	// The adapter splits the wrap's text at the newlines and pipes it kept, so
+	// they have to survive `toPlainText` exactly once per boundary.
+	it("reads a table's rows and cells back out of the plain text", () => {
+		expect(toPlainText(layout("| a | b |\n| - | - |\n| 1 | 2 |", markdown))).to.equal(
+			"a|b\n1|2"
+		);
+	});
+
+	it("keeps two tables with the same alignment apart", () => {
+		expect(layout("| a |\n| - |\n| b |\n\n| c |\n| - |\n| d |", markdown)).to.deep.equal([
+			table("l", [text("a\nb")]),
+			text("\n"),
+			table("l", [text("c\nd")]),
 		]);
 	});
 });
