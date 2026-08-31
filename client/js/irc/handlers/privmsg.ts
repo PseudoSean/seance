@@ -143,6 +143,11 @@ function handleMessage(client: IrcClient, msg: IrcMessage, baseType: MessageType
 
 	if (!highlight && !self) {
 		highlight = client.isHighlight(text);
+	} else if (highlight && client.isHighlightException(text)) {
+		// The query auto-highlight is not derived from the text, so
+		// isHighlight's folded-in exceptions never saw it; the old server
+		// ran the exception regex over every highlight (attic message.ts).
+		highlight = false;
 	}
 
 	const users: string[] = [];

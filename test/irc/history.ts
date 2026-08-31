@@ -75,6 +75,7 @@ interface MsgPayload {
 	msg: SharedMsg;
 	unread?: number;
 	highlight?: number;
+	replay?: boolean;
 }
 
 let dispatch: sinon.SinonSpy;
@@ -609,7 +610,7 @@ describe("Chat history (history.ts)", function () {
 			expect(pendingHistory(h.client)).to.have.length(0);
 		});
 
-		it("history never highlights, notifies or counts as unread", function () {
+		it("history highlights mentions on the line but never notifies or counts", function () {
 			const h = setup();
 			const id = joined(h);
 			const chan = h.client.findChannel("#seance")!;
@@ -619,18 +620,20 @@ describe("Chat history (history.ts)", function () {
 			socket.emit("more", {target: id, lastId: -1, condensed: false});
 			reply(h, h.sent(), [
 				hist(1, "bob", "alice: are you there?"),
-				hist(2, "carol", "hey alice"),
+				hist(2, "carol", "nothing for you"),
 			]);
 
+			// The mention renders highlighted, but replay moves no counters.
 			const [more] = mores(id);
-			expect(more.messages.map((m) => m.highlight)).to.deep.equal([false, false]);
+			expect(more.messages.map((m) => m.highlight)).to.deep.equal([true, false]);
 			expect(chan.shared.unread).to.equal(0);
 			expect(chan.shared.highlight).to.equal(0);
 			expect(msgs(id), "nothing dispatched as a live msg").to.have.length(0);
 
-			// A live mention still highlights.
+			// A live mention still highlights and counts.
 			h.transport.line(":bob!bob@host PRIVMSG #seance :alice ping");
 			expect(msgs(id)[0].msg.highlight).to.equal(true);
+			expect(msgs(id)[0].replay).to.not.equal(true);
 			expect(chan.shared.highlight).to.equal(1);
 		});
 
@@ -819,7 +822,10 @@ describe("Chat history (history.ts)", function () {
 			expect(mores(id)).to.have.length(0);
 			const gap = msgs(id).filter((p) => p.msg.msgid?.startsWith("gap"));
 			expect(gap.map((p) => p.msg.text)).to.deep.equal(["alice you there?", "guess not"]);
-			expect(gap.map((p) => p.msg.highlight)).to.deep.equal([false, false]);
+			// The mention renders highlighted; the replay flag keeps the
+			// consumer from notifying, and no counters move.
+			expect(gap.map((p) => p.msg.highlight)).to.deep.equal([true, false]);
+			expect(gap.map((p) => p.replay)).to.deep.equal([true, true]);
 			expect(gap.every((p) => p.msg.id > 0)).to.equal(true);
 			expect(chan.shared.unread).to.equal(unreadBefore);
 			expect(chan.shared.highlight).to.equal(0);

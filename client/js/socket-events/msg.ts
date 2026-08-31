@@ -75,8 +75,9 @@ socket.on("msg", function (data) {
 	channel.messages.push(data.msg);
 
 	// Highlights used to be collected server-side; keep the recent-mentions
-	// list locally instead.
-	if (data.msg.highlight && !data.msg.self && data.msg.from) {
+	// list locally instead. Replayed history renders its highlights but is
+	// not news: no mention entry, no notification.
+	if (data.msg.highlight && !data.msg.self && !data.replay && data.msg.from) {
 		addMention({
 			chanId: data.chan,
 			msgId: data.msg.id,
@@ -89,7 +90,7 @@ socket.on("msg", function (data) {
 
 	if (data.msg.self) {
 		channel.firstUnread = data.msg.id;
-	} else {
+	} else if (!data.replay) {
 		notifyMessage(data.chan, channel, store.state.activeChannel, data.msg);
 	}
 
