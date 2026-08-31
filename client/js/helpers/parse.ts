@@ -42,6 +42,9 @@ function wrapNode(node: WrapNode, children: Rendered[]): VNode {
 	switch (node.wrap) {
 		case "quote":
 			return createElement("span", {class: ["md-quote"]}, children);
+		case "header":
+			// Block-level, sized by level in the stylesheet
+			return createElement("span", {class: ["md-header", "md-h" + node.level]}, children);
 		case "codeBlock":
 			// The block's own characters, and only those: `CodeBlock` lays them
 			// out as numbered lines and asks the highlighter for tokens. Any

@@ -6,6 +6,7 @@ import {
 	Style,
 	toPlainText,
 } from "../../client/js/helpers/ircmessageparser/layout";
+import {HeaderLevel} from "../../client/js/helpers/ircmessageparser/parseStyle";
 
 // Builders, so the assertions read as the tree they describe.
 const text = (value: string, style: Style = {}): LayoutNode => ({
@@ -15,6 +16,13 @@ const text = (value: string, style: Style = {}): LayoutNode => ({
 });
 
 const quote = (children: LayoutNode[]): LayoutNode => ({kind: "wrap", wrap: "quote", children});
+
+const header = (level: HeaderLevel, children: LayoutNode[]): LayoutNode => ({
+	kind: "wrap",
+	wrap: "header",
+	level,
+	children,
+});
 
 const codeBlock = (children: LayoutNode[], lang?: string): LayoutNode =>
 	lang === undefined
@@ -137,6 +145,50 @@ describe("layout — wraps", () => {
 			quote([text("a "), text("b", {italic: true}), text("\nc")]),
 		]);
 	});
+
+	it("wraps a header", () => {
+		expect(layout("# Title", markdown)).to.deep.equal([header(1, [text("Title")])]);
+	});
+
+	it("styles the text inside a header", () => {
+		expect(layout("# a **b**", markdown)).to.deep.equal([
+			header(1, [text("a "), text("b", {bold: true})]),
+		]);
+	});
+
+	it("wraps a header inside the quote it sits in", () => {
+		expect(layout("> # q", markdown)).to.deep.equal([quote([header(1, [text("q")])])]);
+	});
+
+	it("finds a channel inside a header", () => {
+		const options = {markdown: true, channelPrefixes: ["#"], userModes: ["@"]};
+
+		expect(layout("# see #chan", options)).to.deep.equal([
+			header(1, [
+				text("see "),
+				{kind: "channel", channel: "#chan", children: [text("#chan")]},
+			]),
+		]);
+	});
+
+	it("leaves no stray newline around a header line", () => {
+		expect(layout("x\n# H\ny", markdown)).to.deep.equal([
+			text("x"),
+			header(1, [text("H")]),
+			text("y"),
+		]);
+	});
+
+	it("keeps two header levels in wraps of their own", () => {
+		expect(layout("# A\n## B", markdown)).to.deep.equal([
+			header(1, [text("A")]),
+			header(2, [text("B")]),
+		]);
+	});
+
+	it("leaves the hashes alone when Markdown is off", () => {
+		expect(layout("# Title")).to.deep.equal([text("# Title")]);
+	});
 });
 
 describe("layout — parts", () => {
@@ -209,6 +261,10 @@ describe("toPlainText", () => {
 	it("keeps what is not a marker", () => {
 		expect(toPlainText(layout("> quoted\n> lines", markdown))).to.equal("quoted\nlines");
 		expect(toPlainText(layout("**a** ||b||"))).to.equal("**a** ||b||");
+	});
+
+	it("says a header as the line it is", () => {
+		expect(toPlainText(layout("# Title", markdown))).to.equal("Title");
 	});
 
 	it("reads through parts", () => {
