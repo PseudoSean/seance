@@ -3208,7 +3208,6 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 .md-code-block {
 	display: block;
-	position: relative;
 	white-space: pre-wrap;
 	padding: 4px 6px;
 	margin: 2px 0;
@@ -3216,19 +3215,13 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	color: var(--md-code-color);
 }
 
-/* What the block is shown as — the `lang:file` tag's file, the language, or
- * the guesser's answer — in the corner. The label needs a row of its own, so
- * a labelled block gains the headroom; `user-select: none` keeps it out of a
- * copy, like the gutter numbers. */
-.md-code-block[data-lang] {
-	padding-top: 20px;
-}
-
-.md-code-block[data-lang]::after {
-	content: attr(data-lang);
-	position: absolute;
-	top: 2px;
-	right: 6px;
+/* The caption — the `lang:file` file, else the language, once it is known —
+ * is the block's own first child, in the message's typeface and a muted size:
+ * a label above the rows, never an empty first line of code. Like the gutter
+ * it is kept out of copies. */
+.md-code-head {
+	display: block;
+	margin-bottom: 2px;
 	font-size: 0.85em;
 	color: var(--body-color-muted);
 	user-select: none;
@@ -3288,9 +3281,10 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 /* A list is its own block, one item per line: the markers the user typed are
  * gone, and the bullet or number is drawn, so selecting the list yields the
- * items and not the "- " or "1. ". The marker lives in a fixed-width column
- * (inline-block, pulled left out of the padding), so wrapped lines stay
- * aligned under the text rather than under the marker. */
+ * items and not the "- " or "1. ". The marker lives in a column of its own
+ * (inline-block, pulled left out of the padding, at least as wide as a short
+ * number — a longer one gets its room, the way the gutter's does), with one
+ * space of its own after it. */
 .md-list {
 	display: block;
 	margin: 2px 0;
@@ -3303,14 +3297,14 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 .md-list .md-li::before {
 	display: inline-block;
-	width: 1.5em;
+	min-width: 1.5em;
 	margin-left: -1.5em;
 	text-align: right;
 	user-select: none;
 }
 
 .md-ul .md-li::before {
-	content: "•";
+	content: "•\00a0";
 }
 
 /* An ordered list counts itself; the adapter sets `counter-reset` inline from
@@ -3320,7 +3314,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 .md-ol .md-li::before {
-	content: counter(md-oli) ".";
+	content: counter(md-oli) ".\00a0";
 }
 
 /* A pipe table: real table elements, the first row the header, each column
@@ -3457,14 +3451,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	content: none;
 }
 
-/* A labelled code block in the topic: no headroom for a corner label, and no
- * label. */
-.header .topic .md-code-block[data-lang] {
-	padding-top: 4px;
-}
-
-.header .topic .md-code-block[data-lang]::after {
-	content: none;
+.header .topic .md-code-head {
+	display: none;
 }
 
 /* A topic is one clipped line: there is nothing to collapse and nowhere to put

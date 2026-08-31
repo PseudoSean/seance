@@ -45,7 +45,7 @@ A `[text](url)` link whose visible text differs from its destination. Rendered w
 _Avoid_: markdown link, labelled link
 
 **Code block**:
-A verbatim span rendered as rows, one per line: numbered from a CSS counter once there are two or more, syntax-highlighted when the fence named a language or the guesser recognised one, and labelled in the corner with the file a `lang:file` tag named, else the language. A fence is a run of three or more backticks closed by a run at least as long.
+A verbatim span rendered as rows, one per line: numbered from a CSS counter once there are two or more, syntax-highlighted when the fence named a language or the guesser recognised one, and captioned above with the file a `lang:file` tag named, else the language — a label row, never an empty line of code. A fence is a run of three or more backticks closed by a run at least as long.
 _Avoid_: fenced block, pre, snippet
 
 **List**:

@@ -160,6 +160,14 @@ export default defineComponent({
 				)
 			);
 
+			// The caption — the file a `lang:file` tag named, else the language,
+			// once it is known — is the block's own first child: a bar of its own
+			// above the rows, in the message's typeface and a muted size, so it
+			// reads as a label and never as an empty first line of code.
+			if (label.value !== undefined) {
+				rows.unshift(h("span", {class: ["md-code-head"]}, label.value));
+			}
+
 			if (cut.value !== undefined) {
 				rows.push(
 					h(
