@@ -17,6 +17,25 @@ to `false`; the setting can only ever turn Markdown off, never back on.
 
 Design: `docs/archives/2026-08-29-markdown-messages-design.md`.
 
+## Syntax
+
+The whole of it — nothing outside this table is Markdown here. `\` before any
+marker character makes it literal.
+
+| Markup                             | Result                                                                                                               |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `**text**`                         | bold (`.irc-bold`)                                                                                                   |
+| `*text*`, `_text_`                 | italic (`.irc-italic`); `_` only at word boundaries                                                                  |
+| `__text__`                         | underline (`.irc-underline`)                                                                                         |
+| `~~text~~`                         | strikethrough (`.irc-strikethrough`)                                                                                 |
+| `` `code` ``                       | inline code (`.irc-monospace`), a verbatim span                                                                      |
+| ` ```[lang]⏎code``` `              | code block (`<code class="md-code-block">`, rows, gutter, `lang` kept as the highlighter's tag, single-line allowed) |
+| `\|\|text\|\|`                     | spoiler (`<span class="md-spoiler">`, click or Enter/Space toggles `.md-spoiler-shown`)                              |
+| `> text` at the start of a line    | quote (`<span class="md-quote">`, block-level, `> ` removed)                                                         |
+| `#`–`######` + space at line start | header (`<span class="md-header md-h1">`…`md-h6`, block-level, marker removed; `> # t` nests)                        |
+| `[text](url)`                      | masked link (`<a class="md-link" title=url target=_blank rel=noopener>`), schemes `http:`, `https:`, `web+irc:` only |
+| `\*` etc.                          | backslash escapes any marker character                                                                               |
+
 ## How it works
 
 The pipeline is `parseStyle` → **`applyMarkdown`** → finders → `merge` →

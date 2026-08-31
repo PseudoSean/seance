@@ -1,4 +1,8 @@
 import {expect, Page, test} from "@playwright/test";
+import {
+	COLLAPSE_EXCERPT,
+	COLLAPSE_THRESHOLD,
+} from "../../client/js/helpers/ircmessageparser/codeLines";
 
 // Live end-to-end cover for Markdown rendering: the built `public/` tree in a
 // real browser, talking to a real ircd, asserting on what the DOM ends up
@@ -202,17 +206,24 @@ test("renders a fenced multi-line code block and headers", async ({page}) => {
 });
 
 // A block past COLLAPSE_THRESHOLD lines shows COLLAPSE_EXCERPT of them and a
-// toggle. The hidden lines are not in the DOM, which is the whole point — so
-// this is also where the toolbar's Copy action has to prove it copies the code
-// and not the screen: it reads the layout tree, not the rendered rows.
+// toggle. The counts come from the constants rather than from literals, so the
+// spec follows the thresholds if they ever move. The hidden lines are not in
+// the DOM, which is the whole point — so this is also where the toolbar's Copy
+// action has to prove it copies the code and not the screen: it reads the
+// layout tree, not the rendered rows.
 test("collapses a long code block to an excerpt", async ({page}) => {
 	await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
 
 	const nick = await connect(page);
 	const token = `md${nick.slice(-4)}`;
-	// Sixteen lines of code, the first carrying this run's token so the message
-	// can be picked out while the block is still collapsed.
-	const code = Array.from({length: 16}, (_, i) => `const v${i + 1} = ${i + 1};`);
+	// The shortest block that collapses at all, so the send stays minimal: one
+	// line past the threshold, the first carrying this run's token so the
+	// message can be picked out while the block is still collapsed. With the
+	// two fence lines that is COLLAPSE_THRESHOLD + 3 lines on the wire, which
+	// the server's `draft/multiline` `max-lines` has to allow for this to
+	// arrive as one message (AfterNET offers 100).
+	const lineCount = COLLAPSE_THRESHOLD + 1;
+	const code = Array.from({length: lineCount}, (_, i) => `const v${i + 1} = ${i + 1};`);
 
 	code[0] = `// ${token}k`;
 
@@ -222,8 +233,8 @@ test("collapses a long code block to an excerpt", async ({page}) => {
 	const rows = msg.locator(".md-code-block .md-line");
 	const toggle = msg.locator(".md-code-toggle");
 
-	await expect(toggle).toHaveText("Show all 16 lines");
-	await expect(rows).toHaveCount(8);
+	await expect(toggle).toHaveText(`Show all ${lineCount} lines`);
+	await expect(rows).toHaveCount(COLLAPSE_EXCERPT);
 	await expect(toggle).toHaveAttribute("aria-expanded", "false");
 
 	// Our own send left the channel scrolled to the bottom, and a reader at the
@@ -241,19 +252,19 @@ test("collapses a long code block to an excerpt", async ({page}) => {
 
 	await toggle.click();
 
-	await expect(rows).toHaveCount(16);
+	await expect(rows).toHaveCount(lineCount);
 	await expect(toggle).toHaveText("Show less");
 	await expect(toggle).toHaveAttribute("aria-expanded", "true");
 	expect(await atBottom()).toBe(true);
 
 	await toggle.click();
 
-	await expect(rows).toHaveCount(8);
-	await expect(toggle).toHaveText("Show all 16 lines");
+	await expect(rows).toHaveCount(COLLAPSE_EXCERPT);
+	await expect(toggle).toHaveText(`Show all ${lineCount} lines`);
 
-	// Collapsed, with eight of the sixteen lines nowhere in the DOM — and the
-	// Copy action still yields all sixteen, because it copies the block the
-	// layout tree holds rather than the rows on screen.
+	// Collapsed, with the lines past the excerpt nowhere in the DOM — and the
+	// Copy action still yields every one of them, because it copies the block
+	// the layout tree holds rather than the rows on screen.
 	const copy = msg.locator(".msg-action-copy");
 
 	await msg.hover();

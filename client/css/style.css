@@ -3156,11 +3156,12 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 /* A header is a line of its own, sized and weighted by its level and no more
  * than chat can carry: an h1 is a heading, not a banner.
  *
- * `pre-wrap` is load-bearing. Two adjacent header lines of one level share a
- * single wrap whose text holds the newline between them — the wrap's value
- * *is* the level, so equal levels necessarily group — and nothing else in
- * message content sets `white-space`, so without this the two headings
- * collapse onto one line. */
+ * `pre-wrap` because two adjacent header lines of one level share a single
+ * wrap whose text holds the newline between them — the wrap's value *is* the
+ * level, so equal levels necessarily group — and without it the two headings
+ * collapse onto one line. In the timeline this restates what
+ * `#chat .msg[data-type="message"] .content` already inherits down; the rule is
+ * the wrap's own, so it holds wherever else a message is rendered. */
 .md-header {
 	display: block;
 	margin: 4px 0 2px;
@@ -3252,10 +3253,10 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	user-select: none;
 }
 
-.md-code-toggle:hover,
-.md-code-toggle:focus-visible {
+/* Hover lifts the colour; focus keeps the UA ring, as the spoiler does — the
+ * colour alone is not a focus indicator. */
+.md-code-toggle:hover {
 	color: var(--body-color);
-	outline: 0;
 }
 
 /* Syntax highlighting. The classes are Prism's token types, grouped onto the
@@ -3361,12 +3362,16 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	display: none;
 }
 
-/* A header in the topic is one word among others: no line of its own, no size
- * of its own, and no `pre-wrap` inside a clipped `nowrap` line. */
+/* A header in the topic is one word among others, and plain: no line of its
+ * own, no size, weight, colour or case of its own, and no `pre-wrap` inside a
+ * clipped `nowrap` line. */
 .header .topic .md-header {
 	display: inline;
 	margin: 0;
+	color: inherit;
 	font-size: inherit;
+	font-weight: inherit;
+	text-transform: none;
 	white-space: normal;
 }
 
