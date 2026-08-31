@@ -155,14 +155,14 @@ The MOTD never collapses. It is a monospace block, and
 `:markdown="false"`, so there is no `codeBlock` wrap and `CodeBlock.vue` never
 mounts for it.
 
-A block **carries a label** when something is known about it: the file a
+A block **carries a caption** when something is known about it: the file a
 `lang:file` tag named, else the language — the tag as typed until the tokens
 land (`js` becomes `javascript`), and the guesser's answer only once there is
-one. `CodeBlock.vue` rides it on the block as `data-lang`, which the
-stylesheet shows in the corner (`attr(data-lang)` in a `::after`, the block
-given the headroom for a row of its own, `user-select: none` like the gutter).
-```ansi` is in the shipped grammar list — terminal output is the paste chat
-gets.
+one. The caption is the block's own first row inside the `<code>`, in the
+message's typeface and a muted size, so it reads as a label and never as an
+empty first line of code; it rides the block as `data-lang` for the tests, and
+`user-select: none`, like the gutter, keeps it out of copies. ```ansi` is in
+the shipped grammar list — terminal output is the paste chat gets.
 
 ## Lists, quotes-everything-after, tables, TeX, shortcodes
 
@@ -170,10 +170,10 @@ gets.
 italic). Consecutive items share one `list` wrap, the way quote lines do; the
 wrap's value is `ul`, or `ol:<first item's number>` — the adapter sets the
 counter's start from it, so `3. …` counts 3, 4. The markers are removed and
-the bullet or number is drawn (a fixed-width `::before` column, the way the
-gutter works), so selecting a list yields the items. A line with nothing after
-the marker is not a list; lists do not nest, and a table's rows are never list
-lines.
+the bullet or number is drawn — a `::before` column the way the gutter works,
+with one space of its own after it — so selecting a list yields the items. A
+line with nothing after the marker is not a list; lists do not nest, and a
+table's rows are never list lines.
 
 **`>>>`** at the very start of a message quotes everything after it: one
 `quote` range over the rest of the text, so `> ` lines inside it still lose
