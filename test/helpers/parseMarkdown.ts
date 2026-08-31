@@ -14,6 +14,7 @@ const FLAGS: (keyof ParsedStyle)[] = [
 	"spoiler",
 	"href",
 	"lang",
+	"header",
 ];
 
 type Rendered = Record<string, unknown>;
@@ -187,6 +188,74 @@ describe("markdown — quote", () => {
 	it("only quotes a `> ` at the start of a line", () => {
 		expect(md("a > b")).to.deep.equal([{text: "a > b"}]);
 		expect(md(">b")).to.deep.equal([{text: ">b"}]);
+	});
+});
+
+describe("markdown — header", () => {
+	it("renders a `# ` line as a header without its marker", () => {
+		expect(md("# Title")).to.deep.equal([{text: "Title", header: 1}]);
+	});
+
+	it("still reads the markers inside a header", () => {
+		expect(md("### a **b**")).to.deep.equal([
+			{text: "a ", header: 3},
+			{text: "b", header: 3, bold: true},
+		]);
+	});
+
+	it("takes one to six hashes and no more", () => {
+		expect(md("###### h")).to.deep.equal([{text: "h", header: 6}]);
+		expect(md("####### h")).to.deep.equal([{text: "####### h"}]);
+	});
+
+	it("needs the space and something after it", () => {
+		expect(md("#chan")).to.deep.equal([{text: "#chan"}]);
+		expect(md("# ")).to.deep.equal([{text: "# "}]);
+	});
+
+	it("takes a backslash-escaped hash literally", () => {
+		expect(md("\\# x")).to.deep.equal([{text: "# x"}]);
+	});
+
+	it("only makes a header of a `# ` at the start of a line", () => {
+		expect(md("a # b")).to.deep.equal([{text: "a # b"}]);
+	});
+
+	it("drops the newlines the header line sits between", () => {
+		expect(md("line\n## H\nrest")).to.deep.equal([
+			{text: "line"},
+			{text: "H", header: 2},
+			{text: "rest"},
+		]);
+	});
+
+	it("keeps consecutive headers of one level in one block", () => {
+		expect(md("# A\n# B")).to.deep.equal([{text: "A\nB", header: 1}]);
+	});
+
+	it("keeps headers of different levels apart", () => {
+		expect(md("# A\n## B")).to.deep.equal([
+			{text: "A", header: 1},
+			{text: "B", header: 2},
+		]);
+	});
+
+	it("keeps a blank line the user typed between two headers", () => {
+		expect(md("# A\n\n# B")).to.deep.equal([
+			{text: "A", header: 1},
+			{text: "\n"},
+			{text: "B", header: 1},
+		]);
+	});
+
+	it("nests a header inside a quote", () => {
+		expect(md("> # q")).to.deep.equal([{text: "q", quote: true, header: 1}]);
+		expect(md("> # a\n> # b")).to.deep.equal([{text: "a\nb", quote: true, header: 1}]);
+	});
+
+	it("makes no header of a hash inside code", () => {
+		expect(md("```\n# not\n```")).to.deep.equal([{text: "# not", codeBlock: true}]);
+		expect(md("`# not`")).to.deep.equal([{text: "# not", monospace: true}]);
 	});
 });
 
