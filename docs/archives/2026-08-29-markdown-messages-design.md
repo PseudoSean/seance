@@ -2,6 +2,9 @@
 
 Date: 2026-08-29. Branch: `markdown-messages-development`.
 
+> Historical. The live syntax reference is the project note,
+> `docs/projects/markdown-messages.md` — this table predates headers.
+
 ## Goal
 
 Optionally render Discord-style Markdown in everything `ParsedMessage` displays
