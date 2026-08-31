@@ -37,3 +37,8 @@ shells/capacitor/android/
 shells/capacitor/ios/
 .claude/
 .pi/
+.env
+.opencode/
+.opencode-goal/
+.claude-config/
+.llama-stats.log
