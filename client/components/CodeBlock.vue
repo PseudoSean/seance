@@ -1,6 +1,6 @@
 <script lang="ts">
-import {computed, defineComponent, h, ref, VNode, watch} from "vue";
-import {MIN_GUESS_LINES, splitLines} from "../js/helpers/ircmessageparser/codeLines";
+import {computed, defineComponent, h, nextTick, ref, VNode, watch} from "vue";
+import {excerptRange, MIN_GUESS_LINES, splitLines} from "../js/helpers/ircmessageparser/codeLines";
 import type {Highlighted} from "../js/helpers/ircmessageparser/highlighter";
 
 // One row per line, so the gutter can count them in CSS and a copy of the
@@ -27,6 +27,57 @@ export default defineComponent({
 		const lines = computed<Highlighted>(
 			() => tokens.value ?? plain.value.map((text) => (text ? [{text}] : []))
 		);
+
+		// A long block shows its first lines and a toggle. The cut is decided
+		// from the plain text, like the gutter, so it does not move when the
+		// tokens land; the slice is the last thing that happens, so the
+		// highlighter still sees — and highlights — the whole code once.
+		// `slice(0, undefined)` is the whole array, which is exactly what an
+		// expanded block, or one that shrank under the threshold, wants.
+		const cut = computed(() => excerptRange(plain.value.length));
+		const expanded = ref(false);
+		const shown = computed<Highlighted>(() =>
+			expanded.value ? lines.value : lines.value.slice(0, cut.value)
+		);
+		// The block's own element, for the scroll bookkeeping below
+		const block = ref<HTMLElement | null>(null);
+
+		// Flipping the block changes the height of something in the middle of
+		// the timeline, so the scroll position is restored around it. Two
+		// cases: a reader who was at the bottom of the channel stays at the
+		// bottom (new messages keep arriving there), and anyone else keeps the
+		// block's top edge exactly where it was on screen.
+		async function toggle() {
+			const el = block.value;
+			// Both `.chat` elements in the app — `MessageList`'s and the one
+			// `Chat.vue` renders for a special window — are the scroller.
+			const scroller = el?.closest(".chat") as HTMLElement | null | undefined;
+			// `MessageList`'s own `handleScroll` formula, verbatim: the two
+			// have to agree, or this and `channel.scrolledToBottom` disagree
+			// about the same scroller.
+			const atBottom =
+				!!scroller &&
+				scroller.scrollHeight - scroller.scrollTop - scroller.offsetHeight <= 30;
+			const top = el ? el.getBoundingClientRect().top : 0;
+
+			expanded.value = !expanded.value;
+
+			await nextTick();
+
+			if (!scroller || !el) {
+				return;
+			}
+
+			if (atBottom) {
+				scroller.scrollTop = scroller.scrollHeight;
+				return;
+			}
+
+			// `scrollTop` is read now and not before the flip: the browser's
+			// own scroll anchoring may already have moved it, and a stale
+			// reading would undo what it did.
+			scroller.scrollTop += el.getBoundingClientRect().top - top;
+		}
 
 		// An edit replaces the text under the same component instance, so this
 		// is a watch and not `onMounted`: the tokens of the text before it must
@@ -88,10 +139,38 @@ export default defineComponent({
 			}
 		}
 
-		return () =>
-			h(
+		return () => {
+			const rows: VNode[] = shown.value.map((line) =>
+				h(
+					"span",
+					{class: ["md-line"]},
+					line.map((token): VNode | string =>
+						token.type
+							? h("span", {class: ["tok-" + token.type]}, token.text)
+							: token.text
+					)
+				)
+			);
+
+			if (cut.value !== undefined) {
+				rows.push(
+					h(
+						"button",
+						{
+							type: "button",
+							class: ["md-code-toggle"],
+							"aria-expanded": expanded.value ? "true" : "false",
+							onClick: toggle,
+						},
+						expanded.value ? "Show less" : `Show all ${plain.value.length} lines`
+					)
+				);
+			}
+
+			return h(
 				"code",
 				{
+					ref: block,
 					class: [
 						"md-code-block",
 						numbered.value ? "md-code-block--numbered" : undefined,
@@ -99,18 +178,9 @@ export default defineComponent({
 					style: numbered.value ? {"--md-gutter": gutter.value} : undefined,
 					"data-lang": id.value,
 				},
-				lines.value.map((line) =>
-					h(
-						"span",
-						{class: ["md-line"]},
-						line.map((token): VNode | string =>
-							token.type
-								? h("span", {class: ["tok-" + token.type]}, token.text)
-								: token.text
-						)
-					)
-				)
+				rows
 			);
+		};
 	},
 });
 </script>

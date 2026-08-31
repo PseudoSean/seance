@@ -5,7 +5,7 @@ import {expect, Page, test} from "@playwright/test";
 // holding. The tree it renders from is unit-tested in `test/helpers/layout.ts`;
 // what only a browser can answer is whether the elements that tree names really
 // turn up. It only runs when SEANCE_E2E_IRC_URL points at a WebSocket ircd
-// (e.g. `wss://irc.example.org:9998/`), and it sends six messages to a real
+// (e.g. `wss://irc.example.org:9998/`), and it sends seven messages to a real
 // channel, so keep it that way.
 const ircUrl = process.env.SEANCE_E2E_IRC_URL;
 const channel = process.env.SEANCE_E2E_CHANNEL ?? "#ps";
@@ -199,6 +199,70 @@ test("renders a fenced multi-line code block and headers", async ({page}) => {
 	// The markers are gone, and the body is not part of either header
 	await expect(doc.locator(".content")).not.toContainText("#");
 	await expect(doc.locator(".md-header")).toHaveCount(2);
+});
+
+// A block past COLLAPSE_THRESHOLD lines shows COLLAPSE_EXCERPT of them and a
+// toggle. The hidden lines are not in the DOM, which is the whole point — so
+// this is also where the toolbar's Copy action has to prove it copies the code
+// and not the screen: it reads the layout tree, not the rendered rows.
+test("collapses a long code block to an excerpt", async ({page}) => {
+	await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+
+	const nick = await connect(page);
+	const token = `md${nick.slice(-4)}`;
+	// Sixteen lines of code, the first carrying this run's token so the message
+	// can be picked out while the block is still collapsed.
+	const code = Array.from({length: 16}, (_, i) => `const v${i + 1} = ${i + 1};`);
+
+	code[0] = `// ${token}k`;
+
+	await sayLines(page, ["```js", ...code, "```"]);
+
+	const msg = own(page, nick, `${token}k`);
+	const rows = msg.locator(".md-code-block .md-line");
+	const toggle = msg.locator(".md-code-toggle");
+
+	await expect(toggle).toHaveText("Show all 16 lines");
+	await expect(rows).toHaveCount(8);
+	await expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+	// Our own send left the channel scrolled to the bottom, and a reader at the
+	// bottom stays there across the height change (the other branch keeps the
+	// block's top edge stationary, which for a block that grows downward is by
+	// construction a no-op — there is nothing observable to assert).
+	const atBottom = () =>
+		page.evaluate(() => {
+			const el = document.querySelector("#chat .chat") as HTMLElement;
+
+			return el.scrollHeight - el.scrollTop - el.offsetHeight <= 30;
+		});
+
+	expect(await atBottom()).toBe(true);
+
+	await toggle.click();
+
+	await expect(rows).toHaveCount(16);
+	await expect(toggle).toHaveText("Show less");
+	await expect(toggle).toHaveAttribute("aria-expanded", "true");
+	expect(await atBottom()).toBe(true);
+
+	await toggle.click();
+
+	await expect(rows).toHaveCount(8);
+	await expect(toggle).toHaveText("Show all 16 lines");
+
+	// Collapsed, with eight of the sixteen lines nowhere in the DOM — and the
+	// Copy action still yields all sixteen, because it copies the block the
+	// layout tree holds rather than the rows on screen.
+	const copy = msg.locator(".msg-action-copy");
+
+	await msg.hover();
+	await copy.click();
+	await expect(copy).toHaveAttribute("aria-label", "Copied");
+
+	const clipboard = await page.evaluate(() => navigator.clipboard.readText());
+
+	expect(clipboard).toBe(code.join("\n"));
 });
 
 test("leaves the text alone when the setting is off, Alt+K toggles it", async ({page}) => {

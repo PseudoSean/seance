@@ -3233,6 +3233,31 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	content: counter(line);
 }
 
+/* The excerpt toggle under a long block: the dashed rule is where the code was
+ * cut, and the label says how much is behind it. `user-select: none` keeps it
+ * out of a copy of the block, the way the gutter numbers are kept out. */
+.md-code-toggle {
+	display: block;
+	width: 100%;
+	margin-top: 4px;
+	padding: 3px 0 1px;
+	border: 0;
+	border-top: 1px dashed rgb(128 128 128 / 40%);
+	background: transparent;
+	color: var(--body-color-muted);
+	font: inherit;
+	font-size: 0.9em;
+	text-align: left;
+	cursor: pointer;
+	user-select: none;
+}
+
+.md-code-toggle:hover,
+.md-code-toggle:focus-visible {
+	color: var(--body-color);
+	outline: 0;
+}
+
 /* Syntax highlighting. The classes are Prism's token types, grouped onto the
  * palette in `:root` (dark values in `themes/morning.css`). A type no group
  * names — Prism has hundreds, most of them one grammar's own — inherits
@@ -3328,6 +3353,12 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 .header .topic .md-code-block--numbered .md-line::before {
 	content: none;
+}
+
+/* A topic is one clipped line: there is nothing to collapse and nowhere to put
+ * the control. */
+.header .topic .md-code-toggle {
+	display: none;
 }
 
 /* A header in the topic is one word among others: no line of its own, no size
