@@ -102,7 +102,17 @@ interface ServerToClientEvents {
 	/** Someone else's `+typing` TAGMSG in a loaded channel/query (never our own). */
 	typing: EventHandler<{chan: number; nick: string; state: TypingState}>;
 	"msg:special": EventHandler<{chan: number; data?: Record<string, any>}>;
-	msg: EventHandler<{msg: SharedMsg; chan: number; highlight?: number; unread?: number}>;
+	msg: EventHandler<{
+		msg: SharedMsg;
+		chan: number;
+		highlight?: number;
+		unread?: number;
+		/**
+		 * History catch-up replay: show the message (highlight included)
+		 * but do not notify, play a sound or record a mention.
+		 */
+		replay?: boolean;
+	}>;
 
 	init: EventHandler<{active: number; networks: SharedNetwork[]; token?: string}>;
 

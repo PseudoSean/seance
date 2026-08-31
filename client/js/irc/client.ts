@@ -15,7 +15,7 @@
  */
 
 import socket, {EventBus} from "../socket";
-import {isHighlight} from "../highlight";
+import {createHighlightTester} from "../highlight";
 import {ChanState, ChanType} from "../../../shared/types/chan";
 import {MessageType, SharedMsg, TypingState} from "../../../shared/types/msg";
 import type {SharedNetwork, SharedServerOptions} from "../../../shared/types/network";
@@ -1636,13 +1636,27 @@ export class IrcClient {
 		return idx === -1 ? 1000 : idx;
 	}
 
+	/** Compiled highlight regexes, cached until nick or settings change. */
+	private highlightTester = createHighlightTester();
+
 	/** Whether `text` mentions our nick or a custom highlight keyword. */
 	isHighlight(text: string): boolean {
 		const {keywords, exceptions} = this.options.highlights?.() ?? {
 			keywords: [],
 			exceptions: [],
 		};
-		return isHighlight(text, this.nick, keywords, exceptions);
+		return this.highlightTester.isHighlight(text, this.nick, keywords, exceptions);
+	}
+
+	/**
+	 * Whether `text` matches a highlight exception on its own — for
+	 * highlights that are not derived from the text (the query
+	 * auto-highlight), where {@link isHighlight}'s folded-in exceptions
+	 * never run.
+	 */
+	isHighlightException(text: string): boolean {
+		const {exceptions} = this.options.highlights?.() ?? {keywords: [], exceptions: []};
+		return this.highlightTester.isHighlightException(text, exceptions);
 	}
 
 	findChannel(name: string): Channel | undefined {
@@ -1719,9 +1733,18 @@ export class IrcClient {
 
 	/**
 	 * Allocate an id, keep the unread counters and dispatch `msg`. Mirrors
-	 * `Chan.pushMessage` in the old server.
+	 * `Chan.pushMessage` in the old server. With `replay` (history catch-up
+	 * appends) the message is delivered — highlight included, so a replayed
+	 * mention renders as one — but stays silent: no unread / highlight
+	 * counting here, and the flag travels on the `msg` event so the
+	 * consumer skips notifications and the mentions list.
 	 */
-	pushMessage(chan: Channel, partial: Partial<SharedMsg>, increasesUnread = false): SharedMsg {
+	pushMessage(
+		chan: Channel,
+		partial: Partial<SharedMsg>,
+		increasesUnread = false,
+		{replay = false}: {replay?: boolean} = {}
+	): SharedMsg {
 		const msg: SharedMsg = {
 			users: [],
 			...partial,
@@ -1762,12 +1785,12 @@ export class IrcClient {
 				shared.firstUnread = msg.id;
 			}
 
-			if (increasesUnread || msg.highlight) {
+			if ((increasesUnread || msg.highlight) && !replay) {
 				shared.unread++;
 				ref.unread = true;
 			}
 
-			if (msg.highlight) {
+			if (msg.highlight && !replay) {
 				shared.highlight++;
 				ref.highlight = true;
 			}
@@ -1778,6 +1801,7 @@ export class IrcClient {
 			msg,
 			unread: shared.unread,
 			highlight: shared.highlight,
+			...(replay ? {replay: true} : {}),
 		});
 		return msg;
 	}

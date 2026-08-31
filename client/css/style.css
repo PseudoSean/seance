@@ -965,6 +965,14 @@ of one that has already passed — and only one `animation` can hold the icon. *
 	color: #49505a;
 }
 
+/* A mention is waiting in this channel: brighten and embolden its name so the
+row stands out beyond the badge (ChannelWrapper.vue sets `has-highlight` from
+the same counter the badge shows). Muted channels keep their faded look. */
+.channel-list-item.has-highlight:not(.is-muted) .name {
+	color: #fff;
+	font-weight: 700;
+}
+
 .channel-list-item .close {
 	width: 18px;
 	height: 18px;
