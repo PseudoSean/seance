@@ -5,9 +5,8 @@ import {expect, Page, test} from "@playwright/test";
 // holding. The tree it renders from is unit-tested in `test/helpers/layout.ts`;
 // what only a browser can answer is whether the elements that tree names really
 // turn up. It only runs when SEANCE_E2E_IRC_URL points at a WebSocket ircd
-// (e.g. `wss://irc.example.org:9998/`), and it sends four messages to a real
-// channel — five when SEANCE_E2E_MULTILINE adds the multi-line one below — so
-// keep it that way.
+// (e.g. `wss://irc.example.org:9998/`), and it sends six messages to a real
+// channel, so keep it that way.
 const ircUrl = process.env.SEANCE_E2E_IRC_URL;
 const channel = process.env.SEANCE_E2E_CHANNEL ?? "#ps";
 
@@ -49,6 +48,25 @@ async function say(page: Page, text: string) {
 	await page.click("#input");
 	await page.fill("#input", text);
 	await page.press("#input", "Enter");
+}
+
+// Composes `lines` the way a user does — Shift+Enter between them, Enter to
+// send. `page.fill` would set the value in one go and never exercise the
+// keyboard path, which is what puts the newlines there (`ChatInput.vue`
+// submits on `@keypress.enter.exact`, so Shift+Enter falls through to the
+// textarea).
+async function sayLines(page: Page, lines: string[]) {
+	await page.click("#input");
+
+	for (const [i, line] of lines.entries()) {
+		if (i > 0) {
+			await page.keyboard.press("Shift+Enter");
+		}
+
+		await page.keyboard.type(line);
+	}
+
+	await page.keyboard.press("Enter");
 }
 
 // Our own message carrying `token`. Picking messages by a unique token rather
@@ -111,10 +129,8 @@ test("renders Markdown in own messages", async ({page}) => {
 	// A code block is rows now, one per line, with the gutter counter only on
 	// blocks of two lines or more. One row is all a single-line message can
 	// hold: a fence language tag is only a tag when the fence line ends in a
-	// newline, and a second row needs one too. Newlines reach the wire only
-	// where the server and the client both negotiate `draft/multiline` (a
-	// separate branch/PR), so the multi-line case is the gated test below
-	// rather than this one. The highlighter itself is covered by
+	// newline, and a second row needs one too — so the gutter and the fence tag
+	// are the multi-line test below. The highlighter itself is covered by
 	// `test/helpers/highlighter.ts`.
 	await expect(quoted.locator(".md-code-block .md-line")).toHaveCount(1);
 	await expect(quoted.locator(".md-code-block")).not.toHaveClass(/md-code-block--numbered/);
@@ -137,37 +153,20 @@ test("renders Markdown in own messages", async ({page}) => {
 	expect(clipboard).toBe("block https://example.com/x");
 });
 
-// The other half of the code block: the fence language tag and the gutter, both
-// of which need a message with newlines in it. Only a client and server that
-// negotiate `draft/multiline` put one on the wire, and that lives on a separate
-// branch/PR — so this is gated on SEANCE_E2E_MULTILINE, and the rest of the
-// file still runs on a build without it.
-test("renders a fenced multi-line code block", async ({page}) => {
-	test.skip(
-		!process.env.SEANCE_E2E_MULTILINE,
-		"set SEANCE_E2E_MULTILINE=1 on a build that negotiates draft/multiline"
-	);
-
+// What only a message with newlines in it can show: the fence language tag, the
+// gutter, and headers, which are a line-level thing by construction. Newlines
+// reach the wire where the server and the client both negotiate
+// `draft/multiline`.
+test("renders a fenced multi-line code block and headers", async ({page}) => {
 	const nick = await connect(page);
+	const token = `md${nick.slice(-4)}`;
+	// Every message this run puts in the channel: the random nick is nobody
+	// else's, so counting these is counting our own sends.
+	const all = page.locator(`.msg[data-type="message"][data-from="${nick}"]`);
 
-	// Composed the way a user does — Shift+Enter between the lines, Enter to
-	// send. `page.fill` would set the value in one go and never exercise the
-	// keyboard path, which is what puts the newlines there (`ChatInput.vue`
-	// submits on `@keypress.enter.exact`, so Shift+Enter falls through to the
-	// textarea).
-	await page.click("#input");
-	await page.keyboard.type("```js");
-	await page.keyboard.press("Shift+Enter");
-	await page.keyboard.type("const x = 1;");
-	await page.keyboard.press("Shift+Enter");
-	await page.keyboard.type("let y = x;");
-	await page.keyboard.press("Shift+Enter");
-	await page.keyboard.type("```");
-	await page.keyboard.press("Enter");
+	await sayLines(page, ["```js", `const x = 1; // ${token}f`, "let y = x;", "```"]);
 
-	// The random nick is this run's token: nothing else in the channel comes
-	// from it, so every own message here belongs to that one send.
-	const msg = page.locator(`.msg[data-type="message"][data-from="${nick}"]`);
+	const msg = own(page, nick, `${token}f`);
 	const block = msg.locator(".md-code-block");
 
 	// `data-lang` lands only once the lazy Prism chunk has resolved and the
@@ -184,9 +183,22 @@ test("renders a fenced multi-line code block", async ({page}) => {
 	// Two code rows, so the block carries the gutter counter.
 	await expect(msg.locator(".md-code-block--numbered .md-line")).toHaveCount(2);
 	await expect(msg.locator(".content")).not.toContainText("```");
-	// Last, deliberately: a per-line send would have shown up as four separate
-	// messages long before the highlighted block above rendered.
-	await expect(msg).toHaveCount(1);
+	// Deliberately after the rest: a per-line send would have shown up as four
+	// separate messages long before the highlighted block above rendered.
+	await expect(all).toHaveCount(1);
+
+	// A header ends at its line, so a pasted document is headers and body in
+	// one message: two levels here, each its own block, and the body plain.
+	await sayLines(page, ["# Big", "## Small", `${token}h body text`]);
+
+	const doc = own(page, nick, `${token}h`);
+
+	await expect(all).toHaveCount(2);
+	await expect(doc.locator(".md-h1")).toHaveText("Big");
+	await expect(doc.locator(".md-h2")).toHaveText("Small");
+	// The markers are gone, and the body is not part of either header
+	await expect(doc.locator(".content")).not.toContainText("#");
+	await expect(doc.locator(".md-header")).toHaveCount(2);
 });
 
 test("leaves the text alone when the setting is off, Alt+K toggles it", async ({page}) => {

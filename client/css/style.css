@@ -3153,6 +3153,50 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	margin: 2px 0;
 }
 
+/* A header is a line of its own, sized and weighted by its level and no more
+ * than chat can carry: an h1 is a heading, not a banner.
+ *
+ * `pre-wrap` is load-bearing. Two adjacent header lines of one level share a
+ * single wrap whose text holds the newline between them — the wrap's value
+ * *is* the level, so equal levels necessarily group — and nothing else in
+ * message content sets `white-space`, so without this the two headings
+ * collapse onto one line. */
+.md-header {
+	display: block;
+	margin: 4px 0 2px;
+	font-weight: 600;
+	white-space: pre-wrap;
+}
+
+.md-h1 {
+	font-size: 1.5em;
+	font-weight: 700;
+}
+
+.md-h2 {
+	font-size: 1.3em;
+	font-weight: 700;
+}
+
+.md-h3 {
+	font-size: 1.15em;
+}
+
+.md-h4 {
+	font-size: 1em;
+}
+
+.md-h5 {
+	font-size: 0.95em;
+	color: var(--body-color-muted);
+}
+
+.md-h6 {
+	font-size: 0.85em;
+	color: var(--body-color-muted);
+	text-transform: uppercase;
+}
+
 .md-code-block {
 	display: block;
 	white-space: pre-wrap;
@@ -3284,6 +3328,15 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 .header .topic .md-code-block--numbered .md-line::before {
 	content: none;
+}
+
+/* A header in the topic is one word among others: no line of its own, no size
+ * of its own, and no `pre-wrap` inside a clipped `nowrap` line. */
+.header .topic .md-header {
+	display: inline;
+	margin: 0;
+	font-size: inherit;
+	white-space: normal;
 }
 
 .tooltipped::after {
