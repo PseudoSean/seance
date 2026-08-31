@@ -8,7 +8,7 @@
 
 **Tech Stack:** Existing pipeline only (tokenizer → `layout.ts` tree → `parse.ts` VNodes). No new dependencies.
 
-**Spec:** This plan doubles as the spec; decisions marked **[assumption]** were set by the planner and refined in the grilling session. Baseline design: `docs/archives/2026-08-29-markdown-messages-design.md`.
+**Spec:** This plan doubles as the spec; decisions below were confirmed in the 2026-08-31 grilling session (all planner recommendations accepted; at-bottom scroll wins over toggle-stationary when stuck to the bottom). Baseline design: `docs/archives/2026-08-29-markdown-messages-design.md`.
 
 ## Global Constraints
 
@@ -18,16 +18,16 @@
 - Markdown-off behaviour is unchanged: markers stay literal, no collapsing changes… **collapsing applies regardless of the markdown setting? No — [assumption] collapsing is part of code-block rendering, which only exists when markdown is on.**
 - Behaviour of everything already shipped is unchanged except where this plan says otherwise.
 - Unit tests in `test/helpers/`; mocha: `npx cross-env NODE_ENV=test TS_NODE_PROJECT='./test/tsconfig.json' npx mocha --config=test/.mocharc.yml <file>`; full run `corepack yarn test:mocha`. e2e: `SEANCE_E2E_IRC_URL=wss://fractalrealities.afternet.org:9998/ corepack yarn test:e2e` (multiline now merged, so multi-line cases run ungated — remove the `SEANCE_E2E_MULTILINE` gate where encountered).
-- Commit per task, conventional subjects. Never push. Branch: `markdown-documents`.
+- Commit per task, conventional subjects. Never push. Branch: `markdown-messages` (fast-forwarded to develop; the feature PR continues there).
 
 ## Design decisions (grilling agenda)
 
-1. **[assumption] Header syntax:** `#{1..6}` + one space at line start (start of message or after `\n`), exactly like `> ` quotes. `#chan` is safe (no space). No closing hashes, no underline (`===`) syntax, no header IDs/anchors. `\#` escapes. Headers are not recognised inside code, and markers inside headers still work (`# **bold** title`).
-2. **[assumption] Header scale:** capped for chat — h1 1.5em/700, h2 1.3em/700, h3 1.15em/600, h4 1em/600, h5 0.95em/600 muted, h6 0.85em/600 muted uppercase; block-level with small margins; inline (plain) in the header-bar topic.
-3. **[assumption] Quote/header nesting:** `> # title` renders a header inside a quote; a header line ends at the newline and never swallows following lines.
-4. **[assumption] Collapse threshold:** code blocks with **more than 12 lines** collapse to the **first 8** plus a toggle reading `Show all 34 lines` / `Show less`; state is per-component (lost on re-render, like spoilers). Blocks ≤ 12 lines are unchanged. Only code blocks collapse — long plain messages don't (separate feature if wanted).
-5. **[assumption] Scroll flow:** on toggle, the component keeps its own top edge stationary: snapshot the scroll container's `scrollTop` and the block's `offsetTop` before, restore the delta after `nextTick`. Container found via `el.closest(".chat")` — verify the actual scroll container class in `MessageList.vue` (`keepScrollPosition` there shows which element scrolls) and use that.
-6. **[assumption] Copy copies everything:** the toolbar Copy-code action and text selection of an expanded block are unaffected; a collapsed block's hidden lines are NOT in the DOM (so selection copies what you see; the toolbar action still copies the full code from the layout tree).
+1. **Header syntax:** `#{1..6}` + one space at line start (start of message or after `\n`), exactly like `> ` quotes. `#chan` is safe (no space). No closing hashes, no underline (`===`) syntax, no header IDs/anchors. `\#` escapes. Headers are not recognised inside code, and markers inside headers still work (`# **bold** title`).
+2. **Header scale:** capped for chat — h1 1.5em/700, h2 1.3em/700, h3 1.15em/600, h4 1em/600, h5 0.95em/600 muted, h6 0.85em/600 muted uppercase; block-level with small margins; inline (plain) in the header-bar topic.
+3. **Quote/header nesting:** `> # title` renders a header inside a quote; a header line ends at the newline and never swallows following lines.
+4. **Collapse threshold:** code blocks with **more than 12 lines** collapse to the **first 8** plus a toggle reading `Show all 34 lines` / `Show less`; state is per-component (lost on re-render, like spoilers). Blocks ≤ 12 lines are unchanged. Only code blocks collapse — long plain messages don't (separate feature if wanted).
+5. **Scroll flow:** on toggle, the component keeps its own top edge stationary: snapshot the scroll container's `scrollTop` and the block's `offsetTop` before, restore the delta after `nextTick`. Container found via `el.closest(".chat")` — verify the actual scroll container class in `MessageList.vue` (`keepScrollPosition` there shows which element scrolls) and use that.
+6. **Copy copies everything:** the toolbar Copy-code action and text selection of an expanded block are unaffected; a collapsed block's hidden lines are NOT in the DOM (so selection copies what you see; the toolbar action still copies the full code from the layout tree).
 
 ---
 
