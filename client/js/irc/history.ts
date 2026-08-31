@@ -11,11 +11,12 @@
  *   user-list / topic side effects) and the result is handed to
  *   `socket-events/more.ts` as one `more` event, oldest first, with ids
  *   below everything the channel already shows (`IdAllocator.historyIds`).
- *   History never sets `highlight`, never notifies and never counts as
- *   unread.
+ *   A replayed mention keeps `highlight` (the line renders highlighted),
+ *   but history never notifies and never counts as unread.
  * - **Catch-up** (re-JOIN after a reconnect): `CHATHISTORY AFTER <newest>`;
- *   the lines are appended as ordinary `msg` events, again without
- *   highlight / unread side effects, paging until a short page. The server
+ *   the lines are appended as ordinary `msg` events flagged `replay` (shown
+ *   with their highlights, but no unread / notification side effects),
+ *   paging until a short page. The server
  *   can drive the same thing itself off a `PERSISTENCE ATTACH` cursor, in
  *   which case its `chathistory` batches arrive unasked inside a
  *   `evilnet.github.io/bouncer-replay` wrapper and take the same path
@@ -316,7 +317,9 @@ function replay(client: IrcClient, chan: Channel, lines: IrcMessage[]): Replayed
 			continue; // already shown (dedupe against the channel, not within the batch)
 		}
 
-		msg.highlight = false;
+		// msg.highlight is kept: a replayed mention renders highlighted.
+		// Delivery is what stays silent (no counters, no notification) —
+		// deliverAppend pushes with `replay` and `more` never notifies.
 		messages.push(msg);
 	}
 
@@ -363,12 +366,12 @@ function deliverPrepend(
 	client.dispatch("more", {chan: chan.id, messages, totalMessages});
 }
 
-/** Append catch-up messages as live ones, without highlight / unread effects. */
+/** Append catch-up messages as live ones, without unread / notification effects. */
 function deliverAppend(client: IrcClient, chan: Channel, messages: SharedMsg[]): void {
 	for (const msg of messages) {
 		// pushMessage copies; write the id back so post-replay work
 		// (`afterReplay` closures hold the collected objects) can find it.
-		msg.id = client.pushMessage(chan, msg).id;
+		msg.id = client.pushMessage(chan, msg, false, {replay: true}).id;
 	}
 }
 
@@ -457,8 +460,8 @@ export const chathistoryBatch: BatchHandler = (client, batch) => {
 
 /**
  * One inner batch of the server-driven catch-up (persistence.ts): appended
- * like the AFTER pages of our own catch-up — no highlight, no unread, msgid
- * dedupe against what the channel already shows. A PM from someone we have
+ * like the AFTER pages of our own catch-up — highlights kept but silent
+ * (`replay`), no unread, msgid dedupe against what the channel already shows. A PM from someone we have
  * no window for opens one, as a live message would.
  */
 function deliverCatchup(client: IrcClient, target: string, lines: IrcMessage[]): void {
