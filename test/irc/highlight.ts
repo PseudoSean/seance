@@ -2,7 +2,9 @@ import {expect} from "chai";
 import {
 	buildHighlightRegex,
 	escapeRegExp,
+	createHighlightTester,
 	isHighlight,
+	isHighlightException,
 	parseKeywordList,
 } from "../../client/js/highlight";
 
@@ -181,12 +183,48 @@ describe("highlight", function () {
 				expect(isHighlight("hello nick", "nick", [], undefined)).to.equal(true);
 			});
 
+			it("tests exceptions on their own (for highlights not based on the text)", function () {
+				// A query auto-highlight has no positive match to fold the
+				// exceptions into; isHighlightException checks them alone.
+				expect(isHighlightException("want to grab lunch?", ["lunch"])).to.equal(true);
+				expect(isHighlightException("urgent, ping me", ["lunch"])).to.equal(false);
+				expect(isHighlightException("LUNCH time", ["lunch"])).to.equal(true);
+				expect(isHighlightException("lunchbox", ["lunch"])).to.equal(false);
+				expect(isHighlightException("\x02lunch\x02 now", ["lunch"])).to.equal(true);
+				expect(isHighlightException("anything", [])).to.equal(false);
+				expect(isHighlightException("anything", ["", " "])).to.equal(false);
+			});
+
 			it("applies exceptions through buildHighlightRegex too", function () {
 				const regex = buildHighlightRegex("nick", ["coffee"], ["ignore me"]);
 				expect(regex!.test("nick, coffee?")).to.equal(true);
 				expect(regex!.test("ignore me nick, coffee?")).to.equal(false);
 				expect(regex!.test("nick coffee (ignore me)")).to.equal(false);
 			});
+		});
+	});
+
+	describe("createHighlightTester", function () {
+		it("matches like the plain functions and never serves a stale cache", function () {
+			const tester = createHighlightTester();
+			expect(tester.isHighlight("hello nick", "nick", [], [])).to.equal(true);
+			expect(tester.isHighlight("hello there", "nick", [], [])).to.equal(false);
+
+			// Nick change invalidates.
+			expect(tester.isHighlight("hello nick", "other", [], [])).to.equal(false);
+			// Keyword change invalidates.
+			expect(tester.isHighlight("get coffee", "other", ["coffee"], [])).to.equal(true);
+			// Exception change invalidates.
+			expect(tester.isHighlight("get coffee now", "other", ["coffee"], ["now"])).to.equal(
+				false
+			);
+			// A multi-word keyword is not confused with two keywords.
+			expect(tester.isHighlight("a b", "x", ["a b"], [])).to.equal(true);
+			expect(tester.isHighlight("b alone", "x", ["a", "b"], [])).to.equal(true);
+
+			expect(tester.isHighlightException("at lunch", ["lunch"])).to.equal(true);
+			expect(tester.isHighlightException("at lunch", ["dinner"])).to.equal(false);
+			expect(tester.isHighlightException("at lunch", [])).to.equal(false);
 		});
 	});
 });

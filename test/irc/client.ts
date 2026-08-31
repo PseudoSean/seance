@@ -508,6 +508,41 @@ describe("IrcClient", function () {
 			expect(lastMessage(join.chan.id).text).to.equal("again");
 		});
 
+		it("picks up highlight settings and nick changes immediately", function () {
+			// Guards the memoized highlight regex: the cache must be keyed
+			// on the live settings and the current nick, never go stale.
+			let keywords: string[] = [];
+			const h = setup({highlights: () => ({keywords, exceptions: []})});
+			const id = joined(h);
+
+			h.transport.line(":bob!bob@host PRIVMSG #seance :the ghost appears");
+			expect(lastMessage(id).highlight).to.equal(false);
+
+			keywords = ["ghost"];
+			h.transport.line(":bob!bob@host PRIVMSG #seance :the ghost appears");
+			expect(lastMessage(id).highlight).to.equal(true);
+
+			h.transport.line(":alice!alice@host NICK :spectre");
+			h.transport.line(":bob!bob@host PRIVMSG #seance :spectre, you around?");
+			expect(lastMessage(id).highlight).to.equal(true);
+			h.transport.line(":bob!bob@host PRIVMSG #seance :alice, you around?");
+			expect(lastMessage(id).highlight).to.equal(false);
+		});
+
+		it("applies highlightExceptions to the query auto-highlight", function () {
+			// The old server ran the exception regex over *any* highlight,
+			// including the query one (attic message.ts); keep that.
+			const h = setup({highlights: () => ({keywords: [], exceptions: ["lunch"]})});
+			joined(h);
+			h.transport.line(":eve!eve@host PRIVMSG alice :want to grab lunch?");
+
+			const [join] = payloads<{chan: SharedNetworkChan}>("join");
+			expect(lastMessage(join.chan.id).highlight).to.equal(false);
+
+			h.transport.line(":eve!eve@host PRIVMSG alice :urgent, ping me");
+			expect(lastMessage(join.chan.id).highlight).to.equal(true);
+		});
+
 		it("sends a private message to the sender's query window", function () {
 			const h = setup();
 			joined(h);

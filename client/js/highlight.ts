@@ -115,6 +115,24 @@ export function buildHighlightRegex(
 }
 
 /**
+ * Whether `text` matches any highlight exception on its own. For highlights
+ * not derived from the text (a private message auto-highlight, say) there is
+ * no positive regex to fold the exceptions into; this checks them alone, the
+ * way the old server ran its exception regex over every highlight
+ * (`attic/server/plugins/irc-events/message.ts`). IRC formatting is stripped
+ * first.
+ */
+export function isHighlightException(text: string, exceptions: string[]): boolean {
+	const pattern = keywordPattern(exceptions);
+
+	if (pattern === null) {
+		return false;
+	}
+
+	return new RegExp(pattern, "iu").test(stripIrcFormatting(text));
+}
+
+/**
  * Whether `text` should be highlighted for a user with `nick` and the given
  * custom `keywords`, honouring `exceptions`. IRC formatting is stripped first.
  */
@@ -131,4 +149,44 @@ export function isHighlight(
 	}
 
 	return regex.test(stripIrcFormatting(text));
+}
+
+/**
+ * {@link isHighlight} / {@link isHighlightException} with the compiled
+ * regexes cached until the nick, keywords or exceptions change. One tester
+ * per consumer (IrcClient keeps one per network): the cache holds a single
+ * entry keyed on the inputs, so a settings or nick change simply recompiles.
+ */
+export function createHighlightTester() {
+	// NUL never appears in a nick or a settings keyword, so joined keys
+	// cannot collide (["a b"] vs ["a", "b"]).
+	const SEP = "\x00";
+	let key: string | null = null;
+	let regex: RegExp | null = null;
+	let exceptionKey: string | null = null;
+	let exceptionRegex: RegExp | null = null;
+
+	return {
+		isHighlight(text: string, nick: string, keywords: string[], exceptions: string[]) {
+			const wanted = [nick, ...keywords, SEP, ...exceptions].join(SEP);
+
+			if (key !== wanted) {
+				key = wanted;
+				regex = buildHighlightRegex(nick, keywords, exceptions);
+			}
+
+			return regex !== null && regex.test(stripIrcFormatting(text));
+		},
+		isHighlightException(text: string, exceptions: string[]) {
+			const wanted = exceptions.join(SEP);
+
+			if (exceptionKey !== wanted) {
+				exceptionKey = wanted;
+				const pattern = keywordPattern(exceptions);
+				exceptionRegex = pattern === null ? null : new RegExp(pattern, "iu");
+			}
+
+			return exceptionRegex !== null && exceptionRegex.test(stripIrcFormatting(text));
+		},
+	};
 }

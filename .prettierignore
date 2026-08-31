@@ -36,3 +36,4 @@ tmp/
 shells/capacitor/android/
 shells/capacitor/ios/
 .claude/
+.pi/
