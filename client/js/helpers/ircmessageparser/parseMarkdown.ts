@@ -11,7 +11,7 @@
  */
 
 import {findLinks} from "../../../../shared/linkify";
-import {ParsedStyle, STYLE_KEYS} from "./parseStyle";
+import {HeaderLevel, ParsedStyle, STYLE_KEYS} from "./parseStyle";
 
 export type Range = {start: number; end: number};
 
@@ -30,6 +30,7 @@ export type PieceFlags = {
 	verbatim?: true;
 	href?: string;
 	lang?: string;
+	header?: HeaderLevel;
 };
 
 // What the Markdown stage makes of a message: the style fragments with the
@@ -38,7 +39,7 @@ export type PieceFlags = {
 export type Markdown = {fragments: ParsedStyle[]; verbatim: Range[]};
 
 // Characters a backslash can escape
-const MARKER_CHARS = "*_~|`>[]()\\";
+const MARKER_CHARS = "*_~|`>#[]()\\";
 
 const FENCE = "```";
 // Optional language tag is only a tag when it ends the fence line
@@ -47,13 +48,14 @@ const fenceOpenRx = /^```(?:([\w+-]*)\n)?/;
 // links survive; the scheme is matched case-insensitively.
 const linkRx = /^\[([^\]\n]+)\]\(((?:https?:\/\/|web\+irc:)(?:[^\s()]|\([^\s()]*\))+)\)/i;
 
-type ScanFlag = keyof Omit<PieceFlags, "href" | "lang">;
+type ScanFlag = keyof Omit<PieceFlags, "href" | "lang" | "header">;
 
 // The flags a range can carry: a bare one, or one of the two that name a value
 type ScanRange =
 	| (Range & {flag: ScanFlag})
 	| (Range & {flag: "href"; href: string})
-	| (Range & {flag: "lang"; lang: string});
+	| (Range & {flag: "lang"; lang: string})
+	| (Range & {flag: "header"; level: HeaderLevel});
 
 type Scan = {
 	// Marker characters to drop from the text
@@ -82,6 +84,7 @@ type OpenDelimiter = {char: string; len: number; flag: ScanFlag; pos: number};
 
 const isWordChar = (c: string | undefined) => c !== undefined && /[\p{L}\p{N}_]/u.test(c);
 const isSpace = (c: string | undefined) => c === undefined || /\s/.test(c);
+const isLineStart = (text: string, i: number) => i === 0 || text[i - 1] === "\n";
 
 const sameStyle = (a: ParsedStyle, b: ParsedStyle) => STYLE_KEYS.every((key) => a[key] === b[key]);
 
@@ -185,6 +188,8 @@ function cutPieces(text: string, {removals, ranges}: Scan, extraCuts: number[]):
 				flags.href = range.href;
 			} else if (range.flag === "lang") {
 				flags.lang = range.lang;
+			} else if (range.flag === "header") {
+				flags.header = range.level;
 			} else {
 				flags[range.flag] = true;
 			}
@@ -254,6 +259,22 @@ function scan(text: string): Scan {
 		if (c === ">" && text[i + 1] === " " && (i === 0 || text[i - 1] === "\n")) {
 			quote(text, i, removals, ranges);
 			i += 2;
+			continue;
+		}
+
+		if (c === "#") {
+			// A header may follow a quote marker, so that "> # t" nests one
+			const quoted = text[i - 1] === " " && text[i - 2] === ">" && isLineStart(text, i - 2);
+			const lineStart = quoted ? i - 2 : i;
+			const level = isLineStart(text, lineStart) ? headerLevel(text, i) : undefined;
+
+			if (level !== undefined) {
+				header(text, i, {level, lineStart, quoted}, removals, ranges);
+				i += level + 1;
+				continue;
+			}
+
+			i += 1;
 			continue;
 		}
 
@@ -415,6 +436,84 @@ function codeBlock(text: string, i: number, removals: Range[], ranges: ScanRange
 	}
 
 	return removeEnd;
+}
+
+// The header the run of "#" at `i` opens: one to six of them, one space, and
+// something after it on the line. Undefined when that is not what is there.
+function headerLevel(text: string, i: number): HeaderLevel | undefined {
+	let n = 0;
+
+	while (text[i + n] === "#") {
+		n += 1;
+	}
+
+	if (n === 0 || n > 6 || text[i + n] !== " ") {
+		return undefined;
+	}
+
+	let lineEnd = text.indexOf("\n", i + n + 1);
+
+	if (lineEnd === -1) {
+		lineEnd = text.length;
+	}
+
+	return text.slice(i + n + 1, lineEnd).trim() === "" ? undefined : (n as HeaderLevel);
+}
+
+// The header the line beginning at `lineStart` opens, for a neighbouring line:
+// a quote marker may come first, and only a line of the same kind counts (a
+// quoted header and a bare one are not neighbours of one another).
+function headerLevelAt(text: string, lineStart: number, quoted: boolean): HeaderLevel | undefined {
+	if (text.startsWith("> ", lineStart) !== quoted) {
+		return undefined;
+	}
+
+	return headerLevel(text, quoted ? lineStart + 2 : lineStart);
+}
+
+// A "# " … "###### " header line whose marker starts at `i`. The line is a
+// block, so the newlines that bound it go with the marker — except between two
+// headers of one level, which share a range (and so a wrap) the way
+// consecutive quote lines do, and except a blank line the user typed.
+function header(
+	text: string,
+	i: number,
+	{level, lineStart, quoted}: {level: HeaderLevel; lineStart: number; quoted: boolean},
+	removals: Range[],
+	ranges: ScanRange[]
+) {
+	let lineEnd = text.indexOf("\n", i);
+
+	if (lineEnd === -1) {
+		lineEnd = text.length;
+	}
+
+	// The marker: the hashes and the one space after them
+	removals.push({start: i, end: i + level + 1});
+
+	const prevIsBlank = lineStart >= 2 && text[lineStart - 2] === "\n";
+	const prevLine = lineStart >= 2 ? text.lastIndexOf("\n", lineStart - 2) + 1 : 0;
+	const prevIsHeader = !prevIsBlank && headerLevelAt(text, prevLine, quoted) === level;
+
+	if (lineStart > 0 && text[lineStart - 1] === "\n" && !prevIsBlank && !prevIsHeader) {
+		removals.push({start: lineStart - 1, end: lineStart});
+	}
+
+	const nextIsHeader =
+		text[lineEnd] === "\n" && headerLevelAt(text, lineEnd + 1, quoted) === level;
+
+	if (text[lineEnd] === "\n" && !nextIsHeader) {
+		removals.push({start: lineEnd, end: lineEnd + 1});
+	}
+
+	// The newline joining two headers of one level stays inside the range, so
+	// that the lines end up in one block instead of running together
+	ranges.push({
+		start: i + level + 1,
+		end: nextIsHeader ? lineEnd + 1 : lineEnd,
+		flag: "header",
+		level,
+	});
 }
 
 // A "> " quote line starting at `i`. Consecutive quote lines share one range.
