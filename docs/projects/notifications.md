@@ -33,8 +33,9 @@ cross-device dismissal.
   (`attic/server/plugins/webpush.ts`) is gone with the server.
 - **Settings** (`client/components/Settings/Notifications.vue`,
   `client/js/settings.ts`): `desktopNotifications`, `notification` (sound),
-  `notifyAllMessages`, `highlights`, `highlightExceptions`, plus per-channel
-  mute in the context menu. No badge, no schedule, no levels.
+  `notifyAllMessages`, `highlightMessages` (the visual highlight bar on
+  messages that mention you, default on), `highlights`, `highlightExceptions`,
+  plus per-channel mute in the context menu. No badge, no schedule, no levels.
 - **Read markers exist** (`draft/read-marker`, `handlers/markread.ts`, plan
   D.7 done 2026-08-25): the cross-device "already read" signal we need for
   dismissing notifications is available.

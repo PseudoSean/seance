@@ -69,6 +69,24 @@
 			</label>
 		</div>
 
+		<div>
+			<label class="opt">
+				<input
+					:checked="store.state.settings.highlightMessages"
+					type="checkbox"
+					name="highlightMessages"
+				/>
+				Highlight messages that mention you
+				<span
+					class="tooltipped tooltipped-n tooltipped-no-delay"
+					aria-label="Messages that mention you or match a custom highlight get a
+colored background and border in the channel."
+				>
+					<button class="extra-help" />
+				</span>
+			</label>
+		</div>
+
 		<div v-if="!store.state.serverConfiguration?.public">
 			<label class="opt">
 				<label for="highlights" class="opt">

@@ -5,7 +5,7 @@
 			'msg',
 			{
 				self: message.self,
-				highlight: message.highlight || focused,
+				highlight: (message.highlight && store.state.settings.highlightMessages) || focused,
 				'previous-source': isPreviousSource,
 			},
 		]"
@@ -320,6 +320,7 @@ export default defineComponent({
 		);
 
 		return {
+			store,
 			timeFormat,
 			messageTime,
 			messageTimeLocale,
