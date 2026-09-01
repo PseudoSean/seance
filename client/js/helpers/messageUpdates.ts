@@ -101,3 +101,16 @@ export function replyQuote(
 
 	return undefined;
 }
+
+/**
+ * The reactions `nick` has on `message`, in the order they are shown. The
+ * picker marks these as selected and clicking one takes it back off, which is
+ * the same toggle the badges under a message do.
+ */
+export function myReactions(message: SharedMsg, nick: string): string[] {
+	const me = nick.toLowerCase();
+
+	return (message.reactions ?? [])
+		.filter((reaction) => reaction.nicks.some((n) => n.toLowerCase() === me))
+		.map((reaction) => reaction.text);
+}

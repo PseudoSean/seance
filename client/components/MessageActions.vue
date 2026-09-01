@@ -15,6 +15,7 @@
 			↩
 		</button>
 		<button
+			ref="reactButton"
 			type="button"
 			class="msg-action msg-action-react"
 			aria-label="React"
@@ -55,7 +56,13 @@
 		>
 			✕
 		</button>
-		<ReactionPicker v-if="pickerOpen" @pick="react" @close="pickerOpen = false" />
+		<ReactionPicker
+			v-if="pickerOpen"
+			:anchor="reactButton"
+			:selected="mine"
+			@pick="react"
+			@close="pickerOpen = false"
+		/>
 	</span>
 </template>
 
@@ -67,6 +74,7 @@ import {writeClipboard} from "../js/clipboard";
 import {codeBlocksOf, layout} from "../js/helpers/ircmessageparser/layout";
 import {useStore} from "../js/store";
 import {startEdit, startReply} from "../js/helpers/compose";
+import {myReactions} from "../js/helpers/messageUpdates";
 import {ChanType} from "../../shared/types/chan";
 import {MessageType} from "../../shared/types/msg";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
@@ -86,6 +94,11 @@ export default defineComponent({
 	setup(props) {
 		const store = useStore();
 		const pickerOpen = ref(false);
+		const reactButton = ref<HTMLButtonElement | null>(null);
+
+		// What we have already reacted with: the picker ticks these, and
+		// picking one again takes it back off (bus-contract §1.4 `remove`).
+		const mine = computed(() => myReactions(props.message, props.network.nick || ""));
 
 		// The code blocks the message renders, in order, each as its own
 		// characters — the fence and the gutter are presentation, so neither is
@@ -154,6 +167,7 @@ export default defineComponent({
 				target: props.channel.id,
 				msgid: props.message.msgid,
 				text,
+				remove: mine.value.includes(text),
 			});
 		};
 
@@ -194,6 +208,8 @@ export default defineComponent({
 
 		return {
 			pickerOpen,
+			reactButton,
+			mine,
 			canEdit,
 			canDelete,
 			codeBlocks,
