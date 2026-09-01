@@ -55,6 +55,7 @@ describe("branding", function () {
 				multiNetwork: true,
 				saveNetworks: true,
 				allowCustomServer: true,
+				saslDisconnectOnFail: true,
 			});
 		});
 
@@ -79,6 +80,7 @@ describe("branding", function () {
 				multiNetwork: true,
 				saveNetworks: false,
 				allowCustomServer: true,
+				saslDisconnectOnFail: true,
 			});
 			expect(config.strings).to.deep.equal({"connect.submit": "Go"});
 		});
@@ -161,8 +163,13 @@ describe("branding", function () {
 				multiNetwork: true,
 				saveNetworks: true,
 				allowCustomServer: false,
+				saslDisconnectOnFail: true,
 			});
 			expect(brandingFeatures({appName: "x"}).allowCustomServer).to.equal(true);
+			expect(
+				brandingFeatures(normalizeBranding({features: {saslDisconnectOnFail: false}}))
+					.saslDisconnectOnFail
+			).to.equal(false);
 		});
 	});
 

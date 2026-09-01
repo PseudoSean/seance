@@ -6,13 +6,16 @@
  *     TS_NODE_PROJECT=./test/tsconfig.json npx mocha --config=test/.mocharc.yml \
  *     test/irc/sasl.live.ts
  *
- * The dev ircd has no services, so SASL cannot succeed. Two things are
+ * The dev ircd has no services, so SASL cannot succeed. Three things are
  * checked and printed (`[sasl.live]` lines):
  *
- *   1. IrcClient with an account configured registers normally. As of
- *      2026-08 the dev ircd does not even list `sasl` in CAP LS, so the
- *      client skips SASL silently; if it ever does, one failure is reported.
- *   2. A raw WebSocket forces `CAP REQ :sasl` (nefarious2 ACKs it anyway)
+ *   1. IrcClient with `saslDisconnectOnFail: false` registers anyway, with
+ *      the failure reported in the lobby. As of 2026-08 the dev ircd does
+ *      not even list `sasl` in CAP LS, so the report is "the server does
+ *      not offer SASL".
+ *   2. The same client with the default policy never registers: it reports
+ *      the failure and QUITs (`features.saslDisconnectOnFail`).
+ *   3. A raw WebSocket forces `CAP REQ :sasl` (nefarious2 ACKs it anyway)
  *      and drives {@link SaslAuth} against the real answers, to record the
  *      numeric the server uses without services: `904 :SASL authentication
  *      failed: request timed out`, ~10s after `AUTHENTICATE PLAIN`, with no
@@ -188,7 +191,7 @@ describeLive("IrcClient SASL (live nefarious2)", function () {
 		).to.equal(true);
 	});
 
-	it("IrcClient with a bad account still registers", async function () {
+	it("IrcClient with a bad account still registers when the deploy allows it", async function () {
 		allowSelfSignedForLocalhost(url as string);
 		// ircu IPcheck throttles a quick reconnect after a short-lived connection, so the
 		// ~10s raw exchange above runs first; still give the server a moment.
@@ -206,6 +209,7 @@ describeLive("IrcClient SASL (live nefarious2)", function () {
 			sasl: "plain",
 			saslAccount: process.env.SEANCE_SASL_ACCOUNT ?? "seance-nobody",
 			saslPassword: process.env.SEANCE_SASL_PASSWORD ?? "definitely-wrong",
+			saslDisconnectOnFail: false,
 			ids: new IdAllocator(),
 			reconnect: {enabled: false, initialDelayMs: 1, maxDelayMs: 1, factor: 1, jitter: false},
 		});
@@ -238,15 +242,59 @@ describeLive("IrcClient SASL (live nefarious2)", function () {
 			(m) => m.type === MessageType.ERROR && /^SASL authentication failed/.test(m.text ?? "")
 		);
 
-		if (enabled) {
-			expect(saslErrors, "one SASL failure reported in the lobby").to.have.length(1);
-			log(`client: ${saslErrors[0].text}`);
-		} else {
-			expect(saslErrors).to.deep.equal([]);
-		}
+		// Either way the user is told; only the disconnect is optional.
+		expect(saslErrors, "one SASL failure reported in the lobby").to.have.length(1);
+		log(`client: ${saslErrors[0].text}`);
 
 		expect(client.account).to.equal("");
 		client.disconnect("live sasl test done");
 		await waitFor("close", () => client.state === "disconnected");
+	});
+
+	it("IrcClient with a bad account does not register under the default policy", async function () {
+		allowSelfSignedForLocalhost(url as string);
+		await new Promise((resolve) => setTimeout(resolve, 2_000));
+		const parsed = new URL(url as string);
+		const tag = Math.floor(1000 + Math.random() * 9000);
+		dispatch = sinon.stub(socket, "dispatch").returns(false);
+
+		const client = new IrcClient({
+			host: parsed.hostname + (parsed.pathname === "/" ? "" : parsed.pathname),
+			port: parseInt(parsed.port, 10) || (parsed.protocol === "wss:" ? 443 : 80),
+			tls: parsed.protocol === "wss:",
+			nick: `seancereq${tag}`,
+			join: "",
+			sasl: "plain",
+			saslAccount: process.env.SEANCE_SASL_ACCOUNT ?? "seance-nobody",
+			saslPassword: process.env.SEANCE_SASL_PASSWORD ?? "definitely-wrong",
+			ids: new IdAllocator(),
+			reconnect: {enabled: false, initialDelayMs: 1, maxDelayMs: 1, factor: 1, jitter: false},
+		});
+		client.transport.on((ev) => {
+			if (ev.type === "line") {
+				rawLines.push(ev.line);
+			}
+		});
+
+		client.connect();
+		await waitFor("the client to give up", () => client.isQuitting, 40_000);
+
+		const reported = messages(client.lobby.id)
+			.filter((m) => m.type === MessageType.ERROR)
+			.map((m) => m.text ?? "");
+		log(`required: ${JSON.stringify(reported)}`);
+
+		expect(reported[0], "the reason").to.match(/^SASL authentication failed: /);
+		expect(reported).to.include(
+			`Not connecting to ${client.options.host} without the login you asked for.`
+		);
+		expect(payloads("init"), "never registered").to.have.length(0);
+		expect(client.isConnected).to.equal(false);
+		expect(
+			rawLines.some((l) => / 001 /.test(l)),
+			"no welcome"
+		).to.equal(false);
+
+		await waitFor("close", () => client.state === "disconnected", 20_000);
 	});
 });

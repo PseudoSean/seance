@@ -39,6 +39,13 @@ export interface BrandingFeatures {
 	 * `false` hides the host/port/TLS fields and pins them to the default.
 	 */
 	allowCustomServer?: boolean;
+	/**
+	 * When a network is set to log in with SASL, drop the connection unless
+	 * that login succeeds, instead of registering unauthenticated. Default
+	 * true. `false` restores the old behaviour: the failure is still
+	 * reported in the lobby, but the connection goes ahead as a stranger.
+	 */
+	saslDisconnectOnFail?: boolean;
 }
 
 /**
@@ -187,6 +194,7 @@ export const DEFAULT_BRANDING: BrandingConfig = {
 		multiNetwork: true,
 		saveNetworks: true,
 		allowCustomServer: true,
+		saslDisconnectOnFail: true,
 	},
 	strings: {},
 };
@@ -233,6 +241,7 @@ export function brandingFeatures(config: BrandingConfig = current): Required<Bra
 		multiNetwork: config.features?.multiNetwork !== false,
 		saveNetworks: config.features?.saveNetworks !== false,
 		allowCustomServer: config.features?.allowCustomServer !== false,
+		saslDisconnectOnFail: config.features?.saslDisconnectOnFail !== false,
 	};
 }
 
@@ -518,7 +527,12 @@ export function normalizeBranding(
 
 	const features: BrandingFeatures = {};
 
-	for (const key of ["multiNetwork", "saveNetworks", "allowCustomServer"] as const) {
+	for (const key of [
+		"multiNetwork",
+		"saveNetworks",
+		"allowCustomServer",
+		"saslDisconnectOnFail",
+	] as const) {
 		features[key] = optionalBoolean(rawFeatures[key]) ?? defaults.features?.[key] ?? true;
 	}
 

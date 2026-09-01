@@ -10,6 +10,13 @@ const cap: Handler = (client, msg) => {
 	const result = client.caps.handle(msg);
 
 	for (const line of result.send) {
+		if (client.isQuitting) {
+			// A required SASL login failed while the negotiator ran its
+			// `beforeEnd` hook (client.ts): the `CAP END` it queued behind
+			// that would only go out after our QUIT.
+			break;
+		}
+
 		client.send(line);
 	}
 

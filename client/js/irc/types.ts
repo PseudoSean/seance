@@ -38,8 +38,10 @@ export type ConnectOptions = {
 	saslAccount: string;
 	saslPassword: string;
 	/**
-	 * Drop the connection when SASL fails instead of carrying on unauthenticated
-	 * (irc-framework's `sasl_disconnect_on_fail`; the old server left it off).
+	 * Drop the connection when a configured SASL login does not succeed,
+	 * instead of carrying on unauthenticated. Unset means "ask the deploy":
+	 * `config.json`'s `features.saslDisconnectOnFail`, which defaults to
+	 * true (see `client/js/branding.ts` and client.ts `saslRequired`).
 	 */
 	saslDisconnectOnFail?: boolean;
 };
