@@ -1,61 +1,621 @@
 <template>
-	<div
-		ref="root"
-		class="reaction-picker"
-		role="dialog"
-		aria-label="Add a reaction"
-		@keydown.esc.stop.prevent="$emit('close')"
-	>
-		<div class="reaction-picker-quick">
-			<button
-				v-for="emoji in quickReactions"
-				:key="emoji"
-				type="button"
-				class="reaction-picker-emoji"
-				:aria-label="`React with ${emoji}`"
-				@click="pick(emoji)"
+	<Teleport to="body">
+		<div
+			:id="uid"
+			ref="root"
+			class="reaction-picker"
+			:class="{sheet, flipped}"
+			:style="style"
+			role="dialog"
+			aria-label="Add a reaction"
+			@keydown.esc.stop.prevent="$emit('close')"
+		>
+			<div class="reaction-picker-search">
+				<input
+					ref="input"
+					v-model="query"
+					type="text"
+					class="reaction-picker-input"
+					:maxlength="MAX_REACTION_LENGTH * 2"
+					placeholder="Search emoji, or type any reaction"
+					aria-label="Search emoji, or type any reaction"
+					role="combobox"
+					aria-expanded="true"
+					aria-autocomplete="list"
+					:aria-controls="`${uid}-list`"
+					:aria-activedescendant="active ? `${uid}-opt-${active.index}` : undefined"
+					autocomplete="off"
+					autocapitalize="off"
+					spellcheck="false"
+					@keydown="onKeydown"
+				/>
+				<button
+					v-if="query"
+					type="button"
+					class="reaction-picker-clear"
+					aria-label="Clear search"
+					title="Clear search"
+					@mousedown.prevent
+					@click="clear"
+				>
+					✕
+				</button>
+			</div>
+
+			<div class="reaction-picker-tabs" role="tablist" aria-label="Emoji groups">
+				<button
+					v-for="tab in tabs"
+					:key="tab.key"
+					type="button"
+					class="reaction-picker-tab"
+					:class="{active: tab.key === currentTab}"
+					role="tab"
+					:aria-selected="tab.key === currentTab"
+					:aria-label="tab.label"
+					:title="tab.label"
+					@mousedown.prevent
+					@click="goToSection(tab.key)"
+				>
+					{{ tab.icon }}
+				</button>
+			</div>
+
+			<div
+				:id="`${uid}-list`"
+				ref="list"
+				class="reaction-picker-list"
+				role="listbox"
+				aria-label="Emoji"
+				@scroll.passive="onScroll"
+				@mousedown.prevent
+				@click="onListClick"
+				@mouseover="onListHover"
 			>
-				{{ emoji }}
-			</button>
+				<p v-if="failed" class="reaction-picker-note">
+					The emoji list could not be loaded. You can still type a reaction above.
+				</p>
+				<section
+					v-for="section in sections"
+					:key="section.key"
+					class="reaction-picker-section"
+					:data-key="section.key"
+					role="group"
+					:aria-label="section.label"
+				>
+					<h2 class="reaction-picker-heading" aria-hidden="true">{{ section.label }}</h2>
+					<div class="reaction-picker-grid" role="presentation">
+						<button
+							v-for="option in section.options"
+							:id="`${uid}-opt-${option.index}`"
+							:key="option.index"
+							type="button"
+							class="reaction-picker-option"
+							:class="{
+								active: option.index === activeIndex,
+								selected: isSelected(option),
+								word: !option.emoji,
+								free: option.free,
+							}"
+							role="option"
+							:aria-selected="option.index === activeIndex"
+							:data-index="option.index"
+							:title="option.title"
+						>
+							<span v-if="option.free" class="reaction-picker-free-label"
+								>React with</span
+							>{{ option.label }}
+						</button>
+					</div>
+				</section>
+				<p v-if="!failed && !catalog" class="reaction-picker-note">Loading emoji…</p>
+			</div>
+
+			<div class="reaction-picker-preview">
+				<template v-if="active">
+					<span class="reaction-picker-preview-emoji" :class="{word: !active.emoji}">{{
+						active.label
+					}}</span>
+					<span class="reaction-picker-preview-text">
+						<span class="reaction-picker-preview-name">{{ active.name }}</span>
+						<span v-if="active.description" class="reaction-picker-preview-desc">{{
+							active.description
+						}}</span>
+					</span>
+					<span v-if="isSelected(active)" class="reaction-picker-preview-hint"
+						>Remove</span
+					>
+				</template>
+				<span v-else class="reaction-picker-preview-hint"
+					>Pick an emoji — or type a word, it is a reaction too.</span
+				>
+			</div>
 		</div>
-		<form class="reaction-picker-custom" @submit.prevent="pick(custom)">
-			<input
-				ref="customInput"
-				v-model="custom"
-				type="text"
-				maxlength="64"
-				placeholder="Other…"
-				aria-label="Custom reaction text"
-				autocomplete="off"
-			/>
-			<button type="submit" :disabled="!custom.trim()" aria-label="Send reaction">Add</button>
-		</form>
-	</div>
+	</Teleport>
 </template>
 
 <script lang="ts">
-import {defineComponent, onBeforeUnmount, onMounted, ref} from "vue";
+import {
+	computed,
+	defineComponent,
+	nextTick,
+	onBeforeUnmount,
+	onMounted,
+	PropType,
+	ref,
+	watch,
+} from "vue";
 import eventbus from "../js/eventbus";
+import {
+	EmojiEntry,
+	emojiForName,
+	EmojiGroup,
+	flatten,
+	isEmojiOnly,
+	loadEmojiCatalog,
+	MAX_REACTION_LENGTH,
+	normalizeReaction,
+	searchEmoji,
+} from "../js/helpers/emoji";
+import {DEFAULT_REACTIONS, recentReactions, rememberReaction} from "../js/helpers/reactionRecents";
 
-export const quickReactions = ["👍", "❤️", "😂", "😮", "😢", "🔥", "🎉", "👀"];
+/** One thing the list offers: an emoji, a remembered reaction, or typed text. */
+type Option = {
+	/** Position in the flattened list — what the keyboard walks and ARIA names. */
+	index: number;
+	/** What gets sent. */
+	text: string;
+	/** What the button shows (the same as `text`, except for the free-text pill). */
+	label: string;
+	title: string;
+	/** `:shortcode:` or the reaction itself, for the preview line. */
+	name: string;
+	description: string;
+	/** Emoji render big and square; words render as a pill. */
+	emoji: boolean;
+	/** The "React with <what you typed>" row. */
+	free?: boolean;
+};
+
+type Section = {key: string; label: string; options: Option[]};
+
+/** Gap between the anchor and the popover, and the margin it keeps off screen edges. */
+const GAP = 6;
+const EDGE = 8;
+/** How tall the popover gets, and how little space is still worth opening into. */
+const MAX_HEIGHT = 360;
+const MIN_HEIGHT = 180;
+/** Options considered when an arrow key looks for the row above or below. */
+const NEIGHBOURHOOD = 40;
+
+// Unique per open picker, so ARIA ids never collide with a closing one.
+let instances = 0;
 
 export default defineComponent({
 	name: "ReactionPicker",
+	props: {
+		/** The button the popover hangs off; positioning follows it as you scroll. */
+		anchor: {type: Object as PropType<HTMLElement | null>, default: null},
+		/** Reactions the user already has on this message: shown ticked, picking removes. */
+		selected: {type: Array as PropType<string[]>, default: () => []},
+	},
 	emits: ["pick", "close"],
 	setup(props, {emit}) {
+		const uid = `reaction-picker-${++instances}`;
 		const root = ref<HTMLDivElement | null>(null);
-		const customInput = ref<HTMLInputElement | null>(null);
-		const custom = ref("");
+		const input = ref<HTMLInputElement | null>(null);
+		const list = ref<HTMLDivElement | null>(null);
+
+		const query = ref("");
+		const catalog = ref<EmojiGroup[] | null>(null);
+		const failed = ref(false);
+		const recent = ref<string[]>(recentReactions());
+		const activeIndex = ref(-1);
+		const currentTab = ref("recent");
+
+		loadEmojiCatalog()
+			.then((groups) => {
+				catalog.value = groups;
+			})
+			.catch(() => {
+				failed.value = true;
+			});
+
+		const entryOption = (entry: EmojiEntry): Omit<Option, "index"> => ({
+			text: entry.emoji,
+			label: entry.emoji,
+			title: `:${entry.name}: ${entry.description}`,
+			name: `:${entry.name}:`,
+			description: entry.description,
+			emoji: true,
+		});
+
+		/** Every emoji by its character, so a remembered one can be named. */
+		const byChar = computed(() => {
+			const map = new Map<string, EmojiEntry>();
+
+			for (const entry of flatten(catalog.value ?? [])) {
+				map.set(entry.emoji, entry);
+			}
+
+			return map;
+		});
+
+		// A remembered reaction is whatever was sent, so it may well be a word
+		// — or several emoji, which no shortcode names. One the catalog knows
+		// is described from the catalog, so the preview line reads the same
+		// wherever the emoji was picked from.
+		const textOption = (text: string): Omit<Option, "index"> => {
+			const known = byChar.value.get(text);
+
+			if (known) {
+				return entryOption(known);
+			}
+
+			const emoji = isEmojiOnly(text);
+
+			return {
+				text,
+				label: text,
+				title: text,
+				name: text,
+				description: emoji ? "" : "sent as text",
+				emoji,
+			};
+		};
+
+		const sections = computed<Section[]>(() => {
+			let index = 0;
+			const number = (options: Omit<Option, "index">[]): Option[] =>
+				options.map((option) => ({...option, index: index++}));
+
+			const typed = query.value.trim();
+
+			if (typed) {
+				const hits = catalog.value ? searchEmoji(catalog.value, typed) : [];
+				const options = hits.map(entryOption);
+				const free = normalizeReaction(typed);
+
+				// Anything typed can be sent as it stands — that is what makes
+				// "lol" and "🎉🎉🎉" reachable without an emoji keyboard. The
+				// row is dropped when it would only repeat the first hit.
+				//
+				// Where it goes decides what Enter does, since the first option
+				// is the one highlighted: an exact alias is an emoji somebody
+				// is naming (`tada` → 🎉), anything else is words until they
+				// say otherwise, or `lol` would react with 🍭 lollipop.
+				if (free && !hits.some((hit) => hit.emoji === free)) {
+					const row = {
+						...textOption(free),
+						title: `React with ${free}`,
+						description: "sent as text",
+						free: true,
+					};
+
+					if (emojiForName(typed)) {
+						options.push(row);
+					} else {
+						options.unshift(row);
+					}
+				}
+
+				return [
+					{
+						key: "results",
+						label: hits.length > 0 ? "Search results" : "No emoji match",
+						options: number(options),
+					},
+				];
+			}
+
+			const known = recent.value;
+			const out: Section[] = [
+				{
+					key: "recent",
+					label: known.length > 0 ? "Recently used" : "Quick reactions",
+					options: number((known.length > 0 ? known : DEFAULT_REACTIONS).map(textOption)),
+				},
+			];
+
+			for (const group of catalog.value ?? []) {
+				out.push({
+					key: group.key,
+					label: group.label,
+					options: number(group.emoji.map(entryOption)),
+				});
+			}
+
+			return out;
+		});
+
+		const tabs = computed(() => [
+			{
+				key: "recent",
+				label: recent.value.length > 0 ? "Recently used" : "Quick reactions",
+				icon: "🕘",
+			},
+			...(catalog.value ?? []).map((group) => ({
+				key: group.key,
+				label: group.label,
+				icon: group.icon,
+			})),
+		]);
+
+		const options = computed<Option[]>(() =>
+			sections.value.flatMap((section) => section.options)
+		);
+
+		const active = computed<Option | undefined>(() => options.value[activeIndex.value]);
+		const isSelected = (option: Option) => props.selected.includes(option.text);
 
 		const pick = (text: string) => {
-			const trimmed = text.trim();
+			const normalized = normalizeReaction(text);
 
-			if (!trimmed) {
+			if (!normalized) {
 				return;
 			}
 
-			emit("pick", trimmed);
+			// Taking one of ours back off is not a use of it: it would jump to
+			// the front of the recents on its way out.
+			if (!props.selected.includes(normalized)) {
+				rememberReaction(normalized);
+			}
+
+			emit("pick", normalized);
 			emit("close");
+		};
+
+		const optionAt = (index: number) => options.value[index];
+
+		const scrollActiveIntoView = () => {
+			const el = list.value?.querySelector<HTMLElement>(
+				`[data-index="${activeIndex.value}"]`
+			);
+			el?.scrollIntoView({block: "nearest"});
+		};
+
+		const setActive = (index: number) => {
+			if (index < 0 || index >= options.value.length) {
+				return;
+			}
+
+			activeIndex.value = index;
+			void nextTick(scrollActiveIntoView);
+		};
+
+		/**
+		 * The option a row up or down from the active one, found by geometry
+		 * rather than by counting columns: sections wrap freely and a
+		 * remembered word is wider than an emoji, so there is no column count
+		 * to count with. Only the options near the active one are measured.
+		 */
+		const rowNeighbour = (down: boolean) => {
+			const container = list.value;
+			const from = container?.querySelector<HTMLElement>(
+				`[data-index="${activeIndex.value}"]`
+			);
+
+			if (!container || !from) {
+				return down ? 0 : -1;
+			}
+
+			const origin = from.getBoundingClientRect();
+			const centre = origin.left + origin.width / 2;
+			let best: {index: number; top: number; distance: number} | undefined;
+
+			for (
+				let i = Math.max(0, activeIndex.value - NEIGHBOURHOOD);
+				i <= Math.min(options.value.length - 1, activeIndex.value + NEIGHBOURHOOD);
+				i++
+			) {
+				if (i === activeIndex.value) {
+					continue;
+				}
+
+				const el = container.querySelector<HTMLElement>(`[data-index="${i}"]`);
+
+				if (!el) {
+					continue;
+				}
+
+				const rect = el.getBoundingClientRect();
+
+				// Same visual row: not a candidate for a vertical move.
+				if (Math.abs(rect.top - origin.top) < 2) {
+					continue;
+				}
+
+				if (down ? rect.top < origin.top : rect.top > origin.top) {
+					continue;
+				}
+
+				const distance = Math.abs(rect.left + rect.width / 2 - centre);
+
+				if (
+					!best ||
+					(down ? rect.top < best.top : rect.top > best.top) ||
+					(rect.top === best.top && distance < best.distance)
+				) {
+					best = {index: i, top: rect.top, distance};
+				}
+			}
+
+			return best ? best.index : activeIndex.value;
+		};
+
+		const onKeydown = (e: KeyboardEvent) => {
+			const el = e.target as HTMLInputElement;
+			const caret = el.selectionStart ?? 0;
+			const collapsed = caret === (el.selectionEnd ?? 0);
+
+			switch (e.key) {
+				case "ArrowDown":
+					e.preventDefault();
+					setActive(activeIndex.value < 0 ? 0 : rowNeighbour(true));
+					break;
+
+				case "ArrowUp":
+					e.preventDefault();
+
+					if (activeIndex.value >= 0) {
+						setActive(rowNeighbour(false));
+					}
+
+					break;
+
+				// Left and right walk the grid, but only once the caret has
+				// nowhere left to go — editing what you typed comes first.
+				case "ArrowRight":
+					if (collapsed && caret === el.value.length && optionAt(activeIndex.value + 1)) {
+						e.preventDefault();
+						setActive(activeIndex.value + 1);
+					}
+
+					break;
+
+				case "ArrowLeft":
+					if (collapsed && caret === 0 && activeIndex.value > 0) {
+						e.preventDefault();
+						setActive(activeIndex.value - 1);
+					}
+
+					break;
+
+				case "Enter":
+					e.preventDefault();
+
+					if (active.value) {
+						pick(active.value.text);
+					} else if (query.value.trim()) {
+						pick(query.value);
+					}
+
+					break;
+
+				default:
+					break;
+			}
+		};
+
+		const onListClick = (e: MouseEvent) => {
+			const el = (e.target as HTMLElement).closest<HTMLElement>("[data-index]");
+			const option = el ? optionAt(Number(el.dataset.index)) : undefined;
+
+			if (option) {
+				pick(option.text);
+			}
+		};
+
+		const onListHover = (e: MouseEvent) => {
+			const el = (e.target as HTMLElement).closest<HTMLElement>("[data-index]");
+
+			if (el) {
+				activeIndex.value = Number(el.dataset.index);
+			}
+		};
+
+		const clear = () => {
+			query.value = "";
+			input.value?.focus();
+		};
+
+		const goToSection = (key: string) => {
+			query.value = "";
+
+			void nextTick(() => {
+				const container = list.value;
+				const section = container?.querySelector<HTMLElement>(`[data-key="${key}"]`);
+
+				if (container && section) {
+					container.scrollTop = section.offsetTop;
+					currentTab.value = key;
+				}
+			});
+		};
+
+		// Which group the list is showing, for the tab bar.
+		const onScroll = () => {
+			const container = list.value;
+
+			if (!container) {
+				return;
+			}
+
+			let key = sections.value[0]?.key ?? "recent";
+
+			for (const section of container.querySelectorAll<HTMLElement>("[data-key]")) {
+				if (section.offsetTop - container.scrollTop > 12) {
+					break;
+				}
+
+				key = section.dataset.key ?? key;
+			}
+
+			currentTab.value = key;
+		};
+
+		// A phone gets the sheet at the bottom of the screen; there is no room
+		// for a popover once the on-screen keyboard is up.
+		const sheetQuery = window.matchMedia("(max-width: 479px)");
+		const sheet = ref(sheetQuery.matches);
+
+		const onSheetChange = (e: MediaQueryListEvent) => {
+			sheet.value = e.matches;
+		};
+
+		const style = ref<Record<string, string>>({});
+		const flipped = ref(false);
+
+		/**
+		 * Pin the popover under (or, with no room, over) the anchor. It is
+		 * `position: fixed` and teleported to the body so the scrollback
+		 * cannot clip it, which means following the anchor by hand: on scroll,
+		 * on resize, and once the catalog has changed the height. Flipping
+		 * anchors the bottom edge instead of the top, so a taller popover
+		 * still lines up without measuring it.
+		 */
+		const reposition = () => {
+			const el = root.value;
+			const anchor = props.anchor;
+
+			if (!el || !anchor) {
+				return;
+			}
+
+			if (sheet.value) {
+				style.value = {};
+				flipped.value = false;
+				return;
+			}
+
+			const rect = anchor.getBoundingClientRect();
+			const vh = window.innerHeight;
+			const vw = window.innerWidth;
+
+			// Scrolled past the message the picker belongs to: close rather
+			// than float over an unrelated part of the conversation.
+			if (rect.bottom < 0 || rect.top > vh) {
+				emit("close");
+				return;
+			}
+
+			const below = vh - rect.bottom - GAP - EDGE;
+			const above = rect.top - GAP - EDGE;
+			const flip = below < MAX_HEIGHT && above > below;
+			const room = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, flip ? above : below));
+			const width = el.offsetWidth;
+			const left = Math.min(
+				Math.max(rect.right - width, EDGE),
+				Math.max(EDGE, vw - width - EDGE)
+			);
+
+			flipped.value = flip;
+			style.value = {
+				left: `${Math.round(left)}px`,
+				"max-height": `${Math.round(room)}px`,
+				...(flip
+					? {bottom: `${Math.round(vh - rect.top + GAP)}px`}
+					: {top: `${Math.round(rect.bottom + GAP)}px`}),
+			};
 		};
 
 		const close = () => emit("close");
@@ -67,18 +627,73 @@ export default defineComponent({
 			}
 		};
 
+		watch(query, () => {
+			// With something typed there is always a best guess to highlight;
+			// browsing, nothing is until the pointer or a key says so.
+			activeIndex.value = query.value.trim() ? 0 : -1;
+			currentTab.value = query.value.trim() ? "results" : "recent";
+
+			if (list.value) {
+				list.value.scrollTop = 0;
+			}
+		});
+
+		watch(catalog, () => void nextTick(reposition));
+
 		onMounted(() => {
 			document.addEventListener("mousedown", onDocumentMouseDown);
+			window.addEventListener("scroll", reposition, true);
+			window.addEventListener("resize", reposition);
+			sheetQuery.addEventListener("change", onSheetChange);
 			eventbus.on("escapekey", close);
-			customInput.value?.focus();
+
+			void nextTick(reposition);
+
+			// Focusing the field on a touch screen throws up the keyboard over
+			// the emoji the user came here to tap.
+			if (!window.matchMedia("(pointer: coarse)").matches) {
+				input.value?.focus();
+			}
 		});
 
 		onBeforeUnmount(() => {
 			document.removeEventListener("mousedown", onDocumentMouseDown);
+			window.removeEventListener("scroll", reposition, true);
+			window.removeEventListener("resize", reposition);
+			sheetQuery.removeEventListener("change", onSheetChange);
 			eventbus.off("escapekey", close);
+
+			// Give the keyboard back to where it came from.
+			if (root.value?.contains(document.activeElement)) {
+				props.anchor?.focus();
+			}
 		});
 
-		return {root, customInput, custom, quickReactions, pick};
+		return {
+			MAX_REACTION_LENGTH,
+			uid,
+			root,
+			input,
+			list,
+			query,
+			catalog,
+			failed,
+			sections,
+			tabs,
+			active,
+			activeIndex,
+			currentTab,
+			sheet,
+			flipped,
+			style,
+			isSelected,
+			onKeydown,
+			onListClick,
+			onListHover,
+			onScroll,
+			goToSection,
+			clear,
+		};
 	},
 });
 </script>

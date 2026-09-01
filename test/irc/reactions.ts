@@ -64,6 +64,29 @@ describe("Replies and reactions (handlers/tagmsg.ts, +draft/reply)", function ()
 			]);
 		});
 
+		it("/react takes words, emoji runs and shortcodes, msgid or not", function () {
+			const h = setup();
+			const id = joined(h);
+			h.transport.lines(
+				"@time=2026-08-25T12:01:00.000Z;msgid=m1 :bob!bob@host PRIVMSG #seance :first",
+				"@time=2026-08-25T12:02:00.000Z;msgid=m2 :bob!bob@host PRIVMSG #seance :second"
+			);
+
+			// Everything up to a msgid that names a message loaded here is the
+			// reaction, so a last word is not mistaken for one.
+			h.client.input(id, "/react so cool");
+			h.client.input(id, "/react 🎉🎉🎉 m1");
+			h.client.input(id, "/react :tada:");
+			h.client.input(id, "/react   spaced   out  ");
+
+			expect(h.sent()).to.deep.equal([
+				"@+draft/react=so\\scool;+draft/reply=m2 TAGMSG #seance",
+				"@+draft/react=🎉🎉🎉;+draft/reply=m1 TAGMSG #seance",
+				"@+draft/react=🎉;+draft/reply=m2 TAGMSG #seance",
+				"@+draft/react=spaced\\sout;+draft/reply=m2 TAGMSG #seance",
+			]);
+		});
+
 		it("/react refuses to run without a message or in the lobby", function () {
 			const h = setup();
 			joined(h);
