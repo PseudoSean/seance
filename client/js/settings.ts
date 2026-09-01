@@ -37,6 +37,9 @@ const defaultConfig = {
 			}
 		},
 	},
+	highlightMessages: {
+		default: true,
+	},
 	highlights: {
 		default: "",
 		sync: "always",
