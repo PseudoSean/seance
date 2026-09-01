@@ -14,12 +14,20 @@ export default defineComponent({
 	props: {
 		code: {type: String, required: true},
 		lang: {type: String, default: undefined},
+		// The name a `lang:file` fence tag carried: what the label shows
+		file: {type: String, default: undefined},
 	},
 	setup(props) {
 		// The Prism id the block is being shown as, set only once it really is
 		const id = ref<string | undefined>(undefined);
 		const tokens = ref<Highlighted | undefined>(undefined);
 		const plain = computed(() => splitLines(props.code));
+		// What the block is shown as: a `lang:file` tag's file, else the
+		// highlighter's id for the language — the tag as typed until the tokens
+		// land (`js` becomes `javascript`), the guesser's answer only once there
+		// is one. It rides the block as `data-lang`, which the stylesheet shows
+		// in the corner.
+		const label = computed(() => props.file ?? id.value ?? props.lang);
 		// Both from the plain text, never from the tokens: the gutter must not
 		// jitter when highlighting lands.
 		const numbered = computed(() => plain.value.length >= 2);
@@ -152,6 +160,14 @@ export default defineComponent({
 				)
 			);
 
+			// The caption — the file a `lang:file` tag named, else the language,
+			// once it is known — is the block's own first child: a bar of its own
+			// above the rows, in the message's typeface and a muted size, so it
+			// reads as a label and never as an empty first line of code.
+			if (label.value !== undefined) {
+				rows.unshift(h("span", {class: ["md-code-head"]}, label.value));
+			}
+
 			if (cut.value !== undefined) {
 				rows.push(
 					h(
@@ -176,7 +192,7 @@ export default defineComponent({
 						numbered.value ? "md-code-block--numbered" : undefined,
 					],
 					style: numbered.value ? {"--md-gutter": gutter.value} : undefined,
-					"data-lang": id.value,
+					"data-lang": label.value,
 				},
 				rows
 			);

@@ -9,7 +9,7 @@ import {
 // holding. The tree it renders from is unit-tested in `test/helpers/layout.ts`;
 // what only a browser can answer is whether the elements that tree names really
 // turn up. It only runs when SEANCE_E2E_IRC_URL points at a WebSocket ircd
-// (e.g. `wss://irc.example.org:9998/`), and it sends seven messages to a real
+// (e.g. `wss://irc.example.org:9998/`), and it sends eleven messages to a real
 // channel, so keep it that way.
 const ircUrl = process.env.SEANCE_E2E_IRC_URL;
 const channel = process.env.SEANCE_E2E_CHANNEL ?? "#ps";
@@ -338,4 +338,85 @@ test("leaves the text alone when the setting is off, Alt+K toggles it", async ({
 
 	await expect(pre.locator(".irc-bold")).toHaveText("toggle-probe");
 	await expect(msg.locator(".irc-bold")).toHaveText("markers-kept");
+});
+
+// The newer block-level syntax: lists, a pipe table, TeX, a shortcode, `>>>`,
+// and the code block's corner label. Everything here needs newlines on the
+// wire (the table, the display-adjacent sends), so it rides `draft/multiline`
+// the same way the fenced block above does.
+test("renders lists, tables, TeX, shortcodes and the quote-everything-after", async ({page}) => {
+	const nick = await connect(page);
+	const token = `md${nick.slice(-4)}`;
+
+	// One unordered list of two items, then an ordered one starting at five:
+	// markers gone from the text, the bullets and numbers drawn by CSS.
+	await sayLines(page, [
+		`${token}l groceries:`,
+		"- **tea** and something else",
+		"- oat milk",
+		"5. fifth step",
+		"6. sixth step",
+	]);
+
+	const listed = own(page, nick, `${token}l`);
+
+	await expect(listed.locator(".md-list.md-ul .md-li")).toHaveCount(2);
+	await expect(listed.locator(".md-list.md-ul .md-li").first()).toContainText("tea");
+	await expect(listed.locator(".md-list.md-ul .md-li .irc-bold")).toHaveText("tea");
+	await expect(listed.locator(".md-list.md-ol .md-li")).toHaveCount(2);
+	await expect(listed.locator(".md-list.md-ol .md-li").first()).toHaveText("fifth step");
+	// The counters start where the list said: `5.` at the fifth step, and the
+	// typed markers are nowhere in the message.
+	await expect(listed.locator(".md-list.md-ol")).toHaveAttribute(
+		"style",
+		/counter-reset:\s*md-oli 4/
+	);
+	await expect(listed.locator(".content")).not.toContainText("- **");
+	await expect(listed.locator(".content")).not.toContainText("5. ");
+
+	// A pipe table: the separator row gone, real `th`/`td` elements, and each
+	// column sitting the way its separator cell asked.
+	await sayLines(page, [`${token}t Item | Qty`, "--- | ---:", "screws | 12"]);
+
+	const table = own(page, nick, `${token}t`).locator(".md-table");
+
+	await expect(table.locator("thead th")).toHaveCount(2);
+	await expect(table.locator("tbody td")).toHaveCount(2);
+	// The first cell holds the token too — it is part of the message
+	await expect(table.locator("thead th").first()).toContainText("Item");
+	await expect(table.locator("tbody td").first()).toHaveText("screws");
+	await expect(table.locator("thead th").nth(1)).toHaveCSS("text-align", "right");
+	await expect(own(page, nick, `${token}t`).locator(".content")).not.toContainText("---");
+
+	// A shortcode renders as the character, inline TeX as KaTeX once the chunk
+	// lands, and a double-backtick span keeps the backtick it holds.
+	await say(page, `${token}m hi :smile: $\`E=mc^2\`$ and \`\`a \`b\` c\`\` done`);
+
+	const mixed = own(page, nick, `${token}m`);
+
+	await expect(mixed.locator(".emoji")).toHaveText("😄");
+	await expect(mixed.locator(".content")).not.toContainText(":smile:");
+	await expect(mixed.locator(".md-math .katex")).toBeVisible();
+	await expect(mixed.locator(".irc-monospace")).toHaveText("a `b` c");
+
+	// `>>>` quotes the rest of the message, a list nesting inside it; and a
+	// four-backtick fence holds a three-backtick one, its `lang:file` tag
+	// naming the file the label shows.
+	await sayLines(page, [">>> quoted text", `- ${token}q listed inside`]);
+
+	const quotedAll = own(page, nick, "quoted text");
+
+	await expect(quotedAll.locator(".md-quote")).toContainText("quoted text");
+	await expect(quotedAll.locator(".md-quote .md-list .md-li")).toHaveCount(1);
+	await expect(quotedAll.locator(".content")).not.toContainText(">>>");
+
+	await sayLines(page, ["````python:notes.md", `${token}f has \`\`\` inside`, "````"]);
+
+	const nested = own(page, nick, `${token}f`);
+	const block = nested.locator(".md-code-block");
+
+	// The label is the file, not the language, and it does not wait for Prism.
+	await expect(block).toHaveAttribute("data-lang", "notes.md");
+	await expect(block).toContainText("has ``` inside");
+	await expect(nested.locator(".content")).not.toContainText("````");
 });

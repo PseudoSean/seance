@@ -3,6 +3,7 @@ import anyIntersection from "./anyIntersection";
 import findChannels from "./findChannels";
 import findEmoji from "./findEmoji";
 import findNames from "./findNames";
+import findShortcode, {ShortcodePart} from "./findShortcode";
 import merge, {MergedParts, Part, PartWithFragments} from "./merge";
 import {applyMarkdown, Range} from "./parseMarkdown";
 import parseStyle, {HeaderLevel, ParsedStyle} from "./parseStyle";
@@ -38,21 +39,37 @@ export type LayoutNode =
 	| {kind: "channel"; channel: string; children: LayoutNode[]}
 	| {kind: "emoji"; emoji: string; children: LayoutNode[]}
 	| {kind: "nick"; nick: string; children: LayoutNode[]}
-	| {kind: "wrap"; wrap: "quote" | "spoiler"; children: LayoutNode[]}
+	| {kind: "wrap"; wrap: "quote" | "spoiler" | "math" | "mathBlock"; children: LayoutNode[]}
 	// `level` is how many hashes the header line opened with
 	| {kind: "wrap"; wrap: "header"; level: HeaderLevel; children: LayoutNode[]}
-	// `lang` is the fence's language tag, when it named one
-	| {kind: "wrap"; wrap: "codeBlock"; lang?: string; children: LayoutNode[]}
+	// `lang` is the fence's language tag, when it named one, and `file` the
+	// name a `lang:file` tag carried
+	| {kind: "wrap"; wrap: "codeBlock"; lang?: string; file?: string; children: LayoutNode[]}
+	// `list` is `ul`, or `ol:<first item's number>` for an ordered one
+	| {kind: "wrap"; wrap: "list"; list: string; children: LayoutNode[]}
+	// `table` is one alignment letter (`l`, `r`, `c`) per column, the
+	// separator row's word on how each column sits
+	| {kind: "wrap"; wrap: "table"; table: string; children: LayoutNode[]}
 	| {kind: "wrap"; wrap: "href"; href: string; children: LayoutNode[]};
 
 // Flags that wrap a run of neighbouring nodes in one element, outermost first:
 // a header sits inside the quote it was written in, never the other way round.
-const WRAP_KEYS = ["quote", "header", "codeBlock", "spoiler", "href"] as const;
+const WRAP_KEYS = [
+	"quote",
+	"header",
+	"list",
+	"table",
+	"codeBlock",
+	"spoiler",
+	"mathBlock",
+	"math",
+	"href",
+] as const;
 type WrapKey = typeof WRAP_KEYS[number];
 // `lang` is not a wrap of its own: it qualifies `codeBlock`, so that two
 // blocks in different languages never end up under one element. A header's
 // value is its level, so two levels never end up under one element either.
-type Wrap = Partial<Record<WrapKey, boolean | string | number>> & {lang?: string};
+type Wrap = Partial<Record<WrapKey, boolean | string | number>> & {lang?: string; file?: string};
 // A part, or one run of a part's text, and the wraps it sits in
 type WrappedNodes = {nodes: LayoutNode[]; wrap: Wrap};
 
@@ -83,11 +100,13 @@ export function layout(text: string, options: LayoutOptions = {}): LayoutNode[] 
 	);
 	const linkParts = findLinks(cleanText);
 	const emojiParts = findEmoji(cleanText).filter(outsideVerbatim);
+	const shortcodeParts = findShortcode(cleanText).filter(outsideVerbatim);
 	const nameParts = findNames(cleanText, options.users ?? []).filter(outsideVerbatim);
 
 	const parts = (channelParts as MergedParts)
 		.concat(linkParts)
 		.concat(emojiParts)
+		.concat(shortcodeParts as MergedParts)
 		.concat(nameParts);
 
 	// Merge the styling information with the channels / URLs / nicks / text
@@ -178,6 +197,16 @@ function partNode(part: PartWithFragments<ParsedStyle>): LayoutNode | undefined 
 	}
 
 	if (part.emoji) {
+		// A shortcode renders as the character it stands for, not as the
+		// `:name:` that was typed
+		if (part.shortcode) {
+			return {
+				kind: "emoji",
+				emoji: part.emoji,
+				children: [textNode({...part.fragments[0], text: part.emoji})],
+			};
+		}
+
 		return {kind: "emoji", emoji: part.emoji, children};
 	}
 
@@ -249,11 +278,15 @@ function wrapOf(fragment: ParsedStyle | undefined): Wrap {
 		wrap.lang = fragment.lang;
 	}
 
+	if (fragment.codeBlock && fragment.file) {
+		wrap.file = fragment.file;
+	}
+
 	return wrap;
 }
 
 function sameWrap(a: Wrap, b: Wrap) {
-	return WRAP_KEYS.every((key) => a[key] === b[key]) && a.lang === b.lang;
+	return WRAP_KEYS.every((key) => a[key] === b[key]) && a.lang === b.lang && a.file === b.file;
 }
 
 function wrapNode(key: WrapKey, wrap: Wrap, children: LayoutNode[]): LayoutNode {
@@ -266,16 +299,32 @@ function wrapNode(key: WrapKey, wrap: Wrap, children: LayoutNode[]): LayoutNode 
 	}
 
 	if (key === "codeBlock") {
-		return wrap.lang === undefined
+		return wrap.file !== undefined
+			? {
+					kind: "wrap",
+					wrap: "codeBlock",
+					lang: wrap.lang as string | undefined,
+					file: wrap.file,
+					children,
+			  }
+			: wrap.lang === undefined
 			? {kind: "wrap", wrap: "codeBlock", children}
 			: {kind: "wrap", wrap: "codeBlock", lang: wrap.lang, children};
+	}
+
+	if (key === "list") {
+		return {kind: "wrap", wrap: "list", list: String(wrap.list), children};
+	}
+
+	if (key === "table") {
+		return {kind: "wrap", wrap: "table", table: String(wrap.table), children};
 	}
 
 	return {kind: "wrap", wrap: key, children};
 }
 
 // Groups neighbouring nodes that share a wrap flag under one node, nesting
-// quote > header > codeBlock > spoiler > href.
+// quote > header > list > table > codeBlock > spoiler > mathBlock > math > href.
 function groupNodes(nodes: WrappedNodes[], level = 0): LayoutNode[] {
 	if (level === WRAP_KEYS.length) {
 		return nodes.flatMap((wrappedNodes) => wrappedNodes.nodes);
@@ -288,14 +337,16 @@ function groupNodes(nodes: WrappedNodes[], level = 0): LayoutNode[] {
 	while (i < nodes.length) {
 		const wrap = nodes[i].wrap;
 		const value = wrap[key];
-		// A code block only continues while the language stays the same
+		// A code block only continues while its language — and `lang:file` name
+		// — stay the same
 		const lang = key === "codeBlock" ? wrap.lang : undefined;
+		const file = key === "codeBlock" ? wrap.file : undefined;
 		let j = i + 1;
 
 		while (
 			j < nodes.length &&
 			nodes[j].wrap[key] === value &&
-			(key !== "codeBlock" || nodes[j].wrap.lang === lang)
+			(key !== "codeBlock" || (nodes[j].wrap.lang === lang && nodes[j].wrap.file === file))
 		) {
 			j += 1;
 		}

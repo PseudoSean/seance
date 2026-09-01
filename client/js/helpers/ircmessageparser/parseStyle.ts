@@ -29,8 +29,21 @@ export type ParsedStyle = {
 	href?: string;
 	// The level of the header line this fragment sits on, when it is one
 	header?: HeaderLevel;
-	// The code fence's language tag, when it had one
+	// The code fence's language tag, when it had one, and the file a
+	// `lang:file` tag named
 	lang?: string;
+	file?: string;
+	// The list the fragment is an item of: `ul`, or `ol:<first item's number>`
+	// for an ordered one
+	list?: string;
+	// The pipe table the fragment is a cell of, as its column alignments:
+	// one of `l`, `r`, `c` or `` (left) per column
+	table?: string;
+	// TeX rendered by KaTeX: `$`…`$` inline, `$$…$$` display. The id keeps two
+	// identical spans from merging into one.
+	math?: string;
+	mathBlock?: string;
+	mathId?: number;
 	text: string;
 	start: number;
 	end: number;
@@ -248,7 +261,13 @@ export const STYLE_KEYS: (keyof ParsedStyle)[] = [
 	"spoiler",
 	"href",
 	"lang",
+	"file",
 	"header",
+	"list",
+	"table",
+	"math",
+	"mathBlock",
+	"mathId",
 ];
 
 function prepare(text: string) {
