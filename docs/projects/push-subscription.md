@@ -108,6 +108,18 @@ Inventory (all verified by reading the source; branch head `1d323e0`):
   (`webpush_notify_pm` v1, `webpush_notify_channel` v2, account metadata
   `draft/webpush/payload` = ping/route/full) landed 2026-08-28 and are
   phase-2 material. Delivery prunes HTTP 410 endpoints.
+- **Stale-subscription sweep** (2026-09-02) — every REGISTER stamps an
+  arming timestamp onto the stored record (`endpoint|p256dh|auth|armed`;
+  the S2S `WP` wire format stays 3-field and receivers stamp receipt
+  time). A maintenance sweep at boot and then hourly (`webpush_sweep` in
+  `m_webpush.c`, the IPcheck `TT_PERIODIC` pattern) removes records not
+  re-armed within `FEAT_WEBPUSH_EXPIRE` seconds (default 180 days; `0`
+  disables), logging `WEBPUSH: expired N subscription(s)` at INFO.
+  Records from before the timestamp field are never swept — the client
+  stamps them on its next login (seance re-registers on every load), so
+  a swept device simply recovers on its next app start; a device that
+  stays connected without reloading longer than the window silently
+  loses pushes until it reconnects.
 - **VAPID provisioning** — priority order: `WEBPUSH_VAPID_PRIVKEY` feature →
   persisted key in the store → auto-generate + persist. No services (X3)
   involvement despite the stale "from services" comment in `m_cap.c`.
