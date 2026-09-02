@@ -13,10 +13,13 @@
 // precached copy of the app shell (index.html) so that navigations still
 // resolve when the host is unreachable and the PWA can open offline.
 //
-// There is no Web Push handler: push needs a server-side relay to hold the
-// subscription and send the pushes, and there is none in client-only mode.
-// In-page `Notification` requests are still routed through this worker (see
-// the "message" handler) so that clicks on them focus or reopen the app.
+// Web Push (draft/webpush): the server sends one raw IRC line per push
+// (no CRLF). The handler below is deliberately the smallest thing that
+// renders one — phase-2 slice 0, per docs/projects/push-subscription.md;
+// parsed messages, grouping and MARKREAD dedupe are planned in
+// notifications.md. In-page `Notification` requests are still routed through
+// this worker (see the "message" handler) so that clicks on them focus or
+// reopen the app.
 
 const cacheName = "__HASH__";
 const isDevBuild = cacheName === "dev";
@@ -212,6 +215,86 @@ self.addEventListener("message", function (event) {
 	showNotification(event, event.data);
 });
 
+// --- Web Push (draft/webpush, phase-2 slice 0) -----------------------------
+// The ircd pushes one IRC line (server-defined subset: PMs and highlights,
+// `@time`/`msgid` tags included) per notification, encrypted by the browser
+// before we see it. Group per sender so a burst collapses into one toast.
+
+self.addEventListener("push", function (event) {
+	const line = event.data ? event.data.text() : "";
+
+	event.waitUntil(showPushNotification(line));
+});
+
+async function showPushNotification(line) {
+	const msg = parsePushLine(line);
+
+	if (msg && (msg.command === "PRIVMSG" || msg.command === "NOTICE")) {
+		const isChannel = msg.target.startsWith("#");
+		const text = msg.text.replace(/\x01ACTION /, "*").replace(/\x01$/, "*");
+
+		await self.registration.showNotification(
+			isChannel ? `${msg.nick} in ${msg.target}` : msg.nick,
+			{
+				tag: `push-${msg.nick}`,
+				icon: "img/icon-192.png",
+				body: text,
+				timestamp: msg.time ? Date.parse(msg.time) : undefined,
+				data: {deepLink: null}, // deep links by msgid are phase 2
+			}
+		);
+		return;
+	}
+
+	// userVisibleOnly means every push should surface something; the server's
+	// subset is PM/highlight lines, so anything else is rare — show it generically.
+	await self.registration.showNotification("Seance", {
+		tag: "push-activity",
+		icon: "img/icon-192.png",
+		body: "New activity while you were away.",
+	});
+}
+
+/** Enough of an IRC line for a notification: `@tags :nick!u@h CMD target :text`. */
+function parsePushLine(line) {
+	let rest = line;
+	const tags = {};
+
+	if (rest.startsWith("@")) {
+		const space = rest.indexOf(" ");
+
+		if (space === -1) {
+			return null;
+		}
+
+		for (const pair of rest.slice(1, space).split(";")) {
+			const eq = pair.indexOf("=");
+
+			if (eq !== -1) {
+				tags[pair.slice(0, eq)] = pair.slice(eq + 1);
+			}
+		}
+
+		rest = rest.slice(space + 1);
+	}
+
+	if (!rest.startsWith(":")) {
+		return null;
+	}
+
+	const first = rest.indexOf(" ");
+	const nick = rest.slice(1, first).split("!")[0];
+	const tail = rest.slice(first + 1);
+	const second = tail.indexOf(" ");
+	const command = (second === -1 ? tail : tail.slice(0, second)).toUpperCase();
+	const params = second === -1 ? "" : tail.slice(second + 1);
+	const colon = params.indexOf(" :");
+	const target = (colon === -1 ? params : params.slice(0, colon)).split(" ")[0];
+	const text = colon === -1 ? "" : params.slice(colon + 2);
+
+	return {tags, nick, command, target, text, time: tags.time};
+}
+
 function showNotification(event, payload) {
 	// get current notification, close it, and draw new
 	event.waitUntil(
@@ -237,6 +320,13 @@ function showNotification(event, payload) {
 self.addEventListener("notificationclick", function (event) {
 	event.notification.close();
 
+	// Page-created notifications carry a `chan-<id>` tag; push notifications
+	// have no session-local id to route to (phase 2 adds msgid deep links),
+	// so they just open the app.
+	const route = event.notification.tag.startsWith("chan-")
+		? `.#/${event.notification.tag}`
+		: shellUrl;
+
 	event.waitUntil(
 		clients
 			.matchAll({
@@ -246,7 +336,7 @@ self.addEventListener("notificationclick", function (event) {
 			.then((clientList) => {
 				if (clientList.length === 0) {
 					if (clients.openWindow) {
-						return clients.openWindow(`.#/${event.notification.tag}`);
+						return clients.openWindow(route);
 					}
 
 					return;
