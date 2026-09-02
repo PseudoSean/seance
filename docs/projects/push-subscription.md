@@ -32,6 +32,8 @@ _Live-cycle findings 2026-09-02 (first real trigger attempt, testnet ircd):_
   silently skipped in `notify_iter_cb`. Pushes were stored correctly and
   never sent. Upstream-candidate commit in `testnet/nefarious`.
 - **The worker handles nefarious2's tiered JSON payloads** (`{"t":"msg",…}`
+  for PMs, `{"t":"hl",…}` for channel messages mentioning the account's
+  nick, `{"t":"read",…}` to close what another device already read
   - `text` on the `full` tier — the server DEFAULT since d7dedfb (the
     payload is encrypted server-to-device, so there is nothing to leak;
     accounts can still opt down with `METADATA \* SET draft/webpush/payload
