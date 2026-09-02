@@ -182,6 +182,10 @@ export default async function run(page) {
 		"there is a tab per group plus recents",
 		(await page.count(".reaction-picker-tab")) === 10
 	);
+	await page.check(
+		"tab does not walk 1878 buttons: the field drives the grid",
+		(await page.evaluate(`document.querySelector(${JSON.stringify(OPTION)}).tabIndex`)) === -1
+	);
 	await page.screenshot("1-picker-open", {selector: PICKER, pad: 8});
 
 	// 3. Searching. An exact alias means the emoji is what Enter sends.
@@ -315,6 +319,16 @@ export default async function run(page) {
 		flippedBox && flippedBox.y >= 0
 	);
 	await page.screenshot("7-flipped", {selector: "body", pad: 0});
+
+	// Opening one from another message closes this one: the opener stops the
+	// mousedown the outside-click handler would have seen.
+	await page.evaluate(
+		`document.querySelector(${JSON.stringify(MSG)}).scrollIntoView({block: "center"})`
+	);
+	await page.sleep(200);
+	await page.click(`${MSG} .msg-reaction-add`);
+	await page.sleep(400);
+	await page.check("only one picker is ever open", (await page.count(PICKER)) === 1);
 
 	await press(page, "Escape");
 	await page.sleep(200);

@@ -97,9 +97,10 @@
 								free: option.free,
 							}"
 							role="option"
+							tabindex="-1"
 							:aria-selected="option.index === activeIndex"
+							:aria-label="option.spoken"
 							:data-index="option.index"
-							:title="option.title"
 						>
 							<span v-if="option.free" class="reaction-picker-free-label"
 								>React with</span
@@ -170,6 +171,8 @@ type Option = {
 	/** `:shortcode:` or the reaction itself, for the preview line. */
 	name: string;
 	description: string;
+	/** What a screen reader says: the glyph alone would tell nobody anything. */
+	spoken: string;
 	/** Emoji render big and square; words render as a pill. */
 	emoji: boolean;
 	/** The "React with <what you typed>" row. */
@@ -189,6 +192,14 @@ const NEIGHBOURHOOD = 40;
 
 // Unique per open picker, so ARIA ids never collide with a closing one.
 let instances = 0;
+
+/**
+ * Announced by a picker as it opens, carrying its uid. Openers stop the
+ * mousedown that would otherwise reach the document (so their own button
+ * toggles), which is the very event the outside-click handler waits for — so
+ * without this, opening a second picker would leave the first one on screen.
+ */
+const PICKER_OPENED = "reaction-picker-opened";
 
 export default defineComponent({
 	name: "ReactionPicker",
@@ -226,6 +237,7 @@ export default defineComponent({
 			title: `:${entry.name}: ${entry.description}`,
 			name: `:${entry.name}:`,
 			description: entry.description,
+			spoken: entry.description,
 			emoji: true,
 		});
 
@@ -259,6 +271,7 @@ export default defineComponent({
 				title: text,
 				name: text,
 				description: emoji ? "" : "sent as text",
+				spoken: text,
 				emoji,
 			};
 		};
@@ -288,6 +301,7 @@ export default defineComponent({
 						...textOption(free),
 						title: `React with ${free}`,
 						description: "sent as text",
+						spoken: `React with ${free}`,
 						free: true,
 					};
 
@@ -640,7 +654,15 @@ export default defineComponent({
 
 		watch(catalog, () => void nextTick(reposition));
 
+		const onOtherOpened = (other: string) => {
+			if (other !== uid) {
+				close();
+			}
+		};
+
 		onMounted(() => {
+			eventbus.emit(PICKER_OPENED, uid);
+			eventbus.on(PICKER_OPENED, onOtherOpened);
 			document.addEventListener("mousedown", onDocumentMouseDown);
 			window.addEventListener("scroll", reposition, true);
 			window.addEventListener("resize", reposition);
@@ -657,6 +679,7 @@ export default defineComponent({
 		});
 
 		onBeforeUnmount(() => {
+			eventbus.off(PICKER_OPENED, onOtherOpened);
 			document.removeEventListener("mousedown", onDocumentMouseDown);
 			window.removeEventListener("scroll", reposition, true);
 			window.removeEventListener("resize", reposition);
