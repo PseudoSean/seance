@@ -71,7 +71,9 @@ describe("Web Push subscription (draft/webpush)", function () {
 			register(h, `${ALL_CAPS} draft/webpush=vapid=${VAPID}`);
 
 			const payloads =
-				h.payloads<{network: string; vapid: string | undefined}>("webpush:available");
+				h.payloads<{network: string; vapid: string | undefined; sasl: boolean}>(
+					"webpush:available"
+				);
 			expect(payloads).to.have.lengthOf(1);
 			expect(payloads[0].network).to.equal(h.client.uuid);
 			expect(payloads[0].vapid).to.equal(VAPID);
@@ -82,7 +84,9 @@ describe("Web Push subscription (draft/webpush)", function () {
 			register(h, ALL_CAPS);
 
 			const payloads =
-				h.payloads<{network: string; vapid: string | undefined}>("webpush:available");
+				h.payloads<{network: string; vapid: string | undefined; sasl: boolean}>(
+					"webpush:available"
+				);
 			expect(payloads).to.have.lengthOf(1);
 			expect(payloads[0].vapid).to.be.undefined;
 		});

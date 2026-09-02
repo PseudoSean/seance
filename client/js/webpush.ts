@@ -1,3 +1,5 @@
+import {reactive} from "vue";
+
 import socket from "./socket";
 import {store} from "./store";
 import storage from "./localStorage";
@@ -34,6 +36,16 @@ interface PushMaterial {
 }
 
 const STORAGE_KEY = "thelounge.push";
+
+/** Device-local "never ask again" answer for the connect-time subscribe
+ * prompt (thelounge.* key convention; deliberately not in `thelounge.push`
+ * so the subscription map keeps its shape). */
+const NEVER_ASK_KEY = "thelounge.push.neverAsk";
+
+/** The connect-time "enable push notifications?" prompt (yes/no/never).
+ * Rendered by components/PushPrompt.vue; state lives here because the
+ * decision needs this module's servers/subscriptions view. */
+const pushPrompt = reactive({visible: false});
 
 /** Per-network VAPID keys as announced by `webpush:available`. */
 const servers = new Map<string, string | undefined>();
@@ -193,11 +205,54 @@ function autoRegister(network: string, vapid: string | undefined): void {
 	}
 }
 
-socket.on("webpush:available", ({network, vapid}) => {
+socket.on("webpush:available", ({network, vapid, sasl}) => {
 	servers.set(network, vapid);
 	autoRegister(network, vapid);
 	refreshState();
+	maybePrompt(vapid, sasl);
 });
+
+/** Offer the subscribe prompt once per connection that logged in with SASL
+ * on a push-capable network: the server can push only for accounts, so an
+ * anonymous connect has nothing to offer. Skipped when this browser cannot
+ * subscribe, permission is already denied, a subscription exists, or the
+ * user answered "never" on this device. */
+function maybePrompt(vapid: string | undefined, sasl: boolean): void {
+	if (!sasl || vapid === undefined || pushPrompt.visible) {
+		return;
+	}
+
+	if (!browserSupported() || needsInstall() || permissionDenied()) {
+		return;
+	}
+
+	if (storage.get(NEVER_ASK_KEY)) {
+		return;
+	}
+
+	if (Object.keys(subs).length > 0) {
+		return;
+	}
+
+	pushPrompt.visible = true;
+}
+
+/** Prompt answer: subscribe (the click is the permission user gesture). */
+function acceptPrompt(): void {
+	pushPrompt.visible = false;
+	void subscribe();
+}
+
+/** Prompt answer: not now — asked again on the next connect. */
+function declinePrompt(): void {
+	pushPrompt.visible = false;
+}
+
+/** Prompt answer: never ask again on this device. */
+function neverPrompt(): void {
+	storage.set(NEVER_ASK_KEY, "1");
+	pushPrompt.visible = false;
+}
 
 socket.on("webpush:state", ({network, action, endpoint, ok, code, reason}) => {
 	if (ok) {
@@ -452,4 +507,8 @@ export default {
 	unsubscribe,
 	setSnooze,
 	refresh: refreshState,
+	pushPrompt,
+	acceptPrompt,
+	declinePrompt,
+	neverPrompt,
 };

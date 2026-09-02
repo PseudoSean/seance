@@ -113,8 +113,8 @@ interface ServerToClientEvents {
 	/** Someone else's `+typing` TAGMSG in a loaded channel/query (never our own). */
 	typing: EventHandler<{chan: number; nick: string; state: TypingState}>;
 
-	/** Web Push (draft/webpush): one dispatch per network at registration. `vapid` is the server's public key, or undefined when it cannot push (cap not negotiated or no key advertised). Consumed by `client/js/webpush.ts`. */
-	"webpush:available": EventHandler<{network: string; vapid: string | undefined}>;
+	/** Web Push (draft/webpush): one dispatch per network at registration. `vapid` is the server's public key, or undefined when it cannot push (cap not negotiated or no key advertised). `sasl` is true when this connection logged in via SASL (903 seen). Consumed by `client/js/webpush.ts` (re-register + the subscribe prompt). */
+	"webpush:available": EventHandler<{network: string; vapid: string | undefined; sasl: boolean}>;
 	/** The server acknowledged (`ok: true`) or refused (`FAIL WEBPUSH`, `ok: false` + `code`/`reason`) a `WEBPUSH REGISTER|UNREGISTER`. */
 	"webpush:state": EventHandler<{
 		network: string;

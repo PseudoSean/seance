@@ -29,17 +29,19 @@
 				has something for you while it is closed.
 			</div>
 			<div v-if="store.state.pushNotificationState === 'subscribed'" class="opt">
-				Snooze pushes everywhere:
-				<button type="button" class="btn" @click.prevent="snooze(15 * 60 * 1000)">
-					15 min
-				</button>
-				<button type="button" class="btn" @click.prevent="snooze(60 * 60 * 1000)">
-					1 hour
-				</button>
-				<button type="button" class="btn" @click.prevent="snooze(8 * 60 * 60 * 1000)">
-					8 hours
-				</button>
-				<button type="button" class="btn" @click.prevent="snooze(0)">Off</button>
+				<div>Snooze pushes everywhere:</div>
+				<div class="push-snooze">
+					<button type="button" class="btn" @click.prevent="snooze(15 * 60 * 1000)">
+						15 min
+					</button>
+					<button type="button" class="btn" @click.prevent="snooze(60 * 60 * 1000)">
+						1 hour
+					</button>
+					<button type="button" class="btn" @click.prevent="snooze(8 * 60 * 60 * 1000)">
+						8 hours
+					</button>
+					<button type="button" class="btn" @click.prevent="snooze(0)">Off</button>
+				</div>
 			</div>
 			<div v-if="store.state.pushNotificationState === 'unsupported'" class="error">
 				Push notifications are not supported by this browser (they need the Push API, a
@@ -61,48 +63,6 @@
 				<strong>Warning</strong>: The server refused the push subscription. It may require
 				logging in (SASL) before subscribing.
 			</div>
-		</div>
-
-		<h2>Session</h2>
-		<div>
-			<p class="opt">
-				The server keeps your session while you are away (bouncer-style persistence). This
-				is the session the server sees right now:
-			</p>
-			<div v-if="sessions.length" id="sessionList">
-				<div v-for="s in sessions" :key="s.sessid" class="session-row">
-					<span class="session-state" :class="'session-' + s.state.toLowerCase()">{{
-						s.state
-					}}</span>
-					<strong>{{ s.nick }}</strong>
-					<span v-if="s.channels.length"> in {{ s.channels.join(", ") }}</span>
-					<div class="session-info">
-						{{ s.info }}
-					</div>
-				</div>
-			</div>
-			<div v-else-if="sessionsLoaded" id="sessionEmpty">
-				No persistence session (you are not holding a connection on the server).
-			</div>
-			<div class="opt">
-				<button
-					id="refreshSessions"
-					type="button"
-					class="btn"
-					@click.prevent="loadSessions"
-				>
-					Refresh
-				</button>
-				<button id="forceLogout" type="button" class="btn" @click.prevent="forceLogout">
-					Force logout (end session)
-				</button>
-			</div>
-			<p class="opt">
-				Force logout ends this device's server session and closes its push subscription; the
-				server also forgets every subscription for the account (other devices re-register
-				automatically next time they log in). Other devices' subscriptions cannot be listed
-				from here — the draft/webpush extension has no listing verb.
-			</p>
 		</div>
 
 		<h2>Browser Notifications</h2>
@@ -233,11 +193,9 @@ your nickname or expressions defined in custom highlights."
 </template>
 
 <script lang="ts">
-import {computed, defineComponent, onMounted, onUnmounted, ref} from "vue";
+import {computed, defineComponent, onMounted} from "vue";
 import {useStore} from "../../js/store";
-import socket from "../../js/socket";
 import webpush from "../../js/webpush";
-import type {PushSession} from "../../../shared/types/socket-events";
 
 export default defineComponent({
 	name: "NotificationSettings",
@@ -290,38 +248,8 @@ export default defineComponent({
 			webpush.setSnooze(ms);
 		};
 
-		// Session panel: the account's bouncer session as the server sees it
-		// (`PERSISTENCE LIST` → SESSION/ENDOFLIST → `persistence:sessions`).
-		const sessions = ref<PushSession[]>([]);
-		const sessionsLoaded = ref(false);
-
-		const loadSessions = () => {
-			sessionsLoaded.value = true;
-			socket.emit("persistence:sessions:list", {});
-		};
-
-		const forceLogout = () => {
-			// The server tears down the session AND forgets every webpush
-			// subscription for the account (webpush_store_clear on DETACH);
-			// release this browser's subscription too so the indicator is
-			// honest and the endpoint dies at FCM.
-			socket.emit("persistence:sessions:logout", {});
-			void webpush.unsubscribe();
-		};
-
-		const onSessions = (data: {sessions: PushSession[]}) => {
-			sessions.value = data.sessions;
-			sessionsLoaded.value = true;
-		};
-
 		onMounted(() => {
 			webpush.refresh();
-			socket.on("persistence:sessions", onSessions);
-			loadSessions();
-		});
-
-		onUnmounted(() => {
-			socket.off("persistence:sessions", onSessions);
 		});
 
 		const playNotification = () => {
@@ -340,10 +268,6 @@ export default defineComponent({
 			togglePush,
 			snooze,
 			pushStateLabel,
-			sessions,
-			sessionsLoaded,
-			loadSessions,
-			forceLogout,
 		};
 	},
 });

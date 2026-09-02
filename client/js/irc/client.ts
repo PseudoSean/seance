@@ -223,6 +223,9 @@ export class IrcClient {
 	private batchRefs = 0;
 	/** The SASL exchange in progress during registration, if any. */
 	sasl: SaslAuth | null = null;
+	/** The last SASL exchange ended successfully (903); a configured login
+	 * that was asked for and succeeded. Drives the push-subscribe prompt. */
+	saslOk = false;
 	/** Services account we are logged in as (900/901); "" when not. */
 	account = "";
 	/** The server holds our session across disconnects (`PERSISTENCE STATUS ON`, see persistence.ts). */
@@ -826,10 +829,14 @@ export class IrcClient {
 		this.endSasl();
 
 		if (!result.ok) {
+			this.saslOk = false;
+
 			if (this.saslFailed(result.error ?? "unknown error")) {
 				return;
 			}
 		} else {
+			this.saslOk = true;
+
 			// The one window `PERSISTENCE ATTACH` fits in: the server refuses
 			// it without an account and again once we are registered. It goes
 			// out in the same flush as `CAP END`, before it (persistence.ts).
@@ -1015,7 +1022,11 @@ export class IrcClient {
 		// subscription and the Settings UI can tell the two cases apart. The
 		// WEBPUSH REGISTER itself is emitted later through the bus — a
 		// REGISTER sent before CAP END is silently dropped by nefarious2.
-		this.dispatch("webpush:available", {network: this.uuid, vapid: this.webpushVapid()});
+		this.dispatch("webpush:available", {
+			network: this.uuid,
+			vapid: this.webpushVapid(),
+			sasl: this.saslOk,
+		});
 
 		if (this.persistenceHold || this.serverReplay) {
 			// The server may be about to restore the channels of our held

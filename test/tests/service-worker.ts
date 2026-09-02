@@ -89,7 +89,10 @@ function serve(ws: any, line: string): void {
 	}
 }
 
-const wsInstances: FakeWS[] = [];
+/** Every FakeWS the harness created, newest last.  Typed structurally:
+ * declaring it as FakeWS[] after the class (or before it) trips
+ * no-use-before-define either way. */
+const wsInstances: Array<{sent: string[]; closed: boolean}> = [];
 
 class FakeWS {
 	sent: string[] = [];

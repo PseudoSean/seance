@@ -2417,6 +2417,17 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	padding: 5px 0 5px 1px;
 }
 
+/* Adjacent buttons in a settings row keep a gap between them (snooze row,
+ * prompt actions, anything else that ends up inline). */
+#settings .opt .btn + .btn {
+	margin-left: 8px;
+}
+
+/* The push snooze buttons sit on their own line under their label. */
+#settings .push-snooze {
+	margin-top: 4px;
+}
+
 #settings .opt input {
 	margin-right: 6px;
 }
@@ -3694,6 +3705,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 /* Image viewer and drag-and-drop overlay */
 
 #confirm-dialog-overlay,
+#push-prompt-overlay,
 #upload-overlay,
 #image-viewer,
 #image-viewer .open-btn,
@@ -3706,6 +3718,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #confirm-dialog-overlay,
+#push-prompt-overlay,
 #upload-overlay,
 #image-viewer {
 	position: fixed;
@@ -3722,6 +3735,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #confirm-dialog-overlay.opened,
+#push-prompt-overlay.opened,
 #upload-overlay.is-dragover,
 #image-viewer.opened {
 	visibility: visible;
@@ -3729,6 +3743,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #confirm-dialog-overlay,
+#push-prompt-overlay,
 #image-viewer {
 	background: rgb(0 0 0 / 90%);
 }

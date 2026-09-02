@@ -895,7 +895,6 @@ function swMute(net, target, until) {
 				// ERR_NOMATCHINGKEY: no mute list yet; start from empty.
 				value = "";
 				finish();
-				return;
 			}
 		};
 
