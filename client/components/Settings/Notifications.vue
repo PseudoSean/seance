@@ -98,9 +98,10 @@
 				</button>
 			</div>
 			<p class="opt">
-				Force logout ends this device's server session (it drops the hold and the ghost
-				nick). Other devices' push subscriptions cannot be listed or revoked from here — the
-				draft/webpush extension has no listing verb; each device unsubscribes itself.
+				Force logout ends this device's server session and closes its push subscription; the
+				server also forgets every subscription for the account (other devices re-register
+				automatically next time they log in). Other devices' subscriptions cannot be listed
+				from here — the draft/webpush extension has no listing verb.
 			</p>
 		</div>
 
@@ -300,7 +301,12 @@ export default defineComponent({
 		};
 
 		const forceLogout = () => {
+			// The server tears down the session AND forgets every webpush
+			// subscription for the account (webpush_store_clear on DETACH);
+			// release this browser's subscription too so the indicator is
+			// honest and the endpoint dies at FCM.
 			socket.emit("persistence:sessions:logout", {});
+			void webpush.unsubscribe();
 		};
 
 		const onSessions = (data: {sessions: PushSession[]}) => {
