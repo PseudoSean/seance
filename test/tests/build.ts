@@ -159,7 +159,10 @@ describe("public folder", function () {
 			expect(contents.includes("socket.io")).to.be.false;
 			expect(contents.includes("uploads")).to.be.false;
 			expect(contents.includes("storage")).to.be.false;
-			expect(contents.includes('addEventListener("push"')).to.be.false;
+
+			// Web Push (draft/webpush, phase 2 slice 0): the push handler is
+			// back — the ircd delivers raw lines now (push-subscription.md).
+			expect(contents.includes('addEventListener("push"')).to.be.true;
 
 			done();
 		});
