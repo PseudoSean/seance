@@ -93,6 +93,11 @@ nefarious2 `ircv3.2-upgrade` (`tmp/nefarious2/ircd/m_webpush.c`,
   > "no caller" blocker below is resolved and D.11 can start; the client work
   > (VAPID key handling, `WEBPUSH REGISTER`, service-worker `push` handler)
   > is unchanged.
+  >
+  > **Update 2026-09-01:** phase 1 (subscription via `draft/webpush`) is
+  > researched and verified end-to-end against the testnet ircd — spec,
+  > server inventory, wire transcript and the implementation plan live in
+  > [`push-subscription.md`](push-subscription.md).
 
 - Delivery exists (`webpush_notify_account()` iterates the account's
   subscriptions, prunes HTTP 410), **but nothing calls it**: as of this
