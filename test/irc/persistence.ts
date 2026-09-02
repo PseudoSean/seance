@@ -89,6 +89,36 @@ describe("Session persistence and quiet re-joins (irc/persistence.ts)", function
 			expect(awaitingRestoration(one.client)).to.equal(true);
 		});
 
+		it("auto-enables persistence (PERSISTENCE SET ON) when logged in via SASL", function () {
+			const h = setup({sasl: "plain", saslAccount: "acc", saslPassword: "pw"});
+			h.client.connect();
+			h.transport.open();
+			h.transport.line(`:irc.test CAP * LS :${CAPS} sasl=PLAIN`);
+			const req = h.transport.sent.find((l) => l.startsWith("CAP REQ :"))!;
+			h.transport.line(`:irc.test CAP alice ACK :${req.slice("CAP REQ :".length)}`);
+			h.transport.line("AUTHENTICATE +");
+			h.transport.lines(
+				":irc.test 900 alice alice!alice@host acc :You are now logged in as acc",
+				":irc.test 903 alice :SASL authentication successful"
+			);
+
+			// The registration flush: SET ON rides with CAP END, before it.
+			const sent = h.sent();
+			const setIdx = sent.indexOf("PERSISTENCE SET ON");
+			expect(setIdx, "SET ON sent").to.be.at.least(0);
+			expect(sent.indexOf("CAP END")).to.be.greaterThan(setIdx);
+
+			// The ack + the STATUS that follows are ours: silent.
+			h.transport.lines(":irc.test PERSISTENCE SET ON", ":irc.test PERSISTENCE STATUS ON ON");
+			expect(h.messages().some((m) => /persistence/i.test(m.text ?? ""))).to.equal(false);
+		});
+
+		it("does not auto-enable persistence without SASL", function () {
+			const h = setup();
+			register(h, CAPS, HOLD);
+			expect(h.transport.sent.some((l) => l.startsWith("PERSISTENCE SET"))).to.equal(false);
+		});
+
 		it("STATUS OFF (or no STATUS) JOINs at once", function () {
 			const off = setup();
 			register(off, CAPS, [":irc.test PERSISTENCE STATUS DEFAULT OFF"]);

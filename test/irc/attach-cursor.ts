@@ -259,7 +259,9 @@ describe("PERSISTENCE ATTACH catch-up cursor (irc/persistence.ts)", function () 
 			const attach = sent.indexOf("PERSISTENCE ATTACH default m9");
 			expect(attach, "ATTACH sent").to.be.greaterThan(-1);
 			expect(sent[attach + 1]).to.equal("CAP END");
-			expect(sent[attach - 1]).to.match(/^AUTHENTICATE /);
+			// SET ON rides the same flush (the persistence opt-in, client.ts).
+			expect(sent[attach - 1]).to.equal("PERSISTENCE SET ON");
+			expect(sent[attach - 2]).to.match(/^AUTHENTICATE /);
 			expect(h.client.attachCursor).to.equal("m9");
 			expect(h.client.serverReplay).to.equal(false);
 
@@ -275,7 +277,10 @@ describe("PERSISTENCE ATTACH catch-up cursor (irc/persistence.ts)", function () 
 			const h = saslClient();
 			authenticate(h, `${ALL_CAPS} sasl=PLAIN ${PERSISTENCE_NO_CURSOR}`);
 
-			expect(h.transport.sent.some((l) => l.startsWith("PERSISTENCE"))).to.equal(false);
+			expect(h.transport.sent.some((l) => l.startsWith("PERSISTENCE ATTACH"))).to.equal(
+				false
+			);
+			expect(h.transport.sent).to.include("PERSISTENCE SET ON");
 			expect(h.transport.sent).to.include("CAP END");
 			expect(h.client.attachCursor).to.equal(undefined);
 		});
@@ -284,14 +289,18 @@ describe("PERSISTENCE ATTACH catch-up cursor (irc/persistence.ts)", function () 
 			store();
 			const h = saslClient();
 			authenticate(h);
-			expect(h.transport.sent.some((l) => l.startsWith("PERSISTENCE"))).to.equal(false);
+			expect(h.transport.sent.some((l) => l.startsWith("PERSISTENCE ATTACH"))).to.equal(
+				false
+			);
 		});
 
 		it("does not send a msgid the server could not store (>= 64 bytes)", function () {
 			store({msgid: "x".repeat(64), time: 123});
 			const h = saslClient();
 			authenticate(h);
-			expect(h.transport.sent.some((l) => l.startsWith("PERSISTENCE"))).to.equal(false);
+			expect(h.transport.sent.some((l) => l.startsWith("PERSISTENCE ATTACH"))).to.equal(
+				false
+			);
 
 			// One byte shorter fits.
 			const ok = saslClient({uuid: UUID});
@@ -482,7 +491,10 @@ describe("PERSISTENCE ATTACH catch-up cursor (irc/persistence.ts)", function () 
 			const h = saslClient();
 			reconnect(h, `${ALL_CAPS} sasl=PLAIN ${PERSISTENCE_NO_CURSOR}`);
 
-			expect(h.transport.sent.some((l) => l.startsWith("PERSISTENCE"))).to.equal(false);
+			expect(h.transport.sent.some((l) => l.startsWith("PERSISTENCE ATTACH"))).to.equal(
+				false
+			);
+			expect(h.transport.sent).to.include("PERSISTENCE SET ON");
 			expect(chathistory(h.sent())).to.have.length(1);
 		});
 

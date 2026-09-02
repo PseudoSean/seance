@@ -53,7 +53,13 @@ const persistence: Handler = (client, msg) => {
 
 	if (what === "SET") {
 		// The ack of what we asked for; the STATUS that follows carries the
-		// state the server will act on.
+		// state the server will act on. Our own registration-time auto-enable
+		// (../persistence.ts persistenceEnableLine) is silent — the user never
+		// typed anything.
+		if (client.state === "registering") {
+			return;
+		}
+
 		client.pushMessage(client.lobby, {
 			text: `Session persistence set to: ${(rest[0] ?? "").toUpperCase()}`,
 		});

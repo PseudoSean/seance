@@ -51,6 +51,8 @@ import {
 	awaitRestoration,
 	beginSettling,
 	cancelRestoration,
+	persistenceEnableLine,
+	PERSISTENCE_CAP,
 	serverReplayCovers,
 } from "./persistence";
 import {IdAllocator, sharedIds} from "./ids";
@@ -824,6 +826,14 @@ export class IrcClient {
 			// The one window `PERSISTENCE ATTACH` fits in: the server refuses
 			// it without an account and again once we are registered. It goes
 			// out in the same flush as `CAP END`, before it (persistence.ts).
+			// `SET ON` rides along: it is the client-side opt-in that creates
+			// the server's bouncer session and turns on its hold — without it
+			// the session never exists and draft/webpush pushes can never
+			// fire (docs/projects/push-subscription.md).
+			if (this.caps.hasCapability(PERSISTENCE_CAP)) {
+				this.send(persistenceEnableLine());
+			}
+
 			this.offerAttachCursor();
 		}
 
