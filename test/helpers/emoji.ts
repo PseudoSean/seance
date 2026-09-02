@@ -1,5 +1,6 @@
 import {expect} from "chai";
 import {
+	appendReaction,
 	emojiForName,
 	EmojiGroup,
 	expandShortcodes,
@@ -120,6 +121,28 @@ describe("emoji catalog and reaction text (helpers/emoji.ts)", function () {
 
 			expect(Array.from(cut)).to.have.lengthOf(MAX_REACTION_LENGTH);
 			expect(cut).to.equal("🎉".repeat(MAX_REACTION_LENGTH));
+		});
+
+		it("builds a reaction up one pick at a time", function () {
+			// Emoji sit flush against each other — that is the point of it —
+			// and anything with a word in it keeps its spaces.
+			expect(appendReaction("", "🎉")).to.equal("🎉");
+			expect(appendReaction("🎉", "🔥")).to.equal("🎉🔥");
+			expect(appendReaction("🎉🔥", "👍")).to.equal("🎉🔥👍");
+			expect(appendReaction("so", "cool")).to.equal("so cool");
+			expect(appendReaction("🎉", "nice")).to.equal("🎉 nice");
+			expect(appendReaction("nice", "🎉")).to.equal("nice 🎉");
+			expect(appendReaction("so ", "cool")).to.equal("so cool");
+			expect(appendReaction("🎉", "   ")).to.equal("🎉");
+		});
+
+		it("refuses an addition that would not fit, keeping what is there", function () {
+			const full = "🎉".repeat(MAX_REACTION_LENGTH);
+
+			expect(appendReaction(full, "🔥")).to.equal(full);
+			expect(appendReaction("🎉".repeat(MAX_REACTION_LENGTH - 1), "🔥")).to.have.lengthOf(
+				("🎉".repeat(MAX_REACTION_LENGTH - 1) + "🔥").length
+			);
 		});
 
 		it("tells emoji from words, however many there are", function () {

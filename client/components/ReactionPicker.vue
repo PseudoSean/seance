@@ -70,6 +70,7 @@
 				@mousedown.prevent
 				@click="onListClick"
 				@mouseover="onListHover"
+				@mouseleave="onListLeave"
 			>
 				<p v-if="failed" class="reaction-picker-note">
 					The emoji list could not be loaded. You can still type a reaction above.
@@ -122,12 +123,29 @@
 							active.description
 						}}</span>
 					</span>
-					<span v-if="isSelected(active)" class="reaction-picker-preview-hint"
-						>Remove</span
+					<span class="reaction-picker-preview-hint">{{ hint }}</span>
+				</template>
+				<!-- Nothing highlighted, but something is being built: the bar is
+				     where you see it and where you send it from. -->
+				<template v-else-if="building">
+					<span class="reaction-picker-preview-emoji">{{ building }}</span>
+					<span class="reaction-picker-preview-text">
+						<span class="reaction-picker-preview-name">Building a reaction</span>
+						<span class="reaction-picker-preview-desc"
+							>Shift-click to add more emoji</span
+						>
+					</span>
+					<button
+						type="button"
+						class="reaction-picker-send"
+						@mousedown.prevent
+						@click="pickTyped"
 					>
+						Send
+					</button>
 				</template>
 				<span v-else class="reaction-picker-preview-hint"
-					>Pick an emoji — or type a word, it is a reaction too.</span
+					>Pick an emoji, type a word, or shift-click to combine several.</span
 				>
 			</div>
 		</div>
@@ -147,6 +165,7 @@ import {
 } from "vue";
 import eventbus from "../js/eventbus";
 import {
+	appendReaction,
 	EmojiEntry,
 	emojiForName,
 	EmojiGroup,
@@ -276,6 +295,30 @@ export default defineComponent({
 			};
 		};
 
+		/** The "React with …" row: what is typed, offered as it stands. */
+		const freeOption = (text: string): Omit<Option, "index"> => ({
+			text,
+			label: text,
+			title: `React with ${text}`,
+			name: text,
+			description: "sent as text",
+			spoken: `React with ${text}`,
+			emoji: isEmojiOnly(text),
+			free: true,
+		});
+
+		/**
+		 * Something typed that is only emoji is a reaction being built, not a
+		 * search: shift-clicking appends to it, so replacing the grid with
+		 * results for what was just added would take away the very thing being
+		 * clicked. The field shows what it is; the preview bar sends it.
+		 */
+		const composing = computed(() => {
+			const typed = query.value.trim();
+
+			return typed.length > 0 && isEmojiOnly(typed);
+		});
+
 		const sections = computed<Section[]>(() => {
 			let index = 0;
 			const number = (options: Omit<Option, "index">[]): Option[] =>
@@ -283,7 +326,7 @@ export default defineComponent({
 
 			const typed = query.value.trim();
 
-			if (typed) {
+			if (typed && !composing.value) {
 				const hits = catalog.value ? searchEmoji(catalog.value, typed) : [];
 				const options = hits.map(entryOption);
 				const free = normalizeReaction(typed);
@@ -297,13 +340,7 @@ export default defineComponent({
 				// is naming (`tada` → 🎉), anything else is words until they
 				// say otherwise, or `lol` would react with 🍭 lollipop.
 				if (free && !hits.some((hit) => hit.emoji === free)) {
-					const row = {
-						...textOption(free),
-						title: `React with ${free}`,
-						description: "sent as text",
-						spoken: `React with ${free}`,
-						free: true,
-					};
+					const row = freeOption(free);
 
 					if (emojiForName(typed)) {
 						options.push(row);
@@ -361,6 +398,22 @@ export default defineComponent({
 		const active = computed<Option | undefined>(() => options.value[activeIndex.value]);
 		const isSelected = (option: Option) => props.selected.includes(option.text);
 
+		/** The reaction being built, shown by the preview bar while it is. */
+		const building = computed(() => (composing.value ? query.value.trim() : ""));
+
+		// The one line that says what would happen to the highlighted option.
+		const hint = computed(() => {
+			if (!active.value) {
+				return "";
+			}
+
+			if (isSelected(active.value)) {
+				return "Remove";
+			}
+
+			return active.value.free ? "Enter to send" : "⇧ to combine";
+		});
+
 		const pick = (text: string) => {
 			const normalized = normalizeReaction(text);
 
@@ -379,6 +432,34 @@ export default defineComponent({
 		};
 
 		const optionAt = (index: number) => options.value[index];
+
+		/**
+		 * Add `text` to what is being built instead of sending it — the
+		 * shift-click. The field is the composition, so it goes there and
+		 * keeps the caret at the end; the grid stays put (see `composing`).
+		 * The "React with …" row is the send button, so it never appends.
+		 */
+		const append = (option: Option) => {
+			if (option.free) {
+				pick(option.text);
+				return;
+			}
+
+			const next = appendReaction(query.value, option.text);
+
+			if (next === query.value) {
+				return; // it would not fit: leave what is there alone
+			}
+
+			query.value = next;
+
+			void nextTick(() => {
+				const field = input.value;
+
+				field?.focus();
+				field?.setSelectionRange(next.length, next.length);
+			});
+		};
 
 		const scrollActiveIntoView = () => {
 			const el = list.value?.querySelector<HTMLElement>(
@@ -497,7 +578,9 @@ export default defineComponent({
 				case "Enter":
 					e.preventDefault();
 
-					if (active.value) {
+					if (active.value && e.shiftKey) {
+						append(active.value);
+					} else if (active.value) {
 						pick(active.value.text);
 					} else if (query.value.trim()) {
 						pick(query.value);
@@ -514,18 +597,47 @@ export default defineComponent({
 			const el = (e.target as HTMLElement).closest<HTMLElement>("[data-index]");
 			const option = el ? optionAt(Number(el.dataset.index)) : undefined;
 
-			if (option) {
+			if (!option) {
+				return;
+			}
+
+			if (e.shiftKey) {
+				append(option);
+			} else {
 				pick(option.text);
 			}
 		};
 
 		const onListHover = (e: MouseEvent) => {
+			// While a reaction is being built the preview bar is showing it,
+			// and Enter has to keep meaning "send that" — otherwise passing the
+			// pointer over an emoji would quietly rewrite what Enter does.
+			// `:hover` still lights the cell, and arrow keys still move the
+			// highlight, because both of those are asked for.
+			if (composing.value) {
+				return;
+			}
+
 			const el = (e.target as HTMLElement).closest<HTMLElement>("[data-index]");
 
 			if (el) {
 				activeIndex.value = Number(el.dataset.index);
 			}
 		};
+
+		/**
+		 * Nothing under the pointer, nothing highlighted: Enter goes back to
+		 * meaning the search's best guess, or the reaction being built, rather
+		 * than whichever emoji the pointer happened to leave behind.
+		 */
+		const defaultActive = () => (query.value.trim() && !composing.value ? 0 : -1);
+
+		const onListLeave = () => {
+			activeIndex.value = defaultActive();
+		};
+
+		/** Send what is in the field as it stands (the Send button). */
+		const pickTyped = () => pick(query.value);
 
 		const clear = () => {
 			query.value = "";
@@ -641,13 +753,18 @@ export default defineComponent({
 			}
 		};
 
-		watch(query, () => {
-			// With something typed there is always a best guess to highlight;
-			// browsing, nothing is until the pointer or a key says so.
-			activeIndex.value = query.value.trim() ? 0 : -1;
-			currentTab.value = query.value.trim() ? "results" : "recent";
+		watch(query, (next, previous) => {
+			// Searching, there is always a best guess to highlight; browsing or
+			// building, nothing is until the pointer or a key says so.
+			activeIndex.value = defaultActive();
 
-			if (list.value) {
+			if (composing.value) {
+				return; // an append must not move the grid out from under the pointer
+			}
+
+			currentTab.value = next.trim() ? "results" : "recent";
+
+			if (list.value && previous.trim() !== next.trim()) {
 				list.value.scrollTop = 0;
 			}
 		});
@@ -709,10 +826,14 @@ export default defineComponent({
 			sheet,
 			flipped,
 			style,
+			building,
+			hint,
 			isSelected,
+			pickTyped,
 			onKeydown,
 			onListClick,
 			onListHover,
+			onListLeave,
 			onScroll,
 			goToSection,
 			clear,

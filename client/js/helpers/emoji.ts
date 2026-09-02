@@ -113,6 +113,31 @@ export function normalizeReaction(text: string): string {
 		: flattened;
 }
 
+/**
+ * `addition` tacked onto the reaction `current` is being built: how a
+ * shift-click in the picker grows `🎉` into `🎉🔥`. Emoji sit flush against
+ * each other, which is the whole point; anything with a word in it keeps a
+ * space so the words stay words. An addition that would take the reaction
+ * past {@link MAX_REACTION_LENGTH} is refused rather than silently cut, since
+ * the caller can still see what it already has.
+ */
+export function appendReaction(current: string, addition: string): string {
+	const add = addition.trim();
+
+	if (add.length === 0) {
+		return current;
+	}
+
+	const joined =
+		current.length === 0
+			? add
+			: isEmojiOnly(current) && isEmojiOnly(add)
+			? current + add
+			: `${current.replace(/\s+$/, "")} ${add}`;
+
+	return Array.from(joined).length > MAX_REACTION_LENGTH ? current : joined;
+}
+
 /** True when `text` is emoji and nothing else — how a badge decides its size. */
 export function isEmojiOnly(text: string): boolean {
 	const trimmed = text.trim();

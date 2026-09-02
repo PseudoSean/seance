@@ -4382,6 +4382,29 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	text-overflow: ellipsis;
 }
 
+/* Commits the reaction the field is building (the preview bar doubles as the
+   composition while shift-clicks add to it). */
+.reaction-picker-send {
+	flex: 0 0 auto;
+	margin-left: auto;
+	padding: 3px 10px;
+	border: 1px solid var(--button-color);
+	border-radius: 4px;
+	background: transparent;
+	color: var(--button-color);
+	font: inherit;
+	font-size: 12px;
+	font-weight: bold;
+	cursor: pointer;
+}
+
+.reaction-picker-send:hover,
+.reaction-picker-send:focus-visible {
+	background: var(--button-color);
+	color: var(--button-text-color-hover);
+	outline: 0;
+}
+
 .reaction-picker-preview-hint {
 	flex: 0 1 auto;
 	margin-left: auto;
