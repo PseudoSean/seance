@@ -28,6 +28,19 @@
 	/* Links and link-looking buttons */
 	--link-color: #50a656;
 
+	/* Emoji fonts, ahead of whatever the system would pick on its own: some
+	 * of those are monochrome, and a reaction is mostly emoji. Latin text
+	 * falls through them to the UI font, so this is only ever set on elements
+	 * that hold emoji. */
+	--emoji-font:
+		"Apple Color Emoji",
+		"Segoe UI Emoji",
+		"Noto Color Emoji",
+		"Twemoji Mozilla",
+		"EmojiOne Color",
+		"Android Emoji",
+		sans-serif;
+
 	/* Code blocks. `code` is red, which is fine for an inline pill but wrong
 	 * for a whole block: the runs no grammar rule claimed would be red too, so
 	 * a block states a neutral text colour of its own.
@@ -3912,7 +3925,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	padding: 1px 8px;
 	border: 1px solid rgb(128 128 128 / 35%);
 	border-radius: 12px;
-	background: rgb(0 0 0 / 5%);
+	background: rgb(128 128 128 / 12%);
 	color: var(--body-color);
 	font: inherit;
 	font-size: 0.9em;
@@ -3936,9 +3949,74 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	background: rgb(132 206 136 / 20%);
 }
 
+#chat .msg-reaction:not(.word) .msg-reaction-text,
+.reaction-picker-option:not(.word),
+.reaction-picker-tab,
+.reaction-picker-preview-emoji:not(.word) {
+	font-family: var(--emoji-font);
+}
+
+/* `display: contents` so the transition wrapper does not become a box of its
+   own inside the flex row. */
+#chat .msg-reactions-list {
+	display: contents;
+}
+
+#chat .reaction-enter-active {
+	animation: reaction-pop 160ms ease-out;
+}
+
+@keyframes reaction-pop {
+	from {
+		opacity: 0;
+		transform: scale(0.6);
+	}
+
+	60% {
+		transform: scale(1.08);
+	}
+
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#chat .reaction-enter-active {
+		animation: none;
+	}
+}
+
 #chat .msg-reaction-count {
 	color: var(--body-color-muted);
 	font-variant-numeric: tabular-nums;
+}
+
+/* A reaction is free text, so it may be a sentence: keep the badge from
+   pushing the message around, the title attribute carries the whole of it. */
+#chat .msg-reaction.word .msg-reaction-text {
+	display: inline-block;
+	max-width: 22ch;
+	overflow: hidden;
+	font-size: 0.95em;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	vertical-align: bottom;
+}
+
+#chat .msg-reaction-add {
+	padding: 1px 7px;
+	color: var(--body-color-muted);
+	font-size: 1em;
+	line-height: 1.4;
+	opacity: 0.55;
+}
+
+#chat .msg-reaction-add:hover:not(:disabled),
+#chat .msg-reaction-add:focus-visible {
+	color: var(--body-color);
+	opacity: 1;
 }
 
 #chat .msg-actions {
@@ -3962,8 +4040,10 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	display: flex;
 }
 
-/* Never let the toolbar end up in copied text (see js/clipboard.ts) */
-#chat #js-copy-hack .msg-actions {
+/* Never let the toolbar or the add-a-reaction button end up in copied text
+   (see js/clipboard.ts) */
+#chat #js-copy-hack .msg-actions,
+#chat #js-copy-hack .msg-reaction-add {
 	display: none;
 }
 
@@ -3993,68 +4073,308 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	color: #e74c3c;
 }
 
-#chat .reaction-picker {
-	position: absolute;
-	top: 100%;
-	right: 0;
-	z-index: 3;
-	min-width: 280px;
-	margin-top: 4px;
-	padding: 6px;
+/* The reaction picker is teleported to <body> (it would be clipped by the
+   scrollback otherwise), so it is positioned from JS and styled without the
+   #chat prefix: `top`/`left`/`max-height` come from ReactionPicker.vue, which
+   flips it above the message when there is no room below. */
+.reaction-picker {
+	position: fixed;
+	z-index: 1000;
+	display: flex;
+	flex-direction: column;
+	width: 340px;
+	max-width: calc(100vw - 16px);
+	overflow: hidden;
 	border: 1px solid rgb(128 128 128 / 35%);
-	border-radius: 4px;
+	border-radius: 8px;
 	background: var(--window-bg-color);
-	box-shadow: 0 3px 12px rgb(0 0 0 / 15%);
+	box-shadow: 0 8px 28px rgb(0 0 0 / 22%);
+	color: var(--body-color);
+	font-size: 14px;
+	animation: reaction-picker-in 120ms ease-out;
+	transform-origin: top right;
 }
 
-#chat .reaction-picker-quick {
+.reaction-picker.flipped {
+	transform-origin: bottom right;
+}
+
+/* On a phone the on-screen keyboard leaves no room for a popover, so the
+   picker becomes a sheet along the bottom edge instead. */
+.reaction-picker.sheet {
+	top: auto;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	width: 100%;
+	max-width: none;
+	max-height: 70vh;
+	border-width: 1px 0 0;
+	border-radius: 12px 12px 0 0;
+	transform-origin: bottom center;
+}
+
+@keyframes reaction-picker-in {
+	from {
+		opacity: 0;
+		transform: scale(0.97);
+	}
+
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.reaction-picker {
+		animation: none;
+	}
+}
+
+.reaction-picker-search {
 	display: flex;
-	flex-wrap: wrap;
-	gap: 2px;
-	margin-bottom: 6px;
-}
-
-#chat .reaction-picker-emoji {
-	width: 30px;
-	height: 28px;
-	padding: 0;
-	border: 0;
-	border-radius: 3px;
-	background: transparent;
-	font-size: 18px;
-	line-height: 28px;
-	cursor: pointer;
-}
-
-#chat .reaction-picker-emoji:hover,
-#chat .reaction-picker-emoji:focus-visible {
-	background: rgb(0 0 0 / 8%);
-	outline: 0;
-}
-
-#chat .reaction-picker-custom {
-	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
 	gap: 4px;
+	padding: 8px;
 }
 
-#chat .reaction-picker-custom input {
+.reaction-picker-input {
 	flex: 1 1 auto;
 	min-width: 0;
-	padding: 2px 6px;
+	padding: 6px 8px;
 	border: 1px solid rgb(128 128 128 / 35%);
-	border-radius: 3px;
+	border-radius: 6px;
 	background: transparent;
 	color: var(--body-color);
 	font: inherit;
 	font-size: 13px;
 }
 
-#chat .reaction-picker-custom button {
+.reaction-picker-input:focus {
+	border-color: var(--button-color);
+	outline: 0;
+}
+
+/* The picker is teleported to <body>, so it is outside `#chat-container` —
+   where a theme puts its placeholder colour (themes/morning.css). The
+   global default is black at 35%, which on a dark theme is a smudge; the
+   muted body colour is themed and readable on either. */
+.reaction-picker-input::placeholder {
+	color: var(--body-color-muted);
+	opacity: 1;
+}
+
+.reaction-picker-clear {
 	flex: 0 0 auto;
+	width: 26px;
+	height: 26px;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: transparent;
+	color: var(--body-color-muted);
+	font: inherit;
+	font-size: 12px;
+	cursor: pointer;
+}
+
+.reaction-picker-clear:hover,
+.reaction-picker-clear:focus-visible {
+	background: rgb(128 128 128 / 22%);
+	color: var(--body-color);
+	outline: 0;
+}
+
+.reaction-picker-tabs {
+	display: flex;
+	flex: 0 0 auto;
+	gap: 2px;
+	padding: 0 8px 6px;
+	border-bottom: 1px solid rgb(128 128 128 / 20%);
+}
+
+.reaction-picker-tab {
+	flex: 1 1 0;
+	height: 28px;
+	padding: 0;
+	border: 0;
+	border-radius: 6px;
+	background: transparent;
+	font-size: 16px;
+	line-height: 28px;
+	opacity: 0.55;
+	cursor: pointer;
+}
+
+.reaction-picker-tab:hover,
+.reaction-picker-tab:focus-visible {
+	background: rgb(128 128 128 / 22%);
+	opacity: 1;
+	outline: 0;
+}
+
+.reaction-picker-tab.active {
+	background: rgb(128 128 128 / 18%);
+	box-shadow: inset 0 -2px 0 var(--button-color);
+	opacity: 1;
+}
+
+.reaction-picker-list {
+	position: relative;
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: 0 8px 8px;
+	scrollbar-width: thin;
+}
+
+.reaction-picker-heading {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	margin: 0;
+	padding: 8px 2px 4px;
+	background: var(--window-bg-color);
+	color: var(--body-color-muted);
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.reaction-picker-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px;
+}
+
+.reaction-picker-option {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 32px;
+	height: 30px;
+	padding: 0 2px;
+	border: 0;
+	border-radius: 6px;
+	background: transparent;
+	color: var(--body-color);
+	font: inherit;
+	font-size: 20px;
+	line-height: 1;
+	cursor: pointer;
+}
+
+/* A reaction can be a word, and remembered ones often are: those are set as
+   text in a pill rather than as a 20px glyph. */
+.reaction-picker-option.word {
+	max-width: 100%;
+	padding: 0 8px;
+	overflow: hidden;
+	border: 1px solid rgb(128 128 128 / 35%);
+	font-size: 13px;
 	white-space: nowrap;
-	padding: 2px 8px;
+	text-overflow: ellipsis;
+}
+
+.reaction-picker-option.free {
+	justify-content: flex-start;
+	width: 100%;
+	margin: 2px 0;
+	border-style: dashed;
+	font-size: 14px;
+}
+
+.reaction-picker-free-label {
+	margin-right: 6px;
+	color: var(--body-color-muted);
+	font-size: 12px;
+}
+
+.reaction-picker-option:hover {
+	background: rgb(128 128 128 / 22%);
+	outline: 0;
+}
+
+/* What Enter would send. Tinted rather than grey, so it reads as a choice
+   the keyboard made and not as whatever the pointer happens to be over. */
+.reaction-picker-option.active {
+	background: rgb(132 206 136 / 30%);
+	outline: 0;
+}
+
+.reaction-picker-option.selected {
+	box-shadow: inset 0 0 0 2px var(--button-color);
+}
+
+.reaction-picker-note {
+	margin: 0;
+	padding: 16px 4px;
+	color: var(--body-color-muted);
+	font-size: 13px;
+	text-align: center;
+}
+
+.reaction-picker-preview {
+	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: 8px;
+	min-height: 42px;
+	padding: 6px 10px;
+	border-top: 1px solid rgb(128 128 128 / 20%);
+	background: rgb(128 128 128 / 10%);
+}
+
+.reaction-picker-preview-emoji {
+	flex: 0 0 auto;
+	font-size: 24px;
+	line-height: 1;
+}
+
+.reaction-picker-preview-emoji.word {
+	max-width: 40%;
+	overflow: hidden;
+	font-size: 15px;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.reaction-picker-preview-text {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.reaction-picker-preview-name {
+	overflow: hidden;
+	font-size: 12px;
+	font-weight: 600;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.reaction-picker-preview-desc {
+	overflow: hidden;
+	color: var(--body-color-muted);
+	font-size: 11px;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+/* Commits the reaction the field is building (the preview bar doubles as the
+   composition while shift-clicks add to it). */
+.reaction-picker-send {
+	flex: 0 0 auto;
+	margin-left: auto;
+	padding: 3px 10px;
 	border: 1px solid var(--button-color);
-	border-radius: 3px;
+	border-radius: 4px;
 	background: transparent;
 	color: var(--button-color);
 	font: inherit;
@@ -4063,9 +4383,18 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	cursor: pointer;
 }
 
-#chat .reaction-picker-custom button:disabled {
-	opacity: 0.5;
-	cursor: default;
+.reaction-picker-send:hover,
+.reaction-picker-send:focus-visible {
+	background: var(--button-color);
+	color: var(--button-text-color-hover);
+	outline: 0;
+}
+
+.reaction-picker-preview-hint {
+	flex: 0 1 auto;
+	margin-left: auto;
+	color: var(--body-color-muted);
+	font-size: 12px;
 }
 
 /* "alice is typing…" strip, its own row at the top of #form. Fixed height:

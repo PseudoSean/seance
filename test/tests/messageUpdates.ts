@@ -4,6 +4,7 @@ import {
 	applyReaction,
 	applyRedaction,
 	findMessageById,
+	myReactions,
 	replyQuote,
 } from "../../client/js/helpers/messageUpdates";
 import {MessageType, SharedMsg} from "../../shared/types/msg";
@@ -22,6 +23,21 @@ function msg(id: number, extra: Partial<SharedMsg> = {}): SharedMsg {
 }
 
 describe("message updates (msg:react / msg:redact / msg:edit)", function () {
+	it("lists the reactions one nick has, whatever case they use", function () {
+		const m = msg(1, {
+			reactions: [
+				{text: "👍", nicks: ["Alice", "bob"]},
+				{text: "lol", nicks: ["bob"]},
+				{text: "🎉", nicks: ["alICE"]},
+			],
+		});
+
+		expect(myReactions(m, "alice")).to.deep.equal(["👍", "🎉"]);
+		expect(myReactions(m, "bob")).to.deep.equal(["👍", "lol"]);
+		expect(myReactions(m, "carol")).to.be.empty;
+		expect(myReactions(msg(2), "alice")).to.be.empty;
+	});
+
 	it("finds messages by id, newest first", function () {
 		const list = [msg(1), msg(2), msg(3)];
 		expect(findMessageById(list, 2)).to.equal(list[1]);
