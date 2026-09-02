@@ -13,6 +13,37 @@ and registers the subscription with the ircd per the draft spec. Delivery
 (the service-worker `push` handler) is phase 2 and keeps its plan in
 `notifications.md`._
 
+_Live-cycle findings 2026-09-02 (first real trigger attempt, testnet ircd):_
+
+- **The client must send `PERSISTENCE SET ON`** after SASL (same flush as the
+  ATTACH): it is the opt-in that _creates_ the server's bouncer session and
+  turns its hold on. Without it no session ever exists — regardless of
+  `PERSISTENCE STATUS DEFAULT ON` — and a disconnected client can never be
+  pushed to. Implemented in `client.ts`/`persistence.ts`; the ack + STATUS
+  are swallowed during registration.
+- **The server needs `"BOUNCER_ENABLE" = "TRUE"`** — the feature defaults
+  off, and with it off `bounce_should_hold` returns NULL before anything
+  else is consulted (no session is ever created). testnet's conf now sets
+  it; production needs the same.
+- **nefarious2 bug found and fixed** (testnet submodule, commit `34d377e`):
+  `parse_keys` passed the exact value length to `ircd_strncpy`, which copies
+  len-1 chars — browser keys (87-char p256dh, 22-char auth) were stored one
+  char short, decoded to 64 bytes, failed the 65-byte check, and every push
+  silently skipped in `notify_iter_cb`. Pushes were stored correctly and
+  never sent. Upstream-candidate commit in `testnet/nefarious`.
+- **The worker handles nefarious2's tiered JSON payloads** (`{"t":"msg",…}`
+  - `text` on the `full` tier via the account's `draft/webpush/payload`
+    metadata — set with `METADATA * SET draft/webpush/payload * :full` under
+    `draft/metadata-2`), falling back to the spec's raw IRC line.
+- The whole chain was verified to the edge of the sandbox: session HELD →
+  PM → all server gates pass (flag/HOLDING/subscription/cooldown) → push
+  emitted → FCM accepted a correctly-signed aes128gcm push for this
+  browser's subscription (201 Created, direct-post test). The final
+  FCM→headless-browser delivery could not be observed in this sandbox
+  (headless Chrome's FCM socket + a test profile degraded by repeated
+  subscribe/unsubscribe cycles); the same cycle in a headed browser is the
+  remaining manual check.
+
 Sources: [ircv3-specifications PR #471](https://github.com/ircv3/ircv3-specifications/pull/471)
 (`extensions/webpush.md`, the `draft/webpush` cap), the nefarious2
 `ircv3.2-upgrade` branch (`testnet/nefarious`), and a verified wire-level
