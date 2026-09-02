@@ -224,6 +224,18 @@ export class ISupport {
 		return {prefix: value.slice(0, comma), types: value.slice(comma + 1)};
 	}
 
+	/**
+	 * `VAPID=<url-safe base64>`: the server's Web Push VAPID public key
+	 * (draft/webpush). Advertised while the server has a key; the primary
+	 * source is the cap's 302 value (see `webpushVapidOf`), this token is the
+	 * spec's post-registration channel and arrives via 005.
+	 */
+	get vapid(): string | undefined {
+		const value = this.get("VAPID");
+
+		return value === undefined || value === "" ? undefined : value;
+	}
+
 	/** `BOT=<mode letter>`: the user mode marking bots. */
 	get bot(): string | undefined {
 		const value = this.get("BOT");

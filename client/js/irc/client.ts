@@ -20,7 +20,7 @@ import {createHighlightTester} from "../highlight";
 import {ChanState, ChanType} from "../../../shared/types/chan";
 import {MessageType, SharedMsg, TypingState} from "../../../shared/types/msg";
 import type {SharedNetwork, SharedServerOptions} from "../../../shared/types/network";
-import {CapNegotiator, SEANCE_CAPS} from "./caps";
+import {CapNegotiator, SEANCE_CAPS, webpushVapidOf, WEBPUSH_CAP} from "./caps";
 import {casefold, namesEqual} from "./casemap";
 import {Channel, MsgRef} from "./channel";
 import {commandNames, dispatchInput} from "./commands";
@@ -752,6 +752,12 @@ export class IrcClient {
 				return parseMultilineValue(value) !== undefined;
 			}
 
+			if (name === WEBPUSH_CAP) {
+				// Without a VAPID key the server could never send a push, so
+				// subscribing would be pointless (webpush.ts).
+				return webpushVapidOf(value) !== undefined;
+			}
+
 			if (name === "sasl") {
 				return mechanism !== null && mechanismOffered(mechanism, value);
 			}
@@ -983,6 +989,13 @@ export class IrcClient {
 		// on any build (persistence.ts).
 		beginSettling(this);
 
+		// Web Push availability (draft/webpush): announce the server's VAPID
+		// key (or its absence) so webpush.ts can re-register a stored
+		// subscription and the Settings UI can tell the two cases apart. The
+		// WEBPUSH REGISTER itself is emitted later through the bus — a
+		// REGISTER sent before CAP END is silently dropped by nefarious2.
+		this.dispatch("webpush:available", {network: this.uuid, vapid: this.webpushVapid()});
+
 		if (this.persistenceHold || this.serverReplay) {
 			// The server may be about to restore the channels of our held
 			// session (a draft/persistence batch right behind the MOTD, or
@@ -1016,6 +1029,54 @@ export class IrcClient {
 		if (active) {
 			prefetchCatchup(this, active);
 		}
+	}
+
+	// ------------------------------------------------------- web push (draft/webpush)
+
+	/**
+	 * The VAPID public key this server advertises for Web Push, when the
+	 * `draft/webpush` capability is enabled: the cap 302 value is the primary
+	 * source, the `VAPID` ISUPPORT token the fallback. Undefined when the
+	 * network cannot push (cap missing or no key).
+	 */
+	webpushVapid(): string | undefined {
+		if (!this.caps.hasCapability(WEBPUSH_CAP)) {
+			return undefined;
+		}
+
+		return webpushVapidOf(this.caps.value(WEBPUSH_CAP) ?? "") ?? this.isupport.vapid;
+	}
+
+	/**
+	 * `WEBPUSH REGISTER <endpoint> <keys>`: store the browser's push
+	 * subscription with this account. The endpoint must be https (the server
+	 * rejects anything else) and the keys are the `PushSubscription.toJSON()`
+	 * material (`p256dh`, `auth`). Registration is idempotent per endpoint —
+	 * re-registering on every connect is the draft's renewal mechanism.
+	 */
+	webpushRegister(endpoint: string, keys: {p256dh: string; auth: string}): boolean {
+		const line = `WEBPUSH REGISTER ${endpoint} p256dh=${keys.p256dh};auth=${keys.auth}`;
+
+		// A REGISTER split in two would be two garbage commands: endpoints are
+		// ~150 bytes and the keys ~120, but refuse whole rather than send a
+		// mangled line (MAX_LINE_BYTES guards the ircd's 500-byte WS frames).
+		if (utf8ByteLength(line) > MAX_LINE_BYTES) {
+			this.pushMessage(this.lobby, {
+				type: MessageType.ERROR,
+				text: "Not sent: the push subscription does not fit on one line",
+			});
+			return false;
+		}
+
+		return this.send(line);
+	}
+
+	/**
+	 * `WEBPUSH UNREGISTER <endpoint>`: drop the subscription for this
+	 * account. The server echoes even when the endpoint was not registered.
+	 */
+	webpushUnregister(endpoint: string): boolean {
+		return this.send(`WEBPUSH UNREGISTER ${endpoint}`);
 	}
 
 	// --------------------------------------------------------------- sending

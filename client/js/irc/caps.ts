@@ -50,7 +50,9 @@ export interface CapResult {
  * still registers. `draft/persistence` only buys the `PERSISTENCE STATUS`
  * line at registration (see persistence.ts). `draft/multiline` is only
  * requested when its CAP 302 value parses (the `accept` hook in client.ts,
- * see multiline.ts). Deliberately absent: `draft/bouncer`,
+ * see multiline.ts), and `draft/webpush` likewise needs a `vapid=` value —
+ * a server without its VAPID key cannot send pushes (see webpush.ts and
+ * docs/projects/push-subscription.md). Deliberately absent: `draft/bouncer`,
  * `draft/metadata-2`, `no-implicit-names`.
  */
 export const SEANCE_CAPS: CapNegotiatorOptions = {
@@ -77,6 +79,7 @@ export const SEANCE_CAPS: CapNegotiatorOptions = {
 		"draft/event-playback",
 		"draft/read-marker",
 		"draft/message-redaction",
+		"draft/webpush",
 		"draft/persistence",
 	],
 };
@@ -90,6 +93,28 @@ export const SEANCE_CAPS: CapNegotiatorOptions = {
 const NEVER_REQUEST: ReadonlySet<string> = new Set(["tls", "sts"]);
 
 const REQ_PREFIX = "CAP REQ :";
+
+/** The cap name for the Web Push draft (draft/webpush). */
+export const WEBPUSH_CAP = "draft/webpush";
+
+/**
+ * The VAPID public key a `draft/webpush` CAP 302 value advertises
+ * (`vapid=<url-safe base64>`), undefined when the value does not carry one —
+ * nefarious2 lists the cap bare until its key is available, and without a
+ * key it could never send a push, so the client must not subscribe.
+ */
+export function webpushVapidOf(value: string): string | undefined {
+	if (!value.startsWith("vapid=")) {
+		return undefined;
+	}
+
+	const key = value.slice("vapid=".length);
+
+	// URL-safe base64 of a 65-byte uncompressed P-256 point is 86-88 chars;
+	// accept anything non-empty over 32 so a key-format change upstream does
+	// not silently disable negotiation.
+	return key.length >= 32 && /^[A-Za-z0-9_-]+$/.test(key) ? key : undefined;
+}
 
 /** Parse a CAP LS/NEW/ACK list (`name[=value] ...`) into [name, value] pairs. */
 function parseCapList(list: string): [string, string][] {
