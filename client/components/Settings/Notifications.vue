@@ -19,6 +19,19 @@
 				Push notifications are enabled for this device. The server will wake the app when it
 				has something for you while it is closed.
 			</div>
+			<div v-if="store.state.pushNotificationState === 'subscribed'" class="opt">
+				Snooze pushes everywhere:
+				<button type="button" class="btn" @click.prevent="snooze(15 * 60 * 1000)">
+					15 min
+				</button>
+				<button type="button" class="btn" @click.prevent="snooze(60 * 60 * 1000)">
+					1 hour
+				</button>
+				<button type="button" class="btn" @click.prevent="snooze(8 * 60 * 60 * 1000)">
+					8 hours
+				</button>
+				<button type="button" class="btn" @click.prevent="snooze(0)">Off</button>
+			</div>
 			<div v-if="store.state.pushNotificationState === 'unsupported'" class="error">
 				Push notifications are not supported by this browser (they need the Push API, a
 				service worker and a secure context).
@@ -203,6 +216,10 @@ export default defineComponent({
 			void webpush.togglePushSubscription();
 		};
 
+		const snooze = (ms: number) => {
+			webpush.setSnooze(ms);
+		};
+
 		// Notification permission changes outside the app (site settings);
 		// re-read it whenever this page opens.
 		onMounted(() => {
@@ -223,6 +240,7 @@ export default defineComponent({
 			playNotification,
 			pushToggleable,
 			togglePush,
+			snooze,
 		};
 	},
 });

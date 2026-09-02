@@ -190,6 +190,8 @@ interface ClientToServerEvents {
 		keys: {p256dh: string; auth: string};
 	}>;
 	"webpush:unregister": EventHandler<{network: string; endpoint: string}>;
+	/** Account metadata write for webpush settings (payload tier, mute/snooze). An empty value deletes the key. */
+	"webpush:metadata": EventHandler<{network: string; key: string; value: string}>;
 
 	"upload:auth": NoPayloadEventHandler;
 	"upload:ping": (token: string) => void;

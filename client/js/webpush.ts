@@ -1,11 +1,15 @@
+import socket from "./socket";
+import {store} from "./store";
+import storage from "./localStorage";
+import {idbSet} from "./idb";
+import * as saved from "./irc/saved-networks";
+
 /**
- * Web Push subscriptions (IRCv3 `draft/webpush`, phase 1).
+ * Web Push subscriptions (IRCv3 `draft/webpush`, phases 1+2).
  *
  * docs/projects/push-subscription.md is the plan; `notifications.md` the
- * larger picture (delivery — the service-worker `push` handler — is phase 2).
- *
- * One browser `PushSubscription` exists per distinct VAPID key (the endpoint
- * is owned by the service-worker registration and bound to the
+ * bigger picture. One browser `PushSubscription` per distinct VAPID key (the
+ * endpoint is owned by the service-worker registration and bound to the
  * `applicationServerKey` it was created with). Every connected network whose
  * server advertises the same VAPID key gets the subscription registered with
  * it:
@@ -15,13 +19,13 @@
  *   `webpush:state` (server echo / FAIL WEBPUSH)         ──►  state updates
  *
  * Re-sending an identical REGISTER on every connect is the draft's renewal
- * mechanism, so nothing else schedules refreshes. The subscription material
- * persists in `thelounge.push` keyed by VAPID key.
+ * mechanism, so nothing else schedules refreshes; `pushsubscriptionchange`
+ * (and the SW) self-heal expired subscriptions. The subscription material
+ * persists in `thelounge.push` keyed by VAPID key; the SW's own working copy
+ * (VAPID + credentials for throwaway IRC connections used by quick-reply,
+ * mute and renewal) lives in IndexedDB `seance-push` and is only written
+ * when the user enabled push AND remembering the password.
  */
-
-import socket from "./socket";
-import {store} from "./store";
-import storage from "./localStorage";
 
 /** A browser push subscription, reduced to what the ircd needs. */
 interface PushMaterial {
@@ -33,6 +37,7 @@ const STORAGE_KEY = "thelounge.push";
 
 /** Per-network VAPID keys as announced by `webpush:available`. */
 const servers = new Map<string, string | undefined>();
+
 /** Persisted subscriptions by VAPID key. */
 let subs = loadSubs();
 
@@ -219,6 +224,7 @@ async function subscribe(): Promise<void> {
 		const material = await pushSubscription(vapid);
 		subs = {[vapid]: material};
 		saveSubs();
+		await writeStash(vapid);
 
 		for (const [network, serverVapid] of servers) {
 			if (serverVapid === vapid) {
@@ -226,6 +232,14 @@ async function subscribe(): Promise<void> {
 					network,
 					endpoint: material.endpoint,
 					keys: material.keys,
+				});
+
+				// Push payloads carry the message text (Discord-like); the
+				// account's tier metadata controls this server-side.
+				socket.emit("webpush:metadata", {
+					network,
+					key: "draft/webpush/payload",
+					value: "full",
 				});
 			}
 		}
@@ -236,6 +250,29 @@ async function subscribe(): Promise<void> {
 		// eslint-disable-next-line no-console
 		console.warn("[webpush] subscription failed", error);
 	}
+}
+
+/** Stash what the service worker needs for quick-reply / mute / renewal:
+ * the VAPID key plus connection details — only for networks that are
+ * push-capable AND remember their SASL password (the password never hits
+ * IndexedDB otherwise). */
+async function writeStash(vapid: string): Promise<void> {
+	const networks = saved
+		.list()
+		.filter(
+			(net) =>
+				servers.has(net.uuid) && net.rememberPassword === true && Boolean(net.saslAccount)
+		)
+		.map((net) => ({
+			uuid: net.uuid,
+			host: net.host,
+			port: net.port,
+			tls: net.tls,
+			saslAccount: net.saslAccount,
+			saslPassword: net.saslPassword,
+		}));
+
+	await idbSet("stash", {vapid, networks});
 }
 
 /** Unsubscribe: drop the browser subscription and tell every network. */
@@ -258,6 +295,7 @@ async function unsubscribe(): Promise<void> {
 
 		subs = {};
 		saveSubs();
+		await idbSet("stash", {vapid: null, networks: []});
 	} catch (error) {
 		// eslint-disable-next-line no-console
 		console.warn("[webpush] unsubscription failed", error);
@@ -275,9 +313,66 @@ async function togglePushSubscription(): Promise<void> {
 	}
 }
 
+/**
+ * Snooze pushes for `ms` (0 = clear the snooze): account-wide, enforced by
+ * the ircd's mute gate, so every device stops being woken up. Per-channel
+ * mutes ride the same metadata key (see /pushmute).
+ */
+function setSnooze(ms: number): void {
+	const vapid = anyVapid();
+
+	if (vapid === undefined) {
+		return;
+	}
+
+	const until = ms > 0 ? Math.floor(Date.now() / 1000) + Math.floor(ms / 1000) : 0;
+
+	for (const network of servers.keys()) {
+		socket.emit("webpush:metadata", {
+			network,
+			key: "draft/webpush/mute",
+			value: until > 0 ? `*:${until}` : "",
+		});
+	}
+}
+
 // Boot: replace the stub's "unsupported" with what this browser can do.
 // Servers announce themselves (and re-register stored subscriptions) via
 // `webpush:available` as they connect.
 refreshState();
 
-export default {togglePushSubscription, subscribe, unsubscribe, refresh: refreshState};
+// Opening the app means the user is catching up in-app: drop any push
+// notifications the service worker is still showing (badge included).
+socket.on("init", async () => {
+	try {
+		const registration = await navigator.serviceWorker.ready;
+
+		for (const n of await registration.getNotifications()) {
+			if (n.tag && n.tag.startsWith("push-")) {
+				n.close();
+			}
+		}
+
+		if (navigator.clearAppBadge) {
+			void navigator.clearAppBadge();
+		}
+	} catch {
+		// no SW / not ready — nothing to clear
+	}
+});
+
+// The service worker asks the page to redo a subscription it could not
+// renew itself (pushsubscriptionchange without stashed credentials).
+navigator.serviceWorker.addEventListener("message", (event) => {
+	if (event.data && event.data.type === "resubscribe") {
+		void subscribe();
+	}
+});
+
+export default {
+	togglePushSubscription,
+	subscribe,
+	unsubscribe,
+	setSnooze,
+	refresh: refreshState,
+};

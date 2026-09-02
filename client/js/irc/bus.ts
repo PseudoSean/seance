@@ -103,6 +103,16 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 		}
 	});
 
+	// Account metadata writes for webpush settings (payload tier, mute/
+	// snooze list). SET with an empty value deletes the key.
+	bus.handle("webpush:metadata", ({network, key, value}) => {
+		const client = registry.clientForNetwork(network);
+
+		if (client) {
+			client.send(value ? `METADATA * SET ${key} * :${value}` : `METADATA * SET ${key}`);
+		}
+	});
+
 	bus.handle("open", (id) => {
 		for (const client of registry.allClients()) {
 			client.open(client.channelById(id) ? id : 0);

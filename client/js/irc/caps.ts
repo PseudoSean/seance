@@ -50,10 +50,11 @@ export interface CapResult {
  * still registers. `draft/persistence` only buys the `PERSISTENCE STATUS`
  * line at registration (see persistence.ts). `draft/multiline` is only
  * requested when its CAP 302 value parses (the `accept` hook in client.ts,
- * see multiline.ts), and `draft/webpush` likewise needs a `vapid=` value —
- * a server without its VAPID key cannot send pushes (see webpush.ts and
- * docs/projects/push-subscription.md). Deliberately absent: `draft/bouncer`,
- * `draft/metadata-2`, `no-implicit-names`.
+ * see multiline.ts), `draft/webpush` likewise needs a `vapid=` value — a
+ * server without its VAPID key cannot send pushes (see webpush.ts and
+ * docs/projects/push-subscription.md) — and `draft/metadata-2` carries the
+ * account settings push needs (payload tier, mute/snooze). Deliberately
+ * absent: `draft/bouncer`, `no-implicit-names`.
  */
 export const SEANCE_CAPS: CapNegotiatorOptions = {
 	required: [],
@@ -80,6 +81,7 @@ export const SEANCE_CAPS: CapNegotiatorOptions = {
 		"draft/read-marker",
 		"draft/message-redaction",
 		"draft/webpush",
+		"draft/metadata-2",
 		"draft/persistence",
 	],
 };

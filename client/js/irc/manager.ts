@@ -163,6 +163,28 @@ export function allClients(): IrcClient[] {
 	return Array.from(clients.values());
 }
 
+/**
+ * On page unload (tab close / navigation), say goodbye properly: a QUIT
+ * lets a bouncer-enabled ircd hold the session deterministically (the
+ * m_quit hold gate) instead of racing the socket teardown, and other
+ * servers see a clean quit. Fire-and-forget — the page is going away, so
+ * at most the first bytes make it out; the transport is not closed here
+ * (the browser does that the moment the page dies).
+ *
+ * `pagehide` fires for tab close, navigation and refresh — on refresh the
+ * reconnect after the reload re-attaches the held session, so nothing is
+ * lost either way.
+ */
+if (typeof window !== "undefined") {
+	window.addEventListener("pagehide", () => {
+		for (const client of allClients()) {
+			if (client.isConnected) {
+				client.send("QUIT :page closed");
+			}
+		}
+	});
+}
+
 /** Foreground signals arrive in clusters (visibility + focus + native); one poke per second is plenty. */
 const POKE_INTERVAL_MS = 1000;
 let lastPokeAt = 0;

@@ -212,23 +212,203 @@ self.addEventListener("message", function (event) {
 		return;
 	}
 
-	showNotification(event, event.data);
+	showPageNotification(event, event.data);
 });
 
-// --- Web Push (draft/webpush, phase-2 slice 0) -----------------------------
-// The ircd pushes one notification per event. nefarious2's payload is tiered
-// JSON (account metadata key `draft/webpush/payload`): `{"t":"msg","from":…,
-// "target":…,"msgid":…,"time":…}` on the default `route` tier, plus `"text"`
-// on `full`. The draft spec itself says one raw IRC line — the worker accepts
-// both shapes. Group per sender so a burst collapses into one toast.
+/** Page-requested notification (in-app notify path): tag/replace per channel. */
+function showPageNotification(event, payload) {
+	event.waitUntil(
+		self.registration
+			.getNotifications({tag: `chan-${payload.chanId}`})
+			.then((notifications) => {
+				for (const notification of notifications) {
+					notification.close();
+				}
+
+				return self.registration.showNotification(payload.title, {
+					tag: `chan-${payload.chanId}`,
+					icon: "img/icon-192.png",
+					body: payload.body,
+					timestamp: payload.timestamp,
+				});
+			})
+	);
+}
+
+// --- Web Push (draft/webpush) ----------------------------------------------
+// The ircd pushes one notification per event; nefarious2's payload is tiered
+// JSON (account metadata `draft/webpush/payload`): `{"t":"msg","from":…,
+// "target":…,"msgid":…,"time":…}` (+`"text"` on the full tier), and reads
+// arrive as `{"t":"read","target":…,"ts":…}` so this worker can close
+// notifications that another device has already read. The draft spec's raw
+// IRC line shape is handled as a fallback.
+//
+// Discord-style behaviour layered on top:
+//   - per-target merging with an unread count (tag `push-<target>`),
+//   - app badge = total unread across push notifications,
+//   - actions: Reply (inline text on desktop Chrome) and Mute 1h — both act
+//     through a short-lived IRC connection the worker opens itself
+//     (credentials come from the page via IndexedDB, only stashed when the
+//     user enabled push AND password remembering),
+//   - `pushsubscriptionchange` re-subscribes with the stashed VAPID key and
+//     re-registers, so expiry self-heals.
+
+const IDB_NAME = "seance-push";
+const IDB_STORE = "kv";
+
+function idbOpen() {
+	return new Promise((resolve, reject) => {
+		const req = indexedDB.open(IDB_NAME, 1);
+		req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+		req.onsuccess = () => resolve(req.result);
+		req.onerror = () => reject(req.error);
+	});
+}
+
+async function idbGet(key) {
+	const db = await idbOpen();
+
+	return new Promise((resolve, reject) => {
+		const req = db.transaction(IDB_STORE).objectStore(IDB_STORE).get(key);
+		req.onsuccess = () => resolve(req.result);
+		req.onerror = () => reject(req.error);
+	});
+}
+
+async function idbSet(key, value) {
+	const db = await idbOpen();
+
+	return new Promise((resolve, reject) => {
+		const tx = db.transaction(IDB_STORE, "readwrite");
+		tx.objectStore(IDB_STORE).put(value, key);
+		tx.oncomplete = () => resolve();
+		tx.onerror = () => reject(tx.error);
+	});
+}
+
+/**
+ * Run one batch of actions over a throwaway IRC connection (SASL PLAIN).
+ * `pre` lines go out after SASL completes but before CAP END (that is the
+ * only window `WEBPUSH REGISTER` accepts), `post` lines after 001.
+ * Resolves true when every pre/post line was sent.
+ */
+function swIrcAct(net, pre, post) {
+	return new Promise((resolve) => {
+		const scheme = net.tls ? "wss://" : "ws://";
+		const url = scheme + net.host + ":" + net.port + "/";
+		let ws = null;
+
+		const done = (ok) => {
+			try {
+				ws.close();
+			} catch (e) {
+				//
+			}
+
+			resolve(ok);
+		};
+
+		const timer = setTimeout(() => done(false), 10000);
+
+		ws = new WebSocket(url, "text.ircv3.net");
+
+		ws.onopen = () => {
+			ws.send("CAP LS 302");
+			ws.send("NICK seance-sw");
+			ws.send("USER seance-sw 0 * :seance service worker");
+		};
+
+		ws.onmessage = (e) => {
+			const l = e.data;
+
+			if (l.startsWith("PING")) {
+				ws.send("PONG " + l.slice(5));
+				return;
+			}
+
+			if (/^AUTHENTICATE \+$/.test(l)) {
+				ws.send("AUTHENTICATE " + btoa("\0" + net.saslAccount + "\0" + net.saslPassword));
+				return;
+			}
+
+			if (l.startsWith("FAIL") || / 90[2-8] /.test(l)) {
+				clearTimeout(timer);
+				done(false);
+				return;
+			}
+
+			if (/ 903 /.test(l) && pre.length > 0) {
+				for (const line of pre) {
+					ws.send(line);
+				}
+
+				ws.send("CAP END");
+				return;
+			}
+
+			if (/ 903 /.test(l) && pre.length === 0) {
+				ws.send("CAP END");
+				return;
+			}
+
+			if (/ 001 /.test(l) && post.length > 0) {
+				for (const line of post) {
+					ws.send(line);
+				}
+
+				ws.send("QUIT :done");
+				clearTimeout(timer);
+				return;
+			}
+
+			if (/ 001 /.test(l)) {
+				ws.send("QUIT :done");
+				clearTimeout(timer);
+			}
+		};
+
+		ws.onclose = () => {
+			clearTimeout(timer);
+			resolve(true);
+		};
+
+		ws.onerror = () => {
+			clearTimeout(timer);
+			resolve(false);
+		};
+	});
+}
+
+/** The stash the page writes when push is enabled: our VAPID key and the
+ * networks that are push-capable AND remember their SASL password. */
+async function getStash() {
+	const stash = (await idbGet("stash")) || {};
+
+	return {
+		vapid: stash.vapid || null,
+		networks: Array.isArray(stash.networks) ? stash.networks : [],
+	};
+}
+
+/** Total unread across push notifications -> app badge. */
+async function updateBadge() {
+	const all = await self.registration.getNotifications();
+	const total = all.reduce((sum, n) => sum + ((n.data && n.data.count) || 1), 0);
+
+	if (total > 0 && self.navigator.setAppBadge) {
+		self.navigator.setAppBadge(total);
+	} else if (self.navigator.clearAppBadge) {
+		self.navigator.clearAppBadge();
+	}
+}
 
 self.addEventListener("push", function (event) {
 	const raw = event.data ? event.data.text() : "";
 
-	event.waitUntil(showPushNotification(raw));
+	event.waitUntil(handlePush(raw));
 });
 
-async function showPushNotification(raw) {
+async function handlePush(raw) {
 	let json = null;
 
 	try {
@@ -237,52 +417,97 @@ async function showPushNotification(raw) {
 		// not JSON — spec-shape raw IRC line
 	}
 
-	if (json && json.t) {
-		const kind = json.t === "notice" ? "notice" : "message";
-		const channel = typeof json.target === "string" && json.target.startsWith("#");
-		const title = json.from
-			? channel
-				? `${json.from} in ${json.target}`
-				: json.from
-			: "Seance";
-		const body = typeof json.text === "string" ? json.text : kind;
+	// Another device read a channel: close what we show for it.
+	if (json && json.t === "read") {
+		await closeForTarget(json.target, json.ts);
+		await updateBadge();
+		return;
+	}
+
+	const parsed = json
+		? {from: json.from, target: json.target, text: json.text, time: json.time, kind: json.t}
+		: parsePushLine(raw);
+
+	if (
+		parsed &&
+		(parsed.kind === "msg" ||
+			parsed.kind === "notice" ||
+			parsed.command === "PRIVMSG" ||
+			parsed.command === "NOTICE")
+	) {
+		const isChannel = parsed.target && parsed.target.startsWith("#");
+		const replyTo = isChannel ? parsed.target : parsed.from;
+		const tag = "push-" + (replyTo || "activity");
+		const text =
+			typeof parsed.text === "string"
+				? parsed.text.replace(/\x01ACTION /, "*").replace(/\x01$/, "*")
+				: "New message";
+
+		// Merge per target: newest body, rising unread count.
+		const existing = await self.registration.getNotifications({tag});
+		const count = ((existing[0] && existing[0].data && existing[0].data.count) || 0) + 1;
+
+		for (const n of existing) {
+			n.close();
+		}
+
+		const title = isChannel
+			? parsed.from + " in " + parsed.target + (count > 1 ? " (" + count + ")" : "")
+			: parsed.from + (count > 1 ? " (" + count + ")" : "");
 
 		await self.registration.showNotification(title, {
-			tag: `push-${json.from ?? "activity"}`,
+			tag,
 			icon: "img/icon-192.png",
-			body,
-			timestamp: json.time ? Date.parse(json.time) : undefined,
-			data: {deepLink: null}, // deep links by msgid are phase 2
+			body: text,
+			timestamp: parsed.time ? Date.parse(parsed.time) : undefined,
+			data: {
+				kind: "push",
+				count,
+				from: parsed.from,
+				target: replyTo,
+				time: parsed.time,
+			},
+			// Inline reply on desktop Chrome; a plain button elsewhere.
+			actions: [
+				{action: "reply", type: "text", title: "Reply", placeholder: "Reply…"},
+				{action: "mute1h", title: "Mute 1h"},
+			],
 		});
+
+		await updateBadge();
 		return;
 	}
 
-	const msg = parsePushLine(raw);
-
-	if (msg && (msg.command === "PRIVMSG" || msg.command === "NOTICE")) {
-		const isChannel = msg.target.startsWith("#");
-		const text = msg.text.replace(/\x01ACTION /, "*").replace(/\x01$/, "*");
-
-		await self.registration.showNotification(
-			isChannel ? `${msg.nick} in ${msg.target}` : msg.nick,
-			{
-				tag: `push-${msg.nick}`,
-				icon: "img/icon-192.png",
-				body: text,
-				timestamp: msg.time ? Date.parse(msg.time) : undefined,
-				data: {deepLink: null}, // deep links by msgid are phase 2
-			}
-		);
-		return;
-	}
-
-	// userVisibleOnly means every push should surface something; anything the
-	// server sends that we could not interpret still shows, generically.
+	// userVisibleOnly means every push should surface something.
 	await self.registration.showNotification("Seance", {
 		tag: "push-activity",
 		icon: "img/icon-192.png",
 		body: "New activity while you were away.",
 	});
+
+	await updateBadge();
+}
+
+/** Close push notifications for `target` whose message predates `ts`. */
+async function closeForTarget(target, ts) {
+	const cutoff = ts ? Date.parse(ts) : Infinity;
+	const all = await self.registration.getNotifications();
+
+	for (const n of all) {
+		if (!n.tag || !n.tag.startsWith("push-")) {
+			continue;
+		}
+
+		const sameTarget = n.data && n.data.target === target;
+		const mine = !target && n.tag.startsWith("push-");
+
+		if (
+			(sameTarget || (mine && !target)) &&
+			(!cutoff || !n.data.time || Date.parse(n.data.time) <= cutoff)
+		) {
+			n.close();
+		}
+	}
 }
 
 /** Enough of an IRC line for a notification: `@tags :nick!u@h CMD target :text`. */
@@ -325,34 +550,140 @@ function parsePushLine(line) {
 	return {tags, nick, command, target, text, time: tags.time};
 }
 
-function showNotification(event, payload) {
-	// get current notification, close it, and draw new
-	event.waitUntil(
-		self.registration
-			.getNotifications({
-				tag: `chan-${payload.chanId}`,
-			})
-			.then((notifications) => {
-				for (const notification of notifications) {
-					notification.close();
-				}
+// Renewal: the browser tells us the subscription died (or rotated). Re-create
+// it with the stashed VAPID key and re-register over a throwaway IRC
+// connection; when credentials are not stashed, ask any open page to redo it
+// from the UI instead.
+self.addEventListener("pushsubscriptionchange", function (event) {
+	event.waitUntil(handleResubscribe(event.oldSubscription, event.newSubscription));
+});
 
-				return self.registration.showNotification(payload.title, {
-					tag: `chan-${payload.chanId}`,
-					icon: "img/icon-192.png",
-					body: payload.body,
-					timestamp: payload.timestamp,
-				});
-			})
+async function handleResubscribe(oldSub, newSub) {
+	const stash = await getStash();
+
+	if (newSub && stash.vapid) {
+		await idbSet("stash", {...stash, vapid: stash.vapid});
+	}
+
+	const sub = newSub || (stash.vapid ? await resubscribeWithVapid(stash.vapid) : null);
+
+	if (!sub) {
+		// No usable subscription: ask the page (next open) to redo it.
+		const cs = await self.clients.matchAll({includeUncontrolled: true, type: "window"});
+
+		for (const c of cs) {
+			c.postMessage({type: "resubscribe"});
+		}
+
+		return;
+	}
+
+	const networks = stash.networks.filter((n) => n.saslAccount);
+
+	if (networks.length === 0) {
+		return;
+	}
+
+	await swIrcAct(
+		networks[0],
+		[
+			"WEBPUSH REGISTER " +
+				sub.endpoint +
+				" p256dh=" +
+				sub.keys.p256dh +
+				";auth=" +
+				sub.keys.auth,
+		],
+		[]
 	);
 }
 
+async function resubscribeWithVapid(vapid) {
+	const reg = self.registration;
+
+	try {
+		const key = Uint8Array.from(atob(vapidB64ToStd(vapid)), (c) => c.charCodeAt(0));
+
+		return await reg.pushManager.subscribe({
+			userVisibleOnly: true,
+			applicationServerKey: key.buffer,
+		});
+	} catch (e) {
+		return null;
+	}
+}
+
+function vapidB64ToStd(b64) {
+	const padding = "=".repeat((4 - (b64.length % 4)) % 4);
+
+	return (b64 + padding).replace(/-/g, "+").replace(/_/g, "/");
+}
+
+/** Quick-reply / mute from the notification: run over a throwaway IRC
+ * connection using the stashed credentials. Falls back to false when the
+ * user did not enable password remembering (the click then just opens the
+ * app). */
+async function swAct(net, pre, post) {
+	if (!net || !net.saslAccount || !net.saslPassword) {
+		return false;
+	}
+
+	return swIrcAct(net, pre, post);
+}
+
 self.addEventListener("notificationclick", function (event) {
+	const data = event.notification.data || {};
+
+	// Inline reply (desktop Chrome): the text comes on event.reply. Send it
+	// from the worker over a throwaway IRC connection when credentials are
+	// stashed; otherwise just open the app.
+	if (event.action === "reply" && event.reply && data.target) {
+		event.notification.close();
+		event.waitUntil(
+			(async () => {
+				const stash = await getStash();
+				const sent = await swAct(
+					stash.networks[0],
+					[],
+					["PRIVMSG " + data.target + " :" + event.reply]
+				);
+
+				if (sent) {
+					await closeForTarget(data.target, new Date().toISOString());
+					await updateBadge();
+				} else {
+					await openApp(data.target);
+				}
+			})()
+		);
+		return;
+	}
+
+	// Mute 1h: suppress pushes for this target via the account mute list
+	// (the ircd gates pushes on it). GET-merge-SET so other entries survive.
+	if (event.action === "mute1h" && data.target) {
+		event.notification.close();
+		event.waitUntil(
+			(async () => {
+				const stash = await getStash();
+				const until = Math.floor(Date.now() / 1000) + 3600;
+				const sent = await swMute1h(stash.networks[0], data.target, until);
+
+				if (sent) {
+					await closeForTarget(data.target, new Date().toISOString());
+					await updateBadge();
+				} else {
+					await openApp();
+				}
+			})()
+		);
+		return;
+	}
+
 	event.notification.close();
 
 	// Page-created notifications carry a `chan-<id>` tag; push notifications
-	// have no session-local id to route to (phase 2 adds msgid deep links),
-	// so they just open the app.
+	// deep-link by target (phase 2 refines msgid routing).
 	const route = event.notification.tag.startsWith("chan-")
 		? `.#/${event.notification.tag}`
 		: shellUrl;
@@ -385,6 +716,129 @@ self.addEventListener("notificationclick", function (event) {
 			})
 	);
 });
+
+async function openApp() {
+	const cs = await clients.matchAll({includeUncontrolled: true, type: "window"});
+
+	for (const c of cs) {
+		if ("focus" in c) {
+			await c.focus();
+			return;
+		}
+	}
+
+	if (clients.openWindow) {
+		await clients.openWindow(shellUrl);
+	}
+}
+
+/** Mute `target` for an hour: GET the account mute list, merge, SET. */
+function swMute1h(net, target, until) {
+	return new Promise((resolve) => {
+		const scheme = net.tls ? "wss://" : "ws://";
+		const url = scheme + net.host + ":" + net.port + "/";
+		let ws = null;
+		let value = null;
+		let registered = false;
+		const timer = setTimeout(() => {
+			try {
+				ws.close();
+			} catch (e) {
+				//
+			}
+
+			resolve(false);
+		}, 10000);
+
+		ws = new WebSocket(url, "text.ircv3.net");
+
+		ws.onopen = () => {
+			ws.send("CAP LS 302");
+			ws.send("NICK seance-sw");
+			ws.send("USER seance-sw 0 * :seance service worker");
+		};
+
+		ws.onmessage = (e) => {
+			const l = e.data;
+
+			if (l.startsWith("PING")) {
+				ws.send("PONG " + l.slice(5));
+				return;
+			}
+
+			if (/^AUTHENTICATE \+$/.test(l)) {
+				ws.send("AUTHENTICATE " + btoa("\0" + net.saslAccount + "\0" + net.saslPassword));
+				return;
+			}
+
+			if (/^:[^ ]+ 761 /.test(l)) {
+				// RPL_METADATA: <me> <key> <visibility> :<value>
+				const parts = l.split(" ");
+
+				if (parts[3] === "draft/webpush/mute") {
+					value = l.slice(l.indexOf(" :") + 2);
+				}
+
+				return;
+			}
+
+			if (/^:[^ ]+ METADATA /.test(l)) {
+				// Batched metadata echo: METADATA <key> ... :<value>
+				const bits = l.split(" METADATA ")[1] || "";
+
+				if (bits.startsWith("draft/webpush/mute ")) {
+					const colon = bits.indexOf(" :");
+
+					if (colon !== -1) {
+						value = bits.slice(colon + 2);
+					}
+				}
+
+				return;
+			}
+
+			if (/ 903 /.test(l)) {
+				ws.send("CAP END");
+				return;
+			}
+
+			if (/ 001 /.test(l) && !registered) {
+				registered = true;
+				ws.send("METADATA * GET draft/webpush/mute");
+				return;
+			}
+
+			if (registered && (value !== null || / 76[12] /.test(l))) {
+				const merged = mergeMuteEntry(value || "", target, until);
+
+				ws.send("METADATA * SET draft/webpush/mute * :" + merged);
+				ws.send("QUIT :done");
+				clearTimeout(timer);
+				setTimeout(() => resolve(true), 200);
+			}
+		};
+
+		ws.onclose = () => {
+			clearTimeout(timer);
+			resolve(registered && value !== null);
+		};
+
+		ws.onerror = () => {
+			clearTimeout(timer);
+			resolve(false);
+		};
+	});
+}
+
+/** Merge `target:until` into a semicolon-separated mute value (dropping any
+ * previous entry for the target). */
+function mergeMuteEntry(value, target, until) {
+	const entries = (value || "").split(";").filter((e) => e && !e.startsWith(target + ":"));
+
+	entries.push(target + ":" + until);
+
+	return entries.join(";");
+}
 
 function findSuitableClient(clientList) {
 	for (let i = 0; i < clientList.length; i++) {
