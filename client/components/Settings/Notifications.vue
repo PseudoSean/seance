@@ -2,12 +2,42 @@
 	<div>
 		<h2>Push Notifications</h2>
 		<div>
-			<button id="pushNotifications" type="button" class="btn" disabled>
-				Subscribe to push notifications
+			<button
+				id="pushNotifications"
+				type="button"
+				class="btn"
+				:disabled="!pushToggleable"
+				@click.prevent="togglePush"
+			>
+				{{
+					store.state.pushNotificationState === "subscribed"
+						? "Unsubscribe from push notifications"
+						: "Subscribe to push notifications"
+				}}
 			</button>
-			<div class="error">
-				Push notifications need a server to deliver them and are not available in
-				client-only mode.
+			<div v-if="store.state.pushNotificationState === 'subscribed'" id="pushSubscribed">
+				Push notifications are enabled for this device. The server will wake the app when it
+				has something for you while it is closed.
+			</div>
+			<div v-if="store.state.pushNotificationState === 'unsupported'" class="error">
+				Push notifications are not supported by this browser (they need the Push API, a
+				service worker and a secure context).
+			</div>
+			<div v-if="store.state.pushNotificationState === 'not-installed'" class="error">
+				<strong>Warning</strong>: On iOS, push notifications are only available after
+				installing the app to the Home Screen (Share → Add to Home Screen).
+			</div>
+			<div v-if="store.state.pushNotificationState === 'denied'" class="error">
+				<strong>Warning</strong>: Notifications are blocked by your browser. Allow them in
+				the browser's site settings, then try again.
+			</div>
+			<div v-if="store.state.pushNotificationState === 'server-unsupported'" class="error">
+				Push notifications need a connected server that supports the draft/webpush
+				capability and you to be logged in to an account.
+			</div>
+			<div v-if="store.state.pushNotificationState === 'blocked'" class="error">
+				<strong>Warning</strong>: The server refused the push subscription. It may require
+				logging in (SASL) before subscribing.
 			</div>
 		</div>
 
@@ -139,8 +169,9 @@ your nickname or expressions defined in custom highlights."
 </template>
 
 <script lang="ts">
-import {computed, defineComponent} from "vue";
+import {computed, defineComponent, onMounted} from "vue";
 import {useStore} from "../../js/store";
+import webpush from "../../js/webpush";
 
 export default defineComponent({
 	name: "NotificationSettings",
@@ -161,6 +192,23 @@ export default defineComponent({
 				(navigator.userAgent.includes("Mac") && "ontouchend" in document)
 		);
 
+		// The toggle only works when the browser can subscribe and nothing
+		// harder (denied permission, refused subscription) is in the way; the
+		// error blocks above explain every disabled state.
+		const pushToggleable = computed(() =>
+			["unsubscribed", "subscribed"].includes(store.state.pushNotificationState)
+		);
+
+		const togglePush = () => {
+			void webpush.togglePushSubscription();
+		};
+
+		// Notification permission changes outside the app (site settings);
+		// re-read it whenever this page opens.
+		onMounted(() => {
+			webpush.refresh();
+		});
+
 		const playNotification = () => {
 			const pop = new Audio();
 			pop.src = "audio/pop.wav";
@@ -173,6 +221,8 @@ export default defineComponent({
 			isIOS,
 			store,
 			playNotification,
+			pushToggleable,
+			togglePush,
 		};
 	},
 });
