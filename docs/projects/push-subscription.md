@@ -134,6 +134,42 @@ Two extra findings that shape the client:
   advertised even without X3: iauthd-ts (the IAuth program) does SASL
   itself, so **accounts do not require services**.
 
+### The payload-encryption roundtrip (`tmp/push-roundtrip.mjs`, `tmp/wpcrypto*`)
+
+FCM accepts any octet-stream, so a broken server-side encryptor is
+invisible in the delivery logs: FCM answers 2xx and the browser silently
+discards what it cannot decrypt (no push event, no error anywhere).
+After "posting to FCM succeeded but nothing ever showed on any device"
+persisted across every other fix, the decisive test was a **local
+crypto roundtrip**:
+
+1. Generate a P-256 keypair + auth secret locally, `WEBPUSH REGISTER`
+   them under an HTTPS endpoint the ircd can dial (`https:// irc.testnet.local:9099/` — a hostname, because the endpoint validator
+   blocks IP literals; `/etc/hosts` maps it to 127.0.0.1 and the system
+   CA store trusts the dev cert so libcurl connects).
+2. Arm the hold (`PERSISTENCE SET ON`), `QUIT`, then PM the ghost from a
+   second (SASL'd — anonymous loopback clients can stall in iauthd
+   post-restart) connection.
+3. The listener captures the exact POSTed `aes128gcm` body; the script
+   decrypts it with the private key (RFC 8291 derivation, AAD empty per
+   RFC 8188 §2.2 — "The additional data passed to each invocation of
+   AEAD_AES_128_GCM is a zero-length octet sequence") and verifies the
+   VAPID JWT signature against the announced key.
+4. `tmp/wpcrypto.c` + `tmp/wpcrypto-diff.mjs` diff **every intermediate**
+   (base64url decode, ECDH, ikm, cek, nonce) between the ircd's
+   verbatim primitives and a reference implementation.
+
+This caught the bug that explained every symptom: `webpush_encrypt`
+declared its HKDF info strings with an explicit trailing `\0` **on top
+of the implicit string terminator**, so `sizeof()` was one byte longer
+than RFC 8291's info (29/25 instead of 28/24). The derived CEK and
+nonce were unique garbage — no browser could decrypt anything. The IKM
+derivation was unaffected (fixed 144-byte buffer, not a string
+literal), which is why REGISTER, ECDH and the envelope all looked
+healthy. Fixed in nefarious2 `72fdd37`; the whole chain (REGISTER →
+hold → notify → parse → encrypt → VAPID → POST → decrypt) now verifies
+end-to-end against reference crypto.
+
 ## The test environment (testnet, built and running natively)
 
 `testnet/` ships as Docker Compose (nefarious + X3 + keycloak) but pins the
