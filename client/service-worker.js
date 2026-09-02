@@ -404,6 +404,9 @@ async function updateBadge() {
 
 self.addEventListener("push", function (event) {
 	const raw = event.data ? event.data.text() : "";
+	self.__pushDiag = event.data
+		? "len" + raw.length + " tail" + raw.charCodeAt(raw.length - 1)
+		: "nodata";
 
 	event.waitUntil(handlePush(raw));
 });
@@ -411,8 +414,15 @@ self.addEventListener("push", function (event) {
 async function handlePush(raw) {
 	let json = null;
 
+	// RFC 8188 says the decrypter strips the aes128gcm padding delimiter
+	// (a trailing 0x02) before the payload reaches the SW; if a browser
+	// ever delivers it unstripped, JSON.parse would throw and the push
+	// would degrade to the generic fallback. Trim trailing control bytes
+	// before parsing so the payload is always clean.
+	const clean = raw.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]+$/, "");
+
 	try {
-		json = JSON.parse(raw);
+		json = JSON.parse(clean);
 	} catch (e) {
 		// not JSON — spec-shape raw IRC line
 	}
@@ -426,7 +436,7 @@ async function handlePush(raw) {
 
 	const parsed = json
 		? {from: json.from, target: json.target, text: json.text, time: json.time, kind: json.t}
-		: parsePushLine(raw);
+		: parsePushLine(clean);
 
 	if (
 		parsed &&
@@ -494,7 +504,7 @@ async function handlePush(raw) {
 	await showSafely("Seance", {
 		tag: "push-activity",
 		icon: "img/icon-192.png",
-		body: "New activity while you were away.",
+		body: "New activity while you were away. [dbg:" + (self.__pushDiag || "?") + "]",
 	});
 
 	await updateBadge();
