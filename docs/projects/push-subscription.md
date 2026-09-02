@@ -1,10 +1,17 @@
 # Push subscription, phase 1: `draft/webpush` REGISTER round-trip
 
-_Noted 2026-09-01. Status: researched + verified end-to-end against the
-testnet ircd → implementation plan. Scope: **subscription only** — the client
-subscribes via the browser Push API and registers the subscription with the
-ircd per the draft spec. Delivery (the service-worker `push` handler) is
-phase 2 and keeps its plan in `notifications.md`._
+_Noted 2026-09-01. Status: **implemented 2026-09-01** (branch
+`feat/webpush-subscribe`): M2–M8 as planned below, the probe at
+`tools/webpush-probe.mjs` and the live test at `test/irc/webpush.live.ts` (M1),
+unit tests at `test/irc/webpush.ts` (M9), and the browser scenario at
+`tools/scenarios/webpush-subscribe.mjs` — all green against the testnet ircd.
+One deviation from the text below: the Settings toggle ships **enabled**
+(what the verification checklist requires), with the phase-2 caveat that a
+push arriving before the worker has a `push` handler would be undeliverable.
+Scope: **subscription only** — the client subscribes via the browser Push API
+and registers the subscription with the ircd per the draft spec. Delivery
+(the service-worker `push` handler) is phase 2 and keeps its plan in
+`notifications.md`._
 
 Sources: [ircv3-specifications PR #471](https://github.com/ircv3/ircv3-specifications/pull/471)
 (`extensions/webpush.md`, the `draft/webpush` cap), the nefarious2
