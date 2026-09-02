@@ -32,9 +32,11 @@ _Live-cycle findings 2026-09-02 (first real trigger attempt, testnet ircd):_
   silently skipped in `notify_iter_cb`. Pushes were stored correctly and
   never sent. Upstream-candidate commit in `testnet/nefarious`.
 - **The worker handles nefarious2's tiered JSON payloads** (`{"t":"msg",…}`
-  - `text` on the `full` tier via the account's `draft/webpush/payload`
-    metadata — set with `METADATA * SET draft/webpush/payload * :full` under
-    `draft/metadata-2`), falling back to the spec's raw IRC line.
+  - `text` on the `full` tier — the server DEFAULT since d7dedfb (the
+    payload is encrypted server-to-device, so there is nothing to leak;
+    accounts can still opt down with `METADATA \* SET draft/webpush/payload
+    - :route|ping`under`draft/metadata-2`), falling back to the spec's
+      raw IRC line.
 - The whole chain was verified to the edge of the sandbox: session HELD →
   PM → all server gates pass (flag/HOLDING/subscription/cooldown) → push
   emitted → FCM accepted a correctly-signed aes128gcm push for this
