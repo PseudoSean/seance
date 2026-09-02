@@ -455,7 +455,23 @@ async function handlePush(raw) {
 			? parsed.from + " in " + parsed.target + (count > 1 ? " (" + count + ")" : "")
 			: parsed.from + (count > 1 ? " (" + count + ")" : "");
 
-		await self.registration.showNotification(title, {
+		// Inline reply is desktop-only: Chrome for Android rejects
+		// type:"text" actions outright, which would sink the whole
+		// notification after FCM already delivered it. Buttons only there.
+		const isAndroid = /Android/.test(self.navigator.userAgent);
+		const actions = isAndroid
+			? [{action: "mute1h", title: "Mute 1h"}]
+			: [
+					{
+						action: "reply",
+						type: "text",
+						title: "Reply",
+						placeholder: "Reply…",
+					},
+					{action: "mute1h", title: "Mute 1h"},
+			  ];
+
+		await showSafely(title, {
 			tag,
 			icon: "img/icon-192.png",
 			body: text,
@@ -467,11 +483,7 @@ async function handlePush(raw) {
 				target: replyTo,
 				time: parsed.time,
 			},
-			// Inline reply on desktop Chrome; a plain button elsewhere.
-			actions: [
-				{action: "reply", type: "text", title: "Reply", placeholder: "Reply…"},
-				{action: "mute1h", title: "Mute 1h"},
-			],
+			actions,
 		});
 
 		await updateBadge();
@@ -479,13 +491,42 @@ async function handlePush(raw) {
 	}
 
 	// userVisibleOnly means every push should surface something.
-	await self.registration.showNotification("Seance", {
+	await showSafely("Seance", {
 		tag: "push-activity",
 		icon: "img/icon-192.png",
 		body: "New activity while you were away.",
 	});
 
 	await updateBadge();
+}
+
+/** showNotification that cannot silently fail: if Chrome rejects any
+ * option (an unsupported action, a bad icon), retry with the body only,
+ * then bare.  A delivered push that renders nothing is the worst outcome
+ * there is, so every path here ends in a visible notification. */
+async function showSafely(title, options) {
+	try {
+		await self.registration.showNotification(title, options);
+		return;
+	} catch (e) {
+		// fall through to the reduced forms
+	}
+
+	try {
+		await self.registration.showNotification(title, {
+			tag: options.tag,
+			body: options.body,
+		});
+		return;
+	} catch (e) {
+		// fall through to the bare form
+	}
+
+	try {
+		await self.registration.showNotification(title, {});
+	} catch (e) {
+		// nothing else to try
+	}
 }
 
 /** Close push notifications for `target` whose message predates `ts`. */
