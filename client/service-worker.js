@@ -245,12 +245,15 @@ function showPageNotification(event, payload) {
 // IRC line shape is handled as a fallback.
 //
 // Discord-style behaviour layered on top:
-//   - per-target merging with an unread count (tag `push-<target>`),
+//   - per-target merging with a rising unread count, a combined body
+//     (middle-ellipsised when it overflows; see renderMergedBody) and the
+//     recent messages kept in the notification's data (tag `push-<target>`),
 //   - app badge = total unread across push notifications,
-//   - actions: Reply (inline text on desktop Chrome) and Mute 1h — both act
-//     through a short-lived IRC connection the worker opens itself
-//     (credentials come from the page via IndexedDB, only stashed when the
-//     user enabled push AND password remembering),
+//   - actions on every platform: Reply (an inline text field on desktop
+//     Chrome; a deep-linking button where text actions are unsupported) and
+//     Mute 30m — both act through a short-lived IRC connection the worker
+//     opens itself (credentials come from the page via IndexedDB, only
+//     stashed when the user enabled push AND password remembering),
 //   - `pushsubscriptionchange` re-subscribes with the stashed VAPID key and
 //     re-registers, so expiry self-heals.
 
@@ -288,18 +291,23 @@ async function idbSet(key, value) {
 }
 
 /**
- * Run one batch of actions over a throwaway IRC connection (SASL PLAIN).
- * `pre` lines go out after SASL completes but before CAP END (that is the
- * only window `WEBPUSH REGISTER` accepts), `post` lines after 001.
- * Resolves true when every pre/post line was sent.
+ * Open a throwaway IRC connection (SASL PLAIN) and hand the live socket to
+ * `onReady(ws, done)` at 001.  `pre` lines go out after SASL completes but
+ * before CAP END (the only window `WEBPUSH REGISTER` accepts).  Resolves
+ * through done(ok): false on any SASL/registration failure or timeout.
  */
-function swIrcAct(net, pre, post) {
+function swIrcOpen(net, pre, onReady) {
 	return new Promise((resolve) => {
 		const scheme = net.tls ? "wss://" : "ws://";
 		const url = scheme + net.host + ":" + net.port + "/";
 		let ws = null;
+		let stage = 0; // 0 LS, 1 REQ, 2 AUTHENTICATE PLAIN, 3 payload, 4 registered
 
-		const done = (ok) => {
+		const timer = setTimeout(() => done(false), 10000);
+
+		function done(ok) {
+			clearTimeout(timer);
+
 			try {
 				ws.close();
 			} catch (e) {
@@ -307,9 +315,7 @@ function swIrcAct(net, pre, post) {
 			}
 
 			resolve(ok);
-		};
-
-		const timer = setTimeout(() => done(false), 10000);
+		}
 
 		ws = new WebSocket(url, "text.ircv3.net");
 
@@ -327,18 +333,36 @@ function swIrcAct(net, pre, post) {
 				return;
 			}
 
-			if (/^AUTHENTICATE \+$/.test(l)) {
+			// Each branch flips the stage BEFORE sending: a synchronously
+			// scripted (or locally proxied) server re-enters this handler
+			// from send() before the send returns.
+			if (stage === 0 && / CAP .* LS /.test(l)) {
+				stage = 1;
+				ws.send("CAP REQ :sasl");
+				return;
+			}
+
+			if (stage === 1 && / CAP .* ACK /.test(l)) {
+				stage = 2;
+				ws.send("AUTHENTICATE PLAIN");
+				return;
+			}
+
+			if (stage === 2 && /^AUTHENTICATE \+$/.test(l)) {
+				stage = 3;
 				ws.send("AUTHENTICATE " + btoa("\0" + net.saslAccount + "\0" + net.saslPassword));
 				return;
 			}
 
-			if (l.startsWith("FAIL") || / 90[2-8] /.test(l)) {
-				clearTimeout(timer);
+			// SASL failures: 902 and 904-908 (903 success is handled below).
+			if (stage === 3 && (l.startsWith("FAIL") || / 90[245678] /.test(l))) {
 				done(false);
 				return;
 			}
 
-			if (/ 903 /.test(l) && pre.length > 0) {
+			if (stage === 3 && / 903 /.test(l)) {
+				stage = 4;
+
 				for (const line of pre) {
 					ws.send(line);
 				}
@@ -347,36 +371,25 @@ function swIrcAct(net, pre, post) {
 				return;
 			}
 
-			if (/ 903 /.test(l) && pre.length === 0) {
-				ws.send("CAP END");
-				return;
-			}
-
-			if (/ 001 /.test(l) && post.length > 0) {
-				for (const line of post) {
-					ws.send(line);
-				}
-
-				ws.send("QUIT :done");
-				clearTimeout(timer);
-				return;
-			}
-
-			if (/ 001 /.test(l)) {
-				ws.send("QUIT :done");
-				clearTimeout(timer);
+			if (stage === 4 && / 001 /.test(l)) {
+				onReady(ws, done);
 			}
 		};
 
-		ws.onclose = () => {
-			clearTimeout(timer);
-			resolve(true);
-		};
+		ws.onerror = () => done(false);
+	});
+}
 
-		ws.onerror = () => {
-			clearTimeout(timer);
-			resolve(false);
-		};
+/** Run one batch of lines over a throwaway IRC connection: `pre` before
+ * CAP END, `post` after 001.  Resolves true when both were sent. */
+function swIrcAct(net, pre, post) {
+	return swIrcOpen(net, pre, (ws, done) => {
+		for (const line of post) {
+			ws.send(line);
+		}
+
+		ws.send("QUIT :done");
+		done(true);
 	});
 }
 
@@ -408,6 +421,46 @@ self.addEventListener("push", function (event) {
 
 	event.waitUntil(handlePush(raw));
 });
+
+// --- merged-notification body rendering ------------------------------------
+// Notifications for one target merge into a single record; Chrome clips
+// long bodies, so the renderer keeps how each message starts and ends and
+// hides the middle behind an ellipsis — and over the whole-body budget it
+// keeps the oldest and newest lines, hiding the middle as `… +N more`.
+
+const MERGE_KEEP = 4; // messages retained in the notification's data
+const BODY_BUDGET = 170; // total body characters before middle-dropping
+const LINE_HEAD = 48; // per-line middle-ellipsis split
+const LINE_TAIL = 18;
+
+/** Middle ellipsis: keep how a long message starts and ends. */
+function midEllipsis(s, head = LINE_HEAD, tail = LINE_TAIL) {
+	if (s.length <= head + tail + 1) {
+		return s;
+	}
+
+	return s.slice(0, head) + "…" + s.slice(s.length - tail);
+}
+
+/** Render the merged body: one line per message (`from: text` in channels,
+ * bare text in DMs), newest last.  Over budget, the middle lines collapse
+ * into `… +N more` between the oldest and the newest kept lines. */
+function renderMergedBody(messages, isChannel) {
+	const lines = messages.map((m) => (isChannel && m.from ? m.from + ": " + m.text : m.text));
+	const shown = lines.map((l) => midEllipsis(l));
+	let dropped = 0;
+
+	while (shown.length > 2 && shown.join("\n").length > BODY_BUDGET) {
+		shown.splice(shown.length - 2, 1);
+		dropped++;
+	}
+
+	if (dropped > 0) {
+		shown.splice(shown.length - 1, 0, "… +" + dropped + " more");
+	}
+
+	return shown.join("\n");
+}
 
 async function handlePush(raw) {
 	let json = null;
@@ -452,9 +505,16 @@ async function handlePush(raw) {
 				? parsed.text.replace(/\x01ACTION /, "*").replace(/\x01$/, "*")
 				: "New message";
 
-		// Merge per target: newest body, rising unread count.
+		// Merge per target: a combined body (newest last) and a rising
+		// unread count.  The message list rides on the notification's data
+		// so it survives the worker being killed between pushes.
 		const existing = await self.registration.getNotifications({tag});
-		const count = ((existing[0] && existing[0].data && existing[0].data.count) || 0) + 1;
+		const prev = existing[0] && existing[0].data;
+		const count = ((prev && prev.count) || 0) + 1;
+		const messages = [...((prev && prev.messages) || []), {from: parsed.from, text}].slice(
+			-MERGE_KEEP
+		);
+		const body = renderMergedBody(messages, isChannel);
 
 		for (const n of existing) {
 			n.close();
@@ -464,26 +524,20 @@ async function handlePush(raw) {
 			? parsed.from + " in " + parsed.target + (count > 1 ? " (" + count + ")" : "")
 			: parsed.from + (count > 1 ? " (" + count + ")" : "");
 
-		// Inline reply is desktop-only: Chrome for Android rejects
-		// type:"text" actions outright, which would sink the whole
-		// notification after FCM already delivered it. Buttons only there.
-		const isAndroid = /Android/.test(self.navigator.userAgent);
-		const actions = isAndroid
-			? [{action: "mute1h", title: "Mute 1h"}]
-			: [
-					{
-						action: "reply",
-						type: "text",
-						title: "Reply",
-						placeholder: "Reply…",
-					},
-					{action: "mute1h", title: "Mute 1h"},
-			  ];
+		// Inline reply renders as a text field where the browser supports
+		// it (desktop Chrome) and degrades to a button that deep-links the
+		// chat where it does not — the click handler falls back to openApp
+		// when no reply text arrives.  showSafely guards the whole call if
+		// a browser rejects the actions outright.
+		const actions = [
+			{action: "reply", type: "text", title: "Reply", placeholder: "Reply…"},
+			{action: "mute30", title: "Mute 30m"},
+		];
 
 		await showSafely(title, {
 			tag,
 			icon: "img/icon-192.png",
-			body: text,
+			body,
 			timestamp: parsed.time ? Date.parse(parsed.time) : undefined,
 			data: {
 				kind: "push",
@@ -491,6 +545,7 @@ async function handlePush(raw) {
 				from: parsed.from,
 				target: replyTo,
 				time: parsed.time,
+				messages,
 			},
 			actions,
 		});
@@ -709,15 +764,15 @@ self.addEventListener("notificationclick", function (event) {
 		return;
 	}
 
-	// Mute 1h: suppress pushes for this target via the account mute list
+	// Mute 30m: suppress pushes for this target via the account mute list
 	// (the ircd gates pushes on it). GET-merge-SET so other entries survive.
-	if (event.action === "mute1h" && data.target) {
+	if (event.action === "mute30" && data.target) {
 		event.notification.close();
 		event.waitUntil(
 			(async () => {
 				const stash = await getStash();
-				const until = Math.floor(Date.now() / 1000) + 3600;
-				const sent = await swMute1h(stash.networks[0], data.target, until);
+				const until = Math.floor(Date.now() / 1000) + 30 * 60;
+				const sent = await swMute(stash.networks[0], data.target, until);
 
 				if (sent) {
 					await closeForTarget(data.target, new Date().toISOString());
@@ -782,30 +837,22 @@ async function openApp() {
 	}
 }
 
-/** Mute `target` for an hour: GET the account mute list, merge, SET. */
-function swMute1h(net, target, until) {
-	return new Promise((resolve) => {
-		const scheme = net.tls ? "wss://" : "ws://";
-		const url = scheme + net.host + ":" + net.port + "/";
-		let ws = null;
+/** Mute `target` until `until` (epoch seconds): open a throwaway
+ * connection, GET the account mute list, merge, SET.  Resolves true when
+ * the SET went out. */
+function swMute(net, target, until) {
+	return swIrcOpen(net, [], (ws, done) => {
 		let value = null;
-		let registered = false;
-		const timer = setTimeout(() => {
-			try {
-				ws.close();
-			} catch (e) {
-				//
-			}
 
-			resolve(false);
-		}, 10000);
+		const timer = setTimeout(() => done(false), 10000);
 
-		ws = new WebSocket(url, "text.ircv3.net");
-
-		ws.onopen = () => {
-			ws.send("CAP LS 302");
-			ws.send("NICK seance-sw");
-			ws.send("USER seance-sw 0 * :seance service worker");
+		const finish = () => {
+			clearTimeout(timer);
+			ws.send(
+				"METADATA * SET draft/webpush/mute * :" + mergeMuteEntry(value ?? "", target, until)
+			);
+			ws.send("QUIT :done");
+			setTimeout(() => done(true), 200);
 		};
 
 		ws.onmessage = (e) => {
@@ -816,17 +863,13 @@ function swMute1h(net, target, until) {
 				return;
 			}
 
-			if (/^AUTHENTICATE \+$/.test(l)) {
-				ws.send("AUTHENTICATE " + btoa("\0" + net.saslAccount + "\0" + net.saslPassword));
-				return;
-			}
-
 			if (/^:[^ ]+ 761 /.test(l)) {
 				// RPL_METADATA: <me> <key> <visibility> :<value>
 				const parts = l.split(" ");
 
 				if (parts[3] === "draft/webpush/mute") {
 					value = l.slice(l.indexOf(" :") + 2);
+					finish();
 				}
 
 				return;
@@ -841,42 +884,22 @@ function swMute1h(net, target, until) {
 
 					if (colon !== -1) {
 						value = bits.slice(colon + 2);
+						finish();
 					}
 				}
 
 				return;
 			}
 
-			if (/ 903 /.test(l)) {
-				ws.send("CAP END");
+			if (/ 762 /.test(l)) {
+				// ERR_NOMATCHINGKEY: no mute list yet; start from empty.
+				value = "";
+				finish();
 				return;
 			}
-
-			if (/ 001 /.test(l) && !registered) {
-				registered = true;
-				ws.send("METADATA * GET draft/webpush/mute");
-				return;
-			}
-
-			if (registered && (value !== null || / 76[12] /.test(l))) {
-				const merged = mergeMuteEntry(value || "", target, until);
-
-				ws.send("METADATA * SET draft/webpush/mute * :" + merged);
-				ws.send("QUIT :done");
-				clearTimeout(timer);
-				setTimeout(() => resolve(true), 200);
-			}
 		};
 
-		ws.onclose = () => {
-			clearTimeout(timer);
-			resolve(registered && value !== null);
-		};
-
-		ws.onerror = () => {
-			clearTimeout(timer);
-			resolve(false);
-		};
+		ws.send("METADATA * GET draft/webpush/mute");
 	});
 }
 
