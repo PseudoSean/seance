@@ -216,18 +216,48 @@ self.addEventListener("message", function (event) {
 });
 
 // --- Web Push (draft/webpush, phase-2 slice 0) -----------------------------
-// The ircd pushes one IRC line (server-defined subset: PMs and highlights,
-// `@time`/`msgid` tags included) per notification, encrypted by the browser
-// before we see it. Group per sender so a burst collapses into one toast.
+// The ircd pushes one notification per event. nefarious2's payload is tiered
+// JSON (account metadata key `draft/webpush/payload`): `{"t":"msg","from":…,
+// "target":…,"msgid":…,"time":…}` on the default `route` tier, plus `"text"`
+// on `full`. The draft spec itself says one raw IRC line — the worker accepts
+// both shapes. Group per sender so a burst collapses into one toast.
 
 self.addEventListener("push", function (event) {
-	const line = event.data ? event.data.text() : "";
+	const raw = event.data ? event.data.text() : "";
 
-	event.waitUntil(showPushNotification(line));
+	event.waitUntil(showPushNotification(raw));
 });
 
-async function showPushNotification(line) {
-	const msg = parsePushLine(line);
+async function showPushNotification(raw) {
+	let json = null;
+
+	try {
+		json = JSON.parse(raw);
+	} catch (e) {
+		// not JSON — spec-shape raw IRC line
+	}
+
+	if (json && json.t) {
+		const kind = json.t === "notice" ? "notice" : "message";
+		const channel = typeof json.target === "string" && json.target.startsWith("#");
+		const title = json.from
+			? channel
+				? `${json.from} in ${json.target}`
+				: json.from
+			: "Seance";
+		const body = typeof json.text === "string" ? json.text : kind;
+
+		await self.registration.showNotification(title, {
+			tag: `push-${json.from ?? "activity"}`,
+			icon: "img/icon-192.png",
+			body,
+			timestamp: json.time ? Date.parse(json.time) : undefined,
+			data: {deepLink: null}, // deep links by msgid are phase 2
+		});
+		return;
+	}
+
+	const msg = parsePushLine(raw);
 
 	if (msg && (msg.command === "PRIVMSG" || msg.command === "NOTICE")) {
 		const isChannel = msg.target.startsWith("#");
@@ -246,8 +276,8 @@ async function showPushNotification(line) {
 		return;
 	}
 
-	// userVisibleOnly means every push should surface something; the server's
-	// subset is PM/highlight lines, so anything else is rare — show it generically.
+	// userVisibleOnly means every push should surface something; anything the
+	// server sends that we could not interpret still shows, generically.
 	await self.registration.showNotification("Seance", {
 		tag: "push-activity",
 		icon: "img/icon-192.png",
