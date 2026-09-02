@@ -87,6 +87,11 @@ function permissionDenied(): boolean {
 }
 
 /** Any VAPID key among the connected networks (they are per-ircd; see M7 notes). */
+/** Guards the silent re-subscribe after a server VAPID rotation, so a
+ * burst of webpush:available events (several networks, a reconnect) can
+ * only mint one replacement subscription. */
+let rotationInProgress = false;
+
 function anyVapid(): string | undefined {
 	for (const vapid of servers.values()) {
 		if (vapid !== undefined) {
@@ -109,6 +114,15 @@ function refreshState(): void {
 		return;
 	}
 
+	// A stored subscription means "subscribed": it survives reloads and
+	// disconnects (the server keeps it until the device unregisters, and the
+	// worker renews it). This must win over the current-connection checks so
+	// the Settings page doesn't flip to unsubscribed on every reload.
+	if (Object.keys(subs).length > 0) {
+		setState("subscribed");
+		return;
+	}
+
 	if (anyVapid() === undefined) {
 		// No connected network advertises draft/webpush (or none is connected
 		// yet) — the server half is what phase 1 cannot do without.
@@ -116,15 +130,16 @@ function refreshState(): void {
 		return;
 	}
 
-	if (Object.keys(subs).length > 0) {
-		setState("subscribed");
-		return;
-	}
-
 	setState("unsubscribed");
 }
 
-/** Re-register a stored subscription with one freshly connected network. */
+/** Re-register a stored subscription with one freshly connected network.
+ *
+ * Also self-heals server-side VAPID rotation: if subscriptions exist but
+ * none was made against the key this network now announces, the old
+ * subscription is dead (FCM binds an endpoint to the VAPID key that
+ * created it), so silently mint a fresh one and register that instead —
+ * no user gesture needed, permission already granted. */
 function autoRegister(network: string, vapid: string | undefined): void {
 	if (vapid === undefined) {
 		return;
@@ -134,6 +149,47 @@ function autoRegister(network: string, vapid: string | undefined): void {
 
 	if (sub) {
 		socket.emit("webpush:register", {network, endpoint: sub.endpoint, keys: sub.keys});
+		return;
+	}
+
+	if (
+		Object.keys(subs).length > 0 &&
+		Notification.permission === "granted" &&
+		!rotationInProgress
+	) {
+		const net = saved.get(network);
+
+		if (!net || !net.saslAccount) {
+			return; // re-registering requires an account; leave it to subscribe()
+		}
+
+		rotationInProgress = true;
+
+		void (async () => {
+			try {
+				const material = await pushSubscription(vapid);
+
+				subs = {[vapid]: material};
+				saveSubs();
+				await writeStash(vapid);
+				socket.emit("webpush:register", {
+					network,
+					endpoint: material.endpoint,
+					keys: material.keys,
+				});
+				socket.emit("webpush:metadata", {
+					network,
+					key: "draft/webpush/payload",
+					value: "full",
+				});
+				refreshState();
+			} catch (error) {
+				// eslint-disable-next-line no-console
+				console.warn("[webpush] renewal after VAPID rotation failed", error);
+			} finally {
+				rotationInProgress = false;
+			}
+		})();
 	}
 }
 
@@ -210,6 +266,21 @@ async function subscribe(): Promise<void> {
 
 		if (permission !== "granted") {
 			setState("denied");
+			return;
+		}
+
+		// Client-side enforcement of the account requirement (the server
+		// refuses REGISTER without one anyway): at least one connected
+		// push-capable network must have a SASL account configured.
+		const pushCapable = [...servers.entries()].filter(([, v]) => v !== undefined);
+		const withAccount = pushCapable.filter(([uuid]) => {
+			const net = saved.get(uuid);
+
+			return Boolean(net && net.saslAccount);
+		});
+
+		if (pushCapable.length > 0 && withAccount.length === 0) {
+			setState("blocked");
 			return;
 		}
 
