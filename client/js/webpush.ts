@@ -344,6 +344,10 @@ refreshState();
 // Opening the app means the user is catching up in-app: drop any push
 // notifications the service worker is still showing (badge included).
 socket.on("init", async () => {
+	if (!browserSupported()) {
+		return;
+	}
+
 	try {
 		const registration = await navigator.serviceWorker.ready;
 
@@ -363,11 +367,13 @@ socket.on("init", async () => {
 
 // The service worker asks the page to redo a subscription it could not
 // renew itself (pushsubscriptionchange without stashed credentials).
-navigator.serviceWorker.addEventListener("message", (event) => {
-	if (event.data && event.data.type === "resubscribe") {
-		void subscribe();
-	}
-});
+if (browserSupported() && "serviceWorker" in navigator) {
+	navigator.serviceWorker.addEventListener("message", (event) => {
+		if (event.data && event.data.type === "resubscribe") {
+			void subscribe();
+		}
+	});
+}
 
 export default {
 	togglePushSubscription,
