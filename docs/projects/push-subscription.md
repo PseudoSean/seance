@@ -31,6 +31,14 @@ _Live-cycle findings 2026-09-02 (first real trigger attempt, testnet ircd):_
   char short, decoded to 64 bytes, failed the 65-byte check, and every push
   silently skipped in `notify_iter_cb`. Pushes were stored correctly and
   never sent. Upstream-candidate commit in `testnet/nefarious`.
+- **Notification actions and merging** (all covered by
+  `test/tests/service-worker.ts`): Reply (inline text on desktop; a
+  deep-linking button elsewhere) and Mute 30m both run over a throwaway SASL
+  connection the worker opens from the stashed credentials — reply sends
+  `PRIVMSG`, mute does a metadata GET-merge-SET on `draft/webpush/mute`.
+  Same-target pushes merge into one notification whose body combines the
+  recent messages with middle-ellipsis truncation; the `t:"read"` relay
+  closes a target's notification once another device has read past it.
 - **The worker handles nefarious2's tiered JSON payloads** (`{"t":"msg",…}`
   for PMs, `{"t":"hl",…}` for channel messages mentioning the account's
   nick, `{"t":"read",…}` to close what another device already read
