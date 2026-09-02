@@ -84,6 +84,25 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 		}
 	});
 
+	// Web Push (draft/webpush): the browser subscription lives in
+	// client/js/webpush.ts; these hand it to the network's server. The
+	// echoes / FAILs come back as `webpush:state` (handlers/webpush.ts).
+	bus.handle("webpush:register", ({network, endpoint, keys}) => {
+		const client = registry.clientForNetwork(network);
+
+		if (client) {
+			client.webpushRegister(endpoint, keys);
+		}
+	});
+
+	bus.handle("webpush:unregister", ({network, endpoint}) => {
+		const client = registry.clientForNetwork(network);
+
+		if (client) {
+			client.webpushUnregister(endpoint);
+		}
+	});
+
 	bus.handle("open", (id) => {
 		for (const client of registry.allClients()) {
 			client.open(client.channelById(id) ? id : 0);

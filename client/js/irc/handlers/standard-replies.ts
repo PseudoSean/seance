@@ -9,7 +9,8 @@
  * again when the cooldown is over, and nothing is said. `WARN BATCH
  * MULTILINE_FALLBACK` — one per multi-line message — is silent, and so is
  * `FAIL PERSISTENCE` about the catch-up cursor (../persistence.ts).
- * Everything else is shown raw.
+ * `FAIL WEBPUSH <code> <command> [<endpoint>] :text` becomes `webpush:state`
+ * (../webpush.ts); everything else is shown raw.
  */
 
 import {MessageType} from "../../../../shared/types/msg";
@@ -107,7 +108,29 @@ function multilineFailed(client: IrcClient, msg: IrcMessage): void {
 }
 
 /**
- * The seconds `FAIL BATCH MULTILINE_COOLDOWN <seconds> :text` asks us to wait
+ * `FAIL WEBPUSH <code> <command> [<endpoint>] :<text>` (draft/webpush § Errors,
+ * plus nefarious2's non-spec `ACCOUNT_REQUIRED` which omits the endpoint).
+ * Reported as `webpush:state` with `ok: false`; the subscription UI owns the
+ * message, so nothing lands in the timeline.
+ */
+function webpushFailed(client: IrcClient, msg: IrcMessage): void {
+	const [, code = "", context = "", ...rest] = msg.params;
+	const description = rest.length > 0 ? rest[rest.length - 1] : "";
+	// The spec shape carries the endpoint between the subcommand and the
+	// text; nefarious2's ACCOUNT_REQUIRED drops it and the text comes first.
+	const endpoint = rest.length > 1 ? rest[0] : "";
+
+	client.dispatch("webpush:state", {
+		network: client.uuid,
+		action: context.toUpperCase(),
+		endpoint,
+		ok: false,
+		code: code.toUpperCase(),
+		reason: description,
+	});
+}
+
+/**
  * (`ircd/m_batch.c` counts them down in whole seconds). Zero when the server
  * named none, which only costs one round trip to find out.
  */
@@ -127,6 +150,11 @@ function reply(kind: "FAIL" | "WARN" | "NOTE"): Handler {
 
 		if (kind === "FAIL" && command.toUpperCase() === "REDACT") {
 			redactFailed(client, msg);
+			return;
+		}
+
+		if (kind === "FAIL" && command.toUpperCase() === "WEBPUSH") {
+			webpushFailed(client, msg);
 			return;
 		}
 

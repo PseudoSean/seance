@@ -101,6 +101,18 @@ interface ServerToClientEvents {
 	"msg:edit": EventHandler<{chan: number; id: number; replaces: number}>;
 	/** Someone else's `+typing` TAGMSG in a loaded channel/query (never our own). */
 	typing: EventHandler<{chan: number; nick: string; state: TypingState}>;
+
+	/** Web Push (draft/webpush): one dispatch per network at registration. `vapid` is the server's public key, or undefined when it cannot push (cap not negotiated or no key advertised). Consumed by `client/js/webpush.ts`. */
+	"webpush:available": EventHandler<{network: string; vapid: string | undefined}>;
+	/** The server acknowledged (`ok: true`) or refused (`FAIL WEBPUSH`, `ok: false` + `code`/`reason`) a `WEBPUSH REGISTER|UNREGISTER`. */
+	"webpush:state": EventHandler<{
+		network: string;
+		action: string;
+		endpoint: string;
+		ok: boolean;
+		code?: string;
+		reason?: string;
+	}>;
 	"msg:special": EventHandler<{chan: number; data?: Record<string, any>}>;
 	msg: EventHandler<{
 		msg: SharedMsg;
@@ -170,6 +182,14 @@ interface ClientToServerEvents {
 	"msg:redact": EventHandler<{target: number; msgid: string; reason?: string}>;
 	/** The user's own input activity; the IRC layer throttles and sends `+typing` TAGMSGs. */
 	typing: EventHandler<{target: number; state: TypingState}>;
+
+	/** Web Push (draft/webpush): register the browser's push subscription with one network's server (docs/projects/push-subscription.md). */
+	"webpush:register": EventHandler<{
+		network: string;
+		endpoint: string;
+		keys: {p256dh: string; auth: string};
+	}>;
+	"webpush:unregister": EventHandler<{network: string; endpoint: string}>;
 
 	"upload:auth": NoPayloadEventHandler;
 	"upload:ping": (token: string) => void;
