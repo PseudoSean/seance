@@ -57,7 +57,20 @@ Its parts, top to bottom:
   count), ←/→ move one, but only once the caret has nowhere left to go, and
   Enter sends what is highlighted. Reactions already on the message are ticked.
 - **Preview bar**: the highlighted emoji, its `:shortcode:` and its
-  description — or "Remove" when it is one of yours.
+  description — or "Remove" when it is one of yours. This is the tooltip, so
+  the options carry no `title`: an OS tooltip fading in over the grid is
+  exactly the thing a picker should not do. They are not tab stops either
+  (`tabindex="-1"`), or Tab would walk 1878 buttons, and each one's accessible
+  name is its description rather than the glyph.
+
+Only one picker is ever open. An opener stops the mousedown that would
+otherwise reach the document — that is what lets its own button toggle — which
+is also the event the outside-click handler waits for, so a second picker
+would otherwise leave the first on screen. Each announces itself on the event
+bus as it mounts (`reaction-picker-opened`) and any other closes.
+
+The catalog is fetched on `mouseenter` of either opener, so by the time the
+click lands the grid is usually already there.
 
 ### Recently used
 
@@ -93,8 +106,17 @@ pair. `IrcClient.sendTagmsg` still refuses anything that will not fit in
 
 `isEmojiOnly()` decides how a badge is set: emoji at full size, anything else
 as a text pill, ellipsised at 22ch with the full text and the nicks in the
-`title`. The picker does the same for remembered reactions and for the
-"React with …" row.
+tooltip (`data-tooltip`, the app's own primer tooltip, not the OS one). The
+picker does the same for remembered reactions and for the "React with …" row.
+
+Emoji are set in `--emoji-font` wherever they are shown: a system with more
+than one emoji font otherwise picks its own, and some of those are monochrome.
+Latin text falls through the stack to the UI font, so it is only ever set on
+elements that hold emoji.
+
+A badge that arrives while you are looking pops in (`TransitionGroup`, 160 ms,
+off under `prefers-reduced-motion`); the ones already there when a channel is
+drawn do not, which is what `appear` being off buys.
 
 ## Tests
 

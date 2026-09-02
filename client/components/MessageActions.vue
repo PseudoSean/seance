@@ -21,6 +21,7 @@
 			aria-label="React"
 			title="React"
 			:aria-expanded="pickerOpen"
+			@mouseenter="preloadEmoji"
 			@mousedown.stop
 			@click="pickerOpen = !pickerOpen"
 		>
@@ -75,6 +76,7 @@ import {codeBlocksOf, layout} from "../js/helpers/ircmessageparser/layout";
 import {useStore} from "../js/store";
 import {startEdit, startReply} from "../js/helpers/compose";
 import {myReactions} from "../js/helpers/messageUpdates";
+import {loadEmojiCatalog} from "../js/helpers/emoji";
 import {ChanType} from "../../shared/types/chan";
 import {MessageType} from "../../shared/types/msg";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
@@ -155,6 +157,10 @@ export default defineComponent({
 			() => !!props.message.self || props.channel.type === ChanType.CHANNEL
 		);
 
+		// Fetch the catalog chunk while the pointer is on its way to the button,
+		// so the grid is there the moment the picker opens.
+		const preloadEmoji = () => void loadEmojiCatalog().catch(() => undefined);
+
 		const reply = () => startReply(props.channel, props.message);
 		const edit = () => startEdit(props.channel, props.message);
 
@@ -217,6 +223,7 @@ export default defineComponent({
 			reply,
 			edit,
 			react,
+			preloadEmoji,
 			remove,
 			copyCode,
 		};

@@ -1,30 +1,35 @@
 <template>
 	<span v-if="badges.length" class="msg-reactions" role="group" aria-label="Reactions">
-		<button
-			v-for="badge in badges"
-			:key="badge.text"
-			type="button"
-			class="msg-reaction"
-			:class="{self: badge.self, word: !badge.emoji}"
-			:disabled="!canToggle"
-			:aria-pressed="badge.self"
-			:aria-label="badge.label"
-			:title="badge.title"
-			@click="toggle(badge)"
-		>
-			<span class="msg-reaction-text">{{ badge.text }}</span
-			><span v-if="badge.nicks.length > 1" class="msg-reaction-count">{{
-				badge.nicks.length
-			}}</span>
-		</button>
+		<!-- A badge that arrives while you are looking pops in; the ones already
+		     there when the channel is drawn do not (`appear` is off). -->
+		<TransitionGroup name="reaction" tag="span" class="msg-reactions-list">
+			<button
+				v-for="badge in badges"
+				:key="badge.text"
+				type="button"
+				class="msg-reaction tooltipped tooltipped-n"
+				:class="{self: badge.self, word: !badge.emoji}"
+				:disabled="!canToggle"
+				:aria-pressed="badge.self"
+				:aria-label="badge.label"
+				:data-tooltip="badge.title"
+				@click="toggle(badge)"
+			>
+				<span class="msg-reaction-text">{{ badge.text }}</span
+				><span v-if="badge.nicks.length > 1" class="msg-reaction-count">{{
+					badge.nicks.length
+				}}</span>
+			</button>
+		</TransitionGroup>
 		<button
 			v-if="canToggle"
 			ref="addButton"
 			type="button"
-			class="msg-reaction msg-reaction-add"
+			class="msg-reaction msg-reaction-add tooltipped tooltipped-n"
 			aria-label="Add a reaction"
-			title="Add a reaction"
+			data-tooltip="Add a reaction"
 			:aria-expanded="pickerOpen"
+			@mouseenter="preloadEmoji"
 			@mousedown.stop
 			@click="pickerOpen = !pickerOpen"
 		>
@@ -43,7 +48,7 @@
 <script lang="ts">
 import {computed, defineComponent, PropType, ref, watch} from "vue";
 import socket from "../js/socket";
-import {isEmojiOnly} from "../js/helpers/emoji";
+import {isEmojiOnly, loadEmojiCatalog} from "../js/helpers/emoji";
 import {myReactions} from "../js/helpers/messageUpdates";
 import {rememberReaction} from "../js/helpers/reactionRecents";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
@@ -118,6 +123,10 @@ export default defineComponent({
 		const toggle = (badge: Badge) => send(badge.text, badge.self);
 		const pick = (text: string) => send(text, mine.value.includes(text));
 
+		// Fetch the catalog chunk while the pointer is on its way to the
+		// button, so the grid is there the moment the picker opens.
+		const preloadEmoji = () => void loadEmojiCatalog().catch(() => undefined);
+
 		// Close the picker if the message moves out from under it.
 		watch(
 			() => props.channel?.id,
@@ -126,7 +135,7 @@ export default defineComponent({
 			}
 		);
 
-		return {badges, canToggle, mine, pickerOpen, addButton, toggle, pick};
+		return {badges, canToggle, mine, pickerOpen, addButton, toggle, pick, preloadEmoji};
 	},
 });
 </script>
