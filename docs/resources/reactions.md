@@ -56,10 +56,28 @@ Its parts, top to bottom:
   and a remembered word is wider than an emoji, so there is no column count to
   count), ←/→ move one, but only once the caret has nowhere left to go, and
   Enter sends what is highlighted. Reactions already on the message are ticked.
+- **Building a combination**: shift-click (or Shift+Enter on the highlighted
+  option) adds an emoji to the field instead of sending it, so `🎉🔥👍` is a
+  reaction you can click together — something only a free-text reaction can
+  be, which is why no other client's picker has a pattern to copy. The rules
+  that keep it out of an ordinary click's way:
+  - The field holds what is being built, so **a field that is only emoji is
+    not a search**: the grid stays exactly where it was, because the next
+    emoji to add is in it. Type a letter and it goes back to searching.
+  - The preview bar becomes the composition — what is built so far, "Building
+    a reaction", and a Send — whenever nothing is highlighted.
+  - While building, **hovering does not move the highlight**. `:hover` still
+    lights the cell and the arrow keys still move, but Enter goes on meaning
+    "send what you built" instead of being rewritten by a pointer passing
+    over the grid.
+  - `appendReaction` (`helpers/emoji.ts`, tested) is the join rule: emoji sit
+    flush together, anything with a word in it keeps a space, and an addition
+    that would pass `MAX_REACTION_LENGTH` is refused rather than cut.
 - **Preview bar**: the highlighted emoji, its `:shortcode:` and its
-  description — or "Remove" when it is one of yours. This is the tooltip, so
-  the options carry no `title`: an OS tooltip fading in over the grid is
-  exactly the thing a picker should not do. They are not tab stops either
+  description, and one line for what would happen to it — "Remove" for one of
+  yours, "Enter to send" on the free-text row, "⇧ to combine" otherwise. It is
+  the tooltip, so the options carry no `title`: an OS tooltip fading in over
+  the grid is exactly the thing a picker should not do. They are not tab stops either
   (`tabindex="-1"`), or Tab would walk 1878 buttons, and each one's accessible
   name is its description rather than the glyph.
 

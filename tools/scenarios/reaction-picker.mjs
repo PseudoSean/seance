@@ -107,6 +107,34 @@ function speaker(nick) {
 	};
 }
 
+/** A real click with shift held, which is how a reaction is built up. */
+async function shiftClick(page, selector, index = 0) {
+	const r = await page.rect(selector, index);
+
+	if (!r || (r.width === 0 && r.height === 0)) {
+		throw new Error(`no visible element for ${selector}[${index}]`);
+	}
+
+	const at = {x: r.x + r.width / 2, y: r.y + r.height / 2, modifiers: 8};
+
+	await page.send("Input.dispatchMouseEvent", {type: "mouseMoved", ...at});
+	await page.send("Input.dispatchMouseEvent", {
+		type: "mousePressed",
+		button: "left",
+		buttons: 1,
+		clickCount: 1,
+		...at,
+	});
+	await page.send("Input.dispatchMouseEvent", {
+		type: "mouseReleased",
+		button: "left",
+		buttons: 0,
+		clickCount: 1,
+		...at,
+	});
+	await page.sleep(120);
+}
+
 /** A real key press on whatever has focus (the picker's search field). */
 async function press(page, key, code = key) {
 	const enter = key === "Enter";
@@ -258,9 +286,68 @@ export default async function run(page) {
 		(await page.count("#chat .msg-reaction.word")) > 0
 	);
 
+	// 4b. Shift-click builds a reaction out of several emoji instead of
+	//     sending each one, and the grid must stay put while it does — the
+	//     next emoji to add is in it.
+	await page.click(`${MSG} .msg-reaction-add`);
+	await page.waitFor(`document.querySelector(${JSON.stringify(PICKER)})`, {
+		label: "the picker for the combination",
+	});
+	await page.waitFor(`document.querySelectorAll(".reaction-picker-section").length >= 10`, {
+		timeout: 10000,
+		label: "the catalog",
+	});
+
+	const beforeBuild = await page.count(".reaction-picker-section");
+	const smiley = await optionIndex(page, "😀");
+	await shiftClick(page, OPTION, smiley);
+	await shiftClick(page, OPTION, smiley + 1);
+
+	await page.check(
+		`shift-click builds instead of sending (${await page.evaluate(
+			`document.querySelector(${JSON.stringify(INPUT)}).value`
+		)})`,
+		(await page.evaluate(`document.querySelector(${JSON.stringify(INPUT)}).value`)) === "😀😃"
+	);
+	await page.check(
+		"the grid stays put while building, so the next emoji is where it was",
+		(await page.count(".reaction-picker-section")) === beforeBuild
+	);
+	await page.check(
+		"the preview bar shows what is being built",
+		(await page.evaluate(`document.querySelector(".reaction-picker-preview").textContent`))
+			.replace(/\s+/g, " ")
+			.includes("Building a reaction")
+	);
+	await page.screenshot("4-combination", {selector: PICKER, pad: 8});
+
+	// The pointer is over the grid: while building, that must not rewrite what
+	// Enter does.
+	await page.hover(OPTION, smiley + 4);
+	await page.sleep(200);
+	await page.check(
+		"hovering while building does not steal what Enter sends",
+		(await page.evaluate(`document.querySelector(".reaction-picker-preview").textContent`))
+			.replace(/\s+/g, " ")
+			.includes("Building a reaction")
+	);
+
+	await press(page, "Enter");
+	await page.waitFor(`${BADGES}.includes("😀😃")`, {
+		timeout: 5000,
+		label: "the combined badge",
+	});
+	await page.check(
+		"the combination arrives as one reaction",
+		(await page.evaluate(BADGES)).includes("😀😃")
+	);
+
 	// 5. Both are remembered, newest first, words included.
 	const recent = await page.evaluate(`window.localStorage.getItem("thelounge.reactions.recent")`);
-	await page.check(`recents are stored newest first (${recent})`, recent === '["lol","🎉"]');
+	await page.check(
+		`recents are stored newest first, combinations included (${recent})`,
+		recent === '["😀😃","lol","🎉"]'
+	);
 
 	// 6. Reopened, the recents lead and what we already sent is ticked.
 	await page.click(`${MSG} .msg-reaction-add`);
@@ -273,8 +360,8 @@ export default async function run(page) {
 			"Recently used"
 	);
 	await page.check(
-		"both remembered reactions are ticked as ours",
-		(await page.count(`.reaction-picker-section[data-key="recent"] ${OPTION}.selected`)) === 2
+		"every remembered reaction of ours is ticked",
+		(await page.count(`.reaction-picker-section[data-key="recent"] ${OPTION}.selected`)) === 3
 	);
 	await page.check(
 		"the tick follows the reaction into the catalog, not the row",
