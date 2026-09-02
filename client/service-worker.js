@@ -237,8 +237,9 @@ function showPageNotification(event, payload) {
 
 // --- Web Push (draft/webpush) ----------------------------------------------
 // The ircd pushes one notification per event; nefarious2's payload is tiered
-// JSON (account metadata `draft/webpush/payload`): `{"t":"msg","from":…,
-// "target":…,"msgid":…,"time":…}` (+`"text"` on the full tier), and reads
+// JSON (account metadata `draft/webpush/payload`): `"t":"msg"` (a PM),
+// `"t":"hl"` (a channel message mentioning the account — `from in #chan`),
+// each with `from/target/msgid/time` and `text` on the full tier; reads
 // arrive as `{"t":"read","target":…,"ts":…}` so this worker can close
 // notifications that another device has already read. The draft spec's raw
 // IRC line shape is handled as a fallback.
@@ -404,9 +405,6 @@ async function updateBadge() {
 
 self.addEventListener("push", function (event) {
 	const raw = event.data ? event.data.text() : "";
-	self.__pushDiag = event.data
-		? raw.length + "|" + raw.slice(0, 60) + "|" + raw.slice(-20)
-		: "nodata";
 
 	event.waitUntil(handlePush(raw));
 });
@@ -442,6 +440,7 @@ async function handlePush(raw) {
 		parsed &&
 		(parsed.kind === "msg" ||
 			parsed.kind === "notice" ||
+			parsed.kind === "hl" ||
 			parsed.command === "PRIVMSG" ||
 			parsed.command === "NOTICE")
 	) {
@@ -504,7 +503,7 @@ async function handlePush(raw) {
 	await showSafely("Seance", {
 		tag: "push-activity",
 		icon: "img/icon-192.png",
-		body: "New activity while you were away. [dbg:" + (self.__pushDiag || "?") + "]",
+		body: "New activity while you were away.",
 	});
 
 	await updateBadge();
