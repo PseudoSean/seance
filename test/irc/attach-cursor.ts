@@ -259,9 +259,7 @@ describe("PERSISTENCE ATTACH catch-up cursor (irc/persistence.ts)", function () 
 			const attach = sent.indexOf("PERSISTENCE ATTACH default m9");
 			expect(attach, "ATTACH sent").to.be.greaterThan(-1);
 			expect(sent[attach + 1]).to.equal("CAP END");
-			// SET ON rides the same flush (the persistence opt-in, client.ts).
-			expect(sent[attach - 1]).to.equal("PERSISTENCE SET ON");
-			expect(sent[attach - 2]).to.match(/^AUTHENTICATE /);
+			expect(sent[attach - 1]).to.match(/^AUTHENTICATE /);
 			expect(h.client.attachCursor).to.equal("m9");
 			expect(h.client.serverReplay).to.equal(false);
 
@@ -276,6 +274,7 @@ describe("PERSISTENCE ATTACH catch-up cursor (irc/persistence.ts)", function () 
 			store({msgid: "m9", time: 123});
 			const h = saslClient();
 			authenticate(h, `${ALL_CAPS} sasl=PLAIN ${PERSISTENCE_NO_CURSOR}`);
+			finishRegistration(h);
 
 			expect(h.transport.sent.some((l) => l.startsWith("PERSISTENCE ATTACH"))).to.equal(
 				false

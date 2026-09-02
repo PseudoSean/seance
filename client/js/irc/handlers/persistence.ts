@@ -30,8 +30,11 @@ const persistence: Handler = (client, msg) => {
 		const setting = rest.length > 1 ? rest[0].toUpperCase() : "";
 		client.persistenceHold = effective === "ON";
 
-		if (client.state === "registering") {
-			return; // the unsolicited line; the user did not ask for it
+		if (client.state === "registering" || client.persistenceAutoSetPending) {
+			// The unsolicited line, or the echo of our registration-time
+			// SET ON: the user did not ask for either.
+			client.persistenceAutoSetPending = false;
+			return;
 		}
 
 		client.pushMessage(client.lobby, {
@@ -52,12 +55,8 @@ const persistence: Handler = (client, msg) => {
 	}
 
 	if (what === "SET") {
-		// The ack of what we asked for; the STATUS that follows carries the
-		// state the server will act on. Our own registration-time auto-enable
-		// (../persistence.ts persistenceEnableLine) is silent — the user never
-		// typed anything.
-		if (client.state === "registering") {
-			return;
+		if (client.state === "registering" || client.persistenceAutoSetPending) {
+			return; // our own registration-time auto-enable
 		}
 
 		client.pushMessage(client.lobby, {

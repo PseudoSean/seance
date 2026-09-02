@@ -226,6 +226,9 @@ export class IrcClient {
 	account = "";
 	/** The server holds our session across disconnects (`PERSISTENCE STATUS ON`, see persistence.ts). */
 	persistenceHold = false;
+	/** Our registration-time `PERSISTENCE SET ON` ack is pending (swallowed
+	 * by handlers/persistence.ts until the STATUS echo lands). */
+	persistenceAutoSetPending = false;
 	/** Set while a `draft/persistence` batch restores channel state: handlers update the model but show nothing. */
 	restoring = false;
 	/**
@@ -826,14 +829,6 @@ export class IrcClient {
 			// The one window `PERSISTENCE ATTACH` fits in: the server refuses
 			// it without an account and again once we are registered. It goes
 			// out in the same flush as `CAP END`, before it (persistence.ts).
-			// `SET ON` rides along: it is the client-side opt-in that creates
-			// the server's bouncer session and turns on its hold — without it
-			// the session never exists and draft/webpush pushes can never
-			// fire (docs/projects/push-subscription.md).
-			if (this.caps.hasCapability(PERSISTENCE_CAP)) {
-				this.send(persistenceEnableLine());
-			}
-
 			this.offerAttachCursor();
 		}
 
@@ -998,6 +993,18 @@ export class IrcClient {
 		// Whatever a bouncer says in the next few seconds is setup chatter,
 		// on any build (persistence.ts).
 		beginSettling(this);
+
+		// Opt this connection into session persistence: `PERSISTENCE SET ON`
+		// creates the server's bouncer session and turns its hold on, which
+		// is what draft/webpush triggers fire against. It needs the account
+		// flag, so it only goes out post-registration (a SET sent before CAP
+		// END is answered FAIL ACCOUNT_REQUIRED), and it is idempotent.
+		if (this.caps.hasCapability(PERSISTENCE_CAP) && this.options.saslAccount) {
+			// Flag the ack + STATUS echo as ours: handlers/persistence.ts
+			// swallows them (the user never typed anything).
+			this.persistenceAutoSetPending = true;
+			this.send(persistenceEnableLine());
+		}
 
 		// Web Push availability (draft/webpush): announce the server's VAPID
 		// key (or its absence) so webpush.ts can re-register a stored

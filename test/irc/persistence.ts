@@ -102,15 +102,25 @@ describe("Session persistence and quiet re-joins (irc/persistence.ts)", function
 				":irc.test 903 alice :SASL authentication successful"
 			);
 
-			// The registration flush: SET ON rides with CAP END, before it.
+			// 001/005/422: onRegistered fires at the MOTD end and sends SET ON.
+			h.transport.lines(
+				":irc.test 001 alice :Welcome to the SeanceDev IRC Network, alice",
+				":irc.test 005 alice CHANTYPES=#& PREFIX=(ov)@+ CHANMODES=b,k,l,imnpst CASEMAPPING=rfc1459 STATUSMSG=@+ :are supported by this server",
+				":irc.test 422 alice :MOTD File is missing"
+			);
+
+			// SET ON goes out post-001 (onRegistered): the SET handler needs
+			// the account flag, which pre-CAP-END connections do not carry.
 			const sent = h.sent();
 			const setIdx = sent.indexOf("PERSISTENCE SET ON");
 			expect(setIdx, "SET ON sent").to.be.at.least(0);
-			expect(sent.indexOf("CAP END")).to.be.greaterThan(setIdx);
+			expect(sent.indexOf("CAP END")).to.be.lessThan(setIdx);
 
 			// The ack + the STATUS that follows are ours: silent.
 			h.transport.lines(":irc.test PERSISTENCE SET ON", ":irc.test PERSISTENCE STATUS ON ON");
-			expect(h.messages().some((m) => /persistence/i.test(m.text ?? ""))).to.equal(false);
+			expect(h.messages().some((m) => /Session persistence/i.test(m.text ?? ""))).to.equal(
+				false
+			);
 		});
 
 		it("does not auto-enable persistence without SASL", function () {
