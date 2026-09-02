@@ -39,6 +39,28 @@ const optionIndex = (page, text) =>
 		)})`
 	);
 
+/**
+ * Contrast between the search field's placeholder and the popover behind it.
+ * The picker is teleported out of `#chat-container`, which is where a theme
+ * scopes its placeholder colour, so this is exactly the kind of thing that
+ * silently falls back to the light-theme default.
+ */
+const PLACEHOLDER_CONTRAST = `(() => {
+	const parse = (c) => (c.match(/[\\d.]+/g) || []).slice(0, 3).map(Number);
+	const luminance = (rgb) =>
+		rgb
+			.map((v) => {
+				const s = v / 255;
+				return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+			})
+			.reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+	const input = document.querySelector(".reaction-picker-input");
+	const back = luminance(parse(getComputedStyle(input.closest(".reaction-picker")).backgroundColor));
+	const front = luminance(parse(getComputedStyle(input, "::placeholder").color));
+	const [light, dark] = [front, back].sort((a, b) => b - a);
+	return Math.round(((light + 0.05) / (dark + 0.05)) * 100) / 100;
+})()`;
+
 /** What the picker would send if Enter were pressed right now. */
 const ACTIVE = `(() => {
 	const el = document.querySelector(".reaction-picker-option.active");
@@ -370,6 +392,24 @@ export default async function run(page) {
 	);
 	await page.screenshot("8-sheet", {selector: "body", pad: 0});
 	await page.send("Emulation.clearDeviceMetricsOverride");
+	await page.sleep(400);
+
+	// 11. Readable on either theme. The placeholder is the giveaway: themes
+	//     scope theirs to `#chat-container`, which the picker is not in.
+	const light = await page.evaluate(PLACEHOLDER_CONTRAST);
+	await page.check(`the placeholder reads on the default theme (${light}:1)`, light >= 4.5);
+
+	await page.evaluate(`(() => {
+		const link = document.createElement("link");
+		link.rel = "stylesheet";
+		link.href = "themes/morning.css";
+		document.head.appendChild(link);
+	})()`);
+	await page.sleep(600);
+
+	const dark = await page.evaluate(PLACEHOLDER_CONTRAST);
+	await page.check(`the placeholder reads on a dark theme (${dark}:1)`, dark >= 4.5);
+	await page.screenshot("9-dark-theme", {selector: PICKER, pad: 8});
 
 	talker.quit();
 	await page.check("no console errors", page.consoleErrors.length === 0);

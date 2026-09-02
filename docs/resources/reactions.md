@@ -109,6 +109,12 @@ as a text pill, ellipsised at 22ch with the full text and the nicks in the
 tooltip (`data-tooltip`, the app's own primer tooltip, not the OS one). The
 picker does the same for remembered reactions and for the "React with …" row.
 
+Being teleported out of `#chat-container` costs the picker anything a theme
+scopes to it — `themes/morning.css` puts its placeholder colour there, so the
+search field fell back to the global `rgb(0 0 0 / 35%)` and was a smudge on
+the dark theme. Style the picker from the `:root` variables only, and the
+scenario measures the placeholder's contrast on both themes (>= 4.5:1).
+
 Emoji are set in `--emoji-font` wherever they are shown: a system with more
 than one emoji font otherwise picks its own, and some of those are monochrome.
 Latin text falls through the stack to the UI font, so it is only ever set on
