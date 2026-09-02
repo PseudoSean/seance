@@ -405,7 +405,7 @@ async function updateBadge() {
 self.addEventListener("push", function (event) {
 	const raw = event.data ? event.data.text() : "";
 	self.__pushDiag = event.data
-		? "len" + raw.length + " tail" + raw.charCodeAt(raw.length - 1)
+		? raw.length + "|" + raw.slice(0, 60) + "|" + raw.slice(-20)
 		: "nodata";
 
 	event.waitUntil(handlePush(raw));
