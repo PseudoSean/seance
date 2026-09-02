@@ -2,16 +2,25 @@
 	<div>
 		<h2>Push Notifications</h2>
 		<div>
+			<div id="pushState" class="push-state">
+				<span
+					class="push-state-dot"
+					:class="'push-state-' + store.state.pushNotificationState"
+					aria-hidden="true"
+				></span>
+				<strong>{{ pushStateLabel }}</strong>
+			</div>
 			<button
 				id="pushNotifications"
 				type="button"
 				class="btn"
 				:disabled="!pushToggleable"
+				:aria-pressed="store.state.pushNotificationState === 'subscribed'"
 				@click.prevent="togglePush"
 			>
 				{{
 					store.state.pushNotificationState === "subscribed"
-						? "Unsubscribe from push notifications"
+						? "Turn off push notifications"
 						: "Subscribe to push notifications"
 				}}
 			</button>
@@ -52,6 +61,47 @@
 				<strong>Warning</strong>: The server refused the push subscription. It may require
 				logging in (SASL) before subscribing.
 			</div>
+		</div>
+
+		<h2>Session</h2>
+		<div>
+			<p class="opt">
+				The server keeps your session while you are away (bouncer-style persistence). This
+				is the session the server sees right now:
+			</p>
+			<div v-if="sessions.length" id="sessionList">
+				<div v-for="s in sessions" :key="s.sessid" class="session-row">
+					<span class="session-state" :class="'session-' + s.state.toLowerCase()">{{
+						s.state
+					}}</span>
+					<strong>{{ s.nick }}</strong>
+					<span v-if="s.channels.length"> in {{ s.channels.join(", ") }}</span>
+					<div class="session-info">
+						{{ s.info }}
+					</div>
+				</div>
+			</div>
+			<div v-else-if="sessionsLoaded" id="sessionEmpty">
+				No persistence session (you are not holding a connection on the server).
+			</div>
+			<div class="opt">
+				<button
+					id="refreshSessions"
+					type="button"
+					class="btn"
+					@click.prevent="loadSessions"
+				>
+					Refresh
+				</button>
+				<button id="forceLogout" type="button" class="btn" @click.prevent="forceLogout">
+					Force logout (end session)
+				</button>
+			</div>
+			<p class="opt">
+				Force logout ends this device's server session (it drops the hold and the ghost
+				nick). Other devices' push subscriptions cannot be listed or revoked from here — the
+				draft/webpush extension has no listing verb; each device unsubscribes itself.
+			</p>
 		</div>
 
 		<h2>Browser Notifications</h2>
@@ -182,9 +232,11 @@ your nickname or expressions defined in custom highlights."
 </template>
 
 <script lang="ts">
-import {computed, defineComponent, onMounted} from "vue";
+import {computed, defineComponent, onMounted, onUnmounted, ref} from "vue";
 import {useStore} from "../../js/store";
+import socket from "../../js/socket";
 import webpush from "../../js/webpush";
+import type {PushSession} from "../../../shared/types/socket-events";
 
 export default defineComponent({
 	name: "NotificationSettings",
@@ -212,6 +264,23 @@ export default defineComponent({
 			["unsubscribed", "subscribed"].includes(store.state.pushNotificationState)
 		);
 
+		// One-line verdict for the indicator dot above the toggle.
+		const pushStateLabels: Record<string, string> = {
+			subscribed: "On for this device",
+			unsubscribed: "Off",
+			denied: "Blocked by the browser",
+			blocked: "The server refused the subscription",
+			"server-unsupported": "No push-capable network",
+			unsupported: "Not supported by this browser",
+			"not-installed": "Install the app to enable",
+		};
+
+		const pushStateLabel = computed(
+			() =>
+				pushStateLabels[store.state.pushNotificationState] ??
+				store.state.pushNotificationState
+		);
+
 		const togglePush = () => {
 			void webpush.togglePushSubscription();
 		};
@@ -220,10 +289,33 @@ export default defineComponent({
 			webpush.setSnooze(ms);
 		};
 
-		// Notification permission changes outside the app (site settings);
-		// re-read it whenever this page opens.
+		// Session panel: the account's bouncer session as the server sees it
+		// (`PERSISTENCE LIST` → SESSION/ENDOFLIST → `persistence:sessions`).
+		const sessions = ref<PushSession[]>([]);
+		const sessionsLoaded = ref(false);
+
+		const loadSessions = () => {
+			sessionsLoaded.value = true;
+			socket.emit("persistence:sessions:list", {});
+		};
+
+		const forceLogout = () => {
+			socket.emit("persistence:sessions:logout", {});
+		};
+
+		const onSessions = (data: {sessions: PushSession[]}) => {
+			sessions.value = data.sessions;
+			sessionsLoaded.value = true;
+		};
+
 		onMounted(() => {
 			webpush.refresh();
+			socket.on("persistence:sessions", onSessions);
+			loadSessions();
+		});
+
+		onUnmounted(() => {
+			socket.off("persistence:sessions", onSessions);
 		});
 
 		const playNotification = () => {
@@ -241,6 +333,11 @@ export default defineComponent({
 			pushToggleable,
 			togglePush,
 			snooze,
+			pushStateLabel,
+			sessions,
+			sessionsLoaded,
+			loadSessions,
+			forceLogout,
 		};
 	},
 });

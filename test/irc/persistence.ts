@@ -439,6 +439,67 @@ describe("Session persistence and quiet re-joins (irc/persistence.ts)", function
 			expect(h.payloads("topic")).to.deep.equal([{chan: seance.id, topic: "New topic"}]);
 		});
 
+		it("PERSISTENCE LIST sessions reach the UI as persistence:sessions, not the lobby", function () {
+			const h = setup();
+			register(h, CAPS);
+			h.dispatch.resetHistory();
+
+			h.transport.lines(
+				":irc.test PERSISTENCE SESSION sess1 ACTIVE alice #seance,#foo :active on irc.test",
+				":irc.test PERSISTENCE ENDOFLIST"
+			);
+
+			const lists = h.payloads<{sessions: any[]}>("persistence:sessions");
+			expect(lists).to.have.lengthOf(1);
+			expect(lists[0].sessions).to.deep.equal([
+				{
+					sessid: "sess1",
+					state: "ACTIVE",
+					nick: "alice",
+					channels: ["#seance", "#foo"],
+					info: "active on irc.test",
+				},
+			]);
+			// Session bookkeeping is panel-only: nothing in any channel buffer.
+			expect(h.dispatch.calledWith("msg")).to.equal(false);
+		});
+
+		it("LIST rows before ENDOFLIST buffer, and a stray ENDOFLIST dispatches an empty list", function () {
+			const h = setup();
+			register(h, CAPS);
+			h.dispatch.resetHistory();
+
+			// ENDOFLIST without a LIST in flight: the panel gets an empty list.
+			h.transport.line(":irc.test PERSISTENCE ENDOFLIST");
+			expect(h.payloads("persistence:sessions")).to.deep.equal([{sessions: []}]);
+
+			// A HELD row arrives after its list closed: buffered, not dispatched.
+			h.dispatch.resetHistory();
+			h.transport.line(":irc.test PERSISTENCE SESSION sess2 HELD alice * :held");
+			expect(h.dispatch.calledWith("persistence:sessions")).to.equal(false);
+
+			h.transport.line(":irc.test PERSISTENCE ENDOFLIST");
+			const lists = h.payloads<{sessions: any[]}>("persistence:sessions");
+			expect(lists[0].sessions).to.deep.equal([
+				{
+					sessid: "sess2",
+					state: "HELD",
+					nick: "alice",
+					channels: [],
+					info: "held",
+				},
+			]);
+		});
+
+		it("PERSISTENCE DETACH ack refreshes the panel with an empty list", function () {
+			const h = setup();
+			register(h, CAPS);
+			h.dispatch.resetHistory();
+
+			h.transport.line(":irc.test PERSISTENCE DETACH OK");
+			expect(h.payloads("persistence:sessions")).to.deep.equal([{sessions: []}]);
+		});
+
 		it("a deliberate disconnect and reconnect shows the JOIN as before", function () {
 			const h = connectedWithTopic();
 			const seance = h.client.findChannel("#seance")!;

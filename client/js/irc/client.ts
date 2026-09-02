@@ -20,6 +20,7 @@ import {createHighlightTester} from "../highlight";
 import {ChanState, ChanType} from "../../../shared/types/chan";
 import {MessageType, SharedMsg, TypingState} from "../../../shared/types/msg";
 import type {SharedNetwork, SharedServerOptions} from "../../../shared/types/network";
+import type {PushSession} from "../../../shared/types/socket-events";
 import {CapNegotiator, SEANCE_CAPS, webpushVapidOf, WEBPUSH_CAP} from "./caps";
 import {casefold, namesEqual} from "./casemap";
 import {Channel, MsgRef} from "./channel";
@@ -229,6 +230,9 @@ export class IrcClient {
 	/** Our registration-time `PERSISTENCE SET ON` ack is pending (swallowed
 	 * by handlers/persistence.ts until the STATUS echo lands). */
 	persistenceAutoSetPending = false;
+	/** Buffer for `PERSISTENCE LIST`'s SESSION lines until ENDOFLIST closes
+	 * the batch (Settings → session panel). */
+	persistenceListBuf: PushSession[] | undefined = undefined;
 	/** Set while a `draft/persistence` batch restores channel state: handlers update the model but show nothing. */
 	restoring = false;
 	/**

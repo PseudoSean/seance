@@ -12,6 +12,10 @@
  *   :server PERSISTENCE ATTACH <profile>        (the ack of our ATTACH)
  *   :server PERSISTENCE DETACH|PROFILE …
  *
+ *   :server PERSISTENCE SESSION <sessid> <state> <nick> <channels> :<info>
+ *   :server PERSISTENCE ENDOFLIST              (the close of a LIST)
+ *   :server PERSISTENCE DETACH OK|NOSESSION    (the ack of our force-logout)
+ *
  * Only the effective state matters to us ({@link IrcClient.persistenceHold},
  * read at the end of registration by ../persistence.ts). The registration
  * line is not shown; anything the user asked for is. The `ATTACH` ack of the
@@ -24,6 +28,48 @@ import type {Handler} from "../types";
 const persistence: Handler = (client, msg) => {
 	const [sub = "", ...rest] = msg.params;
 	const what = sub.toUpperCase();
+
+	// `PERSISTENCE LIST` body: SESSION lines accumulate on the client until
+	// ENDOFLIST closes the batch, then the whole list goes out as one
+	// `persistence:sessions` dispatch (Settings → session panel). These
+	// lines never print to the lobby.
+	if (what === "SESSION") {
+		if (!client.persistenceListBuf) {
+			client.persistenceListBuf = [];
+		}
+
+		{
+			const [sessid = "", state = "", nick = "", channels = ""] = rest;
+			const info = rest[rest.length - 1] ?? "";
+
+			client.persistenceListBuf.push({
+				sessid,
+				state: state.toUpperCase(),
+				nick,
+				channels: channels === "*" ? [] : channels.split(/[\s,]+/).filter(Boolean),
+				info,
+			});
+		}
+
+		return;
+	}
+
+	if (what === "ENDOFLIST") {
+		const sessions = client.persistenceListBuf ?? [];
+
+		client.persistenceListBuf = undefined;
+		client.dispatch("persistence:sessions", {sessions});
+		return;
+	}
+
+	if (what === "DETACH") {
+		// The ack of the Settings panel's force-logout: the session is gone
+		// (STATUS follows and prints the effective OFF there). Report an
+		// empty list so the panel refreshes.
+		client.persistenceListBuf = undefined;
+		client.dispatch("persistence:sessions", {sessions: []});
+		return;
+	}
 
 	if (what === "STATUS") {
 		const effective = (rest[rest.length - 1] ?? "").toUpperCase();

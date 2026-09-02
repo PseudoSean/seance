@@ -113,6 +113,22 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 		}
 	});
 
+	// Session visibility (draft/persistence): the Settings panel lists the
+	// account's bouncer session(s) (PERSISTENCE LIST) and can end the current
+	// one (PERSISTENCE DETACH). The SESSION/ENDOFLIST lines come back as
+	// `persistence:sessions` (handlers/persistence.ts). The network uuid is
+	// optional — any connected client shows the same account session.
+	const persistenceClient = ({network}: {network?: string}) =>
+		(network ? registry.clientForNetwork(network) : registry.allClients()[0]) ?? undefined;
+
+	bus.handle("persistence:sessions:list", (params) => {
+		persistenceClient(params)?.send("PERSISTENCE LIST");
+	});
+
+	bus.handle("persistence:sessions:logout", (params) => {
+		persistenceClient(params)?.send("PERSISTENCE DETACH");
+	});
+
 	bus.handle("open", (id) => {
 		for (const client of registry.allClients()) {
 			client.open(client.channelById(id) ? id : 0);

@@ -16,6 +16,17 @@ type Session = {
 	token: string;
 };
 
+/** One row of a `PERSISTENCE LIST` reply (draft/persistence): the account's
+ * bouncer session as the server sees it. There is one session per account. */
+type PushSession = {
+	sessid: string;
+	/** `ACTIVE` (a live connection holds it) or `HELD` (kept while away). */
+	state: string;
+	nick: string;
+	channels: string[];
+	info: string;
+};
+
 type EventHandler<T> = (data: T) => void;
 type NoPayloadEventHandler = EventHandler<void>;
 
@@ -113,6 +124,8 @@ interface ServerToClientEvents {
 		code?: string;
 		reason?: string;
 	}>;
+	/** One `PushSession` per `PERSISTENCE LIST` row, dispatched when the list closes (Settings → session panel). */
+	"persistence:sessions": EventHandler<{sessions: PushSession[]}>;
 	"msg:special": EventHandler<{chan: number; data?: Record<string, any>}>;
 	msg: EventHandler<{
 		msg: SharedMsg;
@@ -192,6 +205,10 @@ interface ClientToServerEvents {
 	"webpush:unregister": EventHandler<{network: string; endpoint: string}>;
 	/** Account metadata write for webpush settings (payload tier, mute/snooze). An empty value deletes the key. */
 	"webpush:metadata": EventHandler<{network: string; key: string; value: string}>;
+	/** Ask the server for the account's bouncer session(s) (`PERSISTENCE LIST`); the reply arrives as `persistence:sessions`. The network is optional — any connected client sees the same session. */
+	"persistence:sessions:list": EventHandler<{network?: string}>;
+	/** End the current device's bouncer session (`PERSISTENCE DETACH`): the hold preference clears and the session is destroyed. */
+	"persistence:sessions:logout": EventHandler<{network?: string}>;
 
 	"upload:auth": NoPayloadEventHandler;
 	"upload:ping": (token: string) => void;
