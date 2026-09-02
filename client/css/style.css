@@ -4157,6 +4157,15 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	outline: 0;
 }
 
+/* The picker is teleported to <body>, so it is outside `#chat-container` —
+   where a theme puts its placeholder colour (themes/morning.css). The
+   global default is black at 35%, which on a dark theme is a smudge; the
+   muted body colour is themed and readable on either. */
+.reaction-picker-input::placeholder {
+	color: var(--body-color-muted);
+	opacity: 1;
+}
+
 .reaction-picker-clear {
 	flex: 0 0 auto;
 	width: 26px;
