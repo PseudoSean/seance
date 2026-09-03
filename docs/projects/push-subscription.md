@@ -79,7 +79,7 @@ round-trip (transcript below).
 
 ## What nefarious2 `ircv3.2-upgrade` implements
 
-Inventory (all verified by reading the source; branch head `1d323e0`):
+Inventory (all verified by reading the source; branch head `451769d`, merged into `push-notifications` on 2026-09-02):
 
 - **Cap + values** — `draft/webpush` in `capab.h`/`m_cap.c`; the CAP 302
   value is `vapid=<key>` when a VAPID key is available, absent otherwise.
