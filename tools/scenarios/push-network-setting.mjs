@@ -22,6 +22,8 @@ export const url =
 
 const frameText = (f) => (typeof f.payloadData === "string" ? f.payloadData : "");
 
+const promptOpened = `document.querySelector("#push-prompt-overlay")?.classList.contains("opened")`;
+
 /** Wait for the *next* registration after `before` (PERSISTENCE SET ON goes
  * out from onRegistered, so seeing one means SASL succeeded and the server
  * burst is done). */
@@ -150,10 +152,19 @@ export default async function run(page) {
 	page.check("re-enabling a network re-arms its push row", true);
 	await page.screenshot("3-settings-row-subscribed");
 
-	// --- 4. the add-network form offers the option, defaulting to on ------
+	// --- 4. the add-network form: the option exists only with SASL on, and
+	// defaults to enabled ("register when the server supports it") ---------
 	await page.goto("http://127.0.0.1:8100/#/connect");
+	await page.waitFor(`!!document.querySelector('input[name="sasl"]')`, {
+		label: "the connect form to render",
+	});
+	page.check(
+		"no push option without authentication configured",
+		(await page.evaluate(`!!document.querySelector('input[name="pushEnabled"]')`)) === false
+	);
+	await page.evaluate(`document.querySelector('input[name="sasl"]').click()`);
 	await page.waitFor(`!!document.querySelector('input[name="pushEnabled"]')`, {
-		label: "the push checkbox to render in the Connect form",
+		label: "the push checkbox to render once SASL is selected",
 	});
 	const connectBox = await page.evaluate(
 		`(() => {
@@ -168,6 +179,64 @@ export default async function run(page) {
 		connectBox === JSON.stringify({checked: true, visible: true})
 	);
 	await page.screenshot("4-connect-form-default-on");
+
+	// Push needs authentication: the checkbox only exists once SASL is
+	// selected in the form.
+	await page.evaluate(`document.querySelector('input[name="sasl"]').click()`);
+	await page.sleep(200);
+	const withSasl = await page.evaluate(`!!document.querySelector('input[name="pushEnabled"]')`);
+	await page.evaluate(`document.querySelector('input[name="sasl"]').click()`);
+	await page.sleep(200);
+	const withoutSasl = await page.evaluate(
+		`(() => JSON.stringify({
+			pushCount: document.querySelectorAll('input[name="pushEnabled"]').length,
+			pushForm: document.querySelector('input[name="pushEnabled"]')?.closest("form")?.id,
+			pushVisible: (() => { const e = document.querySelector('input[name="pushEnabled"]'); const r = e?.getBoundingClientRect(); return r ? r.width > 0 : false; })(),
+			saslChecked: document.querySelector('input[name="sasl"]').checked,
+			saslAccount: !!document.querySelector('input[name="saslAccount"]'),
+		}))()`
+	);
+	console.log("SASLRADIOS:", JSON.stringify({withSasl, withoutSasl}));
+	page.check(
+		"the push checkbox appears only with authentication configured",
+		withSasl === true && withoutSasl === false
+	);
+
+	// --- 5. auto-subscribe: with notification permission pre-granted, a
+	// fresh connect subscribes WITHOUT the prompt (headless has no FCM, so
+	// the attempt ends in the "blocked" state - which is the proof it fired).
+	await page.evaluate(`localStorage.removeItem("thelounge.push")`);
+	await page.grantPermissions(["notifications"], "http://127.0.0.1:8100");
+	await page.goto(page.url);
+	await page.waitFor(`!!document.querySelector("#chat")`, {
+		label: "the chat to render (auto-subscribe pass)",
+		timeout: 60000,
+	});
+	// The CDP grant can lose the race with the app's early connect: make
+	// sure the page itself sees "granted" (re-grant + reload if not), so
+	// the auto-subscribe branch of maybePrompt is what we are exercising.
+	for (let i = 0; i < 3; i++) {
+		if (await page.evaluate(`Notification.permission === "granted"`)) {
+			break;
+		}
+
+		await page.grantPermissions(["notifications"], "http://127.0.0.1:8100");
+		await page.evaluate(`location.reload()`);
+		await page.waitFor(`!!document.querySelector("#chat")`, {timeout: 60000});
+	}
+
+	page.check(
+		"notification permission is granted to the page",
+		await page.evaluate(`Notification.permission === "granted"`)
+	);
+	let before2 = page.wsFrames.length;
+	await waitRegistered(page, before2);
+	await page.waitFor(`!(${promptOpened})`, {label: "no prompt when permission is granted"});
+	page.check(
+		"auto-subscribe: no prompt while permission is granted and enabled",
+		(await page.evaluate(`!(${promptOpened})`)) === true
+	);
+	await page.screenshot("5-auto-subscribe");
 
 	// Leave the profile clean.
 	await page.evaluate(`localStorage.removeItem("thelounge.push")`);

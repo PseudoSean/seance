@@ -166,6 +166,15 @@
 						/>
 					</RevealPassword>
 				</div>
+				<div class="connect-row">
+					<label></label>
+					<div class="input-wrap">
+						<label class="tls">
+							<input v-model="pushEnabled" type="checkbox" name="pushEnabled" />
+							Push notifications (registers when the server supports them)
+						</label>
+					</div>
+				</div>
 				<div v-if="showSavedNetworks" class="connect-row">
 					<label></label>
 					<div class="input-wrap">
@@ -187,22 +196,6 @@
 					<label class="tls">
 						<input v-model="autoconnect" type="checkbox" name="autoconnect" />
 						Connect automatically when the app starts
-					</label>
-				</div>
-			</div>
-
-			<div class="connect-row">
-				<label></label>
-				<div class="input-wrap">
-					<label class="tls">
-						<input v-model="pushEnabled" type="checkbox" name="pushEnabled" />
-						Push notifications (registers when the server supports them)
-						<span
-							class="tooltipped tooltipped-n tooltipped-no-delay"
-							aria-label="Register this device for push notifications on this network. Needs a server that supports the draft/webpush capability and a SASL login. Each network is set up independently."
-						>
-							<button class="extra-help" />
-						</span>
 					</label>
 				</div>
 			</div>

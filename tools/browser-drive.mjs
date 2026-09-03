@@ -406,6 +406,14 @@ async function screenshot(name, {selector, pad = 24, clip} = {}) {
 }
 
 /** Assert without aborting: collects failures so one run reports them all. */
+/** Browser.grantPermissions, for testing notification-driven flows. */
+async function grantPermissions(permissions, origin) {
+	await send("Browser.grantPermissions", {
+		permissions,
+		...(origin ? {origin} : {}),
+	});
+}
+
 function check(label, ok) {
 	if (ok) {
 		note(`  ok  ${label}`);
@@ -427,6 +435,11 @@ const page = {
 	click,
 	hover,
 	fill,
+	grantPermissions,
+	/** Pre-grant browser permissions (e.g. notifications) for this page, so
+	 * flows that need a user gesture can be exercised headlessly:
+	 * `await page.grantPermissions(["notifications"])`. */
+	grantPermissions,
 	screenshot,
 	check,
 	sleep,

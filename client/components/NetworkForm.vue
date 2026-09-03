@@ -81,16 +81,6 @@
 						<input v-model="defaults.autoconnect" type="checkbox" name="autoconnect" />
 						Connect automatically when the app starts
 					</label>
-					<label class="tls">
-						<input v-model="defaults.pushEnabled" type="checkbox" name="pushEnabled" />
-						Push notifications for this network
-						<span
-							class="tooltipped tooltipped-n tooltipped-no-delay"
-							aria-label="Register this device for push notifications on this network. Needs a server that supports the draft/webpush capability and a SASL login. Each network is set up independently."
-						>
-							<button class="extra-help" />
-						</span>
-					</label>
 				</div>
 			</div>
 			<div
@@ -201,6 +191,25 @@ the server tab on new connection"
 							/>
 							Remember password on this device
 						</label>
+					</div>
+					<div class="connect-row">
+						<label></label>
+						<div class="input-wrap">
+							<label class="tls">
+								<input
+									v-model="defaults.pushEnabled"
+									type="checkbox"
+									name="pushEnabled"
+								/>
+								Push notifications for this network
+								<span
+									class="tooltipped tooltipped-n tooltipped-no-delay"
+									aria-label="Register this device for push notifications on this network. The server must support the draft/webpush capability. Push needs authentication, so this only appears with SASL configured. Each network is set up independently."
+								>
+									<button class="extra-help" />
+								</span>
+							</label>
+						</div>
 					</div>
 				</div>
 			</template>

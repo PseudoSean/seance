@@ -234,6 +234,10 @@ socket.on("webpush:available", ({network, vapid, sasl}) => {
  * anonymous connect has nothing to offer. Skipped when this browser cannot
  * subscribe, permission is already denied, a subscription exists, or the
  * user answered "never" on this device. */
+/** A subscribe() run is in flight (the auto-subscribe path can be
+ * triggered by several networks at once). */
+let subscribing = false;
+
 function maybePrompt(network: string, vapid: string | undefined, sasl: boolean): void {
 	if (!sasl || vapid === undefined || !pushOn(network) || pushPrompt.visible) {
 		return;
@@ -243,11 +247,24 @@ function maybePrompt(network: string, vapid: string | undefined, sasl: boolean):
 		return;
 	}
 
-	if (storage.get(NEVER_ASK_KEY)) {
+	if (Object.keys(subs).length > 0) {
+		return; // already subscribed; autoRegister re-registers it
+	}
+
+	// Permission already granted: the network's push option is the user's
+	// choice, so subscribe directly instead of asking again. "default"
+	// (never asked) needs a user gesture, which the prompt's buttons
+	// provide; "never ask again" suppresses that prompt on this device.
+	if (
+		typeof Notification !== "undefined" &&
+		Notification.permission === "granted" &&
+		!subscribing
+	) {
+		void subscribe();
 		return;
 	}
 
-	if (Object.keys(subs).length > 0) {
+	if (storage.get(NEVER_ASK_KEY)) {
 		return;
 	}
 
@@ -290,6 +307,7 @@ socket.on("webpush:state", ({network, action, endpoint, ok, code, reason}) => {
 });
 
 /** URL-safe base64 (no padding) → the bytes PushManager expects. */
+
 function urlB64ToUint8Array(b64: string): Uint8Array {
 	const padding = "=".repeat((4 - (b64.length % 4)) % 4);
 	const base64 = (b64 + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -328,6 +346,12 @@ async function pushSubscription(vapid: string): Promise<PushMaterial> {
  * register it with every connected network advertising that key.
  */
 async function subscribe(): Promise<void> {
+	if (subscribing) {
+		return;
+	}
+
+	subscribing = true;
+
 	if (!browserSupported()) {
 		refreshState();
 		return;
@@ -393,6 +417,8 @@ async function subscribe(): Promise<void> {
 		setState("blocked");
 		// eslint-disable-next-line no-console
 		console.warn("[webpush] subscription failed", error);
+	} finally {
+		subscribing = false;
 	}
 }
 
