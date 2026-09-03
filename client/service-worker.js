@@ -485,6 +485,21 @@ async function handlePush(raw) {
 		return;
 	}
 
+	// Dedup against the page's "seen" ring (client/js/push-seen.ts): a
+	// live page that already received this message over its own WebSocket
+	// owns its notification — its own rules decide whether the user sees
+	// anything. The server pushes to attached-but-idle sessions too
+	// (FEAT_WEBPUSH_IDLE), so without this every highlight would notify
+	// twice. A frozen page writes nothing, which is exactly when the push
+	// must show; the raw-line fallback carries no msgid and never dedups.
+	if (json && typeof json.msgid === "string") {
+		const seen = await idbGet("seen");
+
+		if (Array.isArray(seen) && seen.includes(json.msgid)) {
+			return;
+		}
+	}
+
 	const parsed = json
 		? {from: json.from, target: json.target, text: json.text, time: json.time, kind: json.t}
 		: parsePushLine(clean);

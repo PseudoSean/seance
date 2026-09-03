@@ -1121,7 +1121,9 @@ the same counter the badge shows). Muted channels keep their faded look. */
 }
 
 .channel-list-item .notify-status-icon.enabled::before {
-	content: "\f0a2"; /* outline bell: notifications on, not subscribed */
+	content: "\f0f3"; /* bell: notifications on, not subscribed (the font is
+	                    FA5 solid-only, so no outline variant exists — the
+	                    muted colour is what separates this from on) */
 	color: var(--body-color-muted);
 }
 

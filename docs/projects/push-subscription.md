@@ -415,6 +415,53 @@ The register/unregister, subscription map and stash behaviour are unchanged
 for every network that does not explicitly opt out — the flag gates
 delivery per network, it does not fragment the subscription.
 
+## Pushing to attached sessions: the idle gate + the seen ring (2026-09-03)
+
+The classic policy pushes only **HOLDING** sessions — no client attached.
+Users who leave a client permanently connected but backgrounded never
+hold, so they never get pushes, and their attached desktop also **blocked
+pushes to their other devices** (the session is per account, so one live
+socket suppressed the account-wide push). Two coordinated halves fix that;
+both must ship together:
+
+- **Server: `FEAT_WEBPUSH_IDLE`** (seconds; `0` = off, the default). When a
+  message targets an **attached** session, `m_webpush.c`
+  (`webpush_attached_idle_ok` → the pure `webpush_idle_permits` in
+  `webpush_idle.c`) opens the gate once the session's `hs_last_active` is
+  at least that old. The signal is deliberately coarse: `hs_last_active` is
+  bumped at attach and on every PRIVMSG the account sends
+  (`bounce_record_activity`), and NOT by PING/PONG keepalives
+  (`IDLE_FROM_MSG` keeps `parse.c` out), so keepalive-only connections age
+  out. An actively-chatting session never crosses the threshold. Unit
+  tests: `ircd/test/webpush_idle_cmocka.c`.
+- **Client: the "seen" ring** (`client/js/push-seen.ts` +
+  `service-worker.js`). A live page that received a message over its own
+  WebSocket records the msgid into an IndexedDB ring (last 200, key `seen`
+  in the `seance-push` DB); the worker's push handler drops any
+  `t:"msg"/"hl"` push whose msgid is already there — the page owns its
+  notifications, its own rules decide what the user sees. `t:"read"`
+  closes are never deduped, and the raw-line fallback carries no msgid so
+  it never dedups. Recorded subset = what the server can push: PMs
+  (QUERY channels) and channel highlights. A frozen page writes nothing —
+  which is exactly when the push must show. Unit tests: the SW harness in
+  `test/tests/service-worker.ts`.
+
+Net effect: focused tab → local notifications only (pushes deduped away);
+backgrounded-but-alive tab → local notification, FCM duplicate silently
+dropped; frozen or closed tab → the push shows; and the always-connected
+desktop stops blocking pushes to the user's phone.
+
+Verified live against testnet (FEAT_WEBPUSH_IDLE 60): an attached, silent
+for 76s session — which answered server PINGs the whole time, proving
+keepalives don't reset the clock — gets `WebPush: idle gate: state=attached age=76` and the push pipeline runs (`notify_pm entry` → `notify_account` →
+delivery attempt). The gate line is permanent: it explains in the log why
+any push did or did not fire.
+
+Sidebar bell states (the per-network status indicator): solid **green**
+bell = subscribed; **muted** bell = enabled, not subscribed (the shipped
+font is FA5 solid-only, so the outline variant does not exist — the colour
+separates the states); **bell-slash** = notifications off for the network.
+
 ## Verification checklist (phase 1 done = all of these)
 
 1. `corepack yarn test` green (lint + mocha).

@@ -523,6 +523,10 @@ function setSnooze(ms: number): void {
  *
  * Called from NetworkEdit after `network:edit` has saved the entry, with
  * the flag as it was *before* the save. */
+/** Per-network browser-notification flag (the editor's checkbox), reactive
+ * so sidebar icons re-render on edits; seeded from storage on first read. */
+const notifyFlags = reactive(new Map<string, boolean>());
+
 function onNetworkSaved(next: SavedNetwork, wasEnabled: boolean): void {
 	notifyFlags.set(next.uuid, saved.notifyEnabledOf(next));
 
@@ -567,10 +571,6 @@ function maybeDropSubscription(): void {
 
 /** One network's push situation, for the Settings screen's per-network
  * list. All inputs are reactive (`servers`, `subs`), so rows re-render. */
-/** Per-network browser-notification flag (the editor's checkbox), reactive
- * so sidebar icons re-render on edits; seeded from storage on first read. */
-const notifyFlags = reactive(new Map<string, boolean>());
-
 function notifyOn(uuid: string): boolean {
 	if (!notifyFlags.has(uuid)) {
 		notifyFlags.set(uuid, saved.notifyEnabledOf(saved.get(uuid)));

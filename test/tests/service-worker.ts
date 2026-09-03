@@ -298,10 +298,10 @@ async function fireClick(
 	await new Promise((r) => setTimeout(r, 350));
 }
 
-function msgPayload(from: string, target: string, text: string): string {
+function msgPayload(from: string, target: string, text: string, msgid = "BjAAAaBjzZ0"): string {
 	return (
 		`{"t":"msg","from":"${from}","target":"${target}",` +
-		`"msgid":"BjAAAaBjzZ0","time":"2026-09-02T19:59:00.000Z","text":"${text}"}`
+		`"msgid":"${msgid}","time":"2026-09-02T19:59:00.000Z","text":"${text}"}`
 	);
 }
 
@@ -458,5 +458,35 @@ describe("service worker push notifications", function () {
 		const match = sent.match(/METADATA \* SET draft\/webpush\/mute \* :([^\r\n]+)/);
 		expect(match, "SET line sent").to.exist;
 		expect(match![1]).to.match(/^alice:\d+$/);
+	});
+
+	it("drops a push whose msgid the live page already saw", async function () {
+		const sw = makeSW();
+		const msgid = "BjAAAaBjzZ0";
+
+		// The page recorded this message while it was alive (push-seen.ts).
+		sw.kv.set("seen", [msgid]);
+		await firePush(sw, msgPayload("alice", "pushtest", "hello there"));
+
+		expect(sw.shown, "suppressed when seen").to.have.lengthOf(0);
+
+		// A different message (no record) still shows.
+		await firePush(sw, msgPayload("alice", "pushtest", "second one", "BjAAAaBjzZ1"));
+		expect(sw.shown, "shown when not seen").to.have.lengthOf(1);
+
+		// A push without a msgid (raw-line fallback) never dedups.
+		await firePush(sw, "@msgid=BjAAAaBjzZ9 :alice PRIVMSG pushtest :old line");
+		expect(sw.shown, "raw-line fallback still shows").to.have.lengthOf(2);
+	});
+
+	it("keeps the read relay working when seen entries exist", async function () {
+		const sw = makeSW();
+
+		await firePush(sw, msgPayload("alice", "pushtest", "hello there"));
+		expect(sw.shown).to.have.lengthOf(1);
+
+		// The t:"read" relay carries ts, not msgid — never deduped.
+		await firePush(sw, `{"t":"read","target":"alice","ts":"2026-09-03T00:00:00.000Z"}`);
+		expect(sw.records[0].closed, "notification closed by read relay").to.be.true;
 	});
 });
