@@ -136,3 +136,38 @@ Results 2026-08-24 (transcripts in `nefarious2-websocket.md`, "Prototype status"
 2. `node tools/irc-ws-probe.mjs wss://localhost:8443/ seance-probe --insecure` — **works**: `CAP * LS` with the full cap set, then `001`.
 3. `--binary` — not yet exercised on the TLS port.
 4. 600-byte `PRIVMSG` in one frame over `wss://` — **disconnects** with `WebSocket frame error`; 400 bytes is fine. Confirms the 528-byte cap.
+
+## When logins hang at "904 SASL request timed out"
+
+The IAuth chain (`iauth-tee.mjs` → `iauthd-ts`, both node children of the
+ircd) can die on its own — it did on 2026-09-03 after ~11 h uptime. The
+ircd keeps accepting sockets, CAP LS/ACK still work, SASL succeeds
+server-side in the tee log's last entries, then every client gets
+`904 * :SASL authentication failed: request timed out` and no 001. The
+app shows "closed during IRC registration (connection lost)" in a
+reconnect loop.
+
+Diagnose: `pgrep -af "iauth-tee|iauthd-ts"` — if only the ircd remains
+(or the tee log `tmp/testnet-run/iauth-tee.log` stops growing while
+probes still connect), the chain is dead. There is no restart-without-ircd
+path; the children are spawned at ircd boot.
+
+Fix = the standard restart with the ownership pre-flight (files created
+by root/`node` are unwritable for the `ircrun` user; an unwritable
+iauth-tee.log or pid file kills the chain/boot silently):
+
+```sh
+pkill -f "^/seance/tmp/testnet-run/ircd-install/bin/ircd"
+chown -R ircrun:ircrun /seance/tmp/testnet-run/{conf,history,webpush} \
+  /seance/tmp/testnet-run/{iauth-tee.log,ircd.log,ircd-fg.log,ircd.out}
+su -s /bin/sh ircrun -c 'cd /seance/tmp/testnet-run/conf && \
+  setsid nohup /seance/tmp/testnet-run/ircd-install/bin/ircd \
+  -f ircd-docker.conf >> /seance/tmp/testnet-run/ircd-fg.log 2>&1 &'
+```
+
+Verify: the two node children appear in `ps`, then a probe registers
+(`tools/irc-ws-probe.mjs` shows caps; a SASL probe reaches `903`/`001`).
+Remember clients auto-reconnect, so tabs recover on their own once the
+chain is back — unless another session of the same account beat them to
+it (one active session per account per network; use a second test
+identity for a second tab).
