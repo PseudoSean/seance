@@ -1,20 +1,514 @@
+import {reactive} from "vue";
+
+import socket from "./socket";
 import {store} from "./store";
+import storage from "./localStorage";
+import {idbSet} from "./idb";
+import * as saved from "./irc/saved-networks";
 
-export default {togglePushSubscription};
+/**
+ * Web Push subscriptions (IRCv3 `draft/webpush`, phases 1+2).
+ *
+ * docs/projects/push-subscription.md is the plan; `notifications.md` the
+ * bigger picture. One browser `PushSubscription` per distinct VAPID key (the
+ * endpoint is owned by the service-worker registration and bound to the
+ * `applicationServerKey` it was created with). Every connected network whose
+ * server advertises the same VAPID key gets the subscription registered with
+ * it:
+ *
+ *   `webpush:available` (per network, at registration)  ──►  re-REGISTER stored subs
+ *   Settings toggle ──► PushManager.subscribe()          ──►  `webpush:register`
+ *   `webpush:state` (server echo / FAIL WEBPUSH)         ──►  state updates
+ *
+ * Re-sending an identical REGISTER on every connect is the draft's renewal
+ * mechanism, so nothing else schedules refreshes; `pushsubscriptionchange`
+ * (and the SW) self-heal expired subscriptions. The subscription material
+ * persists in `thelounge.push` keyed by VAPID key; the SW's own working copy
+ * (VAPID + credentials for throwaway IRC connections used by quick-reply,
+ * mute and renewal) lives in IndexedDB `seance-push` and is only written
+ * when the user enabled push AND remembering the password.
+ */
 
-// Web push needs a server to hold the subscription and send the pushes;
-// there is none in client-only mode, so subscriptions are disabled and the
-// service worker has no "push" handler. The worker itself is registered by
-// pwa.ts (installable/offline shell, click-to-open for in-browser
-// notifications — see socket-events/msg.ts, which posts {type: "notification"}
-// to the worker when `hasServiceWorker` is set).
-//
-// When a push relay exists (plan item D.11), this is where the
-// PushManager.subscribe() call and the relay hand-off belong.
-
-store.commit("pushNotificationState", "unsupported");
-
-function togglePushSubscription() {
-	// eslint-disable-next-line no-console
-	console.warn("[webpush] push subscriptions are not available in client-only mode");
+/** A browser push subscription, reduced to what the ircd needs. */
+interface PushMaterial {
+	endpoint: string;
+	keys: {p256dh: string; auth: string};
 }
+
+const STORAGE_KEY = "thelounge.push";
+
+/** Device-local "never ask again" answer for the connect-time subscribe
+ * prompt (thelounge.* key convention; deliberately not in `thelounge.push`
+ * so the subscription map keeps its shape). */
+const NEVER_ASK_KEY = "thelounge.push.neverAsk";
+
+/** The connect-time "enable push notifications?" prompt (yes/no/never).
+ * Rendered by components/PushPrompt.vue; state lives here because the
+ * decision needs this module's servers/subscriptions view. */
+const pushPrompt = reactive({visible: false});
+
+/** Per-network VAPID keys as announced by `webpush:available`. */
+const servers = new Map<string, string | undefined>();
+
+/** Persisted subscriptions by VAPID key. */
+let subs = loadSubs();
+
+function loadSubs(): Record<string, PushMaterial> {
+	try {
+		const raw = storage.get(STORAGE_KEY);
+
+		return raw ? (JSON.parse(raw) as Record<string, PushMaterial>) : {};
+	} catch {
+		return {};
+	}
+}
+
+function saveSubs(): void {
+	storage.set(STORAGE_KEY, JSON.stringify(subs));
+}
+
+function setState(state: string): void {
+	store.commit("pushNotificationState", state);
+}
+
+/** The browser half of Web Push: Push API + service worker + secure context. */
+function browserSupported(): boolean {
+	return (
+		typeof window !== "undefined" &&
+		"PushManager" in window &&
+		"serviceWorker" in navigator &&
+		window.isSecureContext
+	);
+}
+
+/** iOS/iPadOS only expose the Push API to installed Home-Screen web apps. */
+function needsInstall(): boolean {
+	const isIOS =
+		/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+		(navigator.userAgent.includes("Mac") && "ontouchend" in document);
+
+	if (!isIOS) {
+		return false;
+	}
+
+	return !("PushManager" in window);
+}
+
+function permissionDenied(): boolean {
+	return typeof Notification !== "undefined" && Notification.permission === "denied";
+}
+
+/** Any VAPID key among the connected networks (they are per-ircd; see M7 notes). */
+/** Guards the silent re-subscribe after a server VAPID rotation, so a
+ * burst of webpush:available events (several networks, a reconnect) can
+ * only mint one replacement subscription. */
+let rotationInProgress = false;
+
+function anyVapid(): string | undefined {
+	for (const vapid of servers.values()) {
+		if (vapid !== undefined) {
+			return vapid;
+		}
+	}
+
+	return undefined;
+}
+
+/** Recompute the coarse state the Settings screen renders. */
+function refreshState(): void {
+	if (!browserSupported()) {
+		setState(needsInstall() ? "not-installed" : "unsupported");
+		return;
+	}
+
+	if (permissionDenied()) {
+		setState("denied");
+		return;
+	}
+
+	// A stored subscription means "subscribed": it survives reloads and
+	// disconnects (the server keeps it until the device unregisters, and the
+	// worker renews it). This must win over the current-connection checks so
+	// the Settings page doesn't flip to unsubscribed on every reload.
+	if (Object.keys(subs).length > 0) {
+		setState("subscribed");
+		return;
+	}
+
+	if (anyVapid() === undefined) {
+		// No connected network advertises draft/webpush (or none is connected
+		// yet) — the server half is what phase 1 cannot do without.
+		setState("server-unsupported");
+		return;
+	}
+
+	setState("unsubscribed");
+}
+
+/** Re-register a stored subscription with one freshly connected network.
+ *
+ * Also self-heals server-side VAPID rotation: if subscriptions exist but
+ * none was made against the key this network now announces, the old
+ * subscription is dead (FCM binds an endpoint to the VAPID key that
+ * created it), so silently mint a fresh one and register that instead —
+ * no user gesture needed, permission already granted. */
+function autoRegister(network: string, vapid: string | undefined): void {
+	if (vapid === undefined) {
+		return;
+	}
+
+	const sub = subs[vapid];
+
+	if (sub) {
+		socket.emit("webpush:register", {network, endpoint: sub.endpoint, keys: sub.keys});
+		return;
+	}
+
+	if (
+		Object.keys(subs).length > 0 &&
+		Notification.permission === "granted" &&
+		!rotationInProgress
+	) {
+		const net = saved.get(network);
+
+		if (!net || !net.saslAccount) {
+			return; // re-registering requires an account; leave it to subscribe()
+		}
+
+		rotationInProgress = true;
+
+		void (async () => {
+			try {
+				const material = await pushSubscription(vapid);
+
+				subs = {[vapid]: material};
+				saveSubs();
+				await writeStash(vapid);
+				socket.emit("webpush:register", {
+					network,
+					endpoint: material.endpoint,
+					keys: material.keys,
+				});
+				socket.emit("webpush:metadata", {
+					network,
+					key: "draft/webpush/payload",
+					value: "full",
+				});
+				refreshState();
+			} catch (error) {
+				// eslint-disable-next-line no-console
+				console.warn("[webpush] renewal after VAPID rotation failed", error);
+			} finally {
+				rotationInProgress = false;
+			}
+		})();
+	}
+}
+
+socket.on("webpush:available", ({network, vapid, sasl}) => {
+	servers.set(network, vapid);
+	autoRegister(network, vapid);
+	refreshState();
+	maybePrompt(vapid, sasl);
+});
+
+/** Offer the subscribe prompt once per connection that logged in with SASL
+ * on a push-capable network: the server can push only for accounts, so an
+ * anonymous connect has nothing to offer. Skipped when this browser cannot
+ * subscribe, permission is already denied, a subscription exists, or the
+ * user answered "never" on this device. */
+function maybePrompt(vapid: string | undefined, sasl: boolean): void {
+	if (!sasl || vapid === undefined || pushPrompt.visible) {
+		return;
+	}
+
+	if (!browserSupported() || needsInstall() || permissionDenied()) {
+		return;
+	}
+
+	if (storage.get(NEVER_ASK_KEY)) {
+		return;
+	}
+
+	if (Object.keys(subs).length > 0) {
+		return;
+	}
+
+	pushPrompt.visible = true;
+}
+
+/** Prompt answer: subscribe (the click is the permission user gesture). */
+function acceptPrompt(): void {
+	pushPrompt.visible = false;
+	void subscribe();
+}
+
+/** Prompt answer: not now — asked again on the next connect. */
+function declinePrompt(): void {
+	pushPrompt.visible = false;
+}
+
+/** Prompt answer: never ask again on this device. */
+function neverPrompt(): void {
+	storage.set(NEVER_ASK_KEY, "1");
+	pushPrompt.visible = false;
+}
+
+socket.on("webpush:state", ({network, action, endpoint, ok, code, reason}) => {
+	if (ok) {
+		refreshState();
+		return;
+	}
+
+	// The server refused the subscription. ACCOUNT_REQUIRED is nefarious2's
+	// non-spec code for "log in first"; MAX_REGISTRATIONS is spec but not yet
+	// sent by the server. The state text is the user-facing report.
+	store.commit("pushNotificationState", "blocked");
+	// eslint-disable-next-line no-console
+	console.warn(
+		`[webpush] ${action} of ${endpoint} on ${network} failed (${code}): ${
+			reason ?? "no reason given"
+		}`
+	);
+});
+
+/** URL-safe base64 (no padding) → the bytes PushManager expects. */
+function urlB64ToUint8Array(b64: string): Uint8Array {
+	const padding = "=".repeat((4 - (b64.length % 4)) % 4);
+	const base64 = (b64 + padding).replace(/-/g, "+").replace(/_/g, "/");
+	const raw = window.atob(base64);
+	const out = new Uint8Array(raw.length);
+
+	for (let i = 0; i < raw.length; i++) {
+		out[i] = raw.charCodeAt(i);
+	}
+
+	return out;
+}
+
+async function pushSubscription(vapid: string): Promise<PushMaterial> {
+	const registration = await navigator.serviceWorker.ready;
+	const sub = await registration.pushManager.subscribe({
+		userVisibleOnly: true,
+		applicationServerKey: urlB64ToUint8Array(vapid),
+	});
+	const json = sub.toJSON() as PushSubscriptionJSON & {
+		keys?: {p256dh?: string; auth?: string};
+	};
+	const p256dh = json.keys?.p256dh;
+	const auth = json.keys?.auth;
+
+	if (!json.endpoint || !p256dh || !auth) {
+		throw new Error("push subscription is missing endpoint or keys");
+	}
+
+	return {endpoint: json.endpoint, keys: {p256dh, auth}};
+}
+
+/**
+ * Subscribe this device: ask permission (must be a user gesture), create the
+ * browser subscription against the server's VAPID key, persist it, and
+ * register it with every connected network advertising that key.
+ */
+async function subscribe(): Promise<void> {
+	if (!browserSupported()) {
+		refreshState();
+		return;
+	}
+
+	try {
+		const permission = await Notification.requestPermission();
+
+		if (permission !== "granted") {
+			setState("denied");
+			return;
+		}
+
+		// Client-side enforcement of the account requirement (the server
+		// refuses REGISTER without one anyway): at least one connected
+		// push-capable network must have a SASL account configured.
+		const pushCapable = [...servers.entries()].filter(([, v]) => v !== undefined);
+		const withAccount = pushCapable.filter(([uuid]) => {
+			const net = saved.get(uuid);
+
+			return Boolean(net && net.saslAccount);
+		});
+
+		if (pushCapable.length > 0 && withAccount.length === 0) {
+			setState("blocked");
+			return;
+		}
+
+		const vapid = anyVapid();
+
+		if (vapid === undefined) {
+			// No connected network can push (cap not negotiated or no key).
+			setState("server-unsupported");
+			return;
+		}
+
+		const material = await pushSubscription(vapid);
+		subs = {[vapid]: material};
+		saveSubs();
+		await writeStash(vapid);
+
+		for (const [network, serverVapid] of servers) {
+			if (serverVapid === vapid) {
+				socket.emit("webpush:register", {
+					network,
+					endpoint: material.endpoint,
+					keys: material.keys,
+				});
+
+				// Push payloads carry the message text (Discord-like); the
+				// account's tier metadata controls this server-side.
+				socket.emit("webpush:metadata", {
+					network,
+					key: "draft/webpush/payload",
+					value: "full",
+				});
+			}
+		}
+
+		setState("subscribed");
+	} catch (error) {
+		setState("blocked");
+		// eslint-disable-next-line no-console
+		console.warn("[webpush] subscription failed", error);
+	}
+}
+
+/** Stash what the service worker needs for quick-reply / mute / renewal:
+ * the VAPID key plus connection details — only for networks that are
+ * push-capable AND remember their SASL password (the password never hits
+ * IndexedDB otherwise). */
+async function writeStash(vapid: string): Promise<void> {
+	const networks = saved
+		.list()
+		.filter(
+			(net) =>
+				servers.has(net.uuid) && net.rememberPassword === true && Boolean(net.saslAccount)
+		)
+		.map((net) => ({
+			uuid: net.uuid,
+			host: net.host,
+			port: net.port,
+			tls: net.tls,
+			saslAccount: net.saslAccount,
+			saslPassword: net.saslPassword,
+		}));
+
+	await idbSet("stash", {vapid, networks});
+}
+
+/** Unsubscribe: drop the browser subscription and tell every network. */
+async function unsubscribe(): Promise<void> {
+	try {
+		const registration = await navigator.serviceWorker.ready;
+		const existing = await registration.pushManager.getSubscription();
+
+		if (existing) {
+			await existing.unsubscribe();
+		}
+
+		for (const [network, vapid] of servers) {
+			const sub = vapid !== undefined ? subs[vapid] : undefined;
+
+			if (sub) {
+				socket.emit("webpush:unregister", {network, endpoint: sub.endpoint});
+			}
+		}
+
+		subs = {};
+		saveSubs();
+		await idbSet("stash", {vapid: null, networks: []});
+	} catch (error) {
+		// eslint-disable-next-line no-console
+		console.warn("[webpush] unsubscription failed", error);
+	} finally {
+		refreshState();
+	}
+}
+
+/** The Settings toggle: subscribe when unsubscribed, unsubscribe otherwise. */
+async function togglePushSubscription(): Promise<void> {
+	if (store.state.pushNotificationState === "subscribed") {
+		await unsubscribe();
+	} else {
+		await subscribe();
+	}
+}
+
+/**
+ * Snooze pushes for `ms` (0 = clear the snooze): account-wide, enforced by
+ * the ircd's mute gate, so every device stops being woken up. Per-channel
+ * mutes ride the same metadata key (see /pushmute).
+ */
+function setSnooze(ms: number): void {
+	const vapid = anyVapid();
+
+	if (vapid === undefined) {
+		return;
+	}
+
+	const until = ms > 0 ? Math.floor(Date.now() / 1000) + Math.floor(ms / 1000) : 0;
+
+	for (const network of servers.keys()) {
+		socket.emit("webpush:metadata", {
+			network,
+			key: "draft/webpush/mute",
+			value: until > 0 ? `*:${until}` : "",
+		});
+	}
+}
+
+// Boot: replace the stub's "unsupported" with what this browser can do.
+// Servers announce themselves (and re-register stored subscriptions) via
+// `webpush:available` as they connect.
+refreshState();
+
+// Opening the app means the user is catching up in-app: drop any push
+// notifications the service worker is still showing (badge included).
+socket.on("init", async () => {
+	if (!browserSupported()) {
+		return;
+	}
+
+	try {
+		const registration = await navigator.serviceWorker.ready;
+
+		for (const n of await registration.getNotifications()) {
+			if (n.tag && n.tag.startsWith("push-")) {
+				n.close();
+			}
+		}
+
+		if (navigator.clearAppBadge) {
+			void navigator.clearAppBadge();
+		}
+	} catch {
+		// no SW / not ready — nothing to clear
+	}
+});
+
+// The service worker asks the page to redo a subscription it could not
+// renew itself (pushsubscriptionchange without stashed credentials).
+if (browserSupported() && "serviceWorker" in navigator) {
+	navigator.serviceWorker.addEventListener("message", (event) => {
+		if (event.data && event.data.type === "resubscribe") {
+			void subscribe();
+		}
+	});
+}
+
+export default {
+	togglePushSubscription,
+	subscribe,
+	unsubscribe,
+	setSnooze,
+	refresh: refreshState,
+	pushPrompt,
+	acceptPrompt,
+	declinePrompt,
+	neverPrompt,
+};

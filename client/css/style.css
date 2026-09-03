@@ -2430,6 +2430,17 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	padding: 5px 0 5px 1px;
 }
 
+/* Adjacent buttons in a settings row keep a gap between them (snooze row,
+ * prompt actions, anything else that ends up inline). */
+#settings .opt .btn + .btn {
+	margin-left: 8px;
+}
+
+/* The push snooze buttons sit on their own line under their label. */
+#settings .push-snooze {
+	margin-top: 4px;
+}
+
 #settings .opt input {
 	margin-right: 6px;
 }
@@ -3707,6 +3718,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 /* Image viewer and drag-and-drop overlay */
 
 #confirm-dialog-overlay,
+#push-prompt-overlay,
 #upload-overlay,
 #image-viewer,
 #image-viewer .open-btn,
@@ -3719,6 +3731,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #confirm-dialog-overlay,
+#push-prompt-overlay,
 #upload-overlay,
 #image-viewer {
 	position: fixed;
@@ -3735,6 +3748,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #confirm-dialog-overlay.opened,
+#push-prompt-overlay.opened,
 #upload-overlay.is-dragover,
 #image-viewer.opened {
 	visibility: visible;
@@ -3742,6 +3756,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #confirm-dialog-overlay,
+#push-prompt-overlay,
 #image-viewer {
 	background: rgb(0 0 0 / 90%);
 }
@@ -4471,4 +4486,68 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	background: rgb(0 0 0 / 8%);
 	color: var(--body-color);
 	outline: 0;
+}
+
+/* Settings → Push Notifications: the on/off indicator dot + session rows */
+.push-state {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.push-state-dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	background: var(--body-color-muted);
+	flex: 0 0 auto;
+}
+
+.push-state-subscribed {
+	background: #2ea043;
+}
+
+.push-state-unsubscribed,
+.push-state-server-unsupported,
+.push-state-not-installed {
+	background: #9e6a03;
+}
+
+.push-state-denied,
+.push-state-blocked,
+.push-state-unsupported {
+	background: #c93c37;
+}
+
+.session-row {
+	padding: 6px 0;
+	border-bottom: 1px solid var(--body-color-muted);
+}
+
+.session-state {
+	display: inline-block;
+	min-width: 62px;
+	padding: 0 6px;
+	border-radius: 3px;
+	font-size: 12px;
+	font-weight: bold;
+	text-align: center;
+	margin-right: 8px;
+	color: #fff;
+	background: var(--body-color-muted);
+}
+
+.session-held {
+	background: #2ea043;
+}
+
+.session-active {
+	background: #388bfd;
+}
+
+.session-info {
+	color: var(--body-color-muted);
+	font-size: 12px;
+	margin-top: 2px;
 }

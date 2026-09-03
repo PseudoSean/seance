@@ -274,8 +274,12 @@ describe("PERSISTENCE ATTACH catch-up cursor (irc/persistence.ts)", function () 
 			store({msgid: "m9", time: 123});
 			const h = saslClient();
 			authenticate(h, `${ALL_CAPS} sasl=PLAIN ${PERSISTENCE_NO_CURSOR}`);
+			finishRegistration(h);
 
-			expect(h.transport.sent.some((l) => l.startsWith("PERSISTENCE"))).to.equal(false);
+			expect(h.transport.sent.some((l) => l.startsWith("PERSISTENCE ATTACH"))).to.equal(
+				false
+			);
+			expect(h.transport.sent).to.include("PERSISTENCE SET ON");
 			expect(h.transport.sent).to.include("CAP END");
 			expect(h.client.attachCursor).to.equal(undefined);
 		});
@@ -284,14 +288,18 @@ describe("PERSISTENCE ATTACH catch-up cursor (irc/persistence.ts)", function () 
 			store();
 			const h = saslClient();
 			authenticate(h);
-			expect(h.transport.sent.some((l) => l.startsWith("PERSISTENCE"))).to.equal(false);
+			expect(h.transport.sent.some((l) => l.startsWith("PERSISTENCE ATTACH"))).to.equal(
+				false
+			);
 		});
 
 		it("does not send a msgid the server could not store (>= 64 bytes)", function () {
 			store({msgid: "x".repeat(64), time: 123});
 			const h = saslClient();
 			authenticate(h);
-			expect(h.transport.sent.some((l) => l.startsWith("PERSISTENCE"))).to.equal(false);
+			expect(h.transport.sent.some((l) => l.startsWith("PERSISTENCE ATTACH"))).to.equal(
+				false
+			);
 
 			// One byte shorter fits.
 			const ok = saslClient({uuid: UUID});
@@ -482,7 +490,10 @@ describe("PERSISTENCE ATTACH catch-up cursor (irc/persistence.ts)", function () 
 			const h = saslClient();
 			reconnect(h, `${ALL_CAPS} sasl=PLAIN ${PERSISTENCE_NO_CURSOR}`);
 
-			expect(h.transport.sent.some((l) => l.startsWith("PERSISTENCE"))).to.equal(false);
+			expect(h.transport.sent.some((l) => l.startsWith("PERSISTENCE ATTACH"))).to.equal(
+				false
+			);
+			expect(h.transport.sent).to.include("PERSISTENCE SET ON");
 			expect(chathistory(h.sent())).to.have.length(1);
 		});
 

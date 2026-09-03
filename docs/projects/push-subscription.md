@@ -1,10 +1,60 @@
 # Push subscription, phase 1: `draft/webpush` REGISTER round-trip
 
-_Noted 2026-09-01. Status: researched + verified end-to-end against the
-testnet ircd → implementation plan. Scope: **subscription only** — the client
-subscribes via the browser Push API and registers the subscription with the
-ircd per the draft spec. Delivery (the service-worker `push` handler) is
-phase 2 and keeps its plan in `notifications.md`._
+_Noted 2026-09-01. Status: **implemented 2026-09-01** (branch
+`feat/webpush-subscribe`): M2–M8 as planned below, the probe at
+`tools/webpush-probe.mjs` and the live test at `test/irc/webpush.live.ts` (M1),
+unit tests at `test/irc/webpush.ts` (M9), and the browser scenario at
+`tools/scenarios/webpush-subscribe.mjs` — all green against the testnet ircd.
+One deviation from the text below: the Settings toggle ships **enabled**
+(what the verification checklist requires), with the phase-2 caveat that a
+push arriving before the worker has a `push` handler would be undeliverable.
+Scope: **subscription only** — the client subscribes via the browser Push API
+and registers the subscription with the ircd per the draft spec. Delivery
+(the service-worker `push` handler) is phase 2 and keeps its plan in
+`notifications.md`._
+
+_Live-cycle findings 2026-09-02 (first real trigger attempt, testnet ircd):_
+
+- **The client must send `PERSISTENCE SET ON`** after SASL (same flush as the
+  ATTACH): it is the opt-in that _creates_ the server's bouncer session and
+  turns its hold on. Without it no session ever exists — regardless of
+  `PERSISTENCE STATUS DEFAULT ON` — and a disconnected client can never be
+  pushed to. Implemented in `client.ts`/`persistence.ts`; the ack + STATUS
+  are swallowed during registration.
+- **The server needs `"BOUNCER_ENABLE" = "TRUE"`** — the feature defaults
+  off, and with it off `bounce_should_hold` returns NULL before anything
+  else is consulted (no session is ever created). testnet's conf now sets
+  it; production needs the same.
+- **nefarious2 bug found and fixed** (testnet submodule, commit `34d377e`):
+  `parse_keys` passed the exact value length to `ircd_strncpy`, which copies
+  len-1 chars — browser keys (87-char p256dh, 22-char auth) were stored one
+  char short, decoded to 64 bytes, failed the 65-byte check, and every push
+  silently skipped in `notify_iter_cb`. Pushes were stored correctly and
+  never sent. Upstream-candidate commit in `testnet/nefarious`.
+- **Notification actions and merging** (all covered by
+  `test/tests/service-worker.ts`): Reply (inline text on desktop; a
+  deep-linking button elsewhere) and Mute 30m both run over a throwaway SASL
+  connection the worker opens from the stashed credentials — reply sends
+  `PRIVMSG`, mute does a metadata GET-merge-SET on `draft/webpush/mute`.
+  Same-target pushes merge into one notification whose body combines the
+  recent messages with middle-ellipsis truncation; the `t:"read"` relay
+  closes a target's notification once another device has read past it.
+- **The worker handles nefarious2's tiered JSON payloads** (`{"t":"msg",…}`
+  for PMs, `{"t":"hl",…}` for channel messages mentioning the account's
+  nick, `{"t":"read",…}` to close what another device already read
+  - `text` on the `full` tier — the server DEFAULT since d7dedfb (the
+    payload is encrypted server-to-device, so there is nothing to leak;
+    accounts can still opt down with `METADATA \* SET draft/webpush/payload
+    - :route|ping`under`draft/metadata-2`), falling back to the spec's
+      raw IRC line.
+- The whole chain was verified to the edge of the sandbox: session HELD →
+  PM → all server gates pass (flag/HOLDING/subscription/cooldown) → push
+  emitted → FCM accepted a correctly-signed aes128gcm push for this
+  browser's subscription (201 Created, direct-post test). The final
+  FCM→headless-browser delivery could not be observed in this sandbox
+  (headless Chrome's FCM socket + a test profile degraded by repeated
+  subscribe/unsubscribe cycles); the same cycle in a headed browser is the
+  remaining manual check.
 
 Sources: [ircv3-specifications PR #471](https://github.com/ircv3/ircv3-specifications/pull/471)
 (`extensions/webpush.md`, the `draft/webpush` cap), the nefarious2
@@ -29,7 +79,7 @@ round-trip (transcript below).
 
 ## What nefarious2 `ircv3.2-upgrade` implements
 
-Inventory (all verified by reading the source; branch head `1d323e0`):
+Inventory (all verified by reading the source; branch head `451769d`, merged into `push-notifications` on 2026-09-02):
 
 - **Cap + values** — `draft/webpush` in `capab.h`/`m_cap.c`; the CAP 302
   value is `vapid=<key>` when a VAPID key is available, absent otherwise.
@@ -58,6 +108,18 @@ Inventory (all verified by reading the source; branch head `1d323e0`):
   (`webpush_notify_pm` v1, `webpush_notify_channel` v2, account metadata
   `draft/webpush/payload` = ping/route/full) landed 2026-08-28 and are
   phase-2 material. Delivery prunes HTTP 410 endpoints.
+- **Stale-subscription sweep** (2026-09-02) — every REGISTER stamps an
+  arming timestamp onto the stored record (`endpoint|p256dh|auth|armed`;
+  the S2S `WP` wire format stays 3-field and receivers stamp receipt
+  time). A maintenance sweep at boot and then hourly (`webpush_sweep` in
+  `m_webpush.c`, the IPcheck `TT_PERIODIC` pattern) removes records not
+  re-armed within `FEAT_WEBPUSH_EXPIRE` seconds (default 180 days; `0`
+  disables), logging `WEBPUSH: expired N subscription(s)` at INFO.
+  Records from before the timestamp field are never swept — the client
+  stamps them on its next login (seance re-registers on every load), so
+  a swept device simply recovers on its next app start; a device that
+  stays connected without reloading longer than the window silently
+  loses pushes until it reconnects.
 - **VAPID provisioning** — priority order: `WEBPUSH_VAPID_PRIVKEY` feature →
   persisted key in the store → auto-generate + persist. No services (X3)
   involvement despite the stale "from services" comment in `m_cap.c`.
@@ -95,6 +157,42 @@ Two extra findings that shape the client:
 - The `sasl=PLAIN` mechanism list and the `VAPID` ISUPPORT token are
   advertised even without X3: iauthd-ts (the IAuth program) does SASL
   itself, so **accounts do not require services**.
+
+### The payload-encryption roundtrip (`tmp/push-roundtrip.mjs`, `tmp/wpcrypto*`)
+
+FCM accepts any octet-stream, so a broken server-side encryptor is
+invisible in the delivery logs: FCM answers 2xx and the browser silently
+discards what it cannot decrypt (no push event, no error anywhere).
+After "posting to FCM succeeded but nothing ever showed on any device"
+persisted across every other fix, the decisive test was a **local
+crypto roundtrip**:
+
+1. Generate a P-256 keypair + auth secret locally, `WEBPUSH REGISTER`
+   them under an HTTPS endpoint the ircd can dial (`https:// irc.testnet.local:9099/` — a hostname, because the endpoint validator
+   blocks IP literals; `/etc/hosts` maps it to 127.0.0.1 and the system
+   CA store trusts the dev cert so libcurl connects).
+2. Arm the hold (`PERSISTENCE SET ON`), `QUIT`, then PM the ghost from a
+   second (SASL'd — anonymous loopback clients can stall in iauthd
+   post-restart) connection.
+3. The listener captures the exact POSTed `aes128gcm` body; the script
+   decrypts it with the private key (RFC 8291 derivation, AAD empty per
+   RFC 8188 §2.2 — "The additional data passed to each invocation of
+   AEAD_AES_128_GCM is a zero-length octet sequence") and verifies the
+   VAPID JWT signature against the announced key.
+4. `tmp/wpcrypto.c` + `tmp/wpcrypto-diff.mjs` diff **every intermediate**
+   (base64url decode, ECDH, ikm, cek, nonce) between the ircd's
+   verbatim primitives and a reference implementation.
+
+This caught the bug that explained every symptom: `webpush_encrypt`
+declared its HKDF info strings with an explicit trailing `\0` **on top
+of the implicit string terminator**, so `sizeof()` was one byte longer
+than RFC 8291's info (29/25 instead of 28/24). The derived CEK and
+nonce were unique garbage — no browser could decrypt anything. The IKM
+derivation was unaffected (fixed 144-byte buffer, not a string
+literal), which is why REGISTER, ECDH and the envelope all looked
+healthy. Fixed in nefarious2 `72fdd37`; the whole chain (REGISTER →
+hold → notify → parse → encrypt → VAPID → POST → decrypt) now verifies
+end-to-end against reference crypto.
 
 ## The test environment (testnet, built and running natively)
 
