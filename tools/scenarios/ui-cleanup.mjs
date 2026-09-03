@@ -45,7 +45,7 @@ async function waitRegistered(page, before) {
 const promptOpened = `document.querySelector("#push-prompt-overlay")?.classList.contains("opened")`;
 
 const openSettings = `(() => {
-	const el = document.querySelector("#pushState");
+	const el = document.querySelector(".push-networks-hint");
 
 	if (el) {
 		const r = el.getBoundingClientRect();
@@ -124,33 +124,27 @@ export default async function run(page) {
 	await page.waitFor(`!(${promptOpened})`, {label: "no prompt while subscribed"});
 	await page.waitFor(openSettings, {label: "the settings window again"});
 
-	await page.waitFor(`!!document.querySelector(".push-networks")`, {
-		label: "the per-network push list to render",
-	});
 	await page.waitFor(`!!document.querySelector(".push-snooze")`, {
 		label: "the snooze row to render",
 	});
 
-	// The global toggle is gone; the network list is the only push switch.
-	const netRows = await page.evaluate(
-		`(() => {
-			const rows = [...document.querySelectorAll(".push-network")];
-
-			return JSON.stringify({
-				count: rows.length,
-				toggle: !!document.querySelector("#pushNotifications"),
-				states: rows.map((r) => r.querySelector(".push-network-state")?.textContent),
-			});
-		})()`
+	// Enrollment moved into the network editor: the panel keeps only the
+	// hint, the snooze row and the browser-level warnings - no rows, no
+	// global toggle, no status dot.
+	const pushPanel = await page.evaluate(
+		`(() => JSON.stringify({
+			rows: document.querySelectorAll(".push-network").length,
+			hint: !!document.querySelector(".push-networks-hint"),
+			toggle: !!document.querySelector("#pushNotifications"),
+			dot: !!document.querySelector("#pushState"),
+		}))()`
 	);
 	page.check(
-		"push settings are per-network rows with no global toggle",
+		"push settings live in the network editor; Settings only hints",
 		(() => {
-			const parsed = JSON.parse(netRows);
+			const parsed = JSON.parse(pushPanel);
 
-			return (
-				parsed.toggle === false && parsed.count > 0 && parsed.states.length === parsed.count
-			);
+			return parsed.rows === 0 && parsed.hint && !parsed.toggle && !parsed.dot;
 		})()
 	);
 

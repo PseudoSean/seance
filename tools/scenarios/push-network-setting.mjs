@@ -103,15 +103,25 @@ export default async function run(page) {
 		label: "pushEnabled to persist as false",
 	});
 
-	// The settings screen reads the same flag for its per-network row.
+	// The editor shows the state too: the status line under the checkbox.
+	await page.goto(`http://127.0.0.1:8100/#/edit-network/${uuid}`);
+	await page.waitFor(`document.querySelector(".push-net-status")?.textContent.includes("Off")`, {
+		label: "the editor's push status to flip to Off",
+	});
+	page.check("disabling a network persists and shows Off in the editor", true);
+	await page.screenshot("2-edit-status-off");
+
+	// The old Settings rows are gone; only the hint remains.
 	await page.evaluate(`location.hash = "#/settings/notifications"`);
-	await page.waitFor(
-		`[...document.querySelectorAll(".push-network-state")].some((el) =>
-			el.textContent.includes("Off (disabled"))`,
-		{label: "the network row to flip to Off"}
+	await page.waitFor(`!!document.querySelector(".push-networks-hint")`, {
+		label: "the notifications settings hint to render",
+	});
+	page.check(
+		"Settings no longer lists per-network push rows",
+		(await page.evaluate(`document.querySelectorAll(".push-network-state").length`)) === 0 &&
+			(await page.evaluate(`!document.querySelector("#pushState")`)) === true
 	);
-	page.check("disabling a network persists and shows in Settings", true);
-	await page.screenshot("2-settings-row-off");
+	await page.screenshot("2-settings-slimmed");
 
 	// --- 3. re-enable; with a fake subscription the row reads Subscribed --
 	await page.evaluate(`location.hash = "#/edit-network/${uuid}"`);
@@ -136,21 +146,40 @@ export default async function run(page) {
 			},
 		}))`
 	);
-	await page.goto(page.url);
+	// A hard reload: page.url differs from the current document only by the
+	// hash, and Page.navigate would treat that as same-document, while an
+	// empty-hash reload boots the router into "/" (no route, windowless).
+	// A cache-busting query param forces a real navigation to a hash-less
+	// URL, so boot redirects to the channel window and the app re-reads
+	// localStorage into its subscription map.
+	await page.goto(`${page.url}&r=${Date.now()}`);
 	const reloadMark = page.wsFrames.length;
 	await page.waitFor(`!!document.querySelector("#chat")`, {
 		label: "the chat to render after reload",
 		timeout: 60000,
 	});
 	await waitRegistered(page, reloadMark);
-	await page.evaluate(`location.hash = "#/settings/notifications"`);
-	await page.waitFor(
-		`[...document.querySelectorAll(".push-network-state")].some((el) =>
-			el.textContent.trim() === "Subscribed")`,
-		{label: "the network row to flip to Subscribed"}
-	);
-	page.check("re-enabling a network re-arms its push row", true);
-	await page.screenshot("3-settings-row-subscribed");
+	// The (re)join burst can switch the active window right after the reload,
+	// unmounting the editor - poll, re-opening the editor until it sticks.
+	const subscribedDeadline = Date.now() + 45000;
+
+	while (Date.now() < subscribedDeadline) {
+		const text = await page.evaluate(
+			`document.querySelector(".push-net-status")?.textContent.trim()`
+		);
+
+		if (text === "Subscribed") {
+			break;
+		}
+
+		if (text === undefined) {
+			await page.goto(`http://127.0.0.1:8100/#/edit-network/${uuid}`);
+		}
+
+		await page.sleep(500);
+	}
+	page.check("re-enabling a network re-arms its editor status", true);
+	await page.screenshot("3-edit-status-subscribed");
 
 	// --- 4. the add-network form: the option exists only with SASL on, and
 	// defaults to enabled ("register when the server supports it") ---------
@@ -161,6 +190,10 @@ export default async function run(page) {
 	page.check(
 		"no push option without authentication configured",
 		(await page.evaluate(`!!document.querySelector('input[name="pushEnabled"]')`)) === false
+	);
+	page.check(
+		"browser notifications are offered without authentication",
+		(await page.evaluate(`!!document.querySelector('input[name="notifyEnabled"]')`)) === true
 	);
 	await page.evaluate(`document.querySelector('input[name="sasl"]').click()`);
 	await page.waitFor(`!!document.querySelector('input[name="pushEnabled"]')`, {
@@ -180,26 +213,14 @@ export default async function run(page) {
 	);
 	await page.screenshot("4-connect-form-default-on");
 
-	// Push needs authentication: the checkbox only exists once SASL is
-	// selected in the form.
+	// The browser-notifications checkbox stays when SASL goes off (it is
+	// not gated on authentication), while push disappears with it.
 	await page.evaluate(`document.querySelector('input[name="sasl"]').click()`);
 	await page.sleep(200);
-	const withSasl = await page.evaluate(`!!document.querySelector('input[name="pushEnabled"]')`);
-	await page.evaluate(`document.querySelector('input[name="sasl"]').click()`);
-	await page.sleep(200);
-	const withoutSasl = await page.evaluate(
-		`(() => JSON.stringify({
-			pushCount: document.querySelectorAll('input[name="pushEnabled"]').length,
-			pushForm: document.querySelector('input[name="pushEnabled"]')?.closest("form")?.id,
-			pushVisible: (() => { const e = document.querySelector('input[name="pushEnabled"]'); const r = e?.getBoundingClientRect(); return r ? r.width > 0 : false; })(),
-			saslChecked: document.querySelector('input[name="sasl"]').checked,
-			saslAccount: !!document.querySelector('input[name="saslAccount"]'),
-		}))()`
-	);
-	console.log("SASLRADIOS:", JSON.stringify({withSasl, withoutSasl}));
 	page.check(
-		"the push checkbox appears only with authentication configured",
-		withSasl === true && withoutSasl === false
+		"browser notifications stay offered when SASL is off",
+		(await page.evaluate(`!!document.querySelector('input[name="notifyEnabled"]')`)) === true &&
+			(await page.evaluate(`!!document.querySelector('input[name="pushEnabled"]')`)) === false
 	);
 
 	// --- 5. auto-subscribe: with notification permission pre-granted, a

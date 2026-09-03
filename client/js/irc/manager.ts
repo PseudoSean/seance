@@ -34,7 +34,13 @@ export type CreateNetworkOptions = ConnectOptions &
 	Partial<
 		Pick<
 			SavedNetwork,
-			"uuid" | "name" | "autoconnect" | "rememberPassword" | "pushEnabled" | "commands"
+			| "uuid"
+			| "name"
+			| "autoconnect"
+			| "rememberPassword"
+			| "pushEnabled"
+			| "notifyEnabled"
+			| "commands"
 		>
 	>;
 

@@ -2,26 +2,11 @@
 	<div>
 		<h2>Push Notifications</h2>
 		<div>
-			<div id="pushState" class="push-state">
-				<span
-					class="push-state-dot"
-					:class="'push-state-' + store.state.pushNotificationState"
-					aria-hidden="true"
-				></span>
-				<strong>{{ pushStateLabel }}</strong>
-			</div>
-			<div class="push-networks">
-				<div v-for="row in pushNetworks" :key="row.uuid" class="push-network">
-					<router-link :to="'/edit-network/' + row.uuid">{{ row.name }}</router-link>
-					<span class="push-network-state" :class="'push-net-' + row.state">{{
-						row.label
-					}}</span>
-				</div>
-				<div class="push-networks-hint">
-					Push is set up per network — turn it on or off in each network's settings (Edit
-					network → “Push notifications for this network”). The browser delivers the
-					notifications; each push-capable server decides whether to wake this app.
-				</div>
+			<div class="push-networks-hint">
+				Push is set up per network — turn it on or off in each network's settings (Edit
+				network → “Push notifications for this network”), where the enrollment status is
+				also shown. The browser delivers the notifications; each push-capable server decides
+				whether to wake this app.
 			</div>
 			<div v-if="store.state.pushNotificationState === 'subscribed'" class="opt">
 				<div>Snooze pushes everywhere:</div>
@@ -62,34 +47,19 @@
 
 		<h2>Browser Notifications</h2>
 		<div>
-			<label class="opt">
-				<input
-					id="desktopNotifications"
-					:checked="store.state.settings.desktopNotifications"
-					:disabled="store.state.desktopNotificationState === 'nohttps'"
-					type="checkbox"
-					name="desktopNotifications"
-				/>
-				Enable browser notifications<br />
-				<div v-if="store.state.desktopNotificationState === 'unsupported'" class="error">
-					<strong>Warning</strong>: Notifications are not supported by your browser.
-				</div>
-				<div
-					v-if="store.state.desktopNotificationState === 'nohttps'"
-					id="warnBlockedDesktopNotifications"
-					class="error"
-				>
-					<strong>Warning</strong>: Notifications are only supported over HTTPS
-					connections.
-				</div>
-				<div
-					v-if="store.state.desktopNotificationState === 'blocked'"
-					id="warnBlockedDesktopNotifications"
-					class="error"
-				>
-					<strong>Warning</strong>: Notifications are blocked by your browser.
-				</div>
-			</label>
+			<div class="push-networks-hint">
+				Browser notifications are also per network — enabled by default, toggled in each
+				network's settings (Edit network → “Browser notifications for this network”).
+			</div>
+			<div v-if="store.state.desktopNotificationState === 'unsupported'" class="error">
+				<strong>Warning</strong>: Notifications are not supported by your browser.
+			</div>
+			<div v-if="store.state.desktopNotificationState === 'nohttps'" class="error">
+				<strong>Warning</strong>: Notifications are only supported over HTTPS connections.
+			</div>
+			<div v-if="store.state.desktopNotificationState === 'blocked'" class="error">
+				<strong>Warning</strong>: Notifications are blocked by your browser.
+			</div>
 		</div>
 		<div>
 			<label class="opt">
@@ -188,7 +158,7 @@ your nickname or expressions defined in custom highlights."
 </template>
 
 <script lang="ts">
-import {computed, defineComponent, onMounted} from "vue";
+import {defineComponent, onMounted} from "vue";
 import {useStore} from "../../js/store";
 import webpush from "../../js/webpush";
 
@@ -196,61 +166,6 @@ export default defineComponent({
 	name: "NotificationSettings",
 	setup() {
 		const store = useStore();
-
-		const isIOS = computed(
-			() =>
-				[
-					"iPad Simulator",
-					"iPhone Simulator",
-					"iPod Simulator",
-					"iPad",
-					"iPhone",
-					"iPod",
-				].includes(navigator.platform) ||
-				// iPad on iOS 13 detection
-				(navigator.userAgent.includes("Mac") && "ontouchend" in document)
-		);
-
-		// One-line verdict for the indicator dot above the list.
-		const pushStateLabels: Record<string, string> = {
-			subscribed: "On for this device",
-			unsubscribed: "Off",
-			denied: "Blocked by the browser",
-			blocked: "The server refused the subscription",
-			"server-unsupported": "No push-capable network",
-			unsupported: "Not supported by this browser",
-			"not-installed": "Install the app to enable",
-		};
-
-		const pushStateLabel = computed(
-			() =>
-				pushStateLabels[store.state.pushNotificationState] ??
-				store.state.pushNotificationState
-		);
-
-		// Per-network push rows. Reads `store.state.networks` (every connected
-		// network) and webpush's reactive per-network view; re-renders whenever
-		// a network announces itself or the subscription state changes.
-		const pushNetworks = computed(() =>
-			store.state.networks.map((net) => {
-				const info = webpush.networkPushInfo(net.uuid);
-				const state = !info.enabled
-					? "off"
-					: !info.vapid
-					? "unsupported"
-					: info.subscribed
-					? "on"
-					: "ready";
-				const labels: Record<string, string> = {
-					on: "Subscribed",
-					off: "Off (disabled in network settings)",
-					unsupported: "Server has no push support",
-					ready: "Ready — enable in network settings",
-				};
-
-				return {uuid: net.uuid, name: net.name, state, label: labels[state]};
-			})
-		);
 
 		const snooze = (ms: number) => {
 			webpush.setSnooze(ms);
@@ -269,12 +184,9 @@ export default defineComponent({
 		};
 
 		return {
-			isIOS,
 			store,
 			playNotification,
-			pushNetworks,
 			snooze,
-			pushStateLabel,
 		};
 	},
 });

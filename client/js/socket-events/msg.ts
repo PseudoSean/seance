@@ -7,6 +7,7 @@ import {SharedMsg, MessageType} from "../../../shared/types/msg";
 import {ChanType} from "../../../shared/types/chan";
 import {addMention} from "../mentions";
 import {attachMediaPreviews} from "../helpers/messagePreviews";
+import * as saved from "../irc/saved-networks";
 
 let pop;
 
@@ -133,6 +134,14 @@ function notifyMessage(
 		return;
 	}
 
+	// Browser notifications enroll per network (the editor's checkbox,
+	// default on): find the channel's network and honor its saved flag.
+	const network = store.state.networks.find((net) => net.channels.some((c) => c === channel));
+
+	if (!network || !saved.notifyEnabledOf(saved.get(network.uuid))) {
+		return;
+	}
+
 	if (
 		msg.highlight ||
 		(store.state.settings.notifyAllMessages && msg.type === MessageType.MESSAGE)
@@ -146,11 +155,7 @@ function notifyMessage(
 				}
 			}
 
-			if (
-				store.state.settings.desktopNotifications &&
-				"Notification" in window &&
-				Notification.permission === "granted"
-			) {
+			if ("Notification" in window && Notification.permission === "granted") {
 				let title: string;
 				let body: string;
 				// TODO: fix msg type and get rid of that conditional

@@ -391,14 +391,19 @@ decide _who gets told about it_:
   connected, else via the next `webpush:available`).
 - **Settings → Notifications** keeps only what is genuinely browser-global:
   the diagnostics (permission, iOS install hint, unsupported browser,
-  server-refused) and the account-wide snooze. The subscribe toggle moved
-  into network settings; the panel gained a read-only per-network list
-  (Subscribed / Off / no server support / ready) linking to each network's
-  edit page.
+  server-refused) and the account-wide snooze, plus a hint pointing at the
+  network settings. The enrollment status lives in the **network editor**:
+  a status line under the push checkbox (Subscribed / Ready — subscribes on
+  connect / Off / This server has no push support), reactive over the same
+  `servers`/`subs` maps (2026-09-03: the read-only Settings list and the
+  status dot were removed in favour of it). The editor also gained the
+  per-network **browser notifications** checkbox (default on, not gated on
+  authentication; toggling it on is the gesture for the Notification
+  permission ask) — see `docs/projects/notifications.md`.
 - **Scenarios.** `tools/scenarios/push-network-setting.mjs` drives the
-  checkbox ↔ storage ↔ Settings row round-trip headlessly;
-  `tools/scenarios/ui-cleanup.mjs` asserts the global toggle is gone and
-  the per-network rows render.
+  checkbox ↔ storage ↔ editor-status round-trip headlessly;
+  `tools/scenarios/ui-cleanup.mjs` asserts the Settings panel keeps only
+  the hint/snooze/warnings (no rows, no status dot, no global toggle).
 
 The register/unregister, subscription map and stash behaviour are unchanged
 for every network that does not explicitly opt out — the flag gates
