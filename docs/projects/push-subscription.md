@@ -240,8 +240,15 @@ own files with a handful of edits, each of which is a documented trap:
   - appended `Port { port = 8067; websocket = yes; }` and
     `Port { port = 8443; ssl = yes; websocket = yes; }` (the compose config
     has no WebSocket ports at all), and a `Features` block with
-    `"CAP_draft_webpush" = "TRUE"`, `"WEBPUSH_DB" = ".../webpush"`, and the
-    usual IPCHECK clone-limit relaxations for reconnect-heavy testing.
+    `"CAP_draft_webpush" = "TRUE"`, `"WEBPUSH_DB" = ".../webpush"`, the
+    usual IPCHECK clone-limit relaxations for reconnect-heavy testing, and
+    (2026-09-03, multi-tab) `"BOUNCER_REQUIRE_TLS" = "FALSE"` +
+    `"BOUNCER_MAX_SESSIONS" = "5"`: one session per account is structural,
+    so a second tab with the same identity attaches as an **alias** to the
+    live session — but the alias attach is refused for plaintext sockets
+    while the (default-on) `BOUNCER_REQUIRE_TLS` holds. With TLS off,
+    `NOTE BOUNCER ALIAS_ATTACHED` announces the attach; the tabs share the
+    session's delivery stream (read markers included).
 - `ircd-docker.conf` (the three `include`s), a self-signed `ircd.pem`, the
   `saslusers` file (`testaccount:mypassword`), and empty store dirs.
 - The ircd refuses to run as root: it runs as user `ircrun`.

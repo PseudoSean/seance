@@ -169,5 +169,10 @@ Verify: the two node children appear in `ps`, then a probe registers
 (`tools/irc-ws-probe.mjs` shows caps; a SASL probe reaches `903`/`001`).
 Remember clients auto-reconnect, so tabs recover on their own once the
 chain is back — unless another session of the same account beat them to
-it (one active session per account per network; use a second test
-identity for a second tab).
+it. One session per account is structural (the session owns the delivery
+stream and the catch-up cursor); a second connection attaches as an
+**alias** to it — that attach requires TLS unless
+`"BOUNCER_REQUIRE_TLS" = "FALSE"` is set, which the testnet now does
+(with `BOUNCER_MAX_SESSIONS = 5`), so multiple tabs on one identity
+coexist as aliases and share the session. To give a tab its own stream
+instead, use a second test identity.
