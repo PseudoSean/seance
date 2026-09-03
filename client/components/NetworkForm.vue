@@ -224,17 +224,21 @@ the server tab on new connection"
 </template>
 
 <style>
-#connect .connect-auth {
+/* The auth radios stack one per line at full width. `#connect .connect-row`
+ * (style.css) is `display: flex` at the same specificity, and `#connect label`
+ * is 25% wide, so plain `.connect-auth` rules lose or tie depending on bundle
+ * order - chain the classes to win outright. */
+#connect .connect-row.connect-auth {
 	display: block;
 	margin-bottom: 10px;
 }
 
-#connect .connect-auth .opt {
+#connect .connect-row.connect-auth .opt {
 	display: block;
 	width: 100%;
 }
 
-#connect .connect-auth input {
+#connect .connect-row.connect-auth input {
 	margin: 3px 10px 0 0;
 }
 
