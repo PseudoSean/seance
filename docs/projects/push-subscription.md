@@ -358,6 +358,57 @@ cap acceptance/rejection of the `vapid=` value; REGISTER line shape and the
 on-register/off-register lifecycle around `onRegistered()`. Run with
 `SEANCE_IRC_URL` set: `test/irc/webpush.live.ts` from M1.
 
+## Per-network push settings (2026-09-02)
+
+Push settings moved out of the system-wide Settings screen into **network
+settings**: some servers support `draft/webpush`, others do not, and the
+choices are independent per network. The one browser subscription is shared
+(security-origin + service-worker registration); per-network flags only
+decide _who gets told about it_:
+
+- **The flag.** `SavedNetwork.pushEnabled` (`client/js/irc/saved-networks.ts`),
+  persisted in `thelounge.networks`. Missing flag = enabled, so entries from
+  before the flag existed read enabled — no migration. Only an explicit
+  `false` opts a network out (helper `pushEnabledOf`, unit-tested in
+  `test/irc/saved-networks.ts`).
+- **The form.** "Push notifications for this network" checkbox in
+  `NetworkForm.vue` (the Edit-network window) and in the Connect
+  (add-network) form, saved through the normal `network:edit` /
+  `createNetwork` paths. New networks default to enabled on both - the
+  flag means "register when the server supports it", which is what nearly
+  everyone wants; the checkbox is where you opt a network out up front.
+- **The gate.** `client/js/webpush.ts` reads the flag at every per-network
+  touchpoint: `autoRegister` (no REGISTER on connect), `subscribe` (no
+  registration loop membership, and the "at least one account" guard only
+  counts enabled networks), `setSnooze` (mute metadata only to enabled
+  networks), the connect-time prompt (only offered for enabled networks),
+  and the SW stash (`writeStash` — a disabled network's credentials are
+  dropped from quick-reply/renewal). `webpush.onNetworkSaved()` — called
+  from NetworkEdit after `network:edit` — reacts to toggles: off sends
+  `WEBPUSH UNREGISTER` for that network immediately, and when the last
+  enabled push-capable network goes off, drops the browser subscription
+  entirely; on re-registers the stored subscription (immediately when
+  connected, else via the next `webpush:available`).
+- **Settings → Notifications** keeps only what is genuinely browser-global:
+  the diagnostics (permission, iOS install hint, unsupported browser,
+  server-refused) and the account-wide snooze, plus a hint pointing at the
+  network settings. The enrollment status lives in the **network editor**:
+  a status line under the push checkbox (Subscribed / Ready — subscribes on
+  connect / Off / This server has no push support), reactive over the same
+  `servers`/`subs` maps (2026-09-03: the read-only Settings list and the
+  status dot were removed in favour of it). The editor also gained the
+  per-network **browser notifications** checkbox (default on, not gated on
+  authentication; toggling it on is the gesture for the Notification
+  permission ask) — see `docs/projects/notifications.md`.
+- **Scenarios.** `tools/scenarios/push-network-setting.mjs` drives the
+  checkbox ↔ storage ↔ editor-status round-trip headlessly;
+  `tools/scenarios/ui-cleanup.mjs` asserts the Settings panel keeps only
+  the hint/snooze/warnings (no rows, no status dot, no global toggle).
+
+The register/unregister, subscription map and stash behaviour are unchanged
+for every network that does not explicitly opt out — the flag gates
+delivery per network, it does not fragment the subscription.
+
 ## Verification checklist (phase 1 done = all of these)
 
 1. `corepack yarn test` green (lint + mocha).

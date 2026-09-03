@@ -104,15 +104,25 @@ export function describeClose(ctx: CloseContext): CloseReport {
 	}
 
 	if (ctx.phase === "registering") {
+		// The server refuses a second connection for an account that already
+		// has one: its close reason says so, and retrying alone cannot fix it
+		// - the other client has to go (or die and be reclaimed, ~1 minute
+		// with the proxy's keepalive). Say that instead of the generic hint.
+		const sessionConflict = /active session/i.test(ctx.reason);
+
 		return {
 			text: `Connection to ${ctx.host} closed during IRC registration${closeDetail(
 				ctx.code,
 				ctx.reason
 			)}.${notAgain}`,
-			hint:
-				"The WebSocket opened but the server dropped it before registration " +
-				"finished — check that this port really speaks IRC over WebSocket, and " +
-				"look for a server notice above for the reason.",
+			hint: sessionConflict
+				? "This account is already connected on this network - another tab, " +
+				  "window or device is using it. Close that client; this tab then " +
+				  "connects on its next retry (a dead connection is reclaimed within " +
+				  "about a minute)."
+				: "The WebSocket opened but the server dropped it before registration " +
+				  "finished - check that this port really speaks IRC over WebSocket, and " +
+				  "look for a server notice above for the reason.",
 		};
 	}
 

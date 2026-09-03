@@ -286,3 +286,36 @@ us, in the order it is worth doing:
 - The hold is what makes the background time cheap: messages while away
   live in CHATHISTORY and come back via the catch-up. Push notifications
   for that window are the open item in `notifications.md`.
+
+## Round five: the dev-origin zombie session (2026-09-02)
+
+Symptom: the client loops "SASL authentication successful → Connection closed
+during IRC registration" forever; iauthd even passes every attempt, but no
+001 ever arrives. Restarting the ircd clears it instantly.
+
+Cause: the session limit. nefarious2 allows one active bouncer session per
+account per network; a second connection as the same account gets a clean
+WS close (code 1000, `Account already has an active session on this network`). The dev-origin proxy (`tmp/dev-origin.mjs`) used to forward
+`error` but not `close`/`end`, so a browser tab closing or reloading left
+the backend socket — and with it the ircd's "active session" — alive
+forever. Every reconnect then hit the session limit; the zombie only died
+when someone restarted the ircd.
+
+Fixes and traps worth remembering:
+
+- dev-origin now tears down both sockets when either side closes or ends;
+  restart it after editing (kill the `node tmp/dev-origin.mjs` pid first —
+  an old instance holds port 8000 and a fresh one fails silently).
+- The ircd sends a raw `PING :<cookie>` before registration to clients that
+  send NICK before CAP LS (the cookie is skipped for CAP-negotiating
+  clients — seance's client.ts sends `CAP LS 302` first for exactly this
+  reason, and its transport answers any PING anyway). A hand-rolled probe
+  that ignores the cookie stalls at registration forever — which mimics the
+  zombie-session symptom perfectly. Always answer `PING :<cookie>` with
+  `PONG :<cookie>` in probes, or send CAP LS before NICK.
+- A "SASL OK, still alive after CAP END" probe proves nothing: without
+  NICK/USER there is no registration to complete. Wait for `001` (or the
+  396/MODE tail) before believing any registration test.
+- The one-session limit is per account per network: diagnosing "can't
+  connect" as a second client while the first is genuinely connected shows
+  the same close — check for a live session before suspecting the server.

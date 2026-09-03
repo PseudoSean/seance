@@ -4488,7 +4488,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	outline: 0;
 }
 
-/* Settings → Push Notifications: the on/off indicator dot + session rows */
+/* Settings → Push Notifications: the on/off indicator dot + per-network rows */
 .push-state {
 	display: flex;
 	align-items: center;
@@ -4518,6 +4518,45 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 .push-state-blocked,
 .push-state-unsupported {
 	background: #c93c37;
+}
+
+.push-networks {
+	margin: 8px 0 12px;
+}
+
+.push-network {
+	padding: 5px 0;
+	border-bottom: 1px solid var(--body-color-muted);
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+}
+
+.push-network-state {
+	margin-left: auto;
+	font-size: 12px;
+	font-weight: bold;
+	color: var(--body-color-muted);
+	white-space: nowrap;
+}
+
+.push-net-on {
+	color: #2ea043;
+}
+
+.push-net-off,
+.push-net-unsupported {
+	color: var(--body-color-muted);
+}
+
+.push-net-ready {
+	color: #9e6a03;
+}
+
+.push-networks-hint {
+	margin-top: 8px;
+	font-size: 12px;
+	color: var(--body-color-muted);
 }
 
 .session-row {

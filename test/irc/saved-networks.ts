@@ -215,6 +215,96 @@ describe("saved-networks", function () {
 		expect(() => saved.fromForm({name: "no uuid"})).to.throw(/uuid/);
 	});
 
+	it("reads the push flag as enabled unless explicitly disabled", function () {
+		// Entries stored before the flag existed (and networks never saved)
+		// are push-enabled; only an explicit false opts out.
+		expect(saved.pushEnabledOf(undefined)).to.equal(true);
+		expect(saved.pushEnabledOf({pushEnabled: undefined})).to.equal(true);
+		expect(saved.pushEnabledOf({pushEnabled: true})).to.equal(true);
+		expect(saved.pushEnabledOf({pushEnabled: false})).to.equal(false);
+
+		// ...and normalize stamps the default so old storage gains the field.
+		const legacy = saved.normalize({uuid: "x", host: "h", port: "6697", tls: "on"});
+
+		expect(legacy?.pushEnabled).to.equal(true);
+	});
+
+	it("persists the push flag through save and the edit form", function () {
+		const off = saved.save(entry({pushEnabled: false}));
+
+		expect(saved.get(off.uuid)?.pushEnabled).to.equal(false);
+
+		// The form checkbox unchecked (absent from FormData) saves as off;
+		// checked / present saves as on.
+		const viaForm = saved.fromForm({uuid: off.uuid, pushEnabled: "on"}, off);
+
+		expect(viaForm.pushEnabled).to.equal(true);
+
+		const viaUnchecked = saved.fromForm({uuid: off.uuid}, off);
+
+		expect(viaUnchecked.pushEnabled).to.equal(false);
+	});
+
+	it("reads the notify flag as enabled unless explicitly disabled", function () {
+		// Same rule as the push flag: entries stored before the flag existed
+		// (and networks never saved) notify; only an explicit false opts out.
+		expect(saved.notifyEnabledOf(undefined)).to.equal(true);
+		expect(saved.notifyEnabledOf({notifyEnabled: undefined})).to.equal(true);
+		expect(saved.notifyEnabledOf({notifyEnabled: true})).to.equal(true);
+		expect(saved.notifyEnabledOf({notifyEnabled: false})).to.equal(false);
+
+		// ...and normalize stamps the default so old storage gains the field.
+		const legacy = saved.normalize({uuid: "x", host: "h", port: "6697", tls: "on"});
+
+		expect(legacy?.notifyEnabled).to.equal(true);
+	});
+
+	it("persists the notify flag through save and the edit form", function () {
+		const off = saved.save(entry({notifyEnabled: false}));
+
+		expect(saved.get(off.uuid)?.notifyEnabled).to.equal(false);
+
+		// The form checkbox unchecked (absent from FormData) saves as off;
+		// checked / present saves as on.
+		const viaForm = saved.fromForm({uuid: off.uuid, notifyEnabled: "on"}, off);
+
+		expect(viaForm.notifyEnabled).to.equal(true);
+
+		const viaUnchecked = saved.fromForm({uuid: off.uuid}, off);
+
+		expect(viaUnchecked.notifyEnabled).to.equal(false);
+	});
+
+	it("migrates the old global desktop-notifications switch to the saved entries", function () {
+		// The global switch is gone; a user who had it off keeps notifications
+		// off — stamped once onto every saved network.
+		backend.set("settings", JSON.stringify({desktopNotifications: false}));
+		const a = saved.save(entry({uuid: saved.newUuid()}));
+		const b = saved.save(entry({uuid: saved.newUuid(), notifyEnabled: true}));
+
+		saved.migrateGlobalNotify();
+
+		expect(saved.get(a.uuid)?.notifyEnabled).to.equal(false);
+		expect(saved.get(b.uuid)?.notifyEnabled).to.equal(false);
+	});
+
+	it("migration leaves notifications alone when the old switch was not off", function () {
+		const on = saved.save(entry({uuid: saved.newUuid()}));
+
+		backend.set("settings", JSON.stringify({desktopNotifications: true}));
+		saved.migrateGlobalNotify();
+		expect(saved.get(on.uuid)?.notifyEnabled).to.equal(true);
+
+		backend.set("settings", JSON.stringify({}));
+		saved.migrateGlobalNotify();
+		expect(saved.get(on.uuid)?.notifyEnabled).to.equal(true);
+
+		// Garbage in the settings key must not wedge the migration.
+		backend.set("settings", "not json");
+		saved.migrateGlobalNotify();
+		expect(saved.get(on.uuid)?.notifyEnabled).to.equal(true);
+	});
+
 	it("coerces loose values and falls back to the default port", function () {
 		const net = saved.normalize({
 			uuid: "x",

@@ -14,13 +14,21 @@ cross-device dismissal.
 
 ## Where we are
 
-- **In-app only.** `client/js/socket-events/msg.ts` `notifyMessage()` fires on
-  highlights (or every message with `notifyAllMessages`) when the tab is
-  unfocused or another channel is active, skipping `channel.muted`
-  (`client/js/mute.ts`). It plays `pop` and, with `desktopNotifications`
-  granted, posts `{type: "notification", chanId, title, body, timestamp}` to
-  the service worker (`client/service-worker.js` `showNotification`) or falls
-  back to `new Notification()`.
+- **Per network, default on.** `client/js/socket-events/msg.ts`
+  `notifyMessage()` fires on highlights (or every message with
+  `notifyAllMessages`) when the tab is unfocused or another channel is
+  active, skipping `channel.muted` (`client/js/mute.ts`) **and networks
+  whose saved `notifyEnabled` flag is `false`** (the "Browser notifications
+  for this network" checkbox in the network editor, default enabled —
+  `notifyEnabledOf()`; the old global `desktopNotifications` checkbox was
+  removed 2026-09-03 and a one-time migration stamps networks
+  `notifyEnabled: false` when it was off). The gate sits before the
+  delivery split, so both paths honour it. It plays `pop` and, with
+  notification permission granted, posts
+  `{type: "notification", chanId, title, body, timestamp}` to the service
+  worker (`client/service-worker.js` `showNotification`) or falls back to
+  `new Notification()`. Toggling the per-network checkbox on is the user
+  gesture that asks for the permission (only while still "default").
 - **Grouping today** = the notification `tag` is `chan-<id>`: a new
   notification for the same channel closes and replaces the previous one. No
   count, no "3 messages from alice", no batching window.
@@ -32,10 +40,13 @@ cross-device dismissal.
 - **No push.** `client/js/webpush.ts` is a stub (`pushNotificationState: "unsupported"`); the worker has no `push` handler. The old TheLounge relay
   (`attic/server/plugins/webpush.ts`) is gone with the server.
 - **Settings** (`client/components/Settings/Notifications.vue`,
-  `client/js/settings.ts`): `desktopNotifications`, `notification` (sound),
-  `notifyAllMessages`, `highlightMessages` (the visual highlight bar on
-  messages that mention you, default on), `highlights`, `highlightExceptions`,
-  plus per-channel mute in the context menu. No badge, no schedule, no levels.
+  `client/js/settings.ts`): `notification` (sound), `notifyAllMessages`,
+  `highlightMessages` (the visual highlight bar on messages that mention
+  you, default on), `highlights`, `highlightExceptions`, plus per-channel
+  mute in the context menu. Browser-notification enrollment is per network
+  (the editor checkbox); the panel keeps the browser-level diagnostics
+  (blocked / no-HTTPS / unsupported) and a pointer to the network settings.
+  No badge, no schedule, no levels.
 - **Read markers exist** (`draft/read-marker`, `handlers/markread.ts`, plan
   D.7 done 2026-08-25): the cross-device "already read" signal we need for
   dismissing notifications is available.

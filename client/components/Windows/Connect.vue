@@ -166,6 +166,15 @@
 						/>
 					</RevealPassword>
 				</div>
+				<div class="connect-row">
+					<label></label>
+					<div class="input-wrap">
+						<label class="tls">
+							<input v-model="pushEnabled" type="checkbox" name="pushEnabled" />
+							Push notifications (registers when the server supports them)
+						</label>
+					</div>
+				</div>
 				<div v-if="showSavedNetworks" class="connect-row">
 					<label></label>
 					<div class="input-wrap">
@@ -180,6 +189,21 @@
 					</div>
 				</div>
 			</template>
+
+			<div class="connect-row">
+				<label></label>
+				<div class="input-wrap">
+					<label class="tls">
+						<input
+							v-model="notifyEnabled"
+							type="checkbox"
+							name="notifyEnabled"
+							@change="onNotifyToggle"
+						/>
+						Browser notifications for this network
+					</label>
+				</div>
+			</div>
 
 			<div v-if="showSavedNetworks" class="connect-row">
 				<label></label>
@@ -361,6 +385,26 @@ export default defineComponent({
 		const showSasl = ref(false);
 		const rememberPassword = ref(false);
 		const autoconnect = ref(false);
+		/** Push defaults to on for a new network: the flag means "register when
+		 * the server supports it", which is what nearly everyone wants. */
+		const pushEnabled = ref(true);
+
+		/** Browser notifications default to on for a new network (no
+		 * authentication involved, unlike push). */
+		const notifyEnabled = ref(true);
+
+		/** The toggle itself is the user gesture for the Notification
+		 * permission ask (only while the decision is still open). */
+		const onNotifyToggle = () => {
+			if (
+				notifyEnabled.value &&
+				typeof Notification !== "undefined" &&
+				Notification.permission === "default"
+			) {
+				void Notification.requestPermission().catch(() => undefined);
+			}
+		};
+
 		/** The saved entry the form was filled from; its uuid is reused on connect. */
 		const selectedUuid = ref<string | null>(null);
 		const savedNetworks = ref<SavedNetwork[]>(saved.list());
@@ -384,6 +428,8 @@ export default defineComponent({
 			showSasl.value = net.sasl === "plain";
 			rememberPassword.value = !!net.rememberPassword;
 			autoconnect.value = !!net.autoconnect;
+			pushEnabled.value = net.pushEnabled !== false;
+			notifyEnabled.value = net.notifyEnabled !== false;
 			selectedUuid.value = net.uuid;
 			notice.value = "";
 			pinServer();
@@ -438,6 +484,8 @@ export default defineComponent({
 				uuid: selectedUuid.value ?? undefined,
 				rememberPassword: showSasl.value && rememberPassword.value,
 				autoconnect: autoconnect.value,
+				pushEnabled: pushEnabled.value,
+				notifyEnabled: notifyEnabled.value,
 			});
 			selectedUuid.value = client.uuid;
 			refreshSaved();
@@ -499,6 +547,9 @@ export default defineComponent({
 			showSasl,
 			rememberPassword,
 			autoconnect,
+			pushEnabled,
+			notifyEnabled,
+			onNotifyToggle,
 			selectedUuid,
 			savedNetworks,
 			submitted,

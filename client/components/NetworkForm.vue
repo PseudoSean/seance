@@ -193,7 +193,50 @@ the server tab on new connection"
 						</label>
 					</div>
 				</div>
+				<div class="connect-row">
+					<label></label>
+					<div class="input-wrap">
+						<label class="tls">
+							<input
+								v-model="defaults.pushEnabled"
+								type="checkbox"
+								name="pushEnabled"
+							/>
+							Push notifications for this network
+							<span
+								class="tooltipped tooltipped-n tooltipped-no-delay"
+								aria-label="Register this device for push notifications on this network. The server must support the draft/webpush capability. Push needs authentication, so this only appears with SASL configured. Each network is set up independently."
+							>
+								<button class="extra-help" />
+							</span>
+						</label>
+						<div class="push-net-status" :class="'push-net-' + pushStatus.cls">
+							{{ pushStatus.text }}
+						</div>
+					</div>
+				</div>
 			</template>
+
+			<div class="connect-row">
+				<label></label>
+				<div class="input-wrap">
+					<label class="tls">
+						<input
+							v-model="defaults.notifyEnabled"
+							type="checkbox"
+							name="notifyEnabled"
+							@change="onNotifyToggle"
+						/>
+						Browser notifications for this network
+						<span
+							class="tooltipped tooltipped-n tooltipped-no-delay"
+							aria-label="Show browser notifications for highlights and queries on this network. Needs the browser's permission; asks when first saved. Each network is set up independently."
+						>
+							<button class="extra-help" />
+						</span>
+					</label>
+				</div>
+			</div>
 
 			<div>
 				<button type="submit" class="btn" :disabled="disabled ? true : false">
@@ -205,18 +248,28 @@ the server tab on new connection"
 </template>
 
 <style>
-#connect .connect-auth {
+/* The auth radios stack one per line at full width. `#connect .connect-row`
+ * (style.css) is `display: flex` at the same specificity, and `#connect label`
+ * is 25% wide, so plain `.connect-auth` rules lose or tie depending on bundle
+ * order - chain the classes to win outright. */
+#connect .connect-row.connect-auth {
 	display: block;
 	margin-bottom: 10px;
 }
 
-#connect .connect-auth .opt {
+#connect .connect-row.connect-auth .opt {
 	display: block;
 	width: 100%;
 }
 
-#connect .connect-auth input {
+#connect .connect-row.connect-auth input {
 	margin: 3px 10px 0 0;
+}
+
+/* Push enrollment status under the push checkbox (Subscribed / Ready / …). */
+.push-net-status {
+	margin: 2px 0 4px 22px;
+	font-size: 12px;
 }
 
 #connect .connect-note {
@@ -262,6 +315,7 @@ import RevealPassword from "./RevealPassword.vue";
 import SidebarToggle from "./SidebarToggle.vue";
 import {computed, defineComponent, nextTick, onMounted, PropType, ref, watch} from "vue";
 import {displayName, parseCommands, SavedNetwork} from "../js/irc/saved-networks";
+import webpush from "../js/webpush";
 import type {SharedNetworkStatus} from "../../shared/types/network";
 
 /** What the edit form binds to: a saved entry plus the live connection flag. */
@@ -302,6 +356,42 @@ export default defineComponent({
 	setup(props) {
 		const commandsInput = ref<HTMLTextAreaElement | null>(null);
 		const commandsText = ref((props.defaults.commands ?? []).join("\n"));
+
+		/** The toggle itself is the user gesture: ask for the Notification
+		 * permission the first time a network's browser notifications are
+		 * switched on (only while the decision is still open). */
+		const onNotifyToggle = () => {
+			if (
+				props.defaults.notifyEnabled &&
+				typeof Notification !== "undefined" &&
+				Notification.permission === "default"
+			) {
+				void Notification.requestPermission().catch(() => undefined);
+			}
+		};
+
+		// Where the network's push enrollment stands, shown under the push
+		// checkbox (reactive over webpush's servers/subs; the dot colours
+		// come from the settings panel's push-net-* classes).
+		const pushStatus = computed(() => {
+			const info = webpush.networkPushInfo(props.defaults.uuid);
+
+			if (!info.enabled) {
+				return {cls: "off", text: "Off"};
+			}
+
+			if (info.subscribed) {
+				return {cls: "on", text: "Subscribed"};
+			}
+
+			if (info.vapid) {
+				return {cls: "ready", text: "Ready \u2014 subscribes on connect"};
+			}
+
+			return props.defaults.connected
+				? {cls: "unsupported", text: "This server has no push support"}
+				: {cls: "ready", text: "Ready \u2014 subscribes on connect"};
+		});
 
 		const resizeCommandsInput = () => {
 			if (!commandsInput.value) {
@@ -389,6 +479,8 @@ export default defineComponent({
 		};
 
 		return {
+			pushStatus,
+			onNotifyToggle,
 			commandsInput,
 			commandsText,
 			resizeCommandsInput,

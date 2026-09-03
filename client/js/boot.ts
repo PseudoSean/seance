@@ -17,6 +17,7 @@ import {loadMentions} from "./mentions";
 import storage from "./localStorage";
 import {installNativeHooks} from "./native";
 import {installForegroundHooks} from "./foreground";
+import {migrateGlobalNotify} from "./irc/saved-networks";
 import {onLaunch} from "./pwa";
 // Registers the IRC layer's bus handlers (input, names, more, network:*).
 import "./irc/manager";
@@ -53,6 +54,11 @@ export async function boot(): Promise<void> {
 		branding.uploads?.maxSizeBytes ?? DEFAULT_UPLOAD_MAX_BYTES;
 
 	store.commit("serverConfiguration", configuration);
+
+	// Before the settings store's first write (which would drop the old key):
+	// the removed global "Enable browser notifications" checkbox, when it was
+	// off, stamps notifyEnabled: false onto every saved network.
+	migrateGlobalNotify();
 
 	// 'theme' setting depends on serverConfiguration.themes so
 	// settings cannot be applied before this point
