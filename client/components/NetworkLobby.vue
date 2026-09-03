@@ -13,6 +13,9 @@
 		<span v-else class="collapse-network" />
 		<div class="lobby-wrap">
 			<span :title="channel.name" class="name">{{ channel.name }}</span>
+			<span v-if="channel.unread" :class="{highlight: channel.highlight}" class="badge">{{
+				unreadCount
+			}}</span>
 			<span
 				:aria-label="statusLabel"
 				class="connection-status-tooltip tooltipped tooltipped-w"
@@ -23,9 +26,6 @@
 					@click.stop="onStatusClick"
 				/>
 			</span>
-			<span v-if="channel.unread" :class="{highlight: channel.highlight}" class="badge">{{
-				unreadCount
-			}}</span>
 			<span :aria-label="notifyState.label" :title="notifyState.label" class="notify-tooltip">
 				<span :class="['notify-status-icon', notifyState.cls]" />
 			</span>

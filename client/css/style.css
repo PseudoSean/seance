@@ -1094,6 +1094,7 @@ the same counter the badge shows). Muted channels keep their faded look. */
 .channel-list-item .notify-tooltip {
 	flex-shrink: 0;
 	line-height: 1;
+	margin: 0 4px;
 }
 
 .channel-list-item .notify-status-icon {
