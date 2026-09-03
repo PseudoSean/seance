@@ -40,6 +40,10 @@ export type SavedNetwork = ConnectOptions & {
 	autoconnect?: boolean;
 	/** Persist `saslPassword`. Off by default so the password never hits disk. */
 	rememberPassword?: boolean;
+	/** Register this device's Web Push subscription with this network
+	 * (`draft/webpush`). Entries stored before the flag existed read as
+	 * enabled — push was unconditional then. */
+	pushEnabled?: boolean;
 	/** Slash commands run in the lobby after every registration, one per entry. */
 	commands?: string[];
 	/** Epoch ms of the last connect; the picker lists most recent first. */
@@ -181,6 +185,7 @@ export function normalize(raw: Record<string, unknown>): SavedNetwork | undefine
 		saslPassword: sasl ? asString(raw.saslPassword) : "",
 		autoconnect: asBoolean(raw.autoconnect),
 		rememberPassword,
+		pushEnabled: raw.pushEnabled === undefined ? true : asBoolean(raw.pushEnabled),
 		commands: parseCommands(raw.commands),
 	};
 
@@ -197,6 +202,14 @@ export function normalize(raw: Record<string, unknown>): SavedNetwork | undefine
 	return net;
 }
 
+/** Whether a network takes part in Web Push (`draft/webpush`): the saved
+ * flag, defaulting to enabled — entries stored before the flag existed and
+ * networks never saved (plain `/connect host`) are push-enabled; only an
+ * explicit `false` opts a network out. */
+export function pushEnabledOf(net: Pick<SavedNetwork, "pushEnabled"> | undefined): boolean {
+	return net?.pushEnabled !== false;
+}
+
 /**
  * Merge the edit form's payload (`network:edit`) over an existing entry.
  * Checkbox fields are absent from FormData when unchecked, so any missing
@@ -211,7 +224,7 @@ export function fromForm(data: Record<string, unknown>, existing?: SavedNetwork)
 		}
 	}
 
-	for (const flag of ["tls", "autoconnect", "rememberPassword"]) {
+	for (const flag of ["tls", "autoconnect", "rememberPassword", "pushEnabled"]) {
 		if (!(flag in data)) {
 			base[flag] = false;
 		}

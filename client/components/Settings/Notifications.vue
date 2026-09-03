@@ -10,23 +10,18 @@
 				></span>
 				<strong>{{ pushStateLabel }}</strong>
 			</div>
-			<button
-				id="pushNotifications"
-				type="button"
-				class="btn"
-				:disabled="!pushToggleable"
-				:aria-pressed="store.state.pushNotificationState === 'subscribed'"
-				@click.prevent="togglePush"
-			>
-				{{
-					store.state.pushNotificationState === "subscribed"
-						? "Turn off push notifications"
-						: "Subscribe to push notifications"
-				}}
-			</button>
-			<div v-if="store.state.pushNotificationState === 'subscribed'" id="pushSubscribed">
-				Push notifications are enabled for this device. The server will wake the app when it
-				has something for you while it is closed.
+			<div class="push-networks">
+				<div v-for="row in pushNetworks" :key="row.uuid" class="push-network">
+					<router-link :to="'/edit-network/' + row.uuid">{{ row.name }}</router-link>
+					<span class="push-network-state" :class="'push-net-' + row.state">{{
+						row.label
+					}}</span>
+				</div>
+				<div class="push-networks-hint">
+					Push is set up per network — turn it on or off in each network's settings (Edit
+					network → “Push notifications for this network”). The browser delivers the
+					notifications; each push-capable server decides whether to wake this app.
+				</div>
 			</div>
 			<div v-if="store.state.pushNotificationState === 'subscribed'" class="opt">
 				<div>Snooze pushes everywhere:</div>
@@ -216,14 +211,7 @@ export default defineComponent({
 				(navigator.userAgent.includes("Mac") && "ontouchend" in document)
 		);
 
-		// The toggle only works when the browser can subscribe and nothing
-		// harder (denied permission, refused subscription) is in the way; the
-		// error blocks above explain every disabled state.
-		const pushToggleable = computed(() =>
-			["unsubscribed", "subscribed"].includes(store.state.pushNotificationState)
-		);
-
-		// One-line verdict for the indicator dot above the toggle.
+		// One-line verdict for the indicator dot above the list.
 		const pushStateLabels: Record<string, string> = {
 			subscribed: "On for this device",
 			unsubscribed: "Off",
@@ -240,9 +228,29 @@ export default defineComponent({
 				store.state.pushNotificationState
 		);
 
-		const togglePush = () => {
-			void webpush.togglePushSubscription();
-		};
+		// Per-network push rows. Reads `store.state.networks` (every connected
+		// network) and webpush's reactive per-network view; re-renders whenever
+		// a network announces itself or the subscription state changes.
+		const pushNetworks = computed(() =>
+			store.state.networks.map((net) => {
+				const info = webpush.networkPushInfo(net.uuid);
+				const state = !info.enabled
+					? "off"
+					: !info.vapid
+					? "unsupported"
+					: info.subscribed
+					? "on"
+					: "ready";
+				const labels: Record<string, string> = {
+					on: "Subscribed",
+					off: "Off (disabled in network settings)",
+					unsupported: "Server has no push support",
+					ready: "Ready — enable in network settings",
+				};
+
+				return {uuid: net.uuid, name: net.name, state, label: labels[state]};
+			})
+		);
 
 		const snooze = (ms: number) => {
 			webpush.setSnooze(ms);
@@ -264,8 +272,7 @@ export default defineComponent({
 			isIOS,
 			store,
 			playNotification,
-			pushToggleable,
-			togglePush,
+			pushNetworks,
 			snooze,
 			pushStateLabel,
 		};
