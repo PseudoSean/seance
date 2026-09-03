@@ -103,14 +103,8 @@ export default async function run(page) {
 		label: "pushEnabled to persist as false",
 	});
 
-	// The editor shows the state too: the status line under the checkbox.
-	await page.goto(`http://127.0.0.1:8100/#/edit-network/${uuid}`);
-	await page.waitFor(
-		`document.querySelector(".push-net-status")?.classList.contains("push-net-off")`,
-		{label: "the editor's push status to flip to Off"}
-	);
-	page.check("disabling a network persists and shows Off in the editor", true);
-	await page.screenshot("2-edit-status-off");
+	page.check("disabling a network persists as pushEnabled: false", true);
+	await page.screenshot("2-disabled-persisted");
 
 	// The old Settings rows are gone; only the hint remains.
 	await page.evaluate(`location.hash = "#/settings/notifications"`);
@@ -124,7 +118,7 @@ export default async function run(page) {
 	);
 	await page.screenshot("2-settings-slimmed");
 
-	// --- 3. re-enable; with a fake subscription the row reads Subscribed --
+	// --- 3. re-enable; the flag flips back on ------------------------------
 	await page.evaluate(`location.hash = "#/edit-network/${uuid}"`);
 	await page.waitFor(`!!document.querySelector('input[name="pushEnabled"]')`, {
 		label: "the push checkbox again",
@@ -135,52 +129,8 @@ export default async function run(page) {
 		`JSON.parse(localStorage.getItem("thelounge.networks"))[0].pushEnabled === true`,
 		{label: "pushEnabled to persist as true again"}
 	);
-
-	// A subscription made against the server's VAPID key (headless Chromium
-	// cannot make a real one — fake the material, the page only keys off it).
-	// Reload so the app re-reads localStorage into its subscription map.
-	await page.evaluate(
-		`localStorage.setItem("thelounge.push", JSON.stringify({
-			"${vapid}": {
-				endpoint: "https://fcm.googleapis.com/fcm/send/fake",
-				keys: {p256dh: "B".repeat(88), auth: "A".repeat(22)},
-			},
-		}))`
-	);
-	// A hard reload: page.url differs from the current document only by the
-	// hash, and Page.navigate would treat that as same-document, while an
-	// empty-hash reload boots the router into "/" (no route, windowless).
-	// A cache-busting query param forces a real navigation to a hash-less
-	// URL, so boot redirects to the channel window and the app re-reads
-	// localStorage into its subscription map.
-	await page.goto(`${page.url}&r=${Date.now()}`);
-	const reloadMark = page.wsFrames.length;
-	await page.waitFor(`!!document.querySelector("#chat")`, {
-		label: "the chat to render after reload",
-		timeout: 60000,
-	});
-	await waitRegistered(page, reloadMark);
-	// The (re)join burst can switch the active window right after the reload,
-	// unmounting the editor - poll, re-opening the editor until it sticks.
-	const subscribedDeadline = Date.now() + 45000;
-
-	while (Date.now() < subscribedDeadline) {
-		const on = await page.evaluate(
-			`document.querySelector(".push-net-status")?.classList.contains("push-net-on")`
-		);
-
-		if (on === true) {
-			break;
-		}
-
-		if (on === undefined) {
-			await page.goto(`http://127.0.0.1:8100/#/edit-network/${uuid}`);
-		}
-
-		await page.sleep(500);
-	}
-	page.check("re-enabling a network re-arms its editor status", true);
-	await page.screenshot("3-edit-status-subscribed");
+	page.check("re-enabling a network persists as pushEnabled: true", true);
+	await page.screenshot("3-re-enabled");
 
 	// --- 4. the add-network form: the option exists only with SASL on, and
 	// defaults to enabled ("register when the server supports it") ---------

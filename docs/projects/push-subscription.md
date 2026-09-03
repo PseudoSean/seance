@@ -399,14 +399,13 @@ decide _who gets told about it_:
 - **Settings → Notifications** keeps only what is genuinely browser-global:
   the diagnostics (permission, iOS install hint, unsupported browser,
   server-refused) and the account-wide snooze, plus a hint pointing at the
-  network settings. The enrollment status lives in the **network editor**:
-  a status line under the push checkbox (Subscribed / Ready — subscribes on
-  connect / Off / This server has no push support), reactive over the same
-  `servers`/`subs` maps (2026-09-03: the read-only Settings list and the
-  status dot were removed in favour of it). The editor also gained the
-  per-network **browser notifications** checkbox (default on, not gated on
-  authentication; toggling it on is the gesture for the Notification
-  permission ask) — see `docs/projects/notifications.md`.
+  network settings (2026-09-03: the read-only Settings list and the status
+  dot were removed; an editor status line was added the same day and then
+  dropped as redundant — the **sidebar bell** is the per-network status
+  indicator). The editor also gained the per-network **browser
+  notifications** checkbox (default on, not gated on authentication;
+  toggling it on is the gesture for the Notification permission ask) —
+  see `docs/projects/notifications.md`.
 - **Scenarios.** `tools/scenarios/push-network-setting.mjs` drives the
   checkbox ↔ storage ↔ editor-status round-trip headlessly;
   `tools/scenarios/ui-cleanup.mjs` asserts the Settings panel keeps only
