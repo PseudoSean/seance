@@ -372,8 +372,11 @@ decide _who gets told about it_:
   `false` opts a network out (helper `pushEnabledOf`, unit-tested in
   `test/irc/saved-networks.ts`).
 - **The form.** "Push notifications for this network" checkbox in
-  `NetworkForm.vue` (the Edit-network window), saved through the normal
-  `network:edit` path.
+  `NetworkForm.vue` (the Edit-network window) and in the Connect
+  (add-network) form, saved through the normal `network:edit` /
+  `createNetwork` paths. New networks default to enabled on both - the
+  flag means "register when the server supports it", which is what nearly
+  everyone wants; the checkbox is where you opt a network out up front.
 - **The gate.** `client/js/webpush.ts` reads the flag at every per-network
   touchpoint: `autoRegister` (no REGISTER on connect), `subscribe` (no
   registration loop membership, and the "at least one account" guard only

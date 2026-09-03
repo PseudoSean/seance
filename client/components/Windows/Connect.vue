@@ -191,6 +191,22 @@
 				</div>
 			</div>
 
+			<div class="connect-row">
+				<label></label>
+				<div class="input-wrap">
+					<label class="tls">
+						<input v-model="pushEnabled" type="checkbox" name="pushEnabled" />
+						Push notifications (registers when the server supports them)
+						<span
+							class="tooltipped tooltipped-n tooltipped-no-delay"
+							aria-label="Register this device for push notifications on this network. Needs a server that supports the draft/webpush capability and a SASL login. Each network is set up independently."
+						>
+							<button class="extra-help" />
+						</span>
+					</label>
+				</div>
+			</div>
+
 			<div v-if="notice" class="connect-notice">{{ notice }}</div>
 			<div v-if="submitted" class="connect-notice">
 				Connecting as <strong>{{ submitted.nick }}</strong> to
@@ -361,6 +377,9 @@ export default defineComponent({
 		const showSasl = ref(false);
 		const rememberPassword = ref(false);
 		const autoconnect = ref(false);
+		/** Push defaults to on for a new network: the flag means "register when
+		 * the server supports it", which is what nearly everyone wants. */
+		const pushEnabled = ref(true);
 		/** The saved entry the form was filled from; its uuid is reused on connect. */
 		const selectedUuid = ref<string | null>(null);
 		const savedNetworks = ref<SavedNetwork[]>(saved.list());
@@ -384,6 +403,7 @@ export default defineComponent({
 			showSasl.value = net.sasl === "plain";
 			rememberPassword.value = !!net.rememberPassword;
 			autoconnect.value = !!net.autoconnect;
+			pushEnabled.value = net.pushEnabled !== false;
 			selectedUuid.value = net.uuid;
 			notice.value = "";
 			pinServer();
@@ -438,6 +458,7 @@ export default defineComponent({
 				uuid: selectedUuid.value ?? undefined,
 				rememberPassword: showSasl.value && rememberPassword.value,
 				autoconnect: autoconnect.value,
+				pushEnabled: pushEnabled.value,
 			});
 			selectedUuid.value = client.uuid;
 			refreshSaved();
@@ -499,6 +520,7 @@ export default defineComponent({
 			showSasl,
 			rememberPassword,
 			autoconnect,
+			pushEnabled,
 			selectedUuid,
 			savedNetworks,
 			submitted,

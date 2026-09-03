@@ -150,6 +150,25 @@ export default async function run(page) {
 	page.check("re-enabling a network re-arms its push row", true);
 	await page.screenshot("3-settings-row-subscribed");
 
+	// --- 4. the add-network form offers the option, defaulting to on ------
+	await page.goto("http://127.0.0.1:8100/#/connect");
+	await page.waitFor(`!!document.querySelector('input[name="pushEnabled"]')`, {
+		label: "the push checkbox to render in the Connect form",
+	});
+	const connectBox = await page.evaluate(
+		`(() => {
+			const box = document.querySelector('input[name="pushEnabled"]');
+			const r = box.getBoundingClientRect();
+
+			return JSON.stringify({checked: box.checked, visible: r.width > 0});
+		})()`
+	);
+	page.check(
+		"the add-network form defaults push to enabled (connect-if-available)",
+		connectBox === JSON.stringify({checked: true, visible: true})
+	);
+	await page.screenshot("4-connect-form-default-on");
+
 	// Leave the profile clean.
 	await page.evaluate(`localStorage.removeItem("thelounge.push")`);
 	await page.evaluate(`localStorage.removeItem("thelounge.push.neverAsk")`);

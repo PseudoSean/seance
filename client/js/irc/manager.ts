@@ -31,7 +31,12 @@ const clients = new Map<string, IrcClient>();
  * the same host/port/nick is reused, else a fresh one is generated.
  */
 export type CreateNetworkOptions = ConnectOptions &
-	Partial<Pick<SavedNetwork, "uuid" | "name" | "autoconnect" | "rememberPassword" | "commands">>;
+	Partial<
+		Pick<
+			SavedNetwork,
+			"uuid" | "name" | "autoconnect" | "rememberPassword" | "pushEnabled" | "commands"
+		>
+	>;
 
 function highlightKeywords() {
 	return {
