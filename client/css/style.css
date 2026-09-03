@@ -386,6 +386,7 @@ p {
 #image-viewer .open-btn::before,
 .channel-list-item .not-connected-icon::before,
 .channel-list-item .connection-status-icon::before,
+.channel-list-item .notify-status-icon::before,
 .channel-list-item .edit-network::before,
 .channel-list-item .parted-channel-icon::before,
 .jump-to-input::before,
@@ -1109,7 +1110,6 @@ the same counter the badge shows). Muted channels keep their faded look. */
 
 .channel-list-item .notify-status-icon::before {
 	font-size: 11px;
-	display: inline-block;
 	line-height: 18px;
 	text-align: center;
 }
