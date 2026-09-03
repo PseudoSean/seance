@@ -60,6 +60,31 @@ describe("describeClose", function () {
 		expect(report.hint).to.contain("before registration");
 	});
 
+	it("offers the takeover hint when the server names a live session", function () {
+		const report = describeClose({
+			...base,
+			phase: "registering",
+			code: 1000,
+			reason: "Account already has an active session on this network",
+		});
+
+		expect(report.text).to.contain("(Account already has an active session on this network)");
+		expect(report.hint).to.contain("another tab");
+		expect(report.hint).to.contain("next retry");
+	});
+
+	it("keeps the generic hint for other registration closes", function () {
+		const report = describeClose({
+			...base,
+			phase: "registering",
+			code: 1000,
+			reason: "some policy",
+		});
+
+		expect(report.hint).to.not.contain("another tab");
+		expect(report.hint).to.contain("before registration");
+	});
+
 	it("names known close codes on a real disconnect", function () {
 		const report = describeClose({...base, phase: "registered"});
 
