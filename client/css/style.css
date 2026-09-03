@@ -1089,6 +1089,32 @@ the same counter the badge shows). Muted channels keep their faded look. */
 	cursor: default;
 }
 
+/* Per-network notification state (bell) in the sidebar listing. */
+.channel-list-item .notify-status-icon::before {
+	font: normal normal normal 12px/1 FontAwesome;
+	font-size: 11px;
+	display: inline-block;
+	line-height: 18px;
+	text-align: center;
+	width: 16px;
+}
+
+.channel-list-item .notify-status-icon.on::before {
+	content: "\f0f3"; /* solid bell: subscribed to push */
+	color: #2ea043;
+}
+
+.channel-list-item .notify-status-icon.enabled::before {
+	content: "\f0a2"; /* outline bell: notifications on, not subscribed */
+	color: var(--body-color-muted);
+}
+
+.channel-list-item .notify-status-icon.off::before {
+	content: "\f1f6"; /* bell-slash: notifications off */
+	color: var(--body-color-muted);
+	opacity: 0.7;
+}
+
 .channel-list-item .connection-status-icon.is-connected::before {
 	content: "\f0c1"; /* https://fontawesome.com/icons/link?style=solid */
 	color: #84ce88;

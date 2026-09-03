@@ -105,9 +105,10 @@ export default async function run(page) {
 
 	// The editor shows the state too: the status line under the checkbox.
 	await page.goto(`http://127.0.0.1:8100/#/edit-network/${uuid}`);
-	await page.waitFor(`document.querySelector(".push-net-status")?.textContent.includes("Off")`, {
-		label: "the editor's push status to flip to Off",
-	});
+	await page.waitFor(
+		`document.querySelector(".push-net-status")?.classList.contains("push-net-off")`,
+		{label: "the editor's push status to flip to Off"}
+	);
 	page.check("disabling a network persists and shows Off in the editor", true);
 	await page.screenshot("2-edit-status-off");
 
@@ -164,15 +165,15 @@ export default async function run(page) {
 	const subscribedDeadline = Date.now() + 45000;
 
 	while (Date.now() < subscribedDeadline) {
-		const text = await page.evaluate(
-			`document.querySelector(".push-net-status")?.textContent.trim()`
+		const on = await page.evaluate(
+			`document.querySelector(".push-net-status")?.classList.contains("push-net-on")`
 		);
 
-		if (text === "Subscribed") {
+		if (on === true) {
 			break;
 		}
 
-		if (text === undefined) {
+		if (on === undefined) {
 			await page.goto(`http://127.0.0.1:8100/#/edit-network/${uuid}`);
 		}
 

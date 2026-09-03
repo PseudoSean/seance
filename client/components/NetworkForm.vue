@@ -204,15 +204,18 @@ the server tab on new connection"
 							/>
 							Push notifications for this network
 							<span
+								:class="['push-net-status', 'push-net-' + pushStatus.cls]"
+								role="img"
+								:title="'Push: ' + pushStatus.text"
+								:aria-label="'Push: ' + pushStatus.text"
+							/>
+							<span
 								class="tooltipped tooltipped-n tooltipped-no-delay"
 								aria-label="Register this device for push notifications on this network. The server must support the draft/webpush capability. Push needs authentication, so this only appears with SASL configured. Each network is set up independently."
 							>
 								<button class="extra-help" />
 							</span>
 						</label>
-						<div class="push-net-status" :class="'push-net-' + pushStatus.cls">
-							{{ pushStatus.text }}
-						</div>
 					</div>
 				</div>
 			</template>
@@ -266,10 +269,29 @@ the server tab on new connection"
 	margin: 3px 10px 0 0;
 }
 
-/* Push enrollment status under the push checkbox (Subscribed / Ready / …). */
-.push-net-status {
-	margin: 2px 0 4px 22px;
-	font-size: 12px;
+/* Push enrollment status: an icon at the end of the checkbox line (the
+ * colours come from the shared push-net-* classes; the tooltip spells the
+ * state out). */
+.push-net-status::before {
+	font: normal normal normal 12px/1 FontAwesome;
+	padding: 0 4px;
+}
+
+.push-net-status.push-net-on::before {
+	content: "\f00c"; /* check: subscribed */
+}
+
+.push-net-status.push-net-ready::before {
+	content: "\f111"; /* circle: will subscribe on connect */
+}
+
+.push-net-status.push-net-off::before {
+	content: "\f10c"; /* circle outline: off */
+}
+
+.push-net-status.push-net-unsupported::before {
+	content: "\f12a"; /* exclamation: no server support */
+	color: #cb2431;
 }
 
 #connect .connect-note {

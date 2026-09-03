@@ -26,6 +26,9 @@
 			<span v-if="channel.unread" :class="{highlight: channel.highlight}" class="badge">{{
 				unreadCount
 			}}</span>
+			<span :aria-label="notifyState.label" :title="notifyState.label" class="notify-tooltip">
+				<span :class="['notify-status-icon', notifyState.cls]" />
+			</span>
 		</div>
 		<span
 			aria-label="Edit this network…"
@@ -57,6 +60,7 @@ import {useRouter} from "vue-router";
 import collapseNetwork from "../js/helpers/collapseNetwork";
 import roundBadgeNumber from "../js/helpers/roundBadgeNumber";
 import socket from "../js/socket";
+import webpush from "../js/webpush";
 import ChannelWrapper from "./ChannelWrapper.vue";
 
 import type {ClientChan, ClientNetwork} from "../js/types";
@@ -86,6 +90,24 @@ export default defineComponent({
 		const editNetwork = () => {
 			void router.push(`/edit-network/${props.network.uuid}`);
 		};
+
+		// Notification state for this network (bell icon): subscribed,
+		// enabled-but-not-yet, or off. Reactive over webpush's maps + the
+		// notify flag it mirrors from storage on saves.
+		const notifyState = computed(() => {
+			const info = webpush.networkPushInfo(props.network.uuid);
+			const enabled = webpush.notifyOn(props.network.uuid);
+
+			if (!enabled) {
+				return {cls: "off", label: "Notifications off for this network"};
+			}
+
+			if (info.enabled && info.subscribed) {
+				return {cls: "on", label: "Notifications: subscribed to push"};
+			}
+
+			return {cls: "enabled", label: "Notifications on"};
+		});
 
 		const statusClass = computed(() =>
 			props.network.status.connected
@@ -131,6 +153,7 @@ export default defineComponent({
 		};
 
 		return {
+			notifyState,
 			channel,
 			editNetwork,
 			statusClass,
