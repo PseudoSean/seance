@@ -386,6 +386,7 @@ p {
 #image-viewer .open-btn::before,
 .channel-list-item .not-connected-icon::before,
 .channel-list-item .connection-status-icon::before,
+.channel-list-item .notify-status-icon::before,
 .channel-list-item .edit-network::before,
 .channel-list-item .parted-channel-icon::before,
 .jump-to-input::before,
@@ -1087,6 +1088,46 @@ the same counter the badge shows). Muted channels keep their faded look. */
 
 .channel-list-item .connection-status-icon.is-connected {
 	cursor: default;
+}
+
+/* Per-network notification state (bell) in the sidebar listing. */
+.channel-list-item .notify-tooltip {
+	flex-shrink: 0;
+	line-height: 1;
+	margin: 0 4px;
+}
+
+.channel-list-item .notify-status-icon {
+	display: inline-block;
+	width: 18px;
+	height: 18px;
+	opacity: 0.7;
+	transition: opacity 0.2s;
+}
+
+.channel-list-item .notify-tooltip:hover .notify-status-icon {
+	opacity: 1;
+}
+
+.channel-list-item .notify-status-icon::before {
+	font-size: 11px;
+	line-height: 18px;
+	text-align: center;
+}
+
+.channel-list-item .notify-status-icon.on::before {
+	content: "\f0f3"; /* solid bell: subscribed to push */
+	color: #2ea043;
+}
+
+.channel-list-item .notify-status-icon.enabled::before {
+	content: "\f0a2"; /* outline bell: notifications on, not subscribed */
+	color: var(--body-color-muted);
+}
+
+.channel-list-item .notify-status-icon.off::before {
+	content: "\f1f6"; /* bell-slash: notifications off */
+	color: var(--body-color-muted);
 }
 
 .channel-list-item .connection-status-icon.is-connected::before {

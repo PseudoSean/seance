@@ -210,9 +210,6 @@ the server tab on new connection"
 								<button class="extra-help" />
 							</span>
 						</label>
-						<div class="push-net-status" :class="'push-net-' + pushStatus.cls">
-							{{ pushStatus.text }}
-						</div>
 					</div>
 				</div>
 			</template>
@@ -266,12 +263,6 @@ the server tab on new connection"
 	margin: 3px 10px 0 0;
 }
 
-/* Push enrollment status under the push checkbox (Subscribed / Ready / …). */
-.push-net-status {
-	margin: 2px 0 4px 22px;
-	font-size: 12px;
-}
-
 #connect .connect-note {
 	padding: 10px;
 	margin: 10px 0;
@@ -315,7 +306,6 @@ import RevealPassword from "./RevealPassword.vue";
 import SidebarToggle from "./SidebarToggle.vue";
 import {computed, defineComponent, nextTick, onMounted, PropType, ref, watch} from "vue";
 import {displayName, parseCommands, SavedNetwork} from "../js/irc/saved-networks";
-import webpush from "../js/webpush";
 import type {SharedNetworkStatus} from "../../shared/types/network";
 
 /** What the edit form binds to: a saved entry plus the live connection flag. */
@@ -369,29 +359,6 @@ export default defineComponent({
 				void Notification.requestPermission().catch(() => undefined);
 			}
 		};
-
-		// Where the network's push enrollment stands, shown under the push
-		// checkbox (reactive over webpush's servers/subs; the dot colours
-		// come from the settings panel's push-net-* classes).
-		const pushStatus = computed(() => {
-			const info = webpush.networkPushInfo(props.defaults.uuid);
-
-			if (!info.enabled) {
-				return {cls: "off", text: "Off"};
-			}
-
-			if (info.subscribed) {
-				return {cls: "on", text: "Subscribed"};
-			}
-
-			if (info.vapid) {
-				return {cls: "ready", text: "Ready \u2014 subscribes on connect"};
-			}
-
-			return props.defaults.connected
-				? {cls: "unsupported", text: "This server has no push support"}
-				: {cls: "ready", text: "Ready \u2014 subscribes on connect"};
-		});
 
 		const resizeCommandsInput = () => {
 			if (!commandsInput.value) {
@@ -479,7 +446,6 @@ export default defineComponent({
 		};
 
 		return {
-			pushStatus,
 			onNotifyToggle,
 			commandsInput,
 			commandsText,
