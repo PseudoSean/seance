@@ -278,15 +278,16 @@ the server tab on new connection"
 }
 
 .push-net-status.push-net-on::before {
-	content: "\f00c"; /* check: subscribed */
+	content: "\f111"; /* solid circle: subscribed */
 }
 
 .push-net-status.push-net-ready::before {
-	content: "\f111"; /* circle: will subscribe on connect */
+	content: "\f10c"; /* circle outline: will subscribe on connect */
 }
 
 .push-net-status.push-net-off::before {
 	content: "\f10c"; /* circle outline: off */
+	color: var(--body-color-muted);
 }
 
 .push-net-status.push-net-unsupported::before {

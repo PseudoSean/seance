@@ -1090,13 +1090,28 @@ the same counter the badge shows). Muted channels keep their faded look. */
 }
 
 /* Per-network notification state (bell) in the sidebar listing. */
+.channel-list-item .notify-tooltip {
+	flex-shrink: 0;
+	line-height: 1;
+}
+
+.channel-list-item .notify-status-icon {
+	display: inline-block;
+	width: 18px;
+	height: 18px;
+	opacity: 0.7;
+	transition: opacity 0.2s;
+}
+
+.channel-list-item .notify-tooltip:hover .notify-status-icon {
+	opacity: 1;
+}
+
 .channel-list-item .notify-status-icon::before {
-	font: normal normal normal 12px/1 FontAwesome;
 	font-size: 11px;
 	display: inline-block;
 	line-height: 18px;
 	text-align: center;
-	width: 16px;
 }
 
 .channel-list-item .notify-status-icon.on::before {
@@ -1112,7 +1127,6 @@ the same counter the badge shows). Muted channels keep their faded look. */
 .channel-list-item .notify-status-icon.off::before {
 	content: "\f1f6"; /* bell-slash: notifications off */
 	color: var(--body-color-muted);
-	opacity: 0.7;
 }
 
 .channel-list-item .connection-status-icon.is-connected::before {
