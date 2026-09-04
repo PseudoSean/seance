@@ -424,29 +424,46 @@ export const MULTILINE_SETTLE_MS = 1500;
 export const MULTILINE_MAX_COOLDOWN_MS = 120000;
 
 /**
- * The server charges a cooldown for every multiline batch it delivers —
- * `(2 + bodyBytes/128) * MULTILINE_COOLDOWN_DISCOUNT` seconds (`ircd/m_batch.c`)
- * — and *drops the opener* of a batch begun inside that window while still
+ * The server charges a cooldown for every multiline batch it delivers and
+ * *drops the opener* of a batch begun inside that window while still
  * delivering that batch's lines as standalone messages (so they duplicate,
  * and blank ones draw `ERR_NOTEXTTOSEND`, and the closer draws
  * `FAIL BATCH NO_ACTIVE_BATCH`). The echo of the previous batch comes back
  * long before its cooldown ends, so pacing the next batch on the echo alone
- * is not enough: {@link batchCooldownMs} waits out the cooldown too. The
- * discount is at most 1, so the undiscounted figure is a safe upper bound.
+ * is not enough: {@link batchCooldownMs} waits out the cooldown too.
+ *
+ * The formula is `nefarious2`'s `multiline_apply_cooldown` (`ircd/m_batch.c`)
+ * read verbatim: `(MULTILINE_COOLDOWN_BASE + total_bytes/128) * discount/100`
+ * seconds, where `total_bytes` is each line's body plus one byte per newline
+ * joining a non-continued line to the one before it, and `discount` is the
+ * `MULTILINE_COOLDOWN_DISCOUNT` feature — 0-100, default 50. Since the
+ * discount is at most 100, the *undiscounted* figure is an upper bound on the
+ * cooldown for any server, whatever its discount; a second of margin covers
+ * the whole-second rounding on the server's side.
  */
 const MULTILINE_COOLDOWN_BASE_S = 2;
+/** `MULTILINE_COOLDOWN_BYTES_PER_SEC` in `ircd/m_batch.c`. */
+const MULTILINE_COOLDOWN_BYTES_PER_SEC = 128;
 /** Margin on the estimated cooldown, for the server's whole-second rounding. */
 const MULTILINE_PACE_MARGIN_MS = 1000;
 
 /** A safe upper bound (ms) on the server's cooldown after delivering `batch`. */
 export function batchCooldownMs(batch: {lines: MultilineLine[]; action: boolean}): number {
+	// `total_bytes` exactly as the server counts it (m_batch.c L850): each
+	// line's body, plus one byte for the newline joining a non-continued line
+	// to the one before it. An action's body carries its `\x01ACTION …\x01`.
 	let bytes = 0;
 
-	for (const line of batch.lines) {
-		bytes += utf8ByteLength(line.text) + (batch.action ? ACTION_PREFIX.length + 1 : 0);
-	}
+	batch.lines.forEach((line, i) => {
+		const body = utf8ByteLength(line.text) + (batch.action ? ACTION_PREFIX.length + 1 : 0);
+		const feed = i > 0 && !line.concat ? 1 : 0;
+		bytes += body + feed;
+	});
 
-	return Math.ceil((MULTILINE_COOLDOWN_BASE_S + bytes / 128) * 1000) + MULTILINE_PACE_MARGIN_MS;
+	return (
+		Math.ceil((MULTILINE_COOLDOWN_BASE_S + bytes / MULTILINE_COOLDOWN_BYTES_PER_SEC) * 1000) +
+		MULTILINE_PACE_MARGIN_MS
+	);
 }
 
 /** A planned batch, and everything needed to put it on the wire again. */
