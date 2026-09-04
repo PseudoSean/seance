@@ -114,3 +114,40 @@ export function myReactions(message: SharedMsg, nick: string): string[] {
 		.filter((reaction) => reaction.nicks.some((n) => n.toLowerCase() === me))
 		.map((reaction) => reaction.text);
 }
+
+/**
+ * Add a delivered message to a channel's list. Pending copies of our own
+ * outgoing messages (bus-contract §1.7) stay a trailing block — the slot
+ * their echo will land in — so anything else goes in ahead of that block
+ * and a new copy goes after it.
+ */
+export function insertMessage<T extends SharedMsg>(messages: T[], msg: T): void {
+	if (msg.pending) {
+		messages.push(msg);
+		return;
+	}
+
+	let at = messages.length;
+
+	while (at > 0 && messages[at - 1].pending) {
+		at--;
+	}
+
+	messages.splice(at, 0, msg);
+}
+
+/** Take the pending copy `id` out of the list (`msg:settled`). */
+export function removePending<T extends SharedMsg>(messages: T[], id: number): boolean {
+	for (let i = messages.length - 1; i >= 0; i--) {
+		if (messages[i].id === id) {
+			if (!messages[i].pending) {
+				return false;
+			}
+
+			messages.splice(i, 1);
+			return true;
+		}
+	}
+
+	return false;
+}

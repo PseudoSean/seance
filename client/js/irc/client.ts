@@ -63,6 +63,8 @@ import {
 	splitMessage,
 	utf8ByteLength,
 } from "./message";
+import {LABEL_TAG_BYTES, pendingLabel, resetPending, showPending} from "./pending";
+import {splitStatusTarget} from "./handlers/privmsg";
 import {mechanismOffered, SASL_TIMEOUT_MS, SaslAuth, SaslMechanism, SaslResult} from "./sasl";
 import {
 	applyDuration,
@@ -891,6 +893,9 @@ export class IrcClient {
 		this.saveCursor(); // the newest one must not die with the connection
 		this.serverReplay = false;
 		this.clearPendingEdits();
+		// Before resetMultiline: a queued batch's copy is reported here, with
+		// the reason, rather than dropped without a word there.
+		resetPending(this, "connection lost");
 		this.clearTyping();
 
 		for (const chan of this.channels) {
@@ -1107,9 +1112,17 @@ export class IrcClient {
 			plain = plan[0][0].text;
 		}
 
+		// With `echo-message` each line is labelled so its echo can be told
+		// apart (pending.ts); without it there is no echo to label.
+		const echo = this.caps.hasCapability("echo-message");
+		const labelled = echo && this.caps.hasCapability("labeled-response");
 		// The frame cap applies to the whole line; the first chunk carries the
 		// most tags, so every chunk is budgeted as if it did.
-		const prefixBytes = sourceBytes + actionBytes + utf8ByteLength(tagPrefix(firstTags));
+		const prefixBytes =
+			sourceBytes +
+			actionBytes +
+			utf8ByteLength(tagPrefix(firstTags)) +
+			(labelled ? LABEL_TAG_BYTES : 0);
 		let chunks: string[];
 
 		try {
@@ -1120,12 +1133,23 @@ export class IrcClient {
 			return;
 		}
 
-		const echo = this.caps.hasCapability("echo-message");
+		// Where the pending copy shows: the channel a STATUSMSG names, or the
+		// open channel / query. A target that is not open shows nothing (its
+		// echo opens the query, as it always did).
+		const {target: shownTarget, group} = splitStatusTarget(this, target);
+		const chan = echo ? this.findChannel(shownTarget) : undefined;
+		const type = opts.notice
+			? MessageType.NOTICE
+			: opts.action
+			? MessageType.ACTION
+			: MessageType.MESSAGE;
 
 		for (let i = 0; i < chunks.length; i++) {
 			const chunk = chunks[i];
 			const body = opts.action ? `\x01ACTION ${chunk}\x01` : chunk;
-			const tags = i === 0 ? firstTags : opts.tags;
+			const base = i === 0 ? firstTags : opts.tags;
+			const label = echo ? pendingLabel(this) : undefined;
+			const tags = label ? {...base, label} : base;
 
 			if (!this.send(trailingLine(command, [target, body], tags))) {
 				return;
@@ -1133,10 +1157,19 @@ export class IrcClient {
 
 			if (!echo) {
 				this.handleLine(
-					`${tagPrefix(tags)}:${this.nick}!${this.ident}@${
+					`${tagPrefix(base)}:${this.nick}!${this.ident}@${
 						this.host || "localhost"
 					} ${command} ${target} :${body}`
 				);
+			} else if (chan) {
+				showPending(this, chan, {
+					type,
+					text: chunk,
+					label,
+					replyTo: opts.tags?.[REPLY_TAG],
+					editOf: i === 0 ? opts.firstTags?.[EDIT_TAG] : undefined,
+					statusmsgGroup: group,
+				});
 			}
 		}
 	}
@@ -1339,6 +1372,11 @@ export class IrcClient {
 	nextBatchRef(): string {
 		this.batchRefs++;
 		return `m${this.batchRefs}`;
+	}
+
+	/** An id for a message delivered to the UI outside {@link pushMessage} (a pending copy). */
+	nextMsgId(): number {
+		return this.ids.msgId();
 	}
 
 	/** Whether the server lets us send REDACT. */

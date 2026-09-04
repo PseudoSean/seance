@@ -14,10 +14,13 @@
  * This module is store- and DOM-free (it runs under mocha).
  */
 
+import {MessageType} from "../../../shared/types/msg";
 import type {IrcClient} from "./client";
 import {BatchHandler, OpenBatch, openBatchesOf} from "./handlers/batch";
+import {splitStatusTarget} from "./handlers/privmsg";
 import {formatLine, IrcMessage, IrcSource, MAX_LINE_BYTES, utf8ByteLength} from "./message";
-import {ClientTags, trailingLine} from "./wire";
+import {armPending, pendingLabel, PendingMessage, settlePending, showPending} from "./pending";
+import {ClientTags, EDIT_TAG, REPLY_TAG, trailingLine} from "./wire";
 
 /** The capability name, whose CAP 302 value carries the limits. */
 export const MULTILINE_CAP = "draft/multiline";
@@ -429,6 +432,10 @@ interface SentBatch {
 	action: boolean;
 	/** Its local echo has been shown already (no `echo-message`). */
 	shown: boolean;
+	/** `labeled-response` label on the opener, so the echo settles {@link pending}. */
+	label?: string;
+	/** The copy shown while the server has not taken it (with `echo-message`). */
+	pending?: PendingMessage;
 }
 
 /**
@@ -497,16 +504,47 @@ export function sendMultiline(
 	firstOpenerTags: ClientTags = {}
 ): void {
 	const queue = queueOf(client);
+	// With `echo-message` every batch shows as a pending copy from the
+	// start — the ones queued behind the first included, since to the user
+	// they are one message — and is armed when it goes out (transmit).
+	const echo = client.caps.hasCapability("echo-message");
+	const chan = echo ? client.findChannel(splitStatusTarget(client, target).target) : undefined;
+	const type =
+		command === "NOTICE"
+			? MessageType.NOTICE
+			: action
+			? MessageType.ACTION
+			: MessageType.MESSAGE;
 
 	for (const [index, lines] of plan.entries()) {
-		queue.waiting.push({
+		const tags = index === 0 ? {...firstOpenerTags, ...openerTags} : openerTags;
+		const batch: SentBatch = {
 			target,
 			command,
 			lines,
-			tags: index === 0 ? {...firstOpenerTags, ...openerTags} : openerTags,
+			tags,
 			action,
 			shown: false,
-		});
+			label: echo ? pendingLabel(client) : undefined,
+		};
+
+		if (chan) {
+			batch.pending = showPending(
+				client,
+				chan,
+				{
+					type,
+					text: joinPlan(lines),
+					label: batch.label,
+					replyTo: tags[REPLY_TAG],
+					editOf: tags[EDIT_TAG],
+					statusmsgGroup: splitStatusTarget(client, target).group,
+				},
+				{arm: false}
+			);
+		}
+
+		queue.waiting.push(batch);
 	}
 
 	pump(client);
@@ -534,7 +572,7 @@ function transmit(client: IrcClient, batch: SentBatch): boolean {
 	const queue = queueOf(client);
 	const ref = client.nextBatchRef();
 	const opener = formatLine({
-		tags: batch.tags,
+		tags: batch.label ? {...batch.tags, label: batch.label} : batch.tags,
 		command: "BATCH",
 		params: [`+${ref}`, MULTILINE_CAP, batch.target],
 	});
@@ -575,6 +613,10 @@ function transmit(client: IrcClient, batch: SentBatch): boolean {
 		},
 		echo ? MULTILINE_VERDICT_MS : MULTILINE_SETTLE_MS
 	);
+
+	if (batch.pending) {
+		armPending(client, batch.pending); // (again, for a re-sent batch)
+	}
 
 	// A re-sent batch has been on screen since its first attempt.
 	if (!echo && !batch.shown) {
@@ -665,7 +707,12 @@ export function multilineRejected(client: IrcClient): void {
 	resetMultiline(client);
 }
 
-/** Drop everything queued and on the wire (the transport closed). */
+/**
+ * Drop everything queued and on the wire (the transport closed, or the
+ * server rejected the batch and the failure is reported by the caller).
+ * The pending copies come down without a word of their own: on a close
+ * `IrcClient` has already reported them, and a `FAIL` is shown once.
+ */
 export function resetMultiline(client: IrcClient): void {
 	const queue = queueOf(client);
 
@@ -675,6 +722,12 @@ export function resetMultiline(client: IrcClient): void {
 
 	if (queue.retry) {
 		clearTimeout(queue.retry);
+	}
+
+	for (const batch of [queue.inFlight, ...queue.waiting]) {
+		if (batch?.pending) {
+			settlePending(client, batch.pending);
+		}
 	}
 
 	queue.verdict = null;

@@ -153,7 +153,7 @@ describe("Typing notifications (+typing, bus-contract §1.5)", function () {
 			clock.tick(5000);
 			expect(h.sent()).to.deep.equal([
 				"@+typing=active TAGMSG #seance",
-				"PRIVMSG #seance :hello",
+				"@label=s1 PRIVMSG #seance :hello",
 			]);
 
 			// A fresh session: active is not held back by the earlier send.

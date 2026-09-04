@@ -6,6 +6,7 @@
 			{
 				self: message.self,
 				highlight: message.highlight || focused,
+				pending: message.pending,
 				'previous-source': isPreviousSource,
 			},
 		]"

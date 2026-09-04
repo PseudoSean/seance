@@ -75,3 +75,13 @@ _Avoid_: MOTD block, preformatted message
 **Multi-line message**:
 One message whose text contains line feeds — one msgid, one timeline entry, one thing to reply to, react to, edit or delete, however many lines it shows. Only possible where the server and client have agreed to it; where they have not, each line is a message of its own.
 _Avoid_: multiline batch, paragraph, block message
+
+## Sending
+
+**Pending copy**:
+Our own message shown faded, at the bottom of the timeline, from the moment its line is on the wire until the server's echo replaces it or a failure takes it down. Exists only where `echo-message` makes the server the source of the timeline copy; without it the local echo is the copy, at once. It has no msgid, so nothing can refer to it.
+_Avoid_: optimistic message, unsent message, ghost message, placeholder, pending message (that is the input box's draft, `ClientChan.pendingMessage`)
+
+**Settled**:
+What happens to a pending copy when the server has answered for it, whichever way: replaced by the echo, taken down with an error line, or taken down silently after an `ACK`.
+_Avoid_: confirmed, acknowledged, resolved
