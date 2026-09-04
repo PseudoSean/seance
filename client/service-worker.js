@@ -930,20 +930,22 @@ async function handleResubscribe(oldSub, newSub) {
 		return;
 	}
 
+	// Drop the endpoint that just rotated away, or the account keeps two
+	// registrations for this one device and every push arrives twice.
+	const post = [];
+	const oldEndpoint = oldSub && oldSub.endpoint;
+
+	if (oldEndpoint && oldEndpoint !== sub.endpoint) {
+		post.push("WEBPUSH UNREGISTER " + oldEndpoint);
+	}
+
+	post.push(
+		"WEBPUSH REGISTER " + sub.endpoint + " p256dh=" + sub.keys.p256dh + ";auth=" + sub.keys.auth
+	);
+
 	// After 001: nefarious2 silently drops a WEBPUSH REGISTER sent between
 	// SASL and CAP END (docs/projects/push-subscription.md).
-	await swIrcAct(
-		networks[0],
-		[],
-		[
-			"WEBPUSH REGISTER " +
-				sub.endpoint +
-				" p256dh=" +
-				sub.keys.p256dh +
-				";auth=" +
-				sub.keys.auth,
-		]
-	);
+	await swIrcAct(networks[0], [], post);
 }
 
 async function resubscribeWithVapid(vapid) {

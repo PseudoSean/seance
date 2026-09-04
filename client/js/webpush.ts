@@ -65,6 +65,35 @@ function replaceSubs(next: Record<string, PushMaterial>): void {
 	saveSubs();
 }
 
+/** Every stored endpoint (usually one; more only mid-replacement). */
+function storedEndpoints(): string[] {
+	return Object.values(subs).map((sub) => sub.endpoint);
+}
+
+/** Tell every connected network to forget an endpoint. The browser mints a
+ * fresh push endpoint whenever the subscription is recreated (a server VAPID
+ * rotation, the browser rotating it, a re-subscribe); without this the old
+ * endpoint stays registered on the account and the server keeps pushing to
+ * it — the same device then gets every notification twice. The registration
+ * is per account, so unregistering on any one network drops it, but we tell
+ * all of them since a deploy may span several. */
+function unregisterEndpointEverywhere(endpoint: string): void {
+	for (const network of servers.keys()) {
+		socket.emit("webpush:unregister", {network, endpoint});
+	}
+}
+
+/** Drop any previously stored endpoint that the new one replaces, so a
+ * re-subscribe never leaves a stale registration delivering in parallel.
+ * Call with the endpoints captured before {@link replaceSubs}. */
+function unregisterReplaced(previous: string[], keep: string): void {
+	for (const endpoint of previous) {
+		if (endpoint !== keep) {
+			unregisterEndpointEverywhere(endpoint);
+		}
+	}
+}
+
 function loadSubs(): Record<string, PushMaterial> {
 	try {
 		const raw = storage.get(STORAGE_KEY);
@@ -198,9 +227,11 @@ function autoRegister(network: string, vapid: string | undefined): void {
 
 		void (async () => {
 			try {
+				const previous = storedEndpoints();
 				const material = await pushSubscription(vapid);
 
 				replaceSubs({[vapid]: material});
+				unregisterReplaced(previous, material.endpoint);
 				await writeStash();
 				socket.emit("webpush:register", {
 					network,
@@ -391,8 +422,10 @@ async function subscribe(): Promise<void> {
 			return;
 		}
 
+		const previous = storedEndpoints();
 		const material = await pushSubscription(vapid);
 		replaceSubs({[vapid]: material});
+		unregisterReplaced(previous, material.endpoint);
 		await writeStash();
 
 		for (const [network, serverVapid] of servers) {

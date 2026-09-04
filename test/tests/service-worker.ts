@@ -893,4 +893,29 @@ describe("service worker subscription renewal", function () {
 		expect(register, "REGISTER sent").to.be.greaterThan(-1);
 		expect(register, "after CAP END, not before").to.be.greaterThan(capEnd);
 	});
+
+	it("unregisters the rotated-away endpoint so the device is not registered twice", async function () {
+		const sw = makeSW();
+		const promises: Promise<unknown>[] = [];
+		const ev = {
+			oldSubscription: {endpoint: "https://push.example/OLD"},
+			newSubscription: {endpoint: "https://push.example/NEW", keys: {p256dh: "P", auth: "A"}},
+			waitUntil: (p: Promise<unknown>) => promises.push(p),
+		};
+
+		for (const h of sw.handlers.pushsubscriptionchange) {
+			h(ev);
+		}
+
+		await Promise.all(promises).catch(() => {});
+
+		const sent = sw.lastSent();
+		const unregister = sent.indexOf("WEBPUSH UNREGISTER https://push.example/OLD");
+		const register = sent.findIndex((l) =>
+			l.startsWith("WEBPUSH REGISTER https://push.example/NEW")
+		);
+		expect(unregister, "old endpoint unregistered").to.be.greaterThan(-1);
+		expect(register, "new endpoint registered").to.be.greaterThan(-1);
+		expect(unregister, "unregister before register").to.be.lessThan(register);
+	});
 });
