@@ -24,8 +24,12 @@ describe("push/strip", function () {
 
 		it("removes block markers across lines", function () {
 			expect(stripMarkdown("# Title\n```js\nlet x = 1;\n```\n> quoted")).to.equal(
-				"Titlelet x = 1;quoted"
+				"Title\nlet x = 1;\nquoted"
 			);
+		});
+
+		it("keeps a line break after a code block", function () {
+			expect(stripMarkdown("```\ncode\n```\nafter")).to.equal("code\nafter");
 		});
 
 		it("leaves an unclosed marker literal and never loses characters", function () {
@@ -33,8 +37,13 @@ describe("push/strip", function () {
 			expect(stripMarkdown("```js\nlet x = 1;")).to.equal("```js\nlet x = 1;");
 		});
 
-		it("strips a math span to its TeX source", function () {
-			expect(stripMarkdown("see $x^2$ here")).to.equal("see $x^2$ here");
+		it("inline markers join with no added breaks", function () {
+			expect(stripMarkdown("**a** b")).to.equal("a b");
+		});
+
+		it("strips math spans to their TeX source", function () {
+			expect(stripMarkdown("see $" + "`x^2`" + "$ here")).to.equal("see x^2 here");
+			expect(stripMarkdown("$$\\sum_i x_i$$")).to.equal("\\sum_i x_i");
 		});
 	});
 
