@@ -1,7 +1,8 @@
 /**
  * Pending outgoing messages (irc/pending.ts, bus-contract §1.9): with
  * `echo-message` a sent message shows at once as a pending copy, and the
- * server's echo — matched by `labeled-response` label — replaces it.
+ * server's echo replaces it — matched by `labeled-response` label when the
+ * server relays it, else by content.
  */
 
 import {expect} from "chai";
@@ -101,16 +102,34 @@ describe("Pending outgoing messages (irc/pending.ts)", function () {
 			expect(settled(h)).to.have.length(1);
 		});
 
-		it("leaves the copy alone for an unlabelled message of ours (another session)", function () {
+		it("settles a copy whose echo omits the label (a server that does not relay it)", function () {
 			const h = setup();
 			const id = joined(h);
 			h.client.sendMessage("#seance", "hi there");
+			const copy = h.lastMessage(id);
 
+			// The echo of our own message, but without the label: not every
+			// server relays it on the propagated echo-message copy. It is
+			// still our echo (same nick, same text), so the copy settles.
 			h.transport.line("@msgid=m1 :alice!alice@host.example PRIVMSG #seance :hi there");
+
+			expect(settled(h)).to.deep.equal([{chan: id, id: copy.id}]);
+			expect(h.lastMessage(id).msgid).to.equal("m1");
+		});
+
+		it("leaves the copies alone for an unlabelled message of ours we did not send (another session)", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.sendMessage("#seance", "from here");
+
+			// Same account speaking from another device: a self echo with no
+			// label and no pending copy of ours to match. Nothing settles.
+			h.transport.line("@msgid=m1 :alice!alice@host.example PRIVMSG #seance :from the phone");
 
 			expect(settled(h)).to.deep.equal([]);
 			expect(pendingIn(h, id)).to.have.length(1);
-			expect(h.lastMessage(id).msgid).to.equal("m1");
+			expect(pendingIn(h, id)[0].text).to.equal("from here");
+			expect(h.lastMessage(id).text).to.equal("from the phone");
 		});
 
 		it("settles only the copy the echo labels", function () {

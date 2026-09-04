@@ -11,12 +11,15 @@
  * multiline batch, when the connection closes, or after
  * {@link PENDING_TIMEOUT_MS} of silence.
  *
- * The echo is matched to its copy by `labeled-response` label: every line
- * goes out as `@label=s<n>`, and nefarious2 puts the label on the echo (on
- * the batch opener for a multiline one) and on the numeric that rejects it
- * (probed 2026-09-04). Without that cap the oldest copy of the same kind in
- * the channel is taken, an exact text match first — echoes come back in the
- * order the lines went out.
+ * The echo is matched to its copy by `labeled-response` label when the
+ * server relays it: every line goes out as `@label=s<n>`, and nefarious2
+ * puts the label on the echo (on the batch opener for a multiline one) and
+ * on the numeric that rejects it (probed 2026-09-04). But the spec does not
+ * require the label on a propagated echo-message copy, so it is a fast path,
+ * not the only one: failing it (or without the cap at all) the copy is found
+ * by content — the oldest unsettled copy of the same kind in the channel,
+ * exact text preferred — since echoes come back in the order the lines went
+ * out. See {@link settleEcho}.
  *
  * Copies bypass `IrcClient.pushMessage` on purpose: a line the server has
  * not taken must not move the read marker, count towards the history
@@ -183,14 +186,28 @@ export function settleEcho(
 	text: string
 ): PendingMessage | undefined {
 	const entries = registryOf(client).entries;
-	let entry: PendingMessage | undefined;
+	const label = msg.tags.get("label");
 
-	if (client.caps.hasCapability("labeled-response")) {
-		const label = msg.tags.get("label");
-		entry = label ? entries.find((e) => e.label === label) : undefined;
-	} else {
+	// The label is the exact match — but only when the server relays it on the
+	// echo, which the spec does not require of a propagated echo-message copy
+	// and not every server does. So it is a fast path, not the only one.
+	let entry = label ? entries.find((e) => e.label === label) : undefined;
+
+	if (!entry) {
+		// No usable label. Our echoes carry the text we sent, so match a copy
+		// of the same kind in this channel by exact text. That is what keeps a
+		// self message we never sent — the same account on another device —
+		// from settling anything: it matches none of our copies.
 		const kind = entries.filter((e) => e.chan === chan && e.type === type);
-		entry = kind.find((e) => e.text === text) ?? kind[0];
+		entry = kind.find((e) => e.text === text);
+
+		// A server with no `labeled-response` at all can also alter the text
+		// (stripping colours, say), so there the oldest copy of the kind is
+		// the best guess. With the cap negotiated a missing label is the odd
+		// case, not an altered message, so exact text is required.
+		if (!entry && !client.caps.hasCapability("labeled-response")) {
+			entry = kind[0];
+		}
 	}
 
 	if (entry) {
