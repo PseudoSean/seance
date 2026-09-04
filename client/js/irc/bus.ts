@@ -71,6 +71,14 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 		}
 	});
 
+	bus.handle("webpush:list", ({network}) => {
+		const client = registry.clientForNetwork(network);
+
+		if (client && client.isConnected) {
+			client.webpushList();
+		}
+	});
+
 	bus.handle("msg:react", ({target, msgid, text, remove}) => {
 		const client = registry.clientForChannel(target);
 		const chan = client?.channelById(target);

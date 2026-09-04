@@ -124,6 +124,11 @@ interface ServerToClientEvents {
 		code?: string;
 		reason?: string;
 	}>;
+	/** The account's registered push endpoints (`WEBPUSH LIST`), one network's view. `armed` is the last-register unix time; `current` is false for an endpoint bound to a superseded VAPID key (a dead registration). */
+	"webpush:subscriptions": EventHandler<{
+		network: string;
+		subs: Array<{endpoint: string; armed: number; current: boolean}>;
+	}>;
 	/** One `PushSession` per `PERSISTENCE LIST` row, dispatched when the list closes (Settings → session panel). */
 	"persistence:sessions": EventHandler<{sessions: PushSession[]}>;
 	"msg:special": EventHandler<{chan: number; data?: Record<string, any>}>;
@@ -209,6 +214,8 @@ interface ClientToServerEvents {
 		keys: {p256dh: string; auth: string};
 	}>;
 	"webpush:unregister": EventHandler<{network: string; endpoint: string}>;
+	/** Ask a network for the account's registered push endpoints (`WEBPUSH LIST`); the reply arrives as `webpush:subscriptions`. */
+	"webpush:list": EventHandler<{network: string}>;
 	/** Account metadata write for webpush settings (payload tier, mute/snooze). An empty value deletes the key. */
 	"webpush:metadata": EventHandler<{network: string; key: string; value: string}>;
 	/** Ask the server for the account's bouncer session(s) (`PERSISTENCE LIST`); the reply arrives as `persistence:sessions`. The network is optional — any connected client sees the same session. */

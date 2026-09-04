@@ -4633,3 +4633,78 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	font-size: 12px;
 	margin-top: 2px;
 }
+
+/* Settings → Push: the account's registered devices (WEBPUSH LIST). */
+.push-devices {
+	margin-top: 14px;
+}
+
+.push-devices-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	font-weight: bold;
+	margin-bottom: 6px;
+}
+
+.push-devices-empty {
+	font-size: 13px;
+	color: var(--body-color-muted);
+	margin: 4px 0;
+}
+
+.push-device-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.push-device {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 6px 0;
+	border-bottom: 1px solid var(--body-color-muted);
+}
+
+.push-device-label {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px;
+	min-width: 0;
+}
+
+.push-device-host {
+	font-family: monospace;
+	font-size: 13px;
+	word-break: break-all;
+}
+
+.push-device-tag {
+	font-size: 11px;
+	font-weight: bold;
+	padding: 0 6px;
+	border-radius: 3px;
+	color: #fff;
+	white-space: nowrap;
+}
+
+.push-device-tag.this {
+	background: var(--link-color, #2f80ed);
+}
+
+.push-device-tag.stale {
+	background: var(--body-color-muted);
+}
+
+.push-device-age {
+	font-size: 12px;
+	color: var(--body-color-muted);
+	white-space: nowrap;
+}
+
+.push-devices-clear {
+	margin-top: 8px;
+}

@@ -43,6 +43,64 @@
 				<strong>Warning</strong>: The server refused the push subscription. It may require
 				logging in (SASL) before subscribing.
 			</div>
+
+			<div v-if="devices.network" class="push-devices">
+				<div class="push-devices-head">
+					<span>Registered devices</span>
+					<button
+						type="button"
+						class="btn btn-small"
+						:disabled="devices.loading"
+						@click.prevent="refreshDevices"
+					>
+						{{ devices.loading ? "Loading…" : "Refresh" }}
+					</button>
+				</div>
+
+				<p v-if="!devices.loading && devices.subs.length === 0" class="push-devices-empty">
+					No devices are registered for push on this account.
+				</p>
+
+				<ul v-else class="push-device-list">
+					<li v-for="sub in devices.subs" :key="sub.endpoint" class="push-device">
+						<div class="push-device-label">
+							<span class="push-device-host">{{ endpointHost(sub.endpoint) }}</span>
+							<span v-if="sub.thisDevice" class="push-device-tag this"
+								>This device</span
+							>
+							<span
+								v-if="!sub.current"
+								class="push-device-tag stale"
+								title="Registered under a superseded key; the server can no longer reach it."
+								>Stale</span
+							>
+							<span v-if="armedAge(sub.armed)" class="push-device-age">{{
+								armedAge(sub.armed)
+							}}</span>
+						</div>
+						<button
+							type="button"
+							class="btn btn-small"
+							@click.prevent="removeDevice(sub.endpoint)"
+						>
+							Remove
+						</button>
+					</li>
+				</ul>
+
+				<button
+					v-if="devices.subs.length > 0"
+					type="button"
+					class="btn btn-small push-devices-clear"
+					@click.prevent="clearAllDevices"
+				>
+					Clear all devices
+				</button>
+				<p class="push-networks-hint">
+					Removing a device unregisters it on the server so it stops receiving pushes.
+					Clearing all also unsubscribes this browser.
+				</p>
+			</div>
 		</div>
 
 		<h2>Browser Notifications</h2>
@@ -171,8 +229,43 @@ export default defineComponent({
 			webpush.setSnooze(ms);
 		};
 
+		const devices = webpush.deviceList;
+		const refreshDevices = () => webpush.refreshDevices();
+		const removeDevice = (endpoint: string) => webpush.removeDevice(endpoint);
+		const clearAllDevices = () => webpush.clearAllDevices();
+
+		/** "fcm.googleapis.com" from an endpoint, for a readable device label. */
+		const endpointHost = (endpoint: string): string => {
+			try {
+				return new URL(endpoint).host;
+			} catch {
+				return endpoint.slice(0, 40);
+			}
+		};
+
+		/** "3 days ago" style age from a unix time (seconds); "" if unknown. */
+		const armedAge = (armed: number): string => {
+			if (!armed) {
+				return "";
+			}
+
+			const secs = Math.max(0, Math.floor(Date.now() / 1000) - armed);
+			const day = 86400;
+
+			if (secs < 3600) {
+				return `${Math.max(1, Math.floor(secs / 60))} min ago`;
+			}
+
+			if (secs < day) {
+				return `${Math.floor(secs / 3600)} h ago`;
+			}
+
+			return `${Math.floor(secs / day)} d ago`;
+		};
+
 		onMounted(() => {
 			webpush.refresh();
+			webpush.refreshDevices();
 		});
 
 		const playNotification = () => {
@@ -187,6 +280,12 @@ export default defineComponent({
 			store,
 			playNotification,
 			snooze,
+			devices,
+			refreshDevices,
+			removeDevice,
+			clearAllDevices,
+			endpointHost,
+			armedAge,
 		};
 	},
 });
