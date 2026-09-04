@@ -1,6 +1,6 @@
 # Web push: spec-shaped payload, multiline through push, markdown-aware worker
 
-**Date:** 2026-09-04 · **Status:** approved design, awaiting implementation plan
+**Date:** 2026-09-04 · **Status:** implemented on branch push-payload-multiline (client) and push-line-payload (server)
 **Repos:** Seance (`client/`, this repo) and nefarious2 (`testnet/nefarious`,
 the fork's `push-notifications` line)
 
@@ -23,15 +23,15 @@ the client does with the payload.
 
 ## 2. Decisions
 
-| Decision | Choice | Why |
-| --- | --- | --- |
-| Payload shape | One raw IRC line per push, as the draft requires | Spec compliance; nefarious2's tiered JSON was never an IRC message |
-| Aggregation on the server | None | Forbidden by "exactly one IRC message"; the worker already merges per target |
-| Multiline | One push per line at batch close, capped; the worker reassembles by batch reference | Meets "multiline can transmit"; each push is still one IRC message |
-| Cooldown | Kept as is for single messages; checked **once per batch** so a multiline message's lines are never split by it | Bounded POST volume; a batch pushes whole or not at all |
-| Markdown stripping | In the worker (and the page), only when the user's `markdown` setting is on; IRC formatting bytes are always stripped | The renderer's rules live in the client; the server stays Markdown-agnostic |
-| Stripper code | The page's `layout()` + `toPlainText()`, bundled into a worker chunk | One source of truth; unclosed markers stay literal (CommonMark), so partial text never loses characters |
-| Truncation | None on the server for this tier: a single IRC line always fits the 4 KB push ceiling | Removes the 3000-byte clamp and the `trunc` flag from this path |
+| Decision                  | Choice                                                                                                                | Why                                                                                                     |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Payload shape             | One raw IRC line per push, as the draft requires                                                                      | Spec compliance; nefarious2's tiered JSON was never an IRC message                                      |
+| Aggregation on the server | None                                                                                                                  | Forbidden by "exactly one IRC message"; the worker already merges per target                            |
+| Multiline                 | One push per line at batch close, capped; the worker reassembles by batch reference                                   | Meets "multiline can transmit"; each push is still one IRC message                                      |
+| Cooldown                  | Kept as is for single messages; checked **once per batch** so a multiline message's lines are never split by it       | Bounded POST volume; a batch pushes whole or not at all                                                 |
+| Markdown stripping        | In the worker (and the page), only when the user's `markdown` setting is on; IRC formatting bytes are always stripped | The renderer's rules live in the client; the server stays Markdown-agnostic                             |
+| Stripper code             | The page's `layout()` + `toPlainText()`, bundled into a worker chunk                                                  | One source of truth; unclosed markers stay literal (CommonMark), so partial text never loses characters |
+| Truncation                | None on the server for this tier: a single IRC line always fits the 4 KB push ceiling                                 | Removes the 3000-byte clamp and the `trunc` flag from this path                                         |
 
 Superseded during design (recorded so nobody re-proposes them): a server-side
 aggregate with a timer flush at cooldown end, and a JSON payload with the
@@ -51,7 +51,7 @@ Encoding is unchanged: UTF-8 plaintext, aes128gcm (RFC 8291), VAPID
 ### 3.1 Single message (PM, private NOTICE, channel highlight)
 
 ```
-@time=<iso8601>;msgid=<id>[;account=<account>] :<nick>!<user>@<host> PRIVMSG|NOTICE <target> :<text>
+@msgid=<id>;time=<iso8601>[;account=<account>] :<nick>!<user>@<host> PRIVMSG|NOTICE <target> :<text>
 ```
 
 Exactly what a client with `server-time`, `message-tags` and `account-tag`
@@ -70,16 +70,18 @@ are dropped (the draft allows it). `<host>` is the sender's displayed host.
   lines — `testnet/nefarious/ircd/m_batch.c:891`, `:949` — hence the index tag.)
 - `evilnet.github.io/line` is a vendor tag: `<i>` is the 1-based line index
   in the original message, `<sent>` how many lines were pushed for this
-  batch, `<total>` how many lines the message had. `<sent> = min(<total>,
-  WEBPUSH_MULTILINE_LINES)`. Lines beyond `<sent>` are not pushed.
+  batch, `<total>` how many lines the message had. `<sent> = min(<total>, WEBPUSH_MULTILINE_LINES)`. Lines beyond `<sent>` are not pushed.
 - `draft/multiline-concat` is present exactly when the line was a concat
   chunk in the original batch (join to the previous line with no separator;
   otherwise join with a newline).
 - The lines of one batch are sent back-to-back in index order. Delivery
   order is not guaranteed by push services, so the worker orders by `<i>`.
-- The draft does not mention *adding* tags. The vendor tag keeps the payload
+- The draft does not mention _adding_ tags. The vendor tag keeps the payload
   one IRC message; this is a documented extension, noted in
   `docs/projects/push-subscription.md`.
+
+The batch reference is the batch's base msgid — a held session has no
+connection-scoped batch id.
 
 ### 3.3 Cross-device read
 
@@ -133,8 +135,7 @@ it rather than copying it.
 
 ### 4.4 Multiline hook
 
-`webpush_notify_multiline(sptr, target, lines, nlines, batchid, base_msgid,
-timestamp, is_notice)` where `lines` is an array of `{concat, text}`.
+`webpush_notify_multiline(sptr, target, lines, nlines, batchid, base_msgid, timestamp, is_notice)` where `lines` is an array of `{concat, text}`.
 Called from `process_multiline_batch` after `history_store_multiline`
 succeeds, on both the local path (`ircd/m_batch.c:1723`) and the
 server-to-server path (`:2571`); each caller passes its own line list.
@@ -177,14 +178,12 @@ Plain TypeScript, no DOM, no Vue, no store, so mocha loads it:
   `shared/irc.ts`, shared, not copied) and `stripMarkdown(text)` =
   `toPlainText(layout(text, {markdown: true}))`; CTCP `ACTION` rewrite.
 - `merge.ts` — the notification's stored message list: entries
-  `{from, text, msgid?, batch?, lines?: Record<number, {text, concat}>,
-  sent?, total?}`; `addLine(entries, parsed)` finds or creates the batch
+  `{from, text, msgid?, batch?, lines?: Record<number, {text, concat}>, sent?, total?}`; `addLine(entries, parsed)` finds or creates the batch
   entry, inserts by index (idempotent), and `joinLines(entry)` rebuilds the
   text with the concat rule and `…` for a missing index or for lines beyond
   `sent`; `renderMergedBody(entries, isChannel, opts)` (moved from the
   worker) applies strip → middle-ellipsis → line budget.
-- `worker-entry.ts` — assigns `self.seancePush = {parsePushLine, addLine,
-  renderMergedBody, stripFormatting, stripMarkdown}`.
+- `worker-entry.ts` — assigns `self.seancePush = {parsePushLine, addLine, renderMergedBody, stripFormatting, stripMarkdown}`.
 
 ### 5.2 Build
 
@@ -196,7 +195,11 @@ capture its dependencies (`linkify-it`, `emoji-regex`). The service worker
 loads it at top level:
 
 ```js
-try { importScripts(`js/push.js?v=${cacheName}`); } catch (e) { /* strip inline, no markdown */ }
+try {
+  importScripts(`js/push.js?v=${cacheName}`);
+} catch (e) {
+  /* strip inline, no markdown */
+}
 ```
 
 and lists `js/push.js?v=${cacheName}` in `shellPaths`. The test-mode branch
