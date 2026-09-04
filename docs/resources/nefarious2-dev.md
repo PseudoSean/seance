@@ -176,3 +176,45 @@ stream and the catch-up cursor); a second connection attaches as an
 (with `BOUNCER_MAX_SESSIONS = 5`), so multiple tabs on one identity
 coexist as aliases and share the session. To give a tab its own stream
 instead, use a second test identity.
+
+## The native testnet rig after a sandbox reset (2026-09-04)
+
+The sandbox was rebuilt: `/tmp` wiped, apt packages gone, no `ircrun`
+user, no system Chromium. `/seance/tmp` survived. What it took to come
+back, in order:
+
+- `apt-get install gawk flex byacc libssl-dev librocksdb-dev libzstd-dev libcurl4-openssl-dev libjansson-dev libcmocka-dev libmaxminddb-dev gdb`
+  (apt has network). `configure` wants flex; `config.status` wants gawk;
+  `make clean` deletes the byacc/flex outputs.
+- `cd testnet/nefarious && touch config.status && make clean && make -j8`.
+  The touch skips the configure re-run (the old config already has libkc);
+  the clean is **not optional**: `ircd/Makefile.in` carries no dependency
+  info for some objects (`metadata.o`), so after a header change a partial
+  `make` links stale objects and the ircd aborts at boot with
+  `feature_bool: features[feat].feat == feat` — gdb shows the enum names
+  off by one between objects.
+- Install and run as the current user (`ircrun` is gone; the files are
+  ours): copy `ircd/ircd` to `tmp/testnet-run/ircd-install/bin/ircd.<stamp>`,
+  re-point the `ircd` symlink, delete a stale `conf/ircd.pid`, then
+  `cd tmp/testnet-run/conf && setsid nohup ../ircd-install/bin/ircd -f ircd-docker.conf >> ../ircd-fg.log 2>&1 &`.
+  Never `pkill -f` a pattern that also appears in the shell command you
+  are running (it kills that shell); anchor it:
+  `pkill -f "^/seance/tmp/testnet-run/ircd-install/bin/ircd"`,
+  `pkill -f "^node tmp/dev-origin"`.
+- Certificates live in `/seance/tmp/certs/` now (`ca.crt`/`ca.key`,
+  `dev-cert.pem`/`dev-cert.key`; SAN `localhost, 127.0.0.1, 10.0.0.41, 172.22.0.3, irc.testnet.local`), and `tmp/dev-origin.mjs` reads them
+  there and serves the CA at `https://<host>:8000/ca.crt`. **The old CA key
+  is gone**: every phone that trusted the previous CA has to download and
+  install the new `ca.crt` before its browser will register the service
+  worker or subscribe to push again.
+- Chromium is Playwright's only: `tmp/chrome-pw.sh` wraps it with
+  `--no-sandbox --ignore-certificate-errors`. Harnesses:
+  `tmp/sw-reply-probe2.mjs <mode>` drives the real service worker over the
+  DevTools protocol (reply-page, reply-held, reply-queue, click, deeplink,
+  reconnect); `tmp/chan-listen.mjs` and `tmp/names-probe.mjs` watch
+  `#seance`; `tmp/sasl-transcript.mjs account pass nick [caps]` prints a
+  registration transcript; the dev-origin's `POST /__drop` drops every
+  proxied socket.
+- The server caps an account at `WEBPUSH_MAX_REGISTRATIONS` (10) push
+  endpoints and answers `FAIL WEBPUSH MAX_REGISTRATIONS`; fresh Chromium
+  profiles against one test account use them up.

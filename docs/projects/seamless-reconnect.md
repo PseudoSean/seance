@@ -319,3 +319,41 @@ Fixes and traps worth remembering:
 - The one-session limit is per account per network: diagnosing "can't
   connect" as a second client while the first is genuinely connected shows
   the same close — check for a live session before suspecting the server.
+
+## Round six: the foreground reconnect on a phone (2026-09-04)
+
+Symptom: bringing the PWA back to the foreground felt slow — a frozen tab
+thawing took ~2 s to be registered again, most of it waiting.
+
+Measured with `tmp/sw-reply-probe2.mjs reconnect` (freeze the page via
+DevTools, drop its socket at the dev-origin's `POST /__drop` hook, thaw,
+watch the store): the close event and the foreground poke arrive in
+either order on thaw, and both paths ended in the transport's normal first
+backoff (0.5–1 s with jitter) before anything dialled.
+
+Rules now in `transport.ts` (tests in `test/irc/transport.ts`):
+
+- A connection that stayed up ≥ 30 s (the backoff-reset mark) retries **at
+  once** when it drops; a young one still backs off (flapping stays gentle).
+- A socket that dies **while a probe is in flight** retries at once too —
+  that is the poke running before the OS delivered the close.
+- Only the first retry is immediate; if it fails the usual schedule
+  resumes from attempt 2.
+- `probe(timeoutMs)`: the foreground poke passes 4 s instead of the
+  default 10 s.
+- A dial stuck in CONNECTING is abandoned after 15 s
+  (`CONNECT_TIMEOUT_MS`), and `reconnectAll` redials one older than 3 s at
+  foreground time (`redial()`) — `connect()` alone is a no-op while
+  connecting.
+- `foreground.ts` also pokes on `resume` (Page Lifecycle thaw) and `focus`.
+
+Result: thaw → registered in 218 ms (was 2036 ms), with a real second SASL
+login in the ircd's chain log. The lobby says `Reconnecting now (attempt 1)…`
+for an immediate retry.
+
+Open: two `You are not connected to the IRC network…` lines appear in the
+lobby in the ~5 ms between the redial and the new socket opening. Something
+sends twice at that moment; it is not the catch-up (guarded and cancelled
+on close), not the `connecting` listener, not `connect()`/`onOpen()`.
+Pre-existing and cosmetic; attribute with a breakpoint on `client.send`
+when the lobby noise is next worked on.

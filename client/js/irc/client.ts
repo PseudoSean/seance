@@ -622,10 +622,13 @@ export class IrcClient {
 				this.pushMessage(
 					this.lobby,
 					{
-						text: `Reconnecting in ${Math.max(
-							1,
-							Math.round(ev.delayMs / 1000)
-						)}s (attempt ${ev.attempt})…`,
+						// A stable connection's loss retries at once (transport.ts).
+						text:
+							ev.delayMs < 500
+								? `Reconnecting now (attempt ${ev.attempt})…`
+								: `Reconnecting in ${Math.round(ev.delayMs / 1000)}s (attempt ${
+										ev.attempt
+								  })…`,
 					},
 					true
 				);

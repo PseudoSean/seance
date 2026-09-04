@@ -198,9 +198,13 @@ function notifyMessage(
 					if (store.state.hasServiceWorker) {
 						navigator.serviceWorker.ready
 							.then((registration) => {
+								// network + target let a click find the conversation
+								// after this page (and its channel ids) is gone.
 								registration.active?.postMessage({
 									type: "notification",
 									chanId: targetId,
+									network: network.uuid,
+									target: channel.name,
 									timestamp: timestamp,
 									title: title,
 									body: body,

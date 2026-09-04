@@ -462,6 +462,94 @@ bell = subscribed; **muted** bell = enabled, not subscribed (the shipped
 font is FA5 solid-only, so the outline variant does not exist — the colour
 separates the states); **bell-slash** = notifications off for the network.
 
+## Replying from a notification, and opening it (2026-09-04)
+
+Reported from a phone: a reply typed into a push notification never went
+out, and tapping a notification opened the app on whatever it last showed.
+Root causes, each confirmed against the testnet ircd and all fixed:
+
+- **The reply never opened a connection.** The worker only sent when the
+  page had stashed a remembered password, and otherwise silently opened the
+  app and dropped the text. The ircd's SASL chain log records every nick it
+  sees, and the worker's fixed nick `seance-sw` appears in none of the
+  user's sessions — the failure was upstream of the socket.
+- **A fixed nick collides with its own ghost.** nefarious2's bouncer holds
+  a QUIT'd account session as a ghost that keeps its nick, so the second
+  reply ever sent as `seance-sw` gets `433`, which the worker did not
+  handle — a 10 s timeout, then nothing.
+- **A channel PRIVMSG fired at 001 races the bouncer's replay.** Logging in
+  as the account attaches the connection to the account's session (an
+  alias while the app is connected elsewhere, a resume of the held session
+  otherwise); the session's `JOIN`s are replayed right _after_ 001, and a
+  PRIVMSG sent at 001 came back `404 Cannot send to channel` in one run out
+  of five. A PM has no such race.
+- **Clicks could not name a conversation.** Channel ids are session-local;
+  a notification that outlived the page could only open the app root.
+
+What ships (`client/service-worker.js`, `test/tests/service-worker.ts`,
+`client/js/webpush.ts`, `router.ts`, `helpers/pendingTarget.ts`):
+
+- **A reply is never lost.** Three senders, tried in order: an open page
+  (any window, posted with a `MessageChannel`; a frozen page never answers
+  and is given 2.5 s), the worker's own throwaway connection when the
+  password is stashed, and otherwise the IndexedDB `outbox` plus opening
+  the app on the conversation — the page drains the outbox on
+  `webpush:available` (post-001) through the new `send` bus emit
+  (bus-contract §2.1). A Reply button without text (no inline field) opens
+  the conversation.
+- **The throwaway connection** uses a random `seance-xxxxxx` nick, retries
+  another on `433`/`436`/`437`, fails fast on `CAP NAK`/`ERROR`/close, waits
+  for its own `JOIN` of the target (or the `Session resumed` notice, or a
+  1.5 s settle) before a channel PRIVMSG, retries once on `404`, splits
+  long text into frame-sized lines, and only then `QUIT`s. Renewal after
+  `pushsubscriptionchange` sends `WEBPUSH REGISTER` after 001 (the
+  pre-`CAP END` window it used before is silently dropped — see above).
+- **The stash is rewritten on every connect** (`autoRegister`) and on every
+  network save, for every push-enabled network that announced a key: uuid,
+  host, port, tls, account — the password only when remembered. That is what
+  lets the worker deep-link and relay without a login, and log in when it
+  may.
+- **Deep links by network + target.** Every notification carries
+  `data.network`/`data.target` (page notifications get them from `msg.ts`;
+  push notifications from the stash). A click posts `{type: "open", network, target}`
+  to an open page or opens `#/net/<uuid>/<target>`; the route resolves to
+  the channel when it exists, else remembers the pair (60 s TTL) and lands
+  on the network (or the connect form, whose autoconnect brings it up) —
+  `socket-events/join.ts` switches when that join arrives and holds the
+  view still meanwhile, `network.ts` opens a `/query` for a nick target.
+
+Verified in a real Chromium against the rig (`tmp/sw-reply-probe2.mjs`,
+all six modes; a listener in `#seance` confirmed every delivery): page relay
+acked in 5 ms with no throwaway socket; held session → worker connection →
+delivered in 744 ms, the JOIN replay observed at 136 ms; queued reply
+delivered by the reopened page 1.4 s after it booted, outbox emptied; click
+moved an open page from Settings to `#seance`; a cold start on the deep link
+landed on `#seance` 313 ms after boot.
+
+Two facts about the server worth keeping: a resumed or attached
+connection is renamed to the session's nick (`001 <session-nick>`), so the
+worker must read its nick from 001; and `WEBPUSH_MAX_REGISTRATIONS`
+(default 10) now refuses an eleventh device with
+`FAIL WEBPUSH MAX_REGISTRATIONS` — fresh browser profiles against one test
+account hit it quickly.
+
+### Foreground reconnect (same day)
+
+`docs/projects/seamless-reconnect.md` round six. A frozen tab thawing
+took 2.0 s to be registered again; now 0.2 s: `transport.ts` retries at
+once (no backoff) when a connection that was stable for 30 s drops, or
+when the socket dies while a probe is in flight (the foreground poke runs
+before the OS delivers the close), backing off only if that retry fails
+too; `probe()` takes the poke's shorter 4 s deadline; a dial stuck in
+CONNECTING is abandoned after 15 s and redialled at foreground time after
+3 s; `foreground.ts` also listens for `resume` (Page Lifecycle thaw) and
+`focus`. Measured with `tmp/sw-reply-probe2.mjs reconnect` (freeze via
+DevTools, drop the socket at the dev-origin's `POST /__drop`, thaw).
+
+Open: two `You are not connected…` lobby lines appear at the moment of the
+redial (something sends twice during the ~5 ms before the new socket
+opens); pre-existing, cosmetic, not yet attributed.
+
 ## Verification checklist (phase 1 done = all of these)
 
 1. `corepack yarn test` green (lint + mocha).

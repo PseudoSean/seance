@@ -215,7 +215,10 @@ self.addEventListener("message", function (event) {
 	showPageNotification(event, event.data);
 });
 
-/** Page-requested notification (in-app notify path): tag/replace per channel. */
+/** Page-requested notification (in-app notify path): tag/replace per channel.
+ * The page also names the network (uuid) and the target so a click can
+ * still find the conversation after the page — and its session-local
+ * channel ids — is gone. */
 function showPageNotification(event, payload) {
 	event.waitUntil(
 		self.registration
@@ -230,6 +233,11 @@ function showPageNotification(event, payload) {
 					icon: "img/icon-192.png",
 					body: payload.body,
 					timestamp: payload.timestamp,
+					data: {
+						kind: "page",
+						network: payload.network,
+						target: payload.target,
+					},
 				});
 			})
 	);
@@ -249,11 +257,16 @@ function showPageNotification(event, payload) {
 //     (middle-ellipsised when it overflows; see renderMergedBody) and the
 //     recent messages kept in the notification's data (tag `push-<target>`),
 //   - app badge = total unread across push notifications,
-//   - actions on every platform: Reply (an inline text field on desktop
-//     Chrome; a deep-linking button where text actions are unsupported) and
-//     Mute 30m — both act through a short-lived IRC connection the worker
-//     opens itself (credentials come from the page via IndexedDB, only
-//     stashed when the user enabled push AND password remembering),
+//   - actions on every platform: Reply (an inline text field where the
+//     platform has one; a button that opens the conversation elsewhere)
+//     and Mute 30m. A typed reply goes out through an open page when there
+//     is one, else over a short-lived IRC connection the worker opens
+//     itself (credentials come from the page via IndexedDB, only stashed
+//     when the user enabled push AND password remembering), else it is
+//     queued in IndexedDB and the app opened on the conversation to send
+//     it — never dropped. Mute uses the worker's connection.
+//   - clicks deep-link by network + target (`#/net/<uuid>/<target>`), which
+//     survives the page and its session-local channel ids,
 //   - `pushsubscriptionchange` re-subscribes with the stashed VAPID key and
 //     re-registers, so expiry self-heals.
 
@@ -290,22 +303,51 @@ async function idbSet(key, value) {
 	});
 }
 
+/** How long a throwaway connection may take to reach 001 (or finish). */
+const SW_IRC_TIMEOUT_MS = 15000;
+
+/** A throwaway connection's nick. Random on purpose: nefarious2's bouncer
+ * holds a QUIT'd account session as a ghost that keeps its nick, so a fixed
+ * nick collides with the ghost of the previous reply (433) — and once the
+ * connection attaches to the account's session the server renames it to
+ * the session's nick anyway. */
+function randomNick() {
+	return "seance-" + Math.random().toString(36).slice(2, 8);
+}
+
 /**
  * Open a throwaway IRC connection (SASL PLAIN) and hand the live socket to
- * `onReady(ws, done)` at 001.  `pre` lines go out after SASL completes but
- * before CAP END (the only window `WEBPUSH REGISTER` accepts).  Resolves
- * through done(ok): false on any SASL/registration failure or timeout.
+ * `onReady(ws, done, ctx)` at 001.  `pre` lines go out after SASL completes
+ * but before CAP END.  `ctx.nick` is what the server calls us after
+ * registration (the account's session nick when the bouncer attached us to
+ * it); `ctx.onLine(fn)` sees every later line.  Resolves through done(ok):
+ * false on any SASL/registration failure, a close, or the timeout.
  */
 function swIrcOpen(net, pre, onReady) {
 	return new Promise((resolve) => {
 		const scheme = net.tls ? "wss://" : "ws://";
 		const url = scheme + net.host + ":" + net.port + "/";
 		let ws = null;
-		let stage = 0; // 0 LS, 1 REQ, 2 AUTHENTICATE PLAIN, 3 payload, 4 registered
+		let stage = 0; // 0 LS, 1 REQ, 2 AUTHENTICATE PLAIN, 3 payload, 4 CAP END sent, 5 registered
+		let nick = randomNick();
+		let nickTries = 0;
+		let settled = false;
+		const watchers = [];
+		const ctx = {
+			nick,
+			onLine(fn) {
+				watchers.push(fn);
+			},
+		};
 
-		const timer = setTimeout(() => done(false), 10000);
+		const timer = setTimeout(() => done(false), SW_IRC_TIMEOUT_MS);
 
 		function done(ok) {
+			if (settled) {
+				return;
+			}
+
+			settled = true;
 			clearTimeout(timer);
 
 			try {
@@ -317,11 +359,16 @@ function swIrcOpen(net, pre, onReady) {
 			resolve(ok);
 		}
 
-		ws = new WebSocket(url, "text.ircv3.net");
+		try {
+			ws = new WebSocket(url, "text.ircv3.net");
+		} catch (e) {
+			done(false);
+			return;
+		}
 
 		ws.onopen = () => {
 			ws.send("CAP LS 302");
-			ws.send("NICK seance-sw");
+			ws.send("NICK " + nick);
 			ws.send("USER seance-sw 0 * :seance service worker");
 		};
 
@@ -330,6 +377,27 @@ function swIrcOpen(net, pre, onReady) {
 
 			if (l.startsWith("PING")) {
 				ws.send("PONG " + l.slice(5));
+				return;
+			}
+
+			if (stage === 5) {
+				for (const fn of watchers) {
+					fn(l);
+				}
+
+				return;
+			}
+
+			// Nick taken before registration (433/436/437): try another.
+			if (/^\S+ 43[367] /.test(l)) {
+				if (++nickTries > 3) {
+					done(false);
+					return;
+				}
+
+				nick = randomNick();
+				ctx.nick = nick;
+				ws.send("NICK " + nick);
 				return;
 			}
 
@@ -345,6 +413,11 @@ function swIrcOpen(net, pre, onReady) {
 			if (stage === 1 && / CAP .* ACK /.test(l)) {
 				stage = 2;
 				ws.send("AUTHENTICATE PLAIN");
+				return;
+			}
+
+			if (stage === 1 && / CAP .* NAK /.test(l)) {
+				done(false);
 				return;
 			}
 
@@ -371,12 +444,21 @@ function swIrcOpen(net, pre, onReady) {
 				return;
 			}
 
-			if (stage === 4 && / 001 /.test(l)) {
-				onReady(ws, done);
+			if (stage === 4 && /^ERROR /.test(l)) {
+				done(false);
+				return;
+			}
+
+			if (stage === 4 && /^\S+ 001 /.test(l)) {
+				stage = 5;
+				// `:server 001 <nick> :Welcome…` — the bouncer may have renamed us.
+				ctx.nick = l.split(" ")[2] || nick;
+				onReady(ws, done, ctx);
 			}
 		};
 
 		ws.onerror = () => done(false);
+		ws.onclose = () => done(false);
 	});
 }
 
@@ -390,6 +472,144 @@ function swIrcAct(net, pre, post) {
 
 		ws.send("QUIT :done");
 		done(true);
+	});
+}
+
+// --- sending a reply over a throwaway connection ---------------------------
+// The reply connection logs in as the account, so nefarious2's bouncer
+// attaches it to the account's session (as an alias while the app is
+// connected elsewhere, resuming a held session otherwise). The session's
+// channel memberships are replayed to us right AFTER 001 — a channel
+// PRIVMSG fired at 001 races that replay and comes back as 404 — so a
+// channel reply waits for our JOIN of the target (or the "Session resumed"
+// notice that ends the replay), with a settle timer as the fallback, and a
+// 404 earns one retry. A PM has no such race.
+
+const REPLAY_SETTLE_MS = 1500; // channel reply: wait at most this long for the JOIN replay
+const REPLY_GRACE_MS = 600; // after sending: time for the server to refuse (404) before QUIT
+const REPLY_RETRY_MS = 800;
+/** One PRIVMSG line stays under nefarious2's 512-byte body / 528-byte frame
+ * limits; the server prepends `:nick!user@host ` on relay. */
+const REPLY_CHUNK_BYTES = 380;
+
+function isChannelName(target) {
+	return /^[#&!+]/.test(target || "");
+}
+
+/** Split reply text into PRIVMSG-sized chunks at word boundaries. */
+function splitReply(text) {
+	const encoder = new TextEncoder();
+	const chunks = [];
+	let rest = text.replace(/[\r\n]+/g, " ").trim();
+
+	while (rest.length > 0) {
+		if (encoder.encode(rest).length <= REPLY_CHUNK_BYTES) {
+			chunks.push(rest);
+			break;
+		}
+
+		let cut = rest.length;
+
+		while (cut > 0 && encoder.encode(rest.slice(0, cut)).length > REPLY_CHUNK_BYTES) {
+			cut--;
+		}
+
+		const space = rest.lastIndexOf(" ", cut);
+
+		if (space > cut / 2) {
+			cut = space;
+		}
+
+		chunks.push(rest.slice(0, cut).trim());
+		rest = rest.slice(cut).trim();
+	}
+
+	return chunks;
+}
+
+/** Our own JOIN of `target` (the bouncer's membership replay). */
+function isOwnJoin(line, nick, target) {
+	const m = /^(?:@\S+ )?:([^! ]+)\S* JOIN :?(\S+)/.exec(line);
+
+	return (
+		m !== null &&
+		m[1].toLowerCase() === nick.toLowerCase() &&
+		m[2].toLowerCase() === target.toLowerCase()
+	);
+}
+
+/** Send `text` to `target` over a throwaway connection as the account.
+ * Resolves true once every chunk went out without a 404. */
+function swIrcSend(net, target, text) {
+	const chunks = splitReply(text);
+
+	if (chunks.length === 0) {
+		return Promise.resolve(false);
+	}
+
+	return swIrcOpen(net, [], (ws, done, ctx) => {
+		const channel = isChannelName(target);
+		let fired = false;
+		let retried = false;
+		let settle = null;
+		let grace = null;
+
+		const finish = (ok) => {
+			clearTimeout(settle);
+			clearTimeout(grace);
+
+			try {
+				ws.send("QUIT :done");
+			} catch (e) {
+				//
+			}
+
+			done(ok);
+		};
+
+		const fire = () => {
+			if (fired) {
+				return;
+			}
+
+			fired = true;
+			clearTimeout(settle);
+
+			for (const chunk of chunks) {
+				ws.send("PRIVMSG " + target + " :" + chunk);
+			}
+
+			grace = setTimeout(() => finish(true), REPLY_GRACE_MS);
+		};
+
+		ctx.onLine((l) => {
+			if (!fired && channel) {
+				if (isOwnJoin(l, ctx.nick, target) || / NOTICE \S+ :Session resumed/.test(l)) {
+					fire();
+				}
+
+				return;
+			}
+
+			if (fired && /^\S+ 404 /.test(l)) {
+				clearTimeout(grace);
+
+				if (retried) {
+					finish(false);
+					return;
+				}
+
+				retried = true;
+				fired = false;
+				settle = setTimeout(fire, REPLY_RETRY_MS);
+			}
+		});
+
+		if (channel) {
+			settle = setTimeout(fire, REPLAY_SETTLE_MS);
+		} else {
+			fire();
+		}
 	});
 }
 
@@ -549,6 +769,11 @@ async function handlePush(raw) {
 			{action: "mute30", title: "Mute 30m"},
 		];
 
+		// The payload names no network; the stash lists the networks this
+		// device is push-enrolled with (one, for a single-network deploy).
+		const stash = await getStash();
+		const network = stash.networks[0] ? stash.networks[0].uuid : undefined;
+
 		await showSafely(title, {
 			tag,
 			icon: "img/icon-192.png",
@@ -559,6 +784,7 @@ async function handlePush(raw) {
 				count,
 				from: parsed.from,
 				target: replyTo,
+				network,
 				time: parsed.time,
 				messages,
 			},
@@ -698,14 +924,17 @@ async function handleResubscribe(oldSub, newSub) {
 		return;
 	}
 
-	const networks = stash.networks.filter((n) => n.saslAccount);
+	const networks = stash.networks.filter((n) => n.saslAccount && n.saslPassword);
 
 	if (networks.length === 0) {
 		return;
 	}
 
+	// After 001: nefarious2 silently drops a WEBPUSH REGISTER sent between
+	// SASL and CAP END (docs/projects/push-subscription.md).
 	await swIrcAct(
 		networks[0],
+		[],
 		[
 			"WEBPUSH REGISTER " +
 				sub.endpoint +
@@ -713,8 +942,7 @@ async function handleResubscribe(oldSub, newSub) {
 				sub.keys.p256dh +
 				";auth=" +
 				sub.keys.auth,
-		],
-		[]
+		]
 	);
 }
 
@@ -739,43 +967,135 @@ function vapidB64ToStd(b64) {
 	return (b64 + padding).replace(/-/g, "+").replace(/_/g, "/");
 }
 
-/** Quick-reply / mute from the notification: run over a throwaway IRC
- * connection using the stashed credentials. Falls back to false when the
- * user did not enable password remembering (the click then just opens the
- * app). */
-async function swAct(net, pre, post) {
-	if (!net || !net.saslAccount || !net.saslPassword) {
+/** The stashed network a notification belongs to: by uuid when the
+ * notification names one, else the first (single-network deploys). */
+function stashNetwork(stash, uuid) {
+	return stash.networks.find((n) => uuid && n.uuid === uuid) || stash.networks[0] || null;
+}
+
+/** Whether a stashed network can log in on its own (the user remembered
+ * the password; the page never stashes one otherwise). */
+function canLogin(net) {
+	return Boolean(net && net.saslAccount && net.saslPassword);
+}
+
+// --- replying from the notification ----------------------------------------
+// A typed reply must never be lost. Three ways to send it, tried in order:
+//   1. a live page (any window of the app, even a background one) sends it
+//      over its own connection and acks through a MessageChannel — the
+//      common case when the app is merely backgrounded;
+//   2. the worker's own throwaway connection, when the password is stashed;
+//   3. the outbox: the reply is queued in IndexedDB and the app is opened on
+//      the conversation; the page sends the queue once that network is up.
+
+const PAGE_REPLY_TIMEOUT_MS = 2500; // a frozen page never answers
+const OUTBOX_KEY = "outbox";
+const OUTBOX_CAP = 20;
+
+/** Ask an open page to send the reply. Resolves true on the first ack. */
+async function replyViaPage(reply) {
+	const cs = await self.clients.matchAll({includeUncontrolled: true, type: "window"});
+
+	if (cs.length === 0 || typeof MessageChannel !== "function") {
 		return false;
 	}
 
-	return swIrcAct(net, pre, post);
+	return new Promise((resolve) => {
+		let settled = false;
+		let outstanding = cs.length;
+		let timer = null;
+		const ports = [];
+
+		const finish = (ok) => {
+			if (!settled) {
+				settled = true;
+				clearTimeout(timer);
+
+				for (const port of ports) {
+					port.close();
+				}
+
+				resolve(ok);
+			}
+		};
+
+		timer = setTimeout(() => finish(false), PAGE_REPLY_TIMEOUT_MS);
+
+		for (const c of cs) {
+			const channel = new MessageChannel();
+
+			ports.push(channel.port1);
+
+			channel.port1.onmessage = (ev) => {
+				if (ev.data && ev.data.ok) {
+					finish(true);
+				} else if (--outstanding === 0) {
+					finish(false);
+				}
+			};
+
+			try {
+				c.postMessage({type: "reply", ...reply}, [channel.port2]);
+			} catch (e) {
+				if (--outstanding === 0) {
+					finish(false);
+				}
+			}
+		}
+	});
+}
+
+/** Queue a reply for the page to send when its network is next connected. */
+async function enqueueOutbox(reply) {
+	const prev = await idbGet(OUTBOX_KEY);
+	const outbox = Array.isArray(prev) ? prev : [];
+
+	outbox.push(reply);
+	await idbSet(OUTBOX_KEY, outbox.slice(-OUTBOX_CAP));
+}
+
+async function handleReply(data, text) {
+	if (!text || !data.target) {
+		await openApp(data);
+		return;
+	}
+
+	const stash = await getStash();
+	const net = stashNetwork(stash, data.network);
+	const reply = {
+		network: net ? net.uuid : data.network,
+		target: data.target,
+		text,
+		time: new Date().toISOString(),
+	};
+
+	if (await replyViaPage(reply)) {
+		await replyDone(data);
+		return;
+	}
+
+	if (canLogin(net) && (await swIrcSend(net, data.target, text))) {
+		await replyDone(data);
+		return;
+	}
+
+	await enqueueOutbox(reply);
+	await openApp(data);
+}
+
+async function replyDone(data) {
+	await closeForTarget(data.target, new Date().toISOString());
+	await updateBadge();
 }
 
 self.addEventListener("notificationclick", function (event) {
 	const data = event.notification.data || {};
 
-	// Inline reply (desktop Chrome): the text comes on event.reply. Send it
-	// from the worker over a throwaway IRC connection when credentials are
-	// stashed; otherwise just open the app.
-	if (event.action === "reply" && event.reply && data.target) {
+	// Reply: an inline text field where the platform has one (event.reply),
+	// a plain button elsewhere — that one opens the conversation to type in.
+	if (event.action === "reply") {
 		event.notification.close();
-		event.waitUntil(
-			(async () => {
-				const stash = await getStash();
-				const sent = await swAct(
-					stash.networks[0],
-					[],
-					["PRIVMSG " + data.target + " :" + event.reply]
-				);
-
-				if (sent) {
-					await closeForTarget(data.target, new Date().toISOString());
-					await updateBadge();
-				} else {
-					await openApp(data.target);
-				}
-			})()
-		);
+		event.waitUntil(handleReply(data, String(event.reply || "").trim()));
 		return;
 	}
 
@@ -787,13 +1107,13 @@ self.addEventListener("notificationclick", function (event) {
 			(async () => {
 				const stash = await getStash();
 				const until = Math.floor(Date.now() / 1000) + 30 * 60;
-				const sent = await swMute(stash.networks[0], data.target, until);
+				const sent = await swMute(stashNetwork(stash, data.network), data.target, until);
 
 				if (sent) {
 					await closeForTarget(data.target, new Date().toISOString());
 					await updateBadge();
 				} else {
-					await openApp();
+					await openApp(data);
 				}
 			})()
 		);
@@ -801,54 +1121,63 @@ self.addEventListener("notificationclick", function (event) {
 	}
 
 	event.notification.close();
-
-	// Page-created notifications carry a `chan-<id>` tag; push notifications
-	// deep-link by target (phase 2 refines msgid routing).
-	const route = event.notification.tag.startsWith("chan-")
-		? `.#/${event.notification.tag}`
-		: shellUrl;
-
-	event.waitUntil(
-		clients
-			.matchAll({
-				includeUncontrolled: true,
-				type: "window",
-			})
-			.then((clientList) => {
-				if (clientList.length === 0) {
-					if (clients.openWindow) {
-						return clients.openWindow(route);
-					}
-
-					return;
-				}
-
-				const client = findSuitableClient(clientList);
-
-				client.postMessage({
-					type: "open",
-					channel: event.notification.tag,
-				});
-
-				if ("focus" in client) {
-					client.focus();
-				}
-			})
-	);
+	event.waitUntil(openApp(data, event.notification.tag));
 });
 
-async function openApp() {
-	const cs = await clients.matchAll({includeUncontrolled: true, type: "window"});
-
-	for (const c of cs) {
-		if ("focus" in c) {
-			await c.focus();
-			return;
-		}
+/** The in-app route for a notification: by network + target when known
+ * (survives the page and its session-local ids), else by the page's
+ * `chan-<id>` tag, else the app itself. */
+function routeFor(data, tag) {
+	if (data && data.network && data.target) {
+		return `${shellUrl}#/net/${encodeURIComponent(data.network)}/${encodeURIComponent(
+			data.target
+		)}`;
 	}
 
-	if (clients.openWindow) {
-		await clients.openWindow(shellUrl);
+	if (tag && tag.startsWith("chan-")) {
+		return `${shellUrl}#/${tag}`;
+	}
+
+	return shellUrl;
+}
+
+/** Bring the app to the conversation a notification is about: tell an open
+ * page to switch (and focus it), or open a window on the deep link. */
+async function openApp(data, tag) {
+	const cs = await clients.matchAll({includeUncontrolled: true, type: "window"});
+
+	// Focusing or opening a window needs the user activation a notification
+	// click carries; without it (a synthetic call) the browser refuses.
+	// Nothing here may throw: a queued reply is already safe in the outbox,
+	// and the page that is (or gets) told where to go does the rest.
+	if (cs.length === 0) {
+		if (clients.openWindow) {
+			try {
+				await clients.openWindow(routeFor(data, tag));
+			} catch (e) {
+				// eslint-disable-next-line no-console
+				console.warn("[sw] could not open a window", e);
+			}
+		}
+
+		return;
+	}
+
+	const client = findSuitableClient(cs);
+
+	client.postMessage({
+		type: "open",
+		channel: tag,
+		network: data ? data.network : undefined,
+		target: data ? data.target : undefined,
+	});
+
+	if ("focus" in client) {
+		try {
+			await client.focus();
+		} catch (e) {
+			// already told where to go; focus is best effort
+		}
 	}
 }
 

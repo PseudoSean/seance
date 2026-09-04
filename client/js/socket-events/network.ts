@@ -1,4 +1,5 @@
 import socket from "../socket";
+import {getPendingTarget, isChannelTarget} from "../helpers/pendingTarget";
 import {store} from "../store";
 import {switchToChannel} from "../router";
 import {toClientChan} from "../chan";
@@ -42,6 +43,21 @@ socket.on("network:status", function (data) {
 	network.status.connected = data.connected;
 	network.status.connecting = data.connecting;
 	network.status.secure = data.secure;
+
+	// A notification deep link to a private conversation: channels arrive
+	// with the join burst, a query window only when opened — do that now
+	// (the resulting `join` lands on it).
+	const pending = getPendingTarget();
+
+	if (
+		data.connected &&
+		pending &&
+		pending.network === data.network &&
+		!isChannelTarget(pending.target) &&
+		network.channels.length > 0
+	) {
+		socket.emit("input", {target: network.channels[0].id, text: `/query ${pending.target}`});
+	}
 
 	if (!data.connected) {
 		network.channels.forEach((channel) => {

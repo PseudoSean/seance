@@ -191,6 +191,12 @@ interface ClientToServerEvents {
 		/** msgid of our own message to replace: REDACT (channels) + resend with `+seance/edit`. */
 		edit?: string;
 	}>;
+	/** Send `text` to a target named by network uuid + channel/nick — the
+	 * form a notification can use after the page (and its channel ids) is
+	 * gone: the service worker's relayed reply and the queued outbox. Returns
+	 * nothing; the bus handler drops it when that network is not connected,
+	 * so callers check `network.status.connected` first. */
+	send: EventHandler<{network: string; target: string; text: string}>;
 	"msg:react": EventHandler<{target: number; msgid: string; text: string; remove?: boolean}>;
 	"msg:redact": EventHandler<{target: number; msgid: string; reason?: string}>;
 	/** The user's own input activity; the IRC layer throttles and sends `+typing` TAGMSGs. */

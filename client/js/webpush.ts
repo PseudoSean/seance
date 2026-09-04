@@ -3,7 +3,7 @@ import {reactive} from "vue";
 import socket from "./socket";
 import {store} from "./store";
 import storage from "./localStorage";
-import {idbSet} from "./idb";
+import {idbGet, idbSet} from "./idb";
 import * as saved from "./irc/saved-networks";
 import type {SavedNetwork} from "./irc/saved-networks";
 
@@ -179,6 +179,7 @@ function autoRegister(network: string, vapid: string | undefined): void {
 
 	if (sub) {
 		socket.emit("webpush:register", {network, endpoint: sub.endpoint, keys: sub.keys});
+		void writeStash(); // every connect: the worker's copy of the networks stays current
 		return;
 	}
 
@@ -200,7 +201,7 @@ function autoRegister(network: string, vapid: string | undefined): void {
 				const material = await pushSubscription(vapid);
 
 				replaceSubs({[vapid]: material});
-				await writeStash(vapid);
+				await writeStash();
 				socket.emit("webpush:register", {
 					network,
 					endpoint: material.endpoint,
@@ -392,7 +393,7 @@ async function subscribe(): Promise<void> {
 
 		const material = await pushSubscription(vapid);
 		replaceSubs({[vapid]: material});
-		await writeStash(vapid);
+		await writeStash();
 
 		for (const [network, serverVapid] of servers) {
 			if (serverVapid === vapid && pushOn(network)) {
@@ -422,30 +423,34 @@ async function subscribe(): Promise<void> {
 	}
 }
 
-/** Stash what the service worker needs for quick-reply / mute / renewal:
- * the VAPID key plus connection details — only for networks that are
- * push-capable AND remember their SASL password (the password never hits
- * IndexedDB otherwise). */
-async function writeStash(vapid: string): Promise<void> {
+/** Stash what the service worker needs: the VAPID key plus, for every
+ * push-enabled network that announced a key, its uuid and connection
+ * details — that is how the worker deep-links a notification and relays
+ * a reply to this page. The SASL password rides along ONLY for networks
+ * that remember it (it never hits IndexedDB otherwise); that is what lets
+ * the worker send a reply, mute, or renew over its own connection when
+ * no page is alive. Rewritten on every connect so a password remembered
+ * later, or changed, reaches the worker without re-subscribing. */
+async function writeStash(): Promise<void> {
+	const vapid = anyVapid() ?? null;
 	const networks = saved
 		.list()
-		.filter(
-			(net) =>
-				pushOn(net.uuid) &&
-				servers.has(net.uuid) &&
-				net.rememberPassword === true &&
-				Boolean(net.saslAccount)
-		)
+		.filter((net) => pushOn(net.uuid) && servers.get(net.uuid) !== undefined)
 		.map((net) => ({
 			uuid: net.uuid,
 			host: net.host,
 			port: net.port,
 			tls: net.tls,
 			saslAccount: net.saslAccount,
-			saslPassword: net.saslPassword,
+			saslPassword: net.rememberPassword === true ? net.saslPassword : undefined,
 		}));
 
-	await idbSet("stash", {vapid, networks});
+	try {
+		await idbSet("stash", {vapid, networks});
+	} catch (error) {
+		// eslint-disable-next-line no-console
+		console.warn("[webpush] could not write the service worker stash", error);
+	}
 }
 
 /** Unsubscribe: drop the browser subscription and tell every network. */
@@ -529,6 +534,7 @@ const notifyFlags = reactive(new Map<string, boolean>());
 
 function onNetworkSaved(next: SavedNetwork, wasEnabled: boolean): void {
 	notifyFlags.set(next.uuid, saved.notifyEnabledOf(next));
+	void writeStash(); // a password (un)remembered, a push flag flipped
 
 	const enabled = next.pushEnabled !== false;
 
@@ -622,12 +628,94 @@ socket.on("init", async () => {
 	}
 });
 
-// The service worker asks the page to redo a subscription it could not
-// renew itself (pushsubscriptionchange without stashed credentials).
+/** A reply typed into a notification, as the worker hands it over: by
+ * network uuid + target name (the page's channel ids mean nothing to it). */
+interface QueuedReply {
+	network: string;
+	target: string;
+	text: string;
+	time?: string;
+}
+
+const OUTBOX_KEY = "outbox";
+
+/** Send a relayed reply now if that network is connected. */
+function sendReplyNow(reply: QueuedReply): boolean {
+	const network = store.getters.findNetwork(reply.network);
+
+	if (!network || !network.status.connected) {
+		return false;
+	}
+
+	socket.emit("send", {network: reply.network, target: reply.target, text: reply.text});
+
+	return true;
+}
+
+/** Serialises outbox rewrites so a burst of connects cannot lose a reply. */
+let outboxChain: Promise<void> = Promise.resolve();
+
+/** Send what the worker queued for `network` (a reply typed while no page
+ * could send it), now that the network is connected. */
+function drainOutbox(network: string): void {
+	outboxChain = outboxChain
+		.then(async () => {
+			const queued = (await idbGet<QueuedReply[]>(OUTBOX_KEY)) ?? [];
+
+			if (!Array.isArray(queued) || queued.length === 0) {
+				return;
+			}
+
+			const rest = queued.filter(
+				(reply) => !(reply.network === network && sendReplyNow(reply))
+			);
+
+			if (rest.length !== queued.length) {
+				await idbSet(OUTBOX_KEY, rest);
+			}
+		})
+		.catch((error) => {
+			// eslint-disable-next-line no-console
+			console.warn("[webpush] could not drain the reply outbox", error);
+		});
+}
+
+// A network is up (post-001): anything queued for it can go out now.
+socket.on("webpush:available", ({network}) => {
+	drainOutbox(network);
+});
+
 if (browserSupported() && "serviceWorker" in navigator) {
 	navigator.serviceWorker.addEventListener("message", (event) => {
-		if (event.data && event.data.type === "resubscribe") {
+		if (!event.data) {
+			return;
+		}
+
+		// The worker asks the page to redo a subscription it could not renew
+		// itself (pushsubscriptionchange without stashed credentials).
+		if (event.data.type === "resubscribe") {
 			void subscribe();
+			return;
+		}
+
+		// A reply typed into a notification: send it over this page's own
+		// connection and tell the worker whether that worked (it falls back
+		// to its own connection, or queues the reply, otherwise).
+		if (event.data.type === "reply") {
+			const reply = event.data as QueuedReply;
+			const port = event.ports[0];
+			let ok = false;
+
+			try {
+				ok = sendReplyNow(reply);
+			} catch (error) {
+				// eslint-disable-next-line no-console
+				console.warn("[webpush] relayed reply failed", error);
+			}
+
+			if (port) {
+				port.postMessage({ok});
+			}
 		}
 	});
 }

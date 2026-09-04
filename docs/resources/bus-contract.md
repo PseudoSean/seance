@@ -146,6 +146,23 @@ IRCv3 draft (https://github.com/ircv3/ircv3-specifications/pull/471), phase 1 = 
 
 No other `ClientToServerEvents` member is emitted anywhere in `client/` beyond the table above (settings, sort, mute, mentions, history, search were made local; auth/upload/sessions/changelog removed; the old server-relay `push:*` members are dead types kept in the d.ts).
 
+### 2.1 `send` — by network and target name (2026-09-04)
+
+| Emit   | Args                                            | Emitted from                                                                                                                   | IrcClient behaviour                                                                                                                                                                                                                                        |
+| ------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `send` | `{network: uuid; target: string; text: string}` | `client/js/webpush.ts`: a reply the service worker relays from a notification, and the outbox it drains on `webpush:available` | `bus.ts` → `clientForNetwork(uuid)`; when `client.isConnected`, `client.sendMessage(target, text)` (echo-message shows it, a PM target opens its query window); otherwise dropped with a console warning — callers check `network.status.connected` first. |
+
+Channel ids are session-local, so anything that outlives the page — a notification, the worker — names a conversation by **network uuid + target** instead. The same pair is the deep link `#/net/<uuid>/<target>` (router `NetworkTarget`, resolved by `helpers/pendingTarget.ts` once the join arrives) and the `data` every notification carries.
+
+### 2.2 Service worker ↔ page messages (not bus events)
+
+| Direction | Message                                                                   | Handler                                                                                                                                                                                                            |
+| --------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| page → SW | `{type: "notification", chanId, network, target, title, body, timestamp}` | `service-worker.js` `showPageNotification`: tag `chan-<id>`, `data: {kind: "page", network, target}`                                                                                                               |
+| SW → page | `{type: "open", channel?: tag, network?, target?}`                        | `router.ts`: `openTarget(network, target)` (switch, or remember as the pending target), else the `chan-<id>` fallback                                                                                              |
+| SW → page | `{type: "reply", network, target, text, time}` + a `MessageChannel` port  | `webpush.ts`: `sendReplyNow` → the `send` emit when that network is connected; answers `{ok}` on the port (the worker waits 2.5 s, then tries its own connection, then queues the reply in the IndexedDB `outbox`) |
+| SW → page | `{type: "resubscribe"}`                                                   | `webpush.ts`: `subscribe()` again (renewal without stashed credentials)                                                                                                                                            |
+
 ## 3. Store and routing expectations
 
 `client/js/store.ts` `State` (L33-49): `networks: ClientNetwork[]`, `activeChannel?: {network, channel}`, `isConnected`, `currentUserVisibleError`, `serverConfiguration`, `appLoaded`, `mentions`, `settings` (module).

@@ -884,7 +884,9 @@ describe("IrcClient", function () {
 			expect(kept.state).to.equal(ChanState.PARTED);
 			expect(payloads("connecting")).to.have.length(2);
 			expect(messages(1).some((m) => m.type === MessageType.ERROR)).to.equal(true);
-			expect(messages(1).some((m) => /^Reconnecting in/.test(m.text ?? ""))).to.equal(true);
+			expect(messages(1).some((m) => /^Reconnecting (in|now)/.test(m.text ?? ""))).to.equal(
+				true
+			);
 
 			// The transport reconnects on its own; a new registration follows.
 			h.sentAfter();
