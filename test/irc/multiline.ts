@@ -4,9 +4,9 @@ import socket from "../../client/js/socket";
 import {IrcClient} from "../../client/js/irc/client";
 import {IdAllocator} from "../../client/js/irc/ids";
 import {
+	batchCooldownMs,
 	joinMultiline,
 	MULTILINE_MAX_COOLDOWN_MS,
-	MULTILINE_SETTLE_MS,
 	parseMultilineValue,
 	planMultiline,
 } from "../../client/js/irc/multiline";
@@ -709,29 +709,47 @@ describe("multiline sending", function () {
 			}
 		});
 
-		it("opens a second batch when the message does not fit one", function () {
-			const {client, transport, chanId} = setup(offering("max-bytes=16384,max-lines=2"));
+		it("opens a second batch when the message does not fit one, paced past the cooldown", function () {
+			const clock = sinon.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
 
-			client.input(chanId, "one\ntwo\nthree");
+			try {
+				const {client, transport, chanId} = setup(offering("max-bytes=16384,max-lines=2"));
 
-			// The server cools down for a batch it delivered and drops one
-			// opened inside that window, so the second waits for the first to
-			// be answered rather than going out behind it (multiline.ts).
-			expect(transport.sent).to.deep.equal([
-				"BATCH +m1 draft/multiline #seance",
-				"@batch=m1 PRIVMSG #seance :one",
-				"@batch=m1 PRIVMSG #seance :two",
-				"BATCH -m1",
-			]);
+				client.input(chanId, "one\ntwo\nthree");
 
-			transport.sent.length = 0;
-			echoBatch(transport, "Gk1", "one", "two");
+				expect(transport.sent).to.deep.equal([
+					"BATCH +m1 draft/multiline #seance",
+					"@batch=m1 PRIVMSG #seance :one",
+					"@batch=m1 PRIVMSG #seance :two",
+					"BATCH -m1",
+				]);
 
-			expect(transport.sent).to.deep.equal([
-				"BATCH +m2 draft/multiline #seance",
-				"@batch=m2 PRIVMSG #seance :three",
-				"BATCH -m2",
-			]);
+				transport.sent.length = 0;
+				echoBatch(transport, "Gk1", "one", "two");
+
+				// The server took the first batch, but it is still cooling down
+				// from it; the second batch waits that out rather than going out
+				// on the echo alone and being dropped mid-cooldown (multiline.ts).
+				expect(transport.sent).to.deep.equal([]);
+
+				clock.tick(
+					batchCooldownMs({
+						lines: [
+							{text: "one", concat: false},
+							{text: "two", concat: false},
+						],
+						action: false,
+					})
+				);
+
+				expect(transport.sent).to.deep.equal([
+					"BATCH +m2 draft/multiline #seance",
+					"@batch=m2 PRIVMSG #seance :three",
+					"BATCH -m2",
+				]);
+			} finally {
+				clock.restore();
+			}
 		});
 
 		it("sends one line without a batch", function () {
@@ -956,21 +974,36 @@ describe("multiline sending", function () {
 		});
 
 		it("puts the edit tag on the first opener only", function () {
-			const {client, transport, chanId} = setup(offering("max-bytes=16384,max-lines=2"));
+			const clock = sinon.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
 
-			// One edit replaces one message: the second batch is a new one.
-			client.input(chanId, "one\ntwo\nthree", {edit: "old", reply: "parent"});
+			try {
+				const {client, transport, chanId} = setup(offering("max-bytes=16384,max-lines=2"));
 
-			expect(transport.sent[0]).to.equal(
-				"@+seance/edit=old;+draft/reply=parent BATCH +m1 draft/multiline #seance"
-			);
+				// One edit replaces one message: the second batch is a new one.
+				client.input(chanId, "one\ntwo\nthree", {edit: "old", reply: "parent"});
 
-			transport.sent.length = 0;
-			echoBatch(transport, "Gk1", "one", "two");
+				expect(transport.sent[0]).to.equal(
+					"@+seance/edit=old;+draft/reply=parent BATCH +m1 draft/multiline #seance"
+				);
 
-			expect(transport.sent[0]).to.equal(
-				"@+draft/reply=parent BATCH +m2 draft/multiline #seance"
-			);
+				transport.sent.length = 0;
+				echoBatch(transport, "Gk1", "one", "two");
+				clock.tick(
+					batchCooldownMs({
+						lines: [
+							{text: "one", concat: false},
+							{text: "two", concat: false},
+						],
+						action: false,
+					})
+				);
+
+				expect(transport.sent[0]).to.equal(
+					"@+draft/reply=parent BATCH +m2 draft/multiline #seance"
+				);
+			} finally {
+				clock.restore();
+			}
 		});
 
 		it("synthesises one action per batch without echo-message", function () {
@@ -993,7 +1026,17 @@ describe("multiline sending", function () {
 				]);
 
 				transport.sent.length = 0;
-				clock.tick(MULTILINE_SETTLE_MS);
+				// Without echo-message the batch is taken after a settle period,
+				// but the next one still waits out the delivered batch's cooldown.
+				clock.tick(
+					batchCooldownMs({
+						lines: [
+							{text: "one", concat: false},
+							{text: "two", concat: false},
+						],
+						action: true,
+					})
+				);
 
 				expect(transport.sent).to.deep.equal([
 					"BATCH +m2 draft/multiline #seance",
