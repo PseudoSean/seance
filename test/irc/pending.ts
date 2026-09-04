@@ -9,6 +9,7 @@ import {expect} from "chai";
 import sinon from "ts-sinon";
 import socket from "../../client/js/socket";
 import {PENDING_TIMEOUT_MS} from "../../client/js/irc/pending";
+import {batchCooldownMs} from "../../client/js/irc/multiline";
 import {MessageType, SharedMsg} from "../../shared/types/msg";
 import {ALL_CAPS, Harness, joined, setup, stubStorage} from "./support";
 
@@ -407,12 +408,25 @@ describe("Pending outgoing messages (irc/pending.ts)", function () {
 			expect(pendingIn(h, id).map((m) => m.text)).to.deep.equal(["one\ntwo", "three"]);
 
 			echoBatch(h, "s1", "one", "two");
+			// The echo settles the first copy, but the second batch is paced
+			// past the first batch's cooldown before it goes out (multiline.ts).
+			expect(h.sent()).to.deep.equal([]);
+			expect(settled(h).map((p) => p.id)).to.deep.equal([pendingIn(h, id)[0].id]);
+
+			clock.tick(
+				batchCooldownMs({
+					lines: [
+						{text: "one", concat: false},
+						{text: "two", concat: false},
+					],
+					action: false,
+				})
+			);
 			expect(h.sent()).to.deep.equal([
 				"@label=s2 BATCH +m2 draft/multiline #seance",
 				"@batch=m2 PRIVMSG #seance :three",
 				"BATCH -m2",
 			]);
-			expect(settled(h).map((p) => p.id)).to.deep.equal([pendingIn(h, id)[0].id]);
 		});
 
 		it("drops the copies when the server rejects the batch (the failure is reported once)", function () {
