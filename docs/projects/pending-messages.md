@@ -95,12 +95,25 @@ the channel, an exact text match first.
   it once, where it was typed; a second line per copy would be noise. On a
   close `IrcClient.onClose` reports every copy ("connection lost") before
   `resetMultiline` runs, so those are not silent.
+- **The label is a fast path, not a requirement** (fixed 2026-09-04). The
+  first cut settled a copy _only_ by the echoed `@label` when
+  `labeled-response` was negotiated. nefarious2 relays that label, but the
+  spec does not oblige a server to carry it on the propagated echo-message
+  copy, and a server that drops it left every copy stuck faded next to the
+  real message that had already loaded — the reported bug. `settleEcho` now
+  matches by label first and then by content: the oldest unsettled copy of
+  the same kind whose text is an exact match. Only copies we are holding are
+  candidates, so the same account speaking from another device (a self echo
+  with no matching copy) settles nothing and shows as a line. Reproduced and
+  fixed with `tools/scenarios/pending-no-label.mjs`, which strips
+  `label=s<n>` from inbound frames to stand in for such a server.
 
 ## Verified
 
-- `yarn test`: 1028 mocha tests, including the 25 in `test/irc/pending.ts`
-  and 9 in `test/helpers/messageUpdates.ts`; 18 existing wire-line
-  expectations gained the `@label=s<n>` prefix.
+- `yarn test`: the full mocha run, including `test/irc/pending.ts` (the
+  label-fast-path, the content fallback, and a same-account-other-device
+  case) and `test/helpers/messageUpdates.ts`; the wire-line expectations
+  that pin an outgoing PRIVMSG / NOTICE carry the `@label=s<n>` prefix.
 - `tools/scenarios/pending-messages.mjs` in headless Chromium against the
   testnet ircd: an eight-message burst with the echo of the last four held
   back 3 s inside the page — all eight rows at once, the slow half faded
@@ -108,6 +121,12 @@ the channel, an exact text match first.
   block, every copy replaced exactly once, in order, at full opacity, no
   console errors. (The server itself echoed the whole burst within 400 ms;
   fake lag did not hold anything on this rig, hence the shim.)
+- `tools/scenarios/pending-no-label.mjs` in headless Chromium: with
+  `label=s<n>` stripped from inbound frames (a server that does not relay
+  it), the copy still settles by content — one opaque self row, the echo
+  confirmed to have reached the app without the label. Against the same
+  build before the fix this scenario shows the bug: the faded copy and the
+  loaded message side by side.
 
 ## Follow-ups
 
