@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Seance service worker (derived from The Lounge - https://github.com/thelounge/thelounge)
-/* global clients */
+/* global clients, importScripts */
 "use strict";
 
 // Seance is a static single-page app: everything under the registration scope
@@ -24,6 +24,17 @@
 const cacheName = "__HASH__";
 const isDevBuild = cacheName === "dev";
 
+// The push module (client/js/push/*, built to js/push.js): the line parser,
+// the strippers and the merged-body renderer, shared with the page so the
+// two agree. Loaded at start-up — a service worker may only importScripts
+// what it imported while installing. If it fails, push() below falls back
+// to the inline minimum (no Markdown stripping).
+try {
+	importScripts(`js/push.js?v=${cacheName}`);
+} catch (e) {
+	// push() falls back
+}
+
 // The app shell is cached under the scope URL because, with hash-based
 // routing, every navigation request resolves to the scope root.
 const shellUrl = self.registration.scope;
@@ -42,6 +53,7 @@ const shellPaths = [
 	`js/loading-error-handlers.js?v=${cacheName}`,
 	`js/bundle.vendor.js?v=${cacheName}`,
 	`js/bundle.js?v=${cacheName}`,
+	`js/push.js?v=${cacheName}`,
 	`css/style.css?v=${cacheName}`,
 	"themes/default.css",
 	"fonts/fa-solid-900.woff2",

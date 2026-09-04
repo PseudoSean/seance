@@ -111,14 +111,30 @@ const miniCssExtractPlugin = new MiniCssExtractPlugin({
 });
 
 const isProduction = process.env.NODE_ENV === "production";
+
+// Shared by the app and the service-worker push chunk below.
+const tsRule = {
+	test: /\.ts$/i,
+	include: [path.resolve(__dirname, "client"), path.resolve(__dirname, "shared")],
+	exclude: path.resolve(__dirname, "node_modules"),
+	use: {
+		loader: "babel-loader",
+		options: babelConfig,
+	},
+};
+
 const config: webpack.Configuration = {
+	name: "app",
 	mode: isProduction ? "production" : "development",
 	entry: {
 		"js/bundle.js": [path.resolve(__dirname, "client/js/vue.ts")],
 	},
 	devtool: "source-map",
 	output: {
-		clean: true, // Clean the output directory before emit.
+		// Clean the output directory before emit — except the service worker's
+		// push chunk, which the second configuration below emits into the same
+		// tree (and runs after this one; see `dependencies`).
+		clean: {keep: /^js\/push\.js(\.map|\.LICENSE\.txt)?$/},
 		path: path.resolve(__dirname, "public"),
 		filename: "[name]",
 		// Lazily loaded chunks (the highlighter, its Prism grammars, the
@@ -153,15 +169,7 @@ const config: webpack.Configuration = {
 					},
 				},
 			},
-			{
-				test: /\.ts$/i,
-				include: [path.resolve(__dirname, "client"), path.resolve(__dirname, "shared")],
-				exclude: path.resolve(__dirname, "node_modules"),
-				use: {
-					loader: "babel-loader",
-					options: babelConfig,
-				},
-			},
+			tsRule,
 			{
 				test: /\.css$/,
 				use: [
@@ -315,6 +323,42 @@ const config: webpack.Configuration = {
 	],
 };
 
+// The service worker's push module (client/js/push/*), bundled for a
+// worker and loaded with `importScripts("js/push.js")` — its own
+// configuration so the app's vendor cache group cannot pull its
+// dependencies (linkify-it, emoji-regex) into js/bundle.vendor.js, which
+// a worker cannot load. `dependencies` runs it after the app build (whose
+// `clean` would otherwise race its output).
+const pushConfig: webpack.Configuration = {
+	name: "push",
+	dependencies: ["app"],
+	mode: isProduction ? "production" : "development",
+	target: "webworker",
+	entry: {
+		"js/push.js": [path.resolve(__dirname, "client/js/push/worker-entry.ts")],
+	},
+	devtool: "source-map",
+	output: {
+		path: path.resolve(__dirname, "public"),
+		filename: "[name]",
+		publicPath: "auto",
+		clean: false,
+	},
+	performance: {
+		hints: false,
+	},
+	resolve: {
+		extensions: [".ts", ".js"],
+	},
+	module: {
+		rules: [tsRule],
+	},
+	optimization: {
+		splitChunks: false,
+		runtimeChunk: false,
+	},
+};
+
 export default (env: any, argv: any) => {
 	if (argv.mode === "development") {
 		config.target = "node";
@@ -348,11 +392,9 @@ export default (env: any, argv: any) => {
 				path.resolve(__dirname, "scripts/noop.js")
 			),
 		];
+
+		return config;
 	}
 
-	if (argv?.mode === "production") {
-		// ...
-	}
-
-	return config;
+	return [config, pushConfig];
 };
