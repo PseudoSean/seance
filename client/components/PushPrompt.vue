@@ -5,7 +5,7 @@
 				<div class="confirm-text-title">Enable push notifications?</div>
 				<p>
 					The server can wake this app when it has messages for you while it is closed.
-					You can change this any time in Settings → Push Notifications.
+					You can change this per network, in each network's settings.
 				</p>
 			</div>
 			<div class="confirm-buttons">

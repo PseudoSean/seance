@@ -443,14 +443,18 @@ describe("IrcClient", function () {
 			const before = messages(id).length;
 			h.client.sendMessage("#seance", "hi there");
 
-			expect(h.sentAfter()).to.deep.equal(["PRIVMSG #seance :hi there"]);
-			expect(messages(id)).to.have.length(before);
+			expect(h.sentAfter()).to.deep.equal(["@label=s1 PRIVMSG #seance :hi there"]);
+			// Shown at once as a pending copy, replaced by the echo
+			// (test/irc/pending.ts has the rest of that).
+			expect(messages(id)).to.have.length(before + 1);
+			expect(lastMessage(id).pending).to.equal(true);
 
-			h.transport.line(":alice!alice@host.example PRIVMSG #seance :hi there");
+			h.transport.line("@label=s1 :alice!alice@host.example PRIVMSG #seance :hi there");
 			const msg = lastMessage(id);
 			expect(msg.self).to.equal(true);
 			expect(msg.text).to.equal("hi there");
 			expect(msg.highlight).to.equal(false);
+			expect(msg.pending).to.equal(undefined);
 		});
 
 		it("echoes locally when echo-message is not available", function () {
@@ -547,7 +551,7 @@ describe("IrcClient", function () {
 			const h = setup();
 			joined(h);
 			h.client.input(h.client.findChannel("#seance")!.id, "/msg eve hello eve");
-			expect(h.sentAfter()).to.deep.equal(["PRIVMSG eve :hello eve"]);
+			expect(h.sentAfter()).to.deep.equal(["@label=s1 PRIVMSG eve :hello eve"]);
 
 			h.transport.line(":alice!alice@host PRIVMSG eve :hello eve");
 			const query = h.client.findChannel("eve")!;
@@ -884,7 +888,9 @@ describe("IrcClient", function () {
 			expect(kept.state).to.equal(ChanState.PARTED);
 			expect(payloads("connecting")).to.have.length(2);
 			expect(messages(1).some((m) => m.type === MessageType.ERROR)).to.equal(true);
-			expect(messages(1).some((m) => /^Reconnecting in/.test(m.text ?? ""))).to.equal(true);
+			expect(messages(1).some((m) => /^Reconnecting (in|now)/.test(m.text ?? ""))).to.equal(
+				true
+			);
 
 			// The transport reconnects on its own; a new registration follows.
 			h.sentAfter();
@@ -990,7 +996,7 @@ describe("IrcClient", function () {
 			const h = setup();
 			const id = joined(h);
 			h.client.input(id, "hello #seance");
-			expect(h.sentAfter()).to.deep.equal(["PRIVMSG #seance :hello #seance"]);
+			expect(h.sentAfter()).to.deep.equal(["@label=s1 PRIVMSG #seance :hello #seance"]);
 		});
 
 		it("refuses plain text in the lobby", function () {
@@ -1006,14 +1012,16 @@ describe("IrcClient", function () {
 			const h = setup();
 			const id = joined(h);
 			h.client.input(id, "/me waves");
-			expect(h.sentAfter()).to.deep.equal(["PRIVMSG #seance :\x01ACTION waves\x01"]);
+			expect(h.sentAfter()).to.deep.equal([
+				"@label=s1 PRIVMSG #seance :\x01ACTION waves\x01",
+			]);
 		});
 
 		it("treats // as an escaped slash", function () {
 			const h = setup();
 			const id = joined(h);
 			h.client.input(id, "//not a command");
-			expect(h.sentAfter()).to.deep.equal(["PRIVMSG #seance :/not a command"]);
+			expect(h.sentAfter()).to.deep.equal(["@label=s1 PRIVMSG #seance :/not a command"]);
 		});
 
 		it("sends every line of multi-line input separately", function () {
@@ -1021,9 +1029,9 @@ describe("IrcClient", function () {
 			const id = joined(h);
 			h.client.input(id, "one\ntwo\r\n\nthree");
 			expect(h.sentAfter()).to.deep.equal([
-				"PRIVMSG #seance :one",
-				"PRIVMSG #seance :two",
-				"PRIVMSG #seance :three",
+				"@label=s1 PRIVMSG #seance :one",
+				"@label=s2 PRIVMSG #seance :two",
+				"@label=s3 PRIVMSG #seance :three",
 			]);
 		});
 
@@ -1035,16 +1043,17 @@ describe("IrcClient", function () {
 
 			const sent = h.sentAfter();
 			expect(sent.length).to.be.greaterThan(1);
-			const prefix = utf8ByteLength(`:alice!alice@host.example PRIVMSG #seance :`);
+			// What the server relays: our source in front of the line, tags kept.
+			const source = ":alice!alice@host.example ";
 
 			for (const line of sent) {
-				expect(line).to.match(/^PRIVMSG #seance :wörd\d+/);
-				expect(utf8ByteLength(line) + prefix - "PRIVMSG #seance :".length).to.be.at.most(
-					500
-				);
+				expect(line).to.match(/^@label=s\d+ PRIVMSG #seance :wörd\d+/);
+				expect(utf8ByteLength(line) + source.length).to.be.at.most(500);
 			}
 
-			const joinedText = sent.map((l) => l.slice("PRIVMSG #seance :".length)).join(" ");
+			const joinedText = sent
+				.map((l) => l.slice(l.indexOf("PRIVMSG #seance :") + "PRIVMSG #seance :".length))
+				.join(" ");
 			expect(joinedText).to.equal(words);
 		});
 
@@ -1146,7 +1155,7 @@ describe("IrcClient", function () {
 
 			socket.emit("input", {target: id, text: "via bus"});
 			expect(h.transport.sent[h.transport.sent.length - 1]).to.equal(
-				"PRIVMSG #seance :via bus"
+				"@label=s1 PRIVMSG #seance :via bus"
 			);
 
 			socket.emit("network:get", h.client.uuid);

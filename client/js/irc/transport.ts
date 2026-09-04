@@ -55,7 +55,11 @@ const DEFAULTS = {
 };
 const STABLE_CONNECTION_MS = 30_000; // open at least this long → backoff resets
 const MAX_ATTEMPTS = 100; // the attempt counter stops growing here
-const PROBE_TIMEOUT_MS = 10_000; // probe(): no inbound data for this long → the socket is dead
+export const PROBE_TIMEOUT_MS = 10_000; // probe(): no inbound data for this long → the socket is dead
+/** A dial that has not opened by then is abandoned and retried with the
+ * usual backoff: a phone whose radio was off can leave a WebSocket in
+ * CONNECTING for a minute or more, during which connect() is a no-op. */
+export const CONNECT_TIMEOUT_MS = 15_000;
 const PING_RE = /^(?:@\S+ )?(?::\S+ )?PING(?: (.*))?$/i; // [tags] [prefix] PING [params]
 
 export class WsTransport {
@@ -68,7 +72,9 @@ export class WsTransport {
 	private attempt = 0;
 	private timer: ReturnType<typeof setTimeout> | null = null;
 	private closedByUs = false;
-	private openedAt = 0;
+	private openedAt: number | null = null; // null = not open (0 is a real fake-clock time)
+	private connectingSince = 0;
+	private connectTimer: ReturnType<typeof setTimeout> | null = null;
 	private probeTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(opts: TransportOptions) {
@@ -113,9 +119,20 @@ export class WsTransport {
 
 		// Every handler checks `ws === this.ws` so a superseded socket stays silent.
 		this.ws = ws;
+		this.connectingSince = Date.now();
+		this.connectTimer = setTimeout(() => {
+			this.connectTimer = null;
+
+			if (ws === this.ws && this._state === "connecting") {
+				this.ws = null; // its late events are ignored
+				ws.close();
+				this.handleClosed(1006, "connect timed out", false);
+			}
+		}, CONNECT_TIMEOUT_MS);
 		ws.binaryType = "arraybuffer";
 		ws.addEventListener("open", () => {
 			if (ws === this.ws) {
+				this.clearConnectTimer();
 				this._state = "open";
 				this.openedAt = Date.now();
 				this.emit({type: "open", subprotocol: ws.protocol});
@@ -166,7 +183,7 @@ export class WsTransport {
 	 * PROBE_TIMEOUT_MS the socket is dropped and treated like an unclean
 	 * close (so the usual reconnect follows). No-op unless open.
 	 */
-	probe(): void {
+	probe(timeoutMs = PROBE_TIMEOUT_MS): void {
 		if (this._state !== "open" || !this.ws || this.probeTimer !== null) {
 			return;
 		}
@@ -181,7 +198,38 @@ export class WsTransport {
 				ws.close();
 				this.handleClosed(1006, "no reply to PING", false);
 			}
-		}, PROBE_TIMEOUT_MS);
+		}, timeoutMs);
+	}
+
+	/** How long the current dial has been in flight (0 unless connecting). */
+	connectingForMs(): number {
+		return this._state === "connecting" ? Date.now() - this.connectingSince : 0;
+	}
+
+	/**
+	 * Abandon an in-flight dial and start a fresh one now. For the foreground
+	 * poke: a socket left CONNECTING while the OS had the radio off may never
+	 * open, and connect() alone would wait for it.
+	 */
+	redial(): void {
+		if (this._state !== "connecting") {
+			this.connect();
+			return;
+		}
+
+		const ws = this.ws;
+
+		this.clearConnectTimer();
+		this.ws = null; // the abandoned socket's events are ignored
+		this._state = "closed";
+
+		try {
+			ws?.close();
+		} catch (err: unknown) {
+			// a socket that never opened may refuse to close; nothing to do
+		}
+
+		this.connect();
 	}
 
 	/** Close deliberately: no reconnect is scheduled for this closure. */
@@ -189,6 +237,7 @@ export class WsTransport {
 		this.closedByUs = true;
 		this.clearTimer();
 		this.clearProbe();
+		this.clearConnectTimer();
 		this._state = "closed";
 		this.ws?.close(code, reason); // the "close" event follows asynchronously
 	}
@@ -233,15 +282,38 @@ export class WsTransport {
 	}
 
 	private handleClosed(code: number, reason: string, wasClean: boolean): void {
-		this.clearProbe();
+		// A socket that dies while we are probing it (the foreground poke
+		// asked "are you alive?" and the OS answered with the close) is the
+		// user waiting at the screen: retry at once.
+		const probing = this.probeTimer !== null;
 
-		if (this.openedAt > 0 && Date.now() - this.openedAt >= STABLE_CONNECTION_MS) {
+		this.clearProbe();
+		this.clearConnectTimer();
+
+		// A connection that stayed up resets the backoff — and its loss earns
+		// one immediate retry too: that is a phone coming back from the
+		// background (or a proxy hiccup), not a server refusing us, and the
+		// usual first delay is a second spent staring at the screen. A retry
+		// that fails backs off from there as before.
+		const wasStable =
+			this.openedAt !== null && Date.now() - this.openedAt >= STABLE_CONNECTION_MS;
+
+		if (wasStable) {
 			this.attempt = 0;
 		}
 
-		this.openedAt = 0;
+		this.openedAt = null;
 		const retry = !this.closedByUs && this.opts.reconnect.enabled;
-		const delayMs = retry ? this.nextDelay() : undefined;
+		let delayMs: number | undefined;
+
+		if (retry) {
+			delayMs = this.nextDelay(); // counts the attempt either way
+
+			if ((wasStable || probing) && this.attempt === 1) {
+				delayMs = 0;
+			}
+		}
+
 		this._state = retry ? "reconnect-wait" : "closed";
 		this.emit({type: "close", code, reason, wasClean, willReconnect: retry, delayMs});
 
@@ -275,6 +347,13 @@ export class WsTransport {
 		if (this.probeTimer !== null) {
 			clearTimeout(this.probeTimer);
 			this.probeTimer = null;
+		}
+	}
+
+	private clearConnectTimer(): void {
+		if (this.connectTimer !== null) {
+			clearTimeout(this.connectTimer);
+			this.connectTimer = null;
 		}
 	}
 

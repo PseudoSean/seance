@@ -95,6 +95,12 @@ export type SharedMsg = {
 	text?: string;
 	type?: MessageType;
 	self?: boolean;
+	/**
+	 * A copy of our own outgoing message shown before the server has taken
+	 * it (bus-contract §1.9): rendered faded, kept at the bottom, and taken
+	 * down by `msg:settled` when the echo (or a failure) arrives.
+	 */
+	pending?: boolean;
 	time: Date;
 	hostmask?: string;
 	target?: UserInMessage;

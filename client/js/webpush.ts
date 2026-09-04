@@ -3,8 +3,9 @@ import {reactive} from "vue";
 import socket from "./socket";
 import {store} from "./store";
 import storage from "./localStorage";
-import {idbSet} from "./idb";
+import {idbGet, idbSet} from "./idb";
 import * as saved from "./irc/saved-networks";
+import type {SavedNetwork} from "./irc/saved-networks";
 
 /**
  * Web Push subscriptions (IRCv3 `draft/webpush`, phases 1+2).
@@ -47,11 +48,51 @@ const NEVER_ASK_KEY = "thelounge.push.neverAsk";
  * decision needs this module's servers/subscriptions view. */
 const pushPrompt = reactive({visible: false});
 
-/** Per-network VAPID keys as announced by `webpush:available`. */
-const servers = new Map<string, string | undefined>();
+/** Per-network VAPID keys as announced by `webpush:available`. Reactive so
+ * the Settings screen's per-network rows re-render when a network connects. */
+const servers = reactive(new Map<string, string | undefined>());
 
-/** Persisted subscriptions by VAPID key. */
-let subs = loadSubs();
+/** Persisted subscriptions by VAPID key. Reactive for the same reason; kept
+ * one object identity, replaced in place via {@link replaceSubs}. */
+const subs = reactive<Record<string, PushMaterial>>(loadSubs());
+
+function replaceSubs(next: Record<string, PushMaterial>): void {
+	for (const key of Object.keys(subs)) {
+		delete subs[key];
+	}
+
+	Object.assign(subs, next);
+	saveSubs();
+}
+
+/** Every stored endpoint (usually one; more only mid-replacement). */
+function storedEndpoints(): string[] {
+	return Object.values(subs).map((sub) => sub.endpoint);
+}
+
+/** Tell every connected network to forget an endpoint. The browser mints a
+ * fresh push endpoint whenever the subscription is recreated (a server VAPID
+ * rotation, the browser rotating it, a re-subscribe); without this the old
+ * endpoint stays registered on the account and the server keeps pushing to
+ * it — the same device then gets every notification twice. The registration
+ * is per account, so unregistering on any one network drops it, but we tell
+ * all of them since a deploy may span several. */
+function unregisterEndpointEverywhere(endpoint: string): void {
+	for (const network of servers.keys()) {
+		socket.emit("webpush:unregister", {network, endpoint});
+	}
+}
+
+/** Drop any previously stored endpoint that the new one replaces, so a
+ * re-subscribe never leaves a stale registration delivering in parallel.
+ * Call with the endpoints captured before {@link replaceSubs}. */
+function unregisterReplaced(previous: string[], keep: string): void {
+	for (const endpoint of previous) {
+		if (endpoint !== keep) {
+			unregisterEndpointEverywhere(endpoint);
+		}
+	}
+}
 
 function loadSubs(): Record<string, PushMaterial> {
 	try {
@@ -114,6 +155,12 @@ function anyVapid(): string | undefined {
 	return undefined;
 }
 
+/** Whether a network takes part in Web Push: its saved `pushEnabled` flag
+ * (Settings live per network — some servers can push, others cannot). */
+function pushOn(uuid: string): boolean {
+	return saved.pushEnabledOf(saved.get(uuid));
+}
+
 /** Recompute the coarse state the Settings screen renders. */
 function refreshState(): void {
 	if (!browserSupported()) {
@@ -153,7 +200,7 @@ function refreshState(): void {
  * created it), so silently mint a fresh one and register that instead —
  * no user gesture needed, permission already granted. */
 function autoRegister(network: string, vapid: string | undefined): void {
-	if (vapid === undefined) {
+	if (vapid === undefined || !pushOn(network)) {
 		return;
 	}
 
@@ -161,6 +208,7 @@ function autoRegister(network: string, vapid: string | undefined): void {
 
 	if (sub) {
 		socket.emit("webpush:register", {network, endpoint: sub.endpoint, keys: sub.keys});
+		void writeStash(); // every connect: the worker's copy of the networks stays current
 		return;
 	}
 
@@ -179,11 +227,12 @@ function autoRegister(network: string, vapid: string | undefined): void {
 
 		void (async () => {
 			try {
+				const previous = storedEndpoints();
 				const material = await pushSubscription(vapid);
 
-				subs = {[vapid]: material};
-				saveSubs();
-				await writeStash(vapid);
+				replaceSubs({[vapid]: material});
+				unregisterReplaced(previous, material.endpoint);
+				await writeStash();
 				socket.emit("webpush:register", {
 					network,
 					endpoint: material.endpoint,
@@ -209,7 +258,7 @@ socket.on("webpush:available", ({network, vapid, sasl}) => {
 	servers.set(network, vapid);
 	autoRegister(network, vapid);
 	refreshState();
-	maybePrompt(vapid, sasl);
+	maybePrompt(network, vapid, sasl);
 });
 
 /** Offer the subscribe prompt once per connection that logged in with SASL
@@ -217,8 +266,12 @@ socket.on("webpush:available", ({network, vapid, sasl}) => {
  * anonymous connect has nothing to offer. Skipped when this browser cannot
  * subscribe, permission is already denied, a subscription exists, or the
  * user answered "never" on this device. */
-function maybePrompt(vapid: string | undefined, sasl: boolean): void {
-	if (!sasl || vapid === undefined || pushPrompt.visible) {
+/** A subscribe() run is in flight (the auto-subscribe path can be
+ * triggered by several networks at once). */
+let subscribing = false;
+
+function maybePrompt(network: string, vapid: string | undefined, sasl: boolean): void {
+	if (!sasl || vapid === undefined || !pushOn(network) || pushPrompt.visible) {
 		return;
 	}
 
@@ -226,11 +279,24 @@ function maybePrompt(vapid: string | undefined, sasl: boolean): void {
 		return;
 	}
 
-	if (storage.get(NEVER_ASK_KEY)) {
+	if (Object.keys(subs).length > 0) {
+		return; // already subscribed; autoRegister re-registers it
+	}
+
+	// Permission already granted: the network's push option is the user's
+	// choice, so subscribe directly instead of asking again. "default"
+	// (never asked) needs a user gesture, which the prompt's buttons
+	// provide; "never ask again" suppresses that prompt on this device.
+	if (
+		typeof Notification !== "undefined" &&
+		Notification.permission === "granted" &&
+		!subscribing
+	) {
+		void subscribe();
 		return;
 	}
 
-	if (Object.keys(subs).length > 0) {
+	if (storage.get(NEVER_ASK_KEY)) {
 		return;
 	}
 
@@ -273,6 +339,7 @@ socket.on("webpush:state", ({network, action, endpoint, ok, code, reason}) => {
 });
 
 /** URL-safe base64 (no padding) → the bytes PushManager expects. */
+
 function urlB64ToUint8Array(b64: string): Uint8Array {
 	const padding = "=".repeat((4 - (b64.length % 4)) % 4);
 	const base64 = (b64 + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -311,6 +378,12 @@ async function pushSubscription(vapid: string): Promise<PushMaterial> {
  * register it with every connected network advertising that key.
  */
 async function subscribe(): Promise<void> {
+	if (subscribing) {
+		return;
+	}
+
+	subscribing = true;
+
 	if (!browserSupported()) {
 		refreshState();
 		return;
@@ -327,7 +400,9 @@ async function subscribe(): Promise<void> {
 		// Client-side enforcement of the account requirement (the server
 		// refuses REGISTER without one anyway): at least one connected
 		// push-capable network must have a SASL account configured.
-		const pushCapable = [...servers.entries()].filter(([, v]) => v !== undefined);
+		const pushCapable = [...servers.entries()].filter(
+			([uuid, v]) => v !== undefined && pushOn(uuid)
+		);
 		const withAccount = pushCapable.filter(([uuid]) => {
 			const net = saved.get(uuid);
 
@@ -347,13 +422,14 @@ async function subscribe(): Promise<void> {
 			return;
 		}
 
+		const previous = storedEndpoints();
 		const material = await pushSubscription(vapid);
-		subs = {[vapid]: material};
-		saveSubs();
-		await writeStash(vapid);
+		replaceSubs({[vapid]: material});
+		unregisterReplaced(previous, material.endpoint);
+		await writeStash();
 
 		for (const [network, serverVapid] of servers) {
-			if (serverVapid === vapid) {
+			if (serverVapid === vapid && pushOn(network)) {
 				socket.emit("webpush:register", {
 					network,
 					endpoint: material.endpoint,
@@ -375,30 +451,39 @@ async function subscribe(): Promise<void> {
 		setState("blocked");
 		// eslint-disable-next-line no-console
 		console.warn("[webpush] subscription failed", error);
+	} finally {
+		subscribing = false;
 	}
 }
 
-/** Stash what the service worker needs for quick-reply / mute / renewal:
- * the VAPID key plus connection details — only for networks that are
- * push-capable AND remember their SASL password (the password never hits
- * IndexedDB otherwise). */
-async function writeStash(vapid: string): Promise<void> {
+/** Stash what the service worker needs: the VAPID key plus, for every
+ * push-enabled network that announced a key, its uuid and connection
+ * details — that is how the worker deep-links a notification and relays
+ * a reply to this page. The SASL password rides along ONLY for networks
+ * that remember it (it never hits IndexedDB otherwise); that is what lets
+ * the worker send a reply, mute, or renew over its own connection when
+ * no page is alive. Rewritten on every connect so a password remembered
+ * later, or changed, reaches the worker without re-subscribing. */
+async function writeStash(): Promise<void> {
+	const vapid = anyVapid() ?? null;
 	const networks = saved
 		.list()
-		.filter(
-			(net) =>
-				servers.has(net.uuid) && net.rememberPassword === true && Boolean(net.saslAccount)
-		)
+		.filter((net) => pushOn(net.uuid) && servers.get(net.uuid) !== undefined)
 		.map((net) => ({
 			uuid: net.uuid,
 			host: net.host,
 			port: net.port,
 			tls: net.tls,
 			saslAccount: net.saslAccount,
-			saslPassword: net.saslPassword,
+			saslPassword: net.rememberPassword === true ? net.saslPassword : undefined,
 		}));
 
-	await idbSet("stash", {vapid, networks});
+	try {
+		await idbSet("stash", {vapid, networks});
+	} catch (error) {
+		// eslint-disable-next-line no-console
+		console.warn("[webpush] could not write the service worker stash", error);
+	}
 }
 
 /** Unsubscribe: drop the browser subscription and tell every network. */
@@ -419,8 +504,7 @@ async function unsubscribe(): Promise<void> {
 			}
 		}
 
-		subs = {};
-		saveSubs();
+		replaceSubs({});
 		await idbSet("stash", {vapid: null, networks: []});
 	} catch (error) {
 		// eslint-disable-next-line no-console
@@ -454,12 +538,98 @@ function setSnooze(ms: number): void {
 	const until = ms > 0 ? Math.floor(Date.now() / 1000) + Math.floor(ms / 1000) : 0;
 
 	for (const network of servers.keys()) {
+		if (!pushOn(network)) {
+			continue;
+		}
+
 		socket.emit("webpush:metadata", {
 			network,
 			key: "draft/webpush/mute",
 			value: until > 0 ? `*:${until}` : "",
 		});
 	}
+}
+
+/** React to a saved network whose push flag changed (NetworkEdit form).
+ *
+ * Off: unregister this device's subscription from that network right away;
+ * if no enabled push-capable network remains, the browser subscription
+ * itself goes too (nothing would ever deliver through it).
+ * On: re-register the stored subscription with the network when it is
+ * connected; otherwise the next `webpush:available` re-registers via
+ * {@link autoRegister}.
+ *
+ * Called from NetworkEdit after `network:edit` has saved the entry, with
+ * the flag as it was *before* the save. */
+/** Per-network browser-notification flag (the editor's checkbox), reactive
+ * so sidebar icons re-render on edits; seeded from storage on first read. */
+const notifyFlags = reactive(new Map<string, boolean>());
+
+function onNetworkSaved(next: SavedNetwork, wasEnabled: boolean): void {
+	notifyFlags.set(next.uuid, saved.notifyEnabledOf(next));
+	void writeStash(); // a password (un)remembered, a push flag flipped
+
+	const enabled = next.pushEnabled !== false;
+
+	if (enabled === wasEnabled) {
+		return;
+	}
+
+	const vapid = servers.get(next.uuid);
+
+	if (!enabled) {
+		const sub = vapid !== undefined ? subs[vapid] : undefined;
+
+		if (vapid !== undefined && sub) {
+			socket.emit("webpush:unregister", {network: next.uuid, endpoint: sub.endpoint});
+		}
+
+		refreshState();
+		maybeDropSubscription();
+	} else {
+		autoRegister(next.uuid, vapid);
+		refreshState();
+	}
+}
+
+/** The subscription exists only to be delivered through some enabled
+ * push-capable network; when the last one goes off, drop it entirely. */
+function maybeDropSubscription(): void {
+	if (Object.keys(subs).length === 0) {
+		return;
+	}
+
+	for (const [uuid, vapid] of servers) {
+		if (vapid !== undefined && pushOn(uuid)) {
+			return;
+		}
+	}
+
+	void unsubscribe();
+}
+
+/** One network's push situation, for the Settings screen's per-network
+ * list. All inputs are reactive (`servers`, `subs`), so rows re-render. */
+function notifyOn(uuid: string): boolean {
+	if (!notifyFlags.has(uuid)) {
+		notifyFlags.set(uuid, saved.notifyEnabledOf(saved.get(uuid)));
+	}
+
+	return Boolean(notifyFlags.get(uuid));
+}
+
+function networkPushInfo(uuid: string): {
+	enabled: boolean;
+	vapid: boolean;
+	subscribed: boolean;
+} {
+	const vapid = servers.get(uuid);
+
+	return {
+		enabled: pushOn(uuid),
+		vapid: vapid !== undefined,
+		subscribed: vapid !== undefined && Boolean(subs[vapid]),
+	};
 }
 
 // Boot: replace the stub's "unsupported" with what this browser can do.
@@ -491,12 +661,199 @@ socket.on("init", async () => {
 	}
 });
 
-// The service worker asks the page to redo a subscription it could not
-// renew itself (pushsubscriptionchange without stashed credentials).
+/** A reply typed into a notification, as the worker hands it over: by
+ * network uuid + target name (the page's channel ids mean nothing to it). */
+interface QueuedReply {
+	network: string;
+	target: string;
+	text: string;
+	time?: string;
+}
+
+const OUTBOX_KEY = "outbox";
+
+/** Send a relayed reply now if that network is connected. */
+function sendReplyNow(reply: QueuedReply): boolean {
+	const network = store.getters.findNetwork(reply.network);
+
+	if (!network || !network.status.connected) {
+		return false;
+	}
+
+	socket.emit("send", {network: reply.network, target: reply.target, text: reply.text});
+
+	return true;
+}
+
+/** Serialises outbox rewrites so a burst of connects cannot lose a reply. */
+let outboxChain: Promise<void> = Promise.resolve();
+
+/** Send what the worker queued for `network` (a reply typed while no page
+ * could send it), now that the network is connected. */
+function drainOutbox(network: string): void {
+	outboxChain = outboxChain
+		.then(async () => {
+			const queued = (await idbGet<QueuedReply[]>(OUTBOX_KEY)) ?? [];
+
+			if (!Array.isArray(queued) || queued.length === 0) {
+				return;
+			}
+
+			const rest = queued.filter(
+				(reply) => !(reply.network === network && sendReplyNow(reply))
+			);
+
+			if (rest.length !== queued.length) {
+				await idbSet(OUTBOX_KEY, rest);
+			}
+		})
+		.catch((error) => {
+			// eslint-disable-next-line no-console
+			console.warn("[webpush] could not drain the reply outbox", error);
+		});
+}
+
+// A network is up (post-001): anything queued for it can go out now.
+socket.on("webpush:available", ({network}) => {
+	drainOutbox(network);
+});
+
+// --- the account's registered devices (Settings → "Registered devices") ----
+// One push subscription per browser profile, but the account accumulates an
+// endpoint per device (and a stale one whenever a device's subscription is
+// recreated). Only the server knows the whole set; WEBPUSH LIST fetches it so
+// the user can see and clear devices this browser cannot reach.
+
+interface DeviceSub {
+	endpoint: string;
+	/** Last-register unix time (seconds); 0 if unknown. */
+	armed: number;
+	/** False when bound to a superseded VAPID key — a dead registration. */
+	current: boolean;
+	/** This browser's own subscription. */
+	thisDevice: boolean;
+}
+
+/** The devices as the last WEBPUSH LIST reported them. Reactive so the
+ * Settings list re-renders; the network it was fetched from rides along so
+ * a remove/clear targets the right one. */
+const deviceList = reactive<{network: string | undefined; subs: DeviceSub[]; loading: boolean}>({
+	network: undefined,
+	subs: [],
+	loading: false,
+});
+
+/** Our own subscription endpoints (usually one), to mark "this device". */
+function ownEndpoints(): Set<string> {
+	return new Set(Object.values(subs).map((sub) => sub.endpoint));
+}
+
+/** A connected, push-enabled network to run account-scoped commands against
+ * (the subscription set is per account, so any one will do). */
+function anyPushNetwork(): string | undefined {
+	for (const uuid of servers.keys()) {
+		const net = store.getters.findNetwork(uuid);
+
+		if (net && net.status.connected && pushOn(uuid) && servers.get(uuid) !== undefined) {
+			return uuid;
+		}
+	}
+
+	return undefined;
+}
+
+/** Ask the account's server for its registered push endpoints. */
+function refreshDevices(): void {
+	const network = anyPushNetwork();
+
+	if (!network) {
+		deviceList.network = undefined;
+		deviceList.subs = [];
+		deviceList.loading = false;
+		return;
+	}
+
+	deviceList.network = network;
+	deviceList.loading = true;
+	socket.emit("webpush:list", {network});
+}
+
+socket.on("webpush:subscriptions", ({network, subs: rows}) => {
+	if (network !== deviceList.network) {
+		return; // a stale reply from another network
+	}
+
+	const mine = ownEndpoints();
+
+	deviceList.loading = false;
+	deviceList.subs = rows
+		.map((row) => ({...row, thisDevice: mine.has(row.endpoint)}))
+		.sort((a, b) => Number(b.thisDevice) - Number(a.thisDevice) || b.armed - a.armed);
+});
+
+/** Remove one device's registration by endpoint (any device, not only this
+ * one — that is the point of the list). Dropping our own also tears down the
+ * browser subscription so the app's state stays truthful. */
+function removeDevice(endpoint: string): void {
+	const network = deviceList.network;
+
+	if (!network) {
+		return;
+	}
+
+	if (ownEndpoints().has(endpoint)) {
+		void unsubscribe(); // drops the browser sub + unregisters everywhere
+	} else {
+		socket.emit("webpush:unregister", {network, endpoint});
+		deviceList.subs = deviceList.subs.filter((sub) => sub.endpoint !== endpoint);
+	}
+}
+
+/** Clear every registered device for the account in one command, and drop
+ * this browser's own subscription too (it was one of them). */
+function clearAllDevices(): void {
+	const network = deviceList.network;
+
+	if (!network) {
+		return;
+	}
+
+	socket.emit("webpush:unregister", {network, endpoint: "*"});
+	deviceList.subs = [];
+	void unsubscribe();
+}
+
 if (browserSupported() && "serviceWorker" in navigator) {
 	navigator.serviceWorker.addEventListener("message", (event) => {
-		if (event.data && event.data.type === "resubscribe") {
+		if (!event.data) {
+			return;
+		}
+
+		// The worker asks the page to redo a subscription it could not renew
+		// itself (pushsubscriptionchange without stashed credentials).
+		if (event.data.type === "resubscribe") {
 			void subscribe();
+			return;
+		}
+
+		// A reply typed into a notification: send it over this page's own
+		// connection and tell the worker whether that worked (it falls back
+		// to its own connection, or queues the reply, otherwise).
+		if (event.data.type === "reply") {
+			const reply = event.data as QueuedReply;
+			const port = event.ports[0];
+			let ok = false;
+
+			try {
+				ok = sendReplyNow(reply);
+			} catch (error) {
+				// eslint-disable-next-line no-console
+				console.warn("[webpush] relayed reply failed", error);
+			}
+
+			if (port) {
+				port.postMessage({ok});
+			}
 		}
 	});
 }
@@ -507,8 +864,15 @@ export default {
 	unsubscribe,
 	setSnooze,
 	refresh: refreshState,
+	onNetworkSaved,
+	networkPushInfo,
+	notifyOn,
 	pushPrompt,
 	acceptPrompt,
 	declinePrompt,
 	neverPrompt,
+	deviceList,
+	refreshDevices,
+	removeDevice,
+	clearAllDevices,
 };

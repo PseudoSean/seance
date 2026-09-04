@@ -1,0 +1,427 @@
+/**
+ * Pending outgoing messages (irc/pending.ts, bus-contract §1.9): with
+ * `echo-message` a sent message shows at once as a pending copy, and the
+ * server's echo — matched by `labeled-response` label — replaces it.
+ */
+
+import {expect} from "chai";
+import sinon from "ts-sinon";
+import socket from "../../client/js/socket";
+import {PENDING_TIMEOUT_MS} from "../../client/js/irc/pending";
+import {MessageType, SharedMsg} from "../../shared/types/msg";
+import {ALL_CAPS, Harness, joined, setup, stubStorage} from "./support";
+
+const NO_LABELS = ALL_CAPS.replace("labeled-response ", "");
+const NO_ECHO = ALL_CAPS.replace("echo-message ", "");
+const MULTILINE = `${ALL_CAPS} draft/multiline=max-bytes=4096,max-lines=10`;
+
+interface SettledPayload {
+	chan: number;
+	id: number;
+}
+
+function settled(h: Harness): SettledPayload[] {
+	return h.payloads<SettledPayload>("msg:settled");
+}
+
+function pendingIn(h: Harness, chanId: number): SharedMsg[] {
+	return h.messages(chanId).filter((m) => m.pending);
+}
+
+function errorsIn(h: Harness, chanId: number): SharedMsg[] {
+	return h.messages(chanId).filter((m) => m.type === MessageType.ERROR);
+}
+
+describe("Pending outgoing messages (irc/pending.ts)", function () {
+	let clock: sinon.SinonFakeTimers;
+
+	beforeEach(function () {
+		stubStorage();
+		clock = sinon.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
+	});
+
+	afterEach(function () {
+		clock.restore();
+		sinon.restore();
+		socket.removeAllListeners();
+	});
+
+	describe("with echo-message and labeled-response", function () {
+		it("shows a pending copy of a sent message at once", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.sendMessage("#seance", "hi there");
+
+			expect(h.sent()).to.deep.equal(["@label=s1 PRIVMSG #seance :hi there"]);
+			const copy = h.lastMessage(id);
+			expect(copy.pending).to.equal(true);
+			expect(copy.self).to.equal(true);
+			expect(copy.type).to.equal(MessageType.MESSAGE);
+			expect(copy.text).to.equal("hi there");
+			expect(copy.from?.nick).to.equal("alice");
+			expect(copy.msgid).to.equal(undefined);
+			expect(copy.id).to.be.greaterThan(0);
+			// A copy is not news: no counters travel with it.
+			const payload = h.payloads<{unread?: number; highlight?: number}>("msg").pop();
+			expect(payload?.unread).to.equal(undefined);
+			expect(payload?.highlight).to.equal(undefined);
+		});
+
+		it("settles the copy when the labelled echo arrives, before the real message", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.sendMessage("#seance", "hi there");
+			const copy = h.lastMessage(id);
+
+			h.transport.line(
+				"@label=s1;msgid=m1;time=2026-08-25T12:00:01.000Z :alice!alice@host.example PRIVMSG #seance :hi there"
+			);
+
+			expect(settled(h)).to.deep.equal([{chan: id, id: copy.id}]);
+			const real = h.lastMessage(id);
+			expect(real.msgid).to.equal("m1");
+			expect(real.pending).to.equal(undefined);
+			expect(real.self).to.equal(true);
+			expect(real.id).to.not.equal(copy.id);
+			const events = h.events();
+			expect(events.lastIndexOf("msg:settled")).to.be.lessThan(events.lastIndexOf("msg"));
+		});
+
+		it("does not report a timeout once the echo has arrived", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.sendMessage("#seance", "hi there");
+			h.transport.line(
+				"@label=s1;msgid=m1 :alice!alice@host.example PRIVMSG #seance :hi there"
+			);
+
+			clock.tick(PENDING_TIMEOUT_MS);
+
+			expect(errorsIn(h, id)).to.deep.equal([]);
+			expect(settled(h)).to.have.length(1);
+		});
+
+		it("leaves the copy alone for an unlabelled message of ours (another session)", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.sendMessage("#seance", "hi there");
+
+			h.transport.line("@msgid=m1 :alice!alice@host.example PRIVMSG #seance :hi there");
+
+			expect(settled(h)).to.deep.equal([]);
+			expect(pendingIn(h, id)).to.have.length(1);
+			expect(h.lastMessage(id).msgid).to.equal("m1");
+		});
+
+		it("settles only the copy the echo labels", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.sendMessage("#seance", "first");
+			h.client.sendMessage("#seance", "second");
+			const [first, second] = pendingIn(h, id);
+
+			h.transport.line(
+				"@label=s2;msgid=m2 :alice!alice@host.example PRIVMSG #seance :second"
+			);
+
+			expect(settled(h)).to.deep.equal([{chan: id, id: second.id}]);
+			expect(first.pending).to.equal(true);
+		});
+
+		it("labels every chunk of a long message and shows a copy of each", function () {
+			const h = setup();
+			const id = joined(h);
+			const text = "word ".repeat(120).trim(); // ~600 bytes: two lines
+			h.client.sendMessage("#seance", text);
+
+			const lines = h.sent();
+			expect(lines).to.have.length(2);
+			expect(lines[0]).to.match(/^@label=s1 PRIVMSG #seance :/);
+			expect(lines[1]).to.match(/^@label=s2 PRIVMSG #seance :/);
+			const copies = pendingIn(h, id);
+			expect(copies.map((m) => m.text).join(" ")).to.equal(text);
+
+			h.transport.line(`@label=s2;msgid=m2 :alice!alice@host.example ${lines[1].slice(10)}`);
+			expect(settled(h)).to.deep.equal([{chan: id, id: copies[1].id}]);
+		});
+
+		it("carries the reply reference and the action type", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.sendMessage("#seance", "waves", {action: true, tags: {"+draft/reply": "m0"}});
+
+			expect(h.sent()).to.deep.equal([
+				"@+draft/reply=m0;label=s1 PRIVMSG #seance :\x01ACTION waves\x01",
+			]);
+			const copy = h.lastMessage(id);
+			expect(copy.pending).to.equal(true);
+			expect(copy.type).to.equal(MessageType.ACTION);
+			expect(copy.text).to.equal("waves");
+			expect(copy.replyTo).to.equal("m0");
+		});
+
+		it("shows a notice as a pending notice", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.sendMessage("#seance", "heads up", {notice: true});
+
+			expect(h.sent()).to.deep.equal(["@label=s1 NOTICE #seance :heads up"]);
+			expect(h.lastMessage(id).type).to.equal(MessageType.NOTICE);
+			expect(h.lastMessage(id).pending).to.equal(true);
+		});
+
+		it("puts a STATUSMSG copy in the channel with its group", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.sendMessage("@#seance", "ops only");
+
+			const copy = h.lastMessage(id);
+			expect(copy.pending).to.equal(true);
+			expect(copy.statusmsgGroup).to.equal("@");
+		});
+
+		it("shows nothing pending for a target that is not open", function () {
+			const h = setup();
+			joined(h);
+			h.dispatch.resetHistory();
+			h.client.sendMessage("#elsewhere", "hello?");
+
+			expect(h.sent()).to.deep.equal(["@label=s1 PRIVMSG #elsewhere :hello?"]);
+			expect(h.payloads("msg")).to.deep.equal([]);
+		});
+	});
+
+	describe("failures", function () {
+		it("reports a labelled rejection with the server's reason and the text", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.sendMessage("#seance", "hi there");
+			const copy = h.lastMessage(id);
+
+			h.transport.line("@label=s1 :irc.test 404 alice #seance :Cannot send to channel");
+
+			expect(settled(h)).to.deep.equal([{chan: id, id: copy.id}]);
+			const errors = errorsIn(h, id);
+			expect(errors.map((m) => m.text)).to.deep.equal([
+				"Not sent (Cannot send to channel): hi there",
+			]);
+			const events = h.events();
+			expect(events.lastIndexOf("msg:settled")).to.be.lessThan(events.lastIndexOf("msg"));
+		});
+
+		it("still shows an unrelated numeric the usual way", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.sendMessage("#seance", "hi there");
+
+			h.transport.line("@label=h99 :irc.test 404 alice #seance :Cannot send to channel");
+
+			expect(settled(h)).to.deep.equal([]);
+			expect(pendingIn(h, id)).to.have.length(1);
+			expect(errorsIn(h, id)).to.have.length(1);
+			expect(errorsIn(h, id)[0].text ?? "").to.not.match(/^Not sent/);
+		});
+
+		it("gives up when no echo arrives in time", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.sendMessage("#seance", "hi there");
+			const copy = h.lastMessage(id);
+
+			clock.tick(PENDING_TIMEOUT_MS - 1);
+			expect(settled(h)).to.deep.equal([]);
+			clock.tick(1);
+
+			expect(settled(h)).to.deep.equal([{chan: id, id: copy.id}]);
+			expect(errorsIn(h, id).map((m) => m.text)).to.deep.equal([
+				"Not sent (no acknowledgement from the server): hi there",
+			]);
+		});
+
+		it("fails every copy when the connection closes", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.sendMessage("#seance", "one");
+			h.client.sendMessage("#seance", "two");
+			const copies = pendingIn(h, id);
+
+			h.transport.closed();
+
+			expect(settled(h).map((p) => p.id)).to.deep.equal(copies.map((m) => m.id));
+			expect(errorsIn(h, id).map((m) => m.text)).to.deep.equal([
+				"Not sent (connection lost): one",
+				"Not sent (connection lost): two",
+			]);
+		});
+
+		it("treats a labelled ACK as settled without an echo", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.sendMessage("#seance", "hi there");
+			const copy = h.lastMessage(id);
+
+			h.transport.line("@label=s1 :irc.test ACK");
+
+			expect(settled(h)).to.deep.equal([{chan: id, id: copy.id}]);
+			expect(errorsIn(h, id)).to.deep.equal([]);
+		});
+	});
+
+	describe("without labeled-response", function () {
+		it("sends no label and settles the copy with the same text", function () {
+			const h = setup();
+			const id = joined(h, NO_LABELS);
+			h.client.sendMessage("#seance", "hi there");
+			const copy = h.lastMessage(id);
+
+			expect(h.sent()).to.deep.equal(["PRIVMSG #seance :hi there"]);
+			expect(copy.pending).to.equal(true);
+
+			h.transport.line("@msgid=m1 :alice!alice@host.example PRIVMSG #seance :hi there");
+			expect(settled(h)).to.deep.equal([{chan: id, id: copy.id}]);
+		});
+
+		it("prefers the copy whose text matches", function () {
+			const h = setup();
+			const id = joined(h, NO_LABELS);
+			h.client.sendMessage("#seance", "first");
+			h.client.sendMessage("#seance", "second");
+			const [, second] = pendingIn(h, id);
+
+			h.transport.line("@msgid=m2 :alice!alice@host.example PRIVMSG #seance :second");
+
+			expect(settled(h)).to.deep.equal([{chan: id, id: second.id}]);
+		});
+
+		it("falls back to the oldest copy of the same kind when the server altered the text", function () {
+			const h = setup();
+			const id = joined(h, NO_LABELS);
+			h.client.sendMessage("#seance", "\x02bold\x02");
+			const copy = h.lastMessage(id);
+
+			h.transport.line("@msgid=m1 :alice!alice@host.example PRIVMSG #seance :bold");
+
+			expect(settled(h)).to.deep.equal([{chan: id, id: copy.id}]);
+		});
+
+		it("never settles a copy with an echo of another kind", function () {
+			const h = setup();
+			const id = joined(h, NO_LABELS);
+			h.client.sendMessage("#seance", "hi there");
+
+			h.transport.line(
+				"@msgid=m1 :alice!alice@host.example PRIVMSG #seance :\x01ACTION hi there\x01"
+			);
+
+			expect(settled(h)).to.deep.equal([]);
+			expect(pendingIn(h, id)).to.have.length(1);
+		});
+	});
+
+	describe("without echo-message", function () {
+		it("shows the local echo as before and nothing pending", function () {
+			const h = setup();
+			const id = joined(h, NO_ECHO);
+			h.client.sendMessage("#seance", "hi there");
+
+			expect(h.sent()).to.deep.equal(["PRIVMSG #seance :hi there"]);
+			const shown = h.lastMessage(id);
+			expect(shown.self).to.equal(true);
+			expect(shown.pending).to.equal(undefined);
+			expect(pendingIn(h, id)).to.deep.equal([]);
+
+			clock.tick(PENDING_TIMEOUT_MS);
+			expect(settled(h)).to.deep.equal([]);
+			expect(errorsIn(h, id)).to.deep.equal([]);
+		});
+	});
+
+	describe("multi-line messages", function () {
+		function echoBatch(h: Harness, label: string, ...lines: string[]): void {
+			h.transport.line(
+				`@label=${label};msgid=mm1;time=2026-08-25T12:00:01.000Z :alice!alice@host.example BATCH +Gk1 draft/multiline #seance`
+			);
+
+			for (const line of lines) {
+				h.transport.line(`@batch=Gk1 :alice!alice@host.example PRIVMSG #seance :${line}`);
+			}
+
+			h.transport.line(":alice!alice@host.example BATCH -Gk1");
+		}
+
+		it("shows one pending copy for the batch, labelled on the opener", function () {
+			const h = setup();
+			const id = joined(h, MULTILINE);
+			h.client.input(id, "one\ntwo");
+
+			expect(h.sent()).to.deep.equal([
+				"@label=s1 BATCH +m1 draft/multiline #seance",
+				"@batch=m1 PRIVMSG #seance :one",
+				"@batch=m1 PRIVMSG #seance :two",
+				"BATCH -m1",
+			]);
+			const copies = pendingIn(h, id);
+			expect(copies.map((m) => m.text)).to.deep.equal(["one\ntwo"]);
+		});
+
+		it("settles the copy when the echoed batch carries the label", function () {
+			const h = setup();
+			const id = joined(h, MULTILINE);
+			h.client.input(id, "one\ntwo");
+			const copy = h.lastMessage(id);
+
+			echoBatch(h, "s1", "one", "two");
+
+			expect(settled(h)).to.deep.equal([{chan: id, id: copy.id}]);
+			const real = h.lastMessage(id);
+			expect(real.text).to.equal("one\ntwo");
+			expect(real.msgid).to.equal("mm1");
+			expect(real.pending).to.equal(undefined);
+		});
+
+		it("shows every batch of a long message pending while they wait their turn", function () {
+			const h = setup();
+			const id = joined(h, `${ALL_CAPS} draft/multiline=max-bytes=4096,max-lines=2`);
+			h.client.input(id, "one\ntwo\nthree");
+
+			expect(h.sent()).to.have.length(4); // only the first batch is on the wire
+			expect(pendingIn(h, id).map((m) => m.text)).to.deep.equal(["one\ntwo", "three"]);
+
+			echoBatch(h, "s1", "one", "two");
+			expect(h.sent()).to.deep.equal([
+				"@label=s2 BATCH +m2 draft/multiline #seance",
+				"@batch=m2 PRIVMSG #seance :three",
+				"BATCH -m2",
+			]);
+			expect(settled(h).map((p) => p.id)).to.deep.equal([pendingIn(h, id)[0].id]);
+		});
+
+		it("drops the copies when the server rejects the batch (the failure is reported once)", function () {
+			const h = setup();
+			const id = joined(h, `${ALL_CAPS} draft/multiline=max-bytes=4096,max-lines=2`);
+			h.client.input(id, "one\ntwo\nthree");
+			const copies = pendingIn(h, id);
+
+			h.transport.line(":irc.test FAIL BATCH MULTILINE_MAX_LINES 2 :Too many lines");
+
+			expect(settled(h).map((p) => p.id)).to.deep.equal(copies.map((m) => m.id));
+			const notSent = h.messages().filter((m) => m.text?.startsWith("Not sent"));
+			expect(notSent).to.deep.equal([]);
+			expect(h.messages().filter((m) => m.type === MessageType.ERROR)).to.have.length(1);
+		});
+
+		it("gives up on a batch whose echo never comes", function () {
+			const h = setup();
+			const id = joined(h, MULTILINE);
+			h.client.input(id, "one\ntwo");
+			const copy = h.lastMessage(id);
+
+			clock.tick(PENDING_TIMEOUT_MS);
+
+			expect(settled(h)).to.deep.equal([{chan: id, id: copy.id}]);
+			expect(errorsIn(h, id).map((m) => m.text)).to.deep.equal([
+				"Not sent (no acknowledgement from the server): one\ntwo",
+			]);
+		});
+	});
+});

@@ -386,6 +386,7 @@ p {
 #image-viewer .open-btn::before,
 .channel-list-item .not-connected-icon::before,
 .channel-list-item .connection-status-icon::before,
+.channel-list-item .notify-status-icon::before,
 .channel-list-item .edit-network::before,
 .channel-list-item .parted-channel-icon::before,
 .jump-to-input::before,
@@ -1089,6 +1090,48 @@ the same counter the badge shows). Muted channels keep their faded look. */
 	cursor: default;
 }
 
+/* Per-network notification state (bell) in the sidebar listing. */
+.channel-list-item .notify-tooltip {
+	flex-shrink: 0;
+	line-height: 1;
+	margin: 0 4px;
+}
+
+.channel-list-item .notify-status-icon {
+	display: inline-block;
+	width: 18px;
+	height: 18px;
+	opacity: 0.7;
+	transition: opacity 0.2s;
+}
+
+.channel-list-item .notify-tooltip:hover .notify-status-icon {
+	opacity: 1;
+}
+
+.channel-list-item .notify-status-icon::before {
+	font-size: 11px;
+	line-height: 18px;
+	text-align: center;
+}
+
+.channel-list-item .notify-status-icon.on::before {
+	content: "\f0f3"; /* solid bell: subscribed to push */
+	color: #2ea043;
+}
+
+.channel-list-item .notify-status-icon.enabled::before {
+	content: "\f0f3"; /* bell: notifications on, not subscribed (the font is
+	                    FA5 solid-only, so no outline variant exists — the
+	                    muted colour is what separates this from on) */
+	color: var(--body-color-muted);
+}
+
+.channel-list-item .notify-status-icon.off::before {
+	content: "\f1f6"; /* bell-slash: notifications off */
+	color: var(--body-color-muted);
+}
+
 .channel-list-item .connection-status-icon.is-connected::before {
 	content: "\f0c1"; /* https://fontawesome.com/icons/link?style=solid */
 	color: #84ce88;
@@ -1666,6 +1709,13 @@ textarea.input {
 
 #chat .self .content {
 	color: var(--body-color-muted);
+}
+
+/* A copy of our own message the server has not echoed yet (bus-contract
+ * §1.9): faded rather than recoloured, so it reads the same on every theme,
+ * and back to normal — as a new row — once the echo replaces it. */
+#chat .msg.pending {
+	opacity: 0.55;
 }
 
 #chat .msg.channel_list_loading .text {
@@ -4488,7 +4538,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	outline: 0;
 }
 
-/* Settings → Push Notifications: the on/off indicator dot + session rows */
+/* Settings → Push Notifications: the on/off indicator dot + per-network rows */
 .push-state {
 	display: flex;
 	align-items: center;
@@ -4518,6 +4568,45 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 .push-state-blocked,
 .push-state-unsupported {
 	background: #c93c37;
+}
+
+.push-networks {
+	margin: 8px 0 12px;
+}
+
+.push-network {
+	padding: 5px 0;
+	border-bottom: 1px solid var(--body-color-muted);
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+}
+
+.push-network-state {
+	margin-left: auto;
+	font-size: 12px;
+	font-weight: bold;
+	color: var(--body-color-muted);
+	white-space: nowrap;
+}
+
+.push-net-on {
+	color: #2ea043;
+}
+
+.push-net-off,
+.push-net-unsupported {
+	color: var(--body-color-muted);
+}
+
+.push-net-ready {
+	color: #9e6a03;
+}
+
+.push-networks-hint {
+	margin-top: 8px;
+	font-size: 12px;
+	color: var(--body-color-muted);
 }
 
 .session-row {
@@ -4550,4 +4639,79 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	color: var(--body-color-muted);
 	font-size: 12px;
 	margin-top: 2px;
+}
+
+/* Settings → Push: the account's registered devices (WEBPUSH LIST). */
+.push-devices {
+	margin-top: 14px;
+}
+
+.push-devices-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	font-weight: bold;
+	margin-bottom: 6px;
+}
+
+.push-devices-empty {
+	font-size: 13px;
+	color: var(--body-color-muted);
+	margin: 4px 0;
+}
+
+.push-device-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.push-device {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 6px 0;
+	border-bottom: 1px solid var(--body-color-muted);
+}
+
+.push-device-label {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px;
+	min-width: 0;
+}
+
+.push-device-host {
+	font-family: monospace;
+	font-size: 13px;
+	word-break: break-all;
+}
+
+.push-device-tag {
+	font-size: 11px;
+	font-weight: bold;
+	padding: 0 6px;
+	border-radius: 3px;
+	color: #fff;
+	white-space: nowrap;
+}
+
+.push-device-tag.this {
+	background: var(--link-color, #2f80ed);
+}
+
+.push-device-tag.stale {
+	background: var(--body-color-muted);
+}
+
+.push-device-age {
+	font-size: 12px;
+	color: var(--body-color-muted);
+	white-space: nowrap;
+}
+
+.push-devices-clear {
+	margin-top: 8px;
 }

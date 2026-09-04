@@ -16,6 +16,7 @@ import AccountSettings from "../components/Settings/Account.vue";
 import NotificationSettings from "../components/Settings/Notifications.vue";
 import {ClientChan} from "./types";
 import {shouldShowGeneralSettings} from "./helpers/settingsTabs";
+import {clearPendingTarget, setPendingTarget} from "./helpers/pendingTarget";
 
 const router = createRouter({
 	history: createWebHashHistory(),
@@ -91,8 +92,63 @@ const router = createRouter({
 			path: "/chan-:id/search",
 			component: SearchResults,
 		},
+		{
+			// A conversation by network uuid + channel/nick: the deep link a
+			// notification can still follow after the page — and its
+			// session-local channel ids — is gone. Resolves to the channel
+			// when it exists; otherwise remembers the target and lands on the
+			// network (or the connect form, whose autoconnect brings the
+			// network up) until the join for it arrives (socket-events/join.ts).
+			name: "NetworkTarget",
+			path: "/net/:uuid/:target",
+			component: RoutedChat,
+			beforeEnter(to) {
+				const uuid = String(to.params.uuid);
+				const target = String(to.params.target);
+				const hit = findChannelByName(uuid, target);
+
+				if (hit) {
+					return {name: "RoutedChat", params: {id: hit.id}, replace: true};
+				}
+
+				setPendingTarget(uuid, target);
+				const network = store.getters.findNetwork(uuid);
+
+				if (network && network.channels.length > 0) {
+					return {
+						name: "RoutedChat",
+						params: {id: network.channels[0].id},
+						replace: true,
+					};
+				}
+
+				return {name: "Connect", replace: true};
+			},
+		},
 	],
 });
+
+/** A channel on `uuid` by name, case-insensitively (IRC names). */
+function findChannelByName(uuid: string, name: string): ClientChan | undefined {
+	const network = store.getters.findNetwork(uuid);
+	const lower = name.toLowerCase();
+
+	return network?.channels.find((c) => c.name.toLowerCase() === lower);
+}
+
+/** Show the conversation a notification names (network uuid + target),
+ * or remember it until its join arrives. */
+function openTarget(uuid: string, target: string): void {
+	const hit = findChannelByName(uuid, target);
+
+	if (hit) {
+		clearPendingTarget();
+		switchToChannel(hit);
+		return;
+	}
+
+	setPendingTarget(uuid, target);
+}
 
 router.beforeEach((to, from, next) => {
 	// Wait for boot to finish before allowing any navigation
@@ -170,9 +226,19 @@ function switchToChannel(channel: ClientChan) {
 
 if ("serviceWorker" in navigator) {
 	navigator.serviceWorker.addEventListener("message", (event) => {
-		if (event.data && event.data.type === "open") {
-			const id = parseInt(event.data.channel.substring(5), 10); // remove "chan-" prefix
+		if (!event.data || event.data.type !== "open") {
+			return;
+		}
 
+		// A notification click: by network + target when the worker knows
+		// them (they outlive this page's channel ids), else by `chan-<id>`.
+		if (typeof event.data.network === "string" && typeof event.data.target === "string") {
+			openTarget(event.data.network, event.data.target);
+			return;
+		}
+
+		if (typeof event.data.channel === "string" && event.data.channel.startsWith("chan-")) {
+			const id = parseInt(event.data.channel.substring(5), 10); // remove "chan-" prefix
 			const channelTarget = store.getters.findChannel(id);
 
 			if (channelTarget) {
@@ -182,4 +248,4 @@ if ("serviceWorker" in navigator) {
 	});
 }
 
-export {router, navigate, switchToChannel};
+export {router, navigate, switchToChannel, openTarget};

@@ -18,7 +18,11 @@ export interface Transport {
 	send(line: string): void;
 	close(code?: number, reason?: string): void;
 	/** Check that an open socket is alive (PING; silence closes it as lost). Optional. */
-	probe?(): void;
+	probe?(timeoutMs?: number): void;
+	/** Foreground poke: how long the current dial has been in flight (0 unless connecting). */
+	connectingForMs?(): number;
+	/** Foreground poke: abandon a stuck dial and start over now. */
+	redial?(): void;
 }
 
 /**

@@ -9,6 +9,7 @@ import {MessageType, SharedMsg} from "../../../../shared/types/msg";
 import type {IrcClient} from "../client";
 import {errorSpec} from "../errors";
 import {formatLine} from "../message";
+import {failPendingLabel} from "../pending";
 import type {Handler} from "../types";
 
 /** Params without our own leading nick, joined for display. */
@@ -139,6 +140,14 @@ export const numericError: Handler = (client, msg) => {
 
 	const params = msg.params.slice(1); // drop our nick
 	const reason = params.length > 0 ? params[params.length - 1] : "";
+	// `labeled-response`: the numeric answers one of our lines. A message of
+	// ours it rejects is reported with its text, where it was typed.
+	const label = msg.tags.get("label");
+
+	if (label && failPendingLabel(client, label, reason || `error ${msg.command}`)) {
+		return;
+	}
+
 	const error: Partial<SharedMsg> = {
 		type: MessageType.ERROR,
 		time: client.timeOf(msg),

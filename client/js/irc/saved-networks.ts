@@ -40,6 +40,14 @@ export type SavedNetwork = ConnectOptions & {
 	autoconnect?: boolean;
 	/** Persist `saslPassword`. Off by default so the password never hits disk. */
 	rememberPassword?: boolean;
+	/** Register this device's Web Push subscription with this network
+	 * (`draft/webpush`). Entries stored before the flag existed read as
+	 * enabled — push was unconditional then. */
+	pushEnabled?: boolean;
+	/** Show browser notifications (highlights/queries) for this network.
+	 * Entries stored before the flag existed read as enabled — browser
+	 * notifications were global-on then. Not gated on authentication. */
+	notifyEnabled?: boolean;
 	/** Slash commands run in the lobby after every registration, one per entry. */
 	commands?: string[];
 	/** Epoch ms of the last connect; the picker lists most recent first. */
@@ -181,6 +189,8 @@ export function normalize(raw: Record<string, unknown>): SavedNetwork | undefine
 		saslPassword: sasl ? asString(raw.saslPassword) : "",
 		autoconnect: asBoolean(raw.autoconnect),
 		rememberPassword,
+		pushEnabled: raw.pushEnabled === undefined ? true : asBoolean(raw.pushEnabled),
+		notifyEnabled: raw.notifyEnabled === undefined ? true : asBoolean(raw.notifyEnabled),
 		commands: parseCommands(raw.commands),
 	};
 
@@ -197,6 +207,50 @@ export function normalize(raw: Record<string, unknown>): SavedNetwork | undefine
 	return net;
 }
 
+/** Whether a network takes part in Web Push (`draft/webpush`): the saved
+ * flag, defaulting to enabled — entries stored before the flag existed and
+ * networks never saved (plain `/connect host`) are push-enabled; only an
+ * explicit `false` opts a network out. */
+export function pushEnabledOf(net: Pick<SavedNetwork, "pushEnabled"> | undefined): boolean {
+	return net?.pushEnabled !== false;
+}
+
+/** Whether this network may show browser notifications (the `Notification`
+ * API; no server support or login involved). Same rule as the push flag:
+ * missing means enabled, only an explicit `false` opts a network out. */
+export function notifyEnabledOf(net: Pick<SavedNetwork, "notifyEnabled"> | undefined): boolean {
+	return net?.notifyEnabled !== false;
+}
+
+/** One-time migration for the removed global "Enable browser notifications"
+ * checkbox: a user who had it off keeps notifications off, stamped onto every
+ * saved network's {@link SavedNetwork.notifyEnabled}. Runs before the settings
+ * store's first write can drop the old key; no-op when the switch was on,
+ * absent or the stored blob is unusable. */
+export function migrateGlobalNotify(): void {
+	let raw: string | null;
+
+	try {
+		raw = backend.get("settings");
+	} catch {
+		return;
+	}
+
+	let stored: {desktopNotifications?: unknown};
+
+	try {
+		stored = raw ? (JSON.parse(raw) as {desktopNotifications?: unknown}) : {};
+	} catch {
+		return; // garbage settings blob: leave the networks alone
+	}
+
+	if (stored.desktopNotifications !== false) {
+		return;
+	}
+
+	write(list().map((net) => ({...net, notifyEnabled: false})));
+}
+
 /**
  * Merge the edit form's payload (`network:edit`) over an existing entry.
  * Checkbox fields are absent from FormData when unchecked, so any missing
@@ -211,7 +265,7 @@ export function fromForm(data: Record<string, unknown>, existing?: SavedNetwork)
 		}
 	}
 
-	for (const flag of ["tls", "autoconnect", "rememberPassword"]) {
+	for (const flag of ["tls", "autoconnect", "rememberPassword", "pushEnabled", "notifyEnabled"]) {
 		if (!(flag in data)) {
 			base[flag] = false;
 		}

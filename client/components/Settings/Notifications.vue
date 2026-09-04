@@ -2,31 +2,11 @@
 	<div>
 		<h2>Push Notifications</h2>
 		<div>
-			<div id="pushState" class="push-state">
-				<span
-					class="push-state-dot"
-					:class="'push-state-' + store.state.pushNotificationState"
-					aria-hidden="true"
-				></span>
-				<strong>{{ pushStateLabel }}</strong>
-			</div>
-			<button
-				id="pushNotifications"
-				type="button"
-				class="btn"
-				:disabled="!pushToggleable"
-				:aria-pressed="store.state.pushNotificationState === 'subscribed'"
-				@click.prevent="togglePush"
-			>
-				{{
-					store.state.pushNotificationState === "subscribed"
-						? "Turn off push notifications"
-						: "Subscribe to push notifications"
-				}}
-			</button>
-			<div v-if="store.state.pushNotificationState === 'subscribed'" id="pushSubscribed">
-				Push notifications are enabled for this device. The server will wake the app when it
-				has something for you while it is closed.
+			<div class="push-networks-hint">
+				Push is set up per network — turn it on or off in each network's settings (Edit
+				network → “Push notifications for this network”), where the enrollment status is
+				also shown. The browser delivers the notifications; each push-capable server decides
+				whether to wake this app.
 			</div>
 			<div v-if="store.state.pushNotificationState === 'subscribed'" class="opt">
 				<div>Snooze pushes everywhere:</div>
@@ -63,38 +43,81 @@
 				<strong>Warning</strong>: The server refused the push subscription. It may require
 				logging in (SASL) before subscribing.
 			</div>
+
+			<div v-if="devices.network" class="push-devices">
+				<div class="push-devices-head">
+					<span>Registered devices</span>
+					<button
+						type="button"
+						class="btn btn-small"
+						:disabled="devices.loading"
+						@click.prevent="refreshDevices"
+					>
+						{{ devices.loading ? "Loading…" : "Refresh" }}
+					</button>
+				</div>
+
+				<p v-if="!devices.loading && devices.subs.length === 0" class="push-devices-empty">
+					No devices are registered for push on this account.
+				</p>
+
+				<ul v-else class="push-device-list">
+					<li v-for="sub in devices.subs" :key="sub.endpoint" class="push-device">
+						<div class="push-device-label">
+							<span class="push-device-host">{{ endpointHost(sub.endpoint) }}</span>
+							<span v-if="sub.thisDevice" class="push-device-tag this"
+								>This device</span
+							>
+							<span
+								v-if="!sub.current"
+								class="push-device-tag stale"
+								title="Registered under a superseded key; the server can no longer reach it."
+								>Stale</span
+							>
+							<span v-if="armedAge(sub.armed)" class="push-device-age">{{
+								armedAge(sub.armed)
+							}}</span>
+						</div>
+						<button
+							type="button"
+							class="btn btn-small"
+							@click.prevent="removeDevice(sub.endpoint)"
+						>
+							Remove
+						</button>
+					</li>
+				</ul>
+
+				<button
+					v-if="devices.subs.length > 0"
+					type="button"
+					class="btn btn-small push-devices-clear"
+					@click.prevent="clearAllDevices"
+				>
+					Clear all devices
+				</button>
+				<p class="push-networks-hint">
+					Removing a device unregisters it on the server so it stops receiving pushes.
+					Clearing all also unsubscribes this browser.
+				</p>
+			</div>
 		</div>
 
 		<h2>Browser Notifications</h2>
 		<div>
-			<label class="opt">
-				<input
-					id="desktopNotifications"
-					:checked="store.state.settings.desktopNotifications"
-					:disabled="store.state.desktopNotificationState === 'nohttps'"
-					type="checkbox"
-					name="desktopNotifications"
-				/>
-				Enable browser notifications<br />
-				<div v-if="store.state.desktopNotificationState === 'unsupported'" class="error">
-					<strong>Warning</strong>: Notifications are not supported by your browser.
-				</div>
-				<div
-					v-if="store.state.desktopNotificationState === 'nohttps'"
-					id="warnBlockedDesktopNotifications"
-					class="error"
-				>
-					<strong>Warning</strong>: Notifications are only supported over HTTPS
-					connections.
-				</div>
-				<div
-					v-if="store.state.desktopNotificationState === 'blocked'"
-					id="warnBlockedDesktopNotifications"
-					class="error"
-				>
-					<strong>Warning</strong>: Notifications are blocked by your browser.
-				</div>
-			</label>
+			<div class="push-networks-hint">
+				Browser notifications are also per network — enabled by default, toggled in each
+				network's settings (Edit network → “Browser notifications for this network”).
+			</div>
+			<div v-if="store.state.desktopNotificationState === 'unsupported'" class="error">
+				<strong>Warning</strong>: Notifications are not supported by your browser.
+			</div>
+			<div v-if="store.state.desktopNotificationState === 'nohttps'" class="error">
+				<strong>Warning</strong>: Notifications are only supported over HTTPS connections.
+			</div>
+			<div v-if="store.state.desktopNotificationState === 'blocked'" class="error">
+				<strong>Warning</strong>: Notifications are blocked by your browser.
+			</div>
 		</div>
 		<div>
 			<label class="opt">
@@ -193,7 +216,7 @@ your nickname or expressions defined in custom highlights."
 </template>
 
 <script lang="ts">
-import {computed, defineComponent, onMounted} from "vue";
+import {defineComponent, onMounted} from "vue";
 import {useStore} from "../../js/store";
 import webpush from "../../js/webpush";
 
@@ -202,54 +225,47 @@ export default defineComponent({
 	setup() {
 		const store = useStore();
 
-		const isIOS = computed(
-			() =>
-				[
-					"iPad Simulator",
-					"iPhone Simulator",
-					"iPod Simulator",
-					"iPad",
-					"iPhone",
-					"iPod",
-				].includes(navigator.platform) ||
-				// iPad on iOS 13 detection
-				(navigator.userAgent.includes("Mac") && "ontouchend" in document)
-		);
-
-		// The toggle only works when the browser can subscribe and nothing
-		// harder (denied permission, refused subscription) is in the way; the
-		// error blocks above explain every disabled state.
-		const pushToggleable = computed(() =>
-			["unsubscribed", "subscribed"].includes(store.state.pushNotificationState)
-		);
-
-		// One-line verdict for the indicator dot above the toggle.
-		const pushStateLabels: Record<string, string> = {
-			subscribed: "On for this device",
-			unsubscribed: "Off",
-			denied: "Blocked by the browser",
-			blocked: "The server refused the subscription",
-			"server-unsupported": "No push-capable network",
-			unsupported: "Not supported by this browser",
-			"not-installed": "Install the app to enable",
-		};
-
-		const pushStateLabel = computed(
-			() =>
-				pushStateLabels[store.state.pushNotificationState] ??
-				store.state.pushNotificationState
-		);
-
-		const togglePush = () => {
-			void webpush.togglePushSubscription();
-		};
-
 		const snooze = (ms: number) => {
 			webpush.setSnooze(ms);
 		};
 
+		const devices = webpush.deviceList;
+		const refreshDevices = () => webpush.refreshDevices();
+		const removeDevice = (endpoint: string) => webpush.removeDevice(endpoint);
+		const clearAllDevices = () => webpush.clearAllDevices();
+
+		/** "fcm.googleapis.com" from an endpoint, for a readable device label. */
+		const endpointHost = (endpoint: string): string => {
+			try {
+				return new URL(endpoint).host;
+			} catch {
+				return endpoint.slice(0, 40);
+			}
+		};
+
+		/** "3 days ago" style age from a unix time (seconds); "" if unknown. */
+		const armedAge = (armed: number): string => {
+			if (!armed) {
+				return "";
+			}
+
+			const secs = Math.max(0, Math.floor(Date.now() / 1000) - armed);
+			const day = 86400;
+
+			if (secs < 3600) {
+				return `${Math.max(1, Math.floor(secs / 60))} min ago`;
+			}
+
+			if (secs < day) {
+				return `${Math.floor(secs / 3600)} h ago`;
+			}
+
+			return `${Math.floor(secs / day)} d ago`;
+		};
+
 		onMounted(() => {
 			webpush.refresh();
+			webpush.refreshDevices();
 		});
 
 		const playNotification = () => {
@@ -261,13 +277,15 @@ export default defineComponent({
 		};
 
 		return {
-			isIOS,
 			store,
 			playNotification,
-			pushToggleable,
-			togglePush,
 			snooze,
-			pushStateLabel,
+			devices,
+			refreshDevices,
+			removeDevice,
+			clearAllDevices,
+			endpointHost,
+			armedAge,
 		};
 	},
 });

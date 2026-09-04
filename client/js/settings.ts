@@ -19,24 +19,6 @@ const defaultConfig = {
 	coloredNicks: {
 		default: true,
 	},
-	desktopNotifications: {
-		default: false,
-		sync: "never",
-		apply(store: TypedStore, value: boolean) {
-			// Commit a mutation. options can have root: true that allows to commit root mutations in namespaced modules.
-			// https://vuex.vuejs.org/api/#store-instance-methods. not typed?
-			store.commit("refreshDesktopNotificationState", null, {root: true});
-
-			if ("Notification" in window && value && Notification.permission !== "granted") {
-				Notification.requestPermission(() =>
-					store.commit("refreshDesktopNotificationState", null, {root: true})
-				).catch((e) => {
-					// eslint-disable-next-line no-console
-					console.error(e);
-				});
-			}
-		},
-	},
 	highlightMessages: {
 		default: true,
 	},

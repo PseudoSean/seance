@@ -136,3 +136,85 @@ Results 2026-08-24 (transcripts in `nefarious2-websocket.md`, "Prototype status"
 2. `node tools/irc-ws-probe.mjs wss://localhost:8443/ seance-probe --insecure` — **works**: `CAP * LS` with the full cap set, then `001`.
 3. `--binary` — not yet exercised on the TLS port.
 4. 600-byte `PRIVMSG` in one frame over `wss://` — **disconnects** with `WebSocket frame error`; 400 bytes is fine. Confirms the 528-byte cap.
+
+## When logins hang at "904 SASL request timed out"
+
+The IAuth chain (`iauth-tee.mjs` → `iauthd-ts`, both node children of the
+ircd) can die on its own — it did on 2026-09-03 after ~11 h uptime. The
+ircd keeps accepting sockets, CAP LS/ACK still work, SASL succeeds
+server-side in the tee log's last entries, then every client gets
+`904 * :SASL authentication failed: request timed out` and no 001. The
+app shows "closed during IRC registration (connection lost)" in a
+reconnect loop.
+
+Diagnose: `pgrep -af "iauth-tee|iauthd-ts"` — if only the ircd remains
+(or the tee log `tmp/testnet-run/iauth-tee.log` stops growing while
+probes still connect), the chain is dead. There is no restart-without-ircd
+path; the children are spawned at ircd boot.
+
+Fix = the standard restart with the ownership pre-flight (files created
+by root/`node` are unwritable for the `ircrun` user; an unwritable
+iauth-tee.log or pid file kills the chain/boot silently):
+
+```sh
+pkill -f "^/seance/tmp/testnet-run/ircd-install/bin/ircd"
+chown -R ircrun:ircrun /seance/tmp/testnet-run/{conf,history,webpush} \
+  /seance/tmp/testnet-run/{iauth-tee.log,ircd.log,ircd-fg.log,ircd.out}
+su -s /bin/sh ircrun -c 'cd /seance/tmp/testnet-run/conf && \
+  setsid nohup /seance/tmp/testnet-run/ircd-install/bin/ircd \
+  -f ircd-docker.conf >> /seance/tmp/testnet-run/ircd-fg.log 2>&1 &'
+```
+
+Verify: the two node children appear in `ps`, then a probe registers
+(`tools/irc-ws-probe.mjs` shows caps; a SASL probe reaches `903`/`001`).
+Remember clients auto-reconnect, so tabs recover on their own once the
+chain is back — unless another session of the same account beat them to
+it. One session per account is structural (the session owns the delivery
+stream and the catch-up cursor); a second connection attaches as an
+**alias** to it — that attach requires TLS unless
+`"BOUNCER_REQUIRE_TLS" = "FALSE"` is set, which the testnet now does
+(with `BOUNCER_MAX_SESSIONS = 5`), so multiple tabs on one identity
+coexist as aliases and share the session. To give a tab its own stream
+instead, use a second test identity.
+
+## The native testnet rig after a sandbox reset (2026-09-04)
+
+The sandbox was rebuilt: `/tmp` wiped, apt packages gone, no `ircrun`
+user, no system Chromium. `/seance/tmp` survived. What it took to come
+back, in order:
+
+- `apt-get install gawk flex byacc libssl-dev librocksdb-dev libzstd-dev libcurl4-openssl-dev libjansson-dev libcmocka-dev libmaxminddb-dev gdb`
+  (apt has network). `configure` wants flex; `config.status` wants gawk;
+  `make clean` deletes the byacc/flex outputs.
+- `cd testnet/nefarious && touch config.status && make clean && make -j8`.
+  The touch skips the configure re-run (the old config already has libkc);
+  the clean is **not optional**: `ircd/Makefile.in` carries no dependency
+  info for some objects (`metadata.o`), so after a header change a partial
+  `make` links stale objects and the ircd aborts at boot with
+  `feature_bool: features[feat].feat == feat` — gdb shows the enum names
+  off by one between objects.
+- Install and run as the current user (`ircrun` is gone; the files are
+  ours): copy `ircd/ircd` to `tmp/testnet-run/ircd-install/bin/ircd.<stamp>`,
+  re-point the `ircd` symlink, delete a stale `conf/ircd.pid`, then
+  `cd tmp/testnet-run/conf && setsid nohup ../ircd-install/bin/ircd -f ircd-docker.conf >> ../ircd-fg.log 2>&1 &`.
+  Never `pkill -f` a pattern that also appears in the shell command you
+  are running (it kills that shell); anchor it:
+  `pkill -f "^/seance/tmp/testnet-run/ircd-install/bin/ircd"`,
+  `pkill -f "^node tmp/dev-origin"`.
+- Certificates live in `/seance/tmp/certs/` now (`ca.crt`/`ca.key`,
+  `dev-cert.pem`/`dev-cert.key`; SAN `localhost, 127.0.0.1, 10.0.0.41, 172.22.0.3, irc.testnet.local`), and `tmp/dev-origin.mjs` reads them
+  there and serves the CA at `https://<host>:8000/ca.crt`. **The old CA key
+  is gone**: every phone that trusted the previous CA has to download and
+  install the new `ca.crt` before its browser will register the service
+  worker or subscribe to push again.
+- Chromium is Playwright's only: `tmp/chrome-pw.sh` wraps it with
+  `--no-sandbox --ignore-certificate-errors`. Harnesses:
+  `tmp/sw-reply-probe2.mjs <mode>` drives the real service worker over the
+  DevTools protocol (reply-page, reply-held, reply-queue, click, deeplink,
+  reconnect); `tmp/chan-listen.mjs` and `tmp/names-probe.mjs` watch
+  `#seance`; `tmp/sasl-transcript.mjs account pass nick [caps]` prints a
+  registration transcript; the dev-origin's `POST /__drop` drops every
+  proxied socket.
+- The server caps an account at `WEBPUSH_MAX_REGISTRATIONS` (10) push
+  endpoints and answers `FAIL WEBPUSH MAX_REGISTRATIONS`; fresh Chromium
+  profiles against one test account use them up.

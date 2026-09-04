@@ -110,6 +110,12 @@ interface ServerToClientEvents {
 	"msg:redact": EventHandler<{chan: number; id: number; by: string; reason?: string; time: Date}>;
 	/** Message `id` (already delivered via `msg`) replaces message `replaces`. */
 	"msg:edit": EventHandler<{chan: number; id: number; replaces: number}>;
+	/**
+	 * The pending copy `id` (delivered via `msg` with `pending: true`) is
+	 * settled: drop it. The echo, or the error line, that settles it
+	 * follows as its own `msg`.
+	 */
+	"msg:settled": EventHandler<{chan: number; id: number}>;
 	/** Someone else's `+typing` TAGMSG in a loaded channel/query (never our own). */
 	typing: EventHandler<{chan: number; nick: string; state: TypingState}>;
 
@@ -123,6 +129,11 @@ interface ServerToClientEvents {
 		ok: boolean;
 		code?: string;
 		reason?: string;
+	}>;
+	/** The account's registered push endpoints (`WEBPUSH LIST`), one network's view. `armed` is the last-register unix time; `current` is false for an endpoint bound to a superseded VAPID key (a dead registration). */
+	"webpush:subscriptions": EventHandler<{
+		network: string;
+		subs: Array<{endpoint: string; armed: number; current: boolean}>;
 	}>;
 	/** One `PushSession` per `PERSISTENCE LIST` row, dispatched when the list closes (Settings → session panel). */
 	"persistence:sessions": EventHandler<{sessions: PushSession[]}>;
@@ -191,6 +202,12 @@ interface ClientToServerEvents {
 		/** msgid of our own message to replace: REDACT (channels) + resend with `+seance/edit`. */
 		edit?: string;
 	}>;
+	/** Send `text` to a target named by network uuid + channel/nick — the
+	 * form a notification can use after the page (and its channel ids) is
+	 * gone: the service worker's relayed reply and the queued outbox. Returns
+	 * nothing; the bus handler drops it when that network is not connected,
+	 * so callers check `network.status.connected` first. */
+	send: EventHandler<{network: string; target: string; text: string}>;
 	"msg:react": EventHandler<{target: number; msgid: string; text: string; remove?: boolean}>;
 	"msg:redact": EventHandler<{target: number; msgid: string; reason?: string}>;
 	/** The user's own input activity; the IRC layer throttles and sends `+typing` TAGMSGs. */
@@ -203,6 +220,8 @@ interface ClientToServerEvents {
 		keys: {p256dh: string; auth: string};
 	}>;
 	"webpush:unregister": EventHandler<{network: string; endpoint: string}>;
+	/** Ask a network for the account's registered push endpoints (`WEBPUSH LIST`); the reply arrives as `webpush:subscriptions`. */
+	"webpush:list": EventHandler<{network: string}>;
 	/** Account metadata write for webpush settings (payload tier, mute/snooze). An empty value deletes the key. */
 	"webpush:metadata": EventHandler<{network: string; key: string; value: string}>;
 	/** Ask the server for the account's bouncer session(s) (`PERSISTENCE LIST`); the reply arrives as `persistence:sessions`. The network is optional — any connected client sees the same session. */
