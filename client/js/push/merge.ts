@@ -73,7 +73,10 @@ export function joinLines(entry: MergedMessage): string {
  * new list (capped to `keep`, newest last) and whether a message was
  * created — a batch line joining an existing entry is not new, so the
  * unread count rises once per message. Inserting a line by index is
- * idempotent: duplicates and out-of-order delivery are harmless.
+ * idempotent: duplicates and out-of-order delivery are harmless. A batch
+ * line moves its entry to the end, so eviction takes older messages first;
+ * a batch evicted anyway — more than `keep` newer messages between two of
+ * its lines — starts over as a new entry.
  */
 export function addMessage(
 	entries: MergedMessage[],
@@ -100,13 +103,15 @@ export function addMessage(
 			text: incoming.text,
 			concat: incoming.concat === true,
 		};
-		entry.sent = incoming.line.sent;
-		entry.total = incoming.line.total;
+		entry.sent = Math.max(entry.sent ?? 0, incoming.line.sent);
+		entry.total = Math.max(entry.total ?? 0, incoming.line.total);
 		entry.text = joinLines(entry);
 
-		if (!found) {
-			list.push(entry);
+		if (found) {
+			list.splice(list.indexOf(found), 1);
 		}
+
+		list.push(entry);
 
 		return {entries: list.slice(-keep), isNew: !found};
 	}

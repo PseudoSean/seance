@@ -106,6 +106,56 @@ describe("push/merge", function () {
 			expect(isNew).to.equal(true);
 			expect(entries[0].lines).to.equal(undefined);
 		});
+
+		it("keeps the largest sent/total seen", function () {
+			const a = addMessage([], {
+				from: "x",
+				text: "three",
+				batch: "b",
+				line: {index: 3, sent: 3, total: 3},
+			});
+			expect(a.isNew).to.equal(true);
+			expect(a.entries[0].text).to.equal("…\n…\nthree");
+
+			const b = addMessage(a.entries, {
+				from: "x",
+				text: "two",
+				batch: "b",
+				line: {index: 2, sent: 2, total: 3},
+			});
+			expect(b.isNew).to.equal(false);
+			expect(b.entries[0].text).to.equal("…\ntwo\nthree");
+		});
+
+		it("keeps an in-flight batch ahead of older messages", function () {
+			let entries = addMessage([], {
+				from: "x",
+				text: "one",
+				batch: "b",
+				line: {index: 1, sent: 2, total: 2},
+			}).entries;
+
+			entries = addMessage(entries, {from: "a", text: "p1"}, 4).entries;
+			entries = addMessage(entries, {from: "a", text: "p2"}, 4).entries;
+			entries = addMessage(entries, {from: "a", text: "p3"}, 4).entries;
+
+			const result = addMessage(
+				entries,
+				{
+					from: "x",
+					text: "two",
+					batch: "b",
+					line: {index: 2, sent: 2, total: 2},
+				},
+				4
+			);
+
+			expect(result.isNew).to.equal(false);
+
+			const final = addMessage(result.entries, {from: "a", text: "p4"}, 4).entries;
+
+			expect(final.map((e) => e.text)).to.deep.equal(["p2", "p3", "one\ntwo", "p4"]);
+		});
 	});
 
 	describe("joinLines", function () {
