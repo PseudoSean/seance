@@ -61,13 +61,14 @@ are dropped (the draft allows it). `<host>` is the sender's displayed host.
 ### 3.2 Multiline message: one push per line
 
 ```
-@batch=<ref>;msgid=<base>;time=<iso8601>;evilnet.github.io/line=<i>/<sent>/<total>[;draft/multiline-concat] :<nick>!<user>@<host> PRIVMSG|NOTICE <target> :<line>
+@batch=<ref>;msgid=<base>;time=<iso8601>[;account=<account>];evilnet.github.io/line=<i>/<sent>/<total>[;draft/multiline-concat] :<nick>!<user>@<host> PRIVMSG|NOTICE <target> :<line>
 ```
 
 - `<ref>` is the batch reference the server used when relaying the batch;
   `<base>` is the batch's single msgid; `time` is the batch's timestamp.
   (A nefarious2 multiline batch has one msgid and one timestamp for all its
   lines — `testnet/nefarious/ircd/m_batch.c:891`, `:949` — hence the index tag.)
+- `account` is present when the sender is logged in, same as §3.1.
 - `evilnet.github.io/line` is a vendor tag: `<i>` is the 1-based line index
   in the original message, `<sent>` how many lines were pushed for this
   batch, `<total>` how many lines the message had. `<sent> = min(<total>, WEBPUSH_MULTILINE_LINES)`. Lines beyond `<sent>` are not pushed.
@@ -172,18 +173,26 @@ Plain TypeScript, no DOM, no Vue, no store, so mocha loads it:
 
 - `line.ts` — `parsePushLine(raw)` (moved out of the service worker):
   tags with proper unescaping, valueless tags as `true`, prefix, command,
-  params, trailing; returns `{tags, nick, command, target, text, time}`
-  plus, for `MARKREAD`, the `timestamp=` param.
+  params, trailing; returns `{tags, nick, command, target, text, timestamp?}`
+  (`timestamp` is only present for `MARKREAD`, from its `timestamp=` param).
 - `strip.ts` — `stripFormatting(text)` (the `matchFormatting` regex from
-  `shared/irc.ts`, shared, not copied) and `stripMarkdown(text)` =
-  `toPlainText(layout(text, {markdown: true}))`; CTCP `ACTION` rewrite.
+  `shared/irc.ts`, shared, not copied), `stripMarkdown(text)` =
+  `toPlainText(layout(text, {markdown: true}))`, and `notificationText(text, {markdown})`
+  (CTCP `ACTION` rewrite, then `stripFormatting` and, when `markdown` is
+  true, `stripMarkdown`) — the function the worker and the page both call.
 - `merge.ts` — the notification's stored message list: entries
-  `{from, text, msgid?, batch?, lines?: Record<number, {text, concat}>, sent?, total?}`; `addLine(entries, parsed)` finds or creates the batch
-  entry, inserts by index (idempotent), and `joinLines(entry)` rebuilds the
-  text with the concat rule and `…` for a missing index or for lines beyond
-  `sent`; `renderMergedBody(entries, isChannel, opts)` (moved from the
-  worker) applies strip → middle-ellipsis → line budget.
-- `worker-entry.ts` — assigns `self.seancePush = {parsePushLine, addLine, renderMergedBody, stripFormatting, stripMarkdown}`.
+  `{from, text, msgid?, batch?, lines?: Record<string, {text, concat}>, sent?, total?}`;
+  `addMessage(entries, incoming, keep) → {entries, isNew}` finds or creates
+  the batch entry, inserts by index (idempotent), and `joinLines(entry)`
+  rebuilds the text with the concat rule and `…` for a missing index or for
+  lines beyond `sent`; `renderMergedBody(entries, isChannel, render)` (moved
+  from the worker; `render` is the stripper callback, e.g.
+  `(text) => notificationText(text, {markdown})`) applies render →
+  middle-ellipsis → line budget.
+- `worker-entry.ts` — assigns
+  `self.seancePush = {parsePushLine, lineIndexOf, CONCAT_TAG, notificationText, stripFormatting, addMessage, renderMergedBody, MERGE_KEEP}`
+  (no `stripMarkdown` export — the worker only ever needs it through
+  `notificationText`).
 
 ### 5.2 Build
 
@@ -205,21 +214,29 @@ try {
 and lists `js/push.js?v=${cacheName}` in `shellPaths`. The test-mode branch
 of the config (`:324`) applies to the main configuration only.
 
+The chunk is fetched once, at the worker's initial evaluation, before
+install; if that fetch fails the registration runs on the inline fallback
+until the next worker update.
+
 ### 5.3 Worker pipeline (`client/service-worker.js`)
 
 `handlePush`: JSON → today's paths (`read`, tiers). Otherwise
 `self.seancePush.parsePushLine`:
 
 1. `MARKREAD` → `closeForTarget(target, timestamp)`, badge, return.
-2. `PRIVMSG`/`NOTICE`: dedupe on `tags.msgid` against the `seen` ring
-   (the raw-line path never deduped; now it does). For a batch line, dedupe
-   on `msgid + "/" + index`.
+2. `PRIVMSG`/`NOTICE`: dedupe on the message's msgid against the `seen`
+   ring, for every line (the raw-line path never deduped; now it does). A
+   batch shares one msgid across its lines — the same msgid the page
+   recorded from the `BATCH` opener — so there is one dedupe key per
+   message, not one per line. Consequence: a page that records the msgid
+   mid-batch suppresses the batch's remaining lines, and the notification
+   keeps its `…` placeholders for them (as §6 already allows).
 3. Load `prefs` from IndexedDB `seance-push` (`{markdown: boolean}`;
    absent → `true`, the app default in `client/js/settings.ts`).
 4. Per-target merge as today (`tag: push-<target>`, `getNotifications`):
-   `addLine` for a batch line or a plain append; the unread count rises
+   `addMessage` for a batch line or a plain append; the unread count rises
    once per message (first line of a batch only).
-5. `renderMergedBody(entries, isChannel, {markdown})`; title and actions
+5. `renderMergedBody(entries, isChannel, render)`; title and actions
    unchanged; `data.messages` carries the entries so they survive worker
    restarts.
 
@@ -230,9 +247,11 @@ happens.
 ### 5.4 Setting mirror
 
 `client/js/settings.ts` `markdown` gains an `apply(store, value)` that
-writes `idbSet("prefs", {markdown: value})` (`client/js/idb.ts`);
-`client/js/webpush.ts` writes the current value once at boot. The worker
-never reads localStorage.
+calls `mirrorPushPrefs({markdown: value})` (`client/js/push-prefs.ts`,
+merge-writing `idbSet("prefs", …)`, `client/js/idb.ts`). The settings store
+calls `apply` from `applyAll` at boot and from `update` on every change —
+there is no separate write from `webpush.ts`. The worker never reads
+localStorage.
 
 ### 5.5 In-page notifications
 
@@ -287,3 +306,17 @@ Client:
 Aggregation of any kind; changing the cooldown value or semantics for
 single messages; the `ping`/`route` tiers; native shells; renaming the
 `thelounge.*` storage keys.
+
+## 9. Rollout
+
+The client and the server change this payload's shape together, but an
+installed service worker cannot be pushed to a browser out of band — it is
+only re-checked (and, if changed, re-installed) on the browser's own
+schedule, at most once every 24 hours. An old worker (pre this branch)
+handed one of the new §3.1/§3.2 lines titles the notification `undefined`
+(it does not know the line shape) and turns every `MARKREAD` relay into
+the generic "New activity" notification (it does not recognise the
+command). Deploy this client — so the worker in the field already
+understands the new payload — before the server's `full` tier starts
+sending lines, and allow up to 24 hours after that for browsers to pick up
+the new worker before assuming every client has it.

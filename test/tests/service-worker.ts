@@ -252,6 +252,12 @@ interface SWHarness {
 interface HarnessOptions {
 	script?: ServerScript;
 	clients?: FakeClient[];
+	/** Build the worker WITHOUT `sandbox.seancePush` — the js/push.js chunk
+	 * failed to load, so `push()` falls back to its inline minimum. */
+	noPushModule?: boolean;
+	/** Make `indexedDB.open` throw synchronously — the worker must still
+	 * show something rather than let handlePush reject silently. */
+	failIndexedDB?: boolean;
 }
 
 const SCOPE = "https://app.test/";
@@ -348,6 +354,14 @@ function makeSW(muteList = "", options: HarnessOptions = {}): SWHarness {
 		skipWaiting: (): Promise<void> => Promise.resolve(),
 		indexedDB: {
 			open() {
+				if (options.failIndexedDB) {
+					// Private mode / blocked storage: a real browser fires
+					// `onerror` async, but a synchronous throw here rejects
+					// idbOpen()'s Promise just the same (the executor throwing
+					// auto-rejects) and is the smallest fake for it.
+					throw new Error("IndexedDB is not available");
+				}
+
 				const req: FakeReq = {};
 				queueMicrotask(() => {
 					req.result = {
@@ -392,19 +406,25 @@ function makeSW(muteList = "", options: HarnessOptions = {}): SWHarness {
 	};
 	sandbox.self = sandbox;
 	sandbox.globalThis = sandbox;
+
 	// The real push module, exactly as js/push.js hands it to the worker
 	// (client/js/push/worker-entry.ts) — so this sandbox exercises the path
 	// the browser runs, not the worker's own no-module-loaded fallback.
-	sandbox.seancePush = {
-		parsePushLine,
-		lineIndexOf,
-		CONCAT_TAG,
-		notificationText,
-		stripFormatting,
-		addMessage,
-		renderMergedBody,
-		MERGE_KEEP,
-	};
+	// `noPushModule` leaves it unset: `importScripts` is already a no-op
+	// above, so that is exactly what a failed js/push.js fetch looks like,
+	// and `push()` in the worker falls back to its inline minimum.
+	if (!options.noPushModule) {
+		sandbox.seancePush = {
+			parsePushLine,
+			lineIndexOf,
+			CONCAT_TAG,
+			notificationText,
+			stripFormatting,
+			addMessage,
+			renderMergedBody,
+			MERGE_KEEP,
+		};
+	}
 
 	sandbox.addEventListener = (n: string, f: (ev: any) => void) => {
 		(handlers[n] = handlers[n] || []).push(f);
@@ -725,6 +745,62 @@ describe("service worker push notifications", function () {
 		// The t:"read" relay carries ts, not msgid — never deduped.
 		await firePush(sw, `{"t":"read","target":"alice","ts":"2026-09-03T00:00:00.000Z"}`);
 		expect(sw.records[0].closed, "notification closed by read relay").to.be.true;
+	});
+
+	it("titles and tags a highlight on a non-# channel prefix (isChannelName, not startsWith('#'))", async function () {
+		const sw = makeSW();
+
+		await firePush(
+			sw,
+			"@msgid=amp1;time=2026-09-04T10:20:30.123Z :bob!u@h PRIVMSG &local :hey pushtest"
+		);
+
+		expect(sw.shown).to.have.lengthOf(1);
+		expect(sw.shown[0].title).to.equal("bob in &local");
+		expect(sw.shown[0].tag).to.equal("push-&local");
+	});
+
+	it("shows the generic notification when IndexedDB rejects", async function () {
+		const sw = makeSW("", {failIndexedDB: true});
+
+		await firePush(sw, msgPayload("alice", "pushtest", "hello there"));
+
+		expect(sw.shown).to.have.lengthOf(1);
+		expect(sw.shown[0].tag).to.equal("push-activity");
+		expect(sw.shown[0].body).to.equal("New activity while you were away.");
+	});
+});
+
+describe("service worker push notifications (inline fallback, js/push.js not loaded)", function () {
+	it("renders a PM with control bytes stripped and Markdown left literal", async function () {
+		const sw = makeSW("", {noPushModule: true});
+
+		await firePush(
+			sw,
+			"@msgid=fb1;time=2026-09-04T10:20:30.123Z :alice!u@h PRIVMSG me :\x02**hi**\x02"
+		);
+
+		expect(sw.shown).to.have.lengthOf(1);
+		expect(sw.shown[0].title).to.equal("alice");
+		expect(sw.shown[0].body).to.equal("**hi**");
+	});
+
+	it("merges a second push for the same target into a two-line body", async function () {
+		const sw = makeSW("", {noPushModule: true});
+
+		await firePush(
+			sw,
+			"@msgid=fb2;time=2026-09-04T10:20:30.123Z :alice!u@h PRIVMSG me :\x02**hi**\x02"
+		);
+		await firePush(
+			sw,
+			"@msgid=fb3;time=2026-09-04T10:20:31.123Z :alice!u@h PRIVMSG me :\x02**bye**\x02"
+		);
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live).to.have.lengthOf(1);
+		expect(live[0].body).to.equal("**hi**\n**bye**");
+		expect(live[0].data.count).to.equal(2);
 	});
 });
 

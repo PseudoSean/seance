@@ -663,6 +663,7 @@ self.addEventListener("push", function (event) {
 // at the top). The fallback below is what the worker can still do when
 // that chunk did not load: parse the line and strip IRC control bytes.
 
+// Mirrors MERGE_KEEP in client/js/push/merge.ts; must stay equal.
 const MERGE_KEEP_FALLBACK = 4;
 
 function push() {
@@ -730,135 +731,148 @@ async function handlePush(raw) {
 	// before parsing so the payload is always clean.
 	const clean = raw.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]+$/, "");
 
+	// Everything below reads IndexedDB (idbGet, getStash) and the
+	// Notifications API — a rejection there (private mode, IndexedDB
+	// blocked) must still surface something rather than leave Chrome's
+	// generic "site updated in the background" as the only sign of a push.
 	try {
-		json = JSON.parse(clean);
-	} catch (e) {
-		// not JSON — the spec-shaped raw IRC line
-	}
-
-	// Another device read a channel (JSON opt-down tier): close what we show for it.
-	if (json && json.t === "read") {
-		await closeForTarget(json.target, json.ts);
-		await updateBadge();
-		return;
-	}
-
-	const P = push();
-	const parsed = json ? fromJson(json) : P.parsePushLine(clean);
-
-	// The same relay as a MARKREAD line (the full tier).
-	if (parsed && parsed.command === "MARKREAD") {
-		await closeForTarget(parsed.target, parsed.timestamp);
-		await updateBadge();
-		return;
-	}
-
-	if (parsed && (parsed.command === "PRIVMSG" || parsed.command === "NOTICE")) {
-		const msgid = typeof parsed.tags.msgid === "string" ? parsed.tags.msgid : undefined;
-
-		// Dedup against the page's "seen" ring (client/js/push-seen.ts): a
-		// live page that already received this message over its own WebSocket
-		// owns its notification — its own rules decide whether the user sees
-		// anything. The server pushes to attached-but-idle sessions too
-		// (FEAT_WEBPUSH_IDLE), so without this every highlight would notify
-		// twice. A frozen page writes nothing, which is exactly when the push
-		// must show. A batch shares one msgid across its lines, which is also
-		// the msgid the page saw on the BATCH opener.
-		if (msgid) {
-			const seen = await idbGet("seen");
-
-			if (Array.isArray(seen) && seen.includes(msgid)) {
-				return;
-			}
+		try {
+			json = JSON.parse(clean);
+		} catch (e) {
+			// not JSON — the spec-shaped raw IRC line
 		}
 
-		const line = P.lineIndexOf(parsed.tags);
-		const batch = line
-			? typeof parsed.tags.batch === "string"
-				? parsed.tags.batch
-				: msgid
-			: undefined;
-		const isChannel = parsed.target && parsed.target.startsWith("#");
-		const replyTo = isChannel ? parsed.target : parsed.nick;
-		const tag = "push-" + (replyTo || "activity");
+		// Another device read a channel (JSON opt-down tier): close what we show for it.
+		if (json && json.t === "read") {
+			await closeForTarget(json.target, json.ts);
+			await updateBadge();
+			return;
+		}
 
-		// The page mirrors the reader's markdown setting here (client/js/
-		// push-prefs.ts); absent means the app default, on.
-		const prefs = (await idbGet("prefs")) || {};
-		const markdown = prefs.markdown !== false;
+		const P = push();
+		const parsed = json ? fromJson(json) : P.parsePushLine(clean);
 
-		// Merge per target: the message list rides on the notification's
-		// data so it survives the worker being killed between pushes, and a
-		// multiline message grows in place, one line per push.
-		const existing = await self.registration.getNotifications({tag});
-		const prev = existing[0] && existing[0].data;
-		const added = P.addMessage(
-			(prev && prev.messages) || [],
-			{
-				from: parsed.nick,
-				text: parsed.text,
-				msgid,
-				batch: batch || undefined,
-				line: line || undefined,
-				concat: parsed.tags[P.CONCAT_TAG] === true,
-			},
-			P.MERGE_KEEP
-		);
-		const count = ((prev && prev.count) || 0) + (added.isNew ? 1 : 0);
-		const body = P.renderMergedBody(added.entries, isChannel, (text) =>
-			P.notificationText(text, {markdown})
-		);
+		// The same relay as a MARKREAD line (the full tier).
+		if (parsed && parsed.command === "MARKREAD") {
+			await closeForTarget(parsed.target, parsed.timestamp);
+			await updateBadge();
+			return;
+		}
 
-		const title = isChannel
-			? parsed.nick + " in " + parsed.target + (count > 1 ? " (" + count + ")" : "")
-			: parsed.nick + (count > 1 ? " (" + count + ")" : "");
+		if (parsed && (parsed.command === "PRIVMSG" || parsed.command === "NOTICE")) {
+			const msgid = typeof parsed.tags.msgid === "string" ? parsed.tags.msgid : undefined;
 
-		// Inline reply renders as a text field where the browser supports
-		// it (desktop Chrome) and degrades to a button that deep-links the
-		// chat where it does not — the click handler falls back to openApp
-		// when no reply text arrives.  showSafely guards the whole call if
-		// a browser rejects the actions outright.
-		const actions = [
-			{action: "reply", type: "text", title: "Reply", placeholder: "Reply…"},
-			{action: "mute30", title: "Mute 30m"},
-		];
+			// Dedup against the page's "seen" ring (client/js/push-seen.ts): a
+			// live page that already received this message over its own WebSocket
+			// owns its notification — its own rules decide whether the user sees
+			// anything. The server pushes to attached-but-idle sessions too
+			// (FEAT_WEBPUSH_IDLE), so without this every highlight would notify
+			// twice. A frozen page writes nothing, which is exactly when the push
+			// must show. A batch shares one msgid across its lines, which is also
+			// the msgid the page saw on the BATCH opener.
+			if (msgid) {
+				const seen = await idbGet("seen");
 
-		// The payload names no network; the stash lists the networks this
-		// device is push-enrolled with (one, for a single-network deploy).
-		const stash = await getStash();
-		const network = stash.networks[0] ? stash.networks[0].uuid : undefined;
-		const time = typeof parsed.tags.time === "string" ? parsed.tags.time : undefined;
+				if (Array.isArray(seen) && seen.includes(msgid)) {
+					return;
+				}
+			}
 
-		await showSafely(title, {
-			tag,
-			renotify: added.isNew,
+			const line = P.lineIndexOf(parsed.tags);
+			const batch = line
+				? typeof parsed.tags.batch === "string"
+					? parsed.tags.batch
+					: msgid
+				: undefined;
+			const isChannel = isChannelName(parsed.target);
+			const replyTo = isChannel ? parsed.target : parsed.nick;
+			const tag = "push-" + (replyTo || "activity");
+
+			// The page mirrors the reader's markdown setting here (client/js/
+			// push-prefs.ts); absent means the app default, on.
+			const prefs = (await idbGet("prefs")) || {};
+			const markdown = prefs.markdown !== false;
+
+			// Merge per target: the message list rides on the notification's
+			// data so it survives the worker being killed between pushes, and a
+			// multiline message grows in place, one line per push.
+			const existing = await self.registration.getNotifications({tag});
+			const prev = existing[0] && existing[0].data;
+			const added = P.addMessage(
+				(prev && prev.messages) || [],
+				{
+					from: parsed.nick,
+					text: parsed.text,
+					msgid,
+					batch: batch || undefined,
+					line: line || undefined,
+					concat: parsed.tags[P.CONCAT_TAG] === true,
+				},
+				P.MERGE_KEEP
+			);
+			const count = ((prev && prev.count) || 0) + (added.isNew ? 1 : 0);
+			const body = P.renderMergedBody(added.entries, isChannel, (text) =>
+				P.notificationText(text, {markdown})
+			);
+
+			const title = isChannel
+				? parsed.nick + " in " + parsed.target + (count > 1 ? " (" + count + ")" : "")
+				: parsed.nick + (count > 1 ? " (" + count + ")" : "");
+
+			// Inline reply renders as a text field where the browser supports
+			// it (desktop Chrome) and degrades to a button that deep-links the
+			// chat where it does not — the click handler falls back to openApp
+			// when no reply text arrives.  showSafely guards the whole call if
+			// a browser rejects the actions outright.
+			const actions = [
+				{action: "reply", type: "text", title: "Reply", placeholder: "Reply…"},
+				{action: "mute30", title: "Mute 30m"},
+			];
+
+			// The payload names no network; the stash lists the networks this
+			// device is push-enrolled with (one, for a single-network deploy).
+			const stash = await getStash();
+			const network = stash.networks[0] ? stash.networks[0].uuid : undefined;
+			const time = typeof parsed.tags.time === "string" ? parsed.tags.time : undefined;
+
+			await showSafely(title, {
+				tag,
+				renotify: added.isNew,
+				icon: "img/icon-192.png",
+				body,
+				timestamp: time ? Date.parse(time) : undefined,
+				data: {
+					kind: "push",
+					count,
+					from: parsed.nick,
+					target: replyTo,
+					network,
+					time,
+					messages: added.entries,
+				},
+				actions,
+			});
+
+			await updateBadge();
+			return;
+		}
+
+		// userVisibleOnly means every push should surface something.
+		await showSafely("Seance", {
+			tag: "push-activity",
 			icon: "img/icon-192.png",
-			body,
-			timestamp: time ? Date.parse(time) : undefined,
-			data: {
-				kind: "push",
-				count,
-				from: parsed.nick,
-				target: replyTo,
-				network,
-				time,
-				messages: added.entries,
-			},
-			actions,
+			body: "New activity while you were away.",
 		});
 
 		await updateBadge();
-		return;
+	} catch (e) {
+		await showSafely("Seance", {
+			tag: "push-activity",
+			icon: "img/icon-192.png",
+			body: "New activity while you were away.",
+		});
+		await updateBadge();
 	}
-
-	// userVisibleOnly means every push should surface something.
-	await showSafely("Seance", {
-		tag: "push-activity",
-		icon: "img/icon-192.png",
-		body: "New activity while you were away.",
-	});
-
-	await updateBadge();
 }
 
 /** showNotification that cannot silently fail: if Chrome rejects any

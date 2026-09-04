@@ -112,16 +112,22 @@ const miniCssExtractPlugin = new MiniCssExtractPlugin({
 
 const isProduction = process.env.NODE_ENV === "production";
 
-// Shared by the app and the service-worker push chunk below.
-const tsRule = {
-	test: /\.ts$/i,
-	include: [path.resolve(__dirname, "client"), path.resolve(__dirname, "shared")],
-	exclude: path.resolve(__dirname, "node_modules"),
-	use: {
-		loader: "babel-loader",
-		options: babelConfig,
-	},
-};
+// Shared by the app and the service-worker push chunk below. A factory, not
+// a shared object: the development branch below mutates a rule's
+// `use.options` in place (adding the istanbul plugin), and `config` and
+// `pushConfig` must each get their own copy or that mutation would leak
+// into the push chunk's rule too.
+function makeTsRule() {
+	return {
+		test: /\.ts$/i,
+		include: [path.resolve(__dirname, "client"), path.resolve(__dirname, "shared")],
+		exclude: path.resolve(__dirname, "node_modules"),
+		use: {
+			loader: "babel-loader",
+			options: {...babelConfig},
+		},
+	};
+}
 
 const config: webpack.Configuration = {
 	name: "app",
@@ -169,7 +175,7 @@ const config: webpack.Configuration = {
 					},
 				},
 			},
-			tsRule,
+			makeTsRule(),
 			{
 				test: /\.css$/,
 				use: [
@@ -351,7 +357,7 @@ const pushConfig: webpack.Configuration = {
 		extensions: [".ts", ".js"],
 	},
 	module: {
-		rules: [tsRule],
+		rules: [makeTsRule()],
 	},
 	optimization: {
 		splitChunks: false,

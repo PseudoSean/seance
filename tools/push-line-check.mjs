@@ -114,7 +114,7 @@ const clear = () =>
 const deliver = (line) => inWorker(`handlePush(${JSON.stringify(line)}).then(() => true)`);
 const shown = () =>
 	inWorker(
-		"self.registration.getNotifications().then((ns) => ns.map((n) => ({title: n.title, body: n.body, tag: n.tag, count: n.data && n.data.count})))"
+		"self.registration.getNotifications().then((ns) => ns.map((n) => ({title: n.title, body: n.body, tag: n.tag, count: n.data && n.data.count, renotify: n.renotify})))"
 	);
 
 let failures = 0;
@@ -135,6 +135,19 @@ let ns = await shown();
 check("one notification for the PM", ns.length === 1, ns);
 check("PM body stripped", ns[0]?.body === `hello ${RUN}`, ns);
 check("PM title is the sender", ns[0]?.title === "alice", ns);
+
+// `renotify` on a real Notification reflects the option passed to
+// showNotification; some headless builds may not expose it at all, in
+// which case we only check it stays consistently present or absent.
+const rendersRenotify = ns[0]?.renotify !== undefined;
+
+if (rendersRenotify) {
+	check("a fresh PM notification carries renotify: true", ns[0]?.renotify === true, ns);
+} else {
+	console.log(
+		"  note  this build's Notification objects do not expose renotify; skipping the exact-value checks"
+	);
+}
 
 // 2. the same msgid again: the page's "seen" ring is empty in this check
 // (no live page recorded the msgid), so the worker merges it again rather
@@ -178,6 +191,16 @@ check("one notification for the batch", ns.length === 1, ns);
 check("batch counted once", ns[0]?.count === 1, ns);
 check("batch body reassembled and stripped", ns[0]?.body === "bob: let x = 1;", ns);
 check("batch title is a highlight", ns[0]?.title === "bob in #seance", ns);
+
+if (rendersRenotify) {
+	check(
+		"a batch's second line joining an existing entry carries renotify: false",
+		ns[0]?.renotify === false,
+		ns
+	);
+} else {
+	check("renotify stays consistently absent for a batch join", ns[0]?.renotify === undefined, ns);
+}
 
 // 5. a concat chunk glues on
 await clear();
