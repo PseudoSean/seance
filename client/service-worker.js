@@ -268,7 +268,9 @@ function showPageNotification(event, payload) {
 //   - per-target merging with a rising unread count (once per message, not
 //     per multiline line), a combined body stripped of IRC formatting and —
 //     when the reader renders Markdown — of its markers, and the recent
-//     messages kept in the notification's data (tag `push-<target>`),
+//     messages kept in the notification's data (tag `push-<target>`); the
+//     tag replaces the record in place, and `renotify` only for a new
+//     message,
 //   - app badge = total unread across push notifications,
 //   - actions on every platform: Reply (an inline text field where the
 //     platform has one; a button that opens the conversation elsewhere)
@@ -807,10 +809,6 @@ async function handlePush(raw) {
 			P.notificationText(text, {markdown})
 		);
 
-		for (const n of existing) {
-			n.close();
-		}
-
 		const title = isChannel
 			? parsed.nick + " in " + parsed.target + (count > 1 ? " (" + count + ")" : "")
 			: parsed.nick + (count > 1 ? " (" + count + ")" : "");
@@ -833,6 +831,7 @@ async function handlePush(raw) {
 
 		await showSafely(title, {
 			tag,
+			renotify: added.isNew,
 			icon: "img/icon-192.png",
 			body,
 			timestamp: time ? Date.parse(time) : undefined,

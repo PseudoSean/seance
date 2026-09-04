@@ -12,6 +12,9 @@ import {expect} from "chai";
 import {readFileSync} from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
+import {CONCAT_TAG, lineIndexOf, parsePushLine} from "../../client/js/push/line";
+import {addMessage, MERGE_KEEP, renderMergedBody} from "../../client/js/push/merge";
+import {notificationText, stripFormatting} from "../../client/js/push/strip";
 
 const SW_SOURCE = readFileSync(path.join(__dirname, "../../client/service-worker.js"), "utf8");
 
@@ -298,6 +301,18 @@ function makeSW(muteList = "", options: HarnessOptions = {}): SWHarness {
 				);
 			},
 			showNotification(title: string, opts: any): Promise<void> {
+				// The real Notifications API replaces a same-tag notification
+				// silently rather than showing a second one; mirror that here
+				// so the worker's tag-based merge (no explicit close-then-show)
+				// behaves the same under test as in a browser.
+				if (opts.tag) {
+					for (const n of records) {
+						if (!n.closed && n.tag === opts.tag) {
+							n.closed = true;
+						}
+					}
+				}
+
 				const rec: Rec = {
 					tag: opts.tag || "",
 					title,
@@ -377,6 +392,19 @@ function makeSW(muteList = "", options: HarnessOptions = {}): SWHarness {
 	};
 	sandbox.self = sandbox;
 	sandbox.globalThis = sandbox;
+	// The real push module, exactly as js/push.js hands it to the worker
+	// (client/js/push/worker-entry.ts) — so this sandbox exercises the path
+	// the browser runs, not the worker's own no-module-loaded fallback.
+	sandbox.seancePush = {
+		parsePushLine,
+		lineIndexOf,
+		CONCAT_TAG,
+		notificationText,
+		stripFormatting,
+		addMessage,
+		renderMergedBody,
+		MERGE_KEEP,
+	};
 
 	sandbox.addEventListener = (n: string, f: (ev: any) => void) => {
 		(handlers[n] = handlers[n] || []).push(f);
@@ -487,34 +515,34 @@ describe("service worker push notifications", function () {
 		expect(live[0].data.messages).to.have.lengthOf(2);
 	});
 
-	// Middle-ellipsis truncation and the whole-body `… +N more` collapse now
-	// live in client/js/push/merge.ts's renderMergedBody (self.seancePush,
-	// covered by its own mocha tests) rather than in the worker. This VM
-	// sandbox stubs importScripts() as a no-op, so it always exercises the
-	// worker's inline fallback (push.js did not load), which renders
-	// messages untruncated — the "inline minimum" the header comment
-	// describes.
-	it("the fallback renders a long single message untruncated", async function () {
+	it("middle-truncates a long single message", async function () {
 		const sw = makeSW();
 
 		const long = "x".repeat(30) + " MIDDLE " + "y".repeat(30);
 		await firePush(sw, msgPayload("alice", "pushtest", long));
 
-		expect(sw.shown[0].body).to.equal(long);
+		expect(sw.shown[0].body).to.contain("…");
+		expect(sw.shown[0].body.length).to.be.lessThan(70);
+		expect(sw.shown[0].body.startsWith("xxx")).to.equal(true);
+		expect(sw.shown[0].body.endsWith("yyy")).to.equal(true);
 	});
 
-	it("the fallback keeps the newest MERGE_KEEP messages, one per line", async function () {
+	it("collapses an overflowing conversation behind `… +N more`", async function () {
 		const sw = makeSW();
+		const filler = "lorem ipsum dolor sit amet ".repeat(3); // ~81 chars
 
 		for (let i = 1; i <= 5; i++) {
-			await firePush(sw, msgPayload("alice", "pushtest", `msg${i}`));
+			await firePush(sw, msgPayload("alice", "pushtest", `msg${i} ${filler}`));
 		}
 
 		const live = sw.records.filter((n) => !n.closed);
 		expect(live).to.have.lengthOf(1);
-		// MERGE_KEEP_FALLBACK=4 retained msg2-msg5; msg1 aged out of the
-		// window (the title's count=5 still covers it).
-		expect(live[0].body).to.equal("msg2\nmsg3\nmsg4\nmsg5");
+		// MERGE_KEEP=4 retained msg2-msg5; msg1 aged out of the window
+		// (the title's count=5 still covers it) and the body collapsed to
+		// the oldest kept line, the +N marker, and the newest line.
+		expect(live[0].body).to.contain("… +2 more");
+		expect(live[0].body).to.contain("msg2"); // oldest kept for context
+		expect(live[0].body).to.contain("msg5"); // newest kept
 		expect(live[0].data.count).to.equal(5);
 	});
 
@@ -538,6 +566,65 @@ describe("service worker push notifications", function () {
 		// the payload's time is fixed in the past; the read marker predates it
 		await firePush(sw, msgPayload("alice", "pushtest", "arrived later"));
 		await firePush(sw, `{"t":"read","target":"pushtest","ts":"2026-09-01T00:00:00.000Z"}`);
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live).to.have.lengthOf(1);
+	});
+
+	it("strips IRC formatting always, and Markdown markers only when the reader renders it", async function () {
+		const defaultPrefs = makeSW();
+		await firePush(
+			defaultPrefs,
+			"@msgid=fmt1;time=2026-09-02T19:59:00.000Z :alice!u@h PRIVMSG pushtest :\x02**hello**\x02"
+		);
+		expect(defaultPrefs.shown[0].body).to.equal("hello");
+
+		const markdownOff = makeSW();
+		markdownOff.kv.set("prefs", {markdown: false});
+		await firePush(
+			markdownOff,
+			"@msgid=fmt2;time=2026-09-02T19:59:00.000Z :alice!u@h PRIVMSG pushtest :\x02**hello**\x02"
+		);
+		expect(markdownOff.shown[0].body).to.equal("**hello**");
+	});
+
+	it("reassembles a multiline batch delivered out of order into one notification", async function () {
+		const sw = makeSW();
+		const T = "2026-09-02T19:59:00.000Z";
+		const line = (i: number, text: string, concat = "") =>
+			`@batch=b1;msgid=b1;time=${T};evilnet.github.io/line=${i}/3/3${concat} :bob!u@h PRIVMSG pushtest :${text}`;
+
+		await firePush(sw, line(3, "```"));
+		await firePush(sw, line(1, "```js"));
+		await firePush(sw, line(2, "let x = 1;"));
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live).to.have.lengthOf(1);
+		expect(live[0].data.count).to.equal(1);
+		expect(live[0].body).to.equal("let x = 1;");
+	});
+
+	it("a MARKREAD line closes the target's notification when it postdates the message", async function () {
+		const sw = makeSW();
+
+		await firePush(
+			sw,
+			"@msgid=mr1;time=2026-09-02T19:59:00.000Z :alice!u@h PRIVMSG pushtest :unread"
+		);
+		await firePush(sw, ":irc.example MARKREAD alice timestamp=2099-01-01T00:00:00.000Z");
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live).to.have.lengthOf(0);
+	});
+
+	it("a MARKREAD line leaves a notification that postdates it", async function () {
+		const sw = makeSW();
+
+		await firePush(
+			sw,
+			"@msgid=mr2;time=2099-01-01T00:00:00.000Z :alice!u@h PRIVMSG pushtest :future"
+		);
+		await firePush(sw, ":irc.example MARKREAD alice timestamp=2026-09-02T19:59:00.000Z");
 
 		const live = sw.records.filter((n) => !n.closed);
 		expect(live).to.have.lengthOf(1);
@@ -618,9 +705,15 @@ describe("service worker push notifications", function () {
 		await firePush(sw, msgPayload("alice", "pushtest", "second one", "BjAAAaBjzZ1"));
 		expect(sw.shown, "shown when not seen").to.have.lengthOf(1);
 
-		// A push without a msgid (raw-line fallback) never dedups.
+		// The raw-line path dedupes on its own tags.msgid too, against the
+		// same "seen" ring.
+		sw.kv.set("seen", ["BjAAAaBjzZ9"]);
 		await firePush(sw, "@msgid=BjAAAaBjzZ9 :alice PRIVMSG pushtest :old line");
-		expect(sw.shown, "raw-line fallback still shows").to.have.lengthOf(2);
+		expect(sw.shown, "raw-line msgid in the seen ring is deduped").to.have.lengthOf(1);
+
+		// A raw line with a msgid not in the ring still shows.
+		await firePush(sw, "@msgid=BjAAAaBjzZ10 :alice PRIVMSG pushtest :new line");
+		expect(sw.shown, "raw-line msgid not in the ring still shows").to.have.lengthOf(2);
 	});
 
 	it("keeps the read relay working when seen entries exist", async function () {

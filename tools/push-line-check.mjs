@@ -41,7 +41,6 @@ await new Promise((r) => (ws.onopen = r));
 await call("Target.setDiscoverTargets", {discover: true});
 await call("Browser.grantPermissions", {permissions: ["notifications"], origin: ORIGIN});
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const {targetId} = await call("Target.createTarget", {url: "about:blank"});
 const {sessionId} = await call("Target.attachToTarget", {targetId, flatten: true});
 await call("Runtime.enable", {}, sessionId);
@@ -96,6 +95,18 @@ const setMarkdown = (on) =>
 			tx.onerror = () => rej(tx.error);
 		};
 	})`);
+// the page writes the "seen" ring the way push-seen.ts does
+const setSeen = (ids) =>
+	inPage(`new Promise((res, rej) => {
+		const req = indexedDB.open("seance-push", 1);
+		req.onupgradeneeded = () => req.result.createObjectStore("kv");
+		req.onsuccess = () => {
+			const tx = req.result.transaction("kv", "readwrite");
+			tx.objectStore("kv").put(${JSON.stringify(ids)}, "seen");
+			tx.oncomplete = () => res(true);
+			tx.onerror = () => rej(tx.error);
+		};
+	})`);
 const clear = () =>
 	inWorker(
 		"self.registration.getNotifications().then((ns) => { ns.forEach((n) => n.close()); return ns.length; })"
@@ -125,12 +136,26 @@ check("one notification for the PM", ns.length === 1, ns);
 check("PM body stripped", ns[0]?.body === `hello ${RUN}`, ns);
 check("PM title is the sender", ns[0]?.title === "alice", ns);
 
-// 2. the same msgid again: deduped by the worker's own merge, not doubled
+// 2. the same msgid again: the page's "seen" ring is empty in this check
+// (no live page recorded the msgid), so the worker merges it again rather
+// than double-counting a dedupe it cannot know about.
 await deliver(
 	`@msgid=pm${RUN};time=${T};account=alice :alice!u@h PRIVMSG me :\x02**hello**\x02 ${RUN}`
 );
 ns = await shown();
-check("a re-delivered PM does not double the count", ns.length === 1 && ns[0].count === 2, ns);
+check(
+	"a re-delivered PM merges again while the page's seen ring is empty",
+	ns.length === 1 && ns[0].count === 2,
+	ns
+);
+
+// 2b. the same msgid, this time in the page's "seen" ring: the worker dedupes and shows nothing
+await setSeen([`dedupe${RUN}`]);
+await clear();
+await deliver(`@msgid=dedupe${RUN};time=${T} :alice!u@h PRIVMSG me :should not show`);
+ns = await shown();
+check("a msgid in the seen ring is deduped and shows nothing", ns.length === 0, ns);
+await setSeen([]);
 
 // 3. markdown off: markers stay, formatting bytes still go
 await setMarkdown(false);
