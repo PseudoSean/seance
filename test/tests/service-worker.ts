@@ -487,34 +487,34 @@ describe("service worker push notifications", function () {
 		expect(live[0].data.messages).to.have.lengthOf(2);
 	});
 
-	it("middle-truncates a long single message", async function () {
+	// Middle-ellipsis truncation and the whole-body `… +N more` collapse now
+	// live in client/js/push/merge.ts's renderMergedBody (self.seancePush,
+	// covered by its own mocha tests) rather than in the worker. This VM
+	// sandbox stubs importScripts() as a no-op, so it always exercises the
+	// worker's inline fallback (push.js did not load), which renders
+	// messages untruncated — the "inline minimum" the header comment
+	// describes.
+	it("the fallback renders a long single message untruncated", async function () {
 		const sw = makeSW();
 
 		const long = "x".repeat(30) + " MIDDLE " + "y".repeat(30);
 		await firePush(sw, msgPayload("alice", "pushtest", long));
 
-		expect(sw.shown[0].body).to.contain("…");
-		expect(sw.shown[0].body.length).to.be.lessThan(70);
-		expect(sw.shown[0].body.startsWith("xxx")).to.equal(true);
-		expect(sw.shown[0].body.endsWith("yyy")).to.equal(true);
+		expect(sw.shown[0].body).to.equal(long);
 	});
 
-	it("collapses an overflowing conversation behind `… +N more`", async function () {
+	it("the fallback keeps the newest MERGE_KEEP messages, one per line", async function () {
 		const sw = makeSW();
-		const filler = "lorem ipsum dolor sit amet ".repeat(3); // ~81 chars
 
 		for (let i = 1; i <= 5; i++) {
-			await firePush(sw, msgPayload("alice", "pushtest", `msg${i} ${filler}`));
+			await firePush(sw, msgPayload("alice", "pushtest", `msg${i}`));
 		}
 
 		const live = sw.records.filter((n) => !n.closed);
 		expect(live).to.have.lengthOf(1);
-		// MERGE_KEEP=4 retained msg2-msg5; msg1 aged out of the window
-		// (the title's count=5 still covers it) and the body collapsed to
-		// the oldest kept line, the +N marker, and the newest line.
-		expect(live[0].body).to.contain("… +2 more");
-		expect(live[0].body).to.contain("msg2"); // oldest kept for context
-		expect(live[0].body).to.contain("msg5"); // newest kept
+		// MERGE_KEEP_FALLBACK=4 retained msg2-msg5; msg1 aged out of the
+		// window (the title's count=5 still covers it).
+		expect(live[0].body).to.equal("msg2\nmsg3\nmsg4\nmsg5");
 		expect(live[0].data.count).to.equal(5);
 	});
 
