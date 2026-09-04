@@ -637,25 +637,14 @@ function transmit(client: IrcClient, batch: SentBatch): boolean {
 	queue.verdict = setTimeout(
 		() => {
 			// Nothing came back: without `echo-message` that is what delivery
-			// looks like, and with it the echo was lost. Either way there is
-			// nothing left to wait for.
+			// looks like, and with it the echo was lost. Either way, treat the
+			// batch as delivered and pace what comes after it.
 			queue.verdict = null;
 			queue.inFlight = null;
-			pump(client);
+			paceAfter(client, batch);
 		},
 		echo ? MULTILINE_VERDICT_MS : MULTILINE_SETTLE_MS
 	);
-
-	// Pace the next batch past this one's server-side cooldown. pump() also
-	// waits for delivery (inFlight cleared by the echo or the verdict), so the
-	// next batch goes out at the later of the two — never inside the cooldown,
-	// where the server would drop its opener and leak its lines.
-	if (queue.waiting.length > 0) {
-		queue.pace = setTimeout(() => {
-			queue.pace = null;
-			pump(client);
-		}, batchCooldownMs(batch));
-	}
 
 	if (batch.pending) {
 		armPending(client, batch.pending); // (again, for a re-sent batch)
@@ -703,8 +692,35 @@ function settle(client: IrcClient): SentBatch | null {
  * is history, not an echo.
  */
 export function multilineAccepted(client: IrcClient): void {
-	settle(client);
-	pump(client);
+	const batch = settle(client);
+
+	if (batch) {
+		paceAfter(client, batch);
+	} else {
+		pump(client);
+	}
+}
+
+/**
+ * Hold whatever goes out next — the next batch of this message, or the first
+ * batch of a message sent moments later — for `batch`'s server-side cooldown,
+ * timed from its *delivery* (this is called from the echo, or the verdict
+ * timeout that stands in for it). The gate outlives the queue, so the cooldown
+ * a delivered batch leaves behind is not walked into by the next message; and
+ * timing it from delivery, not from the send, is what keeps it right once the
+ * server throttles and delivers a batch long after we sent it.
+ */
+function paceAfter(client: IrcClient, batch: SentBatch): void {
+	const queue = queueOf(client);
+
+	if (queue.pace) {
+		clearTimeout(queue.pace);
+	}
+
+	queue.pace = setTimeout(() => {
+		queue.pace = null;
+		pump(client);
+	}, batchCooldownMs(batch));
 }
 
 /**

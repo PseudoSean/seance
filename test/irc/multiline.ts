@@ -7,6 +7,7 @@ import {
 	batchCooldownMs,
 	joinMultiline,
 	MULTILINE_MAX_COOLDOWN_MS,
+	MULTILINE_SETTLE_MS,
 	parseMultilineValue,
 	planMultiline,
 } from "../../client/js/irc/multiline";
@@ -752,6 +753,50 @@ describe("multiline sending", function () {
 			}
 		});
 
+		it("paces a later message's batch past the previous message's cooldown", function () {
+			const clock = sinon.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
+
+			try {
+				const {client, transport, chanId} = setup();
+
+				// One whole message (a single batch), delivered.
+				client.input(chanId, "one\ntwo");
+				expect(transport.sent).to.deep.equal([
+					"BATCH +m1 draft/multiline #seance",
+					"@batch=m1 PRIVMSG #seance :one",
+					"@batch=m1 PRIVMSG #seance :two",
+					"BATCH -m1",
+				]);
+				transport.sent.length = 0;
+				echoBatch(transport, "Gk1", "one", "two");
+
+				// A second message, sent right after: the server is still cooling
+				// down from the first, so its batch must wait — the cooldown gate
+				// outlives the first message's queue (multiline.ts).
+				client.input(chanId, "three\nfour");
+				expect(transport.sent).to.deep.equal([]);
+
+				clock.tick(
+					batchCooldownMs({
+						lines: [
+							{text: "one", concat: false},
+							{text: "two", concat: false},
+						],
+						action: false,
+					})
+				);
+
+				expect(transport.sent).to.deep.equal([
+					"BATCH +m2 draft/multiline #seance",
+					"@batch=m2 PRIVMSG #seance :three",
+					"@batch=m2 PRIVMSG #seance :four",
+					"BATCH -m2",
+				]);
+			} finally {
+				clock.restore();
+			}
+		});
+
 		it("sends one line without a batch", function () {
 			const {client, transport, chanId} = setup();
 
@@ -1026,16 +1071,18 @@ describe("multiline sending", function () {
 				]);
 
 				transport.sent.length = 0;
-				// Without echo-message the batch is taken after a settle period,
-				// but the next one still waits out the delivered batch's cooldown.
+				// Without echo-message the batch is taken to be delivered after a
+				// settle period, and only then does the next one begin waiting out
+				// the delivered batch's cooldown.
 				clock.tick(
-					batchCooldownMs({
-						lines: [
-							{text: "one", concat: false},
-							{text: "two", concat: false},
-						],
-						action: true,
-					})
+					MULTILINE_SETTLE_MS +
+						batchCooldownMs({
+							lines: [
+								{text: "one", concat: false},
+								{text: "two", concat: false},
+							],
+							action: true,
+						})
 				);
 
 				expect(transport.sent).to.deep.equal([
