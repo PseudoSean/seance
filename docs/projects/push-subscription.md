@@ -588,3 +588,32 @@ opens); pre-existing, cosmetic, not yet attributed.
 - Upstream niceties worth a nefarious2 PR: the `>=` key-length quirk, the
   stale "from services" comment, and the silently-dropped pre-registration
   REGISTER (a `FAIL` would have saved a probe iteration).
+
+## Viewing and clearing registered devices (2026-09-04)
+
+Push subscriptions are per account, and a device leaks an endpoint whenever
+its browser subscription is recreated (a VAPID rotation, a re-subscribe),
+so an account accumulates stale endpoints the leaking browser cannot see or
+reach — the cause of duplicate notifications on a phone. The server offered
+only REGISTER/UNREGISTER, so there was no way to view or clear them. Added:
+
+- **Server** (`testnet/nefarious` `ircd/m_webpush.c`): `WEBPUSH LIST` sends
+  one `WEBPUSH LIST <armed> <cur> <endpoint>` line per subscription (endpoint
+  last, space-free) then `WEBPUSH LIST * <count>` as a terminator; `cur` is 0
+  for an endpoint bound to a superseded VAPID key. `WEBPUSH UNREGISTER *`
+  clears every subscription for the account in one command (per-endpoint
+  would cost ~2 s of fake lag each), broadcast S2S as `U <account> *`. No new
+  store code — `webpush_store_foreach`/`_clear` already existed.
+- **Client**: `handlers/webpush.ts` accumulates the LIST rows and flushes
+  them as one `webpush:subscriptions` bus event on the terminator;
+  `webpush.ts` fetches the set from a connected push network, marks this
+  browser's own endpoint, removes one (unsubscribing the browser when it is
+  ours), or clears all. Settings → Notifications shows a **Registered
+  devices** list (host, age, This device / Stale badges, per-device Remove,
+  Clear all). New bus events `webpush:list` / `webpush:subscriptions`
+  (bus-contract §1.7/§2). Tests: `test/irc/webpush.ts` (row accumulation,
+  terminator flush, empty set, per-request reset).
+
+The re-subscribe leak that creates the stale endpoints is fixed separately
+(the page and the worker now `WEBPUSH UNREGISTER` the endpoint they replace);
+this feature is how a user cleans up endpoints orphaned before that landed.
