@@ -110,6 +110,12 @@ interface ServerToClientEvents {
 	"msg:redact": EventHandler<{chan: number; id: number; by: string; reason?: string; time: Date}>;
 	/** Message `id` (already delivered via `msg`) replaces message `replaces`. */
 	"msg:edit": EventHandler<{chan: number; id: number; replaces: number}>;
+	/**
+	 * The pending copy `id` (delivered via `msg` with `pending: true`) is
+	 * settled: drop it. The echo, or the error line, that settles it
+	 * follows as its own `msg`.
+	 */
+	"msg:settled": EventHandler<{chan: number; id: number}>;
 	/** Someone else's `+typing` TAGMSG in a loaded channel/query (never our own). */
 	typing: EventHandler<{chan: number; nick: string; state: TypingState}>;
 

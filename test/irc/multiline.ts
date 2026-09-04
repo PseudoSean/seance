@@ -1065,7 +1065,9 @@ describe("multiline cooldown", function () {
 		cooldown(transport, 3);
 
 		expect(messages(client.lobby.id)).to.have.length(0);
-		expect(messages(chanId)).to.have.length(0);
+		// Only the pending copies of the message itself, which stay up while
+		// the batches wait (test/irc/pending.ts).
+		expect(messages(chanId).filter((m) => !m.pending)).to.have.length(0);
 	});
 
 	it("keeps the rest of the message behind the batch it re-sends", function () {

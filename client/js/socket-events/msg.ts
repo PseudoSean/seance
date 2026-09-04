@@ -9,6 +9,7 @@ import {addMention} from "../mentions";
 import {recordSeenMsgid} from "../push-seen";
 import {attachMediaPreviews} from "../helpers/messagePreviews";
 import * as saved from "../irc/saved-networks";
+import {insertMessage} from "../helpers/messageUpdates";
 
 let pop;
 
@@ -74,7 +75,10 @@ socket.on("msg", function (data) {
 	// derived locally from the text for direct media URLs only.
 	attachMediaPreviews(data.msg, receivingChannel.network, channel);
 
-	channel.messages.push(data.msg);
+	// Pending copies of our own messages (bus-contract §1.9) stay at the
+	// bottom until their echo settles them, so everything else goes in
+	// ahead of them.
+	insertMessage(channel.messages, data.msg);
 
 	// Highlights used to be collected server-side; keep the recent-mentions
 	// list locally instead. Replayed history renders its highlights but is

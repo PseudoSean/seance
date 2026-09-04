@@ -309,10 +309,10 @@ describe("Replies and reactions (handlers/tagmsg.ts, +draft/reply)", function ()
 			h.client.input(id, "/msg bob hi", {reply: "m1"});
 			h.client.input(id, "/notice bob hi", {reply: "m1"});
 			expect(h.sent()).to.deep.equal([
-				"@+draft/reply=m1 PRIVMSG #seance :yes",
-				"@+draft/reply=m1 PRIVMSG #seance :\x01ACTION nods\x01",
-				"PRIVMSG bob :hi",
-				"NOTICE bob :hi",
+				"@+draft/reply=m1;label=s1 PRIVMSG #seance :yes",
+				"@+draft/reply=m1;label=s2 PRIVMSG #seance :\x01ACTION nods\x01",
+				"@label=s3 PRIVMSG bob :hi",
+				"@label=s4 NOTICE bob :hi",
 			]);
 		});
 
@@ -328,7 +328,7 @@ describe("Replies and reactions (handlers/tagmsg.ts, +draft/reply)", function ()
 			});
 
 			socket.emit("input", {target: id, text: "via bus", reply: "m1"});
-			expect(h.sent()).to.deep.equal(["@+draft/reply=m1 PRIVMSG #seance :via bus"]);
+			expect(h.sent()).to.deep.equal(["@+draft/reply=m1;label=s1 PRIVMSG #seance :via bus"]);
 		});
 
 		it("reads +reply and +draft/reply into replyTo", function () {
@@ -369,12 +369,16 @@ describe("Replies and reactions (handlers/tagmsg.ts, +draft/reply)", function ()
 			const source = ":alice!alice@host.example ";
 
 			for (const line of sent) {
-				expect(line).to.match(/^@\+draft\/reply=ABAAAAAaA8Iz\[f PRIVMSG #seance :wörd\d+/);
+				expect(line).to.match(
+					/^@\+draft\/reply=ABAAAAAaA8Iz\[f;label=s\d+ PRIVMSG #seance :wörd\d+/
+				);
 				expect(utf8ByteLength(line) + source.length).to.be.at.most(MAX_LINE_BYTES);
 			}
 
-			const prefix = `@+draft/reply=${parent} PRIVMSG #seance :`;
-			expect(sent.map((l) => l.slice(prefix.length)).join(" ")).to.equal(words);
+			const body = "PRIVMSG #seance :";
+			expect(sent.map((l) => l.slice(l.indexOf(body) + body.length)).join(" ")).to.equal(
+				words
+			);
 		});
 	});
 });

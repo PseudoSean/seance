@@ -1711,6 +1711,13 @@ textarea.input {
 	color: var(--body-color-muted);
 }
 
+/* A copy of our own message the server has not echoed yet (bus-contract
+ * §1.9): faded rather than recoloured, so it reads the same on every theme,
+ * and back to normal — as a new row — once the echo replaces it. */
+#chat .msg.pending {
+	opacity: 0.55;
+}
+
 #chat .msg.channel_list_loading .text {
 	color: #999;
 	font-style: italic;

@@ -6,6 +6,7 @@
 			{
 				self: message.self,
 				highlight: (message.highlight && store.state.settings.highlightMessages) || focused,
+				pending: message.pending,
 				'previous-source': isPreviousSource,
 			},
 		]"
