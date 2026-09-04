@@ -622,10 +622,13 @@ export class IrcClient {
 				this.pushMessage(
 					this.lobby,
 					{
-						text: `Reconnecting in ${Math.max(
-							1,
-							Math.round(ev.delayMs / 1000)
-						)}s (attempt ${ev.attempt})…`,
+						// A stable connection's loss retries at once (transport.ts).
+						text:
+							ev.delayMs < 500
+								? `Reconnecting now (attempt ${ev.attempt})…`
+								: `Reconnecting in ${Math.round(ev.delayMs / 1000)}s (attempt ${
+										ev.attempt
+								  })…`,
 					},
 					true
 				);
@@ -1105,10 +1108,35 @@ export class IrcClient {
 
 	/**
 	 * `WEBPUSH UNREGISTER <endpoint>`: drop the subscription for this
-	 * account. The server echoes even when the endpoint was not registered.
+	 * account. `*` clears every endpoint the account has in one command. The
+	 * server echoes even when the endpoint was not registered.
 	 */
 	webpushUnregister(endpoint: string): boolean {
 		return this.send(`WEBPUSH UNREGISTER ${endpoint}`);
+	}
+
+	/** Rows collected between a `WEBPUSH LIST` and its `* <count>` terminator. */
+	private webpushListAccum: {endpoint: string; armed: number; current: boolean}[] = [];
+
+	/** `WEBPUSH LIST`: ask the server for the account's registered endpoints.
+	 * The reply is a run of rows (webpushListRow) ended by webpushListEnd. */
+	webpushList(): boolean {
+		this.webpushListAccum = [];
+		return this.send("WEBPUSH LIST");
+	}
+
+	/** One `WEBPUSH LIST` data row, from handlers/webpush.ts. */
+	webpushListRow(row: {endpoint: string; armed: number; current: boolean}): void {
+		this.webpushListAccum.push(row);
+	}
+
+	/** The `WEBPUSH LIST * <count>` terminator: flush the collected rows. */
+	webpushListEnd(): void {
+		this.dispatch("webpush:subscriptions", {
+			network: this.uuid,
+			subs: this.webpushListAccum,
+		});
+		this.webpushListAccum = [];
 	}
 
 	// --------------------------------------------------------------- sending

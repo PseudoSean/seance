@@ -57,6 +57,28 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 		}
 	});
 
+	// By network + target name rather than channel id: what a notification
+	// can still name after the page is gone (the worker's relayed reply, the
+	// outbox). Only over a connected client — a reconnecting one would throw.
+	bus.handle("send", ({network, target, text}) => {
+		const client = registry.clientForNetwork(network);
+
+		if (client && client.isConnected) {
+			client.sendMessage(target, text);
+		} else {
+			// eslint-disable-next-line no-console
+			console.warn("[irc] send to a network that is not connected", network, target);
+		}
+	});
+
+	bus.handle("webpush:list", ({network}) => {
+		const client = registry.clientForNetwork(network);
+
+		if (client && client.isConnected) {
+			client.webpushList();
+		}
+	});
+
 	bus.handle("msg:react", ({target, msgid, text, remove}) => {
 		const client = registry.clientForChannel(target);
 		const chan = client?.channelById(target);

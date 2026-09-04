@@ -415,6 +415,141 @@ The register/unregister, subscription map and stash behaviour are unchanged
 for every network that does not explicitly opt out — the flag gates
 delivery per network, it does not fragment the subscription.
 
+## Pushing to attached sessions: the idle gate + the seen ring (2026-09-03)
+
+The classic policy pushes only **HOLDING** sessions — no client attached.
+Users who leave a client permanently connected but backgrounded never
+hold, so they never get pushes, and their attached desktop also **blocked
+pushes to their other devices** (the session is per account, so one live
+socket suppressed the account-wide push). Two coordinated halves fix that;
+both must ship together:
+
+- **Server: `FEAT_WEBPUSH_IDLE`** (seconds; `0` = off, the default). When a
+  message targets an **attached** session, `m_webpush.c`
+  (`webpush_attached_idle_ok` → the pure `webpush_idle_permits` in
+  `webpush_idle.c`) opens the gate once the session's `hs_last_active` is
+  at least that old. The signal is deliberately coarse: `hs_last_active` is
+  bumped at attach and on every PRIVMSG the account sends
+  (`bounce_record_activity`), and NOT by PING/PONG keepalives
+  (`IDLE_FROM_MSG` keeps `parse.c` out), so keepalive-only connections age
+  out. An actively-chatting session never crosses the threshold. Unit
+  tests: `ircd/test/webpush_idle_cmocka.c`.
+- **Client: the "seen" ring** (`client/js/push-seen.ts` +
+  `service-worker.js`). A live page that received a message over its own
+  WebSocket records the msgid into an IndexedDB ring (last 200, key `seen`
+  in the `seance-push` DB); the worker's push handler drops any
+  `t:"msg"/"hl"` push whose msgid is already there — the page owns its
+  notifications, its own rules decide what the user sees. `t:"read"`
+  closes are never deduped, and the raw-line fallback carries no msgid so
+  it never dedups. Recorded subset = what the server can push: PMs
+  (QUERY channels) and channel highlights. A frozen page writes nothing —
+  which is exactly when the push must show. Unit tests: the SW harness in
+  `test/tests/service-worker.ts`.
+
+Net effect: focused tab → local notifications only (pushes deduped away);
+backgrounded-but-alive tab → local notification, FCM duplicate silently
+dropped; frozen or closed tab → the push shows; and the always-connected
+desktop stops blocking pushes to the user's phone.
+
+Verified live against testnet (FEAT_WEBPUSH_IDLE 60): an attached, silent
+for 76s session — which answered server PINGs the whole time, proving
+keepalives don't reset the clock — gets `WebPush: idle gate: state=attached age=76` and the push pipeline runs (`notify_pm entry` → `notify_account` →
+delivery attempt). The gate line is permanent: it explains in the log why
+any push did or did not fire.
+
+Sidebar bell states (the per-network status indicator): solid **green**
+bell = subscribed; **muted** bell = enabled, not subscribed (the shipped
+font is FA5 solid-only, so the outline variant does not exist — the colour
+separates the states); **bell-slash** = notifications off for the network.
+
+## Replying from a notification, and opening it (2026-09-04)
+
+Reported from a phone: a reply typed into a push notification never went
+out, and tapping a notification opened the app on whatever it last showed.
+Root causes, each confirmed against the testnet ircd and all fixed:
+
+- **The reply never opened a connection.** The worker only sent when the
+  page had stashed a remembered password, and otherwise silently opened the
+  app and dropped the text. The ircd's SASL chain log records every nick it
+  sees, and the worker's fixed nick `seance-sw` appears in none of the
+  user's sessions — the failure was upstream of the socket.
+- **A fixed nick collides with its own ghost.** nefarious2's bouncer holds
+  a QUIT'd account session as a ghost that keeps its nick, so the second
+  reply ever sent as `seance-sw` gets `433`, which the worker did not
+  handle — a 10 s timeout, then nothing.
+- **A channel PRIVMSG fired at 001 races the bouncer's replay.** Logging in
+  as the account attaches the connection to the account's session (an
+  alias while the app is connected elsewhere, a resume of the held session
+  otherwise); the session's `JOIN`s are replayed right _after_ 001, and a
+  PRIVMSG sent at 001 came back `404 Cannot send to channel` in one run out
+  of five. A PM has no such race.
+- **Clicks could not name a conversation.** Channel ids are session-local;
+  a notification that outlived the page could only open the app root.
+
+What ships (`client/service-worker.js`, `test/tests/service-worker.ts`,
+`client/js/webpush.ts`, `router.ts`, `helpers/pendingTarget.ts`):
+
+- **A reply is never lost.** Three senders, tried in order: an open page
+  (any window, posted with a `MessageChannel`; a frozen page never answers
+  and is given 2.5 s), the worker's own throwaway connection when the
+  password is stashed, and otherwise the IndexedDB `outbox` plus opening
+  the app on the conversation — the page drains the outbox on
+  `webpush:available` (post-001) through the new `send` bus emit
+  (bus-contract §2.1). A Reply button without text (no inline field) opens
+  the conversation.
+- **The throwaway connection** uses a random `seance-xxxxxx` nick, retries
+  another on `433`/`436`/`437`, fails fast on `CAP NAK`/`ERROR`/close, waits
+  for its own `JOIN` of the target (or the `Session resumed` notice, or a
+  1.5 s settle) before a channel PRIVMSG, retries once on `404`, splits
+  long text into frame-sized lines, and only then `QUIT`s. Renewal after
+  `pushsubscriptionchange` sends `WEBPUSH REGISTER` after 001 (the
+  pre-`CAP END` window it used before is silently dropped — see above).
+- **The stash is rewritten on every connect** (`autoRegister`) and on every
+  network save, for every push-enabled network that announced a key: uuid,
+  host, port, tls, account — the password only when remembered. That is what
+  lets the worker deep-link and relay without a login, and log in when it
+  may.
+- **Deep links by network + target.** Every notification carries
+  `data.network`/`data.target` (page notifications get them from `msg.ts`;
+  push notifications from the stash). A click posts `{type: "open", network, target}`
+  to an open page or opens `#/net/<uuid>/<target>`; the route resolves to
+  the channel when it exists, else remembers the pair (60 s TTL) and lands
+  on the network (or the connect form, whose autoconnect brings it up) —
+  `socket-events/join.ts` switches when that join arrives and holds the
+  view still meanwhile, `network.ts` opens a `/query` for a nick target.
+
+Verified in a real Chromium against the rig (`tmp/sw-reply-probe2.mjs`,
+all six modes; a listener in `#seance` confirmed every delivery): page relay
+acked in 5 ms with no throwaway socket; held session → worker connection →
+delivered in 744 ms, the JOIN replay observed at 136 ms; queued reply
+delivered by the reopened page 1.4 s after it booted, outbox emptied; click
+moved an open page from Settings to `#seance`; a cold start on the deep link
+landed on `#seance` 313 ms after boot.
+
+Two facts about the server worth keeping: a resumed or attached
+connection is renamed to the session's nick (`001 <session-nick>`), so the
+worker must read its nick from 001; and `WEBPUSH_MAX_REGISTRATIONS`
+(default 10) now refuses an eleventh device with
+`FAIL WEBPUSH MAX_REGISTRATIONS` — fresh browser profiles against one test
+account hit it quickly.
+
+### Foreground reconnect (same day)
+
+`docs/projects/seamless-reconnect.md` round six. A frozen tab thawing
+took 2.0 s to be registered again; now 0.2 s: `transport.ts` retries at
+once (no backoff) when a connection that was stable for 30 s drops, or
+when the socket dies while a probe is in flight (the foreground poke runs
+before the OS delivers the close), backing off only if that retry fails
+too; `probe()` takes the poke's shorter 4 s deadline; a dial stuck in
+CONNECTING is abandoned after 15 s and redialled at foreground time after
+3 s; `foreground.ts` also listens for `resume` (Page Lifecycle thaw) and
+`focus`. Measured with `tmp/sw-reply-probe2.mjs reconnect` (freeze via
+DevTools, drop the socket at the dev-origin's `POST /__drop`, thaw).
+
+Open: two `You are not connected…` lobby lines appear at the moment of the
+redial (something sends twice during the ~5 ms before the new socket
+opens); pre-existing, cosmetic, not yet attributed.
+
 ## Verification checklist (phase 1 done = all of these)
 
 1. `corepack yarn test` green (lint + mocha).
@@ -453,3 +588,32 @@ delivery per network, it does not fragment the subscription.
 - Upstream niceties worth a nefarious2 PR: the `>=` key-length quirk, the
   stale "from services" comment, and the silently-dropped pre-registration
   REGISTER (a `FAIL` would have saved a probe iteration).
+
+## Viewing and clearing registered devices (2026-09-04)
+
+Push subscriptions are per account, and a device leaks an endpoint whenever
+its browser subscription is recreated (a VAPID rotation, a re-subscribe),
+so an account accumulates stale endpoints the leaking browser cannot see or
+reach — the cause of duplicate notifications on a phone. The server offered
+only REGISTER/UNREGISTER, so there was no way to view or clear them. Added:
+
+- **Server** (`testnet/nefarious` `ircd/m_webpush.c`): `WEBPUSH LIST` sends
+  one `WEBPUSH LIST <armed> <cur> <endpoint>` line per subscription (endpoint
+  last, space-free) then `WEBPUSH LIST * <count>` as a terminator; `cur` is 0
+  for an endpoint bound to a superseded VAPID key. `WEBPUSH UNREGISTER *`
+  clears every subscription for the account in one command (per-endpoint
+  would cost ~2 s of fake lag each), broadcast S2S as `U <account> *`. No new
+  store code — `webpush_store_foreach`/`_clear` already existed.
+- **Client**: `handlers/webpush.ts` accumulates the LIST rows and flushes
+  them as one `webpush:subscriptions` bus event on the terminator;
+  `webpush.ts` fetches the set from a connected push network, marks this
+  browser's own endpoint, removes one (unsubscribing the browser when it is
+  ours), or clears all. Settings → Notifications shows a **Registered
+  devices** list (host, age, This device / Stale badges, per-device Remove,
+  Clear all). New bus events `webpush:list` / `webpush:subscriptions`
+  (bus-contract §1.7/§2). Tests: `test/irc/webpush.ts` (row accumulation,
+  terminator flush, empty set, per-request reset).
+
+The re-subscribe leak that creates the stale endpoints is fixed separately
+(the page and the worker now `WEBPUSH UNREGISTER` the endpoint they replace);
+this feature is how a user cleans up endpoints orphaned before that landed.

@@ -22,7 +22,12 @@ export function installForegroundHooks(): void {
 		}
 	});
 
+	// Page Lifecycle: a frozen tab thaws (Chrome, Android especially) —
+	// the socket almost certainly died while it was frozen.
+	document.addEventListener("resume", () => reconnectAll());
+
 	window.addEventListener("online", () => reconnectAll());
+	window.addEventListener("focus", () => reconnectAll());
 
 	window.addEventListener("pageshow", (ev: PageTransitionEvent) => {
 		if (ev.persisted) {
