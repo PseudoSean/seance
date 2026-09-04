@@ -83,7 +83,7 @@ export function addMessage(
 	incoming: IncomingMessage,
 	keep = MERGE_KEEP
 ): {entries: MergedMessage[]; isNew: boolean} {
-	const list = entries.map((entry) => ({
+	const list: MergedMessage[] = entries.map((entry) => ({
 		...entry,
 		lines: entry.lines ? {...entry.lines} : undefined,
 	}));
