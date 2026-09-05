@@ -224,6 +224,21 @@ function switchToChannel(channel: ClientChan) {
 	void navigate("RoutedChat", {id: channel.id});
 }
 
+/**
+ * Whether the view is on a page the user opened on purpose — settings, help,
+ * the changelog, a network's edit form, search results — as opposed to the
+ * connect form (where the app lands when it has nowhere better to be) or a
+ * conversation. A network coming up — the saved networks dialed at boot, a
+ * reconnect's `init` — moves the view to a conversation only when it is not:
+ * a reload on settings brings the networks back in the sidebar and stays on
+ * settings. A route that is not resolved yet counts as nowhere.
+ */
+function onStandalonePage(): boolean {
+	const name = router.currentRoute.value.name;
+
+	return name !== undefined && name !== null && name !== "Connect" && name !== "RoutedChat";
+}
+
 if ("serviceWorker" in navigator) {
 	navigator.serviceWorker.addEventListener("message", (event) => {
 		if (!event.data || event.data.type !== "open") {
@@ -248,4 +263,4 @@ if ("serviceWorker" in navigator) {
 	});
 }
 
-export {router, navigate, switchToChannel, openTarget, findChannelByName};
+export {router, navigate, switchToChannel, onStandalonePage, openTarget, findChannelByName};

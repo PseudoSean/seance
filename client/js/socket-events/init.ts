@@ -1,7 +1,7 @@
 import socket from "../socket";
 import storage from "../localStorage";
 import {toClientChan} from "../chan";
-import {switchToChannel} from "../router";
+import {onStandalonePage, switchToChannel} from "../router";
 import {store} from "../store";
 import {ClientNetwork, ClientChan} from "../types";
 import {SharedNetwork, SharedNetworkChan} from "../../../shared/types/network";
@@ -24,10 +24,13 @@ socket.on("init", function (data) {
 	store.commit("isConnected", true);
 	store.commit("currentUserVisibleError", null);
 
-	// Open the channel the sender asked for, if we are not already somewhere
+	// Open the channel the sender asked for, if we are not already somewhere:
+	// neither in a conversation nor on a page the user opened (settings,
+	// help, …), which a registration — boot's autoconnect, a reconnect —
+	// leaves alone.
 	const channel = store.getters.findChannel(data.active);
 
-	if (channel && !store.state.activeChannel) {
+	if (channel && !store.state.activeChannel && !onStandalonePage()) {
 		switchToChannel(channel.channel);
 	}
 });

@@ -2,7 +2,7 @@ import socket from "../socket";
 import {getPendingTarget, isChannelTarget, takePendingTarget} from "../helpers/pendingTarget";
 import {beginLanding, pendingLanding, takeLanding} from "../helpers/lastChannel";
 import {store} from "../store";
-import {findChannelByName, switchToChannel} from "../router";
+import {findChannelByName, onStandalonePage, switchToChannel} from "../router";
 import {toClientChan} from "../chan";
 import {ClientNetwork} from "../types";
 import {ChanState} from "../../../shared/types/chan";
@@ -37,10 +37,20 @@ socket.on("network", function (data) {
  * the join when it comes. Waiting in the lobby rather than on a placeholder
  * matters — what is shown is what gets remembered, and an automatic stop
  * must not overwrite the memory.
+ *
+ * None of that on a page the user opened on purpose (settings, help, …): the
+ * networks boot dials there come up in the sidebar and the view stays put —
+ * the remembered conversation is left for them to open, and no landing is
+ * begun for it. A deep link is different: the user asked for it.
  */
 function openOnAnnounce(network: ClientNetwork): void {
 	const pending = getPendingTarget();
 	const fromDeepLink = pending !== null && pending.network === network.uuid;
+
+	if (!fromDeepLink && onStandalonePage()) {
+		return;
+	}
+
 	const waitingFor = fromDeepLink ? pending : beginLanding(network.uuid);
 
 	if (!waitingFor) {
