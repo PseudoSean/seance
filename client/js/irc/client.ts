@@ -1862,6 +1862,24 @@ export class IrcClient {
 		return this.channels.find((chan) => this.namesEqual(chan.name, name));
 	}
 
+	/**
+	 * Channels the user asked to `/join` (casefolded) whose JOIN has not come
+	 * back yet. Their JOIN announces a window the user wants to see
+	 * (`join.shouldOpen`, like `/query` and whois do), unlike an autojoin, a
+	 * restore or a forced join, which are state and must not move the view.
+	 */
+	private requestedJoins = new Set<string>();
+
+	/** Note a `/join` the user typed (commands/join.ts). */
+	requestJoin(name: string): void {
+		this.requestedJoins.add(this.casefold(name));
+	}
+
+	/** Whether the user asked for this channel — once: the request is consumed. */
+	takeRequestedJoin(name: string): boolean {
+		return this.requestedJoins.delete(this.casefold(name));
+	}
+
 	channelById(id: number): Channel | undefined {
 		return this.channels.find((chan) => chan.id === id);
 	}

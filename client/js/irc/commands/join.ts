@@ -37,6 +37,8 @@ const join: Command = {
 		);
 
 		names.forEach((name, i) => {
+			// The user wants to see this channel: its JOIN opens the window.
+			client.requestJoin(name);
 			const existing = client.findChannel(name);
 
 			if (existing && existing.type === ChanType.CHANNEL) {

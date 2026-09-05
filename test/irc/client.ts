@@ -398,6 +398,34 @@ describe("IrcClient", function () {
 			]);
 		});
 
+		it("opens the window of a channel the user asked to /join, not of one nobody asked for", function () {
+			const h = setup();
+			register(h);
+			h.client.input(h.client.lobby.id, "/join #New");
+			expect(h.sentAfter()).to.deep.equal(["JOIN #New"]);
+
+			// The server's confirmation, then a channel we never asked for
+			// (a forced join, a held session restoring one).
+			h.transport.line(":alice!alice@host JOIN #new");
+			h.transport.line(":alice!alice@host JOIN #forced");
+
+			const joins = payloads<{chan: SharedNetworkChan; shouldOpen: boolean}>("join");
+			expect(joins.map((j) => [j.chan.name, j.shouldOpen])).to.deep.equal([
+				["#new", true],
+				["#forced", false],
+			]);
+
+			// The request is consumed by its JOIN: leave and get put back, and
+			// the window is not opened again.
+			h.transport.line(":alice!alice@host PART #new");
+			expect(h.client.findChannel("#new")).to.equal(undefined);
+			h.transport.line(":alice!alice@host JOIN #new");
+			const again = payloads<{chan: SharedNetworkChan; shouldOpen: boolean}>("join");
+			expect(again).to.have.length(3);
+			expect(again[2].chan.name).to.equal("#new");
+			expect(again[2].shouldOpen).to.equal(false);
+		});
+
 		it("adds other users with extended-join account and gecos", function () {
 			const h = setup();
 			const id = joined(h);
