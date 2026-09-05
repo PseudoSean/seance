@@ -1,7 +1,8 @@
 import socket from "../socket";
-import {getPendingTarget, isChannelTarget} from "../helpers/pendingTarget";
+import {getPendingTarget, isChannelTarget, takePendingTarget} from "../helpers/pendingTarget";
+import {beginLanding, pendingLanding, takeLanding} from "../helpers/lastChannel";
 import {store} from "../store";
-import {switchToChannel} from "../router";
+import {findChannelByName, switchToChannel} from "../router";
 import {toClientChan} from "../chan";
 import {ClientNetwork} from "../types";
 import {ChanState} from "../../../shared/types/chan";
@@ -21,9 +22,47 @@ socket.on("network", function (data) {
 	store.commit("networks", [...store.state.networks, network]);
 	applyStoredNetworkOrder();
 
-	// Open last channel specified in `join`
-	switchToChannel(network.channels[network.channels.length - 1]);
+	openOnAnnounce(network);
 });
+
+/**
+ * Where the view goes while the network connects. In order: the conversation
+ * a notification deep link is waiting for on it, the one the last page had
+ * open on it (helpers/lastChannel.ts), else — as always — the last channel
+ * of the join list. The autojoin channels are already here as placeholders,
+ * so a deep link or a remembered channel that is one of them is shown at
+ * once. One that is not (a private conversation, a channel a held session
+ * will restore) is waited for in the lobby: the `network:status` handler
+ * below reopens a query once registered, and socket-events/join.ts lands on
+ * the join when it comes. Waiting in the lobby rather than on a placeholder
+ * matters — what is shown is what gets remembered, and an automatic stop
+ * must not overwrite the memory.
+ */
+function openOnAnnounce(network: ClientNetwork): void {
+	const pending = getPendingTarget();
+	const fromDeepLink = pending !== null && pending.network === network.uuid;
+	const waitingFor = fromDeepLink ? pending : beginLanding(network.uuid);
+
+	if (!waitingFor) {
+		switchToChannel(network.channels[network.channels.length - 1]);
+		return;
+	}
+
+	const hit = findChannelByName(network.uuid, waitingFor.target);
+
+	if (!hit) {
+		switchToChannel(network.channels[0]);
+		return;
+	}
+
+	if (fromDeepLink) {
+		takePendingTarget();
+	} else {
+		takeLanding();
+	}
+
+	switchToChannel(hit);
+}
 
 socket.on("network:options", function (data) {
 	const network = store.getters.findNetwork(data.network);
@@ -44,19 +83,26 @@ socket.on("network:status", function (data) {
 	network.status.connecting = data.connecting;
 	network.status.secure = data.secure;
 
-	// A notification deep link to a private conversation: channels arrive
-	// with the join burst, a query window only when opened — do that now
-	// (the resulting `join` lands on it).
+	// A private conversation to reopen now that we are registered: the one
+	// a notification deep link names, or the one the last page had open.
+	// Channels arrive with the join burst, a query window only when opened —
+	// do that now (the resulting `join` lands on it).
 	const pending = getPendingTarget();
+	const waitingFor =
+		pending !== null && pending.network === data.network
+			? pending
+			: pendingLanding(data.network);
 
 	if (
 		data.connected &&
-		pending &&
-		pending.network === data.network &&
-		!isChannelTarget(pending.target) &&
+		waitingFor &&
+		!isChannelTarget(waitingFor.target) &&
 		network.channels.length > 0
 	) {
-		socket.emit("input", {target: network.channels[0].id, text: `/query ${pending.target}`});
+		socket.emit("input", {
+			target: network.channels[0].id,
+			text: `/query ${waitingFor.target}`,
+		});
 	}
 
 	if (!data.connected) {

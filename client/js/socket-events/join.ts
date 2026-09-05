@@ -3,7 +3,9 @@ import {store} from "../store";
 import {switchToChannel} from "../router";
 import {ClientChan} from "../types";
 import {toClientChan} from "../chan";
+import {ChanType} from "../../../shared/types/chan";
 import {getPendingTarget, matchesPendingTarget, takePendingTarget} from "../helpers/pendingTarget";
+import {matchesLanding, pendingLanding, takeLanding} from "../helpers/lastChannel";
 
 socket.on("join", function (data) {
 	const network = store.getters.findNetwork(data.network);
@@ -15,30 +17,39 @@ socket.on("join", function (data) {
 	const clientChan: ClientChan = toClientChan(data.chan);
 	network.channels.splice(data.index || -1, 0, clientChan);
 
-	// A notification deep link is waiting for exactly this conversation:
-	// land on it, and on nothing else meanwhile (the join burst would
-	// otherwise walk the view through every autojoined channel).
+	// A notification deep link is waiting for exactly this conversation.
 	if (matchesPendingTarget(data.network, clientChan.name)) {
 		takePendingTarget();
 		switchToChannel(clientChan);
 		return;
 	}
 
-	if (getPendingTarget() !== null) {
+	// The conversation the last page had open, arriving now: a query
+	// reopened once registered, a channel a held session restores
+	// (helpers/lastChannel.ts).
+	if (matchesLanding(data.network, clientChan.name)) {
+		takeLanding();
+		switchToChannel(clientChan);
 		return;
 	}
 
-	// Queries do not automatically focus, unless the user did a whois
-	if (data.chan.type === "query" && !data.shouldOpen) {
+	// The user asked for this window (/join, /query, whois): show it.
+	if (data.shouldOpen) {
+		switchToChannel(clientChan);
 		return;
 	}
 
-	const chan = store.getters.findChannel(data.chan.id);
-
-	if (chan) {
-		switchToChannel(chan.channel);
-	} else {
-		// eslint-disable-next-line no-console
-		console.error("Could not find channel", data.chan.id);
+	// Waiting for a conversation on this network: nothing else moves the
+	// view meanwhile (the join burst would otherwise walk it through every
+	// channel that arrives).
+	if (getPendingTarget() !== null || pendingLanding(data.network) !== null) {
+		return;
 	}
+
+	// An incoming private message opens its window quietly.
+	if (data.chan.type === ChanType.QUERY) {
+		return;
+	}
+
+	switchToChannel(clientChan);
 });

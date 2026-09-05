@@ -248,4 +248,4 @@ if ("serviceWorker" in navigator) {
 	});
 }
 
-export {router, navigate, switchToChannel, openTarget};
+export {router, navigate, switchToChannel, openTarget, findChannelByName};
