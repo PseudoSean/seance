@@ -442,6 +442,7 @@ describe("upload", function () {
 			fieldName: "fileToUpload",
 			fields: {reqtype: "fileupload", time: "72h"},
 			maxSizeBytes: 1024 * 1024 * 1024,
+			progress: false,
 		};
 
 		it("sends fileToUpload with the reqtype and retention fields", function () {
@@ -941,6 +942,25 @@ describe("upload", function () {
 
 			expect(await rejectionMessage(pending)).to.equal("Upload failed: Failed to fetch");
 			expect(FakeXhr.instances).to.have.length(1);
+		});
+
+		it("never tries progress when the config says the endpoint cannot preflight", async function () {
+			const host = fakeHost({endpoint: ENDPOINT, progress: false});
+			const uploader = new Uploader(host, undefined, XHR);
+
+			const run = uploader.triggerUpload([textFile("a.txt", "hello")]);
+			const xhr = await lastXhr();
+			expect(xhr.upload.onprogress).to.equal(null);
+			xhr.respond(200, '{"url":"https://cdn.example.test/a"}');
+			await run;
+
+			expect(FakeXhr.instances).to.have.length(1);
+			expect(host.urls).to.deep.equal(["https://cdn.example.test/a"]);
+			expect(host.progressLog).to.deep.equal([
+				{fileName: "a.txt", index: 1, count: 1, phase: "preparing", loaded: 0, total: 0},
+				{fileName: "a.txt", index: 1, count: 1, phase: "sending", loaded: 0, total: 0},
+				null,
+			]);
 		});
 
 		it("remembers an endpoint that cannot report progress", async function () {

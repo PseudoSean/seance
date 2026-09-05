@@ -90,6 +90,14 @@ export interface BrandingUploads {
 	accept?: string[];
 	/** Send cookies/credentials with the request. Default false. */
 	withCredentials?: boolean;
+	/**
+	 * Whether the endpoint answers the CORS preflight (`OPTIONS`) that upload
+	 * progress events require. Default true. Set false for a service built
+	 * for curl and ShareX, which refuses `OPTIONS`: the client then sends a
+	 * plain POST from the start (no percentage, no failed preflight in the
+	 * console) instead of finding out the hard way once per page.
+	 */
+	progress?: boolean;
 	/** Extra request headers, e.g. an API key. */
 	headers?: Record<string, string>;
 }
@@ -146,6 +154,8 @@ export const UPLOAD_PRESETS: Record<string, BrandingUploads> = {
 		fieldName: "fileToUpload",
 		fields: {reqtype: "fileupload", time: "72h"},
 		maxSizeBytes: 1024 * 1024 * 1024,
+		// `OPTIONS` answers 405 (checked 2026-09-05), so no upload progress.
+		progress: false,
 	},
 };
 
@@ -443,6 +453,7 @@ function normalizeUploads(value: unknown): BrandingUploads | undefined {
 	const responseErrorKey = optionalString(value.responseErrorKey);
 	const accept = normalizeStringList(value.accept);
 	const withCredentials = optionalBoolean(value.withCredentials);
+	const progress = optionalBoolean(value.progress);
 	const headers = normalizeHeaders(value.headers);
 
 	if (typeof maxSizeBytes === "number" && Number.isFinite(maxSizeBytes) && maxSizeBytes > 0) {
@@ -477,6 +488,10 @@ function normalizeUploads(value: unknown): BrandingUploads | undefined {
 
 	if (withCredentials !== undefined) {
 		uploads.withCredentials = withCredentials;
+	}
+
+	if (progress !== undefined) {
+		uploads.progress = progress;
 	}
 
 	if (headers !== undefined) {

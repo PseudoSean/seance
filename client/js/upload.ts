@@ -858,7 +858,10 @@ export class Uploader {
 				file = await this.renderImage(file);
 			}
 
-			const wantsProgress = !this.progressBlocked.has(config.endpoint);
+			// No progress for an endpoint that cannot answer the preflight it
+			// needs, whether the config said so or this page found out.
+			const wantsProgress =
+				config.progress !== false && !this.progressBlocked.has(config.endpoint);
 			// Total 0 keeps the strip indeterminate when no byte counts will come.
 			report("sending", 0, wantsProgress ? file.size : 0);
 
