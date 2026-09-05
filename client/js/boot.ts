@@ -19,8 +19,9 @@ import {installNativeHooks} from "./native";
 import {installForegroundHooks} from "./foreground";
 import {migrateGlobalNotify} from "./irc/saved-networks";
 import {onLaunch} from "./pwa";
-// Registers the IRC layer's bus handlers (input, names, more, network:*).
-import "./irc/manager";
+// Importing the manager registers the IRC layer's bus handlers (input, names,
+// more, network:*).
+import {autoconnectSavedNetworks} from "./irc/manager";
 
 declare global {
 	interface Window {
@@ -111,21 +112,24 @@ export async function boot(): Promise<void> {
 		}
 	});
 
-	if (await handleQueryParams()) {
-		// web+irc:// links or connect parameters in the URL already put us on
-		// the connect form with those values pre-filled.
-		return;
-	}
-
-	// If we are on an unknown route, open the last known channel, or the
-	// connect form if there is none.
-	if (!router.currentRoute.value.name) {
+	// web+irc:// links or connect parameters in the URL put us on the connect
+	// form with those values pre-filled. Otherwise, on an unknown route, open
+	// the last known channel, or the connect form if there is none.
+	if (!(await handleQueryParams()) && !router.currentRoute.value.name) {
 		if (store.state.networks.length > 0) {
 			await navigate("RoutedChat", {id: store.state.networks[0].channels[0].id});
 		} else {
 			await navigate("Connect");
 		}
 	}
+
+	// The saved networks flagged autoconnect, whatever page the URL opened
+	// on. The connect form used to dial them when it mounted, which left a
+	// reload on settings or help with an empty sidebar until "Add network"
+	// was pressed. Last, once the page has a route: a network's announce
+	// moves the view off the connect form but leaves a page the user opened
+	// alone (socket-events/network.ts), and it needs to know which it is on.
+	autoconnectSavedNetworks();
 }
 
 /**

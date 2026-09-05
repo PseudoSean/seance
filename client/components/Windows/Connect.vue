@@ -311,7 +311,7 @@ import {defineComponent, onMounted, reactive, ref, watch} from "vue";
 
 import {useStore} from "../../js/store";
 import {brandingFeatures, brandingString, expandNick} from "../../js/branding";
-import {autoconnectSavedNetworks, createNetwork} from "../../js/irc/manager";
+import {createNetwork} from "../../js/irc/manager";
 import * as saved from "../../js/irc/saved-networks";
 import {defaultPort, displayName, SavedNetwork} from "../../js/irc/saved-networks";
 import type {ConnectOptions} from "../../js/irc/types";
@@ -529,13 +529,11 @@ export default defineComponent({
 
 		onMounted(() => {
 			// `?autoconnect=1` with a host and nick skips the form entirely.
+			// (The saved networks flagged autoconnect are boot's business,
+			// client/js/boot.ts: they come up whatever page the URL opened on.)
 			if (isTruthyParam(props.queryParams?.autoconnect) && form.host && form.nick) {
 				onSubmit();
 			}
-
-			// Saved networks flagged autoconnect (once per page load).
-			autoconnectSavedNetworks();
-			refreshSaved();
 		});
 
 		return {
