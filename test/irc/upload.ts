@@ -764,6 +764,9 @@ describe("upload", function () {
 
 			const run = uploader.triggerUpload([textFile("a.txt")]);
 			(await lastXhr()).fail();
+			// Before any progress, so it is retried once as a plain POST; that fails too.
+			await until(() => FakeXhr.instances.length === 2);
+			(await lastXhr()).fail();
 			await run;
 
 			expect(host.errors).to.deep.equal(["Upload failed: Failed to fetch"]);
@@ -863,11 +866,116 @@ describe("upload", function () {
 			expect(await response.text()).to.equal("");
 		});
 
+		it("attaches an upload listener only when progress is wanted", async function () {
+			const plain = xhrFetch(ENDPOINT, {method: "POST"}, {XHR});
+			const first = await lastXhr();
+			expect(first.upload.onprogress).to.equal(null);
+			first.respond(200, "ok");
+			await plain;
+
+			const withProgress = xhrFetch(ENDPOINT, {method: "POST"}, {XHR, onProgress() {}});
+			const second = await lastXhr();
+			expect(second.upload.onprogress).to.be.a("function");
+			second.respond(200, "ok");
+			await withProgress;
+		});
+
 		it("is what uploadFile uses when given an XHR class", async function () {
 			const pending = uploadFile(textFile(), {endpoint: ENDPOINT}, {xhr: XHR});
 			(await lastXhr()).respond(200, '{"url":"https://cdn.example.test/via-xhr"}');
 
 			expect(await pending).to.equal("https://cdn.example.test/via-xhr");
+		});
+	});
+
+	describe("progress needs a preflight", function () {
+		beforeEach(function () {
+			FakeXhr.instances = [];
+		});
+
+		it("retries as a plain POST when the request fails before any progress", async function () {
+			const seen: [number, number][] = [];
+			let unavailable = 0;
+			const pending = uploadFile(
+				textFile(),
+				{endpoint: ENDPOINT},
+				{
+					xhr: XHR,
+					onProgress: (loaded, total) => seen.push([loaded, total]),
+					onProgressUnavailable: () => unavailable++,
+				}
+			);
+
+			// The upload listener made the browser preflight; the uploader said 405.
+			(await lastXhr()).fail();
+			await until(() => FakeXhr.instances.length === 2);
+			const retry = await lastXhr();
+			expect(retry.upload.onprogress).to.equal(null);
+			expect(retry.body).to.be.instanceOf(FormData);
+			retry.respond(200, '{"url":"https://cdn.example.test/plain"}');
+
+			expect(await pending).to.equal("https://cdn.example.test/plain");
+			expect(unavailable).to.equal(1);
+			expect(seen).to.deep.equal([]);
+		});
+
+		it("does not retry once bytes were reported", async function () {
+			let unavailable = 0;
+			const pending = uploadFile(
+				textFile(),
+				{endpoint: ENDPOINT},
+				{xhr: XHR, onProgress() {}, onProgressUnavailable: () => unavailable++}
+			);
+			const xhr = await lastXhr();
+			xhr.progress(2, 5);
+			xhr.fail();
+
+			expect(await rejectionMessage(pending)).to.equal("Upload failed: Failed to fetch");
+			expect(FakeXhr.instances).to.have.length(1);
+			expect(unavailable).to.equal(0);
+		});
+
+		it("does not retry when no progress was asked for", async function () {
+			const pending = uploadFile(textFile(), {endpoint: ENDPOINT}, {xhr: XHR});
+			(await lastXhr()).fail();
+
+			expect(await rejectionMessage(pending)).to.equal("Upload failed: Failed to fetch");
+			expect(FakeXhr.instances).to.have.length(1);
+		});
+
+		it("remembers an endpoint that cannot report progress", async function () {
+			const host = fakeHost({endpoint: ENDPOINT});
+			const uploader = new Uploader(host, undefined, XHR);
+
+			const run = uploader.triggerUpload([
+				textFile("a.txt", "hello"),
+				textFile("b.txt", "hi!"),
+			]);
+			(await lastXhr()).fail();
+			await until(() => FakeXhr.instances.length === 2);
+			(await lastXhr()).respond(200, '{"url":"https://cdn.example.test/a"}');
+
+			await until(() => FakeXhr.instances.length === 3);
+			const second = await lastXhr();
+			// No upload listener from the start: no preflight for the second file.
+			expect(second.upload.onprogress).to.equal(null);
+			second.respond(200, '{"url":"https://cdn.example.test/b"}');
+			await run;
+
+			expect(host.errors).to.deep.equal([]);
+			expect(host.urls).to.deep.equal([
+				"https://cdn.example.test/a",
+				"https://cdn.example.test/b",
+			]);
+			// The strip is indeterminate (total 0) once progress is known to be unavailable.
+			expect(host.progressLog).to.deep.equal([
+				{fileName: "a.txt", index: 1, count: 2, phase: "preparing", loaded: 0, total: 0},
+				{fileName: "a.txt", index: 1, count: 2, phase: "sending", loaded: 0, total: 5},
+				{fileName: "a.txt", index: 1, count: 2, phase: "sending", loaded: 0, total: 0},
+				{fileName: "b.txt", index: 2, count: 2, phase: "preparing", loaded: 0, total: 0},
+				{fileName: "b.txt", index: 2, count: 2, phase: "sending", loaded: 0, total: 0},
+				null,
+			]);
 		});
 	});
 

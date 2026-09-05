@@ -87,8 +87,17 @@ export interface UploadFileOptions {
 	fetch?: typeof fetch;
 	/** `XMLHttpRequest` class to use instead of the global one. */
 	xhr?: XhrConstructor;
-	/** Upload progress, in bytes; only an XHR transport reports it. */
+	/**
+	 * Upload progress, in bytes; only an XHR transport reports it. Asking for
+	 * it makes the browser preflight the request (see `xhrFetch`).
+	 */
 	onProgress?: (loaded: number, total: number) => void;
+	/**
+	 * The endpoint refused the preflight that progress events require, and
+	 * the upload was retried as a plain POST without them. Callers remember
+	 * this so later uploads to the same endpoint skip the doomed preflight.
+	 */
+	onProgressUnavailable?: () => void;
 	signal?: AbortSignal;
 	/** Names of `config.fields` to leave out of this attempt. */
 	omitFields?: ReadonlySet<string>;
@@ -104,6 +113,12 @@ const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304]);
  * `Response` built from the status and text; a network failure rejects with
  * the same `TypeError("Failed to fetch")` fetch throws, an abort with an
  * `AbortError`.
+ *
+ * The upload listener is attached only when `onProgress` is given: an XHR
+ * with upload listeners is never a "simple" request, so the browser sends a
+ * CORS preflight (`OPTIONS`) first — which uploaders built for curl and
+ * ShareX do not answer (litterbox says 405) — and the request dies before a
+ * byte goes out. Without the listener the multipart POST needs no preflight.
  */
 export function xhrFetch(
 	url: string,
@@ -126,11 +141,15 @@ export function xhrFetch(
 			xhr.setRequestHeader(name, value);
 		}
 
-		xhr.upload.onprogress = (event) => {
-			if (event.lengthComputable) {
-				options.onProgress?.(event.loaded, event.total);
-			}
-		};
+		const {onProgress} = options;
+
+		if (onProgress !== undefined) {
+			xhr.upload.onprogress = (event) => {
+				if (event.lengthComputable) {
+					onProgress(event.loaded, event.total);
+				}
+			};
+		}
 
 		xhr.onload = () => {
 			const status = xhr.status;
@@ -152,6 +171,45 @@ export function xhrFetch(
 
 		xhr.send((init.body ?? null) as XMLHttpRequestBodyInit | null);
 	});
+}
+
+/**
+ * `xhrFetch` with the progress fallback: a request that fails before any
+ * progress event was seen is retried without the upload listener — that is
+ * what a refused preflight looks like, and the plain POST needs none — and
+ * `onProgressUnavailable` tells the caller. A failure after bytes went out,
+ * or with no progress asked for, is reported as it is.
+ */
+async function xhrSend(
+	url: string,
+	init: RequestInit,
+	options: UploadFileOptions,
+	XHR: XhrConstructor
+): Promise<Response> {
+	const wanted = options.onProgress;
+
+	if (wanted === undefined) {
+		return xhrFetch(url, init, {XHR});
+	}
+
+	let progressSeen = false;
+
+	const onProgress = (loaded: number, total: number) => {
+		progressSeen = true;
+		wanted(loaded, total);
+	};
+
+	try {
+		return await xhrFetch(url, init, {XHR, onProgress});
+	} catch (e: unknown) {
+		if (progressSeen || !(e instanceof TypeError)) {
+			throw e;
+		}
+
+		options.onProgressUnavailable?.();
+
+		return xhrFetch(url, init, {XHR});
+	}
 }
 
 /** Effective size limit for a config, in bytes. */
@@ -379,8 +437,7 @@ async function uploadAttempt(
 	let doFetch: typeof fetch | undefined = options.fetch;
 
 	if (doFetch === undefined && XHR !== undefined) {
-		doFetch = (url, init) =>
-			xhrFetch(String(url), init ?? {}, {XHR, onProgress: options.onProgress});
+		doFetch = (url, init) => xhrSend(String(url), init ?? {}, options, XHR);
 	}
 
 	if (doFetch === undefined && typeof fetch === "function") {
@@ -563,6 +620,12 @@ export class Uploader {
 	/** Files sent so far in this run of the queue, and how many it holds in all. */
 	private runDone = 0;
 	private runCount = 0;
+	/**
+	 * Endpoints that refused the preflight progress events need (see
+	 * `xhrFetch`): later uploads to them go out as plain POSTs at once, and
+	 * the strip shows an indeterminate bar. Per page, not persisted.
+	 */
+	private progressBlocked = new Set<string>();
 
 	onDragEnter = (e: DragEvent) => this.dragEnter(e);
 	onDragOver = (e: DragEvent) => this.dragOver(e);
@@ -795,14 +858,22 @@ export class Uploader {
 				file = await this.renderImage(file);
 			}
 
-			report("sending", 0, file.size);
+			const wantsProgress = !this.progressBlocked.has(config.endpoint);
+			// Total 0 keeps the strip indeterminate when no byte counts will come.
+			report("sending", 0, wantsProgress ? file.size : 0);
 
 			const url = await uploadFile(file, config, {
 				fetch: this.fetchImpl,
 				xhr: this.xhrImpl,
 				signal: controller.signal,
-				onProgress: (loaded, total) =>
-					report(loaded >= total ? "waiting" : "sending", loaded, total),
+				onProgress: wantsProgress
+					? (loaded, total) =>
+							report(loaded >= total ? "waiting" : "sending", loaded, total)
+					: undefined,
+				onProgressUnavailable: () => {
+					this.progressBlocked.add(config.endpoint);
+					report("sending", 0, 0);
+				},
 			});
 
 			host.insertUrl(url);
