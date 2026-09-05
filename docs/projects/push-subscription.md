@@ -684,12 +684,17 @@ Settings still said subscribed — a silent failure. Now:
   version of what the old silent branch tried; falls back to the prompt when
   permission is not granted, since `requestPermission()` needs a gesture),
   **Cold shoulder** (`ignore`: leave it; push from that server stays off
-  until renewed from Settings).
-- **Visible in Settings.** `refreshState` reports **`stale`** (before the
-  "stored means subscribed" rule) whenever `subscriptionIsStale` holds;
-  Settings → Notifications shows the explanation with a **Renew** button
-  (`#pushRenew` → `webpush.subscribe()`) instead of the snooze row, so the
-  problem stays visible after _Never_ and has a way out. The sidebar bell was
+  until renewed from the network's settings).
+- **Visible in Settings, renewed per network.** `refreshState` reports
+  **`stale`** (before the "stored means subscribed" rule) whenever
+  `subscriptionIsStale` holds; Settings → Notifications shows the explanation
+  instead of the snooze row and points at the network's settings, so the
+  problem stays visible after _Never_ and has a way out. The **Renew** button
+  is in the Edit-network form (`#pushRenew` → `webpush.renew(uuid)` →
+  `subscribe(<that network's key>)`), shown when `networkPushInfo(uuid).stale`
+  — a subscription is stored but not for the key this network announces. Per
+  network on purpose: with two networks announcing different keys, only that
+  network's key is the right one to subscribe against. The sidebar bell was
   already honest (`networkPushInfo().subscribed` checks the announced key).
 - **Scenario.** `tools/scenarios/push-renew.mjs` drives it in a real browser
   against the testnet ircd: headless Chromium has no push service, so an init
@@ -699,7 +704,7 @@ Settings still said subscribed — a silent failure. Now:
   is unsubscribed. It checks the silent subscribe with permission granted,
   the renew prompt after a simulated rotation (the stored map and the fake
   browser subscription re-keyed to a key the server never announced), _No_ →
-  Settings stale → Renew, _Never_ → setting `ignore`, no prompt on the next
+  Settings stale → Renew in Edit network, _Never_ → setting `ignore`, no prompt on the next
   connect and the radio selected in Settings, _Yes_ (back on `ask`), the
   `UNREGISTER old` / `REGISTER new` pairs on the wire, that the connect after
   a renewal re-REGISTERs the new endpoint without asking again, and `trust`
