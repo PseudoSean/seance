@@ -64,35 +64,3 @@ export type KeyChangePolicy = "ask" | "trust" | "ignore";
 export function keyChangePolicy(value: unknown): KeyChangePolicy {
 	return value === "trust" || value === "ignore" ? value : "ask";
 }
-
-/** The stored subscriptions no longer match any key a connected server
- * announces: the server rotated its VAPID key (or the stored subscription
- * belongs to a server that is not connected while others are). False while
- * nothing is stored, or while no connected server announces a key — then
- * there is nothing to compare against yet. */
-export function subscriptionIsStale(
-	storedKeys: Iterable<string>,
-	announcedKeys: Iterable<string | undefined>
-): boolean {
-	const stored = new Set(storedKeys);
-
-	if (stored.size === 0) {
-		return false;
-	}
-
-	let announced = false;
-
-	for (const key of announcedKeys) {
-		if (key === undefined) {
-			continue;
-		}
-
-		if (stored.has(key)) {
-			return false;
-		}
-
-		announced = true;
-	}
-
-	return announced;
-}

@@ -17,7 +17,7 @@
 				<p>
 					This server's push key changed, so this device's push subscription for it no
 					longer works. Subscribe again to keep being notified while the app is closed.
-					You can also do this later under Settings → Notifications.
+					You can also do this later from this network's settings.
 				</p>
 			</div>
 			<div v-else class="confirm-text">

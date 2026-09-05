@@ -39,6 +39,31 @@ try {
 // routing, every navigation request resolves to the scope root.
 const shellUrl = self.registration.scope;
 
+// Push-only registrations: the page registers this same script once more
+// per push-enabled network, at `<app>/push/<uuid>/`, because a browser holds
+// one push subscription per registration and each network has its own VAPID
+// key (docs/projects/push-per-network.md). Such a worker serves that one
+// network's pushes and nothing else: no shell cache, no fetch handling, and
+// deep links open the app, never its own scope.
+const scopeNetwork = networkOfScope(shellUrl);
+const pushOnly = scopeNetwork !== undefined;
+const appUrl = pushOnly ? shellUrl.replace(/push\/[^/]+\/$/, "") : shellUrl;
+
+function networkOfScope(scope) {
+	if (self.seancePush && self.seancePush.networkFromScope) {
+		return self.seancePush.networkFromScope(scope);
+	}
+
+	// The push chunk did not load: the same rule, inline.
+	const m = /\/push\/([^/]+)\/$/.exec(scope);
+
+	try {
+		return m ? decodeURIComponent(m[1]) : undefined;
+	} catch (e) {
+		return undefined;
+	}
+}
+
 // Everything a cold start needs, so that an installed app opens offline
 // straight after the first visit (rather than only after a second load has
 // filled the runtime cache). Versioned assets use the same `?v=` query as
@@ -64,10 +89,20 @@ const shellPaths = [
 const excludedPathsFromCache = /^cdn-cgi\//;
 
 self.addEventListener("install", function (event) {
-	event.waitUntil(precacheShell().then(() => self.skipWaiting()));
+	// A push-only worker has no shell to cache (nothing lives under its
+	// scope); activating at once is all it needs.
+	event.waitUntil(
+		(pushOnly ? Promise.resolve() : precacheShell()).then(() => self.skipWaiting())
+	);
 });
 
 self.addEventListener("activate", function (event) {
+	if (pushOnly) {
+		// The cache belongs to the root worker; a push-only one of another
+		// build must not sweep it, and there are no clients to claim.
+		return;
+	}
+
 	event.waitUntil(
 		caches
 			.keys()
@@ -82,7 +117,7 @@ self.addEventListener("activate", function (event) {
 });
 
 self.addEventListener("fetch", function (event) {
-	if (event.request.method !== "GET") {
+	if (pushOnly || event.request.method !== "GET") {
 		return;
 	}
 
@@ -639,10 +674,25 @@ async function getStash() {
 	};
 }
 
-/** Total unread across push notifications -> app badge. */
+/** Total unread across push notifications -> app badge. Notifications live
+ * on the registration that showed them and the badge is one per origin, so
+ * each worker files its own count under its scope in one IndexedDB document
+ * (`badge`) and the badge shows the sum; the page resets the document when
+ * the app opens. */
 async function updateBadge() {
 	const all = await self.registration.getNotifications();
-	const total = all.reduce((sum, n) => sum + ((n.data && n.data.count) || 1), 0);
+	const mine = all.reduce((sum, n) => sum + ((n.data && n.data.count) || 1), 0);
+	let total = mine;
+
+	try {
+		const doc = (await idbGet("badge")) || {};
+
+		doc[shellUrl] = mine;
+		await idbSet("badge", doc);
+		total = Object.values(doc).reduce((sum, n) => sum + (Number(n) || 0), 0);
+	} catch (e) {
+		// IndexedDB unavailable: this worker's own count is the best there is
+	}
 
 	if (total > 0 && self.navigator.setAppBadge) {
 		self.navigator.setAppBadge(total);
@@ -845,10 +895,13 @@ async function handlePushNow(raw) {
 				{action: "mute30", title: "Mute 30m"},
 			];
 
-			// The payload names no network; the stash lists the networks this
-			// device is push-enrolled with (one, for a single-network deploy).
+			// The payload names no network: a push-only worker serves exactly
+			// one (its scope says which); the root worker, which only ever
+			// held the pre-per-network subscription, falls back to the first
+			// stashed network.
 			const stash = await getStash();
-			const network = stash.networks[0] ? stash.networks[0].uuid : undefined;
+			const network =
+				scopeNetwork || (stash.networks[0] ? stash.networks[0].uuid : undefined);
 			const time = typeof parsed.tags.time === "string" ? parsed.tags.time : undefined;
 
 			await showSafely(title, {
@@ -992,25 +1045,27 @@ self.addEventListener("pushsubscriptionchange", function (event) {
 
 async function handleResubscribe(oldSub, newSub) {
 	const stash = await getStash();
-
-	if (newSub && stash.vapid) {
-		await idbSet("stash", {...stash, vapid: stash.vapid});
-	}
-
-	const sub = newSub || (stash.vapid ? await resubscribeWithVapid(stash.vapid) : null);
+	// This worker's network (by scope) and the key its subscription was made
+	// against; the root worker has only the stash-wide key.
+	const net = stashNetwork(stash, scopeNetwork);
+	const vapid = (net && net.vapid) || stash.vapid;
+	const sub = newSub || (vapid ? await resubscribeWithVapid(vapid) : null);
 
 	if (!sub) {
-		// No usable subscription: ask the page (next open) to redo it.
+		// No usable subscription: ask the page (next open) to redo it, for
+		// this network.
 		const cs = await self.clients.matchAll({includeUncontrolled: true, type: "window"});
 
 		for (const c of cs) {
-			c.postMessage({type: "resubscribe"});
+			c.postMessage({type: "resubscribe", network: scopeNetwork});
 		}
 
 		return;
 	}
 
-	const networks = stash.networks.filter((n) => n.saslAccount && n.saslPassword);
+	// A push-only worker re-registers with its own network only; the root
+	// worker with every stashed one, as before.
+	const networks = (pushOnly ? (net ? [net] : []) : stash.networks).filter(canLogin);
 
 	if (networks.length === 0) {
 		return;
@@ -1056,9 +1111,17 @@ function vapidB64ToStd(b64) {
 }
 
 /** The stashed network a notification belongs to: by uuid when the
- * notification names one, else the first (single-network deploys). */
+ * notification names one, else this worker's own network (push-only), else
+ * the first (the root worker, single-network deploys). */
 function stashNetwork(stash, uuid) {
-	return stash.networks.find((n) => uuid && n.uuid === uuid) || stash.networks[0] || null;
+	const want = uuid || scopeNetwork;
+	const found = stash.networks.find((n) => want && n.uuid === want);
+
+	if (found) {
+		return found;
+	}
+
+	return pushOnly ? null : stash.networks[0] || null;
 }
 
 /** Whether a stashed network can log in on its own (the user remembered
@@ -1217,16 +1280,16 @@ self.addEventListener("notificationclick", function (event) {
  * `chan-<id>` tag, else the app itself. */
 function routeFor(data, tag) {
 	if (data && data.network && data.target) {
-		return `${shellUrl}#/net/${encodeURIComponent(data.network)}/${encodeURIComponent(
+		return `${appUrl}#/net/${encodeURIComponent(data.network)}/${encodeURIComponent(
 			data.target
 		)}`;
 	}
 
 	if (tag && tag.startsWith("chan-")) {
-		return `${shellUrl}#/${tag}`;
+		return `${appUrl}#/${tag}`;
 	}
 
-	return shellUrl;
+	return appUrl;
 }
 
 /** Bring the app to the conversation a notification is about: tell an open

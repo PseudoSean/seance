@@ -96,4 +96,31 @@ own subscription against that network's key.
 
 ## Status
 
-_Filled in as the work lands._
+Landed 2026-09-05 on `push-per-network` (merged into `push-notifications`):
+
+- `client/js/push/scope.ts` (`pushScopePath`, `networkFromScope`,
+  `appUrlFromScope`; exported to the worker through `self.seancePush`) and
+  `client/js/helpers/pushStore.ts` (`parseStoredSubscriptions` with the
+  legacy shape, `entryStale`, `anyStale`), both mocha-tested.
+- `client/service-worker.js`: `scopeNetwork` / `pushOnly` / `appUrl`; a
+  push-only worker skips the shell precache, the cache sweep and `fetch`,
+  attributes pushes to its network, renews on `pushsubscriptionchange` with
+  its network's key and credentials (asking the page for that network
+  otherwise), deep-links to the app URL, and files its notification count
+  under its scope in the `badge` document.
+- `client/js/webpush.ts` rewritten on per-network entries: registrations on
+  demand (`ensureRegistration`, awaited to `activated`), the boot-time sync
+  with the browser, the legacy migration (`thelounge.push.legacy`, the root
+  subscription dropped), `subscribe(uuid)` / `unsubscribe(uuid)` /
+  `renew(uuid)`, per-network `autoRegister`/`maybePrompt`, the stash with a
+  `vapid` per network, the app-opened sweep over every registration.
+- `tools/browser-drive.mjs` frames carry `requestId`, so a scenario can tell
+  two connections apart; the fake Push API is per registration
+  (`tools/scenarios/lib/fake-push.mjs`).
+- Verified: `push-renew.mjs` (28 checks) and `push-per-network.mjs`
+  (22 checks: two registrations and REGISTERs on their own sockets, an
+  isolated renewal, the legacy migration, a single-network push-off) against
+  the testnet ircd; `yarn test` green.
+- Open: the sidebar bell and Settings state are unchanged in shape; the
+  root worker still carries the push handler for a device that has not
+  migrated yet (harmless once it has: no subscription there).

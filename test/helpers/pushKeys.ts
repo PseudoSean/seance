@@ -3,7 +3,6 @@ import {
 	decodeApplicationServerKey,
 	keyChangePolicy,
 	sameApplicationServerKey,
-	subscriptionIsStale,
 } from "../../client/js/helpers/pushKeys";
 
 // The testnet ircd's key, as `draft/webpush=vapid=<key>` carries it in CAP LS.
@@ -40,33 +39,6 @@ describe("pushKeys — sameApplicationServerKey", () => {
 
 	it("accepts a typed-array view as well as a raw buffer", () => {
 		expect(sameApplicationServerKey(Uint8Array.from([1, 2, 3]), wanted)).to.equal(true);
-	});
-});
-
-describe("pushKeys — subscriptionIsStale", () => {
-	it("is false with nothing stored", () => {
-		expect(subscriptionIsStale([], ["K"])).to.equal(false);
-	});
-
-	it("is false while no connected server announces a key", () => {
-		expect(subscriptionIsStale(["K"], [])).to.equal(false);
-		expect(subscriptionIsStale(["K"], [undefined])).to.equal(false);
-	});
-
-	it("is false when a stored subscription matches an announced key", () => {
-		expect(subscriptionIsStale(["K"], ["K"])).to.equal(false);
-		expect(subscriptionIsStale(["K"], ["X", "K"])).to.equal(false);
-	});
-
-	it("is true when servers announce keys and none matches", () => {
-		expect(subscriptionIsStale(["K"], ["X"])).to.equal(true);
-		expect(subscriptionIsStale(["K"], [undefined, "X"])).to.equal(true);
-	});
-
-	it("reads the stored keys from a Map's or an object's key iterator", () => {
-		expect(subscriptionIsStale(Object.keys({K: 1}), new Map([["n", "X"]]).values())).to.equal(
-			true
-		);
 	});
 });
 
