@@ -30,6 +30,7 @@ interface Rec {
 		time?: string;
 		messages?: Array<{from: string; text: string}>;
 	};
+	actions?: Array<{action: string; type?: string; title: string}>;
 	closed: boolean;
 	close(): void;
 }
@@ -78,6 +79,19 @@ interface ServerScript {
 	refuseFirst?: boolean;
 	/** Register with the session's nick, not the one the worker asked for. */
 	sessionNick?: string;
+	/** A server without `message-tags` (no client tags can be sent). */
+	noMessageTags?: boolean;
+}
+
+/** What the scripted ircd advertises in CAP LS. */
+function capsOffered(script: ServerScript): string[] {
+	return [
+		"multi-prefix",
+		"sasl",
+		"draft/metadata-2",
+		"draft/webpush",
+		...(script.noMessageTags ? [] : ["message-tags"]),
+	];
 }
 
 /** Scripted ircd: replies the way the testnet server does. The mute list
@@ -109,8 +123,11 @@ function serve(ws: any, line: string): void {
 		}
 	};
 
+	// A client-tag prefix (`@+draft/reply=… PRIVMSG …`) is not the command.
+	const bare = line.startsWith("@") ? line.slice(line.indexOf(" ") + 1) : line;
+
 	if (line === "CAP LS 302") {
-		reply(":irc.testnet.local CAP * LS :multi-prefix sasl draft/metadata-2 draft/webpush");
+		reply(`:irc.testnet.local CAP * LS :${capsOffered(script).join(" ")}`);
 	} else if (line.startsWith("NICK ")) {
 		const nick = line.slice(5);
 
@@ -125,8 +142,10 @@ function serve(ws: any, line: string): void {
 	} else if (line.startsWith("USER ")) {
 		ws.user = true;
 		tryRegister();
-	} else if (line === "CAP REQ :sasl") {
-		reply(":irc.testnet.local CAP * ACK :sasl");
+	} else if (line.startsWith("CAP REQ :")) {
+		const wanted = line.slice("CAP REQ :".length).split(" ");
+		const verb = wanted.every((c) => capsOffered(script).includes(c)) ? "ACK" : "NAK";
+		reply(`:irc.testnet.local CAP * ${verb} :${wanted.join(" ")}`);
 	} else if (line === "AUTHENTICATE PLAIN") {
 		reply("AUTHENTICATE +");
 	} else if (line.startsWith("AUTHENTICATE ")) {
@@ -135,10 +154,10 @@ function serve(ws: any, line: string): void {
 	} else if (line === "CAP END") {
 		ws.capEnded = true;
 		tryRegister();
-	} else if (line.startsWith("PRIVMSG #")) {
+	} else if (bare.startsWith("PRIVMSG #")) {
 		if (script.refuseFirst && !ws.refused) {
 			ws.refused = true;
-			reply(`:irc.testnet.local 404 ${me()} ${line.split(" ")[1]} :Cannot send to channel`);
+			reply(`:irc.testnet.local 404 ${me()} ${bare.split(" ")[1]} :Cannot send to channel`);
 		}
 	} else if (line.startsWith("WEBPUSH REGISTER ")) {
 		reply(`:irc.testnet.local WEBPUSH REGISTER ${line.split(" ")[2]}`);
@@ -324,6 +343,7 @@ function makeSW(muteList = "", options: HarnessOptions = {}): SWHarness {
 					title,
 					body: opts.body,
 					data: opts.data,
+					actions: opts.actions,
 					closed: false,
 					close() {
 						rec.closed = true;
@@ -490,7 +510,16 @@ async function fireClick(
 	await new Promise((r) => setTimeout(r, 350));
 }
 
-function msgPayload(from: string, target: string, text: string, msgid = "BjAAAaBjzZ0"): string {
+/** Every message gets its own msgid, as on a real server: a push that
+ * repeats one is a redelivery and is dropped. */
+let payloadSeq = 0;
+
+function msgPayload(
+	from: string,
+	target: string,
+	text: string,
+	msgid = `BjAAAaBjzZ${++payloadSeq}`
+): string {
 	return (
 		`{"t":"msg","from":"${from}","target":"${target}",` +
 		`"msgid":"${msgid}","time":"2026-09-02T19:59:00.000Z","text":"${text}"}`
@@ -734,7 +763,7 @@ describe("service worker push notifications", function () {
 
 		// The page recorded this message while it was alive (push-seen.ts).
 		sw.kv.set("seen", [msgid]);
-		await firePush(sw, msgPayload("alice", "pushtest", "hello there"));
+		await firePush(sw, msgPayload("alice", "pushtest", "hello there", msgid));
 
 		expect(sw.shown, "suppressed when seen").to.have.lengthOf(0);
 
@@ -751,6 +780,48 @@ describe("service worker push notifications", function () {
 		// A raw line with a msgid not in the ring still shows.
 		await firePush(sw, "@msgid=BjAAAaBjzZ10 :alice PRIVMSG pushtest :new line");
 		expect(sw.shown, "raw-line msgid not in the ring still shows").to.have.lengthOf(2);
+	});
+
+	it("puts Mute 30m on the left and Reply on the right (thumb reach on a phone)", async function () {
+		const sw = makeSW();
+
+		await firePush(sw, msgPayload("alice", "pushtest", "hello there"));
+
+		expect(sw.shown[0].actions!.map((a) => a.action)).to.deep.equal(["mute30", "reply"]);
+		expect(sw.shown[0].actions![1].type, "the reply is the inline text field").to.equal("text");
+	});
+
+	it("drops a push delivered twice (same msgid), even after its notification was closed", async function () {
+		const sw = makeSW();
+		const raw = "@msgid=BjAAAaBjdup1 :alice!u@h PRIVMSG pushtest :hello";
+
+		await firePush(sw, raw);
+		expect(sw.shown).to.have.lengthOf(1);
+
+		await firePush(sw, raw);
+		expect(sw.shown, "a redelivery shows nothing").to.have.lengthOf(1);
+		expect(sw.records.filter((n) => !n.closed)[0].data.count).to.equal(1);
+
+		sw.records[0].close(); // the user replied or dismissed it
+		await firePush(sw, raw);
+		expect(sw.shown, "nor after the notification is gone").to.have.lengthOf(1);
+	});
+
+	it("remembers a shown batch line by line, so the other lines still land", async function () {
+		const sw = makeSW();
+		const T = "2026-09-02T19:59:00.000Z";
+		const line = (i: number, text: string) =>
+			`@batch=b7;msgid=b7;time=${T};evilnet.github.io/line=${i}/2/2 :bob!u@h PRIVMSG pushtest :${text}`;
+
+		await firePush(sw, line(1, "one"));
+		await firePush(sw, line(1, "one")); // redelivered
+		await firePush(sw, line(2, "two"));
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live).to.have.lengthOf(1);
+		expect(live[0].body).to.equal("one\ntwo");
+		expect(live[0].data.count).to.equal(1);
+		expect(sw.shown, "the redelivered line showed nothing").to.have.lengthOf(2);
 	});
 
 	it("keeps the read relay working when seen entries exist", async function () {
@@ -839,6 +910,11 @@ async function pushed(sw: SWHarness, target = "pushtest", from = "alice"): Promi
 	return sw.records.filter((n) => !n.closed)[0];
 }
 
+/** A sent line without its client-tag prefix. */
+function untagged(line: string): string {
+	return line.startsWith("@") ? line.slice(line.indexOf(" ") + 1) : line;
+}
+
 function hlPayload(from: string, chan: string, text: string): string {
 	return `{"t":"hl","from":"${from}","target":"${chan}","msgid":"m-${Math.random()}","time":"2026-09-02T19:59:00.000Z","text":"${text}"}`;
 }
@@ -898,7 +974,10 @@ describe("service worker reply pipeline", function () {
 		const rec = sw.records.filter((n) => !n.closed)[0];
 		await fireClick(sw, rec, "reply", {reply: "again"});
 
-		const privmsgs = sw.lastSent().filter((l) => l.startsWith("PRIVMSG #seance :again"));
+		const privmsgs = sw
+			.lastSent()
+			.map(untagged)
+			.filter((l) => l.startsWith("PRIVMSG #seance :again"));
 		expect(privmsgs, "sent twice").to.have.lengthOf(2);
 		expect(rec.closed, "counted as sent").to.equal(true);
 		expect(sw.opened, "no fallback to opening the app").to.have.lengthOf(0);
@@ -911,7 +990,10 @@ describe("service worker reply pipeline", function () {
 
 		await fireClick(sw, rec, "reply", {reply: long});
 
-		const privmsgs = sw.lastSent().filter((l) => l.startsWith("PRIVMSG alice :"));
+		const privmsgs = sw
+			.lastSent()
+			.map(untagged)
+			.filter((l) => l.startsWith("PRIVMSG alice :"));
 		expect(privmsgs.length).to.be.at.least(2);
 
 		for (const l of privmsgs) {
@@ -990,6 +1072,92 @@ describe("service worker reply pipeline", function () {
 		expect(sw.socketsOpened()).to.equal(0);
 		expect(sw.kv.get("outbox")).to.equal(undefined);
 		expect(sw.opened).to.deep.equal([`${SCOPE}#/net/net-1/alice`]);
+	});
+
+	it("replies as an IRCv3 reply to the newest message when the server has message-tags", async function () {
+		const sw = makeSW("", {script: {joinReplay: ["#seance"]}});
+
+		await firePush(sw, "@msgid=BjAAAaBjrep1 :alice!u@h PRIVMSG #seance :hey pushtest1");
+		await firePush(sw, "@msgid=BjAAAaBjrep2 :alice!u@h PRIVMSG #seance :still there?");
+		const rec = sw.records.filter((n) => !n.closed)[0];
+		await fireClick(sw, rec, "reply", {reply: "yes"});
+
+		const sent = sw.lastSent();
+		expect(sent).to.include("CAP REQ :sasl message-tags");
+		expect(sent).to.include("@+draft/reply=BjAAAaBjrep2 PRIVMSG #seance :yes");
+	});
+
+	it("sends a plain PRIVMSG when the server offers no message-tags", async function () {
+		const sw = makeSW("", {script: {noMessageTags: true}});
+
+		await firePush(sw, "@msgid=BjAAAaBjrep3 :alice!u@h PRIVMSG pushtest :hey");
+		const rec = sw.records.filter((n) => !n.closed)[0];
+		await fireClick(sw, rec, "reply", {reply: "yes"});
+
+		const sent = sw.lastSent();
+		expect(sent).to.include("CAP REQ :sasl");
+		expect(sent).to.include("PRIVMSG alice :yes");
+		expect(sent.join("\n")).to.not.contain("draft/reply");
+		expect(rec.closed).to.equal(true);
+	});
+
+	it("hands the page the reply's msgid and a deadline", async function () {
+		const client = makeClient(() => true);
+		const sw = makeSW("", {clients: [client]});
+
+		await firePush(sw, "@msgid=BjAAAaBjrep4 :alice!u@h PRIVMSG pushtest :hey");
+		const rec = sw.records.filter((n) => !n.closed)[0];
+		const before = Date.now();
+		await fireClick(sw, rec, "reply", {reply: "via page"});
+
+		expect(client.posted[0]).to.include({type: "reply", replyTo: "BjAAAaBjrep4"});
+		expect(client.posted[0].deadline, "the page must not send after the worker gave up on it")
+			.to.be.at.least(before + 2000)
+			.and.at.most(Date.now() + 3000);
+	});
+
+	it("queues the reply's msgid with it", async function () {
+		const sw = makeSW();
+		sw.kv.set("stash", {
+			...STASH,
+			networks: [{...STASH.networks[0], saslPassword: undefined}],
+		});
+
+		await firePush(sw, "@msgid=BjAAAaBjrep5 :alice!u@h PRIVMSG pushtest :hey");
+		const rec = sw.records.filter((n) => !n.closed)[0];
+		await fireClick(sw, rec, "reply", {reply: "keep me"});
+
+		const outbox = sw.kv.get("outbox") as any[];
+		expect(outbox[0]).to.include({target: "alice", text: "keep me", replyTo: "BjAAAaBjrep5"});
+	});
+
+	it("asks one page at a time, the visible one first, so a reply never goes out twice", async function () {
+		const hidden = makeClient(() => true);
+		hidden.focused = false;
+		hidden.visibilityState = "hidden";
+		const visible = makeClient(() => true);
+		const sw = makeSW("", {clients: [hidden, visible]});
+		const rec = await pushed(sw);
+
+		await fireClick(sw, rec, "reply", {reply: "once"});
+
+		expect(visible.posted).to.have.lengthOf(1);
+		expect(hidden.posted, "not asked once the visible page sent it").to.have.lengthOf(0);
+		expect(sw.socketsOpened()).to.equal(0);
+	});
+
+	it("moves on to the next page when the first cannot send", async function () {
+		const offline = makeClient(() => false);
+		const online = makeClient(() => true);
+		const sw = makeSW("", {clients: [offline, online]});
+		const rec = await pushed(sw);
+
+		await fireClick(sw, rec, "reply", {reply: "second page"});
+
+		expect(offline.posted).to.have.lengthOf(1);
+		expect(online.posted).to.have.lengthOf(1);
+		expect(sw.socketsOpened(), "no throwaway connection needed").to.equal(0);
+		expect(rec.closed).to.equal(true);
 	});
 
 	it("does not touch the page's outbox when a reply went out", async function () {

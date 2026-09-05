@@ -76,17 +76,17 @@ export function joinLines(entry: MergedMessage): string {
  * idempotent: duplicates and out-of-order delivery are harmless. A batch
  * line moves its entry to the end, so eviction takes older messages first;
  * a batch evicted anyway — more than `keep` newer messages between two of
- * its lines — starts over as a new entry.
+ * its lines — starts over as a new entry. A plain message is idempotent by
+ * msgid too: pushed again, it is neither added nor new.
  */
 export function addMessage(
 	entries: MergedMessage[],
 	incoming: IncomingMessage,
 	keep = MERGE_KEEP
 ): {entries: MergedMessage[]; isNew: boolean} {
-	const list: MergedMessage[] = entries.map((entry) => ({
-		...entry,
-		lines: entry.lines ? {...entry.lines} : undefined,
-	}));
+	const list: MergedMessage[] = entries.map((entry) =>
+		entry.lines ? {...entry, lines: {...entry.lines}} : {...entry}
+	);
 
 	if (incoming.batch && incoming.line) {
 		const found = list.find((entry) => entry.batch === incoming.batch);
@@ -114,6 +114,12 @@ export function addMessage(
 		list.push(entry);
 
 		return {entries: list.slice(-keep), isNew: !found};
+	}
+
+	// A push delivered twice (a push service promises at-least-once; the
+	// server may retry) must not become a second message.
+	if (incoming.msgid && list.some((entry) => entry.msgid === incoming.msgid)) {
+		return {entries: list.slice(-keep), isNew: false};
 	}
 
 	list.push({from: incoming.from, text: incoming.text, msgid: incoming.msgid});

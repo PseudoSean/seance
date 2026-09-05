@@ -1186,6 +1186,18 @@ describe("IrcClient", function () {
 				"@label=s1 PRIVMSG #seance :via bus"
 			);
 
+			// A notification's reply names the network and target, and the
+			// message it answers (bus-contract §2.1).
+			socket.emit("send", {
+				network: h.client.uuid,
+				target: "#seance",
+				text: "from a notification",
+				replyTo: "BjAAAaBjrep9",
+			});
+			expect(h.transport.sent[h.transport.sent.length - 1]).to.equal(
+				"@+draft/reply=BjAAAaBjrep9;label=s2 PRIVMSG #seance :from a notification"
+			);
+
 			socket.emit("network:get", h.client.uuid);
 			expect(payloads<{uuid: string; host: string}>("network:info")[0]).to.include({
 				uuid: h.client.uuid,
