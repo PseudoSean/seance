@@ -381,12 +381,12 @@ export default async function run(page) {
 		label: "the push identity radios in Settings",
 	});
 	page.check(
-		"4. Settings shows cold shoulder selected",
+		"4. Settings shows Suspicious selected",
 		(await page.evaluate(
 			`document.querySelector('input[name="pushKeyChange"][value="ignore"]').checked`
 		)) === true
 	);
-	await page.screenshot("5b-settings-cold-shoulder");
+	await page.screenshot("5b-settings-suspicious");
 
 	// --- 5. back on ask: "Yes" ------------------------------------------------
 	await setSetting(page, "pushKeyChange", "ask");

@@ -25,7 +25,7 @@
 						name="pushKeyChange"
 						value="ask"
 					/>
-					Prompt when the identity changes — ask before renewing the subscription
+					Wary — ask before renewing the subscription
 				</label>
 				<label class="opt">
 					<input
@@ -34,7 +34,7 @@
 						name="pushKeyChange"
 						value="trust"
 					/>
-					Trusting — renew it on the spot, without asking
+					Naive — renew it on the spot, without asking
 				</label>
 				<label class="opt">
 					<input
@@ -43,7 +43,7 @@
 						name="pushKeyChange"
 						value="ignore"
 					/>
-					Cold shoulder — leave it alone; push from that server stays off until you renew
+					Suspicious — leave it alone; push from that server stays off until you renew
 					from the network settings
 				</label>
 			</div>
