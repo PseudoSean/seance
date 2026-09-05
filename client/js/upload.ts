@@ -6,13 +6,40 @@
 // `uploads` in `config.json` (see docs/resources/branding.md). Without that
 // entry the upload button stays hidden and dropped/pasted files are ignored
 // after a single "not configured" notice.
+//
+// Every way in (a drop, a paste, the paperclip's file dialog) lands in
+// `Uploader.triggerUpload`, which checks size and type, then shows the files
+// to the user through `UploadHost.confirm` (the preview dialog,
+// `UploadPreview.vue`) and sends only what they keep. Progress goes out
+// through `UploadHost.progress` (the strip above the input in
+// `ChatInput.vue`); the request itself rides on `XMLHttpRequest`, the one
+// browser API with upload progress events, wrapped back into a `Response`
+// so the reply is read the same way whatever carried it.
 
 import {update as updateCursor} from "undate";
 
 import {BrandingUploads, DEFAULT_UPLOAD_MAX_BYTES} from "./branding";
+import eventbus from "./eventbus";
+import {isAnimatedImage} from "./helpers/animatedImage";
 import type {TypedStore} from "./store";
 
 export const UPLOADS_NOT_CONFIGURED = "File uploads are not configured in this client.";
+
+/** Where an upload in flight stands; `null` on the host means idle. */
+export interface UploadProgress {
+	fileName: string;
+	/** 1-based position in the current run of uploads, and the run's size. */
+	index: number;
+	count: number;
+	/**
+	 * `preparing`: the image is being re-encoded; `sending`: bytes are going
+	 * out; `waiting`: everything is sent and the reply is awaited.
+	 */
+	phase: "preparing" | "sending" | "waiting";
+	/** Bytes sent and bytes to send; both 0 while preparing. */
+	loaded: number;
+	total: number;
+}
 
 /** Everything the uploader needs from the app, so it can run without the store. */
 export interface UploadHost {
@@ -23,6 +50,22 @@ export interface UploadHost {
 	renderCanvas(): boolean;
 	showError(message: string): void;
 	insertUrl(url: string): void;
+	/**
+	 * Show `files` to the user and resolve with the ones they want sent, in
+	 * order; an empty list cancels the lot.
+	 */
+	confirm(files: File[]): Promise<File[]>;
+	/** Progress of the upload in flight; `null` once the queue is empty. */
+	progress(state: UploadProgress | null): void;
+}
+
+/** The dialog's request on the event bus: `upload:confirm`. */
+export interface UploadConfirmRequest {
+	files: File[];
+	/** Called once with the files to send; `[]` cancels. */
+	resolve: (files: File[]) => void;
+	/** Set by the dialog, synchronously, so a missing dialog fails open. */
+	claimed: boolean;
 }
 
 export class UploadError extends Error {
@@ -32,12 +75,83 @@ export class UploadError extends Error {
 	}
 }
 
+/** `XMLHttpRequest`, or a stand-in with the same shape (tests). */
+export type XhrConstructor = new () => XMLHttpRequest;
+
 export interface UploadFileOptions {
-	/** Fetch implementation; defaults to the global `fetch`. */
+	/**
+	 * Fetch implementation. When given it carries the request; otherwise an
+	 * `XMLHttpRequest` (`xhr`, or the global one) does, for its progress
+	 * events, and the global `fetch` is the last resort.
+	 */
 	fetch?: typeof fetch;
+	/** `XMLHttpRequest` class to use instead of the global one. */
+	xhr?: XhrConstructor;
+	/** Upload progress, in bytes; only an XHR transport reports it. */
+	onProgress?: (loaded: number, total: number) => void;
 	signal?: AbortSignal;
 	/** Names of `config.fields` to leave out of this attempt. */
 	omitFields?: ReadonlySet<string>;
+}
+
+/** Statuses a `Response` may not carry a body with. */
+const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304]);
+
+/**
+ * `fetch(url, init)` over an `XMLHttpRequest`, for the upload progress
+ * events fetch does not have. Honours `method`, `headers` (a plain record),
+ * `credentials: "include"`, `body` and `signal`, and resolves with a
+ * `Response` built from the status and text; a network failure rejects with
+ * the same `TypeError("Failed to fetch")` fetch throws, an abort with an
+ * `AbortError`.
+ */
+export function xhrFetch(
+	url: string,
+	init: RequestInit,
+	options: {XHR: XhrConstructor; onProgress?: (loaded: number, total: number) => void}
+): Promise<Response> {
+	return new Promise((resolve, reject) => {
+		const abortError = () => new DOMException("The operation was aborted.", "AbortError");
+
+		if (init.signal?.aborted) {
+			reject(abortError());
+			return;
+		}
+
+		const xhr = new options.XHR();
+		xhr.open(init.method ?? "GET", url);
+		xhr.withCredentials = init.credentials === "include";
+
+		for (const [name, value] of Object.entries(init.headers ?? {})) {
+			xhr.setRequestHeader(name, value);
+		}
+
+		xhr.upload.onprogress = (event) => {
+			if (event.lengthComputable) {
+				options.onProgress?.(event.loaded, event.total);
+			}
+		};
+
+		xhr.onload = () => {
+			const status = xhr.status;
+
+			if (status < 200 || status > 599) {
+				reject(new TypeError("Failed to fetch"));
+				return;
+			}
+
+			const body = NULL_BODY_STATUSES.has(status) ? null : xhr.responseText;
+			resolve(new Response(body, {status, statusText: xhr.statusText}));
+		};
+
+		xhr.onerror = () => reject(new TypeError("Failed to fetch"));
+		xhr.ontimeout = () => reject(new TypeError("Failed to fetch"));
+		xhr.onabort = () => reject(abortError());
+
+		init.signal?.addEventListener("abort", () => xhr.abort(), {once: true});
+
+		xhr.send((init.body ?? null) as XMLHttpRequestBodyInit | null);
+	});
 }
 
 /** Effective size limit for a config, in bytes. */
@@ -261,7 +375,17 @@ async function uploadAttempt(
 	config: BrandingUploads,
 	options: UploadFileOptions
 ): Promise<string> {
-	const doFetch = options.fetch ?? (typeof fetch === "function" ? fetch : undefined);
+	const XHR = options.xhr ?? (typeof XMLHttpRequest === "function" ? XMLHttpRequest : undefined);
+	let doFetch: typeof fetch | undefined = options.fetch;
+
+	if (doFetch === undefined && XHR !== undefined) {
+		doFetch = (url, init) =>
+			xhrFetch(String(url), init ?? {}, {XHR, onProgress: options.onProgress});
+	}
+
+	if (doFetch === undefined && typeof fetch === "function") {
+		doFetch = fetch;
+	}
 
 	if (doFetch === undefined) {
 		throw new UploadError("Upload failed: fetch is not available");
@@ -307,6 +431,63 @@ async function uploadAttempt(
 	return parseUploadResponse(body, config);
 }
 
+/**
+ * What the "remove metadata" setting will do to `file`: `strip` (redrawn
+ * through a canvas), `off` (setting off), `animated` (an animated WebP, APNG
+ * or AVIF: the canvas would keep one frame, so it goes up whole),
+ * `unsupported` (GIF and SVG, likewise sent as they are) or `not-image`.
+ */
+export type MetadataPlan = "strip" | "off" | "animated" | "unsupported" | "not-image";
+
+export async function metadataPlan(file: File, stripSetting: boolean): Promise<MetadataPlan> {
+	const type = file.type.toLowerCase();
+
+	if (!type.startsWith("image/")) {
+		return "not-image";
+	}
+
+	if (type.includes("svg") || type === "image/gif") {
+		return "unsupported";
+	}
+
+	if (await isAnimatedImage(file)) {
+		return "animated";
+	}
+
+	return stripSetting ? "strip" : "off";
+}
+
+/** Extensions a canvas-encoded blob's type can come back as, first is canonical. */
+const EXTENSIONS_BY_TYPE: Readonly<Record<string, readonly string[]>> = {
+	"image/png": ["png"],
+	"image/jpeg": ["jpg", "jpeg"],
+	"image/webp": ["webp"],
+};
+
+/**
+ * `name` with an extension matching `type`, for a re-encoded image. A canvas
+ * asked for a format it cannot write answers with PNG (Safari for WebP,
+ * every browser for AVIF), and the file should not claim otherwise. Unknown
+ * types and names that already fit are left alone.
+ */
+export function fileNameForType(name: string, type: string): string {
+	const extensions = EXTENSIONS_BY_TYPE[type.toLowerCase()];
+
+	if (extensions === undefined) {
+		return name;
+	}
+
+	const dot = name.lastIndexOf(".");
+	const hasExtension = dot > 0 && dot < name.length - 1;
+	const current = hasExtension ? name.slice(dot + 1).toLowerCase() : "";
+
+	if (extensions.includes(current)) {
+		return name;
+	}
+
+	return `${hasExtension ? name.slice(0, dot) : name}.${extensions[0]}`;
+}
+
 /** Insert `url` at the cursor of the chat input, padded with spaces. */
 export function insertUploadUrl(url: string): void {
 	const textbox = document.getElementById("input");
@@ -330,9 +511,19 @@ export function insertUploadUrl(url: string): void {
 
 	// Set the cursor after the link and a space
 	textbox.selectionStart = textbox.selectionEnd = textBeforeTail.length;
+
+	// What gets sent is the store's `channel.pendingMessage`, which follows
+	// the textarea's `input` event; the execCommand-based insertion above
+	// does not fire one reliably (it depends on what had focus), so say it.
+	textbox.dispatchEvent(new Event("input", {bubbles: true}));
 }
 
-/** The app's `UploadHost`: branding, connection state and errors via the store. */
+/**
+ * The app's `UploadHost`: branding, connection state and errors via the
+ * store; the confirmation through the `upload:confirm` bus event that
+ * `UploadPreview.vue` answers, and progress into `store.state.uploadProgress`
+ * for the strip in `ChatInput.vue`.
+ */
 export function storeUploadHost(store: TypedStore): UploadHost {
 	return {
 		uploads: () => store.state.branding.uploads,
@@ -340,6 +531,17 @@ export function storeUploadHost(store: TypedStore): UploadHost {
 		renderCanvas: () => store.state.settings.uploadCanvas,
 		showError: (message) => store.commit("currentUserVisibleError", message),
 		insertUrl: insertUploadUrl,
+		confirm: (files) =>
+			new Promise((resolve) => {
+				const request: UploadConfirmRequest = {files, resolve, claimed: false};
+				eventbus.emit("upload:confirm", request);
+
+				// No dialog mounted to ask: behave as before and just send.
+				if (!request.claimed) {
+					resolve(files);
+				}
+			}),
+		progress: (state) => store.commit("uploadProgress", state),
 	};
 }
 
@@ -349,13 +551,18 @@ export class Uploader {
 	/** Controller of the upload in flight, if any. */
 	controller: AbortController | null = null;
 	fetchImpl: typeof fetch | undefined;
+	xhrImpl: XhrConstructor | undefined;
 	/** The "not configured" notice is shown once per page, not per drop. */
 	warnedUnconfigured = false;
 
 	overlay: HTMLDivElement | null = null;
-	uploadProgressbar: HTMLSpanElement | null = null;
 
 	private drain: Promise<void> | null = null;
+	/** One confirmation dialog at a time: a second drop waits for the first's answer. */
+	private confirming: Promise<unknown> = Promise.resolve();
+	/** Files sent so far in this run of the queue, and how many it holds in all. */
+	private runDone = 0;
+	private runCount = 0;
 
 	onDragEnter = (e: DragEvent) => this.dragEnter(e);
 	onDragOver = (e: DragEvent) => this.dragOver(e);
@@ -363,9 +570,14 @@ export class Uploader {
 	onDrop = (e: DragEvent) => this.drop(e);
 	onPaste = (e: ClipboardEvent) => this.paste(e);
 
-	constructor(host: UploadHost | null = null, fetchImpl?: typeof fetch) {
+	constructor(
+		host: UploadHost | null = null,
+		fetchImpl?: typeof fetch,
+		xhrImpl?: XhrConstructor
+	) {
 		this.host = host;
 		this.fetchImpl = fetchImpl;
+		this.xhrImpl = xhrImpl;
 	}
 
 	init() {
@@ -375,7 +587,6 @@ export class Uploader {
 	mounted(host: UploadHost | null = this.host) {
 		this.host = host;
 		this.overlay = document.getElementById("upload-overlay") as HTMLDivElement;
-		this.uploadProgressbar = document.getElementById("upload-progressbar") as HTMLSpanElement;
 
 		document.addEventListener("dragenter", this.onDragEnter);
 		document.addEventListener("dragover", this.onDragOver);
@@ -466,34 +677,36 @@ export class Uploader {
 	}
 
 	/**
-	 * Queue files for upload. Resolves once the queue has drained (every
-	 * file uploaded or reported), so callers can await the outcome.
+	 * Offer files for upload: the ones within the size and type limits are
+	 * shown to the user (`host.confirm`) and those they keep are queued.
+	 * Resolves once the queue has drained (every file uploaded or reported),
+	 * so callers can await the outcome.
 	 */
-	triggerUpload(files: (File | null)[]): Promise<void> {
+	async triggerUpload(files: (File | null)[]): Promise<void> {
 		if (!files.length || !this.host) {
-			return Promise.resolve();
+			return;
 		}
 
-		const config = this.host.uploads();
+		const host = this.host;
+		const config = host.uploads();
 
 		if (!config) {
 			if (!this.warnedUnconfigured) {
 				this.warnedUnconfigured = true;
-				this.host.showError(UPLOADS_NOT_CONFIGURED);
+				host.showError(UPLOADS_NOT_CONFIGURED);
 			}
 
-			return Promise.resolve();
+			return;
 		}
 
-		if (!this.host.isConnected()) {
-			this.host.showError(
-				"You are currently disconnected, unable to initiate upload process."
-			);
+		if (!host.isConnected()) {
+			host.showError("You are currently disconnected, unable to initiate upload process.");
 
-			return Promise.resolve();
+			return;
 		}
 
 		const maxFileSize = uploadMaxSize(config);
+		const accepted: File[] = [];
 
 		for (const file of files) {
 			if (!file) {
@@ -501,7 +714,7 @@ export class Uploader {
 			}
 
 			if (file.size > maxFileSize) {
-				this.host.showError(`File ${file.name} is over the maximum allowed size`);
+				host.showError(`File ${file.name} is over the maximum allowed size`);
 				continue;
 			}
 
@@ -509,19 +722,32 @@ export class Uploader {
 			// preset points at an image staging service, so a dropped video
 			// should say so plainly.
 			if (!acceptsType(config, file.type)) {
-				const accepted = (config.accept ?? []).join(", ");
-				this.host.showError(
-					`File ${file.name} is not a type this uploader accepts (${accepted})`
+				const acceptedTypes = (config.accept ?? []).join(", ");
+				host.showError(
+					`File ${file.name} is not a type this uploader accepts (${acceptedTypes})`
 				);
 				continue;
 			}
 
-			this.fileQueue.push(file);
+			accepted.push(file);
 		}
 
-		if (this.fileQueue.length === 0) {
-			return this.drain ?? Promise.resolve();
+		if (accepted.length === 0) {
+			return this.drain ?? undefined;
 		}
+
+		// Dialogs are serialised so a second drop cannot interleave with the
+		// first's; a cancelled one is a resolved, empty list.
+		const asked = this.confirming.then(() => host.confirm(accepted));
+		this.confirming = asked.catch(() => undefined);
+		const chosen = await asked;
+
+		if (chosen.length === 0) {
+			return this.drain ?? undefined;
+		}
+
+		this.fileQueue.push(...chosen);
+		this.runCount += chosen.length;
 
 		if (this.drain === null) {
 			this.drain = this.drainQueue().finally(() => {
@@ -533,15 +759,22 @@ export class Uploader {
 	}
 
 	private async drainQueue(): Promise<void> {
-		let file = this.fileQueue.shift();
+		try {
+			let file = this.fileQueue.shift();
 
-		while (file !== undefined) {
-			await this.uploadOne(file);
-			file = this.fileQueue.shift();
+			while (file !== undefined) {
+				this.runDone += 1;
+				await this.uploadOne(file, this.runDone);
+				file = this.fileQueue.shift();
+			}
+		} finally {
+			this.runDone = 0;
+			this.runCount = 0;
+			this.host?.progress(null);
 		}
 	}
 
-	private async uploadOne(file: File): Promise<void> {
+	private async uploadOne(file: File, index: number): Promise<void> {
 		const host = this.host;
 		const config = host?.uploads();
 
@@ -549,47 +782,48 @@ export class Uploader {
 			return;
 		}
 
-		this.controller = new AbortController();
-		this.setBusy(true);
+		const controller = new AbortController();
+		this.controller = controller;
+
+		const report = (phase: UploadProgress["phase"], loaded: number, total: number) =>
+			host.progress({fileName: file.name, index, count: this.runCount, phase, loaded, total});
 
 		try {
-			if (
-				host.renderCanvas() &&
-				file.type.startsWith("image/") &&
-				!file.type.includes("svg") &&
-				file.type !== "image/gif"
-			) {
+			report("preparing", 0, 0);
+
+			if ((await metadataPlan(file, host.renderCanvas())) === "strip") {
 				file = await this.renderImage(file);
 			}
 
+			report("sending", 0, file.size);
+
 			const url = await uploadFile(file, config, {
 				fetch: this.fetchImpl,
-				signal: this.controller.signal,
+				xhr: this.xhrImpl,
+				signal: controller.signal,
+				onProgress: (loaded, total) =>
+					report(loaded >= total ? "waiting" : "sending", loaded, total),
 			});
 
 			host.insertUrl(url);
 		} catch (e: unknown) {
-			host.showError(e instanceof Error ? e.message : String(e));
+			// A cancel the user asked for is not an error to report.
+			if (!controller.signal.aborted) {
+				host.showError(e instanceof Error ? e.message : String(e));
+			}
 		} finally {
-			this.controller = null;
-			this.setBusy(false);
+			if (this.controller === controller) {
+				this.controller = null;
+			}
 		}
 	}
 
 	/**
-	 * `fetch` has no upload progress events, so the bar is a plain busy
-	 * indicator: fully lit while a request is in flight.
+	 * Re-draw an image through a canvas, dropping its metadata; falls back to
+	 * the original file. The result carries the type the canvas actually
+	 * wrote (a browser that cannot encode the source format answers with
+	 * PNG) and an extension to match.
 	 */
-	setBusy(busy: boolean) {
-		if (!this.uploadProgressbar) {
-			return;
-		}
-
-		this.uploadProgressbar.classList.toggle("upload-progressbar-visible", busy);
-		this.uploadProgressbar.style.width = busy ? "100%" : "0%";
-	}
-
-	/** Re-draw an image through a canvas; falls back to the original file. */
 	renderImage(file: File): Promise<File> {
 		return new Promise((resolve) => {
 			const fileReader = new FileReader();
@@ -616,7 +850,13 @@ export class Uploader {
 					ctx.drawImage(img, 0, 0);
 
 					canvas.toBlob((blob) => {
-						resolve(blob ? new File([blob], file.name, {type: file.type}) : file);
+						if (!blob) {
+							resolve(file);
+							return;
+						}
+
+						const type = blob.type || file.type;
+						resolve(new File([blob], fileNameForType(file.name, type), {type}));
 					}, file.type);
 				};
 

@@ -12,6 +12,7 @@
 		<ImageViewer ref="imageViewer" />
 		<ContextMenu ref="contextMenu" />
 		<ConfirmDialog ref="confirmDialog" />
+		<UploadPreview />
 		<PushPrompt />
 		<div id="upload-overlay"></div>
 	</div>
@@ -29,6 +30,7 @@ import Sidebar from "./Sidebar.vue";
 import ImageViewer from "./ImageViewer.vue";
 import ContextMenu from "./ContextMenu.vue";
 import ConfirmDialog from "./ConfirmDialog.vue";
+import UploadPreview from "./UploadPreview.vue";
 import Mentions from "./Mentions.vue";
 import PushPrompt from "./PushPrompt.vue";
 import {
@@ -55,6 +57,7 @@ export default defineComponent({
 		ImageViewer,
 		ContextMenu,
 		ConfirmDialog,
+		UploadPreview,
 		Mentions,
 		PushPrompt,
 	},

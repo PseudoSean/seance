@@ -73,7 +73,7 @@
 	--highlight-bg-color: #efe8dc;
 	--highlight-border-color: #b08c4f;
 
-	/* Color of the progress bar that appears as a file is being uploaded to the server. Defaults to button color */
+	/* Color of the progress bar shown above the input while a file is being uploaded. Defaults to button color */
 	--upload-progressbar-color: var(--button-color);
 
 	/* Color the sidebar channel icon pulses to while someone is typing there */
@@ -2819,22 +2819,6 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	content: "\f00c"; /* http://fontawesome.io/icon/check/ */
 }
 
-#upload-progressbar {
-	background: var(--upload-progressbar-color);
-	box-shadow: 0 0 10px var(--upload-progressbar-color);
-	width: 0%;
-	height: 2px;
-	visibility: hidden;
-	position: absolute;
-	top: -1px; /* put it on top of #form's border */
-	left: 0;
-}
-
-#upload-progressbar.upload-progressbar-visible {
-	visibility: visible;
-	transition: 0.3s width ease-in-out;
-}
-
 #form {
 	flex: 0 0 auto;
 	border: 0;
@@ -3769,6 +3753,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 #confirm-dialog-overlay,
 #push-prompt-overlay,
+#upload-preview-overlay,
 #upload-overlay,
 #image-viewer,
 #image-viewer .open-btn,
@@ -3782,6 +3767,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 #confirm-dialog-overlay,
 #push-prompt-overlay,
+#upload-preview-overlay,
 #upload-overlay,
 #image-viewer {
 	position: fixed;
@@ -3799,6 +3785,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 #confirm-dialog-overlay.opened,
 #push-prompt-overlay.opened,
+#upload-preview-overlay.opened,
 #upload-overlay.is-dragover,
 #image-viewer.opened {
 	visibility: visible;
@@ -3807,6 +3794,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 #confirm-dialog-overlay,
 #push-prompt-overlay,
+#upload-preview-overlay,
 #image-viewer {
 	background: rgb(0 0 0 / 90%);
 }
@@ -4536,6 +4524,89 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	background: rgb(0 0 0 / 8%);
 	color: var(--body-color);
 	outline: 0;
+}
+
+/* The upload in flight: a row of its own above the input, like .compose-bar */
+#form .upload-bar {
+	flex: 1 0 100%;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	margin: 0 4px 2px;
+	padding: 3px 6px;
+	border-left: 2px solid var(--upload-progressbar-color);
+	background: rgb(0 0 0 / 4%);
+	border-radius: 0 3px 3px 0;
+	color: var(--body-color-muted);
+	font-size: 13px;
+	line-height: 1.4;
+}
+
+#form .upload-bar-label {
+	flex: 1 1 auto;
+	min-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+#form .upload-bar-icon::before {
+	content: "\f0c6"; /* https://fontawesome.com/icons/paperclip?style=solid */
+	font: normal normal normal 12px/1 FontAwesome;
+	margin-right: 4px;
+}
+
+#form .upload-bar-track {
+	flex: 0 1 180px;
+	min-width: 60px;
+	height: 6px;
+	border-radius: 3px;
+	background: rgb(0 0 0 / 10%);
+	overflow: hidden;
+	position: relative;
+}
+
+#form .upload-bar-fill {
+	display: block;
+	height: 100%;
+	border-radius: 3px;
+	background: var(--upload-progressbar-color);
+	transition: width 0.2s ease-out;
+}
+
+/* Bytes unknown (re-encoding, or the server never says): a sweeping band */
+#form .upload-bar-track.indeterminate .upload-bar-fill {
+	position: absolute;
+	width: 40%;
+	animation: upload-bar-sweep 1.2s ease-in-out infinite;
+}
+
+@keyframes upload-bar-sweep {
+	from {
+		left: -40%;
+	}
+
+	to {
+		left: 100%;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#form .upload-bar-track.indeterminate .upload-bar-fill {
+		animation: none;
+		left: 0;
+		width: 100%;
+		opacity: 0.5;
+	}
+}
+
+#form .upload-bar-percent {
+	flex: 0 0 auto;
+	min-width: 3.2em;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	color: var(--body-color);
 }
 
 /* Settings → Push Notifications: the on/off indicator dot + per-network rows */

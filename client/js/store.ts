@@ -9,6 +9,7 @@ import type {InjectionKey} from "vue";
 import {SettingsState} from "./settings";
 import {SharedConfiguration, LockedSharedConfiguration} from "../../shared/types/config";
 import {BrandingConfig, DEFAULT_BRANDING, brandingString} from "./branding";
+import type {UploadProgress} from "./upload";
 
 enum DesktopNotificationState {
 	Unsupported = "unsupported",
@@ -48,6 +49,8 @@ export type State = {
 	sidebarOpen: boolean;
 	sidebarDragging: boolean;
 	userlistOpen: boolean;
+	/** The file upload in flight (`client/js/upload.ts`); `null` when idle. */
+	uploadProgress: UploadProgress | null;
 };
 
 const state = (): State => ({
@@ -67,6 +70,7 @@ const state = (): State => ({
 	sidebarOpen: false,
 	sidebarDragging: false,
 	userlistOpen: storage.get("thelounge.state.userlist") !== "false",
+	uploadProgress: null,
 });
 
 type Getters = {
@@ -190,6 +194,7 @@ type Mutations = {
 	toggleSidebar(state: State): void;
 	toggleUserlist(state: State): void;
 	userlistOpen(state: State, payload: State["userlistOpen"]): void;
+	uploadProgress(state: State, progress: State["uploadProgress"]): void;
 };
 
 const mutations: Mutations = {
@@ -260,6 +265,9 @@ const mutations: Mutations = {
 	},
 	userlistOpen(state, payload) {
 		state.userlistOpen = payload;
+	},
+	uploadProgress(state, progress) {
+		state.uploadProgress = progress;
 	},
 };
 
