@@ -12,6 +12,9 @@ import {expect} from "chai";
 import {readFileSync} from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
+import {CONCAT_TAG, lineIndexOf, parsePushLine} from "../../client/js/push/line";
+import {addMessage, MERGE_KEEP, renderMergedBody} from "../../client/js/push/merge";
+import {notificationText, stripFormatting} from "../../client/js/push/strip";
 
 const SW_SOURCE = readFileSync(path.join(__dirname, "../../client/service-worker.js"), "utf8");
 
@@ -249,6 +252,12 @@ interface SWHarness {
 interface HarnessOptions {
 	script?: ServerScript;
 	clients?: FakeClient[];
+	/** Build the worker WITHOUT `sandbox.seancePush` — the js/push.js chunk
+	 * failed to load, so `push()` falls back to its inline minimum. */
+	noPushModule?: boolean;
+	/** Make `indexedDB.open` throw synchronously — the worker must still
+	 * show something rather than let handlePush reject silently. */
+	failIndexedDB?: boolean;
 }
 
 const SCOPE = "https://app.test/";
@@ -298,6 +307,18 @@ function makeSW(muteList = "", options: HarnessOptions = {}): SWHarness {
 				);
 			},
 			showNotification(title: string, opts: any): Promise<void> {
+				// The real Notifications API replaces a same-tag notification
+				// silently rather than showing a second one; mirror that here
+				// so the worker's tag-based merge (no explicit close-then-show)
+				// behaves the same under test as in a browser.
+				if (opts.tag) {
+					for (const n of records) {
+						if (!n.closed && n.tag === opts.tag) {
+							n.closed = true;
+						}
+					}
+				}
+
 				const rec: Rec = {
 					tag: opts.tag || "",
 					title,
@@ -333,6 +354,14 @@ function makeSW(muteList = "", options: HarnessOptions = {}): SWHarness {
 		skipWaiting: (): Promise<void> => Promise.resolve(),
 		indexedDB: {
 			open() {
+				if (options.failIndexedDB) {
+					// Private mode / blocked storage: a real browser fires
+					// `onerror` async, but a synchronous throw here rejects
+					// idbOpen()'s Promise just the same (the executor throwing
+					// auto-rejects) and is the smallest fake for it.
+					throw new Error("IndexedDB is not available");
+				}
+
 				const req: FakeReq = {};
 				queueMicrotask(() => {
 					req.result = {
@@ -377,6 +406,25 @@ function makeSW(muteList = "", options: HarnessOptions = {}): SWHarness {
 	};
 	sandbox.self = sandbox;
 	sandbox.globalThis = sandbox;
+
+	// The real push module, exactly as js/push.js hands it to the worker
+	// (client/js/push/worker-entry.ts) — so this sandbox exercises the path
+	// the browser runs, not the worker's own no-module-loaded fallback.
+	// `noPushModule` leaves it unset: `importScripts` is already a no-op
+	// above, so that is exactly what a failed js/push.js fetch looks like,
+	// and `push()` in the worker falls back to its inline minimum.
+	if (!options.noPushModule) {
+		sandbox.seancePush = {
+			parsePushLine,
+			lineIndexOf,
+			CONCAT_TAG,
+			notificationText,
+			stripFormatting,
+			addMessage,
+			renderMergedBody,
+			MERGE_KEEP,
+		};
+	}
 
 	sandbox.addEventListener = (n: string, f: (ev: any) => void) => {
 		(handlers[n] = handlers[n] || []).push(f);
@@ -543,6 +591,82 @@ describe("service worker push notifications", function () {
 		expect(live).to.have.lengthOf(1);
 	});
 
+	it("strips IRC formatting always, and Markdown markers only when the reader renders it", async function () {
+		const defaultPrefs = makeSW();
+		await firePush(
+			defaultPrefs,
+			"@msgid=fmt1;time=2026-09-02T19:59:00.000Z :alice!u@h PRIVMSG pushtest :\x02**hello**\x02"
+		);
+		expect(defaultPrefs.shown[0].body).to.equal("hello");
+
+		const markdownOff = makeSW();
+		markdownOff.kv.set("prefs", {markdown: false});
+		await firePush(
+			markdownOff,
+			"@msgid=fmt2;time=2026-09-02T19:59:00.000Z :alice!u@h PRIVMSG pushtest :\x02**hello**\x02"
+		);
+		expect(markdownOff.shown[0].body).to.equal("**hello**");
+	});
+
+	it("reassembles a multiline batch delivered out of order into one notification", async function () {
+		const sw = makeSW();
+		const T = "2026-09-02T19:59:00.000Z";
+		const line = (i: number, text: string, concat = "") =>
+			`@batch=b1;msgid=b1;time=${T};evilnet.github.io/line=${i}/3/3${concat} :bob!u@h PRIVMSG pushtest :${text}`;
+
+		await firePush(sw, line(3, "```"));
+		await firePush(sw, line(1, "```js"));
+		await firePush(sw, line(2, "let x = 1;"));
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live).to.have.lengthOf(1);
+		expect(live[0].data.count).to.equal(1);
+		expect(live[0].body).to.equal("let x = 1;");
+	});
+
+	it("reassembles a multiline batch whose pushes arrive at the same time", async function () {
+		// FCM hands a batch's pushes to the worker together; the handlers run
+		// concurrently, and each one reads the notification's stored state
+		// before writing it back. Every line must survive.
+		const sw = makeSW();
+		const T = "2026-09-02T19:59:00.000Z";
+		const line = (i: number) =>
+			`@batch=b2;msgid=b2;time=${T};evilnet.github.io/line=${i}/5/5 :bob!u@h PRIVMSG pushtest :line ${i}`;
+
+		await Promise.all([1, 2, 3, 4, 5].map((i) => firePush(sw, line(i))));
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live).to.have.lengthOf(1);
+		expect(live[0].data.count).to.equal(1);
+		expect(live[0].body).to.equal("line 1\nline 2\nline 3\nline 4\nline 5");
+	});
+
+	it("a MARKREAD line closes the target's notification when it postdates the message", async function () {
+		const sw = makeSW();
+
+		await firePush(
+			sw,
+			"@msgid=mr1;time=2026-09-02T19:59:00.000Z :alice!u@h PRIVMSG pushtest :unread"
+		);
+		await firePush(sw, ":irc.example MARKREAD alice timestamp=2099-01-01T00:00:00.000Z");
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live).to.have.lengthOf(0);
+	});
+
+	it("a MARKREAD line leaves a notification that postdates it", async function () {
+		const sw = makeSW();
+
+		await firePush(
+			sw,
+			"@msgid=mr2;time=2099-01-01T00:00:00.000Z :alice!u@h PRIVMSG pushtest :future"
+		);
+		await firePush(sw, ":irc.example MARKREAD alice timestamp=2026-09-02T19:59:00.000Z");
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live).to.have.lengthOf(1);
+	});
+
 	it("sends the inline reply over a throwaway connection", async function () {
 		const sw = makeSW();
 
@@ -618,9 +742,15 @@ describe("service worker push notifications", function () {
 		await firePush(sw, msgPayload("alice", "pushtest", "second one", "BjAAAaBjzZ1"));
 		expect(sw.shown, "shown when not seen").to.have.lengthOf(1);
 
-		// A push without a msgid (raw-line fallback) never dedups.
+		// The raw-line path dedupes on its own tags.msgid too, against the
+		// same "seen" ring.
+		sw.kv.set("seen", ["BjAAAaBjzZ9"]);
 		await firePush(sw, "@msgid=BjAAAaBjzZ9 :alice PRIVMSG pushtest :old line");
-		expect(sw.shown, "raw-line fallback still shows").to.have.lengthOf(2);
+		expect(sw.shown, "raw-line msgid in the seen ring is deduped").to.have.lengthOf(1);
+
+		// A raw line with a msgid not in the ring still shows.
+		await firePush(sw, "@msgid=BjAAAaBjzZ10 :alice PRIVMSG pushtest :new line");
+		expect(sw.shown, "raw-line msgid not in the ring still shows").to.have.lengthOf(2);
 	});
 
 	it("keeps the read relay working when seen entries exist", async function () {
@@ -632,6 +762,62 @@ describe("service worker push notifications", function () {
 		// The t:"read" relay carries ts, not msgid — never deduped.
 		await firePush(sw, `{"t":"read","target":"alice","ts":"2026-09-03T00:00:00.000Z"}`);
 		expect(sw.records[0].closed, "notification closed by read relay").to.be.true;
+	});
+
+	it("titles and tags a highlight on a non-# channel prefix (isChannelName, not startsWith('#'))", async function () {
+		const sw = makeSW();
+
+		await firePush(
+			sw,
+			"@msgid=amp1;time=2026-09-04T10:20:30.123Z :bob!u@h PRIVMSG &local :hey pushtest"
+		);
+
+		expect(sw.shown).to.have.lengthOf(1);
+		expect(sw.shown[0].title).to.equal("bob in &local");
+		expect(sw.shown[0].tag).to.equal("push-&local");
+	});
+
+	it("shows the generic notification when IndexedDB rejects", async function () {
+		const sw = makeSW("", {failIndexedDB: true});
+
+		await firePush(sw, msgPayload("alice", "pushtest", "hello there"));
+
+		expect(sw.shown).to.have.lengthOf(1);
+		expect(sw.shown[0].tag).to.equal("push-activity");
+		expect(sw.shown[0].body).to.equal("New activity while you were away.");
+	});
+});
+
+describe("service worker push notifications (inline fallback, js/push.js not loaded)", function () {
+	it("renders a PM with control bytes stripped and Markdown left literal", async function () {
+		const sw = makeSW("", {noPushModule: true});
+
+		await firePush(
+			sw,
+			"@msgid=fb1;time=2026-09-04T10:20:30.123Z :alice!u@h PRIVMSG me :\x02**hi**\x02"
+		);
+
+		expect(sw.shown).to.have.lengthOf(1);
+		expect(sw.shown[0].title).to.equal("alice");
+		expect(sw.shown[0].body).to.equal("**hi**");
+	});
+
+	it("merges a second push for the same target into a two-line body", async function () {
+		const sw = makeSW("", {noPushModule: true});
+
+		await firePush(
+			sw,
+			"@msgid=fb2;time=2026-09-04T10:20:30.123Z :alice!u@h PRIVMSG me :\x02**hi**\x02"
+		);
+		await firePush(
+			sw,
+			"@msgid=fb3;time=2026-09-04T10:20:31.123Z :alice!u@h PRIVMSG me :\x02**bye**\x02"
+		);
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live).to.have.lengthOf(1);
+		expect(live[0].body).to.equal("**hi**\n**bye**");
+		expect(live[0].data.count).to.equal(2);
 	});
 });
 

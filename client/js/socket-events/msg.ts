@@ -1,5 +1,5 @@
 import socket from "../socket";
-import {cleanIrcMessage} from "../../../shared/irc";
+import {notificationText} from "../push/strip";
 import {store} from "../store";
 import {switchToChannel} from "../router";
 import {ClientChan, NetChan, ClientMessage} from "../types";
@@ -193,7 +193,11 @@ function notifyMessage(
 					}
 
 					// TODO: fix msg type and get rid of that conditional
-					body = cleanIrcMessage(msg.text ? msg.text : "");
+					// The same stripping as the service worker's push path, so a
+					// live page and a push show the same body.
+					body = notificationText(msg.text ? msg.text : "", {
+						markdown: store.state.settings.markdown,
+					});
 				}
 
 				const timestamp = Date.parse(String(msg.time));

@@ -1,4 +1,5 @@
 import type {TypedStore} from "./store";
+import {mirrorPushPrefs} from "./push-prefs";
 
 const defaultSettingConfig = {
 	apply() {},
@@ -39,6 +40,12 @@ const defaultConfig = {
 	},
 	markdown: {
 		default: true,
+		// Mirrored to the service worker (it cannot read localStorage) so a
+		// push notification strips Markdown exactly when the page renders it;
+		// applyAll runs this at boot too.
+		apply(store: TypedStore, value: boolean) {
+			void mirrorPushPrefs({markdown: value});
+		},
 	},
 	motd: {
 		default: true,

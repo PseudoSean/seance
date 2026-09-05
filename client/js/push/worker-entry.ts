@@ -1,0 +1,22 @@
+/**
+ * Entry of the service worker's push chunk (public/js/push.js, built by
+ * the second webpack configuration). The worker `importScripts` it at
+ * start-up and reaches everything through `self.seancePush`; keep this
+ * object's shape in step with `push()` in client/service-worker.js.
+ */
+import {CONCAT_TAG, lineIndexOf, parsePushLine} from "./line";
+import {addMessage, MERGE_KEEP, renderMergedBody} from "./merge";
+import {notificationText, stripFormatting} from "./strip";
+
+export const seancePush = {
+	parsePushLine,
+	lineIndexOf,
+	CONCAT_TAG,
+	notificationText,
+	stripFormatting,
+	addMessage,
+	renderMergedBody,
+	MERGE_KEEP,
+};
+
+(self as unknown as {seancePush: typeof seancePush}).seancePush = seancePush;

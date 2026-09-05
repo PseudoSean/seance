@@ -47,6 +47,15 @@ _Live-cycle findings 2026-09-02 (first real trigger attempt, testnet ircd):_
     accounts can still opt down with `METADATA \* SET draft/webpush/payload
     - :route|ping`under`draft/metadata-2`), falling back to the spec's
       raw IRC line.
+  - the spec-shaped raw line (the `full` tier now): parsed by
+    `client/js/push/line.ts`, stripped by `push/strip.ts` (IRC formatting
+    always, Markdown when the mirrored setting is on), merged and
+    reassembled by `push/merge.ts`; `tools/push-line-check.mjs` drives the
+    real worker with synthetic lines. A new message re-alerts through
+    `renotify`; later lines of a multiline message update the same
+    notification silently (tag replacement, no re-alert). The worker's
+    mocha suite (`test/tests/service-worker.ts`) exercises the real
+    module.
 - The whole chain was verified to the edge of the sandbox: session HELD →
   PM → all server gates pass (flag/HOLDING/subscription/cooldown) → push
   emitted → FCM accepted a correctly-signed aes128gcm push for this
@@ -75,7 +84,13 @@ round-trip (transcript below).
   echoes and MUST silently succeed for unknown endpoints.
 - Errors via standard replies: `FAIL WEBPUSH INVALID_PARAMS|INTERNAL_ERROR| MAX_REGISTRATIONS <command> <endpoint> <message>`.
 - The pushed payload (phase 2) is one raw IRC line, encrypted aes128gcm
-  (RFC 8291) under the client's p256dh key, VAPID-signed (RFC 8292).
+  (RFC 8291) under the client's p256dh key, VAPID-signed (RFC 8292). The
+  server's `full` tier does exactly that since the spec-shaped payload
+  work (`docs/projects/push-payload-multiline.md`): `@msgid;time;account :nick!user@host PRIVMSG target :text`, a multiline message as one push
+  per line with a vendor ordering tag `evilnet.github.io/line=<i>/<sent>/<total>`
+  (an addition the draft does not mention: the payload is still one IRC
+  message), and the read relay as `:server MARKREAD target timestamp=…`.
+  The `route`/`ping` opt-down tiers stay JSON; they carry no message.
 
 ## What nefarious2 `ircv3.2-upgrade` implements
 
