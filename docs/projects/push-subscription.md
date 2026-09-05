@@ -623,7 +623,7 @@ been removed.
 The client now relies only on the draft's `REGISTER`/`UNREGISTER <endpoint>`
 for hygiene: it re-sends `REGISTER` on every connect (the draft's renewal
 mechanism), it `UNREGISTER`s the endpoint its own browser replaced whenever
-a subscription is recreated (`unregisterReplaced`/`storedEndpoints` in
+a subscription is recreated (`subscribe(uuid)` unregisters the endpoint it replaces, in
 `webpush.ts`), and the server expires whatever a device stops renewing.
 There is no client-side way to view or clear another device's registration.
 
@@ -648,15 +648,16 @@ Settings still said subscribed — a silent failure. Now:
 - **`client/js/helpers/pushKeys.ts`** (Vue-free, `test/helpers/pushKeys.ts`):
   `decodeApplicationServerKey` (the base64url decoder that used to live in
   `webpush.ts`), `sameApplicationServerKey` (byte comparison against
-  `PushSubscription.options.applicationServerKey`) and `subscriptionIsStale`
-  (stored keys vs. the keys connected servers announce; false while nothing
-  is stored or nothing is announced yet).
+  `PushSubscription.options.applicationServerKey`); the staleness decision
+  is per network in `helpers/pushStore.ts` (`entryStale`/`anyStale`: an
+  entry made against another key than the one its server announces; false
+  while nothing is stored or nothing is announced yet) since subscriptions
+  became per network (`push-per-network.md`).
 - **The mechanical fix.** `pushSubscription()` looks at the browser's existing
   subscription first and unsubscribes it when its key differs, then
   subscribes — what the error message asks for. The caller
-  (`subscribe()`) already unregisters the endpoint that was replaced from
-  every connected network (`unregisterReplaced`), so the account does not
-  keep pushing to a dead endpoint.
+  (`subscribe(uuid)`) unregisters the endpoint that was replaced from that
+  network, so the account does not keep pushing to a dead endpoint.
 - **Never silently.** The rotation branch in `autoRegister` is gone;
   `autoRegister` only re-REGISTERs a stored subscription that matches the
   announced key. `maybePrompt` opens the connect-time prompt in its **`renew`
@@ -686,8 +687,8 @@ Settings still said subscribed — a silent failure. Now:
   **Suspicious** (`ignore`: leave it; push from that server stays off until
   renewed from the network's settings).
 - **Visible in Settings, renewed per network.** `refreshState` reports
-  **`stale`** (before the "stored means subscribed" rule) whenever
-  `subscriptionIsStale` holds; Settings → Notifications shows the explanation
+  **`stale`** (before the "stored means subscribed" rule) whenever any
+  connected network's entry is stale; Settings → Notifications shows the explanation
   instead of the snooze row and points at the network's settings, so the
   problem stays visible after _Never_ and has a way out. The **Renew** button
   is in the Edit-network form (`#pushRenew` → `webpush.renew(uuid)` →
@@ -712,13 +713,9 @@ Settings still said subscribed — a silent failure. Now:
   push off for the network so the account keeps none of its fixed fake
   endpoints (`https://push.invalid/push-renew/e1..4`).
 
-Known limit, unchanged and **confirmed in use on 2026-09-05** (two
-connections, both subscribed, the prompt swapping between them): two enabled
-networks announcing **different** keys share the one browser subscription, so
-whichever key it holds, the other network's connect reports stale and offers
-a renewal that would flip it back (`trust` flips it silently on every
-connect, `ignore` parks it on one network). A browser holds one push
-subscription _per service-worker registration_, so the client-side fix is one
-registration per network (`register("service-worker.js", {scope: "/push/<uuid>/"})`), each with its own subscription and key, the worker
-reading its network from `self.registration.scope` — the next step, not
-started.
+**Resolved the same day**: two enabled networks announcing **different**
+keys used to share the one browser subscription and take it from each other
+on every connect (confirmed in use on 2026-09-05: two connections, both
+subscribed, the prompt swapping between them). Subscriptions are now per
+network — one service-worker registration per network, each with its own
+subscription and key — see `docs/projects/push-per-network.md`.

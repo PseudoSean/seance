@@ -1,91 +1,58 @@
-// VAPID rotation recovery (draft/webpush): the renew prompt, end to end in a
-// real browser against the testnet ircd (SASL + draft/webpush).
+// VAPID rotation recovery (draft/webpush): the renew prompt and the
+// pushKeyChange policies, end to end in a real browser against the testnet
+// ircd (SASL + draft/webpush), on one network.
 //
 //   npx webpack && python3 -m http.server -d public 8001 &
 //   node tools/browser-drive.mjs tools/scenarios/push-renew.mjs [--chrome=…]
 //
-// Headless Chromium has no push service, so the Push API is faked with an
-// init script that behaves like Chrome's: one subscription per service-worker
-// registration, bound to the applicationServerKey it was created with, and
-// `subscribe()` with a different key throws InvalidStateError until the old
-// one is unsubscribed — the exact refusal a server-side VAPID rotation runs
-// into. Everything else (service worker, SASL, WEBPUSH on the wire) is real.
+// Headless Chromium has no push service, so the Push API is faked per
+// service-worker registration (lib/fake-push.mjs); everything else — the
+// workers, SASL, WEBPUSH on the wire — is real.
 //
-// Claims under test (docs/projects/push-subscription.md § VAPID rotation):
-//   1. with permission granted, a fresh connect subscribes silently and
-//      registers with the server under its announced key;
-//   2. once the stored subscription matches no announced key, the connect
-//      opens the prompt in its `renew` variant instead of renewing silently;
-//   3. "No" closes it, Settings reports the stale subscription and points at
+// Claims under test (docs/projects/push-subscription.md § VAPID rotation,
+// push-per-network.md):
+//   1. with permission granted, a fresh connect subscribes silently on the
+//      network's own registration (`push/<uuid>/`) and registers with the
+//      server under its announced key;
+//   2. once the entry matches no announced key, the connect opens the prompt
+//      in its `renew` variant, naming the network, instead of renewing
+//      silently;
+//   3. "No" closes it; Settings reports the stale subscription and points at
 //      the network's settings, whose Renew button recreates the subscription
-//      (old endpoint unregistered, new one registered, stored map re-keyed);
-//      the prompt returns on the next connect;
+//      (old endpoint unregistered, new one registered, entry re-keyed); the
+//      prompt returns on the next connect;
 //   4. "Never" flips the pushKeyChange setting to "ignore" and no later
 //      connect prompts (the subscribe prompt's own never-flag stays untouched);
 //   5. back on "ask", "Yes" does what the Renew button does;
 //   6. the connect after a renewal re-registers the new endpoint and asks
-//      nothing — and both prompt variants name the network (server, account);
+//      nothing;
 //   7. on "trust" a rotation is renewed on the spot, no prompt.
-// The fake endpoints are fixed per slot so re-runs re-register the same
-// four, and the run ends by turning push off for the network so the account
-// keeps none of them.
+// The run ends by turning push off for the network, which unsubscribes it
+// and drops its registration, so the account keeps none of the endpoints.
+
+import {
+	FAKE_ENDPOINT,
+	FAKE_PUSH_API,
+	announcedVapid,
+	getSetting,
+	pushScope,
+	registrationScopes,
+	rotateAway,
+	setSetting,
+	storedSubs,
+	waitFrame,
+	webpushOut,
+} from "./lib/fake-push.mjs";
 
 const ORIGIN = "http://127.0.0.1:8001";
 const ACCOUNT = "pushtest1";
 const PASSWORD = "pushtest1-pass";
-const ENDPOINT = (slot) => `https://push.invalid/push-renew/e${slot}`;
 
 export const url =
 	`${ORIGIN}/?host=127.0.0.1&port=8067&tls=false` +
 	`&nick=pwren&join=%23seance&sasl=plain&saslAccount=${ACCOUNT}&saslPassword=${PASSWORD}` +
 	`&autoconnect=1`;
 
-/** Chrome's Push API, minus the push service: the state lives in
- * localStorage (`__fakePush`) so it survives reloads like a real
- * subscription would. Keys are base64url, as the wire wants them. */
-const FAKE_PUSH_API = `(() => {
-	const STORE = "__fakePush";
-	const load = () => { try { return JSON.parse(localStorage.getItem(STORE) || "null"); } catch { return null; } };
-	const save = (s) => localStorage.setItem(STORE, JSON.stringify(s));
-	const toB64url = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/, "");
-	const fromB64url = (s) => { const std = s.replace(/-/g, "+").replace(/_/g, "/"); return Uint8Array.from(atob(std + "=".repeat((4 - (std.length % 4)) % 4)), (c) => c.charCodeAt(0)); };
-	const keyBytes = (k) => k instanceof ArrayBuffer ? new Uint8Array(k) : ArrayBuffer.isView(k) ? new Uint8Array(k.buffer, k.byteOffset, k.byteLength) : fromB64url(String(k));
-	const fakeKey = (len, seed) => { const b = new Uint8Array(len); b[0] = 4; for (let i = 1; i < len; i++) { b[i] = (seed * 31 + i * 7) & 0xff; } return b; };
-	const makeSub = (state) => ({
-		endpoint: state.endpoint,
-		options: {userVisibleOnly: true, applicationServerKey: fromB64url(state.key).buffer},
-		toJSON() { return {endpoint: state.endpoint, keys: {p256dh: state.p256dh, auth: state.auth}}; },
-		unsubscribe: async () => { save(null); return true; },
-	});
-	const manager = {
-		getSubscription: async () => { const s = load(); return s ? makeSub(s) : null; },
-		subscribe: async (opts) => {
-			const wanted = keyBytes(opts.applicationServerKey);
-			const cur = load();
-			if (cur) {
-				const have = fromB64url(cur.key);
-				const same = have.length === wanted.length && have.every((b, i) => b === wanted[i]);
-				if (!same) {
-					throw new DOMException("Registration failed - A subscription with a different applicationServerKey (or gcm_sender_id) already exists; to change the applicationServerKey, unsubscribe then resubscribe.", "InvalidStateError");
-				}
-				return makeSub(cur);
-			}
-			const slot = Number(localStorage.getItem(STORE + ".slot") || "0") + 1;
-			localStorage.setItem(STORE + ".slot", String(slot));
-			const state = {
-				endpoint: "https://push.invalid/push-renew/e" + slot,
-				key: toB64url(wanted),
-				p256dh: toB64url(fakeKey(65, slot)),
-				auth: toB64url(fakeKey(16, slot + 100)),
-			};
-			save(state);
-			return makeSub(state);
-		},
-	};
-	Object.defineProperty(ServiceWorkerRegistration.prototype, "pushManager", {get() { return manager; }, configurable: true});
-})();`;
-
-const frameText = (f) => (typeof f.payloadData === "string" ? f.payloadData : "");
 const promptOpened = `document.querySelector("#push-prompt-overlay")?.classList.contains("opened")`;
 /** The overlay fades out over 0.2 s and swallows clicks until it is hidden. */
 const promptGone = `getComputedStyle(document.querySelector("#push-prompt-overlay")).visibility === "hidden"`;
@@ -98,43 +65,6 @@ async function waitRegistered(page, before) {
 		timeout: 60000,
 	});
 	await waitFrame(page, before, "out", /^PERSISTENCE/, "the registration (PERSISTENCE SET)");
-}
-
-async function waitFrame(page, since, dir, re, what, timeoutMs = 20000) {
-	const deadline = Date.now() + timeoutMs;
-
-	while (Date.now() < deadline) {
-		if (page.wsFrames.slice(since).some((f) => f.dir === dir && re.test(frameText(f)))) {
-			return true;
-		}
-
-		await page.sleep(100);
-	}
-
-	throw new Error(`timed out waiting for ${what}`);
-}
-
-const webpushOut = (page, since) =>
-	page.wsFrames
-		.slice(since)
-		.filter((f) => f.dir === "out" && frameText(f).startsWith("WEBPUSH "))
-		.map(frameText);
-
-/** The server rotated its key: the stored subscription and the browser's
- * one both stay bound to a key no connected server announces. */
-async function rotateAway(page, tag) {
-	await page.evaluate(`(() => {
-		const subs = JSON.parse(localStorage.getItem("thelounge.push") || "{}");
-		const material = Object.values(subs)[0];
-		const oldKey = ("BOLD" + ${JSON.stringify(
-			tag
-		)} + "A".repeat(90)).slice(0, 88); // valid base64url length
-		localStorage.setItem("thelounge.push", JSON.stringify({[oldKey]: material}));
-		const fake = JSON.parse(localStorage.getItem("__fakePush"));
-		fake.key = oldKey;
-		localStorage.setItem("__fakePush", JSON.stringify(fake));
-		return true;
-	})()`);
 }
 
 /** Load `target`, wait for the registration, and make sure this document
@@ -161,20 +91,11 @@ async function connect(page, target) {
 	throw new Error("the page never saw the notification permission as granted");
 }
 
-/** Write one setting the way the app persists them (localStorage `settings`). */
-const setSetting = (page, name, value) =>
-	page.evaluate(`(() => {
-		const all = JSON.parse(localStorage.getItem("settings") || "{}");
-		all[${JSON.stringify(name)}] = ${JSON.stringify(value)};
-		localStorage.setItem("settings", JSON.stringify(all));
-		return true;
-	})()`);
-
-const getSetting = (page, name) =>
-	page.evaluate(`JSON.parse(localStorage.getItem("settings") || "{}")[${JSON.stringify(name)}]`);
-
-const storedSubs = (page) =>
-	page.evaluate(`JSON.parse(localStorage.getItem("thelounge.push") || "{}")`);
+/** The network's entry is for the server's key and the given endpoint. */
+const entryIs = (subs, uuid, vapid, endpoint) =>
+	Object.keys(subs).join() === uuid &&
+	subs[uuid].vapid === vapid &&
+	subs[uuid].endpoint === endpoint;
 
 export default async function run(page) {
 	await page.grantPermissions(["notifications"], ORIGIN);
@@ -182,32 +103,26 @@ export default async function run(page) {
 
 	// --- 1. fresh profile, permission granted: silent subscribe ------------
 	let before = await connect(page, page.url);
-
-	const vapid = (() => {
-		for (const f of page.wsFrames) {
-			const m = frameText(f).match(/draft\/webpush=vapid=([A-Za-z0-9_-]+)/);
-
-			if (m) {
-				return m[1];
-			}
-		}
-
-		return undefined;
-	})();
+	const vapid = announcedVapid(page);
 	page.check("the server announced a VAPID key in CAP LS", Boolean(vapid));
+
+	// The uuid of the network the URL parameters just created/saved.
+	const uuid = await page.evaluate(
+		`JSON.parse(localStorage.getItem("thelounge.networks"))[0].uuid`
+	);
 
 	await waitFrame(
 		page,
 		before,
 		"out",
-		new RegExp(`^WEBPUSH REGISTER ${ENDPOINT(1)} `),
+		new RegExp(`^WEBPUSH REGISTER ${FAKE_ENDPOINT(1)} `),
 		"the first WEBPUSH REGISTER"
 	);
 	await waitFrame(
 		page,
 		before,
 		"in",
-		new RegExp(`WEBPUSH REGISTER ${ENDPOINT(1)}`),
+		new RegExp(`WEBPUSH REGISTER ${FAKE_ENDPOINT(1)}`),
 		"the server's WEBPUSH REGISTER echo"
 	);
 	page.check(
@@ -216,8 +131,12 @@ export default async function run(page) {
 	);
 	let subs = await storedSubs(page);
 	page.check(
-		"1. the stored subscription is keyed by the server's key",
-		Object.keys(subs).length === 1 && subs[vapid]?.endpoint === ENDPOINT(1)
+		"1. the entry is keyed by the network and carries the server's key",
+		entryIs(subs, uuid, vapid, FAKE_ENDPOINT(1))
+	);
+	page.check(
+		"1. the network got its own service-worker registration",
+		(await registrationScopes(page)).includes(pushScope(ORIGIN, uuid))
 	);
 	await page.screenshot("1-subscribed");
 
@@ -231,12 +150,9 @@ export default async function run(page) {
 		localStorage.setItem("thelounge.networks", JSON.stringify(all));
 		return all.length;
 	})()`);
-	const uuid = await page.evaluate(
-		`JSON.parse(localStorage.getItem("thelounge.networks"))[0].uuid`
-	);
 
 	// --- 2. the server rotated its key: the renew prompt ------------------
-	await rotateAway(page, "one");
+	await rotateAway(page, ORIGIN, uuid, "one");
 	before = await connect(page, `${ORIGIN}/`);
 	await page.waitFor(promptOpened, {label: "the prompt after a key rotation"});
 	page.check(
@@ -265,7 +181,7 @@ export default async function run(page) {
 	);
 	await page.screenshot("2-renew-prompt");
 
-	// --- 3. "No": closed, Settings says stale, Renew there works ------------
+	// --- 3. "No": closed, Settings says stale, Renew in Edit network works --
 	await page.click("#pushPromptNo");
 	await page.waitFor(promptGone, {label: "the prompt to close on No"});
 	page.check("3. No sends nothing", webpushOut(page, before).length === 0);
@@ -287,23 +203,12 @@ export default async function run(page) {
 	);
 	await page.screenshot("3-settings-stale");
 
-	// Renew lives in the network's own settings (with two networks, only
-	// that one's key is the right one to subscribe against).
 	await page.evaluate(`location.hash = "#/edit-network/${uuid}"`);
 	await page.waitFor(`!!document.querySelector("#pushRenew")`, {
 		label: "the Renew button in Edit network",
 	});
 	await page.evaluate(`document.querySelector("#pushRenew").scrollIntoView({block: "center"})`);
 	await page.screenshot("3b-edit-network-stale");
-
-	page.check(
-		"3. the service worker is registered in this document",
-		(await page.evaluate(`navigator.serviceWorker.getRegistration().then((r) => !!r)`)) === true
-	);
-	page.check(
-		"3. permission is granted before Renew",
-		(await page.evaluate(`Notification.permission`)) === "granted"
-	);
 	page.check(
 		"3. the Renew button is what a click at its centre hits",
 		(await page.evaluate(`(() => {
@@ -318,27 +223,27 @@ export default async function run(page) {
 		page,
 		mark,
 		"out",
-		new RegExp(`^WEBPUSH UNREGISTER ${ENDPOINT(1)}$`),
+		new RegExp(`^WEBPUSH UNREGISTER ${FAKE_ENDPOINT(1)}$`),
 		"the old endpoint's UNREGISTER (Renew button)"
 	);
 	await waitFrame(
 		page,
 		mark,
 		"out",
-		new RegExp(`^WEBPUSH REGISTER ${ENDPOINT(2)} `),
+		new RegExp(`^WEBPUSH REGISTER ${FAKE_ENDPOINT(2)} `),
 		"the new endpoint's REGISTER (Renew button)"
 	);
 	await waitFrame(
 		page,
 		mark,
 		"in",
-		new RegExp(`WEBPUSH REGISTER ${ENDPOINT(2)}`),
+		new RegExp(`WEBPUSH REGISTER ${FAKE_ENDPOINT(2)}`),
 		"the server's echo for the renewed endpoint"
 	);
 	subs = await storedSubs(page);
 	page.check(
-		"3. Renew re-keyed the stored subscription to the server's key",
-		Object.keys(subs).length === 1 && subs[vapid]?.endpoint === ENDPOINT(2)
+		"3. Renew re-keyed the entry to the server's key",
+		entryIs(subs, uuid, vapid, FAKE_ENDPOINT(2))
 	);
 	await page.waitFor(`!document.querySelector("#pushStaleRow")`, {
 		label: "the Renew row to leave the form",
@@ -350,7 +255,7 @@ export default async function run(page) {
 	page.check("3. the stale warning is gone", (await page.count("#pushStale")) === 0);
 	await page.screenshot("4-settings-renewed");
 
-	await rotateAway(page, "two");
+	await rotateAway(page, ORIGIN, uuid, "two");
 	before = await connect(page, `${ORIGIN}/`);
 	await page.waitFor(promptOpened, {label: "the prompt again after No"});
 	page.check("3. No: asked again on the next connect", true);
@@ -398,32 +303,36 @@ export default async function run(page) {
 		page,
 		mark,
 		"out",
-		new RegExp(`^WEBPUSH UNREGISTER ${ENDPOINT(2)}$`),
+		new RegExp(`^WEBPUSH UNREGISTER ${FAKE_ENDPOINT(2)}$`),
 		"the old endpoint's UNREGISTER (Yes)"
 	);
 	await waitFrame(
 		page,
 		mark,
 		"out",
-		new RegExp(`^WEBPUSH REGISTER ${ENDPOINT(3)} `),
+		new RegExp(`^WEBPUSH REGISTER ${FAKE_ENDPOINT(3)} `),
 		"the new endpoint's REGISTER (Yes)"
 	);
 	await waitFrame(
 		page,
 		mark,
 		"in",
-		new RegExp(`WEBPUSH REGISTER ${ENDPOINT(3)}`),
+		new RegExp(`WEBPUSH REGISTER ${FAKE_ENDPOINT(3)}`),
 		"the server's echo (Yes)"
 	);
 	await page.waitFor(promptGone, {label: "the prompt to close on Yes"});
 	subs = await storedSubs(page);
 	page.check(
-		"5. Yes re-keyed the stored subscription to the server's key",
-		Object.keys(subs).length === 1 && subs[vapid]?.endpoint === ENDPOINT(3)
+		"5. Yes re-keyed the entry to the server's key",
+		entryIs(subs, uuid, vapid, FAKE_ENDPOINT(3))
 	);
 	page.check(
 		"5. the browser subscription was recreated under the server's key",
-		(await page.evaluate(`JSON.parse(localStorage.getItem("__fakePush")).key`)) === vapid
+		(await page.evaluate(
+			`JSON.parse(localStorage.getItem(${JSON.stringify(
+				`__fakePush:${pushScope(ORIGIN, uuid)}`
+			)})).key`
+		)) === vapid
 	);
 	await page.screenshot("6-renewed-by-yes");
 
@@ -434,7 +343,7 @@ export default async function run(page) {
 		page,
 		before,
 		"out",
-		new RegExp(`^WEBPUSH REGISTER ${ENDPOINT(3)} `),
+		new RegExp(`^WEBPUSH REGISTER ${FAKE_ENDPOINT(3)} `),
 		"the renewed endpoint's re-REGISTER on the next connect"
 	);
 	await page.sleep(1500);
@@ -443,33 +352,32 @@ export default async function run(page) {
 		(await page.evaluate(`!(${promptOpened})`)) === true
 	);
 	page.check(
-		"6. the stored subscription still matches the server's key",
-		Object.keys(await storedSubs(page)).join() === vapid
+		"6. the entry still carries the server's key",
+		entryIs(await storedSubs(page), uuid, vapid, FAKE_ENDPOINT(3))
 	);
 
 	// --- 7. "trust": a rotation is renewed on the spot, nobody is asked -----
 	await setSetting(page, "pushKeyChange", "trust");
-	await rotateAway(page, "three");
+	await rotateAway(page, ORIGIN, uuid, "three");
 	before = await connect(page, `${ORIGIN}/`);
 	await waitFrame(
 		page,
 		before,
 		"out",
-		new RegExp(`^WEBPUSH UNREGISTER ${ENDPOINT(3)}$`),
+		new RegExp(`^WEBPUSH UNREGISTER ${FAKE_ENDPOINT(3)}$`),
 		"the old endpoint's UNREGISTER (trust)"
 	);
 	await waitFrame(
 		page,
 		before,
 		"out",
-		new RegExp(`^WEBPUSH REGISTER ${ENDPOINT(4)} `),
+		new RegExp(`^WEBPUSH REGISTER ${FAKE_ENDPOINT(4)} `),
 		"the new endpoint's REGISTER (trust)"
 	);
 	page.check("7. trust: no prompt", (await page.evaluate(`!(${promptOpened})`)) === true);
-	subs = await storedSubs(page);
 	page.check(
-		"7. trust: the stored subscription was re-keyed on its own",
-		Object.keys(subs).length === 1 && subs[vapid]?.endpoint === ENDPOINT(4)
+		"7. trust: the entry was re-keyed on its own",
+		entryIs(await storedSubs(page), uuid, vapid, FAKE_ENDPOINT(4))
 	);
 	page.check(
 		"7. trust: the setting reads back",
@@ -477,12 +385,13 @@ export default async function run(page) {
 	);
 	await page.screenshot("7-trusting");
 
-	// --- cleanup: push off for the network → the account forgets e3 ---------
+	// --- cleanup: push off for the network → unsubscribed, registration gone
 	mark = page.wsFrames.length;
 	await page.evaluate(`location.hash = "#/edit-network/${uuid}"`);
 	await page.waitFor(`!!document.querySelector('input[name="pushEnabled"]')`, {
 		label: "the push checkbox in Edit network",
 	});
+
 	// The form is longer than the viewport: bring each control on screen
 	// before the real click (a click outside the viewport hits nothing).
 	for (const selector of ['input[name="pushEnabled"]', 'button[type="submit"]']) {
@@ -491,14 +400,24 @@ export default async function run(page) {
 		);
 		await page.click(selector);
 	}
+
 	await waitFrame(
 		page,
 		mark,
 		"out",
-		new RegExp(`^WEBPUSH UNREGISTER ${ENDPOINT(4)}$`),
+		new RegExp(`^WEBPUSH UNREGISTER ${FAKE_ENDPOINT(4)}$`),
 		"the cleanup UNREGISTER"
 	);
-	page.check("cleanup: the run's endpoint was unregistered", true);
+	await page.waitFor(
+		`navigator.serviceWorker.getRegistrations().then((rs) => !rs.some((r) => r.scope === ${JSON.stringify(
+			pushScope(ORIGIN, uuid)
+		)}))`,
+		{label: "the network's registration to be dropped"}
+	);
+	page.check(
+		"cleanup: push off unsubscribed the network and dropped its registration",
+		Object.keys(await storedSubs(page)).length === 0
+	);
 
 	page.check("no console errors", page.consoleErrors.length === 0);
 }

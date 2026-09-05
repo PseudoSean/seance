@@ -240,11 +240,11 @@ function onEvent(msg) {
 			break;
 		}
 		case "Network.webSocketFrameSent":
-			wsFrames.push({dir: "out", ...params.response});
+			wsFrames.push({dir: "out", requestId: params.requestId, ...params.response});
 			note(frameLine("→", params.requestId, params.response));
 			break;
 		case "Network.webSocketFrameReceived":
-			wsFrames.push({dir: "in", ...params.response});
+			wsFrames.push({dir: "in", requestId: params.requestId, ...params.response});
 			note(frameLine("←", params.requestId, params.response));
 			break;
 		case "Network.webSocketFrameError":

@@ -6,9 +6,12 @@
  */
 import {CONCAT_TAG, lineIndexOf, parsePushLine} from "./line";
 import {addMessage, MERGE_KEEP, renderMergedBody} from "./merge";
+import {appUrlFromScope, networkFromScope} from "./scope";
 import {notificationText, stripFormatting} from "./strip";
 
 export const seancePush = {
+	networkFromScope,
+	appUrlFromScope,
 	parsePushLine,
 	lineIndexOf,
 	CONCAT_TAG,
