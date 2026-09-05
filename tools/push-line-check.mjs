@@ -202,6 +202,25 @@ if (rendersRenotify) {
 	check("renotify stays consistently absent for a batch join", ns[0]?.renotify === undefined, ns);
 }
 
+// 4b. the same batch with all pushes handed to the worker at once, the way
+//     FCM delivers them: still one notification, every line present
+await clear();
+const C5 = `c5${RUN}`;
+const ml5 = (i) =>
+	`@batch=${C5};msgid=${C5};time=${T};evilnet.github.io/line=${i}/5/5 :bob!u@h PRIVMSG me :line ${i}`;
+await inWorker(
+	`Promise.all(${JSON.stringify(
+		[1, 2, 3, 4, 5].map(ml5)
+	)}.map((l) => handlePush(l))).then(() => true)`
+);
+ns = await shown();
+check("concurrent batch pushes: one notification", ns.length === 1, ns);
+check(
+	"concurrent batch pushes: every line present",
+	ns[0]?.body === "line 1\nline 2\nline 3\nline 4\nline 5",
+	ns
+);
+
 // 5. a concat chunk glues on
 await clear();
 await deliver(

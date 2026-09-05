@@ -624,6 +624,23 @@ describe("service worker push notifications", function () {
 		expect(live[0].body).to.equal("let x = 1;");
 	});
 
+	it("reassembles a multiline batch whose pushes arrive at the same time", async function () {
+		// FCM hands a batch's pushes to the worker together; the handlers run
+		// concurrently, and each one reads the notification's stored state
+		// before writing it back. Every line must survive.
+		const sw = makeSW();
+		const T = "2026-09-02T19:59:00.000Z";
+		const line = (i: number) =>
+			`@batch=b2;msgid=b2;time=${T};evilnet.github.io/line=${i}/5/5 :bob!u@h PRIVMSG pushtest :line ${i}`;
+
+		await Promise.all([1, 2, 3, 4, 5].map((i) => firePush(sw, line(i))));
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live).to.have.lengthOf(1);
+		expect(live[0].data.count).to.equal(1);
+		expect(live[0].body).to.equal("line 1\nline 2\nline 3\nline 4\nline 5");
+	});
+
 	it("a MARKREAD line closes the target's notification when it postdates the message", async function () {
 		const sw = makeSW();
 

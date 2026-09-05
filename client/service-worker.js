@@ -657,6 +657,22 @@ self.addEventListener("push", function (event) {
 	event.waitUntil(handlePush(raw));
 });
 
+// The lines of a multiline message reach the worker together (FCM hands
+// them over at once) and a service worker runs push handlers concurrently.
+// Each handler reads the notification's stored message list, awaits a few
+// IndexedDB reads, then writes the list back — so two in flight would lose
+// each other's line, leaving `…` placeholders. Pushes are therefore handled
+// one at a time, in arrival order; a failed one never blocks the next.
+let pushChain = Promise.resolve();
+
+function handlePush(raw) {
+	const run = pushChain.then(() => handlePushNow(raw));
+
+	pushChain = run.catch(() => undefined);
+
+	return run;
+}
+
 // --- the push module ---------------------------------------------------------
 // Parsing, stripping and the merged body live in client/js/push/* (mocha-
 // tested) and reach the worker as `self.seancePush` (js/push.js, imported
@@ -721,7 +737,7 @@ function fromJson(json) {
 	};
 }
 
-async function handlePush(raw) {
+async function handlePushNow(raw) {
 	let json = null;
 
 	// RFC 8188 says the decrypter strips the aes128gcm padding delimiter
