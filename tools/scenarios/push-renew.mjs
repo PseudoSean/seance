@@ -16,10 +16,10 @@
 //      registers with the server under its announced key;
 //   2. once the stored subscription matches no announced key, the connect
 //      opens the prompt in its `renew` variant instead of renewing silently;
-//   3. "No" closes it, Settings reports the stale subscription with a Renew
-//      button that recreates the subscription (old endpoint unregistered,
-//      new one registered, stored map re-keyed) and the prompt returns on the
-//      next connect;
+//   3. "No" closes it, Settings reports the stale subscription and points at
+//      the network's settings, whose Renew button recreates the subscription
+//      (old endpoint unregistered, new one registered, stored map re-keyed);
+//      the prompt returns on the next connect;
 //   4. "Never" flips the pushKeyChange setting to "ignore" and no later
 //      connect prompts (the subscribe prompt's own never-flag stays untouched);
 //   5. back on "ask", "Yes" does what the Renew button does;
@@ -278,7 +278,23 @@ export default async function run(page) {
 		"3. Settings hides the snooze row while stale",
 		(await page.count(".push-snooze")) === 0
 	);
+	page.check(
+		"3. Settings points at the network settings instead of renewing itself",
+		(await page.count("#pushRenew")) === 0 &&
+			String(
+				await page.evaluate(`document.querySelector("#pushStale").textContent`)
+			).includes("network's settings")
+	);
 	await page.screenshot("3-settings-stale");
+
+	// Renew lives in the network's own settings (with two networks, only
+	// that one's key is the right one to subscribe against).
+	await page.evaluate(`location.hash = "#/edit-network/${uuid}"`);
+	await page.waitFor(`!!document.querySelector("#pushRenew")`, {
+		label: "the Renew button in Edit network",
+	});
+	await page.evaluate(`document.querySelector("#pushRenew").scrollIntoView({block: "center"})`);
+	await page.screenshot("3b-edit-network-stale");
 
 	page.check(
 		"3. the service worker is registered in this document",
@@ -324,6 +340,10 @@ export default async function run(page) {
 		"3. Renew re-keyed the stored subscription to the server's key",
 		Object.keys(subs).length === 1 && subs[vapid]?.endpoint === ENDPOINT(2)
 	);
+	await page.waitFor(`!document.querySelector("#pushStaleRow")`, {
+		label: "the Renew row to leave the form",
+	});
+	await page.evaluate(`location.hash = "#/settings/notifications"`);
 	await page.waitFor(`!!document.querySelector(".push-snooze")`, {
 		label: "Settings back to subscribed",
 	});

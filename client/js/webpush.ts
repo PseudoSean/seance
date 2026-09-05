@@ -38,8 +38,8 @@ import {
  * prompt in its `renew` variant ("Yes" drops the old subscription and
  * re-subscribes, the old endpoint is unregistered everywhere); the
  * `pushKeyChange` setting can make that automatic (`trust`) or turn it off
- * (`ignore`), and Settings reports the `stale` state with a Renew button
- * either way. The subscription material
+ * (`ignore`), and Settings reports the `stale` state either way, with the
+ * Renew button in that network's settings. The subscription material
  * persists in `thelounge.push` keyed by VAPID key; the SW's own working copy
  * (VAPID + credentials for throwaway IRC connections used by quick-reply,
  * mute and renewal) lives in IndexedDB `seance-push` and is only written
@@ -202,8 +202,9 @@ function refreshState(): void {
 	}
 
 	// The server rotated its VAPID key: what is stored was made against the
-	// old one and delivers nothing. Settings shows this with a Renew button;
-	// the connect-time prompt is the other way out.
+	// old one and delivers nothing. Settings says so and points at the
+	// network's settings, where Renew lives; the connect-time prompt is the
+	// other way out.
 	if (subscriptionIsStale(Object.keys(subs), servers.values())) {
 		setState("stale");
 		return;
@@ -675,14 +676,26 @@ function networkPushInfo(uuid: string): {
 	enabled: boolean;
 	vapid: boolean;
 	subscribed: boolean;
+	/** A subscription is stored, but not for the key this network announces
+	 * (its push identity changed): the Edit-network form offers Renew. */
+	stale: boolean;
 } {
 	const vapid = servers.get(uuid);
+	const subscribed = vapid !== undefined && Boolean(subs[vapid]);
 
 	return {
 		enabled: pushOn(uuid),
 		vapid: vapid !== undefined,
-		subscribed: vapid !== undefined && Boolean(subs[vapid]),
+		subscribed,
+		stale: vapid !== undefined && !subscribed && Object.keys(subs).length > 0,
 	};
+}
+
+/** Renew this device's subscription for one network — the Edit-network
+ * form's button when {@link networkPushInfo} says `stale` — against the key
+ * that network announces (the click is the permission user gesture). */
+function renew(uuid: string): void {
+	void subscribe(servers.get(uuid));
 }
 
 // Boot: replace the stub's "unsupported" with what this browser can do.
@@ -809,6 +822,7 @@ if (browserSupported() && "serviceWorker" in navigator) {
 export default {
 	togglePushSubscription,
 	subscribe,
+	renew,
 	unsubscribe,
 	setSnooze,
 	refresh: refreshState,
