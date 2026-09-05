@@ -8,6 +8,45 @@
 				also shown. The browser delivers the notifications; each push-capable server decides
 				whether to wake this app.
 			</div>
+			<div
+				id="label-push-key-change"
+				class="push-networks-hint"
+				role="heading"
+				aria-level="3"
+			>
+				When a server's push identity (its key) changes, this device's subscription for it
+				stops working. Then:
+			</div>
+			<div role="group" aria-labelledby="label-push-key-change">
+				<label class="opt">
+					<input
+						:checked="store.state.settings.pushKeyChange === 'ask'"
+						type="radio"
+						name="pushKeyChange"
+						value="ask"
+					/>
+					Wary — ask before renewing the subscription
+				</label>
+				<label class="opt">
+					<input
+						:checked="store.state.settings.pushKeyChange === 'trust'"
+						type="radio"
+						name="pushKeyChange"
+						value="trust"
+					/>
+					Naive — renew it on the spot, without asking
+				</label>
+				<label class="opt">
+					<input
+						:checked="store.state.settings.pushKeyChange === 'ignore'"
+						type="radio"
+						name="pushKeyChange"
+						value="ignore"
+					/>
+					Suspicious — leave it alone; push from that server stays off until you renew
+					from the network settings
+				</label>
+			</div>
 			<div v-if="store.state.pushNotificationState === 'subscribed'" class="opt">
 				<div>Snooze pushes everywhere:</div>
 				<div class="push-snooze">
@@ -22,6 +61,12 @@
 					</button>
 					<button type="button" class="btn" @click.prevent="snooze(0)">Off</button>
 				</div>
+			</div>
+			<div v-if="store.state.pushNotificationState === 'stale'" id="pushStale" class="error">
+				<strong>Warning</strong>: A server's push identity (its key) changed, so this
+				device's push subscription for it no longer works. Renew it from that network's
+				settings (Edit network → “Renew push notifications”) to keep being notified while
+				the app is closed.
 			</div>
 			<div v-if="store.state.pushNotificationState === 'unsupported'" class="error">
 				Push notifications are not supported by this browser (they need the Push API, a

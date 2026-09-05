@@ -66,6 +66,11 @@ const defaultConfig = {
 	statusMessages: {
 		default: "condensed",
 	},
+	/** A server's push identity (VAPID key) changed: ask | trust | ignore
+	 * (client/js/webpush.ts, helpers/pushKeys.ts keyChangePolicy). */
+	pushKeyChange: {
+		default: "ask",
+	},
 	theme: {
 		default: document.getElementById("theme")?.dataset.serverTheme,
 		apply(store: TypedStore, value: string) {
