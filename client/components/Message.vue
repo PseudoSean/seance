@@ -76,13 +76,18 @@
 				<span v-if="message.editOf" class="msg-edited" title="This message was edited"
 					>(edited)</span
 				>
-				<LinkPreview
-					v-for="preview in message.previews"
-					:key="preview.link"
-					:keep-scroll-position="keepScrollPosition"
-					:link="preview"
-					:channel="channel"
-				/>
+				<!-- A deleted message hides its previews with its text: the
+				placeholder would otherwise sit above the very image it deleted.
+				Revealing the text brings them back. -->
+				<template v-if="!message.redacted || revealed">
+					<LinkPreview
+						v-for="preview in message.previews"
+						:key="preview.link"
+						:keep-scroll-position="keepScrollPosition"
+						:link="preview"
+						:channel="channel"
+					/>
+				</template>
 				<MessageReactions :message="message" :channel="channel" :network="network" />
 			</span>
 		</template>
@@ -151,13 +156,18 @@
 				<span v-if="message.editOf" class="msg-edited" title="This message was edited"
 					>(edited)</span
 				>
-				<LinkPreview
-					v-for="preview in message.previews"
-					:key="preview.link"
-					:keep-scroll-position="keepScrollPosition"
-					:link="preview"
-					:channel="channel"
-				/>
+				<!-- A deleted message hides its previews with its text: the
+				placeholder would otherwise sit above the very image it deleted.
+				Revealing the text brings them back. -->
+				<template v-if="!message.redacted || revealed">
+					<LinkPreview
+						v-for="preview in message.previews"
+						:key="preview.link"
+						:keep-scroll-position="keepScrollPosition"
+						:link="preview"
+						:channel="channel"
+					/>
+				</template>
 				<MessageReactions :message="message" :channel="channel" :network="network" />
 			</span>
 		</template>

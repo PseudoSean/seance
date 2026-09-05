@@ -108,9 +108,11 @@ export default defineComponent({
 			}
 
 			// Only images the reader has revealed: stepping through the
-			// viewer must not load media they chose not to see.
+			// viewer must not load media they chose not to see — nor a
+			// deleted message's, which sit hidden behind its placeholder.
 			const autoReveal = store.state.settings.mediaReveal === "always";
 			const links = channel.value.messages
+				.filter((msg: SharedMsg) => !msg.redacted)
 				.map((msg: SharedMsg) => msg.previews)
 				.flat()
 				.filter(
