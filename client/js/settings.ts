@@ -1,4 +1,5 @@
 import type {TypedStore} from "./store";
+import {mirrorPushPrefs} from "./push-prefs";
 
 const defaultSettingConfig = {
 	apply() {},
@@ -19,23 +20,8 @@ const defaultConfig = {
 	coloredNicks: {
 		default: true,
 	},
-	desktopNotifications: {
-		default: false,
-		sync: "never",
-		apply(store: TypedStore, value: boolean) {
-			// Commit a mutation. options can have root: true that allows to commit root mutations in namespaced modules.
-			// https://vuex.vuejs.org/api/#store-instance-methods. not typed?
-			store.commit("refreshDesktopNotificationState", null, {root: true});
-
-			if ("Notification" in window && value && Notification.permission !== "granted") {
-				Notification.requestPermission(() =>
-					store.commit("refreshDesktopNotificationState", null, {root: true})
-				).catch((e) => {
-					// eslint-disable-next-line no-console
-					console.error(e);
-				});
-			}
-		},
+	highlightMessages: {
+		default: true,
 	},
 	highlights: {
 		default: "",
@@ -54,6 +40,12 @@ const defaultConfig = {
 	},
 	markdown: {
 		default: true,
+		// Mirrored to the service worker (it cannot read localStorage) so a
+		// push notification strips Markdown exactly when the page renders it;
+		// applyAll runs this at boot too.
+		apply(store: TypedStore, value: boolean) {
+			void mirrorPushPrefs({markdown: value});
+		},
 	},
 	motd: {
 		default: true,
@@ -73,6 +65,11 @@ const defaultConfig = {
 	},
 	statusMessages: {
 		default: "condensed",
+	},
+	/** A server's push identity (VAPID key) changed: ask | trust | ignore
+	 * (client/js/webpush.ts, helpers/pushKeys.ts keyChangePolicy). */
+	pushKeyChange: {
+		default: "ask",
 	},
 	theme: {
 		default: document.getElementById("theme")?.dataset.serverTheme,

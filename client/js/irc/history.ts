@@ -34,6 +34,7 @@ import type {Channel, MsgRef} from "./channel";
 import type {IrcClient, ReplayCollection} from "./client";
 import type {BatchHandler} from "./handlers/batch";
 import {formatLine, IrcMessage} from "./message";
+import {settlePendingLabel} from "./pending";
 import {inBouncerReplay, inServerCatchup} from "./persistence";
 import type {Handler} from "./types";
 
@@ -493,13 +494,19 @@ export function chatHistoryFailed(client: IrcClient, msg: IrcMessage): void {
 	}
 }
 
-/** `labeled-response`: `@label=x ACK` means the request produced nothing. */
+/**
+ * `labeled-response`: `@label=x ACK` means the request produced nothing —
+ * a history request answered with no messages, or a message of ours the
+ * server took without echoing (pending.ts).
+ */
 const ack: Handler = (client, msg) => {
 	const label = msg.tags.get("label");
 	const request = label ? pendingOf(client).find((r) => r.label === label) : undefined;
 
 	if (request) {
 		resolve(client, request, [], "ack");
+	} else if (label) {
+		settlePendingLabel(client, label);
 	}
 };
 

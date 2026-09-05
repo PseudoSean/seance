@@ -4,6 +4,7 @@ import socket from "../../client/js/socket";
 import {IrcClient} from "../../client/js/irc/client";
 import {IdAllocator} from "../../client/js/irc/ids";
 import {
+	batchCooldownMs,
 	joinMultiline,
 	MULTILINE_MAX_COOLDOWN_MS,
 	MULTILINE_SETTLE_MS,
@@ -709,29 +710,91 @@ describe("multiline sending", function () {
 			}
 		});
 
-		it("opens a second batch when the message does not fit one", function () {
-			const {client, transport, chanId} = setup(offering("max-bytes=16384,max-lines=2"));
+		it("opens a second batch when the message does not fit one, paced past the cooldown", function () {
+			const clock = sinon.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
 
-			client.input(chanId, "one\ntwo\nthree");
+			try {
+				const {client, transport, chanId} = setup(offering("max-bytes=16384,max-lines=2"));
 
-			// The server cools down for a batch it delivered and drops one
-			// opened inside that window, so the second waits for the first to
-			// be answered rather than going out behind it (multiline.ts).
-			expect(transport.sent).to.deep.equal([
-				"BATCH +m1 draft/multiline #seance",
-				"@batch=m1 PRIVMSG #seance :one",
-				"@batch=m1 PRIVMSG #seance :two",
-				"BATCH -m1",
-			]);
+				client.input(chanId, "one\ntwo\nthree");
 
-			transport.sent.length = 0;
-			echoBatch(transport, "Gk1", "one", "two");
+				expect(transport.sent).to.deep.equal([
+					"BATCH +m1 draft/multiline #seance",
+					"@batch=m1 PRIVMSG #seance :one",
+					"@batch=m1 PRIVMSG #seance :two",
+					"BATCH -m1",
+				]);
 
-			expect(transport.sent).to.deep.equal([
-				"BATCH +m2 draft/multiline #seance",
-				"@batch=m2 PRIVMSG #seance :three",
-				"BATCH -m2",
-			]);
+				transport.sent.length = 0;
+				echoBatch(transport, "Gk1", "one", "two");
+
+				// The server took the first batch, but it is still cooling down
+				// from it; the second batch waits that out rather than going out
+				// on the echo alone and being dropped mid-cooldown (multiline.ts).
+				expect(transport.sent).to.deep.equal([]);
+
+				clock.tick(
+					batchCooldownMs({
+						lines: [
+							{text: "one", concat: false},
+							{text: "two", concat: false},
+						],
+						action: false,
+					})
+				);
+
+				expect(transport.sent).to.deep.equal([
+					"BATCH +m2 draft/multiline #seance",
+					"@batch=m2 PRIVMSG #seance :three",
+					"BATCH -m2",
+				]);
+			} finally {
+				clock.restore();
+			}
+		});
+
+		it("paces a later message's batch past the previous message's cooldown", function () {
+			const clock = sinon.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
+
+			try {
+				const {client, transport, chanId} = setup();
+
+				// One whole message (a single batch), delivered.
+				client.input(chanId, "one\ntwo");
+				expect(transport.sent).to.deep.equal([
+					"BATCH +m1 draft/multiline #seance",
+					"@batch=m1 PRIVMSG #seance :one",
+					"@batch=m1 PRIVMSG #seance :two",
+					"BATCH -m1",
+				]);
+				transport.sent.length = 0;
+				echoBatch(transport, "Gk1", "one", "two");
+
+				// A second message, sent right after: the server is still cooling
+				// down from the first, so its batch must wait — the cooldown gate
+				// outlives the first message's queue (multiline.ts).
+				client.input(chanId, "three\nfour");
+				expect(transport.sent).to.deep.equal([]);
+
+				clock.tick(
+					batchCooldownMs({
+						lines: [
+							{text: "one", concat: false},
+							{text: "two", concat: false},
+						],
+						action: false,
+					})
+				);
+
+				expect(transport.sent).to.deep.equal([
+					"BATCH +m2 draft/multiline #seance",
+					"@batch=m2 PRIVMSG #seance :three",
+					"@batch=m2 PRIVMSG #seance :four",
+					"BATCH -m2",
+				]);
+			} finally {
+				clock.restore();
+			}
 		});
 
 		it("sends one line without a batch", function () {
@@ -956,21 +1019,36 @@ describe("multiline sending", function () {
 		});
 
 		it("puts the edit tag on the first opener only", function () {
-			const {client, transport, chanId} = setup(offering("max-bytes=16384,max-lines=2"));
+			const clock = sinon.useFakeTimers({toFake: ["setTimeout", "clearTimeout"]});
 
-			// One edit replaces one message: the second batch is a new one.
-			client.input(chanId, "one\ntwo\nthree", {edit: "old", reply: "parent"});
+			try {
+				const {client, transport, chanId} = setup(offering("max-bytes=16384,max-lines=2"));
 
-			expect(transport.sent[0]).to.equal(
-				"@+seance/edit=old;+draft/reply=parent BATCH +m1 draft/multiline #seance"
-			);
+				// One edit replaces one message: the second batch is a new one.
+				client.input(chanId, "one\ntwo\nthree", {edit: "old", reply: "parent"});
 
-			transport.sent.length = 0;
-			echoBatch(transport, "Gk1", "one", "two");
+				expect(transport.sent[0]).to.equal(
+					"@+seance/edit=old;+draft/reply=parent BATCH +m1 draft/multiline #seance"
+				);
 
-			expect(transport.sent[0]).to.equal(
-				"@+draft/reply=parent BATCH +m2 draft/multiline #seance"
-			);
+				transport.sent.length = 0;
+				echoBatch(transport, "Gk1", "one", "two");
+				clock.tick(
+					batchCooldownMs({
+						lines: [
+							{text: "one", concat: false},
+							{text: "two", concat: false},
+						],
+						action: false,
+					})
+				);
+
+				expect(transport.sent[0]).to.equal(
+					"@+draft/reply=parent BATCH +m2 draft/multiline #seance"
+				);
+			} finally {
+				clock.restore();
+			}
 		});
 
 		it("synthesises one action per batch without echo-message", function () {
@@ -993,7 +1071,19 @@ describe("multiline sending", function () {
 				]);
 
 				transport.sent.length = 0;
-				clock.tick(MULTILINE_SETTLE_MS);
+				// Without echo-message the batch is taken to be delivered after a
+				// settle period, and only then does the next one begin waiting out
+				// the delivered batch's cooldown.
+				clock.tick(
+					MULTILINE_SETTLE_MS +
+						batchCooldownMs({
+							lines: [
+								{text: "one", concat: false},
+								{text: "two", concat: false},
+							],
+							action: true,
+						})
+				);
 
 				expect(transport.sent).to.deep.equal([
 					"BATCH +m2 draft/multiline #seance",
@@ -1065,7 +1155,9 @@ describe("multiline cooldown", function () {
 		cooldown(transport, 3);
 
 		expect(messages(client.lobby.id)).to.have.length(0);
-		expect(messages(chanId)).to.have.length(0);
+		// Only the pending copies of the message itself, which stay up while
+		// the batches wait (test/irc/pending.ts).
+		expect(messages(chanId).filter((m) => !m.pending)).to.have.length(0);
 	});
 
 	it("keeps the rest of the message behind the batch it re-sends", function () {

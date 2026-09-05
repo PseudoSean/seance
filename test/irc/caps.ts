@@ -5,7 +5,7 @@ import {IrcMessage, MAX_LINE_BYTES, parseLine, utf8ByteLength} from "../../clien
 // The CAP LS exchange nefarious2 (ircv3.2-upgrade) produced in the prototype
 // run, see docs/resources/nefarious2-websocket.md §Prototype status.
 const NEFARIOUS_LS_1 =
-	":irc.seance.test CAP * LS * :multi-prefix userhost-in-names extended-join away-notify account-notify cap-notify server-time echo-message account-tag chghost invite-notify labeled-response batch setname standard-replies message-tags no-implicit-names draft/no-implicit-names draft/extended-isupport draft/pre-away draft/multiline=max-bytes=16384,max-lines=100 draft/chathistory=100 draft/event-playback draft/message-redaction draft/read-marker draft/metadata-2=before-connect,max-subs=50,max-keys=20,max-value-bytes=300 draft/bouncer draft/persistence";
+	":irc.seance.test CAP * LS * :multi-prefix userhost-in-names extended-join away-notify account-notify cap-notify server-time echo-message account-tag chghost invite-notify labeled-response batch setname standard-replies message-tags no-implicit-names draft/no-implicit-names draft/extended-isupport draft/pre-away draft/multiline=max-bytes=16384,max-lines=100 draft/chathistory=100 draft/event-playback draft/message-redaction draft/read-marker draft/metadata-2=before-connect,max-subs=50,max-keys=20,max-value-bytes=300 draft/webpush=vapid=BLB6-4OioBPa__W4w93qeXLpdHYwSr8xONZjy_8uA1CpBkiyd_lc8ztobgKxEs1F7dFHQGB3yW5mgi54GkJBnGU draft/bouncer draft/persistence";
 const NEFARIOUS_LS_2 = ":irc.seance.test CAP * LS : tls";
 
 // nefarious2 master: no CAP 302 support, one unversioned line.
@@ -64,9 +64,7 @@ describe("irc/caps", function () {
 			expect(requested).to.not.include("tls");
 			expect(requested).to.include("draft/multiline");
 			expect(requested).to.not.include("draft/bouncer");
-			expect(requested).to.not.include("draft/metadata-2");
 			expect(requested).to.include("draft/persistence");
-			expect(requested).to.not.include("draft/metadata-2");
 			expect(requested).to.not.include("no-implicit-names");
 			expect(utf8ByteLength(second.send[0])).to.be.at.most(MAX_LINE_BYTES);
 
@@ -321,9 +319,11 @@ describe("irc/caps", function () {
 
 		it("ignores NEW caps that are not wanted", function () {
 			const neg = registered();
-			const res = feed(neg, ":irc.seance.test CAP seance2 NEW :draft/webpush=vapid");
+			// draft/oper-tag is offered by the real server (probe transcript)
+			// and deliberately not in SEANCE_CAPS.
+			const res = feed(neg, ":irc.seance.test CAP seance2 NEW :draft/oper-tag");
 			expect(res.send).to.deep.equal([]);
-			expect(neg.value("draft/webpush")).to.equal("vapid");
+			expect(neg.value("draft/oper-tag")).to.equal("");
 		});
 
 		it("does not re-request an already enabled cap on NEW", function () {
@@ -387,8 +387,6 @@ describe("irc/caps", function () {
 			]);
 			expect(SEANCE_CAPS.wanted).to.not.include.members([
 				"draft/bouncer",
-				"draft/persistence",
-				"draft/metadata-2",
 				"no-implicit-names",
 				"sasl",
 				"tls",

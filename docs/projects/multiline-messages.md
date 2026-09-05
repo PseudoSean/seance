@@ -93,6 +93,40 @@ Everything below was observed live against AfterNET
 
 ## Sharp edges
 
+- **Every batch must be paced past the server's cooldown, timed from its
+  delivery, and the gate must outlive the message** (fixed 2026-09-04, in two
+  passes). The server charges a cooldown per delivered batch and, for a batch
+  opened inside that window, drops the opener while still delivering the batch's
+  lines as _standalone_ messages — so the message duplicated, blank lines drew
+  `ERR_NOTEXTTOSEND`, and the orphaned closer drew `FAIL BATCH NO_ACTIVE_BATCH`,
+  all shown to the user, before the `MULTILINE_COOLDOWN` re-send delivered the
+  batch again. Two things went wrong:
+
+  - Pacing on the previous batch's _echo_ alone: the echo comes back in
+    milliseconds, long before the cooldown ends, so the next opener went
+    straight into the cooldown. The queue now holds a `pace` timer
+    (`multiline.ts` `paceAfter`) of `batchCooldownMs` — the undiscounted
+    `(2 + bodyBytes/128) s`, a safe upper bound since the server's
+    `MULTILINE_COOLDOWN_DISCOUNT` is at most 1.
+  - Pacing only _within_ one message's queue, timed from the send. A cooldown
+    outlives the message that caused it, so the _next_ message's batch — sent
+    while the server was still cooling down, which is what happens once you are
+    sending fast enough to be throttled — walked into it. The `pace` gate is now
+    set after **every** delivered batch (even the last of a message, so it
+    outlives the queue) and timed from **delivery** (the echo, or the settle
+    period without `echo-message`), not from the send — so a batch the server
+    processes late under throttling still starts its cooldown at the right
+    moment.
+
+  The `MULTILINE_COOLDOWN` re-send stays as a backstop for a server whose
+  discount somehow exceeds 1. Cost: batches are serialised ~one cooldown apart
+  (~15 s per 100-line batch, ~3 s for a short one), whether within a paste or
+  across messages sent in quick succession; a future refinement could learn the
+  real discount from the first cooldown seen. Regression scenarios:
+  `tools/scenarios/multiline-paste.mjs` (a 120-line paste, one message) and
+  `tools/scenarios/multiline-throttle.mjs` (six messages back to back); each
+  asserts no error rows and no duplicated line.
+
 - `MAX_LINE_BYTES = 500` still caps every line: a batch is many short lines,
   not one long one. `planMultiline` clamps the per-line budget to `max-bytes`
   as well, so it can never plan a line the server would have to reject.

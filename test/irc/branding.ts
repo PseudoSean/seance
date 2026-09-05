@@ -317,10 +317,26 @@ describe("branding", function () {
 				fieldName: "fileToUpload",
 				fields: {reqtype: "fileupload", time: "72h"},
 				maxSizeBytes: 1024 * 1024 * 1024,
+				// Refuses the OPTIONS preflight, so no upload progress is attempted.
+				progress: false,
 			});
 
 			// No accept list: litterbox takes video too.
 			expect(uploads).to.not.have.property("accept");
+		});
+
+		it("lets a deploy state whether its uploader answers the preflight", function () {
+			expect(
+				normalizeBranding({uploads: {preset: "catbox-litterbox", progress: true}}).uploads
+					?.progress
+			).to.equal(true);
+			expect(
+				normalizeBranding({uploads: {endpoint: "https://x.test/up", progress: false}})
+					.uploads?.progress
+			).to.equal(false);
+			expect(
+				normalizeBranding({uploads: {endpoint: "https://x.test/up"}}).uploads
+			).to.not.have.property("progress");
 		});
 
 		it("merges fields per key so one can be changed alone", function () {

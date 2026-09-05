@@ -73,7 +73,7 @@
 	--highlight-bg-color: #efe8dc;
 	--highlight-border-color: #b08c4f;
 
-	/* Color of the progress bar that appears as a file is being uploaded to the server. Defaults to button color */
+	/* Color of the progress bar shown above the input while a file is being uploaded. Defaults to button color */
 	--upload-progressbar-color: var(--button-color);
 
 	/* Color the sidebar channel icon pulses to while someone is typing there */
@@ -386,6 +386,7 @@ p {
 #image-viewer .open-btn::before,
 .channel-list-item .not-connected-icon::before,
 .channel-list-item .connection-status-icon::before,
+.channel-list-item .notify-status-icon::before,
 .channel-list-item .edit-network::before,
 .channel-list-item .parted-channel-icon::before,
 .jump-to-input::before,
@@ -1089,6 +1090,48 @@ the same counter the badge shows). Muted channels keep their faded look. */
 	cursor: default;
 }
 
+/* Per-network notification state (bell) in the sidebar listing. */
+.channel-list-item .notify-tooltip {
+	flex-shrink: 0;
+	line-height: 1;
+	margin: 0 4px;
+}
+
+.channel-list-item .notify-status-icon {
+	display: inline-block;
+	width: 18px;
+	height: 18px;
+	opacity: 0.7;
+	transition: opacity 0.2s;
+}
+
+.channel-list-item .notify-tooltip:hover .notify-status-icon {
+	opacity: 1;
+}
+
+.channel-list-item .notify-status-icon::before {
+	font-size: 11px;
+	line-height: 18px;
+	text-align: center;
+}
+
+.channel-list-item .notify-status-icon.on::before {
+	content: "\f0f3"; /* solid bell: subscribed to push */
+	color: #2ea043;
+}
+
+.channel-list-item .notify-status-icon.enabled::before {
+	content: "\f0f3"; /* bell: notifications on, not subscribed (the font is
+	                    FA5 solid-only, so no outline variant exists — the
+	                    muted colour is what separates this from on) */
+	color: var(--body-color-muted);
+}
+
+.channel-list-item .notify-status-icon.off::before {
+	content: "\f1f6"; /* bell-slash: notifications off */
+	color: var(--body-color-muted);
+}
+
 .channel-list-item .connection-status-icon.is-connected::before {
 	content: "\f0c1"; /* https://fontawesome.com/icons/link?style=solid */
 	color: #84ce88;
@@ -1666,6 +1709,13 @@ textarea.input {
 
 #chat .self .content {
 	color: var(--body-color-muted);
+}
+
+/* A copy of our own message the server has not echoed yet (bus-contract
+ * §1.9): faded rather than recoloured, so it reads the same on every theme,
+ * and back to normal — as a new row — once the echo replaces it. */
+#chat .msg.pending {
+	opacity: 0.55;
 }
 
 #chat .msg.channel_list_loading .text {
@@ -2430,6 +2480,17 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	padding: 5px 0 5px 1px;
 }
 
+/* Adjacent buttons in a settings row keep a gap between them (snooze row,
+ * prompt actions, anything else that ends up inline). */
+#settings .opt .btn + .btn {
+	margin-left: 8px;
+}
+
+/* The push snooze buttons sit on their own line under their label. */
+#settings .push-snooze {
+	margin-top: 4px;
+}
+
 #settings .opt input {
 	margin-right: 6px;
 }
@@ -2756,22 +2817,6 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 #version-checker.up-to-date::before {
 	content: "\f00c"; /* http://fontawesome.io/icon/check/ */
-}
-
-#upload-progressbar {
-	background: var(--upload-progressbar-color);
-	box-shadow: 0 0 10px var(--upload-progressbar-color);
-	width: 0%;
-	height: 2px;
-	visibility: hidden;
-	position: absolute;
-	top: -1px; /* put it on top of #form's border */
-	left: 0;
-}
-
-#upload-progressbar.upload-progressbar-visible {
-	visibility: visible;
-	transition: 0.3s width ease-in-out;
 }
 
 #form {
@@ -3707,6 +3752,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 /* Image viewer and drag-and-drop overlay */
 
 #confirm-dialog-overlay,
+#push-prompt-overlay,
+#upload-preview-overlay,
 #upload-overlay,
 #image-viewer,
 #image-viewer .open-btn,
@@ -3719,6 +3766,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #confirm-dialog-overlay,
+#push-prompt-overlay,
+#upload-preview-overlay,
 #upload-overlay,
 #image-viewer {
 	position: fixed;
@@ -3735,6 +3784,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #confirm-dialog-overlay.opened,
+#push-prompt-overlay.opened,
+#upload-preview-overlay.opened,
 #upload-overlay.is-dragover,
 #image-viewer.opened {
 	visibility: visible;
@@ -3742,6 +3793,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #confirm-dialog-overlay,
+#push-prompt-overlay,
+#upload-preview-overlay,
 #image-viewer {
 	background: rgb(0 0 0 / 90%);
 }
@@ -4471,4 +4524,190 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	background: rgb(0 0 0 / 8%);
 	color: var(--body-color);
 	outline: 0;
+}
+
+/* The upload in flight: a row of its own above the input, like .compose-bar */
+#form .upload-bar {
+	flex: 1 0 100%;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	margin: 0 4px 2px;
+	padding: 3px 6px;
+	border-left: 2px solid var(--upload-progressbar-color);
+	background: rgb(0 0 0 / 4%);
+	border-radius: 0 3px 3px 0;
+	color: var(--body-color-muted);
+	font-size: 13px;
+	line-height: 1.4;
+}
+
+#form .upload-bar-label {
+	flex: 1 1 auto;
+	min-width: 0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+#form .upload-bar-icon::before {
+	content: "\f0c6"; /* https://fontawesome.com/icons/paperclip?style=solid */
+	font: normal normal normal 12px/1 FontAwesome;
+	margin-right: 4px;
+}
+
+#form .upload-bar-track {
+	flex: 0 1 180px;
+	min-width: 60px;
+	height: 6px;
+	border-radius: 3px;
+	background: rgb(0 0 0 / 10%);
+	overflow: hidden;
+	position: relative;
+}
+
+#form .upload-bar-fill {
+	display: block;
+	height: 100%;
+	border-radius: 3px;
+	background: var(--upload-progressbar-color);
+	transition: width 0.2s ease-out;
+}
+
+/* Bytes unknown (re-encoding, or the server never says): a sweeping band */
+#form .upload-bar-track.indeterminate .upload-bar-fill {
+	position: absolute;
+	width: 40%;
+	animation: upload-bar-sweep 1.2s ease-in-out infinite;
+}
+
+@keyframes upload-bar-sweep {
+	from {
+		left: -40%;
+	}
+
+	to {
+		left: 100%;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#form .upload-bar-track.indeterminate .upload-bar-fill {
+		animation: none;
+		left: 0;
+		width: 100%;
+		opacity: 0.5;
+	}
+}
+
+#form .upload-bar-percent {
+	flex: 0 0 auto;
+	min-width: 3.2em;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	color: var(--body-color);
+}
+
+/* Settings → Push Notifications: the on/off indicator dot + per-network rows */
+.push-state {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.push-state-dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	background: var(--body-color-muted);
+	flex: 0 0 auto;
+}
+
+.push-state-subscribed {
+	background: #2ea043;
+}
+
+.push-state-unsubscribed,
+.push-state-server-unsupported,
+.push-state-not-installed {
+	background: #9e6a03;
+}
+
+.push-state-denied,
+.push-state-blocked,
+.push-state-unsupported {
+	background: #c93c37;
+}
+
+.push-networks {
+	margin: 8px 0 12px;
+}
+
+.push-network {
+	padding: 5px 0;
+	border-bottom: 1px solid var(--body-color-muted);
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+}
+
+.push-network-state {
+	margin-left: auto;
+	font-size: 12px;
+	font-weight: bold;
+	color: var(--body-color-muted);
+	white-space: nowrap;
+}
+
+.push-net-on {
+	color: #2ea043;
+}
+
+.push-net-off,
+.push-net-unsupported {
+	color: var(--body-color-muted);
+}
+
+.push-net-ready {
+	color: #9e6a03;
+}
+
+.push-networks-hint {
+	margin-top: 8px;
+	font-size: 12px;
+	color: var(--body-color-muted);
+}
+
+.session-row {
+	padding: 6px 0;
+	border-bottom: 1px solid var(--body-color-muted);
+}
+
+.session-state {
+	display: inline-block;
+	min-width: 62px;
+	padding: 0 6px;
+	border-radius: 3px;
+	font-size: 12px;
+	font-weight: bold;
+	text-align: center;
+	margin-right: 8px;
+	color: #fff;
+	background: var(--body-color-muted);
+}
+
+.session-held {
+	background: #2ea043;
+}
+
+.session-active {
+	background: #388bfd;
+}
+
+.session-info {
+	color: var(--body-color-muted);
+	font-size: 12px;
+	margin-top: 2px;
 }

@@ -1,7 +1,36 @@
 <template>
 	<form id="form" method="post" action="" @submit.prevent="onSubmit">
-		<span id="upload-progressbar" />
 		<TypingIndicator :channel="channel" />
+		<div
+			v-if="store.state.uploadProgress"
+			class="upload-bar"
+			role="status"
+			aria-live="polite"
+			:aria-label="uploadLabel"
+		>
+			<span class="upload-bar-label">
+				<span class="upload-bar-icon" aria-hidden="true"></span>
+				{{ uploadLabel }}
+			</span>
+			<span :class="['upload-bar-track', {indeterminate: uploadPercent === null}]">
+				<span
+					class="upload-bar-fill"
+					:style="{width: (uploadPercent === null ? 100 : uploadPercent) + '%'}"
+				></span>
+			</span>
+			<span class="upload-bar-percent">{{
+				uploadPercent === null ? "" : uploadPercent + "%"
+			}}</span>
+			<button
+				type="button"
+				class="compose-bar-cancel"
+				aria-label="Cancel upload"
+				title="Cancel upload"
+				@click="cancelUpload"
+			>
+				✕
+			</button>
+		</div>
 		<div v-if="channel.editing || channel.replyTo" class="compose-bar" role="status">
 			<span v-if="channel.editing" class="compose-bar-label">
 				<span class="compose-bar-icon" aria-hidden="true">✎</span>
@@ -52,6 +81,7 @@
 				type="file"
 				aria-labelledby="upload"
 				multiple
+				:accept="uploadAccept"
 				@change="onUploadInputChange"
 			/>
 			<button
@@ -93,6 +123,7 @@ import type {ClientNetwork, ClientChan} from "../js/types";
 import {useStore} from "../js/store";
 import {ChanType} from "../../shared/types/chan";
 import {cancelCompose, findLastEditable, startEdit} from "../js/helpers/compose";
+import {hasVirtualKeyboard} from "../js/helpers/device";
 import {TypingReporter} from "../js/helpers/typingReporter";
 import TypingIndicator from "./TypingIndicator.vue";
 
@@ -298,8 +329,75 @@ export default defineComponent({
 			uploadInput.value?.click();
 		};
 
+		// The file dialog offers what the uploader takes; the drop and paste
+		// paths check the same list in `Uploader.triggerUpload`.
+		const uploadAccept = computed(() => {
+			const accept = store.state.branding.uploads?.accept;
+			return accept?.length ? accept.join(",") : undefined;
+		});
+
+		// The strip above the input while a file is going up
+		// (`store.state.uploadProgress`, written by `upload.ts`).
+		const uploadLabel = computed(() => {
+			const progress = store.state.uploadProgress;
+
+			if (!progress) {
+				return "";
+			}
+
+			const parts = [`Uploading ${progress.fileName}`];
+
+			if (progress.count > 1) {
+				parts.push(`${progress.index} of ${progress.count}`);
+			}
+
+			if (progress.phase === "preparing") {
+				parts.push("preparing…");
+			} else if (progress.phase === "waiting") {
+				parts.push("waiting for the server…");
+			}
+
+			return parts.join(" · ");
+		});
+
+		const uploadPercent = computed(() => {
+			const progress = store.state.uploadProgress;
+
+			if (!progress || progress.phase === "preparing" || progress.total <= 0) {
+				return null;
+			}
+
+			return Math.min(100, Math.round((progress.loaded / progress.total) * 100));
+		});
+
+		const cancelUpload = () => {
+			upload.abort();
+		};
+
 		const blurInput = () => {
 			input.value?.blur();
+		};
+
+		// Opening a conversation puts the caret in the input, at the end of
+		// any draft, so typing can start at once — with a keyboard. On a
+		// phone or tablet focusing raises the on-screen keyboard and reflows
+		// the whole layout, so there the input waits to be tapped.
+		const focusForTyping = () => {
+			if (hasVirtualKeyboard()) {
+				return;
+			}
+
+			// After the render that swaps in this channel's draft.
+			void nextTick(() => {
+				const el = input.value;
+
+				if (!el) {
+					return;
+				}
+
+				el.focus();
+				el.setSelectionRange(el.value.length, el.value.length);
+			});
 		};
 
 		const onBlur = () => {
@@ -317,6 +415,7 @@ export default defineComponent({
 
 				// A draft left in the previous channel is reported `paused` there.
 				typing.switchTarget();
+				focusForTyping();
 			}
 		);
 
@@ -329,6 +428,7 @@ export default defineComponent({
 
 		onMounted(() => {
 			eventbus.on("escapekey", blurInput);
+			focusForTyping();
 
 			if (store.state.settings.autocomplete) {
 				if (!input.value) {
@@ -481,6 +581,10 @@ export default defineComponent({
 			uploadInput,
 			onUploadInputChange,
 			openFileUpload,
+			uploadAccept,
+			uploadLabel,
+			uploadPercent,
+			cancelUpload,
 			blurInput,
 			onBlur,
 			setInputSize,

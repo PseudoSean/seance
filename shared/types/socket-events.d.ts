@@ -16,6 +16,17 @@ type Session = {
 	token: string;
 };
 
+/** One row of a `PERSISTENCE LIST` reply (draft/persistence): the account's
+ * bouncer session as the server sees it. There is one session per account. */
+type PushSession = {
+	sessid: string;
+	/** `ACTIVE` (a live connection holds it) or `HELD` (kept while away). */
+	state: string;
+	nick: string;
+	channels: string[];
+	info: string;
+};
+
 type EventHandler<T> = (data: T) => void;
 type NoPayloadEventHandler = EventHandler<void>;
 
@@ -99,8 +110,28 @@ interface ServerToClientEvents {
 	"msg:redact": EventHandler<{chan: number; id: number; by: string; reason?: string; time: Date}>;
 	/** Message `id` (already delivered via `msg`) replaces message `replaces`. */
 	"msg:edit": EventHandler<{chan: number; id: number; replaces: number}>;
+	/**
+	 * The pending copy `id` (delivered via `msg` with `pending: true`) is
+	 * settled: drop it. The echo, or the error line, that settles it
+	 * follows as its own `msg`.
+	 */
+	"msg:settled": EventHandler<{chan: number; id: number}>;
 	/** Someone else's `+typing` TAGMSG in a loaded channel/query (never our own). */
 	typing: EventHandler<{chan: number; nick: string; state: TypingState}>;
+
+	/** Web Push (draft/webpush): one dispatch per network at registration. `vapid` is the server's public key, or undefined when it cannot push (cap not negotiated or no key advertised). `sasl` is true when this connection logged in via SASL (903 seen). Consumed by `client/js/webpush.ts` (re-register + the subscribe prompt). */
+	"webpush:available": EventHandler<{network: string; vapid: string | undefined; sasl: boolean}>;
+	/** The server acknowledged (`ok: true`) or refused (`FAIL WEBPUSH`, `ok: false` + `code`/`reason`) a `WEBPUSH REGISTER|UNREGISTER`. */
+	"webpush:state": EventHandler<{
+		network: string;
+		action: string;
+		endpoint: string;
+		ok: boolean;
+		code?: string;
+		reason?: string;
+	}>;
+	/** One `PushSession` per `PERSISTENCE LIST` row, dispatched when the list closes (Settings → session panel). */
+	"persistence:sessions": EventHandler<{sessions: PushSession[]}>;
 	"msg:special": EventHandler<{chan: number; data?: Record<string, any>}>;
 	msg: EventHandler<{
 		msg: SharedMsg;
@@ -166,10 +197,30 @@ interface ClientToServerEvents {
 		/** msgid of our own message to replace: REDACT (channels) + resend with `+seance/edit`. */
 		edit?: string;
 	}>;
+	/** Send `text` to a target named by network uuid + channel/nick — the
+	 * form a notification can use after the page (and its channel ids) is
+	 * gone: the service worker's relayed reply and the queued outbox. Returns
+	 * nothing; the bus handler drops it when that network is not connected,
+	 * so callers check `network.status.connected` first. */
+	send: EventHandler<{network: string; target: string; text: string; replyTo?: string}>;
 	"msg:react": EventHandler<{target: number; msgid: string; text: string; remove?: boolean}>;
 	"msg:redact": EventHandler<{target: number; msgid: string; reason?: string}>;
 	/** The user's own input activity; the IRC layer throttles and sends `+typing` TAGMSGs. */
 	typing: EventHandler<{target: number; state: TypingState}>;
+
+	/** Web Push (draft/webpush): register the browser's push subscription with one network's server (docs/projects/push-subscription.md). */
+	"webpush:register": EventHandler<{
+		network: string;
+		endpoint: string;
+		keys: {p256dh: string; auth: string};
+	}>;
+	"webpush:unregister": EventHandler<{network: string; endpoint: string}>;
+	/** Account metadata write for webpush settings (payload tier, mute/snooze). An empty value deletes the key. */
+	"webpush:metadata": EventHandler<{network: string; key: string; value: string}>;
+	/** Ask the server for the account's bouncer session(s) (`PERSISTENCE LIST`); the reply arrives as `persistence:sessions`. The network is optional — any connected client sees the same session. */
+	"persistence:sessions:list": EventHandler<{network?: string}>;
+	/** End the current device's bouncer session (`PERSISTENCE DETACH`): the hold preference clears and the session is destroyed. */
+	"persistence:sessions:logout": EventHandler<{network?: string}>;
 
 	"upload:auth": NoPayloadEventHandler;
 	"upload:ping": (token: string) => void;

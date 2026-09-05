@@ -1,6 +1,11 @@
 import {expect} from "chai";
 import sinon from "ts-sinon";
-import {WsTransport, TransportEvent, TransportOptions} from "../../client/js/irc/transport";
+import {
+	CONNECT_TIMEOUT_MS,
+	WsTransport,
+	TransportEvent,
+	TransportOptions,
+} from "../../client/js/irc/transport";
 
 type Handler = (ev: unknown) => void;
 
@@ -80,6 +85,8 @@ const fastReconnect = {
 	factor: 2,
 	jitter: false,
 };
+/** Open at least this long → the backoff resets (transport.ts STABLE_CONNECTION_MS). */
+const STABLE_MS = 30_000;
 
 function make(extra: Partial<TransportOptions> = {}): {t: WsTransport; events: TransportEvent[]} {
 	const t = new WsTransport({url: "wss://example.test/", WebSocketImpl, ...extra});
@@ -473,11 +480,37 @@ describe("WsTransport", function () {
 
 			last().open();
 			clock.tick(30_000);
-			last().closed(1006, "", false); // long-lived: back to attempt 1 → 100
+			last().closed(1006, "", false); // long-lived: back to attempt 1, and at once
 			expect(events[events.length - 1]).to.deep.equal({
 				type: "reconnecting",
 				attempt: 1,
-				delayMs: 100,
+				delayMs: 0,
+			});
+		});
+
+		it("retries at once when a long-lived connection drops, then backs off", function () {
+			const {t, events} = make({reconnect: fastReconnect});
+			t.connect();
+			last().open();
+			clock.tick(STABLE_MS);
+			last().closed(1006, "", false);
+
+			// No wait: the phone came back and the user is looking at the screen.
+			expect(events[events.length - 1]).to.deep.equal({
+				type: "reconnecting",
+				attempt: 1,
+				delayMs: 0,
+			});
+			clock.tick(0);
+			expect(FakeWebSocket.instances).to.have.length(2);
+			expect(t.state).to.equal("connecting");
+
+			// That retry failing is a real outage: the usual backoff from here.
+			last().closed(1006, "", false);
+			expect(events[events.length - 1]).to.deep.equal({
+				type: "reconnecting",
+				attempt: 2,
+				delayMs: 200,
 			});
 		});
 
@@ -537,5 +570,127 @@ describe("WsTransport", function () {
 				{type: "error", message: "WebSocket error"},
 			]);
 		});
+	});
+});
+
+describe("WsTransport foreground recovery", function () {
+	let clock: sinon.SinonFakeTimers;
+
+	beforeEach(function () {
+		FakeWebSocket.instances = [];
+		FakeWebSocket.throwOnConstruct = false;
+		clock = sinon.useFakeTimers();
+	});
+
+	afterEach(function () {
+		clock.restore();
+	});
+
+	it("probe() takes a shorter deadline for the foreground poke", function () {
+		const {t, events} = make({reconnect: noReconnect});
+		t.connect();
+		last().open();
+
+		t.probe(4000);
+		clock.tick(3999);
+		expect(t.state).to.equal("open");
+
+		clock.tick(1);
+		expect(t.state).to.equal("closed");
+		expect(events.at(-1)).to.include({type: "close", code: 1006, reason: "no reply to PING"});
+	});
+
+	it("abandons a dial that never opens and retries with the usual backoff", function () {
+		const {t, events} = make({reconnect: fastReconnect});
+		t.connect();
+		const stuck = last();
+
+		clock.tick(CONNECT_TIMEOUT_MS - 1);
+		expect(t.state).to.equal("connecting");
+
+		clock.tick(1);
+		expect(stuck.closeCalls).to.have.lengthOf(1);
+		expect(t.state).to.equal("reconnect-wait");
+		expect(events.at(-2)).to.include({type: "close", reason: "connect timed out"});
+
+		// A late open on the abandoned socket changes nothing.
+		stuck.open();
+		expect(t.state).to.equal("reconnect-wait");
+
+		clock.tick(fastReconnect.initialDelayMs);
+		expect(FakeWebSocket.instances).to.have.lengthOf(2);
+		expect(t.state).to.equal("connecting");
+	});
+
+	it("reports how long the dial has been in flight", function () {
+		const {t} = make({reconnect: noReconnect});
+		expect(t.connectingForMs()).to.equal(0);
+
+		t.connect();
+		clock.tick(2500);
+		expect(t.connectingForMs()).to.equal(2500);
+
+		last().open();
+		expect(t.connectingForMs()).to.equal(0);
+	});
+
+	it("redial() drops a stuck dial and starts a fresh one at once", function () {
+		const {t} = make({reconnect: fastReconnect});
+		t.connect();
+		const stuck = last();
+		clock.tick(5000);
+
+		t.redial();
+
+		expect(stuck.closeCalls).to.have.lengthOf(1);
+		expect(FakeWebSocket.instances).to.have.lengthOf(2);
+		expect(t.state).to.equal("connecting");
+		expect(t.connectingForMs()).to.equal(0);
+
+		// The abandoned socket's events are ignored; the new one's count.
+		stuck.closed(1006);
+		expect(t.state).to.equal("connecting");
+		last().open();
+		expect(t.state).to.equal("open");
+	});
+
+	it("redial() while waiting to reconnect just connects now", function () {
+		const {t} = make({reconnect: fastReconnect});
+		t.connect();
+		last().open();
+		last().closed(1006);
+		expect(t.state).to.equal("reconnect-wait");
+
+		t.redial();
+		expect(t.state).to.equal("connecting");
+		expect(FakeWebSocket.instances).to.have.lengthOf(2);
+	});
+
+	it("retries at once when the socket dies during a probe, even if young", function () {
+		// The foreground poke probes before the OS delivers the close: the
+		// close that follows is the answer, and the user is waiting.
+		const {t, events} = make({reconnect: fastReconnect});
+		t.connect();
+		last().open();
+		clock.tick(3000); // far from the 30 s stable mark
+
+		t.probe(4000);
+		last().closed(1006, "", false);
+
+		expect(events[events.length - 1]).to.deep.equal({
+			type: "reconnecting",
+			attempt: 1,
+			delayMs: 0,
+		});
+		clock.tick(0);
+		expect(t.state).to.equal("connecting");
+		expect(FakeWebSocket.instances).to.have.lengthOf(2);
+
+		// A young connection lost with no probe in flight still backs off.
+		last().open();
+		clock.tick(3000);
+		last().closed(1006, "", false);
+		expect(events[events.length - 1]).to.include({type: "reconnecting", attempt: 2});
+		expect((events[events.length - 1] as {delayMs: number}).delayMs).to.be.greaterThan(0);
 	});
 });

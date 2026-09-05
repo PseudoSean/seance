@@ -14,10 +14,13 @@
  * This module is store- and DOM-free (it runs under mocha).
  */
 
+import {MessageType} from "../../../shared/types/msg";
 import type {IrcClient} from "./client";
 import {BatchHandler, OpenBatch, openBatchesOf} from "./handlers/batch";
+import {splitStatusTarget} from "./handlers/privmsg";
 import {formatLine, IrcMessage, IrcSource, MAX_LINE_BYTES, utf8ByteLength} from "./message";
-import {ClientTags, trailingLine} from "./wire";
+import {armPending, pendingLabel, PendingMessage, settlePending, showPending} from "./pending";
+import {ClientTags, EDIT_TAG, REPLY_TAG, trailingLine} from "./wire";
 
 /** The capability name, whose CAP 302 value carries the limits. */
 export const MULTILINE_CAP = "draft/multiline";
@@ -420,6 +423,49 @@ export const MULTILINE_SETTLE_MS = 1500;
 /** Longest cooldown a message is held for rather than reported as failed. */
 export const MULTILINE_MAX_COOLDOWN_MS = 120000;
 
+/**
+ * The server charges a cooldown for every multiline batch it delivers and
+ * *drops the opener* of a batch begun inside that window while still
+ * delivering that batch's lines as standalone messages (so they duplicate,
+ * and blank ones draw `ERR_NOTEXTTOSEND`, and the closer draws
+ * `FAIL BATCH NO_ACTIVE_BATCH`). The echo of the previous batch comes back
+ * long before its cooldown ends, so pacing the next batch on the echo alone
+ * is not enough: {@link batchCooldownMs} waits out the cooldown too.
+ *
+ * The formula is `nefarious2`'s `multiline_apply_cooldown` (`ircd/m_batch.c`)
+ * read verbatim: `(MULTILINE_COOLDOWN_BASE + total_bytes/128) * discount/100`
+ * seconds, where `total_bytes` is each line's body plus one byte per newline
+ * joining a non-continued line to the one before it, and `discount` is the
+ * `MULTILINE_COOLDOWN_DISCOUNT` feature — 0-100, default 50. Since the
+ * discount is at most 100, the *undiscounted* figure is an upper bound on the
+ * cooldown for any server, whatever its discount; a second of margin covers
+ * the whole-second rounding on the server's side.
+ */
+const MULTILINE_COOLDOWN_BASE_S = 2;
+/** `MULTILINE_COOLDOWN_BYTES_PER_SEC` in `ircd/m_batch.c`. */
+const MULTILINE_COOLDOWN_BYTES_PER_SEC = 128;
+/** Margin on the estimated cooldown, for the server's whole-second rounding. */
+const MULTILINE_PACE_MARGIN_MS = 1000;
+
+/** A safe upper bound (ms) on the server's cooldown after delivering `batch`. */
+export function batchCooldownMs(batch: {lines: MultilineLine[]; action: boolean}): number {
+	// `total_bytes` exactly as the server counts it (m_batch.c L850): each
+	// line's body, plus one byte for the newline joining a non-continued line
+	// to the one before it. An action's body carries its `\x01ACTION …\x01`.
+	let bytes = 0;
+
+	batch.lines.forEach((line, i) => {
+		const body = utf8ByteLength(line.text) + (batch.action ? ACTION_PREFIX.length + 1 : 0);
+		const feed = i > 0 && !line.concat ? 1 : 0;
+		bytes += body + feed;
+	});
+
+	return (
+		Math.ceil((MULTILINE_COOLDOWN_BASE_S + bytes / MULTILINE_COOLDOWN_BYTES_PER_SEC) * 1000) +
+		MULTILINE_PACE_MARGIN_MS
+	);
+}
+
 /** A planned batch, and everything needed to put it on the wire again. */
 interface SentBatch {
 	target: string;
@@ -429,6 +475,10 @@ interface SentBatch {
 	action: boolean;
 	/** Its local echo has been shown already (no `echo-message`). */
 	shown: boolean;
+	/** `labeled-response` label on the opener, so the echo settles {@link pending}. */
+	label?: string;
+	/** The copy shown while the server has not taken it (with `echo-message`). */
+	pending?: PendingMessage;
 }
 
 /**
@@ -453,8 +503,14 @@ interface MultilineQueue {
 	waiting: SentBatch[];
 	/** Verdict timer for {@link inFlight}. */
 	verdict: ReturnType<typeof setTimeout> | null;
-	/** Cooldown timer; nothing goes out while it runs. */
+	/** Cooldown re-send timer (a `MULTILINE_COOLDOWN` FAIL); nothing goes out while it runs. */
 	retry: ReturnType<typeof setTimeout> | null;
+	/**
+	 * Proactive pacing timer: after a delivered batch, the next one waits out
+	 * that batch's server-side cooldown ({@link batchCooldownMs}) so its opener
+	 * is never dropped mid-cooldown. Nothing goes out while it runs.
+	 */
+	pace: ReturnType<typeof setTimeout> | null;
 }
 
 const queues = new WeakMap<IrcClient, MultilineQueue>();
@@ -463,7 +519,7 @@ function queueOf(client: IrcClient): MultilineQueue {
 	let queue = queues.get(client);
 
 	if (!queue) {
-		queue = {inFlight: null, waiting: [], verdict: null, retry: null};
+		queue = {inFlight: null, waiting: [], verdict: null, retry: null, pace: null};
 		queues.set(client, queue);
 	}
 
@@ -497,16 +553,47 @@ export function sendMultiline(
 	firstOpenerTags: ClientTags = {}
 ): void {
 	const queue = queueOf(client);
+	// With `echo-message` every batch shows as a pending copy from the
+	// start — the ones queued behind the first included, since to the user
+	// they are one message — and is armed when it goes out (transmit).
+	const echo = client.caps.hasCapability("echo-message");
+	const chan = echo ? client.findChannel(splitStatusTarget(client, target).target) : undefined;
+	const type =
+		command === "NOTICE"
+			? MessageType.NOTICE
+			: action
+			? MessageType.ACTION
+			: MessageType.MESSAGE;
 
 	for (const [index, lines] of plan.entries()) {
-		queue.waiting.push({
+		const tags = index === 0 ? {...firstOpenerTags, ...openerTags} : openerTags;
+		const batch: SentBatch = {
 			target,
 			command,
 			lines,
-			tags: index === 0 ? {...firstOpenerTags, ...openerTags} : openerTags,
+			tags,
 			action,
 			shown: false,
-		});
+			label: echo ? pendingLabel(client) : undefined,
+		};
+
+		if (chan) {
+			batch.pending = showPending(
+				client,
+				chan,
+				{
+					type,
+					text: joinPlan(lines),
+					label: batch.label,
+					replyTo: tags[REPLY_TAG],
+					editOf: tags[EDIT_TAG],
+					statusmsgGroup: splitStatusTarget(client, target).group,
+				},
+				{arm: false}
+			);
+		}
+
+		queue.waiting.push(batch);
 	}
 
 	pump(client);
@@ -516,7 +603,7 @@ export function sendMultiline(
 function pump(client: IrcClient): void {
 	const queue = queueOf(client);
 
-	if (queue.inFlight || queue.retry || queue.waiting.length === 0) {
+	if (queue.inFlight || queue.retry || queue.pace || queue.waiting.length === 0) {
 		return;
 	}
 
@@ -534,7 +621,7 @@ function transmit(client: IrcClient, batch: SentBatch): boolean {
 	const queue = queueOf(client);
 	const ref = client.nextBatchRef();
 	const opener = formatLine({
-		tags: batch.tags,
+		tags: batch.label ? {...batch.tags, label: batch.label} : batch.tags,
 		command: "BATCH",
 		params: [`+${ref}`, MULTILINE_CAP, batch.target],
 	});
@@ -567,14 +654,18 @@ function transmit(client: IrcClient, batch: SentBatch): boolean {
 	queue.verdict = setTimeout(
 		() => {
 			// Nothing came back: without `echo-message` that is what delivery
-			// looks like, and with it the echo was lost. Either way there is
-			// nothing left to wait for.
+			// looks like, and with it the echo was lost. Either way, treat the
+			// batch as delivered and pace what comes after it.
 			queue.verdict = null;
 			queue.inFlight = null;
-			pump(client);
+			paceAfter(client, batch);
 		},
 		echo ? MULTILINE_VERDICT_MS : MULTILINE_SETTLE_MS
 	);
+
+	if (batch.pending) {
+		armPending(client, batch.pending); // (again, for a re-sent batch)
+	}
 
 	// A re-sent batch has been on screen since its first attempt.
 	if (!echo && !batch.shown) {
@@ -618,8 +709,35 @@ function settle(client: IrcClient): SentBatch | null {
  * is history, not an echo.
  */
 export function multilineAccepted(client: IrcClient): void {
-	settle(client);
-	pump(client);
+	const batch = settle(client);
+
+	if (batch) {
+		paceAfter(client, batch);
+	} else {
+		pump(client);
+	}
+}
+
+/**
+ * Hold whatever goes out next — the next batch of this message, or the first
+ * batch of a message sent moments later — for `batch`'s server-side cooldown,
+ * timed from its *delivery* (this is called from the echo, or the verdict
+ * timeout that stands in for it). The gate outlives the queue, so the cooldown
+ * a delivered batch leaves behind is not walked into by the next message; and
+ * timing it from delivery, not from the send, is what keeps it right once the
+ * server throttles and delivers a batch long after we sent it.
+ */
+function paceAfter(client: IrcClient, batch: SentBatch): void {
+	const queue = queueOf(client);
+
+	if (queue.pace) {
+		clearTimeout(queue.pace);
+	}
+
+	queue.pace = setTimeout(() => {
+		queue.pace = null;
+		pump(client);
+	}, batchCooldownMs(batch));
 }
 
 /**
@@ -632,6 +750,14 @@ export function multilineAccepted(client: IrcClient): void {
  */
 export function multilineCooldown(client: IrcClient, seconds: number): boolean {
 	const queue = queueOf(client);
+
+	// This batch was not delivered, so its estimated cooldown does not apply;
+	// the server's named wait replaces it.
+	if (queue.pace) {
+		clearTimeout(queue.pace);
+		queue.pace = null;
+	}
+
 	const batch = settle(client);
 
 	if (!batch) {
@@ -665,7 +791,12 @@ export function multilineRejected(client: IrcClient): void {
 	resetMultiline(client);
 }
 
-/** Drop everything queued and on the wire (the transport closed). */
+/**
+ * Drop everything queued and on the wire (the transport closed, or the
+ * server rejected the batch and the failure is reported by the caller).
+ * The pending copies come down without a word of their own: on a close
+ * `IrcClient` has already reported them, and a `FAIL` is shown once.
+ */
 export function resetMultiline(client: IrcClient): void {
 	const queue = queueOf(client);
 
@@ -677,8 +808,19 @@ export function resetMultiline(client: IrcClient): void {
 		clearTimeout(queue.retry);
 	}
 
+	if (queue.pace) {
+		clearTimeout(queue.pace);
+	}
+
+	for (const batch of [queue.inFlight, ...queue.waiting]) {
+		if (batch?.pending) {
+			settlePending(client, batch.pending);
+		}
+	}
+
 	queue.verdict = null;
 	queue.retry = null;
+	queue.pace = null;
 	queue.inFlight = null;
 	queue.waiting.length = 0;
 }

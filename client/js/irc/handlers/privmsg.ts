@@ -8,6 +8,7 @@ import {MessageType, SharedMsg} from "../../../../shared/types/msg";
 import type {IrcClient} from "../client";
 import type {Channel} from "../channel";
 import type {IrcMessage} from "../message";
+import {settleEcho} from "../pending";
 import {isRoutineReplayNotice} from "../persistence";
 import {EDIT_TAG, REPLY_TAG, trailingLine} from "../wire";
 import type {Handler} from "../types";
@@ -203,6 +204,12 @@ function handleMessage(client: IrcClient, msg: IrcMessage, baseType: MessageType
 
 	if (editOf) {
 		message.editOf = editOf;
+	}
+
+	// A live message of ours is the echo of one we sent: its pending copy
+	// comes down before the real one goes in (bus-contract §1.9).
+	if (self && !client.replaying) {
+		settleEcho(client, chan, msg, type, text);
 	}
 
 	const pushed = client.pushMessage(chan, message, !self);

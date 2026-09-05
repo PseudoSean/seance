@@ -89,6 +89,46 @@ describe("Session persistence and quiet re-joins (irc/persistence.ts)", function
 			expect(awaitingRestoration(one.client)).to.equal(true);
 		});
 
+		it("auto-enables persistence (PERSISTENCE SET ON) when logged in via SASL", function () {
+			const h = setup({sasl: "plain", saslAccount: "acc", saslPassword: "pw"});
+			h.client.connect();
+			h.transport.open();
+			h.transport.line(`:irc.test CAP * LS :${CAPS} sasl=PLAIN`);
+			const req = h.transport.sent.find((l) => l.startsWith("CAP REQ :"))!;
+			h.transport.line(`:irc.test CAP alice ACK :${req.slice("CAP REQ :".length)}`);
+			h.transport.line("AUTHENTICATE +");
+			h.transport.lines(
+				":irc.test 900 alice alice!alice@host acc :You are now logged in as acc",
+				":irc.test 903 alice :SASL authentication successful"
+			);
+
+			// 001/005/422: onRegistered fires at the MOTD end and sends SET ON.
+			h.transport.lines(
+				":irc.test 001 alice :Welcome to the SeanceDev IRC Network, alice",
+				":irc.test 005 alice CHANTYPES=#& PREFIX=(ov)@+ CHANMODES=b,k,l,imnpst CASEMAPPING=rfc1459 STATUSMSG=@+ :are supported by this server",
+				":irc.test 422 alice :MOTD File is missing"
+			);
+
+			// SET ON goes out post-001 (onRegistered): the SET handler needs
+			// the account flag, which pre-CAP-END connections do not carry.
+			const sent = h.sent();
+			const setIdx = sent.indexOf("PERSISTENCE SET ON");
+			expect(setIdx, "SET ON sent").to.be.at.least(0);
+			expect(sent.indexOf("CAP END")).to.be.lessThan(setIdx);
+
+			// The ack + the STATUS that follows are ours: silent.
+			h.transport.lines(":irc.test PERSISTENCE SET ON", ":irc.test PERSISTENCE STATUS ON ON");
+			expect(h.messages().some((m) => /Session persistence/i.test(m.text ?? ""))).to.equal(
+				false
+			);
+		});
+
+		it("does not auto-enable persistence without SASL", function () {
+			const h = setup();
+			register(h, CAPS, HOLD);
+			expect(h.transport.sent.some((l) => l.startsWith("PERSISTENCE SET"))).to.equal(false);
+		});
+
 		it("STATUS OFF (or no STATUS) JOINs at once", function () {
 			const off = setup();
 			register(off, CAPS, [":irc.test PERSISTENCE STATUS DEFAULT OFF"]);
@@ -397,6 +437,67 @@ describe("Session persistence and quiet re-joins (irc/persistence.ts)", function
 				MessageType.TOPIC_SET_BY,
 			]);
 			expect(h.payloads("topic")).to.deep.equal([{chan: seance.id, topic: "New topic"}]);
+		});
+
+		it("PERSISTENCE LIST sessions reach the UI as persistence:sessions, not the lobby", function () {
+			const h = setup();
+			register(h, CAPS);
+			h.dispatch.resetHistory();
+
+			h.transport.lines(
+				":irc.test PERSISTENCE SESSION sess1 ACTIVE alice #seance,#foo :active on irc.test",
+				":irc.test PERSISTENCE ENDOFLIST"
+			);
+
+			const lists = h.payloads<{sessions: any[]}>("persistence:sessions");
+			expect(lists).to.have.lengthOf(1);
+			expect(lists[0].sessions).to.deep.equal([
+				{
+					sessid: "sess1",
+					state: "ACTIVE",
+					nick: "alice",
+					channels: ["#seance", "#foo"],
+					info: "active on irc.test",
+				},
+			]);
+			// Session bookkeeping is panel-only: nothing in any channel buffer.
+			expect(h.dispatch.calledWith("msg")).to.equal(false);
+		});
+
+		it("LIST rows before ENDOFLIST buffer, and a stray ENDOFLIST dispatches an empty list", function () {
+			const h = setup();
+			register(h, CAPS);
+			h.dispatch.resetHistory();
+
+			// ENDOFLIST without a LIST in flight: the panel gets an empty list.
+			h.transport.line(":irc.test PERSISTENCE ENDOFLIST");
+			expect(h.payloads("persistence:sessions")).to.deep.equal([{sessions: []}]);
+
+			// A HELD row arrives after its list closed: buffered, not dispatched.
+			h.dispatch.resetHistory();
+			h.transport.line(":irc.test PERSISTENCE SESSION sess2 HELD alice * :held");
+			expect(h.dispatch.calledWith("persistence:sessions")).to.equal(false);
+
+			h.transport.line(":irc.test PERSISTENCE ENDOFLIST");
+			const lists = h.payloads<{sessions: any[]}>("persistence:sessions");
+			expect(lists[0].sessions).to.deep.equal([
+				{
+					sessid: "sess2",
+					state: "HELD",
+					nick: "alice",
+					channels: [],
+					info: "held",
+				},
+			]);
+		});
+
+		it("PERSISTENCE DETACH ack refreshes the panel with an empty list", function () {
+			const h = setup();
+			register(h, CAPS);
+			h.dispatch.resetHistory();
+
+			h.transport.line(":irc.test PERSISTENCE DETACH OK");
+			expect(h.payloads("persistence:sessions")).to.deep.equal([{sessions: []}]);
 		});
 
 		it("a deliberate disconnect and reconnect shows the JOIN as before", function () {

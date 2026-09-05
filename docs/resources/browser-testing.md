@@ -94,21 +94,22 @@ export default async function run(page) {
 
 ### The `page` API
 
-| Call                                       | Notes                                                                    |
-| ------------------------------------------ | ------------------------------------------------------------------------ |
-| `goto(url, {waitForSelector})`             | navigate                                                                 |
-| `evaluate(expr)`                           | expression string, evaluated in the page, returned by value              |
-| `waitFor(expr, {timeout, label})`          | polls `!!(expr)` every 150 ms; `label` makes the timeout message legible |
-| `count(selector)`                          | `querySelectorAll(...).length`                                           |
-| `rect(selector, index)`                    | bounding box, or `null`                                                  |
-| `click(selector, index)`                   | **real** mouse events at the element's centre                            |
-| `hover(selector, index)`                   | real `mouseMoved`                                                        |
-| `fill(selector, value)`                    | native setter + `input`/`change`, so Vue notices                         |
-| `screenshot(name, {selector, pad, clip})`  | PNG into `page.outDir`                                                   |
-| `check(label, ok)`                         | records a failure instead of throwing                                    |
-| `sleep(ms)`                                |                                                                          |
-| `consoleLogs`, `consoleErrors`, `wsFrames` | collected since launch                                                   |
-| `send(method, params)`                     | raw CDP, for anything not wrapped                                        |
+| Call                                       | Notes                                                                                  |
+| ------------------------------------------ | -------------------------------------------------------------------------------------- |
+| `goto(url, {waitForSelector})`             | navigate                                                                               |
+| `evaluate(expr)`                           | expression string, evaluated in the page, returned by value                            |
+| `waitFor(expr, {timeout, label})`          | polls `!!(expr)` every 150 ms; `label` makes the timeout message legible               |
+| `count(selector)`                          | `querySelectorAll(...).length`                                                         |
+| `rect(selector, index)`                    | bounding box, or `null`                                                                |
+| `click(selector, index)`                   | **real** mouse events at the element's centre                                          |
+| `hover(selector, index)`                   | real `mouseMoved`                                                                      |
+| `fill(selector, value)`                    | native setter + `input`/`change`, so Vue notices                                       |
+| `addInitScript(source)`                    | runs in every new document before page scripts; fakes a browser API                    |
+| `screenshot(name, {selector, pad, clip})`  | PNG into `page.outDir`                                                                 |
+| `check(label, ok)`                         | records a failure instead of throwing                                                  |
+| `sleep(ms)`                                |                                                                                        |
+| `consoleLogs`, `consoleErrors`, `wsFrames` | collected since launch; a frame has `dir`, `requestId` (one per socket), `payloadData` |
+| `send(method, params)`                     | raw CDP, for anything not wrapped                                                      |
 
 ### Rules that keep a scenario honest
 
@@ -136,6 +137,15 @@ export default async function run(page) {
 6. **Look at the screenshots**, with an image-capable reader. Assertions confirm
    what you thought to check; the picture shows the layout problem you did not.
 7. End with `page.check("no console errors", page.consoleErrors.length === 0)`.
+8. **A cold load on a route is `history.replaceState` + `Page.reload`**, what F5
+   does (`reload-on-settings.mjs` `coldLoad`). `goto` to a URL that differs
+   from the current one only by its `#` fragment is a same-document navigation
+   — the router moves, nothing boots — and a hop through `about:blank` swaps
+   renderer processes, which on a busy box loses the DevTools reply to a poll
+   in flight: `send` has no timeout, so the driver hangs for good (renderer
+   idle, browser-side calls answered, `Runtime.evaluate` never). Poll with a
+   marker set on the old window and tolerate `evaluate` errors while the
+   document is being replaced.
 
 ### Seeding
 

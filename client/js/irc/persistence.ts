@@ -233,6 +233,21 @@ export function attachCursorLine(client: IrcClient): string | undefined {
 }
 
 /**
+ * `PERSISTENCE SET ON`: the client-side opt-in that creates the server's
+ * bouncer session for this account and turns its hold on. Without it the
+ * session never exists — the hold metadata defaults and the advertised
+ * `PERSISTENCE STATUS` notwithstanding — and the server has nothing to
+ * push to (docs/projects/push-subscription.md). Idempotent: the server
+ * answers with the ack + STATUS, and keeps any session we already own.
+ */
+export function persistenceEnableLine(): string {
+	return formatLine({
+		command: "PERSISTENCE",
+		params: ["SET", "ON"],
+	});
+}
+
+/**
  * `FAIL PERSISTENCE <code> [<context>…] :<text>` about our cursor. Both
  * outcomes are silent: a refused ATTACH just means the gap is filled the old
  * way (catchup.ts), and `CURSOR_UNKNOWN` is not a failure at all — the

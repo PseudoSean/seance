@@ -61,6 +61,7 @@ describe("public folder", function () {
 	it("javascript files are built", function () {
 		expect(fs.existsSync(path.join(publicFolder, "js", "bundle.js"))).to.be.true;
 		expect(fs.existsSync(path.join(publicFolder, "js", "bundle.vendor.js"))).to.be.true;
+		expect(fs.existsSync(path.join(publicFolder, "js", "push.js"))).to.be.true;
 	});
 
 	it("style files are built", function () {
@@ -159,7 +160,10 @@ describe("public folder", function () {
 			expect(contents.includes("socket.io")).to.be.false;
 			expect(contents.includes("uploads")).to.be.false;
 			expect(contents.includes("storage")).to.be.false;
-			expect(contents.includes('addEventListener("push"')).to.be.false;
+
+			// Web Push (draft/webpush, phase 2 slice 0): the push handler is
+			// back — the ircd delivers raw lines now (push-subscription.md).
+			expect(contents.includes('addEventListener("push"')).to.be.true;
 
 			done();
 		});

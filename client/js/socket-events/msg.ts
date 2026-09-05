@@ -1,12 +1,15 @@
 import socket from "../socket";
-import {cleanIrcMessage} from "../../../shared/irc";
+import {notificationText} from "../push/strip";
 import {store} from "../store";
 import {switchToChannel} from "../router";
 import {ClientChan, NetChan, ClientMessage} from "../types";
 import {SharedMsg, MessageType} from "../../../shared/types/msg";
 import {ChanType} from "../../../shared/types/chan";
 import {addMention} from "../mentions";
+import {recordSeenMsgid} from "../push-seen";
 import {attachMediaPreviews} from "../helpers/messagePreviews";
+import * as saved from "../irc/saved-networks";
+import {insertMessage} from "../helpers/messageUpdates";
 
 let pop;
 
@@ -72,7 +75,10 @@ socket.on("msg", function (data) {
 	// derived locally from the text for direct media URLs only.
 	attachMediaPreviews(data.msg, receivingChannel.network, channel);
 
-	channel.messages.push(data.msg);
+	// Pending copies of our own messages (bus-contract §1.9) stay at the
+	// bottom until their echo settles them, so everything else goes in
+	// ahead of them.
+	insertMessage(channel.messages, data.msg);
 
 	// Highlights used to be collected server-side; keep the recent-mentions
 	// list locally instead. Replayed history renders its highlights but is
@@ -92,6 +98,18 @@ socket.on("msg", function (data) {
 		channel.firstUnread = data.msg.id;
 	} else if (!data.replay) {
 		notifyMessage(data.chan, channel, store.state.activeChannel, data.msg);
+	}
+
+	// Mark pushable messages as taken by this live page, so the service
+	// worker drops the FCM duplicate the ircd may emit for the same
+	// message while this session is attached-but-idle (FEAT_WEBPUSH_IDLE).
+	// The subset is what the server pushes: PMs and channel mentions.
+	if (
+		!data.msg.self &&
+		data.msg.msgid &&
+		(data.msg.highlight || channel.type === ChanType.QUERY)
+	) {
+		recordSeenMsgid(data.msg.msgid);
 	}
 
 	let messageLimit = 0;
@@ -133,6 +151,14 @@ function notifyMessage(
 		return;
 	}
 
+	// Browser notifications enroll per network (the editor's checkbox,
+	// default on): find the channel's network and honor its saved flag.
+	const network = store.state.networks.find((net) => net.channels.some((c) => c === channel));
+
+	if (!network || !saved.notifyEnabledOf(saved.get(network.uuid))) {
+		return;
+	}
+
 	if (
 		msg.highlight ||
 		(store.state.settings.notifyAllMessages && msg.type === MessageType.MESSAGE)
@@ -146,11 +172,7 @@ function notifyMessage(
 				}
 			}
 
-			if (
-				store.state.settings.desktopNotifications &&
-				"Notification" in window &&
-				Notification.permission === "granted"
-			) {
+			if ("Notification" in window && Notification.permission === "granted") {
 				let title: string;
 				let body: string;
 				// TODO: fix msg type and get rid of that conditional
@@ -171,7 +193,11 @@ function notifyMessage(
 					}
 
 					// TODO: fix msg type and get rid of that conditional
-					body = cleanIrcMessage(msg.text ? msg.text : "");
+					// The same stripping as the service worker's push path, so a
+					// live page and a push show the same body.
+					body = notificationText(msg.text ? msg.text : "", {
+						markdown: store.state.settings.markdown,
+					});
 				}
 
 				const timestamp = Date.parse(String(msg.time));
@@ -180,9 +206,13 @@ function notifyMessage(
 					if (store.state.hasServiceWorker) {
 						navigator.serviceWorker.ready
 							.then((registration) => {
+								// network + target let a click find the conversation
+								// after this page (and its channel ids) is gone.
 								registration.active?.postMessage({
 									type: "notification",
 									chanId: targetId,
+									network: network.uuid,
+									target: channel.name,
 									timestamp: timestamp,
 									title: title,
 									body: body,

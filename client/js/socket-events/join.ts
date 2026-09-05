@@ -3,6 +3,8 @@ import {store} from "../store";
 import {switchToChannel} from "../router";
 import {ClientChan} from "../types";
 import {toClientChan} from "../chan";
+import {matchesPendingTarget, takePendingTarget} from "../helpers/pendingTarget";
+import {matchesLanding, takeLanding} from "../helpers/lastChannel";
 
 socket.on("join", function (data) {
 	const network = store.getters.findNetwork(data.network);
@@ -14,17 +16,30 @@ socket.on("join", function (data) {
 	const clientChan: ClientChan = toClientChan(data.chan);
 	network.channels.splice(data.index || -1, 0, clientChan);
 
-	// Queries do not automatically focus, unless the user did a whois
-	if (data.chan.type === "query" && !data.shouldOpen) {
+	// A notification deep link is waiting for exactly this conversation.
+	if (matchesPendingTarget(data.network, clientChan.name)) {
+		takePendingTarget();
+		switchToChannel(clientChan);
 		return;
 	}
 
-	const chan = store.getters.findChannel(data.chan.id);
+	// The conversation the last page had open, arriving now: a query
+	// reopened once registered, a channel a held session restores
+	// (helpers/lastChannel.ts).
+	if (matchesLanding(data.network, clientChan.name)) {
+		takeLanding();
+		switchToChannel(clientChan);
+		return;
+	}
 
-	if (chan) {
-		switchToChannel(chan.channel);
-	} else {
-		// eslint-disable-next-line no-console
-		console.error("Could not find channel", data.chan.id);
+	// The user asked for this window (/join, /query, whois): show it.
+	// Anything else — a held session restoring its channels
+	// (draft/persistence), a forced join, an incoming private message — is
+	// state, not navigation: the view stays where it is. The autojoin
+	// channels never get here (they are placeholders from the network's
+	// announce), and a restore burst would otherwise walk the view through
+	// every channel it brings, away from the one just landed on.
+	if (data.shouldOpen) {
+		switchToChannel(clientChan);
 	}
 });

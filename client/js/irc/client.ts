@@ -20,7 +20,8 @@ import {createHighlightTester} from "../highlight";
 import {ChanState, ChanType} from "../../../shared/types/chan";
 import {MessageType, SharedMsg, TypingState} from "../../../shared/types/msg";
 import type {SharedNetwork, SharedServerOptions} from "../../../shared/types/network";
-import {CapNegotiator, SEANCE_CAPS} from "./caps";
+import type {PushSession} from "../../../shared/types/socket-events";
+import {CapNegotiator, SEANCE_CAPS, webpushVapidOf, WEBPUSH_CAP} from "./caps";
 import {casefold, namesEqual} from "./casemap";
 import {Channel, MsgRef} from "./channel";
 import {commandNames, dispatchInput} from "./commands";
@@ -51,6 +52,8 @@ import {
 	awaitRestoration,
 	beginSettling,
 	cancelRestoration,
+	persistenceEnableLine,
+	PERSISTENCE_CAP,
 	serverReplayCovers,
 } from "./persistence";
 import {IdAllocator, sharedIds} from "./ids";
@@ -63,6 +66,8 @@ import {
 	splitMessage,
 	utf8ByteLength,
 } from "./message";
+import {LABEL_TAG_BYTES, pendingLabel, resetPending, showPending} from "./pending";
+import {splitStatusTarget} from "./handlers/privmsg";
 import {mechanismOffered, SASL_TIMEOUT_MS, SaslAuth, SaslMechanism, SaslResult} from "./sasl";
 import {
 	applyDuration,
@@ -220,10 +225,19 @@ export class IrcClient {
 	private batchRefs = 0;
 	/** The SASL exchange in progress during registration, if any. */
 	sasl: SaslAuth | null = null;
+	/** The last SASL exchange ended successfully (903); a configured login
+	 * that was asked for and succeeded. Drives the push-subscribe prompt. */
+	saslOk = false;
 	/** Services account we are logged in as (900/901); "" when not. */
 	account = "";
 	/** The server holds our session across disconnects (`PERSISTENCE STATUS ON`, see persistence.ts). */
 	persistenceHold = false;
+	/** Our registration-time `PERSISTENCE SET ON` ack is pending (swallowed
+	 * by handlers/persistence.ts until the STATUS echo lands). */
+	persistenceAutoSetPending = false;
+	/** Buffer for `PERSISTENCE LIST`'s SESSION lines until ENDOFLIST closes
+	 * the batch (Settings → session panel). */
+	persistenceListBuf: PushSession[] | undefined = undefined;
 	/** Set while a `draft/persistence` batch restores channel state: handlers update the model but show nothing. */
 	restoring = false;
 	/**
@@ -610,10 +624,13 @@ export class IrcClient {
 				this.pushMessage(
 					this.lobby,
 					{
-						text: `Reconnecting in ${Math.max(
-							1,
-							Math.round(ev.delayMs / 1000)
-						)}s (attempt ${ev.attempt})…`,
+						// A stable connection's loss retries at once (transport.ts).
+						text:
+							ev.delayMs < 500
+								? `Reconnecting now (attempt ${ev.attempt})…`
+								: `Reconnecting in ${Math.round(ev.delayMs / 1000)}s (attempt ${
+										ev.attempt
+								  })…`,
 					},
 					true
 				);
@@ -752,6 +769,12 @@ export class IrcClient {
 				return parseMultilineValue(value) !== undefined;
 			}
 
+			if (name === WEBPUSH_CAP) {
+				// Without a VAPID key the server could never send a push, so
+				// subscribing would be pointless (webpush.ts).
+				return webpushVapidOf(value) !== undefined;
+			}
+
 			if (name === "sasl") {
 				return mechanism !== null && mechanismOffered(mechanism, value);
 			}
@@ -811,10 +834,14 @@ export class IrcClient {
 		this.endSasl();
 
 		if (!result.ok) {
+			this.saslOk = false;
+
 			if (this.saslFailed(result.error ?? "unknown error")) {
 				return;
 			}
 		} else {
+			this.saslOk = true;
+
 			// The one window `PERSISTENCE ATTACH` fits in: the server refuses
 			// it without an account and again once we are registered. It goes
 			// out in the same flush as `CAP END`, before it (persistence.ts).
@@ -891,6 +918,9 @@ export class IrcClient {
 		this.saveCursor(); // the newest one must not die with the connection
 		this.serverReplay = false;
 		this.clearPendingEdits();
+		// Before resetMultiline: a queued batch's copy is reported here, with
+		// the reason, rather than dropped without a word there.
+		resetPending(this, "connection lost");
 		this.clearTyping();
 
 		for (const chan of this.channels) {
@@ -983,6 +1013,29 @@ export class IrcClient {
 		// on any build (persistence.ts).
 		beginSettling(this);
 
+		// Opt this connection into session persistence: `PERSISTENCE SET ON`
+		// creates the server's bouncer session and turns its hold on, which
+		// is what draft/webpush triggers fire against. It needs the account
+		// flag, so it only goes out post-registration (a SET sent before CAP
+		// END is answered FAIL ACCOUNT_REQUIRED), and it is idempotent.
+		if (this.caps.hasCapability(PERSISTENCE_CAP) && this.options.saslAccount) {
+			// Flag the ack + STATUS echo as ours: handlers/persistence.ts
+			// swallows them (the user never typed anything).
+			this.persistenceAutoSetPending = true;
+			this.send(persistenceEnableLine());
+		}
+
+		// Web Push availability (draft/webpush): announce the server's VAPID
+		// key (or its absence) so webpush.ts can re-register a stored
+		// subscription and the Settings UI can tell the two cases apart. The
+		// WEBPUSH REGISTER itself is emitted later through the bus — a
+		// REGISTER sent before CAP END is silently dropped by nefarious2.
+		this.dispatch("webpush:available", {
+			network: this.uuid,
+			vapid: this.webpushVapid(),
+			sasl: this.saslOk,
+		});
+
 		if (this.persistenceHold || this.serverReplay) {
 			// The server may be about to restore the channels of our held
 			// session (a draft/persistence batch right behind the MOTD, or
@@ -1016,6 +1069,55 @@ export class IrcClient {
 		if (active) {
 			prefetchCatchup(this, active);
 		}
+	}
+
+	// ------------------------------------------------------- web push (draft/webpush)
+
+	/**
+	 * The VAPID public key this server advertises for Web Push, when the
+	 * `draft/webpush` capability is enabled: the cap 302 value is the primary
+	 * source, the `VAPID` ISUPPORT token the fallback. Undefined when the
+	 * network cannot push (cap missing or no key).
+	 */
+	webpushVapid(): string | undefined {
+		if (!this.caps.hasCapability(WEBPUSH_CAP)) {
+			return undefined;
+		}
+
+		return webpushVapidOf(this.caps.value(WEBPUSH_CAP) ?? "") ?? this.isupport.vapid;
+	}
+
+	/**
+	 * `WEBPUSH REGISTER <endpoint> <keys>`: store the browser's push
+	 * subscription with this account. The endpoint must be https (the server
+	 * rejects anything else) and the keys are the `PushSubscription.toJSON()`
+	 * material (`p256dh`, `auth`). Registration is idempotent per endpoint —
+	 * re-registering on every connect is the draft's renewal mechanism.
+	 */
+	webpushRegister(endpoint: string, keys: {p256dh: string; auth: string}): boolean {
+		const line = `WEBPUSH REGISTER ${endpoint} p256dh=${keys.p256dh};auth=${keys.auth}`;
+
+		// A REGISTER split in two would be two garbage commands: endpoints are
+		// ~150 bytes and the keys ~120, but refuse whole rather than send a
+		// mangled line (MAX_LINE_BYTES guards the ircd's 500-byte WS frames).
+		if (utf8ByteLength(line) > MAX_LINE_BYTES) {
+			this.pushMessage(this.lobby, {
+				type: MessageType.ERROR,
+				text: "Not sent: the push subscription does not fit on one line",
+			});
+			return false;
+		}
+
+		return this.send(line);
+	}
+
+	/**
+	 * `WEBPUSH UNREGISTER <endpoint>`: drop one subscription for this
+	 * account (the draft defines no wildcard). The server echoes even when
+	 * the endpoint was not registered.
+	 */
+	webpushUnregister(endpoint: string): boolean {
+		return this.send(`WEBPUSH UNREGISTER ${endpoint}`);
 	}
 
 	// --------------------------------------------------------------- sending
@@ -1107,9 +1209,17 @@ export class IrcClient {
 			plain = plan[0][0].text;
 		}
 
+		// With `echo-message` each line is labelled so its echo can be told
+		// apart (pending.ts); without it there is no echo to label.
+		const echo = this.caps.hasCapability("echo-message");
+		const labelled = echo && this.caps.hasCapability("labeled-response");
 		// The frame cap applies to the whole line; the first chunk carries the
 		// most tags, so every chunk is budgeted as if it did.
-		const prefixBytes = sourceBytes + actionBytes + utf8ByteLength(tagPrefix(firstTags));
+		const prefixBytes =
+			sourceBytes +
+			actionBytes +
+			utf8ByteLength(tagPrefix(firstTags)) +
+			(labelled ? LABEL_TAG_BYTES : 0);
 		let chunks: string[];
 
 		try {
@@ -1120,12 +1230,23 @@ export class IrcClient {
 			return;
 		}
 
-		const echo = this.caps.hasCapability("echo-message");
+		// Where the pending copy shows: the channel a STATUSMSG names, or the
+		// open channel / query. A target that is not open shows nothing (its
+		// echo opens the query, as it always did).
+		const {target: shownTarget, group} = splitStatusTarget(this, target);
+		const chan = echo ? this.findChannel(shownTarget) : undefined;
+		const type = opts.notice
+			? MessageType.NOTICE
+			: opts.action
+			? MessageType.ACTION
+			: MessageType.MESSAGE;
 
 		for (let i = 0; i < chunks.length; i++) {
 			const chunk = chunks[i];
 			const body = opts.action ? `\x01ACTION ${chunk}\x01` : chunk;
-			const tags = i === 0 ? firstTags : opts.tags;
+			const base = i === 0 ? firstTags : opts.tags;
+			const label = echo ? pendingLabel(this) : undefined;
+			const tags = label ? {...base, label} : base;
 
 			if (!this.send(trailingLine(command, [target, body], tags))) {
 				return;
@@ -1133,10 +1254,19 @@ export class IrcClient {
 
 			if (!echo) {
 				this.handleLine(
-					`${tagPrefix(tags)}:${this.nick}!${this.ident}@${
+					`${tagPrefix(base)}:${this.nick}!${this.ident}@${
 						this.host || "localhost"
 					} ${command} ${target} :${body}`
 				);
+			} else if (chan) {
+				showPending(this, chan, {
+					type,
+					text: chunk,
+					label,
+					replyTo: opts.tags?.[REPLY_TAG],
+					editOf: i === 0 ? opts.firstTags?.[EDIT_TAG] : undefined,
+					statusmsgGroup: group,
+				});
 			}
 		}
 	}
@@ -1339,6 +1469,11 @@ export class IrcClient {
 	nextBatchRef(): string {
 		this.batchRefs++;
 		return `m${this.batchRefs}`;
+	}
+
+	/** An id for a message delivered to the UI outside {@link pushMessage} (a pending copy). */
+	nextMsgId(): number {
+		return this.ids.msgId();
 	}
 
 	/** Whether the server lets us send REDACT. */
@@ -1725,6 +1860,24 @@ export class IrcClient {
 
 	findChannel(name: string): Channel | undefined {
 		return this.channels.find((chan) => this.namesEqual(chan.name, name));
+	}
+
+	/**
+	 * Channels the user asked to `/join` (casefolded) whose JOIN has not come
+	 * back yet. Their JOIN announces a window the user wants to see
+	 * (`join.shouldOpen`, like `/query` and whois do), unlike an autojoin, a
+	 * restore or a forced join, which are state and must not move the view.
+	 */
+	private requestedJoins = new Set<string>();
+
+	/** Note a `/join` the user typed (commands/join.ts). */
+	requestJoin(name: string): void {
+		this.requestedJoins.add(this.casefold(name));
+	}
+
+	/** Whether the user asked for this channel — once: the request is consumed. */
+	takeRequestedJoin(name: string): boolean {
+		return this.requestedJoins.delete(this.casefold(name));
 	}
 
 	channelById(id: number): Channel | undefined {

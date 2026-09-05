@@ -4,14 +4,19 @@ import {BrandingUploads, DEFAULT_UPLOAD_MAX_BYTES} from "../../client/js/brandin
 import {
 	UPLOADS_NOT_CONFIGURED,
 	UploadHost,
+	UploadProgress,
 	Uploader,
+	XhrConstructor,
 	acceptsType,
 	buildUploadRequest,
 	fieldsBlamedBy,
+	fileNameForType,
 	lookupResponsePath,
+	metadataPlan,
 	parseUploadResponse,
 	uploadFile,
 	uploadMaxSize,
+	xhrFetch,
 } from "../../client/js/upload";
 
 const ENDPOINT = "https://files.example.test/upload";
@@ -75,6 +80,12 @@ interface FakeHost extends UploadHost {
 	urls: string[];
 	config: BrandingUploads | undefined;
 	connected: boolean;
+	/** Every list of files the host was asked to confirm. */
+	confirmed: File[][];
+	/** Every progress state reported, `null` included. */
+	progressLog: (UploadProgress | null)[];
+	/** What `confirm` answers; the default lets everything through. */
+	decide: (files: File[]) => Promise<File[]>;
 }
 
 function fakeHost(config: BrandingUploads | undefined): FakeHost {
@@ -83,14 +94,109 @@ function fakeHost(config: BrandingUploads | undefined): FakeHost {
 		urls: [],
 		config,
 		connected: true,
+		confirmed: [],
+		progressLog: [],
+		decide: (files) => Promise.resolve(files),
 		uploads: () => host.config,
 		isConnected: () => host.connected,
 		renderCanvas: () => false,
 		showError: (message) => host.errors.push(message),
 		insertUrl: (url) => host.urls.push(url),
+		confirm(files) {
+			host.confirmed.push(files);
+			return host.decide(files);
+		},
+		progress: (state) => host.progressLog.push(state),
 	};
 
 	return host;
+}
+
+/** A stand-in for the browser's XMLHttpRequest that the test drives by hand. */
+class FakeXhr {
+	/** Every instance constructed, oldest first; reset by the describes that use it. */
+	// eslint-disable-next-line no-use-before-define -- the class naming itself in a type
+	static instances: FakeXhr[] = [];
+
+	method = "";
+	url = "";
+	headers: Record<string, string> = {};
+	body: unknown = undefined;
+	withCredentials = false;
+	aborted = false;
+	status = 0;
+	statusText = "";
+	responseText = "";
+	upload: {onprogress: ((event: ProgressEvent) => void) | null} = {onprogress: null};
+	onload: (() => void) | null = null;
+	onerror: (() => void) | null = null;
+	onabort: (() => void) | null = null;
+	ontimeout: (() => void) | null = null;
+
+	constructor() {
+		FakeXhr.instances.push(this);
+	}
+
+	open(method: string, url: string) {
+		this.method = method;
+		this.url = url;
+	}
+
+	setRequestHeader(name: string, value: string) {
+		this.headers[name] = value;
+	}
+
+	send(body: unknown) {
+		this.body = body;
+	}
+
+	abort() {
+		this.aborted = true;
+		this.onabort?.();
+	}
+
+	progress(loaded: number, total: number) {
+		this.upload.onprogress?.({lengthComputable: true, loaded, total} as ProgressEvent);
+	}
+
+	respond(status: number, text: string) {
+		this.status = status;
+		this.responseText = text;
+		this.onload?.();
+	}
+
+	fail() {
+		this.onerror?.();
+	}
+}
+
+const XHR = FakeXhr as unknown as XhrConstructor;
+
+/** Wait for `condition` to hold, letting queued promise callbacks run. */
+async function until(condition: () => boolean): Promise<void> {
+	for (let i = 0; i < 100 && !condition(); i++) {
+		await new Promise((resolve) => setImmediate(resolve));
+	}
+
+	if (!condition()) {
+		throw new Error("condition never held");
+	}
+}
+
+/** The latest request the fake XHR class saw. */
+async function lastXhr(): Promise<FakeXhr> {
+	const count = FakeXhr.instances.length;
+	await until(() => FakeXhr.instances.length > count - 1 && FakeXhr.instances.length > 0);
+	return FakeXhr.instances[FakeXhr.instances.length - 1];
+}
+
+function deferred<T>(): {promise: Promise<T>; resolve: (value: T) => void} {
+	let resolve!: (value: T) => void;
+	const promise = new Promise<T>((r) => {
+		resolve = r;
+	});
+
+	return {promise, resolve};
 }
 
 describe("upload", function () {
@@ -336,6 +442,7 @@ describe("upload", function () {
 			fieldName: "fileToUpload",
 			fields: {reqtype: "fileupload", time: "72h"},
 			maxSizeBytes: 1024 * 1024 * 1024,
+			progress: false,
 		};
 
 		it("sends fileToUpload with the reqtype and retention fields", function () {
@@ -496,6 +603,502 @@ describe("upload", function () {
 				"You are currently disconnected, unable to initiate upload process.",
 			]);
 			expect(fetchStub.called).to.be.false;
+		});
+	});
+
+	describe("confirmation", function () {
+		it("shows the files that passed the checks and sends the ones the user keeps", async function () {
+			const fetchStub = stubFetch(jsonResponse({url: "https://cdn.example.test/b"}));
+			const host = fakeHost({endpoint: ENDPOINT, maxSizeBytes: 5});
+			host.decide = (files) => Promise.resolve(files.filter((f) => f.name === "b.png"));
+
+			await new Uploader(host).triggerUpload([
+				textFile("big.txt", "too big"),
+				imageFile("a.png"),
+				imageFile("b.png"),
+			]);
+
+			expect(host.confirmed.map((files) => files.map((f) => f.name))).to.deep.equal([
+				["a.png", "b.png"],
+			]);
+			expect(host.errors).to.deep.equal(["File big.txt is over the maximum allowed size"]);
+			expect(host.urls).to.deep.equal(["https://cdn.example.test/b"]);
+			expect(fetchStub.calledOnce).to.be.true;
+			expect(
+				((fetchStub.firstCall.args[1] as RequestInit).body as FormData).get("file")
+			).to.have.property("name", "b.png");
+		});
+
+		it("uploads nothing when the user cancels", async function () {
+			const fetchStub = stubFetch();
+			const host = fakeHost({endpoint: ENDPOINT});
+			host.decide = () => Promise.resolve([]);
+
+			await new Uploader(host).triggerUpload([imageFile()]);
+
+			expect(host.confirmed).to.have.length(1);
+			expect(host.urls).to.deep.equal([]);
+			expect(host.errors).to.deep.equal([]);
+			expect(fetchStub.called).to.be.false;
+		});
+
+		it("never asks when nothing passed the checks", async function () {
+			stubFetch();
+			const host = fakeHost({endpoint: ENDPOINT, maxSizeBytes: 1});
+
+			await new Uploader(host).triggerUpload([textFile("big.txt", "too big")]);
+
+			expect(host.confirmed).to.deep.equal([]);
+			expect(host.errors).to.have.length(1);
+		});
+
+		it("asks about a second drop only once the first is answered", async function () {
+			stubFetch(
+				jsonResponse({url: "https://cdn.example.test/1"}),
+				jsonResponse({url: "https://cdn.example.test/2"})
+			);
+			const host = fakeHost({endpoint: ENDPOINT});
+			const first = deferred<File[]>();
+			host.decide = (files) =>
+				files[0].name === "a.png" ? first.promise : Promise.resolve(files);
+			const uploader = new Uploader(host);
+
+			const runA = uploader.triggerUpload([imageFile("a.png")]);
+			const runB = uploader.triggerUpload([imageFile("b.png")]);
+			await new Promise((resolve) => setImmediate(resolve));
+
+			expect(host.confirmed.map((files) => files[0].name)).to.deep.equal(["a.png"]);
+
+			first.resolve([imageFile("a.png")]);
+			await Promise.all([runA, runB]);
+
+			expect(host.confirmed.map((files) => files[0].name)).to.deep.equal(["a.png", "b.png"]);
+			expect(host.urls).to.deep.equal([
+				"https://cdn.example.test/1",
+				"https://cdn.example.test/2",
+			]);
+		});
+	});
+
+	describe("progress", function () {
+		beforeEach(function () {
+			FakeXhr.instances = [];
+		});
+
+		it("reports each file's bytes as they go, then goes idle", async function () {
+			const host = fakeHost({endpoint: ENDPOINT});
+			const uploader = new Uploader(host, undefined, XHR);
+
+			const run = uploader.triggerUpload([
+				textFile("a.txt", "hello"),
+				textFile("b.txt", "hi!"),
+			]);
+
+			const first = await lastXhr();
+			first.progress(2, 5);
+			first.respond(200, '{"url":"https://cdn.example.test/a"}');
+
+			await until(() => FakeXhr.instances.length === 2);
+			const second = await lastXhr();
+			second.progress(3, 3);
+			second.respond(200, '{"url":"https://cdn.example.test/b"}');
+
+			await run;
+
+			expect(host.urls).to.deep.equal([
+				"https://cdn.example.test/a",
+				"https://cdn.example.test/b",
+			]);
+			expect(host.progressLog).to.deep.equal([
+				{fileName: "a.txt", index: 1, count: 2, phase: "preparing", loaded: 0, total: 0},
+				{fileName: "a.txt", index: 1, count: 2, phase: "sending", loaded: 0, total: 5},
+				{fileName: "a.txt", index: 1, count: 2, phase: "sending", loaded: 2, total: 5},
+				{fileName: "b.txt", index: 2, count: 2, phase: "preparing", loaded: 0, total: 0},
+				{fileName: "b.txt", index: 2, count: 2, phase: "sending", loaded: 0, total: 3},
+				{fileName: "b.txt", index: 2, count: 2, phase: "waiting", loaded: 3, total: 3},
+				null,
+			]);
+		});
+
+		it("counts a file queued while another is in flight", async function () {
+			const host = fakeHost({endpoint: ENDPOINT});
+			const uploader = new Uploader(host, undefined, XHR);
+
+			const runA = uploader.triggerUpload([textFile("a.txt")]);
+			const first = await lastXhr();
+			const runB = uploader.triggerUpload([textFile("b.txt")]);
+			await until(() => host.confirmed.length === 2);
+			first.respond(200, '{"url":"https://cdn.example.test/a"}');
+
+			await until(() => FakeXhr.instances.length === 2);
+			const second = await lastXhr();
+			second.respond(200, '{"url":"https://cdn.example.test/b"}');
+			await Promise.all([runA, runB]);
+
+			const sending = host.progressLog.filter((p) => p?.phase === "sending");
+			expect(sending.map((p) => [p?.fileName, p?.index, p?.count])).to.deep.equal([
+				["a.txt", 1, 1],
+				["b.txt", 2, 2],
+			]);
+			expect(host.progressLog[host.progressLog.length - 1]).to.equal(null);
+		});
+
+		it("cancels quietly, dropping the rest of the queue", async function () {
+			const host = fakeHost({endpoint: ENDPOINT});
+			const uploader = new Uploader(host, undefined, XHR);
+
+			const run = uploader.triggerUpload([textFile("a.txt"), textFile("b.txt")]);
+			const first = await lastXhr();
+			uploader.abort();
+			await run;
+
+			expect(first.aborted).to.be.true;
+			expect(FakeXhr.instances).to.have.length(1);
+			expect(host.errors).to.deep.equal([]);
+			expect(host.urls).to.deep.equal([]);
+			expect(host.progressLog[host.progressLog.length - 1]).to.equal(null);
+		});
+
+		it("goes idle after a failure too", async function () {
+			const host = fakeHost({endpoint: ENDPOINT});
+			const uploader = new Uploader(host, undefined, XHR);
+
+			const run = uploader.triggerUpload([textFile("a.txt")]);
+			(await lastXhr()).fail();
+			// Before any progress, so it is retried once as a plain POST; that fails too.
+			await until(() => FakeXhr.instances.length === 2);
+			(await lastXhr()).fail();
+			await run;
+
+			expect(host.errors).to.deep.equal(["Upload failed: Failed to fetch"]);
+			expect(host.progressLog[host.progressLog.length - 1]).to.equal(null);
+		});
+	});
+
+	describe("xhrFetch", function () {
+		beforeEach(function () {
+			FakeXhr.instances = [];
+		});
+
+		it("sends the request the way fetch would and resolves with a Response", async function () {
+			const init = buildUploadRequest(textFile(), {
+				endpoint: ENDPOINT,
+				headers: {"X-Api-Key": "k"},
+				withCredentials: true,
+			});
+
+			const pending = xhrFetch(ENDPOINT, init, {XHR});
+			const xhr = await lastXhr();
+
+			expect(xhr.method).to.equal("POST");
+			expect(xhr.url).to.equal(ENDPOINT);
+			expect(xhr.headers).to.deep.equal({"X-Api-Key": "k"});
+			expect(xhr.withCredentials).to.be.true;
+			expect(xhr.body).to.be.instanceOf(FormData);
+
+			xhr.respond(201, "https://cdn.example.test/x");
+			const response = await pending;
+
+			expect(response.status).to.equal(201);
+			expect(response.ok).to.be.true;
+			expect(await response.text()).to.equal("https://cdn.example.test/x");
+		});
+
+		it("reports upload progress", async function () {
+			const seen: [number, number][] = [];
+			const pending = xhrFetch(
+				ENDPOINT,
+				{method: "POST"},
+				{XHR, onProgress: (loaded, total) => seen.push([loaded, total])}
+			);
+			const xhr = await lastXhr();
+
+			xhr.progress(10, 20);
+			xhr.progress(20, 20);
+			xhr.respond(200, "ok");
+			await pending;
+
+			expect(seen).to.deep.equal([
+				[10, 20],
+				[20, 20],
+			]);
+		});
+
+		it("turns a network error into the TypeError fetch would throw", async function () {
+			const pending = xhrFetch(ENDPOINT, {method: "POST"}, {XHR});
+			(await lastXhr()).fail();
+
+			let error: unknown;
+
+			try {
+				await pending;
+			} catch (e) {
+				error = e;
+			}
+
+			expect(error).to.be.instanceOf(TypeError);
+			expect((error as Error).message).to.equal("Failed to fetch");
+		});
+
+		it("aborts through the signal, before or after sending", async function () {
+			const controller = new AbortController();
+			const pending = xhrFetch(ENDPOINT, {method: "POST", signal: controller.signal}, {XHR});
+			const xhr = await lastXhr();
+
+			controller.abort();
+
+			expect(xhr.aborted).to.be.true;
+			expect(await rejectionMessage(pending)).to.match(/abort/i);
+
+			const early = new AbortController();
+			early.abort();
+			const rejected = xhrFetch(ENDPOINT, {method: "POST", signal: early.signal}, {XHR});
+
+			expect(await rejectionMessage(rejected)).to.match(/abort/i);
+			expect(FakeXhr.instances).to.have.length(1);
+		});
+
+		it("builds a bodiless Response for a 204", async function () {
+			const pending = xhrFetch(ENDPOINT, {method: "POST"}, {XHR});
+			(await lastXhr()).respond(204, "");
+			const response = await pending;
+
+			expect(response.status).to.equal(204);
+			expect(await response.text()).to.equal("");
+		});
+
+		it("attaches an upload listener only when progress is wanted", async function () {
+			const plain = xhrFetch(ENDPOINT, {method: "POST"}, {XHR});
+			const first = await lastXhr();
+			expect(first.upload.onprogress).to.equal(null);
+			first.respond(200, "ok");
+			await plain;
+
+			const withProgress = xhrFetch(ENDPOINT, {method: "POST"}, {XHR, onProgress() {}});
+			const second = await lastXhr();
+			expect(second.upload.onprogress).to.be.a("function");
+			second.respond(200, "ok");
+			await withProgress;
+		});
+
+		it("is what uploadFile uses when given an XHR class", async function () {
+			const pending = uploadFile(textFile(), {endpoint: ENDPOINT}, {xhr: XHR});
+			(await lastXhr()).respond(200, '{"url":"https://cdn.example.test/via-xhr"}');
+
+			expect(await pending).to.equal("https://cdn.example.test/via-xhr");
+		});
+	});
+
+	describe("progress needs a preflight", function () {
+		beforeEach(function () {
+			FakeXhr.instances = [];
+		});
+
+		it("retries as a plain POST when the request fails before any progress", async function () {
+			const seen: [number, number][] = [];
+			let unavailable = 0;
+			const pending = uploadFile(
+				textFile(),
+				{endpoint: ENDPOINT},
+				{
+					xhr: XHR,
+					onProgress: (loaded, total) => seen.push([loaded, total]),
+					onProgressUnavailable: () => unavailable++,
+				}
+			);
+
+			// The upload listener made the browser preflight; the uploader said 405.
+			(await lastXhr()).fail();
+			await until(() => FakeXhr.instances.length === 2);
+			const retry = await lastXhr();
+			expect(retry.upload.onprogress).to.equal(null);
+			expect(retry.body).to.be.instanceOf(FormData);
+			retry.respond(200, '{"url":"https://cdn.example.test/plain"}');
+
+			expect(await pending).to.equal("https://cdn.example.test/plain");
+			expect(unavailable).to.equal(1);
+			expect(seen).to.deep.equal([]);
+		});
+
+		it("does not retry once bytes were reported", async function () {
+			let unavailable = 0;
+			const pending = uploadFile(
+				textFile(),
+				{endpoint: ENDPOINT},
+				{xhr: XHR, onProgress() {}, onProgressUnavailable: () => unavailable++}
+			);
+			const xhr = await lastXhr();
+			xhr.progress(2, 5);
+			xhr.fail();
+
+			expect(await rejectionMessage(pending)).to.equal("Upload failed: Failed to fetch");
+			expect(FakeXhr.instances).to.have.length(1);
+			expect(unavailable).to.equal(0);
+		});
+
+		it("does not retry when no progress was asked for", async function () {
+			const pending = uploadFile(textFile(), {endpoint: ENDPOINT}, {xhr: XHR});
+			(await lastXhr()).fail();
+
+			expect(await rejectionMessage(pending)).to.equal("Upload failed: Failed to fetch");
+			expect(FakeXhr.instances).to.have.length(1);
+		});
+
+		it("never tries progress when the config says the endpoint cannot preflight", async function () {
+			const host = fakeHost({endpoint: ENDPOINT, progress: false});
+			const uploader = new Uploader(host, undefined, XHR);
+
+			const run = uploader.triggerUpload([textFile("a.txt", "hello")]);
+			const xhr = await lastXhr();
+			expect(xhr.upload.onprogress).to.equal(null);
+			xhr.respond(200, '{"url":"https://cdn.example.test/a"}');
+			await run;
+
+			expect(FakeXhr.instances).to.have.length(1);
+			expect(host.urls).to.deep.equal(["https://cdn.example.test/a"]);
+			expect(host.progressLog).to.deep.equal([
+				{fileName: "a.txt", index: 1, count: 1, phase: "preparing", loaded: 0, total: 0},
+				{fileName: "a.txt", index: 1, count: 1, phase: "sending", loaded: 0, total: 0},
+				null,
+			]);
+		});
+
+		it("remembers an endpoint that cannot report progress", async function () {
+			const host = fakeHost({endpoint: ENDPOINT});
+			const uploader = new Uploader(host, undefined, XHR);
+
+			const run = uploader.triggerUpload([
+				textFile("a.txt", "hello"),
+				textFile("b.txt", "hi!"),
+			]);
+			(await lastXhr()).fail();
+			await until(() => FakeXhr.instances.length === 2);
+			(await lastXhr()).respond(200, '{"url":"https://cdn.example.test/a"}');
+
+			await until(() => FakeXhr.instances.length === 3);
+			const second = await lastXhr();
+			// No upload listener from the start: no preflight for the second file.
+			expect(second.upload.onprogress).to.equal(null);
+			second.respond(200, '{"url":"https://cdn.example.test/b"}');
+			await run;
+
+			expect(host.errors).to.deep.equal([]);
+			expect(host.urls).to.deep.equal([
+				"https://cdn.example.test/a",
+				"https://cdn.example.test/b",
+			]);
+			// The strip is indeterminate (total 0) once progress is known to be unavailable.
+			expect(host.progressLog).to.deep.equal([
+				{fileName: "a.txt", index: 1, count: 2, phase: "preparing", loaded: 0, total: 0},
+				{fileName: "a.txt", index: 1, count: 2, phase: "sending", loaded: 0, total: 5},
+				{fileName: "a.txt", index: 1, count: 2, phase: "sending", loaded: 0, total: 0},
+				{fileName: "b.txt", index: 2, count: 2, phase: "preparing", loaded: 0, total: 0},
+				{fileName: "b.txt", index: 2, count: 2, phase: "sending", loaded: 0, total: 0},
+				null,
+			]);
+		});
+	});
+
+	describe("metadataPlan", function () {
+		const animatedWebp = new Uint8Array([
+			...Array.from("RIFF", (c) => c.charCodeAt(0)),
+			22,
+			0,
+			0,
+			0,
+			...Array.from("WEBPVP8X", (c) => c.charCodeAt(0)),
+			10,
+			0,
+			0,
+			0,
+			0x02,
+			0,
+			0,
+			0,
+			1,
+			0,
+			0,
+			1,
+			0,
+			0,
+		]);
+		const stillWebp = new Uint8Array([
+			...Array.from("RIFF", (c) => c.charCodeAt(0)),
+			16,
+			0,
+			0,
+			0,
+			...Array.from("WEBPVP8L", (c) => c.charCodeAt(0)),
+			4,
+			0,
+			0,
+			0,
+			0x2f,
+			0,
+			0,
+			0,
+		]);
+
+		it("strips a still image when the setting is on", async function () {
+			expect(await metadataPlan(imageFile("p.jpg", "image/jpeg"), true)).to.equal("strip");
+			expect(
+				await metadataPlan(new File([stillWebp], "s.webp", {type: "image/webp"}), true)
+			).to.equal("strip");
+		});
+
+		it("keeps animated files, GIF and SVG whole", async function () {
+			expect(
+				await metadataPlan(new File([animatedWebp], "a.webp", {type: "image/webp"}), true)
+			).to.equal("animated");
+			expect(await metadataPlan(imageFile("a.gif", "image/gif"), true)).to.equal(
+				"unsupported"
+			);
+			expect(await metadataPlan(imageFile("a.svg", "image/svg+xml"), true)).to.equal(
+				"unsupported"
+			);
+		});
+
+		it("is off for non-images and when the setting is off", async function () {
+			expect(await metadataPlan(textFile(), true)).to.equal("not-image");
+			expect(await metadataPlan(imageFile("p.jpg", "image/jpeg"), false)).to.equal("off");
+		});
+
+		it("sends an animated WebP untouched even with the setting on", async function () {
+			// There is no canvas under Node: had the file been re-encoded this
+			// would have failed instead of reaching the endpoint.
+			const fetchStub = stubFetch(jsonResponse({url: "https://cdn.example.test/anim"}));
+			const host = fakeHost({endpoint: ENDPOINT});
+			host.renderCanvas = () => true;
+
+			await new Uploader(host).triggerUpload([
+				new File([animatedWebp], "a.webp", {type: "image/webp"}),
+			]);
+
+			expect(host.errors).to.deep.equal([]);
+			expect(host.urls).to.deep.equal(["https://cdn.example.test/anim"]);
+
+			const sent = ((fetchStub.firstCall.args[1] as RequestInit).body as FormData).get(
+				"file"
+			) as File;
+			expect(sent.size).to.equal(animatedWebp.length);
+			expect(sent.type).to.equal("image/webp");
+		});
+	});
+
+	describe("fileNameForType", function () {
+		it("renames the extension when the canvas produced a different format", function () {
+			expect(fileNameForType("photo.webp", "image/png")).to.equal("photo.png");
+			expect(fileNameForType("photo.avif", "image/png")).to.equal("photo.png");
+			expect(fileNameForType("shot.png", "image/webp")).to.equal("shot.webp");
+			expect(fileNameForType("noext", "image/jpeg")).to.equal("noext.jpg");
+		});
+
+		it("leaves a name whose extension already fits", function () {
+			expect(fileNameForType("pic.JPG", "image/jpeg")).to.equal("pic.JPG");
+			expect(fileNameForType("pic.jpeg", "image/jpeg")).to.equal("pic.jpeg");
+			expect(fileNameForType("pic.png", "image/png")).to.equal("pic.png");
+			expect(fileNameForType("pic.png", "image/unknown")).to.equal("pic.png");
+			expect(fileNameForType("pic.png", "")).to.equal("pic.png");
 		});
 	});
 });

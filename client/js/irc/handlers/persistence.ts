@@ -12,6 +12,10 @@
  *   :server PERSISTENCE ATTACH <profile>        (the ack of our ATTACH)
  *   :server PERSISTENCE DETACH|PROFILE …
  *
+ *   :server PERSISTENCE SESSION <sessid> <state> <nick> <channels> :<info>
+ *   :server PERSISTENCE ENDOFLIST              (the close of a LIST)
+ *   :server PERSISTENCE DETACH OK|NOSESSION    (the ack of our force-logout)
+ *
  * Only the effective state matters to us ({@link IrcClient.persistenceHold},
  * read at the end of registration by ../persistence.ts). The registration
  * line is not shown; anything the user asked for is. The `ATTACH` ack of the
@@ -25,13 +29,58 @@ const persistence: Handler = (client, msg) => {
 	const [sub = "", ...rest] = msg.params;
 	const what = sub.toUpperCase();
 
+	// `PERSISTENCE LIST` body: SESSION lines accumulate on the client until
+	// ENDOFLIST closes the batch, then the whole list goes out as one
+	// `persistence:sessions` dispatch (Settings → session panel). These
+	// lines never print to the lobby.
+	if (what === "SESSION") {
+		if (!client.persistenceListBuf) {
+			client.persistenceListBuf = [];
+		}
+
+		{
+			const [sessid = "", state = "", nick = "", channels = ""] = rest;
+			const info = rest[rest.length - 1] ?? "";
+
+			client.persistenceListBuf.push({
+				sessid,
+				state: state.toUpperCase(),
+				nick,
+				channels: channels === "*" ? [] : channels.split(/[\s,]+/).filter(Boolean),
+				info,
+			});
+		}
+
+		return;
+	}
+
+	if (what === "ENDOFLIST") {
+		const sessions = client.persistenceListBuf ?? [];
+
+		client.persistenceListBuf = undefined;
+		client.dispatch("persistence:sessions", {sessions});
+		return;
+	}
+
+	if (what === "DETACH") {
+		// The ack of the Settings panel's force-logout: the session is gone
+		// (STATUS follows and prints the effective OFF there). Report an
+		// empty list so the panel refreshes.
+		client.persistenceListBuf = undefined;
+		client.dispatch("persistence:sessions", {sessions: []});
+		return;
+	}
+
 	if (what === "STATUS") {
 		const effective = (rest[rest.length - 1] ?? "").toUpperCase();
 		const setting = rest.length > 1 ? rest[0].toUpperCase() : "";
 		client.persistenceHold = effective === "ON";
 
-		if (client.state === "registering") {
-			return; // the unsolicited line; the user did not ask for it
+		if (client.state === "registering" || client.persistenceAutoSetPending) {
+			// The unsolicited line, or the echo of our registration-time
+			// SET ON: the user did not ask for either.
+			client.persistenceAutoSetPending = false;
+			return;
 		}
 
 		client.pushMessage(client.lobby, {
@@ -52,8 +101,10 @@ const persistence: Handler = (client, msg) => {
 	}
 
 	if (what === "SET") {
-		// The ack of what we asked for; the STATUS that follows carries the
-		// state the server will act on.
+		if (client.state === "registering" || client.persistenceAutoSetPending) {
+			return; // our own registration-time auto-enable
+		}
+
 		client.pushMessage(client.lobby, {
 			text: `Session persistence set to: ${(rest[0] ?? "").toUpperCase()}`,
 		});

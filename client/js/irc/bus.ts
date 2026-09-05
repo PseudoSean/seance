@@ -10,6 +10,7 @@ import type {IrcClient} from "./client";
 import {requestMore} from "./history";
 import * as saved from "./saved-networks";
 import type {ConnectOptions} from "./types";
+import {REPLY_TAG} from "./wire";
 
 export interface ClientRegistry {
 	clientForChannel(chanId: number): IrcClient | undefined;
@@ -57,6 +58,21 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 		}
 	});
 
+	// By network + target name rather than channel id: what a notification
+	// can still name after the page is gone (the worker's relayed reply, the
+	// outbox). Only over a connected client — a reconnecting one would throw.
+	bus.handle("send", ({network, target, text, replyTo}) => {
+		const client = registry.clientForNetwork(network);
+
+		if (client && client.isConnected) {
+			// A notification's reply answers the message it was shown for.
+			client.sendMessage(target, text, replyTo ? {tags: {[REPLY_TAG]: replyTo}} : {});
+		} else {
+			// eslint-disable-next-line no-console
+			console.warn("[irc] send to a network that is not connected", network, target);
+		}
+	});
+
 	bus.handle("msg:react", ({target, msgid, text, remove}) => {
 		const client = registry.clientForChannel(target);
 		const chan = client?.channelById(target);
@@ -82,6 +98,51 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 		if (client && chan) {
 			client.redact(chan, msgid, reason);
 		}
+	});
+
+	// Web Push (draft/webpush): the browser subscription lives in
+	// client/js/webpush.ts; these hand it to the network's server. The
+	// echoes / FAILs come back as `webpush:state` (handlers/webpush.ts).
+	bus.handle("webpush:register", ({network, endpoint, keys}) => {
+		const client = registry.clientForNetwork(network);
+
+		if (client) {
+			client.webpushRegister(endpoint, keys);
+		}
+	});
+
+	bus.handle("webpush:unregister", ({network, endpoint}) => {
+		const client = registry.clientForNetwork(network);
+
+		if (client) {
+			client.webpushUnregister(endpoint);
+		}
+	});
+
+	// Account metadata writes for webpush settings (payload tier, mute/
+	// snooze list). SET with an empty value deletes the key.
+	bus.handle("webpush:metadata", ({network, key, value}) => {
+		const client = registry.clientForNetwork(network);
+
+		if (client) {
+			client.send(value ? `METADATA * SET ${key} * :${value}` : `METADATA * SET ${key}`);
+		}
+	});
+
+	// Session visibility (draft/persistence): the Settings panel lists the
+	// account's bouncer session(s) (PERSISTENCE LIST) and can end the current
+	// one (PERSISTENCE DETACH). The SESSION/ENDOFLIST lines come back as
+	// `persistence:sessions` (handlers/persistence.ts). The network uuid is
+	// optional — any connected client shows the same account session.
+	const persistenceClient = ({network}: {network?: string}) =>
+		(network ? registry.clientForNetwork(network) : registry.allClients()[0]) ?? undefined;
+
+	bus.handle("persistence:sessions:list", (params) => {
+		persistenceClient(params)?.send("PERSISTENCE LIST");
+	});
+
+	bus.handle("persistence:sessions:logout", (params) => {
+		persistenceClient(params)?.send("PERSISTENCE DETACH");
 	});
 
 	bus.handle("open", (id) => {

@@ -30,7 +30,9 @@ import names from "./names";
 import nick from "./nick";
 import numerics, {numericError} from "./numerics";
 import part from "./part";
+import metadata from "./metadata";
 import persistence from "./persistence";
+import webpush from "./webpush";
 import privmsg from "./privmsg";
 import quit from "./quit";
 import redact from "./redact";
@@ -54,6 +56,7 @@ const modules: Record<string, Handler>[] = [
 	list,
 	lists,
 	markread,
+	metadata,
 	mode,
 	names,
 	nick,
@@ -67,6 +70,7 @@ const modules: Record<string, Handler>[] = [
 	standardReplies,
 	tagmsg,
 	topic,
+	webpush,
 	whois,
 ];
 

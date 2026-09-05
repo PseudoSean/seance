@@ -31,7 +31,18 @@ const clients = new Map<string, IrcClient>();
  * the same host/port/nick is reused, else a fresh one is generated.
  */
 export type CreateNetworkOptions = ConnectOptions &
-	Partial<Pick<SavedNetwork, "uuid" | "name" | "autoconnect" | "rememberPassword" | "commands">>;
+	Partial<
+		Pick<
+			SavedNetwork,
+			| "uuid"
+			| "name"
+			| "autoconnect"
+			| "rememberPassword"
+			| "pushEnabled"
+			| "notifyEnabled"
+			| "commands"
+		>
+	>;
 
 function highlightKeywords() {
 	return {
@@ -163,8 +174,34 @@ export function allClients(): IrcClient[] {
 	return Array.from(clients.values());
 }
 
+/**
+ * On page unload (tab close / navigation), say goodbye properly: a QUIT
+ * lets a bouncer-enabled ircd hold the session deterministically (the
+ * m_quit hold gate) instead of racing the socket teardown, and other
+ * servers see a clean quit. Fire-and-forget — the page is going away, so
+ * at most the first bytes make it out; the transport is not closed here
+ * (the browser does that the moment the page dies).
+ *
+ * `pagehide` fires for tab close, navigation and refresh — on refresh the
+ * reconnect after the reload re-attaches the held session, so nothing is
+ * lost either way.
+ */
+if (typeof window !== "undefined") {
+	window.addEventListener("pagehide", () => {
+		for (const client of allClients()) {
+			if (client.isConnected) {
+				client.send("QUIT :page closed");
+			}
+		}
+	});
+}
+
 /** Foreground signals arrive in clusters (visibility + focus + native); one poke per second is plenty. */
 const POKE_INTERVAL_MS = 1000;
+/** probe() deadline for the foreground poke (the default is 10 s). */
+const FOREGROUND_PROBE_MS = 4_000;
+/** A dial older than this at foreground time is presumed stuck. */
+const STALE_DIAL_MS = 3_000;
 let lastPokeAt = 0;
 
 /**
@@ -184,13 +221,27 @@ export function reconnectAll(): void {
 	lastPokeAt = now;
 
 	for (const client of clients.values()) {
-		if (client.transport.state === "reconnect-wait") {
+		const transport = client.transport;
+
+		if (transport.state === "reconnect-wait") {
 			client.connect();
-		} else if (client.transport.state === "open") {
-			if (client.transport.probe) {
-				client.transport.probe();
+		} else if (transport.state === "connecting") {
+			// A dial started while the OS had the radio off can sit in
+			// CONNECTING for a long time; past the grace, start over now.
+			if (
+				transport.connectingForMs &&
+				transport.redial &&
+				transport.connectingForMs() > STALE_DIAL_MS
+			) {
+				transport.redial();
+			}
+		} else if (transport.state === "open") {
+			if (transport.probe) {
+				// Shorter than the background probe: the user is looking at the
+				// screen, and a live server answers a PING well within this.
+				transport.probe(FOREGROUND_PROBE_MS);
 			} else {
-				client.transport.send("PING :resume");
+				transport.send("PING :resume");
 			}
 		}
 	}
