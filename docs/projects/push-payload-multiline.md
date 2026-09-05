@@ -1,6 +1,6 @@
 # Web push: spec-shaped payload, multiline through push, markdown-aware worker
 
-**Date:** 2026-09-04 · **Status:** implemented on branch push-payload-multiline (client) and push-line-payload (server)
+**Date:** 2026-09-04 · **Status:** implemented on branch push-payload-multiline (client) and push-line-payload (server); 2026-09-05: the later lines of a multiline message carry no msgid (§3.2) after upstream review — client branch push-multiline-fallback
 **Repos:** Seance (`client/`, this repo) and nefarious2 (`testnet/nefarious`,
 the fork's `push-notifications` line)
 
@@ -61,29 +61,49 @@ are dropped (the draft allows it). `<host>` is the sender's displayed host.
 ### 3.2 Multiline message: one push per line
 
 ```
-@batch=<ref>;msgid=<base>;time=<iso8601>[;account=<account>];evilnet.github.io/line=<i>/<sent>/<total>[;draft/multiline-concat] :<nick>!<user>@<host> PRIVMSG|NOTICE <target> :<line>
+@batch=<base>;msgid=<base>;time=<iso8601>[;account=<account>];evilnet.github.io/line=1/<sent>/<total> :<nick>!<user>@<host> PRIVMSG|NOTICE <target> :<line 1>
+@batch=<base>;time=<iso8601>[;account=<account>];evilnet.github.io/line=<i>/<sent>/<total>[;draft/multiline-concat] :<nick>!<user>@<host> PRIVMSG|NOTICE <target> :<line i>
 ```
 
-- `<ref>` is the batch reference the server used when relaying the batch;
-  `<base>` is the batch's single msgid; `time` is the batch's timestamp.
-  (A nefarious2 multiline batch has one msgid and one timestamp for all its
-  lines — `testnet/nefarious/ircd/m_batch.c:891`, `:949` — hence the index tag.)
-- `account` is present when the sender is logged in, same as §3.1.
-- `evilnet.github.io/line` is a vendor tag: `<i>` is the 1-based line index
-  in the original message, `<sent>` how many lines were pushed for this
-  batch, `<total>` how many lines the message had. `<sent> = min(<total>, WEBPUSH_MULTILINE_LINES)`, and the server caps the feature at 64. Lines
-  beyond `<sent>` are not pushed.
+- `<base>` is the batch's single msgid. It is the `batch` reference on
+  **every** line — what the lines inside a `draft/multiline` batch carry,
+  and the receiver's grouping key — and the `msgid` of the **first line
+  only**. That is `draft/multiline`'s fallback form, what a server sends a
+  client that did not negotiate the capability (a push consumer never
+  has): "Any tags that would have been added to the batch, e.g. message
+  IDs, account tags etc MUST be included on the first message line to be
+  sent", and (message-ids) "Servers MUST only include a message ID on the
+  first message of a batch when sending a fallback to non-supporting
+  clients". (An earlier revision repeated `msgid=<base>` on every line;
+  upstream review of the server change pointed at that rule.)
+- `time` is the batch's timestamp and `account` the sender's account (when
+  logged in, same as §3.1), on every line: "Tags MAY also be included on
+  subsequent lines where it makes sense to do so", and for a line that
+  stands on its own as a notification they do. (A nefarious2 multiline
+  batch has one msgid and one timestamp for all its lines —
+  `testnet/nefarious/ircd/m_batch.c:891`, `:949`.)
+- `evilnet.github.io/line` is our vendor tag, not part of the multiline
+  shape: `<i>` is the 1-based line index in the original message, `<sent>`
+  how many lines were pushed for this batch, `<total>` how many lines the
+  message had. `<sent> = min(<total>, WEBPUSH_MULTILINE_LINES)`, and the
+  server caps the feature at 64. Lines beyond `<sent>` are not pushed. Push
+  delivery has no ordering guarantee, unlike a stream, so a receiver needs
+  the tag to reassemble; the payload is still one IRC message. Noted in
+  `docs/projects/push-subscription.md`.
 - `draft/multiline-concat` is present exactly when the line was a concat
   chunk in the original batch (join to the previous line with no separator;
-  otherwise join with a newline).
-- The lines of one batch are sent back-to-back in index order. Delivery
-  order is not guaranteed by push services, so the worker orders by `<i>`.
-- The draft does not mention _adding_ tags. The vendor tag keeps the payload
-  one IRC message; this is a documented extension, noted in
-  `docs/projects/push-subscription.md`.
+  otherwise join with a newline). The spec's own advice for concat lines —
+  leave the trailing space on the line before — keeps each line readable on
+  its own.
+- The lines of one batch are sent back-to-back in index order; the worker
+  orders by `<i>`.
 
 The batch reference is the batch's base msgid — a held session has no
-connection-scoped batch id.
+connection-scoped batch id — and it is the msgid the live page records
+when it receives the batch itself (`client/js/push-seen.ts`, from the
+`BATCH` opener), which is how the worker knows the page already has the
+message whichever line a push service delivers, though only the first
+line carries a msgid (§5.3).
 
 ### 3.3 Cross-device read
 
@@ -177,14 +197,18 @@ Plain TypeScript, no DOM, no Vue, no store, so mocha loads it:
 - `line.ts` — `parsePushLine(raw)` (moved out of the service worker):
   tags with proper unescaping, valueless tags as `true`, prefix, command,
   params, trailing; returns `{tags, nick, command, target, text, timestamp?}`
-  (`timestamp` is only present for `MARKREAD`, from its `timestamp=` param).
+  (`timestamp` is only present for `MARKREAD`, from its `timestamp=` param);
+  `lineIndexOf(tags)` reads the ordering tag.
 - `strip.ts` — `stripFormatting(text)` (the `matchFormatting` regex from
   `shared/irc.ts`, shared, not copied), `stripMarkdown(text)` =
   `toPlainText(layout(text, {markdown: true}))`, and `notificationText(text, {markdown})`
   (CTCP `ACTION` rewrite, then `stripFormatting` and, when `markdown` is
   true, `stripMarkdown`) — the function the worker and the page both call.
 - `merge.ts` — the notification's stored message list: entries
-  `{from, text, msgid?, batch?, lines?: Record<string, {text, concat}>, sent?, total?}`;
+  `{from, text, msgid?, batch?, lines?: Record<string, {text, concat}>, sent?, total?}`
+  (`batch` is the batch reference, the `batch` tag; `msgid` is filled in by
+  whichever line brings it, since only the first carries one and it may not
+  arrive first);
   `addMessage(entries, incoming, keep) → {entries, isNew}` finds or creates
   the batch entry, inserts by index (idempotent), and `joinLines(entry)`
   rebuilds the text with the concat rule and `…` for a missing index or for
@@ -227,13 +251,17 @@ until the next worker update.
 `self.seancePush.parsePushLine`:
 
 1. `MARKREAD` → `closeForTarget(target, timestamp)`, badge, return.
-2. `PRIVMSG`/`NOTICE`: dedupe on the message's msgid against the `seen`
-   ring, for every line (the raw-line path never deduped; now it does). A
-   batch shares one msgid across its lines — the same msgid the page
-   recorded from the `BATCH` opener — so there is one dedupe key per
-   message, not one per line. Consequence: a page that records the msgid
-   mid-batch suppresses the batch's remaining lines, and the notification
-   keeps its `…` placeholders for them (as §6 already allows).
+2. `PRIVMSG`/`NOTICE`: dedupe against the `seen` ring (the raw-line path
+   never deduped; now it does) on three keys: the line's msgid (a plain
+   message, or a batch's first line), the batch reference (the `batch` tag
+   on every line — the base msgid the page recorded from the `BATCH`
+   opener, so a page that received the batch live blocks every line though
+   only the first carries a msgid), and `<batch>#<index>` (what this worker
+   records after showing a line, so a redelivered line shows nothing while
+   the rest of the batch still lands). Consequence: a page that records the
+   message while its lines are still in flight suppresses the lines that
+   arrive after the record, and the notification keeps its `…`
+   placeholders for them (as §6 already allows).
 3. Load `prefs` from IndexedDB `seance-push` (`{markdown: boolean}`;
    absent → `true`, the app default in `client/js/settings.ts`).
 4. Per-target merge as today (`tag: push-<target>`, `getNotifications`):

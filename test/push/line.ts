@@ -64,14 +64,14 @@ describe("push/line", function () {
 			);
 		});
 
-		it("parses a multiline line with its batch and concat tags", function () {
+		it("parses a later line of a multiline message: batch, ordering and concat tags, no msgid", function () {
 			const line = parsePushLine(
-				"@batch=base1;msgid=base1;time=T;evilnet.github.io/line=2/3/5;draft/multiline-concat :alice!u@h PRIVMSG #chan : continued"
+				"@batch=base1;time=T;account=alice;evilnet.github.io/line=2/3/5;draft/multiline-concat :alice!u@h PRIVMSG #chan : continued"
 			);
 			expect(line?.tags).to.deep.equal({
 				batch: "base1",
-				msgid: "base1",
 				time: "T",
+				account: "alice",
 				"evilnet.github.io/line": "2/3/5",
 				"draft/multiline-concat": true,
 			});

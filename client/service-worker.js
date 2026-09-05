@@ -294,8 +294,10 @@ function showPageNotification(event, payload) {
 // The ircd pushes one notification per event. The payload is what
 // draft/webpush asks for: ONE RAW IRC LINE — `@msgid;time;account
 // :nick!u@h PRIVMSG target :text`, a multiline message as one push per
-// line ordered by `evilnet.github.io/line=<i>/<sent>/<total>`, and a read
-// relay as `:server MARKREAD target timestamp=…` (docs/projects/
+// line — `batch=<base msgid>` on every line, the msgid on the first line
+// only (draft/multiline's fallback form) — ordered by
+// `evilnet.github.io/line=<i>/<sent>/<total>`, and a read relay as
+// `:server MARKREAD target timestamp=…` (docs/projects/
 // push-payload-multiline.md §3). The JSON opt-down tiers (`{"t":"msg"|
 // "notice"|"hl",…}` without text, `{"t":"read",…}`) are still parsed.
 //
@@ -901,6 +903,15 @@ async function handlePushNow(raw) {
 
 			const line = P.lineIndexOf(parsed.tags);
 
+			// A multiline message is one push per line: `batch=<base msgid>` on
+			// every line is what the lines share, while the msgid itself rides
+			// the first line only (draft/multiline's fallback form).
+			const batch = line
+				? typeof parsed.tags.batch === "string"
+					? parsed.tags.batch
+					: msgid
+				: undefined;
+
 			// Dedup against the "seen" ring (client/js/push-seen.ts): what this
 			// device has already surfaced. The live page records every pushable
 			// message it received over its own WebSocket — it owns that
@@ -910,25 +921,26 @@ async function handlePushNow(raw) {
 			// the push must show. This worker records what it showed (below), so
 			// the same push delivered again — push services promise at least
 			// once, and a notification the user already answered has no data
-			// left to merge into — shows nothing. A batch shares one msgid
-			// across its lines: the page saw it on the BATCH opener and blocks
-			// them all; the worker remembers lines one by one so the rest of a
+			// left to merge into — shows nothing. A batch's reference is the
+			// msgid the page recorded from the BATCH opener, so the page blocks
+			// every line by it though only the first carries a msgid; the worker
+			// remembers lines one by one (`<batch>#<index>`) so the rest of a
 			// batch still lands.
-			const seenKey = line ? msgid + "#" + line.index : msgid;
+			const seenKey = batch ? batch + "#" + line.index : msgid;
 
-			if (msgid) {
+			if (msgid || batch) {
 				const seen = await idbGet("seen");
 
-				if (Array.isArray(seen) && (seen.includes(msgid) || seen.includes(seenKey))) {
+				if (
+					Array.isArray(seen) &&
+					((msgid && seen.includes(msgid)) ||
+						(batch && seen.includes(batch)) ||
+						(seenKey && seen.includes(seenKey)))
+				) {
 					return;
 				}
 			}
 
-			const batch = line
-				? typeof parsed.tags.batch === "string"
-					? parsed.tags.batch
-					: msgid
-				: undefined;
 			const isChannel = isChannelName(parsed.target);
 			const replyTo = isChannel ? parsed.target : parsed.nick;
 			const tag = "push-" + (replyTo || "activity");
@@ -1009,7 +1021,7 @@ async function handlePushNow(raw) {
 				actions,
 			});
 
-			if (msgid) {
+			if (seenKey) {
 				await idbAppend("seen", seenKey, SEEN_CAP);
 			}
 

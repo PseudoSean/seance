@@ -57,10 +57,10 @@ describe("push/merge", function () {
 			});
 			expect(first.isNew).to.equal(true);
 
+			// Later lines carry no msgid (draft/multiline's fallback form).
 			const second = addMessage(first.entries, {
 				from: "alice",
 				text: " continued",
-				msgid: "b1",
 				batch: "b1",
 				line: {index: 2, sent: 3, total: 3},
 				concat: true,
@@ -70,13 +70,34 @@ describe("push/merge", function () {
 			const third = addMessage(second.entries, {
 				from: "alice",
 				text: "line two",
-				msgid: "b1",
 				batch: "b1",
 				line: {index: 3, sent: 3, total: 3},
 			});
 			expect(third.isNew).to.equal(false);
 			expect(third.entries).to.have.length(1);
 			expect(third.entries[0].text).to.equal("line one continued\nline two");
+			expect(third.entries[0].msgid).to.equal("b1");
+		});
+
+		it("takes the message's msgid from its first line whichever order the lines arrive in", function () {
+			const later = addMessage([], {
+				from: "x",
+				text: "two",
+				batch: "k",
+				line: {index: 2, sent: 2, total: 2},
+			});
+			expect(later.entries[0].msgid).to.equal(undefined);
+
+			const first = addMessage(later.entries, {
+				from: "x",
+				text: "one",
+				msgid: "m1",
+				batch: "k",
+				line: {index: 1, sent: 2, total: 2},
+			});
+			expect(first.isNew).to.equal(false);
+			expect(first.entries[0].msgid).to.equal("m1");
+			expect(first.entries[0].text).to.equal("one\ntwo");
 		});
 
 		it("accepts lines out of order and a duplicate line without change", function () {

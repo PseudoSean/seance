@@ -87,9 +87,13 @@ round-trip (transcript below).
   (RFC 8291) under the client's p256dh key, VAPID-signed (RFC 8292). The
   server's `full` tier does exactly that since the spec-shaped payload
   work (`docs/projects/push-payload-multiline.md`): `@msgid;time;account :nick!user@host PRIVMSG target :text`, a multiline message as one push
-  per line with a vendor ordering tag `evilnet.github.io/line=<i>/<sent>/<total>`
-  (an addition the draft does not mention: the payload is still one IRC
-  message), and the read relay as `:server MARKREAD target timestamp=…`.
+  per line in `draft/multiline`'s fallback form (`batch=<base msgid>` on
+  every line, the msgid on the first line only, `time` and `account` on
+  every line) with a
+  vendor ordering tag `evilnet.github.io/line=<i>/<sent>/<total>` (an
+  addition the drafts do not mention: push delivery has no ordering
+  guarantee, and the payload is still one IRC message), and the read relay
+  as `:server MARKREAD target timestamp=…`.
   The `route`/`ping` opt-down tiers stay JSON; they carry no message.
 
 ## What nefarious2 `ircv3.2-upgrade` implements
@@ -621,13 +625,16 @@ tests in `test/tests/service-worker.ts`, `test/push/merge.ts`, `test/irc/client.
   when it receives the message after that — the worker has already sent
   or queued it (bus-contract §2.2).
 - **The worker remembers what it showed.** After `showNotification` the
-  msgid (a batch line as `<msgid>#<index>`) goes into the same IndexedDB
-  `seen` ring the page writes (`idbAppend`, one read-modify-write
-  transaction, capped like push-seen.ts), and the push handler drops a
-  push whose msgid or line key is there; `addMessage` is idempotent by
-  msgid for plain messages too, and a plain duplicate the ring lost is not
-  re-shown. The page's rule is unchanged: the batch msgid it saw on the
-  opener blocks every line.
+  msgid (a batch line as `<batch>#<index>`, the batch reference being the
+  base msgid every pushed line of a multiline message carries, since only
+  its first line has the msgid) goes into the same IndexedDB `seen` ring
+  the page writes (`idbAppend`, one read-modify-write transaction, capped
+  like push-seen.ts), and the push handler drops a push whose msgid, batch
+  reference or line key is there; `addMessage` is idempotent by msgid for
+  plain messages too, and a plain duplicate the ring lost is not re-shown.
+  The page's rule is unchanged: the batch msgid it saw on the opener is the
+  reference on every line, so every line is blocked whichever arrives
+  first.
 - **Actions:** `[Mute 30m, Reply]`.
 
 Verified on the rig with the probes above: page relay acked in 8 ms and the

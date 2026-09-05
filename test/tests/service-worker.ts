@@ -28,7 +28,7 @@ interface Rec {
 		from?: string;
 		target?: string;
 		time?: string;
-		messages?: Array<{from: string; text: string}>;
+		messages?: Array<{from: string; text: string; msgid?: string}>;
 	};
 	actions?: Array<{action: string; type?: string; title: string}>;
 	closed: boolean;
@@ -526,6 +526,33 @@ function msgPayload(
 	);
 }
 
+const BATCH_T = "2026-09-02T19:59:00.000Z";
+
+/** One pushed line of a multiline message, in draft/multiline's fallback
+ * form (push-payload-multiline.md §3.2): `batch=<base msgid>` on every
+ * line, the msgid on the first line only, the batch's time and the
+ * ordering tag on every line. */
+function batchLine(
+	msgid: string,
+	index: number,
+	sent: number,
+	total: number,
+	text: string,
+	options: {concat?: boolean; from?: string; target?: string} = {}
+): string {
+	const tags = [
+		`batch=${msgid}`,
+		...(index === 1 ? [`msgid=${msgid}`] : []),
+		`time=${BATCH_T}`,
+		`evilnet.github.io/line=${index}/${sent}/${total}`,
+		...(options.concat ? [CONCAT_TAG] : []),
+	];
+
+	return `@${tags.join(";")} :${options.from ?? "bob"}!u@h PRIVMSG ${
+		options.target ?? "pushtest"
+	} :${text}`;
+}
+
 describe("service worker push notifications", function () {
 	it("renders a PM push with the sender as title and the text as body", async function () {
 		const sw = makeSW();
@@ -639,18 +666,31 @@ describe("service worker push notifications", function () {
 
 	it("reassembles a multiline batch delivered out of order into one notification", async function () {
 		const sw = makeSW();
-		const T = "2026-09-02T19:59:00.000Z";
-		const line = (i: number, text: string, concat = "") =>
-			`@batch=b1;msgid=b1;time=${T};evilnet.github.io/line=${i}/3/3${concat} :bob!u@h PRIVMSG pushtest :${text}`;
+		const line = (i: number, text: string) => batchLine("b1", i, 3, 3, text);
 
+		// Only the first line names the message; the others arrive before it.
 		await firePush(sw, line(3, "```"));
-		await firePush(sw, line(1, "```js"));
 		await firePush(sw, line(2, "let x = 1;"));
+		await firePush(sw, line(1, "```js"));
 
 		const live = sw.records.filter((n) => !n.closed);
 		expect(live).to.have.lengthOf(1);
 		expect(live[0].data.count).to.equal(1);
 		expect(live[0].body).to.equal("let x = 1;");
+		expect(live[0].data.messages![0].msgid, "the batch's msgid, from its first line").to.equal(
+			"b1"
+		);
+	});
+
+	it("glues a concat line onto the one before it", async function () {
+		const sw = makeSW();
+
+		await firePush(sw, batchLine("b3", 1, 2, 2, "one long line "));
+		await firePush(sw, batchLine("b3", 2, 2, 2, "in two chunks", {concat: true}));
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live).to.have.lengthOf(1);
+		expect(live[0].body).to.equal("one long line in two chunks");
 	});
 
 	it("reassembles a multiline batch whose pushes arrive at the same time", async function () {
@@ -658,9 +698,7 @@ describe("service worker push notifications", function () {
 		// concurrently, and each one reads the notification's stored state
 		// before writing it back. Every line must survive.
 		const sw = makeSW();
-		const T = "2026-09-02T19:59:00.000Z";
-		const line = (i: number) =>
-			`@batch=b2;msgid=b2;time=${T};evilnet.github.io/line=${i}/5/5 :bob!u@h PRIVMSG pushtest :line ${i}`;
+		const line = (i: number) => batchLine("b2", i, 5, 5, `line ${i}`);
 
 		await Promise.all([1, 2, 3, 4, 5].map((i) => firePush(sw, line(i))));
 
@@ -809,13 +847,48 @@ describe("service worker push notifications", function () {
 
 	it("remembers a shown batch line by line, so the other lines still land", async function () {
 		const sw = makeSW();
-		const T = "2026-09-02T19:59:00.000Z";
-		const line = (i: number, text: string) =>
-			`@batch=b7;msgid=b7;time=${T};evilnet.github.io/line=${i}/2/2 :bob!u@h PRIVMSG pushtest :${text}`;
+		const line = (i: number, text: string) => batchLine("b7", i, 2, 2, text);
 
 		await firePush(sw, line(1, "one"));
 		await firePush(sw, line(1, "one")); // redelivered
 		await firePush(sw, line(2, "two"));
+		await firePush(sw, line(2, "two")); // redelivered: no msgid to go by
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live).to.have.lengthOf(1);
+		expect(live[0].body).to.equal("one\ntwo");
+		expect(live[0].data.count).to.equal(1);
+		expect(sw.shown, "the redelivered lines showed nothing").to.have.lengthOf(2);
+	});
+
+	it("drops every line of a multiline message the live page took, whichever arrives first", async function () {
+		const sw = makeSW();
+		const line = (i: number, text: string) => batchLine("b8", i, 3, 3, text);
+
+		// The page recorded the msgid from the BATCH opener (push-seen.ts);
+		// the later lines carry no msgid, so it is their batch reference
+		// that must be matched against the ring.
+		sw.kv.set("seen", ["b8"]);
+
+		await firePush(sw, line(2, "two"));
+		await firePush(sw, line(1, "one"));
+		await firePush(sw, line(3, "three"));
+
+		expect(sw.shown).to.have.lengthOf(0);
+		expect(sw.records.filter((n) => !n.closed)).to.have.lengthOf(0);
+	});
+
+	it("still takes the earlier line shape, with the batch and msgid tags on every line", async function () {
+		// What a server predating the fallback form pushes. The client ships
+		// first, so for a while both shapes reach the same worker; the extra
+		// msgid changes nothing, the batch tag is the key either way.
+		const sw = makeSW();
+		const line = (i: number, text: string) =>
+			`@batch=b9;msgid=b9;time=${BATCH_T};evilnet.github.io/line=${i}/2/2 :bob!u@h PRIVMSG pushtest :${text}`;
+
+		await firePush(sw, line(2, "two"));
+		await firePush(sw, line(1, "one"));
+		await firePush(sw, line(2, "two")); // redelivered
 
 		const live = sw.records.filter((n) => !n.closed);
 		expect(live).to.have.lengthOf(1);
@@ -1085,6 +1158,19 @@ describe("service worker reply pipeline", function () {
 		const sent = sw.lastSent();
 		expect(sent).to.include("CAP REQ :sasl message-tags");
 		expect(sent).to.include("@+draft/reply=BjAAAaBjrep2 PRIVMSG #seance :yes");
+	});
+
+	it("answers a multiline message by its msgid even when its first line arrived last", async function () {
+		const sw = makeSW("", {script: {joinReplay: ["#seance"]}});
+		const line = (i: number, text: string) =>
+			batchLine("BjAAAaBjml1", i, 2, 2, text, {from: "alice", target: "#seance"});
+
+		await firePush(sw, line(2, "are you there?"));
+		await firePush(sw, line(1, "hey pushtest1"));
+		const rec = sw.records.filter((n) => !n.closed)[0];
+		await fireClick(sw, rec, "reply", {reply: "yes"});
+
+		expect(sw.lastSent()).to.include("@+draft/reply=BjAAAaBjml1 PRIVMSG #seance :yes");
 	});
 
 	it("sends a plain PRIVMSG when the server offers no message-tags", async function () {
