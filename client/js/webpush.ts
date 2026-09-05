@@ -6,6 +6,11 @@ import storage from "./localStorage";
 import {idbGet, idbSet} from "./idb";
 import * as saved from "./irc/saved-networks";
 import type {SavedNetwork} from "./irc/saved-networks";
+import {
+	decodeApplicationServerKey,
+	sameApplicationServerKey,
+	subscriptionIsStale,
+} from "./helpers/pushKeys";
 
 /**
  * Web Push subscriptions (IRCv3 `draft/webpush`, phases 1+2).
@@ -18,12 +23,20 @@ import type {SavedNetwork} from "./irc/saved-networks";
  * it:
  *
  *   `webpush:available` (per network, at registration)  ──►  re-REGISTER stored subs
- *   Settings toggle ──► PushManager.subscribe()          ──►  `webpush:register`
+ *   connect-time prompt (yes/no/never)                   ──►  PushManager.subscribe() ──► `webpush:register`
  *   `webpush:state` (server echo / FAIL WEBPUSH)         ──►  state updates
  *
  * Re-sending an identical REGISTER on every connect is the draft's renewal
  * mechanism, so nothing else schedules refreshes; `pushsubscriptionchange`
- * (and the SW) self-heal expired subscriptions. The subscription material
+ * (and the SW) self-heal expired subscriptions. A server-side VAPID rotation
+ * is different: the stored subscription then matches no announced key, and
+ * the browser refuses `subscribe()` with the new key until the old
+ * subscription is dropped (`InvalidStateError`). That is never healed
+ * silently — a device that stops receiving pushes without a word is what
+ * this module must not produce — so the connect opens the same prompt in its
+ * `renew` variant ("Yes" drops the old subscription and re-subscribes, the
+ * old endpoint is unregistered everywhere), and Settings reports the `stale`
+ * state with a Renew button meanwhile. The subscription material
  * persists in `thelounge.push` keyed by VAPID key; the SW's own working copy
  * (VAPID + credentials for throwaway IRC connections used by quick-reply,
  * mute and renewal) lives in IndexedDB `seance-push` and is only written
@@ -43,10 +56,24 @@ const STORAGE_KEY = "thelounge.push";
  * so the subscription map keeps its shape). */
 const NEVER_ASK_KEY = "thelounge.push.neverAsk";
 
-/** The connect-time "enable push notifications?" prompt (yes/no/never).
- * Rendered by components/PushPrompt.vue; state lives here because the
- * decision needs this module's servers/subscriptions view. */
-const pushPrompt = reactive({visible: false});
+/** The same answer for the renew prompt. A separate flag: declining to be
+ * asked about subscribing says nothing about a subscription the user later
+ * made on purpose, and the other way round. */
+const NEVER_RENEW_KEY = "thelounge.push.neverRenew";
+
+/** What the connect-time prompt asks: to subscribe this device, or to renew
+ * a subscription the server's VAPID rotation made useless. */
+type PromptKind = "subscribe" | "renew";
+
+/** The connect-time prompt (yes/no/never). Rendered by
+ * components/PushPrompt.vue; state lives here because the decision needs
+ * this module's servers/subscriptions view. `vapid` is the key a renewal
+ * subscribes against — the one the prompting network announced. */
+const pushPrompt = reactive<{visible: boolean; kind: PromptKind; vapid: string | undefined}>({
+	visible: false,
+	kind: "subscribe",
+	vapid: undefined,
+});
 
 /** Per-network VAPID keys as announced by `webpush:available`. Reactive so
  * the Settings screen's per-network rows re-render when a network connects. */
@@ -140,11 +167,6 @@ function permissionDenied(): boolean {
 }
 
 /** Any VAPID key among the connected networks (they are per-ircd; see M7 notes). */
-/** Guards the silent re-subscribe after a server VAPID rotation, so a
- * burst of webpush:available events (several networks, a reconnect) can
- * only mint one replacement subscription. */
-let rotationInProgress = false;
-
 function anyVapid(): string | undefined {
 	for (const vapid of servers.values()) {
 		if (vapid !== undefined) {
@@ -173,6 +195,14 @@ function refreshState(): void {
 		return;
 	}
 
+	// The server rotated its VAPID key: what is stored was made against the
+	// old one and delivers nothing. Settings shows this with a Renew button;
+	// the connect-time prompt is the other way out.
+	if (subscriptionIsStale(Object.keys(subs), servers.values())) {
+		setState("stale");
+		return;
+	}
+
 	// A stored subscription means "subscribed": it survives reloads and
 	// disconnects (the server keeps it until the device unregisters, and the
 	// worker renews it). This must win over the current-connection checks so
@@ -193,12 +223,9 @@ function refreshState(): void {
 }
 
 /** Re-register a stored subscription with one freshly connected network.
- *
- * Also self-heals server-side VAPID rotation: if subscriptions exist but
- * none was made against the key this network now announces, the old
- * subscription is dead (FCM binds an endpoint to the VAPID key that
- * created it), so silently mint a fresh one and register that instead —
- * no user gesture needed, permission already granted. */
+ * A stored subscription that was made against another key (the server
+ * rotated its VAPID key) is not touched here: {@link maybePrompt} asks the
+ * user to renew it instead of minting a replacement behind their back. */
 function autoRegister(network: string, vapid: string | undefined): void {
 	if (vapid === undefined || !pushOn(network)) {
 		return;
@@ -209,48 +236,6 @@ function autoRegister(network: string, vapid: string | undefined): void {
 	if (sub) {
 		socket.emit("webpush:register", {network, endpoint: sub.endpoint, keys: sub.keys});
 		void writeStash(); // every connect: the worker's copy of the networks stays current
-		return;
-	}
-
-	if (
-		Object.keys(subs).length > 0 &&
-		Notification.permission === "granted" &&
-		!rotationInProgress
-	) {
-		const net = saved.get(network);
-
-		if (!net || !net.saslAccount) {
-			return; // re-registering requires an account; leave it to subscribe()
-		}
-
-		rotationInProgress = true;
-
-		void (async () => {
-			try {
-				const previous = storedEndpoints();
-				const material = await pushSubscription(vapid);
-
-				replaceSubs({[vapid]: material});
-				unregisterReplaced(previous, material.endpoint);
-				await writeStash();
-				socket.emit("webpush:register", {
-					network,
-					endpoint: material.endpoint,
-					keys: material.keys,
-				});
-				socket.emit("webpush:metadata", {
-					network,
-					key: "draft/webpush/payload",
-					value: "full",
-				});
-				refreshState();
-			} catch (error) {
-				// eslint-disable-next-line no-console
-				console.warn("[webpush] renewal after VAPID rotation failed", error);
-			} finally {
-				rotationInProgress = false;
-			}
-		})();
 	}
 }
 
@@ -261,15 +246,22 @@ socket.on("webpush:available", ({network, vapid, sasl}) => {
 	maybePrompt(network, vapid, sasl);
 });
 
-/** Offer the subscribe prompt once per connection that logged in with SASL
- * on a push-capable network: the server can push only for accounts, so an
- * anonymous connect has nothing to offer. Skipped when this browser cannot
- * subscribe, permission is already denied, a subscription exists, or the
- * user answered "never" on this device. */
 /** A subscribe() run is in flight (the auto-subscribe path can be
  * triggered by several networks at once). */
 let subscribing = false;
 
+/** Offer the prompt once per connection that logged in with SASL on a
+ * push-capable network: the server can push only for accounts, so an
+ * anonymous connect has nothing to offer. Skipped when this browser cannot
+ * subscribe or permission is already denied.
+ *
+ * With no subscription stored it asks to subscribe (or just subscribes when
+ * permission is already granted — the network's push option is the user's
+ * choice), unless the user answered "never" on this device. With one stored
+ * that was made against a key this network no longer announces it asks to
+ * renew — always, permission or not: the renewal replaces the endpoint the
+ * server pushes to, and the user answered "never" only if they said so to
+ * this question. */
 function maybePrompt(network: string, vapid: string | undefined, sasl: boolean): void {
 	if (!sasl || vapid === undefined || !pushOn(network) || pushPrompt.visible) {
 		return;
@@ -280,19 +272,24 @@ function maybePrompt(network: string, vapid: string | undefined, sasl: boolean):
 	}
 
 	if (Object.keys(subs).length > 0) {
-		return; // already subscribed; autoRegister re-registers it
+		if (subs[vapid] || storage.get(NEVER_RENEW_KEY)) {
+			return; // subscribed (autoRegister re-registers it), or told not to ask
+		}
+
+		openPrompt("renew", vapid);
+		return;
 	}
 
-	// Permission already granted: the network's push option is the user's
-	// choice, so subscribe directly instead of asking again. "default"
-	// (never asked) needs a user gesture, which the prompt's buttons
-	// provide; "never ask again" suppresses that prompt on this device.
+	// Permission already granted: subscribe directly instead of asking
+	// again. "default" (never asked) needs a user gesture, which the
+	// prompt's buttons provide; "never ask again" suppresses that prompt on
+	// this device.
 	if (
 		typeof Notification !== "undefined" &&
 		Notification.permission === "granted" &&
 		!subscribing
 	) {
-		void subscribe();
+		void subscribe(vapid);
 		return;
 	}
 
@@ -300,13 +297,21 @@ function maybePrompt(network: string, vapid: string | undefined, sasl: boolean):
 		return;
 	}
 
+	openPrompt("subscribe", vapid);
+}
+
+function openPrompt(kind: PromptKind, vapid: string): void {
+	pushPrompt.kind = kind;
+	pushPrompt.vapid = vapid;
 	pushPrompt.visible = true;
 }
 
-/** Prompt answer: subscribe (the click is the permission user gesture). */
+/** Prompt answer: subscribe, or renew — the same flow, against the key
+ * the prompting network announced (the click is the permission user
+ * gesture). */
 function acceptPrompt(): void {
 	pushPrompt.visible = false;
-	void subscribe();
+	void subscribe(pushPrompt.vapid);
 }
 
 /** Prompt answer: not now — asked again on the next connect. */
@@ -314,9 +319,11 @@ function declinePrompt(): void {
 	pushPrompt.visible = false;
 }
 
-/** Prompt answer: never ask again on this device. */
+/** Prompt answer: never ask this question again on this device. A stale
+ * subscription stays stale (Settings keeps offering Renew); nothing is
+ * unsubscribed behind the user's back. */
 function neverPrompt(): void {
-	storage.set(NEVER_ASK_KEY, "1");
+	storage.set(pushPrompt.kind === "renew" ? NEVER_RENEW_KEY : NEVER_ASK_KEY, "1");
 	pushPrompt.visible = false;
 }
 
@@ -338,26 +345,27 @@ socket.on("webpush:state", ({network, action, endpoint, ok, code, reason}) => {
 	);
 });
 
-/** URL-safe base64 (no padding) → the bytes PushManager expects. */
-
-function urlB64ToUint8Array(b64: string): Uint8Array {
-	const padding = "=".repeat((4 - (b64.length % 4)) % 4);
-	const base64 = (b64 + padding).replace(/-/g, "+").replace(/_/g, "/");
-	const raw = window.atob(base64);
-	const out = new Uint8Array(raw.length);
-
-	for (let i = 0; i < raw.length; i++) {
-		out[i] = raw.charCodeAt(i);
-	}
-
-	return out;
-}
-
+/** Create the browser subscription against `vapid`. A browser holds one
+ * push subscription per service-worker registration, bound to the key it
+ * was created with, and refuses `subscribe()` with another key
+ * (`InvalidStateError`: "unsubscribe then resubscribe") — so a subscription
+ * left over from before a VAPID rotation is dropped first. The caller
+ * unregisters its endpoint from the servers. */
 async function pushSubscription(vapid: string): Promise<PushMaterial> {
 	const registration = await navigator.serviceWorker.ready;
+	const applicationServerKey = decodeApplicationServerKey(vapid);
+	const existing = await registration.pushManager.getSubscription();
+
+	if (
+		existing &&
+		!sameApplicationServerKey(existing.options.applicationServerKey, applicationServerKey)
+	) {
+		await existing.unsubscribe();
+	}
+
 	const sub = await registration.pushManager.subscribe({
 		userVisibleOnly: true,
-		applicationServerKey: urlB64ToUint8Array(vapid),
+		applicationServerKey,
 	});
 	const json = sub.toJSON() as PushSubscriptionJSON & {
 		keys?: {p256dh?: string; auth?: string};
@@ -376,8 +384,11 @@ async function pushSubscription(vapid: string): Promise<PushMaterial> {
  * Subscribe this device: ask permission (must be a user gesture), create the
  * browser subscription against the server's VAPID key, persist it, and
  * register it with every connected network advertising that key.
+ * `preferred` names the key to use when several networks announce
+ * different ones — the prompting network's — and falls back to any
+ * announced key when that network is no longer connected.
  */
-async function subscribe(): Promise<void> {
+async function subscribe(preferred?: string): Promise<void> {
 	if (subscribing) {
 		return;
 	}
@@ -414,7 +425,9 @@ async function subscribe(): Promise<void> {
 			return;
 		}
 
-		const vapid = anyVapid();
+		const announced = [...servers.values()];
+		const vapid =
+			preferred !== undefined && announced.includes(preferred) ? preferred : anyVapid();
 
 		if (vapid === undefined) {
 			// No connected network can push (cap not negotiated or no key).

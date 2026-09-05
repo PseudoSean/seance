@@ -1,7 +1,21 @@
 <template>
 	<div id="push-prompt-overlay" :class="{opened: webpush.pushPrompt.visible}">
-		<div v-if="webpush.pushPrompt.visible" id="push-prompt" role="dialog" aria-modal="true">
-			<div class="confirm-text">
+		<div
+			v-if="webpush.pushPrompt.visible"
+			id="push-prompt"
+			:class="webpush.pushPrompt.kind"
+			role="dialog"
+			aria-modal="true"
+		>
+			<div v-if="webpush.pushPrompt.kind === 'renew'" class="confirm-text">
+				<div class="confirm-text-title">Renew push notifications?</div>
+				<p>
+					The server's push key changed, so this device's push subscription no longer
+					works. Subscribe again to keep being notified while the app is closed. You can
+					also do this later under Settings → Notifications.
+				</p>
+			</div>
+			<div v-else class="confirm-text">
 				<div class="confirm-text-title">Enable push notifications?</div>
 				<p>
 					The server can wake this app when it has messages for you while it is closed.
@@ -66,11 +80,16 @@ import eventbus from "../js/eventbus";
 import webpush from "../js/webpush";
 
 /**
- * The connect-time "enable push notifications?" prompt (yes / no / never).
- * webpush.ts decides when to show it — once per connection that logged in
- * with SASL on a push-capable network, unless this device answered "never"
- * or already holds a subscription. "Yes" reuses the Settings subscribe flow,
- * so the button click doubles as the permission user gesture.
+ * The connect-time push prompt (yes / no / never), in two variants:
+ * "enable push notifications?" when nothing is subscribed, and "renew?"
+ * when the stored subscription was made against a VAPID key the server no
+ * longer announces (a rotation — the browser refuses to re-subscribe until
+ * the old subscription is dropped, and doing that silently would leave a
+ * device that stopped receiving pushes without a word). webpush.ts decides
+ * when to show which — once per connection that logged in with SASL on a
+ * push-capable network, unless this device answered "never" to that
+ * question. "Yes" runs the subscribe flow, so the button click doubles as
+ * the permission user gesture.
  */
 export default defineComponent({
 	name: "PushPrompt",

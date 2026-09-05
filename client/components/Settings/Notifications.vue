@@ -23,6 +23,18 @@
 					<button type="button" class="btn" @click.prevent="snooze(0)">Off</button>
 				</div>
 			</div>
+			<div v-if="store.state.pushNotificationState === 'stale'" id="pushStale">
+				<div class="error">
+					<strong>Warning</strong>: The server's push key changed, so this device's push
+					subscription no longer works. Renew it to keep being notified while the app is
+					closed.
+				</div>
+				<div class="opt">
+					<button id="pushRenew" type="button" class="btn" @click.prevent="renew">
+						Renew push notifications
+					</button>
+				</div>
+			</div>
 			<div v-if="store.state.pushNotificationState === 'unsupported'" class="error">
 				Push notifications are not supported by this browser (they need the Push API, a
 				service worker and a secure context).
@@ -171,6 +183,13 @@ export default defineComponent({
 			webpush.setSnooze(ms);
 		};
 
+		// A stale subscription (the server rotated its VAPID key): the same
+		// subscribe flow the connect-time prompt runs; the click is the
+		// permission user gesture, should the browser want one again.
+		const renew = () => {
+			void webpush.subscribe();
+		};
+
 		onMounted(() => {
 			webpush.refresh();
 		});
@@ -187,6 +206,7 @@ export default defineComponent({
 			store,
 			playNotification,
 			snooze,
+			renew,
 		};
 	},
 });

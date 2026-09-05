@@ -344,8 +344,9 @@ events) — the IRC layer dispatches against that contract.
 - `pushNotificationState`: `unsupported` (no `PushManager`/no SW/ insecure
   context — Electron and Capacitor shells included, per the platform
   matrix) / `not-installed` (iOS: PWA not on the Home Screen) / `denied` /
-  `blocked` (server refused) / `subscribed` / `unsubscribed`. The store
-  already has the field (`store.ts`).
+  `blocked` (server refused) / `stale` (stored subscription made against a
+  key no connected server announces — see § VAPID rotation) / `subscribed` /
+  `unsubscribed`. The store already has the field (`store.ts`).
 - `subscribe(networks)` — user-gesture entry point (Settings button):
   `Notification.requestPermission()` → `registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8Array(vapid)})`
   → persist `{endpoint, keys, vapid}` under `thelounge.push` (localStorage;
@@ -584,9 +585,9 @@ opens); pre-existing, cosmetic, not yet attributed.
   grouping/badging/actions; payload tier (`draft/webpush/payload` account
   metadata via `draft/metadata-2`, which the branch also offers);
   server-side mute/snooze semantics; `pushgarden`-style relay for the
-  Capacitor shells; VAPID rotation UX (the server keeps one key per ircd;
-  rotation invalidates every subscription — the client must surface
-  `pushsubscriptionchange`-style recovery).
+  Capacitor shells. _VAPID rotation UX (the server keeps one key per ircd;
+  rotation invalidates every subscription) landed 2026-09-05 — see § VAPID
+  rotation below._
 
 ## Open questions
 
@@ -625,3 +626,73 @@ mechanism), it `UNREGISTER`s the endpoint its own browser replaced whenever
 a subscription is recreated (`unregisterReplaced`/`storedEndpoints` in
 `webpush.ts`), and the server expires whatever a device stops renewing.
 There is no client-side way to view or clear another device's registration.
+
+## VAPID rotation: the renew prompt (2026-09-05)
+
+A browser holds **one** push subscription per service-worker registration,
+bound to the `applicationServerKey` it was created with. When the server
+rotates its VAPID key, the stored subscription (`thelounge.push`, keyed by
+VAPID key) matches nothing the server announces, and
+`PushManager.subscribe()` with the new key is refused outright:
+
+```
+InvalidStateError: Registration failed - A subscription with a different
+applicationServerKey (or gcm_sender_id) already exists; to change the
+applicationServerKey, unsubscribe then resubscribe.
+```
+
+Before this change `autoRegister` tried to "silently mint a fresh one" on
+that connect, hit exactly that error, logged `[webpush] renewal after VAPID rotation failed` to the console, and left the device without pushes while
+Settings still said subscribed — a silent failure. Now:
+
+- **`client/js/helpers/pushKeys.ts`** (Vue-free, `test/helpers/pushKeys.ts`):
+  `decodeApplicationServerKey` (the base64url decoder that used to live in
+  `webpush.ts`), `sameApplicationServerKey` (byte comparison against
+  `PushSubscription.options.applicationServerKey`) and `subscriptionIsStale`
+  (stored keys vs. the keys connected servers announce; false while nothing
+  is stored or nothing is announced yet).
+- **The mechanical fix.** `pushSubscription()` looks at the browser's existing
+  subscription first and unsubscribes it when its key differs, then
+  subscribes — what the error message asks for. The caller
+  (`subscribe()`) already unregisters the endpoint that was replaced from
+  every connected network (`unregisterReplaced`), so the account does not
+  keep pushing to a dead endpoint.
+- **Never silently.** The rotation branch in `autoRegister` is gone;
+  `autoRegister` only re-REGISTERs a stored subscription that matches the
+  announced key. `maybePrompt` opens the connect-time prompt in its **`renew`
+  variant** (`PushPrompt.vue`, `#push-prompt.renew`, "Renew push
+  notifications?") when a subscription is stored but none was made against
+  the key this network announces — regardless of the permission state,
+  because a renewal changes which endpoint the server pushes to and is worth a
+  "yes". _Yes_ runs `subscribe(vapid)` with the prompting network's key
+  (old browser subscription dropped, old endpoint unregistered everywhere,
+  new one registered, `thelounge.push` re-keyed). _No_ closes it; the next
+  connect asks again. _Never_ sets **`thelounge.push.neverRenew`** — a flag
+  of its own, separate from the subscribe prompt's `thelounge.push.neverAsk`:
+  declining to be asked about subscribing says nothing about a subscription
+  the user later made on purpose, and the other way round. Nothing is
+  unsubscribed on _Never_.
+- **Visible in Settings.** `refreshState` reports **`stale`** (before the
+  "stored means subscribed" rule) whenever `subscriptionIsStale` holds;
+  Settings → Notifications shows the explanation with a **Renew** button
+  (`#pushRenew` → `webpush.subscribe()`) instead of the snooze row, so the
+  problem stays visible after _Never_ and has a way out. The sidebar bell was
+  already honest (`networkPushInfo().subscribed` checks the announced key).
+- **Scenario.** `tools/scenarios/push-renew.mjs` drives it in a real browser
+  against the testnet ircd: headless Chromium has no push service, so an init
+  script (`page.addInitScript`, new in `tools/browser-drive.mjs`) stands in
+  for Chrome's Push API — one subscription per registration, `subscribe()`
+  with a different key throws the `InvalidStateError` above until the old one
+  is unsubscribed. It checks the silent subscribe with permission granted,
+  the renew prompt after a simulated rotation (the stored map and the fake
+  browser subscription re-keyed to a key the server never announced), _No_ →
+  Settings stale → Renew, _Never_ → no prompt on the next connect, _Yes_, and
+  the `UNREGISTER old` / `REGISTER new` pairs on the wire; it ends by turning
+  push off for the network so the account keeps none of its fixed fake
+  endpoints (`https://push.invalid/push-renew/e1..3`).
+
+Known limit, unchanged: two enabled networks announcing **different** keys
+share the one browser subscription, so whichever key it holds, the other
+network's connect reports stale and offers a renewal that would flip it back.
+Per-ircd keys make that a multi-ircd deploy's problem (see Open questions);
+_Never_ stops the asking.
