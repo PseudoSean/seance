@@ -49,12 +49,21 @@ const join: Handler = (client, msg) => {
 	// restore, or its answer to a JOIN for a channel we never left).
 	const wasJoined = self && chan?.state === ChanState.JOINED;
 
+	// Did the user type a `/join` for it? Consumed either way, so a later
+	// JOIN nobody asked for (a forced join, a restore) is not mistaken for it.
+	const requested = self && client.takeRequestedJoin(name);
+
 	if (!chan) {
 		if (!self) {
 			return; // a JOIN for a channel we are not in: nothing to attach it to
 		}
 
-		chan = client.announceChannel(name, ChanType.CHANNEL, {state: ChanState.JOINED});
+		// A channel the user asked for opens its window; anything else
+		// (a held session restoring one, a forced join) is state.
+		chan = client.announceChannel(name, ChanType.CHANNEL, {
+			state: ChanState.JOINED,
+			shouldOpen: requested,
+		});
 	} else if (self && chan.state !== ChanState.JOINED) {
 		chan.state = ChanState.JOINED;
 		chan.users.clear();

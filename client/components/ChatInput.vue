@@ -93,6 +93,7 @@ import type {ClientNetwork, ClientChan} from "../js/types";
 import {useStore} from "../js/store";
 import {ChanType} from "../../shared/types/chan";
 import {cancelCompose, findLastEditable, startEdit} from "../js/helpers/compose";
+import {hasVirtualKeyboard} from "../js/helpers/device";
 import {TypingReporter} from "../js/helpers/typingReporter";
 import TypingIndicator from "./TypingIndicator.vue";
 
@@ -302,6 +303,28 @@ export default defineComponent({
 			input.value?.blur();
 		};
 
+		// Opening a conversation puts the caret in the input, at the end of
+		// any draft, so typing can start at once — with a keyboard. On a
+		// phone or tablet focusing raises the on-screen keyboard and reflows
+		// the whole layout, so there the input waits to be tapped.
+		const focusForTyping = () => {
+			if (hasVirtualKeyboard()) {
+				return;
+			}
+
+			// After the render that swaps in this channel's draft.
+			void nextTick(() => {
+				const el = input.value;
+
+				if (!el) {
+					return;
+				}
+
+				el.focus();
+				el.setSelectionRange(el.value.length, el.value.length);
+			});
+		};
+
 		const onBlur = () => {
 			if (autocompletionRef.value) {
 				autocompletionRef.value.hide();
@@ -317,6 +340,7 @@ export default defineComponent({
 
 				// A draft left in the previous channel is reported `paused` there.
 				typing.switchTarget();
+				focusForTyping();
 			}
 		);
 
@@ -329,6 +353,7 @@ export default defineComponent({
 
 		onMounted(() => {
 			eventbus.on("escapekey", blurInput);
+			focusForTyping();
 
 			if (store.state.settings.autocomplete) {
 				if (!input.value) {
