@@ -1112,9 +1112,9 @@ export class IrcClient {
 	}
 
 	/**
-	 * `WEBPUSH UNREGISTER <endpoint>`: drop the subscription for this
-	 * account. `*` clears every endpoint the account has in one command. The
-	 * server echoes even when the endpoint was not registered.
+	 * `WEBPUSH UNREGISTER <endpoint>`: drop one subscription for this
+	 * account (the draft defines no wildcard). The server echoes even when
+	 * the endpoint was not registered.
 	 */
 	webpushUnregister(endpoint: string): boolean {
 		return this.send(`WEBPUSH UNREGISTER ${endpoint}`);
