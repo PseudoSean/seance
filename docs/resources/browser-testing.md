@@ -137,6 +137,15 @@ export default async function run(page) {
 6. **Look at the screenshots**, with an image-capable reader. Assertions confirm
    what you thought to check; the picture shows the layout problem you did not.
 7. End with `page.check("no console errors", page.consoleErrors.length === 0)`.
+8. **A cold load on a route is `history.replaceState` + `Page.reload`**, what F5
+   does (`reload-on-settings.mjs` `coldLoad`). `goto` to a URL that differs
+   from the current one only by its `#` fragment is a same-document navigation
+   — the router moves, nothing boots — and a hop through `about:blank` swaps
+   renderer processes, which on a busy box loses the DevTools reply to a poll
+   in flight: `send` has no timeout, so the driver hangs for good (renderer
+   idle, browser-side calls answered, `Runtime.evaluate` never). Poll with a
+   marker set on the old window and tolerate `evaluate` errors while the
+   document is being replaced.
 
 ### Seeding
 
