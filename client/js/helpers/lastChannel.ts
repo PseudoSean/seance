@@ -13,8 +13,9 @@
  * is waited for in the lobby and landed on by the `join` that brings it
  * (socket-events/join.ts, after `network:status` reopens a query). The user
  * opening any other conversation first calls the landing off — they have
- * moved on. While a landing is pending on a network, joins nobody asked for
- * do not move the view.
+ * moved on. Joins nobody asked for (a held session restoring its channels,
+ * a forced join) never move the view; only the landing, a deep link, or a
+ * window the user asked for (`join.shouldOpen`) does.
  *
  * Vue-free so mocha covers it (test/helpers/lastChannel.ts); tests swap the
  * storage backend with {@link useStorageBackend}.

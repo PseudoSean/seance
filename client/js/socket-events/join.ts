@@ -3,9 +3,8 @@ import {store} from "../store";
 import {switchToChannel} from "../router";
 import {ClientChan} from "../types";
 import {toClientChan} from "../chan";
-import {ChanType} from "../../../shared/types/chan";
-import {getPendingTarget, matchesPendingTarget, takePendingTarget} from "../helpers/pendingTarget";
-import {matchesLanding, pendingLanding, takeLanding} from "../helpers/lastChannel";
+import {matchesPendingTarget, takePendingTarget} from "../helpers/pendingTarget";
+import {matchesLanding, takeLanding} from "../helpers/lastChannel";
 
 socket.on("join", function (data) {
 	const network = store.getters.findNetwork(data.network);
@@ -34,22 +33,13 @@ socket.on("join", function (data) {
 	}
 
 	// The user asked for this window (/join, /query, whois): show it.
+	// Anything else — a held session restoring its channels
+	// (draft/persistence), a forced join, an incoming private message — is
+	// state, not navigation: the view stays where it is. The autojoin
+	// channels never get here (they are placeholders from the network's
+	// announce), and a restore burst would otherwise walk the view through
+	// every channel it brings, away from the one just landed on.
 	if (data.shouldOpen) {
 		switchToChannel(clientChan);
-		return;
 	}
-
-	// Waiting for a conversation on this network: nothing else moves the
-	// view meanwhile (the join burst would otherwise walk it through every
-	// channel that arrives).
-	if (getPendingTarget() !== null || pendingLanding(data.network) !== null) {
-		return;
-	}
-
-	// An incoming private message opens its window quietly.
-	if (data.chan.type === ChanType.QUERY) {
-		return;
-	}
-
-	switchToChannel(clientChan);
 });
