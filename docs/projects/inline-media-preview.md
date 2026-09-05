@@ -49,7 +49,12 @@ want a chatty, media-rich feel — and cover the links people actually paste
 2. **GIFs.** Today an animated GIF/WebP autoplays as an `<img>`. Add a
    policy: autoplay / play on hover / click-to-play (`prefers-reduced-motion`
    → never autoplay), and prefer `.mp4`/`.webm` variants when a host offers
-   them (imgur `.gifv`, giphy `.mp4`) — far cheaper than GIF.
+   them (imgur `.gifv`, giphy `.mp4`) — far cheaper than GIF. _Found
+   2026-09-05:_ "animated WebP doesn't animate" was not a display problem
+   at all — the upload path's canvas re-encode (the "remove metadata"
+   setting) flattened it to one frame before it left the browser. Fixed in
+   `client/js/upload.ts` via `helpers/animatedImage.ts` (header sniff for
+   WebP/APNG/AVIF sequences, which now skip the re-encode like GIF).
 3. **"Optional" — three levels, in this order of precedence:**
    - deploy default in `config.json` (`features.mediaPreviews: "on" | "click" | "off"`, plus an allow-list of hosts) — `client/js/branding.ts`,
      `docs/resources/branding.md`;
