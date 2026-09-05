@@ -1120,30 +1120,6 @@ export class IrcClient {
 		return this.send(`WEBPUSH UNREGISTER ${endpoint}`);
 	}
 
-	/** Rows collected between a `WEBPUSH LIST` and its `* <count>` terminator. */
-	private webpushListAccum: {endpoint: string; armed: number; current: boolean}[] = [];
-
-	/** `WEBPUSH LIST`: ask the server for the account's registered endpoints.
-	 * The reply is a run of rows (webpushListRow) ended by webpushListEnd. */
-	webpushList(): boolean {
-		this.webpushListAccum = [];
-		return this.send("WEBPUSH LIST");
-	}
-
-	/** One `WEBPUSH LIST` data row, from handlers/webpush.ts. */
-	webpushListRow(row: {endpoint: string; armed: number; current: boolean}): void {
-		this.webpushListAccum.push(row);
-	}
-
-	/** The `WEBPUSH LIST * <count>` terminator: flush the collected rows. */
-	webpushListEnd(): void {
-		this.dispatch("webpush:subscriptions", {
-			network: this.uuid,
-			subs: this.webpushListAccum,
-		});
-		this.webpushListAccum = [];
-	}
-
 	// --------------------------------------------------------------- sending
 
 	/** Send one raw line. Reports an ERROR message in the lobby instead of throwing. */
