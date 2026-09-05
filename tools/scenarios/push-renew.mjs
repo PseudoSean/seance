@@ -22,7 +22,9 @@
 //      next connect;
 //   4. "Never" sets thelounge.push.neverRenew and no later connect prompts
 //      (the subscribe prompt's own never-flag stays untouched);
-//   5. "Yes" does what the Renew button does.
+//   5. "Yes" does what the Renew button does;
+//   6. the connect after a renewal re-registers the new endpoint and asks
+//      nothing — and both prompt variants name the network (server, account).
 // The fake endpoints are fixed per slot so re-runs re-register the same
 // three, and the run ends by turning push off for the network so the account
 // keeps none of them.
@@ -239,6 +241,15 @@ export default async function run(page) {
 		).includes("Renew")
 	);
 	page.check("2. nothing was renewed on its own", webpushOut(page, before).length === 0);
+	const label = String(
+		await page.evaluate(
+			`document.querySelector("#push-prompt .push-prompt-target")?.textContent`
+		)
+	);
+	page.check(
+		"2. the prompt names the network's server and account",
+		label.includes("127.0.0.1:8067") && label.includes(ACCOUNT)
+	);
 	await page.screenshot("2-renew-prompt");
 
 	// --- 3. "No": closed, Settings says stale, Renew there works ------------
@@ -368,6 +379,26 @@ export default async function run(page) {
 		(await page.evaluate(`JSON.parse(localStorage.getItem("__fakePush")).key`)) === vapid
 	);
 	await page.screenshot("6-renewed-by-yes");
+
+	// --- 6. the next connect after Yes is quiet: the renewed subscription
+	// matches the announced key, so it is re-registered and nobody is asked.
+	before = await connect(page, `${ORIGIN}/`);
+	await waitFrame(
+		page,
+		before,
+		"out",
+		new RegExp(`^WEBPUSH REGISTER ${ENDPOINT(3)} `),
+		"the renewed endpoint's re-REGISTER on the next connect"
+	);
+	await page.sleep(1500);
+	page.check(
+		"6. no prompt on the connect after Yes",
+		(await page.evaluate(`!(${promptOpened})`)) === true
+	);
+	page.check(
+		"6. the stored subscription still matches the server's key",
+		Object.keys(await storedSubs(page)).join() === vapid
+	);
 
 	// --- cleanup: push off for the network → the account forgets e3 ---------
 	mark = page.wsFrames.length;

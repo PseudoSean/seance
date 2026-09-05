@@ -9,16 +9,26 @@
 		>
 			<div v-if="webpush.pushPrompt.kind === 'renew'" class="confirm-text">
 				<div class="confirm-text-title">Renew push notifications?</div>
+				<p class="push-prompt-target">
+					<strong>{{ target.name }}</strong>
+					<span v-if="target.server"> · {{ target.server }}</span>
+					<span v-if="target.account"> · {{ target.account }}</span>
+				</p>
 				<p>
-					The server's push key changed, so this device's push subscription no longer
-					works. Subscribe again to keep being notified while the app is closed. You can
-					also do this later under Settings → Notifications.
+					This server's push key changed, so this device's push subscription for it no
+					longer works. Subscribe again to keep being notified while the app is closed.
+					You can also do this later under Settings → Notifications.
 				</p>
 			</div>
 			<div v-else class="confirm-text">
 				<div class="confirm-text-title">Enable push notifications?</div>
+				<p class="push-prompt-target">
+					<strong>{{ target.name }}</strong>
+					<span v-if="target.server"> · {{ target.server }}</span>
+					<span v-if="target.account"> · {{ target.account }}</span>
+				</p>
 				<p>
-					The server can wake this app when it has messages for you while it is closed.
+					This server can wake this app when it has messages for you while it is closed.
 					You can change this per network, in each network's settings.
 				</p>
 			</div>
@@ -57,6 +67,11 @@
 	margin-bottom: 10px;
 }
 
+#push-prompt .push-prompt-target {
+	opacity: 0.85;
+	margin-bottom: 10px;
+}
+
 #push-prompt .confirm-buttons {
 	display: flex;
 	justify-content: flex-end;
@@ -75,9 +90,11 @@
 </style>
 
 <script lang="ts">
-import {defineComponent, onMounted, onUnmounted} from "vue";
+import {computed, defineComponent, onMounted, onUnmounted} from "vue";
 import eventbus from "../js/eventbus";
+import {useStore} from "../js/store";
 import webpush from "../js/webpush";
+import * as saved from "../js/irc/saved-networks";
 
 /**
  * The connect-time push prompt (yes / no / never), in two variants:
@@ -89,11 +106,30 @@ import webpush from "../js/webpush";
  * when to show which — once per connection that logged in with SASL on a
  * push-capable network, unless this device answered "never" to that
  * question. "Yes" runs the subscribe flow, so the button click doubles as
- * the permission user gesture.
+ * the permission user gesture. Both variants name the network that asked
+ * (display name, server, account): a deploy may span several networks, and
+ * a renewal concerns one server's key.
  */
 export default defineComponent({
 	name: "PushPrompt",
 	setup() {
+		const store = useStore();
+
+		// The network whose connect opened the prompt: its live name (ISUPPORT
+		// NETWORK when the entry has none), the server it dials, the account
+		// the push registration belongs to.
+		const target = computed(() => {
+			const uuid = webpush.pushPrompt.network;
+			const entry = uuid ? saved.get(uuid) : undefined;
+			const live = uuid ? store.getters.findNetwork(uuid) : null;
+
+			return {
+				name: live?.name || entry?.name || entry?.host || "this network",
+				server: entry ? `${entry.host}:${entry.port}` : "",
+				account: entry?.saslAccount ?? "",
+			};
+		});
+
 		const no = () => webpush.declinePrompt();
 		const never = () => webpush.neverPrompt();
 		const yes = () => webpush.acceptPrompt();
@@ -114,6 +150,7 @@ export default defineComponent({
 
 		return {
 			webpush,
+			target,
 			no,
 			never,
 			yes,

@@ -67,11 +67,19 @@ type PromptKind = "subscribe" | "renew";
 
 /** The connect-time prompt (yes/no/never). Rendered by
  * components/PushPrompt.vue; state lives here because the decision needs
- * this module's servers/subscriptions view. `vapid` is the key a renewal
- * subscribes against — the one the prompting network announced. */
-const pushPrompt = reactive<{visible: boolean; kind: PromptKind; vapid: string | undefined}>({
+ * this module's servers/subscriptions view. `network` is the uuid of the
+ * network whose connect asked (the prompt names it — a deploy may span
+ * several, and only that one's key is at stake), `vapid` the key a
+ * subscription made from this prompt is created against. */
+const pushPrompt = reactive<{
+	visible: boolean;
+	kind: PromptKind;
+	network: string | undefined;
+	vapid: string | undefined;
+}>({
 	visible: false,
 	kind: "subscribe",
+	network: undefined,
 	vapid: undefined,
 });
 
@@ -276,7 +284,7 @@ function maybePrompt(network: string, vapid: string | undefined, sasl: boolean):
 			return; // subscribed (autoRegister re-registers it), or told not to ask
 		}
 
-		openPrompt("renew", vapid);
+		openPrompt("renew", network, vapid);
 		return;
 	}
 
@@ -297,11 +305,12 @@ function maybePrompt(network: string, vapid: string | undefined, sasl: boolean):
 		return;
 	}
 
-	openPrompt("subscribe", vapid);
+	openPrompt("subscribe", network, vapid);
 }
 
-function openPrompt(kind: PromptKind, vapid: string): void {
+function openPrompt(kind: PromptKind, network: string, vapid: string): void {
 	pushPrompt.kind = kind;
+	pushPrompt.network = network;
 	pushPrompt.vapid = vapid;
 	pushPrompt.visible = true;
 }
