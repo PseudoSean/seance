@@ -667,7 +667,10 @@ Settings still said subscribed — a silent failure. Now:
   "yes". _Yes_ runs `subscribe(vapid)` with the prompting network's key
   (old browser subscription dropped, old endpoint unregistered everywhere,
   new one registered, `thelounge.push` re-keyed). _No_ closes it; the next
-  connect asks again. _Never_ sets **`thelounge.push.neverRenew`** — a flag
+  connect asks again. Both prompt variants **name the network that asked**
+  (display name or ISUPPORT `NETWORK`, `host:port`, SASL account —
+  `pushPrompt.network`): a deploy may span several networks, and the
+  renewal concerns one server's key. _Never_ sets **`thelounge.push.neverRenew`** — a flag
   of its own, separate from the subscribe prompt's `thelounge.push.neverAsk`:
   declining to be asked about subscribing says nothing about a subscription
   the user later made on purpose, and the other way round. Nothing is
@@ -686,8 +689,10 @@ Settings still said subscribed — a silent failure. Now:
   is unsubscribed. It checks the silent subscribe with permission granted,
   the renew prompt after a simulated rotation (the stored map and the fake
   browser subscription re-keyed to a key the server never announced), _No_ →
-  Settings stale → Renew, _Never_ → no prompt on the next connect, _Yes_, and
-  the `UNREGISTER old` / `REGISTER new` pairs on the wire; it ends by turning
+  Settings stale → Renew, _Never_ → no prompt on the next connect, _Yes_,
+  the `UNREGISTER old` / `REGISTER new` pairs on the wire, and that the
+  connect after a renewal re-REGISTERs the new endpoint without asking
+  again; it ends by turning
   push off for the network so the account keeps none of its fixed fake
   endpoints (`https://push.invalid/push-renew/e1..3`).
 
