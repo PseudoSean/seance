@@ -670,11 +670,21 @@ Settings still said subscribed — a silent failure. Now:
   connect asks again. Both prompt variants **name the network that asked**
   (display name or ISUPPORT `NETWORK`, `host:port`, SASL account —
   `pushPrompt.network`): a deploy may span several networks, and the
-  renewal concerns one server's key. _Never_ sets **`thelounge.push.neverRenew`** — a flag
-  of its own, separate from the subscribe prompt's `thelounge.push.neverAsk`:
-  declining to be asked about subscribing says nothing about a subscription
-  the user later made on purpose, and the other way round. Nothing is
-  unsubscribed on _Never_.
+  renewal concerns one server's key. _Never_ flips the **`pushKeyChange`
+  setting** to `ignore` (below), so the choice is visible and reversible in
+  Settings; it is separate from the subscribe prompt's
+  `thelounge.push.neverAsk`, because declining to be asked about subscribing
+  says nothing about a subscription the user later made on purpose, and the
+  other way round. Nothing is unsubscribed on _Never_.
+- **The `pushKeyChange` setting** (`client/js/settings.ts`, default `ask`;
+  `keyChangePolicy` in `helpers/pushKeys.ts` normalises anything else to
+  `ask`) — Settings → Notifications, "When a server's push identity (its key)
+  changes": **Prompt** (`ask`, the renew prompt), **Trusting** (`trust`:
+  renew on the spot when permission is granted, no question — the working
+  version of what the old silent branch tried; falls back to the prompt when
+  permission is not granted, since `requestPermission()` needs a gesture),
+  **Cold shoulder** (`ignore`: leave it; push from that server stays off
+  until renewed from Settings).
 - **Visible in Settings.** `refreshState` reports **`stale`** (before the
   "stored means subscribed" rule) whenever `subscriptionIsStale` holds;
   Settings → Notifications shows the explanation with a **Renew** button
@@ -689,15 +699,21 @@ Settings still said subscribed — a silent failure. Now:
   is unsubscribed. It checks the silent subscribe with permission granted,
   the renew prompt after a simulated rotation (the stored map and the fake
   browser subscription re-keyed to a key the server never announced), _No_ →
-  Settings stale → Renew, _Never_ → no prompt on the next connect, _Yes_,
-  the `UNREGISTER old` / `REGISTER new` pairs on the wire, and that the
-  connect after a renewal re-REGISTERs the new endpoint without asking
-  again; it ends by turning
+  Settings stale → Renew, _Never_ → setting `ignore`, no prompt on the next
+  connect and the radio selected in Settings, _Yes_ (back on `ask`), the
+  `UNREGISTER old` / `REGISTER new` pairs on the wire, that the connect after
+  a renewal re-REGISTERs the new endpoint without asking again, and `trust`
+  renewing a rotation on its own; it ends by turning
   push off for the network so the account keeps none of its fixed fake
-  endpoints (`https://push.invalid/push-renew/e1..3`).
+  endpoints (`https://push.invalid/push-renew/e1..4`).
 
-Known limit, unchanged: two enabled networks announcing **different** keys
-share the one browser subscription, so whichever key it holds, the other
-network's connect reports stale and offers a renewal that would flip it back.
-Per-ircd keys make that a multi-ircd deploy's problem (see Open questions);
-_Never_ stops the asking.
+Known limit, unchanged and **confirmed in use on 2026-09-05** (two
+connections, both subscribed, the prompt swapping between them): two enabled
+networks announcing **different** keys share the one browser subscription, so
+whichever key it holds, the other network's connect reports stale and offers
+a renewal that would flip it back (`trust` flips it silently on every
+connect, `ignore` parks it on one network). A browser holds one push
+subscription _per service-worker registration_, so the client-side fix is one
+registration per network (`register("service-worker.js", {scope: "/push/<uuid>/"})`), each with its own subscription and key, the worker
+reading its network from `self.registration.scope` — the next step, not
+started.

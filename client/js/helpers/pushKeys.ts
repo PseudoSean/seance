@@ -53,6 +53,18 @@ export function sameApplicationServerKey(
 	return true;
 }
 
+/** What to do when a server's push identity (its VAPID key) changed and
+ * the stored subscription no longer matches it — the `pushKeyChange`
+ * setting: `ask` (the renew prompt), `trust` (renew on the spot, no
+ * question), `ignore` (leave it; Settings keeps offering Renew). */
+export type KeyChangePolicy = "ask" | "trust" | "ignore";
+
+/** The setting's value, normalised: anything but the three known policies
+ * reads as `ask` — an unknown value must never silence the prompt. */
+export function keyChangePolicy(value: unknown): KeyChangePolicy {
+	return value === "trust" || value === "ignore" ? value : "ask";
+}
+
 /** The stored subscriptions no longer match any key a connected server
  * announces: the server rotated its VAPID key (or the stored subscription
  * belongs to a server that is not connected while others are). False while

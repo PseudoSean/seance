@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import {
 	decodeApplicationServerKey,
+	keyChangePolicy,
 	sameApplicationServerKey,
 	subscriptionIsStale,
 } from "../../client/js/helpers/pushKeys";
@@ -66,5 +67,20 @@ describe("pushKeys — subscriptionIsStale", () => {
 		expect(subscriptionIsStale(Object.keys({K: 1}), new Map([["n", "X"]]).values())).to.equal(
 			true
 		);
+	});
+});
+
+describe("pushKeys — keyChangePolicy", () => {
+	it("passes the three known policies through", () => {
+		expect(keyChangePolicy("ask")).to.equal("ask");
+		expect(keyChangePolicy("trust")).to.equal("trust");
+		expect(keyChangePolicy("ignore")).to.equal("ignore");
+	});
+
+	it("reads anything else as ask (the default; an unknown value must not silence the prompt)", () => {
+		expect(keyChangePolicy(undefined)).to.equal("ask");
+		expect(keyChangePolicy("")).to.equal("ask");
+		expect(keyChangePolicy("never")).to.equal("ask");
+		expect(keyChangePolicy(true)).to.equal("ask");
 	});
 });

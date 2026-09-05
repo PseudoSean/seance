@@ -8,6 +8,7 @@ import * as saved from "./irc/saved-networks";
 import type {SavedNetwork} from "./irc/saved-networks";
 import {
 	decodeApplicationServerKey,
+	keyChangePolicy,
 	sameApplicationServerKey,
 	subscriptionIsStale,
 } from "./helpers/pushKeys";
@@ -33,10 +34,12 @@ import {
  * the browser refuses `subscribe()` with the new key until the old
  * subscription is dropped (`InvalidStateError`). That is never healed
  * silently — a device that stops receiving pushes without a word is what
- * this module must not produce — so the connect opens the same prompt in its
- * `renew` variant ("Yes" drops the old subscription and re-subscribes, the
- * old endpoint is unregistered everywhere), and Settings reports the `stale`
- * state with a Renew button meanwhile. The subscription material
+ * this module must not produce — so, by default, the connect opens the same
+ * prompt in its `renew` variant ("Yes" drops the old subscription and
+ * re-subscribes, the old endpoint is unregistered everywhere); the
+ * `pushKeyChange` setting can make that automatic (`trust`) or turn it off
+ * (`ignore`), and Settings reports the `stale` state with a Renew button
+ * either way. The subscription material
  * persists in `thelounge.push` keyed by VAPID key; the SW's own working copy
  * (VAPID + credentials for throwaway IRC connections used by quick-reply,
  * mute and renewal) lives in IndexedDB `seance-push` and is only written
@@ -55,11 +58,6 @@ const STORAGE_KEY = "thelounge.push";
  * prompt (thelounge.* key convention; deliberately not in `thelounge.push`
  * so the subscription map keeps its shape). */
 const NEVER_ASK_KEY = "thelounge.push.neverAsk";
-
-/** The same answer for the renew prompt. A separate flag: declining to be
- * asked about subscribing says nothing about a subscription the user later
- * made on purpose, and the other way round. */
-const NEVER_RENEW_KEY = "thelounge.push.neverRenew";
 
 /** What the connect-time prompt asks: to subscribe this device, or to renew
  * a subscription the server's VAPID rotation made useless. */
@@ -266,10 +264,14 @@ let subscribing = false;
  * With no subscription stored it asks to subscribe (or just subscribes when
  * permission is already granted — the network's push option is the user's
  * choice), unless the user answered "never" on this device. With one stored
- * that was made against a key this network no longer announces it asks to
- * renew — always, permission or not: the renewal replaces the endpoint the
- * server pushes to, and the user answered "never" only if they said so to
- * this question. */
+ * that was made against a key this network no longer announces, the
+ * `pushKeyChange` setting decides: `ask` (default) opens the renew prompt,
+ * permission or not — the renewal replaces the endpoint the server pushes
+ * to; `trust` renews on the spot when permission is granted (otherwise the
+ * prompt's button is the gesture the permission ask needs); `ignore` does
+ * nothing — the subscription stays stale and Settings keeps offering
+ * Renew. The renew prompt's "Never" sets `ignore`, so the choice is
+ * visible and reversible in Settings. */
 function maybePrompt(network: string, vapid: string | undefined, sasl: boolean): void {
 	if (!sasl || vapid === undefined || !pushOn(network) || pushPrompt.visible) {
 		return;
@@ -280,8 +282,26 @@ function maybePrompt(network: string, vapid: string | undefined, sasl: boolean):
 	}
 
 	if (Object.keys(subs).length > 0) {
-		if (subs[vapid] || storage.get(NEVER_RENEW_KEY)) {
-			return; // subscribed (autoRegister re-registers it), or told not to ask
+		if (subs[vapid]) {
+			return; // subscribed; autoRegister re-registers it
+		}
+
+		const policy = keyChangePolicy(store.state.settings.pushKeyChange);
+
+		if (policy === "ignore") {
+			return;
+		}
+
+		if (
+			policy === "trust" &&
+			typeof Notification !== "undefined" &&
+			Notification.permission === "granted"
+		) {
+			if (!subscribing) {
+				void subscribe(vapid);
+			}
+
+			return;
 		}
 
 		openPrompt("renew", network, vapid);
@@ -328,11 +348,22 @@ function declinePrompt(): void {
 	pushPrompt.visible = false;
 }
 
-/** Prompt answer: never ask this question again on this device. A stale
- * subscription stays stale (Settings keeps offering Renew); nothing is
- * unsubscribed behind the user's back. */
+/** Prompt answer: never ask this question again on this device. For the
+ * renew prompt that is the `pushKeyChange` setting flipped to `ignore`
+ * (visible and reversible in Settings → Notifications); a stale
+ * subscription stays stale, nothing is unsubscribed behind the user's
+ * back. */
 function neverPrompt(): void {
-	storage.set(pushPrompt.kind === "renew" ? NEVER_RENEW_KEY : NEVER_ASK_KEY, "1");
+	if (pushPrompt.kind === "renew") {
+		void store.dispatch("settings/update", {
+			name: "pushKeyChange",
+			value: "ignore",
+			sync: true,
+		});
+	} else {
+		storage.set(NEVER_ASK_KEY, "1");
+	}
+
 	pushPrompt.visible = false;
 }
 
