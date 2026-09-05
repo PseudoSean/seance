@@ -71,7 +71,8 @@ are dropped (the draft allows it). `<host>` is the sender's displayed host.
 - `account` is present when the sender is logged in, same as §3.1.
 - `evilnet.github.io/line` is a vendor tag: `<i>` is the 1-based line index
   in the original message, `<sent>` how many lines were pushed for this
-  batch, `<total>` how many lines the message had. `<sent> = min(<total>, WEBPUSH_MULTILINE_LINES)`. Lines beyond `<sent>` are not pushed.
+  batch, `<total>` how many lines the message had. `<sent> = min(<total>, WEBPUSH_MULTILINE_LINES)`, and the server caps the feature at 64. Lines
+  beyond `<sent>` are not pushed.
 - `draft/multiline-concat` is present exactly when the line was a concat
   chunk in the original batch (join to the previous line with no separator;
   otherwise join with a newline).
@@ -91,7 +92,9 @@ connection-scoped batch id.
 ```
 
 Replaces `{"t":"read","target":…,"ts":…}`. Same trigger and coalesce
-window as today (`WEBPUSH_READ_COALESCE`, 3 s).
+window as today (`WEBPUSH_READ_COALESCE`, 3 s). With no marker the relay is
+`:<server> MARKREAD <target> *` (the read-marker spec's own no-marker
+form; the worker then sees no `timestamp`).
 
 ### 3.4 Size
 
