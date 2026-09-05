@@ -70,9 +70,9 @@ export function useStorageBackend(next: StorageBackend | null): void {
 	backend = next ?? storage;
 }
 
-/** nefarious2's WebSocket ports: 8443 for wss://, 8067 for ws://. */
+/** The WebSocket ports we suggest: 9998 for wss://, 8067 for ws://. */
 export function defaultPort(tls: boolean): number {
-	return tls ? 8443 : 8067;
+	return tls ? 9998 : 8067;
 }
 
 /** `wss://host:port/path` / `host/path` → bare host name, for display. */

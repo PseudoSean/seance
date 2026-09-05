@@ -327,7 +327,7 @@ describe("saved-networks", function () {
 		expect(net?.commands).to.deep.equal(["/a", "/b"]);
 		expect(net?.lastUsed).to.equal(undefined);
 		expect(saved.normalize({host: "irc.example.org"})).to.equal(undefined);
-		expect(saved.defaultPort(true)).to.equal(8443);
+		expect(saved.defaultPort(true)).to.equal(9998);
 	});
 
 	it("ignores corrupt or malformed storage", function () {
