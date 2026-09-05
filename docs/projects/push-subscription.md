@@ -679,12 +679,12 @@ Settings still said subscribed — a silent failure. Now:
 - **The `pushKeyChange` setting** (`client/js/settings.ts`, default `ask`;
   `keyChangePolicy` in `helpers/pushKeys.ts` normalises anything else to
   `ask`) — Settings → Notifications, "When a server's push identity (its key)
-  changes": **Prompt** (`ask`, the renew prompt), **Trusting** (`trust`:
-  renew on the spot when permission is granted, no question — the working
-  version of what the old silent branch tried; falls back to the prompt when
+  changes": **Wary** (`ask`, the renew prompt), **Naive** (`trust`: renew
+  on the spot when permission is granted, no question — the working version
+  of what the old silent branch tried; falls back to the prompt when
   permission is not granted, since `requestPermission()` needs a gesture),
-  **Cold shoulder** (`ignore`: leave it; push from that server stays off
-  until renewed from the network's settings).
+  **Suspicious** (`ignore`: leave it; push from that server stays off until
+  renewed from the network's settings).
 - **Visible in Settings, renewed per network.** `refreshState` reports
   **`stale`** (before the "stored means subscribed" rule) whenever
   `subscriptionIsStale` holds; Settings → Notifications shows the explanation
