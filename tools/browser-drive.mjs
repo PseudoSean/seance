@@ -406,6 +406,15 @@ async function screenshot(name, {selector, pad = 24, clip} = {}) {
 }
 
 /** Assert without aborting: collects failures so one run reports them all. */
+/** Run `source` in every new document before any page script (CDP
+ * Page.addScriptToEvaluateOnNewDocument): the place to stand in for a
+ * browser API headless cannot provide — the Push API, say — ahead of the
+ * app's boot-time connect. Call before `goto`; it applies to every later
+ * navigation and reload. */
+async function addInitScript(source) {
+	await send("Page.addScriptToEvaluateOnNewDocument", {source});
+}
+
 /** Browser.grantPermissions, for testing notification-driven flows. */
 async function grantPermissions(permissions, origin) {
 	await send("Browser.grantPermissions", {
@@ -435,7 +444,7 @@ const page = {
 	click,
 	hover,
 	fill,
-	grantPermissions,
+	addInitScript,
 	/** Pre-grant browser permissions (e.g. notifications) for this page, so
 	 * flows that need a user gesture can be exercised headlessly:
 	 * `await page.grantPermissions(["notifications"])`. */

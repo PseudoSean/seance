@@ -16,7 +16,8 @@
 //  - service-worker update detection: an installed app has no reload button,
 //    so a new build is flagged in the store and Help offers a reload.
 //
-// Web push is intentionally absent (see webpush.ts).
+// Web push lives in webpush.ts (subscription, the connect-time prompt) and
+// the service worker (delivery).
 
 import {store} from "./store";
 import {BeforeInstallPromptEvent} from "./types";

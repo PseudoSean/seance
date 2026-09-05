@@ -104,6 +104,7 @@ export default async function run(page) {
 | `click(selector, index)`                   | **real** mouse events at the element's centre                            |
 | `hover(selector, index)`                   | real `mouseMoved`                                                        |
 | `fill(selector, value)`                    | native setter + `input`/`change`, so Vue notices                         |
+| `addInitScript(source)`                    | runs in every new document before page scripts; fakes a browser API      |
 | `screenshot(name, {selector, pad, clip})`  | PNG into `page.outDir`                                                   |
 | `check(label, ok)`                         | records a failure instead of throwing                                    |
 | `sleep(ms)`                                |                                                                          |
