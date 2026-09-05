@@ -566,6 +566,84 @@ Open: two `You are not connected…` lobby lines appear at the moment of the
 redial (something sends twice during the ~5 ms before the new socket
 opens); pre-existing, cosmetic, not yet attributed.
 
+## A reply is one reply, and answers its message (2026-09-05)
+
+Reported: replying to a channel push shows an immediate second
+notification, as if the reply re-triggered it; merged notifications seemed
+to add to what was there rather than replace it. Also asked for: the reply
+should be an IRCv3 reply, and Mute 30m should sit left of Reply (a thumb on
+a phone reaches the right edge). Findings against the rig, all with the
+real worker driven over DevTools (`tmp/`-style probes kept in the job
+scratch: `sw-reply-dup-probe.mjs` page/held/frozen/thaw, and a push oracle
+`push-reply-oracle.mjs` that registers a local endpoint and decrypts what
+the ircd POSTs after the account replies):
+
+- **The server never pushes the reply back.** `webpush_hl_account` skips
+  the sender's own account ("no self-highlights via own aliases"), so a
+  reply sent from a resumed held session, from an alias, or from the live
+  page produces no POST — measured 0 further pushes in every mode, with or
+  without a `+draft/reply` tag (the ircd relays the tag unchanged).
+- **The page could send the relayed reply a second time.** The worker
+  posts the reply to an open page and waits 2.5 s; a frozen page (Android
+  in the background, DevTools `Page.setWebLifecycleState`) answers
+  nothing, so the worker sends over its own connection — and when the page
+  thaws it still processes the queued message and sends the same reply
+  again. On the rig only a socket the freeze had killed stopped the second
+  copy (the channel got `Not sent (connection lost)`); on a phone whose
+  socket survives a short freeze it would have gone out twice.
+- **Every open window sent the reply.** `replyViaPage` posted to all
+  window clients at once and each page's `sendReplyNow` sent it: two
+  windows, two copies.
+- **A push delivered twice grew the body.** A plain message was appended
+  again by `addMessage` (only batch lines were idempotent), counted, and
+  re-alerted; and once the user had answered — the notification closed —
+  the worker had no memory of it, so a redelivery (push services promise
+  at-least-once, the ircd may retry, and a root and a per-network worker
+  share the store) showed the message afresh. This is the one path that
+  matches "adding more of it" and could not be reproduced without a real
+  push service.
+
+What ships (`client/service-worker.js`, `client/js/push/merge.ts`,
+`client/js/irc/bus.ts`, `client/js/webpush.ts`, `shared/types/socket-events.d.ts`;
+tests in `test/tests/service-worker.ts`, `test/push/merge.ts`, `test/irc/client.ts`):
+
+- **IRCv3 reply.** The notification's newest message is what a typed reply
+  answers: `replyTo` (its msgid; a batch entry's is the message's) rides
+  the page relay and the outbox entry, the `send` bus emit gains `replyTo`
+  and `bus.ts` puts `+draft/reply=<msgid>` on the PRIVMSG (every chunk),
+  and the throwaway connection asks for `message-tags` when CAP LS offers
+  it (LS continuation lines are accumulated; a NAK of the pair falls back
+  to `sasl` alone) and prefixes `@+draft/reply=<msgid> ` when ACKed.
+- **One page at a time, with a deadline.** `replyViaPage` asks the
+  visible/focused window first and the others only if it says no or stays
+  silent; the message carries `deadline` (epoch ms, the end of the
+  worker's wait) and `webpush.ts` answers `{ok: false}` without sending
+  when it receives the message after that — the worker has already sent
+  or queued it (bus-contract §2.2).
+- **The worker remembers what it showed.** After `showNotification` the
+  msgid (a batch line as `<msgid>#<index>`) goes into the same IndexedDB
+  `seen` ring the page writes (`idbAppend`, one read-modify-write
+  transaction, capped like push-seen.ts), and the push handler drops a
+  push whose msgid or line key is there; `addMessage` is idempotent by
+  msgid for plain messages too, and a plain duplicate the ring lost is not
+  re-shown. The page's rule is unchanged: the batch msgid it saw on the
+  opener blocks every line.
+- **Actions:** `[Mute 30m, Reply]`.
+
+Verified on the rig with the probes above: page relay acked in 8 ms and the
+page sent `@+draft/reply=…;label=s1 PRIVMSG`; held session → throwaway
+`@+draft/reply=<msgid> PRIVMSG` delivered once in 744 ms; frozen page with
+the password stashed → throwaway sent it, the thawed page sent nothing (no
+`Not sent` line, the listener saw one copy); frozen page without a stash →
+outbox entry with `replyTo`, sent once with the tag by the reopened page.
+
+Not changed, worth knowing: a thawed page whose socket survived a freeze
+processes the buffered highlights live; on the rig (1.5 s freeze, socket
+kept) it posted no notification of its own for them. Whether Enter submits
+the inline reply is the platform's notification UI, not the page's: the
+Notifications API only lets the worker declare a `text` action with a
+title and placeholder.
+
 ## Verification checklist (phase 1 done = all of these)
 
 1. `corepack yarn test` green (lint + mocha).

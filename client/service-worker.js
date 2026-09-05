@@ -353,6 +353,36 @@ async function idbSet(key, value) {
 	});
 }
 
+/** Mirrors CAP in client/js/push-seen.ts: the "seen" ring's length. */
+const SEEN_CAP = 200;
+
+/** Append `value` to the list stored under `key` (newest last, capped),
+ * read and written in one transaction so the page's own appends to the
+ * same ring (push-seen.ts) cannot be lost. */
+async function idbAppend(key, value, cap) {
+	const db = await idbOpen();
+
+	return new Promise((resolve, reject) => {
+		const tx = db.transaction(IDB_STORE, "readwrite");
+		const store = tx.objectStore(IDB_STORE);
+		const get = store.get(key);
+
+		get.onsuccess = () => {
+			const prev = Array.isArray(get.result) ? get.result : [];
+
+			if (prev.includes(value)) {
+				resolve();
+				return;
+			}
+
+			store.put([...prev, value].slice(-cap), key);
+		};
+
+		tx.oncomplete = () => resolve();
+		tx.onerror = () => reject(tx.error);
+	});
+}
+
 /** How long a throwaway connection may take to reach 001 (or finish). */
 const SW_IRC_TIMEOUT_MS = 15000;
 
@@ -382,9 +412,13 @@ function swIrcOpen(net, pre, onReady) {
 		let nick = randomNick();
 		let nickTries = 0;
 		let settled = false;
+		let offered = []; // CAP LS, possibly over several lines
+		let askedTags = false;
 		const watchers = [];
 		const ctx = {
 			nick,
+			/** `message-tags` negotiated: client tags (`+draft/reply`) may go out. */
+			tags: false,
 			onLine(fn) {
 				watchers.push(fn);
 			},
@@ -455,18 +489,37 @@ function swIrcOpen(net, pre, onReady) {
 			// scripted (or locally proxied) server re-enters this handler
 			// from send() before the send returns.
 			if (stage === 0 && / CAP .* LS /.test(l)) {
+				// `CAP * LS * :…` continues on the next line; the last one has
+				// no `*`.  Ask for message-tags only where it is offered, so a
+				// reply can answer the message it was typed under.
+				const list = l.slice(l.indexOf(" :", l.indexOf(" LS ")) + 2).split(" ");
+				offered = offered.concat(list.map((cap) => cap.split("=")[0]));
+
+				if (/ LS \* :/.test(l)) {
+					return;
+				}
+
 				stage = 1;
-				ws.send("CAP REQ :sasl");
+				askedTags = offered.includes("message-tags");
+				ws.send("CAP REQ :sasl" + (askedTags ? " message-tags" : ""));
 				return;
 			}
 
 			if (stage === 1 && / CAP .* ACK /.test(l)) {
 				stage = 2;
+				ctx.tags = askedTags;
 				ws.send("AUTHENTICATE PLAIN");
 				return;
 			}
 
 			if (stage === 1 && / CAP .* NAK /.test(l)) {
+				// The tags were the problem, not SASL: ask for SASL alone.
+				if (askedTags) {
+					askedTags = false;
+					ws.send("CAP REQ :sasl");
+					return;
+				}
+
 				done(false);
 				return;
 			}
@@ -535,6 +588,8 @@ function swIrcAct(net, pre, post) {
 // notice that ends the replay), with a settle timer as the fallback, and a
 // 404 earns one retry. A PM has no such race.
 
+/** Mirrors REPLY_TAG in client/js/irc/wire.ts. */
+const REPLY_TAG = "+draft/reply";
 const REPLAY_SETTLE_MS = 1500; // channel reply: wait at most this long for the JOIN replay
 const REPLY_GRACE_MS = 600; // after sending: time for the server to refuse (404) before QUIT
 const REPLY_RETRY_MS = 800;
@@ -588,9 +643,20 @@ function isOwnJoin(line, nick, target) {
 	);
 }
 
-/** Send `text` to `target` over a throwaway connection as the account.
+/** A client-tag value, escaped per the message-tags spec. */
+function escapeTagValue(value) {
+	return String(value)
+		.replace(/\\/g, "\\\\")
+		.replace(/;/g, "\\:")
+		.replace(/ /g, "\\s")
+		.replace(/\r/g, "\\r")
+		.replace(/\n/g, "\\n");
+}
+
+/** Send `text` to `target` over a throwaway connection as the account, as
+ * a reply to `replyTo` (a msgid) where the server takes client tags.
  * Resolves true once every chunk went out without a 404. */
-function swIrcSend(net, target, text) {
+function swIrcSend(net, target, text, replyTo) {
 	const chunks = splitReply(text);
 
 	if (chunks.length === 0) {
@@ -599,6 +665,8 @@ function swIrcSend(net, target, text) {
 
 	return swIrcOpen(net, [], (ws, done, ctx) => {
 		const channel = isChannelName(target);
+		const prefix =
+			replyTo && ctx.tags ? "@" + REPLY_TAG + "=" + escapeTagValue(replyTo) + " " : "";
 		let fired = false;
 		let retried = false;
 		let settle = null;
@@ -626,7 +694,7 @@ function swIrcSend(net, target, text) {
 			clearTimeout(settle);
 
 			for (const chunk of chunks) {
-				ws.send("PRIVMSG " + target + " :" + chunk);
+				ws.send(prefix + "PRIVMSG " + target + " :" + chunk);
 			}
 
 			grace = setTimeout(() => finish(true), REPLY_GRACE_MS);
@@ -744,13 +812,16 @@ function push() {
 		stripFormatting: stripFormattingInline,
 		notificationText: (text) =>
 			stripFormattingInline(text.replace(/\x01ACTION /, "*").replace(/\x01$/, "*")),
-		addMessage: (entries, incoming, keep = MERGE_KEEP_FALLBACK) => ({
-			entries: [
-				...entries,
-				{from: incoming.from, text: incoming.text, msgid: incoming.msgid},
-			].slice(-keep),
-			isNew: true,
-		}),
+		addMessage: (entries, incoming, keep = MERGE_KEEP_FALLBACK) =>
+			incoming.msgid && entries.some((m) => m.msgid === incoming.msgid)
+				? {entries: entries.slice(-keep), isNew: false}
+				: {
+						entries: [
+							...entries,
+							{from: incoming.from, text: incoming.text, msgid: incoming.msgid},
+						].slice(-keep),
+						isNew: true,
+				  },
 		renderMergedBody: (entries, isChannel, render = (t) => t) =>
 			entries
 				.map((m) => (isChannel && m.from ? m.from + ": " + render(m.text) : render(m.text)))
@@ -828,23 +899,31 @@ async function handlePushNow(raw) {
 		if (parsed && (parsed.command === "PRIVMSG" || parsed.command === "NOTICE")) {
 			const msgid = typeof parsed.tags.msgid === "string" ? parsed.tags.msgid : undefined;
 
-			// Dedup against the page's "seen" ring (client/js/push-seen.ts): a
-			// live page that already received this message over its own WebSocket
-			// owns its notification — its own rules decide whether the user sees
-			// anything. The server pushes to attached-but-idle sessions too
-			// (FEAT_WEBPUSH_IDLE), so without this every highlight would notify
-			// twice. A frozen page writes nothing, which is exactly when the push
-			// must show. A batch shares one msgid across its lines, which is also
-			// the msgid the page saw on the BATCH opener.
+			const line = P.lineIndexOf(parsed.tags);
+
+			// Dedup against the "seen" ring (client/js/push-seen.ts): what this
+			// device has already surfaced. The live page records every pushable
+			// message it received over its own WebSocket — it owns that
+			// notification, and the server pushes to attached-but-idle sessions
+			// too (FEAT_WEBPUSH_IDLE), so without this every highlight would
+			// notify twice; a frozen page writes nothing, which is exactly when
+			// the push must show. This worker records what it showed (below), so
+			// the same push delivered again — push services promise at least
+			// once, and a notification the user already answered has no data
+			// left to merge into — shows nothing. A batch shares one msgid
+			// across its lines: the page saw it on the BATCH opener and blocks
+			// them all; the worker remembers lines one by one so the rest of a
+			// batch still lands.
+			const seenKey = line ? msgid + "#" + line.index : msgid;
+
 			if (msgid) {
 				const seen = await idbGet("seen");
 
-				if (Array.isArray(seen) && seen.includes(msgid)) {
+				if (Array.isArray(seen) && (seen.includes(msgid) || seen.includes(seenKey))) {
 					return;
 				}
 			}
 
-			const line = P.lineIndexOf(parsed.tags);
 			const batch = line
 				? typeof parsed.tags.batch === "string"
 					? parsed.tags.batch
@@ -876,6 +955,13 @@ async function handlePushNow(raw) {
 				},
 				P.MERGE_KEEP
 			);
+
+			// The ring lost this msgid but the notification still holds it: a
+			// plain message pushed again adds nothing, so show nothing again.
+			if (!added.isNew && !line) {
+				return;
+			}
+
 			const count = ((prev && prev.count) || 0) + (added.isNew ? 1 : 0);
 			const body = P.renderMergedBody(added.entries, isChannel, (text) =>
 				P.notificationText(text, {markdown})
@@ -889,10 +975,11 @@ async function handlePushNow(raw) {
 			// it (desktop Chrome) and degrades to a button that deep-links the
 			// chat where it does not — the click handler falls back to openApp
 			// when no reply text arrives.  showSafely guards the whole call if
-			// a browser rejects the actions outright.
+			// a browser rejects the actions outright.  Reply goes last, on the
+			// right: that is where a thumb lands on a phone held in one hand.
 			const actions = [
-				{action: "reply", type: "text", title: "Reply", placeholder: "Reply…"},
 				{action: "mute30", title: "Mute 30m"},
+				{action: "reply", type: "text", title: "Reply", placeholder: "Reply…"},
 			];
 
 			// The payload names no network: a push-only worker serves exactly
@@ -921,6 +1008,10 @@ async function handlePushNow(raw) {
 				},
 				actions,
 			});
+
+			if (msgid) {
+				await idbAppend("seen", seenKey, SEEN_CAP);
+			}
 
 			await updateBadge();
 			return;
@@ -1143,7 +1234,41 @@ const PAGE_REPLY_TIMEOUT_MS = 2500; // a frozen page never answers
 const OUTBOX_KEY = "outbox";
 const OUTBOX_CAP = 20;
 
-/** Ask an open page to send the reply. Resolves true on the first ack. */
+/** Ask one page to send the reply: true on its ack, false when it says it
+ * cannot or stays silent past the deadline (a frozen page). The deadline
+ * travels with the message: a page that only wakes up after it must not
+ * send, because by then the reply went out another way. */
+function askPage(client, reply) {
+	return new Promise((resolve) => {
+		const deadline = Date.now() + PAGE_REPLY_TIMEOUT_MS;
+		const channel = new MessageChannel();
+		let settled = false;
+		let timer = null;
+
+		const finish = (ok) => {
+			if (!settled) {
+				settled = true;
+				clearTimeout(timer);
+				channel.port1.close();
+				resolve(ok);
+			}
+		};
+
+		timer = setTimeout(() => finish(false), PAGE_REPLY_TIMEOUT_MS);
+
+		channel.port1.onmessage = (ev) => finish(Boolean(ev.data && ev.data.ok));
+
+		try {
+			client.postMessage({type: "reply", ...reply, deadline}, [channel.port2]);
+		} catch (e) {
+			finish(false);
+		}
+	});
+}
+
+/** Ask the open pages to send the reply, one at a time — the visible one
+ * first — until one does. Asking them all at once would post the reply
+ * once per window. Resolves true when a page sent it. */
 async function replyViaPage(reply) {
 	const cs = await self.clients.matchAll({includeUncontrolled: true, type: "window"});
 
@@ -1151,49 +1276,16 @@ async function replyViaPage(reply) {
 		return false;
 	}
 
-	return new Promise((resolve) => {
-		let settled = false;
-		let outstanding = cs.length;
-		let timer = null;
-		const ports = [];
+	const first = findSuitableClient(cs);
+	const order = [first, ...cs.filter((c) => c !== first)];
 
-		const finish = (ok) => {
-			if (!settled) {
-				settled = true;
-				clearTimeout(timer);
-
-				for (const port of ports) {
-					port.close();
-				}
-
-				resolve(ok);
-			}
-		};
-
-		timer = setTimeout(() => finish(false), PAGE_REPLY_TIMEOUT_MS);
-
-		for (const c of cs) {
-			const channel = new MessageChannel();
-
-			ports.push(channel.port1);
-
-			channel.port1.onmessage = (ev) => {
-				if (ev.data && ev.data.ok) {
-					finish(true);
-				} else if (--outstanding === 0) {
-					finish(false);
-				}
-			};
-
-			try {
-				c.postMessage({type: "reply", ...reply}, [channel.port2]);
-			} catch (e) {
-				if (--outstanding === 0) {
-					finish(false);
-				}
-			}
+	for (const c of order) {
+		if (await askPage(c, reply)) {
+			return true;
 		}
-	});
+	}
+
+	return false;
 }
 
 /** Queue a reply for the page to send when its network is next connected. */
@@ -1205,6 +1297,15 @@ async function enqueueOutbox(reply) {
 	await idbSet(OUTBOX_KEY, outbox.slice(-OUTBOX_CAP));
 }
 
+/** The msgid a reply typed into the notification answers: its newest
+ * message (a batch entry carries the batch's msgid, which is the message's). */
+function replyTargetOf(data) {
+	const list = Array.isArray(data.messages) ? data.messages : [];
+	const last = list[list.length - 1];
+
+	return last && typeof last.msgid === "string" ? last.msgid : undefined;
+}
+
 async function handleReply(data, text) {
 	if (!text || !data.target) {
 		await openApp(data);
@@ -1213,10 +1314,12 @@ async function handleReply(data, text) {
 
 	const stash = await getStash();
 	const net = stashNetwork(stash, data.network);
+	const replyTo = replyTargetOf(data);
 	const reply = {
 		network: net ? net.uuid : data.network,
 		target: data.target,
 		text,
+		...(replyTo ? {replyTo} : {}),
 		time: new Date().toISOString(),
 	};
 
@@ -1225,7 +1328,7 @@ async function handleReply(data, text) {
 		return;
 	}
 
-	if (canLogin(net) && (await swIrcSend(net, data.target, text))) {
+	if (canLogin(net) && (await swIrcSend(net, data.target, text, replyTo))) {
 		await replyDone(data);
 		return;
 	}

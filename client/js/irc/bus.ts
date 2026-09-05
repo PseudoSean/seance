@@ -10,6 +10,7 @@ import type {IrcClient} from "./client";
 import {requestMore} from "./history";
 import * as saved from "./saved-networks";
 import type {ConnectOptions} from "./types";
+import {REPLY_TAG} from "./wire";
 
 export interface ClientRegistry {
 	clientForChannel(chanId: number): IrcClient | undefined;
@@ -60,11 +61,12 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 	// By network + target name rather than channel id: what a notification
 	// can still name after the page is gone (the worker's relayed reply, the
 	// outbox). Only over a connected client — a reconnecting one would throw.
-	bus.handle("send", ({network, target, text}) => {
+	bus.handle("send", ({network, target, text, replyTo}) => {
 		const client = registry.clientForNetwork(network);
 
 		if (client && client.isConnected) {
-			client.sendMessage(target, text);
+			// A notification's reply answers the message it was shown for.
+			client.sendMessage(target, text, replyTo ? {tags: {[REPLY_TAG]: replyTo}} : {});
 		} else {
 			// eslint-disable-next-line no-console
 			console.warn("[irc] send to a network that is not connected", network, target);

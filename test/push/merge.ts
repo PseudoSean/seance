@@ -15,6 +15,22 @@ describe("push/merge", function () {
 			expect(entries).to.deep.equal([{from: "alice", text: "hi", msgid: "m1"}]);
 		});
 
+		it("adds a message pushed twice (same msgid) once, and does not count it as new", function () {
+			const first = addMessage([], {from: "alice", text: "hi", msgid: "m1"});
+			const again = addMessage(first.entries, {from: "alice", text: "hi", msgid: "m1"});
+
+			expect(again.isNew).to.equal(false);
+			expect(again.entries).to.deep.equal(first.entries);
+		});
+
+		it("never dedupes messages that carry no msgid", function () {
+			const a = addMessage([], {from: "a", text: "x"});
+			const b = addMessage(a.entries, {from: "a", text: "x"});
+
+			expect(b.isNew).to.equal(true);
+			expect(b.entries).to.have.length(2);
+		});
+
 		it("keeps only the newest `keep` messages", function () {
 			let entries: MergedMessage[] = [];
 

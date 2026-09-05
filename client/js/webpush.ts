@@ -889,7 +889,13 @@ interface QueuedReply {
 	network: string;
 	target: string;
 	text: string;
+	/** The msgid the reply answers (the notification's newest message). */
+	replyTo?: string;
 	time?: string;
+	/** Relay only: past this (epoch ms) the worker has given up on this page
+	 * and sent the reply another way, so the page must not send it too. A
+	 * frozen page gets the message when it thaws, long after. */
+	deadline?: number;
 }
 
 const OUTBOX_KEY = "outbox";
@@ -902,7 +908,12 @@ function sendReplyNow(reply: QueuedReply): boolean {
 		return false;
 	}
 
-	socket.emit("send", {network: reply.network, target: reply.target, text: reply.text});
+	socket.emit("send", {
+		network: reply.network,
+		target: reply.target,
+		text: reply.text,
+		replyTo: reply.replyTo,
+	});
 
 	return true;
 }
@@ -967,7 +978,11 @@ if (browserSupported() && "serviceWorker" in navigator) {
 			let ok = false;
 
 			try {
-				ok = sendReplyNow(reply);
+				// Delivered late (this page was frozen): the worker has already
+				// sent or queued it — sending now would post the reply twice.
+				const stale = typeof reply.deadline === "number" && Date.now() > reply.deadline;
+
+				ok = !stale && sendReplyNow(reply);
 			} catch (error) {
 				// eslint-disable-next-line no-console
 				console.warn("[webpush] relayed reply failed", error);
