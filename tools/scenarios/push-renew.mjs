@@ -20,13 +20,14 @@
 //      button that recreates the subscription (old endpoint unregistered,
 //      new one registered, stored map re-keyed) and the prompt returns on the
 //      next connect;
-//   4. "Never" sets thelounge.push.neverRenew and no later connect prompts
-//      (the subscribe prompt's own never-flag stays untouched);
-//   5. "Yes" does what the Renew button does;
+//   4. "Never" flips the pushKeyChange setting to "ignore" and no later
+//      connect prompts (the subscribe prompt's own never-flag stays untouched);
+//   5. back on "ask", "Yes" does what the Renew button does;
 //   6. the connect after a renewal re-registers the new endpoint and asks
-//      nothing — and both prompt variants name the network (server, account).
+//      nothing — and both prompt variants name the network (server, account);
+//   7. on "trust" a rotation is renewed on the spot, no prompt.
 // The fake endpoints are fixed per slot so re-runs re-register the same
-// three, and the run ends by turning push off for the network so the account
+// four, and the run ends by turning push off for the network so the account
 // keeps none of them.
 
 const ORIGIN = "http://127.0.0.1:8001";
@@ -159,6 +160,18 @@ async function connect(page, target) {
 
 	throw new Error("the page never saw the notification permission as granted");
 }
+
+/** Write one setting the way the app persists them (localStorage `settings`). */
+const setSetting = (page, name, value) =>
+	page.evaluate(`(() => {
+		const all = JSON.parse(localStorage.getItem("settings") || "{}");
+		all[${JSON.stringify(name)}] = ${JSON.stringify(value)};
+		localStorage.setItem("settings", JSON.stringify(all));
+		return true;
+	})()`);
+
+const getSetting = (page, name) =>
+	page.evaluate(`JSON.parse(localStorage.getItem("settings") || "{}")[${JSON.stringify(name)}]`);
 
 const storedSubs = (page) =>
 	page.evaluate(`JSON.parse(localStorage.getItem("thelounge.push") || "{}")`);
@@ -322,11 +335,12 @@ export default async function run(page) {
 	await page.waitFor(promptOpened, {label: "the prompt again after No"});
 	page.check("3. No: asked again on the next connect", true);
 
-	// --- 4. "Never": flag set, no prompt on later connects ------------------
+	// --- 4. "Never": the setting flips to ignore, no prompt on later connects
 	await page.click("#pushPromptNever");
-	await page.waitFor(`localStorage.getItem("thelounge.push.neverRenew") === "1"`, {
-		label: "the never-renew flag",
-	});
+	await page.waitFor(
+		`JSON.parse(localStorage.getItem("settings") || "{}").pushKeyChange === "ignore"`,
+		{label: "the pushKeyChange setting to read ignore"}
+	);
 	page.check(
 		"4. Never leaves the subscribe prompt's own flag alone",
 		(await page.evaluate(`localStorage.getItem("thelounge.push.neverAsk")`)) === null
@@ -341,8 +355,21 @@ export default async function run(page) {
 	page.check("4. Never: nothing renewed on its own", webpushOut(page, before).length === 0);
 	await page.screenshot("5-never-no-prompt");
 
-	// --- 5. "Yes" -------------------------------------------------------------
-	await page.evaluate(`localStorage.removeItem("thelounge.push.neverRenew")`);
+	// The Settings page shows the choice, reversible there.
+	await page.evaluate(`location.hash = "#/settings/notifications"`);
+	await page.waitFor(`!!document.querySelector('input[name="pushKeyChange"][value="ignore"]')`, {
+		label: "the push identity radios in Settings",
+	});
+	page.check(
+		"4. Settings shows cold shoulder selected",
+		(await page.evaluate(
+			`document.querySelector('input[name="pushKeyChange"][value="ignore"]').checked`
+		)) === true
+	);
+	await page.screenshot("5b-settings-cold-shoulder");
+
+	// --- 5. back on ask: "Yes" ------------------------------------------------
+	await setSetting(page, "pushKeyChange", "ask");
 	before = await connect(page, `${ORIGIN}/`);
 	await page.waitFor(promptOpened, {label: "the prompt once the flag is cleared"});
 	mark = page.wsFrames.length;
@@ -400,6 +427,36 @@ export default async function run(page) {
 		Object.keys(await storedSubs(page)).join() === vapid
 	);
 
+	// --- 7. "trust": a rotation is renewed on the spot, nobody is asked -----
+	await setSetting(page, "pushKeyChange", "trust");
+	await rotateAway(page, "three");
+	before = await connect(page, `${ORIGIN}/`);
+	await waitFrame(
+		page,
+		before,
+		"out",
+		new RegExp(`^WEBPUSH UNREGISTER ${ENDPOINT(3)}$`),
+		"the old endpoint's UNREGISTER (trust)"
+	);
+	await waitFrame(
+		page,
+		before,
+		"out",
+		new RegExp(`^WEBPUSH REGISTER ${ENDPOINT(4)} `),
+		"the new endpoint's REGISTER (trust)"
+	);
+	page.check("7. trust: no prompt", (await page.evaluate(`!(${promptOpened})`)) === true);
+	subs = await storedSubs(page);
+	page.check(
+		"7. trust: the stored subscription was re-keyed on its own",
+		Object.keys(subs).length === 1 && subs[vapid]?.endpoint === ENDPOINT(4)
+	);
+	page.check(
+		"7. trust: the setting reads back",
+		(await getSetting(page, "pushKeyChange")) === "trust"
+	);
+	await page.screenshot("7-trusting");
+
 	// --- cleanup: push off for the network → the account forgets e3 ---------
 	mark = page.wsFrames.length;
 	await page.evaluate(`location.hash = "#/edit-network/${uuid}"`);
@@ -418,7 +475,7 @@ export default async function run(page) {
 		page,
 		mark,
 		"out",
-		new RegExp(`^WEBPUSH UNREGISTER ${ENDPOINT(3)}$`),
+		new RegExp(`^WEBPUSH UNREGISTER ${ENDPOINT(4)}$`),
 		"the cleanup UNREGISTER"
 	);
 	page.check("cleanup: the run's endpoint was unregistered", true);

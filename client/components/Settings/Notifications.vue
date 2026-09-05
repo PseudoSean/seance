@@ -8,6 +8,45 @@
 				also shown. The browser delivers the notifications; each push-capable server decides
 				whether to wake this app.
 			</div>
+			<div
+				id="label-push-key-change"
+				class="push-networks-hint"
+				role="heading"
+				aria-level="3"
+			>
+				When a server's push identity (its key) changes, this device's subscription for it
+				stops working. Then:
+			</div>
+			<div role="group" aria-labelledby="label-push-key-change">
+				<label class="opt">
+					<input
+						:checked="store.state.settings.pushKeyChange === 'ask'"
+						type="radio"
+						name="pushKeyChange"
+						value="ask"
+					/>
+					Prompt when the identity changes — ask before renewing the subscription
+				</label>
+				<label class="opt">
+					<input
+						:checked="store.state.settings.pushKeyChange === 'trust'"
+						type="radio"
+						name="pushKeyChange"
+						value="trust"
+					/>
+					Trusting — renew it on the spot, without asking
+				</label>
+				<label class="opt">
+					<input
+						:checked="store.state.settings.pushKeyChange === 'ignore'"
+						type="radio"
+						name="pushKeyChange"
+						value="ignore"
+					/>
+					Cold shoulder — leave it alone; push from that server stays off until you renew
+					it here
+				</label>
+			</div>
 			<div v-if="store.state.pushNotificationState === 'subscribed'" class="opt">
 				<div>Snooze pushes everywhere:</div>
 				<div class="push-snooze">
