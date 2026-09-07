@@ -128,12 +128,6 @@ export async function boot(): Promise<void> {
 		return;
 	}
 
-	// Startup owns autoconnect. Navigating to a screen must never create a
-	// connection as a side effect (the old Connect-screen hook did exactly
-	// that). Unknown-server links return above and resume this only after the
-	// user accepts or declines their blocking prompt.
-	autoconnectSavedNetworks();
-
 	// If we are on an unknown route, open the last known channel, or the
 	// connect form if there is none.
 	if (!router.currentRoute.value.name) {
@@ -143,6 +137,17 @@ export async function boot(): Promise<void> {
 			await navigate("Connect");
 		}
 	}
+
+	// Startup owns autoconnect. Navigating to a screen must never create a
+	// connection as a side effect (the old Connect-screen hook did exactly
+	// that). Unknown-server links return above and resume this only after the
+	// user accepts or declines their blocking prompt. Last, once the page has
+	// its route: a network's announce moves the view to the remembered
+	// conversation but leaves a page the user opened alone
+	// (socket-events/network.ts), and it needs to know which it is on — and
+	// the unknown-route fallback above must not run after it and override
+	// the landing with the lobby.
+	autoconnectSavedNetworks();
 }
 
 /**
