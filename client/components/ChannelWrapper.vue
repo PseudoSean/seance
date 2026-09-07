@@ -108,7 +108,17 @@ export default defineComponent({
 				return;
 			}
 
+			// The row of the conversation already open: the route does not
+			// change, so ChatInput's channel watch — what puts the caret in
+			// the input on a switch — never runs. Selecting it again means
+			// "let me type here": ask for the caret directly.
+			const alreadyOpen = activeChannel.value?.channel.id === props.channel.id;
+
 			switchToChannel(props.channel);
+
+			if (alreadyOpen) {
+				eventbus.emit("input:focus");
+			}
 		};
 
 		const openContextMenu = (event: MouseEvent) => {

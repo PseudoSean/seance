@@ -537,6 +537,9 @@ export default defineComponent({
 
 		onMounted(() => {
 			eventbus.on("escapekey", blurInput);
+			// A click on the sidebar row of the conversation already open
+			// (ChannelWrapper.vue): no route change, still "let me type".
+			eventbus.on("input:focus", focusForTyping);
 			focusForTyping();
 
 			if (store.state.settings.autocomplete) {
@@ -721,6 +724,7 @@ export default defineComponent({
 			}
 
 			eventbus.off("escapekey", blurInput);
+			eventbus.off("input:focus", focusForTyping);
 
 			if (autocompletionRef.value) {
 				autocompletionRef.value.destroy();
