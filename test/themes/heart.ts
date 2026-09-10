@@ -157,3 +157,21 @@ describe("the <3 theme's motion", function () {
 		);
 	});
 });
+
+describe("the <3 theme's glitter", function () {
+	it("has four bursts, cycled on send, and fires on hover and reactions", function () {
+		for (const n of [1, 2, 3, 4]) {
+			expect(css).to.include(`--heart-burst-${n}:`);
+		}
+
+		for (const n of [1, 2, 3, 4]) {
+			expect(css).to.match(
+				new RegExp(`\\.msg\\.self\\.pending:nth-child\\(4n\\s*\\+\\s*${n}\\)::before`)
+			);
+		}
+
+		expect(css).to.include("#chat .msg:hover::after");
+		expect(css).to.include(".reaction-enter-active::before");
+		expect(css).to.include(".msg-reaction.self::before");
+	});
+});
