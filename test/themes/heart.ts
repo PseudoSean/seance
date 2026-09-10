@@ -128,3 +128,20 @@ describe("the <3 theme's colours", function () {
 		}
 	});
 });
+
+describe("the <3 theme's type", function () {
+	it("bundles Nunito and Baloo 2 and sets them at the chosen weights", function () {
+		for (const file of [
+			"heart/nunito-600.woff2",
+			"heart/nunito-600-italic.woff2",
+			"heart/nunito-800.woff2",
+			"heart/baloo2-700.woff2",
+		]) {
+			expect(css).to.include(`url("${file}")`);
+		}
+
+		expect(css).to.match(/font-family:\s*Nunito/);
+		expect(css).to.match(/font-weight:\s*600/);
+		expect(css).to.match(/font-family:\s*"Baloo 2"/);
+	});
+});

@@ -16,6 +16,37 @@
 @import "coffee.css";
 
 /* ---- fonts ---- */
+@font-face {
+	font-family: Nunito;
+	font-style: normal;
+	font-weight: 600;
+	font-display: swap;
+	src: url("heart/nunito-600.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: Nunito;
+	font-style: italic;
+	font-weight: 600;
+	font-display: swap;
+	src: url("heart/nunito-600-italic.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: Nunito;
+	font-style: normal;
+	font-weight: 800;
+	font-display: swap;
+	src: url("heart/nunito-800.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: "Baloo 2";
+	font-style: normal;
+	font-weight: 700;
+	font-display: swap;
+	src: url("heart/baloo2-700.woff2") format("woff2");
+}
 
 /* ---- tokens ---- */
 :root {
@@ -155,6 +186,41 @@
 .user.color-32 { color: #954871; }
 
 /* ---- type ---- */
+
+/* Nunito 600 everywhere text is read; 800 is its bold. Baloo 2 for the names
+ * the eye jumps to: nicks, channel and network names, the header title.
+ * .context-menu substituted for #context-menu: ContextMenu.vue renders
+ * <ul id="context-menu">, not a class. */
+body,
+#chat .msg,
+#form #input,
+#sidebar,
+#context-menu,
+#settings,
+#help {
+	font-family: Nunito, "Segoe UI", system-ui, sans-serif;
+	font-weight: 600;
+}
+
+b,
+strong,
+.msg .content b,
+#chat .msg.highlight .content {
+	font-weight: 800;
+}
+
+#chat .msg .user,
+#chat .header .title,
+.channel-list-item .name,
+.network .lobby-title .name,
+#sidebar .lobby-title {
+	font-family: "Baloo 2", Nunito, sans-serif;
+	font-weight: 700;
+}
+
+#chat .msg .time {
+	font-variant-numeric: tabular-nums;
+}
 
 /* ---- motion ---- */
 
