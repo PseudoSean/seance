@@ -145,3 +145,15 @@ describe("the <3 theme's type", function () {
 		expect(css).to.match(/font-family:\s*"Baloo 2"/);
 	});
 });
+
+describe("the <3 theme's motion", function () {
+	it("fades messages in, raises the chrome, glows a mention, and stands down under reduced motion", function () {
+		expect(css).to.include("@keyframes heart-fade");
+		expect(css).to.match(/#chat \.msg \{[^}]*animation: heart-fade 340ms ease-out/);
+		expect(css).to.include("@keyframes heart-rise");
+		expect(css).to.include("@keyframes heart-glow");
+		expect(css).to.match(
+			/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*animation: none !important/
+		);
+	});
+});
