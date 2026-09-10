@@ -86,6 +86,7 @@ describe("public folder", function () {
 			"panasync",
 			"day",
 			"morning",
+			"heart",
 		]) {
 			expect(fs.existsSync(path.join(publicFolder, "themes", `${theme}.css`))).to.be.true;
 		}
