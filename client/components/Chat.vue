@@ -1,5 +1,12 @@
 <template>
-	<div id="chat-container" class="window" :data-current-channel="channel.name" lang="">
+	<div
+		id="chat-container"
+		class="window"
+		:data-current-channel="channel.name"
+		:data-scene="scene ? scene.scene : undefined"
+		:style="scene ? {'--channel-seed': String(scene.seed)} : undefined"
+		lang=""
+	>
 		<div
 			id="chat"
 			:class="{
@@ -145,6 +152,7 @@ import ListChannels from "./Special/ListChannels.vue";
 import ListIgnored from "./Special/ListIgnored.vue";
 import {defineComponent, PropType, ref, computed, watch, nextTick, onMounted, Component} from "vue";
 import {channelOpened} from "../js/helpers/lastChannel";
+import {conversationSeed} from "../js/helpers/channelSeed";
 import type {ClientNetwork, ClientChan} from "../js/types";
 import {useStore} from "../js/store";
 import {SpecialChanType, ChanType} from "../../shared/types/chan";
@@ -193,6 +201,14 @@ export default defineComponent({
 			() =>
 				!props.network.status.connected &&
 				(props.channel.type === ChanType.CHANNEL || props.channel.type === ChanType.QUERY)
+		);
+
+		// The seed a theme's meadow grows from (client/js/helpers/channelSeed.ts):
+		// channels and queries only, never the lobby or a special window.
+		const scene = computed(() =>
+			props.channel.type === ChanType.CHANNEL || props.channel.type === ChanType.QUERY
+				? conversationSeed(props.channel.name)
+				: null
 		);
 
 		const specialComponent = computed(() => {
@@ -307,6 +323,7 @@ export default defineComponent({
 			plainTopic,
 			connectingLabel,
 			isDisconnected,
+			scene,
 			specialComponent,
 			hideUserVisibleError,
 			editTopic,
