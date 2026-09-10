@@ -68,7 +68,7 @@ describe("public folder", function () {
 		expect(fs.existsSync(path.join(publicFolder, "css", "style.css"))).to.be.true;
 		expect(fs.existsSync(path.join(publicFolder, "css", "style.css.map"))).to.be.true;
 
-		for (const theme of ["coffee", "creama", "cobalt", "frost", "day", "morning"]) {
+		for (const theme of ["coffee", "creama", "cobalt", "frost", "day", "morning", "heart"]) {
 			expect(fs.existsSync(path.join(publicFolder, "themes", `${theme}.css`))).to.be.true;
 		}
 	});

@@ -1,0 +1,32 @@
+/* <3 — romantic pastels on a blue sky. coffee.css's rules (the token-driven
+ * set every handoff theme shares) with this theme's tokens, plus what no
+ * other theme has: bundled fonts, motion, glitter, and a meadow behind the
+ * chat that belongs to the channel. Design: docs/projects/heart-theme.md.
+ *
+ * Sections, in order: fonts · tokens · nick palette · type · motion · glitter
+ * · meadow · phones · reduced motion. */
+@import "coffee.css";
+
+/* ---- fonts ---- */
+
+/* ---- tokens ---- */
+:root {
+	color-scheme: light;
+
+	/* Chat surface */
+	--chat-bg: #dbeeff;
+}
+
+/* ---- nick palette ---- */
+
+/* ---- type ---- */
+
+/* ---- motion ---- */
+
+/* ---- glitter ---- */
+
+/* ---- meadow ---- */
+
+/* ---- phones ---- */
+
+/* ---- reduced motion ---- */
