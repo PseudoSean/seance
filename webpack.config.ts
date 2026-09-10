@@ -370,6 +370,12 @@ const config: webpack.Configuration = {
 					from: path.resolve(__dirname, "./client/themes/*").replace(/\\/g, "/"),
 					to: "themes/[name][ext]",
 				},
+				{
+					// The <3 theme's fonts and licences, referenced relative to
+					// the stylesheet as heart/<file>.
+					from: path.resolve(__dirname, "./client/themes/heart/*").replace(/\\/g, "/"),
+					to: "themes/heart/[name][ext]",
+				},
 			],
 		}),
 		// socket.io uses debug, we don't need it

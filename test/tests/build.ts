@@ -73,6 +73,19 @@ describe("public folder", function () {
 		}
 	});
 
+	it("the <3 theme's fonts are copied beside it", function () {
+		for (const file of [
+			"nunito-600.woff2",
+			"nunito-600-italic.woff2",
+			"nunito-800.woff2",
+			"baloo2-700.woff2",
+			"OFL-Nunito.txt",
+			"OFL-Baloo2.txt",
+		]) {
+			expect(fs.existsSync(path.join(publicFolder, "themes", "heart", file))).to.be.true;
+		}
+	});
+
 	it("style files contain expected content", function (done) {
 		fs.readFile(path.join(publicFolder, "css", "style.css"), "utf8", function (err, contents) {
 			expect(err).to.be.null;
