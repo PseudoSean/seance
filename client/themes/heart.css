@@ -224,6 +224,65 @@ strong,
 
 /* ---- motion ---- */
 
+/* Every message fades in as it enters the DOM: new ones, history, a channel
+ * opening. The sidebar rows, header and composer rise into place on load.
+ * A mention glows twice. Nothing here needs script: CSS animations run when
+ * an element is inserted or a class starts matching. */
+@keyframes heart-fade {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+
+@keyframes heart-rise {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes heart-glow {
+	0% { box-shadow: inset 0 0 0 0 rgb(217 69 127 / 0%); }
+	30% { box-shadow: inset 0 0 0.9rem rgb(217 69 127 / 22%); }
+	100% { box-shadow: inset 0 0 0 0 rgb(217 69 127 / 0%); }
+}
+
+#chat .msg {
+	animation: heart-fade 340ms ease-out both;
+}
+
+#chat .msg.pending {
+	animation-name: none;
+	opacity: 0.55;
+}
+
+#chat .chat-view[data-type="channel"] .msg.highlight,
+#chat .chat-view[data-type="query"] .msg.highlight {
+	animation: heart-fade 340ms ease-out both, heart-glow 1.8s ease-out 2;
+}
+
+.channel-list-item,
+#chat .header,
+#form {
+	animation: heart-rise 0.45s ease-out both;
+}
+
+.channel-list-item:nth-child(1) { animation-delay: 45ms; }
+.channel-list-item:nth-child(2) { animation-delay: 90ms; }
+.channel-list-item:nth-child(3) { animation-delay: 135ms; }
+.channel-list-item:nth-child(4) { animation-delay: 180ms; }
+.channel-list-item:nth-child(5) { animation-delay: 225ms; }
+.channel-list-item:nth-child(6) { animation-delay: 270ms; }
+.channel-list-item:nth-child(7) { animation-delay: 315ms; }
+.channel-list-item:nth-child(8) { animation-delay: 360ms; }
+.channel-list-item:nth-child(n + 9) { animation-delay: 400ms; }
+#form { animation-delay: 150ms; }
+#form #input { caret-color: var(--heart-rose); }
+
 /* ---- glitter ---- */
 
 /* ---- meadow ---- */
@@ -231,3 +290,17 @@ strong,
 /* ---- phones ---- */
 
 /* ---- reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+	#chat .msg,
+	#chat .msg::before,
+	#chat .msg::after,
+	.channel-list-item,
+	#chat .header,
+	#form,
+	.msg-reaction::before,
+	.msg-reaction::after,
+	#chat .chat {
+		animation: none !important;
+		transition: none !important;
+	}
+}
