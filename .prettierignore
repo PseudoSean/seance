@@ -13,6 +13,7 @@ docs/superpowers/
 *.svg
 *.ico
 *.wav
+*.woff2
 *.tpl
 *.sh
 *.opts
