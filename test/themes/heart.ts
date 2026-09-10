@@ -174,4 +174,18 @@ describe("the <3 theme's glitter", function () {
 		expect(css).to.include(".reaction-enter-active::before");
 		expect(css).to.include(".msg-reaction.self::before");
 	});
+
+	it("stands the tool-button spark down under reduced motion", function () {
+		expect(css).to.match(
+			/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*#chat \.msg-actions button::before[\s\S]*\}/
+		);
+	});
+
+	it("leaves burst sizing to the burst variables, not a stretching background-size", function () {
+		const glitterSection = css.slice(
+			css.indexOf("/* ---- glitter ---- */"),
+			css.indexOf("/* ---- meadow ---- */")
+		);
+		expect(glitterSection).to.not.include("background-size");
+	});
 });

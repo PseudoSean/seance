@@ -404,7 +404,6 @@ strong,
 	height: 2.6em;
 	pointer-events: none;
 	background: var(--heart-burst-1);
-	background-size: 100% 100%;
 	animation: heart-sparkle 0.9s ease-out both;
 }
 
@@ -463,7 +462,6 @@ strong,
 	height: 1.9em;
 	pointer-events: none;
 	background: var(--heart-burst-3);
-	background-size: 100% 100%;
 	animation: heart-sparkle-twinkle 1s ease-out both;
 }
 
@@ -473,7 +471,6 @@ strong,
 	inset: -0.7em;
 	pointer-events: none;
 	background: var(--heart-burst-1);
-	background-size: 100% 100%;
 	animation: heart-sparkle 0.6s ease-out both;
 }
 
@@ -498,7 +495,6 @@ strong,
 	height: 2.4em;
 	pointer-events: none;
 	background: var(--heart-burst-2);
-	background-size: 100% 100%;
 	animation: heart-sparkle-rise 1.2s ease-out both;
 }
 
@@ -523,6 +519,7 @@ strong,
 	#form,
 	.msg-reaction::before,
 	.msg-reaction::after,
+	#chat .msg-actions button::before,
 	#chat .chat {
 		animation: none !important;
 		transition: none !important;
