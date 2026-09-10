@@ -4,7 +4,15 @@
  * chat that belongs to the channel. Design: docs/projects/heart-theme.md.
  *
  * Sections, in order: fonts · tokens · nick palette · type · motion · glitter
- * · meadow · phones · reduced motion. */
+ * · meadow · phones · reduced motion.
+ *
+ * Muted ink (--chat-fg-muted / --heart-ink-muted) is darkened from the
+ * planned #5a7399 to #536a8e: at #5a7399 it read 4.07:1 on the sky
+ * (--chat-bg), short of the 4.5:1 the tests require; #536a8e clears it
+ * at 4.63:1, same hue, lower lightness. Rose text (--heart-rose-text,
+ * --chat-accent, --action-color, --tok-keyword, --tok-operator) is
+ * likewise darkened from #c23a70 (4.28:1 on the sky) to #b9376b
+ * (4.63:1), same hue, lower lightness. */
 @import "coffee.css";
 
 /* ---- fonts ---- */
@@ -13,11 +21,138 @@
 :root {
 	color-scheme: light;
 
-	/* Chat surface */
+	/* The theme's own names, used by the sections below. Rose as text is
+	 * darker than rose as a fill so it reaches 4.5:1 on the sky. */
+	--heart-sky: #dbeeff;
+	--heart-sky-deep: #c6dffa;
+	--heart-paper: #f4f9ff;
+	--heart-ink: #1e3a6e;
+	--heart-ink-muted: #536a8e;
+	--heart-ink-faint: #8fa3c2;
+	--heart-rule: #c5dcf5;
+	--heart-rose: #d9457f;
+	--heart-rose-text: #b9376b;
+	--heart-rose-soft: #f08fb4;
+	--heart-blush: #ffd6e6;
+	--heart-lilac: #e6d9ff;
+	--heart-peach: #ffe3d1;
+	--heart-mint: #1f7354;
+	--heart-hill-far: #dbeee1;
+	--heart-hill-mid: #cbe6d3;
+	--heart-ground: #b7dcc2;
+	--strip: 8.75rem;
+
+	/* Chat surface (coffee.css's tokens) */
 	--chat-bg: #dbeeff;
+	--chat-fg: #1e3a6e;
+	--chat-fg-muted: #536a8e;
+	--chat-fg-faint: #8fa3c2;
+	--chat-heading: #2a4a86;
+	--chat-rule: #c5dcf5;
+	--chat-accent: #b9376b;
+	--chat-accent-fg: #fff;
+	--chat-accent-rule: rgb(217 69 127 / 50%);
+	--chat-highlight-bg: #ffd6e6;
+	--chat-selection: #ffd6e6;
+	--composer-bg: #f4f9ff;
+	--composer-border: #c5dcf5;
+	--window-border: #c5dcf5;
+	--window-shadow: 0 0 25px rgb(30 58 110 / 20%);
+	--menu-bg: #f4f9ff;
+
+	/* Sidebar rail: lilac into peach, ink on it */
+	--rail-bg-top: #e6d9ff;
+	--rail-bg-bottom: #ffe3d1;
+	--rail-fg: #3b4f7a;
+	--rail-fg-strong: #1e3a6e;
+	--rail-fg-active: #1e3a6e;
+	--rail-fg-muted: #5a6f9a;
+	--rail-item-active-bg: rgb(255 255 255 / 70%);
+	--rail-item-hover-bg: rgb(255 255 255 / 40%);
+	--rail-accent: #d9457f;
+	--rail-accent-fg: #fff;
+	--rail-badge-bg: #d9457f;
+	--rail-badge-fg: #fff;
+	--rail-input-bg: #fff;
+	--rail-input-border: #c5dcf5;
+
+	/* Message semantics */
+	--event-join: #1f7354;
+	--event-quit: #b8362a;
+	--nick-default: #2160c8;
+	--notice-color: #0e7676;
+	--action-color: #b9376b;
+
+	/* Notice boxes */
+	--note-bg: #eef4fb;
+	--note-fg: #2a4a86;
+	--warn-bg: #fff2d6;
+	--warn-fg: #7a5a14;
+	--error-bg: #ffe1e6;
+	--error-fg: #a83226;
+	--ok-bg: #e2f3ea;
+	--ok-fg: #24704a;
+
+	/* Tints, focus ring, scrollbars */
+	--tint-soft: rgb(30 58 110 / 5%);
+	--tint-strong: rgb(30 58 110 / 9%);
+	--accent-tint-20: rgb(217 69 127 / 18%);
+	--accent-tint-30: rgb(217 69 127 / 28%);
+	--focus-ring: rgb(217 69 127 / 45%);
+	--scrollbar-track: rgb(30 58 110 / 10%);
+	--scrollbar-thumb: rgb(30 58 110 / 40%);
+	--scrollbar-thumb-active: rgb(30 58 110 / 55%);
+
+	/* Code blocks */
+	--tok-comment: #6b7fa0;
+	--tok-keyword: #b9376b;
+	--tok-string: #1f7354;
+	--tok-number: #2160c8;
+	--tok-function: #6f4fc9;
+	--tok-operator: #b9376b;
+	--tok-punctuation: #4d6187;
+	--tok-tag: #1f7354;
+	--tok-attr: #7040c8;
 }
 
+/* style.css's mIRC values again: coffee brightens these for its dark surface. */
+.irc-fg2 { color: #001f3f; }
+.irc-fg5 { color: #85144b; }
+.irc-fg12 { color: #0074d9; }
+
 /* ---- nick palette ---- */
+.user.color-1 { color: #994663; }
+.user.color-2 { color: #9c4655; }
+.user.color-3 { color: #9d4847; }
+.user.color-4 { color: #9d4a38; }
+.user.color-5 { color: #9a4d27; }
+.user.color-6 { color: #955012; }
+.user.color-7 { color: #8f5500; }
+.user.color-8 { color: #865900; }
+.user.color-9 { color: #7b5d00; }
+.user.color-10 { color: #706300; }
+.user.color-11 { color: #626600; }
+.user.color-12 { color: #536b0e; }
+.user.color-13 { color: #416d23; }
+.user.color-14 { color: #2a7034; }
+.user.color-15 { color: #007043; }
+.user.color-16 { color: #007050; }
+.user.color-17 { color: #006f5d; }
+.user.color-18 { color: #006e6a; }
+.user.color-19 { color: #006c77; }
+.user.color-20 { color: #006b83; }
+.user.color-21 { color: #00698e; }
+.user.color-22 { color: #006898; }
+.user.color-23 { color: #1e669f; }
+.user.color-24 { color: #3761a2; }
+.user.color-25 { color: #4a5ea4; }
+.user.color-26 { color: #5a5ba4; }
+.user.color-27 { color: #6756a0; }
+.user.color-28 { color: #74539b; }
+.user.color-29 { color: #7f5093; }
+.user.color-30 { color: #874c89; }
+.user.color-31 { color: #8f4a7d; }
+.user.color-32 { color: #954871; }
 
 /* ---- type ---- */
 
