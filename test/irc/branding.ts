@@ -338,8 +338,18 @@ describe("branding", function () {
 				optionalFields: ["strip_exif"],
 				responseUrlKey: "results.0.filePath",
 				responseErrorKey: "results.0.error",
-				accept: ["image/png", "image/jpeg", "image/gif", "image/webp"],
-				maxSizeBytes: 10 * 1024 * 1024,
+				accept: [
+					"image/png",
+					"image/jpeg",
+					"image/gif",
+					"image/webp",
+					"video/mp4",
+					"video/quicktime",
+					"video/webm",
+					"video/x-msvideo",
+					"video/x-matroska",
+				],
+				maxSizeBytes: 25 * 1024 * 1024,
 			});
 
 			// A deploy can aim the same wire format at its own PASTE instance.
@@ -358,7 +368,7 @@ describe("branding", function () {
 
 		it("does not let a preset config alias the preset constant", function () {
 			const first = normalizeBranding({uploads: {preset: "boxlabs-paste"}}).uploads;
-			first?.accept?.push("video/mp4");
+			first?.accept?.push("audio/ogg");
 
 			if (first?.fields) {
 				first.fields.strip_exif = "0";
@@ -366,7 +376,7 @@ describe("branding", function () {
 
 			const second = normalizeBranding({uploads: {preset: "boxlabs-paste"}}).uploads;
 
-			expect(second?.accept).to.not.include("video/mp4");
+			expect(second?.accept).to.not.include("audio/ogg");
 			expect(second?.fields).to.deep.equal({strip_exif: "1"});
 		});
 
