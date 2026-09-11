@@ -130,7 +130,7 @@ export class TranslateService {
 
 		const onAbort = () => {
 			if (currentId) {
-				this.client().cancel(currentId);
+				this.worker?.client.cancel(currentId);
 			}
 		};
 

@@ -606,4 +606,34 @@ describe("translate/service", () => {
 		expect((await r.service.route("de", "en"))?.candidate).to.equal("opus:de-en");
 		r.service.dispose();
 	});
+
+	it("an abort after a teardown creates no worker", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		await r.service.capabilities();
+
+		const controller = new AbortController();
+		let message = "";
+		const iteration = (async () => {
+			for await (const chunk of r.service.translate(base, controller.signal)) {
+				void chunk; // unreachable: torn down before anything is ever yielded
+			}
+		})().catch((e: Error) => {
+			message = e.message;
+		});
+
+		while (r.workers.length === 0) {
+			await Promise.resolve();
+		}
+
+		// pagehide tears the worker down synchronously (this.worker = null);
+		// the abort that follows, in the same tick, must not go through
+		// this.client() (which would create a fresh one just to cancel).
+		r.service.pagehide();
+		controller.abort();
+		await iteration;
+
+		expect(message).to.equal(WORKER_DISPOSED);
+		expect(r.workers.length).to.equal(1);
+	});
 });
