@@ -3,7 +3,9 @@
 // NLLB-200 (any pair, FLORES codes on every call) and OPUS-MT (one pair
 // per model, no options). At most two pipelines stay loaded, evicted by
 // last use. The library arrives through `Seq2seqDeps`; seq2seq.real.ts is
-// its only import.
+// its only import. A transformers.js pipeline call cannot be cancelled, so
+// a cancelled request runs to completion and only its result is dropped
+// (`signal.aborted` is checked after the call).
 
 import {
 	Engine,
@@ -67,6 +69,10 @@ export class Seq2seqEngine implements Engine {
 	readonly name = "seq2seq" as const;
 	/** Insertion order is recency: the first entry is the least recently used. */
 	private loaded = new Map<string, PipelineLike>();
+	/** In-flight `deps.pipeline(...)` calls, deduped by model id. */
+	private loading = new Map<string, Promise<PipelineLike>>();
+	/** How many `translate()` calls are currently mid-`await pipe(...)` for a model. */
+	private inUse = new Map<string, number>();
 	private state: EngineStatus = "cold";
 	private deps: Seq2seqDeps;
 
@@ -80,38 +86,51 @@ export class Seq2seqEngine implements Engine {
 			return;
 		}
 
+		const inFlight = this.loading.get(ref.id);
+
+		if (inFlight) {
+			await inFlight;
+			return;
+		}
+
 		this.state = "loading";
 
+		const files = new Map<string, PipelineProgress>();
+		const promise = this.deps.pipeline(ref.id, (p) => {
+			files.set(p.file, p);
+			let loaded = 0;
+			let total = 0;
+
+			for (const file of files.values()) {
+				loaded += file.loaded;
+				total += file.total;
+			}
+
+			onProgress({fraction: total > 0 ? loaded / total : 0, text: p.file});
+		});
+
+		this.loading.set(ref.id, promise);
+
+		let pipe: PipelineLike;
+
 		try {
-			const files = new Map<string, PipelineProgress>();
-			const pipe = await this.deps.pipeline(ref.id, (p) => {
-				files.set(p.file, p);
-				let loaded = 0;
-				let total = 0;
-
-				for (const file of files.values()) {
-					loaded += file.loaded;
-					total += file.total;
-				}
-
-				onProgress({fraction: total > 0 ? loaded / total : 0, text: p.file});
-			});
-
-			this.loaded.set(ref.id, pipe);
-			this.state = "ready";
-			await this.evict();
+			pipe = await promise;
 		} catch (e) {
 			this.state = this.loaded.size > 0 ? "ready" : "failed";
 			throw e;
+		} finally {
+			this.loading.delete(ref.id);
 		}
+
+		this.loaded.set(ref.id, pipe);
+		this.state = "ready";
+		await this.evict();
 	}
 
 	async unload(): Promise<void> {
-		for (const pipe of this.loaded.values()) {
-			await pipe.dispose();
-		}
-
+		await Promise.allSettled([...this.loaded.values()].map((pipe) => pipe.dispose()));
 		this.loaded.clear();
+		this.inUse.clear();
 		this.state = "cold";
 	}
 
@@ -144,7 +163,26 @@ export class Seq2seqEngine implements Engine {
 
 		this.touch(req.model);
 		const options = translationOptions(req);
-		const result = await pipe(req.text, options);
+		this.inUse.set(req.model, (this.inUse.get(req.model) ?? 0) + 1);
+
+		let result: {translation_text: string}[];
+
+		// The eviction deferred while this pipeline was in use only resumes
+		// once this `finally` runs, which requires the caller to drain the
+		// generator (an abandoned generator pins the model in `inUse`).
+		try {
+			result = await pipe(req.text, options);
+		} finally {
+			const count = (this.inUse.get(req.model) ?? 1) - 1;
+
+			if (count > 0) {
+				this.inUse.set(req.model, count);
+			} else {
+				this.inUse.delete(req.model);
+			}
+
+			await this.evict();
+		}
 
 		if (signal.aborted) {
 			return;
@@ -163,12 +201,19 @@ export class Seq2seqEngine implements Engine {
 	}
 
 	private async evict(): Promise<void> {
-		while (this.loaded.size > SEQ2SEQ_MAX_LOADED) {
-			const oldest = this.loaded.keys().next().value as string;
-			const pipe = this.loaded.get(oldest) as PipelineLike;
+		for (const id of this.loaded.keys()) {
+			if (this.loaded.size <= SEQ2SEQ_MAX_LOADED) {
+				break;
+			}
 
-			this.loaded.delete(oldest);
-			await pipe.dispose();
+			if ((this.inUse.get(id) ?? 0) > 0) {
+				continue;
+			}
+
+			const pipe = this.loaded.get(id) as PipelineLike;
+
+			this.loaded.delete(id);
+			await pipe.dispose().catch(() => {});
 		}
 	}
 }

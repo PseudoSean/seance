@@ -17,6 +17,8 @@ function deps() {
 		disposed: [] as string[],
 		run: [] as [string, string, unknown][],
 	};
+	const failDispose = new Set<string>();
+	const pending = new Map<string, Promise<void>>();
 	const d: Seq2seqDeps = {
 		pipeline(modelId, onProgress) {
 			calls.pipeline.push(modelId);
@@ -27,13 +29,18 @@ function deps() {
 			const pipe = ((text: string, options: unknown) => {
 				calls.run.push([modelId, text, options]);
 
-				return Promise.resolve([{translation_text: `[${modelId}] ${text}`}]);
+				const result = [{translation_text: `[${modelId}] ${text}`}];
+				const block = pending.get(modelId);
+
+				return block ? block.then(() => result) : Promise.resolve(result);
 			}) as unknown as PipelineLike;
 
 			pipe.dispose = () => {
 				calls.disposed.push(modelId);
 
-				return Promise.resolve();
+				return failDispose.has(modelId)
+					? Promise.reject(new Error(`dispose failed: ${modelId}`))
+					: Promise.resolve();
 			};
 
 			return Promise.resolve(pipe);
@@ -41,7 +48,23 @@ function deps() {
 		threads: () => false,
 	};
 
-	return {deps: d, calls};
+	/** Blocks the next `translate()` call on this model until the returned function runs. */
+	function gate(modelId: string): () => void {
+		let release: () => void = () => {};
+
+		const promise = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+
+		pending.set(modelId, promise);
+
+		return () => {
+			pending.delete(modelId);
+			release();
+		};
+	}
+
+	return {deps: d, calls, failDispose, gate};
 }
 
 function request(overrides: Partial<TranslateRequest> = {}): TranslateRequest {
@@ -175,5 +198,101 @@ describe("translate/engines/seq2seq", () => {
 			batches: false,
 			threads: false,
 		});
+	});
+
+	it("dedupes two concurrent loads of the same model", async () => {
+		const d = deps();
+		const engine = new Seq2seqEngine(d.deps);
+
+		await Promise.all([
+			engine.load(catalog.nllb, () => {}),
+			engine.load(catalog.nllb, () => {}),
+		]);
+
+		expect(d.calls.pipeline).to.deep.equal([catalog.nllb.id]);
+		expect(engine.isLoaded(catalog.nllb.id)).to.equal(true);
+	});
+
+	it("never evicts a pipeline mid-translate, and re-admits it to eviction once free", async () => {
+		const d = deps();
+		const engine = new Seq2seqEngine(d.deps);
+		const a = catalog.opus["de-en"];
+		const b = catalog.opus["fr-en"];
+		const c = catalog.opus["es-en"];
+		const e = catalog.opus["it-en"];
+
+		await engine.load(a, () => {});
+		await engine.load(b, () => {});
+
+		const release = d.gate(a.id);
+		const consumed = (async () => {
+			const chunks: {text: string; done: boolean}[] = [];
+
+			for await (const chunk of engine.translate(
+				request({model: a.id}),
+				new AbortController().signal
+			)) {
+				chunks.push({text: chunk.text, done: chunk.done});
+			}
+
+			return chunks;
+		})();
+
+		// a is mid-translate (blocked on the gate): loading a third model must
+		// evict b, the least recently used pipeline that is not in use, and
+		// must not touch a.
+		await engine.load(c, () => {});
+		expect(d.calls.disposed).to.deep.equal([b.id]);
+		expect(engine.loadedModels()).to.deep.equal([a.id, c.id]);
+
+		release();
+		const chunks = await consumed;
+
+		expect(chunks).to.deep.equal([{text: `[${a.id}] Hallo Welt`, done: true}]);
+		// a's translate has ended, but the cache is not over capacity, so
+		// nothing is evicted yet — a is merely eligible again.
+		expect(d.calls.disposed).to.deep.equal([b.id]);
+		expect(engine.loadedModels()).to.deep.equal([a.id, c.id]);
+
+		// Now that a is free, it is the least recently used pipeline and a
+		// fourth model finally evicts it.
+		await engine.load(e, () => {});
+		expect(d.calls.disposed).to.deep.equal([b.id, a.id]);
+		expect(engine.loadedModels()).to.deep.equal([c.id, e.id]);
+	});
+
+	it("unload resolves even if a dispose throws, and attempts every pipeline", async () => {
+		const d = deps();
+		const engine = new Seq2seqEngine(d.deps);
+		const a = catalog.opus["de-en"];
+		const b = catalog.opus["fr-en"];
+
+		await engine.load(a, () => {});
+		await engine.load(b, () => {});
+		d.failDispose.add(a.id);
+
+		await engine.unload();
+
+		expect(d.calls.disposed).to.deep.equal([a.id, b.id]);
+		expect(engine.status()).to.equal("cold");
+		expect(engine.loadedModels()).to.deep.equal([]);
+	});
+
+	it("an eviction whose dispose throws still lets the new model load", async () => {
+		const d = deps();
+		const engine = new Seq2seqEngine(d.deps);
+		const a = catalog.opus["de-en"];
+		const b = catalog.opus["fr-en"];
+		const c = catalog.opus["es-en"];
+
+		await engine.load(a, () => {});
+		await engine.load(b, () => {});
+		d.failDispose.add(a.id);
+
+		await engine.load(c, () => {});
+
+		expect(d.calls.disposed).to.deep.equal([a.id]);
+		expect(engine.status()).to.equal("ready");
+		expect(engine.loadedModels()).to.deep.equal([b.id, c.id]);
 	});
 });
