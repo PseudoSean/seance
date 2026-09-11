@@ -168,6 +168,15 @@ export function setReading(network: ClientNetwork, channel: ClientChan, lang: st
 	}
 }
 
+/**
+ * Ask the view of that channel to open its translation panel (the channel
+ * menu's "Translation…", which switches to the channel first). Store
+ * state rather than an event: the view may not exist yet when it is asked.
+ */
+export function requestTranslationPanel(channel: ClientChan): void {
+	store.commit("translationPanelFor", channel.id);
+}
+
 export function setChannelOptions(
 	network: ClientNetwork,
 	channel: ClientChan,

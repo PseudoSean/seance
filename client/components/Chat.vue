@@ -165,17 +165,7 @@ import ListExcepts from "./Special/ListExcepts.vue";
 import ListChannels from "./Special/ListChannels.vue";
 import ListIgnored from "./Special/ListIgnored.vue";
 import TranslationPanel from "./TranslationPanel.vue";
-import {
-	defineComponent,
-	PropType,
-	ref,
-	computed,
-	watch,
-	nextTick,
-	onMounted,
-	onBeforeUnmount,
-	Component,
-} from "vue";
+import {defineComponent, PropType, ref, computed, watch, nextTick, onMounted, Component} from "vue";
 import {channelOpened} from "../js/helpers/lastChannel";
 import type {ClientNetwork, ClientChan} from "../js/types";
 import {useStore} from "../js/store";
@@ -357,20 +347,26 @@ export default defineComponent({
 			translationPanelOpen.value = true;
 		};
 
-		const onPanelRequest = (data: {channel: ClientChan}) => {
-			if (data.channel.id === props.channel.id) {
-				translationPanelOpen.value = true;
-			}
-		};
-
-		onMounted(() => eventbus.on("translation:panel", onPanelRequest));
-		onBeforeUnmount(() => eventbus.off("translation:panel", onPanelRequest));
 		watch(
 			() => props.channel.id,
 			() => {
 				translationPanelOpen.value = false;
 			}
 		);
+
+		// The channel menu's "Translation…" switches to the channel and
+		// leaves its id in the store, so the ask survives the switch: open
+		// the panel once this view is the channel that was asked for, and
+		// clear it. Registered after the watcher above, which closes the
+		// panel on a channel change and would otherwise undo this one.
+		const openPanelIfAsked = () => {
+			if (store.state.translation.panelFor === props.channel.id) {
+				translationPanelOpen.value = true;
+				store.commit("translationPanelFor", null);
+			}
+		};
+
+		watch(() => [props.channel.id, store.state.translation.panelFor], openPanelIfAsked);
 
 		watch(
 			() => props.channel,
@@ -392,6 +388,7 @@ export default defineComponent({
 
 		onMounted(() => {
 			channelChanged();
+			openPanelIfAsked();
 
 			if (props.channel.editTopic) {
 				void nextTick(() => {

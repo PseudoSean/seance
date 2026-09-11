@@ -79,6 +79,8 @@ export type State = {
 		workerError: string | null;
 		/** The queue paused an engine after repeated failures (spec § Lifecycle). */
 		paused: {engine: EngineName; message: string} | null;
+		/** The channel id whose translation panel was asked for (the channel menu). */
+		panelFor: number | null;
 	};
 	translations: Record<number, TranslationEntry>;
 	/** Per-channel switch state, keyed `<network uuid>/<channel name>` (translate/channelStore.ts). */
@@ -103,7 +105,7 @@ const state = (): State => ({
 	sidebarDragging: false,
 	userlistOpen: storage.get("thelounge.state.userlist") !== "false",
 	uploadProgress: null,
-	translation: {capability: null, models: [], workerError: null, paused: null},
+	translation: {capability: null, models: [], workerError: null, paused: null, panelFor: null},
 	translations: {},
 	translateChannels: {},
 });
@@ -234,6 +236,8 @@ type Mutations = {
 	translationModels(state: State, models: ModelView[]): void;
 	translationWorkerError(state: State, message: string | null): void;
 	translationPaused(state: State, paused: State["translation"]["paused"]): void;
+	/** Ask the view of that channel to open its translation panel; null clears it. */
+	translationPanelFor(state: State, id: number | null): void;
 	translationEntry(state: State, payload: {id: number; entry: TranslationEntry}): void;
 	translationPatch(state: State, payload: {id: number; patch: Partial<TranslationEntry>}): void;
 	translationRemove(state: State, id: number): void;
@@ -327,6 +331,9 @@ const mutations: Mutations = {
 	},
 	translationPaused(state, paused) {
 		state.translation.paused = paused;
+	},
+	translationPanelFor(state, id) {
+		state.translation.panelFor = id;
 	},
 	translationEntry(state, {id, entry}) {
 		state.translations[id] = entry;
