@@ -41,9 +41,13 @@ leaves the old files in place and exits 1.
    outline, far legs first, each morphing through the clips (`<animate attributeName="d">`,
    integer relative coordinates) chained by syncbase timing so a gait repeats and the loop
    restarts after the off-stage gap; the travel as an animated translate; the turn as a
-   discrete mirror about the animal's centre; the whole visit faded in and out over a second
-   (or a quarter of the time on stage, if that is shorter) so the animal never just appears or
-   is cut off at a stage edge inside the visible chat. Four files per animal: the near tint,
+   discrete mirror about the animal's centre; the whole visit faded in over a second (or a
+   quarter of the time on stage, if that is shorter) from the moment it appears, and faded out
+   over the same span ending exactly when its box starts crossing the stage edge it leaves by
+   (`tExit`, not the end of its time on stage — the sequence keeps sampling a little past
+   that, and the animal keeps travelling on, invisibly, until the loop restarts) — so the
+   animal never just appears, and is never visibly clipped at a stage edge inside the visible
+   chat. Four files per animal: the near tint,
    the distant-visitor tint (`-far`), and a still of each for reduced motion. Durations are
    written to four decimals, so a chain of clips runs a few ten-thousandths of a second short
    of the loop's travel transform each period — about three seconds a week on a page left
@@ -74,6 +78,13 @@ the causes out:
 
 The per-segment speed the audit prints is never negative: a planted foot's measured velocity
 is clamped at 0 (`lib/travel.mjs`), since none of these animals ever walks backward on purpose.
+
+The audit also prints `tExit`, the sequence time its box starts crossing the stage edge it
+leaves by (found by walking the travel back from the end, so the flush-left start at frame 0
+is never mistaken for an exit) — that, not the end of its time on stage, is what the fade-out
+in `lib/svg.mjs` is keyed to. If the exit condition is never found (it always should be, since
+the exit rule above already guarantees the visit ends off-stage), `tExit` falls back to the
+time on stage and the audit says so.
 
 ## Budget and browsers
 

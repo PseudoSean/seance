@@ -69,6 +69,7 @@ describe("tools/heart svg", function () {
 			period: 45,
 			first: 2,
 			onStage: 40,
+			tExit: 35,
 			fade: 1,
 			keyTimes: [0, 0.1, 0.5, 1],
 			xs: [-200, -200, 900, 900],
@@ -101,12 +102,14 @@ describe("tools/heart svg", function () {
 		expect(svg).to.include('transform="translate(-100 0)"');
 	});
 
-	it("fades the visit in and out, and starts invisible", function () {
+	it("fades the visit in and out, ending the fade-out at tExit rather than onStage, and starts invisible", function () {
 		const svg = animalSvg(spec);
 		expect(svg).to.include('<g opacity="0">');
+		// first/P=0.0444, (first+fade)/P=0.0667, (first+tExit-fade)/P=0.8,
+		// (first+tExit)/P=0.8222 — all keyed to tExit=35, not onStage=40
 		expect(svg).to.include(
 			'<animate attributeName="opacity" calcMode="linear" values="0;0;1;1;0;0" ' +
-				'keyTimes="0;0.0444;0.0667;0.9111;0.9333;1" dur="45s" repeatCount="indefinite"/>'
+				'keyTimes="0;0.0444;0.0667;0.8;0.8222;1" dur="45s" repeatCount="indefinite"/>'
 		);
 		// the fade animate comes before the travel translate on the outer group
 		expect(svg.indexOf('attributeName="opacity"')).to.be.lessThan(

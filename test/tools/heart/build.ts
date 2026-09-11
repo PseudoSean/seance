@@ -144,6 +144,24 @@ describe("tools/heart build", function () {
 		expect(svg).to.include('<g opacity="0">');
 	});
 
+	it("fades out exactly when the box starts to cross the stage edge, not when the sequence stops sampling", function () {
+		const {files, audit} = buildAnimal(blob);
+		// the blob turns and walks back off the left edge well before its last
+		// segment (14 cycles) finishes sampling
+		expect(audit.tExitFallback).to.equal(false);
+		expect(audit.tExit).to.be.lessThan(audit.onStage);
+
+		const svg = files["blob.svg"];
+		const m = svg.match(/attributeName="opacity"[^>]*keyTimes="([^"]*)"/);
+		expect(m).to.not.equal(null);
+		const times = m![1].split(";").map(Number);
+		const offFor = times[4]; // 0; first/P; onFor/P; offAt/P; offFor/P; 1
+		const period = blob.sequence.period;
+		expect(offFor).to.be.closeTo((blob.sequence.first + audit.tExit) / period, 1e-4);
+		// strictly earlier than the old onStage-keyed keyTime would have been
+		expect(offFor).to.be.lessThan((blob.sequence.first + audit.onStage) / period);
+	});
+
 	it("refuses a visit that ends on stage", function () {
 		const short = {
 			...blob,
