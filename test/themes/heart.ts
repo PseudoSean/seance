@@ -165,6 +165,9 @@ describe("the <3 theme's type", function () {
 			/font-family: "Baloo 2";\s*font-style: normal;\s*font-weight: 400 800;/
 		);
 		expect(css).to.match(/#chat \.msg \.user[\s\S]{0,160}font-family:\s*"Baloo 2"/);
+		expect(css, "no rule between nick and text").to.match(
+			/#chat \.content \{\s*border-left-color: transparent;/
+		);
 		expect(css, "the header is paper like the composer").to.match(
 			/#chat \.header \{\s*background: var\(--heart-paper\);/
 		);

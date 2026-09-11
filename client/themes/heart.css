@@ -233,6 +233,13 @@ strong,
 	background: var(--heart-paper);
 }
 
+/* No rule between the nick column and the text: style.css draws a 1px
+ * border-left on the content column and coffee.css colours it with
+ * --chat-rule; transparent keeps the pixel so nothing shifts. */
+#chat .content {
+	border-left-color: transparent;
+}
+
 /* Nunito 600 + tabular-nums measures wider than style.css's fixed 12h
  * columns (07:13 AM at 82.9px vs. a 4.75rem/5.75rem box), wrapping to two
  * lines; restated here, same selectors, so this file's cascade position
