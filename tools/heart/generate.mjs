@@ -36,7 +36,11 @@ for (const name of names) {
 			0
 		)} of ${audit.stageW}`
 	);
-	for (const s of audit.speeds) console.log(`  ${s.id} ${s.kind}: ${s.mean.toFixed(0)} units/s`);
+	for (const s of audit.speeds) {
+		const note =
+			s.mean !== s.measured ? ` (stance measured ${s.measured.toFixed(0)} units/s)` : "";
+		console.log(`  ${s.id} ${s.kind}: ${s.mean.toFixed(0)} units/s${note}`);
+	}
 	for (const p of audit.problems) console.log(`  ✗ ${p}`);
 	if (audit.problems.length) {
 		ok = false;

@@ -105,11 +105,20 @@ export function outlineSequence(def, poses, segs) {
 	return {failures, retries};
 }
 
-/** The travel over every sampled frame, facing flipped at each segment marked `turn`. */
+/**
+ * The travel over every sampled frame, facing flipped at each segment marked
+ * `turn`. A segment may set a numeric `travel` (units/s, forward in the
+ * facing direction) to override the stance measurement for its own frames —
+ * for a rig whose swing does not lift the feet clearly, the plant-detection
+ * this is built on cannot be trusted. `v` stays the measured velocity either
+ * way; only the accumulated position is affected.
+ */
 export function travelOf(def, poses, segs) {
 	const feetFrames = poses.map((p) => ({t: p.t, feet: feetOf(def.rig, p.v)}));
 	const {x, v} = stanceTravel(feetFrames, def.rig.ground);
 	const turns = new Set(segs.filter((s) => s.turn).map((s) => s.start));
+	const owner = new Array(poses.length);
+	for (const s of segs) for (let i = s.start; i < s.start + s.count; i++) owner[i] = s;
 	const xs = [];
 	const flips = [];
 	let facing = 1;
@@ -119,7 +128,14 @@ export function travelOf(def, poses, segs) {
 			facing = -facing;
 			flips.push(poses[i].t);
 		}
-		if (i > 0) acc += facing * (x[i] - x[i - 1]);
+		if (i > 0) {
+			const seg = owner[i];
+			const step =
+				typeof seg?.travel === "number"
+					? seg.travel * (poses[i].t - poses[i - 1].t)
+					: x[i] - x[i - 1];
+			acc += facing * step;
+		}
 		xs.push(acc);
 	}
 	return {xs, v, flips};
@@ -248,10 +264,12 @@ export function buildAnimal(def) {
 	}
 	const speeds = segs.map((s) => {
 		const vs = v.slice(s.start, s.start + s.count);
+		const measured = vs.reduce((a, b) => a + Math.abs(b), 0) / vs.length;
 		return {
 			id: s.id,
 			kind: s.gait ?? s.blendTo ?? s.wobble ?? s.pose,
-			mean: vs.reduce((a, b) => a + Math.abs(b), 0) / vs.length,
+			mean: typeof s.travel === "number" ? s.travel : measured,
+			measured,
 		};
 	});
 	const audit = {
