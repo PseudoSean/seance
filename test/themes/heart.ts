@@ -97,10 +97,15 @@ describe("the <3 theme's colours", function () {
 		}
 	});
 
-	it("keeps text at 4.5:1 on the sky and on a highlighted row", function () {
-		const value = (token: string) =>
-			css.match(new RegExp(`^\\s*${token}:\\s*(#[0-9a-f]{6});`, "m"))![1];
+	/** A token's #rrggbb or #rgb value, the latter expanded to 6 digits. */
+	const value = (token: string) => {
+		const hex = css.match(
+			new RegExp(`^\\s*${token}:\\s*(#[0-9a-f]{6}|#[0-9a-f]{3});`, "m")
+		)![1];
+		return hex.length === 4 ? `#${[...hex.slice(1)].map((c) => c + c).join("")}` : hex;
+	};
 
+	it("keeps text at 4.5:1 on the sky and on a highlighted row", function () {
 		for (const token of [
 			"--chat-fg",
 			"--chat-fg-muted",
@@ -114,6 +119,19 @@ describe("the <3 theme's colours", function () {
 		}
 
 		expect(contrast(value("--chat-fg"), BLUSH), "text on blush").to.be.at.least(4.5);
+	});
+
+	it("keeps icons and placeholders (the one deliberate exception) at 3:1 on the sky", function () {
+		expect(contrast(value("--chat-fg-faint"), SKY), "--chat-fg-faint on sky").to.be.at.least(
+			3.0
+		);
+	});
+
+	it("keeps the unread badge's text at 4.5:1 on its own background", function () {
+		expect(
+			contrast(value("--rail-badge-fg"), value("--rail-badge-bg")),
+			"--rail-badge-fg on --rail-badge-bg"
+		).to.be.at.least(4.5);
 	});
 
 	it("carries 32 nick colours that read on the sky and on a highlighted row", function () {
