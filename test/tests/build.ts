@@ -84,6 +84,10 @@ describe("public folder", function () {
 			"horse-far.svg",
 			"horse-still.svg",
 			"horse-far-still.svg",
+			"puppy.svg",
+			"puppy-far.svg",
+			"puppy-still.svg",
+			"puppy-far-still.svg",
 		]) {
 			expect(fs.existsSync(path.join(publicFolder, "themes", "heart", file))).to.be.true;
 		}
