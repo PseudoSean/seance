@@ -2,6 +2,7 @@ import {expect} from "chai";
 import {emptyContext, type TranslateRequest} from "../../client/js/translate/engine";
 import {
 	CONTEXT_TOKEN_BUDGET,
+	DATA_HEADING,
 	END_SENTINEL,
 	buildMessages,
 	estimateTokens,
@@ -29,24 +30,75 @@ function request(overrides: Partial<TranslateRequest> = {}): TranslateRequest {
 }
 
 describe("translate/prompt", () => {
-	it("the system prompt names the target and the source, keeps placeholders and names", () => {
+	it("the system prompt names the target and the source and keeps placeholders", () => {
+		const req = request({
+			context: {
+				...emptyContext(),
+				names: ["ada", "Storm"],
+				terms: [["rig", "Testaufbau"]],
+			},
+		});
+		const text = systemPrompt(req, name);
+
+		expect(text).to.include("into English");
+		expect(text).to.include("from German");
+		expect(text).to.include("⟦1⟧");
+		expect(text).to.include("Reply with the translation only");
+		expect(text).to.include(DATA_HEADING);
+	});
+
+	it("the system prompt carries nothing anyone in the channel wrote", () => {
 		const text = systemPrompt(
 			request({
+				purpose: "write",
 				context: {
 					...emptyContext(),
 					names: ["ada", "Storm"],
 					terms: [["rig", "Testaufbau"]],
+					voice: ["tô chegando"],
+					topic: "multiline batches",
 				},
 			}),
 			name
 		);
 
-		expect(text).to.include("into English");
-		expect(text).to.include("from German");
-		expect(text).to.include("⟦1⟧");
-		expect(text).to.include("Names, not words: ada, Storm.");
-		expect(text).to.include("Earlier in this channel: rig → Testaufbau.");
-		expect(text).to.include("Reply with the translation only");
+		for (const written of ["ada", "Storm", "rig", "Testaufbau", "chegando", "multiline"]) {
+			expect(text).to.not.include(written);
+		}
+	});
+
+	it("names, terms and the user's voice are data in the user message, before the context", () => {
+		const text = userPrompt(
+			request({
+				purpose: "write",
+				context: {
+					...emptyContext(),
+					names: ["ada", "Storm"],
+					terms: [["rig", "Testaufbau"]],
+					voice: ["tô chegando", "beleza"],
+					recent: [{nick: "ada", text: "anyone tried it?"}],
+				},
+			})
+		);
+
+		expect(text).to.include(
+			[
+				DATA_HEADING,
+				"Names: ada, Storm",
+				"Terms: rig → Testaufbau",
+				'The user\'s earlier messages: "tô chegando", "beleza"',
+			].join("\n")
+		);
+		expect(text.indexOf(DATA_HEADING)).to.be.lessThan(text.indexOf("Context:"));
+		// nothing to label when the channel offered nothing
+		expect(userPrompt(request())).to.not.include(DATA_HEADING);
+	});
+
+	it("the user's voice is only quoted when the user is writing", () => {
+		const context = {...emptyContext(), voice: ["tô chegando"]};
+
+		expect(userPrompt(request({purpose: "read", context}))).to.not.include("chegando");
+		expect(userPrompt(request({purpose: "write", context}))).to.include("chegando");
 	});
 
 	it("asks the model to detect the source when it is unknown, using the hint", () => {
@@ -59,7 +111,7 @@ describe("translate/prompt", () => {
 		).to.include("probably Portuguese");
 	});
 
-	it("carries formality, variant and, when writing, the user's voice", () => {
+	it("carries formality, variant and, when writing, that it is the user's own line", () => {
 		const text = systemPrompt(
 			request({
 				purpose: "write",
@@ -76,7 +128,6 @@ describe("translate/prompt", () => {
 		expect(text).to.include("Use formal address.");
 		expect(text).to.include("Variant: Brazilian Portuguese.");
 		expect(text).to.include("The user is writing this message");
-		expect(text).to.include("tô chegando");
 		expect(systemPrompt(request(), name)).to.not.include("Use formal");
 	});
 
