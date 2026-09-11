@@ -73,13 +73,17 @@ describe("public folder", function () {
 		}
 	});
 
-	it("the <3 theme's fonts are copied beside it", function () {
+	it("the <3 theme's fonts and animals are copied beside it", function () {
 		for (const file of [
 			"nunito-variable.woff2",
 			"nunito-variable-italic.woff2",
 			"baloo2-variable.woff2",
 			"OFL-Nunito.txt",
 			"OFL-Baloo2.txt",
+			"horse.svg",
+			"horse-far.svg",
+			"horse-still.svg",
+			"horse-far-still.svg",
 		]) {
 			expect(fs.existsSync(path.join(publicFolder, "themes", "heart", file))).to.be.true;
 		}
