@@ -425,7 +425,17 @@ export function buildAnimal(def) {
 
 	const layersWith = (near, far) =>
 		segs[0].frames[0].layers.map((l) => ({cls: l.cls, fill: l.cls === "near" ? near : far}));
-	const spec = (layers) => ({viewBox: vb, k, stageW, layers, clips, travel, flip, hearts});
+	const spec = (layers) => ({
+		viewBox: vb,
+		k,
+		stageW,
+		layers,
+		clips,
+		travel,
+		flip,
+		hearts,
+		decor: def.decor,
+	});
 	const farTint = mix(colours.far, SKY, 0.45);
 	const nearLayers = layersWith(mix(colours.near, SKY, 0.35), mix(colours.far, SKY, 0.35));
 	const farLayers = layersWith(farTint, farTint);
@@ -437,12 +447,38 @@ export function buildAnimal(def) {
 		encodePath(l.pts, k, stride(l.cls))
 	);
 
-	const files = {
-		[`${name}.svg`]: animalSvg(spec(nearLayers)),
-		[`${name}-far.svg`]: animalSvg(spec(farLayers)),
-		[`${name}-still.svg`]: stillSvg({viewBox: vb, k, layers: nearLayers, frame: stillFrame}),
-		[`${name}-far-still.svg`]: stillSvg({viewBox: vb, k, layers: farLayers, frame: stillFrame}),
-	};
+	// Which *tints* are written, not which layers exist: every rig still has
+	// near and far layers, and the far tint simply paints them all alike. A
+	// rig cast only in the distance (the dolphin) asks for `["far"]` and
+	// ships two files instead of four. The order below is the order all four
+	// have always been written in.
+	const variants = def.variants ?? ["near", "far"];
+	if (!variants.length || variants.some((t) => t !== "near" && t !== "far")) {
+		problems.push(
+			`variants must be a non-empty subset of ["near", "far"], not ${JSON.stringify(
+				def.variants
+			)}`
+		);
+	}
+	const wants = (tint) => variants.includes(tint);
+	/** @type {Record<string, string>} */
+	const files = {};
+	if (wants("near")) files[`${name}.svg`] = animalSvg(spec(nearLayers));
+	if (wants("far")) files[`${name}-far.svg`] = animalSvg(spec(farLayers));
+	if (wants("near"))
+		files[`${name}-still.svg`] = stillSvg({
+			viewBox: vb,
+			k,
+			layers: nearLayers,
+			frame: stillFrame,
+		});
+	if (wants("far"))
+		files[`${name}-far-still.svg`] = stillSvg({
+			viewBox: vb,
+			k,
+			layers: farLayers,
+			frame: stillFrame,
+		});
 	for (const [f, s] of Object.entries(files)) {
 		const limit = f.includes("still") ? 8 * 1024 : def.budget;
 		if (s.length > limit)
