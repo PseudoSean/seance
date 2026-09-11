@@ -65,13 +65,14 @@
 					<span
 						v-if="translationAvailable"
 						class="translate-tooltip tooltipped tooltipped-w tooltipped-no-touch"
-						:aria-label="translateLabel"
+						:data-tooltip="translateLabel"
 					>
 						<button
 							class="translate"
 							:class="{on: translationOn}"
 							:aria-label="translateLabel"
 							:aria-pressed="translationOn"
+							:aria-expanded="translationPanelOpen"
 							@click="toggleTranslation"
 							@contextmenu.prevent="openTranslationPanel"
 						/>
@@ -97,13 +98,13 @@
 							@click="store.commit('toggleUserlist')"
 						/>
 					</span>
-					<TranslationPanel
-						v-if="translationPanelOpen"
-						:channel="channel"
-						:network="network"
-						@close="translationPanelOpen = false"
-					/>
 				</div>
+				<TranslationPanel
+					v-if="translationPanelOpen"
+					:channel="channel"
+					:network="network"
+					@close="translationPanelOpen = false"
+				/>
 				<div v-if="channel.type === 'special'" class="chat-content">
 					<div class="chat">
 						<div class="messages">
