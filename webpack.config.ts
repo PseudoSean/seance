@@ -449,15 +449,39 @@ const translateConfig: webpack.Configuration = {
 		// transformers.js references Node modules behind its `browser` field;
 		// the webworker target honours that field, these are belt and braces.
 		fallback: {fs: false, path: false, url: false, crypto: false},
+		// transformers.js imports the WebGPU ORT bundle unconditionally, but
+		// seq2seq.real.ts always requests `device: "wasm"`; alias it to the
+		// smaller wasm-only bundle so the WebGPU backend (and the wasm/mjs
+		// pair only it references) never enters the worker bundle.
+		alias: {
+			"onnxruntime-web/webgpu": "onnxruntime-web/wasm",
+		},
 	},
 	module: {
 		rules: [makeTsRule()],
+		// The ORT bundle's own `new URL(..., import.meta.url)` fallback
+		// resolution is never used at runtime — seq2seq.real.ts overrides
+		// wasmPaths to js/ort/ before any model loads — but webpack's
+		// default asset detection would otherwise re-emit the wasm/mjs
+		// files those expressions name as hashed assets at the root of
+		// public/, the deploy tree. Turning it off for this configuration
+		// keeps those bytes out of the deploy tree entirely.
+		parser: {
+			javascript: {url: false},
+		},
 	},
 	plugins: [
 		new CopyPlugin({
 			patterns: [
+				// Only the pair the aliased wasm-only ORT bundle references
+				// (grepped from node_modules/onnxruntime-web/dist/ort.wasm.bundle.min.mjs).
 				{
-					from: "ort-wasm-simd-threaded*",
+					from: "ort-wasm-simd-threaded.mjs",
+					context: path.resolve(__dirname, "node_modules/onnxruntime-web/dist"),
+					to: "js/ort/[name][ext]",
+				},
+				{
+					from: "ort-wasm-simd-threaded.wasm",
 					context: path.resolve(__dirname, "node_modules/onnxruntime-web/dist"),
 					to: "js/ort/[name][ext]",
 				},
