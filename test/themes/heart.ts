@@ -201,7 +201,14 @@ describe("the <3 theme's glitter", function () {
 
 		expect(css).to.include("#chat .msg:hover::after");
 		expect(css).to.include(".reaction-enter-active::before");
-		expect(css).to.include(".msg-reaction.self::before");
+	});
+
+	it("does not burst .msg-reaction.self on its own, a persistent class that would burst on every redraw", function () {
+		const glitterSection = css.slice(
+			css.indexOf("/* ---- glitter ---- */"),
+			css.indexOf("/* ---- meadow ---- */")
+		);
+		expect(glitterSection).to.not.include(".msg-reaction.self::");
 	});
 
 	it("stands the tool-button spark down under reduced motion", function () {
@@ -229,6 +236,10 @@ describe("the <3 theme's meadow", function () {
 		for (const n of [0, 1, 2, 3, 4, 5]) {
 			expect(css).to.include(`#chat-container[data-scene="${n}"]`);
 		}
+
+		const scene1Start = css.indexOf('#chat-container[data-scene="1"]');
+		const scene1Body = css.slice(scene1Start, css.indexOf("}", scene1Start));
+		expect(scene1Body, "scene 1 hides the second cloud").to.include("--heart-cloud-2");
 
 		expect(css).to.include("@keyframes heart-clouds");
 		expect(css).to.match(
