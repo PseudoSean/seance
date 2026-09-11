@@ -20,9 +20,9 @@ function adapter(overrides: Partial<{f16: boolean; maxBuffer: number}> = {}): Ad
 
 function env(overrides: Partial<ProbeEnv> = {}): ProbeEnv {
 	return {
-		gpu: {requestAdapter: async () => adapter()},
+		gpu: {requestAdapter: () => Promise.resolve(adapter())},
 		deviceMemory: 8,
-		storage: {estimate: async () => ({quota: 50 * 1024 * 1024 * 1024})},
+		storage: {estimate: () => Promise.resolve({quota: 50 * 1024 * 1024 * 1024})},
 		wasmSimd: true,
 		...overrides,
 	};
@@ -49,19 +49,23 @@ describe("translate/capability", () => {
 	});
 
 	it("is cpu when the adapter is missing, has no f16 or too small a buffer", async () => {
-		expect((await probe(env({gpu: {requestAdapter: async () => null}}))).reasons).to.deep.equal(
-			["WebGPU adapter unavailable"]
-		);
 		expect(
-			(await probe(env({gpu: {requestAdapter: async () => adapter({f16: false})}}))).reasons
+			(await probe(env({gpu: {requestAdapter: () => Promise.resolve(null)}}))).reasons
+		).to.deep.equal(["WebGPU adapter unavailable"]);
+		expect(
+			(
+				await probe(
+					env({gpu: {requestAdapter: () => Promise.resolve(adapter({f16: false}))}})
+				)
+			).reasons
 		).to.deep.equal(["no 16-bit float shaders"]);
 		expect(
 			(
 				await probe(
 					env({
 						gpu: {
-							requestAdapter: async () =>
-								adapter({maxBuffer: GPU_MIN_BUFFER_BYTES - 1}),
+							requestAdapter: () =>
+								Promise.resolve(adapter({maxBuffer: GPU_MIN_BUFFER_BYTES - 1})),
 						},
 					})
 				)
@@ -80,7 +84,7 @@ describe("translate/capability", () => {
 		const cap = await probe(
 			env({
 				gpu: {
-					requestAdapter: async () => {
+					requestAdapter() {
 						throw new Error("boom");
 					},
 				},
@@ -99,9 +103,9 @@ describe("translate/capability", () => {
 		let calls = 0;
 		const e = env({
 			gpu: {
-				requestAdapter: async () => {
+				requestAdapter() {
 					calls++;
-					return adapter();
+					return Promise.resolve(adapter());
 				},
 			},
 		});

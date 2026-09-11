@@ -20,7 +20,6 @@ const PATTERNS: RegExp[] = [
 	/\bhttps?:\/\/[^\s<>()]+/gi,
 	/\bwww\.[^\s<>()]+/gi,
 	/:[a-z0-9_+-]{2,}:/gi,
-	// eslint-disable-next-line no-control-regex
 	/\x03(?:\d{1,2}(?:,\d{1,2})?)?|[\x02\x0f\x11\x16\x1d\x1e\x1f]/g,
 ];
 
