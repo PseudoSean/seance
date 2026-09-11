@@ -38,7 +38,7 @@ describe("translate/spans", () => {
 		const translated = `${placeholder(2)} und ⟦ 1 ⟧ dann`;
 
 		expect(restore(translated, spans)).to.deep.equal({
-			text: "`c` und https://x.test dann",
+			text: "https://x.test und `c` dann",
 			missing: [],
 		});
 	});
@@ -49,7 +49,7 @@ describe("translate/spans", () => {
 
 		expect(result).to.deep.equal({text: "nur text", missing: [1, 2]});
 		expect(appendMissing(result.text, spans, result.missing)).to.equal(
-			"nur text https://x.test `c`"
+			"nur text `c` https://x.test"
 		);
 	});
 
@@ -58,5 +58,26 @@ describe("translate/spans", () => {
 			text: `x ${placeholder(9)}`,
 			missing: [1],
 		});
+	});
+
+	it("a URL containing www. is one span (later patterns don't match inside protected text)", () => {
+		const {text, spans} = protect("see https://www.example.test now");
+
+		expect(spans).to.deep.equal(["https://www.example.test"]);
+		expect(text).to.equal(`see ${placeholder(1)} now`);
+	});
+
+	it("a URL containing a shortcode-shaped substring is one span", () => {
+		const {text, spans} = protect("see http://x.test:80:something end");
+
+		expect(spans).to.deep.equal(["http://x.test:80:something"]);
+		expect(text).to.equal(`see ${placeholder(1)} end`);
+	});
+
+	it("span numbering follows pattern order, not text position", () => {
+		const {text, spans} = protect(":tada: see https://example.test/a");
+
+		expect(spans).to.deep.equal(["https://example.test/a", ":tada:"]);
+		expect(text).to.equal(`${placeholder(2)} see ${placeholder(1)}`);
 	});
 });

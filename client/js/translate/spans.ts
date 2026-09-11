@@ -29,46 +29,14 @@ export function placeholder(n: number): string {
 }
 
 export function protect(text: string): Protected {
-	interface Match {
-		match: string;
-		index: number;
-		endIndex: number;
-	}
-	const allMatches: Match[] = [];
+	const spans: string[] = [];
+	let out = text;
 
 	for (const pattern of PATTERNS) {
-		let m;
-		pattern.lastIndex = 0;
-		while ((m = pattern.exec(text)) !== null) {
-			allMatches.push({match: m[0], index: m.index, endIndex: m.index + m[0].length});
-		}
-	}
-
-	// Code spans (first pattern) take priority and swallow other matches inside them
-	const codeSpans = allMatches.filter((m) => m.match[0] === "`");
-	const otherMatches = allMatches.filter((m) => {
-		if (m.match[0] === "`") return false;
-		return !codeSpans.some((cs) => m.index >= cs.index && m.endIndex <= cs.endIndex);
-	});
-
-	// Combine and sort by position in original text
-	const filteredMatches = [...codeSpans, ...otherMatches];
-	filteredMatches.sort((a, b) => a.index - b.index);
-
-	// Build spans array and track replacements
-	const spans: string[] = [];
-	const replacements: Array<{index: number; spanIndex: number; length: number}> = [];
-
-	for (const {match, index, endIndex} of filteredMatches) {
-		spans.push(match);
-		replacements.push({index, spanIndex: spans.length, length: endIndex - index});
-	}
-
-	// Replace from right to left to maintain indices
-	let out = text;
-	for (let i = replacements.length - 1; i >= 0; i--) {
-		const {index, spanIndex, length} = replacements[i];
-		out = out.substring(0, index) + placeholder(spanIndex) + out.substring(index + length);
+		out = out.replace(pattern, (match: string) => {
+			spans.push(match);
+			return placeholder(spans.length);
+		});
 	}
 
 	return {text: out, spans};
