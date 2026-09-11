@@ -28,7 +28,7 @@ function rig(script: Script = (req) => [`[en] ${req.lines ? req.lines.join(" | "
 	let engineFor: (from: string | null, to: string) => "llm" | "seq2seq" | null = () => "llm";
 	const deps: QueueDeps = {
 		route: (from, to) => Promise.resolve(engineFor(from, to)),
-		translate(req) {
+		translate(req, _signal) {
 			requests.push(req);
 			return (async function* (): AsyncIterable<TranslateChunk> {
 				await Promise.resolve();
@@ -136,10 +136,10 @@ describe("translate/queue", () => {
 		// eslint-disable-next-line @typescript-eslint/unbound-method
 		const original = r.deps.translate;
 
-		r.deps.translate = (req) => {
+		r.deps.translate = (req, signal) => {
 			inFlight++;
 			peak = Math.max(peak, inFlight);
-			const stream = original(req);
+			const stream = original(req, signal);
 			return (async function* () {
 				for await (const chunk of stream) {
 					yield chunk;
@@ -319,7 +319,7 @@ describe("translate/queue", () => {
 		const r = rig();
 		clock = r.clock;
 		let calls = 0;
-		r.deps.translate = () =>
+		r.deps.translate = (_req, _signal) =>
 			(async function* () {
 				if (calls++ === 0) {
 					await new Promise<void>((resolve) => {
@@ -348,7 +348,7 @@ describe("translate/queue", () => {
 		clock = r.clock;
 		let returned = false;
 
-		r.deps.translate = () => ({
+		r.deps.translate = (_req, _signal) => ({
 			[Symbol.asyncIterator]: () => ({
 				next: () => new Promise<IteratorResult<TranslateChunk>>(() => {}),
 				return(value?: unknown) {
@@ -372,7 +372,7 @@ describe("translate/queue", () => {
 	it("a request that never yields fails as timed out after REQUEST_TIMEOUT_MS", async () => {
 		const r = rig();
 		clock = r.clock;
-		r.deps.translate = () =>
+		r.deps.translate = (_req, _signal) =>
 			(async function* () {
 				await new Promise<void>(() => {});
 				yield {id: 0, text: "never", done: true};
@@ -389,6 +389,47 @@ describe("translate/queue", () => {
 		expect(
 			r.updates.find(([id, u]) => id === 1 && u.status === "failed")?.[1] as {error: string}
 		).to.deep.include({error: "timed out"});
+	});
+
+	it("cancelChannel aborts the signal the queue handed to deps.translate", async () => {
+		const r = rig();
+		clock = r.clock;
+		let sawSignal: AbortSignal | null = null;
+
+		r.deps.translate = (_req, signal) => {
+			sawSignal = signal;
+			return (async function* () {
+				await new Promise<void>(() => {});
+				yield {id: 0, text: "never", done: true};
+			})();
+		};
+
+		r.queue.enqueue(item(1, "eins zwei drei", {single: true}));
+		await settle(r.clock, 3);
+
+		expect(sawSignal?.aborted).to.equal(false);
+		r.queue.cancelChannel(1);
+		await settle(r.clock);
+
+		expect(sawSignal?.aborted).to.equal(true);
+	});
+
+	it("cancelAll drops an item still mid-route", async () => {
+		const r = rig();
+		clock = r.clock;
+		let resolveRoute: ((engine: "llm" | "seq2seq" | null) => void) | null = null;
+
+		r.deps.route = () =>
+			new Promise((resolve) => {
+				resolveRoute = resolve;
+			});
+		r.queue.enqueue(item(1, "eins zwei drei"));
+		r.queue.cancelAll();
+		resolveRoute?.("llm");
+		await settle(r.clock);
+
+		expect(r.updates).to.deep.equal([[1, {status: "dropped"}]]);
+		expect(r.requests.length).to.equal(0);
 	});
 
 	it("route-after-cancel: cancelling before the route resolves drops the item", async () => {

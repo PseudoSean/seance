@@ -512,4 +512,49 @@ describe("translate/service", () => {
 		expect(last).to.deep.equal({status: "idle", fraction: 0});
 		r.service.dispose();
 	});
+
+	it("an abort signal cancels the client stream at once, before any chunk arrives", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		await r.service.capabilities();
+
+		let release: (() => void) | null = null;
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+
+		// A translate that never yields until released: proves the cancel
+		// does not wait on the engine, rather than racing its usual speed.
+		r.llm.translate = (req, signal) => {
+			r.llm.calls.translate.push(req);
+
+			return (async function* () {
+				await gate;
+
+				if (!signal.aborted) {
+					yield {id: req.id, text: "too late", done: true};
+				}
+			})();
+		};
+
+		const controller = new AbortController();
+		const chunks: string[] = [];
+		const iteration = (async () => {
+			for await (const chunk of r.service.translate(base, controller.signal)) {
+				chunks.push(chunk.text);
+			}
+		})();
+
+		while (r.llm.calls.translate.length === 0) {
+			await Promise.resolve();
+		}
+
+		controller.abort();
+		await iteration;
+		release?.();
+
+		expect(chunks).to.deep.equal([]);
+		expect(r.llm.calls.translate.length).to.equal(1);
+		r.service.dispose();
+	});
 });

@@ -43,7 +43,10 @@ export type QueueUpdate =
 
 export interface QueueDeps {
 	route(from: string | null, to: string): Promise<EngineName | null>;
-	translate(req: Omit<TranslateRequest, "id" | "model">): AsyncIterable<TranslateChunk>;
+	translate(
+		req: Omit<TranslateRequest, "id" | "model">,
+		signal: AbortSignal
+	): AsyncIterable<TranslateChunk>;
 	/** Lower runs first; the active channel is 0. */
 	priority(chanId: number): number;
 	/** Messages that arrived in the channel so far (a counter the reader keeps). */
@@ -71,6 +74,9 @@ export class TranslateQueue {
 	/** Per-channel generation, bumped by cancelChannel/cancelAll: a route
 	 *  that resolves for an older generation is dropped instead of queued. */
 	private cancelled = new Map<number, number>();
+	/** Bumped by cancelAll alone: catches an item still mid-route for a
+	 *  channel cancelAll never got to see (not yet in waiting or inFlight). */
+	private globalGeneration = 0;
 	private seq = 0;
 	private held = false;
 	private deps: QueueDeps;
@@ -109,6 +115,8 @@ export class TranslateQueue {
 	}
 
 	cancelAll(): void {
+		this.globalGeneration++;
+
 		const channels = new Set<number>();
 
 		for (const q of this.waiting) {
@@ -168,11 +176,14 @@ export class TranslateQueue {
 
 	private enqueueAt(item: QueueItem, front: boolean): void {
 		const generation = this.generation(item.chanId);
+		const globalGeneration = this.globalGeneration;
 
-		void this.deps
-			.route(item.from, item.to)
-			.then((engine) => {
-				if (this.generation(item.chanId) !== generation) {
+		void this.deps.route(item.from, item.to).then(
+			(engine) => {
+				if (
+					this.generation(item.chanId) !== generation ||
+					this.globalGeneration !== globalGeneration
+				) {
 					this.deps.onUpdate(item.id, {status: "dropped"});
 					return;
 				}
@@ -186,13 +197,14 @@ export class TranslateQueue {
 
 				this.waiting.push(queued);
 				this.pump();
-			})
-			.catch((e) => {
+			},
+			(e) => {
 				this.deps.onUpdate(item.id, {
 					status: "failed",
 					error: e instanceof Error ? e.message : String(e),
 				});
-			});
+			}
+		);
 	}
 
 	private pump(): void {
@@ -299,7 +311,8 @@ export class TranslateQueue {
 						context: first.context,
 				  };
 
-		const iterator = this.deps.translate(request)[Symbol.asyncIterator]();
+		const controller = new AbortController();
+		const iterator = this.deps.translate(request, controller.signal)[Symbol.asyncIterator]();
 		let aborted = false;
 		let timedOut = false;
 
@@ -317,6 +330,7 @@ export class TranslateQueue {
 
 				aborted = true;
 				signalAbort();
+				controller.abort();
 				void iterator.return?.();
 			},
 		};
@@ -336,8 +350,14 @@ export class TranslateQueue {
 			let last = "";
 
 			for (;;) {
+				const nextPromise = iterator.next().then((next) => ({kind: "next" as const, next}));
+
+				// The loser of the race, if it later rejects (the stream threw
+				// after a cancel already won), must not be an unhandled rejection.
+				nextPromise.catch(() => {});
+
 				const outcome = await Promise.race([
-					iterator.next().then((next) => ({kind: "next" as const, next})),
+					nextPromise,
 					abortSignal.then(() => ({kind: "abort" as const})),
 				]);
 

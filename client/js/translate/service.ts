@@ -110,13 +110,15 @@ export class TranslateService {
 
 	/** Tries the candidates in route order; a candidate that fails is down for the session. */
 	async *translate(
-		request: Omit<TranslateRequest, "id" | "model">
+		request: Omit<TranslateRequest, "id" | "model">,
+		signal?: AbortSignal
 	): AsyncIterable<TranslateChunk> {
 		this.inFlight++;
 		this.clearIdle();
 
 		let attemptedView: ModelView | null = null;
 		let completed = false;
+		let onAbort: (() => void) | null = null;
 
 		try {
 			for (;;) {
@@ -134,6 +136,12 @@ export class TranslateService {
 				let yielded = false;
 
 				attemptedView = view;
+				// The queue's own cancel races iterator.next() directly, so this
+				// is only how a cancel reaches the worker: client.cancel(id)
+				// closes the stream's AsyncQueue, which resolves the pending
+				// next() as done and lets the generator's own finally run.
+				onAbort = () => client.cancel(id);
+				signal?.addEventListener("abort", onAbort, {once: true});
 
 				try {
 					for await (const chunk of client.translate(
@@ -181,6 +189,10 @@ export class TranslateService {
 				}
 			}
 		} finally {
+			if (onAbort) {
+				signal?.removeEventListener("abort", onAbort);
+			}
+
 			if (attemptedView && attemptedView.status === "downloading" && !completed) {
 				attemptedView.status = "idle";
 				attemptedView.fraction = 0;
