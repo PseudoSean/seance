@@ -1,0 +1,44 @@
+import {expect} from "chai";
+import {
+	SUPPORTED_LANGUAGES,
+	browserLanguage,
+	isSupported,
+	languageName,
+	nllbCode,
+} from "../../client/js/translate/languages";
+
+describe("translate/languages", () => {
+	it("names a language in full, in the asked-for locale", () => {
+		expect(languageName("de")).to.equal("German");
+		expect(languageName("de", "de")).to.equal("Deutsch");
+		expect(languageName("pt-BR")).to.equal("Brazilian Portuguese");
+	});
+
+	it("falls back to the bundled English table, then to the code", () => {
+		expect(languageName("de", "zz-not-a-locale")).to.equal("German");
+		expect(languageName("xx")).to.equal("xx");
+	});
+
+	it("maps the browser language to a supported code", () => {
+		expect(browserLanguage("de-AT")).to.equal("de");
+		expect(browserLanguage("pt-BR")).to.equal("pt");
+		expect(browserLanguage("nb-NO")).to.equal("nb");
+		expect(browserLanguage("tlh")).to.equal("en");
+		expect(browserLanguage(undefined)).to.equal("en");
+	});
+
+	it("knows the NLLB (FLORES-200) code for every supported language", () => {
+		for (const code of SUPPORTED_LANGUAGES) {
+			expect(nllbCode(code), code).to.match(/^[a-z]{3}_[A-Z][a-z]{3}$/);
+		}
+
+		expect(nllbCode("de")).to.equal("deu_Latn");
+		expect(nllbCode("zh")).to.equal("zho_Hans");
+		expect(nllbCode("xx")).to.equal(null);
+	});
+
+	it("isSupported is the list membership", () => {
+		expect(isSupported("en")).to.equal(true);
+		expect(isSupported("xx")).to.equal(false);
+	});
+});
