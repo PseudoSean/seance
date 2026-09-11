@@ -26,4 +26,10 @@ describe("conversation seed (helpers/channelSeed.ts)", function () {
 		// FNV-1a 32-bit of "#seance": if this changes, every deploy's meadows change.
 		expect(conversationSeed("#seance")).to.deep.equal({scene: 3, seed: 0.2081});
 	});
+
+	it("clamps a seed that would round up to 1", function () {
+		// FNV-1a 32-bit of "#chan34397" rounds to exactly 1 before clamping.
+		expect(conversationSeed("#chan34397").seed).to.equal(0.9999);
+		expect(conversationSeed("#chan34397").seed).to.be.below(1);
+	});
 });
