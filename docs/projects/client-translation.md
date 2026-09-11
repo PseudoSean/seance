@@ -70,12 +70,40 @@ Plan 2 (reading pipeline):
   deadline ("timed out"); a channel switch cancels its in-flight requests
   eagerly; lines older than 200 arrivals in their channel are dropped
   rather than translated late.
-- The channel's per-channel record persists only `read`, `write`,
+- The per-channel record lives in `translate/channelStore.ts`, not
+  `helpers/translateStore.ts`, and persists only `read`, `write`,
   `formality`, `variant`, `since`, `terms` (`thelounge.translate`); runtime
-  patches never write `since`/`terms`.
-- An edited message loses its original's translation (re-queued as a new
-  line); parting or quitting a channel discards its queue, priors and
-  arrival counters.
+  patches never write `since`/`terms`, and a `read`/`write` the build
+  cannot route is loaded as null.
+- An edited or deleted message loses its translation (an edit is re-queued
+  as the new line's own). Parting or quitting a channel discards its queue,
+  priors and arrival counters, its persisted record (the switch, formality,
+  variant and term memory) and the translations of its messages; the
+  message-limit trim in `socket-events/msg.ts` drops the entries of the
+  messages it splices. `state.translations` is in memory only, but it is
+  not kept for the life of the tab.
+- `TERM_LINES` (20) lives in `context.ts` rather than `prompt.ts`: the
+  context builder is where the slice happens. A prompt carries the newest
+  20 of the channel's own terms.
+- The deploy's `translation.glossary` is merged into every request at
+  context-build time rather than seeded into the persisted records, keyed
+  by the source term with the channel's own memory winning; the glossary
+  itself is not subject to `TERM_LINES`.
+- A replayed message (the bus payload's `replay`) is eligible only when it
+  is newer than the page's session as well as newer than `since`: a cold
+  boot does not translate history, a reconnect's catch-up within a session
+  does.
+- Detection thresholds: `DETECT_MIN_GAP` (0.1) over the best guess's lead
+  on the runner-up, not the spec's `DETECT_MIN_CONFIDENCE` (0.6) over a
+  normalised confidence -- a different quantity: `francAll` normalises its
+  best score to 1, so only the lead over the runner-up carries
+  information, and a near tie goes to the channel's prior.
+- `NAMES_CAP` (20) caps the names in a prompt where the spec says "the
+  channel's NAMES list".
+- The channel menu's "Translation…" switches to the channel and asks
+  through `state.translation.panelFor` (a store slot the view clears),
+  not an eventbus event: the view of a channel that is not open does not
+  exist to hear one.
 - The reader waits for the capability probe before the first line of a
   channel, and re-reads the channel's settings after language detection so
   a setting changed mid-flight wins.

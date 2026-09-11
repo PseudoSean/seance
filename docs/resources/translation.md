@@ -30,25 +30,33 @@ else sends is detected (`detect.ts`, `franc` in its own chunk, with the
 channel's dominant language settling near ties), skipped when it is
 already in the target or too short (`eligibility.ts`), given its context
 (`context.ts`: the last ten lines with the translations already shown,
-the reply target, the topic, the names in play, the channel's terms) and
-queued (`queue.ts`: the active channel first, one request per engine,
-LLM lines of one channel and pair batched, items that fell two hundred
-messages behind dropped, an engine paused after three failures in a row).
-The result lives in `store.state.translations` keyed by the message id
-and renders as `TranslationLine.vue` under the original: a "from German"
+the reply target, the topic, the names in play, the newest twenty of the
+channel's terms and the deploy's glossary behind them) and queued
+(`queue.ts`: the active channel first, one request per engine, LLM lines
+of one channel and pair batched, items that fell two hundred messages
+behind dropped, an engine paused after three failures in a row). The
+result lives in `store.state.translations` keyed by the message id and
+renders as `TranslationLine.vue` under the original: a "from German"
 chip, the text streaming with a caret, a retry when it failed; the chip's
 menu retranslates or hides the line, and the toolbar's Translate does one
-message on request in a channel that is off. The switch, the outgoing
-target (plan 3), formality, variant and the term memory are per channel
-under `thelounge.translate` (`channelStore.ts`); older messages are never
-translated (the switch-on moment is recorded). Nothing on a message
-object changes and nothing about unread or highlight counts does. Browser
-check: `tools/scenarios/translate-reading.mjs`, on the in-page fake engine
-(`?fakeTranslate`, `fakePort.ts`): it answers a batched request as
-numbered lines closed by `END`, fails a request whose text carries
-`[fail]` once (the retry succeeds), and logs every request onto
-`globalThis.__seanceTranslateFake` so a scenario can tell a batch from a
-fallback to singles.
+message on request in a channel that is off -- and brings a hidden
+translation back, at no cost, once the chip's "Show original only" has
+taken it away. An entry leaves when its message does: an edit or a REDACT
+drops it, and so do the message-limit trim, a part and a quit. The
+switch, the outgoing target (plan 3), formality, variant and the term
+memory are per channel under `thelounge.translate` (`channelStore.ts`);
+older messages are never translated (the switch-on moment is recorded),
+and a replayed one must be newer than this page's session too, so a
+reload does not re-translate a channel's backlog. The channel menu's
+"Translation…" switches to the channel and asks for the panel through
+`state.translation.panelFor`, which the view clears as it opens it.
+Nothing on a message object changes and nothing about unread or highlight
+counts does. Browser check: `tools/scenarios/translate-reading.mjs`, on
+the in-page fake engine (`?fakeTranslate`, `fakePort.ts`): it answers a
+batched request as numbered lines closed by `END`, fails a request whose
+text carries `[fail]` once (the retry succeeds), and logs every request
+onto `globalThis.__seanceTranslateFake` so a scenario can tell a batch
+from a fallback to singles.
 
 ## The worker
 
