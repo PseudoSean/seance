@@ -29,7 +29,10 @@ leaves the old files in place and exits 1.
    A gait stores one cycle; everything else stores every frame.
 4. **Travel** (`lib/travel.mjs`): the lowest planted foot slides back by exactly what the body
    moves forward, so integrating its velocity gives a travel that never slips and a sit that
-   never drifts. Segments marked `turn` flip the facing.
+   never drifts. Segments marked `turn` flip the facing. A segment may set `travel` (units/s)
+   to drive its own ground speed instead, when the rig's swing does not lift the feet clearly
+   enough for the stance measurement to trust — the approved mockups' puppy and bunny don't;
+   the audit still prints the measured stance speed beside the one actually applied.
 5. **Files** (`lib/svg.mjs`, `lib/build.mjs`): a wide stage (`sequence.stage.aspect` × the
    animal's height); one `<path>` per outline, far legs first, each morphing through the
    clips (`<animate attributeName="d">`, integer relative coordinates) chained by syncbase

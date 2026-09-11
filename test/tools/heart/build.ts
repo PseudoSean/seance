@@ -149,4 +149,28 @@ describe("tools/heart build", function () {
 		const {audit} = buildAnimal(short);
 		expect(audit.problems.join(" ")).to.include("ends on stage");
 	});
+
+	it("lets a segment override its ground speed, keeping the measured stance speed alongside it", function () {
+		const {audit: base} = buildAnimal(blob);
+		const withTravel = {
+			...blob,
+			sequence: {
+				...blob.sequence,
+				segments: [
+					{...blob.sequence.segments[0], travel: 50},
+					...blob.sequence.segments.slice(1),
+				],
+			},
+		};
+		const {audit} = buildAnimal(withTravel);
+		expect(audit.speeds[0].mean).to.equal(50);
+		// the measured stance speed is unchanged by the override
+		expect(audit.speeds[0].measured).to.be.closeTo(base.speeds[0].measured, 1e-9);
+		// the segment covers cycles(10) * dur(0.4) = 4 s; forcing 50 units/s
+		// instead of the ~100 units/s the feet actually measured should pull
+		// xEnd back by roughly that difference over those 4 s, regardless of
+		// what the feet were doing (within a frame's worth of slack)
+		const expectedDelta = (50 - base.speeds[0].measured) * 4;
+		expect(audit.xEnd - base.xEnd).to.be.closeTo(expectedDelta, 10);
+	});
 });
