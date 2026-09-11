@@ -26,17 +26,17 @@
 @font-face {
 	font-family: Nunito;
 	font-style: normal;
-	font-weight: 400;
+	font-weight: 600;
 	font-display: swap;
-	src: url("heart/nunito-400.woff2") format("woff2");
+	src: url("heart/nunito-600.woff2") format("woff2");
 }
 
 @font-face {
 	font-family: Nunito;
 	font-style: italic;
-	font-weight: 400;
+	font-weight: 600;
 	font-display: swap;
-	src: url("heart/nunito-400-italic.woff2") format("woff2");
+	src: url("heart/nunito-600-italic.woff2") format("woff2");
 }
 
 @font-face {
@@ -194,9 +194,11 @@
 
 /* ---- type ---- */
 
-/* Nunito at its regular 400 everywhere text is read (600 was tried and read
- * heavier in the app than in the mockup); 800 is its bold. Baloo 2 for the
- * names the eye jumps to: nicks, channel and network names, the header title.
+/* Nunito 600 everywhere text is read (the weight the mockup was approved at;
+ * a round at 400 was the user's call while the fonts were suspected of not
+ * loading, reversed once they were seen to); 800 is its bold. Baloo 2 for
+ * the names the eye jumps to: nicks, channel and network names, the header
+ * title.
  * .context-menu substituted for #context-menu: ContextMenu.vue renders
  * <ul id="context-menu">, not a class. */
 body,
@@ -207,7 +209,7 @@ body,
 #settings,
 #help {
 	font-family: Nunito, "Segoe UI", system-ui, sans-serif;
-	font-weight: 400;
+	font-weight: 600;
 }
 
 b,
@@ -233,10 +235,9 @@ strong,
 	background: var(--heart-paper);
 }
 
-/* Nunito + tabular-nums measures wider than style.css's fixed 12h columns
- * (07:13 AM at 82.9px in the 600 face vs. a 4.75rem/5.75rem box, wrapping
- * to two lines; the 400 face is a touch narrower and keeps the wider
- * columns); restated here, same selectors, so this file's cascade position
+/* Nunito 600 + tabular-nums measures wider than style.css's fixed 12h
+ * columns (07:13 AM at 82.9px vs. a 4.75rem/5.75rem box), wrapping to two
+ * lines; restated here, same selectors, so this file's cascade position
  * wins. The 24h-only width (also 4.75rem, shared with the seconds-only
  * selector above it in style.css) is left alone. */
 #chat.time-12h .time {

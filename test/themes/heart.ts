@@ -150,8 +150,8 @@ describe("the <3 theme's colours", function () {
 describe("the <3 theme's type", function () {
 	it("bundles Nunito and Baloo 2 and sets them at the chosen weights", function () {
 		for (const file of [
-			"heart/nunito-400.woff2",
-			"heart/nunito-400-italic.woff2",
+			"heart/nunito-600.woff2",
+			"heart/nunito-600-italic.woff2",
 			"heart/nunito-800.woff2",
 			"heart/baloo2-700.woff2",
 		]) {
@@ -163,7 +163,7 @@ describe("the <3 theme's type", function () {
 			/#chat \.header \{\s*background: var\(--heart-paper\);/
 		);
 		expect(css).to.match(
-			/body,[\s\S]{0,200}font-family:\s*Nunito[\s\S]{0,80}font-weight:\s*400/
+			/body,[\s\S]{0,200}font-family:\s*Nunito[\s\S]{0,80}font-weight:\s*600/
 		);
 	});
 

@@ -19,7 +19,7 @@ The theme is **one stylesheet plus static assets** (fonts, animated SVG characte
 | Topic            | Decision                                                                                                                                                                                                                                                                                                                                                                         |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Mechanism        | CSS only (no theme script). Mouse-tracking glitter dropped.                                                                                                                                                                                                                                                                                                                      |
-| Fonts            | Nunito for text at its regular weight 400 (600 was tried and read heavier in the app than in the mockup), Baloo 2 (700) for channel/network names and nicks. Bundled, OFL.                                                                                                                                                                                                       |
+| Fonts            | Nunito for text at **weight 600** (the mockup's weight; a round at 400 while the fonts were suspected of not loading was reversed on 2026-09-11), Baloo 2 (700) for channel/network names and nicks. Bundled, OFL.                                                                                                                                                               |
 | Message entrance | **Fade in**, 340 ms ease-out (chosen over pop and rise).                                                                                                                                                                                                                                                                                                                         |
 | Glitter          | On send, on hovering a message row, on reactions. **Four different bursts**, cycled so consecutive sends differ: sparks, hearts rising, four-point stars twinkling, confetti with stars.                                                                                                                                                                                         |
 | Scene            | Not a parade of floating images. A **meadow behind the whole chat**: sky fills the message area, hills and animals at the foot at a fixed scale; **animals are lightened (opaque) under text**; text gets a faint sky halo.                                                                                                                                                      |
@@ -65,8 +65,8 @@ Sidebar: a lilac→peach vertical gradient on `#sidebar` and `body` (so the gutt
 
 ### 3.2 Type
 
-- `@font-face` for Nunito (400 regular + italic, 800 for bold) and Baloo 2 (700), woff2 files under `client/themes/heart/` referenced relative to the stylesheet. webpack's `client/themes/*` copy pattern is extended to copy the subdirectory (`client/themes/**/*` → `themes/`), keeping the theme self-contained and offline.
-- Body text `font-weight: 400`. Nicks, channel and network names, headings in the settings: Baloo 2 700. Timestamps stay Nunito 400 at the muted tone with `font-variant-numeric: tabular-nums`.
+- `@font-face` for Nunito (600 regular + italic, 800 for bold) and Baloo 2 (700), woff2 files under `client/themes/heart/` referenced relative to the stylesheet. webpack's `client/themes/*` copy pattern is extended to copy the subdirectory (`client/themes/**/*` → `themes/`), keeping the theme self-contained and offline.
+- Body text `font-weight: 600`. Nicks, channel and network names, headings in the settings: Baloo 2 700. Timestamps stay Nunito 600 at the muted tone with `font-variant-numeric: tabular-nums`.
 - Sizes are untouched: the theme is colour, type and motion; layout stays `style.css`'s rem system.
 
 ## 4. Motion
@@ -182,7 +182,7 @@ Hearts from the puppy are part of its SVG (a small heart path with its own anima
 ## 7. App changes
 
 1. `helpers/channelSeed.ts` + `Chat.vue`: publish `data-scene` and `--channel-seed` (§5.2). Test in `test/helpers/channelSeed.ts`.
-2. `configuration.ts`: `{name: "heart", displayName: "ps <3", themeColor: "#f4f9ff"}`; `test/tests/build.ts`: add `heart` to the list of theme files expected in `public/themes/`, and expect `themes/heart/nunito-400.woff2` and `themes/heart/horse.svg`.
+2. `configuration.ts`: `{name: "heart", displayName: "ps <3", themeColor: "#f4f9ff"}`; `test/tests/build.ts`: add `heart` to the list of theme files expected in `public/themes/`, and expect `themes/heart/nunito-600.woff2` and `themes/heart/horse.svg`.
 3. `webpack.config.ts`: the themes copy pattern includes subdirectories.
 4. `docs/resources/themes.md`: the `heart` row and a section on the meadow and the generator; `CLAUDE.md` gets one paragraph pointing there; `docs/projects/heart-theme.md` carries this spec once the work lands (per the repo's `docs/superpowers/` convention).
 
