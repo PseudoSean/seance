@@ -58,8 +58,26 @@ export function decodePath(d) {
 	return out;
 }
 
-/** Attribute numbers: up to four decimals, no trailing zeros. */
-export const fmt = (n) => String(Math.round(n * 1e4) / 1e4);
+/** Attribute numbers: up to `d` decimals (four by default), no trailing zeros. */
+export const fmt = (n, d = 4) => {
+	const p = 10 ** d;
+	return String(Math.round(n * p) / p);
+};
+
+/**
+ * The translate's own keyTime precision: six decimals, not the usual four.
+ * A long loop period (a minute or more) makes four decimals of a *fraction*
+ * of it a coarse ~few-millisecond grid in absolute time — fine for a gait's
+ * own frame spacing, but not for a ramped segment's speed, whose stored
+ * *position* has to land on whatever time the file actually keeps once
+ * rounded, or the two disagree and a frame-to-frame velocity check reads a
+ * spurious jump that was never in the underlying motion (`build.mjs`'s
+ * `travelCurve` snaps a ramp's virtual samples to this exact grid before
+ * computing their positions, for the same reason). Applied to every
+ * translate keyTime and position, gait and ramp alike, so the whole curve
+ * — not just the ramped part — reads back at the precision it was built to.
+ */
+export const TRAVEL_DECIMALS = 6;
 
 const animate = (attrs) =>
 	`<animate${Object.entries(attrs)
@@ -94,7 +112,7 @@ export function animalSvg({viewBox: vb, k, stageW, layers, clips, travel, flip, 
 			attrs.attributeName = "d";
 			attrs.calcMode = "linear";
 			attrs.values = c.values.map((f) => f[i]).join(";");
-			attrs.keyTimes = c.keyTimes.map(fmt).join(";");
+			attrs.keyTimes = c.keyTimes.map((t) => fmt(t)).join(";");
 			attrs.dur = `${fmt(c.dur)}s`;
 			attrs.begin = i === last ? c.begin : `${c.id}.begin`;
 			if (c.repeat > 1) attrs.repeatCount = c.repeat;
@@ -125,15 +143,15 @@ export function animalSvg({viewBox: vb, k, stageW, layers, clips, travel, flip, 
 		  )}" dur="${fmt(travel.period)}s" repeatCount="indefinite"/>`
 		: "";
 	const translate = `<animateTransform attributeName="transform" type="translate" calcMode="linear" values="${travel.xs
-		.map((x) => `${fmt(x)} 0`)
-		.join(";")}" keyTimes="${travel.keyTimes.map(fmt).join(";")}" dur="${fmt(
-		travel.period
-	)}s" repeatCount="indefinite"/>`;
+		.map((x) => `${fmt(x, TRAVEL_DECIMALS)} 0`)
+		.join(";")}" keyTimes="${travel.keyTimes
+		.map((t) => fmt(t, TRAVEL_DECIMALS))
+		.join(";")}" dur="${fmt(travel.period)}s" repeatCount="indefinite"/>`;
 	const fade = animate({
 		attributeName: "opacity",
 		calcMode: "linear",
 		values: "0;0;1;1;0;0",
-		keyTimes: travel.fadeKeyTimes.map(fmt).join(";"),
+		keyTimes: travel.fadeKeyTimes.map((t) => fmt(t)).join(";"),
 		dur: `${fmt(travel.period)}s`,
 		repeatCount: "indefinite",
 	});

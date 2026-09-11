@@ -8,7 +8,7 @@
 import {cyc, sampleGait, samplePose, sampleWobble} from "./sampler.mjs";
 import {align, feetOf, outlineFrame} from "./outline.mjs";
 import {stanceTravel} from "./travel.mjs";
-import {animalSvg, encodePath, fmt, mix, SKY, stillSvg} from "./svg.mjs";
+import {animalSvg, encodePath, fmt, mix, SKY, stillSvg, TRAVEL_DECIMALS} from "./svg.mjs";
 
 /** The pose a gait is in at cycle phase t (0–1). */
 export function gaitPose(gait, channels, t) {
@@ -106,12 +106,58 @@ export function outlineSequence(def, poses, segs) {
 }
 
 /**
+ * The velocity a segment's numeric or ramped `travel` applies at sequence
+ * time `t`: a number is a constant; `[from, to]` ramps linearly across the
+ * segment's own span (`seg.t0`–`seg.t1`), `from` at the start and `to` at
+ * the end, so a gait switch that changes speed does not also stall or jump.
+ * Clamped to `[t0, t1]` — `segStep` below only ever asks for a time inside
+ * the segment's own span, but the clamp keeps this safe to call with
+ * anything.
+ */
+function rampV(seg, t) {
+	const [from, to] = seg.travel;
+	const span = seg.t1 - seg.t0;
+	if (span <= 0) return from;
+	const w = Math.min(1, Math.max(0, (t - seg.t0) / span));
+	return from + (to - from) * w;
+}
+
+/**
+ * `seg`'s overridden rate at time `t` (its own ramp or a constant), or
+ * `null` when `seg` has no override and the caller should fall back to the
+ * measured stance velocity instead.
+ */
+function segRate(seg, t) {
+	if (Array.isArray(seg?.travel)) return rampV(seg, t);
+	if (typeof seg?.travel === "number") return seg.travel;
+	return null;
+}
+
+/** The distance `seg`'s overridden rate covers from `ta` to `tb` (both within its own span), or `null`. */
+function segStep(seg, ta, tb) {
+	const va = segRate(seg, ta);
+	const vb = segRate(seg, tb);
+	return va === null || vb === null ? null : ((va + vb) / 2) * (tb - ta);
+}
+
+/**
  * The travel over every sampled frame, facing flipped at each segment marked
- * `turn`. A segment may set a numeric `travel` (units/s, forward in the
- * facing direction) to override the stance measurement for its own frames —
- * for a rig whose swing does not lift the feet clearly, the plant-detection
- * this is built on cannot be trusted. `v` stays the measured velocity either
- * way; only the accumulated position is affected.
+ * `turn`. A segment may set `travel` (units/s, forward in the facing
+ * direction) to override the stance measurement for its own frames — for a
+ * rig whose swing does not lift the feet clearly, the plant-detection this
+ * is built on cannot be trusted — as a constant number, or `[from, to]` to
+ * ramp linearly across the segment (a step's distance is then the trapezoid
+ * under the ramp between the two frames' velocities, exact for a line, so a
+ * gait blend's speed never stalls to zero or jumps at the switch). A step
+ * that crosses into the next segment is split exactly at the boundary and
+ * each half integrated under its own segment's rate — evaluating a ramp's
+ * neighbour's frame spacing under the ramp's own formula (or vice versa)
+ * would otherwise dip or spike right at the switch, since neither side's
+ * frames land exactly on the shared boundary time. The split only applies
+ * when both sides have an override; a boundary next to a measured (no
+ * override) segment keeps the single whole-step rule, since there is no
+ * continuous function on the measured side to split against. `v` stays the
+ * measured velocity either way; only the accumulated position is affected.
  */
 export function travelOf(def, poses, segs) {
 	const feetFrames = poses.map((p) => ({t: p.t, feet: feetOf(def.rig, p.v)}));
@@ -129,16 +175,90 @@ export function travelOf(def, poses, segs) {
 			flips.push(poses[i].t);
 		}
 		if (i > 0) {
-			const seg = owner[i];
-			const step =
-				typeof seg?.travel === "number"
-					? seg.travel * (poses[i].t - poses[i - 1].t)
-					: x[i] - x[i - 1];
+			const segA = owner[i - 1];
+			const segB = owner[i];
+			const ta = poses[i - 1].t;
+			const tb = poses[i].t;
+			let step = null;
+			if (segA !== segB) {
+				const boundary = segB.t0;
+				const partA = segStep(segA, ta, boundary);
+				const partB = segStep(segB, boundary, tb);
+				if (partA !== null && partB !== null) step = partA + partB;
+			}
+			if (step === null) step = segStep(segB, ta, tb);
+			if (step === null) step = x[i] - x[i - 1];
 			acc += facing * step;
 		}
 		xs.push(acc);
 	}
 	return {xs, v, flips};
+}
+
+/**
+ * The (time, position) samples for the SVG's translate animation: the same
+ * per-pose curve `travelOf` returns, except within a ramp segment
+ * (`Array.isArray(seg.travel)`), subdivided into at least `steps` (never
+ * fewer than its own pose count — this only adds density, on the side where
+ * poses are the sparse one) virtual samples across its own span, regardless
+ * of how many poses (and so outline frames — every outline frame costs
+ * bytes) it has. The translate is its own `<animateTransform>`, independent
+ * of the outline's `d`-morph clips, so it is free to sample the ramp's
+ * exact linear speed as finely as it needs to look smooth at no outline
+ * cost — the outline only needs enough frames for the shape blend itself to
+ * look right.
+ *
+ * Every subdivided time is snapped to the same `TRAVEL_DECIMALS`-precision
+ * keyTime fraction `fmt` (svg.mjs) will round it to before its matching
+ * position is computed, and integration carries on from the *snapped*
+ * previous point, not the ideal one: `fmt` rounds the emitted keyTime and
+ * position independently, and a fine subdivision's ideal spacing (of a
+ * short ramp against the whole loop's period) can be only a few multiples
+ * of that rounding grain, so computing a position for a time the file will
+ * not actually store reads back as a wrong, jumpy velocity once the
+ * (different) stored time is paired with it. Snapping first keeps every
+ * stored position exactly consistent with its stored time; two ideal steps
+ * landing on the same grain collapse to one (`tb <= ta`), self-limiting
+ * `steps` to whatever the grain actually supports for this span and
+ * period. A ramp segment's own last sample lands exactly on its `t1`, which
+ * is exactly the next segment's first pose time too; `push` collapses that
+ * shared instant to one keyframe rather than a zero-length step.
+ */
+export function travelCurve(poses, xs, segs, flips, first, period, steps = 20) {
+	const grid = 10 ** TRAVEL_DECIMALS;
+	const snap = (t) => (Math.round(((first + t) / period) * grid) / grid) * period - first;
+	const times = [];
+	const out = [];
+	const push = (t, x) => {
+		if (times.length && times[times.length - 1] === t) {
+			out[out.length - 1] = x;
+		} else {
+			times.push(t);
+			out.push(x);
+		}
+	};
+	for (const seg of segs) {
+		if (Array.isArray(seg.travel) && seg.t1 > seg.t0) {
+			// never sample coarser than the segment's own poses already do —
+			// `steps` only adds density where the poses are the sparse side
+			const n = Math.max(steps, seg.count);
+			const facing = flips.filter((t) => t <= seg.t0).length % 2 === 0 ? 1 : -1;
+			let acc = xs[seg.start];
+			let ta = seg.t0;
+			push(ta, acc);
+			for (let k = 1; k <= n; k++) {
+				const ideal = seg.t0 + ((seg.t1 - seg.t0) * k) / n;
+				const tb = k === n ? seg.t1 : snap(ideal);
+				if (tb <= ta) continue;
+				acc += facing * ((rampV(seg, ta) + rampV(seg, tb)) / 2) * (tb - ta);
+				push(tb, acc);
+				ta = tb;
+			}
+		} else {
+			for (let i = seg.start; i < seg.start + seg.count; i++) push(poses[i].t, xs[i]);
+		}
+	}
+	return {times, xs: out};
 }
 
 /**
@@ -266,7 +386,8 @@ export function buildAnimal(def) {
 				: `${segs[i - 1].id}.end`,
 	}));
 	const P = sequence.period;
-	const xLast = (x0 + xs[xs.length - 1]) * k;
+	const curve = travelCurve(poses, xs, segs, flips, sequence.first, P);
+	const xLast = (x0 + curve.xs[curve.xs.length - 1]) * k;
 	const {fade, keyTimes: fadeKeyTimes} = fadeTimes({
 		first: sequence.first,
 		onStage,
@@ -282,11 +403,11 @@ export function buildAnimal(def) {
 		fadeKeyTimes,
 		keyTimes: [
 			0,
-			...poses.map((p) => (sequence.first + p.t) / P),
+			...curve.times.map((t) => (sequence.first + t) / P),
 			(sequence.first + onStage) / P,
 			1,
 		],
-		xs: [x0 * k, ...xs.map((x) => (x0 + x) * k), xLast, xLast],
+		xs: [x0 * k, ...curve.xs.map((x) => (x0 + x) * k), xLast, xLast],
 	};
 	const flip = flips.length ? {at: (sequence.first + flips[0]) / P} : null;
 	const heartSeg = segs.find((s) => s.hearts);
@@ -330,16 +451,37 @@ export function buildAnimal(def) {
 	const speeds = segs.map((s) => {
 		const vs = v.slice(s.start, s.start + s.count);
 		const measured = vs.reduce((a, b) => a + Math.abs(b), 0) / vs.length;
+		const mean = Array.isArray(s.travel)
+			? (s.travel[0] + s.travel[1]) / 2
+			: typeof s.travel === "number"
+			? s.travel
+			: measured;
+		const hold = (s.hold ?? 0) > 0 || !!s.wobble;
+		if (hold && Math.abs(mean) >= 5)
+			problems.push(
+				`${s.id} (${
+					s.gait ?? s.blendTo ?? s.wobble ?? s.pose
+				}) is a hold but applies ${mean.toFixed(1)} units/s (must be < 5)`
+			);
 		return {
 			id: s.id,
 			kind: s.gait ?? s.blendTo ?? s.wobble ?? s.pose,
-			mean: typeof s.travel === "number" ? s.travel : measured,
+			mean,
 			measured,
+			hold,
 		};
 	});
+	const clipTotalDur = clips.reduce((a, c) => a + c.dur * c.repeat, 0);
+	if (Math.abs(clipTotalDur - onStage) > 0.005)
+		problems.push(
+			`the clip chain totals ${clipTotalDur.toFixed(3)} s but ${onStage.toFixed(
+				3
+			)} s was sampled (must agree within 5 ms)`
+		);
 	const audit = {
 		frames: segs.reduce((a, s) => a + s.frames.length, 0),
 		onStage,
+		clipTotalDur,
 		gap,
 		retries,
 		failures,

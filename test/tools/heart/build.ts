@@ -1,6 +1,12 @@
 import {expect} from "chai";
 import {Circle, Ellipse, P} from "../../../tools/heart/lib/outline.mjs";
-import {buildAnimal, fadeTimes, samplePoses} from "../../../tools/heart/lib/build.mjs";
+import {
+	buildAnimal,
+	fadeTimes,
+	samplePoses,
+	travelCurve,
+	travelOf,
+} from "../../../tools/heart/lib/build.mjs";
 import {decodePath} from "../../../tools/heart/lib/svg.mjs";
 
 /**
@@ -74,7 +80,11 @@ const blob = {
 		stage: {aspect: 3},
 		segments: [
 			{gait: "step", cycles: 10, fps: 10},
-			{pose: "rest", hold: 0.3, blend: 0.2, fps: 10, turn: true},
+			// travel: 0 pins the stop: blending the walking leg into rest over
+			// 0.2s reads real but spurious stance velocity from the transition,
+			// which the hold-speed audit rule (a stopped, turning pose must not
+			// travel) correctly catches without it
+			{pose: "rest", hold: 0.3, blend: 0.2, fps: 10, turn: true, travel: 0},
 			{wobble: "nod", pose: "rest", secs: 0.5, fps: 10},
 			{gait: "step", cycles: 14, fps: 10},
 		],
@@ -222,8 +232,133 @@ describe("tools/heart build", function () {
 		// the segment covers cycles(10) * dur(0.4) = 4 s; forcing 50 units/s
 		// instead of the ~100 units/s the feet actually measured should pull
 		// xEnd back by roughly that difference over those 4 s, regardless of
-		// what the feet were doing (within a frame's worth of slack)
+		// what the feet were doing (within a couple of frames' worth of slack:
+		// segment 0 now has an override where segment 1, the next one, also
+		// does (travel: 0, pinning its stop) — that boundary step splits at
+		// the shared frame between the two rates instead of using segment 1's
+		// alone, which was 0 either way in the un-overridden `base` case but
+		// picks up a sliver of segment 0's overridden rate here)
 		const expectedDelta = (50 - base.speeds[0].measured) * 4;
-		expect(audit.xEnd - base.xEnd).to.be.closeTo(expectedDelta, 10);
+		expect(audit.xEnd - base.xEnd).to.be.closeTo(expectedDelta, 15);
+	});
+
+	it("ramps travel linearly across a segment instead of holding a constant speed", function () {
+		const withRamp = {
+			...blob,
+			sequence: {
+				...blob.sequence,
+				segments: [
+					{...blob.sequence.segments[0], travel: [50, 0]},
+					...blob.sequence.segments.slice(1),
+				],
+			},
+		};
+		const {poses, segs} = samplePoses(withRamp);
+		const {xs} = travelOf(withRamp, poses, segs);
+		const seg = segs[0];
+		const steps: number[] = [];
+
+		for (let i = seg.start + 1; i < seg.start + seg.count; i++) {
+			steps.push(xs[i] - xs[i - 1]);
+		}
+
+		// the ramp shrinks the step size across the segment (50 units/s down to 0)
+		for (let i = 1; i < steps.length; i++) {
+			expect(steps[i]).to.be.at.most(steps[i - 1] + 1e-9);
+		}
+
+		expect(steps[0]).to.be.greaterThan(steps[steps.length - 1] * 5);
+		expect(steps[steps.length - 1]).to.be.closeTo(0, 1);
+
+		const {audit} = buildAnimal(withRamp);
+		expect(audit.speeds[0].mean).to.be.closeTo(25, 1); // (50 + 0) / 2
+	});
+
+	it("travelCurve subdivides a sparse, short ramp segment finer than its own poses, staying smooth and strictly increasing", function () {
+		// a short (0.3 s), low-fps blend, mirroring the horse's actual gait
+		// blends: few native poses, so travelCurve's own subdivision is what
+		// has to carry the smoothness. The ramp doesn't end at 0 (50 -> 10,
+		// not 50 -> 0): a relative jump next to a true zero is unbounded by
+		// construction, whatever the sampling, and isn't what's under test.
+		const sparseRamp = {
+			...blob,
+			sequence: {
+				...blob.sequence,
+				segments: [
+					{gait: "step", cycles: 1, fps: 10},
+					{pose: "rest", hold: 0, blend: 0.3, fps: 10, travel: [50, 10]},
+				],
+			},
+		};
+		const {poses, segs} = samplePoses(sparseRamp);
+		const {xs, flips} = travelOf(sparseRamp, poses, segs);
+		const seg = segs[1];
+		const curve = travelCurve(
+			poses,
+			xs,
+			segs,
+			flips,
+			sparseRamp.sequence.first,
+			sparseRamp.sequence.period
+		);
+
+		// more virtual samples across the ramp than its own sparse (0.3 s at
+		// 10 fps, only a few frames) poses -- the whole point of decoupling
+		// the translate from the outline's frame count
+		expect(curve.times.length).to.be.greaterThan(poses.length);
+
+		// every stored time strictly increases: the snap-to-rounding-grid
+		// logic never collapses two samples into a backward or zero step
+		for (let i = 1; i < curve.times.length; i++) {
+			expect(curve.times[i]).to.be.greaterThan(curve.times[i - 1]);
+		}
+
+		// within the ramp segment's own span (excluding the handoff step from
+		// the previous, unrelated segment into it), consecutive velocities
+		// never jump wildly (a snapped time paired with the wrong position,
+		// the bug this function exists to avoid, would show up as a spike)
+		const segStart = curve.times.findIndex((t) => t === seg.t0);
+		let worstJump = 0;
+
+		for (let i = segStart + 2; i < curve.times.length && curve.times[i] <= seg.t1 + 1e-9; i++) {
+			const va =
+				(curve.xs[i - 1] - curve.xs[i - 2]) / (curve.times[i - 1] - curve.times[i - 2]);
+			const vb = (curve.xs[i] - curve.xs[i - 1]) / (curve.times[i] - curve.times[i - 1]);
+
+			if (Math.abs(va) < 1) {
+				continue;
+			}
+
+			worstJump = Math.max(worstJump, Math.abs(vb - va) / Math.abs(va));
+		}
+
+		expect(worstJump).to.be.lessThan(0.2);
+	});
+
+	it("flags a hold or wobble segment whose applied speed is not near zero", function () {
+		const stalls = {
+			...blob,
+			sequence: {
+				...blob.sequence,
+				segments: [
+					blob.sequence.segments[0],
+					// drop the fixture's travel: 0 pin, reverting to the raw
+					// (spuriously high) measured stance speed during the blend
+					{...blob.sequence.segments[1], travel: undefined},
+					...blob.sequence.segments.slice(2),
+				],
+			},
+		};
+		const {audit} = buildAnimal(stalls);
+		expect(audit.problems.join(" ")).to.include("is a hold but applies");
+	});
+
+	it("flags a clip chain whose total duration disagrees with the sampled onStage", function () {
+		const {audit} = buildAnimal(blob);
+		// by construction (both derived from the same rounded frame counts)
+		// this always agrees for a well-formed sequence; pin the invariant
+		// itself, since nothing here can legitimately break it
+		expect(audit.clipTotalDur).to.be.closeTo(audit.onStage, 0.005);
+		expect(audit.problems.join(" ")).to.not.include("clip chain");
 	});
 });
