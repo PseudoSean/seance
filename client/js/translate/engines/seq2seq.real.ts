@@ -19,7 +19,12 @@ export function configureTransformers(options: {modelBase?: string; ortBase: str
 		env.remotePathTemplate = "{model}/";
 	}
 
-	env.backends.onnx.wasm.wasmPaths = options.ortBase;
+	// `wasm` is declared readonly on the library's Env type (only its own
+	// fields, like wasmPaths, are meant to be mutated) and, through the
+	// Partial<Env> that TransformersEnvironment wraps it in, possibly
+	// undefined to the type checker; at runtime the library always
+	// populates it before this runs.
+	env.backends.onnx.wasm!.wasmPaths = options.ortBase;
 }
 
 export const realSeq2seqDeps: Seq2seqDeps = {

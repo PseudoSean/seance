@@ -62,6 +62,21 @@ describe("public folder", function () {
 		expect(fs.existsSync(path.join(publicFolder, "js", "bundle.js"))).to.be.true;
 		expect(fs.existsSync(path.join(publicFolder, "js", "bundle.vendor.js"))).to.be.true;
 		expect(fs.existsSync(path.join(publicFolder, "js", "push.js"))).to.be.true;
+		expect(fs.existsSync(path.join(publicFolder, "js", "translate-worker.js"))).to.be.true;
+	});
+
+	it("the translation worker is self-contained and the ORT wasm files are copied", function () {
+		const worker = fs.readFileSync(
+			path.join(publicFolder, "js", "translate-worker.js"),
+			"utf8"
+		);
+
+		expect(worker).to.not.include("bundle.vendor.js");
+
+		const ort = fs.readdirSync(path.join(publicFolder, "js", "ort"));
+
+		expect(ort.some((name) => name.endsWith(".wasm"))).to.be.true;
+		expect(ort.some((name) => name.endsWith(".mjs"))).to.be.true;
 	});
 
 	it("style files are built", function () {

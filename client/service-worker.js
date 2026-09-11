@@ -86,8 +86,12 @@ const shellPaths = [
 	"img/logo-tile.png",
 ];
 
-// Paths that must never be served from cache (Cloudflare challenge endpoints).
-const excludedPathsFromCache = /^cdn-cgi\//;
+// Paths that must never be served from cache: Cloudflare challenge
+// endpoints, and `models/`, where a deploy that mirrors the translation
+// weights next to the app puts them (config.json `translation.modelBase`);
+// a gigabyte of weights has no place in the shell cache, and the ML
+// libraries keep their own Cache Storage entries.
+const excludedPathsFromCache = /^(cdn-cgi|models)\//;
 
 self.addEventListener("install", function (event) {
 	// A push-only worker has no shell to cache (nothing lives under its

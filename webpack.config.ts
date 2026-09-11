@@ -195,7 +195,7 @@ const config: webpack.Configuration = {
 		// Clean the output directory before emit — except the service worker's
 		// push chunk, which the second configuration below emits into the same
 		// tree (and runs after this one; see `dependencies`).
-		clean: {keep: /^js\/push\.js(\.map|\.LICENSE\.txt)?$/},
+		clean: {keep: /^js\/(push\.js|translate-worker\.js)(\.map|\.LICENSE\.txt)?$|^js\/ort\//},
 		path: path.resolve(__dirname, "public"),
 		filename: "[name]",
 		// Lazily loaded chunks (the highlighter, its Prism grammars, the
@@ -418,6 +418,58 @@ const pushConfig: webpack.Configuration = {
 	},
 };
 
+// The translation worker (client/js/translate/*), bundled for a dedicated
+// worker: its own configuration for the same reason as the push chunk (the
+// app's vendor cache group must not pull WebLLM and transformers.js into
+// js/bundle.vendor.js, which a worker cannot load). The ONNX Runtime wasm
+// files transformers.js loads at run time are copied next to it into
+// js/ort/ so a deploy needs no CDN; seq2seq.real.ts points the library
+// there. `dependencies` runs it after the app build (whose `clean` would
+// otherwise race its output).
+const translateConfig: webpack.Configuration = {
+	name: "translate",
+	dependencies: ["app"],
+	mode: isProduction ? "production" : "development",
+	target: "webworker",
+	entry: {
+		"js/translate-worker.js": [path.resolve(__dirname, "client/js/translate/worker-entry.ts")],
+	},
+	devtool: "source-map",
+	output: {
+		path: path.resolve(__dirname, "public"),
+		filename: "[name]",
+		publicPath: "auto",
+		clean: false,
+	},
+	performance: {
+		hints: false,
+	},
+	resolve: {
+		extensions: [".ts", ".js"],
+		// transformers.js references Node modules behind its `browser` field;
+		// the webworker target honours that field, these are belt and braces.
+		fallback: {fs: false, path: false, url: false, crypto: false},
+	},
+	module: {
+		rules: [makeTsRule()],
+	},
+	plugins: [
+		new CopyPlugin({
+			patterns: [
+				{
+					from: "ort-wasm-simd-threaded*",
+					context: path.resolve(__dirname, "node_modules/onnxruntime-web/dist"),
+					to: "js/ort/[name][ext]",
+				},
+			],
+		}),
+	],
+	optimization: {
+		splitChunks: false,
+		runtimeChunk: false,
+	},
+};
+
 export default (env: any, argv: any) => {
 	if (argv.mode === "development") {
 		config.target = "node";
@@ -455,5 +507,5 @@ export default (env: any, argv: any) => {
 		return config;
 	}
 
-	return [config, pushConfig];
+	return [config, pushConfig, translateConfig];
 };
