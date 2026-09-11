@@ -1,8 +1,10 @@
 // The <3 theme in a real browser (docs/projects/heart-theme.md): picking it
 // in Appearance swaps the stylesheet, the chat root carries the
-// conversation's seed, the message area carries the meadow, a message fades
-// in, an own pending message carries its glitter, text keeps its contrast on
-// the sky, and two channels grow two different meadows.
+// conversation's seed, the message area carries the meadow and its animals
+// as fourteen background layers, a message fades in, an own pending message
+// carries its glitter, a reaction bursts on arrival, text keeps its contrast
+// on the sky, two channels grow two different meadows, and a screenshot
+// catches one of #seance's visitors.
 //
 //   corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/theme-heart.mjs
@@ -142,6 +144,14 @@ export default async function run(page) {
 		"the message area carries the meadow's layers",
 		bg.split("radial-gradient").length >= 5
 	);
+	page.check(
+		"the meadow carries the animals as layers",
+		/heart\/(horse|puppy|bunny)(-far)?\.svg/.test(bg)
+	);
+	const layers = await page.evaluate(
+		`getComputedStyle(document.querySelector('#chat .chat-view[data-type="channel"] .chat')).backgroundSize.split(",").length`
+	);
+	page.check(`fourteen background layers (${layers})`, layers === 14);
 
 	const anim = await page.evaluate(
 		`getComputedStyle(document.querySelector("#chat .msg")).animationName`
@@ -184,6 +194,30 @@ export default async function run(page) {
 		label: "the held-back echo",
 	});
 
+	// The first reaction on a message enters the whole group; the theme
+	// bursts on it. The enter class lives 0.9 s (heart-hold), long enough
+	// for one round trip — but it can also be gone before a separate poll
+	// catches it, so submit and poll in one evaluate (requestAnimationFrame,
+	// up to 4 s) rather than a submit followed by a separate page.waitFor.
+	const reactionBurst = await page.evaluate(
+		`(async () => {
+			const i = document.getElementById("input");
+			i.value = "/react 💖";
+			i.dispatchEvent(new Event("input", {bubbles: true}));
+			document.getElementById("form").requestSubmit();
+			const deadline = performance.now() + 4000;
+			for (;;) {
+				const el = document.querySelector(
+					"#chat .reactions-enter-active .msg-reaction:not(.msg-reaction-add)"
+				);
+				if (el) return getComputedStyle(el, "::before").animationName;
+				if (performance.now() > deadline) return "none";
+				await new Promise(requestAnimationFrame);
+			}
+		})()`
+	);
+	page.check(`a reaction bursts (${reactionBurst})`, reactionBurst.includes("heart-sparkle"));
+
 	for (const [label, fg, bg] of [
 		[
 			"text on sky",
@@ -201,6 +235,11 @@ export default async function run(page) {
 	}
 
 	await page.screenshot("heart-seance");
+
+	// #seance is scene 3: the horse is slot A and its first visit starts 2 s
+	// after the file loaded, lasting about 11 s.
+	await page.sleep(2500);
+	await page.screenshot("heart-visitor");
 
 	await page.click(`.channel-list-item[data-name="#kittens"]`);
 	await page.waitFor(`document.querySelector("#input")`, {label: "in #kittens"});

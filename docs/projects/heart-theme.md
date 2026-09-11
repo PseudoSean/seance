@@ -1,12 +1,38 @@
 # The `<3` theme
 
-Date: 2026-09-10. Branch `theme-heart` (worktree `.claude/worktrees/theme-heart`). Status: plan 1 (theme, motion, meadow's sky) landed; plans 2–3 (the animals) follow.
+Date: 2026-09-10. Branch `theme-heart` (worktree `.claude/worktrees/theme-heart`). Status: plan 1 (theme, motion, meadow's sky) and plan 2 (the animals) landed; plan 3 (the remaining seven animals) follows.
 
 Mockups the decisions were made on (private artifacts, viewable only by their author):
 
 - The whole theme in a mock of the app: https://claude.ai/code/artifact/5b2eb3b8-7be8-49ba-a00d-4ae7741c57f4
 - The character pipeline (horse, puppy, bunny): https://claude.ai/code/artifact/8f7564e2-c793-4962-9f41-7e00c1e795bc
 - Earlier rounds: fonts, parade vs. scene, placements, per-channel scenes, gaits.
+
+## Plan 2 (landed 2026-09-11)
+
+`docs/superpowers/plans/2026-09-11-theme-heart-animals.md` implements §5.4–5.7 and §6 (the animals) with these deviations from the spec:
+
+1. Routes live inside the SVG, not in CSS keyframes: a background image's SMIL timeline starts when the image loads and cannot be phased from CSS, so each file is a wide stage the animal crosses, stops on, turns on and leaves by its own `<animateTransform>`s; CSS only places the stage.
+2. Animals are background layers on `#chat .chat`, not pseudo-elements, so a nearer hill passes in front of a distant visitor's feet for free; which animal a slot shows is a custom property per scene.
+3. Travel is derived from the planted feet (the lowest foot on the ground moves backward by what the body moves forward), so a gait never slides and a sit never drifts — no hand-tuned speeds, except decision 9.
+4. Gait cycles are stored once and repeated, sequences are chained with syncbase timing (`begin="s1.end"`), and coordinates are integer relative deltas, which is what brings a horse under 200 KB.
+5. The rainbow rises from behind the hills instead of fading: `background-position-y` is a longhand the clouds' `background-position-x` animation does not touch, so the two animate side by side.
+6. The idle pause (§5.5) is dropped — the user's call on 2026-09-11 ("don't freeze the animations while the user is typing").
+7. Two still files per animal (`-still.svg`, `-far-still.svg`) so reduced motion shows the cast in both tints.
+8. Casting is per scene, phase is per file: two channels with the same scene show the same visitors at the same moments (the image is one resource); the seed still shifts where on the stage each slot is framed, the hills, the hue and the clouds.
+9. A gait segment may set `travel: <units/s>` in its sequence, overriding the measured stance speed: the approved mockups' puppy and bunny bounded and hopped in place with the feet never clearly lifted, so the planted-foot measurement could not carry them. The audit prints the measured speed beside the applied one; the horse keeps the measurement.
+10. The rainbow arc is `radial-gradient(circle farthest-side at 50% 100%, …)` — `closest-side` is degenerate for a circle centred on the box's bottom edge.
+
+Each animal's first visit starts after its file loads: 2 s (horse), 7 s (bunny), 14 s (puppy), on 60 s, 50 s and 75 s loops. The horse's gallop covers about a body length a stride — what the approved rig's leg swing gives, feet locked.
+
+### Live-test rounds (2026-09-11)
+
+Four changes came from the user's live feedback on the real app, outside the plan text:
+
+- The send burst hangs off the text column (`--heart-text-x` on `#chat`, per clock setting).
+- The header is paper (`--heart-paper`), not sky.
+- The nick column has no rule.
+- Fonts are Google Fonts' variable files, the latin subset — the static instances first fetched were the latin-ext subset and drew nothing (`tools/heart/fetch-fonts.mjs` documents the trap).
 
 ## 1. What it is
 
@@ -120,6 +146,8 @@ Both come from `helpers/channelSeed.ts`: FNV-1a over the lower-cased name of the
 
 ### 5.4 Animals
 
+**Implemented, plan 2 (landed 2026-09-11), with decisions 1–4 and 7–10 above** — animals are layers on `#chat .chat`, not pseudo-elements, and their routes live inside the SVG rather than as CSS keyframes; the rest of this section describes the spec's original approach, superseded by those decisions.
+
 Each animal is a **self-animating SVG file** (`client/themes/heart/<animal>.svg`): the near silhouette and the far legs as two paths in the animal's own pastel and its far tint (baked as colours; the SVG is an image; a distant-visitor variant `<animal>-far.svg` carries the far tint on both), animated with SMIL `<animate attributeName="d">` between resampled outlines (§6). The file plays its behaviour sequence on a loop (walk, run, stop, sit, look, turn) and carries its own idle pose.
 
 The theme places animals with pseudo-elements on existing elements (`.messages::before/::after`, `#chat .chat-view::before/::after`, `#chat-container::before/::after`, `#chat::before/::after`): up to eight slots. A slot is `position: absolute; bottom: <ground>; height: calc(var(--strip) * ratio); background: url(heart/horse.svg) no-repeat / contain`, and moves along a **route** — CSS keyframes on `transform` (translateX across the width, `scaleX(-1)` to face the other way) whose timing matches the SVG's own sequence (the generator writes both, §6). A far visitor is smaller, paler (`filter: brightness(1.35) saturate(0.7)`) and higher up. Slots run on 90–140 s loops with long gaps, so at most one or two visitors are on screen and the meadow is often empty, which is what makes an arrival an event.
@@ -128,19 +156,27 @@ Direction changes: the route flips `scaleX` while the character is stopped (sitt
 
 ### 5.5 Idle
 
+**Dropped, plan 2 (landed 2026-09-11), decision 6 above** — the user's call on 2026-09-11: don't freeze the meadow while the composer has focus. Nothing below is implemented.
+
 `#chat-container:has(#input:focus) .chat` pauses every route (`animation-play-state: paused`) and swaps each slot's image for the animal's still (`<animal>-still.svg`, one frame, generated too) so a paused horse does not gallop in place. Focus leaves, the meadow resumes.
 
 ### 5.6 Reduced motion
 
+**Implemented, plan 2 (landed 2026-09-11), decision 7 above** (two still files per animal, near and far tint).
+
 Under `prefers-reduced-motion: reduce` the meadow shows sky, hills, and two still animals (the still files), nothing moves.
 
 ### 5.7 Budget
+
+**Implemented, plan 2 (landed 2026-09-11)**; measured sizes are in §6.4's rows and the generator's audit.
 
 - Only `transform`, `opacity` and `background-position` animate. No layout, no filters animating.
 - Each SVG ≤ 120 KB uncompressed (§6.4), stills ≤ 6 KB; total assets for the theme ≤ 1 MB (fonts ≈ 150 KB, animals ≈ 800 KB, gzip ≈ ¼ of that on the wire).
 - Phones keep the meadow, reduced: under `max-width: 600px` the strip height drops to 6.5rem and only two animal slots stay active (the rest are hidden).
 
 ## 6. Characters: the pipeline
+
+**Implemented, plan 2 (landed 2026-09-11), for horse, puppy and bunny** (§6.4); the remaining seven animals are plan 3.
 
 Everything under `tools/heart/` (Node, ESM), run by hand and checked-in outputs, the way `tools/generate-emoji-catalog.mjs` works.
 
