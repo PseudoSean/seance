@@ -514,7 +514,7 @@ strong,
 /* Reactions: a chip arriving bursts hearts. Not .msg-reaction.self on its
  * own — that class is persistent, so its ::before/::after would burst
  * again on every redraw of the row (a channel re-opened, a reaction added
- * beside it), not just when ours is toggled on. */
+ * beside it), not just when a chip enters. */
 #chat .msg-reaction {
 	position: relative;
 }
