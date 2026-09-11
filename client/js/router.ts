@@ -285,8 +285,15 @@ router.afterEach((to) => {
 		}
 
 		if (channel.messages?.length > 100) {
-			channel.messages.splice(0, channel.messages.length - 100);
+			const dropped = channel.messages.splice(0, channel.messages.length - 100);
 			channel.moreHistoryAvailable = true;
+
+			if (dropped.length > 0) {
+				store.commit(
+					"translationRemoveMany",
+					dropped.map((m) => m.id)
+				);
+			}
 		}
 	}
 });

@@ -399,6 +399,10 @@ export function initReader(): void {
 				"translationRemoveMany",
 				network.channels.flatMap((c) => c.messages.map((m) => m.id))
 			);
+
+			for (const c of network.channels) {
+				arrivals.delete(c.id);
+			}
 		}
 
 		for (const key of Object.keys(store.state.translateChannels)) {

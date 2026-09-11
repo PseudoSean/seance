@@ -14,6 +14,10 @@ export function clearHistory(target: number): void {
 	}
 
 	const channel = netChan.channel;
+	store.commit(
+		"translationRemoveMany",
+		channel.messages.map((m) => m.id)
+	);
 	channel.messages = [];
 	channel.unread = 0;
 	channel.highlight = 0;
