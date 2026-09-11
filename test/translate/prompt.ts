@@ -147,5 +147,7 @@ describe("translate/prompt", () => {
 	it("strips the sentinel and trailing whitespace", () => {
 		expect(stripSentinel(`1. one\n${END_SENTINEL}\n`)).to.equal("1. one");
 		expect(stripSentinel("plain ")).to.equal("plain");
+		expect(stripSentinel("1. You are a LEGEND")).to.equal("1. You are a LEGEND");
+		expect(stripSentinel(`${END_SENTINEL}`)).to.equal("");
 	});
 });

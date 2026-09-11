@@ -128,7 +128,7 @@ export function buildMessages(
 }
 
 export function stripSentinel(text: string): string {
-	return text.replace(new RegExp(`\\n?${END_SENTINEL}\\s*$`), "").trimEnd();
+	return text.replace(new RegExp(`(?:^|\\n)${END_SENTINEL}\\s*$`), "").trimEnd();
 }
 
 /** `null` when the count or the numbering does not match: the caller falls back to one line at a time. */
