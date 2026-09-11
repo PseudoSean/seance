@@ -8,6 +8,7 @@ import {BUILD} from "../build";
 import storage from "../localStorage";
 import {store} from "../store";
 import {probeOnce} from "./capability";
+import {emptyContext} from "./engine";
 import {TranslateClient} from "./client";
 import {FAKE_CAPABILITY, fakePort} from "./fakePort";
 import {isSupported} from "./languages";
@@ -120,4 +121,32 @@ function create(): TranslateService {
 	window.addEventListener("pagehide", () => created.pagehide());
 
 	return created;
+}
+
+// Development aid until plan 2 wires the channel switch: from the console,
+// `await seanceTranslate("Hallo Welt", "en", "de")` returns the translation;
+// pass `console.log` as the fourth argument to watch it stream. `from` null
+// leaves the source to the LLM (the seq2seq engines need it).
+if (BUILD === "dev") {
+	(window as unknown as {seanceTranslate: unknown}).seanceTranslate = async (
+		text: string,
+		to: string,
+		from: string | null = null,
+		onChunk: (text: string, done: boolean) => void = () => {}
+	): Promise<string> => {
+		let last = "";
+
+		for await (const chunk of translateService().translate({
+			text,
+			from,
+			to,
+			purpose: "read",
+			context: emptyContext(),
+		})) {
+			last = chunk.text;
+			onChunk(chunk.text, chunk.done);
+		}
+
+		return last;
+	};
 }
