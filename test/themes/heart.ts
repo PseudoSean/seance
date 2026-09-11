@@ -202,6 +202,12 @@ describe("the <3 theme's glitter", function () {
 
 		expect(css, "no hover glitter").to.not.include(":hover::");
 		expect(css).to.include(".reaction-enter-active::before");
+		expect(css, "the first reaction's group bursts too").to.include(
+			".reactions-enter-active .msg-reaction:not(.msg-reaction-add)::before"
+		);
+		expect(css, "the enter class is held open for the burst").to.match(
+			/#chat \.reaction-enter-active,\s*#chat \.reactions-enter-active \{[^}]*heart-hold 0\.9s/
+		);
 	});
 
 	it("does not burst .msg-reaction.self on its own, a persistent class that would burst on every redraw", function () {

@@ -182,7 +182,7 @@ Hearts from the puppy are part of its SVG (a small heart path with its own anima
 ## 7. App changes
 
 1. `helpers/channelSeed.ts` + `Chat.vue`: publish `data-scene` and `--channel-seed` (§5.2). Test in `test/helpers/channelSeed.ts`.
-2. `configuration.ts`: `{name: "heart", displayName: "<3", themeColor: "#f4f9ff"}`; `test/tests/build.ts`: add `heart` to the list of theme files expected in `public/themes/`, and expect `themes/heart/nunito-400.woff2` and `themes/heart/horse.svg`.
+2. `configuration.ts`: `{name: "heart", displayName: "ps <3", themeColor: "#f4f9ff"}`; `test/tests/build.ts`: add `heart` to the list of theme files expected in `public/themes/`, and expect `themes/heart/nunito-400.woff2` and `themes/heart/horse.svg`.
 3. `webpack.config.ts`: the themes copy pattern includes subdirectories.
 4. `docs/resources/themes.md`: the `heart` row and a section on the meadow and the generator; `CLAUDE.md` gets one paragraph pointing there; `docs/projects/heart-theme.md` carries this spec once the work lands (per the repo's `docs/superpowers/` convention).
 
