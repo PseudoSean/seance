@@ -11,8 +11,15 @@
 // translation panel opens on the globe's context menu with full language
 // names (never codes) and closes on Escape; a line carrying the fake's
 // `[fail]` marker fails once and its retry button succeeds the second
-// time; switching off stops new ones. Detection is real (franc); only the
-// engine is scripted.
+// time; switching off stops new ones; and a REDACT of a translated line
+// takes its translation away with the original text.
+// Detection is real (franc); only the engine is scripted.
+//
+// The speaker negotiates message-tags + echo-message so it learns the
+// msgid the server gave its own line, and the run flips
+// CAP_draft_message_redaction on (the rig leaves it off, and without it
+// REDACT answers FAIL DISABLED and the page never offers the cap) and
+// back off at the end.
 //
 //   corepack yarn build && python3 -m http.server -d public 8021 &
 //   CHROME_BIN=/seance/tmp/chrome-pw.sh node tools/browser-drive.mjs tools/scenarios/translate-reading.mjs
@@ -20,6 +27,8 @@
 //
 // Needs the dev ircd's plain-WS port on 127.0.0.1:8067. NODE_ENV must be
 // unset for the build: a production build compiles the fake out.
+
+import {rigFeature} from "./lib/rig-feature.mjs";
 
 const RUN = Date.now().toString(36);
 const NICK = `tr${RUN}`;
@@ -33,9 +42,12 @@ export const url = `${BASE}?host=127.0.0.1&port=8067&tls=false&nick=${NICK}&join
 const LINES = `document.querySelectorAll('.msg-translation[data-status="done"]').length`;
 const GLOBE = "#chat button.translate";
 const REQUESTS = `(window.__seanceTranslateFake && window.__seanceTranslateFake.requests) || []`;
+const REDACTION_FEATURE = "CAP_draft_message_redaction";
 
 function speaker(nick) {
 	const ws = new WebSocket(IRCD, ["text.ircv3.net"]);
+	/** The msgid the server gave each line this speaker sent, by text. */
+	const msgids = new Map();
 	let joinedResolve;
 	let joinedReject;
 	const joined = new Promise((resolve, reject) => {
@@ -43,8 +55,13 @@ function speaker(nick) {
 		joinedReject = reject;
 		setTimeout(() => reject(new Error("speaker never joined")), 20000);
 	});
+	// Tagged lines arrive with an `@tags` prefix in front of the source.
+	const from = (command) => new RegExp(`^(?:@\\S+ )?:${nick}\\S* ${command}`);
 
 	ws.onopen = () => {
+		// echo-message + message-tags: the echo of our own PRIVMSG carries
+		// the msgid REDACT needs (the live REDACT line itself has no tags).
+		ws.send("CAP LS 302");
 		ws.send(`NICK ${nick}`);
 		ws.send(`USER ${nick} 0 * :seance translation reader`);
 	};
@@ -53,12 +70,25 @@ function speaker(nick) {
 
 		if (line.startsWith("PING")) {
 			ws.send(line.replace("PING", "PONG"));
+		} else if (/ CAP \S+ LS :/.test(line)) {
+			// The last LS line only: a continuation reads `LS * :…`.
+			ws.send("CAP REQ :message-tags echo-message");
+		} else if (/ CAP \S+ (ACK|NAK)/.test(line)) {
+			ws.send("CAP END");
 		} else if (/ 001 /.test(line)) {
 			ws.send(`JOIN ${CHANNEL}`);
 		} else if (/ 433 /.test(line)) {
 			ws.send(`NICK ${nick}_`);
-		} else if (new RegExp(`^:${nick}\\S* JOIN`).test(line)) {
+		} else if (from("JOIN").test(line)) {
 			joinedResolve();
+		} else if (from("PRIVMSG").test(line)) {
+			const tags = /^@(\S+) /.exec(line);
+			const msgid = tags && /(?:^|;)msgid=([^;]+)/.exec(tags[1]);
+			const body = line.indexOf(" :", line.indexOf("PRIVMSG"));
+
+			if (msgid && body > 0) {
+				msgids.set(line.slice(body + 2), msgid[1]);
+			}
 		}
 	};
 	ws.onerror = () => joinedReject(new Error("speaker socket error"));
@@ -66,11 +96,30 @@ function speaker(nick) {
 	return {
 		joined,
 		say: (text) => ws.send(`PRIVMSG ${CHANNEL} :${text}`),
+		msgidOf: (text) => msgids.get(text),
+		redact: (msgid) => ws.send(`REDACT ${CHANNEL} ${msgid} :tidying up`),
 		quit: () => ws.send("QUIT :done"),
 	};
 }
 
 export default async function run(page) {
+	// The rig leaves message redaction off: without the feature REDACT
+	// answers FAIL DISABLED and the page is never offered the cap that
+	// makes it show one.
+	const feature = await rigFeature(REDACTION_FEATURE, "TRUE");
+
+	await page.check("the rig offers draft/message-redaction for this run", feature.after);
+
+	try {
+		await scenario(page);
+	} finally {
+		if (!feature.before) {
+			await rigFeature(REDACTION_FEATURE, "FALSE");
+		}
+	}
+}
+
+async function scenario(page) {
 	await page.goto(page.url, {waitForSelector: "#connect form"});
 	await page.click('#connect button[type="submit"]');
 	await page.waitFor(`!!document.querySelector("#form #input")`, {
@@ -298,6 +347,47 @@ export default async function run(page) {
 	});
 	await page.sleep(1500);
 	await page.check("no translation after switching off", (await page.evaluate(LINES)) === 7);
+
+	// A deleted message keeps neither its text nor its translation: the
+	// speaker redacts one of its own translated lines (an unauthenticated
+	// author may redact its own message with no window) and the row loses
+	// the translated copy with the original.
+	const burstText = "Zeile 5 von fünf, alle sollten übersetzt werden.";
+	const burstMsgid = other.msgidOf(burstText);
+
+	await page.check(
+		`the speaker learned its line's msgid (${burstMsgid ?? "none"})`,
+		!!burstMsgid
+	);
+
+	// The row is found before the REDACT: afterwards its text is behind the
+	// "deleted" button and no longer in textContent. The last match, not the
+	// first: #seance keeps its history, so earlier runs of this scenario are
+	// replayed above this one's line (their rows carry negative ids).
+	const burstRowId = await page.evaluate(
+		`(([...document.querySelectorAll(".msg")].filter((m) => m.textContent.includes("Zeile 5 von fünf")).pop()) || {}).id || ""`
+	);
+	const burstRow = `document.getElementById(${JSON.stringify(burstRowId)})`;
+
+	await page.check(
+		`the burst line's row was found (${burstRowId || "none"}) with its translation`,
+		await page.evaluate(`!!(${burstRow}) && !!(${burstRow}).querySelector(".msg-translation")`)
+	);
+
+	other.redact(burstMsgid);
+	await page.waitFor(`!!(${burstRow}) && !!(${burstRow}).querySelector(".msg-redacted")`, {
+		timeout: 15000,
+		label: "the redacted row shows the deleted button",
+	});
+	await page.check(
+		"the deleted row keeps no translation",
+		await page.evaluate(`!(${burstRow}).querySelector(".msg-translation")`)
+	);
+	await page.check(
+		"the redaction took exactly one translated line away",
+		(await page.evaluate(LINES)) === 6
+	);
+	await page.screenshot("redacted-translation");
 
 	other.quit();
 	await page.check("no console errors", page.consoleErrors.length === 0);
