@@ -113,6 +113,7 @@ function create(): TranslateService {
 		([llm, cpu]) => created.setSettings({llm, cpu})
 	);
 	created.onModels((models) => store.commit("translationModels", models));
+	created.onWorkerError((message) => store.commit("translationWorkerError", message));
 	void created
 		.capabilities()
 		.then((capability) => store.commit("translationCapability", capability));

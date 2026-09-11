@@ -229,6 +229,20 @@ describe("translate/engines/webllm", () => {
 		expect(engine.loadedModels()).to.deep.equal([]);
 	});
 
+	it("two concurrent loads of the same model share one engine", async () => {
+		const d = deps([]);
+		const engine = new WebLlmEngine(d.deps, name);
+
+		engine.configure(catalog);
+		await Promise.all([engine.load(catalog.llm, () => {}), engine.load(catalog.llm, () => {})]);
+
+		expect(d.created.length).to.equal(1);
+		expect(d.calls.reload).to.deep.equal([catalog.llm.id]);
+		expect(d.calls.unload).to.equal(0);
+		expect(engine.status()).to.equal("ready");
+		expect(engine.loadedModels()).to.deep.equal([catalog.llm.id]);
+	});
+
 	it("a failed load leaves the engine failed and empty", async () => {
 		const d = deps([]);
 

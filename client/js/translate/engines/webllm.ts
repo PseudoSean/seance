@@ -90,6 +90,8 @@ export class WebLlmEngine implements Engine {
 	readonly name = "llm" as const;
 	private engine: MlcLike | null = null;
 	private model: string | null = null;
+	/** In-flight `load()` calls, deduped by model id (as in seq2seq.ts). */
+	private loading = new Map<string, Promise<void>>();
 	private state: EngineStatus = "cold";
 	private catalog: ModelCatalog | null = null;
 	private deps: WebLlmDeps;
@@ -104,7 +106,30 @@ export class WebLlmEngine implements Engine {
 		this.catalog = catalog;
 	}
 
+	// Two callers can ask for the same model at once — Settings downloading it
+	// while a translation waits for it — and a reload takes minutes: the second
+	// caller waits on the first instead of unloading the engine the first one is
+	// still reloading.
 	async load(ref: ModelRef, onProgress: (p: LoadProgress) => void): Promise<void> {
+		const inFlight = this.loading.get(ref.id);
+
+		if (inFlight) {
+			await inFlight;
+			return;
+		}
+
+		const promise = this.loadOnce(ref, onProgress);
+
+		this.loading.set(ref.id, promise);
+
+		try {
+			await promise;
+		} finally {
+			this.loading.delete(ref.id);
+		}
+	}
+
+	private async loadOnce(ref: ModelRef, onProgress: (p: LoadProgress) => void): Promise<void> {
 		this.state = "loading";
 
 		try {
@@ -112,9 +137,16 @@ export class WebLlmEngine implements Engine {
 				modelBase: this.catalog?.modelBase,
 				lib: this.catalog?.llmLib,
 			});
+			// Let go of the old engine before awaiting its unload, not after: a
+			// translate() landing in between must report "model not loaded"
+			// rather than generate on an engine that is being torn down.
+			const previous = this.engine;
 
-			if (this.engine) {
-				await this.engine.unload();
+			this.engine = null;
+			this.model = null;
+
+			if (previous) {
+				await previous.unload();
 			}
 
 			this.engine = this.deps.create(appConfig, (report) =>

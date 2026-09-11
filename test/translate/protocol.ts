@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {TranslateClient} from "../../client/js/translate/client";
+import {TranslateClient, TranslateError} from "../../client/js/translate/client";
 import {emptyContext, type ModelRef} from "../../client/js/translate/engine";
 import {buildCatalog, type CacheApi} from "../../client/js/translate/models";
 import {createPortPair} from "../../client/js/translate/protocol";
@@ -10,7 +10,10 @@ const catalog = buildCatalog();
 const llmRef: ModelRef = catalog.llm;
 const nllbRef: ModelRef = catalog.nllb;
 
-function rig(script: (text: string) => string[] = (t) => [t.slice(0, 1), t]) {
+function rig(
+	script: (text: string) => string[] = (t) => [t.slice(0, 1), t],
+	configureError: Error | null = null
+) {
 	const [mainPort, workerPort] = createPortPair();
 	const llm = new FakeEngine("llm", (req) => script(req.text));
 	const seq2seq = new FakeEngine("seq2seq", (req) => [`[${req.to}] ${req.text}`]);
@@ -30,7 +33,13 @@ function rig(script: (text: string) => string[] = (t) => [t.slice(0, 1), t]) {
 		{llm, seq2seq},
 		{
 			cache,
-			configure: (c, ortBase) => configured.push(`${c.llm.id}@${ortBase}`),
+			configure(c, ortBase) {
+				if (configureError) {
+					throw configureError;
+				}
+
+				configured.push(`${c.llm.id}@${ortBase}`);
+			},
 		}
 	);
 	const client = new TranslateClient(mainPort);
@@ -320,6 +329,81 @@ describe("translate/protocol", () => {
 		expect(() => client.translate({...req}, llmRef)).to.throw(
 			"duplicate translation request id 8"
 		);
+	});
+
+	it("a load that fails under a translation fails the stream as a load error", async () => {
+		const {client, llm} = rig();
+
+		llm.failLoad = new Error("out of memory");
+
+		let error: unknown = null;
+
+		try {
+			await collect(
+				client.translate(
+					{
+						id: 9,
+						model: llmRef.id,
+						text: "x",
+						from: "de",
+						to: "en",
+						purpose: "read",
+						context: emptyContext(),
+					},
+					llmRef
+				)
+			);
+		} catch (e) {
+			error = e;
+		}
+
+		expect(error).to.be.instanceOf(TranslateError);
+		expect((error as TranslateError).cause).to.equal("load");
+		expect((error as Error).message).to.equal("out of memory");
+	});
+
+	it("a failed translation is a request error, not the model's", async () => {
+		const {client, llm} = rig();
+
+		await client.load(llmRef);
+		llm.failTranslate = new Error("seq2seq engines do not batch");
+
+		let error: unknown = null;
+
+		try {
+			await collect(
+				client.translate(
+					{
+						id: 10,
+						model: llmRef.id,
+						text: "x",
+						from: "de",
+						to: "en",
+						purpose: "read",
+						context: emptyContext(),
+					},
+					llmRef
+				)
+			);
+		} catch (e) {
+			error = e;
+		}
+
+		expect(error).to.be.instanceOf(TranslateError);
+		expect((error as TranslateError).cause).to.equal("request");
+	});
+
+	it("a worker-scope error reaches onWorkerError", async () => {
+		// rig() configures the client on the way out and the port delivers in a
+		// microtask, so the listener set here is in place before it arrives.
+		const {client} = rig(undefined, new Error("no WebAssembly"));
+		const seen: string[] = [];
+
+		client.onWorkerError = (message) => seen.push(message);
+
+		await client.status();
+
+		expect(seen).to.deep.equal(["no WebAssembly"]);
 	});
 
 	it("a throwing cache rejects models() but leaves the worker alive", async () => {

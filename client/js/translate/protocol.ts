@@ -36,6 +36,9 @@ export type WorkerToMain =
 	| {type: "chunk"; chunk: TranslateChunk}
 	| {type: "done"; id: number}
 	| {
+			// `load` carries an `id` when it was the implicit load of that
+			// translation request: the page fails the stream and knows the
+			// model is at fault, not the request (client.ts `TranslateError`).
 			type: "error";
 			scope: "load" | "unload" | "translate" | "delete" | "status" | "models" | "worker";
 			id?: number;

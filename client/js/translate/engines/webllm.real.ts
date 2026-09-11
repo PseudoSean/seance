@@ -41,7 +41,10 @@ export function webllmCache(getCatalog: () => ModelCatalog | null): CacheApi {
 	};
 
 	return {
-		has: (ref) => hasModelInCache(ref.id, config(ref)),
+		// `async` so that `config()` throwing for a model the library does not
+		// know (appConfigFor) rejects rather than throwing at the caller:
+		// cacheStates() isolates a rejection to this one row.
+		has: async (ref) => await hasModelInCache(ref.id, config(ref)),
 		delete: (ref) => deleteModelAllInfoInCache(ref.id, config(ref)),
 	};
 }

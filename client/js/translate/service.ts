@@ -6,9 +6,9 @@
 // index.ts wires the real worker, the store and the settings.
 
 import {Capability} from "./capability";
-import {TranslateClient, WORKER_DISPOSED} from "./client";
+import {TranslateClient, TranslateError, WORKER_DISPOSED} from "./client";
 import {LoadProgress, ModelRef, TranslateChunk, TranslateRequest} from "./engine";
-import {Candidate, ModelCatalog, catalogModels} from "./models";
+import {Candidate, ModelCatalog, candidateOf, catalogModels} from "./models";
 import {Route, RouteTable, resolveRoute} from "./router";
 
 export const IDLE_UNLOAD_MS = 10 * 60 * 1000;
@@ -52,6 +52,7 @@ export class TranslateService {
 	private nextId = 1;
 	private views = new Map<string, ModelView>();
 	private listeners = new Set<(views: ModelView[]) => void>();
+	private workerErrorListeners = new Set<(message: string) => void>();
 	private generation = 0;
 	private disposed = false;
 
@@ -167,6 +168,15 @@ export class TranslateService {
 						throw e;
 					}
 
+					// Only the model failing takes the candidate out of the
+					// session: a request this model cannot serve (an unknown
+					// pair, a batch a seq2seq engine will not take) is the
+					// caller's to see, and the next candidate would refuse it
+					// the same way.
+					if (!(e instanceof TranslateError) || e.cause !== "load") {
+						throw e;
+					}
+
 					this.down.add(route.candidate);
 				}
 			}
@@ -221,10 +231,19 @@ export class TranslateService {
 		}
 	}
 
+	/** The listener is called at once with what the rows look like now. */
 	onModels(listener: (views: ModelView[]) => void): () => void {
 		this.listeners.add(listener);
+		listener(this.snapshot());
 
 		return () => this.listeners.delete(listener);
+	}
+
+	/** Errors the worker reports for itself: a configure that threw, a handler that did. */
+	onWorkerError(listener: (message: string) => void): () => void {
+		this.workerErrorListeners.add(listener);
+
+		return () => this.workerErrorListeners.delete(listener);
 	}
 
 	async download(ref: ModelRef): Promise<void> {
@@ -245,6 +264,9 @@ export class TranslateService {
 			view.status = "ready";
 			view.fraction = 1;
 			view.cached = true;
+			// It loads again: whatever took this candidate out of the session
+			// (a download that failed, a device that was lost) is over.
+			this.down.delete(candidateOf(ref));
 		} catch (e) {
 			const message = e instanceof Error ? e.message : String(e);
 
@@ -311,6 +333,7 @@ export class TranslateService {
 		this.disposed = true;
 		this.teardown();
 		this.listeners.clear();
+		this.workerErrorListeners.clear();
 	}
 
 	private client(): TranslateClient {
@@ -320,6 +343,13 @@ export class TranslateService {
 
 		if (!this.worker) {
 			this.worker = this.deps.createClient();
+
+			this.worker.client.onWorkerError = (message: string) => {
+				for (const listener of this.workerErrorListeners) {
+					listener(message);
+				}
+			};
+
 			this.worker.client.configure(this.options.catalog, this.options.ortBase);
 		}
 

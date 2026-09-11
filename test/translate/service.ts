@@ -33,6 +33,7 @@ function rig(tier: Capability["tier"] = "gpu", enabled = true) {
 	const workers: {terminated: boolean}[] = [];
 	const cached = new Set<string>();
 	let failDelete: Error | null = null;
+	let failConfigure: Error | null = null;
 	let hangDelete = false;
 	const cache: CacheApi = {
 		has(ref) {
@@ -64,7 +65,22 @@ function rig(tier: Capability["tier"] = "gpu", enabled = true) {
 			const entry = {terminated: false};
 
 			workers.push(entry);
-			const stop = serveEngines(workerPort, {llm, seq2seq}, {cache, configure() {}});
+			const stop = serveEngines(
+				workerPort,
+				{llm, seq2seq},
+				{
+					cache,
+					configure() {
+						if (failConfigure) {
+							const error = failConfigure;
+
+							failConfigure = null;
+
+							throw error;
+						}
+					},
+				}
+			);
 
 			return {
 				client: new TranslateClient(mainPort),
@@ -95,6 +111,9 @@ function rig(tier: Capability["tier"] = "gpu", enabled = true) {
 		seq2seq,
 		failNextDelete(error: Error) {
 			failDelete = error;
+		},
+		failNextConfigure(error: Error) {
+			failConfigure = error;
 		},
 		hangNextDelete() {
 			hangDelete = true;
@@ -154,6 +173,57 @@ describe("translate/service", () => {
 		r.llm.failLoad = new Error("device lost");
 		expect(await text(r.service.translate({...base, text: "Zwei"}))).to.equal("seq:Zwei");
 		expect((await r.service.route("de", "en"))?.candidate).to.equal("opus:de-en");
+		r.service.dispose();
+	});
+
+	it("a request the model cannot serve is reported, not blamed on the model", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		r.llm.failTranslate = new Error("no NLLB code for xx");
+
+		let message = "";
+
+		try {
+			await text(r.service.translate(base));
+		} catch (e) {
+			message = (e as Error).message;
+		}
+
+		expect(message).to.equal("no NLLB code for xx");
+		// not retried on the next candidate, and the LLM is still the route
+		expect(r.seq2seq.calls.translate.length).to.equal(0);
+		expect((await r.service.route("de", "en"))?.candidate).to.equal("llm");
+		r.service.dispose();
+	});
+
+	it("downloading a model that failed puts its candidate back in the route", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		r.llm.failLoad = new Error("device lost");
+
+		expect(await text(r.service.translate(base))).to.equal("seq:Hallo");
+		expect((await r.service.route("de", "en"))?.candidate).to.equal("opus:de-en");
+
+		await r.service.download(catalog.llm);
+
+		expect((await r.service.route("de", "en"))?.candidate).to.equal("llm");
+		r.service.dispose();
+	});
+
+	it("a download and a translation of the same model share one load", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		// long enough that the translation certainly arrives while Settings'
+		// download is still running: it must join that load, not start a second
+		r.llm.loadTicks = 50;
+
+		const [, translated] = await Promise.all([
+			r.service.download(catalog.llm),
+			text(r.service.translate(base)),
+		]);
+
+		expect(translated).to.equal("llm:Hallo");
+		expect(r.llm.calls.load.length).to.equal(1);
 		r.service.dispose();
 	});
 
@@ -255,6 +325,34 @@ describe("translate/service", () => {
 		const view = (await r.service.models()).find((v) => v.ref.id === catalog.llm.id);
 
 		expect(view).to.include({status: "failed", error: "out of memory"});
+		r.service.dispose();
+	});
+
+	it("onModels hands the new listener the rows as they are now", () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		const seen: string[][] = [];
+
+		r.service.onModels((views) => seen.push(views.map((v) => `${v.ref.id}:${v.status}`)));
+
+		expect(seen.length).to.equal(1);
+		expect(seen[0][0]).to.equal(`${catalog.llm.id}:idle`);
+		expect(seen[0].length).to.equal(
+			2 + Object.keys(catalog.opus).length // llm + nllb + the pairs
+		);
+		r.service.dispose();
+	});
+
+	it("a worker error of its own reaches the onWorkerError listeners", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		const seen: string[] = [];
+
+		r.service.onWorkerError((message) => seen.push(message));
+		r.failNextConfigure(new Error("no WebAssembly"));
+		await r.service.models();
+
+		expect(seen).to.deep.equal(["no WebAssembly"]);
 		r.service.dispose();
 	});
 

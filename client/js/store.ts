@@ -53,8 +53,11 @@ export type State = {
 	userlistOpen: boolean;
 	/** The file upload in flight (`client/js/upload.ts`); `null` when idle. */
 	uploadProgress: UploadProgress | null;
-	/** Client-side translation: the device probe and the model manager's rows. */
-	translation: {capability: Capability | null; models: ModelView[]};
+	/**
+	 * Client-side translation: the device probe, the model manager's rows and
+	 * what the worker last reported about itself (`null` while it is healthy).
+	 */
+	translation: {capability: Capability | null; models: ModelView[]; workerError: string | null};
 };
 
 const state = (): State => ({
@@ -75,7 +78,7 @@ const state = (): State => ({
 	sidebarDragging: false,
 	userlistOpen: storage.get("thelounge.state.userlist") !== "false",
 	uploadProgress: null,
-	translation: {capability: null, models: []},
+	translation: {capability: null, models: [], workerError: null},
 });
 
 type Getters = {
@@ -202,6 +205,7 @@ type Mutations = {
 	uploadProgress(state: State, progress: State["uploadProgress"]): void;
 	translationCapability(state: State, capability: Capability): void;
 	translationModels(state: State, models: ModelView[]): void;
+	translationWorkerError(state: State, message: string | null): void;
 };
 
 const mutations: Mutations = {
@@ -281,6 +285,9 @@ const mutations: Mutations = {
 	},
 	translationModels(state, models) {
 		state.translation.models = models;
+	},
+	translationWorkerError(state, message) {
+		state.translation.workerError = message;
 	},
 };
 

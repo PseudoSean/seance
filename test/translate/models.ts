@@ -4,6 +4,7 @@ import {
 	DEFAULT_NLLB_ID,
 	buildCatalog,
 	cacheStates,
+	candidateOf,
 	catalogModels,
 	refFor,
 	type CacheApi,
@@ -60,6 +61,34 @@ describe("translate/models", () => {
 		expect(models[0].id).to.equal(DEFAULT_LLM_ID);
 		expect(models[1].id).to.equal(DEFAULT_NLLB_ID);
 		expect(new Set(models.map((m) => m.id)).size).to.equal(models.length);
+	});
+
+	it("names the candidate a model answers for", () => {
+		const catalog = buildCatalog();
+
+		expect(candidateOf(catalog.llm)).to.equal("llm");
+		expect(candidateOf(catalog.nllb)).to.equal("nllb");
+		expect(candidateOf(catalog.opus["de-en"])).to.equal("opus:de-en");
+	});
+
+	it("one model the cache cannot answer for does not empty the list", async () => {
+		const api: CacheApi = {
+			has(ref) {
+				return ref.id === DEFAULT_LLM_ID
+					? Promise.reject(new Error(`unknown WebLLM model ${ref.id}`))
+					: Promise.resolve(true);
+			},
+			delete() {
+				return Promise.resolve();
+			},
+		};
+		const states = await cacheStates(buildCatalog(), api);
+
+		expect(states.length).to.equal(catalogModels(buildCatalog()).length);
+		expect(states.find((s) => s.ref.id === DEFAULT_LLM_ID)?.cached).to.equal(false);
+		expect(states.filter((s) => s.ref.id !== DEFAULT_LLM_ID).every((s) => s.cached)).to.equal(
+			true
+		);
 	});
 
 	it("asks the cache api about every model", async () => {

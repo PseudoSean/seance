@@ -85,8 +85,8 @@
 			</div>
 
 			<h3>Models</h3>
-			<div v-if="loadError" class="translate-hint translate-error">
-				Could not reach the translation worker: {{ loadError }}
+			<div v-if="problem" class="translate-hint translate-error">
+				Could not reach the translation worker: {{ problem }}
 			</div>
 			<div v-if="capability" class="translate-hint translate-device">
 				<template v-if="capability.tier === 'gpu'"
@@ -237,6 +237,10 @@ export default defineComponent({
 		const capability = computed(() => store.state.translation.capability);
 		const languages = SUPPORTED_LANGUAGES;
 		const loadError = ref<string | null>(null);
+		// Two ways the worker can disappoint this tab: a call it made rejected
+		// (loadError), or the worker reported a problem of its own that no call
+		// was waiting for (the store's workerError, set by index.ts).
+		const problem = computed(() => store.state.translation.workerError ?? loadError.value);
 
 		const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -298,6 +302,7 @@ export default defineComponent({
 			capability,
 			languages,
 			loadError,
+			problem,
 			name,
 			size,
 			stateLabel,

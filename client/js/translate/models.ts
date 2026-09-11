@@ -118,6 +118,21 @@ export function refFor(catalog: ModelCatalog, candidate: Candidate): ModelRef | 
 	return catalog.opus[candidate.slice("opus:".length)] ?? null;
 }
 
+/** The other direction: which route candidate a model answers for. */
+export function candidateOf(ref: ModelRef): Candidate {
+	if (ref.family === "llm") {
+		return "llm";
+	}
+
+	if (ref.family === "nllb") {
+		return "nllb";
+	}
+
+	const [from, to] = ref.pair ?? ["", ""];
+
+	return `opus:${from}-${to}`;
+}
+
 /** Answered by the worker, where Cache Storage and the libraries' cache helpers live. */
 export interface CacheApi {
 	has(ref: ModelRef): Promise<boolean>;
@@ -129,11 +144,20 @@ export interface ModelCacheState {
 	cached: boolean;
 }
 
+// One entry that cannot answer is that entry's problem — it counts as not
+// downloaded and Settings still lists every other model (an LLM id the
+// library does not know throws in `webllm.real.ts`'s `has`). A cache api
+// that throws synchronously is the whole of Cache Storage being unusable,
+// and that still rejects: Settings says so instead of offering every model
+// as a fresh download.
 export async function cacheStates(
 	catalog: ModelCatalog,
 	api: CacheApi
 ): Promise<ModelCacheState[]> {
 	return Promise.all(
-		catalogModels(catalog).map(async (ref) => ({ref, cached: await api.has(ref)}))
+		catalogModels(catalog).map(async (ref) => ({
+			ref,
+			cached: await api.has(ref).catch(() => false),
+		}))
 	);
 }

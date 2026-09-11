@@ -40,6 +40,20 @@ function deferred<T>(): DedupEntry<T> {
 
 export const WORKER_DISPOSED = "translation worker disposed";
 
+/**
+ * Why a translation failed, so the service can tell the two apart: `"load"`
+ * is the model (the download failed, no memory, no device) and the candidate
+ * is marked down for the session; `"request"` is this request (a pair the
+ * model has no code for, a batch a seq2seq engine cannot take) and the model
+ * stays healthy.
+ */
+export class TranslateError extends Error {
+	constructor(message: string, readonly cause: "load" | "request") {
+		super(message);
+		this.name = "TranslateError";
+	}
+}
+
 export class TranslateClient {
 	private loads = new Map<string, LoadEntry>();
 	private unloads = new Map<EngineName, DedupEntry<void>>();
@@ -48,6 +62,8 @@ export class TranslateClient {
 	private statusWaiters: Deferred<Record<EngineName, EngineSnapshot>>[] = [];
 	private modelsWaiters: Deferred<ModelCacheState[]>[] = [];
 	private disposed = false;
+	/** `scope: "worker"`: a configure that threw, or a handler that did. */
+	onWorkerError: ((message: string) => void) | null = null;
 
 	constructor(private port: MainPort) {
 		port.onmessage = (event) => this.receive(event.data);
@@ -180,6 +196,11 @@ export class TranslateClient {
 		this.modelsWaiters = [];
 	}
 
+	private failStream(id: number, error: Error): void {
+		this.streams.get(id)?.queue.fail(error);
+		this.streams.delete(id);
+	}
+
 	private receive(message: WorkerToMain): void {
 		if (this.disposed) {
 			return;
@@ -215,15 +236,22 @@ export class TranslateClient {
 			case "error": {
 				const error = new Error(message.message);
 
-				if (message.scope === "load" && message.ref) {
-					this.loads.get(message.ref.id)?.reject(error);
+				if (message.scope === "load" && message.id !== undefined) {
+					// The implicit load of a translation: nothing asked for
+					// this load, so it fails that stream and says why.
+					this.failStream(message.id, new TranslateError(message.message, "load"));
+				} else if (message.scope === "load" && message.ref) {
+					this.loads
+						.get(message.ref.id)
+						?.reject(new TranslateError(message.message, "load"));
 					this.loads.delete(message.ref.id);
 				} else if (message.scope === "unload" && message.engine) {
 					this.unloads.get(message.engine)?.reject(error);
 					this.unloads.delete(message.engine);
 				} else if (message.scope === "translate" && message.id !== undefined) {
-					this.streams.get(message.id)?.queue.fail(error);
-					this.streams.delete(message.id);
+					this.failStream(message.id, new TranslateError(message.message, "request"));
+				} else if (message.scope === "worker") {
+					this.onWorkerError?.(message.message);
 				} else if (message.scope === "delete" && message.ref) {
 					this.deletes.get(message.ref.id)?.reject(error);
 					this.deletes.delete(message.ref.id);

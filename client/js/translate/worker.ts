@@ -5,7 +5,7 @@
 // Nothing here knows about the libraries: worker-entry.ts hands in the real
 // engines, tests and fakePort.ts hand in scripted ones.
 
-import {Engine, EngineName} from "./engine";
+import {Engine, EngineName, ModelRef} from "./engine";
 import {CacheApi, ModelCatalog, cacheStates} from "./models";
 import {EngineSnapshot, MainToWorker, WorkerPort, errorMessage} from "./protocol";
 
@@ -22,7 +22,29 @@ export interface WorkerDeps {
 
 export function serveEngines(port: WorkerPort, engines: EngineSet, deps: WorkerDeps): () => void {
 	const controllers = new Map<number, AbortController>();
+	const loading = new Map<string, Promise<void>>();
 	let catalog: ModelCatalog | null = null;
+
+	// A model has two ways in — Settings' explicit `load` and the implicit one
+	// a `translate` needs — and they can ask for the same model at once, so the
+	// second joins the first rather than starting a second download. Progress
+	// is posted once per report and client.ts fans it out to the `load` caller
+	// and to every stream waiting on that model.
+	const load = (ref: ModelRef): Promise<void> => {
+		const inFlight = loading.get(ref.id);
+
+		if (inFlight) {
+			return inFlight;
+		}
+
+		const promise = engines[ref.engine]
+			.load(ref, (progress) => port.postMessage({type: "progress", ref, progress}))
+			.finally(() => loading.delete(ref.id));
+
+		loading.set(ref.id, promise);
+
+		return promise;
+	};
 
 	const snapshot = (): Record<EngineName, EngineSnapshot> => ({
 		llm: {status: engines.llm.status(), models: engines.llm.loadedModels()},
@@ -46,12 +68,8 @@ export function serveEngines(port: WorkerPort, engines: EngineSet, deps: WorkerD
 				break;
 
 			case "load": {
-				const engine = engines[message.ref.engine];
-
 				try {
-					await engine.load(message.ref, (progress) =>
-						port.postMessage({type: "progress", ref: message.ref, progress})
-					);
+					await load(message.ref);
 					port.postMessage({type: "loaded", ref: message.ref});
 				} catch (e) {
 					port.postMessage({
@@ -88,9 +106,25 @@ export function serveEngines(port: WorkerPort, engines: EngineSet, deps: WorkerD
 
 				try {
 					if (!engine.isLoaded(message.ref.id)) {
-						await engine.load(message.ref, (progress) =>
-							port.postMessage({type: "progress", ref: message.ref, progress})
-						);
+						try {
+							await load(message.ref);
+						} catch (e) {
+							// The model could not load: that is the model's
+							// failure, not this request's, and the page tells
+							// the two apart by the scope (the id says which
+							// stream to fail).
+							if (!controller.signal.aborted) {
+								port.postMessage({
+									type: "error",
+									scope: "load",
+									id: message.req.id,
+									ref: message.ref,
+									message: errorMessage(e),
+								});
+							}
+
+							return;
+						}
 					}
 
 					for await (const chunk of engine.translate(message.req, controller.signal)) {
