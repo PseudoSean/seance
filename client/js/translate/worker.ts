@@ -5,7 +5,7 @@
 // Nothing here knows about the libraries: worker-entry.ts hands in the real
 // engines, tests and fakePort.ts hand in scripted ones.
 
-import {Engine, EngineName, ModelRef} from "./engine";
+import {Engine, EngineError, EngineName, ModelRef} from "./engine";
 import {CacheApi, ModelCatalog, cacheStates} from "./models";
 import {EngineSnapshot, MainToWorker, WorkerPort, errorMessage} from "./protocol";
 
@@ -142,7 +142,10 @@ export function serveEngines(port: WorkerPort, engines: EngineSet, deps: WorkerD
 					if (!controller.signal.aborted) {
 						port.postMessage({
 							type: "error",
-							scope: "translate",
+							scope:
+								e instanceof EngineError && e.cause === "load"
+									? "load"
+									: "translate",
 							id: message.req.id,
 							ref: message.ref,
 							message: errorMessage(e),

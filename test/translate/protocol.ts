@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {TranslateClient, TranslateError} from "../../client/js/translate/client";
-import {emptyContext, type ModelRef} from "../../client/js/translate/engine";
+import {EngineError, emptyContext, type ModelRef} from "../../client/js/translate/engine";
 import {buildCatalog, type CacheApi} from "../../client/js/translate/models";
 import {createPortPair} from "../../client/js/translate/protocol";
 import {serveEngines} from "../../client/js/translate/worker";
@@ -441,5 +441,34 @@ describe("translate/protocol", () => {
 		}
 
 		expect(message).to.equal("adapter lost");
+	});
+
+	it("a load-class EngineError from translate arrives as a load failure", async () => {
+		const {client, llm} = rig();
+		await client.load(llmRef);
+		llm.failTranslate = new EngineError("device lost twice", "load");
+		let caught: unknown = null;
+
+		try {
+			await collect(
+				client.translate(
+					{
+						id: 9,
+						model: llmRef.id,
+						text: "x",
+						from: "de",
+						to: "en",
+						purpose: "read",
+						context: emptyContext(),
+					},
+					llmRef
+				)
+			);
+		} catch (e) {
+			caught = e;
+		}
+
+		expect(caught).to.be.instanceOf(TranslateError);
+		expect((caught as TranslateError).cause).to.equal("load");
 	});
 });

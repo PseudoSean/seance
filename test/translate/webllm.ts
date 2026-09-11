@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {emptyContext, type TranslateRequest} from "../../client/js/translate/engine";
+import {EngineError, emptyContext, type TranslateRequest} from "../../client/js/translate/engine";
 import {
 	WebLlmEngine,
 	appConfigFor,
@@ -293,5 +293,69 @@ describe("translate/engines/webllm", () => {
 		expect(d.calls.unload).to.equal(1);
 		expect(engine.status()).to.equal("failed");
 		expect(engine.loadedModels()).to.deep.equal([]);
+	});
+	it("a generation failure tears the engine down so the next request reloads", async () => {
+		const d = deps([]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+		const original = d.calls;
+		const mlc = d.deps.create({model_list: []}, () => {});
+		mlc.chat.completions.create = () => Promise.reject(new Error("Device lost"));
+		d.deps.create = () => mlc;
+		await engine.unload();
+		await engine.load(catalog.llm, () => {});
+		let error: Error | null = null;
+
+		try {
+			for await (const _c of engine.translate(request(), new AbortController().signal)) {
+				// consume
+			}
+		} catch (e) {
+			error = e as Error;
+		}
+
+		expect(error).to.be.instanceOf(EngineError);
+		expect((error as EngineError).cause).to.equal("request");
+		expect(engine.isLoaded(catalog.llm.id)).to.equal(false);
+		expect(engine.status()).to.equal("failed");
+		expect(original.unload).to.be.greaterThan(0);
+	});
+
+	it("the second generation failure in a row is a load-class failure", async () => {
+		const d = deps([]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		const mlc = d.deps.create({model_list: []}, () => {});
+		mlc.chat.completions.create = () => Promise.reject(new Error("Device lost"));
+		d.deps.create = () => mlc;
+		const causes: string[] = [];
+
+		for (let i = 0; i < 2; i++) {
+			await engine.load(catalog.llm, () => {});
+
+			try {
+				for await (const _c of engine.translate(request(), new AbortController().signal)) {
+					// consume
+				}
+			} catch (e) {
+				causes.push((e as EngineError).cause);
+			}
+		}
+
+		expect(causes).to.deep.equal(["request", "load"]);
+	});
+
+	it("a completed generation resets the failure count", async () => {
+		const d = deps(["ok"]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+
+		for await (const _c of engine.translate(request(), new AbortController().signal)) {
+			// consume
+		}
+
+		expect(engine.generationFailures).to.equal(0);
 	});
 });

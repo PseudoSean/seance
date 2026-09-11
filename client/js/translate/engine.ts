@@ -93,3 +93,19 @@ export interface Engine {
 	capabilities(): EngineCapabilities;
 	translate(req: TranslateRequest, signal: AbortSignal): AsyncIterable<TranslateChunk>;
 }
+
+/**
+ * An engine's own failure classification. `load`: the model is gone or
+ * cannot be used (a lost WebGPU device, twice); the service marks the
+ * candidate down. `request`: this request failed (a bad pair, an
+ * unsupported shape); the next request may succeed.
+ */
+export class EngineError extends Error {
+	readonly cause: "load" | "request";
+
+	constructor(message: string, cause: "load" | "request") {
+		super(message);
+		this.name = "EngineError";
+		this.cause = cause;
+	}
+}

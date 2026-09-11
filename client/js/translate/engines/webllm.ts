@@ -8,6 +8,7 @@
 import {
 	Engine,
 	EngineCapabilities,
+	EngineError,
 	EngineStatus,
 	LoadProgress,
 	ModelRef,
@@ -96,10 +97,16 @@ export class WebLlmEngine implements Engine {
 	private catalog: ModelCatalog | null = null;
 	private deps: WebLlmDeps;
 	private languageName: (code: string) => string;
+	private failures = 0;
 
 	constructor(deps: WebLlmDeps, languageName: (code: string) => string) {
 		this.deps = deps;
 		this.languageName = languageName;
+	}
+
+	/** Consecutive generation failures; a completed generation resets it. */
+	get generationFailures(): number {
+		return this.failures;
 	}
 
 	configure(catalog: ModelCatalog): void {
@@ -230,9 +237,29 @@ export class WebLlmEngine implements Engine {
 				yield {id: req.id, text, done: false};
 			}
 
+			this.failures = 0;
+
 			if (!signal.aborted) {
 				yield {id: req.id, text: stripSentinel(text), done: true};
 			}
+		} catch (e) {
+			if (signal.aborted) {
+				return;
+			}
+
+			// A generation that threw is a device that may be gone (spec
+			// § Lifecycle): drop the engine so the next request reloads it;
+			// the second failure in a row is the model's failure, not the
+			// request's, and the service takes the candidate down.
+			this.failures++;
+			this.engine = null;
+			this.model = null;
+			this.state = "failed";
+			await engine.unload().catch(() => {});
+			throw new EngineError(
+				e instanceof Error ? e.message : String(e),
+				this.failures >= 2 ? "load" : "request"
+			);
 		} finally {
 			signal.removeEventListener("abort", onAbort);
 		}
