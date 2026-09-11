@@ -412,6 +412,29 @@ strong,
 	}
 }
 
+/* Where a row's text starts, so a burst can hang off it: style.css's time
+ * column (3.5rem plus its 0.625rem padding; 4.75rem with seconds; the type
+ * section's 5.5rem / 7.25rem for a 12-hour clock) plus the 8.5rem nick
+ * column and the content's 0.625rem padding. The mockup's burst sat 0.4em
+ * before the text and its second one 3em after; the app's row has two
+ * columns in front of the text where the mockup had one. Under 480px
+ * style.css flows the row inline and the burst starts at its left edge. */
+#chat {
+	--heart-text-x: 13.25rem;
+}
+
+#chat.time-seconds {
+	--heart-text-x: 14.5rem;
+}
+
+#chat.time-12h {
+	--heart-text-x: 15.25rem;
+}
+
+#chat.time-seconds.time-12h {
+	--heart-text-x: 17rem;
+}
+
 /* Send: an own message bursts once while it is the newest thing in the channel.
  * The pending copy shows first, then the echo that replaces it milliseconds
  * later (each is a new element, so the burst restarts on the echo and is what
@@ -421,7 +444,7 @@ strong,
 #chat .msg.self:last-child::after {
 	content: "";
 	position: absolute;
-	left: 3.6em;
+	left: calc(var(--heart-text-x) - 0.4em);
 	top: -0.6em;
 	width: 10em;
 	height: 2.6em;
@@ -431,7 +454,7 @@ strong,
 }
 
 #chat .msg.self:last-child::after {
-	left: 7em;
+	left: calc(var(--heart-text-x) + 3em);
 	animation-delay: 0.12s;
 }
 
@@ -705,6 +728,13 @@ strong,
 @media (max-width: 600px) {
 	:root {
 		--strip: 6.5rem;
+	}
+}
+
+/* style.css's breakpoint for the inline message row. */
+@media (max-width: 479px) {
+	#chat {
+		--heart-text-x: 0.4em;
 	}
 }
 
