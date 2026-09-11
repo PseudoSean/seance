@@ -567,7 +567,8 @@ strong,
  * area's height), with clouds drifting across. All of it is background layers
  * on the scroll container, so it stays put while messages scroll. Which
  * hills, where, and the tint of the green come from the conversation's seed
- * (data-scene, --channel-seed on #chat-container). The animals come in plan 2. */
+ * (data-scene, --channel-seed on #chat-container). The animals are
+ * background layers too: see the tokens below. */
 /* stylelint-disable-next-line no-duplicate-selectors -- the meadow's neutral hill-layout defaults */
 :root {
 	/* two mid hills: x (left edge as % of width), w (width %), h (height as a share of --strip) */
@@ -584,6 +585,33 @@ strong,
 	 * it by swapping both gradients for transparent ones. */
 	/* stylelint-disable-next-line max-line-length -- one flat gradient list reads better than a wrap mid-value */
 	--heart-cloud-2: radial-gradient(closest-side at 40% 60%, #fff 0 60%, transparent 61%), radial-gradient(closest-side at 65% 45%, #fff 0 50%, transparent 51%);
+
+	/* The animals: self-animating SVG stages (tools/heart/README.md), each
+	 * one background layer. A scene casts them into three slots — two near,
+	 * one distant visitor on the plateau — by pointing the slot tokens at
+	 * the animal tokens; reduced motion repoints the animal tokens at the
+	 * stills, so no scene is restated there. Heights are shares of --strip;
+	 * a distant visitor is 0.7 of its animal's. */
+	--heart-horse: url("heart/horse.svg");
+	--heart-horse-far: url("heart/horse-far.svg");
+	--heart-puppy: url("heart/puppy.svg");
+	--heart-puppy-far: url("heart/puppy-far.svg");
+	--heart-bunny: url("heart/bunny.svg");
+	--heart-bunny-far: url("heart/bunny-far.svg");
+	--heart-horse-h: 0.66;
+	--heart-puppy-h: 0.44;
+	--heart-bunny-h: 0.44;
+	--heart-slot-a: var(--heart-horse);
+	--heart-slot-a-h: var(--heart-horse-h);
+	--heart-slot-b: none;
+	--heart-slot-b-h: 0.44;
+	--heart-slot-f: none;
+	--heart-slot-f-h: 0.31;
+
+	/* The rainbow's layer (Task 9 fills it in for two scenes): parked below
+	 * the box, where a layer paints nothing. */
+	--heart-rainbow: none;
+	--heart-rainbow-y: calc(100% + var(--strip) * 1.3);
 }
 
 /* The seeded hue and the greens derived from it: --channel-seed only ever
@@ -604,6 +632,14 @@ strong,
 	--heart-hill-2-x: 60%;
 	--heart-hill-2-w: 50%;
 	--heart-hill-2-h: 0.18;
+
+	/* scene 0 */
+	--heart-slot-a: var(--heart-horse);
+	--heart-slot-a-h: var(--heart-horse-h);
+	--heart-slot-b: var(--heart-bunny);
+	--heart-slot-b-h: var(--heart-bunny-h);
+	--heart-slot-f: var(--heart-puppy-far);
+	--heart-slot-f-h: 0.31;
 }
 
 #chat-container[data-scene="1"] {
@@ -616,6 +652,14 @@ strong,
 
 	/* One cloud in this scene (§5.3): both of the second cloud's ellipses go transparent. */
 	--heart-cloud-2: linear-gradient(transparent, transparent), linear-gradient(transparent, transparent);
+
+	/* scene 1 */
+	--heart-slot-a: var(--heart-puppy);
+	--heart-slot-a-h: var(--heart-puppy-h);
+	--heart-slot-b: none;
+	--heart-slot-b-h: 0.44;
+	--heart-slot-f: var(--heart-horse-far);
+	--heart-slot-f-h: 0.46;
 }
 
 #chat-container[data-scene="2"] {
@@ -625,6 +669,14 @@ strong,
 	--heart-hill-2-x: 70%;
 	--heart-hill-2-w: 60%;
 	--heart-hill-2-h: 0.17;
+
+	/* scene 2 */
+	--heart-slot-a: var(--heart-bunny);
+	--heart-slot-a-h: var(--heart-bunny-h);
+	--heart-slot-b: var(--heart-puppy);
+	--heart-slot-b-h: var(--heart-puppy-h);
+	--heart-slot-f: var(--heart-horse-far);
+	--heart-slot-f-h: 0.46;
 }
 
 #chat-container[data-scene="3"] {
@@ -634,6 +686,14 @@ strong,
 	--heart-hill-2-x: 45%;
 	--heart-hill-2-w: 35%;
 	--heart-hill-2-h: 0.25;
+
+	/* scene 3 */
+	--heart-slot-a: var(--heart-horse);
+	--heart-slot-a-h: var(--heart-horse-h);
+	--heart-slot-b: var(--heart-puppy);
+	--heart-slot-b-h: var(--heart-puppy-h);
+	--heart-slot-f: var(--heart-bunny-far);
+	--heart-slot-f-h: 0.31;
 }
 
 #chat-container[data-scene="4"] {
@@ -646,6 +706,14 @@ strong,
 
 	/* One cloud in this scene (§5.3): both of the second cloud's ellipses go transparent. */
 	--heart-cloud-2: linear-gradient(transparent, transparent), linear-gradient(transparent, transparent);
+
+	/* scene 4 */
+	--heart-slot-a: var(--heart-bunny);
+	--heart-slot-a-h: var(--heart-bunny-h);
+	--heart-slot-b: none;
+	--heart-slot-b-h: 0.44;
+	--heart-slot-f: none;
+	--heart-slot-f-h: 0.31;
 }
 
 #chat-container[data-scene="5"] {
@@ -655,67 +723,87 @@ strong,
 	--heart-hill-2-x: 75%;
 	--heart-hill-2-w: 45%;
 	--heart-hill-2-h: 0.23;
+
+	/* scene 5 */
+	--heart-slot-a: var(--heart-puppy);
+	--heart-slot-a-h: var(--heart-puppy-h);
+	--heart-slot-b: var(--heart-horse);
+	--heart-slot-b-h: var(--heart-horse-h);
+	--heart-slot-f: var(--heart-bunny-far);
+	--heart-slot-f-h: 0.31;
 }
 
 #chat .chat-view[data-type="channel"] .chat,
 #chat .chat-view[data-type="query"] .chat {
 	background-color: var(--heart-sky);
 
-	/* Top layer first. Each cloud is two overlapping ellipses sharing one
-	 * box (cloud 1 literal, cloud 2 var(--heart-cloud-2) so a scene can hide
-	 * it, §5.3) · ground · mid hill 2 · mid hill 1 · far plateau · far hill
-	 * · sky. */
+	/* Top layer first: cloud 1 (two ellipses) · cloud 2 (two, var) · near
+	 * animal B · near animal A · ground · mid hill 2 · mid hill 1 · the
+	 * distant visitor · far plateau · far hill · rainbow · sky. Fourteen
+	 * layers (var(--heart-cloud-2) expands to two); every list below, the
+	 * keyframes and the reduced-motion block carry fourteen entries in this
+	 * order. A near animal sits above the ground band so its feet show; the
+	 * visitor sits between the mid hills and the plateau so a nearer hill
+	 * passes in front of its feet. Each animal is a wide stage (tools/heart)
+	 * sized from its height, framed left or right by the seed. */
 	/* stylelint-disable-next-line max-line-length -- one flat gradient list reads better than a wrap mid-value */
-	background-image: radial-gradient(closest-side at 40% 60%, #fff 0 60%, transparent 61%), radial-gradient(closest-side at 65% 45%, #fff 0 50%, transparent 51%), var(--heart-cloud-2), linear-gradient(var(--heart-ground), var(--heart-ground)), radial-gradient(ellipse 50% 100% at 50% 100%, var(--heart-hill-mid) 0 68%, transparent 69%), radial-gradient(ellipse 50% 100% at 50% 100%, var(--heart-hill-mid) 0 68%, transparent 69%), linear-gradient(var(--heart-hill-far), var(--heart-hill-far)), radial-gradient(ellipse 60% 100% at 30% 100%, var(--heart-hill-far) 0 70%, transparent 71%), linear-gradient(180deg, var(--heart-sky) 0%, var(--heart-sky-deep) 100%);
+	background-image: radial-gradient(closest-side at 40% 60%, #fff 0 60%, transparent 61%), radial-gradient(closest-side at 65% 45%, #fff 0 50%, transparent 51%), var(--heart-cloud-2), var(--heart-slot-b), var(--heart-slot-a), linear-gradient(var(--heart-ground), var(--heart-ground)), radial-gradient(ellipse 50% 100% at 50% 100%, var(--heart-hill-mid) 0 68%, transparent 69%), radial-gradient(ellipse 50% 100% at 50% 100%, var(--heart-hill-mid) 0 68%, transparent 69%), var(--heart-slot-f), linear-gradient(var(--heart-hill-far), var(--heart-hill-far)), radial-gradient(ellipse 60% 100% at 30% 100%, var(--heart-hill-far) 0 70%, transparent 71%), var(--heart-rainbow), linear-gradient(180deg, var(--heart-sky) 0%, var(--heart-sky-deep) 100%);
 	background-repeat: no-repeat;
-
-	/* var(--heart-cloud-2) expands to two comma-separated images, so the
-	 * size/position lists below carry 10 entries for the 8 written above:
-	 * cloud 1's two ellipses, cloud 2's two (identical to each other, like
-	 * cloud 1's), then ground · mid hill 2 · mid hill 1 · far plateau · far
-	 * hill · sky. */
 	background-size:
 		3.6rem 1.3rem,
 		3.6rem 1.3rem,
 		2.4rem 0.9rem,
 		2.4rem 0.9rem,
+		auto calc(var(--strip) * var(--heart-slot-b-h)),
+		auto calc(var(--strip) * var(--heart-slot-a-h)),
 		100% calc(var(--strip) * 0.14),
 		var(--heart-hill-2-w) calc(var(--strip) * var(--heart-hill-2-h)),
 		var(--heart-hill-1-w) calc(var(--strip) * var(--heart-hill-1-h)),
+		auto calc(var(--strip) * var(--heart-slot-f-h)),
 		100% calc(var(--strip) * 0.31),
 		110% calc(var(--strip) * 0.48),
+		calc(var(--strip) * 2.4) calc(var(--strip) * 1.2),
 		100% 100%;
 	background-position:
 		-4rem calc(100% - var(--strip) * 0.8),
 		-4rem calc(100% - var(--strip) * 0.8),
 		-3rem calc(100% - var(--strip) * 0.6),
 		-3rem calc(100% - var(--strip) * 0.6),
+		calc(80% - var(--channel-seed, 0.5) * 60%) calc(100% - var(--strip) * 0.12),
+		calc(20% + var(--channel-seed, 0.5) * 60%) calc(100% - var(--strip) * 0.12),
 		0 100%,
 		var(--heart-hill-2-x) 100%,
 		var(--heart-hill-1-x) 100%,
+		calc(50% + (var(--channel-seed, 0.5) - 0.5) * 40%) calc(100% - var(--strip) * 0.295),
 		0 100%,
 		-5% 100%,
+		calc(30% + var(--channel-seed, 0.5) * 40%) var(--heart-rainbow-y),
 		0 0;
 	animation: heart-clouds 90s linear infinite;
 	animation-delay: calc(var(--channel-seed, 0.5) * -90s);
 }
 
 /* Only the two clouds' four layers move (each pair together, so the two
- * ellipses of one cloud stay put relative to each other); every other
- * position is restated. */
+ * ellipses of one cloud stay put relative to each other); every other x is
+ * restated. This animates the x longhand alone so the rainbow's rise
+ * (heart-rainbow, on y) composes with it. */
 @keyframes heart-clouds {
 	to {
-		background-position:
-			calc(100% + 4rem) calc(100% - var(--strip) * 0.8),
-			calc(100% + 4rem) calc(100% - var(--strip) * 0.8),
-			calc(100% + 3rem) calc(100% - var(--strip) * 0.6),
-			calc(100% + 3rem) calc(100% - var(--strip) * 0.6),
-			0 100%,
-			var(--heart-hill-2-x) 100%,
-			var(--heart-hill-1-x) 100%,
-			0 100%,
-			-5% 100%,
-			0 0;
+		background-position-x:
+			calc(100% + 4rem),
+			calc(100% + 4rem),
+			calc(100% + 3rem),
+			calc(100% + 3rem),
+			calc(80% - var(--channel-seed, 0.5) * 60%),
+			calc(20% + var(--channel-seed, 0.5) * 60%),
+			0,
+			var(--heart-hill-2-x),
+			var(--heart-hill-1-x),
+			calc(50% + (var(--channel-seed, 0.5) - 0.5) * 40%),
+			0,
+			-5%,
+			calc(30% + var(--channel-seed, 0.5) * 40%),
+			0;
 	}
 }
 
@@ -741,6 +829,12 @@ strong,
 @media (max-width: 600px) {
 	:root {
 		--strip: 6.5rem;
+	}
+
+	/* Two animal slots stay (spec §5.7): the first near one and the distant
+	 * visitor. Same specificity as the scene rules, later in the file. */
+	#chat-container[data-scene] {
+		--heart-slot-b: none;
 	}
 }
 
@@ -768,11 +862,21 @@ strong,
 		transition: none !important;
 	}
 
+	/* The animals as stills: the slot tokens point at the animal tokens, so
+	 * repointing those is enough. */
+	/* stylelint-disable-next-line no-duplicate-selectors -- the reduced-motion swap to stills */
+	:root {
+		--heart-horse: url("heart/horse-still.svg");
+		--heart-horse-far: url("heart/horse-far-still.svg");
+		--heart-puppy: url("heart/puppy-still.svg");
+		--heart-puppy-far: url("heart/puppy-far-still.svg");
+		--heart-bunny: url("heart/bunny-still.svg");
+		--heart-bunny-far: url("heart/bunny-far-still.svg");
+	}
+
 	/* The clouds' animation is off, but they still show: parked inside the
-	 * box instead of at the off-screen start position the animation begins
-	 * from. Only the two clouds' four entries change (each cloud's pair of
-	 * ellipses together); the rest restate the base rule's positions
-	 * unchanged. */
+	 * box (22 %, 68 %) instead of at the off-screen start position the
+	 * animation begins from. Every other entry restates the base rule. */
 	#chat .chat-view[data-type="channel"] .chat,
 	#chat .chat-view[data-type="query"] .chat {
 		background-position:
@@ -780,11 +884,15 @@ strong,
 			22% calc(100% - var(--strip) * 0.8),
 			68% calc(100% - var(--strip) * 0.6),
 			68% calc(100% - var(--strip) * 0.6),
+			70% calc(100% - var(--strip) * 0.12),
+			30% calc(100% - var(--strip) * 0.12),
 			0 100%,
 			var(--heart-hill-2-x) 100%,
 			var(--heart-hill-1-x) 100%,
+			50% calc(100% - var(--strip) * 0.295),
 			0 100%,
 			-5% 100%,
+			50% var(--heart-rainbow-y),
 			0 0;
 	}
 }

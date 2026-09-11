@@ -308,3 +308,117 @@ describe("the <3 theme's meadow", function () {
 		expect(reducedMotionBlock).to.include("68%");
 	});
 });
+
+describe("the <3 theme's animals", function () {
+	/** The meadow rule's body. */
+	const meadowRule = () => {
+		const start = css.indexOf(
+			'#chat .chat-view[data-type="channel"] .chat,\n#chat .chat-view[data-type="query"] .chat {'
+		);
+		expect(start, "the meadow rule").to.be.greaterThan(-1);
+		return css.slice(start, css.indexOf("\n}", start));
+	};
+
+	/** Top-level comma-separated entries of a declaration's value, var(--heart-cloud-2) counted as two. */
+	const entries = (block: string, prop: string) => {
+		const m = block.match(new RegExp(`\\n\\t${prop}:([^;]*);`));
+		expect(m, prop).to.not.be.null;
+		const value = m![1];
+		let depth = 0;
+		let count = 1;
+
+		for (const c of value) {
+			if (c === "(") {
+				depth++;
+			} else if (c === ")") {
+				depth--;
+			} else if (c === "," && depth === 0) {
+				count++;
+			}
+		}
+
+		return count + (value.includes("var(--heart-cloud-2)") ? 1 : 0);
+	};
+
+	it("paints three animal slots and a rainbow slot as layers, fourteen deep in every list", function () {
+		const rule = meadowRule();
+
+		for (const prop of ["background-image", "background-size", "background-position"]) {
+			expect(entries(rule, prop), prop).to.equal(14);
+		}
+
+		const image = rule.match(/\n\tbackground-image:([^;]*);/)![1];
+		const order = [
+			"var(--heart-cloud-2)",
+			"var(--heart-slot-b)",
+			"var(--heart-slot-a)",
+			"var(--heart-ground)",
+			"var(--heart-slot-f)",
+			"var(--heart-hill-far)",
+			"var(--heart-rainbow)",
+			"var(--heart-sky-deep)",
+		];
+		let at = -1;
+
+		for (const token of order) {
+			const next = image.indexOf(token, at + 1);
+			expect(next, `${token} after the previous layer`).to.be.greaterThan(at);
+			at = next;
+		}
+
+		expect(rule).to.include("auto calc(var(--strip) * var(--heart-slot-a-h))");
+		expect(rule).to.include("calc(100% - var(--strip) * 0.295)"); // the visitor stands on the plateau
+	});
+
+	it("declares the six animal files and casts every scene", function () {
+		for (const animal of ["horse", "puppy", "bunny"]) {
+			expect(css).to.include(`--heart-${animal}: url("heart/${animal}.svg");`);
+			expect(css).to.include(`--heart-${animal}-far: url("heart/${animal}-far.svg");`);
+			expect(css).to.match(new RegExp(`--heart-${animal}-h: 0\\.\\d+;`));
+		}
+
+		for (const n of [0, 1, 2, 3, 4, 5]) {
+			const start = css.indexOf(`#chat-container[data-scene="${n}"]`);
+			const body = css.slice(start, css.indexOf("}", start));
+			expect(body, `scene ${n} casts slot a`).to.match(
+				/--heart-slot-a: var\(--heart-(horse|puppy|bunny)\);/
+			);
+			expect(body, `scene ${n} sizes slot a`).to.match(
+				/--heart-slot-a-h: var\(--heart-(horse|puppy|bunny)-h\);/
+			);
+			expect(body, `scene ${n} decides slot f`).to.match(
+				/--heart-slot-f: (none|var\(--heart-(horse|puppy|bunny)-far\));/
+			);
+		}
+
+		const scene1 = css.slice(css.indexOf('#chat-container[data-scene="1"]'));
+		expect(scene1.slice(0, scene1.indexOf("}"))).to.include("--heart-slot-b: none;");
+	});
+
+	it("moves only x in the cloud keyframes, fourteen entries", function () {
+		const start = css.indexOf("@keyframes heart-clouds");
+		const block = css.slice(start, css.indexOf("\n}", start));
+		expect(block).to.include("background-position-x:");
+		expect(block).to.not.include("background-position-y");
+		expect(block).to.not.match(/\n\t\tbackground-position:/);
+		expect(entries(block.replace(/\n\t\t/g, "\n\t"), "background-position-x")).to.equal(14);
+	});
+
+	it("keeps two slots on phones and shows stills under reduced motion", function () {
+		const phones = css.slice(
+			css.indexOf("@media (max-width: 600px)"),
+			css.indexOf("@media (prefers-reduced-motion: reduce)")
+		);
+		expect(phones).to.match(/#chat-container\[data-scene\] \{[^}]*--heart-slot-b: none;/);
+		const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
+
+		for (const animal of ["horse", "puppy", "bunny"]) {
+			expect(reduced).to.include(`--heart-${animal}: url("heart/${animal}-still.svg");`);
+			expect(reduced).to.include(
+				`--heart-${animal}-far: url("heart/${animal}-far-still.svg");`
+			);
+		}
+
+		expect(entries(reduced.replace(/\n\t\t/g, "\n\t"), "background-position")).to.equal(14);
+	});
+});
