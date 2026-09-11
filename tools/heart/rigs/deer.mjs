@@ -128,20 +128,25 @@ const gaits = {
 				[92, -22],
 				[100, -30],
 			],
+			// The hock's deepest fold has to land where the leg passes vertical
+			// — 84 %, where `hind.up` crosses 0 — and not before it. At its
+			// first timing (76 %) the leg was straight again by the time it swung
+			// under the body, and the hoof cleared the ground by 7 units: a drag,
+			// not a step.
 			"hind.can": [
 				[0, -4],
 				[30, -2],
-				[60, -6],
-				[76, -36],
-				[90, -8],
+				[62, -10],
+				[84, -54],
+				[95, -16],
 				[100, -4],
 			],
 			"hind.hoof": [
 				[0, 2],
 				[30, 0],
-				[60, -2],
-				[76, 14],
-				[92, 2],
+				[62, -2],
+				[84, 24],
+				[95, 6],
 				[100, 2],
 			],
 			"front.up": [
@@ -442,16 +447,22 @@ export default {
 	// cycle however many it runs), so the distance is bought with cycles and
 	// not with speed.
 	//
-	// The walk's own travel is measured, not pinned: a four-beat walk always
-	// has a foot on the ground, so the stance measurement has something to
-	// read, and it reads 61 units/s — about 73 units a 1.2 s stride, a little
-	// over two thirds of the shoulder height, which is what a deer's walking
-	// stride is. Everything after it is pinned — the three holds to 0 (a
-	// grazing deer must not drift), and the two transitions as ramps from and
-	// to that 61, because the clamp in tools/heart/lib/travel.mjs zeroes a
-	// blend's measured speed (the planted hoof swings forward relative to the
-	// body throughout) and the deer would stop dead for the length of every
-	// switch.
+	// Every segment's travel is pinned, the walk's included, and 65 units/s is
+	// the walk's own measured mean — 78 units a 1.2 s stride, about three
+	// quarters of the shoulder height, which is what a deer's walking stride
+	// is. The measurement is right on average and unusable frame by frame:
+	// three frames of every twenty-two clamp to zero and the speed steps
+	// 38 → 89 across every cycle boundary, so measuring it would stop the deer
+	// dead for a moment eighteen times over and lurch it at every stride. The
+	// cause is the clamp in tools/heart/lib/travel.mjs, the one that stops a
+	// foot touching down mid-swing from reading as the body walking backward:
+	// a four-beat walk hands the reference between feet twice a cycle, and
+	// with the near feet at y ≈ 201 and the far at ≈ 196 both inside the
+	// 6-unit plant tolerance, the hand-over goes to a foot of a different
+	// length at a different phase, which reads as moving forward. No other rig
+	// in the cast measures a gait either. The holds are pinned to 0 (a grazing
+	// deer must not drift) and the two transitions ramp from and to the 65,
+	// since the same clamp zeroes a blend's measured speed outright.
 	//
 	// The graze is split in two so its blend and its hold can carry different
 	// frame rates: the blend needs frames for the head to swing down through,
@@ -462,8 +473,8 @@ export default {
 		period: 66,
 		stage: {aspect: 16},
 		segments: [
-			{gait: "walk", cycles: 18, fps: 18},
-			{pose: "stand", hold: 0, blend: 0.5, fps: 10, travel: [61, 0]},
+			{gait: "walk", cycles: 18, fps: 18, travel: 65},
+			{pose: "stand", hold: 0, blend: 0.5, fps: 10, travel: [65, 0]},
 			{pose: "graze", hold: 0, blend: 0.9, fps: 10, travel: 0},
 			{pose: "graze", hold: 2.2, blend: 0, fps: 2, travel: 0},
 			{pose: "alert", hold: 0.2, blend: 0.5, fps: 10, travel: 0},
