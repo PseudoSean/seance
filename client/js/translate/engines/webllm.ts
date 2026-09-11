@@ -124,9 +124,16 @@ export class WebLlmEngine implements Engine {
 			this.model = ref.id;
 			this.state = "ready";
 		} catch (e) {
+			const created = this.engine;
+
 			this.engine = null;
 			this.model = null;
 			this.state = "failed";
+
+			if (created) {
+				await created.unload().catch(() => {});
+			}
+
 			throw e;
 		}
 	}

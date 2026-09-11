@@ -250,4 +250,34 @@ describe("translate/engines/webllm", () => {
 		expect(engine.status()).to.equal("failed");
 		expect(engine.loadedModels()).to.deep.equal([]);
 	});
+
+	it("a load whose reload throws releases the engine it created", async () => {
+		const d = deps([]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		const original = d.deps.create.bind(d.deps);
+
+		d.deps.create = (appConfig, onProgress) => {
+			const mlc = original(appConfig, onProgress);
+
+			mlc.reload = () => {
+				throw new Error("out of memory");
+			};
+
+			return mlc;
+		};
+
+		let message = "";
+
+		try {
+			await engine.load(catalog.llm, () => {});
+		} catch (e) {
+			message = (e as Error).message;
+		}
+
+		expect(message).to.equal("out of memory");
+		expect(d.calls.unload).to.equal(1);
+		expect(engine.status()).to.equal("failed");
+		expect(engine.loadedModels()).to.deep.equal([]);
+	});
 });
