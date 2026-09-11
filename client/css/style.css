@@ -4269,6 +4269,12 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	animation: reaction-pop 160ms ease-out;
 }
 
+/* The first reaction on a message you are looking at: the whole group pops
+   in the same way (MessageReactions.vue's Transition wrapper). */
+#chat .reactions-enter-active {
+	animation: reaction-pop 160ms ease-out;
+}
+
 @keyframes reaction-pop {
 	from {
 		opacity: 0;
@@ -4286,7 +4292,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 @media (prefers-reduced-motion: reduce) {
-	#chat .reaction-enter-active {
+	#chat .reaction-enter-active,
+	#chat .reactions-enter-active {
 		animation: none;
 	}
 }

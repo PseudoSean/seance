@@ -1,4 +1,4 @@
-/* <3 — romantic pastels on a blue sky. coffee.css's rules (the token-driven
+/* ps <3 — romantic pastels on a blue sky. coffee.css's rules (the token-driven
  * set every handoff theme shares) with this theme's tokens, plus what no
  * other theme has: bundled fonts, motion, glitter, and a meadow behind the
  * chat that belongs to the channel. Design: docs/projects/heart-theme.md.
@@ -483,8 +483,29 @@ strong,
 	position: relative;
 }
 
+/* Vue keeps an enter class only as long as the element's own animation
+ * runs (style.css's 160 ms pop), which would cut the burst off at once; a
+ * do-nothing animation as long as the burst holds the class open. The whole
+ * group enters when the first reaction lands (.reactions-enter-active,
+ * MessageReactions.vue), a later chip on its own (.reaction-enter-active);
+ * both keep style.css's pop, restated because the shorthand replaces it. */
+#chat .reaction-enter-active,
+#chat .reactions-enter-active {
+	animation:
+		reaction-pop 160ms ease-out,
+		heart-hold 0.9s linear;
+}
+
+@keyframes heart-hold {
+	to {
+		visibility: visible;
+	}
+}
+
 #chat .reaction-enter-active::before,
-#chat .reaction-enter-active::after {
+#chat .reaction-enter-active::after,
+#chat .reactions-enter-active .msg-reaction:not(.msg-reaction-add)::before,
+#chat .reactions-enter-active .msg-reaction:not(.msg-reaction-add)::after {
 	content: "";
 	position: absolute;
 	left: -0.8em;
@@ -493,10 +514,11 @@ strong,
 	height: 2.4em;
 	pointer-events: none;
 	background: var(--heart-burst-2);
-	animation: heart-sparkle-rise 1.2s ease-out both;
+	animation: heart-sparkle-rise 0.9s ease-out both;
 }
 
-#chat .reaction-enter-active::after {
+#chat .reaction-enter-active::after,
+#chat .reactions-enter-active .msg-reaction:not(.msg-reaction-add)::after {
 	left: 0.6em;
 	background: var(--heart-burst-3);
 	animation: heart-sparkle-twinkle 0.9s ease-out both;
@@ -696,6 +718,8 @@ strong,
 	#form,
 	.msg-reaction::before,
 	.msg-reaction::after,
+	#chat .reaction-enter-active,
+	#chat .reactions-enter-active,
 	#chat .chat {
 		animation: none !important;
 		transition: none !important;

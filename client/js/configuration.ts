@@ -37,7 +37,7 @@ const configuration: SharedConfiguration = {
 		{name: "frost", displayName: "Frost", themeColor: "#eef2f7"},
 		{name: "day", displayName: "Day", themeColor: null},
 		{name: "morning", displayName: "Morning", themeColor: null},
-		{name: "heart", displayName: "<3", themeColor: "#f4f9ff"},
+		{name: "heart", displayName: "ps <3", themeColor: "#f4f9ff"},
 	],
 	defaultTheme: "coffee",
 	lockNetwork: false,
