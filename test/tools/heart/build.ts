@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {Circle, Ellipse, P} from "../../../tools/heart/lib/outline.mjs";
-import {buildAnimal, samplePoses} from "../../../tools/heart/lib/build.mjs";
+import {buildAnimal, fadeTimes, samplePoses} from "../../../tools/heart/lib/build.mjs";
 import {decodePath} from "../../../tools/heart/lib/svg.mjs";
 
 /**
@@ -160,6 +160,38 @@ describe("tools/heart build", function () {
 		expect(offFor).to.be.closeTo((blob.sequence.first + audit.tExit) / period, 1e-4);
 		// strictly earlier than the old onStage-keyed keyTime would have been
 		expect(offFor).to.be.lessThan((blob.sequence.first + audit.onStage) / period);
+	});
+
+	describe("fadeTimes", function () {
+		const strictlyIncreasing = (keyTimes: number[]) => {
+			for (let i = 1; i < keyTimes.length; i++) {
+				expect(keyTimes[i], `keyTimes[${i}] > keyTimes[${i - 1}]`).to.be.greaterThan(
+					keyTimes[i - 1]
+				);
+			}
+		};
+
+		it("uses a one-second fade (or a quarter of onStage) when the visit is long enough", function () {
+			const {fade, keyTimes} = fadeTimes({first: 2, onStage: 40, tExit: 35, period: 45});
+			expect(fade).to.equal(1); // onStage/4 = 10, capped at 1; tExit(35) >= 3*fade
+			expect(keyTimes).to.deep.equal([0, 2 / 45, 3 / 45, 36 / 45, 37 / 45, 1]);
+			strictlyIncreasing(keyTimes);
+		});
+
+		it("shrinks the fade to a third of a short visit so no two keyTimes coincide", function () {
+			// onStage/4 = 0.5 would normally be the fade, but tExit (1.2) is
+			// under 3x that candidate, so fade shrinks to tExit/3 = 0.4 instead
+			// -- the bug this guard exists for: at the old fade (0.5), fade-in's
+			// end (first+fade) and fade-out's start (first+tExit-fade) would
+			// both land on first+0.7, an illegal repeated keyTime under SMIL's
+			// linear calcMode.
+			const {fade, keyTimes} = fadeTimes({first: 0.5, onStage: 2, tExit: 1.2, period: 10});
+			expect(fade).to.be.closeTo(0.4, 1e-9);
+			[0, 0.05, 0.09, 0.13, 0.17, 1].forEach((t, i) =>
+				expect(keyTimes[i]).to.be.closeTo(t, 1e-9)
+			);
+			strictlyIncreasing(keyTimes);
+		});
 	});
 
 	it("refuses a visit that ends on stage", function () {

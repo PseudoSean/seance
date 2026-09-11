@@ -74,13 +74,15 @@ const animate = (attrs) =>
  * whole loop; and, when the sequence turns, a mirror flip about the
  * animal's centre at that moment (a scale about the centre: the two static
  * translates bracket it). Hearts, when given, ride inside the same groups.
- * The outer group fades the visit in over `travel.fade` seconds from
- * `travel.first`, and fades out over the same span ending at `travel.tExit`
- * — the moment the box starts crossing the stage edge it leaves by, not the
- * end of the loop's time on stage — so the fade is always done before any
- * clipping would show; the animal then travels on, invisibly, until the
- * loop restarts. Starts at `opacity="0"` so nothing shows before the
- * animation's first sample.
+ * The outer group fades the visit in from `travel.first` and out ending at
+ * `travel.tExit` — the moment the box starts crossing the stage edge it
+ * leaves by, not the end of the loop's time on stage — so the fade is
+ * always done before any clipping would show; the animal then travels on,
+ * invisibly, until the loop restarts. The six keyTimes (and the fade
+ * duration itself, shrunk for a visit too short for two back-to-back fades)
+ * come from `build.mjs`'s `fadeTimes()` as `travel.fadeKeyTimes`, so they
+ * stay strictly increasing — this file only renders them. Starts at
+ * `opacity="0"` so nothing shows before the animation's first sample.
  */
 export function animalSvg({viewBox: vb, k, stageW, layers, clips, travel, flip, hearts}) {
 	const last = layers.length - 1;
@@ -127,17 +129,11 @@ export function animalSvg({viewBox: vb, k, stageW, layers, clips, travel, flip, 
 		.join(";")}" keyTimes="${travel.keyTimes.map(fmt).join(";")}" dur="${fmt(
 		travel.period
 	)}s" repeatCount="indefinite"/>`;
-	const onFor = travel.first + travel.fade;
-	const offAt = travel.first + travel.tExit - travel.fade;
-	const offFor = travel.first + travel.tExit;
-	const fadeTimes = [0, travel.first, onFor, offAt, offFor, travel.period].map(
-		(t) => t / travel.period
-	);
 	const fade = animate({
 		attributeName: "opacity",
 		calcMode: "linear",
 		values: "0;0;1;1;0;0",
-		keyTimes: fadeTimes.map(fmt).join(";"),
+		keyTimes: travel.fadeKeyTimes.map(fmt).join(";"),
 		dur: `${fmt(travel.period)}s`,
 		repeatCount: "indefinite",
 	});
