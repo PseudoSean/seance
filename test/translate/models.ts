@@ -65,11 +65,13 @@ describe("translate/models", () => {
 	it("asks the cache api about every model", async () => {
 		const asked: string[] = [];
 		const api: CacheApi = {
-			has: async (ref) => {
+			has(ref) {
 				asked.push(ref.id);
-				return ref.id === DEFAULT_NLLB_ID;
+				return Promise.resolve(ref.id === DEFAULT_NLLB_ID);
 			},
-			delete: async () => {},
+			delete() {
+				return Promise.resolve();
+			},
 		};
 		const states = await cacheStates(buildCatalog(), api);
 

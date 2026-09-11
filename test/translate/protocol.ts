@@ -16,9 +16,12 @@ function rig(script: (text: string) => string[] = (t) => [t.slice(0, 1), t]) {
 	const seq2seq = new FakeEngine("seq2seq", (req) => [`[${req.to}] ${req.text}`]);
 	const cached = new Set<string>();
 	const cache: CacheApi = {
-		has: async (ref) => cached.has(ref.id),
-		delete: async (ref) => {
+		has(ref) {
+			return Promise.resolve(cached.has(ref.id));
+		},
+		delete(ref) {
 			cached.delete(ref.id);
+			return Promise.resolve();
 		},
 	};
 	const configured: string[] = [];
@@ -214,5 +217,105 @@ describe("translate/protocol", () => {
 		}
 
 		expect(message).to.equal("translation worker disposed");
+	});
+
+	it("client.cancel() from inside the for-await ends the loop", async () => {
+		const {client, llm} = rig(() => ["a", "ab", "abc", "abcd"]);
+		await client.load(llmRef);
+		const seen: string[] = [];
+		const req = {
+			id: 5,
+			model: llmRef.id,
+			text: "x",
+			from: "de",
+			to: "en",
+			purpose: "read" as const,
+			context: emptyContext(),
+		};
+
+		for await (const chunk of client.translate(req, llmRef)) {
+			seen.push(chunk.text);
+			client.cancel(req.id);
+		}
+
+		// let the cancel message travel and the engine observe its signal
+		await new Promise((resolve) => setTimeout(resolve, 5));
+		expect(seen).to.deep.equal(["a"]);
+		expect(llm.calls.translate.length).to.equal(1);
+	});
+
+	it("two concurrent loads for the same model both resolve, sharing progress", async () => {
+		const {client, llm} = rig();
+		const progressA: number[] = [];
+		const progressB: number[] = [];
+
+		await Promise.all([
+			client.load(llmRef, (p) => progressA.push(p.fraction)),
+			client.load(llmRef, (p) => progressB.push(p.fraction)),
+		]);
+
+		expect(llm.calls.load.length).to.equal(1);
+		expect(progressA).to.deep.equal([0.5, 1]);
+		expect(progressB).to.deep.equal([0.5, 1]);
+	});
+
+	it("a throwing unload rejects with the engine's message", async () => {
+		const {client, llm} = rig();
+
+		llm.unload = () => {
+			throw new Error("stuck");
+		};
+
+		let message = "";
+
+		try {
+			await client.unload("llm");
+		} catch (e) {
+			message = (e as Error).message;
+		}
+
+		expect(message).to.equal("stuck");
+	});
+
+	it("translate of an unloaded model reports its load progress before the chunks", async () => {
+		const {client} = rig();
+		const events: string[] = [];
+		const req = {
+			id: 6,
+			model: llmRef.id,
+			text: "Hallo",
+			from: "de",
+			to: "en",
+			purpose: "read" as const,
+			context: emptyContext(),
+		};
+
+		for await (const chunk of client.translate(req, llmRef, (p) =>
+			events.push(`progress:${p.fraction}`)
+		)) {
+			events.push(`chunk:${chunk.text}`);
+		}
+
+		expect(events.slice(0, 2)).to.deep.equal(["progress:0.5", "progress:1"]);
+		expect(events.slice(2)).to.deep.equal(["chunk:H", "chunk:Hallo", "chunk:Hallo"]);
+	});
+
+	it("a duplicate translation request id throws synchronously", () => {
+		const {client} = rig();
+		const req = {
+			id: 8,
+			model: llmRef.id,
+			text: "x",
+			from: "de",
+			to: "en",
+			purpose: "read" as const,
+			context: emptyContext(),
+		};
+
+		client.translate(req, llmRef);
+
+		expect(() => client.translate({...req}, llmRef)).to.throw(
+			"duplicate translation request id 8"
+		);
 	});
 });

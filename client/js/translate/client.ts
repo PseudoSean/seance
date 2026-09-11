@@ -13,13 +13,38 @@ interface Deferred<T> {
 	reject: (error: Error) => void;
 }
 
+interface DedupEntry<T> extends Deferred<T> {
+	promise: Promise<T>;
+}
+
+interface LoadEntry extends DedupEntry<void> {
+	onProgress: Array<(p: LoadProgress) => void>;
+}
+
+interface StreamEntry {
+	queue: AsyncQueue<TranslateChunk>;
+	refId: string;
+	onProgress: (p: LoadProgress) => void;
+}
+
+function deferred<T>(): DedupEntry<T> {
+	let resolve!: (value: T) => void;
+	let reject!: (error: Error) => void;
+	const promise = new Promise<T>((res, rej) => {
+		resolve = res;
+		reject = rej;
+	});
+
+	return {promise, resolve, reject};
+}
+
 const DISPOSED = "translation worker disposed";
 
 export class TranslateClient {
-	private loads = new Map<string, Deferred<void> & {onProgress: (p: LoadProgress) => void}>();
-	private unloads = new Map<EngineName, Deferred<void>>();
-	private deletes = new Map<string, Deferred<void>>();
-	private streams = new Map<number, AsyncQueue<TranslateChunk>>();
+	private loads = new Map<string, LoadEntry>();
+	private unloads = new Map<EngineName, DedupEntry<void>>();
+	private deletes = new Map<string, DedupEntry<void>>();
+	private streams = new Map<number, StreamEntry>();
 	private statusWaiters: Deferred<Record<EngineName, EngineSnapshot>>[] = [];
 	private modelsWaiters: Deferred<ModelCacheState[]>[] = [];
 	private disposed = false;
@@ -33,31 +58,60 @@ export class TranslateClient {
 	}
 
 	load(ref: ModelRef, onProgress: (p: LoadProgress) => void = () => {}): Promise<void> {
-		return new Promise((resolve, reject) => {
-			this.loads.set(ref.id, {resolve, reject, onProgress});
-			this.port.postMessage({type: "load", ref});
-		});
+		const existing = this.loads.get(ref.id);
+
+		if (existing) {
+			existing.onProgress.push(onProgress);
+			return existing.promise;
+		}
+
+		const entry: LoadEntry = {...deferred<void>(), onProgress: [onProgress]};
+
+		this.loads.set(ref.id, entry);
+		this.port.postMessage({type: "load", ref});
+
+		return entry.promise;
 	}
 
 	unload(engine: EngineName): Promise<void> {
-		return new Promise((resolve, reject) => {
-			this.unloads.set(engine, {resolve, reject});
-			this.port.postMessage({type: "unload", engine});
-		});
+		const existing = this.unloads.get(engine);
+
+		if (existing) {
+			return existing.promise;
+		}
+
+		const entry = deferred<void>();
+
+		this.unloads.set(engine, entry);
+		this.port.postMessage({type: "unload", engine});
+
+		return entry.promise;
 	}
 
-	translate(req: TranslateRequest, ref: ModelRef): AsyncIterable<TranslateChunk> {
+	translate(
+		req: TranslateRequest,
+		ref: ModelRef,
+		onProgress: (p: LoadProgress) => void = () => {}
+	): AsyncIterable<TranslateChunk> {
+		if (this.streams.has(req.id)) {
+			throw new Error(`duplicate translation request id ${req.id}`);
+		}
+
 		const queue = new AsyncQueue<TranslateChunk>();
 
 		queue.onReturn = () => this.cancel(req.id);
-		this.streams.set(req.id, queue);
+		this.streams.set(req.id, {queue, refId: ref.id, onProgress});
 		this.port.postMessage({type: "translate", req, ref});
 
 		return queue;
 	}
 
 	cancel(id: number): void {
-		if (this.streams.delete(id)) {
+		const stream = this.streams.get(id);
+
+		if (stream) {
+			stream.queue.close();
+			this.streams.delete(id);
 			this.port.postMessage({type: "cancel", id});
 		}
 	}
@@ -77,10 +131,18 @@ export class TranslateClient {
 	}
 
 	deleteModel(ref: ModelRef): Promise<void> {
-		return new Promise((resolve, reject) => {
-			this.deletes.set(ref.id, {resolve, reject});
-			this.port.postMessage({type: "delete", ref});
-		});
+		const existing = this.deletes.get(ref.id);
+
+		if (existing) {
+			return existing.promise;
+		}
+
+		const entry = deferred<void>();
+
+		this.deletes.set(ref.id, entry);
+		this.port.postMessage({type: "delete", ref});
+
+		return entry.promise;
 	}
 
 	dispose(): void {
@@ -102,7 +164,7 @@ export class TranslateClient {
 		}
 
 		for (const stream of this.streams.values()) {
-			stream.fail(error);
+			stream.queue.fail(error);
 		}
 
 		this.loads.clear();
@@ -120,7 +182,14 @@ export class TranslateClient {
 
 		switch (message.type) {
 			case "progress":
-				this.loads.get(message.ref.id)?.onProgress(message.progress);
+				this.loads.get(message.ref.id)?.onProgress.forEach((cb) => cb(message.progress));
+
+				for (const stream of this.streams.values()) {
+					if (stream.refId === message.ref.id) {
+						stream.onProgress(message.progress);
+					}
+				}
+
 				break;
 			case "loaded":
 				this.loads.get(message.ref.id)?.resolve();
@@ -131,20 +200,24 @@ export class TranslateClient {
 				this.unloads.delete(message.engine);
 				break;
 			case "chunk":
-				this.streams.get(message.chunk.id)?.push(message.chunk);
+				this.streams.get(message.chunk.id)?.queue.push(message.chunk);
 				break;
 			case "done":
-				this.streams.get(message.id)?.close();
+				this.streams.get(message.id)?.queue.close();
 				this.streams.delete(message.id);
 				break;
+
 			case "error": {
 				const error = new Error(message.message);
 
 				if (message.scope === "load" && message.ref) {
 					this.loads.get(message.ref.id)?.reject(error);
 					this.loads.delete(message.ref.id);
+				} else if (message.scope === "unload" && message.engine) {
+					this.unloads.get(message.engine)?.reject(error);
+					this.unloads.delete(message.engine);
 				} else if (message.scope === "translate" && message.id !== undefined) {
-					this.streams.get(message.id)?.fail(error);
+					this.streams.get(message.id)?.queue.fail(error);
 					this.streams.delete(message.id);
 				} else if (message.scope === "delete" && message.ref) {
 					this.deletes.get(message.ref.id)?.reject(error);
@@ -153,6 +226,7 @@ export class TranslateClient {
 
 				break;
 			}
+
 			case "status":
 				this.statusWaiters.splice(0).forEach((w) => w.resolve(message.engines));
 				break;

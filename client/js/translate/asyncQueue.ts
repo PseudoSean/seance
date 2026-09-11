@@ -29,6 +29,10 @@ export class AsyncQueue<T> implements AsyncIterable<T> {
 	}
 
 	fail(error: Error): void {
+		if (this.closed) {
+			return;
+		}
+
 		this.error = error;
 
 		for (const waiter of this.waiters.splice(0)) {

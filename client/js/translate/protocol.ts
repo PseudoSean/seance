@@ -37,15 +37,20 @@ export type WorkerToMain =
 	| {type: "done"; id: number}
 	| {
 			type: "error";
-			scope: "load" | "translate" | "delete" | "worker";
+			scope: "load" | "unload" | "translate" | "delete" | "worker";
 			id?: number;
 			ref?: ModelRef;
+			engine?: EngineName;
 			message: string;
 	  }
 	| {type: "status"; engines: Record<EngineName, EngineSnapshot>}
 	| {type: "models"; models: ModelCacheState[]}
 	| {type: "deleted"; ref: ModelRef};
 
+// `Port` is the slice of `Worker` / `DedicatedWorkerGlobalScope` both sides
+// use. A real `Worker` is assigned with a one-token cast
+// (`worker as unknown as MainPort`) because `onmessage`'s `MessageEvent`
+// parameter is not structurally assignable to `{data: In}`.
 export interface Port<Out, In> {
 	postMessage(message: Out): void;
 	onmessage: ((event: {data: In}) => void) | null;
@@ -56,17 +61,15 @@ export type WorkerPort = Port<WorkerToMain, MainToWorker>;
 
 /** Two ports wired to each other; delivery is asynchronous and structured-cloned, like a real worker. */
 export function createPortPair(): [MainPort, WorkerPort] {
-	const main: MainPort = {
-		onmessage: null,
-		postMessage(message) {
-			queueMicrotask(() => worker.onmessage?.({data: structuredClone(message)}));
-		},
+	const main: MainPort = {onmessage: null, postMessage() {}};
+	const worker: WorkerPort = {onmessage: null, postMessage() {}};
+
+	main.postMessage = (message) => {
+		queueMicrotask(() => worker.onmessage?.({data: structuredClone(message)}));
 	};
-	const worker: WorkerPort = {
-		onmessage: null,
-		postMessage(message) {
-			queueMicrotask(() => main.onmessage?.({data: structuredClone(message)}));
-		},
+
+	worker.postMessage = (message) => {
+		queueMicrotask(() => main.onmessage?.({data: structuredClone(message)}));
 	};
 
 	return [main, worker];

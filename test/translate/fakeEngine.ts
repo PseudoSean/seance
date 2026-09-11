@@ -52,10 +52,11 @@ export class FakeEngine implements Engine {
 		this.state = "ready";
 	}
 
-	async unload(): Promise<void> {
+	unload(): Promise<void> {
 		this.calls.unload++;
 		this.loaded = [];
 		this.state = "cold";
+		return Promise.resolve();
 	}
 
 	status(): EngineStatus {

@@ -39,6 +39,7 @@ export function serveEngines(port: WorkerPort, engines: EngineSet, deps: WorkerD
 				catalog = message.catalog;
 				deps.configure(message.catalog, message.ortBase);
 				break;
+
 			case "load": {
 				const engine = engines[message.ref.engine];
 
@@ -58,10 +59,22 @@ export function serveEngines(port: WorkerPort, engines: EngineSet, deps: WorkerD
 
 				break;
 			}
+
 			case "unload":
-				await engines[message.engine].unload();
-				port.postMessage({type: "unloaded", engine: message.engine});
+				try {
+					await engines[message.engine].unload();
+					port.postMessage({type: "unloaded", engine: message.engine});
+				} catch (e) {
+					port.postMessage({
+						type: "error",
+						scope: "unload",
+						engine: message.engine,
+						message: errorMessage(e),
+					});
+				}
+
 				break;
+
 			case "translate": {
 				const engine = engines[message.ref.engine];
 				const controller = new AbortController();
@@ -102,6 +115,7 @@ export function serveEngines(port: WorkerPort, engines: EngineSet, deps: WorkerD
 
 				break;
 			}
+
 			case "cancel":
 				controllers.get(message.id)?.abort();
 				break;
