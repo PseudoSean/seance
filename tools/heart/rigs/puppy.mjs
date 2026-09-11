@@ -289,7 +289,7 @@ export default {
 			{pose: "sit", hold: 0.5, blend: 0.25, fps: 12},
 			{pose: "stand", hold: 0.2, blend: 0.4, fps: 12, turn: true},
 			{pose: "crouch", hold: 0, blend: 0.2, fps: 12},
-			{gait: "bound", cycles: 6, fps: 24, travel: 100},
+			{gait: "bound", cycles: 7, fps: 24, travel: 100},
 		],
 	},
 };

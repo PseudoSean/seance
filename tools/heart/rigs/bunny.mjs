@@ -262,16 +262,21 @@ export default {
 	rig,
 	colours: {near: "#9b82dc", far: "#cbbfee"},
 	budget: 160 * 1024,
+	// Hop in, sit up and twitch, drop and hop on. `travel: 160` (about 1.3
+	// body lengths a hop) — 85 read as barely moving, about half a body
+	// length per 0.8 s hop. Cycles retuned so the bunny sits up near the
+	// middle of its 736-unit stage and clears the right edge; the audit's
+	// exit rule decides the count.
 	sequence: {
 		first: 7,
 		period: 50,
 		stage: {aspect: 8},
 		segments: [
-			{gait: "hop", cycles: 6, fps: 24, travel: 85},
+			{gait: "hop", cycles: 3, fps: 24, travel: 160},
 			{pose: "sit", hold: 0.4, blend: 0.45, fps: 12},
 			{wobble: "twitch", pose: "sit", secs: 1.4, fps: 12},
 			{pose: "crouch", hold: 0.1, blend: 0.4, fps: 12},
-			{gait: "hop", cycles: 9, fps: 24, travel: 85},
+			{gait: "hop", cycles: 4, fps: 24, travel: 160},
 		],
 	},
 };
