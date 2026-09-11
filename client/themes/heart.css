@@ -507,7 +507,150 @@ strong,
 
 /* ---- meadow ---- */
 
+/* Behind every channel and query: a sky that fills the message area and,
+ * at its foot, hills and a ground line sized from --strip (never from the
+ * area's height), with clouds drifting across. All of it is background layers
+ * on the scroll container, so it stays put while messages scroll. Which
+ * hills, where, and the tint of the green come from the conversation's seed
+ * (data-scene, --channel-seed on #chat-container). The animals come in plan 2. */
+/* stylelint-disable-next-line no-duplicate-selectors -- the meadow's seeded hill tokens, kept with this section */
+:root {
+	--heart-hill-hue: calc(140deg + (var(--channel-seed, 0.5) - 0.5) * 60deg);
+	--heart-hill-far: hsl(var(--heart-hill-hue) 36% 90%);
+	--heart-hill-mid: hsl(var(--heart-hill-hue) 36% 84%);
+	--heart-ground: hsl(var(--heart-hill-hue) 34% 78%);
+
+	/* two mid hills: x (left edge as % of width), w (width %), h (height as a share of --strip) */
+	--heart-hill-1-x: 10%;
+	--heart-hill-1-w: 60%;
+	--heart-hill-1-h: 0.24;
+	--heart-hill-2-x: 55%;
+	--heart-hill-2-w: 55%;
+	--heart-hill-2-h: 0.19;
+}
+
+#chat-container[data-scene="0"] {
+	--heart-hill-1-x: -10%;
+	--heart-hill-1-w: 55%;
+	--heart-hill-1-h: 0.26;
+	--heart-hill-2-x: 60%;
+	--heart-hill-2-w: 50%;
+	--heart-hill-2-h: 0.18;
+}
+
+#chat-container[data-scene="1"] {
+	--heart-hill-1-x: 20%;
+	--heart-hill-1-w: 70%;
+	--heart-hill-1-h: 0.22;
+	--heart-hill-2-x: -20%;
+	--heart-hill-2-w: 45%;
+	--heart-hill-2-h: 0.2;
+}
+
+#chat-container[data-scene="2"] {
+	--heart-hill-1-x: 35%;
+	--heart-hill-1-w: 40%;
+	--heart-hill-1-h: 0.27;
+	--heart-hill-2-x: 70%;
+	--heart-hill-2-w: 60%;
+	--heart-hill-2-h: 0.17;
+}
+
+#chat-container[data-scene="3"] {
+	--heart-hill-1-x: 0%;
+	--heart-hill-1-w: 90%;
+	--heart-hill-1-h: 0.19;
+	--heart-hill-2-x: 45%;
+	--heart-hill-2-w: 35%;
+	--heart-hill-2-h: 0.25;
+}
+
+#chat-container[data-scene="4"] {
+	--heart-hill-1-x: -25%;
+	--heart-hill-1-w: 65%;
+	--heart-hill-1-h: 0.21;
+	--heart-hill-2-x: 30%;
+	--heart-hill-2-w: 80%;
+	--heart-hill-2-h: 0.2;
+}
+
+#chat-container[data-scene="5"] {
+	--heart-hill-1-x: 15%;
+	--heart-hill-1-w: 50%;
+	--heart-hill-1-h: 0.25;
+	--heart-hill-2-x: 75%;
+	--heart-hill-2-w: 45%;
+	--heart-hill-2-h: 0.23;
+}
+
+#chat .chat-view[data-type="channel"] .chat,
+#chat .chat-view[data-type="query"] .chat {
+	background-color: var(--heart-sky);
+
+	/* Top layer first. Clouds · ground · mid hill 2 · mid hill 1 · far plateau · far hill · sky. */
+	/* stylelint-disable-next-line max-line-length -- one flat gradient list reads better than a wrap mid-value */
+	background-image: radial-gradient(closest-side, #fff 0 60%, transparent 61%), radial-gradient(closest-side, #fff 0 60%, transparent 61%), linear-gradient(var(--heart-ground), var(--heart-ground)), radial-gradient(ellipse 50% 100% at 50% 100%, var(--heart-hill-mid) 0 68%, transparent 69%), radial-gradient(ellipse 50% 100% at 50% 100%, var(--heart-hill-mid) 0 68%, transparent 69%), linear-gradient(var(--heart-hill-far), var(--heart-hill-far)), radial-gradient(ellipse 60% 100% at 30% 100%, var(--heart-hill-far) 0 70%, transparent 71%), linear-gradient(180deg, var(--heart-sky) 0%, var(--heart-sky-deep) 100%);
+	background-repeat: no-repeat;
+	background-size:
+		3.6rem 1.3rem,
+		2.4rem 0.9rem,
+		100% calc(var(--strip) * 0.14),
+		var(--heart-hill-2-w) calc(var(--strip) * var(--heart-hill-2-h)),
+		var(--heart-hill-1-w) calc(var(--strip) * var(--heart-hill-1-h)),
+		100% calc(var(--strip) * 0.31),
+		110% calc(var(--strip) * 0.48),
+		100% 100%;
+	background-position:
+		-4rem calc(100% - var(--strip) * 0.8),
+		-3rem calc(100% - var(--strip) * 0.6),
+		0 100%,
+		var(--heart-hill-2-x) 100%,
+		var(--heart-hill-1-x) 100%,
+		0 100%,
+		-5% 100%,
+		0 0;
+	animation: heart-clouds 90s linear infinite;
+	animation-delay: calc(var(--channel-seed, 0.5) * -90s);
+}
+
+/* Only the two cloud layers move; every other position is restated. */
+@keyframes heart-clouds {
+	to {
+		background-position:
+			calc(100% + 4rem) calc(100% - var(--strip) * 0.8),
+			calc(100% + 3rem) calc(100% - var(--strip) * 0.6),
+			0 100%,
+			var(--heart-hill-2-x) 100%,
+			var(--heart-hill-1-x) 100%,
+			0 100%,
+			-5% 100%,
+			0 0;
+	}
+}
+
+/* The messages sit on the sky: a faint halo keeps ink clean over hills and, later, animals. */
+#chat .chat-view[data-type="channel"] .msg,
+#chat .chat-view[data-type="query"] .msg {
+	text-shadow: 0 0 6px var(--heart-sky), 0 0 2px var(--heart-sky);
+}
+
+/* stylelint-disable-next-line no-duplicate-selectors -- same rows the motion section animates, now with the fill */
+#chat .chat-view[data-type="channel"] .msg.highlight,
+#chat .chat-view[data-type="query"] .msg.highlight {
+	background: rgb(255 214 230 / 85%);
+}
+
+/* Writing pauses the meadow. */
+#chat-container:has(#input:focus) .chat {
+	animation-play-state: paused;
+}
+
 /* ---- phones ---- */
+@media (max-width: 600px) {
+	:root {
+		--strip: 6.5rem;
+	}
+}
 
 /* ---- reduced motion ---- */
 @media (prefers-reduced-motion: reduce) {
