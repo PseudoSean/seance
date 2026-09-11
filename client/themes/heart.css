@@ -12,7 +12,14 @@
  * at 4.63:1, same hue, lower lightness. Rose text (--heart-rose-text,
  * --chat-accent, --action-color, --tok-keyword, --tok-operator) is
  * likewise darkened from #c23a70 (4.28:1 on the sky) to #b9376b
- * (4.63:1), same hue, lower lightness. */
+ * (4.63:1), same hue, lower lightness. Faint ink (--chat-fg-faint /
+ * --heart-ink-faint, icons and placeholders only, the theme's one
+ * deliberate exception to 4.5:1) is darkened from #8fa3c2 (2.16:1) to
+ * #6e83a8 (3.23:1) to clear the spec's 3:1 floor. The unread badge
+ * (--rail-badge-fg white on --rail-badge-bg) uses --heart-rose-text
+ * (#b9376b, 5.5:1) rather than --heart-rose (#d9457f, 4.11:1) so its
+ * white numeral clears 4.5:1; --rail-accent keeps --heart-rose, since
+ * the active-row marker it draws carries no text. */
 @import "coffee.css";
 
 /* ---- fonts ---- */
@@ -59,7 +66,7 @@
 	--heart-paper: #f4f9ff;
 	--heart-ink: #1e3a6e;
 	--heart-ink-muted: #536a8e;
-	--heart-ink-faint: #8fa3c2;
+	--heart-ink-faint: #6e83a8;
 	--heart-rule: #c5dcf5;
 	--heart-rose: #d9457f;
 	--heart-rose-text: #b9376b;
@@ -77,7 +84,7 @@
 	--chat-bg: #dbeeff;
 	--chat-fg: #1e3a6e;
 	--chat-fg-muted: #536a8e;
-	--chat-fg-faint: #8fa3c2;
+	--chat-fg-faint: #6e83a8;
 	--chat-heading: #2a4a86;
 	--chat-rule: #c5dcf5;
 	--chat-accent: #b9376b;
@@ -102,7 +109,7 @@
 	--rail-item-hover-bg: rgb(255 255 255 / 40%);
 	--rail-accent: #d9457f;
 	--rail-accent-fg: #fff;
-	--rail-badge-bg: #d9457f;
+	--rail-badge-bg: #b9376b;
 	--rail-badge-fg: #fff;
 	--rail-input-bg: #fff;
 	--rail-input-border: #c5dcf5;
