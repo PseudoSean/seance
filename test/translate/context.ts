@@ -3,6 +3,7 @@ import type {ClientChan} from "../../client/js/types";
 import {
 	CONTEXT_LINES,
 	NAMES_CAP,
+	TERM_LINES,
 	addressedNick,
 	buildContext,
 	mentionedNicks,
@@ -60,6 +61,7 @@ describe("translate/context", () => {
 		const context = buildContext(channel, channel.messages[4], {
 			translated: (id) => (id === 2 ? "Yes, yesterday." : undefined),
 			terms: [["rig", "Testaufbau"]],
+			glossary: [],
 			formality: "formal",
 			variant: "",
 			sourceHint: "de",
@@ -86,6 +88,7 @@ describe("translate/context", () => {
 		const context = buildContext(channel, messages[29], {
 			translated: () => undefined,
 			terms: [],
+			glossary: [],
 			formality: "auto",
 			variant: "",
 			sourceHint: null,
@@ -112,6 +115,7 @@ describe("translate/context", () => {
 		const opts = {
 			translated: () => undefined,
 			terms: [],
+			glossary: [],
 			formality: "auto" as const,
 			variant: "",
 			sourceHint: null,
@@ -136,6 +140,7 @@ describe("translate/context", () => {
 		const context = buildContext(channel, messages[11], {
 			translated: () => undefined,
 			terms: [],
+			glossary: [],
 			formality: "auto",
 			variant: "Brazilian Portuguese",
 			sourceHint: null,
@@ -145,12 +150,73 @@ describe("translate/context", () => {
 		expect(context.variant).to.equal("Brazilian Portuguese");
 	});
 
+	it("keeps the newest TERM_LINES of the channel's terms", () => {
+		const channel: ContextChannel = {topic: "", users, messages: [m(1, "ada", "hi")]};
+		// channelStore.rememberTerm appends, so the tail is the newest.
+		const terms: [string, string][] = Array.from({length: TERM_LINES + 5}, (_, i) => [
+			`term${i}`,
+			`Begriff${i}`,
+		]);
+		const context = buildContext(channel, channel.messages[0], {
+			translated: () => undefined,
+			terms,
+			glossary: [],
+			formality: "auto",
+			variant: "",
+			sourceHint: null,
+		});
+
+		expect(context.terms.length).to.equal(TERM_LINES);
+		expect(context.terms[0][0]).to.equal("term5");
+		expect(context.terms[TERM_LINES - 1][0]).to.equal(`term${terms.length - 1}`);
+	});
+
+	it("merges the deploy glossary behind the channel's terms, uncapped", () => {
+		const channel: ContextChannel = {topic: "", users, messages: [m(1, "ada", "hi")]};
+		const terms: [string, string][] = Array.from({length: TERM_LINES + 2}, (_, i) => [
+			`term${i}`,
+			`Begriff${i}`,
+		]);
+
+		// The channel's own memory of a term wins over the deploy's; the
+		// glossary itself is not subject to TERM_LINES.
+		terms.push(["rig", "Testaufbau"]);
+
+		const glossary: [string, string][] = [
+			["rig", "Aufbau"],
+			...Array.from({length: TERM_LINES + 3}, (_, i): [string, string] => [
+				`deploy${i}`,
+				`Einsatz${i}`,
+			]),
+		];
+		const context = buildContext(channel, channel.messages[0], {
+			translated: () => undefined,
+			terms,
+			glossary,
+			formality: "auto",
+			variant: "",
+			sourceHint: null,
+		});
+
+		expect(context.terms.length).to.equal(TERM_LINES + glossary.length - 1);
+		expect(context.terms.find(([source]) => source === "rig")).to.deep.equal([
+			"rig",
+			"Testaufbau",
+		]);
+		expect(context.terms.filter(([source]) => source === "rig").length).to.equal(1);
+		expect(context.terms[context.terms.length - 1]).to.deep.equal([
+			`deploy${TERM_LINES + 2}`,
+			`Einsatz${TERM_LINES + 2}`,
+		]);
+	});
+
 	it("copies terms, so the built context does not hold the caller's array", () => {
 		const channel: ContextChannel = {topic: "", users, messages: [m(1, "ada", "hi")]};
 		const terms: [string, string][] = [["rig", "Testaufbau"]];
 		const context = buildContext(channel, channel.messages[0], {
 			translated: () => undefined,
 			terms,
+			glossary: [],
 			formality: "auto",
 			variant: "",
 			sourceHint: null,

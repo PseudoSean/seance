@@ -3,7 +3,8 @@
 // already have, the reply target (the parent by msgid, else the last line
 // of the nick the text addresses), the topic, the names the model must not
 // translate (capped: the nicks in the context and the ones the text
-// mentions, never the whole NAMES list), the channel's term memory, and the
+// mentions, never the whole NAMES list), the newest TERM_LINES of the
+// channel's term memory merged with the deploy's glossary, and the
 // detector's source hint. Vue-free: it reads plain channel-shaped objects.
 
 import {ContextLine, PromptContext} from "./engine";
@@ -11,6 +12,8 @@ import {Formality} from "./channelStore";
 
 export const CONTEXT_LINES = 10;
 export const NAMES_CAP = 20;
+/** How many of the channel's own terms one prompt carries, newest first out. */
+export const TERM_LINES = 20;
 
 const CHAT_TYPES = new Set(["message", "action", "notice"]);
 
@@ -32,7 +35,10 @@ export interface ContextChannel {
 
 export interface ContextOptions {
 	translated: (id: number) => string | undefined;
+	/** The channel's term memory, oldest first (channelStore.ts). */
 	terms: [string, string][];
+	/** The deploy's `translation.glossary` (branding.ts), merged into the terms. */
+	glossary: [string, string][];
 	formality: Formality;
 	variant: string;
 	sourceHint: string | null;
@@ -135,13 +141,27 @@ export function buildContext(
 		}
 	}
 
+	// The newest TERM_LINES of the channel's own memory (rememberTerm
+	// appends, so the tail is the newest) and the deploy's glossary behind
+	// them, keyed by the source term with the channel's own winning; the
+	// glossary is not subject to TERM_LINES, a deploy decides its own size.
+	// Built fresh rather than copied: `opts.terms` can be a channel's live
+	// term list (a Vue reactive Proxy), and the built context must be plain
+	// data on its own, independent of any boundary guard.
+	const terms: [string, string][] = [];
+	const seen = new Set<string>();
+
+	for (const [source, target] of [...opts.terms.slice(-TERM_LINES), ...opts.glossary]) {
+		if (!seen.has(source)) {
+			seen.add(source);
+			terms.push([source, target]);
+		}
+	}
+
 	const context: PromptContext = {
 		recent,
 		names: names.slice(0, NAMES_CAP),
-		// A copy, not the caller's array: `opts.terms` can be a channel's
-		// live term list (a Vue reactive Proxy), and the built context must
-		// be plain data on its own, independent of any boundary guard.
-		terms: opts.terms.map(([source, target]) => [source, target]),
+		terms,
 		voice: [],
 		formality: opts.formality,
 	};

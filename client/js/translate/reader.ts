@@ -6,6 +6,7 @@
 // header globe and the panel call setReading/setChannelOptions; the chip
 // and the toolbar call retranslate/showOriginal/retryTranslation.
 
+import {getBranding} from "../branding";
 import socket from "../socket";
 import {store, type TranslationEntry} from "../store";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../types";
@@ -24,6 +25,13 @@ import {isEligible, plainTextOf} from "./eligibility";
 import {translateService} from "./index";
 import {type QueueItem, type QueueUpdate, TranslateQueue} from "./queue";
 import {protect} from "./spans";
+
+// When this page started. A replayed message (a reconnect's catch-up)
+// is only eligible when it is newer than this as well as newer than the
+// channel's switch-on moment: `since` is persisted while the
+// translations are not, so without this a reload would re-translate
+// every replayed line back to a switch-on that may be days old.
+const SESSION_START = Date.now();
 
 const queues = new Map<string, TranslateQueue>();
 const priors = new Map<string, LanguagePrior>();
@@ -175,13 +183,15 @@ function entryFor(from: string, to: string): TranslationEntry {
 /**
  * Consider one message. `force` is the toolbar's "Translate" and the chip's
  * "Retranslate": eligibility and the target check are skipped, and an
- * unknown source is left to the LLM.
+ * unknown source is left to the LLM. `replay` is the bus payload's flag: a
+ * history catch-up, held to this page's session as well as to `since`.
  */
 export async function translateMessage(
 	network: ClientNetwork,
 	channel: ClientChan,
 	message: ClientMessage,
-	force = false
+	force = false,
+	replay = false
 ): Promise<void> {
 	if (!message.text) {
 		return;
@@ -202,7 +212,11 @@ export async function translateMessage(
 	const nicks = channel.users.map((u) => u.nick);
 
 	if (!force) {
-		if (!initial.read || !isEligible(message, {since: initial.since, nicks})) {
+		// A cold boot does not translate history; a reconnect's catch-up
+		// within a session does (SESSION_START).
+		const since = replay ? Math.max(initial.since, SESSION_START) : initial.since;
+
+		if (!initial.read || !isEligible(message, {since, nicks})) {
 			return;
 		}
 	}
@@ -241,6 +255,7 @@ export async function translateMessage(
 				return entry && entry.status === "done" ? entry.text : undefined;
 			},
 			terms: settings.terms,
+			glossary: getBranding().translation?.glossary ?? [],
 			formality: settings.formality,
 			variant: settings.variant,
 			sourceHint: from || prior.top(),
@@ -320,7 +335,7 @@ export function initReader(): void {
 		arrivals.set(target.channel.id, (arrivals.get(target.channel.id) ?? 0) + 1);
 
 		if (channelTranslation(target.network, target.channel).read) {
-			void translateMessage(target.network, target.channel, data.msg);
+			void translateMessage(target.network, target.channel, data.msg, false, data.replay);
 		}
 	});
 
