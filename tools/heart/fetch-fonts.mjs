@@ -1,25 +1,44 @@
-// Downloads the <3 theme's fonts (Nunito 600/600i/800, Baloo 2 700; SIL OFL)
-// from Google Fonts' CSS endpoint into client/themes/heart/, plus the licence
-// texts from the google/fonts repository. Run once; the files are committed.
+// Downloads the <3 theme's fonts — Nunito and Baloo 2 as the variable woff2
+// files Google Fonts serves (one file per style carrying a weight range),
+// SIL OFL — from Google Fonts' CSS endpoint into client/themes/heart/, plus
+// the licence texts from the google/fonts repository. Run once; the files
+// are committed.
 //
 //   node tools/heart/fetch-fonts.mjs
+//
+// The variable files, not single-weight instances: the mockups the theme was
+// approved against loaded the family from Google Fonts with several weights,
+// which is served as the variable font, and a static instance cut from it
+// renders visibly differently in some browsers. The endpoint hands Mac
+// browsers a different build from Windows and Linux ones; the Windows/Linux
+// build (also what Firefox gets) is the one bundled.
 import {mkdir, writeFile} from "node:fs/promises";
 import path from "node:path";
 
 const OUT = path.resolve("client/themes/heart");
-// A modern UA makes the endpoint answer with woff2 URLs.
+// A modern UA makes the endpoint answer with woff2 URLs; Windows, Linux and
+// Firefox UAs all get the same build.
 const UA =
-	"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
 const FACES = [
-	{file: "nunito-600.woff2", css: "family=Nunito:wght@600", weight: "600", style: "normal"},
 	{
-		file: "nunito-600-italic.woff2",
-		css: "family=Nunito:ital,wght@1,600",
-		weight: "600",
+		file: "nunito-variable.woff2",
+		css: "family=Nunito:ital,wght@0,400..800",
+		weight: "400 800",
+		style: "normal",
+	},
+	{
+		file: "nunito-variable-italic.woff2",
+		css: "family=Nunito:ital,wght@1,400..700",
+		weight: "400 700",
 		style: "italic",
 	},
-	{file: "nunito-800.woff2", css: "family=Nunito:wght@800", weight: "800", style: "normal"},
-	{file: "baloo2-700.woff2", css: "family=Baloo+2:wght@700", weight: "700", style: "normal"},
+	{
+		file: "baloo2-variable.woff2",
+		css: "family=Baloo+2:wght@400..800",
+		weight: "400 800",
+		style: "normal",
+	},
 ];
 const LICENCES = [
 	["OFL-Nunito.txt", "https://raw.githubusercontent.com/google/fonts/main/ofl/nunito/OFL.txt"],

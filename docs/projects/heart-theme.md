@@ -65,7 +65,7 @@ Sidebar: a lilac→peach vertical gradient on `#sidebar` and `body` (so the gutt
 
 ### 3.2 Type
 
-- `@font-face` for Nunito (600 regular + italic, 800 for bold) and Baloo 2 (700), woff2 files under `client/themes/heart/` referenced relative to the stylesheet. webpack's `client/themes/*` copy pattern is extended to copy the subdirectory (`client/themes/**/*` → `themes/`), keeping the theme self-contained and offline.
+- `@font-face` for Nunito (variable, 400–800 and an italic 400–700) and Baloo 2 (variable, 400–800), woff2 files under `client/themes/heart/` referenced relative to the stylesheet. webpack's `client/themes/*` copy pattern is extended to copy the subdirectory (`client/themes/**/*` → `themes/`), keeping the theme self-contained and offline.
 - Body text `font-weight: 600`. Nicks, channel and network names, headings in the settings: Baloo 2 700. Timestamps stay Nunito 600 at the muted tone with `font-variant-numeric: tabular-nums`.
 - Sizes are untouched: the theme is colour, type and motion; layout stays `style.css`'s rem system.
 
@@ -182,7 +182,7 @@ Hearts from the puppy are part of its SVG (a small heart path with its own anima
 ## 7. App changes
 
 1. `helpers/channelSeed.ts` + `Chat.vue`: publish `data-scene` and `--channel-seed` (§5.2). Test in `test/helpers/channelSeed.ts`.
-2. `configuration.ts`: `{name: "heart", displayName: "ps <3", themeColor: "#f4f9ff"}`; `test/tests/build.ts`: add `heart` to the list of theme files expected in `public/themes/`, and expect `themes/heart/nunito-600.woff2` and `themes/heart/horse.svg`.
+2. `configuration.ts`: `{name: "heart", displayName: "ps <3", themeColor: "#f4f9ff"}`; `test/tests/build.ts`: add `heart` to the list of theme files expected in `public/themes/`, and expect `themes/heart/nunito-variable.woff2` and `themes/heart/horse.svg`.
 3. `webpack.config.ts`: the themes copy pattern includes subdirectories.
 4. `docs/resources/themes.md`: the `heart` row and a section on the meadow and the generator; `CLAUDE.md` gets one paragraph pointing there; `docs/projects/heart-theme.md` carries this spec once the work lands (per the repo's `docs/superpowers/` convention).
 
