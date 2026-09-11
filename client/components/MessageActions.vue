@@ -208,6 +208,7 @@ export default defineComponent({
 
 		const reply = () => startReply(props.channel, props.message);
 		const edit = () => startEdit(props.channel, props.message);
+
 		const translate = () => {
 			if (hiddenTranslation.value) {
 				// Showing it again must not cost a new translation.
