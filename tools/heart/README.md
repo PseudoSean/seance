@@ -32,15 +32,31 @@ leaves the old files in place and exits 1.
    never drifts. None of these animals ever walks backward on purpose, so a planted foot
    measured moving forward relative to the body — a touch-down mid-swing, common across a
    gait blend — clamps that frame's velocity at 0 rather than reading it as the body stepping
-   back. Segments marked `turn` flip the facing. A segment may set `travel` (units/s) to drive
-   its own ground speed instead, when the rig's swing does not lift the feet clearly enough
-   for the stance measurement to trust — the approved mockups' puppy and bunny don't; the
-   audit still prints the measured stance speed beside the one actually applied.
+   back. Segments marked `turn` flip the facing. A segment may set `travel` to drive its own
+   ground speed instead, when the rig's swing does not lift the feet clearly enough for the
+   stance measurement to trust — the approved mockups' puppy and bunny don't — as a constant
+   units/s, or `[from, to]` to ramp linearly across the segment's own span: clamping alone
+   zeroes a gait blend's measured speed (the planted hoof swings forward there throughout),
+   which read as the horse stalling for the length of every blend; the horse's own blends
+   instead ramp between its two gaits' speeds, so it never stops or lurches at the switch. The
+   audit still prints the measured stance speed beside whichever is actually applied (the
+   ramp's own mean, for a ramp).
 5. **Files** (`lib/svg.mjs`, `lib/build.mjs`): a wide stage (`sequence.stage.aspect` × the
-   animal's height), the animal starting flush with the stage's left edge; one `<path>` per
+   animal's height — sized so the visit actually crosses a wide chat rather than a slice of
+   it: horse is aspect 16, puppy and bunny 24, since the small animals are half the horse's
+   height and need the larger multiple to reach the same pixel width, about 1850 px at the
+   theme's size), the animal starting flush with the stage's left edge; one `<path>` per
    outline, far legs first, each morphing through the clips (`<animate attributeName="d">`,
    integer relative coordinates) chained by syncbase timing so a gait repeats and the loop
-   restarts after the off-stage gap; the travel as an animated translate; the turn as a
+   restarts after the off-stage gap; the travel as an animated translate — its own keyframes,
+   independent of the outline's, from `travelCurve` (`lib/build.mjs`): a ramp segment is
+   subdivided far finer than its own (cheap, low-fps) outline frames, since the translate
+   costs nothing extra per sample and the outline costs bytes per frame, and every subdivided
+   time is snapped to the same rounding precision (`TRAVEL_DECIMALS`, `lib/svg.mjs`) its
+   position is computed against — skip that and a long loop period makes four decimals of a
+   _fraction_ of it too coarse to tell two nearby frames' times apart, so a stored position
+   pairs with a slightly different stored time than it was computed for and a velocity check
+   reads a spurious jump that was never in the underlying motion; the turn as a
    discrete mirror about the animal's centre; the whole visit faded in over a second (or a
    quarter of the time on stage, if that is shorter) from the moment it appears, and faded out
    over the same span ending exactly when its box starts crossing the stage edge it leaves by
@@ -74,7 +90,17 @@ the causes out:
   Current headroom: bunny near sits at 4.18 % of the 5 % limit, puppy far at 6.96 % of the
   10 % limit — so a new rig tuned blind against the limits knows how much room there really is;
 - the visit ends off-stage on either side, the off-stage gap is ≥ 2 s;
-- sizes: `horse.svg` ≤ 200 KB, `puppy.svg` and `bunny.svg` ≤ 160 KB, stills ≤ 8 KB.
+- sizes: `horse.svg` ≤ 200 KB, `puppy.svg` and `bunny.svg` ≤ 160 KB, stills ≤ 8 KB;
+- the clip chain's total duration (Σ `dur` × `repeat` over the segments) agrees with the
+  sampled `onStage` within 5 ms — the two are built from the same rounded frame counts and
+  should always match exactly; a mismatch would mean the shape morphs and the travel have
+  drifted out of sync with each other, animating a pose that no longer lines up with where the
+  animal has travelled to;
+- every hold — a `pose` segment with `hold > 0`, or a `wobble` — applies under 5 units/s: a
+  stopped, sitting, or turning animal must not travel, even a little. A hold's _measured_
+  stance speed can read higher than that (a blend into the hold can register real but
+  spurious foot movement mid-transition); the fix is a `travel: 0` pin on that segment in the
+  rig, not a change here — bunny's `crouch` needed exactly this (it measured ~5.3 units/s).
 
 The per-segment speed the audit prints is never negative: a planted foot's measured velocity
 is clamped at 0 (`lib/travel.mjs`), since none of these animals ever walks backward on purpose.

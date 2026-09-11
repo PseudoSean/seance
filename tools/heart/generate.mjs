@@ -41,10 +41,16 @@ for (const name of names) {
 			audit.tExitFallback ? " — exit condition not found, fell back to onStage" : ""
 		}`
 	);
+	console.log(
+		`  clip chain ${audit.clipTotalDur.toFixed(3)} s vs onStage ${audit.onStage.toFixed(
+			3
+		)} s (diff ${((audit.clipTotalDur - audit.onStage) * 1000).toFixed(1)} ms)`
+	);
 	for (const s of audit.speeds) {
 		const note =
 			s.mean !== s.measured ? ` (stance measured ${s.measured.toFixed(0)} units/s)` : "";
-		console.log(`  ${s.id} ${s.kind}: ${s.mean.toFixed(0)} units/s${note}`);
+		const hold = s.hold ? " [hold]" : "";
+		console.log(`  ${s.id} ${s.kind}: ${s.mean.toFixed(0)} units/s${note}${hold}`);
 	}
 	for (const p of audit.problems) console.log(`  ✗ ${p}`);
 	if (audit.problems.length) {
