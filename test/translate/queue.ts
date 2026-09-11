@@ -270,6 +270,28 @@ describe("translate/queue", () => {
 		expect(r.requests.length).to.equal(PAUSE_AFTER_FAILURES + 1);
 	});
 
+	it("a retry resumes the engine its failures paused", async () => {
+		let failing = true;
+		const r = rig((req) => (failing ? new Error("boom") : [`[en] ${req.text}`]));
+		clock = r.clock;
+
+		for (let i = 1; i <= PAUSE_AFTER_FAILURES; i++) {
+			r.queue.enqueue(item(i, `zeile ${i} hier`, {single: true}));
+		}
+
+		await settle(r.clock);
+		expect(r.queue.paused("llm")).to.equal(true);
+
+		// The chip's retry, with nobody having resumed the engine: the item
+		// would otherwise stay pending behind the pause for ever.
+		failing = false;
+		r.queue.retry(item(1, "zeile 1 hier"));
+		await settle(r.clock);
+
+		expect(r.queue.paused("llm")).to.equal(false);
+		expect(r.updates.filter(([id, u]) => id === 1 && u.status === "done")).to.have.length(1);
+	});
+
 	it("a route that rejects fails the item instead of losing it", async () => {
 		const r = rig();
 		clock = r.clock;

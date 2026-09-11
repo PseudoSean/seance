@@ -283,6 +283,27 @@ export async function translateMessage(
 	}
 }
 
+/**
+ * Let a paused engine run again. state.translation.paused is global (one
+ * engine, however many networks queue for it), so every queue resumes it.
+ * Both ways back into the queue go through here: an engine pauses after
+ * three failures in a row, which is exactly when a user reaches for a
+ * retry, and an item queued behind a paused engine never runs.
+ */
+function resumePausedEngines(): void {
+	const paused = store.state.translation.paused;
+
+	if (!paused) {
+		return;
+	}
+
+	for (const queue of queues.values()) {
+		queue.resume(paused.engine);
+	}
+
+	store.commit("translationPaused", null);
+}
+
 export function retranslate(
 	network: ClientNetwork,
 	channel: ClientChan,
@@ -293,6 +314,7 @@ export function retranslate(
 		return;
 	}
 
+	resumePausedEngines();
 	void translateMessage(network, channel, message, true);
 }
 
@@ -306,17 +328,7 @@ export function retryTranslation(
 	channel: ClientChan,
 	message: ClientMessage
 ): void {
-	const paused = store.state.translation.paused;
-
-	if (paused) {
-		// state.translation.paused is global (one engine, however many
-		// networks queue for it), so every queue that paused it resumes.
-		for (const queue of queues.values()) {
-			queue.resume(paused.engine);
-		}
-
-		store.commit("translationPaused", null);
-	}
+	resumePausedEngines();
 
 	const known = items.get(message.id);
 

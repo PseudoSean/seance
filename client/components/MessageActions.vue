@@ -41,8 +41,8 @@
 			v-if="canTranslate"
 			type="button"
 			class="msg-action msg-action-translate"
-			aria-label="Translate"
-			title="Translate"
+			:aria-label="translateLabel"
+			:title="translateLabel"
 			@click.stop="translate"
 		>
 			🌐
@@ -87,7 +87,7 @@ import {useStore} from "../js/store";
 import {startEdit, startReply} from "../js/helpers/compose";
 import {myReactions} from "../js/helpers/messageUpdates";
 import {loadEmojiCatalog} from "../js/helpers/emoji";
-import {retranslate, translationAvailable} from "../js/translate/reader";
+import {retranslate, showOriginal, translationAvailable} from "../js/translate/reader";
 import {ChanType} from "../../shared/types/chan";
 import {MessageType} from "../../shared/types/msg";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
@@ -168,6 +168,18 @@ export default defineComponent({
 			() => !!props.message.self || props.channel.type === ChanType.CHANNEL
 		);
 
+		// "Show original only" hides the line, chip included, so the toolbar
+		// is the only way back to it.
+		const hiddenTranslation = computed(() => {
+			const entry = store.state.translations[props.message.id];
+
+			return !!entry && entry.status === "done" && entry.hidden;
+		});
+
+		const translateLabel = computed(() =>
+			hiddenTranslation.value ? "Show translation" : "Translate"
+		);
+
 		const canTranslate = computed(() => {
 			if (!translationAvailable() || props.message.self) {
 				return false;
@@ -182,7 +194,12 @@ export default defineComponent({
 
 			const entry = store.state.translations[props.message.id];
 
-			return !entry || entry.status === "failed" || entry.status === "dropped";
+			return (
+				!entry ||
+				entry.status === "failed" ||
+				entry.status === "dropped" ||
+				hiddenTranslation.value
+			);
 		});
 
 		// Fetch the catalog chunk while the pointer is on its way to the button,
@@ -191,7 +208,15 @@ export default defineComponent({
 
 		const reply = () => startReply(props.channel, props.message);
 		const edit = () => startEdit(props.channel, props.message);
-		const translate = () => retranslate(props.network, props.channel, props.message);
+		const translate = () => {
+			if (hiddenTranslation.value) {
+				// Showing it again must not cost a new translation.
+				showOriginal(props.message.id, false);
+				return;
+			}
+
+			retranslate(props.network, props.channel, props.message);
+		};
 
 		const react = (text: string) => {
 			if (!props.message.msgid) {
@@ -253,6 +278,7 @@ export default defineComponent({
 			reply,
 			edit,
 			translate,
+			translateLabel,
 			react,
 			preloadEmoji,
 			remove,

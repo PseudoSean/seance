@@ -196,7 +196,15 @@ export class TranslateQueue {
 				const queued: Queued = {item, engine, seq: front ? -++this.seq : ++this.seq};
 
 				this.waiting.push(queued);
-				this.pump();
+
+				if (front && this.pausedEngines.has(engine)) {
+					// A retry is someone asking for this line now: the engine its
+					// failures paused gets another chance rather than leaving the
+					// item waiting for ever. resume() pumps.
+					this.resume(engine);
+				} else {
+					this.pump();
+				}
 			},
 			(e) => {
 				this.deps.onUpdate(item.id, {
