@@ -38,6 +38,16 @@
 			{{ copied ? "✓" : "⧉" }}
 		</button>
 		<button
+			v-if="canTranslate"
+			type="button"
+			class="msg-action msg-action-translate"
+			aria-label="Translate"
+			title="Translate"
+			@click.stop="translate"
+		>
+			🌐
+		</button>
+		<button
 			v-if="canEdit"
 			type="button"
 			class="msg-action msg-action-edit"
@@ -77,6 +87,7 @@ import {useStore} from "../js/store";
 import {startEdit, startReply} from "../js/helpers/compose";
 import {myReactions} from "../js/helpers/messageUpdates";
 import {loadEmojiCatalog} from "../js/helpers/emoji";
+import {channelTranslation, retranslate, translationAvailable} from "../js/translate/reader";
 import {ChanType} from "../../shared/types/chan";
 import {MessageType} from "../../shared/types/msg";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
@@ -157,12 +168,31 @@ export default defineComponent({
 			() => !!props.message.self || props.channel.type === ChanType.CHANNEL
 		);
 
+		const canTranslate = computed(() => {
+			if (!translationAvailable() || props.message.self) {
+				return false;
+			}
+
+			if (
+				props.message.type !== MessageType.MESSAGE &&
+				props.message.type !== MessageType.ACTION
+			) {
+				return false;
+			}
+
+			const entry = store.state.translations[props.message.id];
+			const reading = channelTranslation(props.network, props.channel).read !== null;
+
+			return !reading || !entry || entry.status === "failed" || entry.status === "dropped";
+		});
+
 		// Fetch the catalog chunk while the pointer is on its way to the button,
 		// so the grid is there the moment the picker opens.
 		const preloadEmoji = () => void loadEmojiCatalog().catch(() => undefined);
 
 		const reply = () => startReply(props.channel, props.message);
 		const edit = () => startEdit(props.channel, props.message);
+		const translate = () => retranslate(props.network, props.channel, props.message);
 
 		const react = (text: string) => {
 			if (!props.message.msgid) {
@@ -218,10 +248,12 @@ export default defineComponent({
 			mine,
 			canEdit,
 			canDelete,
+			canTranslate,
 			codeBlocks,
 			copied,
 			reply,
 			edit,
+			translate,
 			react,
 			preloadEmoji,
 			remove,
