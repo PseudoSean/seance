@@ -45,13 +45,26 @@ const LICENCES = [
 	["OFL-Baloo2.txt", "https://raw.githubusercontent.com/google/fonts/main/ofl/baloo2/OFL.txt"],
 ];
 
-/** The latin subset's woff2 URL out of the endpoint's stylesheet. */
+/**
+ * The latin subset's woff2 URL out of the endpoint's stylesheet. Each
+ * subset's comment (cyrillic, latin-ext, latin, …) stands BEFORE its
+ * @font-face block, so the pair has to be matched as a unit: splitting on
+ * "@font-face" and looking for the comment inside a block finds the block
+ * before the right one — the latin-ext file, which has ā and ő but not a to
+ * z, loads fine and then draws every plain letter in the fallback font.
+ */
 function latinUrl(css) {
-	const blocks = css.split("@font-face").slice(1);
-	const latin = blocks.find((b) => b.includes("/* latin */"));
-	const m = latin && latin.match(/url\((https:[^)]+\.woff2)\)/);
-	if (!m) throw new Error("no latin woff2 in the endpoint's answer");
-	return m[1];
+	const pair = /\/\* (\S+) \*\/\s*@font-face \{([^}]*)\}/g;
+	for (const m of css.matchAll(pair)) {
+		if (m[1] !== "latin") continue;
+		const u = m[2].match(/url\((https:[^)]+\.woff2)\)/);
+		if (!u) break;
+		if (!/unicode-range:\s*U\+0000-00FF/.test(m[2])) {
+			throw new Error("the latin block does not start at U+0000: the picker is off");
+		}
+		return u[1];
+	}
+	throw new Error("no latin woff2 in the endpoint's answer");
 }
 
 await mkdir(OUT, {recursive: true});
