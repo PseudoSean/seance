@@ -4,6 +4,11 @@
 // remember what was downloaded in memory, and translate by echoing the
 // text behind the target language's name, word by word. Vue-free so a
 // mocha test can pin its shape.
+//
+// index.ts reaches this module behind `BUILD === "dev"`, and webpack
+// folds it out of a production build: `NODE_ENV=production yarn build`
+// ships neither the scripted engines nor the request log (grep
+// `public/js/*.js` for `__seanceTranslateFake` to check).
 
 import {
 	Engine,
