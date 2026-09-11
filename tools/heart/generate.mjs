@@ -15,7 +15,7 @@ import path from "path";
 import {buildAnimal} from "./lib/build.mjs";
 
 const OUT = path.resolve(import.meta.dirname, "../../client/themes/heart");
-const ALL = ["horse", "puppy", "bunny"];
+const ALL = ["horse", "puppy", "bunny", "deer"];
 const names = process.argv.slice(2).length ? process.argv.slice(2) : ALL;
 let ok = true;
 
