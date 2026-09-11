@@ -3,8 +3,11 @@ import fs from "fs";
 import path from "path";
 
 const DIR = path.resolve(__dirname, "../../../client/themes/heart");
-/** [animal, budget for the near and far files in KB] — Tasks 6 and 7 add theirs. */
-const ANIMALS: [string, number][] = [["horse", 200]];
+/** [animal, budget for the near and far files in KB] — Task 7 adds its own. */
+const ANIMALS: [string, number][] = [
+	["horse", 200],
+	["puppy", 160],
+];
 
 describe("the <3 theme's generated animals (client/themes/heart/*.svg)", function () {
 	const read = (f: string) => fs.readFileSync(path.join(DIR, f), "utf8");
@@ -38,7 +41,13 @@ describe("the <3 theme's generated animals (client/themes/heart/*.svg)", functio
 					expect(svg, `${id} syncs the other paths`).to.include(`begin="${id}.begin"`);
 				}
 
-				for (const m of svg.matchAll(/values="([^"]*)" keyTimes="([^"]*)" dur=/g)) {
+				// calcMode="discrete" is the turn's flip transform: its keyTimes are
+				// [0, flip.at] within the shared period and legitimately stop short of
+				// 1 (see tools/heart/lib/svg.mjs animalSvg's `scale`). Every other
+				// animate/animateTransform here is calcMode="linear" and must span 0 to 1.
+				for (const m of svg.matchAll(
+					/calcMode="linear"[^>]*values="([^"]*)" keyTimes="([^"]*)" dur=/g
+				)) {
 					const values = m[1].split(";");
 					const times = m[2].split(";").map(Number);
 					expect(values.length).to.equal(times.length);
