@@ -435,6 +435,7 @@ p {
 #viewport .lt::before,
 #viewport .rt::before,
 #chat button.mentions::before,
+#chat button.translate::before,
 #chat button.close::before,
 #chat button.menu::before,
 #chat button.search::before,
@@ -509,6 +510,7 @@ p {
 #viewport .rt::before { content: "\f0c0"; /* https://fontawesome.com/icons/users?style=solid */ }
 #chat button.menu::before { content: "\f142"; /* http://fontawesome.io/icon/ellipsis-v/ */ }
 #chat button.mentions::before { content: "\f1fa"; /* https://fontawesome.com/icons/at?style=solid */ }
+#chat button.translate::before { content: "\f0ac"; /* https://fontawesome.com/icons/globe?style=solid */ }
 #chat button.search::before { content: "\f002"; /* https://fontawesome.com/icons/search?style=solid */ }
 #chat button.close::before { content: "\f00d"; /* https://fontawesome.com/icons/times?style=solid */ }
 #chat .connecting-indicator::before { content: "\f021"; /* https://fontawesome.com/icons/sync?style=solid */ }
@@ -779,6 +781,7 @@ p {
 #viewport .lt,
 #viewport .rt,
 #chat button.mentions,
+#chat button.translate,
 #chat button.search,
 #chat button.menu,
 #chat button.close {
@@ -794,6 +797,7 @@ p {
 #viewport .lt::before,
 #viewport .rt::before,
 #chat button.mentions::before,
+#chat button.translate::before,
 #chat button.search::before,
 #chat button.menu::before,
 #chat button.close::before {
@@ -1504,6 +1508,47 @@ textarea.input {
 
 #chat .header {
 	border-bottom: 1px solid #e7e7e7;
+	position: relative;
+}
+
+#chat button.translate.on {
+	color: var(--chat-accent, var(--link-color));
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	border-radius: 0.25rem;
+}
+
+.translation-panel {
+	position: absolute;
+	top: 100%;
+	right: 0.5rem;
+	z-index: 10;
+	display: grid;
+	gap: 0.5rem;
+	min-width: 17rem;
+	padding: 0.75rem;
+	border: 1px solid var(--window-border, rgb(128 128 128 / 30%));
+	border-radius: 0.375rem;
+	background: var(--body-bg-color);
+	box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 25%);
+}
+
+.translation-panel-row {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 0.5rem;
+	align-items: center;
+}
+
+.translation-panel-done {
+	justify-self: end;
+}
+
+@media (max-width: 479px) {
+	.translation-panel {
+		right: 0;
+		left: 0;
+		min-width: 0;
+	}
 }
 
 /* A dial or a reconnect is a spinner in the header, not a banner */

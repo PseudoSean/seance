@@ -199,6 +199,15 @@ export function generateChannelContextMenu(
 				);
 			},
 		});
+
+		items.push({
+			label: "Translation…",
+			type: "item",
+			class: "translate",
+			action() {
+				eventbus.emit("translation:panel", {channel, network});
+			},
+		});
 	}
 
 	const humanFriendlyChanTypeMap: Record<string, string> = {

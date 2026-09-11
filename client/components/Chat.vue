@@ -62,6 +62,20 @@
 							:aria-label="connectingLabel"
 						/>
 					</span>
+					<span
+						v-if="translationAvailable"
+						class="translate-tooltip tooltipped tooltipped-w tooltipped-no-touch"
+						:aria-label="translateLabel"
+					>
+						<button
+							class="translate"
+							:class="{on: translationOn}"
+							:aria-label="translateLabel"
+							:aria-pressed="translationOn"
+							@click="toggleTranslation"
+							@contextmenu.prevent="openTranslationPanel"
+						/>
+					</span>
 					<button
 						class="mentions"
 						aria-label="Open your mentions"
@@ -83,6 +97,12 @@
 							@click="store.commit('toggleUserlist')"
 						/>
 					</span>
+					<TranslationPanel
+						v-if="translationPanelOpen"
+						:channel="channel"
+						:network="network"
+						@close="translationPanelOpen = false"
+					/>
 				</div>
 				<div v-if="channel.type === 'special'" class="chat-content">
 					<div class="chat">
@@ -143,12 +163,29 @@ import ListInvites from "./Special/ListInvites.vue";
 import ListExcepts from "./Special/ListExcepts.vue";
 import ListChannels from "./Special/ListChannels.vue";
 import ListIgnored from "./Special/ListIgnored.vue";
-import {defineComponent, PropType, ref, computed, watch, nextTick, onMounted, Component} from "vue";
+import TranslationPanel from "./TranslationPanel.vue";
+import {
+	defineComponent,
+	PropType,
+	ref,
+	computed,
+	watch,
+	nextTick,
+	onMounted,
+	onBeforeUnmount,
+	Component,
+} from "vue";
 import {channelOpened} from "../js/helpers/lastChannel";
 import type {ClientNetwork, ClientChan} from "../js/types";
 import {useStore} from "../js/store";
 import {SpecialChanType, ChanType} from "../../shared/types/chan";
 import {layout, toPlainText} from "../js/helpers/ircmessageparser/layout";
+import {
+	channelTranslation,
+	setReading,
+	translationAvailable as translationAvailableNow,
+} from "../js/translate/reader";
+import {languageName} from "../js/translate/languages";
 
 export default defineComponent({
 	name: "Chat",
@@ -159,6 +196,7 @@ export default defineComponent({
 		ChatUserList,
 		SidebarToggle,
 		MessageSearchForm,
+		TranslationPanel,
 	},
 	props: {
 		network: {type: Object as PropType<ClientNetwork>, required: true},
@@ -272,6 +310,67 @@ export default defineComponent({
 			});
 		};
 
+		const translationPanelOpen = ref(false);
+		const translationState = computed(() => channelTranslation(props.network, props.channel));
+		const translationAvailable = computed(
+			() =>
+				(props.channel.type === ChanType.CHANNEL ||
+					props.channel.type === ChanType.QUERY) &&
+				translationAvailableNow()
+		);
+		const translationOn = computed(
+			() => translationState.value.read !== null || translationState.value.write !== null
+		);
+		const translateLabel = computed(() => {
+			const name = (code: string) => languageName(code, navigator.language);
+			const {read, write} = translationState.value;
+			const paused = store.state.translation.paused;
+			const parts: string[] = [];
+
+			if (read) {
+				parts.push(`Translating into ${name(read)}`);
+			} else {
+				parts.push(`Translate messages into ${name(store.state.settings.translateTo)}`);
+			}
+
+			if (write) {
+				parts.push(`sending in ${name(write)}`);
+			}
+
+			if (paused) {
+				parts.push(`paused: ${paused.message}`);
+			}
+
+			return parts.join(", ");
+		});
+
+		const toggleTranslation = () => {
+			setReading(
+				props.network,
+				props.channel,
+				translationState.value.read ? null : store.state.settings.translateTo
+			);
+		};
+
+		const openTranslationPanel = () => {
+			translationPanelOpen.value = true;
+		};
+
+		const onPanelRequest = (data: {channel: ClientChan}) => {
+			if (data.channel.id === props.channel.id) {
+				translationPanelOpen.value = true;
+			}
+		};
+
+		onMounted(() => eventbus.on("translation:panel", onPanelRequest));
+		onBeforeUnmount(() => eventbus.off("translation:panel", onPanelRequest));
+		watch(
+			() => props.channel.id,
+			() => {
+				translationPanelOpen.value = false;
+			}
+		);
+
 		watch(
 			() => props.channel,
 			() => {
@@ -313,6 +412,12 @@ export default defineComponent({
 			saveTopic,
 			openContextMenu,
 			openMentions,
+			translationPanelOpen,
+			translationAvailable,
+			translationOn,
+			translateLabel,
+			toggleTranslation,
+			openTranslationPanel,
 		};
 	},
 });
