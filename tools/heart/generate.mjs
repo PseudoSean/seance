@@ -36,6 +36,11 @@ for (const name of names) {
 			0
 		)} of ${audit.stageW}`
 	);
+	console.log(
+		`  fades out by t=${audit.tExit.toFixed(2)} s (on stage ${audit.onStage.toFixed(2)} s)${
+			audit.tExitFallback ? " — exit condition not found, fell back to onStage" : ""
+		}`
+	);
 	for (const s of audit.speeds) {
 		const note =
 			s.mean !== s.measured ? ` (stance measured ${s.measured.toFixed(0)} units/s)` : "";

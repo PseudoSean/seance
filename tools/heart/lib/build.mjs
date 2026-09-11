@@ -141,6 +141,28 @@ export function travelOf(def, poses, segs) {
 	return {xs, v, flips};
 }
 
+/**
+ * When the animal's box starts to cross the stage boundary it leaves by, so
+ * the fade-out can finish exactly there instead of hanging on past it: the
+ * last contiguous run of frames whose box already crosses one edge —
+ * rightward when `x0 + xs[i] + vb.x + vb.w >= stageW`, leftward when
+ * `x0 + xs[i] + vb.x <= 0` — walking back from the end so the flush-left
+ * start (`x0 = -vb.x`, which trivially satisfies the leftward test at frame
+ * 0) is never mistaken for the exit. The exit rule guarantees the last frame
+ * satisfies one of the two; `found: false` only if it somehow doesn't.
+ */
+export function findExitTime(poses, xs, x0, vb, stageW) {
+	const exits = (i) => {
+		const pos = x0 + xs[i];
+		return pos + vb.x + vb.w >= stageW || pos + vb.x <= 0;
+	};
+	const n = poses.length;
+	if (!exits(n - 1)) return {t: null, found: false};
+	let i = n - 1;
+	while (i > 0 && exits(i - 1)) i--;
+	return {t: poses[i].t, found: true};
+}
+
 const lengthOf = (pts) => {
 	let L = 0;
 	for (let i = 0; i < pts.length; i += 2) {
@@ -174,6 +196,8 @@ export function buildAnimal(def) {
 			)} of ${stageW}: add cycles to the last gait`
 		);
 	}
+	const exitTime = findExitTime(poses, xs, x0, vb, stageW);
+	const tExit = exitTime.found ? exitTime.t : onStage;
 	let worstNear = 0;
 	let worstFar = 0;
 	for (const seg of segs) {
@@ -213,11 +237,14 @@ export function buildAnimal(def) {
 	}));
 	const P = sequence.period;
 	const xLast = (x0 + xs[xs.length - 1]) * k;
-	const fade = Math.min(1, onStage / 4);
+	let fade = Math.min(1, onStage / 4);
+	// a visit shorter than two fades: shrink so fade-in and fade-out don't overlap
+	if (tExit - fade < fade) fade = tExit / 2;
 	const travel = {
 		period: P,
 		first: sequence.first,
 		onStage,
+		tExit,
 		fade,
 		keyTimes: [
 			0,
@@ -286,6 +313,8 @@ export function buildAnimal(def) {
 		worstFar,
 		xEnd,
 		stageW,
+		tExit,
+		tExitFallback: !exitTime.found,
 		speeds,
 		bytes: Object.fromEntries(Object.entries(files).map(([f, s]) => [f, s.length])),
 		problems,
