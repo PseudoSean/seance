@@ -208,6 +208,8 @@ Seance can translate messages on the user's device (`client/js/translate/`, `doc
 
 **Mirror layout.** Under `modelBase`, a WebLLM model lives at `<modelBase>/<model_id>/` with the files of its Hugging Face repo (`mlc-chat-config.json`, `ndarray-cache.json`, the `params_shard_*.bin`), and a transformers.js model at `<modelBase>/<repo>/` (e.g. `<modelBase>/Xenova/nllb-200-distilled-600M/`) with `config.json`, `tokenizer.json`, `tokenizer_config.json` and `onnx/*_quantized.onnx`. A mirror on another origin needs `Access-Control-Allow-Origin` for the app's origin; a mirror inside the app's own tree goes under `models/`, which the service worker leaves alone. The compiled WebLLM library (`translation.llm.lib`) can be mirrored the same way.
 
+**MIME types.** The worker `import()`s `js/ort/ort-wasm-simd-threaded.mjs`; serve `.mjs` as `text/javascript` and `.wasm` as `application/wasm`, or the CPU models fail with "no available backend found".
+
 **Threads.** The CPU models run several times faster with multi-threaded WebAssembly, which the browser only allows on a cross-origin-isolated page. A deploy that can set response headers sends `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` on `index.html`; with `require-corp` instead, every cross-origin resource the page loads (link previews, the uploader, a mirror on another origin) must also send `Cross-Origin-Resource-Policy: cross-origin`. Without the headers everything still works, single-threaded. The CPU engine reports whether it got threads in its status snapshot (`threads` on the worker's `status` reply); no screen shows it yet, so a deploy checks `crossOriginIsolated` in the browser console.
 
 ## Files a rebranded deploy overwrites in `public/`

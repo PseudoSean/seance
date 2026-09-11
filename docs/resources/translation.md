@@ -55,6 +55,8 @@ only caller:
 
 ## Weights
 
+**Serving.** The worker loads ONNX Runtime with a dynamic `import()` of `js/ort/ort-wasm-simd-threaded.mjs`, and a browser refuses a module served with anything but a JavaScript MIME type ("Failed to fetch dynamically imported module", surfaced by the tab as "no available backend found"). A deploy must serve `.mjs` as `text/javascript` and `.wasm` as `application/wasm` (the latter for streaming compilation; a wrong type there only slows the load). GitHub Pages, nginx and Python's `http.server` do; a hand-rolled static server with its own MIME table may not.
+
 WebLLM caches under its own Cache Storage keys, transformers.js under
 `transformers-cache`; `service-worker.js` never touches either, nor a
 same-origin mirror under `models/`. The ONNX Runtime wasm files ship in
