@@ -218,8 +218,17 @@ strong,
 	font-weight: 700;
 }
 
-#chat .msg .time {
-	font-variant-numeric: tabular-nums;
+/* Nunito 600 + tabular-nums measures wider than style.css's fixed 12h
+ * columns (07:13 AM at 82.9px vs. a 4.75rem/5.75rem box), wrapping to two
+ * lines; restated here, same selectors, so this file's cascade position
+ * wins. The 24h-only width (also 4.75rem, shared with the seconds-only
+ * selector above it in style.css) is left alone. */
+#chat.time-12h .time {
+	width: 5.5rem;
+}
+
+#chat.time-seconds.time-12h .time {
+	width: 7.25rem;
 }
 
 /* ---- motion ---- */
@@ -252,23 +261,18 @@ strong,
 }
 
 #chat .msg {
-	animation: heart-fade 340ms ease-out both;
-}
-
-#chat .msg.pending {
-	animation-name: none;
-	opacity: 0.55;
+	animation: heart-fade 340ms ease-out backwards;
 }
 
 #chat .chat-view[data-type="channel"] .msg.highlight,
 #chat .chat-view[data-type="query"] .msg.highlight {
-	animation: heart-fade 340ms ease-out both, heart-glow 1.8s ease-out 2;
+	animation: heart-fade 340ms ease-out backwards, heart-glow 1.8s ease-out 2;
 }
 
 .channel-list-item,
 #chat .header,
 #form {
-	animation: heart-rise 0.45s ease-out both;
+	animation: heart-rise 0.45s ease-out backwards;
 }
 
 .channel-list-item:nth-child(1) { animation-delay: 45ms; }
