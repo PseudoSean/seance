@@ -67,4 +67,18 @@ describe("tools/heart travel", function () {
 		expect(v[2]).to.equal(50);
 		expect(v[3]).to.equal(0); // 0.4 s in the air: not a stride any more
 	});
+
+	it("clamps a planted foot that swings forward to zero instead of reading it as backward", function () {
+		const g = 100;
+		// planted in both frames (on the ground both times), but the foot
+		// moves forward (dx > 0): a touch-down mid-swing, never the body
+		// stepping back.
+		const frames = [
+			{t: 0, feet: [{layer: "near", x: 10, y: g}]},
+			{t: 0.1, feet: [{layer: "near", x: 20, y: g}]},
+		];
+		const {x, v} = stanceTravel(frames, g);
+		expect(v[1]).to.equal(0);
+		expect(x[1]).to.equal(0);
+	});
 });

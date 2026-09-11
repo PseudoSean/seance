@@ -74,6 +74,10 @@ const animate = (attrs) =>
  * whole loop; and, when the sequence turns, a mirror flip about the
  * animal's centre at that moment (a scale about the centre: the two static
  * translates bracket it). Hearts, when given, ride inside the same groups.
+ * The outer group fades the visit in and out over `travel.fade` seconds at
+ * each end of its time on stage (`travel.first`, `travel.onStage`) and
+ * starts at `opacity="0"` so nothing shows before the animation's first
+ * sample.
  */
 export function animalSvg({viewBox: vb, k, stageW, layers, clips, travel, flip, hearts}) {
 	const last = layers.length - 1;
@@ -120,11 +124,25 @@ export function animalSvg({viewBox: vb, k, stageW, layers, clips, travel, flip, 
 		.join(";")}" keyTimes="${travel.keyTimes.map(fmt).join(";")}" dur="${fmt(
 		travel.period
 	)}s" repeatCount="indefinite"/>`;
+	const onFor = travel.first + travel.fade;
+	const offAt = travel.first + travel.onStage - travel.fade;
+	const offFor = travel.first + travel.onStage;
+	const fadeTimes = [0, travel.first, onFor, offAt, offFor, travel.period].map(
+		(t) => t / travel.period
+	);
+	const fade = animate({
+		attributeName: "opacity",
+		calcMode: "linear",
+		values: "0;0;1;1;0;0",
+		keyTimes: fadeTimes.map(fmt).join(";"),
+		dur: `${fmt(travel.period)}s`,
+		repeatCount: "indefinite",
+	});
 	return (
 		`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 ${fmt(vb.y * k)} ${fmt(
 			stageW * k
 		)} ${fmt(vb.h * k)}">` +
-		`<g>${translate}<g transform="translate(${fmt(
+		`<g opacity="0">${fade}${translate}<g transform="translate(${fmt(
 			centre
 		)} 0)">${scale}<g transform="translate(${fmt(-centre)} 0)">${paths.join(
 			""

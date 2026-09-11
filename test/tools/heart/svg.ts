@@ -65,7 +65,14 @@ describe("tools/heart svg", function () {
 				],
 			},
 		],
-		travel: {period: 45, keyTimes: [0, 0.1, 0.5, 1], xs: [-200, -200, 900, 900]},
+		travel: {
+			period: 45,
+			first: 2,
+			onStage: 40,
+			fade: 1,
+			keyTimes: [0, 0.1, 0.5, 1],
+			xs: [-200, -200, 900, 900],
+		},
 		flip: {at: 0.3},
 		hearts: null,
 	};
@@ -92,6 +99,19 @@ describe("tools/heart svg", function () {
 		);
 		expect(svg).to.include('transform="translate(100 0)"');
 		expect(svg).to.include('transform="translate(-100 0)"');
+	});
+
+	it("fades the visit in and out, and starts invisible", function () {
+		const svg = animalSvg(spec);
+		expect(svg).to.include('<g opacity="0">');
+		expect(svg).to.include(
+			'<animate attributeName="opacity" calcMode="linear" values="0;0;1;1;0;0" ' +
+				'keyTimes="0;0.0444;0.0667;0.9111;0.9333;1" dur="45s" repeatCount="indefinite"/>'
+		);
+		// the fade animate comes before the travel translate on the outer group
+		expect(svg.indexOf('attributeName="opacity"')).to.be.lessThan(
+			svg.indexOf('attributeName="transform" type="translate" calcMode="linear"')
+		);
 	});
 
 	it("omits the flip when the sequence never turns and adds hearts when asked", function () {
