@@ -23,6 +23,8 @@ describe("translate/detect", () => {
 		expect(ISO3_OF.zh).to.equal("cmn");
 		expect(iso3ToIso1("zho")).to.equal("zh");
 		expect(iso3ToIso1("und")).to.equal(null);
+		expect(ISO3_OF.ms).to.equal("zlm");
+		expect(iso3ToIso1("zsm")).to.equal("ms");
 	});
 
 	it("names the best language with the gap to the runner-up as confidence", () => {
@@ -74,7 +76,7 @@ describe("translate/detect", () => {
 		).to.equal("de");
 	});
 
-	it("skips codes it does not know", () => {
+	it("an unknown best language is undetermined; an unknown runner-up is ignored", () => {
 		expect(
 			detectWith(
 				[
@@ -83,7 +85,17 @@ describe("translate/detect", () => {
 				],
 				null
 			)
-		).to.deep.equal({lang: "fr", confidence: 0.2});
+		).to.deep.equal({lang: null, confidence: 0});
+		expect(
+			detectWith(
+				[
+					["deu", 1],
+					["xxx", 0.9],
+					["fra", 0.5],
+				],
+				null
+			)
+		).to.deep.equal({lang: "de", confidence: 0.5});
 	});
 
 	it("the prior is the most frequent language of the recent window", () => {

@@ -4,6 +4,14 @@
 // a message the detector places in the target language. Confidence is the
 // gap between the best and the runner-up; a near tie goes to the channel's
 // prior (its dominant language over the last messages). Vue-free.
+//
+// franc does not carry every language we support: Estonian, Basque, Irish,
+// Welsh and Icelandic have no trigram or script data in it at all, so
+// `detectWith` never proposes them — those five are only translated on a
+// forced/manual request, never auto-detected. Malay is a near miss: franc
+// knows the code `zlm`, not NLLB's `zsm`, so `ISO3_OF`/`ISO1_OF` carry an
+// override for it (the same shape as the existing `cmn`/`zho` override for
+// Chinese).
 
 import {NLLB_CODES, SUPPORTED_LANGUAGES, isSupported} from "./languages";
 
@@ -20,14 +28,19 @@ export const DETECT_MIN_GAP = 0.1;
 export const DETECT_MIN_LENGTH = 10;
 export const PRIOR_WINDOW = 200;
 
+/** Where franc's code differs from the NLLB/FLORES code's first three letters. */
+const FRANC_OVERRIDES: Record<string, string> = {zh: "cmn", ms: "zlm"};
+
 /** ISO 639-1 → the 639-3 code franc reports; NLLB's FLORES codes carry it. */
 export const ISO3_OF: Record<string, string> = Object.fromEntries(
-	SUPPORTED_LANGUAGES.map((code) => [code, code === "zh" ? "cmn" : NLLB_CODES[code].slice(0, 3)])
+	SUPPORTED_LANGUAGES.map((code) => [code, FRANC_OVERRIDES[code] ?? NLLB_CODES[code].slice(0, 3)])
 );
 
 const ISO1_OF: Record<string, string> = {
 	...Object.fromEntries(Object.entries(ISO3_OF).map(([iso1, iso3]) => [iso3, iso1])),
+	// The NLLB code for each override language still maps back to it.
 	zho: "zh",
+	zsm: "ms",
 };
 
 export function iso3ToIso1(code: string): string | null {
@@ -37,19 +50,23 @@ export function iso3ToIso1(code: string): string | null {
 const ONLY = Object.values(ISO3_OF);
 
 export function detectWith(scores: Scores, prior: string | null): Detection {
+	// franc's raw best is the language it is actually most sure of. When
+	// that language is not one we support, the detection is undetermined:
+	// guessing a lower-ranked known language would translate from the wrong
+	// source. (A forced/manual translation request still lets the LLM
+	// detect on its own.) An unknown code ranked *below* a known best is
+	// simply not a contender and is dropped from the gap.
+	if (scores.length === 0 || iso3ToIso1(scores[0][0]) === null) {
+		return {lang: null, confidence: 0};
+	}
+
 	const known = scores
 		.map(([code, weight]) => ({lang: iso3ToIso1(code), weight}))
 		.filter((entry): entry is {lang: string; weight: number} => entry.lang !== null);
 
-	if (known.length === 0) {
-		return {lang: null, confidence: 0};
-	}
-
 	const best = known[0];
-	// The gap is against the runner-up in franc's raw ranking, not the
-	// runner-up among known languages: a language we do not support but
-	// franc ranked above `best` still makes `best` a less confident guess.
-	const gap = scores.length > 1 ? scores[0][1] - scores[1][1] : scores[0][1];
+	const second = known[1];
+	const gap = second ? best.weight - second.weight : best.weight;
 	const confidence = Math.round(gap * 1000) / 1000;
 
 	if (gap >= DETECT_MIN_GAP) {
