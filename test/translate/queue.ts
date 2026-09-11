@@ -9,6 +9,7 @@ import {
 	BATCH_MAX_LINES,
 	DROP_AFTER_LINES,
 	PAUSE_AFTER_FAILURES,
+	REQUEST_TIMEOUT_MS,
 	TranslateQueue,
 	type QueueDeps,
 	type QueueItem,
@@ -24,7 +25,7 @@ function rig(script: Script = (req) => [`[en] ${req.lines ? req.lines.join(" | "
 	const requests: Omit<TranslateRequest, "id" | "model">[] = [];
 	const paused: [string, string][] = [];
 	const arrivals = new Map<number, number>();
-	let engineFor: (from: string, to: string) => "llm" | "seq2seq" | null = () => "llm";
+	let engineFor: (from: string | null, to: string) => "llm" | "seq2seq" | null = () => "llm";
 	const deps: QueueDeps = {
 		route: (from, to) => Promise.resolve(engineFor(from, to)),
 		translate(req) {
@@ -53,6 +54,7 @@ function rig(script: Script = (req) => [`[en] ${req.lines ? req.lines.join(" | "
 
 	return {
 		queue,
+		deps,
 		clock,
 		updates,
 		requests,
@@ -131,11 +133,10 @@ describe("translate/queue", () => {
 		r.setEngine((from) => (from === "de" ? "llm" : "seq2seq"));
 		let inFlight = 0;
 		let peak = 0;
-		// eslint-disable-next-line @typescript-eslint/unbound-method, dot-notation
-		const original = r.queue["deps"].translate;
+		// eslint-disable-next-line @typescript-eslint/unbound-method
+		const original = r.deps.translate;
 
-		// eslint-disable-next-line dot-notation
-		r.queue["deps"].translate = (req) => {
+		r.deps.translate = (req) => {
 			inFlight++;
 			peak = Math.max(peak, inFlight);
 			const stream = original(req);
@@ -224,6 +225,28 @@ describe("translate/queue", () => {
 		expect(r.updates).to.deep.equal([[1, {status: "dropped"}]]);
 	});
 
+	it("a stale item is pruned on the next pump even while its own engine stays paused", async () => {
+		const r = rig(() => new Error("boom"));
+		clock = r.clock;
+
+		for (let i = 1; i <= PAUSE_AFTER_FAILURES; i++) {
+			r.queue.enqueue(item(i, `zeile ${i} hier`, {single: true}));
+		}
+
+		await settle(r.clock);
+		expect(r.queue.paused("llm")).to.equal(true);
+
+		r.queue.enqueue(item(100, "alt und vergessen"));
+		r.arrivals.set(1, DROP_AFTER_LINES + 1);
+
+		r.setEngine(() => "seq2seq");
+		r.queue.enqueue(item(200, "andere sprache", {chanId: 2}));
+		await settle(r.clock);
+
+		expect(r.updates.filter(([id]) => id === 100)).to.deep.equal([[100, {status: "dropped"}]]);
+		expect(r.queue.paused("llm")).to.equal(true);
+	});
+
 	it("a failure is reported and three in a row pause the engine", async () => {
 		const r = rig(() => new Error("boom"));
 		clock = r.clock;
@@ -247,13 +270,56 @@ describe("translate/queue", () => {
 		expect(r.requests.length).to.equal(PAUSE_AFTER_FAILURES + 1);
 	});
 
+	it("a route that rejects fails the item instead of losing it", async () => {
+		const r = rig();
+		clock = r.clock;
+		r.deps.route = () => Promise.reject(new Error("router exploded"));
+		r.queue.enqueue(item(1, "eins zwei drei"));
+		await settle(r.clock);
+
+		expect(r.updates).to.deep.equal([[1, {status: "failed", error: "router exploded"}]]);
+	});
+
+	it("an item with an unknown source routes and translates with from: null", async () => {
+		const r = rig();
+		clock = r.clock;
+		const routedWith: (string | null)[] = [];
+		// eslint-disable-next-line @typescript-eslint/unbound-method
+		const originalRoute = r.deps.route;
+
+		r.deps.route = (from, to) => {
+			routedWith.push(from);
+			return originalRoute(from, to);
+		};
+
+		r.queue.enqueue(item(1, "bonjour", {from: null}));
+		await settle(r.clock);
+
+		expect(routedWith).to.deep.equal([null]);
+		expect(r.requests[0].from).to.equal(null);
+		expect(r.updates.filter(([, u]) => u.status === "done").length).to.equal(1);
+	});
+
+	it("appends missing spans only to the final text, not a streaming chunk", async () => {
+		const r = rig(() => ["step one no url", "step two no url"]);
+		clock = r.clock;
+		r.queue.enqueue(item(1, "siehe https://x.test bitte"));
+		await settle(r.clock);
+
+		const pending = r.updates.filter(([id, u]) => id === 1 && u.status === "pending");
+		const done = r.updates.find(([id, u]) => id === 1 && u.status === "done");
+
+		expect(pending[1][1].text).to.equal("step one no url");
+		expect(pending[2][1].text).to.equal("step two no url");
+		expect(done?.[1].text).to.equal("step two no url https://x.test");
+	});
+
 	it("cancelChannel drops queued items and the in-flight one of that channel", async () => {
 		let release: (() => void) | null = null;
 		const r = rig();
 		clock = r.clock;
 		let calls = 0;
-		// eslint-disable-next-line dot-notation
-		r.queue["deps"].translate = () =>
+		r.deps.translate = () =>
 			(async function* () {
 				if (calls++ === 0) {
 					await new Promise<void>((resolve) => {
@@ -275,6 +341,72 @@ describe("translate/queue", () => {
 			"dropped",
 		]);
 		expect(r.updates.filter(([id]) => id === 2).map(([, u]) => u.status)).to.include("done");
+	});
+
+	it("cancelChannel calls the iterator's return, so a cancel reaches an engine that never yields", async () => {
+		const r = rig();
+		clock = r.clock;
+		let returned = false;
+
+		r.deps.translate = () => ({
+			[Symbol.asyncIterator]: () => ({
+				next: () => new Promise<IteratorResult<TranslateChunk>>(() => {}),
+				return(value?: unknown) {
+					returned = true;
+					return Promise.resolve({done: true as const, value});
+				},
+			}),
+		});
+		r.queue.enqueue(item(1, "eins zwei drei", {single: true}));
+		await settle(r.clock, 3);
+		r.queue.cancelChannel(1);
+		await settle(r.clock);
+
+		expect(returned).to.equal(true);
+		expect(r.updates.filter(([id]) => id === 1).map(([, u]) => u.status)).to.deep.equal([
+			"pending",
+			"dropped",
+		]);
+	});
+
+	it("a request that never yields fails as timed out after REQUEST_TIMEOUT_MS", async () => {
+		const r = rig();
+		clock = r.clock;
+		r.deps.translate = () =>
+			(async function* () {
+				await new Promise<void>(() => {});
+				yield {id: 0, text: "never", done: true};
+			})();
+		r.queue.enqueue(item(1, "eins zwei drei", {single: true}));
+		await settle(r.clock, 3);
+		await clock.tickAsync(REQUEST_TIMEOUT_MS);
+		await settle(r.clock);
+
+		expect(r.updates.filter(([id]) => id === 1).map(([, u]) => u.status)).to.deep.equal([
+			"pending",
+			"failed",
+		]);
+		expect(
+			r.updates.find(([id, u]) => id === 1 && u.status === "failed")?.[1] as {error: string}
+		).to.deep.include({error: "timed out"});
+	});
+
+	it("route-after-cancel: cancelling before the route resolves drops the item", async () => {
+		const r = rig();
+		clock = r.clock;
+		let resolveRoute: ((engine: "llm" | "seq2seq" | null) => void) | null = null;
+
+		r.deps.route = () =>
+			new Promise((resolve) => {
+				resolveRoute = resolve;
+			});
+		r.queue.enqueue(item(1, "eins zwei drei"));
+		r.queue.cancelChannel(1);
+		resolveRoute?.("llm");
+		await settle(r.clock);
+
+		expect(r.updates).to.deep.equal([[1, {status: "dropped"}]]);
+		expect(r.requests.length).to.equal(0);
 	});
 
 	it("retry re-enqueues an item at the front", async () => {

@@ -14,7 +14,9 @@ import {appendMissing, restore} from "./spans";
 export const DROP_AFTER_LINES = 200;
 export const BATCH_MAX_LINES = 6;
 export const PAUSE_AFTER_FAILURES = 3;
+export const REQUEST_TIMEOUT_MS = 2 * 60 * 1000;
 export const NO_ROUTE = "no translation engine can take this request";
+export const TIMED_OUT = "timed out";
 
 export interface QueueItem {
 	/** The message's store id. */
@@ -23,7 +25,8 @@ export interface QueueItem {
 	/** Protected text (spans.ts) and its spans. */
 	text: string;
 	spans: string[];
-	from: string;
+	/** null = the source language could not be detected. */
+	from: string | null;
 	to: string;
 	context: PromptContext;
 	/** `deps.arrivals(chanId)` when the item was queued. */
@@ -39,7 +42,7 @@ export type QueueUpdate =
 	| {status: "dropped"};
 
 export interface QueueDeps {
-	route(from: string, to: string): Promise<EngineName | null>;
+	route(from: string | null, to: string): Promise<EngineName | null>;
 	translate(req: Omit<TranslateRequest, "id" | "model">): AsyncIterable<TranslateChunk>;
 	/** Lower runs first; the active channel is 0. */
 	priority(chanId: number): number;
@@ -55,11 +58,19 @@ interface Queued {
 	seq: number;
 }
 
+interface Running {
+	chanIds: Set<number>;
+	abort: () => void;
+}
+
 export class TranslateQueue {
 	private waiting: Queued[] = [];
-	private inFlight = new Map<EngineName, {chanIds: Set<number>; abort: () => void}>();
+	private inFlight = new Map<EngineName, Running>();
 	private failures = new Map<EngineName, number>();
 	private pausedEngines = new Set<EngineName>();
+	/** Per-channel generation, bumped by cancelChannel/cancelAll: a route
+	 *  that resolves for an older generation is dropped instead of queued. */
+	private cancelled = new Map<number, number>();
 	private seq = 0;
 	private held = false;
 	private deps: QueueDeps;
@@ -68,28 +79,20 @@ export class TranslateQueue {
 		this.deps = deps;
 	}
 
-	enqueue(item: QueueItem, front = false): void {
-		void this.deps.route(item.from, item.to).then((engine) => {
-			if (!engine) {
-				this.deps.onUpdate(item.id, {status: "failed", error: NO_ROUTE});
-				return;
-			}
-
-			const queued: Queued = {item, engine, seq: front ? -++this.seq : ++this.seq};
-
-			this.waiting.push(queued);
-			this.pump();
-		});
+	enqueue(item: QueueItem): void {
+		this.enqueueAt(item, false);
 	}
 
 	retry(item: QueueItem): void {
-		this.enqueue(
+		this.enqueueAt(
 			{...item, single: true, arrivalsAtEnqueue: this.deps.arrivals(item.chanId)},
 			true
 		);
 	}
 
 	cancelChannel(chanId: number): void {
+		this.bumpGeneration(chanId);
+
 		const dropped = this.waiting.filter((q) => q.item.chanId === chanId);
 
 		this.waiting = this.waiting.filter((q) => q.item.chanId !== chanId);
@@ -106,6 +109,22 @@ export class TranslateQueue {
 	}
 
 	cancelAll(): void {
+		const channels = new Set<number>();
+
+		for (const q of this.waiting) {
+			channels.add(q.item.chanId);
+		}
+
+		for (const running of this.inFlight.values()) {
+			for (const chanId of running.chanIds) {
+				channels.add(chanId);
+			}
+		}
+
+		for (const chanId of channels) {
+			this.bumpGeneration(chanId);
+		}
+
 		for (const q of this.waiting.splice(0)) {
 			this.deps.onUpdate(q.item.id, {status: "dropped"});
 		}
@@ -139,10 +158,49 @@ export class TranslateQueue {
 		this.pump();
 	}
 
+	private generation(chanId: number): number {
+		return this.cancelled.get(chanId) ?? 0;
+	}
+
+	private bumpGeneration(chanId: number): void {
+		this.cancelled.set(chanId, this.generation(chanId) + 1);
+	}
+
+	private enqueueAt(item: QueueItem, front: boolean): void {
+		const generation = this.generation(item.chanId);
+
+		void this.deps
+			.route(item.from, item.to)
+			.then((engine) => {
+				if (this.generation(item.chanId) !== generation) {
+					this.deps.onUpdate(item.id, {status: "dropped"});
+					return;
+				}
+
+				if (!engine) {
+					this.deps.onUpdate(item.id, {status: "failed", error: NO_ROUTE});
+					return;
+				}
+
+				const queued: Queued = {item, engine, seq: front ? -++this.seq : ++this.seq};
+
+				this.waiting.push(queued);
+				this.pump();
+			})
+			.catch((e) => {
+				this.deps.onUpdate(item.id, {
+					status: "failed",
+					error: e instanceof Error ? e.message : String(e),
+				});
+			});
+	}
+
 	private pump(): void {
 		if (this.held) {
 			return;
 		}
+
+		this.prune();
 
 		this.waiting.sort(
 			(a, b) =>
@@ -163,65 +221,65 @@ export class TranslateQueue {
 		}
 	}
 
-	private takeHead(engine: EngineName): Queued[] | null {
-		for (;;) {
-			const index = this.waiting.findIndex((q) => q.engine === engine);
+	/** Drops every waiting item that fell DROP_AFTER_LINES messages behind,
+	 *  including an engine's that stays paused and never reaches takeHead. */
+	private prune(): void {
+		const stale = new Set(
+			this.waiting.filter(
+				(q) =>
+					this.deps.arrivals(q.item.chanId) - q.item.arrivalsAtEnqueue > DROP_AFTER_LINES
+			)
+		);
 
-			if (index < 0) {
-				return null;
-			}
+		if (stale.size === 0) {
+			return;
+		}
 
-			const head = this.waiting[index];
+		this.waiting = this.waiting.filter((q) => !stale.has(q));
 
-			if (
-				this.deps.arrivals(head.item.chanId) - head.item.arrivalsAtEnqueue >
-				DROP_AFTER_LINES
-			) {
-				this.waiting.splice(index, 1);
-				this.deps.onUpdate(head.item.id, {status: "dropped"});
-				continue;
-			}
-
-			this.waiting.splice(index, 1);
-
-			if (engine !== "llm" || head.item.single) {
-				return [head];
-			}
-
-			const batch = [head];
-
-			for (const q of [...this.waiting]) {
-				if (batch.length >= BATCH_MAX_LINES) {
-					break;
-				}
-
-				if (
-					q.engine === engine &&
-					!q.item.single &&
-					q.item.chanId === head.item.chanId &&
-					q.item.from === head.item.from &&
-					q.item.to === head.item.to
-				) {
-					batch.push(q);
-					this.waiting.splice(this.waiting.indexOf(q), 1);
-				}
-			}
-
-			return batch;
+		for (const q of stale) {
+			this.deps.onUpdate(q.item.id, {status: "dropped"});
 		}
 	}
 
+	private takeHead(engine: EngineName): Queued[] | null {
+		const index = this.waiting.findIndex((q) => q.engine === engine);
+
+		if (index < 0) {
+			return null;
+		}
+
+		const head = this.waiting[index];
+
+		this.waiting.splice(index, 1);
+
+		if (engine !== "llm" || head.item.single) {
+			return [head];
+		}
+
+		const batch = [head];
+
+		for (const q of [...this.waiting]) {
+			if (batch.length >= BATCH_MAX_LINES) {
+				break;
+			}
+
+			if (
+				q.engine === engine &&
+				!q.item.single &&
+				q.item.chanId === head.item.chanId &&
+				q.item.from === head.item.from &&
+				q.item.to === head.item.to
+			) {
+				batch.push(q);
+				this.waiting.splice(this.waiting.indexOf(q), 1);
+			}
+		}
+
+		return batch;
+	}
+
 	private async run(engine: EngineName, batch: Queued[]): Promise<void> {
-		let aborted = false;
-		const running = {
-			chanIds: new Set(batch.map((q) => q.item.chanId)),
-			abort() {
-				aborted = true;
-			},
-		};
-
-		this.inFlight.set(engine, running);
-
 		const first = batch[0].item;
 		const request: Omit<TranslateRequest, "id" | "model"> =
 			batch.length > 1
@@ -241,32 +299,76 @@ export class TranslateQueue {
 						context: first.context,
 				  };
 
+		const iterator = this.deps.translate(request)[Symbol.asyncIterator]();
+		let aborted = false;
+		let timedOut = false;
+
+		let signalAbort: () => void = () => {};
+
+		const abortSignal = new Promise<void>((resolve) => {
+			signalAbort = resolve;
+		});
+		const running: Running = {
+			chanIds: new Set(batch.map((q) => q.item.chanId)),
+			abort() {
+				if (aborted) {
+					return;
+				}
+
+				aborted = true;
+				signalAbort();
+				void iterator.return?.();
+			},
+		};
+
+		this.inFlight.set(engine, running);
+
 		for (const q of batch) {
 			this.deps.onUpdate(q.item.id, {status: "pending", text: "", engine});
 		}
 
+		const timer = setTimeout(() => {
+			timedOut = true;
+			running.abort();
+		}, REQUEST_TIMEOUT_MS);
+
 		try {
 			let last = "";
 
-			for await (const chunk of this.deps.translate(request)) {
-				if (aborted) {
+			for (;;) {
+				const outcome = await Promise.race([
+					iterator.next().then((next) => ({kind: "next" as const, next})),
+					abortSignal.then(() => ({kind: "abort" as const})),
+				]);
+
+				if (outcome.kind === "abort") {
 					break;
 				}
+
+				if (outcome.next.done) {
+					break;
+				}
+
+				const chunk = outcome.next.value;
 
 				last = chunk.text;
 
 				if (batch.length === 1 && !chunk.done) {
 					this.deps.onUpdate(first.id, {
 						status: "pending",
-						text: this.restoreText(first, chunk.text),
+						text: this.restoreText(first, chunk.text, false),
 						engine,
 					});
 				}
 			}
 
 			if (aborted) {
-				for (const q of batch) {
-					this.deps.onUpdate(q.item.id, {status: "dropped"});
+				if (timedOut) {
+					this.fail(engine, batch, TIMED_OUT);
+				} else {
+					for (const q of batch) {
+						this.deps.onUpdate(q.item.id, {status: "dropped"});
+					}
 				}
 
 				return;
@@ -275,7 +377,7 @@ export class TranslateQueue {
 			if (batch.length === 1) {
 				this.deps.onUpdate(first.id, {
 					status: "done",
-					text: this.restoreText(first, last),
+					text: this.restoreText(first, last, true),
 					engine,
 				});
 			} else {
@@ -289,7 +391,7 @@ export class TranslateQueue {
 					batch.forEach((q, i) => {
 						this.deps.onUpdate(q.item.id, {
 							status: "done",
-							text: this.restoreText(q.item, lines[i]),
+							text: this.restoreText(q.item, lines[i], true),
 							engine,
 						});
 					});
@@ -298,29 +400,35 @@ export class TranslateQueue {
 
 			this.failures.set(engine, 0);
 		} catch (e) {
-			const message = e instanceof Error ? e.message : String(e);
-
-			for (const q of batch) {
-				this.deps.onUpdate(q.item.id, {status: "failed", error: message});
-			}
-
-			const count = (this.failures.get(engine) ?? 0) + 1;
-
-			this.failures.set(engine, count);
-
-			if (count >= PAUSE_AFTER_FAILURES) {
-				this.pausedEngines.add(engine);
-				this.deps.onPause(engine, message);
-			}
+			this.fail(engine, batch, e instanceof Error ? e.message : String(e));
 		} finally {
+			clearTimeout(timer);
 			this.inFlight.delete(engine);
 			this.pump();
 		}
 	}
 
-	private restoreText(item: QueueItem, text: string): string {
+	private fail(engine: EngineName, batch: Queued[], message: string): void {
+		for (const q of batch) {
+			this.deps.onUpdate(q.item.id, {status: "failed", error: message});
+		}
+
+		const count = (this.failures.get(engine) ?? 0) + 1;
+
+		this.failures.set(engine, count);
+
+		if (count >= PAUSE_AFTER_FAILURES) {
+			this.pausedEngines.add(engine);
+			this.deps.onPause(engine, message);
+		}
+	}
+
+	/** Missing spans (spans.ts) are appended only to the final text: a
+	 *  streaming chunk restores placeholders in place but does not yet know
+	 *  whether a later chunk will still be missing one. */
+	private restoreText(item: QueueItem, text: string, final: boolean): string {
 		const restored = restore(text, item.spans);
 
-		return appendMissing(restored.text, item.spans, restored.missing);
+		return final ? appendMissing(restored.text, item.spans, restored.missing) : restored.text;
 	}
 }
