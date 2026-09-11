@@ -1,8 +1,8 @@
 # Client-side translation
 
 _Started 2026-09-11 on the `client-translation` branch (from `origin/develop`
-at `d6b6624b`). Status: **design approved, not implemented**. This file is
-the spec; the implementation plan follows from it._
+at `d6b6624b`). Status: **phase 1 (engine layer) implemented; phases 2-4
+pending**. This file is the spec; the implementation plan follows from it._
 
 ## Goal
 
@@ -366,6 +366,8 @@ the app usable without the next:
    protocol, the two engines, `router.ts` with a provisional default table,
    `spans.ts`, the `FakeEngine`, and Settings → Translation with the model
    manager. Verifiable from Settings alone: download a model, see it cached.
+   Plan: docs/superpowers/plans/2026-09-11-client-translation-1-engine-layer.md
+   (gitignored, local).
 2. **Reading**: `detect.ts`, `queue.ts`, `prompt.ts`, the store map, the
    header switch, `Message.vue`, the per-channel store, `translate-reading.mjs`.
 3. **Composer**: the strip, the check, the gate, the send path,

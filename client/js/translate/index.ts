@@ -27,8 +27,15 @@ export function translateService(): TranslateService {
 	return service;
 }
 
+// Captured at module load (vue.ts imports the router, which statically
+// imports Settings/Translation.vue, before `boot()` runs) rather than read
+// inside useFake(): boot.ts's handleQueryParams() strips the page's query
+// string on every load, and the service is created lazily, well after that
+// — reading window.location.search at call time would never see the flag.
+const initialSearch = window.location.search;
+
 function useFake(): boolean {
-	return BUILD === "dev" && new URLSearchParams(window.location.search).has("fakeTranslate");
+	return BUILD === "dev" && new URLSearchParams(initialSearch).has("fakeTranslate");
 }
 
 function workerUrl(): string {

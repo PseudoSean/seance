@@ -85,3 +85,25 @@ _Avoid_: optimistic message, unsent message, ghost message, placeholder, pending
 **Settled**:
 What happens to a pending copy when the server has answered for it, whichever way: replaced by the echo, taken down with an error line, or taken down silently after an `ACK`.
 _Avoid_: confirmed, acknowledged, resolved
+
+## Translation
+
+**engine**:
+One of the two translators behind `Engine`: the **LLM** (WebLLM, GPU) or **seq2seq** (transformers.js, CPU: **NLLB** or an **OPUS-MT pair model**).
+_Avoid_: model backend, translation provider
+
+**candidate**:
+An entry of the route table: `llm`, `nllb` or `opus:<from>-<to>`; the **router** resolves a pair to the first candidate the **tier** (`gpu`/`cpu`/`none`, from the **probe**), the engine settings and the session's **down-marks** allow.
+_Avoid_: route entry, option
+
+**catalog**:
+The models a deploy knows (`models.ts`), the shipped defaults plus `config.json`'s `translation` block; a **mirror** is `translation.modelBase`.
+_Avoid_: model list, registry
+
+**span protection**:
+Placeholders (`⟦1⟧`) standing in for URLs, code, shortcodes and formatting codes while an engine works.
+_Avoid_: masking, tokenization (that is the engine's own, internal, tokenizer)
+
+**model view**:
+A Settings row: cached, downloading (with a fraction), ready or failed.
+_Avoid_: model state, download entry

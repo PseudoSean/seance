@@ -11,6 +11,7 @@
 			<SettingTabItem v-if="showGeneral" name="General" class-name="general" to="" />
 			<SettingTabItem name="Appearance" class-name="appearance" to="appearance" />
 			<SettingTabItem name="Notifications" class-name="notifications" to="notifications" />
+			<SettingTabItem name="Translation" class-name="translation" to="translation" />
 			<SettingTabItem v-if="!isPublic" name="Account" class-name="account" to="account" />
 		</ul>
 	</aside>
@@ -99,6 +100,10 @@
 
 .settings-menu .notifications::before {
 	content: "\f0f3"; /* http://fontawesome.io/icon/bell/ */
+}
+
+.settings-menu .translation::before {
+	content: "\f0ac"; /* https://fontawesome.com/icons/globe?style=solid */
 }
 
 .settings-menu .general::before {
