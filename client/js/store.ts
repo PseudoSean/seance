@@ -12,6 +12,8 @@ import {BrandingConfig, DEFAULT_BRANDING, brandingString} from "./branding";
 import type {UploadProgress} from "./upload";
 import type {Capability} from "./translate/capability";
 import type {ModelView} from "./translate/service";
+import type {ChannelTranslation} from "./translate/channelStore";
+import type {EngineName} from "./translate/engine";
 
 enum DesktopNotificationState {
 	Unsupported = "unsupported",
@@ -30,6 +32,20 @@ function detectDesktopNotificationState(): DesktopNotificationState {
 	}
 
 	return DesktopNotificationState.Blocked;
+}
+
+/** A message's translation (spec § Reading pipeline, 5): in memory only, keyed by the message's store id. */
+export interface TranslationEntry {
+	status: "pending" | "done" | "failed" | "dropped";
+	/** Restored text so far (pending) or the result (done). */
+	text: string;
+	/** Detected source (ISO 639-1) or "" when the engine detected it. */
+	from: string;
+	to: string;
+	engine: EngineName | null;
+	error: string | null;
+	/** "Show original only": the line is kept but not rendered. */
+	hidden: boolean;
 }
 
 export type State = {
@@ -57,7 +73,16 @@ export type State = {
 	 * Client-side translation: the device probe, the model manager's rows and
 	 * what the worker last reported about itself (`null` while it is healthy).
 	 */
-	translation: {capability: Capability | null; models: ModelView[]; workerError: string | null};
+	translation: {
+		capability: Capability | null;
+		models: ModelView[];
+		workerError: string | null;
+		/** The queue paused an engine after repeated failures (spec § Lifecycle). */
+		paused: {engine: EngineName; message: string} | null;
+	};
+	translations: Record<number, TranslationEntry>;
+	/** Per-channel switch state, keyed `<network uuid>/<channel name>` (translate/channelStore.ts). */
+	translateChannels: Record<string, ChannelTranslation>;
 };
 
 const state = (): State => ({
@@ -78,7 +103,9 @@ const state = (): State => ({
 	sidebarDragging: false,
 	userlistOpen: storage.get("thelounge.state.userlist") !== "false",
 	uploadProgress: null,
-	translation: {capability: null, models: [], workerError: null},
+	translation: {capability: null, models: [], workerError: null, paused: null},
+	translations: {},
+	translateChannels: {},
 });
 
 type Getters = {
@@ -206,6 +233,13 @@ type Mutations = {
 	translationCapability(state: State, capability: Capability): void;
 	translationModels(state: State, models: ModelView[]): void;
 	translationWorkerError(state: State, message: string | null): void;
+	translationPaused(state: State, paused: State["translation"]["paused"]): void;
+	translationEntry(state: State, payload: {id: number; entry: TranslationEntry}): void;
+	translationPatch(state: State, payload: {id: number; patch: Partial<TranslationEntry>}): void;
+	translationRemove(state: State, id: number): void;
+	translateChannelSet(state: State, payload: {key: string; value: ChannelTranslation}): void;
+	translateChannelRemove(state: State, key: string): void;
+	translateChannelsLoaded(state: State, all: Record<string, ChannelTranslation>): void;
 };
 
 const mutations: Mutations = {
@@ -288,6 +322,31 @@ const mutations: Mutations = {
 	},
 	translationWorkerError(state, message) {
 		state.translation.workerError = message;
+	},
+	translationPaused(state, paused) {
+		state.translation.paused = paused;
+	},
+	translationEntry(state, {id, entry}) {
+		state.translations[id] = entry;
+	},
+	translationPatch(state, {id, patch}) {
+		const entry = state.translations[id];
+
+		if (entry) {
+			Object.assign(entry, patch);
+		}
+	},
+	translationRemove(state, id) {
+		delete state.translations[id];
+	},
+	translateChannelSet(state, {key, value}) {
+		state.translateChannels[key] = value;
+	},
+	translateChannelRemove(state, key) {
+		delete state.translateChannels[key];
+	},
+	translateChannelsLoaded(state, all) {
+		state.translateChannels = all;
 	},
 };
 

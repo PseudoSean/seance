@@ -18,6 +18,9 @@ import "./msg";
 // has pushed it and re-routed a `showInActive` notice. ./typing below
 // relies on the same ordering.
 import "./activity";
+// Translation reads the message after ./msg and ./activity, and forgets a
+// channel's switch before ./part removes it.
+import "./translate";
 import "./msg_special";
 import "./msg_updates";
 import "./names";

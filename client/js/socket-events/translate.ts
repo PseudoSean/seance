@@ -1,0 +1,7 @@
+// The reading pipeline's listeners (client/js/translate/reader.ts): a
+// second `msg` listener that runs after ./msg pushed the message, plus
+// `part`/`quit` cleanup that runs before ./part and ./quit remove the
+// channel or network.
+import {initReader} from "../translate/reader";
+
+initReader();
