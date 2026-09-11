@@ -34,13 +34,8 @@ const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, 
 
 /** The token a request's text (or any of its lines) can carry to fail once:
  *  browser scenarios exercise the failed-line/retry UI without a real
- *  engine ever failing. Kept out of production builds like the rest of
- *  this module. */
+ *  engine ever failing. */
 const FAIL_TOKEN = "[fail]";
-
-/** Texts that have already failed once (module-level: shared by every
- *  fakePort() instance in the page, which is what a scenario expects). */
-const failedOnce = new Set<string>();
 
 interface TranslateFakeRequestLog {
 	id: number;
@@ -76,6 +71,8 @@ class ScriptedEngine implements Engine {
 	private stepMs: number;
 	private loaded: string[] = [];
 	private state: EngineStatus = "cold";
+	/** Texts this engine has already failed once, so a retry succeeds. */
+	private failedOnce = new Set<string>();
 
 	constructor(name: "llm" | "seq2seq", stepMs: number) {
 		this.name = name;
@@ -126,8 +123,8 @@ class ScriptedEngine implements Engine {
 
 		const failKey = req.lines ? req.lines.join("\n") : req.text;
 
-		if (failKey.includes(FAIL_TOKEN) && !failedOnce.has(failKey)) {
-			failedOnce.add(failKey);
+		if (failKey.includes(FAIL_TOKEN) && !this.failedOnce.has(failKey)) {
+			this.failedOnce.add(failKey);
 			throw new Error("scripted failure");
 		}
 

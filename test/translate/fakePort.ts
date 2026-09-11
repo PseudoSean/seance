@@ -134,5 +134,26 @@ describe("translate/fakePort", () => {
 
 		expect(chunks[chunks.length - 1]).to.equal("[English] this line will [fail] once");
 		terminate();
+
+		// The one-shot is the engine instance's, not the module's: a fresh
+		// page (a scenario reload) fails the same text again.
+		const second = fakePort({stepMs: 0});
+		const reloaded = new TranslateClient(second.port);
+
+		reloaded.configure(catalog, "https://app.test/js/ort/");
+		await reloaded.load(catalog.llm, () => {});
+
+		let threwAgain = false;
+
+		try {
+			for await (const _chunk of reloaded.translate(req, catalog.llm)) {
+				// draining
+			}
+		} catch (e) {
+			threwAgain = true;
+		}
+
+		expect(threwAgain).to.equal(true);
+		second.terminate();
 	});
 });

@@ -168,6 +168,14 @@ export class TranslateService {
 						yield chunk;
 					}
 
+					// A cancel ends the stream normally (client.ts closes it at
+					// once, without waiting for the engine), so arriving here is
+					// no proof the model did: leave the view to the `finally`,
+					// which puts a half-downloaded one back to idle.
+					if (signal?.aborted) {
+						return;
+					}
+
 					if (view.status === "downloading") {
 						view.status = "ready";
 						view.fraction = 1;

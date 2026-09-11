@@ -7,6 +7,7 @@
 // two in step).
 
 import storage from "../localStorage";
+import {isSupported} from "./languages";
 
 export const STORAGE_KEY = "thelounge.translate";
 export const TERM_CAP = 300;
@@ -64,10 +65,15 @@ function sanitize(value: unknown): ChannelTranslation | null {
 	}
 
 	const raw = value as Record<string, unknown>;
+	// Only the fields above survive: a record written by a later version
+	// loses its extra keys the next time this one writes the blob.
 	const out = defaultChannelTranslation();
 
-	out.read = typeof raw.read === "string" ? raw.read : null;
-	out.write = typeof raw.write === "string" ? raw.write : null;
+	// A language this build cannot route (hand-edited, or dropped from
+	// SUPPORTED_LANGUAGES by a later version) is no target at all: it would
+	// leave the channel switched on with every line failing to route.
+	out.read = typeof raw.read === "string" && isSupported(raw.read) ? raw.read : null;
+	out.write = typeof raw.write === "string" && isSupported(raw.write) ? raw.write : null;
 	out.formality = isFormality(raw.formality) ? raw.formality : "auto";
 	out.variant = typeof raw.variant === "string" ? raw.variant : "";
 	out.since = typeof raw.since === "number" && out.read ? raw.since : 0;

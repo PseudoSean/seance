@@ -513,6 +513,60 @@ describe("translate/service", () => {
 		r.service.dispose();
 	});
 
+	it("an abort during a download leaves the model neither ready nor cached", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		await r.service.capabilities();
+
+		let release: (() => void) | null = null;
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+
+		// A load that reports progress and then hangs: the view is
+		// "downloading" when the abort arrives.
+		r.llm.load = async (ref, onProgress) => {
+			onProgress({fraction: 0.4, text: "part 1"});
+			await gate;
+		};
+
+		let last: {status: string; fraction: number; cached: boolean} | null = null;
+
+		r.service.onModels((views) => {
+			const llmView = views.find((v) => v.ref.id === catalog.llm.id);
+
+			if (llmView) {
+				last = {
+					status: llmView.status,
+					fraction: llmView.fraction,
+					cached: llmView.cached,
+				};
+			}
+		});
+
+		const controller = new AbortController();
+		const chunks: string[] = [];
+		const iteration = (async () => {
+			for await (const chunk of r.service.translate(base, controller.signal)) {
+				chunks.push(chunk.text);
+			}
+		})();
+
+		for (let i = 0; i < 100 && last?.status !== "downloading"; i++) {
+			await Promise.resolve();
+		}
+
+		expect(last?.status).to.equal("downloading");
+
+		controller.abort();
+		await iteration;
+		release?.();
+
+		expect(chunks).to.deep.equal([]);
+		expect(last).to.deep.equal({status: "idle", fraction: 0, cached: false});
+		r.service.dispose();
+	});
+
 	it("an abort signal cancels the client stream at once, before any chunk arrives", async () => {
 		const r = rig("gpu");
 		clock = r.clock;

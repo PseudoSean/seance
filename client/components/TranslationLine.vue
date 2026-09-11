@@ -17,7 +17,7 @@
 			couldn't translate
 			<button type="button" class="msg-translation-retry" @click.stop="retry">retry</button>
 		</span>
-		<span v-else class="msg-translation-text" dir="auto">
+		<span v-else class="msg-translation-text" :lang="entry.to" dir="auto">
 			<ParsedMessage
 				v-if="entry.text"
 				:network="network"

@@ -92,15 +92,24 @@ export default defineComponent({
 			}
 		};
 
+		let pointerTimer: ReturnType<typeof setTimeout> | null = null;
+
 		onMounted(() => {
 			document.addEventListener("keydown", onKey);
 			// Deferred so the click that opened the panel does not close it.
-			setTimeout(() => document.addEventListener("mousedown", onPointer), 0);
+			pointerTimer = setTimeout(() => document.addEventListener("mousedown", onPointer), 0);
 			panel.value?.querySelector("select")?.focus();
 		});
 		onBeforeUnmount(() => {
 			document.removeEventListener("keydown", onKey);
 			document.removeEventListener("mousedown", onPointer);
+
+			// A panel closed within the tick would otherwise leave the
+			// deferred registration to add a listener nothing removes.
+			if (pointerTimer !== null) {
+				clearTimeout(pointerTimer);
+				pointerTimer = null;
+			}
 		});
 
 		return {panel, state, languages, name, onRead, onWrite, onFormality, onVariant};

@@ -111,6 +111,27 @@ describe("translate/channelStore", () => {
 		expect(loadAll()).to.deep.equal({"n1/#a": defaultChannelTranslation()});
 	});
 
+	it("drops a stored target this build cannot route", () => {
+		backend.set(
+			STORAGE_KEY,
+			JSON.stringify({
+				"n1/#a": {read: "xx", write: "zz", since: 1234, variant: "keep me"},
+				"n1/#b": {read: "de", write: "en", since: 1234},
+			})
+		);
+
+		const all = loadAll();
+
+		expect(all["n1/#a"].read).to.equal(null);
+		expect(all["n1/#a"].write).to.equal(null);
+		// `since` goes with an unusable read, the rest of the record stays.
+		expect(all["n1/#a"].since).to.equal(0);
+		expect(all["n1/#a"].variant).to.equal("keep me");
+		expect(all["n1/#b"].read).to.equal("de");
+		expect(all["n1/#b"].write).to.equal("en");
+		expect(all["n1/#b"].since).to.equal(1234);
+	});
+
 	it("a patch cannot overwrite the term memory or the moment", () => {
 		setChannelTranslation("n1", "#seance", {read: "en"});
 		rememberTerm("n1", "#seance", ["rig", "Testaufbau"]);
