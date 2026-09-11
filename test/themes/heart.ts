@@ -446,4 +446,18 @@ describe("the <3 theme's animals", function () {
 		const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
 		expect(reduced).to.include("--heart-rainbow-y: calc(100% - var(--strip) * 0.3);");
 	});
+
+	it("keeps fourteen background-position-y entries in each of the rainbow's three keyframe groups", function () {
+		const start = css.indexOf("@keyframes heart-rainbow");
+		const block = css.slice(start, css.indexOf("\n}", start)).replace(/\n\t\t/g, "\n\t");
+		let from = 0;
+
+		for (let i = 0; i < 3; i++) {
+			const idx = block.indexOf("background-position-y:", from);
+			expect(idx, `group ${i}`).to.be.greaterThan(-1);
+			const group = block.slice(block.lastIndexOf("\n", idx));
+			expect(entries(group, "background-position-y"), `group ${i}`).to.equal(14);
+			from = idx + 1;
+		}
+	});
 });

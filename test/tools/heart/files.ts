@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 
 const DIR = path.resolve(__dirname, "../../../client/themes/heart");
-/** [animal, budget for the near and far files in KB] — Task 7 adds its own. */
+/** One row per animal, with the near and far files' budget in KB. */
 const ANIMALS: [string, number][] = [
 	["horse", 200],
 	["puppy", 160],
