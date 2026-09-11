@@ -140,7 +140,12 @@ elements that hold emoji.
 
 A badge that arrives while you are looking pops in (`TransitionGroup`, 160 ms,
 off under `prefers-reduced-motion`); the ones already there when a channel is
-drawn do not, which is what `appear` being off buys.
+drawn do not, which is what `appear` being off buys. The first reaction on a
+message enters the whole group (`.reactions-enter-active`, the outer
+`Transition`, itself without `appear`) and a later badge enters on its own
+(`.reaction-enter-active`); themes hang their flourishes on those classes
+(`heart.css`'s glitter). A badge is keyed on its text alone, so toggling it
+never remounts it — a keyboard user's focus stays on the button.
 
 ## Tests
 

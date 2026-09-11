@@ -1,16 +1,17 @@
 <template>
 	<!-- The group pops in when the first reaction lands on a message you are
 	     looking at (a Transition without `appear`: nothing on the channel's
-	     first draw), and a badge that arrives after that pops in on its own;
-	     a badge is keyed on its text and on whether it is yours, so toggling
-	     yours re-enters it. Themes hang their own flourishes on the same
-	     enter classes (heart.css's glitter). -->
+	     first draw), and a badge that arrives after that pops in on its own.
+	     A badge is keyed on its text alone, so toggling yours on and off
+	     never remounts it — it keeps its identity (and a keyboard user's
+	     focus) across the toggle. Themes hang their own flourishes on the
+	     same enter classes (heart.css's glitter). -->
 	<Transition name="reactions">
 		<span v-if="badges.length" class="msg-reactions" role="group" aria-label="Reactions">
 			<TransitionGroup name="reaction" tag="span" class="msg-reactions-list">
 				<button
 					v-for="badge in badges"
-					:key="badge.text + (badge.self ? '+' : '')"
+					:key="badge.text"
 					type="button"
 					class="msg-reaction tooltipped tooltipped-n"
 					:class="{self: badge.self, word: !badge.emoji}"
