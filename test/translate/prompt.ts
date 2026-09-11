@@ -1,0 +1,151 @@
+import {expect} from "chai";
+import {emptyContext, type TranslateRequest} from "../../client/js/translate/engine";
+import {
+	CONTEXT_TOKEN_BUDGET,
+	END_SENTINEL,
+	buildMessages,
+	estimateTokens,
+	formatBatchedInput,
+	parseBatchedOutput,
+	stripSentinel,
+	systemPrompt,
+	trimContext,
+	userPrompt,
+} from "../../client/js/translate/prompt";
+
+const name = (code: string) => ({de: "German", en: "English", pt: "Portuguese"}[code] ?? code);
+
+function request(overrides: Partial<TranslateRequest> = {}): TranslateRequest {
+	return {
+		id: 1,
+		model: "m",
+		text: "Ich schick dir gleich das Log.",
+		from: "de",
+		to: "en",
+		purpose: "read",
+		context: emptyContext(),
+		...overrides,
+	};
+}
+
+describe("translate/prompt", () => {
+	it("the system prompt names the target and the source, keeps placeholders and names", () => {
+		const text = systemPrompt(
+			request({
+				context: {
+					...emptyContext(),
+					names: ["ada", "Storm"],
+					terms: [["rig", "Testaufbau"]],
+				},
+			}),
+			name
+		);
+
+		expect(text).to.include("into English");
+		expect(text).to.include("from German");
+		expect(text).to.include("⟦1⟧");
+		expect(text).to.include("Names, not words: ada, Storm.");
+		expect(text).to.include("Earlier in this channel: rig → Testaufbau.");
+		expect(text).to.include("Reply with the translation only");
+	});
+
+	it("asks the model to detect the source when it is unknown, using the hint", () => {
+		expect(systemPrompt(request({from: null}), name)).to.include("Detect the source language");
+		expect(
+			systemPrompt(
+				request({from: null, context: {...emptyContext(), sourceHint: "pt"}}),
+				name
+			)
+		).to.include("probably Portuguese");
+	});
+
+	it("carries formality, variant and, when writing, the user's voice", () => {
+		const text = systemPrompt(
+			request({
+				purpose: "write",
+				context: {
+					...emptyContext(),
+					formality: "formal",
+					variant: "Brazilian Portuguese",
+					voice: ["tô chegando", "beleza"],
+				},
+			}),
+			name
+		);
+
+		expect(text).to.include("Use formal address.");
+		expect(text).to.include("Variant: Brazilian Portuguese.");
+		expect(text).to.include("The user is writing this message");
+		expect(text).to.include("tô chegando");
+		expect(systemPrompt(request(), name)).to.not.include("Use formal");
+	});
+
+	it("the user prompt quotes the context, the reply target and the topic, then the line", () => {
+		const text = userPrompt(
+			request({
+				context: {
+					...emptyContext(),
+					topic: "multiline batches",
+					recent: [
+						{nick: "ada", text: "anyone tried it?"},
+						{nick: "jonas", text: "Ja, gestern.", translated: "Yes, yesterday."},
+					],
+					replyTo: {nick: "ada", text: "anyone tried it?"},
+				},
+			})
+		);
+
+		expect(text).to.equal(
+			[
+				"Topic: multiline batches",
+				"Context:",
+				"<ada> anyone tried it?",
+				"<jonas> Ja, gestern. (translation: Yes, yesterday.)",
+				"This line replies to <ada>: anyone tried it?",
+				"Translate: Ich schick dir gleich das Log.",
+			].join("\n")
+		);
+	});
+
+	it("a bare request is just the line", () => {
+		expect(userPrompt(request())).to.equal("Translate: Ich schick dir gleich das Log.");
+	});
+
+	it("trims the context from the oldest end to the token budget", () => {
+		const lines = Array.from({length: 40}, (_, i) => ({nick: "n", text: "x".repeat(100) + i}));
+		const kept = trimContext(lines, 200);
+
+		expect(kept.length).to.be.lessThan(lines.length);
+		expect(kept[kept.length - 1]).to.equal(lines[lines.length - 1]);
+		expect(estimateTokens(kept.map((l) => l.text).join("\n"))).to.be.at.most(200);
+		expect(CONTEXT_TOKEN_BUDGET).to.equal(700);
+	});
+
+	it("builds system + user messages", () => {
+		const messages = buildMessages(request(), name);
+
+		expect(messages.map((m) => m.role)).to.deep.equal(["system", "user"]);
+		expect(messages[1].content).to.include("Translate: Ich schick");
+	});
+
+	it("formats and parses batched lines", () => {
+		const input = formatBatchedInput(["eins", "zwei"]);
+
+		expect(input).to.equal(
+			`Translate each numbered line; answer with the same numbers, then ${END_SENTINEL} on its own line:\n1. eins\n2. zwei`
+		);
+		expect(parseBatchedOutput(`1. one\n2. two\n${END_SENTINEL}`, 2)).to.deep.equal([
+			"one",
+			"two",
+		]);
+		expect(parseBatchedOutput("1. one\n2. two", 2)).to.deep.equal(["one", "two"]);
+		expect(parseBatchedOutput("1. one", 2)).to.equal(null);
+		expect(parseBatchedOutput("one\ntwo", 2)).to.equal(null);
+		expect(userPrompt(request({lines: ["eins", "zwei"]}))).to.equal(input);
+	});
+
+	it("strips the sentinel and trailing whitespace", () => {
+		expect(stripSentinel(`1. one\n${END_SENTINEL}\n`)).to.equal("1. one");
+		expect(stripSentinel("plain ")).to.equal("plain");
+	});
+});
