@@ -43,16 +43,23 @@ both describe defects that are invisible in a still frame:
   out in the rig tree's order — far legs first for the quadrupeds here — and a far leg is
   deliberately raised, so judge the near feet: a quarter of the cycle clear for a four-beat
   walk, most of it for a gallop.
-- **the ground speed frame by frame**, per segment, with the step across each cycle seam. A
-  gait stores one cycle and repeats it, so a speed that differs between the cycle's first and
-  last frame is replayed as a lurch once per stride, forever. The audit only ever prints one
-  mean per segment, and the contact sheet tracks the animal so it sits centred in every cell —
-  which is precisely what hides both of these.
+- **the ground speed frame by frame**, per segment, as two series side by side: what is
+  _applied_ (a pinned or ramped `travel` overrides the measurement) and the _raw_ stance
+  measurement the rig's own feet produce. Judge a gait on the raw one — the applied series is
+  flat by construction wherever a segment pins its speed, so a check against it alone reports
+  a clean seam for exactly the segments that most needed pinning. A gait stores one cycle and
+  repeats it, so a raw speed that differs across the cycle seam is replayed as a lurch once
+  per stride, forever. The audit only ever prints one mean per segment, and the contact sheet
+  tracks the animal so it sits centred in every cell — which is precisely what hides both of
+  these.
 
 The deer needed this twice: its four-beat walk measured a speed that stepped 38 → 89 at every
 cycle boundary (so it was pinned at the measurement's own mean instead), and a hind hoof
 cleared the ground by only 7 units because the hock's fold peaked 8 % of the cycle before the
-leg passed vertical. A clean audit and a contact sheet that looks right caught neither.
+leg passed vertical. A clean audit and a contact sheet that looks right caught neither. Run it
+on the deer today and the walk still reports the lurch — 38 % of the mean across every seam,
+54 frames of 395 stalled — beside the flat pinned speed that now hides it, which is what you
+want: the pin is the right fix, and the numbers it was drawn from stay visible.
 
 ## The pipeline
 

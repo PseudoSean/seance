@@ -74,44 +74,67 @@ for (const [gname, gait] of Object.entries(rig.gaits ?? {})) {
 }
 
 // ── 2. is the ground speed smooth, and smooth across a repeat? ───────────────
+// `travelOf` hands back both curves: `xs` is what is APPLIED (a pinned or ramped
+// `travel` overrides the measurement) and `v` is the RAW stance measurement the
+// rig's own feet produce. Judge a gait on the raw series — the applied one is
+// flat by construction wherever a segment pins its speed, so checking that alone
+// reports a clean seam for exactly the segments that most needed pinning.
 const {poses, segs} = samplePoses(def);
-const {xs} = travelOf(def, poses, segs);
+const {xs, v: raw} = travelOf(def, poses, segs);
 
-console.log("\nground speed per segment");
+const stats = (a) => {
+	const min = Math.min(...a);
+	const max = Math.max(...a);
+	const mean = a.reduce((x, y) => x + y, 0) / a.length;
+	return {min, max, mean, spread: mean > 0 ? ((max - min) / 2 / mean) * 100 : 0};
+};
+
+console.log("\nground speed per segment — raw stance measurement vs what is applied");
 for (const s of segs) {
-	const vs = [];
+	const applied = [];
+	const stance = [];
 	for (let i = s.start + 1; i < s.start + s.count; i++) {
 		const dt = poses[i].t - poses[i - 1].t;
-		if (dt > 0) vs.push((xs[i] - xs[i - 1]) / dt);
+		if (dt <= 0) continue;
+		applied.push((xs[i] - xs[i - 1]) / dt);
+		stance.push(raw[i]);
 	}
-	if (!vs.length) continue;
-	const min = Math.min(...vs);
-	const max = Math.max(...vs);
-	const mean = vs.reduce((a, b) => a + b, 0) / vs.length;
-	const spread = mean > 0 ? ((max - min) / 2 / mean) * 100 : 0;
-	const stalled = vs.filter((x) => x < 0.5).length;
+	if (!applied.length) continue;
+	const A = stats(applied.map(Math.abs));
+	const R = stats(stance);
 	const what = s.gait ?? s.blendTo ?? s.wobble ?? s.pose ?? "?";
+	const pinned = s.travel !== undefined;
 	console.log(
-		`  ${s.id} ${String(what).padEnd(10)} min ${min.toFixed(1).padStart(7)} ` +
-			`max ${max.toFixed(1).padStart(7)} mean ${mean.toFixed(1).padStart(7)} ` +
-			`spread ${spread.toFixed(0).padStart(3)} %  stalled frames ${stalled}/${vs.length}`
+		`  ${s.id} ${String(what).padEnd(10)} applied mean ${A.mean.toFixed(1).padStart(7)}` +
+			`${pinned ? " (pinned)" : "        "}   raw mean ${R.mean.toFixed(1).padStart(7)} ` +
+			`min ${R.min.toFixed(1).padStart(6)} max ${R.max.toFixed(1).padStart(6)} ` +
+			`spread ${R.spread.toFixed(0).padStart(3)} %`
 	);
-	// only a moving segment can stall; a pose hold or a wobble is pinned to 0 on purpose
-	if (s.gait && stalled > vs.length * 0.1) {
-		console.log("    STALLS — over a tenth of this moving segment sits at zero speed");
+	const stalled = stance.filter((x) => x < 0.5).length;
+	if (s.gait && stalled > stance.length * 0.1) {
+		console.log(
+			`    the raw measurement stalls on ${stalled}/${stance.length} frames — ` +
+				(pinned
+					? "pinning is hiding it, which is the right call, but the mean you pinned at is drawn from these"
+					: "PIN THIS SEGMENT, or the animal stops dead once per stride")
+		);
 	}
 	// a gait stores one cycle and repeats it, so the seam is replayed every stride
 	if (s.gait && rig.gaits[s.gait]) {
 		const per = Math.round(rig.gaits[s.gait].dur * s.fps);
 		for (let c = 1; c <= cycles; c++) {
 			const i = c * per;
-			if (i > 0 && i < vs.length) {
-				const step = vs[i] - vs[i - 1];
-				const rel = mean > 0 ? Math.abs(step / mean) * 100 : 0;
+			if (i - 2 >= 0 && i < stance.length) {
+				const before = stance[i - 2];
+				const across = stance[i - 1];
+				const after = stance[i];
+				const step = Math.abs(after - before);
+				const rel = R.mean > 0 ? (step / R.mean) * 100 : 0;
 				console.log(
-					`    cycle seam ${c}: ${vs[i - 1].toFixed(1)} → ${vs[i].toFixed(1)} ` +
-						`(step ${step.toFixed(1)}, ${rel.toFixed(0)} % of the mean)` +
-						(rel > 25 ? "  LURCHES — this repeats every stride" : "")
+					`    cycle seam ${c} (raw): before ${before.toFixed(1)} → across ` +
+						`${across.toFixed(1)} → after ${after.toFixed(1)} ` +
+						`(step ${step.toFixed(1)}, ${rel.toFixed(0)} % of the raw mean)` +
+						(rel > 25 ? "  LURCHES — a repeat replays this every stride" : "")
 				);
 			}
 		}
