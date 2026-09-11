@@ -36,6 +36,23 @@ rejection every in-flight call gets on teardown, `IDLE_UNLOAD_MS` for how
 long an unused worker survives, and `translateService().translate()` as the
 one call a new caller (the header switch) needs on the page.
 
+**The caller's half of the contract:** a stream from
+`translateService().translate()` must be consumed to the end, or left with
+`break`/`return` (anything that runs the generator's `return()`). A
+generator simply abandoned never releases the service's in-flight count, so
+the idle unload never fires and the worker lives until `pagehide`.
+
+**Prerequisites for plan 2**, none of which matter while the service is the
+only caller:
+
+- `status` and `models` replies carry no correlation id, so every
+  outstanding waiter settles on the first one back. Serialise those calls,
+  or give the messages ids, before a second caller exists.
+- `Seq2seqEngine.unload()` disposes what is loaded and ignores loads still
+  in flight: a pipeline that arrives after it is loaded again, uncounted.
+- An abandoned generator leaks an in-flight count (above), and in the
+  seq2seq engine it also pins its model against eviction.
+
 ## Weights
 
 WebLLM caches under its own Cache Storage keys, transformers.js under
