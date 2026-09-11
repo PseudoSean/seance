@@ -381,7 +381,12 @@ export default {
 	colours: {near: "#d97a9c", far: "#ecbccb"},
 	budget: 200 * 1024,
 	// Gallop in, collect into a prance, prance, gallop off. A visit lasts
-	// about 11 s of a 60 s loop; the first is 2 s after the file loads.
+	// about 14 s of a 60 s loop; the first is 2 s after the file loads. (The
+	// last gait's cycles were raised from 3 to 6 — the audit's own rule — to
+	// clear the stage: this rig's measured gallop travel is well under the
+	// 600-750 units/s a quick geometric estimate would suggest, apparently
+	// because a transverse gallop's stance phases are brief and much of the
+	// cycle runs on held-over velocity between them; see task-5-report.md.)
 	sequence: {
 		first: 2,
 		period: 60,
