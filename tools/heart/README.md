@@ -10,9 +10,25 @@ directory is how they are made.
     node tools/heart/generate.mjs            # every animal
     node tools/heart/generate.mjs puppy      # one
 
-Read the audit it prints, look at the result in a browser (a `tmp/` page with the file as a
-`background-image`, or the theme itself), then commit the files. A problem in the audit
+Read the audit it prints, look at the result, then commit the files. A problem in the audit
 leaves the old files in place and exits 1.
+
+## Look at it
+
+    node tools/heart/contact-sheet.mjs puppy          # tmp/heart-puppy-sheet.png
+    node tools/heart/contact-sheet.mjs puppy --times=0,5,11,16 --height=220
+
+`contact-sheet.mjs` photographs one animal's visit through a real browser — twelve cells
+across the window it is visible, each one a slot like the theme's over the theme's sky and
+ground, the stage's background-position tracked so the animal is in the middle of its cell
+rather than 1/24 of it — and stitches them into one PNG you can read pose by pose. Times are
+seconds after the sequence's `first`, the same clock as the audit's `onStage` and `tExit`.
+The animation is SMIL inside a `background-image` and cannot be seeked from outside, so the
+tool reaches a time by waiting for it: a twelve-cell sheet takes about one visit (~40 s for
+the puppy). Chromium is launched through `tools/browser-drive.mjs` and must be: a container's
+64 MB `/dev/shm` kills the renderer on these layers without the `--disable-dev-shm-usage`
+the driver passes. The audit says whether a rig is sound; the sheet is the only thing that
+says whether the animal looks like the animal.
 
 ## The pipeline
 
@@ -90,7 +106,26 @@ the causes out:
   Current headroom: bunny near sits at 4.18 % of the 5 % limit, puppy far at 6.96 % of the
   10 % limit — so a new rig tuned blind against the limits knows how much room there really is;
 - the visit ends off-stage on either side, the off-stage gap is ≥ 2 s;
-- sizes: `horse.svg` ≤ 200 KB, `puppy.svg` and `bunny.svg` ≤ 160 KB, stills ≤ 8 KB;
+- sizes: each animated file (the near tint and the `-far` one, which is the same
+  shape) within its rig's own `budget`, stills ≤ 8 KB. The cast's budgets, which
+  are also the rows `test/tools/heart/files.ts` holds the committed files to:
+
+  | Animal  | Each animated file | Files             |
+  | ------- | ------------------ | ----------------- |
+  | horse   | 200 KB             | 4                 |
+  | puppy   | 160 KB             | 4                 |
+  | bunny   | 160 KB             | 4                 |
+  | deer    | 150 KB             | 4                 |
+  | kitten  | 150 KB             | 4                 |
+  | teddy   | 120 KB             | 4                 |
+  | bird    | 120 KB             | 4                 |
+  | frog    | 100 KB             | 4                 |
+  | ladybug | 100 KB             | 4                 |
+  | dolphin | 120 KB             | 2 (far tint only) |
+
+  A rig sets its `budget` to its row; the audit refuses to write a file over it,
+  and the test skips an animal's rows until its files exist;
+
 - the clip chain's total duration (Σ `dur` × `repeat` over the segments) agrees with the
   sampled `onStage` within 5 ms — the two are built from the same rounded frame counts and
   should always match exactly; a mismatch would mean the shape morphs and the travel have
@@ -115,6 +150,11 @@ time on stage and the audit says so.
 ## Budget and browsers
 
 Each near file is 100–200 KB uncompressed (gzip ≈ ¼ on the wire); the theme's directory
-stays under 1.3 MB. Chromium runs SMIL — chained clips, additive transforms, path morphs —
-inside a CSS `background-image` (`spike-svg-background/`). Firefox and Safari still need
-their rows in that spike's README filled in.
+stays under 2.8 MB with the whole cast in it. That is not what a page downloads: a scene
+casts three animals, and a `url()` sitting in a CSS custom property that no resolved
+`background-image` substitutes is never fetched, so a page pulls three animal files out of
+the directory however many are committed — the theme's browser scenario
+(`tools/scenarios/theme-heart.mjs`) counts what one actually fetches. Chromium runs SMIL —
+chained clips, additive transforms, path morphs — inside a CSS `background-image`
+(`spike-svg-background/`). Firefox and Safari still need their rows in that spike's README
+filled in.
