@@ -30,7 +30,11 @@ chunk) hosts both engines; the page talks to it over `protocol.ts`
 loads on demand, marks candidates down and terminates the worker after ten
 idle minutes or on `pagehide`. `index.ts` is the singleton wired to the
 store; on a development build `?fakeTranslate` swaps in `fakePort.ts`, an
-in-page scripted worker the scenarios use.
+in-page scripted worker the scenarios use. Plan 2 (reading) starts from the
+page-side surface `client.ts` already exposes: `TranslateClient.translate(req, ref, onProgress?)` for the streamed chunks, `WORKER_DISPOSED` as the
+rejection every in-flight call gets on teardown, `IDLE_UNLOAD_MS` for how
+long an unused worker survives, and `translateService().translate()` as the
+one call a new caller (the header switch) needs on the page.
 
 ## Weights
 

@@ -85,6 +85,9 @@
 			</div>
 
 			<h3>Models</h3>
+			<div v-if="loadError" class="translate-hint translate-error">
+				Could not reach the translation worker: {{ loadError }}
+			</div>
 			<div v-if="capability" class="translate-hint translate-device">
 				<template v-if="capability.tier === 'gpu'"
 					>This device can run the GPU model.</template
@@ -189,6 +192,10 @@
 	color: var(--error-fg, #c33);
 }
 
+.translate-error {
+	color: var(--error-fg, #c33);
+}
+
 .translate-model-track {
 	grid-column: 1 / -1;
 	display: block;
@@ -213,7 +220,7 @@
 </style>
 
 <script lang="ts">
-import {computed, defineComponent, onMounted, toRaw} from "vue";
+import {computed, defineComponent, onMounted, ref, toRaw} from "vue";
 import {useStore} from "../../js/store";
 import {translateService} from "../../js/translate";
 import type {ModelRef} from "../../js/translate/engine";
@@ -229,10 +236,15 @@ export default defineComponent({
 		const models = computed(() => store.state.translation.models);
 		const capability = computed(() => store.state.translation.capability);
 		const languages = SUPPORTED_LANGUAGES;
+		const loadError = ref<string | null>(null);
+
+		const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 		onMounted(() => {
 			if (enabled) {
-				void service.models();
+				service.models().catch((e: unknown) => {
+					loadError.value = errorMessage(e);
+				});
 			}
 		});
 
@@ -254,27 +266,29 @@ export default defineComponent({
 			}
 		};
 
-		const allowed = (ref: ModelRef) => {
+		const allowed = (modelRef: ModelRef) => {
 			const cap = capability.value;
 
 			if (!cap) {
 				return false;
 			}
 
-			return ref.engine === "llm" ? cap.tier === "gpu" : cap.tier !== "none";
+			return modelRef.engine === "llm" ? cap.tier === "gpu" : cap.tier !== "none";
 		};
 
 		// The ref comes off a reactive `v-for` row (store.state.translation.models);
 		// the worker protocol structured-clones every message, which rejects a
 		// Vue reactive Proxy, so send the raw object underneath it.
-		const download = (ref: ModelRef) => {
-			service.download(toRaw(ref)).catch(() => {
+		const download = (modelRef: ModelRef) => {
+			service.download(toRaw(modelRef)).catch(() => {
 				// the view carries the error; nothing else to do
 			});
 		};
 
-		const remove = (ref: ModelRef) => {
-			void service.deleteModel(toRaw(ref));
+		const remove = (modelRef: ModelRef) => {
+			service.deleteModel(toRaw(modelRef)).catch((e: unknown) => {
+				loadError.value = errorMessage(e);
+			});
 		};
 
 		return {
@@ -283,6 +297,7 @@ export default defineComponent({
 			models,
 			capability,
 			languages,
+			loadError,
 			name,
 			size,
 			stateLabel,

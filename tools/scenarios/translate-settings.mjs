@@ -5,10 +5,13 @@
 // turning "Downloaded", delete turning it back — plus the choice surviving
 // a reload. Nothing in `yarn test` renders the tab.
 //
-//   corepack yarn build --mode=development && python3 -m http.server -d public 8021 &
+//   corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/translate-settings.mjs
 //
-// A development build is required: the fake is compiled out of production.
+// NODE_ENV must be unset (`corepack yarn build`, not
+// `NODE_ENV=production corepack yarn build`): a production build's
+// BUILD !== "dev" folds useFake() to false at compile time and Terser
+// drops the fake worker as dead code.
 
 const BASE = "http://localhost:8021/";
 
@@ -78,6 +81,7 @@ export default async function run(page) {
 
 	const llmId = await page.evaluate(`document.querySelector(".translate-model").dataset.model`);
 
+	await page.waitFor(`!!document.querySelector(".translate-device")`, {label: "device note"});
 	page.check(
 		"device note says gpu",
 		(await page.evaluate(`document.querySelector(".translate-device")?.textContent`)).includes(
@@ -86,12 +90,13 @@ export default async function run(page) {
 	);
 	page.check("LLM row not downloaded", (await page.evaluate(STATE(llmId))) === "Not downloaded");
 	page.check(
-		"target defaults to a full name",
-		/^[A-Z][a-z]+/.test(
-			await page.evaluate(
-				`document.querySelector('select[name="translateTo"] option:checked').textContent`
-			)
-		)
+		"target defaults to the locale's full name",
+		(await page.evaluate(
+			`document.querySelector('select[name="translateTo"] option:checked').textContent.trim()`
+		)) ===
+			(await page.evaluate(
+				`new Intl.DisplayNames([navigator.language], {type: "language"}).of(document.querySelector('select[name="translateTo"]').value)`
+			))
 	);
 	await page.screenshot("translation-settings");
 

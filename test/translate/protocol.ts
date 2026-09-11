@@ -65,6 +65,9 @@ describe("translate/protocol", () => {
 		await client.load(llmRef, (p) => progress.push(p.fraction));
 
 		expect(llm.calls.load).to.deep.equal([llmRef]);
+		// The port boundary posts a plain copy of every ref (client.ts), so a
+		// reactive Proxy from a future call site cannot fail structured cloning.
+		expect(Object.getPrototypeOf(llm.calls.load[0])).to.equal(Object.prototype);
 		expect(progress).to.deep.equal([0.5, 1]);
 		expect((await client.status()).llm).to.deep.equal({
 			status: "ready",

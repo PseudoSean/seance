@@ -17,6 +17,15 @@ import {RouteTable, mergeRoutes} from "./router";
 import {DEFAULT_ROUTES} from "./routes.default";
 import {ServiceDeps, TranslateService} from "./service";
 
+// Captured at module load (vue.ts imports the router, which statically
+// imports Settings/Translation.vue, before `boot()` runs) rather than read
+// inside useFake(): boot.ts's handleQueryParams() strips the page's query
+// string on every load, and the service is created lazily, well after that
+// — reading window.location.search at call time would never see the flag.
+// Declared above every export so no caller, however early, can reach it
+// before it is initialized.
+const initialSearch = window.location.search;
+
 let service: TranslateService | null = null;
 
 export function translateService(): TranslateService {
@@ -26,13 +35,6 @@ export function translateService(): TranslateService {
 
 	return service;
 }
-
-// Captured at module load (vue.ts imports the router, which statically
-// imports Settings/Translation.vue, before `boot()` runs) rather than read
-// inside useFake(): boot.ts's handleQueryParams() strips the page's query
-// string on every load, and the service is created lazily, well after that
-// — reading window.location.search at call time would never see the flag.
-const initialSearch = window.location.search;
 
 function useFake(): boolean {
 	return BUILD === "dev" && new URLSearchParams(initialSearch).has("fakeTranslate");

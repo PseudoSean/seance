@@ -68,7 +68,12 @@ export class TranslateClient {
 		const entry: LoadEntry = {...deferred<void>(), onProgress: [onProgress]};
 
 		this.loads.set(ref.id, entry);
-		this.port.postMessage({type: "load", ref});
+		// A plain copy, not the caller's ref itself: a future call site may
+		// hand in a Vue reactive Proxy (Translation.vue already guards with
+		// toRaw(), but nothing enforces that upstream), and every port —
+		// the fake, and a real Worker — structured-clones the message,
+		// which throws DataCloneError on a Proxy.
+		this.port.postMessage({type: "load", ref: {...ref}});
 
 		return entry.promise;
 	}
@@ -101,7 +106,7 @@ export class TranslateClient {
 
 		queue.onReturn = () => this.cancel(req.id);
 		this.streams.set(req.id, {queue, refId: ref.id, onProgress});
-		this.port.postMessage({type: "translate", req, ref});
+		this.port.postMessage({type: "translate", req, ref: {...ref}});
 
 		return queue;
 	}
@@ -140,7 +145,7 @@ export class TranslateClient {
 		const entry = deferred<void>();
 
 		this.deletes.set(ref.id, entry);
-		this.port.postMessage({type: "delete", ref});
+		this.port.postMessage({type: "delete", ref: {...ref}});
 
 		return entry.promise;
 	}
