@@ -22,6 +22,29 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   model failed to load or translate is skipped until reload). The shipped
   table is provisional until `tools/translate-eval.mjs` (plan 4) measures.
 
+## Reading a channel
+
+The globe in a channel's header switches translation on for that channel
+(`Chat.vue`, `translate/reader.ts`): from then on every message someone
+else sends is detected (`detect.ts`, `franc` in its own chunk, with the
+channel's dominant language settling near ties), skipped when it is
+already in the target or too short (`eligibility.ts`), given its context
+(`context.ts`: the last ten lines with the translations already shown,
+the reply target, the topic, the names in play, the channel's terms) and
+queued (`queue.ts`: the active channel first, one request per engine,
+LLM lines of one channel and pair batched, items that fell two hundred
+messages behind dropped, an engine paused after three failures in a row).
+The result lives in `store.state.translations` keyed by the message id
+and renders as `TranslationLine.vue` under the original: a "from German"
+chip, the text streaming with a caret, a retry when it failed; the chip's
+menu retranslates or hides the line, and the toolbar's Translate does one
+message on request in a channel that is off. The switch, the outgoing
+target (plan 3), formality, variant and the term memory are per channel
+under `thelounge.translate` (`channelStore.ts`); older messages are never
+translated (the switch-on moment is recorded). Nothing on a message
+object changes and nothing about unread or highlight counts does. Browser
+check: `tools/scenarios/translate-reading.mjs`.
+
 ## The worker
 
 `js/translate-worker.js` (its own webpack configuration, like the push

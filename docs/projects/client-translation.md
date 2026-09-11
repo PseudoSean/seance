@@ -1,7 +1,7 @@
 # Client-side translation
 
 _Started 2026-09-11 on the `client-translation` branch (from `origin/develop`
-at `d6b6624b`). Status: **phase 1 (engine layer) implemented; phases 2-4
+at `d6b6624b`). Status: **phases 1 and 2 implemented; phases 3 and 4
 pending**. This file is the spec; the implementation plan follows from it._
 
 ## Goal
@@ -35,6 +35,52 @@ a nick glossary, per-channel term memory, multiline messages as one unit,
 queue batching, a round-trip check on the strip as a button, and voice
 examples and formality as settings. Deferred: draft-and-refine across the two
 engines, and a "wrong?" feedback log.
+
+### Deviations recorded during implementation
+
+Plan 1 (engine layer):
+
+- `Engine.capabilities()` carries no language lists; the model catalog
+  (`models.ts`) does.
+- `TranslateChunk` has no `line`; batched results are parsed once on `done`.
+- `translateEngines` is two boolean settings, `translateLlm` and
+  `translateCpu`.
+- `TranslateRequest` names its `model`; the service picks it from the route.
+- Engines expose `loadedModels()` / `isLoaded(model)` rather than one loaded
+  flag.
+- A candidate is marked down only on a load-class failure (`EngineError`
+  cause `"load"`); a request failure is reported per line and the candidate
+  stays up.
+
+Plan 2 (reading pipeline):
+
+- Language detection uses `franc` (a lazy chunk) with the channel's
+  recent-language prior, not hand-built n-gram profiles. When franc's best
+  guess is a language the catalog does not know, the detection is
+  undetermined (no lower-ranked guess is used); a forced (manual)
+  translation still lets the LLM detect the source.
+- Eligibility: the shortcode pattern requires a letter, so a clock time
+  like `12:30:45` is never treated as an emoji shortcode (applied to span
+  protection too).
+- WebGPU device loss: the reload-once counter belongs to the model id;
+  loading a different model resets it, a second consecutive loss of the
+  same model marks the LLM candidate down.
+- Queue: a pair without a route fails the line ("no route") instead of
+  hanging; every request carries an AbortSignal end to end and a 120 s
+  deadline ("timed out"); a channel switch cancels its in-flight requests
+  eagerly; lines older than 200 arrivals in their channel are dropped
+  rather than translated late.
+- The channel's per-channel record persists only `read`, `write`,
+  `formality`, `variant`, `since`, `terms` (`thelounge.translate`); runtime
+  patches never write `since`/`terms`.
+- An edited message loses its original's translation (re-queued as a new
+  line); parting or quitting a channel discards its queue, priors and
+  arrival counters.
+- The reader waits for the capability probe before the first line of a
+  channel, and re-reads the channel's settings after language detection so
+  a setting changed mid-flight wins.
+- The translation panel is a sibling of the channel header (absolutely
+  positioned under it), not a child: the header clips its overflow.
 
 ## Non-goals
 

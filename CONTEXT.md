@@ -107,3 +107,23 @@ _Avoid_: masking, tokenization (that is the engine's own, internal, tokenizer)
 **model view**:
 A Settings row: cached, downloading (with a fraction), ready or failed.
 _Avoid_: model state, download entry
+
+**switch**:
+A channel's reading target: a language code, or off. Set from the header globe or the panel; the moment it was set (`since`) is recorded so older messages are never translated.
+_Avoid_: toggle state, read flag
+
+**chip**:
+The "from German" button on a translated line (`TranslationLine.vue`), full language name; opens the retranslate/hide menu.
+_Avoid_: badge, label
+
+**prior**:
+A channel's dominant detected language so far (`LanguagePrior`), used to settle a near-tie in detection and as the sourceHint the prompt carries.
+_Avoid_: bias, running average
+
+**drop**:
+A queued line the queue gave up on because too many messages arrived in its channel before an engine got to it (`DROP_AFTER_LINES`); shown as no translation at all, not a failure.
+_Avoid_: skip, expire
+
+**pause**:
+An engine set aside after `PAUSE_AFTER_FAILURES` consecutive failures, until a retry resumes it; global to the engine, not per channel.
+_Avoid_: disable, blacklist
