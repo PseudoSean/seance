@@ -37,7 +37,7 @@ export type WorkerToMain =
 	| {type: "done"; id: number}
 	| {
 			type: "error";
-			scope: "load" | "unload" | "translate" | "delete" | "worker";
+			scope: "load" | "unload" | "translate" | "delete" | "status" | "models" | "worker";
 			id?: number;
 			ref?: ModelRef;
 			engine?: EngineName;

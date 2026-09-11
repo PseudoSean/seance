@@ -222,6 +222,10 @@ export class TranslateClient {
 				} else if (message.scope === "delete" && message.ref) {
 					this.deletes.get(message.ref.id)?.reject(error);
 					this.deletes.delete(message.ref.id);
+				} else if (message.scope === "status") {
+					this.statusWaiters.splice(0).forEach((w) => w.reject(error));
+				} else if (message.scope === "models") {
+					this.modelsWaiters.splice(0).forEach((w) => w.reject(error));
 				}
 
 				break;

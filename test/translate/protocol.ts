@@ -37,7 +37,7 @@ function rig(script: (text: string) => string[] = (t) => [t.slice(0, 1), t]) {
 
 	client.configure(catalog, "https://app.test/js/ort/");
 
-	return {client, llm, seq2seq, cached, configured, stop};
+	return {client, llm, seq2seq, cached, cache, configured, stop};
 }
 
 async function collect(iterable: AsyncIterable<{text: string; done: boolean}>) {
@@ -317,5 +317,42 @@ describe("translate/protocol", () => {
 		expect(() => client.translate({...req}, llmRef)).to.throw(
 			"duplicate translation request id 8"
 		);
+	});
+
+	it("a throwing cache rejects models() but leaves the worker alive", async () => {
+		const {client, cache} = rig();
+
+		cache.has = () => {
+			throw new Error("no cache storage");
+		};
+
+		let message = "";
+
+		try {
+			await client.models();
+		} catch (e) {
+			message = (e as Error).message;
+		}
+
+		expect(message).to.equal("no cache storage");
+		expect((await client.status()).llm.status).to.equal("cold");
+	});
+
+	it("a throwing snapshot rejects status() with the engine's message", async () => {
+		const {client, llm} = rig();
+
+		llm.loadedModels = () => {
+			throw new Error("adapter lost");
+		};
+
+		let message = "";
+
+		try {
+			await client.status();
+		} catch (e) {
+			message = (e as Error).message;
+		}
+
+		expect(message).to.equal("adapter lost");
 	});
 });

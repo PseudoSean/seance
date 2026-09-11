@@ -36,8 +36,13 @@ export function serveEngines(port: WorkerPort, engines: EngineSet, deps: WorkerD
 	const handle = async (message: MainToWorker): Promise<void> => {
 		switch (message.type) {
 			case "configure":
-				catalog = message.catalog;
-				deps.configure(message.catalog, message.ortBase);
+				try {
+					catalog = message.catalog;
+					deps.configure(message.catalog, message.ortBase);
+				} catch (e) {
+					port.postMessage({type: "error", scope: "worker", message: errorMessage(e)});
+				}
+
 				break;
 
 			case "load": {
@@ -120,13 +125,23 @@ export function serveEngines(port: WorkerPort, engines: EngineSet, deps: WorkerD
 				controllers.get(message.id)?.abort();
 				break;
 			case "status":
-				port.postMessage({type: "status", engines: snapshot()});
+				try {
+					port.postMessage({type: "status", engines: snapshot()});
+				} catch (e) {
+					port.postMessage({type: "error", scope: "status", message: errorMessage(e)});
+				}
+
 				break;
 			case "models":
-				port.postMessage({
-					type: "models",
-					models: catalog ? await cacheStates(catalog, deps.cache) : [],
-				});
+				try {
+					port.postMessage({
+						type: "models",
+						models: catalog ? await cacheStates(catalog, deps.cache) : [],
+					});
+				} catch (e) {
+					port.postMessage({type: "error", scope: "models", message: errorMessage(e)});
+				}
+
 				break;
 			case "delete":
 				try {
