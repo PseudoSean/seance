@@ -226,6 +226,13 @@ strong,
 	font-weight: 700;
 }
 
+/* The channel header is paper, like the composer (the mockup's .head:
+ * background var(--paper), a rule below); style.css gives it no background
+ * of its own, so it showed the sky. */
+#chat .header {
+	background: var(--heart-paper);
+}
+
 /* Nunito + tabular-nums measures wider than style.css's fixed 12h columns
  * (07:13 AM at 82.9px in the 600 face vs. a 4.75rem/5.75rem box, wrapping
  * to two lines; the 400 face is a touch narrower and keeps the wider
