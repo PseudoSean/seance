@@ -48,7 +48,10 @@ The theme is **one stylesheet plus static assets** (fonts, animated SVG characte
 --lilac      #e6d9ff   sidebar top
 --peach      #ffe3d1   sidebar bottom
 --mint       #1f7354   joins (text, so 4.5:1 on --sky; the lighter #2f8f6b measured 3.4)
---hill-far   #dbeee1  --hill-mid #cbe6d3  --ground #b7dcc2   (base; tinted per channel, §5)
+--hill-far   #dbeee1  --hill-mid #cbe6d3  --ground #b7dcc2   (base; tinted per channel, §5 —
+  in the shipped CSS these three are computed at runtime from the seeded hue on #chat-container,
+  hsl(var(--heart-hill-hue) ...); the hexes here are the fallback that applies only outside
+  #chat-container, where var(--channel-seed) never resolves)
 --horse #d97a9c / far #ecbccb   --puppy #e39a5a / #f1cba6   --bunny #9b82dc / #cbbfee
 --deer #b48ad6  --kitten #5aa9b8  --teddy #c98a6a  --bird #52b3b3  --dolphin #6f9fe0  --frog #6fbf8a  --ladybug #e0524f
 (each animal's far legs and its distant appearances use the "far" tint: the colour mixed ~55 % toward --sky)
@@ -113,7 +116,7 @@ Both come from `helpers/channelSeed.ts`: FNV-1a over the lower-cased name of the
 - Hill layout: six layouts keyed by `data-scene` (which hills, their widths and heights).
 - Clouds: `animation-delay: calc(var(--channel-seed) * -80s)` and a per-scene count.
 - Cast and timing: per `data-scene`, which animal each slot shows and its route's `animation-delay` offset (`calc(var(--channel-seed) * -40s)`), so two channels with the same layout still differ in who is where.
-- A rainbow (a pseudo-element arc of the pastel palette that fades in for a minute every few minutes) in two of the six scenes.
+- A rainbow (a pseudo-element arc of the pastel palette that fades in for a minute every few minutes) in two of the six scenes — placed in **plan 2**, with the animal slots: it needs a pseudo-element, which plan 1 does not add.
 
 ### 5.4 Animals
 
@@ -125,7 +128,7 @@ Direction changes: the route flips `scaleX` while the character is stopped (sitt
 
 ### 5.5 Idle
 
-`body:has(#input:focus)` pauses every route (`animation-play-state: paused`) and swaps each slot's image for the animal's still (`<animal>-still.svg`, one frame, generated too) so a paused horse does not gallop in place. Focus leaves, the meadow resumes.
+`#chat-container:has(#input:focus) .chat` pauses every route (`animation-play-state: paused`) and swaps each slot's image for the animal's still (`<animal>-still.svg`, one frame, generated too) so a paused horse does not gallop in place. Focus leaves, the meadow resumes.
 
 ### 5.6 Reduced motion
 

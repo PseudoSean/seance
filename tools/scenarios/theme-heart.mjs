@@ -148,6 +148,20 @@ export default async function run(page) {
 	);
 	page.check(`messages fade in (${anim})`, anim.includes("heart-fade"));
 
+	const timeMetrics = await page.evaluate(
+		`(() => {
+			const el = document.querySelector("#chat .msg .time");
+			const cs = getComputedStyle(el);
+			return [el.getBoundingClientRect().height, parseFloat(cs.lineHeight)];
+		})()`
+	);
+	page.check(
+		`timestamp is one line (${timeMetrics[0].toFixed(1)}px height, ${timeMetrics[1].toFixed(
+			1
+		)}px line-height)`,
+		timeMetrics[0] < timeMetrics[1] * 1.6
+	);
+
 	// The echo of this line is held back by INSTALL_SHIM, so the pending
 	// copy (and its burst) stays on screen long enough to read.
 	await page.evaluate(
@@ -173,12 +187,12 @@ export default async function run(page) {
 	for (const [label, fg, bg] of [
 		[
 			"text on sky",
-			`getComputedStyle(document.querySelector("#chat .msg .content")).color`,
+			`getComputedStyle(document.querySelector('#chat .msg[data-type="message"] .content')).color`,
 			`getComputedStyle(document.querySelector('#chat .chat-view[data-type="channel"] .chat')).backgroundColor`,
 		],
 		[
 			"timestamp on sky",
-			`getComputedStyle(document.querySelector("#chat .msg .time")).color`,
+			`getComputedStyle(document.querySelector('#chat .msg[data-type="message"] .time')).color`,
 			`getComputedStyle(document.querySelector('#chat .chat-view[data-type="channel"] .chat')).backgroundColor`,
 		],
 	]) {

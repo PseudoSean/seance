@@ -151,6 +151,6 @@ Cross-cutting types and helpers. `shared/types/socket-events.ts` (`ServerToClien
 - `docs/resources/browser-testing.md` — `tools/browser-drive.mjs`: watching the IRC WebSocket frame by frame, writing scenarios, and the traps (scrollback, profile reuse, synthetic clicks).
 - `docs/resources/irc-links.md` — the `web+irc://` link scheme (why not `irc:`/`ircs:`), its grammar and everywhere it is wired.
 - `docs/resources/reactions.md` — reactions as free text: the emoji picker, the recents list, `/react`'s argument rules and where the catalog comes from.
-- `docs/resources/themes.md` — how a theme file works, the four themes (`coffee` default, `creama`, `day`, `morning`), the Ink & Amber tokens and where they deviate from the handoff in `docs/resources/themes/`. Browser check: `tools/scenarios/themes.mjs`.
+- `docs/resources/themes.md` — how a theme file works, the seven themes (`coffee` default, `creama`, `cobalt`, `frost`, `day`, `morning`, `heart`), the Ink & Amber tokens and where they deviate from the handoff in `docs/resources/themes/`. Browser check: `tools/scenarios/themes.mjs`.
 - `docs/projects/heart-theme.md` — the `<3` theme's design and plan status.
 - There are no public end-user docs yet; `branding.links` defaults point at this repository and its `docs/`.
