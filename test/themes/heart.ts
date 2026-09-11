@@ -421,4 +421,29 @@ describe("the <3 theme's animals", function () {
 
 		expect(entries(reduced.replace(/\n\t\t/g, "\n\t"), "background-position")).to.equal(14);
 	});
+
+	it("raises a rainbow in scenes 2 and 5 on y alone", function () {
+		expect(css).to.match(
+			/--heart-rainbow-arc: radial-gradient\(circle farthest-side at 50% 100%/
+		);
+
+		for (const n of [2, 5]) {
+			const start = css.indexOf(`#chat-container[data-scene="${n}"]`);
+			expect(css.slice(start, css.indexOf("}", start)), `scene ${n}`).to.include(
+				"--heart-rainbow: var(--heart-rainbow-arc);"
+			);
+		}
+
+		const rule = meadowRule();
+		expect(rule).to.match(
+			/animation:\s*heart-clouds 90s linear infinite,\s*heart-rainbow 300s ease-in-out infinite;/
+		);
+		const start = css.indexOf("@keyframes heart-rainbow");
+		const block = css.slice(start, css.indexOf("\n}", start));
+		expect(block).to.include("background-position-y:");
+		expect(block).to.not.include("background-position-x");
+		expect(block).to.include("calc(100% - var(--strip) * 0.3)");
+		const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
+		expect(reduced).to.include("--heart-rainbow-y: calc(100% - var(--strip) * 0.3);");
+	});
 });
