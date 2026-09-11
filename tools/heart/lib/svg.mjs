@@ -101,8 +101,14 @@ const animate = (attrs) =>
  * come from `build.mjs`'s `fadeTimes()` as `travel.fadeKeyTimes`, so they
  * stay strictly increasing — this file only renders them. Starts at
  * `opacity="0"` so nothing shows before the animation's first sample.
+ *
+ * `decor`, when a rig has any, is scenery the animal moves *behind*: each
+ * `{d, fill}` is painted last, as a sibling of the outer group rather than a
+ * child of it, so it neither travels nor fades and stays put for the whole
+ * loop. Its `d` is in the rig's own coordinates — the space the outline
+ * paths are encoded in — so it carries the same `k` as a transform.
  */
-export function animalSvg({viewBox: vb, k, stageW, layers, clips, travel, flip, hearts}) {
+export function animalSvg({viewBox: vb, k, stageW, layers, clips, travel, flip, hearts, decor}) {
 	const last = layers.length - 1;
 	const centre = (vb.x + vb.w / 2) * k;
 	const paths = layers.map((layer, i) => {
@@ -147,6 +153,9 @@ export function animalSvg({viewBox: vb, k, stageW, layers, clips, travel, flip, 
 		.join(";")}" keyTimes="${travel.keyTimes
 		.map((t) => fmt(t, TRAVEL_DECIMALS))
 		.join(";")}" dur="${fmt(travel.period)}s" repeatCount="indefinite"/>`;
+	const scenery = (decor ?? [])
+		.map((p) => `<path fill="${p.fill}" transform="scale(${fmt(k)})" d="${p.d}"/>`)
+		.join("");
 	const fade = animate({
 		attributeName: "opacity",
 		calcMode: "linear",
@@ -163,7 +172,7 @@ export function animalSvg({viewBox: vb, k, stageW, layers, clips, travel, flip, 
 			centre
 		)} 0)">${scale}<g transform="translate(${fmt(-centre)} 0)">${paths.join(
 			""
-		)}${heart}</g></g></g></svg>\n`
+		)}${heart}</g></g></g>${scenery}</svg>\n`
 	);
 }
 

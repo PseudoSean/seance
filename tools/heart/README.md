@@ -80,7 +80,14 @@ says whether the animal looks like the animal.
    that, and the animal keeps travelling on, invisibly, until the loop restarts) — so the
    animal never just appears, and is never visibly clipped at a stage edge inside the visible
    chat. Four files per animal: the near tint,
-   the distant-visitor tint (`-far`), and a still of each for reduced motion. Durations are
+   the distant-visitor tint (`-far`), and a still of each for reduced motion — unless the rig
+   sets `variants` (a subset of `["near", "far"]`, default both), which chooses the **tints**
+   written, not the layers drawn: an animal only ever cast in the distance sets
+   `variants: ["far"]` and ships the far tint and its still alone. A rig may also carry
+   `decor`, an array of `{d, fill}` in its own coordinates, painted last and outside every
+   group of the animated file — scenery the animal passes _behind_, which neither travels nor
+   fades with the visit (and so is on screen for the whole loop, the off-stage gap included);
+   the stills, being the rig's own box rather than the stage, carry none of it. Durations are
    written to four decimals, so a chain of clips runs a few ten-thousandths of a second short
    of the loop's travel transform each period — about three seconds a week on a page left
    open, not worth twelve churned files.

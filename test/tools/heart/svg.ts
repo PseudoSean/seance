@@ -140,6 +140,68 @@ describe("tools/heart svg", function () {
 		);
 	});
 
+	/**
+	 * The outer `<g opacity="0">` — the one carrying the travel and the fade —
+	 * split from what follows it, by counting `<g`/`</g>` depth to its own
+	 * close rather than by string index, so the nesting is asserted as
+	 * structure.
+	 */
+	function outerGroup(svg: string) {
+		const open = svg.indexOf('<g opacity="0">');
+		expect(open, "the outer group").to.be.greaterThan(-1);
+		let depth = 0;
+		let i = open;
+
+		while (i < svg.length) {
+			if (svg.startsWith("<g", i)) {
+				depth++;
+				i = svg.indexOf(">", i) + 1;
+			} else if (svg.startsWith("</g>", i)) {
+				depth--;
+				i += 4;
+
+				if (depth === 0) {
+					return {inside: svg.slice(open, i), after: svg.slice(i)};
+				}
+			} else {
+				i++;
+			}
+		}
+
+		throw new Error("the outer group never closes");
+	}
+
+	it("paints decor after the animal, outside the group that travels and fades", function () {
+		const decor = [
+			{d: "M0,60h100v20h-100z", fill: "#8ec"},
+			{d: "M0,64q50,10 100,0z", fill: "#cef"},
+		];
+		const svg = animalSvg({...spec, decor});
+		// rig coordinates, so the same k the outline paths are encoded with
+		expect(svg).to.include('<path fill="#8ec" transform="scale(2)" d="M0,60h100v20h-100z"/>');
+		expect(svg).to.include('<path fill="#cef" transform="scale(2)" d="M0,64q50,10 100,0z"/>');
+		expect(svg.match(/<path /g)).to.have.length(4);
+
+		const {inside, after} = outerGroup(svg);
+		// that group is the one that moves and fades, and holds the animal
+		expect(inside).to.include('attributeName="transform" type="translate"');
+		expect(inside).to.include('attributeName="opacity"');
+		expect(inside).to.include('fill="#aaa"');
+		expect(inside).to.include('fill="#333"');
+		// neither decor path is inside it: decor neither travels nor fades
+		expect(inside).to.not.include('fill="#8ec"');
+		expect(inside).to.not.include('fill="#cef"');
+		// both follow every animal path, in the order the spec gave them
+		expect(after).to.include('fill="#8ec"');
+		expect(after).to.include('fill="#cef"');
+		expect(after.indexOf('fill="#8ec"')).to.be.lessThan(after.indexOf('fill="#cef"'));
+	});
+
+	it("writes nothing at all for a spec with no decor", function () {
+		expect(animalSvg({...spec, decor: undefined})).to.equal(animalSvg(spec));
+		expect(animalSvg({...spec, decor: []})).to.equal(animalSvg(spec));
+	});
+
 	it("writes a still as plain paths in the rig's own box", function () {
 		const still = stillSvg({
 			viewBox: spec.viewBox,

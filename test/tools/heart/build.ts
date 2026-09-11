@@ -154,6 +154,38 @@ describe("tools/heart build", function () {
 		expect(svg).to.include('<g opacity="0">');
 	});
 
+	it("emits only the tints a rig asks for, and passes its decor to the stage", function () {
+		const decor = [{d: "M0,70h100v10h-100z", fill: "#9cf"}];
+		const {files, audit} = buildAnimal({...blob, variants: ["far"], decor});
+		expect(audit.problems, audit.problems.join("; ")).to.deep.equal([]);
+		// the far *tint*, both of its files, and no near tint at all
+		expect(Object.keys(files)).to.deep.equal(["blob-far.svg", "blob-far-still.svg"]);
+		// the audit measures what is actually emitted, and misses nothing
+		expect(Object.keys(audit.bytes)).to.deep.equal(["blob-far.svg", "blob-far-still.svg"]);
+		expect(files["blob-far.svg"]).to.include(
+			'<path fill="#9cf" transform="scale(1)" d="M0,70h100v10h-100z"/>'
+		);
+		// the still is the rig's own box, not the stage: no decor there
+		expect(files["blob-far-still.svg"]).to.not.include("#9cf");
+
+		// a rig that asks for neither still gets all four, in the same order
+		expect(Object.keys(buildAnimal(blob).files)).to.deep.equal([
+			"blob.svg",
+			"blob-far.svg",
+			"blob-still.svg",
+			"blob-far-still.svg",
+		]);
+	});
+
+	it("refuses a variants list that is empty or names something other than a tint", function () {
+		expect(buildAnimal({...blob, variants: []}).audit.problems.join(" ")).to.include(
+			"variants"
+		);
+		expect(buildAnimal({...blob, variants: ["Far"]}).audit.problems.join(" ")).to.include(
+			"variants"
+		);
+	});
+
 	it("fades out exactly when the box starts to cross the stage edge, not when the sequence stops sampling", function () {
 		const {files, audit} = buildAnimal(blob);
 		// the blob turns and walks back off the left edge well before its last
