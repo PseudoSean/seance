@@ -75,8 +75,8 @@ describe("public folder", function () {
 
 	it("the <3 theme's fonts are copied beside it", function () {
 		for (const file of [
-			"nunito-400.woff2",
-			"nunito-400-italic.woff2",
+			"nunito-600.woff2",
+			"nunito-600-italic.woff2",
 			"nunito-800.woff2",
 			"baloo2-700.woff2",
 			"OFL-Nunito.txt",
