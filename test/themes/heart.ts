@@ -201,6 +201,20 @@ describe("the <3 theme's glitter", function () {
 		}
 
 		expect(css, "no hover glitter").to.not.include(":hover::");
+		expect(css, "the send burst hangs off the text column").to.match(
+			/#chat \.msg\.self:last-child::before,\s*#chat \.msg\.self:last-child::after \{[^}]*left: calc\(var\(--heart-text-x\) - 0\.4em\)/
+		);
+		for (const [cls, x] of [
+			["", "13.25rem"],
+			[".time-seconds", "14.5rem"],
+			[".time-12h", "15.25rem"],
+			[".time-seconds.time-12h", "17rem"],
+		]) {
+			expect(css, `text start with ${cls || "the default clock"}`).to.match(
+				new RegExp(`#chat${cls.replace(/\./g, "\\.")} \\{\\s*--heart-text-x: ${x};`)
+			);
+		}
+		expect(css).to.match(/@media \(max-width: 479px\) \{\s*#chat \{\s*--heart-text-x: 0\.4em;/);
 		expect(css).to.include(".reaction-enter-active::before");
 		expect(css, "the first reaction's group bursts too").to.include(
 			".reactions-enter-active .msg-reaction:not(.msg-reaction-add)::before"
