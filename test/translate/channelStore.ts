@@ -12,6 +12,7 @@ import {
 	setChannelTranslation,
 	splitKey,
 	useStorageBackend,
+	type ChannelTranslation,
 } from "../../client/js/translate/channelStore";
 
 function memoryBackend() {
@@ -108,5 +109,20 @@ describe("translate/channelStore", () => {
 		expect(loadAll()).to.deep.equal({});
 		backend.set(STORAGE_KEY, JSON.stringify({"n1/#a": {read: 7, terms: "x"}, "n1/#b": null}));
 		expect(loadAll()).to.deep.equal({"n1/#a": defaultChannelTranslation()});
+	});
+
+	it("a patch cannot overwrite the term memory or the moment", () => {
+		setChannelTranslation("n1", "#seance", {read: "en"});
+		rememberTerm("n1", "#seance", ["rig", "Testaufbau"]);
+		const before = getChannelTranslation("n1", "#seance");
+		const next = setChannelTranslation("n1", "#seance", {
+			...before,
+			read: "de",
+			terms: [],
+			since: 1,
+		} as Partial<Omit<ChannelTranslation, "since" | "terms">>);
+
+		expect(next.terms).to.deep.equal([["rig", "Testaufbau"]]);
+		expect(next.since).to.equal(before.since);
 	});
 });

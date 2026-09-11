@@ -133,7 +133,11 @@ export function setChannelTranslation(
 	const all = loadAll();
 	const key = channelKey(networkUuid, channelName);
 	const current = all[key] ?? defaultChannelTranslation();
-	const next: ChannelTranslation = {...current, ...patch};
+	const rest = {...(patch as Partial<ChannelTranslation>)};
+
+	delete rest.since;
+	delete rest.terms;
+	const next: ChannelTranslation = {...current, ...rest};
 
 	if (next.read && !current.read) {
 		next.since = Date.now();
