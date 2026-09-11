@@ -172,13 +172,41 @@
 	margin: 0.75rem 0 0;
 }
 
+/*
+ * The name takes a row of its own: model labels run to "NLLB-200 600M
+ * (CPU, 200 languages)", and sharing the row with the size, the state and
+ * an uppercase Download button left it wrapping to four lines. Size and
+ * state sit under it on the left, the button on the right; the progress
+ * track, when there is one, takes a full row below both.
+ */
 .translate-model {
 	display: grid;
-	grid-template-columns: 1fr auto auto auto;
-	gap: 0.5rem 0.75rem;
+	grid-template-areas:
+		"name name name"
+		"size state action";
+	grid-template-columns: auto 1fr auto;
+	gap: 0.25rem 0.75rem;
 	align-items: center;
 	padding: 0.5rem 0;
 	border-top: 1px solid var(--window-border, rgb(128 128 128 / 20%));
+}
+
+.translate-model-name {
+	grid-area: name;
+}
+
+.translate-model-size {
+	grid-area: size;
+}
+
+.translate-model-state {
+	grid-area: state;
+}
+
+.translate-model-download,
+.translate-model-delete {
+	grid-area: action;
+	justify-self: end;
 }
 
 .translate-model-size,
@@ -196,9 +224,12 @@
 	color: var(--error-fg, #c33);
 }
 
+/* No area of its own: it is auto-placed into a row below the named ones,
+   so a row without a track has no empty row and no gap for it. */
 .translate-model-track {
 	grid-column: 1 / -1;
 	display: block;
+	margin-top: 0.25rem;
 	height: 0.375rem;
 	border-radius: 0.25rem;
 	background: var(--tint-strong, rgb(128 128 128 / 20%));
@@ -214,7 +245,16 @@
 
 @media (max-width: 480px) {
 	.translate-model {
-		grid-template-columns: 1fr auto;
+		grid-template-areas:
+			"name name"
+			"size state"
+			"action action";
+		grid-template-columns: auto 1fr;
+	}
+
+	.translate-model-download,
+	.translate-model-delete {
+		justify-self: start;
 	}
 }
 </style>
