@@ -1,4 +1,5 @@
 import {expect} from "chai";
+import type {ClientChan} from "../../client/js/types";
 import {
 	CONTEXT_LINES,
 	NAMES_CAP,
@@ -8,6 +9,10 @@ import {
 	type ContextChannel,
 	type ContextMessage,
 } from "../../client/js/translate/context";
+
+// The client's channel must satisfy the builder's structural type without a cast.
+const _assignable: (chan: ClientChan) => ContextChannel = (chan) => chan;
+void _assignable;
 
 function m(
 	id: number,

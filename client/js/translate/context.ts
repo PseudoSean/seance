@@ -18,7 +18,7 @@ export interface ContextMessage {
 	id: number;
 	type?: string;
 	text?: string;
-	from?: {nick: string};
+	from?: {nick?: string};
 	msgid?: string;
 	replyTo?: string;
 	supersededBy?: number;
@@ -26,7 +26,7 @@ export interface ContextMessage {
 
 export interface ContextChannel {
 	messages: ContextMessage[];
-	users: {nick: string}[];
+	users: {nick?: string}[];
 	topic: string;
 }
 
@@ -71,7 +71,8 @@ function isChat(message: ContextMessage): boolean {
 		CHAT_TYPES.has(message.type) &&
 		message.supersededBy === undefined &&
 		typeof message.text === "string" &&
-		message.from !== undefined
+		message.from !== undefined &&
+		typeof message.from.nick === "string"
 	);
 }
 
@@ -94,7 +95,9 @@ export function buildContext(
 	const before = index >= 0 ? channel.messages.slice(0, index) : channel.messages;
 	const recentMessages = before.filter(isChat).slice(-CONTEXT_LINES);
 	const recent = recentMessages.map((m) => lineOf(m, opts.translated(m.id)));
-	const nicks = channel.users.map((u) => u.nick);
+	const nicks = channel.users
+		.map((u) => u.nick)
+		.filter((n): n is string => typeof n === "string");
 	const text = message.text ?? "";
 
 	let replyTo: ContextLine | undefined;
