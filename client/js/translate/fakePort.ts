@@ -8,6 +8,7 @@
 import {
 	Engine,
 	EngineCapabilities,
+	EngineName,
 	EngineStatus,
 	LoadProgress,
 	ModelRef,
@@ -17,6 +18,7 @@ import {
 import {languageName} from "./languages";
 import {Capability} from "./capability";
 import {MainPort, createPortPair} from "./protocol";
+import {END_SENTINEL} from "./prompt";
 import {serveEngines} from "./worker";
 
 export const FAKE_CAPABILITY: Capability = {
@@ -29,6 +31,45 @@ export const FAKE_CAPABILITY: Capability = {
 };
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/** The token a request's text (or any of its lines) can carry to fail once:
+ *  browser scenarios exercise the failed-line/retry UI without a real
+ *  engine ever failing. Kept out of production builds like the rest of
+ *  this module. */
+const FAIL_TOKEN = "[fail]";
+
+/** Texts that have already failed once (module-level: shared by every
+ *  fakePort() instance in the page, which is what a scenario expects). */
+const failedOnce = new Set<string>();
+
+interface TranslateFakeRequestLog {
+	id: number;
+	model: string;
+	text: string;
+	lines: number;
+	engine: EngineName;
+}
+
+interface TranslateFakeGlobal {
+	requests: TranslateFakeRequestLog[];
+}
+
+declare global {
+	// eslint-disable-next-line no-var
+	var __seanceTranslateFake: TranslateFakeGlobal | undefined;
+}
+
+function logRequest(req: TranslateRequest, engine: EngineName): void {
+	const g = (globalThis.__seanceTranslateFake ??= {requests: []});
+
+	g.requests.push({
+		id: req.id,
+		model: req.model,
+		text: req.text,
+		lines: req.lines ? req.lines.length : 0,
+		engine,
+	});
+}
 
 class ScriptedEngine implements Engine {
 	readonly name: "llm" | "seq2seq";
@@ -79,6 +120,39 @@ class ScriptedEngine implements Engine {
 	async *translate(req: TranslateRequest, signal: AbortSignal): AsyncIterable<TranslateChunk> {
 		if (!this.isLoaded(req.model)) {
 			throw new Error(`model not loaded: ${req.model}`);
+		}
+
+		logRequest(req, this.name);
+
+		const failKey = req.lines ? req.lines.join("\n") : req.text;
+
+		if (failKey.includes(FAIL_TOKEN) && !failedOnce.has(failKey)) {
+			failedOnce.add(failKey);
+			throw new Error("scripted failure");
+		}
+
+		if (req.lines) {
+			let text = "";
+
+			for (let i = 0; i < req.lines.length; i++) {
+				if (signal.aborted) {
+					return;
+				}
+
+				await wait(this.stepMs);
+
+				const line = `${i + 1}. [${languageName(req.to)}] ${req.lines[i]}`;
+
+				text = text ? `${text}\n${line}` : line;
+				yield {id: req.id, text, done: false};
+			}
+
+			if (signal.aborted) {
+				return;
+			}
+
+			yield {id: req.id, text: `${text}\n${END_SENTINEL}`, done: true};
+			return;
 		}
 
 		const words = `[${languageName(req.to)}] ${req.text}`.split(" ");

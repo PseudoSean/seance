@@ -43,7 +43,12 @@ target (plan 3), formality, variant and the term memory are per channel
 under `thelounge.translate` (`channelStore.ts`); older messages are never
 translated (the switch-on moment is recorded). Nothing on a message
 object changes and nothing about unread or highlight counts does. Browser
-check: `tools/scenarios/translate-reading.mjs`.
+check: `tools/scenarios/translate-reading.mjs`, on the in-page fake engine
+(`?fakeTranslate`, `fakePort.ts`): it answers a batched request as
+numbered lines closed by `END`, fails a request whose text carries
+`[fail]` once (the retry succeeds), and logs every request onto
+`globalThis.__seanceTranslateFake` so a scenario can tell a batch from a
+fallback to singles.
 
 ## The worker
 
