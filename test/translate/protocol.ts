@@ -471,4 +471,39 @@ describe("translate/protocol", () => {
 		expect(caught).to.be.instanceOf(TranslateError);
 		expect((caught as TranslateError).cause).to.equal("load");
 	});
+
+	it("translate posts a plain copy, so a reactive Proxy inside the request cannot fail structured cloning", async () => {
+		const {client, llm} = rig();
+		await client.load(llmRef);
+		const context = emptyContext();
+
+		// A bare Proxy is enough: structured clone rejects any Proxy, which is
+		// what a Vue reactive object is under the hood (Translation.vue's
+		// channel term list, reached through `reader.ts`'s live channel settings).
+		context.terms = new Proxy([["Seance", "Séance"]], {}) as [string, string][];
+
+		await collect(
+			client.translate(
+				{
+					id: 10,
+					model: llmRef.id,
+					text: "hi",
+					from: "de",
+					to: "en",
+					purpose: "read",
+					context,
+				},
+				llmRef
+			)
+		);
+
+		const received = llm.calls.translate[llm.calls.translate.length - 1];
+
+		expect(received.context.terms).to.deep.equal([["Seance", "Séance"]]);
+		expect(received.text).to.equal("hi");
+		expect(received.from).to.equal("de");
+		expect(received.to).to.equal("en");
+		expect(received.purpose).to.equal("read");
+		expect(received.model).to.equal(llmRef.id);
+	});
 });

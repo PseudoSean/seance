@@ -144,4 +144,19 @@ describe("translate/context", () => {
 		expect(context.names.length).to.be.at.most(NAMES_CAP);
 		expect(context.variant).to.equal("Brazilian Portuguese");
 	});
+
+	it("copies terms, so the built context does not hold the caller's array", () => {
+		const channel: ContextChannel = {topic: "", users, messages: [m(1, "ada", "hi")]};
+		const terms: [string, string][] = [["rig", "Testaufbau"]];
+		const context = buildContext(channel, channel.messages[0], {
+			translated: () => undefined,
+			terms,
+			formality: "auto",
+			variant: "",
+			sourceHint: null,
+		});
+
+		expect(context.terms).to.deep.equal(terms);
+		expect(context.terms).to.not.equal(terms);
+	});
 });

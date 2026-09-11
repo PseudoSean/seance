@@ -27,6 +27,17 @@ interface StreamEntry {
 	onProgress: (p: LoadProgress) => void;
 }
 
+// A plain copy of a request, not the caller's object itself: a request's
+// context is built from live store state (`reader.ts` passes
+// `channelTranslation()`'s `settings.terms`, a Vue reactive Proxy, straight
+// into `context.terms`), and every port — the fake, and a real Worker —
+// structured-clones the message, which throws DataCloneError on a Proxy
+// anywhere inside it. The request is plain data (strings, numbers, null,
+// nested plain objects and arrays), so a JSON round trip is exact.
+function plainRequest(req: TranslateRequest): TranslateRequest {
+	return JSON.parse(JSON.stringify(req)) as TranslateRequest;
+}
+
 function deferred<T>(): DedupEntry<T> {
 	let resolve!: (value: T) => void;
 	let reject!: (error: Error) => void;
@@ -122,7 +133,7 @@ export class TranslateClient {
 
 		queue.onReturn = () => this.cancel(req.id);
 		this.streams.set(req.id, {queue, refId: ref.id, onProgress});
-		this.port.postMessage({type: "translate", req, ref: {...ref}});
+		this.port.postMessage({type: "translate", req: plainRequest(req), ref: {...ref}});
 
 		return queue;
 	}

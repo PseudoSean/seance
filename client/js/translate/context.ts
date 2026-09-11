@@ -138,7 +138,10 @@ export function buildContext(
 	const context: PromptContext = {
 		recent,
 		names: names.slice(0, NAMES_CAP),
-		terms: opts.terms,
+		// A copy, not the caller's array: `opts.terms` can be a channel's
+		// live term list (a Vue reactive Proxy), and the built context must
+		// be plain data on its own, independent of any boundary guard.
+		terms: opts.terms.map(([source, target]) => [source, target]),
 		voice: [],
 		formality: opts.formality,
 	};
