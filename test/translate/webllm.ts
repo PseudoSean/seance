@@ -346,6 +346,34 @@ describe("translate/engines/webllm", () => {
 		expect(causes).to.deep.equal(["request", "load"]);
 	});
 
+	it("a different model gets its own reload grace", async () => {
+		const d = deps([]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure({...catalog, llmLib: "https://m.test/lib.wasm"});
+		const mlc = d.deps.create({model_list: []}, () => {});
+		mlc.chat.completions.create = () => Promise.reject(new Error("Device lost"));
+		d.deps.create = () => mlc;
+		const other = {...catalog.llm, id: "other-model-q4f16_1-MLC"};
+		const causes: string[] = [];
+
+		for (const ref of [catalog.llm, other]) {
+			await engine.load(ref, () => {});
+
+			try {
+				for await (const _c of engine.translate(
+					request({model: ref.id}),
+					new AbortController().signal
+				)) {
+					// consume
+				}
+			} catch (e) {
+				causes.push((e as EngineError).cause);
+			}
+		}
+
+		expect(causes).to.deep.equal(["request", "request"]);
+	});
+
 	it("a completed generation resets the failure count", async () => {
 		const d = deps(["ok"]);
 		const engine = new WebLlmEngine(d.deps, name);

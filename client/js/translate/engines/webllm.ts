@@ -98,6 +98,7 @@ export class WebLlmEngine implements Engine {
 	private deps: WebLlmDeps;
 	private languageName: (code: string) => string;
 	private failures = 0;
+	private failuresModel: string | null = null;
 
 	constructor(deps: WebLlmDeps, languageName: (code: string) => string) {
 		this.deps = deps;
@@ -162,6 +163,11 @@ export class WebLlmEngine implements Engine {
 			await this.engine.reload(ref.id);
 			this.model = ref.id;
 			this.state = "ready";
+
+			if (this.failuresModel !== ref.id) {
+				this.failures = 0;
+				this.failuresModel = ref.id;
+			}
 		} catch (e) {
 			const created = this.engine;
 
