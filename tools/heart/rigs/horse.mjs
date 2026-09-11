@@ -380,25 +380,34 @@ export default {
 	rig,
 	colours: {near: "#d97a9c", far: "#ecbccb"},
 	budget: 200 * 1024,
-	// Gallop in, collect into a prance, prance, gallop off. A visit lasts
-	// about 14 s of a 60 s loop; the first is 2 s after the file loads. (The
-	// last gait's cycles were raised from 3 to 6 to clear the stage: the
-	// gallop measures about 280 rig units/s from the planted hooves (274
-	// entering, 284 leaving), about one body length a stride, because that
-	// is what the approved rig's leg swing covers — the feet stay locked.
-	// Three cycles left the exit short of clearing the 1720-unit stage; six
-	// does. See docs/projects/heart-theme.md's plan-2 block for the decision
-	// record.)
+	// Gallop in, collect into a prance, prance, gallop off. The stage is
+	// aspect 16 (about 2752 units, ~1850 px at the theme's size) so the visit
+	// crosses the whole channel rather than a slice of it: the gallop-in
+	// covers about the stage's near-middle, the prance holds near there, the
+	// gallop-out clears the far edge. See docs/projects/heart-theme.md's
+	// plan-2 block for the decision record.
+	//
+	// `travel` is fixed per segment rather than measured: the clamp
+	// (tools/heart/lib/travel.mjs) that stops the plant-detection from
+	// reading a mid-swing touch-down as backward motion also zeroes the two
+	// blend segments (their planted hoof swings forward relative to the
+	// body throughout), which froze the horse for 0.3 s at every gait
+	// switch. Ramping `travel: [280, 70]`/`[70, 280]` across each blend
+	// instead keeps the horse moving at every frame; the gallop's measured
+	// stance speed is ~280 units/s (about one body length a stride, because
+	// that is what the approved rig's leg swing covers — the feet stay
+	// locked) and the prance's is ~68 (kept as the constant 70 applied
+	// speed; the measurement stays printed beside it).
 	sequence: {
 		first: 2,
 		period: 60,
-		stage: {aspect: 10},
+		stage: {aspect: 16},
 		segments: [
-			{gait: "gallop", cycles: 2, fps: 30},
-			{blendTo: "prance", secs: 0.3, fps: 15},
-			{gait: "prance", cycles: 8, fps: 30},
-			{blendTo: "gallop", secs: 0.3, fps: 15},
-			{gait: "gallop", cycles: 6, fps: 30},
+			{gait: "gallop", cycles: 6, fps: 30, travel: 280},
+			{blendTo: "prance", secs: 0.3, fps: 15, travel: [280, 70]},
+			{gait: "prance", cycles: 13, fps: 30, travel: 70},
+			{blendTo: "gallop", secs: 0.3, fps: 15, travel: [70, 280]},
+			{gait: "gallop", cycles: 4, fps: 30, travel: 280},
 		],
 	},
 };

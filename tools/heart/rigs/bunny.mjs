@@ -270,13 +270,16 @@ export default {
 	sequence: {
 		first: 7,
 		period: 50,
-		stage: {aspect: 8},
+		stage: {aspect: 24},
 		segments: [
-			{gait: "hop", cycles: 3, fps: 24, travel: 160},
+			{gait: "hop", cycles: 9, fps: 24, travel: 160},
 			{pose: "sit", hold: 0.4, blend: 0.45, fps: 12},
 			{wobble: "twitch", pose: "sit", secs: 1.4, fps: 12},
-			{pose: "crouch", hold: 0.1, blend: 0.4, fps: 12},
-			{gait: "hop", cycles: 4, fps: 24, travel: 160},
+			// travel: 0 pins the drop: the crouch's arms reaching for the
+			// ground read as ~5.3 units/s of stance drift (the hold-speed audit
+			// rule's own catch — a static bunny must not travel)
+			{pose: "crouch", hold: 0.1, blend: 0.4, fps: 12, travel: 0},
+			{gait: "hop", cycles: 10, fps: 24, travel: 160},
 		],
 	},
 };

@@ -23,7 +23,7 @@ Mockups the decisions were made on (private artifacts, viewable only by their au
 9. A gait segment may set `travel: <units/s>` in its sequence, overriding the measured stance speed: the approved mockups' puppy and bunny bounded and hopped in place with the feet never clearly lifted, so the planted-foot measurement could not carry them. The audit prints the measured speed beside the applied one; the horse keeps the measurement.
 10. The rainbow arc is `radial-gradient(circle farthest-side at 50% 100%, …)` — `closest-side` is degenerate for a circle centred on the box's bottom edge.
 
-Each animal's first visit starts after its file loads: 2 s (horse), 7 s (bunny), 14 s (puppy), on 60 s, 50 s and 75 s loops. The horse's gallop covers about a body length a stride — what the approved rig's leg swing gives, feet locked.
+Each animal's first visit starts after its file loads: 2 s (horse), 7 s (bunny), 14 s (puppy), on 60 s, 50 s and 75 s loops. The horse's gallop covers about a body length a stride — what the approved rig's leg swing gives, feet locked. Each stage is `sequence.stage.aspect` × the animal's height: horse 16, puppy and bunny 24 (the small animals are half the horse's height, so they need the larger multiple to reach the same pixel width — about 1850 px at the theme's size, wide enough that a visit crosses the whole channel on a wide chat instead of a slice of it). A visit now lasts about 20 s (horse ~19.7 s, puppy ~26.9 s, bunny ~17.8 s), tuned so the animal reads as arriving at about the stage's middle before whatever it does there (the horse's prance, the puppy's sit-and-turn, the bunny's sit-up) and leaving fully off the far edge — see `tools/heart/README.md` § The audit for the exact rule.
 
 ### Live-test rounds (2026-09-11)
 
@@ -33,6 +33,18 @@ Four changes came from the user's live feedback on the real app, outside the pla
 - The header is paper (`--heart-paper`), not sky.
 - The nick column has no rule.
 - Fonts are Google Fonts' variable files, the latin subset — the static instances first fetched were the latin-ext subset and drew nothing (`tools/heart/fetch-fonts.mjs` documents the trap).
+
+A further round, also from live testing: animals now cross the whole channel (stage aspects
+raised as above, cycle counts retuned to still land at about the middle and clear the far
+edge); `travel` accepts `[from, to]` to ramp linearly across a segment, since the velocity
+clamp (decision 3 above) that stops a mid-swing touch-down reading as backward motion also
+zeroed the horse's gait-blend segments outright, freezing it for 0.3 s at every gallop/prance
+switch — the horse's blends now ramp between its two gaits' speeds instead. Two more audit
+rules catch the class of bug behind an animal appearing to slide with no visible animation:
+the clip chain's total duration must agree with the sampled time on stage within 5 ms, and a
+hold (a stopped, sitting or turning pose) must apply under 5 units/s — bunny's `crouch` needed
+a `travel: 0` pin to pass the latter (its blend read ~5.3 units/s of spurious drift). Neither
+rule fired on the puppy; the reported slide was not reproduced.
 
 ## 1. What it is
 

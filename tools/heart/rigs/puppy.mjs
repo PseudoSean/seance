@@ -279,9 +279,9 @@ export default {
 	sequence: {
 		first: 14,
 		period: 75,
-		stage: {aspect: 8},
+		stage: {aspect: 24},
 		segments: [
-			{gait: "bound", cycles: 5, fps: 24, travel: 100},
+			{gait: "bound", cycles: 14, fps: 24, travel: 100},
 			{pose: "skid", hold: 0.3, blend: 0.14, fps: 12},
 			{pose: "sit", hold: 0.5, blend: 0.5, fps: 12},
 			{wobble: "look", pose: "sit", secs: 1.8, fps: 12, hearts: true},
@@ -289,7 +289,7 @@ export default {
 			{pose: "sit", hold: 0.5, blend: 0.25, fps: 12},
 			{pose: "stand", hold: 0.2, blend: 0.4, fps: 12, turn: true},
 			{pose: "crouch", hold: 0, blend: 0.2, fps: 12},
-			{gait: "bound", cycles: 7, fps: 24, travel: 100},
+			{gait: "bound", cycles: 16, fps: 24, travel: 100},
 		],
 	},
 };
