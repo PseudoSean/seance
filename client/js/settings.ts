@@ -2,6 +2,7 @@ import type {TypedStore} from "./store";
 import {mirrorPushPrefs} from "./push-prefs";
 import {normalizeFontSize} from "./helpers/fontSize";
 import {prefersTwelveHourClock} from "./helpers/hourCycle";
+import {browserLanguage} from "./translate/languages";
 
 const defaultSettingConfig = {
 	apply() {},
@@ -78,6 +79,25 @@ const defaultConfig = {
 	 * (client/js/webpush.ts, helpers/pushKeys.ts keyChangePolicy). */
 	pushKeyChange: {
 		default: "ask",
+	},
+	/** Translation (client/js/translate): the language incoming messages are read in. */
+	translateTo: {
+		default: browserLanguage(navigator.language),
+	},
+	/** auto | formal | casual, one line of the prompt. */
+	translateFormality: {
+		default: "auto",
+	},
+	/** button | auto: the round-trip check on the composer's strip. */
+	translateRoundTrip: {
+		default: "button",
+	},
+	/** Let the router pick the GPU model / the CPU models. */
+	translateLlm: {
+		default: true,
+	},
+	translateCpu: {
+		default: true,
 	},
 	// UI scale: the root font size everything in style.css is sized off in
 	// rem. The scale and its normalization live in helpers/fontSize.ts; the

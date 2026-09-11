@@ -10,6 +10,8 @@ import {SettingsState} from "./settings";
 import {SharedConfiguration, LockedSharedConfiguration} from "../../shared/types/config";
 import {BrandingConfig, DEFAULT_BRANDING, brandingString} from "./branding";
 import type {UploadProgress} from "./upload";
+import type {Capability} from "./translate/capability";
+import type {ModelView} from "./translate/service";
 
 enum DesktopNotificationState {
 	Unsupported = "unsupported",
@@ -51,6 +53,8 @@ export type State = {
 	userlistOpen: boolean;
 	/** The file upload in flight (`client/js/upload.ts`); `null` when idle. */
 	uploadProgress: UploadProgress | null;
+	/** Client-side translation: the device probe and the model manager's rows. */
+	translation: {capability: Capability | null; models: ModelView[]};
 };
 
 const state = (): State => ({
@@ -71,6 +75,7 @@ const state = (): State => ({
 	sidebarDragging: false,
 	userlistOpen: storage.get("thelounge.state.userlist") !== "false",
 	uploadProgress: null,
+	translation: {capability: null, models: []},
 });
 
 type Getters = {
@@ -195,6 +200,8 @@ type Mutations = {
 	toggleUserlist(state: State): void;
 	userlistOpen(state: State, payload: State["userlistOpen"]): void;
 	uploadProgress(state: State, progress: State["uploadProgress"]): void;
+	translationCapability(state: State, capability: Capability): void;
+	translationModels(state: State, models: ModelView[]): void;
 };
 
 const mutations: Mutations = {
@@ -268,6 +275,12 @@ const mutations: Mutations = {
 	},
 	uploadProgress(state, progress) {
 		state.uploadProgress = progress;
+	},
+	translationCapability(state, capability) {
+		state.translation.capability = capability;
+	},
+	translationModels(state, models) {
+		state.translation.models = models;
 	},
 };
 
