@@ -6,7 +6,7 @@
 // index.ts wires the real worker, the store and the settings.
 
 import {Capability} from "./capability";
-import {TranslateClient} from "./client";
+import {TranslateClient, WORKER_DISPOSED} from "./client";
 import {LoadProgress, ModelRef, TranslateChunk, TranslateRequest} from "./engine";
 import {Candidate, ModelCatalog, catalogModels} from "./models";
 import {Route, RouteTable, resolveRoute} from "./router";
@@ -52,6 +52,8 @@ export class TranslateService {
 	private nextId = 1;
 	private views = new Map<string, ModelView>();
 	private listeners = new Set<(views: ModelView[]) => void>();
+	private generation = 0;
+	private disposed = false;
 
 	constructor(
 		private deps: ServiceDeps,
@@ -69,7 +71,16 @@ export class TranslateService {
 
 	capabilities(): Promise<Capability> {
 		if (!this.capability) {
-			this.capability = this.deps.probe();
+			this.capability = this.deps.probe().catch(
+				(e): Capability => ({
+					tier: "none",
+					reasons: [e instanceof Error ? e.message : String(e)],
+					f16: false,
+					maxBufferBytes: 0,
+					deviceMemoryGiB: null,
+					storageQuotaBytes: null,
+				})
+			);
 		}
 
 		return this.capability;
@@ -111,18 +122,40 @@ export class TranslateService {
 					throw new Error(TRANSLATION_UNAVAILABLE);
 				}
 
+				const client = this.client();
+				const gen = this.generation;
 				const id = this.nextId++;
 				const req: TranslateRequest = {...request, id, model: route.ref.id};
+				const view = this.view(route.ref);
 				let yielded = false;
 
 				try {
-					for await (const chunk of this.client().translate(req, route.ref)) {
+					for await (const chunk of client.translate(
+						req,
+						route.ref,
+						(progress: LoadProgress) => {
+							view.status = "downloading";
+							view.fraction = progress.fraction;
+							this.publish();
+						}
+					)) {
 						yielded = true;
 						yield chunk;
 					}
 
+					if (view.status === "downloading") {
+						view.status = "ready";
+						view.fraction = 1;
+						view.cached = true;
+						this.publish();
+					}
+
 					return;
 				} catch (e) {
+					if (this.generation !== gen) {
+						throw e;
+					}
+
 					if (yielded) {
 						throw e;
 					}
@@ -141,30 +174,38 @@ export class TranslateService {
 			return [];
 		}
 
-		const states = await this.client().models();
+		this.inFlight++;
+		this.clearIdle();
 
-		for (const state of states) {
-			const view = this.views.get(state.ref.id);
+		try {
+			const states = await this.client().models();
 
-			if (view) {
-				view.cached = state.cached;
+			for (const state of states) {
+				const view = this.views.get(state.ref.id);
 
-				if (state.cached && view.status === "idle") {
-					view.status = "ready";
-					view.fraction = 1;
-				}
+				if (view) {
+					view.cached = state.cached;
 
-				if (!state.cached && view.status === "ready") {
-					view.status = "idle";
-					view.fraction = 0;
+					if (state.cached && (view.status === "idle" || view.status === "failed")) {
+						view.status = "ready";
+						view.fraction = 1;
+						view.error = null;
+					}
+
+					if (!state.cached && view.status === "ready") {
+						view.status = "idle";
+						view.fraction = 0;
+					}
 				}
 			}
+
+			this.publish();
+
+			return this.snapshot();
+		} finally {
+			this.inFlight--;
+			this.scheduleIdle();
 		}
-
-		this.scheduleIdle();
-		this.publish();
-
-		return this.snapshot();
 	}
 
 	onModels(listener: (views: ModelView[]) => void): () => void {
@@ -192,8 +233,17 @@ export class TranslateService {
 			view.fraction = 1;
 			view.cached = true;
 		} catch (e) {
-			view.status = "failed";
-			view.error = e instanceof Error ? e.message : String(e);
+			const message = e instanceof Error ? e.message : String(e);
+
+			if (message === WORKER_DISPOSED) {
+				view.status = "idle";
+				view.fraction = 0;
+				view.error = null;
+			} else {
+				view.status = "failed";
+				view.error = message;
+			}
+
 			throw e;
 		} finally {
 			this.inFlight--;
@@ -205,14 +255,25 @@ export class TranslateService {
 	async deleteModel(ref: ModelRef): Promise<void> {
 		const view = this.view(ref);
 
-		await this.client().unload(ref.engine);
-		await this.client().deleteModel(ref);
-		view.cached = false;
-		view.status = "idle";
-		view.fraction = 0;
-		view.error = null;
-		this.scheduleIdle();
-		this.publish();
+		this.inFlight++;
+		this.clearIdle();
+
+		try {
+			await this.client().unload(ref.engine);
+			await this.client().deleteModel(ref);
+			view.cached = false;
+			view.status = "idle";
+			view.fraction = 0;
+			view.error = null;
+		} catch (e) {
+			view.status = "failed";
+			view.error = e instanceof Error ? e.message : String(e);
+			throw e;
+		} finally {
+			this.inFlight--;
+			this.scheduleIdle();
+			this.publish();
+		}
 	}
 
 	/** Drop every loaded model and the worker with them. */
@@ -227,12 +288,13 @@ export class TranslateService {
 	}
 
 	dispose(): void {
+		this.disposed = true;
 		this.teardown();
 		this.listeners.clear();
 	}
 
 	private client(): TranslateClient {
-		if (!this.options.enabled) {
+		if (this.disposed || !this.options.enabled) {
 			throw new Error(TRANSLATION_UNAVAILABLE);
 		}
 
@@ -246,6 +308,7 @@ export class TranslateService {
 
 	private teardown(): void {
 		this.clearIdle();
+		this.generation++;
 
 		if (this.worker) {
 			this.worker.client.dispose();
@@ -287,7 +350,17 @@ export class TranslateService {
 	}
 
 	private snapshot(): ModelView[] {
-		return catalogModels(this.options.catalog).map((ref) => ({...this.view(ref)}));
+		return catalogModels(this.options.catalog).map((ref) => {
+			const view: ModelView = this.views.get(ref.id) ?? {
+				ref,
+				cached: false,
+				status: "idle",
+				fraction: 0,
+				error: null,
+			};
+
+			return {...view};
+		});
 	}
 
 	private publish(): void {

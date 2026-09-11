@@ -5,7 +5,7 @@ import {emptyContext} from "../../client/js/translate/engine";
 import {buildCatalog, type CacheApi} from "../../client/js/translate/models";
 import {createPortPair} from "../../client/js/translate/protocol";
 import {DEFAULT_ROUTES} from "../../client/js/translate/routes.default";
-import {TranslateClient} from "../../client/js/translate/client";
+import {TranslateClient, WORKER_DISPOSED} from "../../client/js/translate/client";
 import {
 	IDLE_UNLOAD_MS,
 	TRANSLATION_UNAVAILABLE,
@@ -32,11 +32,20 @@ function rig(tier: Capability["tier"] = "gpu", enabled = true) {
 	const clock = sinon.useFakeTimers();
 	const workers: {terminated: boolean}[] = [];
 	const cached = new Set<string>();
+	let failDelete: Error | null = null;
 	const cache: CacheApi = {
 		has(ref) {
 			return Promise.resolve(cached.has(ref.id));
 		},
 		delete(ref) {
+			if (failDelete) {
+				const error = failDelete;
+
+				failDelete = null;
+
+				return Promise.reject(error);
+			}
+
 			cached.delete(ref.id);
 
 			return Promise.resolve();
@@ -50,12 +59,13 @@ function rig(tier: Capability["tier"] = "gpu", enabled = true) {
 			const entry = {terminated: false};
 
 			workers.push(entry);
-			serveEngines(workerPort, {llm, seq2seq}, {cache, configure() {}});
+			const stop = serveEngines(workerPort, {llm, seq2seq}, {cache, configure() {}});
 
 			return {
 				client: new TranslateClient(mainPort),
 				terminate() {
 					entry.terminated = true;
+					stop();
 				},
 			};
 		},
@@ -71,7 +81,17 @@ function rig(tier: Capability["tier"] = "gpu", enabled = true) {
 		{llm: true, cpu: true}
 	);
 
-	return {service, workers, cached, clock, llm, seq2seq};
+	return {
+		service,
+		workers,
+		cached,
+		clock,
+		llm,
+		seq2seq,
+		failNextDelete(error: Error) {
+			failDelete = error;
+		},
+	};
 }
 
 async function text(iterable: AsyncIterable<{text: string; done: boolean}>) {
@@ -238,5 +258,111 @@ describe("translate/service", () => {
 		expect(await r.service.models()).to.deep.equal([]);
 		expect(r.workers.length).to.equal(0);
 		r.service.dispose();
+	});
+
+	it("a teardown during a translation aborts it without marking the candidate down", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		r.llm.loadTicks = 50;
+		let intervened = false;
+
+		r.service.onModels((views) => {
+			const llmView = views.find((v) => v.ref.id === catalog.llm.id);
+
+			if (!intervened && llmView?.status === "downloading") {
+				intervened = true;
+				r.service.pagehide();
+			}
+		});
+
+		let message = "";
+
+		try {
+			await text(r.service.translate(base));
+		} catch (e) {
+			message = (e as Error).message;
+		}
+
+		expect(message).to.equal(WORKER_DISPOSED);
+		expect(r.workers.length).to.equal(1);
+		expect((await r.service.route("de", "en"))?.candidate).to.equal("llm");
+		r.service.dispose();
+	});
+
+	it("an implicit download during a translation shows on the views", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		const seen: {status: string; cached: boolean}[] = [];
+
+		r.service.onModels((views) => {
+			const llmView = views.find((v) => v.ref.id === catalog.llm.id);
+
+			if (llmView) {
+				seen.push({status: llmView.status, cached: llmView.cached});
+			}
+		});
+
+		expect(await text(r.service.translate(base))).to.equal("llm:Hallo");
+		expect(seen.some((s) => s.status === "downloading")).to.equal(true);
+		expect(seen[seen.length - 1]).to.deep.equal({status: "ready", cached: true});
+		r.service.dispose();
+	});
+
+	it("models() clears a failed view once the model is cached", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		r.seq2seq.failLoad = new Error("boom");
+		let message = "";
+
+		try {
+			await r.service.download(catalog.nllb);
+		} catch (e) {
+			message = (e as Error).message;
+		}
+
+		expect(message).to.equal("boom");
+		r.cached.add(catalog.nllb.id);
+		const view = (await r.service.models()).find((v) => v.ref.id === catalog.nllb.id);
+
+		expect(view).to.include({status: "ready", error: null, cached: true});
+		r.service.dispose();
+	});
+
+	it("a failed delete is recorded on the view", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		r.failNextDelete(new Error("locked"));
+		let message = "";
+
+		try {
+			await r.service.deleteModel(catalog.nllb);
+		} catch (e) {
+			message = (e as Error).message;
+		}
+
+		expect(message).to.equal("locked");
+		const view = (await r.service.models()).find((v) => v.ref.id === catalog.nllb.id);
+
+		expect(view).to.include({status: "failed", error: "locked"});
+		r.service.dispose();
+	});
+
+	it("dispose is terminal", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		await text(r.service.translate(base));
+		expect(r.workers.length).to.equal(1);
+		r.service.dispose();
+
+		let message = "";
+
+		try {
+			await text(r.service.translate(base));
+		} catch (e) {
+			message = (e as Error).message;
+		}
+
+		expect(message).to.equal(TRANSLATION_UNAVAILABLE);
+		expect(r.workers.length).to.equal(1);
 	});
 });

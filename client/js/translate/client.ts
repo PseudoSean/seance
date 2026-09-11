@@ -38,7 +38,7 @@ function deferred<T>(): DedupEntry<T> {
 	return {promise, resolve, reject};
 }
 
-const DISPOSED = "translation worker disposed";
+export const WORKER_DISPOSED = "translation worker disposed";
 
 export class TranslateClient {
 	private loads = new Map<string, LoadEntry>();
@@ -148,7 +148,7 @@ export class TranslateClient {
 	dispose(): void {
 		this.disposed = true;
 		this.port.onmessage = null;
-		const error = new Error(DISPOSED);
+		const error = new Error(WORKER_DISPOSED);
 
 		for (const load of this.loads.values()) {
 			load.reject(error);
