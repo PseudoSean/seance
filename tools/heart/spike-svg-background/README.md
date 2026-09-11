@@ -13,6 +13,8 @@ context. Open index.html; a box whose shape moves is a yes.
 
 Decision rule (spec §8): SMIL where it runs; else CSS-in-SVG; else stills for that engine.
 
+Plan 2 also relies on syncbase timing (`begin="s1.end"`), `additive="sum"` transforms, a discrete scale flip and relative-coordinate path morphs inside a background image — all verified in Chromium 151 (headless screenshots, 2026-09-11); Firefox and Safari still to be checked with a real animal file.
+
 **Fix applied to this copy of index.html**: the `#cssin` SVG embeds its own
 `<style>@keyframes …</style>` element. Written literally inside the outer page's
 `<style>` block (as a `data:` URI value), the literal characters `</style>` end the
