@@ -246,6 +246,11 @@ export function retranslate(
 	channel: ClientChan,
 	message: ClientMessage
 ): void {
+	// Toolbar hides the action while a line is pending, but no caller may double-queue a line
+	if (store.state.translations[message.id]?.status === "pending") {
+		return;
+	}
+
 	void translateMessage(network, channel, message, true);
 }
 

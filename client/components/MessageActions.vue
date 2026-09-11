@@ -87,7 +87,7 @@ import {useStore} from "../js/store";
 import {startEdit, startReply} from "../js/helpers/compose";
 import {myReactions} from "../js/helpers/messageUpdates";
 import {loadEmojiCatalog} from "../js/helpers/emoji";
-import {channelTranslation, retranslate, translationAvailable} from "../js/translate/reader";
+import {retranslate, translationAvailable} from "../js/translate/reader";
 import {ChanType} from "../../shared/types/chan";
 import {MessageType} from "../../shared/types/msg";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
@@ -181,9 +181,8 @@ export default defineComponent({
 			}
 
 			const entry = store.state.translations[props.message.id];
-			const reading = channelTranslation(props.network, props.channel).read !== null;
 
-			return !reading || !entry || entry.status === "failed" || entry.status === "dropped";
+			return !entry || entry.status === "failed" || entry.status === "dropped";
 		});
 
 		// Fetch the catalog chunk while the pointer is on its way to the button,
