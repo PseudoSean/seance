@@ -158,9 +158,39 @@ export function findExitTime(poses, xs, x0, vb, stageW) {
 	};
 	const n = poses.length;
 	if (!exits(n - 1)) return {t: null, found: false};
+	// walks back from the end, so this is the start of the *trailing*
+	// contiguous run past the boundary: a rig whose box crossed the edge,
+	// bounced back on stage, then crossed again right before the end would
+	// fade late (no current rig does this — travel is monotonic per facing).
 	let i = n - 1;
 	while (i > 0 && exits(i - 1)) i--;
 	return {t: poses[i].t, found: true};
+}
+
+/**
+ * The six opacity keyTimes for a visit's fade, as fractions of `period`: 0,
+ * when the loop places the animal on stage (`first`), when the fade-in
+ * ends, when the fade-out starts, when it ends (at `tExit` — see
+ * `findExitTime` — not `onStage`), and 1. `fade` is a second, or a quarter
+ * of `onStage` if that is shorter. A visit too short for two such fades
+ * back to back would give the fade-in's end and the fade-out's start the
+ * same keyTime, which SMIL's linear calcMode rejects — a visit under three
+ * fades instead splits `tExit` into three equal thirds (fade in, plateau,
+ * fade out), which keeps every keyTime strictly increasing however short
+ * the visit is.
+ */
+export function fadeTimes({first, onStage, tExit, period}) {
+	let fade = Math.min(1, onStage / 4);
+	if (tExit < 3 * fade) fade = tExit / 3;
+	const keyTimes = [
+		0,
+		first / period,
+		(first + fade) / period,
+		(first + tExit - fade) / period,
+		(first + tExit) / period,
+		1,
+	];
+	return {fade, keyTimes};
 }
 
 const lengthOf = (pts) => {
@@ -237,15 +267,19 @@ export function buildAnimal(def) {
 	}));
 	const P = sequence.period;
 	const xLast = (x0 + xs[xs.length - 1]) * k;
-	let fade = Math.min(1, onStage / 4);
-	// a visit shorter than two fades: shrink so fade-in and fade-out don't overlap
-	if (tExit - fade < fade) fade = tExit / 2;
+	const {fade, keyTimes: fadeKeyTimes} = fadeTimes({
+		first: sequence.first,
+		onStage,
+		tExit,
+		period: P,
+	});
 	const travel = {
 		period: P,
 		first: sequence.first,
 		onStage,
 		tExit,
 		fade,
+		fadeKeyTimes,
 		keyTimes: [
 			0,
 			...poses.map((p) => (sequence.first + p.t) / P),
