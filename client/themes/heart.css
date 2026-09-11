@@ -26,17 +26,17 @@
 @font-face {
 	font-family: Nunito;
 	font-style: normal;
-	font-weight: 600;
+	font-weight: 400;
 	font-display: swap;
-	src: url("heart/nunito-600.woff2") format("woff2");
+	src: url("heart/nunito-400.woff2") format("woff2");
 }
 
 @font-face {
 	font-family: Nunito;
 	font-style: italic;
-	font-weight: 600;
+	font-weight: 400;
 	font-display: swap;
-	src: url("heart/nunito-600-italic.woff2") format("woff2");
+	src: url("heart/nunito-400-italic.woff2") format("woff2");
 }
 
 @font-face {
@@ -194,8 +194,9 @@
 
 /* ---- type ---- */
 
-/* Nunito 600 everywhere text is read; 800 is its bold. Baloo 2 for the names
- * the eye jumps to: nicks, channel and network names, the header title.
+/* Nunito at its regular 400 everywhere text is read (600 was tried and read
+ * heavier in the app than in the mockup); 800 is its bold. Baloo 2 for the
+ * names the eye jumps to: nicks, channel and network names, the header title.
  * .context-menu substituted for #context-menu: ContextMenu.vue renders
  * <ul id="context-menu">, not a class. */
 body,
@@ -206,7 +207,7 @@ body,
 #settings,
 #help {
 	font-family: Nunito, "Segoe UI", system-ui, sans-serif;
-	font-weight: 600;
+	font-weight: 400;
 }
 
 b,
@@ -225,9 +226,10 @@ strong,
 	font-weight: 700;
 }
 
-/* Nunito 600 + tabular-nums measures wider than style.css's fixed 12h
- * columns (07:13 AM at 82.9px vs. a 4.75rem/5.75rem box), wrapping to two
- * lines; restated here, same selectors, so this file's cascade position
+/* Nunito + tabular-nums measures wider than style.css's fixed 12h columns
+ * (07:13 AM at 82.9px in the 600 face vs. a 4.75rem/5.75rem box, wrapping
+ * to two lines; the 400 face is a touch narrower and keeps the wider
+ * columns); restated here, same selectors, so this file's cascade position
  * wins. The 24h-only width (also 4.75rem, shared with the seconds-only
  * selector above it in style.css) is left alone. */
 #chat.time-12h .time {
@@ -269,6 +271,12 @@ strong,
 
 #chat .msg {
 	animation: heart-fade 340ms ease-out backwards;
+}
+
+/* The pending copy of an own message appears at style.css's 0.55 at once: a
+ * fade to full and a snap back down on every send is worse than none. */
+#chat .msg.pending {
+	animation-name: none;
 }
 
 #chat .chat-view[data-type="channel"] .msg.highlight,
@@ -404,9 +412,13 @@ strong,
 	}
 }
 
-/* Send: the pending copy of an own message bursts once. */
-#chat .msg.self.pending::before,
-#chat .msg.self.pending::after {
+/* Send: an own message bursts once while it is the newest thing in the channel.
+ * The pending copy shows first, then the echo that replaces it milliseconds
+ * later (each is a new element, so the burst restarts on the echo and is what
+ * the eye sees); an own message loaded as history only bursts when it is the
+ * last one, on opening the channel. */
+#chat .msg.self:last-child::before,
+#chat .msg.self:last-child::after {
 	content: "";
 	position: absolute;
 	left: 3.6em;
@@ -418,75 +430,49 @@ strong,
 	animation: heart-sparkle 0.9s ease-out both;
 }
 
-#chat .msg.self.pending::after {
+#chat .msg.self:last-child::after {
 	left: 7em;
 	animation-delay: 0.12s;
 }
 
-#chat .msg.self.pending:nth-child(4n + 1)::before {
+#chat .msg.self:last-child:nth-child(4n + 1)::before {
 	background: var(--heart-burst-1);
 	animation-name: heart-sparkle;
 }
 
-#chat .msg.self.pending:nth-child(4n + 2)::before {
+#chat .msg.self:last-child:nth-child(4n + 2)::before {
 	background: var(--heart-burst-2);
 	animation-name: heart-sparkle-rise;
 	animation-duration: 1.3s;
 }
 
-#chat .msg.self.pending:nth-child(4n + 2)::after {
+#chat .msg.self:last-child:nth-child(4n + 2)::after {
 	background: var(--heart-burst-3);
 	animation-name: heart-sparkle-twinkle;
 }
 
-#chat .msg.self.pending:nth-child(4n + 3)::before {
+#chat .msg.self:last-child:nth-child(4n + 3)::before {
 	background: var(--heart-burst-3);
 	animation-name: heart-sparkle-twinkle;
 	animation-duration: 1.1s;
 }
 
-#chat .msg.self.pending:nth-child(4n + 3)::after {
+#chat .msg.self:last-child:nth-child(4n + 3)::after {
 	background: var(--heart-burst-1);
 	animation-name: heart-sparkle-pop;
 }
 
-#chat .msg.self.pending:nth-child(4n + 4)::before {
+#chat .msg.self:last-child:nth-child(4n + 4)::before {
 	background: var(--heart-burst-4);
 	animation-name: heart-sparkle-pop;
 	animation-duration: 1s;
 }
 
-#chat .msg.self.pending:nth-child(4n + 4)::after {
+#chat .msg.self:last-child:nth-child(4n + 4)::after {
 	background: var(--heart-burst-2);
 	animation-name: heart-sparkle-rise;
 	animation-duration: 1.4s;
 	animation-delay: 0.2s;
-}
-
-/* Hover: a twinkle by the tools, once per entry, and a spark on a tool. */
-#chat .msg:hover::after {
-	content: "";
-	position: absolute;
-	right: 7.5rem;
-	top: -0.3em;
-	width: 6em;
-	height: 1.9em;
-	pointer-events: none;
-	background: var(--heart-burst-3);
-	animation: heart-sparkle-twinkle 1s ease-out both;
-}
-
-#chat .msg-actions button:hover::before {
-	content: "";
-	position: absolute;
-	inset: -0.7em;
-	pointer-events: none;
-	background: var(--heart-burst-1);
-	animation: heart-sparkle 0.6s ease-out both;
-}
-
-#chat .msg-actions button {
-	position: relative;
 }
 
 /* Reactions: a chip arriving bursts hearts. Not .msg-reaction.self on its
@@ -681,15 +667,16 @@ strong,
 	text-shadow: 0 0 6px var(--heart-sky), 0 0 2px var(--heart-sky);
 }
 
+/* A spoiler hides its text by making it transparent; the halo would draw the
+ * glyphs as a readable blur, so it gets no halo until revealed. */
+#chat .msg .md-spoiler:not(.md-spoiler-shown) {
+	text-shadow: none;
+}
+
 /* stylelint-disable-next-line no-duplicate-selectors -- same rows the motion section animates, now with the fill */
 #chat .chat-view[data-type="channel"] .msg.highlight,
 #chat .chat-view[data-type="query"] .msg.highlight {
 	background: rgb(255 214 230 / 85%);
-}
-
-/* Writing pauses the meadow. */
-#chat-container:has(#input:focus) .chat {
-	animation-play-state: paused;
 }
 
 /* ---- phones ---- */
@@ -709,7 +696,6 @@ strong,
 	#form,
 	.msg-reaction::before,
 	.msg-reaction::after,
-	#chat .msg-actions button::before,
 	#chat .chat {
 		animation: none !important;
 		transition: none !important;

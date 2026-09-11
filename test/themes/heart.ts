@@ -150,8 +150,8 @@ describe("the <3 theme's colours", function () {
 describe("the <3 theme's type", function () {
 	it("bundles Nunito and Baloo 2 and sets them at the chosen weights", function () {
 		for (const file of [
-			"heart/nunito-600.woff2",
-			"heart/nunito-600-italic.woff2",
+			"heart/nunito-400.woff2",
+			"heart/nunito-400-italic.woff2",
 			"heart/nunito-800.woff2",
 			"heart/baloo2-700.woff2",
 		]) {
@@ -160,7 +160,7 @@ describe("the <3 theme's type", function () {
 
 		expect(css).to.match(/#chat \.msg \.user[\s\S]{0,160}font-family:\s*"Baloo 2"/);
 		expect(css).to.match(
-			/body,[\s\S]{0,200}font-family:\s*Nunito[\s\S]{0,80}font-weight:\s*600/
+			/body,[\s\S]{0,200}font-family:\s*Nunito[\s\S]{0,80}font-weight:\s*400/
 		);
 	});
 
@@ -179,6 +179,7 @@ describe("the <3 theme's motion", function () {
 	it("fades messages in, raises the chrome, glows a mention, and stands down under reduced motion", function () {
 		expect(css).to.include("@keyframes heart-fade");
 		expect(css).to.match(/#chat \.msg \{[^}]*animation: heart-fade 340ms ease-out backwards/);
+		expect(css).to.match(/#chat \.msg\.pending \{[^}]*animation-name: none/);
 		expect(css).to.include("@keyframes heart-rise");
 		expect(css).to.include("@keyframes heart-glow");
 		expect(css).to.match(
@@ -188,18 +189,18 @@ describe("the <3 theme's motion", function () {
 });
 
 describe("the <3 theme's glitter", function () {
-	it("has four bursts, cycled on send, and fires on hover and reactions", function () {
+	it("has four bursts, cycled on send, and fires on reactions; nothing on hover", function () {
 		for (const n of [1, 2, 3, 4]) {
 			expect(css).to.include(`--heart-burst-${n}:`);
 		}
 
 		for (const n of [1, 2, 3, 4]) {
 			expect(css).to.match(
-				new RegExp(`\\.msg\\.self\\.pending:nth-child\\(4n\\s*\\+\\s*${n}\\)::before`)
+				new RegExp(`\\.msg\\.self:last-child:nth-child\\(4n\\s*\\+\\s*${n}\\)::before`)
 			);
 		}
 
-		expect(css).to.include("#chat .msg:hover::after");
+		expect(css, "no hover glitter").to.not.include(":hover::");
 		expect(css).to.include(".reaction-enter-active::before");
 	});
 
@@ -209,12 +210,6 @@ describe("the <3 theme's glitter", function () {
 			css.indexOf("/* ---- meadow ---- */")
 		);
 		expect(glitterSection).to.not.include(".msg-reaction.self::");
-	});
-
-	it("stands the tool-button spark down under reduced motion", function () {
-		expect(css).to.match(
-			/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*#chat \.msg-actions button::before[\s\S]*\}/
-		);
 	});
 
 	it("leaves burst sizing to the burst variables, not a stretching background-size", function () {
@@ -242,11 +237,14 @@ describe("the <3 theme's meadow", function () {
 		expect(scene1Body, "scene 1 hides the second cloud").to.include("--heart-cloud-2");
 
 		expect(css).to.include("@keyframes heart-clouds");
-		expect(css).to.match(
-			/#chat-container:has\(#input:focus\)[^{]*\{[^}]*animation-play-state: paused/
+		expect(css, "the meadow never pauses while typing").to.not.include(
+			"animation-play-state: paused"
 		);
 		expect(css).to.match(/@media \(max-width: 600px\)[\s\S]*--strip: 6\.5rem/);
 		expect(css).to.match(/text-shadow: 0 0 6px var\(--heart-sky\)/);
+		expect(css, "spoilers keep no halo").to.match(
+			/\.md-spoiler:not\(\.md-spoiler-shown\) \{[^}]*text-shadow: none/
+		);
 	});
 
 	it("computes the seeded hue on #chat-container, not on :root, so the tint actually varies", function () {

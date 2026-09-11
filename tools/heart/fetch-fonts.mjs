@@ -1,4 +1,4 @@
-// Downloads the <3 theme's fonts (Nunito 600/600i/800, Baloo 2 700; SIL OFL)
+// Downloads the <3 theme's fonts (Nunito 400/400i/800, Baloo 2 700; SIL OFL)
 // from Google Fonts' CSS endpoint into client/themes/heart/, plus the licence
 // texts from the google/fonts repository. Run once; the files are committed.
 //
@@ -11,11 +11,11 @@ const OUT = path.resolve("client/themes/heart");
 const UA =
 	"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
 const FACES = [
-	{file: "nunito-600.woff2", css: "family=Nunito:wght@600", weight: "600", style: "normal"},
+	{file: "nunito-400.woff2", css: "family=Nunito:wght@400", weight: "400", style: "normal"},
 	{
-		file: "nunito-600-italic.woff2",
-		css: "family=Nunito:ital,wght@1,600",
-		weight: "600",
+		file: "nunito-400-italic.woff2",
+		css: "family=Nunito:ital,wght@1,400",
+		weight: "400",
 		style: "italic",
 	},
 	{file: "nunito-800.woff2", css: "family=Nunito:wght@800", weight: "800", style: "normal"},
