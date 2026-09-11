@@ -30,8 +30,18 @@ const BOXLABS: BrandingUploads = {
 	optionalFields: ["strip_exif"],
 	responseUrlKey: "results.0.filePath",
 	responseErrorKey: "results.0.error",
-	accept: ["image/png", "image/jpeg", "image/gif", "image/webp"],
-	maxSizeBytes: 10 * 1024 * 1024,
+	accept: [
+		"image/png",
+		"image/jpeg",
+		"image/gif",
+		"image/webp",
+		"video/mp4",
+		"video/quicktime",
+		"video/webm",
+		"video/x-msvideo",
+		"video/x-matroska",
+	],
+	maxSizeBytes: 25 * 1024 * 1024,
 };
 
 function imageFile(name = "pasted.png", type = "image/png"): File {
@@ -406,18 +416,33 @@ describe("upload", function () {
 			expect(fetchStub.callCount).to.equal(2);
 		});
 
-		it("refuses a video before contacting the endpoint", async function () {
-			const fetchStub = stubFetch();
+		it("uploads a video, which the endpoint takes despite its /img/ path", async function () {
+			const fetchStub = stubFetch(
+				jsonResponse({results: [{success: true, filePath: "/img/vid_1.mp4"}]})
+			);
 			const host = fakeHost(BOXLABS);
 
 			await new Uploader(host).triggerUpload([
 				new File(["x"], "clip.mp4", {type: "video/mp4"}),
 			]);
 
-			expect(host.errors).to.deep.equal([
-				"File clip.mp4 is not a type this uploader accepts " +
-					"(image/png, image/jpeg, image/gif, image/webp)",
+			expect(host.errors).to.deep.equal([]);
+			expect(host.urls).to.deep.equal(["https://paste.boxlabs.uk/img/vid_1.mp4"]);
+			expect(fetchStub.called).to.be.true;
+		});
+
+		it("refuses a type the endpoint does not take, before contacting it", async function () {
+			const fetchStub = stubFetch();
+			const host = fakeHost(BOXLABS);
+
+			// Audio is refused by the service as "Unsupported type .ogg", so
+			// there is no reason to spend the upload finding that out.
+			await new Uploader(host).triggerUpload([
+				new File(["x"], "sound.ogg", {type: "audio/ogg"}),
 			]);
+
+			expect(host.errors.length).to.equal(1);
+			expect(host.errors[0]).to.contain("sound.ogg is not a type this uploader accepts");
 			expect(fetchStub.called).to.be.false;
 		});
 
