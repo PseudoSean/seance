@@ -92,6 +92,12 @@ const chrome = spawn(
 		flags.has("--devtools") ? "--auto-open-devtools-for-tabs" : "--disable-gpu",
 		"--no-first-run",
 		"--no-default-browser-check",
+		// Chromium puts raster and shared-memory buffers in /dev/shm, which is
+		// 64 MB in a container, and a page that repaints large animated layers
+		// every frame (the <3 theme's meadow) crashes the renderer when it
+		// fills; the flag moves them to /tmp, which is what Playwright does by
+		// default.
+		"--disable-dev-shm-usage",
 		// The dev ircd and the dev web server use self-signed certificates.
 		"--ignore-certificate-errors",
 		"--window-size=1280,900",
