@@ -514,6 +514,8 @@ p {
 #chat .connecting-indicator::before { content: "\f021"; /* https://fontawesome.com/icons/sync?style=solid */ }
 
 .context-menu-join::before { content: "\f067"; /* http://fontawesome.io/icon/plus/ */ }
+.context-menu-translate-retry::before { content: "\f2f1"; /* https://fontawesome.com/icons/sync-alt?style=solid */ }
+.context-menu-translate-hide::before { content: "\f070"; /* https://fontawesome.com/icons/eye-slash?style=solid */ }
 .context-menu-user::before { content: "\f007"; /* http://fontawesome.io/icon/user/ */ }
 .context-menu-close::before { content: "\f00d"; /* http://fontawesome.io/icon/times/ */ }
 .context-menu-list::before { content: "\f03a"; /* http://fontawesome.io/icon/list/ */ }
@@ -4259,6 +4261,80 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	color: var(--body-color-muted);
 	font-size: 0.85em;
 	user-select: none;
+}
+
+/* The translated line under a message (client/components/TranslationLine.vue,
+ * docs/resources/translation.md): muted like the timestamps so the original
+ * reads first, the language chip in the accent, a caret while it streams. */
+#chat .msg-translation {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.25rem 0.4rem;
+	margin-top: 0.15rem;
+	color: var(--body-color-muted);
+	font-size: 0.95em;
+}
+
+#chat .msg-translation-chip {
+	flex: none;
+	padding: 0 0.3em;
+	border: 1px solid var(--chat-accent-rule, var(--link-color));
+	border-radius: 0.2rem;
+	background: transparent;
+	color: var(--chat-accent, var(--link-color));
+	font: inherit;
+	font-size: 0.7em;
+	line-height: 1.5;
+	letter-spacing: 0.05em;
+	cursor: pointer;
+}
+
+#chat .msg-translation-chip:hover,
+#chat .msg-translation-chip:focus-visible {
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	outline: 0;
+}
+
+#chat .msg-translation-text {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+#chat .msg-translation-caret {
+	display: inline-block;
+	width: 0.5em;
+	height: 1em;
+	margin-left: 0.1em;
+	background: var(--chat-accent, var(--link-color));
+	vertical-align: text-bottom;
+	animation: msg-translation-blink 1s steps(2) infinite;
+}
+
+@keyframes msg-translation-blink {
+	50% {
+		opacity: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#chat .msg-translation-caret {
+		animation: none;
+	}
+}
+
+#chat .msg-translation-failed {
+	font-style: italic;
+}
+
+#chat .msg-translation-retry {
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--link-color);
+	font: inherit;
+	text-decoration: underline;
+	cursor: pointer;
 }
 
 #chat .msg-redacted {
