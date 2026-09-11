@@ -49,6 +49,11 @@ socket.on("msg:edit", function (data) {
 	// The edit takes the original's place in the list; the original is hidden.
 	const placed = applyEdit(target.channel.messages, data.replaces, data.id);
 
+	// The original's translation (if any) belongs to text that no longer
+	// exists; the edit arrives as its own `msg` and is read/translated on
+	// its own terms.
+	store.commit("translationRemove", data.replaces);
+
 	// A pending copy only stands in until its echo does (`msg:settled` shows
 	// the original again), so the compose bar follows the real replacement
 	// alone. Replying to or editing the replaced message follows the edit,

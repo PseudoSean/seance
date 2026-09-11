@@ -20,7 +20,6 @@ import {
 } from "./channelStore";
 import {buildContext} from "./context";
 import {LanguagePrior, detectLanguage} from "./detect";
-import type {EngineName} from "./engine";
 import {isEligible, plainTextOf} from "./eligibility";
 import {translateService} from "./index";
 import {type QueueItem, type QueueUpdate, TranslateQueue} from "./queue";
@@ -151,7 +150,7 @@ export function setChannelOptions(
 	commitChannel(network, channel, setChannelTranslation(network.uuid, channel.name, patch));
 }
 
-function entryFor(message: ClientMessage, from: string, to: string): TranslationEntry {
+function entryFor(from: string, to: string): TranslationEntry {
 	return {status: "pending", text: "", from, to, engine: null, error: null, hidden: false};
 }
 
@@ -166,22 +165,43 @@ export async function translateMessage(
 	message: ClientMessage,
 	force = false
 ): Promise<void> {
-	if (!translationAvailable() || !message.text) {
+	if (!message.text) {
 		return;
 	}
 
-	const settings = channelTranslation(network, channel);
-	const to = settings.read ?? store.state.settings.translateTo;
+	// The service is created (and the device probe started) on first use,
+	// which is often this very call: without waiting for it here, every
+	// message that arrives before the probe resolves is silently dropped.
+	if (!store.state.translation.capability) {
+		await translateService().capabilities();
+	}
+
+	if (!translationAvailable()) {
+		return;
+	}
+
+	const initial = channelTranslation(network, channel);
 	const nicks = channel.users.map((u) => u.nick);
 
 	if (!force) {
-		if (!settings.read || !isEligible(message, {since: settings.since, nicks})) {
+		if (!initial.read || !isEligible(message, {since: initial.since, nicks})) {
 			return;
 		}
 	}
 
 	const prior = priorFor(network, channel);
 	const detection = await detectLanguage(plainTextOf(message.text, nicks), prior);
+
+	// Detection (the first call also awaits the franc chunk download) can
+	// take a while: re-read the switch afterwards, since a switch-off or a
+	// target change during that wait must not still ship a translation.
+	const settings = channelTranslation(network, channel);
+
+	if (!force && !settings.read) {
+		return;
+	}
+
+	const to = settings.read ?? store.state.settings.translateTo;
 
 	if (!force && (detection.lang === null || detection.lang === to)) {
 		return;
@@ -212,7 +232,7 @@ export async function translateMessage(
 	};
 
 	items.set(message.id, {network: network.uuid, item});
-	store.commit("translationEntry", {id: message.id, entry: entryFor(message, from ?? "", to)});
+	store.commit("translationEntry", {id: message.id, entry: entryFor(from ?? "", to)});
 
 	if (force) {
 		queueFor(network).retry(item);
@@ -242,7 +262,12 @@ export function retryTranslation(
 	const paused = store.state.translation.paused;
 
 	if (paused) {
-		queues.get(network.uuid)?.resume(paused.engine);
+		// state.translation.paused is global (one engine, however many
+		// networks queue for it), so every queue that paused it resumes.
+		for (const queue of queues.values()) {
+			queue.resume(paused.engine);
+		}
+
 		store.commit("translationPaused", null);
 	}
 
@@ -287,6 +312,8 @@ export function initReader(): void {
 
 		queues.get(target.network.uuid)?.cancelChannel(target.channel.id);
 		forgetChannel(target.network.uuid, target.channel.name);
+		priors.delete(channelKey(target.network.uuid, target.channel.name));
+		arrivals.delete(target.channel.id);
 		store.commit(
 			"translateChannelRemove",
 			channelKey(target.network.uuid, target.channel.name)
@@ -301,6 +328,12 @@ export function initReader(): void {
 		for (const key of Object.keys(store.state.translateChannels)) {
 			if (key.startsWith(`${data.network}/`)) {
 				store.commit("translateChannelRemove", key);
+			}
+		}
+
+		for (const key of [...priors.keys()]) {
+			if (key.startsWith(`${data.network}/`)) {
+				priors.delete(key);
 			}
 		}
 	});
