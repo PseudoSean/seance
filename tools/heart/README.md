@@ -30,6 +30,30 @@ the puppy). Chromium is launched through `tools/browser-drive.mjs` and must be: 
 the driver passes. The audit says whether a rig is sound; the sheet is the only thing that
 says whether the animal looks like the animal.
 
+## Measure it
+
+    node tools/heart/gait-probe.mjs deer
+
+`gait-probe.mjs` prints the two numbers nothing else in this directory will show you, and
+both describe defects that are invisible in a still frame:
+
+- **how far each foot lifts** through one cycle of each gait. The stance measurement
+  (`lib/travel.mjs`) treats any foot within 6 units of the ground as planted, so a swing that
+  barely clears that is read as planted for its whole swing and the animal drags. Feet come
+  out in the rig tree's order — far legs first for the quadrupeds here — and a far leg is
+  deliberately raised, so judge the near feet: a quarter of the cycle clear for a four-beat
+  walk, most of it for a gallop.
+- **the ground speed frame by frame**, per segment, with the step across each cycle seam. A
+  gait stores one cycle and repeats it, so a speed that differs between the cycle's first and
+  last frame is replayed as a lurch once per stride, forever. The audit only ever prints one
+  mean per segment, and the contact sheet tracks the animal so it sits centred in every cell —
+  which is precisely what hides both of these.
+
+The deer needed this twice: its four-beat walk measured a speed that stepped 38 → 89 at every
+cycle boundary (so it was pinned at the measurement's own mean instead), and a hind hoof
+cleared the ground by only 7 units because the hock's fold peaked 8 % of the cycle before the
+leg passed vertical. A clean audit and a contact sheet that looks right caught neither.
+
 ## The pipeline
 
 1. **Rig** (`rigs/<animal>.mjs`): parts as paper.js paths in local coordinates under a tree
