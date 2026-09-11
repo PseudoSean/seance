@@ -1,13 +1,39 @@
-// Prints the <3 theme's 32 nick colours: hues swept round the wheel at one
-// oklch lightness (chroma 0.115, the handoff themes' value), every slot at
-// ≥ 4.5:1 on the sky (#dbeeff) and on a highlighted row (#ffd6e6), so a nick
-// reads on both. Lightness is lowered per slot until it clears the bar.
+// Prints the <3 theme's 32 nick colours: hues swept, in order, across the
+// spec's biased ranges (§3.1: rose/coral, gold, teal, sky, lilac — not a
+// uniform sweep round the wheel) at one oklch lightness (chroma 0.115, the
+// handoff themes' value), every slot at ≥ 4.5:1 on the sky (#dbeeff) and on
+// a highlighted row (#ffd6e6), so a nick reads on both. Lightness is
+// lowered per slot until it clears the bar.
 //
 //   node tools/heart/nick-palette.mjs   → paste into client/themes/heart.css
 const SKY = [0xdb, 0xee, 0xff];
 const BLUSH = [0xff, 0xd6, 0xe6];
 const CHROMA = 0.115;
-const SLOTS = 32;
+
+// Hue ranges (start deg, end deg, slot count), swept in order and evenly
+// spaced with both ends included; rose/coral wraps through 0/360.
+const HUE_RANGES = [
+	[330, 30, 11], // rose/coral
+	[40, 60, 4], // gold
+	[165, 195, 6], // teal
+	[210, 240, 5], // sky
+	[260, 300, 6], // lilac
+];
+
+function sweepHues() {
+	const hues = [];
+	for (const [start, end, slots] of HUE_RANGES) {
+		const span = (end - start + 360) % 360 || 360;
+		const step = span / (slots - 1);
+		for (let i = 0; i < slots; i++) {
+			hues.push((start + step * i) % 360);
+		}
+	}
+	return hues;
+}
+
+const HUES = sweepHues();
+const SLOTS = HUES.length;
 
 function oklchToSrgb(L, C, hDeg) {
 	const h = (hDeg * Math.PI) / 180;
@@ -44,7 +70,7 @@ function contrast(a, b) {
 const hex = ([r, g, b]) => "#" + [r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("");
 
 for (let i = 0; i < SLOTS; i++) {
-	const hue = (i * 360) / SLOTS;
+	const hue = HUES[i];
 	let L = 0.56,
 		rgb;
 	do {
