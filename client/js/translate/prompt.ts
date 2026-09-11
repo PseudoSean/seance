@@ -49,11 +49,14 @@ export function systemPrompt(req: TranslateRequest, name: (code: string) => stri
 		: c.sourceHint
 		? `from the language it is written in (probably ${name(c.sourceHint)})`
 		: "from the language it is written in";
+	const finalLineInstruction = req.lines
+		? `Translate each numbered line of the final block; earlier lines are context. Answer with the same numbers, one translation per line, then ${END_SENTINEL} on its own line.`
+		: "Translate only the final message; earlier lines are context.";
 
 	parts.push(
 		`You translate chat messages from an IRC channel ${source} into ${name(req.to)}.`,
 		req.from ? "" : "Detect the source language yourself.",
-		"Translate only the final message; earlier lines are context.",
+		finalLineInstruction,
 		`Keep placeholders like ${placeholder(
 			1
 		)}, nicknames, channel names and anything after # exactly as they are.`,

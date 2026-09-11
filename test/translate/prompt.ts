@@ -111,6 +111,14 @@ describe("translate/prompt", () => {
 		).to.include("probably Portuguese");
 	});
 
+	it("a batched request's system prompt asks for numbered lines, not just the final message", () => {
+		const text = systemPrompt(request({lines: ["a", "b"]}), name);
+
+		expect(text).to.include("each numbered line");
+		expect(text).to.not.include("only the final message");
+		expect(systemPrompt(request(), name)).to.include("only the final message");
+	});
+
 	it("carries formality, variant and, when writing, that it is the user's own line", () => {
 		const text = systemPrompt(
 			request({
