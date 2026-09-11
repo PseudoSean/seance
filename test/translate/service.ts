@@ -557,4 +557,53 @@ describe("translate/service", () => {
 		expect(r.llm.calls.translate.length).to.equal(1);
 		r.service.dispose();
 	});
+
+	it("one abort listener serves the whole call, whichever candidate ends up running", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		await r.service.capabilities();
+		// the first candidate (llm) fails to load and falls through to the
+		// second (opus): the abort must still reach whichever one is current,
+		// not a listener left behind closing over the abandoned llm id.
+		r.llm.failLoad = new Error("device lost");
+
+		let release: (() => void) | null = null;
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+
+		r.seq2seq.translate = (req, signal) => {
+			r.seq2seq.calls.translate.push(req);
+
+			return (async function* () {
+				await gate;
+
+				if (!signal.aborted) {
+					yield {id: req.id, text: "too late", done: true};
+				}
+			})();
+		};
+
+		const controller = new AbortController();
+		const chunks: string[] = [];
+		const iteration = (async () => {
+			for await (const chunk of r.service.translate(base, controller.signal)) {
+				chunks.push(chunk.text);
+			}
+		})();
+
+		while (r.seq2seq.calls.translate.length === 0) {
+			await Promise.resolve();
+		}
+
+		controller.abort();
+		await iteration;
+		release?.();
+
+		expect(chunks).to.deep.equal([]);
+		expect(r.seq2seq.calls.translate.length).to.equal(1);
+		expect(r.llm.calls.translate.length).to.equal(0);
+		expect((await r.service.route("de", "en"))?.candidate).to.equal("opus:de-en");
+		r.service.dispose();
+	});
 });

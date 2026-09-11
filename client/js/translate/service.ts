@@ -113,12 +113,28 @@ export class TranslateService {
 		request: Omit<TranslateRequest, "id" | "model">,
 		signal?: AbortSignal
 	): AsyncIterable<TranslateChunk> {
+		if (signal?.aborted) {
+			return;
+		}
+
 		this.inFlight++;
 		this.clearIdle();
 
 		let attemptedView: ModelView | null = null;
 		let completed = false;
-		let onAbort: (() => void) | null = null;
+		// One listener for the whole call, whichever candidate is currently
+		// running: a candidate that fails to load falls through to the next,
+		// which would otherwise register another listener on the caller's
+		// signal every time, each closing over an id already abandoned.
+		let currentId = 0;
+
+		const onAbort = () => {
+			if (currentId) {
+				this.client().cancel(currentId);
+			}
+		};
+
+		signal?.addEventListener("abort", onAbort, {once: true});
 
 		try {
 			for (;;) {
@@ -136,12 +152,7 @@ export class TranslateService {
 				let yielded = false;
 
 				attemptedView = view;
-				// The queue's own cancel races iterator.next() directly, so this
-				// is only how a cancel reaches the worker: client.cancel(id)
-				// closes the stream's AsyncQueue, which resolves the pending
-				// next() as done and lets the generator's own finally run.
-				onAbort = () => client.cancel(id);
-				signal?.addEventListener("abort", onAbort, {once: true});
+				currentId = id;
 
 				try {
 					for await (const chunk of client.translate(
@@ -189,9 +200,7 @@ export class TranslateService {
 				}
 			}
 		} finally {
-			if (onAbort) {
-				signal?.removeEventListener("abort", onAbort);
-			}
+			signal?.removeEventListener("abort", onAbort);
 
 			if (attemptedView && attemptedView.status === "downloading" && !completed) {
 				attemptedView.status = "idle";
