@@ -148,16 +148,22 @@ describe("the <3 theme's colours", function () {
 });
 
 describe("the <3 theme's type", function () {
-	it("bundles Nunito and Baloo 2 and sets them at the chosen weights", function () {
+	it("bundles Nunito and Baloo 2 as variable fonts and sets them at the chosen weights", function () {
 		for (const file of [
-			"heart/nunito-600.woff2",
-			"heart/nunito-600-italic.woff2",
-			"heart/nunito-800.woff2",
-			"heart/baloo2-700.woff2",
+			"heart/nunito-variable.woff2",
+			"heart/nunito-variable-italic.woff2",
+			"heart/baloo2-variable.woff2",
 		]) {
 			expect(css).to.include(`url("${file}")`);
 		}
 
+		expect(css, "weight ranges").to.match(
+			/font-family: Nunito;\s*font-style: normal;\s*font-weight: 400 800;/
+		);
+		expect(css, "italic range").to.match(/font-style: italic;\s*font-weight: 400 700;/);
+		expect(css, "Baloo range").to.match(
+			/font-family: "Baloo 2";\s*font-style: normal;\s*font-weight: 400 800;/
+		);
 		expect(css).to.match(/#chat \.msg \.user[\s\S]{0,160}font-family:\s*"Baloo 2"/);
 		expect(css, "the header is paper like the composer").to.match(
 			/#chat \.header \{\s*background: var\(--heart-paper\);/

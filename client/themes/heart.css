@@ -23,36 +23,34 @@
 @import "coffee.css";
 
 /* ---- fonts ---- */
+
+/* Nunito and Baloo 2 as Google Fonts' variable files (tools/heart/fetch-fonts.mjs):
+ * one file per style carrying a weight range, the same builds the mockups
+ * loaded from Google — a single-weight instance cut from them renders
+ * visibly differently in some browsers. Latin subset; other scripts fall
+ * back to the system stack mid-line. */
 @font-face {
 	font-family: Nunito;
 	font-style: normal;
-	font-weight: 600;
+	font-weight: 400 800;
 	font-display: swap;
-	src: url("heart/nunito-600.woff2") format("woff2");
+	src: url("heart/nunito-variable.woff2") format("woff2");
 }
 
 @font-face {
 	font-family: Nunito;
 	font-style: italic;
-	font-weight: 600;
+	font-weight: 400 700;
 	font-display: swap;
-	src: url("heart/nunito-600-italic.woff2") format("woff2");
-}
-
-@font-face {
-	font-family: Nunito;
-	font-style: normal;
-	font-weight: 800;
-	font-display: swap;
-	src: url("heart/nunito-800.woff2") format("woff2");
+	src: url("heart/nunito-variable-italic.woff2") format("woff2");
 }
 
 @font-face {
 	font-family: "Baloo 2";
 	font-style: normal;
-	font-weight: 700;
+	font-weight: 400 800;
 	font-display: swap;
-	src: url("heart/baloo2-700.woff2") format("woff2");
+	src: url("heart/baloo2-variable.woff2") format("woff2");
 }
 
 /* ---- tokens ---- */
