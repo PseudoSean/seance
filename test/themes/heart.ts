@@ -189,3 +189,23 @@ describe("the <3 theme's glitter", function () {
 		expect(glitterSection).to.not.include("background-size");
 	});
 });
+
+describe("the <3 theme's meadow", function () {
+	it("paints sky, hills and clouds behind channels and queries, seeded per conversation", function () {
+		expect(css).to.match(
+			/#chat \.chat-view\[data-type="channel"\] \.chat,\s*#chat \.chat-view\[data-type="query"\] \.chat \{/
+		);
+		expect(css).to.include("var(--channel-seed, 0.5)");
+
+		for (const n of [0, 1, 2, 3, 4, 5]) {
+			expect(css).to.include(`#chat-container[data-scene="${n}"]`);
+		}
+
+		expect(css).to.include("@keyframes heart-clouds");
+		expect(css).to.match(
+			/#chat-container:has\(#input:focus\)[^{]*\{[^}]*animation-play-state: paused/
+		);
+		expect(css).to.match(/@media \(max-width: 600px\)[\s\S]*--strip: 6\.5rem/);
+		expect(css).to.match(/text-shadow: 0 0 6px var\(--heart-sky\)/);
+	});
+});
