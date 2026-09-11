@@ -320,8 +320,9 @@ strong,
 /* Bursts are backgrounds on pseudo-elements: gradient sparks, confetti
  * strips, and data-URI hearts and four-point stars. Four bursts, cycled by
  * the message's position so consecutive sends differ. A burst runs once,
- * when the pseudo-element appears (the pending copy of an own message, a
- * hovered row, a reaction chip arriving or toggled). */
+ * when the pseudo-element appears: an own message while it is the newest
+ * thing in the channel, or a reaction group or chip entering. No hovered
+ * row — that glitter was dropped. */
 /* stylelint-disable-next-line no-duplicate-selectors -- glitter's own tokens, kept with this section */
 :root {
 	--heart-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M10 17.5S2.5 12.8 2.5 7.6A3.9 3.9 0 0 1 10 5.3a3.9 3.9 0 0 1 7.5 2.3c0 5.2-7.5 9.9-7.5 9.9z' fill='%23d9457f'/%3E%3C/svg%3E");
@@ -960,7 +961,11 @@ strong,
 
 	/* The clouds' animation is off, but they still show: parked inside the
 	 * box (22 %, 68 %) instead of at the off-screen start position the
-	 * animation begins from. Every other entry restates the base rule. */
+	 * animation begins from. Slot B, slot A, slot F and the rainbow (entries
+	 * 5, 6, 10, 13) take fixed positions here too (70 %, 30 %, 50 %, 50 %)
+	 * instead of the seed-framed calc() the base rule uses — under reduced
+	 * motion the seed frames nothing, though the hills and hue still vary.
+	 * The remaining entries restate the base rule. */
 	#chat .chat-view[data-type="channel"] .chat,
 	#chat .chat-view[data-type="query"] .chat {
 		background-position:

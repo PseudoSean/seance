@@ -39,7 +39,9 @@ leaves the old files in place and exits 1.
    timing so a gait repeats and the loop restarts after the off-stage gap; the travel as an
    animated translate; the turn as a discrete mirror about the animal's centre. Four files
    per animal: the near tint, the distant-visitor tint (`-far`), and a still of each for
-   reduced motion.
+   reduced motion. Durations are written to four decimals, so a chain of clips runs a few
+   ten-thousandths of a second short of the loop's travel transform each period — about
+   three seconds a week on a page left open, not worth twelve churned files.
 
 ## Rules a rig must keep
 
@@ -58,7 +60,9 @@ the causes out:
 
 - zero union failures (a union that comes back bigger than its parts is retried with the
   pose nudged; four failures is a rig problem);
-- the outline's length changes ≤ 5 % between stored frames (near), ≤ 10 % (a far leg);
+- the outline's length changes ≤ 5 % between stored frames (near), ≤ 10 % (a far leg).
+  Current headroom: bunny near sits at 4.18 % of the 5 % limit, puppy far at 6.96 % of the
+  10 % limit — so a new rig tuned blind against the limits knows how much room there really is;
 - the visit ends off-stage on either side, the off-stage gap is ≥ 2 s;
 - sizes: `horse.svg` ≤ 200 KB, `puppy.svg` and `bunny.svg` ≤ 160 KB, stills ≤ 8 KB.
 

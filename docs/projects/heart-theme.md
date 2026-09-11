@@ -36,7 +36,7 @@ Four changes came from the user's live feedback on the real app, outside the pla
 
 ## 1. What it is
 
-A seventh theme for Seance, display name `<3`, file `client/themes/heart.css` (a `<` cannot be in a stylesheet URL). Vivid, highly animated, romantic pastels on a blue sky, dark blue text in a charming, highly legible font. Messages fade in, glitter bursts on send, hover and reactions, the chrome rises into place, and behind the chat a meadow lives that belongs to the channel: pale far hills, nearer hills, a ground line, drifting clouds, and silhouette animals that walk, run, play and turn back.
+A seventh theme for Seance, display name `ps <3`, file `client/themes/heart.css` (a `<` cannot be in a stylesheet URL). Vivid, highly animated, romantic pastels on a blue sky, dark blue text in a charming, highly legible font. Messages fade in, glitter bursts on send and reactions, the chrome rises into place, and behind the chat a meadow lives that belongs to the channel: pale far hills, nearer hills, a ground line, drifting clouds, and silhouette animals that walk, run, play and turn back.
 
 The theme is **one stylesheet plus static assets** (fonts, animated SVG characters). No script ships with the theme. Two small app changes make it possible (§7).
 
@@ -99,17 +99,16 @@ Sidebar: a lilac→peach vertical gradient on `#sidebar` and `body` (so the gutt
 
 All motion is CSS animations/transitions on elements the app already renders, keyed to classes it already sets. No script.
 
-| Moment             | Hook                                                                                                                                                                                                  | Motion                                                                                                    |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| A message appears  | any `#chat .msg` inserted into the DOM (history loads and channel opens included: everything animates into place)                                                                                     | `fade` 340 ms ease-out, opacity 0 → 1.                                                                    |
-| A mention          | `.msg.highlight`                                                                                                                                                                                      | blush background plus a `glow` (inset rose shadow, 1.8 s, twice) on insertion.                            |
-| Own message sent   | `.msg.self.pending` (the pending copy, §bus-contract 1.9)                                                                                                                                             | two star bursts on `::before`/`::after` (see below), 0.9–1.4 s, once.                                     |
-| Hovering a message | `.msg:hover`                                                                                                                                                                                          | a twinkle by the tools (`::after`), 1 s, once per entry; a smaller spark on `.msg .actions button:hover`. |
-| A reaction         | `.reaction-enter-active` (Vue transition group on `.msg-reactions-list`; a chip's arrival only — not `.msg-reaction.self` on its own, a persistent class that would burst on every redraw of the row) | hearts rising + stars, 1.2 s.                                                                             |
-| The chrome on load | `#sidebar .channel-list-item` (staggered by `nth-child`, 45 ms steps), `#chat .header`, `#form`                                                                                                       | `rise` 450–500 ms: opacity 0 → 1, translateY 8px → 0.                                                     |
-| Composer focus     | `#form:focus-within`                                                                                                                                                                                  | rose top edge (the existing focus-ring convention) and rose caret.                                        |
+| Moment             | Hook                                                                                                                                                                                                  | Motion                                                                         |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| A message appears  | any `#chat .msg` inserted into the DOM (history loads and channel opens included: everything animates into place)                                                                                     | `fade` 340 ms ease-out, opacity 0 → 1.                                         |
+| A mention          | `.msg.highlight`                                                                                                                                                                                      | blush background plus a `glow` (inset rose shadow, 1.8 s, twice) on insertion. |
+| Own message sent   | `.msg.self:last-child` (the pending copy, then the echo that replaces it; an own message loaded as history only when it is the last one, on opening the channel)                                      | two star bursts on `::before`/`::after` (see below), 0.9–1.4 s, once.          |
+| A reaction         | `.reaction-enter-active` (Vue transition group on `.msg-reactions-list`; a chip's arrival only — not `.msg-reaction.self` on its own, a persistent class that would burst on every redraw of the row) | hearts rising + stars, 1.2 s.                                                  |
+| The chrome on load | `#sidebar .channel-list-item` (staggered by `nth-child`, 45 ms steps), `#chat .header`, `#form`                                                                                                       | `rise` 450–500 ms: opacity 0 → 1, translateY 8px → 0.                          |
+| Composer focus     | `#form:focus-within`                                                                                                                                                                                  | rose top edge (the existing focus-ring convention) and rose caret.             |
 
-**Glitter bursts** are backgrounds on pseudo-elements: layered `radial-gradient` sparks, `linear-gradient` confetti strips, and data-URI SVG hearts and four-point stars in rose, yellow, sky and lilac. Four bursts (`--burst-1..4`) and four keyframe sets (`sparkle`, `sparkle-rise`, `sparkle-pop`, `sparkle-twinkle`). The send burst is chosen by `.msg.self.pending:nth-child(4n+1)`…`(4n+4)` so consecutive sends differ. Reactions use a fixed pairing (hearts + stars).
+**Glitter bursts** are backgrounds on pseudo-elements: layered `radial-gradient` sparks, `linear-gradient` confetti strips, and data-URI SVG hearts and four-point stars in rose, yellow, sky and lilac. Four bursts (`--burst-1..4`) and four keyframe sets (`sparkle`, `sparkle-rise`, `sparkle-pop`, `sparkle-twinkle`). The send burst is chosen by `.msg.self:last-child:nth-child(4n+1)`…`(4n+4)` so consecutive sends differ. Reactions use a fixed pairing (hearts + stars).
 
 `@media (prefers-reduced-motion: reduce)`: every animation and transition off, the meadow shows a still (§5.6), bursts do not appear.
 
@@ -164,14 +163,14 @@ Direction changes: the route flips `scaleX` while the character is stopped (sitt
 
 **Implemented, plan 2 (landed 2026-09-11), decision 7 above** (two still files per animal, near and far tint).
 
-Under `prefers-reduced-motion: reduce` the meadow shows sky, hills, and two still animals (the still files), nothing moves.
+Under `prefers-reduced-motion: reduce` the meadow shows sky, hills, and the cast's stills (up to three on desktop, two on phones — the same slots the scene casts, now motionless), nothing moves.
 
 ### 5.7 Budget
 
-**Implemented, plan 2 (landed 2026-09-11)**; measured sizes are in §6.4's rows and the generator's audit.
+**Implemented, plan 2 (landed 2026-09-11)**; the real budgets are in `tools/heart/README.md` § The audit, and measured sizes print in the generator's own audit output.
 
 - Only `transform`, `opacity` and `background-position` animate. No layout, no filters animating.
-- Each SVG ≤ 120 KB uncompressed (§6.4), stills ≤ 6 KB; total assets for the theme ≤ 1 MB (fonts ≈ 150 KB, animals ≈ 800 KB, gzip ≈ ¼ of that on the wire).
+- ~~Each SVG ≤ 120 KB uncompressed (§6.4), stills ≤ 6 KB~~ — shipped higher: `horse.svg` ≤ 200 KB, `puppy.svg`/`bunny.svg` ≤ 160 KB, stills ≤ 8 KB (`tools/heart/README.md` § The audit); total assets for the theme ≤ 1 MB (fonts ≈ 150 KB, animals ≈ 800 KB, gzip ≈ ¼ of that on the wire).
 - Phones keep the meadow, reduced: under `max-width: 600px` the strip height drops to 6.5rem and only two animal slots stay active (the rest are hidden).
 
 ## 6. Characters: the pipeline
@@ -192,11 +191,15 @@ Everything under `tools/heart/` (Node, ESM), run by hand and checked-in outputs,
 
 ### 6.2 Outlines
 
-Per frame: pose → union of the near parts into one closed path (paper.js in Node via `paper-jsdom`), each far leg into its own; a union that comes back larger than its parts is retried with a nudged pose; the outline is resampled to N points starting at the rig's marker, aligned to the previous frame, and run through the concave-only fillet (rounds ~14, strength 0.5). Audit: max frame-to-frame outline-length change (< 2 % body, < 6 % far legs) and no union failures; the generator refuses to emit a clip that fails.
+**Implemented, plan 2 (landed 2026-09-11)**, with the generator built on plain `paper` (no canvas, no `paper-jsdom`) and the audit's thresholds shipped higher than drafted below.
+
+Per frame: pose → union of the near parts into one closed path (paper.js in Node, no canvas), each far leg into its own; a union that comes back larger than its parts is retried with a nudged pose; the outline is resampled to N points starting at the rig's marker, aligned to the previous frame, and run through the concave-only fillet (rounds ~14, strength 0.5). Audit: max frame-to-frame outline-length change (≤ 5 % body, ≤ 10 % far legs) and no union failures; the generator refuses to emit a clip that fails.
 
 ### 6.3 Output
 
-`client/themes/heart/<animal>.svg`: viewBox, two (or three) `<path>`s, each with `<animate attributeName="d" values="…" keyTimes="…" dur="…" repeatCount="indefinite" calcMode="linear">`. Frames at 15–24 fps for sequences, 30 fps for gaits; coordinates rounded to one decimal. `<animal>-still.svg`: the idle pose. A `routes.css` fragment per animal with the keyframes that match the sequence's stops and turns, included into `heart.css` at build by the generator (the theme stays one file; the fragment is generated text between markers).
+**Implemented, plan 2 (landed 2026-09-11), decisions 1 and 4 above** — differs from the draft below: coordinates are integers written as relative deltas, not rounded decimals, and there is no `routes.css` fragment (decision 1).
+
+`client/themes/heart/<animal>.svg`: viewBox, two (or three) `<path>`s (far legs first, the near outline last so it paints on top), each morphing through the sequence's clips with `<animate attributeName="d" calcMode="linear">`; clips are chained with syncbase timing — one `<animate>` per clip, each beginning on the previous clip's `.end` — and a gait clip stores one cycle and repeats it with its own `repeatCount`, never `indefinite` on the whole path. Frames at 15–24 fps for sequences, 30 fps for gaits; coordinates are integers, written as relative deltas along the outline (`encodePath`, `tools/heart/lib/svg.mjs`). `<animal>-still.svg`: the idle pose. There is no `routes.css` fragment: routes live inside the SVG (decision 1), not as CSS keyframes matched against the sequence's stops and turns.
 
 ### 6.4 Cast and behaviours
 

@@ -237,7 +237,7 @@ export default async function run(page) {
 	await page.screenshot("heart-seance");
 
 	// #seance is scene 3: the horse is slot A and its first visit starts 2 s
-	// after the file loaded, lasting about 11 s.
+	// after the file loaded, lasting about 14 s.
 	await page.sleep(2500);
 	await page.screenshot("heart-visitor");
 
