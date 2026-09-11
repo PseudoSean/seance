@@ -7,6 +7,7 @@ const DIR = path.resolve(__dirname, "../../../client/themes/heart");
 const ANIMALS: [string, number][] = [
 	["horse", 200],
 	["puppy", 160],
+	["bunny", 160],
 ];
 
 describe("the <3 theme's generated animals (client/themes/heart/*.svg)", function () {
