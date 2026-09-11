@@ -70,7 +70,17 @@ describe("translate/capability", () => {
 					})
 				)
 			).reasons
-		).to.deep.equal(["GPU buffer limit under 2 GiB"]);
+		).to.deep.equal(["GPU buffer limit under 1 GiB"]);
+	});
+
+	it("rates gpu an adapter whose binding limit is 2 GiB minus the alignment slack", async () => {
+		// Chrome reports maxStorageBufferBindingSize as 2147483644 on most desktop GPUs.
+		const cap = await probe(
+			env({gpu: {requestAdapter: () => Promise.resolve(adapter({maxBuffer: 2147483644}))}})
+		);
+
+		expect(cap.tier).to.equal("gpu");
+		expect(cap.reasons).to.deep.equal([]);
 	});
 
 	it("is none without WebAssembly SIMD, with every reason listed", async () => {

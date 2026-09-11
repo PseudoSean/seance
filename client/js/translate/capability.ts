@@ -1,5 +1,5 @@
 // The device probe (spec § capability.ts): what the router may pick from.
-// `gpu` needs a WebGPU adapter with 16-bit float shaders and 2 GiB of
+// `gpu` needs a WebGPU adapter with 16-bit float shaders and 1 GiB of
 // addressable buffer (a q4f16 1.7B model plus its KV cache); `cpu` needs
 // WebAssembly SIMD for ONNX Runtime; `none` hides the feature. The reasons
 // are what Settings shows in place of a missing model row. `browserEnv()`
@@ -28,7 +28,10 @@ export interface ProbeEnv {
 	wasmSimd: boolean;
 }
 
-export const GPU_MIN_BUFFER_BYTES = 2 * 1024 * 1024 * 1024;
+// WebLLM's own floor for a q4f16 model. Adapters report their limits with alignment
+// slack (Chrome: maxStorageBufferBindingSize 2147483644 on most desktop GPUs), so a
+// threshold at exactly 2 GiB refused hardware that runs the model fine.
+export const GPU_MIN_BUFFER_BYTES = 1024 * 1024 * 1024;
 
 /** A minimal module using a v128 op; validating it proves SIMD support. */
 export const WASM_SIMD_PROBE = new Uint8Array([
@@ -65,7 +68,7 @@ export async function probe(env: ProbeEnv): Promise<Capability> {
 			if (!f16) {
 				reasons.push("no 16-bit float shaders");
 			} else if (maxBufferBytes < GPU_MIN_BUFFER_BYTES) {
-				reasons.push("GPU buffer limit under 2 GiB");
+				reasons.push("GPU buffer limit under 1 GiB");
 			} else {
 				gpuOk = true;
 			}

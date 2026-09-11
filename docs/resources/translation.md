@@ -10,7 +10,7 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
 - **GPU: WebLLM.** An instruction LLM (default `Qwen3-1.7B-q4f16_1-MLC`)
   on WebGPU, prompted to translate with the channel's context. Greedy at
   temperature 0.1, thinking off, one line of output. Needs an adapter with
-  `shader-f16` and 2 GiB of buffer (`capability.ts`).
+  `shader-f16` and 1 GiB of buffer, WebLLM's floor for a q4f16 model; adapters report 2 GiB minus alignment slack (`capability.ts`).
 - **CPU: transformers.js on ONNX Runtime WASM.** Purpose-built translation
   models: NLLB-200 distilled 600M (any pair, FLORES codes) and OPUS-MT pair
   models (30-80 MB each). Two stay loaded, least recently used evicted.

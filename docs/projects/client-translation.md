@@ -140,7 +140,7 @@ The probe, run once per page and cached in memory only: `navigator.gpu`
 adapter present, `shader-f16` feature, adapter `maxBufferSize` and
 `maxStorageBufferBindingSize`, `navigator.deviceMemory` (where exposed) and
 `navigator.storage.estimate()`. Output: `{tier: "gpu" | "cpu" | "none", reasons: string[]}`. The `gpu` tier needs an adapter with f16 and at least
-2 GiB of addressable buffer; `none` means not even WASM SIMD, and the feature
+1 GiB of addressable buffer (WebLLM's floor; adapters report their limits with alignment slack, so 2 GiB exactly refused real hardware); `none` means not even WASM SIMD, and the feature
 hides itself. The reasons are what Settings shows ("no WebGPU", "not enough
 GPU memory") instead of a missing row.
 
