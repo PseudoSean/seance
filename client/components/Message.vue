@@ -77,7 +77,7 @@
 				><ParsedMessage v-else :message="message" />
 				<span v-if="message.editOf" class="msg-edited" :title="editedTitle">(edited)</span>
 				<TranslationLine
-					v-if="channel"
+					v-if="channel && (!message.redacted || revealed)"
 					:message="message"
 					:channel="channel"
 					:network="network"
@@ -161,7 +161,7 @@
 				><ParsedMessage v-else :network="network" :message="message" />
 				<span v-if="message.editOf" class="msg-edited" :title="editedTitle">(edited)</span>
 				<TranslationLine
-					v-if="channel"
+					v-if="channel && (!message.redacted || revealed)"
 					:message="message"
 					:channel="channel"
 					:network="network"

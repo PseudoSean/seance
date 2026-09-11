@@ -90,6 +90,15 @@ function queueFor(network: ClientNetwork): TranslateQueue {
 function applyUpdate(id: number, update: QueueUpdate): void {
 	const existing = store.state.translations[id];
 
+	// The queue is finished with the item, so the context it carries (up
+	// to CONTEXT_LINES of text, the names and a copy of the channel's term
+	// memory) goes with it. Never on "failed": retryTranslation's fast
+	// path is what that entry survives for; anything else is rebuilt by
+	// retranslate.
+	if (update.status === "done" || update.status === "dropped") {
+		items.delete(id);
+	}
+
 	switch (update.status) {
 		case "pending":
 			if (existing) {
@@ -120,6 +129,15 @@ function applyUpdate(id: number, update: QueueUpdate): void {
 			}
 
 			break;
+	}
+}
+
+/** Drop the remembered queue items the predicate matches. */
+function forgetItems(match: (entry: {network: string; item: QueueItem}) => boolean): void {
+	for (const [id, entry] of items) {
+		if (match(entry)) {
+			items.delete(id);
+		}
 	}
 }
 
@@ -319,16 +337,33 @@ export function initReader(): void {
 		forgetChannel(target.network.uuid, target.channel.name);
 		priors.delete(channelKey(target.network.uuid, target.channel.name));
 		arrivals.delete(target.channel.id);
+		forgetItems(({item}) => item.chanId === target.channel.id);
+		store.commit(
+			"translationRemoveMany",
+			target.channel.messages.map((m) => m.id)
+		);
 		store.commit(
 			"translateChannelRemove",
 			channelKey(target.network.uuid, target.channel.name)
 		);
 	});
 
+	// Registered before socket-events/quit.ts (import order), so the
+	// network and its messages are still in the store when this runs.
 	socket.on("quit", (data) => {
 		queues.get(data.network)?.cancelAll();
 		queues.delete(data.network);
 		forgetNetwork(data.network);
+		forgetItems(({network}) => network === data.network);
+
+		const network = store.state.networks.find((n) => n.uuid === data.network);
+
+		if (network) {
+			store.commit(
+				"translationRemoveMany",
+				network.channels.flatMap((c) => c.messages.map((m) => m.id))
+			);
+		}
 
 		for (const key of Object.keys(store.state.translateChannels)) {
 			if (key.startsWith(`${data.network}/`)) {

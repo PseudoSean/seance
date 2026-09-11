@@ -126,7 +126,14 @@ socket.on("msg", function (data) {
 	}
 
 	if (messageLimit > 0 && channel.messages.length > messageLimit) {
-		channel.messages.splice(0, channel.messages.length - messageLimit);
+		const trimmed = channel.messages.splice(0, channel.messages.length - messageLimit);
+
+		// Their translations (client/js/translate/reader.ts) are keyed by
+		// message id and can never be reached again: they leave with them.
+		store.commit(
+			"translationRemoveMany",
+			trimmed.map((m) => m.id)
+		);
 		channel.moreHistoryAvailable = true;
 	}
 

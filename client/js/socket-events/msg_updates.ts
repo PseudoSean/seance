@@ -37,6 +37,11 @@ socket.on("msg:redact", function (data) {
 	if (message) {
 		applyRedaction(message, {by: data.by, reason: data.reason, time: data.time});
 	}
+
+	// A deleted message keeps its text for click-to-reveal, but its
+	// translation is a second, unhidden copy of that text: drop it, so a
+	// reveal shows the original alone (Message.vue gates the line too).
+	store.commit("translationRemove", data.id);
 });
 
 socket.on("msg:edit", function (data) {

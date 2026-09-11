@@ -237,6 +237,8 @@ type Mutations = {
 	translationEntry(state: State, payload: {id: number; entry: TranslationEntry}): void;
 	translationPatch(state: State, payload: {id: number; patch: Partial<TranslationEntry>}): void;
 	translationRemove(state: State, id: number): void;
+	/** Prune several at once: a channel's messages left the store (trim, part, quit). */
+	translationRemoveMany(state: State, ids: number[]): void;
 	translateChannelSet(state: State, payload: {key: string; value: ChannelTranslation}): void;
 	translateChannelRemove(state: State, key: string): void;
 	translateChannelsLoaded(state: State, all: Record<string, ChannelTranslation>): void;
@@ -338,6 +340,11 @@ const mutations: Mutations = {
 	},
 	translationRemove(state, id) {
 		delete state.translations[id];
+	},
+	translationRemoveMany(state, ids) {
+		for (const id of ids) {
+			delete state.translations[id];
+		}
 	},
 	translateChannelSet(state, {key, value}) {
 		state.translateChannels[key] = value;
