@@ -159,6 +159,9 @@ describe("the <3 theme's type", function () {
 		}
 
 		expect(css).to.match(/#chat \.msg \.user[\s\S]{0,160}font-family:\s*"Baloo 2"/);
+		expect(css, "the header is paper like the composer").to.match(
+			/#chat \.header \{\s*background: var\(--heart-paper\);/
+		);
 		expect(css).to.match(
 			/body,[\s\S]{0,200}font-family:\s*Nunito[\s\S]{0,80}font-weight:\s*400/
 		);
