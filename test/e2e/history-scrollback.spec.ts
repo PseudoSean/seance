@@ -35,7 +35,18 @@ function webIrcUri(url: string) {
 	return `web+irc://${new URL(url).host}/${channel}`;
 }
 
-/** Seed the channel over a plain TCP connection: ROWS messages, then leave. */
+let seedSocket: net.Socket | null = null;
+
+// The seeder stays in the channel: nefarious2 (2026-09-08) treats a
+// channel that emptied and was rejoined as a new incarnation and hides the
+// earlier rows, which is the ircd's business, not this test's.
+test.afterEach(() => {
+	seedSocket?.write("QUIT :seeded\r\n");
+	seedSocket?.end();
+	seedSocket = null;
+});
+
+/** Seed the channel over a plain TCP connection: ROWS messages, and stay. */
 function seedHistory(): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const s = net.connect(seedPort, seedHost);
@@ -65,10 +76,9 @@ function seedHistory(): Promise<void> {
 
 						if (++n >= ROWS) {
 							clearInterval(tick);
-							// let the last rows persist, then leave
+							// let the last rows persist
 							setTimeout(() => {
-								s.write("QUIT :seeded\r\n");
-								s.end();
+								seedSocket = s;
 								resolve();
 							}, 1500);
 						}
@@ -180,20 +190,32 @@ test("scrollback never overlaps requests and keeps the anchor across every prepe
 		await expect.poll(() => sent, {timeout: 10_000}).toBe(sentBefore + 1);
 		const anchorAtTop = await anchor(page);
 
-		// Provoke a second request while the first is in flight.
+		// Provoke a second request while the first is in flight. A fast
+		// server may have landed the page already (the bed answers in
+		// ~100 ms); then the scroll back to 0 is a scroll of the user's own
+		// on top of a finished prepend and the round's anchor check would be
+		// meaningless -- so the round only asserts what its timing allows.
 		await scrollTo(page, 240);
 		await page.waitForTimeout(40);
+		const stillLoading = landed === landedBefore;
 		await scrollTo(page, 0);
 		await page.waitForTimeout(150);
-		expect(sent, `round ${round}: a second request went out while one was loading`).toBe(
-			sentBefore + 1
-		);
+
+		if (stillLoading) {
+			expect(sent, `round ${round}: a second request went out while one was loading`).toBe(
+				sentBefore + 1
+			);
+		}
 
 		await expect.poll(() => landed, {timeout: 30_000}).toBeGreaterThanOrEqual(landedBefore + 1);
 		await page.waitForTimeout(800); // render + scroll restore settle
 
 		if (!(await page.isVisible(".show-more button"))) {
 			break; // history exhausted
+		}
+
+		if (!stillLoading) {
+			continue;
 		}
 
 		// Invariant 2: the row that was at the top is still where it was --
@@ -210,4 +232,73 @@ test("scrollback never overlaps requests and keeps the anchor across every prepe
 
 	// Invariant 1: never two history requests in flight.
 	expect(maxInFlight, `max in flight (sent ${sent}, landed ${landed})`).toBeLessThanOrEqual(1);
+});
+
+test("a compensation the scroller drops is restored, and does not chain-load", async ({page}) => {
+	// WebKit ignores a scrollTop written while a momentum scroll or a held
+	// finger is active: the prepend lands, the view stays at the top, and
+	// the button (re-rendered with every page) re-fires the observer -- one
+	// lost compensation used to load page after page and leave the user
+	// hours back. Emulated here by forcing the view back to 0 right after
+	// the compensation applied.
+	test.setTimeout(120_000);
+	await seedHistory();
+
+	let sent = 0;
+	let landed = 0;
+	const batches = new Set<string>();
+	page.on("websocket", (ws) => {
+		ws.on("framesent", (f) => {
+			if (/^(@\S+ )?CHATHISTORY (BEFORE|LATEST) /i.test(String(f.payload))) {
+				sent++;
+			}
+		});
+		ws.on("framereceived", (f) => {
+			const p = String(f.payload);
+			const open = /BATCH \+(\S+) chathistory/i.exec(p);
+
+			if (open) {
+				batches.add(open[1]);
+			}
+
+			const close = /BATCH -(\S+)/i.exec(p);
+
+			if (close && batches.delete(close[1])) {
+				landed++;
+			}
+		});
+	});
+
+	await connect(page);
+	await expect.poll(() => landed, {timeout: 30_000}).toBeGreaterThanOrEqual(1);
+	await page.waitForTimeout(500);
+
+	const scrollTopOf = () =>
+		page.evaluate(() => (document.querySelector(".chat") as HTMLElement).scrollTop);
+
+	const sentBefore = sent;
+	const landedBefore = landed;
+	await scrollTo(page, 0);
+	await expect.poll(() => sent, {timeout: 10_000}).toBe(sentBefore + 1);
+	const anchorAtTop = await anchor(page);
+	await expect.poll(() => landed, {timeout: 30_000}).toBe(landedBefore + 1);
+	// Let the compensation land, then take it away as WebKit would.
+	await expect.poll(scrollTopOf, {timeout: 5_000}).toBeGreaterThan(0);
+	await scrollTo(page, 0);
+	await page.waitForTimeout(700);
+
+	expect(Math.abs((await anchor(page)) - anchorAtTop), "anchor not restored").toBeLessThanOrEqual(
+		4
+	);
+	expect(await scrollTopOf(), "view left at the top").toBeGreaterThan(0);
+	expect(sent, "chain-loaded after the lost compensation").toBe(sentBefore + 1);
+
+	// A scroll of the user's own, later, loads exactly one more page.
+	await page.waitForTimeout(500);
+	await scrollTo(page, 0);
+	await expect.poll(() => sent, {timeout: 10_000}).toBe(sentBefore + 2);
+	await expect.poll(() => landed, {timeout: 30_000}).toBe(landedBefore + 2);
+	await page.waitForTimeout(800);
+	expect(sent, "more than one page per user scroll").toBe(sentBefore + 2);
+	expect(await scrollTopOf()).toBeGreaterThan(0);
 });
