@@ -208,4 +208,31 @@ describe("the <3 theme's meadow", function () {
 		expect(css).to.match(/@media \(max-width: 600px\)[\s\S]*--strip: 6\.5rem/);
 		expect(css).to.match(/text-shadow: 0 0 6px var\(--heart-sky\)/);
 	});
+
+	it("computes the seeded hue on #chat-container, not on :root, so the tint actually varies", function () {
+		const meadowSection = css.slice(css.indexOf("/* ---- meadow ---- */"));
+
+		const bareStart = meadowSection.indexOf("#chat-container {");
+		expect(bareStart, "a bare #chat-container rule").to.be.greaterThan(-1);
+		const bodyStart = meadowSection.indexOf("{", bareStart) + 1;
+		const bodyEnd = meadowSection.indexOf("}", bodyStart);
+		const chatContainerRule = meadowSection.slice(bodyStart, bodyEnd);
+
+		expect(chatContainerRule).to.include("--heart-hill-hue:");
+		expect(chatContainerRule).to.include("var(--channel-seed, 0.5)");
+
+		for (const match of meadowSection.matchAll(/:root\s*\{([^}]*)\}/g)) {
+			expect(match[1]).to.not.include("--heart-hill-hue:");
+		}
+	});
+
+	it("keeps the clouds on screen, just still, under reduced motion", function () {
+		const reducedMotionBlock = css.slice(
+			css.indexOf("@media (prefers-reduced-motion: reduce)")
+		);
+
+		expect(reducedMotionBlock).to.include("background-position");
+		expect(reducedMotionBlock).to.include("22%");
+		expect(reducedMotionBlock).to.include("68%");
+	});
 });

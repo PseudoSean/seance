@@ -513,13 +513,8 @@ strong,
  * on the scroll container, so it stays put while messages scroll. Which
  * hills, where, and the tint of the green come from the conversation's seed
  * (data-scene, --channel-seed on #chat-container). The animals come in plan 2. */
-/* stylelint-disable-next-line no-duplicate-selectors -- the meadow's seeded hill tokens, kept with this section */
+/* stylelint-disable-next-line no-duplicate-selectors -- the meadow's neutral hill-layout defaults */
 :root {
-	--heart-hill-hue: calc(140deg + (var(--channel-seed, 0.5) - 0.5) * 60deg);
-	--heart-hill-far: hsl(var(--heart-hill-hue) 36% 90%);
-	--heart-hill-mid: hsl(var(--heart-hill-hue) 36% 84%);
-	--heart-ground: hsl(var(--heart-hill-hue) 34% 78%);
-
 	/* two mid hills: x (left edge as % of width), w (width %), h (height as a share of --strip) */
 	--heart-hill-1-x: 10%;
 	--heart-hill-1-w: 60%;
@@ -527,6 +522,17 @@ strong,
 	--heart-hill-2-x: 55%;
 	--heart-hill-2-w: 55%;
 	--heart-hill-2-h: 0.19;
+}
+
+/* The seeded hue and the greens derived from it: --channel-seed only ever
+ * exists as an inline style on #chat-container, so these have to be declared
+ * here (not on :root, which never sees it) or var(--channel-seed) always
+ * falls back and the tint never varies. */
+#chat-container {
+	--heart-hill-hue: calc(140deg + (var(--channel-seed, 0.5) - 0.5) * 60deg);
+	--heart-hill-far: hsl(var(--heart-hill-hue) 36% 90%);
+	--heart-hill-mid: hsl(var(--heart-hill-hue) 36% 84%);
+	--heart-ground: hsl(var(--heart-hill-hue) 34% 78%);
 }
 
 #chat-container[data-scene="0"] {
@@ -666,5 +672,22 @@ strong,
 	#chat .chat {
 		animation: none !important;
 		transition: none !important;
+	}
+
+	/* The clouds' animation is off, but they still show: parked inside the
+	 * box instead of at the off-screen start position the animation begins
+	 * from. Only the two cloud entries change; the rest restate the base
+	 * rule's positions unchanged. */
+	#chat .chat-view[data-type="channel"] .chat,
+	#chat .chat-view[data-type="query"] .chat {
+		background-position:
+			22% calc(100% - var(--strip) * 0.8),
+			68% calc(100% - var(--strip) * 0.6),
+			0 100%,
+			var(--heart-hill-2-x) 100%,
+			var(--heart-hill-1-x) 100%,
+			0 100%,
+			-5% 100%,
+			0 0;
 	}
 }
