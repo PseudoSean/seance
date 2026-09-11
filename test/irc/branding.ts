@@ -449,4 +449,61 @@ describe("branding", function () {
 			);
 		});
 	});
+
+	describe("translation", function () {
+		it("is absent by default", function () {
+			expect(normalizeBranding({}).translation).to.equal(undefined);
+		});
+
+		it("parses the whole block", function () {
+			const config = normalizeBranding({
+				translation: {
+					enabled: false,
+					modelBase: "https://models.example.test/",
+					llm: {
+						model: "gemma-3-1b-it-q4f16_1-MLC",
+						lib: "https://models.example.test/g.wasm",
+					},
+					cpu: {nllb: "mirror/nllb", opus: {"fi-en": "mirror/opus-fi-en"}},
+					routes: {en: {de: ["opus:de-en", "nllb"]}},
+					glossary: [["rig", "Testaufbau"]],
+					defaultTarget: "de",
+				},
+			});
+
+			expect(config.translation).to.deep.equal({
+				enabled: false,
+				modelBase: "https://models.example.test/",
+				llm: {
+					model: "gemma-3-1b-it-q4f16_1-MLC",
+					lib: "https://models.example.test/g.wasm",
+				},
+				cpu: {nllb: "mirror/nllb", opus: {"fi-en": "mirror/opus-fi-en"}},
+				routes: {en: {de: ["opus:de-en", "nllb"]}},
+				glossary: [["rig", "Testaufbau"]],
+				defaultTarget: "de",
+			});
+		});
+
+		it("drops what it cannot use and keeps the rest", function () {
+			const config = normalizeBranding({
+				translation: {
+					enabled: "yes",
+					modelBase: "not a url",
+					llm: "Qwen",
+					cpu: {nllb: 7, opus: {"de-en": 1, "fr-en": "ok"}},
+					routes: {en: {de: "nllb", fr: ["llm", 3]}},
+					glossary: [["a", "b"], ["c"], "d"],
+					defaultTarget: 5,
+				},
+			});
+
+			expect(config.translation).to.deep.equal({
+				cpu: {opus: {"fr-en": "ok"}},
+				routes: {en: {fr: ["llm"]}},
+				glossary: [["a", "b"]],
+			});
+			expect(normalizeBranding({translation: "off"}).translation).to.equal(undefined);
+		});
+	});
 });

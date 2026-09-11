@@ -184,6 +184,28 @@ export const UPLOAD_PRESETS: Record<string, BrandingUploads> = {
 	},
 };
 
+/**
+ * Client-side translation (client/js/translate, docs/resources/translation.md).
+ * Everything is optional; absent means the shipped defaults with the public
+ * Hugging Face CDN as the weight source.
+ */
+export interface BrandingTranslation {
+	/** Default true. `false` hides the feature and never starts the worker. */
+	enabled?: boolean;
+	/** Mirror base URL for the weights; the layout is documented in branding.md § Translation. */
+	modelBase?: string;
+	/** The WebLLM model id, and its compiled library URL when it is not a prebuilt one. */
+	llm?: {model?: string; lib?: string};
+	/** The NLLB repo and OPUS-MT repos keyed "from-to". */
+	cpu?: {nllb?: string; opus?: Record<string, string>};
+	/** Route overrides: target → source (or "*") → ordered candidates. */
+	routes?: Record<string, Record<string, string[]>>;
+	/** Network vocabulary seeded into every channel's term memory. */
+	glossary?: [string, string][];
+	/** The reading target when the user has not chosen one; defaults to the browser language. */
+	defaultTarget?: string;
+}
+
 export interface BrandingConfig {
 	appName: string;
 	shortName?: string;
@@ -199,6 +221,8 @@ export interface BrandingConfig {
 	strings?: Record<string, string>;
 	/** File uploader endpoint. Absent means uploads are off. */
 	uploads?: BrandingUploads;
+	/** Client-side translation; absent means defaults. */
+	translation?: BrandingTranslation;
 }
 
 /** Upload size limit applied when `uploads.maxSizeBytes` is unset. */
@@ -572,6 +596,129 @@ function normalizeStrings(value: unknown): Record<string, string> {
 	return strings;
 }
 
+function normalizeRoutes(value: unknown): Record<string, Record<string, string[]>> | undefined {
+	if (!isRecord(value)) {
+		return undefined;
+	}
+
+	const routes: Record<string, Record<string, string[]>> = {};
+
+	for (const [to, sources] of Object.entries(value)) {
+		if (!isRecord(sources)) {
+			continue;
+		}
+
+		const forTarget: Record<string, string[]> = {};
+
+		for (const [from, candidates] of Object.entries(sources)) {
+			const list = normalizeStringList(candidates);
+
+			if (list && list.length > 0) {
+				forTarget[from] = list;
+			}
+		}
+
+		if (Object.keys(forTarget).length > 0) {
+			routes[to] = forTarget;
+		}
+	}
+
+	return Object.keys(routes).length > 0 ? routes : undefined;
+}
+
+function normalizeGlossary(value: unknown): [string, string][] | undefined {
+	if (!Array.isArray(value)) {
+		return undefined;
+	}
+
+	const pairs: [string, string][] = [];
+
+	for (const entry of value) {
+		if (
+			Array.isArray(entry) &&
+			entry.length === 2 &&
+			typeof entry[0] === "string" &&
+			typeof entry[1] === "string"
+		) {
+			pairs.push([entry[0], entry[1]]);
+		}
+	}
+
+	return pairs.length > 0 ? pairs : undefined;
+}
+
+export function normalizeTranslation(value: unknown): BrandingTranslation | undefined {
+	if (!isRecord(value)) {
+		return undefined;
+	}
+
+	const translation: BrandingTranslation = {};
+	const enabled = optionalBoolean(value.enabled);
+	const modelBase = optionalUrl(value.modelBase);
+	const defaultTarget = optionalString(value.defaultTarget);
+
+	if (enabled !== undefined) {
+		translation.enabled = enabled;
+	}
+
+	if (modelBase !== undefined) {
+		translation.modelBase = modelBase;
+	}
+
+	if (isRecord(value.llm)) {
+		const llm: {model?: string; lib?: string} = {};
+		const model = optionalString(value.llm.model);
+		const lib = optionalUrl(value.llm.lib);
+
+		if (model !== undefined) {
+			llm.model = model;
+		}
+
+		if (lib !== undefined) {
+			llm.lib = lib;
+		}
+
+		if (Object.keys(llm).length > 0) {
+			translation.llm = llm;
+		}
+	}
+
+	if (isRecord(value.cpu)) {
+		const cpu: {nllb?: string; opus?: Record<string, string>} = {};
+		const nllb = optionalString(value.cpu.nllb);
+		const opus = normalizeStringMap(value.cpu.opus);
+
+		if (nllb !== undefined) {
+			cpu.nllb = nllb;
+		}
+
+		if (opus && Object.keys(opus).length > 0) {
+			cpu.opus = opus;
+		}
+
+		if (Object.keys(cpu).length > 0) {
+			translation.cpu = cpu;
+		}
+	}
+
+	const routes = normalizeRoutes(value.routes);
+	const glossary = normalizeGlossary(value.glossary);
+
+	if (routes) {
+		translation.routes = routes;
+	}
+
+	if (glossary) {
+		translation.glossary = glossary;
+	}
+
+	if (defaultTarget !== undefined) {
+		translation.defaultTarget = defaultTarget;
+	}
+
+	return Object.keys(translation).length > 0 ? translation : undefined;
+}
+
 /**
  * Validate a parsed `config.json` and merge it over the defaults. Unknown or
  * malformed fields are dropped rather than failing the whole file, so a typo
@@ -623,6 +770,7 @@ export function normalizeBranding(
 	const theme = optionalString(source.theme) ?? defaults.theme;
 	const themeColor = optionalString(source.themeColor) ?? defaults.themeColor;
 	const uploads = normalizeUploads(source.uploads) ?? defaults.uploads;
+	const translation = normalizeTranslation(source.translation) ?? defaults.translation;
 
 	if (shortName !== undefined) {
 		config.shortName = shortName;
@@ -642,6 +790,10 @@ export function normalizeBranding(
 
 	if (uploads !== undefined) {
 		config.uploads = uploads;
+	}
+
+	if (translation !== undefined) {
+		config.translation = translation;
 	}
 
 	return config;
