@@ -114,6 +114,9 @@ export class TranslateService {
 		this.inFlight++;
 		this.clearIdle();
 
+		let attemptedView: ModelView | null = null;
+		let completed = false;
+
 		try {
 			for (;;) {
 				const route = await this.route(request.from, request.to);
@@ -128,6 +131,8 @@ export class TranslateService {
 				const req: TranslateRequest = {...request, id, model: route.ref.id};
 				const view = this.view(route.ref);
 				let yielded = false;
+
+				attemptedView = view;
 
 				try {
 					for await (const chunk of client.translate(
@@ -150,6 +155,8 @@ export class TranslateService {
 						this.publish();
 					}
 
+					completed = true;
+
 					return;
 				} catch (e) {
 					if (this.generation !== gen) {
@@ -164,6 +171,12 @@ export class TranslateService {
 				}
 			}
 		} finally {
+			if (attemptedView && attemptedView.status === "downloading" && !completed) {
+				attemptedView.status = "idle";
+				attemptedView.fraction = 0;
+				this.publish();
+			}
+
 			this.inFlight--;
 			this.scheduleIdle();
 		}
@@ -266,8 +279,15 @@ export class TranslateService {
 			view.fraction = 0;
 			view.error = null;
 		} catch (e) {
-			view.status = "failed";
-			view.error = e instanceof Error ? e.message : String(e);
+			const message = e instanceof Error ? e.message : String(e);
+
+			if (message === WORKER_DISPOSED) {
+				view.error = null;
+			} else {
+				view.status = "failed";
+				view.error = message;
+			}
+
 			throw e;
 		} finally {
 			this.inFlight--;

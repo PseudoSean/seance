@@ -33,11 +33,16 @@ function rig(tier: Capability["tier"] = "gpu", enabled = true) {
 	const workers: {terminated: boolean}[] = [];
 	const cached = new Set<string>();
 	let failDelete: Error | null = null;
+	let hangDelete = false;
 	const cache: CacheApi = {
 		has(ref) {
 			return Promise.resolve(cached.has(ref.id));
 		},
 		delete(ref) {
+			if (hangDelete) {
+				return new Promise<void>(() => {});
+			}
+
 			if (failDelete) {
 				const error = failDelete;
 
@@ -90,6 +95,9 @@ function rig(tier: Capability["tier"] = "gpu", enabled = true) {
 		seq2seq,
 		failNextDelete(error: Error) {
 			failDelete = error;
+		},
+		hangNextDelete() {
+			hangDelete = true;
 		},
 	};
 }
@@ -364,5 +372,46 @@ describe("translate/service", () => {
 
 		expect(message).to.equal(TRANSLATION_UNAVAILABLE);
 		expect(r.workers.length).to.equal(1);
+	});
+
+	it("a teardown during a delete leaves the view as it was", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		r.hangNextDelete();
+
+		let message = "";
+		const pending = r.service.deleteModel(catalog.nllb).catch((e: Error) => {
+			message = e.message;
+		});
+
+		r.service.pagehide();
+		await pending;
+
+		expect(message).to.equal(WORKER_DISPOSED);
+		const view = (await r.service.models()).find((v) => v.ref.id === catalog.nllb.id);
+
+		expect(view).to.include({status: "idle", error: null});
+	});
+
+	it("an abandoned translation does not leave its view downloading", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		let last: {status: string; fraction: number} | null = null;
+
+		r.service.onModels((views) => {
+			const llmView = views.find((v) => v.ref.id === catalog.llm.id);
+
+			if (llmView) {
+				last = {status: llmView.status, fraction: llmView.fraction};
+			}
+		});
+
+		for await (const chunk of r.service.translate(base)) {
+			expect(chunk.text).to.equal("llm:Hallo");
+			break;
+		}
+
+		expect(last).to.deep.equal({status: "idle", fraction: 0});
+		r.service.dispose();
 	});
 });
