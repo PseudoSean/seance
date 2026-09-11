@@ -140,16 +140,27 @@ describe("the <3 theme's type", function () {
 			expect(css).to.include(`url("${file}")`);
 		}
 
-		expect(css).to.match(/font-family:\s*Nunito/);
-		expect(css).to.match(/font-weight:\s*600/);
-		expect(css).to.match(/font-family:\s*"Baloo 2"/);
+		expect(css).to.match(/#chat \.msg \.user[\s\S]{0,160}font-family:\s*"Baloo 2"/);
+		expect(css).to.match(
+			/body,[\s\S]{0,200}font-family:\s*Nunito[\s\S]{0,80}font-weight:\s*600/
+		);
+	});
+
+	it("widens the 12h timestamp column past a 4.5rem/5.75rem wrap under Nunito", function () {
+		const typeSection = css.slice(
+			css.indexOf("/* ---- type ---- */"),
+			css.indexOf("/* ---- motion ---- */")
+		);
+		expect(typeSection).to.match(/#chat\.time-12h \.time \{\s*width: 5\.5rem;/);
+		expect(typeSection).to.match(/#chat\.time-seconds\.time-12h \.time \{\s*width: 7\.25rem;/);
+		expect(typeSection).to.not.match(/font-variant-numeric:\s*tabular-nums/);
 	});
 });
 
 describe("the <3 theme's motion", function () {
 	it("fades messages in, raises the chrome, glows a mention, and stands down under reduced motion", function () {
 		expect(css).to.include("@keyframes heart-fade");
-		expect(css).to.match(/#chat \.msg \{[^}]*animation: heart-fade 340ms ease-out/);
+		expect(css).to.match(/#chat \.msg \{[^}]*animation: heart-fade 340ms ease-out backwards/);
 		expect(css).to.include("@keyframes heart-rise");
 		expect(css).to.include("@keyframes heart-glow");
 		expect(css).to.match(
