@@ -1,0 +1,112 @@
+import {expect} from "chai";
+import {
+	STORAGE_KEY,
+	TERM_CAP,
+	channelKey,
+	defaultChannelTranslation,
+	forgetChannel,
+	forgetNetwork,
+	getChannelTranslation,
+	loadAll,
+	rememberTerm,
+	setChannelTranslation,
+	splitKey,
+	useStorageBackend,
+} from "../../client/js/translate/channelStore";
+
+function memoryBackend() {
+	const data = new Map<string, string>();
+
+	return {
+		data,
+		get(key: string) {
+			return data.get(key) ?? null;
+		},
+		set(key: string, value: string) {
+			data.set(key, value);
+		},
+		remove(key: string) {
+			data.delete(key);
+		},
+	};
+}
+
+describe("translate/channelStore", () => {
+	let backend = memoryBackend();
+
+	beforeEach(() => {
+		backend = memoryBackend();
+		useStorageBackend(backend);
+	});
+
+	afterEach(() => useStorageBackend(null));
+
+	it("keys are network uuid and lower-cased channel name", () => {
+		expect(channelKey("n1", "#Seance")).to.equal("n1/#seance");
+		expect(splitKey("n1/#seance")).to.deep.equal({network: "n1", name: "#seance"});
+	});
+
+	it("an unknown channel is off with the defaults", () => {
+		expect(getChannelTranslation("n1", "#seance")).to.deep.equal(defaultChannelTranslation());
+		expect(defaultChannelTranslation()).to.deep.equal({
+			read: null,
+			write: null,
+			formality: "auto",
+			variant: "",
+			since: 0,
+			terms: [],
+		});
+	});
+
+	it("switching reading on records the moment, and persists", () => {
+		const before = Date.now();
+		const state = setChannelTranslation("n1", "#Seance", {read: "en"});
+
+		expect(state.read).to.equal("en");
+		expect(state.since).to.be.at.least(before);
+		expect(JSON.parse(backend.data.get(STORAGE_KEY) as string)["n1/#seance"].read).to.equal(
+			"en"
+		);
+		expect(getChannelTranslation("n1", "#seance").read).to.equal("en");
+	});
+
+	it("changing the language while on keeps the moment; switching off clears it", () => {
+		const first = setChannelTranslation("n1", "#seance", {read: "en"}).since;
+
+		expect(setChannelTranslation("n1", "#seance", {read: "de"}).since).to.equal(first);
+		expect(setChannelTranslation("n1", "#seance", {read: null}).since).to.equal(0);
+	});
+
+	it("term memory dedupes by source, keeps the newest, and is capped", () => {
+		rememberTerm("n1", "#seance", ["rig", "Testaufbau"]);
+		rememberTerm("n1", "#seance", ["rig", "Prüfstand"]);
+		expect(getChannelTranslation("n1", "#seance").terms).to.deep.equal([["rig", "Prüfstand"]]);
+
+		for (let i = 0; i < TERM_CAP + 5; i++) {
+			rememberTerm("n1", "#seance", [`t${i}`, `x${i}`]);
+		}
+
+		const terms = getChannelTranslation("n1", "#seance").terms;
+
+		expect(terms.length).to.equal(TERM_CAP);
+		expect(terms[terms.length - 1]).to.deep.equal([`t${TERM_CAP + 4}`, `x${TERM_CAP + 4}`]);
+		expect(terms.some(([source]) => source === "rig")).to.equal(false);
+	});
+
+	it("forgetting a channel or a network removes its entries", () => {
+		setChannelTranslation("n1", "#a", {read: "en"});
+		setChannelTranslation("n1", "#b", {read: "en"});
+		setChannelTranslation("n2", "#a", {read: "en"});
+		forgetChannel("n1", "#A");
+		expect(Object.keys(loadAll())).to.deep.equal(["n1/#b", "n2/#a"]);
+		forgetNetwork("n1");
+		expect(Object.keys(loadAll())).to.deep.equal(["n2/#a"]);
+	});
+
+	it("survives unreadable storage", () => {
+		backend.set(STORAGE_KEY, "nonsense");
+		expect(loadAll()).to.deep.equal({});
+		backend.set(STORAGE_KEY, JSON.stringify({"n1/#a": {read: 7, terms: "x"}, "n1/#b": null}));
+		expect(loadAll()).to.deep.equal({"n1/#a": defaultChannelTranslation()});
+	});
+});
