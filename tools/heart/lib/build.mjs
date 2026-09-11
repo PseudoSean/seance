@@ -165,7 +165,7 @@ export function buildAnimal(def) {
 	const gap = sequence.period - sequence.first - onStage;
 	if (gap < 2)
 		problems.push(`the off-stage gap is ${gap.toFixed(1)} s (need ≥ 2 s): raise the period`);
-	const x0 = -(vb.x + vb.w);
+	const x0 = -vb.x;
 	const xEnd = x0 + xs[xs.length - 1];
 	if (!(xEnd + vb.x + vb.w <= 0 || xEnd + vb.x >= stageW)) {
 		problems.push(
@@ -213,8 +213,12 @@ export function buildAnimal(def) {
 	}));
 	const P = sequence.period;
 	const xLast = (x0 + xs[xs.length - 1]) * k;
+	const fade = Math.min(1, onStage / 4);
 	const travel = {
 		period: P,
+		first: sequence.first,
+		onStage,
+		fade,
 		keyTimes: [
 			0,
 			...poses.map((p) => (sequence.first + p.t) / P),

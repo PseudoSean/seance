@@ -63,6 +63,19 @@ describe("the <3 theme's generated animals (client/themes/heart/*.svg)", functio
 				expect(svg).to.include('type="translate"');
 			});
 
+			it("fades the visit in and out on the outer group, invisible before its first sample", function () {
+				const svg = read(`${name}.svg`);
+				expect(svg).to.include('<g opacity="0">');
+				// the outer group's fade is the first <animate> in the file — the
+				// puppy's hearts carry their own opacity animate too, but inside
+				// the inner group, after the outer group's translate
+				const first = svg.indexOf("<animate ");
+				expect(first).to.be.greaterThan(-1);
+				const tag = svg.slice(first, svg.indexOf("/>", first) + 2);
+				expect(tag).to.include('attributeName="opacity"');
+				expect(tag).to.include('calcMode="linear" values="0;0;1;1;0;0"');
+			});
+
 			it("keeps the far file the same shape in the far tint, and the stills static", function () {
 				const strip = (s: string) => s.replace(/fill="#[0-9a-f]{6}"/g, "");
 				expect(strip(read(`${name}-far.svg`))).to.equal(strip(read(`${name}.svg`)));

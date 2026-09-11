@@ -139,6 +139,9 @@ describe("tools/heart build", function () {
 		expect(audit.speeds[2].mean).to.be.lessThan(1); // the wobble: planted and still
 		expect(files["blob-still.svg"]).to.not.include("<animate");
 		expect(files["blob-far.svg"]).to.include('fill="#e4d3e2"');
+		// fades in and out over the visit, invisible before its first sample
+		expect(svg).to.include('attributeName="opacity" calcMode="linear" values="0;0;1;1;0;0"');
+		expect(svg).to.include('<g opacity="0">');
 	});
 
 	it("refuses a visit that ends on stage", function () {

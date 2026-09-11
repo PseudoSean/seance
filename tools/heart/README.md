@@ -29,19 +29,25 @@ leaves the old files in place and exits 1.
    A gait stores one cycle; everything else stores every frame.
 4. **Travel** (`lib/travel.mjs`): the lowest planted foot slides back by exactly what the body
    moves forward, so integrating its velocity gives a travel that never slips and a sit that
-   never drifts. Segments marked `turn` flip the facing. A segment may set `travel` (units/s)
-   to drive its own ground speed instead, when the rig's swing does not lift the feet clearly
-   enough for the stance measurement to trust — the approved mockups' puppy and bunny don't;
-   the audit still prints the measured stance speed beside the one actually applied.
+   never drifts. None of these animals ever walks backward on purpose, so a planted foot
+   measured moving forward relative to the body — a touch-down mid-swing, common across a
+   gait blend — clamps that frame's velocity at 0 rather than reading it as the body stepping
+   back. Segments marked `turn` flip the facing. A segment may set `travel` (units/s) to drive
+   its own ground speed instead, when the rig's swing does not lift the feet clearly enough
+   for the stance measurement to trust — the approved mockups' puppy and bunny don't; the
+   audit still prints the measured stance speed beside the one actually applied.
 5. **Files** (`lib/svg.mjs`, `lib/build.mjs`): a wide stage (`sequence.stage.aspect` × the
-   animal's height); one `<path>` per outline, far legs first, each morphing through the
-   clips (`<animate attributeName="d">`, integer relative coordinates) chained by syncbase
-   timing so a gait repeats and the loop restarts after the off-stage gap; the travel as an
-   animated translate; the turn as a discrete mirror about the animal's centre. Four files
-   per animal: the near tint, the distant-visitor tint (`-far`), and a still of each for
-   reduced motion. Durations are written to four decimals, so a chain of clips runs a few
-   ten-thousandths of a second short of the loop's travel transform each period — about
-   three seconds a week on a page left open, not worth twelve churned files.
+   animal's height), the animal starting flush with the stage's left edge; one `<path>` per
+   outline, far legs first, each morphing through the clips (`<animate attributeName="d">`,
+   integer relative coordinates) chained by syncbase timing so a gait repeats and the loop
+   restarts after the off-stage gap; the travel as an animated translate; the turn as a
+   discrete mirror about the animal's centre; the whole visit faded in and out over a second
+   (or a quarter of the time on stage, if that is shorter) so the animal never just appears or
+   is cut off at a stage edge inside the visible chat. Four files per animal: the near tint,
+   the distant-visitor tint (`-far`), and a still of each for reduced motion. Durations are
+   written to four decimals, so a chain of clips runs a few ten-thousandths of a second short
+   of the loop's travel transform each period — about three seconds a week on a page left
+   open, not worth twelve churned files.
 
 ## Rules a rig must keep
 
@@ -65,6 +71,9 @@ the causes out:
   10 % limit — so a new rig tuned blind against the limits knows how much room there really is;
 - the visit ends off-stage on either side, the off-stage gap is ≥ 2 s;
 - sizes: `horse.svg` ≤ 200 KB, `puppy.svg` and `bunny.svg` ≤ 160 KB, stills ≤ 8 KB.
+
+The per-segment speed the audit prints is never negative: a planted foot's measured velocity
+is clamped at 0 (`lib/travel.mjs`), since none of these animals ever walks backward on purpose.
 
 ## Budget and browsers
 
