@@ -15,11 +15,13 @@ export interface Protected {
 // Order matters: a code span swallows the URL inside it, a URL swallows the
 // shortcode-looking `:80:` inside it. Placeholders never match a later
 // pattern (no letters, no colons, no control characters).
+// A shortcode body must contain at least one letter, but :+1: and :-1: are
+// special cases.
 const PATTERNS: RegExp[] = [
 	/`[^`\n]+`/g,
 	/\bhttps?:\/\/[^\s<>()]+/gi,
 	/\bwww\.[^\s<>()]+/gi,
-	/:[a-z0-9_+-]{2,}:/gi,
+	/:(?:[+-]1|(?=[a-z0-9_+-]*[a-z])[a-z0-9_+-]{2,}):/gi,
 	/\x03(?:\d{1,2}(?:,\d{1,2})?)?|[\x02\x0f\x11\x16\x1d\x1e\x1f]/g,
 ];
 

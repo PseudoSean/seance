@@ -23,6 +23,9 @@ describe("translate/eligibility", () => {
 				nicks
 			)
 		).to.equal("schau mal fett danke");
+		expect(plainTextOf("Ich komme um 10:30:45 Uhr :+1:", [])).to.equal(
+			"Ich komme um 10:30:45 Uhr"
+		);
 	});
 
 	it("wordCount counts words, not punctuation", () => {

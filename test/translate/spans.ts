@@ -80,4 +80,11 @@ describe("translate/spans", () => {
 		expect(spans).to.deep.equal(["https://example.test/a", ":tada:"]);
 		expect(text).to.equal(`${placeholder(2)} see ${placeholder(1)}`);
 	});
+
+	it("a time is not a shortcode", () => {
+		expect(protect("um 10:30:45 Uhr :+1:")).to.deep.equal({
+			text: `um 10:30:45 Uhr ${placeholder(1)}`,
+			spans: [":+1:"],
+		});
+	});
 });

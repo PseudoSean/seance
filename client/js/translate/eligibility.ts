@@ -15,6 +15,10 @@ export interface EligibilityMsg {
 
 const CHAT_TYPES = new Set(["message", "action", "notice"]);
 
+// A shortcode body must contain at least one letter, but :+1: and :-1: are
+// special cases.
+const SHORTCODE = /:(?:[+-]1|(?=[a-z0-9_+-]*[a-z])[a-z0-9_+-]{2,}):/gi;
+
 // eslint-disable-next-line no-misleading-character-class
 const EMOJI = /[\p{Extended_Pictographic}‍️]/gu;
 
@@ -24,7 +28,7 @@ export function plainTextOf(text: string, nicks: string[]): string {
 		.replace(/`[^`\n]+`/g, " ")
 		.replace(/\bhttps?:\/\/[^\s<>()]+/gi, " ")
 		.replace(/\bwww\.[^\s<>()]+/gi, " ")
-		.replace(/:[a-z0-9_+-]{2,}:/gi, " ")
+		.replace(SHORTCODE, " ")
 		.replace(/\x03(?:\d{1,2}(?:,\d{1,2})?)?|[\x02\x0f\x11\x16\x1d\x1e\x1f]/g, "")
 		.replace(EMOJI, " ");
 
