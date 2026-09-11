@@ -160,6 +160,6 @@ Cross-cutting types and helpers. `shared/types/socket-events.ts` (`ServerToClien
 - `docs/resources/reactions.md` — reactions as free text: the emoji picker, the recents list, `/react`'s argument rules and where the catalog comes from.
 - `docs/resources/settings-backup.md` — the `.seance-settings` file: what it carries, what it never does, how a restore applies.
 - `docs/resources/aliases.md` — command aliases: the expansion rules, where they hook into input, the settings editor.
-- `docs/resources/themes.md` — how a theme file works, the four themes (`coffee` default, `creama`, `day`, `morning`), the Ink & Amber tokens and where they deviate from the handoff in `docs/resources/themes/`. Browser check: `tools/scenarios/themes.mjs`.
+- `docs/resources/themes.md` — how a theme file works, the seven themes (`coffee` default, `creama`, `cobalt`, `frost`, `day`, `morning`, `heart`), the Ink & Amber tokens and where they deviate from the handoff in `docs/resources/themes/`. Browser check: `tools/scenarios/themes.mjs`.
 - `docs/projects/heart-theme.md` — the `<3` theme's design and plan status.
 - There are no public end-user docs yet; `branding.links` defaults point at this repository and its `docs/`.
