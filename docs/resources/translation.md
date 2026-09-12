@@ -120,17 +120,25 @@ reconnect's catch-up, a reload's replay -- is gated by the switch-on moment
 alone, like a live one: a channel switched on today still does not
 translate last week's scrollback, but everything said since it was
 switched on is translated whether this page saw it live or on a replay.
-A replay arrives one line at a time, so it is bounded by counting:
-`HISTORY_QUEUE_CAP` (40) replayed lines per channel per replay window, a
-live line closing the window. A **"load more"** is the reader asking for
-that history -- they are looking at it now -- so the switch-on moment does
-not gate it at all, while the rest of eligibility (own lines, pending
-ones, short ones, lines already in the target) still does; and because
-that page arrives whole, its newest 40 lines are queued, newest first
+A reconnect's catch-up arrives one line at a time (as `msg` with `replay`),
+so it is bounded by counting: `HISTORY_QUEUE_CAP` (40) replayed lines per
+channel per replay window, a live line closing the window. A **"load
+more"** is the reader asking for that history -- they are looking at it now
+-- so the switch-on moment does not gate it at all, while the rest of
+eligibility (own lines, pending ones, short ones, lines already in the
+target) still does; and because that page arrives whole, its newest 40
+lines are queued, newest first
 (`eligibility.ts` `HISTORY_QUEUE_CAP` and `historyQueueOrder`, from the
 reader's second `socket.on("more")` listener, which runs after
 `socket-events/more.ts` has prepended the page, so the objects it queues
-are the store's own and their ids are store ids). The queue then runs a
+are the store's own and their ids are store ids). Careful: **two** things
+arrive as `more` (`irc/history.ts` `mode: "prepend"`) -- that page, and a
+channel's first history fill when it is joined, which nobody asked for.
+Only the asked-for one skips `since`, and `channel.historyLoading` is what
+tells them apart: `MessageList.vue` sets it immediately before its emit
+and `socket-events/more.ts` clears it a tick after the reader's listener
+has run. A join's fill is bounded and ordered the same way but gated by
+`since` like any other replay. The queue then runs a
 channel's live lines ahead of its history ones (`QueueItem.history`,
 cleared by a retry, since a retry is someone asking for that line now),
 and the history ones are what a channel that has fallen

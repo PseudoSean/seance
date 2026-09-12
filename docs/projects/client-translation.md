@@ -99,12 +99,15 @@ Plan 2 (reading pipeline):
   reload's replay of what was said since the switch-on is translated. A
   replay is bounded by counting, because the reader sees it one line at a
   time: `HISTORY_QUEUE_CAP` (40) replayed lines per channel per replay
-  window, a live line closing the window — so a join replay keeps the
-  _first_ 40 of its window rather than its newest 40, which is what the
+  window, a live line closing the window — so a reconnect's catch-up keeps
+  the _first_ 40 of its window rather than its newest 40, which is what the
   one-line-at-a-time path allows. A "load more" arrives as a page, so it
   keeps the newest `HISTORY_QUEUE_CAP` lines, newest first, and skips the
   `since` check entirely (the reader asked for that history) while the rest
-  of eligibility still applies. The cap and the ordering live in
+  of eligibility still applies. Two things arrive as `more`, though
+  (`irc/history.ts` `mode: "prepend"`): that page and a channel's first
+  history fill on joining it — `channel.historyLoading` is the
+  discriminator, and only the asked-for page skips `since`. The cap and the ordering live in
   `eligibility.ts` (store-free, so mocha covers them) rather than in
   `reader.ts` as the brief had it; `translateMessage` takes an
   `options.history` flag and `QueueItem.history` orders a channel's live

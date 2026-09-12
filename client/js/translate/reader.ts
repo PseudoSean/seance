@@ -505,17 +505,26 @@ export function initReader(): void {
 
 	// After socket-events/more.ts prepended the page (import order in
 	// socket-events/index.ts): the objects in `data.messages` are the ones
-	// now in `channel.messages`, so their ids are store ids. The reader
-	// asked for this history, so the switch-on moment does not gate it —
-	// the newest `HISTORY_QUEUE_CAP` of the page are queued, newest first,
-	// one after another so the queue's order is the order they were asked
-	// for.
+	// now in `channel.messages`, so their ids are store ids. The newest
+	// `HISTORY_QUEUE_CAP` of the page are queued, newest first, one after
+	// another so the queue's order is the order they were asked for.
+	//
+	// Two different things arrive as `more` (irc/history.ts `mode:
+	// "prepend"`): the page MessageList asked for, and a channel's *first*
+	// history fill when it is joined, which nobody asked for. Only the
+	// first skips the switch-on moment — the reader is looking at that page
+	// now; a join's fill is a replay like any other and must not translate
+	// last week's scrollback. `historyLoading` tells them apart:
+	// MessageList sets it immediately before its emit and
+	// socket-events/more.ts clears it a tick after this listener has run.
 	socket.on("more", (data) => {
 		const target = store.getters.findChannel(data.chan);
 
 		if (!target || !channelTranslation(target.network, target.channel).read) {
 			return;
 		}
+
+		const asked = target.channel.historyLoading;
 
 		void (async () => {
 			for (const message of historyQueueOrder(data.messages)) {
@@ -526,7 +535,7 @@ export function initReader(): void {
 					false,
 					true,
 					undefined,
-					{history: true}
+					{history: asked}
 				);
 			}
 		})();
