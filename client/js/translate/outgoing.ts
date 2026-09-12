@@ -43,6 +43,13 @@ export const ABORTED = "aborted";
  */
 export const UNCHANGED = "came back unchanged";
 export const EMPTY_TRANSLATION = "empty translation";
+/**
+ * The model talked about the request instead of answering it -- "okay,
+ * let's see. The user wants the translation of …" -- and ran out of tokens
+ * before it got to a translation (measured on the offline runner,
+ * 2026-09-12). The answer's failure, like the two above.
+ */
+export const NARRATION = "talked about the request instead of translating";
 
 export type DraftGate = "empty" | "command" | "edit" | "ok";
 
@@ -176,15 +183,54 @@ export function echoingSoFar(source: string, partial: string): boolean {
 /**
  * What an answer amounts to: `null` when it is a translation, else the
  * failure it is -- `EMPTY_TRANSLATION` for nothing a language could be,
- * `UNCHANGED` for the source handed back. Both sides of the composer
+ * `NARRATION` for the model talking about the request, `UNCHANGED` for the
+ * source handed back. Both sides of the composer
  * (`writer.ts`: the draft's translation and the round trip's read-back) ask
  * this of every answer, so the order of the two rules is decided once: an
  * answer with no letters in it is reported as that even where it is also
  * the source over again.
  */
+/**
+ * Is an answer the model narrating the task? Two signs, either enough: it
+ * quotes the source line (a translation never contains the line it
+ * translates, in quotes), or it says both "the user" and "translat…" where
+ * the source says neither. Both are English on purpose: the model narrates in
+ * English whatever the target. Checked against every answer the offline
+ * runner had produced (1,048 of them) with no false positive.
+ */
+export function isNarration(source: string, answer: string): boolean {
+	const line = source.trim().toLowerCase();
+	const said = answer.toLowerCase();
+
+	if (line.length >= 4) {
+		for (const [open, close] of [
+			['"', '"'],
+			["'", "'"],
+			["\u201c", "\u201d"],
+		]) {
+			if (said.includes(`${open}${line}${close}`)) {
+				return true;
+			}
+		}
+	}
+
+	const user = /\bthe user\b/i;
+	const translate = /\btranslat/i;
+
+	return (
+		user.test(answer) &&
+		translate.test(answer) &&
+		!(user.test(source) && translate.test(source))
+	);
+}
+
 export function answerError(source: string, translation: string): string | null {
 	if (hasNoLetters(translation)) {
 		return EMPTY_TRANSLATION;
+	}
+
+	if (isNarration(source, translation)) {
+		return NARRATION;
 	}
 
 	if (isUnchanged(source, translation)) {

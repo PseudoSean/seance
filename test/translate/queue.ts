@@ -5,7 +5,7 @@ import {
 	type TranslateChunk,
 	type TranslateRequest,
 } from "../../client/js/translate/engine";
-import {EMPTY_TRANSLATION, UNCHANGED} from "../../client/js/translate/outgoing";
+import {EMPTY_TRANSLATION, NARRATION, UNCHANGED} from "../../client/js/translate/outgoing";
 import {
 	BATCH_MAX_LINES,
 	DROP_AFTER_LINES,
@@ -537,6 +537,23 @@ describe("translate/queue", () => {
 
 		expect(done.map(([id]) => id)).to.deep.equal([4]);
 		expect(done[0][1].text).to.equal("[en] eine ganz normale zeile hier");
+	});
+
+	it("fails an answer that talks about the request, without pausing the engine", async () => {
+		const r = rig((req) => [
+			`okay, let's see. The user wants the translation of "${
+				req.lines ? req.lines[0] : req.text
+			}" into English.`,
+		]);
+		clock = r.clock;
+		r.queue.enqueue(item(1, "das ist eine zeile hier", {single: true}));
+		await settle(r.clock);
+
+		expect(r.updates.filter(([, u]) => u.status === "failed")).to.deep.equal([
+			[1, {status: "failed", error: NARRATION}],
+		]);
+		expect(r.paused).to.deep.equal([]);
+		expect(r.queue.paused("llm")).to.equal(false);
 	});
 
 	it("fails an answer with nothing in it a language could be", async () => {

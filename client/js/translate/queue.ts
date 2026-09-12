@@ -18,9 +18,11 @@ import {EngineName, PromptContext, TranslateChunk, TranslateRequest} from "./eng
 import {
 	ABORTED,
 	EMPTY_TRANSLATION,
+	NARRATION,
 	type OutgoingDeps,
 	UNCHANGED,
 	hasNoLetters,
+	isNarration,
 	isUnchanged,
 	translateDraft,
 } from "./outgoing";
@@ -637,7 +639,17 @@ export class TranslateQueue {
 			return;
 		}
 
-		if (isUnchanged(restoreAll(q.info.text, q.info), text)) {
+		const original = restoreAll(q.info.text, q.info);
+
+		// The model talking about the request ("okay, let's see. The user
+		// wants …") is no more a translation than an echo is, and no more the
+		// engine's fault.
+		if (isNarration(original, text)) {
+			this.deps.onUpdate(q.item.id, {status: "failed", error: NARRATION});
+			return;
+		}
+
+		if (isUnchanged(original, text)) {
 			this.deps.onUpdate(q.item.id, {status: "failed", error: UNCHANGED});
 			return;
 		}

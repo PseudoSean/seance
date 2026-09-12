@@ -8,6 +8,7 @@ import {
 import {
 	ABORTED,
 	EMPTY_TRANSLATION,
+	NARRATION,
 	TERM_MAX_WORDS,
 	TIMED_OUT,
 	UNCHANGED,
@@ -18,6 +19,7 @@ import {
 	draftGate,
 	echoingSoFar,
 	hasNoLetters,
+	isNarration,
 	isUnchanged,
 	reverseTarget,
 	termPair,
@@ -180,6 +182,38 @@ describe("translate/outgoing", () => {
 			expect(hasNoLetters("Hallo")).to.equal(false);
 			expect(hasNoLetters("Привет")).to.equal(false);
 			expect(hasNoLetters("こんにちは")).to.equal(false);
+		});
+	});
+
+	describe("isNarration", () => {
+		it("catches the model talking about the request", () => {
+			// The answer the offline runner produced, token budget and all.
+			const narrated =
+				'okay, let\'s see. The user wants the translation of "sounds good to me" into French. The phrase is casual and friendly. In French, "sounds good to me" can be translated as "C\'est bien pour moi" or';
+
+			expect(isNarration("sounds good to me", narrated)).to.equal(true);
+			expect(
+				isNarration("hey there", "The user wants me to translate this into German.")
+			).to.equal(true);
+			expect(answerError("sounds good to me", narrated)).to.equal(NARRATION);
+		});
+
+		it("leaves translations alone, including ones that mention users or translating", () => {
+			expect(isNarration("sounds good to me", "C'est bien pour moi.")).to.equal(false);
+			expect(isNarration("ok", 'd\'accord "ok"')).to.equal(false);
+			expect(
+				isNarration(
+					"the user asked us to translate the docs",
+					"the user asked us to translate the docs, please"
+				)
+			).to.equal(false);
+			expect(
+				isNarration(
+					"Translate into French: the meeting is at noon",
+					"Die Sitzung ist um 12 Uhr."
+				)
+			).to.equal(false);
+			expect(isNarration("l'utilisateur", "the user")).to.equal(false);
 		});
 	});
 

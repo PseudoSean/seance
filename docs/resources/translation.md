@@ -282,8 +282,16 @@ reason, truncated, with the whole of it in the title -- and turns
 Send's tooltip into "Send as written".
 
 Two answers are failures rather than translations, on the same terms as the
-reading side: **an echo** ("came back unchanged") and **an answer with no
-letters in it** ("empty translation"). The echo needs no `from !== to`
+reading side: **an echo** ("came back unchanged") and **an answer with no letters in it** ("empty translation"). A third was added once the
+offline runner caught it: **an answer that talks about the request**
+("talked about the request instead of translating") -- the model writing
+"okay, let's see. The user wants the translation of …" until its token
+budget ran out, which the strip showed as a translation and which read as
+the model thinking. `isNarration` judges it: the answer quotes the source
+line, or says "the user" and "translat…" where the source says neither
+(no false positive among the 1,048 answers the runner had produced). The
+composer gives it the same bare second try as an echo; the reading queue
+fails the line without counting it against the engine. The echo needs no `from !== to`
 guard any more -- a source is never the target -- so what it means is the
 model declining: a line with nothing to translate ("ok, brb", a bare nick)
 as much as one it would not touch. The offer the strip already makes is the

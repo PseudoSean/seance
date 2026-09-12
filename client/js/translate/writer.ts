@@ -19,6 +19,7 @@ import {type EngineName, type PromptContext, emptyContext} from "./engine";
 import {translateService} from "./index";
 import {
 	ABORTED,
+	NARRATION,
 	type OutgoingDeps,
 	type OutgoingRequest,
 	type TranslateCapture,
@@ -384,8 +385,11 @@ export async function translateOutgoing(
 			// only where the first produced nothing usable. The strip stays
 			// pending and streams the retry, and its chip drops to `auto`
 			// because that is the request now in flight. Exactly one retry:
-			// a model that echoes a bare request is declining.
-			if (error === UNCHANGED) {
+			// a model that echoes a bare request is declining. An answer that
+			// narrates the request instead ("okay, let's see. The user wants
+			// …") gets the same second try: the same model looking at the same
+			// confounding request, and the bare one translates.
+			if (error === UNCHANGED || error === NARRATION) {
 				store.commit("outgoingTranslationPatch", {
 					chanId: channel.id,
 					patch: {from: null},
@@ -565,7 +569,9 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 			// again, which says nothing about what it means — so it gets the
 			// same bare second try the translation itself gets: no
 			// `sourceHint`, the source left to the model.
-			if (answerError(entry.text, read) === UNCHANGED) {
+			const first = answerError(entry.text, read);
+
+			if (first === UNCHANGED || first === NARRATION) {
 				read = await attempt(bareRetry(request), true);
 
 				if (!current(channel, draft, controller)) {
