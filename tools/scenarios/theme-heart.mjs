@@ -1,20 +1,24 @@
 // The <3 theme in a real browser (docs/projects/heart-theme.md): picking it
 // in Appearance swaps the stylesheet, the chat root carries the
 // conversation's seed, the message area carries the meadow and its animals
-// as fourteen background layers, a message fades in, an own pending message
-// carries its glitter, a reaction bursts on arrival, text keeps its contrast
-// on the sky, two channels grow two different meadows, and a screenshot
-// catches one of #seance's visitors.
+// as fourteen background layers, **the browser fetches the animals the scene
+// casts and no others**, a message fades in, an own pending message carries
+// its glitter, a reaction bursts on arrival, text keeps its contrast on the
+// sky, two channels grow two different meadows, and a screenshot catches one
+// of #seance's visitors.
 //
 //   corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/theme-heart.mjs
 //
 // The default target is a plain-WS ircd on 127.0.0.1:8067 (the dev ircd's
-// ws:// port); SEANCE_IRC_PORT overrides the port for a different rig.
+// ws:// port); SEANCE_IRC_PORT overrides the port for a different rig, and
+// SEANCE_HTTP_PORT the port the built `public/` is served on — worth setting
+// deliberately, since a stale server already squatting on the default serves
+// a *different* build and every check below then reports on that one.
 
 const RUN = Date.now().toString(36);
 const NICK = `hb${RUN}`;
-const BASE = "http://localhost:8021/";
+const BASE = `http://localhost:${process.env.SEANCE_HTTP_PORT ?? "8021"}/`;
 const PORT = process.env.SEANCE_IRC_PORT ?? "8067";
 
 export const url = `${BASE}?host=127.0.0.1&port=${PORT}&tls=false&nick=${NICK}&join=%23seance,%23kittens`;
@@ -87,6 +91,65 @@ const INSTALL_CONTRAST = `(() => {
 	return true;
 })()`;
 
+/**
+ * What the meadow's animal files are doing, from the page's own point of view:
+ *
+ * - `declared`: every `heart/<file>.svg` the theme's stylesheet names anywhere
+ *   — the animal tokens, their `-far` tints and the reduced-motion stills.
+ * - `cast`: the files the open conversation's scene actually substitutes into
+ *   the three slots, read off the computed `--heart-slot-a/-b/-f`.
+ * - `fetched`: what the browser has actually asked the network for, from
+ *   Resource Timing. Background images fetched by CSS appear here like any
+ *   other subresource.
+ *
+ * All three are read out of the running page rather than written down here:
+ * this file has already shipped a hardcoded cast that went stale the moment a
+ * scene was recast.
+ */
+const MEADOW_FILES = `(() => {
+	const files = (s) => [...String(s).matchAll(/heart\\/([a-z-]+\\.svg)/g)].map((m) => m[1]);
+	const declared = new Set();
+
+	for (const sheet of document.styleSheets) {
+		let rules;
+		try {
+			rules = sheet.cssRules;
+		} catch {
+			continue; // a cross-origin sheet; the theme is not one
+		}
+		for (const rule of rules) for (const f of files(rule.cssText || "")) declared.add(f);
+	}
+
+	const cs = getComputedStyle(document.getElementById("chat-container"));
+	const cast = new Set();
+
+	for (const slot of ["a", "b", "f"]) {
+		for (const f of files(cs.getPropertyValue("--heart-slot-" + slot))) cast.add(f);
+	}
+
+	const fetched = new Set(
+		files(performance.getEntriesByType("resource").map((e) => e.name).join(" "))
+	);
+	return {
+		declared: [...declared].sort(),
+		cast: [...cast].sort(),
+		fetched: [...fetched].sort(),
+	};
+})()`;
+
+/** MEADOW_FILES once the scene's own animals have arrived (they are fetched
+ * asynchronously, a moment after the stylesheet swap paints). */
+async function meadowFiles(page, label) {
+	await page.waitFor(
+		`(() => {
+			const m = ${MEADOW_FILES};
+			return m.cast.length > 0 && m.cast.every((f) => m.fetched.includes(f));
+		})()`,
+		{label}
+	);
+	return page.evaluate(MEADOW_FILES);
+}
+
 export default async function run(page) {
 	// A ?host link only pre-fills the connect form (a link is a suggestion,
 	// boot.ts handleQueryParams); connect for real.
@@ -155,6 +218,68 @@ export default async function run(page) {
 		`getComputedStyle(document.querySelector('#chat .chat-view[data-type="channel"] .chat')).backgroundSize.split(",").length`
 	);
 	page.check(`fourteen background layers (${layers})`, layers === 14);
+
+	// The whole of the theme's size argument (tools/heart/README.md § Budget
+	// and browsers): the directory holds every animal, a scene casts three,
+	// and a `url()` sitting in a custom property that no resolved
+	// background-image substitutes is never fetched. If that is wrong the
+	// budget is wrong, so it is checked here rather than remembered.
+	const meadow = await meadowFiles(page, "the scene's animals fetched");
+	const seen = new Set(meadow.cast);
+	const extra = meadow.fetched.filter((f) => !meadow.cast.includes(f));
+	const uncast = meadow.declared.filter((f) => !meadow.cast.includes(f));
+	// Two or three: every scene casts two near animals and most a distant
+	// visitor, but scene 4's plateau is deliberately empty and a phone drops
+	// slot B — so the count is reported, and only the sets below are pinned.
+	page.check(
+		`the scene casts ${meadow.cast.length} animals (${meadow.cast.join(" ")})`,
+		meadow.cast.length >= 2 && meadow.cast.length <= 3
+	);
+	page.check(
+		`${meadow.fetched.length} of the theme's ${meadow.declared.length} animal files were ` +
+			`fetched, and they are exactly the cast${
+				extra.length ? ` — also ${extra.join(" ")}` : ""
+			}`,
+		extra.length === 0
+	);
+	page.check(
+		`the ${uncast.length} uncast files were never requested (${uncast.slice(0, 4).join(" ")}${
+			uncast.length > 4 ? " …" : ""
+		})`,
+		uncast.length > 0 && uncast.every((f) => !meadow.fetched.includes(f))
+	);
+
+	// A scene sizes its distant visitor as `calc(0.7 * var(--heart-<animal>-h))`
+	// — a calc nested inside the slot's own `calc(var(--strip) * …)`. That is
+	// valid CSS, but nothing without a browser can confirm it resolves, and a
+	// layer that computed to nothing would simply not be painted, in silence.
+	// Measure it: the tenth background layer of fourteen is the visitor, and it
+	// should be 0.7 of its own animal's token, in strips.
+	const visitor = (meadow.cast.find((f) => f.endsWith("-far.svg")) ?? "").replace("-far.svg", "");
+	const slotPx = await page.evaluate(
+		`(() => {
+			const chat = document.querySelector('#chat .chat-view[data-type="channel"] .chat');
+			const probe = document.createElement("div");
+			probe.style.cssText = "position:absolute;visibility:hidden;height:var(--strip)";
+			chat.appendChild(probe);
+			const strip = probe.getBoundingClientRect().height;
+			probe.remove();
+			const token = parseFloat(
+				getComputedStyle(document.getElementById("chat-container")).getPropertyValue(
+					"--heart-${visitor}-h"
+				)
+			);
+			const sizes = getComputedStyle(chat).backgroundSize.split(",");
+			const far = parseFloat(sizes[9].trim().split(/\\s+/).pop());
+			return {far, expected: 0.7 * token * strip, token, strip};
+		})()`
+	);
+	page.check(
+		`the ${visitor} on the plateau is ${slotPx.far.toFixed(1)}px — 0.7 of its own ` +
+			`${slotPx.token} token on a ${slotPx.strip.toFixed(0)}px strip, ` +
+			`${slotPx.expected.toFixed(1)}px`,
+		slotPx.far > 1 && Math.abs(slotPx.far - slotPx.expected) < 1
+	);
 
 	const anim = await page.evaluate(
 		`getComputedStyle(document.querySelector("#chat .msg")).animationName`
@@ -257,6 +382,22 @@ export default async function run(page) {
 	page.check(
 		`#kittens grows a different meadow (${seedB})`,
 		seedB[0] !== seedA[0] || seedB[1] !== seedA[1]
+	);
+
+	// A second scene adds its own cast and nothing else: over the whole run
+	// the browser has fetched the union of the conversations opened, never
+	// the directory.
+	const meadowB = await meadowFiles(page, "#kittens' animals fetched");
+
+	for (const f of meadowB.cast) {
+		seen.add(f);
+	}
+
+	const union = [...seen].sort();
+	page.check(
+		`two scenes have fetched ${meadowB.fetched.length} files, the union of their casts ` +
+			`(${union.join(" ")})`,
+		meadowB.fetched.join(" ") === union.join(" ")
 	);
 	await page.screenshot("heart-kittens");
 

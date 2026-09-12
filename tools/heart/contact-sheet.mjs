@@ -7,8 +7,16 @@
 //   node tools/heart/contact-sheet.mjs puppy
 //   node tools/heart/contact-sheet.mjs puppy --out=tmp/sheet-puppy.png
 //   node tools/heart/contact-sheet.mjs bunny --times=1,4,8,12 --height=200
+//   node tools/heart/contact-sheet.mjs --all --out=tmp/sheet-cast.png
 //
 // Options:
+//   --all            the whole cast, one row per animal, four cells each, each
+//                    at its own magnification (CAST below): a picture of every
+//                    animal in one PNG. It photographs eight visits end to end,
+//                    so it takes about four minutes. Rows are *not* to the same
+//                    scale — the bird is 10 % of its own box, so a row that
+//                    showed it at its true size beside the horse would show a
+//                    speck — and the sheet says so under the title.
 //   --out=<path>     where to write the PNG (default tmp/heart-<animal>-sheet.png)
 //   --times=a,b,c    sample times in seconds, **relative to the sequence's
 //                    `first`** — the same clock the audit's `onStage` and
@@ -28,9 +36,10 @@
 //                    `--height=520 --cell=0.5,1.35 --cols=6`.
 //   --slot=<token>   the animal's `--heart-<animal>-h` from the theme, which is
 //                    what the ground band and the box's rest height are shares
-//                    of (default 0.44). Only needed to judge *footing* — where
-//                    the feet sit against the grass — since the band is drawn
-//                    from it; poses read fine at the default.
+//                    of. The default is the animal's own token, read from its
+//                    rig's `theme` block, so footing is right without passing
+//                    anything; give it a number to see the animal against some
+//                    other slot's band.
 //   --far            use the distant-visitor tint; the default is the near file,
 //                    falling back to `-far` for an animal that has no near file
 //                    (the dolphin never comes close)
@@ -76,15 +85,60 @@ const GROUND = "#b7dcc2";
  * animal whose box bottom sits 0.12 strip above the foot of the meadow.
  *
  * Both are shares of a *strip*, so turning them into shares of the rendered
- * height needs the animal's own `--heart-<animal>-h`, which lives in
- * `client/themes/heart.css` and is not in the SVG. 0.44 is the default
- * because that is what the cast's small animals were when this was written;
- * it is only the right band for an animal at that token, and four of the
- * eight are not (horse 0.7176, puppy 0.6172, bunny 0.6026, deer 0.5781 —
- * their boxes grew to stop clipping them, and their tokens grew with the
- * boxes). Pass `--slot=<token>` to read the animal's footing against the
- * band it actually gets; the default is fine for reading poses. */
+ * height needs the animal's own `--heart-<animal>-h` — which is not in the
+ * SVG, but is in the rig: every cast rig carries a `theme` block holding the
+ * token the stylesheet must use (`tools/heart/rigs/<animal>.mjs`, checked by
+ * `test/themes/heart.ts`). `slotOf` reads it from there, so the band under an
+ * animal is the band it actually gets. This was a hardcoded 0.44 until the
+ * cast grew and four boxes with it, and a wrong band reads as an animal
+ * floating above the grass or sunk into it. A rig with no `theme` block — a
+ * held animal, cast in no scene — falls back to it. */
 const SLOT = 0.44;
+
+/** The animal's own `--heart-<animal>-h`, from its rig. */
+async function slotOf(name) {
+	try {
+		const def = (await import(`./rigs/${name}.mjs`)).default;
+		return def.theme?.height ?? SLOT;
+	} catch {
+		return SLOT;
+	}
+}
+
+/**
+ * `--all`: the whole cast, one row each, at the magnification that makes the
+ * animal legible rather than at a shared scale. `height` is the rendered height
+ * of the animal's *box* in px — chosen so the body inside that box comes out at
+ * about the same size for everything that walks, which is why the numbers vary
+ * so much: the frog's box holds its hop and the bird's 800 units hold 76 units
+ * of bird, because the sky above it is its flight path. Rows are therefore not
+ * comparable in size, and the sheet's subtitle says so.
+ *
+ * The cell around it is **not** a hand-picked pair. A cell has to hold the
+ * whole box plus the gap the theme leaves under it (`sit`, 0.12 strip, which is
+ * 0.12/slot of the rendered height — two thirds of it for the ladybug, whose
+ * token is 0.19), and it has to be wider than the box or the animal is cut off
+ * at the sides. Both come out of `cellFor` below; the first version of this
+ * table guessed them and clipped the frog and the ladybug to unreadable blobs.
+ */
+const CAST = [
+	{name: "horse", height: 132},
+	{name: "deer", height: 128},
+	{name: "puppy", height: 184},
+	{name: "bunny", height: 124},
+	{name: "kitten", height: 136},
+	{name: "frog", height: 160},
+	{name: "ladybug", height: 150},
+	{name: "bird", height: 460},
+];
+
+/** The cell for one row of `--all`, as shares of the rendered height: wide
+ * enough for the box with room either side, tall enough for the box *and* the
+ * gap the slot leaves under it. `minW` keeps a very tall box (the bird's) from
+ * asking for a sliver of a cell. */
+function cellFor(box, slot, minW = 0.8) {
+	return [Math.max(minW, (box.w / box.h) * 1.25), (1 + sit(slot)) * 1.06];
+}
 const band = (slot) => 0.14 / slot;
 const sit = (slot) => 0.12 / slot;
 const CELL_W = 2.4;
@@ -335,39 +389,75 @@ window.__sheetPng = (async () => {
 `;
 }
 
+/** The `--all` stitcher: one row per animal, each row at its own cell size,
+ * so a tall-boxed animal can be shot larger than a wide-boxed one. Same canvas
+ * trick as `gridPage`. */
+function rowsPage(rows, title, subtitle) {
+	const width =
+		MARGIN * 2 +
+		Math.max(...rows.map((r) => r.shots.length * r.cellW + (r.shots.length - 1) * GAP));
+	const height = MARGIN * 2 + TITLE * 2 + rows.reduce((h, r) => h + LABEL + r.cellH + GAP, 0);
+	return `<title>contact sheet</title>
+<style>html, body { margin: 0; background: #fff; }</style>
+<canvas id="sheet" width="${width}" height="${height}"></canvas>
+<script>
+const ROWS = ${JSON.stringify(rows)};
+const c = document.getElementById("sheet").getContext("2d");
+c.fillStyle = "#ffffff";
+c.fillRect(0, 0, ${width}, ${height});
+c.textBaseline = "top";
+c.fillStyle = "#222222";
+c.font = "600 16px system-ui, sans-serif";
+c.fillText(${JSON.stringify(title)}, ${MARGIN}, ${MARGIN - 4});
+c.fillStyle = "#666666";
+c.font = "13px system-ui, sans-serif";
+c.fillText(${JSON.stringify(subtitle)}, ${MARGIN}, ${MARGIN + 17});
+
+window.__sheetPng = (async () => {
+	let y = ${MARGIN + TITLE * 2};
+
+	for (const row of ROWS) {
+		c.fillStyle = "#222222";
+		c.font = "600 13px system-ui, sans-serif";
+		c.fillText(row.label, ${MARGIN}, y + 3);
+		const imgs = await Promise.all(row.shots.map((s) => new Promise((res, rej) => {
+			const img = new Image();
+			img.onload = () => res(img);
+			img.onerror = () => rej(new Error("a shot did not decode"));
+			img.src = s.png;
+		})));
+
+		for (let i = 0; i < imgs.length; i++) {
+			const x = ${MARGIN} + i * (row.cellW + ${GAP});
+			c.drawImage(imgs[i], x, y + ${LABEL});
+			c.strokeStyle = "#94a8b8";
+			c.lineWidth = 1;
+			c.strokeRect(x + 0.5, y + ${LABEL} + 0.5, row.cellW - 1, row.cellH - 1);
+		}
+
+		y += ${LABEL} + row.cellH + ${GAP};
+	}
+
+	return document.getElementById("sheet").toDataURL("image/png");
+})();
+</script>
+`;
+}
+
 // ------------------------------------------------------------ the run
 
-/** Runs inside tools/browser-drive.mjs (this file is its own scenario). */
-export default async function run(page) {
-	const name = page.opt("animal", null);
-
-	if (!name) {
-		throw new Error("--animal=<name> is required");
-	}
-
-	const far = page.flags.has("--far");
+/** One animal's cells: builds its page, waits its visit out, shoots it. */
+async function shootAnimal(page, name, {far, animal, cw, ch, slot, spec, cols, samples}) {
 	const a = readAnimal(name, far);
-	const animal = Number(page.opt("animal-height", 150));
-	const [cw, ch] = cellShape(page.opt("cell", null));
-	const slot = Number(page.opt("slot", SLOT));
-
-	if (!(slot > 0)) {
-		throw new Error(`--slot wants a positive height token, got ${page.opt("slot", SLOT)}`);
-	}
-
 	const geom = {
 		animal,
 		band: Math.round(animal * band(slot)),
 		sit: Math.round(animal * sit(slot)),
 		cellW: Math.round(animal * cw),
 		cellH: Math.round(animal * ch),
-		cols: Number(page.opt("cols", 4)),
+		cols,
 	};
-	const spec = page.opt("times", null);
-	const times = spec
-		? spec.split(",").map((s) => Number(s.trim()))
-		: defaultTimes(a, DEFAULT_SAMPLES);
-	const out = resolve(page.opt("sheet-out", join("tmp", `heart-${name}-sheet.png`)));
+	const times = spec ? spec.split(",").map((s) => Number(s.trim())) : defaultTimes(a, samples);
 	const dir = join(ROOT, "tmp", "heart-contact-sheet", name);
 	mkdirSync(dir, {recursive: true});
 	copyFileSync(a.file, join(dir, basename(a.file)));
@@ -425,10 +515,12 @@ export default async function run(page) {
 		console.log(`  shot ${shots.length}/${times.length} at t = ${t.toFixed(1)} s`);
 	}
 
-	const title =
-		`${name}${far || a.file.includes("-far") ? " (far)" : ""} — ` +
-		`${shots.length} samples of a visit, t after first = ${a.first} s, loop ${a.period} s`;
-	writeFileSync(join(dir, "grid.html"), gridPage(shots, geom, title));
+	return {a, geom, shots, times, dir};
+}
+
+/** Stitch a page of cells and write the PNG it hands back. */
+async function stitch(page, html, dir, out) {
+	writeFileSync(join(dir, "grid.html"), html);
 	await page.goto(pathToFileURL(join(dir, "grid.html")).href);
 	const url = await page.evaluate("window.__sheetPng");
 
@@ -441,26 +533,116 @@ export default async function run(page) {
 	console.log(`\ncontact sheet ${out}`);
 }
 
+/** Runs inside tools/browser-drive.mjs (this file is its own scenario). */
+export default async function run(page) {
+	const all = page.flags.has("--all");
+	const name = page.opt("animal", null);
+
+	if (!name && !all) {
+		throw new Error("--animal=<name> is required (or --all for the whole cast)");
+	}
+
+	const far = page.flags.has("--far");
+	const spec = page.opt("times", null);
+	const cols = Number(page.opt("cols", 4));
+
+	if (all) {
+		const samples = Number(page.opt("samples", 4));
+		const rows = [];
+		const dir = join(ROOT, "tmp", "heart-contact-sheet", "cast");
+		mkdirSync(dir, {recursive: true});
+
+		for (const {name: animalName, height} of CAST) {
+			const slot = Number(page.opt("slot", await slotOf(animalName)));
+			const [cw, ch] = cellFor(readAnimal(animalName, far).box, slot);
+			const {a, geom, shots, times} = await shootAnimal(page, animalName, {
+				far,
+				animal: height,
+				cw,
+				ch,
+				slot,
+				spec,
+				cols: samples,
+				samples,
+			});
+			rows.push({
+				label:
+					`${animalName} — box ${geom.animal}px, t = ` +
+					`${times.map((t) => t.toFixed(1)).join(", ")} s after first, ` +
+					`loop ${a.period} s`,
+				cellW: geom.cellW,
+				cellH: geom.cellH,
+				shots,
+			});
+		}
+
+		await stitch(
+			page,
+			rowsPage(
+				rows,
+				`the <3 theme's cast — ${rows.length} animals, ${rows[0].shots.length} moments of one visit each`,
+				"each row at its own magnification, so every animal is legible: they are not to scale with one another"
+			),
+			dir,
+			resolve(page.opt("sheet-out", join("tmp", "sheet-cast.png")))
+		);
+		return;
+	}
+
+	const [cw, ch] = cellShape(page.opt("cell", null));
+	const slot = Number(page.opt("slot", await slotOf(name)));
+
+	if (!(slot > 0)) {
+		throw new Error(`--slot wants a positive height token, got ${page.opt("slot", SLOT)}`);
+	}
+
+	const {a, geom, shots, dir} = await shootAnimal(page, name, {
+		far,
+		animal: Number(page.opt("animal-height", 150)),
+		cw,
+		ch,
+		slot,
+		spec,
+		cols,
+		samples: DEFAULT_SAMPLES,
+	});
+	const title =
+		`${name}${far || a.file.includes("-far") ? " (far)" : ""} — ` +
+		`${shots.length} samples of a visit, t after first = ${a.first} s, loop ${a.period} s`;
+	await stitch(
+		page,
+		gridPage(shots, geom, title),
+		dir,
+		resolve(page.opt("sheet-out", join("tmp", `heart-${name}-sheet.png`)))
+	);
+}
+
 // ----------------------------------------------------------- the command
 
 if (import.meta.filename === resolve(process.argv[1] ?? "")) {
 	const argv = process.argv.slice(2);
+	const all = argv.includes("--all");
 	const name = argv.find((x) => !x.startsWith("--"));
 	const opt = (key) => argv.find((x) => x.startsWith(`--${key}=`))?.slice(key.length + 3);
 
-	if (!name) {
-		console.error("usage: node tools/heart/contact-sheet.mjs <animal> [--out=…] [--times=…]");
+	if (!name && !all) {
+		console.error(
+			"usage: node tools/heart/contact-sheet.mjs <animal> [--out=…] [--times=…]\n" +
+				"       node tools/heart/contact-sheet.mjs --all [--out=…]"
+		);
 		process.exit(2);
 	}
 
-	const out = resolve(opt("out") ?? join("tmp", `heart-${name}-sheet.png`));
+	const out = resolve(
+		opt("out") ?? join("tmp", all ? "sheet-cast.png" : `heart-${name}-sheet.png`)
+	);
 	const args = [
 		DRIVER,
 		import.meta.filename,
-		`--animal=${name}`,
+		...(all ? ["--all"] : [`--animal=${name}`]),
 		`--sheet-out=${out}`,
 		"--no-ws",
-		`--out=${join(ROOT, "tmp", "heart-contact-sheet", name, "shots")}`,
+		`--out=${join(ROOT, "tmp", "heart-contact-sheet", all ? "cast" : name, "shots")}`,
 	];
 
 	for (const [cli, driver] of [
@@ -469,6 +651,7 @@ if (import.meta.filename === resolve(process.argv[1] ?? "")) {
 		["cols", "cols"],
 		["cell", "cell"],
 		["slot", "slot"],
+		["samples", "samples"],
 		// the driver's own: $CHROME_BIN is the other way to point it at a binary
 		["chrome", "chrome"],
 	]) {

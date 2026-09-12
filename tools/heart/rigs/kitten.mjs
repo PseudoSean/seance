@@ -426,6 +426,21 @@ export default {
 	rig,
 	colours: {near: "#5aa9b8", far: "#b0d6dd"},
 	budget: 150 * 1024,
+	/**
+	 * What `client/themes/heart.css` has to say about this animal — the half of
+	 * the box coupling no audit can reach, checked by `test/themes/heart.ts`
+	 * (tools/heart/README.md § The audit):
+	 *
+	 * - `height` is `--heart-kitten-h`, the on-screen height of the *box*, in
+	 *   strips;
+	 * - `box` is the `viewBox.h` it was picked against, so a box that grows
+	 *   without its token growing by the same ratio fails there instead of
+	 *   shipping an animal a different size;
+	 * - `stageWidth` is `stage.aspect × viewBox.h`, which a box change must
+	 *   leave alone — the aspect scales the other way — or the animal travels a
+	 *   different distance.
+	 */
+	theme: {height: 0.44, box: 91, stageWidth: 2184},
 	// Trot in, stalk, wiggle, pounce, land, sit, wash, stand and trot on the
 	// same way. The pounce is the `leap` pose with a travel burst and the
 	// landing ramping it back to zero; both are pure blends with `hold: 0`,

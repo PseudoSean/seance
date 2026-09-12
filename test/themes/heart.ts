@@ -1,6 +1,14 @@
 import {expect} from "chai";
 import fs from "fs";
 import path from "path";
+import bird from "../../tools/heart/rigs/bird.mjs";
+import bunny from "../../tools/heart/rigs/bunny.mjs";
+import deer from "../../tools/heart/rigs/deer.mjs";
+import frog from "../../tools/heart/rigs/frog.mjs";
+import horse from "../../tools/heart/rigs/horse.mjs";
+import kitten from "../../tools/heart/rigs/kitten.mjs";
+import ladybug from "../../tools/heart/rigs/ladybug.mjs";
+import puppy from "../../tools/heart/rigs/puppy.mjs";
 
 const css = fs.readFileSync(path.resolve(__dirname, "../../client/themes/heart.css"), "utf8");
 
@@ -514,5 +522,110 @@ describe("the <3 theme's animals", function () {
 			expect(entries(group, "background-position-y"), `group ${i}`).to.equal(14);
 			from = idx + 1;
 		}
+	});
+});
+
+/**
+ * The rig-to-CSS coupling, from the rigs' side.
+ *
+ * An animal's size and travel on screen are four numbers that have to move
+ * together: the rig's `viewBox.h` and `stage.aspect`, the theme's
+ * `--heart-<animal>-h`, and the far slot the scenes give it. The generator's
+ * audit can see the two in the rig and nothing at all in the stylesheet, and
+ * that gap has already cost a round — four boxes grew to stop clipping their
+ * animals (`lib/build.mjs` `boxOverflow`) and every one of them needed a
+ * hand-made edit here that nothing would have missed if it had been skipped.
+ *
+ * So each cast rig records what the theme must say (`theme` in
+ * `tools/heart/rigs/<animal>.mjs`) and this block derives the expectation
+ * from it rather than restating it: grow a box, forget the token, and the
+ * failure names the number to write.
+ */
+describe("the <3 theme's animals are the size their rigs say", function () {
+	/** The cast, by the name its tokens and files use. */
+	const RIGS: Record<string, any> = {horse, deer, puppy, bunny, kitten, frog, ladybug, bird};
+
+	/** A distant visitor is 0.7 of its animal (the meadow's comment in heart.css). */
+	const FAR_RATIO = 0.7;
+
+	/** One scene rule's body. */
+	const sceneBody = (n: number) => {
+		const start = css.indexOf(`#chat-container[data-scene="${n}"]`);
+		expect(start, `scene ${n}`).to.be.greaterThan(-1);
+		return css.slice(start, css.indexOf("\n}", start));
+	};
+
+	for (const [name, def] of Object.entries(RIGS)) {
+		describe(name, function () {
+			it("was sized against the box the rig still has", function () {
+				expect(def.theme, `${name}'s rig declares no theme block`).to.be.an("object");
+				const {height, box} = def.theme;
+				const now = def.rig.viewBox.h;
+				expect(
+					box,
+					`${name}'s box is ${now} but --heart-${name}-h (${height}) was picked ` +
+						`against ${box}: scale the token by ${now}/${box} to ` +
+						`${Number(((height * now) / box).toFixed(4))}, scale stage.aspect by ` +
+						`${box}/${now}, and set theme.box to ${now}`
+				).to.equal(now);
+			});
+
+			it("is the height in heart.css that its rig says it is", function () {
+				expect(css, `--heart-${name}-h`).to.include(
+					`--heart-${name}-h: ${def.theme.height};`
+				);
+			});
+
+			it("crosses the stage width its rig says it does", function () {
+				const width = def.sequence.stage.aspect * def.rig.viewBox.h;
+				expect(
+					Math.abs(width - def.theme.stageWidth) / def.theme.stageWidth,
+					`${name}'s stage is aspect ${def.sequence.stage.aspect} × box ` +
+						`${def.rig.viewBox.h} = ${width.toFixed(1)} rig units, not the ` +
+						`${def.theme.stageWidth} it was drawn for: scale stage.aspect to ` +
+						`${Number((def.theme.stageWidth / def.rig.viewBox.h).toFixed(4))}`
+				).to.be.below(0.001);
+			});
+		});
+	}
+
+	it("gives every slot the height token of the animal in it", function () {
+		for (const n of [0, 1, 2, 3, 4, 5]) {
+			const body = sceneBody(n);
+
+			for (const slot of ["a", "b"]) {
+				const animal = body.match(
+					new RegExp(`--heart-slot-${slot}: var\\(--heart-([a-z]+)\\);`)
+				);
+
+				if (!animal) {
+					continue; // an empty slot: `none`, and its height sizes nothing
+				}
+
+				expect(body, `scene ${n}'s slot ${slot} is a ${animal[1]}`).to.include(
+					`--heart-slot-${slot}-h: var(--heart-${animal[1]}-h);`
+				);
+			}
+		}
+	});
+
+	it("derives every distant visitor's height from its animal's own token", function () {
+		let visitors = 0;
+
+		for (const n of [0, 1, 2, 3, 4, 5]) {
+			const body = sceneBody(n);
+			const animal = body.match(/--heart-slot-f: var\(--heart-([a-z]+)-far\);/);
+
+			if (!animal) {
+				continue; // no visitor on that scene's plateau
+			}
+
+			visitors++;
+			expect(body, `scene ${n}'s visitor is a ${animal[1]}`).to.include(
+				`--heart-slot-f-h: calc(${FAR_RATIO} * var(--heart-${animal[1]}-h));`
+			);
+		}
+
+		expect(visitors, "scenes with a distant visitor").to.equal(5);
 	});
 });

@@ -282,6 +282,21 @@ export default {
 	rig,
 	colours: {near: "#e39a5a", far: "#f1cba6"},
 	budget: 160 * 1024,
+	/**
+	 * What `client/themes/heart.css` has to say about this animal — the half of
+	 * the box coupling no audit can reach, checked by `test/themes/heart.ts`
+	 * (tools/heart/README.md § The audit):
+	 *
+	 * - `height` is `--heart-puppy-h`, the on-screen height of the *box*, in
+	 *   strips;
+	 * - `box` is the `viewBox.h` it was picked against, so a box that grows
+	 *   without its token growing by the same ratio fails there instead of
+	 *   shipping an animal a different size;
+	 * - `stageWidth` is `stage.aspect × viewBox.h`, which a box change must
+	 *   leave alone — the aspect scales the other way — or the animal travels a
+	 *   different distance.
+	 */
+	theme: {height: 0.6172, box: 115, stageWidth: 1962},
 	// Three hearts rise over the head while it looks around (rig units, above
 	// the sitting head). `x`, `y` and `rise` are scaled by the rig's `k`
 	// (lib/build.mjs) and `d` deliberately is not, so the glyph draws at half

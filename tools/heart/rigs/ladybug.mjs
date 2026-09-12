@@ -650,6 +650,21 @@ export default {
 	rig,
 	colours: {near: "#d4574e", far: "#eaa9a3"},
 	budget: 100 * 1024,
+	/**
+	 * What `client/themes/heart.css` has to say about this animal — the half of
+	 * the box coupling no audit can reach, checked by `test/themes/heart.ts`
+	 * (tools/heart/README.md § The audit):
+	 *
+	 * - `height` is `--heart-ladybug-h`, the on-screen height of the *box*, in
+	 *   strips;
+	 * - `box` is the `viewBox.h` it was picked against, so a box that grows
+	 *   without its token growing by the same ratio fails there instead of
+	 *   shipping an animal a different size;
+	 * - `stageWidth` is `stage.aspect × viewBox.h`, which a box change must
+	 *   leave alone — the aspect scales the other way — or the animal travels a
+	 *   different distance.
+	 */
+	theme: {height: 0.19, box: 65, stageWidth: 1170},
 	sequence: {
 		first: 6,
 		period: 44,

@@ -618,7 +618,15 @@ strong,
 	 * puppy, bunny and kitten sit at the cast's usual 10.5 and the deer
 	 * (8.8) and bird (13.2) near it; the frog (7.2) and the ladybug (3.4)
 	 * wander a shorter stretch instead of crossing, which is what a token
-	 * sized from a small body implies. */
+	 * sized from a small body implies.
+	 *
+	 * **None of that arithmetic can be checked from inside a stylesheet**,
+	 * and it was hand-maintained across four numbers until it wasn't: each
+	 * cast rig now carries a `theme` block (`tools/heart/rigs/<animal>.mjs`)
+	 * recording the token below, the `viewBox.h` it was picked against and
+	 * the stage's width in rig units, and `test/themes/heart.ts` fails when
+	 * a rig and this file disagree. Grow a box without scaling its token
+	 * here and the test says so, with the number to write. */
 	--heart-horse: url("heart/horse.svg");
 	--heart-horse-far: url("heart/horse-far.svg");
 	--heart-deer: url("heart/deer.svg");
@@ -643,6 +651,12 @@ strong,
 	--heart-frog-h: 0.3;
 	--heart-ladybug-h: 0.19;
 	--heart-bird-h: 1.2;
+
+	/* The neutral cast, in case a conversation ever paints the meadow with
+	 * no scene: one horse. Slots B and F are `none`, so their heights size
+	 * nothing and stay literals; a slot that carries an animal takes that
+	 * animal's own token, and a distant visitor 0.7 of it — written as the
+	 * `calc` it is, so the two cannot drift apart. */
 	--heart-slot-a: var(--heart-horse);
 	--heart-slot-a-h: var(--heart-horse-h);
 	--heart-slot-b: none;
@@ -691,7 +705,7 @@ strong,
 	--heart-slot-b: var(--heart-bunny);
 	--heart-slot-b-h: var(--heart-bunny-h);
 	--heart-slot-f: var(--heart-deer-far);
-	--heart-slot-f-h: 0.4046;
+	--heart-slot-f-h: calc(0.7 * var(--heart-deer-h));
 }
 
 #chat-container[data-scene="1"] {
@@ -711,7 +725,7 @@ strong,
 	--heart-slot-b: var(--heart-frog);
 	--heart-slot-b-h: var(--heart-frog-h);
 	--heart-slot-f: var(--heart-puppy-far);
-	--heart-slot-f-h: 0.4347;
+	--heart-slot-f-h: calc(0.7 * var(--heart-puppy-h));
 }
 
 #chat-container[data-scene="2"] {
@@ -728,7 +742,7 @@ strong,
 	--heart-slot-b: var(--heart-ladybug);
 	--heart-slot-b-h: var(--heart-ladybug-h);
 	--heart-slot-f: var(--heart-horse-far);
-	--heart-slot-f-h: 0.5001;
+	--heart-slot-f-h: calc(0.7 * var(--heart-horse-h));
 
 	/* one of the two rainbow scenes (§5.3) */
 	--heart-rainbow: var(--heart-rainbow-arc);
@@ -749,7 +763,7 @@ strong,
 	--heart-slot-b: var(--heart-frog);
 	--heart-slot-b-h: var(--heart-frog-h);
 	--heart-slot-f: var(--heart-bunny-far);
-	--heart-slot-f-h: 0.4246;
+	--heart-slot-f-h: calc(0.7 * var(--heart-bunny-h));
 }
 
 #chat-container[data-scene="4"] {
@@ -788,7 +802,7 @@ strong,
 	--heart-slot-b: var(--heart-horse);
 	--heart-slot-b-h: var(--heart-horse-h);
 	--heart-slot-f: var(--heart-kitten-far);
-	--heart-slot-f-h: 0.31;
+	--heart-slot-f-h: calc(0.7 * var(--heart-kitten-h));
 
 	/* one of the two rainbow scenes (§5.3) */
 	--heart-rainbow: var(--heart-rainbow-arc);
