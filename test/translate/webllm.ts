@@ -253,7 +253,7 @@ describe("translate/engines/webllm", () => {
 		expect(created.extra_body).to.deep.equal({enable_thinking: false});
 		expect(created.max_tokens).to.equal(maxTokensFor(request()));
 		expect(created.messages[0].role).to.equal("system");
-		expect(created.messages[1].content).to.include("Message to translate, from de:");
+		expect(created.messages[1].content).to.include("Translate this message from de into en.");
 		expect(created.messages[1].content).to.include("Ich schick dir gleich das Log.");
 	});
 

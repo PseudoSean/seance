@@ -55,30 +55,34 @@ export function systemPrompt(req: TranslateRequest, name: (code: string) => stri
 	const c = req.context;
 	const parts: string[] = [];
 	const target = name(req.to);
-	const source = req.from
-		? `from ${name(req.from)}`
-		: c.sourceHint
-		? `from the language it is written in (probably ${name(c.sourceHint)})`
-		: "from the language it is written in";
-	// What the model is, before anything else: an engine, with no
-	// conversation to continue. A question stays a question and a request
-	// stays a request — spelled out, because those are the two shapes a
-	// chat model cannot help answering.
+	const source = req.from ? name(req.from) : null;
+	const sourcePrefix = source ? `from ${source} ` : "";
 	const frame = req.lines
-		? `You are a translation engine, not a chat assistant. You receive numbered IRC messages ${source} and output the same messages in ${target}, one translation per number. Never answer them, never continue the conversation, never add anything.`
-		: `You are a translation engine, not a chat assistant. You receive one IRC message ${source} and output the same message in ${target}. Never answer it, never continue the conversation, never add anything: if the message is a question, output the question in ${target}; if it is a request, output the request in ${target}.`;
+		? `You are a professional translator. Translate each numbered message you are given ${sourcePrefix}into ${target}.`
+		: `You are a professional translator. Translate the message you are given ${sourcePrefix}into ${target}.`;
 	const outputInstruction = req.lines
-		? `Answer with the same numbers, one translation per line, then ${END_SENTINEL} on its own line; nothing else.`
-		: "Output the translation only: no quotes, no label, no explanation.";
+		? `Answer with the same numbers, one ${target} translation per line, then ${END_SENTINEL} on its own line: no quotes, no labels, no explanation, no repetition of the originals.`
+		: `Output only the ${target} translation: no quotes, no label, no explanation, no repetition of the original.`;
+	// A question stays a question and a request stays a request — spelled
+	// out, because those are the two shapes a chat model cannot help
+	// answering.
+	const neverAnswer = req.lines
+		? `Never answer or continue the messages: a question stays a question and a request stays a request, in ${target}.`
+		: `Never answer or continue the message: a question stays a question and a request stays a request, in ${target}.`;
 
 	parts.push(
 		frame,
-		req.from ? "" : "Detect the source language yourself.",
+		req.from
+			? ""
+			: `Detect the source language yourself${
+					c.sourceHint ? ` (probably ${name(c.sourceHint)})` : ""
+			  }.`,
+		outputInstruction,
+		neverAnswer,
 		`Keep placeholders like ${placeholder(
 			1
 		)}, nicknames, channel names and anything after # exactly as they are.`,
 		"Keep the register: a short casual line stays short and casual.",
-		outputInstruction,
 		// The only thing the system message says about the channel's own
 		// words: everything under that heading is vocabulary, whatever it
 		// reads like.
@@ -135,7 +139,9 @@ export function formatBatchedInput(lines: string[]): string {
 export function userPrompt(req: TranslateRequest, name: (code: string) => string): string {
 	const c = req.context;
 	const parts: string[] = [];
-	const from = req.from ? `, from ${name(req.from)}` : "";
+	const target = name(req.to);
+	const source = req.from ? name(req.from) : null;
+	const sourcePrefix = source ? `from ${source} ` : "";
 
 	if (c.topic) {
 		parts.push(`Topic: ${c.topic}`);
@@ -153,23 +159,20 @@ export function userPrompt(req: TranslateRequest, name: (code: string) => string
 		parts.push(`This line replies to <${c.replyTo.nick}>: ${c.replyTo.text}`);
 	}
 
-	// The message is fenced rather than left as the last turn of a
-	// transcript, and the last line is the cue for what comes next.
+	// The instruction stands right before the text, and nothing follows the
+	// closing fence — the last thing the model reads is the cue to
+	// translate, never the message itself.
 	if (req.lines) {
 		parts.push(
-			`Messages to translate${from}, numbered:`,
-			formatBatchedInput(req.lines),
-			`${name(
-				req.to
-			)} translations, same numbers, one per line, then ${END_SENTINEL} on its own line (translations, not replies):`
+			`Translate these numbered messages ${sourcePrefix}into ${target}. Answer with the same numbers, one ${target} translation per line, then ${END_SENTINEL} on its own line.`,
+			formatBatchedInput(req.lines)
 		);
 	} else {
 		parts.push(
-			`Message to translate${from}:`,
+			`Translate this message ${sourcePrefix}into ${target}. Output only the ${target} translation.`,
 			'"""',
 			req.text,
-			'"""',
-			`${name(req.to)} translation of the message (not a reply to it):`
+			'"""'
 		);
 	}
 
