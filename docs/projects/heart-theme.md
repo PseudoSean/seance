@@ -345,18 +345,50 @@ channel can be overcast, clear, or carry one fat low cloud. Rarely, a drifting f
 
 ### 11.5 The camp
 
-**A fancy tent or yurt in the field, with a fire.** The user's call: _"I'd like a fancy tent or
-yurt added to the field, smoke from a fire comes out at night and it glows."_
+**All four tents ship, one per scene, chosen by the channel's seed, tucked against a hill, and
+desaturated.** The user's calls: _"I'd like a fancy tent or yurt added to the field, smoke from a
+fire comes out at night and it glows"_, then, against the mockup
+(https://claude.ai/code/artifact/74c31318-0bc8-4f07-b372-83d28bb3ca7d): _"I like all variations
+of this tent. Let's set a scene from a seed on each channel; use one of these 4 tents, on every
+scene 1 variation of the tent, tucked against a hill (but it cannot have too much color
+saturation because it will be hard to read text over it)."_
 
-Not yet designed — tent against yurt, and its styling, go to the user as a mockup before any
-code. What is already settled by the request: smoke rises from a fire, and at night the camp
-glows.
+- **The four shapes** are the mockup's: yurt, bell tent, striped pavilion, tipi. **No flags or
+  pennants** — the user rejected them, and they were also the most saturated marks on the
+  drawings, so removing them serves the legibility rule below as well.
+- **The fire is inside the tent.** The user's correction: _"I imagined the smoke would be coming
+  out of the tent top (implying a fire inside) and the inside of the tent would glow because of
+  the fire at night."_ So there is no campfire beside the tent. Smoke leaves by a vent at the
+  top — the yurt's open crown ring, the bell tent's stove pipe, the tipi's smoke flap, a vent at
+  the pavilion's left peak — and after dark the fabric blooms from within, brightest at the
+  doorway, with a soft spill onto the ground. Each shape must therefore have a believable vent
+  drawn at its apex; that is a requirement of the drawing, not a detail.
+- **One per scene, every scene.** The tent token is cast per scene exactly as the animal slots
+  are — `--heart-tent: var(--heart-tent-yurt)` and so on — so a channel always has a camp and
+  which camp it is comes from its seed. All six scenes carry one.
+- **Tucked against a hill**, at the foot of a mid hill rather than out on the open grass. The
+  mid hills already move per scene (`--heart-hill-1-x`, `-2-x`), so the tent's position is
+  derived from the hill it leans on, not set independently.
+- **The fire smokes all day; the doorway and the ground glow come up after dark**, driven by the
+  same local-clock hook as everything else (§11.1).
 
-The time-of-day hook (§11.1) makes this easier than it would have been under a CSS loop: the
-camp can read the same published phase as everything else, so its glow and smoke can appear
-after dark without a second clock to keep in step. Whether the camp is a CSS layer or a
-generated SVG through the §6 pipeline is open; the SVG keeps the layer count down, which matters
-because §5's list is fourteen entries asserted in eight separate places.
+**The saturation ceiling is a requirement, not a preference.** The tent sits behind message
+text, and this theme already has a discipline for that: silhouettes are opaque and lightened by
+mixing about 35 % toward the sky, never made translucent, and `.msg` carries a sky halo (§3, §5).
+The tent follows the same rule and one more of its own — no part of it may be more saturated
+than `--heart-hill-mid`, the most saturated thing already allowed to sit under text. In practice
+that means a fabric palette of low-chroma creams and warm greys, and the mockup's rose band and
+blue pennant desaturated well below what they are there. The scenario's existing contrast
+assertions (ink and nick colours ≥ 4.5:1 on `--sky`) are the check that this held.
+
+The fire's glow at night is the exception that needs watching: a warm glow is saturated light by
+nature. Keep it low in the frame, behind the hill line, and let it bloom on the ground rather
+than up into the text.
+
+**Layer cost, to go in with eyes open.** The tent is one more background layer, taking §5's list
+from fourteen entries to fifteen — and fourteen is asserted in eight separate lists plus
+`test/themes/heart.ts`. That is a bounded, known chunk of work, and it is the price of the
+feature; it is not a reason to fake the tent into an existing layer.
 
 ### 11.6 Wish list
 
@@ -364,3 +396,64 @@ Deliberately not in plan 4, kept so they are not lost:
 
 - **owl, fox, hedgehog** — the nocturnal animals, three new rigs by the pipeline in §6;
 - a drifting flock of birds as a rare weather state.
+
+## 12. The open question night raises: ink on a dark sky
+
+Not yet decided, and it has to be before plan 4 is written, because it changes how much work
+night is.
+
+Everything about this theme's legibility is measured against a **light** sky. `--ink` clears
+4.5:1 on `--sky`; `--ink-faint` clears 3:1; the 32 nick colours were generated at one oklch
+lightness specifically to clear 4.5:1 on `--sky` and on `--blush`; and
+`tools/scenarios/theme-heart.mjs` asserts those ratios in a real browser. The sky is not a strip
+at the bottom of the chat — §5 puts it behind the whole message area.
+
+So a night sky of the kind the mockup draws (roughly `#0f1836` to `#22325a`) puts dark blue ink
+on a near-black ground. Every contrast measurement in the theme fails, and the chat becomes
+unreadable at exactly the moment the meadow looks best.
+
+Three ways out:
+
+1. **The whole theme goes dark after sunset — ink, nicks and chrome included.** The most
+   coherent, and arguably the nicest: the app quietly turns into a dark theme while it is dark
+   outside, and back at dawn. It means a second full palette that clears the same ratios, and
+   the nick sweep regenerated at a lightness that works on a dark ground. Recommended.
+2. **Night stays light.** The sky only cools to a deep dusk blue that dark ink still clears,
+   with the moon and stars carrying the idea instead of darkness. Cheap and safe, and much less
+   striking.
+3. **Only the meadow strip darkens.** The bottom `--strip` goes to night while the sky behind
+   the text stays pale. Preserves every ratio untouched, but a pale sky over dark hills at
+   midnight reads as a mistake rather than a choice.
+
+Option 1 is the recommendation, with the contrast work treated as part of the night, not as a
+follow-up — this theme has been careful about ratios from the start and night should not be
+where that lapses.
+
+## 13. Private messages get no meadow
+
+The user's call: _"this decoration of the background shouldn't exist for private messages (I
+will need some alternative idea of a much plainer and less animated background for private
+messages)."_
+
+Today a query gets the same treatment as a channel — §5's meadow is painted on
+`#chat .chat-view[data-type="channel"] .chat` **and its query twin**. That twin comes out.
+
+What replaces it is not yet decided; the shape of the answer is that a private message should be
+calmer and quieter than a channel, and should still belong to the theme rather than falling back
+to bare `coffee`. Candidates to put to the user:
+
+- **The sky alone.** The same time-of-day gradient the meadow uses, and nothing else: no hills,
+  no animals, no clouds, no camp, no motion at all. A query still sits in the same world and
+  under the same sun, but the world is empty and still. Cheapest, and the strongest contrast
+  with a channel.
+- **A blush wash.** Not the sky at all but the theme's `--blush`, very softly graded — private
+  conversations get their own colour, which doubles as a signal that you are somewhere different.
+- **The sky with one distant hill.** A single static silhouette on the horizon, no motion. Keeps
+  a hint of place without anything moving behind the text.
+
+Whichever is chosen, three rules hold: nothing animates, nothing is cast from the seed, and the
+contrast floors in §3 apply unchanged.
+
+This also removes a cost. Every animal file a query would have fetched is no longer fetched
+there, and the fourteen-layer list (fifteen with the camp) does not have to hold for a surface
+that is not painting it.
