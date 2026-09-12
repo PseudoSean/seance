@@ -14,6 +14,7 @@ import type {ClientChan, ClientNetwork} from "../types";
 import {
 	type Formality,
 	channelKey,
+	effectiveFormality,
 	getChannelTranslation,
 	rememberTerm,
 	termsFor,
@@ -28,6 +29,7 @@ import {
 	NARRATION,
 	type OutgoingDeps,
 	type OutgoingRequest,
+	REPETITION,
 	type TranslateCapture,
 	UNCHANGED,
 	WRITE_DETECT_MIN_GAP,
@@ -134,18 +136,9 @@ const deps: OutgoingDeps = {
 	loadTicks: () => translateService().loadTicks(),
 };
 
-/** The global setting is typed as a string (settings.ts derives it from its default). */
-function asFormality(value: unknown): Formality {
-	return value === "formal" || value === "casual" ? value : "auto";
-}
-
-/**
- * The register a request in this channel is written in: the channel's own
- * choice, or the global setting where the channel says "auto". The
- * composer's translation and its read-back take the same one.
- */
+/** The channel's register, or the global one where it says "auto" (channelStore.ts). */
 function formalityOf(channel: Formality): Formality {
-	return channel !== "auto" ? channel : asFormality(store.state.settings.translateFormality);
+	return effectiveFormality(channel, store.state.settings.translateFormality);
 }
 
 /**
@@ -393,8 +386,9 @@ export async function translateOutgoing(
 			// a model that echoes a bare request is declining. An answer that
 			// narrates the request instead ("okay, let's see. The user wants
 			// …") gets the same second try: the same model looking at the same
-			// confounding request, and the bare one translates.
-			if (error === UNCHANGED || error === NARRATION) {
+			// confounding request, and the bare one translates. So does one
+			// stuck repeating a word ("Höfðu ekki ekki ekki …").
+			if (error === UNCHANGED || error === NARRATION || error === REPETITION) {
 				store.commit("outgoingTranslationPatch", {
 					chanId: channel.id,
 					patch: {from: null},
@@ -603,7 +597,7 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 			// left to the model (the hint stays, for a seq2seq route).
 			const first = answerError(entry.text, read);
 
-			if (first === UNCHANGED || first === NARRATION) {
+			if (first === UNCHANGED || first === NARRATION || first === REPETITION) {
 				read = await attempt(bareRetry(request), true);
 
 				if (!current(channel, draft, controller)) {

@@ -50,6 +50,19 @@ export const EMPTY_TRANSLATION = "empty translation";
  * 2026-09-12). The answer's failure, like the two above.
  */
 export const NARRATION = "talked about the request instead of translating";
+/**
+ * The model got stuck repeating itself -- "Höfðu ekki ekki ekki ekki …",
+ * "Nafaka ya kisasa kama kama kama …" (Qwen on Icelandic and Swahili
+ * questions, 2026-09-12). The answer's failure, like the three above.
+ */
+export const REPETITION = "got stuck repeating itself";
+/** How many times in a row a word (or a run of a script without spaces) makes a loop. */
+export const REPEAT_MIN = 6;
+
+/** Scripts written without spaces between words: a loop there is a repeated run of characters. */
+const SPACELESS_CLASS =
+	"[\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Thai}\\p{Script=Lao}\\p{Script=Khmer}\\p{Script=Myanmar}]";
+const SPACELESS_LOOP = new RegExp(`(${SPACELESS_CLASS}{1,3})\\1{${REPEAT_MIN - 1},}`, "u");
 
 export type DraftGate = "empty" | "command" | "edit" | "ok";
 
@@ -183,6 +196,7 @@ export function echoingSoFar(source: string, partial: string): boolean {
 /**
  * What an answer amounts to: `null` when it is a translation, else the
  * failure it is -- `EMPTY_TRANSLATION` for nothing a language could be,
+ * `REPETITION` for a model stuck in a loop,
  * `NARRATION` for the model talking about the request, `UNCHANGED` for the
  * source handed back. Both sides of the composer
  * (`writer.ts`: the draft's translation and the round trip's read-back) ask
@@ -224,9 +238,47 @@ export function isNarration(source: string, answer: string): boolean {
 	);
 }
 
+/**
+ * Is an answer a model stuck in a loop? The same word REPEAT_MIN or more
+ * times in a row (case and punctuation aside), or in a script written
+ * without spaces the same run of one to three characters REPEAT_MIN or more
+ * times. "no no no no" and "hahahaha" are not: four in a row, and a Latin
+ * word is only ever compared as a whole word.
+ */
+export function isRepetition(answer: string): boolean {
+	let previous = "";
+	let run = 0;
+
+	for (const token of answer.toLowerCase().split(/\s+/)) {
+		const word = token.replace(/[\p{P}\p{S}]+/gu, "");
+
+		if (word === "") {
+			continue;
+		}
+
+		if (word === previous) {
+			run++;
+
+			if (run >= REPEAT_MIN) {
+				return true;
+			}
+		} else {
+			previous = word;
+			run = 1;
+		}
+	}
+
+	return SPACELESS_LOOP.test(answer);
+}
+
 export function answerError(source: string, translation: string): string | null {
 	if (hasNoLetters(translation)) {
 		return EMPTY_TRANSLATION;
+	}
+
+	// A line that repeats itself translates into one that does.
+	if (isRepetition(translation) && !isRepetition(source)) {
+		return REPETITION;
 	}
 
 	if (isNarration(source, translation)) {

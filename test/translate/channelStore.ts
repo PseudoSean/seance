@@ -3,7 +3,9 @@ import {
 	STORAGE_KEY,
 	TERM_CAP,
 	channelKey,
+	asFormality,
 	defaultChannelTranslation,
+	effectiveFormality,
 	forgetChannel,
 	forgetNetwork,
 	getChannelTranslation,
@@ -43,6 +45,19 @@ describe("translate/channelStore", () => {
 	});
 
 	afterEach(() => useStorageBackend(null));
+
+	it("a channel's register falls back to the global one where it says auto", () => {
+		expect(effectiveFormality("formal", "casual")).to.equal("formal");
+		expect(effectiveFormality("casual", "formal")).to.equal("casual");
+		expect(effectiveFormality("auto", "formal")).to.equal("formal");
+		expect(effectiveFormality("auto", "casual")).to.equal("casual");
+		expect(effectiveFormality("auto", "auto")).to.equal("auto");
+		// The setting is a string in the store; anything unknown is auto.
+		expect(effectiveFormality("auto", "polite")).to.equal("auto");
+		expect(effectiveFormality("auto", undefined)).to.equal("auto");
+		expect(asFormality("formal")).to.equal("formal");
+		expect(asFormality(3)).to.equal("auto");
+	});
 
 	it("keys are network uuid and lower-cased channel name", () => {
 		expect(channelKey("n1", "#Seance")).to.equal("n1/#seance");

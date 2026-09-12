@@ -20,10 +20,12 @@ import {
 	EMPTY_TRANSLATION,
 	NARRATION,
 	type OutgoingDeps,
+	REPETITION,
 	UNCHANGED,
 	armDeadline,
 	hasNoLetters,
 	isNarration,
+	isRepetition,
 	isUnchanged,
 	translateDraft,
 } from "./outgoing";
@@ -649,6 +651,14 @@ export class TranslateQueue {
 		}
 
 		const original = restoreAll(q.info.text, q.info);
+
+		// A model stuck repeating a word ("ekki ekki ekki …") has not
+		// translated the line either, and the engine did complete: failed,
+		// counted toward no pause, like the narration below.
+		if (isRepetition(text) && !isRepetition(original)) {
+			this.deps.onUpdate(q.item.id, {status: "failed", error: REPETITION});
+			return;
+		}
 
 		// The model talking about the request ("okay, let's see. The user
 		// wants …") is no more a translation than an echo is, and no more the

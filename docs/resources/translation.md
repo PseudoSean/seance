@@ -15,16 +15,67 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   models: NLLB-200 distilled 600M (any pair, FLORES codes) and OPUS-MT pair
   models (30-80 MB each). Two stay loaded, least recently used evicted.
   Several times faster with WASM threads, which need the cross-origin
-  isolation headers (branding.md).
-- **The router** (`router.ts`, `routes.default.ts`) picks per pair from an
-  ordered candidate list, narrowed by the device tier, the two engine
-  settings, the catalog and the session's down-marks (a candidate whose
-  model failed to load or translate is skipped until reload). Among the
-  candidates that survive, one whose model is **already downloaded** wins
-  over one that is not, whatever the table's order: a request has two
-  minutes, and waiting out a download inside them when a model on the
-  device could have answered is the worse trade. The shipped
-  table is provisional until `tools/translate-eval.mjs` (plan 4) measures.
+  isolation headers (branding.md). **NLLB is sent one sentence at a time**
+  (`engines/seq2seq.ts` `splitSentences`: after `.` `!` `?` `…` and
+  whitespace or the end, after `。` `！` `？` whatever follows, never inside
+  a placeholder or at a decimal point), the results joined with a space
+  and streamed after each sentence: handed a two-sentence line whole it
+  translates the first sentence and stops (35% of content words back whole,
+  51% split, over 27 languages). OPUS-MT keeps every sentence of a whole
+  line and scores the same or better whole, so its requests stay whole.
+- **The router** (`router.ts`, `routes.default.ts`) picks per pair from a
+  table entry of **quality classes**, best first, narrowed by the device
+  tier, the two engine settings, the catalog and the session's down-marks
+  (a candidate whose model failed to load or translate is skipped until
+  reload). The first class with a usable candidate takes the request.
+  Inside it, a candidate whose model is **already downloaded** wins over
+  the class's own order; a better class is never skipped for a downloaded
+  model in a worse one. In an entry a bare candidate is a class of one and
+  a nested list a class of equivalent candidates: `["nllb", "llm"]` is a
+  strict order, `[["llm", "opus:de-en"], "nllb"]` makes the LLM and the
+  OPUS pair interchangeable ahead of NLLB. A deploy's `translation.routes`
+  has the same shape, so an older flat override stays valid and reads as a
+  strict order. The row for a pair is the target's row for the source, the
+  target's wildcard, the wildcard target's row for the source, then the
+  global wildcard. The service asks the worker which models are downloaded
+  on its first route, once, so the preference works before Settings has
+  been opened.
+- **A better class that is not downloaded is downloaded on demand**, not
+  passed over: the strip or the reading line says "Downloading <model>… N%"
+  while it waits (`service.ts` `downloadNote`, off the model views), and
+  the request's deadline (two minutes in the queue and the composer) waits
+  the download out: `outgoing.ts` `armDeadline` re-arms a deadline that
+  runs out while the service's `loadTicks` counter is still moving, and
+  fires once the download stalls. A download that fails marks the class
+  down; the next class answers, and the reason stays on the model's row and
+  in the error. The alternative -- answer from the best downloaded class
+  while the better one downloads -- was not taken: it is exactly how a
+  Filipino draft reached Qwen, and a device with nothing downloaded has to
+  wait for a download anyway.
+- **The source hint.** A seq2seq model has no prompt to detect a source in,
+  so a request whose `from` is null used to skip every CPU candidate. The
+  request's `context.sourceHint` -- the detector's weak verdict, or the
+  channel's dominant language -- now picks the table row when `from` is null
+  and lets a seq2seq candidate run: the service sends that request with the
+  hint as its `from`, while an LLM request keeps `from: null` and is told
+  the hint as a guess. The composer fills the hint from the draft's
+  detection when `writeSource` names no source (`outgoing.ts`
+  `sourceHintFor`), and the bare second try keeps it.
+- **The shipped table follows a measurement**:
+  `tools/translate-eval/results/2026-09-12-languages.md`, the share of an
+  English line's content words that come back after a round trip through
+  each engine (Qwen on 3-9 chat shapes, NLLB and OPUS-MT on a question, a
+  casual line and a two-sentence line; `tmp/cpu-roundtrip.ts` for the CPU
+  models). Differences under ~10 points are ties. NLLB first with the LLM as
+  the fallback class for sr hr sl bg el he fa bn ta et lv lt eu ga cy is sw
+  af tl ur fi ca nb id ar; the LLM and NLLB in one class for sk ms gl hi hu
+  th cs pl; the LLM and OPUS-MT in one class for de nl ru, the LLM then
+  OPUS-MT for fr es it; the LLM then NLLB everywhere else. Each placement
+  applies to the language as source and as target. `LIMITED_LANGUAGES`
+  (is lv et hi lt bn hu) are the languages whose best engine brought back
+  under 55%: the channel panel's pickers and Settings' reading target say
+  "Translations into and out of this language are often wrong." when one is
+  chosen.
 
 ## Reading a channel
 
@@ -322,7 +373,15 @@ the model thinking. `isNarration` judges it: the answer quotes the source
 line, or says "the user" and "translat…" where the source says neither
 (no false positive among the 1,048 answers the runner had produced). The
 composer gives it the same bare second try as an echo; the reading queue
-fails the line without counting it against the engine. The echo needs no `from !== to`
+fails the line without counting it against the engine. A fourth, from the
+language measurements: **an answer stuck repeating itself** ("got stuck
+repeating itself") -- Qwen answering Icelandic and Swahili questions with
+"Höfðu ekki ekki ekki ekki …". `isRepetition` judges it: the same word six
+or more times in a row, or in a script written without spaces the same run
+of one to three characters six or more times, and never when the source
+repeats itself too ("no no no no" and "hahahaha" pass). It is checked right
+after the letterless rule and handled exactly like a narration: one bare
+retry in the composer, an uncounted failure in the queue. The echo needs no `from !== to`
 guard any more -- a source is never the target -- so what it means is the
 model declining: a line with nothing to translate ("ok, brb", a bare nick)
 as much as one it would not touch. The offer the strip already makes is the
@@ -402,7 +461,8 @@ formality and variant, and the channel's terms for the translation's
 language into the reading language (`termsFor`). No voice: that is the
 writer's. A read-back given the line cold reads it differently from how
 the channel will, and showing how the channel will read it is the point.
-The bare second try on an echo or a narration still drops the context.
+The bare second try on an echo, a narration or a loop still drops the
+context, all but the register and the source hint.
 
 When the second Enter sends a translation whose read-back finished, the
 posted line shows that read-back as its translation, with the same chip

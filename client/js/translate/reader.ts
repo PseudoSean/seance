@@ -18,6 +18,7 @@ import {
 	type ChannelTranslation,
 	channelKey,
 	defaultChannelTranslation,
+	effectiveFormality,
 	forgetNetwork,
 	loadAll,
 	setChannelTranslation,
@@ -458,7 +459,12 @@ export async function translateMessage(
 			},
 			terms: termsFor(settings.terms, source, to),
 			glossary: getBranding().translation?.glossary ?? [],
-			formality: settings.formality,
+			// The channel's register, or the global one where it says "auto":
+			// the same fallback the composer uses (channelStore.ts).
+			formality: effectiveFormality(
+				settings.formality,
+				store.state.settings.translateFormality
+			),
 			variant: settings.variant,
 			sourceHint: source || prior.top(),
 		}),

@@ -462,6 +462,28 @@ Emphasis marks on the LLM route, measured (2026-09-12):
   context like an incoming line's translation, and a sent translation's
   line takes the
   finished read-back as its translation, matched by channel and exact text.
+- **Routing by quality class** (live test, 2026-09-12: Filipino reached
+  Qwen, which writes it poorly, though the table put NLLB first). A route
+  table entry is ordered quality classes, not one ordered list, and a
+  downloaded model is preferred only inside its class (§ `router.ts` said
+  a table entry is an ordered list, and the implementation had let any
+  downloaded candidate win). A better class that is not downloaded is
+  downloaded on demand, the request's deadline re-armed while the download
+  progresses (`armDeadline`, `loadTicks`), instead of the request going to
+  a downloaded worse class. The service asks the worker what is downloaded
+  on its first route. A route takes the request's source hint when `from`
+  is null, so a seq2seq candidate no longer needs a named source.
+- **NLLB is sent sentence by sentence**, OPUS-MT whole
+  (`splitSentences`): NLLB drops the later sentences of a line.
+- **The default table is placed from a round-trip measurement**
+  (`tools/translate-eval/results/2026-09-12-languages.md`) rather than
+  plan 4's chrF evaluation, and `LIMITED_LANGUAGES` marks the languages no
+  engine handles well.
+- **An answer stuck repeating itself is a failure** (`REPETITION`),
+  handled like a narration.
+- **Incoming lines take the global formality where the channel says
+  "auto"**, as the composer always did (`channelStore.ts`
+  `effectiveFormality`).
 
 ## Non-goals
 
@@ -542,7 +564,7 @@ threads on.
 ### `router.ts`
 
 A table keyed by target language, then source, each entry an ordered list of
-candidates:
+candidates (implemented as ordered quality classes; see the deviation list):
 
 ```ts
 type Candidate = "llm" | "nllb" | `opus:${string}-${string}`;

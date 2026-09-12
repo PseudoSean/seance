@@ -9,6 +9,7 @@ import {
 	ABORTED,
 	EMPTY_TRANSLATION,
 	NARRATION,
+	REPETITION,
 	TERM_MAX_WORDS,
 	TIMED_OUT,
 	UNCHANGED,
@@ -20,6 +21,7 @@ import {
 	echoingSoFar,
 	hasNoLetters,
 	isNarration,
+	isRepetition,
 	isUnchanged,
 	reverseTarget,
 	sourceHintFor,
@@ -227,11 +229,48 @@ describe("translate/outgoing", () => {
 		});
 	});
 
+	describe("isRepetition", () => {
+		it("catches a model stuck repeating a word", () => {
+			expect(isRepetition("Höfðu ekki ekki ekki ekki ekki ekki ekki ekki …")).to.equal(true);
+			expect(isRepetition("Nafaka ya kisasa kama kama kama kama kama kama kama")).to.equal(
+				true
+			);
+			// Case and punctuation aside.
+			expect(isRepetition("Kama, kama, KAMA. kama kama kama!")).to.equal(true);
+		});
+
+		it("catches a repeated run in a script written without spaces", () => {
+			expect(isRepetition("我们我们我们我们我们我们")).to.equal(true);
+			expect(isRepetition("ですですですですですです")).to.equal(true);
+			expect(isRepetition("ไม่ไม่ไม่ไม่ไม่ไม่")).to.equal(true);
+		});
+
+		it("leaves emphasis, laughter and ordinary lines alone", () => {
+			expect(isRepetition("no no no no")).to.equal(false);
+			expect(isRepetition("hahahaha")).to.equal(false);
+			expect(isRepetition("hahahahahahahahaha")).to.equal(false);
+			expect(isRepetition("very very very very very good, not very very")).to.equal(false);
+			expect(isRepetition("我们把部署改到了周四。")).to.equal(false);
+			expect(isRepetition("哈哈哈哈")).to.equal(false);
+			expect(isRepetition("")).to.equal(false);
+		});
+	});
+
 	describe("answerError", () => {
 		it("passes a translation and names the failure an echo or a letterless answer is", () => {
 			expect(answerError("das ist wichtig", "this is important")).to.equal(null);
 			expect(answerError("ok, brb", "Ok,  brb.")).to.equal(UNCHANGED);
 			expect(answerError("hello there", "\u27f9 ")).to.equal(EMPTY_TRANSLATION);
+		});
+
+		it("reports a loop after the letterless rule, unless the source repeats itself too", () => {
+			expect(answerError("is it not?", "ekki ekki ekki ekki ekki ekki ekki")).to.equal(
+				REPETITION
+			);
+			expect(
+				answerError("no no no no no no no", "nein nein nein nein nein nein nein")
+			).to.equal(null);
+			expect(answerError("...", "!!! !!! !!! !!! !!! !!!")).to.equal(EMPTY_TRANSLATION);
 		});
 
 		it("reports a letterless answer as letterless even where it is also the source", () => {

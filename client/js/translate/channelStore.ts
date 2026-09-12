@@ -84,6 +84,21 @@ function isFormality(value: unknown): value is Formality {
 	return value === "auto" || value === "formal" || value === "casual";
 }
 
+/** A stored or settings value as a register; anything else is "auto". */
+export function asFormality(value: unknown): Formality {
+	return isFormality(value) ? value : "auto";
+}
+
+/**
+ * The register a request in a channel uses: the channel's own choice, or
+ * the global setting (`translateFormality`, typed as a string by
+ * settings.ts) where the channel says "auto". The composer's translation,
+ * its read-back and every incoming line in the channel take the same one.
+ */
+export function effectiveFormality(channel: Formality, global: unknown): Formality {
+	return channel !== "auto" ? channel : asFormality(global);
+}
+
 /**
  * The declared languages as the record keeps them: supported codes only,
  * in the order they were added, no duplicates. A code this build cannot

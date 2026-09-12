@@ -5,7 +5,12 @@ import {
 	type TranslateChunk,
 	type TranslateRequest,
 } from "../../client/js/translate/engine";
-import {EMPTY_TRANSLATION, NARRATION, UNCHANGED} from "../../client/js/translate/outgoing";
+import {
+	EMPTY_TRANSLATION,
+	NARRATION,
+	REPETITION,
+	UNCHANGED,
+} from "../../client/js/translate/outgoing";
 import {
 	BATCH_MAX_LINES,
 	DROP_AFTER_LINES,
@@ -551,6 +556,25 @@ describe("translate/queue", () => {
 
 		expect(r.updates.filter(([, u]) => u.status === "failed")).to.deep.equal([
 			[1, {status: "failed", error: NARRATION}],
+		]);
+		expect(r.paused).to.deep.equal([]);
+		expect(r.queue.paused("llm")).to.equal(false);
+	});
+
+	it("fails an answer stuck repeating itself, without pausing the engine", async () => {
+		const r = rig(() => ["Höfðu ekki ekki ekki ekki ekki ekki ekki ekki"]);
+		clock = r.clock;
+
+		for (let id = 1; id <= PAUSE_AFTER_FAILURES; id++) {
+			r.queue.enqueue(item(id, "hast du das nicht gesehen", {single: true}));
+		}
+
+		await settle(r.clock);
+
+		expect(r.updates.filter(([, u]) => u.status === "failed")).to.deep.equal([
+			[1, {status: "failed", error: REPETITION}],
+			[2, {status: "failed", error: REPETITION}],
+			[3, {status: "failed", error: REPETITION}],
 		]);
 		expect(r.paused).to.deep.equal([]);
 		expect(r.queue.paused("llm")).to.equal(false);
