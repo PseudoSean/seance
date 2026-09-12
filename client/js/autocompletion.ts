@@ -7,6 +7,7 @@ import {TextareaEditor} from "@textcomplete/textarea";
 import fuzzy from "fuzzy";
 
 import emojiMap from "./helpers/simplemap.json";
+import {aliasNames} from "./helpers/aliases";
 import {store} from "./store";
 import {ChanType} from "../../shared/types/chan";
 
@@ -313,6 +314,16 @@ function completeNicks(word: string, isFuzzy: boolean) {
 
 function getCommands() {
 	let cmds = constants.commands.slice();
+
+	for (const name of aliasNames()) {
+		const cmd = `/${name}`;
+
+		if (!cmds.includes(cmd)) {
+			cmds.push(cmd);
+		}
+	}
+
+	cmds.sort();
 
 	if (!store.state.settings.searchEnabled) {
 		cmds = cmds.filter((c) => c !== "/search");

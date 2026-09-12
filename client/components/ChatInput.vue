@@ -133,6 +133,7 @@ import Mousetrap from "mousetrap";
 import {wrapCursor} from "undate";
 import autocompletion from "../js/autocompletion";
 import {commands} from "../js/commands/index";
+import {expandAlias} from "../js/helpers/aliases";
 import socket from "../js/socket";
 import upload from "../js/upload";
 import eventbus from "../js/eventbus";
@@ -387,6 +388,28 @@ export default defineComponent({
 			return text.length > 80 ? text.slice(0, 79) + "…" : text;
 		});
 
+		/**
+		 * Run `line` as a UI-only command (`/collapse`, `/search`, …).
+		 * True when the line is consumed here and must not reach the bus —
+		 * also for a bare `/`, which is not a command at all.
+		 */
+		const runClientCommand = (line: string): boolean => {
+			if (line[0] !== "/" || line[1] === "/") {
+				return false;
+			}
+
+			const args = line.substring(1).split(" ");
+			const cmd = args.shift()?.toLowerCase();
+
+			if (!cmd) {
+				return true;
+			}
+
+			return (
+				Object.prototype.hasOwnProperty.call(commands, cmd) && commands[cmd](args) === true
+			);
+		};
+
 		const onSubmit = (fromEnterKey = false) => {
 			if (!input.value) {
 				return;
@@ -462,17 +485,30 @@ export default defineComponent({
 				props.channel.inputHistory.pop();
 			}
 
-			if (text[0] === "/") {
-				const args = text.substring(1).split(" ");
-				const cmd = args.shift()?.toLowerCase();
+			// A user-defined alias replaces the line before anything looks at
+			// it, so its expansion reaches the UI-only commands below as well
+			// as the IRC layer. Never while editing: the edit body is text.
+			if (!editing) {
+				const expanded = expandAlias(text, {
+					chan: props.channel.name,
+					me: props.network.nick,
+				});
 
-				if (!cmd) {
-					return false;
-				}
+				if (expanded) {
+					for (const line of expanded) {
+						if (!runClientCommand(line)) {
+							socket.emit("input", {target, text: line});
+						}
+					}
 
-				if (Object.prototype.hasOwnProperty.call(commands, cmd) && commands[cmd](args)) {
-					return false;
+					props.channel.replyTo = null;
+					props.channel.editing = null;
+					return;
 				}
+			}
+
+			if (text[0] === "/" && runClientCommand(text)) {
+				return false;
 			}
 
 			// An edit keeps the parent of the message it replaces; the IRC layer
