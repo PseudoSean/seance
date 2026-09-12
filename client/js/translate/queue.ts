@@ -9,7 +9,7 @@
 
 import {EngineName, PromptContext, TranslateChunk, TranslateRequest} from "./engine";
 import {parseBatchedOutput} from "./prompt";
-import {appendMissing, restore} from "./spans";
+import {type Protected, type SpanMeta, restore, restoreAll} from "./spans";
 
 export const DROP_AFTER_LINES = 200;
 export const BATCH_MAX_LINES = 6;
@@ -22,9 +22,10 @@ export interface QueueItem {
 	/** The message's store id. */
 	id: number;
 	chanId: number;
-	/** Protected text (spans.ts) and its spans. */
+	/** Protected text (spans.ts), its spans and what each of them is. */
 	text: string;
 	spans: string[];
+	meta: SpanMeta[];
 	/** null = the source language could not be detected. */
 	from: string | null;
 	to: string;
@@ -466,8 +467,11 @@ export class TranslateQueue {
 	 *  streaming chunk restores placeholders in place but does not yet know
 	 *  whether a later chunk will still be missing one. */
 	private restoreText(item: QueueItem, text: string, final: boolean): string {
-		const restored = restore(text, item.spans);
-
-		return final ? appendMissing(restored.text, item.spans, restored.missing) : restored.text;
+		return final ? restoreAll(text, protectedOf(item)) : restore(text, item.spans).text;
 	}
+}
+
+/** The item's protected text as spans.ts hands it around. */
+function protectedOf(item: QueueItem): Protected {
+	return {text: item.text, spans: item.spans, meta: item.meta};
 }

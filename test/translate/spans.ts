@@ -1,5 +1,12 @@
 import {expect} from "chai";
-import {appendMissing, placeholder, protect, restore} from "../../client/js/translate/spans";
+import {
+	appendMissing,
+	placeholder,
+	placeholdersIn,
+	protect,
+	restore,
+	restoreAll,
+} from "../../client/js/translate/spans";
 
 describe("translate/spans", () => {
 	it("replaces URLs, code spans, shortcodes and formatting codes with numbered placeholders", () => {
@@ -30,7 +37,7 @@ describe("translate/spans", () => {
 	});
 
 	it("leaves plain text alone", () => {
-		expect(protect("Ja, gestern.")).to.deep.equal({text: "Ja, gestern.", spans: []});
+		expect(protect("Ja, gestern.")).to.deep.equal({text: "Ja, gestern.", spans: [], meta: []});
 	});
 
 	it("restores placeholders in any order and tolerates spaces inside them", () => {
@@ -85,6 +92,165 @@ describe("translate/spans", () => {
 		expect(protect("um 10:30:45 Uhr :+1:")).to.deep.equal({
 			text: `um 10:30:45 Uhr ${placeholder(1)}`,
 			spans: [":+1:"],
+			meta: [{kind: "verbatim"}],
+		});
+	});
+
+	describe("markdown, prefixes and nicks", () => {
+		/** What an engine does to a line it translates: the placeholders survive. */
+		const translated = (text: string) => `[en] ${text}`;
+
+		it("makes an emphasis pair two markers that know each other", () => {
+			const info = protect("this is supposed to be in *German*.");
+
+			expect(info.text).to.equal(
+				`this is supposed to be in ${placeholder(1)}German${placeholder(2)}.`
+			);
+			expect(info.spans).to.deep.equal(["*", "*"]);
+			expect(info.meta).to.deep.equal([
+				{kind: "marker", partner: 2},
+				{kind: "marker", partner: 1},
+			]);
+			expect(restoreAll(info.text, info)).to.equal("this is supposed to be in *German*.");
+		});
+
+		it("a lost closer takes the opener with it, rather than leaving a stray marker", () => {
+			const info = protect("*German*");
+
+			expect(restoreAll(`${placeholder(1)}German`, info)).to.equal("German");
+			expect(restoreAll("German", info)).to.equal("German");
+		});
+
+		it("matches the longest marker first, so ** is bold and not two italics", () => {
+			const source = "**laut** und __unterstrichen__ und ~~weg~~ und ||geheim|| und *kursiv*";
+			const info = protect(source);
+
+			expect(info.spans).to.deep.equal([
+				"**",
+				"**",
+				"__",
+				"__",
+				"~~",
+				"~~",
+				"||",
+				"||",
+				"*",
+				"*",
+			]);
+			expect(info.text).to.equal(
+				`${placeholder(1)}laut${placeholder(2)} und ${placeholder(
+					3
+				)}unterstrichen${placeholder(4)} und ${placeholder(5)}weg${placeholder(
+					6
+				)} und ${placeholder(7)}geheim${placeholder(8)} und ${placeholder(
+					9
+				)}kursiv${placeholder(10)}`
+			);
+			expect(restoreAll(info.text, info)).to.equal(source);
+		});
+
+		it("leaves arithmetic alone: 2*3*4 is not emphasis", () => {
+			expect(protect("2*3*4 und 5_6_7")).to.deep.equal({
+				text: "2*3*4 und 5_6_7",
+				spans: [],
+				meta: [],
+			});
+		});
+
+		it("a link's text is translated between two markers and the target is untouched", () => {
+			const info = protect("see [the build log](https://example.test/log) please");
+
+			expect(info.text).to.equal(
+				`see ${placeholder(2)}the build log${placeholder(3)} please`
+			);
+			expect(info.spans).to.deep.equal([
+				"https://example.test/log",
+				"[",
+				`](${placeholder(1)})`,
+			]);
+			expect(restoreAll(translated(info.text), info)).to.equal(
+				"[en] see [the build log](https://example.test/log) please"
+			);
+		});
+
+		it("a fenced block spanning three lines is one span and the line count is kept", () => {
+			const source = "erste Zeile\n```\nx = 1\n```\nletzte Zeile";
+			const info = protect(source);
+
+			expect(info.spans).to.deep.equal(["```\nx = 1\n```"]);
+			expect(info.meta).to.deep.equal([{kind: "verbatim"}]);
+			expect(info.text).to.equal(`erste Zeile\n${placeholder(1)}\nletzte Zeile`);
+
+			const out = restoreAll(info.text, info);
+
+			expect(out).to.equal(source);
+			expect(out.split("\n")).to.have.length(source.split("\n").length);
+		});
+
+		it("a line's leading syntax is one prefix span, put back on its line when lost", () => {
+			const info = protect("# Überschrift\n- erster Punkt\n> zitiert");
+
+			expect(info.spans).to.deep.equal(["# ", "- ", "> "]);
+			expect(info.meta).to.deep.equal([
+				{kind: "prefix", line: 0},
+				{kind: "prefix", line: 1},
+				{kind: "prefix", line: 2},
+			]);
+			expect(info.text).to.equal(
+				`${placeholder(1)}Überschrift\n${placeholder(2)}erster Punkt\n${placeholder(
+					3
+				)}zitiert`
+			);
+			// The engine dropped every prefix but kept the line count.
+			expect(restoreAll("Heading\nfirst item\nquoted", info)).to.equal(
+				"# Heading\n- first item\n> quoted"
+			);
+		});
+
+		it("a prefix lost from a single line goes back to the front of it", () => {
+			const info = protect("## Kapitel zwei");
+
+			expect(restoreAll("Chapter two", info, placeholdersIn(info.text))).to.equal(
+				"## Chapter two"
+			);
+		});
+
+		it("protects a nick only as a whole word, longest first", () => {
+			const info = protect("hallo alice, aliceland kennt alice nicht", {
+				nicks: ["alice", "al", "x"],
+			});
+
+			expect(info.spans).to.deep.equal(["alice", "alice"]);
+			expect(info.text).to.equal(
+				`hallo ${placeholder(1)}, aliceland kennt ${placeholder(2)} nicht`
+			);
+			expect(restoreAll(translated(info.text), info)).to.equal(
+				"[en] hallo alice, aliceland kennt alice nicht"
+			);
+		});
+
+		it("a nick is never found inside a placeholder an earlier stage left", () => {
+			const info = protect("siehe https://example.test/12 und 12 dort", {nicks: ["12"]});
+
+			expect(info.spans).to.deep.equal(["https://example.test/12", "12"]);
+			expect(info.text).to.equal(`siehe ${placeholder(1)} und ${placeholder(2)} dort`);
+		});
+
+		it("round-trips a line carrying every kind of syntax at once", () => {
+			const source =
+				"# Notiz für alice: siehe `make test`, *wichtig*, [Log](https://example.test/l) :tada:";
+			const info = protect(source, {nicks: ["alice"]});
+
+			expect(restoreAll(info.text, info)).to.equal(source);
+			expect(restoreAll(translated(info.text), info)).to.equal(`[en] ${source}`);
+		});
+
+		it("drops a placeholder number the engine invented", () => {
+			const info = protect("*so*");
+
+			expect(
+				restoreAll(`${placeholder(1)}so${placeholder(2)} ${placeholder(9)}`, info)
+			).to.equal("*so* ");
 		});
 	});
 });

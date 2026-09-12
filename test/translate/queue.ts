@@ -74,6 +74,7 @@ function item(id: number, text: string, overrides: Partial<QueueItem> = {}): Que
 		chanId: 1,
 		text: protectedText.text,
 		spans: protectedText.spans,
+		meta: protectedText.meta,
 		from: "de",
 		to: "en",
 		context: emptyContext(),

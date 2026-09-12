@@ -18,6 +18,7 @@ import {
 	type OutgoingDeps,
 	type OutgoingRequest,
 } from "../../client/js/translate/outgoing";
+import {protect} from "../../client/js/translate/spans";
 
 type Req = Omit<TranslateRequest, "id" | "model">;
 type Script = (req: Req) => string[] | Error;
@@ -208,6 +209,75 @@ describe("translate/outgoing", () => {
 
 			expect(r.requests.map((q) => q.lines?.length ?? 0)).to.deep.equal([2, 0, 0]);
 			expect(text).to.equal("[de] one\n[de] two");
+		});
+
+		it("hides markdown markers and the channel's nicks from the engine, and puts them back", async () => {
+			const r = rig((req) => [`[de] ${req.text}`]);
+			const text = await translateDraft(
+				r.deps,
+				request({
+					text: "this is supposed to be in *German*. Ask hilde.",
+					nicks: ["hilde", "otto"],
+				}),
+				new AbortController().signal,
+				() => {}
+			);
+
+			expect(r.requests[0].text).to.equal("this is supposed to be in ⟦1⟧German⟦2⟧. Ask ⟦3⟧.");
+			expect(text).to.equal("[de] this is supposed to be in *German*. Ask hilde.");
+		});
+
+		it("a marker whose partner the engine lost leaves no stray marker behind", async () => {
+			const r = rig(() => ["[de] ⟦1⟧so wichtig"]);
+			const text = await translateDraft(
+				r.deps,
+				request({text: "*so wichtig*"}),
+				new AbortController().signal,
+				() => {}
+			);
+
+			expect(text).to.equal("[de] so wichtig");
+		});
+
+		it("re-prepends a line prefix the engine dropped", async () => {
+			const r = rig(() => ["[de] Titel"]);
+			const text = await translateDraft(
+				r.deps,
+				request({text: "# Title"}),
+				new AbortController().signal,
+				() => {}
+			);
+
+			expect(r.requests[0].text).to.equal("⟦1⟧Title");
+			expect(text).to.equal("# [de] Titel");
+		});
+
+		it("ships a fenced code block whole and never sends it for translation", async () => {
+			const r = rig(echo);
+			const text = await translateDraft(
+				r.deps,
+				request({text: "look at this\n```\nx = 1\n```\nand that is all"}),
+				new AbortController().signal,
+				() => {}
+			);
+
+			expect(r.requests).to.have.length(1);
+			expect(r.requests[0].lines).to.deep.equal(["look at this", "and that is all"]);
+			expect(text).to.equal("[de] look at this\n```\nx = 1\n```\n[de] and that is all");
+		});
+
+		it("takes an already-protected text and restores against its spans", async () => {
+			const r = rig(echo);
+			const info = protect("erste Zeile\nzweite *Zeile*");
+			const text = await translateDraft(
+				r.deps,
+				request({text: info.text, protected: info}),
+				new AbortController().signal,
+				() => {}
+			);
+
+			expect(r.requests[0].lines).to.deep.equal(["erste Zeile", "zweite ⟦1⟧Zeile⟦2⟧"]);
+			expect(text).to.equal("[de] erste Zeile\n[de] zweite *Zeile*");
 		});
 
 		it("times out, aborting the request it made", async () => {

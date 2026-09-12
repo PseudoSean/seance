@@ -6,7 +6,7 @@
 
 import type {PromptContext, TranslateChunk, TranslateRequest} from "./engine";
 import {parseBatchedOutput, stripSentinel} from "./prompt";
-import {appendMissing, protect, restore} from "./spans";
+import {type Protected, placeholdersIn, protect, restore, restoreAll} from "./spans";
 
 /** A draft's translation is given up after this long (the queue's limit). */
 export const WRITE_TIMEOUT_MS = 2 * 60 * 1000;
@@ -124,22 +124,36 @@ export interface OutgoingRequest {
 	context: PromptContext;
 	/** The route's engine takes numbered lines (the LLM does; seq2seq does not). */
 	batches: boolean;
+	/** The channel's names, protected like any other span (spans.ts). */
+	nicks?: string[];
+	/**
+	 * Already protected, `text` being its protected form: the reading queue
+	 * protects a whole message once (a fenced block is one span across its
+	 * lines) and hands the lines here. Without it the text is protected
+	 * here — once, before it is split, for the same reason.
+	 */
+	protected?: Protected;
 }
 
-/** One translation of `protectedText` streamed through `onChunk` (restored), resolved restored. */
+/** Nothing here but placeholders: a fenced code block's line, say. */
+function isProtectedOnly(line: string): boolean {
+	return placeholdersIn(line).length > 0 && line.replace(/⟦\s*\d+\s*⟧/g, "").trim() === "";
+}
+
+/** One translation of the already-protected `line`, streamed through `onChunk` (restored). */
 async function translateOne(
 	deps: OutgoingDeps,
 	request: OutgoingRequest,
+	info: Protected,
 	line: string,
 	signal: AbortSignal,
 	onChunk: (text: string) => void
 ): Promise<string> {
-	const guarded = protect(line);
 	let last = "";
 
 	for await (const chunk of deps.translate(
 		{
-			text: guarded.text,
+			text: line,
 			from: request.from,
 			to: request.to,
 			purpose: request.purpose,
@@ -148,23 +162,20 @@ async function translateOne(
 		signal
 	)) {
 		last = chunk.text;
-		onChunk(restore(chunk.text, guarded.spans).text);
+		onChunk(restore(chunk.text, info.spans).text);
 	}
 
-	const restored = restore(last, guarded.spans);
-
-	return appendMissing(restored.text, guarded.spans, restored.missing);
+	return restoreAll(last, info, placeholdersIn(line));
 }
 
 /** The numbered stream as it stands, numbers stripped and spans restored, for the strip. */
-function batchedPreview(raw: string, spans: string[][]): string {
+function batchedPreview(raw: string, info: Protected): string {
 	return stripSentinel(raw)
 		.split("\n")
-		.map((line, i) => {
+		.map((line) => {
 			const match = /^\s*\d+\.\s?(.*)$/.exec(line);
-			const body = match ? match[1] : line;
 
-			return spans[i] ? restore(body, spans[i]).text : body;
+			return restore(match ? match[1] : line, info.spans).text;
 		})
 		.join("\n");
 }
@@ -177,17 +188,17 @@ function batchedPreview(raw: string, spans: string[][]): string {
 async function translateBatched(
 	deps: OutgoingDeps,
 	request: OutgoingRequest,
+	info: Protected,
 	lines: string[],
 	signal: AbortSignal,
 	onChunk: (text: string) => void
 ): Promise<string[] | null> {
-	const guarded = lines.map((line) => protect(line));
 	let last = "";
 
 	for await (const chunk of deps.translate(
 		{
 			text: "",
-			lines: guarded.map((g) => g.text),
+			lines,
 			from: request.from,
 			to: request.to,
 			purpose: request.purpose,
@@ -196,12 +207,7 @@ async function translateBatched(
 		signal
 	)) {
 		last = chunk.text;
-		onChunk(
-			batchedPreview(
-				chunk.text,
-				guarded.map((g) => g.spans)
-			)
-		);
+		onChunk(batchedPreview(chunk.text, info));
 	}
 
 	const parsed = parseBatchedOutput(last, lines.length);
@@ -210,15 +216,15 @@ async function translateBatched(
 		return null;
 	}
 
-	return parsed.map((text, i) => {
-		const restored = restore(text, guarded[i].spans);
-
-		return appendMissing(restored.text, guarded[i].spans, restored.missing);
-	});
+	return parsed.map((text, i) => restoreAll(text, info, placeholdersIn(lines[i])));
 }
 
 /**
- * Translate a draft as a unit. Resolves the translation with the draft's
+ * Translate a text as a unit — the composer's draft, and (through the
+ * queue) a multi-line message someone sent. The whole text is protected
+ * once and only then split, so a fenced block is one span rather than a
+ * fence per line, and a line that holds nothing but a placeholder is put
+ * back rather than translated. Resolves the translation with the text's
  * line structure (blank lines in place); rejects with TIMED_OUT after
  * WRITE_TIMEOUT_MS, ABORTED when `signal` aborts, or the engine's error.
  * `onChunk` gets the text so far, restored, for the strip to stream.
@@ -260,26 +266,51 @@ export async function translateDraft(
 	};
 
 	try {
-		const lines = request.text.split("\n");
-		const filled = lines.map((l, i) => [l, i] as [string, number]).filter(([l]) => l.trim());
+		// Once, on the whole text: a fenced code block is one span across
+		// its lines, and a placeholder's number is the same in every line.
+		const info = request.protected ?? protect(request.text, {nicks: request.nicks});
+		const lines = info.text.split("\n");
+		const filled: [string, number][] = [];
+		// A line that is nothing but protected syntax (a code block) has
+		// nothing to translate: it is put back as it was.
+		const kept: number[] = [];
 
-		if (filled.length <= 1) {
-			const only = filled.length === 1 ? filled[0][0] : request.text;
-			const text = await translateOne(deps, request, only, controller.signal, onChunk);
+		lines.forEach((line, index) => {
+			if (line.trim() === "") {
+				return;
+			}
+
+			if (isProtectedOnly(line)) {
+				kept.push(index);
+				return;
+			}
+
+			filled.push([line, index]);
+		});
+
+		if (filled.length <= 1 && kept.length === 0) {
+			const only = filled.length === 1 ? filled[0][0] : info.text;
+			const text = await translateOne(deps, request, info, only, controller.signal, onChunk);
 
 			return finish(text);
 		}
 
 		const out = [...lines];
+
+		for (const index of kept) {
+			out[index] = restoreAll(lines[index], info, placeholdersIn(lines[index]));
+		}
+
 		let translated: string[] | null = null;
 
-		if (request.batches) {
+		if (request.batches && filled.length > 1) {
 			let streamed = false;
 
 			try {
 				translated = await translateBatched(
 					deps,
 					request,
+					info,
 					filled.map(([l]) => l),
 					controller.signal,
 					(preview) => {
@@ -314,6 +345,7 @@ export async function translateDraft(
 				const text = await translateOne(
 					deps,
 					request,
+					info,
 					line,
 					controller.signal,
 					(partial) => {

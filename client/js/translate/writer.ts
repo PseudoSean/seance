@@ -211,6 +211,7 @@ export async function translateOutgoing(
 					purpose: "write",
 					context,
 					batches: route?.candidate === "llm",
+					nicks,
 				},
 				controller.signal,
 				(partial) => {
@@ -335,6 +336,7 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 					purpose: "read",
 					context,
 					batches: route?.candidate === "llm",
+					nicks: channel.users.map((u) => u.nick),
 				},
 				controller.signal,
 				(partial) => {

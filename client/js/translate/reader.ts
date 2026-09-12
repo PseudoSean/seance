@@ -274,12 +274,13 @@ export async function translateMessage(
 	}
 
 	const from = detection.lang && detection.lang !== to ? detection.lang : null;
-	const protectedText = protect(message.text);
+	const protectedText = protect(message.text, {nicks});
 	const item: QueueItem = {
 		id: message.id,
 		chanId: channel.id,
 		text: protectedText.text,
 		spans: protectedText.spans,
+		meta: protectedText.meta,
 		from,
 		to,
 		context: buildContext(channel, message, {
