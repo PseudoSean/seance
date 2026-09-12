@@ -156,6 +156,77 @@ describe("translate/queue", () => {
 		expect(r.requests.map((q) => q.from)).to.deep.equal(["es", "de", "fr"]);
 	});
 
+	// What is being said now over what was said then: a history line (a join
+	// replay, or a page the reader loaded) waits behind its channel's live
+	// items whatever order they were queued in.
+	it("a live item runs before the history items queued before it", async () => {
+		const r = rig((req) => {
+			if (!req.lines) {
+				return [`[en] ${req.text}`];
+			}
+
+			return [req.lines.map((line, i) => `${i + 1}. [en] ${line}`).join("\n") + "\nEND"];
+		});
+
+		clock = r.clock;
+		r.queue.pauseForTest();
+
+		for (let i = 1; i <= 5; i++) {
+			r.queue.enqueue(item(i, `alte zeile ${i} hier`, {history: true, from: "fr"}));
+		}
+
+		r.queue.enqueue(item(10, "das ist gerade eben"));
+		await settle(r.clock, 3);
+		r.queue.resumeForTest();
+		await settle(r.clock);
+
+		// The live line alone first, then the five history lines as one batch.
+		expect(r.requests.map((q) => q.from)).to.deep.equal(["de", "fr"]);
+		expect(r.requests[0].text).to.equal("das ist gerade eben");
+		expect(r.requests[1].lines?.length).to.equal(5);
+	});
+
+	// A retry is someone asking for that line now, so it stops being
+	// history: a burst of live chat must not push it to the back.
+	it("a retried history item is no longer held behind live lines", async () => {
+		const r = rig();
+		clock = r.clock;
+		r.queue.pauseForTest();
+		r.queue.enqueue(item(10, "das ist gerade eben", {from: "de"}));
+		r.queue.retry(item(1, "alte zeile hier", {history: true, from: "fr"}));
+		await settle(r.clock, 3);
+		r.queue.resumeForTest();
+		await settle(r.clock);
+
+		expect(r.requests.map((q) => q.from)).to.deep.equal(["fr", "de"]);
+	});
+
+	it("history items are what a channel that fell behind has left to drop", async () => {
+		const r = rig();
+		clock = r.clock;
+		r.queue.pauseForTest();
+
+		// The page the reader loaded, queued when the channel had seen
+		// nothing; then DROP_AFTER_LINES live lines arrive, the last of them
+		// queued for translation too.
+		for (let i = 1; i <= 5; i++) {
+			r.queue.enqueue(
+				item(i, `alte zeile ${i} hier`, {history: true, from: "fr", arrivalsAtEnqueue: 0})
+			);
+		}
+
+		r.arrivals.set(1, DROP_AFTER_LINES + 1);
+		r.queue.enqueue(item(10, "das ist gerade eben", {arrivalsAtEnqueue: DROP_AFTER_LINES + 1}));
+		await settle(r.clock, 3);
+		r.queue.resumeForTest();
+		await settle(r.clock);
+
+		expect(r.updates.filter(([, u]) => u.status === "dropped").map(([id]) => id)).to.deep.equal(
+			[1, 2, 3, 4, 5]
+		);
+		expect(r.requests.map((q) => q.text)).to.deep.equal(["das ist gerade eben"]);
+	});
+
 	it("runs one request per engine, so the GPU and CPU engines overlap", async () => {
 		const r = rig();
 		clock = r.clock;

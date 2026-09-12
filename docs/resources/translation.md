@@ -101,11 +101,10 @@ line at a time to a seq2seq engine, blank lines where they were, and never
 batched with the other lines of the channel. Without that the engine's cut
 kept the first line and the rest of the message was silently lost. An entry leaves when its message does: an edit or a REDACT
 drops it, and so do the message-limit trim, a part and a quit. The
-switch, the outgoing target (plan 3), formality, variant and the term
-memory are per channel under `thelounge.translate` (`channelStore.ts`);
-older messages are never translated (the switch-on moment is recorded),
-and a replayed one must be newer than this page's session too, so a
-reload does not re-translate a channel's backlog. The channel menu's
+switch, the outgoing target (plan 3), formality, variant, the languages
+spoken here and the term memory are per channel under
+`thelounge.translate` (`channelStore.ts`); older messages are never
+translated (the switch-on moment is recorded). The channel menu's
 "Translation…" switches to the channel and asks for the panel through
 `state.translation.panelFor`, which the view clears as it opens it.
 Nothing on a message object changes and nothing about unread or highlight
@@ -115,6 +114,28 @@ batched request as numbered lines closed by `END`, fails a request whose
 text carries `[fail]` once (the retry succeeds), and logs every request
 onto `globalThis.__seanceTranslateFake` so a scenario can tell a batch
 from a fallback to singles.
+
+**History is translated, bounded and newest first.** A replayed line -- a
+reconnect's catch-up, a reload's replay -- is gated by the switch-on moment
+alone, like a live one: a channel switched on today still does not
+translate last week's scrollback, but everything said since it was
+switched on is translated whether this page saw it live or on a replay.
+A replay arrives one line at a time, so it is bounded by counting:
+`HISTORY_QUEUE_CAP` (40) replayed lines per channel per replay window, a
+live line closing the window. A **"load more"** is the reader asking for
+that history -- they are looking at it now -- so the switch-on moment does
+not gate it at all, while the rest of eligibility (own lines, pending
+ones, short ones, lines already in the target) still does; and because
+that page arrives whole, its newest 40 lines are queued, newest first
+(`eligibility.ts` `HISTORY_QUEUE_CAP` and `historyQueueOrder`, from the
+reader's second `socket.on("more")` listener, which runs after
+`socket-events/more.ts` has prepended the page, so the objects it queues
+are the store's own and their ids are store ids). The queue then runs a
+channel's live lines ahead of its history ones (`QueueItem.history`,
+cleared by a retry, since a retry is someone asking for that line now),
+and the history ones are what a channel that has fallen
+`DROP_AFTER_LINES` behind has left to drop. Browser check: the last steps
+of `tools/scenarios/translate-reading.mjs`.
 
 ## The channel's panel
 

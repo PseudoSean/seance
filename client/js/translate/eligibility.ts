@@ -1,9 +1,31 @@
 // Which incoming messages the reading pipeline considers (spec § Reading
 // pipeline, 1): from someone else, not pending, a chat type, after the
 // channel's switch-on time, and with enough words once URLs, code, emoji,
-// formatting codes and nick mentions are gone. Vue-free.
+// formatting codes and nick mentions are gone. History — a join replay or a
+// "load more" — is bounded here as well. Vue-free.
 
 export const MIN_WORDS = 3;
+
+/**
+ * How many of a channel's history lines one load may queue. A "load more"
+ * the user asked for and a join replay are both held to this, so scrolling
+ * back through a year does not queue a year: what is over the cap is left
+ * untranslated until the reader asks for one of those lines by hand.
+ */
+export const HISTORY_QUEUE_CAP = 40;
+
+/**
+ * The lines of a loaded history page the pipeline considers, newest first:
+ * the reader is looking at the newest of what just arrived, so those are
+ * queued first and the oldest of an over-long page are not queued at all.
+ */
+export function historyQueueOrder<T>(messages: readonly T[], cap = HISTORY_QUEUE_CAP): T[] {
+	if (cap <= 0) {
+		return [];
+	}
+
+	return messages.slice(-cap).reverse();
+}
 
 export interface EligibilityMsg {
 	type?: string;

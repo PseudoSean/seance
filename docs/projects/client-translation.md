@@ -90,10 +90,25 @@ Plan 2 (reading pipeline):
   context-build time rather than seeded into the persisted records, keyed
   by the source term with the channel's own memory winning; the glossary
   itself is not subject to `TERM_LINES`.
-- A replayed message (the bus payload's `replay`) is eligible only when it
-  is newer than the page's session as well as newer than `since`: a cold
-  boot does not translate history, a reconnect's catch-up within a session
-  does.
+- **History is translated, bounded and newest first** — this reverses plan
+  2's cold-boot ruling (a replayed message used to be eligible only when it
+  was newer than the page's session as well as newer than `since`, so a
+  cold boot translated nothing). Since the live test of 2026-09-12 a
+  replayed message is gated by `since` alone, like a live one: a channel
+  switched on today still does not translate last week's scrollback, but a
+  reload's replay of what was said since the switch-on is translated. A
+  replay is bounded by counting, because the reader sees it one line at a
+  time: `HISTORY_QUEUE_CAP` (40) replayed lines per channel per replay
+  window, a live line closing the window — so a join replay keeps the
+  _first_ 40 of its window rather than its newest 40, which is what the
+  one-line-at-a-time path allows. A "load more" arrives as a page, so it
+  keeps the newest `HISTORY_QUEUE_CAP` lines, newest first, and skips the
+  `since` check entirely (the reader asked for that history) while the rest
+  of eligibility still applies. The cap and the ordering live in
+  `eligibility.ts` (store-free, so mocha covers them) rather than in
+  `reader.ts` as the brief had it; `translateMessage` takes an
+  `options.history` flag and `QueueItem.history` orders a channel's live
+  lines ahead of its history ones (a retry clears it).
 - A channel's **declared languages** (`channelStore.ts` `languages`, the
   panel's _Languages spoken here_) are an explicit prior above the
   automatic one, added after the live test of 2026-09-12: a declared

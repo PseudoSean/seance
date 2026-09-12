@@ -1,6 +1,7 @@
 // The reading-side scheduler (spec § queue.ts). One instance per network:
-// a FIFO ordered by the caller's priority (the active channel first) and
-// arrival, one request in flight per engine so the GPU and CPU engines
+// a FIFO ordered by the caller's priority (the active channel first), then
+// live lines before history ones, then arrival; one request in flight per
+// engine so the GPU and CPU engines
 // overlap, LLM items of one channel and pair batched as numbered lines,
 // items that fell DROP_AFTER_LINES messages behind dropped, and an engine
 // paused after PAUSE_AFTER_FAILURES consecutive failures. A multi-line
@@ -48,6 +49,12 @@ export interface QueueItem {
 	arrivalsAtEnqueue: number;
 	/** Never batch this item (a retry, or a batch that failed to parse). */
 	single: boolean;
+	/**
+	 * A history line (a join replay, or a page the reader loaded) rather
+	 * than one that just arrived: it runs behind the channel's live items,
+	 * and it is what a channel falling behind has left to drop.
+	 */
+	history?: true;
 }
 
 export type QueueUpdate =
@@ -114,7 +121,14 @@ export class TranslateQueue {
 
 	retry(item: QueueItem): void {
 		this.enqueueAt(
-			{...item, single: true, arrivalsAtEnqueue: this.deps.arrivals(item.chanId)},
+			{
+				...item,
+				single: true,
+				// Someone asked for this line now, so it is no longer history:
+				// a burst of live chat must not push a retry to the back.
+				history: undefined,
+				arrivalsAtEnqueue: this.deps.arrivals(item.chanId),
+			},
 			true
 		);
 	}
@@ -264,9 +278,13 @@ export class TranslateQueue {
 
 		this.prune();
 
+		// The active channel first, then what is being said now over what was
+		// said then (a history page the reader loaded, or a join replay),
+		// then the order they were queued in.
 		this.waiting.sort(
 			(a, b) =>
 				this.deps.priority(a.item.chanId) - this.deps.priority(b.item.chanId) ||
+				Number(a.item.history ?? false) - Number(b.item.history ?? false) ||
 				a.seq - b.seq
 		);
 

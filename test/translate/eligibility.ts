@@ -1,5 +1,12 @@
 import {expect} from "chai";
-import {MIN_WORDS, isEligible, plainTextOf, wordCount} from "../../client/js/translate/eligibility";
+import {
+	HISTORY_QUEUE_CAP,
+	MIN_WORDS,
+	historyQueueOrder,
+	isEligible,
+	plainTextOf,
+	wordCount,
+} from "../../client/js/translate/eligibility";
 
 const nicks = ["ada", "jonas", "Storm"];
 const since = Date.parse("2026-09-11T12:00:00Z");
@@ -16,6 +23,23 @@ function msg(overrides: Record<string, unknown> = {}) {
 }
 
 describe("translate/eligibility", () => {
+	// A loaded history page: the newest lines are the ones the reader is
+	// looking at, and a long page is cut rather than queued whole.
+	it("a loaded history page is taken newest first, up to the cap", () => {
+		expect(HISTORY_QUEUE_CAP).to.equal(40);
+		expect(historyQueueOrder(["a", "b", "c"])).to.deep.equal(["c", "b", "a"]);
+		expect(historyQueueOrder(["a", "b", "c", "d"], 2)).to.deep.equal(["d", "c"]);
+		expect(historyQueueOrder([], 2)).to.deep.equal([]);
+		expect(historyQueueOrder(["a", "b"], 0)).to.deep.equal([]);
+
+		const page = Array.from({length: HISTORY_QUEUE_CAP + 5}, (_, i) => i);
+		const queued = historyQueueOrder(page);
+
+		expect(queued.length).to.equal(HISTORY_QUEUE_CAP);
+		expect(queued[0]).to.equal(HISTORY_QUEUE_CAP + 4);
+		expect(queued).to.not.include(0);
+	});
+
 	it("plainTextOf strips what a detector must not see", () => {
 		expect(
 			plainTextOf(
