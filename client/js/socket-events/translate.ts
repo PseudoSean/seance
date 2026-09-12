@@ -3,5 +3,7 @@
 // `part`/`quit` cleanup that runs before ./part and ./quit remove the
 // channel or network.
 import {initReader} from "../translate/reader";
+import {initWriter} from "../translate/writer";
 
 initReader();
+initWriter();
