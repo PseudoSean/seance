@@ -310,6 +310,16 @@ describe("the <3 theme's meadow", function () {
 });
 
 describe("the <3 theme's animals", function () {
+	/** The cast (tools/heart/README.md); the teddy and the dolphin are held. */
+	const CAST = ["horse", "deer", "puppy", "bunny", "kitten", "frog", "ladybug", "bird"];
+
+	/** One scene rule's body. */
+	const sceneBody = (n: number) => {
+		const start = css.indexOf(`#chat-container[data-scene="${n}"]`);
+		expect(start, `scene ${n}`).to.be.greaterThan(-1);
+		return css.slice(start, css.indexOf("\n}", start));
+	};
+
 	/** The meadow rule's body. */
 	const meadowRule = () => {
 		const start = css.indexOf(
@@ -370,29 +380,72 @@ describe("the <3 theme's animals", function () {
 		expect(rule).to.include("calc(100% - var(--strip) * 0.295)"); // the visitor stands on the plateau
 	});
 
-	it("declares the six animal files and casts every scene", function () {
-		for (const animal of ["horse", "puppy", "bunny"]) {
+	it("declares the eight animals' files, and every file it names exists", function () {
+		for (const animal of CAST) {
 			expect(css).to.include(`--heart-${animal}: url("heart/${animal}.svg");`);
 			expect(css).to.include(`--heart-${animal}-far: url("heart/${animal}-far.svg");`);
-			expect(css).to.match(new RegExp(`--heart-${animal}-h: 0\\.\\d+;`));
+			expect(css, `--heart-${animal}-h`).to.match(
+				new RegExp(`--heart-${animal}-h: \\d*\\.\\d+;`)
+			);
 		}
+
+		for (const [, file] of css.matchAll(/url\("(heart\/[^"]+\.svg)"\)/g)) {
+			expect(
+				fs.existsSync(path.resolve(__dirname, "../../client/themes/", file)),
+				`${file} exists`
+			).to.be.true;
+		}
+	});
+
+	it("casts all eight, every scene, and holds no animal the user set aside", function () {
+		const cast = new Map(CAST.map((animal) => [animal, [] as number[]]));
+		const near = `var\\(--heart-(${CAST.join("|")})\\)`;
 
 		for (const n of [0, 1, 2, 3, 4, 5]) {
-			const start = css.indexOf(`#chat-container[data-scene="${n}"]`);
-			const body = css.slice(start, css.indexOf("}", start));
+			const body = sceneBody(n);
 			expect(body, `scene ${n} casts slot a`).to.match(
-				/--heart-slot-a: var\(--heart-(horse|puppy|bunny)\);/
+				new RegExp(`--heart-slot-a: ${near};`)
 			);
 			expect(body, `scene ${n} sizes slot a`).to.match(
-				/--heart-slot-a-h: var\(--heart-(horse|puppy|bunny)-h\);/
+				new RegExp(`--heart-slot-a-h: var\\(--heart-(${CAST.join("|")})-h\\);`)
+			);
+			expect(body, `scene ${n} decides slot b`).to.match(
+				new RegExp(`--heart-slot-b: (none|${near});`)
 			);
 			expect(body, `scene ${n} decides slot f`).to.match(
-				/--heart-slot-f: (none|var\(--heart-(horse|puppy|bunny)-far\));/
+				new RegExp(`--heart-slot-f: (none|var\\(--heart-(${CAST.join("|")})-far\\));`)
 			);
+
+			for (const [, animal] of body.matchAll(
+				/--heart-slot-[abf]: var\(--heart-([a-z]+?)(?:-far)?\);/g
+			)) {
+				cast.get(animal)!.push(n);
+			}
 		}
 
-		const scene1 = css.slice(css.indexOf('#chat-container[data-scene="1"]'));
-		expect(scene1.slice(0, scene1.indexOf("}"))).to.include("--heart-slot-b: none;");
+		for (const [animal, scenes] of cast) {
+			expect(scenes, `${animal} is cast somewhere`).to.not.be.empty;
+		}
+
+		// The teddy bear and the dolphin were held: their rigs stay, their
+		// files are gone (test/tools/heart/files.ts), and the theme must not
+		// reach for either.
+		for (const held of ["teddy", "dolphin"]) {
+			expect(css, `no ${held} in the theme`).to.not.include(held);
+		}
+	});
+
+	it("gives a phone a mid or large animal in every scene", function () {
+		// Phones keep slot A and the distant visitor and drop slot B, so an
+		// animal cast only into B never shows on one. Whichever way a pair is
+		// cast, what survives must not be only a small creature.
+		const small = ["frog", "ladybug", "bird"];
+
+		for (const n of [0, 1, 2, 3, 4, 5]) {
+			const body = sceneBody(n);
+			const a = body.match(/--heart-slot-a: var\(--heart-([a-z]+)\);/)![1];
+			expect(small, `scene ${n}'s near animal on a phone`).to.not.include(a);
+		}
 	});
 
 	it("moves only x in the cloud keyframes, fourteen entries", function () {
@@ -412,7 +465,7 @@ describe("the <3 theme's animals", function () {
 		expect(phones).to.match(/#chat-container\[data-scene\] \{[^}]*--heart-slot-b: none;/);
 		const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
 
-		for (const animal of ["horse", "puppy", "bunny"]) {
+		for (const animal of CAST) {
 			expect(reduced).to.include(`--heart-${animal}: url("heart/${animal}-still.svg");`);
 			expect(reduced).to.include(
 				`--heart-${animal}-far: url("heart/${animal}-far-still.svg");`

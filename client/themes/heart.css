@@ -592,16 +592,47 @@ strong,
 	 * one distant visitor on the plateau — by pointing the slot tokens at
 	 * the animal tokens; reduced motion repoints the animal tokens at the
 	 * stills, so no scene is restated there. Heights are shares of --strip;
-	 * a distant visitor is 0.7 of its animal's. */
+	 * a distant visitor is 0.7 of its animal's.
+	 *
+	 * A height token sizes the animal's *box*, and several boxes carry
+	 * deliberate empty space — the bird's is 800 units tall for 76 units of
+	 * bird, because the sky above it is its flight path; the frog's holds
+	 * its hop, the ladybug's its wings' transit, the kitten's its raised
+	 * tail — so every token is picked from the body that actually renders,
+	 * never from the box. The share of the box each animal fills, measured
+	 * off its still: horse 0.92, deer 0.92, puppy 0.62, kitten 0.82, bunny
+	 * (ears past the box) ~1, frog 0.57, ladybug 0.55, bird 0.10.
+	 *
+	 * The second number a token moves is how far the animal travels:
+	 * on-screen stage width is `stage.aspect × the token`, in strips. Horse,
+	 * puppy, bunny and kitten sit at the cast's usual 10.5 and the deer
+	 * (8.8) and bird (13.2) near it; the frog (7.2) and the ladybug (3.4)
+	 * wander a shorter stretch instead of crossing, which is what a token
+	 * sized from a small body implies. */
 	--heart-horse: url("heart/horse.svg");
 	--heart-horse-far: url("heart/horse-far.svg");
+	--heart-deer: url("heart/deer.svg");
+	--heart-deer-far: url("heart/deer-far.svg");
 	--heart-puppy: url("heart/puppy.svg");
 	--heart-puppy-far: url("heart/puppy-far.svg");
 	--heart-bunny: url("heart/bunny.svg");
 	--heart-bunny-far: url("heart/bunny-far.svg");
+	--heart-kitten: url("heart/kitten.svg");
+	--heart-kitten-far: url("heart/kitten-far.svg");
+	--heart-frog: url("heart/frog.svg");
+	--heart-frog-far: url("heart/frog-far.svg");
+	--heart-ladybug: url("heart/ladybug.svg");
+	--heart-ladybug-far: url("heart/ladybug-far.svg");
+	--heart-bird: url("heart/bird.svg");
+	--heart-bird-far: url("heart/bird-far.svg");
 	--heart-horse-h: 0.66;
-	--heart-puppy-h: 0.44;
+	--heart-deer-h: 0.55;
+	--heart-puppy-h: 0.585;
 	--heart-bunny-h: 0.44;
+	--heart-kitten-h: 0.44;
+	--heart-frog-h: 0.3;
+	--heart-ladybug-h: 0.19;
+	--heart-bird-h: 1.2;
 	--heart-slot-a: var(--heart-horse);
 	--heart-slot-a-h: var(--heart-horse-h);
 	--heart-slot-b: none;
@@ -644,13 +675,13 @@ strong,
 	--heart-hill-2-w: 50%;
 	--heart-hill-2-h: 0.18;
 
-	/* scene 0 */
+	/* scene 0: horse and bunny near, a deer on the plateau */
 	--heart-slot-a: var(--heart-horse);
 	--heart-slot-a-h: var(--heart-horse-h);
 	--heart-slot-b: var(--heart-bunny);
 	--heart-slot-b-h: var(--heart-bunny-h);
-	--heart-slot-f: var(--heart-puppy-far);
-	--heart-slot-f-h: 0.31;
+	--heart-slot-f: var(--heart-deer-far);
+	--heart-slot-f-h: 0.385;
 }
 
 #chat-container[data-scene="1"] {
@@ -664,13 +695,13 @@ strong,
 	/* One cloud in this scene (§5.3): both of the second cloud's ellipses go transparent. */
 	--heart-cloud-2: linear-gradient(transparent, transparent), linear-gradient(transparent, transparent);
 
-	/* scene 1 */
-	--heart-slot-a: var(--heart-puppy);
-	--heart-slot-a-h: var(--heart-puppy-h);
-	--heart-slot-b: none;
-	--heart-slot-b-h: 0.44;
-	--heart-slot-f: var(--heart-horse-far);
-	--heart-slot-f-h: 0.46;
+	/* scene 1: a deer with a frog at its feet, a puppy on the plateau */
+	--heart-slot-a: var(--heart-deer);
+	--heart-slot-a-h: var(--heart-deer-h);
+	--heart-slot-b: var(--heart-frog);
+	--heart-slot-b-h: var(--heart-frog-h);
+	--heart-slot-f: var(--heart-puppy-far);
+	--heart-slot-f-h: 0.412;
 }
 
 #chat-container[data-scene="2"] {
@@ -681,11 +712,11 @@ strong,
 	--heart-hill-2-w: 60%;
 	--heart-hill-2-h: 0.17;
 
-	/* scene 2 */
-	--heart-slot-a: var(--heart-bunny);
-	--heart-slot-a-h: var(--heart-bunny-h);
-	--heart-slot-b: var(--heart-puppy);
-	--heart-slot-b-h: var(--heart-puppy-h);
+	/* scene 2: a kitten and a ladybug, a horse on the plateau */
+	--heart-slot-a: var(--heart-kitten);
+	--heart-slot-a-h: var(--heart-kitten-h);
+	--heart-slot-b: var(--heart-ladybug);
+	--heart-slot-b-h: var(--heart-ladybug-h);
 	--heart-slot-f: var(--heart-horse-far);
 	--heart-slot-f-h: 0.46;
 
@@ -701,11 +732,12 @@ strong,
 	--heart-hill-2-w: 35%;
 	--heart-hill-2-h: 0.25;
 
-	/* scene 3 */
-	--heart-slot-a: var(--heart-horse);
-	--heart-slot-a-h: var(--heart-horse-h);
-	--heart-slot-b: var(--heart-puppy);
-	--heart-slot-b-h: var(--heart-puppy-h);
+	/* scene 3: the puppy's scene — it sits and its hearts rise — with a frog
+	 * beside it and a bunny on the plateau */
+	--heart-slot-a: var(--heart-puppy);
+	--heart-slot-a-h: var(--heart-puppy-h);
+	--heart-slot-b: var(--heart-frog);
+	--heart-slot-b-h: var(--heart-frog-h);
 	--heart-slot-f: var(--heart-bunny-far);
 	--heart-slot-f-h: 0.31;
 }
@@ -721,11 +753,13 @@ strong,
 	/* One cloud in this scene (§5.3): both of the second cloud's ellipses go transparent. */
 	--heart-cloud-2: linear-gradient(transparent, transparent), linear-gradient(transparent, transparent);
 
-	/* scene 4 */
-	--heart-slot-a: var(--heart-bunny);
-	--heart-slot-a-h: var(--heart-bunny-h);
-	--heart-slot-b: none;
-	--heart-slot-b-h: 0.44;
+	/* scene 4: the sparse one — a kitten under a bird, and nobody on the
+	 * plateau. The kitten takes the near slot and the bird the one phones
+	 * drop: a phone that kept only the bird would show an empty sky. */
+	--heart-slot-a: var(--heart-kitten);
+	--heart-slot-a-h: var(--heart-kitten-h);
+	--heart-slot-b: var(--heart-bird);
+	--heart-slot-b-h: var(--heart-bird-h);
 	--heart-slot-f: none;
 	--heart-slot-f-h: 0.31;
 }
@@ -738,12 +772,12 @@ strong,
 	--heart-hill-2-w: 45%;
 	--heart-hill-2-h: 0.23;
 
-	/* scene 5 */
-	--heart-slot-a: var(--heart-puppy);
-	--heart-slot-a-h: var(--heart-puppy-h);
+	/* scene 5: a bunny with a horse passing in front, a kitten on the plateau */
+	--heart-slot-a: var(--heart-bunny);
+	--heart-slot-a-h: var(--heart-bunny-h);
 	--heart-slot-b: var(--heart-horse);
 	--heart-slot-b-h: var(--heart-horse-h);
-	--heart-slot-f: var(--heart-bunny-far);
+	--heart-slot-f: var(--heart-kitten-far);
 	--heart-slot-f-h: 0.31;
 
 	/* one of the two rainbow scenes (§5.3) */
@@ -916,7 +950,14 @@ strong,
 	}
 
 	/* Two animal slots stay (spec §5.7): the first near one and the distant
-	 * visitor. Same specificity as the scene rules, later in the file. */
+	 * visitor. Same specificity as the scene rules, later in the file.
+	 *
+	 * Every scene therefore keeps a mid or large animal on a phone — that is
+	 * what decides which way round a pair is cast. The three animals only
+	 * ever cast into slot B (frog, ladybug, bird) are desktop-only by that
+	 * rule: promoting one into slot A would leave a phone showing nothing
+	 * but a small creature, or in scene 4's case an empty sky. Scene 4 keeps
+	 * its empty plateau, so on a phone it is its kitten alone. */
 	#chat-container[data-scene] {
 		--heart-slot-b: none;
 	}
@@ -952,10 +993,20 @@ strong,
 	:root {
 		--heart-horse: url("heart/horse-still.svg");
 		--heart-horse-far: url("heart/horse-far-still.svg");
+		--heart-deer: url("heart/deer-still.svg");
+		--heart-deer-far: url("heart/deer-far-still.svg");
 		--heart-puppy: url("heart/puppy-still.svg");
 		--heart-puppy-far: url("heart/puppy-far-still.svg");
 		--heart-bunny: url("heart/bunny-still.svg");
 		--heart-bunny-far: url("heart/bunny-far-still.svg");
+		--heart-kitten: url("heart/kitten-still.svg");
+		--heart-kitten-far: url("heart/kitten-far-still.svg");
+		--heart-frog: url("heart/frog-still.svg");
+		--heart-frog-far: url("heart/frog-far-still.svg");
+		--heart-ladybug: url("heart/ladybug-still.svg");
+		--heart-ladybug-far: url("heart/ladybug-far-still.svg");
+		--heart-bird: url("heart/bird-still.svg");
+		--heart-bird-far: url("heart/bird-far-still.svg");
 		--heart-rainbow-y: calc(100% - var(--strip) * 0.3);
 	}
 

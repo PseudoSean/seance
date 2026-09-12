@@ -226,7 +226,14 @@ export const rig = {
 	nFar: 120,
 	emitStrideFar: 2,
 	fillet: 12,
-	viewBox: {x: 0, y: 20, w: 110, h: 82},
+	// 27 units of sky above the puppy's old y = 20 top, for the hearts: the
+	// glyph sits 26 units over the sitting head and rises 26 more, so a box
+	// that stopped at the head clipped it away entirely (it left the box one
+	// unit into a 1.4 s rise and was wholly outside by 0.46 s, still fully
+	// opaque — the hearts had never been visible). `stage.aspect` and the
+	// theme's `--heart-puppy-h` are scaled by 82/109 and 109/82 to match, so
+	// the puppy is the same size on screen and crosses the same distance.
+	viewBox: {x: 0, y: -7, w: 110, h: 109},
 	ground: 100,
 	k: 2,
 	farGroups: (items) => [items.slice(0, 5), items.slice(5, 10)],
@@ -268,7 +275,12 @@ export default {
 	rig,
 	colours: {near: "#e39a5a", far: "#f1cba6"},
 	budget: 160 * 1024,
-	// Three hearts rise over the head while it looks around (rig units, above the sitting head).
+	// Three hearts rise over the head while it looks around (rig units, above
+	// the sitting head). `x`, `y` and `rise` are scaled by the rig's `k`
+	// (lib/build.mjs) and `d` deliberately is not, so the glyph draws at half
+	// the size its own coordinates imply: at full size it is as wide as the
+	// muzzle and its apex reaches the top of the box. Small reads better and
+	// costs no extra sky.
 	hearts: {
 		d: "M0,4 C0,0 4,-3 7,0 C10,3 7,8 0,13 C-7,8 -10,3 -7,0 C-4,-3 0,0 0,4 Z",
 		x: 86,
@@ -279,7 +291,10 @@ export default {
 	sequence: {
 		first: 14,
 		period: 75,
-		stage: {aspect: 24},
+		// 18, not the small animals' 24: the stage is `aspect × viewBox.h` and
+		// the box grew from 82 to 109 for the hearts, so 18 × 109 ≈ 24 × 82
+		// keeps the crossing the same width in rig units and on screen.
+		stage: {aspect: 18},
 		segments: [
 			{gait: "bound", cycles: 14, fps: 24, travel: 100},
 			{pose: "skid", hold: 0.3, blend: 0.14, fps: 12},
