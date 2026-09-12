@@ -122,6 +122,7 @@ describe("translate/fakePort", () => {
 			purpose: "read" as const,
 			context: emptyContext(),
 		};
+
 		const answer = async (text: string): Promise<string> => {
 			let last = "";
 
