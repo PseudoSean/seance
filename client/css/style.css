@@ -4382,6 +4382,10 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
    row. `anywhere` lets it break mid-token; the title has the untruncated
    text. */
 #chat .msg-translation-reason {
+	/* `anywhere` breaks a long URL mid-token, and the break eats the space
+	   before the retry button: without a margin of its own the button reads
+	   as part of the reason ("…quantized.onnxretry"). */
+	margin-right: 0.4em;
 	color: var(--body-color-muted);
 	font-size: 0.85em;
 	overflow-wrap: anywhere;
