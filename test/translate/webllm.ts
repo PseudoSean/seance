@@ -253,7 +253,8 @@ describe("translate/engines/webllm", () => {
 		expect(created.extra_body).to.deep.equal({enable_thinking: false});
 		expect(created.max_tokens).to.equal(maxTokensFor(request()));
 		expect(created.messages[0].role).to.equal("system");
-		expect(created.messages[1].content).to.include("Translate: Ich schick");
+		expect(created.messages[1].content).to.include("Message to translate, from de:");
+		expect(created.messages[1].content).to.include("Ich schick dir gleich das Log.");
 	});
 
 	it("a batched request stops at the sentinel and strips it", async () => {
@@ -318,6 +319,38 @@ describe("translate/engines/webllm", () => {
 		expect(d.calls.ranToEnd).to.equal(true);
 		// A cut is a completed translation, not a failure.
 		expect(engine.generationFailures).to.equal(0);
+	});
+
+	it("a reply that opens with a newline is not cut to nothing", async () => {
+		const d = deps(["\n", "Hallo", "\nWelt"]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+		const seen: {text: string; done: boolean}[] = [];
+
+		for await (const chunk of engine.translate(request(), new AbortController().signal)) {
+			seen.push({text: chunk.text, done: chunk.done});
+		}
+
+		expect(seen).to.deep.equal([
+			{text: "", done: false},
+			{text: "Hallo", done: false},
+			{text: "Hallo", done: true},
+		]);
+	});
+
+	it("a single-line reply is unquoted and unlabelled", async () => {
+		const d = deps(['Translation: "Hallo Welt"']);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+		const seen: {text: string; done: boolean}[] = [];
+
+		for await (const chunk of engine.translate(request(), new AbortController().signal)) {
+			seen.push({text: chunk.text, done: chunk.done});
+		}
+
+		expect(seen[seen.length - 1]).to.deep.equal({text: "Hallo Welt", done: true});
 	});
 
 	it("a batched request keeps its newlines and stops at the sentinel, thinking block aside", async () => {

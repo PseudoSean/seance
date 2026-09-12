@@ -18,7 +18,14 @@ import {
 	TranslateRequest,
 } from "../engine";
 import {ModelCatalog} from "../models";
-import {ChatMessage, END_SENTINEL, buildMessages, estimateTokens, stripSentinel} from "../prompt";
+import {
+	ChatMessage,
+	END_SENTINEL,
+	buildMessages,
+	cleanOutput,
+	estimateTokens,
+	stripSentinel,
+} from "../prompt";
 
 export interface ChatRequest {
 	messages: ChatMessage[];
@@ -302,7 +309,11 @@ export class WebLlmEngine implements Engine {
 					continue;
 				}
 
-				const newline = req.lines ? -1 : visible.indexOf("\n");
+				// A single-line reply that opens with a newline is not an
+				// empty translation: the cut is the first newline after the
+				// text, so the leading whitespace goes first.
+				const shown = req.lines ? visible : visible.trimStart();
+				const newline = req.lines ? -1 : shown.indexOf("\n");
 
 				if (newline !== -1) {
 					// A translation is one line, and the stop string that used
@@ -311,14 +322,14 @@ export class WebLlmEngine implements Engine {
 					this.failures = 0;
 					yield {
 						id: req.id,
-						text: visible.slice(0, newline).replace(/\r$/, ""),
+						text: cleanOutput(shown.slice(0, newline).replace(/\r$/, "")),
 						done: true,
 					};
 					engine.interruptGenerate();
 					continue;
 				}
 
-				yield {id: req.id, text: visible, done: false};
+				yield {id: req.id, text: shown, done: false};
 			}
 
 			// A drained (aborted) generation proves nothing about the model:
@@ -329,7 +340,11 @@ export class WebLlmEngine implements Engine {
 				const visible = cut ? null : visibleText(text);
 
 				if (visible !== null) {
-					yield {id: req.id, text: stripSentinel(visible), done: true};
+					// A batched answer is cleaned line by line, where it is
+					// parsed; a single one is the whole of the text.
+					const done = stripSentinel(visible);
+
+					yield {id: req.id, text: req.lines ? done : cleanOutput(done), done: true};
 				}
 			}
 		} catch (e) {
