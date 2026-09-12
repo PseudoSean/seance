@@ -1,0 +1,52 @@
+[
+  {
+    "note": "a plain question: the shape the reading pipeline sees most",
+    "text": "can you send me the log from yesterday?",
+    "from": "en",
+    "to": "de"
+  },
+  {
+    "note": "emphasis and a nick: both become placeholders, and `ps` only because it is passed as a nick",
+    "text": "Hello this is supposed to be in *German*. Ask ps.",
+    "from": "en",
+    "to": "de",
+    "nicks": ["ps"]
+  },
+  {
+    "note": "a URL and inline code: verbatim spans the model must carry through untouched",
+    "text": "see https://example.com/logs and run `tail -f irc.log` first",
+    "from": "en",
+    "to": "de"
+  },
+  {
+    "note": "the other direction, so the one-shot example is withheld (its own source is English)",
+    "text": "Kannst du mir bitte das Protokoll von gestern schicken?",
+    "from": "de",
+    "to": "en"
+  },
+  {
+    "note": "under ten characters: the shortest thing the router will still hand to the LLM",
+    "text": "ok, brb",
+    "from": "en",
+    "to": "de"
+  },
+  {
+    "note": "the line talks about the target language: the model is tempted to comment rather than translate",
+    "text": "this line is supposed to be in German",
+    "from": "en",
+    "to": "de"
+  },
+  {
+    "note": "a two-line draft: purpose write, numbered lines in and out",
+    "text": "the build is green\nI'll merge it after lunch",
+    "from": "en",
+    "to": "de",
+    "purpose": "write"
+  },
+  {
+    "note": "a question Qwen answers instead of translating",
+    "text": "what time is it?",
+    "from": "en",
+    "to": "de"
+  }
+]
