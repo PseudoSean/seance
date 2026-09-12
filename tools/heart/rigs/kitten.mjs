@@ -45,6 +45,16 @@ D.tailRoot = [
 	P("M-3.4,0 C-3.8,5 -3.4,10 -3,14 L3,14 C3.4,10 3.8,5 3.4,0 Z"),
 	Circle(0, 14, 3.3),
 ];
+// Measured clearances over the whole sequence, so a later change can tell what
+// it is spending: the outer two segments never come closer than 1.54 units to
+// the body or 2.91 to the near hind leg, both during `wiggle`. The root segment
+// runs far tighter — its base sits ~0.002 from the body every frame, which is
+// the buried disc doing its job, and it passes ~0.009 from the hind leg's upper
+// segment in 21 frames of `wiggle`. That last one is the number to watch: a
+// touch there encloses a pocket between tail, leg and rump, and a pocket that
+// opens and closes jumps the outline. There is no room for it — the near
+// outline already sits at 4.68 % of the 5 % limit. Re-measure after touching
+// `wiggle`, the hind leg or any tail rest angle.
 D.tailSeg = [P("M-3,0 C-3.4,5 -3,10 -2.6,14 L2.6,14 C3,10 3.4,5 3,0 Z"), Circle(0, 14, 2.9)];
 D.tailTip = [P("M-2.6,0 C-2.8,4 -2.4,8 -2,11 L2,11 C2.4,8 2.8,4 2.6,0 Z")];
 D.fup = [P("M-5,-10 C-6,2 -5,8 -4,12 L4,12 C5,8 6,2 5,-10 Z"), Circle(0, 12, 4.4)];
