@@ -266,9 +266,10 @@ export class WebLlmEngine implements Engine {
 				yield {id: req.id, text, done: false};
 			}
 
-			this.failures = 0;
-
+			// A drained (aborted) generation proves nothing about the model:
+			// only a completed one clears the failure count.
 			if (!signal.aborted) {
+				this.failures = 0;
 				yield {id: req.id, text: stripSentinel(text), done: true};
 			}
 		} catch (e) {
