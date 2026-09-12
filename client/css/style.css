@@ -1395,15 +1395,10 @@ so the toolbar has one weight; green is what marks a subscribed bell. */
 	font-size: 1rem;
 }
 
-/* A size container, so the settings menu can ask whether the window is wide
- * enough for it to sit beside the content (Navigation.vue) in rem, which a
- * media query cannot see. */
-#settings {
-	/* stylelint-disable-next-line property-no-unknown */
-	container-type: inline-size;
-	/* stylelint-disable-next-line property-no-unknown */
-	container-name: settings;
-}
+/* The `settings` size container is the modal pane itself
+ * (Windows/Settings.vue .settings-modal): the tab strip asks it whether
+ * there is room for labels (Navigation.vue) in rem, which a media query
+ * cannot see. */
 
 /* Native checkboxes and radios do not follow the font; size them off it so
  * the big scales get a target that matches their label. */

@@ -1,6 +1,5 @@
 <template>
 	<aside class="settings-menu">
-		<h2>Settings</h2>
 		<ul role="navigation" aria-label="Settings tabs">
 			<SettingTabItem
 				v-if="showNetworks"
@@ -12,68 +11,50 @@
 			<SettingTabItem name="Appearance" class-name="appearance" to="appearance" />
 			<SettingTabItem name="Notifications" class-name="notifications" to="notifications" />
 			<SettingTabItem name="Aliases" class-name="aliases" to="aliases" />
-			<SettingTabItem v-if="!isPublic" name="Account" class-name="account" to="account" />
 		</ul>
 	</aside>
 </template>
 
 <style>
+/* The settings menu is a horizontal tab strip across the top of the
+ * settings modal (Windows/Settings.vue): one row of icon + label tabs,
+ * horizontally scrollable if it must be, the active one underlined in the
+ * theme's accent. When the pane is too narrow for every label (the modal
+ * is the `settings` size container), the inactive tabs drop to icons only
+ * — the active tab keeps its label, so where you are is always written
+ * out. */
 .settings-menu {
-	position: fixed;
-	/* top: Header + (padding bottom of h2 - border) */
-	top: calc(3rem + 5px);
-	/* Mid page minus the width of the container and 30 pixels for padding.
-	   The static position already sits right of the sidebar, so at the
-	   larger UI scales on a narrow window the offset is clamped there
-	   instead of sliding under it. */
-	margin-left: max(0.5rem, calc(50% - 30rem - 30px));
-}
-
-/** The calculation is mobile +  2/3 of container width. Fairly arbitrary. */
-@media screen and (max-width: calc(768px + 320px)) {
-	.settings-menu {
-		position: static;
-		width: min(30rem, 100%);
-		align-self: center;
-		margin: 0 auto;
-		padding: 0 15px;
-	}
-}
-
-/* The same, in rem, off the settings window itself (a size container,
- * style.css #settings): beside a centred 30rem container the menu has its
- * ~12rem only once the window is 56rem wide, and at the big scales that is
- * wider than most screens, so it stacks above the content instead of
- * lying across it. */
-@container settings (max-width: 56rem) {
-	.settings-menu {
-		position: static;
-		width: min(30rem, 100%);
-		align-self: center;
-		margin: 0 auto;
-		padding: 0 15px;
-	}
+	flex: 0 0 auto;
+	width: 100%;
 }
 
 .settings-menu ul {
-	padding: 0;
+	display: flex;
+	flex-wrap: nowrap;
+	overflow-x: auto;
+	scrollbar-width: none;
+	margin: 0;
+	padding: 0 0.75rem;
+	/* An inset hairline rather than a border: the underline of the active
+	 * tab paints over it. */
+	box-shadow: inset 0 -1px 0 rgb(128 128 128 / 30%);
+}
+
+.settings-menu ul::-webkit-scrollbar {
+	display: none;
 }
 
 .settings-menu li {
-	font-size: 1.125rem;
+	flex: 0 0 auto;
+	font-size: 1rem;
 	list-style: none;
 }
 
 .settings-menu button {
 	color: var(--body-color-muted);
-	width: 100%;
-	height: 100%;
-	display: inline-block;
-	text-align: left;
-}
-
-.settings-menu li:not(:last-of-type) button {
-	margin-bottom: 0.45em;
+	white-space: nowrap;
+	padding: 0.55em 0.7em;
+	border-bottom: 2px solid transparent;
 }
 
 /* The icon box and its gap are em: at the big scales an 18px box put the
@@ -88,10 +69,6 @@
 
 .settings-menu .appearance::before {
 	content: "\f108"; /* http://fontawesome.io/icon/desktop/ */
-}
-
-.settings-menu .account::before {
-	content: "\f007"; /* http://fontawesome.io/icon/user/ */
 }
 
 .settings-menu .messages::before {
@@ -120,13 +97,27 @@
 }
 
 .settings-menu button.active {
+	border-bottom-color: var(--button-color);
 	cursor: default;
+}
+
+/* Five labelled tabs need roughly 40rem; below that the inactive ones are
+ * icons alone (their names stay as aria-label and title). */
+@container settings (max-width: 41rem) {
+	.settings-menu button:not(.active) .tab-label {
+		display: none;
+	}
+
+	.settings-menu button:not(.active)::before {
+		margin-right: 0;
+	}
 }
 </style>
 
 <script lang="ts">
 import SettingTabItem from "./SettingTabItem.vue";
-import {defineComponent} from "vue";
+import {defineComponent, nextTick, onMounted, watch} from "vue";
+import {useRoute} from "vue-router";
 import {useStore} from "../../js/store";
 import {brandingFeatures} from "../../js/branding";
 import {shouldShowGeneralSettings} from "../../js/helpers/settingsTabs";
@@ -138,9 +129,23 @@ export default defineComponent({
 	},
 	setup() {
 		const store = useStore();
-		const isPublic = store.state.serverConfiguration?.public;
+		const route = useRoute();
+
+		// The strip scrolls, so the active tab may sit off screen (opening
+		// Aliases from a deep link, or coming back to the tab the user
+		// left). `nearest` makes this a no-op when nothing overflows.
+		const revealActive = () => {
+			void nextTick(() => {
+				document
+					.querySelector(".settings-menu button.active")
+					?.scrollIntoView({inline: "nearest", block: "nearest"});
+			});
+		};
+
+		onMounted(revealActive);
+		watch(() => route.name, revealActive);
+
 		return {
-			isPublic,
 			showGeneral: shouldShowGeneralSettings(),
 			showNetworks: brandingFeatures(store.state.branding).saveNetworks,
 		};

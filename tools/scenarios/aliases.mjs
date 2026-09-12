@@ -118,6 +118,10 @@ export default async function run(page) {
 	await page.waitFor(`(${STORED})?.length === 2`, {label: "both aliases saved"});
 
 	// --- In a real channel ----------------------------------------------------
+	// Settings is a modal over the whole app: leave through Done before
+	// reaching for the sidebar.
+	await page.click(".settings-modal-done");
+	await page.waitFor(`!document.querySelector(".settings-modal")`, {label: "settings closed"});
 	await page.click(`.channel-list-item[data-name="${CHANNEL}"]`);
 	await page.waitFor(`!!document.querySelector("#input")`, {label: "the input box"});
 	await page.sleep(1500); // let the join burst and catch-up settle
