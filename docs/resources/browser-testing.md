@@ -96,7 +96,10 @@ mobile viewport flag, so `--width=390 --height=844 --mobile` is a phone (the
 A scenario is a `.mjs` module in `tools/scenarios/` whose default export is
 `async (page) => {…}`. It may also export `url` as its default target;
 `--url=` overrides. The process exits non-zero if any check failed, so a
-scenario doubles as a smoke check.
+scenario doubles as a smoke check. `translate-reading.mjs`,
+`translate-composer.mjs` and `translate-cpu-real.mjs` run in
+`#seance-translate` rather than `#seance`, so their scripted lines never land
+in a tester's own channel context.
 
 A WebSocket frame error is normally counted as a failure of its own, because
 one usually means the client sent something the browser or the ircd would not

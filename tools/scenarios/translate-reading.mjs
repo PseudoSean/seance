@@ -1,6 +1,8 @@
 // The reading pipeline in a real browser, on the in-page fake engine
 // (?fakeTranslate on a non-production build) with a second user speaking
-// German in #seance through a raw WebSocket to the dev ircd. Steps, in
+// German in #seance-translate (its own channel, not #seance, so these lines
+// never land in a tester's own context) through a raw WebSocket to the dev
+// ircd. Steps, in
 // order: nothing is translated before the globe is switched on; a German
 // line gets a "from German" line with the fake's "[English] …" echo; an
 // English line gets none; a five-line burst is translated and proved
@@ -40,11 +42,11 @@ import {rigFeature} from "./lib/rig-feature.mjs";
 const RUN = Date.now().toString(36);
 const NICK = `tr${RUN}`;
 const SPEAKER = `de${RUN}`;
-const CHANNEL = "#seance";
+const CHANNEL = "#seance-translate";
 const IRCD = process.env.SEANCE_IRC_WS || "ws://127.0.0.1:8067/";
 const BASE = "http://localhost:8021/";
 
-export const url = `${BASE}?host=127.0.0.1&port=8067&tls=false&nick=${NICK}&join=%23seance&fakeTranslate`;
+export const url = `${BASE}?host=127.0.0.1&port=8067&tls=false&nick=${NICK}&join=%23seance-translate&fakeTranslate`;
 
 const LINES = `document.querySelectorAll('.msg-translation[data-status="done"]').length`;
 const GLOBE = "#chat button.translate";
@@ -584,7 +586,7 @@ async function scenario(page) {
 
 	// The row is found before the REDACT: afterwards its text is behind the
 	// "deleted" button and no longer in textContent. The last match, not the
-	// first: #seance keeps its history, so earlier runs of this scenario are
+	// first: #seance-translate keeps its history, so earlier runs of this scenario are
 	// replayed above this one's line (their rows carry negative ids).
 	const burstRowId = await page.evaluate(
 		`(([...document.querySelectorAll(".msg")].filter((m) => m.textContent.includes("Zeile 5 von fünf")).pop()) || {}).id || ""`

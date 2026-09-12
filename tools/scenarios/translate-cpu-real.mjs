@@ -179,9 +179,12 @@ export default async function run(page) {
 	}
 
 	// ---- The dev ircd, then a real translation ----------------------------
-	await page.goto(`${BASE}?host=127.0.0.1&port=8067&tls=false&nick=cpu${RUN}&join=%23seance`, {
-		waitForSelector: "#connect form",
-	});
+	await page.goto(
+		`${BASE}?host=127.0.0.1&port=8067&tls=false&nick=cpu${RUN}&join=%23seance-translate`,
+		{
+			waitForSelector: "#connect form",
+		}
+	);
 	// The link-approval form: a URL never connects on its own.
 	await page.click('#connect button[type="submit"]');
 	await page.waitFor(`!!document.querySelector("#form #input")`, {

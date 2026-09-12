@@ -1,6 +1,8 @@
 // The composer in a real browser, on the in-page fake engine
 // (?fakeTranslate on a non-production build), with a second user in
-// #seance over a raw WebSocket who hears what the page actually sends.
+// #seance-translate (its own channel, not #seance, so these lines never
+// land in a tester's own context) over a raw WebSocket who hears what the
+// page actually sends.
 // Steps, in order: the panel sets the write target and the placeholder
 // says so; the first Enter puts a "to German" strip above the input with
 // the fake's "[German] …" streaming in, Send disabled until it ends, the
@@ -33,11 +35,11 @@
 const RUN = Date.now().toString(36);
 const NICK = `tw${RUN}`;
 const LISTENER = `hr${RUN}`;
-const CHANNEL = "#seance";
+const CHANNEL = "#seance-translate";
 const IRCD = process.env.SEANCE_IRC_WS || "ws://127.0.0.1:8067/";
 const BASE = "http://localhost:8021/";
 
-export const url = `${BASE}?host=127.0.0.1&port=8067&tls=false&nick=${NICK}&join=%23seance&fakeTranslate`;
+export const url = `${BASE}?host=127.0.0.1&port=8067&tls=false&nick=${NICK}&join=%23seance-translate&fakeTranslate`;
 
 const GLOBE = "#chat button.translate";
 const MOBILE = process.argv.includes("--mobile");
