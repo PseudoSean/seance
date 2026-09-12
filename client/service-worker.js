@@ -24,6 +24,12 @@
 const cacheName = "__HASH__";
 const isDevBuild = cacheName === "dev";
 
+// Cache Storage the translation engines own (client/js/translate/): the
+// model weights a user downloaded once. transformers.js keeps
+// "transformers-cache", WebLLM keeps "webllm/model", "webllm/wasm" and
+// "webllm/config". A shell update must never evict them.
+const isModelCache = (name) => name === "transformers-cache" || name.startsWith("webllm/");
+
 // The push module (client/js/push/*, built to js/push.js): the line parser,
 // the strippers and the merged-body renderer, shared with the page so the
 // two agree. Loaded at start-up — a service worker may only importScripts
@@ -113,7 +119,9 @@ self.addEventListener("activate", function (event) {
 			.keys()
 			.then((names) =>
 				Promise.all(
-					names.filter((name) => name !== cacheName).map((name) => caches.delete(name))
+					names
+						.filter((name) => name !== cacheName && !isModelCache(name))
+						.map((name) => caches.delete(name))
 				)
 			)
 	);

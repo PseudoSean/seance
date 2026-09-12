@@ -168,9 +168,12 @@ python3 -c 'import http.server as h, mimetypes as m, functools; m.add_type("text
 
 **CPU models and ONNX Runtime.** The seq2seq engine loads the `q8` weights with `session_options: {graphOptimizationLevel: "basic"}` (`engines/seq2seq.real.ts`). ONNX Runtime's default level is _extended_, and one of its transforms rejects the QDQ graphs these models ship: `Can't create a session. ERROR_CODE: 1 … qdq_actions.cc:137 TransposeDQWeightsForMatMulNBits Missing required scale: model.shared.weight_merged_0_scale`. Every CPU model then fails to load, which the composer shows as "couldn't translate, send as written?" and the reading line as "couldn't translate" — the whole tier looks broken. `basic` stops short of that transform and the same weights load and run, so do not raise the level to fix a slow load. This is the other half of the serving note above: a wrong `.mjs` type and a wrong optimizer level both end as "no CPU model would load", and only the reason on the model row (Settings → Translation) or beside the failure tells them apart. Browser check, opt-in because it downloads real weights: `SEANCE_REAL_MODELS=1 node tools/browser-drive.mjs tools/scenarios/translate-cpu-real.mjs`.
 
-WebLLM caches under its own Cache Storage keys, transformers.js under
+WebLLM caches under its own Cache Storage keys (`webllm/model`,
+`webllm/wasm`, `webllm/config`), transformers.js under
 `transformers-cache`; `service-worker.js` never touches either, nor a
-same-origin mirror under `models/`. The ONNX Runtime wasm files ship in
+same-origin mirror under `models/` — and its `activate` cache sweep
+(`isModelCache`) explicitly skips these names, so a shell update cannot
+evict a model. The ONNX Runtime wasm files ship in
 `js/ort/`. Settings → Translation lists every catalog model with its size
 and cached state, downloads with progress and deletes.
 

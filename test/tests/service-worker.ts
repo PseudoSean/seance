@@ -1430,6 +1430,25 @@ describe("service worker build announcement", function () {
 
 		expect(a.posted).to.deep.equal([]);
 	});
+
+	it("keeps the translation engines' model caches on a shell update", async function () {
+		const sw = makeSW({clients: []});
+		const deleted: string[] = [];
+
+		sw.sandbox.caches.keys = (): Promise<string[]> =>
+			Promise.resolve(["older-build", "transformers-cache", "webllm/model", "webllm/config"]);
+
+		sw.sandbox.caches.delete = (name: string): Promise<boolean> => {
+			deleted.push(name);
+			return Promise.resolve(true);
+		};
+
+		sw.sandbox.clients.claim = (): Promise<void> => Promise.resolve();
+
+		await activate(sw);
+
+		expect(deleted).to.deep.equal(["older-build"]);
+	});
 });
 
 describe("service worker mark read", function () {
