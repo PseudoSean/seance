@@ -18,6 +18,14 @@
 //   --height=<px>    the animal's rendered height (default 150); raise it and
 //                    lower --cols if a small animal reads too small
 //   --cols=<n>       columns in the grid (default 4)
+//   --cell=<w>,<h>   the cell's width and height as shares of the animal's
+//                    rendered height (default 2.4,1.5). A rig whose box is
+//                    mostly empty — the bird's is 800 units tall for 76 units
+//                    of bird, because the empty sky above it *is* its route —
+//                    has to be shot at a large --height to be legible at all,
+//                    and the default cell would then be enormous and almost
+//                    entirely sky. Narrow the cell instead: the bird reads at
+//                    `--height=520 --cell=0.5,1.35 --cols=6`.
 //   --far            use the distant-visitor tint; the default is the near file,
 //                    falling back to `-far` for an animal that has no near file
 //                    (the dolphin never comes close)
@@ -66,6 +74,20 @@ const BAND = 0.14 / 0.44;
 const SIT = 0.12 / 0.44;
 const CELL_W = 2.4;
 const CELL_H = 1.5;
+/** `--cell=w,h` overrides both, in the same units (shares of the height). */
+function cellShape(spec) {
+	if (!spec) {
+		return [CELL_W, CELL_H];
+	}
+
+	const [w, h] = spec.split(",").map(Number);
+
+	if (!(w > 0) || !(h > 0)) {
+		throw new Error(`--cell wants two positive numbers, got ${spec}`);
+	}
+
+	return [w, h];
+}
 /** Drawn around the grid, in px. */
 const GAP = 8;
 const MARGIN = 12;
@@ -311,12 +333,13 @@ export default async function run(page) {
 	const far = page.flags.has("--far");
 	const a = readAnimal(name, far);
 	const animal = Number(page.opt("animal-height", 150));
+	const [cw, ch] = cellShape(page.opt("cell", null));
 	const geom = {
 		animal,
 		band: Math.round(animal * BAND),
 		sit: Math.round(animal * SIT),
-		cellW: Math.round(animal * CELL_W),
-		cellH: Math.round(animal * CELL_H),
+		cellW: Math.round(animal * cw),
+		cellH: Math.round(animal * ch),
 		cols: Number(page.opt("cols", 4)),
 	};
 	const spec = page.opt("times", null);
@@ -423,6 +446,7 @@ if (import.meta.filename === resolve(process.argv[1] ?? "")) {
 		["times", "times"],
 		["height", "animal-height"],
 		["cols", "cols"],
+		["cell", "cell"],
 		// the driver's own: $CHROME_BIN is the other way to point it at a binary
 		["chrome", "chrome"],
 	]) {

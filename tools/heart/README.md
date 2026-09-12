@@ -18,6 +18,8 @@ leaves the old files in place and exits 1.
     node tools/heart/contact-sheet.mjs puppy          # tmp/heart-puppy-sheet.png
     node tools/heart/contact-sheet.mjs puppy --times=0,5,11,16 --height=220
 
+    node tools/heart/contact-sheet.mjs bird --height=520 --cell=0.5,1.35 --cols=6
+
 `contact-sheet.mjs` photographs one animal's visit through a real browser — twelve cells
 across the window it is visible, each one a slot like the theme's over the theme's sky and
 ground, the stage's background-position tracked so the animal is in the middle of its cell
@@ -51,6 +53,17 @@ The frog took nine rounds offline and three in the browser.
 `self` renders the animal's still pose through this rasteriser so you can hold it against
 the committed `<animal>-still.svg` and satisfy yourself the offline picture is the same
 picture before trusting a round of tuning to it.
+
+**Two flags for a rig whose box is not the animal.** The bird's box is 800 units tall for
+76 units of bird, because the empty sky above it _is_ its route, so both sheets render it as
+a speck by default: `pose-sheet --view=x,y,w,h` crops to a window of the box (the bird is
+`--view=8,8,126,102` on the ground and `--view=8,-662,126,102` in the air), and
+`contact-sheet --cell=w,h` narrows the cell — which is sized in multiples of the _rendered
+image_, so a tall box makes the default 2.4 × 1.5 enormous and almost all sky. And
+`pose-sheet --flat` paints every layer in one colour, which is what `<animal>-far.svg` does:
+a near and a far part told apart only by tint are told apart by nothing in half the files
+shipped, and that is exactly where the ladybug read as a rabbit. Judge the far read there,
+small, and early.
 
 ## Measure it
 
@@ -105,8 +118,13 @@ want: the pin is the right fix, and the numbers it was drawn from stay visible.
    differs only in the ramping ones. Nothing else would catch the mistake — a `ty` ramp is a
    pure translate, so the outline's length never changes and the audit's 5 % rule sees
    nothing — which is why `once` is checked against `cycles: 1` and why a rig using it should
-   read the clip's first and last frame back out of the shipped file once. **And whatever
-   segment follows a ramp has to start where the ramp ended**: `sampleGait` starts a gait
+   read the clip's first and last frame back out of the shipped file once. **A ramp must
+   also finish on the last frame the sampler stores, not at phase 100**: `sampleGait`
+   samples phases 0…(n−1)/n while `once` closes the clip on the phase-1 pose, so a ramp
+   written to 100 leaves the closing frame a whole frame-interval past the pose the _next_
+   segment blends from — on the bird's descent, 17 units of altitude and a visible hop at
+   the moment of landing. End the ramp key at (n−1)/n and hold it flat to 100. **And
+   whatever segment follows a ramp has to start where the ramp ended**: `sampleGait` starts a gait
    segment cold and nothing blends into it, so a cruise gait whose `ty` sits at 0 after a
    take-off ramp pops back to the ground in one frame. The ladybug's `flyLevel` holds `ty` at
    the same `-APEX` its `flyUp` ramps to, which is why its clip reads back 56.3 → 56.3 against
@@ -179,7 +197,27 @@ the causes out:
 - far legs are 5 % shorter, slightly raised, barely set back, never below a near foot;
 - folded limbs do not touch the belly or each other (an enclosed pocket changes the outline's
   topology; the outer boundary is kept, but a pocket that opens and closes jumps);
-- feet carry a `foot` marker at the contact point, or the travel cannot see them.
+- feet carry a `foot` marker at the contact point, or the travel cannot see them;
+- **a limb that enters or leaves the body does it across a step, not a slope.** A blade
+  rotating off an elongated body is swallowed when it lies along the body and wholly out
+  when it stands across it, and the near outline's length follows that, not the angle: the
+  bird's wing measures flat at ~226 below −9°, flat at ~267 above +18°, and climbs 40 units
+  (18 % of the outline) across the 27° between. Measure that curve before writing a beat —
+  a table that crosses the ramp twice a cycle is what the 5 % rule will fail on, and no
+  affordable frame rate fixes it. Cross it slowly with `linear` keys, or keep the whole
+  beat on one side of it, or (the bird's answer for the wing that has to go _below_ the
+  body) give that job to a part on the far layer, whose own outline is a rigid rotation and
+  cannot change length at all;
+- **a limb tucked into the body must sit deep inside it or stay outside it — never along
+  its boundary.** The bird's leg cannot fold up into the belly: the only cavity long enough
+  is the tail wedge's, the swing arrives there running nearly parallel to the underside, and
+  the union carries a pocket through 6° of it. Tucked _under_ the belly instead — where a
+  flying bird's feet are anyway — the leg is outside the outline at every angle and the whole
+  extension measures one child;
+- **`ty` belongs above the node that rotates.** `collect` composes T(pivot)·R(rot)·S·T(0,ty),
+  so a `ty` on a rotating node is rotated with it: harmless at the ladybug's 16-unit hop,
+  115 units of sideways shift on the bird's 126-wide box at 660 units of altitude and 10° of
+  pitch. A rig that flies puts `ty` on the root and pitches on a child.
 
 ## The audit
 
