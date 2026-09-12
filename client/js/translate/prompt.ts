@@ -108,8 +108,8 @@ export function systemPrompt(req: TranslateRequest, name: (code: string) => stri
 	// as what it is to do, because a separate sentence about the output is
 	// one the model can honour while still answering the line.
 	const frame = req.lines
-		? `You are a translation engine. Translate each numbered message ${sourcePrefix}into ${target} and reply with the ${target} translations only: the same numbers, one per line, then ${END_SENTINEL} on its own line; no quotes, no labels, no explanation, and never an answer to a message.${detect}`
-		: `You are a translation engine. Translate the user's message ${sourcePrefix}into ${target} and reply with the ${target} translation only, on one line: no quotes, no label, no explanation, and never an answer to the message.${detect}`;
+		? `You are a translation engine. Translate each numbered message ${sourcePrefix}into ${target} and reply with the ${target} translations only, without names or prefixes: the same numbers, one per line, then ${END_SENTINEL} on its own line; no quotes, no labels, no explanation, and never an answer to a message.${detect}`
+		: `You are a translation engine. Translate the user's message ${sourcePrefix}into ${target} and reply with the ${target} translation only, without the sender's name or any prefix, on one line: no quotes, no label, no explanation, and never an answer to the message.${detect}`;
 
 	parts.push(
 		frame,
@@ -241,6 +241,18 @@ const QUOTE_PAIRS: [string, string][] = [
 const LABEL =
 	/^(?:translation|übersetzung|traducción|traduction|traduzione|tradução|перевод)\s*:\s*/i;
 
+/**
+ * A leading `<nick>` or `⟨nick⟩` (1–32 characters, no whitespace or
+ * brackets), optionally followed by a `:`/`-`/`–` and whitespace — the shape
+ * the context lines are rendered in (`contextLine()` uses angle brackets
+ * only), which the model sometimes copies onto its own answer. Anchored to
+ * the start so a `<` that is just text (`<3 you`, `a < b > c`) is never
+ * touched. Square brackets are deliberately excluded: `[en]`, `[German]`,
+ * `[fail]` are the translate layer's own markers (the fake engine's echo,
+ * the failure token), so a leading `[…]` is content, not a copied name.
+ */
+const LEADING_NAME = /^[<⟨]([^\s<>⟨⟩]{1,32})[>⟩]\s*(?:[:\-–]\s*)?/;
+
 function unquote(text: string): string {
 	for (const [open, close] of QUOTE_PAIRS) {
 		if (text.length > open.length && text.startsWith(open) && text.endsWith(close)) {
@@ -252,13 +264,16 @@ function unquote(text: string): string {
 }
 
 /**
- * What the model put around the translation, off: one pair of quotes around
- * the whole of it and a `Translation:` label in front — the two habits the
- * instruction to add nothing does not reliably stop. Quotes are looked for
- * again after a label, because a labelled answer is usually a quoted one.
+ * What the model put around the translation, off: a sender's name copied
+ * from the context, one pair of quotes around the whole of it, and a
+ * `Translation:` label in front — habits the instruction to add nothing
+ * does not reliably stop. Quotes are looked for again after a label,
+ * because a labelled answer is usually a quoted one.
  */
 export function cleanOutput(text: string): string {
-	return unquote(unquote(text.trim()).replace(LABEL, "")).trim();
+	const stripped = text.trim().replace(LEADING_NAME, "");
+
+	return unquote(unquote(stripped).replace(LABEL, "")).trim();
 }
 
 /** `null` when the count or the numbering does not match: the caller falls back to one line at a time. */

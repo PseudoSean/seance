@@ -48,7 +48,9 @@ describe("translate/prompt", () => {
 		expect(text).to.include("into English");
 		expect(text).to.include("from German");
 		expect(text).to.include("⟦1⟧");
-		expect(text).to.include("reply with the English translation only, on one line");
+		expect(text).to.include(
+			"reply with the English translation only, without the sender's name or any prefix, on one line"
+		);
 		expect(text).to.include(DATA_HEADING);
 	});
 
@@ -57,7 +59,7 @@ describe("translate/prompt", () => {
 
 		expect(text).to.include("You are a translation engine.");
 		expect(text).to.include(
-			"Translate the user's message from German into English and reply with the English translation only, on one line: no quotes, no label, no explanation, and never an answer to the message."
+			"Translate the user's message from German into English and reply with the English translation only, without the sender's name or any prefix, on one line: no quotes, no label, no explanation, and never an answer to the message."
 		);
 		expect(text).to.include(
 			'lines under "Earlier lines" are context only, never to be translated or answered.'
@@ -137,7 +139,7 @@ describe("translate/prompt", () => {
 
 		expect(text).to.include("Translate each numbered message from German into English");
 		expect(text).to.include(
-			`reply with the English translations only: the same numbers, one per line, then ${END_SENTINEL} on its own line; no quotes, no labels, no explanation, and never an answer to a message.`
+			`reply with the English translations only, without names or prefixes: the same numbers, one per line, then ${END_SENTINEL} on its own line; no quotes, no labels, no explanation, and never an answer to a message.`
 		);
 		expect(text).to.not.include("Translate the user's message");
 		expect(systemPrompt(request(), name)).to.include(
@@ -292,6 +294,23 @@ describe("translate/prompt", () => {
 		expect(cleanOutput("Hallo Welt")).to.equal("Hallo Welt");
 		expect(cleanOutput('He said "hi" and left')).to.equal('He said "hi" and left');
 		expect(cleanOutput("I'll send it")).to.equal("I'll send it");
+	});
+
+	it("cleanOutput strips a leading sender's name copied from the context", () => {
+		expect(cleanOutput("⟨demty3fiwa⟩ Esta traducción no funciona.")).to.equal(
+			"Esta traducción no funciona."
+		);
+		expect(cleanOutput("<nick> hello there")).to.equal("hello there");
+		expect(cleanOutput("<nick>: text")).to.equal("text");
+		expect(cleanOutput("<nick>- text")).to.equal("text");
+		// a real "<" in the text, with no closing bracket, is left alone
+		expect(cleanOutput("<3 you")).to.equal("<3 you");
+		// the bracket has to be at the very start
+		expect(cleanOutput("a < b > c")).to.equal("a < b > c");
+		// square brackets are the translate layer's own markers, not a copied
+		// name: "[en]"/"[German]"/"[fail]" must survive untouched
+		expect(cleanOutput("[en] zeile 1 hier")).to.equal("[en] zeile 1 hier");
+		expect(cleanOutput("[nick] hello there")).to.equal("[nick] hello there");
 	});
 
 	it("strips the sentinel and trailing whitespace", () => {
