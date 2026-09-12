@@ -13,14 +13,17 @@
 // translation (the other user hears "[German] …", the strip goes, the
 // input clears) and ArrowUp recalls the original draft; Escape drops a
 // strip and keeps the draft; a draft carrying the fake's "[fail]" marker
-// gets the failure strip and Enter sends it as written; "/me" never
+// gets the failure strip and Enter sends it as written, and one carrying
+// "[echo]" -- which the fake hands back as typed -- gets the same strip
+// with "came back unchanged" as its reason; "/me" never
 // translates; a three-line draft translates as one numbered request and
 // ships as three lines; a draft carrying markdown, a nick, a URL and a code
 // span comes back with every one of them intact (the engine only ever saw
 // placeholders), the strip's Copy button's tooltip reads "Copied" and its
 // text is selectable, a fenced code block is never sent for translation and comes
 // back byte for byte; inline TeX and a bold word together survive both the
-// strip and the round trip's read-back row; switching the target off
+// strip and the round trip's read-back row; the chip's title names the
+// route its text came down; switching the target off
 // restores plain sending.
 // Under `--mobile` the panel is asserted to be the full-screen sheet, with
 // formality as a segmented control and the close button putting it away.
@@ -315,6 +318,18 @@ export default async function run(page) {
 			`${REQUESTS}.some((r) => r.purpose === "write" && r.text === ${JSON.stringify(draft)})`
 		)) === true
 	);
+
+	// The route behind the strip, in the chip's title: the pair, the model's
+	// own id, and GPU or CPU. The fake runs as the `llm` candidate, so this
+	// one is a GPU route.
+	const chipTitle = String(
+		await page.evaluate(`document.querySelector(".translate-bar-chip").title`)
+	);
+
+	await page.check(
+		`the chip's title names the route it took (${chipTitle})`,
+		chipTitle.includes("→ German") && chipTitle.endsWith("(GPU)")
+	);
 	await page.screenshot("composer-strip");
 
 	// 3. Typing drops the strip; the next Enter translates afresh.
@@ -441,6 +456,40 @@ export default async function run(page) {
 				failing
 			)}))`
 		)
+	);
+
+	// 7b. An answer equal to the draft is no translation either: the fake's
+	// "[echo]" token hands the text straight back, and the strip says so
+	// rather than offering the draft as its own translation.
+	const echoed = `[echo] this one comes back as typed ${RUN}`;
+
+	await typeAndEnter(page, echoed);
+	await page.waitFor(`!!document.querySelector(".translate-bar.failed")`, {
+		timeout: 20000,
+		label: "the echo strip",
+	});
+	await page.check(
+		"the reason says the line came back unchanged",
+		(await page.evaluate(
+			`(document.querySelector(".translate-bar-reason") || {}).textContent`
+		)) === "came back unchanged"
+	);
+	await page.check(
+		"the send button offers the draft as written",
+		(await page.evaluate(
+			`document.querySelector(".translate-bar-send").getAttribute("aria-label")`
+		)) === "Send as written"
+	);
+	await page.screenshot("composer-echoed");
+	await page.evaluate(ENTER);
+	await page.waitFor(settledSelf(echoed), {
+		timeout: 20000,
+		label: "the echoed draft sent as written",
+	});
+	await page.check("the other user heard the draft as typed", await heard(other, echoed));
+	await page.check(
+		"the input cleared after the echo send",
+		(await page.evaluate(inputValue)) === ""
 	);
 
 	// 8. A command never translates.

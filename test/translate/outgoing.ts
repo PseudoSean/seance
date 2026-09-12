@@ -12,6 +12,8 @@ import {
 	WRITE_DETECT_MIN_GAP,
 	WRITE_TIMEOUT_MS,
 	draftGate,
+	hasNoLetters,
+	isUnchanged,
 	reverseTarget,
 	termPair,
 	translateDraft,
@@ -134,6 +136,45 @@ describe("translate/outgoing", () => {
 		});
 	});
 
+	describe("isUnchanged and hasNoLetters", () => {
+		// An echo is judged loosely: a model handing a line back rather than
+		// translating it often normalises the case, the spacing or the full
+		// stop, and that is still the line that went in.
+		it("takes back the same line through case, spacing and trailing punctuation", () => {
+			expect(isUnchanged("please keep the log", "Please keep the log")).to.equal(true);
+			expect(isUnchanged("please keep  the   log", "  please keep the log  ")).to.equal(true);
+			expect(isUnchanged("please keep the log.", "please keep the log")).to.equal(true);
+			expect(isUnchanged("wirklich?!", "wirklich")).to.equal(true);
+			expect(isUnchanged("das war es…", "Das war es")).to.equal(true);
+			expect(isUnchanged("", "   ")).to.equal(true);
+		});
+
+		it("is no echo when the answer is another line, or the line with a word added", () => {
+			expect(isUnchanged("please keep the log", "bitte behalte das Log")).to.equal(false);
+			expect(isUnchanged("please keep the log", "please keep the whole log")).to.equal(false);
+			expect(isUnchanged("ok", "ok dann")).to.equal(false);
+			expect(isUnchanged("log", "Log file")).to.equal(false);
+		});
+
+		it("has no letters where nothing in the text could be a language", () => {
+			expect(hasNoLetters("")).to.equal(true);
+			expect(hasNoLetters("   ")).to.equal(true);
+			expect(hasNoLetters("⟹ ")).to.equal(true);
+			expect(hasNoLetters("--- ---")).to.equal(true);
+			// A placeholder is span syntax, not content, digit and all.
+			expect(hasNoLetters("⟦1⟧")).to.equal(true);
+			expect(hasNoLetters("⟹ ⟦1⟧")).to.equal(true);
+		});
+
+		it("takes a word, a number or another script as an answer", () => {
+			expect(hasNoLetters("ok")).to.equal(false);
+			expect(hasNoLetters("42")).to.equal(false);
+			expect(hasNoLetters("Hallo")).to.equal(false);
+			expect(hasNoLetters("Привет")).to.equal(false);
+			expect(hasNoLetters("こんにちは")).to.equal(false);
+		});
+	});
+
 	describe("termPair", () => {
 		it("keeps a short pair and drops sentences, commands, placeholders and identical text", () => {
 			expect(termPair("rig", "Testaufbau")).to.deep.equal(["rig", "Testaufbau"]);
@@ -148,6 +189,12 @@ describe("translate/outgoing", () => {
 			);
 			expect(termPair("/me", "ich")).to.equal(null);
 			expect(termPair("see ⟦1⟧", "siehe ⟦1⟧")).to.equal(null);
+			// A side with nothing in it a language could be is no term: it
+			// would be quoted into every later prompt as a real word's
+			// translation.
+			expect(termPair("rig", "⟹")).to.equal(null);
+			expect(termPair("rig", "--- ---")).to.equal(null);
+			expect(termPair("→", "Pfeil")).to.equal(null);
 			expect(termPair("Rig", "rig")).to.equal(null);
 			expect(termPair("one\ntwo", "eins zwei")).to.equal(null);
 			expect(TERM_MAX_WORDS).to.equal(3);

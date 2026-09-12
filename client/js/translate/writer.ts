@@ -18,8 +18,12 @@ import {type EngineName, emptyContext} from "./engine";
 import {translateService} from "./index";
 import {
 	ABORTED,
+	EMPTY_TRANSLATION,
 	type OutgoingDeps,
+	UNCHANGED,
 	WRITE_DETECT_MIN_GAP,
+	hasNoLetters,
+	isUnchanged,
 	reverseTarget,
 	termPair,
 	translateDraft,
@@ -285,14 +289,32 @@ export async function translateOutgoing(
 		// since then the prefix is the user's own.
 		text = stripCopiedNickPrefix(text, draft, nicks);
 
-		// An engine that gave nothing back is a failure, not a message: the
-		// strip says so and offers the draft as written, where a "done" of ""
-		// would be sent as an empty line — which the IRC layer drops in
-		// silence, taking the draft with it.
-		if (text.trim() === "") {
+		// An answer with nothing in it a language could be is a failure, not
+		// a message: the strip says so and offers the draft as written, where
+		// a "done" of "" would be sent as an empty line — which the IRC layer
+		// drops in silence, taking the draft with it. A model given an
+		// English line in the write shape answered `⟹ ⟦1⟧` on the offline
+		// runner, which restores to `⟹ `, so "" is not the only way to get
+		// nothing back.
+		if (hasNoLetters(text)) {
 			store.commit("outgoingTranslationPatch", {
 				chanId: channel.id,
-				patch: {status: "failed", error: "empty translation"},
+				patch: {status: "failed", error: EMPTY_TRANSLATION},
+			});
+
+			return "strip";
+		}
+
+		// The draft back again is not a translation either. No `from !== to`
+		// guard is needed for it: `writeSource` no longer names the target,
+		// so an echo here is the model declining — a line with nothing to
+		// translate ("ok, brb") as much as one it would not touch. The offer
+		// is the same as any failure's, and it is the right one: the second
+		// Enter sends the draft as written.
+		if (isUnchanged(draft, text)) {
+			store.commit("outgoingTranslationPatch", {
+				chanId: channel.id,
+				patch: {status: "failed", error: UNCHANGED},
 			});
 
 			return "strip";
@@ -409,21 +431,25 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 		}
 
 		if (current(channel, draft, controller)) {
+			// Read back from the translation, so that is the source the
+			// prefix rule is judged against.
+			const read = stripCopiedNickPrefix(
+				text,
+				entry.text,
+				channel.users.map((u) => u.nick)
+			);
+
+			// Nothing a language could be is no read-back: the row would
+			// otherwise offer `⟹ ` as what the translation says. The check's
+			// own failed state ("couldn't check") is what a thrown error
+			// gives, so that is the path it takes.
+			if (hasNoLetters(read)) {
+				throw new Error(EMPTY_TRANSLATION);
+			}
+
 			store.commit("outgoingTranslationPatch", {
 				chanId: channel.id,
-				patch: {
-					check: {
-						status: "done",
-						// Read back from the translation, so that is the
-						// source the prefix rule is judged against.
-						text: stripCopiedNickPrefix(
-							text,
-							entry.text,
-							channel.users.map((u) => u.nick)
-						),
-						to: target,
-					},
-				},
+				patch: {check: {status: "done", text: read, to: target}},
 			});
 		}
 	} catch (e) {
@@ -454,12 +480,18 @@ export function noteOutgoingSent(
 	translation: string,
 	to: string
 ): void {
-	const voice = voices.get(channel.id);
+	// The line the model handed back, and one with nothing in it a language
+	// could be, are not the user's voice: a voice line in the wrong language
+	// is quoted into every later prompt, which teaches the model to answer
+	// in it. termPair refuses the same pairs.
+	if (!isUnchanged(draft, translation) && !hasNoLetters(translation)) {
+		const voice = voices.get(channel.id);
 
-	if (voice && voice.to === to) {
-		voice.lines = [...voice.lines, translation].slice(-VOICE_KEEP);
-	} else {
-		voices.set(channel.id, {to, lines: [translation]});
+		if (voice && voice.to === to) {
+			voice.lines = [...voice.lines, translation].slice(-VOICE_KEEP);
+		} else {
+			voices.set(channel.id, {to, lines: [translation]});
+		}
 	}
 
 	const pair = termPair(draft, translation);

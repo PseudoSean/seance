@@ -30,6 +30,13 @@ export const TERM_MAX_CHARS = 40;
 export const WRITE_DETECT_MIN_GAP = 0.3;
 export const TIMED_OUT = "timed out";
 export const ABORTED = "aborted";
+/**
+ * The two failures that are the *answer's* rather than the engine's
+ * (`writer.ts`, `queue.ts`): the engine completed, so neither marks a
+ * candidate down or counts toward the queue's pause.
+ */
+export const UNCHANGED = "came back unchanged";
+export const EMPTY_TRANSLATION = "empty translation";
 
 export type DraftGate = "empty" | "command" | "edit" | "ok";
 
@@ -100,6 +107,43 @@ export function reverseTarget(readingLanguage: string, writeTarget: string): str
 	return readingLanguage !== writeTarget ? readingLanguage : null;
 }
 
+/** What two texts are compared as by `isUnchanged`: the differences a model
+ *  makes to a line it is handing back rather than translating. */
+function echoForm(text: string): string {
+	return text
+		.toLowerCase()
+		.replace(/\s+/g, " ")
+		.trim()
+		.replace(/[.,!?…]+$/, "")
+		.trim();
+}
+
+/**
+ * The answer is the source over again: the model echoed instead of
+ * translating. That is what a request whose source was its own target
+ * produced (`writeSource` no longer builds one), and it is what a model
+ * does with a line that has nothing to translate -- "ok, brb", a bare nick.
+ * Judged loosely on purpose: an answer differing only in case, in spacing
+ * or in the full stop it dropped is still the line that went in.
+ */
+export function isUnchanged(source: string, translation: string): boolean {
+	return echoForm(source) === echoForm(translation);
+}
+
+/**
+ * Nothing in it a language could be -- `""`, `⟹ `, `⟦1⟧`, `--- ---`. A
+ * model asked for a line with nothing to translate answers with punctuation
+ * alone often enough to matter (`⟹ ⟦1⟧` was measured on the offline runner
+ * for an English line in the write shape). Letters and digits of any script
+ * are content, so `ok`, `42` and `Hallo` are answers; a placeholder is
+ * span syntax rather than content, so its digit does not count (the same
+ * strip `isProtectedOnly` does below -- restoration never leaves one, so
+ * this only matters to a caller holding a protected text).
+ */
+export function hasNoLetters(text: string): boolean {
+	return !/[\p{L}\p{N}]/u.test(text.replace(/⟦\s*\d+\s*⟧/g, ""));
+}
+
 function wordCount(text: string): number {
 	return text.split(/\s+/).filter((w) => w !== "").length;
 }
@@ -128,6 +172,13 @@ export function termPair(draft: string, translation: string): [string, string] |
 	}
 
 	if (source.startsWith("/") || source.includes("⟦") || target.includes("⟦")) {
+		return null;
+	}
+
+	// A side with nothing in it a language could be is no term: an answer of
+	// punctuation alone would be quoted into every later prompt as the
+	// translation of a real word.
+	if (hasNoLetters(source) || hasNoLetters(target)) {
 		return null;
 	}
 

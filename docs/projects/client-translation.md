@@ -169,6 +169,22 @@ Plan 3 (composer):
   the source to the LLM rather than name the write target. `canCheckOutgoing`
   takes the network and channel for it — it had no caller, so nothing else
   moved.
+- **An echo is not a translation, nor is a line without letters** — the
+  other half of the 2026-09-12 live-test fix. `outgoing.ts` `isUnchanged`
+  (past case, collapsed whitespace and trailing `.,!?…`) and `hasNoLetters`
+  (no `\p{L}`/`\p{N}`, a placeholder's digit not counting) fail the answer
+  instead of showing it: in the composer with `UNCHANGED` /
+  `EMPTY_TRANSLATION` — the strip's existing "send as written?" being the
+  right offer for a line with nothing to translate as well as for a model
+  that did not translate — in the round trip as "couldn't check", and in
+  the reading queue as the line's own failure, which deliberately does
+  _not_ go through `fail()` and counts toward no `PAUSE_AFTER_FAILURES`
+  (the engine completed). Neither answer joins the prompt's `voice` or the
+  term memory. The strip's chip gained a `title` naming the route
+  (`<Source> → <Target> · <model id> (GPU|CPU)`, from `OutgoingTranslation`'s
+  new `engine`/`model`), because "why does this read like the draft" was
+  unanswerable from the UI. The fake's `[echo]` token (`fakePort.ts`) is
+  how both scenarios exercise it.
 - The Check button and its Settings → Translation choice were removed on
   the user's direction: the round trip always runs, so there was nothing
   left to offer a choice about.

@@ -41,6 +41,13 @@ const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, 
  *  browser scenarios exercise the failed-line/retry UI without a real
  *  engine ever failing. */
 const FAIL_TOKEN = "[fail]";
+/** The token a request's text (or any of its lines) can carry to come back
+ *  as it went in: browser scenarios exercise the echo rule (outgoing.ts
+ *  `isUnchanged`) without a real model ever declining to translate. Like
+ *  `[fail]`'s, the token itself stays in the answer — what an echo drops is
+ *  the `[Language]` prefix the fake otherwise puts in front, since an
+ *  answer differing from the text by anything at all would not be one. */
+const ECHO_TOKEN = "[echo]";
 
 interface TranslateFakeRequestLog {
 	id: number;
@@ -143,6 +150,8 @@ class ScriptedEngine implements Engine {
 			throw new Error("scripted failure");
 		}
 
+		const echoing = failKey.includes(ECHO_TOKEN);
+
 		if (req.lines) {
 			let text = "";
 
@@ -153,7 +162,9 @@ class ScriptedEngine implements Engine {
 
 				await wait(this.stepMs);
 
-				const line = `${i + 1}. [${languageName(req.to)}] ${req.lines[i]}`;
+				const line = echoing
+					? `${i + 1}. ${req.lines[i]}`
+					: `${i + 1}. [${languageName(req.to)}] ${req.lines[i]}`;
 
 				text = text ? `${text}\n${line}` : line;
 				yield {id: req.id, text, done: false};
@@ -167,7 +178,7 @@ class ScriptedEngine implements Engine {
 			return;
 		}
 
-		const words = `[${languageName(req.to)}] ${req.text}`.split(" ");
+		const words = (echoing ? req.text : `[${languageName(req.to)}] ${req.text}`).split(" ");
 		let text = "";
 
 		for (const word of words) {

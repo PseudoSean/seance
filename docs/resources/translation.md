@@ -54,6 +54,18 @@ message on request in a channel that is off -- and brings a hidden
 translation back, at no cost, once the chip's "Show original only" has
 taken it away.
 
+**An answer is not automatically a translation.** Two of them fail the line
+instead: one that came back as the original (the model echoed rather than
+translated -- `outgoing.ts` `isUnchanged`, judged past case, spacing and a
+dropped full stop, and compared restored against restored so the route's
+marker form cancels out) and one with nothing in it a language could be
+(`hasNoLetters`: `⟹ `, `--- ---`, the empty string; letters and digits of
+any script are content). Both are the _answer's_ failure, not the
+engine's, so they never go through the queue's `fail()`: nothing is marked
+down and neither counts toward the three-in-a-row pause, since the engine
+did complete and the next line may well be one it can do. The line keeps
+its chip and its Retry.
+
 **The channel's own languages weight detection.** The panel's _Languages
 spoken here_ records what people write in a channel (`channelStore.ts`
 `languages`, ISO 639-1, supported codes only, persisted with the rest of
@@ -265,8 +277,21 @@ accessible name, never as visible text -- for Copy (its tooltip reads "Copied" f
 it worked), Send (disabled while pending), and Edit. Both rows of the strip are
 `user-select: text`: the line the user is being asked to approve has to be
 selectable. A failure shows "couldn't translate, send as written?" -- followed by the
-engine's reason, truncated, with the whole of it in the title -- and turns
-Send's tooltip into "Send as written". The second Enter is the same `input` bus emit
+reason, truncated, with the whole of it in the title -- and turns
+Send's tooltip into "Send as written".
+
+Two answers are failures rather than translations, on the same terms as the
+reading side: **an echo** ("came back unchanged") and **an answer with no
+letters in it** ("empty translation"). The echo needs no `from !== to`
+guard any more -- a source is never the target -- so what it means is the
+model declining: a line with nothing to translate ("ok, brb", a bare nick)
+as much as one it would not touch. The offer the strip already makes is the
+right one for either, and the second Enter sends the draft as written. The
+round trip refuses a letterless read-back the same way ("couldn't check"),
+and neither an echo nor a letterless answer joins the `voice` quoted to the
+model next time or the channel's term memory (`termPair`): a voice line in
+the wrong language would be quoted into every later prompt.
+The second Enter is the same `input` bus emit
 as any other send (`deliver`, so history, replies and edits do not
 diverge): it ships the strip's translation, or the draft itself after a
 failure, and calls `noteOutgoingSent`, which extends the voice and, when
@@ -285,8 +310,10 @@ Send.
 
 The scenario's fake logs `purpose: "write"` (or `"read"` for the check) on
 every request, so a browser check can tell the composer's traffic from the
-reader's. Browser check: `tools/scenarios/translate-composer.mjs` (also
-`--mobile`).
+reader's, and a request whose text carries `[echo]` comes back as it went
+in (the token stays, the `[Language]` prefix does not) so the echo rule can
+be exercised without a real model declining. Browser check:
+`tools/scenarios/translate-composer.mjs` (also `--mobile`).
 
 ## Span protection
 
@@ -596,6 +623,14 @@ Nothing here asserts: reading the table is the measurement. Run the whole
 set per prompt variant rather than per edit — a run is a minute or two —
 and keep every variant's table, because the answers move in both
 directions at once.
+
+The eval expectations stand as they are now that an echo is a failure in
+the app. The `ok, brb` case still expects `"ok, brb" back, or a German equivalent — nothing invented`, and the engine still echoes it: that is the
+engine behaving, and a line with nothing to translate is exactly what the
+composer now presents as "couldn't translate, send as written?" instead of
+offering the draft back as its own translation. Do not change a case's
+`expect` to chase the app's rule; the runner measures the model, the app
+decides what to do with what the model says.
 
 This is the first `.ts` tool in `tools/` — everything else there is plain
 `.mjs`. It runs under `npx tsx`, is type-checked by `npx tsc --noEmit -p tools` and is linted because `.eslintrc.cjs` names `tools/tsconfig.json`

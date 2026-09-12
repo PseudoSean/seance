@@ -15,7 +15,15 @@
 // Vue-free; reader.ts feeds it and writes its updates to the store.
 
 import {EngineName, PromptContext, TranslateChunk, TranslateRequest} from "./engine";
-import {ABORTED, type OutgoingDeps, translateDraft} from "./outgoing";
+import {
+	ABORTED,
+	EMPTY_TRANSLATION,
+	type OutgoingDeps,
+	UNCHANGED,
+	hasNoLetters,
+	isUnchanged,
+	translateDraft,
+} from "./outgoing";
 import {parseBatchedOutput} from "./prompt";
 import {
 	LLM_MARKERS,
@@ -481,11 +489,7 @@ export class TranslateQueue {
 			}
 
 			if (batch.length === 1) {
-				this.deps.onUpdate(first.id, {
-					status: "done",
-					text: this.restoreText(head.info, last, true),
-					engine,
-				});
+				this.report(engine, head, this.restoreText(head.info, last, true));
 			} else {
 				const lines = parseBatchedOutput(last, batch.length);
 
@@ -495,11 +499,7 @@ export class TranslateQueue {
 					}
 				} else {
 					batch.forEach((q, i) => {
-						this.deps.onUpdate(q.item.id, {
-							status: "done",
-							text: this.restoreText(q.info, lines[i], true),
-							engine,
-						});
+						this.report(engine, q, this.restoreText(q.info, lines[i], true));
 					});
 				}
 			}
@@ -600,7 +600,7 @@ export class TranslateQueue {
 				return;
 			}
 
-			this.deps.onUpdate(item.id, {status: "done", text: outcome.text, engine});
+			this.report(engine, queued, outcome.text);
 			this.failures.set(engine, 0);
 		} catch (e) {
 			const message = e instanceof Error ? e.message : String(e);
@@ -619,6 +619,30 @@ export class TranslateQueue {
 			this.inFlight.delete(engine);
 			this.pump();
 		}
+	}
+
+	/**
+	 * An answer, reported as the translation or as the failure it is. A
+	 * translation that came back as the original (the model echoing rather
+	 * than translating) or with nothing in it a language could be is the
+	 * *answer's* failure, not the engine's: it never goes through `fail()`,
+	 * so it marks nothing down and counts toward no pause — the engine did
+	 * complete, and the line keeps its chip with Retry / Retranslate from…
+	 * Both sides of the comparison are restored (`restoreAll`), so whichever
+	 * marker form the route chose cancels out.
+	 */
+	private report(engine: EngineName, q: Queued, text: string): void {
+		if (hasNoLetters(text)) {
+			this.deps.onUpdate(q.item.id, {status: "failed", error: EMPTY_TRANSLATION});
+			return;
+		}
+
+		if (isUnchanged(restoreAll(q.info.text, q.info), text)) {
+			this.deps.onUpdate(q.item.id, {status: "failed", error: UNCHANGED});
+			return;
+		}
+
+		this.deps.onUpdate(q.item.id, {status: "done", text, engine});
 	}
 
 	private fail(engine: EngineName, batch: Queued[], message: string): void {

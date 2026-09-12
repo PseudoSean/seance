@@ -19,7 +19,9 @@
 // request; the page's own German line is never translated; the
 // translation panel opens on the globe's context menu as one column of
 // controls of equal width, each language named in itself (the endonym,
-// never a code) and a link to Settings, and closes on Escape; a line carrying the fake's `[fail]`
+// never a code) and a link to Settings, and closes on Escape; a line the fake hands back
+// unchanged (its `[echo]` token) fails with "came back unchanged" and costs the engine
+// nothing -- the next line is still translated; a line carrying the fake's `[fail]`
 // marker fails once and its retry button succeeds the second time; a line carrying `*Betonung*` and the page's own nick keeps both
 // (the chip's menu offers Copy translation and the line is selectable); a
 // `draft/multiline` message is translated line by line rather than losing
@@ -1055,6 +1057,67 @@ async function scenario(page) {
 			loaded.order.every((index) => index >= loaded.count - HISTORY_QUEUE_CAP)
 	);
 	await page.screenshot("translated-history");
+
+	// An answer equal to the line is not a translation: the `[echo]` token
+	// makes the fake hand the text back, which fails the line -- and it is
+	// the answer's failure, not the engine's, so it counts toward no pause
+	// and the next normal line is still translated. Sent one at a time: two
+	// lines in flight together would be batched, and then the second would
+	// be echoed too.
+	const echoMarker = `Echoprobe${RUN}`;
+
+	other.say(
+		`Dies ist ein langer deutscher Testsatz mit einem [echo] Marker für die ${echoMarker}.`
+	);
+
+	const echoRow = `[...document.querySelectorAll(".msg")].filter((m) => m.textContent.includes(${JSON.stringify(
+		echoMarker
+	)})).pop()`;
+
+	await page.waitFor(
+		`!!(${echoRow}) && !!(${echoRow}).querySelector('.msg-translation[data-status="failed"]')`,
+		{timeout: 20000, label: "the echoed line fails"}
+	);
+	await page.check(
+		"the reason says the line came back unchanged",
+		(await page.evaluate(
+			`((${echoRow}).querySelector(".msg-translation-reason") || {}).textContent.trim()`
+		)) === "came back unchanged"
+	);
+	await page.check(
+		"the failed line still shows its chip",
+		await page.evaluate(`!!(${echoRow}).querySelector(".msg-translation-chip")`)
+	);
+	await page.evaluate(`(${echoRow}).scrollIntoView({block: "center"})`);
+	await page.screenshot("echoed-translation");
+
+	const doneBeforeNext = Number(await page.evaluate(LINES));
+	const afterEchoMarker = `Nachechoprobe${RUN}`;
+
+	other.say(`Und dies ist wieder ein ganz normaler deutscher Satz für die ${afterEchoMarker}.`);
+
+	const afterEchoRow = `[...document.querySelectorAll(".msg")].filter((m) => m.textContent.includes(${JSON.stringify(
+		afterEchoMarker
+	)})).pop()`;
+
+	await page.waitFor(
+		`!!(${afterEchoRow}) && !!(${afterEchoRow}).querySelector('.msg-translation[data-status="done"]')`,
+		{timeout: 20000, label: "the next line is translated: the engine was not paused"}
+	);
+
+	const doneAfterNext = Number(await page.evaluate(LINES));
+
+	await page.check(
+		`the echo cost the engine nothing (${doneBeforeNext} then ${doneAfterNext} done lines)`,
+		doneAfterNext === doneBeforeNext + 1
+	);
+	// The globe's title is where a pause shows (Chat.vue `translateLabel`).
+	await page.check(
+		"no engine was paused",
+		!String(
+			await page.evaluate(`document.querySelector(${JSON.stringify(GLOBE)}).title`)
+		).includes("paused:")
+	);
 
 	// Off before the speaker goes: a switch-off drops what the load left
 	// waiting, so nothing is mid-translation as the sockets close.

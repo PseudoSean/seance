@@ -5,6 +5,7 @@ import {
 	type TranslateChunk,
 	type TranslateRequest,
 } from "../../client/js/translate/engine";
+import {EMPTY_TRANSLATION, UNCHANGED} from "../../client/js/translate/outgoing";
 import {
 	BATCH_MAX_LINES,
 	DROP_AFTER_LINES,
@@ -497,6 +498,110 @@ describe("translate/queue", () => {
 
 		expect(r.queue.paused("llm")).to.equal(false);
 		expect(r.updates.filter(([id, u]) => id === 1 && u.status === "done")).to.have.length(1);
+	});
+
+	// An answer equal to what went in is the *answer's* failure, not the
+	// engine's: the engine completed, it just did not translate. Three of
+	// them must not pause it the way three real failures would, since the
+	// next line may well be one it can do.
+	it("fails a line the engine handed back, and never pauses for it", async () => {
+		const r = rig((req) => {
+			const text = req.lines ? req.lines.join("\n") : req.text;
+
+			return [text.includes("echo") ? text : `[en] ${text}`];
+		});
+
+		clock = r.clock;
+
+		for (let i = 1; i <= PAUSE_AFTER_FAILURES; i++) {
+			r.queue.enqueue(item(i, `das ist echo zeile ${i} hier`, {single: true}));
+		}
+
+		await settle(r.clock);
+
+		const failed = r.updates.filter(([, u]) => u.status === "failed");
+
+		expect(failed).to.deep.equal([
+			[1, {status: "failed", error: UNCHANGED}],
+			[2, {status: "failed", error: UNCHANGED}],
+			[3, {status: "failed", error: UNCHANGED}],
+		]);
+		expect(r.paused).to.deep.equal([]);
+		expect(r.queue.paused("llm")).to.equal(false);
+
+		// The engine is still the route for the next line, and it runs.
+		r.queue.enqueue(item(4, "eine ganz normale zeile hier", {single: true}));
+		await settle(r.clock);
+
+		const done = r.updates.filter(([, u]) => u.status === "done");
+
+		expect(done.map(([id]) => id)).to.deep.equal([4]);
+		expect(done[0][1].text).to.equal("[en] eine ganz normale zeile hier");
+	});
+
+	it("fails an answer with nothing in it a language could be", async () => {
+		const r = rig(() => ["⟹"]);
+		clock = r.clock;
+		r.queue.enqueue(item(1, "das ist eine zeile hier"));
+		await settle(r.clock);
+
+		expect(r.updates.filter(([, u]) => u.status === "failed")).to.deep.equal([
+			[1, {status: "failed", error: EMPTY_TRANSLATION}],
+		]);
+		expect(r.paused).to.deep.equal([]);
+	});
+
+	// Both sides of the comparison are restored, so whichever marker form
+	// the route chose (spans.ts `renderMarkers`) cancels out: the LLM's own
+	// marks and a seq2seq placeholder are both recognised as the line in.
+	it("recognises an echo whichever marker form the route chose", async () => {
+		const r = rig((req) => [req.text]);
+		clock = r.clock;
+		r.queue.enqueue(item(1, "das ist *wichtig* hier"));
+		await settle(r.clock);
+
+		expect(r.requests[0].text).to.equal("das ist *wichtig* hier");
+		expect(r.requests[0].markers).to.equal("literal");
+
+		r.setEngine(() => "seq2seq");
+		r.queue.enqueue(item(2, "siehe https://x.test bitte hier"));
+		await settle(r.clock);
+
+		expect(r.requests[1].text).to.equal(`siehe ${placeholder(1)} bitte hier`);
+		expect(r.updates.filter(([, u]) => u.status === "failed")).to.deep.equal([
+			[1, {status: "failed", error: UNCHANGED}],
+			[2, {status: "failed", error: UNCHANGED}],
+		]);
+	});
+
+	it("fails each echoed line of a batch, and an echoed multi-line message", async () => {
+		const r = rig((req) =>
+			req.lines
+				? [req.lines.map((line, i) => `${i + 1}. ${line}`).join("\n") + "\nEND"]
+				: [req.text]
+		);
+
+		clock = r.clock;
+		r.queue.pauseForTest();
+		r.queue.enqueue(item(1, "eins zwei drei hier"));
+		r.queue.enqueue(item(2, "vier fünf sechs hier"));
+		await settle(r.clock, 3);
+		r.queue.resumeForTest();
+		await settle(r.clock);
+
+		expect(r.requests[0].lines).to.have.length(2);
+		expect(r.updates.filter(([, u]) => u.status === "failed")).to.deep.equal([
+			[1, {status: "failed", error: UNCHANGED}],
+			[2, {status: "failed", error: UNCHANGED}],
+		]);
+
+		r.queue.enqueue(item(3, "erste Zeile hier\nzweite Zeile hier"));
+		await settle(r.clock, 40);
+
+		expect(r.updates.filter(([id, u]) => id === 3 && u.status === "failed")).to.deep.equal([
+			[3, {status: "failed", error: UNCHANGED}],
+		]);
+		expect(r.paused).to.deep.equal([]);
 	});
 
 	it("a route that rejects fails the item instead of losing it", async () => {
