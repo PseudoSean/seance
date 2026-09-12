@@ -11,8 +11,8 @@
 // can hide a translation; the toolbar's Translate does one message on
 // request; the page's own German line is never translated; the
 // translation panel opens on the globe's context menu as one column of
-// controls of equal width, full language names (never codes) and a link to
-// Settings, and closes on Escape; a line carrying the fake's `[fail]`
+// controls of equal width, each language named in itself (the endonym,
+// never a code) and a link to Settings, and closes on Escape; a line carrying the fake's `[fail]`
 // marker fails once and its retry button succeeds the second time; a line carrying `*Betonung*` and the page's own nick keeps both
 // (the chip's menu offers Copy translation and the line is selectable); a
 // `draft/multiline` message is translated line by line rather than losing
@@ -433,8 +433,12 @@ async function scenario(page) {
 	);
 
 	await page.check(
-		`the "read" select names languages in full (${readLabels.join(", ")})`,
-		readLabels.includes("German") && readLabels.every((label) => !/^[a-z]{2}$/i.test(label))
+		`the "read" select names each language in itself (${readLabels.join(", ")})`,
+		// The options carry the endonym, not the English name: "Deutsch",
+		// never "German" and never the bare code.
+		readLabels.includes("Deutsch") &&
+			!readLabels.includes("German") &&
+			readLabels.every((label) => !/^[a-z]{2}$/i.test(label))
 	);
 
 	await page.evaluate(
