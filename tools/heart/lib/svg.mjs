@@ -79,6 +79,13 @@ export const fmt = (n, d = 4) => {
  */
 export const TRAVEL_DECIMALS = 6;
 
+/** Scenery paths: `{d, fill}` in the rig's own coordinates, so each carries
+ * the same `k` the outlines are encoded with as a transform. */
+const sceneryPaths = (decor, k) =>
+	(decor ?? [])
+		.map((p) => `<path fill="${p.fill}" transform="scale(${fmt(k)})" d="${p.d}"/>`)
+		.join("");
+
 const animate = (attrs) =>
 	`<animate${Object.entries(attrs)
 		.map(([k, v]) => ` ${k}="${v}"`)
@@ -106,7 +113,9 @@ const animate = (attrs) =>
  * `{d, fill}` is painted last, as a sibling of the outer group rather than a
  * child of it, so it neither travels nor fades and stays put for the whole
  * loop. Its `d` is in the rig's own coordinates — the space the outline
- * paths are encoded in — so it carries the same `k` as a transform.
+ * paths are encoded in — so it carries the same `k` as a transform. It is
+ * authored against the *stage*, which is why the still takes `stillDecor`
+ * instead and never this.
  */
 export function animalSvg({viewBox: vb, k, stageW, layers, clips, travel, flip, hearts, decor}) {
 	const last = layers.length - 1;
@@ -153,9 +162,7 @@ export function animalSvg({viewBox: vb, k, stageW, layers, clips, travel, flip, 
 		.join(";")}" keyTimes="${travel.keyTimes
 		.map((t) => fmt(t, TRAVEL_DECIMALS))
 		.join(";")}" dur="${fmt(travel.period)}s" repeatCount="indefinite"/>`;
-	const scenery = (decor ?? [])
-		.map((p) => `<path fill="${p.fill}" transform="scale(${fmt(k)})" d="${p.d}"/>`)
-		.join("");
+	const scenery = sceneryPaths(decor, k);
 	const fade = animate({
 		attributeName: "opacity",
 		calcMode: "linear",
@@ -176,11 +183,23 @@ export function animalSvg({viewBox: vb, k, stageW, layers, clips, travel, flip, 
 	);
 }
 
-/** One frame, no stage, no motion: the reduced-motion still, in the rig's own box. */
-export function stillSvg({viewBox: vb, k, layers, frame}) {
+/**
+ * One frame, no stage, no motion: the reduced-motion still, in the rig's own
+ * box.
+ *
+ * `decor` here is a rig's `stillDecor`, not the animated file's `decor`, and
+ * the two are deliberately different arrays. Stage scenery is authored
+ * against a box `aspect × viewBox.h` wide and a still's viewBox is the rig's
+ * own, so a pond built for the stage crops to a featureless band here. A rig
+ * whose animal is not legible without its scenery — the dolphin, which with
+ * no water is a fish in the sky — draws a second, box-sized copy for this.
+ * Same `{d, fill}` shape, same rig coordinates, same `k`, painted over the
+ * animal.
+ */
+export function stillSvg({viewBox: vb, k, layers, frame, decor}) {
 	return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${fmt(vb.x * k)} ${fmt(
 		vb.y * k
 	)} ${fmt(vb.w * k)} ${fmt(vb.h * k)}">${layers
 		.map((l, i) => `<path fill="${l.fill}" d="${frame[i]}"/>`)
-		.join("")}</svg>\n`;
+		.join("")}${sceneryPaths(decor, k)}</svg>\n`;
 }
