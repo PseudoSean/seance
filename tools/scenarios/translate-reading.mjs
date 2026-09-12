@@ -56,7 +56,7 @@ const REDACTION_FEATURE = "CAP_draft_message_redaction";
  * Reading on or off. The globe's click is the switch where there is a
  * pointer; on touch the tap opens the panel instead (there is no
  * right-click to reach it with), so the switch is the panel's first
- * control and Done puts it away.
+ * control and the close button puts it away.
  */
 async function setReading(page, code) {
 	await page.click(GLOBE);
@@ -73,9 +73,9 @@ async function setReading(page, code) {
 			code
 		)}; s.dispatchEvent(new Event("change", {bubbles: true})); })()`
 	);
-	await page.evaluate(`document.querySelector(".translation-panel-done").click()`);
+	await page.evaluate(`document.querySelector(".translation-panel-close").click()`);
 	await page.waitFor(`!document.querySelector(".translation-panel")`, {
-		label: "Done put the panel away",
+		label: "the close button put the panel away",
 	});
 }
 
@@ -426,6 +426,10 @@ async function scenario(page) {
 		"the failed line offers a retry button",
 		await page.evaluate(`!!(${failRow}).querySelector(".msg-translation-retry")`)
 	);
+	await page.evaluate(
+		`(${failRow}).querySelector(".msg-translation-retry").scrollIntoView({block: "center"})`
+	);
+	await page.screenshot("failed-retry");
 	await page.click(".msg-translation-retry");
 	await page.waitFor(
 		`!!(${failRow}) && !!(${failRow}).querySelector('.msg-translation[data-status="done"]')`,

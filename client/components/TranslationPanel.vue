@@ -18,6 +18,7 @@
 					type="button"
 					class="translation-panel-close"
 					aria-label="Close"
+					title="Close"
 					@click="$emit('close')"
 				>
 					✕
@@ -130,9 +131,6 @@
 				>
 					Language and models in Settings
 				</router-link>
-				<button type="button" class="btn translation-panel-done" @click="$emit('close')">
-					Done
-				</button>
 			</div>
 		</div>
 	</Teleport>

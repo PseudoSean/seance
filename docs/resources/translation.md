@@ -41,7 +41,8 @@ of one channel and pair batched, items that fell two hundred messages
 behind dropped, an engine paused after three failures in a row). The
 result lives in `store.state.translations` keyed by the message id and
 renders as `TranslationLine.vue` under the original: a "from German"
-chip, the text streaming with a caret, a retry when it failed (with the
+chip, the text streaming with a caret, a retry when it failed (an icon
+button, "Retry the translation" its tooltip and accessible name, with the
 engine's reason beside "couldn't translate" when there is one -- a model
 that would not load says so rather than leaving the tier looking broken); the chip's
 menu copies, retranslates or hides the line ("Copy translation" puts the
@@ -140,13 +141,15 @@ to send -- and given up after `WRITE_TIMEOUT_MS` (2 min).
 
 The result lives in `store.state.outgoingTranslations`, keyed by channel
 id, and `ChatInput.vue` renders it as the `.translate-bar` strip above the
-input: a "to German" chip, the streaming text with a caret, a Copy button
-that reads "Copied" for two seconds after it worked, a Check button
-once the round trip has something to check, Send (disabled while pending),
-and Edit. Both rows of the strip are `user-select: text`: the line the user
-is being asked to approve has to be selectable. A failure shows "couldn't translate, send as written?" -- followed by the
+input: a "to German" chip, the streaming text with a caret, and icon
+buttons -- their words kept as the tooltip and accessible name, never as
+visible text -- for Copy (its tooltip reads "Copied" for two seconds after
+it worked), Check once the round trip has something to check, Send
+(disabled while pending), and Edit. Both rows of the strip are
+`user-select: text`: the line the user is being asked to approve has to be
+selectable. A failure shows "couldn't translate, send as written?" -- followed by the
 engine's reason, truncated, with the whole of it in the title -- and turns
-Send into "Send as written". The second Enter is the same `input` bus emit
+Send's tooltip into "Send as written". The second Enter is the same `input` bus emit
 as any other send (`deliver`, so history, replies and edits do not
 diverge): it ships the strip's translation, or the draft itself after a
 failure, and calls `noteOutgoingSent`, which extends the voice and, when

@@ -18,7 +18,13 @@
 			<span v-if="entry.error" class="msg-translation-reason" :title="entry.error">{{
 				shortReason(entry.error)
 			}}</span>
-			<button type="button" class="msg-translation-retry" @click.stop="retry">retry</button>
+			<button
+				type="button"
+				class="msg-translation-retry"
+				title="Retry the translation"
+				aria-label="Retry the translation"
+				@click.stop="retry"
+			/>
 		</span>
 		<span v-else class="msg-translation-text" :lang="entry.to" dir="auto">
 			<ParsedMessage

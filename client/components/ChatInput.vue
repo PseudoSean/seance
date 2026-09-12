@@ -101,13 +101,16 @@
 					<button
 						v-if="outgoing.status === 'done'"
 						type="button"
-						class="translate-bar-button translate-bar-copy"
-						title="Copy the translation"
+						:class="[
+							'translate-bar-button',
+							'translate-bar-copy',
+							{'translate-bar-copy-done': copiedOutgoing},
+						]"
+						:title="copiedOutgoing ? 'Copied' : 'Copy the translation'"
+						:aria-label="copiedOutgoing ? 'Copied' : 'Copy the translation'"
 						@mousedown.prevent
 						@click="copyOutgoing"
-					>
-						{{ copiedOutgoing ? "Copied" : "Copy" }}
-					</button>
+					/>
 					<button
 						v-if="
 							outgoing.status === 'done' &&
@@ -117,29 +120,35 @@
 						type="button"
 						class="translate-bar-button translate-bar-check-button"
 						title="Show how it reads back"
+						aria-label="Show how it reads back"
 						@mousedown.prevent
 						@click="checkOutgoingNow"
-					>
-						Check
-					</button>
+					/>
 					<button
 						type="button"
 						class="translate-bar-button translate-bar-send"
 						:disabled="outgoingBusy || !canSend"
+						:title="
+							outgoing.status === 'failed'
+								? 'Send as written'
+								: 'Send the translation'
+						"
+						:aria-label="
+							outgoing.status === 'failed'
+								? 'Send as written'
+								: 'Send the translation'
+						"
 						@mousedown.prevent
 						@click="onSubmit()"
-					>
-						{{ outgoing.status === "failed" ? "Send as written" : "Send" }}
-					</button>
+					/>
 					<button
 						type="button"
 						class="translate-bar-button translate-bar-edit"
 						title="Keep typing (Escape)"
+						aria-label="Keep typing (Escape)"
 						@mousedown.prevent
 						@click="cancelOutgoingNow"
-					>
-						Edit
-					</button>
+					/>
 				</span>
 			</div>
 			<div

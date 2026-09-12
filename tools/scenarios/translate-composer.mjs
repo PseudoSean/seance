@@ -14,11 +14,11 @@
 // translates; a three-line draft translates as one numbered request and
 // ships as three lines; a draft carrying markdown, a nick, a URL and a code
 // span comes back with every one of them intact (the engine only ever saw
-// placeholders), the strip's Copy button reads "Copied" and its text is
-// selectable, a fenced code block is never sent for translation and comes
+// placeholders), the strip's Copy button's tooltip reads "Copied" and its
+// text is selectable, a fenced code block is never sent for translation and comes
 // back byte for byte; switching the target off restores plain sending.
 // Under `--mobile` the panel is asserted to be the full-screen sheet, with
-// formality as a segmented control and Done closing it.
+// formality as a segmented control and the close button putting it away.
 // Detection is real (franc); only the engine is scripted.
 //
 //   corepack yarn build && python3 -m http.server -d public 8021 &
@@ -215,18 +215,18 @@ async function panelIsASheet(page) {
 		)) !== "none"
 	);
 	await page.check(
-		"Done is on screen, above the safe area",
+		"the close button is on screen",
 		await page.evaluate(
 			`(() => {
-				const r = document.querySelector(".translation-panel-done").getBoundingClientRect();
+				const r = document.querySelector(".translation-panel-close").getBoundingClientRect();
 				return r.height > 0 && r.bottom <= innerHeight + 1;
 			})()`
 		)
 	);
 	await page.screenshot("translation-sheet");
-	await page.click(".translation-panel-done");
+	await page.click(".translation-panel-close");
 	await page.waitFor(`!document.querySelector(".translation-panel")`, {
-		label: "Done closed the sheet",
+		label: "the close button closed the sheet",
 	});
 }
 
@@ -385,8 +385,11 @@ export default async function run(page) {
 	await page.check(
 		"the send button offers the draft as written",
 		(await page.evaluate(
-			`document.querySelector(".translate-bar-send").textContent.trim()`
-		)) === "Send as written"
+			`document.querySelector(".translate-bar-send").getAttribute("aria-label")`
+		)) === "Send as written" &&
+			(await page.evaluate(
+				`document.querySelector(".translate-bar-send").getAttribute("title")`
+			)) === "Send as written"
 	);
 	await page.screenshot("composer-failed");
 	await page.evaluate(ENTER);
@@ -469,8 +472,8 @@ export default async function run(page) {
 	);
 	await page.evaluate(`document.querySelector(".translate-bar-copy").click()`);
 	await page.waitFor(
-		`document.querySelector(".translate-bar-copy").textContent.trim() === "Copied"`,
-		{timeout: 5000, label: "the Copy button reads Copied"}
+		`document.querySelector(".translate-bar-copy").getAttribute("aria-label") === "Copied" && document.querySelector(".translate-bar-copy").getAttribute("title") === "Copied"`,
+		{timeout: 5000, label: "the Copy button's tooltip reads Copied"}
 	);
 	await page.check(
 		"the strip's text is selectable",
