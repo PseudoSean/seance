@@ -26,6 +26,11 @@
 //                    and the default cell would then be enormous and almost
 //                    entirely sky. Narrow the cell instead: the bird reads at
 //                    `--height=520 --cell=0.5,1.35 --cols=6`.
+//   --slot=<token>   the animal's `--heart-<animal>-h` from the theme, which is
+//                    what the ground band and the box's rest height are shares
+//                    of (default 0.44). Only needed to judge *footing* — where
+//                    the feet sit against the grass — since the band is drawn
+//                    from it; poses read fine at the default.
 //   --far            use the distant-visitor tint; the default is the near file,
 //                    falling back to `-far` for an animal that has no near file
 //                    (the dolphin never comes close)
@@ -66,12 +71,22 @@ const DRIVER = join(ROOT, "tools/browser-drive.mjs");
 /** The theme's sky and ground (client/themes/heart.css `--heart-sky`, `--heart-ground`). */
 const SKY = "#dbeeff";
 const GROUND = "#b7dcc2";
-/** The cell's proportions, as shares of the animal's rendered height — the
- * theme's own `--strip` ratios for a 0.44 slot: a ground band of 0.14 strip
- * under an animal of 0.44 strip, its box bottom 0.12 strip above the foot of
- * the meadow. */
-const BAND = 0.14 / 0.44;
-const SIT = 0.12 / 0.44;
+/** The cell's proportions, as shares of the animal's rendered height, from
+ * the theme's own `--strip` ratios: a ground band 0.14 strip tall under an
+ * animal whose box bottom sits 0.12 strip above the foot of the meadow.
+ *
+ * Both are shares of a *strip*, so turning them into shares of the rendered
+ * height needs the animal's own `--heart-<animal>-h`, which lives in
+ * `client/themes/heart.css` and is not in the SVG. 0.44 is the default
+ * because that is what the cast's small animals were when this was written;
+ * it is only the right band for an animal at that token, and four of the
+ * eight are not (horse 0.7176, puppy 0.6172, bunny 0.6026, deer 0.5781 —
+ * their boxes grew to stop clipping them, and their tokens grew with the
+ * boxes). Pass `--slot=<token>` to read the animal's footing against the
+ * band it actually gets; the default is fine for reading poses. */
+const SLOT = 0.44;
+const band = (slot) => 0.14 / slot;
+const sit = (slot) => 0.12 / slot;
 const CELL_W = 2.4;
 const CELL_H = 1.5;
 /** `--cell=w,h` overrides both, in the same units (shares of the height). */
@@ -334,10 +349,16 @@ export default async function run(page) {
 	const a = readAnimal(name, far);
 	const animal = Number(page.opt("animal-height", 150));
 	const [cw, ch] = cellShape(page.opt("cell", null));
+	const slot = Number(page.opt("slot", SLOT));
+
+	if (!(slot > 0)) {
+		throw new Error(`--slot wants a positive height token, got ${page.opt("slot", SLOT)}`);
+	}
+
 	const geom = {
 		animal,
-		band: Math.round(animal * BAND),
-		sit: Math.round(animal * SIT),
+		band: Math.round(animal * band(slot)),
+		sit: Math.round(animal * sit(slot)),
 		cellW: Math.round(animal * cw),
 		cellH: Math.round(animal * ch),
 		cols: Number(page.opt("cols", 4)),
@@ -447,6 +468,7 @@ if (import.meta.filename === resolve(process.argv[1] ?? "")) {
 		["height", "animal-height"],
 		["cols", "cols"],
 		["cell", "cell"],
+		["slot", "slot"],
 		// the driver's own: $CHROME_BIN is the other way to point it at a binary
 		["chrome", "chrome"],
 	]) {

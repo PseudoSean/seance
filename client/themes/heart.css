@@ -600,10 +600,18 @@ strong,
 	 * its hop, the ladybug's its wings' transit, the kitten's its raised
 	 * tail — so every token is picked from the body that actually renders,
 	 * never from the box. The share of the box each animal fills, measured
-	 * off its still: horse 0.92, deer 0.92, kitten 0.82, puppy 0.62, frog
-	 * 0.57, ladybug 0.55, bird 0.10. The bunny is not in that list because
-	 * its own still overflows its viewBox and so has no honest figure; its
-	 * 0.44 is the shipped, approved one.
+	 * off its still: bunny 0.91, deer 0.88, horse 0.85, kitten 0.83, puppy
+	 * 0.59, frog 0.58, ladybug 0.55, bird 0.10.
+	 *
+	 * Four of those tokens were rescaled when the boxes grew to stop
+	 * clipping their animals (tools/heart/lib/build.mjs `boxOverflow`), and
+	 * the arithmetic is the point: a box height and its token move together
+	 * or the animal changes size. `token / viewBox.h` is the on-screen scale
+	 * and it is unchanged on all eight — horse 0.66/172 → 0.7176/187, deer
+	 * 0.55/196 → 0.5781/206, puppy 0.585/109 → 0.6172/115, bunny 0.44/92 →
+	 * 0.6026/126, and each far slot below by the same ratio. The rigs' own
+	 * `stage.aspect` moved the other way, so `aspect × token` — the crossing
+	 * width, in strips — is unchanged too.
 	 *
 	 * The second number a token moves is how far the animal travels:
 	 * on-screen stage width is `stage.aspect × the token`, in strips. Horse,
@@ -627,10 +635,10 @@ strong,
 	--heart-ladybug-far: url("heart/ladybug-far.svg");
 	--heart-bird: url("heart/bird.svg");
 	--heart-bird-far: url("heart/bird-far.svg");
-	--heart-horse-h: 0.66;
-	--heart-deer-h: 0.55;
-	--heart-puppy-h: 0.585;
-	--heart-bunny-h: 0.44;
+	--heart-horse-h: 0.7176;
+	--heart-deer-h: 0.5781;
+	--heart-puppy-h: 0.6172;
+	--heart-bunny-h: 0.6026;
 	--heart-kitten-h: 0.44;
 	--heart-frog-h: 0.3;
 	--heart-ladybug-h: 0.19;
@@ -683,7 +691,7 @@ strong,
 	--heart-slot-b: var(--heart-bunny);
 	--heart-slot-b-h: var(--heart-bunny-h);
 	--heart-slot-f: var(--heart-deer-far);
-	--heart-slot-f-h: 0.385;
+	--heart-slot-f-h: 0.4046;
 }
 
 #chat-container[data-scene="1"] {
@@ -703,7 +711,7 @@ strong,
 	--heart-slot-b: var(--heart-frog);
 	--heart-slot-b-h: var(--heart-frog-h);
 	--heart-slot-f: var(--heart-puppy-far);
-	--heart-slot-f-h: 0.412;
+	--heart-slot-f-h: 0.4347;
 }
 
 #chat-container[data-scene="2"] {
@@ -720,7 +728,7 @@ strong,
 	--heart-slot-b: var(--heart-ladybug);
 	--heart-slot-b-h: var(--heart-ladybug-h);
 	--heart-slot-f: var(--heart-horse-far);
-	--heart-slot-f-h: 0.46;
+	--heart-slot-f-h: 0.5001;
 
 	/* one of the two rainbow scenes (§5.3) */
 	--heart-rainbow: var(--heart-rainbow-arc);
@@ -741,7 +749,7 @@ strong,
 	--heart-slot-b: var(--heart-frog);
 	--heart-slot-b-h: var(--heart-frog-h);
 	--heart-slot-f: var(--heart-bunny-far);
-	--heart-slot-f-h: 0.31;
+	--heart-slot-f-h: 0.4246;
 }
 
 #chat-container[data-scene="4"] {
