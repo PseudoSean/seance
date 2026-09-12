@@ -17,6 +17,8 @@
 // placeholders), the strip's Copy button reads "Copied" and its text is
 // selectable, a fenced code block is never sent for translation and comes
 // back byte for byte; switching the target off restores plain sending.
+// Under `--mobile` the panel is asserted to be the full-screen sheet, with
+// formality as a segmented control and Done closing it.
 // Detection is real (franc); only the engine is scripted.
 //
 //   corepack yarn build && python3 -m http.server -d public 8021 &
@@ -38,6 +40,7 @@ const BASE = "http://localhost:8021/";
 export const url = `${BASE}?host=127.0.0.1&port=8067&tls=false&nick=${NICK}&join=%23seance&fakeTranslate`;
 
 const GLOBE = "#chat button.translate";
+const MOBILE = process.argv.includes("--mobile");
 const BAR = ".translate-bar";
 const BAR_TEXT = ".translate-bar-row:first-child .translate-bar-text";
 const INPUT = "#form #input";
@@ -128,13 +131,17 @@ async function heard(other, text, timeout = 10000) {
 	}
 }
 
-async function setWriteTarget(page, code) {
+async function openPanel(page) {
 	await page.evaluate(
 		`document.querySelector(${JSON.stringify(
 			GLOBE
 		)}).dispatchEvent(new MouseEvent("contextmenu", {bubbles: true, cancelable: true}))`
 	);
 	await page.waitFor(`!!document.querySelector(".translation-panel")`, {label: "panel open"});
+}
+
+async function setWriteTarget(page, code) {
+	await openPanel(page);
 	await page.evaluate(
 		`(() => { const s = document.querySelector('.translation-panel select[name="translateWrite"]'); s.value = ${JSON.stringify(
 			code
@@ -144,6 +151,83 @@ async function setWriteTarget(page, code) {
 		`document.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", code: "Escape", keyCode: 27, which: 27, bubbles: true}))`
 	);
 	await page.waitFor(`!document.querySelector(".translation-panel")`, {label: "panel closed"});
+}
+
+/**
+ * The phone layout, under `--mobile`: the same choices as a full-screen
+ * sheet, with room to press them. Whether the harness's emulation also
+ * reports a touch-primary device decides how the sheet is opened here — a
+ * tap on the globe where it does (there is no right-click on a phone), the
+ * synthetic contextmenu where only the width query makes the layout.
+ */
+async function panelIsASheet(page) {
+	const touch = await page.evaluate(`matchMedia("(hover: none) and (pointer: coarse)").matches`);
+
+	page.check(`--mobile emulates a touch-primary device: ${touch}`, true);
+
+	if (touch) {
+		await page.click(GLOBE);
+	} else {
+		await openPanel(page);
+	}
+
+	await page.waitFor(`!!document.querySelector(".translation-panel--sheet")`, {
+		label: "the panel came up as a sheet",
+	});
+
+	const rect = await page.rect(".translation-panel--sheet");
+	const viewport = await page.evaluate(`({w: innerWidth, h: innerHeight})`);
+	const size = rect ? `${Math.round(rect.width)}x${Math.round(rect.height)}` : "none";
+
+	await page.check(
+		`the sheet fills the viewport (${size} of ${viewport.w}x${viewport.h})`,
+		!!rect &&
+			Math.round(rect.x) === 0 &&
+			Math.round(rect.y) === 0 &&
+			Math.round(rect.width) === viewport.w &&
+			Math.round(rect.height) === viewport.h
+	);
+	await page.check(
+		"formality is a segmented control, not a native picker",
+		await page.evaluate(
+			`!!document.querySelector('.translation-panel-segmented[role="radiogroup"]') && !document.querySelector('select[name="translateFormality"]')`
+		)
+	);
+
+	const segments = await page.evaluate(
+		`[...document.querySelectorAll('.translation-panel-segment[role="radio"]')].map((b) => b.textContent.trim())`
+	);
+
+	await page.check(
+		`the three choices are spelled out (${segments.join(", ")})`,
+		segments.join("|") === "As written|Formally|Casually"
+	);
+	await page.check(
+		"the write target is a native select in this layout too",
+		await page.evaluate(
+			`!!document.querySelector('.translation-panel select[name="translateWrite"]')`
+		)
+	);
+	await page.check(
+		"the hints the desktop panel omits are shown",
+		(await page.evaluate(
+			`getComputedStyle(document.querySelector(".translation-panel-hint")).display`
+		)) !== "none"
+	);
+	await page.check(
+		"Done is on screen, above the safe area",
+		await page.evaluate(
+			`(() => {
+				const r = document.querySelector(".translation-panel-done").getBoundingClientRect();
+				return r.height > 0 && r.bottom <= innerHeight + 1;
+			})()`
+		)
+	);
+	await page.screenshot("translation-sheet");
+	await page.click(".translation-panel-done");
+	await page.waitFor(`!document.querySelector(".translation-panel")`, {
+		label: "Done closed the sheet",
+	});
 }
 
 async function typeAndEnter(page, text) {
@@ -177,6 +261,10 @@ export default async function run(page) {
 			await page.evaluate(`document.querySelector(${JSON.stringify(INPUT)}).placeholder`)
 		).includes("sent in German")
 	);
+
+	if (MOBILE) {
+		await panelIsASheet(page);
+	}
 
 	// 2. The first Enter translates into the strip.
 	const draft = `please keep the timestamps in the log ${RUN}`;

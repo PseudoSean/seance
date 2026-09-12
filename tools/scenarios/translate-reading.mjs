@@ -8,10 +8,10 @@
 // five singles, and every burst line's echo is rendered); the chip's menu
 // can hide a translation; the toolbar's Translate does one message on
 // request; the page's own German line is never translated; the
-// translation panel opens on the globe's context menu with full language
-// names (never codes) and closes on Escape; a line carrying the fake's
-// `[fail]` marker fails once and its retry button succeeds the second
-// time; a line carrying `*Betonung*` and the page's own nick keeps both
+// translation panel opens on the globe's context menu as one column of
+// controls of equal width, full language names (never codes) and a link to
+// Settings, and closes on Escape; a line carrying the fake's `[fail]`
+// marker fails once and its retry button succeeds the second time; a line carrying `*Betonung*` and the page's own nick keeps both
 // (the chip's menu offers Copy translation and the line is selectable); a
 // `draft/multiline` message is translated line by line rather than losing
 // all but its first; switching off stops new ones; and a REDACT of a
@@ -30,7 +30,10 @@
 //   … --mobile --width=390 --height=844
 //
 // Needs the dev ircd's plain-WS port on 127.0.0.1:8067. NODE_ENV must be
-// unset for the build: a production build compiles the fake out.
+// unset for the build: a production build compiles the fake out. Under
+// `--mobile` the globe's tap opens the panel rather than switching reading
+// (there is no right-click on a phone), so the switch is thrown through the
+// panel's own control there.
 
 import {rigFeature} from "./lib/rig-feature.mjs";
 
@@ -45,8 +48,36 @@ export const url = `${BASE}?host=127.0.0.1&port=8067&tls=false&nick=${NICK}&join
 
 const LINES = `document.querySelectorAll('.msg-translation[data-status="done"]').length`;
 const GLOBE = "#chat button.translate";
+const MOBILE = process.argv.includes("--mobile");
 const REQUESTS = `(window.__seanceTranslateFake && window.__seanceTranslateFake.requests) || []`;
 const REDACTION_FEATURE = "CAP_draft_message_redaction";
+
+/**
+ * Reading on or off. The globe's click is the switch where there is a
+ * pointer; on touch the tap opens the panel instead (there is no
+ * right-click to reach it with), so the switch is the panel's first
+ * control and Done puts it away.
+ */
+async function setReading(page, code) {
+	await page.click(GLOBE);
+
+	if (!MOBILE) {
+		return;
+	}
+
+	await page.waitFor(`!!document.querySelector(".translation-panel")`, {
+		label: "the tap opened the panel",
+	});
+	await page.evaluate(
+		`(() => { const s = document.querySelector('.translation-panel select[name="translateRead"]'); s.value = ${JSON.stringify(
+			code
+		)}; s.dispatchEvent(new Event("change", {bubbles: true})); })()`
+	);
+	await page.evaluate(`document.querySelector(".translation-panel-done").click()`);
+	await page.waitFor(`!document.querySelector(".translation-panel")`, {
+		label: "Done put the panel away",
+	});
+}
 
 function speaker(nick) {
 	const ws = new WebSocket(IRCD, ["text.ircv3.net"]);
@@ -165,18 +196,24 @@ async function scenario(page) {
 	await page.sleep(1500);
 	await page.check("nothing translated before the switch", (await page.evaluate(LINES)) === 0);
 
-	await page.click(GLOBE);
+	await setReading(page, "en");
 	await page.waitFor(
 		`document.querySelector(${JSON.stringify(GLOBE)}).classList.contains("on")`,
 		{label: "globe on"}
 	);
+
+	const globeLabel = String(
+		await page.evaluate(
+			`document.querySelector(${JSON.stringify(GLOBE)}).getAttribute("aria-label")`
+		)
+	);
+
+	// On touch the button is the way into the panel, and says so.
 	await page.check(
-		"tooltip names the language",
-		String(
-			await page.evaluate(
-				`document.querySelector(${JSON.stringify(GLOBE)}).getAttribute("aria-label")`
-			)
-		).startsWith("Translating into")
+		MOBILE
+			? `the globe offers the settings (${globeLabel})`
+			: `the tooltip names the language (${globeLabel})`,
+		globeLabel.startsWith(MOBILE ? "Translation settings" : "Translating into")
 	);
 
 	other.say("Ich schicke dir gleich das Log, einen Moment bitte.");
@@ -316,6 +353,43 @@ async function scenario(page) {
 			panelRect.y + panelRect.height <= viewport.h
 	);
 
+	await page.check(
+		"the footer links to Settings -> Translation",
+		String(
+			await page.evaluate(
+				`(document.querySelector(".translation-panel-more") || {}).getAttribute("href")`
+			)
+		).endsWith("/settings/translation")
+	);
+
+	if (MOBILE) {
+		// The phone's layout is the sheet, asserted in full by
+		// tools/scenarios/translate-composer.mjs --mobile.
+		await page.check(
+			"the panel came up as the phone's sheet",
+			await page.evaluate(`!!document.querySelector(".translation-panel--sheet")`)
+		);
+	} else {
+		// One column: every setting is a label with its control under it, so
+		// the four controls come out the same width.
+		const controlWidths = await page.evaluate(
+			`[...document.querySelectorAll(".translation-panel .translation-panel-control")].map((c) => Math.round(c.getBoundingClientRect().width))`
+		);
+
+		await page.check(
+			`the four controls share one width (${controlWidths.join(", ")})`,
+			controlWidths.length === 4 && new Set(controlWidths).size === 1
+		);
+		await page.check(
+			"the hints stay out of the desktop panel",
+			(await page.evaluate(
+				`getComputedStyle(document.querySelector(".translation-panel-hint")).display`
+			)) === "none"
+		);
+	}
+
+	await page.screenshot("translation-panel");
+
 	const readLabels = await page.evaluate(
 		`[...document.querySelectorAll('select[name="translateRead"] option')].map((o) => o.textContent.trim())`
 	);
@@ -444,7 +518,7 @@ async function scenario(page) {
 	await page.screenshot("translated-multiline");
 
 	// Off again: a new German line gets nothing.
-	await page.click(GLOBE);
+	await setReading(page, "");
 	await page.waitFor(
 		`!document.querySelector(${JSON.stringify(GLOBE)}).classList.contains("on")`,
 		{label: "globe off"}
