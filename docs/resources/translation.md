@@ -53,7 +53,8 @@ message on request in a channel that is off -- and brings a hidden
 translation back, at no cost, once the chip's "Show original only" has
 taken it away. The translated line is `user-select: text` like the
 original above it -- `body` is `user-select: none`, so a block that is
-meant to be read and quoted has to say so.
+meant to be read and quoted has to say so. Once a translation is in, it is
+the bright line; the original dims to the muted colour.
 
 A message that arrived as `draft/multiline` is one message whose text
 carries newlines, and it goes through the composer's own `translateDraft`

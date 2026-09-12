@@ -9,6 +9,7 @@
 				pending: message.pending,
 				'previous-source': isPreviousSource,
 				'actions-open': actionsOpen,
+				translated,
 			},
 		]"
 		:data-type="message.type"
@@ -284,6 +285,16 @@ export default defineComponent({
 			return "message-" + (props.message.type || "invalid"); // TODO: force existence of type in sharedmsg
 		});
 
+		// A finished, shown translation is the bright line; the original dims
+		// (docs/resources/translation.md § Reading a channel). Pending,
+		// failed, dropped or hidden ("Show original only") keep the original
+		// at its normal colour.
+		const translated = computed(() => {
+			const entry = store.state.translations[props.message.id];
+
+			return !!entry && entry.status === "done" && !entry.hidden;
+		});
+
 		const isAction = () => {
 			if (!props.message.type) {
 				return false;
@@ -385,6 +396,7 @@ export default defineComponent({
 			redactedLabel,
 			hideRevealed,
 			canAct,
+			translated,
 		};
 	},
 });

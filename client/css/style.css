@@ -4577,6 +4577,27 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	animation: msg-translation-blink 1s steps(2) infinite;
 }
 
+/* Once a translation is shown and done, it is the bright line and the
+ * original above it dims (docs/resources/translation.md § Reading a
+ * channel): `.content` carries the original's text, so muting it there is
+ * enough — links, mentions and inline code set their own colour rather than
+ * inheriting, and the translation chip keeps its accent. Pending, failed,
+ * dropped or hidden ("Show original only") translations do not add the
+ * `translated` class (Message.vue), so the original stays at full ink and
+ * the streaming text keeps today's muted treatment above. */
+#chat .msg.translated .content {
+	color: var(--body-color-muted);
+}
+
+#chat .msg.translated .msg-translation {
+	color: var(--body-color);
+	font-size: 1em;
+}
+
+#chat .msg.translated .msg-translation-text {
+	color: var(--body-color);
+}
+
 @keyframes msg-translation-blink {
 	50% {
 		opacity: 0;

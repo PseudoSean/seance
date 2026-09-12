@@ -232,6 +232,35 @@ async function scenario(page) {
 	);
 	await page.screenshot("translated-line");
 
+	// Once a translation is shown and done, it is the bright line and the
+	// original dims (docs/resources/translation.md § Reading a channel):
+	// read both reference colours rather than hard-coding hex.
+	const bodyColor = String(await page.evaluate(`getComputedStyle(document.body).color`));
+	const mutedColor = String(
+		await page.evaluate(`getComputedStyle(document.querySelector(".time")).color`)
+	);
+	// The exact text repeats across every run's chathistory backlog (unlike
+	// the RUN-suffixed markers below), so take the newest match, not the
+	// first.
+	const translatedRow = `[...document.querySelectorAll(".msg")].filter((m) => m.textContent.includes("Ich schicke dir gleich das Log")).pop()`;
+
+	await page.check(
+		"the translated row carries the translated class",
+		await page.evaluate(`(${translatedRow}).classList.contains("translated")`)
+	);
+	await page.check(
+		"the original text is muted",
+		(await page.evaluate(
+			`getComputedStyle((${translatedRow}).querySelector(".content")).color`
+		)) === mutedColor
+	);
+	await page.check(
+		"the translation text is the bright body colour",
+		(await page.evaluate(
+			`getComputedStyle(document.querySelector(".msg-translation-text")).color`
+		)) === bodyColor
+	);
+
 	other.say("this one is already in english so it needs no line at all");
 	await page.waitFor(`document.body.innerText.includes("needs no line at all")`, {
 		label: "English line arrived",
@@ -289,6 +318,13 @@ async function scenario(page) {
 	);
 	await page.click(".context-menu-translate-hide");
 	await page.waitFor(`${LINES} === 5`, {label: "one translation hidden"});
+	await page.check(
+		"Show original only drops the translated class and the original's colour",
+		(await page.evaluate(`(${translatedRow}).classList.contains("translated")`)) === false &&
+			(await page.evaluate(
+				`getComputedStyle((${translatedRow}).querySelector(".content")).color`
+			)) === bodyColor
+	);
 
 	// The toolbar on the first, pre-switch message.
 	const firstMsg = `[...document.querySelectorAll(".msg")].find((m) => m.textContent.includes("wie geht es euch heute"))`;
