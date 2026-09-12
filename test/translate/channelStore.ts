@@ -11,8 +11,10 @@ import {
 	rememberTerm,
 	setChannelTranslation,
 	splitKey,
+	termsFor,
 	useStorageBackend,
 	type ChannelTranslation,
+	type TermEntry,
 } from "../../client/js/translate/channelStore";
 
 function memoryBackend() {
@@ -110,20 +112,94 @@ describe("translate/channelStore", () => {
 		expect(setChannelTranslation("n1", "#seance", {read: null}).since).to.equal(0);
 	});
 
-	it("term memory dedupes by source, keeps the newest, and is capped", () => {
-		rememberTerm("n1", "#seance", ["rig", "Testaufbau"]);
-		rememberTerm("n1", "#seance", ["rig", "Prüfstand"]);
-		expect(getChannelTranslation("n1", "#seance").terms).to.deep.equal([["rig", "Prüfstand"]]);
+	it("term memory replaces a same-source same-language entry, keeps the newest, and is capped", () => {
+		rememberTerm("n1", "#seance", {source: "rig", target: "Testaufbau", from: "en", to: "de"});
+		rememberTerm("n1", "#seance", {source: "rig", target: "Prüfstand", from: "en", to: "de"});
+		expect(getChannelTranslation("n1", "#seance").terms).to.deep.equal([
+			{source: "rig", target: "Prüfstand", from: "en", to: "de"},
+		]);
 
 		for (let i = 0; i < TERM_CAP + 5; i++) {
-			rememberTerm("n1", "#seance", [`t${i}`, `x${i}`]);
+			rememberTerm("n1", "#seance", {source: `t${i}`, target: `x${i}`, from: null, to: "de"});
 		}
 
 		const terms = getChannelTranslation("n1", "#seance").terms;
 
 		expect(terms.length).to.equal(TERM_CAP);
-		expect(terms[terms.length - 1]).to.deep.equal([`t${TERM_CAP + 4}`, `x${TERM_CAP + 4}`]);
-		expect(terms.some(([source]) => source === "rig")).to.equal(false);
+		expect(terms[terms.length - 1]).to.deep.equal({
+			source: `t${TERM_CAP + 4}`,
+			target: `x${TERM_CAP + 4}`,
+			from: null,
+			to: "de",
+		});
+		expect(terms.some(({source}) => source === "rig")).to.equal(false);
+	});
+
+	it("term memory keeps a French and a German rendering of the same source", () => {
+		rememberTerm("n1", "#seance", {source: "thanks", target: "danke", from: "en", to: "de"});
+		rememberTerm("n1", "#seance", {source: "thanks", target: "merci", from: "en", to: "fr"});
+		expect(getChannelTranslation("n1", "#seance").terms).to.deep.equal([
+			{source: "thanks", target: "danke", from: "en", to: "de"},
+			{source: "thanks", target: "merci", from: "en", to: "fr"},
+		]);
+	});
+
+	it("loading drops a legacy pair and a term it cannot place", () => {
+		backend.set(
+			STORAGE_KEY,
+			JSON.stringify({
+				"n1/#a": {
+					read: "en",
+					terms: [
+						["thanks", "danke"],
+						{source: "rig", target: "Testaufbau", from: "en", to: "zz"},
+						{source: "rig", target: "Testaufbau", from: "zz", to: "de"},
+						{source: "rig", target: 7, from: "en", to: "de"},
+						{source: "log", target: "Protokoll", from: "en", to: "de"},
+						{source: "ok", target: "d'accord", from: null, to: "fr", extra: 1},
+					],
+				},
+			})
+		);
+
+		expect(loadAll()["n1/#a"].terms).to.deep.equal([
+			{source: "log", target: "Protokoll", from: "en", to: "de"},
+			{source: "ok", target: "d'accord", from: null, to: "fr"},
+		]);
+	});
+
+	describe("termsFor", () => {
+		const de: TermEntry = {source: "thanks", target: "danke", from: "en", to: "de"};
+		const fr: TermEntry = {source: "thanks", target: "merci", from: "en", to: "fr"};
+		const unplaced: TermEntry = {source: "log", target: "Protokoll", from: null, to: "de"};
+
+		it("gives a matching entry as [source, target]", () => {
+			expect(termsFor([de, fr], "en", "de")).to.deep.equal([["thanks", "danke"]]);
+		});
+
+		it("gives an entry written from the target reversed", () => {
+			expect(termsFor([de, fr], "de", "en")).to.deep.equal([["danke", "thanks"]]);
+		});
+
+		it("leaves out an entry for another language", () => {
+			expect(termsFor([fr], "en", "de")).to.deep.equal([]);
+			expect(termsFor([de], "fr", "de")).to.deep.equal([]);
+			expect(termsFor([de], "fr", "en")).to.deep.equal([]);
+		});
+
+		it("an entry with no source matches any source for its target", () => {
+			expect(termsFor([unplaced], "en", "de")).to.deep.equal([["log", "Protokoll"]]);
+			expect(termsFor([unplaced], "fr", "de")).to.deep.equal([["log", "Protokoll"]]);
+			// Its source is unknown, so it cannot be read back.
+			expect(termsFor([unplaced], "de", "en")).to.deep.equal([]);
+		});
+
+		it("a request with no source matches the entries of its target, in order", () => {
+			expect(termsFor([de, fr, unplaced], null, "de")).to.deep.equal([
+				["thanks", "danke"],
+				["log", "Protokoll"],
+			]);
+		});
 	});
 
 	it("forgetting a channel or a network removes its entries", () => {
@@ -166,7 +242,7 @@ describe("translate/channelStore", () => {
 
 	it("a patch cannot overwrite the term memory or the moment", () => {
 		setChannelTranslation("n1", "#seance", {read: "en"});
-		rememberTerm("n1", "#seance", ["rig", "Testaufbau"]);
+		rememberTerm("n1", "#seance", {source: "rig", target: "Testaufbau", from: "en", to: "de"});
 		const before = getChannelTranslation("n1", "#seance");
 		const next = setChannelTranslation("n1", "#seance", {
 			...before,
@@ -175,7 +251,9 @@ describe("translate/channelStore", () => {
 			since: 1,
 		} as Partial<Omit<ChannelTranslation, "since" | "terms">>);
 
-		expect(next.terms).to.deep.equal([["rig", "Testaufbau"]]);
+		expect(next.terms).to.deep.equal([
+			{source: "rig", target: "Testaufbau", from: "en", to: "de"},
+		]);
 		expect(next.since).to.equal(before.since);
 	});
 });

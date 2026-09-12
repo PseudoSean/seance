@@ -14,6 +14,21 @@ export const TERM_CAP = 300;
 
 export type Formality = "auto" | "formal" | "casual";
 
+/**
+ * One remembered term: a short line the user sent translated and what it
+ * went out as. The languages travel with it, so a prompt only carries the
+ * terms of its own pair (`termsFor`): without them a German session's
+ * "thanks -> danke" was quoted into every later French write.
+ */
+export interface TermEntry {
+	source: string;
+	target: string;
+	/** The language `source` is in; null when the write left the source to the model. */
+	from: string | null;
+	/** The language `target` is in: the write target it was sent to. */
+	to: string;
+}
+
 export interface ChannelTranslation {
 	/** Reading target (ISO 639-1) or null when off. */
 	read: string | null;
@@ -30,8 +45,8 @@ export interface ChannelTranslation {
 	languages: string[];
 	/** When reading was switched on (ms); 0 when off. */
 	since: number;
-	/** Term memory, oldest first, one entry per source term. */
-	terms: [string, string][];
+	/** Term memory, oldest first, one entry per source term and target language. */
+	terms: TermEntry[];
 }
 
 export interface StorageBackend {
@@ -94,6 +109,27 @@ function languagesOf(value: unknown): string[] {
 	return out;
 }
 
+/**
+ * A stored term this build can place: both sides text, a supported target
+ * and a supported (or unknown) source. A legacy `[source, target]` pair
+ * carries no language, so it is dropped: the memory starts over once.
+ */
+function isTermEntry(value: unknown): value is TermEntry {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		return false;
+	}
+
+	const raw = value as Record<string, unknown>;
+
+	return (
+		typeof raw.source === "string" &&
+		typeof raw.target === "string" &&
+		typeof raw.to === "string" &&
+		isSupported(raw.to) &&
+		(raw.from === null || (typeof raw.from === "string" && isSupported(raw.from)))
+	);
+}
+
 function sanitize(value: unknown): ChannelTranslation | null {
 	if (typeof value !== "object" || value === null) {
 		return null;
@@ -115,13 +151,8 @@ function sanitize(value: unknown): ChannelTranslation | null {
 	out.since = typeof raw.since === "number" && out.read ? raw.since : 0;
 	out.terms = Array.isArray(raw.terms)
 		? raw.terms
-				.filter(
-					(t): t is [string, string] =>
-						Array.isArray(t) &&
-						t.length === 2 &&
-						typeof t[0] === "string" &&
-						typeof t[1] === "string"
-				)
+				.filter(isTermEntry)
+				.map(({source, target, from, to}) => ({source, target, from, to}))
 				.slice(-TERM_CAP)
 		: [];
 
@@ -199,19 +230,47 @@ export function setChannelTranslation(
 	return next;
 }
 
-export function rememberTerm(
-	networkUuid: string,
-	channelName: string,
-	pair: [string, string]
-): void {
+/**
+ * Remember a term. An entry for the same source *and* the same target
+ * language is replaced; the same phrase can keep a French and a German
+ * rendering side by side.
+ */
+export function rememberTerm(networkUuid: string, channelName: string, entry: TermEntry): void {
 	const all = loadAll();
 	const key = channelKey(networkUuid, channelName);
 	const current = all[key] ?? defaultChannelTranslation();
-	const terms = current.terms.filter(([source]) => source !== pair[0]);
+	const terms = current.terms.filter((t) => !(t.source === entry.source && t.to === entry.to));
 
-	terms.push(pair);
+	terms.push({source: entry.source, target: entry.target, from: entry.from, to: entry.to});
 	all[key] = {...current, terms: terms.slice(-TERM_CAP)};
 	saveAll(all);
+}
+
+/**
+ * The channel's terms as the prompt's pairs for one request: an entry
+ * written into `to` gives [source, target] (when both sides name a source,
+ * they must agree); an entry written *from* `to` into `from` gives the
+ * reverse, [target, source], so a line read back in the language a term was
+ * sent in finds it. Everything else is left out.
+ */
+export function termsFor(
+	entries: readonly TermEntry[],
+	from: string | null,
+	to: string
+): [string, string][] {
+	const out: [string, string][] = [];
+
+	// Oldest first, as stored, so buildContext's newest TERM_LINES are still
+	// the newest. One pair per entry: the forward reading wins.
+	for (const entry of entries) {
+		if (entry.to === to && (from === null || entry.from === null || entry.from === from)) {
+			out.push([entry.source, entry.target]);
+		} else if (entry.from === to && (from === null || entry.to === from)) {
+			out.push([entry.target, entry.source]);
+		}
+	}
+
+	return out;
 }
 
 export function forgetChannel(networkUuid: string, channelName: string): void {

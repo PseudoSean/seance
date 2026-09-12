@@ -726,7 +726,14 @@ export default defineComponent({
 				deliver(line, text);
 
 				if (translated !== null) {
-					noteOutgoingSent(props.network, props.channel, text, translated, entry.to);
+					noteOutgoingSent(
+						props.network,
+						props.channel,
+						text,
+						translated,
+						entry.to,
+						entry.from
+					);
 				}
 
 				return;

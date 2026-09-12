@@ -474,6 +474,9 @@ Emphasis marks on the LLM route, measured (2026-09-12):
   it misplaces is misplaced. A lost mark leaves a correctly translated
   sentence; the mangled placeholder left the user's own English in the
   composer.
+- **Term memory is kept per language** (live test, 2026-09-12): an entry is
+  `{source, target, from, to}` and a prompt carries only its own pair's
+  terms (`channelStore.ts` `termsFor`); stored bare pairs are dropped once.
 
 ## Non-goals
 

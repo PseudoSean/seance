@@ -21,6 +21,7 @@ import {
 	forgetNetwork,
 	loadAll,
 	setChannelTranslation,
+	termsFor,
 } from "./channelStore";
 import {buildContext} from "./context";
 import {LanguagePrior, detectLanguage} from "./detect";
@@ -370,7 +371,7 @@ export async function translateMessage(
 
 				return entry && entry.status === "done" ? entry.text : undefined;
 			},
-			terms: settings.terms,
+			terms: termsFor(settings.terms, source, to),
 			glossary: getBranding().translation?.glossary ?? [],
 			formality: settings.formality,
 			variant: settings.variant,

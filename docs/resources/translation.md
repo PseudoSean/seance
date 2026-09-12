@@ -332,7 +332,25 @@ diverge): it ships the strip's translation, or the draft itself after a
 failure, and calls `noteOutgoingSent`, which extends the voice and, when
 the draft and its translation are term-sized (`termPair`: one line, short
 both ways, genuinely different), remembers the pair in the channel's term
-memory. Typing again, walking input history, Escape, the strip's own Edit
+memory.
+
+**Term memory is kept per language.** An entry (`channelStore.ts`
+`TermEntry`) is `{source, target, from, to}`: the draft, what it went out
+as, the strip's source (`null` when the write left it to the model) and the
+write target. `rememberTerm` replaces an entry only when both the `source`
+and the `to` match, so "thanks" can keep a German and a French rendering
+side by side, and `TERM_CAP` (300) still bounds the list. A prompt carries
+only the terms of its own pair: `termsFor(entries, from, to)` gives an
+entry written into `to` as `[source, target]` (when both name a source they
+must agree; a `null` on either side matches), an entry written _from_ `to`
+as the reverse `[target, source]`, and leaves out the rest, oldest first so
+`buildContext` still quotes the newest `TERM_LINES`. The writer asks for
+the draft's pair, the reader for the line's source (possibly unknown) and
+its reading target. Before this the memory was bare pairs: after a German
+session every French write, and every reading prompt, still told the model
+to render "thanks" as "danke". A stored legacy pair carries no language and
+is dropped on load (the memory starts over once), as is an entry whose `to`
+is not a supported language or whose `from` is neither `null` nor one. Typing again, walking input history, Escape, the strip's own Edit
 button and parting the channel all invalidate the strip; the next Enter
 starts over.
 

@@ -11,7 +11,13 @@ import {BUILD} from "../build";
 import socket from "../socket";
 import {store, type OutgoingTranslation} from "../store";
 import type {ClientChan, ClientNetwork} from "../types";
-import {type Formality, channelKey, getChannelTranslation, rememberTerm} from "./channelStore";
+import {
+	type Formality,
+	channelKey,
+	getChannelTranslation,
+	rememberTerm,
+	termsFor,
+} from "./channelStore";
 import {buildContext} from "./context";
 import {detectLanguage} from "./detect";
 import {plainTextOf} from "./eligibility";
@@ -275,7 +281,7 @@ export async function translateOutgoing(
 
 					return entry && entry.status === "done" ? entry.text : undefined;
 				},
-				terms: settings.terms,
+				terms: termsFor(settings.terms, from, to),
 				glossary: getBranding().translation?.glossary ?? [],
 				formality:
 					settings.formality !== "auto"
@@ -614,15 +620,18 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 
 /**
  * A translation went out: it joins the voice quoted to the model next
- * time, and a term-sized pair joins the channel's memory (the store's copy
- * of the record is refreshed, like setChannelOptions does).
+ * time, and a term-sized pair joins the channel's memory with the languages
+ * it was written from and into (`from` is the strip's source, null when the
+ * model was left to place it). The store's copy of the record is refreshed,
+ * like setChannelOptions does.
  */
 export function noteOutgoingSent(
 	network: ClientNetwork,
 	channel: ClientChan,
 	draft: string,
 	translation: string,
-	to: string
+	to: string,
+	from: string | null
 ): void {
 	// The line the model handed back, and one with nothing in it a language
 	// could be, are not the user's voice: a voice line in the wrong language
@@ -641,7 +650,7 @@ export function noteOutgoingSent(
 	const pair = termPair(draft, translation);
 
 	if (pair) {
-		rememberTerm(network.uuid, channel.name, pair);
+		rememberTerm(network.uuid, channel.name, {source: pair[0], target: pair[1], from, to});
 		store.commit("translateChannelSet", {
 			key: channelKey(network.uuid, channel.name),
 			value: getChannelTranslation(network.uuid, channel.name),
