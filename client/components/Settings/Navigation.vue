@@ -29,29 +29,115 @@
 	margin-left: max(0.5rem, calc(50% - 30rem - 30px));
 }
 
-/** The calculation is mobile +  2/3 of container width. Fairly arbitrary. */
+/* On a window too narrow for the menu to sit beside the content, it is a
+ * sticky, horizontally scrollable tab strip instead of a stacked list: one
+ * row of icon + label tabs pinned to the top of the settings window, the
+ * active one underlined in the theme's accent. The list took a whole
+ * screen's height ahead of the content at the big font scales; the strip
+ * takes one line and stays put while the page scrolls. The rules live twice
+ * on purpose: a px media query (which cannot see the root font size) and
+ * the rem container query off the settings window (style.css #settings),
+ * like the pair this replaced.
+ *
+ * The calculation is mobile + 2/3 of container width. Fairly arbitrary. */
 @media screen and (max-width: calc(768px + 320px)) {
 	.settings-menu {
-		position: static;
-		width: min(30rem, 100%);
-		align-self: center;
-		margin: 0 auto;
-		padding: 0 15px;
+		position: sticky;
+		top: 0;
+		z-index: 2;
+		width: 100%;
+		margin: 0;
+		background: var(--window-bg-color);
+	}
+
+	.settings-menu h2 {
+		display: none;
+	}
+
+	.settings-menu ul {
+		display: flex;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		scrollbar-width: none;
+		margin: 0;
+		padding: 0 0.75rem;
+		/* An inset hairline rather than a border: the underline of the
+		 * active tab paints over it. */
+		box-shadow: inset 0 -1px 0 rgb(128 128 128 / 30%);
+	}
+
+	.settings-menu ul::-webkit-scrollbar {
+		display: none;
+	}
+
+	.settings-menu li {
+		flex: 0 0 auto;
+	}
+
+	.settings-menu li:not(:last-of-type) button {
+		margin-bottom: 0;
+	}
+
+	.settings-menu button {
+		white-space: nowrap;
+		padding: 0.6em 0.75em;
+		border-bottom: 2px solid transparent;
+	}
+
+	.settings-menu button.active {
+		border-bottom-color: var(--button-color);
 	}
 }
 
 /* The same, in rem, off the settings window itself (a size container,
  * style.css #settings): beside a centred 30rem container the menu has its
  * ~12rem only once the window is 56rem wide, and at the big scales that is
- * wider than most screens, so it stacks above the content instead of
- * lying across it. */
+ * wider than most screens, so it becomes the tab strip instead of lying
+ * across the content. */
 @container settings (max-width: 56rem) {
 	.settings-menu {
-		position: static;
-		width: min(30rem, 100%);
-		align-self: center;
-		margin: 0 auto;
-		padding: 0 15px;
+		position: sticky;
+		top: 0;
+		z-index: 2;
+		width: 100%;
+		margin: 0;
+		background: var(--window-bg-color);
+	}
+
+	.settings-menu h2 {
+		display: none;
+	}
+
+	.settings-menu ul {
+		display: flex;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		scrollbar-width: none;
+		margin: 0;
+		padding: 0 0.75rem;
+		box-shadow: inset 0 -1px 0 rgb(128 128 128 / 30%);
+	}
+
+	.settings-menu ul::-webkit-scrollbar {
+		display: none;
+	}
+
+	.settings-menu li {
+		flex: 0 0 auto;
+	}
+
+	.settings-menu li:not(:last-of-type) button {
+		margin-bottom: 0;
+	}
+
+	.settings-menu button {
+		white-space: nowrap;
+		padding: 0.6em 0.75em;
+		border-bottom: 2px solid transparent;
+	}
+
+	.settings-menu button.active {
+		border-bottom-color: var(--button-color);
 	}
 }
 
@@ -126,7 +212,8 @@
 
 <script lang="ts">
 import SettingTabItem from "./SettingTabItem.vue";
-import {defineComponent} from "vue";
+import {defineComponent, nextTick, onMounted, watch} from "vue";
+import {useRoute} from "vue-router";
 import {useStore} from "../../js/store";
 import {brandingFeatures} from "../../js/branding";
 import {shouldShowGeneralSettings} from "../../js/helpers/settingsTabs";
@@ -138,7 +225,24 @@ export default defineComponent({
 	},
 	setup() {
 		const store = useStore();
+		const route = useRoute();
 		const isPublic = store.state.serverConfiguration?.public;
+
+		// As a horizontal strip the menu scrolls, so the active tab may sit
+		// off screen (opening Aliases from a deep link, or coming back to
+		// the tab the user left). `nearest` makes this a no-op in the wide
+		// layout, where nothing overflows.
+		const revealActive = () => {
+			void nextTick(() => {
+				document
+					.querySelector(".settings-menu button.active")
+					?.scrollIntoView({inline: "nearest", block: "nearest"});
+			});
+		};
+
+		onMounted(revealActive);
+		watch(() => route.name, revealActive);
+
 		return {
 			isPublic,
 			showGeneral: shouldShowGeneralSettings(),
