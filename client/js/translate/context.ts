@@ -14,6 +14,8 @@ export const CONTEXT_LINES = 10;
 export const NAMES_CAP = 20;
 /** How many of the channel's own terms one prompt carries, newest first out. */
 export const TERM_LINES = 20;
+/** The user's own recent lines in the target language quoted for a write (spec § prompt.ts). */
+export const VOICE_LINES = 5;
 
 const CHAT_TYPES = new Set(["message", "action", "notice"]);
 
@@ -42,6 +44,8 @@ export interface ContextOptions {
 	formality: Formality;
 	variant: string;
 	sourceHint: string | null;
+	/** The user's earlier lines in the target language, oldest first (a write only). */
+	voice?: string[];
 }
 
 function nickMatching(word: string, nicks: string[]): string | null {
@@ -162,7 +166,7 @@ export function buildContext(
 		recent,
 		names: names.slice(0, NAMES_CAP),
 		terms,
-		voice: [],
+		voice: (opts.voice ?? []).slice(-VOICE_LINES),
 		formality: opts.formality,
 	};
 

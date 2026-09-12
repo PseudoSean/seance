@@ -4,6 +4,7 @@ import {
 	CONTEXT_LINES,
 	NAMES_CAP,
 	TERM_LINES,
+	VOICE_LINES,
 	addressedNick,
 	buildContext,
 	mentionedNicks,
@@ -224,5 +225,23 @@ describe("translate/context", () => {
 
 		expect(context.terms).to.deep.equal(terms);
 		expect(context.terms).to.not.equal(terms);
+	});
+
+	it("quotes the newest VOICE_LINES of the user's own lines, and none by default", () => {
+		const channel: ContextChannel = {messages: [m(1, "ada", "hi")], users, topic: ""};
+		const opts = {
+			translated: () => undefined,
+			terms: [] as [string, string][],
+			glossary: [] as [string, string][],
+			formality: "auto" as const,
+			variant: "",
+			sourceHint: null,
+		};
+		const voice = ["one", "two", "three", "four", "five", "six", "seven"];
+
+		expect(buildContext(channel, m(2, "me", "x"), opts).voice).to.deep.equal([]);
+		expect(buildContext(channel, m(2, "me", "x"), {...opts, voice}).voice).to.deep.equal(
+			voice.slice(-VOICE_LINES)
+		);
 	});
 });

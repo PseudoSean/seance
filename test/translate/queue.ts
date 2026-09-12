@@ -505,4 +505,19 @@ describe("translate/queue", () => {
 			[1, {status: "failed", error: "no translation engine can take this request"}],
 		]);
 	});
+
+	it("hold() keeps new runs from starting and release() runs them", async () => {
+		const r = rig();
+		clock = r.clock;
+
+		r.queue.hold();
+		r.queue.enqueue(item(1, "eins"));
+		r.queue.enqueue(item(2, "zwei"));
+		await r.clock.tickAsync(10);
+		expect(r.requests).to.have.length(0);
+
+		r.queue.release();
+		await r.clock.tickAsync(10);
+		expect(r.requests.length).to.be.greaterThan(0);
+	});
 });

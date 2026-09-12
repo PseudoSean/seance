@@ -90,6 +90,7 @@ describe("translate/fakePort", () => {
 			id: 2,
 			model: catalog.llm.id,
 			text: "",
+			purpose: "read",
 			lines: 3,
 			engine: "llm",
 		});

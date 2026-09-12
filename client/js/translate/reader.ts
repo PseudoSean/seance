@@ -39,6 +39,25 @@ const arrivals = new Map<number, number>();
 /** The last item queued per message, for retries. */
 const items = new Map<number, {network: string; item: QueueItem}>();
 
+/** Composer requests holding the reading queues (writer.ts); nested holds count. */
+let holds = 0;
+
+export function holdReading(): void {
+	if (holds++ === 0) {
+		for (const queue of queues.values()) {
+			queue.hold();
+		}
+	}
+}
+
+export function releaseReading(): void {
+	if (holds > 0 && --holds === 0) {
+		for (const queue of queues.values()) {
+			queue.release();
+		}
+	}
+}
+
 export function channelTranslation(
 	network: ClientNetwork,
 	channel: ClientChan
@@ -89,6 +108,11 @@ function queueFor(network: ClientNetwork): TranslateQueue {
 			onUpdate: (id, update) => applyUpdate(id, update),
 			onPause: (engine, message) => store.commit("translationPaused", {engine, message}),
 		});
+
+		if (holds > 0) {
+			queue.hold();
+		}
+
 		queues.set(network.uuid, queue);
 	}
 

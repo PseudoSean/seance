@@ -156,14 +156,25 @@ export class TranslateQueue {
 		return this.waiting.length;
 	}
 
-	/** Tests: hold the pump so several enqueues can be observed as one batch. */
-	pauseForTest(): void {
+	/**
+	 * Hold new runs: a composer request has the engines (spec § Composer);
+	 * an item already in flight finishes. Idempotent.
+	 */
+	hold(): void {
 		this.held = true;
 	}
 
-	resumeForTest(): void {
+	release(): void {
 		this.held = false;
 		this.pump();
+	}
+
+	pauseForTest(): void {
+		this.hold();
+	}
+
+	resumeForTest(): void {
+		this.release();
 	}
 
 	private generation(chanId: number): number {

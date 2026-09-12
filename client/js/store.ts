@@ -48,6 +48,20 @@ export interface TranslationEntry {
 	hidden: boolean;
 }
 
+/** A draft's translation in the composer (spec § Composer), keyed by the channel's store id. */
+export interface OutgoingTranslation {
+	status: "pending" | "done" | "failed";
+	/** The draft the strip was made from; a different draft invalidates it. */
+	draft: string;
+	/** Restored text so far (pending) or the translation (done). */
+	text: string;
+	from: string | null;
+	to: string;
+	error: string | null;
+	/** The round trip: idle until Check (or translateRoundTrip: auto) runs it. */
+	check: {status: "idle" | "pending" | "done" | "failed"; text: string; to: string | null};
+}
+
 export type State = {
 	appLoaded: boolean;
 	activeChannel?: NetChan;
@@ -83,6 +97,7 @@ export type State = {
 		panelFor: number | null;
 	};
 	translations: Record<number, TranslationEntry>;
+	outgoingTranslations: Record<number, OutgoingTranslation>;
 	/** Per-channel switch state, keyed `<network uuid>/<channel name>` (translate/channelStore.ts). */
 	translateChannels: Record<string, ChannelTranslation>;
 };
@@ -107,6 +122,7 @@ const state = (): State => ({
 	uploadProgress: null,
 	translation: {capability: null, models: [], workerError: null, paused: null, panelFor: null},
 	translations: {},
+	outgoingTranslations: {},
 	translateChannels: {},
 });
 
@@ -243,6 +259,15 @@ type Mutations = {
 	translationRemove(state: State, id: number): void;
 	/** Prune several at once: a channel's messages left the store (trim, part, quit). */
 	translationRemoveMany(state: State, ids: number[]): void;
+	outgoingTranslationSet(
+		state: State,
+		payload: {chanId: number; value: OutgoingTranslation}
+	): void;
+	outgoingTranslationPatch(
+		state: State,
+		payload: {chanId: number; patch: Partial<OutgoingTranslation>}
+	): void;
+	outgoingTranslationRemove(state: State, chanId: number): void;
 	translateChannelSet(state: State, payload: {key: string; value: ChannelTranslation}): void;
 	translateChannelRemove(state: State, key: string): void;
 	translateChannelsLoaded(state: State, all: Record<string, ChannelTranslation>): void;
@@ -352,6 +377,19 @@ const mutations: Mutations = {
 		for (const id of ids) {
 			delete state.translations[id];
 		}
+	},
+	outgoingTranslationSet(state, {chanId, value}) {
+		state.outgoingTranslations[chanId] = value;
+	},
+	outgoingTranslationPatch(state, {chanId, patch}) {
+		const entry = state.outgoingTranslations[chanId];
+
+		if (entry) {
+			Object.assign(entry, patch);
+		}
+	},
+	outgoingTranslationRemove(state, chanId) {
+		delete state.outgoingTranslations[chanId];
 	},
 	translateChannelSet(state, {key, value}) {
 		state.translateChannels[key] = value;
