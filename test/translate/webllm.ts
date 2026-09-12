@@ -253,7 +253,9 @@ describe("translate/engines/webllm", () => {
 		expect(created.extra_body).to.deep.equal({enable_thinking: false});
 		expect(created.max_tokens).to.equal(maxTokensFor(request()));
 		expect(created.messages[0].role).to.equal("system");
-		expect(created.messages[1].content).to.include("Translate this message from de into en.");
+		expect(created.messages[1].content).to.equal(
+			"Translate into en: Ich schick dir gleich das Log."
+		);
 		expect(created.messages[1].content).to.include("Ich schick dir gleich das Log.");
 	});
 
@@ -319,6 +321,71 @@ describe("translate/engines/webllm", () => {
 		expect(d.calls.ranToEnd).to.equal(true);
 		// A cut is a completed translation, not a failure.
 		expect(engine.generationFailures).to.equal(0);
+	});
+
+	it("the cut skips a line that only echoes the source and takes the next one", async () => {
+		const d = deps([
+			"Ich schick dir gleich das Log.",
+			"\n",
+			"I'll send you the log shortly.",
+			"\nand more",
+		]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+		const seen: {text: string; done: boolean}[] = [];
+
+		for await (const chunk of engine.translate(request(), new AbortController().signal)) {
+			seen.push({text: chunk.text, done: chunk.done});
+		}
+
+		expect(seen).to.deep.equal([
+			// while it is the line being generated, nobody can tell it is an echo
+			{text: "Ich schick dir gleich das Log.", done: false},
+			// the newline makes it a whole line, and it stops being shown
+			{text: "", done: false},
+			{text: "I'll send you the log shortly.", done: false},
+			{text: "I'll send you the log shortly.", done: true},
+		]);
+		expect(d.calls.interrupt).to.equal(1);
+		expect(engine.generationFailures).to.equal(0);
+	});
+
+	it("a bare fence line is not the translation either", async () => {
+		const d = deps(['"""\n', "Hallo Welt", "\n"]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+		const seen: {text: string; done: boolean}[] = [];
+
+		for await (const chunk of engine.translate(request(), new AbortController().signal)) {
+			seen.push({text: chunk.text, done: chunk.done});
+		}
+
+		expect(seen).to.deep.equal([
+			{text: "", done: false},
+			{text: "Hallo Welt", done: false},
+			{text: "Hallo Welt", done: true},
+		]);
+		expect(d.calls.interrupt).to.equal(1);
+	});
+
+	it("a reply that is nothing but the echo is yielded rather than nothing at all", async () => {
+		const d = deps(["Ich schick dir", " gleich das Log."]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+		const seen: {text: string; done: boolean}[] = [];
+
+		for await (const chunk of engine.translate(request(), new AbortController().signal)) {
+			seen.push({text: chunk.text, done: chunk.done});
+		}
+
+		expect(seen[seen.length - 1]).to.deep.equal({
+			text: "Ich schick dir gleich das Log.",
+			done: true,
+		});
+		expect(d.calls.interrupt).to.equal(0);
 	});
 
 	it("a reply that opens with a newline is not cut to nothing", async () => {

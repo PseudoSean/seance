@@ -1,10 +1,13 @@
 import {expect} from "chai";
 import {emptyContext, type TranslateRequest} from "../../client/js/translate/engine";
+import {isSupported} from "../../client/js/translate/languages";
 import {
 	CONTEXT_HEADING,
 	CONTEXT_TOKEN_BUDGET,
 	DATA_HEADING,
 	END_SENTINEL,
+	EXAMPLES,
+	EXAMPLE_SOURCE,
 	buildMessages,
 	cleanOutput,
 	estimateTokens,
@@ -45,19 +48,19 @@ describe("translate/prompt", () => {
 		expect(text).to.include("into English");
 		expect(text).to.include("from German");
 		expect(text).to.include("⟦1⟧");
-		expect(text).to.include("Output only the English translation");
+		expect(text).to.include("reply with the English translation only, on one line");
 		expect(text).to.include(DATA_HEADING);
 	});
 
-	it("the system prompt frames a professional translator that never answers the message", () => {
+	it("the system prompt frames a translation engine that never answers the message", () => {
 		const text = systemPrompt(request(), name);
 
-		expect(text).to.include("You are a professional translator.");
+		expect(text).to.include("You are a translation engine.");
 		expect(text).to.include(
-			"Never answer or continue the message: a question stays a question and a request stays a request, in English."
+			"Translate the user's message from German into English and reply with the English translation only, on one line: no quotes, no label, no explanation, and never an answer to the message."
 		);
 		expect(text).to.include(
-			'Lines under "Earlier lines" are context only: never translate or answer them.'
+			'lines under "Earlier lines" are context only, never to be translated or answered.'
 		);
 	});
 
@@ -105,7 +108,9 @@ describe("translate/prompt", () => {
 			].join("\n")
 		);
 		expect(text).to.include(CONTEXT_HEADING);
+		// data, then the earlier lines, then the instruction that carries the text
 		expect(text.indexOf(DATA_HEADING)).to.be.lessThan(text.indexOf(CONTEXT_HEADING));
+		expect(text.indexOf(CONTEXT_HEADING)).to.be.lessThan(text.indexOf("Translate into"));
 		// nothing to label when the channel offered nothing
 		expect(userPrompt(request(), name)).to.not.include(DATA_HEADING);
 	});
@@ -130,15 +135,14 @@ describe("translate/prompt", () => {
 	it("a batched request's system prompt asks for numbered lines, not one message", () => {
 		const text = systemPrompt(request({lines: ["a", "b"]}), name);
 
-		expect(text).to.include("Translate each numbered message you are given");
+		expect(text).to.include("Translate each numbered message from German into English");
 		expect(text).to.include(
-			"Never answer or continue the messages: a question stays a question and a request stays a request, in English."
+			`reply with the English translations only: the same numbers, one per line, then ${END_SENTINEL} on its own line; no quotes, no labels, no explanation, and never an answer to a message.`
 		);
-		expect(text).to.include(
-			`Answer with the same numbers, one English translation per line, then ${END_SENTINEL} on its own line: no quotes, no labels, no explanation, no repetition of the originals.`
+		expect(text).to.not.include("Translate the user's message");
+		expect(systemPrompt(request(), name)).to.include(
+			"Translate the user's message from German into English"
 		);
-		expect(text).to.not.include("Translate the message you are given");
-		expect(systemPrompt(request(), name)).to.include("Translate the message you are given");
 	});
 
 	it("carries formality, variant and, when writing, that it is the user's own line", () => {
@@ -184,30 +188,49 @@ describe("translate/prompt", () => {
 				"<ada> anyone tried it?",
 				"<jonas> Ja, gestern. (translation: Yes, yesterday.)",
 				"This line replies to <ada>: anyone tried it?",
-				"Translate this message from German into English. Output only the English translation.",
-				'"""',
-				"Ich schick dir gleich das Log.",
-				'"""',
+				"Translate into English: Ich schick dir gleich das Log.",
 			].join("\n")
 		);
 	});
 
-	it("a bare request is the fenced message under its cue, and nothing follows the fence", () => {
+	it("a bare request is one line: the cue and the message, no fence", () => {
 		const text = userPrompt(request(), name);
 
-		expect(text).to.equal(
+		expect(text).to.equal("Translate into English: Ich schick dir gleich das Log.");
+		expect(text).to.not.include('"""');
+	});
+
+	it("one worked example, and only when the source is the example's own English", () => {
+		const req = request({text: "hello this is supposed to be in German", from: "en", to: "de"});
+
+		expect(userPrompt(req, name)).to.equal(
 			[
-				"Translate this message from German into English. Output only the English translation.",
-				'"""',
-				"Ich schick dir gleich das Log.",
-				'"""',
+				`Example: ${EXAMPLE_SOURCE} → ${EXAMPLES.de}`,
+				"Translate into German: hello this is supposed to be in German",
 			].join("\n")
 		);
-		expect(text.endsWith('"""')).to.equal(true);
-		// no source to name when it is the model's job to detect it
-		expect(userPrompt(request({from: null}), name)).to.include(
-			"Translate this message into English."
+		// the example's source is English, so it teaches nothing about de → en
+		expect(userPrompt(request({from: "de", to: "de"}), name)).to.not.include("Example:");
+		// a target with no example of its own gets none
+		expect(userPrompt(request({from: "en", to: "ar"}), name)).to.not.include("Example:");
+		// an unknown source is most often English; the example still helps
+		expect(userPrompt(request({from: null, to: "de"}), name)).to.include(
+			`Example: ${EXAMPLE_SOURCE} → ${EXAMPLES.de}`
 		);
+		// batched requests get it too, above their numbered block
+		const batched = userPrompt(request({from: "en", to: "de", lines: ["one", "two"]}), name);
+
+		expect(batched.indexOf("Example:")).to.be.lessThan(batched.indexOf("Translate each line"));
+	});
+
+	it("every example language is one the router knows", () => {
+		for (const code of Object.keys(EXAMPLES)) {
+			expect(isSupported(code), code).to.equal(true);
+		}
+
+		// Norwegian is `nb` here, never `no`.
+		expect(EXAMPLES.nb).to.be.a("string");
+		expect(EXAMPLES.no).to.equal(undefined);
 	});
 
 	it("trims the context from the oldest end to the token budget", () => {
@@ -224,11 +247,10 @@ describe("translate/prompt", () => {
 		const messages = buildMessages(request(), name);
 
 		expect(messages.map((m) => m.role)).to.deep.equal(["system", "user"]);
-		expect(messages[0].content).to.include("You are a professional translator.");
-		expect(messages[1].content).to.include(
-			'Translate this message from German into English. Output only the English translation.\n"""\nIch schick dir gleich das Log.\n"""'
+		expect(messages[0].content).to.include("You are a translation engine.");
+		expect(messages[1].content).to.equal(
+			"Translate into English: Ich schick dir gleich das Log."
 		);
-		expect(messages[1].content.endsWith('"""')).to.equal(true);
 	});
 
 	it("formats and parses batched lines", () => {
@@ -244,7 +266,7 @@ describe("translate/prompt", () => {
 		expect(parseBatchedOutput("one\ntwo", 2)).to.equal(null);
 		expect(userPrompt(request({lines: ["eins", "zwei"]}), name)).to.equal(
 			[
-				`Translate these numbered messages from German into English. Answer with the same numbers, one English translation per line, then ${END_SENTINEL} on its own line.`,
+				`Translate each line into English, same numbers, then ${END_SENTINEL} on its own line:`,
 				input,
 			].join("\n")
 		);

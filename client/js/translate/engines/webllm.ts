@@ -1,11 +1,13 @@
 // The GPU tier (spec § engines/webllm.ts): WebLLM's MLCEngine behind the
 // Engine interface. One model at a time. Generation is greedy at a low
 // temperature, thinking off, a token budget from the input length, and a
-// stop at the batch sentinel — a single-line request cuts itself at the
-// first newline instead, because with thinking off WebLLM prepends an
-// empty `<think></think>` block to the reply that a "\n" stop matched
-// inside. The library arrives through `WebLlmDeps` so this file never
-// imports it; webllm.real.ts does.
+// stop at the batch sentinel — a single-line request cuts itself instead,
+// because with thinking off WebLLM prepends an empty `<think></think>`
+// block to the reply that a "\n" stop matched inside. The cut takes the
+// first line that is not the source echoed back: a small model asked to
+// translate often repeats the text (or opens a `"""` fence around it)
+// before it gets to the translation. The library arrives through
+// `WebLlmDeps` so this file never imports it; webllm.real.ts does.
 
 import {
 	Engine,
@@ -114,6 +116,82 @@ function visibleText(raw: string): string | null {
 	}
 
 	return raw.replace(THINK_BLOCK, "");
+}
+
+/** A line of nothing but quotes or a fence: the model opened a block. */
+const FENCE_ONLY = /^(?:"""|["'“”„«»])+$/;
+
+/** For comparing a line with the source: spacing, case and one final .!? do not count. */
+function normalise(text: string): string {
+	return text
+		.trim()
+		.replace(/\s+/g, " ")
+		.toLowerCase()
+		.replace(/[.!?]$/, "");
+}
+
+/** What a line carries once its fence and its label are off; "" when nothing. */
+function content(line: string): string {
+	const clean = cleanOutput(line);
+
+	return FENCE_ONLY.test(clean) ? "" : clean;
+}
+
+/**
+ * Not a translation: the source echoed back, an empty line, or a bare
+ * fence. `req.text` is the protected text, the same the model was shown,
+ * so the comparison is like for like.
+ */
+function isEcho(line: string, source: string): boolean {
+	const carried = content(line);
+
+	return carried === "" || normalise(carried) === normalise(source);
+}
+
+/**
+ * A single-line reply as it streams. `cut` is the translation once a
+ * complete line that is not an echo has arrived — everything before it was
+ * echo, and the generation is over as far as we are concerned. Until then
+ * `rest` is what to show: the text with the echoed lines dropped, so the
+ * source never flashes up in the translation's place.
+ */
+function scanLines(shown: string, source: string): {cut: string | null; rest: string} {
+	const parts = shown.split("\n");
+
+	// The last element is still being generated; the others are lines.
+	for (let i = 0; i < parts.length - 1; i++) {
+		if (!isEcho(parts[i], source)) {
+			return {cut: cleanOutput(parts[i].replace(/\r$/, "")), rest: ""};
+		}
+	}
+
+	return {cut: null, rest: parts[parts.length - 1]};
+}
+
+/**
+ * The whole of a single-line reply once the stream is over: the first line
+ * that is not an echo, or — when the model only ever echoed — the last line
+ * that carries anything at all, which beats showing nothing. Nothing at all
+ * returns "", which the queue and writer already treat as a failure.
+ */
+function pickTranslation(text: string, source: string): string {
+	const lines = text.split("\n").map((line) => line.replace(/\r$/, ""));
+
+	for (const line of lines) {
+		if (!isEcho(line, source)) {
+			return cleanOutput(line);
+		}
+	}
+
+	for (let i = lines.length - 1; i >= 0; i--) {
+		const carried = content(lines[i]);
+
+		if (carried !== "") {
+			return carried;
+		}
+	}
+
+	return "";
 }
 
 export class WebLlmEngine implements Engine {
@@ -310,26 +388,28 @@ export class WebLlmEngine implements Engine {
 				}
 
 				// A single-line reply that opens with a newline is not an
-				// empty translation: the cut is the first newline after the
-				// text, so the leading whitespace goes first.
+				// empty translation: the leading whitespace goes first.
 				const shown = req.lines ? visible : visible.trimStart();
-				const newline = req.lines ? -1 : shown.indexOf("\n");
 
-				if (newline !== -1) {
-					// A translation is one line, and the stop string that used
-					// to end it here matched inside the thinking block instead.
+				if (req.lines) {
+					yield {id: req.id, text: shown, done: false};
+					continue;
+				}
+
+				// A translation is one line, and the stop string that used
+				// to end it here matched inside the thinking block instead —
+				// so the line is picked out here, past the echoed ones.
+				const scan = scanLines(shown, req.text);
+
+				if (scan.cut !== null) {
 					cut = true;
 					this.failures = 0;
-					yield {
-						id: req.id,
-						text: cleanOutput(shown.slice(0, newline).replace(/\r$/, "")),
-						done: true,
-					};
+					yield {id: req.id, text: scan.cut, done: true};
 					engine.interruptGenerate();
 					continue;
 				}
 
-				yield {id: req.id, text: shown, done: false};
+				yield {id: req.id, text: scan.rest, done: false};
 			}
 
 			// A drained (aborted) generation proves nothing about the model:
@@ -341,10 +421,15 @@ export class WebLlmEngine implements Engine {
 
 				if (visible !== null) {
 					// A batched answer is cleaned line by line, where it is
-					// parsed; a single one is the whole of the text.
-					const done = stripSentinel(visible);
+					// parsed; a single one is whichever of its lines is the
+					// translation rather than the source read back.
+					const done = stripSentinel(req.lines ? visible : visible.trimStart());
 
-					yield {id: req.id, text: req.lines ? done : cleanOutput(done), done: true};
+					yield {
+						id: req.id,
+						text: req.lines ? done : pickTranslation(done, req.text),
+						done: true,
+					};
 				}
 			}
 		} catch (e) {
