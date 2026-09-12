@@ -241,14 +241,15 @@ describe("translate/engines/webllm", () => {
 			{text: "I'll", done: false},
 			{text: "I'll send", done: false},
 			{text: "I'll send you the log", done: false},
-			{text: "I'll send you the log shortly.\n", done: false},
+			// The newline is the engine's own cut now, not a stop string.
 			{text: "I'll send you the log shortly.", done: true},
 		]);
+		expect(d.calls.interrupt).to.equal(1);
 		const created = d.calls.create[0];
 
 		expect(created.stream).to.equal(true);
 		expect(created.temperature).to.equal(0.1);
-		expect(created.stop).to.deep.equal(["\n"]);
+		expect(created.stop).to.deep.equal([]);
 		expect(created.extra_body).to.deep.equal({enable_thinking: false});
 		expect(created.max_tokens).to.equal(maxTokensFor(request()));
 		expect(created.messages[0].role).to.equal("system");
@@ -273,10 +274,75 @@ describe("translate/engines/webllm", () => {
 		expect(d.calls.create[0].stop).to.deep.equal(["\nEND"]);
 	});
 
-	it("maxTokensFor is 2 × input tokens + 32, capped at 512", () => {
-		expect(maxTokensFor(request({text: "abcd"}))).to.equal(34);
+	it("the empty thinking block WebLLM prepends never reaches the caller", async () => {
+		const d = deps(["<think>", "\n\n</think>", "\n\n", "Hallo", " Welt"]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+		const seen: {text: string; done: boolean}[] = [];
+
+		for await (const chunk of engine.translate(request(), new AbortController().signal)) {
+			seen.push({text: chunk.text, done: chunk.done});
+		}
+
+		// Nothing at all while the block is open; an empty translation-so-far
+		// once it closes, which is all the block leaves behind.
+		expect(seen).to.deep.equal([
+			{text: "", done: false},
+			{text: "", done: false},
+			{text: "Hallo", done: false},
+			{text: "Hallo Welt", done: false},
+			{text: "Hallo Welt", done: true},
+		]);
+		expect(seen.some((chunk) => chunk.text.includes("<think>"))).to.equal(false);
+	});
+
+	it("a single-line request cuts itself at the first newline and drains the rest", async () => {
+		const d = deps(["<think>\n\n</think>\n\n", "Hallo", "\nWelt", " mehr"]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+		const seen: {text: string; done: boolean}[] = [];
+
+		for await (const chunk of engine.translate(request(), new AbortController().signal)) {
+			seen.push({text: chunk.text, done: chunk.done});
+		}
+
+		expect(seen).to.deep.equal([
+			{text: "", done: false},
+			{text: "Hallo", done: false},
+			{text: "Hallo", done: true},
+		]);
+		expect(d.calls.interrupt).to.equal(1);
+		// The generation reached the point where WebLLM releases its lock.
+		expect(d.calls.ranToEnd).to.equal(true);
+		// A cut is a completed translation, not a failure.
+		expect(engine.generationFailures).to.equal(0);
+	});
+
+	it("a batched request keeps its newlines and stops at the sentinel, thinking block aside", async () => {
+		const d = deps(["<think>\n\n</think>\n\n", "1. Hallo\n", "2. Welt\nEND"]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+		const chunks: string[] = [];
+
+		for await (const chunk of engine.translate(
+			request({lines: ["eins", "zwei"]}),
+			new AbortController().signal
+		)) {
+			chunks.push(chunk.text);
+		}
+
+		expect(chunks[chunks.length - 1]).to.equal("1. Hallo\n2. Welt");
+		expect(d.calls.create[0].stop).to.deep.equal(["\nEND"]);
+		expect(d.calls.interrupt).to.equal(0);
+	});
+
+	it("maxTokensFor is 2 × input tokens + 32 + the thinking block, capped at 512", () => {
+		expect(maxTokensFor(request({text: "abcd"}))).to.equal(50);
 		expect(maxTokensFor(request({text: "x".repeat(4000)}))).to.equal(512);
-		expect(maxTokensFor(request({lines: ["abcd", "efgh"]}))).to.equal(2 * 3 + 32);
+		expect(maxTokensFor(request({lines: ["abcd", "efgh"]}))).to.equal(2 * 3 + 32 + 16);
 	});
 
 	it("an abort interrupts generation", async () => {

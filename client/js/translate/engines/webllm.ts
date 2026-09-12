@@ -1,8 +1,10 @@
 // The GPU tier (spec § engines/webllm.ts): WebLLM's MLCEngine behind the
 // Engine interface. One model at a time. Generation is greedy at a low
-// temperature, thinking off, a token budget from the input length, a stop
-// at the first newline (a translation is one line) or at the batch
-// sentinel. The library arrives through `WebLlmDeps` so this file never
+// temperature, thinking off, a token budget from the input length, and a
+// stop at the batch sentinel — a single-line request cuts itself at the
+// first newline instead, because with thinking off WebLLM prepends an
+// empty `<think></think>` block to the reply that a "\n" stop matched
+// inside. The library arrives through `WebLlmDeps` so this file never
 // imports it; webllm.real.ts does.
 
 import {
@@ -84,7 +86,27 @@ export function appConfigFor(
 export function maxTokensFor(req: TranslateRequest): number {
 	const input = req.lines ? req.lines.join("\n") : req.text;
 
-	return Math.min(512, 2 * estimateTokens(input) + 32);
+	// + 16: the empty thinking block WebLLM prepends when thinking is off.
+	return Math.min(512, 2 * estimateTokens(input) + 32 + 16);
+}
+
+/** The empty thinking block, and the opener on its own while the rest streams in. */
+const THINK_BLOCK = /^\s*<think>[\s\S]*?<\/think>\s*/;
+const THINK_OPEN = /^\s*<think>/;
+
+/**
+ * What of the raw reply is the translation. With `enable_thinking: false`
+ * WebLLM does not ask the model not to think: it encodes `<think>\n\n</think>`
+ * itself and pushes those tokens into the output before prefill, so every
+ * reply starts with a block the model never generated. `null` means the
+ * block is still open — there is nothing to show yet.
+ */
+function visibleText(raw: string): string | null {
+	if (THINK_OPEN.test(raw) && !THINK_BLOCK.test(raw)) {
+		return null;
+	}
+
+	return raw.replace(THINK_BLOCK, "");
 }
 
 export class WebLlmEngine implements Engine {
@@ -235,7 +257,7 @@ export class WebLlmEngine implements Engine {
 				stream: true,
 				temperature: 0.1,
 				max_tokens: maxTokensFor(req),
-				stop: req.lines ? [`\n${END_SENTINEL}`] : ["\n"],
+				stop: req.lines ? [`\n${END_SENTINEL}`] : [],
 				extra_body: {enable_thinking: false},
 			});
 
@@ -245,6 +267,9 @@ export class WebLlmEngine implements Engine {
 			this.generating = req.id;
 
 			let text = "";
+			// A single-line request that has had its line: the generation is
+			// over as far as we are concerned, but the stream is still drained.
+			let cut = false;
 
 			for await (const delta of stream) {
 				if (signal.aborted) {
@@ -256,6 +281,13 @@ export class WebLlmEngine implements Engine {
 					continue;
 				}
 
+				if (cut) {
+					// The same drain, but the interrupt is already sent: the
+					// generation was running when it went out, and WebLLM only
+					// clears that flag when the next generation starts.
+					continue;
+				}
+
 				const piece = delta.choices[0]?.delta?.content ?? "";
 
 				if (piece === "") {
@@ -263,14 +295,42 @@ export class WebLlmEngine implements Engine {
 				}
 
 				text += piece;
-				yield {id: req.id, text, done: false};
+
+				const visible = visibleText(text);
+
+				if (visible === null) {
+					continue;
+				}
+
+				const newline = req.lines ? -1 : visible.indexOf("\n");
+
+				if (newline !== -1) {
+					// A translation is one line, and the stop string that used
+					// to end it here matched inside the thinking block instead.
+					cut = true;
+					this.failures = 0;
+					yield {
+						id: req.id,
+						text: visible.slice(0, newline).replace(/\r$/, ""),
+						done: true,
+					};
+					engine.interruptGenerate();
+					continue;
+				}
+
+				yield {id: req.id, text: visible, done: false};
 			}
 
 			// A drained (aborted) generation proves nothing about the model:
 			// only a completed one clears the failure count.
 			if (!signal.aborted) {
 				this.failures = 0;
-				yield {id: req.id, text: stripSentinel(text), done: true};
+
+				const visible = cut ? null : visibleText(text);
+
+				if (visible !== null) {
+					yield {id: req.id, text: stripSentinel(visible), done: true};
+				}
 			}
 		} catch (e) {
 			if (signal.aborted) {
