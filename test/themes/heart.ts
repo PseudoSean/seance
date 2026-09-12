@@ -429,9 +429,11 @@ describe("the <3 theme's animals", function () {
 
 		// The teddy bear and the dolphin were held: their rigs stay, their
 		// files are gone (test/tools/heart/files.ts), and the theme must not
-		// reach for either.
+		// reach for either. Tokens and urls, not the bare word — the docs may
+		// well end up explaining in a comment here why neither is cast.
 		for (const held of ["teddy", "dolphin"]) {
-			expect(css, `no ${held} in the theme`).to.not.include(held);
+			expect(css, `no --heart-${held} token`).to.not.include(`--heart-${held}`);
+			expect(css, `no heart/${held} file`).to.not.include(`url("heart/${held}`);
 		}
 	});
 
