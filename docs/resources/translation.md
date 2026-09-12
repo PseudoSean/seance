@@ -58,6 +58,64 @@ text carries `[fail]` once (the retry succeeds), and logs every request
 onto `globalThis.__seanceTranslateFake` so a scenario can tell a batch
 from a fallback to singles.
 
+## Writing in a channel
+
+The panel also sets an outgoing target per channel (`write`, next to `read`
+in `thelounge.translate`); `writeTarget()` returns it as soon as
+translation is enabled, without waiting for the device probe, so the
+composer can show a placeholder ("sent in German") the instant the target
+is picked.
+
+The first Enter on a non-empty, non-command, non-edit draft
+(`outgoing.ts` `draftGate`) calls `writer.ts` `translateOutgoing` instead
+of sending: it detects the draft's language (no channel prior -- it is the
+user's own line, not what the channel has been saying), decides the source
+with `writeSource` (the detector's verdict, or the user's reading language
+when the draft is too short to place and that differs from the target,
+else left to the LLM), and builds context the same way the reader does
+(recent lines, reply target, topic, names, terms, glossary) plus a `voice`:
+the last `VOICE_LINES` (5) of this channel's own sent translations to this
+target, session-only, so the model's phrasing stays consistent across a
+conversation without ever touching persisted storage.
+
+The reading queues are held (`holdReading()`/`releaseReading()`) for the
+length of the request, so a write is never left waiting behind a channel's
+incoming traffic; a read already in flight when the hold starts still
+finishes. `translateDraft` (`outgoing.ts`) then does the actual work: a
+single-line draft as one request, a multi-line one as a numbered batch when
+the route's engine batches (else line by line, falling back to line-by-line
+whenever the batch's numbering does not parse), streamed with the draft's
+blank lines and line count preserved, and given up after `WRITE_TIMEOUT_MS`
+(2 min).
+
+The result lives in `store.state.outgoingTranslations`, keyed by channel
+id, and `ChatInput.vue` renders it as the `.translate-bar` strip above the
+input: a "to German" chip, the streaming text with a caret, a Check button
+once the round trip has something to check, Send (disabled while pending),
+and Edit. A failure shows "couldn't translate, send as written?" and turns
+Send into "Send as written". The second Enter is the same `input` bus emit
+as any other send (`deliver`, so history, replies and edits do not
+diverge): it ships the strip's translation, or the draft itself after a
+failure, and calls `noteOutgoingSent`, which extends the voice and, when
+the draft and its translation are term-sized (`termPair`: one line, short
+both ways, genuinely different), remembers the pair in the channel's term
+memory. Typing again, walking input history, Escape, the strip's own Edit
+button and parting the channel all invalidate the strip; the next Enter
+starts over.
+
+The round trip reads a done translation back toward `reverseTarget` (the
+draft's detected language, or the user's reading language, whichever
+differs from the write target -- when neither does, there is nothing to
+read back into and no Check is offered) and shows it in a second row,
+"reads back as:". `translateRoundTrip: "auto"` starts the check as soon as
+the translation finishes and Send waits for it; `"button"` leaves Send free
+even while a check the user asked for is still running.
+
+The scenario's fake logs `purpose: "write"` (or `"read"` for the check) on
+every request, so a browser check can tell the composer's traffic from the
+reader's. Browser check: `tools/scenarios/translate-composer.mjs` (also
+`--mobile`).
+
 ## The worker
 
 `js/translate-worker.js` (its own webpack configuration, like the push

@@ -127,3 +127,31 @@ _Avoid_: skip, expire
 **pause**:
 An engine set aside after `PAUSE_AFTER_FAILURES` consecutive failures, until a retry resumes it; global to the engine, not per channel.
 _Avoid_: disable, blacklist
+
+**write target**:
+A channel's outgoing language, set from the panel and persisted alongside the reading **switch** (`thelounge.translate` `write`); `writeTarget()` returns it whenever translation is enabled, without waiting on the device probe.
+_Avoid_: send language, outgoing switch
+
+**the strip**:
+The `.translate-bar` above the input (`ChatInput.vue`) that shows a draft's outgoing translation: the chip, the streaming text, Check/Send/Edit, and the read-back row underneath. A different draft, a channel switch, Escape or the strip's own Edit takes it down.
+_Avoid_: translation bar, preview box
+
+**the first Enter / the second Enter**:
+The first Enter on a draft with a write target starts its translation (`translateOutgoing`) instead of sending; the second Enter, once the strip shows a result (or a failure), sends what the strip holds.
+_Avoid_: initial submit, confirm submit
+
+**read back**:
+The round trip: a done translation translated once more, back toward the user's reading language, shown under the strip so a failed or a subtly wrong translation can be caught before sending. `"auto"` runs it as soon as the translation ends; `"button"` waits for Check.
+_Avoid_: back-translation, verification pass
+
+**voice lines**:
+The user's own last few sent translations to one target, session-only, quoted in the next prompt to that target (`VOICE_LINES` = 5 of up to `VOICE_KEEP` kept).
+_Avoid_: style examples, tone memory
+
+**term pair**:
+A term-sized draft and its translation (`termPair`: at most `TERM_MAX_WORDS` words and `TERM_MAX_CHARS` characters, one line, translation short and different) that a sent message leaves in the channel's term memory; a sentence never qualifies.
+_Avoid_: glossary entry, learned term
+
+**hold**:
+`holdReading()`/`releaseReading()`: the reading queues pause new runs while a draft translates (a run already in flight finishes), so a write is never starved behind reading traffic; nested holds count.
+_Avoid_: pause, lock

@@ -1,8 +1,8 @@
 # Client-side translation
 
 _Started 2026-09-11 on the `client-translation` branch (from `origin/develop`
-at `d6b6624b`). Status: **phases 1 and 2 implemented; phases 3 and 4
-pending**. This file is the spec; the implementation plan follows from it._
+at `d6b6624b`). Status: **phases 1, 2 and 3 implemented; phase 4
+pending** (plan 3, the composer: `docs/superpowers/plans/2026-09-12-client-translation-3-composer.md`, gitignored, local). This file is the spec; the implementation plan follows from it._
 
 ## Goal
 
@@ -109,6 +109,61 @@ Plan 2 (reading pipeline):
   a setting changed mid-flight wins.
 - The translation panel is a sibling of the channel header (absolutely
   positioned under it), not a child: the header clips its overflow.
+
+Plan 3 (composer):
+
+- A message edit never translates: `startEdit` pre-fills the draft with
+  the sent text, already in the write language, and the gate treats
+  `channel.editing` like a slash command. "Escape or Edit removes the
+  strip" is the strip's own Edit button, not the edit compose bar.
+- The round trip's reverse language is the draft's detected language,
+  else the user's reading language; when that equals the write target
+  there is nothing to read back into and no Check is offered.
+  `translateRoundTrip: "auto"` starts the check as soon as the
+  translation ends and Send waits for it; `"button"` never lets a
+  running check block Send.
+- Term memory takes term-sized pairs only: a one-line draft of at most
+  `TERM_MAX_WORDS` (3) words and `TERM_MAX_CHARS` (40) characters whose
+  translation is also short and differs from it. Sentences never enter
+  the memory.
+- A write runs beside the reading queue but ahead of it: `holdReading()`
+  stops new reading runs (a run already in flight finishes) while a
+  draft translates; requests are correlated by id, so two streams at
+  once are safe.
+- A draft the detector cannot place (under ten characters, or
+  undetermined) is translated as if written in the user's reading
+  language when that differs from the write target; otherwise the
+  source is left to the LLM, so a CPU-only device with no route gets the
+  failure strip.
+- A multi-line draft translates as one batched numbered request when the
+  route's engine batches, else line by line; a batch whose numbering
+  does not parse is retried line by line. Blank lines stay in place and
+  the line count survives, so a translated draft's multiline decision
+  sees the same shape the draft itself would have gotten.
+- Escape with a strip up removes only the strip; without one it behaves
+  as it always has (it blurs, it does not clear).
+- Typing notifications are left alone: the first Enter sends nothing, so
+  the 5 s idle timer reports "paused" and the message lands a few
+  seconds late.
+- A translation longer than 500 bytes splits into two `PRIVMSG`s like any
+  long text; the strip does not warn.
+- Formality for a write is `channel.formality` when it is not `"auto"`,
+  else the global `translateFormality` setting; reading keeps using the
+  channel's alone.
+- The strip's copy: chip `to German`; failure `couldn't translate, send as written?` with the send button reading `Send as written`; the check
+  row's label `reads back as:`.
+- `writeTarget()` does not wait for the device probe: it returns the
+  channel's `write` target as soon as the service is enabled, so a
+  placeholder can say "sent in German" a moment before the probe
+  answers. `translateOutgoing` awaits the probe itself before judging
+  availability, so a fresh page's first draft is not sent untranslated
+  while the probe is still in flight.
+- An empty translation is treated as a failure ("send as written"), not
+  as a message with nothing in it. A translation that begins with `/` is
+  escaped as `//…` so the IRC layer sends it as text, the same trick a
+  literal `/` in the draft already relies on. A translation started for
+  one channel is only ever sent in that channel, and only while its
+  network is up.
 
 ## Non-goals
 
