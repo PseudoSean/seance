@@ -34,7 +34,11 @@ const sessions = new Map<number, AbortController>();
 const checks = new Map<number, AbortController>();
 /** The user's sent translations per channel, for the prompt's voice line (session only). */
 const voices = new Map<number, {to: string; lines: string[]}>();
-/** More than VOICE_LINES are kept so a target switch and back still has a few. */
+/**
+ * How many sent translations a channel remembers for one target (a send to
+ * a different target replaces the lot); buildContext quotes the newest
+ * VOICE_LINES of them, so the surplus is only margin.
+ */
 const VOICE_KEEP = 10;
 
 const deps: OutgoingDeps = {
@@ -48,12 +52,16 @@ function asFormality(value: unknown): Formality {
 	return value === "formal" || value === "casual" ? value : "auto";
 }
 
+/**
+ * The channel's write target, synchronously, for a component to render off.
+ * It does not wait for the device probe — the panel is the only writer of
+ * `write`, and a placeholder that says "sent in German" a moment before the
+ * probe answers is better than a draft that goes out untranslated because
+ * the capability was not known yet. translateOutgoing awaits the probe and
+ * judges availability there.
+ */
 export function writeTarget(network: ClientNetwork, channel: ClientChan): string | null {
-	if (!translationAvailable()) {
-		return null;
-	}
-
-	return channelTranslation(network, channel).write;
+	return translateService().enabled ? channelTranslation(network, channel).write : null;
 }
 
 export function outgoingTranslation(channel: ClientChan): OutgoingTranslation | undefined {
@@ -75,10 +83,13 @@ function current(channel: ClientChan, draft: string, controller: AbortController
 
 /**
  * The first Enter: translate the draft into the channel's write target.
- * Resolves "strip" when the strip is up (the second Enter sends it, or
- * sends the draft as written after a failure) and "plain" when the draft
- * needs no translation — the detector already places it in the target —
- * so the caller sends it as typed.
+ * Resolves "plain" when the draft needs no translation — there is no write
+ * target, the device cannot translate, or the detector already places the
+ * draft in the target — so the caller sends it as typed. Resolves "strip"
+ * when the strip is up (the second Enter sends it, or sends the draft as
+ * written after a failure) and when a strip was dropped mid-flight (a newer
+ * draft, a cancel, the panel's target moved): nothing is sent, the draft
+ * stays in the input.
  */
 export async function translateOutgoing(
 	network: ClientNetwork,
@@ -110,8 +121,21 @@ export async function translateOutgoing(
 	});
 
 	try {
+		// The probe before the verdict, like reader.ts: on a cold page the
+		// service is created by this very call and its tier is not known
+		// yet, so judging availability first would send every first draft
+		// untranslated.
 		if (!store.state.translation.capability) {
 			await translateService().capabilities();
+		}
+
+		if (!current(channel, draft, controller)) {
+			return "strip";
+		}
+
+		if (!translationAvailable()) {
+			cancelOutgoing(channel);
+			return "plain";
 		}
 
 		const nicks = channel.users.map((u) => u.nick);
@@ -123,12 +147,15 @@ export async function translateOutgoing(
 			return "strip";
 		}
 
-		// The panel may have changed while the detector loaded.
+		// The panel may have changed while the detector loaded. The strip
+		// this draft was started for is gone, so nothing is sent: the draft
+		// stays in the input for the user's next Enter, which translates it
+		// into the new target.
 		const settings = channelTranslation(network, channel);
 
 		if (settings.write !== to) {
 			cancelOutgoing(channel);
-			return "plain";
+			return "strip";
 		}
 
 		if (detection.lang === to) {
@@ -165,7 +192,10 @@ export async function translateOutgoing(
 			}
 		);
 
-		store.commit("outgoingTranslationPatch", {chanId: channel.id, patch: {from}});
+		if (current(channel, draft, controller)) {
+			store.commit("outgoingTranslationPatch", {chanId: channel.id, patch: {from}});
+		}
+
 		holdReading();
 
 		let text: string;

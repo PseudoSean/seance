@@ -1,6 +1,6 @@
-// The reading pipeline's glue (spec § Reading pipeline): one of the
-// modules — with index.ts, fakePort.ts and writer.ts — that import the
-// store. A second `socket.on("msg")` listener (registered by
+// The reading pipeline's glue (spec § Reading pipeline): one of the three
+// modules — with index.ts and writer.ts — that import the store. A second
+// `socket.on("msg")` listener (registered by
 // socket-events/translate.ts after socket-events/msg.ts pushed the
 // message) runs eligibility → detection → context → queue; the queue
 // writes state.translations; the header globe and the panel call
