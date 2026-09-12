@@ -16,6 +16,7 @@ import {
 	answerError,
 	bareRetry,
 	draftGate,
+	echoingSoFar,
 	hasNoLetters,
 	isUnchanged,
 	reverseTarget,
@@ -192,6 +193,23 @@ describe("translate/outgoing", () => {
 		it("reports a letterless answer as letterless even where it is also the source", () => {
 			expect(answerError("", "")).to.equal(EMPTY_TRANSLATION);
 			expect(answerError("--- ---", "--- ---")).to.equal(EMPTY_TRANSLATION);
+		});
+	});
+
+	describe("echoingSoFar", () => {
+		it("holds while the stream is still the source coming back", () => {
+			expect(echoingSoFar("We moved the deploy to Thursday", "We moved")).to.equal(true);
+			expect(echoingSoFar("We moved  the deploy", "we moved the")).to.equal(true);
+			expect(
+				echoingSoFar("the build is green\nI'll merge it", "the build is green\nI'll")
+			).to.equal(true);
+		});
+
+		it("lets go once the answer departs from the source, and never holds nothing", () => {
+			expect(echoingSoFar("We moved the deploy", "Wir haben")).to.equal(false);
+			expect(echoingSoFar("ps, are you coming?", "ps, kommst")).to.equal(false);
+			expect(echoingSoFar("hello there", "")).to.equal(false);
+			expect(echoingSoFar("hello there", "   ")).to.equal(false);
 		});
 	});
 

@@ -26,6 +26,7 @@ import {
 	WRITE_DETECT_MIN_GAP,
 	answerError,
 	bareRetry,
+	echoingSoFar,
 	hasNoLetters,
 	isUnchanged,
 	reverseTarget,
@@ -334,7 +335,9 @@ export async function translateOutgoing(
 					if (current(channel, draft, controller)) {
 						store.commit("outgoingTranslationPatch", {
 							chanId: channel.id,
-							patch: {text: partial},
+							// Nothing but the draft coming back yet: show the caret, not
+							// an echo the bare retry may be about to replace.
+							patch: {text: echoingSoFar(draft, partial) ? "" : partial},
 						});
 					}
 				});
@@ -523,7 +526,13 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 					if (current(channel, draft, controller)) {
 						store.commit("outgoingTranslationPatch", {
 							chanId: channel.id,
-							patch: {check: {status: "pending", text: partial, to: target}},
+							patch: {
+								check: {
+									status: "pending",
+									text: echoingSoFar(entry.text, partial) ? "" : partial,
+									to: target,
+								},
+							},
 						});
 					}
 				});

@@ -155,6 +155,25 @@ export function hasNoLetters(text: string): boolean {
 }
 
 /**
+ * Is a streaming answer, so far, nothing but the source coming back? The
+ * strip and the read-back row show a stream as it arrives, and a model that
+ * is about to hand the line back writes it out word by word first -- which,
+ * with the bare second try replacing it, read as the translation rewriting
+ * itself. While this holds the row shows only its caret; the moment the
+ * answer departs from the source, it shows the answer. Case and runs of
+ * whitespace are ignored, as `isUnchanged` ignores them.
+ */
+export function echoingSoFar(source: string, partial: string): boolean {
+	const so = partial.toLowerCase().replace(/\s+/g, " ").trim();
+
+	if (so === "") {
+		return false;
+	}
+
+	return source.toLowerCase().replace(/\s+/g, " ").trim().startsWith(so);
+}
+
+/**
  * What an answer amounts to: `null` when it is a translation, else the
  * failure it is -- `EMPTY_TRANSLATION` for nothing a language could be,
  * `UNCHANGED` for the source handed back. Both sides of the composer

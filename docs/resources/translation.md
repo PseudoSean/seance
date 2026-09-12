@@ -304,7 +304,13 @@ back rather than translate it -- a source that is wrong for the draft, and a
 context that confounds it -- are exactly what that removes. The route is
 kept (`batches`, `markers`, the protection), so it is the same engine over
 the same protected text and only what the prompt says about the draft
-changes; the strip stays pending and streams the retry. Exactly one retry:
+changes; the strip stays pending and streams the retry. **Neither try shows
+an echo while it streams**: `echoingSoFar(source, partial)` holds the row at
+its caret while the text so far is still the draft coming back (case and
+spacing ignored), and shows the answer the moment it departs from it --
+without it the first try's echo streamed out word by word and the retry
+then replaced it, which read as the translation rewriting itself. The
+read-back row does the same against the translation. Exactly one retry:
 a model that echoes a bare request is declining, and the offer then stands.
 A letterless answer is reported at once -- there is nothing in it to suggest
 the request was the problem. The round trip does the same with a read-back
