@@ -644,6 +644,11 @@ page, then:
 copy(JSON.stringify(seanceTranslateLast)); // or seanceTranslateLog
 ```
 
+An attempt the page gave up on is recorded too -- a newer draft, Escape or
+the strip's Edit aborts the request and leaves an entry with `text: ""` and
+`error: "aborted"` -- so where the newest entry is one of those, take the
+request being reported out of `seanceTranslateLog` instead.
+
 ```sh
 npx tsx tools/translate-llm.ts --capture tmp/capture.json --show-prompt --raw
 ```
