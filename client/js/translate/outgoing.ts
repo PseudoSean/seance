@@ -65,21 +65,29 @@ export function draftGate(text: string, editing: boolean): DraftGate {
  * misplacing a short draft than the user actually switching languages, so
  * it falls back to the reading language rather than sending the draft to
  * the LLM under a source it probably is not.
+ *
+ * A fallback is never the target. "From German into German" is a request
+ * the model answers by handing the line back -- measured -- so where the
+ * reading language is the write target there is nothing to fall back to and
+ * the source is left to the LLM. A draft the detector places in the target
+ * with a strong verdict never reaches here: the caller sends it as typed.
  */
 export function writeSource(
 	detection: {lang: string | null; confidence: number},
 	readingLanguage: string,
 	writeTarget: string
 ): string | null {
+	const fallback = readingLanguage !== writeTarget ? readingLanguage : null;
+
 	if (!detection.lang) {
-		return readingLanguage !== writeTarget ? readingLanguage : null;
+		return fallback;
 	}
 
 	if (detection.lang === readingLanguage) {
 		return detection.lang;
 	}
 
-	return detection.confidence >= WRITE_DETECT_MIN_GAP ? detection.lang : readingLanguage;
+	return detection.confidence >= WRITE_DETECT_MIN_GAP ? detection.lang : fallback;
 }
 
 /**

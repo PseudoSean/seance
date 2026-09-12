@@ -78,7 +78,9 @@
 			aria-live="polite"
 		>
 			<div class="translate-bar-row">
-				<span class="translate-bar-chip">{{ outgoingChip }}</span>
+				<span class="translate-bar-chip" :title="outgoingChipTitle">{{
+					outgoingChip
+				}}</span>
 				<span
 					v-if="outgoing.status === 'failed'"
 					class="translate-bar-text translate-bar-failed"
@@ -498,6 +500,26 @@ export default defineComponent({
 		const outgoingChip = computed(() =>
 			outgoing.value ? `to ${languageName(outgoing.value.to, navigator.language)}` : ""
 		);
+
+		// Which route the strip's text came down, in the chip's title: the
+		// pair as the request asked for it ("auto" where the source was left
+		// to the model), the model's own id, and whether it ran on the GPU.
+		// The chip's visible text stays the language alone -- this is for
+		// someone wondering why a translation reads as it does. No title
+		// until the route has answered.
+		const outgoingChipTitle = computed(() => {
+			const entry = outgoing.value;
+
+			if (!entry || !entry.model) {
+				return undefined;
+			}
+
+			const from = entry.from ? languageName(entry.from, navigator.language) : "auto";
+
+			return `${from} → ${languageName(entry.to, navigator.language)} · ${entry.model} (${
+				entry.engine === "llm" ? "GPU" : "CPU"
+			})`;
+		});
 
 		// Why it failed, beside "couldn't translate": an ORT session error or
 		// a model id is long and multi-line, so the strip shows the head of it
@@ -1123,6 +1145,7 @@ export default defineComponent({
 			connectNetwork,
 			outgoing,
 			outgoingChip,
+			outgoingChipTitle,
 			shortReason,
 			outgoingBusy,
 			sendTooltip,

@@ -14,7 +14,7 @@ import {type Formality, channelKey, getChannelTranslation, rememberTerm} from ".
 import {buildContext} from "./context";
 import {detectLanguage} from "./detect";
 import {plainTextOf} from "./eligibility";
-import {emptyContext} from "./engine";
+import {type EngineName, emptyContext} from "./engine";
 import {translateService} from "./index";
 import {
 	ABORTED,
@@ -26,6 +26,7 @@ import {
 	writeSource,
 } from "./outgoing";
 import {channelTranslation, holdReading, releaseReading} from "./reader";
+import type {Route} from "./router";
 import {LLM_MARKERS, type MarkerForm, stripCopiedNickPrefix} from "./spans";
 
 /** An id no message has: buildContext then takes the whole scrollback as "before" the draft. */
@@ -39,6 +40,34 @@ const DRAFT_ID = Number.MAX_SAFE_INTEGER;
  */
 function markersFor(candidate: string | undefined): MarkerForm {
 	return candidate === "llm" ? LLM_MARKERS : "placeholder";
+}
+
+/**
+ * Which of the two engines a route runs on (`models.ts` `Candidate` names
+ * the model, `engine.ts` `EngineName` the engine behind it): the strip's
+ * title says GPU or CPU off this, so a user looking at a translation can
+ * see which one they got.
+ */
+function engineFor(route: Route | null): EngineName | null {
+	if (!route) {
+		return null;
+	}
+
+	return route.candidate === "llm" ? "llm" : "seq2seq";
+}
+
+/**
+ * The language the user reads this channel in -- the channel's own panel
+ * setting, the global one only as the fallback for a channel whose reading
+ * is off. The reader decides the same way (`reader.ts`), and it has to be
+ * the same decision: a composer that read the global alone would take a
+ * draft it could not place as written in the write target whenever the
+ * panel read English while the global still named German, and ask for a
+ * translation from German into German -- which the model answers by handing
+ * the line back untranslated.
+ */
+function readingLanguage(network: ClientNetwork, channel: ClientChan): string {
+	return channelTranslation(network, channel).read ?? store.state.settings.translateTo;
 }
 
 /** In-flight translation and check per channel id. */
@@ -127,6 +156,8 @@ export async function translateOutgoing(
 			text: "",
 			from: null,
 			to,
+			engine: null,
+			model: null,
 			error: null,
 			check: {status: "idle", text: "", to: null},
 		},
@@ -176,7 +207,7 @@ export async function translateOutgoing(
 			return "plain";
 		}
 
-		const from = writeSource(detection, store.state.settings.translateTo, to);
+		const from = writeSource(detection, readingLanguage(network, channel), to);
 		const route = await translateService().route(from, to);
 		const context = buildContext(
 			channel,
@@ -206,7 +237,10 @@ export async function translateOutgoing(
 		);
 
 		if (current(channel, draft, controller)) {
-			store.commit("outgoingTranslationPatch", {chanId: channel.id, patch: {from}});
+			store.commit("outgoingTranslationPatch", {
+				chanId: channel.id,
+				patch: {from, engine: engineFor(route), model: route?.ref.id ?? null},
+			});
 		}
 
 		holdReading();
@@ -302,8 +336,12 @@ export function cancelOutgoing(channel: ClientChan): void {
 	}
 }
 
-export function canCheckOutgoing(entry: OutgoingTranslation): boolean {
-	return reverseTarget(store.state.settings.translateTo, entry.to) !== null;
+export function canCheckOutgoing(
+	network: ClientNetwork,
+	channel: ClientChan,
+	entry: OutgoingTranslation
+): boolean {
+	return reverseTarget(readingLanguage(network, channel), entry.to) !== null;
 }
 
 /** The round trip: the translation read back into the user's language, under the strip. */
@@ -314,7 +352,7 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 		return;
 	}
 
-	const target = reverseTarget(store.state.settings.translateTo, entry.to);
+	const target = reverseTarget(readingLanguage(network, channel), entry.to);
 
 	if (!target) {
 		return;

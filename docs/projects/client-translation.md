@@ -158,6 +158,17 @@ Plan 3 (composer):
   unless the verdict clears `WRITE_DETECT_MIN_GAP` (0.3): a live-test fix
   after a short English draft was misdetected as Italian and sent, and read
   back, in the wrong language.
+- **The composer's reading language is the channel's, and a fallback source
+  is never the target** — a live-test fix of 2026-09-12, after the strip
+  showed English drafts back as their own "translation". `writer.ts`
+  `readingLanguage` takes `channelTranslation(network, channel).read` with
+  the global setting only as the fallback, the way the reader does (the
+  read-back wave had the composer reading the global alone, so a channel
+  reading English with the global still on the write target asked for
+  German into German); and both of `writeSource`'s fallback branches leave
+  the source to the LLM rather than name the write target. `canCheckOutgoing`
+  takes the network and channel for it — it had no caller, so nothing else
+  moved.
 - The Check button and its Settings → Translation choice were removed on
   the user's direction: the round trip always runs, so there was nothing
   left to offer a choice about.

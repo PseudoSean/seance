@@ -118,6 +118,16 @@ describe("translate/outgoing", () => {
 			).to.equal("it");
 		});
 
+		// "From German into German" is a request the model answers by handing
+		// the line back, so where the reading language is the write target
+		// there is nothing to fall back to: the source is left to the LLM.
+		it("never falls back to the reading language when that is the target", () => {
+			expect(writeSource({lang: "en", confidence: 0.28}, "de", "de")).to.equal(null);
+			expect(writeSource({lang: "en", confidence: 0.28}, "en", "de")).to.equal("en");
+			expect(writeSource({lang: "it", confidence: 0.12}, "en", "de")).to.equal("en");
+			expect(writeSource({lang: "it", confidence: 0.4}, "de", "de")).to.equal("it");
+		});
+
 		it("targets the reading language, never the draft's detected language", () => {
 			expect(reverseTarget("en", "de")).to.equal("en");
 			expect(reverseTarget("de", "de")).to.equal(null);

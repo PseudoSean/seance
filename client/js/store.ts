@@ -64,6 +64,13 @@ export interface OutgoingTranslation {
 	text: string;
 	from: string | null;
 	to: string;
+	/**
+	 * The route that produced it (`writer.ts` `engineFor`): the strip's chip
+	 * names the model in its title and says whether it ran on the GPU. Both
+	 * null until the route has answered.
+	 */
+	engine: EngineName | null;
+	model: string | null;
 	error: string | null;
 	/** The round trip: idle until the translation is done, then it always runs. */
 	check: {status: "idle" | "pending" | "done" | "failed"; text: string; to: string | null};

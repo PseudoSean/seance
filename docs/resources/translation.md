@@ -212,6 +212,14 @@ the last `VOICE_LINES` (5) of this channel's own sent translations to this
 target, session-only, so the model's phrasing stays consistent across a
 conversation without ever touching persisted storage.
 
+The language the user reads in is the **channel's** -- the panel's `read`,
+with the global Settings -> Translation target only as the fallback for a
+channel whose reading is switched off (`writer.ts` `readingLanguage`). The
+reader decides it the same way, and it has to be the same decision: a
+composer that read the global alone would take a channel reading English
+while the global still named German as reading German, and ask for a draft
+to be translated from German into German.
+
 `writeSource` has two rules. A draft too short for the detector to place
 (`Detection.lang === null`) is taken as the user's reading language when
 that differs from the write target, else left to the LLM. A draft the
@@ -224,6 +232,15 @@ taken as the reading language instead. The same threshold gates the
 "already in the target" shortcut: a detector verdict that names the write
 target skips translation only when it is at least that sure, otherwise the
 draft still goes to the LLM under the reading-language source.
+
+**A fallback source is never the target.** Both fallback branches -- the
+unplaced draft and the weak differing verdict -- name the reading language
+only when it differs from the write target, and otherwise leave the source
+to the LLM (`null`). A request that says "from German into German" is one
+the model answers by handing the line back untranslated, which is exactly
+what the live test of 2026-09-12 saw. A draft the detector places in the
+target with a strong verdict never reaches this: the caller sends it as
+typed.
 
 The reading queues are held (`holdReading()`/`releaseReading()`) for the
 length of the request, and again for the round-trip check, so a write is
@@ -239,9 +256,12 @@ to send -- and given up after `WRITE_TIMEOUT_MS` (2 min).
 
 The result lives in `store.state.outgoingTranslations`, keyed by channel
 id, and `ChatInput.vue` renders it as the `.translate-bar` strip above the
-input: a "to German" chip, the streaming text with a caret, and icon
-buttons -- their words kept as the tooltip and accessible name, never as
-visible text -- for Copy (its tooltip reads "Copied" for two seconds after
+input: a "to German" chip -- whose `title` names the route the text came
+down, `<Source> -> <Target> · <model id> (GPU|CPU)`, from the `engine` and
+`model` the entry carries (both null, and no title, until the route has
+answered); "auto" stands in for a source left to the model -- the streaming
+text with a caret, and icon buttons -- their words kept as the tooltip and
+accessible name, never as visible text -- for Copy (its tooltip reads "Copied" for two seconds after
 it worked), Send (disabled while pending), and Edit. Both rows of the strip are
 `user-select: text`: the line the user is being asked to approve has to be
 selectable. A failure shows "couldn't translate, send as written?" -- followed by the
