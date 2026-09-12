@@ -316,6 +316,35 @@ through dawn. Sky, far hills, mid hills and ground all warm and cool together �
 interpolates ten palette keys across the cycle (night, first light, sunrise, morning, midday,
 afternoon, golden hour, sunset, dusk, night) and those are the values to port.
 
+### 11.2b The moon shows its real phase
+
+Approved 2026-09-12 against a live calculation in the mockup. The user asked whether accurate
+phases were possible; they are, and the local-clock hook (§11.1) already knows the date, so
+there is no new mechanism to build.
+
+**Use the true elongation, not the mean month.** Counting days since a known new moon and
+dividing by the mean synodic month of 29.530589 days is three lines, but a real lunation runs
+from about 29.27 to 29.83 days. Measured over the four years from 2026-09-12, that model drifts
+by up to **0.98 days of age and 10.2 points of illumination** — the difference between a fat
+crescent and a quarter, and wrong in a way anyone who looks out of a window can catch.
+
+The honest version is the moon's ecliptic longitude minus the sun's, with the six largest
+periodic terms in longitude (`6.2886 sin M′`, `1.2740 sin(2D − M′)`, `0.6583 sin 2D`,
+`0.2136 sin 2M′`, `−0.1851 sin M`, `−0.1143 sin 2F`). About twenty lines, no data to fetch, no
+network, accurate to minutes. Illuminated fraction is `(1 − cos D) / 2`.
+
+**Drawing a phase without arc-flag guesswork:** a dark disc, the near half filled light, then one
+ellipse of horizontal radius `R · |cos D|` — filled dark for a crescent, light for a gibbous —
+and the whole thing mirrored horizontally when waning. Exact at every phase, three shapes.
+
+**A new moon means no moon.** It is not a dark disc in the sky, it is an absent one, so those
+nights get a darker, starrier meadow with nothing on the arc. This falls out of the same number
+for free and is the nicest detail in the feature.
+
+Northern-hemisphere orientation is assumed (lit on the right while waxing). The moon keeps to
+the same night arc as the sun rather than its true rising time — being right about the phase is
+what a viewer can check; being right about moonrise is a rabbit hole with no visible payoff.
+
 ### 11.3 Night
 
 **A quieter meadow, with night creatures, and some creatures in both.** The user's call:
