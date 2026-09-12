@@ -2978,6 +2978,59 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	justify-content: space-between;
 }
 
+/* A newer build's service worker is waiting (Help.vue): one quiet strip,
+ * accent-edged like the composer's status bars, with a small solid Reload. */
+#help .update-banner {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin: 0 0 1rem;
+	padding: 0.5rem 0.75rem;
+	border-left: 3px solid var(--button-color);
+	border-radius: 0 3px 3px 0;
+	background: rgb(0 0 0 / 4%);
+}
+
+#help .update-banner-icon::before {
+	content: "\f0aa"; /* https://fontawesome.com/icons/arrow-circle-up?style=solid */
+	display: inline-block;
+	font: normal normal normal 1em/1 FontAwesome;
+	color: var(--button-color);
+}
+
+#help .update-banner-text {
+	flex: 1 1 auto;
+	min-width: 0;
+	font-weight: bold;
+}
+
+#help .update-banner-reload {
+	flex: 0 0 auto;
+	padding: 0.3em 1em;
+	border: 0;
+	border-radius: 3px;
+	background: var(--button-color);
+	color: var(--button-text-color-hover);
+	font: inherit;
+	font-size: 0.875rem;
+	font-weight: bold;
+	cursor: pointer;
+	transition: opacity 0.2s, box-shadow 0.2s;
+}
+
+#help .update-banner-reload:hover {
+	opacity: 0.85;
+}
+
+#help .update-banner-reload:focus-visible {
+	outline: 0;
+	box-shadow: 0 0 0 3px rgb(132 206 136 / 50%);
+}
+
+#help .update-banner-reload:active {
+	opacity: 0.7;
+}
+
 #help .help-item {
 	display: table-row;
 	font-size: 1rem;
