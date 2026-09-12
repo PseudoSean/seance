@@ -99,6 +99,16 @@
 				></span>
 				<span class="translate-bar-actions">
 					<button
+						v-if="outgoing.status === 'done'"
+						type="button"
+						class="translate-bar-button translate-bar-copy"
+						title="Copy the translation"
+						@mousedown.prevent
+						@click="copyOutgoing"
+					>
+						{{ copiedOutgoing ? "Copied" : "Copy" }}
+					</button>
+					<button
 						v-if="
 							outgoing.status === 'done' &&
 							outgoing.check.status === 'idle' &&
@@ -216,6 +226,7 @@ import Mousetrap from "mousetrap";
 import {wrapCursor} from "undate";
 import autocompletion from "../js/autocompletion";
 import {commands} from "../js/commands/index";
+import {writeClipboard} from "../js/clipboard";
 import socket from "../js/socket";
 import upload from "../js/upload";
 import eventbus from "../js/eventbus";
@@ -256,6 +267,9 @@ const ENTER_NEWLINE_WINDOW_MS = 500;
 
 /** Characters of a failure reason the strip shows; the title has all of it. */
 const REASON_MAX = 120;
+
+/** How long the strip's Copy button reads "Copied" after a successful copy. */
+const COPIED_LABEL_MS = 2000;
 import {TypingReporter} from "../js/helpers/typingReporter";
 import TypingIndicator from "./TypingIndicator.vue";
 
@@ -505,6 +519,37 @@ export default defineComponent({
 		};
 
 		const canCheck = computed(() => !!outgoing.value && canCheckOutgoing(outgoing.value));
+
+		// Copy: the translation is what the strip is showing, so it is what
+		// the button puts on the clipboard. The label says so for two
+		// seconds, since nothing else about the page changes.
+		const copiedOutgoing = ref(false);
+		let copiedTimer: number | null = null;
+
+		const copyOutgoing = () => {
+			const entry = outgoing.value;
+
+			if (!entry) {
+				return;
+			}
+
+			void writeClipboard(entry.text).then((copied) => {
+				if (!copied) {
+					return;
+				}
+
+				copiedOutgoing.value = true;
+
+				if (copiedTimer !== null) {
+					window.clearTimeout(copiedTimer);
+				}
+
+				copiedTimer = window.setTimeout(() => {
+					copiedOutgoing.value = false;
+					copiedTimer = null;
+				}, COPIED_LABEL_MS);
+			});
+		};
 
 		// Send waits for the translation, and for the automatic check.
 		const outgoingBusy = computed(() => {
@@ -1047,6 +1092,11 @@ export default defineComponent({
 				ticker = null;
 			}
 
+			if (copiedTimer !== null) {
+				window.clearTimeout(copiedTimer);
+				copiedTimer = null;
+			}
+
 			eventbus.off("escapekey", blurInput);
 			eventbus.off("input:focus", focusForTyping);
 
@@ -1095,6 +1145,8 @@ export default defineComponent({
 			sendTooltip,
 			cancelOutgoingNow,
 			checkOutgoingNow,
+			copiedOutgoing,
+			copyOutgoing,
 		};
 	},
 });

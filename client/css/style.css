@@ -516,6 +516,7 @@ p {
 #chat .connecting-indicator::before { content: "\f021"; /* https://fontawesome.com/icons/sync?style=solid */ }
 
 .context-menu-join::before { content: "\f067"; /* http://fontawesome.io/icon/plus/ */ }
+.context-menu-translate-copy::before { content: "\f0c5"; /* https://fontawesome.com/icons/copy?style=solid */ }
 .context-menu-translate-retry::before { content: "\f2f1"; /* https://fontawesome.com/icons/sync-alt?style=solid */ }
 .context-menu-translate-hide::before { content: "\f070"; /* https://fontawesome.com/icons/eye-slash?style=solid */ }
 .context-menu-user::before { content: "\f007"; /* http://fontawesome.io/icon/user/ */ }
@@ -4346,9 +4347,13 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	outline: 0;
 }
 
+/* `body` is `user-select: none` and only a few blocks opt back in, so the
+   translated copy of a line says so for itself: it is text to read, quote
+   and copy exactly like the original above it. */
 #chat .msg-translation-text {
 	flex: 1 1 auto;
 	min-width: 0;
+	user-select: text;
 }
 
 #chat .msg-translation-caret {
@@ -5060,11 +5065,15 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	white-space: nowrap;
 }
 
+/* Both rows of the strip: the translation about to be sent, and the
+   read-back under it. `body` is `user-select: none`, so without this the
+   line the user is being asked to approve cannot be selected or copied. */
 #form .translate-bar-text {
 	flex: 1 1 12rem;
 	min-width: 0;
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
+	user-select: text;
 }
 
 #form .translate-bar-caret {

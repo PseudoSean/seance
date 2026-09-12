@@ -11,12 +11,16 @@
 // translation panel opens on the globe's context menu with full language
 // names (never codes) and closes on Escape; a line carrying the fake's
 // `[fail]` marker fails once and its retry button succeeds the second
-// time; switching off stops new ones; and a REDACT of a translated line
-// takes its translation away with the original text.
+// time; a line carrying `*Betonung*` and the page's own nick keeps both
+// (the chip's menu offers Copy translation and the line is selectable); a
+// `draft/multiline` message is translated line by line rather than losing
+// all but its first; switching off stops new ones; and a REDACT of a
+// translated line takes its translation away with the original text.
 // Detection is real (franc); only the engine is scripted.
 //
 // The speaker negotiates message-tags + echo-message so it learns the
-// msgid the server gave its own line, and the run flips
+// msgid the server gave its own line, and batch + draft/multiline so it
+// can send one multi-line message; the run flips
 // CAP_draft_message_redaction on (the rig leaves it off, and without it
 // REDACT answers FAIL DISABLED and the page never offers the cap) and
 // back off at the end.
@@ -61,6 +65,8 @@ function speaker(nick) {
 	ws.onopen = () => {
 		// echo-message + message-tags: the echo of our own PRIVMSG carries
 		// the msgid REDACT needs (the live REDACT line itself has no tags).
+		// batch + draft/multiline: this speaker also sends one multi-line
+		// message, which the page joins into a single message.
 		ws.send("CAP LS 302");
 		ws.send(`NICK ${nick}`);
 		ws.send(`USER ${nick} 0 * :seance translation reader`);
@@ -72,7 +78,7 @@ function speaker(nick) {
 			ws.send(line.replace("PING", "PONG"));
 		} else if (/ CAP \S+ LS :/.test(line)) {
 			// The last LS line only: a continuation reads `LS * :…`.
-			ws.send("CAP REQ :message-tags echo-message");
+			ws.send("CAP REQ :message-tags echo-message batch draft/multiline");
 		} else if (/ CAP \S+ (ACK|NAK)/.test(line)) {
 			ws.send("CAP END");
 		} else if (/ 001 /.test(line)) {
@@ -96,6 +102,18 @@ function speaker(nick) {
 	return {
 		joined,
 		say: (text) => ws.send(`PRIVMSG ${CHANNEL} :${text}`),
+		/** One `draft/multiline` message: the page joins the batch's lines with newlines. */
+		sayMultiline(lines) {
+			const tag = `ml${Date.now().toString(36)}`;
+
+			ws.send(`BATCH +${tag} draft/multiline ${CHANNEL}`);
+
+			for (const line of lines) {
+				ws.send(`@batch=${tag} PRIVMSG ${CHANNEL} :${line}`);
+			}
+
+			ws.send(`BATCH -${tag}`);
+		},
 		msgidOf: (text) => msgids.get(text),
 		redact: (msgid) => ws.send(`REDACT ${CHANNEL} ${msgid} :tidying up`),
 		quit: () => ws.send("QUIT :done"),
@@ -215,11 +233,23 @@ async function scenario(page) {
 		);
 	}
 
-	// The chip's menu: hide one translation.
+	// The chip's menu: copy one translation, hide one translation.
 	await page.click(".msg-translation-chip");
 	await page.waitFor(`!!document.querySelector(".context-menu-translate-hide")`, {
 		label: "chip menu open",
 	});
+	await page.check(
+		"the chip's menu offers Copy translation first",
+		await page.evaluate(
+			`!!document.querySelector("#context-menu-item-0.context-menu-translate-copy")`
+		)
+	);
+	await page.check(
+		"the translated line is selectable",
+		(await page.evaluate(
+			`getComputedStyle(document.querySelector(".msg-translation-text")).userSelect`
+		)) === "text"
+	);
 	await page.click(".context-menu-translate-hide");
 	await page.waitFor(`${LINES} === 5`, {label: "one translation hidden"});
 
@@ -335,6 +365,84 @@ async function scenario(page) {
 	);
 	await page.check("the retry added exactly one done line", (await page.evaluate(LINES)) === 7);
 
+	// Markdown markers and the names in the channel are protected, never
+	// translated: the fake echoes what it was given, so the translated line
+	// still carries the emphasis (rendered, as in the original) and the
+	// page's own nick.
+	const emphasisMarker = `Betonungsprobe${RUN}`;
+
+	other.say(
+		`Hallo ${NICK}, das ist *Betonung* in der ${emphasisMarker} und danach folgt noch mehr Text.`
+	);
+
+	const emphasisRow = `[...document.querySelectorAll(".msg")].filter((m) => m.textContent.includes(${JSON.stringify(
+		emphasisMarker
+	)})).pop()`;
+
+	await page.waitFor(
+		`!!(${emphasisRow}) && !!(${emphasisRow}).querySelector('.msg-translation[data-status="done"]')`,
+		{timeout: 15000, label: "the emphasised line is translated"}
+	);
+	await page.check(
+		"the emphasis survived and renders as emphasis in the translation",
+		(await page.evaluate(
+			`((${emphasisRow}).querySelector(".msg-translation-text .irc-italic") || {}).textContent`
+		)) === "Betonung"
+	);
+	await page.check(
+		"the page's own nick came back untouched",
+		await page.evaluate(
+			`(${emphasisRow}).querySelector(".msg-translation-text").textContent.includes(${JSON.stringify(
+				NICK
+			)})`
+		)
+	);
+
+	// A draft/multiline message is one message with newlines in it: every
+	// line of it is translated, not just the first.
+	const multiMarker = `Mehrzeiler${RUN}`;
+	const multiLines = [
+		`Erste Zeile vom ${multiMarker} mit genügend Worten darin.`,
+		`Zweite Zeile vom ${multiMarker} und noch ein paar Worte mehr.`,
+		`Dritte Zeile vom ${multiMarker}, damit ist dann Schluss.`,
+	];
+
+	other.sayMultiline(multiLines);
+
+	const multiRow = `[...document.querySelectorAll(".msg")].filter((m) => m.textContent.includes(${JSON.stringify(
+		multiMarker
+	)})).pop()`;
+
+	await page.waitFor(`!!(${multiRow})`, {
+		timeout: 15000,
+		label: "the multi-line message arrived",
+	});
+	await page.check(
+		"the three lines arrived as one message",
+		await page.evaluate(
+			multiLines
+				.map((l) => `(${multiRow}).textContent.includes(${JSON.stringify(l)})`)
+				.join(" && ")
+		)
+	);
+	await page.waitFor(
+		`!!(${multiRow}) && !!(${multiRow}).querySelector('.msg-translation[data-status="done"]')`,
+		{timeout: 25000, label: "the multi-line message is translated"}
+	);
+
+	for (const line of multiLines) {
+		await page.check(
+			`the multi-line translation carries "${line.slice(0, 24)}…"`,
+			await page.evaluate(
+				`(${multiRow}).querySelector(".msg-translation-text").textContent.includes(${JSON.stringify(
+					`[English] ${line}`
+				)})`
+			)
+		);
+	}
+
+	await page.screenshot("translated-multiline");
+
 	// Off again: a new German line gets nothing.
 	await page.click(GLOBE);
 	await page.waitFor(
@@ -346,7 +454,7 @@ async function scenario(page) {
 		label: "post-switch line arrived",
 	});
 	await page.sleep(1500);
-	await page.check("no translation after switching off", (await page.evaluate(LINES)) === 7);
+	await page.check("no translation after switching off", (await page.evaluate(LINES)) === 9);
 
 	// A deleted message keeps neither its text nor its translation: the
 	// speaker redacts one of its own translated lines (an unauthenticated
@@ -385,7 +493,7 @@ async function scenario(page) {
 	);
 	await page.check(
 		"the redaction took exactly one translated line away",
-		(await page.evaluate(LINES)) === 6
+		(await page.evaluate(LINES)) === 8
 	);
 	await page.screenshot("redacted-translation");
 

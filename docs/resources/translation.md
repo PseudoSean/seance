@@ -44,10 +44,22 @@ renders as `TranslationLine.vue` under the original: a "from German"
 chip, the text streaming with a caret, a retry when it failed (with the
 engine's reason beside "couldn't translate" when there is one -- a model
 that would not load says so rather than leaving the tier looking broken); the chip's
-menu retranslates or hides the line, and the toolbar's Translate does one
+menu copies, retranslates or hides the line ("Copy translation" puts the
+translated text on the clipboard through `js/clipboard.ts`, the helper the
+message toolbar's Copy uses, and says nothing when the browser refuses),
+and the toolbar's Translate does one
 message on request in a channel that is off -- and brings a hidden
 translation back, at no cost, once the chip's "Show original only" has
-taken it away. An entry leaves when its message does: an edit or a REDACT
+taken it away. The translated line is `user-select: text` like the
+original above it -- `body` is `user-select: none`, so a block that is
+meant to be read and quoted has to say so.
+
+A message that arrived as `draft/multiline` is one message whose text
+carries newlines, and it goes through the composer's own `translateDraft`
+rather than the queue's single-line request: numbered lines to an LLM, one
+line at a time to a seq2seq engine, blank lines where they were, and never
+batched with the other lines of the channel. Without that the engine's cut
+kept the first line and the rest of the message was silently lost. An entry leaves when its message does: an edit or a REDACT
 drops it, and so do the message-limit trim, a part and a quit. The
 switch, the outgoing target (plan 3), formality, variant and the term
 memory are per channel under `thelounge.translate` (`channelStore.ts`);
@@ -98,9 +110,11 @@ to send -- and given up after `WRITE_TIMEOUT_MS` (2 min).
 
 The result lives in `store.state.outgoingTranslations`, keyed by channel
 id, and `ChatInput.vue` renders it as the `.translate-bar` strip above the
-input: a "to German" chip, the streaming text with a caret, a Check button
+input: a "to German" chip, the streaming text with a caret, a Copy button
+that reads "Copied" for two seconds after it worked, a Check button
 once the round trip has something to check, Send (disabled while pending),
-and Edit. A failure shows "couldn't translate, send as written?" -- followed by the
+and Edit. Both rows of the strip are `user-select: text`: the line the user
+is being asked to approve has to be selectable. A failure shows "couldn't translate, send as written?" -- followed by the
 engine's reason, truncated, with the whole of it in the title -- and turns
 Send into "Send as written". The second Enter is the same `input` bus emit
 as any other send (`deliver`, so history, replies and edits do not
@@ -124,6 +138,46 @@ The scenario's fake logs `purpose: "write"` (or `"read"` for the check) on
 every request, so a browser check can tell the composer's traffic from the
 reader's. Browser check: `tools/scenarios/translate-composer.mjs` (also
 `--mobile`).
+
+## Span protection
+
+Fidelity is the code's job, not the model's. `spans.ts` swaps everything
+the client itself treats as syntax for numbered placeholders (`⟦1⟧`) before
+any engine sees the text, and puts it back afterwards; both sides of the
+app go through it, and the composer's `translateDraft` protects the whole
+text **once**, before it splits it into lines, so a construct that spans
+lines is one span rather than a fragment per line.
+
+The stages run in order and a placeholder never matches a later pattern:
+fenced code blocks (` ``` `, closing fence at least as long, the block's
+inner newlines inside the span), then inline code, URLs, `www.` links,
+emoji shortcodes and IRC formatting codes, then Markdown links, then
+emphasis pairs (`**`, `__`, `~~`, `||`, then `*`, `_`, longest first, only
+same-line pairs and only where the usual emphasis rule holds -- `2*3*4` is
+arithmetic), then a line's leading syntax (`#` to `######`, `-`/`*`/`+`,
+`1.`/`1)`, `>` with nesting), then the channel's nicknames (whole word,
+case-insensitive, longest first, at least two characters, never inside an
+earlier placeholder). This is a conservative reading of the client's own
+grammar (`helpers/ircmessageparser/parseMarkdown.ts`); protecting a little
+more than the client renders is safe, because a span is put back byte for
+byte.
+
+Every span says what it is, and each kind has its own restore policy
+(`restoreAll`):
+
+- **verbatim** -- put back where the engine left it; appended after the
+  text when the engine lost it ("better shown late than lost").
+- **marker** -- one half of a pair. Lose either half and neither goes back,
+  so a translation never comes out with a stray `*` in it.
+- **prefix** -- a line's leading syntax. Lost, it is re-prepended to its
+  line (to its own line when the whole text is restored at once and the
+  line count held, otherwise to the front of the line being restored).
+
+A placeholder number the engine invented is dropped rather than shown, and
+a span nested inside another (a link's `](target)`, whose target the URL
+stage already claimed) travels with its parent and is never reported lost.
+A line that holds nothing but a placeholder -- a fenced block on its own --
+is put back rather than sent for translation at all.
 
 ## The worker
 

@@ -12,7 +12,11 @@
 // strip and keeps the draft; a draft carrying the fake's "[fail]" marker
 // gets the failure strip and Enter sends it as written; "/me" never
 // translates; a three-line draft translates as one numbered request and
-// ships as three lines; switching the target off restores plain sending.
+// ships as three lines; a draft carrying markdown, a nick, a URL and a code
+// span comes back with every one of them intact (the engine only ever saw
+// placeholders), the strip's Copy button reads "Copied" and its text is
+// selectable, a fenced code block is never sent for translation and comes
+// back byte for byte; switching the target off restores plain sending.
 // Detection is real (franc); only the engine is scripted.
 //
 //   corepack yarn build && python3 -m http.server -d public 8021 &
@@ -150,6 +154,9 @@ async function typeAndEnter(page, text) {
 export default async function run(page) {
 	const other = listener(LISTENER);
 
+	// The strip's Copy button goes through navigator.clipboard, which a
+	// headless page is not granted by default.
+	await page.grantPermissions(["clipboardReadWrite", "clipboardSanitizedWrite"], BASE);
 	await page.goto(page.url, {waitForSelector: "#connect form"});
 	await page.click('#connect button[type="submit"]');
 	await page.waitFor(`!!document.querySelector(${JSON.stringify(INPUT)})`, {
@@ -349,6 +356,72 @@ export default async function run(page) {
 			(await heard(other, `[German] line two ${RUN}`)) &&
 			(await heard(other, `[German] line three ${RUN}`))
 	);
+
+	// 9b. Markdown markers, a nick, a URL and a code span survive: the fake
+	// echoes its input, so what the strip shows is exactly what was
+	// protected and put back. A marker the engine never saw cannot be lost.
+	const fidelity = `Hello everyone, this is supposed to be in *German*. Ask ${LISTENER}. See https://example.org/x and \`code\``;
+
+	await page.fill(INPUT, "");
+	await typeAndEnter(page, fidelity);
+	await page.waitFor(`${barText} === ${JSON.stringify(`[German] ${fidelity}`)}`, {
+		timeout: 25000,
+		label: "the strip kept the markers, the nick, the URL and the code span",
+	});
+	await page.check(
+		"the engine never saw the marker, the nick, the URL or the code span",
+		!(await page.evaluate(`${REQUESTS}.slice(-1)[0].text`)).includes("*German*")
+	);
+	await page.screenshot("composer-markdown");
+
+	// The strip can be copied and selected.
+	await page.check(
+		"the strip offers a Copy button once the translation is done",
+		await page.evaluate(`!!document.querySelector(".translate-bar-copy")`)
+	);
+	await page.evaluate(`document.querySelector(".translate-bar-copy").click()`);
+	await page.waitFor(
+		`document.querySelector(".translate-bar-copy").textContent.trim() === "Copied"`,
+		{timeout: 5000, label: "the Copy button reads Copied"}
+	);
+	await page.check(
+		"the strip's text is selectable",
+		(await page.evaluate(
+			`getComputedStyle(document.querySelector(".translate-bar-text")).userSelect`
+		)) === "text"
+	);
+	await page.evaluate(key("Escape", 27));
+	await page.waitFor(`!document.querySelector(${JSON.stringify(BAR)})`, {
+		label: "the fidelity strip dismissed",
+	});
+
+	// 9c. A fenced code block is one span: it is never sent for translation
+	// and it comes back byte for byte, with the prose around it translated.
+	const fenced = [`first line ${RUN}`, "```", "x = 1", "```", `last line ${RUN}`].join("\n");
+	const fencedOut = [
+		`[German] first line ${RUN}`,
+		"```",
+		"x = 1",
+		"```",
+		`[German] last line ${RUN}`,
+	].join("\n");
+
+	await page.fill(INPUT, fenced);
+	await page.evaluate(`document.querySelector("#form").requestSubmit()`);
+	await page.waitFor(`${barText} === ${JSON.stringify(fencedOut)}`, {
+		timeout: 25000,
+		label: "the code block shipped verbatim, the prose around it translated",
+	});
+	await page.check(
+		"only the two prose lines went to the engine",
+		(await page.evaluate(`${REQUESTS}.slice(-1)[0].lines`)) === 2
+	);
+	await page.screenshot("composer-code-block");
+	await page.evaluate(key("Escape", 27));
+	await page.waitFor(`!document.querySelector(${JSON.stringify(BAR)})`, {
+		label: "the code-block strip dismissed",
+	});
+	await page.fill(INPUT, "");
 
 	// 10. Off again: plain sending.
 	await setWriteTarget(page, "");

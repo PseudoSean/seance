@@ -38,6 +38,7 @@
 
 <script lang="ts">
 import {computed, defineComponent, PropType} from "vue";
+import {writeClipboard} from "../js/clipboard";
 import eventbus from "../js/eventbus";
 import {useStore} from "../js/store";
 import {retranslate, retryTranslation, showOriginal} from "../js/translate/reader";
@@ -77,6 +78,16 @@ export default defineComponent({
 			eventbus.emit("contextmenu:items", {
 				event,
 				items: [
+					{
+						label: "Copy translation",
+						type: "item",
+						class: "translate-copy",
+						// Like the toolbar's Copy: nowhere to report a
+						// refused clipboard, so a failure is silent.
+						action() {
+							void writeClipboard(entry.value?.text ?? "");
+						},
+					},
 					{
 						label: "Retranslate",
 						type: "item",

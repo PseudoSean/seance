@@ -192,6 +192,46 @@ Fix wave after the first live test on a CPU-only device (2026-09-12):
   downloaded NLLB sat there, and the request then spent its two-minute
   deadline downloading.
 
+Fix wave after the first real-model test of fidelity (2026-09-12):
+
+- **Markdown markers are placeholders, not prose.** `*German*` came back
+  from a real model as `German`. Span protection now covers the client's
+  own markdown: an emphasis pair (`*`, `**`, `__`, `~~`, `||`) and a link's
+  `[` / `](target)` are a **marker pair**, the model translates between
+  them, and if it loses either half neither goes back — a lost marker never
+  leaves a stray `*` behind.
+- **Line prefixes are restored to their line.** A header, bullet, ordered
+  item or quote marker at a line start is its own kind of span; when the
+  engine drops it, it is re-prepended to the line rather than appended
+  after the text like a lost URL.
+- **Nicknames are protected.** The channel's names (whole word,
+  case-insensitive, longest first, at least two characters) are
+  placeholders too. They are still listed in the prompt as data, so the
+  model sees the placeholder and the name it stands for.
+- **A fenced code block is one span across its lines**, which means the
+  text has to be protected _before_ it is split: `translateDraft` now
+  protects the whole text once rather than a line at a time, and a line
+  holding nothing but a placeholder is put back rather than translated. The
+  spec had protection per request; one protection per message is what makes
+  a construct that spans lines survive, and it also gives every line of a
+  message one shared numbering.
+- **The link stage can nest.** URLs are protected before links, so a
+  link's closing `](⟦1⟧)` span carries a placeholder of its own; restore
+  resolves a span's own placeholders (one level, bounded) and never reports
+  a nested span as lost.
+- **A multi-line incoming message goes through the composer's line
+  logic.** The reading queue sent it as one single-line request and the
+  engine's cut kept only the first line. It now reuses `translateDraft`
+  (never batched with other lines, `purpose: "read"`, `batches` from the
+  route's engine), with the text arriving already protected. The work is
+  raced against the queue's abort the way `run()` races its iterator, so a
+  cancelled channel frees the engine at once.
+- **The translation can be copied and selected.** `body` is
+  `user-select: none`; `#chat .msg-translation-text` and
+  `#form .translate-bar-text` opt back in, the chip's menu gains a first
+  item "Copy translation", and the composer's strip gains a Copy button
+  that reads "Copied" for two seconds.
+
 ## Non-goals
 
 - No translation of the lobby, notices from the server, events (join, part,
