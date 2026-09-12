@@ -7,6 +7,8 @@
 //   node tools/heart/pose-sheet.mjs frog seq 0,2,4,6   # sequence times (seconds)
 //   node tools/heart/pose-sheet.mjs kitten self        # rasteriser self-check
 //   ... --out=tmp/x.png --scale=4 --cols=4
+//   ... --view=8,8,126,102   # crop, for a rig whose box is mostly empty sky
+//   ... --flat               # every layer one colour, the way -far.svg paints them
 //
 // This is the fast loop. `contact-sheet.mjs` photographs the shipped SVG through
 // a real browser and has to wait out the animation in real time — a twelve-cell
@@ -225,8 +227,13 @@ function flat(item) {
 const def = (await import(`./rigs/${name}.mjs`)).default;
 const {rig} = def;
 // every far outline in the lighter tint, the near one last and on top —
-// a rig may have any number of far groups (the ladybug has four)
-const fillsFor = (n) => [...Array(Math.max(0, n - 1)).fill("#a8c6a0"), "#7fb069"];
+// a rig may have any number of far groups (the ladybug has four). `--flat`
+// paints them all alike instead, which is what `<animal>-far.svg` does: a
+// pair of shapes told apart only by tint is told apart by nothing there, and
+// that is exactly where the ladybug read as a rabbit.
+const FLAT = args.includes("--flat");
+const fillsFor = (n) =>
+	FLAT ? Array(n).fill("#7fb069") : [...Array(Math.max(0, n - 1)).fill("#a8c6a0"), "#7fb069"];
 
 const poseOf = (p) => {
 	const v = {};
@@ -261,7 +268,12 @@ if (cmd === "poses") {
 	}
 }
 
-const view = {...rig.viewBox};
+// `--view=x,y,w,h` crops the render: a rig whose box is mostly empty sky (the
+// bird's is 800 units tall for 76 units of bird) is unreadable at its own box.
+const viewOpt = opt("view");
+const view = viewOpt
+	? (([x, y, w, h]) => ({x, y, w, h}))(viewOpt.split(",").map(Number))
+	: {...rig.viewBox};
 if (opt("fillet")) rig.fillet = Number(opt("fillet"));
 const cw = Math.round(view.w * SCALE);
 const ch = Math.round(view.h * SCALE);
