@@ -457,3 +457,41 @@ contrast floors in §3 apply unchanged.
 This also removes a cost. Every animal file a query would have fetched is no longer fetched
 there, and the fourteen-layer list (fifteen with the camp) does not have to hold for a surface
 that is not painting it.
+
+## 14. The teddy bear and the dolphin are held (2026-09-12)
+
+The user's call: _"let's put a hold on the teddy bear as an animal, since it can't move. and also
+put a hold on the dolphin. but birds are necessary."_
+
+The teddy's reason is a taste judgement worth writing down because it is not about the drawing:
+**a stuffed toy that walks itself reads wrong however well it is drawn.** That is a category
+problem, and it explains why the shipped bear never quite worked. It was already being redrawn
+side-on when this landed — two reviews had found it read as a front-facing icon gliding sideways
+— and that redraw was stopped mid-flight. Its unfinished rig is parked as a patch outside the
+repo; the committed rig is untouched.
+
+The dolphin is held on the same message, with no reason given. Its work stands: a clean audit at
+1.39 % near outline change, its own pond as `decor`, and a `stillDecor` mechanism it added to the
+generator that survives it.
+
+**The bird stays** — "birds are necessary" — which is fortunate, since it is the best animal in
+the cast.
+
+### What "held" means here
+
+- The **rigs stay** in `tools/heart/rigs/`, reviewed and buildable.
+  `node tools/heart/generate.mjs teddy` still works.
+- The **generated files are removed and are not regenerated**. `client/themes/heart/` is copied
+  into `public/` whole, so a file no scene casts is dead weight in every deploy — about 470 KB
+  between the two. `HELD` in `tools/heart/generate.mjs` lists them and says why; a full
+  regenerate prints the list and skips them.
+- `test/tools/heart/files.ts` marks both rows `held` and **asserts their files are absent**,
+  rather than skipping. Skipping would let a stray regenerate quietly put those bytes back into
+  every deploy.
+- To bring one back: add it to `ALL`, regenerate, cast it in a scene, and drop the `held` flag.
+
+### The cast is now eight
+
+horse, puppy, bunny, deer, kitten, frog, ladybug, bird. §6.4's table of ten stands as the
+design; two of its rows are simply not cast today. The ladybug still needs its redraw — it
+currently reads as a rabbit, and the cast already has one.
