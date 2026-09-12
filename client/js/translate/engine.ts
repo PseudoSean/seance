@@ -41,7 +41,12 @@ export interface PromptContext {
 	recent: ContextLine[];
 	replyTo?: ContextLine;
 	topic?: string;
-	/** The channel's dominant language when the detector was unsure. */
+	/**
+	 * The language the text is probably in when `from` is null: the
+	 * detector's weak verdict or the channel's dominant language. The LLM
+	 * is told it as a guess; a seq2seq route takes it as the source
+	 * (router.ts, service.ts), since that engine has no prompt to detect in.
+	 */
 	sourceHint?: string;
 	names: string[];
 	terms: [string, string][];

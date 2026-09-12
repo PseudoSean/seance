@@ -292,6 +292,61 @@ export interface OutgoingDeps {
 	): AsyncIterable<TranslateChunk>;
 	setTimeout(fn: () => void, ms: number): unknown;
 	clearTimeout(handle: unknown): void;
+	/**
+	 * A counter that moves while a model downloads (service.ts `loadTicks`).
+	 * Optional: without it a deadline is a plain timeout.
+	 */
+	loadTicks?(): number;
+}
+
+export interface Deadline {
+	clear(): void;
+}
+
+/**
+ * A request's deadline that waits out a model download: when `ms` has
+ * passed and the load counter has moved since the deadline was armed (the
+ * model this request waits for is downloading), it is armed again for
+ * another `ms` instead of expiring. A download that stalls stops the
+ * counter, and the next expiry fires. An NLLB download is ~620 MB, which
+ * two minutes do not cover on most links, and ruling C routes a weak
+ * language to it whether it is downloaded or not.
+ */
+export function armDeadline(
+	timers: Pick<OutgoingDeps, "setTimeout" | "clearTimeout" | "loadTicks">,
+	ms: number,
+	onExpire: () => void
+): Deadline {
+	let handle: unknown = null;
+	let ticks = timers.loadTicks?.() ?? 0;
+	let cleared = false;
+
+	const arm = () => {
+		handle = timers.setTimeout(() => {
+			if (cleared) {
+				return;
+			}
+
+			const now = timers.loadTicks?.() ?? 0;
+
+			if (now !== ticks) {
+				ticks = now;
+				arm();
+				return;
+			}
+
+			onExpire();
+		}, ms);
+	};
+
+	arm();
+
+	return {
+		clear() {
+			cleared = true;
+			timers.clearTimeout(handle);
+		},
+	};
 }
 
 export interface OutgoingRequest {
@@ -322,8 +377,30 @@ export interface OutgoingRequest {
 }
 
 /**
+ * The source hint a draft's request carries (`PromptContext.sourceHint`):
+ * the named source when there is one, else the detector's verdict however
+ * weak, unless that verdict is the target itself. A seq2seq route takes the
+ * hint as its source (router.ts), so a draft whose source is left to the
+ * LLM (`writeSource` returned null) can still reach NLLB or OPUS-MT.
+ */
+export function sourceHintFor(
+	detection: {lang: string | null},
+	source: string | null,
+	to: string
+): string | null {
+	if (source) {
+		return source;
+	}
+
+	return detection.lang && detection.lang !== to ? detection.lang : null;
+}
+
+/**
  * The second try for an answer that came back unchanged: the same draft,
- * the source left to the model, no context but the register.
+ * the source left to the model, no context but the register and the source
+ * hint. The hint stays because a seq2seq route takes it as its source: the
+ * retry goes down the same route, and without a hint that route would have
+ * no source at all.
  *
  * The bare request is the shape a model answers most reliably, and the two
  * things that make one hand a line back rather than translate it -- a
@@ -339,6 +416,10 @@ export function bareRetry(request: OutgoingRequest): OutgoingRequest {
 
 	if (request.context.variant) {
 		context.variant = request.context.variant;
+	}
+
+	if (request.context.sourceHint) {
+		context.sourceHint = request.context.sourceHint;
 	}
 
 	return {...request, from: null, context};
@@ -483,10 +564,12 @@ export async function translateDraft(
 
 	signal.addEventListener("abort", abort, {once: true});
 
-	const timer = deps.setTimeout(() => {
+	// Waits out a model download (armDeadline): the first draft in a weak
+	// language may be what downloads NLLB.
+	const timer = armDeadline(deps, WRITE_TIMEOUT_MS, () => {
 		timedOut = true;
 		controller.abort();
-	}, WRITE_TIMEOUT_MS);
+	});
 
 	// A stream that ended because of the timeout or the caller's abort ends
 	// normally (client.ts closes it at once), so the result is checked, not
@@ -615,7 +698,7 @@ export async function translateDraft(
 
 		throw e;
 	} finally {
-		deps.clearTimeout(timer);
+		timer.clear();
 		signal.removeEventListener("abort", abort);
 	}
 }

@@ -157,8 +157,10 @@ function queueFor(network: ClientNetwork): TranslateQueue {
 		const service = translateService();
 
 		queue = new TranslateQueue({
-			route: (from, to) => service.route(from, to).then((route) => route?.ref.engine ?? null),
+			route: (from, to, hint) =>
+				service.route(from, to, hint).then((route) => route?.ref.engine ?? null),
 			translate: (req, signal) => service.translate(req, signal),
+			loadTicks: () => service.loadTicks(),
 			priority(chanId) {
 				if (store.state.activeChannel?.channel.id === chanId) {
 					return 0;

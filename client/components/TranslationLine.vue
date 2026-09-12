@@ -42,6 +42,7 @@
 				:message="message"
 				:text="entry.text"
 			/>
+			<span v-if="download" class="msg-translation-download">{{ download }}</span>
 			<span
 				v-if="entry.status === 'pending'"
 				class="msg-translation-caret"
@@ -58,6 +59,7 @@ import eventbus from "../js/eventbus";
 import {useStore} from "../js/store";
 import {readingLanguage, retranslate, retryTranslation, showOriginal} from "../js/translate/reader";
 import {languageName} from "../js/translate/languages";
+import {downloadNote} from "../js/translate/service";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
 import ParsedMessage from "./ParsedMessage.vue";
 import SourceLanguagePicker from "./SourceLanguagePicker.vue";
@@ -97,6 +99,22 @@ export default defineComponent({
 		const chipLabel = computed(() =>
 			entry.value ? `${chipText.value}. Translation options` : ""
 		);
+
+		// Nothing streamed yet and a model of this line's engine downloading:
+		// the line is waiting for that download, and says so.
+		const download = computed(() => {
+			const value = entry.value;
+
+			if (!value || value.status !== "pending" || value.text || !value.engine) {
+				return "";
+			}
+
+			const view = store.state.translation.models.find(
+				(v) => v.status === "downloading" && v.ref.engine === value.engine
+			);
+
+			return view ? downloadNote(view) : "";
+		});
 
 		const chip = ref<HTMLButtonElement | null>(null);
 		const pickerOpen = ref(false);
@@ -179,6 +197,7 @@ export default defineComponent({
 			pickerOpen,
 			chipText,
 			chipLabel,
+			download,
 			openMenu,
 			pickSource,
 			retry,

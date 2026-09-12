@@ -93,7 +93,10 @@
 				>
 				<span v-else class="translate-bar-text" dir="auto" :lang="outgoing.to"
 					>{{ outgoing.text
-					}}<span
+					}}<span v-if="outgoingDownload" class="translate-bar-download">{{
+						outgoingDownload
+					}}</span
+					><span
 						v-if="outgoing.status === 'pending'"
 						class="translate-bar-caret"
 						aria-hidden="true"
@@ -252,6 +255,7 @@ import {hasVirtualKeyboard} from "../js/helpers/device";
 import {languageName} from "../js/translate/languages";
 import {draftGate} from "../js/translate/outgoing";
 import {readingLanguage} from "../js/translate/reader";
+import {downloadNote} from "../js/translate/service";
 import {
 	cancelOutgoing,
 	noteOutgoingSent,
@@ -548,6 +552,21 @@ export default defineComponent({
 			return `${from} → ${readerName(entry.to)} · ${entry.model} (${
 				entry.engine === "llm" ? "GPU" : "CPU"
 			})`;
+		});
+
+		// The route's model downloading for this draft (service.ts loads it on
+		// demand, and the deadline waits for it): the strip says so rather
+		// than blink a caret for minutes.
+		const outgoingDownload = computed(() => {
+			const entry = outgoing.value;
+
+			if (!entry || entry.status !== "pending" || entry.text || !entry.model) {
+				return "";
+			}
+
+			const view = store.state.translation.models.find((v) => v.ref.id === entry.model);
+
+			return view && view.status === "downloading" ? downloadNote(view) : "";
 		});
 
 		// Why it failed, beside "couldn't translate": an ORT session error or
@@ -1189,6 +1208,7 @@ export default defineComponent({
 			outgoingChip,
 			outgoingCheckLabel,
 			outgoingChipTitle,
+			outgoingDownload,
 			shortReason,
 			outgoingBusy,
 			sendTooltip,

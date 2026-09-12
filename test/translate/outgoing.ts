@@ -22,6 +22,7 @@ import {
 	isNarration,
 	isUnchanged,
 	reverseTarget,
+	sourceHintFor,
 	termPair,
 	translateDraft,
 	writeSource,
@@ -138,6 +139,15 @@ describe("translate/outgoing", () => {
 			// A weak verdict for the target itself (a strong one is sent as
 			// typed before this is asked) names no source either.
 			expect(writeSource({lang: "de", confidence: 0.2}, "de", "de")).to.equal(null);
+		});
+
+		it("sourceHintFor: the named source, else the detector's verdict unless it is the target", () => {
+			expect(sourceHintFor({lang: "tl"}, "en", "de")).to.equal("en");
+			// writeSource left the source to the LLM; a weak Filipino verdict is
+			// still what lets a seq2seq route take the draft.
+			expect(sourceHintFor({lang: "tl"}, null, "en")).to.equal("tl");
+			expect(sourceHintFor({lang: "en"}, null, "en")).to.equal(null);
+			expect(sourceHintFor({lang: null}, null, "en")).to.equal(null);
 		});
 
 		it("targets the reading language, never the draft's detected language", () => {
@@ -269,7 +279,7 @@ describe("translate/outgoing", () => {
 				},
 			});
 
-		it("leaves the source to the model and keeps nothing of the context but the register", () => {
+		it("leaves the source to the model and keeps nothing of the context but the register and the hint", () => {
 			const original = full();
 			const bare = bareRetry(original);
 
@@ -281,8 +291,10 @@ describe("translate/outgoing", () => {
 				voice: [],
 				formality: "formal",
 				variant: "de-AT",
+				// A seq2seq route takes the hint as its source: the retry goes
+				// down the same route, which without it would have no source.
+				sourceHint: "de",
 			});
-			expect(bare.context.sourceHint).to.equal(undefined);
 			expect(bare.context.topic).to.equal(undefined);
 			expect(bare.context.replyTo).to.equal(undefined);
 		});
@@ -542,6 +554,46 @@ describe("translate/outgoing", () => {
 			await r.clock.tickAsync(WRITE_TIMEOUT_MS + 1);
 			expect(await failed).to.equal(TIMED_OUT);
 			expect(r.signals[0].aborted).to.equal(true);
+		});
+
+		it("waits out a model download, and times out once the download stalls", async () => {
+			const r = rig(() => ["never"]);
+			let ticks = 0;
+			const never: OutgoingDeps = {
+				...r.deps,
+				loadTicks: () => ticks,
+				translate(_req, signal) {
+					r.signals.push(signal);
+
+					// eslint-disable-next-line require-yield -- ends only by abort or timeout, never yields
+					return (async function* (): AsyncIterable<TranslateChunk> {
+						await new Promise<void>((resolve) =>
+							signal.addEventListener("abort", () => resolve())
+						);
+					})();
+				},
+			};
+			let outcome: string | null = null;
+
+			void translateDraft(never, request(), new AbortController().signal, () => {}).catch(
+				(e: Error) => {
+					outcome = e.message;
+				}
+			);
+
+			for (let i = 0; i < 3; i++) {
+				ticks += 7;
+				await r.clock.tickAsync(WRITE_TIMEOUT_MS + 1);
+			}
+
+			expect(outcome).to.equal(null);
+			expect(r.signals[0].aborted).to.equal(false);
+
+			await r.clock.tickAsync(WRITE_TIMEOUT_MS + 1);
+
+			expect(outcome).to.equal(TIMED_OUT);
+			expect(r.signals[0].aborted).to.equal(true);
+			r.clock.restore();
 		});
 
 		it("reports the caller's abort as ABORTED and passes it down", async () => {

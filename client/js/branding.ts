@@ -198,8 +198,12 @@ export interface BrandingTranslation {
 	llm?: {model?: string; lib?: string};
 	/** The NLLB repo and OPUS-MT repos keyed "from-to". */
 	cpu?: {nllb?: string; opus?: Record<string, string>};
-	/** Route overrides: target → source (or "*") → ordered candidates. */
-	routes?: Record<string, Record<string, string[]>>;
+	/**
+	 * Route overrides: target → source (or "*") → quality classes, best
+	 * first. A string is a class of one (so a flat list is a strict order);
+	 * a nested list is a class of equivalent candidates (router.ts).
+	 */
+	routes?: Record<string, Record<string, (string | string[])[]>>;
 	/** Network vocabulary seeded into every channel's term memory. */
 	glossary?: [string, string][];
 	/** The reading target when the user has not chosen one; defaults to the browser language. */
@@ -596,25 +600,53 @@ function normalizeStrings(value: unknown): Record<string, string> {
 	return strings;
 }
 
-function normalizeRoutes(value: unknown): Record<string, Record<string, string[]>> | undefined {
+function normalizeRouteEntry(value: unknown): (string | string[])[] | undefined {
+	if (!Array.isArray(value)) {
+		return undefined;
+	}
+
+	const entry: (string | string[])[] = [];
+
+	for (const element of value) {
+		if (Array.isArray(element)) {
+			const group = normalizeStringList(element);
+
+			if (group) {
+				entry.push(group);
+			}
+		} else {
+			const candidate = optionalString(element);
+
+			if (candidate !== undefined) {
+				entry.push(candidate);
+			}
+		}
+	}
+
+	return entry.length > 0 ? entry : undefined;
+}
+
+function normalizeRoutes(
+	value: unknown
+): Record<string, Record<string, (string | string[])[]>> | undefined {
 	if (!isRecord(value)) {
 		return undefined;
 	}
 
-	const routes: Record<string, Record<string, string[]>> = {};
+	const routes: Record<string, Record<string, (string | string[])[]>> = {};
 
 	for (const [to, sources] of Object.entries(value)) {
 		if (!isRecord(sources)) {
 			continue;
 		}
 
-		const forTarget: Record<string, string[]> = {};
+		const forTarget: Record<string, (string | string[])[]> = {};
 
 		for (const [from, candidates] of Object.entries(sources)) {
-			const list = normalizeStringList(candidates);
+			const entry = normalizeRouteEntry(candidates);
 
-			if (list && list.length > 0) {
-				forTarget[from] = list;
+			if (entry) {
+				forTarget[from] = entry;
 			}
 		}
 

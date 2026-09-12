@@ -1,20 +1,40 @@
 // The router (spec § router.ts): a table keyed by target language, then
-// source, each entry an ordered list of candidates. `resolveRoute` returns
-// the first candidate the device tier allows (an `llm` candidate is
+// source, each entry the candidates in **quality classes**, best class
+// first. `resolveRoute` walks the classes in order and takes the first
+// class with a candidate the device tier allows (an `llm` candidate is
 // skipped, never failed, below the gpu tier), the user's engine settings
 // allow, the catalog has a model for, and that is not marked down for the
-// session. A seq2seq candidate needs a known source language; the LLM
-// detects it itself.
+// session. Inside that class a candidate whose model is already downloaded
+// wins over the class's own order; a better class is never skipped for a
+// downloaded model in a worse one: its model is downloaded on demand
+// instead (service.ts). A seq2seq candidate needs a source language: the
+// request's `from`, or failing that its source hint.
 
 import {Tier} from "./capability";
 import {ModelRef} from "./engine";
 import {Candidate, ModelCatalog, refFor} from "./models";
 
-/** to → (from | "*") → candidates, with "*" → "*" as the last resort. */
-export type RouteTable = Record<string, Record<string, Candidate[]>>;
+/**
+ * One table entry: its elements are quality classes, best first. A bare
+ * candidate is a class of one, so a flat list (`["llm", "nllb"]`, the
+ * shape every deploy override had) is a strict order, and a nested list
+ * (`[["llm", "opus:de-en"], "nllb"]`) makes its candidates equivalent: the
+ * downloaded one is preferred, the list's order breaks the tie.
+ */
+export type RouteEntry = (Candidate | Candidate[])[];
+
+/** to → (from | "*") → classes; "*" → from and "*" → "*" behind a target's own rows. */
+export type RouteTable = Record<string, Record<string, RouteEntry>>;
 
 export interface RouteInput {
 	from: string | null;
+	/**
+	 * The language the caller's detector placed the text in when the verdict
+	 * was too weak to name as `from` (`PromptContext.sourceHint`). It picks
+	 * the table row when `from` is null, and lets a seq2seq candidate run
+	 * with it as its source; the LLM request keeps `from: null`.
+	 */
+	hint: string | null;
 	to: string;
 	tier: Tier;
 	allowLlm: boolean;
@@ -22,7 +42,7 @@ export interface RouteInput {
 	down: ReadonlySet<Candidate>;
 	/**
 	 * Is this model already downloaded? Optional: without it every candidate
-	 * counts as unknown and the order is the table's own.
+	 * counts as unknown and each class's order is the table's own.
 	 */
 	cached?: (ref: ModelRef) => boolean;
 }
@@ -32,20 +52,29 @@ export interface Route {
 	ref: ModelRef;
 }
 
-export function candidatesFor(table: RouteTable, from: string | null, to: string): Candidate[] {
+/** An entry's classes, each a non-empty list of candidates. */
+export function classesOf(entry: RouteEntry): Candidate[][] {
+	return entry
+		.map((element) => (Array.isArray(element) ? [...element] : [element]))
+		.filter((group) => group.length > 0);
+}
+
+/**
+ * The classes for a pair: the target's row for the source, the target's
+ * wildcard, the wildcard target's row for the source, then the global
+ * wildcard.
+ */
+export function candidatesFor(table: RouteTable, from: string | null, to: string): Candidate[][] {
 	const forTarget = table[to];
+	const anyTarget = table["*"];
+	const entry =
+		(from ? forTarget?.[from] : undefined) ??
+		forTarget?.["*"] ??
+		(from ? anyTarget?.[from] : undefined) ??
+		anyTarget?.["*"] ??
+		[];
 
-	if (forTarget) {
-		if (from && forTarget[from]) {
-			return forTarget[from];
-		}
-
-		if (forTarget["*"]) {
-			return forTarget["*"];
-		}
-	}
-
-	return table["*"]?.["*"] ?? [];
+	return classesOf(entry);
 }
 
 export function resolveRoute(
@@ -57,40 +86,45 @@ export function resolveRoute(
 		return null;
 	}
 
-	// A model that is already downloaded wins over one that is not, whatever
-	// the table's order: the alternative is a request sitting inside its
-	// two-minute deadline waiting for a download while a model that could
-	// have answered it at once is on the device. Preference only — with
-	// nothing cached (or no way to ask) the first allowed candidate stands.
-	let first: Route | null = null;
+	const source = input.from ?? input.hint;
 
-	for (const candidate of candidatesFor(table, input.from, input.to)) {
-		if (input.down.has(candidate)) {
-			continue;
-		}
+	for (const group of candidatesFor(table, source, input.to)) {
+		let first: Route | null = null;
 
-		if (candidate === "llm") {
-			if (input.tier !== "gpu" || !input.allowLlm) {
+		for (const candidate of group) {
+			if (input.down.has(candidate)) {
 				continue;
 			}
-		} else if (!input.allowCpu || input.from === null) {
-			continue;
+
+			if (candidate === "llm") {
+				if (input.tier !== "gpu" || !input.allowLlm) {
+					continue;
+				}
+			} else if (!input.allowCpu || source === null) {
+				continue;
+			}
+
+			const ref = refFor(catalog, candidate);
+
+			if (!ref) {
+				continue;
+			}
+
+			// Preference inside the class only: an equivalent model already on
+			// the device answers at once instead of waiting for a download.
+			if (input.cached?.(ref)) {
+				return {candidate, ref};
+			}
+
+			first = first ?? {candidate, ref};
 		}
 
-		const ref = refFor(catalog, candidate);
-
-		if (!ref) {
-			continue;
+		if (first) {
+			return first;
 		}
-
-		if (input.cached?.(ref)) {
-			return {candidate, ref};
-		}
-
-		first = first ?? {candidate, ref};
 	}
 
-	return first;
+	return null;
 }
 
 /** A deploy's `translation.routes` over the shipped table, one entry at a time. */

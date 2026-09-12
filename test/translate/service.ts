@@ -4,12 +4,14 @@ import type {Capability} from "../../client/js/translate/capability";
 import {emptyContext} from "../../client/js/translate/engine";
 import {buildCatalog, type CacheApi} from "../../client/js/translate/models";
 import {createPortPair} from "../../client/js/translate/protocol";
+import type {RouteTable} from "../../client/js/translate/router";
 import {DEFAULT_ROUTES} from "../../client/js/translate/routes.default";
 import {TranslateClient, WORKER_DISPOSED} from "../../client/js/translate/client";
 import {
 	IDLE_UNLOAD_MS,
 	TRANSLATION_UNAVAILABLE,
 	TranslateService,
+	downloadNote,
 	type ServiceDeps,
 } from "../../client/js/translate/service";
 import {serveEngines} from "../../client/js/translate/worker";
@@ -28,7 +30,11 @@ function capability(tier: Capability["tier"]): Capability {
 	};
 }
 
-function rig(tier: Capability["tier"] = "gpu", enabled = true) {
+function rig(
+	tier: Capability["tier"] = "gpu",
+	enabled = true,
+	routes: RouteTable = DEFAULT_ROUTES
+) {
 	const clock = sinon.useFakeTimers();
 	const workers: {terminated: boolean}[] = [];
 	const cached = new Set<string>();
@@ -98,7 +104,7 @@ function rig(tier: Capability["tier"] = "gpu", enabled = true) {
 	};
 	const service = new TranslateService(
 		deps,
-		{catalog, routes: DEFAULT_ROUTES, ortBase: "https://app.test/js/ort/", enabled},
+		{catalog, routes, ortBase: "https://app.test/js/ort/", enabled},
 		{llm: true, cpu: true}
 	);
 
@@ -161,6 +167,85 @@ describe("translate/service", () => {
 		expect((await cpu.service.route("de", "en"))?.candidate).to.equal("opus:de-en");
 		expect(await text(cpu.service.translate(base))).to.equal("seq:Hallo");
 		cpu.service.dispose();
+	});
+
+	it("a seq2seq route takes the source hint as its source; the LLM keeps from: null", async () => {
+		const hinted = {...base, from: null, context: {...emptyContext(), sourceHint: "de"}};
+		const cpu = rig("cpu");
+		clock = cpu.clock;
+
+		expect((await cpu.service.route(null, "en", "de"))?.candidate).to.equal("opus:de-en");
+		expect(await text(cpu.service.translate(hinted))).to.equal("seq:Hallo");
+		expect(cpu.seq2seq.calls.translate[0].from).to.equal("de");
+		cpu.service.dispose();
+		cpu.clock.restore();
+
+		const gpu = rig("gpu");
+		clock = gpu.clock;
+
+		expect(await text(gpu.service.translate(hinted))).to.equal("llm:Hallo");
+		expect(gpu.llm.calls.translate[0].from).to.equal(null);
+		gpu.service.dispose();
+	});
+
+	it("the first route knows what is downloaded without Settings having asked", async () => {
+		const r = rig("gpu", true, {en: {de: [["llm", "opus:de-en"]]}});
+		clock = r.clock;
+		r.cached.add(catalog.opus["de-en"].id);
+
+		expect((await r.service.route("de", "en"))?.candidate).to.equal("opus:de-en");
+		r.service.dispose();
+	});
+
+	it("a better class is downloaded on demand rather than skipped for a downloaded worse one", async () => {
+		const r = rig("gpu", true, {en: {sw: ["nllb", "llm"]}});
+		clock = r.clock;
+		r.cached.add(catalog.llm.id);
+		const seen: string[] = [];
+
+		r.service.onModels((views) => {
+			const nllb = views.find((v) => v.ref.id === catalog.nllb.id);
+
+			if (nllb) {
+				seen.push(nllb.status);
+			}
+		});
+
+		const ticks = r.service.loadTicks();
+
+		expect(await text(r.service.translate({...base, from: "sw"}))).to.equal("seq:Hallo");
+		expect(r.seq2seq.calls.load.map((ref) => ref.id)).to.deep.equal([catalog.nllb.id]);
+		expect(r.llm.calls.load).to.deep.equal([]);
+		expect(seen).to.include("downloading");
+		// The deadlines of the queue and the composer watch this counter.
+		expect(r.service.loadTicks()).to.be.greaterThan(ticks);
+		r.service.dispose();
+	});
+
+	it("a better class whose download fails falls to the next class, the reason kept", async () => {
+		const r = rig("gpu", true, {en: {sw: ["nllb", "llm"]}});
+		clock = r.clock;
+		r.seq2seq.failLoad = new Error("quota exceeded");
+
+		expect(await text(r.service.translate({...base, from: "sw"}))).to.equal("llm:Hallo");
+		expect((await r.service.route("sw", "en"))?.candidate).to.equal("llm");
+
+		const views = await r.service.models();
+
+		expect(views.find((v) => v.ref.id === catalog.nllb.id)?.error).to.equal("quota exceeded");
+		r.service.dispose();
+	});
+
+	it("downloadNote names the model and how far its download has got", () => {
+		expect(
+			downloadNote({
+				ref: catalog.nllb,
+				cached: false,
+				status: "downloading",
+				fraction: 0.424,
+				error: null,
+			})
+		).to.equal("Downloading NLLB-200 600M (CPU, 200 languages)\u2026 42%");
 	});
 
 	it("marks a candidate down when its model fails to load and takes the next", async () => {

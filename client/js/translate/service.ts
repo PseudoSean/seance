@@ -43,6 +43,11 @@ export interface ModelView {
 	error: string | null;
 }
 
+/** What a strip or a reading line says while its model downloads. */
+export function downloadNote(view: ModelView): string {
+	return `Downloading ${view.ref.label}… ${Math.round(view.fraction * 100)}%`;
+}
+
 export class TranslateService {
 	private worker: {client: TranslateClient; terminate(): void} | null = null;
 	private capability: Promise<Capability> | null = null;
@@ -55,6 +60,10 @@ export class TranslateService {
 	private workerErrorListeners = new Set<(message: string) => void>();
 	private generation = 0;
 	private disposed = false;
+	/** Once per service: which models are downloaded, for the router's in-class preference. */
+	private cacheKnown: Promise<void> | null = null;
+	/** Moves on every download progress event (`loadTicks`). */
+	private ticks = 0;
 
 	constructor(
 		private deps: ServiceDeps,
@@ -91,15 +100,31 @@ export class TranslateService {
 		this.settings = settings;
 	}
 
-	async route(from: string | null, to: string): Promise<Route | null> {
+	/**
+	 * The route for a pair. `hint` is the request's source hint: it picks the
+	 * table row when `from` is null and lets a seq2seq candidate run with it
+	 * as the source (router.ts). The first call asks the worker what is
+	 * downloaded, once: without that every model counts as absent until
+	 * Settings is opened, and the router could not prefer a downloaded one.
+	 */
+	async route(
+		from: string | null,
+		to: string,
+		hint: string | null = null
+	): Promise<Route | null> {
 		if (!this.options.enabled) {
 			return null;
 		}
 
 		const capability = await this.capabilities();
 
+		if (capability.tier !== "none") {
+			await this.primeCache();
+		}
+
 		return resolveRoute(this.options.routes, this.options.catalog, {
 			from,
+			hint,
 			to,
 			tier: capability.tier,
 			allowLlm: this.settings.llm,
@@ -109,7 +134,24 @@ export class TranslateService {
 		});
 	}
 
-	/** Tries the candidates in route order; a candidate that fails is down for the session. */
+	/**
+	 * A counter that moves on every download progress event, of any model.
+	 * The reading queue and the composer re-arm a request deadline that runs
+	 * out while it is still moving (outgoing.ts `armDeadline`): the router
+	 * sends a request to the best class whether its model is downloaded or
+	 * not, and a request waiting for a 620 MB download must not time out
+	 * while the download progresses.
+	 */
+	loadTicks(): number {
+		return this.ticks;
+	}
+
+	/**
+	 * Tries the candidates in route order; a candidate that fails is down for
+	 * the session. A model that is not downloaded is downloaded here, its
+	 * progress on the model views; one that fails to download is down, and
+	 * the next class takes the request with the reason kept for the error.
+	 */
 	async *translate(
 		request: Omit<TranslateRequest, "id" | "model">,
 		signal?: AbortSignal
@@ -134,6 +176,12 @@ export class TranslateService {
 		// which would otherwise register another listener on the caller's
 		// signal every time, each closing over an id already abandoned.
 		let currentId = 0;
+		const hint = request.context.sourceHint ?? null;
+		// A teardown (pagehide, unload all) while the route was still being
+		// resolved -- the first route asks the worker what is downloaded --
+		// ends this call like one during the translation itself, rather than
+		// creating a new worker to carry on.
+		const startGeneration = this.generation;
 
 		const onAbort = () => {
 			if (currentId) {
@@ -145,7 +193,11 @@ export class TranslateService {
 
 		try {
 			for (;;) {
-				const route = await this.route(request.from, request.to);
+				const route = await this.route(request.from, request.to, hint);
+
+				if (this.generation !== startGeneration) {
+					throw new Error(WORKER_DISPOSED);
+				}
 
 				if (!route) {
 					throw new Error(
@@ -158,7 +210,10 @@ export class TranslateService {
 				const client = this.client();
 				const gen = this.generation;
 				const id = this.nextId++;
-				const req: TranslateRequest = {...request, id, model: route.ref.id};
+				// A seq2seq model has no prompt to detect a source in: it takes
+				// the hint as its source. The LLM keeps `from: null`.
+				const from = request.from ?? (route.ref.engine === "seq2seq" ? hint : null);
+				const req: TranslateRequest = {...request, from, id, model: route.ref.id};
 				const view = this.view(route.ref);
 				let yielded = false;
 
@@ -170,6 +225,7 @@ export class TranslateService {
 						req,
 						route.ref,
 						(progress: LoadProgress) => {
+							this.ticks++;
 							view.status = "downloading";
 							view.fraction = progress.fraction;
 							this.publish();
@@ -281,6 +337,23 @@ export class TranslateService {
 		}
 	}
 
+	private primeCache(): Promise<void> {
+		if (!this.cacheKnown) {
+			this.cacheKnown = this.models().then(
+				() => undefined,
+				(e: unknown) => {
+					// Torn down mid-question: ask again next time. Any other
+					// failure is left alone, and every model counts as absent.
+					if (e instanceof Error && e.message === WORKER_DISPOSED) {
+						this.cacheKnown = null;
+					}
+				}
+			);
+		}
+
+		return this.cacheKnown;
+	}
+
 	/** The listener is called at once with what the rows look like now. */
 	onModels(listener: (views: ModelView[]) => void): () => void {
 		this.listeners.add(listener);
@@ -308,6 +381,7 @@ export class TranslateService {
 
 		try {
 			await this.client().load(ref, (progress: LoadProgress) => {
+				this.ticks++;
 				view.fraction = progress.fraction;
 				this.publish();
 			});

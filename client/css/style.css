@@ -4771,6 +4771,12 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	font-style: italic;
 }
 
+/* A model downloading for this line (TranslationLine.vue). */
+#chat .msg-translation-download {
+	color: var(--body-color-muted);
+	font-style: italic;
+}
+
 /* Why it failed, from the engine: an ORT session error or a model id, so it
    is long, it is not prose, and it must not push the retry button off the
    row. `anywhere` lets it break mid-token; the title has the untruncated
@@ -5494,7 +5500,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	}
 }
 
-#form .translate-bar-failed {
+#form .translate-bar-failed,
+#form .translate-bar-download {
 	color: var(--body-color-muted);
 	font-style: italic;
 }

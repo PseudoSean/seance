@@ -28,7 +28,7 @@ function rig(script: Script = (req) => [`[en] ${req.lines ? req.lines.join(" | "
 	const arrivals = new Map<number, number>();
 	let engineFor: (from: string | null, to: string) => "llm" | "seq2seq" | null = () => "llm";
 	const deps: QueueDeps = {
-		route: (from, to) => Promise.resolve(engineFor(from, to)),
+		route: (from, to, _hint) => Promise.resolve(engineFor(from, to)),
 		translate(req, _signal) {
 			requests.push(req);
 			return (async function* (): AsyncIterable<TranslateChunk> {
@@ -634,19 +634,22 @@ describe("translate/queue", () => {
 	it("an item with an unknown source routes and translates with from: null", async () => {
 		const r = rig();
 		clock = r.clock;
-		const routedWith: (string | null)[] = [];
+		const routedWith: [string | null, string | null][] = [];
 		// eslint-disable-next-line @typescript-eslint/unbound-method
 		const originalRoute = r.deps.route;
 
-		r.deps.route = (from, to) => {
-			routedWith.push(from);
-			return originalRoute(from, to);
+		r.deps.route = (from, to, hint) => {
+			routedWith.push([from, hint]);
+			return originalRoute(from, to, hint);
 		};
 
-		r.queue.enqueue(item(1, "bonjour", {from: null}));
+		r.queue.enqueue(
+			item(1, "bonjour", {from: null, context: {...emptyContext(), sourceHint: "fr"}})
+		);
 		await settle(r.clock);
 
-		expect(routedWith).to.deep.equal([null]);
+		// The hint goes to the router, which may send a seq2seq request with it.
+		expect(routedWith).to.deep.equal([[null, "fr"]]);
 		expect(r.requests[0].from).to.equal(null);
 		expect(r.updates.filter(([, u]) => u.status === "done").length).to.equal(1);
 	});
@@ -740,6 +743,40 @@ describe("translate/queue", () => {
 		expect(
 			r.updates.find(([id, u]) => id === 1 && u.status === "failed")?.[1] as {error: string}
 		).to.deep.include({error: "timed out"});
+	});
+
+	it("the deadline waits while a model downloads and fires once the download stalls", async () => {
+		const r = rig();
+		clock = r.clock;
+		let ticks = 0;
+
+		r.deps.loadTicks = () => ticks;
+		r.deps.translate = (_req, _signal) =>
+			(async function* () {
+				await new Promise<void>(() => {});
+				yield {id: 0, text: "never", done: true};
+			})();
+		r.queue.enqueue(item(1, "eins zwei drei", {single: true}));
+		await settle(r.clock, 3);
+
+		// Three deadlines' worth of download progress: never timed out.
+		for (let i = 0; i < 3; i++) {
+			ticks += 5;
+			await clock.tickAsync(REQUEST_TIMEOUT_MS);
+		}
+
+		expect(r.updates.filter(([id]) => id === 1).map(([, u]) => u.status)).to.deep.equal([
+			"pending",
+		]);
+
+		// The download stalls: one more deadline and the line fails.
+		await clock.tickAsync(REQUEST_TIMEOUT_MS);
+		await settle(r.clock);
+
+		expect(r.updates.filter(([id]) => id === 1).map(([, u]) => u.status)).to.deep.equal([
+			"pending",
+			"failed",
+		]);
 	});
 
 	it("cancelChannel aborts the signal the queue handed to deps.translate", async () => {

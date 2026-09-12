@@ -21,6 +21,7 @@ import {
 	NARRATION,
 	type OutgoingDeps,
 	UNCHANGED,
+	armDeadline,
 	hasNoLetters,
 	isNarration,
 	isUnchanged,
@@ -74,7 +75,8 @@ export type QueueUpdate =
 	| {status: "dropped"};
 
 export interface QueueDeps {
-	route(from: string | null, to: string): Promise<EngineName | null>;
+	/** `hint` is the item's `context.sourceHint`: a seq2seq route takes it as the source. */
+	route(from: string | null, to: string, hint: string | null): Promise<EngineName | null>;
 	translate(
 		req: Omit<TranslateRequest, "id" | "model">,
 		signal: AbortSignal
@@ -85,6 +87,12 @@ export interface QueueDeps {
 	arrivals(chanId: number): number;
 	onUpdate(id: number, update: QueueUpdate): void;
 	onPause(engine: EngineName, message: string): void;
+	/**
+	 * A counter that moves while a model downloads (service.ts `loadTicks`):
+	 * the request deadline is re-armed while it moves (outgoing.ts
+	 * `armDeadline`). Optional: without it the deadline is a plain timeout.
+	 */
+	loadTicks?(): number;
 }
 
 interface Queued {
@@ -236,7 +244,7 @@ export class TranslateQueue {
 		const generation = this.generation(item.chanId);
 		const globalGeneration = this.globalGeneration;
 
-		void this.deps.route(item.from, item.to).then(
+		void this.deps.route(item.from, item.to, item.context.sourceHint ?? null).then(
 			(engine) => {
 				if (
 					this.generation(item.chanId) !== generation ||
@@ -437,10 +445,10 @@ export class TranslateQueue {
 			this.deps.onUpdate(q.item.id, {status: "pending", text: "", engine});
 		}
 
-		const timer = setTimeout(() => {
+		const timer = armDeadline(this.timers(), REQUEST_TIMEOUT_MS, () => {
 			timedOut = true;
 			running.abort();
-		}, REQUEST_TIMEOUT_MS);
+		});
 
 		try {
 			let last = "";
@@ -510,7 +518,7 @@ export class TranslateQueue {
 		} catch (e) {
 			this.fail(engine, batch, e instanceof Error ? e.message : String(e));
 		} finally {
-			clearTimeout(timer);
+			timer.clear();
 			this.inFlight.delete(engine);
 			this.pump();
 		}
@@ -555,15 +563,16 @@ export class TranslateQueue {
 			translate: (req, signal) => this.deps.translate(req, signal),
 			setTimeout: (fn, ms) => setTimeout(fn, ms),
 			clearTimeout: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+			loadTicks: () => this.deps.loadTicks?.() ?? 0,
 		};
 
 		this.inFlight.set(engine, running);
 		this.deps.onUpdate(item.id, {status: "pending", text: "", engine});
 
-		const timer = setTimeout(() => {
+		const timer = armDeadline(this.timers(), REQUEST_TIMEOUT_MS, () => {
 			timedOut = true;
 			running.abort();
-		}, REQUEST_TIMEOUT_MS);
+		});
 
 		try {
 			const work = translateDraft(
@@ -617,7 +626,7 @@ export class TranslateQueue {
 				this.fail(engine, [queued], message);
 			}
 		} finally {
-			clearTimeout(timer);
+			timer.clear();
 			this.inFlight.delete(engine);
 			this.pump();
 		}
@@ -655,6 +664,15 @@ export class TranslateQueue {
 		}
 
 		this.deps.onUpdate(q.item.id, {status: "done", text, engine});
+	}
+
+	/** The request deadline's timers: the page's own, and the service's load counter. */
+	private timers(): Pick<OutgoingDeps, "setTimeout" | "clearTimeout" | "loadTicks"> {
+		return {
+			setTimeout: (fn, ms) => setTimeout(fn, ms),
+			clearTimeout: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+			loadTicks: () => this.deps.loadTicks?.() ?? 0,
+		};
 	}
 
 	private fail(engine: EngineName, batch: Queued[], message: string): void {

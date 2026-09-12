@@ -485,6 +485,20 @@ describe("branding", function () {
 			});
 		});
 
+		it("keeps a route's quality classes and drops what is not a candidate", function () {
+			const config = normalizeBranding({
+				translation: {
+					routes: {
+						en: {de: [["llm", "opus:de-en", 7], "nllb", [], [3]], sw: ["nllb", "llm"]},
+					},
+				},
+			});
+
+			expect(config.translation).to.deep.equal({
+				routes: {en: {de: [["llm", "opus:de-en"], "nllb"], sw: ["nllb", "llm"]}},
+			});
+		});
+
 		it("drops what it cannot use and keeps the rest", function () {
 			const config = normalizeBranding({
 				translation: {

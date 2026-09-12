@@ -37,6 +37,7 @@ import {
 	hasNoLetters,
 	isUnchanged,
 	reverseTarget,
+	sourceHintFor,
 	termPair,
 	translateDraft,
 	writeSource,
@@ -130,6 +131,7 @@ const deps: OutgoingDeps = {
 	translate: (req, signal) => translateService().translate(req, signal),
 	setTimeout: (fn, ms) => window.setTimeout(fn, ms),
 	clearTimeout: (handle) => window.clearTimeout(handle as number),
+	loadTicks: () => translateService().loadTicks(),
 };
 
 /** The global setting is typed as a string (settings.ts derives it from its default). */
@@ -261,7 +263,11 @@ export async function translateOutgoing(
 		}
 
 		const from = writeSource(detection, readingLanguage(network, channel), to);
-		const route = await translateService().route(from, to);
+		// The detector's verdict, however weak, rides along as the source
+		// hint: a seq2seq route takes it as its source, so a draft whose
+		// source is left to the LLM can still reach NLLB (router.ts).
+		const hint = sourceHintFor(detection, from, to);
+		const route = await translateService().route(from, to, hint);
 		const context = buildContext(
 			channel,
 			{
@@ -281,7 +287,7 @@ export async function translateOutgoing(
 				glossary: getBranding().translation?.glossary ?? [],
 				formality: formalityOf(settings.formality),
 				variant: settings.variant,
-				sourceHint: from,
+				sourceHint: hint,
 				voice: voiceFor(channel, to),
 			}
 		);
@@ -483,7 +489,7 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 	});
 
 	try {
-		const route = await translateService().route(entry.to, target);
+		const route = await translateService().route(entry.to, target, entry.to);
 		const settings = channelTranslation(network, channel);
 		// The context a reader of this channel would give the model for the
 		// line the user is about to post, built the way reader.ts builds one
@@ -593,8 +599,8 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 
 			// A read-back equal to the translation is the translation over
 			// again, which says nothing about what it means — so it gets the
-			// same bare second try the translation itself gets: no
-			// `sourceHint`, the source left to the model.
+			// same bare second try the translation itself gets: the source
+			// left to the model (the hint stays, for a seq2seq route).
 			const first = answerError(entry.text, read);
 
 			if (first === UNCHANGED || first === NARRATION) {
