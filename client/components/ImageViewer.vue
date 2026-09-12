@@ -45,6 +45,7 @@ import {computed, defineComponent, ref, watch} from "vue";
 import eventbus from "../js/eventbus";
 import {useStore} from "../js/store";
 import {isPreviewRevealed} from "../js/helpers/mediaTrust";
+import {setImageViewerClose} from "../js/helpers/imageViewer";
 import {ClientChan, ClientLinkPreview} from "../js/types";
 import {SharedMsg} from "../../shared/types/msg";
 
@@ -449,6 +450,7 @@ export default defineComponent({
 		watch(link, (newLink, oldLink) => {
 			// TODO: history.pushState
 			if (newLink === null) {
+				setImageViewerClose(null);
 				eventbus.off("escapekey", closeViewer);
 				eventbus.off("resize", correctPosition);
 				Mousetrap.unbind("left");
@@ -459,6 +461,7 @@ export default defineComponent({
 			setPrevNextImages();
 
 			if (!oldLink) {
+				setImageViewerClose(closeViewer);
 				eventbus.on("escapekey", closeViewer);
 				eventbus.on("resize", correctPosition);
 				Mousetrap.bind("left", previous);

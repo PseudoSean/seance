@@ -5,6 +5,7 @@
 // `Capacitor.Plugins` stays empty unless `@capacitor/core` is bundled.
 
 import {leavePage, onStandalonePage} from "./router";
+import {closeOpenImage} from "./helpers/imageViewer";
 import {reconnectAll} from "./irc/manager";
 import {checkForUpdate} from "./pwa";
 
@@ -36,10 +37,14 @@ export function installNativeHooks(): void {
 		}
 	});
 
-	// Android back button: leave a standalone page for the conversation it
-	// came from, else minimize (overrides the default). Not `router.back()`:
-	// the history is kept one deep (router.ts).
+	// Android back button: close an open image, else leave a standalone page
+	// for the conversation it came from, else minimize (overrides the
+	// default). Not `router.back()`: the history is kept one deep (router.ts).
 	cap.addListener("App", "backButton", () => {
+		if (closeOpenImage()) {
+			return;
+		}
+
 		if (onStandalonePage() && leavePage()) {
 			return;
 		}
