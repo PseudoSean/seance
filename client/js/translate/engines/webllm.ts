@@ -1,13 +1,21 @@
 // The GPU tier (spec § engines/webllm.ts): WebLLM's MLCEngine behind the
 // Engine interface. One model at a time. Generation is greedy at a low
 // temperature, thinking off, a token budget from the input length, and a
-// stop at the batch sentinel — a single-line request cuts itself instead,
+// stop at the batch sentinel — a single-line request has no stop at all,
 // because with thinking off WebLLM prepends an empty `<think></think>`
-// block to the reply that a "\n" stop matched inside. The cut takes the
-// first line that is not the source echoed back: a small model asked to
-// translate often repeats the text (or opens a `"""` fence around it)
-// before it gets to the translation. The library arrives through
-// `WebLlmDeps` so this file never imports it; webllm.real.ts does.
+// block to the reply that a "\n" stop matched inside.
+//
+// So a single-line generation is consumed whole and the answer is picked
+// out of it here: the lines up to the first **blank** one (a blank line
+// opens the note the prompt forbade), minus the source echoed back, a bare
+// `"""` fence and the canned greetings of `EXAMPLES` — a small model asked
+// to translate often repeats the text before it gets to the translation,
+// and sometimes greets instead of translating at all. What is left is
+// joined back into one line, so a long message the model wrapped over
+// several lines arrives whole; it used to be cut at the first of them.
+//
+// The library arrives through `WebLlmDeps` so this file never imports it;
+// webllm.real.ts does.
 
 import {
 	Engine,
@@ -23,6 +31,7 @@ import {ModelCatalog} from "../models";
 import {
 	ChatMessage,
 	END_SENTINEL,
+	EXAMPLE_ANSWERS,
 	buildMessages,
 	cleanOutput,
 	estimateTokens,
@@ -96,8 +105,10 @@ export function maxTokensFor(req: TranslateRequest): number {
 	const input = req.lines ? req.lines.join("\n") : req.text;
 
 	// 3 × the input: room for the model to echo the line once before it
-	// translates (the cut skips the echo) and still finish. + 16: the empty
-	// thinking block WebLLM prepends when thinking is off.
+	// translates (the scan drops the echo) and still finish. + 16: the empty
+	// thinking block WebLLM prepends when thinking is off. Measured against
+	// the real model, the longest case of the evaluation set (four sentences,
+	// ~60 input tokens) finished well inside it.
 	return Math.min(512, 3 * estimateTokens(input) + 48 + 16);
 }
 
@@ -151,39 +162,67 @@ function isEcho(line: string, source: string): boolean {
 }
 
 /**
- * A single-line reply as it streams. `cut` is the translation once a
- * complete line that is not an echo has arrived — everything before it was
- * echo, and the generation is over as far as we are concerned. Until then
- * `rest` is what to show: the text with the echoed lines dropped, so the
- * source never flashes up in the translation's place.
+ * A canned greeting the model offers instead of translating (`EXAMPLES` in
+ * prompt.ts). It is fluent target-language text and it is not the source,
+ * so nothing else would catch it: shown, it is a confident translation of
+ * somebody else's sentence.
  */
-function scanLines(shown: string, source: string): {cut: string | null; rest: string} {
-	const parts = shown.split("\n");
+function isExampleAnswer(carried: string): boolean {
+	return (
+		carried !== "" && EXAMPLE_ANSWERS.some((answer) => normalise(answer) === normalise(carried))
+	);
+}
 
-	// The last element is still being generated; the others are lines.
-	for (let i = 0; i < parts.length - 1; i++) {
-		if (!isEcho(parts[i], source)) {
-			return {cut: cleanOutput(parts[i].replace(/\r$/, "")), rest: ""};
-		}
-	}
-
-	return {cut: null, rest: parts[parts.length - 1]};
+/** What the guards took out of a single-line reply, and what they left. */
+interface Scan {
+	/** The lines that are the translation, cleaned, in order. */
+	kept: string[];
+	/** A canned answer was dropped — and it was not the source read back. */
+	example: boolean;
 }
 
 /**
- * The whole of a single-line reply once the stream is over: the first line
- * that is not an echo, or — when the model only ever echoed — the last line
- * that carries anything at all, which beats showing nothing. Nothing at all
- * returns "", which the queue and writer already treat as a failure.
+ * A single-line reply, line by line, up to the first **blank** one: a blank
+ * line opens the note or the explanation the prompt forbade, and nothing
+ * past it is the translation. Everything before it that is not the source
+ * read back, a bare fence or a canned answer is kept — a translation the
+ * model wrapped over two lines is both of them, which is why the cut at the
+ * first line is gone.
+ *
+ * The echo check comes first on purpose: a line that is both the source and
+ * a canned answer (the source *is* "hallo, wie geht es dir?") is an echo,
+ * not a refusal.
  */
-function pickTranslation(text: string, source: string): string {
-	const lines = text.split("\n").map((line) => line.replace(/\r$/, ""));
+function scanLines(text: string, source: string): Scan {
+	const scan: Scan = {kept: [], example: false};
 
-	for (const line of lines) {
-		if (!isEcho(line, source)) {
-			return cleanOutput(line);
+	for (const raw of text.split("\n")) {
+		const line = raw.replace(/\r$/, "");
+
+		if (line.trim() === "") {
+			break;
 		}
+
+		const carried = content(line);
+
+		if (carried === "" || isEcho(line, source)) {
+			continue;
+		}
+
+		if (isExampleAnswer(carried)) {
+			scan.example = true;
+			continue;
+		}
+
+		scan.kept.push(carried);
 	}
+
+	return scan;
+}
+
+/** The last line that carries anything at all: better than showing nothing. */
+function lastCarried(text: string): string {
+	const lines = text.split("\n").map((line) => line.replace(/\r$/, ""));
 
 	for (let i = lines.length - 1; i >= 0; i--) {
 		const carried = content(lines[i]);
@@ -194,6 +233,22 @@ function pickTranslation(text: string, source: string): string {
 	}
 
 	return "";
+}
+
+/**
+ * What to show while a single-line reply is still coming: the lines that
+ * are the translation so far, joined, and the line still being generated
+ * after them. Past a blank line nothing more is shown.
+ */
+function progressText(shown: string, source: string): string {
+	const parts = shown.split("\n");
+	const complete = parts.slice(0, -1);
+	const scan = scanLines(complete.join("\n"), source);
+	const done = complete.some((line) => line.trim() === "");
+
+	return (done ? scan.kept : [...scan.kept, parts[parts.length - 1]])
+		.filter((part) => part !== "")
+		.join(" ");
 }
 
 export class WebLlmEngine implements Engine {
@@ -323,6 +378,31 @@ export class WebLlmEngine implements Engine {
 		return {streams: true, batches: true};
 	}
 
+	/**
+	 * A finished single-line reply as the one line a message is: everything
+	 * up to the first blank line that is not the source read back or a
+	 * canned answer, joined with single spaces.
+	 *
+	 * Nothing left, with a canned answer among what was dropped, is a
+	 * refusal rather than an empty translation — the composer's strip offers
+	 * "send as written" and a reading line offers Retry. Nothing left with
+	 * only the source read back keeps the old fallback: the last line that
+	 * carries anything, which beats showing nothing.
+	 */
+	private oneLine(text: string, source: string): string {
+		const scan = scanLines(text, source);
+
+		if (scan.kept.length > 0) {
+			return scan.kept.join(" ");
+		}
+
+		if (scan.example) {
+			throw new EngineError("the model answered with the example", "request");
+		}
+
+		return lastCarried(text);
+	}
+
 	async *translate(req: TranslateRequest, signal: AbortSignal): AsyncIterable<TranslateChunk> {
 		const engine = this.engine;
 
@@ -354,9 +434,6 @@ export class WebLlmEngine implements Engine {
 			this.generating = req.id;
 
 			let text = "";
-			// A single-line request that has had its line: the generation is
-			// over as far as we are concerned, but the stream is still drained.
-			let cut = false;
 
 			for await (const delta of stream) {
 				if (signal.aborted) {
@@ -365,13 +442,6 @@ export class WebLlmEngine implements Engine {
 					// when a generation starts, so ask again on every chunk until
 					// it stops. Nothing is yielded after an abort.
 					engine.interruptGenerate();
-					continue;
-				}
-
-				if (cut) {
-					// The same drain, but the interrupt is already sent: the
-					// generation was running when it went out, and WebLLM only
-					// clears that flag when the next generation starts.
 					continue;
 				}
 
@@ -398,20 +468,11 @@ export class WebLlmEngine implements Engine {
 					continue;
 				}
 
-				// A translation is one line, and the stop string that used
-				// to end it here matched inside the thinking block instead —
-				// so the line is picked out here, past the echoed ones.
-				const scan = scanLines(shown, req.text);
-
-				if (scan.cut !== null) {
-					cut = true;
-					this.failures = 0;
-					yield {id: req.id, text: scan.cut, done: true};
-					engine.interruptGenerate();
-					continue;
-				}
-
-				yield {id: req.id, text: scan.rest, done: false};
+				// The whole generation is consumed: a single-line request
+				// used to be cut at its first complete line, which dropped
+				// every later sentence when the model wrapped a long answer
+				// or restated the line before translating it.
+				yield {id: req.id, text: progressText(shown, req.text), done: false};
 			}
 
 			// A drained (aborted) generation proves nothing about the model:
@@ -419,22 +480,29 @@ export class WebLlmEngine implements Engine {
 			if (!signal.aborted) {
 				this.failures = 0;
 
-				const visible = cut ? null : visibleText(text);
+				const visible = visibleText(text);
 
 				if (visible !== null) {
 					// A batched answer is cleaned line by line, where it is
-					// parsed; a single one is whichever of its lines is the
-					// translation rather than the source read back.
+					// parsed; a single one is its lines up to the first blank
+					// one, the source read back and the canned answers
+					// dropped, joined back into the one line a message is.
 					const done = stripSentinel(req.lines ? visible : visible.trimStart());
 
 					yield {
 						id: req.id,
-						text: req.lines ? done : pickTranslation(done, req.text),
+						text: req.lines ? done : this.oneLine(done, req.text),
 						done: true,
 					};
 				}
 			}
 		} catch (e) {
+			// A guard's refusal is about this answer, not about the device:
+			// the model stays loaded and the request is the one that failed.
+			if (e instanceof EngineError) {
+				throw e;
+			}
+
 			if (signal.aborted) {
 				return;
 			}

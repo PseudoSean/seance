@@ -10,6 +10,7 @@ import {
 	type WebLlmDeps,
 } from "../../client/js/translate/engines/webllm";
 import {buildCatalog} from "../../client/js/translate/models";
+import {EXAMPLES} from "../../client/js/translate/prompt";
 
 const catalog = buildCatalog();
 const prebuilt: ModelRecord[] = [
@@ -241,10 +242,12 @@ describe("translate/engines/webllm", () => {
 			{text: "I'll", done: false},
 			{text: "I'll send", done: false},
 			{text: "I'll send you the log", done: false},
-			// The newline is the engine's own cut now, not a stop string.
+			// The trailing newline ends no longer ends the request: the
+			// generation is consumed whole and the answer picked out of it.
+			{text: "I'll send you the log shortly.", done: false},
 			{text: "I'll send you the log shortly.", done: true},
 		]);
-		expect(d.calls.interrupt).to.equal(1);
+		expect(d.calls.interrupt).to.equal(0);
 		const created = d.calls.create[0];
 
 		expect(created.stream).to.equal(true);
@@ -300,7 +303,7 @@ describe("translate/engines/webllm", () => {
 		expect(seen.some((chunk) => chunk.text.includes("<think>"))).to.equal(false);
 	});
 
-	it("a single-line request cuts itself at the first newline and drains the rest", async () => {
+	it("a single-line reply that wraps is joined, not cut at the first newline", async () => {
 		const d = deps(["<think>\n\n</think>\n\n", "Hallo", "\nWelt", " mehr"]);
 		const engine = new WebLlmEngine(d.deps, name);
 		engine.configure(catalog);
@@ -314,16 +317,35 @@ describe("translate/engines/webllm", () => {
 		expect(seen).to.deep.equal([
 			{text: "", done: false},
 			{text: "Hallo", done: false},
-			{text: "Hallo", done: true},
+			{text: "Hallo Welt", done: false},
+			{text: "Hallo Welt mehr", done: false},
+			{text: "Hallo Welt mehr", done: true},
 		]);
-		expect(d.calls.interrupt).to.equal(1);
+		// Nothing is interrupted any more: the generation ends by itself.
+		expect(d.calls.interrupt).to.equal(0);
 		// The generation reached the point where WebLLM releases its lock.
 		expect(d.calls.ranToEnd).to.equal(true);
-		// A cut is a completed translation, not a failure.
+		// A completed generation is not a failure.
 		expect(engine.generationFailures).to.equal(0);
 	});
 
-	it("the cut skips a line that only echoes the source and takes the next one", async () => {
+	it("a blank line ends the translation: the note after it is dropped", async () => {
+		const d = deps(["A\nB", "\n\nNote: ", "B is an idiom here."]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+		const seen: {text: string; done: boolean}[] = [];
+
+		for await (const chunk of engine.translate(request(), new AbortController().signal)) {
+			seen.push({text: chunk.text, done: chunk.done});
+		}
+
+		expect(seen[seen.length - 1]).to.deep.equal({text: "A B", done: true});
+		// and nothing past the blank line is ever shown on the way there
+		expect(seen.every((chunk) => !chunk.text.includes("Note"))).to.equal(true);
+	});
+
+	it("the echoed line is dropped and what follows it is joined", async () => {
 		const d = deps([
 			"Ich schick dir gleich das Log.",
 			"\n",
@@ -345,9 +367,10 @@ describe("translate/engines/webllm", () => {
 			// the newline makes it a whole line, and it stops being shown
 			{text: "", done: false},
 			{text: "I'll send you the log shortly.", done: false},
-			{text: "I'll send you the log shortly.", done: true},
+			{text: "I'll send you the log shortly. and more", done: false},
+			{text: "I'll send you the log shortly. and more", done: true},
 		]);
-		expect(d.calls.interrupt).to.equal(1);
+		expect(d.calls.interrupt).to.equal(0);
 		expect(engine.generationFailures).to.equal(0);
 	});
 
@@ -365,9 +388,10 @@ describe("translate/engines/webllm", () => {
 		expect(seen).to.deep.equal([
 			{text: "", done: false},
 			{text: "Hallo Welt", done: false},
+			{text: "Hallo Welt", done: false},
 			{text: "Hallo Welt", done: true},
 		]);
-		expect(d.calls.interrupt).to.equal(1);
+		expect(d.calls.interrupt).to.equal(0);
 	});
 
 	it("a reply that is nothing but the echo is yielded rather than nothing at all", async () => {
@@ -402,7 +426,8 @@ describe("translate/engines/webllm", () => {
 		expect(seen).to.deep.equal([
 			{text: "", done: false},
 			{text: "Hallo", done: false},
-			{text: "Hallo", done: true},
+			{text: "Hallo Welt", done: false},
+			{text: "Hallo Welt", done: true},
 		]);
 	});
 
@@ -437,6 +462,69 @@ describe("translate/engines/webllm", () => {
 		expect(chunks[chunks.length - 1]).to.equal("1. Hallo\n2. Welt");
 		expect(d.calls.create[0].stop).to.deep.equal(["\nEND"]);
 		expect(d.calls.interrupt).to.equal(0);
+	});
+
+	it("a canned example answer is skipped like an echo", async () => {
+		const d = deps([`${EXAMPLES.de}\n`, "I'll send you the log shortly."]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+		const seen: {text: string; done: boolean}[] = [];
+
+		for await (const chunk of engine.translate(request(), new AbortController().signal)) {
+			seen.push({text: chunk.text, done: chunk.done});
+		}
+
+		expect(seen[seen.length - 1]).to.deep.equal({
+			text: "I'll send you the log shortly.",
+			done: true,
+		});
+		expect(seen.every((chunk) => !chunk.text.includes(EXAMPLES.de))).to.equal(true);
+	});
+
+	it("a reply that is nothing but the canned answer fails the request, not the model", async () => {
+		const d = deps([`${EXAMPLES.de.toUpperCase()} `]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+		let error: Error | null = null;
+
+		try {
+			for await (const _c of engine.translate(request(), new AbortController().signal)) {
+				// consume
+			}
+		} catch (e) {
+			error = e as Error;
+		}
+
+		expect(error).to.be.instanceOf(EngineError);
+		expect(error?.message).to.equal("the model answered with the example");
+		expect((error as EngineError).cause).to.equal("request");
+		// The device is fine: the model stays loaded and nothing is counted
+		// against it, so the queue's retry has an engine to retry on.
+		expect(engine.isLoaded(catalog.llm.id)).to.equal(true);
+		expect(engine.status()).to.equal("ready");
+		expect(engine.generationFailures).to.equal(0);
+		expect(d.calls.unload).to.equal(0);
+	});
+
+	it("a source that is itself the canned answer is an echo, not a refusal", async () => {
+		// The line to translate *is* "Hallo, wie geht es dir?" (already in
+		// the target): the echo rule runs first, so the reply comes back.
+		const d = deps(["Hallo, wie geht es dir?"]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+		const seen: string[] = [];
+
+		for await (const chunk of engine.translate(
+			request({text: "Hallo, wie geht es dir?", from: null, to: "de"}),
+			new AbortController().signal
+		)) {
+			seen.push(chunk.text);
+		}
+
+		expect(seen[seen.length - 1]).to.equal("Hallo, wie geht es dir?");
 	});
 
 	it("maxTokensFor is 3 × input tokens + 48 + the thinking block, capped at 512", () => {

@@ -7,7 +7,9 @@ import {
 	DATA_HEADING,
 	END_SENTINEL,
 	EXAMPLES,
+	EXAMPLE_ANSWERS,
 	EXAMPLE_SOURCE,
+	ONLY_THE_TRANSLATION,
 	buildMessages,
 	cleanOutput,
 	estimateTokens,
@@ -187,9 +189,10 @@ describe("translate/prompt", () => {
 			[
 				"Topic: multiline batches",
 				"Earlier lines (context only, do not translate or answer them):",
-				"<ada> anyone tried it?",
-				"<jonas> Ja, gestern. (translation: Yes, yesterday.)",
+				"ada: anyone tried it?",
+				"jonas: Ja, gestern. (translation: Yes, yesterday.)",
 				"This line replies to <ada>: anyone tried it?",
+				ONLY_THE_TRANSLATION,
 				"Translate into English: Ich schick dir gleich das Log.",
 			].join("\n")
 		);
@@ -200,32 +203,66 @@ describe("translate/prompt", () => {
 
 		expect(text).to.equal("Translate into English: Ich schick dir gleich das Log.");
 		expect(text).to.not.include('"""');
+		// measured: on a bare request the reminder costs the translation
+		expect(text).to.not.include(ONLY_THE_TRANSLATION);
 	});
 
-	it("one worked example, and only when the source is the example's own English", () => {
-		const req = request({text: "hello this is supposed to be in German", from: "en", to: "de"});
+	it("the reminder stands immediately before the line, and only above one", () => {
+		// anything above the line at all is enough: a topic on its own,
+		const topic = userPrompt(request({context: {...emptyContext(), topic: "release"}}), name);
 
-		expect(userPrompt(req, name)).to.equal(
-			[
-				`Example: ${EXAMPLE_SOURCE} → ${EXAMPLES.de}`,
-				"Translate into German: hello this is supposed to be in German",
-			].join("\n")
-		);
-		// the example's source is English, so it teaches nothing about de → en
-		expect(userPrompt(request({from: "de", to: "de"}), name)).to.not.include("Example:");
-		// a target with no example of its own gets none
-		expect(userPrompt(request({from: "en", to: "ar"}), name)).to.not.include("Example:");
-		// an unknown source is most often English; the example still helps
-		expect(userPrompt(request({from: null, to: "de"}), name)).to.include(
-			`Example: ${EXAMPLE_SOURCE} → ${EXAMPLES.de}`
-		);
-		// batched requests get it too, above their numbered block
-		const batched = userPrompt(request({from: "en", to: "de", lines: ["one", "two"]}), name);
+		expect(topic.split("\n").slice(-2)).to.deep.equal([
+			ONLY_THE_TRANSLATION,
+			"Translate into English: Ich schick dir gleich das Log.",
+		]);
 
-		expect(batched.indexOf("Example:")).to.be.lessThan(batched.indexOf("Translate each line"));
+		// the data block on its own,
+		expect(
+			userPrompt(request({context: {...emptyContext(), names: ["ada"]}}), name)
+		).to.include(ONLY_THE_TRANSLATION);
+
+		// and a batched request is no different.
+		const batched = userPrompt(
+			request({
+				lines: ["eins", "zwei"],
+				context: {...emptyContext(), recent: [{nick: "ada", text: "tried it?"}]},
+			}),
+			name
+		);
+
+		expect(batched.indexOf(ONLY_THE_TRANSLATION)).to.be.lessThan(
+			batched.indexOf("Translate each line")
+		);
+		// once, never twice
+		expect(batched.split(ONLY_THE_TRANSLATION)).to.have.length(2);
 	});
 
-	it("every example language is one the router knows", () => {
+	it("no worked example is ever shown to the model", () => {
+		const shapes = [
+			request({text: "hello this is supposed to be in German", from: "en", to: "de"}),
+			request({from: null, to: "de"}),
+			request({from: "en", to: "de", lines: ["one", "two"]}),
+			request({
+				from: "en",
+				to: "de",
+				context: {...emptyContext(), recent: [{nick: "ada", text: "tried it?"}]},
+			}),
+		];
+
+		for (const req of shapes) {
+			const text = userPrompt(req, name);
+
+			expect(text).to.not.include("Example:");
+			expect(text).to.not.include(EXAMPLE_SOURCE);
+			expect(text).to.not.include(EXAMPLES.de);
+		}
+
+		expect(userPrompt(shapes[0], name)).to.equal(
+			"Translate into German: hello this is supposed to be in German"
+		);
+	});
+
+	it("every example language is one the router knows, and each answer is a guard", () => {
 		for (const code of Object.keys(EXAMPLES)) {
 			expect(isSupported(code), code).to.equal(true);
 		}
@@ -233,6 +270,11 @@ describe("translate/prompt", () => {
 		// Norwegian is `nb` here, never `no`.
 		expect(EXAMPLES.nb).to.be.a("string");
 		expect(EXAMPLES.no).to.equal(undefined);
+
+		// The table is no longer shown; it is what the engine refuses.
+		expect(EXAMPLE_ANSWERS).to.deep.equal(Object.values(EXAMPLES));
+		expect(EXAMPLE_ANSWERS).to.include(EXAMPLES.de);
+		expect(EXAMPLE_ANSWERS.length).to.be.greaterThan(0);
 	});
 
 	it("trims the context from the oldest end to the token budget", () => {

@@ -420,6 +420,10 @@ function nodeDeps(
 	};
 }
 
+interface Fixture extends Partial<PromptContext> {
+	nicks?: string[];
+}
+
 interface EvalCase {
 	text: string;
 	from?: string | null;
@@ -427,11 +431,11 @@ interface EvalCase {
 	purpose?: Purpose;
 	/** The channel's names, for `protect()`; a nick becomes a placeholder. */
 	nicks?: string[];
+	/** The case's own channel: a `PromptContext` (plus `nicks`), as `--context` takes one. */
+	context?: Fixture;
 	note?: string;
-}
-
-interface Fixture extends Partial<PromptContext> {
-	nicks?: string[];
+	/** What a correct answer carries. Printed, never asserted. */
+	expect?: string;
 }
 
 interface Options {
@@ -530,12 +534,7 @@ function parseArgs(argv: string[]): Options {
 	return options;
 }
 
-function loadFixture(file: string | null): {context: PromptContext; nicks: string[]} {
-	if (!file) {
-		return {context: emptyContext(), nicks: []};
-	}
-
-	const fixture = JSON.parse(readFileSync(file, "utf8")) as Fixture;
+function fixtureContext(fixture: Fixture): PromptContext {
 	const context: PromptContext = {
 		recent: fixture.recent ?? [],
 		names: fixture.names ?? [],
@@ -560,7 +559,17 @@ function loadFixture(file: string | null): {context: PromptContext; nicks: strin
 		context.sourceHint = fixture.sourceHint;
 	}
 
-	return {context, nicks: fixture.nicks ?? []};
+	return context;
+}
+
+function loadFixture(file: string | null): {context: PromptContext; nicks: string[]} {
+	if (!file) {
+		return {context: emptyContext(), nicks: []};
+	}
+
+	const fixture = JSON.parse(readFileSync(file, "utf8")) as Fixture;
+
+	return {context: fixtureContext(fixture), nicks: fixture.nicks ?? []};
 }
 
 /**
@@ -752,12 +761,21 @@ async function main(): Promise<void> {
 				}) ${JSON.stringify(item.text)}`
 			);
 
+			if (item.expect) {
+				console.log(`  want ${item.expect}`);
+			}
+
+			// A case may bring its own channel: its context replaces the
+			// command line's, and its own `nicks` the fixture's.
+			const local = item.context
+				? {context: fixtureContext(item.context), nicks: item.context.nicks ?? base.nicks}
+				: {context: base.context, nicks: base.nicks};
 			const result = await runCase(
 				engine,
 				backend,
 				catalog.llm.id,
 				item,
-				base,
+				{...base, ...local},
 				{prompt: !promptShown, raw: options.raw, stream: false},
 				i + 1
 			);
