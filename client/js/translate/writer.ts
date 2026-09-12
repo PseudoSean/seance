@@ -19,6 +19,7 @@ import {translateService} from "./index";
 import {
 	ABORTED,
 	type OutgoingDeps,
+	WRITE_DETECT_MIN_GAP,
 	reverseTarget,
 	termPair,
 	translateDraft,
@@ -160,12 +161,12 @@ export async function translateOutgoing(
 			return "strip";
 		}
 
-		if (detection.lang === to) {
+		if (detection.lang === to && detection.confidence >= WRITE_DETECT_MIN_GAP) {
 			cancelOutgoing(channel);
 			return "plain";
 		}
 
-		const from = writeSource(detection.lang, store.state.settings.translateTo, to);
+		const from = writeSource(detection, store.state.settings.translateTo, to);
 		const route = await translateService().route(from, to);
 		const context = buildContext(
 			channel,
@@ -291,7 +292,7 @@ export function cancelOutgoing(channel: ClientChan): void {
 }
 
 export function canCheckOutgoing(entry: OutgoingTranslation): boolean {
-	return reverseTarget(entry.from, store.state.settings.translateTo, entry.to) !== null;
+	return reverseTarget(store.state.settings.translateTo, entry.to) !== null;
 }
 
 /** The round trip: the translation read back into the user's language, under the strip. */
@@ -302,7 +303,7 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 		return;
 	}
 
-	const target = reverseTarget(entry.from, store.state.settings.translateTo, entry.to);
+	const target = reverseTarget(store.state.settings.translateTo, entry.to);
 
 	if (!target) {
 		return;

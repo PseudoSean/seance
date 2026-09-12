@@ -9,6 +9,7 @@ import {
 	ABORTED,
 	TERM_MAX_WORDS,
 	TIMED_OUT,
+	WRITE_DETECT_MIN_GAP,
 	WRITE_TIMEOUT_MS,
 	draftGate,
 	reverseTarget,
@@ -94,14 +95,32 @@ describe("translate/outgoing", () => {
 	});
 
 	describe("writeSource and reverseTarget", () => {
-		it("trust the detector, then the reading language, then nobody", () => {
-			expect(writeSource("fr", "en", "de")).to.equal("fr");
-			expect(writeSource(null, "en", "de")).to.equal("en");
-			expect(writeSource(null, "de", "de")).to.equal(null);
-			expect(reverseTarget("fr", "en", "de")).to.equal("fr");
-			expect(reverseTarget(null, "en", "de")).to.equal("en");
-			expect(reverseTarget(null, "de", "de")).to.equal(null);
-			expect(reverseTarget("de", "en", "de")).to.equal(null);
+		it("trusts the reading language for an unplaced draft, then nobody", () => {
+			expect(writeSource({lang: null, confidence: 0}, "en", "de")).to.equal("en");
+			expect(writeSource({lang: null, confidence: 0}, "de", "de")).to.equal(null);
+		});
+
+		it("trusts a verdict that agrees with the reading language outright", () => {
+			expect(writeSource({lang: "en", confidence: 0.05}, "en", "de")).to.equal("en");
+		});
+
+		it("falls back to the reading language when a differing verdict is weak", () => {
+			// An English draft the detector calls Italian at a weak 0.12: not
+			// sure enough to override the reading language.
+			expect(writeSource({lang: "it", confidence: 0.12}, "en", "de")).to.equal("en");
+		});
+
+		it("trusts a differing verdict once it clears WRITE_DETECT_MIN_GAP", () => {
+			expect(WRITE_DETECT_MIN_GAP).to.equal(0.3);
+			expect(writeSource({lang: "it", confidence: 0.4}, "en", "de")).to.equal("it");
+			expect(
+				writeSource({lang: "it", confidence: WRITE_DETECT_MIN_GAP}, "en", "de")
+			).to.equal("it");
+		});
+
+		it("targets the reading language, never the draft's detected language", () => {
+			expect(reverseTarget("en", "de")).to.equal("en");
+			expect(reverseTarget("de", "de")).to.equal(null);
 		});
 	});
 

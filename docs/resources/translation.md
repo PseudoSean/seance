@@ -144,13 +144,24 @@ The first Enter on a non-empty, non-command, non-edit draft
 (`outgoing.ts` `draftGate`) calls `writer.ts` `translateOutgoing` instead
 of sending: it detects the draft's language (no channel prior -- it is the
 user's own line, not what the channel has been saying), decides the source
-with `writeSource` (the detector's verdict, or the user's reading language
-when the draft is too short to place and that differs from the target,
-else left to the LLM), and builds context the same way the reader does
+with `writeSource` (`outgoing.ts`), and builds context the same way the reader does
 (recent lines, reply target, topic, names, terms, glossary) plus a `voice`:
 the last `VOICE_LINES` (5) of this channel's own sent translations to this
 target, session-only, so the model's phrasing stays consistent across a
 conversation without ever touching persisted storage.
+
+`writeSource` has two rules. A draft too short for the detector to place
+(`Detection.lang === null`) is taken as the user's reading language when
+that differs from the write target, else left to the LLM. A draft the
+detector does place is trusted outright when its verdict agrees with the
+reading language; when it names another language, that verdict is trusted
+only once it clears `WRITE_DETECT_MIN_GAP` (0.3, three times the reading
+side's `DETECT_MIN_GAP`) -- a weaker gap is more likely the detector
+misplacing a short draft than an actual language switch, so the draft is
+taken as the reading language instead. The same threshold gates the
+"already in the target" shortcut: a detector verdict that names the write
+target skips translation only when it is at least that sure, otherwise the
+draft still goes to the LLM under the reading-language source.
 
 The reading queues are held (`holdReading()`/`releaseReading()`) for the
 length of the request, and again for the round-trip check, so a write is
@@ -184,10 +195,9 @@ button and parting the channel all invalidate the strip; the next Enter
 starts over.
 
 The round trip reads a done translation back toward `reverseTarget` (the
-draft's detected language, or the user's reading language, whichever
-differs from the write target -- when neither does, there is nothing to
-read back into and no check runs) and shows it in a second row, "reads
-back as:". The check always starts as soon as the translation finishes,
+user's reading language, whatever the draft was detected as -- when the
+reading language equals the write target there is nothing to read back
+into and no check runs) and shows it in a second row, "reads back as:". The check always starts as soon as the translation finishes,
 and Send waits for it -- a failed check ("couldn't check") never blocks
 Send.
 

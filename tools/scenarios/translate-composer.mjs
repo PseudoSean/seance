@@ -342,6 +342,12 @@ export default async function run(page) {
 		{timeout: 20000, label: "the read-back line"}
 	);
 	await page.check(
+		"the read-back row is marked as the reading language",
+		(await page.evaluate(
+			`(document.querySelector(".translate-bar-check .translate-bar-text") || {}).lang`
+		)) === "en"
+	);
+	await page.check(
 		"Send is enabled once the check ends",
 		!(await page.evaluate(`document.querySelector("#submit").disabled`)) &&
 			!(await page.evaluate(`document.querySelector(".translate-bar-send").disabled`))

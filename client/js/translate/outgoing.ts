@@ -13,6 +13,14 @@ export const WRITE_TIMEOUT_MS = 2 * 60 * 1000;
 /** A draft this short (words) whose translation is also short is a term worth remembering. */
 export const TERM_MAX_WORDS = 3;
 export const TERM_MAX_CHARS = 40;
+/**
+ * How sure the detector must be (its best guess's lead over the runner-up,
+ * `detect.ts` `Detection.confidence`) before the composer trusts it over the
+ * user's reading language: three times the reading side's `DETECT_MIN_GAP`
+ * (0.1), because a wrong source here sends the draft to the LLM in the
+ * wrong language rather than just skipping a translation.
+ */
+export const WRITE_DETECT_MIN_GAP = 0.3;
 export const TIMED_OUT = "timed out";
 export const ABORTED = "aborted";
 
@@ -41,31 +49,40 @@ export function draftGate(text: string, editing: boolean): DraftGate {
 }
 
 /**
- * The source language sent with a write. The detector's verdict when it
- * has one; a draft too short to place is taken as the user's reading
- * language when that differs from the target, else left to the LLM.
+ * The source language sent with a write. A draft too short to place
+ * (`detection.lang === null`) is taken as the user's reading language when
+ * that differs from the target, else left to the LLM. A draft the detector
+ * places in the reading language is trusted outright. A draft the detector
+ * places somewhere else is trusted only when it is sure enough
+ * (`WRITE_DETECT_MIN_GAP`) -- a weak verdict is more likely the detector
+ * misplacing a short draft than the user actually switching languages, so
+ * it falls back to the reading language rather than sending the draft to
+ * the LLM under a source it probably is not.
  */
 export function writeSource(
-	detected: string | null,
+	detection: {lang: string | null; confidence: number},
 	readingLanguage: string,
 	writeTarget: string
 ): string | null {
-	if (detected) {
-		return detected;
+	if (!detection.lang) {
+		return readingLanguage !== writeTarget ? readingLanguage : null;
 	}
 
-	return readingLanguage !== writeTarget ? readingLanguage : null;
+	if (detection.lang === readingLanguage) {
+		return detection.lang;
+	}
+
+	return detection.confidence >= WRITE_DETECT_MIN_GAP ? detection.lang : readingLanguage;
 }
 
-/** The language a translation is read back into, or null when there is none to read back into. */
-export function reverseTarget(
-	detected: string | null,
-	readingLanguage: string,
-	writeTarget: string
-): string | null {
-	const candidate = detected ?? readingLanguage;
-
-	return candidate !== writeTarget ? candidate : null;
+/**
+ * The language a translation is read back into: the user's reading
+ * language, or null when it is the same as the write target (nothing to
+ * read back into). The draft's detected source plays no part -- the
+ * read-back is always for the person reading, in the language they read.
+ */
+export function reverseTarget(readingLanguage: string, writeTarget: string): string | null {
+	return readingLanguage !== writeTarget ? readingLanguage : null;
 }
 
 function wordCount(text: string): number {

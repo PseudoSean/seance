@@ -116,10 +116,15 @@ Plan 3 (composer):
   the sent text, already in the write language, and the gate treats
   `channel.editing` like a slash command. "Escape or Edit removes the
   strip" is the strip's own Edit button, not the edit compose bar.
-- The round trip's reverse language is the draft's detected language,
-  else the user's reading language; when that equals the write target
-  there is nothing to read back into and no check runs. The check always
-  starts as soon as the translation ends and Send waits for it.
+- The round trip's reverse language is always the user's reading language,
+  never the draft's detected language -- the read-back is for the person
+  reading it; when the reading language equals the write target there is
+  nothing to read back into and no check runs. The check always starts as
+  soon as the translation ends and Send waits for it. `writeSource`
+  likewise trusts the reading language over a differing detector verdict
+  unless the verdict clears `WRITE_DETECT_MIN_GAP` (0.3): a live-test fix
+  after a short English draft was misdetected as Italian and sent, and read
+  back, in the wrong language.
 - The Check button and its Settings → Translation choice were removed on
   the user's direction: the round trip always runs, so there was nothing
   left to offer a choice about.
