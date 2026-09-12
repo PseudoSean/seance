@@ -127,8 +127,8 @@ want: the pin is the right fix, and the numbers it was drawn from stay visible.
    whatever segment follows a ramp has to start where the ramp ended**: `sampleGait` starts a gait
    segment cold and nothing blends into it, so a cruise gait whose `ty` sits at 0 after a
    take-off ramp pops back to the ground in one frame. The ladybug's `flyLevel` holds `ty` at
-   the same `-APEX` its `flyUp` ramps to, which is why its clip reads back 56.3 → 56.3 against
-   the ramp's 71.6 → 56.3.
+   the same `-APEX` its `flyUp` ramps to, which is why its clip reads back 66.1 → 66.1 against
+   the ramp's 81.8 → 66.1.
 
    **An arc is not a ramp.** A gait whose root channel comes back to where it started — the
    dolphin's leap, out of the water and back into it — is periodic like any other, so it takes

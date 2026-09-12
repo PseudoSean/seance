@@ -3,43 +3,88 @@
 // played once whose root channel travels one way across the whole segment,
 // which is how the flight climbs and descends. Facing right, ground y = 100.
 //
-// Drawn at the same unit scale as every other animal — a 54-unit dome, 52
-// units of standing silhouette, a 98-unit box — because `n`, `fillet` and
-// the audit's outline rules are tuned for a body that size. Its tiny size on
-// screen comes entirely from `--heart-ladybug-h` in the theme, not from the
-// drawing.
+// Drawn at the same unit scale as every other animal — 86 units of standing
+// beetle in a 121 × 65 box — because `n`, `fillet` and the audit's outline
+// rules are tuned for a body that size. Its tiny size on screen comes
+// entirely from `--heart-ladybug-h` in the theme, not from the drawing.
 //
 // Rotation sign: paper.js rotates clockwise on screen for a positive angle
-// (y points down), so a part drawn hanging straight down swings *backward*
-// for a positive angle, and a part drawn pointing backward swings *up*.
-// Every table below is written against that.
+// (y points down), so a part drawn pointing forward (local +x) swings *up*
+// for a negative angle. Every table below is written against that.
 //
-// A ladybug reads by four things: a near-circular domed back, a small head
-// low and forward of it, thin legs under it, and — only in flight — wings
-// above the dome. Three constraints hold the whole rig together:
+// ── What a side-on beetle is, and what it is not ─────────────────────────
 //
-//   1. **The wings vanish when folded.** Each is drawn lying forward inside
-//      the shell from a pivot at the dome's apex and rotates up and back out
-//      of it, so at `wing = 0` the near wing contributes nothing to the union
-//      (measured: the union's area with it and without it differ by
-//      0.000000 of 2117.7) and the far wing — its own outline, painted before
-//      the near one — lies wholly inside it (0.0000 of its 291.9 outside the
-//      emitted near outline). Walking, the ladybug is a plain dome. Anything
-//      that moves a wing pivot, lengthens a blade or lowers the shell has to
-//      re-measure both.
-//   2. **The body stands 13 units off the ground, and that is not styling.**
+// The first ladybug shipped here was a 54 × 38 dome on visible legs with two
+// upright blades over it, and in the browser it read as **a rabbit** — the
+// cast already has one, so that is a defect and not a weakness. A ladybug is
+// recognised by its spots and its round plan view, and a silhouette has
+// neither; from the side the default drawing of one is a featureless dome,
+// and a dome on legs with two things sticking up is a mammal. Three levers
+// carry the beetle instead, in this order:
+//
+//   1. **Wide and low, and the crest forward.** Standing, the silhouette
+//      measures **36.0 tall on 85.9 long — a ratio of 0.42**, where the old
+//      dome was 51 on 62, or 0.82. The dorsal line peaks a third of the way
+//      back from the front and tapers to a blunt rear that all but touches
+//      the ground, which is a beetle; a rabbit's high point is its rump, at
+//      the back. The legs are short (9 + 12 against the old 12 + 14) and
+//      about eleven units of each shows below the belly.
+//   2. **Three descending lobes, elytra → pronotum → head.** Each ends in a
+//      near-vertical cliff that the next one steps off, so the dorsal line
+//      drops 68.4 → 74.3 at the elytra's front and 76.4 → 81.7 at the
+//      pronotum's: two notches of about five and a half units, which survive
+//      `fillet: 8` and are visible in the browser sheet. A rabbit has
+//      neither — its body flows into its snout in one curve. Two short
+//      antennae angle up and forward off the head.
+//   3. **The wings go back, never up.** Opened they reach **22.7 units
+//      behind the body at 32° above horizontal**, so a flying beetle is
+//      dominated by wings that overhang behind it. Upright blades are ears;
+//      that is exactly what went wrong the first time. The one moment they
+//      *are* upright is the instant the sweep passes vertical, which nothing
+//      holds — see constraint 1.
+//   4. And a fourth that turned out to matter more than expected: **an
+//      insect's leg is a zigzag where a mammal's is a column.** `KNEE` and
+//      the splay of `CONTACT` away from `HIP` are chosen so the femur hangs
+//      near vertical and the *shin* takes the angle, putting the knee three
+//      or four units below the belly where it shows. Straightening the legs
+//      alone took the silhouette back to reading as a pig.
+//
+// Three constraints hold the rig together:
+//
+//   1. **The wings vanish when folded.** Each is drawn lying *forward*
+//      inside the body from a pivot near its rear and rotates up and back
+//      out of it, so at `WING_FOLD` the near wing contributes nothing to the
+//      union and the far wing — its own outline, painted before the near
+//      one — lies wholly inside it (both measured at 0; see the rig's
+//      report). Anything that moves a wing pivot, lengthens a blade or
+//      lowers the body has to re-measure both.
+//
+//      **A rear pivot is forced, and so is the sweep through vertical.** A
+//      blade hinged at the *front* can never reach past the back of the body
+//      — its tip gets no further than `pivot.x − length` — so a wing that
+//      overhangs the rear must hinge at the rear and lie forward when
+//      folded, and every path from "forward" to "backward" goes over the
+//      top. The box's height is that transit and nothing else: 41 units of
+//      blade above a pivot at y = 81 puts the tip at y = 40.4, which is why
+//      a 36-unit animal needs a box that starts at y = 38. The transit is a
+//      waypoint (`lifting`), never a hold, so it lasts a couple of frames of
+//      the opening blend and the wings finish shallow — which is the whole
+//      point. The same geometry is why the blade is 41 rather than the
+//      "longer than the body" a flying beetle really has: folded, it has to
+//      fit inside a body that is 73 units long.
+//   2. **The body stands 11 units off the ground, and that is not styling.**
 //      A swinging foot has to clear `lib/travel.mjs`'s 6-unit plant
 //      tolerance or the stance measurement reads the whole swing as planted;
 //      it also has to stay clear of the belly, because a leg that leaves the
 //      body and comes back to graze it encloses a pocket `largest()` drops
 //      (the frog's foot, the teddy's arm). Usable lift is roughly
-//      `clearance − 4`, so 13 units of clearance buys the 7.5-unit lift the
-//      probe wants and little more. Lowering the shell costs both at once.
+//      `clearance − 4`, and `LIFT` is 8: the probe measures 7.9 units of it
+//      and the near feet clear the tolerance for 9 frames of 40.
 //   3. **Each leg crosses the body's boundary exactly once.** The femur's
-//      top is buried, the knee sits at or just below the belly line and the
-//      shin only ever goes further out and down. No leg tucks under the
-//      body, in flight included — the legs simply dangle in their standing
-//      splay and ride up with it.
+//      top is buried, and the knee tucks up into the belly at mid-swing
+//      while the shin goes on out and down. No leg tucks under the body, in
+//      flight included — the legs simply dangle in their standing splay and
+//      ride up with it.
 
 import {P, Circle, Ellipse, scaled} from "../lib/outline.mjs";
 
@@ -47,79 +92,114 @@ const GROUND = 100;
 
 // ── the parts ────────────────────────────────────────────────────────────
 const D = {};
-// The domed back: one ellipse 50 × 36, its underside 13 above the ground.
-// A second, smaller ellipse pushed forward and up gives the pronotum's
-// shoulder, so the back line rises from the head instead of leaving it as a
-// bump stuck on a circle.
-D.shell = [Ellipse(43, 68, 27, 19), Ellipse(57, 74, 13, 12)];
-// The head: smaller, forward and low, clearing the shell by 6.5 units.
-D.head = [Ellipse(70, 83, 8, 7)];
+// The body: two lobes, 73 units long and 25 tall together. Drawing them as
+// one smooth mass — the first thing tried here — reads as a pig, because a
+// long unbroken back with a snout on the end is a mammal; what says beetle
+// is the step between them, and the second step from the pronotum into the
+// head (lever 2).
+D.body = [
+	// the elytra: rear tip low and blunt, crest a third back from its front,
+	// front a near-vertical cliff for the pronotum to step off
+	P(
+		"M8,88.4 C8,80 13,70.8 25,67.4 C38,64 54,64.2 62,66.2 " +
+			"C64.6,66.6 65.4,67.2 65.6,68.4 L66.2,84 " +
+			"C64.4,87 58,88.8 48,89.2 C32,89.7 14,89.6 9.6,89.2 C8.4,89.1 8,89 8,88.4 Z"
+	),
+	// the pronotum: a smaller shield whose crest sits five units below the
+	// elytra's front edge, so the dorsal line steps down into it — and whose
+	// own front is a second cliff, for the head to step off in turn
+	P(
+		"M56,80 C56,77 61,74.8 68,74.2 C74.5,73.7 79.4,74.6 80.8,76.4 " +
+			"L81.4,85 C79.8,87.2 74,88.7 66,89 C60,89.1 56,87.4 56,84 Z"
+	),
+];
+// The head: a small lobe hung forward of the pronotum's cliff and below its
+// top, so the dorsal line steps down 76.4 → 81.7 into it. It overlaps the
+// pronotum by three units of x and about four of y — enough that the union
+// is one piece at every pose (a head that only touches would be dropped by
+// `largest()` and vanish), little enough that the notch survives the fillet.
+D.head = [Ellipse(83.5, 85.6, 5.2, 4.2)];
 // Femur (top buried in the body) and its knee cap; the cap is wider than the
-// bar it caps, per the rig rules.
-D.femur = [P("M-3,-5 C-3.4,1 -3,7 -2.6,12 L2.6,12 C3,7 3.4,1 3,-5 Z"), Circle(0, 12, 3.2)];
+// bar it caps and than the shin it carries, per the rig rules.
+D.femur = [P("M-2,-4 C-2.3,0 -2,4.5 -1.75,9 L1.75,9 C2,4.5 2.3,0 2,-4 Z"), Circle(0, 9, 2.3)];
 // Shin, ending in a rounded tarsus rather than a disc — a bug's foot is a
 // point, and a foot cap here would be the widest thing under the belly at
 // mid-swing, which is exactly what must not touch it.
-D.shin = [P("M-2.6,0 C-2.8,5 -2.3,10 -1.8,14 C-0.6,15.1 0.6,15.1 1.8,14 C2.3,10 2.8,5 2.6,0 Z")];
-// Both antennae on one node, as two prongs that diverge: drawn from inside
-// the head so their roots can never detach from it.
-D.ant = [
-	P("M-2,3.5 C-0.2,-2 2.4,-6.6 5.6,-10.8 L8.4,-8.8 C5.4,-4.8 3.2,-0.6 2,3.8 Z"),
-	P("M-1,5.4 C2.4,1.4 6.2,-1.4 10.8,-3.6 L11.8,-0.4 C7.8,1.4 4.4,3.8 1.6,7 Z"),
+D.shin = [
+	P("M-1.7,0 C-1.85,4.5 -1.5,8 -1.2,12 C-0.4,12.7 0.4,12.7 1.2,12 C1.5,8 1.85,4.5 1.7,0 Z"),
 ];
-// A wing: a 40-unit blade, 13 across at its widest, drawn lying **forward**
-// and 28° down from a pivot at the dome's apex, so that at `wing = 0` it is
-// folded away inside the shell. Opening rotates it *counter-clockwise*
-// (negative) up through vertical and back over the abdomen — never through
-// "pointing down", which is the frog's tongue lesson. Rooting it at the apex
-// rather than at the front is what makes it read as a wing rather than an
-// ear: the blade rises out of the middle of the back with the pronotum and
-// the head clearly in front of it, and 29 of its 40 units are outside the
-// dome at every angle the beat visits, so the outline's length barely moves
-// while it beats. Broad, too — a narrow prong above a round body is an ear
-// whatever else is done to it. `wing()` scales it down for the far side.
+// Both antennae on one node, as two thin prongs that diverge: drawn from
+// inside the head so their roots can never detach from it. Short, as a
+// ladybug's are, but not stubs — a stub reads as a horn, and a club on the
+// end (tried) reads as a finger. Their length is bounded by the box, not by
+// taste: they are the front-most thing the animal has.
+D.ant = [
+	P("M-1.4,1.2 C0.4,-1.6 2.6,-4.2 5.4,-6.8 L7,-5.2 C4.6,-2.8 2.8,-0.4 1.6,2 Z"),
+	P("M-1,3 C1.6,0.8 4.8,-1 8.6,-2.2 L9.2,-0.2 C6,1 3.4,2.6 1.6,4.4 Z"),
+];
+// A wing: a 41-unit blade, 12 across at its widest, drawn lying **forward**
+// along the body's own axis from a pivot near its rear, so that at
+// `WING_FOLD` it is folded away inside. Opening rotates it *counter-
+// clockwise* (negative) up over the back and down again behind the animal,
+// finishing shallow and rearward. Broad near the root and tapered to a tip:
+// a blade that is fattest in the middle reads as a tail, and the tip has to
+// stay a tip through `fillet`. `wing()` scales it down for the far side.
 D.wing = [
 	P(
-		"M0.1,-4.9 C6.5,-3.4 13,-0.6 18.8,2.7 C24.5,6 32.8,10.6 35,14.6 " +
-			"C36.4,17.2 34.6,21.4 31.6,21 C26.4,20.2 18,16 12.7,14.1 " +
-			"C7,12 1.2,6.4 -4.1,2.9 C-6.2,1.2 -3,-5.4 0.1,-4.9 Z"
+		"M0.6,-5 C4,-6.4 8,-6.6 12,-6 C18,-5.1 26,-3.4 33,-1.6 " +
+			"C38,-0.3 41,0.7 41,1.3 C41,2 38.4,2.6 34,2.9 " +
+			"C27,3.4 19,4.4 13,5.4 C8,6.2 3.6,6.2 0.7,5 " +
+			"C-1.8,4 -1.9,-4 0.6,-5 Z"
 	),
 ];
 
 // ── the leg chain ────────────────────────────────────────────────────────
-const L1 = 12; // hip → knee
-const L2 = 14; // knee → tarsus (the contact point)
-/** Near hips, rear to front; each is buried 4–5 units inside the shell. */
+const L1 = 9; // hip → knee
+const L2 = 12; // knee → tarsus (the contact point)
+/** Near hips, rear to front; each is buried 4–5 units inside the body. */
 const HIP = [
-	[33, 80],
-	[47, 82],
-	[62, 80],
+	[28, 84],
+	[50, 84],
+	[70, 84],
 ];
-/** Far hips: 3 back and 2 up, per the rig rules. */
+/** Far hips: 5 back and 2 up. Further back than the quadrupeds' 3, so the
+ * six legs read as six spaced strokes rather than three thick pairs; the far
+ * tripod is still 2 units high and 5 % short, so no far foot ever plants
+ * below a near one. */
 const FAR_HIP = [
-	[30, 78],
-	[44, 80],
-	[59, 78],
+	[23, 82],
+	[45, 82],
+	[65, 82],
 ];
-/** Where each near foot's stance is centred. */
-const CONTACT = [29, 47, 65];
-const STRIDE = 12; // how far a planted foot tracks back, in units
+/** Where each near foot's stance is centred — splayed back of the hips at
+ * the rear and forward of it at the front, which is a beetle's sprawl and
+ * also keeps every stance target inside the 20 units the two links reach. */
+const CONTACT = [22, 45, 74];
+const STRIDE = 11; // how far a planted foot tracks back, in units
 /**
  * How high a swinging foot rises. It is bounded on both sides and there is
  * not much room between them: below 6 it is inside `lib/travel.mjs`'s plant
  * tolerance and the animal drags, and every unit of it costs outline. A
  * tripod puts all three near legs at full stretch twice a cycle and folds
  * two of them at the quarters, so the near outline's length swings by very
- * nearly `4 × LIFT` units on a ~270-unit perimeter, once per half-cycle —
- * 9 units of lift measured 6.2 % between frames against the audit's 5 %
- * limit, and it is not a sampling artefact (a 1 % sweep of the cycle shows
- * one smooth slide, the union's child count pinned at 1, so a finer frame
- * rate does help). 7.5 with a 13-frame cycle sits at 4.55 %, and still
- * clears the tolerance for a fifth of the cycle.
+ * nearly `4 × LIFT` units, once per half-cycle. The shorter legs this redraw
+ * uses made that much cheaper than it was: 8 units of lift over an 11-frame
+ * cycle measures **3.58 %** of the near outline against the audit's 5 %,
+ * where the old dome's 7.5 over 13 frames measured 4.55 %. The probe reads
+ * 7.9 units of lift and the near feet clear the plant tolerance for 9 frames
+ * of 40 — a little over a fifth of the cycle.
  */
-const LIFT = 7.5;
-/** The knee's fold direction per leg: back, back, forward — a beetle's sprawl. */
-const KNEE = [-1, -1, 1];
+const LIFT = 8;
+/**
+ * The knee's fold direction per leg. Each foot is splayed away from its own
+ * hip — the rear pair back, the front pair forward — and the sign is chosen
+ * so the femur hangs near vertical and the *shin* takes the angle: the knee
+ * then sits three or four units below the belly, outside the body, and each
+ * leg reads as a bent stick rather than a straight column. A mammal's leg is
+ * a column; an insect's is a zigzag, and at this size that is most of what
+ * the legs contribute.
+ */
+const KNEE = [1, 1, -1];
 
 /**
  * The two-link solution putting leg `i`'s tarsus on `(tx, ty)`: the femur's
@@ -203,27 +283,34 @@ function leg(side, i) {
 	};
 }
 
+/** Folded: the blade lying forward along the body's own axis, out of sight. */
+const WING_FOLD = -13;
+/** Open: back and 32° above horizontal, the tip 22.7 units past the rear of
+ * the body. Shallower than this was tried first and the blade sat *below*
+ * the elytra's crest, where it read as a tail rather than a wing. */
+const WING_OPEN = -148;
+/** The far blade is 28 % shorter, hinges further forward and sits ten
+ * degrees higher, so the pair is told apart by length and attitude and not
+ * by tint — `ladybug-far.svg` paints every layer alike, and that is exactly
+ * where a matched pair of prongs read as a rabbit last time. Both point
+ * *backward*, which is what keeps them off the ear register whatever their
+ * separation. */
+const FAR_FOLD = -13;
+const FAR_OPEN = -138;
+
 /**
- * One wing on its own channel. **The two are told apart by shape and
- * attitude, not by tint**, and that is the hard-won part of this rig: the
- * near blade is 40 units long, sweeps up and back over the abdomen and shows
- * about 30 of itself; the far one is 31, hinges 6 units further forward and
- * nearer the surface, and is held up and *forward* over the pronotum with a
- * shallow flutter, showing about 17. A matched pair of prongs above a round
- * body is a rabbit however they are coloured — and the far tint is exactly
- * where that shows, because `ladybug-far.svg` paints every layer alike, so a
- * pair distinguished only by tint is distinguished by nothing in half the
- * files shipped. A long one sweeping back and a short one held forward
- * straddle the dome in a V in either file.
+ * One wing on its own channel, hinged near the rear of the body and lying
+ * forward inside it when folded (constraint 1).
  */
 function wing(side) {
-	const scale = side === "far" ? 0.78 : 1;
+	const far = side === "far";
+	const scale = far ? 0.72 : 1;
 	return {
-		pivot: side === "far" ? [40, 59] : [34, 60],
+		pivot: far ? [30, 80] : [22, 81],
 		rot: `wing.${side}`,
 		layer: side,
 		shapes: scaled(D.wing, scale, scale),
-		marker: [33.3 * scale, 17.8 * scale],
+		marker: [42 * scale, 1.2 * scale],
 	};
 }
 
@@ -238,7 +325,7 @@ const TRIPOD = {"near.1": 0, "near.2": 0.5, "near.3": 0, "far.1": 0.5, "far.2": 
 /**
  * The crawl. Half a cycle of stance per leg, so at every instant at least
  * one near tarsus is on the ground sliding back at `STRIDE / (dur / 2)` —
- * 48 units/s, which is what the sequence pins. The far tripod is raised 2
+ * 44 units/s, which is what the sequence pins. The far tripod is raised 2
  * units and 5 % shorter, so it never plants below a near foot and never wins
  * `stanceTravel`'s "lowest planted foot": the measurement only ever reads
  * the IK'd near legs.
@@ -253,8 +340,8 @@ const crawl = {
 		"leg.2.shin": LEGS[1].shin,
 		"leg.3.up": LEGS[2].up,
 		"leg.3.shin": LEGS[2].shin,
-		"wing.near": hold(0),
-		"wing.far": hold(0),
+		"wing.near": hold(WING_FOLD),
+		"wing.far": hold(FAR_FOLD),
 		ant: [
 			[0, -5],
 			[50, 5],
@@ -273,19 +360,19 @@ const crawl = {
 /**
  * The wingbeat, shared by all three flight gaits: one beat per cycle,
  * written as a full cycle so `flyLevel` can repeat it and the two ramped
- * gaits can hold two of them. It stays between −100° and −134°, so the blade
- * is 29 to 30 of its 40 units outside the dome throughout and the outline's
- * length changes by little more than rigid rotation — the whole beat is
- * 0.86 % of the near outline per stored frame, the cheapest thing in the
- * rig. Only the takeoff and landing blends ever pull a wing back through the
- * shell's surface, and those are the two segments that keep their frame rate.
+ * gaits can hold two of them. It stays between −134° and −162°, so the blade
+ * is entirely behind the body throughout and the outline's length changes by
+ * little more than rigid rotation — 0.33 % per stored frame, the cheapest
+ * thing in the rig. Only the two blends that open and fold the wings ever
+ * pull a blade back through the body's surface, and those are the segments
+ * that keep their frame rate.
  */
 const beat = (base) => [
-	[base + 0, -117],
+	[base + 0, -148],
 	[base + 25, -134],
-	[base + 50, -117],
-	[base + 75, -100],
-	[base + 100, -117],
+	[base + 50, -148],
+	[base + 75, -162],
+	[base + 100, -148],
 ];
 /**
  * The same beat `n` times inside one cycle, for the two ramped gaits. Two
@@ -305,19 +392,17 @@ const beats = (n) => {
 };
 const beats2 = beats(2);
 /**
- * The far wing's own beat: held up and forward over the pronotum, 30–70°
- * away from wherever the near one is, with an eighth of its amplitude. Two
- * blades that beat *together* are a pair of ears whichever way they point;
- * one sweeping and one nearly still is a flying insect. It is a separate
- * outline, so its own sweep costs the near outline nothing at all.
+ * The far wing's own beat: a shorter blade held a little higher than the
+ * near one with a sixth of its amplitude. Two blades that beat *together*
+ * are a matched pair; one sweeping and one nearly still is a flying insect.
+ * It is a separate outline, so its own sweep costs the near outline nothing.
  */
-const FAR_WING = -72;
 const farBeat = [
-	[0, FAR_WING],
-	[25, FAR_WING - 8],
-	[50, FAR_WING],
-	[75, FAR_WING + 8],
-	[100, FAR_WING],
+	[0, FAR_OPEN],
+	[25, FAR_OPEN - 6],
+	[50, FAR_OPEN],
+	[75, FAR_OPEN + 6],
+	[100, FAR_OPEN],
 ];
 
 /** The legs dangle in their standing splay through every flight gait. */
@@ -444,11 +529,11 @@ const legsAt = (p) =>
 		)
 	);
 
-/** Standing on all six, wings folded away: the ladybug as a plain dome. */
+/** Standing on all six, wings folded away: the ladybug as a plain beetle. */
 const walk = {
 	...legsAt(25),
-	"wing.near": 0,
-	"wing.far": 0,
+	"wing.near": WING_FOLD,
+	"wing.far": FAR_FOLD,
 	ant: -4,
 	ty: 0,
 	pitch: 0,
@@ -456,13 +541,25 @@ const walk = {
 	sy: 1,
 };
 
+/**
+ * Half-open, the waypoint that splits the opening blend in two. Everything
+ * expensive happens between `walk` and here — the blades leaving the body,
+ * which is where the near outline's length actually moves — and everything
+ * from here to `opened` is rigid rotation of a blade that is already wholly
+ * outside, so the second half can be blended twice as fast for half the
+ * frames. It is also the top of the sweep: a wing hinged at the rear and
+ * folded forward has to pass through vertical to get behind the animal, and
+ * this is the pose that says how tall the box must be.
+ */
+const lifting = {...walk, "wing.near": -86, "wing.far": -80, pitch: -2, ant: -8};
+
 /** Wings out, still on the ground — the pose the flight starts from. */
-const opened = {...walk, "wing.near": -117, "wing.far": FAR_WING, pitch: -4, ant: -10};
+const opened = {...walk, "wing.near": WING_OPEN, "wing.far": FAR_OPEN, pitch: -4, ant: -10};
 
 /** Down again, wings still out; they fold on the way back to `walk`. */
 const landed = {...opened, pitch: 2, ty: 0};
 
-const poses = {walk, opened, landed};
+const poses = {walk, lifting, opened, landed};
 
 export const rig = {
 	n: 300,
@@ -470,20 +567,26 @@ export const rig = {
 	// Nine emitted points per far outline, the coarsest in the cast, and the
 	// place this rig pays for having four of them: a far leg is a bent stick
 	// three or four pixels long at the theme's size and a far wing about ten,
-	// while every point of every far outline costs bytes on all 98 stored
+	// while every point of every far outline costs bytes on all the stored
 	// frames. `nFar` stays high — it is what the fillet runs on, and it costs
 	// nothing — and only the emitted stride is coarse.
 	nFar: 90,
 	emitStrideFar: 10,
-	// 8, below the rest of the cast: the antennae and the shins are exactly
-	// the features a stronger fillet rounds away.
+	// 8, below the rest of the cast: the antennae, the shins and the neck
+	// notch are exactly the features a stronger fillet rounds away.
 	fillet: 8,
-	viewBox: {x: 8, y: 5, w: 80, h: 98},
+	// 65 units tall for 36 units of standing beetle: the sky above it is the
+	// wing's transit through vertical (constraint 1) and the flight's 16-unit
+	// apex, and nothing else. 121 wide, because the open wings overhang 22.7
+	// units behind a body that is already 86 long with its head. Measured
+	// over all 580 sampled frames the animal occupies x −21.7..94.7,
+	// y 40.4..102.5 — about two units of margin on every side.
+	viewBox: {x: -24, y: 38, w: 121, h: 65},
 	ground: GROUND,
 	// 1, not the small animals' 2: `k` is the integer grid the outlines are
 	// rounded onto, and the ladybug is the smallest thing in the cast on
-	// screen — one rig unit of its 98-unit box is about a third of a pixel at
-	// the theme's size, and dropping the grain from 2 to 1 was worth 4 KB.
+	// screen — one rig unit of its box is about a third of a pixel at the
+	// theme's size.
 	k: 1,
 	// the far wing, then each far leg's three parts (femur, knee cap, shin)
 	farGroups: (items) => [
@@ -493,21 +596,21 @@ export const rig = {
 		items.slice(7, 10),
 	],
 	root: {
-		pivot: [50, GROUND],
+		pivot: [45, GROUND],
 		rot: "pitch",
 		ty: "ty",
 		scale: ["sx", "sy"],
 		children: [
 			{
-				pivot: [-50, -GROUND],
+				pivot: [-45, -GROUND],
 				children: [
 					wing("far"),
 					leg("far", 0),
 					leg("far", 1),
 					leg("far", 2),
-					{shapes: D.shell},
-					{shapes: D.head, marker: [78, 83]},
-					{pivot: [73, 80], rot: "ant", shapes: D.ant},
+					{shapes: D.body},
+					{shapes: D.head, marker: [88.7, 85.6]},
+					{pivot: [84.8, 83.4], rot: "ant", shapes: D.ant},
 					wing("near"),
 					leg("near", 0),
 					leg("near", 1),
@@ -519,9 +622,11 @@ export const rig = {
 	gaits,
 	channels,
 	poses,
-	// `opened`, not `walk`: a folded ladybug is a featureless dome with three
-	// sticks, and the wings are what the visit is about.
-	still: opened,
+	// `walk`, not `opened`: the still is what a reduced-motion reader gets,
+	// and the crawling beetle — long, low, six legs, head and antennae — is
+	// the read this rig is built around. The old rig chose the open pose
+	// because a folded ladybug was a featureless dome; this body is not.
+	still: walk,
 };
 
 export default {
@@ -530,32 +635,34 @@ export default {
 	colours: {near: "#d4574e", far: "#eaa9a3"},
 	budget: 100 * 1024,
 	sequence: {
-		first: 8,
-		period: 54,
+		first: 6,
+		period: 44,
 		stage: {aspect: 18},
 		// Distance is bought with crawl cycles, which are free in bytes (a
 		// gait stores one cycle whatever it repeats) — the flight covers only
-		// 324 of the 1684 units the visit has to cross. Both gait seams are
-		// ramped rather than stepped, the teddy's fix: a crawl pinned at 48
-		// next to a hold pinned at 0 changes the ground speed by the whole 48
+		// about 300 of the units the visit has to cross. Both gait seams are
+		// ramped rather than stepped, the teddy's fix: a crawl pinned at 44
+		// next to a hold pinned at 0 changes the ground speed by the whole 44
 		// in one frame. Every hold runs at 5–6 fps because a hold's frames are
-		// byte-identical copies of one pose; the two blends that open and fold
-		// the wings are the expensive ones and keep their frame rate.
+		// byte-identical copies of one pose; the blend that pulls the blades
+		// out of the body is the expensive one and keeps its frame rate.
 		segments: [
-			{gait: "crawl", cycles: 24, fps: 26, travel: 48},
-			{pose: "walk", hold: 0, blend: 0.25, fps: 12, travel: [48, 0]},
+			{gait: "crawl", cycles: 16, fps: 22, travel: 44},
+			{pose: "walk", hold: 0, blend: 0.25, fps: 12, travel: [44, 0]},
 			{pose: "walk", hold: 0.3, blend: 0, fps: 5, travel: 0},
-			{pose: "opened", hold: 0, blend: 0.5, fps: 20, travel: 0},
+			{pose: "lifting", hold: 0, blend: 0.5, fps: 26, travel: 0},
+			{pose: "opened", hold: 0, blend: 0.26, fps: 12, travel: 0},
 			{pose: "opened", hold: 0.2, blend: 0, fps: 5, travel: 0},
 			{gait: "flyUp", cycles: 1, once: true, fps: 20, travel: [0, 150]},
 			{gait: "flyLevel", cycles: 6, fps: 20, travel: 150},
 			{gait: "flyDown", cycles: 1, once: true, fps: 20, travel: [150, 0]},
 			{pose: "landed", hold: 0, blend: 0.25, fps: 12, travel: 0},
 			{pose: "landed", hold: 0.3, blend: 0, fps: 5, travel: 0},
-			{pose: "walk", hold: 0, blend: 0.45, fps: 20, travel: 0},
+			{pose: "lifting", hold: 0, blend: 0.26, fps: 12, travel: 0},
+			{pose: "walk", hold: 0, blend: 0.5, fps: 26, travel: 0},
 			{pose: "walk", hold: 0.15, blend: 0, fps: 6, travel: 0},
-			{blendTo: "crawl", secs: 0.3, fps: 8, travel: [0, 48]},
-			{gait: "crawl", cycles: 38, fps: 26, travel: 48},
+			{blendTo: "crawl", secs: 0.3, fps: 8, travel: [0, 44]},
+			{gait: "crawl", cycles: 28, fps: 22, travel: 44},
 		],
 	},
 };
