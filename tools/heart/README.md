@@ -90,9 +90,27 @@ want: the pin is the right fix, and the numbers it was drawn from stay visible.
    and wobbles; a sequence of segments (a gait for n cycles, a blend into a gait, a pose
    with a blend and a hold, a wobble around a pose) with the frame rate per segment. The
    shapes and tables are the ones the mockups were approved with, moved here verbatim.
+
+   **The ramp cycle.** A gait stores one cycle and repeats it, so a root channel that ramps
+   inside the cycle resets on every repeat — no use to anything that has to climb. A gait
+   played with `cycles: 1` whose `dur` spans several limb beats can instead ramp a root
+   channel _one way_ across the whole segment, with no new machinery: the **ladybug**'s
+   `flyUp` holds two wingbeats while `ty` travels from the ground to the top of its arc,
+   `flyLevel` — an ordinary cyclic gait, so its repeats cost no stored frames — flies the
+   distance, and `flyDown` ramps back down; the **bird**'s take-off is the same shape. Mark
+   such a segment `once: true`. Without it the clip closes on its own frame 0, which is right
+   for a repeat and, for a ramp, replays the whole climb backwards inside the clip's last
+   frame interval; `once` closes it on the gait's pose at phase 1 instead, which for every
+   cyclic channel (a limb beat, phased or not) is that channel's frame-0 value again and
+   differs only in the ramping ones. Nothing else would catch the mistake — a `ty` ramp is a
+   pure translate, so the outline's length never changes and the audit's 5 % rule sees
+   nothing — which is why `once` is checked against `cycles: 1` and why a rig using it should
+   read the clip's first and last frame back out of the shipped file once.
+
 2. **Sample** (`lib/sampler.mjs`): the segments become a list of poses at their frame rates.
 3. **Outline** (`lib/outline.mjs`): per stored frame, the near parts are united into one
-   closed outline and each far leg into its own (paper.js boolean ops, no canvas), the
+   closed outline and each far group into its own — a far leg, or whatever else a rig puts
+   on the far layer, the ladybug's far wing included (paper.js boolean ops, no canvas) — the
    outline is resampled from the rig's marker, rotated to line up with the previous frame,
    and its concave vertices — only those — are filleted, so joints soften and tips stay sharp.
    A gait stores one cycle; everything else stores every frame.

@@ -79,11 +79,23 @@ export function samplePoses(def) {
  * pose or wobble, aligned frame to frame across segment boundaries. Every
  * clip is closed at its own duration — a gait on its first frame, aligned
  * to its last, so the repeat is seamless; a pose on a hold of its last.
+ *
+ * **A ramp cycle closes on its own end instead** (`once: true`, and only
+ * with `cycles: 1` — see README § The pipeline). A gait whose root channel
+ * ramps one way across the cycle — the ladybug's climb, the bird's take-off
+ * — is not periodic, so closing it on its own frame 0 would replay the
+ * whole ramp backwards in the clip's last frame interval. Nothing else
+ * catches that: a `ty` ramp is a pure translate, so the outline's *length*
+ * never changes and the audit's 5 % rule sees nothing. The closing frame is
+ * instead the gait's pose at phase 1 − ε, which for every cyclic channel
+ * (a limb beat, phased or not — `cyc` wraps `t − phase`) is exactly its
+ * frame-0 value again and differs only in the ramping ones.
  */
 export function outlineSequence(def, poses, segs) {
 	let prev = null;
 	let failures = 0;
 	let retries = 0;
+	const problems = [];
 	for (const seg of segs) {
 		const n = seg.gait ? seg.cycleFrames : seg.count;
 		seg.frames = [];
@@ -96,13 +108,29 @@ export function outlineSequence(def, poses, segs) {
 			prev = o.layers;
 		}
 		seg.dur = seg.gait ? seg.cycleFrames / seg.fps : seg.t1 - seg.t0;
-		const closing = seg.gait
-			? seg.frames[0].layers.map((l, li) => ({cls: l.cls, pts: align(l.pts, prev[li].pts)}))
-			: prev;
+		if (seg.once && !(seg.gait && seg.cycles === 1)) {
+			problems.push(`${seg.id} is marked once but is not a gait played with cycles: 1`);
+		}
+		let closing;
+		if (seg.gait && seg.once) {
+			const gait = def.rig.gaits[seg.gait];
+			const end = gaitPose(gait, def.rig.channels(seg.gait), 1 - 1e-9);
+			const o = outlineFrame(def.rig, end, prev);
+			if (o.failed) failures++;
+			retries += o.attempts;
+			closing = o.layers;
+		} else if (seg.gait) {
+			closing = seg.frames[0].layers.map((l, li) => ({
+				cls: l.cls,
+				pts: align(l.pts, prev[li].pts),
+			}));
+		} else {
+			closing = prev;
+		}
 		seg.frames.push({t: seg.dur, layers: closing});
 		prev = closing;
 	}
-	return {failures, retries};
+	return {failures, retries, problems};
 }
 
 /**
@@ -329,9 +357,9 @@ export function buildAnimal(def) {
 	const stageW = sequence.stage.aspect * vb.h;
 	const stride = (cls) => (cls === "near" ? rig.emitStride ?? 1 : rig.emitStrideFar ?? 1);
 	const {poses, segs, onStage} = samplePoses(def);
-	const {failures, retries} = outlineSequence(def, poses, segs);
+	const {failures, retries, problems: clipProblems} = outlineSequence(def, poses, segs);
 	const {xs, v, flips} = travelOf(def, poses, segs);
-	const problems = [];
+	const problems = [...clipProblems];
 	if (failures) problems.push(`${failures} frame(s) whose union failed after retries`);
 	if (flips.length > 1) problems.push("more than one turn (a file carries one flip)");
 	const gap = sequence.period - sequence.first - onStage;

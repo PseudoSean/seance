@@ -224,7 +224,9 @@ function flat(item) {
 // ------------------------------------------------------------- drive
 const def = (await import(`./rigs/${name}.mjs`)).default;
 const {rig} = def;
-const fills = ["#a8c6a0", "#a8c6a0", "#7fb069"];
+// every far outline in the lighter tint, the near one last and on top —
+// a rig may have any number of far groups (the ladybug has four)
+const fillsFor = (n) => [...Array(Math.max(0, n - 1)).fill("#a8c6a0"), "#7fb069"];
 
 const poseOf = (p) => {
 	const v = {};
@@ -295,7 +297,7 @@ for (const [name, v] of frames) {
 		continue;
 	}
 	const o = outlineFrame(rig, v, null);
-	cells.push(renderCell(o.layers, view, cw, ch, fills.slice(-o.layers.length)));
+	cells.push(renderCell(o.layers, view, cw, ch, fillsFor(o.layers.length)));
 	console.log(`${name}${o.failed ? "  UNION FAILED" : ""}`);
 }
 const {px, W, H} = grid(cells, cw, ch);
