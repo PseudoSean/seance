@@ -11,6 +11,7 @@
 			<SettingTabItem v-if="showGeneral" name="General" class-name="general" to="" />
 			<SettingTabItem name="Appearance" class-name="appearance" to="appearance" />
 			<SettingTabItem name="Notifications" class-name="notifications" to="notifications" />
+			<SettingTabItem name="Aliases" class-name="aliases" to="aliases" />
 			<SettingTabItem v-if="!isPublic" name="Account" class-name="account" to="account" />
 		</ul>
 	</aside>
@@ -107,6 +108,10 @@
 
 .settings-menu .networks::before {
 	content: "\f233"; /* https://fontawesome.com/icons/server */
+}
+
+.settings-menu .aliases::before {
+	content: "\f120"; /* https://fontawesome.com/icons/terminal */
 }
 
 .settings-menu button:hover,
