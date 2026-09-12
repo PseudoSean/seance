@@ -24,11 +24,10 @@
 		</span>
 		<template v-if="message.type === 'unhandled'">
 			<span class="from">[{{ message.command }}]</span>
-			<span class="content">
-				<span v-for="(param, id) in message.params" :key="id">{{
-					`&#32;${param}&#32;`
-				}}</span>
-			</span>
+			<!-- One interpolation, single-space joined: the content is
+			     `white-space: pre-wrap` (server-formatted /map, /stats…), so
+			     any decorative space here would render. -->
+			<span class="content">{{ message.params.join(" ") }}</span>
 		</template>
 		<template v-else-if="isAction()">
 			<span class="from"><span class="only-copy" aria-hidden="true">***&nbsp;</span></span>

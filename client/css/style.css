@@ -295,6 +295,9 @@ button {
 code,
 pre,
 #chat .msg[data-type="monospace_block"] .text,
+/* Unhandled numerics are server-formatted for a fixed-width column
+   (/map trees, /stats tables): keep their spacing honest. */
+#chat .msg[data-type="unhandled"] .content,
 .irc-monospace,
 textarea#user-specified-css-input {
 	font-family: Consolas, Menlo, Monaco, "Lucida Console", "DejaVu Sans Mono", "Courier New", monospace;
@@ -4203,6 +4206,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 #chat .msg[data-type="message"] .content,
 #chat .msg[data-type="monospace_block"] .content,
 #chat .msg[data-type="notice"] .content,
+#chat .msg[data-type="unhandled"] .content,
 #chat .ctcp-message,
 #chat .part-reason,
 #chat .quit-reason,
