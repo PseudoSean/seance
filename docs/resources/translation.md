@@ -474,7 +474,7 @@ the cue that holds the message -- `Translate into German: <text>` on one
 line, no fence. A batched (drafted) request numbers its lines in and out
 and ends with `END`.
 
-Three things about that shape were **measured against the model itself**
+Four things about that shape were **measured against the model itself**
 (`tools/translate-llm.ts` over `tools/translate-eval/prompts.json`; the
 section below), not reasoned about:
 
@@ -505,6 +505,29 @@ section below), not reasoned about:
   never on a streaming partial -- a prefix is not a prefix until the text
   after it has arrived. A source we cannot find leaves the text alone:
   keeping a prefix is the harmless way to be wrong.
+- **"Detect the source language yourself." only when the source is
+  unknown.** Named beside a known source ("from English into Turkish.
+  Detect the source language yourself (probably English).") it stopped two
+  long English lines being handed back untranslated -- Turkish and Korean,
+  every run (`tools/translate-eval/echo.json`) -- so it looked like the fix.
+  On the 108-case round trip it was not: it dropped "March 3rd" from a
+  German line and "standup" from an Italian one, turned one line of a
+  Ukrainian draft to nonsense, left Chinese inside an English
+  back-translation, and took Hindi and Greek from bad to worse; the mean
+  fell from 68% to 66% even with the two echoes fixed
+  (`tools/translate-eval/results/2026-09-12-roundtrip-suite.md` against
+  `…-detect-always.md`). Eight other phrasings were measured on `echo.json`
+  and `prompts.json` first: the sentence _instead of_ the named source let an
+  embedded "Translate into French:" through (`prompts.json` 13b), asking for
+  "every sentence" made a Japanese paragraph echo as well, asking the model
+  to "check the language" fixed Turkish but not Korean, and rewording the
+  marks sentence cost the `*German*` line. The echo is handled after the
+  fact instead: the composer's bare second try (`bareRetry`) leaves the
+  source to the model and drops the context, which on this prompt translates
+  both paragraphs. What nothing here fixes is a word left in English inside
+  a good translation (`*urgent*` in German and Russian, `Thursday` in
+  Japanese) and one line of a three-line draft handed back (Spanish): the
+  retry compares the whole draft, so a draft with one echoed line passes.
 - **"Output only the translation of the last message, nothing else."** as
   the last line before the cue -- but only when something stands above the
   line for the model to mistake for it (a topic, the data block, the
@@ -695,6 +718,47 @@ composer now presents as "couldn't translate, send as written?" instead of
 offering the draft back as its own translation. Do not change a case's
 `expect` to chase the app's rule; the runner measures the model, the app
 decides what to do with what the model says.
+
+**The round-trip suite.** `tools/translate-eval/make-suite.mjs` writes
+`suite.json`: nine shapes of chat line — a plain question, a long sentence
+with three clauses, a four-sentence paragraph, a three-line draft, a line
+of commands and shorthand that do not translate (`brb`, `kubectl`, `502`,
+`lol`), markdown with code and a URL, an idiom, a line addressed to a nick,
+and times, a date and a unit — into the eight languages a user is likeliest
+to write (de, fr, es, it, pt, ja, zh, ru), and three of those shapes into
+twelve more (nl, pl, uk, tr, ko, sv, cs, ar, hi, vi, id, el): 108 cases.
+`tools/translate-eval/roundtrip.ts` runs a fixture forward, sends every
+answer back into the case's source language in the reading shape with no
+context, and writes a markdown table with the share of each line's content
+words that came back (`overlap.ts`: lower-cased, function words out, a
+five-character stem counts as a match, so an inflection survives and a
+paraphrase does not):
+
+```sh
+npx tsx tools/translate-eval/roundtrip.ts tools/translate-eval/suite.json --out tmp/roundtrip.md
+```
+
+Two model loads and about twenty minutes on the CPU; the two runner
+transcripts land beside the table. A low score is a list of cases for a
+person to read, not a verdict — an idiom rendered as its meaning scores
+badly and is right. What the 2026-09-12 run measured, for the route table
+plan 4 will write: a mean of 69% of content words back over the 108 cases;
+the eight main languages and uk, tr, ko, vi between 66% and 78%; idioms
+and the three-line draft the weakest shapes everywhere; **hi and el at
+24% and 22%, with the question already garbled** — those pairs do not
+belong on the LLM; ar, id, cs and pl in the fifties. Two forward answers
+were the English line handed back whole (tr and ko, the paragraph), which
+the table scores as a perfect trip, so read the forward column for echoes
+before trusting a high number.
+
+**The echo set.** `tools/translate-eval/make-echo.mjs` writes `echo.json`:
+the lines the model handed back or left half in English on that run (the
+tr and ko paragraphs, a Japanese paragraph with `Thursday` and `deploy`
+left in English, a Spanish three-line draft with one line untranslated,
+`*urgent*` left inside its marks in German and Russian, `week` and `paste`
+left in a French paragraph, and two reading-direction lines). A prompt
+change is measured against this file **and** `prompts.json`: the first
+must improve, the second must not regress.
 
 This is the first `.ts` tool in `tools/` — everything else there is plain
 `.mjs`. It runs under `npx tsx`, is type-checked by `npx tsc --noEmit -p tools` and is linted because `.eslintrc.cjs` names `tools/tsconfig.json`

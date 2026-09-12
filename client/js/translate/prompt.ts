@@ -149,6 +149,12 @@ export function systemPrompt(req: TranslateRequest, name: (code: string) => stri
 	const sourcePrefix = source ? `from ${source} ` : "";
 	// Part of the frame's own sentence rather than one of its own: the frame
 	// says what to do with the message, and working out its language is that.
+	// Only when the source is unknown: said beside a named source it stopped
+	// two long lines being handed back, but on the 108-case round trip it
+	// dropped a date, a term and a line of a draft and left Chinese in a
+	// back-translation (tools/translate-eval/results/, 2026-09-12), and the
+	// composer's bare second try (outgoing.ts `bareRetry`) already translates
+	// the lines that were handed back.
 	const detect = req.from
 		? ""
 		: ` Detect the source language yourself${

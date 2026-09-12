@@ -43,3 +43,5 @@ shells/capacitor/ios/
 .claude-config/
 .llama-stats.log
 testnet/
+# Generated measurement tables (tools/translate-eval/roundtrip.ts); column padding would multiply their size.
+tools/translate-eval/results/

@@ -130,6 +130,11 @@ describe("translate/prompt", () => {
 
 	it("asks the model to detect the source when it is unknown, using the hint", () => {
 		expect(systemPrompt(request({from: null}), name)).to.include("Detect the source language");
+		// Not when it is known: measured on the round trip, saying it beside a
+		// named source cost more than it fixed (prompt.ts, the comment on
+		// `detect`); the composer's bare retry covers the lines it fixed.
+		expect(systemPrompt(request({from: "de"}), name)).to.include("from German into English");
+		expect(systemPrompt(request({from: "de"}), name)).to.not.include("Detect the source");
 		expect(
 			systemPrompt(
 				request({from: null, context: {...emptyContext(), sourceHint: "pt"}}),

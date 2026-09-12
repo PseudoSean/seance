@@ -195,6 +195,13 @@ Plan 3 (composer):
   `seanceTranslateLog` (nothing in a production build), and
   `tools/translate-llm.ts --capture <file>` replays one exactly as the page
   asked for it. The fake's `[echo-once]` token is the retry succeeding.
+- **A round-trip suite measures prompt changes** (`tools/translate-eval/`:
+  108 cases, twenty languages, forward and back). Naming the source _and_
+  asking the model to detect it stopped two long lines being echoed but cost
+  more elsewhere (a dropped date, a lost term, a garbled draft line, the mean
+  68% → 66%), so the prompt is unchanged and the composer's bare retry
+  handles the echo. Hindi and Greek scored 24% and 22% and belong on the CPU
+  models in plan 4's route table.
 - The Check button and its Settings → Translation choice were removed on
   the user's direction: the round trip always runs, so there was nothing
   left to offer a choice about.
