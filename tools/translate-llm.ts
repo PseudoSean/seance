@@ -6,7 +6,7 @@
 //
 //   npx tsx tools/translate-llm.ts "hello, how are you?" --to de [--from en]
 //       [--purpose read|write] [--context fixture.json] [--show-prompt]
-//       [--raw] [--device cpu|cuda]
+//       [--raw] [--device cpu|cuda] [--markers placeholder|literal|tags]
 //   npx tsx tools/translate-llm.ts --eval tools/translate-eval/prompts.json [--to de]
 //
 // Only the model backend differs from the browser. The think-block
@@ -65,7 +65,7 @@ import {
 	parseBatchedOutput,
 	stripSentinel,
 } from "../client/js/translate/prompt";
-import {placeholdersIn, protect, restoreAll} from "../client/js/translate/spans";
+import {type MarkerForm, placeholdersIn, protect, restoreAll} from "../client/js/translate/spans";
 
 type Device = "cpu" | "cuda";
 type Purpose = "read" | "write";
@@ -449,6 +449,8 @@ interface Options {
 	to: string;
 	from: string | null;
 	purpose: Purpose;
+	/** The route's marker form (spans.ts `renderMarkers`); the app's LLM route uses `LLM_MARKERS`. */
+	markers: MarkerForm;
 	contextFile: string | null;
 	showPrompt: boolean;
 	raw: boolean;
@@ -461,6 +463,7 @@ const USAGE = [
 	'usage: npx tsx tools/translate-llm.ts "text" --to de [--from en] [--purpose read|write]',
 	"                                     [--context fixture.json] [--show-prompt] [--raw]",
 	"                                     [--device cpu|cuda] [--repo <hf repo>]",
+	"                                     [--markers placeholder|literal|tags]",
 	"       npx tsx tools/translate-llm.ts --eval tools/translate-eval/prompts.json [--to de]",
 ].join("\n");
 
@@ -470,6 +473,7 @@ function parseArgs(argv: string[]): Options {
 		to: "de",
 		from: null,
 		purpose: "read",
+		markers: "placeholder",
 		contextFile: null,
 		showPrompt: false,
 		raw: false,
@@ -503,6 +507,14 @@ function parseArgs(argv: string[]): Options {
 			}
 
 			options.purpose = purpose;
+		} else if (arg === "--markers") {
+			const markers = value();
+
+			if (markers !== "placeholder" && markers !== "literal" && markers !== "tags") {
+				throw new Error(`--markers is placeholder, literal or tags, not ${markers}`);
+			}
+
+			options.markers = markers;
 		} else if (arg === "--context") {
 			options.contextFile = value();
 		} else if (arg === "--eval") {
@@ -639,12 +651,15 @@ async function runCase(
 		purpose: Purpose;
 		context: PromptContext;
 		nicks: string[];
+		markers: MarkerForm;
 	},
 	show: {prompt: boolean; raw: boolean; stream: boolean},
 	id: number
 ): Promise<RunResult> {
 	const nicks = item.nicks ?? base.nicks;
-	const info = protect(item.text, {nicks});
+	// The app's exact shape: one protection per request, in the marker form
+	// the route it is about to take asks for (spans.ts `renderMarkers`).
+	const info = protect(item.text, {nicks, markers: base.markers});
 	// A draft is protected once and only then split, as outgoing.ts does, so a
 	// fenced block is one span rather than a fence per line.
 	const lines = info.text.split("\n").filter((line) => line.trim() !== "");
@@ -657,6 +672,7 @@ async function runCase(
 		to: item.to ?? base.to,
 		purpose: item.purpose ?? base.purpose,
 		context: base.context,
+		markers: base.markers,
 	};
 
 	if (batched) {
@@ -740,6 +756,7 @@ async function main(): Promise<void> {
 	console.log(`model   ${catalog.llm.id} → ${options.repo} (${DTYPE})`);
 	console.log(`cache   ${env.cacheDir}`);
 	console.log(`device  ${options.device} requested`);
+	console.log(`markers ${options.markers}`);
 
 	const loadStarted = Date.now();
 	let shown = -1;
@@ -765,6 +782,7 @@ async function main(): Promise<void> {
 		purpose: options.purpose,
 		context: fixture.context,
 		nicks: fixture.nicks,
+		markers: options.markers,
 	};
 
 	if (options.evalFile) {

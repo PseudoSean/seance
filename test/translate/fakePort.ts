@@ -95,6 +95,9 @@ describe("translate/fakePort", () => {
 			from: "de",
 			to: "en",
 			engine: "llm",
+			// The marker form the route chose (spans.ts `renderMarkers`); a
+			// request that names none carries the numbered pairs.
+			markers: "placeholder",
 		});
 
 		terminate();

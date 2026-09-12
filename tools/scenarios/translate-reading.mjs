@@ -670,10 +670,13 @@ async function scenario(page) {
 	);
 	await page.check("the retry added exactly one done line", (await page.evaluate(LINES)) === 7);
 
-	// Markdown markers and the names in the channel are protected, never
-	// translated: the fake echoes what it was given, so the translated line
-	// still carries the emphasis (rendered, as in the original) and the
-	// page's own nick.
+	// The names in the channel are protected and the emphasis survives: the
+	// fake echoes what it was given, so the translated line still carries
+	// the emphasis (rendered, as in the original) and the page's own nick.
+	// The nick travels as a placeholder; the marks reach the LLM route as
+	// `*…*` themselves (spans.ts `LLM_MARKERS`, and the composer scenario
+	// pins the form the request carries), which is why what comes back has
+	// to be rendered emphasis either way.
 	const emphasisMarker = `Betonungsprobe${RUN}`;
 
 	other.say(
@@ -790,9 +793,7 @@ async function scenario(page) {
 	// are proved by the ordinary translated-line check.
 	await page.check(
 		"the display math survived as its own span, not mangled into prose",
-		await page.evaluate(
-			`!!(${mathRow}).querySelector(".msg-translation-text .md-math-block")`
-		)
+		await page.evaluate(`!!(${mathRow}).querySelector(".msg-translation-text .md-math-block")`)
 	);
 	await page.check(
 		"the prose around the math block was translated",

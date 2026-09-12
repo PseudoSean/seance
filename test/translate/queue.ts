@@ -15,7 +15,7 @@ import {
 	type QueueItem,
 	type QueueUpdate,
 } from "../../client/js/translate/queue";
-import {protect} from "../../client/js/translate/spans";
+import {placeholder, protect} from "../../client/js/translate/spans";
 
 type Script = (req: Omit<TranslateRequest, "id" | "model">) => string[] | Error;
 
@@ -96,6 +96,34 @@ describe("translate/queue", () => {
 	afterEach(() => {
 		clock?.restore();
 		clock = null;
+	});
+
+	// The marker form is the route's, and the route is only known here: a
+	// message is protected when it arrives (reader.ts), so the queue renders
+	// its pairs for whichever engine took it (spans.ts `renderMarkers`).
+	it("sends the marks themselves to the LLM and numbered pairs to seq2seq", async () => {
+		const r = rig((req) => [`[en] ${req.text}`]);
+		clock = r.clock;
+		r.queue.enqueue(item(1, "das ist *wichtig*"));
+		await settle(r.clock);
+
+		expect(r.requests[0].text).to.equal("das ist *wichtig*");
+		expect(r.requests[0].markers).to.equal("literal");
+
+		r.setEngine(() => "seq2seq");
+		r.queue.enqueue(item(2, "das ist *wichtig*"));
+		await settle(r.clock);
+
+		expect(r.requests[1].text).to.equal(`das ist ${placeholder(1)}wichtig${placeholder(2)}`);
+		expect(r.requests[1].markers).to.equal("placeholder");
+
+		// Either way the reader is shown one thing: the marks, around the
+		// words the engine put them around.
+		expect(
+			r.updates
+				.filter(([, u]) => u.status === "done")
+				.map(([, u]) => (u as {text: string}).text)
+		).to.deep.equal(["[en] das ist *wichtig*", "[en] das ist *wichtig*"]);
 	});
 
 	it("translates one item, streaming, and restores the placeholders", async () => {

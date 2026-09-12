@@ -5,6 +5,8 @@
 // DOM or a library, so mocha loads it and test/translate/fakeEngine.ts can
 // stand in for either engine.
 
+import type {MarkerForm} from "./spans";
+
 export type EngineName = "llm" | "seq2seq";
 export type ModelFamily = "llm" | "nllb" | "opus";
 export type EngineStatus = "cold" | "loading" | "ready" | "failed";
@@ -60,6 +62,12 @@ export interface TranslateRequest {
 	model: string;
 	/** After span protection: placeholders are already in place. */
 	text: string;
+	/**
+	 * The form `text`'s marker pairs are in (spans.ts `renderMarkers`), so
+	 * the prompt can say what to keep. Absent means `placeholder`; the
+	 * seq2seq engines ignore it, having no prompt to say it in.
+	 */
+	markers?: MarkerForm;
 	/** A batched request: numbered lines in, numbered lines out (LLM only). */
 	lines?: string[];
 	/** ISO 639-1 (639-3 codes are mapped by languages.ts); null = unknown. */

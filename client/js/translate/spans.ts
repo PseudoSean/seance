@@ -3,8 +3,8 @@
 // IRC formatting codes, Markdown markers, a line's leading syntax and the
 // channel's nicknames — is swapped for numbered placeholders before any
 // engine sees the text and put back afterwards. Fidelity is the code's job,
-// not the model's: the model only ever sees a placeholder where the syntax
-// was, so `*German*` can never come back as `German`.
+// not the model's: for everything whose content is not to change, the
+// engine only ever sees a placeholder where the syntax was.
 //
 // Three kinds of span, three restore policies (`restoreAll`):
 //
@@ -12,6 +12,17 @@
 //   marker    one half of a pair; lose either half and neither goes back,
 //             so a stray `*` is never left behind
 //   prefix    a line's leading syntax; lost ⇒ re-prepended to its line
+//
+// `protect()` is the one canonical protection and always numbers every
+// span. A marker pair is then *rendered* for the route the request is
+// about to take (`renderMarkers`, `MarkerForm`), because a pair is the one
+// span whose content the engine has to translate: a small LLM given
+// `⟦1⟧German⟦2⟧` stops translating altogether, so the LLM route sees the
+// marks themselves (`LLM_MARKERS`) while the seq2seq engines, which read no
+// instructions, keep the placeholders. Rendering is a pure text pass over
+// `protect()`'s output, so the reading queue can do it when the route is
+// resolved rather than when the message was protected, and `restoreAll`
+// reads whichever form its `Protected` says it is in.
 //
 // Vue-free and DOM-free, so mocha loads it (`test/translate/spans.ts`).
 
@@ -25,15 +36,49 @@ export type SpanMeta =
 	/** 0-based line of the protected text the prefix opened. */
 	| {kind: "prefix"; line: number};
 
+/**
+ * How a marker pair is written in the text an engine sees. Everything else
+ * — URLs, code, TeX, tables, nicknames, line prefixes — is a numbered
+ * placeholder on every route, always.
+ *
+ *   placeholder  `⟦1⟧German⟦2⟧`, the seq2seq engines' form (no prompt to
+ *                read an instruction from, so the code must do it all)
+ *   literal      `*German*`, the marks as the user typed them
+ *   tags         `<1>German</1>`, an XML-ish pair the number travels on
+ *
+ * The LLM route uses `LLM_MARKERS`; `tags` is reachable only from
+ * `tools/translate-llm.ts --markers tags`, which is what it exists for.
+ */
+export type MarkerForm = "placeholder" | "literal" | "tags";
+
+/**
+ * What the LLM route asks `renderMarkers` for.
+ *
+ * Measured on the runner (`tools/translate-eval/markers.json`,
+ * docs/resources/translation.md § Emphasis marks on the LLM route): with
+ * bare `⟦n⟧` pairs *around words it must translate* the 1.7B model stops
+ * translating — `please keep the *timestamps* in the log, I need the
+ * **ordering**` came back as `⟧3⟧timestamps⟦4⟧ in der Log ⟦1⟧ordering⟦2⟧`,
+ * the emphasised words untranslated and a mangled placeholder with them.
+ * The same placeholders for URLs, code, nicknames and prefixes are fine,
+ * because nothing inside them is meant to change; a mark is different, the
+ * words between its halves have to move.
+ */
+export const LLM_MARKERS: MarkerForm = "literal";
+
 export interface Protected {
 	text: string;
 	spans: string[];
 	meta: SpanMeta[];
+	/** The form `text`'s marker pairs are in; absent means `placeholder`. */
+	markers?: MarkerForm;
 }
 
 export interface ProtectOptions {
 	/** The channel's user list: a name is data, never something to translate. */
 	nicks?: string[];
+	/** The marker form for this route (`renderMarkers`); default `placeholder`. */
+	markers?: MarkerForm;
 }
 
 // Order matters: a code span swallows the URL inside it, a URL swallows the
@@ -422,7 +467,96 @@ export function protect(text: string, options: ProtectOptions = {}): Protected {
 	out = protectPrefixes(out, spans);
 	out = protectNicks(out, options.nicks ?? [], spans);
 
-	return {text: out, spans: spans.spans, meta: spans.meta};
+	return renderMarkers(
+		{text: out, spans: spans.spans, meta: spans.meta, markers: "placeholder"},
+		options.markers ?? "placeholder"
+	);
+}
+
+/** `<1>` and `</1>`: a marker pair in `tags` form. */
+const TAG_RX = /<(\/?)(\d+)>/g;
+
+/** A marker half that is nothing but syntax: no span of its own inside it. */
+function isPlainMarker(span: string): boolean {
+	return !span.includes(PLACEHOLDER_OPEN);
+}
+
+/**
+ * `protect()`'s output with its marker pairs written in `form`. Only marker
+ * spans move; a URL, a code span, a nickname, a table or a line prefix is a
+ * numbered placeholder on every route, and the numbering itself never
+ * changes — so the same `Protected` restores the answer whichever form it
+ * went out in.
+ *
+ * `literal` puts every half back into the text as the user typed it (`*`,
+ * `**`, `~~`, `||`, and a link's `[` and `](⟦n⟧)` both), and with it goes
+ * the guarantee that a pair cannot be half-lost: what the model returns is
+ * what the user sees, marks included, and a mark the model drops is simply
+ * gone — which still leaves a correctly translated sentence, unlike a
+ * placeholder it mangles. A link's target stays hidden all the same: its
+ * `](…)` half carries the placeholder the URL stage already made of it, so
+ * the model is shown well-formed markdown around a number it cannot read.
+ * Handing it the brief's half-literal `[the log⟦3⟧` instead was measured
+ * and cost the case: `*now*` came back untranslated.
+ *
+ * `tags` renders a pair as `<n>…</n>` on the *opening* half's number (the
+ * halves of a pair are always pushed consecutively, so its partner is
+ * `n + 1`); a pair that is not symmetrical syntax — the link again — keeps
+ * its placeholders.
+ */
+export function renderMarkers(info: Protected, form: MarkerForm): Protected {
+	if (form === "placeholder" || (info.markers ?? "placeholder") === form) {
+		return info;
+	}
+
+	const text = info.text.replace(PLACEHOLDER_RX, (match, n: string) => {
+		const index = Number(n);
+		const own = info.meta[index - 1];
+
+		if (!own || own.kind !== "marker") {
+			return match;
+		}
+
+		const open = Math.min(index, own.partner);
+		const close = Math.max(index, own.partner);
+
+		if (form === "tags") {
+			const symmetrical =
+				isPlainMarker(info.spans[open - 1]) && isPlainMarker(info.spans[close - 1]);
+
+			if (!symmetrical) {
+				return match;
+			}
+
+			return index === open ? `<${open}>` : `</${open}>`;
+		}
+
+		return info.spans[index - 1];
+	});
+
+	// The numbering and what each span is are untouched: only how a pair is
+	// written changed, so `info`'s own spans and meta restore the answer.
+	return {text, spans: info.spans, meta: info.meta, markers: form};
+}
+
+/**
+ * A `tags` answer as the rest of the module reads it: every tag the spans
+ * actually account for back to its placeholder, so the orphan rule, the
+ * missing report and `expandSpan` all work on one form. A tag number that
+ * is not a marker pair's opening half is text the engine (or the user)
+ * wrote — `<3>` is left alone.
+ */
+function untag(text: string, info: Protected): string {
+	return text.replace(TAG_RX, (match, slash: string, digits: string) => {
+		const index = Number(digits);
+		const meta = info.meta[index - 1];
+
+		if (!meta || meta.kind !== "marker" || meta.partner !== index + 1) {
+			return match;
+		}
+
+		return placeholder(slash === "" ? index : index + 1);
+	});
 }
 
 /**
@@ -490,10 +624,13 @@ export function appendMissing(text: string, spans: string[], missing: number[]):
  * in one go) it goes back to its own line, as long as the line count held.
  */
 export function restoreAll(text: string, info: Protected, expected?: number[]): string {
+	// A `tags` answer is read as placeholders: the pairs the spans account
+	// for become `⟦n⟧` again and everything below is one code path.
+	const carried = info.markers === "tags" ? untag(text, info) : text;
 	// What the engine was given, not every span there is: a span nested
 	// inside another (a link's target) travels with its parent.
 	const want = expected ?? placeholdersIn(info.text);
-	const found = new Set(placeholdersIn(text).filter((i) => i >= 1 && i <= info.spans.length));
+	const found = new Set(placeholdersIn(carried).filter((i) => i >= 1 && i <= info.spans.length));
 	// Half a pair is no use: put back neither, rather than a stray `*`.
 	const orphaned = new Set(
 		[...found].filter((i) => {
@@ -503,7 +640,7 @@ export function restoreAll(text: string, info: Protected, expected?: number[]): 
 		})
 	);
 
-	let out = text.replace(PLACEHOLDER_RX, (_match, n: string) => {
+	let out = carried.replace(PLACEHOLDER_RX, (_match, n: string) => {
 		const index = Number(n);
 
 		if (index < 1 || index > info.spans.length || orphaned.has(index)) {

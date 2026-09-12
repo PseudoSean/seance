@@ -26,10 +26,20 @@ import {
 	writeSource,
 } from "./outgoing";
 import {channelTranslation, holdReading, releaseReading} from "./reader";
-import {stripCopiedNickPrefix} from "./spans";
+import {LLM_MARKERS, type MarkerForm, stripCopiedNickPrefix} from "./spans";
 
 /** An id no message has: buildContext then takes the whole scrollback as "before" the draft. */
 const DRAFT_ID = Number.MAX_SAFE_INTEGER;
+
+/**
+ * The marker form a route's engine reads (spans.ts): the LLM is the one
+ * that takes an instruction about the marks and the one that cannot handle
+ * placeholders around words it must translate, so it gets `LLM_MARKERS`;
+ * every seq2seq candidate keeps the numbered pairs.
+ */
+function markersFor(candidate: string | undefined): MarkerForm {
+	return candidate === "llm" ? LLM_MARKERS : "placeholder";
+}
 
 /** In-flight translation and check per channel id. */
 const sessions = new Map<number, AbortController>();
@@ -213,6 +223,7 @@ export async function translateOutgoing(
 					purpose: "write",
 					context,
 					batches: route?.candidate === "llm",
+					markers: markersFor(route?.candidate),
 					nicks,
 				},
 				controller.signal,
@@ -342,6 +353,7 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 					purpose: "read",
 					context,
 					batches: route?.candidate === "llm",
+					markers: markersFor(route?.candidate),
 					nicks: channel.users.map((u) => u.nick),
 				},
 				controller.signal,

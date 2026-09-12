@@ -6,7 +6,14 @@
 
 import type {PromptContext, TranslateChunk, TranslateRequest} from "./engine";
 import {parseBatchedOutput, stripSentinel} from "./prompt";
-import {type Protected, placeholdersIn, protect, restore, restoreAll} from "./spans";
+import {
+	type MarkerForm,
+	type Protected,
+	placeholdersIn,
+	protect,
+	restore,
+	restoreAll,
+} from "./spans";
 
 /** A draft's translation is given up after this long (the queue's limit). */
 export const WRITE_TIMEOUT_MS = 2 * 60 * 1000;
@@ -144,6 +151,13 @@ export interface OutgoingRequest {
 	/** The channel's names, protected like any other span (spans.ts). */
 	nicks?: string[];
 	/**
+	 * The marker form the route's engine reads (spans.ts `renderMarkers`):
+	 * `LLM_MARKERS` on the LLM route, `placeholder` everywhere else. It
+	 * travels with the request as well as into the protection, so the
+	 * prompt can say what the text it is looking at carries.
+	 */
+	markers?: MarkerForm;
+	/**
 	 * Already protected, `text` being its protected form: the reading queue
 	 * protects a whole message once (a fenced block is one span across its
 	 * lines) and hands the lines here. Without it the text is protected
@@ -175,6 +189,7 @@ async function translateOne(
 			to: request.to,
 			purpose: request.purpose,
 			context: request.context,
+			markers: request.markers,
 		},
 		signal
 	)) {
@@ -220,6 +235,7 @@ async function translateBatched(
 			to: request.to,
 			purpose: request.purpose,
 			context: request.context,
+			markers: request.markers,
 		},
 		signal
 	)) {
@@ -285,7 +301,9 @@ export async function translateDraft(
 	try {
 		// Once, on the whole text: a fenced code block is one span across
 		// its lines, and a placeholder's number is the same in every line.
-		const info = request.protected ?? protect(request.text, {nicks: request.nicks});
+		const info =
+			request.protected ??
+			protect(request.text, {nicks: request.nicks, markers: request.markers});
 		const lines = info.text.split("\n");
 		const filled: [string, number][] = [];
 		// A line that is nothing but protected syntax (a code block) has

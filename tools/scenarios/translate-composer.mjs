@@ -492,7 +492,12 @@ export default async function run(page) {
 
 	// 9b. Markdown markers, a nick, a URL and a code span survive: the fake
 	// echoes its input, so what the strip shows is exactly what was
-	// protected and put back. A marker the engine never saw cannot be lost.
+	// protected and put back. The nick, the URL and the code span are
+	// placeholders on every route — the engine never sees them — while the
+	// marks themselves are what the LLM route is given (spans.ts
+	// `LLM_MARKERS`, measured: bare `⟦n⟧` pairs around words it must
+	// translate stop the model translating), and the fake runs as the `llm`
+	// candidate here.
 	const fidelity = `Hello everyone, this is supposed to be in *German*. Ask ${LISTENER}. See https://example.org/x and \`code\``;
 
 	await page.fill(INPUT, "");
@@ -501,9 +506,18 @@ export default async function run(page) {
 		timeout: 25000,
 		label: "the strip kept the markers, the nick, the URL and the code span",
 	});
+
+	const fidelityRequest = await page.evaluate(`${REQUESTS}.slice(-1)[0]`);
+
 	await page.check(
-		"the engine never saw the marker, the nick, the URL or the code span",
-		!(await page.evaluate(`${REQUESTS}.slice(-1)[0].text`)).includes("*German*")
+		"the engine never saw the nick, the URL or the code span",
+		!fidelityRequest.text.includes(LISTENER) &&
+			!fidelityRequest.text.includes("https://example.org/x") &&
+			!fidelityRequest.text.includes("`code`")
+	);
+	await page.check(
+		`the LLM route was given the marks themselves (markers: ${fidelityRequest.markers})`,
+		fidelityRequest.markers === "literal" && fidelityRequest.text.includes("*German*")
 	);
 	await page.screenshot("composer-markdown");
 
@@ -557,9 +571,9 @@ export default async function run(page) {
 	await page.fill(INPUT, "");
 
 	// 9d. Inline TeX and an emphasis pair together: the engine only ever
-	// sees a placeholder for the math and a marker pair for the bold word,
-	// and both the primary strip and the round-trip's read-back row keep
-	// them intact.
+	// sees a placeholder for the math — its content must not change — while
+	// the bold marks reach it as `**`, and both the primary strip and the
+	// round-trip's read-back row keep them intact.
 	const math = "the result is $`x^2`$ and it is **final**";
 
 	await typeAndEnter(page, math);

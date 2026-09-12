@@ -7,6 +7,8 @@ import {
 	DATA_HEADING,
 	END_SENTINEL,
 	EXAMPLES,
+	KEEP_MARKS,
+	KEEP_TAGS,
 	EXAMPLE_ANSWERS,
 	EXAMPLE_SOURCE,
 	ONLY_THE_TRANSLATION,
@@ -146,6 +148,19 @@ describe("translate/prompt", () => {
 		expect(text).to.not.include("Translate the user's message");
 		expect(systemPrompt(request(), name)).to.include(
 			"Translate the user's message from German into English"
+		);
+	});
+
+	it("says what to do with the marks only when the text carries them", () => {
+		// The placeholder sentence is in every request; the marks sentence is
+		// for the form the route asked for (spans.ts `renderMarkers`), so a
+		// seq2seq request reads exactly as it always did.
+		expect(systemPrompt(request(), name)).to.include("Keep placeholders like");
+		expect(systemPrompt(request(), name)).to.not.include("Keep markdown marks");
+		expect(systemPrompt(request({markers: "literal"}), name)).to.include(KEEP_MARKS);
+		expect(systemPrompt(request({markers: "tags"}), name)).to.include(KEEP_TAGS);
+		expect(systemPrompt(request({markers: "placeholder"}), name)).to.not.include(
+			"Keep markdown marks"
 		);
 	});
 

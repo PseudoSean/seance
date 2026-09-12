@@ -260,6 +260,71 @@ separator elsewhere in the table falls back to the **verbatim** policy and
 is appended after the text rather than put back at its column -- accepted
 as today's policy rather than special-cased.
 
+### Emphasis marks on the LLM route
+
+A marker pair is the one span whose _content_ the engine has to translate,
+and that turned out to be the difference. Everything else a placeholder
+stands for -- a URL, a code span, a nickname, a table's separator, a line
+prefix -- is meant to come back unchanged, and the models carry those
+through happily. Bare `⟦n⟧` pairs _around words to translate_ are what the
+1.7B LLM cannot do: asked for `please keep the *timestamps* in the log, I need the **ordering**` it answered `⟧3⟧timestamps⟦4⟧ in der Log ⟦1⟧ordering⟦2⟧` -- the emphasised words untranslated, the first clause
+dropped and a placeholder mangled -- and `hello this is supposed to be in *German*` came back as `hallo this is supposed to be in ⟦1⟧German⟦2⟧`, a
+near echo.
+
+So the form a pair takes is chosen **per route** (`spans.ts`
+`MarkerForm`, `renderMarkers`): `protect()` is still the one canonical
+protection and always numbers every span, and the pairs are then rendered
+for the engine the request is about to reach.
+
+- **`literal`** -- `LLM_MARKERS`, what the LLM route gets: the marks as the
+  user typed them (`*German*`), with one added system sentence (`KEEP_MARKS`
+  in `prompt.ts`). A link stays well-formed markdown with only its target
+  hidden (`[the log](⟦1⟧)`).
+- **`placeholder`** -- `⟦1⟧German⟦2⟧`, what every seq2seq candidate gets.
+  They read no prompt, so the code has to do all of it, and they do not have
+  the LLM's problem.
+- **`tags`** -- `<1>German</1>`, kept because `tools/translate-llm.ts --markers tags` measures it, and reachable from nowhere else.
+
+Measured over `tools/translate-eval/markers.json` (eight cases, the two
+reported lines among them, en->de in the composer's shape and de->en in the
+reader's, all with one channel's context) and scored on whether the whole
+sentence was translated and the marks landed on the right words:
+`literal` 5 correct of 8 with 3 partial and nothing garbled, `placeholder`
+3 correct with 3 sentences lost, `tags` 4 correct with 4 lost -- including
+the worst answer of the whole measurement, the reported line coming back as
+the single word `Ordnung`. `tags` also loses its opening tag to
+`cleanOutput`'s copied-name strip, which reads `<1>` as a name. The table
+is in
+`docs/superpowers/plans/2026-09-12-client-translation-3-ledger/markers-report.md`.
+
+What `literal` gives up is the guarantee that a pair cannot be half-lost:
+the marks in the answer are the model's own, so a mark it drops is gone and
+a mark it misplaces is misplaced (`das **neue** Rig ist *fertig*` came back
+`The new Rig is *done*`, one pair short). That is the trade the measurement
+bought: a lost mark leaves a correctly translated sentence, where a mangled
+placeholder left the user's own English back in the composer. Nothing else
+changed on any route.
+
+Where the choice is made:
+
+- the composer (`writer.ts`) resolves the route before `translateDraft` and
+  passes the form for both the translation and its read-back check;
+- the reading queue (`queue.ts`) cannot: `reader.ts` protects a message when
+  it arrives and the route is resolved per item later, so the form is chosen
+  in `enqueueAt` -- where the engine first becomes known -- and kept on the
+  `Queued` record, which is what both the request and the restore are built
+  from. (One `Protected` per request, both directions: restoring a rendered
+  request against the canonical protection is _accidentally_ right for
+  `literal` and wrong for `tags`.)
+
+`restoreAll` reads whichever form its `Protected` says it is in: a `tags`
+answer has its pairs turned back into placeholders first (only the numbers
+the spans actually account for, so a `<3>` somebody typed stays text), and
+under `literal` there is nothing to put back for a mark -- the answer
+carries it already. A request's `markers` travels with it
+(`TranslateRequest.markers`) so `prompt.ts` can say what the text holds, and
+the fake engine records it, which is what the composer scenario asserts.
+
 ## The prompt
 
 `prompt.ts` assembles two messages for the LLM tier. The **system** message
@@ -419,6 +484,14 @@ runner says so, or says loudly that the block was absent. `--raw` prints
 the raw delta stream and then the echo guard's verdict on each line, which
 is what tells "the model echoed the source" apart from "the model
 translated and the guard dropped it".
+
+`--markers placeholder|literal|tags` protects the input in that marker form
+(spans.ts `renderMarkers`) and sends the form with the request, so a run is
+the app's exact shape on that route; `tools/translate-eval/markers.json` is
+the set the per-route rule above was chosen with (eight cases: the two
+reported lines, a nick to carry through, three pairs in one line, a link, a
+spoiler at the front of the line, and two reading-direction lines, each
+carrying the composer's own channel context).
 
 `--context fixture.json` supplies a `PromptContext` (`recent`, `names`,
 `terms`, `topic`, `replyTo`, `voice`, `formality`, `variant`, `sourceHint`)

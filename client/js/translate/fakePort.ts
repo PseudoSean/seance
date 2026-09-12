@@ -52,6 +52,8 @@ interface TranslateFakeRequestLog {
 	from: string | null;
 	to: string;
 	engine: EngineName;
+	/** The marker form the route chose (spans.ts `renderMarkers`). */
+	markers: string;
 }
 
 interface TranslateFakeGlobal {
@@ -75,6 +77,7 @@ function logRequest(req: TranslateRequest, engine: EngineName): void {
 		from: req.from,
 		to: req.to,
 		engine,
+		markers: req.markers ?? "placeholder",
 	});
 }
 

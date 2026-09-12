@@ -362,6 +362,40 @@ TeX and pipe tables survive translation (2026-09-12):
   stages; only the pipes themselves and the whole alignment row are claimed
   up front.
 
+Emphasis marks on the LLM route, measured (2026-09-12):
+
+- **A marker pair's form is chosen per route; every other span is a
+  numbered placeholder everywhere.** `⟦n⟧` pairs _around words to
+  translate_ are what the 1.7B LLM cannot handle -- the reported draft came
+  back with its emphasised words untranslated and a placeholder mangled --
+  so the LLM route is given the marks themselves (`spans.ts` `LLM_MARKERS`
+  = `literal`, with one added system sentence) and the seq2seq engines keep
+  the pairs. Measured over `tools/translate-eval/markers.json`: literal 5
+  correct of 8 (3 partial, nothing garbled) against the placeholder
+  baseline's 3 (3 sentences lost) and XML-ish tag pairs' 4 (4 lost).
+- **`protect()` stays the one canonical protection; the form is a
+  rendering.** The spec's `protect(text, {markers})` exists, but it is
+  `renderMarkers()` underneath, and that function is what the reading queue
+  uses: `reader.ts` protects a message when it arrives and its route is
+  resolved per item later, so the queue renders the pairs in `enqueueAt`
+  (where the engine first becomes known) and keeps the one `Protected` the
+  request and the restore are both built from.
+- **A link keeps its whole shape literal, only its target hidden.** The
+  brief for this measurement said the `](url)` half should stay a verbatim
+  placeholder; measured, that half-literal `[the log⟦3⟧` cost the case
+  (`*now*` came back untranslated) while the well-formed
+  `[the log](⟦1⟧)` was translated whole. The URL is a placeholder either
+  way.
+- **Tag numbers are span indices, not per-pair ordinals.** `**` is matched
+  before `*`, so `*timestamps* … **ordering**` renders as
+  `<3>timestamps</3> … <1>ordering</1>`. The form is kept only because the
+  runner measures it (`--markers tags`).
+- **A mark can now be half-lost, and that is the trade.** With literal
+  marks the answer's marks are the model's own: one it drops is gone and one
+  it misplaces is misplaced. A lost mark leaves a correctly translated
+  sentence; the mangled placeholder left the user's own English in the
+  composer.
+
 ## Non-goals
 
 - No translation of the lobby, notices from the server, events (join, part,

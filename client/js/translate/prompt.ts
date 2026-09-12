@@ -63,6 +63,18 @@ export const CONTEXT_HEADING = "Earlier lines (context only, do not translate or
 export const ONLY_THE_TRANSLATION =
 	"Output only the translation of the last message, nothing else.";
 
+/**
+ * What the LLM route is told about the marks it can see. Placeholders are
+ * covered by the sentence above it, which every request carries; these two
+ * are for the forms `renderMarkers` leaves in the text (spans.ts
+ * `MarkerForm`), and only the form the request is actually in is said, so a
+ * seq2seq request — and every request before this measurement — reads
+ * exactly as it did.
+ */
+export const KEEP_MARKS =
+	"Keep markdown marks such as *…*, **…**, ~~…~~ and ||…|| around the words they wrap, translated inside them.";
+export const KEEP_TAGS = "Keep the tags like <1>…</1> around the words they wrap.";
+
 /** The sentence `EXAMPLES` answers: the pair the prompt used to carry. */
 export const EXAMPLE_SOURCE = "hello, how are you?";
 
@@ -156,6 +168,7 @@ export function systemPrompt(req: TranslateRequest, name: (code: string) => stri
 		`Keep placeholders like ${placeholder(
 			1
 		)}, nicknames, channel names and anything after # exactly as they are.`,
+		req.markers === "literal" ? KEEP_MARKS : req.markers === "tags" ? KEEP_TAGS : "",
 		"Keep the register: a short casual line stays short and casual.",
 		// The only thing the system message says about the channel's own
 		// words: everything under that heading is vocabulary, whatever it

@@ -7,13 +7,23 @@
 // message is never batched with others and goes through the composer's own
 // line logic (`translateDraft`), so every line of it is translated. The
 // queue owns span restoration: items arrive protected and updates carry
-// restored text. Vue-free; reader.ts feeds it and writes its updates to
-// the store.
+// restored text — and since a message is protected when it arrives but
+// routed when it runs, the marker form its engine reads (spans.ts
+// `renderMarkers`) is chosen here, once the route has answered, and kept on
+// the `Queued` record that both the request and the restore are built from.
+// Vue-free; reader.ts feeds it and writes its updates to the store.
 
 import {EngineName, PromptContext, TranslateChunk, TranslateRequest} from "./engine";
 import {ABORTED, type OutgoingDeps, translateDraft} from "./outgoing";
 import {parseBatchedOutput} from "./prompt";
-import {type Protected, type SpanMeta, restore, restoreAll} from "./spans";
+import {
+	LLM_MARKERS,
+	type Protected,
+	type SpanMeta,
+	renderMarkers,
+	restore,
+	restoreAll,
+} from "./spans";
 
 export const DROP_AFTER_LINES = 200;
 export const BATCH_MAX_LINES = 6;
@@ -64,6 +74,14 @@ interface Queued {
 	item: QueueItem;
 	engine: EngineName;
 	seq: number;
+	/**
+	 * The item's protected text in the marker form `engine` reads (spans.ts
+	 * `renderMarkers`). The reader protects a message when it arrives, long
+	 * before a route is resolved, so the form is chosen here — where the
+	 * engine first becomes known — and the one `Protected` then both builds
+	 * the request and restores the answer.
+	 */
+	info: Protected;
 }
 
 interface Running {
@@ -209,7 +227,15 @@ export class TranslateQueue {
 					return;
 				}
 
-				const queued: Queued = {item, engine, seq: front ? -++this.seq : ++this.seq};
+				const queued: Queued = {
+					item,
+					engine,
+					seq: front ? -++this.seq : ++this.seq,
+					info: renderMarkers(
+						protectedOf(item),
+						engine === "llm" ? LLM_MARKERS : "placeholder"
+					),
+				};
 
 				this.waiting.push(queued);
 
@@ -317,7 +343,8 @@ export class TranslateQueue {
 	}
 
 	private async run(engine: EngineName, batch: Queued[]): Promise<void> {
-		const first = batch[0].item;
+		const head = batch[0];
+		const first = head.item;
 
 		// A `draft/multiline` message is one message whose text carries
 		// newlines. Sending it as one line would leave the engine's cut
@@ -325,26 +352,31 @@ export class TranslateQueue {
 		// logic instead — numbered lines to an LLM, one line at a time to a
 		// seq2seq engine, blank lines where they were.
 		if (batch.length === 1 && isMultiline(first)) {
-			await this.runMultiline(engine, batch[0]);
+			await this.runMultiline(engine, head);
 			return;
 		}
 
+		// Every item of a batch went through the same route, so the marker
+		// form is the batch's, not each line's.
+		const markers = head.info.markers;
 		const request: Omit<TranslateRequest, "id" | "model"> =
 			batch.length > 1
 				? {
 						text: "",
-						lines: batch.map((q) => q.item.text),
+						lines: batch.map((q) => q.info.text),
 						from: first.from,
 						to: first.to,
 						purpose: "read",
 						context: first.context,
+						markers,
 				  }
 				: {
-						text: first.text,
+						text: head.info.text,
 						from: first.from,
 						to: first.to,
 						purpose: "read",
 						context: first.context,
+						markers,
 				  };
 
 		const controller = new AbortController();
@@ -412,7 +444,7 @@ export class TranslateQueue {
 				if (batch.length === 1 && !chunk.done) {
 					this.deps.onUpdate(first.id, {
 						status: "pending",
-						text: this.restoreText(first, chunk.text, false),
+						text: this.restoreText(head.info, chunk.text, false),
 						engine,
 					});
 				}
@@ -433,7 +465,7 @@ export class TranslateQueue {
 			if (batch.length === 1) {
 				this.deps.onUpdate(first.id, {
 					status: "done",
-					text: this.restoreText(first, last, true),
+					text: this.restoreText(head.info, last, true),
 					engine,
 				});
 			} else {
@@ -447,7 +479,7 @@ export class TranslateQueue {
 					batch.forEach((q, i) => {
 						this.deps.onUpdate(q.item.id, {
 							status: "done",
-							text: this.restoreText(q.item, lines[i], true),
+							text: this.restoreText(q.info, lines[i], true),
 							engine,
 						});
 					});
@@ -473,6 +505,7 @@ export class TranslateQueue {
 	 */
 	private async runMultiline(engine: EngineName, queued: Queued): Promise<void> {
 		const item = queued.item;
+		const info = queued.info;
 		const controller = new AbortController();
 
 		let aborted = false;
@@ -516,13 +549,14 @@ export class TranslateQueue {
 			const work = translateDraft(
 				deps,
 				{
-					text: item.text,
-					protected: protectedOf(item),
+					text: info.text,
+					protected: info,
 					from: item.from,
 					to: item.to,
 					purpose: "read",
 					context: item.context,
 					batches: engine === "llm",
+					markers: info.markers,
 				},
 				controller.signal,
 				(partial) => {
@@ -587,14 +621,15 @@ export class TranslateQueue {
 	/** Missing spans (spans.ts) are appended only to the final text: a
 	 *  streaming chunk restores placeholders in place but does not yet know
 	 *  whether a later chunk will still be missing one. */
-	private restoreText(item: QueueItem, text: string, final: boolean): string {
-		return final ? restoreAll(text, protectedOf(item)) : restore(text, item.spans).text;
+	private restoreText(info: Protected, text: string, final: boolean): string {
+		return final ? restoreAll(text, info) : restore(text, info.spans).text;
 	}
 }
 
-/** The item's protected text as spans.ts hands it around. */
+/** The item's protected text as spans.ts hands it around: the reader's own
+ *  canonical protection, marker pairs still numbered. */
 function protectedOf(item: QueueItem): Protected {
-	return {text: item.text, spans: item.spans, meta: item.meta};
+	return {text: item.text, spans: item.spans, meta: item.meta, markers: "placeholder"};
 }
 
 /** A `draft/multiline` message: one message, several lines. */

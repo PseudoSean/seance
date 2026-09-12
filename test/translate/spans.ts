@@ -1,9 +1,12 @@
 import {expect} from "chai";
 import {
+	LLM_MARKERS,
+	type MarkerForm,
 	appendMissing,
 	placeholder,
 	placeholdersIn,
 	protect,
+	renderMarkers,
 	restore,
 	restoreAll,
 	stripCopiedNickPrefix,
@@ -39,7 +42,12 @@ describe("translate/spans", () => {
 	});
 
 	it("leaves plain text alone", () => {
-		expect(protect("Ja, gestern.")).to.deep.equal({text: "Ja, gestern.", spans: [], meta: []});
+		expect(protect("Ja, gestern.")).to.deep.equal({
+			text: "Ja, gestern.",
+			spans: [],
+			meta: [],
+			markers: "placeholder",
+		});
 	});
 
 	it("restores placeholders in any order and tolerates spaces inside them", () => {
@@ -95,6 +103,7 @@ describe("translate/spans", () => {
 			text: `um 10:30:45 Uhr ${placeholder(1)}`,
 			spans: [":+1:"],
 			meta: [{kind: "verbatim"}],
+			markers: "placeholder",
 		});
 	});
 
@@ -156,6 +165,7 @@ describe("translate/spans", () => {
 				text: "2*3*4 und 5_6_7",
 				spans: [],
 				meta: [],
+				markers: "placeholder",
 			});
 		});
 
@@ -271,6 +281,7 @@ describe("translate/spans", () => {
 				text: "$5 and $10",
 				spans: [],
 				meta: [],
+				markers: "placeholder",
 			});
 		});
 
@@ -351,6 +362,136 @@ describe("translate/spans", () => {
 				"|",
 				"https://example.test/a",
 			]);
+		});
+	});
+
+	// The form a marker pair takes for the route the request is about to
+	// take (spans.ts `MarkerForm`). Measured on the runner: the LLM route
+	// gets the marks themselves, the seq2seq engines keep the numbered pairs
+	// (docs/resources/translation.md § Emphasis marks on the LLM route).
+	describe("marker forms", () => {
+		it("the LLM route asks for the marks themselves", () => {
+			expect(LLM_MARKERS).to.equal("literal");
+		});
+
+		it("literal leaves the marks in the text and protects everything else", () => {
+			const info = protect("please keep the *timestamps*, I need the **ordering**, ps", {
+				nicks: ["ps"],
+				markers: "literal",
+			});
+
+			expect(info.text).to.equal(
+				`please keep the *timestamps*, I need the **ordering**, ${placeholder(5)}`
+			);
+			expect(info.markers).to.equal("literal");
+			// The pairs are still spans: the numbering and the meta are the
+			// canonical protection's, so the same info restores the answer.
+			expect(info.spans).to.deep.equal(["**", "**", "*", "*", "ps"]);
+		});
+
+		it("literal restores what the model wrote, marks and all", () => {
+			const info = protect("das ist *wichtig*", {markers: "literal"});
+			// The model's own marks, around its own words.
+			expect(restoreAll("this is *important*", info, placeholdersIn(info.text))).to.equal(
+				"this is *important*"
+			);
+			// A mark the model dropped is simply gone — and the sentence is
+			// still a translation, which is the whole point of the form.
+			expect(restoreAll("this is important", info, placeholdersIn(info.text))).to.equal(
+				"this is important"
+			);
+			// A half the model kept is not put back as an orphan either: it
+			// is the model's own text now, and nothing here invented it.
+			expect(restoreAll("this is *important", info, placeholdersIn(info.text))).to.equal(
+				"this is *important"
+			);
+		});
+
+		it("literal keeps a link well-formed with only its target hidden", () => {
+			const info = protect("see [the log](https://example.test/log) *now*", {
+				markers: "literal",
+			});
+
+			expect(info.text).to.equal(`see [the log](${placeholder(1)}) *now*`);
+			expect(restoreAll(`siehe [das Log](${placeholder(1)}) *jetzt*`, info)).to.equal(
+				"siehe [das Log](https://example.test/log) *jetzt*"
+			);
+			// The URL is verbatim, so a target the model dropped is shown
+			// late rather than lost.
+			expect(restoreAll("siehe [das Log] *jetzt*", info)).to.equal(
+				"siehe [das Log] *jetzt* https://example.test/log"
+			);
+		});
+
+		it("tags number a pair on its opening half and restore both ways", () => {
+			const info = protect("please keep the *timestamps*, I need the **ordering**", {
+				markers: "tags",
+			});
+
+			// `**` is matched before `*`, so the bold pair is spans 1 and 2:
+			// the numbers are span indices, not the order the pairs read in.
+			expect(info.text).to.equal(
+				"please keep the <3>timestamps</3>, I need the <1>ordering</1>"
+			);
+			expect(
+				restoreAll(
+					"behalte die <3>Zeitstempel</3>, ich brauche die <1>Reihenfolge</1>",
+					info,
+					placeholdersIn(info.text)
+				)
+			).to.equal("behalte die *Zeitstempel*, ich brauche die **Reihenfolge**");
+			// Half a pair is still no pair: neither half comes back.
+			expect(restoreAll("behalte die <3>Zeitstempel", info)).to.equal(
+				"behalte die Zeitstempel"
+			);
+		});
+
+		it("a tag number the spans do not account for is left as text", () => {
+			const info = protect("kaufe *heute*", {markers: "tags"});
+
+			// Span 1 is the pair's opening half, so <1>…</1> is a pair; <2>
+			// is its closer's number and <9> is nobody's, and neither is a
+			// tag this module wrote.
+			expect(restoreAll("buy <1>today</1> <2> <9>", info)).to.equal("buy *today* <2> <9>");
+		});
+
+		it("placeholder is the default and renderMarkers is idempotent", () => {
+			const canonical = protect("das ist *wichtig*");
+
+			expect(canonical.text).to.equal(`das ist ${placeholder(1)}wichtig${placeholder(2)}`);
+			expect(renderMarkers(canonical, "placeholder")).to.equal(canonical);
+
+			const literal = renderMarkers(canonical, "literal");
+
+			expect(literal.text).to.equal("das ist *wichtig*");
+			expect(renderMarkers(literal, "literal")).to.equal(literal);
+			// Rendering never touches the spans or what each of them is.
+			expect(literal.spans).to.equal(canonical.spans);
+			expect(literal.meta).to.equal(canonical.meta);
+		});
+
+		it("every other protection is the same on every route", () => {
+			const source =
+				"siehe `git log` und https://example.test/a :tada: um 10:30:45, ps — *wichtig*";
+
+			for (const markers of ["placeholder", "literal", "tags"] as MarkerForm[]) {
+				const info = protect(source, {nicks: ["ps"], markers});
+
+				// Code, URL, shortcode, the pair, the nick: the same spans in
+				// the same order, however the pair is written in the text.
+				expect(info.spans, markers).to.deep.equal([
+					"`git log`",
+					"https://example.test/a",
+					":tada:",
+					"*",
+					"*",
+					"ps",
+				]);
+				// Whatever the form, the round trip is the text itself.
+				expect(restoreAll(info.text, info, placeholdersIn(info.text)), markers).to.equal(
+					source
+				);
+			}
 		});
 	});
 
