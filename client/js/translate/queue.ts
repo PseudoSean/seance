@@ -3,11 +3,15 @@
 // arrival, one request in flight per engine so the GPU and CPU engines
 // overlap, LLM items of one channel and pair batched as numbered lines,
 // items that fell DROP_AFTER_LINES messages behind dropped, and an engine
-// paused after PAUSE_AFTER_FAILURES consecutive failures. The queue owns
-// span restoration: items arrive protected and updates carry restored
-// text. Vue-free; reader.ts feeds it and writes its updates to the store.
+// paused after PAUSE_AFTER_FAILURES consecutive failures. A multi-line
+// message is never batched with others and goes through the composer's own
+// line logic (`translateDraft`), so every line of it is translated. The
+// queue owns span restoration: items arrive protected and updates carry
+// restored text. Vue-free; reader.ts feeds it and writes its updates to
+// the store.
 
 import {EngineName, PromptContext, TranslateChunk, TranslateRequest} from "./engine";
+import {ABORTED, type OutgoingDeps, translateDraft} from "./outgoing";
 import {parseBatchedOutput} from "./prompt";
 import {type Protected, type SpanMeta, restore, restoreAll} from "./spans";
 
@@ -285,7 +289,7 @@ export class TranslateQueue {
 
 		this.waiting.splice(index, 1);
 
-		if (engine !== "llm" || head.item.single) {
+		if (engine !== "llm" || head.item.single || isMultiline(head.item)) {
 			return [head];
 		}
 
@@ -299,6 +303,7 @@ export class TranslateQueue {
 			if (
 				q.engine === engine &&
 				!q.item.single &&
+				!isMultiline(q.item) &&
 				q.item.chanId === head.item.chanId &&
 				q.item.from === head.item.from &&
 				q.item.to === head.item.to
@@ -313,6 +318,17 @@ export class TranslateQueue {
 
 	private async run(engine: EngineName, batch: Queued[]): Promise<void> {
 		const first = batch[0].item;
+
+		// A `draft/multiline` message is one message whose text carries
+		// newlines. Sending it as one line would leave the engine's cut
+		// keeping only the first, so it goes through the composer's own line
+		// logic instead — numbered lines to an LLM, one line at a time to a
+		// seq2seq engine, blank lines where they were.
+		if (batch.length === 1 && isMultiline(first)) {
+			await this.runMultiline(engine, batch[0]);
+			return;
+		}
+
 		const request: Omit<TranslateRequest, "id" | "model"> =
 			batch.length > 1
 				? {
@@ -448,6 +464,111 @@ export class TranslateQueue {
 		}
 	}
 
+	/**
+	 * A multi-line item, translated line by line through `translateDraft`
+	 * (outgoing.ts): the same request shapes, the same fallback to singles
+	 * when the numbering does not parse, the same protection — except that
+	 * the text arrives protected, so the whole message's spans are one
+	 * numbering and a fenced block is one of them.
+	 */
+	private async runMultiline(engine: EngineName, queued: Queued): Promise<void> {
+		const item = queued.item;
+		const controller = new AbortController();
+
+		let aborted = false;
+		let timedOut = false;
+
+		let signalAbort: () => void = () => {};
+
+		// Raced against the work, the way run() races the iterator: a cancel
+		// frees the engine at once even if the stream behind it takes its
+		// time noticing the signal.
+		const abortRace = new Promise<{kind: "abort"}>((resolve) => {
+			signalAbort = () => resolve({kind: "abort"});
+		});
+		const running: Running = {
+			chanIds: new Set([item.chanId]),
+			abort() {
+				if (aborted) {
+					return;
+				}
+
+				aborted = true;
+				signalAbort();
+				controller.abort();
+			},
+		};
+		const deps: OutgoingDeps = {
+			translate: (req, signal) => this.deps.translate(req, signal),
+			setTimeout: (fn, ms) => setTimeout(fn, ms),
+			clearTimeout: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+		};
+
+		this.inFlight.set(engine, running);
+		this.deps.onUpdate(item.id, {status: "pending", text: "", engine});
+
+		const timer = setTimeout(() => {
+			timedOut = true;
+			running.abort();
+		}, REQUEST_TIMEOUT_MS);
+
+		try {
+			const work = translateDraft(
+				deps,
+				{
+					text: item.text,
+					protected: protectedOf(item),
+					from: item.from,
+					to: item.to,
+					purpose: "read",
+					context: item.context,
+					batches: engine === "llm",
+				},
+				controller.signal,
+				(partial) => {
+					if (!aborted) {
+						this.deps.onUpdate(item.id, {status: "pending", text: partial, engine});
+					}
+				}
+			).then((text) => ({kind: "done" as const, text}));
+
+			// The loser of the race, if it later rejects, must not be an
+			// unhandled rejection.
+			work.catch(() => {});
+
+			const outcome = await Promise.race([work, abortRace]);
+
+			if (outcome.kind === "abort") {
+				if (timedOut) {
+					this.fail(engine, [queued], TIMED_OUT);
+				} else {
+					this.deps.onUpdate(item.id, {status: "dropped"});
+				}
+
+				return;
+			}
+
+			this.deps.onUpdate(item.id, {status: "done", text: outcome.text, engine});
+			this.failures.set(engine, 0);
+		} catch (e) {
+			const message = e instanceof Error ? e.message : String(e);
+
+			// The queue's own abort is a drop (or the deadline); anything else
+			// is this engine's failure, and three in a row pause it.
+			if (timedOut) {
+				this.fail(engine, [queued], TIMED_OUT);
+			} else if (aborted || message === ABORTED) {
+				this.deps.onUpdate(item.id, {status: "dropped"});
+			} else {
+				this.fail(engine, [queued], message);
+			}
+		} finally {
+			clearTimeout(timer);
+			this.inFlight.delete(engine);
+			this.pump();
+		}
+	}
+
 	private fail(engine: EngineName, batch: Queued[], message: string): void {
 		for (const q of batch) {
 			this.deps.onUpdate(q.item.id, {status: "failed", error: message});
@@ -474,4 +595,9 @@ export class TranslateQueue {
 /** The item's protected text as spans.ts hands it around. */
 function protectedOf(item: QueueItem): Protected {
 	return {text: item.text, spans: item.spans, meta: item.meta};
+}
+
+/** A `draft/multiline` message: one message, several lines. */
+function isMultiline(item: QueueItem): boolean {
+	return item.text.includes("\n");
 }

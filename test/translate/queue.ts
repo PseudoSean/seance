@@ -212,6 +212,113 @@ describe("translate/queue", () => {
 		]);
 	});
 
+	describe("a multi-line message", () => {
+		const MULTILINE = "erste Zeile hier\nzweite Zeile hier\ndritte Zeile hier";
+		const numbered: Script = (req) =>
+			req.lines
+				? [req.lines.map((line, i) => `${i + 1}. [en] ${line}`).join("\n") + "\nEND"]
+				: [`[en] ${req.text}`];
+
+		it("goes to an LLM as one numbered request and comes back with its lines", async () => {
+			const r = rig(numbered);
+			clock = r.clock;
+			r.queue.enqueue(item(1, MULTILINE));
+			await settle(r.clock, 40);
+
+			expect(r.requests).to.have.length(1);
+			expect(r.requests[0].lines).to.deep.equal([
+				"erste Zeile hier",
+				"zweite Zeile hier",
+				"dritte Zeile hier",
+			]);
+
+			const done = r.updates.find(([id, u]) => id === 1 && u.status === "done");
+
+			expect(done?.[1].text).to.equal(
+				"[en] erste Zeile hier\n[en] zweite Zeile hier\n[en] dritte Zeile hier"
+			);
+		});
+
+		it("goes to a seq2seq engine one line at a time", async () => {
+			const r = rig(numbered);
+			clock = r.clock;
+			r.setEngine(() => "seq2seq");
+			r.queue.enqueue(item(1, MULTILINE));
+			await settle(r.clock, 40);
+
+			expect(r.requests.map((q) => q.text)).to.deep.equal([
+				"erste Zeile hier",
+				"zweite Zeile hier",
+				"dritte Zeile hier",
+			]);
+
+			const done = r.updates.find(([id, u]) => id === 1 && u.status === "done");
+
+			expect(done?.[1].text.split("\n")).to.have.length(3);
+		});
+
+		it("is never batched with the single-line items around it", async () => {
+			const r = rig(numbered);
+			clock = r.clock;
+			r.queue.pauseForTest();
+			r.queue.enqueue(item(1, MULTILINE));
+			r.queue.enqueue(item(2, "eine kurze Zeile"));
+			r.queue.enqueue(item(3, "noch eine kurze"));
+			await settle(r.clock, 3);
+			r.queue.resumeForTest();
+			await settle(r.clock, 40);
+
+			// The multi-line message's own batch, then the two short lines
+			// batched together — never one request carrying all three.
+			expect(r.requests.map((q) => q.lines?.length ?? 0)).to.deep.equal([3, 2]);
+			expect(r.updates.filter(([, u]) => u.status === "done")).to.have.length(3);
+		});
+
+		it("keeps a fenced code block whole and does not send it for translation", async () => {
+			const r = rig(numbered);
+			clock = r.clock;
+			r.queue.enqueue(item(1, "schau mal hier\n```\nx = 1\n```\nund das war es"));
+			await settle(r.clock, 40);
+
+			expect(r.requests).to.have.length(1);
+			expect(r.requests[0].lines).to.have.length(2);
+
+			const done = r.updates.find(([id, u]) => id === 1 && u.status === "done");
+
+			expect(done?.[1].text).to.equal(
+				"[en] schau mal hier\n```\nx = 1\n```\n[en] und das war es"
+			);
+		});
+
+		it("reports the engine's failure instead of losing the message", async () => {
+			const r = rig(() => new Error("boom"));
+			clock = r.clock;
+			r.queue.enqueue(item(1, MULTILINE));
+			await settle(r.clock, 40);
+
+			expect(r.updates.map(([, u]) => u.status)).to.deep.equal(["pending", "failed"]);
+			expect(
+				r.updates.find(([, u]) => u.status === "failed")?.[1] as {error: string}
+			).to.deep.include({error: "boom"});
+		});
+
+		it("a cancelled channel drops it rather than failing it", async () => {
+			const r = rig(numbered);
+			clock = r.clock;
+			r.deps.translate = (_req, _signal) =>
+				(async function* () {
+					await new Promise<void>(() => {});
+					yield {id: 0, text: "never", done: true};
+				})();
+			r.queue.enqueue(item(1, MULTILINE));
+			await settle(r.clock, 5);
+			r.queue.cancelChannel(1);
+			await settle(r.clock, 40);
+
+			expect(r.updates.map(([, u]) => u.status)).to.deep.equal(["pending", "dropped"]);
+		});
+	});
+
 	it("drops an item that fell more than DROP_AFTER_LINES messages behind", async () => {
 		const r = rig();
 		clock = r.clock;
