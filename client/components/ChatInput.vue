@@ -92,36 +92,40 @@
 						aria-hidden="true"
 					></span
 				></span>
-				<button
-					v-if="
-						outgoing.status === 'done' && outgoing.check.status === 'idle' && canCheck
-					"
-					type="button"
-					class="translate-bar-button translate-bar-check-button"
-					title="Show how it reads back"
-					@mousedown.prevent
-					@click="checkOutgoingNow"
-				>
-					Check
-				</button>
-				<button
-					type="button"
-					class="translate-bar-button translate-bar-send"
-					:disabled="outgoingBusy || !canSend"
-					@mousedown.prevent
-					@click="onSubmit()"
-				>
-					{{ outgoing.status === "failed" ? "Send as written" : "Send" }}
-				</button>
-				<button
-					type="button"
-					class="translate-bar-button translate-bar-edit"
-					title="Keep typing (Escape)"
-					@mousedown.prevent
-					@click="cancelOutgoingNow"
-				>
-					Edit
-				</button>
+				<span class="translate-bar-actions">
+					<button
+						v-if="
+							outgoing.status === 'done' &&
+							outgoing.check.status === 'idle' &&
+							canCheck
+						"
+						type="button"
+						class="translate-bar-button translate-bar-check-button"
+						title="Show how it reads back"
+						@mousedown.prevent
+						@click="checkOutgoingNow"
+					>
+						Check
+					</button>
+					<button
+						type="button"
+						class="translate-bar-button translate-bar-send"
+						:disabled="outgoingBusy || !canSend"
+						@mousedown.prevent
+						@click="onSubmit()"
+					>
+						{{ outgoing.status === "failed" ? "Send as written" : "Send" }}
+					</button>
+					<button
+						type="button"
+						class="translate-bar-button translate-bar-edit"
+						title="Keep typing (Escape)"
+						@mousedown.prevent
+						@click="cancelOutgoingNow"
+					>
+						Edit
+					</button>
+				</span>
 			</div>
 			<div
 				v-if="outgoing.check.status !== 'idle'"
@@ -633,9 +637,17 @@ export default defineComponent({
 				}
 
 				const translated = entry.status === "done" ? entry.text : null;
+				let line = translated ?? text;
+
+				// A translation that begins with "/" is text, not a command:
+				// the IRC layer sends `//x` as the text `/x`, and deliver's
+				// own slash intercept would otherwise take it for a UI one.
+				if (translated !== null && translated.startsWith("/")) {
+					line = `/${translated}`;
+				}
 
 				cancelOutgoing(props.channel);
-				deliver(translated ?? text, text);
+				deliver(line, text);
 
 				if (translated !== null) {
 					noteOutgoingSent(props.network, props.channel, text, translated, entry.to);
@@ -652,8 +664,19 @@ export default defineComponent({
 			// The first Enter (spec § Composer 1-3): translate, and send only
 			// when the draft turns out to need none.
 			if (writeTarget(props.network, props.channel) && draftGate(text, !!editing) === "ok") {
+				// The verdict can be seconds late (a cold engine, a slow
+				// device), so it is checked against the composer it started
+				// in: another conversation, a changed draft or a network that
+				// went down in the meantime all leave the draft where it is.
+				const startedFor = props.channel.id;
+
 				void translateOutgoing(props.network, props.channel, text).then((verdict) => {
-					if (verdict === "plain" && props.channel.pendingMessage === text) {
+					if (
+						verdict === "plain" &&
+						props.channel.id === startedFor &&
+						props.channel.pendingMessage === text &&
+						canSend.value
+					) {
 						deliver(text, text);
 					}
 				});

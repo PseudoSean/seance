@@ -5000,6 +5000,11 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	flex-direction: column;
 	gap: 0.125rem;
 	min-width: 0;
+
+	/* However long the translation, the composer keeps its place: the strip
+	 * scrolls instead of pushing the input off the screen. */
+	max-height: 40vh;
+	overflow: auto;
 	margin: 0 0.25rem 0.125rem;
 	padding: 0.125rem 0.375rem;
 	border-left: 2px solid var(--chat-accent, var(--link-color));
@@ -5010,11 +5015,21 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	line-height: 1.5;
 }
 
+/* Narrow panes: the chip and the text share the first line and the three
+ * buttons drop to a line of their own, rather than each wrapping alone. */
 #form .translate-bar-row {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
 	gap: 0.375rem;
 	min-width: 0;
+}
+
+#form .translate-bar-actions {
+	display: flex;
+	flex: 0 0 auto;
+	gap: 0.375rem;
+	margin-left: auto;
 }
 
 #form .translate-bar-chip {
@@ -5030,7 +5045,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #form .translate-bar-text {
-	flex: 1 1 auto;
+	flex: 1 1 12rem;
 	min-width: 0;
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;

@@ -229,6 +229,19 @@ export async function translateOutgoing(
 			return "strip";
 		}
 
+		// An engine that gave nothing back is a failure, not a message: the
+		// strip says so and offers the draft as written, where a "done" of ""
+		// would be sent as an empty line — which the IRC layer drops in
+		// silence, taking the draft with it.
+		if (text.trim() === "") {
+			store.commit("outgoingTranslationPatch", {
+				chanId: channel.id,
+				patch: {status: "failed", error: "empty translation"},
+			});
+
+			return "strip";
+		}
+
 		store.commit("outgoingTranslationPatch", {
 			chanId: channel.id,
 			patch: {status: "done", text},
