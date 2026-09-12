@@ -32,6 +32,16 @@ export const realSeq2seqDeps: Seq2seqDeps = {
 		const pipe = await pipeline("translation", modelId, {
 			dtype: "q8",
 			device: "wasm",
+			// The q8 weights are QDQ graphs, and ONNX Runtime's *extended*
+			// optimizer level (the library's default) runs a MatMulNBits
+			// transform that rejects them outright: "Can't create a session.
+			// ERROR_CODE: 1 … qdq_actions.cc:137
+			// TransposeDQWeightsForMatMulNBits Missing required scale:
+			// model.shared.weight_merged_0_scale for node:
+			// model.shared.weight_transposed_DequantizeLinear" — so every CPU
+			// model failed to load and the tier looked broken. `basic` stops
+			// short of that transform and the same weights load and run.
+			session_options: {graphOptimizationLevel: "basic"},
 			progress_callback(report: {
 				status: string;
 				file?: string;

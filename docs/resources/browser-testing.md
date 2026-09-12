@@ -27,6 +27,16 @@ tools/nefarious-dev/run.sh -d             # dev ircd, when IRC is involved
 when you switch branches** — rebuild after a checkout or you test the wrong
 code. Screenshots go to `tmp/browser-drive/<timestamp>/` (also gitignored).
 
+`http.server` serves `.mjs` as `application/octet-stream` where the system MIME
+table has no entry for it (Debian has none), and a browser refuses a module
+with that type — which breaks the translation worker's ONNX Runtime import and
+nothing else. A scenario that touches the real translation engines
+(`translate-cpu-real.mjs`) needs the types added on the way in:
+
+```sh
+python3 -c 'import http.server as h, mimetypes as m, functools; m.add_type("text/javascript", ".mjs"); m.add_type("application/wasm", ".wasm"); h.test(functools.partial(h.SimpleHTTPRequestHandler, directory="public"), h.ThreadingHTTPServer, port=8021)' &
+```
+
 Chromium comes from `$CHROME_BIN` or `chromium`; `--chrome=` overrides. The
 tool passes `--ignore-certificate-errors` because the dev ircd's certificate is
 self-signed.
