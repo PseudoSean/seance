@@ -274,20 +274,37 @@ export async function translateDraft(
 		let translated: string[] | null = null;
 
 		if (request.batches) {
-			translated = await translateBatched(
-				deps,
-				request,
-				filled.map(([l]) => l),
-				controller.signal,
-				(preview) => {
-					const partial = preview.split("\n");
+			let streamed = false;
 
-					filled.forEach(([, index], n) => {
-						out[index] = partial[n] ?? "";
-					});
-					onChunk(out.join("\n"));
+			try {
+				translated = await translateBatched(
+					deps,
+					request,
+					filled.map(([l]) => l),
+					controller.signal,
+					(preview) => {
+						streamed = true;
+
+						const partial = preview.split("\n");
+
+						filled.forEach(([, index], n) => {
+							out[index] = partial[n] ?? "";
+						});
+						onChunk(out.join("\n"));
+					}
+				);
+			} catch (e) {
+				// The service resolves the route again and may land on another
+				// candidate — a seq2seq one refuses a batched request outright.
+				// A refusal before anything was yielded is the same case as
+				// numbering that does not parse: go line by line. A failure
+				// mid-stream, an abort and the timeout are real.
+				if (streamed || timedOut || signal.aborted) {
+					throw e;
 				}
-			);
+
+				translated = null;
+			}
 		}
 
 		if (!translated) {

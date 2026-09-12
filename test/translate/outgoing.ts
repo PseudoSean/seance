@@ -195,6 +195,21 @@ describe("translate/outgoing", () => {
 			expect(plain).to.equal("[de] one\n[de] two");
 		});
 
+		it("goes line by line when the engine refuses the batch before it yields", async () => {
+			const r = rig((req) =>
+				req.lines ? new Error("seq2seq engines do not batch") : [`[de] ${req.text}`]
+			);
+			const text = await translateDraft(
+				r.deps,
+				request({text: "one\ntwo"}),
+				new AbortController().signal,
+				() => {}
+			);
+
+			expect(r.requests.map((q) => q.lines?.length ?? 0)).to.deep.equal([2, 0, 0]);
+			expect(text).to.equal("[de] one\n[de] two");
+		});
+
 		it("times out, aborting the request it made", async () => {
 			const r = rig(() => ["never"]);
 			const never: OutgoingDeps = {

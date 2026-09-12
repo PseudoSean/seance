@@ -51,6 +51,7 @@
 import {computed, defineComponent, onBeforeUnmount, onMounted, PropType, ref} from "vue";
 import {SUPPORTED_LANGUAGES, languageName} from "../js/translate/languages";
 import {channelTranslation, setChannelOptions, setReading} from "../js/translate/reader";
+import {cancelOutgoing} from "../js/translate/writer";
 import type {ClientChan, ClientNetwork} from "../js/types";
 import type {Formality} from "../js/translate/channelStore";
 
@@ -71,8 +72,14 @@ export default defineComponent({
 
 		const onRead = (event: Event) =>
 			setReading(props.network, props.channel, valueOf(event) || null);
-		const onWrite = (event: Event) =>
+
+		const onWrite = (event: Event) => {
+			// A strip already up was translated for the old target: it must not
+			// survive the change, finished or not.
+			cancelOutgoing(props.channel);
 			setChannelOptions(props.network, props.channel, {write: valueOf(event) || null});
+		};
+
 		const onFormality = (event: Event) =>
 			setChannelOptions(props.network, props.channel, {
 				formality: valueOf(event) as Formality,

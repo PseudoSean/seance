@@ -24,7 +24,7 @@ import {
 	translateDraft,
 	writeSource,
 } from "./outgoing";
-import {channelTranslation, holdReading, releaseReading, translationAvailable} from "./reader";
+import {channelTranslation, holdReading, releaseReading} from "./reader";
 
 /** An id no message has: buildContext then takes the whole scrollback as "before" the draft. */
 const DRAFT_ID = Number.MAX_SAFE_INTEGER;
@@ -121,19 +121,20 @@ export async function translateOutgoing(
 	});
 
 	try {
-		// The probe before the verdict, like reader.ts: on a cold page the
-		// service is created by this very call and its tier is not known
-		// yet, so judging availability first would send every first draft
-		// untranslated.
-		if (!store.state.translation.capability) {
-			await translateService().capabilities();
-		}
+		// The probe before the verdict: on a cold page the service is
+		// created by this very call and its tier is not known yet, so
+		// judging availability first would send every first draft
+		// untranslated. The awaited value is the verdict — reading it back
+		// out of the store would depend on index.ts chaining its commit onto
+		// this same promise first. The probe is memoised, so this is free
+		// once it has answered.
+		const capability = await translateService().capabilities();
 
 		if (!current(channel, draft, controller)) {
 			return "strip";
 		}
 
-		if (!translationAvailable()) {
+		if (!translateService().enabled || capability.tier === "none") {
 			cancelOutgoing(channel);
 			return "plain";
 		}
@@ -317,26 +318,37 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 
 		context.sourceHint = entry.to;
 
-		const text = await translateDraft(
-			deps,
-			{
-				text: entry.text,
-				from: entry.to,
-				to: target,
-				purpose: "read",
-				context,
-				batches: route?.candidate === "llm",
-			},
-			controller.signal,
-			(partial) => {
-				if (current(channel, draft, controller)) {
-					store.commit("outgoingTranslationPatch", {
-						chanId: channel.id,
-						patch: {check: {status: "pending", text: partial, to: target}},
-					});
+		// Held like the translation itself: under `translateRoundTrip: "auto"`
+		// Send waits for this check, so it must not queue behind the
+		// channel's incoming traffic either.
+		holdReading();
+
+		let text: string;
+
+		try {
+			text = await translateDraft(
+				deps,
+				{
+					text: entry.text,
+					from: entry.to,
+					to: target,
+					purpose: "read",
+					context,
+					batches: route?.candidate === "llm",
+				},
+				controller.signal,
+				(partial) => {
+					if (current(channel, draft, controller)) {
+						store.commit("outgoingTranslationPatch", {
+							chanId: channel.id,
+							patch: {check: {status: "pending", text: partial, to: target}},
+						});
+					}
 				}
-			}
-		);
+			);
+		} finally {
+			releaseReading();
+		}
 
 		if (current(channel, draft, controller)) {
 			store.commit("outgoingTranslationPatch", {
