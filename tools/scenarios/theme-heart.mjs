@@ -146,7 +146,7 @@ export default async function run(page) {
 	);
 	page.check(
 		"the meadow carries the animals as layers",
-		/heart\/(horse|puppy|bunny)(-far)?\.svg/.test(bg)
+		/heart\/(horse|deer|puppy|bunny|kitten|frog|ladybug|bird)(-far)?\.svg/.test(bg)
 	);
 	const layers = await page.evaluate(
 		`getComputedStyle(document.querySelector('#chat .chat-view[data-type="channel"] .chat')).backgroundSize.split(",").length`
@@ -236,8 +236,8 @@ export default async function run(page) {
 
 	await page.screenshot("heart-seance");
 
-	// #seance is scene 3: the horse is slot A and its first visit starts 2 s
-	// after the file loaded, lasting about 14 s.
+	// #seance is scene 3: the puppy is slot A and its first visit starts 14 s
+	// after the file loaded, the frog in slot B rather sooner.
 	await page.sleep(2500);
 	await page.screenshot("heart-visitor");
 
