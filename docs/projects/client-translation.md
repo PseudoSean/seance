@@ -322,6 +322,17 @@ Retranslating from a chosen source (2026-09-12):
   reading entry's `done` and the composer's strip and round-trip
   read-back. Never on a streaming partial — mid-stream, `alex` is not yet
   a prefix.
+- **A prefix the source itself carried is never stripped.** Ruling 10 reads
+  a leading `nick:` as the model copying its context, but addressing
+  somebody is the commonest shape on IRC and `protectNicks` sees it through
+  the engine intact — so the reading entry's strip is judged against the
+  message's own text, the composer's against the draft, and the round
+  trip's against the translation it reads back
+  (`stripCopiedNickPrefix`). Without the gate a translated `alice: kannst du das prüfen?` lost who it was addressed to, and a draft addressed to
+  somebody was sent without their name. A source that cannot be found
+  leaves the text alone. Neither scenario can see this (the fake engine
+  answers `[English] <text>`, so its output never opens with a nick), so
+  it is pinned by unit tests alone.
 - **Switching a channel on opens its panel.** A desktop click on the globe
   that turns reading on now opens the panel too; a click that turns it off
   only turns it off, and the touch tap is unchanged.

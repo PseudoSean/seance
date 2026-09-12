@@ -25,7 +25,7 @@ import {
 	writeSource,
 } from "./outgoing";
 import {channelTranslation, holdReading, releaseReading} from "./reader";
-import {stripNickPrefix} from "./spans";
+import {stripCopiedNickPrefix} from "./spans";
 
 /** An id no message has: buildContext then takes the whole scrollback as "before" the draft. */
 const DRAFT_ID = Number.MAX_SAFE_INTEGER;
@@ -235,8 +235,9 @@ export async function translateOutgoing(
 		// The prompt shows the earlier lines as `nick: text`, so a model can
 		// copy a name in that shape in front of its answer. Only the finished
 		// text is cleaned: a stream's prefix is not one until the line after
-		// it has arrived.
-		text = stripNickPrefix(text, nicks);
+		// it has arrived — and a draft that opened with `nick: ` keeps it,
+		// since then the prefix is the user's own.
+		text = stripCopiedNickPrefix(text, draft, nicks);
 
 		// An engine that gave nothing back is a failure, not a message: the
 		// strip says so and offers the draft as written, where a "done" of ""
@@ -362,8 +363,11 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 				patch: {
 					check: {
 						status: "done",
-						text: stripNickPrefix(
+						// Read back from the translation, so that is the
+						// source the prefix rule is judged against.
+						text: stripCopiedNickPrefix(
 							text,
+							entry.text,
 							channel.users.map((u) => u.nick)
 						),
 						to: target,

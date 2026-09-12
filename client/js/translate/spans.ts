@@ -453,3 +453,20 @@ export function stripNickPrefix(text: string, nicks: string[]): string {
 
 	return text.slice(match[0].length);
 }
+
+/**
+ * The prefix off a translation — unless the text it was translated from
+ * carried one too. `alice: kannst du das prüfen?` is the commonest shape
+ * there is on IRC, and nick protection sees it through the engine intact,
+ * so stripping it would throw away who the line was addressed to. Only a
+ * prefix the model added is the model's to lose.
+ */
+export function stripCopiedNickPrefix(
+	translation: string,
+	source: string,
+	nicks: string[]
+): string {
+	return stripNickPrefix(source, nicks) === source
+		? stripNickPrefix(translation, nicks)
+		: translation;
+}

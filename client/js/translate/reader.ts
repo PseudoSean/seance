@@ -25,7 +25,7 @@ import {LanguagePrior, detectLanguage} from "./detect";
 import {isEligible, plainTextOf} from "./eligibility";
 import {translateService} from "./index";
 import {type QueueItem, type QueueUpdate, TranslateQueue} from "./queue";
-import {protect, stripNickPrefix} from "./spans";
+import {protect, stripCopiedNickPrefix} from "./spans";
 
 // When this page started. A replayed message (a reconnect's catch-up)
 // is only eligible when it is newer than this as well as newer than the
@@ -121,19 +121,30 @@ function queueFor(network: ClientNetwork): TranslateQueue {
 }
 
 /**
- * The names of the channel a queued line belongs to, for the nick prefix a
- * model may have copied out of the context. Read before the item is
- * forgotten; an item already gone (or a channel that has left) leaves the
- * text as the engine gave it.
+ * The finished translation with a nick prefix the model copied out of the
+ * context taken off — but only when the message itself did not open with
+ * one (spans.ts `stripCopiedNickPrefix`), which needs the message and its
+ * channel. Read before the item is forgotten; an item, a channel or a
+ * message we cannot find leaves the text as the engine gave it, since
+ * keeping a prefix is the harmless way to be wrong.
  */
-function nicksOfItem(known: {item: QueueItem} | undefined): string[] {
+function withoutCopiedNick(id: number, known: {item: QueueItem} | undefined, text: string): string {
 	if (!known) {
-		return [];
+		return text;
 	}
 
 	const target = store.getters.findChannel(known.item.chanId);
+	const source = target?.channel.messages.find((m) => m.id === id)?.text;
 
-	return target ? target.channel.users.map((u) => u.nick) : [];
+	if (!target || !source) {
+		return text;
+	}
+
+	return stripCopiedNickPrefix(
+		text,
+		source,
+		target.channel.users.map((u) => u.nick)
+	);
 }
 
 function applyUpdate(id: number, update: QueueUpdate): void {
@@ -173,7 +184,7 @@ function applyUpdate(id: number, update: QueueUpdate): void {
 					// model can copy a name in that shape; only the finished
 					// text is cleaned, since a stream's prefix is not a prefix
 					// until the line after it has arrived.
-					text: stripNickPrefix(update.text, nicksOfItem(known)),
+					text: withoutCopiedNick(id, known, update.text),
 					engine: update.engine,
 					error: null,
 				},

@@ -6,6 +6,7 @@ import {
 	protect,
 	restore,
 	restoreAll,
+	stripCopiedNickPrefix,
 	stripNickPrefix,
 } from "../../client/js/translate/spans";
 
@@ -282,6 +283,32 @@ describe("translate/spans", () => {
 			expect(stripNickPrefix("alice: one\ntwo", nicks)).to.equal("one\ntwo");
 			expect(stripNickPrefix("one\nalice: two", nicks)).to.equal("one\nalice: two");
 			expect(stripNickPrefix("alice:\nhello", nicks)).to.equal("alice:\nhello");
+		});
+
+		it("keeps the prefix the source itself carried", () => {
+			// Addressing somebody is the commonest shape on IRC, and nick
+			// protection sees it through the engine intact: that prefix is
+			// not the model's to lose.
+			expect(
+				stripCopiedNickPrefix(
+					"alice: can you check this?",
+					"alice: kannst du das prüfen?",
+					nicks
+				)
+			).to.equal("alice: can you check this?");
+			// A prefix nobody wrote is the model copying its context.
+			expect(
+				stripCopiedNickPrefix("alice: can you check this?", "kannst du das prüfen?", nicks)
+			).to.equal("can you check this?");
+			// A source addressed to one name, an answer addressed to another:
+			// still the source's prefix, so it stays.
+			expect(stripCopiedNickPrefix("bob-2: hallo", "alice: hello", nicks)).to.equal(
+				"bob-2: hallo"
+			);
+			// Neither side has one: nothing to do.
+			expect(stripCopiedNickPrefix("hello there", "hallo zusammen", nicks)).to.equal(
+				"hello there"
+			);
 		});
 	});
 });

@@ -270,11 +270,18 @@ section below), not reasoned about:
   `Moment: bitte warten` is a translation, not a prefix -- so
   `spans.ts` `stripNickPrefix(text, nicks)` takes `<nick>: `, `<nick> - `
   or `<nick> – ` off a finished translation only when the token in front is
-  a name the channel actually has (case-insensitively). It runs where the
-  text is committed: the reading entry's `done` (`reader.ts`) and the
-  composer's strip and round-trip read-back (`writer.ts`), never on a
-  streaming partial -- a prefix is not a prefix until the text after it has
-  arrived.
+  a name the channel actually has (case-insensitively), and
+  `stripCopiedNickPrefix(translation, source, nicks)` only calls for that
+  when the **source** did not open with one of its own: addressing somebody
+  (`alice: kannst du das prüfen?`) is the commonest shape there is on IRC
+  and nick protection sees it through the engine intact, so only a prefix
+  the model added is the model's to lose. It runs where the
+  text is committed: the reading entry's `done` (`reader.ts`, judged
+  against the message's own text) and the composer's strip (against the
+  draft) and round-trip read-back (against the translation it reads back),
+  never on a streaming partial -- a prefix is not a prefix until the text
+  after it has arrived. A source we cannot find leaves the text alone:
+  keeping a prefix is the harmless way to be wrong.
 - **"Output only the translation of the last message, nothing else."** as
   the last line before the cue -- but only when something stands above the
   line for the model to mistake for it (a topic, the data block, the
