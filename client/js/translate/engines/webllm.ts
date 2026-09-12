@@ -240,20 +240,20 @@ export class WebLlmEngine implements Engine {
 			});
 
 			// The lock is ours from here, so an abort from now on is ours to
-			// act on. One that arrived while we waited for it handed the
-			// generation to a request nobody wants any more: end it at once.
+			// act on — the loop's drain is what ends a generation nobody
+			// wants any more, whether the abort came before it or during it.
 			this.generating = req.id;
-
-			if (signal.aborted) {
-				engine.interruptGenerate();
-				return;
-			}
 
 			let text = "";
 
 			for await (const delta of stream) {
 				if (signal.aborted) {
-					return;
+					// Drain, never return: WebLLM releases its per-model lock only
+					// when its generator finishes, and resets its interrupt flag
+					// when a generation starts, so ask again on every chunk until
+					// it stops. Nothing is yielded after an abort.
+					engine.interruptGenerate();
+					continue;
 				}
 
 				const piece = delta.choices[0]?.delta?.content ?? "";

@@ -21,7 +21,20 @@ const prebuilt: ModelRecord[] = [
 ];
 
 function fakeMlc(pieces: string[]) {
-	const calls = {reload: [] as string[], unload: 0, interrupt: 0, create: [] as ChatRequest[]};
+	const calls = {
+		reload: [] as string[],
+		unload: 0,
+		interrupt: 0,
+		create: [] as ChatRequest[],
+		/**
+		 * Set when the generator reaches the end of its `for` loop — where
+		 * WebLLM's own generator releases its per-model lock. An early
+		 * `return()` from the consumer never gets there, so a stranded lock
+		 * shows up here as `false`. This fake keeps streaming through an
+		 * interrupt, as WebLLM does until its next decode step.
+		 */
+		ranToEnd: false,
+	};
 	const mlc: MlcLike = {
 		reload(modelId) {
 			calls.reload.push(modelId);
@@ -46,8 +59,11 @@ function fakeMlc(pieces: string[]) {
 						await Promise.resolve();
 
 						for (const piece of pieces) {
+							await Promise.resolve();
 							yield {choices: [{delta: {content: piece}}]};
 						}
+
+						calls.ranToEnd = true;
 					})();
 				},
 			},
@@ -276,6 +292,52 @@ describe("translate/engines/webllm", () => {
 		}
 
 		expect(d.calls.interrupt).to.equal(1);
+	});
+
+	it("an abort mid-stream drains the stream instead of returning early", async () => {
+		const d = deps(["a", "b", "c", "d"]);
+		const engine = new WebLlmEngine(d.deps, name);
+
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+
+		const controller = new AbortController();
+		const seen: string[] = [];
+
+		for await (const chunk of engine.translate(request(), controller.signal)) {
+			seen.push(chunk.text);
+
+			if (seen.length === 2) {
+				controller.abort();
+			}
+		}
+
+		// Nothing after the abort: not the remaining pieces, not the done chunk.
+		expect(seen).to.deep.equal(["a", "ab"]);
+		expect(d.calls.interrupt).to.be.at.least(1);
+		// The generation reached the point where WebLLM would release its lock.
+		expect(d.calls.ranToEnd).to.equal(true);
+	});
+
+	it("an abort before the first chunk still drains and interrupts once the generation runs", async () => {
+		const d = deps(["a", "b"]);
+		const engine = new WebLlmEngine(d.deps, name);
+
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+
+		const controller = new AbortController();
+		const stream = engine.translate(request(), controller.signal)[Symbol.asyncIterator]();
+		const first = stream.next();
+
+		// Before a single chunk — before `create()` has even resolved, so the
+		// interrupt the listener would send has nothing to aim at yet.
+		controller.abort();
+		expect(d.calls.interrupt).to.equal(0);
+
+		expect((await first).done).to.equal(true);
+		expect(d.calls.interrupt).to.be.at.least(1);
+		expect(d.calls.ranToEnd).to.equal(true);
 	});
 
 	it("an abort while waiting for the lock leaves the running generation alone", async () => {
