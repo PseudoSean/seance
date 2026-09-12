@@ -30,6 +30,28 @@ the puppy). Chromium is launched through `tools/browser-drive.mjs` and must be: 
 the driver passes. The audit says whether a rig is sound; the sheet is the only thing that
 says whether the animal looks like the animal.
 
+## Tune it fast
+
+    node tools/heart/pose-sheet.mjs frog poses        # every named pose, and the still
+    node tools/heart/pose-sheet.mjs frog gait 12      # 12 phases of each gait
+    node tools/heart/pose-sheet.mjs frog seq 0,2,4,6  # sequence times, in seconds
+    node tools/heart/pose-sheet.mjs kitten self       # check the rasteriser itself
+
+`pose-sheet.mjs` runs the rig's own outline pipeline straight into a PNG grid, with no
+browser and no SVG in between: the same unions, the same resample, the same fillet the
+generator would emit. It costs well under a second, so a pose can be judged and changed
+dozens of times before anything is generated at all.
+
+That is the difference between it and `contact-sheet.mjs`, and both are worth having.
+The contact sheet photographs the _shipped file_ through a real browser, so it is the only
+thing that proves what a viewer sees — but it has to wait out the animation in real time,
+and a twelve-cell sheet costs a whole visit, forty seconds and up. Tune here, confirm there.
+The frog took nine rounds offline and three in the browser.
+
+`self` renders the animal's still pose through this rasteriser so you can hold it against
+the committed `<animal>-still.svg` and satisfy yourself the offline picture is the same
+picture before trusting a round of tuning to it.
+
 ## Measure it
 
     node tools/heart/gait-probe.mjs deer
