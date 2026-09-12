@@ -3002,19 +3002,36 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	margin-bottom: 0;
 }
 
+/* Each dt/dd pair is one row (whois.vue wraps them in divs). The label is
+ * lifted out of the content column into the gutter — absolutely positioned
+ * left of the separator bar, right-aligned against it like a nick — which
+ * the row leaves empty below its first line. `1rem + 1px` retraces the
+ * content padding (0.5rem), the separator border (1px) and the gutter's own
+ * 0.5rem of padding, so the label's right edge lands where a nick ends. A
+ * long label runs on into the (equally empty) time column. */
 .whois {
-	display: grid;
-	grid-template-columns: max-content auto;
 	margin: 0;
 }
 
-.whois dt {
-	grid-column-start: 1;
-	margin-right: 20px;
+.whois > div {
+	position: relative;
+}
+
+#chat .whois dt {
+	position: absolute;
+	top: 0;
+	right: calc(100% + 1rem + 1px);
+	white-space: nowrap;
+	color: var(--body-color-muted);
 }
 
 .whois dd {
-	grid-column-start: 2;
+	margin: 0;
+}
+
+/* The labels escape the content column, so it must not clip. */
+#chat .msg[data-type="whois"] .content {
+	overflow: visible;
 }
 
 .changelog-text {
@@ -4028,6 +4045,18 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	#chat .condensed-summary .time,
 	#chat .condensed-summary .from {
 		display: none;
+	}
+
+	/* Inline flow has no gutter to project the whois labels into: back to
+	 * "Label: value" run-in lines. */
+	#chat .whois dt {
+		position: static;
+		display: inline;
+		white-space: normal;
+	}
+
+	#chat .whois dd {
+		display: inline;
 	}
 }
 
