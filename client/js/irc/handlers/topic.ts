@@ -36,6 +36,16 @@ const rplTopic: Handler = (client, msg) => {
 	const chan = name ? client.findChannel(name) : undefined;
 
 	if (!chan) {
+		// Only the reply to a `/topic #chan` we are not in; otherwise state
+		// for a channel we do not show, which has nowhere to go.
+		if (name && client.takeInfoAsked(name)) {
+			client.pushMessage(client.lobby, {
+				time: client.timeOf(msg),
+				text: `Topic for ${name}: ${topic}`,
+				showInActive: true,
+			});
+		}
+
 		return;
 	}
 
@@ -44,23 +54,39 @@ const rplTopic: Handler = (client, msg) => {
 	// while another client of the account holds the session and we are
 	// attached as an alias — nefarious2's answer to that JOIN (m_join.c,
 	// "already a member"). Say it when it is news, or when asked (/topic).
-	chan.topicQuiet = topic === chan.shared.topic && !chan.topicAsked;
+	const asked = chan.topicAsked;
+	chan.topicQuiet = topic === chan.shared.topic && !asked;
 	chan.topicAsked = false;
+	chan.topicAskedActive = asked;
 
 	if (chan.topicQuiet) {
 		return;
 	}
 
-	client.pushMessage(chan, {type: MessageType.TOPIC, time: client.timeOf(msg), text: topic});
+	client.pushMessage(chan, {
+		type: MessageType.TOPIC,
+		time: client.timeOf(msg),
+		text: topic,
+		showInActive: asked || undefined,
+	});
 	chan.shared.topic = topic;
 	client.dispatch("topic", {chan: chan.id, topic});
 };
 
 // RPL_NOTOPIC: <me> <channel> :No topic is set
 const rplNoTopic: Handler = (client, msg) => {
-	const chan = msg.params[1] ? client.findChannel(msg.params[1]) : undefined;
+	const name = msg.params[1];
+	const chan = name ? client.findChannel(name) : undefined;
 
 	if (!chan) {
+		if (name && client.takeInfoAsked(name)) {
+			client.pushMessage(client.lobby, {
+				time: client.timeOf(msg),
+				text: `No topic is set for ${name}.`,
+				showInActive: true,
+			});
+		}
+
 		return;
 	}
 
@@ -68,7 +94,11 @@ const rplNoTopic: Handler = (client, msg) => {
 
 	if (chan.topicAsked) {
 		chan.topicAsked = false;
-		client.pushMessage(chan, {time: client.timeOf(msg), text: "No topic is set."});
+		client.pushMessage(chan, {
+			time: client.timeOf(msg),
+			text: "No topic is set.",
+			showInActive: true,
+		});
 	}
 
 	chan.shared.topic = "";
@@ -89,6 +119,9 @@ const rplTopicWhoTime: Handler = (client, msg) => {
 		return;
 	}
 
+	const asked = chan.topicAskedActive;
+	chan.topicAskedActive = false;
+
 	const nick = setter.split("!")[0];
 	const seconds = parseInt(when, 10);
 
@@ -98,6 +131,7 @@ const rplTopicWhoTime: Handler = (client, msg) => {
 		from: chan.userRef(nick),
 		when: Number.isNaN(seconds) ? new Date() : new Date(seconds * 1000),
 		self: client.isSelf(nick),
+		showInActive: asked || undefined,
 	});
 };
 
