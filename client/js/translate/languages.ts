@@ -186,6 +186,57 @@ export function languageName(code: string, locale = "en"): string {
 	return FALLBACK_NAMES[code] ?? code;
 }
 
+const endonymCache = new Map<string, string>();
+
+/**
+ * The language's own name in its own locale — `Deutsch` for `de`, `日本語`
+ * for `ja` — falling back to the bundled English table when the runtime has
+ * no data for that locale (the constructor throws, or `.of()` hands back the
+ * code itself).
+ */
+export function languageEndonym(code: string): string {
+	const cached = endonymCache.get(code);
+
+	if (cached !== undefined) {
+		return cached;
+	}
+
+	let endonym: string | undefined;
+
+	try {
+		const names = new Intl.DisplayNames([code], {type: "language"});
+		const name = names.of(code);
+
+		if (name && name !== code) {
+			endonym = name;
+		}
+	} catch {
+		// an unknown locale or a runtime without Intl.DisplayNames
+	}
+
+	// CLDR spells some endonyms lowercase mid-sentence ("français"), but a
+	// picker option stands alone, so a real endonym takes an initial capital
+	// in its own locale — a no-op for a script without case ("日本語"). The
+	// bundled-English/code fallback is left as `languageName` already spells
+	// it — capitalising an unknown code would turn "xx" into "Xx".
+	const resolved = endonym
+		? endonym.charAt(0).toLocaleUpperCase(code) + endonym.slice(1)
+		: languageName(code, "en");
+
+	endonymCache.set(code, resolved);
+
+	return resolved;
+}
+
+/**
+ * What a language picker's `<option>` shows: the endonym alone, whatever the
+ * reader's own locale is. Its own function so that adding the reader's name
+ * back in one day (`Français · French`) is one edit here.
+ */
+export function languageOptionLabel(code: string): string {
+	return languageEndonym(code);
+}
+
 /** `navigator.language` → a supported code; English when nothing matches. */
 export function browserLanguage(navigatorLanguage: string | undefined): string {
 	const primary = (navigatorLanguage ?? "").toLowerCase().split(/[-_]/)[0];

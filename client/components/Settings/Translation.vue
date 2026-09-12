@@ -264,7 +264,7 @@ import {computed, defineComponent, onMounted, ref, toRaw} from "vue";
 import {useStore} from "../../js/store";
 import {translateService} from "../../js/translate";
 import type {ModelRef} from "../../js/translate/engine";
-import {SUPPORTED_LANGUAGES, languageName} from "../../js/translate/languages";
+import {SUPPORTED_LANGUAGES, languageOptionLabel} from "../../js/translate/languages";
 import type {ModelView} from "../../js/translate/service";
 
 export default defineComponent({
@@ -275,7 +275,8 @@ export default defineComponent({
 		const enabled = service.enabled;
 		const models = computed(() => store.state.translation.models);
 		const capability = computed(() => store.state.translation.capability);
-		const languages = SUPPORTED_LANGUAGES;
+		const name = (code: string) => languageOptionLabel(code);
+		const languages = [...SUPPORTED_LANGUAGES].sort((a, b) => name(a).localeCompare(name(b)));
 		const loadError = ref<string | null>(null);
 		// Two ways the worker can disappoint this tab: a call it made rejected
 		// (loadError), or the worker reported a problem of its own that no call
@@ -291,8 +292,6 @@ export default defineComponent({
 				});
 			}
 		});
-
-		const name = (code: string) => languageName(code, navigator.language);
 
 		const size = (bytes: number) =>
 			bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} GB` : `${Math.round(bytes / 1e6)} MB`;

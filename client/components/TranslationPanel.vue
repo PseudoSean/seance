@@ -138,7 +138,7 @@
 
 <script lang="ts">
 import {computed, defineComponent, onBeforeUnmount, onMounted, PropType, ref} from "vue";
-import {SUPPORTED_LANGUAGES, languageName} from "../js/translate/languages";
+import {SUPPORTED_LANGUAGES, languageOptionLabel} from "../js/translate/languages";
 import {channelTranslation, setChannelOptions, setReading} from "../js/translate/reader";
 import {cancelOutgoing} from "../js/translate/writer";
 import {hasVirtualKeyboard} from "../js/helpers/device";
@@ -164,9 +164,9 @@ export default defineComponent({
 	setup(props, {emit}) {
 		const panel = ref<HTMLElement | null>(null);
 		const state = computed(() => channelTranslation(props.network, props.channel));
-		const languages = SUPPORTED_LANGUAGES;
+		const name = (code: string) => languageOptionLabel(code);
+		const languages = [...SUPPORTED_LANGUAGES].sort((a, b) => name(a).localeCompare(name(b)));
 		const formalities = FORMALITIES;
-		const name = (code: string) => languageName(code, navigator.language);
 		const valueOf = (event: Event) =>
 			(event.target as HTMLSelectElement | HTMLInputElement).value;
 

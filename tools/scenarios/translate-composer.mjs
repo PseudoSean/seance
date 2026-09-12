@@ -254,6 +254,22 @@ export default async function run(page) {
 	await other.joined;
 
 	// 1. The write target.
+	await openPanel(page);
+	await page.check(
+		"the write target options are named in themselves (Deutsch, Français)",
+		await page.evaluate(
+			`(() => {
+				const s = document.querySelector('.translation-panel select[name="translateWrite"]');
+				const text = (v) => s.querySelector('option[value="' + v + '"]').textContent.trim();
+				return text("de") === "Deutsch" && text("fr") === "Français";
+			})()`
+		)
+	);
+	await page.evaluate(
+		`document.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", code: "Escape", keyCode: 27, which: 27, bubbles: true}))`
+	);
+	await page.waitFor(`!document.querySelector(".translation-panel")`, {label: "panel closed"});
+
 	await setWriteTarget(page, "de");
 	await page.check(
 		"the placeholder says the channel sends in German",

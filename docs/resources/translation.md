@@ -108,6 +108,11 @@ panel is what held it. Browser checks:
 `tools/scenarios/translate-reading.mjs` (the column, and the sheet under
 `--mobile`) and `tools/scenarios/translate-composer.mjs --mobile --width=390 --height=844` (the sheet in full).
 
+Every language picker's options -- here and in Settings -> Translation --
+show the endonym alone (`Deutsch`, `Français`, `日本語`), from
+`languageOptionLabel()` (`Intl.DisplayNames` in the language's own locale),
+falling back to the bundled English table.
+
 ## Writing in a channel
 
 The panel also sets an outgoing target per channel (`write`, next to `read`
