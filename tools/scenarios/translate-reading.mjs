@@ -3,7 +3,9 @@
 // German in #seance-translate (its own channel, not #seance, so these lines
 // never land in a tester's own context) through a raw WebSocket to the dev
 // ircd. Steps, in
-// order: nothing is translated before the globe is switched on; a German
+// order: nothing is translated before the globe is switched on (two German
+// lines go by first, and the "load more" steps at the end are what show
+// that the reader can still ask for them); a German
 // line gets a "from German" line with the fake's "[English] …" echo; an
 // English line gets none; the chip's menu retranslates from another source
 // (the detector's runners-up one click each, never the line's own source;
@@ -23,8 +25,12 @@
 // `draft/multiline` message is translated line by line rather than losing
 // all but its first; a two-line `$$…$$` display-math block survives a
 // translation byte for byte, embedded line break included; switching off
-// stops new ones; and a REDACT of a translated line takes its translation
-// away with the original text.
+// stops new ones; a REDACT of a translated line takes its translation
+// away with the original text; declaring German in the panel (a chip named
+// in its own language, gone from the picker's options) places a nine-
+// character line the detector cannot look at; and a "load more" is
+// translated although every line of it predates the switch-on moment,
+// newest row first and no more than `HISTORY_QUEUE_CAP` of the page.
 // Detection is real (franc); only the engine is scripted.
 //
 // The speaker negotiates message-tags + echo-message so it learns the
@@ -110,6 +116,38 @@ async function setReading(page, code) {
 	await page.waitFor(`!document.querySelector(".translation-panel")`, {
 		label: "the close button put the panel away",
 	});
+}
+
+/**
+ * The panel without touching the switch: a right-click where there is a
+ * pointer, and on touch the tap itself, which is how the panel opens there.
+ */
+async function openPanel(page) {
+	if (MOBILE) {
+		await page.click(GLOBE);
+	} else {
+		await page.evaluate(
+			`document.querySelector(${JSON.stringify(
+				GLOBE
+			)}).dispatchEvent(new MouseEvent("contextmenu", {bubbles: true, cancelable: true}))`
+		);
+	}
+
+	await page.waitFor(`!!document.querySelector(".translation-panel")`, {
+		timeout: 10000,
+		label: "the panel opened",
+	});
+}
+
+/** Set one of the panel's selects and let Vue hear it. */
+function setPanelSelect(page, name, value) {
+	return page.evaluate(
+		`(() => { const s = document.querySelector('.translation-panel select[name=${JSON.stringify(
+			name
+		)}]'); s.value = ${JSON.stringify(
+			value
+		)}; s.dispatchEvent(new Event("change", {bubbles: true})); })()`
+	);
 }
 
 /**
@@ -239,9 +277,13 @@ async function scenario(page) {
 	const other = speaker(SPEAKER);
 
 	await other.joined;
+	// Two German lines before the switch: what was said before a channel was
+	// switched on is never translated (`since`), and the "load more" steps at
+	// the end are what shows that a line the reader asks for still is.
 	other.say("Guten Tag zusammen, wie geht es euch heute?");
-	await page.waitFor(`document.body.innerText.includes("wie geht es euch heute")`, {
-		label: "first German line arrived",
+	other.say("Und hier ist noch eine zweite Zeile vor dem Einschalten.");
+	await page.waitFor(`document.body.innerText.includes("zweite Zeile vor dem Einschalten")`, {
+		label: "both German lines arrived before the switch",
 	});
 	await page.sleep(1500);
 	await page.check("nothing translated before the switch", (await page.evaluate(LINES)) === 0);
@@ -594,14 +636,14 @@ async function scenario(page) {
 		);
 	} else {
 		// One column: every setting is a label with its control under it, so
-		// the four controls come out the same width.
+		// the five controls come out the same width.
 		const controlWidths = await page.evaluate(
 			`[...document.querySelectorAll(".translation-panel .translation-panel-control")].map((c) => Math.round(c.getBoundingClientRect().width))`
 		);
 
 		await page.check(
-			`the four controls share one width (${controlWidths.join(", ")})`,
-			controlWidths.length === 4 && new Set(controlWidths).size === 1
+			`the five controls share one width (${controlWidths.join(", ")})`,
+			controlWidths.length === 5 && new Set(controlWidths).size === 1
 		);
 		await page.check(
 			"the hints stay out of the desktop panel",
@@ -858,6 +900,169 @@ async function scenario(page) {
 		(await page.evaluate(LINES)) === 9
 	);
 	await page.screenshot("redacted-translation");
+
+	// The channel's declared languages. Reading is off by now, so this turns
+	// it back on through the panel's own control on either layout -- and the
+	// panel is where German is declared in the first place.
+	await openPanel(page);
+	await setPanelSelect(page, "translateLanguageAdd", "de");
+	await page.waitFor(`!!document.querySelector(".translation-panel-chip")`, {
+		label: "German is declared as spoken here",
+	});
+
+	const chipText = String(
+		await page.evaluate(`document.querySelector(".translation-panel-chip").textContent.trim()`)
+	);
+
+	await page.check(
+		`the chip names the language in itself (${chipText})`,
+		chipText.startsWith("Deutsch")
+	);
+	await page.check(
+		"the picker no longer offers a language the channel has declared",
+		!(await page.evaluate(
+			`[...document.querySelectorAll('.translation-panel select[name="translateLanguageAdd"] option')].some((o) => o.value === "de")`
+		))
+	);
+	await page.screenshot("panel-languages");
+
+	await setPanelSelect(page, "translateRead", "en");
+	await page.evaluate(`document.querySelector(".translation-panel-close").click()`);
+	await page.waitFor(`!document.querySelector(".translation-panel")`, {
+		label: "the panel closed after declaring German",
+	});
+	await page.waitFor(
+		`document.querySelector(${JSON.stringify(GLOBE)}).classList.contains("on")`,
+		{label: "reading is on again"}
+	);
+
+	// Nine characters, three words: under DETECT_MIN_LENGTH, so franc is
+	// never asked and this line used to be skipped. The declaration is what
+	// places it -- German is the one declared language that is not English.
+	const shortLine = "So ist es";
+
+	other.say(shortLine);
+	await page.waitFor(`${LINES} === 10`, {
+		timeout: 20000,
+		label: "the short German line is translated",
+	});
+
+	const shortRow = `[...document.querySelectorAll(".msg")].filter((m) => m.textContent.includes(${JSON.stringify(
+		shortLine
+	)})).pop()`;
+
+	await page.check(
+		"the short line's chip reads from German",
+		(await page.evaluate(
+			`((${shortRow}).querySelector(".msg-translation-chip") || {}).textContent.trim()`
+		)) === "from German"
+	);
+
+	// History the reader asks for: a "load more" is translated although every
+	// line of it is older than the switch-on moment a minute ago, newest line
+	// first, and at most HISTORY_QUEUE_CAP of the page
+	// (client/js/translate/eligibility.ts).
+	const HISTORY_QUEUE_CAP = 40;
+
+	await page.check(
+		"there are older messages to load",
+		(await page.evaluate(
+			`(() => { const el = document.querySelector("#chat .show-more"); return el ? getComputedStyle(el).display : "none"; })()`
+		)) !== "none"
+	);
+
+	// The order the rows gain a translation line in is the order the reader
+	// queued them in: an entry is committed per line as it is queued. Watched
+	// from before the load, so nothing is missed by looking too late.
+	await page.evaluate(
+		`(() => {
+			window.__seanceTranslationOrder = [];
+			const seen = new Set(
+				[...document.querySelectorAll(".msg-translation")]
+					.map((el) => (el.closest(".msg") || {}).id)
+					.filter(Boolean)
+			);
+			const scan = () => {
+				for (const el of document.querySelectorAll(".msg-translation")) {
+					const row = el.closest(".msg");
+
+					if (row && row.id && !seen.has(row.id)) {
+						seen.add(row.id);
+						window.__seanceTranslationOrder.push(row.id);
+					}
+				}
+			};
+
+			new MutationObserver(scan).observe(document.querySelector("#chat .messages"), {
+				childList: true,
+				subtree: true,
+			});
+		})()`
+	);
+
+	const rowsBefore = Number(
+		await page.evaluate(`document.querySelectorAll("#chat .msg").length`)
+	);
+	const topBefore = String(
+		await page.evaluate(`(document.querySelector("#chat .msg") || {}).id || ""`)
+	);
+	const doneBefore = Number(await page.evaluate(LINES));
+
+	// Clicked where it stands: scrolling the scrollback to the top would let
+	// MessageList's own IntersectionObserver fire a second load on top of
+	// this one, and the page's size is what the assertions below count.
+	await page.evaluate(`document.querySelector("#chat .show-more button").click()`);
+	await page.waitFor(`document.querySelectorAll("#chat .msg").length > ${rowsBefore}`, {
+		timeout: 20000,
+		label: "a page of older messages arrived",
+	});
+	await page.waitFor(`${LINES} > ${doneBefore}`, {
+		timeout: 30000,
+		label: "the loaded history is translated, though all of it predates the switch",
+	});
+	await page.sleep(6000);
+
+	const loaded = await page.evaluate(
+		`(() => {
+			const rows = [...document.querySelectorAll("#chat .msg")];
+			const found = rows.findIndex((m) => m.id === ${JSON.stringify(topBefore)});
+			const ids = rows.slice(0, found < 0 ? 0 : found).map((m) => m.id);
+			const order = (window.__seanceTranslationOrder || [])
+				.filter((id) => ids.includes(id))
+				.map((id) => ids.indexOf(id));
+
+			return {
+				count: ids.length,
+				order,
+				done: document.querySelectorAll('.msg-translation[data-status="done"]').length,
+			};
+		})()`
+	);
+
+	await page.check(
+		`the load brought ${loaded.count} older rows and queued ${loaded.order.length} of them`,
+		loaded.count > 0 && loaded.order.length >= 2
+	);
+	await page.check(
+		`the newest of them was queued first (row indexes ${loaded.order.join(", ")})`,
+		loaded.order.every((index, i) => i === 0 || index < loaded.order[i - 1])
+	);
+	await page.check(
+		`at most HISTORY_QUEUE_CAP of the page was queued (${
+			loaded.done - doneBefore
+		} translated, page of ${loaded.count})`,
+		loaded.done - doneBefore <= HISTORY_QUEUE_CAP &&
+			loaded.order.every((index) => index >= loaded.count - HISTORY_QUEUE_CAP)
+	);
+	await page.screenshot("translated-history");
+
+	// Off before the speaker goes: a switch-off drops what the load left
+	// waiting, so nothing is mid-translation as the sockets close.
+	await setReading(page, "");
+	await page.waitFor(
+		`!document.querySelector(${JSON.stringify(GLOBE)}).classList.contains("on")`,
+		{label: "reading off again at the end"}
+	);
 
 	other.quit();
 	await page.check("no console errors", page.consoleErrors.length === 0);
