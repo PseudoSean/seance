@@ -156,7 +156,8 @@ describe("tools/heart build", function () {
 
 	it("emits only the tints a rig asks for, and passes its decor to the stage", function () {
 		const decor = [{d: "M0,70h100v10h-100z", fill: "#9cf"}];
-		const {files, audit} = buildAnimal({...blob, variants: ["far"], decor});
+		const stillDecor = [{d: "M0,72h100v8h-100z", fill: "#3bd"}];
+		const {files, audit} = buildAnimal({...blob, variants: ["far"], decor, stillDecor});
 		expect(audit.problems, audit.problems.join("; ")).to.deep.equal([]);
 		// the far *tint*, both of its files, and no near tint at all
 		expect(Object.keys(files)).to.deep.equal(["blob-far.svg", "blob-far-still.svg"]);
@@ -165,8 +166,17 @@ describe("tools/heart build", function () {
 		expect(files["blob-far.svg"]).to.include(
 			'<path fill="#9cf" transform="scale(1)" d="M0,70h100v10h-100z"/>'
 		);
-		// the still is the rig's own box, not the stage: no decor there
+		// the still is the rig's own box, not the stage: the stage's decor is
+		// never drawn there, and `stillDecor` — the box-sized copy a rig draws
+		// for it — is (the dolphin's pond)
 		expect(files["blob-far-still.svg"]).to.not.include("#9cf");
+		expect(files["blob-far-still.svg"]).to.include(
+			'<path fill="#3bd" transform="scale(1)" d="M0,72h100v8h-100z"/>'
+		);
+		// and a rig with no `stillDecor` writes nothing extra at all
+		expect(
+			buildAnimal({...blob, variants: ["far"], decor}).files["blob-far-still.svg"]
+		).to.not.include('<path fill="#3bd"');
 
 		// a rig that asks for neither still gets all four, in the same order
 		expect(Object.keys(buildAnimal(blob).files)).to.deep.equal([

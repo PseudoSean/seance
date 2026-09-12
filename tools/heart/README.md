@@ -130,6 +130,12 @@ want: the pin is the right fix, and the numbers it was drawn from stay visible.
    the same `-APEX` its `flyUp` ramps to, which is why its clip reads back 56.3 → 56.3 against
    the ramp's 71.6 → 56.3.
 
+   **An arc is not a ramp.** A gait whose root channel comes back to where it started — the
+   dolphin's leap, out of the water and back into it — is periodic like any other, so it takes
+   no `once` and repeats for free: `cycles: 6` stores one cycle, where six ramped segments
+   would have stored six. Reach for the ramp only when the channel genuinely ends somewhere
+   else than it began.
+
 2. **Sample** (`lib/sampler.mjs`): the segments become a list of poses at their frame rates.
 3. **Outline** (`lib/outline.mjs`): per stored frame, the near parts are united into one
    closed outline and each far group into its own — a far leg, or whatever else a rig puts
@@ -181,10 +187,31 @@ want: the pin is the right fix, and the numbers it was drawn from stay visible.
    `decor`, an array of `{d, fill}` in its own coordinates, painted last and outside every
    group of the animated file — scenery the animal passes _behind_, which neither travels nor
    fades with the visit (and so is on screen for the whole loop, the off-stage gap included);
-   the stills, being the rig's own box rather than the stage, carry none of it. Durations are
-   written to four decimals, so a chain of clips runs a few ten-thousandths of a second short
-   of the loop's travel transform each period — about three seconds a week on a page left
-   open, not worth twelve churned files.
+   the stills, being the rig's own box rather than the stage, carry none of _that_ array and
+   take **`stillDecor`** instead — the same `{d, fill}` shape drawn against the box, for a rig
+   whose animal is not legible without its scenery (the dolphin's pond: a leaping dolphin with
+   no water under it is a fish in the sky, and a stage ellipse 2856 units wide crops to a flat
+   band in a 130-unit box). **The shape and the position run on two
+   different clocks, and keeping them equal is load-bearing.** The clips are a syncbase chain
+   (each begins on the previous one's `.end`; the first restarts on the last one's `.end` plus
+   an offset) while the travel, the flip and the fade are `animateTransform`s with `dur` = the
+   period on the document clock. Nothing re-synchronises them, so a difference between the two
+   periods is not a one-off error — it is added again every loop, forever. The restart offset
+   is therefore `period - onStage`, computed from the durations _as they will be written_
+   (every `dur` goes through `fmt`, so summing unrounded values would still leave a residue to
+   accumulate), and the audit refuses a file whose chain period and travel period differ by
+   more than half a millisecond. `test/tools/heart/files.ts` asserts the same thing over the
+   committed SVGs.
+
+   This is written at length because it shipped wrong. The restart offset was `gap`
+   (`period - first - onStage`, the right number for the "is the animal away long enough"
+   check and the wrong one here), so every loop restarted the shape `first` seconds early:
+   2 s a loop for the horse, 14 s for the puppy. Within a few minutes the pose had nothing to
+   do with the position and the animals slid around the meadow in frozen poses. Nothing caught
+   it — the audit compared the chain against `onStage`, which was correct, and never against
+   the period; the contact sheet photographs a single visit, so a defect that needs several
+   loops to show cannot appear in one; and an earlier note in this file waved the whole class
+   of problem away as "about three seconds a week, not worth twelve churned files".
 
 ## Rules a rig must keep
 
@@ -247,6 +274,9 @@ the causes out:
   A rig sets its `budget` to its row; the audit refuses to write a file over it,
   and the test skips an animal's rows until its files exist;
 
+- the clip chain's period (Σ `dur` × `repeat`, plus the restart offset) equals the travel
+  transform's `dur` within half a millisecond — the two clocks above, which nothing
+  re-synchronises;
 - the clip chain's total duration (Σ `dur` × `repeat` over the segments) agrees with the
   sampled `onStage` within 5 ms — the two are built from the same rounded frame counts and
   should always match exactly; a mismatch would mean the shape morphs and the travel have

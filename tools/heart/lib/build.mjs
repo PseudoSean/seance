@@ -362,6 +362,10 @@ export function buildAnimal(def) {
 	const problems = [...clipProblems];
 	if (failures) problems.push(`${failures} frame(s) whose union failed after retries`);
 	if (flips.length > 1) problems.push("more than one turn (a file carries one flip)");
+	// The idle tail inside one period: the visit occupies [first, first + onStage],
+	// so this is how long the animal is away before the period ends. It is the
+	// "is it gone long enough" check, and deliberately NOT the chain's restart
+	// offset — see `restart` below, where confusing the two was a real bug.
 	const gap = sequence.period - sequence.first - onStage;
 	if (gap < 2)
 		problems.push(`the off-stage gap is ${gap.toFixed(1)} s (need ≥ 2 s): raise the period`);
@@ -408,12 +412,45 @@ export function buildAnimal(def) {
 		dur: seg.dur,
 		keyTimes: seg.frames.map((f) => f.t / seg.dur),
 		values: seg.frames.map((f) => f.layers.map((l) => encodePath(l.pts, k, stride(l.cls)))),
-		begin:
-			i === 0
-				? `${fmt(sequence.first)}s;${lastId}.end+${fmt(gap)}s`
-				: `${segs[i - 1].id}.end`,
+		begin: i === 0 ? null : `${segs[i - 1].id}.end`,
 	}));
 	const P = sequence.period;
+
+	// What the clip chain restarts on, and it is NOT `gap`.
+	//
+	// The shape clips are a syncbase chain: each begins on the previous one's
+	// `.end`, and the first restarts on the last one's `.end` plus this offset.
+	// The travel, the flip and the fade are separate animateTransforms with
+	// `dur` = the period, repeating on the document clock. Two clocks, and they
+	// only stay together if the chain's period is exactly the travel's.
+	//
+	// The last clip ends at `first + onStage`, and the next visit must begin at
+	// `first + period`, so the offset is `period - onStage`. Using `gap`
+	// (`period - first - onStage`, the right number for the "is it away long
+	// enough" check below) restarts the chain at `period` instead — `first`
+	// seconds early, every single loop. The pose then walks out of phase with
+	// the position by `first` seconds per period until the animal is drawn in
+	// an arbitrary pose while its position glides on regardless. That was the
+	// "animations lose sync and the animals just glide around" report, and at
+	// the puppy's `first: 14` against a 75 s period it only takes a few loops.
+	//
+	// Derive it from the durations *as they will be written* rather than from
+	// the unrounded `onStage`: every `dur` is emitted through `fmt`, so a chain
+	// summed from unrounded values would still creep a fraction of a
+	// ten-thousandth each loop. Subtracting the rounded sum from the period
+	// makes the emitted chain period exactly the emitted travel period, with no
+	// residue to accumulate.
+	const roundedOnStage = clips.reduce((a, c) => a + Number(fmt(c.dur)) * c.repeat, 0);
+	const restart = P - roundedOnStage;
+	clips[0].begin = `${fmt(sequence.first)}s;${lastId}.end+${fmt(restart)}s`;
+
+	const chainPeriod = roundedOnStage + Number(fmt(restart));
+	if (Math.abs(chainPeriod - P) > 0.0005)
+		problems.push(
+			`the clip chain's period is ${chainPeriod.toFixed(4)} s against a travel period of ` +
+				`${P.toFixed(4)} s: the shape animation would drift out of phase with the ` +
+				`position by ${(P - chainPeriod).toFixed(4)} s every loop`
+		);
 	const curve = travelCurve(poses, xs, segs, flips, sequence.first, P);
 	const xLast = (x0 + curve.xs[curve.xs.length - 1]) * k;
 	const {fade, keyTimes: fadeKeyTimes} = fadeTimes({
@@ -465,8 +502,10 @@ export function buildAnimal(def) {
 		decor: def.decor,
 	});
 	const farTint = mix(colours.far, SKY, 0.45);
-	const nearLayers = layersWith(mix(colours.near, SKY, 0.35), mix(colours.far, SKY, 0.35));
 	const farLayers = layersWith(farTint, farTint);
+	// Lazy, so a rig that ships no near tint need not invent a near colour:
+	// `colours.near` is read only where the near file is actually written.
+	const nearLayers = () => layersWith(mix(colours.near, SKY, 0.35), mix(colours.far, SKY, 0.35));
 
 	const stillV = {};
 	for (const ch of rig.channels())
@@ -491,14 +530,17 @@ export function buildAnimal(def) {
 	const wants = (tint) => variants.includes(tint);
 	/** @type {Record<string, string>} */
 	const files = {};
-	if (wants("near")) files[`${name}.svg`] = animalSvg(spec(nearLayers));
+	if (wants("near")) files[`${name}.svg`] = animalSvg(spec(nearLayers()));
 	if (wants("far")) files[`${name}-far.svg`] = animalSvg(spec(farLayers));
+	// `stillDecor`, never `decor`: stage scenery is authored against a box
+	// `aspect × vb.h` wide and would crop to a band in the rig's own box.
 	if (wants("near"))
 		files[`${name}-still.svg`] = stillSvg({
 			viewBox: vb,
 			k,
-			layers: nearLayers,
+			layers: nearLayers(),
 			frame: stillFrame,
+			decor: def.stillDecor,
 		});
 	if (wants("far"))
 		files[`${name}-far-still.svg`] = stillSvg({
@@ -506,6 +548,7 @@ export function buildAnimal(def) {
 			k,
 			layers: farLayers,
 			frame: stillFrame,
+			decor: def.stillDecor,
 		});
 	for (const [f, s] of Object.entries(files)) {
 		const limit = f.includes("still") ? 8 * 1024 : def.budget;
