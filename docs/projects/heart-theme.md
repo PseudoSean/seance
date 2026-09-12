@@ -522,5 +522,13 @@ the cast.
 ### The cast is now eight
 
 horse, puppy, bunny, deer, kitten, frog, ladybug, bird. §6.4's table of ten stands as the
-design; two of its rows are simply not cast today. The ladybug still needs its redraw — it
-currently reads as a rabbit, and the cast already has one.
+design; two of its rows are simply not cast today.
+
+The ladybug was **redrawn** on 2026-09-12, because the first one read as a rabbit and the cast
+already has one. What carries a beetle in a side-on silhouette, in the order the rounds found
+them: a body that is wide and low with its crest forward and a blunt rear near the ground
+(36 units tall on 86 long, where the old dome was 51 on 62); three descending lobes — elytra,
+pronotum, head — each stepping off the last one's cliff; legs that zigzag, the femur near
+vertical and the shin taking the angle, because a mammal's leg is a column; and wings that
+open _rearward_, 22.7 units past the back of the body, never upright. The rig's header
+(`tools/heart/rigs/ladybug.mjs`) carries the geometry and the constraints that fix it.
