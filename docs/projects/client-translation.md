@@ -322,7 +322,6 @@ Retranslating from a chosen source (2026-09-12):
   reading entry's `done` and the composer's strip and round-trip
   read-back. Never on a streaming partial — mid-stream, `alex` is not yet
   a prefix.
-
 - **Switching a channel on opens its panel.** A desktop click on the globe
   that turns reading on now opens the panel too; a click that turns it off
   only turns it off, and the touch tap is unchanged.
