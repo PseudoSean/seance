@@ -112,19 +112,6 @@
 						@click="copyOutgoing"
 					/>
 					<button
-						v-if="
-							outgoing.status === 'done' &&
-							outgoing.check.status === 'idle' &&
-							canCheck
-						"
-						type="button"
-						class="translate-bar-button translate-bar-check-button"
-						title="Show how it reads back"
-						aria-label="Show how it reads back"
-						@mousedown.prevent
-						@click="checkOutgoingNow"
-					/>
-					<button
 						type="button"
 						class="translate-bar-button translate-bar-send"
 						:disabled="outgoingBusy || !canSend"
@@ -263,9 +250,7 @@ import {hasVirtualKeyboard} from "../js/helpers/device";
 import {languageName} from "../js/translate/languages";
 import {draftGate} from "../js/translate/outgoing";
 import {
-	canCheckOutgoing,
 	cancelOutgoing,
-	checkOutgoing,
 	noteOutgoingSent,
 	translateOutgoing,
 	writeTarget,
@@ -527,8 +512,6 @@ export default defineComponent({
 			return text.length > REASON_MAX ? `${text.slice(0, REASON_MAX - 1)}…` : text;
 		};
 
-		const canCheck = computed(() => !!outgoing.value && canCheckOutgoing(outgoing.value));
-
 		// Copy: the translation is what the strip is showing, so it is what
 		// the button puts on the clipboard. The label says so for two
 		// seconds, since nothing else about the page changes.
@@ -568,11 +551,7 @@ export default defineComponent({
 				return false;
 			}
 
-			return (
-				entry.status === "pending" ||
-				(entry.check.status === "pending" &&
-					store.state.settings.translateRoundTrip === "auto")
-			);
+			return entry.status === "pending" || entry.check.status === "pending";
 		});
 
 		const sendTooltip = computed(() => {
@@ -869,10 +848,6 @@ export default defineComponent({
 			focusForTyping();
 		};
 
-		const checkOutgoingNow = () => {
-			void checkOutgoing(props.network, props.channel);
-		};
-
 		const onBlur = () => {
 			if (autocompletionRef.value) {
 				autocompletionRef.value.hide();
@@ -1150,10 +1125,8 @@ export default defineComponent({
 			outgoingChip,
 			shortReason,
 			outgoingBusy,
-			canCheck,
 			sendTooltip,
 			cancelOutgoingNow,
-			checkOutgoingNow,
 			copiedOutgoing,
 			copyOutgoing,
 		};

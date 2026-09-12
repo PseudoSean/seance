@@ -88,10 +88,6 @@ const defaultConfig = {
 	translateFormality: {
 		default: "auto",
 	},
-	/** button | auto: the round-trip check on the composer's strip. */
-	translateRoundTrip: {
-		default: "button",
-	},
 	/** Let the router pick the GPU model / the CPU models. */
 	translateLlm: {
 		default: true,

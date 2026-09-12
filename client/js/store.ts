@@ -58,7 +58,7 @@ export interface OutgoingTranslation {
 	from: string | null;
 	to: string;
 	error: string | null;
-	/** The round trip: idle until Check (or translateRoundTrip: auto) runs it. */
+	/** The round trip: idle until the translation is done, then it always runs. */
 	check: {status: "idle" | "pending" | "done" | "failed"; text: string; to: string | null};
 }
 

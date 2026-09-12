@@ -5378,8 +5378,6 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 #form .translate-bar-copy::before { content: "\f0c5"; /* https://fontawesome.com/icons/copy?style=solid */ }
 #form .translate-bar-copy-done::before { content: "\f00c"; /* https://fontawesome.com/icons/check?style=solid */ }
 
-/* https://fontawesome.com/icons/exchange-alt?style=solid */
-#form .translate-bar-check-button::before { content: "\f362"; }
 #form .translate-bar-send::before { content: "\f1d8"; /* https://fontawesome.com/icons/paper-plane?style=solid */ }
 #form .translate-bar-edit::before { content: "\f303"; /* https://fontawesome.com/icons/pencil-alt?style=solid */ }
 

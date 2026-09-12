@@ -249,9 +249,7 @@ export async function translateOutgoing(
 			patch: {status: "done", text},
 		});
 
-		if (store.state.settings.translateRoundTrip === "auto") {
-			void checkOutgoing(network, channel);
-		}
+		void checkOutgoing(network, channel);
 
 		return "strip";
 	} catch (e) {
@@ -319,9 +317,8 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 
 		context.sourceHint = entry.to;
 
-		// Held like the translation itself: under `translateRoundTrip: "auto"`
-		// Send waits for this check, so it must not queue behind the
-		// channel's incoming traffic either.
+		// Held like the translation itself: Send waits for this check, so it
+		// must not queue behind the channel's incoming traffic either.
 		holdReading();
 
 		let text: string;

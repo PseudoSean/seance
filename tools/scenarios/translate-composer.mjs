@@ -7,8 +7,9 @@
 // says so; the first Enter puts a "to German" strip above the input with
 // the fake's "[German] …" streaming in, Send disabled until it ends, the
 // draft still in the input, the request logged with purpose "write";
-// typing drops the strip; Check reads the translation back
-// ("[English] [German] …", a read request); the second Enter sends the
+// typing drops the strip; the check runs automatically once the
+// translation ends, disabling Send again until the read-back line
+// ("[English] [German] …", a read request) is done; the second Enter sends the
 // translation (the other user hears "[German] …", the strip goes, the
 // input clears) and ArrowUp recalls the original draft; Escape drops a
 // strip and keeps the draft; a draft carrying the fake's "[fail]" marker
@@ -307,12 +308,10 @@ export default async function run(page) {
 		(await page.evaluate(inputValue)) === draft
 	);
 	await page.check(
-		"Send is enabled once it ends",
-		!(await page.evaluate(`document.querySelector("#submit").disabled`))
-	);
-	await page.check(
 		"the request went out as a write",
-		(await page.evaluate(`${REQUESTS}.slice(-1)[0].purpose`)) === "write"
+		(await page.evaluate(
+			`${REQUESTS}.some((r) => r.purpose === "write" && r.text === ${JSON.stringify(draft)})`
+		)) === true
 	);
 	await page.screenshot("composer-strip");
 
@@ -327,13 +326,25 @@ export default async function run(page) {
 		label: "translated again",
 	});
 
-	// 4. Check reads it back.
-	await page.evaluate(`document.querySelector(".translate-bar-check-button").click()`);
+	// 4. The check runs automatically and Send waits for it.
+	await page.waitFor(`!!document.querySelector(".translate-bar-check")`, {
+		timeout: 20000,
+		label: "the check started",
+	});
+	await page.check(
+		"Send is disabled while the check runs",
+		await page.evaluate(`document.querySelector("#submit").disabled`)
+	);
 	await page.waitFor(
 		`(document.querySelector(".translate-bar-check .translate-bar-text") || {}).textContent === ${JSON.stringify(
 			`[English] [German] ${draft} edited`
 		)}`,
 		{timeout: 20000, label: "the read-back line"}
+	);
+	await page.check(
+		"Send is enabled once the check ends",
+		!(await page.evaluate(`document.querySelector("#submit").disabled`)) &&
+			!(await page.evaluate(`document.querySelector(".translate-bar-send").disabled`))
 	);
 	await page.check(
 		"the check went out as a read",
@@ -451,6 +462,11 @@ export default async function run(page) {
 		"one numbered request carried the three lines",
 		(await page.evaluate(`${REQUESTS}.slice(-1)[0].lines`)) === 3
 	);
+	// The automatic check runs on this draft too; Send waits for it.
+	await page.waitFor(`!document.querySelector("#submit").disabled`, {
+		timeout: 20000,
+		label: "Send re-enabled once the multi-line draft's check ends",
+	});
 	await page.evaluate(`document.querySelector("#form").requestSubmit()`);
 	await page.waitFor(
 		`document.body.innerText.includes(${JSON.stringify(`[German] line three ${RUN}`)})`,

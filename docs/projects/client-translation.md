@@ -32,7 +32,7 @@ quality claim is measured by a script rather than assumed.
 Quality levers in the first version: recent messages as context, the reply
 target, the channel topic and language prior, deterministic span protection,
 a nick glossary, per-channel term memory, multiline messages as one unit,
-queue batching, a round-trip check on the strip as a button, and voice
+queue batching, a round-trip check on the strip, and voice
 examples and formality as settings. Deferred: draft-and-refine across the two
 engines, and a "wrong?" feedback log.
 
@@ -118,10 +118,11 @@ Plan 3 (composer):
   strip" is the strip's own Edit button, not the edit compose bar.
 - The round trip's reverse language is the draft's detected language,
   else the user's reading language; when that equals the write target
-  there is nothing to read back into and no Check is offered.
-  `translateRoundTrip: "auto"` starts the check as soon as the
-  translation ends and Send waits for it; `"button"` never lets a
-  running check block Send.
+  there is nothing to read back into and no check runs. The check always
+  starts as soon as the translation ends and Send waits for it.
+- The Check button and its Settings → Translation choice were removed on
+  the user's direction: the round trip always runs, so there was nothing
+  left to offer a choice about.
 - Term memory takes term-sized pairs only: a one-line draft of at most
   `TERM_MAX_WORDS` (3) words and `TERM_MAX_CHARS` (40) characters whose
   translation is also short and differs from it. Sentences never enter
@@ -509,9 +510,9 @@ The `write` target is per channel and separate from `read`. On Enter with
    German" chip and the text streaming in; Send disabled until the stream
    ends. The input keeps the original and stays editable; typing invalidates
    the strip and Enter requests a fresh translation.
-4. **Check.** A "Check" button runs the round trip and shows "reads back
-   as: …" under the translation; the `translateRoundTrip` setting makes it
-   automatic, in which case Send waits for it.
+4. **Check.** The round trip always runs once the translation is done and
+   shows "reads back as: …" under it; Send waits for it, a failed check
+   never blocks Send.
 5. **Send.** Enter or Send ships the translation through `sendMessage`
    exactly as typed text would: pending copy, `@label`, echo. The input
    history entry keeps the original so Up recalls what the user wrote. The
@@ -542,8 +543,7 @@ shows in the tooltip.
 
 - **User settings** (`store-settings.ts`, `thelounge.settings`):
   `translateTo` (default from `navigator.language`), `translateFormality`
-  (`auto | formal | casual`), `translateRoundTrip` (`button | auto`),
-  `translateEngines` (`{llm: boolean, cpu: boolean}`). Settings → Translation
+  (`auto | formal | casual`), `translateEngines` (`{llm: boolean, cpu: boolean}`). Settings → Translation
   holds them and the model manager: every known model with size, cached or
   not, download with progress, delete; below the GPU tier the LLM row shows
   the probe's reason.

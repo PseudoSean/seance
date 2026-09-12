@@ -150,8 +150,7 @@ id, and `ChatInput.vue` renders it as the `.translate-bar` strip above the
 input: a "to German" chip, the streaming text with a caret, and icon
 buttons -- their words kept as the tooltip and accessible name, never as
 visible text -- for Copy (its tooltip reads "Copied" for two seconds after
-it worked), Check once the round trip has something to check, Send
-(disabled while pending), and Edit. Both rows of the strip are
+it worked), Send (disabled while pending), and Edit. Both rows of the strip are
 `user-select: text`: the line the user is being asked to approve has to be
 selectable. A failure shows "couldn't translate, send as written?" -- followed by the
 engine's reason, truncated, with the whole of it in the title -- and turns
@@ -168,10 +167,10 @@ starts over.
 The round trip reads a done translation back toward `reverseTarget` (the
 draft's detected language, or the user's reading language, whichever
 differs from the write target -- when neither does, there is nothing to
-read back into and no Check is offered) and shows it in a second row,
-"reads back as:". `translateRoundTrip: "auto"` starts the check as soon as
-the translation finishes and Send waits for it; `"button"` leaves Send free
-even while a check the user asked for is still running.
+read back into and no check runs) and shows it in a second row, "reads
+back as:". The check always starts as soon as the translation finishes,
+and Send waits for it -- a failed check ("couldn't check") never blocks
+Send.
 
 The scenario's fake logs `purpose: "write"` (or `"read"` for the check) on
 every request, so a browser check can tell the composer's traffic from the

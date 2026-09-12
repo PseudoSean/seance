@@ -55,35 +55,6 @@
 					Casually
 				</label>
 			</div>
-			<div
-				id="label-translate-roundtrip"
-				class="translate-hint"
-				role="heading"
-				aria-level="3"
-			>
-				Before sending a translated message
-			</div>
-			<div role="group" aria-labelledby="label-translate-roundtrip">
-				<label class="opt">
-					<input
-						:checked="store.state.settings.translateRoundTrip === 'button'"
-						type="radio"
-						name="translateRoundTrip"
-						value="button"
-					/>
-					Offer a Check button that shows how it reads back
-				</label>
-				<label class="opt">
-					<input
-						:checked="store.state.settings.translateRoundTrip === 'auto'"
-						type="radio"
-						name="translateRoundTrip"
-						value="auto"
-					/>
-					Always show how it reads back
-				</label>
-			</div>
-
 			<h3>Models</h3>
 			<div v-if="problem" class="translate-hint translate-error">
 				Could not reach the translation worker: {{ problem }}

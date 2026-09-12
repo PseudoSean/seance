@@ -1,6 +1,6 @@
 // Settings → Translation on the in-page fake worker (client/js/translate/
 // fakePort.ts, reached with ?fakeTranslate on a development build): the
-// language select, the formality and round-trip radios, the two engine
+// language select, the formality radios, the two engine
 // toggles, and the model manager — download with a progress bar, the row
 // turning "Downloaded", delete turning it back — plus the choice surviving
 // a reload. Nothing in `yarn test` renders the tab.
