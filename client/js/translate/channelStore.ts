@@ -1,10 +1,10 @@
 // Per-channel translation state (spec § Settings, persistence): the reading
-// and writing targets, formality and variant, the moment reading was
-// switched on (older messages are not translated), and the channel's term
-// memory. One JSON blob under `thelounge.translate`, keyed by network uuid
-// and lower-cased channel name like helpers/mediaTrust.ts. Vue-free; the
-// store slice in store.ts mirrors it for reactivity (reader.ts keeps the
-// two in step).
+// and writing targets, formality and variant, the languages people write in
+// the channel, the moment reading was switched on (older messages are not
+// translated), and the channel's term memory. One JSON blob under
+// `thelounge.translate`, keyed by network uuid and lower-cased channel name
+// like helpers/mediaTrust.ts. Vue-free; the store slice in store.ts mirrors
+// it for reactivity (reader.ts keeps the two in step).
 
 import storage from "../localStorage";
 import {isSupported} from "./languages";
@@ -22,6 +22,12 @@ export interface ChannelTranslation {
 	formality: Formality;
 	/** Free text for the prompt, e.g. "Brazilian Portuguese". */
 	variant: string;
+	/**
+	 * The languages people write in this channel (ISO 639-1, supported
+	 * codes only, deduplicated). Detection favours them: see detect.ts
+	 * `DECLARED_MARGIN`. Empty when nothing was declared.
+	 */
+	languages: string[];
 	/** When reading was switched on (ms); 0 when off. */
 	since: number;
 	/** Term memory, oldest first, one entry per source term. */
@@ -52,11 +58,40 @@ export function splitKey(key: string): {network: string; name: string} {
 }
 
 export function defaultChannelTranslation(): ChannelTranslation {
-	return {read: null, write: null, formality: "auto", variant: "", since: 0, terms: []};
+	return {
+		read: null,
+		write: null,
+		formality: "auto",
+		variant: "",
+		languages: [],
+		since: 0,
+		terms: [],
+	};
 }
 
 function isFormality(value: unknown): value is Formality {
 	return value === "auto" || value === "formal" || value === "casual";
+}
+
+/**
+ * The declared languages as the record keeps them: supported codes only,
+ * in the order they were added, no duplicates. A code this build cannot
+ * route is dropped rather than kept as a dead weight on detection.
+ */
+function languagesOf(value: unknown): string[] {
+	if (!Array.isArray(value)) {
+		return [];
+	}
+
+	const out: string[] = [];
+
+	for (const code of value) {
+		if (typeof code === "string" && isSupported(code) && !out.includes(code)) {
+			out.push(code);
+		}
+	}
+
+	return out;
 }
 
 function sanitize(value: unknown): ChannelTranslation | null {
@@ -76,6 +111,7 @@ function sanitize(value: unknown): ChannelTranslation | null {
 	out.write = typeof raw.write === "string" && isSupported(raw.write) ? raw.write : null;
 	out.formality = isFormality(raw.formality) ? raw.formality : "auto";
 	out.variant = typeof raw.variant === "string" ? raw.variant : "";
+	out.languages = languagesOf(raw.languages);
 	out.since = typeof raw.since === "number" && out.read ? raw.since : 0;
 	out.terms = Array.isArray(raw.terms)
 		? raw.terms
@@ -144,6 +180,12 @@ export function setChannelTranslation(
 	delete rest.since;
 	delete rest.terms;
 	const next: ChannelTranslation = {...current, ...rest};
+
+	// The patch comes from the panel, so the codes are checked here as well
+	// as on load: the committed record is what the store mirrors until the
+	// next page, and an unroutable language must not sit in it weighting
+	// detection.
+	next.languages = languagesOf(next.languages);
 
 	if (next.read && !current.read) {
 		next.since = Date.now();

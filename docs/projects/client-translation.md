@@ -72,7 +72,8 @@ Plan 2 (reading pipeline):
   rather than translated late.
 - The per-channel record lives in `translate/channelStore.ts`, not
   `helpers/translateStore.ts`, and persists only `read`, `write`,
-  `formality`, `variant`, `since`, `terms` (`thelounge.translate`); runtime
+  `formality`, `variant`, `languages`, `since`, `terms`
+  (`thelounge.translate`); runtime
   patches never write `since`/`terms`, and a `read`/`write` the build
   cannot route is loaded as null.
 - An edited or deleted message loses its translation (an edit is re-queued
@@ -93,6 +94,20 @@ Plan 2 (reading pipeline):
   is newer than the page's session as well as newer than `since`: a cold
   boot does not translate history, a reconnect's catch-up within a session
   does.
+- A channel's **declared languages** (`channelStore.ts` `languages`, the
+  panel's _Languages spoken here_) are an explicit prior above the
+  automatic one, added after the live test of 2026-09-12: a declared
+  language within `DECLARED_MARGIN` (0.25) of franc's best wins over an
+  undeclared best; two declared contenders that close resolve by their own
+  gap, then by the prior, and otherwise stay undetermined; a best franc
+  names but the catalog cannot route is rescued by a declared contender
+  rather than coming back undetermined; and a line under
+  `DETECT_MIN_LENGTH` is taken as the single declared language that is not
+  the reader's target when there is exactly one, at confidence 0 and
+  without noting the automatic prior. `candidates` puts declared
+  contenders first. `detectLanguage` grew a fourth argument for it
+  (`options: {exclude}` — the reader's target), which the brief left
+  implicit; the composer passes neither `declared` nor `exclude`.
 - Detection thresholds: `DETECT_MIN_GAP` (0.1) over the best guess's lead
   on the runner-up, not the spec's `DETECT_MIN_CONFIDENCE` (0.6) over a
   normalised confidence -- a different quantity: `francAll` normalises its

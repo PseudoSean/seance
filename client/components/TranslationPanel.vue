@@ -45,6 +45,50 @@
 							>Lines others send are shown with a translation underneath.</span
 						>
 					</label>
+
+					<!-- The languages people write here. Not a multi-select: the
+					     list is fifty long and what a channel speaks is two or
+					     three of them, so they go in one at a time and come out
+					     as chips. -->
+					<div class="translation-panel-field">
+						<span id="translation-panel-languages" class="translation-panel-label"
+							>Languages spoken here</span
+						>
+						<div v-if="state.languages.length" class="translation-panel-chips">
+							<span
+								v-for="code in state.languages"
+								:key="code"
+								class="translation-panel-chip"
+							>
+								{{ name(code) }}
+								<button
+									type="button"
+									class="translation-panel-chip-remove"
+									:aria-label="'Remove ' + name(code)"
+									:title="'Remove ' + name(code)"
+									@click="removeLanguage(code)"
+								>
+									✕
+								</button>
+							</span>
+						</div>
+						<select
+							name="translateLanguageAdd"
+							class="input translation-panel-control"
+							aria-labelledby="translation-panel-languages"
+							value=""
+							@change="onAddLanguage"
+						>
+							<option value="">Add a language…</option>
+							<option v-for="code in addable" :key="code" :value="code">
+								{{ name(code) }}
+							</option>
+						</select>
+						<span class="translation-panel-hint"
+							>Lines in these languages are recognised even when they are short or
+							look alike.</span
+						>
+					</div>
 				</section>
 
 				<section class="translation-panel-section">
@@ -186,8 +230,33 @@ export default defineComponent({
 
 		const phone = computed(() => hasVirtualKeyboard() || narrow.value);
 
+		// What is left to declare, so the picker never offers a language the
+		// channel already lists.
+		const addable = computed(() =>
+			languages.filter((code) => !state.value.languages.includes(code))
+		);
+
 		const onRead = (event: Event) =>
 			setReading(props.network, props.channel, valueOf(event) || null);
+
+		const setLanguages = (next: string[]) =>
+			setChannelOptions(props.network, props.channel, {languages: next});
+
+		const onAddLanguage = (event: Event) => {
+			const select = event.target as HTMLSelectElement;
+			const code = select.value;
+
+			// Back to "Add a language…": the select is a verb, not a value, and
+			// the chosen language is now shown as a chip.
+			select.value = "";
+
+			if (code && !state.value.languages.includes(code)) {
+				setLanguages([...state.value.languages, code]);
+			}
+		};
+
+		const removeLanguage = (code: string) =>
+			setLanguages(state.value.languages.filter((c) => c !== code));
 
 		const onWrite = (event: Event) => {
 			// A strip already up was translated for the old target: it must not
@@ -254,9 +323,12 @@ export default defineComponent({
 			phone,
 			state,
 			languages,
+			addable,
 			formalities,
 			name,
 			onRead,
+			onAddLanguage,
+			removeLanguage,
 			onWrite,
 			setFormality,
 			onFormality,

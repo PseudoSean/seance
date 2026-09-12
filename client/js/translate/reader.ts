@@ -242,7 +242,7 @@ export function requestTranslationPanel(channel: ClientChan): void {
 export function setChannelOptions(
 	network: ClientNetwork,
 	channel: ClientChan,
-	patch: Partial<Pick<ChannelTranslation, "write" | "formality" | "variant">>
+	patch: Partial<Pick<ChannelTranslation, "write" | "formality" | "variant" | "languages">>
 ): void {
 	commitChannel(network, channel, setChannelTranslation(network.uuid, channel.name, patch));
 }
@@ -317,7 +317,13 @@ export async function translateMessage(
 				confidence: 1,
 				candidates: store.state.translations[message.id]?.candidates ?? [],
 		  }
-		: await detectLanguage(plainTextOf(message.text, nicks), prior);
+		: await detectLanguage(plainTextOf(message.text, nicks), prior, initial.languages, {
+				// The language the reader already reads, so a channel that
+				// declares one other can place a line too short for franc. The
+				// switch is re-read after the await below; this is the target as
+				// it stands now, which is the one the reader is looking at.
+				exclude: initial.read ?? store.state.settings.translateTo,
+		  });
 
 	// Detection (the first call also awaits the franc chunk download) can
 	// take a while: re-read the switch afterwards, since a switch-off or a

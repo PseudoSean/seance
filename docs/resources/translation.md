@@ -31,7 +31,8 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
 The globe in a channel's header switches translation on for that channel
 (`Chat.vue`, `translate/reader.ts`): from then on every message someone
 else sends is detected (`detect.ts`, `franc` in its own chunk, with the
-channel's dominant language settling near ties), skipped when it is
+channel's declared languages and then its dominant language settling near
+ties), skipped when it is
 already in the target or too short (`eligibility.ts`), given its context
 (`context.ts`: the last ten lines with the translations already shown,
 the reply target, the topic, the names in play, the newest twenty of the
@@ -52,6 +53,27 @@ and the toolbar's Translate does one
 message on request in a channel that is off -- and brings a hidden
 translation back, at no cost, once the chip's "Show original only" has
 taken it away.
+
+**The channel's own languages weight detection.** The panel's _Languages
+spoken here_ records what people write in a channel (`channelStore.ts`
+`languages`, ISO 639-1, supported codes only, persisted with the rest of
+the record), and `detect.ts` weighs them above its automatic prior in
+three ways. A declared language that franc ranks within `DECLARED_MARGIN`
+(0.25) of its best **wins** over an undeclared best -- a trigram lead that
+small is a weaker claim than the reader's; two declared contenders that
+close resolve by their own gap, then by the prior, and where neither
+separates them the line is left alone rather than translated from a coin
+toss. A best franc names but we cannot translate from is **rescued** by a
+declared contender instead of coming back undetermined. And a line under
+`DETECT_MIN_LENGTH` (10 characters), which franc cannot place at all, is
+taken as the one declared language that is **not** what the reader reads
+when there is exactly one -- so "So ist es" in a German/English channel
+read in English is translated, where before it was skipped. Nothing is
+noted into the automatic prior from that last case: a line the detector
+never saw is no evidence about the channel. `candidates` -- the chip menu's
+one-click corrections -- puts the declared contenders first. The composer
+declares nothing: a draft is the user's own language, not a channel
+matter.
 
 There are three ways to retranslate on that menu, because detection is the
 thing most likely to be wrong: **Retranslate** runs the line again as it
@@ -96,10 +118,11 @@ from a fallback to singles.
 
 ## The channel's panel
 
-The per-channel choices -- reading language, outgoing target, formality,
-variant -- are one component (`TranslationPanel.vue`) in two layouts. Where
+The per-channel choices -- reading language, the languages spoken here,
+outgoing target, formality, variant -- are one component
+(`TranslationPanel.vue`) in two layouts. Where
 there is a pointer it is a column anchored under the channel header: each
-setting a label with its control beneath it, so the four controls share one
+setting a label with its control beneath it, so the five controls share one
 width and one rhythm (20rem wide, 2.125rem controls); the section headings
 and the one-line hints are left out, and a footer carries a link to
 Settings -> Translation beside Done. Where `helpers/device.ts`
@@ -126,6 +149,16 @@ outside -- on a click outside it; the caret goes back to the globe when the
 panel is what held it. Browser checks:
 `tools/scenarios/translate-reading.mjs` (the column, and the sheet under
 `--mobile`) and `tools/scenarios/translate-composer.mjs --mobile --width=390 --height=844` (the sheet in full).
+
+_Languages spoken here_ is the one field that is not a single choice: the
+declared languages show as chips (`.translation-panel-chip`, each the
+language's own name and a ✕ that removes it, wrapping above the control),
+and a `translateLanguageAdd` select whose first option reads "Add a
+language…" appends one at a time and springs back to that option -- a
+fifty-long multi-select would be a poor way to name the two or three
+languages a channel speaks. It offers only what the channel has not
+declared yet. On the sheet its hint reads "Lines in these languages are
+recognised even when they are short or look alike."
 
 Every language picker's options -- here and in Settings -> Translation --
 show the endonym alone (`Deutsch`, `Français`, `日本語`), from

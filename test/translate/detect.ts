@@ -1,10 +1,12 @@
 import {expect} from "chai";
 import {
+	DECLARED_MARGIN,
 	DETECT_CANDIDATES,
 	DETECT_MIN_GAP,
 	DETECT_MIN_LENGTH,
 	ISO3_OF,
 	LanguagePrior,
+	type Scores,
 	detectLanguage,
 	detectWith,
 	iso3ToIso1,
@@ -128,6 +130,163 @@ describe("translate/detect", () => {
 				null
 			).candidates
 		).to.deep.equal(["zh", "ja"]);
+	});
+
+	// The channel's declared languages (channelStore.ts `languages`): what
+	// the reader says people write here, weighed above franc's own lead.
+	it("a declared language wins over a close undeclared best", () => {
+		expect(DECLARED_MARGIN).to.equal(0.25);
+		expect(
+			detectWith(
+				[
+					["nld", 1],
+					["deu", 0.8],
+				],
+				null,
+				["de"]
+			)
+		).to.deep.equal({lang: "de", confidence: DETECT_MIN_GAP, candidates: ["de", "nl"]});
+		// The margin is the edge, and it is inclusive.
+		expect(
+			detectWith(
+				[
+					["nld", 1],
+					["deu", 0.75],
+				],
+				null,
+				["de"]
+			).lang
+		).to.equal("de");
+		// Further behind than the margin: franc's best stands.
+		expect(
+			detectWith(
+				[
+					["nld", 1],
+					["deu", 0.7],
+				],
+				null,
+				["de"]
+			).lang
+		).to.equal("nl");
+		// Franc's best is itself declared and clear: unchanged, real gap.
+		expect(
+			detectWith(
+				[
+					["deu", 1],
+					["nld", 0.3],
+				],
+				null,
+				["de"]
+			)
+		).to.deep.equal({lang: "de", confidence: 0.7, candidates: ["de", "nl"]});
+	});
+
+	it("two declared contenders resolve by their own gap, then the prior", () => {
+		const close: Scores = [
+			["deu", 1],
+			["nld", 0.95],
+			["eng", 0.9],
+		];
+
+		// Neither can be separated and no prior names one: the line is left
+		// alone rather than translated from a coin toss.
+		expect(detectWith(close, null, ["de", "nl"])).to.deep.equal({
+			lang: null,
+			confidence: 0.05,
+			candidates: ["de", "nl", "en"],
+		});
+		// The prior breaks the tie between the two declared languages.
+		expect(detectWith(close, "nl", ["de", "nl"]).lang).to.equal("nl");
+		// A prior naming neither of them decides nothing.
+		expect(detectWith(close, "en", ["de", "nl"]).lang).to.equal(null);
+		// Their own gap is enough: the better declared one wins, and the
+		// undeclared language between them does not enter the gap.
+		expect(
+			detectWith(
+				[
+					["deu", 1],
+					["eng", 0.99],
+					["nld", 0.8],
+				],
+				null,
+				["de", "nl"]
+			)
+		).to.deep.equal({lang: "de", confidence: 0.2, candidates: ["de", "nl", "en"]});
+	});
+
+	it("a best franc cannot place is rescued by a declared contender", () => {
+		expect(
+			detectWith(
+				[
+					["xxx", 1],
+					["deu", 0.6],
+				],
+				null,
+				["de"]
+			)
+		).to.deep.equal({lang: "de", confidence: DETECT_MIN_GAP, candidates: ["de"]});
+		// None of the contenders is declared: undetermined as before.
+		expect(
+			detectWith(
+				[
+					["xxx", 1],
+					["deu", 0.6],
+				],
+				null,
+				["fr"]
+			).lang
+		).to.equal(null);
+	});
+
+	it("declared contenders lead the candidate list", () => {
+		expect(
+			detectWith(
+				[
+					["deu", 1],
+					["nld", 0.9],
+					["fra", 0.8],
+					["spa", 0.7],
+				],
+				null,
+				["es"]
+			).candidates
+		).to.deep.equal(["es", "de", "nl"]);
+	});
+
+	it("declaring nothing, or nothing routable, changes nothing", () => {
+		const tie: Scores = [
+			["nob", 1],
+			["dan", 0.97],
+		];
+
+		expect(detectWith(tie, null, [])).to.deep.equal(detectWith(tie, null));
+		expect(detectWith(tie, "da", [])).to.deep.equal(detectWith(tie, "da"));
+		expect(detectWith(tie, null, ["xx"])).to.deep.equal(detectWith(tie, null));
+	});
+
+	it("a short line is placed when one declared language is not the target", async () => {
+		setDetector(() => {
+			throw new Error("the detector must not run on a line this short");
+		});
+
+		// Nine characters: too short for trigrams, but the channel writes
+		// German and English and this reader reads English.
+		expect(
+			await detectLanguage("So ist es", null, ["de", "en"], {exclude: "en"})
+		).to.deep.equal({lang: "de", confidence: 0, candidates: ["de"]});
+		// Two candidates besides the target: nothing to choose between them.
+		expect(
+			(await detectLanguage("So ist es", null, ["de", "nl", "en"], {exclude: "en"})).lang
+		).to.equal(null);
+		// Declared but unroutable, or nothing declared at all: undetermined.
+		expect((await detectLanguage("So ist es", null, ["xx"], {exclude: "en"})).lang).to.equal(
+			null
+		);
+		expect(await detectLanguage("So ist es", null)).to.deep.equal({
+			lang: null,
+			confidence: 0,
+			candidates: [],
+		});
 	});
 
 	it("the prior is the most frequent language of the recent window", () => {

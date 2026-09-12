@@ -152,9 +152,9 @@ export async function translateOutgoing(
 		}
 
 		const nicks = channel.users.map((u) => u.nick);
-		// No channel prior: it describes what others write, and this is
-		// the user's own line.
-		const detection = await detectLanguage(plainTextOf(draft, nicks), null);
+		// No channel prior and no declared languages: both describe what
+		// others write here, and this is the user's own line.
+		const detection = await detectLanguage(plainTextOf(draft, nicks), null, []);
 
 		if (!current(channel, draft, controller)) {
 			return "strip";

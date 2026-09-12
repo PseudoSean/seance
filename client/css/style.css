@@ -1619,6 +1619,39 @@ textarea.input {
 	line-height: normal;
 }
 
+/* The channel's declared languages: as many as it takes, wrapping above
+   the picker that adds them. */
+.translation-panel-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+}
+
+.translation-panel-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	padding: 0.0625rem 0.25rem 0.0625rem 0.375rem;
+	border-radius: 0.75rem;
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	font-size: 0.8125rem;
+}
+
+.translation-panel-chip-remove {
+	padding: 0 0.125rem;
+	border: 0;
+	background: none;
+	color: var(--body-color-muted);
+	font: inherit;
+	font-size: 0.75rem;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.translation-panel-chip-remove:hover {
+	color: var(--body-color);
+}
+
 .translation-panel-foot {
 	display: flex;
 	align-items: center;
@@ -1722,6 +1755,22 @@ textarea.input {
 	padding: 0 0.875rem;
 	border-radius: 0.375rem;
 	font-size: 1rem;
+}
+
+/* A chip's ✕ is a target on a phone, so the chip grows to hold one. */
+.translation-panel--sheet .translation-panel-chips {
+	gap: 0.375rem;
+}
+
+.translation-panel--sheet .translation-panel-chip {
+	padding: 0.1875rem 0.375rem 0.1875rem 0.625rem;
+	border-radius: 1rem;
+	font-size: 0.9375rem;
+}
+
+.translation-panel--sheet .translation-panel-chip-remove {
+	padding: 0.25rem;
+	font-size: 0.875rem;
 }
 
 /* Three choices are three targets, not a native picker. */

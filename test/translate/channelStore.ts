@@ -54,9 +54,41 @@ describe("translate/channelStore", () => {
 			write: null,
 			formality: "auto",
 			variant: "",
+			languages: [],
 			since: 0,
 			terms: [],
 		});
+	});
+
+	it("the channel's languages are kept, deduplicated, unknown codes dropped", () => {
+		expect(
+			setChannelTranslation("n1", "#seance", {languages: ["de", "en", "de", "xx", "nb"]})
+				.languages
+		).to.deep.equal(["de", "en", "nb"]);
+		expect(getChannelTranslation("n1", "#seance").languages).to.deep.equal(["de", "en", "nb"]);
+
+		// A patch that does not mention them leaves them alone.
+		expect(setChannelTranslation("n1", "#seance", {read: "en"}).languages).to.deep.equal([
+			"de",
+			"en",
+			"nb",
+		]);
+		expect(setChannelTranslation("n1", "#seance", {languages: []}).languages).to.deep.equal([]);
+	});
+
+	it("sanitize drops languages this build cannot route", () => {
+		backend.set(
+			STORAGE_KEY,
+			JSON.stringify({
+				"n1/#a": {read: "en", languages: ["de", "zz", 7, "de"]},
+				"n1/#b": {read: "en", languages: "de"},
+			})
+		);
+
+		const all = loadAll();
+
+		expect(all["n1/#a"].languages).to.deep.equal(["de"]);
+		expect(all["n1/#b"].languages).to.deep.equal([]);
 	});
 
 	it("switching reading on records the moment, and persists", () => {
