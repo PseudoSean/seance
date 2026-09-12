@@ -10,11 +10,12 @@
 //   npx tsx tools/translate-llm.ts --eval tools/translate-eval/prompts.json [--to de]
 //
 // Only the model backend differs from the browser. The think-block
-// stripping, the echo guard, the single-line cut, `cleanOutput` and the
-// abort/drain loop are the shipped engine itself, and the request is
-// assembled by `protect()` and `emptyContext()` exactly as `reader.ts` and
-// `outgoing.ts` assemble theirs — so what this prints is what the app would
-// show, up to the weights.
+// stripping, the echo and canned-answer guards, the blank-line rule,
+// `cleanOutput` and the abort/drain loop are the shipped engine itself
+// (`--raw` says what each line of a reply was kept or dropped as), and the
+// request is assembled by `protect()` and `emptyContext()` exactly as
+// `reader.ts` and `outgoing.ts` assemble theirs — so what this prints is
+// what the app would show, up to the weights.
 //
 // The weights are the ONNX build of the same model
 // (`onnx-community/Qwen3-1.7B-ONNX`, `q4f16`) rather than WebLLM's MLC
@@ -58,7 +59,12 @@ import {
 } from "../client/js/translate/engines/webllm";
 import {languageName} from "../client/js/translate/languages";
 import {buildCatalog} from "../client/js/translate/models";
-import {cleanOutput, parseBatchedOutput, stripSentinel} from "../client/js/translate/prompt";
+import {
+	EXAMPLE_ANSWERS,
+	cleanOutput,
+	parseBatchedOutput,
+	stripSentinel,
+} from "../client/js/translate/prompt";
 import {placeholdersIn, protect, restoreAll} from "../client/js/translate/spans";
 
 type Device = "cpu" | "cuda";
@@ -585,19 +591,33 @@ function normalise(text: string): string {
 		.replace(/[.!?]$/, "");
 }
 
-/** The engine's view of the raw stream, line by line, for `--raw`. */
+/**
+ * The engine's view of the raw stream, line by line, for `--raw`: what each
+ * line is kept or dropped as, and where the answer stops. The kept lines are
+ * what the engine joins with single spaces.
+ */
 function echoVerdict(raw: string, source: string): string[] {
 	const visible = raw.replace(/^\s*<think>[\s\S]*?<\/think>\s*/, "");
+	let past = false;
 
 	return visible.split("\n").map((line, i) => {
 		const carried = cleanOutput(line.replace(/\r$/, ""));
 		const bare = /^(?:"""|["'“”„«»])+$/.test(carried) ? "" : carried;
-		const verdict =
-			bare === ""
-				? "dropped (empty or a bare fence)"
-				: normalise(bare) === normalise(source)
-				? "dropped (the source read back)"
-				: "kept — this is the translation";
+		const verdict = past
+			? "dropped (past the blank line)"
+			: line.trim() === ""
+			? "the blank line: the answer ends here"
+			: bare === ""
+			? "dropped (empty or a bare fence)"
+			: normalise(bare) === normalise(source)
+			? "dropped (the source read back)"
+			: EXAMPLE_ANSWERS.some((answer) => normalise(answer) === normalise(bare))
+			? "dropped (a canned answer — the example guard)"
+			: "kept — part of the translation";
+
+		if (line.trim() === "") {
+			past = true;
+		}
 
 		return `    [${i}] ${JSON.stringify(line)} → ${JSON.stringify(bare)}  ${verdict}`;
 	});
@@ -674,7 +694,7 @@ async function runCase(
 		console.log(`raw deltas as the engine saw them: ${JSON.stringify(node.lastRaw)}`);
 
 		if (!batched) {
-			console.log("  the echo guard, line by line:");
+			console.log("  the engine's guards, line by line (the kept lines are joined):");
 
 			for (const line of echoVerdict(node.lastRaw, request.text)) {
 				console.log(line);
