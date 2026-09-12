@@ -175,7 +175,6 @@ export default defineComponent({
 		};
 
 		const jumpToBottom = () => {
-
 			pendingAnchor = null; // a jump supersedes any anchor being verified
 			skipNextScrollEvent.value = true;
 
