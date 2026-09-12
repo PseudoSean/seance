@@ -1,5 +1,6 @@
 import {expect} from "chai";
 import {
+	DETECT_CANDIDATES,
 	DETECT_MIN_GAP,
 	DETECT_MIN_LENGTH,
 	ISO3_OF,
@@ -37,12 +38,16 @@ describe("translate/detect", () => {
 				],
 				null
 			)
-		).to.deep.equal({lang: "de", confidence: 0.4});
+		).to.deep.equal({lang: "de", confidence: 0.4, candidates: ["de", "nl", "en"]});
 	});
 
 	it("names nothing when franc cannot tell or the gap is too small", () => {
-		expect(detectWith([["und", 1]], null)).to.deep.equal({lang: null, confidence: 0});
-		expect(detectWith([], null)).to.deep.equal({lang: null, confidence: 0});
+		expect(detectWith([["und", 1]], null)).to.deep.equal({
+			lang: null,
+			confidence: 0,
+			candidates: [],
+		});
+		expect(detectWith([], null)).to.deep.equal({lang: null, confidence: 0, candidates: []});
 		expect(
 			detectWith(
 				[
@@ -51,7 +56,7 @@ describe("translate/detect", () => {
 				],
 				null
 			)
-		).to.deep.equal({lang: null, confidence: 0.03});
+		).to.deep.equal({lang: null, confidence: 0.03, candidates: ["nb", "da"]});
 	});
 
 	it("lets the channel's prior settle a near tie", () => {
@@ -63,7 +68,7 @@ describe("translate/detect", () => {
 				],
 				"da"
 			)
-		).to.deep.equal({lang: "da", confidence: DETECT_MIN_GAP});
+		).to.deep.equal({lang: "da", confidence: DETECT_MIN_GAP, candidates: ["nb", "da"]});
 		// not a tie: the prior does not override a clear winner
 		expect(
 			detectWith(
@@ -85,7 +90,7 @@ describe("translate/detect", () => {
 				],
 				null
 			)
-		).to.deep.equal({lang: null, confidence: 0});
+		).to.deep.equal({lang: null, confidence: 0, candidates: ["fr"]});
 		expect(
 			detectWith(
 				[
@@ -95,7 +100,34 @@ describe("translate/detect", () => {
 				],
 				null
 			)
-		).to.deep.equal({lang: "de", confidence: 0.5});
+		).to.deep.equal({lang: "de", confidence: 0.5, candidates: ["de", "fr"]});
+	});
+
+	it("carries at most DETECT_CANDIDATES known contenders, deduplicated, in franc's order", () => {
+		expect(DETECT_CANDIDATES).to.equal(3);
+		expect(
+			detectWith(
+				[
+					["deu", 1],
+					["nld", 0.9],
+					["xxx", 0.8],
+					["fra", 0.7],
+					["spa", 0.6],
+				],
+				null
+			).candidates
+		).to.deep.equal(["de", "nl", "fr"]);
+		// Two franc codes, one language: `cmn` and `zho` are both Chinese.
+		expect(
+			detectWith(
+				[
+					["cmn", 1],
+					["zho", 0.99],
+					["jpn", 0.4],
+				],
+				null
+			).candidates
+		).to.deep.equal(["zh", "ja"]);
 	});
 
 	it("the prior is the most frequent language of the recent window", () => {
@@ -121,7 +153,11 @@ describe("translate/detect", () => {
 				["eng", 0.3],
 			];
 		});
-		expect(await detectLanguage("kurz", null)).to.deep.equal({lang: null, confidence: 0});
+		expect(await detectLanguage("kurz", null)).to.deep.equal({
+			lang: null,
+			confidence: 0,
+			candidates: [],
+		});
 		expect(calls).to.deep.equal([]);
 
 		const prior = new LanguagePrior();
@@ -131,6 +167,7 @@ describe("translate/detect", () => {
 		).to.deep.equal({
 			lang: "de",
 			confidence: 0.7,
+			candidates: ["de", "en"],
 		});
 		expect(calls.length).to.equal(1);
 		expect(prior.top()).to.equal("de");
@@ -142,5 +179,9 @@ describe("translate/detect", () => {
 
 		expect(result.lang).to.equal("de");
 		expect(DETECT_MIN_LENGTH).to.equal(10);
+		// The runners-up the chip's menu offers as one-click corrections:
+		// German leads, and there is more than one contender to correct to.
+		expect(result.candidates[0]).to.equal("de");
+		expect(result.candidates.length).to.equal(DETECT_CANDIDATES);
 	});
 });

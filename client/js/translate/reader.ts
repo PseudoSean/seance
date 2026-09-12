@@ -25,7 +25,7 @@ import {LanguagePrior, detectLanguage} from "./detect";
 import {isEligible, plainTextOf} from "./eligibility";
 import {translateService} from "./index";
 import {type QueueItem, type QueueUpdate, TranslateQueue} from "./queue";
-import {protect} from "./spans";
+import {protect, stripNickPrefix} from "./spans";
 
 // When this page started. A replayed message (a reconnect's catch-up)
 // is only eligible when it is newer than this as well as newer than the
@@ -120,8 +120,25 @@ function queueFor(network: ClientNetwork): TranslateQueue {
 	return queue;
 }
 
+/**
+ * The names of the channel a queued line belongs to, for the nick prefix a
+ * model may have copied out of the context. Read before the item is
+ * forgotten; an item already gone (or a channel that has left) leaves the
+ * text as the engine gave it.
+ */
+function nicksOfItem(known: {item: QueueItem} | undefined): string[] {
+	if (!known) {
+		return [];
+	}
+
+	const target = store.getters.findChannel(known.item.chanId);
+
+	return target ? target.channel.users.map((u) => u.nick) : [];
+}
+
 function applyUpdate(id: number, update: QueueUpdate): void {
 	const existing = store.state.translations[id];
+	const known = items.get(id);
 
 	// The queue is finished with the item, so the context it carries (up
 	// to CONTEXT_LINES of text, the names and a copy of the channel's term
@@ -150,7 +167,16 @@ function applyUpdate(id: number, update: QueueUpdate): void {
 		case "done":
 			store.commit("translationPatch", {
 				id,
-				patch: {status: "done", text: update.text, engine: update.engine, error: null},
+				patch: {
+					status: "done",
+					// The prompt shows the earlier lines as `nick: text`, so a
+					// model can copy a name in that shape; only the finished
+					// text is cleaned, since a stream's prefix is not a prefix
+					// until the line after it has arrived.
+					text: stripNickPrefix(update.text, nicksOfItem(known)),
+					engine: update.engine,
+					error: null,
+				},
 			});
 			break;
 		case "failed":
@@ -210,8 +236,17 @@ export function setChannelOptions(
 	commitChannel(network, channel, setChannelTranslation(network.uuid, channel.name, patch));
 }
 
-function entryFor(from: string, to: string): TranslationEntry {
-	return {status: "pending", text: "", from, to, engine: null, error: null, hidden: false};
+function entryFor(from: string, to: string, candidates: string[]): TranslationEntry {
+	return {
+		status: "pending",
+		text: "",
+		from,
+		to,
+		candidates,
+		engine: null,
+		error: null,
+		hidden: false,
+	};
 }
 
 /**
@@ -219,13 +254,19 @@ function entryFor(from: string, to: string): TranslationEntry {
  * "Retranslate": eligibility and the target check are skipped, and an
  * unknown source is left to the LLM. `replay` is the bus payload's flag: a
  * history catch-up, held to this page's session as well as to `since`.
+ * `from` is the chip menu's "Retranslate from …": the reader has said what
+ * the line is written in, so detection is skipped entirely — the source is
+ * never null, the detector's candidates are carried over so the menu keeps
+ * offering the alternatives, and nothing is noted into the channel's prior
+ * (one reader's correction of one line is not the channel's language).
  */
 export async function translateMessage(
 	network: ClientNetwork,
 	channel: ClientChan,
 	message: ClientMessage,
 	force = false,
-	replay = false
+	replay = false,
+	from?: string
 ): Promise<void> {
 	if (!message.text) {
 		return;
@@ -256,7 +297,16 @@ export async function translateMessage(
 	}
 
 	const prior = priorFor(network, channel);
-	const detection = await detectLanguage(plainTextOf(message.text, nicks), prior);
+	// A chosen source is the answer detection would have given: no chunk to
+	// download, no verdict to reach, and the previous entry's candidates
+	// stay on offer.
+	const detection = from
+		? {
+				lang: from,
+				confidence: 1,
+				candidates: store.state.translations[message.id]?.candidates ?? [],
+		  }
+		: await detectLanguage(plainTextOf(message.text, nicks), prior);
 
 	// Detection (the first call also awaits the franc chunk download) can
 	// take a while: re-read the switch afterwards, since a switch-off or a
@@ -273,7 +323,9 @@ export async function translateMessage(
 		return;
 	}
 
-	const from = detection.lang && detection.lang !== to ? detection.lang : null;
+	// A chosen source is used as it stands, even when it is the target: the
+	// reader asked for that translation.
+	const source = from ?? (detection.lang && detection.lang !== to ? detection.lang : null);
 	const protectedText = protect(message.text, {nicks});
 	const item: QueueItem = {
 		id: message.id,
@@ -281,7 +333,7 @@ export async function translateMessage(
 		text: protectedText.text,
 		spans: protectedText.spans,
 		meta: protectedText.meta,
-		from,
+		from: source,
 		to,
 		context: buildContext(channel, message, {
 			translated(id) {
@@ -293,14 +345,17 @@ export async function translateMessage(
 			glossary: getBranding().translation?.glossary ?? [],
 			formality: settings.formality,
 			variant: settings.variant,
-			sourceHint: from || prior.top(),
+			sourceHint: source || prior.top(),
 		}),
 		arrivalsAtEnqueue: arrivals.get(channel.id) ?? 0,
 		single: force,
 	};
 
 	items.set(message.id, {network: network.uuid, item});
-	store.commit("translationEntry", {id: message.id, entry: entryFor(from ?? "", to)});
+	store.commit("translationEntry", {
+		id: message.id,
+		entry: entryFor(source ?? "", to, detection.candidates),
+	});
 
 	if (force) {
 		queueFor(network).retry(item);
@@ -330,10 +385,16 @@ function resumePausedEngines(): void {
 	store.commit("translationPaused", null);
 }
 
+/**
+ * Translate one line on request: the toolbar's Translate and the chip
+ * menu's Retranslate. `from` is the menu's "Retranslate from …" — the
+ * source the reader chose, detection skipped.
+ */
 export function retranslate(
 	network: ClientNetwork,
 	channel: ClientChan,
-	message: ClientMessage
+	message: ClientMessage,
+	from?: string
 ): void {
 	// Toolbar hides the action while a line is pending, but no caller may double-queue a line
 	if (store.state.translations[message.id]?.status === "pending") {
@@ -341,7 +402,7 @@ export function retranslate(
 	}
 
 	resumePausedEngines();
-	void translateMessage(network, channel, message, true);
+	void translateMessage(network, channel, message, true, false, from);
 }
 
 export function showOriginal(id: number, hidden: boolean): void {
@@ -362,7 +423,15 @@ export function retryTranslation(
 		store.commit("translationPatch", {id: message.id, patch: {status: "pending", error: null}});
 		queueFor(network).retry(known.item);
 	} else {
-		retranslate(network, channel, message);
+		// The remembered item is gone, so the request is built again — with
+		// the source the failed entry had, whether the detector or the reader
+		// chose it: a retry is the same translation, not a fresh guess.
+		retranslate(
+			network,
+			channel,
+			message,
+			store.state.translations[message.id]?.from || undefined
+		);
 	}
 }
 

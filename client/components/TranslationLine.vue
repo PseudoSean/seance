@@ -5,6 +5,7 @@
 		:data-status="entry.status"
 	>
 		<button
+			ref="chip"
 			type="button"
 			class="msg-translation-chip"
 			:aria-label="chipLabel"
@@ -13,6 +14,14 @@
 		>
 			{{ chipText }}
 		</button>
+		<SourceLanguagePicker
+			v-if="pickerOpen"
+			:anchor="chip"
+			:selected="entry.from"
+			:candidates="entry.candidates"
+			@pick="pickSource"
+			@close="pickerOpen = false"
+		/>
 		<span v-if="entry.status === 'failed'" class="msg-translation-failed">
 			couldn't translate
 			<span v-if="entry.error" class="msg-translation-reason" :title="entry.error">{{
@@ -43,7 +52,7 @@
 </template>
 
 <script lang="ts">
-import {computed, defineComponent, PropType} from "vue";
+import {computed, defineComponent, PropType, ref} from "vue";
 import {writeClipboard} from "../js/clipboard";
 import eventbus from "../js/eventbus";
 import {useStore} from "../js/store";
@@ -51,13 +60,14 @@ import {retranslate, retryTranslation, showOriginal} from "../js/translate/reade
 import {languageName} from "../js/translate/languages";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
 import ParsedMessage from "./ParsedMessage.vue";
+import SourceLanguagePicker from "./SourceLanguagePicker.vue";
 
 /** Characters of a failure reason the line shows; the title has all of it. */
 const REASON_MAX = 120;
 
 export default defineComponent({
 	name: "TranslationLine",
-	components: {ParsedMessage},
+	components: {ParsedMessage, SourceLanguagePicker},
 	props: {
 		message: {type: Object as PropType<ClientMessage>, required: true},
 		channel: {type: Object as PropType<ClientChan>, required: true},
@@ -80,6 +90,22 @@ export default defineComponent({
 				: ""
 		);
 
+		const chip = ref<HTMLButtonElement | null>(null);
+		const pickerOpen = ref(false);
+
+		const retranslateFrom = (from?: string) =>
+			retranslate(props.network, props.channel, props.message, from);
+
+		const pickSource = (code: string) => retranslateFrom(code);
+
+		// The detector's runners-up, one click each. The line's own source is
+		// not among them: "Retranslate from German" on a line already read as
+		// German is just "Retranslate". An explicit source keeps the list, so
+		// the way back to the detector's own guess is on the menu too.
+		const alternatives = computed(() =>
+			(entry.value?.candidates ?? []).filter((code) => code !== entry.value?.from)
+		);
+
 		const openMenu = (event: MouseEvent) => {
 			eventbus.emit("contextmenu:items", {
 				event,
@@ -98,7 +124,21 @@ export default defineComponent({
 						label: "Retranslate",
 						type: "item",
 						class: "translate-retry",
-						action: () => retranslate(props.network, props.channel, props.message),
+						action: () => retranslateFrom(),
+					},
+					...alternatives.value.map((code) => ({
+						label: `Retranslate from ${languageName(code, navigator.language)}`,
+						type: "item",
+						class: "translate-retry-from",
+						action: () => retranslateFrom(code),
+					})),
+					{
+						label: "Retranslate from…",
+						type: "item",
+						class: "translate-retry-pick",
+						action() {
+							pickerOpen.value = true;
+						},
 					},
 					{
 						label: "Show original only",
@@ -125,7 +165,17 @@ export default defineComponent({
 			return text.length > REASON_MAX ? `${text.slice(0, REASON_MAX - 1)}…` : text;
 		};
 
-		return {entry, chipText, chipLabel, openMenu, retry, shortReason};
+		return {
+			entry,
+			chip,
+			pickerOpen,
+			chipText,
+			chipLabel,
+			openMenu,
+			pickSource,
+			retry,
+			shortReason,
+		};
 	},
 });
 </script>

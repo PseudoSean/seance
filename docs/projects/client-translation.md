@@ -290,6 +290,39 @@ The prompt measured against the real model (2026-09-12):
   so is the `⟦n⟧` placeholder syntax (measured as paired `<1>…</1>` tags:
   same answers).
 
+Retranslating from a chosen source (2026-09-12):
+
+- **The detector keeps its ranking.** `Detection` carries `candidates`: the
+  known languages in franc's order, deduplicated (`cmn`/`zho` are one
+  language), at most `DETECT_CANDIDATES` (3), whatever the verdict — an
+  unknown best still lists the known runners-up, so a line franc placed in
+  a language the catalog does not know is still one click from a
+  translation. They ride on the store's `TranslationEntry` (session only,
+  like the rest of it).
+- **The chip's menu leaves the line's own source off its one-click list.**
+  The brief asked for the candidates that differ from `entry.from`, and
+  also for the scenario to find "Retranslate from German" on a line read as
+  German: those cannot both hold — that item would only repeat
+  Retranslate. The filter is what shipped. The scenario proves the rest of
+  the ruling instead: the first menu offers runners-up, none of them the
+  line's own source; after retranslating from French the same menu offers
+  "Retranslate from German", which is also the proof that an explicit
+  source keeps the candidates it inherited.
+- **An explicit source is used as it stands**, even when it equals the
+  target: the reader asked for that translation. It skips detection
+  entirely (no franc chunk, no verdict) and notes nothing into the
+  channel's prior.
+- **A retry keeps the failed entry's source.** The fast path already
+  re-queues the remembered item, which carries its `from`; the rebuild path
+  now passes `entry.from` explicitly, so a retry is the same translation
+  rather than a fresh guess — and, like any explicit source, skips the
+  prior.
+- **`stripNickPrefix` lives in `spans.ts`** (the nick list is already a
+  spans concept) and runs only where a finished text is committed: the
+  reading entry's `done` and the composer's strip and round-trip
+  read-back. Never on a streaming partial — mid-stream, `alex` is not yet
+  a prefix.
+
 ## Non-goals
 
 - No translation of the lobby, notices from the server, events (join, part,

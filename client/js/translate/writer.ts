@@ -25,6 +25,7 @@ import {
 	writeSource,
 } from "./outgoing";
 import {channelTranslation, holdReading, releaseReading} from "./reader";
+import {stripNickPrefix} from "./spans";
 
 /** An id no message has: buildContext then takes the whole scrollback as "before" the draft. */
 const DRAFT_ID = Number.MAX_SAFE_INTEGER;
@@ -231,6 +232,12 @@ export async function translateOutgoing(
 			return "strip";
 		}
 
+		// The prompt shows the earlier lines as `nick: text`, so a model can
+		// copy a name in that shape in front of its answer. Only the finished
+		// text is cleaned: a stream's prefix is not one until the line after
+		// it has arrived.
+		text = stripNickPrefix(text, nicks);
+
 		// An engine that gave nothing back is a failure, not a message: the
 		// strip says so and offers the draft as written, where a "done" of ""
 		// would be sent as an empty line — which the IRC layer drops in
@@ -352,7 +359,16 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 		if (current(channel, draft, controller)) {
 			store.commit("outgoingTranslationPatch", {
 				chanId: channel.id,
-				patch: {check: {status: "done", text, to: target}},
+				patch: {
+					check: {
+						status: "done",
+						text: stripNickPrefix(
+							text,
+							channel.users.map((u) => u.nick)
+						),
+						to: target,
+					},
+				},
 			});
 		}
 	} catch (e) {

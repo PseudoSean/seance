@@ -51,7 +51,23 @@ message toolbar's Copy uses, and says nothing when the browser refuses),
 and the toolbar's Translate does one
 message on request in a channel that is off -- and brings a hidden
 translation back, at no cost, once the chip's "Show original only" has
-taken it away. The translated line is `user-select: text` like the
+taken it away.
+
+There are three ways to retranslate on that menu, because detection is the
+thing most likely to be wrong: **Retranslate** runs the line again as it
+was, **Retranslate from `<Language>`** appears once per runner-up the
+detector ranked (`detect.ts` `candidates`, at most `DETECT_CANDIDATES` (3)
+known languages in franc's order, carried on the entry; the line's own
+source is left off the menu, since that item would only repeat
+Retranslate), and **Retranslate from...** opens
+`SourceLanguagePicker.vue` for any of the supported languages -- a popover
+under the chip where there is a pointer, a bottom sheet on a phone or under
+480px, closing on Escape, on Cancel and on a click outside. A chosen source
+skips detection altogether: the entry's `from` becomes that language (so
+the chip reads "from French"), the runners-up it inherited stay on the menu
+(the detector's own guess among them), and nothing is noted into the
+channel's language prior -- one reader's correction of one line is not the
+channel's language. A retry keeps whatever source the failed line had. The translated line is `user-select: text` like the
 original above it -- `body` is `user-select: none`, so a block that is
 meant to be read and quoted has to say so. Once a translation is in, it is
 the bright line; the original dims to the muted colour.
@@ -246,7 +262,16 @@ section below), not reasoned about:
   list of canned greetings the engine **refuses** (below).
 - **`nick: text` for the earlier lines**, not `<nick> text`. With angle
   brackets, a line that arrived with context came back untranslated, and
-  the answers that did come carried a copied `<nick>` in front.
+  the answers that did come carried a copied `<nick>` in front. The shape
+  the prompt now uses is one `cleanOutput` cannot strip generically --
+  `Moment: bitte warten` is a translation, not a prefix -- so
+  `spans.ts` `stripNickPrefix(text, nicks)` takes `<nick>: `, `<nick> - `
+  or `<nick> – ` off a finished translation only when the token in front is
+  a name the channel actually has (case-insensitively). It runs where the
+  text is committed: the reading entry's `done` (`reader.ts`) and the
+  composer's strip and round-trip read-back (`writer.ts`), never on a
+  streaming partial -- a prefix is not a prefix until the text after it has
+  arrived.
 - **"Output only the translation of the last message, nothing else."** as
   the last line before the cue -- but only when something stands above the
   line for the model to mistake for it (a topic, the data block, the

@@ -425,3 +425,31 @@ export function restoreAll(text: string, info: Protected, expected?: number[]): 
 		? out
 		: `${out} ${lost.map((i) => expandSpan(info.spans, i, new Set())).join(" ")}`;
 }
+
+/**
+ * A sender's name the model copied from the context, off the front of a
+ * translation. The prompt renders the earlier lines as `nick: text`, so the
+ * model picks that shape up as readily as the `<nick>` one `cleanOutput`
+ * strips — and `cleanOutput` cannot strip this one generically, because
+ * `Moment: bitte warten` is a translation, not a prefix. So only a name the
+ * channel actually has counts: the token before the separator is matched
+ * case-insensitively (the model capitalises freely) against the channel's
+ * own list. The separator is `:`, `-` or `–` followed by a space, so the
+ * strip never crosses into the next line of a multi-line translation.
+ * Vue-free, store-free, DOM-free.
+ */
+export function stripNickPrefix(text: string, nicks: string[]): string {
+	const match = /^[ \t]*(\S{1,32}?)[ \t]*[:\-–][ \t]+/.exec(text);
+
+	if (!match) {
+		return text;
+	}
+
+	const found = match[1].toLowerCase();
+
+	if (!nicks.some((nick) => nick.toLowerCase() === found)) {
+		return text;
+	}
+
+	return text.slice(match[0].length);
+}

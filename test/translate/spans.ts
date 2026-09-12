@@ -6,6 +6,7 @@ import {
 	protect,
 	restore,
 	restoreAll,
+	stripNickPrefix,
 } from "../../client/js/translate/spans";
 
 describe("translate/spans", () => {
@@ -251,6 +252,36 @@ describe("translate/spans", () => {
 			expect(
 				restoreAll(`${placeholder(1)}so${placeholder(2)} ${placeholder(9)}`, info)
 			).to.equal("*so* ");
+		});
+	});
+
+	describe("stripNickPrefix", () => {
+		const nicks = ["alice", "bob-2", "de1a2b"];
+
+		it("drops a channel member's name copied in front of the translation", () => {
+			expect(stripNickPrefix("alice: hello there", nicks)).to.equal("hello there");
+			expect(stripNickPrefix("Alice: hello there", nicks)).to.equal("hello there");
+			expect(stripNickPrefix("alice - hello there", nicks)).to.equal("hello there");
+			expect(stripNickPrefix("alice – hello there", nicks)).to.equal("hello there");
+			expect(stripNickPrefix("  alice : hello there", nicks)).to.equal("hello there");
+			// A nick may carry the separator character itself.
+			expect(stripNickPrefix("bob-2: hello there", nicks)).to.equal("hello there");
+		});
+
+		it("keeps a prefix that is not a name in the channel", () => {
+			expect(stripNickPrefix("Moment: bitte warten", nicks)).to.equal("Moment: bitte warten");
+			expect(stripNickPrefix("hello there", nicks)).to.equal("hello there");
+			expect(stripNickPrefix("alice: hello there", [])).to.equal("alice: hello there");
+			// Not a single token before the separator.
+			expect(stripNickPrefix("dear alice: hello", nicks)).to.equal("dear alice: hello");
+			// No space after the separator: a time, a ratio, a URL.
+			expect(stripNickPrefix("alice:hello", nicks)).to.equal("alice:hello");
+		});
+
+		it("never crosses into a later line", () => {
+			expect(stripNickPrefix("alice: one\ntwo", nicks)).to.equal("one\ntwo");
+			expect(stripNickPrefix("one\nalice: two", nicks)).to.equal("one\nalice: two");
+			expect(stripNickPrefix("alice:\nhello", nicks)).to.equal("alice:\nhello");
 		});
 	});
 });

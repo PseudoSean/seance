@@ -18,6 +18,13 @@ import {NLLB_CODES, SUPPORTED_LANGUAGES, isSupported} from "./languages";
 export interface Detection {
 	lang: string | null;
 	confidence: number;
+	/**
+	 * The known languages franc ranked highest, best first (at most
+	 * `DETECT_CANDIDATES`), whatever the verdict: the chip's menu offers them
+	 * as one-click corrections when detection got the source wrong. `lang`
+	 * may be null while these still name the contenders.
+	 */
+	candidates: string[];
 }
 
 /** `francAll`'s shape: `[iso639-3, weight]`, best first, best weight 1. */
@@ -27,6 +34,8 @@ export type Detector = (text: string, options: {only: string[]}) => Scores;
 export const DETECT_MIN_GAP = 0.1;
 export const DETECT_MIN_LENGTH = 10;
 export const PRIOR_WINDOW = 200;
+/** How many of franc's known contenders a `Detection` carries. */
+export const DETECT_CANDIDATES = 3;
 
 /** Where franc's code differs from the NLLB/FLORES code's first three letters. */
 const FRANC_OVERRIDES: Record<string, string> = {zh: "cmn", ms: "zlm"};
@@ -50,19 +59,32 @@ export function iso3ToIso1(code: string): string | null {
 const ONLY = Object.values(ISO3_OF);
 
 export function detectWith(scores: Scores, prior: string | null): Detection {
+	// The languages we could translate from, in franc's order. An unknown
+	// code ranked *below* a known best is simply not a contender and is
+	// dropped from the gap.
+	const known = scores
+		.map(([code, weight]) => ({lang: iso3ToIso1(code), weight}))
+		.filter((entry): entry is {lang: string; weight: number} => entry.lang !== null);
+
+	// The contenders the reader is offered whatever the verdict below —
+	// including one franc rated above a language it does not know. Two franc
+	// codes can map to the same language (`cmn`/`zho`), so dedupe.
+	const candidates: string[] = [];
+
+	for (const entry of known) {
+		if (!candidates.includes(entry.lang) && candidates.length < DETECT_CANDIDATES) {
+			candidates.push(entry.lang);
+		}
+	}
+
 	// franc's raw best is the language it is actually most sure of. When
 	// that language is not one we support, the detection is undetermined:
 	// guessing a lower-ranked known language would translate from the wrong
 	// source. (A forced/manual translation request still lets the LLM
-	// detect on its own.) An unknown code ranked *below* a known best is
-	// simply not a contender and is dropped from the gap.
+	// detect on its own, and the chip's menu offers the runners-up above.)
 	if (scores.length === 0 || iso3ToIso1(scores[0][0]) === null) {
-		return {lang: null, confidence: 0};
+		return {lang: null, confidence: 0, candidates};
 	}
-
-	const known = scores
-		.map(([code, weight]) => ({lang: iso3ToIso1(code), weight}))
-		.filter((entry): entry is {lang: string; weight: number} => entry.lang !== null);
 
 	const best = known[0];
 	const second = known[1];
@@ -70,7 +92,7 @@ export function detectWith(scores: Scores, prior: string | null): Detection {
 	const confidence = Math.round(gap * 1000) / 1000;
 
 	if (gap >= DETECT_MIN_GAP) {
-		return {lang: best.lang, confidence};
+		return {lang: best.lang, confidence, candidates};
 	}
 
 	// A near tie: the prior wins when it is one of the contenders.
@@ -78,10 +100,10 @@ export function detectWith(scores: Scores, prior: string | null): Detection {
 		prior &&
 		known.some((entry) => entry.lang === prior && best.weight - entry.weight < DETECT_MIN_GAP)
 	) {
-		return {lang: prior, confidence: DETECT_MIN_GAP};
+		return {lang: prior, confidence: DETECT_MIN_GAP, candidates};
 	}
 
-	return {lang: null, confidence};
+	return {lang: null, confidence, candidates};
 }
 
 /** The dominant language of a channel's recent messages. */
@@ -158,7 +180,7 @@ export async function detectLanguage(
 	prior: LanguagePrior | null
 ): Promise<Detection> {
 	if (text.length < DETECT_MIN_LENGTH) {
-		return {lang: null, confidence: 0};
+		return {lang: null, confidence: 0, candidates: []};
 	}
 
 	const detect = await loadDetector();

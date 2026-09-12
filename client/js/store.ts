@@ -42,6 +42,13 @@ export interface TranslationEntry {
 	/** Detected source (ISO 639-1) or "" when the engine detected it. */
 	from: string;
 	to: string;
+	/**
+	 * The detector's runners-up (`detect.ts` `candidates`), which the chip's
+	 * menu offers as one-click "Retranslate from …" corrections. Session
+	 * only, like the rest of the entry; an explicit source keeps the list it
+	 * inherited, so the alternatives stay on offer.
+	 */
+	candidates: string[];
 	engine: EngineName | null;
 	error: string | null;
 	/** "Show original only": the line is kept but not rendered. */
