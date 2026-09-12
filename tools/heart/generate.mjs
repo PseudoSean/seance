@@ -15,19 +15,29 @@ import path from "path";
 import {buildAnimal} from "./lib/build.mjs";
 
 const OUT = path.resolve(import.meta.dirname, "../../client/themes/heart");
-const ALL = [
-	"horse",
-	"puppy",
-	"bunny",
-	"deer",
-	"kitten",
-	"frog",
-	"teddy",
-	"ladybug",
-	"bird",
-	"dolphin",
-];
+const ALL = ["horse", "puppy", "bunny", "deer", "kitten", "frog", "ladybug", "bird"];
+
+/**
+ * Rigs that are built and reviewed but not currently cast in any scene, so
+ * their files are not generated and not shipped. `client/themes/heart/` is
+ * copied into `public/` whole, so a file no scene casts is dead weight in
+ * every deploy — the rigs stay, the output does not.
+ *
+ * - `teddy`: held 2026-09-12. "let's put a hold on the teddy bear as an
+ *   animal, since it can't move" — a stuffed toy that walks itself reads
+ *   wrong, whatever the drawing does. An unfinished side-on redraw of it is
+ *   parked as a patch outside the repo.
+ * - `dolphin`: held 2026-09-12, same message.
+ *
+ * Both still build: `node tools/heart/generate.mjs teddy` works, since names
+ * given on the command line are imported directly. To bring one back, add it
+ * to ALL, regenerate, and cast it in a scene in `client/themes/heart.css`.
+ */
+const HELD = ["teddy", "dolphin"];
 const names = process.argv.slice(2).length ? process.argv.slice(2) : ALL;
+if (!process.argv.slice(2).length && HELD.length) {
+	console.log(`held, not generated: ${HELD.join(", ")} (see HELD in this file)`);
+}
 let ok = true;
 
 for (const name of names) {

@@ -15,6 +15,12 @@ type Animal = {
 	/** The dolphin only ever passes in the distance, so it ships two files,
 	 * not four: the far tint and its still, and no near tint at all. */
 	farOnly?: boolean;
+	/** Built and reviewed, but cast in no scene, so its files are not
+	 * generated and must not be in the directory: `client/themes/heart/` is
+	 * copied into `public/` whole, so anything here ships to every deploy
+	 * whether a scene paints it or not. The rig stays in `tools/heart/rigs/`
+	 * and `HELD` in `tools/heart/generate.mjs` says why. */
+	held?: boolean;
 };
 
 /**
@@ -36,18 +42,18 @@ const ANIMALS: Animal[] = [
 	{name: "bunny", budget: 160},
 	{name: "deer", budget: 150},
 	{name: "kitten", budget: 150},
-	{name: "teddy", budget: 120},
+	{name: "teddy", budget: 120, held: true},
 	{name: "bird", budget: 120},
 	{name: "frog", budget: 100},
 	{name: "ladybug", budget: 100},
-	{name: "dolphin", budget: 120, farOnly: true},
+	{name: "dolphin", budget: 120, farOnly: true, held: true},
 ];
 
 describe("the <3 theme's generated animals (client/themes/heart/*.svg)", function () {
 	const read = (f: string) => fs.readFileSync(path.join(DIR, f), "utf8");
 	const has = (f: string) => fs.existsSync(path.join(DIR, f));
 
-	for (const {name, budget, farOnly} of ANIMALS) {
+	for (const {name, budget, farOnly, held} of ANIMALS) {
 		const near = `${name}.svg`;
 		const far = `${name}-far.svg`;
 		/** The animated file the assertions below read: the near tint, or the
@@ -57,6 +63,21 @@ describe("the <3 theme's generated animals (client/themes/heart/*.svg)", functio
 		const stills = farOnly
 			? [`${name}-far-still.svg`]
 			: [`${name}-still.svg`, `${name}-far-still.svg`];
+
+		if (held) {
+			// A held animal is not merely absent, it is required to be absent.
+			// Skipping would let a stray regenerate put ~470 KB back into every
+			// deploy without a single test noticing.
+			describe(`${name} (held, not cast)`, function () {
+				it("ships no files while it is held", function () {
+					for (const f of [...animated, ...stills]) {
+						expect(has(f), `${f} — ${name} is held; remove it or un-hold the animal`).to
+							.be.false;
+					}
+				});
+			});
+			continue;
+		}
 
 		describe(name, function () {
 			// An animal the cast has not grown yet: the row above is its
