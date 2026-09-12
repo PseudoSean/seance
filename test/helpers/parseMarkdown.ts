@@ -520,6 +520,24 @@ describe("markdown — escapes", () => {
 		expect(md("a\\")).to.deep.equal([{text: "a\\"}]);
 		expect(md("C:\\")).to.deep.equal([{text: "C:\\"}]);
 	});
+
+	it("keeps a backslash that sits between two symbols: that is art, not an escape", () => {
+		// The shrug is what everyone else on the channel sees; the marker it
+		// touches still opens nothing
+		expect(md("¯\\_(ツ)_/¯")).to.deep.equal([{text: "¯\\_(ツ)_/¯"}]);
+		expect(md("(\\_/)")).to.deep.equal([{text: "(\\_/)"}]);
+		// The kept marker is no delimiter: the emphasis around it still pairs
+		expect(md("*a (\\*) b*")).to.deep.equal([{text: "a (\\*) b", italic: true}]);
+	});
+
+	it("still escapes a marker that touches a word, another marker or the end", () => {
+		expect(md("snake\\_case")).to.deep.equal([{text: "snake_case"}]);
+		expect(md("\\_\\_init\\_\\_")).to.deep.equal([{text: "__init__"}]);
+		expect(md("\\*\\*not bold\\*\\*")).to.deep.equal([{text: "**not bold**"}]);
+		expect(md("(\\*")).to.deep.equal([{text: "(*"}]);
+		// A doubled backslash is one backslash wherever it sits
+		expect(md("(\\\\)")).to.deep.equal([{text: "(\\)"}]);
+	});
 });
 
 describe("markdown — nesting and malformed markers", () => {
