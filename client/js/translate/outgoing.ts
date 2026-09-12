@@ -90,8 +90,12 @@ export function writeSource(
 		return fallback;
 	}
 
+	// A verdict that agrees with the reading language is trusted outright —
+	// unless that language is the target, where a weak verdict (the strong
+	// one was sent as typed by the caller) is still no source: the target
+	// is never named as the source, whichever branch would have named it.
 	if (detection.lang === readingLanguage) {
-		return detection.lang;
+		return fallback;
 	}
 
 	return detection.confidence >= WRITE_DETECT_MIN_GAP ? detection.lang : fallback;

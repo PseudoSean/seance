@@ -128,6 +128,9 @@ describe("translate/outgoing", () => {
 			expect(writeSource({lang: "en", confidence: 0.28}, "en", "de")).to.equal("en");
 			expect(writeSource({lang: "it", confidence: 0.12}, "en", "de")).to.equal("en");
 			expect(writeSource({lang: "it", confidence: 0.4}, "de", "de")).to.equal("it");
+			// A weak verdict for the target itself (a strong one is sent as
+			// typed before this is asked) names no source either.
+			expect(writeSource({lang: "de", confidence: 0.2}, "de", "de")).to.equal(null);
 		});
 
 		it("targets the reading language, never the draft's detected language", () => {

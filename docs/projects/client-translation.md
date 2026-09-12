@@ -165,10 +165,10 @@ Plan 3 (composer):
   the global setting only as the fallback, the way the reader does (the
   read-back wave had the composer reading the global alone, so a channel
   reading English with the global still on the write target asked for
-  German into German); and both of `writeSource`'s fallback branches leave
-  the source to the LLM rather than name the write target. `canCheckOutgoing`
-  takes the network and channel for it — it had no caller, so nothing else
-  moved.
+  German into German); and `writeSource` never names the write target as
+  the source — a weak verdict for it, like a fallback that would be it,
+  leaves the source to the LLM. `canCheckOutgoing`, which had no caller,
+  is gone.
 - **An echo is not a translation, nor is a line without letters** — the
   other half of the 2026-09-12 live-test fix. `outgoing.ts` `isUnchanged`
   (past case, collapsed whitespace and trailing `.,!?…`) and `hasNoLetters`

@@ -358,14 +358,6 @@ export function cancelOutgoing(channel: ClientChan): void {
 	}
 }
 
-export function canCheckOutgoing(
-	network: ClientNetwork,
-	channel: ClientChan,
-	entry: OutgoingTranslation
-): boolean {
-	return reverseTarget(readingLanguage(network, channel), entry.to) !== null;
-}
-
 /** The round trip: the translation read back into the user's language, under the strip. */
 export async function checkOutgoing(network: ClientNetwork, channel: ClientChan): Promise<void> {
 	const entry = store.state.outgoingTranslations[channel.id];

@@ -245,10 +245,11 @@ taken as the reading language instead. The same threshold gates the
 target skips translation only when it is at least that sure, otherwise the
 draft still goes to the LLM under the reading-language source.
 
-**A fallback source is never the target.** Both fallback branches -- the
+**The source is never the target.** Both fallback branches -- the
 unplaced draft and the weak differing verdict -- name the reading language
 only when it differs from the write target, and otherwise leave the source
-to the LLM (`null`). A request that says "from German into German" is one
+to the LLM (`null`); a weak verdict for the target itself (a strong one is
+sent as typed before this is asked) names no source either. A request that says "from German into German" is one
 the model answers by handing the line back untranslated, which is exactly
 what the live test of 2026-09-12 saw. A draft the detector places in the
 target with a strong verdict never reaches this: the caller sends it as
