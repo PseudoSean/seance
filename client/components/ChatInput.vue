@@ -144,7 +144,7 @@
 				v-if="outgoing.check.status !== 'idle'"
 				class="translate-bar-row translate-bar-check"
 			>
-				<span class="translate-bar-check-label">reads back as:</span>
+				<span class="translate-bar-check-label">{{ outgoingCheckLabel }}</span>
 				<span v-if="outgoing.check.status === 'failed'" class="translate-bar-failed"
 					>couldn't check</span
 				>
@@ -251,6 +251,7 @@ import {
 import {hasVirtualKeyboard} from "../js/helpers/device";
 import {languageName} from "../js/translate/languages";
 import {draftGate} from "../js/translate/outgoing";
+import {readingLanguage} from "../js/translate/reader";
 import {
 	cancelOutgoing,
 	noteOutgoingSent,
@@ -497,14 +498,38 @@ export default defineComponent({
 		// keeps it like it keeps the draft.
 		const outgoing = computed(() => store.state.outgoingTranslations[props.channel.id]);
 
-		const outgoingChip = computed(() =>
-			outgoing.value ? `to ${languageName(outgoing.value.to, navigator.language)}` : ""
+		// The strip's labels name their languages in the language the user
+		// reads this channel in, not the browser's (reader.ts readingLanguage).
+		const readerName = (code: string) =>
+			languageName(code, readingLanguage(props.network, props.channel));
+
+		// Source → target, "→ German" until (or unless) a source is named.
+		const outgoingChip = computed(() => {
+			const entry = outgoing.value;
+
+			if (!entry) {
+				return "";
+			}
+
+			return entry.from
+				? `${readerName(entry.from)} → ${readerName(entry.to)}`
+				: `→ ${readerName(entry.to)}`;
+		});
+
+		// The read-back row's label: the translation's language → the one it
+		// is read back into, the user's reading language.
+		const outgoingCheckLabel = computed(() =>
+			outgoing.value
+				? `${readerName(outgoing.value.to)} → ${readerName(
+						readingLanguage(props.network, props.channel)
+				  )}`
+				: ""
 		);
 
 		// Which route the strip's text came down, in the chip's title: the
 		// pair as the request asked for it ("auto" where the source was left
 		// to the model), the model's own id, and whether it ran on the GPU.
-		// The chip's visible text stays the language alone -- this is for
+		// The chip's visible text stays the pair alone -- this is for
 		// someone wondering why a translation reads as it does. No title
 		// until the route has answered.
 		const outgoingChipTitle = computed(() => {
@@ -514,9 +539,9 @@ export default defineComponent({
 				return undefined;
 			}
 
-			const from = entry.from ? languageName(entry.from, navigator.language) : "auto";
+			const from = entry.from ? readerName(entry.from) : "auto";
 
-			return `${from} → ${languageName(entry.to, navigator.language)} · ${entry.model} (${
+			return `${from} → ${readerName(entry.to)} · ${entry.model} (${
 				entry.engine === "llm" ? "GPU" : "CPU"
 			})`;
 		});
@@ -1152,6 +1177,7 @@ export default defineComponent({
 			connectNetwork,
 			outgoing,
 			outgoingChip,
+			outgoingCheckLabel,
 			outgoingChipTitle,
 			shortReason,
 			outgoingBusy,

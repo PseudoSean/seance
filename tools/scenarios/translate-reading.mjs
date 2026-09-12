@@ -6,11 +6,11 @@
 // order: nothing is translated before the globe is switched on (two German
 // lines go by first, and the "load more" steps at the end are what show
 // that the reader can still ask for them); a German
-// line gets a "from German" line with the fake's "[English] …" echo; an
+// line gets a "German → English" line with the fake's "[English] …" echo; an
 // English line gets none; the chip's menu retranslates from another source
 // (the detector's runners-up one click each, never the line's own source;
 // "Retranslate from…" opens the picker, Escape asks for nothing, French
-// makes the chip read "from French" and the request carry `from: "fr"`, and
+// makes the chip read "French → English" and the request carry `from: "fr"`, and
 // the runners-up survive that choice so one click puts it back on German);
 // a five-line burst is translated and proved
 // batched (the in-page request log shows one multi-line LLM request, not
@@ -312,11 +312,13 @@ async function scenario(page) {
 
 	other.say("Ich schicke dir gleich das Log, einen Moment bitte.");
 	await page.waitFor(`${LINES} === 1`, {timeout: 15000, label: "one translated line"});
+	// Every label names its languages in the reader's language: this
+	// channel is read in English, so the German line's chip is in English.
 	await page.check(
-		"chip says from German",
+		"a chip reads German → English in a channel read in English",
 		(await page.evaluate(
 			`document.querySelector(".msg-translation-chip").textContent.trim()`
-		)) === "from German"
+		)) === "German → English"
 	);
 	await page.check(
 		"the fake's English echo is shown",
@@ -451,10 +453,10 @@ async function scenario(page) {
 		!!frenchRequest && frenchRequest.from === "fr" && frenchRequest.to === "en"
 	);
 	await page.check(
-		"the chip now reads from French",
+		"the chip now reads French → English",
 		(await page.evaluate(
 			`document.querySelector(".msg-translation-chip").textContent.trim()`
-		)) === "from French"
+		)) === "French → English"
 	);
 	await page.waitFor(`${LINES} === 1`, {
 		timeout: 15000,
@@ -480,7 +482,7 @@ async function scenario(page) {
 		`[...document.querySelectorAll(".context-menu-translate-retry-from")].find((i) => i.textContent.includes("German")).click()`
 	);
 	await page.waitFor(
-		`document.querySelector(".msg-translation-chip").textContent.trim() === "from German"`,
+		`document.querySelector(".msg-translation-chip").textContent.trim() === "German → English"`,
 		{timeout: 15000, label: "the one-click candidate put it back on German"}
 	);
 	await page.waitFor(`${LINES} === 1`, {timeout: 15000, label: "the German line is translated"});
@@ -954,10 +956,10 @@ async function scenario(page) {
 	)})).pop()`;
 
 	await page.check(
-		"the short line's chip reads from German",
+		"the short line's chip reads German → English",
 		(await page.evaluate(
 			`((${shortRow}).querySelector(".msg-translation-chip") || {}).textContent.trim()`
-		)) === "from German"
+		)) === "German → English"
 	);
 
 	// History the reader asks for: a "load more" is translated although every

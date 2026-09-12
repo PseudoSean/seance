@@ -56,7 +56,7 @@ import {computed, defineComponent, PropType, ref} from "vue";
 import {writeClipboard} from "../js/clipboard";
 import eventbus from "../js/eventbus";
 import {useStore} from "../js/store";
-import {retranslate, retryTranslation, showOriginal} from "../js/translate/reader";
+import {readingLanguage, retranslate, retryTranslation, showOriginal} from "../js/translate/reader";
 import {languageName} from "../js/translate/languages";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
 import ParsedMessage from "./ParsedMessage.vue";
@@ -76,18 +76,26 @@ export default defineComponent({
 	setup(props) {
 		const store = useStore();
 		const entry = computed(() => store.state.translations[props.message.id]);
-		const chipText = computed(() =>
-			entry.value?.from
-				? `from ${languageName(entry.value.from, navigator.language)}`
-				: "translated"
-		);
+		// Every language the line names is named in the language its reader
+		// reads (the channel's reading language, else the global one), not
+		// the browser's: "French → English" for an English reader,
+		// "Französisch → Englisch" for a German one.
+		const nameOf = (code: string) =>
+			languageName(code, readingLanguage(props.network, props.channel));
+		// Source → target; `from` is "" when the engine placed the source itself.
+		const chipText = computed(() => {
+			const value = entry.value;
+
+			if (!value) {
+				return "";
+			}
+
+			return value.from
+				? `${nameOf(value.from)} → ${nameOf(value.to)}`
+				: `→ ${nameOf(value.to)}`;
+		});
 		const chipLabel = computed(() =>
-			entry.value
-				? `${chipText.value} into ${languageName(
-						entry.value.to,
-						navigator.language
-				  )}. Translation options`
-				: ""
+			entry.value ? `${chipText.value}. Translation options` : ""
 		);
 
 		const chip = ref<HTMLButtonElement | null>(null);
@@ -127,7 +135,7 @@ export default defineComponent({
 						action: () => retranslateFrom(),
 					},
 					...alternatives.value.map((code) => ({
-						label: `Retranslate from ${languageName(code, navigator.language)}`,
+						label: `Retranslate from ${nameOf(code)}`,
 						type: "item",
 						class: "translate-retry-from",
 						action: () => retranslateFrom(code),

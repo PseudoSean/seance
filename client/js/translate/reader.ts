@@ -73,6 +73,22 @@ export function channelTranslation(
 	);
 }
 
+/**
+ * The language the user reads this channel in -- the channel's own panel
+ * setting, the global one only as the fallback for a channel whose reading
+ * is off. The one decision for everything that needs it: the composer
+ * (`writer.ts`) places a draft it cannot detect and reads a translation
+ * back into it, and the labels (`TranslationLine.vue`, the composer strip)
+ * name their languages in it. A composer that read the global alone would
+ * take a draft it could not place as written in the write target whenever
+ * the panel read English while the global still named German, and ask for
+ * a translation from German into German -- which the model answers by
+ * handing the line back untranslated.
+ */
+export function readingLanguage(network: ClientNetwork, channel: ClientChan): string {
+	return channelTranslation(network, channel).read ?? store.state.settings.translateTo;
+}
+
 export function translationAvailable(): boolean {
 	const tier = store.state.translation.capability?.tier;
 

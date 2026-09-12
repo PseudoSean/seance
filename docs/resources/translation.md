@@ -41,8 +41,9 @@ channel's terms and the deploy's glossary behind them) and queued
 of one channel and pair batched, items that fell two hundred messages
 behind dropped, an engine paused after three failures in a row). The
 result lives in `store.state.translations` keyed by the message id and
-renders as `TranslationLine.vue` under the original: a "from German"
-chip, the text streaming with a caret, a retry when it failed (an icon
+renders as `TranslationLine.vue` under the original: a "German → English"
+chip (source → target, "→ English" where the engine placed the source
+itself), the text streaming with a caret, a retry when it failed (an icon
 button, "Retry the translation" its tooltip and accessible name, with the
 engine's reason beside "couldn't translate" when there is one -- a model
 that would not load says so rather than leaving the tier looking broken); the chip's
@@ -53,6 +54,18 @@ and the toolbar's Translate does one
 message on request in a channel that is off -- and brings a hidden
 translation back, at no cost, once the chip's "Show original only" has
 taken it away.
+
+**The labels on the text are a language pair, in the reader's language.**
+The line's chip, the composer strip's chip and the read-back row's label
+all read `<Source> → <Target>` -- no "from", "to", "into" or "reads back
+as" -- and every language name in them and in their titles is
+`languageName(code, readingLanguage(network, channel))`: the channel's
+reading language, else the global `translateTo` (`reader.ts`
+`readingLanguage`, the one helper the composer uses too). A user who reads
+English sees "French → English", one who reads German sees "Französisch →
+Englisch". The chip menu's actions keep their wording ("Retranslate from
+French") with the names chosen the same way; the language pickers keep
+their endonyms.
 
 **An answer is not automatically a translation.** Two of them fail the line
 instead: one that came back as the original (the model echoed rather than
@@ -98,7 +111,7 @@ Retranslate), and **Retranslate from...** opens
 under the chip where there is a pointer, a bottom sheet on a phone or under
 480px, closing on Escape, on Cancel and on a click outside. A chosen source
 skips detection altogether: the entry's `from` becomes that language (so
-the chip reads "from French"), the runners-up it inherited stay on the menu
+the chip reads "French → English"), the runners-up it inherited stay on the menu
 (the detector's own guess among them), and nothing is noted into the
 channel's language prior -- one reader's correction of one line is not the
 channel's language. A retry keeps whatever source the failed line had. The translated line is `user-select: text` like the
@@ -269,8 +282,9 @@ to send -- and given up after `WRITE_TIMEOUT_MS` (2 min).
 
 The result lives in `store.state.outgoingTranslations`, keyed by channel
 id, and `ChatInput.vue` renders it as the `.translate-bar` strip above the
-input: a "to German" chip -- whose `title` names the route the text came
-down, `<Source> -> <Target> · <model id> (GPU|CPU)`, from the `engine` and
+input: an "English → German" chip (the strip's source → its target, "→
+German" until a source is named) -- whose `title` names the route the text came
+down, `<Source> → <Target> · <model id> (GPU|CPU)`, from the `engine` and
 `model` the entry carries (both null, and no title, until the route has
 answered); "auto" stands in for a source left to the model -- the streaming
 text with a caret, and icon buttons -- their words kept as the tooltip and
@@ -357,7 +371,8 @@ starts over.
 The round trip reads a done translation back toward `reverseTarget` (the
 user's reading language, whatever the draft was detected as -- when the
 reading language equals the write target there is nothing to read back
-into and no check runs) and shows it in a second row, "reads back as:". The check always starts as soon as the translation finishes,
+into and no check runs) and shows it in a second row labelled with the pair it reads back, "German →
+English" (the translation's language → the reading language). The check always starts as soon as the translation finishes,
 and Send waits for it -- a failed check ("couldn't check") never blocks
 Send.
 

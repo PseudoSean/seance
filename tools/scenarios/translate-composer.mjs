@@ -4,7 +4,7 @@
 // land in a tester's own context) over a raw WebSocket who hears what the
 // page actually sends.
 // Steps, in order: the panel sets the write target and the placeholder
-// says so; the first Enter puts a "to German" strip above the input with
+// says so; the first Enter puts an "English → German" strip above the input with
 // the fake's "[German] …" streaming in, Send disabled until it ends, the
 // draft still in the input, the request logged with purpose "write";
 // typing drops the strip; the check runs automatically once the
@@ -297,10 +297,11 @@ export default async function run(page) {
 
 	await typeAndEnter(page, draft);
 	await page.waitFor(`!!document.querySelector(${JSON.stringify(BAR)})`, {label: "the strip"});
-	await page.check(
-		"the chip names the language in full",
-		(await page.evaluate(`document.querySelector(".translate-bar-chip").textContent`)) ===
-			"to German"
+	// The chip is the pair, named in the reading language (English here);
+	// the source joins it once the route has answered.
+	await page.waitFor(
+		`(document.querySelector(".translate-bar-chip") || {textContent: ""}).textContent.trim() === "English → German"`,
+		{timeout: 20000, label: "the chip reads English → German"}
 	);
 	await page.check(
 		"Send is disabled while it streams",
@@ -359,6 +360,12 @@ export default async function run(page) {
 			`[English] [German] ${draft} edited`
 		)}`,
 		{timeout: 20000, label: "the read-back line"}
+	);
+	await page.check(
+		"the read-back row is labelled German → English",
+		(await page.evaluate(
+			`(document.querySelector(".translate-bar-check-label") || {textContent: ""}).textContent.trim()`
+		)) === "German → English"
 	);
 	await page.check(
 		"the read-back row is marked as the reading language",

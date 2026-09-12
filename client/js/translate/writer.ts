@@ -41,7 +41,7 @@ import {
 	translateDraft,
 	writeSource,
 } from "./outgoing";
-import {channelTranslation, holdReading, releaseReading} from "./reader";
+import {channelTranslation, holdReading, readingLanguage, releaseReading} from "./reader";
 import type {Route} from "./router";
 import {LLM_MARKERS, type MarkerForm, stripCopiedNickPrefix} from "./spans";
 
@@ -111,20 +111,6 @@ function engineFor(route: Route | null): EngineName | null {
 	}
 
 	return route.candidate === "llm" ? "llm" : "seq2seq";
-}
-
-/**
- * The language the user reads this channel in -- the channel's own panel
- * setting, the global one only as the fallback for a channel whose reading
- * is off. The reader decides the same way (`reader.ts`), and it has to be
- * the same decision: a composer that read the global alone would take a
- * draft it could not place as written in the write target whenever the
- * panel read English while the global still named German, and ask for a
- * translation from German into German -- which the model answers by handing
- * the line back untranslated.
- */
-function readingLanguage(network: ClientNetwork, channel: ClientChan): string {
-	return channelTranslation(network, channel).read ?? store.state.settings.translateTo;
 }
 
 /** In-flight translation and check per channel id. */
