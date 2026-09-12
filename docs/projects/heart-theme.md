@@ -257,3 +257,110 @@ Nothing else in the app changes. The theme must degrade gracefully on a deploy t
 1. Sidebar gradient: **lilac → peach**, as mocked.
 2. Queries: **get a meadow**, seeded by the other person's nick.
 3. Phones: **keep a reduced meadow** (6.5rem strip, two visitor slots), never hidden.
+
+## 11. Day, night and weather (decided 2026-09-12, plan 4)
+
+Chosen by the user against a live mockup of the alternatives
+(https://claude.ai/code/artifact/6cf06f97-09c1-492d-9575-4b650c7c084a). The mockup's day and
+night looks were approved as drawn — "I like what you created for the new day look and night
+look, very good" — so the palette keys in it are the starting point, not a fresh design.
+
+### 11.1 The cycle follows the viewer's own clock
+
+**The scene's time of day is the local time, and the app supplies it.** The user's call, after
+first choosing a six-hour CSS loop and then reversing it the same day: _"I changed my mind, I
+want the scene time to be taken from the local clock, even if that is a javascript hook."_
+
+This is the point where the theme stops being CSS-only. That rule (§2, decision 1) held for
+everything before it and is now deliberately spent, once, on this. The reasoning that won: a
+meadow that is dark when it is actually dark outside reads as a place, while any loop reads as a
+screensaver and never matches the world the reader is in.
+
+**Shape of the hook.** It is the same shape as the channel seed, which is the precedent to
+follow: `Chat.vue` already publishes `data-scene` and `--channel-seed` on `#chat-container` from
+`client/js/helpers/channelSeed.ts`, and every theme but this one ignores them. So a small
+Vue-free helper publishes the time of day the same way — a number for where we are in the day,
+and a coarse phase name — and only this theme reads it. Refresh on a timer of about a minute and
+on `visibilitychange`, so a laptop that slept wakes up showing the right sky.
+
+Three mechanisms for turning that number into a palette, to be settled in the plan:
+
+- `@property`-registered colour tokens, which makes them interpolable, and let CSS transition
+  between phases;
+- `color-mix()` between the two neighbouring phase palettes, with the hook publishing the
+  fraction between them — colour logic stays in CSS, the hook supplies only numbers;
+- the hook computing the interpolated colours itself and setting the tokens directly, which is
+  simplest and least declarative.
+
+Prefer the middle one unless it measures badly: it keeps the palette in the stylesheet where the
+rest of the theme's design lives, and keeps the hook to arithmetic.
+
+**The sun and moon position** needs no colour interpolation at all — a `calc()` off the
+published number places them on their arc, in pure CSS.
+
+Consequences to keep in mind:
+
+- Two people in different time zones see different skies. That is the entire point.
+- `prefers-reduced-motion` still stands down the moving parts (fireflies, smoke, drifting
+  clouds). The sun itself moves imperceptibly at real-time rates, so the cycle need not be
+  frozen — but the palette must still be correct rather than defaulting to day.
+- A theme that reads an app-published value must degrade sanely when it is absent: with no hook
+  (an older build, a page that has not booted the helper) the meadow falls back to the daytime
+  palette rather than to an unstyled or midnight one.
+
+### 11.2 The sun and the moon
+
+One arc across the sky: sunrise at the meadow's left edge, overhead at midday, sunset at the
+right, and the moon rides the same arc through the night. Stars fade up through dusk and out
+through dawn. Sky, far hills, mid hills and ground all warm and cool together — the mockup
+interpolates ten palette keys across the cycle (night, first light, sunrise, morning, midday,
+afternoon, golden hour, sunset, dusk, night) and those are the values to port.
+
+### 11.3 Night
+
+**A quieter meadow, with night creatures, and some creatures in both.** The user's call:
+_"i like a quieter meadow at night, with night creatures; some creatures can be both."_
+
+So night is not the day cast retinted wholesale, and not a wholly separate cast either:
+
+- fewer animals are cast after dark than by day, and they move less;
+- some of the existing ten appear in both — the deer and the bunny read naturally at night, the
+  horse and the puppy do not;
+- genuinely nocturnal animals join them: **owl, fox, hedgehog** are on the wish list (§11.6),
+  and the night scene table is built so they slot in without being redone;
+- fireflies drift over the grass;
+- everything cast at night takes the cooler, dimmer moonlit tint.
+
+### 11.4 Clouds and weather
+
+**A seeded cloud field, plus weather.** The user's call: _"I'd like a field plus weather."_
+
+The complaint that prompted it was exact: _"the clouds don't have enough variation. its always
+the same 2 small clouds"_ — and it is worse than two. There are two, and scenes 1 and 4 set
+`--heart-cloud-2` to transparent, so those channels cross an empty sky behind a single cloud.
+
+Replace them with six clouds at three sizes, three heights and three drift speeds, arranged
+from the channel's own seed the way the hills already are, plus a weather axis on that seed so a
+channel can be overcast, clear, or carry one fat low cloud. Rarely, a drifting flock of birds.
+
+### 11.5 The camp
+
+**A fancy tent or yurt in the field, with a fire.** The user's call: _"I'd like a fancy tent or
+yurt added to the field, smoke from a fire comes out at night and it glows."_
+
+Not yet designed — tent against yurt, and its styling, go to the user as a mockup before any
+code. What is already settled by the request: smoke rises from a fire, and at night the camp
+glows.
+
+The time-of-day hook (§11.1) makes this easier than it would have been under a CSS loop: the
+camp can read the same published phase as everything else, so its glow and smoke can appear
+after dark without a second clock to keep in step. Whether the camp is a CSS layer or a
+generated SVG through the §6 pipeline is open; the SVG keeps the layer count down, which matters
+because §5's list is fourteen entries asserted in eight separate places.
+
+### 11.6 Wish list
+
+Deliberately not in plan 4, kept so they are not lost:
+
+- **owl, fox, hedgehog** — the nocturnal animals, three new rigs by the pipeline in §6;
+- a drifting flock of birds as a rare weather state.
