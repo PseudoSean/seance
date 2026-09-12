@@ -167,7 +167,7 @@ browser, including what the page fetches (below).
 
 ### Budget, and the claim it rests on
 
-`client/themes/heart/` is **2.11 MB** — 32 SVGs (1.99 MB) and three variable fonts (111 KB) —
+`client/themes/heart/` is **2.13 MB** — 32 SVGs (2.03 MB) and three variable fonts (111 KB) —
 against the 2.8 MB cap. Each animated file is inside its rig's own budget, which the audit
 refuses to write over and `test/tools/heart/files.ts` holds the committed files to:
 
@@ -178,7 +178,7 @@ refuses to write over and `test/tools/heart/files.ts` holds the committed files 
 | bunny   | 110.9 KB           | 160 KB | 4.18 %     | 2.47 %     | 76     | 17.8 / 50 s  |
 | deer    | 141.5 KB           | 150 KB | 1.84 %     | 0.31 %     | 98     | 34.3 / 66 s  |
 | kitten  | 144.9 KB           | 150 KB | 4.68 %     | 2.32 %     | 115    | 46.0 / 72 s  |
-| frog    | 85.3 KB            | 100 KB | 3.19 %     | 4.61 %     | 95     | 17.9 / 58 s  |
+| frog    | 97.8 KB            | 100 KB | 3.79 %     | 5.93 %     | 111    | 17.9 / 58 s  |
 | ladybug | 94.8 KB            | 100 KB | 3.58 %     | 3.35 %     | 109    | 27.9 / 44 s  |
 | bird    | 94.3 KB            | 120 KB | 3.34 %     | 1.14 %     | 162    | 13.8 / 36 s  |
 
@@ -187,13 +187,13 @@ outline-length rule is the one that decides how a beat can be written, and the c
 0.84–4.68 % of a 5 % limit near (kitten worst, then bunny) and 0.31–6.96 % of a 10 % limit far
 (puppy worst — the puppy's far legs). Under 1 % (horse) means a rig with room to spare; 4.7 %
 means a rig whose next retouch has to be measured, not guessed. Sizes have less drama in them:
-every animal is inside its budget, the tightest being the kitten (144.9 of 150 KB) and the deer
-(141.5 of 150), the loosest the bunny (110.9 of 160). On the wire it is gzip that decides —
+every animal is inside its budget, the tightest being the frog (97.8 of 100 KB) and the kitten
+(144.9 of 150), the loosest the bunny (110.9 of 160). On the wire it is gzip that decides —
 the horse's 191.5 KB file is 28.3 KB gzipped, about 15 %.
 
 **A page never fetches the directory.** A scene casts three animals, and a `url()` sitting in a
 CSS custom property that no resolved `background-image` substitutes is _never requested_ — that
-is what makes a 2.11 MB directory a three-file download and the whole budget argument rests on
+is what makes a 2.13 MB directory a three-file download and the whole budget argument rests on
 it. It is now a check rather than a memory: `tools/scenarios/theme-heart.mjs` reads the scene's
 cast off the computed `--heart-slot-a/-b/-f`, reads what the browser actually asked for out of
 Resource Timing, and asserts the two are equal.

@@ -55,6 +55,12 @@ browser and no SVG in between: the same unions, the same resample, the same fill
 generator would emit. It costs well under a second, so a pose can be judged and changed
 dozens of times before anything is generated at all.
 
+**Judge it at `--scale=2` or smaller, and don't over-trust the zoom.** The frog's redraw ran
+nine variants at `--scale=4`, where the animal is about twelve times the size it ships at, and
+the read wandered — frog, dog, crocodile, newt — chasing detail that is sub-pixel in the slot.
+The contact sheet's own cell is the honest size, and a shape that only resolves at 4× is a
+shape nobody will see.
+
 That is the difference between it and `contact-sheet.mjs`, and both are worth having.
 The contact sheet photographs the _shipped file_ through a real browser, so it is the only
 thing that proves what a viewer sees — but it has to wait out the animation in real time,
@@ -287,11 +293,14 @@ the causes out:
   before the theme can cast it;
 - the outline's length changes ≤ 5 % between stored frames (near), ≤ 10 % (a far leg).
   Current headroom across the cast of eight: near runs 0.84 % (horse) to **4.68 % (kitten)**,
-  then bunny 4.18, ladybug 3.58, bird 3.34, frog 3.19, puppy 2.62, deer 1.84; far runs 0.31 %
-  (deer) to **6.96 % (puppy)**, then frog 4.61, ladybug 3.35, bunny 2.47, kitten 2.32, bird
+  then bunny 4.18, frog 3.79, ladybug 3.58, bird 3.34, puppy 2.62, deer 1.84; far runs 0.31 %
+  (deer) to **6.96 % (puppy)**, then frog 5.93, ladybug 3.35, bunny 2.47, kitten 2.32, bird
   1.14, horse 0.47. So a new rig tuned blind against the limits knows how much room there
   really is — and two of the eight are close enough that their next retouch has to be measured
-  rather than guessed;
+  rather than guessed. **The rule is a symptom check, not a topology check**: a limb that folds
+  against the belly closes a pocket the union drops, and the 20 % the frog's redraw lost in one
+  frame that way looks exactly like a beat written too fast. Count the union's children across
+  the cycle when a number like that appears — a frame rate cannot fix a hole;
 - the visit ends off-stage on either side, the off-stage gap is ≥ 2 s;
 - sizes: each animated file (the near tint and the `-far` one, which is the same
   shape) within its rig's own `budget`, stills ≤ 8 KB. The cast's budgets, which
