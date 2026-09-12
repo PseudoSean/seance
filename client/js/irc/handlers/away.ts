@@ -1,6 +1,8 @@
 /**
- * AWAY (`away-notify`, and the server's echo of our own). Channel users get
- * `away` set silently; query windows show a message; our own goes to the lobby.
+ * AWAY (`away-notify`, and the server's echo of our own), plus the 305/306
+ * confirmations of our own `/away`. Channel users get `away` set silently;
+ * query windows show a message; our own goes to the lobby — the 305/306,
+ * being a reply the user asked for, follows to the active tab.
  */
 
 import {ChanType} from "../../../../shared/types/chan";
@@ -40,4 +42,21 @@ const away: Handler = (client, msg) => {
 	}
 };
 
-export default {AWAY: away};
+/** RPL_UNAWAY / RPL_NOWAWAY: <me> :You are no longer marked as being away… */
+function selfAway(type: MessageType): Handler {
+	return (client, msg) => {
+		client.pushMessage(
+			client.lobby,
+			{
+				type,
+				time: client.timeOf(msg),
+				text: msg.params[msg.params.length - 1] ?? "",
+				self: true,
+				showInActive: true,
+			},
+			true
+		);
+	};
+}
+
+export default {AWAY: away, "305": selfAway(MessageType.BACK), "306": selfAway(MessageType.AWAY)};

@@ -5,21 +5,26 @@
 			<span v-if="message.whois.whowas"> is offline, last information:</span>
 		</p>
 
+		<!-- Each dt/dd pair is wrapped in a div (valid in a dl) so the label
+		     can be positioned into the empty gutter column, right-aligned
+		     against the row separator like a nick (style.css `.whois`). -->
 		<dl class="whois">
-			<template v-if="message.whois.account">
+			<div v-if="message.whois.account">
 				<dt>Logged in as:</dt>
 				<dd>{{ message.whois.account }}</dd>
-			</template>
+			</div>
 
-			<dt>Host mask:</dt>
-			<dd class="hostmask">
-				<ParsedMessage
-					:network="network"
-					:text="message.whois.ident + '@' + message.whois.hostname"
-				/>
-			</dd>
+			<div>
+				<dt>Host mask:</dt>
+				<dd class="hostmask">
+					<ParsedMessage
+						:network="network"
+						:text="message.whois.ident + '@' + message.whois.hostname"
+					/>
+				</dd>
+			</div>
 
-			<template v-if="message.whois.actual_hostname">
+			<div v-if="message.whois.actual_hostname">
 				<dt>Actual host:</dt>
 				<dd class="hostmask">
 					<a
@@ -32,88 +37,88 @@
 						({{ message.whois.actual_hostname }})</i
 					>
 				</dd>
-			</template>
+			</div>
 
-			<template v-if="message.whois.actual_username">
+			<div v-if="message.whois.actual_username">
 				<dt>Actual username:</dt>
 				<dd>{{ message.whois.actual_username }}</dd>
-			</template>
+			</div>
 
-			<template v-if="message.whois.real_name">
+			<div v-if="message.whois.real_name">
 				<dt>Real name:</dt>
 				<dd><ParsedMessage :network="network" :text="message.whois.real_name" /></dd>
-			</template>
+			</div>
 
-			<template v-if="message.whois.registered_nick">
+			<div v-if="message.whois.registered_nick">
 				<dt>Registered nick:</dt>
 				<dd>{{ message.whois.registered_nick }}</dd>
-			</template>
+			</div>
 
-			<template v-if="message.whois.channels">
+			<div v-if="message.whois.channels">
 				<dt>Channels:</dt>
 				<dd><ParsedMessage :network="network" :text="message.whois.channels" /></dd>
-			</template>
+			</div>
 
-			<template v-if="message.whois.modes">
+			<div v-if="message.whois.modes">
 				<dt>Modes:</dt>
 				<dd>{{ message.whois.modes }}</dd>
-			</template>
+			</div>
 
 			<template v-if="message.whois.special">
-				<template v-for="special in message.whois.special" :key="special">
+				<div v-for="special in message.whois.special" :key="special">
 					<dt>Special:</dt>
 					<dd>{{ special }}</dd>
-				</template>
+				</div>
 			</template>
 
-			<template v-if="message.whois.operator">
+			<div v-if="message.whois.operator">
 				<dt>Operator:</dt>
 				<dd>{{ message.whois.operator }}</dd>
-			</template>
+			</div>
 
-			<template v-if="message.whois.helpop">
+			<div v-if="message.whois.helpop">
 				<dt>Available for help:</dt>
 				<dd>Yes</dd>
-			</template>
+			</div>
 
-			<template v-if="message.whois.bot">
+			<div v-if="message.whois.bot">
 				<dt>Is a bot:</dt>
 				<dd>Yes</dd>
-			</template>
+			</div>
 
-			<template v-if="message.whois.away">
+			<div v-if="message.whois.away">
 				<dt>Away:</dt>
 				<dd><ParsedMessage :network="network" :text="message.whois.away" /></dd>
-			</template>
+			</div>
 
-			<template v-if="message.whois.secure">
+			<div v-if="message.whois.secure">
 				<dt>Secure connection:</dt>
 				<dd>Yes</dd>
-			</template>
+			</div>
 
 			<template v-if="message.whois.certfps">
-				<template v-for="certfp in message.whois.certfps" :key="certfp">
+				<div v-for="certfp in message.whois.certfps" :key="certfp">
 					<dt>Certificate:</dt>
 					<dd>{{ certfp }}</dd>
-				</template>
+				</div>
 			</template>
 
-			<template v-if="message.whois.server">
+			<div v-if="message.whois.server">
 				<dt>Connected to:</dt>
 				<dd>
 					{{ message.whois.server }} <i>({{ message.whois.server_info }})</i>
 				</dd>
-			</template>
+			</div>
 
-			<template v-if="message.whois.logonTime">
+			<div v-if="message.whois.logonTime">
 				<dt>Connected at:</dt>
 				<dd>{{ localetime(message.whois.logonTime) }}</dd>
-			</template>
+			</div>
 
-			<template v-if="message.whois.idle">
+			<div v-if="message.whois.idle">
 				<dt>Idle since:</dt>
 				<dd>{{ localetime(message.whois.idleTime) }}</dd>
-			</template>
+			</div>
 		</dl>
 	</span>
 </template>

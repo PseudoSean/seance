@@ -1958,6 +1958,24 @@ export class IrcClient {
 		return this.requestedJoins.delete(this.casefold(name));
 	}
 
+	/**
+	 * Channels (casefolded) whose topic/modes the user asked about without
+	 * being in them (`/topic #chan`, `/mode #chan`). The 331/332/324 for a
+	 * channel not in the channel list is normally dropped; one that was asked
+	 * for renders in the lobby with `showInActive` instead.
+	 */
+	private infoAsked = new Set<string>();
+
+	/** Note a topic/modes query for a channel we are not in (commands/). */
+	markInfoAsked(name: string): void {
+		this.infoAsked.add(this.casefold(name));
+	}
+
+	/** Whether the user asked about this channel — once: the request is consumed. */
+	takeInfoAsked(name: string): boolean {
+		return this.infoAsked.delete(this.casefold(name));
+	}
+
 	channelById(id: number): Channel | undefined {
 		return this.channels.find((chan) => chan.id === id);
 	}

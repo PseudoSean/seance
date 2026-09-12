@@ -54,6 +54,8 @@ export class Channel {
 	topicQuiet = false;
 	/** The user asked for the topic (`/topic`): show the next 331/332 even if it is unchanged. */
 	topicAsked = false;
+	/** The 332 just shown was asked for: it and its 333 follow the user to the active tab. */
+	topicAskedActive = false;
 	/** The modes 324 last showed; a reconnect asks again and gets the same answer back. */
 	modeText: string | undefined = undefined;
 	/** The user asked for the modes (`/mode #chan`): show the next 324 even if it is unchanged. */

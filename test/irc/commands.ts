@@ -288,7 +288,7 @@ describe("irc commands", function () {
 			expect(h.sentAfter()).to.deep.equal(["WHOIS bob bob", "WHOIS irc.other bob", "WHOIS"]);
 		});
 
-		it("assembles the numerics into one whois message in a new query window", function () {
+		it("assembles the numerics into one whois message where the user is", function () {
 			const h = setup();
 			joined(h);
 			h.transport.lines(
@@ -310,13 +310,12 @@ describe("irc commands", function () {
 				":irc.test 318 alice bob :End of /WHOIS list."
 			);
 
-			const [join] = payloads<{chan: SharedNetworkChan; shouldOpen: boolean}>("join");
-			expect(join.chan.name).to.equal("bob");
-			expect(join.chan.type).to.equal(ChanType.QUERY);
-			expect(join.shouldOpen).to.equal(true);
+			// No query window opens; the summary follows the user instead.
+			expect(payloads("join")).to.have.length(0);
 
-			const msg = lastMessage(join.chan.id);
+			const msg = lastMessage(1);
 			expect(msg.type).to.equal(MessageType.WHOIS);
+			expect(msg.showInActive).to.equal(true);
 			expect(msg.whois).to.include({
 				nick: "bob",
 				ident: "~bob",
@@ -362,8 +361,8 @@ describe("irc commands", function () {
 				":irc.test 314 alice bob ~old host.old * :Older",
 				":irc.test 369 alice bob :End of WHOWAS"
 			);
-			const [join] = payloads<{chan: SharedNetworkChan}>("join");
-			const msg = lastMessage(join.chan.id);
+			expect(payloads("join")).to.have.length(0);
+			const msg = lastMessage(1);
 			expect(msg.type).to.equal(MessageType.WHOIS);
 			expect(msg.whois).to.include({whowas: true, ident: "~new", hostname: "host.new"});
 		});
@@ -379,6 +378,109 @@ describe("irc commands", function () {
 			expect(away).to.have.length(1);
 			expect(away[0].text).to.equal("gone fishing");
 			expect(away[0].from?.nick).to.equal("bob");
+		});
+	});
+
+	describe("reply routing", function () {
+		it("shows an asked-for topic again, following the user", function () {
+			const h = setup();
+			const id = joined(h);
+			h.transport.line(":irc.test 332 alice #seance :Welcome");
+			expect(lastMessage(id).type).to.equal(MessageType.TOPIC);
+			expect(lastMessage(id).showInActive).to.equal(undefined);
+
+			h.client.input(id, "/topic");
+			expect(h.sentAfter()).to.deep.equal(["TOPIC #seance"]);
+			h.transport.lines(
+				":irc.test 332 alice #seance :Welcome",
+				":irc.test 333 alice #seance bob!bob@host 1756000000"
+			);
+			const [topic, setBy] = messages(id).slice(-2);
+			expect(topic.type).to.equal(MessageType.TOPIC);
+			expect(topic.showInActive).to.equal(true);
+			expect(setBy.type).to.equal(MessageType.TOPIC_SET_BY);
+			expect(setBy.showInActive).to.equal(true);
+		});
+
+		it("queries and sets the topic of a named channel", function () {
+			const h = setup();
+			const id = joined(h);
+			h.transport.lines(
+				":alice!alice@host.example JOIN #other",
+				":irc.test 366 alice #other :End of /NAMES list."
+			);
+			const other = h.client.findChannel("#other")!;
+			h.sentAfter();
+
+			h.client.input(id, "/topic #other");
+			h.client.input(id, "/topic #other fresh paint");
+			expect(h.sentAfter()).to.deep.equal(["TOPIC #other", "TOPIC #other :fresh paint"]);
+
+			h.transport.line(":irc.test 332 alice #other :fresh paint");
+			expect(lastMessage(other.id).type).to.equal(MessageType.TOPIC);
+			expect(lastMessage(other.id).showInActive).to.equal(true);
+		});
+
+		it("shows the topic of a channel we are not in, in the lobby, once", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.input(id, "/topic #secret");
+			expect(h.sentAfter()).to.deep.equal(["TOPIC #secret"]);
+
+			h.transport.line(":irc.test 332 alice #secret :Hidden gem");
+			expect(lastMessage(1).text).to.equal("Topic for #secret: Hidden gem");
+			expect(lastMessage(1).showInActive).to.equal(true);
+
+			// Unasked, the same numeric is state with nowhere to go.
+			const before = messages().length;
+			h.transport.line(":irc.test 332 alice #secret :Hidden gem");
+			expect(messages()).to.have.length(before);
+
+			h.client.input(id, "/topic #void");
+			h.transport.line(":irc.test 331 alice #void :No topic is set");
+			expect(lastMessage(1).text).to.equal("No topic is set for #void.");
+			expect(lastMessage(1).showInActive).to.equal(true);
+		});
+
+		it("shows the modes of a channel we are not in, in the lobby, once", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.input(id, "/mode #secret");
+			expect(h.sentAfter()).to.deep.equal(["MODE #secret"]);
+
+			h.transport.line(":irc.test 324 alice #secret +ntk hunter2");
+			expect(lastMessage(1).type).to.equal(MessageType.MODE_CHANNEL);
+			expect(lastMessage(1).text).to.equal("#secret +ntk hunter2");
+			expect(lastMessage(1).showInActive).to.equal(true);
+
+			const before = messages().length;
+			h.transport.line(":irc.test 324 alice #secret +ntk hunter2");
+			expect(messages()).to.have.length(before);
+		});
+
+		it("shows unhandled numerics where the user is", function () {
+			const h = setup();
+			joined(h);
+			h.transport.line(":irc.test 391 alice irc.test :Thursday afternoon");
+			expect(lastMessage(1).type).to.equal(MessageType.UNHANDLED);
+			expect(lastMessage(1).text).to.equal("391 irc.test Thursday afternoon");
+			expect(lastMessage(1).showInActive).to.equal(true);
+		});
+
+		it("confirms /away and /back where the user is", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.input(id, "/away gone fishing");
+			h.transport.line(":irc.test 306 alice :You have been marked as being away");
+			expect(lastMessage(1).type).to.equal(MessageType.AWAY);
+			expect(lastMessage(1).self).to.equal(true);
+			expect(lastMessage(1).text).to.equal("You have been marked as being away");
+			expect(lastMessage(1).showInActive).to.equal(true);
+
+			h.client.input(id, "/back");
+			h.transport.line(":irc.test 305 alice :You are no longer marked as being away");
+			expect(lastMessage(1).type).to.equal(MessageType.BACK);
+			expect(lastMessage(1).showInActive).to.equal(true);
 		});
 	});
 
