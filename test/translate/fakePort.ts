@@ -92,6 +92,8 @@ describe("translate/fakePort", () => {
 			text: "",
 			purpose: "read",
 			lines: 3,
+			from: "de",
+			to: "en",
 			engine: "llm",
 		});
 

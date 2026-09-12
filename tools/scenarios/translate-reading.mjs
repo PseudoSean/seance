@@ -5,7 +5,12 @@
 // ircd. Steps, in
 // order: nothing is translated before the globe is switched on; a German
 // line gets a "from German" line with the fake's "[English] …" echo; an
-// English line gets none; a five-line burst is translated and proved
+// English line gets none; the chip's menu retranslates from another source
+// (the detector's runners-up one click each, never the line's own source;
+// "Retranslate from…" opens the picker, Escape asks for nothing, French
+// makes the chip read "from French" and the request carry `from: "fr"`, and
+// the runners-up survive that choice so one click puts it back on German);
+// a five-line burst is translated and proved
 // batched (the in-page request log shows one multi-line LLM request, not
 // five singles, and every burst line's echo is rendered); the chip's menu
 // can hide a translation; the toolbar's Translate does one message on
@@ -35,7 +40,9 @@
 // unset for the build: a production build compiles the fake out. Under
 // `--mobile` the globe's tap opens the panel rather than switching reading
 // (there is no right-click on a phone), so the switch is thrown through the
-// panel's own control there.
+// panel's own control there; with a pointer the switch-on click opens the
+// panel too (and the run puts it away with Escape before going on), while
+// the switch-off click must leave it closed.
 
 import {rigFeature} from "./lib/rig-feature.mjs";
 
@@ -64,6 +71,28 @@ async function setReading(page, code) {
 	await page.click(GLOBE);
 
 	if (!MOBILE) {
+		// Switching a channel on opens its panel with it, so the reader can
+		// see and adjust the languages at once; switching off is only that.
+		// The panel is put away again before the run goes on.
+		await page.sleep(300);
+
+		const panel = await page.evaluate(`!!document.querySelector(".translation-panel")`);
+
+		if (code) {
+			await page.check("the switch-on click opened the panel", panel);
+
+			if (panel) {
+				await page.evaluate(
+					`document.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", bubbles: true}))`
+				);
+				await page.waitFor(`!document.querySelector(".translation-panel")`, {
+					label: "the panel closed again before the next step",
+				});
+			}
+		} else {
+			await page.check("the switch-off click left the panel closed", !panel);
+		}
+
 		return;
 	}
 
@@ -78,6 +107,21 @@ async function setReading(page, code) {
 	await page.evaluate(`document.querySelector(".translation-panel-close").click()`);
 	await page.waitFor(`!document.querySelector(".translation-panel")`, {
 		label: "the close button put the panel away",
+	});
+}
+
+/**
+ * The chip's menu. A freshly translated line sits at the bottom edge of the
+ * scrollback, where the composer overlaps it, so the chip is brought into
+ * the middle before it is clicked.
+ */
+async function openChipMenu(page, label) {
+	await page.evaluate(
+		`document.querySelector(".msg-translation-chip").scrollIntoView({block: "center"})`
+	);
+	await page.click(".msg-translation-chip");
+	await page.waitFor(`!!document.querySelector(".context-menu-translate-retry-pick")`, {
+		label,
 	});
 }
 
@@ -261,6 +305,143 @@ async function scenario(page) {
 		(await page.evaluate(
 			`getComputedStyle(document.querySelector(".msg-translation-text")).color`
 		)) === bodyColor
+	);
+
+	// The chip's menu can retranslate from another source. The detector's
+	// runners-up are one click each; the line's own source is not among them
+	// (that item would only repeat Retranslate), and "Retranslate from…"
+	// opens the picker for any supported language.
+	await openChipMenu(page, "the chip menu offers the source items");
+
+	const sourceItems = await page.evaluate(
+		`[...document.querySelectorAll(".context-menu-translate-retry-from")].map((i) => i.textContent.trim())`
+	);
+
+	await page.check(
+		`the menu offers the detector's runners-up (${sourceItems.join(", ") || "none"})`,
+		sourceItems.length > 0 &&
+			sourceItems.every((label) => /^Retranslate from \S/.test(label)) &&
+			!sourceItems.includes("Retranslate from German")
+	);
+	await page.screenshot("chip-menu-sources");
+
+	const requestsBeforePicker = await page.evaluate(`(${REQUESTS}).length`);
+
+	await page.click(".context-menu-translate-retry-pick");
+	await page.waitFor(`!!document.querySelector(".source-language-picker")`, {
+		label: "the source picker opened",
+	});
+	await page.check(
+		MOBILE
+			? "the picker came up as the phone's sheet"
+			: "the picker came up as the desktop popover",
+		(await page.evaluate(`!!document.querySelector(".source-language-picker--sheet")`)) ===
+			MOBILE
+	);
+
+	const pickerRect = await page.rect(".source-language-picker");
+	const pickerViewport = await page.evaluate(`({w: innerWidth, h: innerHeight})`);
+
+	await page.check(
+		"the picker lies inside the viewport",
+		!!pickerRect &&
+			pickerRect.x >= 0 &&
+			pickerRect.y >= 0 &&
+			pickerRect.x + pickerRect.width <= pickerViewport.w &&
+			pickerRect.y + pickerRect.height <= pickerViewport.h
+	);
+
+	const fromLabels = await page.evaluate(
+		`[...document.querySelectorAll('select[name="translateFrom"] option')].map((o) => o.textContent.trim())`
+	);
+
+	await page.check(
+		`the picker names each language in itself (${fromLabels.length} options)`,
+		fromLabels.includes("Deutsch") &&
+			!fromLabels.includes("German") &&
+			fromLabels.every((label) => !/^[a-z]{2}$/i.test(label))
+	);
+	await page.screenshot("source-language-picker");
+
+	// Escape closes it and asks for nothing.
+	await page.evaluate(
+		`document.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", bubbles: true}))`
+	);
+	await page.waitFor(`!document.querySelector(".source-language-picker")`, {
+		label: "Escape closed the picker",
+	});
+	await page.sleep(700);
+	await page.check(
+		"Escape asked for no translation",
+		(await page.evaluate(`(${REQUESTS}).length`)) === requestsBeforePicker
+	);
+
+	// Chosen: French. The chip says so and the request carries it.
+	await openChipMenu(page, "the chip menu opened again");
+	await page.click(".context-menu-translate-retry-pick");
+	await page.waitFor(`!!document.querySelector(".source-language-picker")`, {
+		label: "the source picker opened again",
+	});
+	await page.evaluate(
+		`(() => { const s = document.querySelector('select[name="translateFrom"]'); s.value = "fr"; s.dispatchEvent(new Event("change", {bubbles: true})); })()`
+	);
+	await page.click(".source-language-picker-confirm");
+	await page.waitFor(`!document.querySelector(".source-language-picker")`, {
+		label: "Translate closed the picker",
+	});
+	await page.waitFor(`(${REQUESTS}).length > ${requestsBeforePicker}`, {
+		timeout: 15000,
+		label: "the chosen source went to the engine",
+	});
+
+	const frenchRequest = await page.evaluate(`(${REQUESTS})[(${REQUESTS}).length - 1]`);
+
+	await page.check(
+		`the request asked for French as the source (from: ${
+			frenchRequest && frenchRequest.from
+		}, to: ${frenchRequest && frenchRequest.to})`,
+		!!frenchRequest && frenchRequest.from === "fr" && frenchRequest.to === "en"
+	);
+	await page.check(
+		"the chip now reads from French",
+		(await page.evaluate(
+			`document.querySelector(".msg-translation-chip").textContent.trim()`
+		)) === "from French"
+	);
+	await page.waitFor(`${LINES} === 1`, {
+		timeout: 15000,
+		label: "the retranslation from French is in",
+	});
+
+	// The candidates survived the explicit source, so the detector's own
+	// guess is one click away again.
+	await openChipMenu(page, "the chip menu opened a third time");
+
+	const afterItems = await page.evaluate(
+		`[...document.querySelectorAll(".context-menu-translate-retry-from")].map((i) => i.textContent.trim())`
+	);
+
+	await page.check(
+		`an explicit source keeps the runners-up (${afterItems.join(", ") || "none"})`,
+		afterItems.includes("Retranslate from German") &&
+			!afterItems.includes("Retranslate from French")
+	);
+
+	// And one click puts the line back on German.
+	await page.evaluate(
+		`[...document.querySelectorAll(".context-menu-translate-retry-from")].find((i) => i.textContent.includes("German")).click()`
+	);
+	await page.waitFor(
+		`document.querySelector(".msg-translation-chip").textContent.trim() === "from German"`,
+		{timeout: 15000, label: "the one-click candidate put it back on German"}
+	);
+	await page.waitFor(`${LINES} === 1`, {timeout: 15000, label: "the German line is translated"});
+
+	const germanRequest = await page.evaluate(`(${REQUESTS})[(${REQUESTS}).length - 1]`);
+
+	await page.check(
+		`the one-click candidate asked for German (from: ${germanRequest && germanRequest.from})`,
+		!!germanRequest && germanRequest.from === "de"
 	);
 
 	other.say("this one is already in english so it needs no line at all");

@@ -48,6 +48,9 @@ interface TranslateFakeRequestLog {
 	text: string;
 	purpose: "read" | "write";
 	lines: number;
+	/** The source the request asked for: null when it was left to the engine. */
+	from: string | null;
+	to: string;
 	engine: EngineName;
 }
 
@@ -69,6 +72,8 @@ function logRequest(req: TranslateRequest, engine: EngineName): void {
 		text: req.text,
 		purpose: req.purpose,
 		lines: req.lines ? req.lines.length : 0,
+		from: req.from,
+		to: req.to,
 		engine,
 	});
 }
