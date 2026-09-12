@@ -256,6 +256,39 @@ Panel redraw after the live test (2026-09-12):
   only in the document while a menu is open, and no menu can be opened from
   the sheet.
 
+The prompt measured against the real model (2026-09-12):
+
+- **No worked example in the prompt.** The spec's one-shot pair
+  (`Example: hello, how are you? → hallo, wie geht es dir?`) is gone: over
+  `tools/translate-eval/prompts.json` the model copied it rather than read
+  it -- returning the example's own answer on lines that mention the target
+  language or carry placeholders, and translating only the first word of
+  the user's own `*German*` line. Offering it as prior chat turns was
+  measured too (`[system, user, assistant, user]`) and scored no better, so
+  `buildMessages` stays two messages.
+- **`EXAMPLES` stays as a guard, not as a prompt.** The table is now the
+  canned greetings the engine refuses: an answer equal to one of them is
+  skipped like an echo, and a reply that is nothing else fails the request
+  with "the model answered with the example" (request-class -- the model
+  stays loaded, the line offers Retry). A line that is both the source and
+  a canned greeting is an echo, not a refusal.
+- **The earlier lines render as `nick: text`,** not `<nick> text`: with
+  angle brackets a line that arrived with context came back untranslated.
+  `cleanOutput`'s `<nick>` strip stays for the reply target's line, which
+  still uses brackets.
+- **"Output only the translation of the last message, nothing else."**
+  is the last line before the cue, and only when something stands above the
+  line (topic, data block, earlier lines, reply target). On a bare request
+  it measurably costs the translation.
+- **No single-line cut.** A single-line generation is consumed whole and
+  the answer is its lines up to the first blank one, echoes and canned
+  answers dropped, joined with single spaces -- the spec's "first line that
+  is not an echo" dropped every later sentence of a long message. The token
+  budget is unchanged (`3 × input + 48 + 16`, capped at 512).
+- Nick protection is unchanged (measured with it off: same answers), and
+  so is the `⟦n⟧` placeholder syntax (measured as paired `<1>…</1>` tags:
+  same answers).
+
 ## Non-goals
 
 - No translation of the lobby, notices from the server, events (join, part,
