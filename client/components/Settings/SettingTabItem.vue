@@ -3,10 +3,12 @@
 		<router-link v-slot:default="{navigate, isExactActive}" :to="'/settings/' + to" custom>
 			<button
 				:class="['icon', className, {active: isExactActive || isActiveRoute}]"
+				:aria-label="name"
+				:title="name"
 				@click="navigate"
 				@keypress.enter="navigate"
 			>
-				{{ name }}
+				<span class="tab-label">{{ name }}</span>
 			</button>
 		</router-link>
 	</li>
