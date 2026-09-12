@@ -95,8 +95,10 @@ export function appConfigFor(
 export function maxTokensFor(req: TranslateRequest): number {
 	const input = req.lines ? req.lines.join("\n") : req.text;
 
-	// + 16: the empty thinking block WebLLM prepends when thinking is off.
-	return Math.min(512, 2 * estimateTokens(input) + 32 + 16);
+	// 3 × the input: room for the model to echo the line once before it
+	// translates (the cut skips the echo) and still finish. + 16: the empty
+	// thinking block WebLLM prepends when thinking is off.
+	return Math.min(512, 3 * estimateTokens(input) + 48 + 16);
 }
 
 /** The empty thinking block, and the opener on its own while the rest streams in. */

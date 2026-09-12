@@ -439,10 +439,10 @@ describe("translate/engines/webllm", () => {
 		expect(d.calls.interrupt).to.equal(0);
 	});
 
-	it("maxTokensFor is 2 × input tokens + 32 + the thinking block, capped at 512", () => {
-		expect(maxTokensFor(request({text: "abcd"}))).to.equal(50);
+	it("maxTokensFor is 3 × input tokens + 48 + the thinking block, capped at 512", () => {
+		expect(maxTokensFor(request({text: "abcd"}))).to.equal(3 * 1 + 48 + 16);
 		expect(maxTokensFor(request({text: "x".repeat(4000)}))).to.equal(512);
-		expect(maxTokensFor(request({lines: ["abcd", "efgh"]}))).to.equal(2 * 3 + 32 + 16);
+		expect(maxTokensFor(request({lines: ["abcd", "efgh"]}))).to.equal(3 * 3 + 48 + 16);
 	});
 
 	it("an abort interrupts generation", async () => {
