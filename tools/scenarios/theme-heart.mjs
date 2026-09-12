@@ -123,6 +123,9 @@ export default async function run(page) {
 	await page.click(`.channel-list-item[data-name="#seance"]`);
 	await page.waitFor(`document.querySelector("#input")`, {label: "back in #seance"});
 	await page.sleep(300);
+	// When the meadow's animal layers started animating: each file's visit is
+	// timed from its own load, and "heart-visitor" below waits out that clock.
+	const meadowSince = Date.now();
 
 	page.check(
 		"the stylesheet is themes/heart.css",
@@ -236,9 +239,13 @@ export default async function run(page) {
 
 	await page.screenshot("heart-seance");
 
-	// #seance is scene 3: the puppy is slot A and its first visit starts 14 s
-	// after the file loaded, the frog in slot B rather sooner.
-	await page.sleep(2500);
+	// #seance is scene 3: puppy (slot A), frog (slot B), a bunny on the
+	// plateau. Each file's visit is timed from when it loaded, and the three
+	// windows only overlap between 15 s and 21.9 s — puppy 15–38.4 s, frog
+	// 12–25.5 s, bunny-far 8–21.9 s — so wait out that clock rather than a
+	// fixed pause, which the checks above may already have outrun.
+	const VISITOR_AT = 20000;
+	await page.sleep(Math.max(500, VISITOR_AT - (Date.now() - meadowSince)));
 	await page.screenshot("heart-visitor");
 
 	await page.click(`.channel-list-item[data-name="#kittens"]`);

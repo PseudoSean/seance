@@ -600,8 +600,10 @@ strong,
 	 * its hop, the ladybug's its wings' transit, the kitten's its raised
 	 * tail — so every token is picked from the body that actually renders,
 	 * never from the box. The share of the box each animal fills, measured
-	 * off its still: horse 0.92, deer 0.92, puppy 0.62, kitten 0.82, bunny
-	 * (ears past the box) ~1, frog 0.57, ladybug 0.55, bird 0.10.
+	 * off its still: horse 0.92, deer 0.92, kitten 0.82, puppy 0.62, frog
+	 * 0.57, ladybug 0.55, bird 0.10. The bunny is not in that list because
+	 * its own still overflows its viewBox and so has no honest figure; its
+	 * 0.44 is the shipped, approved one.
 	 *
 	 * The second number a token moves is how far the animal travels:
 	 * on-screen stage width is `stage.aspect × the token`, in strips. Horse,
