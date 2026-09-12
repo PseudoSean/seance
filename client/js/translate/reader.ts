@@ -3,8 +3,9 @@
 // `socket.on("msg")` listener (registered by
 // socket-events/translate.ts after socket-events/msg.ts pushed the
 // message) runs eligibility → detection → context → queue, and a second
-// `socket.on("more")` does the same for a history page the reader asked
-// for (newest first, capped); the queue
+// `socket.on("more")` does the same for a history page (newest first,
+// capped), as does a replay batch and the requeue of a switch-on or a
+// language change; the queue
 // writes state.translations; the header globe and the panel call
 // setReading/setChannelOptions; the chip and the toolbar call
 // retranslate/showOriginal/retryTranslation.
@@ -17,7 +18,6 @@ import {
 	type ChannelTranslation,
 	channelKey,
 	defaultChannelTranslation,
-	forgetChannel,
 	forgetNetwork,
 	loadAll,
 	setChannelTranslation,
@@ -25,7 +25,7 @@ import {
 } from "./channelStore";
 import {buildContext} from "./context";
 import {LanguagePrior, detectLanguage} from "./detect";
-import {HISTORY_QUEUE_CAP, historyQueueOrder, isEligible, plainTextOf} from "./eligibility";
+import {ReplayBatches, historyQueueOrder, isEligible, plainTextOf} from "./eligibility";
 import {translateService} from "./index";
 import {type QueueItem, type QueueUpdate, TranslateQueue} from "./queue";
 import {protect, stripCopiedNickPrefix} from "./spans";
@@ -34,13 +34,12 @@ const queues = new Map<string, TranslateQueue>();
 const priors = new Map<string, LanguagePrior>();
 const arrivals = new Map<number, number>();
 /**
- * Replayed lines seen per channel since its last live one: a join replay (a
- * reconnect's catch-up, or a reload's) is translated up to
- * `HISTORY_QUEUE_CAP` and then left alone. The reader sees a replay one
- * line at a time, so this counts the window rather than picking its newest
- * lines — what a "load more" can do because it arrives as a page.
+ * Per channel id, bumped whenever its reading restarts (switched on, off,
+ * or to another language) or the channel goes: a history run or a
+ * detection still under way for the old state stops rather than queueing
+ * into the new one — twice, or into a channel that is no longer there.
  */
-const replays = new Map<number, number>();
+const generations = new Map<number, number>();
 /** The last item queued per message, for retries. */
 const items = new Map<number, {network: string; item: QueueItem}>();
 
@@ -106,6 +105,50 @@ function priorFor(network: ClientNetwork, channel: ClientChan): LanguagePrior {
 
 	return prior;
 }
+
+function generationOf(chanId: number): number {
+	return generations.get(chanId) ?? 0;
+}
+
+/** Still the reading the caller started under, in a channel still in the store. */
+function stillCurrent(chanId: number, generation: number): boolean {
+	return generationOf(chanId) === generation && !!store.getters.findChannel(chanId);
+}
+
+/**
+ * Queue a load of history lines, in the order given (newest first,
+ * `historyQueueOrder`), one after another so the queue's order is that
+ * order: a history page, a replay batch, or the requeue of a switch-on or a
+ * language change. Every line still goes through eligibility and detection.
+ */
+async function queueHistory(
+	network: ClientNetwork,
+	channel: ClientChan,
+	newestFirst: readonly ClientMessage[]
+): Promise<void> {
+	const generation = generationOf(channel.id);
+
+	for (const message of newestFirst) {
+		if (!stillCurrent(channel.id, generation)) {
+			return;
+		}
+
+		await translateMessage(network, channel, message, false, true);
+	}
+}
+
+/**
+ * A replay's lines grouped into the batch that brought them (eligibility.ts
+ * `ReplayBatches`): each batch of a catch-up or a bouncer replay queues at
+ * most `HISTORY_QUEUE_CAP` of its lines, newest first.
+ */
+const replayBatches = new ReplayBatches<ClientMessage>((chanId, newestFirst) => {
+	const target = store.getters.findChannel(chanId);
+
+	if (target) {
+		void queueHistory(target.network, target.channel, newestFirst);
+	}
+});
 
 function queueFor(network: ClientNetwork): TranslateQueue {
 	let queue = queues.get(network.uuid);
@@ -239,15 +282,45 @@ function commitChannel(
 	store.commit("translateChannelSet", {key: channelKey(network.uuid, channel.name), value});
 }
 
-/** Turn reading on (a language) or off (null) for a channel. */
+/**
+ * Turn reading on (a language) or off (null) for a channel. Off cancels
+ * what is queued. On, or another language, starts the channel's reading
+ * over on what it shows: its queued work and translations go, its language
+ * prior with them, and its messages are queued again, newest first and
+ * capped like a history load. The same language again changes nothing.
+ *
+ * An own line's translation is the composer's read-back (writer.ts), which
+ * the pipeline cannot make again since it never translates own lines: it is
+ * kept when it is already in the new language and goes with the rest when
+ * it is not.
+ */
 export function setReading(network: ClientNetwork, channel: ClientChan, lang: string | null): void {
+	const before = channelTranslation(network, channel).read;
 	const value = setChannelTranslation(network.uuid, channel.name, {read: lang});
 
 	commitChannel(network, channel, value);
 
-	if (!lang) {
-		queues.get(network.uuid)?.cancelChannel(channel.id);
+	if (lang === before) {
+		return;
 	}
+
+	generations.set(channel.id, generationOf(channel.id) + 1);
+	replayBatches.drop(channel.id);
+	queues.get(network.uuid)?.cancelChannel(channel.id);
+
+	if (!lang) {
+		return;
+	}
+
+	forgetItems(({item}) => item.chanId === channel.id);
+	store.commit(
+		"translationRemoveMany",
+		channel.messages
+			.filter((m) => !(m.self && store.state.translations[m.id]?.to === lang))
+			.map((m) => m.id)
+	);
+	priors.delete(channelKey(network.uuid, channel.name));
+	void queueHistory(network, channel, historyQueueOrder(channel.messages));
 }
 
 /**
@@ -290,10 +363,8 @@ function entryFor(from: string, to: string, candidates: string[]): TranslationEn
  * never null, the detector's candidates are carried over so the menu keeps
  * offering the alternatives, and nothing is noted into the channel's prior
  * (one reader's correction of one line is not the channel's language).
- * `options.history` is a "load more" the reader asked for: the switch-on
- * moment does not gate it (they are looking at that history now), while
- * everything else eligibility asks — own lines, pending ones, short ones —
- * still does.
+ * However old a line is, it is considered: reading covers what the channel
+ * shows, and history is bounded per load by its callers instead.
  */
 export async function translateMessage(
 	network: ClientNetwork,
@@ -301,8 +372,7 @@ export async function translateMessage(
 	message: ClientMessage,
 	force = false,
 	replay = false,
-	from?: string,
-	options: {history?: boolean} = {}
+	from?: string
 ): Promise<void> {
 	if (!message.text) {
 		return;
@@ -321,19 +391,10 @@ export async function translateMessage(
 
 	const initial = channelTranslation(network, channel);
 	const nicks = channel.users.map((u) => u.nick);
+	const generation = generationOf(channel.id);
 
-	if (!force) {
-		// A replayed line is gated by the switch-on moment alone, like a live
-		// one: a channel switched on today does not translate last week's
-		// scrollback, but a reconnect's catch-up and a reload's replay of
-		// what was said since are translated. A "load more" is the reader
-		// asking for that history, so `since` does not gate it — the rest of
-		// eligibility still does.
-		const since = options.history ? 0 : initial.since;
-
-		if (!initial.read || !isEligible(message, {since, nicks})) {
-			return;
-		}
+	if (!force && (!initial.read || !isEligible(message, {nicks}))) {
+		return;
 	}
 
 	const prior = priorFor(network, channel);
@@ -356,10 +417,16 @@ export async function translateMessage(
 
 	// Detection (the first call also awaits the franc chunk download) can
 	// take a while: re-read the switch afterwards, since a switch-off or a
-	// target change during that wait must not still ship a translation.
+	// target change during that wait must not still ship a translation (a
+	// target change queues the channel again itself), and a channel left
+	// meanwhile keeps its setting but has nothing to show a translation in.
 	const settings = channelTranslation(network, channel);
 
-	if (!force && !settings.read) {
+	if (!store.getters.findChannel(channel.id)) {
+		return;
+	}
+
+	if (!force && (!settings.read || generationOf(channel.id) !== generation)) {
 		return;
 	}
 
@@ -398,7 +465,7 @@ export async function translateMessage(
 		// A history line waits behind the channel's live ones (queue.ts): what
 		// is being said now matters more than what was said then. A forced
 		// request is never history, however old the line is — someone asked.
-		...(!force && (replay || options.history) ? {history: true as const} : {}),
+		...(!force && replay ? {history: true as const} : {}),
 	};
 
 	items.set(message.id, {network: network.uuid, item});
@@ -500,40 +567,28 @@ export function initReader(): void {
 
 		arrivals.set(target.channel.id, (arrivals.get(target.channel.id) ?? 0) + 1);
 
-		// A replay window: count what it brings and stop queueing past the
-		// cap, so a reload of a channel that has been on for a week does not
-		// queue a week. A live line closes the window.
-		if (data.replay) {
-			const seen = (replays.get(target.channel.id) ?? 0) + 1;
-
-			replays.set(target.channel.id, seen);
-
-			if (seen > HISTORY_QUEUE_CAP) {
-				return;
-			}
-		} else {
-			replays.delete(target.channel.id);
+		if (!channelTranslation(target.network, target.channel).read) {
+			return;
 		}
 
-		if (channelTranslation(target.network, target.channel).read) {
-			void translateMessage(target.network, target.channel, data.msg, false, data.replay);
+		// A replayed line (a reconnect's catch-up, a bouncer replay) waits
+		// for the rest of its batch, so the batch is queued newest first and
+		// capped like a history page: a reload of a channel that has been on
+		// for a week does not queue a week.
+		if (data.replay) {
+			replayBatches.add(target.channel.id, data.msg);
+		} else {
+			void translateMessage(target.network, target.channel, data.msg);
 		}
 	});
 
 	// After socket-events/more.ts prepended the page (import order in
 	// socket-events/index.ts): the objects in `data.messages` are the ones
-	// now in `channel.messages`, so their ids are store ids. The newest
-	// `HISTORY_QUEUE_CAP` of the page are queued, newest first, one after
-	// another so the queue's order is the order they were asked for.
-	//
-	// Two different things arrive as `more` (irc/history.ts `mode:
-	// "prepend"`): the page MessageList asked for, and a channel's *first*
-	// history fill when it is joined, which nobody asked for. Only the
-	// first skips the switch-on moment — the reader is looking at that page
-	// now; a join's fill is a replay like any other and must not translate
-	// last week's scrollback. `historyLoading` tells them apart:
-	// MessageList sets it immediately before its emit and
-	// socket-events/more.ts clears it a tick after this listener has run.
+	// now in `channel.messages`, so their ids are store ids. Both things
+	// that arrive as `more` (irc/history.ts `mode: "prepend"`) -- the page
+	// MessageList asked for and a channel's first history fill on joining
+	// it -- are a load like any other: the newest `HISTORY_QUEUE_CAP` of the
+	// page, newest first.
 	socket.on("more", (data) => {
 		const target = store.getters.findChannel(data.chan);
 
@@ -541,25 +596,15 @@ export function initReader(): void {
 			return;
 		}
 
-		const asked = target.channel.historyLoading;
-
-		void (async () => {
-			for (const message of historyQueueOrder(data.messages)) {
-				await translateMessage(
-					target.network,
-					target.channel,
-					message,
-					false,
-					true,
-					undefined,
-					{history: asked}
-				);
-			}
-		})();
+		void queueHistory(target.network, target.channel, historyQueueOrder(data.messages));
 	});
 
 	// Registered before socket-events/part.ts (import order), so the
-	// channel is still in the store when this runs.
+	// channel is still in the store when this runs. The channel's setting
+	// stays (channelStore and state.translateChannels): a rejoin finds
+	// reading still on, in the same language, and translates the history
+	// the join loads. What goes is this channel object's work: its queue,
+	// counters, remembered items and the translations of its messages.
 	socket.on("part", (data) => {
 		const target = store.getters.findChannel(data.chan);
 
@@ -568,18 +613,14 @@ export function initReader(): void {
 		}
 
 		queues.get(target.network.uuid)?.cancelChannel(target.channel.id);
-		forgetChannel(target.network.uuid, target.channel.name);
 		priors.delete(channelKey(target.network.uuid, target.channel.name));
 		arrivals.delete(target.channel.id);
-		replays.delete(target.channel.id);
+		generations.delete(target.channel.id);
+		replayBatches.drop(target.channel.id);
 		forgetItems(({item}) => item.chanId === target.channel.id);
 		store.commit(
 			"translationRemoveMany",
 			target.channel.messages.map((m) => m.id)
-		);
-		store.commit(
-			"translateChannelRemove",
-			channelKey(target.network.uuid, target.channel.name)
 		);
 	});
 
@@ -601,7 +642,8 @@ export function initReader(): void {
 
 			for (const c of network.channels) {
 				arrivals.delete(c.id);
-				replays.delete(c.id);
+				generations.delete(c.id);
+				replayBatches.drop(c.id);
 			}
 		}
 

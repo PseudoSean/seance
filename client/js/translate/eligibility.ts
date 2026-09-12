@@ -1,16 +1,19 @@
 // Which incoming messages the reading pipeline considers (spec § Reading
-// pipeline, 1): from someone else, not pending, a chat type, after the
-// channel's switch-on time, and with enough words once URLs, code, emoji,
-// formatting codes and nick mentions are gone. History — a join replay or a
-// "load more" — is bounded here as well. Vue-free.
+// pipeline, 1): from someone else, not pending, a chat type, and with enough
+// words once URLs, code, emoji, formatting codes and nick mentions are gone
+// -- however old: reading covers what is in the channel, not only what
+// arrives after the switch. History -- a join's fill, a replay or catch-up,
+// a "load more", the requeue of a switch-on or a language change -- is
+// bounded here as well: newest first, `HISTORY_QUEUE_CAP` per load. Vue-free.
 
 export const MIN_WORDS = 3;
 
 /**
- * How many of a channel's history lines one load may queue. A "load more"
- * the user asked for and a join replay are both held to this, so scrolling
- * back through a year does not queue a year: what is over the cap is left
- * untranslated until the reader asks for one of those lines by hand.
+ * How many of a channel's history lines one load may queue. A "load more",
+ * a join's fill, one replay or catch-up batch and the requeue of a switch-on
+ * are each held to this, so scrolling back through a year does not queue a
+ * year: what is over the cap is left untranslated until the reader asks for
+ * one of those lines by hand.
  */
 export const HISTORY_QUEUE_CAP = 40;
 
@@ -27,11 +30,63 @@ export function historyQueueOrder<T>(messages: readonly T[], cap = HISTORY_QUEUE
 	return messages.slice(-cap).reverse();
 }
 
+/**
+ * Replayed lines grouped into the load that brought them. A catch-up or a
+ * bouncer replay reaches the reader one `msg` at a time, but a whole batch
+ * is delivered in one synchronous run (irc/history.ts `deliverAppend`) and
+ * the bus dispatches synchronously, so the lines a channel receives before
+ * the scheduled flush runs are one batch. The flush gets them newest first
+ * and capped (`historyQueueOrder`); the next batch starts a fresh count, with
+ * no live line needed in between.
+ */
+export class ReplayBatches<T> {
+	private readonly pending = new Map<number, T[]>();
+	private readonly flush: (chanId: number, newestFirst: T[]) => void;
+	private readonly schedule: (fn: () => void) => void;
+	private readonly cap: number;
+
+	constructor(
+		flush: (chanId: number, newestFirst: T[]) => void,
+		schedule: (fn: () => void) => void = (fn) => queueMicrotask(fn),
+		cap = HISTORY_QUEUE_CAP
+	) {
+		this.flush = flush;
+		this.schedule = schedule;
+		this.cap = cap;
+	}
+
+	add(chanId: number, line: T): void {
+		const open = this.pending.get(chanId);
+
+		if (open) {
+			open.push(line);
+			return;
+		}
+
+		const batch = [line];
+
+		this.pending.set(chanId, batch);
+		this.schedule(() => {
+			// Dropped (a part, a switch) or replaced since: nothing to flush.
+			if (this.pending.get(chanId) !== batch) {
+				return;
+			}
+
+			this.pending.delete(chanId);
+			this.flush(chanId, historyQueueOrder(batch, this.cap));
+		});
+	}
+
+	/** Forget a channel's unflushed lines. */
+	drop(chanId: number): void {
+		this.pending.delete(chanId);
+	}
+}
+
 export interface EligibilityMsg {
 	type?: string;
 	self?: boolean;
 	pending?: boolean;
-	time: Date | number;
 	text?: string;
 }
 
@@ -73,14 +128,8 @@ export function wordCount(text: string): number {
 		.filter((word) => word !== "").length;
 }
 
-export function isEligible(msg: EligibilityMsg, opts: {since: number; nicks: string[]}): boolean {
+export function isEligible(msg: EligibilityMsg, opts: {nicks: string[]}): boolean {
 	if (msg.self || msg.pending || !msg.type || !CHAT_TYPES.has(msg.type) || !msg.text) {
-		return false;
-	}
-
-	const time = msg.time instanceof Date ? msg.time.getTime() : msg.time;
-
-	if (time < opts.since) {
 		return false;
 	}
 

@@ -57,7 +57,6 @@ describe("translate/channelStore", () => {
 			formality: "auto",
 			variant: "",
 			languages: [],
-			since: 0,
 			terms: [],
 		});
 	});
@@ -93,23 +92,33 @@ describe("translate/channelStore", () => {
 		expect(all["n1/#b"].languages).to.deep.equal([]);
 	});
 
-	it("switching reading on records the moment, and persists", () => {
-		const before = Date.now();
+	it("switching reading on persists", () => {
 		const state = setChannelTranslation("n1", "#Seance", {read: "en"});
 
 		expect(state.read).to.equal("en");
-		expect(state.since).to.be.at.least(before);
 		expect(JSON.parse(backend.data.get(STORAGE_KEY) as string)["n1/#seance"].read).to.equal(
 			"en"
 		);
 		expect(getChannelTranslation("n1", "#seance").read).to.equal("en");
 	});
 
-	it("changing the language while on keeps the moment; switching off clears it", () => {
-		const first = setChannelTranslation("n1", "#seance", {read: "en"}).since;
+	it("changing the language and switching off keep the rest of the record", () => {
+		setChannelTranslation("n1", "#seance", {read: "en", variant: "keep me"});
 
-		expect(setChannelTranslation("n1", "#seance", {read: "de"}).since).to.equal(first);
-		expect(setChannelTranslation("n1", "#seance", {read: null}).since).to.equal(0);
+		expect(setChannelTranslation("n1", "#seance", {read: "de"})).to.include({
+			read: "de",
+			variant: "keep me",
+		});
+		expect(setChannelTranslation("n1", "#seance", {read: null})).to.include({
+			read: null,
+			variant: "keep me",
+		});
+	});
+
+	it("a stored switch-on moment from an earlier version is not carried", () => {
+		backend.set(STORAGE_KEY, JSON.stringify({"n1/#a": {read: "en", since: 1234}}));
+
+		expect(loadAll()["n1/#a"]).to.deep.equal({...defaultChannelTranslation(), read: "en"});
 	});
 
 	it("term memory replaces a same-source same-language entry, keeps the newest, and is capped", () => {
@@ -223,8 +232,8 @@ describe("translate/channelStore", () => {
 		backend.set(
 			STORAGE_KEY,
 			JSON.stringify({
-				"n1/#a": {read: "xx", write: "zz", since: 1234, variant: "keep me"},
-				"n1/#b": {read: "de", write: "en", since: 1234},
+				"n1/#a": {read: "xx", write: "zz", variant: "keep me"},
+				"n1/#b": {read: "de", write: "en"},
 			})
 		);
 
@@ -232,15 +241,13 @@ describe("translate/channelStore", () => {
 
 		expect(all["n1/#a"].read).to.equal(null);
 		expect(all["n1/#a"].write).to.equal(null);
-		// `since` goes with an unusable read, the rest of the record stays.
-		expect(all["n1/#a"].since).to.equal(0);
+		// The rest of the record stays.
 		expect(all["n1/#a"].variant).to.equal("keep me");
 		expect(all["n1/#b"].read).to.equal("de");
 		expect(all["n1/#b"].write).to.equal("en");
-		expect(all["n1/#b"].since).to.equal(1234);
 	});
 
-	it("a patch cannot overwrite the term memory or the moment", () => {
+	it("a patch cannot overwrite the term memory", () => {
 		setChannelTranslation("n1", "#seance", {read: "en"});
 		rememberTerm("n1", "#seance", {source: "rig", target: "Testaufbau", from: "en", to: "de"});
 		const before = getChannelTranslation("n1", "#seance");
@@ -248,12 +255,10 @@ describe("translate/channelStore", () => {
 			...before,
 			read: "de",
 			terms: [],
-			since: 1,
-		} as Partial<Omit<ChannelTranslation, "since" | "terms">>);
+		} as Partial<Omit<ChannelTranslation, "terms">>);
 
 		expect(next.terms).to.deep.equal([
 			{source: "rig", target: "Testaufbau", from: "en", to: "de"},
 		]);
-		expect(next.since).to.equal(before.since);
 	});
 });

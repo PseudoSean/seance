@@ -1,7 +1,6 @@
 // Per-channel translation state (spec § Settings, persistence): the reading
 // and writing targets, formality and variant, the languages people write in
-// the channel, the moment reading was switched on (older messages are not
-// translated), and the channel's term memory. One JSON blob under
+// the channel, and the channel's term memory. One JSON blob under
 // `thelounge.translate`, keyed by network uuid and lower-cased channel name
 // like helpers/mediaTrust.ts. Vue-free; the store slice in store.ts mirrors
 // it for reactivity (reader.ts keeps the two in step).
@@ -43,8 +42,6 @@ export interface ChannelTranslation {
 	 * `DECLARED_MARGIN`. Empty when nothing was declared.
 	 */
 	languages: string[];
-	/** When reading was switched on (ms); 0 when off. */
-	since: number;
 	/** Term memory, oldest first, one entry per source term and target language. */
 	terms: TermEntry[];
 }
@@ -79,7 +76,6 @@ export function defaultChannelTranslation(): ChannelTranslation {
 		formality: "auto",
 		variant: "",
 		languages: [],
-		since: 0,
 		terms: [],
 	};
 }
@@ -148,7 +144,6 @@ function sanitize(value: unknown): ChannelTranslation | null {
 	out.formality = isFormality(raw.formality) ? raw.formality : "auto";
 	out.variant = typeof raw.variant === "string" ? raw.variant : "";
 	out.languages = languagesOf(raw.languages);
-	out.since = typeof raw.since === "number" && out.read ? raw.since : 0;
 	out.terms = Array.isArray(raw.terms)
 		? raw.terms
 				.filter(isTermEntry)
@@ -201,14 +196,13 @@ export function getChannelTranslation(
 export function setChannelTranslation(
 	networkUuid: string,
 	channelName: string,
-	patch: Partial<Omit<ChannelTranslation, "since" | "terms">>
+	patch: Partial<Omit<ChannelTranslation, "terms">>
 ): ChannelTranslation {
 	const all = loadAll();
 	const key = channelKey(networkUuid, channelName);
 	const current = all[key] ?? defaultChannelTranslation();
 	const rest = {...(patch as Partial<ChannelTranslation>)};
 
-	delete rest.since;
 	delete rest.terms;
 	const next: ChannelTranslation = {...current, ...rest};
 
@@ -217,12 +211,6 @@ export function setChannelTranslation(
 	// next page, and an unroutable language must not sit in it weighting
 	// detection.
 	next.languages = languagesOf(next.languages);
-
-	if (next.read && !current.read) {
-		next.since = Date.now();
-	} else if (!next.read) {
-		next.since = 0;
-	}
 
 	all[key] = next;
 	saveAll(all);

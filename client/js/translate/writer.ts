@@ -138,6 +138,15 @@ function asFormality(value: unknown): Formality {
 }
 
 /**
+ * The register a request in this channel is written in: the channel's own
+ * choice, or the global setting where the channel says "auto". The
+ * composer's translation and its read-back take the same one.
+ */
+function formalityOf(channel: Formality): Formality {
+	return channel !== "auto" ? channel : asFormality(store.state.settings.translateFormality);
+}
+
+/**
  * The channel's write target, synchronously, for a component to render off.
  * It does not wait for the device probe — the panel is the only writer of
  * `write`, and a placeholder that says "sent in German" a moment before the
@@ -270,10 +279,7 @@ export async function translateOutgoing(
 				},
 				terms: termsFor(settings.terms, from, to),
 				glossary: getBranding().translation?.glossary ?? [],
-				formality:
-					settings.formality !== "auto"
-						? settings.formality
-						: asFormality(store.state.settings.translateFormality),
+				formality: formalityOf(settings.formality),
 				variant: settings.variant,
 				sourceHint: from,
 				voice: voiceFor(channel, to),
@@ -503,7 +509,7 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 				},
 				terms: termsFor(settings.terms, entry.to, target),
 				glossary: getBranding().translation?.glossary ?? [],
-				formality: settings.formality,
+				formality: formalityOf(settings.formality),
 				variant: settings.variant,
 				sourceHint: entry.to,
 			}

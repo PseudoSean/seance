@@ -2,6 +2,7 @@ import {expect} from "chai";
 import {
 	HISTORY_QUEUE_CAP,
 	MIN_WORDS,
+	ReplayBatches,
 	historyQueueOrder,
 	isEligible,
 	plainTextOf,
@@ -9,14 +10,13 @@ import {
 } from "../../client/js/translate/eligibility";
 
 const nicks = ["ada", "jonas", "Storm"];
-const since = Date.parse("2026-09-11T12:00:00Z");
 
 function msg(overrides: Record<string, unknown> = {}) {
 	return {
 		type: "message",
 		self: false,
 		pending: false,
-		time: new Date(since + 1000),
+		time: new Date("2026-09-11T12:00:00Z"),
 		text: "Ja, gestern, der Batch-Cooldown greift jetzt auch bei leeren Zeilen.",
 		...overrides,
 	};
@@ -40,6 +40,93 @@ describe("translate/eligibility", () => {
 		expect(queued).to.not.include(0);
 	});
 
+	// A replay reaches the reader a line at a time, but one batch in one
+	// synchronous run: what arrives before the scheduled flush is one load.
+	describe("ReplayBatches", () => {
+		function batches(cap?: number) {
+			const scheduled: (() => void)[] = [];
+			const flushed: [number, number[]][] = [];
+			const grouper = new ReplayBatches<number>(
+				(chanId, lines) => flushed.push([chanId, lines]),
+				(fn) => scheduled.push(fn),
+				cap
+			);
+			const runScheduled = () => scheduled.splice(0).forEach((fn) => fn());
+
+			return {grouper, flushed, runScheduled, scheduled};
+		}
+
+		it("one run of lines is one batch, per channel, newest first", () => {
+			const {grouper, flushed, runScheduled, scheduled} = batches();
+
+			grouper.add(1, 10);
+			grouper.add(2, 20);
+			grouper.add(1, 11);
+			grouper.add(1, 12);
+
+			expect(scheduled.length).to.equal(2);
+			expect(flushed).to.deep.equal([]);
+
+			runScheduled();
+
+			expect(flushed).to.deep.equal([
+				[1, [12, 11, 10]],
+				[2, [20]],
+			]);
+		});
+
+		it("each batch is capped on its own, with no live line in between", () => {
+			const {grouper, flushed, runScheduled} = batches(2);
+
+			[1, 2, 3, 4].forEach((line) => grouper.add(7, line));
+			runScheduled();
+			[5, 6, 7].forEach((line) => grouper.add(7, line));
+			runScheduled();
+
+			expect(flushed).to.deep.equal([
+				[7, [4, 3]],
+				[7, [7, 6]],
+			]);
+		});
+
+		it("the default cap is HISTORY_QUEUE_CAP", () => {
+			const {grouper, flushed, runScheduled} = batches();
+
+			for (let i = 0; i < HISTORY_QUEUE_CAP + 5; i++) {
+				grouper.add(3, i);
+			}
+
+			runScheduled();
+
+			expect(flushed[0][1].length).to.equal(HISTORY_QUEUE_CAP);
+			expect(flushed[0][1][0]).to.equal(HISTORY_QUEUE_CAP + 4);
+		});
+
+		it("a dropped channel flushes nothing, and its next line starts a new batch", () => {
+			const {grouper, flushed, runScheduled} = batches();
+
+			grouper.add(4, 1);
+			grouper.drop(4);
+			grouper.add(4, 2);
+			runScheduled();
+
+			expect(flushed).to.deep.equal([[4, [2]]]);
+		});
+
+		it("flushes on a microtask by default", async () => {
+			const flushed: number[][] = [];
+			const grouper = new ReplayBatches<number>((_chanId, lines) => flushed.push(lines));
+
+			grouper.add(1, 1);
+			grouper.add(1, 2);
+			expect(flushed).to.deep.equal([]);
+
+			await Promise.resolve();
+
+			expect(flushed).to.deep.equal([[2, 1]]);
+		});
+	});
+
 	it("plainTextOf strips what a detector must not see", () => {
 		expect(
 			plainTextOf(
@@ -58,26 +145,25 @@ describe("translate/eligibility", () => {
 		expect(MIN_WORDS).to.equal(3);
 	});
 
-	it("a message from someone else, after the switch, with three words, qualifies", () => {
-		expect(isEligible(msg(), {since, nicks})).to.equal(true);
-		expect(isEligible(msg({type: "action"}), {since, nicks})).to.equal(true);
-		expect(isEligible(msg({type: "notice"}), {since, nicks})).to.equal(true);
+	it("a message from someone else with three words qualifies, however old", () => {
+		expect(isEligible(msg(), {nicks})).to.equal(true);
+		expect(isEligible(msg({type: "action"}), {nicks})).to.equal(true);
+		expect(isEligible(msg({type: "notice"}), {nicks})).to.equal(true);
+		expect(isEligible(msg({time: new Date(0)}), {nicks})).to.equal(true);
 	});
 
-	it("own, pending, other-typed and pre-switch messages do not", () => {
-		expect(isEligible(msg({self: true}), {since, nicks})).to.equal(false);
-		expect(isEligible(msg({pending: true}), {since, nicks})).to.equal(false);
-		expect(isEligible(msg({type: "join"}), {since, nicks})).to.equal(false);
-		expect(isEligible(msg({time: new Date(since - 1)}), {since, nicks})).to.equal(false);
-		expect(isEligible(msg({time: since - 1}), {since, nicks})).to.equal(false);
+	it("own, pending and other-typed messages do not", () => {
+		expect(isEligible(msg({self: true}), {nicks})).to.equal(false);
+		expect(isEligible(msg({pending: true}), {nicks})).to.equal(false);
+		expect(isEligible(msg({type: "join"}), {nicks})).to.equal(false);
 	});
 
 	it("too little text does not", () => {
-		expect(isEligible(msg({text: "ok danke"}), {since, nicks})).to.equal(false);
-		expect(
-			isEligible(msg({text: "https://example.test/a :tada: ada:"}), {since, nicks})
-		).to.equal(false);
-		expect(isEligible(msg({text: "`nur code hier drin`"}), {since, nicks})).to.equal(false);
-		expect(isEligible(msg({text: undefined}), {since, nicks})).to.equal(false);
+		expect(isEligible(msg({text: "ok danke"}), {nicks})).to.equal(false);
+		expect(isEligible(msg({text: "https://example.test/a :tada: ada:"}), {nicks})).to.equal(
+			false
+		);
+		expect(isEligible(msg({text: "`nur code hier drin`"}), {nicks})).to.equal(false);
+		expect(isEligible(msg({text: undefined}), {nicks})).to.equal(false);
 	});
 });
