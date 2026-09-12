@@ -128,8 +128,10 @@ Plan 3 (composer):
   the memory.
 - A write runs beside the reading queue but ahead of it: `holdReading()`
   stops new reading runs (a run already in flight finishes) while a
-  draft translates; requests are correlated by id, so two streams at
-  once are safe.
+  draft translates, and again while the round trip reads it back; the
+  worker correlates chunks by request id, and the WebLLM engine
+  interrupts only the generation the aborted request owns, so a stream
+  cancelled on one side never truncates the other.
 - A draft the detector cannot place (under ten characters, or
   undetermined) is translated as if written in the user's reading
   language when that differs from the write target; otherwise the
@@ -137,9 +139,10 @@ Plan 3 (composer):
   failure strip.
 - A multi-line draft translates as one batched numbered request when the
   route's engine batches, else line by line; a batch whose numbering
-  does not parse is retried line by line. Blank lines stay in place and
-  the line count survives, so a translated draft's multiline decision
-  sees the same shape the draft itself would have gotten.
+  does not parse, or a batch the candidate refuses, is retried line by
+  line. Blank lines between lines stay in place, so a translated draft's
+  multiline decision sees the shape the draft had; a draft whose only
+  non-blank line sits among blank lines is sent as that line alone.
 - The globe's light means reading: `translationOn` is `read !== null`.
   A write-only channel shows an unlit globe whose tooltip still says
   "sending in German" — the click toggles reading, so the light has to

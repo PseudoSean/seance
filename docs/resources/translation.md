@@ -79,9 +79,9 @@ target, session-only, so the model's phrasing stays consistent across a
 conversation without ever touching persisted storage.
 
 The reading queues are held (`holdReading()`/`releaseReading()`) for the
-length of the request, so a write is never left waiting behind a channel's
-incoming traffic; a read already in flight when the hold starts still
-finishes. `translateDraft` (`outgoing.ts`) then does the actual work: a
+length of the request, and again for the round-trip check, so a write is
+never left waiting behind a channel's incoming traffic; a read already in
+flight when the hold starts still finishes. `translateDraft` (`outgoing.ts`) then does the actual work: a
 single-line draft as one request, a multi-line one as a numbered batch when
 the route's engine batches (else line by line, falling back to line-by-line
 whenever the batch's numbering does not parse or the engine refuses the
