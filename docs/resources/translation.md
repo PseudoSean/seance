@@ -217,17 +217,26 @@ lines is one span rather than a fragment per line.
 
 The stages run in order and a placeholder never matches a later pattern:
 fenced code blocks (` ``` `, closing fence at least as long, the block's
-inner newlines inside the span), then inline code, URLs, `www.` links,
-emoji shortcodes and IRC formatting codes, then Markdown links, then
-emphasis pairs (`**`, `__`, `~~`, `||`, then `*`, `_`, longest first, only
-same-line pairs and only where the usual emphasis rule holds -- `2*3*4` is
-arithmetic), then a line's leading syntax (`#` to `######`, `-`/`*`/`+`,
-`1.`/`1)`, `>` with nesting), then the channel's nicknames (whole word,
-case-insensitive, longest first, at least two characters, never inside an
-earlier placeholder). This is a conservative reading of the client's own
-grammar (`helpers/ircmessageparser/parseMarkdown.ts`); protecting a little
-more than the client renders is safe, because a span is put back byte for
-byte.
+inner newlines inside the span), then TeX -- display math `$$…$$` (may span
+lines, block-level like a fence) and inline math `` $`…`$ `` (the
+dollar-backtick shape, closed on the same line -- what keeps "$5 and $10"
+out of the maths), each one verbatim span, fences included, run before the
+code pattern so a backtick inside the TeX is never read as a code span --
+then pipe tables (a header row, an alignment row `|---|:-:|…` with the same
+number of cells, then every following non-blank line with a pipe: the
+alignment row is one span -- nothing to translate there at all -- and every
+`|` that bounds a cell on the other rows is its own span, so the cells
+between them are the only thing left for the engine to translate), then
+inline code, URLs, `www.` links, emoji shortcodes and IRC formatting codes,
+then Markdown links, then emphasis pairs (`**`, `__`, `~~`, `||`, then `*`,
+`_`, longest first, only same-line pairs and only where the usual emphasis
+rule holds -- `2*3*4` is arithmetic), then a line's leading syntax (`#` to
+`######`, `-`/`*`/`+`, `1.`/`1)`, `>` with nesting), then the channel's
+nicknames (whole word, case-insensitive, longest first, at least two
+characters, never inside an earlier placeholder). This is a conservative
+reading of the client's own grammar
+(`helpers/ircmessageparser/parseMarkdown.ts`); protecting a little more
+than the client renders is safe, because a span is put back byte for byte.
 
 Every span says what it is, and each kind has its own restore policy
 (`restoreAll`):
@@ -243,8 +252,13 @@ Every span says what it is, and each kind has its own restore policy
 A placeholder number the engine invented is dropped rather than shown, and
 a span nested inside another (a link's `](target)`, whose target the URL
 stage already claimed) travels with its parent and is never reported lost.
-A line that holds nothing but a placeholder -- a fenced block on its own --
-is put back rather than sent for translation at all.
+A line that holds nothing but a placeholder -- a fenced block, a display
+math block or a table's alignment row on its own -- is put back rather than
+sent for translation at all. A pipe table's alignment row uses the
+**prefix** policy (its own line, since it is the whole line); a lost cell
+separator elsewhere in the table falls back to the **verbatim** policy and
+is appended after the text rather than put back at its column -- accepted
+as today's policy rather than special-cased.
 
 ## The prompt
 

@@ -256,6 +256,104 @@ describe("translate/spans", () => {
 		});
 	});
 
+	describe("math and tables", () => {
+		it("keeps inline math ($`…`$) intact and translates the words around it", () => {
+			const info = protect("see $`e^{i\\pi}`$ now");
+
+			expect(info.spans).to.deep.equal(["$`e^{i\\pi}`$"]);
+			expect(info.meta).to.deep.equal([{kind: "verbatim"}]);
+			expect(info.text).to.equal(`see ${placeholder(1)} now`);
+			expect(restoreAll(`[en] ${info.text}`, info)).to.equal("[en] see $`e^{i\\pi}`$ now");
+		});
+
+		it("a dollar amount is not math", () => {
+			expect(protect("$5 and $10")).to.deep.equal({
+				text: "$5 and $10",
+				spans: [],
+				meta: [],
+			});
+		});
+
+		it("display math ($$…$$) spanning lines is one span and the line count survives", () => {
+			const source = "vorher\n$$\n\\int_0^1 x\\,dx\n$$\nnachher";
+			const info = protect(source);
+
+			expect(info.spans).to.deep.equal(["$$\n\\int_0^1 x\\,dx\n$$"]);
+			expect(info.meta).to.deep.equal([{kind: "verbatim"}]);
+			expect(info.text).to.equal(`vorher\n${placeholder(1)}\nnachher`);
+
+			const out = restoreAll(info.text, info);
+
+			expect(out).to.equal(source);
+			expect(out.split("\n")).to.have.length(source.split("\n").length);
+		});
+
+		it("a backtick inside math is not read as inline code (runs before the code pattern)", () => {
+			const info = protect("$`a \\cdot b`$ und `code`");
+
+			expect(info.spans).to.deep.equal(["$`a \\cdot b`$", "`code`"]);
+			expect(info.meta).to.deep.equal([{kind: "verbatim"}, {kind: "verbatim"}]);
+		});
+
+		it("a three-row table round-trips with the cells transformed and the separators in place", () => {
+			const source = "| Name | Price |\n|---|---:|\n| Tea | 3 |";
+			const info = protect(source);
+			const lines = info.text.split("\n");
+
+			expect(lines[0]).to.equal(
+				`${placeholder(1)} Name ${placeholder(2)} Price ${placeholder(3)}`
+			);
+			expect(lines[1]).to.equal(placeholder(4));
+			expect(lines[2]).to.equal(
+				`${placeholder(5)} Tea ${placeholder(6)} 3 ${placeholder(7)}`
+			);
+			expect(info.meta[3]).to.deep.equal({kind: "prefix", line: 1});
+			expect(restoreAll(info.text, info)).to.equal(source);
+
+			// The engine sees `⟦1⟧ Name ⟦2⟧ Price ⟦3⟧` and translates the
+			// cells; the separator row is never sent at all (nothing but a
+			// placeholder), so the fake here stands in for what comes back.
+			const translated = [
+				`${placeholder(1)} Name ${placeholder(2)} Preis ${placeholder(3)}`,
+				lines[1],
+				`${placeholder(5)} Tee ${placeholder(6)} 3 ${placeholder(7)}`,
+			].join("\n");
+
+			expect(restoreAll(translated, info)).to.equal(
+				"| Name | Preis |\n|---|---:|\n| Tee | 3 |"
+			);
+		});
+
+		it("a lost cell separator is appended, today's verbatim policy", () => {
+			const source = "| A | B |\n|---|---|\n| 1 | 2 |";
+			const info = protect(source);
+			const withoutOne = info.text.replace(placeholder(2), "");
+
+			expect(restoreAll(withoutOne, info)).to.equal("| A  B |\n|---|---|\n| 1 | 2 | |");
+		});
+
+		it("a lost alignment row is re-prepended to its own line", () => {
+			const source = "| A | B |\n|---|---|\n| 1 | 2 |";
+			const info = protect(source);
+			const withoutSep = info.text.replace(placeholder(4), "");
+
+			expect(restoreAll(withoutSep, info)).to.equal(source);
+		});
+
+		it("a table cell keeps a URL protected within it", () => {
+			const info = protect("| Link |\n|---|\n| https://example.test/a |");
+
+			expect(info.spans).to.deep.equal([
+				"|",
+				"|",
+				"|---|",
+				"|",
+				"|",
+				"https://example.test/a",
+			]);
+		});
+	});
+
 	describe("stripNickPrefix", () => {
 		const nicks = ["alice", "bob-2", "de1a2b"];
 

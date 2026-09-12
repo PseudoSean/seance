@@ -299,6 +299,19 @@ describe("translate/outgoing", () => {
 			expect(text).to.equal("[de] erste Zeile\n[de] zweite *Zeile*");
 		});
 
+		it("keeps inline math intact through a draft's translation", async () => {
+			const r = rig((req) => [`[de] ${req.text}`]);
+			const text = await translateDraft(
+				r.deps,
+				request({text: "the result is $`x^2`$ and it is final"}),
+				new AbortController().signal,
+				() => {}
+			);
+
+			expect(r.requests[0].text).to.equal("the result is ⟦1⟧ and it is final");
+			expect(text).to.equal("[de] the result is $`x^2`$ and it is final");
+		});
+
 		it("times out, aborting the request it made", async () => {
 			const r = rig(() => ["never"]);
 			const never: OutgoingDeps = {

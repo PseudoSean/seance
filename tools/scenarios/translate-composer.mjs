@@ -19,7 +19,9 @@
 // span comes back with every one of them intact (the engine only ever saw
 // placeholders), the strip's Copy button's tooltip reads "Copied" and its
 // text is selectable, a fenced code block is never sent for translation and comes
-// back byte for byte; switching the target off restores plain sending.
+// back byte for byte; inline TeX and a bold word together survive both the
+// strip and the round trip's read-back row; switching the target off
+// restores plain sending.
 // Under `--mobile` the panel is asserted to be the full-screen sheet, with
 // formality as a segmented control and the close button putting it away.
 // Detection is real (franc); only the engine is scripted.
@@ -551,6 +553,34 @@ export default async function run(page) {
 	await page.evaluate(key("Escape", 27));
 	await page.waitFor(`!document.querySelector(${JSON.stringify(BAR)})`, {
 		label: "the code-block strip dismissed",
+	});
+	await page.fill(INPUT, "");
+
+	// 9d. Inline TeX and an emphasis pair together: the engine only ever
+	// sees a placeholder for the math and a marker pair for the bold word,
+	// and both the primary strip and the round-trip's read-back row keep
+	// them intact.
+	const math = "the result is $`x^2`$ and it is **final**";
+
+	await typeAndEnter(page, math);
+	await page.waitFor(`${barText} === ${JSON.stringify(`[German] ${math}`)}`, {
+		timeout: 25000,
+		label: "the strip kept the TeX and the bold word",
+	});
+	await page.check(
+		"the engine never saw the TeX literally",
+		!(await page.evaluate(`${REQUESTS}.slice(-1)[0].text`)).includes("x^2")
+	);
+	await page.waitFor(
+		`(document.querySelector(".translate-bar-check .translate-bar-text") || {}).textContent === ${JSON.stringify(
+			`[English] [German] ${math}`
+		)}`,
+		{timeout: 25000, label: "the read-back row kept the TeX and the bold word too"}
+	);
+	await page.screenshot("composer-math");
+	await page.evaluate(key("Escape", 27));
+	await page.waitFor(`!document.querySelector(${JSON.stringify(BAR)})`, {
+		label: "the math strip dismissed",
 	});
 	await page.fill(INPUT, "");
 

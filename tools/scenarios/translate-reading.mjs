@@ -21,8 +21,10 @@
 // marker fails once and its retry button succeeds the second time; a line carrying `*Betonung*` and the page's own nick keeps both
 // (the chip's menu offers Copy translation and the line is selectable); a
 // `draft/multiline` message is translated line by line rather than losing
-// all but its first; switching off stops new ones; and a REDACT of a
-// translated line takes its translation away with the original text.
+// all but its first; a two-line `$$…$$` display-math block survives a
+// translation byte for byte, embedded line break included; switching off
+// stops new ones; and a REDACT of a translated line takes its translation
+// away with the original text.
 // Detection is real (franc); only the engine is scripted.
 //
 // The speaker negotiates message-tags + echo-message so it learns the
@@ -129,6 +131,8 @@ function speaker(nick) {
 	const ws = new WebSocket(IRCD, ["text.ircv3.net"]);
 	/** The msgid the server gave each line this speaker sent, by text. */
 	const msgids = new Map();
+	/** Guarantees a fresh batch tag even for two calls in the same millisecond. */
+	let batchSeq = 0;
 	let joinedResolve;
 	let joinedReject;
 	const joined = new Promise((resolve, reject) => {
@@ -181,7 +185,7 @@ function speaker(nick) {
 		say: (text) => ws.send(`PRIVMSG ${CHANNEL} :${text}`),
 		/** One `draft/multiline` message: the page joins the batch's lines with newlines. */
 		sayMultiline(lines) {
-			const tag = `ml${Date.now().toString(36)}`;
+			const tag = `ml${Date.now().toString(36)}${(batchSeq++).toString(36)}`;
 
 			ws.send(`BATCH +${tag} draft/multiline ${CHANNEL}`);
 
@@ -744,6 +748,62 @@ async function scenario(page) {
 
 	await page.screenshot("translated-multiline");
 
+	// nefarious2 charges a per-connection cooldown after a delivered
+	// draft/multiline batch and silently drops the opener of one started
+	// inside that window (its lines still arrive, just unbatched) --
+	// documented in CLAUDE.md's multiline section. The speaker's previous
+	// batch just landed, so the next one waits it out.
+	await page.sleep(5000);
+
+	// Display TeX spanning a two-line `$$…$$` block: the fences and the
+	// content between them are never sent for translation and come back
+	// byte for byte (the embedded line break included), with the prose
+	// around them translated as usual.
+	const mathMarker = `Mathezeile${RUN}`;
+	const mathLines = [
+		`Hier folgt eine Formel namens ${mathMarker}: $$\\int_0^1 x\\,dx`,
+		`$$ und das war die Formel.`,
+	];
+
+	other.sayMultiline(mathLines);
+
+	const mathRow = `[...document.querySelectorAll(".msg")].filter((m) => m.textContent.includes(${JSON.stringify(
+		mathMarker
+	)})).pop()`;
+
+	await page.waitFor(`!!(${mathRow})`, {
+		timeout: 15000,
+		label: "the math-block message arrived",
+	});
+	await page.waitFor(
+		`!!(${mathRow}) && !!(${mathRow}).querySelector('.msg-translation[data-status="done"]')`,
+		{timeout: 25000, label: "the math-block message is translated"}
+	);
+
+	// The `$$…$$` fences are markdown syntax, stripped by the renderer like
+	// any other marker (`*bold*` doesn't show its asterisks either): the
+	// TeX renders through the same `MathSpan`/KaTeX path any other display
+	// math does, raw TeX until the KaTeX chunk lands and rendered markup
+	// after -- so byte-for-byte survival is proved structurally (a
+	// `.md-math-block` span exists at all, rather than the fences and the
+	// backslashes showing up as mangled prose) and the surrounding words
+	// are proved by the ordinary translated-line check.
+	await page.check(
+		"the display math survived as its own span, not mangled into prose",
+		await page.evaluate(
+			`!!(${mathRow}).querySelector(".msg-translation-text .md-math-block")`
+		)
+	);
+	await page.check(
+		"the prose around the math block was translated",
+		await page.evaluate(
+			`(${mathRow}).querySelector(".msg-translation-text").textContent.includes("[English]") && (${mathRow}).querySelector(".msg-translation-text").textContent.includes(${JSON.stringify(
+				mathMarker
+			)})`
+		)
+	);
+	await page.screenshot("translated-math-block");
+
 	// Off again: a new German line gets nothing.
 	await setReading(page, "");
 	await page.waitFor(
@@ -755,7 +815,7 @@ async function scenario(page) {
 		label: "post-switch line arrived",
 	});
 	await page.sleep(1500);
-	await page.check("no translation after switching off", (await page.evaluate(LINES)) === 9);
+	await page.check("no translation after switching off", (await page.evaluate(LINES)) === 10);
 
 	// A deleted message keeps neither its text nor its translation: the
 	// speaker redacts one of its own translated lines (an unauthenticated
@@ -794,7 +854,7 @@ async function scenario(page) {
 	);
 	await page.check(
 		"the redaction took exactly one translated line away",
-		(await page.evaluate(LINES)) === 8
+		(await page.evaluate(LINES)) === 9
 	);
 	await page.screenshot("redacted-translation");
 

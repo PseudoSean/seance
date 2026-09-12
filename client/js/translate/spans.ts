@@ -150,6 +150,116 @@ function protectFences(text: string, spans: Spans): string {
 	return out.join("\n");
 }
 
+// TeX, the client's own two shapes (parseMarkdown.ts math scan and
+// mathBlock()): display math `$$…$$`, block-level like a fence and free to
+// span lines, and inline math `` $`…`$ `` — the dollar-backtick shape,
+// closed on the same line — is what keeps "$5 and $10" out of the maths.
+// Each match is one verbatim span, fences included, and this runs before
+// the inline-code pattern (so a backtick inside the TeX is never read as a
+// code span) and before emphasis (so `_`/`^` inside TeX are not markers).
+function protectMath(text: string, spans: Spans): string {
+	let out = "";
+	let i = 0;
+
+	while (i < text.length) {
+		if (text[i] === "$" && text[i + 1] === "$") {
+			const close = text.indexOf("$$", i + 2);
+
+			if (close > i + 2) {
+				out += spans.push(text.slice(i, close + 2), {kind: "verbatim"});
+				i = close + 2;
+				continue;
+			}
+		} else if (text[i] === "$" && text[i + 1] === "`") {
+			const close = text.indexOf("`$", i + 2);
+			const lineEnd = text.indexOf("\n", i + 2);
+
+			if (close > i + 2 && (lineEnd === -1 || close < lineEnd)) {
+				out += spans.push(text.slice(i, close + 2), {kind: "verbatim"});
+				i = close + 2;
+				continue;
+			}
+		}
+
+		out += text[i];
+		i += 1;
+	}
+
+	return out;
+}
+
+// A row's cells, the client's own trimming rule (parseMarkdown.ts
+// rowCells): the line must hold a pipe, and the outer pipes (with the
+// padding right against them) are not cells.
+function rowCells(line: string): string[] | undefined {
+	if (!line.includes("|")) {
+		return undefined;
+	}
+
+	let inner = line.trim();
+
+	if (inner.startsWith("|")) {
+		inner = inner.slice(1);
+	}
+
+	if (inner.endsWith("|")) {
+		inner = inner.slice(0, -1);
+	}
+
+	return inner.split("|").map((cell) => cell.trim());
+}
+
+const SEP_CELL_RX = /^:?-+:?$/;
+
+function protectRowPipes(line: string, spans: Spans): string {
+	return line.replace(/\|/g, () => spans.push("|", {kind: "verbatim"}));
+}
+
+// A GFM pipe table, the client's own pre-pass (parseMarkdown.ts
+// scanTables/tableAt): a header row, an alignment row (`|---|:-:|…`) with
+// the same number of cells, then every following non-blank line that holds
+// a pipe. The alignment row carries nothing to translate at all — one span
+// for the whole line, re-prepended to its own line if the engine drops it —
+// and every `|` that bounds a cell on the other rows is its own span, so
+// what is left between them is the cell text, still open to every later
+// stage (a URL or an emphasis pair inside a cell is still protected).
+function protectTables(text: string, spans: Spans): string {
+	const lines = text.split("\n");
+	let i = 0;
+
+	while (i < lines.length) {
+		const head = rowCells(lines[i]);
+		const sep = i + 1 < lines.length ? rowCells(lines[i + 1]) : undefined;
+
+		if (
+			!head ||
+			!sep ||
+			sep.length !== head.length ||
+			!sep.every((cell) => SEP_CELL_RX.test(cell))
+		) {
+			i += 1;
+			continue;
+		}
+
+		let end = i + 2;
+
+		while (end < lines.length && lines[end].trim() !== "" && lines[end].includes("|")) {
+			end += 1;
+		}
+
+		lines[i] = protectRowPipes(lines[i], spans);
+		lines[i + 1] = spans.push(lines[i + 1], {kind: "prefix", line: i + 1});
+
+		for (let row = i + 2; row < end; row++) {
+			lines[row] = protectRowPipes(lines[row], spans);
+		}
+
+		i = end;
+	}
+
+	return lines.join("\n");
+}
+
 // `[text](target)`: the brackets are a marker pair and the link text is
 // translated between them.
 function protectLinks(text: string, spans: Spans): string {
@@ -291,13 +401,17 @@ function protectNicks(text: string, nicks: string[], spans: Spans): string {
 
 /**
  * Protect, stage by stage: each stage runs on the previous one's output, so
- * a placeholder never matches a later pattern. Fenced blocks, then the
- * opaque spans (code, URLs, shortcodes, formatting codes), then links,
- * emphasis pairs, line prefixes and finally the nicknames.
+ * a placeholder never matches a later pattern. Fenced blocks, then TeX,
+ * then pipe tables, then the opaque spans (code, URLs, shortcodes,
+ * formatting codes), then links, emphasis pairs, line prefixes and finally
+ * the nicknames.
  */
 export function protect(text: string, options: ProtectOptions = {}): Protected {
 	const spans = new Spans();
 	let out = protectFences(text, spans);
+
+	out = protectMath(out, spans);
+	out = protectTables(out, spans);
 
 	for (const pattern of PATTERNS) {
 		out = out.replace(pattern, (match: string) => spans.push(match, {kind: "verbatim"}));

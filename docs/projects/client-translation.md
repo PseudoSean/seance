@@ -342,6 +342,26 @@ Retranslating from a chosen source (2026-09-12):
   that turns reading on now opens the panel too; a click that turns it off
   only turns it off, and the touch tap is unchanged.
 
+TeX and pipe tables survive translation (2026-09-12):
+
+- **Math is verbatim, one span each.** Display math `$$…$$` (may span
+  lines, fences included) and inline math `` $`…`$ `` (the dollar-backtick
+  shape, one line) are protected before the code-span pattern and before
+  emphasis, mirroring `parseMarkdown.ts`'s own math scan without importing
+  it.
+- **A pipe table's alignment row uses the prefix policy, not verbatim.**
+  The ruling that shipped this called it a verbatim span "re-prepended to
+  its line if lost" -- that behaviour is what `spans.ts`'s **prefix** kind
+  already does (a lost prefix goes back to its own line), so the row is a
+  `{kind: "prefix"}` span rather than a second, special-cased verbatim
+  policy. A lost cell separator elsewhere in the table keeps the ordinary
+  **verbatim** policy and is appended after the text instead of at its
+  column -- accepted as-is, not special-cased.
+- **Tables and math run before the opaque-span stage, after fences.** So a
+  URL or emphasis pair inside a table cell is still protected by the later
+  stages; only the pipes themselves and the whole alignment row are claimed
+  up front.
+
 ## Non-goals
 
 - No translation of the lobby, notices from the server, events (join, part,
