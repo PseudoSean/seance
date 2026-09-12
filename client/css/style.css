@@ -4377,6 +4377,16 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	font-style: italic;
 }
 
+/* Why it failed, from the engine: an ORT session error or a model id, so it
+   is long, it is not prose, and it must not push the retry button off the
+   row. `anywhere` lets it break mid-token; the title has the untruncated
+   text. */
+#chat .msg-translation-reason {
+	color: var(--body-color-muted);
+	font-size: 0.85em;
+	overflow-wrap: anywhere;
+}
+
 #chat .msg-translation-retry {
 	padding: 0;
 	border: 0;
@@ -5072,6 +5082,14 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 #form .translate-bar-failed {
 	color: var(--body-color-muted);
 	font-style: italic;
+}
+
+/* The same reason in the composer's strip (see .msg-translation-reason). */
+#form .translate-bar-reason {
+	margin-left: 0.4em;
+	color: var(--body-color-muted);
+	font-size: 0.85em;
+	overflow-wrap: anywhere;
 }
 
 #form .translate-bar-button {

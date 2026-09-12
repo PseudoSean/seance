@@ -82,7 +82,12 @@
 				<span
 					v-if="outgoing.status === 'failed'"
 					class="translate-bar-text translate-bar-failed"
-					>couldn't translate, send as written?</span
+					>couldn't translate, send as written?<span
+						v-if="outgoing.error"
+						class="translate-bar-reason"
+						:title="outgoing.error"
+						>{{ shortReason(outgoing.error) }}</span
+					></span
 				>
 				<span v-else class="translate-bar-text" dir="auto" :lang="outgoing.to"
 					>{{ outgoing.text
@@ -248,6 +253,9 @@ import {
 
 /** How long after a Return its late-arriving newline is still recognised. */
 const ENTER_NEWLINE_WINDOW_MS = 500;
+
+/** Characters of a failure reason the strip shows; the title has all of it. */
+const REASON_MAX = 120;
 import {TypingReporter} from "../js/helpers/typingReporter";
 import TypingIndicator from "./TypingIndicator.vue";
 
@@ -482,6 +490,19 @@ export default defineComponent({
 		const outgoingChip = computed(() =>
 			outgoing.value ? `to ${languageName(outgoing.value.to, navigator.language)}` : ""
 		);
+
+		// Why it failed, beside "couldn't translate": an ORT session error or
+		// a model id is long and multi-line, so the strip shows the head of it
+		// and the title carries the whole thing.
+		const shortReason = (error: string | null) => {
+			if (!error) {
+				return "";
+			}
+
+			const text = error.replace(/\s+/g, " ").trim();
+
+			return text.length > REASON_MAX ? `${text.slice(0, REASON_MAX - 1)}…` : text;
+		};
 
 		const canCheck = computed(() => !!outgoing.value && canCheckOutgoing(outgoing.value));
 
@@ -1068,6 +1089,7 @@ export default defineComponent({
 			connectNetwork,
 			outgoing,
 			outgoingChip,
+			shortReason,
 			outgoingBusy,
 			canCheck,
 			sendTooltip,

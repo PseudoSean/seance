@@ -122,6 +122,12 @@ export class TranslateService {
 
 		let attemptedView: ModelView | null = null;
 		let completed = false;
+		// "<model id>: <reason>" of the last candidate whose model would not
+		// load in this call. Every candidate failing that way is still
+		// TRANSLATION_UNAVAILABLE to the caller, but a bare "no translation
+		// engine can take this request" is what a broken CPU tier looked like
+		// for a whole live test: the reason has to travel with it.
+		let lastLoadError: string | null = null;
 		// One listener for the whole call, whichever candidate is currently
 		// running: a candidate that fails to load falls through to the next,
 		// which would otherwise register another listener on the caller's
@@ -141,7 +147,11 @@ export class TranslateService {
 				const route = await this.route(request.from, request.to);
 
 				if (!route) {
-					throw new Error(TRANSLATION_UNAVAILABLE);
+					throw new Error(
+						lastLoadError
+							? `${TRANSLATION_UNAVAILABLE}: ${lastLoadError}`
+							: TRANSLATION_UNAVAILABLE
+					);
 				}
 
 				const client = this.client();
@@ -204,6 +214,16 @@ export class TranslateService {
 						throw e;
 					}
 
+					// The same record `download()` keeps, so Settings' model row
+					// says why this one is out and the caller's error carries
+					// the reason of the last candidate that would not load.
+					const message = e instanceof Error ? e.message : String(e);
+
+					view.status = "failed";
+					view.error = message;
+					this.publish();
+
+					lastLoadError = `${route.ref.id}: ${message}`;
 					this.down.add(route.candidate);
 				}
 			}

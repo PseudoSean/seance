@@ -15,6 +15,9 @@
 		</button>
 		<span v-if="entry.status === 'failed'" class="msg-translation-failed">
 			couldn't translate
+			<span v-if="entry.error" class="msg-translation-reason" :title="entry.error">{{
+				shortReason(entry.error)
+			}}</span>
 			<button type="button" class="msg-translation-retry" @click.stop="retry">retry</button>
 		</span>
 		<span v-else class="msg-translation-text" :lang="entry.to" dir="auto">
@@ -41,6 +44,9 @@ import {retranslate, retryTranslation, showOriginal} from "../js/translate/reade
 import {languageName} from "../js/translate/languages";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
 import ParsedMessage from "./ParsedMessage.vue";
+
+/** Characters of a failure reason the line shows; the title has all of it. */
+const REASON_MAX = 120;
 
 export default defineComponent({
 	name: "TranslationLine",
@@ -89,7 +95,20 @@ export default defineComponent({
 
 		const retry = () => retryTranslation(props.network, props.channel, props.message);
 
-		return {entry, chipText, chipLabel, openMenu, retry};
+		// Why it failed, after "couldn't translate": an engine's error can be
+		// long and multi-line, so the line shows the head of it and the title
+		// carries the whole thing.
+		const shortReason = (error: string | null) => {
+			if (!error) {
+				return "";
+			}
+
+			const text = error.replace(/\s+/g, " ").trim();
+
+			return text.length > REASON_MAX ? `${text.slice(0, REASON_MAX - 1)}…` : text;
+		};
+
+		return {entry, chipText, chipLabel, openMenu, retry, shortReason};
 	},
 });
 </script>

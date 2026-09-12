@@ -176,6 +176,42 @@ describe("translate/service", () => {
 		r.service.dispose();
 	});
 
+	it("a load failure lands on the model view and travels with the error", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		await r.service.models();
+		r.llm.failLoad = new Error("device lost");
+		// failLoad is one-shot; both seq2seq candidates (the OPUS pair, then
+		// NLLB) have to refuse for the loop to run out of route.
+		r.seq2seq.load = () => Promise.reject(new Error("Can't create a session"));
+
+		let message = "";
+
+		try {
+			await text(r.service.translate(base));
+		} catch (e) {
+			message = (e as Error).message;
+		}
+
+		// The generic message would say nothing about why the tier is dead;
+		// the last candidate's model and reason ride with it.
+		expect(message).to.equal(
+			`${TRANSLATION_UNAVAILABLE}: ${catalog.nllb.id}: Can't create a session`
+		);
+
+		const views = await r.service.models();
+
+		expect(views.find((v) => v.ref.id === catalog.llm.id)).to.include({
+			status: "failed",
+			error: "device lost",
+		});
+		expect(views.find((v) => v.ref.id === catalog.opus["de-en"].id)).to.include({
+			status: "failed",
+			error: "Can't create a session",
+		});
+		r.service.dispose();
+	});
+
 	it("a request the model cannot serve is reported, not blamed on the model", async () => {
 		const r = rig("gpu");
 		clock = r.clock;

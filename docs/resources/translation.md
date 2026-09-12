@@ -37,7 +37,9 @@ of one channel and pair batched, items that fell two hundred messages
 behind dropped, an engine paused after three failures in a row). The
 result lives in `store.state.translations` keyed by the message id and
 renders as `TranslationLine.vue` under the original: a "from German"
-chip, the text streaming with a caret, a retry when it failed; the chip's
+chip, the text streaming with a caret, a retry when it failed (with the
+engine's reason beside "couldn't translate" when there is one -- a model
+that would not load says so rather than leaving the tier looking broken); the chip's
 menu retranslates or hides the line, and the toolbar's Translate does one
 message on request in a channel that is off -- and brings a hidden
 translation back, at no cost, once the chip's "Show original only" has
@@ -94,7 +96,8 @@ The result lives in `store.state.outgoingTranslations`, keyed by channel
 id, and `ChatInput.vue` renders it as the `.translate-bar` strip above the
 input: a "to German" chip, the streaming text with a caret, a Check button
 once the round trip has something to check, Send (disabled while pending),
-and Edit. A failure shows "couldn't translate, send as written?" and turns
+and Edit. A failure shows "couldn't translate, send as written?" -- followed by the
+engine's reason, truncated, with the whole of it in the title -- and turns
 Send into "Send as written". The second Enter is the same `input` bus emit
 as any other send (`deliver`, so history, replies and edits do not
 diverge): it ships the strip's translation, or the draft itself after a

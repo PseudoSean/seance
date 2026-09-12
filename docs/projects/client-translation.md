@@ -172,6 +172,18 @@ Plan 3 (composer):
   one channel is only ever sent in that channel, and only while its
   network is up.
 
+Fix wave after the first live test on a CPU-only device (2026-09-12):
+
+- A load failure is no longer swallowed. `service.translate()` records the
+  reason on the model view the way `download()` does (Settings' row reads
+  `Failed: …`), and when every candidate has failed in one call the thrown
+  `TRANSLATION_UNAVAILABLE` carries `<model id>: <reason>` of the last one.
+  The composer's strip and the reading line show that reason beside
+  "couldn't translate", truncated to 120 characters with the whole of it in
+  the `title`. The first live test on a CPU-only device produced nothing but
+  "couldn't translate, send as written?" for a fault (ONNX Runtime refusing
+  the q8 weights) that was named precisely in an error nobody could see.
+
 ## Non-goals
 
 - No translation of the lobby, notices from the server, events (join, part,
