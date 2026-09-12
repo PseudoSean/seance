@@ -368,15 +368,24 @@ export default {
 		first: 7,
 		period: 64,
 		stage: {aspect: 22},
+		// The two gait seams are ramped, not stepped: a pinned gait next to a
+		// pinned hold changes the ground speed by the whole 58.7 units/s in one
+		// frame, which reads as the bear stopping dead and starting again from
+		// nothing. Same fix the deer and the kitten use — the stop ramps across
+		// the blend into `stand`, and a short `blendTo` ramps back up into the
+		// waddle. A ramp's hold is scored on its mean, so the ramping segments
+		// carry no hold and the still ones follow behind them.
 		segments: [
 			{gait: "waddle", cycles: 21, fps: 20, travel: 58.7},
-			{pose: "stand", hold: 0.2, blend: 0.4, fps: 12, travel: 0},
+			{pose: "stand", hold: 0, blend: 0.4, fps: 12, travel: [58.7, 0]},
+			{pose: "stand", hold: 0.2, blend: 0, fps: 6, travel: 0},
 			{pose: "saluting", hold: 0, blend: 0.55, fps: 24, travel: 0},
 			{pose: "waving", hold: 0.4, blend: 0.5, fps: 12, travel: 0},
 			{wobble: "wave", pose: "waving", secs: 1.8, fps: 12, travel: 0},
 			{pose: "saluting", hold: 0, blend: 0.45, fps: 12, travel: 0},
 			{pose: "stand", hold: 0, blend: 0.55, fps: 24, travel: 0},
 			{pose: "stand", hold: 0.3, blend: 0, fps: 6, travel: 0},
+			{blendTo: "waddle", secs: 0.3, fps: 12, travel: [0, 58.7]},
 			{gait: "waddle", cycles: 26, fps: 20, travel: 58.7},
 		],
 	},
