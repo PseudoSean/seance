@@ -284,6 +284,21 @@ export default {
 	rig,
 	colours: {near: "#9b82dc", far: "#cbbfee"},
 	budget: 160 * 1024,
+	/**
+	 * What `client/themes/heart.css` has to say about this animal — the half of
+	 * the box coupling no audit can reach, checked by `test/themes/heart.ts`
+	 * (tools/heart/README.md § The audit):
+	 *
+	 * - `height` is `--heart-bunny-h`, the on-screen height of the *box*, in
+	 *   strips;
+	 * - `box` is the `viewBox.h` it was picked against, so a box that grows
+	 *   without its token growing by the same ratio fails there instead of
+	 *   shipping an animal a different size;
+	 * - `stageWidth` is `stage.aspect × viewBox.h`, which a box change must
+	 *   leave alone — the aspect scales the other way — or the animal travels a
+	 *   different distance.
+	 */
+	theme: {height: 0.6026, box: 126, stageWidth: 2208},
 	// Hop in, sit up and twitch, drop and hop on. `travel: 160` (about 1.3
 	// body lengths a hop) — 85 read as barely moving, about half a body
 	// length per 0.8 s hop. Cycles retuned so the bunny sits up near the

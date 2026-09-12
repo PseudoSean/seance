@@ -451,6 +451,21 @@ export default {
 	rig,
 	colours: {near: "#c98fb4", far: "#e8c9dd"},
 	budget: 150 * 1024,
+	/**
+	 * What `client/themes/heart.css` has to say about this animal — the half of
+	 * the box coupling no audit can reach, checked by `test/themes/heart.ts`
+	 * (tools/heart/README.md § The audit):
+	 *
+	 * - `height` is `--heart-deer-h`, the on-screen height of the *box*, in
+	 *   strips;
+	 * - `box` is the `viewBox.h` it was picked against, so a box that grows
+	 *   without its token growing by the same ratio fails there instead of
+	 *   shipping an animal a different size;
+	 * - `stageWidth` is `stage.aspect × viewBox.h`, which a box change must
+	 *   leave alone — the aspect scales the other way — or the animal travels a
+	 *   different distance.
+	 */
+	theme: {height: 0.5781, box: 206, stageWidth: 3136},
 	// Walk in, stop, graze, look up with an ear flick, bound off. The walk
 	// carries most of the visit — cycles are free in bytes (a gait stores one
 	// cycle however many it runs), so the distance is bought with cycles and

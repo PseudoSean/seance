@@ -20,6 +20,8 @@ leaves the old files in place and exits 1.
 
     node tools/heart/contact-sheet.mjs bird --height=520 --cell=0.5,1.35 --cols=6
 
+    node tools/heart/contact-sheet.mjs --all --out=tmp/sheet-cast.png
+
 `contact-sheet.mjs` photographs one animal's visit through a real browser — twelve cells
 across the window it is visible, each one a slot like the theme's over the theme's sky and
 ground, the stage's background-position tracked so the animal is in the middle of its cell
@@ -31,6 +33,15 @@ the puppy). Chromium is launched through `tools/browser-drive.mjs` and must be: 
 64 MB `/dev/shm` kills the renderer on these layers without the `--disable-dev-shm-usage`
 the driver passes. The audit says whether a rig is sound; the sheet is the only thing that
 says whether the animal looks like the animal.
+
+The ground band under the animal is a share of a _strip_, so drawing it needs the animal's
+`--heart-<animal>-h` — which the tool reads from the rig's own `theme` block, so footing is
+right without passing anything (`--slot=<token>` still overrides, to see an animal against
+some other slot's band). **`--all` shoots the whole cast**, one row per animal, four moments
+of one visit each, into a single PNG: eight visits end to end, about four minutes. Each row
+is rendered at its own magnification (the `CAST` table in the file) because a shared scale
+would show the bird — 76 units of bird in an 800-unit box — as a speck; the sheet says so
+under its title, and rows are therefore not comparable in size.
 
 ## Tune it fast
 
@@ -265,10 +276,22 @@ the causes out:
   scales an animal by `viewBox.h` and the stage is `aspect × viewBox.h`, so `viewBox.h`,
   `--heart-<animal>-h` (× new/old), that animal's far slot height in every scene (the same way)
   and `stage.aspect` (× old/new) move together, or the animal changes size and travel on screen.
-  The puppy's rig header is the worked example, twice over;
+  The puppy's rig header is the worked example, twice over.
+  **Two of those four numbers are in a stylesheet no audit here can read**, so the rig records
+  what the theme must say: `theme: {height, box, stageWidth}` in every cast rig — the token, the
+  `viewBox.h` it was picked against, and the stage width in rig units that a box change must
+  preserve. `test/themes/heart.ts` derives the stylesheet's numbers from those and fails with
+  the arithmetic spelled out ("scale the token by 100/91 to 0.4835, scale stage.aspect by
+  91/100, and set theme.box to 100"). A far slot is no longer a number at all: the scenes say
+  `calc(0.7 * var(--heart-<animal>-h))`. Bring a held animal back and it needs a `theme` block
+  before the theme can cast it;
 - the outline's length changes ≤ 5 % between stored frames (near), ≤ 10 % (a far leg).
-  Current headroom: bunny near sits at 4.18 % of the 5 % limit, puppy far at 6.96 % of the
-  10 % limit — so a new rig tuned blind against the limits knows how much room there really is;
+  Current headroom across the cast of eight: near runs 0.84 % (horse) to **4.68 % (kitten)**,
+  then bunny 4.18, ladybug 3.58, bird 3.34, frog 3.19, puppy 2.62, deer 1.84; far runs 0.31 %
+  (deer) to **6.96 % (puppy)**, then frog 4.61, ladybug 3.35, bunny 2.47, kitten 2.32, bird
+  1.14, horse 0.47. So a new rig tuned blind against the limits knows how much room there
+  really is — and two of the eight are close enough that their next retouch has to be measured
+  rather than guessed;
 - the visit ends off-stage on either side, the off-stage gap is ≥ 2 s;
 - sizes: each animated file (the near tint and the `-far` one, which is the same
   shape) within its rig's own `budget`, stills ≤ 8 KB. The cast's budgets, which
@@ -316,12 +339,21 @@ time on stage and the audit says so.
 
 ## Budget and browsers
 
-Each near file is 100–200 KB uncompressed (gzip ≈ ¼ on the wire); the theme's directory
-stays under 2.8 MB with the whole cast in it. That is not what a page downloads: a scene
-casts three animals, and a `url()` sitting in a CSS custom property that no resolved
-`background-image` substitutes is never fetched, so a page pulls three animal files out of
-the directory however many are committed — the theme's browser scenario
-(`tools/scenarios/theme-heart.mjs`) counts what one actually fetches. Chromium runs SMIL —
+Each near file is 85–192 KB uncompressed (the horse's 191.5 KB is 28.3 KB gzipped, about
+15 % — better than the ¼ rule of thumb); the theme's directory is 2.11 MB with the whole cast
+in it, against a 2.8 MB cap. That is not what a page downloads: a scene casts three animals,
+and a `url()` sitting in a CSS custom property that no resolved `background-image` substitutes
+is never fetched, so a page pulls three animal files out of the directory however many are
+committed.
+
+**That claim is the whole budget argument, so it is a check and not a memory.** The theme's
+browser scenario (`tools/scenarios/theme-heart.mjs`) reads the open conversation's cast off the
+computed `--heart-slot-a/-b/-f`, reads what the browser actually requested out of Resource
+Timing, and asserts the two sets are equal — both derived from the running page, since a
+hardcoded cast in that file has already gone stale once. Measured 2026-09-12: 3 of the theme's
+32 animal files fetched on a scene-3 channel, 5 after a second scene, and 29 never requested.
+Watched failing, too: with one rule added to the built stylesheet so a real `background-image`
+substitutes `var(--heart-horse)`, the run reports "4 … also horse.svg" and exits non-zero. Chromium runs SMIL —
 chained clips, additive transforms, path morphs — inside a CSS `background-image`
 (`spike-svg-background/`). Firefox and Safari still need their rows in that spike's README
 filled in.

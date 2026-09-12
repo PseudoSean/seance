@@ -1,6 +1,6 @@
 # The `<3` theme
 
-Date: 2026-09-10. Branch `theme-heart` (worktree `.claude/worktrees/theme-heart`). Status: plan 1 (theme, motion, meadow's sky) and plan 2 (the animals) landed; plan 3 (the remaining seven animals) follows.
+Date: 2026-09-10. Branch `theme-heart` (worktree `.claude/worktrees/theme-heart`). Status: plan 1 (theme, motion, meadow's sky), plan 2 (the first three animals) and plan 3 (the cast of eight) landed; plan 4 (day, night and weather, §11) follows.
 
 Mockups the decisions were made on (private artifacts, viewable only by their author):
 
@@ -45,6 +45,168 @@ the clip chain's total duration must agree with the sampled time on stage within
 hold (a stopped, sitting or turning pose) must apply under 5 units/s — bunny's `crouch` needed
 a `travel: 0` pin to pass the latter (its blend read ~5.3 units/s of spurious drift). Neither
 rule fired on the puppy; the reported slide was not reproduced.
+
+## Plan 3 (landed 2026-09-12)
+
+The meadow's cast grows from three animals to eight and the six scenes are recast around them
+(§5.4, §6.4). Five new rigs shipped — deer, kitten, frog, ladybug, bird — and two more were
+built, reviewed and then **held** by the user (§14).
+
+### The cast, and where each one stands
+
+A scene casts two near animals and, in five of the six, a distant visitor on the plateau. Phones drop slot B
+(§5.7), so slot A is always a mid or large animal — that constraint decides which way round
+each pair is cast, and `test/themes/heart.ts` pins it.
+
+| Scene | Slot A (near) | Slot B (near, desktop only) | Plateau                     |
+| ----- | ------------- | --------------------------- | --------------------------- |
+| 0     | horse         | bunny                       | deer                        |
+| 1     | deer          | frog                        | puppy                       |
+| 2     | kitten        | ladybug                     | horse                       |
+| 3     | puppy         | frog                        | bunny                       |
+| 4     | kitten        | bird                        | _(none — the sparse scene)_ |
+| 5     | bunny         | horse                       | kitten                      |
+
+A near slot takes the animal's own token; the plateau takes `calc(0.7 * var(--heart-X-h))`,
+written as the calc it always was rather than as a fifth literal per scene.
+
+| Animal  | `--heart-<animal>-h` | box (`viewBox.h`) | stage (rig units) | crossing (strips) | cast in           |
+| ------- | -------------------- | ----------------- | ----------------- | ----------------- | ----------------- |
+| horse   | 0.7176               | 187               | 2752              | 10.6              | 0, 5, 2 (plateau) |
+| deer    | 0.5781               | 206               | 3136              | 8.8               | 1, 0 (plateau)    |
+| puppy   | 0.6172               | 115               | 1962              | 10.5              | 3, 1 (plateau)    |
+| bunny   | 0.6026               | 126               | 2208              | 10.6              | 0, 5, 3 (plateau) |
+| kitten  | 0.44                 | 91                | 2184              | 10.6              | 2, 4, 5 (plateau) |
+| frog    | 0.3                  | 74                | 1776              | 7.2               | 1, 3              |
+| ladybug | 0.19                 | 65                | 1170              | 3.4               | 2                 |
+| bird    | 1.2                  | 800               | 8800              | 13.2              | 4                 |
+
+The token sizes the animal's **box**, not the animal: the bird's box is 800 units tall for 76
+units of bird. The four numbers in a row are one relationship — grow a box and the token, the
+plateau's share and `stage.aspect` all move — and it was hand-maintained until this plan's last
+task, which moved it into each rig's `theme` block with `test/themes/heart.ts` holding the
+stylesheet to it (below).
+
+### Deviations from §6.4, and why
+
+- **The teddy bear and the dolphin are held** (§14, 2026-09-12): both were built and reviewed,
+  and the user's call — "it can't move" — stands against a stuffed toy that walks itself. The
+  rigs stay under `tools/heart/rigs/`, `HELD` in `tools/heart/generate.mjs` says why, no files
+  are generated, and `test/tools/heart/files.ts` asserts their files are **absent**, since
+  `client/themes/heart/` ships whole to every deploy.
+- **The ladybug was redrawn as a beetle.** The first draft's smooth dome with two half-ellipse
+  wings read as a _rabbit_ at meadow size — and worse in the far tint, where near and far parts
+  are one colour and only shape tells them apart. The redraw gives it a head, a pronotum and a
+  visible elytra split, and is judged with `pose-sheet --flat`, which paints every layer one
+  colour precisely because that is the read that failed.
+- **The bird needed no theme change beyond its token.** §5.4 imagined "the only slot with a
+  high route"; none exists. A viewBox 800 units tall for 76 units of bird puts the sky _inside
+  the animal's own box_, so the file flies the bird itself and the theme still places one
+  ordinary slot. The token is 1.2 strips of box for a 21 px bird.
+- **Four tokens were not picked by the aspect rule** (deer, frog, ladybug, bird), which would
+  have made a deer as tall as a horse and a ladybug larger than a frog; they were chosen off a
+  line-up of all eight stills over the theme's own sky and ground.
+- **Scene 4 casts the kitten near and the bird in slot B**, not the other way round: phones drop
+  slot B, and a phone showing a single 21 px bird in an empty sky is not a scene.
+
+### The two invariants that were added after they had already shipped broken
+
+Both were known before they broke, and neither was written down anywhere a machine could read.
+That is the reusable part.
+
+1. **The clip chain's period must equal the travel's period.** A file's shape and its position
+   run on two clocks — the outline morphs are a syncbase chain (`begin="s3.end"`), the travel,
+   flip and fade are `animateTransform`s with `dur` = the loop period — and nothing
+   re-synchronises them, so a difference is not an error, it is an error _added every loop_.
+   The restart offset was `gap` (`period − first − onStage`) where it had to be
+   `period − onStage`, so every loop restarted the shape `first` seconds early: 2 s a loop for
+   the horse, 14 s for the puppy. Within minutes the animals were sliding around the meadow in
+   frozen poses, which is how the user found it.
+   **Why nothing caught it:** the audit compared the chain against `onStage` — correct, and a
+   different quantity; the contact sheet photographs _one_ visit, so a defect that needs several
+   loops to appear cannot appear in it; and an earlier note in `tools/heart/README.md` had
+   dismissed the whole class as "about three seconds a week, not worth twelve churned files".
+   Now: the offset is computed from the durations _as they are written_ (every `dur` goes
+   through `fmt`), the audit refuses a file whose two periods differ by more than half a
+   millisecond, and `test/tools/heart/files.ts` asserts it over the committed SVGs.
+
+2. **Nothing may be drawn outside its own viewBox.** An outer `<svg>` clips to its viewBox, so
+   an outline that leaves the box is silently cut — and the box is also what the fade-out is
+   keyed to. Four of the first five rigs shipped with it: the bunny lost 17 units of ear
+   _through the sit-up that is the whole point of the animal_, the deer 16 units of muzzle
+   through the graze, the horse its ear tips, a hoof and the muzzle at full stretch, the puppy
+   3 units at the left and below.
+   **Why nothing caught it:** the idle pose fits comfortably, so a still tells you nothing; only
+   the extremes of a pose leave the box. One rig author did check it by hand and wrote the
+   result in his report — "nothing leaves the viewBox, tightest margin 7.2 units" — which is the
+   whole lesson: the knowledge existed, in prose, in a file nothing reads.
+   Now: `boxOverflow` (`tools/heart/lib/build.mjs`) takes every point of every layer of every
+   stored frame, the still and the puppy's hearts, allows 1 rig unit for the resampled polygon's
+   own slop, and names the frame and the three-number fix when it refuses.
+
+3. **And, before it could produce a third bug: the rig-to-CSS size coupling.** The two numbers
+   in the rig (`viewBox.h`, `stage.aspect`) and the two in the stylesheet (the height token, the
+   plateau's share) have to move together, and the audit can only see the rig's half. Each cast
+   rig now carries `theme: {height, box, stageWidth}` — the token the stylesheet must use, the
+   box it was picked against, and the stage width a box change must preserve — and
+   `test/themes/heart.ts` derives what `heart.css` must say from it. Grow a box and forget the
+   theme and the failure reads: _"kitten's box is 100 but --heart-kitten-h (0.44) was picked
+   against 91: scale the token by 100/91 to 0.4835, scale stage.aspect by 91/100, and set
+   theme.box to 100"_.
+
+### The tools that now exist
+
+| Tool                            | Costs                            | What it is for                                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tools/heart/pose-sheet.mjs`    | under a second, no browser       | The rig's own outline pipeline straight into a PNG grid: every named pose, n phases of a gait, sequence times, or `self` to check the rasteriser against the shipped still. `--view=x,y,w,h` crops a box that is mostly empty, `--flat` paints every layer one colour — the far tint's read, which is where the ladybug failed. **Tune here.** |
+| `tools/heart/gait-probe.mjs`    | a second, no browser             | The two numbers a still cannot show: how far each foot lifts through a cycle (a swing that clears the 6-unit stance threshold by nothing reads as planted, and the animal drags) and the ground speed frame by frame, _applied beside raw_, so a cycle-seam lurch that a pinned speed hides is still visible. The deer needed it twice.        |
+| `tools/heart/contact-sheet.mjs` | one visit, ~40 s, a real browser | The **shipped file** as a viewer sees it: twelve cells across the window the animal is visible, tracked so it is centred in each, over the theme's sky and ground at the animal's own slot token. `--all` shoots the whole cast, one row each, in about four minutes. **Confirm here.**                                                        |
+
+`tools/scenarios/theme-heart.mjs` is the fourth: the theme inside the real app, in a real
+browser, including what the page fetches (below).
+
+### Budget, and the claim it rests on
+
+`client/themes/heart/` is **2.11 MB** — 32 SVGs (1.99 MB) and three variable fonts (111 KB) —
+against the 2.8 MB cap. Each animated file is inside its rig's own budget, which the audit
+refuses to write over and `test/tools/heart/files.ts` holds the committed files to:
+
+| Animal  | Each animated file | Budget | Near ≤ 5 % | Far ≤ 10 % | Frames | Visit / loop |
+| ------- | ------------------ | ------ | ---------- | ---------- | ------ | ------------ |
+| horse   | 191.5 KB           | 200 KB | 0.84 %     | 0.47 %     | 86     | 19.7 / 60 s  |
+| puppy   | 147.9 KB           | 160 KB | 2.62 %     | 6.96 %     | 120    | 26.9 / 75 s  |
+| bunny   | 110.9 KB           | 160 KB | 4.18 %     | 2.47 %     | 76     | 17.8 / 50 s  |
+| deer    | 141.5 KB           | 150 KB | 1.84 %     | 0.31 %     | 98     | 34.3 / 66 s  |
+| kitten  | 144.9 KB           | 150 KB | 4.68 %     | 2.32 %     | 115    | 46.0 / 72 s  |
+| frog    | 85.3 KB            | 100 KB | 3.19 %     | 4.61 %     | 95     | 17.9 / 58 s  |
+| ladybug | 94.8 KB            | 100 KB | 3.58 %     | 3.35 %     | 109    | 27.9 / 44 s  |
+| bird    | 94.3 KB            | 120 KB | 3.34 %     | 1.14 %     | 162    | 13.8 / 36 s  |
+
+**The headroom that matters to the next rig author** is in the two percentage columns: the
+outline-length rule is the one that decides how a beat can be written, and the cast is at
+0.84–4.68 % of a 5 % limit near (kitten worst, then bunny) and 0.31–6.96 % of a 10 % limit far
+(puppy worst — the puppy's far legs). Under 1 % (horse) means a rig with room to spare; 4.7 %
+means a rig whose next retouch has to be measured, not guessed. Sizes have less drama in them:
+every animal is inside its budget, the tightest being the kitten (144.9 of 150 KB) and the deer
+(141.5 of 150), the loosest the bunny (110.9 of 160). On the wire it is gzip that decides —
+the horse's 191.5 KB file is 28.3 KB gzipped, about 15 %.
+
+**A page never fetches the directory.** A scene casts three animals, and a `url()` sitting in a
+CSS custom property that no resolved `background-image` substitutes is _never requested_ — that
+is what makes a 2.11 MB directory a three-file download and the whole budget argument rests on
+it. It is now a check rather than a memory: `tools/scenarios/theme-heart.mjs` reads the scene's
+cast off the computed `--heart-slot-a/-b/-f`, reads what the browser actually asked for out of
+Resource Timing, and asserts the two are equal.
+
+Measured, 2026-09-12, in Chromium against the built `public/`:
+
+- on `#seance` (scene 3): **3 of the theme's 32 animal files fetched** — `puppy.svg`,
+  `frog.svg`, `bunny-far.svg` — and the other 29, the horse among them, never requested;
+- after opening `#kittens` (scene 4) as well: **5**, the union of the two casts;
+- **falsified**: with one rule added to the built stylesheet so a real `background-image`
+  substitutes `var(--heart-horse)`, the same run reports _"4 … also horse.svg"_ and fails. The
+  check has teeth, and the mechanism is exactly the one claimed: substituted, the file is
+  fetched; unsubstituted, it is not.
 
 ## 1. What it is
 
@@ -214,6 +376,13 @@ Per frame: pose → union of the near parts into one closed path (paper.js in No
 `client/themes/heart/<animal>.svg`: viewBox, two (or three) `<path>`s (far legs first, the near outline last so it paints on top), each morphing through the sequence's clips with `<animate attributeName="d" calcMode="linear">`; clips are chained with syncbase timing — one `<animate>` per clip, each beginning on the previous clip's `.end` — and a gait clip stores one cycle and repeats it with its own `repeatCount`, never `indefinite` on the whole path. Frames at 15–24 fps for sequences, 30 fps for gaits; coordinates are integers, written as relative deltas along the outline (`encodePath`, `tools/heart/lib/svg.mjs`). `<animal>-still.svg`: the idle pose. There is no `routes.css` fragment: routes live inside the SVG (decision 1), not as CSS keyframes matched against the sequence's stops and turns.
 
 ### 6.4 Cast and behaviours
+
+**Implemented, plan 3 (landed 2026-09-12)**, with two rows held: the **teddy bear** and the
+**dolphin** were built, reviewed and set aside by the user (§14), so their rigs stay and their
+files are deliberately absent. The other eight ship; the plan-3 block above has the scene table,
+the tokens and the deviations. Two behaviours were added to the drafted list: the puppy's hearts
+rise from its sit (they had never been visible until its box grew for them), and the ladybug was
+redrawn as a beetle after the first draft read as a rabbit.
 
 | Animal     | Sequence (loop)                                                                               | Notes                                                       |
 | ---------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
