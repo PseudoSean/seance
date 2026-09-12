@@ -71,6 +71,80 @@
 				✕
 			</button>
 		</div>
+		<div
+			v-if="outgoing"
+			:class="['translate-bar', {failed: outgoing.status === 'failed'}]"
+			role="status"
+			aria-live="polite"
+		>
+			<div class="translate-bar-row">
+				<span class="translate-bar-chip">{{ outgoingChip }}</span>
+				<span
+					v-if="outgoing.status === 'failed'"
+					class="translate-bar-text translate-bar-failed"
+					>couldn't translate, send as written?</span
+				>
+				<span v-else class="translate-bar-text" dir="auto" :lang="outgoing.to"
+					>{{ outgoing.text
+					}}<span
+						v-if="outgoing.status === 'pending'"
+						class="translate-bar-caret"
+						aria-hidden="true"
+					></span
+				></span>
+				<button
+					v-if="
+						outgoing.status === 'done' && outgoing.check.status === 'idle' && canCheck
+					"
+					type="button"
+					class="translate-bar-button translate-bar-check-button"
+					title="Show how it reads back"
+					@mousedown.prevent
+					@click="checkOutgoingNow"
+				>
+					Check
+				</button>
+				<button
+					type="button"
+					class="translate-bar-button translate-bar-send"
+					:disabled="outgoingBusy || !canSend"
+					@mousedown.prevent
+					@click="onSubmit()"
+				>
+					{{ outgoing.status === "failed" ? "Send as written" : "Send" }}
+				</button>
+				<button
+					type="button"
+					class="translate-bar-button translate-bar-edit"
+					title="Keep typing (Escape)"
+					@mousedown.prevent
+					@click="cancelOutgoingNow"
+				>
+					Edit
+				</button>
+			</div>
+			<div
+				v-if="outgoing.check.status !== 'idle'"
+				class="translate-bar-row translate-bar-check"
+			>
+				<span class="translate-bar-check-label">reads back as:</span>
+				<span v-if="outgoing.check.status === 'failed'" class="translate-bar-failed"
+					>couldn't check</span
+				>
+				<span
+					v-else
+					class="translate-bar-text"
+					dir="auto"
+					:lang="outgoing.check.to ?? undefined"
+					>{{ outgoing.check.text
+					}}<span
+						v-if="outgoing.check.status === 'pending'"
+						class="translate-bar-caret"
+						aria-hidden="true"
+					></span
+				></span>
+			</div>
+		</div>
 		<span id="nick">{{ network.nick }}</span>
 		<label for="input" class="sr-only">Message input</label>
 		<textarea
@@ -112,7 +186,7 @@
 		<span
 			id="submit-tooltip"
 			class="tooltipped tooltipped-w tooltipped-no-touch"
-			:data-tooltip="canSend ? 'Send message' : 'Not connected'"
+			:data-tooltip="sendTooltip"
 		>
 			<!-- `mousedown.prevent` keeps focus in the textarea: a tap that blurs
 			it drops the keyboard, the viewport grows and the button moves out
@@ -121,7 +195,7 @@
 				id="submit"
 				type="submit"
 				aria-label="Send message"
-				:disabled="!canSend"
+				:disabled="!canSend || outgoingBusy"
 				@mousedown.prevent
 			/>
 		</span>
@@ -157,6 +231,16 @@ import {
 	startEdit,
 } from "../js/helpers/compose";
 import {hasVirtualKeyboard} from "../js/helpers/device";
+import {languageName} from "../js/translate/languages";
+import {draftGate} from "../js/translate/outgoing";
+import {
+	canCheckOutgoing,
+	cancelOutgoing,
+	checkOutgoing,
+	noteOutgoingSent,
+	translateOutgoing,
+	writeTarget,
+} from "../js/translate/writer";
 
 /** How long after a Return its late-arriving newline is still recognised. */
 const ENTER_NEWLINE_WINDOW_MS = 500;
@@ -262,11 +346,13 @@ export default defineComponent({
 		const setPendingMessage = (e: Event) => {
 			const el = e.target as HTMLTextAreaElement;
 
-			// The Return that already sent, landing late (see onEnterKey).
-			if (enterNewlineDeadline > performance.now() && /^\n+$/.test(el.value)) {
+			// The Return that already sent, or translated, landing late (see onEnterKey).
+			if (
+				enterNewlineDeadline > performance.now() &&
+				(/^\n+$/.test(el.value) || el.value === `${props.channel.pendingMessage}\n`)
+			) {
 				enterNewlineDeadline = 0;
-				el.value = "";
-				props.channel.pendingMessage = "";
+				el.value = props.channel.pendingMessage;
 				setInputSize();
 				return;
 			}
@@ -282,7 +368,11 @@ export default defineComponent({
 
 		const getInputPlaceholder = (channel: ClientChan) => {
 			if (channel.type === ChanType.CHANNEL || channel.type === ChanType.QUERY) {
-				return `Write to ${channel.name}`;
+				const to = writeTarget(props.network, channel);
+
+				return to
+					? `Write to ${channel.name} · sent in ${languageName(to, navigator.language)}`
+					: `Write to ${channel.name}`;
 			}
 
 			return "";
@@ -380,54 +470,54 @@ export default defineComponent({
 			return text.length > 80 ? text.slice(0, 79) + "…" : text;
 		});
 
-		const onSubmit = (fromEnterKey = false) => {
-			if (!input.value) {
-				return;
-			}
+		// The outgoing translation (spec § Composer): the strip above the
+		// input is store state per channel (writer.ts), so a channel switch
+		// keeps it like it keeps the draft.
+		const outgoing = computed(() => store.state.outgoingTranslations[props.channel.id]);
 
-			// Triggering click event opens the virtual keyboard on mobile
-			// This can only be called from another interactive event (e.g. button click)
-			input.value.click();
-			input.value.focus();
+		const outgoingChip = computed(() =>
+			outgoing.value ? `to ${languageName(outgoing.value.to, navigator.language)}` : ""
+		);
 
-			// No global gate: `/connect` and friends must work from a
-			// disconnected network. Plain text in a conversation on a
-			// network that is down stays as the draft (`canSend`, the same
-			// rule that disables the send button); elsewhere the IRC layer
-			// answers it with NOT_CONNECTED_TEXT.
-			const target = props.channel.id;
+		const canCheck = computed(() => !!outgoing.value && canCheckOutgoing(outgoing.value));
 
-			// A keyboard that inserts the Return's newline before the keypress
-			// fires has already put it in the draft.
-			let text = props.channel.pendingMessage;
+		// Send waits for the translation, and for the automatic check.
+		const outgoingBusy = computed(() => {
+			const entry = outgoing.value;
 
-			if (fromEnterKey && text.endsWith("\n")) {
-				text = text.slice(0, -1);
-				props.channel.pendingMessage = text;
-			}
-
-			if (text.length === 0 || !canSend.value) {
-				// Return on an empty composer inserts a newline; an offline
-				// composer keeps its draft.
-				if (text.length === 0 && fromEnterKey) {
-					clearInput();
-					setInputSize();
-				}
-
+			if (!entry) {
 				return false;
 			}
 
+			return (
+				entry.status === "pending" ||
+				(entry.check.status === "pending" &&
+					store.state.settings.translateRoundTrip === "auto")
+			);
+		});
+
+		const sendTooltip = computed(() => {
+			if (!canSend.value) {
+				return "Not connected";
+			}
+
+			if (!outgoing.value) {
+				return "Send message";
+			}
+
+			return outgoing.value.status === "failed" ? "Send as written" : "Send the translation";
+		});
+
+		/**
+		 * Ship `text` as the message; `original` is what the input history
+		 * remembers (the draft, when `text` is its translation). Everything
+		 * a send does lives here so the plain path, the translated path and
+		 * the "send as written" path cannot drift apart.
+		 */
+		const deliver = (text: string, original: string) => {
+			const target = props.channel.id;
 			const editing = props.channel.editing;
 			const replyTo = props.channel.replyTo;
-
-			// Editing to the identical text is a no-op: just leave edit mode.
-			if (editing && text === editing.text) {
-				cancelCompose(props.channel);
-				clearInput();
-				setInputSize();
-				reportTyping(); // nothing was sent, so this is a real `done`
-				return false;
-			}
 
 			if (autocompletionRef.value) {
 				autocompletionRef.value.hide();
@@ -446,8 +536,8 @@ export default defineComponent({
 			typing.sent(target);
 
 			// Store new message in history if last message isn't already equal
-			if (props.channel.inputHistory[1] !== text) {
-				props.channel.inputHistory.splice(1, 0, text);
+			if (props.channel.inputHistory[1] !== original) {
+				props.channel.inputHistory.splice(1, 0, original);
 			}
 
 			// Limit input history to a 100 entries
@@ -482,6 +572,96 @@ export default defineComponent({
 
 			props.channel.replyTo = null;
 			props.channel.editing = null;
+		};
+
+		const onSubmit = (fromEnterKey = false) => {
+			if (!input.value) {
+				return;
+			}
+
+			// Triggering click event opens the virtual keyboard on mobile
+			// This can only be called from another interactive event (e.g. button click)
+			input.value.click();
+			input.value.focus();
+
+			// No global gate: `/connect` and friends must work from a
+			// disconnected network. Plain text in a conversation on a
+			// network that is down stays as the draft (`canSend`, the same
+			// rule that disables the send button); elsewhere the IRC layer
+			// answers it with NOT_CONNECTED_TEXT.
+
+			// A keyboard that inserts the Return's newline before the keypress
+			// fires has already put it in the draft.
+			let text = props.channel.pendingMessage;
+
+			if (fromEnterKey && text.endsWith("\n")) {
+				text = text.slice(0, -1);
+				props.channel.pendingMessage = text;
+			}
+
+			if (text.length === 0 || !canSend.value) {
+				// Return on an empty composer inserts a newline; an offline
+				// composer keeps its draft.
+				if (text.length === 0 && fromEnterKey) {
+					clearInput();
+					setInputSize();
+				}
+
+				return false;
+			}
+
+			const editing = props.channel.editing;
+
+			// Editing to the identical text is a no-op: just leave edit mode.
+			if (editing && text === editing.text) {
+				cancelCompose(props.channel);
+				clearInput();
+				setInputSize();
+				reportTyping(); // nothing was sent, so this is a real `done`
+				return false;
+			}
+
+			// The second Enter (spec § Composer 5): the strip's translation
+			// goes, or after a failure the draft as written. Nothing goes
+			// while it is still translating (or, with the automatic check,
+			// still reading back).
+			const entry = store.state.outgoingTranslations[props.channel.id];
+
+			if (entry && entry.draft === text) {
+				if (outgoingBusy.value) {
+					return false;
+				}
+
+				const translated = entry.status === "done" ? entry.text : null;
+
+				cancelOutgoing(props.channel);
+				deliver(translated ?? text, text);
+
+				if (translated !== null) {
+					noteOutgoingSent(props.network, props.channel, text, translated, entry.to);
+				}
+
+				return;
+			}
+
+			if (entry) {
+				// A strip for another draft (the watch below normally removes it first).
+				cancelOutgoing(props.channel);
+			}
+
+			// The first Enter (spec § Composer 1-3): translate, and send only
+			// when the draft turns out to need none.
+			if (writeTarget(props.network, props.channel) && draftGate(text, !!editing) === "ok") {
+				void translateOutgoing(props.network, props.channel, text).then((verdict) => {
+					if (verdict === "plain" && props.channel.pendingMessage === text) {
+						deliver(text, text);
+					}
+				});
+
+				return false;
+			}
+
+			deliver(text, text);
 		};
 
 		/**
@@ -586,6 +766,15 @@ export default defineComponent({
 			});
 		};
 
+		const cancelOutgoingNow = () => {
+			cancelOutgoing(props.channel);
+			focusForTyping();
+		};
+
+		const checkOutgoingNow = () => {
+			void checkOutgoing(props.network, props.channel);
+		};
+
 		const onBlur = () => {
 			if (autocompletionRef.value) {
 				autocompletionRef.value.hide();
@@ -607,8 +796,16 @@ export default defineComponent({
 
 		watch(
 			() => props.channel.pendingMessage,
-			() => {
+			(value) => {
 				setInputSize();
+
+				// Typing, or walking the history, invalidates the strip (spec
+				// § Composer 3): the next Enter translates afresh.
+				const entry = store.state.outgoingTranslations[props.channel.id];
+
+				if (entry && value !== entry.draft) {
+					cancelOutgoing(props.channel);
+				}
 			}
 		);
 
@@ -662,6 +859,12 @@ export default defineComponent({
 			// Escape cancels a pending reply/edit before anything else gets it
 			// (the global handler in App.vue blurs the input otherwise).
 			inputTrap.bind("esc", () => {
+				// A translation strip goes first (spec § Composer 6); the draft stays.
+				if (store.state.outgoingTranslations[props.channel.id]) {
+					cancelOutgoing(props.channel);
+					return false;
+				}
+
 				if (!props.channel.replyTo && !props.channel.editing) {
 					return;
 				}
@@ -840,6 +1043,13 @@ export default defineComponent({
 			retryInSeconds,
 			canConnectNow,
 			connectNetwork,
+			outgoing,
+			outgoingChip,
+			outgoingBusy,
+			canCheck,
+			sendTooltip,
+			cancelOutgoingNow,
+			checkOutgoingNow,
 		};
 	},
 });

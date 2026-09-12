@@ -309,9 +309,8 @@ export default defineComponent({
 					props.channel.type === ChanType.QUERY) &&
 				translationAvailableNow()
 		);
-		const translationOn = computed(
-			() => translationState.value.read !== null || translationState.value.write !== null
-		);
+		// The light means reading; a write target shows in the tooltip.
+		const translationOn = computed(() => translationState.value.read !== null);
 		const translateLabel = computed(() => {
 			const name = (code: string) => languageName(code, navigator.language);
 			const {read, write} = translationState.value;

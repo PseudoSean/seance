@@ -4990,6 +4990,120 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	outline: 0;
 }
 
+/* Outgoing translation above the input (client/components/ChatInput.vue,
+ * spec § Composer): the same row the reply/edit strip takes, the language
+ * chip in the accent, full ink for the text since it is what will be sent,
+ * a caret while it streams, the read-back line under it. */
+#form .translate-bar {
+	flex: 1 0 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	min-width: 0;
+	margin: 0 0.25rem 0.125rem;
+	padding: 0.125rem 0.375rem;
+	border-left: 2px solid var(--chat-accent, var(--link-color));
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	border-radius: 0 0.1875rem 0.1875rem 0;
+	color: var(--body-color);
+	font-size: 0.875rem;
+	line-height: 1.5;
+}
+
+#form .translate-bar-row {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	min-width: 0;
+}
+
+#form .translate-bar-chip {
+	flex: none;
+	padding: 0 0.3em;
+	border: 1px solid var(--chat-accent-rule, var(--link-color));
+	border-radius: 0.2rem;
+	color: var(--chat-accent, var(--link-color));
+	font-size: 0.7em;
+	line-height: 1.5;
+	letter-spacing: 0.05em;
+	white-space: nowrap;
+}
+
+#form .translate-bar-text {
+	flex: 1 1 auto;
+	min-width: 0;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+#form .translate-bar-caret {
+	display: inline-block;
+	width: 0.5em;
+	height: 1em;
+	margin-left: 0.1em;
+	background: var(--chat-accent, var(--link-color));
+	vertical-align: text-bottom;
+	animation: msg-translation-blink 1s steps(2) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#form .translate-bar-caret {
+		animation: none;
+	}
+}
+
+#form .translate-bar-failed {
+	color: var(--body-color-muted);
+	font-style: italic;
+}
+
+#form .translate-bar-button {
+	flex: 0 0 auto;
+	height: 1.5rem;
+	padding: 0 0.5rem;
+	border: 1px solid var(--chat-accent-rule, var(--link-color));
+	border-radius: 0.1875rem;
+	background: transparent;
+	color: var(--chat-accent, var(--link-color));
+	font: inherit;
+	font-size: 0.8125rem;
+	line-height: 1.5rem;
+	cursor: pointer;
+}
+
+#form .translate-bar-button:hover,
+#form .translate-bar-button:focus-visible {
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	outline: 0;
+}
+
+#form .translate-bar-send {
+	border-color: var(--chat-accent, var(--link-color));
+	background: var(--chat-accent, var(--link-color));
+	color: var(--chat-accent-fg, #fff);
+}
+
+#form .translate-bar-send:hover,
+#form .translate-bar-send:focus-visible {
+	background: var(--chat-accent, var(--link-color));
+	opacity: 0.85;
+}
+
+#form .translate-bar-button[disabled] {
+	opacity: 0.5;
+	cursor: default;
+}
+
+#form .translate-bar-check {
+	color: var(--body-color-muted);
+	font-size: 0.8125rem;
+}
+
+#form .translate-bar-check-label {
+	flex: 0 0 auto;
+	font-style: italic;
+}
+
 /* The upload in flight: a row of its own above the input, like .compose-bar */
 #form .upload-bar {
 	flex: 1 0 100%;
