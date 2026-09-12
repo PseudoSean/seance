@@ -9,7 +9,7 @@
 import {getBranding} from "../branding";
 import {BUILD} from "../build";
 import socket from "../socket";
-import {store, type OutgoingTranslation} from "../store";
+import {store, type OutgoingTranslation, type TranslationEntry} from "../store";
 import type {ClientChan, ClientNetwork} from "../types";
 import {
 	type Formality,
@@ -21,7 +21,7 @@ import {
 import {buildContext} from "./context";
 import {detectLanguage} from "./detect";
 import {plainTextOf} from "./eligibility";
-import {type EngineName, type PromptContext, emptyContext} from "./engine";
+import {type EngineName, type PromptContext} from "./engine";
 import {translateService} from "./index";
 import {
 	ABORTED,
@@ -43,6 +43,7 @@ import {
 } from "./outgoing";
 import {channelTranslation, holdReading, readingLanguage, releaseReading} from "./reader";
 import type {Route} from "./router";
+import {SentReadBacks} from "./sentReadBack";
 import {LLM_MARKERS, type MarkerForm, stripCopiedNickPrefix} from "./spans";
 
 /** An id no message has: buildContext then takes the whole scrollback as "before" the draft. */
@@ -477,9 +478,36 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 
 	try {
 		const route = await translateService().route(entry.to, target);
-		const context = emptyContext();
+		const settings = channelTranslation(network, channel);
+		// The context a reader of this channel would give the model for the
+		// line the user is about to post, built the way reader.ts builds one
+		// for a line arriving here: recent lines with the translations the
+		// reader already has, names, topic, the draft's reply target, the
+		// channel's register and the terms for this pair. No voice — that is
+		// the writer's. A read-back given the line cold reads it differently
+		// from how the channel will, which is what it is there to show.
+		const context = buildContext(
+			channel,
+			{
+				id: DRAFT_ID,
+				type: "message",
+				text: entry.text,
+				from: {nick: network.nick},
+				replyTo: channel.replyTo?.msgid,
+			},
+			{
+				translated(id) {
+					const done = store.state.translations[id];
 
-		context.sourceHint = entry.to;
+					return done && done.status === "done" ? done.text : undefined;
+				},
+				terms: termsFor(settings.terms, entry.to, target),
+				glossary: getBranding().translation?.glossary ?? [],
+				formality: settings.formality,
+				variant: settings.variant,
+				sourceHint: entry.to,
+			}
+		);
 
 		const nicks = channel.users.map((u) => u.nick);
 		const request: OutgoingRequest = {
@@ -586,7 +614,7 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 
 		store.commit("outgoingTranslationPatch", {
 			chanId: channel.id,
-			patch: {check: {status: "done", text: read, to: target}},
+			patch: {check: {status: "done", text: read, to: target, engine: engineFor(route)}},
 		});
 	} catch (e) {
 		const message = e instanceof Error ? e.message : String(e);
@@ -602,6 +630,32 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 			checks.delete(channel.id);
 		}
 	}
+}
+
+/** Sent translations waiting for their line to reach the store (sentReadBack.ts). */
+const sentReadBacks = new SentReadBacks();
+
+/**
+ * The strip's translation is about to be sent: when its round trip
+ * finished, the read-back is recorded against the text that goes out, and
+ * the line takes it as its translation when it reaches the store (the
+ * `msg` listener in initWriter). Called before the send, since the IRC
+ * layer dispatches the line inside the send's emit. A send without a
+ * finished read-back records nothing.
+ */
+export function recordSentReadBack(channel: ClientChan, entry: OutgoingTranslation): void {
+	const check = entry.check;
+
+	if (entry.status !== "done" || check.status !== "done" || !check.to || !check.text) {
+		return;
+	}
+
+	sentReadBacks.record(
+		channel.id,
+		entry.text,
+		{text: check.text, from: entry.to, to: check.to, engine: check.engine ?? null},
+		Date.now()
+	);
 }
 
 /**
@@ -645,6 +699,49 @@ export function noteOutgoingSent(
 }
 
 export function initWriter(): void {
+	// After socket-events/msg.ts put the line in the store (import order in
+	// socket-events/index.ts), so `data.msg.id` is the store id. An own line
+	// the composer recorded a read-back for takes it as its translation:
+	// the pending copy first, then the echo that replaces it (the copy's
+	// entry goes with the copy), or the one line without `echo-message`.
+	// No request is made; the reader skips own lines anyway.
+	socket.on("msg", (data) => {
+		if (!data.msg.self || data.replay || typeof data.msg.text !== "string") {
+			return;
+		}
+
+		const match = sentReadBacks.match(data.chan, data.msg.text, data.msg, Date.now());
+
+		if (!match) {
+			return;
+		}
+
+		const entry: TranslationEntry = {
+			status: "done",
+			text: match.value.text,
+			from: match.value.from,
+			to: match.value.to,
+			candidates: [],
+			engine: match.value.engine,
+			error: null,
+			hidden: false,
+		};
+
+		store.commit("translationEntry", {id: data.msg.id, entry});
+
+		if (match.replacesCopy !== undefined) {
+			store.commit("translationRemove", match.replacesCopy);
+		}
+	});
+
+	// A pending copy that is taken down (its echo, a rejection, a timeout)
+	// takes the read-back it held with it.
+	socket.on("msg:settled", (data) => {
+		if (store.state.translations[data.id]) {
+			store.commit("translationRemove", data.id);
+		}
+	});
+
 	// Registered before socket-events/part.ts / quit.ts (import order), like
 	// the reader's: a channel that goes takes its strip and requests with it.
 	socket.on("part", (data) => {
@@ -653,6 +750,7 @@ export function initWriter(): void {
 		if (target) {
 			cancelOutgoing(target.channel);
 			voices.delete(target.channel.id);
+			sentReadBacks.forget(target.channel.id);
 		}
 	});
 
@@ -662,6 +760,7 @@ export function initWriter(): void {
 		for (const channel of network?.channels ?? []) {
 			cancelOutgoing(channel);
 			voices.delete(channel.id);
+			sentReadBacks.forget(channel.id);
 		}
 	});
 }

@@ -72,8 +72,17 @@ export interface OutgoingTranslation {
 	engine: EngineName | null;
 	model: string | null;
 	error: string | null;
-	/** The round trip: idle until the translation is done, then it always runs. */
-	check: {status: "idle" | "pending" | "done" | "failed"; text: string; to: string | null};
+	/**
+	 * The round trip: idle until the translation is done, then it always
+	 * runs. `engine` is the route the read-back came down, which the posted
+	 * line's translation carries (writer.ts `recordSentReadBack`).
+	 */
+	check: {
+		status: "idle" | "pending" | "done" | "failed";
+		text: string;
+		to: string | null;
+		engine?: EngineName | null;
+	};
 }
 
 export type State = {

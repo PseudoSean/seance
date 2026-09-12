@@ -477,6 +477,11 @@ Emphasis marks on the LLM route, measured (2026-09-12):
 - **Term memory is kept per language** (live test, 2026-09-12): an entry is
   `{source, target, from, to}` and a prompt carries only its own pair's
   terms (`channelStore.ts` `termsFor`); stored bare pairs are dropped once.
+- **The read-back sees what a recipient sees, and the posted line shows
+  it** (live test, 2026-09-12): the round trip is built with the channel's
+  context like an incoming line's translation (the channel's own formality,
+  as the reader passes it), and a sent translation's line takes the
+  finished read-back as its translation, matched by channel and exact text.
 
 ## Non-goals
 

@@ -120,6 +120,7 @@ function listener(nick) {
 	return {
 		joined,
 		heard: () => heard.slice(),
+		say: (text) => ws.send(`PRIVMSG ${CHANNEL} :${text}`),
 		quit: () => ws.send("QUIT :done"),
 	};
 }
@@ -263,6 +264,17 @@ export default async function run(page) {
 	});
 	await other.joined;
 
+	// Scrollback for the context: a line from the other user before any
+	// draft, so a request built from the channel has something to quote
+	// whatever the channel's history holds.
+	const opener = `did anyone look at the log rotation ${RUN}`;
+
+	other.say(opener);
+	await page.waitFor(`document.body.innerText.includes(${JSON.stringify(opener)})`, {
+		timeout: 20000,
+		label: "the other user's line in the channel",
+	});
+
 	// 1. The write target.
 	await openPanel(page);
 	await page.check(
@@ -382,9 +394,41 @@ export default async function run(page) {
 		"the check went out as a read",
 		(await page.evaluate(`${REQUESTS}.slice(-1)[0].purpose`)) === "read"
 	);
+	// The read-back is built like an incoming line's translation: the check
+	// for this translation carried the channel's recent lines.
+	const readBackRequests = `${REQUESTS}.filter((r) => r.purpose === "read" && r.text.indexOf(${JSON.stringify(
+		`${draft} edited`
+	)}) !== -1)`;
+
+	await page.check(
+		"the read-back carried the channel's context",
+		await page.evaluate(
+			`(() => { const reads = ${readBackRequests}; return reads.length > 0 && reads[0].contextLines > 0; })()`
+		)
+	);
+	await page.check(
+		"the read-back quoted no voice (that is the writer's)",
+		(await page.evaluate(`${readBackRequests}[0].voice`)) === 0
+	);
+
+	const readBackText = await page.evaluate(
+		`(document.querySelector(".translate-bar-check .translate-bar-text") || {}).textContent`
+	);
+
 	await page.screenshot("composer-check");
 
 	// 5. The second Enter sends the translation.
+	const requestsBeforeSend = await page.evaluate(`${REQUESTS}.length`);
+	/** The translation row under the own line carrying `text`, settled or not. */
+	const ownTranslation = (text, settled) =>
+		`(() => {
+			const row = [...document.querySelectorAll(${JSON.stringify(
+				settled ? ".msg.self:not(.pending)" : ".msg.self"
+			)})].find((m) => m.textContent.includes(${JSON.stringify(text)}));
+			const line = row && row.querySelector(".msg-translation-text");
+			return line ? line.textContent.trim() : "";
+		})()`;
+
 	await page.evaluate(ENTER);
 	await page.waitFor(`!document.querySelector(${JSON.stringify(BAR)})`, {
 		label: "the strip went with the send",
@@ -393,6 +437,27 @@ export default async function run(page) {
 		timeout: 20000,
 		label: "the translation in the timeline, echoed back",
 	});
+	await page.waitFor(
+		`${ownTranslation(`[German] ${draft} edited`, true)} === ${JSON.stringify(readBackText)}`,
+		{timeout: 5000, label: "the posted line shows the read-back as its translation"}
+	);
+	await page.check(
+		"the posted line's chip names German → English",
+		await page.evaluate(
+			`(() => {
+				const row = [...document.querySelectorAll(".msg.self:not(.pending)")].find((m) =>
+					m.textContent.includes(${JSON.stringify(`[German] ${draft} edited`)})
+				);
+				const chip = row && row.querySelector(".msg-translation-chip");
+				return !!chip && chip.textContent.trim() === "German → English";
+			})()`
+		)
+	);
+	await page.check(
+		"no translation request was made for the posted line",
+		(await page.evaluate(`${REQUESTS}.length`)) === requestsBeforeSend
+	);
+	await page.screenshot("composer-posted-read-back");
 	await page.check("the input cleared", (await page.evaluate(inputValue)) === "");
 	await page.check(
 		"the other user heard the German line",

@@ -255,6 +255,7 @@ import {readingLanguage} from "../js/translate/reader";
 import {
 	cancelOutgoing,
 	noteOutgoingSent,
+	recordSentReadBack,
 	translateOutgoing,
 	writeTarget,
 } from "../js/translate/writer";
@@ -394,7 +395,10 @@ export default defineComponent({
 				const to = writeTarget(props.network, channel);
 
 				return to
-					? `Write to ${channel.name} · sent in ${languageName(to, navigator.language)}`
+					? `Write to ${channel.name} · sent in ${languageName(
+							to,
+							readingLanguage(props.network, channel)
+					  )}`
 					: `Write to ${channel.name}`;
 			}
 
@@ -745,6 +749,12 @@ export default defineComponent({
 				// own slash intercept would otherwise take it for a UI one.
 				if (translated !== null && translated.startsWith("/")) {
 					line = `/${translated}`;
+				}
+
+				// Before the send: the IRC layer puts the line in the store
+				// inside deliver's emit, and cancelOutgoing takes the strip.
+				if (translated !== null) {
+					recordSentReadBack(props.channel, entry);
 				}
 
 				cancelOutgoing(props.channel);

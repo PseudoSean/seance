@@ -376,6 +376,34 @@ English" (the translation's language → the reading language). The check always
 and Send waits for it -- a failed check ("couldn't check") never blocks
 Send.
 
+The read-back is built like the translation of an incoming line: the
+context a recipient in the channel would give the model, in the output
+language -- `buildContext` over the channel's scrollback, as `reader.ts`
+calls it, with the recent lines and the translations the reader already
+has for them, names, topic, the draft's reply target, the channel's
+formality and variant, and the channel's terms for the translation's
+language into the reading language (`termsFor`). No voice: that is the
+writer's. A read-back given the line cold reads it differently from how
+the channel will, and showing how the channel will read it is the point.
+The bare second try on an echo or a narration still drops the context.
+
+When the second Enter sends a translation whose read-back finished, the
+posted line shows that read-back as its translation, with the same chip
+and emphasis as any translated line, and no request is made for it.
+`writer.ts` `recordSentReadBack` records the read-back against the exact
+text sent **before** the send (the IRC layer puts the line in the store
+inside the send's emit), and a `msg` listener in `initWriter` matches own
+lines by channel and text (`sentReadBack.ts`, bounded to 20 records, each
+dropped after 90 s or once matched): with `echo-message` the pending copy
+takes the entry and the echo that replaces it takes it again (the copy's
+entry leaves with the copy on `msg:settled`); without it the one line
+takes it. A send without a finished read-back -- the reading language is
+the write target, the check failed, the draft went out as written -- gets
+no entry, and so does a line the IRC layer split (a long line chunked by
+`splitMessage`, or a multi-line one on a server without
+`draft/multiline`), since no part of it carries the text that was
+recorded.
+
 The scenario's fake logs `purpose: "write"` (or `"read"` for the check) on
 every request, so a browser check can tell the composer's traffic from the
 reader's, plus `contextLines` and `voice` (how much of the channel the
