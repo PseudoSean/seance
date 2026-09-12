@@ -11,7 +11,6 @@
 			<SettingTabItem name="Appearance" class-name="appearance" to="appearance" />
 			<SettingTabItem name="Notifications" class-name="notifications" to="notifications" />
 			<SettingTabItem name="Aliases" class-name="aliases" to="aliases" />
-			<SettingTabItem v-if="!isPublic" name="Account" class-name="account" to="account" />
 		</ul>
 	</aside>
 </template>
@@ -72,10 +71,6 @@
 	content: "\f108"; /* http://fontawesome.io/icon/desktop/ */
 }
 
-.settings-menu .account::before {
-	content: "\f007"; /* http://fontawesome.io/icon/user/ */
-}
-
 .settings-menu .messages::before {
 	content: "\f0e0"; /* http://fontawesome.io/icon/envelope/ */
 }
@@ -106,9 +101,9 @@
 	cursor: default;
 }
 
-/* Six labelled tabs need roughly 47rem; below that the inactive ones are
+/* Five labelled tabs need roughly 40rem; below that the inactive ones are
  * icons alone (their names stay as aria-label and title). */
-@container settings (max-width: 48rem) {
+@container settings (max-width: 41rem) {
 	.settings-menu button:not(.active) .tab-label {
 		display: none;
 	}
@@ -135,7 +130,6 @@ export default defineComponent({
 	setup() {
 		const store = useStore();
 		const route = useRoute();
-		const isPublic = store.state.serverConfiguration?.public;
 
 		// The strip scrolls, so the active tab may sit off screen (opening
 		// Aliases from a deep link, or coming back to the tab the user
@@ -152,7 +146,6 @@ export default defineComponent({
 		watch(() => route.name, revealActive);
 
 		return {
-			isPublic,
 			showGeneral: shouldShowGeneralSettings(),
 			showNetworks: brandingFeatures(store.state.branding).saveNetworks,
 		};
