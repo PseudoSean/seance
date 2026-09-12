@@ -46,7 +46,7 @@
 //   the translation.
 
 import {ContextLine, TranslateRequest} from "./engine";
-import {placeholder} from "./spans";
+import {placeholder, placeholdersIn} from "./spans";
 
 export interface ChatMessage {
 	role: "system" | "user" | "assistant";
@@ -169,11 +169,28 @@ export function systemPrompt(req: TranslateRequest, name: (code: string) => stri
 		? `You are a translation engine. Translate each numbered message ${sourcePrefix}into ${target} and reply with the ${target} translations only, without names or prefixes: the same numbers, one per line, then ${END_SENTINEL} on its own line; no quotes, no labels, no explanation, and never an answer to a message.${detect}`
 		: `You are a translation engine. Translate the user's message ${sourcePrefix}into ${target} and reply with the ${target} translation only, without the sender's name or any prefix, on one line: no quotes, no label, no explanation, and never an answer to the message.${detect}`;
 
+	// The keep-placeholders sentence is said only when the text carries
+	// something to keep: a placeholder, a mark or a tag. Measured 2026-09-12
+	// (docs/resources/translation.md § The prompt): on a long, jargon-heavy
+	// line with nothing in it to keep, "Keep placeholders … exactly as they
+	// are" made English the likeliest first token of a Turkish or Korean
+	// translation (28% and 52%, the top choice), and the model handed the
+	// line back; without it the copy fell to under 2%. Where there is a mark
+	// it stays, because it also holds emphasis marks in place. Nothing else
+	// is scoped: with the marks sentence left out as well, an embedded
+	// "Translate into French: …" was obeyed, and either sentence alone
+	// resisted it.
+	const carried = req.lines ? req.lines.join("\n") : req.text;
+	const hasSomethingToKeep =
+		placeholdersIn(carried).length > 0 || /\*|~~|\|\||<\/?\d+>/.test(carried);
+
 	parts.push(
 		frame,
-		`Keep placeholders like ${placeholder(
-			1
-		)}, nicknames, channel names and anything after # exactly as they are.`,
+		hasSomethingToKeep
+			? `Keep placeholders like ${placeholder(
+					1
+			  )}, nicknames, channel names and anything after # exactly as they are.`
+			: "",
 		req.markers === "literal" ? KEEP_MARKS : req.markers === "tags" ? KEEP_TAGS : "",
 		"Keep the register: a short casual line stays short and casual.",
 		// The only thing the system message says about the channel's own

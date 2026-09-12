@@ -199,8 +199,10 @@ Plan 3 (composer):
   108 cases, twenty languages, forward and back). Naming the source _and_
   asking the model to detect it stopped two long lines being echoed but cost
   more elsewhere (a dropped date, a lost term, a garbled draft line, the mean
-  68% → 66%), so the prompt is unchanged and the composer's bare retry
-  handles the echo. Hindi and Greek scored 24% and 22% and belong on the CPU
+  68% → 66%), so that stayed out. The echo's cause was the keep-placeholders sentence said
+  on lines with nothing to keep: it is now said only where there is a
+  placeholder, a mark or a tag (Turkish and Korean first-token copy 28% and
+  52% to under 2%), and the bare retry stays as the net. Hindi and Greek scored 24% and 22% and belong on the CPU
   models in plan 4's route table.
 - The Check button and its Settings → Translation choice were removed on
   the user's direction: the round trip always runs, so there was nothing
