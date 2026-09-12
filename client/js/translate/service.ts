@@ -105,6 +105,7 @@ export class TranslateService {
 			allowLlm: this.settings.llm,
 			allowCpu: this.settings.cpu,
 			down: this.down,
+			cached: (ref: ModelRef) => this.views.get(ref.id)?.cached === true,
 		});
 	}
 

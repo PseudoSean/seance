@@ -1,4 +1,5 @@
 import {expect} from "chai";
+import type {ModelRef} from "../../client/js/translate/engine";
 import {buildCatalog} from "../../client/js/translate/models";
 import {
 	candidatesFor,
@@ -54,6 +55,44 @@ describe("translate/router", () => {
 	it("skips the seq2seq candidates when the source language is unknown", () => {
 		expect(resolveRoute(table, catalog, input({from: null, tier: "cpu"}))).to.equal(null);
 		expect(resolveRoute(table, catalog, input({from: null}))?.candidate).to.equal("llm");
+	});
+
+	it("prefers a candidate whose model is already on the device", () => {
+		const isCached = (id: string) => (ref: ModelRef) => ref.id === id;
+
+		// llm is first in the de→en list and allowed, but the OPUS pair is
+		// downloaded: taking llm would make the request wait for a download.
+		expect(
+			resolveRoute(table, catalog, input({cached: isCached(catalog.opus["de-en"].id)}))
+				?.candidate
+		).to.equal("opus:de-en");
+		expect(
+			resolveRoute(table, catalog, input({tier: "cpu", cached: isCached(catalog.nllb.id)}))
+				?.candidate
+		).to.equal("nllb");
+
+		// Nothing cached, or nothing to ask: the table's order stands.
+		expect(resolveRoute(table, catalog, input({cached: () => false}))?.candidate).to.equal(
+			"llm"
+		);
+		expect(resolveRoute(table, catalog, input())?.candidate).to.equal("llm");
+	});
+
+	it("never picks a candidate that is down or disallowed, cached or not", () => {
+		const cachedOpus = (ref: ModelRef) => ref.id === catalog.opus["de-en"].id;
+
+		expect(
+			resolveRoute(table, catalog, input({cached: cachedOpus, down: new Set(["opus:de-en"])}))
+				?.candidate
+		).to.equal("llm");
+		// A downloaded LLM on a device that cannot run it stays unrouted.
+		expect(
+			resolveRoute(
+				table,
+				catalog,
+				input({tier: "cpu", cached: (ref: ModelRef) => ref.id === catalog.llm.id})
+			)?.candidate
+		).to.equal("opus:de-en");
 	});
 
 	it("skips a candidate the catalog has no model for", () => {

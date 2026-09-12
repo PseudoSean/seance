@@ -20,6 +20,11 @@ export interface RouteInput {
 	allowLlm: boolean;
 	allowCpu: boolean;
 	down: ReadonlySet<Candidate>;
+	/**
+	 * Is this model already downloaded? Optional: without it every candidate
+	 * counts as unknown and the order is the table's own.
+	 */
+	cached?: (ref: ModelRef) => boolean;
 }
 
 export interface Route {
@@ -52,6 +57,13 @@ export function resolveRoute(
 		return null;
 	}
 
+	// A model that is already downloaded wins over one that is not, whatever
+	// the table's order: the alternative is a request sitting inside its
+	// two-minute deadline waiting for a download while a model that could
+	// have answered it at once is on the device. Preference only — with
+	// nothing cached (or no way to ask) the first allowed candidate stands.
+	let first: Route | null = null;
+
 	for (const candidate of candidatesFor(table, input.from, input.to)) {
 		if (input.down.has(candidate)) {
 			continue;
@@ -67,12 +79,18 @@ export function resolveRoute(
 
 		const ref = refFor(catalog, candidate);
 
-		if (ref) {
+		if (!ref) {
+			continue;
+		}
+
+		if (input.cached?.(ref)) {
 			return {candidate, ref};
 		}
+
+		first = first ?? {candidate, ref};
 	}
 
-	return null;
+	return first;
 }
 
 /** A deploy's `translation.routes` over the shipped table, one entry at a time. */

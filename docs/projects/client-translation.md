@@ -183,6 +183,14 @@ Fix wave after the first live test on a CPU-only device (2026-09-12):
   the `title`. The first live test on a CPU-only device produced nothing but
   "couldn't translate, send as written?" for a fault (ONNX Runtime refusing
   the q8 weights) that was named precisely in an error nobody could see.
+- The router prefers a candidate whose model is **already downloaded**
+  over one that would have to be fetched, whatever order the table lists
+  them in (`RouteInput.cached`, supplied by `service.route()` from the
+  model views; without it the order is unchanged). The spec's router picks
+  the first allowed candidate full stop, which on a CPU-only device sent
+  English → German to an OPUS pair that was not on the device while a
+  downloaded NLLB sat there, and the request then spent its two-minute
+  deadline downloading.
 
 ## Non-goals
 

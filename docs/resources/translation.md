@@ -19,7 +19,11 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
 - **The router** (`router.ts`, `routes.default.ts`) picks per pair from an
   ordered candidate list, narrowed by the device tier, the two engine
   settings, the catalog and the session's down-marks (a candidate whose
-  model failed to load or translate is skipped until reload). The shipped
+  model failed to load or translate is skipped until reload). Among the
+  candidates that survive, one whose model is **already downloaded** wins
+  over one that is not, whatever the table's order: a request has two
+  minutes, and waiting out a download inside them when a model on the
+  device could have answered is the worse trade. The shipped
   table is provisional until `tools/translate-eval.mjs` (plan 4) measures.
 
 ## Reading a channel
