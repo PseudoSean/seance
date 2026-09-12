@@ -9,7 +9,14 @@ import {
 	type RouteInput,
 	type RouteTable,
 } from "../../client/js/translate/router";
-import {DEFAULT_ROUTES} from "../../client/js/translate/routes.default";
+import {
+	DEFAULT_ROUTES,
+	LIMITED_LANGUAGES,
+	NLLB_FIRST,
+	NLLB_TIED,
+	isLimitedLanguage,
+} from "../../client/js/translate/routes.default";
+import {nllbCode} from "../../client/js/translate/languages";
 
 const catalog = buildCatalog();
 const table: RouteTable = {
@@ -183,14 +190,92 @@ describe("translate/router", () => {
 		).to.equal("llm");
 	});
 
-	it("the default table prefers the LLM for major languages and NLLB for the tail", () => {
-		expect(candidatesFor(DEFAULT_ROUTES, "de", "en")).to.deep.equal([
-			["llm"],
-			["opus:de-en"],
-			["nllb"],
-		]);
-		expect(candidatesFor(DEFAULT_ROUTES, "sw", "en")[0]).to.deep.equal(["nllb"]);
-		expect(candidatesFor(DEFAULT_ROUTES, "en", "sw")[0]).to.deep.equal(["nllb"]);
-		expect(candidatesFor(DEFAULT_ROUTES, "ja", "fr")).to.deep.equal([["llm"], ["nllb"]]);
+	describe("the default table", () => {
+		it("puts NLLB first where it measured ahead, in both directions", () => {
+			for (const code of ["tl", "el", "fi", "ca", "nb", "id", "ar", "sw"]) {
+				expect(candidatesFor(DEFAULT_ROUTES, code, "en"), `${code}→en`).to.deep.equal([
+					["nllb"],
+					["llm"],
+				]);
+				expect(candidatesFor(DEFAULT_ROUTES, "en", code), `en→${code}`).to.deep.equal([
+					["nllb"],
+					["llm"],
+				]);
+			}
+
+			// A target with no row of its own still sends a weak source to NLLB.
+			expect(candidatesFor(DEFAULT_ROUTES, "tl", "pt")).to.deep.equal([["nllb"], ["llm"]]);
+			// Either side weak is enough.
+			expect(candidatesFor(DEFAULT_ROUTES, "el", "sk")).to.deep.equal([["nllb"], ["llm"]]);
+		});
+
+		it("puts the LLM and NLLB in one class where they tied", () => {
+			for (const code of ["sk", "ms", "gl", "hi", "hu", "th", "cs", "pl"]) {
+				expect(candidatesFor(DEFAULT_ROUTES, code, "en"), `${code}→en`).to.deep.equal([
+					["llm", "nllb"],
+				]);
+				expect(candidatesFor(DEFAULT_ROUTES, "fr", code), `fr→${code}`).to.deep.equal([
+					["llm", "nllb"],
+				]);
+			}
+		});
+
+		it("gives the OPUS-MT pairs the class they measured into", () => {
+			expect(candidatesFor(DEFAULT_ROUTES, "de", "en")).to.deep.equal([
+				["llm", "opus:de-en"],
+				["nllb"],
+			]);
+			expect(candidatesFor(DEFAULT_ROUTES, "en", "ru")).to.deep.equal([
+				["llm", "opus:en-ru"],
+				["nllb"],
+			]);
+			expect(candidatesFor(DEFAULT_ROUTES, "en", "fr")).to.deep.equal([
+				["llm"],
+				["opus:en-fr"],
+				["nllb"],
+			]);
+		});
+
+		it("keeps the LLM first everywhere else", () => {
+			expect(candidatesFor(DEFAULT_ROUTES, "ja", "fr")).to.deep.equal([["llm"], ["nllb"]]);
+			expect(candidatesFor(DEFAULT_ROUTES, "en", "pt")).to.deep.equal([["llm"], ["nllb"]]);
+			expect(candidatesFor(DEFAULT_ROUTES, "de", "fr")).to.deep.equal([["llm"], ["nllb"]]);
+		});
+
+		it("Filipino with Qwen downloaded and NLLB not goes to NLLB", () => {
+			expect(
+				resolveRoute(
+					DEFAULT_ROUTES,
+					catalog,
+					input({from: null, hint: "tl", to: "en", cached: isCached(catalog.llm.id)})
+				)?.candidate
+			).to.equal("nllb");
+			expect(
+				resolveRoute(
+					DEFAULT_ROUTES,
+					catalog,
+					input({from: "en", to: "tl", cached: isCached(catalog.llm.id)})
+				)?.candidate
+			).to.equal("nllb");
+		});
+
+		it("every placed language has an NLLB code, and the limited ones are marked", () => {
+			for (const code of [...NLLB_FIRST, ...NLLB_TIED]) {
+				expect(nllbCode(code), code).to.not.equal(null);
+			}
+
+			expect([...LIMITED_LANGUAGES].sort()).to.deep.equal([
+				"bn",
+				"et",
+				"hi",
+				"hu",
+				"is",
+				"lt",
+				"lv",
+			]);
+			expect(isLimitedLanguage("hu")).to.equal(true);
+			expect(isLimitedLanguage("fi")).to.equal(false);
+			expect(isLimitedLanguage(null)).to.equal(false);
+		});
 	});
 });

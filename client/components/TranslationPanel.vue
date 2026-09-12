@@ -41,6 +41,9 @@
 								{{ name(code) }}
 							</option>
 						</select>
+						<span v-if="limited(state.read)" class="translation-panel-limited"
+							>Translations into and out of this language are often wrong.</span
+						>
 						<span class="translation-panel-hint"
 							>Lines others send are shown with a translation underneath.</span
 						>
@@ -106,6 +109,9 @@
 								{{ name(code) }}
 							</option>
 						</select>
+						<span v-if="limited(state.write)" class="translation-panel-limited"
+							>Translations into and out of this language are often wrong.</span
+						>
 						<span class="translation-panel-hint"
 							>Enter shows the translation first; Enter again sends it.</span
 						>
@@ -184,6 +190,7 @@
 import {computed, defineComponent, onBeforeUnmount, onMounted, PropType, ref} from "vue";
 import {SUPPORTED_LANGUAGES, languageOptionLabel} from "../js/translate/languages";
 import {channelTranslation, setChannelOptions, setReading} from "../js/translate/reader";
+import {isLimitedLanguage} from "../js/translate/routes.default";
 import {cancelOutgoing} from "../js/translate/writer";
 import {hasVirtualKeyboard} from "../js/helpers/device";
 import type {ClientChan, ClientNetwork} from "../js/types";
@@ -326,6 +333,7 @@ export default defineComponent({
 			addable,
 			formalities,
 			name,
+			limited: isLimitedLanguage,
 			onRead,
 			onAddLanguage,
 			removeLanguage,

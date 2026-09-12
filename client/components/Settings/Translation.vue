@@ -19,6 +19,12 @@
 				</select>
 			</label>
 			<div
+				v-if="limited(store.state.settings.translateTo)"
+				class="translate-hint translate-limited"
+			>
+				Translations into and out of this language are often wrong.
+			</div>
+			<div
 				id="label-translate-formality"
 				class="translate-hint"
 				role="heading"
@@ -235,6 +241,7 @@ import {computed, defineComponent, onMounted, ref, toRaw} from "vue";
 import {useStore} from "../../js/store";
 import {translateService} from "../../js/translate";
 import type {ModelRef} from "../../js/translate/engine";
+import {isLimitedLanguage} from "../../js/translate/routes.default";
 import {SUPPORTED_LANGUAGES, languageOptionLabel} from "../../js/translate/languages";
 import type {ModelView} from "../../js/translate/service";
 
@@ -311,6 +318,7 @@ export default defineComponent({
 			models,
 			capability,
 			languages,
+			limited: isLimitedLanguage,
 			loadError,
 			problem,
 			name,

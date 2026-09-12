@@ -1608,6 +1608,15 @@ textarea.input {
 	display: none;
 }
 
+/* A language every engine measured poorly in (routes.default.ts
+   LIMITED_LANGUAGES): said wherever the panel is, not only in the sheet. */
+.translation-panel-limited {
+	display: block;
+	color: var(--body-color-muted);
+	font-size: 0.8125rem;
+	font-style: italic;
+}
+
 .translation-panel-control {
 	width: 100%;
 	box-sizing: border-box;
