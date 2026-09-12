@@ -595,37 +595,41 @@ Deliberately not in plan 4, kept so they are not lost:
 - **owl, fox, hedgehog** — the nocturnal animals, three new rigs by the pipeline in §6;
 - a drifting flock of birds as a rare weather state.
 
-## 12. The open question night raises: ink on a dark sky
+## 12. At night the whole theme goes dark (decided 2026-09-12)
 
-Not yet decided, and it has to be before plan 4 is written, because it changes how much work
-night is.
+The user's call: _"yes go dark at night."_
 
-Everything about this theme's legibility is measured against a **light** sky. `--ink` clears
-4.5:1 on `--sky`; `--ink-faint` clears 3:1; the 32 nick colours were generated at one oklch
-lightness specifically to clear 4.5:1 on `--sky` and on `--blush`; and
-`tools/scenarios/theme-heart.mjs` asserts those ratios in a real browser. The sky is not a strip
-at the bottom of the chat — §5 puts it behind the whole message area.
+This was the one question night could not be built without. Everything about this theme's
+legibility is measured against a **light** sky: `--ink` clears 4.5:1 on `--sky`, `--ink-faint`
+clears 3:1, the 32 nick colours were generated at one oklch lightness specifically to clear
+4.5:1 on `--sky` and on `--blush`, and `tools/scenarios/theme-heart.mjs` asserts those ratios in
+a real browser. The sky is not a strip at the foot of the chat — §5 puts it behind the whole
+message area. A night sky of the kind the mockup draws would therefore put dark blue ink on a
+near-black ground and fail every one of those measurements at exactly the moment the meadow looks
+its best.
 
-So a night sky of the kind the mockup draws (roughly `#0f1836` to `#22325a`) puts dark blue ink
-on a near-black ground. Every contrast measurement in the theme fails, and the chat becomes
-unreadable at exactly the moment the meadow looks best.
+So the app quietly turns into a dark theme while it is dark outside, and back at dawn.
 
-Three ways out:
+### What this commits us to
 
-1. **The whole theme goes dark after sunset — ink, nicks and chrome included.** The most
-   coherent, and arguably the nicest: the app quietly turns into a dark theme while it is dark
-   outside, and back at dawn. It means a second full palette that clears the same ratios, and
-   the nick sweep regenerated at a lightness that works on a dark ground. Recommended.
-2. **Night stays light.** The sky only cools to a deep dusk blue that dark ink still clears,
-   with the moon and stars carrying the idea instead of darkness. Cheap and safe, and much less
-   striking.
-3. **Only the meadow strip darkens.** The bottom `--strip` goes to night while the sky behind
-   the text stays pale. Preserves every ratio untouched, but a pale sky over dark hills at
-   midnight reads as a mistake rather than a choice.
+- **A second full palette**, not a tint pass. Ink, faint ink, the chrome, the borders, the blush,
+  the composer, the sidebar — everything `--heart-sky` is currently measured against.
+- **The nick sweep regenerated for a dark ground.** The 32 colours are a generated set at one
+  oklch lightness chosen to clear 4.5:1 on a light sky; that lightness is wrong on a dark one.
+  Generate a second sweep and switch between them, checked in as values the way the first is.
+- **The contrast floors hold at night exactly as they do by day** — ink ≥ 4.5:1, faint ink ≥ 3:1,
+  nicks ≥ 4.5:1 on their ground. This theme has been careful about ratios since plan 1 and night
+  is not where that lapses. The scenario must measure them in _both_ states, not just one.
+- **The crossover is gradual, and text must clear its floor at every step of it.** Dusk is the
+  dangerous moment: a palette that is legible at midday and legible at midnight can still pass
+  through an unreadable middle. Check the worst intermediate, not just the two ends.
+- **Reduced motion still gets a correct palette**, not a frozen daytime one — the meadow may stop
+  moving, but a user reading at midnight should not be handed the day's colours.
 
-Option 1 is the recommendation, with the contrast work treated as part of the night, not as a
-follow-up — this theme has been careful about ratios from the start and night should not be
-where that lapses.
+### What it does not commit us to
+
+The user's own theme choice is untouched: this is the `<3` theme following the sun, not the app
+gaining a dark mode. Someone who wants a light interface at midnight picks another theme.
 
 ## 13. Private messages get no meadow
 
