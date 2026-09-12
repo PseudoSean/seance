@@ -147,6 +147,66 @@ describe("the <3 theme's generated animals (client/themes/heart/*.svg)", functio
 		});
 	}
 
+	/**
+	 * The shape and the position run on two different clocks, and this is the
+	 * assertion that they agree.
+	 *
+	 * The outline clips are a syncbase chain — each `<animate>` begins on the
+	 * previous one's `.end`, and the first restarts on the last one's `.end`
+	 * plus an offset. The travel, the flip and the fade are `animateTransform`s
+	 * with `dur` = the period, repeating on the document clock. Nothing
+	 * re-synchronises them, so any difference between the chain's period and
+	 * the travel's is not a one-off error: it is added again every loop until
+	 * the animal is drawn in a pose that has nothing to do with where it is.
+	 *
+	 * That shipped once. The restart offset was the off-stage gap
+	 * (`period - first - onStage`) where it needed to be `period - onStage`, so
+	 * every loop restarted the shape `first` seconds early — 14 s a loop for the
+	 * puppy — and within a few minutes the animals were gliding around in
+	 * frozen poses. No other check could see it: the audit compared the chain
+	 * against `onStage`, which was correct, and never against the period.
+	 */
+	describe("keeps the shape chain on the same clock as the travel", function () {
+		for (const {name, farOnly} of ANIMALS) {
+			const file = farOnly ? `${name}-far.svg` : `${name}.svg`;
+			it(`${file} restarts its clips exactly one period apart`, function () {
+				if (!has(file)) {
+					return this.skip();
+				}
+
+				const svg = read(file);
+
+				const travel = svg.match(
+					/<animateTransform[^>]*type="translate"[^>]*dur="([\d.]+)s"/
+				);
+				expect(travel, `${file}: no travel transform`).to.not.be.null;
+				const period = Number(travel![1]);
+
+				const clips = [
+					...svg.matchAll(/<animate\s+id="[^"]+"[^>]*?dur="([\d.]+)s"([^>]*)>/g),
+				].map((m) => {
+					const rc = m[2].match(/repeatCount="(\d+)"/);
+					return Number(m[1]) * (rc ? Number(rc[1]) : 1);
+				});
+				expect(clips.length, `${file}: no clips found`).to.be.greaterThan(0);
+
+				const restart = svg.match(/\.end\+([\d.]+)s/);
+				expect(restart, `${file}: the first clip does not restart the chain`).to.not.be
+					.null;
+
+				const chain = clips.reduce((a, d) => a + d, 0) + Number(restart![1]);
+				// half a millisecond: the durations are written to four decimals,
+				// and the restart offset is derived from those rounded values so
+				// that the two periods come out equal rather than merely close.
+				expect(
+					Math.abs(chain - period),
+					`${file}: chain ${chain}s vs travel ${period}s — the pose would drift ` +
+						`${(period - chain).toFixed(4)}s out of phase every loop`
+				).to.be.at.most(0.0005);
+			});
+		}
+	});
+
 	it("keeps the whole directory under 2.8 MB", function () {
 		const total = fs
 			.readdirSync(DIR)
