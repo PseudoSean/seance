@@ -114,7 +114,10 @@ safe area. The sheet's height follows `--viewport-height`
 (`helpers/viewport.ts`), so iOS's keyboard cannot push Done off the screen.
 
 How it opens splits the same way. With a pointer, a click on the globe
-toggles reading and a right-click opens the panel; on touch there is no
+toggles reading and a right-click opens the panel -- and a click that turns
+reading **on** opens the panel with it, so the reader sees and can adjust
+the languages at once (a click that turns reading off only turns it off);
+on touch there is no
 right-click, so the **tap** opens the panel (whose first control is the
 reading switch) and the globe's label says "Translation settings". The
 channel menu's "Translation..." reaches it on both. It closes on the X, on

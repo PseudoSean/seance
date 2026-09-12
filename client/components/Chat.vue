@@ -343,16 +343,26 @@ export default defineComponent({
 			return parts.join(", ");
 		});
 
+		const openTranslationPanel = () => {
+			translationPanelOpen.value = true;
+		};
+
 		const toggleTranslation = () => {
+			const wasOn = translationState.value.read !== null;
+
 			setReading(
 				props.network,
 				props.channel,
-				translationState.value.read ? null : store.state.settings.translateTo
+				wasOn ? null : store.state.settings.translateTo
 			);
-		};
 
-		const openTranslationPanel = () => {
-			translationPanelOpen.value = true;
+			// Switching a channel on opens its panel with it: the reader sees
+			// which languages they just asked for and can adjust them at once,
+			// where the click alone would silently pick the global target.
+			// Switching off is the whole of what switching off means.
+			if (!wasOn) {
+				openTranslationPanel();
+			}
 		};
 
 		const onTranslateClick = () => {
