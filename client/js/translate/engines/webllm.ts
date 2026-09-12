@@ -99,6 +99,14 @@ export class WebLlmEngine implements Engine {
 	private languageName: (code: string) => string;
 	private failures = 0;
 	private failuresModel: string | null = null;
+	/**
+	 * The id of the request whose generation is running. WebLLM serialises
+	 * generations per model behind its own lock, so a second request sits in
+	 * `create()` until the first is done — but `interruptGenerate()` is
+	 * engine-global and would end whatever is generating. Only the request
+	 * that owns the generation may interrupt it; a queued one just drops out.
+	 */
+	private generating: number | null = null;
 
 	constructor(deps: WebLlmDeps, languageName: (code: string) => string) {
 		this.deps = deps;
@@ -213,7 +221,11 @@ export class WebLlmEngine implements Engine {
 			throw new Error(`model not loaded: ${req.model}`);
 		}
 
-		const onAbort = () => engine.interruptGenerate();
+		const onAbort = () => {
+			if (this.generating === req.id) {
+				engine.interruptGenerate();
+			}
+		};
 
 		signal.addEventListener("abort", onAbort);
 
@@ -226,6 +238,17 @@ export class WebLlmEngine implements Engine {
 				stop: req.lines ? [`\n${END_SENTINEL}`] : ["\n"],
 				extra_body: {enable_thinking: false},
 			});
+
+			// The lock is ours from here, so an abort from now on is ours to
+			// act on. One that arrived while we waited for it handed the
+			// generation to a request nobody wants any more: end it at once.
+			this.generating = req.id;
+
+			if (signal.aborted) {
+				engine.interruptGenerate();
+				return;
+			}
+
 			let text = "";
 
 			for await (const delta of stream) {
@@ -267,6 +290,10 @@ export class WebLlmEngine implements Engine {
 				this.failures >= 2 ? "load" : "request"
 			);
 		} finally {
+			if (this.generating === req.id) {
+				this.generating = null;
+			}
+
 			signal.removeEventListener("abort", onAbort);
 		}
 	}

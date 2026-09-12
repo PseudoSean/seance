@@ -74,6 +74,77 @@ function deps(pieces: string[]) {
 	return {deps: d, created, calls: fake.calls};
 }
 
+/**
+ * WebLLM's per-model lock, modelled as a deferred `create()`: a request sits
+ * in `create()` until the test grants it the lock, exactly as a generation
+ * waits for the one before it. `interruptGenerate()` is engine-global, as
+ * WebLLM's is — it ends whichever generation is streaming, whoever called it.
+ */
+function lockedMlc(pieces: string[]) {
+	const calls = {reload: [] as string[], unload: 0, interrupt: 0, create: [] as ChatRequest[]};
+	const locks: (() => void)[] = [];
+	let interrupted = false;
+	const mlc: MlcLike = {
+		reload(modelId) {
+			calls.reload.push(modelId);
+
+			return Promise.resolve();
+		},
+		unload() {
+			calls.unload++;
+
+			return Promise.resolve();
+		},
+		interruptGenerate() {
+			calls.interrupt++;
+			interrupted = true;
+		},
+		chat: {
+			completions: {
+				async create(req) {
+					calls.create.push(req);
+					await new Promise<void>((resolve) => locks.push(resolve));
+					// WebLLM clears the flag as a generation starts.
+					interrupted = false;
+
+					return (async function* () {
+						await Promise.resolve();
+
+						for (const piece of pieces) {
+							if (interrupted) {
+								return;
+							}
+
+							yield {choices: [{delta: {content: piece}}]};
+						}
+					})();
+				},
+			},
+		},
+	};
+
+	return {mlc, calls, locks};
+}
+
+function lockedDeps(pieces: string[]) {
+	const fake = lockedMlc(pieces);
+	const d: WebLlmDeps = {prebuilt, create: () => fake.mlc};
+
+	return {
+		deps: d,
+		calls: fake.calls,
+		/** Hand the lock to the n-th `create()` call; any other keeps waiting. */
+		grant: (n: number) => fake.locks[n](),
+	};
+}
+
+/** Drain the microtask queue (these harnesses use no timers). */
+async function settle() {
+	for (let i = 0; i < 10; i++) {
+		await Promise.resolve();
+	}
+}
+
 function request(overrides: Partial<TranslateRequest> = {}): TranslateRequest {
 	return {
 		id: 1,
@@ -204,6 +275,86 @@ describe("translate/engines/webllm", () => {
 			break;
 		}
 
+		expect(d.calls.interrupt).to.equal(1);
+	});
+
+	it("an abort while waiting for the lock leaves the running generation alone", async () => {
+		const d = lockedDeps(["a", "b"]);
+		const engine = new WebLlmEngine(d.deps, name);
+
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+
+		const waiting = new AbortController();
+		const running = engine
+			.translate(request({id: 1}), new AbortController().signal)
+			[Symbol.asyncIterator]();
+		const queued = engine.translate(request({id: 2}), waiting.signal)[Symbol.asyncIterator]();
+		const first = running.next();
+
+		// The queued request asks for the lock and never gets it: that is the
+		// case under test, so do not grant it here (test (c) below is the
+		// request that does get it after its abort).
+		void queued.next();
+		await settle();
+		expect(d.calls.create).to.have.length(2);
+		d.grant(0);
+		expect((await first).value.text).to.equal("a");
+
+		waiting.abort();
+		await settle();
+		expect(d.calls.interrupt).to.equal(0);
+
+		const rest: {text: string; done: boolean}[] = [];
+
+		for (let step = await running.next(); !step.done; step = await running.next()) {
+			rest.push({text: step.value.text, done: step.value.done});
+		}
+
+		expect(rest).to.deep.equal([
+			{text: "ab", done: false},
+			{text: "ab", done: true},
+		]);
+		expect(d.calls.interrupt).to.equal(0);
+	});
+
+	it("an abort of the generation that is running interrupts it once", async () => {
+		const d = lockedDeps(["a", "b"]);
+		const engine = new WebLlmEngine(d.deps, name);
+
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+
+		const controller = new AbortController();
+		const stream = engine.translate(request(), controller.signal)[Symbol.asyncIterator]();
+		const first = stream.next();
+
+		await settle();
+		d.grant(0);
+		expect((await first).value.text).to.equal("a");
+
+		controller.abort();
+		expect(d.calls.interrupt).to.equal(1);
+		expect((await stream.next()).done).to.equal(true);
+	});
+
+	it("a request aborted before the lock arrives ends the generation handed to it", async () => {
+		const d = lockedDeps(["a", "b"]);
+		const engine = new WebLlmEngine(d.deps, name);
+
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+
+		const controller = new AbortController();
+		const stream = engine.translate(request(), controller.signal)[Symbol.asyncIterator]();
+		const first = stream.next();
+
+		await settle();
+		controller.abort();
+		expect(d.calls.interrupt).to.equal(0);
+
+		d.grant(0);
+		expect((await first).done).to.equal(true);
 		expect(d.calls.interrupt).to.equal(1);
 	});
 
