@@ -232,6 +232,30 @@ Fix wave after the first real-model test of fidelity (2026-09-12):
   item "Copy translation", and the composer's strip gains a Copy button
   that reads "Copied" for two seconds.
 
+Panel redraw after the live test (2026-09-12):
+
+- **The per-channel panel is one component in two layouts.** Every setting
+  is a label with its control beneath it, so the four controls share one
+  width; on a touch-primary device (or a window as narrow as the phone's
+  chat layout, `max-width: 479px`) the same markup `<Teleport>`s to
+  `<body>` as a full-screen sheet with 2.75rem controls, the two sections
+  under their headings, a one-line hint under each control and a full-width
+  Done above the safe area. Formality is a native picker in the column and
+  a three-way segmented control (`role="radiogroup"`) on the sheet -- three
+  targets to press instead of a picker to open.
+- **On touch the globe's tap opens the panel** rather than toggling
+  reading, since there is no right-click to reach the panel with; the
+  reading switch is the panel's first control and the button's label reads
+  "Translation settings". With a pointer nothing changes: click toggles,
+  right-click opens.
+- The panel's footer links to Settings -> Translation, for the choices that
+  are not per channel.
+- The sheet sits at `z-index: 1001`, above the sidebar and its overlay. The
+  spec's "below context menus" is not achievable as written --
+  `#context-menu-container` is 1000 -- and costs nothing: the container is
+  only in the document while a menu is open, and no menu can be opened from
+  the sheet.
+
 ## Non-goals
 
 - No translation of the lobby, notices from the server, events (join, part,

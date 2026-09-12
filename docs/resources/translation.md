@@ -76,6 +76,36 @@ text carries `[fail]` once (the retry succeeds), and logs every request
 onto `globalThis.__seanceTranslateFake` so a scenario can tell a batch
 from a fallback to singles.
 
+## The channel's panel
+
+The per-channel choices -- reading language, outgoing target, formality,
+variant -- are one component (`TranslationPanel.vue`) in two layouts. Where
+there is a pointer it is a column anchored under the channel header: each
+setting a label with its control beneath it, so the four controls share one
+width and one rhythm (20rem wide, 2.125rem controls); the section headings
+and the one-line hints are left out, and a footer carries a link to
+Settings -> Translation beside Done. Where `helpers/device.ts`
+`hasVirtualKeyboard()` reports a touch-primary device, or the window is as
+narrow as the phone's chat layout (`max-width: 479px`), the same markup
+`<Teleport>`s to `<body>` and takes `.translation-panel--sheet`: a
+full-screen sheet with 2.75rem controls, the two sections (Reading,
+Writing) under their headings, a hint under each control, formality as a
+three-way segmented control (`role="radiogroup"`, "As written" / "Formally"
+/ "Casually") rather than a native picker, and a full-width Done above the
+safe area. The sheet's height follows `--viewport-height`
+(`helpers/viewport.ts`), so iOS's keyboard cannot push Done off the screen.
+
+How it opens splits the same way. With a pointer, a click on the globe
+toggles reading and a right-click opens the panel; on touch there is no
+right-click, so the **tap** opens the panel (whose first control is the
+reading switch) and the globe's label says "Translation settings". The
+channel menu's "Translation..." reaches it on both. It closes on the X, on
+Done, on Escape, and -- the anchored panel only, since the sheet has no
+outside -- on a click outside it; the caret goes back to the globe when the
+panel is what held it. Browser checks:
+`tools/scenarios/translate-reading.mjs` (the column, and the sheet under
+`--mobile`) and `tools/scenarios/translate-composer.mjs --mobile --width=390 --height=844` (the sheet in full).
+
 ## Writing in a channel
 
 The panel also sets an outgoing target per channel (`write`, next to `read`

@@ -71,9 +71,9 @@
 							class="translate"
 							:class="{on: translationOn}"
 							:aria-label="translateLabel"
-							:aria-pressed="translationOn"
+							:aria-pressed="touch ? undefined : translationOn"
 							:aria-expanded="translationPanelOpen"
-							@click="toggleTranslation"
+							@click="onTranslateClick"
 							@contextmenu.prevent="openTranslationPanel"
 						/>
 					</span>
@@ -177,6 +177,7 @@ import {
 	translationAvailable as translationAvailableNow,
 } from "../js/translate/reader";
 import {languageName} from "../js/translate/languages";
+import {hasVirtualKeyboard} from "../js/helpers/device";
 
 export default defineComponent({
 	name: "Chat",
@@ -311,7 +312,15 @@ export default defineComponent({
 		);
 		// The light means reading; a write target shows in the tooltip.
 		const translationOn = computed(() => translationState.value.read !== null);
+		// A touch device has no right-click, so the tap is what opens the
+		// panel there and the button says so; the click keeps toggling
+		// reading where there is a pointer.
+		const touch = hasVirtualKeyboard();
 		const translateLabel = computed(() => {
+			if (touch) {
+				return "Translation settings";
+			}
+
 			const name = (code: string) => languageName(code, navigator.language);
 			const {read, write} = translationState.value;
 			const paused = store.state.translation.paused;
@@ -344,6 +353,14 @@ export default defineComponent({
 
 		const openTranslationPanel = () => {
 			translationPanelOpen.value = true;
+		};
+
+		const onTranslateClick = () => {
+			if (touch) {
+				openTranslationPanel();
+			} else {
+				toggleTranslation();
+			}
 		};
 
 		watch(
@@ -413,7 +430,8 @@ export default defineComponent({
 			translationAvailable,
 			translationOn,
 			translateLabel,
-			toggleTranslation,
+			touch,
+			onTranslateClick,
 			openTranslationPanel,
 		};
 	},
