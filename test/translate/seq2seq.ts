@@ -3,11 +3,13 @@ import {emptyContext, type TranslateRequest} from "../../client/js/translate/eng
 import {
 	SEQ2SEQ_MAX_LOADED,
 	Seq2seqEngine,
+	splitSentences,
 	translationOptions,
 	type PipelineLike,
 	type Seq2seqDeps,
 } from "../../client/js/translate/engines/seq2seq";
 import {buildCatalog} from "../../client/js/translate/models";
+import {placeholder} from "../../client/js/translate/spans";
 
 const catalog = buildCatalog();
 
@@ -127,6 +129,125 @@ describe("translate/engines/seq2seq", () => {
 
 		expect(chunks).to.deep.equal([{text: `[${catalog.nllb.id}] Hallo Welt`, done: true}]);
 		expect(d.calls.run[0][2]).to.deep.equal({src_lang: "deu_Latn", tgt_lang: "eng_Latn"});
+	});
+
+	describe("splitSentences", () => {
+		it("splits after a full stop, a question mark and an exclamation mark", () => {
+			expect(
+				splitSentences(
+					"We moved the deploy to Thursday. Please keep the timestamps in the log this time."
+				)
+			).to.deep.equal([
+				"We moved the deploy to Thursday.",
+				"Please keep the timestamps in the log this time.",
+			]);
+			expect(splitSentences("really? yes! see you")).to.deep.equal([
+				"really?",
+				"yes!",
+				"see you",
+			]);
+			expect(splitSentences("wait… what?! no")).to.deep.equal(["wait…", "what?!", "no"]);
+		});
+
+		it("never at a decimal point, a version number or a mark with no space after it", () => {
+			expect(splitSentences("v2.4 is out. update now")).to.deep.equal([
+				"v2.4 is out.",
+				"update now",
+			]);
+			expect(splitSentences("it costs 2.50 today")).to.deep.equal(["it costs 2.50 today"]);
+			expect(splitSentences("see example.com for it")).to.deep.equal([
+				"see example.com for it",
+			]);
+		});
+
+		it("keeps a placeholder whole and a closing quote with its sentence", () => {
+			expect(splitSentences(`see ${placeholder(0)}. it has the log`)).to.deep.equal([
+				`see ${placeholder(0)}.`,
+				"it has the log",
+			]);
+			expect(splitSentences('she said "done." then left')).to.deep.equal([
+				'she said "done."',
+				"then left",
+			]);
+		});
+
+		it("splits after CJK full-width marks with no space after them", () => {
+			expect(splitSentences("我们把部署改到了周四。请保留日志！可以吗？")).to.deep.equal([
+				"我们把部署改到了周四。",
+				"请保留日志！",
+				"可以吗？",
+			]);
+		});
+
+		it("gives one sentence back as it is, and trims around several", () => {
+			expect(splitSentences("can you send me the log from yesterday?")).to.deep.equal([
+				"can you send me the log from yesterday?",
+			]);
+			expect(splitSentences("no full stop here  ")).to.deep.equal(["no full stop here  "]);
+			expect(splitSentences("  One.   Two.  ")).to.deep.equal(["One.", "Two."]);
+			expect(splitSentences("")).to.deep.equal([""]);
+		});
+	});
+
+	it("NLLB translates sentence by sentence and streams the text so far", async () => {
+		const d = deps();
+		const engine = new Seq2seqEngine(d.deps);
+		await engine.load(catalog.nllb, () => {});
+		const chunks: {text: string; done: boolean}[] = [];
+
+		for await (const chunk of engine.translate(
+			request({text: `Wir sind da. ${placeholder(0)}. Bis bald`}),
+			new AbortController().signal
+		)) {
+			chunks.push({text: chunk.text, done: chunk.done});
+		}
+
+		const id = catalog.nllb.id;
+
+		// The placeholder on its own is kept, never sent to the model.
+		expect(d.calls.run.map(([, text]) => text)).to.deep.equal(["Wir sind da.", "Bis bald"]);
+		expect(chunks).to.deep.equal([
+			{text: `[${id}] Wir sind da.`, done: false},
+			{text: `[${id}] Wir sind da. ${placeholder(0)}.`, done: false},
+			{text: `[${id}] Wir sind da. ${placeholder(0)}. [${id}] Bis bald`, done: true},
+		]);
+	});
+
+	it("OPUS-MT gets a multi-sentence text whole", async () => {
+		const d = deps();
+		const engine = new Seq2seqEngine(d.deps);
+		const opus = catalog.opus["de-en"];
+		await engine.load(opus, () => {});
+		const chunks: {text: string; done: boolean}[] = [];
+
+		for await (const chunk of engine.translate(
+			request({model: opus.id, text: "Wir sind da. Bis bald"}),
+			new AbortController().signal
+		)) {
+			chunks.push({text: chunk.text, done: chunk.done});
+		}
+
+		expect(d.calls.run.map(([, text]) => text)).to.deep.equal(["Wir sind da. Bis bald"]);
+		expect(chunks).to.deep.equal([{text: `[${opus.id}] Wir sind da. Bis bald`, done: true}]);
+	});
+
+	it("a cancel between two sentences stops before the next one", async () => {
+		const d = deps();
+		const engine = new Seq2seqEngine(d.deps);
+		await engine.load(catalog.nllb, () => {});
+		const controller = new AbortController();
+		const chunks: string[] = [];
+
+		for await (const chunk of engine.translate(
+			request({text: "Eins. Zwei. Drei."}),
+			controller.signal
+		)) {
+			chunks.push(chunk.text);
+			controller.abort();
+		}
+
+		expect(d.calls.run.length).to.equal(2);
+		expect(chunks.length).to.equal(1);
 	});
 
 	it("keeps two models and evicts the least recently used", async () => {

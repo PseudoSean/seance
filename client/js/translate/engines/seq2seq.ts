@@ -5,7 +5,11 @@
 // last use. The library arrives through `Seq2seqDeps`; seq2seq.real.ts is
 // its only import. A transformers.js pipeline call cannot be cancelled, so
 // a cancelled request runs to completion and only its result is dropped
-// (`signal.aborted` is checked after the call).
+// (`signal.aborted` is checked after the call). NLLB is given a request one
+// sentence at a time (`splitSentences`): handed a two-sentence line whole it
+// translates the first sentence and stops. OPUS-MT keeps every sentence of
+// a whole line and scores the same or better whole, so its requests stay
+// whole (docs/resources/translation.md § Two engines, one router).
 
 import {
 	Engine,
@@ -38,6 +42,89 @@ export const SEQ2SEQ_MAX_LOADED = 2;
 
 function isNllb(modelId: string): boolean {
 	return /nllb/i.test(modelId);
+}
+
+/** Marks that end a sentence when whitespace or the end of the text follows. */
+const SENTENCE_END = new Set([".", "!", "?", "\u2026"]);
+/** The full-width marks, which end a sentence whatever follows: CJK puts no space after them. */
+const WIDE_SENTENCE_END = new Set(["\u3002", "\uff01", "\uff1f"]);
+/** Closing quotes and brackets that stay with the sentence they close. */
+const CLOSERS = new Set(['"', "'", "\u201d", "\u2019", "\u00bb", ")", "]"]);
+
+function isDigit(ch: string | undefined): boolean {
+	return ch !== undefined && ch >= "0" && ch <= "9";
+}
+
+/**
+ * A text's sentences, trimmed, for an engine that translates one at a time.
+ * A sentence ends after `.`, `!`, `?` or `…` (a run of them, and any closing
+ * quote or bracket after it) followed by whitespace or the end of the text,
+ * and after `。`, `！` or `？` whatever follows. Never inside a placeholder
+ * (`⟦n⟧`), and never at a decimal point between digits. A text with one
+ * sentence, or none, comes back as itself in a one-element list.
+ */
+export function splitSentences(text: string): string[] {
+	const sentences: string[] = [];
+	let start = 0;
+	let i = 0;
+
+	while (i < text.length) {
+		const ch = text[i];
+
+		if (ch === "\u27e6") {
+			const close = text.indexOf("\u27e7", i);
+
+			if (close > i) {
+				i = close + 1;
+				continue;
+			}
+		}
+
+		if (!SENTENCE_END.has(ch) && !WIDE_SENTENCE_END.has(ch)) {
+			i++;
+			continue;
+		}
+
+		if (ch === "." && isDigit(text[i - 1]) && isDigit(text[i + 1])) {
+			i++;
+			continue;
+		}
+
+		let end = i;
+		let wide = false;
+
+		while (
+			end < text.length &&
+			(SENTENCE_END.has(text[end]) || WIDE_SENTENCE_END.has(text[end]))
+		) {
+			wide = wide || WIDE_SENTENCE_END.has(text[end]);
+			end++;
+		}
+
+		while (end < text.length && CLOSERS.has(text[end])) {
+			end++;
+		}
+
+		if (wide || end === text.length || /\s/.test(text[end])) {
+			const sentence = text.slice(start, end).trim();
+
+			if (sentence !== "") {
+				sentences.push(sentence);
+			}
+
+			start = end;
+		}
+
+		i = end;
+	}
+
+	const rest = text.slice(start).trim();
+
+	if (rest !== "") {
+		sentences.push(rest);
+	}
+
+	return sentences.length > 1 ? sentences : [text];
 }
 
 export function translationOptions(req: TranslateRequest): Record<string, string> {
@@ -163,15 +250,39 @@ export class Seq2seqEngine implements Engine {
 
 		this.touch(req.model);
 		const options = translationOptions(req);
-		this.inUse.set(req.model, (this.inUse.get(req.model) ?? 0) + 1);
+		// NLLB one sentence at a time, OPUS whole (see the header).
+		const parts = isNllb(req.model) ? splitSentences(req.text) : [req.text];
+		const done: string[] = [];
 
-		let result: {translation_text: string}[];
+		this.inUse.set(req.model, (this.inUse.get(req.model) ?? 0) + 1);
 
 		// The eviction deferred while this pipeline was in use only resumes
 		// once this `finally` runs, which requires the caller to drain the
-		// generator (an abandoned generator pins the model in `inUse`).
+		// generator (an abandoned generator pins the model in `inUse`). The
+		// count covers every sentence, so no eviction lands between two.
 		try {
-			result = await pipe(req.text, options);
+			for (let n = 0; n < parts.length; n++) {
+				// A sentence of several with no letters (a placeholder on its
+				// own) has nothing to translate, and NLLB given one invents
+				// something. A one-part request is sent as it always was.
+				if (parts.length > 1 && !/\p{L}/u.test(parts[n])) {
+					done.push(parts[n].trim());
+				} else {
+					const result = await pipe(parts[n], options);
+
+					done.push((result[0]?.translation_text ?? "").trim());
+				}
+
+				if (signal.aborted) {
+					return;
+				}
+
+				// The text so far after each sentence but the last, which is
+				// yielded once the pipeline is released.
+				if (n < parts.length - 1) {
+					yield {id: req.id, text: done.join(" "), done: false};
+				}
+			}
 		} finally {
 			const count = (this.inUse.get(req.model) ?? 1) - 1;
 
@@ -188,7 +299,7 @@ export class Seq2seqEngine implements Engine {
 			return;
 		}
 
-		yield {id: req.id, text: (result[0]?.translation_text ?? "").trim(), done: true};
+		yield {id: req.id, text: done.join(" "), done: true};
 	}
 
 	private touch(id: string): void {
