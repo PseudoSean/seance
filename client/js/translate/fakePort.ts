@@ -157,18 +157,26 @@ class ScriptedEngine implements Engine {
 
 		logRequest(req, this.name);
 
+		// A batch holding a line that has not failed yet answers with nothing
+		// a batch parser accepts, so the queue sends its lines again one at a
+		// time (what it does with a batch a model botched) and only that
+		// line's own request fails: a channel's backlog queued together must
+		// not fail every line beside one scripted failure. A multi-line draft
+		// (`purpose` "write") keeps failing as one request.
+		if (
+			req.lines &&
+			req.purpose === "read" &&
+			req.lines.some((line) => line.includes(FAIL_TOKEN) && !this.failedOnce.has(line))
+		) {
+			yield {id: req.id, text: "", done: true};
+			return;
+		}
+
 		const failKey = req.lines ? req.lines.join("\n") : req.text;
 
 		if (failKey.includes(FAIL_TOKEN) && !this.failedOnce.has(failKey)) {
 			this.failedOnce.add(failKey);
 			throw new Error("scripted failure");
-		}
-
-		let echoing = failKey.includes(ECHO_TOKEN);
-
-		if (failKey.includes(ECHO_ONCE_TOKEN) && !this.echoedOnce.has(failKey)) {
-			this.echoedOnce.add(failKey);
-			echoing = true;
 		}
 
 		if (req.lines) {
@@ -181,7 +189,11 @@ class ScriptedEngine implements Engine {
 
 				await wait(this.stepMs);
 
-				const line = echoing
+				// A batch echoes only the lines carrying a token, as a model
+				// handing back one line of several would: a channel's backlog
+				// queued together (a switch-on, a language change) must not
+				// fail every line batched with one scripted echo.
+				const line = this.echoes(req.lines[i])
 					? `${i + 1}. ${req.lines[i]}`
 					: `${i + 1}. [${languageName(req.to)}] ${req.lines[i]}`;
 
@@ -197,7 +209,9 @@ class ScriptedEngine implements Engine {
 			return;
 		}
 
-		const words = (echoing ? req.text : `[${languageName(req.to)}] ${req.text}`).split(" ");
+		const words = (
+			this.echoes(req.text) ? req.text : `[${languageName(req.to)}] ${req.text}`
+		).split(" ");
 		let text = "";
 
 		for (const word of words) {
@@ -211,6 +225,16 @@ class ScriptedEngine implements Engine {
 		}
 
 		yield {id: req.id, text, done: true};
+	}
+
+	/** `[echo]` every time; `[echo-once]` the first time this text is seen. */
+	private echoes(text: string): boolean {
+		if (text.includes(ECHO_ONCE_TOKEN) && !this.echoedOnce.has(text)) {
+			this.echoedOnce.add(text);
+			return true;
+		}
+
+		return text.includes(ECHO_TOKEN);
 	}
 }
 

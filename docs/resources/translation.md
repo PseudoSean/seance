@@ -128,8 +128,8 @@ kept the first line and the rest of the message was silently lost. An entry leav
 drops it, and so do the message-limit trim, a part and a quit. The
 switch, the outgoing target (plan 3), formality, variant, the languages
 spoken here and the term memory are per channel under
-`thelounge.translate` (`channelStore.ts`); older messages are never
-translated (the switch-on moment is recorded). The channel menu's
+`thelounge.translate` (`channelStore.ts`); leaving a channel keeps them,
+and only a network's quit forgets them. The channel menu's
 "Translation…" switches to the channel and asks for the panel through
 `state.translation.panelFor`, which the view clears as it opens it.
 Nothing on a message object changes and nothing about unread or highlight
@@ -140,35 +140,52 @@ text carries `[fail]` once (the retry succeeds), and logs every request
 onto `globalThis.__seanceTranslateFake` so a scenario can tell a batch
 from a fallback to singles.
 
-**History is translated, bounded and newest first.** A replayed line -- a
-reconnect's catch-up, a reload's replay -- is gated by the switch-on moment
-alone, like a live one: a channel switched on today still does not
-translate last week's scrollback, but everything said since it was
-switched on is translated whether this page saw it live or on a replay.
-A reconnect's catch-up arrives one line at a time (as `msg` with `replay`),
-so it is bounded by counting: `HISTORY_QUEUE_CAP` (40) replayed lines per
-channel per replay window, a live line closing the window. A **"load
-more"** is the reader asking for that history -- they are looking at it now
--- so the switch-on moment does not gate it at all, while the rest of
-eligibility (own lines, pending ones, short ones, lines already in the
-target) still does; and because that page arrives whole, its newest 40
-lines are queued, newest first
-(`eligibility.ts` `HISTORY_QUEUE_CAP` and `historyQueueOrder`, from the
-reader's second `socket.on("more")` listener, which runs after
-`socket-events/more.ts` has prepended the page, so the objects it queues
-are the store's own and their ids are store ids). Careful: **two** things
-arrive as `more` (`irc/history.ts` `mode: "prepend"`) -- that page, and a
-channel's first history fill when it is joined, which nobody asked for.
-Only the asked-for one skips `since`, and `channel.historyLoading` is what
-tells them apart: `MessageList.vue` sets it immediately before its emit
-and `socket-events/more.ts` clears it a tick after the reader's listener
-has run. A join's fill is bounded and ordered the same way but gated by
-`since` like any other replay. The queue then runs a
-channel's live lines ahead of its history ones (`QueueItem.history`,
-cleared by a retry, since a retry is someone asking for that line now),
-and the history ones are what a channel that has fallen
-`DROP_AFTER_LINES` behind has left to drop. Browser check: the last steps
-of `tools/scenarios/translate-reading.mjs`.
+**Reading covers what the channel shows, capped per load, newest first.**
+A line is considered however old it is: what keeps one out is the rules
+above -- own lines, pending copies, types other than chat, `MIN_WORDS`,
+detection -- never when it was said. History is bounded per _load_, each
+load queueing at most `HISTORY_QUEUE_CAP` (40) of its lines, newest first
+(`eligibility.ts` `historyQueueOrder`, through `reader.ts` `queueHistory`,
+one line after another so the queue's order is that order):
+
+- a history page arriving as `more` (`irc/history.ts` `mode: "prepend"`)
+  -- the page `MessageList.vue` asked for and a channel's first fill on
+  joining it alike; the reader's second `socket.on("more")` runs after
+  `socket-events/more.ts` has prepended the page, so the objects it queues
+  are the store's own and their ids are store ids;
+- one batch of a reconnect's catch-up or a bouncer replay, which reaches
+  the reader as `msg` with `replay`, one line at a time. A batch is
+  delivered in one synchronous run (`deliverAppend`) and the bus
+  dispatches synchronously, so `eligibility.ts` `ReplayBatches` takes the
+  lines a channel receives before a microtask as one batch; the next batch
+  counts afresh, with no live line needed in between;
+- the requeue of a switch-on or a language change (below).
+
+**Switching reading on, or to another language, retranslates what is on
+screen** (`reader.ts` `setReading`): the channel's queued work is
+cancelled, its remembered items, translations and language prior go, and
+its messages are queued again as one load. Setting the same language again
+does nothing, and switching off only cancels what is queued. A posted
+line's translation is the composer's read-back (§ Writing in a channel),
+which the pipeline cannot make again since it never translates own lines:
+it is kept when it is already in the new reading language and removed with
+the rest when it is not.
+
+**Leaving a channel keeps its setting.** A part cancels that channel's
+queued work, forgets its queue items and drops the translations with its
+messages, but the record stays: a rejoin finds reading still on, in the
+same language, and translates the history the join loads. A network's quit
+still forgets its channels' records. A per-channel generation stops a
+history run, or a detection still under way, once the reading restarts or
+the channel goes, so nothing is queued twice or into a channel that is no
+longer there.
+
+The queue then runs a channel's live lines ahead of its history ones
+(`QueueItem.history`, cleared by a retry, since a retry is someone asking
+for that line now), and the history ones are what a channel that has
+fallen `DROP_AFTER_LINES` behind has left to drop. Browser check: the
+switch-on, "load more", language-change and rejoin steps of
+`tools/scenarios/translate-reading.mjs`.
 
 ## The channel's panel
 

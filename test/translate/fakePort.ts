@@ -148,6 +148,52 @@ describe("translate/fakePort", () => {
 			"[English] this line comes [echo-once] back"
 		);
 
+		// A batch hands back only the lines that carry a token: a channel's
+		// backlog queued together must not fail every line beside one echo.
+		const batchLines = ["erste Zeile hier", "this line comes [echo] back", "dritte Zeile hier"];
+		let batched = "";
+
+		for await (const chunk of client.translate(
+			{...base, text: "", lines: batchLines},
+			catalog.llm
+		)) {
+			batched = chunk.text;
+		}
+
+		expect(parseBatchedOutput(batched, batchLines.length)).to.deep.equal([
+			"[English] erste Zeile hier",
+			"this line comes [echo] back",
+			"[English] dritte Zeile hier",
+		]);
+
+		// A reading batch holding a line that has not failed yet answers
+		// nothing a parser accepts (the queue falls back to singles), and that
+		// line alone then fails once.
+		const failLines = ["erste Zeile hier", "this line will [fail] in a batch"];
+		let failBatch = "x";
+
+		for await (const chunk of client.translate(
+			{...base, text: "", lines: failLines},
+			catalog.llm
+		)) {
+			failBatch = chunk.text;
+		}
+
+		expect(parseBatchedOutput(failBatch, failLines.length)).to.equal(null);
+
+		let singleError = "";
+
+		try {
+			await answer("this line will [fail] in a batch");
+		} catch (e) {
+			singleError = e instanceof Error ? e.message : String(e);
+		}
+
+		expect(singleError).to.contain("scripted failure");
+		expect(await answer("this line will [fail] in a batch")).to.equal(
+			"[English] this line will [fail] in a batch"
+		);
+
 		terminate();
 	});
 
