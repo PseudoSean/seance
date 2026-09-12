@@ -439,13 +439,23 @@ const flyUp = {
 		...dangle,
 		"wing.near": beats2,
 		"wing.far": farBeat,
+		// **A ramp finishes on the last frame the sampler stores, not at phase
+		// 100.** `sampleGait` stores phases 0…(n−1)/n — 0…90 for the ten frames
+		// 0.5 s at 20 fps rounds to — while `once` closes the clip on the
+		// phase-1 pose, so a key written at 100 leaves the clip's closing frame
+		// a whole frame-interval past the pose the *next* segment blends from.
+		// Here that is harmless (`flyLevel` starts cold at `-APEX` whatever this
+		// does); on `flyDown` it was a 0.9-unit pop at the moment of landing,
+		// and on the bird 17 units of altitude.
 		ty: [
 			[0, 0, "linear"],
-			[100, -APEX, "linear"],
+			[90, -APEX, "linear"],
+			[100, -APEX],
 		],
 		pitch: [
 			[0, 0, "linear"],
-			[100, -7, "linear"],
+			[90, -7, "linear"],
+			[100, -7],
 		],
 	},
 };
@@ -469,13 +479,19 @@ const flyDown = {
 		...dangle,
 		"wing.near": beats2,
 		"wing.far": farBeat,
+		// ends on the last stored frame (phase 90 of ten), as `flyUp`'s does —
+		// this is the seam that needs it: the `landed` blend that follows starts
+		// from the last *stored* pose, so a ramp written to 100 leaves the
+		// animal 0.9 units in the air at the moment it touches down
 		ty: [
 			[0, -APEX, "linear"],
-			[100, 0, "linear"],
+			[90, 0, "linear"],
+			[100, 0],
 		],
 		pitch: [
 			[0, -7, "linear"],
-			[100, 4, "linear"],
+			[90, 4, "linear"],
+			[100, 4],
 		],
 	},
 };
