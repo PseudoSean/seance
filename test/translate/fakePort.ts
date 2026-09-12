@@ -98,7 +98,54 @@ describe("translate/fakePort", () => {
 			// The marker form the route chose (spans.ts `renderMarkers`); a
 			// request that names none carries the numbered pairs.
 			markers: "placeholder",
+			// How much of the channel the context carried: a scenario tells
+			// the composer's bare second try from the first request by these.
+			contextLines: 0,
+			voice: 0,
 		});
+
+		terminate();
+	});
+
+	it("hands back a request carrying [echo], and one carrying [echo-once] only once", async () => {
+		const {port, terminate} = fakePort({stepMs: 0});
+		const client = new TranslateClient(port);
+
+		client.configure(catalog, "https://app.test/js/ort/");
+		await client.load(catalog.llm, () => {});
+
+		const base = {
+			id: 4,
+			model: catalog.llm.id,
+			from: "de",
+			to: "en",
+			purpose: "read" as const,
+			context: emptyContext(),
+		};
+		const answer = async (text: string): Promise<string> => {
+			let last = "";
+
+			for await (const chunk of client.translate({...base, text}, catalog.llm)) {
+				last = chunk.text;
+			}
+
+			return last;
+		};
+
+		// `[echo]` is every time: the echo rule's own scenario step wants both
+		// the translation and its bare retry to come back unchanged.
+		expect(await answer("this line comes [echo] back")).to.equal("this line comes [echo] back");
+		expect(await answer("this line comes [echo] back")).to.equal("this line comes [echo] back");
+
+		// `[echo-once]` is the bare retry succeeding: handed back once, then
+		// translated. Keyed on the text, like `[fail]`'s single failure —
+		// and a retry is the same text, so it is the same key.
+		expect(await answer("this line comes [echo-once] back")).to.equal(
+			"this line comes [echo-once] back"
+		);
+		expect(await answer("this line comes [echo-once] back")).to.equal(
+			"[English] this line comes [echo-once] back"
+		);
 
 		terminate();
 	});

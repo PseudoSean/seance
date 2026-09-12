@@ -14,8 +14,10 @@
 // input clears) and ArrowUp recalls the original draft; Escape drops a
 // strip and keeps the draft; a draft carrying the fake's "[fail]" marker
 // gets the failure strip and Enter sends it as written, and one carrying
-// "[echo]" -- which the fake hands back as typed -- gets the same strip
-// with "came back unchanged" as its reason; "/me" never
+// "[echo]" -- which the fake hands back as typed -- is tried a second time
+// with nothing but the draft (no context, no source) before the same strip
+// reports "came back unchanged", while "[echo-once]", handed back only the
+// first time, ends as the bare retry's translation; "/me" never
 // translates; a three-line draft translates as one numbered request and
 // ships as three lines; a draft carrying markdown, a nick, a URL and a code
 // span comes back with every one of them intact (the engine only ever saw
@@ -474,6 +476,54 @@ export default async function run(page) {
 			`(document.querySelector(".translate-bar-reason") || {}).textContent`
 		)) === "came back unchanged"
 	);
+
+	// The echo bought one more generation, and a bare one: the same draft
+	// with the source left to the model and nothing of the channel in the
+	// prompt. Filtered by the draft's own text rather than counted, because
+	// the retry is not the only request the page makes.
+	const echoWrites = `${REQUESTS}.filter((r) => r.purpose === "write" && r.text.indexOf("[echo]") !== -1)`;
+
+	await page.check(
+		"the echo was tried twice, the second time bare",
+		await page.evaluate(
+			`(() => {
+				const tries = ${echoWrites};
+				return (
+					tries.length === 2 &&
+					tries[1].from === null &&
+					tries[1].contextLines === 0 &&
+					tries[1].voice === 0
+				);
+			})()`
+		)
+	);
+	await page.check(
+		"the first try carried the channel's context",
+		(await page.evaluate(`${echoWrites}[0].contextLines`)) > 0
+	);
+	await page.check(
+		"the chip's title says the retry named no source",
+		String(
+			await page.evaluate(`document.querySelector(".translate-bar-chip").title`)
+		).startsWith("auto → German")
+	);
+	await page.check(
+		"the dev build kept the retry as the last composer request",
+		await page.evaluate(
+			`(() => {
+				const last = window.seanceTranslateLast;
+				return (
+					!!last &&
+					last.kind === "write" &&
+					last.retry === true &&
+					last.error === "came back unchanged" &&
+					last.from === null &&
+					last.context.recent.length === 0 &&
+					(window.seanceTranslateLog || []).length >= 2
+				);
+			})()`
+		)
+	);
 	await page.check(
 		"the send button offers the draft as written",
 		(await page.evaluate(
@@ -489,6 +539,74 @@ export default async function run(page) {
 	await page.check("the other user heard the draft as typed", await heard(other, echoed));
 	await page.check(
 		"the input cleared after the echo send",
+		(await page.evaluate(inputValue)) === ""
+	);
+
+	// 7c. The bare second try is a real second chance: the fake's
+	// "[echo-once]" token hands the first request back and translates the
+	// next one, so the strip ends done with the retry's translation and the
+	// second Enter sends it like any other.
+	const retried = `[echo-once] this one needs a second try ${RUN}`;
+
+	await typeAndEnter(page, retried);
+	await page.waitFor(`${barText} === ${JSON.stringify(`[German] ${retried}`)}`, {
+		timeout: 30000,
+		label: "the bare retry's translation",
+	});
+	await page.check(
+		"the strip is not a failure",
+		!(await page.evaluate(`!!document.querySelector(".translate-bar.failed")`))
+	);
+
+	const retryWrites = `${REQUESTS}.filter((r) => r.purpose === "write" && r.text.indexOf("[echo-once]") !== -1)`;
+
+	await page.check(
+		"the retried draft went out twice, the second time bare",
+		await page.evaluate(
+			`(() => {
+				const tries = ${retryWrites};
+				return (
+					tries.length === 2 &&
+					tries[0].contextLines > 0 &&
+					tries[1].from === null &&
+					tries[1].contextLines === 0
+				);
+			})()`
+		)
+	);
+	await page.check(
+		"the capture holds both tries and only the first as an echo",
+		await page.evaluate(
+			`(() => {
+				const log = (window.seanceTranslateLog || []).filter(
+					(e) => e.kind === "write" && e.draft === ${JSON.stringify(retried)}
+				);
+				return (
+					log.length === 2 &&
+					log[0].retry === false &&
+					log[0].error === "came back unchanged" &&
+					log[1].retry === true &&
+					log[1].error === null
+				);
+			})()`
+		)
+	);
+	await page.screenshot("composer-retried");
+	await page.waitFor(
+		`!!document.querySelector(".translate-bar-send") && !document.querySelector(".translate-bar-send").disabled`,
+		{timeout: 30000, label: "the round trip finished and Send is offered"}
+	);
+	await page.evaluate(ENTER);
+	await page.waitFor(settledSelf(`[German] ${retried}`), {
+		timeout: 20000,
+		label: "the retry's translation in the timeline",
+	});
+	await page.check(
+		"the other user heard the retry's translation",
+		await heard(other, `[German] ${retried}`)
+	);
+	await page.check(
+		"the input cleared after the retry send",
 		(await page.evaluate(inputValue)) === ""
 	);
 

@@ -48,6 +48,12 @@ const FAIL_TOKEN = "[fail]";
  *  the `[Language]` prefix the fake otherwise puts in front, since an
  *  answer differing from the text by anything at all would not be one. */
 const ECHO_TOKEN = "[echo]";
+/** The same, once: the first request carrying it comes back as it went in
+ *  and every later one translates, so a scenario can watch the composer's
+ *  bare second try succeed (`outgoing.ts` `bareRetry`). Keyed like
+ *  `[fail]`'s single failure, on the request's text -- and a retry is the
+ *  same protected text, so it is the same key. */
+const ECHO_ONCE_TOKEN = "[echo-once]";
 
 interface TranslateFakeRequestLog {
 	id: number;
@@ -61,6 +67,10 @@ interface TranslateFakeRequestLog {
 	engine: EngineName;
 	/** The marker form the route chose (spans.ts `renderMarkers`). */
 	markers: string;
+	/** How many recent lines the context carried: 0 is a bare request. */
+	contextLines: number;
+	/** How many of the user's own lines the context quoted (`purpose: "write"`). */
+	voice: number;
 }
 
 interface TranslateFakeGlobal {
@@ -85,6 +95,8 @@ function logRequest(req: TranslateRequest, engine: EngineName): void {
 		to: req.to,
 		engine,
 		markers: req.markers ?? "placeholder",
+		contextLines: req.context.recent.length,
+		voice: req.context.voice.length,
 	});
 }
 
@@ -95,6 +107,8 @@ class ScriptedEngine implements Engine {
 	private state: EngineStatus = "cold";
 	/** Texts this engine has already failed once, so a retry succeeds. */
 	private failedOnce = new Set<string>();
+	/** Texts this engine has already echoed once, so a retry translates. */
+	private echoedOnce = new Set<string>();
 
 	constructor(name: "llm" | "seq2seq", stepMs: number) {
 		this.name = name;
@@ -150,7 +164,12 @@ class ScriptedEngine implements Engine {
 			throw new Error("scripted failure");
 		}
 
-		const echoing = failKey.includes(ECHO_TOKEN);
+		let echoing = failKey.includes(ECHO_TOKEN);
+
+		if (failKey.includes(ECHO_ONCE_TOKEN) && !this.echoedOnce.has(failKey)) {
+			this.echoedOnce.add(failKey);
+			echoing = true;
+		}
 
 		if (req.lines) {
 			let text = "";

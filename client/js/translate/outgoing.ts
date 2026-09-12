@@ -4,7 +4,13 @@
 // trip, and the rule for what a sent pair leaves in term memory. writer.ts
 // is the store glue around it; ChatInput.vue renders the strip.
 
-import type {PromptContext, TranslateChunk, TranslateRequest} from "./engine";
+import {
+	type EngineName,
+	type PromptContext,
+	type TranslateChunk,
+	type TranslateRequest,
+	emptyContext,
+} from "./engine";
 import {parseBatchedOutput, stripSentinel} from "./prompt";
 import {
 	type MarkerForm,
@@ -148,6 +154,27 @@ export function hasNoLetters(text: string): boolean {
 	return !/[\p{L}\p{N}]/u.test(text.replace(/⟦\s*\d+\s*⟧/g, ""));
 }
 
+/**
+ * What an answer amounts to: `null` when it is a translation, else the
+ * failure it is -- `EMPTY_TRANSLATION` for nothing a language could be,
+ * `UNCHANGED` for the source handed back. Both sides of the composer
+ * (`writer.ts`: the draft's translation and the round trip's read-back) ask
+ * this of every answer, so the order of the two rules is decided once: an
+ * answer with no letters in it is reported as that even where it is also
+ * the source over again.
+ */
+export function answerError(source: string, translation: string): string | null {
+	if (hasNoLetters(translation)) {
+		return EMPTY_TRANSLATION;
+	}
+
+	if (isUnchanged(source, translation)) {
+		return UNCHANGED;
+	}
+
+	return null;
+}
+
 function wordCount(text: string): number {
 	return text.split(/\s+/).filter((w) => w !== "").length;
 }
@@ -227,6 +254,56 @@ export interface OutgoingRequest {
 	 * here — once, before it is split, for the same reason.
 	 */
 	protected?: Protected;
+}
+
+/**
+ * The second try for an answer that came back unchanged: the same draft,
+ * the source left to the model, no context but the register.
+ *
+ * The bare request is the shape a model answers most reliably, and the two
+ * things that make one hand a line back rather than translate it -- a
+ * source that is wrong for the draft, and a context that confounds it --
+ * are exactly what this removes. The route is kept (`batches`, `markers`,
+ * `protected`), so the retry goes to the same engine over the same
+ * protected text; only what the prompt says about it changes.
+ */
+export function bareRetry(request: OutgoingRequest): OutgoingRequest {
+	const context = emptyContext();
+
+	context.formality = request.context.formality;
+
+	if (request.context.variant) {
+		context.variant = request.context.variant;
+	}
+
+	return {...request, from: null, context};
+}
+
+/**
+ * One attempt as a development build records it (`writer.ts`, behind
+ * `BUILD === "dev"`, onto `window.seanceTranslateLog`): everything the
+ * offline runner needs to send the same request again
+ * (`tools/translate-llm.ts --capture`), and what came back.
+ */
+export interface TranslateCapture {
+	/** The draft's translation, or the round trip reading one back. */
+	kind: "write" | "check";
+	/** ISO time the attempt finished. */
+	at: string;
+	/** The text that went in: the draft, or the translation being read back. */
+	draft: string;
+	from: string | null;
+	to: string;
+	model: string | null;
+	engine: EngineName | null;
+	markers: MarkerForm;
+	/** This was the bare second try (`bareRetry`). */
+	retry: boolean;
+	context: PromptContext;
+	/** The answer, restored and with a copied nick prefix stripped. */
+	text: string;
+	/** `answerError`'s verdict, the thrown message, or null. */
+	error: string | null;
 }
 
 /** Nothing here but placeholders: a fenced code block's line, say. */

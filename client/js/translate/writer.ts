@@ -7,6 +7,7 @@
 // while one runs; the request goes to the service directly.
 
 import {getBranding} from "../branding";
+import {BUILD} from "../build";
 import socket from "../socket";
 import {store, type OutgoingTranslation} from "../store";
 import type {ClientChan, ClientNetwork} from "../types";
@@ -14,14 +15,17 @@ import {type Formality, channelKey, getChannelTranslation, rememberTerm} from ".
 import {buildContext} from "./context";
 import {detectLanguage} from "./detect";
 import {plainTextOf} from "./eligibility";
-import {type EngineName, emptyContext} from "./engine";
+import {type EngineName, type PromptContext, emptyContext} from "./engine";
 import {translateService} from "./index";
 import {
 	ABORTED,
-	EMPTY_TRANSLATION,
 	type OutgoingDeps,
+	type OutgoingRequest,
+	type TranslateCapture,
 	UNCHANGED,
 	WRITE_DETECT_MIN_GAP,
+	answerError,
+	bareRetry,
 	hasNoLetters,
 	isUnchanged,
 	reverseTarget,
@@ -35,6 +39,47 @@ import {LLM_MARKERS, type MarkerForm, stripCopiedNickPrefix} from "./spans";
 
 /** An id no message has: buildContext then takes the whole scrollback as "before" the draft. */
 const DRAFT_ID = Number.MAX_SAFE_INTEGER;
+
+/**
+ * A development build's record of the composer's requests, for the offline
+ * runner (`tools/translate-llm.ts --capture`): a translation that reads
+ * wrongly cannot be diagnosed from the answer alone, and the request the
+ * page built -- its context, its source, its marker form -- is the one
+ * thing a report about it cannot otherwise carry. `seanceTranslateLast` is
+ * the newest attempt, `seanceTranslateLog` the newest CAPTURE_KEEP of them.
+ * Neither is defined in a production build.
+ */
+declare global {
+	// eslint-disable-next-line no-var
+	var seanceTranslateLog: TranslateCapture[] | undefined;
+	// eslint-disable-next-line no-var
+	var seanceTranslateLast: TranslateCapture | undefined;
+}
+
+const CAPTURE_KEEP = 10;
+
+/** The context as it went out, detached from the store's objects it quotes. */
+function cloneContext(context: PromptContext): PromptContext {
+	return JSON.parse(JSON.stringify(context)) as PromptContext;
+}
+
+function capture(entry: TranslateCapture): void {
+	if (BUILD !== "dev") {
+		return;
+	}
+
+	const log = (window.seanceTranslateLog ??= []);
+
+	log.push(entry);
+
+	// Trimmed in place rather than replaced, so a console that holds a
+	// reference to the array keeps seeing the newest entries.
+	if (log.length > CAPTURE_KEEP) {
+		log.splice(0, log.length - CAPTURE_KEEP);
+	}
+
+	window.seanceTranslateLast = entry;
+}
 
 /**
  * The marker form a route's engine reads (spans.ts): the LLM is the one
@@ -247,77 +292,125 @@ export async function translateOutgoing(
 			});
 		}
 
-		holdReading();
+		const request: OutgoingRequest = {
+			text: draft,
+			from,
+			to,
+			purpose: "write",
+			context,
+			batches: route?.candidate === "llm",
+			markers: markersFor(route?.candidate),
+			nicks,
+		};
 
-		let text: string;
+		/**
+		 * One generation of this draft, streamed into the strip: the answer
+		 * restored, a copied nick prefix off it, and — on a development
+		 * build — the request and what it produced recorded. Both tries go
+		 * through here, so they are the same request in everything but what
+		 * the prompt says about the draft.
+		 */
+		const attempt = async (req: OutgoingRequest, retry: boolean): Promise<string> => {
+			const record = (text: string, error: string | null) =>
+				capture({
+					kind: "write",
+					at: new Date().toISOString(),
+					draft,
+					from: req.from,
+					to: req.to,
+					model: route?.ref.id ?? null,
+					engine: engineFor(route),
+					markers: req.markers ?? "placeholder",
+					retry,
+					context: cloneContext(req.context),
+					text,
+					error,
+				});
 
-		try {
-			text = await translateDraft(
-				deps,
-				{
-					text: draft,
-					from,
-					to,
-					purpose: "write",
-					context,
-					batches: route?.candidate === "llm",
-					markers: markersFor(route?.candidate),
-					nicks,
-				},
-				controller.signal,
-				(partial) => {
+			let answer: string;
+
+			try {
+				answer = await translateDraft(deps, req, controller.signal, (partial) => {
 					if (current(channel, draft, controller)) {
 						store.commit("outgoingTranslationPatch", {
 							chanId: channel.id,
 							patch: {text: partial},
 						});
 					}
+				});
+			} catch (e) {
+				record("", e instanceof Error ? e.message : String(e));
+				throw e;
+			}
+
+			// The prompt shows the earlier lines as `nick: text`, so a model
+			// can copy a name in that shape in front of its answer. Only the
+			// finished text is cleaned: a stream's prefix is not one until
+			// the line after it has arrived — and a draft that opened with
+			// `nick: ` keeps it, since then the prefix is the user's own.
+			const text = stripCopiedNickPrefix(answer, draft, nicks);
+
+			record(text, answerError(draft, text));
+
+			return text;
+		};
+
+		holdReading();
+
+		let text: string;
+
+		try {
+			text = await attempt(request, false);
+
+			if (!current(channel, draft, controller)) {
+				return "strip";
+			}
+
+			// `answerError` (outgoing.ts) judges an answer: nothing in it a
+			// language could be is a failure rather than a message (a "done"
+			// of "" would be sent as an empty line, which the IRC layer drops
+			// in silence, taking the draft with it), and the draft back again
+			// is not a translation either.
+			let error = answerError(draft, text);
+
+			// An echo gets one more try, and a bare one: the same draft with
+			// the source left to the model and no context but the register.
+			// The two things that make a model hand a line back — a source
+			// that is wrong for the draft, and a context that confounds it —
+			// are exactly what that removes, and it costs a second generation
+			// only where the first produced nothing usable. The strip stays
+			// pending and streams the retry, and its chip drops to `auto`
+			// because that is the request now in flight. Exactly one retry:
+			// a model that echoes a bare request is declining.
+			if (error === UNCHANGED) {
+				store.commit("outgoingTranslationPatch", {
+					chanId: channel.id,
+					patch: {from: null},
+				});
+
+				text = await attempt(bareRetry(request), true);
+
+				if (!current(channel, draft, controller)) {
+					return "strip";
 				}
-			);
+
+				error = answerError(draft, text);
+			}
+
+			// Either failure offers the same thing, and it is the right one
+			// for a line with nothing to translate ("ok, brb") as much as for
+			// a model that would not touch it: the second Enter sends the
+			// draft as written.
+			if (error) {
+				store.commit("outgoingTranslationPatch", {
+					chanId: channel.id,
+					patch: {status: "failed", error},
+				});
+
+				return "strip";
+			}
 		} finally {
 			releaseReading();
-		}
-
-		if (!current(channel, draft, controller)) {
-			return "strip";
-		}
-
-		// The prompt shows the earlier lines as `nick: text`, so a model can
-		// copy a name in that shape in front of its answer. Only the finished
-		// text is cleaned: a stream's prefix is not one until the line after
-		// it has arrived — and a draft that opened with `nick: ` keeps it,
-		// since then the prefix is the user's own.
-		text = stripCopiedNickPrefix(text, draft, nicks);
-
-		// An answer with nothing in it a language could be is a failure, not
-		// a message: the strip says so and offers the draft as written, where
-		// a "done" of "" would be sent as an empty line — which the IRC layer
-		// drops in silence, taking the draft with it. A model given an
-		// English line in the write shape answered `⟹ ⟦1⟧` on the offline
-		// runner, which restores to `⟹ `, so "" is not the only way to get
-		// nothing back.
-		if (hasNoLetters(text)) {
-			store.commit("outgoingTranslationPatch", {
-				chanId: channel.id,
-				patch: {status: "failed", error: EMPTY_TRANSLATION},
-			});
-
-			return "strip";
-		}
-
-		// The draft back again is not a translation either. No `from !== to`
-		// guard is needed for it: `writeSource` no longer names the target,
-		// so an echo here is the model declining — a line with nothing to
-		// translate ("ok, brb") as much as one it would not touch. The offer
-		// is the same as any failure's, and it is the right one: the second
-		// Enter sends the draft as written.
-		if (isUnchanged(draft, text)) {
-			store.commit("outgoingTranslationPatch", {
-				chanId: channel.id,
-				patch: {status: "failed", error: UNCHANGED},
-			});
-
-			return "strip";
 		}
 
 		store.commit("outgoingTranslationPatch", {
@@ -389,61 +482,105 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 
 		context.sourceHint = entry.to;
 
-		// Held like the translation itself: Send waits for this check, so it
-		// must not queue behind the channel's incoming traffic either.
-		holdReading();
+		const nicks = channel.users.map((u) => u.nick);
+		const request: OutgoingRequest = {
+			text: entry.text,
+			from: entry.to,
+			to: target,
+			purpose: "read",
+			context,
+			batches: route?.candidate === "llm",
+			markers: markersFor(route?.candidate),
+			nicks,
+		};
 
-		let text: string;
+		/**
+		 * One read-back, streamed into the second row. Read back *from* the
+		 * translation, so that is the source the prefix rule is judged
+		 * against — and the source an answer is compared with.
+		 */
+		const attempt = async (req: OutgoingRequest, retry: boolean): Promise<string> => {
+			const record = (text: string, error: string | null) =>
+				capture({
+					kind: "check",
+					at: new Date().toISOString(),
+					draft: entry.text,
+					from: req.from,
+					to: req.to,
+					model: route?.ref.id ?? null,
+					engine: engineFor(route),
+					markers: req.markers ?? "placeholder",
+					retry,
+					context: cloneContext(req.context),
+					text,
+					error,
+				});
 
-		try {
-			text = await translateDraft(
-				deps,
-				{
-					text: entry.text,
-					from: entry.to,
-					to: target,
-					purpose: "read",
-					context,
-					batches: route?.candidate === "llm",
-					markers: markersFor(route?.candidate),
-					nicks: channel.users.map((u) => u.nick),
-				},
-				controller.signal,
-				(partial) => {
+			let answer: string;
+
+			try {
+				answer = await translateDraft(deps, req, controller.signal, (partial) => {
 					if (current(channel, draft, controller)) {
 						store.commit("outgoingTranslationPatch", {
 							chanId: channel.id,
 							patch: {check: {status: "pending", text: partial, to: target}},
 						});
 					}
+				});
+			} catch (e) {
+				record("", e instanceof Error ? e.message : String(e));
+				throw e;
+			}
+
+			const text = stripCopiedNickPrefix(answer, entry.text, nicks);
+
+			record(text, answerError(entry.text, text));
+
+			return text;
+		};
+
+		// Held like the translation itself: Send waits for this check, so it
+		// must not queue behind the channel's incoming traffic either.
+		holdReading();
+
+		let read: string;
+
+		try {
+			read = await attempt(request, false);
+
+			if (!current(channel, draft, controller)) {
+				return;
+			}
+
+			// A read-back equal to the translation is the translation over
+			// again, which says nothing about what it means — so it gets the
+			// same bare second try the translation itself gets: no
+			// `sourceHint`, the source left to the model.
+			if (answerError(entry.text, read) === UNCHANGED) {
+				read = await attempt(bareRetry(request), true);
+
+				if (!current(channel, draft, controller)) {
+					return;
 				}
-			);
+			}
+
+			// Still the translation over again, or nothing a language could
+			// be (the row would otherwise offer `⟹ ` as what the translation
+			// says): the check's own failed state ("couldn't check") is what a
+			// thrown error gives, so that is the path either takes.
+			const error = answerError(entry.text, read);
+
+			if (error) {
+				throw new Error(error);
+			}
 		} finally {
 			releaseReading();
 		}
 
-		if (current(channel, draft, controller)) {
-			// Read back from the translation, so that is the source the
-			// prefix rule is judged against.
-			const read = stripCopiedNickPrefix(
-				text,
-				entry.text,
-				channel.users.map((u) => u.nick)
-			);
-
-			// Nothing a language could be is no read-back: the row would
-			// otherwise offer `⟹ ` as what the translation says. The check's
-			// own failed state ("couldn't check") is what a thrown error
-			// gives, so that is the path it takes.
-			if (hasNoLetters(read)) {
-				throw new Error(EMPTY_TRANSLATION);
-			}
-
-			store.commit("outgoingTranslationPatch", {
-				chanId: channel.id,
-				patch: {check: {status: "done", text: read, to: target}},
-			});
-		}
+		store.commit("outgoingTranslationPatch", {
+			chanId: channel.id,
+			patch: {check: {status: "done", text: read, to: target}},
+		});
 	} catch (e) {
 		const message = e instanceof Error ? e.message : String(e);
 

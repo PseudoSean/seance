@@ -292,6 +292,26 @@ round trip refuses a letterless read-back the same way ("couldn't check"),
 and neither an echo nor a letterless answer joins the `voice` quoted to the
 model next time or the channel's term memory (`termPair`): a voice line in
 the wrong language would be quoted into every later prompt.
+
+**An echo buys one more generation, and a bare one.** Before the strip
+reports "came back unchanged" the same draft goes out a second time in the
+shape `bareRetry()` (`outgoing.ts`) builds: the source left to the model
+(`from: null`, so the chip's title drops to `auto → …`) and a context
+carrying nothing but the register -- no recent lines, no voice, no terms, no
+topic, no reply target, no `sourceHint`. The bare request is the shape a
+model answers most reliably, and the two things that make one hand a line
+back rather than translate it -- a source that is wrong for the draft, and a
+context that confounds it -- are exactly what that removes. The route is
+kept (`batches`, `markers`, the protection), so it is the same engine over
+the same protected text and only what the prompt says about the draft
+changes; the strip stays pending and streams the retry. Exactly one retry:
+a model that echoes a bare request is declining, and the offer then stands.
+A letterless answer is reported at once -- there is nothing in it to suggest
+the request was the problem. The round trip does the same with a read-back
+that is the translation over again, and reports the failure ("couldn't
+check") only when the bare try comes back unchanged too. It costs a second
+generation only where the first produced nothing usable.
+
 The second Enter is the same `input` bus emit
 as any other send (`deliver`, so history, replies and edits do not
 diverge): it ships the strip's translation, or the draft itself after a
@@ -311,9 +331,13 @@ Send.
 
 The scenario's fake logs `purpose: "write"` (or `"read"` for the check) on
 every request, so a browser check can tell the composer's traffic from the
-reader's, and a request whose text carries `[echo]` comes back as it went
-in (the token stays, the `[Language]` prefix does not) so the echo rule can
-be exercised without a real model declining. Browser check:
+reader's, plus `contextLines` and `voice` (how much of the channel the
+context carried), so it can tell a bare retry from a full request. A
+request whose text carries `[echo]` comes back as it went in (the token
+stays, the `[Language]` prefix does not) so the echo rule can be exercised
+without a real model declining; `[echo-once]` does that to the first
+request carrying it and translates every later one, which is the bare
+second try succeeding. Browser check:
 `tools/scenarios/translate-composer.mjs` (also `--mobile`).
 
 ## Span protection
@@ -602,6 +626,40 @@ the set the per-route rule above was chosen with (eight cases: the two
 reported lines, a nick to carry through, three pairs in one line, a link, a
 spoiler at the front of the line, and two reading-direction lines, each
 carrying the composer's own channel context).
+
+**`--capture` replays what the page actually sent.** A development build
+(`BUILD === "dev"`, which is every `yarn build` without
+`NODE_ENV=production`) records every composer attempt -- the draft's
+translation and the round trip's read-back, the bare retry included -- on
+two globals: `window.seanceTranslateLast` is the newest and
+`window.seanceTranslateLog` the newest ten. Each entry carries `kind`
+(`write`/`check`), `at`, `draft`, `from`, `to`, `model`, `engine`,
+`markers`, `retry`, the whole `context` as it went out, the `text` that
+came back and the `error` it was judged as (`came back unchanged`, `empty translation`, a thrown message, or null). A production build defines
+neither global. So a translation that reads wrongly on someone's GPU can be
+reproduced here exactly as it was asked for -- open the console on the
+page, then:
+
+```js
+copy(JSON.stringify(seanceTranslateLast)); // or seanceTranslateLog
+```
+
+```sh
+npx tsx tools/translate-llm.ts --capture tmp/capture.json --show-prompt --raw
+```
+
+The capture supplies the text, `from`, `to`, `markers` and the context, and
+`purpose` from its `kind` (a `write` capture would otherwise be replayed as
+a reading request and build the wrong prompt); `--to`, `--from`,
+`--purpose`, `--markers` and a text argument on the command line still
+override it, and `--context` replaces the context. A capture carries no
+user list, so the context's own `names` stand in for span protection --
+they are the recent speakers and the nicks the draft mentions, which is
+what a placeholder is for. Note that `--context` accepts a captured
+`context` object on its own (the fixture shape is exactly a partial
+`PromptContext`), but handing it the _whole_ capture silently drops
+`draft`, `from`, `to` and `markers` rather than complaining -- that is what
+`--capture` is for.
 
 `--context fixture.json` supplies a `PromptContext` (`recent`, `names`,
 `terms`, `topic`, `replyTo`, `voice`, `formality`, `variant`, `sourceHint`)

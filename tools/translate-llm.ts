@@ -7,6 +7,7 @@
 //   npx tsx tools/translate-llm.ts "hello, how are you?" --to de [--from en]
 //       [--purpose read|write] [--context fixture.json] [--show-prompt]
 //       [--raw] [--device cpu|cuda] [--markers placeholder|literal|tags]
+//   npx tsx tools/translate-llm.ts --capture capture.json
 //   npx tsx tools/translate-llm.ts --eval tools/translate-eval/prompts.json [--to de]
 //
 // Only the model backend differs from the browser. The think-block
@@ -59,6 +60,7 @@ import {
 } from "../client/js/translate/engines/webllm";
 import {languageName} from "../client/js/translate/languages";
 import {buildCatalog} from "../client/js/translate/models";
+import type {TranslateCapture} from "../client/js/translate/outgoing";
 import {
 	EXAMPLE_ANSWERS,
 	cleanOutput,
@@ -452,6 +454,9 @@ interface Options {
 	/** The route's marker form (spans.ts `renderMarkers`); the app's LLM route uses `LLM_MARKERS`. */
 	markers: MarkerForm;
 	contextFile: string | null;
+	/** `--capture`: a `seanceTranslateLast` object saved from the app. */
+	captureFile: string | null;
+	capture: TranslateCapture | null;
 	showPrompt: boolean;
 	raw: boolean;
 	device: Device;
@@ -464,6 +469,7 @@ const USAGE = [
 	"                                     [--context fixture.json] [--show-prompt] [--raw]",
 	"                                     [--device cpu|cuda] [--repo <hf repo>]",
 	"                                     [--markers placeholder|literal|tags]",
+	"       npx tsx tools/translate-llm.ts --capture capture.json [--to de] [--show-prompt]",
 	"       npx tsx tools/translate-llm.ts --eval tools/translate-eval/prompts.json [--to de]",
 ].join("\n");
 
@@ -475,6 +481,8 @@ function parseArgs(argv: string[]): Options {
 		purpose: "read",
 		markers: "placeholder",
 		contextFile: null,
+		captureFile: null,
+		capture: null,
 		showPrompt: false,
 		raw: false,
 		device: "cpu",
@@ -482,8 +490,16 @@ function parseArgs(argv: string[]): Options {
 		repo: ONNX_REPO,
 	};
 
+	// Which flags the command line actually carried: a capture supplies the
+	// rest, and "the default is still there" cannot be told from "the user
+	// asked for the default" any other way (`--from` has no value that means
+	// "unset" -- null is a real source).
+	const given = new Set<string>();
+
 	for (let i = 0; i < argv.length; i++) {
 		const arg = argv[i];
+
+		given.add(arg);
 
 		const value = () => {
 			const next = argv[++i];
@@ -517,6 +533,8 @@ function parseArgs(argv: string[]): Options {
 			options.markers = markers;
 		} else if (arg === "--context") {
 			options.contextFile = value();
+		} else if (arg === "--capture") {
+			options.captureFile = value();
 		} else if (arg === "--eval") {
 			options.evalFile = value();
 		} else if (arg === "--device") {
@@ -545,11 +563,52 @@ function parseArgs(argv: string[]): Options {
 		}
 	}
 
+	// Before the check below: a capture brings the text with it.
+	if (options.captureFile) {
+		options.capture = JSON.parse(readFileSync(options.captureFile, "utf8")) as TranslateCapture;
+		applyCapture(options, options.capture, given);
+	}
+
 	if (options.text === null && options.evalFile === null) {
 		throw new Error(USAGE);
 	}
 
 	return options;
+}
+
+/**
+ * `--capture` takes a saved `seanceTranslateLast` (translate/writer.ts, a
+ * development build only) as the whole request: the draft, the pair, the
+ * marker form and the context the page built, so a translation someone
+ * reports can be replayed exactly as it was asked for rather than
+ * approximated. `--to`, `--from`, `--purpose`, `--markers` and a text
+ * argument on the command line still override it, and `--context` replaces
+ * the context.
+ *
+ * `purpose` comes from `kind`: the draft's translation is a write, the round
+ * trip reading one back is a read -- the default (`read`) would otherwise
+ * build the wrong prompt for every captured draft.
+ */
+function applyCapture(options: Options, capture: TranslateCapture, given: Set<string>): void {
+	if (options.text === null) {
+		options.text = capture.draft;
+	}
+
+	if (!given.has("--from")) {
+		options.from = capture.from;
+	}
+
+	if (!given.has("--to")) {
+		options.to = capture.to;
+	}
+
+	if (!given.has("--purpose")) {
+		options.purpose = capture.kind === "write" ? "write" : "read";
+	}
+
+	if (!given.has("--markers")) {
+		options.markers = capture.markers;
+	}
 }
 
 function fixtureContext(fixture: Fixture): PromptContext {
@@ -758,6 +817,20 @@ async function main(): Promise<void> {
 	console.log(`device  ${options.device} requested`);
 	console.log(`markers ${options.markers}`);
 
+	if (options.capture) {
+		const capture = options.capture;
+
+		console.log(
+			`capture ${options.captureFile ?? ""} — ${capture.kind}${
+				capture.retry ? " (the bare second try)" : ""
+			}, ${capture.from ?? "auto"} → ${capture.to}, ${
+				capture.model ?? "no model"
+			}; the page got ${JSON.stringify(capture.text)}${
+				capture.error ? ` (${capture.error})` : ""
+			}`
+		);
+	}
+
 	const loadStarted = Date.now();
 	let shown = -1;
 
@@ -775,7 +848,17 @@ async function main(): Promise<void> {
 
 	console.log(`loaded  on ${node?.device ?? "?"} in ${(loadMs / 1000).toFixed(1)}s\n`);
 
-	const fixture = loadFixture(options.contextFile);
+	// A capture carries the context the page sent. It carries no user list,
+	// so the context's own `names` stand in for span protection -- they are
+	// the recent speakers and the nicks the draft mentions, which is what a
+	// nick placeholder is for. `--context` replaces both.
+	const fixture =
+		options.capture && !options.contextFile
+			? {
+					context: fixtureContext(options.capture.context),
+					nicks: options.capture.context.names,
+			  }
+			: loadFixture(options.contextFile);
 	const base = {
 		to: options.to,
 		from: options.from,

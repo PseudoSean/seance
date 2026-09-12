@@ -185,6 +185,16 @@ Plan 3 (composer):
   new `engine`/`model`), because "why does this read like the draft" was
   unanswerable from the UI. The fake's `[echo]` token (`fakePort.ts`) is
   how both scenarios exercise it.
+- **An echo gets one bare second try, and a development build keeps the
+  request** — the composer (not the reading queue) sends an echoed draft
+  once more as `bareRetry()` builds it (`from: null`, `emptyContext()` plus
+  the register, the route kept) and reports `UNCHANGED` only if that comes
+  back unchanged too; the round trip retries its read-back the same way.
+  `answerError()` is the one place the two answer rules are ordered.
+  `BUILD === "dev"` records every attempt on `window.seanceTranslateLast` /
+  `seanceTranslateLog` (nothing in a production build), and
+  `tools/translate-llm.ts --capture <file>` replays one exactly as the page
+  asked for it. The fake's `[echo-once]` token is the retry succeeding.
 - The Check button and its Settings → Translation choice were removed on
   the user's direction: the round trip always runs, so there was nothing
   left to offer a choice about.

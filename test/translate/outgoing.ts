@@ -7,10 +7,14 @@ import {
 } from "../../client/js/translate/engine";
 import {
 	ABORTED,
+	EMPTY_TRANSLATION,
 	TERM_MAX_WORDS,
 	TIMED_OUT,
+	UNCHANGED,
 	WRITE_DETECT_MIN_GAP,
 	WRITE_TIMEOUT_MS,
+	answerError,
+	bareRetry,
 	draftGate,
 	hasNoLetters,
 	isUnchanged,
@@ -175,6 +179,94 @@ describe("translate/outgoing", () => {
 			expect(hasNoLetters("Hallo")).to.equal(false);
 			expect(hasNoLetters("Привет")).to.equal(false);
 			expect(hasNoLetters("こんにちは")).to.equal(false);
+		});
+	});
+
+	describe("answerError", () => {
+		it("passes a translation and names the failure an echo or a letterless answer is", () => {
+			expect(answerError("das ist wichtig", "this is important")).to.equal(null);
+			expect(answerError("ok, brb", "Ok,  brb.")).to.equal(UNCHANGED);
+			expect(answerError("hello there", "\u27f9 ")).to.equal(EMPTY_TRANSLATION);
+		});
+
+		it("reports a letterless answer as letterless even where it is also the source", () => {
+			expect(answerError("", "")).to.equal(EMPTY_TRANSLATION);
+			expect(answerError("--- ---", "--- ---")).to.equal(EMPTY_TRANSLATION);
+		});
+	});
+
+	describe("bareRetry", () => {
+		const full = (): OutgoingRequest =>
+			request({
+				text: "bis sp\u00e4ter",
+				from: "de",
+				to: "en",
+				markers: "literal",
+				nicks: ["ada", "jonas"],
+				protected: protect("bis sp\u00e4ter"),
+				context: {
+					recent: [{nick: "ada", text: "hat jemand das Log?"}],
+					replyTo: {nick: "jonas", text: "ich schau mal"},
+					topic: "release day",
+					sourceHint: "de",
+					names: ["ada", "jonas"],
+					terms: [["rig", "Testaufbau"]],
+					voice: ["ich schau es mir an"],
+					formality: "formal",
+					variant: "de-AT",
+				},
+			});
+
+		it("leaves the source to the model and keeps nothing of the context but the register", () => {
+			const original = full();
+			const bare = bareRetry(original);
+
+			expect(bare.from).to.equal(null);
+			expect(bare.context).to.deep.equal({
+				recent: [],
+				names: [],
+				terms: [],
+				voice: [],
+				formality: "formal",
+				variant: "de-AT",
+			});
+			expect(bare.context.sourceHint).to.equal(undefined);
+			expect(bare.context.topic).to.equal(undefined);
+			expect(bare.context.replyTo).to.equal(undefined);
+		});
+
+		it("keeps the draft, the target and the route it is going down", () => {
+			const original = full();
+			const bare = bareRetry(original);
+
+			expect(bare.text).to.equal("bis sp\u00e4ter");
+			expect(bare.to).to.equal("en");
+			expect(bare.purpose).to.equal("write");
+			expect(bare.batches).to.equal(original.batches);
+			expect(bare.markers).to.equal("literal");
+			expect(bare.nicks).to.deep.equal(["ada", "jonas"]);
+			expect(bare.protected).to.equal(original.protected);
+		});
+
+		it("carries no variant where the request had none", () => {
+			const bare = bareRetry(
+				request({context: {...emptyContext(), formality: "casual", variant: ""}})
+			);
+
+			expect(bare.context.formality).to.equal("casual");
+			expect("variant" in bare.context).to.equal(false);
+		});
+
+		it("does not touch the request it was given", () => {
+			const original = full();
+			const before = JSON.stringify(original);
+
+			bareRetry(original);
+
+			expect(JSON.stringify(original)).to.equal(before);
+			expect(original.from).to.equal("de");
+			expect(original.context.recent).to.have.length(1);
+			expect(original.context.sourceHint).to.equal("de");
 		});
 	});
 
