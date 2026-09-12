@@ -23,7 +23,7 @@
 //      of it, so at `wing = 0` the near wing contributes nothing to the union
 //      (measured: the union's area with it and without it differ by
 //      0.000000 of 2117.7) and the far wing — its own outline, painted before
-//      the near one — lies wholly inside it (0.0000 of its 323.4 outside the
+//      the near one — lies wholly inside it (0.0000 of its 291.9 outside the
 //      emitted near outline). Walking, the ladybug is a plain dome. Anything
 //      that moves a wing pivot, lengthens a blade or lowers the shell has to
 //      re-measure both.
@@ -67,20 +67,22 @@ D.ant = [
 	P("M-2,3.5 C-0.2,-2 2.4,-6.6 5.6,-10.8 L8.4,-8.8 C5.4,-4.8 3.2,-0.6 2,3.8 Z"),
 	P("M-1,5.4 C2.4,1.4 6.2,-1.4 10.8,-3.6 L11.8,-0.4 C7.8,1.4 4.4,3.8 1.6,7 Z"),
 ];
-// A wing: a 34-unit blade drawn lying **forward** and 20° down from a pivot
-// at the dome's apex, so that at `wing = 0` it is folded away inside the
-// shell. Opening rotates it *counter-clockwise* (negative) up through
-// vertical and back over the abdomen — never through "pointing down", which
-// is the frog's tongue lesson. Rooting it at the apex rather than at the
-// front is what makes it read as a wing instead of an ear: the blade rises
-// out of the middle of the back with the pronotum and the head clearly in
-// front of it, and 24 of its 34 units are outside the dome at every angle
-// the beat visits, so the outline's length barely moves while it beats.
+// A wing: a 40-unit blade, 13 across at its widest, drawn lying **forward**
+// and 28° down from a pivot at the dome's apex, so that at `wing = 0` it is
+// folded away inside the shell. Opening rotates it *counter-clockwise*
+// (negative) up through vertical and back over the abdomen — never through
+// "pointing down", which is the frog's tongue lesson. Rooting it at the apex
+// rather than at the front is what makes it read as a wing rather than an
+// ear: the blade rises out of the middle of the back with the pronotum and
+// the head clearly in front of it, and 29 of its 40 units are outside the
+// dome at every angle the beat visits, so the outline's length barely moves
+// while it beats. Broad, too — a narrow prong above a round body is an ear
+// whatever else is done to it. `wing()` scales it down for the far side.
 D.wing = [
 	P(
-		"M-0.4,-4 C6,-2.6 12,-0.4 18,4.2 C24,8 32,11.6 34.5,15.5 " +
-			"C35.8,17.8 34.4,20.4 32.1,20.1 C27,19.4 19,15.6 13.5,12.6 " +
-			"C7.6,9.6 1.2,5.4 -3.6,2 C-5.6,0.4 -3,-3.6 -0.4,-4 Z"
+		"M0.1,-4.9 C6.5,-3.4 13,-0.6 18.8,2.7 C24.5,6 32.8,10.6 35,14.6 " +
+			"C36.4,17.2 34.6,21.4 31.6,21 C26.4,20.2 18,16 12.7,14.1 " +
+			"C7,12 1.2,6.4 -4.1,2.9 C-6.2,1.2 -3,-5.4 0.1,-4.9 Z"
 	),
 ];
 
@@ -202,19 +204,22 @@ function leg(side, i) {
 }
 
 /**
- * One wing on its own channel; the far one a little shorter and set back,
- * per the rig rules, and on the far layer — **its lighter tint is what makes
- * the pair read as wings.** United into one near outline the two blades
- * still diverge into a V, but a V of two same-coloured prongs above a round
- * body is a pair of ears; the pale one behind the coral one is a wing. It
- * costs a fourth far outline — nine emitted points on every one of the 98
- * stored frames, about 11 KB of the 100 KB row — which is bought back on the
- * far paths' emitted stride and on the flight's frame rate.
+ * One wing on its own channel. **The two are told apart by shape and
+ * attitude, not by tint**, and that is the hard-won part of this rig: the
+ * near blade is 40 units long, sweeps up and back over the abdomen and shows
+ * about 30 of itself; the far one is 31, hinges 6 units further forward and
+ * nearer the surface, and is held up and *forward* over the pronotum with a
+ * shallow flutter, showing about 17. A matched pair of prongs above a round
+ * body is a rabbit however they are coloured — and the far tint is exactly
+ * where that shows, because `ladybug-far.svg` paints every layer alike, so a
+ * pair distinguished only by tint is distinguished by nothing in half the
+ * files shipped. A long one sweeping back and a short one held forward
+ * straddle the dome in a V in either file.
  */
 function wing(side) {
-	const scale = side === "far" ? 0.94 : 1;
+	const scale = side === "far" ? 0.78 : 1;
 	return {
-		pivot: side === "far" ? [31, 61] : [34, 60],
+		pivot: side === "far" ? [40, 59] : [34, 60],
 		rot: `wing.${side}`,
 		layer: side,
 		shapes: scaled(D.wing, scale, scale),
@@ -269,7 +274,7 @@ const crawl = {
  * The wingbeat, shared by all three flight gaits: one beat per cycle,
  * written as a full cycle so `flyLevel` can repeat it and the two ramped
  * gaits can hold two of them. It stays between −100° and −134°, so the blade
- * is 24 to 30 of its 34 units outside the dome throughout and the outline's
+ * is 29 to 30 of its 40 units outside the dome throughout and the outline's
  * length changes by little more than rigid rotation — the whole beat is
  * 0.86 % of the near outline per stored frame, the cheapest thing in the
  * rig. Only the takeoff and landing blends ever pull a wing back through the
@@ -300,14 +305,20 @@ const beats = (n) => {
 };
 const beats2 = beats(2);
 /**
- * The far wing sits 28° short of the near one's sweep, in every gait and
- * every pose, so the pair opens as a V rather than as one thick blade. A
- * *phase* offset would have done it while a beat is running, but folded,
- * both wings sit at 0, and the pair has to read as two the moment they
- * open — which a fixed offset gives and a phase offset does not.
+ * The far wing's own beat: held up and forward over the pronotum, 30–70°
+ * away from wherever the near one is, with an eighth of its amplitude. Two
+ * blades that beat *together* are a pair of ears whichever way they point;
+ * one sweeping and one nearly still is a flying insect. It is a separate
+ * outline, so its own sweep costs the near outline nothing at all.
  */
-const FAR_WING = 28;
-const trail = (keys) => keys.map(([p, v, e]) => (e ? [p, v + FAR_WING, e] : [p, v + FAR_WING]));
+const FAR_WING = -72;
+const farBeat = [
+	[0, FAR_WING],
+	[25, FAR_WING - 8],
+	[50, FAR_WING],
+	[75, FAR_WING + 8],
+	[100, FAR_WING],
+];
 
 /** The legs dangle in their standing splay through every flight gait. */
 const dangle = {
@@ -342,7 +353,7 @@ const flyUp = {
 	ch: {
 		...dangle,
 		"wing.near": beats2,
-		"wing.far": trail(beats2),
+		"wing.far": farBeat,
 		ty: [
 			[0, 0, "linear"],
 			[100, -APEX, "linear"],
@@ -360,7 +371,7 @@ const flyLevel = {
 	ch: {
 		...dangle,
 		"wing.near": beat(0),
-		"wing.far": trail(beat(0)),
+		"wing.far": farBeat,
 		ty: hold(-APEX),
 		pitch: hold(-7),
 	},
@@ -372,7 +383,7 @@ const flyDown = {
 	ch: {
 		...dangle,
 		"wing.near": beats2,
-		"wing.far": trail(beats2),
+		"wing.far": farBeat,
 		ty: [
 			[0, -APEX, "linear"],
 			[100, 0, "linear"],
@@ -446,7 +457,7 @@ const walk = {
 };
 
 /** Wings out, still on the ground — the pose the flight starts from. */
-const opened = {...walk, "wing.near": -117, "wing.far": -117 + FAR_WING, pitch: -4, ant: -10};
+const opened = {...walk, "wing.near": -117, "wing.far": FAR_WING, pitch: -4, ant: -10};
 
 /** Down again, wings still out; they fold on the way back to `walk`. */
 const landed = {...opened, pitch: 2, ty: 0};

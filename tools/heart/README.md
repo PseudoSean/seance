@@ -105,7 +105,12 @@ want: the pin is the right fix, and the numbers it was drawn from stay visible.
    differs only in the ramping ones. Nothing else would catch the mistake — a `ty` ramp is a
    pure translate, so the outline's length never changes and the audit's 5 % rule sees
    nothing — which is why `once` is checked against `cycles: 1` and why a rig using it should
-   read the clip's first and last frame back out of the shipped file once.
+   read the clip's first and last frame back out of the shipped file once. **And whatever
+   segment follows a ramp has to start where the ramp ended**: `sampleGait` starts a gait
+   segment cold and nothing blends into it, so a cruise gait whose `ty` sits at 0 after a
+   take-off ramp pops back to the ground in one frame. The ladybug's `flyLevel` holds `ty` at
+   the same `-APEX` its `flyUp` ramps to, which is why its clip reads back 56.3 → 56.3 against
+   the ramp's 71.6 → 56.3.
 
 2. **Sample** (`lib/sampler.mjs`): the segments become a list of poses at their frame rates.
 3. **Outline** (`lib/outline.mjs`): per stored frame, the near parts are united into one
