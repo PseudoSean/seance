@@ -6,7 +6,7 @@
 // the meadow must not show.
 
 import {cyc, sampleGait, samplePose, sampleWobble} from "./sampler.mjs";
-import {align, feetOf, outlineFrame} from "./outline.mjs";
+import {align, feetOf, outlineFrame, P as pathOf} from "./outline.mjs";
 import {stanceTravel} from "./travel.mjs";
 import {animalSvg, encodePath, fmt, mix, SKY, stillSvg, TRAVEL_DECIMALS} from "./svg.mjs";
 
@@ -350,6 +350,65 @@ const lengthOf = (pts) => {
 	return L;
 };
 
+/**
+ * How much slack the containment rule below allows, in rig units. Not zero,
+ * because the outline is a resampled polygon: the extreme is measured at
+ * sample points, the fillet nudges concave vertices, and `encodePath` rounds
+ * to integers, so an exact-containment demand would make a rig's box twitch
+ * by a fraction of a unit whenever a pose is retouched. One unit is under
+ * 1 % of every box in the cast and far below what an eye can see, while the
+ * defects this catches are 2–17 units — the smallest real one (the deer's
+ * hind hoof) is twice the allowance and the worst (the bunny's ears) is
+ * seventeen times it. A rig should still be given a few units of true
+ * clearance rather than parked on the allowance.
+ */
+export const BOX_MARGIN = 1;
+
+/**
+ * **Nothing may be drawn outside its own viewBox.** Every stored frame's
+ * outlines — and the still's — against the rig's box, per side, in rig
+ * units (the `d` strings are these coordinates × `k`, so a `k: 2` rig reads
+ * double in the shipped file; the numbers here are always the rig's own).
+ *
+ * A box that does not contain its animal clips it, silently, in the shipped
+ * file: the still is written in the rig's box on all four sides, and the
+ * animated file is the rig's box vertically (`0 … stageW` horizontally, so
+ * only the two vertical sides bite there — but the box is also what
+ * `findExitTime` fades the visit out on, so an outline hanging past `vb.x`
+ * or `vb.x + vb.w` is an animal the fade lets reach the stage edge). This
+ * shipped wrong on four of the first five rigs — the bunny lost 17 units of
+ * ear through the sit-up that is the whole point of the animal — while the
+ * bird's own report already said "nothing leaves the viewBox, tightest
+ * margin 7.2 units". The knowledge existed; nothing enforced it. Now
+ * something does.
+ *
+ * `frames` is `[{label, layers}]`; `worst` names the frame that reached
+ * furthest on each side, so the message says which pose to look at.
+ */
+export function boxOverflow(vb, frames) {
+	const bounds = {minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity};
+	const worst = {};
+	for (const f of frames) {
+		for (const l of f.layers) {
+			for (let i = 0; i < l.pts.length; i += 2) {
+				const x = l.pts[i];
+				const y = l.pts[i + 1];
+				if (x < bounds.minX) [bounds.minX, worst.left] = [x, f.label];
+				if (x > bounds.maxX) [bounds.maxX, worst.right] = [x, f.label];
+				if (y < bounds.minY) [bounds.minY, worst.above] = [y, f.label];
+				if (y > bounds.maxY) [bounds.maxY, worst.below] = [y, f.label];
+			}
+		}
+	}
+	const over = {
+		above: vb.y - bounds.minY,
+		below: bounds.maxY - (vb.y + vb.h),
+		left: vb.x - bounds.minX,
+		right: bounds.maxX - (vb.x + vb.w),
+	};
+	return {bounds, over, worst};
+}
+
 export function buildAnimal(def) {
 	const {rig, sequence, colours, name} = def;
 	const k = rig.k ?? 1;
@@ -359,6 +418,13 @@ export function buildAnimal(def) {
 	const {poses, segs, onStage} = samplePoses(def);
 	const {failures, retries, problems: clipProblems} = outlineSequence(def, poses, segs);
 	const {xs, v, flips} = travelOf(def, poses, segs);
+	// Outlined here rather than beside the file it is written into, so the
+	// containment rule below sees it: the still is a stored frame like any
+	// other and clips like any other (the bunny's ears were cut off in both).
+	const stillV = {};
+	for (const ch of rig.channels())
+		stillV[ch.name] = rig.still[ch.name] ?? rig.still[ch.key] ?? ch.rest ?? 0;
+	const stillLayers = outlineFrame(rig, stillV, null).layers;
 	const problems = [...clipProblems];
 	if (failures) problems.push(`${failures} frame(s) whose union failed after retries`);
 	if (flips.length > 1) problems.push("more than one turn (a file carries one flip)");
@@ -403,6 +469,52 @@ export function buildAnimal(def) {
 			`a far leg's outline length jumps ${(worstFar * 100).toFixed(
 				1
 			)} % between frames (limit 10 %)`
+		);
+
+	// Nothing may be drawn outside its own viewBox — see `boxOverflow`. The
+	// hearts are in this too, as the two corners of the box the glyph sweeps
+	// at the top of its rise: they ride inside the same groups and clip to
+	// the same viewBox, and they are the one thing here already known to have
+	// been clipped away *entirely* (see the puppy rig's header), so a rule
+	// that watched only the outlines would still not have caught them. Their
+	// `d` is in the file's k-scaled space while `x`/`y`/`rise` are scaled by
+	// `k` on the way out, so the glyph's own bounds come back to rig units
+	// divided by `k`.
+	const heartBox = [];
+	if (def.hearts) {
+		const b = pathOf(def.hearts.d).bounds;
+		heartBox.push({
+			label: "the hearts",
+			layers: [
+				{
+					pts: [
+						def.hearts.x + b.left / k,
+						def.hearts.y - def.hearts.rise + b.top / k,
+						def.hearts.x + b.right / k,
+						def.hearts.y + b.bottom / k,
+					],
+				},
+			],
+		});
+	}
+	const box = boxOverflow(vb, [
+		...segs.flatMap((s) =>
+			s.frames.map((f, i) => ({label: `${s.id} frame ${i}`, layers: f.layers}))
+		),
+		{label: "the still", layers: stillLayers},
+		...heartBox,
+	]);
+	const spill = Object.entries(box.over)
+		.filter(([, d]) => d > BOX_MARGIN)
+		.map(([side, d]) => `${d.toFixed(1)} ${side} (${box.worst[side]})`);
+	if (spill.length)
+		problems.push(
+			`the outline leaves the viewBox by ${spill.join(", ")}, in rig units: the box is ` +
+				`x ${fmt(vb.x)}…${fmt(vb.x + vb.w)}, y ${fmt(vb.y)}…${fmt(vb.y + vb.h)} and the ` +
+				`outline reaches x ${fmt(box.bounds.minX, 1)}…${fmt(box.bounds.maxX, 1)}, ` +
+				`y ${fmt(box.bounds.minY, 1)}…${fmt(box.bounds.maxY, 1)}. Grow the box, and with ` +
+				`it the theme's --heart-<animal>-h (× the new h / the old) and this rig's ` +
+				`stage.aspect (× the old h / the new), or the animal changes size and travel`
 		);
 
 	const lastId = segs[segs.length - 1].id;
@@ -507,12 +619,7 @@ export function buildAnimal(def) {
 	// `colours.near` is read only where the near file is actually written.
 	const nearLayers = () => layersWith(mix(colours.near, SKY, 0.35), mix(colours.far, SKY, 0.35));
 
-	const stillV = {};
-	for (const ch of rig.channels())
-		stillV[ch.name] = rig.still[ch.name] ?? rig.still[ch.key] ?? ch.rest ?? 0;
-	const stillFrame = outlineFrame(rig, stillV, null).layers.map((l) =>
-		encodePath(l.pts, k, stride(l.cls))
-	);
+	const stillFrame = stillLayers.map((l) => encodePath(l.pts, k, stride(l.cls)));
 
 	// Which *tints* are written, not which layers exist: every rig still has
 	// near and far layers, and the far tint simply paints them all alike. A

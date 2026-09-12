@@ -233,7 +233,14 @@ export const rig = {
 	// opaque — the hearts had never been visible). `stage.aspect` and the
 	// theme's `--heart-puppy-h` are scaled by 82/109 and 109/82 to match, so
 	// the puppy is the same size on screen and crosses the same distance.
-	viewBox: {x: 0, y: -7, w: 110, h: 109},
+	//
+	// The same arithmetic again, for the same reason at the other three
+	// edges: {x: 0, w: 110, h: 109} still cut 2.9 units off the bottom and
+	// 3.3 off the left of the bound. Extremes reach y 21.8…104.9 (the sky the
+	// hearts need keeps the top far clear) and x -3.3…109.6, so this clears
+	// them by 3.1 below, 3.7 left and 3.4 right; `h` 109 → 115 scales the
+	// theme token by 115/109 and the aspect by 109/115 in turn.
+	viewBox: {x: -7, y: -7, w: 120, h: 115},
 	ground: 100,
 	k: 2,
 	farGroups: (items) => [items.slice(0, 5), items.slice(5, 10)],
@@ -291,10 +298,11 @@ export default {
 	sequence: {
 		first: 14,
 		period: 75,
-		// 18, not the small animals' 24: the stage is `aspect × viewBox.h` and
-		// the box grew from 82 to 109 for the hearts, so 18 × 109 ≈ 24 × 82
-		// keeps the crossing the same width in rig units and on screen.
-		stage: {aspect: 18},
+		// 17.0609, not the small animals' original 24: the stage is
+		// `aspect × viewBox.h` and the box grew from 82 to 109 for the hearts
+		// and then to 115 to hold the bound, so 17.0609 × 115 = 18 × 109 ≈
+		// 24 × 82 keeps the crossing the same width in rig units and on screen.
+		stage: {aspect: 17.0609},
 		segments: [
 			{gait: "bound", cycles: 14, fps: 24, travel: 100},
 			{pose: "skid", hold: 0.3, blend: 0.14, fps: 12},

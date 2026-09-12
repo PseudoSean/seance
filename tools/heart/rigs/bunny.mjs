@@ -155,6 +155,18 @@ function channels() {
 	return ch;
 }
 
+// The sit-up, rocked back onto the haunches. `ty: -13.5`, not 0: `pitch`
+// turns the whole body about the root pivot (56, 100), which is *on* the
+// ground at mid-body, so pitching 34° back swings the rear down through it —
+// at ty 0 the planted hind feet measured y 109 and 111.2 against a ground of
+// 100 and the tail ball's bottom 107.9, a bunny drawn ten units into the
+// earth. The legs alone cannot fix that (the rump is body, not leg), so the
+// body is lifted instead, which lands the near hind foot on 100.0, the far
+// one 2.2 above it and the silhouette's lowest point on 100.4 — the sole of
+// the flat foot, resting. `collect` composes T(pivot)·R(rot)·S·T(0,ty), so
+// this `ty` is rotated with the pitch: it lifts 11.2 and carries the bunny
+// 7.5 units back, which is what rocking onto the haunches does anyway. That
+// backward slide is why the sit segment pins `travel: 0` (below).
 const sit = {
 	shank: 46,
 	foot: -8,
@@ -162,7 +174,7 @@ const sit = {
 	"arm.far.up": -48,
 	"arm.near.low": 60,
 	"arm.far.low": 56,
-	ty: 0,
+	ty: -13.5,
 	pitch: -34,
 	sx: 1,
 	sy: 1,
@@ -197,7 +209,17 @@ export const rig = {
 	nFar: 120,
 	emitStrideFar: 2,
 	fillet: 12,
-	viewBox: {x: 0, y: 10, w: 120, h: 92},
+	// Contains the animal: nothing may be drawn outside its own box
+	// (lib/build.mjs `boxOverflow`). The old {x: 0, y: 10, w: 120, h: 92}
+	// cut 17 units off the top — the ears, through the sit-up that is the
+	// whole point of this rig — 9.6 off the bottom and 9.7 off the right of
+	// a hop. The sit's own burial is fixed in the pose above, not here; what
+	// is left is a box that was simply too small. Extremes now reach
+	// y -14.4…105.6 and x 3.3…129.7, so this clears them by 3 (above), 2.4
+	// (below) and 3.3 (right). The theme's `--heart-bunny-h` is scaled by
+	// 126/92 and `stage.aspect` by 92/126 to match, so the bunny is the same
+	// size on screen and crosses the same distance.
+	viewBox: {x: 0, y: -18, w: 133, h: 126},
 	ground: 100,
 	k: 2,
 	// the far shank and foot (three parts), then the far arm (five)
@@ -270,10 +292,18 @@ export default {
 	sequence: {
 		first: 7,
 		period: 50,
-		stage: {aspect: 24},
+		// 17.5238, not 24: the stage is `aspect × viewBox.h` and the box grew
+		// from 92 to 126 to hold the ears, so 17.5238 × 126 = 24 × 92 keeps
+		// the crossing the same width in rig units and on screen.
+		stage: {aspect: 17.5238},
 		segments: [
 			{gait: "hop", cycles: 9, fps: 24, travel: 160},
-			{pose: "sit", hold: 0.4, blend: 0.45, fps: 12},
+			// travel: 0 pins the sit-up for the same reason the drop below is
+			// pinned: rocking back onto the haunches carries the body 7.5 units
+			// backward (the pose's `ty`, rotated by its pitch), which the stance
+			// measurement reads as real forward travel — a sitting bunny must
+			// not move, and the hold-speed rule says so
+			{pose: "sit", hold: 0.4, blend: 0.45, fps: 12, travel: 0},
 			{wobble: "twitch", pose: "sit", secs: 1.4, fps: 12},
 			// travel: 0 pins the drop: the crouch's arms reaching for the
 			// ground read as ~5.3 units/s of stance drift (the hold-speed audit

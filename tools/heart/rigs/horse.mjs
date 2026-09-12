@@ -325,7 +325,15 @@ export const rig = {
 	nFar: 120,
 	emitStrideFar: 2,
 	fillet: 14,
-	viewBox: {x: 0, y: 30, w: 230, h: 172},
+	// Contains the animal: nothing may be drawn outside its own box
+	// (lib/build.mjs `boxOverflow`). The old {x: 0, y: 30, w: 230, h: 172}
+	// cut 5.7 units off the top, 2.5 off the bottom, 3.6 off the left and
+	// 8.2 off the right — ear tips, a hoof and the muzzle at full stretch.
+	// Extremes reach y 24.3…204.5 and x -3.6…238.2, so this clears them by
+	// 3.3, 3.5, 3.4 and 2.8. The theme's `--heart-horse-h` is scaled by
+	// 187/172 and `stage.aspect` by 172/187 to match, so the horse is the
+	// same size on screen and crosses the same distance.
+	viewBox: {x: -7, y: 21, w: 248, h: 187},
 	ground: 200,
 	k: 1,
 	// the far hind leg's five parts, then the far front leg's five
@@ -381,7 +389,7 @@ export default {
 	colours: {near: "#d97a9c", far: "#ecbccb"},
 	budget: 200 * 1024,
 	// Gallop in, collect into a prance, prance, gallop off. The stage is
-	// aspect 16 (about 2752 units, ~1850 px at the theme's size) so the visit
+	// 2752 units (~1850 px at the theme's size) so the visit
 	// crosses the whole channel rather than a slice of it: the gallop-in
 	// covers about the stage's near-middle, the prance holds near there, the
 	// gallop-out clears the far edge. See docs/projects/heart-theme.md's
@@ -401,7 +409,10 @@ export default {
 	sequence: {
 		first: 2,
 		period: 60,
-		stage: {aspect: 16},
+		// 14.7166, not 16: the stage is `aspect × viewBox.h` and the box grew
+		// from 172 to 187 to hold the animal, so 14.7166 × 187 = 16 × 172
+		// keeps the crossing the same width in rig units and on screen.
+		stage: {aspect: 14.7166},
 		segments: [
 			{gait: "gallop", cycles: 6, fps: 30, travel: 280},
 			{blendTo: "prance", secs: 0.3, fps: 15, travel: [280, 70]},

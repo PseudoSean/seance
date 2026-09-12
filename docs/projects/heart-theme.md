@@ -23,7 +23,7 @@ Mockups the decisions were made on (private artifacts, viewable only by their au
 9. A gait segment may set `travel: <units/s>` in its sequence, overriding the measured stance speed: the approved mockups' puppy and bunny bounded and hopped in place with the feet never clearly lifted, so the planted-foot measurement could not carry them. The audit prints the measured speed beside the applied one; the horse keeps the measurement.
 10. The rainbow arc is `radial-gradient(circle farthest-side at 50% 100%, …)` — `closest-side` is degenerate for a circle centred on the box's bottom edge.
 
-Each animal's first visit starts after its file loads: 2 s (horse), 7 s (bunny), 14 s (puppy), on 60 s, 50 s and 75 s loops. The horse's gallop covers about a body length a stride — what the approved rig's leg swing gives, feet locked. Each stage is `sequence.stage.aspect` × the animal's height: horse 16, puppy and bunny 24 (the small animals are half the horse's height, so they need the larger multiple to reach the same pixel width — about 1850 px at the theme's size, wide enough that a visit crosses the whole channel on a wide chat instead of a slice of it). A visit now lasts about 20 s (horse ~19.7 s, puppy ~26.9 s, bunny ~17.8 s), tuned so the animal reads as arriving at about the stage's middle before whatever it does there (the horse's prance, the puppy's sit-and-turn, the bunny's sit-up) and leaving fully off the far edge — see `tools/heart/README.md` § The audit for the exact rule.
+Each animal's first visit starts after its file loads: 2 s (horse), 7 s (bunny), 14 s (puppy), on 60 s, 50 s and 75 s loops. The horse's gallop covers about a body length a stride — what the approved rig's leg swing gives, feet locked. Each stage is `sequence.stage.aspect` × the animal's box height, and it is the product that is sized, not the multiplier: about 1850 px at the theme's size, wide enough that a visit crosses the whole channel on a wide chat instead of a slice of it (horse 2752 rig units, puppy 1962, bunny 2208). The multiplier is therefore whatever that product needs — horse 14.7166, puppy 17.0609, bunny 17.5238 — and it moves whenever a box does, since a box that grew to stop clipping its animal would otherwise widen the stage with it (`tools/heart/README.md` § The audit). A visit now lasts about 20 s (horse ~19.7 s, puppy ~26.9 s, bunny ~17.8 s), tuned so the animal reads as arriving at about the stage's middle before whatever it does there (the horse's prance, the puppy's sit-and-turn, the bunny's sit-up) and leaving fully off the far edge — see `tools/heart/README.md` § The audit for the exact rule.
 
 ### Live-test rounds (2026-09-11)
 
@@ -34,8 +34,8 @@ Four changes came from the user's live feedback on the real app, outside the pla
 - The nick column has no rule.
 - Fonts are Google Fonts' variable files, the latin subset — the static instances first fetched were the latin-ext subset and drew nothing (`tools/heart/fetch-fonts.mjs` documents the trap).
 
-A further round, also from live testing: animals now cross the whole channel (stage aspects
-raised as above, cycle counts retuned to still land at about the middle and clear the far
+A further round, also from live testing: animals now cross the whole channel (stages widened to
+the ~1850 px above, cycle counts retuned to still land at about the middle and clear the far
 edge); `travel` accepts `[from, to]` to ramp linearly across a segment, since the velocity
 clamp (decision 3 above) that stops a mid-swing touch-down reading as backward motion also
 zeroed the horse's gait-blend segments outright, freezing it for 0.3 s at every gallop/prance

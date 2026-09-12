@@ -250,6 +250,22 @@ the causes out:
 
 - zero union failures (a union that comes back bigger than its parts is retried with the
   pose nudged; four failures is a rig problem);
+- **nothing is drawn outside its own viewBox**: no stored frame's outline — the still's and the
+  puppy's hearts included — may leave the rig's box by more than 1 rig unit, reported per side
+  with the frame that reached furthest. A box that does not hold its animal clips it silently:
+  the still is the rig's box on all four sides, the animated file is that box vertically (it is
+  `0 … stageW` across), and the box is also what the fade-out is keyed to, so an outline hanging
+  past `vb.x`/`vb.x + vb.w` reaches the stage edge before the fade has finished. Four of the
+  first five rigs shipped with this defect — the bunny lost 17 units of ear through the sit-up
+  that is the whole point of the animal, the deer 16 units of muzzle through the graze — while
+  the bird's own report already said "nothing leaves the viewBox, tightest margin 7.2 units".
+  The knowledge existed and nothing enforced it. The 1-unit allowance is for the resampled
+  polygon's own slop (sampled extremes, the fillet, integer rounding), not a budget: give a rig
+  a few units of real clearance. **Growing a box is never a one-number change** — the theme
+  scales an animal by `viewBox.h` and the stage is `aspect × viewBox.h`, so `viewBox.h`,
+  `--heart-<animal>-h` (× new/old), that animal's far slot height in every scene (the same way)
+  and `stage.aspect` (× old/new) move together, or the animal changes size and travel on screen.
+  The puppy's rig header is the worked example, twice over;
 - the outline's length changes ≤ 5 % between stored frames (near), ≤ 10 % (a far leg).
   Current headroom: bunny near sits at 4.18 % of the 5 % limit, puppy far at 6.96 % of the
   10 % limit — so a new rig tuned blind against the limits knows how much room there really is;

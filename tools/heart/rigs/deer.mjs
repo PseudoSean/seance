@@ -386,7 +386,16 @@ export const rig = {
 	nFar: 120,
 	emitStrideFar: 3,
 	fillet: 13,
-	viewBox: {x: 34, y: 6, w: 206, h: 196},
+	// Contains the animal: nothing may be drawn outside its own box
+	// (lib/build.mjs `boxOverflow`). The old {x: 34, y: 6, w: 206, h: 196}
+	// cut 2.2 units off the bottom and 15.8 off the right — a hoof, and the
+	// muzzle through the graze, which reaches furthest forward of anything
+	// this rig does. Extremes reach y 5.8…204.2 and x 37…255.8, so this
+	// clears them by 3.8 (above), 3.8 (below), 3 (left) and 3.2 (right). The
+	// theme's `--heart-deer-h` is scaled by 206/196 and `stage.aspect` by
+	// 196/206 to match, so the deer is the same size on screen and crosses
+	// the same distance.
+	viewBox: {x: 34, y: 2, w: 225, h: 206},
 	ground: 200,
 	k: 1,
 	// the far hind leg's five parts, then the far front leg's five
@@ -471,7 +480,10 @@ export default {
 	sequence: {
 		first: 5,
 		period: 66,
-		stage: {aspect: 16},
+		// 15.2233, not 16: the stage is `aspect × viewBox.h` and the box grew
+		// from 196 to 206 to hold the animal, so 15.2233 × 206 = 16 × 196
+		// keeps the crossing the same width in rig units and on screen.
+		stage: {aspect: 15.2233},
 		segments: [
 			{gait: "walk", cycles: 18, fps: 18, travel: 65},
 			{pose: "stand", hold: 0, blend: 0.5, fps: 10, travel: [65, 0]},
