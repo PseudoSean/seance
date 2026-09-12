@@ -140,6 +140,10 @@ Plan 3 (composer):
   does not parse is retried line by line. Blank lines stay in place and
   the line count survives, so a translated draft's multiline decision
   sees the same shape the draft itself would have gotten.
+- The globe's light means reading: `translationOn` is `read !== null`.
+  A write-only channel shows an unlit globe whose tooltip still says
+  "sending in German" — the click toggles reading, so the light has to
+  say what the click will undo.
 - Escape with a strip up removes only the strip; without one it behaves
   as it always has (it blurs, it does not clear).
 - Typing notifications are left alone: the first Enter sends nothing, so
@@ -404,11 +408,15 @@ the user's second Enter.
 `Chat.vue` gains a globe button beside the mentions and menu buttons, shown
 when `capability.tier !== "none"` and `translation.enabled`. Click toggles
 `read` for the channel (target = `translateTo`); lit (accent colour, accent
-tint background) when `read` or `write` is set; its tooltip states the
-current state ("Translating to English", "Translating to English, sending in
-German"). Right-click or long press opens the same panel the channel menu's
-"Translation…" entry opens: reading target (with "off"), outgoing target
-(with "off"), formality, variant. A paused engine shows in the tooltip.
+tint background) when `read` is set — the light means reading, which is what
+the click toggles, so a channel that only sends in another language shows
+an unlit globe. The tooltip states the whole state either way
+("Translating into English", "Translating into English, sending in
+German", or "Translate messages into English, sending in German" when
+only the write target is set). Right-click or long press opens the same
+panel the channel menu's "Translation…" entry opens: reading target (with
+"off"), outgoing target (with "off"), formality, variant. A paused engine
+shows in the tooltip.
 
 ## Settings, persistence, deploy configuration
 

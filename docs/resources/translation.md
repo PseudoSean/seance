@@ -84,9 +84,11 @@ incoming traffic; a read already in flight when the hold starts still
 finishes. `translateDraft` (`outgoing.ts`) then does the actual work: a
 single-line draft as one request, a multi-line one as a numbered batch when
 the route's engine batches (else line by line, falling back to line-by-line
-whenever the batch's numbering does not parse), streamed with the draft's
-blank lines and line count preserved, and given up after `WRITE_TIMEOUT_MS`
-(2 min).
+whenever the batch's numbering does not parse or the engine refuses the
+batch before it yields anything), streamed with the blank lines between a
+draft's lines kept where they were -- a draft whose only non-blank line sits
+among blank lines is sent as that line alone, since a blank line is nothing
+to send -- and given up after `WRITE_TIMEOUT_MS` (2 min).
 
 The result lives in `store.state.outgoingTranslations`, keyed by channel
 id, and `ChatInput.vue` renders it as the `.translate-bar` strip above the
