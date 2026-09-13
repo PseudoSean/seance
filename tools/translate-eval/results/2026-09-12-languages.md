@@ -72,17 +72,18 @@ the target.
 
 - **NLLB first, Qwen as the fallback class** (NLLB ahead by more than the tie
   band): sr, hr, sl, bg, el, he, fa, bn, ta, et, lv, lt, eu, ga, cy, is, sw,
-  af, tl, ur, and from the second batch fi (+21), ca (+27), nb (+18), id
-  (+24) and ar (+12: past the tie band, short of the 15 points the first
-  batch's NLLB-first languages cleared; placed on the side of the
-  measurement).
+  af, tl, ur, and from the second batch fi (+21), ca (+27), nb (+18) and id
+  (+24).
 - **Qwen and NLLB in one class** (a downloaded NLLB preferred, Qwen
   otherwise): sk, ms, gl, hi, and from the second batch hu (-8), th (+6), cs
   (+8), pl (0).
 - **Qwen and OPUS-MT in one class**: de, nl, ru. **Qwen, then OPUS-MT**: fr,
   es, it.
 - **Qwen first, NLLB next**: pt, sv, da, ro, uk, tr, vi, zh, ja, ko, and any
-  language not measured.
+  language not measured — and ar, though NLLB measured 12 points ahead: Qwen
+  reads the channel's context and the seq2seq models do not, and a short-line
+  round trip flatters benchmark-trained models in chat (the user's call,
+  2026-09-13).
 
 **Limited** (`LIMITED_LANGUAGES`, the best engine under 55%): is 43, lv 43,
 et 49, hi 50, hu 52, lt 54, bn 54.

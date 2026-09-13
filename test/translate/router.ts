@@ -192,7 +192,26 @@ describe("translate/router", () => {
 
 	describe("the default table", () => {
 		it("puts NLLB first where it measured ahead, in both directions", () => {
-			for (const code of ["tl", "el", "fi", "ca", "nb", "id", "ar", "sw"]) {
+			// Arabic measured NLLB ahead too, but stays LLM-first for the
+			// channel context the LLM reads (routes.default.ts): it routes like
+			// any language the table has no opinion about.
+			for (const pair of [
+				["ar", "en"],
+				["en", "ar"],
+			] as const) {
+				expect(
+					candidatesFor(DEFAULT_ROUTES, pair[0], pair[1]),
+					pair.join("→")
+				).to.deep.equal(
+					candidatesFor(
+						DEFAULT_ROUTES,
+						pair[0] === "ar" ? "pt" : "en",
+						pair[1] === "ar" ? "pt" : "en"
+					)
+				);
+			}
+
+			for (const code of ["tl", "el", "fi", "ca", "nb", "id", "sw"]) {
 				expect(candidatesFor(DEFAULT_ROUTES, code, "en"), `${code}→en`).to.deep.equal([
 					["nllb"],
 					["llm"],

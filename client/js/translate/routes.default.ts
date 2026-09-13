@@ -41,8 +41,11 @@ export const NLLB_FIRST: readonly string[] = [
 	"fi",
 	"ca",
 	"nb",
-	"ar",
 	"id",
+	// Not "ar", though NLLB measured 12 points ahead of the LLM: the LLM
+	// reads the channel's context (recent lines, names, the reply target),
+	// which the seq2seq models ignore, and their edge on short benchmark-like
+	// lines overstates them in chat. Arabic stays LLM-first, NLLB next.
 ];
 
 /** The LLM and NLLB within the tie band: one class. */

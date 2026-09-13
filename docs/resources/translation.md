@@ -72,9 +72,12 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   casual line and a two-sentence line; `tmp/cpu-roundtrip.ts` for the CPU
   models). Differences under ~10 points are ties. NLLB first with the LLM as
   the fallback class for sr hr sl bg el he fa bn ta et lv lt eu ga cy is sw
-  af tl ur fi ca nb id ar; the LLM and NLLB in one class for sk ms gl hi hu
+  af tl ur fi ca nb id; the LLM and NLLB in one class for sk ms gl hi hu
   th cs pl; the LLM and OPUS-MT in one class for de nl ru, the LLM then
-  OPUS-MT for fr es it; the LLM then NLLB everywhere else. Each placement
+  OPUS-MT for fr es it; the LLM then NLLB everywhere else. Arabic measured
+  NLLB 12 points ahead and is placed LLM-first anyway: the LLM reads the
+  channel's context and the seq2seq models do not, and a short-line round
+  trip flatters benchmark-trained models in chat. Each placement
   applies to the language as source and as target. `LIMITED_LANGUAGES`
   (is lv et hi lt bn hu) are the languages whose best engine brought back
   under 55%: the channel panel's pickers and Settings' reading target say
