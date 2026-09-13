@@ -227,6 +227,76 @@ msgctxt "composer.uploading"
 msgid "Uploading {file}"
 msgstr ""
 
+#: client/components/MessageCondensed.vue
+#. Condensed status block: away markings while the block was collapsed. The singular shows 'once' when one marking happened, the plural the number of markings; {count} is that number.
+msgctxt "condensed.away"
+msgid "marked away once"
+msgid_plural "marked away {count} times"
+msgstr[0] ""
+msgstr[1] ""
+
+#: client/components/MessageCondensed.vue
+#. Condensed status block: back markings while the block was collapsed. The singular shows 'once' when one marking happened, the plural the number of markings; {count} is that number.
+msgctxt "condensed.back"
+msgid "marked back once"
+msgid_plural "marked back {count} times"
+msgstr[0] ""
+msgstr[1] ""
+
+#: client/components/MessageCondensed.vue
+#. Condensed status block: {count} users changed their username/hostname while the block was collapsed.
+msgctxt "condensed.chghost"
+msgid "{count} user has changed hostname"
+msgid_plural "{count} users have changed hostname"
+msgstr[0] ""
+msgstr[1] ""
+
+#: client/components/MessageCondensed.vue
+#. Condensed status block: {count} users joined while the block was collapsed. The counts of several kinds join into one sentence in the active locale's list format.
+msgctxt "condensed.join"
+msgid "{count} user has joined"
+msgid_plural "{count} users have joined"
+msgstr[0] ""
+msgstr[1] ""
+
+#: client/components/MessageCondensed.vue
+#. Condensed status block: {count} users were kicked while the block was collapsed.
+msgctxt "condensed.kicked"
+msgid "{count} user was kicked"
+msgid_plural "{count} users were kicked"
+msgstr[0] ""
+msgstr[1] ""
+
+#: client/components/MessageCondensed.vue
+#. Condensed status block: {count} users left the channel (quits are counted as parts) while the block was collapsed.
+msgctxt "condensed.left"
+msgid "{count} user has left"
+msgid_plural "{count} users have left"
+msgstr[0] ""
+msgstr[1] ""
+
+#: client/components/MessageCondensed.vue
+#. Condensed status block: {count} channel-mode changes were set while the block was collapsed (one MODE line can carry several).
+msgctxt "condensed.modes"
+msgid "{count} mode was set"
+msgid_plural "{count} modes were set"
+msgstr[0] ""
+msgstr[1] ""
+
+#: client/components/MessageCondensed.vue
+#. Condensed status block: {count} users renamed while the block was collapsed.
+msgctxt "condensed.nick"
+msgid "{count} user has changed nick"
+msgid_plural "{count} users have changed nick"
+msgstr[0] ""
+msgstr[1] ""
+
+#: client/components/MessageCondensed.vue
+#. aria-label of the small toggle button that expands or collapses the condensed status block in a channel's scrollback.
+msgctxt "condensed.toggle"
+msgid "Toggle status messages"
+msgstr ""
+
 #: client/components/ConfirmDialog.vue
 #. Button of every confirmation dialog in the app (delete message, delete network, restore settings, clear history…); clicking declines and closes the dialog.
 msgctxt "confirm.cancel"

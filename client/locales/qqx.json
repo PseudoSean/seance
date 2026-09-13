@@ -41,6 +41,39 @@
   "composer.uploadPreparing": "‫ṗŕéṗàŕïñġ…ṗŕéṗàŕïñġ…‬",
   "composer.uploadWaiting": "‫ẃàïţïñġ ḟöŕ ţḣé śéŕṽéŕ…ẃàïţïñġ ḟöŕ ţḣé śéŕṽéŕ…‬",
   "composer.uploading": "‫üṗľöàḋïñġ {file}üṗľöàḋïñġ {file}‬",
+  "condensed.away": {
+    "one": "‫ṁàŕķéḋ àẃàý öñċéṁàŕķéḋ àẃàý öñċé‬",
+    "other": "‫ṁàŕķéḋ àẃàý öñċéṁàŕķéḋ àẃàý öñċé‬"
+  },
+  "condensed.back": {
+    "one": "‫ṁàŕķéḋ ḃàċķ öñċéṁàŕķéḋ ḃàċķ öñċé‬",
+    "other": "‫ṁàŕķéḋ ḃàċķ öñċéṁàŕķéḋ ḃàċķ öñċé‬"
+  },
+  "condensed.chghost": {
+    "one": "‫{count} üśéŕ ḣàś ċḣàñġéḋ ḣöśţñàṁé{count} üśéŕ ḣàś ċḣàñġéḋ ḣöśţñàṁé‬",
+    "other": "‫{count} üśéŕ ḣàś ċḣàñġéḋ ḣöśţñàṁé{count} üśéŕ ḣàś ċḣàñġéḋ ḣöśţñàṁé‬"
+  },
+  "condensed.join": {
+    "one": "‫{count} üśéŕ ḣàś ĵöïñéḋ{count} üśéŕ ḣàś ĵöïñéḋ‬",
+    "other": "‫{count} üśéŕ ḣàś ĵöïñéḋ{count} üśéŕ ḣàś ĵöïñéḋ‬"
+  },
+  "condensed.kicked": {
+    "one": "‫{count} üśéŕ ẃàś ķïċķéḋ{count} üśéŕ ẃàś ķïċķéḋ‬",
+    "other": "‫{count} üśéŕ ẃàś ķïċķéḋ{count} üśéŕ ẃàś ķïċķéḋ‬"
+  },
+  "condensed.left": {
+    "one": "‫{count} üśéŕ ḣàś ľéḟţ{count} üśéŕ ḣàś ľéḟţ‬",
+    "other": "‫{count} üśéŕ ḣàś ľéḟţ{count} üśéŕ ḣàś ľéḟţ‬"
+  },
+  "condensed.modes": {
+    "one": "‫{count} ṁöḋé ẃàś śéţ{count} ṁöḋé ẃàś śéţ‬",
+    "other": "‫{count} ṁöḋé ẃàś śéţ{count} ṁöḋé ẃàś śéţ‬"
+  },
+  "condensed.nick": {
+    "one": "‫{count} üśéŕ ḣàś ċḣàñġéḋ ñïċķ{count} üśéŕ ḣàś ċḣàñġéḋ ñïċķ‬",
+    "other": "‫{count} üśéŕ ḣàś ċḣàñġéḋ ñïċķ{count} üśéŕ ḣàś ċḣàñġéḋ ñïċķ‬"
+  },
+  "condensed.toggle": "‫ţöġġľé śţàţüś ṁéśśàġéśţöġġľé śţàţüś ṁéśśàġéś‬",
   "confirm.cancel": "‫ċàñċéľċàñċéľ‬",
   "connect.account": "‫àċċöüñţàċċöüñţ‬",
   "connect.ariaLabel": "‫ċöññéċţċöññéċţ‬",

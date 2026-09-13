@@ -41,6 +41,39 @@
   "composer.uploadPreparing": "preparing…",
   "composer.uploadWaiting": "waiting for the server…",
   "composer.uploading": "Uploading {file}",
+  "condensed.away": {
+    "one": "marked away once",
+    "other": "marked away {count} times"
+  },
+  "condensed.back": {
+    "one": "marked back once",
+    "other": "marked back {count} times"
+  },
+  "condensed.chghost": {
+    "one": "{count} user has changed hostname",
+    "other": "{count} users have changed hostname"
+  },
+  "condensed.join": {
+    "one": "{count} user has joined",
+    "other": "{count} users have joined"
+  },
+  "condensed.kicked": {
+    "one": "{count} user was kicked",
+    "other": "{count} users were kicked"
+  },
+  "condensed.left": {
+    "one": "{count} user has left",
+    "other": "{count} users have left"
+  },
+  "condensed.modes": {
+    "one": "{count} mode was set",
+    "other": "{count} modes were set"
+  },
+  "condensed.nick": {
+    "one": "{count} user has changed nick",
+    "other": "{count} users have changed nick"
+  },
+  "condensed.toggle": "Toggle status messages",
   "confirm.cancel": "Cancel",
   "connect.account": "Account",
   "connect.ariaLabel": "Connect",
