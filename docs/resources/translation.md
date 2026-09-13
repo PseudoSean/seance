@@ -486,7 +486,7 @@ budget ran out, which the strip showed as a translation and which read as
 the model thinking. `isNarration` judges it: the answer quotes the source
 line, or says "the user" and "translat…" where the source says neither
 (no false positive among the 1,048 answers the runner had produced). The
-composer gives it the same bare second try as an echo; the reading queue fails the line without counting it against the engine. **Packaging comes off before any of
+composer gives it the same bare second try as an echo, and so does the reading queue, which fails the line -- without counting it against the engine -- only if the second answer is judged the same. **Packaging comes off before any of
 that** (`tidyAnswer`): a leading clause about the translation ending in a
 colon ("Here comes the translation of the last message: …", seen on a
 Korean read-back once the read-back carried the channel's context, whose
@@ -505,8 +505,8 @@ of two or three characters six or more times or a single character twelve or
 more ("ええええええ、本当に？" and "哈哈哈哈哈哈，太好了" are surprise and laughter,
 not a loop -- the loops seen were whole words), and never when the source
 repeats itself too ("no no no no" and "hahahaha" pass). It is checked right
-after the letterless rule and handled exactly like a narration: one bare
-retry in the composer, an uncounted failure in the queue. A fifth, from a
+after the letterless rule and handled like a narration in the composer (one bare
+retry) but not in the reading queue, which fails it at once, uncounted. A fifth, from a
 live test: **an answer to the question** ("answered the question instead of
 translating it", `ANSWERED`) -- a Russian read-back that replied, in
 English, to the question it was given to translate. `isAnsweredQuestion(source, answer, to)` judges it by the mark alone, so the model's wording does not
@@ -517,8 +517,8 @@ a language whose questions often end without one (`ja`, `zh`, `ko`, `th`,
 `answerError(source, answer, to)` checks it after the narration rule and
 takes the language the answer is in -- the write target for a draft, the
 reading language for a read-back; the composer gives it the bare second try
-for the draft and the read-back, and the reading queue fails the line
-without counting it against the engine. The echo needs no `from !== to`
+for the draft and the read-back, and the reading queue retries the line once
+bare and fails it, uncounted, only if the second answer is judged the same. The echo needs no `from !== to`
 guard any more -- a source is never the target -- so what it means is the
 model declining: a line with nothing to translate ("ok, brb", a bare nick)
 as much as one it would not touch. The offer the strip already makes is the
