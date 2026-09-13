@@ -258,6 +258,14 @@ form.message-search input::placeholder {
 	box-shadow: inset 0 0 0 1px var(--win-border), inset 1px 1px 2px rgb(0 0 0 / 20%);
 }
 
+/* The shadows here are a ring and corner lighting — direction-neutral —
+ * but they restate themselves for the active row under RTL, or coffee's
+ * RTL marker override (higher specificity, imported file) and then
+ * mardam's bevel restate would both paint over them. */
+[dir="rtl"] .channel-list-item.active {
+	box-shadow: inset 0 0 0 1px var(--win-border), inset 1px 1px 2px rgb(0 0 0 / 20%);
+}
+
 .channel-list-item.has-unread .name {
 	color: var(--win-select);
 	font-weight: 700;

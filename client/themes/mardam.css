@@ -223,6 +223,13 @@ body,
 	box-shadow: var(--bevel-sunken);
 }
 
+/* The bevel is corner lighting, not direction — it restates itself under
+ * RTL so coffee's RTL marker override (higher specificity, imported file)
+ * does not paint the active row amber instead. */
+[dir="rtl"] .channel-list-item.active {
+	box-shadow: var(--bevel-sunken);
+}
+
 .channel-list-item[data-type="lobby"] {
 	font-weight: 700;
 	background: transparent;

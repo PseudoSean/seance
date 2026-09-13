@@ -1171,6 +1171,13 @@ of one that has already passed — and only one `animation` can hold the icon. *
 	mask-image: linear-gradient(to left, transparent, black 20px);
 }
 
+/* The fade sits at the clip end — the inline end of the row — so the mask
+ * flips with the reading direction. */
+[dir="rtl"] .header .topic,
+[dir="rtl"] .channel-list-item .name {
+	mask-image: linear-gradient(to right, transparent, black 20px);
+}
+
 .channel-list-item .badge,
 #sidebar .add-channel-tooltip,
 #sidebar .edit-network-tooltip,
