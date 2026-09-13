@@ -40,8 +40,23 @@
 // config.json (branding is fetched at boot, so no rebuild is needed), the
 // same deploy shape tools/scenarios/sign-in.mjs builds for; the file is
 // restored afterwards.
+//
+// Task 10 extensions:
+//  - the truncation pass: qqx doubles every string, so in the --dev run the
+//    connect form's controls (right after the pick), then the sidebar rows
+//    and the settings tab strip (over a network fabricated through the
+//    `init` bus event — dev-build-only window.socket) must show nothing
+//    clipped (scrollWidth > clientWidth is a failure);
+//  - first-paint attribution: the dir-setter wrapper records
+//    document.readyState alongside every write, and the FIRST write must
+//    have happened at readyState "loading" — the pre-paint script's write,
+//    attributable, not just order-first;
+//  - the production run seeds the stored pick (locale=qqx) and proves it
+//    activates: dir flips to rtl at first paint and the runtime catalog
+//    serves qqx copy — an explicit pick is not gated by devOnly.
 
 import {copyFileSync, mkdirSync, readFileSync, writeFileSync} from "node:fs";
+import {FAKE_NETWORK_SNIPPET} from "./lib/fake-network.mjs";
 
 const BASE = process.env.SEANCE_HTTP ?? "http://localhost:8000/";
 
@@ -132,7 +147,11 @@ const reload = async (page, waitForSelector) => {
 
 /** Installed before any page script, on every new document: wraps the
  * <html> `dir` setter so the scenario can prove the direction was set by the
- * pre-paint script — the first write in the document, before bundle.js. */
+ * pre-paint script — the first write in the document, before bundle.js, at
+ * readyState "loading" (attributed, not just order-first). Only writes to
+ * the documentElement are recorded: Vue also patches `dir="auto"` onto
+ * message/textarea elements as a DOM prop while mounting, and those are
+ * per-element rendering, not the document's direction. */
 const DIR_HISTORY_HOOK = `(() => {
 	window.__dirHistory = [];
 	const desc = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "dir");
@@ -144,13 +163,41 @@ const DIR_HISTORY_HOOK = `(() => {
 	Object.defineProperty(HTMLElement.prototype, "dir", {
 		get: desc.get,
 		set(value) {
-			window.__dirHistory.push(String(value));
+			if (this === document.documentElement) {
+				window.__dirHistory.push({dir: String(value), readyState: document.readyState});
+			}
+
 			desc.set.call(this, value);
 		},
 		configurable: true,
 		enumerable: desc.enumerable,
 	});
 })()`;
+
+/** Elements of `selector` whose content overflows their box — a clipped
+ * control (qqx doubles every string; nothing in the wave-A chrome may
+ * overflow). Returns human-readable offenders, empty when clean. */
+const CLIPPED = (selector) =>
+	`(() => {
+		const bad = [];
+		for (const el of document.querySelectorAll(${JSON.stringify(selector)})) {
+			if (el.scrollWidth > el.clientWidth + 1) {
+				bad.push(
+					(el.id ? "#" + el.id : el.tagName.toLowerCase()) +
+						" [" + String(el.textContent ?? "").trim().slice(0, 40) + "]"
+				);
+			}
+		}
+		return bad;
+	})()`;
+
+const assertNothingClipped = async (page, selector, label) => {
+	const bad = (await page.evaluate(CLIPPED(selector))) ?? [];
+	page.check(
+		`${label} — nothing clipped in ${selector}${bad.length > 0 ? `: ${bad.join("; ")}` : ""}`,
+		bad.length === 0
+	);
+};
 
 export default async function run(page) {
 	const devBuild = page.flags.has("--dev");
@@ -201,22 +248,43 @@ export default async function run(page) {
 			(await page.evaluate(STORED_LOCALE)) === "qqx"
 		);
 
+		// (b2) Truncation pass, part 1: qqx doubles every string — with the
+		// form freshly relabeled, none of its controls may clip their copy.
+		await assertNothingClipped(
+			page,
+			`#connect form button`,
+			"truncation: connect form buttons"
+		);
+		await assertNothingClipped(
+			page,
+			`#connect form select`,
+			"truncation: connect form selects"
+		);
+		await assertNothingClipped(page, `#connect form input`, "truncation: connect form inputs");
+		await assertNothingClipped(page, `#connect form label`, "truncation: connect form labels");
+
 		// (c) Reload: the pick survived and the direction was right from the
 		// first paint — __dirHistory[0] is the pre-paint script's write, which
-		// runs before bundle.js.
+		// runs before bundle.js at readyState "loading" (attributed, not just
+		// order-first).
 		await reload(page, SELECT);
 		page.check("pick survived the reload", (await page.evaluate(STORED_LOCALE)) === "qqx");
 		page.check("select still shows qqx", (await page.evaluate(SELECT_VALUE)) === "qqx");
 		page.check("direction still rtl after reload", (await page.evaluate(DIR)) === "rtl");
 		page.check("html lang still qqx", (await page.evaluate(LANG)) === "qqx");
+		const first = await page.evaluate(`(window.__dirHistory ?? [])[0]`);
 		page.check(
 			"dir was rtl from first paint (pre-paint, before bundle.js)",
-			(await page.evaluate(`(window.__dirHistory ?? [])[0]`)) === "rtl"
+			!!first && first.dir === "rtl"
+		);
+		page.check(
+			"the first dir write happened at readyState loading (pre-paint attribution)",
+			!!first && first.readyState === "loading"
 		);
 		const history = await page.evaluate(`window.__dirHistory ?? []`);
 		page.check(
 			"every dir write in the reloaded document stayed rtl",
-			history.length > 0 && history.every((v) => v === "rtl")
+			history.length > 0 && history.every((write) => write.dir === "rtl")
 		);
 
 		// (d) The screenshot deliverable: the remembered RTL connect form.
@@ -240,6 +308,50 @@ export default async function run(page) {
 		} finally {
 			writeFileSync("public/config.json", originalConfig);
 		}
+
+		// (f) Truncation pass, part 2: the sidebar rows and the settings tab
+		// strip under qqx. The sidebar needs rows, so a network is fabricated
+		// through the `init` bus event (lib/fake-network.mjs) — that helper
+		// rides window.socket, which only the development build exposes.
+		const faked = await page.evaluate(FAKE_NETWORK_SNIPPET);
+
+		if (faked) {
+			await page.waitFor(
+				`!!document.querySelector(".channel-list-item[data-type='lobby']")`,
+				{
+					label: "the fabricated network's lobby row",
+				}
+			);
+			await assertNothingClipped(page, `.channel-list-item`, "truncation: sidebar rows");
+
+			await page.click(`#footer button.settings`);
+			await page.waitFor(`!!document.querySelector(".settings-menu")`, {
+				label: "settings open",
+			});
+			await assertNothingClipped(
+				page,
+				`.settings-menu button`,
+				"truncation: settings tab strip"
+			);
+			await assertNothingClipped(
+				page,
+				`.settings-modal-footer button, .settings-modal-header button`,
+				"truncation: settings modal header/footer buttons"
+			);
+			const truncShot = await page.screenshot("i18n-language-switch-truncation");
+			copyFileSync(truncShot, "tmp/scenarios/i18n-language-switch-truncation.png");
+
+			// Settings is a modal; nothing behind the backdrop is clickable —
+			// leave through Done before touching anything else.
+			await page.click(".settings-modal-done");
+			await page.waitFor(`!!document.querySelector("#input")`, {
+				label: "back in the channel",
+			});
+		} else {
+			console.log(
+				"SKIP truncation pass part 2: window.socket (the init fabrication) needs the development build"
+			);
+		}
 	} else {
 		// The (e) assertions: a production build never offers a dev-only locale.
 		const values = await page.evaluate(OPTION_VALUES);
@@ -251,6 +363,29 @@ export default async function run(page) {
 			(await page.evaluate(AUTO_TEXT)) === "System default (English)"
 		);
 		await page.screenshot("i18n-language-switch-prod");
+
+		// (f) An explicitly stored dev-only pick still activates in a
+		// production build — the LanguageSelect comment's claim, now proven:
+		// the pre-paint script flips the direction from the blob, and
+		// activate() serves the qqx catalog over en at runtime.
+		await page.evaluate(`localStorage.setItem("settings", JSON.stringify({locale: "qqx"}))`);
+		await reload(page, SELECT);
+		page.check(
+			"prod: stored qqx pick flips the direction to rtl",
+			(await page.evaluate(DIR)) === "rtl"
+		);
+		page.check("prod: stored qqx pick sets lang=qqx", (await page.evaluate(LANG)) === "qqx");
+		const prodFirst = await page.evaluate(`(window.__dirHistory ?? [])[0]`);
+		page.check(
+			"prod: the flip was pre-paint (first write at readyState loading)",
+			!!prodFirst && prodFirst.dir === "rtl" && prodFirst.readyState === "loading"
+		);
+		const prodLabel = await page.evaluate(ROW_TEXT);
+		page.check(
+			"prod: the runtime catalog switched too (row label RLE-wrapped)",
+			prodLabel.includes(RLE) && prodLabel !== EN_LABEL
+		);
+		await page.screenshot("i18n-language-switch-prod-qqx");
 	}
 
 	page.check("no console errors", page.consoleErrors.length === 0);
