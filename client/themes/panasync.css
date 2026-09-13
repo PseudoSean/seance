@@ -177,7 +177,7 @@ body,
 
 /* The user list's count is a status bar too. */
 #chat .userlist {
-	border-left-color: var(--ansi-blue);
+	border-inline-start-color: var(--ansi-blue);
 }
 
 #chat .userlist .count {

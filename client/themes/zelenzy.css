@@ -175,8 +175,14 @@
 
 #chat .userlist {
 	background: var(--chat-bg);
-	border-left: 0;
+	border-inline-start: 0;
 	box-shadow: inset 1px 0 0 var(--win-shadow);
+}
+
+/* The list's inner edge faces the scrollback; in RTL it sits on the other
+ * side of the pane. */
+[dir="rtl"] #chat .userlist {
+	box-shadow: inset -1px 0 0 var(--win-shadow);
 }
 
 #chat .userlist .count {

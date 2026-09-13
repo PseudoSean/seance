@@ -185,7 +185,7 @@ body,
 /* The nick list: a sunken white list beside the scrollback, its search box
  * on the grey. */
 #chat .userlist {
-	border-left: 0;
+	border-inline-start: 0;
 	box-shadow: var(--bevel-sunken);
 }
 
@@ -323,7 +323,7 @@ body,
 }
 
 #chat .msg.highlight {
-	border-left-color: #c00;
+	border-inline-start-color: #c00;
 }
 
 /* Timestamps in the scrollback's own black, the way mIRC prints them. */
