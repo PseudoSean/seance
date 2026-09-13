@@ -86,15 +86,6 @@ function applyDefaultTarget(defaultTarget: string | undefined): void {
 	}
 }
 
-// The GPU model the same way: settings.ts's default is 1.7B, and a deploy
-// that names its own model (translation.llm.model) makes that the default
-// while the user has chosen none.
-function applyDefaultLlmModel(defaultLlm: string): void {
-	if (!hasStoredSetting("translateLlmModel")) {
-		void store.dispatch("settings/update", {name: "translateLlmModel", value: defaultLlm});
-	}
-}
-
 function create(): TranslateService {
 	const branding = getBranding().translation ?? {};
 	const fake = useFake();
@@ -117,10 +108,10 @@ function create(): TranslateService {
 		setTimeout: (fn, ms) => window.setTimeout(fn, ms),
 		clearTimeout: (handle) => window.clearTimeout(handle as number),
 	};
-	const catalog = buildCatalog(
-		branding,
-		hasStoredSetting("translateLlmModel") ? store.state.settings.translateLlmModel : null
-	);
+	// An unset GPU model ("") is no choice: it resolves to the catalog's
+	// default (the deploy's model, else 1.7B) every time it is read, so a later
+	// deploy default reaches everyone who never picked one.
+	const catalog = buildCatalog(branding, store.state.settings.translateLlmModel || null);
 	const created = new TranslateService(
 		deps,
 		{
@@ -133,7 +124,6 @@ function create(): TranslateService {
 	);
 
 	applyDefaultTarget(branding.defaultTarget);
-	applyDefaultLlmModel(catalog.llmDefault);
 
 	store.watch(
 		() =>

@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import sinon from "ts-sinon";
 import type {Capability} from "../../client/js/translate/capability";
-import {emptyContext} from "../../client/js/translate/engine";
+import {emptyContext, type ModelRef} from "../../client/js/translate/engine";
 import {
 	QWEN3_1_7B_ID,
 	QWEN3_4B_ID,
@@ -150,6 +150,29 @@ function gateLlm(r: ReturnType<typeof rig>): () => void {
 	};
 
 	return release;
+}
+
+/** Hold the rig's LLM load of `id` until `release` is called; `asked` records every load asked for. */
+function gateLlmLoad(
+	r: ReturnType<typeof rig>,
+	id: string
+): {release: () => void; asked: string[]} {
+	let release!: () => void;
+	const gate = new Promise<void>((resolve) => (release = resolve));
+	const original = r.llm.load.bind(r.llm);
+	const asked: string[] = [];
+
+	r.llm.load = async (ref, onProgress) => {
+		asked.push(ref.id);
+
+		if (ref.id === id) {
+			await gate;
+		}
+
+		return original(ref, onProgress);
+	};
+
+	return {release: () => release(), asked};
 }
 
 async function text(iterable: AsyncIterable<{text: string; done: boolean}>) {
@@ -514,6 +537,108 @@ describe("translate/service", () => {
 			QWEN3_1_7B_ID,
 			QWEN3_4B_ID,
 		]);
+		r.service.dispose();
+	});
+
+	it("a Settings download of the other GPU model holds a request for the selected one until it is done", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		const large = catalog.llmChoices.find((ref) => ref.id === QWEN3_4B_ID) as ModelRef;
+		const load = gateLlmLoad(r, QWEN3_4B_ID);
+		const jaFr = {...base, from: "ja", to: "fr"};
+		const downloading = r.service.download(large);
+
+		await r.clock.tickAsync(0);
+		expect(load.asked).to.deep.equal([QWEN3_4B_ID]);
+
+		const running = text(r.service.translate(jaFr));
+
+		await r.clock.tickAsync(0);
+		// The 1.7B load does not start under the 4B one.
+		expect(load.asked).to.deep.equal([QWEN3_4B_ID]);
+		expect(r.llm.calls.translate).to.deep.equal([]);
+
+		load.release();
+		await downloading;
+		expect(await running).to.equal("llm:Hallo");
+		expect(load.asked).to.deep.equal([QWEN3_4B_ID, QWEN3_1_7B_ID]);
+		expect(r.llm.calls.translate.map((req) => req.model)).to.deep.equal([QWEN3_1_7B_ID]);
+		// Nothing was marked down on the way.
+		expect((await r.service.route("ja", "fr"))?.candidate).to.equal("llm");
+		r.service.dispose();
+	});
+
+	it("a switch waits for the old model's download before unloading it and loading the new one", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		const small = catalog.llmChoices.find((ref) => ref.id === QWEN3_1_7B_ID) as ModelRef;
+		const load = gateLlmLoad(r, QWEN3_1_7B_ID);
+		const jaFr = {...base, from: "ja", to: "fr"};
+		const downloading = r.service.download(small);
+
+		await r.clock.tickAsync(0);
+		expect(load.asked).to.deep.equal([QWEN3_1_7B_ID]);
+
+		r.service.setLlmModel(QWEN3_4B_ID);
+
+		const running = text(r.service.translate(jaFr));
+
+		await r.clock.tickAsync(0);
+		expect(r.llm.calls.unload).to.equal(0);
+		expect(load.asked).to.deep.equal([QWEN3_1_7B_ID]);
+
+		load.release();
+		await downloading;
+		expect(await running).to.equal("llm:Hallo");
+		expect(r.llm.calls.unload).to.equal(1);
+		expect(load.asked).to.deep.equal([QWEN3_1_7B_ID, QWEN3_4B_ID]);
+		expect(r.llm.calls.translate.map((req) => req.model)).to.deep.equal([QWEN3_4B_ID]);
+		expect((await r.service.route("ja", "fr"))?.ref.id).to.equal(QWEN3_4B_ID);
+		r.service.dispose();
+	});
+
+	it("deleting the unselected GPU model leaves the selected one's request and idle clock alone", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		const large = catalog.llmChoices.find((ref) => ref.id === QWEN3_4B_ID) as ModelRef;
+		const release = gateLlm(r);
+		const running = text(r.service.translate(base));
+
+		await r.clock.tickAsync(0);
+		await r.service.deleteModel(large);
+		expect(r.llm.calls.unload).to.equal(0);
+
+		release();
+		expect(await running).to.equal("llm:Hallo");
+		expect(r.llm.isLoaded(QWEN3_1_7B_ID)).to.equal(true);
+		expect(r.llm.calls.unload).to.equal(0);
+
+		// The idle unload still fires: 1.7B is the only engine loaded, so the
+		// worker goes with it.
+		await r.clock.tickAsync(GPU_IDLE_UNLOAD_MS);
+		expect(r.workers[0].terminated).to.equal(true);
+		r.service.dispose();
+	});
+
+	it("deleting the loaded GPU model waits for its request, then unloads it", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		const small = catalog.llmChoices.find((ref) => ref.id === QWEN3_1_7B_ID) as ModelRef;
+		const release = gateLlm(r);
+		const running = text(r.service.translate(base));
+
+		await r.clock.tickAsync(0);
+
+		const deleting = r.service.deleteModel(small);
+
+		await r.clock.tickAsync(0);
+		expect(r.llm.calls.unload).to.equal(0);
+
+		release();
+		expect(await running).to.equal("llm:Hallo");
+		await deleting;
+		expect(r.llm.calls.unload).to.equal(1);
+		expect(r.llm.isLoaded(QWEN3_1_7B_ID)).to.equal(false);
 		r.service.dispose();
 	});
 

@@ -81,6 +81,9 @@ export class TranslateService {
 	/** Running LLM streams by model id: a model is unloaded only once its own are done. */
 	private llmRunning = new Map<string, number>();
 	private llmWaiters: {ready: () => boolean; resolve: () => void}[] = [];
+	/** Bumped on every GPU request or download claimed; per model, the last one's number. */
+	private llmStartSeq = 0;
+	private llmLastStart = new Map<string, number>();
 	/**
 	 * A GPU model switch still settling: the old model's running requests
 	 * finishing, then its unload. LLM work waits for it, since loading
@@ -195,8 +198,31 @@ export class TranslateService {
 		return new Promise((resolve) => this.llmWaiters.push({ready, resolve}));
 	}
 
+	/**
+	 * GPU work claimed on model `id`: a request or a download. WebLLM holds one
+	 * model, and loading another tears down the engine this work runs on, so
+	 * work on another model waits until every claim on this one is released.
+	 * Claim synchronously after checking `otherLlmWork`, with no await between.
+	 */
 	private llmStarted(id: string): void {
 		this.llmRunning.set(id, (this.llmRunning.get(id) ?? 0) + 1);
+		this.llmLastStart.set(id, ++this.llmStartSeq);
+	}
+
+	/** GPU work (a request or a download) running on a model other than `id`. */
+	private otherLlmWork(id: string): boolean {
+		return [...this.llmRunning.keys()].some((running) => running !== id);
+	}
+
+	/** Whether work on another GPU model was claimed after claim number `seq`. */
+	private otherLlmStartedSince(id: string, seq: number): boolean {
+		for (const [model, started] of this.llmLastStart) {
+			if (model !== id && started > seq) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private llmEnded(id: string): void {
@@ -402,6 +428,16 @@ export class TranslateService {
 					continue;
 				}
 
+				// Another GPU model's work is running — a Settings download of the
+				// unselected model, say: loading this one now would tear that
+				// load down. Wait for it, then route again.
+				if (route.ref.engine === "llm" && this.otherLlmWork(route.ref.id)) {
+					const waitingFor = route.ref.id;
+
+					await this.whenLlm(() => !this.otherLlmWork(waitingFor));
+					continue;
+				}
+
 				const client = this.client();
 				const gen = this.generation;
 				const id = this.nextId++;
@@ -422,6 +458,8 @@ export class TranslateService {
 				if (llmId) {
 					this.llmStarted(llmId);
 				}
+
+				const llmSeq = this.llmStartSeq;
 
 				try {
 					for await (const chunk of client.translate(
@@ -487,8 +525,13 @@ export class TranslateService {
 
 					// A GPU model that was switched away from while it loaded
 					// is no longer what the candidate runs: its failure does
-					// not take the new model down with it.
-					if (!llmId || llmId === this.options.catalog.llm.id) {
+					// not take the new model down with it. Nor does a load that
+					// another GPU model's load may have torn down.
+					if (
+						!llmId ||
+						(llmId === this.options.catalog.llm.id &&
+							!this.otherLlmStartedSince(llmId, llmSeq))
+					) {
 						this.down.add(route.candidate);
 					}
 				} finally {
@@ -595,15 +638,36 @@ export class TranslateService {
 		this.clearIdle();
 		this.engineStarted(ref.engine);
 
+		const startGeneration = this.generation;
+		let llmClaimed = false;
+
 		try {
 			if (ref.engine === "llm") {
-				// WebLLM holds one model: loading this one while a request
-				// generates on another would end that request.
-				if (this.llmSwitch) {
-					await this.llmSwitch;
+				// WebLLM holds one model: loading this one while a request or a
+				// download runs on another would end that work. Wait until none
+				// does, then claim this download as work on its model at once,
+				// so a request for another model waits for it in turn.
+				for (;;) {
+					if (this.llmSwitch) {
+						await this.llmSwitch;
+						continue;
+					}
+
+					if (this.otherLlmWork(ref.id)) {
+						await this.whenLlm(() => !this.otherLlmWork(ref.id));
+						continue;
+					}
+
+					break;
 				}
 
-				await this.whenLlm(() => [...this.llmRunning.keys()].every((id) => id === ref.id));
+				// Torn down (a page hide) while it waited: start no new worker.
+				if (this.generation !== startGeneration) {
+					throw new Error(WORKER_DISPOSED);
+				}
+
+				this.llmStarted(ref.id);
+				llmClaimed = true;
 			}
 
 			await this.client().load(ref, (progress: LoadProgress) => {
@@ -630,6 +694,10 @@ export class TranslateService {
 
 			throw e;
 		} finally {
+			if (llmClaimed) {
+				this.llmEnded(ref.id);
+			}
+
 			this.engineEnded(ref.engine);
 			this.inFlight--;
 			this.scheduleIdle();
@@ -644,8 +712,13 @@ export class TranslateService {
 		this.clearIdle();
 
 		try {
-			await this.client().unload(ref.engine);
-			this.loadedEngines.delete(ref.engine);
+			if (ref.engine === "llm") {
+				await this.releaseLlmForDelete(ref.id);
+			} else {
+				await this.client().unload(ref.engine);
+				this.loadedEngines.delete(ref.engine);
+			}
+
 			await this.client().deleteModel(ref);
 			view.cached = false;
 			view.status = "idle";
@@ -667,6 +740,31 @@ export class TranslateService {
 			this.scheduleIdle();
 			this.publish();
 		}
+	}
+
+	/**
+	 * Before a GPU model's files are deleted: once no request or download runs
+	 * on it, unload the GPU engine only if it holds that model. Deleting the
+	 * unselected model never touches the model another request is using, and
+	 * the engine's idle clock is left to that work.
+	 */
+	private async releaseLlmForDelete(id: string): Promise<void> {
+		if (this.llmSwitch) {
+			await this.llmSwitch;
+		}
+
+		await this.whenLlm(() => !this.llmRunning.get(id));
+
+		const client = this.client();
+		const status = await client.status();
+
+		// Work on it started again while the worker answered: it is in use.
+		if (!status.llm.models.includes(id) || this.llmRunning.get(id)) {
+			return;
+		}
+
+		await client.unload("llm");
+		this.loadedEngines.delete("llm");
 	}
 
 	/** Drop every loaded model and the worker with them. */

@@ -519,9 +519,15 @@ The GPU model is a choice (2026-09-13):
   shipped model, a third choice. Its `lib` travels on its own ref
   (`ModelRef.lib`) instead of the catalog-wide `llmLib` the engines used to
   read, which would have handed the deploy's library to the other models.
-- **The setting's default is 1.7B**, and a deploy's model replaces it the
-  first time `index.ts` runs (`applyDefaultLlmModel`, the `translateTo`
-  precedent): `settings.ts` computes defaults before `config.json` loads.
+- **The setting is `""` until the user picks a model** and an unset value
+  resolves to the catalog default at read time (`llmChoice`): `settings.ts`
+  computes defaults before `config.json` loads, and writing the deploy's
+  default into settings on first run (tried first) would have kept a later
+  deploy default from anyone who never chose.
+- **GPU downloads and deletes are GPU work** (fix round 1): a Settings
+  download claims its model like a request, work on another GPU model
+  waits for it, and a delete unloads the engine only when it holds the
+  deleted model, after that model's work ends.
 - **A switch settles before any LLM work continues**
   (`service.ts` `setLlmModel`): WebLLM holds one model and loading another
   ends a running generation, so later LLM requests and LLM downloads wait

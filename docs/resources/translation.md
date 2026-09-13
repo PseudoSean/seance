@@ -19,11 +19,20 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   memory, so it is a choice rather than the default. Settings → Translation's
   "GPU model" select writes `translateLlmModel` (carried by the settings
   backup like any setting); the model manager lists both rows, whichever is
-  selected, and marks the selected one "In use". A deploy's
-  `translation.llm.model` becomes the default while the user has chosen
-  none (`index.ts` `applyDefaultLlmModel`) and is added to the choices when it
-  is neither shipped model, its `lib` on its own ref only (`ModelRef.lib`). A
-  stored id that is no longer a choice selects the default (`llmChoice`).
+  selected, and marks the selected one "In use". The setting stays `""`
+  until the user picks a model, and an unset value resolves to the
+  catalog's default each time it is read, so a deploy's
+  `translation.llm.model` is the default for everyone who never chose (and
+  a later deploy default reaches them too); it is added to the choices when
+  it is neither shipped model, its `lib` on its own ref only
+  (`ModelRef.lib`). A stored id that is no longer a choice selects the
+  default (`llmChoice`). **GPU work is one model at a time**: a request or
+  a Settings download claims its model (`llmStarted`), and work on another
+  model — a request, a download, a switch's unload — waits until those
+  claims are released, since WebLLM loading one model tears down the
+  engine the other runs on; a load that another model's work may have torn
+  down never marks the route down. Deleting a GPU model unloads the engine
+  only when it holds that model, after that model's own work ends.
   **A switch takes effect without a reload** (`service.ts` `setLlmModel`):
   nothing in flight is cancelled; a running LLM request finishes on the old
   model, LLM work waits until those are done (WebLLM holds one model, and

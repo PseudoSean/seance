@@ -3,7 +3,6 @@ import {mirrorPushPrefs} from "./push-prefs";
 import {normalizeFontSize} from "./helpers/fontSize";
 import {prefersTwelveHourClock} from "./helpers/hourCycle";
 import {browserLanguage} from "./translate/languages";
-import {DEFAULT_LLM_ID} from "./translate/models";
 
 const defaultSettingConfig = {
 	apply() {},
@@ -97,11 +96,12 @@ const defaultConfig = {
 		default: true,
 	},
 	/** Which GPU model (translate/models.ts LLM_CHOICES, or the deploy's own) the
-	 * LLM candidate runs. A deploy's model replaces this default the first time
-	 * (translate/index.ts); a stored id that is no longer a choice selects the
-	 * default (models.ts `llmChoice`). */
+	 * LLM candidate runs. "" until the user picks one: unset and a stored id that
+	 * is no longer a choice both resolve to the catalog's default at read time
+	 * (models.ts `llmChoice`), so a later deploy default still reaches users who
+	 * never chose. */
 	translateLlmModel: {
-		default: DEFAULT_LLM_ID,
+		default: "",
 	},
 	// UI scale: the root font size everything in style.css is sized off in
 	// rem. The scale and its normalization live in helpers/fontSize.ts; the
