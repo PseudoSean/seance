@@ -31,6 +31,12 @@ msgctxt "chat.currentlyOpen"
 msgid "Currently open {type}"
 msgstr ""
 
+#: client/components/MessageList.vue:10
+#. Text of the 'load older messages' button at the top of the scrollback while earlier history is being fetched.
+msgctxt "chat.historyLoading"
+msgid "Loading…"
+msgstr ""
+
 #: client/components/Chat.vue:106
 #. aria-label of the downward-arrow button that appears above the message input when the scrollback is scrolled up; clicking scrolls down to the newest messages.
 msgctxt "chat.jumpToRecent"
@@ -47,6 +53,12 @@ msgstr ""
 #. aria-label of the save control at the right end of the topic editor, shown while the channel topic is being edited; clicking saves the new topic.
 msgctxt "chat.saveTopic"
 msgid "Save topic"
+msgstr ""
+
+#: client/components/MessageList.vue:11
+#. Text of the button at the top of the scrollback that fetches and shows earlier history of the conversation.
+msgctxt "chat.showOlder"
+msgid "Show older messages"
 msgstr ""
 
 #: client/components/Chat.vue:78
@@ -792,6 +804,48 @@ msgctxt "lobby.notificationsSubscribed"
 msgid "Notifications: subscribed to push"
 msgstr ""
 
+#: client/components/Mentions.vue:16
+#. Button at the right of the mentions popup's title; clicking clears every entry from the list.
+msgctxt "mentions.dismissAll"
+msgid "Dismiss all"
+msgstr ""
+
+#: client/components/Mentions.vue:42
+#. Tooltip and aria-label of the ✕ button on an entry of the mentions popup; clicking removes that entry from the list.
+msgctxt "mentions.dismissOne"
+msgid "Dismiss this mention"
+msgstr ""
+
+#: client/components/Mentions.vue:21
+#. Shown in the mentions popup when there is nothing to list: nobody mentioned you recently.
+msgctxt "mentions.empty"
+msgid "You have no recent mentions."
+msgstr ""
+
+#: client/components/Mentions.vue:30
+#. Line under each entry of the mentions popup saying where the mentioned message was posted. {channel} is the channel's name, {network} the display name of the chat network it belongs to.
+msgctxt "mentions.inOn"
+msgid "in {channel} on {network}"
+msgstr ""
+
+#: client/components/Mentions.vue:33
+#. Line under an entry of the mentions popup when the channel the mentioned message was posted in no longer exists in this client.
+msgctxt "mentions.inUnknown"
+msgid "in unknown channel"
+msgstr ""
+
+#: client/components/Mentions.vue:20
+#. Shown in the mentions popup while its list is being fetched.
+msgctxt "mentions.loading"
+msgid "Loading…"
+msgstr ""
+
+#: client/components/Mentions.vue:10
+#. Title of the popup that lists the messages in which you were mentioned recently.
+msgctxt "mentions.title"
+msgid "Recent mentions"
+msgstr ""
+
 #: client/components/MessageActions.vue:6
 #. aria-label of the hover toolbar on a chat message holding the reply, react, copy, edit and delete buttons.
 msgctxt "message.actionsToolbar"
@@ -930,6 +984,18 @@ msgctxt "message.statusmsg"
 msgid "This message was only shown to users with {mode} mode"
 msgstr ""
 
+#: client/components/MessageSearchForm.vue:19
+#. aria-label of the magnifier button in a chat window's header; clicking it opens the message-search field for the conversation.
+msgctxt "search.openForm"
+msgid "Search messages in this channel"
+msgstr ""
+
+#: client/components/MessageSearchForm.vue:10
+#. Placeholder of the message-search field that opens from the magnifier in a chat window's header; it filters this conversation's history.
+msgctxt "search.placeholder"
+msgid "Search messages…"
+msgstr ""
+
 #: client/components/Windows/Connect.vue:72
 #: client/components/Windows/Connect.vue:296
 #: client/components/Settings/Appearance.vue:249
@@ -1032,3 +1098,23 @@ msgid "{count} unread message"
 msgid_plural "{count} unread messages"
 msgstr[0] ""
 msgstr[1] ""
+
+#: client/components/ChatUserList.vue:13
+#. Placeholder of the search field at the top of the user list panel: how many members the channel has while the list is being filtered. The singular shows with exactly one member, the plural otherwise.
+msgctxt "userlist.count"
+msgid "{count} user"
+msgid_plural "{count} users"
+msgstr[0] ""
+msgstr[1] ""
+
+#: client/components/ChatUserList.vue:17
+#. Visually hidden but screen-reader-spoken label of the search field at the top of the channel member panel, used to filter the member list by name.
+msgctxt "userlist.searchLabel"
+msgid "Search among the user list"
+msgstr ""
+
+#: client/components/ChatUserList.vue:5
+#. aria-label of the side panel listing a channel's members. {name} is the channel's name as shown in the header; it is a chat name and stays as written.
+msgctxt "userlist.title"
+msgid "User list for {name}"
+msgstr ""

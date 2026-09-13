@@ -7,18 +7,18 @@
 	>
 		<div class="mentions-popup">
 			<div class="mentions-popup-title">
-				Recent mentions
+				{{ t("mentions.title") }}
 				<button
 					v-if="resolvedMessages.length"
 					class="btn dismiss-all-mentions"
 					@click="dismissAllMentions()"
 				>
-					Dismiss all
+					{{ t("mentions.dismissAll") }}
 				</button>
 			</div>
 			<template v-if="resolvedMessages.length === 0">
-				<p v-if="isLoading">Loading…</p>
-				<p v-else>You have no recent mentions.</p>
+				<p v-if="isLoading">{{ t("mentions.loading") }}</p>
+				<p v-else>{{ t("mentions.empty") }}</p>
 			</template>
 			<template v-for="message in resolvedMessages" v-else :key="message.msgId">
 				<div :class="['msg', message.type]">
@@ -27,10 +27,14 @@
 							<span class="from">
 								<Username :user="(message.from as any)" />
 								<template v-if="message.channel">
-									in {{ message.channel.channel.name }} on
-									{{ message.channel.network.name }}
+									{{
+										t("mentions.inOn", {
+											channel: message.channel.channel.name,
+											network: message.channel.network.name,
+										})
+									}}
 								</template>
-								<template v-else> in unknown channel </template> </span
+								<template v-else>{{ t("mentions.inUnknown") }}</template> </span
 							>{{ ` ` }}
 							<span :title="message.localetime" class="time">
 								{{ messageTime(message.time.toString()) }}
@@ -39,11 +43,11 @@
 						<div>
 							<span
 								class="close-tooltip tooltipped tooltipped-w"
-								aria-label="Dismiss this mention"
+								:aria-label="dismissLabel"
 							>
 								<button
 									class="msg-dismiss"
-									aria-label="Dismiss this mention"
+									:aria-label="dismissLabel"
 									@click="dismissMention(message)"
 								></button>
 							</span>
@@ -157,6 +161,7 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import {computed, watch, defineComponent, ref, onMounted, onUnmounted} from "vue";
 import {useStore} from "../js/store";
+import {useI18n} from "../js/i18n";
 import type {SharedMention} from "../../shared/types/mention";
 import type {NetChan} from "../js/types";
 
@@ -175,6 +180,7 @@ export default defineComponent({
 	},
 	setup() {
 		const store = useStore();
+		const {t} = useI18n();
 		const isOpen = ref(false);
 		const isLoading = ref(false);
 		const resolvedMessages = computed(() => {
@@ -195,6 +201,8 @@ export default defineComponent({
 				isLoading.value = false;
 			}
 		);
+
+		const dismissLabel = computed(() => t("mentions.dismissOne"));
 
 		const messageTime = (time: string) => {
 			return dayjs(time).fromNow();
@@ -239,6 +247,8 @@ export default defineComponent({
 			isOpen,
 			isLoading,
 			resolvedMessages,
+			t,
+			dismissLabel,
 			messageTime,
 			dismissMention,
 			dismissAllMentions,

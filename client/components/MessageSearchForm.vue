@@ -7,7 +7,7 @@
 				type="search"
 				name="search"
 				class="input"
-				placeholder="Search messages…"
+				:placeholder="placeholderText"
 				@blur="closeSearch"
 				@keyup.esc="closeSearch"
 			/>
@@ -16,7 +16,7 @@
 			v-if="!onSearchPage"
 			class="search"
 			type="button"
-			aria-label="Search messages in this channel"
+			:aria-label="openLabel"
 			@mousedown.prevent="toggleSearch"
 		/>
 	</form>
@@ -85,6 +85,7 @@ import {computed, defineComponent, onMounted, PropType, ref, watch} from "vue";
 import {useRoute, useRouter} from "vue-router";
 import eventbus from "../js/eventbus";
 import {ClientNetwork, ClientChan} from "../js/types";
+import {useI18n} from "../js/i18n";
 
 export default defineComponent({
 	name: "MessageSearchForm",
@@ -93,7 +94,13 @@ export default defineComponent({
 		channel: {type: Object as PropType<ClientChan>, required: true},
 	},
 	setup(props) {
+		const {t} = useI18n();
 		const searchOpened = ref(false);
+
+		// Search field placeholder and the magnifier's label.
+		const placeholderText = computed(() => t("search.placeholder"));
+		const openLabel = computed(() => t("search.openForm"));
+
 		const searchInput = ref("");
 		const router = useRouter();
 		const route = useRoute();
@@ -165,6 +172,8 @@ export default defineComponent({
 			searchOpened,
 			searchInput,
 			searchInputField,
+			placeholderText,
+			openLabel,
 			closeSearch,
 			toggleSearch,
 			searchMessages,

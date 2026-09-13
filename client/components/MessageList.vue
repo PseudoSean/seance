@@ -7,8 +7,8 @@
 				class="btn"
 				@click="onShowMoreClick"
 			>
-				<span v-if="channel.historyLoading">Loading…</span>
-				<span v-else>Show older messages</span>
+				<span v-if="channel.historyLoading">{{ t("chat.historyLoading") }}</span>
+				<span v-else>{{ t("chat.showOlder") }}</span>
 			</button>
 		</div>
 		<div
@@ -79,6 +79,7 @@ import {
 	watch,
 } from "vue";
 import {useStore} from "../js/store";
+import {useI18n} from "../js/i18n";
 import {ClientChan, ClientMessage, ClientNetwork, ClientLinkPreview} from "../js/types";
 
 type CondensedMessageContainer = {
@@ -105,6 +106,7 @@ export default defineComponent({
 	},
 	setup(props) {
 		const store = useStore();
+		const {t} = useI18n();
 
 		const chat = ref<HTMLDivElement | null>(null);
 		const loadMoreButton = ref<HTMLButtonElement | null>(null);
@@ -609,6 +611,7 @@ export default defineComponent({
 		return {
 			chat,
 			store,
+			t,
 			onShowMoreClick,
 			loadMoreButton,
 			onCopy,

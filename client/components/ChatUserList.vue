@@ -1,20 +1,13 @@
 <template>
-	<aside
-		ref="userlist"
-		class="userlist"
-		:aria-label="'User list for ' + channel.name"
-		@mouseleave="removeHoverUser"
-	>
+	<aside ref="userlist" class="userlist" :aria-label="listTitle" @mouseleave="removeHoverUser">
 		<div class="count">
 			<input
 				ref="input"
 				:value="userSearchInput"
-				:placeholder="
-					channel.users.length + ' user' + (channel.users.length === 1 ? '' : 's')
-				"
+				:placeholder="countPlaceholder"
 				type="search"
 				class="search"
-				aria-label="Search among the user list"
+				:aria-label="searchLabel"
 				tabindex="-1"
 				@input="setUserSearchInput"
 				@keydown.up="navigateUserList($event, -1)"
@@ -62,6 +55,7 @@ import {computed, defineComponent, nextTick, PropType, ref} from "vue";
 import type {UserInMessage} from "../../shared/types/msg";
 import type {ClientChan, ClientUser} from "../js/types";
 import Username from "./Username.vue";
+import {useI18n} from "../js/i18n";
 
 const modes = {
 	"~": "owner",
@@ -82,9 +76,17 @@ export default defineComponent({
 		channel: {type: Object as PropType<ClientChan>, required: true},
 	},
 	setup(props) {
+		const {t, tCount} = useI18n();
 		const userSearchInput = ref("");
 		const activeUser = ref<UserInMessage | null>();
 		const userlist = ref<HTMLDivElement>();
+
+		// Panel label and the member-count placeholder of its search field.
+		const listTitle = computed(() => t("userlist.title", {name: props.channel.name}));
+		const searchLabel = computed(() => t("userlist.searchLabel"));
+		const countPlaceholder = computed(() =>
+			tCount("userlist.count", props.channel.users.length)
+		);
 		const filteredUsers = computed(() => {
 			if (!userSearchInput.value) {
 				return;
@@ -242,6 +244,9 @@ export default defineComponent({
 			userSearchInput,
 			activeUser,
 			userlist,
+			listTitle,
+			searchLabel,
+			countPlaceholder,
 
 			setUserSearchInput,
 			getModeClass,
