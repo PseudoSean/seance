@@ -1,8 +1,8 @@
 <template>
 	<span class="content">
-		Topic set by
-		<Username :user="message.from" />
-		on {{ messageTimeLocale }}
+		{{ t("msg.topicSetBy") }}
+		<bdi><Username :user="message.from" /></bdi>
+		{{ t("msg.topicSetOn", {time: messageTimeLocale}) }}
 	</span>
 </template>
 
@@ -11,6 +11,7 @@ import localetime from "../../js/helpers/localetime";
 import {computed, defineComponent, PropType} from "vue";
 import {ClientNetwork, ClientMessage} from "../../js/types";
 import Username from "../Username.vue";
+import {useI18n} from "../../js/i18n";
 
 export default defineComponent({
 	name: "MessageTypeTopicSetBy",
@@ -28,9 +29,11 @@ export default defineComponent({
 		},
 	},
 	setup(props) {
+		const {t} = useI18n();
 		const messageTimeLocale = computed(() => localetime(props.message.when));
 
 		return {
+			t,
 			messageTimeLocale,
 		};
 	},

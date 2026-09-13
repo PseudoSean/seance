@@ -2,8 +2,8 @@
 	<span class="content">
 		<ParsedMessage v-if="message.self" :network="network" :message="message" />
 		<template v-else>
-			<Username :user="message.from" />
-			is away
+			<bdi><Username :user="message.from" /></bdi>
+			{{ t("msg.away") }}
 			<i class="away-message">(<ParsedMessage :network="network" :message="message" />)</i>
 		</template>
 	</span>
@@ -14,6 +14,7 @@ import {defineComponent, PropType} from "vue";
 import type {ClientNetwork, ClientMessage} from "../../js/types";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
+import {useI18n} from "../../js/i18n";
 
 export default defineComponent({
 	name: "MessageTypeAway",
@@ -30,6 +31,13 @@ export default defineComponent({
 			type: Object as PropType<ClientMessage>,
 			required: true,
 		},
+	},
+	setup() {
+		const {t} = useI18n();
+
+		return {
+			t,
+		};
 	},
 });
 </script>

@@ -2,9 +2,9 @@
 	<table class="ban-list">
 		<thead>
 			<tr>
-				<th class="hostmask">Exempted</th>
-				<th class="banned_by">Exempted By</th>
-				<th class="banned_at">Exempted At</th>
+				<th class="hostmask">{{ t("special.excepts.exempted") }}</th>
+				<th class="banned_by">{{ t("special.excepts.exemptedBy") }}</th>
+				<th class="banned_at">{{ t("special.excepts.exemptedAt") }}</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -24,6 +24,7 @@ import ParsedMessage from "../ParsedMessage.vue";
 import localeTime from "../../js/helpers/localetime";
 import {defineComponent, PropType} from "vue";
 import type {ClientNetwork, ClientChan} from "../../js/types";
+import {useI18n} from "../../js/i18n";
 
 /**
  * Ban-exception (+e) list. Rows share `BanEntry` from `handlers/lists.ts`
@@ -40,11 +41,14 @@ export default defineComponent({
 		channel: {type: Object as PropType<ClientChan>, required: true},
 	},
 	setup() {
+		const {t} = useI18n();
+
 		const localetime = (date: number | Date) => {
 			return localeTime(date);
 		};
 
 		return {
+			t,
 			localetime,
 		};
 	},

@@ -1,10 +1,11 @@
 <template>
 	<span class="content">
-		<Username :user="message.from" />
-		invited
-		<span v-if="message.invitedYou">you</span>
-		<Username v-else :user="message.target" />
-		to <ParsedMessage :network="network" :text="message.channel" />
+		<bdi><Username :user="message.from" /></bdi>
+		{{ t("msg.invited") }}
+		<span v-if="message.invitedYou">{{ t("msg.invitedYou") }}</span>
+		<bdi v-else><Username :user="message.target" /></bdi>
+		{{ t("msg.invitedTo") }}
+		<ParsedMessage :network="network" :text="message.channel" />
 	</span>
 </template>
 
@@ -13,6 +14,7 @@ import {defineComponent, PropType} from "vue";
 import {ClientNetwork, ClientMessage} from "../../js/types";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
+import {useI18n} from "../../js/i18n";
 
 export default defineComponent({
 	name: "MessageTypeInvite",
@@ -29,6 +31,13 @@ export default defineComponent({
 			type: Object as PropType<ClientMessage>,
 			required: true,
 		},
+	},
+	setup() {
+		const {t} = useI18n();
+
+		return {
+			t,
+		};
 	},
 });
 </script>

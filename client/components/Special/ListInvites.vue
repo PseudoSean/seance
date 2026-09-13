@@ -2,9 +2,9 @@
 	<table class="invite-list">
 		<thead>
 			<tr>
-				<th class="hostmask">Invited</th>
-				<th class="invitened_by">Invited By</th>
-				<th class="invitened_at">Invited At</th>
+				<th class="hostmask">{{ t("special.invites.invited") }}</th>
+				<th class="invitened_by">{{ t("special.invites.invitedBy") }}</th>
+				<th class="invitened_at">{{ t("special.invites.invitedAt") }}</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -23,7 +23,8 @@
 import ParsedMessage from "../ParsedMessage.vue";
 import localetime from "../../js/helpers/localetime";
 import {defineComponent, PropType} from "vue";
-import {ClientNetwork, ClientChan} from "../../js/types";
+import type {ClientNetwork, ClientChan} from "../../js/types";
+import {useI18n} from "../../js/i18n";
 
 export default defineComponent({
 	name: "ListInvites",
@@ -35,7 +36,10 @@ export default defineComponent({
 		channel: {type: Object as PropType<ClientChan>, required: true},
 	},
 	setup() {
+		const {t} = useI18n();
+
 		return {
+			t,
 			localetime: (date: Date) => localetime(date),
 		};
 	},

@@ -450,6 +450,84 @@ msgctxt "connection.error"
 msgid "Connection error: {message}"
 msgstr ""
 
+#: client/components/MessageTypes/error.vue
+#. Join refusal (475) phrased by the client. {channel} is the refused channel name, user data, never translated; the '- <cause>.' layout follows the server's cause ordering.
+msgctxt "error.badChannelKey"
+msgid "Cannot join {channel} - Bad channel key."
+msgstr ""
+
+#: client/components/MessageTypes/error.vue
+#. Join refusal (474) phrased by the client; {channel} is the refused channel name.
+msgctxt "error.bannedFromChannel"
+msgid "Cannot join {channel} - You have been banned from the channel."
+msgstr ""
+
+#: client/components/MessageTypes/error.vue
+#. Send refusal (404) phrased by the client; {channel} is the refused channel name.
+msgctxt "error.cannotSendToChannel"
+msgid "Cannot send to channel {channel}"
+msgstr ""
+
+#: client/components/MessageTypes/error.vue
+#. Join refusal (471) phrased by the client; {channel} is the refused channel name.
+msgctxt "error.channelIsFull"
+msgid "Cannot join {channel} - Channel is full."
+msgstr ""
+
+#: client/components/MessageTypes/error.vue
+#. Refusal (482) phrased by the client, e.g. a mode change without operator status.
+msgctxt "error.chanopPrivsNeeded"
+msgid "Cannot perform action: You're not a channel operator."
+msgstr ""
+
+#: client/components/MessageTypes/error.vue
+#. Join refusal (473) phrased by the client; {channel} is the refused channel name.
+msgctxt "error.inviteOnlyChannel"
+msgid "Cannot join {channel} - Channel is invite only."
+msgstr ""
+
+#: client/components/MessageTypes/error.vue
+#. Send refusal (401) phrased by the client; {nick} is the addressed nick, user data.
+msgctxt "error.noSuchNick"
+msgid "User {nick} hasn't logged in or does not exist."
+msgstr ""
+
+#: client/components/MessageTypes/error.vue
+#. Refusal (442) phrased by the client, e.g. a topic change from outside.
+msgctxt "error.notOnChannel"
+msgid "Cannot perform action: You're not on the channel."
+msgstr ""
+
+#: client/components/MessageTypes/error.vue
+#. Login refusal (464) phrased by the client.
+msgctxt "error.passwordMismatch"
+msgid "Password mismatch."
+msgstr ""
+
+#: client/components/MessageTypes/error.vue
+#. Join refusal (405) phrased by the client; {channel} is the refused channel name.
+msgctxt "error.tooManyChannels"
+msgid "Cannot join {channel} - You've already reached the maximum number of channels allowed."
+msgstr ""
+
+#: client/components/MessageTypes/error.vue
+#. Server rejection (421) phrased by the client; {command} is the unknown slash command as typed, user input.
+msgctxt "error.unknownCommand"
+msgid "Unknown command: {command}"
+msgstr ""
+
+#: client/components/MessageTypes/error.vue
+#. Refusal (441) phrased by the client, e.g. a kick of a user who has left; {nick} is user data.
+msgctxt "error.userNotInChannel"
+msgid "User {nick} is not on the channel."
+msgstr ""
+
+#: client/components/MessageTypes/error.vue
+#. Refusal (443) phrased by the client; {nick} is user data.
+msgctxt "error.userOnChannel"
+msgid "User {nick} is already on the channel."
+msgstr ""
+
 #: client/components/NetworkForm.vue:168
 #. Label of the services account (login name) field on the network edit form, shown when SASL is on.
 msgctxt "form.account"
@@ -2134,6 +2212,138 @@ msgctxt "message.statusmsg"
 msgid "This message was only shown to users with {mode} mode"
 msgstr ""
 
+#: client/components/MessageTypes/away.vue
+#. System message when a user is marked away (away-notify). Renders after the user's name (direction-isolated in <bdi>); the away reason in parentheses is server text and stays verbatim.
+msgctxt "msg.away"
+msgid "is away"
+msgstr ""
+
+#: client/components/MessageTypes/back.vue
+#. System message when a user is no longer marked away. Renders after the user's name, which renders direction-isolated in <bdi>.
+msgctxt "msg.back"
+msgid "is back"
+msgstr ""
+
+#: client/components/MessageTypes/chghost.vue
+#. System message when a user changes their username (ident) or hostname (CHGHOST). First frame fragment, after the user's name (direction-isolated in <bdi>); 'username to'/'hostname to' follow as their own fragments.
+msgctxt "msg.chghost"
+msgid "has changed"
+msgstr ""
+
+#: client/components/MessageTypes/chghost.vue
+#. CHGHOST system message: leads the new hostname, which is server-supplied and stays verbatim.
+msgctxt "msg.chghostHost"
+msgid "hostname to"
+msgstr ""
+
+#: client/components/MessageTypes/chghost.vue
+#. CHGHOST system message: leads the new username (ident), which is user content and renders direction-isolated in <bdi>.
+msgctxt "msg.chghostUser"
+msgid "username to"
+msgstr ""
+
+#: client/components/MessageTypes/ctcp_request.vue
+#. CTCP request system message, first fragment after the user's name (direction-isolated in <bdi>). The literal 'CTCP' abbreviation element follows, then the second fragment.
+msgctxt "msg.ctcpRequest"
+msgid "sent a"
+msgstr ""
+
+#: client/components/MessageTypes/ctcp_request.vue
+#. CTCP request system message, second fragment. It follows the literal 'CTCP' abbreviation element and leads the request body, which the other client supplied and stays verbatim.
+msgctxt "msg.ctcpRequestTail"
+msgid "request:"
+msgstr ""
+
+#: client/components/MessageTypes/invite.vue
+#. System message when a user invites someone to a channel. Renders after the inviter's name (direction-isolated in <bdi>) and before the invited name or 'you', then 'to <channel>'.
+msgctxt "msg.invited"
+msgid "invited"
+msgstr ""
+
+#: client/components/MessageTypes/invite.vue
+#. Invite system message, before the channel name, which is server data and stays verbatim.
+msgctxt "msg.invitedTo"
+msgid "to"
+msgstr ""
+
+#: client/components/MessageTypes/invite.vue
+#. Invite system message: the invited name when the invitation named the reader. Lowercase mid-sentence by position ('{nick} invited you to <channel>').
+msgctxt "msg.invitedYou"
+msgid "you"
+msgstr ""
+
+#: client/components/MessageTypes/join.vue
+#. System message when a user joins a channel. Renders after the user's name, which the frame renders direction-isolated in <bdi>; the name itself is user content and never translated. A translator reorders the name only through a placeholder variant — this frame stays after it.
+msgctxt "msg.join"
+msgid "has joined the channel"
+msgstr ""
+
+#: client/components/MessageTypes/kick.vue
+#. System message when a channel operator kicks a user. Renders between the operator's and the target's name; both render direction-isolated in <bdi>. The kick reason, if any, is server text and stays verbatim.
+msgctxt "msg.kick"
+msgid "has kicked"
+msgstr ""
+
+#: client/components/MessageTypes/mode.vue
+#. System message when a user sets channel or user modes. Renders after the user's name (direction-isolated in <bdi>); the mode string itself is protocol text and stays verbatim.
+msgctxt "msg.mode"
+msgid "sets mode"
+msgstr ""
+
+#: client/components/MessageTypes/mode_channel.vue
+#. System message announcing a channel's modes (324). The mode string in <b> is protocol text and stays verbatim.
+msgctxt "msg.modeChannelIs"
+msgid "Channel mode is"
+msgstr ""
+
+#: client/components/MessageTypes/mode_user.vue
+#. System message announcing the reader's own user modes (221). The mode string in <b> is protocol text and stays verbatim.
+msgctxt "msg.modeUserIs"
+msgid "Your user mode is"
+msgstr ""
+
+#: client/components/MessageTypes/nick.vue
+#. System message when a user renames. Renders between the old and the new name; both render direction-isolated in <bdi> and are user content, never translated.
+msgctxt "msg.nick"
+msgid "is now known as"
+msgstr ""
+
+#: client/components/MessageTypes/part.vue
+#. System message when a user leaves a channel. Renders after the user's name (direction-isolated in <bdi>) and before any part reason, which the server supplied and stays verbatim.
+msgctxt "msg.part"
+msgid "has left the channel"
+msgstr ""
+
+#: client/components/MessageTypes/quit.vue
+#. System message when a user disconnects from the network. Renders after the user's name (direction-isolated in <bdi>) and before any quit reason, which the server supplied and stays verbatim.
+msgctxt "msg.quit"
+msgid "has quit"
+msgstr ""
+
+#: client/components/MessageTypes/topic.vue
+#. System message when a user changes a channel's topic. Renders after the user's name (direction-isolated in <bdi>); the new topic is channel content and stays verbatim.
+msgctxt "msg.topicChanged"
+msgid "has changed the topic to:"
+msgstr ""
+
+#: client/components/MessageTypes/topic.vue
+#. System message announcing a channel's topic (no changer known, e.g. on join). The topic itself is channel content and stays verbatim.
+msgctxt "msg.topicIs"
+msgid "The topic is:"
+msgstr ""
+
+#: client/components/MessageTypes/topic_set_by.vue
+#. System message naming who set the topic (333). Renders before the setter's name (direction-isolated in <bdi>); the time follows through the next fragment.
+msgctxt "msg.topicSetBy"
+msgid "Topic set by"
+msgstr ""
+
+#: client/components/MessageTypes/topic_set_by.vue
+#. Topic-set-by system message, after the setter's name. {time} is the pre-formatted timestamp of when the topic was set; keep it in the position the language's preposition wants.
+msgctxt "msg.topicSetOn"
+msgid "on {time}"
+msgstr ""
+
 #: client/components/PushPrompt.vue
 #. Body of the push opt-in prompt; explains what allowing push does and that it is chosen per network.
 msgctxt "push.enableBody"
@@ -3210,6 +3420,90 @@ msgid_plural "{count} unread messages"
 msgstr[0] ""
 msgstr[1] ""
 
+#: client/components/Special/ListBans.vue
+#. Column header of the channel-ban list: the banned hostmask, verbatim server data.
+msgctxt "special.bans.banned"
+msgid "Banned"
+msgstr ""
+
+#: client/components/Special/ListBans.vue
+#. Column header of the channel-ban list: when the ban was set, locale-formatted.
+msgctxt "special.bans.bannedAt"
+msgid "Banned At"
+msgstr ""
+
+#: client/components/Special/ListBans.vue
+#. Column header of the channel-ban list: the operator who set the ban, verbatim.
+msgctxt "special.bans.bannedBy"
+msgid "Banned By"
+msgstr ""
+
+#: client/components/Special/ListChannels.vue
+#. Column header of the channel list: the channel name, verbatim server data.
+msgctxt "special.channels.channel"
+msgid "Channel"
+msgstr ""
+
+#: client/components/Special/ListChannels.vue
+#. Column header of the channel list: the channel's topic, verbatim server data.
+msgctxt "special.channels.topic"
+msgid "Topic"
+msgstr ""
+
+#: client/components/Special/ListChannels.vue
+#. Column header of the channel list: how many visible users the channel has.
+msgctxt "special.channels.users"
+msgid "Users"
+msgstr ""
+
+#: client/components/Special/ListExcepts.vue
+#. Column header of the ban-exception list: the exempted hostmask, verbatim server data.
+msgctxt "special.excepts.exempted"
+msgid "Exempted"
+msgstr ""
+
+#: client/components/Special/ListExcepts.vue
+#. Column header of the ban-exception list: when the exception was set, locale-formatted.
+msgctxt "special.excepts.exemptedAt"
+msgid "Exempted At"
+msgstr ""
+
+#: client/components/Special/ListExcepts.vue
+#. Column header of the ban-exception list: who set the exception, verbatim.
+msgctxt "special.excepts.exemptedBy"
+msgid "Exempted By"
+msgstr ""
+
+#: client/components/Special/ListIgnored.vue
+#. Column header of the ignore list: the ignored hostmask, verbatim server data.
+msgctxt "special.ignored.hostmask"
+msgid "Hostmask"
+msgstr ""
+
+#: client/components/Special/ListIgnored.vue
+#. Column header of the ignore list: when the ignore was set, locale-formatted.
+msgctxt "special.ignored.ignoredAt"
+msgid "Ignored At"
+msgstr ""
+
+#: client/components/Special/ListInvites.vue
+#. Column header of the channel-invite list: the invited hostmask, verbatim server data.
+msgctxt "special.invites.invited"
+msgid "Invited"
+msgstr ""
+
+#: client/components/Special/ListInvites.vue
+#. Column header of the channel-invite list: when the invite was set, locale-formatted.
+msgctxt "special.invites.invitedAt"
+msgid "Invited At"
+msgstr ""
+
+#: client/components/Special/ListInvites.vue
+#. Column header of the channel-invite list: who set the invite, verbatim.
+msgctxt "special.invites.invitedBy"
+msgid "Invited By"
+msgstr ""
+
 #: client/components/TypingIndicator.vue:31
 #. Line above the message input naming the two longest-typing users and summarizing everyone else. {nick1} and {nick2} are those users' names; {count} is how many further users are typing. The singular form shows when one further user is meant, the plural for any other number.
 msgctxt "typing.many"
@@ -3326,6 +3620,126 @@ msgstr ""
 #. aria-label of the side panel listing a channel's members. {name} is the channel's name as shown in the header; it is a chat name and stays as written.
 msgctxt "userlist.title"
 msgid "User list for {name}"
+msgstr ""
+
+#: client/components/MessageTypes/whois.vue
+#. Whois row: the user's real IP and hostname, verbatim server data.
+msgctxt "whois.actualHost"
+msgid "Actual host:"
+msgstr ""
+
+#: client/components/MessageTypes/whois.vue
+#. Whois row: the user's real username (ident), verbatim server data.
+msgctxt "whois.actualUsername"
+msgid "Actual username:"
+msgstr ""
+
+#: client/components/MessageTypes/whois.vue
+#. Whois row: the user's away reason, verbatim server content.
+msgctxt "whois.awayLabel"
+msgid "Away:"
+msgstr ""
+
+#: client/components/MessageTypes/whois.vue
+#. Whois row naming a user marked as a bot; the value is a Yes.
+msgctxt "whois.bot"
+msgid "Is a bot:"
+msgstr ""
+
+#: client/components/MessageTypes/whois.vue
+#. Whois row: a TLS client certificate fingerprint, verbatim hex data.
+msgctxt "whois.cert"
+msgid "Certificate:"
+msgstr ""
+
+#: client/components/MessageTypes/whois.vue
+#. Whois row: the channels the user is in, verbatim server data.
+msgctxt "whois.channels"
+msgid "Channels:"
+msgstr ""
+
+#: client/components/MessageTypes/whois.vue
+#. Whois row: when the user connected, locale-formatted.
+msgctxt "whois.connectedAt"
+msgid "Connected at:"
+msgstr ""
+
+#: client/components/MessageTypes/whois.vue
+#. Whois row: the server the user is on and its info line, verbatim server data.
+msgctxt "whois.connectedTo"
+msgid "Connected to:"
+msgstr ""
+
+#: client/components/MessageTypes/whois.vue
+#. Whois row naming a user marked as a help operator; the value is a Yes.
+msgctxt "whois.helpop"
+msgid "Available for help:"
+msgstr ""
+
+#: client/components/MessageTypes/whois.vue
+#. Whois row: the user's ident and hostmask, verbatim server data.
+msgctxt "whois.hostmask"
+msgid "Host mask:"
+msgstr ""
+
+#: client/components/MessageTypes/whois.vue
+#. Whois row: when the user was last active, locale-formatted.
+msgctxt "whois.idleSince"
+msgid "Idle since:"
+msgstr ""
+
+#: client/components/MessageTypes/whois.vue
+#. Whois row: the services account the user is logged into; the value is account data, verbatim.
+msgctxt "whois.loggedAs"
+msgid "Logged in as:"
+msgstr ""
+
+#: client/components/MessageTypes/whois.vue
+#. Whois row: the user's modes, verbatim protocol text.
+msgctxt "whois.modes"
+msgid "Modes:"
+msgstr ""
+
+#: client/components/MessageTypes/whois.vue
+#. Shown after the nick of a user who left the network (WHOWAS), leading the last recorded whois data; the nick renders direction-isolated in <bdi>.
+msgctxt "whois.offline"
+msgid "is offline, last information:"
+msgstr ""
+
+#: client/components/MessageTypes/whois.vue
+#. Whois row: the user's IRC-operator status, verbatim server data.
+msgctxt "whois.operator"
+msgid "Operator:"
+msgstr ""
+
+#: client/components/MessageTypes/whois.vue
+#. Whois row: the user's realname field, user content, verbatim.
+msgctxt "whois.realName"
+msgid "Real name:"
+msgstr ""
+
+#: client/components/MessageTypes/whois.vue
+#. Whois row: the user's services-registered nick, verbatim.
+msgctxt "whois.registeredNick"
+msgid "Registered nick:"
+msgstr ""
+
+#: client/components/MessageTypes/whois.vue
+#. Whois row naming a user connected over TLS; the value is a Yes.
+msgctxt "whois.secure"
+msgid "Secure connection:"
+msgstr ""
+
+#: client/components/MessageTypes/whois.vue
+#. Whois row: extra server-specific whois lines, verbatim server data.
+msgctxt "whois.special"
+msgid "Special:"
+msgstr ""
+
+#: client/components/MessageTypes/whois.vue
+#. The value of whois rows whose answer is affirmative (help operator, bot, secure connection).
+msgctxt "whois.yes"
+msgid "Yes"
 msgstr ""
 
 #: client/components/Windows/Changelog.vue

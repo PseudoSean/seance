@@ -2,8 +2,8 @@
 	<table class="ignore-list">
 		<thead>
 			<tr>
-				<th class="hostmask">Hostmask</th>
-				<th class="when">Ignored At</th>
+				<th class="hostmask">{{ t("special.ignored.hostmask") }}</th>
+				<th class="when">{{ t("special.ignored.ignoredAt") }}</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -19,7 +19,8 @@
 import ParsedMessage from "../ParsedMessage.vue";
 import localetime from "../../js/helpers/localetime";
 import {defineComponent, PropType} from "vue";
-import {ClientNetwork, ClientChan} from "../../js/types";
+import type {ClientNetwork, ClientChan} from "../../js/types";
+import {useI18n} from "../../js/i18n";
 
 export default defineComponent({
 	name: "ListIgnored",
@@ -31,7 +32,10 @@ export default defineComponent({
 		channel: {type: Object as PropType<ClientChan>, required: true},
 	},
 	setup() {
+		const {t} = useI18n();
+
 		return {
+			t,
 			localetime,
 		};
 	},

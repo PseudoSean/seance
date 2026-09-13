@@ -1,8 +1,10 @@
 <template>
 	<span class="content">
-		<Username :user="message.from" />
-		is now known as
-		<Username :user="{nick: message.new_nick, mode: message.from.mode}" />
+		<bdi><Username :user="message.from" /></bdi>
+		{{ t("msg.nick") }}
+		<bdi>
+			<Username :user="{nick: message.new_nick, mode: message.from.mode}" />
+		</bdi>
 	</span>
 </template>
 
@@ -10,6 +12,7 @@
 import {defineComponent, PropType} from "vue";
 import {ClientNetwork, ClientMessage} from "../../js/types";
 import Username from "../Username.vue";
+import {useI18n} from "../../js/i18n";
 
 export default defineComponent({
 	name: "MessageTypeNick",
@@ -25,6 +28,13 @@ export default defineComponent({
 			type: Object as PropType<ClientMessage>,
 			required: true,
 		},
+	},
+	setup() {
+		const {t} = useI18n();
+
+		return {
+			t,
+		};
 	},
 });
 </script>

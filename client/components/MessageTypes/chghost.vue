@@ -1,12 +1,15 @@
 <template>
 	<span class="content">
-		<Username :user="message.from" />
-		has changed
+		<bdi><Username :user="message.from" /></bdi>
+		{{ t("msg.chghost") }}
 		<span v-if="message.new_ident"
-			>username to <b>{{ message.new_ident }}</b></span
+			>{{ t("msg.chghostUser") }}
+			<b
+				><bdi>{{ message.new_ident }}</bdi></b
+			></span
 		>
 		<span v-if="message.new_host"
-			>hostname to
+			>{{ t("msg.chghostHost") }}
 			<i class="hostmask"><ParsedMessage :network="network" :text="message.new_host" /></i
 		></span>
 	</span>
@@ -17,6 +20,7 @@ import {defineComponent, PropType} from "vue";
 import {ClientNetwork, ClientMessage} from "../../js/types";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
+import {useI18n} from "../../js/i18n";
 
 export default defineComponent({
 	name: "MessageTypeChangeHost",
@@ -33,6 +37,13 @@ export default defineComponent({
 			type: Object as PropType<ClientMessage>,
 			required: true,
 		},
+	},
+	setup() {
+		const {t} = useI18n();
+
+		return {
+			t,
+		};
 	},
 });
 </script>

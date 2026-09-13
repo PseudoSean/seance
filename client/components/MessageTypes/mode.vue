@@ -1,7 +1,7 @@
 <template>
 	<span class="content">
-		<Username :user="message.from" />
-		sets mode
+		<bdi><Username :user="message.from" /></bdi>
+		{{ t("msg.mode") }}
 		<ParsedMessage :message="message" />
 	</span>
 </template>
@@ -11,6 +11,7 @@ import {defineComponent, PropType} from "vue";
 import {ClientNetwork, ClientMessage} from "../../js/types";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
+import {useI18n} from "../../js/i18n";
 
 export default defineComponent({
 	name: "MessageTypeMode",
@@ -27,6 +28,13 @@ export default defineComponent({
 			type: Object as PropType<ClientMessage>,
 			required: true,
 		},
+	},
+	setup() {
+		const {t} = useI18n();
+
+		return {
+			t,
+		};
 	},
 });
 </script>
