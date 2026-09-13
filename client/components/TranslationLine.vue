@@ -83,6 +83,7 @@ import eventbus from "../js/eventbus";
 import {useStore} from "../js/store";
 import {readingLanguage, retranslate, retryTranslation, showOriginal} from "../js/translate/reader";
 import {languageName} from "../js/translate/languages";
+import {directionText} from "../js/translate/labels";
 import {downloadNote} from "../js/translate/service";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
 import ParsedMessage from "./ParsedMessage.vue";
@@ -108,7 +109,8 @@ export default defineComponent({
 		// "Französisch → Englisch" for a German one.
 		const nameOf = (code: string) =>
 			languageName(code, readingLanguage(props.network, props.channel));
-		// Source → target; `from` is "" when the engine placed the source itself.
+		// Source → target; `from` is "" when the engine placed the source
+		// itself, and the detector's contenders are named instead (labels.ts).
 		// A skipped line's tag is the language it was taken for, or "?" when
 		// the detector could not tell.
 		const chipText = computed(() => {
@@ -122,9 +124,7 @@ export default defineComponent({
 				return value.reason === "same" && value.from ? nameOf(value.from) : "?";
 			}
 
-			return value.from
-				? `${nameOf(value.from)} → ${nameOf(value.to)}`
-				: `→ ${nameOf(value.to)}`;
+			return directionText(value.from, value.to, value.candidates ?? [], nameOf);
 		});
 		const chipLabel = computed(() => {
 			const value = entry.value;

@@ -674,15 +674,21 @@ async function scenario(page) {
 		timeout: 20000,
 		label: "the Spanish line the detector could not place is translated",
 	});
+	// The chip names the detector's contenders instead of dropping the source
+	// (labels.ts): "Spanish / Portuguese → English", in whichever order franc
+	// ranked them this run -- never a bare "→ English".
+	const spanishChip = String(
+		await page.evaluate(
+			`((${newestRow(
+				spanish
+			)}).querySelector(".msg-translation-chip") || {}).textContent || ""`
+		)
+	).trim();
+	const CONTENDER = "(Spanish|Portuguese|Galician)";
+
 	await page.check(
-		"its chip names no source",
-		String(
-			await page.evaluate(
-				`((${newestRow(
-					spanish
-				)}).querySelector(".msg-translation-chip") || {}).textContent || ""`
-			)
-		).trim() === "→ English"
+		`its chip names the detector's contenders (${JSON.stringify(spanishChip)})`,
+		new RegExp(`^${CONTENDER}( / ${CONTENDER}|\\?) → English$`).test(spanishChip)
 	);
 
 	const spanishRequests = await page.evaluate(

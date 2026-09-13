@@ -162,8 +162,9 @@ of one channel and pair batched, items that fell two hundred messages
 behind dropped, an engine paused after three failures in a row). The
 result lives in `store.state.translations` keyed by the message id and
 renders as `TranslationLine.vue` under the original: a "German → English"
-chip (source → target, "→ English" where the engine placed the source
-itself), the text streaming with a caret, a retry when it failed (an icon
+chip (source → target; where the engine placed the source itself, the
+detector's contenders stand in for it -- "Norwegian / Danish → English",
+"French? → English", "? → English" with none -- `labels.ts`), the text streaming with a caret, a retry when it failed (an icon
 button, "Retry the translation" its tooltip and accessible name, with the
 engine's reason beside "couldn't translate" when there is one -- a model
 that would not load says so rather than leaving the tier looking broken); the chip's
