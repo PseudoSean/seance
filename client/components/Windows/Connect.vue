@@ -68,6 +68,17 @@
 				</div>
 			</div>
 
+			<div class="connect-row connect-locale">
+				<label for="connect:locale">{{ ti18n("settings.locale") }}</label>
+				<div class="input-wrap">
+					<LanguageSelect
+						id="connect:locale"
+						:model-value="store.state.settings.locale"
+						@change="setLocale"
+					/>
+				</div>
+			</div>
+
 			<div v-if="notice" class="connect-notice">{{ notice }}</div>
 			<div v-if="submitted" class="connect-notice">
 				Connecting as <strong>{{ submitted.nick }}</strong> to
@@ -281,6 +292,17 @@
 				</div>
 			</div>
 
+			<div class="connect-row connect-locale">
+				<label for="connect:locale">{{ ti18n("settings.locale") }}</label>
+				<div class="input-wrap">
+					<LanguageSelect
+						id="connect:locale"
+						:model-value="store.state.settings.locale"
+						@change="setLocale"
+					/>
+				</div>
+			</div>
+
 			<div v-if="notice" class="connect-notice">{{ notice }}</div>
 			<div v-if="submitted" class="connect-notice">
 				Connecting as <strong>{{ submitted.nick }}</strong> to
@@ -358,6 +380,21 @@
 	margin-top: 2rem;
 }
 
+/* The language row: a quiet utility at the bottom of the form, not one of
+ * the connect fields. Its copy is long (the label carries a gloss), so it
+ * takes the full row width instead of the 25% field-label column, muted. */
+#connect .connect-locale {
+	display: block;
+	margin-top: 0.625rem;
+}
+
+#connect .connect-locale label {
+	width: 100%;
+	margin-top: 0;
+	margin-bottom: 0.375rem;
+	color: var(--body-color-muted, inherit);
+}
+
 /* The stock `.btn` is already an outline, so the two ways in would look
  * alike; the account form is the primary one, and fills. `.btn-guest` keeps
  * the outline (and its class, which the browser scenario clicks). */
@@ -377,7 +414,9 @@ import * as saved from "../../js/irc/saved-networks";
 import {defaultPort, SavedNetwork} from "../../js/irc/saved-networks";
 import {mergeJoinLists} from "../../js/helpers/linkTarget";
 import {router, switchToChannel} from "../../js/router";
+import {useI18n} from "../../js/i18n";
 import type {ConnectOptions} from "../../js/irc/types";
+import LanguageSelect from "../LanguageSelect.vue";
 import RevealPassword from "../RevealPassword.vue";
 import SidebarToggle from "../SidebarToggle.vue";
 
@@ -393,6 +432,7 @@ const CONNECT_PARAMS = ["host", "port", "tls", "nick", "join", "channels", "sasl
 export default defineComponent({
 	name: "Connect",
 	components: {
+		LanguageSelect,
 		RevealPassword,
 		SidebarToggle,
 	},
@@ -407,6 +447,12 @@ export default defineComponent({
 		const network = branding.defaultNetwork;
 		const defaults = store.state.serverConfiguration?.defaults;
 		const t = (key: string) => brandingString(key, branding);
+		// The language row speaks through the i18n runtime instead: reactive on
+		// a locale change, with the deploy's `strings` overrides still winning
+		// there (useI18n's t). The branding alias above is Task 6's to replace.
+		const {t: ti18n} = useI18n();
+		const setLocale = (tag: string) =>
+			void store.dispatch("settings/update", {name: "locale", value: tag});
 
 		const tls = network?.tls ?? defaults?.tls ?? true;
 		// The server the deploy points at. Pinned when the host is locked.
@@ -682,7 +728,10 @@ export default defineComponent({
 
 		return {
 			form,
+			store,
 			t,
+			ti18n,
+			setLocale,
 			signInMode,
 			guestAccess,
 			signInIntro,

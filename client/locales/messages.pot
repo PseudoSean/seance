@@ -111,3 +111,17 @@ msgstr ""
 msgctxt "loading.slow"
 msgid "This is taking longer than it should, there might be connectivity issues."
 msgstr ""
+
+#: client/components/Windows/Connect.vue:72
+#: client/components/Windows/Connect.vue:296
+#: client/components/Settings/Appearance.vue:249
+#. Label of the interface-language row on the connect form and in Settings → Appearance; the gloss is part of the copy so the row explains itself while the UI still reads English.
+msgctxt "settings.locale"
+msgid "Language — display language of the whole interface."
+msgstr ""
+
+#: client/components/LanguageSelect.vue:50
+#. First option of the language selector: follow the browser's languages. The component appends the currently resolved tag in parentheses.
+msgctxt "settings.locale.auto"
+msgid "System default"
+msgstr ""

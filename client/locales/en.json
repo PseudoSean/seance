@@ -15,5 +15,7 @@
   "help.website": "Website",
   "loading.reload": "Reload page",
   "loading.requiresJs": "This application requires a modern browser with JavaScript enabled.",
-  "loading.slow": "This is taking longer than it should, there might be connectivity issues."
+  "loading.slow": "This is taking longer than it should, there might be connectivity issues.",
+  "settings.locale": "Language — display language of the whole interface.",
+  "settings.locale.auto": "System default"
 }

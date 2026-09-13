@@ -246,6 +246,16 @@
 			</select>
 		</div>
 
+		<h2>{{ t("settings.locale") }}</h2>
+		<div>
+			<label for="settings-locale" class="sr-only">{{ t("settings.locale") }}</label>
+			<LanguageSelect
+				id="settings-locale"
+				:model-value="store.state.settings.locale"
+				@change="setLocale"
+			/>
+		</div>
+
 		<div>
 			<h2>Custom Stylesheet</h2>
 			<label for="user-specified-css-input" class="sr-only">
@@ -340,6 +350,8 @@ textarea#user-specified-css-input {
 <script lang="ts">
 import {computed, defineComponent, ref} from "vue";
 import {useStore} from "../../js/store";
+import {useI18n} from "../../js/i18n";
+import LanguageSelect from "../LanguageSelect.vue";
 import {
 	fontSizeLabels,
 	fontSizeScale,
@@ -359,8 +371,13 @@ type TrustedEntry = {key: string; name: string; network: string};
 
 export default defineComponent({
 	name: "AppearanceSettings",
+	components: {LanguageSelect},
 	setup() {
 		const store = useStore();
+		const {t} = useI18n();
+
+		const setLocale = (tag: string) =>
+			void store.dispatch("settings/update", {name: "locale", value: tag});
 
 		// Channel and account keys carry the network uuid; show its name.
 		const networkName = (uuid: string) =>
@@ -450,6 +467,8 @@ export default defineComponent({
 
 		return {
 			store,
+			t,
+			setLocale,
 			trustedGroups,
 			trustedCount,
 			untrust,
