@@ -105,7 +105,7 @@
 
 .network-settings-status::before {
 	content: "●";
-	margin-right: 5px;
+	margin-inline-end: 5px;
 }
 
 .network-settings-status.is-connected::before {

@@ -71,7 +71,7 @@
 	background-color: var(--window-bg-color);
 	position: absolute;
 	width: 400px;
-	right: 80px;
+	inset-inline-end: 80px;
 	top: 55px;
 	max-height: 400px;
 	overflow-y: auto;

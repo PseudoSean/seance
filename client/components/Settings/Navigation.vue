@@ -81,7 +81,7 @@
 	height: 1em;
 	display: inline-block;
 	content: "";
-	margin-right: 0.45em;
+	margin-inline-end: 0.45em;
 }
 
 .settings-menu .appearance::before {
@@ -126,7 +126,7 @@
 	}
 
 	.settings-menu button:not(.active)::before {
-		margin-right: 0;
+		margin-inline-end: 0;
 	}
 }
 </style>

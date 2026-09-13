@@ -144,7 +144,7 @@
 
 .settings-aliases .alias-slash {
 	position: absolute;
-	left: 0.55em;
+	inset-inline-start: 0.55em;
 	top: 50%;
 	transform: translateY(-50%);
 	color: var(--body-color-muted);
@@ -154,7 +154,7 @@
 }
 
 .settings-aliases .alias-name {
-	padding-left: 1.4em;
+	padding-inline-start: 1.4em;
 	font-family: Consolas, Menlo, Monaco, "Lucida Console", "DejaVu Sans Mono", "Courier New",
 		monospace;
 }

@@ -155,7 +155,7 @@
 	border: 0;
 	color: #fff;
 	background-color: rgba(255, 255, 255, 0.1);
-	padding-right: 2.5rem;
+	padding-inline-end: 2.5rem;
 	appearance: none;
 }
 
@@ -167,7 +167,7 @@
 	content: "\f002"; /* http://fontawesome.io/icon/search/ */
 	color: rgba(255, 255, 255, 0.35);
 	position: absolute;
-	right: 8px;
+	inset-inline-end: 8px;
 	top: 0;
 	bottom: 0;
 	pointer-events: none;

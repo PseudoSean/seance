@@ -78,7 +78,7 @@
 
 #push-prompt .confirm-buttons .btn {
 	margin-bottom: 0;
-	margin-left: 10px;
+	margin-inline-start: 10px;
 }
 
 #push-prompt .confirm-buttons .btn-cancel {

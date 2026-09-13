@@ -336,7 +336,7 @@
 
 #connect .connection-status::before {
 	content: "●";
-	margin-right: 6px;
+	margin-inline-end: 6px;
 }
 
 #connect .connection-status.is-connected::before {

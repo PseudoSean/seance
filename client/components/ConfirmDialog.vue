@@ -44,7 +44,7 @@
 
 #confirm-dialog .confirm-buttons .btn {
 	margin-bottom: 0;
-	margin-left: 10px;
+	margin-inline-start: 10px;
 }
 
 #confirm-dialog .confirm-buttons .btn-cancel {

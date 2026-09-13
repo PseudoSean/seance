@@ -334,14 +334,14 @@ textarea#user-specified-css-input {
 
 .font-size-sample .time {
 	flex: 0 0 auto;
-	margin-right: 0.6em;
+	margin-inline-end: 0.6em;
 	color: var(--body-color-muted);
 	font-variant-numeric: tabular-nums;
 }
 
 .font-size-sample .from {
 	flex: 0 0 auto;
-	margin-right: 0.6em;
+	margin-inline-end: 0.6em;
 	font-weight: bold;
 }
 
