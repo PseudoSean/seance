@@ -174,6 +174,8 @@ interface BackendOptions {
 	repo: string;
 	/** The ONNX export to load: q4f16 (the default), fp16, fp32, int8, uint8, q4, q8, bnb4. */
 	dtype: Dtype;
+	/** ONNX Runtime worker threads; null leaves its default (every core). */
+	threads: number | null;
 	log(text: string): void;
 }
 
@@ -247,7 +249,14 @@ class NodeMlc implements MlcLike {
 				this.model = await AutoModelForCausalLM.from_pretrained(repo, {
 					dtype: this.options.dtype,
 					device: attempt.device,
-					...(attempt.basic ? {session_options: {graphOptimizationLevel: "basic"}} : {}),
+					session_options: {
+						...(attempt.basic ? {graphOptimizationLevel: "basic"} : {}),
+						// `--threads`: ONNX Runtime pins its own worker threads, so a
+						// process-level core limit (taskset) does not bound it.
+						...(this.options.threads
+							? {intraOpNumThreads: this.options.threads, interOpNumThreads: 1}
+							: {}),
+					},
 					progress_callback: (info: ProgressInfo) => this.progress(info),
 				});
 				this.device = attempt.device;
@@ -474,12 +483,14 @@ interface Options {
 	local: string | null;
 	/** `--profile`: the GPU model id whose prompt profile asks (client/js/translate/prompts/). */
 	profile: string;
+	/** `--threads`: ONNX Runtime worker threads (default: every core). */
+	threads: number | null;
 }
 
 const USAGE = [
 	'usage: npx tsx tools/translate-llm.ts "text" --to de [--from en] [--purpose read|write]',
 	"                                     [--context fixture.json] [--show-prompt] [--raw]",
-	"                                     [--device cpu|cuda] [--repo <hf repo>] [--dtype q4f16|fp16|int8|…]",
+	"                                     [--device cpu|cuda] [--threads N] [--repo <hf repo>] [--dtype q4f16|fp16|int8|…]",
 	"                                     [--local tmp/models/web/<model id>]",
 	"                                     [--markers placeholder|literal|tags]",
 	"                                     [--profile <model id>]",
@@ -505,6 +516,7 @@ function parseArgs(argv: string[]): Options {
 		dtype: DTYPE,
 		local: null,
 		profile: QWEN3_1_7B_ID,
+		threads: null,
 	};
 
 	// Which flags the command line actually carried: a capture supplies the
@@ -554,6 +566,14 @@ function parseArgs(argv: string[]): Options {
 			options.captureFile = value();
 		} else if (arg === "--eval") {
 			options.evalFile = value();
+		} else if (arg === "--threads") {
+			const threads = Number(value());
+
+			if (!Number.isInteger(threads) || threads < 1) {
+				throw new Error("--threads is a whole number of threads, at least 1");
+			}
+
+			options.threads = threads;
 		} else if (arg === "--device") {
 			const device = value();
 
@@ -869,6 +889,7 @@ async function main(): Promise<void> {
 		device: options.device,
 		repo: options.repo,
 		dtype: options.dtype,
+		threads: options.threads,
 		log: (text) => console.log(text),
 	});
 	// The prompt profile is chosen here, not by the id the backend is loaded

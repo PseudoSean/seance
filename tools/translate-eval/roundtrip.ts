@@ -14,7 +14,7 @@
 // the table file (`<out>.forward.txt`, `<out>.back.txt`).
 
 import {spawnSync} from "node:child_process";
-import {readFileSync, writeFileSync} from "node:fs";
+import {existsSync, readFileSync, writeFileSync} from "node:fs";
 import {contentOverlap} from "./overlap";
 
 interface EvalCase {
@@ -33,21 +33,34 @@ interface Run {
 	transcript: string;
 }
 
-function runEval(fixture: string, markers: string, runnerArgs: string[]): Run {
+function runEval(fixture: string, markers: string, runnerArgs: string[], expected: number): Run {
 	const result = spawnSync(
 		"npx",
 		["tsx", "tools/translate-llm.ts", "--eval", fixture, "--markers", markers, ...runnerArgs],
 		{encoding: "utf8", maxBuffer: 64 * 1024 * 1024}
 	);
 	const transcript = `${result.stdout}\n${result.stderr}`;
+	const outs = outsOf(result.stdout);
 
 	if (result.status !== 0) {
-		throw new Error(`runner failed on ${fixture}:\n${transcript.slice(-2000)}`);
+		// ONNX Runtime's CUDA provider can abort while the process tears down
+		// ("corrupted double-linked list", status 134), after every answer was
+		// written: a run that answered every case is kept.
+		if (outs.length !== expected) {
+			throw new Error(`runner failed on ${fixture}:\n${transcript.slice(-2000)}`);
+		}
+
+		console.log(`  (runner exited with ${result.status} after all ${expected} answers; kept)`);
 	}
 
+	return {outs, transcript};
+}
+
+/** The answers in a runner transcript, in case order. */
+function outsOf(transcript: string): string[] {
 	const outs: string[] = [];
 
-	for (const line of result.stdout.split("\n")) {
+	for (const line of transcript.split("\n")) {
 		const match = /^ {2}out {2}(.*)$/.exec(line);
 
 		if (match) {
@@ -55,7 +68,7 @@ function runEval(fixture: string, markers: string, runnerArgs: string[]): Run {
 		}
 	}
 
-	return {outs, transcript};
+	return outs;
 }
 
 function main(): void {
@@ -68,7 +81,7 @@ function main(): void {
 
 	if (!fixture) {
 		throw new Error(
-			"usage: roundtrip.ts <fixture.json> [--markers literal] [--out file.md] [-- <runner flags>]"
+			"usage: roundtrip.ts <fixture.json> [--markers literal] [--out file.md] [--resume] [-- <runner flags>]"
 		);
 	}
 
@@ -81,12 +94,23 @@ function main(): void {
 	const markers = flag("--markers", "literal");
 	const out = flag("--out", "tmp/roundtrip.md");
 	const cases = JSON.parse(readFileSync(fixture, "utf8")) as EvalCase[];
+	// `--resume`: a forward transcript already beside the output (a run that
+	// was stopped during its back pass) is used instead of running it again.
+	const resumeFrom = `${out}.forward.txt`;
+	const resumed = args.includes("--resume") && existsSync(resumeFrom);
 
-	console.log(`forward: ${cases.length} cases from ${fixture}`);
+	console.log(`forward: ${cases.length} cases from ${fixture}${resumed ? " (resumed)" : ""}`);
 
-	const forward = runEval(fixture, markers, runnerArgs);
+	let forward: Run;
 
-	writeFileSync(`${out}.forward.txt`, forward.transcript);
+	if (resumed) {
+		const transcript = readFileSync(resumeFrom, "utf8");
+
+		forward = {outs: outsOf(transcript), transcript};
+	} else {
+		forward = runEval(fixture, markers, runnerArgs, cases.length);
+		writeFileSync(`${out}.forward.txt`, forward.transcript);
+	}
 
 	if (forward.outs.length !== cases.length) {
 		throw new Error(
@@ -109,7 +133,7 @@ function main(): void {
 	writeFileSync(backFixture, JSON.stringify(back, null, 1));
 	console.log(`back: ${back.length} cases`);
 
-	const backward = runEval(backFixture, markers, runnerArgs);
+	const backward = runEval(backFixture, markers, runnerArgs, back.length);
 
 	writeFileSync(`${out}.back.txt`, backward.transcript);
 
