@@ -206,9 +206,7 @@ describe("branding", function () {
 			expect(brandingString("connect.submit")).to.equal("Connect");
 			setCatalog("de", enCatalog, {"connect.title": "Verbinden"});
 			expect(brandingString("connect.title")).to.equal("Verbinden"); // the locale, not a dict
-			expect(brandingString("connect.savedNetworksEmpty")).to.equal(
-				"No saved networks yet. Networks you connect to are remembered here."
-			); // a key the locale overlay omits falls to en
+			expect(brandingString("connect.rememberMe")).to.equal("Stay signed in on this device"); // a key the locale overlay omits falls to en
 		});
 	});
 
