@@ -5,7 +5,7 @@
 				<img src="img/logo-tile.png" class="logo" :alt="appName" role="presentation" />
 				<span
 					v-if="isDevelopment"
-					:title="`${appName} has been built in development mode`"
+					:title="devBuildTitle"
 					:style="{
 						backgroundColor: '#ff9e18',
 						color: '#000',
@@ -13,14 +13,14 @@
 						borderRadius: '4px',
 						fontSize: '12px',
 					}"
-					>DEVELOPER</span
+					>{{ t("sidebar.developerBadge") }}</span
 				>
 				<button
 					v-if="isDevelopment"
 					class="devtools-toggle"
 					type="button"
-					title="Toggle eruda devtools"
-					aria-label="Toggle eruda devtools"
+					:title="devtoolsLabel"
+					:aria-label="devtoolsLabel"
 					@click="toggleDevtools"
 				>
 					🐞
@@ -29,7 +29,7 @@
 			<NetworkList />
 		</div>
 		<footer id="footer">
-			<span class="tooltipped tooltipped-n tooltipped-no-touch" aria-label="Settings"
+			<span class="tooltipped tooltipped-n tooltipped-no-touch" :aria-label="settingsLabel"
 				><router-link
 					v-slot:default="{navigate, isActive}"
 					to="/settings"
@@ -43,13 +43,7 @@
 						@keypress.enter="navigate"
 					></button> </router-link
 			></span>
-			<span
-				class="tooltipped tooltipped-n tooltipped-no-touch"
-				:aria-label="
-					store.state.serverConfiguration?.isUpdateAvailable
-						? 'Help\n(update available)'
-						: 'Help'
-				"
+			<span class="tooltipped tooltipped-n tooltipped-no-touch" :aria-label="helpLabel"
 				><router-link
 					v-slot:default="{navigate, isActive}"
 					to="/help"
@@ -76,6 +70,7 @@
 import {computed, defineComponent, nextTick, onMounted, onUnmounted, PropType, ref} from "vue";
 import {useRoute} from "vue-router";
 import {useStore} from "../js/store";
+import {useI18n} from "../js/i18n";
 import NetworkList from "./NetworkList.vue";
 import {devtoolsAvailable, toggleDevtools} from "../js/devtools";
 
@@ -278,10 +273,26 @@ export default defineComponent({
 
 		const appName = computed(() => store.state.branding.appName);
 
+		// Footer and dev-mode labels, reactive on a locale change.
+		const {t} = useI18n();
+		const settingsLabel = computed(() => t("sidebar.settings"));
+		const helpLabel = computed(() =>
+			store.state.serverConfiguration?.isUpdateAvailable
+				? t("sidebar.helpUpdate")
+				: t("sidebar.help")
+		);
+		const devtoolsLabel = computed(() => t("sidebar.toggleDevtools"));
+		const devBuildTitle = computed(() => t("sidebar.devBuildTitle", {app: appName.value}));
+
 		return {
 			appName,
 			isDevelopment,
 			toggleDevtools,
+			t,
+			settingsLabel,
+			helpLabel,
+			devtoolsLabel,
+			devBuildTitle,
 			store,
 			route,
 			sidebar,

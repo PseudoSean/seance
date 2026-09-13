@@ -267,6 +267,91 @@ msgctxt "loading.slow"
 msgid "This is taking longer than it should, there might be connectivity issues."
 msgstr ""
 
+#: client/components/NetworkLobby.vue:156
+#. aria-label of the plus button on a sidebar network row while the join-channel form is open: clicking closes it again.
+msgctxt "lobby.cancel"
+msgid "Cancel"
+msgstr ""
+
+#: client/components/NetworkLobby.vue:176
+#. aria-label of the chevron that collapses a network's channel list in the sidebar.
+msgctxt "lobby.collapse"
+msgid "Collapse"
+msgstr ""
+
+#: client/components/NetworkLobby.vue:138
+#. Tooltip and aria-label of the connection-state dot on a sidebar network row while the network is online.
+msgctxt "lobby.connected"
+msgid "Connected"
+msgstr ""
+
+#: client/components/NetworkLobby.vue:140
+#. Tooltip and aria-label of the connection-state dot on a sidebar network row while a connection is being dialled; clicking cancels it.
+msgctxt "lobby.connectingCancel"
+msgid "Connecting… (click to cancel)"
+msgstr ""
+
+#: client/components/NetworkLobby.vue:141
+#. Tooltip and aria-label of the connection-state dot on a sidebar network row when the network is down; clicking dials it again.
+msgctxt "lobby.disconnectedConnect"
+msgid "Disconnected (click to connect)"
+msgstr ""
+
+#: client/components/NetworkLobby.vue:44
+#: client/components/NetworkLobby.vue:49
+#. aria-label of the pencil button in the sidebar's network row (lobby): opens the network's edit form in Settings.
+msgctxt "lobby.edit"
+msgid "Edit this network…"
+msgstr ""
+
+#: client/components/NetworkLobby.vue:176
+#. aria-label of the chevron that expands a collapsed network's channel list in the sidebar.
+msgctxt "lobby.expand"
+msgid "Expand"
+msgstr ""
+
+#: client/components/NetworkLobby.vue:156
+#. aria-label of the plus button on a sidebar network row: opens the small join-channel form under the network.
+msgctxt "lobby.joinChannel"
+msgid "Join a channel…"
+msgstr ""
+
+#: client/components/NetworkLobby.vue:164
+#. Tooltip of the nick shown at the right of a sidebar network row before the network is connected; {network} is the network's display name.
+msgctxt "lobby.nickOffline"
+msgid "Your nickname for {network} (not connected)"
+msgstr ""
+
+#: client/components/NetworkLobby.vue:163
+#. Tooltip of the nick shown at the right of a sidebar network row while the network is connected; {network} is the network's display name.
+msgctxt "lobby.nickOn"
+msgid "Your nickname on {network}"
+msgstr ""
+
+#: client/components/NetworkLobby.vue:66
+#. Screen-reader-only prefix read before the current nick at the right of a sidebar network row (visually hidden).
+msgctxt "lobby.nickname"
+msgid "Nickname: "
+msgstr ""
+
+#: client/components/NetworkLobby.vue:118
+#. Tooltip and aria-label of the crossed-out bell icon on a sidebar network row: push and browser notifications are switched off for this network.
+msgctxt "lobby.notificationsOff"
+msgid "Notifications off for this network"
+msgstr ""
+
+#: client/components/NetworkLobby.vue:125
+#. Tooltip and aria-label of the bell icon on a sidebar network row: notifications are enabled but this device is not yet registered for push.
+msgctxt "lobby.notificationsOn"
+msgid "Notifications on"
+msgstr ""
+
+#: client/components/NetworkLobby.vue:122
+#. Tooltip and aria-label of the bell icon on a sidebar network row when this device is subscribed to the network's push notifications.
+msgctxt "lobby.notificationsSubscribed"
+msgid "Notifications: subscribed to push"
+msgstr ""
+
 #: client/components/Windows/Connect.vue:72
 #: client/components/Windows/Connect.vue:296
 #: client/components/Settings/Appearance.vue:249
@@ -280,3 +365,92 @@ msgstr ""
 msgctxt "settings.locale.auto"
 msgid "System default"
 msgstr ""
+
+#: client/components/Sidebar.vue:8
+#. Tooltip of the developer badge next to the sidebar logo, shown only in development builds; {app} is the app's display name.
+msgctxt "sidebar.devBuildTitle"
+msgid "{app} has been built in development mode"
+msgstr ""
+
+#: client/components/Sidebar.vue:16
+#. Small orange badge next to the sidebar logo, shown only in development builds so a dev build is never mistaken for a deploy.
+msgctxt "sidebar.developerBadge"
+msgid "DEVELOPER"
+msgstr ""
+
+#: client/components/NetworkList.vue:8
+#. Message shown in the sidebar when there are no networks at all; the connect form is open beside it.
+msgctxt "sidebar.empty"
+msgid "You are not connected to any networks yet."
+msgstr ""
+
+#: client/components/Sidebar.vue:51
+#. aria-label of the question-mark button in the sidebar footer: opens the help window.
+msgctxt "sidebar.help"
+msgid "Help"
+msgstr ""
+
+#: client/components/Sidebar.vue:50
+#. aria-label of the help button in the sidebar footer when a newer build is available; the parenthetical sits on its own line.
+msgctxt "sidebar.helpUpdate"
+msgid "Help\n(update available)"
+msgstr ""
+
+#: client/components/NetworkList.vue:17
+#. Placeholder of the sidebar's jump-to search field that filters the channel list.
+msgctxt "sidebar.jumpTo"
+msgid "Jump to..."
+msgstr ""
+
+#: client/components/ChannelWrapper.vue:97
+#. Part of a sidebar channel row's aria-label and tooltip, after the channel name: how many messages highlight (mention) the user.
+msgctxt "sidebar.mentions"
+msgid "{count} mention"
+msgid_plural "{count} mentions"
+msgstr[0] ""
+msgstr[1] ""
+
+#: client/components/NetworkList.vue:6
+#: client/components/NetworkList.vue:10
+#. aria-label of the sidebar's navigation region (the network/channel list).
+msgctxt "sidebar.networkList"
+msgid "Network and Channel list"
+msgstr ""
+
+#: client/components/NetworkList.vue:55
+#. Shown under the sidebar's jump-to search field when nothing matches.
+msgctxt "sidebar.noResults"
+msgid "No results found."
+msgstr ""
+
+#: client/components/NetworkList.vue:12
+#. Screen-reader-only label of the sidebar's jump-to search input (visually hidden).
+msgctxt "sidebar.searchLabel"
+msgid "Search among the channel list"
+msgstr ""
+
+#: client/components/Sidebar.vue:32
+#. aria-label of the gear button in the sidebar footer: opens the settings window.
+msgctxt "sidebar.settings"
+msgid "Settings"
+msgstr ""
+
+#: client/components/SidebarToggle.vue:2
+#. aria-label of the hamburger button that opens and closes the sidebar (channel list) on narrow screens.
+msgctxt "sidebar.toggle"
+msgid "Toggle channel list"
+msgstr ""
+
+#: client/components/Sidebar.vue:22
+#. Title and aria-label of the ladybird button in the sidebar, shown only in development builds: opens or closes the eruda in-page devtools.
+msgctxt "sidebar.toggleDevtools"
+msgid "Toggle eruda devtools"
+msgstr ""
+
+#: client/components/ChannelWrapper.vue:89
+#. Part of a sidebar channel row's aria-label and tooltip, after the channel name: how many unread messages it holds.
+msgctxt "sidebar.unread"
+msgid "{count} unread message"
+msgid_plural "{count} unread messages"
+msgstr[0] ""
+msgstr[1] ""

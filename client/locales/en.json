@@ -40,6 +40,40 @@
   "loading.reload": "Reload page",
   "loading.requiresJs": "This application requires a modern browser with JavaScript enabled.",
   "loading.slow": "This is taking longer than it should, there might be connectivity issues.",
+  "lobby.cancel": "Cancel",
+  "lobby.collapse": "Collapse",
+  "lobby.connected": "Connected",
+  "lobby.connectingCancel": "Connecting… (click to cancel)",
+  "lobby.disconnectedConnect": "Disconnected (click to connect)",
+  "lobby.edit": "Edit this network…",
+  "lobby.expand": "Expand",
+  "lobby.joinChannel": "Join a channel…",
+  "lobby.nickOffline": "Your nickname for {network} (not connected)",
+  "lobby.nickOn": "Your nickname on {network}",
+  "lobby.nickname": "Nickname: ",
+  "lobby.notificationsOff": "Notifications off for this network",
+  "lobby.notificationsOn": "Notifications on",
+  "lobby.notificationsSubscribed": "Notifications: subscribed to push",
   "settings.locale": "Language — display language of the whole interface.",
-  "settings.locale.auto": "System default"
+  "settings.locale.auto": "System default",
+  "sidebar.devBuildTitle": "{app} has been built in development mode",
+  "sidebar.developerBadge": "DEVELOPER",
+  "sidebar.empty": "You are not connected to any networks yet.",
+  "sidebar.help": "Help",
+  "sidebar.helpUpdate": "Help\n(update available)",
+  "sidebar.jumpTo": "Jump to...",
+  "sidebar.mentions": {
+    "one": "{count} mention",
+    "other": "{count} mentions"
+  },
+  "sidebar.networkList": "Network and Channel list",
+  "sidebar.noResults": "No results found.",
+  "sidebar.searchLabel": "Search among the channel list",
+  "sidebar.settings": "Settings",
+  "sidebar.toggle": "Toggle channel list",
+  "sidebar.toggleDevtools": "Toggle eruda devtools",
+  "sidebar.unread": {
+    "one": "{count} unread message",
+    "other": "{count} unread messages"
+  }
 }

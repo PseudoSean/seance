@@ -37,6 +37,7 @@ import isChannelCollapsed from "../js/helpers/isChannelCollapsed";
 import {ClientNetwork, ClientChan} from "../js/types";
 import {computed, defineComponent, PropType} from "vue";
 import {useStore} from "../js/store";
+import {useI18n} from "../js/i18n";
 import {switchToChannel} from "../js/router";
 
 export default defineComponent({
@@ -55,6 +56,8 @@ export default defineComponent({
 	},
 	setup(props) {
 		const store = useStore();
+		// The row's aria-label/title speaks through the plural-aware counter.
+		const {tCount} = useI18n();
 		const activeChannel = computed(() => store.state.activeChannel);
 		const isChannelVisible = computed(
 			() => props.isFiltering || !isChannelCollapsed(props.network, props.channel)
@@ -85,19 +88,11 @@ export default defineComponent({
 			const type = props.channel.type;
 
 			if (props.channel.unread > 0) {
-				if (props.channel.unread > 1) {
-					extra.push(`${props.channel.unread} unread messages`);
-				} else {
-					extra.push(`${props.channel.unread} unread message`);
-				}
+				extra.push(tCount("sidebar.unread", props.channel.unread));
 			}
 
 			if (props.channel.highlight > 0) {
-				if (props.channel.highlight > 1) {
-					extra.push(`${props.channel.highlight} mentions`);
-				} else {
-					extra.push(`${props.channel.highlight} mention`);
-				}
+				extra.push(tCount("sidebar.mentions", props.channel.highlight));
 			}
 
 			return `${type}: ${props.channel.name} ${extra.length ? `(${extra.join(", ")})` : ""}`;
