@@ -7,13 +7,14 @@ import {computed, ref} from "vue";
 import {
 	bestLocale,
 	isRTL,
+	resolvableTags,
 	setCatalog,
 	t as coreT,
 	tCount as coreTCount,
 	type Catalog,
 	type Vars,
 } from "./core";
-import {AVAILABLE} from "./available";
+import {AVAILABLE, DEV} from "./available";
 import enCatalog from "../../locales/en.json";
 import {mirrorPushPrefs} from "../push-prefs";
 
@@ -46,12 +47,11 @@ async function loadOverlay(tag: string): Promise<Catalog | undefined> {
  * localStorage). Runs from the setting's apply() at boot and on change.
  */
 export async function activate(setting: string): Promise<void> {
+	// "auto" never lands on a dev-only locale in a production build; an
+	// explicitly stored tag (a dev-forced qqx, say) activates as chosen.
 	const tag =
 		setting === "auto"
-			? bestLocale(
-					navigator.languages ?? [],
-					AVAILABLE.map((a) => a.tag)
-			  )
+			? bestLocale(navigator.languages ?? [], resolvableTags(AVAILABLE, DEV))
 			: setting;
 	setCatalog(tag, enCatalog, await loadOverlay(tag));
 	localeRef.value = tag;

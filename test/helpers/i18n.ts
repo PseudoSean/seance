@@ -6,6 +6,7 @@ import {
 	bestLocale,
 	interpolate,
 	isRTL,
+	resolvableTags,
 	setCatalog,
 	t,
 	tCount,
@@ -52,6 +53,17 @@ describe("i18n core", () => {
 		expect(bestLocale(["en-GB"], ["en", "de"])).to.equal("en");
 		expect(bestLocale(["fr-CA"], ["en", "de"])).to.equal("en");
 		expect(bestLocale(["xx-YY", "de-DE"], ["en", "de"])).to.equal("de"); // a later preference wins when an earlier has no match
+	});
+
+	it("auto-resolution may pick a dev-only locale in development, never in production", () => {
+		// The generated available.ts carries DEV as a baked const, so the
+		// filter is a pure helper over (entries, DEV) — both outcomes pinned.
+		const available: ReadonlyArray<{tag: string; devOnly?: boolean}> = [
+			{tag: "en"},
+			{tag: "qqx", devOnly: true},
+		];
+		expect(resolvableTags(available, false)).to.deep.equal(["en"]);
+		expect(resolvableTags(available, true)).to.deep.equal(["en", "qqx"]);
 	});
 
 	it("the pre-paint script and the core agree on RTL tags", () => {
