@@ -6,7 +6,8 @@ import {tmpdir} from "node:os";
 import {join, resolve} from "node:path";
 import {parsePo} from "../../tools/i18n/po";
 import {addToPot} from "../../tools/i18n/add";
-import {checkPot} from "../../tools/i18n/check";
+import {ALLOWED_UNREFERENCED, checkPot} from "../../tools/i18n/check";
+import {POT_PATH} from "../../tools/i18n/paths";
 import {compileLocales, CompileResult, pseudo} from "../../tools/i18n/compile";
 import {mergePo} from "../../tools/i18n/merge";
 
@@ -321,6 +322,37 @@ describe("i18n toolchain", () => {
 			// in the i18n implementation directory: neither is a call site, so
 			// the missing list stays at the one genuinely missing key.
 			expect(problems.missing).to.deep.equal(["widget.missing"]);
+		});
+	});
+
+	describe("the live tree", () => {
+		it("messages.pot and the real client/ call sites agree", () => {
+			// The gate Task 6 Step 1 mandates: from this task on, yarn test
+			// fails when a t()/tCount() key is missing from the pot or a pot
+			// key is referenced by no call site. Runs against the real tree,
+			// not the fixtures.
+			const problems = checkPot(POT_PATH, [resolve("client")]);
+			expect(problems.missing).to.deep.equal([]);
+			expect(problems.unreferenced).to.deep.equal([]);
+			expect(problems.missingContext).to.deep.equal([]);
+		});
+
+		it("keeps every allowlisted key pinned to the splash id/key table", () => {
+			// ALLOWED_UNREFERENCED keys are referenced from places the
+			// .ts/.vue scanner cannot see: client/index.html's static splash
+			// copy and the splash id/key table in client/js/i18n/index.ts —
+			// a data table, not t() call sites. Read that file's source text
+			// and pin each allowlisted key as a quoted literal in it, so a
+			// splash key that leaves the table cannot linger on the
+			// allowlist.
+			const source = readFileSync(resolve("client/js/i18n/index.ts"), "utf8");
+
+			for (const key of ALLOWED_UNREFERENCED) {
+				expect(
+					source,
+					`${key} is allowlisted in check.ts but no longer appears in client/js/i18n/index.ts`
+				).to.contain(`"${key}"`);
+			}
 		});
 	});
 });

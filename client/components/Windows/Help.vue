@@ -7,7 +7,7 @@
 			<h1 class="title">Help</h1>
 
 			<h2 class="help-version-title">
-				<span>{{ store.getters.brandingString("help.about") }} {{ appName }}</span>
+				<span>{{ t("help.about") }} {{ appName }}</span>
 				<small>
 					v{{ build.version }} (<router-link id="view-changelog" to="/changelog"
 						>release notes</router-link
@@ -58,7 +58,7 @@
 
 				<p v-if="links.website">
 					<a :href="links.website" target="_blank" rel="noopener" class="website-link">{{
-						store.getters.brandingString("help.website")
+						t("help.website")
 					}}</a>
 				</p>
 				<p v-if="links.help">
@@ -67,12 +67,12 @@
 						target="_blank"
 						rel="noopener"
 						class="documentation-link"
-						>{{ store.getters.brandingString("help.documentation") }}</a
+						>{{ t("help.documentation") }}</a
 					>
 				</p>
 				<p v-if="links.privacy">
 					<a :href="links.privacy" target="_blank" rel="noopener" class="privacy-link">{{
-						store.getters.brandingString("help.privacy")
+						t("help.privacy")
 					}}</a>
 				</p>
 				<p>
@@ -873,6 +873,7 @@
 <script lang="ts">
 import {computed, defineComponent, ref} from "vue";
 import {useStore} from "../../js/store";
+import {useI18n} from "../../js/i18n";
 import {buildIdentityOf, isPastRelease, sourceLinks} from "../../js/helpers/sourceLinks";
 import SidebarToggle from "../SidebarToggle.vue";
 
@@ -883,6 +884,7 @@ export default defineComponent({
 	},
 	setup() {
 		const store = useStore();
+		const {t} = useI18n();
 		const isApple = navigator.platform.match(/(Mac|iPhone|iPod|iPad)/i) || false;
 		const isTouch = navigator.maxTouchPoints > 0;
 		const appName = computed(() => store.state.branding.appName);
@@ -908,6 +910,7 @@ export default defineComponent({
 			reloadForUpdate,
 			source,
 			store,
+			t,
 		};
 	},
 });

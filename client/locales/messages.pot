@@ -26,18 +26,6 @@ msgid "Stay signed in on this device"
 msgstr ""
 
 #: client/js/branding.ts
-#. Heading of the saved-networks list on the connect form.
-msgctxt "connect.savedNetworks"
-msgid "Saved networks"
-msgstr ""
-
-#: client/js/branding.ts
-#. Empty state of the saved-networks list on the connect form.
-msgctxt "connect.savedNetworksEmpty"
-msgid "No saved networks yet. Networks you connect to are remembered here."
-msgstr ""
-
-#: client/js/branding.ts
 #. Intro line above the sign-in form; intentionally empty by default, fill only if the deploy wants one.
 msgctxt "connect.signInIntro"
 msgid ""
@@ -68,24 +56,28 @@ msgid "Connect to IRC"
 msgstr ""
 
 #: client/js/branding.ts
+#: client/components/Windows/Help.vue
 #. About line at the top of the Help window, before the app name.
 msgctxt "help.about"
 msgid "About"
 msgstr ""
 
 #: client/js/branding.ts
+#: client/components/Windows/Help.vue
 #. Label of the documentation link in the Help window.
 msgctxt "help.documentation"
 msgid "Documentation"
 msgstr ""
 
 #: client/js/branding.ts
+#: client/components/Windows/Help.vue
 #. Label of the privacy policy link in the Help window.
 msgctxt "help.privacy"
 msgid "Privacy policy"
 msgstr ""
 
 #: client/js/branding.ts
+#: client/components/Windows/Help.vue
 #. Label of the network's website link in the Help window.
 msgctxt "help.website"
 msgid "Website"

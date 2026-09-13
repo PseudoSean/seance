@@ -8,8 +8,8 @@
 //
 // The scan is a heuristic (a regex over comments-stripped source), which is
 // why call sites are written `t("key")` — double quotes, no concatenation.
-// Fixture coverage lives in test/tests/i18n-toolchain.ts; the live-tree
-// assertion joins it in Task 6 once real call sites exist.
+// Fixture coverage and the live-tree assertion (the real client/ tree and
+// messages.pot) live in test/tests/i18n-toolchain.ts.
 
 import {readFileSync, readdirSync} from "node:fs";
 import {join, relative, resolve} from "node:path";
@@ -19,11 +19,25 @@ import {parsePo} from "./po";
 export interface PotProblems {
 	/** Referenced by a call site but missing from the pot. */
 	missing: string[];
-	/** In the pot but never referenced. */
+	/** In the pot but never referenced, excepting ALLOWED_UNREFERENCED. */
 	unreferenced: string[];
 	/** Pot entries without a single `#.` context line. */
 	missingContext: string[];
 }
+
+/**
+ * Keys the call-site scan can never see. The loading splash's only
+ * referents are the static copy in client/index.html (the scanner reads
+ * just .ts/.vue) and the splash id/key table in client/js/i18n/index.ts —
+ * a data table, not t() call sites. The live-tree assertion in
+ * test/tests/i18n-toolchain.ts pins every key here to that table, so a
+ * splash key that leaves it cannot linger on the allowlist.
+ */
+export const ALLOWED_UNREFERENCED = new Set([
+	"loading.reload",
+	"loading.requiresJs",
+	"loading.slow",
+]);
 
 /** t("key") / tCount("key", …) — the only way a key becomes a call site. */
 const CALL_SITE = /\bt(?:Count)?\(\s*"([^"]+)"/g;
@@ -78,7 +92,9 @@ export function checkPot(potPath: string, scanRoots: string[]): PotProblems {
 
 	return {
 		missing: [...referenced].filter((key) => !potKeys.includes(key)).sort(),
-		unreferenced: potKeys.filter((key) => !referenced.has(key)).sort(),
+		unreferenced: potKeys
+			.filter((key) => !referenced.has(key) && !ALLOWED_UNREFERENCED.has(key))
+			.sort(),
 		missingContext: entries
 			.filter((entry) => entry.msgctxt !== "" && entry.context.length === 0)
 			.map((entry) => entry.msgctxt)
