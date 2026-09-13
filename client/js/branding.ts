@@ -11,7 +11,7 @@
 // `theme-color`, the loading splash). See docs/resources/branding.md.
 
 import enCatalog from "../locales/en.json";
-import {t as coreT} from "./i18n/core";
+import {interpolate, t as coreT, tCount as coreTCount, type Vars} from "./i18n/core";
 
 export interface BrandingNetwork {
 	/** Display name for the network (defaults to the host name). */
@@ -269,17 +269,39 @@ export function setBranding(config: BrandingConfig): BrandingConfig {
 	return current;
 }
 
+/** The deploy's `strings` entry for a key: its voice, when the entry is a
+ * non-empty string; `undefined` otherwise (a malformed or empty override
+ * falls through to the catalogs). */
+function stringOverride(key: string, config: BrandingConfig): string | undefined {
+	const override = config.strings?.[key];
+	return typeof override === "string" && override.length > 0 ? override : undefined;
+}
+
+/**
+ * One override-aware resolver, shared by everything the reader reads: the
+ * Vue side's t()/tCount() (useI18n), the splash loop, and brandingString().
+ * The deploy's `strings` overrides are its voice (in the deploy's language)
+ * and win in every locale, and `{var}` placeholders interpolate in the
+ * override too — a plural key's override is a flat template, so `{count}`/
+ * `{n}` interpolate into it. Without an override the active locale's
+ * catalog answers exactly as the core resolver resolves it (locale → en →
+ * the key itself).
+ */
+export function brandingT(key: string, vars: Vars = {}, count?: number): string {
+	const override = stringOverride(key, current);
+
+	if (override !== undefined) {
+		return interpolate(override, count === undefined ? vars : {...vars, count, n: count});
+	}
+
+	return count === undefined ? coreT(key, vars) : coreTCount(key, count, vars);
+}
+
 /** Look up a UI string, honouring `strings` overrides from config.json.
  * The override is the deploy's voice (in the deploy's language) and wins
  * in every locale; without one, the active locale's catalog answers. */
 export function brandingString(key: string, config: BrandingConfig = current): string {
-	const override = config.strings?.[key];
-
-	if (typeof override === "string" && override.length > 0) {
-		return override;
-	}
-
-	return coreT(key); // locale catalog → en → the key
+	return stringOverride(key, config) ?? coreT(key); // locale catalog → en → the key
 }
 
 /**

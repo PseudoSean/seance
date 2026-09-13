@@ -4,6 +4,7 @@ import {
 	DEFAULT_BRANDING,
 	brandingFeatures,
 	brandingString,
+	brandingT,
 	expandNick,
 	getBranding,
 	nickFromAccount,
@@ -207,6 +208,50 @@ describe("branding", function () {
 			setCatalog("de", enCatalog, {"connect.title": "Verbinden"});
 			expect(brandingString("connect.title")).to.equal("Verbinden"); // the locale, not a dict
 			expect(brandingString("connect.rememberMe")).to.equal("Stay signed in on this device"); // a key the locale overlay omits falls to en
+		});
+	});
+
+	describe("brandingT: the one override-aware resolver (t, tCount, splash)", function () {
+		// The catalog the app's useI18n() and the splash loop resolve through
+		// is the same core one; a fake en keeps the shapes readable.
+		const en = {
+			"connect.title": "Connect to IRC",
+			"composer.connectingTo": "Connecting to {network}…",
+			"condensed.join": {one: "{count} user has joined", other: "{count} users have joined"},
+		};
+
+		beforeEach(function () {
+			setCatalog("en", en, undefined);
+			setBranding({appName: "Test"});
+		});
+
+		it("honours an override on a flat key and falls through without one", function () {
+			expect(brandingT("connect.title")).to.equal("Connect to IRC");
+			setBranding({appName: "Test", strings: {"connect.title": "Join TestNet"}});
+			expect(brandingT("connect.title")).to.equal("Join TestNet");
+		});
+
+		it("interpolates {vars} in an override of a var-bearing key", function () {
+			// The old override branch returned the raw string, rendering a
+			// literal "{network}" (ChatInput's connection strip).
+			setBranding({
+				appName: "Test",
+				strings: {"composer.connectingTo": "Dialling {network}…"},
+			});
+			expect(brandingT("composer.connectingTo", {network: "TestNet"})).to.equal(
+				"Dialling TestNet…"
+			);
+		});
+
+		it("treats an override of a plural key as the template, {count}/{n} filled", function () {
+			setBranding({appName: "Test", strings: {"condensed.join": "{count} folks in"}});
+			expect(brandingT("condensed.join", {}, 1)).to.equal("1 folks in");
+			expect(brandingT("condensed.join", {n: 0}, 0)).to.equal("0 folks in");
+		});
+
+		it("without an override a plural key resolves the catalog's categories", function () {
+			expect(brandingT("condensed.join", {}, 1)).to.equal("1 user has joined");
+			expect(brandingT("condensed.join", {}, 3)).to.equal("3 users have joined");
 		});
 	});
 

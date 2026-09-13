@@ -27,12 +27,25 @@
 			(function () {
 				try {
 					var stored = JSON.parse(localStorage.getItem("settings") || "{}");
-					var tag =
+					var available = "__AVAILABLE_LOCALES__".split(",");
+					var storedLocale =
 						typeof stored.locale === "string" && stored.locale !== "auto"
 							? stored.locale
 							: "";
-					var available = "__AVAILABLE_LOCALES__".split(",");
-					if (!tag) {
+					var tag = "";
+					if (storedLocale) {
+						// The stored tag activates as chosen only when this build
+						// still ships it: a stale one (a locale the deploy dropped,
+						// a settings blob restored from a backup) must not pin a
+						// lang/dir no catalog backs — boot's activate() falls back
+						// to en for the same reason, so auto-resolution is skipped
+						// here too and lang/dir stay as authored.
+						for (var k = 0; k < available.length && !tag; k++) {
+							if (available[k].toLowerCase() === storedLocale.toLowerCase()) {
+								tag = available[k];
+							}
+						}
+					} else {
 						for (var i = 0; i < (navigator.languages || []).length && !tag; i++) {
 							var want = navigator.languages[i].toLowerCase();
 							for (var j = 0; j < available.length && !tag; j++) {

@@ -4,19 +4,10 @@
 // itself is the Vue-free core.ts (mocha loads that one, not this file).
 
 import {computed, ref} from "vue";
-import {
-	bestLocale,
-	isRTL,
-	resolvableTags,
-	setCatalog,
-	t as coreT,
-	tCount as coreTCount,
-	type Catalog,
-	type Vars,
-} from "./core";
+import {bestLocale, isRTL, resolvableTags, setCatalog, type Catalog, type Vars} from "./core";
+import {brandingT} from "../branding";
 import {AVAILABLE, DEV} from "./available";
 import enCatalog from "../../locales/en.json";
-import {getBranding} from "../branding";
 import {mirrorPushPrefs} from "../push-prefs";
 
 /** Read during every template call, so a locale change re-renders whatever
@@ -50,11 +41,23 @@ async function loadOverlay(tag: string): Promise<Catalog | undefined> {
 export async function activate(setting: string): Promise<void> {
 	// "auto" never lands on a dev-only locale in a production build; an
 	// explicitly stored tag (a dev-forced qqx, say) activates as chosen.
-	const tag =
+	let tag =
 		setting === "auto"
 			? bestLocale(navigator.languages ?? [], resolvableTags(AVAILABLE, DEV))
 			: setting;
-	setCatalog(tag, enCatalog, await loadOverlay(tag));
+
+	// Best-effort, never a rejection: settingsBackup restores the whole
+	// settings blob, so a stored tag this build has no compiled catalog for
+	// reaches activate() through boot's `void activate()` — a rejecting
+	// dynamic import there would cascade. Fall back to en, as the worker's
+	// applyLocale() does (client/js/push/i18n.ts).
+	try {
+		setCatalog(tag, enCatalog, await loadOverlay(tag));
+	} catch {
+		tag = "en";
+		setCatalog("en", enCatalog, undefined);
+	}
+
 	localeRef.value = tag;
 
 	const root = document.documentElement;
@@ -72,7 +75,9 @@ export async function activate(setting: string): Promise<void> {
 		const node = document.getElementById(id);
 
 		if (node) {
-			node.textContent = coreT(key);
+			// The same override-aware resolver the components use: a deploy's
+			// `strings` override of a splash key is live, not inert.
+			node.textContent = brandingT(key);
 		}
 	}
 
@@ -80,20 +85,20 @@ export async function activate(setting: string): Promise<void> {
 }
 
 /** `const {t, tCount} = useI18n()` in setup(). Each call reads localeRef so
- * the component re-renders on a language change. */
+ * the component re-renders on a language change. Both resolve through the
+ * one override-aware helper (brandingT): the deploy's `strings` overrides
+ * interpolate their `{var}`s — on flat, var-bearing and plural keys alike —
+ * and a key with no override answers from the catalogs exactly as core
+ * would. */
 export function useI18n() {
 	const t = (key: string, vars?: Vars): string => {
 		void localeRef.value;
-		// The deploy's `strings` overrides are its voice (in the deploy's
-		// language) and win in every locale — the same rule brandingString()
-		// applies for non-Vue callers, in front of the one catalog lookup.
-		const override = getBranding().strings?.[key];
-		return typeof override === "string" && override.length > 0 ? override : coreT(key, vars);
+		return brandingT(key, vars);
 	};
 
 	const tCount = (key: string, count: number, vars?: Vars): string => {
 		void localeRef.value;
-		return coreTCount(key, count, vars);
+		return brandingT(key, vars, count);
 	};
 
 	return {t, tCount, locale: computed(() => localeRef.value)};
