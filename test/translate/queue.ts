@@ -625,8 +625,10 @@ describe("translate/queue", () => {
 			[2, {status: "failed", error: REPETITION}],
 			[3, {status: "failed", error: REPETITION}],
 		]);
-		// A loop is not retried: one answer per line.
-		expect(r.requests).to.have.length(PAUSE_AFTER_FAILURES);
+		// A loop is retried once, bare, like the composer retries it: two
+		// answers per line, and still no pause.
+		expect(r.requests).to.have.length(PAUSE_AFTER_FAILURES * 2);
+		expect(r.requests.filter((req) => req.from === null)).to.have.length(PAUSE_AFTER_FAILURES);
 		expect(r.paused).to.deep.equal([]);
 		expect(r.queue.paused("llm")).to.equal(false);
 	});

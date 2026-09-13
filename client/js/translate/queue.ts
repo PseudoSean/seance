@@ -667,7 +667,7 @@ export class TranslateQueue {
 	 * Both sides of the comparison are restored (`restoreAll`), so whichever
 	 * marker form the route chose cancels out.
 	 *
-	 * An echo, a narration or an answered question is first retried once,
+	 * An echo, a loop, a narration or an answered question is first retried once,
 	 * bare (`retryBare`), the way the composer retries a draft: measured on
 	 * casual English chat lines the bare shape translated all 8 of Qwen3-4B's
 	 * echoes and 2 of Qwen3-1.7B's 5. Only a second such answer is reported.
@@ -685,10 +685,11 @@ export class TranslateQueue {
 		}
 
 		// A model stuck repeating a word ("ekki ekki ekki …") has not
-		// translated the line either, and the engine did complete: failed,
-		// counted toward no pause, like the narration below.
+		// translated the line either, and the engine did complete: judged like
+		// the narration below, retried once bare as the composer retries it
+		// (writer.ts), and counted toward no pause.
 		if (isRepetition(text) && !isRepetition(original)) {
-			this.deps.onUpdate(q.item.id, {status: "failed", error: REPETITION});
+			this.failJudged(q, REPETITION);
 			return;
 		}
 
@@ -743,7 +744,8 @@ export class TranslateQueue {
 			context.variant = item.context.variant;
 		}
 
-		const hint = item.from ?? item.context.sourceHint;
+		// The existing hint first, then the source, as `bareRetry` orders them.
+		const hint = item.context.sourceHint ?? item.from;
 
 		if (hint) {
 			context.sourceHint = hint;
