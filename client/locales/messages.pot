@@ -1346,7 +1346,7 @@ msgctxt "message.statusmsg"
 msgid "This message was only shown to users with {mode} mode"
 msgstr ""
 
-#: components/PushPrompt.vue
+#: client/components/PushPrompt.vue
 #. Body of the push opt-in prompt; explains what allowing push does and that it is chosen per network.
 msgctxt "push.enableBody"
 msgid "This server can wake this app when it has messages for you while it is closed. You can change this per network, in each network's settings."
