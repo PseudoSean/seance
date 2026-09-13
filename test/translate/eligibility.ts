@@ -152,10 +152,21 @@ describe("translate/eligibility", () => {
 		expect(isEligible(msg({time: new Date(0)}), {nicks})).to.equal(true);
 	});
 
-	it("own, pending and other-typed messages do not", () => {
-		expect(isEligible(msg({self: true}), {nicks})).to.equal(false);
+	it("the user's own lines qualify like anyone's, however old", () => {
+		expect(isEligible(msg({self: true}), {nicks})).to.equal(true);
+		expect(isEligible(msg({self: true, type: "action"}), {nicks})).to.equal(true);
+		expect(isEligible(msg({self: true, time: new Date(0)}), {nicks})).to.equal(true);
+	});
+
+	it("pending copies, own or not, and other-typed messages do not", () => {
 		expect(isEligible(msg({pending: true}), {nicks})).to.equal(false);
+		expect(isEligible(msg({self: true, pending: true}), {nicks})).to.equal(false);
 		expect(isEligible(msg({type: "join"}), {nicks})).to.equal(false);
+		expect(isEligible(msg({self: true, type: "join"}), {nicks})).to.equal(false);
+	});
+
+	it("an own line under MIN_WORDS does not", () => {
+		expect(isEligible(msg({self: true, text: "ok danke"}), {nicks})).to.equal(false);
 	});
 
 	it("too little text does not", () => {

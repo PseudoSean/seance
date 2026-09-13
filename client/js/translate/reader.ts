@@ -29,6 +29,7 @@ import {LanguagePrior, detectLanguage} from "./detect";
 import {ReplayBatches, historyQueueOrder, isEligible, plainTextOf} from "./eligibility";
 import {translateService} from "./index";
 import {type QueueItem, type QueueUpdate, TranslateQueue} from "./queue";
+import {sentReadBacks, takesReadBack} from "./sentReadBack";
 import {protect, stripCopiedNickPrefix} from "./spans";
 
 const queues = new Map<string, TranslateQueue>();
@@ -292,10 +293,10 @@ function commitChannel(
  * prior with them, and its messages are queued again, newest first and
  * capped like a history load. The same language again changes nothing.
  *
- * An own line's translation is the composer's read-back (writer.ts), which
- * the pipeline cannot make again since it never translates own lines: it is
- * kept when it is already in the new language and goes with the rest when
- * it is not.
+ * Own lines go with the rest and are queued again like anyone's. The one
+ * exception is an own line whose translation is already in the new language
+ * -- a posted line's read-back (writer.ts) -- which is kept, and which the
+ * requeue then leaves alone rather than translating it a second time.
  */
 export function setReading(network: ClientNetwork, channel: ClientChan, lang: string | null): void {
 	const before = channelTranslation(network, channel).read;
@@ -316,14 +317,17 @@ export function setReading(network: ClientNetwork, channel: ClientChan, lang: st
 	}
 
 	forgetItems(({item}) => item.chanId === channel.id);
+
+	const requeued = channel.messages.filter(
+		(m) => !(m.self && store.state.translations[m.id]?.to === lang)
+	);
+
 	store.commit(
 		"translationRemoveMany",
-		channel.messages
-			.filter((m) => !(m.self && store.state.translations[m.id]?.to === lang))
-			.map((m) => m.id)
+		requeued.map((m) => m.id)
 	);
 	priors.delete(channelKey(network.uuid, channel.name));
-	void queueHistory(network, channel, historyQueueOrder(channel.messages));
+	void queueHistory(network, channel, historyQueueOrder(requeued));
 }
 
 /**
@@ -586,6 +590,23 @@ export function initReader(): void {
 		if (data.replay) {
 			replayBatches.add(target.channel.id, data.msg);
 		} else {
+			// A posted translation keeps the composer's read-back rather than
+			// being translated again (sentReadBack.ts `takesReadBack`): checked
+			// here, synchronously in the dispatch, so it holds whichever of
+			// this listener and the writer's runs first.
+			if (
+				takesReadBack(
+					sentReadBacks,
+					target.channel.id,
+					data.msg,
+					false,
+					!!store.state.translations[data.msg.id],
+					Date.now()
+				)
+			) {
+				return;
+			}
+
 			void translateMessage(target.network, target.channel, data.msg);
 		}
 	});

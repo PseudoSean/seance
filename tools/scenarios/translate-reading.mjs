@@ -4,7 +4,8 @@
 // never land in a tester's own context) through a raw WebSocket to the dev
 // ircd. Steps, in
 // order: nothing is translated while the globe is off, and the two German
-// lines said before it is switched on are translated once it is (reading
+// lines said before it is switched on -- and the page's own German line
+// said then too -- are translated once it is (reading
 // covers what the channel shows, not only what arrives after the switch;
 // the switch-on's requeue of the backlog is let settle and every later
 // count is taken against it); a German
@@ -18,7 +19,7 @@
 // batched (the in-page request log shows one multi-line LLM request, not
 // five singles, and every burst line's echo is rendered); the chip's menu
 // can hide a translation; the toolbar's Translate does one message on
-// request; the page's own German line is never translated; the
+// request; the page's own German line is translated like anyone's; the
 // translation panel opens on the globe's context menu as one column of
 // controls of equal width, each language named in itself (the endonym,
 // never a code) and a link to Settings, and closes on Escape; a line the fake hands back
@@ -37,7 +38,8 @@
 // page; changing the reading language in the panel replaces the
 // translations on screen with ones into the new language (the chip names
 // it); and leaving the channel with /part and joining it again keeps the
-// globe on and translates the history the rejoin loads.
+// globe on and translates the history the rejoin loads, the page's own
+// line from before the part included.
 // Detection is real (franc); only the engine is scripted.
 //
 // The speaker negotiates message-tags + echo-message so it learns the
@@ -329,6 +331,21 @@ async function scenario(page) {
 	await page.waitFor(`document.body.innerText.includes("zweite Zeile vor dem Einschalten")`, {
 		label: "both German lines arrived before the switch",
 	});
+
+	// The page's own German line, also before the switch: own lines are part
+	// of what the channel shows, so the switch-on translates it as well.
+	const ownBeforeMarker = `Eigenzeile${RUN}`;
+	const ownBefore = `Ich schreibe selbst noch eine eigene Zeile vor dem Einschalten, ${ownBeforeMarker}.`;
+	const ownBeforeRow = `[...document.querySelectorAll(".msg.self:not(.pending)")].filter((m) => m.textContent.includes(${JSON.stringify(
+		ownBeforeMarker
+	)})).pop()`;
+
+	await page.fill("#input", ownBefore);
+	await page.evaluate(`document.querySelector("#form").requestSubmit()`);
+	await page.waitFor(`!!(${ownBeforeRow})`, {
+		timeout: 15000,
+		label: "the page's own German line arrived before the switch",
+	});
 	await page.sleep(1500);
 	await page.check("nothing translated while reading is off", (await page.evaluate(LINES)) === 0);
 
@@ -345,6 +362,18 @@ async function scenario(page) {
 			)
 			.join(" && "),
 		{timeout: 90000, label: "the two lines said before the switch are translated once it is on"}
+	);
+	await page.waitFor(
+		`!!(${ownBeforeRow})?.querySelector('.msg-translation[data-status="done"]')`,
+		{timeout: 90000, label: "the page's own line said before the switch is translated too"}
+	);
+	await page.check(
+		"the own line's translation is the fake's English echo",
+		String(
+			await page.evaluate(
+				`((${ownBeforeRow}).querySelector(".msg-translation-text") || {}).textContent`
+			)
+		).includes("[English] Ich schreibe selbst")
 	);
 
 	const base = await settledLines(page, "the switch-on's requeue");
@@ -652,8 +681,10 @@ async function scenario(page) {
 	await page.waitFor(`${LINES} === ${base + 6}`, {timeout: 15000, label: "translate on request"});
 	await page.screenshot("translated-burst");
 
-	// The page's own line is never translated, however long or German.
-	const ownMarker = `Ausschlussregel${RUN}`;
+	// The page's own line is read like anyone's: a live German line from the
+	// page gets its translation (no write target is set, so there is no
+	// read-back for it to keep).
+	const ownMarker = `Eigennachricht${RUN}`;
 	const ownLine = `Ich sende hier einen langen deutschen Satz zum Testen der ${ownMarker} für eigene Nachrichten.`;
 
 	await page.fill("#input", ownLine);
@@ -662,19 +693,24 @@ async function scenario(page) {
 		timeout: 10000,
 		label: "own line sent",
 	});
-	await page.sleep(1500); // the fake would need well under this to translate it
-	await page.check(
-		"own line raised no new translation",
-		(await page.evaluate(LINES)) === base + 6
-	);
 
-	const ownRow = `[...document.querySelectorAll(".msg.self")].find((m) => m.textContent.includes(${JSON.stringify(
+	const ownRow = `[...document.querySelectorAll(".msg.self:not(.pending)")].filter((m) => m.textContent.includes(${JSON.stringify(
 		ownMarker
-	)}))`;
+	)})).pop()`;
 
+	await page.waitFor(
+		`!!(${ownRow}) && !!(${ownRow}).querySelector('.msg-translation[data-status="done"]')`,
+		{timeout: 15000, label: "the own line is translated"}
+	);
 	await page.check(
-		"the own row carries no translation line",
-		await page.evaluate(`!!(${ownRow}) && !(${ownRow}).querySelector(".msg-translation")`)
+		"the own line added exactly one done line",
+		(await page.evaluate(LINES)) === base + 7
+	);
+	await page.check(
+		"the own row's chip reads German → English",
+		(await page.evaluate(
+			`((${ownRow}).querySelector(".msg-translation-chip") || {}).textContent.trim()`
+		)) === "German → English"
 	);
 
 	// The panel: opened from the globe's context menu, full language names,
@@ -799,7 +835,7 @@ async function scenario(page) {
 	);
 	await page.check(
 		"the retry added exactly one done line",
-		(await page.evaluate(LINES)) === base + 7
+		(await page.evaluate(LINES)) === base + 8
 	);
 
 	// The names in the channel are protected and the emphasis survives: the
@@ -950,7 +986,7 @@ async function scenario(page) {
 	await page.sleep(1500);
 	await page.check(
 		"no translation after switching off",
-		(await page.evaluate(LINES)) === base + 10
+		(await page.evaluate(LINES)) === base + 11
 	);
 
 	// A deleted message keeps neither its text nor its translation: the
@@ -990,7 +1026,7 @@ async function scenario(page) {
 	);
 	await page.check(
 		"the redaction took exactly one translated line away",
-		(await page.evaluate(LINES)) === base + 9
+		(await page.evaluate(LINES)) === base + 10
 	);
 	await page.screenshot("redacted-translation");
 
@@ -1258,6 +1294,22 @@ async function scenario(page) {
 	);
 	await page.screenshot("reading-language-changed");
 
+	// An own line said just before leaving, so the rejoin's history (newest
+	// first, capped) is sure to bring it back: read live into French first.
+	const ownPartMarker = `Abschiedszeile${RUN}`;
+	const ownPart = `Meine eigene Zeile kurz vor dem Verlassen des Kanals, ${ownPartMarker}.`;
+	const ownPartRow = `[...document.querySelectorAll(".msg.self:not(.pending)")].filter((m) => m.textContent.includes(${JSON.stringify(
+		ownPartMarker
+	)})).pop()`;
+	const ownPartText = `((((${ownPartRow}) || document).querySelector('.msg-translation[data-status="done"] .msg-translation-text') || {}).textContent || "")`;
+
+	await page.fill("#input", ownPart);
+	await page.evaluate(`document.querySelector("#form").requestSubmit()`);
+	await page.waitFor(`!!(${ownPartRow}) && ${ownPartText}.includes("[French]")`, {
+		timeout: 30000,
+		label: "the own line before the part is translated into French",
+	});
+
 	// Leave and come back: the channel keeps its setting, so the globe is on
 	// after the rejoin and the history the join loads is translated.
 	await page.fill("#input", `/part ${CHANNEL}`);
@@ -1285,6 +1337,10 @@ async function scenario(page) {
 	await page.waitFor(`(${afterEchoText}).includes("[French]")`, {
 		timeout: 90000,
 		label: "the history the rejoin loaded is translated",
+	});
+	await page.waitFor(`!!(${ownPartRow}) && ${ownPartText}.includes("[French]")`, {
+		timeout: 90000,
+		label: "the page's own line from before the rejoin is translated",
 	});
 	await page.screenshot("rejoined-translated");
 

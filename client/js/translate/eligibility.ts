@@ -1,5 +1,5 @@
 // Which incoming messages the reading pipeline considers (spec § Reading
-// pipeline, 1): from someone else, not pending, a chat type, and with enough
+// pipeline, 1): anyone's, the user's own included, not pending, a chat type, and with enough
 // words once URLs, code, emoji, formatting codes and nick mentions are gone
 // -- however old: reading covers what is in the channel, not only what
 // arrives after the switch. History -- a join's fill, a replay or catch-up,
@@ -129,7 +129,12 @@ export function wordCount(text: string): number {
 }
 
 export function isEligible(msg: EligibilityMsg, opts: {nicks: string[]}): boolean {
-	if (msg.self || msg.pending || !msg.type || !CHAT_TYPES.has(msg.type) || !msg.text) {
+	// Own lines are read too: a line from before a switch-on, a rejoin or a
+	// reload is as much of the channel as anyone's. The one own line the
+	// pipeline leaves alone -- a posted translation that keeps its
+	// read-back -- is ruled out by its caller (sentReadBack.ts
+	// `takesReadBack`), since eligibility cannot see the composer's records.
+	if (msg.pending || !msg.type || !CHAT_TYPES.has(msg.type) || !msg.text) {
 		return false;
 	}
 

@@ -87,8 +87,8 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
 ## Reading a channel
 
 The globe in a channel's header switches translation on for that channel
-(`Chat.vue`, `translate/reader.ts`): from then on every message someone
-else sends is detected (`detect.ts`, `franc` in its own chunk, with the
+(`Chat.vue`, `translate/reader.ts`): from then on every message in it,
+the user's own included, is detected (`detect.ts`, `franc` in its own chunk, with the
 channel's declared languages and then its dominant language settling near
 ties), skipped when it is
 already in the target or too short (`eligibility.ts`), given its context
@@ -200,8 +200,13 @@ from a fallback to singles.
 
 **Reading covers what the channel shows, capped per load, newest first.**
 A line is considered however old it is: what keeps one out is the rules
-above -- own lines, pending copies, types other than chat, `MIN_WORDS`,
-detection -- never when it was said. History is bounded per _load_, each
+above -- pending copies, types other than chat, `MIN_WORDS`, detection
+-- never when it was said, and never who said it: the user's own lines are
+read too, so a line written before the switch-on, before a rejoin or a
+reload, or sent without a read-back gets its translation like anyone's
+(an own line already in the reading language is detected as such and
+skipped). The one own line the pipeline leaves alone is a posted
+translation that keeps the composer's read-back (§ Writing in a channel). History is bounded per _load_, each
 load queueing at most `HISTORY_QUEUE_CAP` (40) of its lines, newest first
 (`eligibility.ts` `historyQueueOrder`, through `reader.ts` `queueHistory`,
 one line after another so the queue's order is that order):
@@ -224,10 +229,10 @@ screen** (`reader.ts` `setReading`): the channel's queued work is
 cancelled, its remembered items, translations and language prior go, and
 its messages are queued again as one load. Setting the same language again
 does nothing, and switching off only cancels what is queued. A posted
-line's translation is the composer's read-back (§ Writing in a channel),
-which the pipeline cannot make again since it never translates own lines:
-it is kept when it is already in the new reading language and removed with
-the rest when it is not.
+line's translation is the composer's read-back (§ Writing in a channel):
+it is kept, and left out of the requeue, when it is already in the new
+reading language; when it is not it goes with the rest and the line is
+translated again like any other.
 
 **Leaving a channel keeps its setting.** A part cancels that channel's
 queued work, forgets its queue items and drops the translations with its
@@ -496,6 +501,18 @@ no entry, and so does a line the IRC layer split (a long line chunked by
 `splitMessage`, or a multi-line one on a server without
 `draft/multiline`), since no part of it carries the text that was
 recorded.
+
+That line is not translated a second time, although the reading pipeline
+reads own lines. The reader's live `msg` listener asks
+`sentReadBack.ts` `takesReadBack` first, synchronously inside the same
+dispatch as the writer's listener: a live own line is skipped when it
+already carries a translation (the writer ran first and attached the
+read-back) or when a record still covers it (`SentReadBacks.covers`, the
+same channel-and-text predicate `match` uses, without taking the record --
+the reader ran first, or this is the echo of a pending copy that took the
+read-back). Either way the writer's `match` gives it the read-back, so the
+check holds whichever listener runs first. A replayed own line has no
+read-back coming (the writer ignores replays) and is read.
 
 The scenario's fake logs `purpose: "write"` (or `"read"` for the check) on
 every request, so a browser check can tell the composer's traffic from the

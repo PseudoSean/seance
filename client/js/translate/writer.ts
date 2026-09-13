@@ -47,7 +47,7 @@ import {
 } from "./outgoing";
 import {channelTranslation, holdReading, readingLanguage, releaseReading} from "./reader";
 import type {Route} from "./router";
-import {SentReadBacks} from "./sentReadBack";
+import {sentReadBacks} from "./sentReadBack";
 import {LLM_MARKERS, type MarkerForm, stripCopiedNickPrefix} from "./spans";
 
 /** An id no message has: buildContext then takes the whole scrollback as "before" the draft. */
@@ -645,9 +645,6 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 	}
 }
 
-/** Sent translations waiting for their line to reach the store (sentReadBack.ts). */
-const sentReadBacks = new SentReadBacks();
-
 /**
  * The strip's translation is about to be sent: when its round trip
  * finished, the read-back is recorded against the text that goes out, and
@@ -717,7 +714,8 @@ export function initWriter(): void {
 	// the composer recorded a read-back for takes it as its translation:
 	// the pending copy first, then the echo that replaces it (the copy's
 	// entry goes with the copy), or the one line without `echo-message`.
-	// No request is made; the reader skips own lines anyway.
+	// No request is made: the reader leaves such a line alone whichever
+	// listener runs first (sentReadBack.ts `takesReadBack`).
 	socket.on("msg", (data) => {
 		if (!data.msg.self || data.replay || typeof data.msg.text !== "string") {
 			return;

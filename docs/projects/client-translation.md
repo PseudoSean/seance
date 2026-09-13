@@ -91,6 +91,15 @@ Plan 2 (reading pipeline):
   context-build time rather than seeded into the persisted records, keyed
   by the source term with the channel's own memory winning; the glossary
   itself is not subject to `TERM_LINES`.
+- **Own lines are read too** (live test, 2026-09-13: the user's past lines
+  stayed bare): eligibility no longer excludes `self` (§ Reading pipeline,
+  1, said own messages were excluded), only pending copies. A posted
+  translation keeps the composer's read-back instead of being translated
+  again: the reader's live listener skips an own line that carries a
+  translation or that a read-back record still covers
+  (`sentReadBack.ts` `takesReadBack`), which holds in either listener
+  order. A language change retranslates own lines with the rest, except a
+  read-back already in the new language, which is kept and not requeued.
 - **Reading covers what the channel shows** (live test, 2026-09-12; this reverses plan 2's switch-on-moment rule): no `since` gate on any path, history capped at `HISTORY_QUEUE_CAP` per load (a page, a replay batch, the requeue of a switch-on or language change), newest first, and leaving a channel keeps its setting.
 - A channel's **declared languages** (`channelStore.ts` `languages`, the
   panel's _Languages spoken here_) are an explicit prior above the

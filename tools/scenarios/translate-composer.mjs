@@ -25,7 +25,9 @@
 // text is selectable, a fenced code block is never sent for translation and comes
 // back byte for byte; inline TeX and a bold word together survive both the
 // strip and the round trip's read-back row; the chip's title names the
-// route its text came down; switching the target off
+// route its text came down; with reading switched on in English and a
+// German draft sent in French, the posted line keeps its read-back and the
+// reading pipeline asks for no translation of it; switching the target off
 // restores plain sending.
 // Under `--mobile` the panel is asserted to be the full-screen sheet, with
 // formality as a segmented control and the close button putting it away.
@@ -836,6 +838,83 @@ export default async function run(page) {
 		label: "the math strip dismissed",
 	});
 	await page.fill(INPUT, "");
+
+	// 9e. Reading is on and the posted line would be read: its text is German
+	// behind the fake's "[French]" prefix, so the reading pipeline, which
+	// reads own lines too, would translate it into English if it were not
+	// the line the read-back is for. It keeps the read-back and no reading
+	// request is made for it.
+	await openPanel(page);
+	await page.evaluate(
+		`(() => { const s = document.querySelector('.translation-panel select[name="translateRead"]'); s.value = "en"; s.dispatchEvent(new Event("change", {bubbles: true})); })()`
+	);
+	await page.evaluate(
+		`document.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", code: "Escape", keyCode: 27, which: 27, bubbles: true}))`
+	);
+	await page.waitFor(`!document.querySelector(".translation-panel")`, {label: "panel closed"});
+	await page.waitFor(
+		`document.querySelector(${JSON.stringify(GLOBE)}).classList.contains("on")`,
+		{
+			label: "reading is on in English",
+		}
+	);
+	await setWriteTarget(page, "fr");
+
+	const german = `Ich möchte die Protokolle morgen früh noch einmal gründlich prüfen ${RUN}`;
+	const posted = `[French] ${german}`;
+	const readsOfPosted = `${REQUESTS}.filter((r) => r.purpose === "read" && r.text.indexOf(${JSON.stringify(
+		german
+	)}) !== -1).length`;
+
+	await typeAndEnter(page, german);
+	await page.waitFor(`${barText} === ${JSON.stringify(posted)}`, {
+		timeout: 25000,
+		label: "the German draft translated into French",
+	});
+	await page.waitFor(
+		`(document.querySelector(".translate-bar-check .translate-bar-text") || {}).textContent === ${JSON.stringify(
+			`[English] ${posted}`
+		)}`,
+		{timeout: 25000, label: "the French line's read-back"}
+	);
+	await page.waitFor(
+		`!!document.querySelector(".translate-bar-send") && !document.querySelector(".translate-bar-send").disabled`,
+		{timeout: 20000, label: "Send offered once the read-back is done"}
+	);
+
+	const readsBeforeSend = Number(await page.evaluate(readsOfPosted));
+
+	await page.check(
+		`the read-back was the one reading request for the line so far (${readsBeforeSend})`,
+		readsBeforeSend === 1
+	);
+	await page.evaluate(ENTER);
+	await page.waitFor(settledSelf(posted), {
+		timeout: 20000,
+		label: "the French line in the timeline, echoed back",
+	});
+	await page.waitFor(
+		`${ownTranslation(posted, true)} === ${JSON.stringify(`[English] ${posted}`)}`,
+		{
+			timeout: 5000,
+			label: "the posted line shows its read-back",
+		}
+	);
+	// The reader's path awaits the probe and detection before it queues, so
+	// a request it made would only show up after a while.
+	await page.sleep(3000);
+
+	const readsAfterSend = Number(await page.evaluate(readsOfPosted));
+
+	await page.check(
+		`no reading request was made for the posted line (${readsAfterSend} read requests carry it)`,
+		readsAfterSend === readsBeforeSend
+	);
+	await page.check(
+		"the posted line still shows the read-back",
+		(await page.evaluate(ownTranslation(posted, true))) === `[English] ${posted}`
+	);
+	await page.screenshot("composer-posted-read-while-reading");
 
 	// 10. Off again: plain sending.
 	await setWriteTarget(page, "");
