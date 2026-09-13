@@ -33,7 +33,7 @@
 // nothing but `!` (token 0). Read the output before trusting it; `cpu` is
 // the default because it is the one that is always right.
 
-import {readFileSync} from "node:fs";
+import {existsSync, readdirSync, readFileSync, statSync} from "node:fs";
 import path from "node:path";
 import {
 	AutoModelForCausalLM,
@@ -77,6 +77,10 @@ type Model = Awaited<ReturnType<typeof AutoModelForCausalLM.from_pretrained>>;
 /** The Hugging Face repository the MLC model id is served from here. */
 const ONNX_REPO = "onnx-community/Qwen3-1.7B-ONNX";
 const DTYPE = "q4f16";
+/** The ONNX exports transformers.js can load by name (`--dtype`). */
+const DTYPES = ["q4f16", "fp16", "fp32", "int8", "uint8", "q4", "q8", "bnb4"] as const;
+
+type Dtype = typeof DTYPES[number];
 /** What WebLLM pushes into the output when thinking is off; see `create()`. */
 const THINK_BLOCK = "<think>\n\n</think>\n\n";
 /** The same block as the chat template renders it, wherever it put it. */
@@ -167,6 +171,8 @@ class DeltaQueue implements AsyncIterable<ChatDelta> {
 interface BackendOptions {
 	device: Device;
 	repo: string;
+	/** The ONNX export to load: q4f16 (the default), fp16, fp32, int8, uint8, q4, q8, bnb4. */
+	dtype: Dtype;
 	log(text: string): void;
 }
 
@@ -238,7 +244,7 @@ class NodeMlc implements MlcLike {
 		for (const attempt of attemptsFor(this.options.device)) {
 			try {
 				this.model = await AutoModelForCausalLM.from_pretrained(repo, {
-					dtype: DTYPE,
+					dtype: this.options.dtype,
 					device: attempt.device,
 					...(attempt.basic ? {session_options: {graphOptimizationLevel: "basic"}} : {}),
 					progress_callback: (info: ProgressInfo) => this.progress(info),
@@ -462,12 +468,16 @@ interface Options {
 	device: Device;
 	evalFile: string | null;
 	repo: string;
+	dtype: Dtype;
+	/** A local model directory (`tmp/models/web/<id>`), loaded instead of `repo`. */
+	local: string | null;
 }
 
 const USAGE = [
 	'usage: npx tsx tools/translate-llm.ts "text" --to de [--from en] [--purpose read|write]',
 	"                                     [--context fixture.json] [--show-prompt] [--raw]",
-	"                                     [--device cpu|cuda] [--repo <hf repo>]",
+	"                                     [--device cpu|cuda] [--repo <hf repo>] [--dtype q4f16|fp16|int8|…]",
+	"                                     [--local tmp/models/web/<model id>]",
 	"                                     [--markers placeholder|literal|tags]",
 	"       npx tsx tools/translate-llm.ts --capture capture.json [--to de] [--show-prompt]",
 	"       npx tsx tools/translate-llm.ts --eval tools/translate-eval/prompts.json [--to de]",
@@ -488,6 +498,8 @@ function parseArgs(argv: string[]): Options {
 		device: "cpu",
 		evalFile: null,
 		repo: ONNX_REPO,
+		dtype: DTYPE,
+		local: null,
 	};
 
 	// Which flags the command line actually carried: a capture supplies the
@@ -547,6 +559,20 @@ function parseArgs(argv: string[]): Options {
 			options.device = device;
 		} else if (arg === "--repo") {
 			options.repo = value();
+		} else if (arg === "--local") {
+			// A directory in the layout transformers.js loads from disk, such as
+			// the web build's own q4f16_1 weights that
+			// tools/translate-eval/mlc-to-onnx.py writes: its name is the id.
+			options.local = path.resolve(value());
+			options.repo = path.basename(options.local);
+		} else if (arg === "--dtype") {
+			const dtype = value();
+
+			if (!(DTYPES as readonly string[]).includes(dtype)) {
+				throw new Error(`--dtype is one of ${DTYPES.join(", ")}, not ${dtype}`);
+			}
+
+			options.dtype = dtype as Dtype;
 		} else if (arg === "--show-prompt") {
 			options.showPrompt = true;
 		} else if (arg === "--raw") {
@@ -797,6 +823,35 @@ async function runCase(
 	};
 }
 
+/** What `--local` will load, so a run says which weights it scored. */
+function localWeights(dir: string, dtype: Dtype): string {
+	const suffix = dtype === "fp32" ? "" : `_${dtype}`;
+	const onnxDir = path.join(dir, "onnx");
+	const graph = `model${suffix}.onnx`;
+
+	if (!existsSync(path.join(onnxDir, graph))) {
+		throw new Error(`--local ${dir} has no onnx/${graph}`);
+	}
+
+	const files = readdirSync(onnxDir)
+		.filter((file) => file === graph || file.startsWith(`${graph}_data`))
+		.map((file) => `${file} ${(statSync(path.join(onnxDir, file)).size / 1e9).toFixed(2)} GB`);
+	const statePath = path.join(dir, "conversion-state.json");
+	let origin = "local ONNX weights";
+
+	if (existsSync(statePath)) {
+		const state = JSON.parse(readFileSync(statePath, "utf8")) as {
+			done?: Record<string, unknown>;
+		};
+
+		origin = `MLC q4f16_1 weights dequantized into ${
+			Object.keys(state.done ?? {}).length
+		} tensors`;
+	}
+
+	return `${dir}/onnx: ${files.join(", ")} (${origin}; remote models off)`;
+}
+
 async function main(): Promise<void> {
 	const options = parseArgs(process.argv.slice(2));
 
@@ -806,14 +861,23 @@ async function main(): Promise<void> {
 	const {deps, backend} = nodeDeps(catalog.llm.id, {
 		device: options.device,
 		repo: options.repo,
+		dtype: options.dtype,
 		log: (text) => console.log(text),
 	});
 	const engine = new WebLlmEngine(deps, (code) => languageName(code));
 
 	engine.configure(catalog);
 
-	console.log(`model   ${catalog.llm.id} → ${options.repo} (${DTYPE})`);
+	console.log(`model   ${catalog.llm.id} → ${options.repo} (${options.dtype})`);
 	console.log(`cache   ${env.cacheDir}`);
+
+	if (options.local) {
+		env.localModelPath = `${path.dirname(options.local)}${path.sep}`;
+		env.allowLocalModels = true;
+		env.allowRemoteModels = false;
+		console.log(`weights ${localWeights(options.local, options.dtype)}`);
+	}
+
 	console.log(`device  ${options.device} requested`);
 	console.log(`markers ${options.markers}`);
 
