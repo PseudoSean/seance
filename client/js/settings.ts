@@ -1,5 +1,6 @@
 import type {TypedStore} from "./store";
 import {mirrorPushPrefs} from "./push-prefs";
+import {activate} from "./i18n";
 import {normalizeFontSize} from "./helpers/fontSize";
 import {prefersTwelveHourClock} from "./helpers/hourCycle";
 
@@ -42,6 +43,17 @@ const defaultConfig = {
 	},
 	links: {
 		default: true,
+	},
+	// Display language: "auto" (follow the browser) or a locale tag from
+	// client/js/i18n/available.ts (generated). apply() resolves, lazy-loads
+	// the catalog, sets <html lang>/<html dir> and mirrors the tag to the
+	// push worker. Nothing renders before boot's applyAll, and the pre-paint
+	// script in index.html covers the direction before that.
+	locale: {
+		default: "auto",
+		apply(store: TypedStore, value: string) {
+			void activate(value);
+		},
 	},
 	markdown: {
 		default: true,

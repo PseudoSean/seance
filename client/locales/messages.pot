@@ -90,3 +90,24 @@ msgstr ""
 msgctxt "help.website"
 msgid "Website"
 msgstr ""
+
+#: client/index.html
+#: client/js/i18n/index.ts
+#. Loading splash: button that reloads the page when the bundle never arrived.
+msgctxt "loading.reload"
+msgid "Reload page"
+msgstr ""
+
+#: client/index.html
+#: client/js/i18n/index.ts
+#. Loading splash: the message for a browser without JavaScript; the static HTML copy in index.html matches it, so the en boot-time swap is invisible.
+msgctxt "loading.requiresJs"
+msgid "This application requires a modern browser with JavaScript enabled."
+msgstr ""
+
+#: client/index.html
+#: client/js/i18n/index.ts
+#. Loading splash: the bundle is taking unusually long to arrive.
+msgctxt "loading.slow"
+msgid "This is taking longer than it should, there might be connectivity issues."
+msgstr ""

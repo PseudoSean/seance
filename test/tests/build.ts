@@ -35,6 +35,9 @@ describe("public folder", function () {
 
 		expect(html.includes("__APP_NAME__")).to.be.false;
 		expect(html.includes("__THEME_COLOR__")).to.be.false;
+		// Substituted at build from client/locales/tags.json for the pre-paint
+		// script; a leftover token would break the language resolution.
+		expect(html.includes("__AVAILABLE_LOCALES__")).to.be.false;
 		expect(html.includes(`<title>${config.appName}</title>`)).to.be.true;
 		expect(html.includes("The Lounge")).to.be.false;
 		expect(manifest.name).to.equal(config.appName);

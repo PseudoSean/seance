@@ -12,5 +12,8 @@
   "help.about": "About",
   "help.documentation": "Documentation",
   "help.privacy": "Privacy policy",
-  "help.website": "Website"
+  "help.website": "Website",
+  "loading.reload": "Reload page",
+  "loading.requiresJs": "This application requires a modern browser with JavaScript enabled.",
+  "loading.slow": "This is taking longer than it should, there might be connectivity issues."
 }
