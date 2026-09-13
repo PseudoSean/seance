@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 <!-- New entries go after this line -->
 
+## Unreleased
+
+- Scrollback: a history page landing while the list is still moving (a fling, a held finger; WebKit drops the scroll position the compensation writes) no longer leaves the view at the top and loads page after page. The compensation is re-checked for 600 ms and re-applied (stopping the momentum) if it was lost, and auto-loading older messages needs a scroll of the user's own after each page.
+
 ## v4.5.0-rc.3 - 2026-05-12 [Pre-release]
 
 [See the full changelog](https://github.com/thelounge/thelounge/compare/v4.5.0-rc.2...v4.5.0-rc.3)

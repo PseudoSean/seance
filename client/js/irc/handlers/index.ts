@@ -3,8 +3,11 @@
  *
  * To handle a new command, add a file exporting `{COMMAND: handler, ...}`
  * and list it in `modules` below. Numerics not registered here fall through
- * to {@link unhandled}, which shows them raw in the lobby (or in the channel
- * their first parameter names), like the old server's unhandled.ts. 4xx/5xx
+ * to {@link unhandled}, which shows them raw where the user is — stored in
+ * the lobby (or the channel their first parameter names) and re-targeted to
+ * the active tab (`showInActive`): they are almost always the reply to a
+ * command the user just typed (/stats, /map, /time, /raw …), and replies
+ * come to the tab that asked (docs/projects/reply-routing.md). 4xx/5xx
  * numerics without a specific handler become ERROR messages instead.
  */
 
@@ -112,6 +115,7 @@ export const unhandled: Handler = (client, msg) => {
 			command: msg.command,
 			params,
 			text: `${msg.command} ${params.join(" ")}`,
+			showInActive: true,
 		},
 		true
 	);

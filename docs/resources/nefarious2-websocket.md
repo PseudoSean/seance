@@ -57,7 +57,7 @@ Port {
 Server to client (`ircd/s_bsd.c:328-430`):
 
 - The sendq is split on `\r\n`; **each IRC line becomes one WebSocket message, CRLF stripped** (`:354-378`). Matches the IRCv3 spec.
-- Text mode (subprotocol `text.ircv3.net` or auto-detected text): payload is validated as UTF-8 and invalid bytes are replaced with U+FFFD before sending (`:380-386`). Binary mode sends raw bytes.
+- Text mode (subprotocol `text.ircv3.net` or auto-detected text): payload is validated as UTF-8 and invalid bytes are replaced with U+FFFD before sending (`:380-386`). Binary mode sends raw bytes. Before `aef2f29` (merged upstream, in `ircv3.2-upgrade` since 2026-09) the validator also rewrote **valid C0 control bytes** — CTCP's `\x01` and mIRC formatting — so an image older than that renders every echoed `/me` as raw `�ACTION …�`; rebuild the dev image rather than suspecting the client.
 - Server frames are unmasked, FIN set, single fragment (`websocket.c:574-608`). Max line = `FULL_MSG_SIZE` = 8191 tag bytes + 512 (`include/ircd_defs.h:108-112`).
 - **Nothing is sent until the handshake completes** (`s_bsd.c:322-325`); output is queued.
 

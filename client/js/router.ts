@@ -12,9 +12,9 @@ import {store} from "./store";
 
 import AppearanceSettings from "../components/Settings/Appearance.vue";
 import GeneralSettings from "../components/Settings/General.vue";
-import AccountSettings from "../components/Settings/Account.vue";
 import NotificationSettings from "../components/Settings/Notifications.vue";
 import TranslationSettings from "../components/Settings/Translation.vue";
+import AliasSettings from "../components/Settings/Aliases.vue";
 import NetworkSettings from "../components/Settings/Networks.vue";
 import {ClientChan} from "./types";
 import {shouldShowGeneralSettings} from "./helpers/settingsTabs";
@@ -68,12 +68,6 @@ const router = createRouter({
 					component: AppearanceSettings,
 				},
 				{
-					name: "Account",
-					path: "account",
-					component: AccountSettings,
-					props: true,
-				},
-				{
 					name: "Notifications",
 					path: "notifications",
 					component: NotificationSettings,
@@ -82,6 +76,11 @@ const router = createRouter({
 					name: "Translation",
 					path: "translation",
 					component: TranslationSettings,
+				},
+				{
+					name: "Aliases",
+					path: "aliases",
+					component: AliasSettings,
 				},
 			],
 		},

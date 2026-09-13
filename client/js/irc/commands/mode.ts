@@ -67,11 +67,14 @@ const mode: Command = {
 
 		if (params.length === 1) {
 			// A query: show the reply even when it repeats the modes we
-			// already display (handlers/mode.ts hides join-burst repeats).
+			// already display (handlers/mode.ts hides join-burst repeats),
+			// and even for a channel we are not in (normally dropped).
 			const target = client.findChannel(params[0]);
 
 			if (target) {
 				target.modesAsked = true;
+			} else if (client.isupport.chantypes.includes(params[0][0])) {
+				client.markInfoAsked(params[0]);
 			}
 		}
 

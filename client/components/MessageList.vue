@@ -61,7 +61,6 @@
 import {condensedTypes} from "../../shared/irc";
 import {ChanType} from "../../shared/types/chan";
 import {MessageType, SharedMsg} from "../../shared/types/msg";
-import eventbus from "../js/eventbus";
 import clipboard from "../js/clipboard";
 import socket from "../js/socket";
 import Message from "./Message.vue";
@@ -81,7 +80,6 @@ import {
 } from "vue";
 import {useStore} from "../js/store";
 import {ClientChan, ClientMessage, ClientNetwork, ClientLinkPreview} from "../js/types";
-import {KEYBOARD_SETTLE_MS} from "../js/helpers/viewport";
 
 type CondensedMessageContainer = {
 	type: "condensed";
@@ -115,14 +113,85 @@ export default defineComponent({
 
 		const isWaitingForNextTick = ref(false);
 
-		const jumpToBottom = () => {
+		/**
+		 * Auto-loading older history is armed by a real scroll and disarmed
+		 * by each load. A page that lands while the scroller is still moving
+		 * (a fling, a held finger: WebKit drops the programmatic scrollTop the
+		 * compensation writes) leaves the view at the top with the button
+		 * still in view, and the button re-renders with every page, which
+		 * re-fires the observer -- so without this gate one lost compensation
+		 * chain-loads page after page ("hours past where you were"). Now a
+		 * lost compensation costs at most one page, and the next load needs a
+		 * scroll of the user's own.
+		 */
+		let autoLoadArmed = true;
+		/** When the last prepend was compensated, for the re-arm delay. */
+		let lastPrependAt = 0;
+		/** The anchor the last compensation restored, verified afterwards. */
+		let pendingAnchor: {heightOld: number; at: number} | null = null;
+		let verifyTimer: ReturnType<typeof setTimeout> | null = null;
+
+		/** Re-arm on a scroll that is not the tail of the last prepend. */
+		const REARM_AFTER_MS = 400;
+		/** How long a compensation is re-checked against a momentum scroll. */
+		const VERIFY_FOR_MS = 600;
+		const ANCHOR_TOLERANCE = 4;
+
+		/**
+		 * Confirm the compensation stuck. WebKit ignores a scrollTop written
+		 * during momentum scrolling and rubber-banding; when the anchor is
+		 * lost within VERIFY_FOR_MS of the write, stop the momentum (toggling
+		 * overflow is the one thing that does) and write it again.
+		 */
+		const verifyAnchor = () => {
+			const el = chat.value;
+			const anchor = pendingAnchor;
+
+			if (!el || !anchor) {
+				return;
+			}
+
+			if (Date.now() - anchor.at > VERIFY_FOR_MS) {
+				pendingAnchor = null; // the user has moved on; leave them be
+				return;
+			}
+
+			if (verifyTimer !== null) {
+				clearTimeout(verifyTimer);
+			}
+
+			if (Math.abs(el.scrollHeight - el.scrollTop - anchor.heightOld) <= ANCHOR_TOLERANCE) {
+				// Holding, for now: momentum can still take it within the window.
+				verifyTimer = setTimeout(verifyAnchor, 100);
+				return;
+			}
+
+			el.style.overflow = "hidden";
+			void el.offsetHeight; // flush: this is what kills the momentum
+			el.style.overflow = "";
 			skipNextScrollEvent.value = true;
+			el.scrollTop = el.scrollHeight - anchor.heightOld;
+			verifyTimer = setTimeout(verifyAnchor, 100);
+		};
+
+		const jumpToBottom = () => {
+			pendingAnchor = null; // a jump supersedes any anchor being verified
+			skipNextScrollEvent.value = true;
+
 			props.channel.scrolledToBottom = true;
 
 			const el = chat.value;
 
 			if (el) {
+				// A scroll event follows only if something moved; a flag armed
+				// for nothing would swallow the user's next real scroll.
+				const before = el.scrollTop;
+
 				el.scrollTop = el.scrollHeight;
+
+				if (el.scrollTop !== before) {
+					skipNextScrollEvent.value = true;
+				}
 			}
 		};
 
@@ -166,6 +235,11 @@ export default defineComponent({
 					return;
 				}
 
+				if (!autoLoadArmed) {
+					return; // the button stays for a tap; see autoLoadArmed
+				}
+
+				autoLoadArmed = false;
 				onShowMoreClick();
 			});
 		};
@@ -340,6 +414,16 @@ export default defineComponent({
 					skipNextScrollEvent.value = true;
 
 					el.scrollTop = el.scrollHeight - heightOld;
+
+					// Not final until it has survived the scroller's own motion.
+					lastPrependAt = Date.now();
+					pendingAnchor = {heightOld, at: lastPrependAt};
+
+					if (verifyTimer !== null) {
+						clearTimeout(verifyTimer);
+					}
+
+					verifyTimer = setTimeout(verifyAnchor, 50);
 				}
 
 				return;
@@ -384,47 +468,65 @@ export default defineComponent({
 			}
 		};
 
+		// The box height the list was last seen at. A scroll event that
+		// arrives with a different one is the browser moving the list as it
+		// re-lays it out (a rotation, the keyboard, a toolbar) and comes
+		// before the resize observer in the same frame: not the user, so it
+		// must not decide whether the list is still pinned.
+		let seenHeight = 0;
+
 		const handleScroll = () => {
 			// Setting scrollTop also triggers scroll event
 			// We don't want to perform calculations for that
 			if (skipNextScrollEvent.value) {
 				skipNextScrollEvent.value = false;
+
+				// Our own write, or a user scroll coalesced into the same frame:
+				// either way the anchor under verification gets a look.
+				if (pendingAnchor) {
+					verifyAnchor();
+				}
+
 				return;
 			}
 
 			const el = chat.value;
 
-			if (!el) {
+			if (!el || el.clientHeight !== seenHeight) {
 				return;
 			}
 
 			props.channel.scrolledToBottom = el.scrollHeight - el.scrollTop - el.offsetHeight <= 30;
-		};
 
-		const handleResize = () => {
-			// Keep the list at the bottom through a resize, except under a
-			// selection: the keyboard leaving is a resize too.
-			if (!props.channel.scrolledToBottom || hasSelection()) {
-				return;
+			// A scroll of the user's own, not the tail of the last prepend's
+			// gesture: the next auto-load may fire.
+			if (!pendingAnchor && Date.now() - lastPrependAt > REARM_AFTER_MS) {
+				autoLoadArmed = true;
 			}
 
-			jumpToBottom();
-
-			// The keyboard animates, so the first resize is measured midway and
-			// the scroll lands short of the settled bottom. Go again once it is
-			// done (helpers/viewport.ts re-measures on the same schedule).
-			setTimeout(() => {
-				if (!hasSelection()) {
-					jumpToBottom();
-				}
-			}, KEYBOARD_SETTLE_MS);
+			if (pendingAnchor) {
+				verifyAnchor();
+			}
 		};
+
+		// The list's box follows the composer, the typing indicator, the user
+		// list, the window and iOS's stepped keyboard shrink: one observer,
+		// after layout. Not under a selection, which the scroll would lose.
+		const resizeObserver = new ResizeObserver(() => {
+			seenHeight = chat.value?.clientHeight ?? 0;
+
+			if (props.channel.scrolledToBottom && !hasSelection()) {
+				jumpToBottom();
+			}
+		});
 
 		onMounted(() => {
 			chat.value?.addEventListener("scroll", handleScroll, {passive: true});
 			chat.value?.addEventListener("touchmove", dismissKeyboard, {passive: true});
 
-			eventbus.on("resize", handleResize);
+			if (chat.value) {
+				resizeObserver.observe(chat.value);
+			}
 
 			void nextTick(() => {
 				if (historyObserver.value && loadMoreButton.value) {
@@ -441,6 +543,7 @@ export default defineComponent({
 				// Re-add the intersection observer to trigger the check again on channel switch
 				// Otherwise if last channel had the button visible, switching to a new channel won't trigger the history
 				if (historyObserver.value && loadMoreButton.value) {
+					autoLoadArmed = true; // a fresh channel gets its first page unasked
 					historyObserver.value.unobserve(loadMoreButton.value);
 					historyObserver.value.observe(loadMoreButton.value);
 				}
@@ -467,14 +570,6 @@ export default defineComponent({
 			}
 		);
 
-		watch(
-			() => props.channel.pendingMessage,
-			async () => {
-				// Keep the scroll stuck when input gets resized while typing
-				await keepScrollPosition();
-			}
-		);
-
 		// Release the typing indicator's reserved line when a new message is
 		// actually rendered (last rendered item changed — a history prepend
 		// does not count). This runs before the DOM update, so the new line
@@ -490,26 +585,20 @@ export default defineComponent({
 			}
 		);
 
-		watch(
-			() => props.channel.typing.length > 0 || props.channel.typingReserved,
-			async () => {
-				// The typing indicator line above the input appears (and is later
-				// released by a new message): keep the list stuck to the bottom
-				// across that height change, like an input resize.
-				await keepScrollPosition();
-			}
-		);
-
 		onBeforeUpdate(() => {
 			unreadMarkerShown = false;
 		});
 
 		onBeforeUnmount(() => {
-			eventbus.off("resize", handleResize);
+			resizeObserver.disconnect();
 			chat.value?.removeEventListener("scroll", handleScroll);
 		});
 
 		onUnmounted(() => {
+			if (verifyTimer !== null) {
+				clearTimeout(verifyTimer);
+			}
+
 			chat.value?.removeEventListener("touchmove", dismissKeyboard);
 
 			if (historyObserver.value) {

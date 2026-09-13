@@ -43,6 +43,7 @@ file from a newer version is refused with a message.
 | `thelounge.muted`              | muted channels                             |
 | `thelounge.media.trusted`      | trusted media hosts / channels / accounts  |
 | `thelounge.reactions.recent`   | the reaction picker's recents              |
+| `thelounge.aliases`            | command aliases (Settings → Aliases)       |
 | `thelounge.ignore.<uuid>`      | ignore list per network                    |
 
 Left out on purpose: `thelounge.sts` (a cache), `thelounge.push*` (this

@@ -246,7 +246,8 @@ export default async function run(page) {
 		);
 		await page.sleep(700);
 		await page.screenshot(`settings-${name}`);
-		await page.click(`.channel-list-item[data-name="${CHANNEL}"]`);
+		// Settings is a modal; Done returns to the channel it covered.
+		await page.click(".settings-modal-done");
 		await page.waitFor(`document.querySelector("#input")`, {label: "back in the channel"});
 		await page.sleep(300);
 	};

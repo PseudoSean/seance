@@ -119,9 +119,13 @@ export default async function run(page) {
 	page.check("memory untouched by settings", (await stored())?.target === "#seance");
 	await page.screenshot("2-settings-reload");
 
-	// 3. The sidebar it filled is live: the channel opens from it.
+	// 3. The sidebar it filled is live once the modal is out of the way:
+	// settings is a modal over the whole app now, so leave it through its
+	// Done button first, then open the channel from the sidebar.
+	await page.click(".settings-modal-done");
+	await page.waitFor(`!document.querySelector(".settings-modal")`, {label: "settings closed"});
 	await page.click(item("#seance"));
-	await page.waitFor(`${ACTIVE} === "#seance"`, {label: "opened #seance from settings"});
+	await page.waitFor(`${ACTIVE} === "#seance"`, {label: "opened #seance from the sidebar"});
 
 	// 4. Same on help.
 	await coldLoad("/#/help", "#help");

@@ -102,6 +102,10 @@ type OpenDelimiter = {char: string; len: number; flag: ScanFlag; pos: number};
 
 const isWordChar = (c: string | undefined) => c !== undefined && /[\p{L}\p{N}_]/u.test(c);
 const isSpace = (c: string | undefined) => c === undefined || /\s/.test(c);
+// A character that is neither a word, a space, an emphasis marker nor a
+// backslash: what ASCII art is drawn with
+const isSymbol = (c: string | undefined) =>
+	c !== undefined && !isWordChar(c) && !isSpace(c) && !(c in EMPHASIS) && c !== "\\";
 const isLineStart = (text: string, i: number) => i === 0 || text[i - 1] === "\n";
 
 const sameStyle = (a: ParsedStyle, b: ParsedStyle) => STYLE_KEYS.every((key) => a[key] === b[key]);
@@ -264,7 +268,14 @@ function scan(text: string): Scan {
 		// Not `MARKER_CHARS.includes(escaped ?? "")`: every string contains the
 		// empty string, so a backslash ending the text would swallow itself.
 		if (c === "\\" && escaped !== undefined && MARKER_CHARS.includes(escaped)) {
-			removals.push({start: i, end: i + 1});
+			// The marker is literal either way. The backslash stays when it is
+			// art — between two symbols, "¯\_(ツ)_/¯", which is what the rest
+			// of the channel sees; next to a word ("snake\_case") or another
+			// marker ("\*\*") it is an escape and goes, and "\\" always does.
+			if (escaped === "\\" || !isSymbol(text[i - 1]) || !isSymbol(text[i + 2])) {
+				removals.push({start: i, end: i + 1});
+			}
+
 			i += 2;
 			continue;
 		}

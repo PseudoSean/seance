@@ -147,8 +147,11 @@ export const UPLOAD_PRESETS: Record<string, BrandingUploads> = {
 	 * `{"results":[{"success":false,"error":"…"}]}`, and `filePath` is
 	 * relative to the endpoint.
 	 *
-	 * **Sends no CORS header as of 2026-08-28, so it does not work from a
-	 * browser yet.** Kept because the fix is one header on boxlabs' side.
+	 * Works from a browser as of **2026-09-10**: the operator added
+	 * `Access-Control-Allow-Origin: *` to the `POST` response and now answers
+	 * `OPTIONS` with `204`, so the progress strip shows a real percentage
+	 * (no `progress: false` needed, unlike litterbox). End-to-end verified
+	 * the same day: `filePath` comes back relative, as poxchat's source says.
 	 */
 	"boxlabs-paste": {
 		endpoint: "https://paste.boxlabs.uk/img/",
@@ -157,9 +160,27 @@ export const UPLOAD_PRESETS: Record<string, BrandingUploads> = {
 		optionalFields: ["strip_exif"],
 		responseUrlKey: "results.0.filePath",
 		responseErrorKey: "results.0.error",
-		// The endpoint is `/img/`: it takes images, not video.
-		accept: ["image/png", "image/jpeg", "image/gif", "image/webp"],
-		maxSizeBytes: 10 * 1024 * 1024,
+		// Despite the `/img/` path it takes video too — the page says
+		// "Images (JPG, PNG, GIF, WEBP) up to 10MB / Videos (MP4, MOV, WEBM,
+		// AVI, MKV) up to 25MB", and the server gates on the **extension**,
+		// not the declared type (verified 2026-09-10: `.m4v`, `.avif`, audio
+		// and a name with no extension are all refused as "Unsupported
+		// type"). Videos are stored as `vid_*`, images as `img_*`.
+		accept: [
+			"image/png",
+			"image/jpeg",
+			"image/gif",
+			"image/webp",
+			"video/mp4",
+			"video/quicktime",
+			"video/webm",
+			"video/x-msvideo",
+			"video/x-matroska",
+		],
+		// The contract has one limit, so it is the video one: the service
+		// caps images at 10 MB itself and says so in the error, which beats
+		// refusing a 12 MB video here that it would have taken.
+		maxSizeBytes: 25 * 1024 * 1024,
 	},
 
 	/**

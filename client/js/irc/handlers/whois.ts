@@ -1,8 +1,8 @@
 /**
  * WHOIS / WHOWAS replies, accumulated per nick until 318 / 369 and then
- * shown as one `whois` message in the user's query window (opened if
- * needed), as attic/server/plugins/irc-events/whois.ts did on top of
- * irc-framework's `whois` event. Field names match irc-framework's so
+ * shown as one `whois` message where the user is (lobby + `showInActive`,
+ * docs/projects/reply-routing.md) — never opening a query window. Field
+ * names match irc-framework's so
  * `client/components/MessageTypes/whois.vue` renders unchanged.
  */
 
@@ -131,11 +131,12 @@ function finish(client: IrcClient, msg: IrcMessage, whowas: boolean): void {
 		data.logonTime = parseInt(data.logon, 10) * 1000;
 	}
 
-	const chan =
-		client.findChannel(data.nick) ??
-		client.announceChannel(data.nick, ChanType.QUERY, {shouldOpen: true});
-
-	client.pushMessage(chan, {type: MessageType.WHOIS, time: client.timeOf(msg), whois: data});
+	client.pushMessage(client.lobby, {
+		type: MessageType.WHOIS,
+		time: client.timeOf(msg),
+		whois: data,
+		showInActive: true,
+	});
 }
 
 // RPL_WHOISUSER / RPL_WHOWASUSER: <me> <nick> <user> <host> * :<real name>

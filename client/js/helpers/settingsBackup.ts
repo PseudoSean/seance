@@ -4,7 +4,8 @@
  *
  * The file is the localStorage entries that hold preferences — the settings
  * object, the saved networks, sort orders, mutes, ignore lists, trusted media
- * hosts, recent reactions — wrapped in a small envelope and gzipped with the
+ * hosts, recent reactions, command aliases — wrapped in a small envelope and
+ * gzipped with the
  * browser's own `CompressionStream` (no dependency; a plain-JSON file is
  * accepted too, the loader sniffs the gzip magic). Extension:
  * `.seance-settings`.
@@ -36,6 +37,7 @@ export const BACKUP_KEYS: readonly string[] = [
 	"thelounge.muted",
 	"thelounge.media.trusted",
 	"thelounge.reactions.recent",
+	"thelounge.aliases",
 ];
 
 /** Key prefixes the backup carries: one entry per network. */
