@@ -8,7 +8,7 @@ import {parsePo} from "../../tools/i18n/po";
 import {addToPot} from "../../tools/i18n/add";
 import {ALLOWED_UNREFERENCED, checkPot} from "../../tools/i18n/check";
 import {POT_PATH} from "../../tools/i18n/paths";
-import {compileLocales, CompileResult, pseudo} from "../../tools/i18n/compile";
+import {compileLocales, Catalog, CompileResult, pseudo} from "../../tools/i18n/compile";
 import {mergePo} from "../../tools/i18n/merge";
 
 const FIXTURES = resolve("tools/i18n/fixtures");
@@ -151,6 +151,59 @@ describe("i18n toolchain", () => {
 			expect(out).to.contain("{count}");
 			// Brackets mirror, letters turn into accented lookalikes.
 			expect(pseudo("(a)")).to.equal("\u202B)à()à(\u202C");
+		});
+	});
+
+	describe("the committed catalogs", () => {
+		// The REAL shipped files, not fixtures: qqx is regenerated from en on
+		// every compile, so these two pins fail the moment the generator and
+		// the compile rulings drift apart (committed en.json is the source of
+		// truth for both).
+		const en = JSON.parse(readFileSync(resolve("client/locales/en.json"), "utf8")) as Catalog;
+		const qqx = JSON.parse(readFileSync(resolve("client/locales/qqx.json"), "utf8")) as Catalog;
+
+		/** An en value with nothing in it: the intentional-empty copy the
+		 * compile ruling keeps out of qqx (en serves the key at runtime). */
+		const isEmptyEn = (value: string | Record<string, string>): boolean =>
+			value === "" || Object.keys(value).length === 0;
+
+		it("covers every en key whose en value is non-empty, and nothing else", () => {
+			const expected = Object.keys(en).filter((key) => !isEmptyEn(en[key]));
+			expect(expected.length, "en keys the runtime can serve").to.be.greaterThan(0);
+			expect(
+				expected.filter((key) => !(key in qqx)),
+				"non-empty en keys missing from qqx"
+			).to.deep.equal([]);
+			expect(
+				Object.keys(qqx).filter((key) => !(key in en) || isEmptyEn(en[key])),
+				"keys qqx carries without a translatable en value"
+			).to.deep.equal([]);
+			expect(Object.keys(qqx).length).to.equal(expected.length);
+		});
+
+		it("carries every plural category the en entry has, with the same doubled text", () => {
+			const pluralKeys = Object.keys(en).filter(
+				(key) => typeof en[key] !== "string" && !isEmptyEn(en[key])
+			);
+			expect(pluralKeys.length, "en plural entries").to.be.greaterThan(0);
+
+			for (const key of pluralKeys) {
+				const enCats = Object.keys(en[key] as Record<string, string>);
+				const forms = qqx[key];
+
+				expect(forms, `${key} is plural under qqx too`).to.be.an("object");
+				// Same categories, none missing, none invented.
+				expect(
+					Object.keys(forms as Record<string, string>).sort(),
+					`${key} categories`
+				).to.deep.equal([...enCats].sort());
+				// The rig's shape: one text in every category, RLE-wrapped,
+				// so every plural form renders right-to-left.
+				const texts = new Set(Object.values(forms as Record<string, string>));
+				expect(texts.size, `${key} carries one text across its categories`).to.equal(1);
+				const text = (forms as Record<string, string>)[enCats[0]];
+				expect(text.startsWith("\u202B"), `${key} is RLE-wrapped`).to.equal(true);
+			}
 		});
 	});
 
