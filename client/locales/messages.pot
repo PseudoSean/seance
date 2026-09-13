@@ -3396,6 +3396,60 @@ msgctxt "send.tagsTooLong"
 msgid "Not sent: the tags do not fit on one line"
 msgstr ""
 
+#: client/components/Settings/Aliases.vue
+#. Button under the alias table: appends a new, empty alias row to edit.
+msgctxt "settings.aliases.add"
+msgid "Add alias"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Shown in place of the alias table when no aliases are defined.
+msgctxt "settings.aliases.empty"
+msgid "No aliases yet."
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Column heading of the alias editor table: the name of the slash command being defined. The header row is aria-hidden; each input's own aria-label carries this meaning to screen readers.
+msgctxt "settings.aliases.headName"
+msgid "Alias"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
+msgctxt "settings.aliases.headRuns"
+msgid "Runs"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. aria-label of the whole aliases pane (a role=group in Settings); heard by screen readers when they enter the pane.
+msgctxt "settings.aliases.paneAria"
+msgid "Command aliases"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Heading of the command-aliases pane in Settings, where the user defines their own slash commands.
+msgctxt "settings.aliases.titleHeading"
+msgid "Command aliases"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. aria-label of the try-it input: type an alias invocation to preview its expansion.
+msgctxt "settings.aliases.tryAria"
+msgid "Try an alias"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Heading of the live preview: type an alias invocation and see the commands it expands to.
+msgctxt "settings.aliases.tryHeading"
+msgid "Try it"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Heading of the variables reference: the dollar placeholders an alias body can use.
+msgctxt "settings.aliases.variablesHeading"
+msgid "Variables"
+msgstr ""
+
 #: client/components/Settings/Appearance.vue
 #. Checkbox in Settings > Appearance; when ticked, typing in the message input suggests completions for names, emoji and commands.
 msgctxt "settings.appearance.autocomplete"

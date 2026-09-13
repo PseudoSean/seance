@@ -1,6 +1,6 @@
 <template>
-	<div class="settings-aliases" role="group" aria-label="Command aliases">
-		<h2>Command aliases</h2>
+	<div class="settings-aliases" role="group" :aria-label="paneAria">
+		<h2>{{ t("settings.aliases.titleHeading") }}</h2>
 		<p class="alias-intro">
 			An alias is a slash command of your own. Typing
 			<code>/{{ rows[0]?.name || "wave" }}</code> runs what you define here — one command per
@@ -10,8 +10,8 @@
 
 		<div v-if="rows.length" class="alias-table">
 			<div class="alias-head" aria-hidden="true">
-				<span class="alias-head-name">Alias</span>
-				<span class="alias-head-body">Runs</span>
+				<span class="alias-head-name">{{ t("settings.aliases.headName") }}</span>
+				<span class="alias-head-body">{{ t("settings.aliases.headRuns") }}</span>
 			</div>
 			<div
 				v-for="(row, index) in rows"
@@ -56,14 +56,14 @@
 				</div>
 			</div>
 		</div>
-		<p v-else class="alias-empty">No aliases yet.</p>
+		<p v-else class="alias-empty">{{ t("settings.aliases.empty") }}</p>
 
 		<div class="alias-actions">
-			<button class="btn" type="button" @click="add">Add alias</button>
+			<button class="btn" type="button" @click="add">{{ t("settings.aliases.add") }}</button>
 			<span class="alias-status" role="status">{{ statusText }}</span>
 		</div>
 
-		<h2>Variables</h2>
+		<h2>{{ t("settings.aliases.variablesHeading") }}</h2>
 		<dl class="alias-vars">
 			<dt><code>$1</code> … <code>$9</code></dt>
 			<dd>one argument (empty when not given)</dd>
@@ -84,11 +84,11 @@
 			looping.
 		</p>
 
-		<h2>Try it</h2>
+		<h2>{{ t("settings.aliases.tryHeading") }}</h2>
 		<input
 			v-model="tryText"
 			dir="auto"
-			aria-label="Try an alias"
+			:aria-label="tryAria"
 			class="input alias-try"
 			type="text"
 			:placeholder="tryPlaceholder"
@@ -254,6 +254,7 @@
 
 <script lang="ts">
 import {computed, defineComponent, reactive, ref, watch} from "vue";
+import {useI18n} from "../../js/i18n";
 import {
 	expandAlias,
 	isValidAliasName,
@@ -273,6 +274,7 @@ interface AliasRow extends Alias {
 export default defineComponent({
 	name: "AliasSettings",
 	setup() {
+		const {t} = useI18n();
 		let nextId = 1;
 		const rows = reactive<AliasRow[]>(loadAliases().map((alias) => ({...alias, id: nextId++})));
 
@@ -368,11 +370,15 @@ export default defineComponent({
 			validRows.value.length > 0 ? `/${validRows.value[0].name} some arguments` : "/wave bob"
 		);
 
+		const paneAria = computed(() => t("settings.aliases.paneAria"));
+		const tryAria = computed(() => t("settings.aliases.tryAria"));
+
 		const preview = computed(() =>
 			expandAlias(tryText.value, {chan: "#channel", me: "yournick"}, validRows.value)
 		);
 
 		return {
+			t,
 			rows,
 			rowError,
 			statusText,
@@ -381,6 +387,8 @@ export default defineComponent({
 			bodyRows,
 			tryText,
 			tryPlaceholder,
+			paneAria,
+			tryAria,
 			preview,
 			maxNameLength: MAX_NAME_LENGTH,
 		};
