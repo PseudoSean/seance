@@ -182,6 +182,7 @@ export default defineComponent({
 		const editLabel = computed(() => t("lobby.edit"));
 
 		return {
+			t,
 			notifyState,
 			channel,
 			editNetwork,

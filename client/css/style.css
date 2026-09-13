@@ -2761,6 +2761,11 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	width: 25%;
 	flex-shrink: 0;
 	margin-top: 11px;
+
+	/* A label that cannot shrink must still be able to break a word: a
+	 * single long term (qqx doubles every string) otherwise bleeds across
+	 * the row and over the input. */
+	overflow-wrap: anywhere;
 }
 
 #connect .tls {
