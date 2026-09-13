@@ -1,7 +1,8 @@
 // The shipped route tables, one per GPU model, placed by measurement: the
 // share of an English line's content words that came back after a round
 // trip through each engine (tools/translate-eval/results/2026-09-12-languages.md,
-// measured on Qwen3-1.7B). Small samples, so a difference under ~10 points
+// with Qwen3-1.7B re-scored on the web build's own 4-bit weights in
+// 2026-09-13-web-weights.md). Small samples, so a difference under ~10 points
 // is a tie. Each language is placed in both directions, since the
 // measurement is a round trip.
 //
@@ -45,7 +46,6 @@ export const NLLB_FIRST: readonly string[] = [
 	"sr",
 	"hr",
 	"sl",
-	"bg",
 	"el",
 	"he",
 	"fa",
@@ -55,7 +55,6 @@ export const NLLB_FIRST: readonly string[] = [
 	"lv",
 	"lt",
 	"eu",
-	"ga",
 	"cy",
 	"is",
 	"sw",
@@ -63,23 +62,32 @@ export const NLLB_FIRST: readonly string[] = [
 	"tl",
 	"ur",
 	"fi",
-	"ca",
-	"nb",
-	"id",
-	// Not "ar", though NLLB measured 12 points ahead of the LLM: the LLM
-	// reads the channel's context (recent lines, names, the reply target),
-	// which the seq2seq models ignore, and their edge on short benchmark-like
-	// lines overstates them in chat. Arabic stays LLM-first, NLLB next.
+	"hu",
+	"hi",
+	// Not "ar", though NLLB measured ahead of the LLM (29 points on the web
+	// weights): the LLM reads the channel's context (recent lines, names, the
+	// reply target), which the seq2seq models ignore, and their edge on short
+	// benchmark-like lines overstates them in chat. Arabic stays LLM-first.
 ];
 
 /** The LLM and NLLB within the tie band: one class. */
-export const NLLB_TIED: readonly string[] = ["sk", "ms", "gl", "hi", "hu", "th", "cs", "pl"];
+export const NLLB_TIED: readonly string[] = ["sk", "ms", "gl", "th", "cs", "nb", "bg", "id"];
 
 /** OPUS-MT pair languages whose pairs tie with or beat the LLM: one class with it. */
-export const OPUS_TIED: readonly string[] = ["de", "nl", "ru"];
+export const OPUS_TIED: readonly string[] = ["de", "nl", "ru", "fr"];
 
 /** Under 55% of a line's content words back from the best engine (see `RoutePlacement`). */
-export const LIMITED_LANGUAGES: readonly string[] = ["is", "lv", "et", "hi", "lt", "bn", "hu"];
+export const LIMITED_LANGUAGES: readonly string[] = [
+	"is",
+	"lv",
+	"et",
+	"hi",
+	"lt",
+	"bn",
+	"hu",
+	"sk",
+	"ko",
+];
 
 export const QWEN3_1_7B: RoutePlacement = {
 	nllbFirst: NLLB_FIRST,
@@ -94,7 +102,6 @@ export const QWEN3_4B_NLLB_FIRST: readonly string[] = [
 	"sr",
 	"hr",
 	"sl",
-	"bg",
 	"el",
 	"he",
 	"fa",
@@ -104,7 +111,6 @@ export const QWEN3_4B_NLLB_FIRST: readonly string[] = [
 	"lv",
 	"lt",
 	"eu",
-	"ga",
 	"cy",
 	"is",
 	"sw",
@@ -112,9 +118,8 @@ export const QWEN3_4B_NLLB_FIRST: readonly string[] = [
 	"tl",
 	"ur",
 	"fi",
-	"ca",
-	"nb",
-	"id",
+	"hu",
+	"hi",
 	// Not "ar", for the same reason as 1.7B's list.
 ];
 
@@ -122,14 +127,14 @@ export const QWEN3_4B_NLLB_TIED: readonly string[] = [
 	"sk",
 	"ms",
 	"gl",
-	"hi",
-	"hu",
 	"th",
 	"cs",
-	"pl",
+	"nb",
+	"bg",
+	"id",
 ];
 
-export const QWEN3_4B_OPUS_TIED: readonly string[] = ["de", "nl", "ru"];
+export const QWEN3_4B_OPUS_TIED: readonly string[] = ["de", "nl", "ru", "fr"];
 
 export const QWEN3_4B_LIMITED_LANGUAGES: readonly string[] = [
 	"is",
@@ -139,6 +144,8 @@ export const QWEN3_4B_LIMITED_LANGUAGES: readonly string[] = [
 	"lt",
 	"bn",
 	"hu",
+	"sk",
+	"ko",
 ];
 
 export const QWEN3_4B: RoutePlacement = {

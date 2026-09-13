@@ -485,7 +485,8 @@ Emphasis marks on the LLM route, measured (2026-09-12):
 - **NLLB is sent sentence by sentence**, OPUS-MT whole
   (`splitSentences`): NLLB drops the later sentences of a line.
 - **The default table is placed from a round-trip measurement**
-  (`tools/translate-eval/results/2026-09-12-languages.md`) rather than
+  (`tools/translate-eval/results/2026-09-12-languages.md`, Qwen re-scored on
+  the web build's own weights in `2026-09-13-web-weights.md`) rather than
   plan 4's chrF evaluation, and `LIMITED_LANGUAGES` marks the languages no
   engine handles well.
 - **An answer stuck repeating itself is a failure** (`REPETITION`),

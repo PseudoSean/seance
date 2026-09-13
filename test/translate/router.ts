@@ -211,7 +211,8 @@ describe("translate/router", () => {
 				);
 			}
 
-			for (const code of ["tl", "el", "fi", "ca", "nb", "id", "sw"]) {
+			// Placed from the web build's own weights (2026-09-13-web-weights.md).
+			for (const code of ["tl", "el", "fi", "hu", "hi", "sw"]) {
 				expect(candidatesFor(DEFAULT_ROUTES, code, "en"), `${code}→en`).to.deep.equal([
 					["nllb"],
 					["llm"],
@@ -229,7 +230,7 @@ describe("translate/router", () => {
 		});
 
 		it("puts the LLM and NLLB in one class where they tied", () => {
-			for (const code of ["sk", "ms", "gl", "hi", "hu", "th", "cs", "pl"]) {
+			for (const code of ["sk", "ms", "gl", "th", "cs", "nb", "bg", "id"]) {
 				expect(candidatesFor(DEFAULT_ROUTES, code, "en"), `${code}→en`).to.deep.equal([
 					["llm", "nllb"],
 				]);
@@ -248,9 +249,14 @@ describe("translate/router", () => {
 				["llm", "opus:en-ru"],
 				["nllb"],
 			]);
+			// French tied with OPUS-MT on the web weights (Qwen +3).
 			expect(candidatesFor(DEFAULT_ROUTES, "en", "fr")).to.deep.equal([
+				["llm", "opus:en-fr"],
+				["nllb"],
+			]);
+			expect(candidatesFor(DEFAULT_ROUTES, "en", "es")).to.deep.equal([
 				["llm"],
-				["opus:en-fr"],
+				["opus:en-es"],
 				["nllb"],
 			]);
 		});
@@ -259,6 +265,14 @@ describe("translate/router", () => {
 			expect(candidatesFor(DEFAULT_ROUTES, "ja", "fr")).to.deep.equal([["llm"], ["nllb"]]);
 			expect(candidatesFor(DEFAULT_ROUTES, "en", "pt")).to.deep.equal([["llm"], ["nllb"]]);
 			expect(candidatesFor(DEFAULT_ROUTES, "de", "fr")).to.deep.equal([["llm"], ["nllb"]]);
+
+			// Qwen ahead of NLLB by more than the tie band on the web weights.
+			for (const code of ["pl", "ca", "ga"]) {
+				expect(candidatesFor(DEFAULT_ROUTES, "en", code), `en→${code}`).to.deep.equal([
+					["llm"],
+					["nllb"],
+				]);
+			}
 		});
 
 		it("Filipino with Qwen downloaded and NLLB not goes to NLLB", () => {
@@ -289,8 +303,10 @@ describe("translate/router", () => {
 				"hi",
 				"hu",
 				"is",
+				"ko",
 				"lt",
 				"lv",
+				"sk",
 			]);
 			expect(isLimitedLanguage("hu")).to.equal(true);
 			expect(isLimitedLanguage("fi")).to.equal(false);

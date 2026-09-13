@@ -131,16 +131,19 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   English line's content words that come back after a round trip through
   each engine (Qwen on 3-9 chat shapes, NLLB and OPUS-MT on a question, a
   casual line and a two-sentence line; `tmp/cpu-roundtrip.ts` for the CPU
-  models). Differences under ~10 points are ties. NLLB first with the LLM as
-  the fallback class for sr hr sl bg el he fa bn ta et lv lt eu ga cy is sw
-  af tl ur fi ca nb id; the LLM and NLLB in one class for sk ms gl hi hu
-  th cs pl; the LLM and OPUS-MT in one class for de nl ru, the LLM then
-  OPUS-MT for fr es it; the LLM then NLLB everywhere else. Arabic measured
-  NLLB 12 points ahead and is placed LLM-first anyway: the LLM reads the
+  models), with Qwen re-scored on the web build's own 4-bit weights
+  (`2026-09-13-web-weights.md`: the ONNX export's float16 output head had
+  flattered it on the long tail). Differences under ~10 points are ties.
+  NLLB first with the LLM as the fallback class for sr hr sl el he fa bn ta
+  et lv lt eu cy is sw af tl ur fi hu hi; the LLM and NLLB in one class for
+  sk ms gl th cs nb bg id; the LLM and OPUS-MT in one class for de nl ru fr,
+  the LLM then OPUS-MT for es it; the LLM then NLLB everywhere else (pl, ca
+  and ga measured the LLM ahead). Arabic measured NLLB well ahead (29 points
+  on the web weights) and is placed LLM-first anyway: the LLM reads the
   channel's context and the seq2seq models do not, and a short-line round
   trip flatters benchmark-trained models in chat. Each placement
   applies to the language as source and as target. `LIMITED_LANGUAGES`
-  (is lv et hi lt bn hu) are the languages whose best engine brought back
+  (is lv et hi lt bn hu sk ko) are the languages whose best engine brought back
   under 55%: the channel panel's pickers and Settings' reading target say
   "Translations into and out of this language are often wrong." when one is
   chosen — the selected GPU model's list.
