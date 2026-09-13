@@ -278,9 +278,11 @@ function stringOverride(key: string, config: BrandingConfig): string | undefined
 }
 
 /**
- * One override-aware resolver, shared by everything the reader reads: the
- * Vue side's t()/tCount() (useI18n), the splash loop, and brandingString().
- * The deploy's `strings` overrides are its voice (in the deploy's language)
+ * One override-aware resolver, shared by everything the reader reads on the
+ * Vue side: the page's t()/tCount() (useI18n) and the splash loop.
+ * (brandingString() keeps its own equivalent chain — string override → core
+ * resolver.) The deploy's `strings` overrides are its voice (in the deploy's
+ * language)
  * and win in every locale, and `{var}` placeholders interpolate in the
  * override too — a plural key's override is a flat template, so `{count}`/
  * `{n}` interpolate into it. Without an override the active locale's
