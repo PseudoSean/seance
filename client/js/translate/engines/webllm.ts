@@ -28,7 +28,14 @@ import {
 	TranslateRequest,
 } from "../engine";
 import {ModelCatalog} from "../models";
-import {ChatMessage, END_SENTINEL, EXAMPLE_ANSWERS, cleanOutput, stripSentinel} from "../prompt";
+import {
+	ChatMessage,
+	END_SENTINEL,
+	EXAMPLE_ANSWERS,
+	cleanOutput,
+	stripSentinel,
+	EXAMPLES,
+} from "../prompt";
 import {PromptProfile, promptProfileFor} from "../prompts";
 import {QWEN3_1_7B_PROMPT} from "../prompts/qwen3-1.7b";
 
@@ -163,6 +170,29 @@ function isExampleAnswer(carried: string): boolean {
 	);
 }
 
+/** Words a source may have and still be a greeting the canned answer translates. */
+const GREETING_WORDS = 6;
+
+/**
+ * The canned answer that is a translation after all: the target language's
+ * own greeting for a source that is a short question -- "hey, how's it
+ * going?" into Spanish is "hola, ¿cómo estás?". Measured on the web build's
+ * 4B weights, where the guard failed exactly that line. A canned answer in
+ * another language, or for a longer or non-question line, is still a
+ * greeting instead of a translation.
+ */
+function greetingFits(carried: string, source: string, to: string | undefined): boolean {
+	const own = to ? EXAMPLES[to] : undefined;
+	const line = source.trim();
+
+	return (
+		own !== undefined &&
+		normalise(own) === normalise(carried) &&
+		/[?\uff1f]$/.test(line) &&
+		line.split(/\s+/).length <= GREETING_WORDS
+	);
+}
+
 /** What the guards took out of a single-line reply, and what they left. */
 interface Scan {
 	/** The lines that are the translation, cleaned, in order. */
@@ -183,7 +213,7 @@ interface Scan {
  * a canned answer (the source *is* "hallo, wie geht es dir?") is an echo,
  * not a refusal.
  */
-function scanLines(text: string, source: string): Scan {
+function scanLines(text: string, source: string, to?: string): Scan {
 	const scan: Scan = {kept: [], example: false};
 
 	for (const raw of text.split("\n")) {
@@ -199,7 +229,7 @@ function scanLines(text: string, source: string): Scan {
 			continue;
 		}
 
-		if (isExampleAnswer(carried)) {
+		if (isExampleAnswer(carried) && !greetingFits(carried, source, to)) {
 			scan.example = true;
 			continue;
 		}
@@ -230,10 +260,10 @@ function lastCarried(text: string): string {
  * are the translation so far, joined, and the line still being generated
  * after them. Past a blank line nothing more is shown.
  */
-function progressText(shown: string, source: string): string {
+function progressText(shown: string, source: string, to?: string): string {
 	const parts = shown.split("\n");
 	const complete = parts.slice(0, -1);
-	const scan = scanLines(complete.join("\n"), source);
+	const scan = scanLines(complete.join("\n"), source, to);
 	const done = complete.some((line) => line.trim() === "");
 
 	return (done ? scan.kept : [...scan.kept, parts[parts.length - 1]])
@@ -379,8 +409,8 @@ export class WebLlmEngine implements Engine {
 	 * only the source read back keeps the old fallback: the last line that
 	 * carries anything, which beats showing nothing.
 	 */
-	private oneLine(text: string, source: string): string {
-		const scan = scanLines(text, source);
+	private oneLine(text: string, source: string, to?: string): string {
+		const scan = scanLines(text, source, to);
 
 		if (scan.kept.length > 0) {
 			return scan.kept.join(" ");
@@ -466,7 +496,7 @@ export class WebLlmEngine implements Engine {
 				// used to be cut at its first complete line, which dropped
 				// every later sentence when the model wrapped a long answer
 				// or restated the line before translating it.
-				yield {id: req.id, text: progressText(shown, req.text), done: false};
+				yield {id: req.id, text: progressText(shown, req.text, req.to), done: false};
 			}
 
 			// A drained (aborted) generation proves nothing about the model:
@@ -485,7 +515,7 @@ export class WebLlmEngine implements Engine {
 
 					yield {
 						id: req.id,
-						text: req.lines ? done : this.oneLine(done, req.text),
+						text: req.lines ? done : this.oneLine(done, req.text, req.to),
 						done: true,
 					};
 				}

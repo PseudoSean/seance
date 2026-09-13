@@ -488,6 +488,41 @@ describe("translate/engines/webllm", () => {
 		expect(seen.every((chunk) => !chunk.text.includes(EXAMPLES.de))).to.equal(true);
 	});
 
+	it("the target's own greeting translates a short question", async () => {
+		// Measured on the web build's 4B weights: the guard failed this line.
+		const d = deps([EXAMPLES.es]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+		const req = request({text: "hey, how's it going?", from: "en", to: "es"});
+		let last = "";
+
+		for await (const chunk of engine.translate(req, new AbortController().signal)) {
+			last = chunk.text;
+		}
+
+		expect(last).to.equal(EXAMPLES.es);
+	});
+
+	it("another language's greeting for a short question still fails", async () => {
+		const d = deps([EXAMPLES.de]);
+		const engine = new WebLlmEngine(d.deps, name);
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+		const req = request({text: "hey, how's it going?", from: "en", to: "es"});
+		let error: Error | null = null;
+
+		try {
+			for await (const _c of engine.translate(req, new AbortController().signal)) {
+				// consume
+			}
+		} catch (e) {
+			error = e as Error;
+		}
+
+		expect(error?.message).to.equal("the model answered with the example");
+	});
+
 	it("a reply that is nothing but the canned answer fails the request, not the model", async () => {
 		const d = deps([`${EXAMPLES.de.toUpperCase()} `]);
 		const engine = new WebLlmEngine(d.deps, name);

@@ -949,7 +949,6 @@ async function main(): Promise<void> {
 
 	if (options.evalFile) {
 		const cases = JSON.parse(readFileSync(options.evalFile, "utf8")) as EvalCase[];
-		let promptShown = !options.showPrompt;
 
 		for (let i = 0; i < cases.length; i++) {
 			const item = cases[i];
@@ -970,19 +969,27 @@ async function main(): Promise<void> {
 			const local = item.context
 				? {context: fixtureContext(item.context), nicks: item.context.nicks ?? base.nicks}
 				: {context: base.context, nicks: base.nicks};
-			const result = await runCase(
-				engine,
-				backend,
-				catalog.llm.id,
-				item,
-				{...base, ...local},
-				{prompt: !promptShown, raw: options.raw, stream: false},
-				i + 1
-			);
 
-			promptShown = true;
-			console.log(`  out  ${JSON.stringify(result.text)}`);
-			console.log(`  time ${(result.ms / 1000).toFixed(1)}s\n`);
+			// A request the engine fails (a canned answer, say) is that case's
+			// answer -- an empty one, which the scorers count as a failure --
+			// never the end of the run.
+			try {
+				const result = await runCase(
+					engine,
+					backend,
+					catalog.llm.id,
+					item,
+					{...base, ...local},
+					{prompt: i === 0 && options.showPrompt, raw: options.raw, stream: false},
+					i + 1
+				);
+
+				console.log(`  out  ${JSON.stringify(result.text)}`);
+				console.log(`  time ${(result.ms / 1000).toFixed(1)}s\n`);
+			} catch (error) {
+				console.log(`  out  ""`);
+				console.log(`  error ${error instanceof Error ? error.message : String(error)}\n`);
+			}
 		}
 	} else {
 		const result = await runCase(
