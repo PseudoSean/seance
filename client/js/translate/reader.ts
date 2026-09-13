@@ -25,7 +25,7 @@ import {
 	termsFor,
 } from "./channelStore";
 import {buildContext} from "./context";
-import {LanguagePrior, detectLanguage} from "./detect";
+import {LanguagePrior, detectLanguage, detectionSkip} from "./detect";
 import {ReplayBatches, historyQueueOrder, isEligible, plainTextOf} from "./eligibility";
 import {translateService} from "./index";
 import {type QueueItem, type QueueUpdate, TranslateQueue} from "./queue";
@@ -439,13 +439,23 @@ export async function translateMessage(
 
 	const to = settings.read ?? store.state.settings.translateTo;
 
-	if (!force && (detection.lang === null || detection.lang === to)) {
+	// Placed in the reading language, or not placed with the reading language
+	// among the contenders: left alone (detect.ts `detectionSkip`). A line
+	// the detector could not place is otherwise translated with its source
+	// left to the engine.
+	if (!force && detectionSkip(detection, to) !== null) {
 		return;
 	}
 
 	// A chosen source is used as it stands, even when it is the target: the
 	// reader asked for that translation.
 	const source = from ?? (detection.lang && detection.lang !== to ? detection.lang : null);
+	// Not placed: the prompt says nothing about the source and the router gets
+	// no hint (the item's `context.sourceHint` is both). The channel's prior
+	// is no better a guess -- a Spanish line in a German channel would be
+	// announced as "probably German" -- and a weak guess would send the line
+	// to a seq2seq model with the wrong source, where the LLM places it itself.
+	const unsure = detection.lang === null;
 	const protectedText = protect(message.text, {nicks});
 	const item: QueueItem = {
 		id: message.id,
@@ -470,7 +480,7 @@ export async function translateMessage(
 				store.state.settings.translateFormality
 			),
 			variant: settings.variant,
-			sourceHint: source || prior.top(),
+			sourceHint: source ?? (unsure ? null : prior.top()),
 		}),
 		arrivalsAtEnqueue: arrivals.get(channel.id) ?? 0,
 		single: force,

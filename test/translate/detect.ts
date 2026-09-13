@@ -9,6 +9,7 @@ import {
 	type Scores,
 	detectLanguage,
 	detectWith,
+	detectionSkip,
 	iso3ToIso1,
 	setDetector,
 } from "../../client/js/translate/detect";
@@ -342,5 +343,39 @@ describe("translate/detect", () => {
 		// German leads, and there is more than one contender to correct to.
 		expect(result.candidates[0]).to.equal("de");
 		expect(result.candidates.length).to.equal(DETECT_CANDIDATES);
+	});
+
+	describe("detectionSkip", () => {
+		it("skips a line placed in the reading language as the same", () => {
+			expect(
+				detectionSkip({lang: "en", confidence: 0.3, candidates: ["en", "fr"]}, "en")
+			).to.equal("same");
+		});
+
+		it("translates a line placed in another language", () => {
+			expect(
+				detectionSkip({lang: "de", confidence: 0.3, candidates: ["de", "en"]}, "en")
+			).to.equal(null);
+		});
+
+		// franc's measured Spanish/Portuguese/Galician near tie: nothing names
+		// English, so the line is translated with its source left to the engine.
+		it("translates an unplaced line whose candidates leave the reading language out", () => {
+			expect(
+				detectionSkip({lang: null, confidence: 0.007, candidates: ["es", "pt", "gl"]}, "en")
+			).to.equal(null);
+		});
+
+		it("skips an unplaced line that could be the reading language as unsure", () => {
+			expect(
+				detectionSkip({lang: null, confidence: 0.04, candidates: ["fr", "en", "ca"]}, "en")
+			).to.equal("unsure");
+		});
+
+		it("skips an unplaced line with no candidates at all as unsure", () => {
+			expect(detectionSkip({lang: null, confidence: 0, candidates: []}, "en")).to.equal(
+				"unsure"
+			);
+		});
 	});
 });

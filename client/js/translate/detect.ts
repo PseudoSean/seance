@@ -164,8 +164,9 @@ export function detectWith(
 		}
 
 		// Two of the channel's own languages, too close to separate: the
-		// prior settles it, and where it cannot the line is left alone rather
-		// than translated from a coin toss.
+		// prior settles it, and where it cannot no source is named rather
+		// than one chosen by a coin toss (the reader then leaves the source
+		// to the engine, `detectionSkip`).
 		if (prior && ours.some((entry) => entry.lang === prior)) {
 			return {lang: prior, confidence: DETECT_MIN_GAP, candidates};
 		}
@@ -186,6 +187,34 @@ export function detectWith(
 	}
 
 	return {lang: null, confidence, candidates};
+}
+
+/**
+ * Why the reading pipeline leaves a detected line alone, or null when it
+ * translates it: `same` when the detector placed it in the reading language
+ * `to`, `unsure` when it could not place it and `to` is one of its likeliest
+ * candidates (or it named none at all: a line too short to look at). A line
+ * the detector could not place whose candidates leave the reading language
+ * out is translated, its source left to the engine: franc ranks Spanish,
+ * Galician and Portuguese within a hundredth of each other, and measured on
+ * a real channel's history (71 lines, read in English) skipping every
+ * unsure line left 21 untranslated where this rule leaves 2, both English.
+ */
+export type DetectionSkip = "same" | "unsure" | null;
+
+export function detectionSkip(detection: Detection, to: string): DetectionSkip {
+	if (detection.lang === to) {
+		return "same";
+	}
+
+	if (
+		detection.lang === null &&
+		(detection.candidates.length === 0 || detection.candidates.includes(to))
+	) {
+		return "unsure";
+	}
+
+	return null;
 }
 
 /** The dominant language of a channel's recent messages. */
