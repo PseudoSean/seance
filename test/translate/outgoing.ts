@@ -8,6 +8,7 @@ import {
 import {
 	ABORTED,
 	EMPTY_TRANSLATION,
+	ANSWERED,
 	NARRATION,
 	REPETITION,
 	TERM_MAX_WORDS,
@@ -16,6 +17,7 @@ import {
 	WRITE_DETECT_MIN_GAP,
 	WRITE_TIMEOUT_MS,
 	answerError,
+	isAnsweredQuestion,
 	bareRetry,
 	draftGate,
 	tidyAnswer,
@@ -208,7 +210,7 @@ describe("translate/outgoing", () => {
 			expect(
 				isNarration("hey there", "The user wants me to translate this into German.")
 			).to.equal(true);
-			expect(answerError("sounds good to me", narrated)).to.equal(NARRATION);
+			expect(answerError("sounds good to me", narrated, "en")).to.equal(NARRATION);
 		});
 
 		it("leaves translations alone, including ones that mention users or translating", () => {
@@ -295,24 +297,93 @@ describe("translate/outgoing", () => {
 
 	describe("answerError", () => {
 		it("passes a translation and names the failure an echo or a letterless answer is", () => {
-			expect(answerError("das ist wichtig", "this is important")).to.equal(null);
-			expect(answerError("ok, brb", "Ok,  brb.")).to.equal(UNCHANGED);
-			expect(answerError("hello there", "\u27f9 ")).to.equal(EMPTY_TRANSLATION);
+			expect(answerError("das ist wichtig", "this is important", "en")).to.equal(null);
+			expect(answerError("ok, brb", "Ok,  brb.", "en")).to.equal(UNCHANGED);
+			expect(answerError("hello there", "\u27f9 ", "en")).to.equal(EMPTY_TRANSLATION);
 		});
 
 		it("reports a loop after the letterless rule, unless the source repeats itself too", () => {
-			expect(answerError("is it not?", "ekki ekki ekki ekki ekki ekki ekki")).to.equal(
+			expect(answerError("is it not?", "ekki ekki ekki ekki ekki ekki ekki", "en")).to.equal(
 				REPETITION
 			);
 			expect(
-				answerError("no no no no no no no", "nein nein nein nein nein nein nein")
+				answerError("no no no no no no no", "nein nein nein nein nein nein nein", "en")
 			).to.equal(null);
-			expect(answerError("...", "!!! !!! !!! !!! !!! !!!")).to.equal(EMPTY_TRANSLATION);
+			expect(answerError("...", "!!! !!! !!! !!! !!! !!!", "en")).to.equal(EMPTY_TRANSLATION);
 		});
 
 		it("reports a letterless answer as letterless even where it is also the source", () => {
-			expect(answerError("", "")).to.equal(EMPTY_TRANSLATION);
-			expect(answerError("--- ---", "--- ---")).to.equal(EMPTY_TRANSLATION);
+			expect(answerError("", "", "en")).to.equal(EMPTY_TRANSLATION);
+			expect(answerError("--- ---", "--- ---", "en")).to.equal(EMPTY_TRANSLATION);
+		});
+	});
+
+	describe("isAnsweredQuestion", () => {
+		it("catches a question answered instead of translated", () => {
+			expect(
+				isAnsweredQuestion("во сколько начинается встреча?", "It starts at nine.", "en")
+			).to.equal(true);
+			expect(
+				answerError("во сколько начинается встреча?", "It starts at nine.", "en")
+			).to.equal(ANSWERED);
+		});
+
+		it("passes a translated question, which keeps its mark", () => {
+			expect(
+				isAnsweredQuestion(
+					"во сколько начинается встреча?",
+					"What time does the meeting start?",
+					"en"
+				)
+			).to.equal(false);
+			expect(
+				isAnsweredQuestion("kommst du morgen?", "Are you coming tomorrow？", "en")
+			).to.equal(false);
+			expect(isAnsweredQuestion("are you coming?", "هل ستأتي؟", "ar")).to.equal(false);
+		});
+
+		it("reads a Spanish question by its closing mark", () => {
+			expect(
+				isAnsweredQuestion("¿Vienes mañana?", "Are you coming tomorrow?", "en")
+			).to.equal(false);
+			expect(isAnsweredQuestion("¿Vienes mañana?", "Yes, I will be there.", "en")).to.equal(
+				true
+			);
+		});
+
+		it("looks past closing quotes, brackets and emoji after the mark", () => {
+			expect(
+				isAnsweredQuestion('er fragte "kommst du?"', "Sure, I am coming.", "en")
+			).to.equal(true);
+			expect(isAnsweredQuestion("kommst du morgen? 🙂", "Yes, see you then.", "en")).to.equal(
+				true
+			);
+			expect(
+				isAnsweredQuestion("(kommst du morgen?)", "(Yes, see you then.)", "en")
+			).to.equal(true);
+		});
+
+		it("leaves a statement alone", () => {
+			expect(
+				isAnsweredQuestion("das Treffen beginnt um neun.", "It starts at nine.", "en")
+			).to.equal(false);
+		});
+
+		it("does not take a mark inside the line for a question", () => {
+			expect(isAnsweredQuestion("Memorizar? Hm...", "Memorise. Hm...", "en")).to.equal(false);
+		});
+
+		it("does not judge a target whose questions often go without a mark", () => {
+			for (const to of ["ja", "zh", "ko", "th", "el"]) {
+				expect(
+					isAnsweredQuestion("what time does it start?", "何時に始まりますか", to),
+					to
+				).to.equal(false);
+			}
+
+			expect(answerError("what time does it start?", "何時に始まりますか", "ja")).to.equal(
+				null
+			);
 		});
 	});
 

@@ -6,6 +6,7 @@ import {
 	type TranslateRequest,
 } from "../../client/js/translate/engine";
 import {
+	ANSWERED,
 	EMPTY_TRANSLATION,
 	NARRATION,
 	REPETITION,
@@ -559,6 +560,48 @@ describe("translate/queue", () => {
 		]);
 		expect(r.paused).to.deep.equal([]);
 		expect(r.queue.paused("llm")).to.equal(false);
+	});
+
+	it("fails a question answered instead of translated, without pausing the engine", async () => {
+		const r = rig((req) => [
+			(req.lines ? req.lines[0] : req.text).includes("?")
+				? "It starts at nine."
+				: `[en] ${req.text}`,
+		]);
+		clock = r.clock;
+
+		for (let id = 1; id <= PAUSE_AFTER_FAILURES; id++) {
+			r.queue.enqueue(item(id, "wann beginnt das Treffen morgen?", {single: true}));
+		}
+
+		await settle(r.clock);
+
+		expect(r.updates.filter(([, u]) => u.status === "failed")).to.deep.equal([
+			[1, {status: "failed", error: ANSWERED}],
+			[2, {status: "failed", error: ANSWERED}],
+			[3, {status: "failed", error: ANSWERED}],
+		]);
+		expect(r.paused).to.deep.equal([]);
+		expect(r.queue.paused("llm")).to.equal(false);
+
+		// A translated question keeps its mark and is a translation.
+		r.queue.enqueue(item(4, "das Treffen beginnt morgen um neun", {single: true}));
+		await settle(r.clock);
+
+		expect(r.updates.filter(([, u]) => u.status === "done").map(([id]) => id)).to.deep.equal([
+			4,
+		]);
+	});
+
+	it("does not judge a question translated into a target that drops the mark", async () => {
+		const r = rig(() => ["明日の会議は何時に始まりますか"]);
+		clock = r.clock;
+		r.queue.enqueue(item(1, "wann beginnt das Treffen morgen?", {single: true, to: "ja"}));
+		await settle(r.clock);
+
+		expect(r.updates.filter(([, u]) => u.status === "done").map(([id]) => id)).to.deep.equal([
+			1,
+		]);
 	});
 
 	it("fails an answer stuck repeating itself, without pausing the engine", async () => {

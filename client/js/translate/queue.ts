@@ -17,6 +17,7 @@
 import {EngineName, PromptContext, TranslateChunk, TranslateRequest} from "./engine";
 import {
 	ABORTED,
+	ANSWERED,
 	EMPTY_TRANSLATION,
 	NARRATION,
 	type OutgoingDeps,
@@ -24,6 +25,7 @@ import {
 	UNCHANGED,
 	armDeadline,
 	hasNoLetters,
+	isAnsweredQuestion,
 	isNarration,
 	isRepetition,
 	isUnchanged,
@@ -670,6 +672,14 @@ export class TranslateQueue {
 		// engine's fault.
 		if (isNarration(original, text)) {
 			this.deps.onUpdate(q.item.id, {status: "failed", error: NARRATION});
+			return;
+		}
+
+		// A question answered rather than translated ("what time does it
+		// start?" → "It starts at nine.") is not a translation either, and
+		// not the engine's failure.
+		if (isAnsweredQuestion(original, text, q.item.to)) {
+			this.deps.onUpdate(q.item.id, {status: "failed", error: ANSWERED});
 			return;
 		}
 

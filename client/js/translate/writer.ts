@@ -26,6 +26,7 @@ import {type EngineName, type PromptContext} from "./engine";
 import {translateService} from "./index";
 import {
 	ABORTED,
+	ANSWERED,
 	NARRATION,
 	type OutgoingDeps,
 	type OutgoingRequest,
@@ -358,7 +359,7 @@ export async function translateOutgoing(
 			// translation, a wrapper round the whole answer): outgoing.ts tidyAnswer.
 			const text = tidyAnswer(draft, stripCopiedNickPrefix(answer, draft, nicks));
 
-			record(text, answerError(draft, text));
+			record(text, answerError(draft, text, to));
 
 			return text;
 		};
@@ -379,7 +380,7 @@ export async function translateOutgoing(
 			// of "" would be sent as an empty line, which the IRC layer drops
 			// in silence, taking the draft with it), and the draft back again
 			// is not a translation either.
-			let error = answerError(draft, text);
+			let error = answerError(draft, text, to);
 
 			// An echo gets one more try, and a bare one: the same draft with
 			// the source left to the model and no context but the register.
@@ -393,8 +394,14 @@ export async function translateOutgoing(
 			// narrates the request instead ("okay, let's see. The user wants
 			// …") gets the same second try: the same model looking at the same
 			// confounding request, and the bare one translates. So does one
-			// stuck repeating a word ("Höfðu ekki ekki ekki …").
-			if (error === UNCHANGED || error === NARRATION || error === REPETITION) {
+			// stuck repeating a word ("Höfðu ekki ekki ekki …"), and one that
+			// answered the draft's question instead of translating it.
+			if (
+				error === UNCHANGED ||
+				error === NARRATION ||
+				error === ANSWERED ||
+				error === REPETITION
+			) {
 				store.commit("outgoingTranslationPatch", {
 					chanId: channel.id,
 					patch: {from: null},
@@ -406,7 +413,7 @@ export async function translateOutgoing(
 					return "strip";
 				}
 
-				error = answerError(draft, text);
+				error = answerError(draft, text, to);
 			}
 
 			// Either failure offers the same thing, and it is the right one
@@ -579,7 +586,7 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 
 			const text = tidyAnswer(entry.text, stripCopiedNickPrefix(answer, entry.text, nicks));
 
-			record(text, answerError(entry.text, text));
+			record(text, answerError(entry.text, text, target));
 
 			return text;
 		};
@@ -602,9 +609,14 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 			// same bare second try the translation itself gets: no
 			// `sourceHint`, the source left to the model (the routing hint
 			// stays, for a seq2seq route).
-			const first = answerError(entry.text, read);
+			const first = answerError(entry.text, read, target);
 
-			if (first === UNCHANGED || first === NARRATION || first === REPETITION) {
+			if (
+				first === UNCHANGED ||
+				first === NARRATION ||
+				first === ANSWERED ||
+				first === REPETITION
+			) {
 				read = await attempt(bareRetry(request), true);
 
 				if (!current(channel, draft, controller)) {
@@ -616,7 +628,7 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 			// be (the row would otherwise offer `⟹ ` as what the translation
 			// says): the check's own failed state ("couldn't check") is what a
 			// thrown error gives, so that is the path either takes.
-			const error = answerError(entry.text, read);
+			const error = answerError(entry.text, read, target);
 
 			if (error) {
 				throw new Error(error);

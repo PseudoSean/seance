@@ -51,6 +51,14 @@ export const EMPTY_TRANSLATION = "empty translation";
  */
 export const NARRATION = "talked about the request instead of translating";
 /**
+ * The model answered a question it was asked to translate -- a Russian
+ * read-back of "what time does the meeting start?" came back as an English
+ * reply to it (live test, 2026-09-13). Judged by the question mark alone
+ * (`isAnsweredQuestion`), so it does not depend on the model's wording. The
+ * answer's failure, like the ones above.
+ */
+export const ANSWERED = "answered the question instead of translating it";
+/**
  * The model got stuck repeating itself -- "Höfðu ekki ekki ekki ekki …",
  * "Nafaka ya kisasa kama kama kama …" (Qwen on Icelandic and Swahili
  * questions, 2026-09-12). The answer's failure, like the three above.
@@ -197,7 +205,8 @@ export function echoingSoFar(source: string, partial: string): boolean {
  * What an answer amounts to: `null` when it is a translation, else the
  * failure it is -- `EMPTY_TRANSLATION` for nothing a language could be,
  * `REPETITION` for a model stuck in a loop,
- * `NARRATION` for the model talking about the request, `UNCHANGED` for the
+ * `NARRATION` for the model talking about the request, `ANSWERED` for a
+ * question answered rather than translated, `UNCHANGED` for the
  * source handed back. Both sides of the composer
  * (`writer.ts`: the draft's translation and the round trip's read-back) ask
  * this of every answer, so the order of the two rules is decided once: an
@@ -236,6 +245,43 @@ export function isNarration(source: string, answer: string): boolean {
 		translate.test(answer) &&
 		!(user.test(source) && translate.test(source))
 	);
+}
+
+/** The question marks a translation of a question keeps: Latin, full-width, Arabic. */
+const QUESTION_MARKS = /[?\uff1f\u061f]/u;
+
+/**
+ * What can follow a question's mark at the end of a line: closing quotes and
+ * brackets, emoji (with their joiners, variation selectors and skin tones)
+ * and space. Taken off before the last character is looked at.
+ */
+const QUESTION_TAIL =
+	// eslint-disable-next-line no-misleading-character-class
+	/[\s"'\u00bb\u201d\u2019\u203a\u300d\u300f)\]}\uff09\uff3d\uff5d\u3011\u3009\u300b\p{Extended_Pictographic}\u200d\ufe0f\u{1f3fb}-\u{1f3ff}]+$/u;
+
+/**
+ * Targets whose translation of a question often ends without a question
+ * mark (a particle such as Japanese か, Korean 까, Thai ไหม, or the Greek
+ * `;`), so a missing mark there says nothing.
+ */
+const QUESTION_MARK_OPTIONAL = new Set(["ja", "zh", "ko", "th", "el"]);
+
+/**
+ * Did the model answer a question instead of translating it? The source
+ * ends in a question mark (`?`, `？`, `؟`; closing quotes, brackets and emoji
+ * after it aside) and the answer carries none -- a translation of a question
+ * keeps its mark. Never judged into a language whose questions often go
+ * without one (`QUESTION_MARK_OPTIONAL`). A mark inside the source ("Memorizar?
+ * Hm...") does not make the line a question.
+ */
+export function isAnsweredQuestion(source: string, answer: string, to: string): boolean {
+	if (QUESTION_MARK_OPTIONAL.has(to)) {
+		return false;
+	}
+
+	const last = source.replace(QUESTION_TAIL, "").slice(-1);
+
+	return last !== "" && QUESTION_MARKS.test(last) && !QUESTION_MARKS.test(answer);
 }
 
 /**
@@ -343,7 +389,12 @@ export function tidyAnswer(source: string, answer: string): string {
 	return text;
 }
 
-export function answerError(source: string, translation: string): string | null {
+/**
+ * `to` is the language the answer should be in: the question rule
+ * (`isAnsweredQuestion`) is not applied to targets whose questions often
+ * end without a mark.
+ */
+export function answerError(source: string, translation: string, to: string): string | null {
 	if (hasNoLetters(translation)) {
 		return EMPTY_TRANSLATION;
 	}
@@ -355,6 +406,10 @@ export function answerError(source: string, translation: string): string | null 
 
 	if (isNarration(source, translation)) {
 		return NARRATION;
+	}
+
+	if (isAnsweredQuestion(source, translation, to)) {
+		return ANSWERED;
 	}
 
 	if (isUnchanged(source, translation)) {
