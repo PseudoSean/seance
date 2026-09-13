@@ -62,11 +62,11 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   builders, not copies, so `test/translate/prompt.ts` pins it byte for
   byte); `QWEN3_4B_PROMPT` (`prompts/qwen3-4b.ts`) started as a copy in its
   own module, so 4B's wording changes without touching 1.7B's and the
-  other way round. They already differ in one place: 1.7B says the marks
-  sentence only on a line that carries a mark (measured on its web
-  weights), 4B still says it on every literal-marker request until 4B is
-  measured; `test/translate/promptProfile.ts` pins that difference and
-  the two equal everywhere else. A
+  other way round. Today they render the same: each was measured on its
+  own web weights, and both say the marks sentence only on a line that
+  carries a mark (casual set, 45 lines: 1.7B 32 to 40 clean, 4B 30 to 37;
+  4B also kept the register sentence, which measured 2 lines better than
+  without it); `test/translate/promptProfile.ts` pins them equal. A
   model without a profile of its own gets 1.7B's. `WebLlmEngine` asks with
   the loaded model's profile; the batch sentinel, the output parsing and
   the canned answers stay shared in `prompt.ts`. The offline runner takes

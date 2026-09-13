@@ -104,20 +104,20 @@ describe("translate/prompts", () => {
 	// 4B's wording started as a copy of 1.7B's and changes only from 4B's own
 	// measurement; 1.7B's has since moved on its own (below). Any other
 	// difference is what a 4B rewording is meant to break here.
-	it("4B's profile renders what 1.7B's does, but for the marks sentence 1.7B has scoped", () => {
+	it("4B's profile renders what 1.7B's does", () => {
 		expect(QWEN3_4B_PROMPT.KEEP_MARKS).to.equal(prompt.KEEP_MARKS);
 		expect(QWEN3_4B_PROMPT.KEEP_TAGS).to.equal(prompt.KEEP_TAGS);
 		expect(QWEN3_4B_PROMPT.ONLY_THE_TRANSLATION).to.equal(prompt.ONLY_THE_TRANSLATION);
 
-		// 1.7B says the marks sentence only where the line carries a mark
-		// (1881e957, measured on 1.7B's web weights); 4B still says it on
-		// every literal-marker request until 4B is measured.
+		// Both say the marks sentence only where the line carries a mark,
+		// each measured on its own web weights (casual set: 1.7B 32 -> 40,
+		// 4B 30 -> 37 of 45 clean).
 		const unmarked = request({text: "sounds good to me", markers: "literal"});
 
 		expect(prompt.systemPrompt(unmarked, name)).to.not.include(prompt.KEEP_MARKS);
-		expect(QWEN3_4B_PROMPT.systemPrompt({...unmarked, model: QWEN3_4B_ID}, name)).to.include(
-			QWEN3_4B_PROMPT.KEEP_MARKS
-		);
+		expect(
+			QWEN3_4B_PROMPT.systemPrompt({...unmarked, model: QWEN3_4B_ID}, name)
+		).to.not.include(QWEN3_4B_PROMPT.KEEP_MARKS);
 
 		for (const [label, req] of REQUESTS) {
 			const messages = QWEN3_4B_PROMPT.buildMessages({...req, model: QWEN3_4B_ID}, name);
