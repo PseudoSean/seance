@@ -271,6 +271,78 @@ export function isRepetition(answer: string): boolean {
 	return SPACELESS_LOOP.test(answer);
 }
 
+/** The wrappers a model puts round a whole answer: open, close. */
+const ANSWER_WRAPPERS: [string, string][] = [
+	["**", "**"],
+	["__", "__"],
+	["*", "*"],
+	["_", "_"],
+	['"', '"'],
+	["\u201c", "\u201d"],
+	["\u201e", "\u201c"],
+	["\u00ab", "\u00bb"],
+];
+
+/**
+ * An answer with the model's packaging taken off, judged against the line it
+ * translates. Two kinds, both seen from Qwen on a read-back once the request
+ * carried the channel's context ("Output only the translation of the last
+ * message" is in that prompt, and the model echoed the phrase):
+ *
+ * - a leading clause about the translation ending in a colon -- "Here comes
+ *   the translation of the last message: …" -- unless the source line has a
+ *   colon of its own or itself talks about a translation;
+ * - bold, italics or quotes round the whole answer (a full stop after the
+ *   closing mark included) when the source line has no such wrapper and the
+ *   answer has no second one inside.
+ *
+ * What is left is what the judge (`answerError`) sees and what the user is
+ * shown; an answer that was nothing but a preamble is left as it was, so the
+ * judge still refuses it.
+ */
+export function tidyAnswer(source: string, answer: string): string {
+	let text = answer.trim();
+	const line = source.trim();
+
+	const preamble = /^([^:\n]{0,100}):\s+(\S[\s\S]*)$/.exec(text);
+
+	// Only where the source line has no colon of its own: a colon the
+	// message carries ("Übersetzung für die Doku: fertig") comes through in
+	// its translation, and the clause before it is content, not packaging.
+	if (
+		preamble &&
+		/\btranslat/i.test(preamble[1]) &&
+		!/[:\uff1a]/.test(line) &&
+		!/\btranslat/i.test(line)
+	) {
+		text = preamble[2].trim();
+	}
+
+	for (const [open, close] of ANSWER_WRAPPERS) {
+		if (!text.startsWith(open) || line.startsWith(open)) {
+			continue;
+		}
+
+		const trailing = /[.!?\u2026]*$/.exec(text)?.[0] ?? "";
+		const body = text.slice(0, text.length - trailing.length);
+
+		if (body.length <= open.length + close.length || !body.endsWith(close)) {
+			continue;
+		}
+
+		const inner = body.slice(open.length, body.length - close.length);
+
+		if (inner.trim() === "" || inner.includes(open) || inner.includes(close)) {
+			continue;
+		}
+
+		text = `${inner.trim()}${trailing}`;
+		break;
+	}
+
+	return text;
+}
+
 export function answerError(source: string, translation: string): string | null {
 	if (hasNoLetters(translation)) {
 		return EMPTY_TRANSLATION;

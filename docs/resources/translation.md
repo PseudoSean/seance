@@ -379,8 +379,17 @@ budget ran out, which the strip showed as a translation and which read as
 the model thinking. `isNarration` judges it: the answer quotes the source
 line, or says "the user" and "translat…" where the source says neither
 (no false positive among the 1,048 answers the runner had produced). The
-composer gives it the same bare second try as an echo; the reading queue
-fails the line without counting it against the engine. A fourth, from the
+composer gives it the same bare second try as an echo; the reading queue fails the line without counting it against the engine. **Packaging comes off before any of
+that** (`tidyAnswer`): a leading clause about the translation ending in a
+colon ("Here comes the translation of the last message: …", seen on a
+Korean read-back once the read-back carried the channel's context, whose
+prompt says "Output only the translation of the last message") is taken
+off unless the source line has a colon of its own (a colon the message
+carries comes through in its translation) or itself talks about a
+translation, and bold,
+italics or quotes round the whole answer are unwrapped when the source has
+no such wrapper. The composer does this for the draft and the read-back,
+the reading queue for every line. A fourth, from the
 language measurements: **an answer stuck repeating itself** ("got stuck
 repeating itself") -- Qwen answering Icelandic and Swahili questions with
 "Höfðu ekki ekki ekki ekki …". `isRepetition` judges it: the same word six

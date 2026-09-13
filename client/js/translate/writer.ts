@@ -35,6 +35,7 @@ import {
 	WRITE_DETECT_MIN_GAP,
 	answerError,
 	bareRetry,
+	tidyAnswer,
 	echoingSoFar,
 	hasNoLetters,
 	isUnchanged,
@@ -353,7 +354,9 @@ export async function translateOutgoing(
 			// finished text is cleaned: a stream's prefix is not one until
 			// the line after it has arrived — and a draft that opened with
 			// `nick: ` keeps it, since then the prefix is the user's own.
-			const text = stripCopiedNickPrefix(answer, draft, nicks);
+			// The copied name, then the model's packaging (a preamble about the
+			// translation, a wrapper round the whole answer): outgoing.ts tidyAnswer.
+			const text = tidyAnswer(draft, stripCopiedNickPrefix(answer, draft, nicks));
 
 			record(text, answerError(draft, text));
 
@@ -574,7 +577,7 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 				throw e;
 			}
 
-			const text = stripCopiedNickPrefix(answer, entry.text, nicks);
+			const text = tidyAnswer(entry.text, stripCopiedNickPrefix(answer, entry.text, nicks));
 
 			record(text, answerError(entry.text, text));
 

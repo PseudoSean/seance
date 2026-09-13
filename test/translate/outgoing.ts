@@ -18,6 +18,7 @@ import {
 	answerError,
 	bareRetry,
 	draftGate,
+	tidyAnswer,
 	echoingSoFar,
 	hasNoLetters,
 	isNarration,
@@ -253,6 +254,42 @@ describe("translate/outgoing", () => {
 			expect(isRepetition("我们把部署改到了周四。")).to.equal(false);
 			expect(isRepetition("哈哈哈哈")).to.equal(false);
 			expect(isRepetition("")).to.equal(false);
+		});
+	});
+
+	describe("tidyAnswer", () => {
+		it("takes off a preamble about the translation and a wrapper round the whole answer", () => {
+			// The read-back the user saw, English → Korean read back into English.
+			expect(
+				tidyAnswer(
+					"큰 테스트가 다가옵니다",
+					"Here comes the translation of the last messsage: **Here comes the big test**."
+				)
+			).to.equal("Here comes the big test.");
+			expect(tidyAnswer("wichtig", "**important**")).to.equal("important");
+			expect(tidyAnswer("wichtig", "*important*")).to.equal("important");
+			expect(tidyAnswer("wichtig", "\u201cimportant\u201d")).to.equal("important");
+			expect(tidyAnswer("hallo", "The translation is: hello!")).to.equal("hello!");
+		});
+
+		it("leaves an answer alone when the source has the same shape", () => {
+			// The source talks about a translation: its colon is content.
+			expect(
+				tidyAnswer("Übersetzung für die Doku: fertig", "translation for the docs: done")
+			).to.equal("translation for the docs: done");
+			// A colon that is not about a translation.
+			expect(tidyAnswer("Hinweis: der Build ist grün", "Note: the build is green")).to.equal(
+				"Note: the build is green"
+			);
+			// The source is wrapped too.
+			expect(tidyAnswer("*wichtig*", "*important*")).to.equal("*important*");
+			// Two emphasised spans are not one wrapper.
+			expect(tidyAnswer("a und b", "**a** and **b**")).to.equal("**a** and **b**");
+			// Nothing but a preamble: left for the judge to refuse.
+			expect(tidyAnswer("hallo", "Here is the translation:")).to.equal(
+				"Here is the translation:"
+			);
+			expect(tidyAnswer("hallo", "hello")).to.equal("hello");
 		});
 	});
 

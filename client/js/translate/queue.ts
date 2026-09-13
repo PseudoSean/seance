@@ -27,6 +27,7 @@ import {
 	isNarration,
 	isRepetition,
 	isUnchanged,
+	tidyAnswer,
 	translateDraft,
 } from "./outgoing";
 import {parseBatchedOutput} from "./prompt";
@@ -644,13 +645,17 @@ export class TranslateQueue {
 	 * Both sides of the comparison are restored (`restoreAll`), so whichever
 	 * marker form the route chose cancels out.
 	 */
-	private report(engine: EngineName, q: Queued, text: string): void {
+	private report(engine: EngineName, q: Queued, answer: string): void {
+		const original = restoreAll(q.info.text, q.info);
+		// The model's packaging off first (a preamble about the translation, a
+		// wrapper round the whole answer), so the checks and the store see the
+		// translation itself.
+		const text = tidyAnswer(original, answer);
+
 		if (hasNoLetters(text)) {
 			this.deps.onUpdate(q.item.id, {status: "failed", error: EMPTY_TRANSLATION});
 			return;
 		}
-
-		const original = restoreAll(q.info.text, q.info);
 
 		// A model stuck repeating a word ("ekki ekki ekki …") has not
 		// translated the line either, and the engine did complete: failed,
