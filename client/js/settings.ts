@@ -3,6 +3,7 @@ import {mirrorPushPrefs} from "./push-prefs";
 import {normalizeFontSize} from "./helpers/fontSize";
 import {prefersTwelveHourClock} from "./helpers/hourCycle";
 import {browserLanguage} from "./translate/languages";
+import {DEFAULT_LLM_ID} from "./translate/models";
 
 const defaultSettingConfig = {
 	apply() {},
@@ -94,6 +95,13 @@ const defaultConfig = {
 	},
 	translateCpu: {
 		default: true,
+	},
+	/** Which GPU model (translate/models.ts LLM_CHOICES, or the deploy's own) the
+	 * LLM candidate runs. A deploy's model replaces this default the first time
+	 * (translate/index.ts); a stored id that is no longer a choice selects the
+	 * default (models.ts `llmChoice`). */
+	translateLlmModel: {
+		default: DEFAULT_LLM_ID,
 	},
 	// UI scale: the root font size everything in style.css is sized off in
 	// rem. The scale and its normalization live in helpers/fontSize.ts; the

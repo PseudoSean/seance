@@ -191,6 +191,9 @@ import {computed, defineComponent, onBeforeUnmount, onMounted, PropType, ref} fr
 import {SUPPORTED_LANGUAGES, languageOptionLabel} from "../js/translate/languages";
 import {channelTranslation, setChannelOptions, setReading} from "../js/translate/reader";
 import {isLimitedLanguage} from "../js/translate/routes.default";
+import {translateService} from "../js/translate";
+import {llmChoice} from "../js/translate/models";
+import {useStore} from "../js/store";
 import {cancelOutgoing} from "../js/translate/writer";
 import {hasVirtualKeyboard} from "../js/helpers/device";
 import type {ClientChan, ClientNetwork} from "../js/types";
@@ -214,7 +217,14 @@ export default defineComponent({
 	emits: ["close"],
 	setup(props, {emit}) {
 		const panel = ref<HTMLElement | null>(null);
+		const store = useStore();
 		const state = computed(() => channelTranslation(props.network, props.channel));
+		// The limited languages are the selected GPU model's (routes.default.ts).
+		const limited = (code: string | null) =>
+			isLimitedLanguage(
+				code,
+				llmChoice(translateService().catalog, store.state.settings.translateLlmModel).id
+			);
 		const name = (code: string) => languageOptionLabel(code);
 		const languages = [...SUPPORTED_LANGUAGES].sort((a, b) => name(a).localeCompare(name(b)));
 		const formalities = FORMALITIES;
@@ -333,7 +343,7 @@ export default defineComponent({
 			addable,
 			formalities,
 			name,
-			limited: isLimitedLanguage,
+			limited,
 			onRead,
 			onAddLanguage,
 			removeLanguage,

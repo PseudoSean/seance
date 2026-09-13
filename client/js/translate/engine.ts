@@ -22,6 +22,12 @@ export interface ModelRef {
 	sizeBytes: number;
 	/** OPUS-MT pair models: [from, to] in ISO 639-1. */
 	pair?: [string, string];
+	/**
+	 * A GPU model's compiled WebLLM library, when the deploy named one
+	 * (`translation.llm.lib`): it belongs to that model alone, never to the
+	 * other GPU choices.
+	 */
+	lib?: string;
 }
 
 export interface LoadProgress {

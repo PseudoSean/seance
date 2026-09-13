@@ -35,7 +35,7 @@ export function webllmCache(getCatalog: () => ModelCatalog | null): CacheApi {
 			...prebuiltAppConfig,
 			model_list: appConfigFor(ref, prebuilt, {
 				modelBase: catalog?.modelBase,
-				lib: catalog?.llmLib,
+				lib: ref.lib,
 			}).model_list,
 		};
 	};

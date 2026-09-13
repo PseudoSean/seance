@@ -1,8 +1,9 @@
-// The shipped route table, placed by measurement: the share of an English
-// line's content words that came back after a round trip through each
-// engine (tools/translate-eval/results/2026-09-12-languages.md). Small
-// samples, so a difference under ~10 points is a tie. Each language is
-// placed in both directions, since the measurement is a round trip.
+// The shipped route tables, one per GPU model, placed by measurement: the
+// share of an English line's content words that came back after a round
+// trip through each engine (tools/translate-eval/results/2026-09-12-languages.md,
+// measured on Qwen3-1.7B). Small samples, so a difference under ~10 points
+// is a tie. Each language is placed in both directions, since the
+// measurement is a round trip.
 //
 // - NLLB first, the LLM as a fallback class, where NLLB came back ahead by
 //   more than the tie band.
@@ -12,9 +13,32 @@
 //   ahead on three cases, and under a second a line on the CPU), the class
 //   after the LLM for fr, es and it (the LLM ahead).
 // - Every other language: the LLM first, NLLB next.
+//
+// A larger GPU model moves the line between "NLLB is better" and "the LLM
+// is", so each model has its own lists: re-placing a language for one model
+// is an edit of that model's lists, never of the code that builds a table.
+// A model with no lists of its own (a deploy's) gets 1.7B's.
 
-import {Candidate, DEFAULT_OPUS_PAIRS} from "./models";
+import {Candidate, DEFAULT_OPUS_PAIRS, QWEN3_1_7B_ID, QWEN3_4B_ID} from "./models";
 import {RouteEntry, RouteTable} from "./router";
+
+/** Where one GPU model's measurement placed the languages. */
+export interface RoutePlacement {
+	/** NLLB came back ahead of the LLM by more than the tie band. */
+	nllbFirst: readonly string[];
+	/** The LLM and NLLB within the tie band: one class. */
+	nllbTied: readonly string[];
+	/** OPUS-MT pair languages whose pairs tie with or beat the LLM: one class with it. */
+	opusTied: readonly string[];
+	/**
+	 * Languages whose best measured engine brought back under 55% of a line's
+	 * content words: translations into and out of them are often wrong
+	 * whichever engine takes them, and the language pickers say so.
+	 */
+	limited: readonly string[];
+}
+
+// ---- Qwen3-1.7B (measured) ----
 
 /** NLLB came back ahead of the LLM by more than the tie band. */
 export const NLLB_FIRST: readonly string[] = [
@@ -54,61 +78,143 @@ export const NLLB_TIED: readonly string[] = ["sk", "ms", "gl", "hi", "hu", "th",
 /** OPUS-MT pair languages whose pairs tie with or beat the LLM: one class with it. */
 export const OPUS_TIED: readonly string[] = ["de", "nl", "ru"];
 
-/**
- * Languages whose best measured engine brought back under 55% of a line's
- * content words: translations into and out of them are often wrong
- * whichever engine takes them, and the language pickers say so.
- */
+/** Under 55% of a line's content words back from the best engine (see `RoutePlacement`). */
 export const LIMITED_LANGUAGES: readonly string[] = ["is", "lv", "et", "hi", "lt", "bn", "hu"];
 
-export function isLimitedLanguage(code: string | null | undefined): boolean {
-	return !!code && LIMITED_LANGUAGES.includes(code);
+export const QWEN3_1_7B: RoutePlacement = {
+	nllbFirst: NLLB_FIRST,
+	nllbTied: NLLB_TIED,
+	opusTied: OPUS_TIED,
+	limited: LIMITED_LANGUAGES,
+};
+
+// ---- Qwen3-4B (starts as 1.7B's placements until its own measurement) ----
+
+export const QWEN3_4B_NLLB_FIRST: readonly string[] = [
+	"sr",
+	"hr",
+	"sl",
+	"bg",
+	"el",
+	"he",
+	"fa",
+	"bn",
+	"ta",
+	"et",
+	"lv",
+	"lt",
+	"eu",
+	"ga",
+	"cy",
+	"is",
+	"sw",
+	"af",
+	"tl",
+	"ur",
+	"fi",
+	"ca",
+	"nb",
+	"id",
+	// Not "ar", for the same reason as 1.7B's list.
+];
+
+export const QWEN3_4B_NLLB_TIED: readonly string[] = [
+	"sk",
+	"ms",
+	"gl",
+	"hi",
+	"hu",
+	"th",
+	"cs",
+	"pl",
+];
+
+export const QWEN3_4B_OPUS_TIED: readonly string[] = ["de", "nl", "ru"];
+
+export const QWEN3_4B_LIMITED_LANGUAGES: readonly string[] = [
+	"is",
+	"lv",
+	"et",
+	"hi",
+	"lt",
+	"bn",
+	"hu",
+];
+
+export const QWEN3_4B: RoutePlacement = {
+	nllbFirst: QWEN3_4B_NLLB_FIRST,
+	nllbTied: QWEN3_4B_NLLB_TIED,
+	opusTied: QWEN3_4B_OPUS_TIED,
+	limited: QWEN3_4B_LIMITED_LANGUAGES,
+};
+
+const PLACEMENTS: Record<string, RoutePlacement> = {
+	[QWEN3_1_7B_ID]: QWEN3_1_7B,
+	[QWEN3_4B_ID]: QWEN3_4B,
+};
+
+/** The placements for a GPU model; any model without its own gets 1.7B's. */
+export function placementFor(llmModelId: string | null | undefined): RoutePlacement {
+	return (llmModelId && PLACEMENTS[llmModelId]) || QWEN3_1_7B;
+}
+
+export function limitedLanguagesFor(llmModelId: string | null | undefined): readonly string[] {
+	return placementFor(llmModelId).limited;
+}
+
+/** Is `code` one of the limited languages of this GPU model (1.7B's when none is named)? */
+export function isLimitedLanguage(
+	code: string | null | undefined,
+	llmModelId: string | null = QWEN3_1_7B_ID
+): boolean {
+	return !!code && limitedLanguagesFor(llmModelId).includes(code);
 }
 
 /** The entry for a pair without an OPUS-MT model; `"*"` stands for any language. */
-function entryFor(from: string, to: string): RouteEntry {
+function entryFor(placement: RoutePlacement, from: string, to: string): RouteEntry {
 	const sides = [from, to];
 
-	if (sides.some((code) => NLLB_FIRST.includes(code))) {
+	if (sides.some((code) => placement.nllbFirst.includes(code))) {
 		return ["nllb", "llm"];
 	}
 
-	if (sides.some((code) => NLLB_TIED.includes(code))) {
+	if (sides.some((code) => placement.nllbTied.includes(code))) {
 		return [["llm", "nllb"]];
 	}
 
 	return ["llm", "nllb"];
 }
 
-function opusEntry(pairKey: string): RouteEntry {
+function opusEntry(placement: RoutePlacement, pairKey: string): RouteEntry {
 	const [from, to] = pairKey.split("-");
 	const candidate: Candidate = `opus:${pairKey}`;
 
-	if (OPUS_TIED.includes(from) || OPUS_TIED.includes(to)) {
+	if (placement.opusTied.includes(from) || placement.opusTied.includes(to)) {
 		return [["llm", candidate], "nllb"];
 	}
 
 	return ["llm", candidate, "nllb"];
 }
 
-function buildDefault(): RouteTable {
-	const placed = [...NLLB_FIRST, ...NLLB_TIED];
+/** A route table from one model's placements. */
+export function buildRoutes(placement: RoutePlacement): RouteTable {
+	const placed = [...placement.nllbFirst, ...placement.nllbTied];
 	const table: RouteTable = {"*": {"*": ["llm", "nllb"]}};
 
 	// A placed language as the source, into a target with no row of its own.
 	for (const from of placed) {
-		table["*"][from] = entryFor(from, "*");
+		table["*"][from] = entryFor(placement, from, "*");
 	}
 
 	// A placed language as the target, from anything.
 	for (const to of placed) {
-		table[to] = {"*": entryFor("*", to)};
+		table[to] = {"*": entryFor(placement, "*", to)};
 	}
 
 	for (const pairKey of Object.keys(DEFAULT_OPUS_PAIRS)) {
 		const [from, to] = pairKey.split("-");
 
-		(table[to] ??= {})[from] = opusEntry(pairKey);
+		(table[to] ??= {})[from] = opusEntry(placement, pairKey);
 	}
 
 	// Every target with a row gets a row for every placed source, so a
@@ -120,7 +226,7 @@ function buildDefault(): RouteTable {
 
 		for (const from of placed) {
 			if (from !== to && !table[to][from]) {
-				table[to][from] = entryFor(from, to);
+				table[to][from] = entryFor(placement, from, to);
 			}
 		}
 	}
@@ -128,4 +234,24 @@ function buildDefault(): RouteTable {
 	return table;
 }
 
-export const DEFAULT_ROUTES: RouteTable = buildDefault();
+const TABLES = new Map<RoutePlacement, RouteTable>();
+
+/**
+ * The shipped route table for a GPU model: 4B's for Qwen3-4B, 1.7B's for
+ * Qwen3-1.7B and for any model without placements of its own. Built once
+ * per placement; callers merge a deploy's overrides over a copy
+ * (`mergeRoutes` copies), never into it.
+ */
+export function routesFor(llmModelId: string | null | undefined): RouteTable {
+	const placement = placementFor(llmModelId);
+	let table = TABLES.get(placement);
+
+	if (!table) {
+		table = buildRoutes(placement);
+		TABLES.set(placement, table);
+	}
+
+	return table;
+}
+
+export const DEFAULT_ROUTES: RouteTable = routesFor(QWEN3_1_7B_ID);

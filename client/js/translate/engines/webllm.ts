@@ -28,15 +28,9 @@ import {
 	TranslateRequest,
 } from "../engine";
 import {ModelCatalog} from "../models";
-import {
-	ChatMessage,
-	END_SENTINEL,
-	EXAMPLE_ANSWERS,
-	buildMessages,
-	cleanOutput,
-	estimateTokens,
-	stripSentinel,
-} from "../prompt";
+import {ChatMessage, END_SENTINEL, EXAMPLE_ANSWERS, cleanOutput, stripSentinel} from "../prompt";
+import {PromptProfile, promptProfileFor} from "../prompts";
+import {QWEN3_1_7B_PROMPT} from "../prompts/qwen3-1.7b";
 
 export interface ChatRequest {
 	messages: ChatMessage[];
@@ -74,6 +68,8 @@ export interface WebLlmDeps {
 		onProgress: (report: {progress: number; text: string}) => void
 	): MlcLike;
 	prebuilt: ModelRecord[];
+	/** The loaded model's prompt profile; `prompts/index.ts` `promptProfileFor` unless a caller swaps it. */
+	promptProfileFor?: (modelId: string) => PromptProfile;
 }
 
 const HF_MLC = "https://huggingface.co/mlc-ai/";
@@ -101,15 +97,9 @@ export function appConfigFor(
 	return {model_list: [{model_id: ref.id, model, model_lib: lib}]};
 }
 
+/** Qwen3-1.7B's token budget (prompts/qwen3-1.7b.ts); each profile has its own. */
 export function maxTokensFor(req: TranslateRequest): number {
-	const input = req.lines ? req.lines.join("\n") : req.text;
-
-	// 3 × the input: room for the model to echo the line once before it
-	// translates (the scan drops the echo) and still finish. + 16: the empty
-	// thinking block WebLLM prepends when thinking is off. Measured against
-	// the real model, the longest case of the evaluation set (four sentences,
-	// ~60 input tokens) finished well inside it.
-	return Math.min(512, 3 * estimateTokens(input) + 48 + 16);
+	return QWEN3_1_7B_PROMPT.maxTokensFor(req);
 }
 
 /** The empty thinking block, and the opener on its own while the rest streams in. */
@@ -315,7 +305,7 @@ export class WebLlmEngine implements Engine {
 		try {
 			const appConfig = appConfigFor(ref, this.deps.prebuilt, {
 				modelBase: this.catalog?.modelBase,
-				lib: this.catalog?.llmLib,
+				lib: ref.lib,
 			});
 			// Let go of the old engine before awaiting its unload, not after: a
 			// translate() landing in between must report "model not loaded"
@@ -418,12 +408,16 @@ export class WebLlmEngine implements Engine {
 
 		signal.addEventListener("abort", onAbort);
 
+		// The loaded model's own wording and budget (prompts/): a model is
+		// asked the way it was measured, never with another model's prompt.
+		const profile = (this.deps.promptProfileFor ?? promptProfileFor)(this.model ?? req.model);
+
 		try {
 			const stream = await engine.chat.completions.create({
-				messages: buildMessages(req, this.languageName),
+				messages: profile.buildMessages(req, this.languageName),
 				stream: true,
 				temperature: 0.1,
-				max_tokens: maxTokensFor(req),
+				max_tokens: profile.maxTokensFor(req),
 				stop: req.lines ? [`\n${END_SENTINEL}`] : [],
 				extra_body: {enable_thinking: false},
 			});

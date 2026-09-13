@@ -7,10 +7,58 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
 
 ## Two engines, one router
 
-- **GPU: WebLLM.** An instruction LLM (default `Qwen3-1.7B-q4f16_1-MLC`)
-  on WebGPU, prompted to translate with the channel's context. Greedy at
-  temperature 0.1, thinking off, one line of output. Needs an adapter with
-  `shader-f16` and 1 GiB of buffer, WebLLM's floor for a q4f16 model; adapters report 2 GiB minus alignment slack (`capability.ts`).
+- **GPU: WebLLM.** An instruction LLM on WebGPU, prompted to translate with
+  the channel's context. Greedy at temperature 0.1, thinking off, one line
+  of output. Needs an adapter with `shader-f16` and 1 GiB of buffer,
+  WebLLM's floor for a q4f16 model; adapters report 2 GiB minus alignment slack (`capability.ts`).
+- **Two GPU models, one chosen.** `models.ts` `LLM_CHOICES`: `Qwen3-1.7B-q4f16_1-MLC`
+  (the default, ~1.1 GB download, ~2.0 GB of GPU memory) and
+  `Qwen3-4B-q4f16_1-MLC` (~2.3 GB, ~3.4 GB). On 45 casual chat lines into
+  French, German and Spanish they scored alike (41 and 40 clean), and 4B's
+  phrasing read noticeably more natural; it is also slower and needs more
+  memory, so it is a choice rather than the default. Settings → Translation's
+  "GPU model" select writes `translateLlmModel` (carried by the settings
+  backup like any setting); the model manager lists both rows, whichever is
+  selected, and marks the selected one "In use". A deploy's
+  `translation.llm.model` becomes the default while the user has chosen
+  none (`index.ts` `applyDefaultLlmModel`) and is added to the choices when it
+  is neither shipped model, its `lib` on its own ref only (`ModelRef.lib`). A
+  stored id that is no longer a choice selects the default (`llmChoice`).
+  **A switch takes effect without a reload** (`service.ts` `setLlmModel`):
+  nothing in flight is cancelled; a running LLM request finishes on the old
+  model, LLM work waits until those are done (WebLLM holds one model, and
+  loading another would end them), then the old model is unloaded if it is
+  still the one loaded, and every request routed afterwards — a queued
+  reading line included — goes to the new model. The switch lifts the LLM
+  candidate's down-mark; the new model failing to load marks it down as
+  before.
+- **One route table per GPU model.** Where the LLM beats NLLB depends on the
+  model, so `routes.default.ts` keeps each model's placements as their own
+  lists (`NLLB_FIRST`, `NLLB_TIED`, `OPUS_TIED`, `LIMITED_LANGUAGES` for
+  1.7B; `QWEN3_4B_NLLB_FIRST`, `QWEN3_4B_NLLB_TIED`, `QWEN3_4B_OPUS_TIED`,
+  `QWEN3_4B_LIMITED_LANGUAGES` for 4B) and `routesFor(llmModelId)` /
+  `limitedLanguagesFor(llmModelId)` build from them; a model without lists
+  of its own (a deploy's) gets 1.7B's. 4B's lists start as 1.7B's
+  placements until its own measurement re-places them (`test/translate/routes.ts`
+  pins the two tables equal until then). The service builds its table from
+  the selected model's with the deploy's `translation.routes` merged over
+  it, and rebuilds it on a switch.
+- **One prompt profile per GPU model** (`prompts/`). The prompt was tuned
+  on 1.7B, and a different build already reacts differently to the same
+  wording (the float16 1.7B wrapped 11 of 45 casual answers in markdown
+  marks), so the wording is chosen per model: `promptProfileFor(modelId)`
+  returns a `PromptProfile` — `systemPrompt`, `userPrompt`,
+  `buildMessages`, `maxTokensFor`, `KEEP_MARKS`, `KEEP_TAGS`,
+  `ONLY_THE_TRANSLATION`. `QWEN3_1_7B_PROMPT` is `prompt.ts` itself (its
+  builders, not copies, so `test/translate/prompt.ts` pins it byte for
+  byte); `QWEN3_4B_PROMPT` (`prompts/qwen3-4b.ts`) starts as a copy in its
+  own module, so 4B's wording changes without touching 1.7B's
+  (`test/translate/promptProfile.ts` pins the two equal until then). A
+  model without a profile of its own gets 1.7B's. `WebLlmEngine` asks with
+  the loaded model's profile; the batch sentinel, the output parsing and
+  the canned answers stay shared in `prompt.ts`. The offline runner takes
+  `--profile <model id>` (default 1.7B) to choose the wording apart from
+  the weights it loads.
 - **CPU: transformers.js on ONNX Runtime WASM.** Purpose-built translation
   models: NLLB-200 distilled 600M (any pair, FLORES codes) and OPUS-MT pair
   models (30-80 MB each). Two stay loaded, least recently used evicted.
@@ -65,7 +113,7 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   code judged too weak to trust is what the prompt measurements warn
   against. The bare second try drops `context.sourceHint` as before and
   keeps `hint`, so it goes down the same route.
-- **The shipped table follows a measurement**:
+- **The shipped 1.7B table follows a measurement** (4B's starts as a copy):
   `tools/translate-eval/results/2026-09-12-languages.md`, the share of an
   English line's content words that come back after a round trip through
   each engine (Qwen on 3-9 chat shapes, NLLB and OPUS-MT on a question, a
@@ -82,7 +130,7 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   (is lv et hi lt bn hu) are the languages whose best engine brought back
   under 55%: the channel panel's pickers and Settings' reading target say
   "Translations into and out of this language are often wrong." when one is
-  chosen.
+  chosen — the selected GPU model's list.
 
 ## Reading a channel
 

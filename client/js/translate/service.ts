@@ -8,8 +8,9 @@
 import {Capability} from "./capability";
 import {TranslateClient, TranslateError, WORKER_DISPOSED} from "./client";
 import {LoadProgress, ModelRef, TranslateChunk, TranslateRequest} from "./engine";
-import {Candidate, ModelCatalog, candidateOf, catalogModels} from "./models";
-import {Route, RouteTable, resolveRoute} from "./router";
+import {Candidate, ModelCatalog, candidateOf, catalogModels, selectLlm} from "./models";
+import {Route, RouteTable, mergeRoutes, resolveRoute} from "./router";
+import {routesFor as shippedRoutesFor} from "./routes.default";
 
 export const IDLE_UNLOAD_MS = 10 * 60 * 1000;
 export const TRANSLATION_UNAVAILABLE = "no translation engine can take this request";
@@ -22,8 +23,12 @@ export interface ServiceDeps {
 }
 
 export interface ServiceOptions {
+	/** Its `llm` is the selected GPU model; `setLlmModel` changes it. */
 	catalog: ModelCatalog;
-	routes: RouteTable;
+	/** The deploy's `translation.routes`, merged over the selected model's table. */
+	routes?: RouteTable;
+	/** The shipped table for a GPU model id; `routes.default.ts` `routesFor` unless a test swaps it. */
+	routesFor?: (llmModelId: string) => RouteTable;
 	ortBase: string;
 	enabled: boolean;
 }
@@ -64,6 +69,18 @@ export class TranslateService {
 	private cacheKnown: Promise<void> | null = null;
 	/** Moves on every download progress event (`loadTicks`). */
 	private ticks = 0;
+	/** The selected GPU model's table with the deploy's overrides merged in. */
+	private table: RouteTable;
+	/** Running LLM streams by model id: a model is unloaded only once its own are done. */
+	private llmRunning = new Map<string, number>();
+	private llmWaiters: {ready: () => boolean; resolve: () => void}[] = [];
+	/**
+	 * A GPU model switch still settling: the old model's running requests
+	 * finishing, then its unload. LLM work waits for it, since loading
+	 * another model into WebLLM tears down the engine a request is still
+	 * generating on.
+	 */
+	private llmSwitch: Promise<void> | null = null;
 
 	constructor(
 		private deps: ServiceDeps,
@@ -73,10 +90,120 @@ export class TranslateService {
 		for (const ref of catalogModels(options.catalog)) {
 			this.views.set(ref.id, {ref, cached: false, status: "idle", fraction: 0, error: null});
 		}
+
+		this.table = this.buildTable();
 	}
 
 	get enabled(): boolean {
 		return this.options.enabled;
+	}
+
+	/** The catalog as it stands: `catalog.llm` is the selected GPU model. */
+	get catalog(): ModelCatalog {
+		return this.options.catalog;
+	}
+
+	/**
+	 * Selects the GPU model (an id that is not a choice selects the default).
+	 * Nothing in flight is cancelled or failed: a running LLM request
+	 * finishes on the old model, which is unloaded after it, and every LLM
+	 * request routed from now on — a queued reading line included — goes to
+	 * the new one. The LLM candidate's down-mark is lifted: it was the old
+	 * model's.
+	 */
+	setLlmModel(id: string | null): void {
+		const next = selectLlm(this.options.catalog, id);
+
+		if (next === this.options.catalog) {
+			return;
+		}
+
+		const previous = this.options.catalog.llm.id;
+
+		this.options = {...this.options, catalog: next};
+		this.table = this.buildTable();
+		this.down.delete("llm");
+		this.retireLlm(previous);
+	}
+
+	private buildTable(): RouteTable {
+		const shipped = (this.options.routesFor ?? shippedRoutesFor)(this.options.catalog.llm.id);
+
+		return mergeRoutes(shipped, this.options.routes ?? {});
+	}
+
+	/** Unload `id` once its running requests are done, unless it is selected again by then. */
+	private retireLlm(id: string): void {
+		const worker = this.worker;
+
+		if (!worker) {
+			// No worker, nothing loaded.
+			return;
+		}
+
+		const gen = this.generation;
+		const before = this.llmSwitch ?? Promise.resolve();
+		const settling: Promise<void> = before
+			.then(() => this.whenLlm(() => !this.llmRunning.get(id)))
+			.then(async () => {
+				if (
+					this.generation !== gen ||
+					this.worker !== worker ||
+					this.options.catalog.llm.id === id
+				) {
+					return;
+				}
+
+				const status = await worker.client.status();
+
+				if (status.llm.models.includes(id)) {
+					await worker.client.unload("llm");
+				}
+			})
+			.catch(() => {
+				// A worker torn down meanwhile unloaded everything anyway.
+			})
+			.then(() => {
+				if (this.llmSwitch === settling) {
+					this.llmSwitch = null;
+				}
+			});
+
+		this.llmSwitch = settling;
+	}
+
+	private whenLlm(ready: () => boolean): Promise<void> {
+		if (ready()) {
+			return Promise.resolve();
+		}
+
+		return new Promise((resolve) => this.llmWaiters.push({ready, resolve}));
+	}
+
+	private llmStarted(id: string): void {
+		this.llmRunning.set(id, (this.llmRunning.get(id) ?? 0) + 1);
+	}
+
+	private llmEnded(id: string): void {
+		const left = (this.llmRunning.get(id) ?? 1) - 1;
+
+		if (left > 0) {
+			this.llmRunning.set(id, left);
+		} else {
+			this.llmRunning.delete(id);
+		}
+
+		const waiting = this.llmWaiters;
+
+		this.llmWaiters = [];
+
+		for (const waiter of waiting) {
+			if (waiter.ready()) {
+				waiter.resolve();
+			} else {
+				this.llmWaiters.push(waiter);
+			}
+		}
 	}
 
 	capabilities(): Promise<Capability> {
@@ -122,7 +249,7 @@ export class TranslateService {
 			await this.primeCache();
 		}
 
-		return resolveRoute(this.options.routes, this.options.catalog, {
+		return resolveRoute(this.table, this.options.catalog, {
 			from,
 			hint,
 			to,
@@ -211,6 +338,15 @@ export class TranslateService {
 					);
 				}
 
+				// A GPU model switch is settling: the old model's requests
+				// are still generating, and loading the new one would tear
+				// their engine down. Wait, then route again, since the
+				// selection may have moved on meanwhile.
+				if (route.ref.engine === "llm" && this.llmSwitch) {
+					await this.llmSwitch;
+					continue;
+				}
+
 				const client = this.client();
 				const gen = this.generation;
 				const id = this.nextId++;
@@ -223,6 +359,12 @@ export class TranslateService {
 
 				attemptedView = view;
 				currentId = id;
+
+				const llmId = route.ref.engine === "llm" ? route.ref.id : null;
+
+				if (llmId) {
+					this.llmStarted(llmId);
+				}
 
 				try {
 					for await (const chunk of client.translate(
@@ -285,7 +427,17 @@ export class TranslateService {
 					this.publish();
 
 					lastLoadError = `${route.ref.id}: ${message}`;
-					this.down.add(route.candidate);
+
+					// A GPU model that was switched away from while it loaded
+					// is no longer what the candidate runs: its failure does
+					// not take the new model down with it.
+					if (!llmId || llmId === this.options.catalog.llm.id) {
+						this.down.add(route.candidate);
+					}
+				} finally {
+					if (llmId) {
+						this.llmEnded(llmId);
+					}
 				}
 			}
 		} finally {
@@ -384,6 +536,16 @@ export class TranslateService {
 		this.clearIdle();
 
 		try {
+			if (ref.engine === "llm") {
+				// WebLLM holds one model: loading this one while a request
+				// generates on another would end that request.
+				if (this.llmSwitch) {
+					await this.llmSwitch;
+				}
+
+				await this.whenLlm(() => [...this.llmRunning.keys()].every((id) => id === ref.id));
+			}
+
 			await this.client().load(ref, (progress: LoadProgress) => {
 				view.fraction = progress.fraction;
 				this.publish();

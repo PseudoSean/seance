@@ -1,9 +1,10 @@
 // Settings → Translation on the in-page fake worker (client/js/translate/
 // fakePort.ts, reached with ?fakeTranslate on a development build): the
-// language select, the formality radios, the two engine
-// toggles, and the model manager — download with a progress bar, the row
-// turning "Downloaded", delete turning it back — plus the choice surviving
-// a reload. Nothing in `yarn test` renders the tab.
+// language select, the formality radios, the two engine toggles, the GPU
+// model choice, and the model manager — download with a progress bar, the
+// row turning "Downloaded", delete turning it back — plus the choices
+// surviving a reload, and the next GPU translation running on the chosen
+// model. Nothing in `yarn test` renders the tab.
 //
 //   corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/translate-settings.mjs
@@ -12,6 +13,11 @@
 // `NODE_ENV=production corepack yarn build`): a production build's
 // BUILD !== "dev" folds useFake() to false at compile time and Terser
 // drops the fake worker as dead code.
+//
+// One reload only: on a busy box a later navigation has lost the DevTools
+// reply to a poll in flight and hung the driver (docs/resources/
+// browser-testing.md, trap 8), so every choice that has to survive a
+// reload is made before the one there is.
 
 const BASE = "http://localhost:8021/";
 
@@ -21,6 +27,28 @@ const ROW = (id) => `.translate-model[data-model="${id}"]`;
 const STATE = (id) =>
 	`document.querySelector('${ROW(id)} .translate-model-state')?.textContent.trim()`;
 const STORED = (key) => `JSON.parse(localStorage.getItem("settings") ?? "{}").${key} ?? null`;
+const SMALL = "Qwen3-1.7B-q4f16_1-MLC";
+const LARGE = "Qwen3-4B-q4f16_1-MLC";
+/** The data-model of every row marked "In use", joined: exactly one is expected. */
+const IN_USE = `[...document.querySelectorAll(".translate-model-in-use")].map((el) => el.closest(".translate-model").dataset.model).join(",")`;
+const LAST_FAKE_MODEL = `(globalThis.__seanceTranslateFake?.requests ?? []).at(-1)?.model ?? null`;
+
+async function chooseLlm(page, id) {
+	await page.evaluate(
+		`(() => {
+			const el = document.querySelector('select[name="translateLlmModel"]');
+			el.value = ${JSON.stringify(id)};
+			el.dispatchEvent(new Event("change", {bubbles: true}));
+		})()`
+	);
+	await page.waitFor(`(${IN_USE}) === ${JSON.stringify(id)}`, {label: `${id} in use`});
+}
+
+// A GPU-routed translation through the dev console aid (index.ts): Japanese
+// into French has no NLLB placement, so its route is the LLM first.
+async function translateOnGpu(page) {
+	return page.evaluate(`seanceTranslate("hello there", "fr", "ja")`);
+}
 
 const FOOTER_VISIBLE = `(() => {
 	const el = document.querySelector("#footer button.settings");
@@ -75,11 +103,24 @@ export default async function run(page) {
 		label: "settings open",
 	});
 	await page.click(`.settings-menu button.translation`);
-	await page.waitFor(`document.querySelectorAll(".translate-model").length >= 3`, {
+	await page.waitFor(`document.querySelectorAll(".translate-model").length >= 4`, {
 		label: "model rows rendered",
 	});
 
-	const llmId = await page.evaluate(`document.querySelector(".translate-model").dataset.model`);
+	const llmId = SMALL;
+
+	page.check(
+		"both GPU models listed",
+		!!(await page.evaluate(`!!document.querySelector('${ROW(SMALL)}')`)) &&
+			!!(await page.evaluate(`!!document.querySelector('${ROW(LARGE)}')`))
+	);
+	page.check(
+		"the GPU model select offers both, with sizes",
+		(await page.evaluate(
+			`[...document.querySelectorAll('select[name="translateLlmModel"] option')].map((o) => o.textContent.trim()).join("|")`
+		)) === "Qwen3 1.7B · 1.1 GB|Qwen3 4B · 2.3 GB"
+	);
+	page.check("1.7B is in use by default", (await page.evaluate(IN_USE)) === SMALL);
 
 	await page.waitFor(`!!document.querySelector(".translate-device")`, {label: "device note"});
 	page.check(
@@ -132,6 +173,11 @@ export default async function run(page) {
 	);
 	page.check("llm toggle stored", (await page.evaluate(STORED("translateLlm"))) === false);
 
+	// The GPU model is a choice: choosing 4B marks its row "In use" at once.
+	await chooseLlm(page, LARGE);
+	page.check("4B stored", (await page.evaluate(STORED("translateLlmModel"))) === LARGE);
+	await page.screenshot("translation-llm-4b");
+
 	// No page.reload in the harness: navigate back to the boot URL (the app
 	// reboots and, with no saved network, lands on the connect page again)
 	// and re-open Settings → Translation the way the scenario did the first time.
@@ -154,5 +200,30 @@ export default async function run(page) {
 			`document.querySelector('input[name="translateFormality"][value="formal"]').checked`
 		)) === true
 	);
+	page.check(
+		"4B survives a reload",
+		(await page.evaluate(
+			`document.querySelector('select[name="translateLlmModel"]').value`
+		)) === LARGE
+	);
+	await page.waitFor(`(${IN_USE}) === ${JSON.stringify(LARGE)}`, {
+		label: "4B still in use after the reload",
+	});
 	await page.screenshot("translation-settings-after");
+
+	// The next GPU translation runs on 4B; switching back to 1.7B takes
+	// effect for the one after it, without a reload.
+	await page.click(`input[name="translateLlm"]`);
+	page.check("llm toggle back on", (await page.evaluate(STORED("translateLlm"))) === true);
+
+	const large = await translateOnGpu(page);
+
+	page.check("a translation came back on 4B", typeof large === "string" && large.length > 0);
+	page.check("the fake engine ran 4B", (await page.evaluate(LAST_FAKE_MODEL)) === LARGE);
+
+	await chooseLlm(page, SMALL);
+	page.check("1.7B stored again", (await page.evaluate(STORED("translateLlmModel"))) === SMALL);
+	await translateOnGpu(page);
+	page.check("the fake engine ran 1.7B again", (await page.evaluate(LAST_FAKE_MODEL)) === SMALL);
+	await page.screenshot("translation-llm-back");
 }

@@ -93,6 +93,18 @@
 				/>
 				Use the CPU models where they are the better choice
 			</label>
+			<label class="opt translate-llm-model">
+				<span>GPU model</span>
+				<select name="translateLlmModel" :value="selectedLlm.id">
+					<option v-for="choice in llmChoices" :key="choice.id" :value="choice.id">
+						{{ llmName(choice) }} · {{ size(choice.sizeBytes) }}
+					</option>
+				</select>
+			</label>
+			<div class="translate-hint translate-llm-hint">
+				The larger model translates more naturally, needs about 3.4 GB of graphics memory
+				and is slower.
+			</div>
 			<ul class="translate-models">
 				<li
 					v-for="view in models"
@@ -101,7 +113,14 @@
 					:data-model="view.ref.id"
 					:data-status="view.status"
 				>
-					<span class="translate-model-name">{{ view.ref.label }}</span>
+					<span class="translate-model-name"
+						>{{ view.ref.label }}
+						<span
+							v-if="view.ref.engine === 'llm' && view.ref.id === selectedLlm.id"
+							class="translate-model-in-use"
+							>In use</span
+						></span
+					>
 					<span class="translate-model-size">{{ size(view.ref.sizeBytes) }}</span>
 					<span class="translate-model-state">{{ stateLabel(view) }}</span>
 					<span v-if="view.status === 'downloading'" class="translate-model-track">
@@ -139,8 +158,19 @@
 	color: var(--body-color-muted);
 }
 
-.translate-target select {
+.translate-target select,
+.translate-llm-model select {
 	margin-left: 0.5rem;
+}
+
+.translate-model-in-use {
+	margin-left: 0.5rem;
+	padding: 0 0.375rem;
+	border-radius: 0.25rem;
+	font-size: 0.85em;
+	color: var(--chat-accent, var(--link-color));
+	border: 1px solid currentcolor;
+	white-space: nowrap;
 }
 
 .translate-models {
@@ -241,6 +271,7 @@ import {computed, defineComponent, onMounted, ref, toRaw} from "vue";
 import {useStore} from "../../js/store";
 import {translateService} from "../../js/translate";
 import type {ModelRef} from "../../js/translate/engine";
+import {llmChoice, llmName} from "../../js/translate/models";
 import {isLimitedLanguage} from "../../js/translate/routes.default";
 import {SUPPORTED_LANGUAGES, languageOptionLabel} from "../../js/translate/languages";
 import type {ModelView} from "../../js/translate/service";
@@ -260,6 +291,13 @@ export default defineComponent({
 		// (loadError), or the worker reported a problem of its own that no call
 		// was waiting for (the store's workerError, set by index.ts).
 		const problem = computed(() => store.state.translation.workerError ?? loadError.value);
+		const llmChoices = service.catalog.llmChoices;
+		// The setting as the service reads it: an id that is no longer a
+		// choice shows (and runs) the default.
+		const selectedLlm = computed(() =>
+			llmChoice(service.catalog, store.state.settings.translateLlmModel)
+		);
+		const limited = (code: string | null) => isLimitedLanguage(code, selectedLlm.value.id);
 
 		const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -318,7 +356,10 @@ export default defineComponent({
 			models,
 			capability,
 			languages,
-			limited: isLimitedLanguage,
+			limited,
+			llmChoices,
+			selectedLlm,
+			llmName,
 			loadError,
 			problem,
 			name,

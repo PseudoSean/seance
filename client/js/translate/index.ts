@@ -14,8 +14,7 @@ import {FAKE_CAPABILITY, fakePort} from "./fakePort";
 import {isSupported} from "./languages";
 import {buildCatalog} from "./models";
 import {MainPort} from "./protocol";
-import {RouteTable, mergeRoutes} from "./router";
-import {DEFAULT_ROUTES} from "./routes.default";
+import {RouteTable} from "./router";
 import {ServiceDeps, TranslateService} from "./service";
 
 // Captured at module load (vue.ts imports the router, which statically
@@ -52,11 +51,7 @@ function workerUrl(): string {
 // after getBranding() has something to read) and, the first time only,
 // dispatches the same action Settings uses so the choice persists like any
 // other user setting.
-function applyDefaultTarget(defaultTarget: string | undefined): void {
-	if (!defaultTarget || !isSupported(defaultTarget)) {
-		return;
-	}
-
+function hasStoredSetting(name: string): boolean {
 	let stored: Record<string, unknown> = {};
 
 	try {
@@ -65,8 +60,25 @@ function applyDefaultTarget(defaultTarget: string | undefined): void {
 		stored = {};
 	}
 
-	if (!Object.prototype.hasOwnProperty.call(stored, "translateTo")) {
+	return Object.prototype.hasOwnProperty.call(stored, name);
+}
+
+function applyDefaultTarget(defaultTarget: string | undefined): void {
+	if (!defaultTarget || !isSupported(defaultTarget)) {
+		return;
+	}
+
+	if (!hasStoredSetting("translateTo")) {
 		void store.dispatch("settings/update", {name: "translateTo", value: defaultTarget});
+	}
+}
+
+// The GPU model the same way: settings.ts's default is 1.7B, and a deploy
+// that names its own model (translation.llm.model) makes that the default
+// while the user has chosen none.
+function applyDefaultLlmModel(defaultLlm: string): void {
+	if (!hasStoredSetting("translateLlmModel")) {
+		void store.dispatch("settings/update", {name: "translateLlmModel", value: defaultLlm});
 	}
 }
 
@@ -92,11 +104,15 @@ function create(): TranslateService {
 		setTimeout: (fn, ms) => window.setTimeout(fn, ms),
 		clearTimeout: (handle) => window.clearTimeout(handle as number),
 	};
+	const catalog = buildCatalog(
+		branding,
+		hasStoredSetting("translateLlmModel") ? store.state.settings.translateLlmModel : null
+	);
 	const created = new TranslateService(
 		deps,
 		{
-			catalog: buildCatalog(branding),
-			routes: mergeRoutes(DEFAULT_ROUTES, (branding.routes ?? {}) as RouteTable),
+			catalog,
+			routes: (branding.routes ?? {}) as RouteTable,
 			ortBase: new URL("js/ort/", document.baseURI).href,
 			enabled: branding.enabled !== false,
 		},
@@ -104,6 +120,7 @@ function create(): TranslateService {
 	);
 
 	applyDefaultTarget(branding.defaultTarget);
+	applyDefaultLlmModel(catalog.llmDefault);
 
 	store.watch(
 		() =>
@@ -112,6 +129,12 @@ function create(): TranslateService {
 				boolean
 			],
 		([llm, cpu]) => created.setSettings({llm, cpu})
+	);
+	// A switch takes effect at once (service.ts `setLlmModel`): the old model
+	// unloads once its running requests are done, later requests route anew.
+	store.watch(
+		() => store.state.settings.translateLlmModel,
+		(id: string) => created.setLlmModel(id)
 	);
 	created.onModels((models) => store.commit("translationModels", models));
 	created.onWorkerError((message) => store.commit("translationWorkerError", message));

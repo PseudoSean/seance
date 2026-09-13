@@ -17,8 +17,21 @@ export interface CatalogOptions {
 }
 
 export interface ModelCatalog {
+	/** The selected GPU model: what a route's `llm` candidate runs. */
 	llm: ModelRef;
-	/** WebLLM's compiled model library for a non-prebuilt or mirrored LLM. */
+	/**
+	 * Every GPU model the user can choose: the shipped ones, then the
+	 * deploy's own model when it is neither. Settings lists them all, so
+	 * either can be downloaded or deleted whichever is selected.
+	 */
+	llmChoices: ModelRef[];
+	/** The id selected while the user has chosen none: the deploy's model, else 1.7B. */
+	llmDefault: string;
+	/**
+	 * The deploy's `translation.llm.lib`, as given. The engines read it off
+	 * the model's own ref (`ModelRef.lib`), which only the deploy's model
+	 * (or the default it mirrors) carries.
+	 */
 	llmLib?: string;
 	nllb: ModelRef;
 	/** Keyed "from-to". */
@@ -27,7 +40,9 @@ export interface ModelCatalog {
 	modelBase?: string;
 }
 
-export const DEFAULT_LLM_ID = "Qwen3-1.7B-q4f16_1-MLC";
+export const QWEN3_1_7B_ID = "Qwen3-1.7B-q4f16_1-MLC";
+export const QWEN3_4B_ID = "Qwen3-4B-q4f16_1-MLC";
+export const DEFAULT_LLM_ID = QWEN3_1_7B_ID;
 export const DEFAULT_NLLB_ID = "Xenova/nllb-200-distilled-600M";
 export const DEFAULT_OPUS_PAIRS: Record<string, string> = {
 	"de-en": "Xenova/opus-mt-de-en",
@@ -61,8 +76,94 @@ function opusRef(pairKey: string, id: string): ModelRef {
 	};
 }
 
-export function buildCatalog(options: CatalogOptions = {}): ModelCatalog {
+const LLM_LABEL_SUFFIX = " (GPU, all languages)";
+
+/**
+ * The GPU models Settings offers, both WebLLM prebuilt ids. `sizeBytes` is
+ * the download; the graphics memory they need is WebLLM's
+ * `vram_required_MB`, about 2.0 GB for 1.7B and 3.4 GB for 4B.
+ */
+export const LLM_CHOICES: readonly ModelRef[] = [
+	{
+		engine: "llm",
+		family: "llm",
+		id: QWEN3_1_7B_ID,
+		label: `Qwen3 1.7B${LLM_LABEL_SUFFIX}`,
+		sizeBytes: LLM_SIZE_BYTES,
+	},
+	{
+		engine: "llm",
+		family: "llm",
+		id: QWEN3_4B_ID,
+		label: `Qwen3 4B${LLM_LABEL_SUFFIX}`,
+		sizeBytes: 2_300_000_000,
+	},
+];
+
+/** A GPU model's name without its "(GPU, all languages)" note, for the model select. */
+export function llmName(ref: ModelRef): string {
+	return ref.label.endsWith(LLM_LABEL_SUFFIX)
+		? ref.label.slice(0, -LLM_LABEL_SUFFIX.length)
+		: ref.label;
+}
+
+/** A deploy's own GPU model, neither of the shipped choices. */
+function deployLlmRef(id: string, lib: string | undefined): ModelRef {
+	const ref: ModelRef = {
+		engine: "llm",
+		family: "llm",
+		id,
+		label: `${id.replace(/-q4f16_1-MLC$/, "").replace(/-/g, " ")}${LLM_LABEL_SUFFIX}`,
+		sizeBytes: LLM_SIZE_BYTES,
+	};
+
+	if (lib) {
+		ref.lib = lib;
+	}
+
+	return ref;
+}
+
+/**
+ * The GPU model `selected` names among the choices; an id that is none of
+ * them (a stored setting a later deploy no longer offers, an empty one)
+ * gets the default.
+ */
+export function llmChoice(catalog: ModelCatalog, selected: string | null | undefined): ModelRef {
+	return (
+		catalog.llmChoices.find((ref) => ref.id === selected) ??
+		catalog.llmChoices.find((ref) => ref.id === catalog.llmDefault) ??
+		catalog.llm
+	);
+}
+
+/** The catalog with `selected` (see `llmChoice`) as its GPU model. */
+export function selectLlm(
+	catalog: ModelCatalog,
+	selected: string | null | undefined
+): ModelCatalog {
+	const llm = llmChoice(catalog, selected);
+
+	return llm === catalog.llm ? catalog : {...catalog, llm};
+}
+
+export function buildCatalog(
+	options: CatalogOptions = {},
+	selectedLlm: string | null = null
+): ModelCatalog {
 	const llmId = options.llm?.model ?? DEFAULT_LLM_ID;
+	const lib = options.llm?.lib;
+	// A deploy's library belongs to the deploy's model (or to the shipped
+	// default it mirrors), never to the other choice: a 4B load handed the
+	// 1.7B wasm fails.
+	const llmChoices = LLM_CHOICES.map(
+		(ref): ModelRef => (ref.id === llmId && lib ? {...ref, lib} : {...ref})
+	);
+
+	if (!llmChoices.some((ref) => ref.id === llmId)) {
+		llmChoices.push(deployLlmRef(llmId, lib));
+	}
+
 	const nllbId = options.cpu?.nllb ?? DEFAULT_NLLB_ID;
 	const pairs = {...DEFAULT_OPUS_PAIRS, ...(options.cpu?.opus ?? {})};
 	const opus: Record<string, ModelRef> = {};
@@ -74,13 +175,9 @@ export function buildCatalog(options: CatalogOptions = {}): ModelCatalog {
 	}
 
 	const catalog: ModelCatalog = {
-		llm: {
-			engine: "llm",
-			family: "llm",
-			id: llmId,
-			label: `${llmId.replace(/-q4f16_1-MLC$/, "").replace(/-/g, " ")} (GPU, all languages)`,
-			sizeBytes: LLM_SIZE_BYTES,
-		},
+		llm: llmChoices.find((ref) => ref.id === llmId) as ModelRef,
+		llmChoices,
+		llmDefault: llmId,
 		nllb: {
 			engine: "seq2seq",
 			family: "nllb",
@@ -99,11 +196,12 @@ export function buildCatalog(options: CatalogOptions = {}): ModelCatalog {
 		catalog.modelBase = options.modelBase.replace(/\/+$/, "");
 	}
 
-	return catalog;
+	return selectLlm(catalog, selectedLlm);
 }
 
+/** Every model Settings lists: all the GPU choices, NLLB, then the OPUS-MT pairs. */
 export function catalogModels(catalog: ModelCatalog): ModelRef[] {
-	return [catalog.llm, catalog.nllb, ...Object.values(catalog.opus)];
+	return [...catalog.llmChoices, catalog.nllb, ...Object.values(catalog.opus)];
 }
 
 export function refFor(catalog: ModelCatalog, candidate: Candidate): ModelRef | null {

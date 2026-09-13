@@ -507,6 +507,42 @@ Emphasis marks on the LLM route, measured (2026-09-12):
   2026-09-13): judged by the question mark alone (`isAnsweredQuestion`),
   handled like a narration.
 
+The GPU model is a choice (2026-09-13):
+
+- **Qwen3-1.7B or Qwen3-4B, chosen in Settings** (`translateLlmModel`,
+  `models.ts` `LLM_CHOICES`); the spec had one GPU model, named by the
+  deploy. On 45 casual lines into French, German and Spanish 4B scored like
+  1.7B (40 against 41 clean) with more natural phrasing, at ~3.4 GB of GPU
+  memory against ~2.0 GB. The catalog lists every choice
+  (`catalog.llmChoices`) and `catalog.llm` is the selected one; a deploy's
+  `translation.llm.model` becomes the default and, when it is neither
+  shipped model, a third choice. Its `lib` travels on its own ref
+  (`ModelRef.lib`) instead of the catalog-wide `llmLib` the engines used to
+  read, which would have handed the deploy's library to the other models.
+- **The setting's default is 1.7B**, and a deploy's model replaces it the
+  first time `index.ts` runs (`applyDefaultLlmModel`, the `translateTo`
+  precedent): `settings.ts` computes defaults before `config.json` loads.
+- **A switch settles before any LLM work continues**
+  (`service.ts` `setLlmModel`): WebLLM holds one model and loading another
+  ends a running generation, so later LLM requests and LLM downloads wait
+  for the old model's running requests, the old model is unloaded if it is
+  still loaded, and only then does LLM work resume. The switch lifts the
+  LLM candidate's down-mark, and a load failure of a model already switched
+  away from does not mark the new one down.
+- **One route table per GPU model** (`routes.default.ts`
+  `routesFor(llmModelId)`, `limitedLanguagesFor`), each from its own
+  placement lists; 4B's start as 1.7B's until measured. The service merges
+  the deploy's `translation.routes` over the selected model's table and
+  rebuilds it on a switch (`ServiceOptions.routes` is now the deploy's
+  overrides alone, `routesFor` the shipped tables).
+- **Each GPU model has its own prompt profile** (`prompts/`,
+  `promptProfileFor`); the spec had one prompt (§ `prompt.ts`). 1.7B's
+  profile is `prompt.ts` unchanged; 4B's is a copy in its own module, to be
+  reworded from 4B's own measurements. `maxTokensFor` moved into the
+  profiles (`engines/webllm.ts` keeps an export of 1.7B's), and
+  `WebLlmDeps.promptProfileFor` lets a caller swap the lookup
+  (`tools/translate-llm.ts --profile`).
+
 ## Non-goals
 
 - No translation of the lobby, notices from the server, events (join, part,

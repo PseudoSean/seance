@@ -1,5 +1,10 @@
 import {expect} from "chai";
-import {EngineError, emptyContext, type TranslateRequest} from "../../client/js/translate/engine";
+import {
+	EngineError,
+	emptyContext,
+	type ModelRef,
+	type TranslateRequest,
+} from "../../client/js/translate/engine";
 import {
 	WebLlmEngine,
 	appConfigFor,
@@ -9,8 +14,9 @@ import {
 	type ModelRecord,
 	type WebLlmDeps,
 } from "../../client/js/translate/engines/webllm";
-import {buildCatalog} from "../../client/js/translate/models";
+import {QWEN3_1_7B_ID, QWEN3_4B_ID, buildCatalog} from "../../client/js/translate/models";
 import {EXAMPLES} from "../../client/js/translate/prompt";
+import {promptProfileFor} from "../../client/js/translate/prompts";
 
 const catalog = buildCatalog();
 const prebuilt: ModelRecord[] = [
@@ -816,11 +822,16 @@ describe("translate/engines/webllm", () => {
 	it("a different model gets its own reload grace", async () => {
 		const d = deps([]);
 		const engine = new WebLlmEngine(d.deps, name);
-		engine.configure({...catalog, llmLib: "https://m.test/lib.wasm"});
+		engine.configure(catalog);
 		const mlc = d.deps.create({model_list: []}, () => {});
 		mlc.chat.completions.create = () => Promise.reject(new Error("Device lost"));
 		d.deps.create = () => mlc;
-		const other = {...catalog.llm, id: "other-model-q4f16_1-MLC"};
+		// A deploy's own model carries its library on its ref (models.ts).
+		const other = {
+			...catalog.llm,
+			id: "other-model-q4f16_1-MLC",
+			lib: "https://m.test/lib.wasm",
+		};
 		const causes: string[] = [];
 
 		for (const ref of [catalog.llm, other]) {
@@ -852,5 +863,64 @@ describe("translate/engines/webllm", () => {
 		}
 
 		expect(engine.generationFailures).to.equal(0);
+	});
+
+	it("asks with the prompt profile of the model it loaded", async () => {
+		const d = deps(["ok"]);
+		const asked: string[] = [];
+
+		d.deps.prebuilt = [
+			...prebuilt,
+			{
+				model_id: QWEN3_4B_ID,
+				model: `https://huggingface.co/mlc-ai/${QWEN3_4B_ID}/resolve/main/`,
+				model_lib: "https://m.test/qwen3-4b.wasm",
+			},
+		];
+
+		d.deps.promptProfileFor = (modelId) => {
+			asked.push(modelId);
+
+			return {
+				...promptProfileFor(modelId),
+				buildMessages: () => [{role: "system", content: `profile of ${modelId}`}],
+				maxTokensFor: () => 77,
+			};
+		};
+
+		const engine = new WebLlmEngine(d.deps, name);
+		const large = catalog.llmChoices.find((ref) => ref.id === QWEN3_4B_ID);
+
+		engine.configure(catalog);
+		await engine.load(large as ModelRef, () => {});
+
+		for await (const _c of engine.translate(
+			request({model: QWEN3_4B_ID}),
+			new AbortController().signal
+		)) {
+			// consume
+		}
+
+		expect(asked).to.deep.equal([QWEN3_4B_ID]);
+		expect(d.calls.create[0].messages).to.deep.equal([
+			{role: "system", content: `profile of ${QWEN3_4B_ID}`},
+		]);
+		expect(d.calls.create[0].max_tokens).to.equal(77);
+	});
+
+	it("without an injected lookup the loaded model's own profile builds the messages", async () => {
+		const d = deps(["ok"]);
+		const engine = new WebLlmEngine(d.deps, name);
+
+		engine.configure(catalog);
+		await engine.load(catalog.llm, () => {});
+
+		for await (const _c of engine.translate(request(), new AbortController().signal)) {
+			// consume
+		}
+
+		expect(d.calls.create[0].messages).to.deep.equal(
+			promptProfileFor(QWEN3_1_7B_ID).buildMessages(request(), name)
+		);
 	});
 });

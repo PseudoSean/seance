@@ -2,7 +2,12 @@ import {expect} from "chai";
 import sinon from "ts-sinon";
 import type {Capability} from "../../client/js/translate/capability";
 import {emptyContext} from "../../client/js/translate/engine";
-import {buildCatalog, type CacheApi} from "../../client/js/translate/models";
+import {
+	QWEN3_1_7B_ID,
+	QWEN3_4B_ID,
+	buildCatalog,
+	type CacheApi,
+} from "../../client/js/translate/models";
 import {createPortPair} from "../../client/js/translate/protocol";
 import type {RouteTable} from "../../client/js/translate/router";
 import {DEFAULT_ROUTES} from "../../client/js/translate/routes.default";
@@ -104,7 +109,7 @@ function rig(
 	};
 	const service = new TranslateService(
 		deps,
-		{catalog, routes, ortBase: "https://app.test/js/ort/", enabled},
+		{catalog, routesFor: () => routes, ortBase: "https://app.test/js/ort/", enabled},
 		{llm: true, cpu: true}
 	);
 
@@ -400,6 +405,158 @@ describe("translate/service", () => {
 		r.service.dispose();
 	});
 
+	it("a GPU model switch unloads the old model and routes the next LLM request to the new one", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		expect(await text(r.service.translate(base))).to.equal("llm:Hallo");
+		expect(r.llm.calls.load.map((ref) => ref.id)).to.deep.equal([QWEN3_1_7B_ID]);
+
+		r.service.setLlmModel(QWEN3_4B_ID);
+		await r.clock.tickAsync(0);
+		expect(r.llm.calls.unload).to.equal(1);
+		expect(r.service.catalog.llm.id).to.equal(QWEN3_4B_ID);
+		expect((await r.service.route("de", "en"))?.ref.id).to.equal(QWEN3_4B_ID);
+
+		expect(await text(r.service.translate({...base, text: "Welt"}))).to.equal("llm:Welt");
+		expect(r.llm.calls.load.map((ref) => ref.id)).to.deep.equal([QWEN3_1_7B_ID, QWEN3_4B_ID]);
+		expect(r.llm.calls.translate.map((req) => req.model)).to.deep.equal([
+			QWEN3_1_7B_ID,
+			QWEN3_4B_ID,
+		]);
+		// No worker was torn down for it.
+		expect(r.workers.length).to.equal(1);
+		expect(r.workers[0].terminated).to.equal(false);
+		r.service.dispose();
+	});
+
+	it("a switch to the model already selected, or to no choice from the default, changes nothing", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		await text(r.service.translate(base));
+		const before = r.service.catalog;
+
+		r.service.setLlmModel(QWEN3_1_7B_ID);
+		r.service.setLlmModel("gone-model-q4f16_1-MLC");
+		await r.clock.tickAsync(0);
+		expect(r.service.catalog).to.equal(before);
+		expect(r.llm.calls.unload).to.equal(0);
+		r.service.dispose();
+	});
+
+	it("a switch with nothing loaded yet creates no worker", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		r.service.setLlmModel(QWEN3_4B_ID);
+		await r.clock.tickAsync(0);
+		expect(r.workers.length).to.equal(0);
+		expect((await r.service.route("de", "en"))?.ref.id).to.equal(QWEN3_4B_ID);
+		r.service.dispose();
+	});
+
+	it("a request in flight finishes on the old model; the switch waits for it", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		let release!: () => void;
+		const gate = new Promise<void>((resolve) => (release = resolve));
+		const original = r.llm.translate.bind(r.llm);
+		let started = 0;
+
+		r.llm.translate = async function* (req, signal) {
+			started++;
+
+			if (started === 1) {
+				await gate;
+			}
+
+			yield* original(req, signal);
+		};
+
+		const running = text(r.service.translate(base));
+
+		await r.clock.tickAsync(0);
+		expect(started).to.equal(1);
+
+		r.service.setLlmModel(QWEN3_4B_ID);
+		const next = text(r.service.translate({...base, text: "Welt"}));
+
+		await r.clock.tickAsync(0);
+		// Neither unloaded under the running request nor replaced by the new load.
+		expect(r.llm.calls.unload).to.equal(0);
+		expect(r.llm.calls.load.map((ref) => ref.id)).to.deep.equal([QWEN3_1_7B_ID]);
+		expect(started).to.equal(1);
+
+		release();
+		expect(await running).to.equal("llm:Hallo");
+		expect(await next).to.equal("llm:Welt");
+		expect(r.llm.calls.unload).to.equal(1);
+		expect(r.llm.calls.load.map((ref) => ref.id)).to.deep.equal([QWEN3_1_7B_ID, QWEN3_4B_ID]);
+		expect(r.llm.calls.translate.map((req) => req.model)).to.deep.equal([
+			QWEN3_1_7B_ID,
+			QWEN3_4B_ID,
+		]);
+		r.service.dispose();
+	});
+
+	it("a switch lifts the old model's down-mark; the new model failing marks it down as today", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		// Japanese into French: the LLM strictly first, NLLB the next class.
+		const jaFr = {...base, from: "ja", to: "fr"};
+
+		r.llm.failLoad = new Error("out of memory");
+		expect(await text(r.service.translate(jaFr))).to.equal("seq:Hallo");
+		expect((await r.service.route("ja", "fr"))?.candidate).to.equal("nllb");
+
+		r.service.setLlmModel(QWEN3_4B_ID);
+		await r.clock.tickAsync(0);
+		expect((await r.service.route("ja", "fr"))?.ref.id).to.equal(QWEN3_4B_ID);
+
+		r.llm.failLoad = new Error("no adapter memory");
+		expect(await text(r.service.translate(jaFr))).to.equal("seq:Hallo");
+		const view = (await r.service.models()).find((v) => v.ref.id === QWEN3_4B_ID);
+
+		expect(view).to.include({status: "failed", error: "no adapter memory"});
+		expect((await r.service.route("ja", "fr"))?.candidate).to.equal("nllb");
+		r.service.dispose();
+	});
+
+	it("builds its table from the selected model's routes with the deploy's merged over them", async () => {
+		const asked: string[] = [];
+		clock = sinon.useFakeTimers();
+		const service = new TranslateService(
+			{
+				// No worker: the cache question fails and every model counts as absent.
+				createClient() {
+					throw new Error("no worker in this test");
+				},
+				probe: () => Promise.resolve(capability("gpu")),
+				setTimeout: (fn, ms) => setTimeout(fn, ms),
+				clearTimeout: (handle) => clearTimeout(handle as NodeJS.Timeout),
+			},
+			{
+				catalog,
+				routesFor(id) {
+					asked.push(id);
+					return id === QWEN3_4B_ID ? {"*": {"*": ["nllb"]}} : {"*": {"*": ["llm"]}};
+				},
+				routes: {en: {de: ["opus:de-en"]}},
+				ortBase: "",
+				enabled: true,
+			},
+			{llm: true, cpu: true}
+		);
+
+		expect((await service.route("fr", "ja"))?.candidate).to.equal("llm");
+		expect((await service.route("de", "en"))?.candidate).to.equal("opus:de-en");
+
+		service.setLlmModel(QWEN3_4B_ID);
+		expect(asked).to.deep.equal([QWEN3_1_7B_ID, QWEN3_4B_ID]);
+		expect((await service.route("fr", "ja"))?.candidate).to.equal("nllb");
+		// The deploy's override survives the switch.
+		expect((await service.route("de", "en"))?.candidate).to.equal("opus:de-en");
+		service.dispose();
+	});
+
 	it("unloads and terminates the worker after ten idle minutes, not while a request runs", async () => {
 		const r = rig("gpu");
 		clock = r.clock;
@@ -435,7 +592,7 @@ describe("translate/service", () => {
 		const views = await r.service.models();
 
 		expect(views.map((v) => v.ref.id)).to.deep.equal([
-			catalog.llm.id,
+			...catalog.llmChoices.map((c) => c.id),
 			catalog.nllb.id,
 			...Object.values(catalog.opus).map((o) => o.id),
 		]);
@@ -486,7 +643,8 @@ describe("translate/service", () => {
 		expect(seen.length).to.equal(1);
 		expect(seen[0][0]).to.equal(`${catalog.llm.id}:idle`);
 		expect(seen[0].length).to.equal(
-			2 + Object.keys(catalog.opus).length // llm + nllb + the pairs
+			// every GPU choice + nllb + the pairs
+			catalog.llmChoices.length + 1 + Object.keys(catalog.opus).length
 		);
 		r.service.dispose();
 	});

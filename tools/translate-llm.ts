@@ -59,7 +59,8 @@ import {
 	WebLlmEngine,
 } from "../client/js/translate/engines/webllm";
 import {languageName} from "../client/js/translate/languages";
-import {buildCatalog} from "../client/js/translate/models";
+import {QWEN3_1_7B_ID, buildCatalog} from "../client/js/translate/models";
+import {promptProfileFor} from "../client/js/translate/prompts";
 import type {TranslateCapture} from "../client/js/translate/outgoing";
 import {
 	EXAMPLE_ANSWERS,
@@ -471,6 +472,8 @@ interface Options {
 	dtype: Dtype;
 	/** A local model directory (`tmp/models/web/<id>`), loaded instead of `repo`. */
 	local: string | null;
+	/** `--profile`: the GPU model id whose prompt profile asks (client/js/translate/prompts/). */
+	profile: string;
 }
 
 const USAGE = [
@@ -479,6 +482,7 @@ const USAGE = [
 	"                                     [--device cpu|cuda] [--repo <hf repo>] [--dtype q4f16|fp16|int8|…]",
 	"                                     [--local tmp/models/web/<model id>]",
 	"                                     [--markers placeholder|literal|tags]",
+	"                                     [--profile <model id>]",
 	"       npx tsx tools/translate-llm.ts --capture capture.json [--to de] [--show-prompt]",
 	"       npx tsx tools/translate-llm.ts --eval tools/translate-eval/prompts.json [--to de]",
 ].join("\n");
@@ -500,6 +504,7 @@ function parseArgs(argv: string[]): Options {
 		repo: ONNX_REPO,
 		dtype: DTYPE,
 		local: null,
+		profile: QWEN3_1_7B_ID,
 	};
 
 	// Which flags the command line actually carried: a capture supplies the
@@ -573,6 +578,8 @@ function parseArgs(argv: string[]): Options {
 			}
 
 			options.dtype = dtype as Dtype;
+		} else if (arg === "--profile") {
+			options.profile = value();
 		} else if (arg === "--show-prompt") {
 			options.showPrompt = true;
 		} else if (arg === "--raw") {
@@ -864,11 +871,19 @@ async function main(): Promise<void> {
 		dtype: options.dtype,
 		log: (text) => console.log(text),
 	});
+	// The prompt profile is chosen here, not by the id the backend is loaded
+	// under (always the catalog's): the weights and the wording are picked
+	// separately, so 4B's wording can be run against any weights.
+	const profile = promptProfileFor(options.profile);
+
+	deps.promptProfileFor = () => profile;
+
 	const engine = new WebLlmEngine(deps, (code) => languageName(code));
 
 	engine.configure(catalog);
 
 	console.log(`model   ${catalog.llm.id} → ${options.repo} (${options.dtype})`);
+	console.log(`profile ${profile.modelId}`);
 	console.log(`cache   ${env.cacheDir}`);
 
 	if (options.local) {
