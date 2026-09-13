@@ -1,16 +1,17 @@
 <template>
 	<div>
-		<h2>Messages</h2>
+		<h2>{{ t("settings.appearance.messagesHeading") }}</h2>
 		<div>
 			<label class="opt">
 				<input :checked="store.state.settings.motd" type="checkbox" name="motd" />
-				Show <abbr title="Message Of The Day">MOTD</abbr>
+				{{ t("settings.appearance.showMotd") }}
+				<abbr :title="motdTitle">MOTD</abbr>
 			</label>
 		</div>
 		<div>
 			<label class="opt">
 				<input :checked="store.state.settings.markdown" type="checkbox" name="markdown" />
-				Render Markdown formatting (bold, code, spoilers…)
+				{{ t("settings.appearance.markdown") }}
 			</label>
 		</div>
 		<div>
@@ -20,7 +21,7 @@
 					type="checkbox"
 					name="showSeconds"
 				/>
-				Include seconds in timestamp
+				{{ t("settings.appearance.showSeconds") }}
 			</label>
 		</div>
 		<div>
@@ -30,18 +31,18 @@
 					type="checkbox"
 					name="use12hClock"
 				/>
-				Use 12-hour timestamps
+				{{ t("settings.appearance.use12hClock") }}
 			</label>
 		</div>
-		<h2 id="label-media-previews">Media previews</h2>
+		<h2 id="label-media-previews">{{ t("settings.appearance.mediaHeading") }}</h2>
 		<div role="group" aria-labelledby="label-media-previews">
 			<label class="opt">
 				<input :checked="store.state.settings.media" type="checkbox" name="media" />
-				Preview images, video and audio links inline
+				{{ t("settings.appearance.media") }}
 			</label>
 			<div
 				role="group"
-				aria-label="When to load previews"
+				:aria-label="mediaRevealGroupLabel"
 				:class="['media-reveal-options', {disabled: !store.state.settings.media}]"
 			>
 				<label class="opt">
@@ -52,7 +53,7 @@
 						name="mediaReveal"
 						value="click"
 					/>
-					Click to reveal — nothing is fetched from the media site until you ask to see it
+					{{ t("settings.appearance.mediaClick") }}
 				</label>
 				<label class="opt">
 					<input
@@ -62,7 +63,7 @@
 						name="mediaReveal"
 						value="always"
 					/>
-					Show automatically — the media site sees your address as soon as a link appears
+					{{ t("settings.appearance.mediaAlways") }}
 				</label>
 			</div>
 			<div
@@ -70,19 +71,22 @@
 				class="trusted-hosts"
 			>
 				<div class="trusted-hosts-head">
-					<span class="trusted-hosts-title">Always shown</span>
+					<span class="trusted-hosts-title">{{
+						t("settings.appearance.trustedHeading")
+					}}</span>
 					<button
 						v-if="trustedCount > 0"
 						type="button"
 						class="trusted-hosts-clear"
 						@click="clearTrusted()"
 					>
-						Clear all
+						{{ t("settings.appearance.trustedClear") }}
 					</button>
 				</div>
 				<p class="trusted-hosts-help">
-					Media in these scopes loads without asking. Add one with
-					<em>Always show</em> on any preview.
+					{{ t("settings.appearance.trustedHelpA") }}
+					<em>{{ t("settings.appearance.trustedButtonName") }}</em>
+					{{ t("settings.appearance.trustedHelpB") }}
 				</p>
 				<template v-for="group in trustedGroups" :key="group.kind">
 					<div v-if="group.entries.length > 0" class="trusted-group">
@@ -100,23 +104,22 @@
 								<button
 									type="button"
 									class="trusted-host-remove"
-									:aria-label="`Stop always showing ${group.verb} ${entry.name}`"
-									:title="`Stop always showing ${group.verb} ${entry.name}`"
+									:aria-label="untrustLabel(group.kind, entry.name)"
+									:title="untrustLabel(group.kind, entry.name)"
 									@click="untrust(group.kind, entry.key)"
 								></button>
 							</li>
 						</ul>
 					</div>
 				</template>
-				<p v-if="trustedCount === 0" class="trusted-hosts-empty">Nothing yet.</p>
+				<p v-if="trustedCount === 0" class="trusted-hosts-empty">
+					{{ t("settings.appearance.trustedEmpty") }}
+				</p>
 			</div>
 		</div>
 		<h2 id="label-status-messages">
-			Status messages
-			<span
-				class="tooltipped tooltipped-n tooltipped-no-delay"
-				aria-label="Joins, parts, quits, kicks, nick changes, and mode changes"
-			>
+			{{ t("settings.appearance.statusHeading") }}
+			<span class="tooltipped tooltipped-n tooltipped-no-delay" :aria-label="statusHelpLabel">
 				<button class="extra-help" />
 			</span>
 		</h2>
@@ -128,7 +131,7 @@
 					name="statusMessages"
 					value="shown"
 				/>
-				Show all status messages individually
+				{{ t("settings.appearance.statusShown") }}
 			</label>
 			<label class="opt">
 				<input
@@ -137,7 +140,7 @@
 					name="statusMessages"
 					value="condensed"
 				/>
-				Condense status messages together
+				{{ t("settings.appearance.statusCondensed") }}
 			</label>
 			<label class="opt">
 				<input
@@ -146,10 +149,10 @@
 					name="statusMessages"
 					value="hidden"
 				/>
-				Hide all status messages
+				{{ t("settings.appearance.statusHidden") }}
 			</label>
 		</div>
-		<h2>Visual Aids</h2>
+		<h2>{{ t("settings.appearance.visualAids") }}</h2>
 		<div>
 			<label class="opt">
 				<input
@@ -157,7 +160,7 @@
 					type="checkbox"
 					name="coloredNicks"
 				/>
-				Enable colored nicknames
+				{{ t("settings.appearance.coloredNicks") }}
 			</label>
 			<label class="opt">
 				<input
@@ -165,16 +168,16 @@
 					type="checkbox"
 					name="autocomplete"
 				/>
-				Enable autocomplete
+				{{ t("settings.appearance.autocomplete") }}
 			</label>
 		</div>
 		<div>
 			<label class="opt">
 				<label for="nickPostfix" class="opt">
-					Nick autocomplete postfix
+					{{ t("settings.appearance.nickPostfix") }}
 					<span
 						class="tooltipped tooltipped-n tooltipped-no-delay"
-						aria-label="Nick autocomplete postfix (for example a comma)"
+						:aria-label="nickPostfixHelp"
 					>
 						<button class="extra-help" />
 					</span>
@@ -185,12 +188,12 @@
 					type="text"
 					name="nickPostfix"
 					class="input"
-					placeholder="Nick autocomplete postfix (e.g. ', ')"
+					:placeholder="nickPostfixPlaceholder"
 				/>
 			</label>
 		</div>
 
-		<h2 id="label-font-size">Font size</h2>
+		<h2 id="label-font-size">{{ t("settings.appearance.fontSizeHeading") }}</h2>
 		<div role="group" aria-labelledby="label-font-size" class="font-size-setting">
 			<!-- No `name`: the window's generic @change handler would store the
 			     raw slider index. While the slider moves only the sample below
@@ -204,7 +207,7 @@
 					list="font-size-stops"
 					:value="shownIndex"
 					:aria-valuetext="shownLabel"
-					aria-label="Message font size"
+					:aria-label="fontSizeAriaLabel"
 					@input="onFontSizeInput"
 					@change="onFontSizeChange"
 				/>
@@ -227,9 +230,9 @@
 			</div>
 		</div>
 
-		<h2>Theme</h2>
+		<h2>{{ t("settings.appearance.theme") }}</h2>
 		<div>
-			<label for="theme-select" class="sr-only">Theme</label>
+			<label for="theme-select" class="sr-only">{{ t("settings.appearance.theme") }}</label>
 			<select
 				id="theme-select"
 				:value="store.state.settings.theme"
@@ -257,16 +260,16 @@
 		</div>
 
 		<div>
-			<h2>Custom Stylesheet</h2>
+			<h2>{{ t("settings.appearance.customStylesheet") }}</h2>
 			<label for="user-specified-css-input" class="sr-only">
-				Custom stylesheet. You can override any style with CSS here.
+				{{ t("settings.appearance.customStylesheetHelp") }}
 			</label>
 			<textarea
 				id="user-specified-css-input"
 				:value="store.state.settings.userStyles"
 				class="input"
 				name="userStyles"
-				placeholder="/* You can override any style with CSS here */"
+				:placeholder="customStylesheetPlaceholder"
 			/>
 		</div>
 	</div>
@@ -376,6 +379,25 @@ export default defineComponent({
 		const store = useStore();
 		const {t} = useI18n();
 
+		const motdTitle = computed(() => t("settings.appearance.motdTitle"));
+		const mediaRevealGroupLabel = computed(() => t("settings.appearance.mediaRevealGroup"));
+		const statusHelpLabel = computed(() => t("settings.appearance.statusHelp"));
+		const nickPostfixHelp = computed(() => t("settings.appearance.nickPostfixHelp"));
+		const nickPostfixPlaceholder = computed(() =>
+			t("settings.appearance.nickPostfixPlaceholder")
+		);
+		const fontSizeAriaLabel = computed(() => t("settings.appearance.fontSizeAria"));
+		const customStylesheetPlaceholder = computed(() =>
+			t("settings.appearance.customStylesheetPlaceholder")
+		);
+
+		/** Remove-button label of the always-shown list: "in" a channel,
+		 * "from" a site or a person. */
+		const untrustLabel = (kind: TrustKind, name: string) =>
+			kind === "channel"
+				? t("settings.appearance.untrustIn", {name})
+				: t("settings.appearance.untrustFrom", {name});
+
 		const setLocale = (tag: string) =>
 			void store.dispatch("settings/update", {name: "locale", value: tag});
 
@@ -394,17 +416,19 @@ export default defineComponent({
 			});
 
 		const trustedGroups = computed(() => [
-			{kind: "host" as TrustKind, title: "Sites", verb: "from", entries: entriesOf("host")},
+			{
+				kind: "host" as TrustKind,
+				title: t("settings.appearance.trustedSites"),
+				entries: entriesOf("host"),
+			},
 			{
 				kind: "account" as TrustKind,
-				title: "People",
-				verb: "from",
+				title: t("settings.appearance.trustedPeople"),
 				entries: entriesOf("account"),
 			},
 			{
 				kind: "channel" as TrustKind,
-				title: "Channels",
-				verb: "in",
+				title: t("settings.appearance.trustedChannels"),
 				entries: entriesOf("channel"),
 			},
 		]);
@@ -468,6 +492,14 @@ export default defineComponent({
 		return {
 			store,
 			t,
+			motdTitle,
+			mediaRevealGroupLabel,
+			statusHelpLabel,
+			nickPostfixHelp,
+			nickPostfixPlaceholder,
+			fontSizeAriaLabel,
+			customStylesheetPlaceholder,
+			untrustLabel,
 			setLocale,
 			trustedGroups,
 			trustedCount,

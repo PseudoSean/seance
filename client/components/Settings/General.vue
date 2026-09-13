@@ -1,14 +1,14 @@
 <template>
 	<div>
 		<div v-if="canRegisterProtocol || store.state.installPromptAvailable">
-			<h2>Native app</h2>
+			<h2>{{ t("settings.general.nativeApp") }}</h2>
 			<button
 				v-if="store.state.installPromptAvailable"
 				type="button"
 				class="btn"
 				@click.prevent="nativeInstallPrompt"
 			>
-				Install {{ appName }} as an app
+				{{ t("settings.general.installApp", {appName}) }}
 			</button>
 			<button
 				v-if="canRegisterProtocol"
@@ -16,11 +16,11 @@
 				class="btn"
 				@click.prevent="registerProtocol"
 			>
-				Open web+irc:// links with {{ appName }}
+				{{ t("settings.general.openLinks", {appName}) }}
 			</button>
 		</div>
 		<div v-if="store.state.serverConfiguration?.fileUpload">
-			<h2>File uploads</h2>
+			<h2>{{ t("settings.general.uploadsHeading") }}</h2>
 			<div>
 				<label class="opt">
 					<input
@@ -28,11 +28,10 @@
 						type="checkbox"
 						name="uploadCanvas"
 					/>
-					Attempt to remove metadata from images before uploading
+					{{ t("settings.general.uploadCanvas") }}
 					<span
 						class="tooltipped tooltipped-n tooltipped-no-delay"
-						aria-label="This option renders the image into a canvas element to remove metadata from the image.
-	This may break orientation if your browser does not support that."
+						:aria-label="uploadCanvasHelp"
 					>
 						<button class="extra-help" />
 					</span>
@@ -40,7 +39,7 @@
 			</div>
 		</div>
 		<div>
-			<h2>Typing notifications</h2>
+			<h2>{{ t("settings.general.typingHeading") }}</h2>
 			<div>
 				<label class="opt">
 					<input
@@ -48,10 +47,10 @@
 						type="checkbox"
 						name="sendTypingNotifications"
 					/>
-					Send typing notifications
+					{{ t("settings.general.sendTyping") }}
 					<span
 						class="tooltipped tooltipped-n tooltipped-no-delay"
-						aria-label="Lets people in the channel see when you are typing (IRCv3 +typing)."
+						:aria-label="sendTypingHelp"
 					>
 						<button class="extra-help" />
 					</span>
@@ -59,45 +58,47 @@
 			</div>
 		</div>
 		<div v-if="!store.state.serverConfiguration?.public">
-			<h2>Automatic away message</h2>
+			<h2>{{ t("settings.general.awayHeading") }}</h2>
 
 			<label class="opt">
-				<label for="awayMessage" class="sr-only">Automatic away message</label>
+				<label for="awayMessage" class="sr-only">{{
+					t("settings.general.awayHeading")
+				}}</label>
 				<input
 					id="awayMessage"
 					:value="store.state.settings.awayMessage"
 					type="text"
 					name="awayMessage"
 					class="input"
-					:placeholder="`Away message if ${appName} is not open`"
+					:placeholder="awayPlaceholder"
 				/>
 			</label>
 		</div>
 		<div class="settings-backup">
-			<h2>Backup and restore</h2>
-			<p>Save your settings to a file. You can restore here or on another device.</p>
+			<h2>{{ t("settings.general.backupHeading") }}</h2>
+			<p>{{ t("settings.general.backupIntro") }}</p>
 			<label class="opt">
 				<input v-model="includePasswords" type="checkbox" />
-				Include network passwords
+				{{ t("settings.general.includePasswords") }}
 				<span
 					class="tooltipped tooltipped-n tooltipped-no-delay"
-					aria-label="Passwords are stored in the file unencrypted."
+					:aria-label="includePasswordsHelp"
 				>
 					<button class="extra-help" />
 				</span>
 			</label>
 			<div class="opt">
 				<button type="button" class="btn" :disabled="busy" @click.prevent="download">
-					Export settings…
+					{{ t("settings.general.export") }}
 				</button>
 				<button type="button" class="btn" :disabled="busy" @click.prevent="pickFile">
-					Import settings…
+					{{ t("settings.general.import") }}
 				</button>
 				<input
 					ref="fileInput"
 					type="file"
 					class="sr-only"
-					aria-label="Settings file to restore"
+					:aria-label="fileAriaLabel"
 					:accept="`${fileExtension},application/json`"
 					@change="onFileChosen"
 				/>
@@ -123,6 +124,7 @@
 <script lang="ts">
 import {computed, defineComponent, onMounted, ref} from "vue";
 import {useStore} from "../../js/store";
+import {useI18n} from "../../js/i18n";
 import {promptInstall} from "../../js/pwa";
 import eventbus from "../../js/eventbus";
 import {
@@ -142,7 +144,15 @@ export default defineComponent({
 	name: "GeneralSettings",
 	setup() {
 		const store = useStore();
+		const {t, tCount} = useI18n();
 		const appName = computed(() => store.state.branding.appName);
+		const uploadCanvasHelp = computed(() => t("settings.general.uploadCanvasHelp"));
+		const sendTypingHelp = computed(() => t("settings.general.sendTypingHelp"));
+		const awayPlaceholder = computed(() =>
+			t("settings.general.awayPlaceholder", {appName: appName.value})
+		);
+		const includePasswordsHelp = computed(() => t("settings.general.includePasswordsHelp"));
+		const fileAriaLabel = computed(() => t("settings.general.fileAria"));
 		const canRegisterProtocol = ref(false);
 
 		onMounted(() => {
@@ -199,7 +209,7 @@ export default defineComponent({
 				// Revoke after the click has had its turn at the URL.
 				setTimeout(() => URL.revokeObjectURL(url), 10_000);
 			} catch (e) {
-				error.value = "Couldn't create the file.";
+				error.value = t("settings.general.exportFailed");
 			} finally {
 				busy.value = false;
 			}
@@ -213,24 +223,21 @@ export default defineComponent({
 		const describe = (backup: SettingsBackup, name: string) => {
 			const networks = networkCount(backup);
 			const parts = [
-				"your settings",
-				networks === 1 ? "1 network" : `${networks} networks`,
-				"mutes and ignore lists",
+				t("settings.general.backupPartSettings"),
+				tCount("settings.general.backupNetworks", networks),
+				t("settings.general.backupMutes"),
 			];
-			const passwords = hasPasswords(backup) ? " The file includes network passwords." : "";
-			return (
-				`This replaces ${parts.join(", ")} with the contents of ${name}, ` +
-				`then reloads.${passwords}`
-			);
+			const passwords = hasPasswords(backup) ? t("settings.general.backupPasswords") : "";
+			return t("settings.general.backupFrame", {parts: parts.join(", "), file: name});
 		};
 
 		const restore = (backup: SettingsBackup, name: string) => {
 			eventbus.emit(
 				"confirm-dialog",
 				{
-					title: "Import settings?",
+					title: t("settings.general.importTitle"),
 					text: describe(backup, name),
-					button: "Import and reload",
+					button: t("settings.general.importButton"),
 				},
 				(confirmed: boolean) => {
 					if (!confirmed) {
@@ -261,7 +268,7 @@ export default defineComponent({
 				restore(backup, file.name);
 			} catch (e) {
 				error.value =
-					e instanceof BackupFormatError ? e.message : "Couldn't read the file.";
+					e instanceof BackupFormatError ? e.message : t("settings.general.importFailed");
 			} finally {
 				busy.value = false;
 			}
@@ -270,6 +277,12 @@ export default defineComponent({
 		return {
 			appName,
 			store,
+			t,
+			uploadCanvasHelp,
+			sendTypingHelp,
+			awayPlaceholder,
+			includePasswordsHelp,
+			fileAriaLabel,
 			canRegisterProtocol,
 			nativeInstallPrompt,
 			registerProtocol,

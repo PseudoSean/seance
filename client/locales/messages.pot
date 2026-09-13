@@ -996,6 +996,404 @@ msgctxt "search.placeholder"
 msgid "Search messages…"
 msgstr ""
 
+#: client/components/Settings/Appearance.vue
+#. Checkbox in Settings > Appearance; when ticked, typing in the message input suggests completions for names, emoji and commands.
+msgctxt "settings.appearance.autocomplete"
+msgid "Enable autocomplete"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Checkbox in Settings > Appearance; when ticked, each user's name in chat is drawn in its own consistent color.
+msgctxt "settings.appearance.coloredNicks"
+msgid "Enable colored nicknames"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Heading of the section in Settings > Appearance holding the user's own CSS. Keep the capitalization style of the source if possible.
+msgctxt "settings.appearance.customStylesheet"
+msgid "Custom Stylesheet"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Visually hidden label of the custom stylesheet text area in Settings > Appearance, where CSS rules overriding the app's own styles can be entered.
+msgctxt "settings.appearance.customStylesheetHelp"
+msgid "Custom stylesheet. You can override any style with CSS here."
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Placeholder of the custom stylesheet text area in Settings > Appearance, written as a CSS comment. Keep the /* */ comment markers.
+msgctxt "settings.appearance.customStylesheetPlaceholder"
+msgid "/* You can override any style with CSS here */"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. aria-label of the slider in Settings > Appearance that changes the size of chat text and the interface with it.
+msgctxt "settings.appearance.fontSizeAria"
+msgid "Message font size"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Heading of the text size control in Settings > Appearance; a slider that scales the whole interface.
+msgctxt "settings.appearance.fontSizeHeading"
+msgid "Font size"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Checkbox in Settings > Appearance; when ticked, chat messages are rendered with Markdown styling such as bold text, code blocks and spoiler marks. Ellipsis is part of the copy.
+msgctxt "settings.appearance.markdown"
+msgid "Render Markdown formatting (bold, code, spoilers…)"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Checkbox in Settings > Appearance; when ticked, links to media are shown as an inline playable preview inside the chat instead of a plain link.
+msgctxt "settings.appearance.media"
+msgid "Preview images, video and audio links inline"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Radio option in Settings > Appearance; media previews load on their own as soon as a message contains one, which exposes your address to the media site. Em dash is part of the copy.
+msgctxt "settings.appearance.mediaAlways"
+msgid "Show automatically — the media site sees your address as soon as a link appears"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Radio option in Settings > Appearance; media previews stay behind a placeholder until you click them, so nothing is loaded from the media site before that. Em dash is part of the copy.
+msgctxt "settings.appearance.mediaClick"
+msgid "Click to reveal — nothing is fetched from the media site until you ask to see it"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Heading of the media preview section in Settings > Appearance, which controls how links to images, video and audio are shown in chat.
+msgctxt "settings.appearance.mediaHeading"
+msgid "Media previews"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Visually hidden group label of the two radio choices in Settings > Appearance that decide when media previews are fetched from their site.
+msgctxt "settings.appearance.mediaRevealGroup"
+msgid "When to load previews"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Heading of the message display section in Settings > Appearance.
+msgctxt "settings.appearance.messagesHeading"
+msgid "Messages"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Expansion of the acronym MOTD, shown as the abbreviation's hover tooltip on the Message Of The Day checkbox in Settings > Appearance.
+msgctxt "settings.appearance.motdTitle"
+msgid "Message Of The Day"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Label of the text field in Settings > Appearance that sets the character(s) inserted after a completed user's name, for example a comma.
+msgctxt "settings.appearance.nickPostfix"
+msgid "Nick autocomplete postfix"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Tooltip on the nick autocomplete postfix field in Settings > Appearance; explains what the field sets.
+msgctxt "settings.appearance.nickPostfixHelp"
+msgid "Nick autocomplete postfix (for example a comma)"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Placeholder of the nick autocomplete postfix field in Settings > Appearance; keep the example punctuation (the quoted comma) as it shows what would be typed.
+msgctxt "settings.appearance.nickPostfixPlaceholder"
+msgid "Nick autocomplete postfix (e.g. ', ')"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. First word of the checkbox label in Settings > Appearance that displays the server's Message Of The Day; the untranslated acronym 'MOTD' follows it as a marked abbreviation, so only this word is translated.
+msgctxt "settings.appearance.showMotd"
+msgid "Show"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Checkbox in Settings > Appearance; when ticked, message timestamps include the seconds as well as hours and minutes.
+msgctxt "settings.appearance.showSeconds"
+msgid "Include seconds in timestamp"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Radio option in Settings > Appearance; joins and parts are compressed into one summary line to keep the chat short.
+msgctxt "settings.appearance.statusCondensed"
+msgid "Condense status messages together"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Heading of the section in Settings > Appearance that controls how join, part and similar service notices are shown in chat.
+msgctxt "settings.appearance.statusHeading"
+msgid "Status messages"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Tooltip on the status messages heading in Settings > Appearance; lists the kinds of notices meant (people joining or leaving, being removed, renaming, and permission changes).
+msgctxt "settings.appearance.statusHelp"
+msgid "Joins, parts, quits, kicks, nick changes, and mode changes"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Radio option in Settings > Appearance; joins, parts and similar service notices are not shown at all.
+msgctxt "settings.appearance.statusHidden"
+msgid "Hide all status messages"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Radio option in Settings > Appearance; every join, part or similar notice appears as its own line in the chat.
+msgctxt "settings.appearance.statusShown"
+msgid "Show all status messages individually"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Heading of the theme section in Settings > Appearance, and the visually hidden label of the theme dropdown beneath it; picks the color scheme of the app.
+msgctxt "settings.appearance.theme"
+msgid "Theme"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. The name of the button on a media preview that marks its site, sender or channel as always allowed to load; the words appear quoted inside the always-shown list's help sentence in Settings > Appearance.
+msgctxt "settings.appearance.trustedButtonName"
+msgid "Always show"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Subheading in the always-shown media list of Settings > Appearance above the chat channel entries.
+msgctxt "settings.appearance.trustedChannels"
+msgid "Channels"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Button in Settings > Appearance beside the always-shown list heading; clicking removes every entry from that list.
+msgctxt "settings.appearance.trustedClear"
+msgid "Clear all"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Shown under the always-shown media list in Settings > Appearance when it has no entries.
+msgctxt "settings.appearance.trustedEmpty"
+msgid "Nothing yet."
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Heading of the list in Settings > Appearance of sites, people and channels whose media always loads without asking.
+msgctxt "settings.appearance.trustedHeading"
+msgid "Always shown"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. First part of the help line under the always-shown list in Settings > Appearance; the second part and the words 'Always show' (the name of the button on any media preview) follow it. Ends mid-sentence.
+msgctxt "settings.appearance.trustedHelpA"
+msgid "Media in these scopes loads without asking. Add one with"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Last part of the help line under the always-shown list in Settings > Appearance, after the words 'Always show' marking the preview button's name. Ends the sentence.
+msgctxt "settings.appearance.trustedHelpB"
+msgid "on any preview."
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Subheading in the always-shown media list of Settings > Appearance above the user account entries.
+msgctxt "settings.appearance.trustedPeople"
+msgid "People"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Subheading in the always-shown media list of Settings > Appearance above the website entries.
+msgctxt "settings.appearance.trustedSites"
+msgid "Sites"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Tooltip and aria-label of the remove button on an entry of the always-shown media list in Settings > Appearance, for a website or a person. {name} is that site's host or the person's name. Clicking stops their media from loading automatically.
+msgctxt "settings.appearance.untrustFrom"
+msgid "Stop always showing from {name}"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Tooltip and aria-label of the remove button on an entry of the always-shown media list in Settings > Appearance, for a chat channel. {name} is that channel's name.
+msgctxt "settings.appearance.untrustIn"
+msgid "Stop always showing in {name}"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Checkbox in Settings > Appearance; when ticked, message timestamps use a 12-hour clock (am/pm) instead of a 24-hour clock.
+msgctxt "settings.appearance.use12hClock"
+msgid "Use 12-hour timestamps"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue
+#. Heading of the section in Settings > Appearance holding readability helpers such as nickname colors and autocomplete. Keep the capitalization style of the source if possible.
+msgctxt "settings.appearance.visualAids"
+msgid "Visual Aids"
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Heading of the away section in Settings > General, and the visually hidden label of the away-message input beneath it; names the setting that marks you away with a message when the app is closed.
+msgctxt "settings.general.awayHeading"
+msgid "Automatic away message"
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Placeholder of the away-message field in Settings > General; shows the message that is sent automatically while the app is not open. {appName} is the chat app's display name.
+msgctxt "settings.general.awayPlaceholder"
+msgid "Away message if {appName} is not open"
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Body of the confirmation dialog before restoring a settings backup in Settings > General. {parts} is a comma-joined list ('your settings, 1 network, mutes and ignore lists'), {file} the chosen backup file's name.
+msgctxt "settings.general.backupFrame"
+msgid "This replaces {parts} with the contents of {file}, then reloads."
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Heading of the settings backup section in Settings > General, which exports preferences to a file and restores them.
+msgctxt "settings.general.backupHeading"
+msgid "Backup and restore"
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Intro line under the Backup and restore heading in Settings > General; says what exporting does.
+msgctxt "settings.general.backupIntro"
+msgid "Save your settings to a file. You can restore here or on another device."
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Part of the restore-confirmation sentence in Settings > General: fills the list of what the file replaces for muted users and ignored users. Comma-joined by position.
+msgctxt "settings.general.backupMutes"
+msgid "mutes and ignore lists"
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Part of the settings-restore confirmation in Settings > General; fills the list of what a restore replaces with how many saved chat networks the file carries. The singular shows with exactly one network, the plural otherwise.
+msgctxt "settings.general.backupNetworks"
+msgid "{count} network"
+msgid_plural "{count} networks"
+msgstr[0] ""
+msgstr[1] ""
+
+#: client/components/Settings/General.vue
+#. Part of the restore-confirmation sentence in Settings > General: fills the list of what the file replaces for the app's own preferences. Comma-joined with the other parts by position.
+msgctxt "settings.general.backupPartSettings"
+msgid "your settings"
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Sentence appended to the restore-confirmation dialog in Settings > General when the backup file contains saved network passwords. The leading space is part of the copy; it follows the previous sentence.
+msgctxt "settings.general.backupPasswords"
+msgid " The file includes network passwords."
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Button in Settings > General; downloads the settings backup file to the device. Ellipsis is part of the copy.
+msgctxt "settings.general.export"
+msgid "Export settings…"
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Error message in Settings > General shown when exporting the settings backup failed and no file was produced.
+msgctxt "settings.general.exportFailed"
+msgid "Couldn't create the file."
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Visually hidden but screen-reader-spoken label of the hidden file picker behind the Import settings button; it accepts a previously exported settings file.
+msgctxt "settings.general.fileAria"
+msgid "Settings file to restore"
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Button in Settings > General; opens a file picker to restore a previously exported settings backup file. Ellipsis is part of the copy.
+msgctxt "settings.general.import"
+msgid "Import settings…"
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Confirmation button of the settings-restore dialog in Settings > General; clicking restores the file and reloads the app.
+msgctxt "settings.general.importButton"
+msgid "Import and reload"
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Error message in Settings > General shown when the chosen file could not be read as a settings backup.
+msgctxt "settings.general.importFailed"
+msgid "Couldn't read the file."
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Title of the confirmation dialog shown before a settings backup file is restored from Settings > General.
+msgctxt "settings.general.importTitle"
+msgid "Import settings?"
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Checkbox in Settings > General's backup section; when ticked, the exported settings file also contains the saved chat network passwords.
+msgctxt "settings.general.includePasswords"
+msgid "Include network passwords"
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Tooltip on the include-network-passwords checkbox in Settings > General; warns that the export keeps passwords in plain text.
+msgctxt "settings.general.includePasswordsHelp"
+msgid "Passwords are stored in the file unencrypted."
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Button in Settings > General; clicking shows the browser's prompt that installs this web app to the device's home screen or app list. {appName} is the chat app's display name.
+msgctxt "settings.general.installApp"
+msgid "Install {appName} as an app"
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Heading of the Native app section in Settings > General; groups the install and link-handler options for using the chat app as an installed application.
+msgctxt "settings.general.nativeApp"
+msgid "Native app"
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Button in Settings > General; registers this web app as the handler for web+irc:// chat links so clicking one anywhere opens it in the app. Keep the web+irc:// scheme verbatim. {appName} is the chat app's display name.
+msgctxt "settings.general.openLinks"
+msgid "Open web+irc:// links with {appName}"
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Checkbox in Settings > General; when ticked, other people in the channel are told while you are typing a message.
+msgctxt "settings.general.sendTyping"
+msgid "Send typing notifications"
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Tooltip on the send-typing-notifications checkbox in Settings > General; mentions the IRCv3 +typing tag in parentheses.
+msgctxt "settings.general.sendTypingHelp"
+msgid "Lets people in the channel see when you are typing (IRCv3 +typing)."
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Heading of the typing indicator section in Settings > General.
+msgctxt "settings.general.typingHeading"
+msgid "Typing notifications"
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Checkbox in Settings > General. When ticked, images are re-drawn through a canvas before they are sent to the chat server, which strips photo metadata such as camera model and GPS location. Affects image uploads only.
+msgctxt "settings.general.uploadCanvas"
+msgid "Attempt to remove metadata from images before uploading"
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Tooltip on the metadata-removal upload checkbox in Settings > General; explains how the option works and that it can mis-rotate photos in browsers without canvas orientation support.
+msgctxt "settings.general.uploadCanvasHelp"
+msgid "This option renders the image into a canvas element to remove metadata from the image. This may break orientation if your browser does not support that."
+msgstr ""
+
+#: client/components/Settings/General.vue
+#. Heading of the file upload options section in Settings > General.
+msgctxt "settings.general.uploadsHeading"
+msgid "File uploads"
+msgstr ""
+
 #: client/components/Windows/Connect.vue:72
 #: client/components/Windows/Connect.vue:296
 #: client/components/Settings/Appearance.vue:249
@@ -1008,6 +1406,329 @@ msgstr ""
 #. First option of the language selector: follow the browser's languages. The component appends the currently resolved tag in parentheses.
 msgctxt "settings.locale.auto"
 msgid "System default"
+msgstr ""
+
+#: client/components/Settings/Networks.vue
+#. Button on the networks settings page; opens the connect form to set up a new chat network connection.
+msgctxt "settings.networks.add"
+msgid "Add network"
+msgstr ""
+
+#: client/components/Settings/Networks.vue
+#. Button on a saved network row in the networks settings page while that network is offline; clicking dials the chat network again.
+msgctxt "settings.networks.connect"
+msgid "Connect"
+msgstr ""
+
+#: client/components/Settings/Networks.vue
+#. Status label on a saved network row in the networks settings page; the connection to that chat network is up.
+msgctxt "settings.networks.connected"
+msgid "Connected"
+msgstr ""
+
+#: client/components/Settings/Networks.vue
+#. Status label on a saved network row in the networks settings page, and the caption of the same row's button, while the connection to that chat network is being established. Ellipsis is part of the copy.
+msgctxt "settings.networks.connecting"
+msgid "Connecting…"
+msgstr ""
+
+#: client/components/Settings/Networks.vue
+#. Button on a saved network row in the networks settings page; opens a confirmation before the saved network is removed.
+msgctxt "settings.networks.delete"
+msgid "Delete"
+msgstr ""
+
+#: client/components/Settings/Networks.vue
+#. Confirmation button of the dialog that removes a saved chat network.
+msgctxt "settings.networks.deleteButton"
+msgid "Delete network"
+msgstr ""
+
+#: client/components/Settings/Networks.vue
+#. Body of the confirmation dialog before removing a saved chat network; explains what the deletion does.
+msgctxt "settings.networks.deleteText"
+msgid "This removes the saved network and disconnects it if it is running."
+msgstr ""
+
+#: client/components/Settings/Networks.vue
+#. Title of the confirmation dialog before removing a saved chat network. {name} is the network's display name.
+msgctxt "settings.networks.deleteTitle"
+msgid "Delete {name}?"
+msgstr ""
+
+#: client/components/Settings/Networks.vue
+#. Status label on a saved network row in the networks settings page; the connection to that chat network is down.
+msgctxt "settings.networks.disconnected"
+msgid "Disconnected"
+msgstr ""
+
+#: client/components/Settings/Networks.vue
+#. Button on a saved network row in the networks settings page; opens the form where that network's address and credentials are changed.
+msgctxt "settings.networks.edit"
+msgid "Edit"
+msgstr ""
+
+#: client/components/Settings/Networks.vue
+#. Empty state of the networks settings page, shown when no chat network has been saved in this browser.
+msgctxt "settings.networks.empty"
+msgid "No networks saved yet."
+msgstr ""
+
+#: client/components/Settings/Networks.vue
+#. Heading of the networks page in the chat app's settings, which lists the IRC network connections saved in this browser.
+msgctxt "settings.networks.heading"
+msgid "Networks"
+msgstr ""
+
+#: client/components/Settings/Networks.vue
+#. Line under the Networks heading in the settings, saying what the page is for.
+msgctxt "settings.networks.intro"
+msgid "Manage the IRC networks saved in this browser."
+msgstr ""
+
+#: client/components/Settings/Networks.vue
+#. Button on a saved network row in the networks settings page while that network is connected; clicking opens the network's chat view.
+msgctxt "settings.networks.open"
+msgid "Open"
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Warning line in Settings > Notifications when notification permission has been denied in the browser.
+msgctxt "settings.notifications.browserBlocked"
+msgid "Notifications are blocked by your browser."
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Heading of the section in Settings > Notifications about the browser's own notifications while the app is open.
+msgctxt "settings.notifications.browserHeading"
+msgid "Browser Notifications"
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Intro line of the browser notifications section in Settings > Notifications; the quoted phrase names the toggle in each network's edit form. Keep the curly quotes.
+msgctxt "settings.notifications.browserPerNetwork"
+msgid "Browser notifications are also per network — enabled by default, toggled in each network's settings (Edit network → “Browser notifications for this network”)."
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Warning line in Settings > Notifications when the browser cannot show notifications at all.
+msgctxt "settings.notifications.browserUnsupported"
+msgid "Notifications are not supported by your browser."
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Placeholder of the custom-highlights and highlight-exceptions fields in Settings > Notifications; shows the expected input format.
+msgctxt "settings.notifications.commaList"
+msgid "Comma-separated, e.g.: word, some more words, anotherword"
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Checkbox in Settings > Notifications; when ticked, messages mentioning you are drawn with a colored background and can notify.
+msgctxt "settings.notifications.highlight"
+msgid "Highlight messages that mention you"
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Label of the text field in Settings > Notifications for words that suppress highlights.
+msgctxt "settings.notifications.highlightExceptions"
+msgid "Highlight exceptions"
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Tooltip on the highlight-exceptions field in Settings > Notifications; explains that these words suppress highlight treatment.
+msgctxt "settings.notifications.highlightExceptionsHelp"
+msgid "If a message contains any of these comma-separated expressions, it will not trigger a highlight even if it contains your nickname or expressions defined in custom highlights."
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Tooltip on the highlight checkbox in Settings > Notifications; explains the visual effect of highlights.
+msgctxt "settings.notifications.highlightHelp"
+msgid "Messages that mention you or match a custom highlight get a colored background and border in the channel."
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Label of the text field in Settings > Notifications for extra words that count as mentions of you.
+msgctxt "settings.notifications.highlights"
+msgid "Custom highlights"
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Tooltip on the custom highlights field in Settings > Notifications; explains the field's comma-separated format.
+msgctxt "settings.notifications.highlightsHelp"
+msgid "If a message contains any of these comma-separated expressions, it will trigger a highlight."
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Warning line in Settings > Notifications, shown on an iPhone browsing the app without installing it; the parenthesized phrase is the iOS share menu's action.
+msgctxt "settings.notifications.iosNotInstalled"
+msgid "On iOS, push notifications are only available after installing the app to the Home Screen (Share → Add to Home Screen)."
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Radio choice in Settings > Notifications for the server's push-identity change behaviour: show a confirmation prompt before the device re-subscribes. Em dash is part of the copy.
+msgctxt "settings.notifications.keyChangeAsk"
+msgid "Wary — ask before renewing the subscription"
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Radio choice in Settings > Notifications for the server's push-identity change behaviour: do nothing, so push stays off for that server until renewed from its network settings. Em dash is part of the copy.
+msgctxt "settings.notifications.keyChangeIgnore"
+msgid "Suspicious — leave it alone; push from that server stays off until you renew from the network settings"
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Heading-like line in Settings > Notifications introducing the three radio choices for what to do when a chat server's push identity changes; the colon leads into the choices.
+msgctxt "settings.notifications.keyChangeIntro"
+msgid "When a server's push identity (its key) changes, this device's subscription for it stops working. Then:"
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Radio choice in Settings > Notifications for the server's push-identity change behaviour: re-subscribe immediately and silently. Em dash is part of the copy.
+msgctxt "settings.notifications.keyChangeTrust"
+msgid "Naive — renew it on the spot, without asking"
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Warning line in Settings > Notifications when the page is not served over a secure connection, which browsers require for notifications.
+msgctxt "settings.notifications.noHttps"
+msgid "Notifications are only supported over HTTPS connections."
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Checkbox in Settings > Notifications; when ticked, every chat message notifies, not only mentions and highlights.
+msgctxt "settings.notifications.notifyAll"
+msgid "Enable notification for all messages"
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Button in Settings > Notifications beside the notification-sound checkbox; clicking plays the notification sound once as a preview.
+msgctxt "settings.notifications.playSound"
+msgid "Play sound"
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Warning line in Settings > Notifications when the chat server refused the push subscription; SASL (the IRC login mechanism) stays verbatim.
+msgctxt "settings.notifications.pushBlocked"
+msgid "The server refused the push subscription. It may require logging in (SASL) before subscribing."
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Warning line in Settings > Notifications when notification permission was denied; points at the browser's site settings to re-enable.
+msgctxt "settings.notifications.pushDenied"
+msgid "Notifications are blocked by your browser. Allow them in the browser's site settings, then try again."
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Heading of the push notification section in Settings > Notifications; push wakes the app on new messages while it is closed.
+msgctxt "settings.notifications.pushHeading"
+msgid "Push Notifications"
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Intro line of the push section in Settings > Notifications; explains that push is enabled per chat network from that network's edit form (the quoted phrase names that setting) and that each server decides whether to support it. Keep the curly quotes and the arrow.
+msgctxt "settings.notifications.pushPerNetwork"
+msgid "Push is set up per network — turn it on or off in each network's settings (Edit network → “Push notifications for this network”), where the enrollment status is also shown. The browser delivers the notifications; each push-capable server decides whether to wake this app."
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Warning line in Settings > Notifications when the chat server itself does not offer web push; names the IRCv3 draft/webpush capability, which stays verbatim.
+msgctxt "settings.notifications.serverUnsupported"
+msgid "Push notifications need a connected server that supports the draft/webpush capability and you to be logged in to an account."
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Snooze button in Settings > Notifications; pauses push notifications for fifteen minutes.
+msgctxt "settings.notifications.snooze15"
+msgid "15 min"
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Snooze button in Settings > Notifications; pauses push notifications for eight hours.
+msgctxt "settings.notifications.snooze480"
+msgid "8 hours"
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Snooze button in Settings > Notifications; pauses push notifications for one hour.
+msgctxt "settings.notifications.snooze60"
+msgid "1 hour"
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Lead-in above the snooze buttons in Settings > Notifications, shown while push is enabled; the buttons pause push notifications for all networks. Keep the trailing colon.
+msgctxt "settings.notifications.snoozeIntro"
+msgid "Snooze pushes everywhere:"
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Snooze button in Settings > Notifications; ends the pause and resumes push notifications immediately.
+msgctxt "settings.notifications.snoozeOff"
+msgid "Off"
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Checkbox in Settings > Notifications; when ticked, a sound plays alongside a notification.
+msgctxt "settings.notifications.sound"
+msgid "Enable notification sound"
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Warning line in Settings > Notifications shown after a chat server changed its push identity; tells the reader to re-subscribe from that network's edit form, whose control is named in the quoted phrase.
+msgctxt "settings.notifications.stale"
+msgid "A server's push identity (its key) changed, so this device's push subscription for it no longer works. Renew it from that network's settings (Edit network → “Renew push notifications”) to keep being notified while the app is closed."
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Warning line in Settings > Notifications when the browser cannot do web push; the parentheses name the browser features push requires.
+msgctxt "settings.notifications.unsupported"
+msgid "Push notifications are not supported by this browser (they need the Push API, a service worker and a secure context)."
+msgstr ""
+
+#: client/components/Settings/Notifications.vue
+#. Word rendered bold at the start of several warning lines in Settings > Notifications (push and browser notification problems); a colon follows it.
+msgctxt "settings.notifications.warning"
+msgid "Warning"
+msgstr ""
+
+#: client/components/Settings/Navigation.vue
+#: client/components/SettingTabItem.vue
+#. Label of the Settings modal's Aliases tab (tab strip); switching tabs navigates to the Aliases settings pane.
+msgctxt "settings.tabs.aliases"
+msgid "Aliases"
+msgstr ""
+
+#: client/components/Settings/Navigation.vue
+#: client/components/SettingTabItem.vue
+#. Label of the Settings modal's Appearance tab (tab strip); switching tabs navigates to the Appearance settings pane.
+msgctxt "settings.tabs.appearance"
+msgid "Appearance"
+msgstr ""
+
+#: client/components/Settings/Navigation.vue
+#. aria-label of the row of tab buttons across the top of the settings window, used to switch between its pages.
+msgctxt "settings.tabs.aria"
+msgid "Settings tabs"
+msgstr ""
+
+#: client/components/Settings/Navigation.vue
+#: client/components/SettingTabItem.vue
+#. Label of the Settings modal's General tab (tab strip); switching tabs navigates to the General settings pane.
+msgctxt "settings.tabs.general"
+msgid "General"
+msgstr ""
+
+#: client/components/Settings/Navigation.vue
+#: client/components/SettingTabItem.vue
+#. Label of the Settings modal's Networks tab (tab strip); switching tabs navigates to the Networks settings pane.
+msgctxt "settings.tabs.networks"
+msgid "Networks"
+msgstr ""
+
+#: client/components/Settings/Navigation.vue
+#: client/components/SettingTabItem.vue
+#. Label of the Settings modal's Notifications tab (tab strip); switching tabs navigates to the Notifications settings pane.
+msgctxt "settings.tabs.notifications"
+msgid "Notifications"
 msgstr ""
 
 #: client/components/Sidebar.vue:8
