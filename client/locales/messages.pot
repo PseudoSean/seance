@@ -3347,8 +3347,8 @@ msgid "Edit not sent: an edit of that message is already waiting for the server.
 msgstr ""
 
 #: client/js/irc/client.ts
-#: client/js/commands/index.ts:215
-#: client/js/commands/index.ts:224
+#: client/js/irc/commands/index.ts:215
+#: client/js/irc/commands/index.ts:224
 #. Lobby error when a command or message was typed while the network is down; nothing was sent.
 msgctxt "send.notConnected"
 msgid "You are not connected to the IRC network, unable to send your command."
@@ -3403,9 +3403,51 @@ msgid "Add alias"
 msgstr ""
 
 #: client/components/Settings/Aliases.vue
+#. aria-label of an alias row's commands (body) input. {name} is the alias's name — or, while the name is empty, the row's number; verbatim user content either way, never translated.
+msgctxt "settings.aliases.bodyAria"
+msgid "Commands for alias {name}"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Example body shown in the alias-body input: an IRC action waving at the first argument. Keep the /me command and the $1 token verbatim; the action wording is an example and may be adapted.
+msgctxt "settings.aliases.bodyPlaceholder"
+msgid "/me waves at $1"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
 #. Shown in place of the alias table when no aliases are defined.
 msgctxt "settings.aliases.empty"
 msgid "No aliases yet."
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Row error: the alias has a name but no commands.
+msgctxt "settings.aliases.errorBody"
+msgid "Say what the alias runs."
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Row error: another row already defines this alias. {name} is the other alias's name, verbatim user content; the slash before it is the command prefix.
+msgctxt "settings.aliases.errorDuplicate"
+msgid "There is already a /{name}."
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Row error under an alias row: the alias has no name.
+msgctxt "settings.aliases.errorName"
+msgid "Give the alias a name."
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Row error: the alias name contains characters other than letters, digits, hyphen and underscore. The - and _ are literal characters, keep them.
+msgctxt "settings.aliases.errorNameChars"
+msgid "Names are letters, digits, - and _ — no spaces or slashes."
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Row error: the body exceeds the length limit. {limit} is the maximum number of characters (a number).
+msgctxt "settings.aliases.errorTooLong"
+msgid "The body is too long (over {limit} characters)."
 msgstr ""
 
 #: client/components/Settings/Aliases.vue
@@ -3421,10 +3463,86 @@ msgid "Runs"
 msgstr ""
 
 #: client/components/Settings/Aliases.vue
+#. Joins the last two entries of the alias-body variable list ($2- or $*). Single word; the spaces around it come from the template.
+msgctxt "settings.aliases.introOr"
+msgid "or"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Intro fragment (Settings -> Aliases): leads into the example alias invocation that follows in code style; the fragment ends where the example begins.
+msgctxt "settings.aliases.introOwn"
+msgid "An alias is a slash command of your own. Typing"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Intro fragment between the example invocation and the variable list: what defining an alias does. Sits in front of the $1 token.
+msgctxt "settings.aliases.introRuns"
+msgid "runs what you define here — one command per line, with the arguments filled in where the body says"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. aria-label of an alias row's name input. {number} is the row's position, counting from 1.
+msgctxt "settings.aliases.nameAria"
+msgid "Alias name {number}"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Placeholder of the alias-name input: the alias's name goes here.
+msgctxt "settings.aliases.namePlaceholder"
+msgid "name"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Nested-alias fragment between the two example commands: the first command can be rewritten as the second.
+msgctxt "settings.aliases.nestedBecomes"
+msgid "can become"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Nested-alias fragment: aliases may call other aliases and shadow built-in commands; the two example commands follow in code style.
+msgctxt "settings.aliases.nestedMain"
+msgid "A body line can invoke another alias, and an alias named after a built-in command replaces it —"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Nested-alias fragment: closes the example — shadowing a built-in does not recurse for ever.
+msgctxt "settings.aliases.nestedTail"
+msgid "without looping."
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
 #. aria-label of the whole aliases pane (a role=group in Settings); heard by screen readers when they enter the pane.
 msgctxt "settings.aliases.paneAria"
 msgid "Command aliases"
 msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Live preview: the typed text matched no alias, so it would go to the server exactly as typed.
+msgctxt "settings.aliases.previewMiss"
+msgid "Not an alias — this would be sent as typed."
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. aria-label of an alias row's remove button (trash icon; no visible text). {name} is the alias's name — or the row's number while the name is empty; verbatim user content.
+msgctxt "settings.aliases.removeAria"
+msgid "Remove alias {name}"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Status line when some rows have errors and are not saved yet. {count} is the number of saved aliases; gettext plural, English index 0 is the singular.
+msgctxt "settings.aliases.statusBroken"
+msgid "{count} alias saved — rows with errors are not saved."
+msgid_plural "{count} aliases saved — rows with errors are not saved."
+msgstr[0] ""
+msgstr[1] ""
+
+#: client/components/Settings/Aliases.vue
+#. Status line under the alias table: how many aliases are saved. {count} is the number; gettext plural, English index 0 is the singular.
+msgctxt "settings.aliases.statusSaved"
+msgid "{count} alias saved."
+msgid_plural "{count} aliases saved."
+msgstr[0] ""
+msgstr[1] ""
 
 #: client/components/Settings/Aliases.vue
 #. Heading of the command-aliases pane in Settings, where the user defines their own slash commands.
@@ -3439,9 +3557,51 @@ msgid "Try an alias"
 msgstr ""
 
 #: client/components/Settings/Aliases.vue
+#. Try-it placeholder when at least one valid alias exists: an example invocation of that alias. {name} is the alias's name, verbatim; the rest is example prose.
+msgctxt "settings.aliases.tryExample"
+msgid "/{name} some arguments"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
 #. Heading of the live preview: type an alias invocation and see the commands it expands to.
 msgctxt "settings.aliases.tryHeading"
 msgid "Try it"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Variable reference: what $chan expands to.
+msgctxt "settings.aliases.varChan"
+msgid "the current channel or query"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Variable reference fragment: introduces the $$ escape, which follows in code style as a single dollar sign.
+msgctxt "settings.aliases.varLiteral"
+msgid "a literal"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Variable reference: what $me expands to.
+msgctxt "settings.aliases.varMe"
+msgid "your nick on that network"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Variable reference: what $1 expands to in an alias body.
+msgctxt "settings.aliases.varOne"
+msgid "one argument (empty when not given)"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Variable reference: what $2- expands to (everything from the second argument on).
+msgctxt "settings.aliases.varRest"
+msgid "arguments from the 2nd to the last"
+msgstr ""
+
+#: client/components/Settings/Aliases.vue
+#. Variable reference: what $* expands to.
+msgctxt "settings.aliases.varStar"
+msgid "everything after the alias name"
 msgstr ""
 
 #: client/components/Settings/Aliases.vue
