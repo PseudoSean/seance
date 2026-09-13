@@ -353,6 +353,30 @@ msgctxt "connect.connectingAs"
 msgid "Connecting as {nick} to {network}…"
 msgstr ""
 
+#: client/js/irc/client.ts
+#. Lobby status line while a chat network is being dialled. {host} and {port} come from the saved network's settings.
+msgctxt "connect.connectingTo"
+msgid "Connecting to {host}:{port}…"
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Lobby status line while an automatic retry dials a chat network; {attempt} counts the retries this connection has seen.
+msgctxt "connect.connectingToAttempt"
+msgid "Connecting to {host}:{port}… (attempt {attempt})"
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Lobby status line when the user's own /quit closed the connection on purpose.
+msgctxt "connect.disconnected"
+msgid "Disconnected."
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Lobby status line after registration naming the IRCv3 capabilities the server enabled; {caps} is a comma-separated list of protocol tokens, never translated.
+msgctxt "connect.enabledCaps"
+msgid "Enabled capabilities: {caps}"
+msgstr ""
+
 #: client/components/Windows/Connect.vue:572
 #. Notice on the connect form when it was opened by a link to a saved network whose password was not remembered; {account} is the services account name.
 msgctxt "connect.enterPassword"
@@ -435,6 +459,12 @@ msgctxt "connect.pushNotifications"
 msgid "Push notifications (registers when the server supports them)"
 msgstr ""
 
+#: client/js/irc/client.ts
+#. Lobby status line when the network was disconnected while an automatic reconnect was still scheduled.
+msgctxt "connect.reconnectCancelled"
+msgid "Reconnect cancelled."
+msgstr ""
+
 #: client/js/branding.ts
 #. Checkbox on the sign-in form: remember the account and reconnect on the next load.
 msgctxt "connect.rememberMe"
@@ -445,6 +475,66 @@ msgstr ""
 #. Checkbox under the SASL password field on the connect form: keep the password in this browser's storage so reconnects need no typing.
 msgctxt "connect.rememberPassword"
 msgid "Remember password on this device"
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Lobby error when the login the deploy asked for did not go through; {reason} is one of the connect.saslReason* copies (or, for a few server-side rejections, a technical phrase left verbatim).
+msgctxt "connect.saslFailed"
+msgid "SASL authentication failed: {reason}"
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Lobby error after a failed required SASL login: the network was dropped instead of registering unauthenticated. {host} is the chat network's configured host name.
+msgctxt "connect.saslQuitHint"
+msgid "Not connecting to {host} without the login you asked for."
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Lobby error after a required SASL login that merely timed out (a slow login service, not a wrong password): the connection is redialled on the usual schedule. {host} is the configured host name.
+msgctxt "connect.saslQuitHintRetry"
+msgid "Not connecting to {host} without the login you asked for; trying again."
+msgstr ""
+
+#: client/js/irc/handlers/cap.ts
+#. Reason fragment of 'SASL authentication failed: {reason}' when the server rejected the client's request for the sasl capability (CAP NAK). Lowercase mid-sentence by position.
+msgctxt "connect.saslReason.capRefused"
+msgid "the server refused the sasl capability"
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Reason fragment of 'SASL authentication failed: {reason}' when the saved network has no login credentials. Lowercase mid-sentence by position.
+msgctxt "connect.saslReason.noCredentials"
+msgid "no account name or password is configured"
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Reason fragment of 'SASL authentication failed: {reason}' when the server took too long to answer the login. Lowercase mid-sentence by position.
+msgctxt "connect.saslReason.timeout"
+msgid "timed out waiting for the server"
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Reason fragment of 'SASL authentication failed: {reason}' when the server announced no usable sasl capability. Lowercase mid-sentence by position.
+msgctxt "connect.saslReason.unavailable"
+msgid "the server does not offer SASL"
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Reason fragment of 'SASL authentication failed: {reason}' when the server's rejection named no cause. Lowercase mid-sentence by position.
+msgctxt "connect.saslReason.unknown"
+msgid "unknown error"
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Reason fragment of 'SASL authentication failed: {reason}' when the server's SASL mechanisms do not include the saved network's. {offered} and {mechanism} are protocol mechanism tokens, never translated.
+msgctxt "connect.saslReason.wrongMechanism"
+msgid "the server offers SASL {offered}, not {mechanism}"
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Follow-up to a failed required SASL login, telling the reader where to fix or drop the credentials.
+msgctxt "connect.saslRequiredHint"
+msgid "Check the account name and password in this network's settings, or pick \"No authentication\" there to connect without logging in."
 msgstr ""
 
 #: client/components/Windows/Connect.vue:207
@@ -488,6 +578,18 @@ msgstr ""
 #. Heading of the sign-in panel (features.signIn on).
 msgctxt "connect.signInTitle"
 msgid "Sign in"
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Lobby status line when the connection is dropped to be redialled over TLS. {port} is the secure port the server's policy named.
+msgctxt "connect.stsReconnect"
+msgid "Server requires a secure connection (STS): reconnecting on port {port}…"
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Lobby status line when the server's strict-transport-security policy upgrades a plain connection to TLS. {port} is the new TLS port.
+msgctxt "connect.stsUpgrade"
+msgid "Upgrading to TLS on port {port} (STS policy)"
 msgstr ""
 
 #: client/js/branding.ts
@@ -1798,6 +1900,62 @@ msgctxt "link.tryAgain"
 msgid "Click to try again"
 msgstr ""
 
+#: client/js/irc/handlers/list.ts
+#. Title of the special window the /list command fills with the server's channels. The name doubles as the window's lookup name, so it stays byte-stable per locale while the session lives.
+msgctxt "list.channelList"
+msgid "Channel List"
+msgstr ""
+
+#: client/js/irc/handlers/lists.ts
+#. Status message when a mode list (bans, invites, exceptions) the user asked for came back with no entries. {kind} is the list's name as an English word inserted by the app ('Ban list', 'Invite list', 'Exception list'); the matching kind keys are list.kindBans/list.kindInvites/list.kindExcepts.
+msgctxt "list.isEmpty"
+msgid "{kind} is empty"
+msgstr ""
+
+#: client/js/irc/handlers/lists.ts
+#. Name of the channel-ban (+b) list, inserted into '{kind} is empty' and '{kind} for {channel}'.
+msgctxt "list.kindBans"
+msgid "Ban list"
+msgstr ""
+
+#: client/js/irc/handlers/lists.ts
+#. Name of the ban-exception (+e) list, inserted into '{kind} is empty' and '{kind} for {channel}'.
+msgctxt "list.kindExcepts"
+msgid "Exception list"
+msgstr ""
+
+#: client/js/irc/handlers/lists.ts
+#. Name of the channel-invite (+I) list, inserted into '{kind} is empty' and '{kind} for {channel}'.
+msgctxt "list.kindInvites"
+msgid "Invite list"
+msgstr ""
+
+#: client/js/irc/handlers/list.ts
+#. Status line in the 'Channel List' window updated as each channel arrives; {count} is the number received so far.
+msgctxt "list.loaded"
+msgid "Loaded {count} channel..."
+msgid_plural "Loaded {count} channels..."
+msgstr[0] ""
+msgstr[1] ""
+
+#: client/js/irc/handlers/list.ts
+#. Status line in the 'Channel List' window while the server sends its channels.
+msgctxt "list.loading"
+msgid "Loading channel list, this can take a moment..."
+msgstr ""
+
+#: client/js/irc/handlers/lists.ts
+#. Title of a special window showing one channel's mode list. {kind} is the list's name ('Ban list' etc.), {channel} the channel name. Byte-stable per locale while the session lives: the title doubles as the window's lookup name.
+msgctxt "list.windowTitle"
+msgid "{kind} for {channel}"
+msgstr ""
+
+#: client/js/socket-events/connection.ts
+#. Splash-screen status shown while the app loads its page (the chat header's spinner takes over once a chat window exists).
+msgctxt "loading.connecting"
+msgid "Connecting…"
+msgstr ""
+
 #: client/index.html
 #: client/js/i18n/index.ts
 #. Loading splash: button that reloads the page when the bundle never arrived.
@@ -2414,6 +2572,42 @@ msgctxt "msg.topicSetOn"
 msgid "on {time}"
 msgstr ""
 
+#: client/js/irc/handlers/nick.ts
+#. Lobby status line when your own nick change is confirmed. {nick} is the new nick, user content, never translated.
+msgctxt "msg.youAreKnownAs"
+msgid "You're now known as {nick}"
+msgstr ""
+
+#: client/js/socket-events/msg.ts
+#. Desktop notification title when another user invites the reader to a channel; the body names the inviter and channel.
+msgctxt "notify.channelInvite"
+msgid "New channel invite:"
+msgstr ""
+
+#: client/js/socket-events/msg.ts
+#. Desktop notification body when another user invites the reader to a channel; {nick} and {channel} are the inviter's name and the channel name, both verbatim.
+msgctxt "notify.inviteBody"
+msgid "{nick} invited you to {channel}"
+msgstr ""
+
+#: client/js/socket-events/msg.ts
+#. Desktop notification title for a channel event that is not a message (e.g. an action); {nick} is the sender's name and {channel} the channel name, both verbatim.
+msgctxt "notify.titleChannel"
+msgid "{nick} ({channel})"
+msgstr ""
+
+#: client/js/socket-events/msg.ts
+#. Desktop notification title for a channel message; {nick} is the sender's name and {channel} the channel name, both verbatim.
+msgctxt "notify.titleChannelSays"
+msgid "{nick} ({channel}) says:"
+msgstr ""
+
+#: client/js/socket-events/msg.ts
+#. Desktop notification title for a private message; {nick} is the sender's name, verbatim.
+msgctxt "notify.titleSays"
+msgid "{nick} says:"
+msgstr ""
+
 #: client/components/PushPrompt.vue
 #. Body of the push opt-in prompt; explains what allowing push does and that it is chosen per network.
 msgctxt "push.enableBody"
@@ -2664,6 +2858,66 @@ msgstr ""
 #. Shown in the search-results view when the search field is empty; invites typing a query.
 msgctxt "search.results.typePrompt"
 msgid "Type something to search for."
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Lobby error when the server never answered the redaction an edit depends on.
+msgctxt "send.editNoReply"
+msgid "Edit not sent: no reply from the server."
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Lobby error when a second edit of the same message was sent before the first one settled.
+msgctxt "send.editWaiting"
+msgid "Edit not sent: an edit of that message is already waiting for the server."
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Lobby error when a command or message was typed while the network is down; nothing was sent.
+msgctxt "send.notConnected"
+msgid "You are not connected to the IRC network, unable to send your command."
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Lobby error when an IRC line could not be written to the socket. {message} is a technical transport error, left verbatim.
+msgctxt "send.notSent"
+msgid "Not sent: {message}"
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Lobby error when the server's push-subscription registration line exceeds the IRC line limit; nothing was sent.
+msgctxt "send.pushTooLong"
+msgid "Not sent: the push subscription does not fit on one line"
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Lobby error when a reaction was sent on a server without message-tags.
+msgctxt "send.reactNeedsTags"
+msgid "Reactions need the message-tags capability, which this server did not enable."
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Lobby error when a reaction was sent in a window that carries no messages.
+msgctxt "send.reactTargets"
+msgid "Reactions can only be sent in channels and queries."
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Lobby error when deletion was tried outside a channel.
+msgctxt "send.redactChannels"
+msgid "Messages can only be deleted in channels."
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Lobby error when deletion was tried on a server without the redaction capability.
+msgctxt "send.redactUnavailable"
+msgid "Deleting messages is not available: the server did not enable draft/message-redaction."
+msgstr ""
+
+#: client/js/irc/client.ts
+#. Lobby error when a message's client tags exceed the IRC line limit; nothing was sent.
+msgctxt "send.tagsTooLong"
+msgid "Not sent: the tags do not fit on one line"
 msgstr ""
 
 #: client/components/Settings/Appearance.vue
@@ -3572,6 +3826,90 @@ msgstr ""
 #. Column header of the channel-invite list: who set the invite, verbatim.
 msgctxt "special.invites.invitedBy"
 msgid "Invited By"
+msgstr ""
+
+#: client/js/irc/handlers/standard-replies.ts
+#. Why fragment of 'Message not sent: {why}' (FAIL BATCH MULTILINE_INVALID_TARGET). Lowercase mid-sentence by position.
+msgctxt "sr.multiline.invalidTarget"
+msgid "its lines did not all go to the same target."
+msgstr ""
+
+#: client/js/irc/handlers/standard-replies.ts
+#. Why fragment of 'Message not sent: {why}' (FAIL BATCH MULTILINE_MAX_BYTES without a limit named). Lowercase mid-sentence by position.
+msgctxt "sr.multiline.maxBytes"
+msgid "it was too long for one multi-line message."
+msgstr ""
+
+#: client/js/irc/handlers/standard-replies.ts
+#. Why fragment of 'Message not sent: {why}'; {limit} is the byte limit the server named.
+msgctxt "sr.multiline.maxBytesLimit"
+msgid "it was too long for one multi-line message (the server's limit is {limit} bytes)."
+msgstr ""
+
+#: client/js/irc/handlers/standard-replies.ts
+#. Why fragment of 'Message not sent: {why}' (FAIL BATCH MULTILINE_MAX_LINES without a limit named). Lowercase mid-sentence by position.
+msgctxt "sr.multiline.maxLines"
+msgid "it had too many lines for one multi-line message."
+msgstr ""
+
+#: client/js/irc/handlers/standard-replies.ts
+#. Why fragment of 'Message not sent: {why}'; {limit} is the line limit the server named.
+msgctxt "sr.multiline.maxLinesLimit"
+msgid "it had too many lines for one multi-line message (the server's limit is {limit})."
+msgstr ""
+
+#: client/js/irc/handlers/standard-replies.ts
+#. Why fragment of 'Message not sent: {why}' when the server's rejection named no cause. Lowercase mid-sentence by position.
+msgctxt "sr.multiline.rejected"
+msgid "the server rejected the multi-line batch."
+msgstr ""
+
+#: client/js/irc/handlers/standard-replies.ts
+#. Channel error when the server threw away a whole multi-line message; {why} is one of the sr.multiline* copies or the server's own description, left verbatim.
+msgctxt "sr.multilineNotSent"
+msgid "Message not sent: {why}"
+msgstr ""
+
+#: client/js/irc/handlers/standard-replies.ts
+#. Channel error for a refused deletion (FAIL REDACT DISABLED); the server's own copy is replaced with this phrasing.
+msgctxt "sr.redactDisabled"
+msgid "Deleting messages is disabled on this server."
+msgstr ""
+
+#: client/js/irc/handlers/standard-replies.ts
+#. Channel error when a message edit was dropped because its redaction was refused; {why} is one of the sr.redact* copies or the server's own description, left verbatim.
+msgctxt "sr.redactEditPrefix"
+msgid "Edit not sent: {why}"
+msgstr ""
+
+#: client/js/irc/handlers/standard-replies.ts
+#. Channel error for a refused deletion (FAIL REDACT REDACT_FORBIDDEN).
+msgctxt "sr.redactForbidden"
+msgid "You are not allowed to delete that message."
+msgstr ""
+
+#: client/js/irc/handlers/standard-replies.ts
+#. Channel error for a refused deletion aimed at a non-channel (FAIL REDACT INVALID_TARGET).
+msgctxt "sr.redactInvalidTarget"
+msgid "Messages can only be deleted in channels."
+msgstr ""
+
+#: client/js/irc/handlers/standard-replies.ts
+#. Channel error for a refused deletion; {why} is one of the sr.redact* copies or the server's own description, left verbatim.
+msgctxt "sr.redactPrefix"
+msgid "Could not delete message: {why}"
+msgstr ""
+
+#: client/js/irc/handlers/standard-replies.ts
+#. Channel error for a deletion naming a message the server has forgotten (FAIL REDACT UNKNOWN_MSGID).
+msgctxt "sr.redactUnknownMsgid"
+msgid "The server no longer has that message."
+msgstr ""
+
+#: client/js/irc/handlers/standard-replies.ts
+#. Channel error for a deletion past the server's edit window (FAIL REDACT REDACT_WINDOW_EXPIRED).
+msgctxt "sr.redactWindowExpired"
+msgid "That message is too old to delete."
 msgstr ""
 
 #: client/components/TypingIndicator.vue:31

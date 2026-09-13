@@ -13,6 +13,7 @@
  * untouched — the UI renders them as text.
  */
 
+import {t} from "../../i18n/core";
 import {ChanType, SpecialChanType} from "../../../../shared/types/chan";
 import {MessageType} from "../../../../shared/types/msg";
 import type {Channel} from "../channel";
@@ -43,8 +44,10 @@ interface RawEntry {
 interface ListKind {
 	/** Mode letter; keys the accumulation buffer. */
 	mode: "b" | "I" | "e";
-	/** Human name: window title prefix and "is empty" text. */
-	label: string;
+	/** The human name, resolved at use: window title prefix and "is empty"
+	 * text. A resolver keeps every t() call a plain literal (the pot ↔
+	 * call-site scanner only sees direct calls). */
+	label: () => string;
 	/** Which special-channel component renders the window. */
 	special: SpecialChanType;
 	toRow: (entry: RawEntry) => BanEntry | InviteEntry;
@@ -64,20 +67,20 @@ const toInvite = (entry: RawEntry): InviteEntry => ({
 
 const BANS: ListKind = {
 	mode: "b",
-	label: "Ban list",
+	label: () => t("list.kindBans"),
 	special: SpecialChanType.BANLIST,
 	toRow: toBan,
 };
 const INVITES: ListKind = {
 	mode: "I",
-	label: "Invite list",
+	label: () => t("list.kindInvites"),
 	special: SpecialChanType.INVITELIST,
 	toRow: toInvite,
 };
 // +e entries share the ban row shape; `ListExcepts.vue` only changes the headers.
 const EXCEPTS: ListKind = {
 	mode: "e",
-	label: "Exception list",
+	label: () => t("list.kindExcepts"),
 	special: SpecialChanType.EXCEPTLIST,
 	toRow: toBan,
 };
@@ -153,7 +156,7 @@ function finish(kind: ListKind, client: IrcClient, msg: IrcMessage): void {
 			{
 				type: MessageType.ERROR,
 				time: client.timeOf(msg),
-				text: `${kind.label} is empty`,
+				text: t("list.isEmpty", {kind: kind.label()}),
 				showInActive,
 			},
 			true
@@ -161,7 +164,7 @@ function finish(kind: ListKind, client: IrcClient, msg: IrcMessage): void {
 		return;
 	}
 
-	const name = `${kind.label} for ${channel}`;
+	const name = t("list.windowTitle", {kind: kind.label(), channel});
 	const existing = client.findChannel(name);
 
 	if (existing) {

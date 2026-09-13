@@ -1,3 +1,4 @@
+import {t} from "../i18n/core";
 import socket from "../socket";
 import {notificationText} from "../push/strip";
 import {store} from "../store";
@@ -181,17 +182,22 @@ function notifyMessage(
 				const nick = msg.from && msg.from.nick ? msg.from.nick : "unkonown";
 
 				if (msg.type === MessageType.INVITE) {
-					title = "New channel invite:";
-					body = nick + " invited you to " + msg.channel;
+					title = t("notify.channelInvite");
+					body = t("notify.inviteBody", {nick, channel: msg.channel ?? ""});
 				} else {
-					title = nick;
-
-					if (channel.type !== ChanType.QUERY) {
-						title += ` (${channel.name})`;
-					}
-
+					// Titles of "someone says" notifications, one per shape: the
+					// whole sentence is the translator's, the nick and channel
+					// inside it verbatim.
 					if (msg.type === MessageType.MESSAGE) {
-						title += " says:";
+						title =
+							channel.type !== ChanType.QUERY
+								? t("notify.titleChannelSays", {nick, channel: channel.name})
+								: t("notify.titleSays", {nick});
+					} else {
+						title =
+							channel.type !== ChanType.QUERY
+								? t("notify.titleChannel", {nick, channel: channel.name})
+								: nick;
 					}
 
 					// TODO: fix msg type and get rid of that conditional

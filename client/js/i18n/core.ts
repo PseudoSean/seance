@@ -3,10 +3,16 @@
 // index.ts; the settings wiring in settings.ts; the pre-paint copy of the
 // RTL set in client/index.html is pinned by test/helpers/i18n.ts.
 
+import enCatalog from "../../locales/en.json";
+
 export type Vars = Record<string, string | number>;
 export type Catalog = Record<string, string | Record<string, string>>;
 
-let catalog: Catalog = {};
+// en is the active catalog from the first import: the IRC layer resolves its
+// status strings through t() before — and without — the Vue side's
+// activate() runs, and under mocha it must resolve real English, not keys.
+// setCatalog() replaces this with the chosen locale's overlay on activation.
+let catalog: Catalog = enCatalog;
 let tag = "en";
 
 /** Tags whose writing systems flow right-to-left. The pre-paint script in

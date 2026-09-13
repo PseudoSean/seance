@@ -10,7 +10,7 @@ socket.on("connecting", function () {
 	// Dialling is not an error: the chat header spins a small icon off
 	// `network.status.connecting`, and the sidebar shows it per network.
 	// Only the splash screen, which has no header yet, says it in words.
-	updateLoadingMessage("Connecting…");
+	updateLoadingMessage(t("loading.connecting"));
 });
 
 socket.on("error", function (data) {

@@ -7,12 +7,12 @@
  * `ChanType.SPECIAL` window (channel list, ignore list) goes through.
  */
 
+import {t, tCount} from "../../i18n/core";
 import {ChanType, SpecialChanType} from "../../../../shared/types/chan";
 import type {Channel} from "../channel";
 import type {IrcClient} from "../client";
 import type {Handler} from "../types";
 
-export const CHANNEL_LIST_CHAN = "Channel List";
 export const MAX_CHANS = 500;
 
 export interface ChannelListEntry {
@@ -77,13 +77,13 @@ export function showSpecial(
 }
 
 function updateListStatus(client: IrcClient, data: ChannelListData): void {
-	showSpecial(client, CHANNEL_LIST_CHAN, SpecialChanType.CHANNELLIST, data);
+	showSpecial(client, t("list.channelList"), SpecialChanType.CHANNELLIST, data);
 }
 
 // RPL_LISTSTART: <me> Channel :Users  Name
 const listStart: Handler = (client) => {
 	resetChannelList(client);
-	updateListStatus(client, {text: "Loading channel list, this can take a moment..."});
+	updateListStatus(client, {text: t("list.loading")});
 };
 
 // RPL_LIST: <me> <channel> <# visible> :<topic>
@@ -96,7 +96,7 @@ const listEntry: Handler = (client, msg) => {
 
 	const cache = cacheFor(client);
 	cache.push({channel, num_users: parseInt(count ?? "0", 10) || 0, topic});
-	updateListStatus(client, {text: `Loaded ${cache.length} channels...`});
+	updateListStatus(client, {text: tCount("list.loaded", cache.length)});
 };
 
 // RPL_LISTEND: <me> :End of /LIST
