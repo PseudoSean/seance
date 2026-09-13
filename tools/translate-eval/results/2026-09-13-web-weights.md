@@ -92,7 +92,7 @@ Qwen3-4B is measured on its own weights below.
 ## Qwen3-4B on its own web weights
 
 The WebLLM `Qwen3-4B-q4f16_1-MLC` weights as a 4-bit graph
-(`tmp/exp/gpu/mlc-to-q4.py`: MatMulNBits with MLC's own nibbles, scales and
+(`tools/translate-eval/mlc-to-q4.py`: MatMulNBits with MLC's own nibbles, scales and
 zero point 7, the tied head 4-bit, the embedding lookup at its exact
 dequantized values; layer norms in float32 so ONNX Runtime's CUDA provider
 returns numbers), on 4B's own prompt profile, on the GPU. On the prompts set
