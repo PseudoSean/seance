@@ -13,7 +13,9 @@
   },
   "scripts": {
     "build:client": "webpack",
-    "build": "webpack",
+    "i18n:compile": "tsx tools/i18n/compile.ts",
+    "i18n:check": "tsx tools/i18n/check.ts",
+    "build": "yarn i18n:compile && webpack",
     "coverage": "webpack --mode=development && cross-env NODE_ENV=test TS_NODE_PROJECT='./test/tsconfig.json' nyc --nycrc-path=test/.nycrc-mocha.json mocha --config=test/.mocharc.yml 'test/**/*.ts' && nyc --nycrc-path=test/.nycrc-report.json report",
     "format:prettier": "prettier --write \"**/*.*\"",
     "lint:check-eslint": "eslint-config-prettier .eslintrc.cjs",
