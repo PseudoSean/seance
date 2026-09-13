@@ -399,11 +399,15 @@ to send -- and given up after `WRITE_TIMEOUT_MS` (2 min).
 
 The result lives in `store.state.outgoingTranslations`, keyed by channel
 id, and `ChatInput.vue` renders it as the `.translate-bar` strip above the
-input: an "English → German" chip (the strip's source → its target, "→
-German" until a source is named) -- whose `title` names the route the text came
-down, `<Source> → <Target> · <model id> (GPU|CPU)`, from the `engine` and
-`model` the entry carries (both null, and no title, until the route has
-answered); "auto" stands in for a source left to the model -- the streaming
+input: an "English → German" chip (the draft's language → its target, "→
+German" until a source is named; the entry's `from`, which a retry leaves
+alone, so the chip reads the same before, during and after one) -- whose
+`title` names the route the text came down,
+`<Source> → <Target> · <model id> (GPU|CPU)`, from the `requestFrom`, `engine`
+and `model` the entry carries (all null, and no title, until the route has
+answered); "auto" stands in for a
+source the request left to the model, and " · retried without a source" follows
+once the bare second try ran (`retried`) -- the streaming
 text with a caret, and icon buttons -- their words kept as the tooltip and
 accessible name, never as visible text -- for Copy (its tooltip reads "Copied" for two seconds after
 it worked), Send (disabled while pending), and Edit. Both rows of the strip are
@@ -464,7 +468,8 @@ the wrong language would be quoted into every later prompt.
 **An echo buys one more generation, and a bare one.** Before the strip
 reports "came back unchanged" the same draft goes out a second time in the
 shape `bareRetry()` (`outgoing.ts`) builds: the source left to the model
-(`from: null`, so the chip's title drops to `auto → …`) and a context
+(`from: null`, so the chip's title drops to `auto → …` and says the retry
+ran, while the chip itself keeps the draft's language) and a context
 carrying nothing but the register -- no recent lines, no voice, no terms, no
 topic, no reply target, no `sourceHint`. The bare request is the shape a
 model answers most reliably, and the two things that make one hand a line

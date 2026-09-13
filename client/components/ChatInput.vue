@@ -536,10 +536,10 @@ export default defineComponent({
 
 		// Which route the strip's text came down, in the chip's title: the
 		// pair as the request asked for it ("auto" where the source was left
-		// to the model), the model's own id, and whether it ran on the GPU.
-		// The chip's visible text stays the pair alone -- this is for
-		// someone wondering why a translation reads as it does. No title
-		// until the route has answered.
+		// to the model), the model's own id, whether it ran on the GPU, and
+		// whether the bare second try ran. The chip's visible text stays the
+		// draft's direction -- this is for someone wondering why a
+		// translation reads as it does. No title until the route has answered.
 		const outgoingChipTitle = computed(() => {
 			const entry = outgoing.value;
 
@@ -547,11 +547,12 @@ export default defineComponent({
 				return undefined;
 			}
 
-			const from = entry.from ? readerName(entry.from) : "auto";
-
-			return `${from} → ${readerName(entry.to)} · ${entry.model} (${
+			const from = entry.requestFrom ? readerName(entry.requestFrom) : "auto";
+			const route = `${from} → ${readerName(entry.to)} · ${entry.model} (${
 				entry.engine === "llm" ? "GPU" : "CPU"
 			})`;
+
+			return entry.retried ? `${route} · retried without a source` : route;
 		});
 
 		// The route's model downloading for this draft (service.ts loads it on

@@ -558,6 +558,7 @@ export default async function run(page) {
 	// prompt. Filtered by the draft's own text rather than counted, because
 	// the retry is not the only request the page makes.
 	const echoWrites = `${REQUESTS}.filter((r) => r.purpose === "write" && r.text.indexOf("[echo]") !== -1)`;
+	const echoTitle = await page.evaluate(`document.querySelector(".translate-bar-chip").title`);
 
 	await page.check(
 		"the echo was tried twice, the second time bare",
@@ -579,9 +580,11 @@ export default async function run(page) {
 	);
 	await page.check(
 		"the chip's title says the retry named no source",
-		String(
-			await page.evaluate(`document.querySelector(".translate-bar-chip").title`)
-		).startsWith("auto → German")
+		(() => {
+			const title = String(echoTitle);
+
+			return title.startsWith("auto → German") && title.endsWith("retried without a source");
+		})()
 	);
 	await page.check(
 		"the dev build kept the retry as the last composer request",
@@ -632,6 +635,24 @@ export default async function run(page) {
 	await page.check(
 		"the strip is not a failure",
 		!(await page.evaluate(`!!document.querySelector(".translate-bar.failed")`))
+	);
+	// The chip is the draft's direction, not the request's source: the bare
+	// retry named none, and the label still reads English → German; the
+	// title is where the retry shows.
+	await page.check(
+		"the chip still reads English → German after the retry",
+		(await page.evaluate(
+			`document.querySelector(".translate-bar-chip").textContent.trim()`
+		)) === "English → German"
+	);
+
+	const retryTitle = String(
+		await page.evaluate(`document.querySelector(".translate-bar-chip").title`)
+	);
+
+	await page.check(
+		`the chip's title mentions the retry (${retryTitle})`,
+		retryTitle.startsWith("auto → German") && retryTitle.includes("retried without a source")
 	);
 
 	const retryWrites = `${REQUESTS}.filter((r) => r.purpose === "write" && r.text.indexOf("[echo-once]") !== -1)`;

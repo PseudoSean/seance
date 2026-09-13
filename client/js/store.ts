@@ -74,7 +74,19 @@ export interface OutgoingTranslation {
 	draft: string;
 	/** Restored text so far (pending) or the translation (done). */
 	text: string;
+	/**
+	 * The draft's language, as the writer chose it (`writeSource`): the
+	 * chip's label. Null until the source is known, or when none is named.
+	 * A retry leaves it alone -- the draft is still in that language.
+	 */
 	from: string | null;
+	/**
+	 * The source the request in flight named: `from` on the first try, null
+	 * on the bare second one (the chip's title says "auto").
+	 */
+	requestFrom: string | null;
+	/** The bare second try ran (`outgoing.ts` `bareRetry`). */
+	retried: boolean;
 	to: string;
 	/**
 	 * The route that produced it (`writer.ts` `engineFor`): the strip's chip

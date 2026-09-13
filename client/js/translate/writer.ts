@@ -205,6 +205,8 @@ export async function translateOutgoing(
 			draft,
 			text: "",
 			from: null,
+			requestFrom: null,
+			retried: false,
 			to,
 			engine: null,
 			model: null,
@@ -292,7 +294,12 @@ export async function translateOutgoing(
 		if (current(channel, draft, controller)) {
 			store.commit("outgoingTranslationPatch", {
 				chanId: channel.id,
-				patch: {from, engine: engineFor(route), model: route?.ref.id ?? null},
+				patch: {
+					from,
+					requestFrom: from,
+					engine: engineFor(route),
+					model: route?.ref.id ?? null,
+				},
 			});
 		}
 
@@ -388,7 +395,8 @@ export async function translateOutgoing(
 			// that is wrong for the draft, and a context that confounds it —
 			// are exactly what that removes, and it costs a second generation
 			// only where the first produced nothing usable. The strip stays
-			// pending and streams the retry, and its chip drops to `auto`
+			// pending and streams the retry; its chip keeps the draft's
+			// language, and the title drops to `auto` and says a retry ran,
 			// because that is the request now in flight. Exactly one retry:
 			// a model that echoes a bare request is declining. An answer that
 			// narrates the request instead ("okay, let's see. The user wants
@@ -404,7 +412,7 @@ export async function translateOutgoing(
 			) {
 				store.commit("outgoingTranslationPatch", {
 					chanId: channel.id,
-					patch: {from: null},
+					patch: {requestFrom: null, retried: true},
 				});
 
 				text = await attempt(bareRetry(request), true);
