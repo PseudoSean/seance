@@ -1,7 +1,6 @@
 import {expect} from "chai";
 import sinon from "ts-sinon";
 import {
-	BRANDING_STRINGS,
 	DEFAULT_BRANDING,
 	brandingFeatures,
 	brandingString,
@@ -11,7 +10,10 @@ import {
 	loadBranding,
 	normalizeBranding,
 	resetBranding,
+	setBranding,
 } from "../../client/js/branding";
+import {setCatalog, t as coreT} from "../../client/js/i18n/core";
+import enCatalog from "../../client/locales/en.json";
 
 /** Minimal stand-in for a `fetch` returning the given body. */
 function fakeFetch(body: string | object, status = 200): typeof fetch {
@@ -27,9 +29,16 @@ function fakeFetch(body: string | object, status = 200): typeof fetch {
 }
 
 describe("branding", function () {
+	beforeEach(function () {
+		// brandingString resolves through the i18n core, so every test starts
+		// from the compiled en catalog the app boots with.
+		setCatalog("en", enCatalog, undefined);
+	});
+
 	afterEach(function () {
 		sinon.restore();
 		resetBranding();
+		setCatalog("en", enCatalog, undefined);
 	});
 
 	describe("normalizeBranding", function () {
@@ -161,9 +170,7 @@ describe("branding", function () {
 			});
 
 			expect(brandingString("connect.title", config)).to.equal("Join TestNet");
-			expect(brandingString("connect.submit", config)).to.equal(
-				BRANDING_STRINGS["connect.submit"]
-			);
+			expect(brandingString("connect.submit", config)).to.equal(enCatalog["connect.submit"]);
 			expect(brandingString("unknown.key", config)).to.equal("unknown.key");
 			expect(brandingFeatures(config)).to.deep.equal({
 				multiNetwork: true,
@@ -178,6 +185,30 @@ describe("branding", function () {
 				brandingFeatures(normalizeBranding({features: {saslDisconnectOnFail: false}}))
 					.saslDisconnectOnFail
 			).to.equal(false);
+		});
+	});
+
+	describe("brandingString over the i18n catalogs", function () {
+		it("branding strings override every locale; locale overrides en", function () {
+			setBranding({appName: "Test", strings: {"connect.title": "Join the seance"}});
+			setCatalog("en", {"connect.title": "Connect to IRC"}, undefined);
+			expect(brandingString("connect.title")).to.equal("Join the seance");
+			setCatalog("de", {"connect.title": "Connect to IRC"}, {"connect.title": "Verbinden"});
+			expect(brandingString("connect.title")).to.equal("Join the seance"); // deploy voice wins
+			expect(coreT("connect.title")).to.equal("Verbinden"); // without an override the locale wins
+		});
+
+		it("without an override the active locale answers, en behind it", function () {
+			setBranding({appName: "Test"});
+			setCatalog("en", enCatalog, undefined);
+			// The en copy now lives in the pot (compiled to en.json), not in a
+			// hardcoded dict.
+			expect(brandingString("connect.submit")).to.equal("Connect");
+			setCatalog("de", enCatalog, {"connect.title": "Verbinden"});
+			expect(brandingString("connect.title")).to.equal("Verbinden"); // the locale, not a dict
+			expect(brandingString("connect.savedNetworksEmpty")).to.equal(
+				"No saved networks yet. Networks you connect to are remembered here."
+			); // a key the locale overlay omits falls to en
 		});
 	});
 

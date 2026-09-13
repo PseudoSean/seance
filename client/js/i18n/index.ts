@@ -16,6 +16,7 @@ import {
 } from "./core";
 import {AVAILABLE, DEV} from "./available";
 import enCatalog from "../../locales/en.json";
+import {getBranding} from "../branding";
 import {mirrorPushPrefs} from "../push-prefs";
 
 /** Read during every template call, so a locale change re-renders whatever
@@ -83,9 +84,11 @@ export async function activate(setting: string): Promise<void> {
 export function useI18n() {
 	const t = (key: string, vars?: Vars): string => {
 		void localeRef.value;
-		// Deploy-branding overrides (Task 4) slot in here — in front of the
-		// catalog lookup, inside this one closure.
-		return coreT(key, vars);
+		// The deploy's `strings` overrides are its voice (in the deploy's
+		// language) and win in every locale — the same rule brandingString()
+		// applies for non-Vue callers, in front of the one catalog lookup.
+		const override = getBranding().strings?.[key];
+		return typeof override === "string" && override.length > 0 ? override : coreT(key, vars);
 	};
 
 	const tCount = (key: string, count: number, vars?: Vars): string => {

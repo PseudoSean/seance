@@ -10,6 +10,9 @@
 // `index.html` that must exist before any JavaScript runs (`<title>`,
 // `theme-color`, the loading splash). See docs/resources/branding.md.
 
+import enCatalog from "../locales/en.json";
+import {t as coreT} from "./i18n/core";
+
 export interface BrandingNetwork {
 	/** Display name for the network (defaults to the host name). */
 	name?: string;
@@ -216,7 +219,11 @@ export interface BrandingConfig {
 	themeColor?: string;
 	links?: BrandingLinks;
 	features?: BrandingFeatures;
-	/** Overrides for a small set of UI strings, keyed like `connect.title`. */
+	/**
+	 * Overrides for a small set of UI strings, keyed like `connect.title`.
+	 * An override is the deploy's voice and wins in every locale; unknown
+	 * keys are dropped by `normalizeStrings`.
+	 */
 	strings?: Record<string, string>;
 	/** File uploader endpoint. Absent means uploads are off. */
 	uploads?: BrandingUploads;
@@ -224,26 +231,6 @@ export interface BrandingConfig {
 
 /** Upload size limit applied when `uploads.maxSizeBytes` is unset. */
 export const DEFAULT_UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
-
-/** Keys accepted in `strings`, with the copy used when not overridden. */
-export const BRANDING_STRINGS: Record<string, string> = {
-	"connect.title": "Connect to IRC",
-	"connect.savedNetworks": "Saved networks",
-	"connect.savedNetworksEmpty":
-		"No saved networks yet. Networks you connect to are remembered here.",
-	"connect.submit": "Connect",
-	// The sign-in panel (`features.signIn`).
-	"connect.signInTitle": "Sign in",
-	"connect.signInIntro": "",
-	"connect.signInSubmit": "Sign in",
-	"connect.rememberMe": "Stay signed in on this device",
-	"connect.guestTitle": "No account?",
-	"connect.guestSubmit": "Connect as guest",
-	"help.about": "About",
-	"help.website": "Website",
-	"help.documentation": "Documentation",
-	"help.privacy": "Privacy policy",
-};
 
 export const DEFAULT_BRANDING: BrandingConfig = {
 	appName: "Seance",
@@ -282,7 +269,9 @@ export function setBranding(config: BrandingConfig): BrandingConfig {
 	return current;
 }
 
-/** Look up a UI string, honouring `strings` overrides from the config. */
+/** Look up a UI string, honouring `strings` overrides from config.json.
+ * The override is the deploy's voice (in the deploy's language) and wins
+ * in every locale; without one, the active locale's catalog answers. */
 export function brandingString(key: string, config: BrandingConfig = current): string {
 	const override = config.strings?.[key];
 
@@ -290,7 +279,7 @@ export function brandingString(key: string, config: BrandingConfig = current): s
 		return override;
 	}
 
-	return BRANDING_STRINGS[key] ?? key;
+	return coreT(key); // locale catalog → en → the key
 }
 
 /**
@@ -577,6 +566,12 @@ function normalizeUploads(value: unknown): BrandingUploads | undefined {
 	return uploads;
 }
 
+// The gettext catalog is the source of English copy (the former hardcoded
+// string dict moved into the pot), so its keys — compiled into en.json —
+// define what `strings` may override. Unknown keys are dropped silently, as
+// before: a typo in one field never takes the app down.
+const KNOWN_KEYS = new Set<string>(Object.keys(enCatalog));
+
 function normalizeStrings(value: unknown): Record<string, string> {
 	const strings: Record<string, string> = {};
 
@@ -585,7 +580,7 @@ function normalizeStrings(value: unknown): Record<string, string> {
 	}
 
 	for (const [key, text] of Object.entries(value)) {
-		if (typeof text === "string" && key in BRANDING_STRINGS) {
+		if (typeof text === "string" && KNOWN_KEYS.has(key)) {
 			strings[key] = text;
 		}
 	}
