@@ -1099,6 +1099,32 @@ msgid_plural "{count} unread messages"
 msgstr[0] ""
 msgstr[1] ""
 
+#: client/components/TypingIndicator.vue:31
+#. Line above the message input naming the two longest-typing users and summarizing everyone else. {nick1} and {nick2} are those users' names; {count} is how many further users are typing. The singular form shows when one further user is meant, the plural for any other number.
+msgctxt "typing.many"
+msgid "{nick1}, {nick2} and {count} other is typing…"
+msgid_plural "{nick1}, {nick2} and {count} others are typing…"
+msgstr[0] ""
+msgstr[1] ""
+
+#: client/components/TypingIndicator.vue:31
+#. Line above the message input saying that one user is writing a message right now. {nick} is that user's name.
+msgctxt "typing.one"
+msgid "{nick} is typing…"
+msgstr ""
+
+#: client/components/TypingIndicator.vue:31
+#. Line above the message input saying that three users are writing messages right now. {nick1}, {nick2} and {nick3} are their names, in the order they started typing.
+msgctxt "typing.three"
+msgid "{nick1}, {nick2} and {nick3} are typing…"
+msgstr ""
+
+#: client/components/TypingIndicator.vue:31
+#. Line above the message input saying that two users are writing messages right now. {nick1} and {nick2} are their names, in the order they started typing.
+msgctxt "typing.two"
+msgid "{nick1} and {nick2} are typing…"
+msgstr ""
+
 #: client/components/ChatUserList.vue:13
 #. Placeholder of the search field at the top of the user list panel: how many members the channel has while the list is being filtered. The singular shows with exactly one member, the plural otherwise.
 msgctxt "userlist.count"
