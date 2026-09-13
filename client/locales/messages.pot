@@ -7,6 +7,60 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#: client/components/Chat.vue:186
+#. Tooltip and aria-label of the spinner in a chat window's header while the connection is being established, when the network's display name is not known.
+msgctxt "chat.connecting"
+msgid "Connecting…"
+msgstr ""
+
+#: client/components/Chat.vue:186
+#. Tooltip and aria-label of the spinner in a chat window's header while that network's connection is being established. {network} is the display name of the chat network.
+msgctxt "chat.connectingTo"
+msgid "Connecting to {network}…"
+msgstr ""
+
+#: client/components/Chat.vue:72
+#. aria-label of the ☰ button in a chat window's header; clicking opens the menu of actions for the current conversation.
+msgctxt "chat.contextMenu"
+msgid "Open the context menu"
+msgstr ""
+
+#: client/components/Chat.vue:22
+#. aria-label of the conversation's name in the header of an open chat window (the visible text is the channel or conversation name itself). {type} is the kind of conversation, inserted as an English word by the app: 'channel' (a group chat), 'query' (a private one-on-one chat), 'lobby' (the network's home view) or 'special' (a list window such as the ban list).
+msgctxt "chat.currentlyOpen"
+msgid "Currently open {type}"
+msgstr ""
+
+#: client/components/Chat.vue:106
+#. aria-label of the downward-arrow button that appears above the message input when the scrollback is scrolled up; clicking scrolls down to the newest messages.
+msgctxt "chat.jumpToRecent"
+msgid "Jump to recent messages"
+msgstr ""
+
+#: client/components/Chat.vue:67
+#. aria-label of the @ button in a chat window's header; clicking opens the popup listing messages that mention you.
+msgctxt "chat.mentions"
+msgid "Open your mentions"
+msgstr ""
+
+#: client/components/Chat.vue:35
+#. aria-label of the save control at the right end of the topic editor, shown while the channel topic is being edited; clicking saves the new topic.
+msgctxt "chat.saveTopic"
+msgid "Save topic"
+msgstr ""
+
+#: client/components/Chat.vue:78
+#. Tooltip and aria-label of the button in a chat window's header that shows and hides the panel listing the channel's members.
+msgctxt "chat.toggleUserlist"
+msgid "Toggle user list"
+msgstr ""
+
+#: client/components/Chat.vue:30
+#. Placeholder of the input field shown while the channel topic is being edited (double-click the topic line to open it); Enter saves.
+msgctxt "chat.topicPlaceholder"
+msgid "Set channel topic"
+msgstr ""
+
 #: client/components/ChatInput.vue:67
 #. aria-label of the ✕ button that leaves reply or edit mode in the compose bar above the message input; the keyboard key Escape does the same.
 msgctxt "composer.cancel"

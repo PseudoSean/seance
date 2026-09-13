@@ -19,21 +19,19 @@
 			>
 				<div class="header">
 					<SidebarToggle />
-					<span class="title" :aria-label="'Currently open ' + channel.type">{{
-						channel.name
-					}}</span>
+					<span class="title" :aria-label="openTitle">{{ channel.name }}</span>
 					<div v-if="channel.editTopic === true" class="topic-container">
 						<input
 							ref="topicInput"
 							:value="channel.topic"
 							class="topic-input"
-							placeholder="Set channel topic"
+							:placeholder="topicPlaceholder"
 							enterkeyhint="done"
 							@keyup.enter="saveTopic"
 							@keyup.esc="channel.editTopic = false"
 						/>
-						<span aria-label="Save topic" class="save-topic" @click="saveTopic">
-							<span type="button" aria-label="Save topic"></span>
+						<span :aria-label="saveTopicLabel" class="save-topic" @click="saveTopic">
+							<span type="button" :aria-label="saveTopicLabel"></span>
 						</span>
 					</div>
 					<span
@@ -62,24 +60,16 @@
 							:aria-label="connectingLabel"
 						/>
 					</span>
-					<button
-						class="mentions"
-						aria-label="Open your mentions"
-						@click="openMentions"
-					/>
-					<button
-						class="menu"
-						aria-label="Open the context menu"
-						@click="openContextMenu"
-					/>
+					<button class="mentions" :aria-label="mentionsLabel" @click="openMentions" />
+					<button class="menu" :aria-label="contextMenuLabel" @click="openContextMenu" />
 					<span
 						v-if="channel.type === 'channel'"
 						class="rt-tooltip tooltipped tooltipped-w"
-						aria-label="Toggle user list"
+						:aria-label="toggleUserlistLabel"
 					>
 						<button
 							class="rt"
-							aria-label="Toggle user list"
+							:aria-label="toggleUserlistLabel"
 							@click="store.commit('toggleUserlist')"
 						/>
 					</span>
@@ -103,7 +93,7 @@
 							'scroll-down tooltipped tooltipped-w tooltipped-no-touch',
 							{'scroll-down-shown': !channel.scrolledToBottom},
 						]"
-						aria-label="Jump to recent messages"
+						:aria-label="jumpToRecentLabel"
 						@click="messageList?.jumpToBottom()"
 					>
 						<div class="scroll-down-arrow" />
@@ -149,6 +139,7 @@ import type {ClientNetwork, ClientChan} from "../js/types";
 import {useStore} from "../js/store";
 import {SpecialChanType, ChanType} from "../../shared/types/chan";
 import {layout, toPlainText} from "../js/helpers/ircmessageparser/layout";
+import {useI18n} from "../js/i18n";
 
 export default defineComponent({
 	name: "Chat",
@@ -168,6 +159,7 @@ export default defineComponent({
 	emits: ["channel-changed"],
 	setup(props, {emit}) {
 		const store = useStore();
+		const {t} = useI18n();
 
 		const messageList = ref<typeof MessageList>();
 		const topicInput = ref<HTMLInputElement | null>(null);
@@ -182,8 +174,22 @@ export default defineComponent({
 			return toPlainText(layout(topic, {markdown: store.state.settings.markdown}));
 		});
 
+		// Screen-reader frame around the conversation name in the header;
+		// {type} is the app's internal kind ("channel", "query", "lobby",
+		// "special") and is inserted as-is.
+		const openTitle = computed(() => t("chat.currentlyOpen", {type: props.channel.type}));
+
+		const topicPlaceholder = computed(() => t("chat.topicPlaceholder"));
+		const saveTopicLabel = computed(() => t("chat.saveTopic"));
+		const mentionsLabel = computed(() => t("chat.mentions"));
+		const contextMenuLabel = computed(() => t("chat.contextMenu"));
+		const toggleUserlistLabel = computed(() => t("chat.toggleUserlist"));
+		const jumpToRecentLabel = computed(() => t("chat.jumpToRecent"));
+
 		const connectingLabel = computed(() =>
-			props.network.name ? `Connecting to ${props.network.name}…` : "Connecting…"
+			props.network.name
+				? t("chat.connectingTo", {network: props.network.name})
+				: t("chat.connecting")
 		);
 
 		// A conversation whose network is down is faded (like a pending
@@ -302,9 +308,17 @@ export default defineComponent({
 
 		return {
 			store,
+			t,
 			messageList,
 			topicInput,
 			plainTopic,
+			openTitle,
+			topicPlaceholder,
+			saveTopicLabel,
+			mentionsLabel,
+			contextMenuLabel,
+			toggleUserlistLabel,
+			jumpToRecentLabel,
 			connectingLabel,
 			isDisconnected,
 			specialComponent,
