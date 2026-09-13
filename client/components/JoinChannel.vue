@@ -11,6 +11,7 @@
 		<input
 			v-model="inputChannel"
 			v-focus
+			dir="auto"
 			type="text"
 			class="input"
 			name="channel"
@@ -22,6 +23,7 @@
 		/>
 		<input
 			v-model="inputPassword"
+			dir="auto"
 			type="password"
 			class="input"
 			name="key"

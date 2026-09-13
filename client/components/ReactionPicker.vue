@@ -14,6 +14,7 @@
 				<input
 					ref="input"
 					v-model="query"
+					dir="auto"
 					type="text"
 					class="reaction-picker-input"
 					:maxlength="MAX_REACTION_LENGTH * 2"

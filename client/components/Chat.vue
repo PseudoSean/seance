@@ -23,6 +23,7 @@
 					<div v-if="channel.editTopic === true" class="topic-container">
 						<input
 							ref="topicInput"
+							dir="auto"
 							:value="channel.topic"
 							class="topic-input"
 							:placeholder="topicPlaceholder"

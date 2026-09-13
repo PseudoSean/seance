@@ -1965,7 +1965,16 @@ textarea.input {
 	padding-inline-end: 0.375rem;
 	border-inline-start: 1px solid #f6f6f6;
 	overflow: hidden; /* Prevents Zalgo text to expand beyond messages */
-	text-align: start; /* follows each paragraph's own direction once the content is bidi-isolated (unicode-bidi below) */
+	text-align: start; /* follows the paragraph direction resolved below */
+
+	/* Chat text lays out by its own first strong character, per paragraph —
+	 * a Hebrew or Arabic line in an otherwise Latin window reads right, and
+	 * the other way around — instead of by the chrome's direction. One
+	 * isolation here, at the container: the parser's inline spans stay as
+	 * they are, and the system-message frames' <bdi> nicks isolate their own
+	 * little run inside the paragraph, which is exactly one level down, not
+	 * a second wrap of the same text. */
+	unicode-bidi: plaintext;
 }
 
 #chat .msg[data-type="unhandled"] .from {

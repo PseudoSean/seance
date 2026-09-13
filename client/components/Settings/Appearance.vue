@@ -184,6 +184,7 @@
 				</label>
 				<input
 					id="nickPostfix"
+					dir="auto"
 					:value="store.state.settings.nickPostfix"
 					type="text"
 					name="nickPostfix"
@@ -266,6 +267,7 @@
 			</label>
 			<textarea
 				id="user-specified-css-input"
+				dir="auto"
 				:value="store.state.settings.userStyles"
 				class="input"
 				name="userStyles"

@@ -3,6 +3,7 @@
 		<div class="count">
 			<input
 				ref="input"
+				dir="auto"
 				:value="userSearchInput"
 				:placeholder="countPlaceholder"
 				type="search"

@@ -35,6 +35,7 @@
 				<input
 					id="connect:saslAccount"
 					v-model.trim="form.saslAccount"
+					dir="auto"
 					class="input"
 					name="saslAccount"
 					maxlength="100"
@@ -49,6 +50,7 @@
 						id="connect:saslPassword"
 						ref="passwordInput"
 						v-model="form.saslPassword"
+						dir="auto"
 						class="input"
 						:type="slotProps.isVisible ? 'text' : 'password'"
 						name="saslPassword"
@@ -105,6 +107,7 @@
 					<input
 						id="connect:guestNick"
 						v-model.trim="guestNick"
+						dir="auto"
 						class="input nick"
 						name="guestNick"
 						pattern="[^\s:!@]+"
@@ -139,6 +142,7 @@
 					<input
 						id="connect:host"
 						v-model.trim="form.host"
+						dir="auto"
 						class="input"
 						name="host"
 						:aria-label="serverAddressLabel"
@@ -153,6 +157,7 @@
 					<input
 						id="connect:port"
 						v-model.number="form.port"
+						dir="auto"
 						class="input"
 						type="number"
 						min="1"
@@ -179,6 +184,7 @@
 				<input
 					id="connect:nick"
 					v-model.trim="form.nick"
+					dir="auto"
 					class="input nick"
 					name="nick"
 					pattern="[^\s:!@]+"
@@ -194,6 +200,7 @@
 				<input
 					id="connect:channels"
 					v-model.trim="form.join"
+					dir="auto"
 					class="input"
 					name="join"
 					:placeholder="channelsPlaceholder"
@@ -219,6 +226,7 @@
 					<input
 						id="connect:saslAccount"
 						v-model.trim="form.saslAccount"
+						dir="auto"
 						class="input"
 						name="saslAccount"
 						maxlength="100"
@@ -239,6 +247,7 @@
 							id="connect:saslPassword"
 							ref="passwordInput"
 							v-model="form.saslPassword"
+							dir="auto"
 							class="input"
 							:type="slotProps.isVisible ? 'text' : 'password'"
 							name="saslPassword"

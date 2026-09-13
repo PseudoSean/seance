@@ -13,6 +13,7 @@
 			<input
 				id="channel-search-input"
 				ref="searchInput"
+				dir="auto"
 				:value="searchText"
 				:placeholder="jumpToPlaceholder"
 				type="search"

@@ -23,6 +23,7 @@
 					<span class="alias-slash" aria-hidden="true">/</span>
 					<input
 						v-model.trim="row.name"
+						dir="auto"
 						:aria-label="'Alias name ' + (index + 1)"
 						class="input alias-name"
 						type="text"
@@ -35,6 +36,7 @@
 				</label>
 				<textarea
 					v-model="row.body"
+					dir="auto"
 					:aria-label="'Commands for alias ' + (row.name || index + 1)"
 					class="input alias-body"
 					:rows="bodyRows(row)"
@@ -85,6 +87,7 @@
 		<h2>Try it</h2>
 		<input
 			v-model="tryText"
+			dir="auto"
 			aria-label="Try an alias"
 			class="input alias-try"
 			type="text"

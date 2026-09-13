@@ -167,6 +167,7 @@
 				</label>
 				<input
 					id="highlights"
+					dir="auto"
 					:value="store.state.settings.highlights"
 					type="text"
 					name="highlights"
@@ -190,6 +191,7 @@
 				</label>
 				<input
 					id="highlightExceptions"
+					dir="auto"
 					:value="store.state.settings.highlightExceptions"
 					type="text"
 					name="highlightExceptions"

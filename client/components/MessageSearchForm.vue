@@ -4,6 +4,7 @@
 			<input
 				ref="searchInputField"
 				v-model="searchInput"
+				dir="auto"
 				type="search"
 				name="search"
 				class="input"

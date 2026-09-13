@@ -43,6 +43,7 @@
 				<input
 					id="connect:name"
 					v-model.trim="defaults.name"
+					dir="auto"
 					class="input"
 					name="name"
 					maxlength="100"
@@ -55,6 +56,7 @@
 					<input
 						id="connect:host"
 						v-model.trim="defaults.host"
+						dir="auto"
 						class="input"
 						name="host"
 						:aria-label="serverAddressLabel"
@@ -68,6 +70,7 @@
 					<input
 						id="connect:port"
 						v-model.number="defaults.port"
+						dir="auto"
 						class="input"
 						type="number"
 						min="1"
@@ -104,6 +107,7 @@
 				<input
 					id="connect:nick"
 					v-model.trim="defaults.nick"
+					dir="auto"
 					class="input nick"
 					name="nick"
 					pattern="[^\s:!@]+"
@@ -119,6 +123,7 @@
 				<input
 					id="connect:channels"
 					v-model.trim="defaults.join"
+					dir="auto"
 					class="input"
 					name="join"
 					:placeholder="channelsPlaceholder"
@@ -141,6 +146,7 @@
 					id="connect:commands"
 					ref="commandsInput"
 					v-model="commandsText"
+					dir="auto"
 					autocomplete="off"
 					class="input"
 					name="commands"
@@ -166,6 +172,7 @@
 					<input
 						id="connect:saslAccount"
 						v-model.trim="defaults.saslAccount"
+						dir="auto"
 						class="input"
 						name="saslAccount"
 						maxlength="100"
@@ -185,6 +192,7 @@
 						<input
 							id="connect:saslPassword"
 							v-model="defaults.saslPassword"
+							dir="auto"
 							class="input"
 							:type="slotProps.isVisible ? 'text' : 'password'"
 							name="saslPassword"

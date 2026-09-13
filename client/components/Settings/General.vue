@@ -66,6 +66,7 @@
 				}}</label>
 				<input
 					id="awayMessage"
+					dir="auto"
 					:value="store.state.settings.awayMessage"
 					type="text"
 					name="awayMessage"
