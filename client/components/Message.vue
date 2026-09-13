@@ -50,7 +50,7 @@
 						><span class="msg-reply-nick">{{ quote.nick }}</span
 						>&#32;<span class="msg-reply-text">{{ quote.text }}</span></template
 					>
-					<span v-else class="msg-reply-text">(unknown message)</span>
+					<span v-else class="msg-reply-text">{{ t("message.replyUnknown") }}</span>
 				</button>
 				<StatusmsgMarker :group="message.statusmsgGroup" />
 				<Username
@@ -62,19 +62,21 @@
 					v-if="message.redacted && !revealed"
 					type="button"
 					class="msg-redacted"
-					aria-label="Deleted message, click to reveal"
+					:aria-label="redactedRevealLabel"
 					@click="revealed = true"
 				>
 					{{ redactedLabel }}</button
 				><span
 					v-else-if="message.redacted"
 					class="msg-redacted-revealed"
-					title="Click to hide again"
+					:title="redactedHideTitle"
 					@click="hideRevealed"
 					><ParsedMessage :message="message" />
 					<span class="msg-redacted-note">{{ redactedLabel }}</span></span
 				><ParsedMessage v-else :message="message" />
-				<span v-if="message.editOf" class="msg-edited" :title="editedTitle">(edited)</span>
+				<span v-if="message.editOf" class="msg-edited" :title="editedTitle">{{
+					t("message.editedBadge")
+				}}</span>
 				<!-- A deleted message hides its previews with its text: the
 				placeholder would otherwise sit above the very image it deleted.
 				Revealing the text brings them back. -->
@@ -115,7 +117,7 @@
 			<span class="content" dir="auto">
 				<span
 					v-if="message.showInActive"
-					aria-label="This message was shown in your active channel"
+					:aria-label="shownInActiveLabel"
 					class="msg-shown-in-active tooltipped tooltipped-e"
 					><span></span
 				></span>
@@ -133,26 +135,28 @@
 						><span class="msg-reply-nick">{{ quote.nick }}</span
 						>&#32;<span class="msg-reply-text">{{ quote.text }}</span></template
 					>
-					<span v-else class="msg-reply-text">(unknown message)</span>
+					<span v-else class="msg-reply-text">{{ t("message.replyUnknown") }}</span>
 				</button>
 				<StatusmsgMarker :group="message.statusmsgGroup" />
 				<button
 					v-if="message.redacted && !revealed"
 					type="button"
 					class="msg-redacted"
-					aria-label="Deleted message, click to reveal"
+					:aria-label="redactedRevealLabel"
 					@click="revealed = true"
 				>
 					{{ redactedLabel }}</button
 				><span
 					v-else-if="message.redacted"
 					class="msg-redacted-revealed"
-					title="Click to hide again"
+					:title="redactedHideTitle"
 					@click="hideRevealed"
 					><ParsedMessage :network="network" :message="message" />
 					<span class="msg-redacted-note">{{ redactedLabel }}</span></span
 				><ParsedMessage v-else :network="network" :message="message" />
-				<span v-if="message.editOf" class="msg-edited" :title="editedTitle">(edited)</span>
+				<span v-if="message.editOf" class="msg-edited" :title="editedTitle">{{
+					t("message.editedBadge")
+				}}</span>
 				<!-- A deleted message hides its previews with its text: the
 				placeholder would otherwise sit above the very image it deleted.
 				Revealing the text brings them back. -->
@@ -196,6 +200,7 @@ import {MessageType} from "../../shared/types/msg";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
 import {useStore} from "../js/store";
 import {hasVirtualKeyboard} from "../js/helpers/device";
+import {useI18n} from "../js/i18n";
 
 MessageTypes.ParsedMessage = ParsedMessage;
 MessageTypes.LinkPreview = LinkPreview;
@@ -226,6 +231,7 @@ export default defineComponent({
 	},
 	setup(props) {
 		const store = useStore();
+		const {t} = useI18n();
 
 		// On a touch device the toolbar opens on a tap: the long press that
 		// fakes a hover is also how iOS starts a text selection (see the
@@ -261,8 +267,8 @@ export default defineComponent({
 		// An edit keeps its original's time (msg:edit); when it was made is editedAt.
 		const editedTitle = computed(() => {
 			return props.message.editedAt
-				? `Edited ${localetime(props.message.editedAt)}`
-				: "This message was edited";
+				? t("message.editedAt", {time: localetime(props.message.editedAt)})
+				: t("message.edited");
 		});
 
 		const messageComponent = computed(() => {
@@ -290,8 +296,8 @@ export default defineComponent({
 
 		const quoteLabel = computed(() =>
 			quote.value
-				? `Replying to ${quote.value.nick}: ${quote.value.text}. Jump to that message.`
-				: "Replying to a message that is not loaded"
+				? t("message.replyingTo", {nick: quote.value.nick, text: quote.value.text})
+				: t("message.replyMissing")
 		);
 
 		const jumpToParent = () => {
@@ -329,9 +335,14 @@ export default defineComponent({
 			}
 
 			return r.reason
-				? `[Message deleted by ${r.by}: ${r.reason}]`
-				: `[Message deleted by ${r.by}]`;
+				? t("message.deletedWithReason", {nick: r.by, reason: r.reason})
+				: t("message.deleted", {nick: r.by});
 		});
+
+		// Labels of the deletion placeholder and its reveal state.
+		const redactedRevealLabel = computed(() => t("message.redactedReveal"));
+		const redactedHideTitle = computed(() => t("message.redactedHide"));
+		const shownInActiveLabel = computed(() => t("message.shownInActive"));
 
 		const hideRevealed = (e: MouseEvent) => {
 			// Let links inside the revealed text keep working.
@@ -366,8 +377,12 @@ export default defineComponent({
 			quote,
 			quoteLabel,
 			jumpToParent,
+			t,
 			revealed,
 			redactedLabel,
+			redactedRevealLabel,
+			redactedHideTitle,
+			shownInActiveLabel,
 			hideRevealed,
 			canAct,
 		};

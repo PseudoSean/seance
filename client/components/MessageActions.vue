@@ -3,13 +3,13 @@
 		class="msg-actions"
 		:class="{active: pickerOpen}"
 		role="toolbar"
-		aria-label="Message actions"
+		:aria-label="toolbarLabel"
 	>
 		<button
 			type="button"
 			class="msg-action msg-action-reply"
-			aria-label="Reply"
-			title="Reply"
+			:aria-label="replyLabel"
+			:title="replyLabel"
 			@click="reply"
 		>
 			↩
@@ -18,8 +18,8 @@
 			ref="reactButton"
 			type="button"
 			class="msg-action msg-action-react"
-			aria-label="React"
-			title="React"
+			:aria-label="reactLabel"
+			:title="reactLabel"
 			:aria-expanded="pickerOpen"
 			@mouseenter="preloadEmoji"
 			@mousedown.stop
@@ -31,8 +31,8 @@
 			v-if="codeBlocks.length > 0"
 			type="button"
 			class="msg-action msg-action-copy"
-			:aria-label="copied ? 'Copied' : 'Copy code'"
-			:title="copied ? 'Copied' : 'Copy code'"
+			:aria-label="copyCodeLabel"
+			:title="copyCodeLabel"
 			@click.stop="copyCode"
 		>
 			{{ copied ? "✓" : "⧉" }}
@@ -41,8 +41,8 @@
 			v-if="canEdit"
 			type="button"
 			class="msg-action msg-action-edit"
-			aria-label="Edit"
-			title="Edit"
+			:aria-label="editLabel"
+			:title="editLabel"
 			@click="edit"
 		>
 			✎
@@ -51,8 +51,8 @@
 			v-if="canDelete"
 			type="button"
 			class="msg-action msg-action-delete"
-			aria-label="Delete"
-			title="Delete"
+			:aria-label="deleteLabel"
+			:title="deleteLabel"
 			@click="remove"
 		>
 			✕
@@ -81,6 +81,7 @@ import {ChanType} from "../../shared/types/chan";
 import {MessageType} from "../../shared/types/msg";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
 import ReactionPicker from "./ReactionPicker.vue";
+import {useI18n} from "../js/i18n";
 
 // How long the button says so after a copy that worked
 const COPIED_MS = 1500;
@@ -95,6 +96,7 @@ export default defineComponent({
 	},
 	setup(props) {
 		const store = useStore();
+		const {t} = useI18n();
 		const pickerOpen = ref(false);
 		const reactButton = ref<HTMLButtonElement | null>(null);
 
@@ -132,6 +134,16 @@ export default defineComponent({
 		};
 
 		onUnmounted(clearCopied);
+
+		// Toolbar labels (the copy button toggles between them).
+		const toolbarLabel = computed(() => t("message.actionsToolbar"));
+		const replyLabel = computed(() => t("message.reply"));
+		const reactLabel = computed(() => t("message.react"));
+		const editLabel = computed(() => t("message.edit"));
+		const deleteLabel = computed(() => t("message.delete"));
+		const copyCodeLabel = computed(() =>
+			copied.value ? t("message.copied") : t("message.copyCode")
+		);
 
 		// Several blocks are one copy, a blank line apart: they were blocks of
 		// their own, and a copy that ran them together would be a different
@@ -186,15 +198,15 @@ export default defineComponent({
 
 			const preview = (props.message.text ?? "").slice(0, 120);
 			const who = props.message.self
-				? "your message"
-				: `${props.message.from?.nick}'s message`;
+				? t("message.deleteWhoSelf")
+				: t("message.deleteWhoOther", {nick: props.message.from?.nick ?? ""});
 
 			eventbus.emit(
 				"confirm-dialog",
 				{
-					title: "Delete message",
-					text: `Delete ${who}? "${preview}"`,
-					button: "Delete",
+					title: t("message.deleteTitle"),
+					text: t("message.deleteConfirm", {who, preview}),
+					button: t("message.delete"),
 				},
 				(confirmed: boolean) => {
 					if (confirmed) {
@@ -220,6 +232,12 @@ export default defineComponent({
 			canDelete,
 			codeBlocks,
 			copied,
+			toolbarLabel,
+			replyLabel,
+			reactLabel,
+			editLabel,
+			deleteLabel,
+			copyCodeLabel,
 			reply,
 			edit,
 			react,

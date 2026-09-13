@@ -792,6 +792,144 @@ msgctxt "lobby.notificationsSubscribed"
 msgid "Notifications: subscribed to push"
 msgstr ""
 
+#: client/components/MessageActions.vue:6
+#. aria-label of the hover toolbar on a chat message holding the reply, react, copy, edit and delete buttons.
+msgctxt "message.actionsToolbar"
+msgid "Message actions"
+msgstr ""
+
+#: client/components/MessageActions.vue:34
+#. Tooltip and aria-label of a chat message's copy-code button for a moment after the copy succeeded.
+msgctxt "message.copied"
+msgid "Copied"
+msgstr ""
+
+#: client/components/MessageActions.vue:34
+#. Tooltip and aria-label of the copy button that a chat message shows when it contains code blocks; clicking copies the code to the clipboard.
+msgctxt "message.copyCode"
+msgid "Copy code"
+msgstr ""
+
+#: client/components/MessageActions.vue:54
+#. Tooltip and aria-label of the ✕ button in a chat message's hover toolbar, and the label of the confirmation button in the dialog it opens; both delete the message.
+msgctxt "message.delete"
+msgid "Delete"
+msgstr ""
+
+#: client/components/MessageActions.vue:196
+#. Body of the confirmation dialog shown before a chat message is deleted. {who} describes whose message it is ('your message', or another user's name in the possessive), {preview} is the beginning of the message text, quoted.
+msgctxt "message.deleteConfirm"
+msgid "Delete {who}? \"{preview}\""
+msgstr ""
+
+#: client/components/MessageActions.vue:195
+#. Title of the confirmation dialog shown before a chat message is deleted.
+msgctxt "message.deleteTitle"
+msgid "Delete message"
+msgstr ""
+
+#: client/components/MessageActions.vue:190
+#. Part of the delete-confirmation dialog's body: fills the {who} placeholder when the message to be deleted was written by someone else. {nick} is that user's name.
+msgctxt "message.deleteWhoOther"
+msgid "{nick}'s message"
+msgstr ""
+
+#: client/components/MessageActions.vue:189
+#. Part of the delete-confirmation dialog's body: fills the {who} placeholder when the message to be deleted is the reader's own.
+msgctxt "message.deleteWhoSelf"
+msgid "your message"
+msgstr ""
+
+#: client/components/Message.vue:333
+#. Visible text standing in for a deleted chat message when the deletion gave no reason. {nick} is the name of the user who deleted it. Square brackets are part of the copy.
+msgctxt "message.deleted"
+msgid "[Message deleted by {nick}]"
+msgstr ""
+
+#: client/components/Message.vue:331
+#. Visible text standing in for a deleted chat message when the deletion gave a reason. {nick} is the name of the user who deleted it, {reason} the reason they gave. Square brackets are part of the copy.
+msgctxt "message.deletedWithReason"
+msgid "[Message deleted by {nick}: {reason}]"
+msgstr ""
+
+#: client/components/MessageActions.vue:44
+#. Tooltip and aria-label of the pencil button in a chat message's hover toolbar, shown on your own messages; clicking starts editing that message.
+msgctxt "message.edit"
+msgid "Edit"
+msgstr ""
+
+#: client/components/Message.vue:265
+#. Tooltip on the edited marker of a chat message when the time of the edit is unknown.
+msgctxt "message.edited"
+msgid "This message was edited"
+msgstr ""
+
+#: client/components/Message.vue:264
+#. Tooltip on the edited marker of a chat message that was edited after being sent; {time} is the date and time the edit was made, already formatted in the reader's locale.
+msgctxt "message.editedAt"
+msgid "Edited {time}"
+msgstr ""
+
+#: client/components/Message.vue:77
+#. Small marker shown after a chat message that was edited after being sent. Parenthesized; keep the lowercase form.
+msgctxt "message.editedBadge"
+msgid "(edited)"
+msgstr ""
+
+#: client/components/MessageActions.vue:21
+#. Tooltip and aria-label of the smiley button in a chat message's hover toolbar; clicking opens the emoji picker to add a reaction to that message.
+msgctxt "message.react"
+msgid "React"
+msgstr ""
+
+#: client/components/Message.vue:72
+#. Tooltip on the revealed text of a deleted chat message; clicking hides the text again.
+msgctxt "message.redactedHide"
+msgid "Click to hide again"
+msgstr ""
+
+#: client/components/Message.vue:65
+#. aria-label of the placeholder button that replaces a deleted chat message; clicking shows the deleted text.
+msgctxt "message.redactedReveal"
+msgid "Deleted message, click to reveal"
+msgstr ""
+
+#: client/components/MessageActions.vue:11
+#. Tooltip and aria-label of the reply button in a chat message's hover toolbar; clicking starts a reply quoting that message.
+msgctxt "message.reply"
+msgid "Reply"
+msgstr ""
+
+#: client/components/Message.vue:294
+#. aria-label of the quoted-message button on a chat message when the message being replied to is not in the loaded scrollback, so it cannot be jumped to.
+msgctxt "message.replyMissing"
+msgid "Replying to a message that is not loaded"
+msgstr ""
+
+#: client/components/Message.vue:53
+#. Visible text of the quoted-message button on a chat message when the message being replied to is not in the loaded scrollback; it stands in for the quoted text. Parenthesized.
+msgctxt "message.replyUnknown"
+msgid "(unknown message)"
+msgstr ""
+
+#: client/components/Message.vue:291
+#. aria-label of the small quoted-message button on a chat message that is a reply; clicking scrolls to the message being replied to. {nick} is the name of the user who wrote the quoted message, {text} its content as plain text.
+msgctxt "message.replyingTo"
+msgid "Replying to {nick}: {text}. Jump to that message."
+msgstr ""
+
+#: client/components/Message.vue:118
+#. Tooltip of the small marker on a chat message that arrived while you had another channel open; the server delivered it to the active window only.
+msgctxt "message.shownInActive"
+msgid "This message was shown in your active channel"
+msgstr ""
+
+#: client/components/StatusmsgMarker.vue:4
+#. Tooltip of the small mode-prefix marker (a character such as + or @) shown before messages that the server delivered only to the part of the channel holding that status. {mode} is the mode character itself, inserted verbatim.
+msgctxt "message.statusmsg"
+msgid "This message was only shown to users with {mode} mode"
+msgstr ""
+
 #: client/components/Windows/Connect.vue:72
 #: client/components/Windows/Connect.vue:296
 #: client/components/Settings/Appearance.vue:249
