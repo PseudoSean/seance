@@ -1010,6 +1010,204 @@ msgctxt "mentions.title"
 msgid "Recent mentions"
 msgstr ""
 
+#: client/js/helpers/contextMenu.ts
+#. The word for a group chat room, filling {type} in the context-menu mute items. Lowercase mid-sentence.
+msgctxt "menu.chanTypeChannel"
+msgid "channel"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Word for a whole chat server connection, filling {type} in the context-menu mute items. Lowercase mid-sentence.
+msgctxt "menu.chanTypeNetwork"
+msgid "network"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. The word for a private one-on-one chat, filling {type} in the context-menu mute items. Lowercase mid-sentence.
+msgctxt "menu.chanTypeQuery"
+msgid "conversation"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item on a conversation; deletes the locally loaded messages of that conversation after a confirmation. Also the title and confirmation button of that dialog.
+msgctxt "menu.clearHistory"
+msgid "Clear history"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Body of the confirmation dialog before the locally loaded messages of a conversation are deleted. {channel} is the conversation's name.
+msgctxt "menu.clearHistoryText"
+msgid "Are you sure you want to clear history for {channel}? This cannot be undone."
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item on a channel in the sidebar network list; clicking leaves the channel (the app stops showing it and tells the server so).
+msgctxt "menu.closeChannel"
+msgid "Leave"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item on a chat network's home row in the sidebar network list; clicking forgets the saved network connection. Shown instead of 'Close' because a network cannot be merely closed.
+msgctxt "menu.closeLobby"
+msgid "Remove"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item on a private one-on-one conversation or a list window in the sidebar; clicking closes the window without leaving anything on the server.
+msgctxt "menu.closeQuery"
+msgid "Close"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item on a chat network's home row while the network is offline; clicking dials the network again.
+msgctxt "menu.connect"
+msgid "Connect"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item on a user; opens (or switches to) the private one-on-one conversation with that user.
+msgctxt "menu.directMessages"
+msgid "Direct messages"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item on a chat network's home row while the network is connected; clicking hangs up the connection to that network.
+msgctxt "menu.disconnect"
+msgid "Disconnect"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item on a chat network's home row; opens the form where the network's address and credentials are changed. Ellipsis is part of the copy.
+msgctxt "menu.editNetwork"
+msgid "Edit this network…"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item on a chat channel in the sidebar; opens the editor for the channel's topic line.
+msgctxt "menu.editTopic"
+msgid "Edit topic"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item that grants an IRC channel role to a user; {name} is the role's name ('operator'), {mode} the mode letter with its plus sign, e.g. +o.
+msgctxt "menu.giveMode"
+msgid "Give {name} (+{mode})"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item that grants an IRC mode whose role name is unknown; {mode} is the mode letter with its plus sign, e.g. +z.
+msgctxt "menu.giveModeUnknown"
+msgid "Mode +{mode}"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item on a clickable channel name inside a chat message, when that channel is already open in this client; clicking switches to it.
+msgctxt "menu.goToChannel"
+msgid "Go to channel"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item on a user; hides all further messages from that user on the network.
+msgctxt "menu.ignore"
+msgid "Ignore user"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item on a chat network's home row; opens the field to join a channel on that network. Ellipsis is part of the copy.
+msgctxt "menu.joinChannel"
+msgid "Join a channel…"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item on a clickable channel name inside a chat message, when that channel is not open yet; clicking joins it.
+msgctxt "menu.joinInline"
+msgid "Join channel"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item on a user in a channel you have permission in; removes that user from the channel (they may rejoin).
+msgctxt "menu.kick"
+msgid "Kick"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item on a chat channel in the sidebar; asks the server for the channel's ban list.
+msgctxt "menu.listBanned"
+msgid "List banned users"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item on a chat network's home row; asks the server for the list of every public channel on that network.
+msgctxt "menu.listChannels"
+msgid "List all channels"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item on a chat network's home row; shows the list of users whose messages are hidden on that network.
+msgctxt "menu.listIgnored"
+msgid "List ignored users"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Name of the IRC channel administrator role (the & prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
+msgctxt "menu.modeAdmin"
+msgid "admin"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Name of the IRC half-operator role (the % prefix), filling {name} in the mode menu items. Lowercase mid-sentence; keep the hyphen if natural.
+msgctxt "menu.modeHalfOp"
+msgid "half-op"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Name of the IRC channel operator role (the @ prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
+msgctxt "menu.modeOperator"
+msgid "operator"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Name of the highest IRC channel role (the ~ prefix), filling {name} in the mode menu items such as 'Revoke {name} (-a)'. Lowercase mid-sentence.
+msgctxt "menu.modeOwner"
+msgid "owner"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Name of the IRC voiced role (the + prefix; may speak in a moderated channel), filling {name} in the mode menu items. Lowercase mid-sentence.
+msgctxt "menu.modeVoice"
+msgid "voice"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item on a conversation; clicking mutes it (no highlights, no notifications from it). {type} names the kind of conversation in lowercase: 'network', 'channel' or 'conversation'.
+msgctxt "menu.muteType"
+msgid "Mute {type}"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item that takes an IRC channel role away from a user; {name} is the role's name ('operator'), {mode} the mode letter with its minus sign, e.g. -o.
+msgctxt "menu.revokeMode"
+msgid "Revoke {name} (-{mode})"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item that removes an IRC mode whose role name is unknown; {mode} is the mode letter with its minus sign, e.g. -z.
+msgctxt "menu.revokeModeUnknown"
+msgid "Mode -{mode}"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item on a conversation whose messages are muted (not highlighted, not notified); clicking unmutes it. {type} names the kind of conversation in lowercase: 'network', 'channel' or 'conversation'.
+msgctxt "menu.unmuteType"
+msgid "Unmute {type}"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Context-menu item on a user (in the user list, a message or a conversation); asks the server for that user's details (real name, account, idle time).
+msgctxt "menu.whois"
+msgid "User information"
+msgstr ""
+
 #: client/components/MessageActions.vue:6
 #. aria-label of the hover toolbar on a chat message holding the reply, react, copy, edit and delete buttons.
 msgctxt "message.actionsToolbar"

@@ -526,7 +526,6 @@ kbd {
 
 /* Connect form, settings, version checker */
 #connect .connect-notice,
-#connect .saved-networks-empty,
 #connect .connect-note,
 #version-checker.loading {
 	background-color: var(--note-bg);

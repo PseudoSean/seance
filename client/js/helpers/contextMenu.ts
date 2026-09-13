@@ -1,3 +1,4 @@
+import {t} from "../i18n/core";
 import socket from "../socket";
 import {clearHistory} from "../history";
 import {setMuteStatus} from "../mute";
@@ -45,10 +46,10 @@ export function generateChannelContextMenu(
 	};
 
 	const closeMap = {
-		lobby: "Remove",
-		channel: "Leave",
-		query: "Close",
-		special: "Close",
+		lobby: t("menu.closeLobby"),
+		channel: t("menu.closeChannel"),
+		query: t("menu.closeQuery"),
+		special: t("menu.closeQuery"),
 	};
 
 	let items: ContextMenuItem[] = [
@@ -68,19 +69,19 @@ export function generateChannelContextMenu(
 		items = [
 			...items,
 			{
-				label: "Edit this network…",
+				label: t("menu.editNetwork"),
 				type: "item",
 				class: "edit",
 				link: `/settings/networks/${network.uuid}`,
 			},
 			{
-				label: "Join a channel…",
+				label: t("menu.joinChannel"),
 				type: "item",
 				class: "join",
 				action: () => (network.isJoinChannelShown = true),
 			},
 			{
-				label: "List all channels",
+				label: t("menu.listChannels"),
 				type: "item",
 				class: "list",
 				action: () =>
@@ -90,7 +91,7 @@ export function generateChannelContextMenu(
 					}),
 			},
 			{
-				label: "List ignored users",
+				label: t("menu.listIgnored"),
 				type: "item",
 				class: "list",
 				action: () =>
@@ -101,7 +102,7 @@ export function generateChannelContextMenu(
 			},
 			network.status.connected
 				? {
-						label: "Disconnect",
+						label: t("menu.disconnect"),
 						type: "item",
 						class: "disconnect",
 						action: () =>
@@ -111,7 +112,7 @@ export function generateChannelContextMenu(
 							}),
 				  }
 				: {
-						label: "Connect",
+						label: t("menu.connect"),
 						type: "item",
 						class: "connect",
 						action: () =>
@@ -126,7 +127,7 @@ export function generateChannelContextMenu(
 	// Add menu items for channels
 	if (channel.type === ChanType.CHANNEL) {
 		items.push({
-			label: "Edit topic",
+			label: t("menu.editTopic"),
 			type: "item",
 			class: "edit",
 			action() {
@@ -135,7 +136,7 @@ export function generateChannelContextMenu(
 			},
 		});
 		items.push({
-			label: "List banned users",
+			label: t("menu.listBanned"),
 			type: "item",
 			class: "list",
 			action() {
@@ -151,7 +152,7 @@ export function generateChannelContextMenu(
 	if (channel.type === ChanType.QUERY) {
 		items.push(
 			{
-				label: "User information",
+				label: t("menu.whois"),
 				type: "item",
 				class: "action-whois",
 				action() {
@@ -163,7 +164,7 @@ export function generateChannelContextMenu(
 				},
 			},
 			{
-				label: "Ignore user",
+				label: t("menu.ignore"),
 				type: "item",
 				class: "action-ignore",
 				action() {
@@ -178,16 +179,16 @@ export function generateChannelContextMenu(
 
 	if (channel.type === ChanType.CHANNEL || channel.type === ChanType.QUERY) {
 		items.push({
-			label: "Clear history",
+			label: t("menu.clearHistory"),
 			type: "item",
 			class: "clear-history",
 			action() {
 				eventbus.emit(
 					"confirm-dialog",
 					{
-						title: "Clear history",
-						text: `Are you sure you want to clear history for ${channel.name}? This cannot be undone.`,
-						button: "Clear history",
+						title: t("menu.clearHistory"),
+						text: t("menu.clearHistoryText", {channel: channel.name}),
+						button: t("menu.clearHistory"),
 					},
 					(result) => {
 						if (!result) {
@@ -202,9 +203,9 @@ export function generateChannelContextMenu(
 	}
 
 	const humanFriendlyChanTypeMap: Record<string, string> = {
-		lobby: "network",
-		channel: "channel",
-		query: "conversation",
+		lobby: t("menu.chanTypeNetwork"),
+		channel: t("menu.chanTypeChannel"),
+		query: t("menu.chanTypeQuery"),
 	};
 
 	// We don't allow the muting of ChanType.SPECIAL channels
@@ -214,7 +215,9 @@ export function generateChannelContextMenu(
 		const chanType = humanFriendlyChanTypeMap[channel.type];
 
 		items.push({
-			label: channel.muted ? `Unmute ${chanType}` : `Mute ${chanType}`,
+			label: channel.muted
+				? t("menu.unmuteType", {type: chanType})
+				: t("menu.muteType", {type: chanType}),
 			type: "item",
 			class: "mute",
 			action() {
@@ -264,7 +267,7 @@ export function generateInlineChannelContextMenu(
 	if (channel) {
 		return [
 			{
-				label: "Go to channel",
+				label: t("menu.goToChannel"),
 				type: "item",
 				class: "chan",
 				link: `/chan-${channel.id}`,
@@ -274,7 +277,7 @@ export function generateInlineChannelContextMenu(
 
 	return [
 		{
-			label: "Join channel",
+			label: t("menu.joinInline"),
 			type: "item",
 			class: "join",
 			action: join,
@@ -316,13 +319,13 @@ export function generateUserContextMenu(
 			type: "divider",
 		},
 		{
-			label: "User information",
+			label: t("menu.whois"),
 			type: "item",
 			class: "action-whois",
 			action: whois,
 		},
 		{
-			label: "Ignore user",
+			label: t("menu.ignore"),
 			type: "item",
 			class: "action-ignore",
 			action() {
@@ -333,7 +336,7 @@ export function generateUserContextMenu(
 			},
 		},
 		{
-			label: "Direct messages",
+			label: t("menu.directMessages"),
 			type: "item",
 			class: "action-query",
 			action() {
@@ -358,11 +361,11 @@ export function generateUserContextMenu(
 
 	// Names of the standard modes we are able to change
 	const modeCharToName = {
-		"~": "owner",
-		"&": "admin",
-		"@": "operator",
-		"%": "half-op",
-		"+": "voice",
+		"~": t("menu.modeOwner"),
+		"&": t("menu.modeAdmin"),
+		"@": t("menu.modeOperator"),
+		"%": t("menu.modeHalfOp"),
+		"+": t("menu.modeVoice"),
 	};
 
 	// Labels for the mode changes.  For example .rev({mode: "a", symbol: "&"}) => 'Revoke admin (-a)'
@@ -374,7 +377,9 @@ export function generateUserContextMenu(
 				return "";
 			}
 
-			const res = name ? `Revoke ${name} (-${m.mode})` : `Mode -${m.mode}`;
+			const res = name
+				? t("menu.revokeMode", {name, mode: m.mode})
+				: t("menu.revokeModeUnknown", {mode: m.mode});
 			return res;
 		},
 		give(m: {symbol: string; mode: string}) {
@@ -384,7 +389,9 @@ export function generateUserContextMenu(
 				return "";
 			}
 
-			const res = name ? `Give ${name} (+${m.mode})` : `Mode +${m.mode}`;
+			const res = name
+				? t("menu.giveMode", {name, mode: m.mode})
+				: t("menu.giveModeUnknown", {mode: m.mode});
 			return res;
 		},
 	};
@@ -449,7 +456,7 @@ export function generateUserContextMenu(
 		// Check if the target user has no mode or a mode lower than ours.
 		if (user.modes.length === 0 || compare(currentChannelUser.modes[0], user.modes[0])) {
 			items.push({
-				label: "Kick",
+				label: t("menu.kick"),
 				type: "item",
 				class: "action-kick",
 				action() {
