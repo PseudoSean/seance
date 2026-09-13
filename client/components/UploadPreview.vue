@@ -14,8 +14,7 @@
 			<div class="confirm-text">
 				<div id="upload-preview-title" class="confirm-text-title">{{ title }}</div>
 				<p class="upload-preview-hint">
-					Check that this is what you meant to share, then upload. Anyone who can open the
-					link will be able to see it.
+					{{ t("upload.confirmHint") }}
 				</p>
 				<ul class="upload-preview-list">
 					<li
@@ -67,8 +66,8 @@
 						<button
 							type="button"
 							class="upload-preview-remove"
-							:aria-label="`Don't upload ${item.file.name}`"
-							title="Don't upload this file"
+							:aria-label="removeLabel(item.file.name)"
+							:title="removeTitle"
 							@click="remove(item)"
 						>
 							✕
@@ -77,7 +76,9 @@
 				</ul>
 			</div>
 			<div class="confirm-buttons">
-				<button type="button" class="btn btn-cancel" @click="close(false)">Cancel</button>
+				<button type="button" class="btn btn-cancel" @click="close(false)">
+					{{ t("upload.cancel") }}
+				</button>
 				<button
 					id="upload-preview-confirm"
 					ref="confirmButton"
@@ -85,7 +86,7 @@
 					class="btn"
 					@click="close(true)"
 				>
-					{{ items.length > 1 ? `Upload ${items.length} files` : "Upload" }}
+					{{ confirmText }}
 				</button>
 			</div>
 		</div>
@@ -254,8 +255,9 @@
 </style>
 
 <script lang="ts">
-import {defineComponent, nextTick, onMounted, onUnmounted, ref} from "vue";
+import {defineComponent, nextTick, onMounted, onUnmounted, computed, ref} from "vue";
 import eventbus from "../js/eventbus";
+import {useI18n} from "../js/i18n";
 import {useStore} from "../js/store";
 import friendlysize from "../js/helpers/friendlysize";
 import {hasVirtualKeyboard} from "../js/helpers/device";
@@ -286,13 +288,17 @@ interface PreviewItem {
 	plan: MetadataPlan | null;
 }
 
-const NOTES: Record<MetadataPlan, string> = {
-	strip: "Metadata (EXIF) will be removed before upload",
-	off: "Sent as it is, metadata included",
-	animated: "Animated — sent as it is, so the animation is kept",
-	unsupported: "Sent as it is",
-	"not-image": "",
-};
+const noteForPlan = (
+	t: (key: string, vars?: Record<string, unknown>) => string,
+	plan: MetadataPlan
+): string =>
+	({
+		strip: t("upload.noteStrip"),
+		off: t("upload.noteOff"),
+		animated: t("upload.noteAnimated"),
+		unsupported: t("upload.noteUnsupported"),
+		"not-image": "",
+	}[plan]);
 
 function kindOf(file: File): PreviewKind {
 	const type = file.type.toLowerCase();
@@ -316,11 +322,24 @@ export default defineComponent({
 	name: "UploadPreview",
 	setup() {
 		const store = useStore();
+		const {t} = useI18n();
 		const request = ref<UploadConfirmRequest | null>(null);
 		const items = ref<PreviewItem[]>([]);
 		const title = ref("Upload this file?");
 		const confirmButton = ref<HTMLButtonElement>();
 		let nextKey = 1;
+
+		// The dialog's title and confirmation button, reactive to the file count.
+		const titleText = computed(() =>
+			items.value.length > 1 ? t("upload.confirmTitleMany") : t("upload.confirmTitleOne")
+		);
+		const confirmText = computed(() =>
+			items.value.length > 1
+				? t("upload.confirmMany", {count: items.value.length})
+				: t("upload.confirmOne")
+		);
+		const removeLabel = (name: string) => t("upload.removeOne", {name});
+		const removeTitle = computed(() => t("upload.removeTitle"));
 
 		const revoke = (item: PreviewItem) => {
 			if (item.url) {
@@ -379,7 +398,6 @@ export default defineComponent({
 
 			incoming.claimed = true;
 			request.value = incoming;
-			title.value = incoming.files.length > 1 ? "Upload these files?" : "Upload this file?";
 
 			items.value = incoming.files.map((file) => {
 				const kind = kindOf(file);
@@ -442,7 +460,7 @@ export default defineComponent({
 			return parts.join(" · ");
 		};
 
-		const noteFor = (item: PreviewItem) => (item.plan ? NOTES[item.plan] : "");
+		const noteFor = (item: PreviewItem) => (item.plan ? noteForPlan(t, item.plan) : "");
 
 		const onEscape = () => close(false);
 
@@ -460,7 +478,10 @@ export default defineComponent({
 		return {
 			request,
 			items,
-			title,
+			title: titleText,
+			confirmText,
+			removeLabel,
+			removeTitle,
 			confirmButton,
 			close,
 			remove,
@@ -469,6 +490,7 @@ export default defineComponent({
 			extensionOf,
 			details,
 			noteFor,
+			t,
 		};
 	},
 });

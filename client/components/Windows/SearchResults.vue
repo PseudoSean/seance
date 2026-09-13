@@ -10,20 +10,21 @@
 			<div
 				class="chat-view"
 				data-type="search-results"
-				aria-label="Search results"
+				:aria-label="resultsAria"
 				role="tabpanel"
 			>
 				<div v-if="network && channel" class="header">
 					<SidebarToggle />
 					<span class="title"
-						>Searching in <span class="channel-name">{{ channel.name }}</span> for</span
+						>{{ t("search.results.searchingIn") }}
+						<span class="channel-name">{{ channel.name }}</span></span
 					>
 					<span class="topic">{{ route.query.q }}</span>
 					<MessageSearchForm :network="network" :channel="channel" />
 					<button
 						class="close"
-						aria-label="Close search window"
-						title="Close search window"
+						:aria-label="closeAria"
+						:title="closeAria"
 						@click="closeSearch"
 					/>
 				</div>
@@ -31,13 +32,17 @@
 					<div ref="chat" class="chat" tabindex="-1">
 						<div v-show="moreResultsAvailable" class="show-more">
 							<button ref="loadMoreButton" class="btn" @click="onShowMoreClick">
-								Show older results ({{ total - messages.length }} more)
+								{{
+									t("search.results.showOlder", {count: total - messages.length})
+								}}
 							</button>
 						</div>
 
-						<div v-if="!query" class="search-status">Type something to search for.</div>
+						<div v-if="!query" class="search-status">
+							{{ t("search.results.typePrompt") }}
+						</div>
 						<div v-else-if="!messages.length" class="search-status">
-							No results found.
+							{{ t("search.results.none") }}
 						</div>
 						<div
 							class="messages"
@@ -66,8 +71,7 @@
 							</div>
 						</div>
 						<div class="search-scope-note">
-							Only messages loaded in this session are searched — older history is not
-							searched.
+							{{ t("search.results.scopeNote") }}
 						</div>
 					</div>
 				</div>
@@ -103,6 +107,7 @@ import DateMarker from "../DateMarker.vue";
 import {watch, computed, defineComponent, nextTick, ref, onMounted, onUnmounted} from "vue";
 
 import {useStore} from "../../js/store";
+import {useI18n} from "../../js/i18n";
 import {useRoute} from "vue-router";
 import {switchToChannel, navigate} from "../../js/router";
 import {DEFAULT_SEARCH_LIMIT, searchMessages, type SearchResult} from "../../js/search";
@@ -118,6 +123,7 @@ export default defineComponent({
 	setup() {
 		const store = useStore();
 		const route = useRoute();
+		const {t} = useI18n();
 
 		const chat = ref<HTMLDivElement>();
 		const loadMoreButton = ref<HTMLButtonElement>();
@@ -131,6 +137,8 @@ export default defineComponent({
 		const oldChatHeight = ref(0);
 
 		const query = computed(() => String(route.query.q || "").trim());
+		const resultsAria = computed(() => t("search.results.aria"));
+		const closeAria = computed(() => t("search.results.close"));
 
 		const chan = computed(() => {
 			const chanId = parseInt(String(route.params.id || ""), 10);
@@ -264,6 +272,9 @@ export default defineComponent({
 		});
 
 		return {
+			t,
+			resultsAria,
+			closeAria,
 			chat,
 			loadMoreButton,
 			messages,

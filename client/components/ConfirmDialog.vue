@@ -6,7 +6,9 @@
 				<p>{{ data?.text }}</p>
 			</div>
 			<div class="confirm-buttons">
-				<button class="btn btn-cancel" @click="close(false)">Cancel</button>
+				<button class="btn btn-cancel" @click="close(false)">
+					{{ t("confirm.cancel") }}
+				</button>
 				<button class="btn btn-danger" @click="close(true)">{{ data?.button }}</button>
 			</div>
 		</div>
@@ -52,6 +54,7 @@
 
 <script lang="ts">
 import eventbus from "../js/eventbus";
+import {useI18n} from "../js/i18n";
 import {defineComponent, onMounted, onUnmounted, ref} from "vue";
 
 type ConfirmDialogData = {
@@ -67,6 +70,7 @@ type ConfirmDialogCallback = {
 export default defineComponent({
 	name: "ConfirmDialog",
 	setup() {
+		const {t} = useI18n();
 		const data = ref<ConfirmDialogData>();
 		const callback = ref<ConfirmDialogCallback>();
 
@@ -94,6 +98,7 @@ export default defineComponent({
 		});
 
 		return {
+			t,
 			data,
 			close,
 		};

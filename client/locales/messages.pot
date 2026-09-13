@@ -195,6 +195,12 @@ msgctxt "composer.uploading"
 msgid "Uploading {file}"
 msgstr ""
 
+#: client/components/ConfirmDialog.vue
+#. Button of every confirmation dialog in the app (delete message, delete network, restore settings, clear history…); clicking declines and closes the dialog.
+msgctxt "confirm.cancel"
+msgid "Cancel"
+msgstr ""
+
 #: client/components/Windows/Connect.vue:34
 #: client/components/Windows/Connect.vue:213
 #. Label of the services account (login name) text field on the connect form and on the network edit form.
@@ -984,6 +990,54 @@ msgctxt "message.statusmsg"
 msgid "This message was only shown to users with {mode} mode"
 msgstr ""
 
+#: components/PushPrompt.vue
+#. Body of the push opt-in prompt; explains what allowing push does and that it is chosen per network.
+msgctxt "push.enableBody"
+msgid "This server can wake this app when it has messages for you while it is closed. You can change this per network, in each network's settings."
+msgstr ""
+
+#: client/components/PushPrompt.vue
+#. Title of the prompt shown at connect time asking whether to enable web push notifications for that chat network.
+msgctxt "push.enableTitle"
+msgid "Enable push notifications?"
+msgstr ""
+
+#: client/components/PushPrompt.vue
+#. Fallback for the network name in the push prompt's target line when no name is known for the chat network being asked about.
+msgctxt "push.fallbackNetwork"
+msgid "this network"
+msgstr ""
+
+#: client/components/PushPrompt.vue
+#. Button of the push opt-in prompt; declines and stops the app from ever asking again for that network.
+msgctxt "push.never"
+msgid "Never"
+msgstr ""
+
+#: client/components/PushPrompt.vue
+#. Button of the push opt-in prompt; declines for now without disabling future prompts.
+msgctxt "push.no"
+msgid "No"
+msgstr ""
+
+#: client/components/PushPrompt.vue
+#. Body of the push-renewal prompt; explains why the subscription broke and that re-subscribing can be done later from that network's settings.
+msgctxt "push.renewBody"
+msgid "This server's push key changed, so this device's push subscription for it no longer works. Subscribe again to keep being notified while the app is closed. You can also do this later from this network's settings."
+msgstr ""
+
+#: client/components/PushPrompt.vue
+#. Title of the prompt shown at connect time when a chat server's push identity (its key) changed and the device's subscription must be renewed.
+msgctxt "push.renewTitle"
+msgid "Renew push notifications?"
+msgstr ""
+
+#: client/components/PushPrompt.vue
+#. Button of the push opt-in prompt; allows web push (the click doubles as the browser's permission gesture).
+msgctxt "push.yes"
+msgid "Yes"
+msgstr ""
+
 #: client/components/MessageSearchForm.vue:19
 #. aria-label of the magnifier button in a chat window's header; clicking it opens the message-search field for the conversation.
 msgctxt "search.openForm"
@@ -994,6 +1048,48 @@ msgstr ""
 #. Placeholder of the message-search field that opens from the magnifier in a chat window's header; it filters this conversation's history.
 msgctxt "search.placeholder"
 msgid "Search messages…"
+msgstr ""
+
+#: client/components/Windows/SearchResults.vue
+#. aria-label of the search-results view of the chat window, which lists the messages matching a search.
+msgctxt "search.results.aria"
+msgid "Search results"
+msgstr ""
+
+#: client/components/Windows/SearchResults.vue
+#. Tooltip and aria-label of the ✕ button in the search-results header; clicking closes the search and returns to the conversation.
+msgctxt "search.results.close"
+msgid "Close search window"
+msgstr ""
+
+#: client/components/Windows/SearchResults.vue
+#. Shown in the search-results view when the search matched no messages.
+msgctxt "search.results.none"
+msgid "No results found."
+msgstr ""
+
+#: client/components/Windows/SearchResults.vue
+#. Note under the search results, explaining that the search covers only the messages currently loaded in the app, not the full history on the server. Em dash is part of the copy.
+msgctxt "search.results.scopeNote"
+msgid "Only messages loaded in this session are searched — older history is not searched."
+msgstr ""
+
+#: client/components/Windows/SearchResults.vue
+#. First part of the header of the search-results window; the channel's name and the search query follow it. Ends mid-sentence.
+msgctxt "search.results.searchingIn"
+msgid "Searching in"
+msgstr ""
+
+#: client/components/Windows/SearchResults.vue
+#. Button at the top of the search results list that fetches more matches. {count} is how many further matches are available.
+msgctxt "search.results.showOlder"
+msgid "Show older results ({count} more)"
+msgstr ""
+
+#: client/components/Windows/SearchResults.vue
+#. Shown in the search-results view when the search field is empty; invites typing a query.
+msgctxt "search.results.typePrompt"
+msgid "Type something to search for."
 msgstr ""
 
 #: client/components/Settings/Appearance.vue
@@ -1846,6 +1942,78 @@ msgctxt "typing.two"
 msgid "{nick1} and {nick2} are typing…"
 msgstr ""
 
+#: client/components/UploadPreview.vue
+#. Button of the upload confirmation dialog; clicking cancels the whole upload and sends nothing.
+msgctxt "upload.cancel"
+msgid "Cancel"
+msgstr ""
+
+#: client/components/UploadPreview.vue
+#. Intro line of the upload confirmation dialog; asks the user to check the files and warns that every uploaded file is reachable through its link.
+msgctxt "upload.confirmHint"
+msgid "Check that this is what you meant to share, then upload. Anyone who can open the link will be able to see it."
+msgstr ""
+
+#: client/components/UploadPreview.vue
+#. Confirmation button of the upload dialog when several files are queued; clicking sends them all to the chat server.
+msgctxt "upload.confirmMany"
+msgid "Upload {count} files"
+msgstr ""
+
+#: client/components/UploadPreview.vue
+#. Confirmation button of the upload confirmation dialog when one file is queued; clicking sends it to the chat server.
+msgctxt "upload.confirmOne"
+msgid "Upload"
+msgstr ""
+
+#: client/components/UploadPreview.vue
+#. Title of the confirmation dialog shown before files are uploaded to the chat server, when several files were chosen.
+msgctxt "upload.confirmTitleMany"
+msgid "Upload these files?"
+msgstr ""
+
+#: client/components/UploadPreview.vue
+#. Title of the confirmation dialog shown before files are uploaded to the chat server, when one file was chosen.
+msgctxt "upload.confirmTitleOne"
+msgid "Upload this file?"
+msgstr ""
+
+#: client/components/UploadPreview.vue
+#. Note under an animated image in the upload confirmation dialog; it is not re-drawn, so its animation survives. Em dash is part of the copy.
+msgctxt "upload.noteAnimated"
+msgid "Animated — sent as it is, so the animation is kept"
+msgstr ""
+
+#: client/components/UploadPreview.vue
+#. Note under a file in the upload confirmation dialog when it will be sent unchanged, with its metadata. Starts the note.
+msgctxt "upload.noteOff"
+msgid "Sent as it is, metadata included"
+msgstr ""
+
+#: client/components/UploadPreview.vue
+#. Note under a file in the upload confirmation dialog when the remove-metadata setting is on and the image will be re-drawn to strip its EXIF metadata. Capitalized; starts the note.
+msgctxt "upload.noteStrip"
+msgid "Metadata (EXIF) will be removed before upload"
+msgstr ""
+
+#: client/components/UploadPreview.vue
+#. Note under a file in the upload confirmation dialog when the app cannot re-process it and it will be sent unchanged. Starts the note.
+msgctxt "upload.noteUnsupported"
+msgid "Sent as it is"
+msgstr ""
+
+#: client/components/UploadPreview.vue
+#. aria-label of the ✕ button on a file in the upload confirmation dialog; clicking removes that file from the upload. {name} is the file's name.
+msgctxt "upload.removeOne"
+msgid "Don't upload {name}"
+msgstr ""
+
+#: client/components/UploadPreview.vue
+#. Tooltip of the ✕ button on a file in the upload confirmation dialog; clicking removes the file from the upload.
+msgctxt "upload.removeTitle"
+msgid "Don't upload this file"
+msgstr ""
+
 #: client/components/ChatUserList.vue:13
 #. Placeholder of the search field at the top of the user list panel: how many members the channel has while the list is being filtered. The singular shows with exactly one member, the plural otherwise.
 msgctxt "userlist.count"
@@ -1864,4 +2032,100 @@ msgstr ""
 #. aria-label of the side panel listing a channel's members. {name} is the channel's name as shown in the header; it is a chat name and stays as written.
 msgctxt "userlist.title"
 msgid "User list for {name}"
+msgstr ""
+
+#: client/components/Windows/Changelog.vue
+#. Text of the link in the changelog window that opens the list of every release.
+msgctxt "windows.changelog.allReleasesLink"
+msgid "see all releases"
+msgstr ""
+
+#: client/components/Windows/Changelog.vue
+#. aria-label of the changelog window, which shows the app's release notes.
+msgctxt "windows.changelog.aria"
+msgid "Changelog"
+msgstr ""
+
+#: client/components/Windows/Changelog.vue
+#. Link at the top of the changelog window that goes back to the help page; the left double angle quote is part of the copy.
+msgctxt "windows.changelog.back"
+msgid "« Help"
+msgstr ""
+
+#: client/components/Windows/Changelog.vue
+#. Word inside the link of the changelog's past-release sentence: the linked text names the source code commit the running build was made from; the commit hash follows it. Mid-sentence.
+msgctxt "windows.changelog.commitLink"
+msgid "commit"
+msgstr ""
+
+#: client/components/Windows/Changelog.vue
+#. First sentence of the paragraph in the changelog window that says the release notes are read online; the following words are the two links.
+msgctxt "windows.changelog.notBundled"
+msgid "Release notes are not bundled with the build."
+msgstr ""
+
+#: client/components/Windows/Changelog.vue
+#. Word joining the two links of the changelog window's last paragraph (the release notes and the list of all releases). Mid-sentence.
+msgctxt "windows.changelog.or"
+msgid "or"
+msgstr ""
+
+#: client/components/Windows/Changelog.vue
+#. Start of the sentence in the changelog window shown when the running build is newer than its release; what follows names the source commit and the changes since the release. Ends mid-sentence.
+msgctxt "windows.changelog.pastRelease"
+msgid "This build is"
+msgstr ""
+
+#: client/components/Windows/Changelog.vue
+#. Middle of the changelog's past-release sentence, after the link naming the source commit; introduces the link that lists what changed since the release. {version} is the release number the build follows. Keep the comma, colon and the v.
+msgctxt "windows.changelog.pastReleaseAfter"
+msgid ", after v{version}:"
+msgstr ""
+
+#: client/components/Windows/Changelog.vue
+#. Text of the link in the changelog window that opens the release notes for this release. {version} is the release number, with the v as in the source.
+msgctxt "windows.changelog.readNotesLink"
+msgid "Read the notes for v{version}"
+msgstr ""
+
+#: client/components/Windows/Changelog.vue
+#. Text of the link in the changelog's past-release sentence that opens the list of changes between the release and this build. Mid-sentence.
+msgctxt "windows.changelog.sinceReleaseLink"
+msgid "what changed since the release"
+msgstr ""
+
+#: client/components/Windows/Changelog.vue
+#. Heading of the changelog window. {version} is the release version number, kept as written (a v followed by the number).
+msgctxt "windows.changelog.title"
+msgid "Release notes for v{version}"
+msgstr ""
+
+#: client/components/Windows/NetworkEdit.vue
+#. Link at the top of the network-editing form that goes back to the list of saved networks; the left arrow is part of the copy.
+msgctxt "windows.networkEdit.back"
+msgid "← Networks"
+msgstr ""
+
+#: client/components/Windows/Settings.vue
+#. aria-label of the ✕ button at the top right of the settings window; clicking closes the settings and returns to the chat.
+msgctxt "windows.settings.close"
+msgid "Close settings"
+msgstr ""
+
+#: client/components/Windows/Settings.vue
+#. Button in the footer of the settings window; clicking closes the settings and returns to the chat.
+msgctxt "windows.settings.done"
+msgid "Done"
+msgstr ""
+
+#: client/components/Windows/Settings.vue
+#. Line in the footer of the settings window, beside the Done button; explains that settings apply instantly and nothing needs saving.
+msgctxt "windows.settings.note"
+msgid "Changes are saved as you make them."
+msgstr ""
+
+#: client/components/Windows/Settings.vue
+#. Title of the settings window: the heading of the modal, its dialog aria-label, and the accessible name of the whole settings pane.
+msgctxt "windows.settings.title"
+msgid "Settings"
 msgstr ""
