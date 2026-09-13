@@ -7,6 +7,68 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#: client/components/Windows/Connect.vue:34
+#: client/components/Windows/Connect.vue:213
+#. Label of the services account (login name) text field on the connect form and on the network edit form.
+msgctxt "connect.account"
+msgid "Account"
+msgstr ""
+
+#: client/components/Windows/Connect.vue:7
+#. aria-label of the whole connect screen (the window/dialog element); announced by screen readers on arriving at the form.
+msgctxt "connect.ariaLabel"
+msgid "Connect"
+msgstr ""
+
+#: client/components/Windows/Connect.vue:201
+#. Heading of the authentication section on the connect form (the SASL toggle and account fields follow).
+msgctxt "connect.authentication"
+msgid "Authentication"
+msgstr ""
+
+#: client/components/Windows/Connect.vue:290
+#. Checkbox on the connect form: dial this network every time the app opens.
+msgctxt "connect.autoconnect"
+msgid "Connect automatically when the app starts"
+msgstr ""
+
+#: client/components/Windows/Connect.vue:280
+#. Checkbox at the bottom of the connect form: show desktop notifications for this network's messages; the browser's permission ask fires when it is first switched on.
+msgctxt "connect.browserNotifications"
+msgid "Browser notifications for this network"
+msgstr ""
+
+#: client/components/Windows/Connect.vue:188
+#. Label of the field listing channels to join automatically after connecting, on the connect and network edit forms.
+msgctxt "connect.channels"
+msgid "Channels"
+msgstr ""
+
+#: client/components/Windows/Connect.vue:194
+#. Placeholder of the channels field on the connect form: example channel names, and a note that the field may stay empty.
+msgctxt "connect.channelsPlaceholder"
+msgid "#channel, #another (optional)"
+msgstr ""
+
+#: client/components/Windows/Connect.vue:84
+#: client/components/Windows/Connect.vue:308
+#. Status line shown on the connect form right after submitting: the nick used and the network name (or host:port of the server) being dialled.
+msgctxt "connect.connectingAs"
+msgid "Connecting as {nick} to {network}…"
+msgstr ""
+
+#: client/components/Windows/Connect.vue:572
+#. Notice on the connect form when it was opened by a link to a saved network whose password was not remembered; {account} is the services account name.
+msgctxt "connect.enterPassword"
+msgid "Enter the password for {account} to connect."
+msgstr ""
+
+#: client/components/Windows/Connect.vue:672
+#. Error notice shown under the guest sign-in form when the guest nick field was left empty or invalid.
+msgctxt "connect.guestNickRequired"
+msgid "Choose a nick to connect as a guest."
+msgstr ""
+
 #: client/js/branding.ts
 #. Button that connects with just a nick instead of an account.
 msgctxt "connect.guestSubmit"
@@ -19,10 +81,99 @@ msgctxt "connect.guestTitle"
 msgid "No account?"
 msgstr ""
 
+#: client/components/Windows/Connect.vue:608
+#. Notice at the top of the connect form when a web+irc:// link named a server the deploy does not allow; {network} is this deploy's network name, {host} the refused server.
+msgctxt "connect.linkIgnored"
+msgid "This app only connects to {network}. The link to {host} was ignored."
+msgstr ""
+
+#: client/components/Windows/Connect.vue:610
+#. Notice on the connect approval dialog opened from a web+irc:// link without channels; {host}:{port} is the proposed server.
+msgctxt "connect.linkSuggest"
+msgid "This link suggests connecting to {host}:{port}. Nothing is saved until you choose to connect."
+msgstr ""
+
+#: client/components/Windows/Connect.vue:611
+#. Notice on the connect approval dialog opened from a web+irc:// link that also names channels to join; {channels} is the comma-separated channel list.
+msgctxt "connect.linkSuggestJoin"
+msgid "This link suggests connecting to {host}:{port} and joining {channels}. Nothing is saved until you choose to connect."
+msgstr ""
+
+#: client/components/Windows/Connect.vue:28
+#: client/components/Windows/Connect.vue:126
+#. Read-only row label on the connect/sign-in form, above the name of the network being connected to (shown instead of an editable server field).
+msgctxt "connect.network"
+msgid "Network"
+msgstr ""
+
+#: client/components/Windows/Connect.vue:118
+#. Heading of the connect form when it opened from a web+irc:// link that proposes a server the user has not approved yet.
+msgctxt "connect.newServerTitle"
+msgid "Connect to a new server?"
+msgstr ""
+
+#: client/components/Windows/Connect.vue:101
+#: client/components/Windows/Connect.vue:173
+#. Label of the nickname text field: on the connect form and in the guest half of the sign-in panel.
+msgctxt "connect.nick"
+msgid "Nick"
+msgstr ""
+
+#: client/components/Windows/Connect.vue:91
+#: client/components/Windows/Connect.vue:315
+#. Dismiss button on the connect screen shown as a dialog when the user followed a web+irc:// link; declines the connection without disconnecting the app.
+msgctxt "connect.notNow"
+msgid "Not now"
+msgstr ""
+
+#: client/components/Windows/Connect.vue:46
+#: client/components/Windows/Connect.vue:228
+#. Label of the account password field on the connect form, sign-in panel and network edit form; the field has a show/hide eye toggle.
+msgctxt "connect.password"
+msgid "Password"
+msgstr ""
+
+#: client/components/Windows/Connect.vue:251
+#. Checkbox in the authentication section of the connect form: register this device for push notifications once the IRC server supports it.
+msgctxt "connect.pushNotifications"
+msgid "Push notifications (registers when the server supports them)"
+msgstr ""
+
 #: client/js/branding.ts
 #. Checkbox on the sign-in form: remember the account and reconnect on the next load.
 msgctxt "connect.rememberMe"
 msgid "Stay signed in on this device"
+msgstr ""
+
+#: client/components/Windows/Connect.vue:264
+#. Checkbox under the SASL password field on the connect form: keep the password in this browser's storage so reconnects need no typing.
+msgctxt "connect.rememberPassword"
+msgid "Remember password on this device"
+msgstr ""
+
+#: client/components/Windows/Connect.vue:207
+#. Checkbox on the connect form: reveals the account name and password fields used to authenticate with network services (SASL).
+msgctxt "connect.saslToggle"
+msgid "I have a services account (SASL)"
+msgstr ""
+
+#: client/components/Windows/Connect.vue:124
+#: client/components/Windows/Connect.vue:132
+#. The IRC server section of the connect form: heading above the server fields, and the label of the server host field.
+msgctxt "connect.server"
+msgid "Server"
+msgstr ""
+
+#: client/components/Windows/Connect.vue:139
+#. aria-label of the server host text input (e.g. irc.example.org) on the connect form; the visible label is on the row.
+msgctxt "connect.serverAddress"
+msgid "Server address"
+msgstr ""
+
+#: client/components/Windows/Connect.vue:156
+#. aria-label of the numeric port input next to the server host field on the connect form.
+msgctxt "connect.serverPort"
+msgid "Server port"
 msgstr ""
 
 #: client/js/branding.ts
@@ -53,6 +204,18 @@ msgstr ""
 #. Heading of the connect form (features.signIn off).
 msgctxt "connect.title"
 msgid "Connect to IRC"
+msgstr ""
+
+#: client/components/Windows/Connect.vue:166
+#. Checkbox under the server fields on the connect form: connect over TLS instead of a plain connection.
+msgctxt "connect.useTls"
+msgid "Use secure connection (TLS)"
+msgstr ""
+
+#: client/components/Windows/Connect.vue:171
+#. Heading of the user section of the connect form (nick, channels, authentication follow below it).
+msgctxt "connect.user"
+msgid "User"
 msgstr ""
 
 #: client/js/branding.ts
