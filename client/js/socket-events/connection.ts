@@ -1,3 +1,4 @@
+import {t} from "../i18n/core";
 import {store} from "../store";
 import socket from "../socket";
 
@@ -16,7 +17,7 @@ socket.on("error", function (data) {
 	const message = String(data?.message || data);
 
 	store.commit("isConnected", false);
-	store.commit("currentUserVisibleError", `Connection error: ${message}`);
+	store.commit("currentUserVisibleError", t("connection.error", {message}));
 	updateLoadingMessage(store.state.currentUserVisibleError);
 });
 
