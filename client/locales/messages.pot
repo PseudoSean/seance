@@ -218,6 +218,240 @@ msgctxt "connect.user"
 msgid "User"
 msgstr ""
 
+#: client/components/NetworkForm.vue:168
+#. Label of the services account (login name) field on the network edit form, shown when SASL is on.
+msgctxt "form.account"
+msgid "Account"
+msgstr ""
+
+#: client/components/NetworkForm.vue:505
+#. Button on the network edit form's status row while a connection is being dialled: stop trying.
+msgctxt "form.actionCancel"
+msgid "Cancel"
+msgstr ""
+
+#: client/components/NetworkForm.vue:505
+#. Button on the network edit form's status row: dial this network now.
+msgctxt "form.actionConnect"
+msgid "Connect"
+msgstr ""
+
+#: client/components/NetworkForm.vue:505
+#. Button on the network edit form's status row while the network is online: hang up.
+msgctxt "form.actionDisconnect"
+msgid "Disconnect"
+msgstr ""
+
+#: client/components/NetworkForm.vue:98
+#. Note on the network edit form, shown while the network is up: edits to these fields wait for the next connection.
+msgctxt "form.applyNote"
+msgid "Server, port, TLS, channels and authentication changes apply the next time this network connects (a network that is waiting to reconnect retries right away)."
+msgstr ""
+
+#: client/components/NetworkForm.vue:6
+#. aria-label of the network edit form window (Settings → Networks → a network).
+msgctxt "form.ariaEdit"
+msgid "Edit network"
+msgstr ""
+
+#: client/components/NetworkForm.vue:154
+#. Heading of the authentication section of the network edit form; the radio choices and SASL fields follow.
+msgctxt "form.authentication"
+msgid "Authentication"
+msgstr ""
+
+#: client/components/NetworkForm.vue:90
+#. Checkbox on the network edit form: dial this network every time the app opens.
+msgctxt "form.autoconnect"
+msgid "Connect automatically when the app starts"
+msgstr ""
+
+#: client/components/NetworkForm.vue:260
+#. Checkbox on the network edit form: show desktop notifications for this network's messages; the browser's permission ask fires when first saved.
+msgctxt "form.browserNotifications"
+msgid "Browser notifications for this network"
+msgstr ""
+
+#: client/components/NetworkForm.vue:263
+#. Tooltip of the question-mark icon next to the browser notifications checkbox on the network edit form.
+msgctxt "form.browserNotificationsHelp"
+msgid "Show browser notifications for highlights and queries on this network. Needs the browser's permission; asks when first saved. Each network is set up independently."
+msgstr ""
+
+#: client/components/NetworkForm.vue:119
+#. Label of the field listing channels to join automatically after connecting, on the network edit form.
+msgctxt "form.channels"
+msgid "Channels"
+msgstr ""
+
+#: client/components/NetworkForm.vue:125
+#. Placeholder of the channels field on the network edit form: example channel names, where a name may be followed by its door key.
+msgctxt "form.channelsPlaceholder"
+msgid "#channel, #another key (joined on connect)"
+msgstr ""
+
+#: client/components/NetworkForm.vue:133
+#. Label of the field holding IRC commands sent automatically when this network connects, on the network edit form.
+msgctxt "form.commands"
+msgid "Commands"
+msgstr ""
+
+#: client/components/NetworkForm.vue:136
+#. Tooltip of the question-mark icon next to the Commands field on the network edit form (three lines).
+msgctxt "form.commandsHelp"
+msgid "One /command per line.\nEach command will be executed in\nthe server tab on new connection"
+msgstr ""
+
+#: client/components/NetworkForm.vue:490
+#. Status line on the network edit form while the network is online without TLS.
+msgctxt "form.connectedInsecure"
+msgid "Connected (not secure)"
+msgstr ""
+
+#: client/components/NetworkForm.vue:490
+#. Status line on the network edit form while the network is online over TLS.
+msgctxt "form.connectedTls"
+msgid "Connected (TLS)"
+msgstr ""
+
+#: client/components/NetworkForm.vue:493
+#. Status line on the network edit form while the network is being dialled.
+msgctxt "form.connecting"
+msgid "Connecting…"
+msgstr ""
+
+#: client/components/NetworkForm.vue:493
+#. Status line on the network edit form when the network is not connected.
+msgctxt "form.disconnected"
+msgid "Disconnected"
+msgstr ""
+
+#: client/components/NetworkForm.vue:14
+#. Heading of the network edit form; {name} is the network's current display name.
+msgctxt "form.editTitle"
+msgid "Edit {name}"
+msgstr ""
+
+#: client/components/NetworkForm.vue:42
+#. Label of the display-name field of a saved network on the network edit form.
+msgctxt "form.name"
+msgid "Name"
+msgstr ""
+
+#: client/components/NetworkForm.vue:49
+#. Placeholder of the network display-name field on the network edit form: the field may stay empty.
+msgctxt "form.namePlaceholder"
+msgid "Optional, defaults to the server's network name"
+msgstr ""
+
+#: client/components/NetworkForm.vue:40
+#. Heading of the server half of the network edit form (name, server, TLS, autoconnect).
+msgctxt "form.networkSettings"
+msgid "Network settings"
+msgstr ""
+
+#: client/components/NetworkForm.vue:104
+#. Label of the nickname field on the network edit form.
+msgctxt "form.nick"
+msgid "Nick"
+msgstr ""
+
+#: client/components/NetworkForm.vue:158
+#. Radio option on the network edit form: connect without a services account.
+msgctxt "form.noAuth"
+msgid "No authentication"
+msgstr ""
+
+#: client/components/NetworkForm.vue:183
+#. Label of the services account password field on the network edit form, shown when SASL is on.
+msgctxt "form.password"
+msgid "Password"
+msgstr ""
+
+#: client/components/NetworkForm.vue:196
+#. Placeholder of the SASL password field on the network edit form: saving without typing keeps the stored password.
+msgctxt "form.passwordPlaceholder"
+msgid "Leave empty to keep the current password"
+msgstr ""
+
+#: client/components/NetworkForm.vue:225
+#. Tooltip of the question-mark icon next to the push notifications checkbox on the network edit form.
+msgctxt "form.pushHelp"
+msgid "Register this device for push notifications on this network. The server must support the draft/webpush capability. Push needs authentication, so this only appears with SASL configured. Each network is set up independently."
+msgstr ""
+
+#: client/components/NetworkForm.vue:222
+#. Checkbox on the network edit form: register this device for this network's push notifications.
+msgctxt "form.pushNotifications"
+msgid "Push notifications for this network"
+msgstr ""
+
+#: client/components/NetworkForm.vue:244
+#. Button on the network edit form next to the stale-push warning: re-subscribes this device for the network.
+msgctxt "form.pushRenew"
+msgid "Renew push notifications"
+msgstr ""
+
+#: client/components/NetworkForm.vue:240
+#. Warning on the network edit form when the server announced a new push key and this device's subscription must be renewed.
+msgctxt "form.pushStaleHint"
+msgid "This server's push identity (its key) changed, so this device's push subscription for it no longer works."
+msgstr ""
+
+#: client/components/NetworkForm.vue:209
+#. Checkbox on the network edit form: keep this network's SASL password in the browser's storage.
+msgctxt "form.rememberPassword"
+msgid "Remember password on this device"
+msgstr ""
+
+#: client/components/NetworkForm.vue:162
+#. Radio option on the network edit form: authenticate with an account name and password (SASL PLAIN).
+msgctxt "form.saslPlain"
+msgid "Username + password (SASL PLAIN)"
+msgstr ""
+
+#: client/components/NetworkForm.vue:273
+#. Submit button of the network edit form.
+msgctxt "form.save"
+msgid "Save network"
+msgstr ""
+
+#: client/components/NetworkForm.vue:53
+#. Label of the server host field on the network edit form.
+msgctxt "form.server"
+msgid "Server"
+msgstr ""
+
+#: client/components/NetworkForm.vue:60
+#. aria-label of the server host text input (e.g. irc.example.org) on the network edit form; the visible label is on the row.
+msgctxt "form.serverAddress"
+msgid "Server address"
+msgstr ""
+
+#: client/components/NetworkForm.vue:76
+#. aria-label of the numeric port input next to the server host field on the network edit form.
+msgctxt "form.serverPort"
+msgid "Server port"
+msgstr ""
+
+#: client/components/NetworkForm.vue:26
+#. Label of the connection-status row at the top of the network edit form (shown only while the app knows the network's live state).
+msgctxt "form.status"
+msgid "Status"
+msgstr ""
+
+#: client/components/NetworkForm.vue:86
+#. Checkbox on the network edit form: connect to this network over TLS instead of a plain connection.
+msgctxt "form.useTls"
+msgid "Use secure connection (TLS)"
+msgstr ""
+
+#: client/components/NetworkForm.vue:102
+#. Heading of the user half of the network edit form (nick, channels, commands, authentication).
+msgctxt "form.userPreferences"
+msgid "User preferences"
+msgstr ""
+
 #: client/js/branding.ts
 #: client/components/Windows/Help.vue
 #. About line at the top of the Help window, before the app name.
@@ -244,6 +478,36 @@ msgstr ""
 #. Label of the network's website link in the Help window.
 msgctxt "help.website"
 msgid "Website"
+msgstr ""
+
+#: client/components/JoinChannel.vue:20
+#. Title (hover hint) of the channel name input in the sidebar's join-channel form, shown when the typed name is invalid.
+msgctxt "join.channelHint"
+msgid "The channel name may not contain spaces"
+msgstr ""
+
+#: client/components/JoinChannel.vue:17
+#. Placeholder of the channel name input in the join-channel form that opens under a network in the sidebar.
+msgctxt "join.channelPlaceholder"
+msgid "Channel"
+msgstr ""
+
+#: client/components/JoinChannel.vue:31
+#. Title (hover hint) of the channel key input in the sidebar's join-channel form, shown when the typed key is invalid.
+msgctxt "join.passwordHint"
+msgid "The channel password may not contain spaces"
+msgstr ""
+
+#: client/components/JoinChannel.vue:28
+#. Placeholder of the channel key (password) input in the sidebar's join-channel form; private channels need one.
+msgctxt "join.passwordPlaceholder"
+msgid "Password (optional)"
+msgstr ""
+
+#: client/components/JoinChannel.vue:34
+#. Submit button of the join-channel form under a network in the sidebar.
+msgctxt "join.submit"
+msgid "Join"
 msgstr ""
 
 #: client/index.html

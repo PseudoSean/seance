@@ -3,7 +3,7 @@
 		id="connect"
 		:class="['window', {'network-form-embedded': embedded}]"
 		:role="embedded ? undefined : 'tabpanel'"
-		aria-label="Edit network"
+		:aria-label="ariaEditLabel"
 	>
 		<div v-if="!embedded" class="header">
 			<SidebarToggle />
@@ -11,7 +11,7 @@
 		<form :class="{container: !embedded}" method="post" action="" @submit.prevent="onSubmit">
 			<h1 class="title">
 				<input v-model="defaults.uuid" type="hidden" name="uuid" />
-				Edit {{ displayName(defaults) }}
+				{{ t("form.editTitle", {name: displayName(defaults)}) }}
 			</h1>
 
 			<!--
@@ -23,7 +23,7 @@
 				WebSocket connection, or they wait on later phases (STS: D.6).
 			-->
 			<div v-if="status" class="connect-row connect-status">
-				<label>Status</label>
+				<label>{{ t("form.status") }}</label>
 				<div class="input-wrap">
 					<span :class="['connection-status', statusClass]">{{ statusText }}</span>
 					<button
@@ -37,27 +37,27 @@
 				</div>
 			</div>
 
-			<h2>Network settings</h2>
+			<h2>{{ t("form.networkSettings") }}</h2>
 			<div class="connect-row">
-				<label for="connect:name">Name</label>
+				<label for="connect:name">{{ t("form.name") }}</label>
 				<input
 					id="connect:name"
 					v-model.trim="defaults.name"
 					class="input"
 					name="name"
 					maxlength="100"
-					placeholder="Optional, defaults to the server's network name"
+					:placeholder="namePlaceholder"
 				/>
 			</div>
 			<div class="connect-row">
-				<label for="connect:host">Server</label>
+				<label for="connect:host">{{ t("form.server") }}</label>
 				<div class="input-wrap">
 					<input
 						id="connect:host"
 						v-model.trim="defaults.host"
 						class="input"
 						name="host"
-						aria-label="Server address"
+						:aria-label="serverAddressLabel"
 						autocapitalize="off"
 						:autocorrect.attr="'off'"
 						spellcheck="false"
@@ -73,7 +73,7 @@
 						min="1"
 						max="65535"
 						name="port"
-						aria-label="Server port"
+						:aria-label="serverPortLabel"
 						required
 					/>
 				</div>
@@ -83,11 +83,11 @@
 				<div class="input-wrap">
 					<label class="tls">
 						<input v-model="defaults.tls" type="checkbox" name="tls" />
-						Use secure connection (TLS)
+						{{ t("form.useTls") }}
 					</label>
 					<label class="tls">
 						<input v-model="defaults.autoconnect" type="checkbox" name="autoconnect" />
-						Connect automatically when the app starts
+						{{ t("form.autoconnect") }}
 					</label>
 				</div>
 			</div>
@@ -95,13 +95,12 @@
 				v-if="status ? status.connected || status.connecting : defaults.connected"
 				class="connect-note"
 			>
-				Server, port, TLS, channels and authentication changes apply the next time this
-				network connects (a network that is waiting to reconnect retries right away).
+				{{ t("form.applyNote") }}
 			</div>
 
-			<h2>User preferences</h2>
+			<h2>{{ t("form.userPreferences") }}</h2>
 			<div class="connect-row">
-				<label for="connect:nick">Nick</label>
+				<label for="connect:nick">{{ t("form.nick") }}</label>
 				<input
 					id="connect:nick"
 					v-model.trim="defaults.nick"
@@ -116,13 +115,13 @@
 				/>
 			</div>
 			<div class="connect-row">
-				<label for="connect:channels">Channels</label>
+				<label for="connect:channels">{{ t("form.channels") }}</label>
 				<input
 					id="connect:channels"
 					v-model.trim="defaults.join"
 					class="input"
 					name="join"
-					placeholder="#channel, #another key (joined on connect)"
+					:placeholder="channelsPlaceholder"
 					autocapitalize="off"
 					:autocorrect.attr="'off'"
 					spellcheck="false"
@@ -130,12 +129,10 @@
 			</div>
 			<div class="connect-row">
 				<label for="connect:commands">
-					Commands
+					{{ t("form.commands") }}
 					<span
 						class="tooltipped tooltipped-ne tooltipped-no-delay"
-						aria-label="One /command per line.
-Each command will be executed in
-the server tab on new connection"
+						:aria-label="commandsHelp"
 					>
 						<button class="extra-help" type="button" />
 					</span>
@@ -151,21 +148,21 @@ the server tab on new connection"
 				/>
 			</div>
 
-			<h2 id="label-auth">Authentication</h2>
+			<h2 id="label-auth">{{ t("form.authentication") }}</h2>
 			<div class="connect-row connect-auth" role="group" aria-labelledby="label-auth">
 				<label class="opt">
 					<input v-model="defaults.sasl" type="radio" name="sasl" value="" />
-					No authentication
+					{{ t("form.noAuth") }}
 				</label>
 				<label class="opt">
 					<input v-model="defaults.sasl" type="radio" name="sasl" value="plain" />
-					Username + password (SASL PLAIN)
+					{{ t("form.saslPlain") }}
 				</label>
 			</div>
 
 			<template v-if="defaults.sasl === 'plain'">
 				<div class="connect-row">
-					<label for="connect:saslAccount">Account</label>
+					<label for="connect:saslAccount">{{ t("form.account") }}</label>
 					<input
 						id="connect:saslAccount"
 						v-model.trim="defaults.saslAccount"
@@ -180,7 +177,7 @@ the server tab on new connection"
 					/>
 				</div>
 				<div class="connect-row">
-					<label for="connect:saslPassword">Password</label>
+					<label for="connect:saslPassword">{{ t("form.password") }}</label>
 					<RevealPassword
 						v-slot:default="slotProps"
 						class="input-wrap password-container"
@@ -193,7 +190,7 @@ the server tab on new connection"
 							name="saslPassword"
 							maxlength="300"
 							autocomplete="current-password"
-							placeholder="Leave empty to keep the current password"
+							:placeholder="passwordPlaceholder"
 						/>
 					</RevealPassword>
 				</div>
@@ -206,7 +203,7 @@ the server tab on new connection"
 								type="checkbox"
 								name="rememberPassword"
 							/>
-							Remember password on this device
+							{{ t("form.rememberPassword") }}
 						</label>
 					</div>
 				</div>
@@ -219,10 +216,10 @@ the server tab on new connection"
 								type="checkbox"
 								name="pushEnabled"
 							/>
-							Push notifications for this network
+							{{ t("form.pushNotifications") }}
 							<span
 								class="tooltipped tooltipped-n tooltipped-no-delay"
-								aria-label="Register this device for push notifications on this network. The server must support the draft/webpush capability. Push needs authentication, so this only appears with SASL configured. Each network is set up independently."
+								:aria-label="pushHelp"
 							>
 								<button class="extra-help" />
 							</span>
@@ -237,11 +234,10 @@ the server tab on new connection"
 					<label></label>
 					<div class="input-wrap">
 						<div class="push-stale-hint">
-							This server's push identity (its key) changed, so this device's push
-							subscription for it no longer works.
+							{{ t("form.pushStaleHint") }}
 						</div>
 						<button id="pushRenew" type="button" class="btn" @click.prevent="renewPush">
-							Renew push notifications
+							{{ t("form.pushRenew") }}
 						</button>
 					</div>
 				</div>
@@ -257,10 +253,10 @@ the server tab on new connection"
 							name="notifyEnabled"
 							@change="onNotifyToggle"
 						/>
-						Browser notifications for this network
+						{{ t("form.browserNotifications") }}
 						<span
 							class="tooltipped tooltipped-n tooltipped-no-delay"
-							aria-label="Show browser notifications for highlights and queries on this network. Needs the browser's permission; asks when first saved. Each network is set up independently."
+							:aria-label="browserNotificationsHelp"
 						>
 							<button class="extra-help" />
 						</span>
@@ -270,7 +266,7 @@ the server tab on new connection"
 
 			<div>
 				<button type="submit" class="btn" :disabled="disabled ? true : false">
-					Save network
+					{{ t("form.save") }}
 				</button>
 			</div>
 		</form>
@@ -359,6 +355,7 @@ import SidebarToggle from "./SidebarToggle.vue";
 import {computed, defineComponent, nextTick, onMounted, PropType, ref, watch} from "vue";
 import {displayName, parseCommands, SavedNetwork} from "../js/irc/saved-networks";
 import webpush from "../js/webpush";
+import {useI18n} from "../js/i18n";
 import type {SharedNetworkStatus} from "../../shared/types/network";
 
 /** What the edit form binds to: a saved entry plus the live connection flag. */
@@ -398,6 +395,17 @@ export default defineComponent({
 		},
 	},
 	setup(props) {
+		const {t} = useI18n();
+		// Labels bound to attributes: computeds, so a locale change re-renders.
+		const ariaEditLabel = computed(() => t("form.ariaEdit"));
+		const namePlaceholder = computed(() => t("form.namePlaceholder"));
+		const serverAddressLabel = computed(() => t("form.serverAddress"));
+		const serverPortLabel = computed(() => t("form.serverPort"));
+		const channelsPlaceholder = computed(() => t("form.channelsPlaceholder"));
+		const commandsHelp = computed(() => t("form.commandsHelp"));
+		const passwordPlaceholder = computed(() => t("form.passwordPlaceholder"));
+		const pushHelp = computed(() => t("form.pushHelp"));
+		const browserNotificationsHelp = computed(() => t("form.browserNotificationsHelp"));
 		const commandsInput = ref<HTMLTextAreaElement | null>(null);
 		const commandsText = ref((props.defaults.commands ?? []).join("\n"));
 
@@ -487,10 +495,10 @@ export default defineComponent({
 			}
 
 			if (s.connected) {
-				return s.secure ? "Connected (TLS)" : "Connected (not secure)";
+				return s.secure ? t("form.connectedTls") : t("form.connectedInsecure");
 			}
 
-			return s.connecting ? "Connecting…" : "Disconnected";
+			return s.connecting ? t("form.connecting") : t("form.disconnected");
 		});
 
 		const statusClass = computed(() =>
@@ -502,7 +510,11 @@ export default defineComponent({
 		);
 
 		const actionLabel = computed(() =>
-			props.status?.connected ? "Disconnect" : props.status?.connecting ? "Cancel" : "Connect"
+			props.status?.connected
+				? t("form.actionDisconnect")
+				: props.status?.connecting
+				? t("form.actionCancel")
+				: t("form.actionConnect")
 		);
 
 		const onAction = () => {
@@ -511,6 +523,16 @@ export default defineComponent({
 		};
 
 		return {
+			t,
+			ariaEditLabel,
+			namePlaceholder,
+			serverAddressLabel,
+			serverPortLabel,
+			channelsPlaceholder,
+			commandsHelp,
+			passwordPlaceholder,
+			pushHelp,
+			browserNotificationsHelp,
 			pushInfo,
 			renewPush,
 			onNotifyToggle,
