@@ -18,6 +18,7 @@ import {mkdirSync, readFileSync, readdirSync, writeFileSync} from "node:fs";
 import {dirname, resolve} from "node:path";
 import {parsePo, PoEntry} from "./po";
 import {PLURAL_RULES, parsePluralForms, PluralRule} from "./plural";
+import {pseudo} from "./pseudo";
 import {AVAILABLE_PATH, LOCALES_DIR} from "./paths";
 
 /** What the runtime loads: strings, plurals keyed by CLDR category. */
@@ -128,68 +129,6 @@ function compileEntry(entry: PoEntry, tag: string, expr: string): string | Recor
 /** A compiled value with nothing in it: an untranslated singular or plural. */
 function isEmptyValue(value: string | Record<string, string>): boolean {
 	return value === "" || Object.keys(value).length === 0;
-}
-
-// Deterministic pseudo-translation: accented lookalikes, doubled length
-// (catches truncation/overflow), RLE+PDF wrapped so every string renders
-// right-to-left. Extracted to tools/i18n/pseudo.ts in Task 10; until then it
-// lives here with the compile step that consumes it.
-const RLE = "\u202B";
-const PDF = "\u202C";
-
-const LOOKALIKE: Record<string, string> = {
-	a: "à",
-	b: "ḃ",
-	c: "ċ",
-	d: "ḋ",
-	e: "é",
-	f: "ḟ",
-	g: "ġ",
-	h: "ḣ",
-	i: "ï",
-	j: "ĵ",
-	k: "ķ",
-	l: "ľ",
-	m: "ṁ",
-	n: "ñ",
-	o: "ö",
-	p: "ṗ",
-	q: "q́",
-	r: "ŕ",
-	s: "ś",
-	t: "ţ",
-	u: "ü",
-	v: "ṽ",
-	w: "ẃ",
-	x: "x́",
-	y: "ý",
-	z: "ź",
-};
-
-const MIRROR: Record<string, string> = {
-	"(": ")",
-	")": "(",
-	"[": "]",
-	"]": "[",
-	"{": "}",
-	"}": "{",
-	"<": ">",
-	">": "<",
-};
-
-/** Pseudo-translate one string; {name} interpolation tokens stay verbatim. */
-export function pseudo(input: string): string {
-	// Odd indices are the captured {name} tokens: they skip the mapping so a
-	// pseudo-localized string still interpolates at runtime.
-	const body = input
-		.split(/(\{\w+\})/)
-		.map((part, index) =>
-			index % 2 === 1
-				? part
-				: [...part].map((c) => MIRROR[c] ?? LOOKALIKE[c.toLowerCase()] ?? c).join("")
-		)
-		.join("");
-	return RLE + body + body + PDF; // doubled: see truncation, brackets flipped
 }
 
 /** en.json from the pot: msgid/msgid_plural with a fixed en mapping. */

@@ -56,7 +56,7 @@
 //    serves qqx copy — an explicit pick is not gated by devOnly.
 
 import {copyFileSync, mkdirSync, readFileSync, writeFileSync} from "node:fs";
-import {FAKE_NETWORK_SNIPPET} from "./lib/fake-network.mjs";
+import {FAKE_NETWORK_SNIPPET, fakeNetworkSnippet} from "./lib/fake-network.mjs";
 
 const BASE = process.env.SEANCE_HTTP ?? "http://localhost:8000/";
 
@@ -309,49 +309,84 @@ export default async function run(page) {
 			writeFileSync("public/config.json", originalConfig);
 		}
 
-		// (f) Truncation pass, part 2: the sidebar rows and the settings tab
-		// strip under qqx. The sidebar needs rows, so a network is fabricated
-		// through the `init` bus event (lib/fake-network.mjs) — that helper
-		// rides window.socket, which only the development build exposes.
+		// (f) Truncation pass, part 2: the sidebar rows, the settings tab
+		// strip and the connection bar under qqx. The sidebar needs rows, so
+		// networks are fabricated through the `init` bus event
+		// (lib/fake-network.mjs) — that helper rides window.socket, which
+		// only the development build exposes.
 		const faked = await page.evaluate(FAKE_NETWORK_SNIPPET);
+		page.check(
+			"truncation fixture: the fabricated network rendered (window.socket present)",
+			faked === true
+		);
 
-		if (faked) {
-			await page.waitFor(
-				`!!document.querySelector(".channel-list-item[data-type='lobby']")`,
-				{
-					label: "the fabricated network's lobby row",
-				}
-			);
-			await assertNothingClipped(page, `.channel-list-item`, "truncation: sidebar rows");
-
-			await page.click(`#footer button.settings`);
-			await page.waitFor(`!!document.querySelector(".settings-menu")`, {
-				label: "settings open",
-			});
-			await assertNothingClipped(
-				page,
-				`.settings-menu button`,
-				"truncation: settings tab strip"
-			);
-			await assertNothingClipped(
-				page,
-				`.settings-modal-footer button, .settings-modal-header button`,
-				"truncation: settings modal header/footer buttons"
-			);
-			const truncShot = await page.screenshot("i18n-language-switch-truncation");
-			copyFileSync(truncShot, "tmp/scenarios/i18n-language-switch-truncation.png");
-
-			// Settings is a modal; nothing behind the backdrop is clickable —
-			// leave through Done before touching anything else.
-			await page.click(".settings-modal-done");
-			await page.waitFor(`!!document.querySelector("#input")`, {
-				label: "back in the channel",
-			});
-		} else {
-			console.log(
-				"SKIP truncation pass part 2: window.socket (the init fabrication) needs the development build"
+		if (!faked) {
+			// Fail loud: a production build (or a regression dropping the
+			// window.socket exposure) must not silently skip the pass — the
+			// same rule i18n-rtl-layout.mjs applies to its whole run.
+			throw new Error(
+				"truncation pass part 2 needs window.socket (the init fabrication) — " +
+					"run against the development build (client/js/socket.ts exposes it only there)"
 			);
 		}
+
+		await page.waitFor(`!!document.querySelector(".channel-list-item[data-type='lobby']")`, {
+			label: "the fabricated network's lobby row",
+		});
+		await assertNothingClipped(page, `.channel-list-item`, "truncation: sidebar rows");
+
+		await page.click(`#footer button.settings`);
+		await page.waitFor(`!!document.querySelector(".settings-menu")`, {label: "settings open"});
+		await assertNothingClipped(page, `.settings-menu button`, "truncation: settings tab strip");
+		await assertNothingClipped(
+			page,
+			`.settings-modal-footer button, .settings-modal-header button`,
+			"truncation: settings modal header/footer buttons"
+		);
+		const truncShot = await page.screenshot("i18n-language-switch-truncation");
+		copyFileSync(truncShot, "tmp/scenarios/i18n-language-switch-truncation.png");
+
+		// Settings is a modal; nothing behind the backdrop is clickable —
+		// leave through Done before touching anything else.
+		await page.click(".settings-modal-done");
+		await page.waitFor(`!!document.querySelector("#input")`, {label: "back in the channel"});
+
+		// The connection bar is wave-A chrome too, and the connected TestNet
+		// can never show it — dispatch a second, dead network and open one
+		// of its channels: "Disconnected from …" plus its Connect button.
+		const dead = await page.evaluate(
+			fakeNetworkSnippet({
+				uuid: "fake-dead-0000",
+				name: "GhostNet",
+				nick: "wraith",
+				channel: "#ghost",
+				query: "shade",
+				connected: false,
+				baseId: 10,
+			})
+		);
+		page.check("truncation fixture: the dead network rendered", dead === true);
+		await page.waitFor(`!!document.querySelector(".channel-list-item[data-name='#ghost']")`, {
+			label: "the dead network's channel row",
+		});
+		await page.click(`.channel-list-item[data-name='#ghost']`);
+		await page.waitFor(`!!document.querySelector(".connection-bar")`, {
+			label: "the connection bar on the dead channel",
+		});
+		page.check(
+			"connection bar: the strip's copy is localized (RLE-wrapped)",
+			await page.evaluate(
+				`document.querySelector(".connection-bar-label")?.textContent.includes("\\u202B")`
+			)
+		);
+		await assertNothingClipped(page, `.connection-bar`, "truncation: connection bar strip");
+		await assertNothingClipped(
+			page,
+			`.connection-bar button`,
+			"truncation: connection bar buttons"
+		);
+		const barShot = await page.screenshot("i18n-language-switch-connection-bar");
+		copyFileSync(barShot, "tmp/scenarios/i18n-language-switch-connection-bar.png");
 	} else {
 		// The (e) assertions: a production build never offers a dev-only locale.
 		const values = await page.evaluate(OPTION_VALUES);

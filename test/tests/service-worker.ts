@@ -17,7 +17,7 @@ import {applyLocale} from "../../client/js/push/i18n";
 import {CONCAT_TAG, lineIndexOf, parsePushLine} from "../../client/js/push/line";
 import {addMessage, MERGE_KEEP, renderMergedBody} from "../../client/js/push/merge";
 import {notificationText, stripFormatting} from "../../client/js/push/strip";
-import {pseudo} from "../../tools/i18n/compile";
+import {pseudo} from "../../tools/i18n/pseudo";
 
 const SW_SOURCE = readFileSync(path.join(__dirname, "../../client/service-worker.js"), "utf8");
 

@@ -8,7 +8,8 @@ import {parsePo} from "../../tools/i18n/po";
 import {addToPot} from "../../tools/i18n/add";
 import {ALLOWED_UNREFERENCED, checkPot} from "../../tools/i18n/check";
 import {POT_PATH} from "../../tools/i18n/paths";
-import {compileLocales, Catalog, CompileResult, pseudo} from "../../tools/i18n/compile";
+import {compileLocales, Catalog, CompileResult} from "../../tools/i18n/compile";
+import {pseudo} from "../../tools/i18n/pseudo";
 import {mergePo} from "../../tools/i18n/merge";
 
 const FIXTURES = resolve("tools/i18n/fixtures");
@@ -204,6 +205,16 @@ describe("i18n toolchain", () => {
 				const text = (forms as Record<string, string>)[enCats[0]];
 				expect(text.startsWith("\u202B"), `${key} is RLE-wrapped`).to.equal(true);
 			}
+		});
+
+		it("compiles a real key to exactly what pseudo() makes of its en value", () => {
+			// The generator now lives in tools/i18n/pseudo.ts; this rider pins
+			// the moved code to the committed output: one real singular key,
+			// end to end from en.json through pseudo() to qqx.json.
+			const key = "connect.submit";
+			const enValue = en[key];
+			expect(enValue, "a singular en copy to pin").to.be.a("string");
+			expect(qqx[key]).to.equal(pseudo(enValue as string));
 		});
 	});
 

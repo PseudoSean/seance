@@ -1,5 +1,5 @@
-// Fabricate a connected network in the running app, without an ircd: the
-// snippet dispatches the same `init` bus event a registration dispatches
+// Fabricate a network in the running app, without an ircd: the snippet
+// dispatches the same `init` bus event a registration dispatches
 // (client/js/irc/client.ts onRegistered → bus.dispatch("init")), so the
 // store, sidebar and chat window render exactly what a real connection
 // would show. Rendering-only scenarios (i18n direction checks) use this to
@@ -8,39 +8,57 @@
 //
 // window.socket is dev-build-only (client/js/socket.ts), so scenarios that
 // use this must run against a development build; the snippet reports false
-// when the exposure is missing so the scenario can say so instead of
-// failing cryptically.
+// when the exposure is missing so the scenario can fail loudly instead of
+// silently skipping its assertions.
 //
-// The network is memory-only: it lives until the next navigation.
-
-const NOW = "Date.now()";
+// Each dispatch merges one network into the store: a second call adds a
+// second network — give it its own uuid, nick, channel name and a baseId
+// that keeps the channel ids clear of the first network's (the store keys
+// channels by id across networks). A disconnected network (connected:
+// false) renders the connection bar on its channel window — the only way
+// to that wave-A surface. The networks are memory-only: they live until
+// the next navigation.
 
 /**
  * JS source that evaluates to true when the dispatch ran, false when
  * `window.socket` is absent (production build).
  *
- * One network ("TestNet") with a lobby, `#seance` (the active channel,
- * carrying a few messages) and a query row in the sidebar.
+ * One network with a lobby, a channel (opened as the active window,
+ * carrying a few messages) and a query row in the sidebar. The defaults
+ * describe the connected "TestNet" rig the rtl-layout scenario loops over.
  */
-export const FAKE_NETWORK_SNIPPET = `(() => {
+export function fakeNetworkSnippet({
+	uuid = "fake-0000-0000",
+	name = "TestNet",
+	nick = "seanobot",
+	channel = "#seance",
+	query = "moria",
+	topic = "A room with mirrors on every wall",
+	connected = true,
+	baseId = 0,
+} = {}) {
+	const chanId = (n) => baseId + n;
+	const status = JSON.stringify({connected, connecting: false, secure: false});
+
+	return `(() => {
 	if (typeof window.socket === "undefined") {
 		return false;
 	}
 
-	const now = ${NOW};
+	const now = Date.now();
 	const base = {mode: "", modes: [], away: "", lastMessage: now};
 	const message = (id, from, text, minutesAgo) => ({
 		id,
 		type: "message",
 		from: {...base, nick: from},
 		text,
-		self: from === "seanobot",
+		self: from === ${JSON.stringify(nick)},
 		time: new Date(now - minutesAgo * 60000),
 		users: [],
 	});
 	const lobby = {
-		id: 1,
-		name: "TestNet",
+		id: ${chanId(1)},
+		name: ${JSON.stringify(name)},
 		key: "",
 		topic: "",
 		firstUnread: 0,
@@ -52,11 +70,11 @@ export const FAKE_NETWORK_SNIPPET = `(() => {
 		messages: [],
 		totalMessages: 0,
 	};
-	const channel = {
-		id: 2,
-		name: "#seance",
+	const chan = {
+		id: ${chanId(2)},
+		name: ${JSON.stringify(channel)},
 		key: "",
-		topic: "A room with mirrors on every wall",
+		topic: ${JSON.stringify(topic)},
 		firstUnread: 0,
 		unread: 0,
 		highlight: 0,
@@ -64,10 +82,12 @@ export const FAKE_NETWORK_SNIPPET = `(() => {
 		type: "channel",
 		state: 1,
 		messages: [
-			message(3, "moria", "the new channel theme renders mirrored under the pseudo locale", 24),
-			message(4, "seanobot", "short one", 21),
+			message(${chanId(
+				21
+			)}, "moria", "the new channel theme renders mirrored under the pseudo locale", 24),
+			message(${chanId(22)}, ${JSON.stringify(nick)}, "short one", 21),
 			message(
-				5,
+				${chanId(23)},
 				"moria",
 				"a much longer line that has to wrap somewhere: the gutter keeps its columns while the text takes what width remains, exactly what the direction check wants to measure",
 				18
@@ -76,8 +96,8 @@ export const FAKE_NETWORK_SNIPPET = `(() => {
 		totalMessages: 3,
 	};
 	const query = {
-		id: 3,
-		name: "moria",
+		id: ${chanId(3)},
+		name: ${JSON.stringify(query)},
 		key: "",
 		topic: "",
 		firstUnread: 0,
@@ -90,17 +110,21 @@ export const FAKE_NETWORK_SNIPPET = `(() => {
 		totalMessages: 0,
 	};
 	const network = {
-		uuid: "fake-0000-0000",
-		name: "TestNet",
-		nick: "seanobot",
+		uuid: ${JSON.stringify(uuid)},
+		name: ${JSON.stringify(name)},
+		nick: ${JSON.stringify(nick)},
 		serverOptions: {
 			CHANTYPES: ["#"],
 			PREFIX: {prefix: [{symbol: "@", mode: "o"}], modeToSymbol: {o: "@"}, symbols: ["@"]},
-			NETWORK: "TestNet",
+			NETWORK: ${JSON.stringify(name)},
 		},
-		status: {connected: true, connecting: false, secure: false},
-		channels: [lobby, channel, query],
+		status: ${status},
+		channels: [lobby, chan, query],
 	};
-	window.socket.dispatch("init", {active: channel.id, networks: [network]});
+	window.socket.dispatch("init", {active: chan.id, networks: [network]});
 	return true;
 })()`;
+}
+
+/** The default rig: one connected TestNet with #seance active. */
+export const FAKE_NETWORK_SNIPPET = fakeNetworkSnippet();
