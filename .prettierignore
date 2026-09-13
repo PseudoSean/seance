@@ -48,3 +48,6 @@ testnet/
 # so regeneration is byte-stable and prettier never fights it.
 client/js/i18n/available.ts
 client/locales/tags.json
+
+# Data fixtures that mimic call-site trees for the toolchain tests; never imported, deliberately not lint-clean.
+tools/i18n/fixtures/
