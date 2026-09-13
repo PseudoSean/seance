@@ -8,6 +8,8 @@
  * Store/DOM-free (runs under mocha); the caller passes the page protocol in.
  */
 
+import {t} from "../i18n/core";
+
 /** How far the connection got before it closed. */
 export type ClosePhase = "connecting" | "registering" | "registered";
 
@@ -34,17 +36,19 @@ export interface CloseReport {
 	hint?: string;
 }
 
-/** RFC 6455 close codes worth spelling out instead of "(code N)". */
-const CLOSE_CODES: Record<number, string> = {
-	1001: "server going away",
-	1002: "WebSocket protocol error",
-	1006: "connection lost",
-	1008: "policy violation",
-	1009: "message too large",
-	1011: "server error",
-	1012: "server restarting",
-	1013: "server asked to try again later",
-	1015: "TLS handshake failed",
+/** RFC 6455 close codes worth spelling out instead of "(code N)". Resolvers
+ * keep every t() call a plain literal (the pot ↔ call-site scanner only sees
+ * direct calls). */
+const CLOSE_CODES: Record<number, () => string> = {
+	1001: () => t("disconnect.code1001"),
+	1002: () => t("disconnect.code1002"),
+	1006: () => t("disconnect.code1006"),
+	1008: () => t("disconnect.code1008"),
+	1009: () => t("disconnect.code1009"),
+	1011: () => t("disconnect.code1011"),
+	1012: () => t("disconnect.code1012"),
+	1013: () => t("disconnect.code1013"),
+	1015: () => t("disconnect.code1015"),
 };
 
 /** `(reason)` / `(connection lost)` / `(code 4000)` — or "" for a clean 1000. */
@@ -57,8 +61,8 @@ function closeDetail(code: number, reason: string): string {
 		return "";
 	}
 
-	const name = CLOSE_CODES[code];
-	return name ? ` (${name})` : ` (code ${code})`;
+	const name = CLOSE_CODES[code]?.();
+	return name ? ` (${name})` : ` (${t("disconnect.codeUnknown", {code})})`;
 }
 
 /** True when the transport error text says more than the browser's stock event. */
@@ -67,39 +71,33 @@ function informative(message: string | undefined): message is string {
 }
 
 export function describeClose(ctx: CloseContext): CloseReport {
-	const notAgain = ctx.willReconnect ? "" : " Not reconnecting.";
+	const notAgain = ctx.willReconnect ? "" : ` ${t("disconnect.notReconnecting")}`;
 
 	if (ctx.phase === "connecting") {
 		// The socket never opened: the browser knows why but will not tell us.
 		const error = informative(ctx.errorMessage) ? ` (${ctx.errorMessage})` : "";
-		const text = `Could not connect to ${ctx.url}${error}.${notAgain}`;
+		const text = t("disconnect.couldNotConnect", {url: ctx.url, error}) + notAgain;
 		const secure = ctx.url.startsWith("wss:");
 
 		if (!secure && ctx.pageProtocol === "https:") {
 			return {
 				text,
-				hint:
-					"This page was loaded over HTTPS, so the browser blocks plain ws:// " +
-					"connections. Enable TLS for this network, or open the app over http://.",
+				hint: t("disconnect.hint.httpsBlocked"),
 			};
 		}
 
 		if (secure) {
 			return {
 				text,
-				hint:
-					"The browser does not reveal why. Likely causes: the server is down, the " +
-					"port is wrong, or its TLS certificate is not trusted — for a self-signed " +
-					`certificate, open ${ctx.url.replace(/^wss:/, "https:")} in a new tab, ` +
-					"accept the warning, then reconnect.",
+				hint: t("disconnect.hint.wssCauses", {
+					url: ctx.url.replace(/^wss:/, "https:"),
+				}),
 			};
 		}
 
 		return {
 			text,
-			hint:
-				"The browser does not reveal why. Likely causes: the server is down, the " +
-				"port is wrong, or it does not accept WebSocket connections on that port.",
+			hint: t("disconnect.hint.plainCauses"),
 		};
 	}
 
@@ -111,22 +109,22 @@ export function describeClose(ctx: CloseContext): CloseReport {
 		const sessionConflict = /active session/i.test(ctx.reason);
 
 		return {
-			text: `Connection to ${ctx.host} closed during IRC registration${closeDetail(
-				ctx.code,
-				ctx.reason
-			)}.${notAgain}`,
+			text:
+				t("disconnect.registeringClosed", {
+					host: ctx.host,
+					detail: closeDetail(ctx.code, ctx.reason),
+				}) + notAgain,
 			hint: sessionConflict
-				? "This account is already connected on this network - another tab, " +
-				  "window or device is using it. Close that client; this tab then " +
-				  "connects on its next retry (a dead connection is reclaimed within " +
-				  "about a minute)."
-				: "The WebSocket opened but the server dropped it before registration " +
-				  "finished - check that this port really speaks IRC over WebSocket, and " +
-				  "look for a server notice above for the reason.",
+				? t("disconnect.hint.sessionConflict")
+				: t("disconnect.hint.registration"),
 		};
 	}
 
 	return {
-		text: `Disconnected from ${ctx.host}${closeDetail(ctx.code, ctx.reason)}.${notAgain}`,
+		text:
+			t("disconnect.disconnected", {
+				host: ctx.host,
+				detail: closeDetail(ctx.code, ctx.reason),
+			}) + notAgain,
 	};
 }

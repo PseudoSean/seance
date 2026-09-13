@@ -976,7 +976,7 @@ export class IrcClient {
 		this.clearPendingEdits();
 		// Before resetMultiline: a queued batch's copy is reported here, with
 		// the reason, rather than dropped without a word there.
-		resetPending(this, "connection lost");
+		resetPending(this, t("pending.connectionLost"));
 		this.clearTyping();
 
 		for (const chan of this.channels) {

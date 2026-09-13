@@ -483,6 +483,12 @@ msgctxt "connect.saslFailed"
 msgid "SASL authentication failed: {reason}"
 msgstr ""
 
+#: client/js/irc/sasl.ts
+#. Lobby status line listing the SASL mechanisms the server offers (902-adjacent RPL_SASLMECHS). {mechanisms} is the server's comma-separated token list, verbatim.
+msgctxt "connect.saslMechanisms"
+msgid "Available SASL mechanisms: {mechanisms}"
+msgstr ""
+
 #: client/js/irc/client.ts
 #. Lobby error after a failed required SASL login: the network was dropped instead of registering unauthenticated. {host} is the chat network's configured host name.
 msgctxt "connect.saslQuitHint"
@@ -495,6 +501,12 @@ msgctxt "connect.saslQuitHintRetry"
 msgid "Not connecting to {host} without the login you asked for; trying again."
 msgstr ""
 
+#: client/js/irc/sasl.ts
+#. Reason fragment of 'SASL authentication failed: {reason}' when the server's AUTHENTICATE challenge is not the empty one PLAIN and EXTERNAL expect. {mechanism} is the mechanism token, verbatim. Lowercase mid-sentence by position.
+msgctxt "connect.saslReason.badChallenge"
+msgid "unexpected challenge for {mechanism}"
+msgstr ""
+
 #: client/js/irc/handlers/cap.ts
 #. Reason fragment of 'SASL authentication failed: {reason}' when the server rejected the client's request for the sasl capability (CAP NAK). Lowercase mid-sentence by position.
 msgctxt "connect.saslReason.capRefused"
@@ -505,6 +517,12 @@ msgstr ""
 #. Reason fragment of 'SASL authentication failed: {reason}' when the saved network has no login credentials. Lowercase mid-sentence by position.
 msgctxt "connect.saslReason.noCredentials"
 msgid "no account name or password is configured"
+msgstr ""
+
+#: client/js/irc/sasl.ts
+#. Reason fragment of 'SASL authentication failed: {reason}' when a SASL failure numeric carries no text of its own. {code} is the numeric, verbatim. Lowercase mid-sentence by position.
+msgctxt "connect.saslReason.numeric"
+msgid "numeric {code}"
 msgstr ""
 
 #: client/js/irc/client.ts
@@ -620,6 +638,120 @@ msgstr ""
 #. Error line the app shows when the connection to the chat server failed (also flashed on the loading splash). {message} is the verbatim technical message from the server or browser — never translate or reword its content.
 msgctxt "connection.error"
 msgid "Connection error: {message}"
+msgstr ""
+
+#: client/js/irc/disconnect.ts
+#. Name of WebSocket close code 1001 in a connection-failure report. Lowercase mid-sentence by position.
+msgctxt "disconnect.code1001"
+msgid "server going away"
+msgstr ""
+
+#: client/js/irc/disconnect.ts
+#. Name of WebSocket close code 1002 in a connection-failure report. Lowercase mid-sentence by position.
+msgctxt "disconnect.code1002"
+msgid "WebSocket protocol error"
+msgstr ""
+
+#: client/js/irc/disconnect.ts
+#. Name of WebSocket close code 1006 (abnormal closure: refused, unreachable, TLS failure — the browser never says which) in a connection-failure report. Lowercase mid-sentence by position.
+msgctxt "disconnect.code1006"
+msgid "connection lost"
+msgstr ""
+
+#: client/js/irc/disconnect.ts
+#. Name of WebSocket close code 1008 in a connection-failure report. Lowercase mid-sentence by position.
+msgctxt "disconnect.code1008"
+msgid "policy violation"
+msgstr ""
+
+#: client/js/irc/disconnect.ts
+#. Name of WebSocket close code 1009 in a connection-failure report. Lowercase mid-sentence by position.
+msgctxt "disconnect.code1009"
+msgid "message too large"
+msgstr ""
+
+#: client/js/irc/disconnect.ts
+#. Name of WebSocket close code 1011 in a connection-failure report. Lowercase mid-sentence by position.
+msgctxt "disconnect.code1011"
+msgid "server error"
+msgstr ""
+
+#: client/js/irc/disconnect.ts
+#. Name of WebSocket close code 1012 in a connection-failure report. Lowercase mid-sentence by position.
+msgctxt "disconnect.code1012"
+msgid "server restarting"
+msgstr ""
+
+#: client/js/irc/disconnect.ts
+#. Name of WebSocket close code 1013 in a connection-failure report. Lowercase mid-sentence by position.
+msgctxt "disconnect.code1013"
+msgid "server asked to try again later"
+msgstr ""
+
+#: client/js/irc/disconnect.ts
+#. Name of WebSocket close code 1015 in a connection-failure report. Lowercase mid-sentence by position.
+msgctxt "disconnect.code1015"
+msgid "TLS handshake failed"
+msgstr ""
+
+#: client/js/irc/disconnect.ts
+#. Detail of a connection-failure report when the WebSocket closed with a code the app has no name for. {code} is the numeric close code, verbatim.
+msgctxt "disconnect.codeUnknown"
+msgid "code {code}"
+msgstr ""
+
+#: client/js/irc/disconnect.ts
+#. Connection-failure report when the WebSocket never opened. {url} is the address that was dialled, verbatim. {error} is ' (<the browser's error text>)' or empty — the browser hides why a dial failed, so the slot often stays empty.
+msgctxt "disconnect.couldNotConnect"
+msgid "Could not connect to {url}{error}."
+msgstr ""
+
+#: client/js/irc/disconnect.ts
+#. Connection-failure report once the network was registered. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
+msgctxt "disconnect.disconnected"
+msgid "Disconnected from {host}{detail}."
+msgstr ""
+
+#: client/js/irc/disconnect.ts
+#. Follow-up hint under a failed connection dialled with ws:// from an https:// page: the browser blocks mixed content, so the fix is on the network's settings.
+msgctxt "disconnect.hint.httpsBlocked"
+msgid "This page was loaded over HTTPS, so the browser blocks plain ws:// connections. Enable TLS for this network, or open the app over http://."
+msgstr ""
+
+#: client/js/irc/disconnect.ts
+#. Follow-up hint under a failed plain (ws://) dial from a non-secure page.
+msgctxt "disconnect.hint.plainCauses"
+msgid "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or it does not accept WebSocket connections on that port."
+msgstr ""
+
+#: client/js/irc/disconnect.ts
+#. Follow-up hint under a connection the server dropped during IRC registration, when the close reason named no live session.
+msgctxt "disconnect.hint.registration"
+msgid "The WebSocket opened but the server dropped it before registration finished - check that this port really speaks IRC over WebSocket, and look for a server notice above for the reason."
+msgstr ""
+
+#: client/js/irc/disconnect.ts
+#. Follow-up hint when the server's close reason names a live session: retrying alone cannot fix it, the other client has to go.
+msgctxt "disconnect.hint.sessionConflict"
+msgid "This account is already connected on this network - another tab, window or device is using it. Close that client; this tab then connects on its next retry (a dead connection is reclaimed within about a minute)."
+msgstr ""
+
+#: client/js/irc/disconnect.ts
+#. Follow-up hint under a failed secure (wss://) dial. {url} is the network's address with https: in place of wss:, for accepting a self-signed certificate once.
+msgctxt "disconnect.hint.wssCauses"
+msgid "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or its TLS certificate is not trusted — for a self-signed certificate, open {url} in a new tab, accept the warning, then reconnect."
+msgstr ""
+
+#: client/js/irc/disconnect.ts
+#. Closing sentence of a connection-failure report, shown when the client gave up for good; otherwise the sentence is the report alone.
+msgctxt "disconnect.notReconnecting"
+msgid "Not reconnecting."
+msgstr ""
+
+#: client/js/irc/disconnect.ts
+#. Connection-failure report when the server dropped the socket before registration finished. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
+msgctxt "disconnect.registeringClosed"
+msgid "Connection to {host} closed during IRC registration{detail}."
 msgstr ""
 
 #: client/components/MessageTypes/error.vue
@@ -2536,6 +2668,24 @@ msgctxt "msg.nick"
 msgid "is now known as"
 msgstr ""
 
+#: client/js/irc/handlers/numerics.ts
+#. Lobby error when the server refused a nick as taken (433) and gave no reason of its own; shown as '<nick>: <reason>'. Lowercase mid-sentence by position.
+msgctxt "msg.nickInUse"
+msgid "Nickname is already in use."
+msgstr ""
+
+#: client/js/irc/handlers/numerics.ts
+#. Lobby error when the server refused a nick as malformed (432) and gave no reason of its own; shown as '<nick>: <reason>'. Lowercase mid-sentence by position.
+msgctxt "msg.nickInvalid"
+msgid "Nickname is invalid."
+msgstr ""
+
+#: client/js/irc/handlers/whois.ts
+#. Lobby error when a whois/whowas named a nick the server does not know; {nick} is the nick as typed, user input.
+msgctxt "msg.noSuchNick"
+msgid "No such nick: {nick}"
+msgstr ""
+
 #: client/components/MessageTypes/part.vue
 #. System message when a user leaves a channel. Renders after the user's name (direction-isolated in <bdi>) and before any part reason, which the server supplied and stays verbatim.
 msgctxt "msg.part"
@@ -2552,6 +2702,12 @@ msgstr ""
 #. System message when a user changes a channel's topic. Renders after the user's name (direction-isolated in <bdi>); the new topic is channel content and stays verbatim.
 msgctxt "msg.topicChanged"
 msgid "has changed the topic to:"
+msgstr ""
+
+#: client/js/irc/handlers/topic.ts
+#. Reply to a topic request for a channel the client is not in: the channel name and the topic itself are verbatim channel data.
+msgctxt "msg.topicFor"
+msgid "Topic for {channel}: {topic}"
 msgstr ""
 
 #: client/components/MessageTypes/topic.vue
@@ -2572,10 +2728,28 @@ msgctxt "msg.topicSetOn"
 msgid "on {time}"
 msgstr ""
 
+#: client/js/irc/handlers/topic.ts
+#. Channel message answering a topic request when the channel has none (331).
+msgctxt "msg.topicUnset"
+msgid "No topic is set."
+msgstr ""
+
+#: client/js/irc/handlers/topic.ts
+#. Reply to a topic request for a channel the client is not in that has no topic; {channel} is the channel name, verbatim.
+msgctxt "msg.topicUnsetFor"
+msgid "No topic is set for {channel}."
+msgstr ""
+
 #: client/js/irc/handlers/nick.ts
 #. Lobby status line when your own nick change is confirmed. {nick} is the new nick, user content, never translated.
 msgctxt "msg.youAreKnownAs"
 msgid "You're now known as {nick}"
+msgstr ""
+
+#: client/js/irc/multiline.ts
+#. Reason under 'Not sent: {message}' when a multi-line message's framing leaves no space for any text. {prefix} and {maxBytes} are byte counts.
+msgctxt "multiline.noRoom"
+msgid "No room for message text: {prefix} bytes of line prefix, {maxBytes} bytes per message"
 msgstr ""
 
 #: client/js/socket-events/msg.ts
@@ -2606,6 +2780,55 @@ msgstr ""
 #. Desktop notification title for a private message; {nick} is the sender's name, verbatim.
 msgctxt "notify.titleSays"
 msgid "{nick} says:"
+msgstr ""
+
+#: client/js/irc/client.ts
+#: client/js/irc/pending.ts
+#. Reason fragment of 'Not sent ({reason}): {text}' when the connection dropped with the message still unconfirmed. Lowercase mid-sentence by position.
+msgctxt "pending.connectionLost"
+msgid "connection lost"
+msgstr ""
+
+#: client/js/irc/pending.ts
+#. Reason fragment of 'Not sent ({reason}): {text}' when the server stayed silent for a minute. Lowercase mid-sentence by position.
+msgctxt "pending.noAcknowledgement"
+msgid "no acknowledgement from the server"
+msgstr ""
+
+#: client/js/irc/pending.ts
+#. Error under a message the server never confirmed. {reason} is a short cause (one of the pending.* fragments or the server's own rejection text, verbatim); {text} is the message as typed, user content, verbatim.
+msgctxt "pending.notSent"
+msgid "Not sent ({reason}): {text}"
+msgstr ""
+
+#: client/js/irc/handlers/numerics.ts
+#. Reason fragment of 'Not sent ({reason}): {text}' when a labelled rejection numeric names no text. {code} is the numeric, verbatim. Lowercase mid-sentence by position.
+msgctxt "pending.numericError"
+msgid "error {code}"
+msgstr ""
+
+#: client/js/irc/handlers/persistence.ts
+#. Lobby passthrough of a PERSISTENCE reply the app does not otherwise understand; {params} is the server's own words, verbatim.
+msgctxt "persistence.echo"
+msgid "Persistence: {params}"
+msgstr ""
+
+#: client/js/irc/handlers/persistence.ts
+#. Lobby status line confirming the state change the user asked for. {state} is the server's ON/OFF token, verbatim.
+msgctxt "persistence.set"
+msgid "Session persistence set to: {state}"
+msgstr ""
+
+#: client/js/irc/handlers/persistence.ts
+#. Lobby status line reporting the bouncer session's state. {state} is the server's ON/OFF token, verbatim.
+msgctxt "persistence.status"
+msgid "Session persistence (the server keeps you in your channels while disconnected): {state}"
+msgstr ""
+
+#: client/js/irc/handlers/persistence.ts
+#. Suffix of the persistence status line when the server's effective state differs from the setting this network asked for. {setting} is the ON/OFF token, verbatim. The leading space is glued in code.
+msgctxt "persistence.yourSetting"
+msgid "(your setting: {setting})"
 msgstr ""
 
 #: client/components/PushPrompt.vue
@@ -4046,6 +4269,12 @@ msgstr ""
 #. Whois row: the user's away reason, verbatim server content.
 msgctxt "whois.awayLabel"
 msgid "Away:"
+msgstr ""
+
+#: client/js/irc/handlers/whois.ts
+#. Fallback away reason for a query contact whose RPL_AWAY carries no text; it lands in the reason slot of the away system message ('<name> is away (<reason>)') and in the query's away state. Lowercase mid-sentence by position.
+msgctxt "whois.awayNoReason"
+msgid "is away"
 msgstr ""
 
 #: client/components/MessageTypes/whois.vue

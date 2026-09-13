@@ -3,6 +3,7 @@
  */
 
 import {MessageType} from "../../../../shared/types/msg";
+import {t} from "../../i18n/core";
 import type {Handler} from "../types";
 
 const topicChange: Handler = (client, msg) => {
@@ -41,7 +42,7 @@ const rplTopic: Handler = (client, msg) => {
 		if (name && client.takeInfoAsked(name)) {
 			client.pushMessage(client.lobby, {
 				time: client.timeOf(msg),
-				text: `Topic for ${name}: ${topic}`,
+				text: t("msg.topicFor", {channel: name, topic}),
 				showInActive: true,
 			});
 		}
@@ -82,7 +83,7 @@ const rplNoTopic: Handler = (client, msg) => {
 		if (name && client.takeInfoAsked(name)) {
 			client.pushMessage(client.lobby, {
 				time: client.timeOf(msg),
-				text: `No topic is set for ${name}.`,
+				text: t("msg.topicUnsetFor", {channel: name}),
 				showInActive: true,
 			});
 		}
@@ -96,7 +97,7 @@ const rplNoTopic: Handler = (client, msg) => {
 		chan.topicAsked = false;
 		client.pushMessage(chan, {
 			time: client.timeOf(msg),
-			text: "No topic is set.",
+			text: t("msg.topicUnset"),
 			showInActive: true,
 		});
 	}
