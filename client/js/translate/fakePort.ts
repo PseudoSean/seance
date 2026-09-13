@@ -85,6 +85,22 @@ interface TranslateFakeRequestLog {
 
 interface TranslateFakeGlobal {
 	requests: TranslateFakeRequestLog[];
+	/**
+	 * The model ids each scripted engine holds right now: what a scenario
+	 * reads to see a model unloaded (service.ts idle and not-in-use unloads).
+	 * A terminated fake worker holds nothing, as a real one frees its memory.
+	 */
+	loaded?: Partial<Record<EngineName, string[]>>;
+}
+
+function fakeGlobal(): TranslateFakeGlobal {
+	return (globalThis.__seanceTranslateFake ??= {requests: []});
+}
+
+function publishLoaded(engine: EngineName, ids: string[]): void {
+	const g = fakeGlobal();
+
+	g.loaded = {...(g.loaded ?? {}), [engine]: [...ids]};
 }
 
 declare global {
@@ -93,7 +109,7 @@ declare global {
 }
 
 function logRequest(req: TranslateRequest, engine: EngineName): void {
-	const g = (globalThis.__seanceTranslateFake ??= {requests: []});
+	const g = fakeGlobal();
 
 	g.requests.push({
 		id: req.id,
@@ -136,11 +152,13 @@ class ScriptedEngine implements Engine {
 
 		this.loaded = this.name === "llm" ? [ref.id] : [...this.loaded, ref.id];
 		this.state = "ready";
+		publishLoaded(this.name, this.loaded);
 	}
 
 	unload(): Promise<void> {
 		this.loaded = [];
 		this.state = "cold";
+		publishLoaded(this.name, this.loaded);
 
 		return Promise.resolve();
 	}
@@ -264,9 +282,11 @@ export function fakePort(options: {stepMs?: number} = {}): {port: MainPort; term
 	const stepMs = options.stepMs ?? 120;
 	const [mainPort, workerPort] = createPortPair();
 	const cached = new Set<string>();
+	const llm = new ScriptedEngine("llm", stepMs);
+	const seq2seq = new ScriptedEngine("seq2seq", stepMs);
 	const stop = serveEngines(
 		workerPort,
-		{llm: new ScriptedEngine("llm", stepMs), seq2seq: new ScriptedEngine("seq2seq", stepMs)},
+		{llm, seq2seq},
 		{
 			configure() {},
 			cache: {
@@ -292,5 +312,13 @@ export function fakePort(options: {stepMs?: number} = {}): {port: MainPort; term
 		originalOnMessage?.(event);
 	};
 
-	return {port: mainPort, terminate: stop};
+	return {
+		port: mainPort,
+		// A terminated worker frees what its engines held.
+		terminate() {
+			stop();
+			void llm.unload();
+			void seq2seq.unload();
+		},
+	};
 }

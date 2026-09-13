@@ -27,6 +27,18 @@ import {ServiceDeps, TranslateService} from "./service";
 const initialSearch = window.location.search;
 
 let service: TranslateService | null = null;
+let usage: (() => boolean) | null = null;
+
+/**
+ * What says translation is in use (reader.ts `translationInUse`): once it
+ * is not and nothing is in flight, the service unloads every model at once.
+ * Registered before the service exists (initReader runs at boot) and handed
+ * to it when it is created.
+ */
+export function setTranslationUsage(inUse: () => boolean): void {
+	usage = inUse;
+	service?.setInUse(inUse);
+}
 
 export function translateService(): TranslateService {
 	if (!service) {
@@ -44,13 +56,7 @@ function workerUrl(): string {
 	return new URL(`js/translate-worker.js?v=${BUILD}`, document.baseURI).href;
 }
 
-// The deploy's default reading target (branding.translation.defaultTarget)
-// only applies while the user has never chosen one. settings.ts computes
-// its `translateTo` default at import time, before config.json is fetched,
-// so it cannot see the branding value; this runs after the service (and so
-// after getBranding() has something to read) and, the first time only,
-// dispatches the same action Settings uses so the choice persists like any
-// other user setting.
+/** Whether the user's stored settings carry `name` at all (a default is not a choice). */
 function hasStoredSetting(name: string): boolean {
 	let stored: Record<string, unknown> = {};
 
@@ -63,6 +69,13 @@ function hasStoredSetting(name: string): boolean {
 	return Object.prototype.hasOwnProperty.call(stored, name);
 }
 
+// The deploy's default reading target (branding.translation.defaultTarget)
+// only applies while the user has never chosen one. settings.ts computes
+// its `translateTo` default at import time, before config.json is fetched,
+// so it cannot see the branding value; this runs after the service (and so
+// after getBranding() has something to read) and, the first time only,
+// dispatches the same action Settings uses so the choice persists like any
+// other user setting.
 function applyDefaultTarget(defaultTarget: string | undefined): void {
 	if (!defaultTarget || !isSupported(defaultTarget)) {
 		return;
@@ -135,6 +148,22 @@ function create(): TranslateService {
 	store.watch(
 		() => store.state.settings.translateLlmModel,
 		(id: string) => created.setLlmModel(id)
+	);
+
+	if (usage) {
+		created.setInUse(usage);
+	}
+
+	// A channel switched off, a composer strip closed: the store state the
+	// usage reads is reactive, so a change asks again (a queue draining asks
+	// through reader.ts).
+	store.watch(
+		() => (usage ? usage() : true),
+		(inUse: boolean) => {
+			if (!inUse) {
+				created.usageChanged();
+			}
+		}
 	);
 	created.onModels((models) => store.commit("translationModels", models));
 	created.onWorkerError((message) => store.commit("translationWorkerError", message));

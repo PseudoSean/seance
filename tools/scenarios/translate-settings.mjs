@@ -32,6 +32,8 @@ const LARGE = "Qwen3-4B-q4f16_1-MLC";
 /** The data-model of every row marked "In use", joined: exactly one is expected. */
 const IN_USE = `[...document.querySelectorAll(".translate-model-in-use")].map((el) => el.closest(".translate-model").dataset.model).join(",")`;
 const LAST_FAKE_MODEL = `(globalThis.__seanceTranslateFake?.requests ?? []).at(-1)?.model ?? null`;
+/** What the fake worker's engines hold (fakePort.ts `loaded`): nothing, in either. */
+const NOTHING_LOADED = `Object.values(globalThis.__seanceTranslateFake?.loaded ?? {}).every((ids) => ids.length === 0)`;
 
 async function chooseLlm(page, id) {
 	await page.evaluate(
@@ -226,4 +228,19 @@ export default async function run(page) {
 	await translateOnGpu(page);
 	page.check("the fake engine ran 1.7B again", (await page.evaluate(LAST_FAKE_MODEL)) === SMALL);
 	await page.screenshot("translation-llm-back");
+
+	// This page has no channel reading or writing through translation (it
+	// never connects), no queued line and no composer strip: translation is
+	// not in use, so once the request is done every model unloads at once
+	// (service.ts `usageChanged`), without waiting out the idle minutes.
+	page.check(
+		"a model was loaded for the request",
+		(await page.evaluate(`JSON.stringify(globalThis.__seanceTranslateFake?.loaded ?? {})`)) !==
+			"{}"
+	);
+	await page.waitFor(NOTHING_LOADED, {timeout: 5000, label: "no model loaded"});
+	page.check(
+		"no model stays loaded while translation is not in use",
+		await page.evaluate(NOTHING_LOADED)
+	);
 }

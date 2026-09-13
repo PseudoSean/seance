@@ -51,9 +51,13 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   `buildMessages`, `maxTokensFor`, `KEEP_MARKS`, `KEEP_TAGS`,
   `ONLY_THE_TRANSLATION`. `QWEN3_1_7B_PROMPT` is `prompt.ts` itself (its
   builders, not copies, so `test/translate/prompt.ts` pins it byte for
-  byte); `QWEN3_4B_PROMPT` (`prompts/qwen3-4b.ts`) starts as a copy in its
-  own module, so 4B's wording changes without touching 1.7B's
-  (`test/translate/promptProfile.ts` pins the two equal until then). A
+  byte); `QWEN3_4B_PROMPT` (`prompts/qwen3-4b.ts`) started as a copy in its
+  own module, so 4B's wording changes without touching 1.7B's and the
+  other way round. They already differ in one place: 1.7B says the marks
+  sentence only on a line that carries a mark (measured on its web
+  weights), 4B still says it on every literal-marker request until 4B is
+  measured; `test/translate/promptProfile.ts` pins that difference and
+  the two equal everywhere else. A
   model without a profile of its own gets 1.7B's. `WebLlmEngine` asks with
   the loaded model's profile; the batch sentinel, the output parsing and
   the canned answers stay shared in `prompt.ts`. The offline runner takes
@@ -865,20 +869,30 @@ echo, not a refusal.
 `js/translate-worker.js` (its own webpack configuration, like the push
 chunk) hosts both engines; the page talks to it over `protocol.ts`
 (`client.ts` on the page, `worker.ts` in the worker). `service.ts` routes,
-loads on demand, marks candidates down and terminates the worker after ten
-idle minutes or on `pagehide`. `index.ts` is the singleton wired to the
+loads on demand, marks candidates down and gives memory back when a model
+is not needed: a loaded GPU model with no request unloads after 3 minutes
+(`GPU_IDLE_UNLOAD_MS`) and a CPU model after 5 (`CPU_IDLE_UNLOAD_MS`); a
+tier switched off in Settings unloads at once (once nothing runs on it);
+and every model unloads at once when translation is not in use — no
+channel in the store reads or writes through it, no line waits in a queue
+and no composer strip or read-back is open (`reader.ts` `translationInUse`,
+registered through `index.ts` `setTranslationUsage`; the store watch and a
+queue's drain ask `service.usageChanged()`, which checks on the next tick)
+— and nothing is in flight. The last model going takes the worker with
+it, as `pagehide` does; the next request loads again, with its download
+note. `index.ts` is the singleton wired to the
 store; on a development build `?fakeTranslate` swaps in `fakePort.ts`, an
 in-page scripted worker the scenarios use. Plan 2 (reading) starts from the
 page-side surface `client.ts` already exposes: `TranslateClient.translate(req, ref, onProgress?)` for the streamed chunks, `WORKER_DISPOSED` as the
-rejection every in-flight call gets on teardown, `IDLE_UNLOAD_MS` for how
-long an unused worker survives, and `translateService().translate()` as the
+rejection every in-flight call gets on teardown, `GPU_IDLE_UNLOAD_MS` and
+`CPU_IDLE_UNLOAD_MS` for how long an unused model survives, and `translateService().translate()` as the
 one call a new caller (the header switch) needs on the page.
 
 **The caller's half of the contract:** a stream from
 `translateService().translate()` must be consumed to the end, or left with
 `break`/`return` (anything that runs the generator's `return()`). A
 generator simply abandoned never releases the service's in-flight count, so
-the idle unload never fires and the worker lives until `pagehide`.
+no unload ever fires and the worker lives until `pagehide`.
 
 **Prerequisites for plan 2**, none of which matter while the service is the
 only caller:

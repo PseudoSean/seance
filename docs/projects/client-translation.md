@@ -537,11 +537,25 @@ The GPU model is a choice (2026-09-13):
   overrides alone, `routesFor` the shipped tables).
 - **Each GPU model has its own prompt profile** (`prompts/`,
   `promptProfileFor`); the spec had one prompt (§ `prompt.ts`). 1.7B's
-  profile is `prompt.ts` unchanged; 4B's is a copy in its own module, to be
-  reworded from 4B's own measurements. `maxTokensFor` moved into the
+  profile is `prompt.ts` itself; 4B's started as a copy in its own module, to
+  be reworded from 4B's own measurements (1.7B's marks sentence has since
+  been scoped to marked lines, 4B's has not). `maxTokensFor` moved into the
   profiles (`engines/webllm.ts` keeps an export of 1.7B's), and
   `WebLlmDeps.promptProfileFor` lets a caller swap the lookup
   (`tools/translate-llm.ts --profile`).
+- **Models unload when translation is not in use** (the user: "unload these
+  models from memory when they are not in use, or translation is disabled
+  on all channels"); the spec had one 10-minute idle unload of everything.
+  Now per tier — the GPU model after 3 idle minutes, a CPU model after 5,
+  either at once when its tier is switched off — and everything at once
+  when nothing wants translation: no channel in the store reading or
+  writing, nothing queued, no composer strip open (`reader.ts`
+  `translationInUse`), and nothing in flight. A channel that was left keeps
+  its setting but does not count. The check runs on the next tick
+  (`service.ts` `usageChanged`) so a queue between two lines has started
+  the next one first. The fake worker publishes what its engines hold
+  (`__seanceTranslateFake.loaded`) and frees it when terminated, which is
+  what `translate-settings.mjs` checks.
 
 ## Non-goals
 
@@ -819,9 +833,12 @@ shows in the tooltip.
 ## Lifecycle, memory, errors
 
 - Ceiling: one GPU model plus two CPU models.
-- Idle: everything unloads and the worker terminates after
-  `IDLE_UNLOAD_MS` (10 minutes) with no switch on in any open channel and no
-  request, and on `pagehide`.
+- Idle: a GPU model unloads after 3 minutes with no request and a CPU
+  model after 5 (`GPU_IDLE_UNLOAD_MS`, `CPU_IDLE_UNLOAD_MS`); a tier
+  switched off in Settings unloads at once; everything unloads at once when
+  no channel has reading or writing on, nothing is queued, no composer strip
+  is open and nothing is in flight; and on `pagehide`. The last model going
+  terminates the worker (see the deviation list, 2026-09-13).
 - WebGPU `device lost`: reload the model once; a second loss marks `llm`
   down for the session.
 - A failed request marks the entry `failed` with a "couldn't translate"

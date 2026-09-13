@@ -27,7 +27,7 @@ import {
 import {buildContext} from "./context";
 import {type Detection, LanguagePrior, detectLanguage, detectionSkip} from "./detect";
 import {ReplayBatches, historyQueueOrder, isEligible, plainTextOf} from "./eligibility";
-import {translateService} from "./index";
+import {setTranslationUsage, translateService} from "./index";
 import {NO_ROUTE, type QueueItem, type QueueUpdate, TranslateQueue} from "./queue";
 import {sentReadBacks, takesReadBack} from "./sentReadBack";
 import {protect, stripCopiedNickPrefix} from "./spans";
@@ -92,6 +92,31 @@ export function channelTranslation(
  */
 export function readingLanguage(network: ClientNetwork, channel: ClientChan): string {
 	return channelTranslation(network, channel).read ?? store.state.settings.translateTo;
+}
+
+/**
+ * Whether translation is wanted right now (service.ts `setInUse`): a
+ * composer strip open (with its read-back), a line waiting in a queue, or a
+ * channel still in the store reading or writing through it. A channel that
+ * was left keeps its setting for a rejoin but wants nothing meanwhile. When
+ * none is, and nothing is in flight, the models unload at once.
+ */
+export function translationInUse(): boolean {
+	if (Object.keys(store.state.outgoingTranslations).length > 0) {
+		return true;
+	}
+
+	if ([...queues.values()].some((queue) => queue.size() > 0)) {
+		return true;
+	}
+
+	return store.state.networks.some((network) =>
+		network.channels.some((channel) => {
+			const setting = channelTranslation(network, channel);
+
+			return !!setting.read || !!setting.write;
+		})
+	);
 }
 
 export function translationAvailable(): boolean {
@@ -221,6 +246,12 @@ function withoutCopiedNick(id: number, known: {item: QueueItem} | undefined, tex
 function applyUpdate(id: number, update: QueueUpdate): void {
 	const existing = store.state.translations[id];
 	const known = items.get(id);
+
+	// A line leaving the queue may be the last thing translation was wanted
+	// for (queue sizes are not store state, so the watch in index.ts cannot see it).
+	if (update.status !== "pending") {
+		translateService().usageChanged();
+	}
 
 	// The queue is finished with the item, so the context it carries (up
 	// to CONTEXT_LINES of text, the names and a copy of the channel's term
@@ -637,6 +668,7 @@ export function retryTranslation(
 
 export function initReader(): void {
 	store.commit("translateChannelsLoaded", loadAll());
+	setTranslationUsage(translationInUse);
 
 	// After socket-events/msg.ts pushed the message (import order in
 	// socket-events/index.ts): the object in `data.msg` is the one in

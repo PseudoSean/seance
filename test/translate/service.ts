@@ -13,7 +13,8 @@ import type {RouteTable} from "../../client/js/translate/router";
 import {DEFAULT_ROUTES} from "../../client/js/translate/routes.default";
 import {TranslateClient, WORKER_DISPOSED} from "../../client/js/translate/client";
 import {
-	IDLE_UNLOAD_MS,
+	CPU_IDLE_UNLOAD_MS,
+	GPU_IDLE_UNLOAD_MS,
 	TRANSLATION_UNAVAILABLE,
 	TranslateService,
 	downloadNote,
@@ -130,6 +131,25 @@ function rig(
 			hangDelete = true;
 		},
 	};
+}
+
+/** Hold the rig's first LLM request before its first chunk until the returned function is called. */
+function gateLlm(r: ReturnType<typeof rig>): () => void {
+	let release!: () => void;
+	const gate = new Promise<void>((resolve) => (release = resolve));
+	const original = r.llm.translate.bind(r.llm);
+	let first = true;
+
+	r.llm.translate = async function* (req, signal) {
+		if (first) {
+			first = false;
+			await gate;
+		}
+
+		yield* original(req, signal);
+	};
+
+	return release;
 }
 
 async function text(iterable: AsyncIterable<{text: string; done: boolean}>) {
@@ -557,18 +577,131 @@ describe("translate/service", () => {
 		service.dispose();
 	});
 
-	it("unloads and terminates the worker after ten idle minutes, not while a request runs", async () => {
+	it("a GPU model unloads after three idle minutes and a CPU model after five", async () => {
+		const r = rig("gpu", true, {en: {de: ["llm"], fr: ["nllb"]}});
+		clock = r.clock;
+		expect(await text(r.service.translate(base))).to.equal("llm:Hallo");
+		expect(await text(r.service.translate({...base, from: "fr"}))).to.equal("seq:Hallo");
+
+		await r.clock.tickAsync(GPU_IDLE_UNLOAD_MS - 1);
+		expect(r.llm.calls.unload).to.equal(0);
+		await r.clock.tickAsync(1);
+		expect(r.llm.calls.unload).to.equal(1);
+		expect(r.seq2seq.calls.unload).to.equal(0);
+		expect(r.workers[0].terminated).to.equal(false);
+
+		await r.clock.tickAsync(CPU_IDLE_UNLOAD_MS - GPU_IDLE_UNLOAD_MS - 1);
+		expect(r.workers[0].terminated).to.equal(false);
+		await r.clock.tickAsync(1);
+		// The last model going takes the worker with it.
+		expect(r.workers[0].terminated).to.equal(true);
+
+		// A model that unloaded loads again on the next request.
+		expect(await text(r.service.translate(base))).to.equal("llm:Hallo");
+		expect(r.llm.calls.load.length).to.equal(2);
+		expect(r.workers.length).to.equal(2);
+		r.service.dispose();
+	});
+
+	it("a request keeps its model's idle clock from starting", async () => {
 		const r = rig("gpu");
 		clock = r.clock;
-		await text(r.service.translate(base));
-		expect(r.workers.length).to.equal(1);
-		await r.clock.tickAsync(IDLE_UNLOAD_MS - 1);
+		const release = gateLlm(r);
+		const running = text(r.service.translate(base));
+
+		await r.clock.tickAsync(CPU_IDLE_UNLOAD_MS * 2);
+		expect(r.llm.calls.unload).to.equal(0);
+		expect(r.workers[0].terminated).to.equal(false);
+
+		release();
+		expect(await running).to.equal("llm:Hallo");
+		await r.clock.tickAsync(GPU_IDLE_UNLOAD_MS - 1);
 		expect(r.workers[0].terminated).to.equal(false);
 		await r.clock.tickAsync(1);
 		expect(r.workers[0].terminated).to.equal(true);
-		// the next request starts a fresh worker
-		await text(r.service.translate(base));
+		r.service.dispose();
+	});
+
+	it("unloads everything at once when translation is not in use and nothing is in flight", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		let inUse = true;
+
+		r.service.setInUse(() => inUse);
+		expect(await text(r.service.translate(base))).to.equal("llm:Hallo");
+		await r.clock.tickAsync(0);
+		expect(r.workers[0].terminated).to.equal(false);
+
+		inUse = false;
+		r.service.usageChanged();
+		await r.clock.tickAsync(0);
+		expect(r.workers[0].terminated).to.equal(true);
+
+		// And it comes back when asked: a fresh worker (the rig's engines
+		// outlive their workers, so the load itself is not counted here).
+		inUse = true;
+		expect(await text(r.service.translate(base))).to.equal("llm:Hallo");
 		expect(r.workers.length).to.equal(2);
+		r.service.dispose();
+	});
+
+	it("translation not in use waits for the request in flight, then unloads", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		const release = gateLlm(r);
+
+		r.service.setInUse(() => false);
+
+		const running = text(r.service.translate(base));
+
+		await r.clock.tickAsync(0);
+		r.service.usageChanged();
+		await r.clock.tickAsync(0);
+		expect(r.workers[0].terminated).to.equal(false);
+
+		release();
+		expect(await running).to.equal("llm:Hallo");
+		await r.clock.tickAsync(0);
+		expect(r.workers[0].terminated).to.equal(true);
+		r.service.dispose();
+	});
+
+	it("a tier switched off in Settings unloads that tier at once", async () => {
+		const r = rig("gpu", true, {en: {de: ["llm"], fr: ["nllb"]}});
+		clock = r.clock;
+		await text(r.service.translate(base));
+		await text(r.service.translate({...base, from: "fr"}));
+
+		r.service.setSettings({llm: false, cpu: true});
+		await r.clock.tickAsync(0);
+		expect(r.llm.calls.unload).to.equal(1);
+		expect(r.seq2seq.calls.unload).to.equal(0);
+		expect(r.workers[0].terminated).to.equal(false);
+
+		r.service.setSettings({llm: false, cpu: false});
+		await r.clock.tickAsync(0);
+		// The last loaded tier going takes the worker with it.
+		expect(r.workers[0].terminated).to.equal(true);
+		r.service.dispose();
+	});
+
+	it("a tier switched off while its request runs unloads when the request ends", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		const release = gateLlm(r);
+		const running = text(r.service.translate(base));
+
+		await r.clock.tickAsync(0);
+		r.service.setSettings({llm: false, cpu: true});
+		await r.clock.tickAsync(0);
+		// Not under the running request.
+		expect(r.llm.calls.unload).to.equal(0);
+		expect(r.workers[0].terminated).to.equal(false);
+
+		release();
+		expect(await running).to.equal("llm:Hallo");
+		await r.clock.tickAsync(0);
+		expect(r.llm.calls.unload).to.equal(1);
 		r.service.dispose();
 	});
 

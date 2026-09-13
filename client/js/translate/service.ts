@@ -1,18 +1,25 @@
 // The main-thread orchestrator (spec § service, § Lifecycle): probes once,
 // routes a request, loads the model on demand, marks a candidate down for
 // the session when its model cannot load or translate, and takes the next.
-// The worker is created lazily and terminated after IDLE_UNLOAD_MS with
-// nothing in flight, or on pagehide. Model views feed Settings. Vue-free:
+// The worker is created lazily. A loaded GPU model with nothing to do is
+// unloaded after GPU_IDLE_UNLOAD_MS and a CPU model after
+// CPU_IDLE_UNLOAD_MS; a tier switched off in Settings unloads at once;
+// everything goes at once when translation is not in use anywhere
+// (`setInUse`) and nothing is in flight, and on pagehide. The last model
+// going takes the worker with it. Model views feed Settings. Vue-free:
 // index.ts wires the real worker, the store and the settings.
 
 import {Capability} from "./capability";
 import {TranslateClient, TranslateError, WORKER_DISPOSED} from "./client";
-import {LoadProgress, ModelRef, TranslateChunk, TranslateRequest} from "./engine";
+import {EngineName, LoadProgress, ModelRef, TranslateChunk, TranslateRequest} from "./engine";
 import {Candidate, ModelCatalog, candidateOf, catalogModels, selectLlm} from "./models";
 import {Route, RouteTable, mergeRoutes, resolveRoute} from "./router";
 import {routesFor as shippedRoutesFor} from "./routes.default";
 
-export const IDLE_UNLOAD_MS = 10 * 60 * 1000;
+/** A loaded GPU model with no request for this long gives its memory back. */
+export const GPU_IDLE_UNLOAD_MS = 3 * 60 * 1000;
+/** A loaded CPU model with no request for this long gives its memory back. */
+export const CPU_IDLE_UNLOAD_MS = 5 * 60 * 1000;
 export const TRANSLATION_UNAVAILABLE = "no translation engine can take this request";
 
 export interface ServiceDeps {
@@ -81,6 +88,14 @@ export class TranslateService {
 	 * generating on.
 	 */
 	private llmSwitch: Promise<void> | null = null;
+	/** Requests and downloads running per engine: an engine is never unloaded under one. */
+	private engineRunning: Record<EngineName, number> = {llm: 0, seq2seq: 0};
+	/** Engines given a model since they were last unloaded. */
+	private loadedEngines = new Set<EngineName>();
+	private engineTimers: Record<EngineName, unknown> = {llm: null, seq2seq: null};
+	/** Whether translation is wanted anywhere (reader.ts `translationInUse`); unset, it always is. */
+	private inUse: (() => boolean) | null = null;
+	private usageTimer: unknown = null;
 
 	constructor(
 		private deps: ServiceDeps,
@@ -223,8 +238,48 @@ export class TranslateService {
 		return this.capability;
 	}
 
+	/** A tier switched off gives its memory back at once, once nothing runs on it. */
 	setSettings(settings: ServiceSettings): void {
+		const before = this.settings;
+
 		this.settings = settings;
+
+		if (before.llm && !settings.llm) {
+			this.afterEngineIdle("llm");
+		}
+
+		if (before.cpu && !settings.cpu) {
+			this.afterEngineIdle("seq2seq");
+		}
+	}
+
+	/**
+	 * What says translation is wanted anywhere — a channel reading or writing
+	 * through it, a queued line, an open composer strip. Once it says no and
+	 * nothing is in flight, every model is unloaded at once.
+	 */
+	setInUse(inUse: (() => boolean) | null): void {
+		this.inUse = inUse;
+		this.usageChanged();
+	}
+
+	/**
+	 * Something the usage reads has changed (a channel switched off, a strip
+	 * closed, a queue drained). Checked on the next tick rather than now, so
+	 * a queue or a composer about to start its next request has done so.
+	 */
+	usageChanged(): void {
+		if (!this.inUse || !this.worker || this.usageTimer !== null) {
+			return;
+		}
+
+		this.usageTimer = this.deps.setTimeout(() => {
+			this.usageTimer = null;
+
+			if (this.worker && this.inFlight === 0 && this.inUse && !this.inUse()) {
+				this.teardown();
+			}
+		}, 0);
 	}
 
 	/**
@@ -362,6 +417,8 @@ export class TranslateService {
 
 				const llmId = route.ref.engine === "llm" ? route.ref.id : null;
 
+				this.engineStarted(route.ref.engine);
+
 				if (llmId) {
 					this.llmStarted(llmId);
 				}
@@ -438,6 +495,8 @@ export class TranslateService {
 					if (llmId) {
 						this.llmEnded(llmId);
 					}
+
+					this.engineEnded(route.ref.engine);
 				}
 			}
 		} finally {
@@ -534,6 +593,7 @@ export class TranslateService {
 		this.publish();
 		this.inFlight++;
 		this.clearIdle();
+		this.engineStarted(ref.engine);
 
 		try {
 			if (ref.engine === "llm") {
@@ -570,6 +630,7 @@ export class TranslateService {
 
 			throw e;
 		} finally {
+			this.engineEnded(ref.engine);
 			this.inFlight--;
 			this.scheduleIdle();
 			this.publish();
@@ -584,6 +645,7 @@ export class TranslateService {
 
 		try {
 			await this.client().unload(ref.engine);
+			this.loadedEngines.delete(ref.engine);
 			await this.client().deleteModel(ref);
 			view.cached = false;
 			view.status = "idle";
@@ -620,6 +682,13 @@ export class TranslateService {
 
 	dispose(): void {
 		this.disposed = true;
+		this.inUse = null;
+
+		if (this.usageTimer !== null) {
+			this.deps.clearTimeout(this.usageTimer);
+			this.usageTimer = null;
+		}
+
 		this.teardown();
 		this.listeners.clear();
 		this.workerErrorListeners.clear();
@@ -647,6 +716,9 @@ export class TranslateService {
 
 	private teardown(): void {
 		this.clearIdle();
+		this.clearEngineTimer("llm");
+		this.clearEngineTimer("seq2seq");
+		this.loadedEngines.clear();
 		this.generation++;
 
 		if (this.worker) {
@@ -656,17 +728,101 @@ export class TranslateService {
 		}
 	}
 
+	/**
+	 * Nothing in flight any more. The models themselves go by their own
+	 * engine's timer (`afterEngineIdle`); a worker holding none (Settings only
+	 * asked what is downloaded) goes after the longer wait. And translation
+	 * may no longer be in use at all.
+	 */
 	private scheduleIdle(): void {
 		this.clearIdle();
 
-		if (this.worker && this.inFlight === 0) {
+		if (!this.worker || this.inFlight !== 0) {
+			return;
+		}
+
+		this.usageChanged();
+
+		if (this.loadedEngines.size === 0) {
 			this.idleTimer = this.deps.setTimeout(() => {
 				this.idleTimer = null;
 
-				if (this.inFlight === 0) {
+				if (this.inFlight === 0 && this.loadedEngines.size === 0) {
 					this.teardown();
 				}
-			}, IDLE_UNLOAD_MS);
+			}, CPU_IDLE_UNLOAD_MS);
+		}
+	}
+
+	private engineStarted(engine: EngineName): void {
+		this.engineRunning[engine]++;
+		// Counted as loaded from the first request on: unloading an engine
+		// whose load then failed costs nothing, missing one costs its memory.
+		this.loadedEngines.add(engine);
+		this.clearEngineTimer(engine);
+	}
+
+	private engineEnded(engine: EngineName): void {
+		this.engineRunning[engine] = Math.max(0, this.engineRunning[engine] - 1);
+		this.afterEngineIdle(engine);
+	}
+
+	/**
+	 * An engine with nothing running: unloaded at once when its tier is
+	 * switched off, otherwise after its idle wait (3 minutes for the GPU
+	 * model, 5 for the CPU models) unless a request arrives first.
+	 */
+	private afterEngineIdle(engine: EngineName): void {
+		if (this.engineRunning[engine] > 0 || !this.loadedEngines.has(engine)) {
+			return;
+		}
+
+		const allowed = engine === "llm" ? this.settings.llm : this.settings.cpu;
+
+		if (!allowed) {
+			this.unloadEngine(engine);
+			return;
+		}
+
+		this.clearEngineTimer(engine);
+		this.engineTimers[engine] = this.deps.setTimeout(
+			() => {
+				this.engineTimers[engine] = null;
+
+				if (this.engineRunning[engine] === 0) {
+					this.unloadEngine(engine);
+				}
+			},
+			engine === "llm" ? GPU_IDLE_UNLOAD_MS : CPU_IDLE_UNLOAD_MS
+		);
+	}
+
+	/** The engine's models out of memory; the last engine going takes the worker. */
+	private unloadEngine(engine: EngineName): void {
+		this.clearEngineTimer(engine);
+
+		const worker = this.worker;
+
+		if (!worker || !this.loadedEngines.has(engine)) {
+			return;
+		}
+
+		this.loadedEngines.delete(engine);
+
+		if (this.loadedEngines.size === 0 && this.inFlight === 0) {
+			this.teardown();
+			return;
+		}
+
+		worker.client.unload(engine).catch(() => {
+			// A worker torn down meanwhile unloaded it anyway.
+		});
+	}
+
+	private clearEngineTimer(engine: EngineName): void {
+		if (this.engineTimers[engine] !== null) {
+			this.deps.clearTimeout(this.engineTimers[engine]);
+			this.engineTimers[engine] = null;
 		}
 	}
 
