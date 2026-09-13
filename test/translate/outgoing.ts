@@ -318,7 +318,7 @@ describe("translate/outgoing", () => {
 				},
 			});
 
-		it("leaves the source to the model and keeps nothing of the context but the register and the hint", () => {
+		it("leaves the source to the model and keeps nothing of the context but the register", () => {
 			const original = full();
 			const bare = bareRetry(original);
 
@@ -330,12 +330,21 @@ describe("translate/outgoing", () => {
 				voice: [],
 				formality: "formal",
 				variant: "de-AT",
-				// A seq2seq route takes the hint as its source: the retry goes
-				// down the same route, which without it would have no source.
-				sourceHint: "de",
 			});
+			expect(bare.context.sourceHint).to.equal(undefined);
 			expect(bare.context.topic).to.equal(undefined);
 			expect(bare.context.replyTo).to.equal(undefined);
+			expect(bare.context.topic).to.equal(undefined);
+			expect(bare.context.replyTo).to.equal(undefined);
+		});
+
+		it("keeps the source as the routing hint, which never reaches the prompt", () => {
+			// A seq2seq route takes the hint as its source: the retry goes down
+			// the same route, which without it would have no source at all.
+			expect(bareRetry(full()).hint).to.equal("de");
+			expect(bareRetry(full()).context.sourceHint).to.equal(undefined);
+			expect(bareRetry({...full(), from: null, hint: "tl"}).hint).to.equal("tl");
+			expect(bareRetry({...full(), from: null, hint: null}).hint).to.equal(null);
 		});
 
 		it("keeps the draft, the target and the route it is going down", () => {
@@ -565,6 +574,21 @@ describe("translate/outgoing", () => {
 
 			expect(r.requests[0].text).to.equal("the result is ⟦1⟧ and it is final");
 			expect(text).to.equal("[de] the result is $`x^2`$ and it is final");
+		});
+
+		it("sends the routing hint with every request, outside the prompt's context", async () => {
+			const r = rig(echo);
+
+			await translateDraft(
+				r.deps,
+				request({from: null, hint: "tl", batches: false}),
+				new AbortController().signal,
+				() => {}
+			);
+
+			expect(r.requests.map((q) => q.hint)).to.deep.equal(["tl"]);
+			expect(r.requests[0].context.sourceHint).to.equal(undefined);
+			r.clock.restore();
 		});
 
 		it("times out, aborting the request it made", async () => {

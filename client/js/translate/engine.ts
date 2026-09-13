@@ -42,10 +42,9 @@ export interface PromptContext {
 	replyTo?: ContextLine;
 	topic?: string;
 	/**
-	 * The language the text is probably in when `from` is null: the
-	 * detector's weak verdict or the channel's dominant language. The LLM
-	 * is told it as a guess; a seq2seq route takes it as the source
-	 * (router.ts, service.ts), since that engine has no prompt to detect in.
+	 * The channel's dominant language when the detector was unsure: the LLM
+	 * is told it as a guess. Absent `TranslateRequest.hint`, a seq2seq route
+	 * also takes it as the source (router.ts, service.ts).
 	 */
 	sourceHint?: string;
 	names: string[];
@@ -77,6 +76,15 @@ export interface TranslateRequest {
 	lines?: string[];
 	/** ISO 639-1 (639-3 codes are mapped by languages.ts); null = unknown. */
 	from: string | null;
+	/**
+	 * The language the text is probably in when `from` is null, for routing
+	 * only: it picks the table row and is a seq2seq request's source
+	 * (service.ts), and never reaches a prompt. The composer's weak detector
+	 * verdict travels here, since telling the LLM a guess the code judged
+	 * too weak to trust is measured to cost it (prompt.ts). Absent, the
+	 * router falls back to `context.sourceHint`.
+	 */
+	hint?: string | null;
 	to: string;
 	purpose: "read" | "write";
 	context: PromptContext;

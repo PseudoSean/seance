@@ -405,6 +405,8 @@ export interface OutgoingRequest {
 	/** The draft as typed: unprotected, may carry newlines. */
 	text: string;
 	from: string | null;
+	/** Routing only (`TranslateRequest.hint`): a seq2seq route's source when `from` is null. */
+	hint?: string | null;
 	to: string;
 	purpose: "write" | "read";
 	context: PromptContext;
@@ -429,11 +431,12 @@ export interface OutgoingRequest {
 }
 
 /**
- * The source hint a draft's request carries (`PromptContext.sourceHint`):
- * the named source when there is one, else the detector's verdict however
- * weak, unless that verdict is the target itself. A seq2seq route takes the
- * hint as its source (router.ts), so a draft whose source is left to the
- * LLM (`writeSource` returned null) can still reach NLLB or OPUS-MT.
+ * The routing hint a draft's request carries (`TranslateRequest.hint`, never
+ * the prompt): the named source when there is one, else the detector's
+ * verdict however weak, unless that verdict is the target itself. A seq2seq
+ * route takes the hint as its source (router.ts), so a draft whose source is
+ * left to the LLM (`writeSource` returned null) can still reach NLLB or
+ * OPUS-MT.
  */
 export function sourceHintFor(
 	detection: {lang: string | null},
@@ -449,10 +452,10 @@ export function sourceHintFor(
 
 /**
  * The second try for an answer that came back unchanged: the same draft,
- * the source left to the model, no context but the register and the source
- * hint. The hint stays because a seq2seq route takes it as its source: the
- * retry goes down the same route, and without a hint that route would have
- * no source at all.
+ * the source left to the model, no context but the register. The routing
+ * hint (`hint`, not part of the prompt) stays, because a seq2seq route
+ * takes it as its source: the retry goes down the same route, and without
+ * it that route would have no source at all.
  *
  * The bare request is the shape a model answers most reliably, and the two
  * things that make one hand a line back rather than translate it -- a
@@ -470,11 +473,7 @@ export function bareRetry(request: OutgoingRequest): OutgoingRequest {
 		context.variant = request.context.variant;
 	}
 
-	if (request.context.sourceHint) {
-		context.sourceHint = request.context.sourceHint;
-	}
-
-	return {...request, from: null, context};
+	return {...request, from: null, hint: request.hint ?? request.from, context};
 }
 
 /**
@@ -524,6 +523,7 @@ async function translateOne(
 		{
 			text: line,
 			from: request.from,
+			hint: request.hint,
 			to: request.to,
 			purpose: request.purpose,
 			context: request.context,
@@ -570,6 +570,7 @@ async function translateBatched(
 			text: "",
 			lines,
 			from: request.from,
+			hint: request.hint,
 			to: request.to,
 			purpose: request.purpose,
 			context: request.context,

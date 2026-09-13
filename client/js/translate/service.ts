@@ -135,12 +135,16 @@ export class TranslateService {
 	}
 
 	/**
-	 * A counter that moves on every download progress event, of any model.
-	 * The reading queue and the composer re-arm a request deadline that runs
-	 * out while it is still moving (outgoing.ts `armDeadline`): the router
-	 * sends a request to the best class whether its model is downloaded or
-	 * not, and a request waiting for a 620 MB download must not time out
-	 * while the download progresses.
+	 * A counter that moves on every progress event of a load a translation
+	 * is waiting for. The reading queue and the composer re-arm a request
+	 * deadline that runs out while it is still moving (outgoing.ts
+	 * `armDeadline`): the router sends a request to the best class whether
+	 * its model is downloaded or not, and a request waiting for a 620 MB
+	 * download must not time out while the download progresses. A download
+	 * started from Settings does not move it on its own (a translation that
+	 * joins that download does, through its own progress callback: client.ts
+	 * hands every joined load the same events), so a request stuck on an
+	 * engine is kept alive at most as long as another request's download.
 	 */
 	loadTicks(): number {
 		return this.ticks;
@@ -176,7 +180,7 @@ export class TranslateService {
 		// which would otherwise register another listener on the caller's
 		// signal every time, each closing over an id already abandoned.
 		let currentId = 0;
-		const hint = request.context.sourceHint ?? null;
+		const hint = request.hint ?? request.context.sourceHint ?? null;
 		// A teardown (pagehide, unload all) while the route was still being
 		// resolved -- the first route asks the worker what is downloaded --
 		// ends this call like one during the translation itself, rather than
@@ -381,7 +385,6 @@ export class TranslateService {
 
 		try {
 			await this.client().load(ref, (progress: LoadProgress) => {
-				this.ticks++;
 				view.fraction = progress.fraction;
 				this.publish();
 			});

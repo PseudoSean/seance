@@ -256,9 +256,11 @@ export async function translateOutgoing(
 		}
 
 		const from = writeSource(detection, readingLanguage(network, channel), to);
-		// The detector's verdict, however weak, rides along as the source
+		// The detector's verdict, however weak, rides along as the routing
 		// hint: a seq2seq route takes it as its source, so a draft whose
-		// source is left to the LLM can still reach NLLB (router.ts).
+		// source is left to the LLM can still reach NLLB (router.ts). It is
+		// not the prompt's `sourceHint`: the LLM is not told a guess the
+		// code judged too weak to trust.
 		const hint = sourceHintFor(detection, from, to);
 		const route = await translateService().route(from, to, hint);
 		const context = buildContext(
@@ -280,7 +282,7 @@ export async function translateOutgoing(
 				glossary: getBranding().translation?.glossary ?? [],
 				formality: formalityOf(settings.formality),
 				variant: settings.variant,
-				sourceHint: hint,
+				sourceHint: from,
 				voice: voiceFor(channel, to),
 			}
 		);
@@ -295,6 +297,7 @@ export async function translateOutgoing(
 		const request: OutgoingRequest = {
 			text: draft,
 			from,
+			hint,
 			to,
 			purpose: "write",
 			context,
@@ -593,8 +596,9 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 
 			// A read-back equal to the translation is the translation over
 			// again, which says nothing about what it means — so it gets the
-			// same bare second try the translation itself gets: the source
-			// left to the model (the hint stays, for a seq2seq route).
+			// same bare second try the translation itself gets: no
+			// `sourceHint`, the source left to the model (the routing hint
+			// stays, for a seq2seq route).
 			const first = answerError(entry.text, read);
 
 			if (first === UNCHANGED || first === NARRATION || first === REPETITION) {

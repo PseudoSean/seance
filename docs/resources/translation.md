@@ -53,14 +53,18 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   Filipino draft reached Qwen, and a device with nothing downloaded has to
   wait for a download anyway.
 - **The source hint.** A seq2seq model has no prompt to detect a source in,
-  so a request whose `from` is null used to skip every CPU candidate. The
-  request's `context.sourceHint` -- the detector's weak verdict, or the
-  channel's dominant language -- now picks the table row when `from` is null
-  and lets a seq2seq candidate run: the service sends that request with the
-  hint as its `from`, while an LLM request keeps `from: null` and is told
-  the hint as a guess. The composer fills the hint from the draft's
-  detection when `writeSource` names no source (`outgoing.ts`
-  `sourceHintFor`), and the bare second try keeps it.
+  so a request whose `from` is null used to skip every CPU candidate. A
+  request's routing hint now picks the table row when `from` is null and
+  lets a seq2seq candidate run: the service sends that request with the
+  hint as its `from`, while an LLM request keeps `from: null`. The hint is
+  `TranslateRequest.hint` when the caller sets one, else
+  `context.sourceHint` (the reader's channel prior, which the LLM prompt
+  already carried). The composer puts the draft's weak detector verdict in
+  `hint` only (`outgoing.ts` `sourceHintFor`) when `writeSource` names no
+  source: it never reaches the prompt, since telling the LLM a guess the
+  code judged too weak to trust is what the prompt measurements warn
+  against. The bare second try drops `context.sourceHint` as before and
+  keeps `hint`, so it goes down the same route.
 - **The shipped table follows a measurement**:
   `tools/translate-eval/results/2026-09-12-languages.md`, the share of an
   English line's content words that come back after a round trip through
@@ -462,7 +466,7 @@ language into the reading language (`termsFor`). No voice: that is the
 writer's. A read-back given the line cold reads it differently from how
 the channel will, and showing how the channel will read it is the point.
 The bare second try on an echo, a narration or a loop still drops the
-context, all but the register and the source hint.
+context, all but the register; the routing hint stays.
 
 When the second Enter sends a translation whose read-back finished, the
 posted line shows that read-back as its translation, with the same chip

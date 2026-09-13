@@ -188,6 +188,33 @@ describe("translate/service", () => {
 		gpu.service.dispose();
 	});
 
+	it("the request's routing hint wins over the context's and never changes the prompt context", async () => {
+		const r = rig("cpu");
+		clock = r.clock;
+		const request = {
+			...base,
+			from: null,
+			hint: "de",
+			context: {...emptyContext(), sourceHint: "fr"},
+		};
+
+		expect(await text(r.service.translate(request))).to.equal("seq:Hallo");
+		expect(r.seq2seq.calls.translate[0].from).to.equal("de");
+		expect(r.seq2seq.calls.translate[0].context.sourceHint).to.equal("fr");
+		r.service.dispose();
+	});
+
+	it("a download started from Settings does not move loadTicks on its own", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		const ticks = r.service.loadTicks();
+
+		await r.service.download(catalog.nllb);
+
+		expect(r.service.loadTicks()).to.equal(ticks);
+		r.service.dispose();
+	});
+
 	it("the first route knows what is downloaded without Settings having asked", async () => {
 		const r = rig("gpu", true, {en: {de: [["llm", "opus:de-en"]]}});
 		clock = r.clock;
