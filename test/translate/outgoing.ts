@@ -257,6 +257,19 @@ describe("translate/outgoing", () => {
 			expect(isRepetition("哈哈哈哈")).to.equal(false);
 			expect(isRepetition("")).to.equal(false);
 		});
+
+		it("leaves drawn-out surprise and laughter alone", () => {
+			expect(isRepetition("ええええええ、本当に？")).to.equal(false);
+			expect(isRepetition("哈哈哈哈哈哈，太好了")).to.equal(false);
+			expect(isRepetition("え".repeat(11))).to.equal(false);
+		});
+
+		it("counts a single repeated character only at twelve in a row", () => {
+			expect(isRepetition("ええええええええええええ")).to.equal(true);
+			expect(isRepetition("哈".repeat(12))).to.equal(true);
+			// Whole words keep the six.
+			expect(isRepetition("ekki ekki ekki ekki ekki ekki")).to.equal(true);
+		});
 	});
 
 	describe("tidyAnswer", () => {

@@ -13,7 +13,9 @@
 // English line gets no translation but a muted "English" mark, whose menu's
 // "Translate anyway" translates it; a Spanish line franc cannot tell from
 // Galician is translated with no source named and no "probably" guess in its
-// request; the chip's menu retranslates from another source
+// request; a three-word line too short for franc, said before any language is
+// declared, is marked "?" instead, and its mark's "Translate anyway"
+// translates it; the chip's menu retranslates from another source
 // (the detector's runners-up one click each, never the line's own source;
 // "Retranslate from…" opens the picker, Escape asks for nothing, French
 // makes the chip read "French → English" and the request carry `from: "fr"`, and
@@ -696,6 +698,68 @@ async function scenario(page) {
 			spanishRequests.every((r) => r.from === null && r.sourceHint === null)
 	);
 	base += 1;
+
+	// A line the detector cannot place at all: nine characters, three words,
+	// under DETECT_MIN_LENGTH so franc is never asked, and no language is
+	// declared here yet to place it. Unplaced with no candidates it could
+	// still be English (detect.ts `detectionSkip` "unsure"), so it is left
+	// alone and marked "?", and the mark's menu translates it anyway. No RUN
+	// marker fits under ten characters, so the rows with this text are
+	// counted first and the new one is the newest.
+	const unsureLine = "ja so gut";
+	const unsureRows = `[...document.querySelectorAll(".msg")].filter((m) => m.textContent.includes(${JSON.stringify(
+		unsureLine
+	)}))`;
+	const unsureBefore = await page.evaluate(`${unsureRows}.length`);
+
+	other.say(unsureLine);
+	await page.waitFor(`${unsureRows}.length > ${unsureBefore}`, {
+		timeout: 15000,
+		label: "the unplaceable line arrived",
+	});
+
+	const unsureRowId = String(await page.evaluate(`${unsureRows}.pop().id`));
+	const UNSURE_TAG = `#${unsureRowId} .msg-translation-skipped-tag`;
+
+	await page.waitFor(`!!document.querySelector(${JSON.stringify(UNSURE_TAG)})`, {
+		timeout: 15000,
+		label: "the unplaceable line carries the skipped mark",
+	});
+	await page.check(
+		"the mark reads ? for a line the detector could not place",
+		(await page.evaluate(
+			`document.querySelector(${JSON.stringify(UNSURE_TAG)}).textContent.trim()`
+		)) === "?"
+	);
+	await page.check(
+		"the unsure line gets no translation",
+		(await page.evaluate(LINES)) === base + 1
+	);
+	await page.screenshot("unsure-mark");
+	await openChipMenu(page, UNSURE_TAG, "the unsure mark's menu opened");
+	await page.check(
+		"the unsure mark's menu offers Translate anyway",
+		await page.evaluate(`!!document.querySelector(".context-menu-translate-anyway")`)
+	);
+	await page.click(".context-menu-translate-anyway");
+	await page.waitFor(
+		`!!document.querySelector(${JSON.stringify(
+			`#${unsureRowId} .msg-translation[data-status="done"]`
+		)})`,
+		{timeout: 20000, label: "Translate anyway on the unsure line produced a translation"}
+	);
+	await page.check(
+		"the translation replaced the ? mark",
+		await page.evaluate(
+			`!document.querySelector(${JSON.stringify(
+				UNSURE_TAG
+			)}) && document.querySelector(${JSON.stringify(
+				`#${unsureRowId} .msg-translation-text`
+			)}).textContent.includes("[English] ja so gut")`
+		)
+	);
+	base += 1;
+	await page.check("one more done line", (await page.evaluate(LINES)) === base + 1);
 
 	const requestsBeforeBurst = await page.evaluate(`(${REQUESTS}).length`);
 

@@ -440,7 +440,9 @@ language measurements: **an answer stuck repeating itself** ("got stuck
 repeating itself") -- Qwen answering Icelandic and Swahili questions with
 "Höfðu ekki ekki ekki ekki …". `isRepetition` judges it: the same word six
 or more times in a row, or in a script written without spaces the same run
-of one to three characters six or more times, and never when the source
+of two or three characters six or more times or a single character twelve or
+more ("ええええええ、本当に？" and "哈哈哈哈哈哈，太好了" are surprise and laughter,
+not a loop -- the loops seen were whole words), and never when the source
 repeats itself too ("no no no no" and "hahahaha" pass). It is checked right
 after the letterless rule and handled exactly like a narration: one bare
 retry in the composer, an uncounted failure in the queue. A fifth, from a

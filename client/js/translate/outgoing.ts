@@ -64,13 +64,24 @@ export const ANSWERED = "answered the question instead of translating it";
  * questions, 2026-09-12). The answer's failure, like the three above.
  */
 export const REPETITION = "got stuck repeating itself";
-/** How many times in a row a word (or a run of a script without spaces) makes a loop. */
+/**
+ * How many times in a row a word, or a run of two or three characters in a
+ * script without spaces, makes a loop.
+ */
 export const REPEAT_MIN = 6;
+/**
+ * How many times in a row a single character of a script without spaces
+ * makes a loop. Six is ordinary drawn-out speech there -- "ええええええ、本当に？",
+ * "哈哈哈哈哈哈，太好了" (measured, tmp/judge-first-attempts.ts) -- while the
+ * loops actually seen were whole words.
+ */
+export const SINGLE_REPEAT_MIN = 12;
 
 /** Scripts written without spaces between words: a loop there is a repeated run of characters. */
 const SPACELESS_CLASS =
 	"[\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Thai}\\p{Script=Lao}\\p{Script=Khmer}\\p{Script=Myanmar}]";
-const SPACELESS_LOOP = new RegExp(`(${SPACELESS_CLASS}{1,3})\\1{${REPEAT_MIN - 1},}`, "u");
+const SPACELESS_RUN_LOOP = new RegExp(`(${SPACELESS_CLASS}{2,3})\\1{${REPEAT_MIN - 1},}`, "u");
+const SPACELESS_CHAR_LOOP = new RegExp(`(${SPACELESS_CLASS})\\1{${SINGLE_REPEAT_MIN - 1},}`, "u");
 
 export type DraftGate = "empty" | "command" | "edit" | "ok";
 
@@ -287,9 +298,11 @@ export function isAnsweredQuestion(source: string, answer: string, to: string): 
 /**
  * Is an answer a model stuck in a loop? The same word REPEAT_MIN or more
  * times in a row (case and punctuation aside), or in a script written
- * without spaces the same run of one to three characters REPEAT_MIN or more
- * times. "no no no no" and "hahahaha" are not: four in a row, and a Latin
- * word is only ever compared as a whole word.
+ * without spaces the same run of two or three characters REPEAT_MIN or more
+ * times, or the same single character SINGLE_REPEAT_MIN or more. "no no no
+ * no" and "hahahaha" are not: four in a row, and a Latin word is only ever
+ * compared as a whole word; nor are "ええええええ" and "哈哈哈哈哈哈", six of one
+ * character.
  */
 export function isRepetition(answer: string): boolean {
 	let previous = "";
@@ -314,7 +327,7 @@ export function isRepetition(answer: string): boolean {
 		}
 	}
 
-	return SPACELESS_LOOP.test(answer);
+	return SPACELESS_RUN_LOOP.test(answer) || SPACELESS_CHAR_LOOP.test(answer);
 }
 
 /** The wrappers a model puts round a whole answer: open, close. */
