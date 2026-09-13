@@ -1,0 +1,16 @@
+{
+  "connect.guestSubmit": "Connect as guest",
+  "connect.guestTitle": "No account?",
+  "connect.rememberMe": "Stay signed in on this device",
+  "connect.savedNetworks": "Saved networks",
+  "connect.savedNetworksEmpty": "No saved networks yet. Networks you connect to are remembered here.",
+  "connect.signInIntro": "",
+  "connect.signInSubmit": "Sign in",
+  "connect.signInTitle": "Sign in",
+  "connect.submit": "Connect",
+  "connect.title": "Connect to IRC",
+  "help.about": "About",
+  "help.documentation": "Documentation",
+  "help.privacy": "Privacy policy",
+  "help.website": "Website"
+}

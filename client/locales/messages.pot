@@ -1,0 +1,92 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: seance\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: client/js/branding.ts
+#. Button that connects with just a nick instead of an account.
+msgctxt "connect.guestSubmit"
+msgid "Connect as guest"
+msgstr ""
+
+#: client/js/branding.ts
+#. Heading of the guest half of the sign-in form (features.guestAccess on).
+msgctxt "connect.guestTitle"
+msgid "No account?"
+msgstr ""
+
+#: client/js/branding.ts
+#. Checkbox on the sign-in form: remember the account and reconnect on the next load.
+msgctxt "connect.rememberMe"
+msgid "Stay signed in on this device"
+msgstr ""
+
+#: client/js/branding.ts
+#. Heading of the saved-networks list on the connect form.
+msgctxt "connect.savedNetworks"
+msgid "Saved networks"
+msgstr ""
+
+#: client/js/branding.ts
+#. Empty state of the saved-networks list on the connect form.
+msgctxt "connect.savedNetworksEmpty"
+msgid "No saved networks yet. Networks you connect to are remembered here."
+msgstr ""
+
+#: client/js/branding.ts
+#. Intro line above the sign-in form; intentionally empty by default, fill only if the deploy wants one.
+msgctxt "connect.signInIntro"
+msgid ""
+msgstr ""
+
+#: client/js/branding.ts
+#. Button that submits the sign-in form.
+msgctxt "connect.signInSubmit"
+msgid "Sign in"
+msgstr ""
+
+#: client/js/branding.ts
+#. Heading of the sign-in panel (features.signIn on).
+msgctxt "connect.signInTitle"
+msgid "Sign in"
+msgstr ""
+
+#: client/js/branding.ts
+#. Button on the connect form: submits it and dials the server.
+msgctxt "connect.submit"
+msgid "Connect"
+msgstr ""
+
+#: client/js/branding.ts
+#. Heading of the connect form (features.signIn off).
+msgctxt "connect.title"
+msgid "Connect to IRC"
+msgstr ""
+
+#: client/js/branding.ts
+#. About line at the top of the Help window, before the app name.
+msgctxt "help.about"
+msgid "About"
+msgstr ""
+
+#: client/js/branding.ts
+#. Label of the documentation link in the Help window.
+msgctxt "help.documentation"
+msgid "Documentation"
+msgstr ""
+
+#: client/js/branding.ts
+#. Label of the privacy policy link in the Help window.
+msgctxt "help.privacy"
+msgid "Privacy policy"
+msgstr ""
+
+#: client/js/branding.ts
+#. Label of the network's website link in the Help window.
+msgctxt "help.website"
+msgid "Website"
+msgstr ""
