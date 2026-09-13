@@ -77,10 +77,7 @@ describe("i18n toolchain", () => {
 				const result = compileFixture("compile/fuzzy");
 				// The fuzzy entry is left out entirely so the runtime falls back
 				// to en for its key.
-				expect(result.catalogs.fr).to.deep.equal({
-					"good.key": "Bon",
-					"untranslated.key": "",
-				});
+				expect(result.catalogs.fr).to.deep.equal({"good.key": "Bon"});
 				expect(result.warnings.join("\n")).to.match(/fuzzy\.target/);
 				expect(warn.calledWithMatch(/fuzzy\.target/)).to.equal(true);
 				expect(result.warnings.join("\n")).to.not.contain("untranslated.key");
@@ -93,18 +90,34 @@ describe("i18n toolchain", () => {
 			expect(() => compileFixture("compile/placeholder")).to.throw(/activity\.join/);
 		});
 
-		it("keeps untranslated entries as empty strings (no throw, no invention)", () => {
-			// "untranslated.key" carries no translation in the fixture: compile
-			// must not invent one and must not fail either.
+		it("omits untranslated entries so the runtime falls back to en", () => {
+			// "untranslated.key" (singular) and "untranslated.plural" (no filled
+			// category) carry no translation in the fixture. The runtime falls
+			// back to en on key ABSENCE, so a present-but-empty value would
+			// shadow en: compile leaves the key out entirely — without
+			// inventing a translation and without failing.
 			const warn = sinon.stub(console, "warn");
 
 			try {
 				const result = compileFixture("compile/fuzzy");
-				expect(result.catalogs.fr).to.deep.equal({
-					"good.key": "Bon",
-					"untranslated.key": "",
-				});
+				expect(result.catalogs.fr).to.deep.equal({"good.key": "Bon"});
 				expect(result.warnings.join("\n")).to.not.contain("untranslated.key");
+				expect(result.warnings.join("\n")).to.not.contain("untranslated.plural");
+			} finally {
+				warn.restore();
+			}
+		});
+
+		it("keeps the intentional empty copy in en.json and omits it from qqx", () => {
+			// "intentional.empty" is English copy that happens to be empty
+			// (like connect.signInIntro): en.json keeps it verbatim, while the
+			// qqx overlay leaves it out — en serves the key at runtime.
+			const warn = sinon.stub(console, "warn");
+
+			try {
+				const result = compileFixture("compile/fuzzy");
+				expect(result.catalogs.en["intentional.empty"]).to.equal("");
+				expect(result.catalogs.qqx).to.not.have.property("intentional.empty");
 			} finally {
 				warn.restore();
 			}

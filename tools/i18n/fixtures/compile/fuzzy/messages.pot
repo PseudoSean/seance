@@ -21,3 +21,15 @@ msgstr ""
 msgctxt "untranslated.key"
 msgid "Untranslated"
 msgstr ""
+
+#. Left untranslated on purpose, plural.
+msgctxt "untranslated.plural"
+msgid "{count} user has joined"
+msgid_plural "{count} users have joined"
+msgstr[0] ""
+msgstr[1] ""
+
+#. Intentionally empty English copy; a deploy may fill it in.
+msgctxt "intentional.empty"
+msgid ""
+msgstr ""

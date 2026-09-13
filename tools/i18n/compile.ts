@@ -125,6 +125,11 @@ function compileEntry(entry: PoEntry, tag: string, expr: string): string | Recor
 	return entry.msgstr[0] ?? "";
 }
 
+/** A compiled value with nothing in it: an untranslated singular or plural. */
+function isEmptyValue(value: string | Record<string, string>): boolean {
+	return value === "" || Object.keys(value).length === 0;
+}
+
 // Deterministic pseudo-translation: accented lookalikes, doubled length
 // (catches truncation/overflow), RLE+PDF wrapped so every string renders
 // right-to-left. Extracted to tools/i18n/pseudo.ts in Task 10; until then it
@@ -212,6 +217,12 @@ function pseudoCatalogFromEn(en: Catalog): Catalog {
 	const catalog: Catalog = {};
 
 	for (const [key, value] of Object.entries(en)) {
+		// Empty en values (an intentional empty copy) have nothing to
+		// pseudo-translate: leave the key out so en serves it at runtime.
+		if (isEmptyValue(value)) {
+			continue;
+		}
+
 		if (typeof value === "string") {
 			catalog[key] = pseudo(value);
 			continue;
@@ -271,7 +282,9 @@ export function compileLocales(options: CompileOptions = {}): CompileResult {
 		// en and qqx are produced from the pot itself — a hand-written file
 		// for either tag would be overwritten or listed twice.
 		if (tag === "qqx" || tag === "en") {
-			throw new Error(`compile: ${tag} is compiled from the pot — there is no hand-written ${tag}.po`);
+			throw new Error(
+				`compile: ${tag} is compiled from the pot — there is no hand-written ${tag}.po`
+			);
 		}
 
 		const {headers, entries} = parsePo(readFileSync(resolve(localesDir, file), "utf8"));
@@ -296,7 +309,15 @@ export function compileLocales(options: CompileOptions = {}): CompileResult {
 			}
 
 			assertPlaceholders(entry);
-			catalog[entry.msgctxt] = compileEntry(entry, tag, rule.expr);
+			const value = compileEntry(entry, tag, rule.expr);
+
+			// The runtime falls back to en on key ABSENCE, so an entry with
+			// nothing compiled must be left out — a present "" (or an empty
+			// plural object) would shadow en. en.json itself keeps every pot
+			// msgid verbatim, including the intentional empty copies.
+			if (!isEmptyValue(value)) {
+				catalog[entry.msgctxt] = value;
+			}
 		}
 
 		catalogs[tag] = catalog;
