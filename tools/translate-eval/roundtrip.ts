@@ -33,10 +33,10 @@ interface Run {
 	transcript: string;
 }
 
-function runEval(fixture: string, markers: string): Run {
+function runEval(fixture: string, markers: string, runnerArgs: string[]): Run {
 	const result = spawnSync(
 		"npx",
-		["tsx", "tools/translate-llm.ts", "--eval", fixture, "--markers", markers],
+		["tsx", "tools/translate-llm.ts", "--eval", fixture, "--markers", markers, ...runnerArgs],
 		{encoding: "utf8", maxBuffer: 64 * 1024 * 1024}
 	);
 	const transcript = `${result.stdout}\n${result.stderr}`;
@@ -59,11 +59,17 @@ function runEval(fixture: string, markers: string): Run {
 }
 
 function main(): void {
-	const args = process.argv.slice(2);
+	const all = process.argv.slice(2);
+	// Everything after a bare `--` goes to the runner as it is (`--repo`, `--dtype`).
+	const split = all.indexOf("--");
+	const args = split >= 0 ? all.slice(0, split) : all;
+	const runnerArgs = split >= 0 ? all.slice(split + 1) : [];
 	const fixture = args.find((a) => !a.startsWith("--"));
 
 	if (!fixture) {
-		throw new Error("usage: roundtrip.ts <fixture.json> [--markers literal] [--out file.md]");
+		throw new Error(
+			"usage: roundtrip.ts <fixture.json> [--markers literal] [--out file.md] [-- <runner flags>]"
+		);
 	}
 
 	const flag = (name: string, fallback: string): string => {
@@ -78,7 +84,7 @@ function main(): void {
 
 	console.log(`forward: ${cases.length} cases from ${fixture}`);
 
-	const forward = runEval(fixture, markers);
+	const forward = runEval(fixture, markers, runnerArgs);
 
 	writeFileSync(`${out}.forward.txt`, forward.transcript);
 
@@ -103,7 +109,7 @@ function main(): void {
 	writeFileSync(backFixture, JSON.stringify(back, null, 1));
 	console.log(`back: ${back.length} cases`);
 
-	const backward = runEval(backFixture, markers);
+	const backward = runEval(backFixture, markers, runnerArgs);
 
 	writeFileSync(`${out}.back.txt`, backward.transcript);
 

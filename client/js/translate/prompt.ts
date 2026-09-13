@@ -176,10 +176,15 @@ export function systemPrompt(req: TranslateRequest, name: (code: string) => stri
 	// are" made English the likeliest first token of a Turkish or Korean
 	// translation (28% and 52%, the top choice), and the model handed the
 	// line back; without it the copy fell to under 2%. Where there is a mark
-	// it stays, because it also holds emphasis marks in place. Nothing else
-	// is scoped: with the marks sentence left out as well, an embedded
-	// "Translate into French: …" was obeyed, and either sentence alone
-	// resisted it.
+	// it stays, because it also holds emphasis marks in place. The marks
+	// sentence is scoped the same way: on the web build's own weights (MLC
+	// q4f16_1, tools/translate-eval/mlc-to-onnx.py) its examples were copied
+	// onto unmarked lines ("sounds good to me ||…||") and casual lines came
+	// back untranslated -- 40 of 45 clean without it on unmarked lines,
+	// 32 with it; the marks and prompt sets scored the same either way. (An
+	// embedded "Translate into French: …" is obeyed on those weights with or
+	// without it; the earlier measurement that it resisted was on ONNX
+	// weights with a float16 output head.)
 	const carried = req.lines ? req.lines.join("\n") : req.text;
 	const hasSomethingToKeep =
 		placeholdersIn(carried).length > 0 || /\*|~~|\|\||<\/?\d+>/.test(carried);
@@ -191,7 +196,11 @@ export function systemPrompt(req: TranslateRequest, name: (code: string) => stri
 					1
 			  )}, nicknames, channel names and anything after # exactly as they are.`
 			: "",
-		req.markers === "literal" ? KEEP_MARKS : req.markers === "tags" ? KEEP_TAGS : "",
+		req.markers === "literal" && hasSomethingToKeep
+			? KEEP_MARKS
+			: req.markers === "tags"
+			? KEEP_TAGS
+			: "",
 		"Keep the register: a short casual line stays short and casual.",
 		// The only thing the system message says about the channel's own
 		// words: everything under that heading is vocabulary, whatever it

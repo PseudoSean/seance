@@ -159,12 +159,17 @@ export function reverseTarget(readingLanguage: string, writeTarget: string): str
 /** What two texts are compared as by `isUnchanged`: the differences a model
  *  makes to a line it is handing back rather than translating. */
 function echoForm(text: string): string {
-	return text
-		.toLowerCase()
-		.replace(/\s+/g, " ")
-		.trim()
-		.replace(/[.,!?…]+$/, "")
-		.trim();
+	return (
+		text
+			.toLowerCase()
+			// Marks the model wrapped the line in are packaging, not a change:
+			// "*sounds good to me*" and "||no problem||" are still the line.
+			.replace(/\*\*|__|~~|\|\||(^|\s)[*_]+|[*_]+(\s|$)/g, " ")
+			.replace(/\s+/g, " ")
+			.trim()
+			.replace(/[.,!?…]+$/, "")
+			.trim()
+	);
 }
 
 /**
@@ -330,8 +335,14 @@ export function isRepetition(answer: string): boolean {
 	return SPACELESS_RUN_LOOP.test(answer) || SPACELESS_CHAR_LOOP.test(answer);
 }
 
+/** A mark with nothing but an ellipsis inside, at the end or the start. */
+const EMPTY_MARK_AFTER = /\s*(\|\||~~|\*\*|__|\*|_)\s*(?:\u2026|\.{2,})\s*\1\s*$/;
+const EMPTY_MARK_BEFORE = /^\s*(\|\||~~|\*\*|__|\*|_)\s*(?:\u2026|\.{2,})\s*\1\s*/;
+
 /** The wrappers a model puts round a whole answer: open, close. */
 const ANSWER_WRAPPERS: [string, string][] = [
+	["||", "||"],
+	["~~", "~~"],
 	["**", "**"],
 	["__", "__"],
 	["*", "*"],
@@ -377,6 +388,18 @@ export function tidyAnswer(source: string, answer: string): string {
 		text = preamble[2].trim();
 	}
 
+	// An empty mark the source does not have, at either end: "||…||",
+	// "~~...~~". Measured on the web build's 1.7B weights, which copied
+	// the marks sentence's own example onto 7 of 45 casual lines
+	// ("sounds good to me ||…||").
+	for (const edge of [EMPTY_MARK_AFTER, EMPTY_MARK_BEFORE]) {
+		const found = edge.exec(text);
+
+		if (found && !line.includes(found[1]) && text.replace(edge, "").trim() !== "") {
+			text = text.replace(edge, "").trim();
+		}
+	}
+
 	for (const [open, close] of ANSWER_WRAPPERS) {
 		if (!text.startsWith(open) || line.startsWith(open)) {
 			continue;
@@ -391,7 +414,7 @@ export function tidyAnswer(source: string, answer: string): string {
 
 		const inner = body.slice(open.length, body.length - close.length);
 
-		if (inner.trim() === "" || inner.includes(open) || inner.includes(close)) {
+		if (!/[\p{L}\p{N}]/u.test(inner) || inner.includes(open) || inner.includes(close)) {
 			continue;
 		}
 

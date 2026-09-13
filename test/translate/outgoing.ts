@@ -171,6 +171,10 @@ describe("translate/outgoing", () => {
 			expect(isUnchanged("please keep the log.", "please keep the log")).to.equal(true);
 			expect(isUnchanged("wirklich?!", "wirklich")).to.equal(true);
 			expect(isUnchanged("das war es…", "Das war es")).to.equal(true);
+			// Marks round the line or round a word are packaging.
+			expect(isUnchanged("sounds good to me", "*sounds good to me*")).to.equal(true);
+			expect(isUnchanged("no problem", "||No problem||")).to.equal(true);
+			expect(isUnchanged("wait what?", "**wait** what?")).to.equal(true);
 			expect(isUnchanged("", "   ")).to.equal(true);
 		});
 
@@ -285,6 +289,28 @@ describe("translate/outgoing", () => {
 			expect(tidyAnswer("wichtig", "*important*")).to.equal("important");
 			expect(tidyAnswer("wichtig", "\u201cimportant\u201d")).to.equal("important");
 			expect(tidyAnswer("hallo", "The translation is: hello!")).to.equal("hello!");
+			expect(tidyAnswer("wichtig", "||important||")).to.equal("important");
+			expect(tidyAnswer("wichtig", "~~important~~")).to.equal("important");
+		});
+
+		it("takes off an empty mark the model copied from the prompt", () => {
+			// Measured on the web build's 1.7B weights, casual English lines.
+			expect(tidyAnswer("no problem", "Non problème ||…||")).to.equal("Non problème");
+			expect(tidyAnswer("no problem", "No problem ||...||")).to.equal("No problem");
+			expect(tidyAnswer("no problem", "~~…~~ kein Problem")).to.equal("kein Problem");
+			// The judge then sees the echo that was hiding behind it.
+			expect(
+				answerError(
+					"sounds good to me",
+					tidyAnswer("sounds good to me", "sounds good to me ||…||"),
+					"fr"
+				)
+			).to.equal(UNCHANGED);
+			// A source with the same mark keeps it, and a mark with words inside is content.
+			expect(tidyAnswer("wait ||…||", "attends ||…||")).to.equal("attends ||…||");
+			expect(tidyAnswer("a spoiler", "un ||spoiler||")).to.equal("un ||spoiler||");
+			// Nothing but the mark: left for the judge.
+			expect(tidyAnswer("hm", "||…||")).to.equal("||…||");
 		});
 
 		it("leaves an answer alone when the source has the same shape", () => {
