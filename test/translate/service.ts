@@ -17,7 +17,7 @@ import {
 	GPU_IDLE_UNLOAD_MS,
 	TRANSLATION_UNAVAILABLE,
 	TranslateService,
-	downloadNote,
+	loadNote,
 	type ServiceDeps,
 } from "../../client/js/translate/service";
 import {serveEngines} from "../../client/js/translate/worker";
@@ -311,16 +311,20 @@ describe("translate/service", () => {
 		r.service.dispose();
 	});
 
-	it("downloadNote names the model and how far its download has got", () => {
-		expect(
-			downloadNote({
-				ref: catalog.nllb,
-				cached: false,
-				status: "downloading",
-				fraction: 0.424,
-				error: null,
-			})
-		).to.equal("Downloading NLLB-200 600M (CPU, 200 languages)\u2026 42%");
+	it("loadNote names the model and how far it has got, downloading or loading", () => {
+		const view = {
+			ref: catalog.nllb,
+			cached: false,
+			status: "downloading" as const,
+			fraction: 0.424,
+			error: null,
+		};
+
+		expect(loadNote(view)).to.equal("Downloading NLLB-200 600M (CPU, 200 languages)\u2026 42%");
+		// Already on this device: loaded back into memory, not downloaded again.
+		expect(loadNote({...view, cached: true})).to.equal(
+			"Loading NLLB-200 600M (CPU, 200 languages) into memory\u2026 42%"
+		);
 	});
 
 	it("marks a candidate down when its model fails to load and takes the next", async () => {

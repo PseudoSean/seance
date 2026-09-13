@@ -84,7 +84,7 @@ import {useStore} from "../js/store";
 import {readingLanguage, retranslate, retryTranslation, showOriginal} from "../js/translate/reader";
 import {languageName} from "../js/translate/languages";
 import {directionText} from "../js/translate/labels";
-import {downloadNote} from "../js/translate/service";
+import {loadNote} from "../js/translate/service";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
 import ParsedMessage from "./ParsedMessage.vue";
 import SourceLanguagePicker from "./SourceLanguagePicker.vue";
@@ -155,7 +155,7 @@ export default defineComponent({
 				(v) => v.status === "downloading" && v.ref.engine === value.engine
 			);
 
-			return view ? downloadNote(view) : "";
+			return view ? loadNote(view) : "";
 		});
 
 		const chip = ref<HTMLButtonElement | null>(null);

@@ -55,9 +55,19 @@ export interface ModelView {
 	error: string | null;
 }
 
-/** What a strip or a reading line says while its model downloads. */
-export function downloadNote(view: ModelView): string {
-	return `Downloading ${view.ref.label}… ${Math.round(view.fraction * 100)}%`;
+/**
+ * What a strip or a reading line says while its model loads. A model not yet
+ * on this device is being downloaded; one already downloaded (`cached`,
+ * known before the load from the worker's cache state) is being loaded back
+ * into memory -- after an idle unload, a GPU model switch or a page reload --
+ * which the user should not mistake for another download.
+ */
+export function loadNote(view: ModelView): string {
+	const percent = Math.round(view.fraction * 100);
+
+	return view.cached
+		? `Loading ${view.ref.label} into memory… ${percent}%`
+		: `Downloading ${view.ref.label}… ${percent}%`;
 }
 
 export class TranslateService {

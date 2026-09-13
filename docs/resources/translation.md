@@ -107,7 +107,10 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   been opened.
 - **A better class that is not downloaded is downloaded on demand**, not
   passed over: the strip or the reading line says "Downloading <model>… N%"
-  while it waits (`service.ts` `downloadNote`, off the model views), and
+  while it waits, or "Loading <model> into memory… N%" when the model is
+  already on the device and only being loaded back (after an idle unload, a
+  GPU model switch or a reload; `service.ts` `loadNote`, off the model
+  views' `cached`), and
   the request's deadline (two minutes in the queue and the composer) waits
   the download out: `outgoing.ts` `armDeadline` re-arms a deadline that
   runs out while the service's `loadTicks` counter is still moving, and

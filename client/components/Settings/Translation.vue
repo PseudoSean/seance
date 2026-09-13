@@ -315,7 +315,10 @@ export default defineComponent({
 		const stateLabel = (view: ModelView) => {
 			switch (view.status) {
 				case "downloading":
-					return `${Math.round(view.fraction * 100)}%`;
+					// Already on this device: the row is loading it, not downloading it.
+					return view.cached
+						? `Loading… ${Math.round(view.fraction * 100)}%`
+						: `${Math.round(view.fraction * 100)}%`;
 				case "ready":
 					return "Downloaded";
 				case "failed":

@@ -256,7 +256,7 @@ import {hasVirtualKeyboard} from "../js/helpers/device";
 import {languageName} from "../js/translate/languages";
 import {draftGate} from "../js/translate/outgoing";
 import {readingLanguage} from "../js/translate/reader";
-import {downloadNote} from "../js/translate/service";
+import {loadNote} from "../js/translate/service";
 import {
 	cancelOutgoing,
 	noteOutgoingSent,
@@ -575,7 +575,7 @@ export default defineComponent({
 
 			const view = store.state.translation.models.find((v) => v.ref.id === entry.model);
 
-			return view && view.status === "downloading" ? downloadNote(view) : "";
+			return view && view.status === "downloading" ? loadNote(view) : "";
 		});
 
 		// Why it failed, beside "couldn't translate": an ORT session error or
