@@ -578,7 +578,7 @@ p {
 #help .documentation-link::before,
 #help .report-issue-link::before {
 	display: inline-block;
-	margin-right: 5px;
+	margin-inline-end: 5px;
 
 	/* These 2 directives are loosely taken from .fa-fw */
 	width: 1.35em;
@@ -689,7 +689,7 @@ p {
 #chat .msg-statusmsg,
 #chat .msg-shown-in-active {
 	cursor: help;
-	margin-right: 5px;
+	margin-inline-end: 5px;
 }
 
 #chat .msg-statusmsg span::before,
@@ -722,7 +722,7 @@ p {
 	color: #cfcfcf;
 	content: "\f002"; /* http://fontawesome.io/icon/search/ */
 	position: absolute;
-	right: 13px;
+	inset-inline-end: 13px;
 	line-height: 3rem;
 }
 
@@ -733,7 +733,7 @@ p {
 
 #settings #play::before {
 	content: "\f028"; /* http://fontawesome.io/icon/volume-up/ */
-	margin-right: 9px;
+	margin-inline-end: 9px;
 }
 
 #image-viewer .previous-image-btn::before {
@@ -867,7 +867,7 @@ p {
 }
 
 #sidebar .devtools-toggle {
-	margin-left: 4px;
+	margin-inline-start: 4px;
 	padding: 0 4px;
 	border: 0;
 	border-radius: 4px;
@@ -964,7 +964,8 @@ background on hover (unless active) */
 	color: #84ce88;
 	font-size: 1.0625rem;
 	font-weight: bold;
-	padding: 0.375rem 0.875rem 0.25rem 0;
+	padding-block: 0.375rem 0.25rem;
+	padding-inline: 0 0.875rem;
 }
 
 /* The network header is two rows inside one tab — one click target, one drag
@@ -992,7 +993,7 @@ wrapper is what the jump-to results' server glyph (::before) sits beside. */
 
 .channel-list-item .lobby-status {
 	margin-top: 0.125rem;
-	padding-left: 0.875rem; /* the channel rows' own padding, so the toolbar sits on their icon column */
+	padding-inline-start: 0.875rem; /* the channel rows' own padding, so the toolbar sits on their icon column */
 	gap: 0.5rem;
 	font-size: 0.75rem;
 	font-weight: normal;
@@ -1011,7 +1012,7 @@ wrapper is what the jump-to results' server glyph (::before) sits beside. */
 	overflow: hidden;
 	white-space: nowrap;
 	text-overflow: ellipsis;
-	text-align: right;
+	text-align: end;
 
 	/* A theme with a rail palette (coffee, creama) lends its muted rail text;
 	the fallback is day's sidebar #b7c5d1, stepped back. */
@@ -1053,7 +1054,7 @@ way of the click. */
 
 .channel-list-item::before {
 	width: 1em;
-	margin-right: 0.75em;
+	margin-inline-end: 0.75em;
 	line-height: 1.2;
 }
 
@@ -1113,7 +1114,7 @@ of one that has already passed — and only one `animation` can hold the icon. *
 	flex-grow: 1;
 	overflow: hidden;
 	white-space: nowrap;
-	margin-right: 5px;
+	margin-inline-end: 5px;
 }
 
 .header .topic,
@@ -1335,7 +1336,7 @@ so the toolbar has one weight; green is what marks a subscribed bell. */
 #sidebar .network .collapse-network {
 	width: 2.5rem;
 	opacity: 0.4;
-	padding-left: 0.6875rem;
+	padding-inline-start: 0.6875rem;
 	transition: opacity 0.2s;
 	flex-shrink: 0;
 }
@@ -1406,7 +1407,8 @@ input[type="checkbox"],
 input[type="radio"] {
 	width: 1em;
 	height: 1em;
-	margin: 0 0.4em 0 0;
+	margin-block: 0;
+	margin-inline: 0 0.4em;
 	vertical-align: -0.1em;
 	flex: 0 0 auto;
 }
@@ -1530,7 +1532,7 @@ textarea.input {
 
 .header .title {
 	font-size: 1.0625rem;
-	padding-left: 6px;
+	padding-inline-start: 6px;
 	flex-shrink: 1;
 	white-space: nowrap;
 	overflow: hidden;
@@ -1540,12 +1542,12 @@ textarea.input {
 .topic-container {
 	position: relative;
 	flex-grow: 1;
-	padding-left: 10px;
+	padding-inline-start: 10px;
 }
 
 .header .topic {
 	color: var(--body-color-muted);
-	margin-left: 8px;
+	margin-inline-start: 8px;
 	word-break: break-all;
 	flex-grow: 1;
 	overflow: hidden;
@@ -1563,8 +1565,8 @@ textarea.input {
 	background: transparent;
 	border: 1px solid #cdd3da;
 	border-radius: 2px;
-	padding-right: 2.5rem;
-	padding-left: 0.625rem;
+	padding-inline-end: 2.5rem;
+	padding-inline-start: 0.625rem;
 	width: 100%;
 	height: 2.5rem;
 	overflow: hidden;
@@ -1576,7 +1578,7 @@ textarea.input {
 .topic-container .save-topic {
 	position: absolute;
 	top: 0.25rem;
-	right: 0;
+	inset-inline-end: 0;
 }
 
 .topic-container .save-topic span {
@@ -1678,7 +1680,7 @@ textarea.input {
 }
 
 #chat .userlist {
-	border-left: 1px solid #e7e7e7;
+	border-inline-start: 1px solid #e7e7e7;
 	width: var(--userlist-width);
 	display: none;
 	flex-direction: column;
@@ -1735,7 +1737,7 @@ textarea.input {
 .scroll-down {
 	position: absolute;
 	bottom: 16px;
-	right: 16px;
+	inset-inline-end: 16px;
 	z-index: 2;
 	pointer-events: none;
 	opacity: 0;
@@ -1778,7 +1780,7 @@ textarea.input {
 }
 
 .userlist-open .chat-view[data-type="channel"] .scroll-down {
-	right: calc(var(--userlist-width) + 1rem);
+	inset-inline-end: calc(var(--userlist-width) + 1rem);
 }
 
 #chat .messages {
@@ -1868,7 +1870,7 @@ textarea.input {
  * and none of this applies. */
 #chat .time {
 	color: var(--body-color-muted);
-	padding-left: 0.625rem;
+	padding-inline-start: 0.625rem;
 
 	/* 00:00 is 5ch exactly; the letters of pm and the colons are narrower
 	 * than a figure in most faces, so the 12-hour forms carry less slack
@@ -1876,7 +1878,7 @@ textarea.input {
 	width: 5.5ch;
 	white-space: nowrap;
 	font-variant-numeric: tabular-nums;
-	box-sizing: content-box; /* highlights have a border-left */
+	box-sizing: content-box; /* highlights have a border-inline-start */
 }
 
 #chat.time-12h .time {
@@ -1893,12 +1895,12 @@ textarea.input {
 
 #chat .from {
 	padding: 0.2em 0.5rem;
-	text-align: right;
+	text-align: end;
 	box-sizing: content-box;
 	flex: 0 1000 12ch; /* the shrink weight is what makes it give way before .content */
 	min-width: 9ch;
 
-	/* A nick wider than the column overflows at the right whatever the
+	/* A nick wider than the column overflows at its inline end whatever the
 	 * alignment, so that is where it is cut: an ellipsis, so the start of
 	 * the nick is what stays. */
 	overflow: hidden;
@@ -1910,11 +1912,11 @@ textarea.input {
 #chat .content {
 	flex: 1 1 30ch;
 	min-width: 0;
-	padding-left: 0.5rem;
-	padding-right: 0.375rem;
-	border-left: 1px solid #f6f6f6;
+	padding-inline-start: 0.5rem;
+	padding-inline-end: 0.375rem;
+	border-inline-start: 1px solid #f6f6f6;
 	overflow: hidden; /* Prevents Zalgo text to expand beyond messages */
-	text-align: left; /* so RTL text will still be aligned left, not right */
+	text-align: start; /* follows each paragraph's own direction once the content is bidi-isolated (unicode-bidi below) */
 }
 
 #chat .msg[data-type="unhandled"] .from {
@@ -2002,12 +2004,12 @@ textarea.input {
 #chat .msg.channel_list_loading .text {
 	color: #999;
 	font-style: italic;
-	padding-left: 20px;
+	padding-inline-start: 20px;
 }
 
 #chat .msg.channel_list_truncated .text {
 	color: #f00;
-	padding-left: 20px;
+	padding-inline-start: 20px;
 }
 
 #chat table.channel-list,
@@ -2041,7 +2043,7 @@ textarea.input {
 #chat table.ban-list .banned_at,
 #chat table.ignore-list .hostmask,
 #chat table.ignore-list .when {
-	text-align: left;
+	text-align: start;
 }
 
 #chat table.channel-list .users {
@@ -2105,20 +2107,20 @@ textarea.input {
 
 #chat .chat-view[data-type="channel"] .msg.highlight {
 	background-color: var(--highlight-bg-color);
-	border-left: 5px solid var(--highlight-border-color);
+	border-inline-start: 5px solid var(--highlight-border-color);
 }
 
 #chat .chat-view[data-type="channel"] .msg.highlight .time {
-	padding-left: 5px;
+	padding-inline-start: 5px;
 	color: #696969;
 }
 
 #chat .chat-view[data-type="channel"] .msg.highlight .content {
-	border-left: 1px solid var(--highlight-bg-color);
+	border-inline-start: 1px solid var(--highlight-bg-color);
 }
 
 #chat .preview-size {
-	margin-left: 5px;
+	margin-inline-start: 5px;
 	user-select: none;
 }
 
@@ -2213,7 +2215,7 @@ textarea.input {
 #chat .toggle-content .more {
 	color: var(--link-color);
 	font-weight: normal;
-	margin-left: 10px;
+	margin-inline-start: 10px;
 	flex-shrink: 0;
 }
 
@@ -2267,7 +2269,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	min-width: min(320px, 100%);
 	max-width: 100%;
 	min-height: 64px;
-	padding: 6px 10px 6px 6px;
+	padding-block: 6px;
+	padding-inline: 6px 10px;
 }
 
 #chat .media-veil-main {
@@ -2276,10 +2279,11 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	align-items: center;
 	gap: 10px;
 	min-width: 0;
-	padding: 5px 8px 5px 5px;
+	padding-block: 5px;
+	padding-inline: 5px 8px;
 	border-radius: 6px;
 	color: inherit;
-	text-align: left;
+	text-align: start;
 	transition: background-color 0.15s;
 }
 
@@ -2368,7 +2372,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 #chat .media-veil-trust {
 	flex: 0 0 auto;
-	margin-left: auto;
+	margin-inline-start: auto;
 	padding: 4px 10px;
 	border: 1px solid rgb(127 127 127 / 40%);
 	border-radius: 999px;
@@ -2389,7 +2393,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #chat .media-veil-caret {
-	margin-left: 4px;
+	margin-inline-start: 4px;
 	font-size: 0.7rem;
 }
 
@@ -2412,7 +2416,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 #chat .media-tools {
 	position: absolute;
 	top: 6px;
-	right: 6px;
+	inset-inline-end: 6px;
 	display: flex;
 	gap: 2px;
 	padding: 2px;
@@ -2474,7 +2478,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
-	padding-right: 4px;
+	padding-inline-end: 4px;
 }
 
 #chat .toggle-type-audio .media-tools {
@@ -2552,7 +2556,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	font: inherit;
 	outline: 0;
 	padding: 0.8125rem;
-	padding-right: 1.875rem;
+	padding-inline-end: 1.875rem;
 	width: 100%;
 }
 
@@ -2645,7 +2649,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #loading pre {
-	text-align: left;
+	text-align: start;
 	white-space: normal;
 }
 
@@ -2702,7 +2706,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 #connect .tls input,
 #connect input[name="proxyEnabled"] {
-	margin: 3px 10px 0 0;
+	margin-block: 3px 0;
+	margin-inline: 0 10px;
 }
 
 #connect\:host,
@@ -2758,13 +2763,14 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 #settings .opt {
 	display: block;
-	padding: 5px 0 5px 1px;
+	padding-block: 5px;
+	padding-inline: 1px 0;
 }
 
 /* Adjacent buttons in a settings row keep a gap between them (snooze row,
  * prompt actions, anything else that ends up inline). */
 #settings .opt .btn + .btn {
-	margin-left: 8px;
+	margin-inline-start: 8px;
 }
 
 /* The push snooze buttons sit on their own line under their label. */
@@ -2773,12 +2779,12 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #settings .opt input {
-	margin-right: 0.4em;
+	margin-inline-end: 0.4em;
 }
 
 /* Media previews: reveal policy and trusted hosts (Settings/Appearance.vue) */
 #settings .media-reveal-options {
-	margin-left: 22px;
+	margin-inline-start: 22px;
 	transition: opacity 0.2s;
 }
 
@@ -2787,7 +2793,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #settings .trusted-hosts {
-	margin: 8px 0 0 22px;
+	margin-block: 8px 0;
+	margin-inline: 22px 0;
 	padding: 10px 12px;
 	border: 1px solid rgb(127 127 127 / 25%);
 	border-radius: 6px;
@@ -2856,7 +2863,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
-	padding: 3px 4px 3px 10px;
+	padding-block: 3px;
+	padding-inline: 10px 4px;
 	border: 1px solid rgb(127 127 127 / 40%);
 	border-radius: 999px;
 	font-size: 0.875rem;
@@ -2926,7 +2934,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 .password-container input {
-	padding-right: 37px;
+	padding-inline-end: 37px;
 }
 
 #sign-in .password-container {
@@ -2940,7 +2948,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 .password-container .reveal-password {
 	position: absolute;
 	top: 2px;
-	right: 0;
+	inset-inline-end: 0;
 	appearance: none;
 }
 
@@ -2981,8 +2989,11 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	gap: 0.5rem;
 	margin: 0 0 1rem;
 	padding: 0.5rem 0.75rem;
-	border-left: 3px solid var(--button-color);
-	border-radius: 0 3px 3px 0;
+	border-inline-start: 3px solid var(--button-color);
+	border-start-start-radius: 0;
+	border-start-end-radius: 3px;
+	border-end-end-radius: 3px;
+	border-end-start-radius: 0;
 	background: rgb(0 0 0 / 4%);
 }
 
@@ -3039,7 +3050,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 #help .help-item .subject {
 	white-space: nowrap;
-	padding-right: 15px;
+	padding-inline-end: 15px;
 }
 
 #help .help-item .subject.gesture {
@@ -3052,11 +3063,12 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 /* Each dt/dd pair is one row (whois.vue wraps them in divs). The label is
  * lifted out of the content column into the gutter — absolutely positioned
- * left of the separator bar, right-aligned against it like a nick — which
- * the row leaves empty below its first line. `1rem + 1px` retraces the
- * content padding (0.5rem), the separator border (1px) and the gutter's own
- * 0.5rem of padding, so the label's right edge lands where a nick ends. A
- * long label runs on into the (equally empty) time column. */
+ * past the separator bar on its inline-start side, end-aligned against it
+ * like a nick — which the row leaves empty below its first line.
+ * `1rem + 1px` retraces the content padding (0.5rem), the separator border
+ * (1px) and the gutter's own 0.5rem of padding, so the label's end edge
+ * lands where a nick ends. A long label runs on into the (equally empty)
+ * time column. */
 .whois {
 	margin: 0;
 }
@@ -3068,7 +3080,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 #chat .whois dt {
 	position: absolute;
 	top: 0;
-	right: calc(100% + 1rem + 1px);
+	inset-inline-end: calc(100% + 1rem + 1px);
 	white-space: nowrap;
 	color: var(--body-color-muted);
 }
@@ -3127,8 +3139,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #version-checker::before {
-	margin-left: 6px;
-	margin-right: 12px;
+	margin-inline-start: 6px;
+	margin-inline-end: 12px;
 	font-size: 1.2em;
 }
 
@@ -3605,8 +3617,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 .md-quote {
 	display: block;
-	border-left: 3px solid var(--body-color-muted, #bbb);
-	padding-left: 8px;
+	border-inline-start: 3px solid var(--body-color-muted, #bbb);
+	padding-inline-start: 8px;
 	margin: 2px 0;
 }
 
@@ -3694,9 +3706,9 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	 * outgrows the guess still gets its room instead of spilling into the
 	 * code; `tabular-nums` keeps the digits in one column. */
 	min-width: var(--md-gutter, 1ch);
-	margin-right: 0.6em;
+	margin-inline-end: 0.6em;
 	font-variant-numeric: tabular-nums;
-	text-align: right;
+	text-align: end;
 	opacity: 0.5;
 	user-select: none;
 	counter-increment: line;
@@ -3717,7 +3729,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	color: var(--body-color-muted);
 	font: inherit;
 	font-size: 0.9em;
-	text-align: left;
+	text-align: start;
 	cursor: pointer;
 	user-select: none;
 }
@@ -3741,14 +3753,14 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 .md-list .md-li {
 	display: block;
-	padding-left: 1.5em;
+	padding-inline-start: 1.5em;
 }
 
 .md-list .md-li::before {
 	display: inline-block;
 	min-width: 1.5em;
-	margin-left: -1.5em;
-	text-align: right;
+	margin-inline-start: -1.5em;
+	text-align: end;
 	user-select: none;
 }
 
@@ -4015,7 +4027,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	}
 
 	#chat .header .title {
-		padding-left: 6px;
+		padding-inline-start: 6px;
 	}
 
 	#chat .toggle-content .thumb {
@@ -4036,13 +4048,13 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 		background-color: var(--window-bg-color);
 		height: 100%;
 		position: absolute;
-		right: 0;
+		inset-inline-end: 0;
 		top: 0;
 		z-index: 1;
 	}
 
 	.userlist-open .chat-view[data-type="channel"] .scroll-down {
-		right: 1rem;
+		inset-inline-end: 1rem;
 	}
 }
 
@@ -4083,11 +4095,11 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	}
 
 	#chat .chat-view[data-type="channel"] .msg.highlight {
-		padding-left: 5px;
+		padding-inline-start: 5px;
 	}
 
 	#chat .chat-view[data-type="channel"] .msg.highlight .time {
-		padding-left: 0;
+		padding-inline-start: 0;
 	}
 
 	#chat .condensed-summary .time,
@@ -4227,7 +4239,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #image-viewer .close-btn {
-	right: 0;
+	inset-inline-end: 0;
 	height: 2em;
 	z-index: 1002;
 }
@@ -4237,7 +4249,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #image-viewer .open-btn {
-	right: 0;
+	inset-inline-end: 0;
 	bottom: 0;
 	top: auto;
 	height: 2em;
@@ -4251,11 +4263,11 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #image-viewer .previous-image-btn {
-	left: 0;
+	inset-inline-start: 0;
 }
 
 #image-viewer .next-image-btn {
-	right: 0;
+	inset-inline-end: 0;
 }
 
 #image-viewer .close-btn:hover,
@@ -4311,13 +4323,13 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	margin: 0 0 2px;
 	padding: 0 6px;
 	border: 0;
-	border-left: 2px solid var(--body-color-muted);
+	border-inline-start: 2px solid var(--body-color-muted);
 	background: transparent;
 	color: var(--body-color-muted);
 	font: inherit;
 	font-size: 0.9em;
 	line-height: 1.3;
-	text-align: left;
+	text-align: start;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -4327,7 +4339,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 #chat .msg-reply-quote:hover,
 #chat .msg-reply-quote:focus-visible {
 	color: var(--body-color);
-	border-left-color: var(--link-color);
+	border-inline-start-color: var(--link-color);
 	outline: 0;
 }
 
@@ -4337,7 +4349,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #chat .msg-reply-arrow {
-	margin-right: 4px;
+	margin-inline-end: 4px;
 }
 
 #chat .msg-reply-nick {
@@ -4345,7 +4357,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #chat .msg-edited {
-	margin-left: 4px;
+	margin-inline-start: 4px;
 	color: var(--body-color-muted);
 	font-size: 0.85em;
 	user-select: none;
@@ -4359,7 +4371,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	font: inherit;
 	font-style: italic;
 	cursor: pointer;
-	text-align: left;
+	text-align: start;
 }
 
 #chat .msg-redacted:hover,
@@ -4373,7 +4385,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #chat .msg-redacted-note {
-	margin-left: 4px;
+	margin-inline-start: 4px;
 	color: var(--body-color-muted);
 	font-style: italic;
 	font-size: 0.85em;
@@ -4490,7 +4502,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 #chat .msg-actions {
 	position: absolute;
 	top: -8px;
-	right: 8px;
+	inset-inline-end: 8px;
 	z-index: 2;
 	display: none;
 	align-items: center;
@@ -4771,7 +4783,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 .reaction-picker-free-label {
-	margin-right: 6px;
+	margin-inline-end: 6px;
 	color: var(--body-color-muted);
 	font-size: 0.8125rem;
 }
@@ -4852,7 +4864,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
    composition while shift-clicks add to it). */
 .reaction-picker-send {
 	flex: 0 0 auto;
-	margin-left: auto;
+	margin-inline-start: auto;
 	padding: 3px 10px;
 	border: 1px solid var(--button-color);
 	border-radius: 4px;
@@ -4873,7 +4885,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 .reaction-picker-preview-hint {
 	flex: 0 1 auto;
-	margin-left: auto;
+	margin-inline-start: auto;
 	color: var(--body-color-muted);
 	font-size: 0.8125rem;
 }
@@ -4904,9 +4916,12 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	min-width: 0;
 	margin: 0 4px 2px;
 	padding: 2px 6px;
-	border-left: 2px solid var(--button-color);
+	border-inline-start: 2px solid var(--button-color);
 	background: rgb(0 0 0 / 4%);
-	border-radius: 0 3px 3px 0;
+	border-start-start-radius: 0;
+	border-start-end-radius: 3px;
+	border-end-end-radius: 3px;
+	border-end-start-radius: 0;
 	color: var(--body-color-muted);
 	font-size: 0.875rem;
 	line-height: 1.5;
@@ -4921,7 +4936,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #form .compose-bar-icon {
-	margin-right: 2px;
+	margin-inline-end: 2px;
 }
 
 #form .compose-bar-nick {
@@ -4963,9 +4978,12 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	min-width: 0;
 	margin: 0 4px 2px;
 	padding: 3px 6px;
-	border-left: 2px solid var(--upload-progressbar-color);
+	border-inline-start: 2px solid var(--upload-progressbar-color);
 	background: rgb(0 0 0 / 4%);
-	border-radius: 0 3px 3px 0;
+	border-start-start-radius: 0;
+	border-start-end-radius: 3px;
+	border-end-end-radius: 3px;
+	border-end-start-radius: 0;
 	color: var(--body-color-muted);
 	font-size: 0.875rem;
 	line-height: 1.4;
@@ -4982,7 +5000,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 #form .upload-bar-icon::before {
 	content: "\f0c6"; /* https://fontawesome.com/icons/paperclip?style=solid */
 	font: normal normal normal 0.9em/1 FontAwesome;
-	margin-right: 4px;
+	margin-inline-end: 4px;
 }
 
 #form .upload-bar-track {
@@ -5012,11 +5030,11 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 @keyframes upload-bar-sweep {
 	from {
-		left: -40%;
+		inset-inline-start: -40%;
 	}
 
 	to {
-		left: 100%;
+		inset-inline-start: 100%;
 	}
 }
 
@@ -5033,9 +5051,12 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	min-width: 0;
 	margin: 0 4px 2px;
 	padding: 2px 6px;
-	border-left: 2px solid var(--body-color-muted);
+	border-inline-start: 2px solid var(--body-color-muted);
 	background: rgb(0 0 0 / 4%);
-	border-radius: 0 3px 3px 0;
+	border-start-start-radius: 0;
+	border-start-end-radius: 3px;
+	border-end-end-radius: 3px;
+	border-end-start-radius: 0;
 	color: var(--body-color-muted);
 	font-size: 0.875rem;
 	line-height: 1.5;
@@ -5098,7 +5119,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 @media (prefers-reduced-motion: reduce) {
 	#form .upload-bar-track.indeterminate .upload-bar-fill {
 		animation: none;
-		left: 0;
+		inset-inline-start: 0;
 		width: 100%;
 		opacity: 0.5;
 	}
@@ -5107,7 +5128,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 #form .upload-bar-percent {
 	flex: 0 0 auto;
 	min-width: 3.2em;
-	text-align: right;
+	text-align: end;
 	font-variant-numeric: tabular-nums;
 	color: var(--body-color);
 }
@@ -5157,7 +5178,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 .push-network-state {
-	margin-left: auto;
+	margin-inline-start: auto;
 	font-size: 0.8125rem;
 	font-weight: bold;
 	color: var(--body-color-muted);
@@ -5196,7 +5217,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	font-size: 0.8125rem;
 	font-weight: bold;
 	text-align: center;
-	margin-right: 8px;
+	margin-inline-end: 8px;
 	color: #fff;
 	background: var(--body-color-muted);
 }
