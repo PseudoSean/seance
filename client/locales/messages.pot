@@ -91,6 +91,239 @@ msgctxt "chat.topicPlaceholder"
 msgid "Set channel topic"
 msgstr ""
 
+#: client/js/irc/commands/alias.ts
+#. Confirmation after /alias <name> <commands> created a new alias. {name} is the alias name as typed, verbatim.
+msgctxt "cmd.alias.added"
+msgid "Alias /{name} added."
+msgstr ""
+
+#: client/js/irc/commands/alias.ts
+#. Error when an /alias name is invalid. {max} is the length limit, a number.
+msgctxt "cmd.alias.badName"
+msgid "Alias names are letters, digits, _ and - (up to {max} characters)."
+msgstr ""
+
+#: client/js/irc/commands/alias.ts
+#. Reply to /alias <name> when that alias does not exist. {name} is the name as typed, user input, verbatim; the second '/alias …' part is command syntax.
+msgctxt "cmd.alias.missing"
+msgid "No alias /{name}. /alias {name} <commands> creates it."
+msgstr ""
+
+#: client/js/irc/commands/alias.ts
+#. Reply to a bare /alias when none are defined; the '/alias <name> <commands>' part is command syntax and stays verbatim.
+msgctxt "cmd.alias.none"
+msgid "No aliases defined. /alias <name> <commands> creates one."
+msgstr ""
+
+#: client/js/irc/commands/alias.ts
+#. Error when an /alias body exceeds the size limit. {length} and {max} are byte counts.
+msgctxt "cmd.alias.tooLong"
+msgid "That alias is too long ({length} of at most {max} characters)."
+msgstr ""
+
+#: client/js/irc/commands/alias.ts
+#. Error when a new alias would exceed the count limit. {max} is the limit, a number; 'Settings → Aliases' names the settings tab where aliases are edited.
+msgctxt "cmd.alias.tooMany"
+msgid "You already have {max} aliases; delete one in Settings → Aliases first."
+msgstr ""
+
+#: client/js/irc/commands/alias.ts
+#. Confirmation after /alias <name> <commands> overwrote an existing alias. {name} is the alias name as typed, verbatim.
+msgctxt "cmd.alias.updated"
+msgid "Alias /{name} updated."
+msgstr ""
+
+#: client/js/irc/commands/connect.ts
+#. Error when /connect is typed for a network that is already up.
+msgctxt "cmd.alreadyConnected"
+msgid "You are already connected."
+msgstr ""
+
+#: client/js/irc/commands/me.ts
+#: client/js/irc/commands/react.ts
+#. Error when a command that needs a conversation is typed in a network's lobby. {cmd} is the command as typed, user input, verbatim.
+msgctxt "cmd.channelsAndQueriesOnly"
+msgid "{cmd} command can only be used in channels and queries."
+msgstr ""
+
+#: client/js/irc/commands/ban.ts
+#: client/js/irc/commands/kick.ts
+#: client/js/irc/commands/mode.ts
+#: client/js/irc/commands/topic.ts
+#: client/js/irc/commands/invite.ts
+#. Error when a channel-only command is typed in another window. {cmd} is the command as typed (its canonical lowercase name, e.g. 'ban', 'kickban', 'op'), user input, verbatim.
+msgctxt "cmd.channelsOnly"
+msgid "{cmd} command can only be used in channels."
+msgstr ""
+
+#: client/js/irc/commands/invite.ts
+#. Error when /invite is typed outside a channel without naming one. {cmd} is the command as typed, user input, verbatim.
+msgctxt "cmd.channelsOrTargetOnly"
+msgid "{cmd} command can only be used in channels or by specifying a target."
+msgstr ""
+
+#: client/js/irc/commands/ignore.ts
+#. Confirmation after /ignore. {mask} is the hostmask, user data, wrapped in bold formatting codes, verbatim.
+msgctxt "cmd.ignore.added"
+msgid "{mask} added to ignorelist"
+msgstr ""
+
+#: client/js/irc/commands/ignore.ts
+#. Error when /ignore names a hostmask that is already on the ignore list.
+msgctxt "cmd.ignore.already"
+msgid "The specified user/hostmask is already ignored"
+msgstr ""
+
+#: client/js/irc/commands/ignore.ts
+#. Error when /unignore names a hostmask that is not on the ignore list.
+msgctxt "cmd.ignore.notIgnored"
+msgid "The specified user/hostmask is not ignored"
+msgstr ""
+
+#: client/js/irc/commands/ignore.ts
+#. Confirmation after /unignore. {mask} is the hostmask, user data, wrapped in bold formatting codes, verbatim.
+msgctxt "cmd.ignore.removed"
+msgid "Successfully removed {mask} from ignorelist"
+msgstr ""
+
+#: client/js/irc/commands/ignore.ts
+#. Error when /ignore names the user's own nick.
+msgctxt "cmd.ignore.self"
+msgid "You can't ignore yourself"
+msgstr ""
+
+#: client/js/irc/commands/ignorelist.ts
+#. Error shown instead of the ignore-list window when nothing is ignored.
+msgctxt "cmd.ignorelistEmpty"
+msgid "Ignorelist is empty"
+msgstr ""
+
+#: client/js/irc/commands/ignorelist.ts
+#. Title of the special window showing the network's ignore list, opened by /ignorelist. The name doubles as the window's lookup name, so it stays byte-stable per locale while the session lives.
+msgctxt "cmd.ignorelistTitle"
+msgid "Ignored users"
+msgstr ""
+
+#: client/js/irc/commands/index.ts
+#. Error when a plain message is typed in a network's lobby instead of a channel or query; the lobby's input is for commands.
+msgctxt "cmd.lobbySend"
+msgid "Messages can not be sent to lobbies."
+msgstr ""
+
+#: client/js/irc/commands/mute.ts
+#. Error when /mute or /unmute names several channels or users with no open window. {targets} is the comma-joined list of names as typed, user input, verbatim. Plural for more than one name.
+msgctxt "cmd.mute.nonePlural"
+msgid "No open channels or users found for {targets}"
+msgstr ""
+
+#: client/js/irc/commands/mute.ts
+#. Error when /mute or /unmute names a channel or user that has no open window. {targets} is the comma-joined list of names as typed, user input, verbatim. Singular for one name.
+msgctxt "cmd.mute.noneSingular"
+msgid "No open channel or user found for {targets}"
+msgstr ""
+
+#: client/js/irc/commands/nick.ts
+#. Error when /nick is given a new nick containing spaces.
+msgctxt "cmd.nickSpaces"
+msgid "Nicknames may not contain spaces."
+msgstr ""
+
+#: client/js/irc/commands/nick.ts
+#. Error when /nick is given a new nick that exceeds the server's reported length limit.
+msgctxt "cmd.nickTooLong"
+msgid "Nicknames may not be this long."
+msgstr ""
+
+#: client/js/irc/commands/part.ts
+#. Error when /part is typed in a network's lobby; the '/quit' part is a command name, verbatim.
+msgctxt "cmd.partLobby"
+msgid "You can not part from networks, use /quit instead."
+msgstr ""
+
+#: client/js/irc/commands/msg.ts
+#. Error when /query is given a channel name; the '/join' part is a command name, verbatim.
+msgctxt "cmd.query.channel"
+msgid "You can not open query windows for channels, use /join instead."
+msgstr ""
+
+#: client/js/irc/commands/msg.ts
+#. Error when /query is typed with no nick.
+msgctxt "cmd.query.noArg"
+msgid "You cannot open a query window without an argument."
+msgstr ""
+
+#: client/js/irc/commands/msg.ts
+#. Error when /query is given a name starting with a channel membership prefix (~&@%+); a prefixed nick needs the prefix dropped.
+msgctxt "cmd.query.prefix"
+msgid "You can not open query windows for names starting with a user prefix."
+msgstr ""
+
+#: client/js/irc/commands/msg.ts
+#. Error when /query is given a name with spaces; nicks cannot contain them.
+msgctxt "cmd.query.spaces"
+msgid "You can not open query windows for names containing spaces."
+msgstr ""
+
+#: client/js/irc/commands/react.ts
+#. Error when /react is typed where no recent message can carry a reaction (e.g. a window without message-tags history).
+msgctxt "cmd.reactNoTarget"
+msgid "No message to react to: none here carries a msgid."
+msgstr ""
+
+#: client/js/irc/commands/rejoin.ts
+#. Error when /rejoin is typed outside a channel window.
+msgctxt "cmd.rejoinChannels"
+msgid "You can only rejoin channels."
+msgstr ""
+
+#: client/js/irc/commands/ctcp.ts
+#. Usage line of /ctcp when arguments are missing; the placeholders are command syntax.
+msgctxt "cmd.usageCtcp"
+msgid "Usage: /ctcp <nick> <ctcp_type>"
+msgstr ""
+
+#: client/js/irc/commands/ignore.ts
+#. Usage line of /ignore and /unignore when no target is given. {cmd} is the command as typed, user input, verbatim; the rest is command syntax.
+msgctxt "cmd.usageIgnore"
+msgid "Usage: /{cmd} <nick>[!ident][@host]"
+msgstr ""
+
+#: client/js/irc/commands/join.ts
+#. Usage line of /join when no channel is given; the placeholders are command syntax.
+msgctxt "cmd.usageJoin"
+msgid "Usage: /join <channel> [key]"
+msgstr ""
+
+#: client/js/irc/commands/ban.ts
+#. Usage line of the mode-list commands (/ban, /unban, …) when no nick is given. {cmd} is the command as typed, user input, verbatim; the '<nick>' placeholder is command syntax, not user data.
+msgctxt "cmd.usageNick"
+msgid "Usage: /{cmd} <nick>"
+msgstr ""
+
+#: client/js/irc/commands/nick.ts
+#. Usage line of /nick when no new nick is given; the placeholder is command syntax.
+msgctxt "cmd.usageNickChange"
+msgid "Usage: /nick <your new nick>"
+msgstr ""
+
+#: client/js/irc/commands/mode.ts
+#. Usage line of /op, /deop, /voice, /devoice when no nick is given. {cmd} is the command as typed, user input, verbatim; the rest is command syntax.
+msgctxt "cmd.usageNickMulti"
+msgid "Usage: /{cmd} <nick> [...nick]"
+msgstr ""
+
+#: client/js/irc/commands/react.ts
+#. Usage line of /react when no reaction text is given. {cmd} is the command as typed, user input, verbatim; the rest is command syntax.
+msgctxt "cmd.usageReact"
+msgid "Usage: /{cmd} <text> [msgid]"
+msgstr ""
+
+#: client/js/irc/commands/redact.ts
+#. Usage line of /redact when no msgid is given. {cmd} is the command as typed, user input, verbatim; the rest is command syntax.
+msgctxt "cmd.usageRedact"
+msgid "Usage: /{cmd} <msgid> [reason]"
+msgstr ""
+
 #: client/components/CodeBlock.vue
 #. Button under a long code block in a chat message that shows only its first lines; clicking reveals every line. {count} is the number of lines of code. The singular shows with exactly one line, the plural otherwise.
 msgctxt "code.showAllLines"
@@ -2612,6 +2845,12 @@ msgstr ""
 #. CTCP request system message, second fragment. It follows the literal 'CTCP' abbreviation element and leads the request body, which the other client supplied and stays verbatim.
 msgctxt "msg.ctcpRequestTail"
 msgid "request:"
+msgstr ""
+
+#: client/components/MessageTypes/ctcp_request.vue
+#. Tooltip of the 'CTCP' abbreviation inside the CTCP-request system message; the abbreviation itself is the protocol's name and stays verbatim.
+msgctxt "msg.ctcpTitle"
+msgid "Client-to-client protocol"
 msgstr ""
 
 #: client/components/MessageTypes/invite.vue

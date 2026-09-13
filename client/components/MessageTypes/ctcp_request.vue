@@ -2,14 +2,14 @@
 	<span class="content">
 		<bdi><Username :user="message.from" /></bdi>
 		{{ t("msg.ctcpRequest") }}
-		<abbr title="Client-to-client protocol">CTCP</abbr>
+		<abbr :title="ctcpTitle">CTCP</abbr>
 		{{ t("msg.ctcpRequestTail") }}
 		<span class="ctcp-message"><ParsedMessage :text="message.ctcpMessage" /></span>
 	</span>
 </template>
 
 <script lang="ts">
-import {defineComponent, PropType} from "vue";
+import {computed, defineComponent, PropType} from "vue";
 import {ClientNetwork, ClientMessage} from "../../js/types";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
@@ -33,9 +33,11 @@ export default defineComponent({
 	},
 	setup() {
 		const {t} = useI18n();
+		const ctcpTitle = computed(() => t("msg.ctcpTitle"));
 
 		return {
 			t,
+			ctcpTitle,
 		};
 	},
 });

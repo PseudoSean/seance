@@ -12,6 +12,7 @@
  * before the bus ever sees them.
  */
 
+import {t} from "../../i18n/core";
 import {ChanType} from "../../../../shared/types/chan";
 import {MessageType} from "../../../../shared/types/msg";
 import type {Channel} from "../channel";
@@ -96,9 +97,6 @@ export function commandNames(): string[] {
 		.concat(clientSideCommands, passThroughCommands)
 		.sort();
 }
-
-export const NOT_CONNECTED =
-	"You are not connected to the IRC network, unable to send your command.";
 
 /**
  * Commands whose argument *is* the message, so multi-line input stays one
@@ -192,7 +190,7 @@ function inputLine(
 		if (chan.type === ChanType.LOBBY) {
 			client.pushMessage(chan, {
 				type: MessageType.ERROR,
-				text: "Messages can not be sent to lobbies.",
+				text: t("cmd.lobbySend"),
 			});
 			return;
 		}
@@ -214,7 +212,7 @@ function inputLine(
 
 	if (command) {
 		if (!client.isConnected && !command.allowDisconnected) {
-			client.pushMessage(chan, {type: MessageType.ERROR, text: NOT_CONNECTED});
+			client.pushMessage(chan, {type: MessageType.ERROR, text: t("send.notConnected")});
 			return;
 		}
 
@@ -223,7 +221,7 @@ function inputLine(
 	}
 
 	if (!client.isConnected) {
-		client.pushMessage(chan, {type: MessageType.ERROR, text: NOT_CONNECTED});
+		client.pushMessage(chan, {type: MessageType.ERROR, text: t("send.notConnected")});
 		return;
 	}
 
