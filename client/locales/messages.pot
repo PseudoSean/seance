@@ -3316,11 +3316,16 @@ msgctxt "search.results.scopeNote"
 msgid "Only messages loaded in this session are searched — older history is not searched."
 msgstr ""
 
-#: client/components/Windows/SearchResults.vue
+#: client/components/Windows/SearchResults.vue:21
+#. Second fragment of the search-results window header, rendered after the styled channel-name element; the search term itself follows the header. The element (the channel's or query window's name — user content, never translated) sits between this fragment and the one before it. Word order inside each fragment is free; the fragments cannot cross the element. Ends mid-sentence.
+msgctxt "search.results.searchingInAfter"
+msgid "for"
+msgstr ""
+
 #: client/components/Windows/SearchResults.vue:19
-#. Header of the search-results window; the search term itself follows it in the header. {target} is the name of the channel or query window being searched — user content, never translated. Ends mid-sentence.
-msgctxt "search.results.searchingIn"
-msgid "Searching in {target} for"
+#. First fragment of the search-results window header, rendered before the styled channel-name element. That element (the channel's or query window's name — user content, never translated, like a <Username>) sits between this fragment and the one after it. Word order inside each fragment is free; the fragments cannot cross the element.
+msgctxt "search.results.searchingInBefore"
+msgid "Searching in"
 msgstr ""
 
 #: client/components/Windows/SearchResults.vue
