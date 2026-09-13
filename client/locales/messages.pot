@@ -3347,6 +3347,8 @@ msgid "Edit not sent: an edit of that message is already waiting for the server.
 msgstr ""
 
 #: client/js/irc/client.ts
+#: client/js/commands/index.ts:215
+#: client/js/commands/index.ts:224
 #. Lobby error when a command or message was typed while the network is down; nothing was sent.
 msgctxt "send.notConnected"
 msgid "You are not connected to the IRC network, unable to send your command."
