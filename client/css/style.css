@@ -101,9 +101,25 @@
 	/* The user list likewise: 180px at medium, 204px at large. */
 	--userlist-width: min(calc(6rem + 84px), 85vw);
 
+	/* Slide distances for the panes that hide off a phone screen: the sidebar
+	 * docks at the inline-start edge and slides out past it, the user list
+	 * docks at the inline-end edge and slides out past that one. The
+	 * magnitudes are the panes' own widths, whatever those end up being
+	 * (--sidebar-width is capped to the screen, so a literal length here
+	 * would leave a strip visible). */
+	--slide-away: calc(-1 * var(--sidebar-width));
+	--slide-end-away: var(--userlist-width);
+
 	/* #status-bar-tint's height, and the room the sidebar leaves for it. In px:
 	 * it answers to iOS's sampler, not to the UI scale. */
 	--status-bar-tint-height: 8px;
+}
+
+/* RTL flips which edge each pane hides past: same magnitudes, swapped
+ * signs. :root[dir] and not [dir] :root — the attribute sits on <html>. */
+:root[dir="rtl"] {
+	--slide-away: var(--sidebar-width);
+	--slide-end-away: calc(-1 * var(--userlist-width));
 }
 
 /* The font-size setting's scale (client/js/helpers/fontSize.ts). */
@@ -3963,10 +3979,10 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 		background: var(--body-bg-color);
 		height: 100%;
 		position: absolute;
-		right: 100%; /* its own width off screen, whatever that width is */
+		inset-inline-start: 0; /* docked at the start edge; hidden by the slide below */
 		z-index: 10;
 		transition: transform 160ms;
-		transform: translateZ(0);
+		transform: translate3d(var(--slide-away), 0, 0);
 	}
 
 	#sidebar-overlay {
@@ -3989,7 +4005,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	}
 
 	#viewport.menu-open #sidebar {
-		transform: translate3d(100%, 0, 0);
+		transform: translate3d(0, 0, 0);
 	}
 
 	#viewport.menu-dragging #sidebar-overlay,
@@ -4016,8 +4032,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 		background-color: var(--window-bg-color);
 		height: 100%;
 		position: absolute;
-		right: 0;
-		transform: translateX(var(--userlist-width));
+		inset-inline-end: 0;
+		transform: translateX(var(--slide-end-away));
 		transition: transform 0.2s;
 		z-index: 1;
 	}

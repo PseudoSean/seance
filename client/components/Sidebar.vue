@@ -101,6 +101,13 @@ export default defineComponent({
 			store.commit("sidebarOpen", state);
 		};
 
+		/**
+		 * Which way the pane slides: the sidebar docks at the inline-start
+		 * edge, which is the left one in LTR and the right one in RTL. -1 in
+		 * RTL maps inline progress to and from screen coordinates.
+		 */
+		const slideDir = () => (document.documentElement.dir === "rtl" ? -1 : 1);
+
 		const onTouchMove = (e: TouchEvent) => {
 			const touch = (touchCurPos.value = e.touches.item(0));
 
@@ -113,7 +120,12 @@ export default defineComponent({
 				return;
 			}
 
-			let distX = touch.screenX - touchStartPos.value.screenX;
+			const dirFactor = slideDir();
+
+			// distX is drag progress in the inline direction (positive = the
+			// pane is being revealed); the angle check below only compares
+			// magnitudes, so the sign flip does not move its threshold.
+			let distX = dirFactor * (touch.screenX - touchStartPos.value.screenX);
 			const distY = touch.screenY - touchStartPos.value.screenY;
 
 			if (!menuIsMoving.value) {
@@ -149,8 +161,14 @@ export default defineComponent({
 				distX = 0;
 			}
 
+			// The pane's rest position is the slid-away transform, so the drag
+			// runs from `-menuWidth` (hidden) to 0 (shown), mirrored by the
+			// direction factor; the class state takes over on release.
 			if (sidebar.value) {
-				sidebar.value.style.transform = "translate3d(" + distX.toString() + "px, 0, 0)";
+				sidebar.value.style.transform =
+					"translate3d(" +
+					(dirFactor * (distX - menuWidth.value)).toString() +
+					"px, 0, 0)";
 			}
 
 			if (props.overlay) {
@@ -180,7 +198,9 @@ export default defineComponent({
 					absDiff > menuWidth.value / 2 ||
 					(Date.now() - touchStartTime.value < 180 && absDiff > 50)
 				) {
-					toggle(diff > 0);
+					// Positive inline progress opens the pane: a rightward
+					// swipe in LTR, a leftward one in RTL.
+					toggle(diff * slideDir() > 0);
 				}
 			}
 
@@ -247,10 +267,18 @@ export default defineComponent({
 			menuWidth.value = parseFloat(styles.width);
 			menuIsAbsolute.value = styles.position === "absolute";
 
-			if (
-				!store.state.sidebarOpen ||
-				(touchStartPos.value?.screenX && touchStartPos.value.screenX > menuWidth.value)
-			) {
+			// The drag engages anywhere except the pane's own docked strip:
+			// measured from the start edge, which is the left one in LTR and
+			// the right one in RTL. (Distance 0 at the docked edge counts as
+			// no gesture, mirroring the old screenX 0 check.)
+			const rtl = document.documentElement.dir === "rtl";
+			const dockX = touchStartPos.value
+				? rtl
+					? window.innerWidth - touchStartPos.value.screenX
+					: touchStartPos.value.screenX
+				: 0;
+
+			if (!store.state.sidebarOpen || (dockX && dockX > menuWidth.value)) {
 				touchStartTime.value = Date.now();
 				drag = new AbortController();
 
