@@ -207,7 +207,10 @@ export function serializePo(headers: Record<string, string>, entries: PoEntry[])
 	out.push('msgid ""', 'msgstr ""');
 
 	for (const [key, value] of Object.entries(allHeaders)) {
-		if (value) {
+		// Language stays in the output even when empty: a template is
+		// deliberately of no language yet, and parsePo reads the empty value
+		// back, so the header round-trips.
+		if (value || key === "Language") {
 			out.push(quote(`${key}: ${value}\n`));
 		}
 	}
