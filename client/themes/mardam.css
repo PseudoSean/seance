@@ -230,6 +230,11 @@ body,
 	box-shadow: var(--bevel-sunken);
 }
 
+/* The restate above out-specifies the lobby rule: keep LTR's bare lobby row. */
+[dir="rtl"] .channel-list-item[data-type="lobby"] {
+	box-shadow: none;
+}
+
 .channel-list-item[data-type="lobby"] {
 	font-weight: 700;
 	background: transparent;
