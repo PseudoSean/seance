@@ -201,25 +201,43 @@ export async function encodeBackup(backup: SettingsBackup): Promise<Uint8Array> 
 	return pipe(json, new CompressionStream("gzip"));
 }
 
-export class BackupFormatError extends Error {}
+/**
+ * Why a backup file was refused. Stable identifiers on purpose: this module
+ * is Vue-free and carries no English copy — the render site
+ * (Settings/General.vue) translates the code into reader-visible wording.
+ */
+export type BackupFormatErrorCode =
+	| "not-settings"
+	| "newer-version"
+	| "damaged"
+	| "no-decompression";
+
+export class BackupFormatError extends Error {
+	readonly code: BackupFormatErrorCode;
+
+	constructor(code: BackupFormatErrorCode) {
+		super(code);
+		this.code = code;
+	}
+}
 
 function validate(value: unknown): SettingsBackup {
 	if (typeof value !== "object" || value === null) {
-		throw new BackupFormatError("This isn't a settings file.");
+		throw new BackupFormatError("not-settings");
 	}
 
 	const obj = value as Record<string, unknown>;
 
 	if (obj.format !== FORMAT) {
-		throw new BackupFormatError("This isn't a settings file.");
+		throw new BackupFormatError("not-settings");
 	}
 
 	if (typeof obj.version !== "number" || obj.version > VERSION) {
-		throw new BackupFormatError("This file was made by a newer version.");
+		throw new BackupFormatError("newer-version");
 	}
 
 	if (typeof obj.entries !== "object" || obj.entries === null || Array.isArray(obj.entries)) {
-		throw new BackupFormatError("This file is damaged.");
+		throw new BackupFormatError("damaged");
 	}
 
 	return {
@@ -237,13 +255,13 @@ export async function decodeBackup(bytes: Uint8Array): Promise<SettingsBackup> {
 
 	if (isGzip(bytes)) {
 		if (typeof DecompressionStream === "undefined") {
-			throw new BackupFormatError("This browser can't read compressed files.");
+			throw new BackupFormatError("no-decompression");
 		}
 
 		try {
 			json = await pipe(bytes, new DecompressionStream("gzip"));
 		} catch (e) {
-			throw new BackupFormatError("This file is damaged.");
+			throw new BackupFormatError("damaged");
 		}
 	}
 
@@ -252,7 +270,7 @@ export async function decodeBackup(bytes: Uint8Array): Promise<SettingsBackup> {
 	try {
 		parsed = JSON.parse(new TextDecoder().decode(json));
 	} catch (e) {
-		throw new BackupFormatError("This isn't a settings file.");
+		throw new BackupFormatError("not-settings");
 	}
 
 	return validate(parsed);

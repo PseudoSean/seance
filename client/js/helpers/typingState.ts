@@ -82,24 +82,3 @@ export function expireTyping(entries: TypingEntry[], now: number): TypingEntry[]
 
 	return entries.filter((e) => e.expiresAt > now);
 }
-
-/**
- * "alice is typing…", "alice and bob are typing…",
- * "alice, bob and 2 others are typing…"; empty string when nobody is.
- */
-export function typingSummary(entries: TypingEntry[]): string {
-	const nicks = entries.map((e) => e.nick);
-
-	switch (nicks.length) {
-		case 0:
-			return "";
-		case 1:
-			return `${nicks[0]} is typing…`;
-		case 2:
-			return `${nicks[0]} and ${nicks[1]} are typing…`;
-		case 3:
-			return `${nicks[0]}, ${nicks[1]} and ${nicks[2]} are typing…`;
-		default:
-			return `${nicks[0]}, ${nicks[1]} and ${nicks.length - 2} others are typing…`;
-	}
-}

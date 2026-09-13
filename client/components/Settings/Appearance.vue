@@ -358,7 +358,6 @@ import {useStore} from "../../js/store";
 import {useI18n} from "../../js/i18n";
 import LanguageSelect from "../LanguageSelect.vue";
 import {
-	fontSizeLabels,
 	fontSizeScale,
 	fontSizes,
 	normalizeFontSize,
@@ -448,32 +447,45 @@ export default defineComponent({
 		const draggedTo = ref<FontSize | null>(null);
 		const shown = computed(() => draggedTo.value ?? fontSize.value);
 		const shownIndex = computed(() => fontSizes.indexOf(shown.value));
-		const shownLabel = computed(() => fontSizeLabels[shown.value]);
+		// The steps' labels translate here, at the render site: the module is
+		// Vue-free and the pot is the only source of English copy.
+		const fontSizeLabels = computed<Record<FontSize, string>>(() => ({
+			tiny: t("settings.appearance.fontSizeTiny"),
+			small: t("settings.appearance.fontSizeSmall"),
+			medium: t("settings.appearance.fontSizeMedium"),
+			large: t("settings.appearance.fontSizeLarge"),
+			xlarge: t("settings.appearance.fontSizeXlarge"),
+			huge: t("settings.appearance.fontSizeHuge"),
+		}));
+		const shownLabel = computed(() => fontSizeLabels.value[shown.value]);
 		// The sample at the shown step: its percentage of the browser default,
 		// through whatever the page is at now (1rem = the applied step).
 		const sampleFontSize = computed(
 			() => `${fontSizeScale[shown.value] / fontSizeScale[fontSize.value]}rem`
 		);
-		const sampleLines = [
+		// The sample conversation speaks through the pot like everything else;
+		// the sample nicks and clock times stand in for user content and
+		// render verbatim.
+		const sampleLines = computed(() => [
 			{
 				time: "12:34",
 				from: "grandma",
 				color: "color-4",
-				text: "Can you read this without your glasses?",
+				text: t("settings.appearance.sampleGlasses"),
 			},
 			{
 				time: "12:35",
 				from: "you",
 				color: "color-10",
-				text: "Yes! Slide it until this is comfortable.",
+				text: t("settings.appearance.sampleSlide"),
 			},
 			{
 				time: "12:35",
 				from: "grandma",
 				color: "color-4",
-				text: "The ends are meant to be too small and too big.",
+				text: t("settings.appearance.sampleEnds"),
 			},
-		];
+		]);
 
 		const stepOf = (event: Event) =>
 			fontSizes[Number((event.target as HTMLInputElement).value)];

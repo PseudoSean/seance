@@ -131,6 +131,7 @@ import eventbus from "../../js/eventbus";
 import {
 	applyBackup,
 	BackupFormatError,
+	BackupFormatErrorCode,
 	collectBackup,
 	decodeBackup,
 	encodeBackup,
@@ -253,6 +254,21 @@ export default defineComponent({
 			);
 		};
 
+		/** The reader-visible wording for a refused backup file: the Vue-free
+		 * module carries stable codes, this is where they become copy. */
+		const importErrorText = (code: BackupFormatErrorCode): string => {
+			switch (code) {
+				case "newer-version":
+					return t("settings.general.importNewer");
+				case "damaged":
+					return t("settings.general.importDamaged");
+				case "no-decompression":
+					return t("settings.general.importNoDecompression");
+				default:
+					return t("settings.general.importNotSettings");
+			}
+		};
+
 		const onFileChosen = async (event: Event) => {
 			const input = event.target as HTMLInputElement;
 			const file = input.files?.[0];
@@ -269,7 +285,9 @@ export default defineComponent({
 				restore(backup, file.name);
 			} catch (e) {
 				error.value =
-					e instanceof BackupFormatError ? e.message : t("settings.general.importFailed");
+					e instanceof BackupFormatError
+						? importErrorText(e.code)
+						: t("settings.general.importFailed");
 			} finally {
 				busy.value = false;
 			}

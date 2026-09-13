@@ -1029,7 +1029,12 @@ async function handlePushNow(raw) {
 		// before anything reader-visible is composed — the locale can change
 		// between pushes and no page may be open to apply it for us. A stale
 		// js/push.js (a mid-deploy worker) carries no surface: t() falls
-		// back to the English literals instead.
+		// back to the English literals instead. The catalog the installs
+		// land in is one shared module state: a second push (or this
+		// handler's own catch, below) applying a locale while an earlier
+		// push is still composing wins last-writer-wins, so notifications
+		// from one flurry can mix locales. Tolerated — one reader, and the
+		// next push re-applies the prefs' choice.
 		const prefs = (await idbGet("prefs")) || {};
 		const markdown = prefs.markdown !== false;
 

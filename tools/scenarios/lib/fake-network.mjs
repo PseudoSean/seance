@@ -11,10 +11,12 @@
 // when the exposure is missing so the scenario can fail loudly instead of
 // silently skipping its assertions.
 //
-// Each dispatch merges one network into the store: a second call adds a
-// second network — give it its own uuid, nick, channel name and a baseId
-// that keeps the channel ids clear of the first network's (the store keys
-// channels by id across networks). A disconnected network (connected:
+// Each dispatch REPLACES the store's network list with the payload — the
+// init handler commits the array wholesale, so a network absent from the
+// payload vanishes. A second call that wants two networks must dispatch
+// both, giving each its own uuid, nick, channel name and a baseId that
+// keeps the channel ids clear of the other's (the store keys channels by
+// id across networks). A disconnected network (connected:
 // false) renders the connection bar on its channel window — the only way
 // to that wave-A surface. The networks are memory-only: they live until
 // the next navigation.

@@ -15,10 +15,9 @@
 			>
 				<div v-if="network && channel" class="header">
 					<SidebarToggle />
-					<span class="title"
-						>{{ t("search.results.searchingIn") }}
-						<span class="channel-name">{{ channel.name }}</span></span
-					>
+					<span class="title">{{
+						t("search.results.searchingIn", {target: channel.name})
+					}}</span>
 					<span class="topic">{{ route.query.q }}</span>
 					<MessageSearchForm :network="network" :channel="channel" />
 					<button
@@ -81,10 +80,6 @@
 </template>
 
 <style>
-.channel-name {
-	font-weight: 700;
-}
-
 .chat-view[data-type="search-results"] .search-scope-note {
 	padding: 10px;
 	font-size: 0.8125rem;

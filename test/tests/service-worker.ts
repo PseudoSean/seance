@@ -12,12 +12,23 @@ import {expect} from "chai";
 import {existsSync, readFileSync} from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
-import {interpolate, t} from "../../client/js/i18n/core";
+import {interpolate, setCatalog, t} from "../../client/js/i18n/core";
+import enCatalog from "../../client/locales/en.json";
 import {applyLocale} from "../../client/js/push/i18n";
 import {CONCAT_TAG, lineIndexOf, parsePushLine} from "../../client/js/push/line";
 import {addMessage, MERGE_KEEP, renderMergedBody} from "../../client/js/push/merge";
+import {appUrlFromScope, networkFromScope} from "../../client/js/push/scope";
 import {notificationText, stripFormatting} from "../../client/js/push/strip";
 import {pseudo} from "../../tools/i18n/pseudo";
+
+// The harness pushes with stored prefs whose locale the worker applies into
+// the SHARED core catalog (applyLocale → setCatalog); a qqx run would leave
+// every later file resolving pseudo-copy. This file is safe today only
+// through mocha file order — hand the real English catalog back after every
+// test instead of leaning on that order.
+afterEach(function () {
+	setCatalog("en", enCatalog, undefined);
+});
 
 const SW_SOURCE = readFileSync(path.join(__dirname, "../../client/service-worker.js"), "utf8");
 
@@ -469,6 +480,8 @@ function makeSW(options: HarnessOptions = {}): SWHarness {
 	// and `push()` in the worker falls back to its inline minimum.
 	if (!options.noPushModule) {
 		sandbox.seancePush = {
+			networkFromScope,
+			appUrlFromScope,
 			parsePushLine,
 			lineIndexOf,
 			CONCAT_TAG,
@@ -1707,6 +1720,28 @@ describe("service worker copy fallback (SW_COPY_FALLBACK)", function () {
 
 		for (const key of swKeys) {
 			expect(fallback[key], key).to.equal(en[key]);
+		}
+	});
+});
+
+describe("service worker push module surface", function () {
+	it("binds exactly the keys worker-entry.ts exports", async function () {
+		// The sandbox's seancePush stands in for js/push.js's module: if a
+		// key is added to worker-entry.ts's export and not to this harness
+		// (or the other way), the worker would run with a silently narrower
+		// surface than the browser's. worker-entry.ts assigns onto `self`
+		// at import time, so stand one in for Node first.
+		(globalThis as {self?: unknown}).self = {};
+
+		try {
+			const {seancePush} = await import("../../client/js/push/worker-entry");
+			const sw = makeSW();
+
+			expect(Object.keys(sw.sandbox.seancePush as object)).to.deep.equal(
+				Object.keys(seancePush)
+			);
+		} finally {
+			delete (globalThis as {self?: unknown}).self;
 		}
 	});
 });

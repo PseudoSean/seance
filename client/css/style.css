@@ -8,6 +8,41 @@
 	content: attr(data-tooltip);
 }
 
+/* The vendor tooltip css is physical (left/right, margin-left/right), and
+ * the east/west pair is asymmetric in use: the time, the status marker and
+ * the active-window hook point east, the part/close and connecting hints
+ * point west. North and south centre on the anchor either way, but a
+ * tooltip pinned to one side of its anchor lands on the wrong side once
+ * the reading direction flips — mirror e↔w under RTL, caret included
+ * (the vendor's #1b1f23 arrow colour matches its own tooltip background). */
+[dir="rtl"] .tooltipped-e::after {
+	left: auto;
+	right: 100%;
+	margin-left: 0;
+	margin-right: 6px;
+}
+
+[dir="rtl"] .tooltipped-e::before {
+	right: auto;
+	left: -7px;
+	border-right-color: transparent;
+	border-left-color: #1b1f23;
+}
+
+[dir="rtl"] .tooltipped-w::after {
+	right: auto;
+	left: 100%;
+	margin-right: 0;
+	margin-left: 6px;
+}
+
+[dir="rtl"] .tooltipped-w::before {
+	left: auto;
+	right: -7px;
+	border-left-color: transparent;
+	border-right-color: #1b1f23;
+}
+
 :root {
 	/* Main text color */
 	--body-color: #222;

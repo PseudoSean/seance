@@ -3317,9 +3317,10 @@ msgid "Only messages loaded in this session are searched — older history is no
 msgstr ""
 
 #: client/components/Windows/SearchResults.vue
-#. First part of the header of the search-results window; the channel's name and the search query follow it. Ends mid-sentence.
+#: client/components/Windows/SearchResults.vue:19
+#. Header of the search-results window; the search term itself follows it in the header. {target} is the name of the channel or query window being searched — user content, never translated. Ends mid-sentence.
 msgctxt "search.results.searchingIn"
-msgid "Searching in"
+msgid "Searching in {target} for"
 msgstr ""
 
 #: client/components/Windows/SearchResults.vue
@@ -3652,6 +3653,42 @@ msgctxt "settings.appearance.fontSizeHeading"
 msgid "Font size"
 msgstr ""
 
+#: client/components/Settings/Appearance.vue:458
+#. Label of the largest step of the font-size slider in Settings → Appearance. One word.
+msgctxt "settings.appearance.fontSizeHuge"
+msgid "Huge"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue:456
+#. Label of the default step of the font-size slider in Settings → Appearance. One word.
+msgctxt "settings.appearance.fontSizeLarge"
+msgid "Large"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue:455
+#. Label of the middle step of the font-size slider in Settings → Appearance: the browser's default size. One word.
+msgctxt "settings.appearance.fontSizeMedium"
+msgid "Medium"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue:454
+#. Label of the second step of the font-size slider in Settings → Appearance. One word.
+msgctxt "settings.appearance.fontSizeSmall"
+msgid "Small"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue:453
+#. Label of the smallest step of the font-size slider in Settings → Appearance: the datalist stop and the value shown while dragging. One word.
+msgctxt "settings.appearance.fontSizeTiny"
+msgid "Tiny"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue:457
+#. Label of the second-largest step of the font-size slider in Settings → Appearance.
+msgctxt "settings.appearance.fontSizeXlarge"
+msgid "Extra large"
+msgstr ""
+
 #: client/components/Settings/Appearance.vue
 #. Checkbox in Settings > Appearance; when ticked, chat messages are rendered with Markdown styling such as bold text, code blocks and spoiler marks. Ellipsis is part of the copy.
 msgctxt "settings.appearance.markdown"
@@ -3716,6 +3753,24 @@ msgstr ""
 #. Placeholder of the nick autocomplete postfix field in Settings > Appearance; keep the example punctuation (the quoted comma) as it shows what would be typed.
 msgctxt "settings.appearance.nickPostfixPlaceholder"
 msgid "Nick autocomplete postfix (e.g. ', ')"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue:486
+#. Third line of the sample chat under the font-size slider in Settings → Appearance: the extreme steps are intentionally unusable.
+msgctxt "settings.appearance.sampleEnds"
+msgid "The ends are meant to be too small and too big."
+msgstr ""
+
+#: client/components/Settings/Appearance.vue:474
+#. First line of the sample chat under the font-size slider in Settings → Appearance, written by the sample nick grandma: it asks whether the text is comfortable to read.
+msgctxt "settings.appearance.sampleGlasses"
+msgid "Can you read this without your glasses?"
+msgstr ""
+
+#: client/components/Settings/Appearance.vue:480
+#. Second line of the sample chat under the font-size slider in Settings → Appearance, the reply telling the reader to drag the slider until the text is comfortable.
+msgctxt "settings.appearance.sampleSlide"
+msgid "Yes! Slide it until this is comfortable."
 msgstr ""
 
 #: client/components/Settings/Appearance.vue
@@ -3930,10 +3985,34 @@ msgctxt "settings.general.importButton"
 msgid "Import and reload"
 msgstr ""
 
+#: client/components/Settings/General.vue:259
+#. Error notice under the import control in Settings → General when the backup file is corrupt or truncated. Starts a short sentence.
+msgctxt "settings.general.importDamaged"
+msgid "This file is damaged."
+msgstr ""
+
 #: client/components/Settings/General.vue
 #. Error message in Settings > General shown when the chosen file could not be read as a settings backup.
 msgctxt "settings.general.importFailed"
 msgid "Couldn't read the file."
+msgstr ""
+
+#: client/components/Settings/General.vue:259
+#. Error notice under the import control in Settings → General when the backup was written by a newer build of the app that this one cannot read. Starts a short sentence.
+msgctxt "settings.general.importNewer"
+msgid "This file was made by a newer version."
+msgstr ""
+
+#: client/components/Settings/General.vue:259
+#. Error notice under the import control in Settings → General when the browser lacks the DecompressionStream API the compressed backup needs. Starts a short sentence.
+msgctxt "settings.general.importNoDecompression"
+msgid "This browser can't read compressed files."
+msgstr ""
+
+#: client/components/Settings/General.vue:259
+#. Error notice under the import control in Settings → General when the chosen file is not a settings backup (wrong shape, unparseable). Starts a short sentence.
+msgctxt "settings.general.importNotSettings"
+msgid "This isn't a settings file."
 msgstr ""
 
 #: client/components/Settings/General.vue
@@ -4010,7 +4089,8 @@ msgstr ""
 
 #: client/components/Windows/Connect.vue:72
 #: client/components/Windows/Connect.vue:296
-#: client/components/Settings/Appearance.vue:249
+#: client/components/Settings/Appearance.vue:253
+#: client/components/Settings/Appearance.vue:255
 #. Label of the interface-language row on the connect form and in Settings → Appearance; the gloss is part of the copy so the row explains itself while the UI still reads English.
 msgctxt "settings.locale"
 msgid "Language — display language of the whole interface."
@@ -4305,14 +4385,14 @@ msgid "Warning"
 msgstr ""
 
 #: client/components/Settings/Navigation.vue
-#: client/components/SettingTabItem.vue
+#: client/components/Settings/SettingTabItem.vue
 #. Label of the Settings modal's Aliases tab (tab strip); switching tabs navigates to the Aliases settings pane.
 msgctxt "settings.tabs.aliases"
 msgid "Aliases"
 msgstr ""
 
 #: client/components/Settings/Navigation.vue
-#: client/components/SettingTabItem.vue
+#: client/components/Settings/SettingTabItem.vue
 #. Label of the Settings modal's Appearance tab (tab strip); switching tabs navigates to the Appearance settings pane.
 msgctxt "settings.tabs.appearance"
 msgid "Appearance"
@@ -4325,21 +4405,21 @@ msgid "Settings tabs"
 msgstr ""
 
 #: client/components/Settings/Navigation.vue
-#: client/components/SettingTabItem.vue
+#: client/components/Settings/SettingTabItem.vue
 #. Label of the Settings modal's General tab (tab strip); switching tabs navigates to the General settings pane.
 msgctxt "settings.tabs.general"
 msgid "General"
 msgstr ""
 
 #: client/components/Settings/Navigation.vue
-#: client/components/SettingTabItem.vue
+#: client/components/Settings/SettingTabItem.vue
 #. Label of the Settings modal's Networks tab (tab strip); switching tabs navigates to the Networks settings pane.
 msgctxt "settings.tabs.networks"
 msgid "Networks"
 msgstr ""
 
 #: client/components/Settings/Navigation.vue
-#: client/components/SettingTabItem.vue
+#: client/components/Settings/SettingTabItem.vue
 #. Label of the Settings modal's Notifications tab (tab strip); switching tabs navigates to the Notifications settings pane.
 msgctxt "settings.tabs.notifications"
 msgid "Notifications"
@@ -4671,10 +4751,22 @@ msgctxt "typing.two"
 msgid "{nick1} and {nick2} are typing…"
 msgstr ""
 
+#: client/js/upload.ts:788
+#. Error notice when the file's type is not on the uploader's accepted list. {file} is the file's name — user content, never translated; {types} is the accepted-type list from the deploy's config, kept verbatim.
+msgctxt "upload.badType"
+msgid "File {file} is not a type this uploader accepts ({types})"
+msgstr ""
+
 #: client/components/UploadPreview.vue
 #. Button of the upload confirmation dialog; clicking cancels the whole upload and sends nothing.
 msgctxt "upload.cancel"
 msgid "Cancel"
+msgstr ""
+
+#: client/js/upload.ts:460
+#. Notice when an upload in flight was cancelled before it finished.
+msgctxt "upload.cancelled"
+msgid "Upload cancelled"
 msgstr ""
 
 #: client/components/UploadPreview.vue
@@ -4705,6 +4797,48 @@ msgstr ""
 #. Title of the confirmation dialog shown before files are uploaded to the chat server, when one file was chosen.
 msgctxt "upload.confirmTitleOne"
 msgid "Upload this file?"
+msgstr ""
+
+#: client/js/upload.ts:765
+#. Error notice when the user tries to send a file while the network is disconnected. Shown in the error strip above the message input.
+msgctxt "upload.disconnected"
+msgid "You are currently disconnected, unable to initiate upload process."
+msgstr ""
+
+#: client/js/upload.ts:464
+#. Frame for a failed upload; the underlying reason follows the colon. {reason} is the browser's or endpoint's own message, kept verbatim — its content is not our copy.
+msgctxt "upload.failed"
+msgid "Upload failed: {reason}"
+msgstr ""
+
+#: client/js/upload.ts:476
+#. Frame for a failed upload when the endpoint answered with an error status and no readable message. {status} is the numeric HTTP status code.
+msgctxt "upload.failedHttp"
+msgid "Upload failed: HTTP {status}"
+msgstr ""
+
+#: client/js/upload.ts:353
+#. Error notice when the upload endpoint answered but its reply lacks the expected URL field. {field} is the response path named in the deploy's config (technical, never translated).
+msgctxt "upload.missingField"
+msgid "Upload failed: the uploader did not return a \"{field}\" URL"
+msgstr ""
+
+#: client/js/upload.ts:447
+#. Error notice when the browser offers no way to send a request, so the upload cannot even start.
+msgctxt "upload.noFetch"
+msgid "Upload failed: fetch is not available"
+msgstr ""
+
+#: client/js/upload.ts:365
+#. Error notice when the upload endpoint's reply carries no usable link.
+msgctxt "upload.noUrl"
+msgid "Upload failed: the uploader did not return a URL"
+msgstr ""
+
+#: client/js/upload.ts:758
+#. Error notice when the user drops, pastes or picks a file but this deploy has no uploads endpoint configured, so no file can be sent. Shown in the error strip above the message input.
+msgctxt "upload.notConfigured"
+msgid "File uploads are not configured in this client."
 msgstr ""
 
 #: client/components/UploadPreview.vue
@@ -4741,6 +4875,12 @@ msgstr ""
 #. Tooltip of the ✕ button on a file in the upload confirmation dialog; clicking removes the file from the upload.
 msgctxt "upload.removeTitle"
 msgid "Don't upload this file"
+msgstr ""
+
+#: client/js/upload.ts:779
+#. Error notice when a file the user sent is larger than the uploader's size limit. {file} is the file's name — user content, never translated.
+msgctxt "upload.tooLarge"
+msgid "File {file} is over the maximum allowed size"
 msgstr ""
 
 #: client/components/ChatUserList.vue:13

@@ -149,7 +149,9 @@ describe("settings backup (helpers/settingsBackup.ts)", function () {
 			encode(JSON.stringify({format: FORMAT, version: VERSION + 1, entries: {}}))
 		);
 		expect(newer).to.be.instanceOf(BackupFormatError);
-		expect((newer as Error).message).to.match(/newer version/);
+		// The Vue-free module carries stable codes; the render site
+		// (Settings/General.vue) translates them.
+		expect((newer as BackupFormatError).code).to.equal("newer-version");
 
 		const damaged = await failure(new Uint8Array([0x1f, 0x8b, 1, 2, 3, 4]));
 		expect(damaged).to.be.instanceOf(BackupFormatError);

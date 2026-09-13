@@ -451,7 +451,7 @@ export default defineComponent({
 			// disconnected network. Plain text in a conversation on a
 			// network that is down stays as the draft (`canSend`, the same
 			// rule that disables the send button); elsewhere the IRC layer
-			// answers it with NOT_CONNECTED_TEXT.
+			// answers it with the `send.notConnected` error.
 			const target = props.channel.id;
 
 			// A keyboard that inserts the Return's newline before the keypress

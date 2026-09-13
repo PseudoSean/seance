@@ -19,7 +19,9 @@
 			>
 				<div class="header">
 					<SidebarToggle />
-					<span class="title" :aria-label="openTitle">{{ channel.name }}</span>
+					<span class="title" :aria-label="openTitle"
+						><bdi>{{ channel.name }}</bdi></span
+					>
 					<div v-if="channel.editTopic === true" class="topic-container">
 						<input
 							ref="topicInput"

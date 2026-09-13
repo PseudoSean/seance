@@ -64,7 +64,7 @@
 				</div>
 				<span v-if="network.nick" :title="nickLabel" class="lobby-nick"
 					><span class="sr-only">{{ t("lobby.nickname") }}</span
-					>{{ network.nick }}</span
+					><bdi>{{ network.nick }}</bdi></span
 				>
 			</div>
 		</div>

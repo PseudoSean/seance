@@ -19,8 +19,11 @@
 		     lang> and the text direction, so an RTL language never flashes
 		     left-to-right. Reads the same settings blob as client/js/settings.ts;
 		     resolves "auto" against the baked locale list — __AVAILABLE_LOCALES__
-		     is substituted at build from client/locales/tags.json — with the same
-		     exact-then-base order as client/js/i18n bestLocale(). The RTL tag
+		     is substituted at build from client/locales/tags.json. The match
+		     order differs from client/js/i18n bestLocale() — exact-or-base per
+		     candidate here, exact-then-base per preference there — which can
+		     pick a different tag of the same language; harmless, and moot while
+		     the list ships no subtags. The RTL tag
 		     list is pinned to client/js/i18n/core.ts by test/helpers/i18n.ts.
 		     Fail-closed: any error means English/left-to-right until boot. -->
 		<script>

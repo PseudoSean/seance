@@ -8,7 +8,7 @@ import type {InjectionKey} from "vue";
 
 import {SettingsState} from "./settings";
 import {SharedConfiguration, LockedSharedConfiguration} from "../../shared/types/config";
-import {BrandingConfig, DEFAULT_BRANDING, brandingString} from "./branding";
+import {BrandingConfig, DEFAULT_BRANDING} from "./branding";
 import type {UploadProgress} from "./upload";
 
 enum DesktopNotificationState {
@@ -74,8 +74,6 @@ const state = (): State => ({
 });
 
 type Getters = {
-	/** Branded UI copy: `strings` overrides from config.json, else the default text. */
-	brandingString: (state: State) => (key: string) => string;
 	findChannelOnCurrentNetwork: (state: State) => (name: string) => ClientChan | undefined;
 	findChannelOnNetwork: (state: State) => (
 		networkUuid: string,
@@ -99,7 +97,6 @@ export type CallableGetters = {
 };
 
 const getters: Getters = {
-	brandingString: (state) => (key: string) => brandingString(key, state.branding),
 	findChannelOnCurrentNetwork: (state) => (name: string) => {
 		name = name.toLowerCase();
 		return state.activeChannel?.network.channels.find((c) => c.name.toLowerCase() === name);
