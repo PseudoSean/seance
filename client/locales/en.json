@@ -761,6 +761,13 @@
   "sr.redactPrefix": "Could not delete message: {why}",
   "sr.redactUnknownMsgid": "The server no longer has that message.",
   "sr.redactWindowExpired": "That message is too old to delete.",
+  "sw.markRead": "Mark read",
+  "sw.newActivity": "New activity while you were away.",
+  "sw.newMessage": "New message",
+  "sw.reply": "Reply",
+  "sw.replyPlaceholder": "Reply…",
+  "sw.titleChannel": "{nick} in {target}",
+  "sw.titleCount": "({count})",
   "typing.many": {
     "one": "{nick1}, {nick2} and {count} other is typing…",
     "other": "{nick1}, {nick2} and {count} others are typing…"

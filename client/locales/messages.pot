@@ -4386,6 +4386,49 @@ msgctxt "sr.redactWindowExpired"
 msgid "That message is too old to delete."
 msgstr ""
 
+#: client/service-worker.js:1146
+#. Title of the left action button on a push notification (shown on every platform): marks the conversation read on the server at this notification's newest message, which also closes the notification on the reader's other devices.
+msgctxt "sw.markRead"
+msgid "Mark read"
+msgstr ""
+
+#: client/service-worker.js:1194
+#: client/service-worker.js:1212
+#. Body of the fallback notification shown when a push payload cannot be parsed into a conversation message, or the worker hit an error: something happened, but there is nothing to show. The title is the app name and is never translated.
+msgctxt "sw.newActivity"
+msgid "New activity while you were away."
+msgstr ""
+
+#: client/service-worker.js:992
+#. Body of a notification for a push payload that named no message text (a degraded opt-down tier): the conversation saw activity whose content was not delivered.
+msgctxt "sw.newMessage"
+msgid "New message"
+msgstr ""
+
+#: client/service-worker.js:1150
+#. Title of the right action button on a push notification; where the platform has an inline reply field it opens that, else it opens the conversation. Kept last so a thumb lands on it.
+msgctxt "sw.reply"
+msgid "Reply"
+msgstr ""
+
+#: client/service-worker.js:1151
+#. Placeholder of the notification's inline reply text field (platforms that show one, e.g. desktop Chrome); what the reader types goes to the conversation as one IRC message.
+msgctxt "sw.replyPlaceholder"
+msgid "Reply…"
+msgstr ""
+
+#: client/service-worker.js:1134
+#. Notification title for a message in a channel: {nick} is the sender's nickname, {target} the channel name. Translated as a whole so word order is free; the unread-count suffix is appended after it, never inside.
+msgctxt "sw.titleChannel"
+msgid "{nick} in {target}"
+msgstr ""
+
+#: client/service-worker.js:1132
+#. Unread-count suffix appended after the notification title once a conversation has more than one message; {count} is the number of unread messages. A bare numeric suffix with no plural forms; the space separating it from the title is added by the worker.
+msgctxt "sw.titleCount"
+msgid "({count})"
+msgstr ""
+
 #: client/components/TypingIndicator.vue:31
 #. Line above the message input naming the two longest-typing users and summarizing everyone else. {nick1} and {nick2} are those users' names; {count} is how many further users are typing. The singular form shows when one further user is meant, the plural for any other number.
 msgctxt "typing.many"

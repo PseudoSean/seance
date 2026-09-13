@@ -924,6 +924,47 @@ function push() {
 	};
 }
 
+// --- the worker's own copy ----------------------------------------------------
+// The strings the worker itself composes — notification actions, the title
+// fragments, the fallback activity body — resolve through the same i18n
+// catalog the app uses: the push module installs applyLocale/t/interpolate
+// (client/js/push/i18n.ts), and handlePushNow applies the prefs' locale per
+// push, before composing anything. t() below prefers that surface; the
+// literals here are what it falls back to when js/push.js did not load and
+// no catalog exists anywhere. They must stay equal to the pot's sw.* msgids
+// (client/locales/messages.pot) — pinned by test/tests/service-worker.ts
+// against the compiled en.json.
+
+const SW_COPY_FALLBACK = {
+	"sw.markRead": "Mark read",
+	"sw.reply": "Reply",
+	"sw.replyPlaceholder": "Reply…",
+	"sw.newActivity": "New activity while you were away.",
+	"sw.newMessage": "New message",
+	"sw.titleChannel": "{nick} in {target}",
+	"sw.titleCount": "({count})",
+};
+
+/** {name} interpolation over the fallback copy (core.ts's interpolate). */
+function swInterpolate(template, vars) {
+	return template.replace(/\{(\w+)\}/g, (match, name) =>
+		vars && Object.prototype.hasOwnProperty.call(vars, name) ? String(vars[name]) : match
+	);
+}
+
+/** A label the worker itself composes: the push module's catalog when its
+ * chunk loaded, the English literals above when it did not. Call sites are
+ * written t("key") so tools/i18n/check.ts's call-site scan sees them. */
+function t(key, vars) {
+	const pushModule = self.seancePush;
+
+	if (pushModule && typeof pushModule.t === "function") {
+		return pushModule.t(key, vars);
+	}
+
+	return swInterpolate(SW_COPY_FALLBACK[key] || key, vars || {});
+}
+
 /** shared/irc.ts's matchFormatting, inline for the fallback. */
 function stripFormattingInline(text) {
 	return text
@@ -948,7 +989,7 @@ function fromJson(json) {
 		nick: json.from,
 		command: json.t === "notice" ? "NOTICE" : "PRIVMSG",
 		target: json.target,
-		text: typeof json.text === "string" ? json.text : "New message",
+		text: typeof json.text === "string" ? json.text : t("sw.newMessage"),
 	};
 }
 
@@ -981,6 +1022,21 @@ async function handlePushNow(raw) {
 		}
 
 		const P = push();
+
+		// The page mirrors the reader's preferences here (client/js/
+		// push-prefs.ts): whether Markdown renders, and the UI language tag
+		// the worker's own copy resolves through. Applied here, per push and
+		// before anything reader-visible is composed — the locale can change
+		// between pushes and no page may be open to apply it for us. A stale
+		// js/push.js (a mid-deploy worker) carries no surface: t() falls
+		// back to the English literals instead.
+		const prefs = (await idbGet("prefs")) || {};
+		const markdown = prefs.markdown !== false;
+
+		if (typeof P.applyLocale === "function") {
+			await P.applyLocale(appUrl, prefs.locale);
+		}
+
 		const parsed = json ? fromJson(json) : P.parsePushLine(clean);
 
 		// The same relay as a MARKREAD line (the full tier).
@@ -1038,14 +1094,10 @@ async function handlePushNow(raw) {
 			const replyTo = isChannel ? parsed.target : parsed.nick;
 			const tag = "push-" + (replyTo || "activity");
 
-			// The page mirrors the reader's markdown setting here (client/js/
-			// push-prefs.ts); absent means the app default, on.
-			const prefs = (await idbGet("prefs")) || {};
-			const markdown = prefs.markdown !== false;
-
-			// Merge per target: the message list rides on the notification's
-			// data so it survives the worker being killed between pushes, and a
-			// multiline message grows in place, one line per push.
+			// Merge per target (the markdown preference was read with the
+			// locale, above): the message list rides on the notification's
+			// data so it survives the worker being killed between pushes, and
+			// a multiline message grows in place, one line per push.
 			const existing = await self.registration.getNotifications({tag});
 			const prev = existing[0] && existing[0].data;
 			const added = P.addMessage(
@@ -1072,9 +1124,15 @@ async function handlePushNow(raw) {
 				P.notificationText(text, {markdown})
 			);
 
+			// Title fragments resolve whole — never concatenated — so a
+			// translation is free to reorder them; the unread count is a bare
+			// numeric suffix (no plurals in the worker; the separating space
+			// is added here), and a query title is the nick alone: nothing to
+			// translate.
+			const countSuffix = count > 1 ? " " + t("sw.titleCount", {count}) : "";
 			const title = isChannel
-				? parsed.nick + " in " + parsed.target + (count > 1 ? " (" + count + ")" : "")
-				: parsed.nick + (count > 1 ? " (" + count + ")" : "");
+				? t("sw.titleChannel", {nick: parsed.nick, target: parsed.target}) + countSuffix
+				: parsed.nick + countSuffix;
 
 			// Inline reply renders as a text field where the browser supports
 			// it (desktop Chrome) and degrades to a button that deep-links the
@@ -1085,8 +1143,13 @@ async function handlePushNow(raw) {
 			// Mark read is "seen, no answer needed": the account's read marker
 			// at this notification's newest message, on every device.
 			const actions = [
-				{action: "markread", title: "Mark read"},
-				{action: "reply", type: "text", title: "Reply", placeholder: "Reply…"},
+				{action: "markread", title: t("sw.markRead")},
+				{
+					action: "reply",
+					type: "text",
+					title: t("sw.reply"),
+					placeholder: t("sw.replyPlaceholder"),
+				},
 			];
 
 			// The payload names no network: a push-only worker serves exactly
@@ -1128,15 +1191,25 @@ async function handlePushNow(raw) {
 		await showSafely("Seance", {
 			tag: "push-activity",
 			icon: "img/icon-192.png",
-			body: "New activity while you were away.",
+			body: t("sw.newActivity"),
 		});
 
 		await updateBadge();
 	} catch (e) {
+		// Whatever failed above, the prefs' locale may or may not have been
+		// applied — a push that dies before it leaves a locale a previous
+		// push installed, which must not leak into the fallback copy.
+		// Resolve from the default instead.
+		const surface = push();
+
+		if (typeof surface.applyLocale === "function") {
+			await surface.applyLocale(appUrl, undefined);
+		}
+
 		await showSafely("Seance", {
 			tag: "push-activity",
 			icon: "img/icon-192.png",
-			body: "New activity while you were away.",
+			body: t("sw.newActivity"),
 		});
 		await updateBadge();
 	}

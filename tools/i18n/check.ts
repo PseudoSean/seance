@@ -28,10 +28,11 @@ export interface PotProblems {
 /**
  * Keys the call-site scan can never see. The loading splash's only
  * referents are the static copy in client/index.html (the scanner reads
- * just .ts/.vue) and the splash id/key table in client/js/i18n/index.ts —
- * a data table, not t() call sites. The live-tree assertion in
- * test/tests/i18n-toolchain.ts pins every key here to that table, so a
- * splash key that leaves it cannot linger on the allowlist.
+ * just .ts/.vue plus the service worker) and the splash id/key table in
+ * client/js/i18n/index.ts — a data table, not t() call sites. The
+ * live-tree assertion in test/tests/i18n-toolchain.ts pins every key here
+ * to that table, so a splash key that leaves it cannot linger on the
+ * allowlist.
  *
  * The dates.* labels are the second kind: formatRelativeDay() resolves them
  * inside client/js/i18n/dates.ts, which the scan skips wholesale (date
@@ -47,8 +48,17 @@ export const ALLOWED_UNREFERENCED = new Set([
 	"loading.slow",
 ]);
 
-/** t("key") / tCount("key", …) — the only way a key becomes a call site. */
+/** t("key") / tCount("key", …) — the only way a key becomes a call site.
+ * The service worker's own t() (client/service-worker.js, which prefers the
+ * push module's catalog) is written in the same shape on purpose, so this
+ * one regex covers it too once its file is scanned (SERVICE_WORKER_FILE). */
 const CALL_SITE = /\bt(?:Count)?\(\s*"([^"]+)"/g;
+
+/** The service worker composes reader-visible copy (notification actions,
+ * title fragments, the fallback body) through the same resolver shape, but
+ * it is plain .js outside the .ts/.vue scan — collected explicitly per
+ * scan root, so fixture trees without one are unaffected. */
+const SERVICE_WORKER_FILE = "service-worker.js";
 
 /** Directories the implementation itself lives in — never call sites. */
 const I18N_DIR = /(^|[\\/])js[\\/]i18n([\\/]|$)/;
@@ -76,7 +86,9 @@ function collectCallSites(dir: string, root: string, into: Set<string>): void {
 			continue;
 		}
 
-		if (!/\.(?:ts|vue)$/.test(item.name) || I18N_DIR.test(relative(root, path))) {
+		const isCallSiteFile = /\.(?:ts|vue)$/.test(item.name) || item.name === SERVICE_WORKER_FILE;
+
+		if (!isCallSiteFile || I18N_DIR.test(relative(root, path))) {
 			continue;
 		}
 

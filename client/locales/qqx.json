@@ -760,6 +760,13 @@
   "sr.redactPrefix": "‫ċöüľḋ ñöţ ḋéľéţé ṁéśśàġé: {why}ċöüľḋ ñöţ ḋéľéţé ṁéśśàġé: {why}‬",
   "sr.redactUnknownMsgid": "‫ţḣé śéŕṽéŕ ñö ľöñġéŕ ḣàś ţḣàţ ṁéśśàġé.ţḣé śéŕṽéŕ ñö ľöñġéŕ ḣàś ţḣàţ ṁéśśàġé.‬",
   "sr.redactWindowExpired": "‫ţḣàţ ṁéśśàġé ïś ţöö öľḋ ţö ḋéľéţé.ţḣàţ ṁéśśàġé ïś ţöö öľḋ ţö ḋéľéţé.‬",
+  "sw.markRead": "‫ṁàŕķ ŕéàḋṁàŕķ ŕéàḋ‬",
+  "sw.newActivity": "‫ñéẃ àċţïṽïţý ẃḣïľé ýöü ẃéŕé àẃàý.ñéẃ àċţïṽïţý ẃḣïľé ýöü ẃéŕé àẃàý.‬",
+  "sw.newMessage": "‫ñéẃ ṁéśśàġéñéẃ ṁéśśàġé‬",
+  "sw.reply": "‫ŕéṗľýŕéṗľý‬",
+  "sw.replyPlaceholder": "‫ŕéṗľý…ŕéṗľý…‬",
+  "sw.titleChannel": "‫{nick} ïñ {target}{nick} ïñ {target}‬",
+  "sw.titleCount": "‫){count}(){count}(‬",
   "typing.many": {
     "one": "‫{nick1}, {nick2} àñḋ {count} öţḣéŕ ïś ţýṗïñġ…{nick1}, {nick2} àñḋ {count} öţḣéŕ ïś ţýṗïñġ…‬",
     "other": "‫{nick1}, {nick2} àñḋ {count} öţḣéŕ ïś ţýṗïñġ…{nick1}, {nick2} àñḋ {count} öţḣéŕ ïś ţýṗïñġ…‬"

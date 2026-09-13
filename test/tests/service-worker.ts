@@ -9,12 +9,15 @@
  * page's connection, else a throwaway-connection MARKREAD, else the outbox).
  */
 import {expect} from "chai";
-import {readFileSync} from "node:fs";
+import {existsSync, readFileSync} from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
+import {interpolate, t} from "../../client/js/i18n/core";
+import {applyLocale} from "../../client/js/push/i18n";
 import {CONCAT_TAG, lineIndexOf, parsePushLine} from "../../client/js/push/line";
 import {addMessage, MERGE_KEEP, renderMergedBody} from "../../client/js/push/merge";
 import {notificationText, stripFormatting} from "../../client/js/push/strip";
+import {pseudo} from "../../tools/i18n/compile";
 
 const SW_SOURCE = readFileSync(path.join(__dirname, "../../client/service-worker.js"), "utf8");
 
@@ -30,7 +33,12 @@ interface Rec {
 		time?: string;
 		messages?: Array<{from: string; text: string; msgid?: string}>;
 	};
-	actions?: Array<{action: string; type?: string; title: string}>;
+	actions?: Array<{
+		action: string;
+		type?: string;
+		title: string;
+		placeholder?: string;
+	}>;
 	closed: boolean;
 	close(): void;
 }
@@ -371,15 +379,31 @@ function makeSW(options: HarnessOptions = {}): SWHarness {
 					put: (): Promise<void> => Promise.resolve(),
 				}),
 		},
-		fetch: (): Promise<any> =>
-			Promise.resolve({
-				ok: true,
+		fetch(url: string): Promise<any> {
+			// The locale catalogs come off disk — the real compiled artifacts:
+			// the worker's i18n (client/js/push/i18n.ts) fetches
+			// `<app>/locales/<tag>.json`, and the HTTP round-trip is the one
+			// piece of the browser this vm cannot run. Everything else keeps
+			// the empty 200 the push tests have always seen.
+			const catalog = /locales\/([A-Za-z0-9-]+)\.json$/.exec(String(url));
+			const file =
+				catalog !== null
+					? path.join(__dirname, "../../client/locales", catalog[1] + ".json")
+					: null;
+			const body = file !== null && existsSync(file) ? readFileSync(file, "utf8") : null;
+
+			return Promise.resolve({
+				ok: file === null || body !== null,
+				status: file !== null && body === null ? 404 : 200,
 				clone() {
 					return this;
 				},
-				text: (): Promise<string> => Promise.resolve(""),
+				text: (): Promise<string> => Promise.resolve(body ?? ""),
+				json: (): Promise<unknown> =>
+					Promise.resolve(body === null ? {} : JSON.parse(body)),
 				arrayBuffer: (): Promise<ArrayBuffer> => Promise.resolve(new ArrayBuffer(0)),
-			}),
+			});
+		},
 		importScripts(): void {},
 		skipWaiting: (): Promise<void> => Promise.resolve(),
 		indexedDB: {
@@ -453,6 +477,24 @@ function makeSW(options: HarnessOptions = {}): SWHarness {
 			addMessage,
 			renderMergedBody,
 			MERGE_KEEP,
+			// The worker's i18n surface (worker-entry.ts installs the same
+			// three, with the worker's global fetch bound): applyLocale
+			// applies the prefs' locale per push, and t/interpolate resolve
+			// the worker's own copy through it. The fetcher is this sandbox's
+			// fetch, so the real loader runs against the same fake transport
+			// the worker's own fetch calls would.
+			applyLocale: (appUrl: string, tag?: string | null) =>
+				applyLocale(
+					(url: string) =>
+						sandbox.fetch(url) as {
+							ok: boolean;
+							json(): Promise<unknown>;
+						},
+					appUrl,
+					tag
+				),
+			t,
+			interpolate,
 		};
 	}
 
@@ -849,6 +891,72 @@ describe("service worker push notifications", function () {
 		expect(sw.shown[0].actions![1].type, "the reply is the inline text field").to.equal("text");
 	});
 
+	it("localizes the actions, placeholder and title through the prefs' locale (qqx)", async function () {
+		const sw = makeSW();
+		sw.kv.set("prefs", {markdown: true, locale: "qqx"});
+
+		await firePush(sw, hlPayload("alice", "#seance", "hey there"));
+
+		const shown = sw.shown[0];
+		// The channel title resolves whole ({nick} in {target}) through the
+		// catalog; nick and target are user content and stay verbatim.
+		expect(shown.title).to.equal(
+			interpolate(pseudo("{nick} in {target}"), {nick: "alice", target: "#seance"})
+		);
+		const actions = shown.actions!;
+		expect(actions.map((a) => a.title)).to.deep.equal([pseudo("Mark read"), pseudo("Reply")]);
+		expect(actions[1].placeholder).to.equal(pseudo("Reply…"));
+	});
+
+	it("keeps the exact English copy when the prefs carry no locale", async function () {
+		const sw = makeSW();
+
+		await firePush(sw, hlPayload("alice", "#seance", "hey there"));
+
+		const actions = sw.shown[0].actions!;
+		expect(actions.map((a) => a.title)).to.deep.equal(["Mark read", "Reply"]);
+		expect(actions[1].placeholder).to.equal("Reply…");
+		expect(sw.shown[0].title).to.equal("alice in #seance");
+		expect(sw.shown[0].body).to.equal("alice: hey there");
+	});
+
+	it("falls back to English for a locale the deploy has no catalog for", async function () {
+		const sw = makeSW();
+		sw.kv.set("prefs", {locale: "zz"});
+
+		await firePush(sw, hlPayload("alice", "#seance", "hey there"));
+
+		expect(sw.shown[0].actions!.map((a) => a.title)).to.deep.equal(["Mark read", "Reply"]);
+		expect(sw.shown[0].title).to.equal("alice in #seance");
+	});
+
+	it("localizes the unread-count suffix with the title (a bare number, no plurals)", async function () {
+		const sw = makeSW();
+
+		await firePush(sw, msgPayload("alice", "pushtest", "first"));
+		await firePush(sw, msgPayload("alice", "pushtest", "second"));
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live[0].title).to.equal("alice (2)");
+	});
+
+	it("resolves the fallback body from the default locale when IndexedDB rejects", async function () {
+		// A previous push may have installed another locale; the failure path
+		// knows nothing about the prefs, so it must reset to the default
+		// rather than speak a locale it cannot name.
+		const localized = makeSW();
+		localized.kv.set("prefs", {locale: "qqx"});
+		await firePush(localized, msgPayload("alice", "pushtest", "hello there"));
+		expect(localized.shown[0].actions![0].title).to.equal(pseudo("Mark read"));
+
+		const failed = makeSW({failIndexedDB: true});
+		await firePush(failed, msgPayload("alice", "pushtest", "hello there"));
+
+		expect(failed.shown).to.have.lengthOf(1);
+		expect(failed.shown[0].tag).to.equal("push-activity");
+		expect(failed.shown[0].body).to.equal("New activity while you were away.");
+	});
+
 	it("drops a push delivered twice (same msgid), even after its notification was closed", async function () {
 		const sw = makeSW();
 		const raw = "@msgid=BjAAAaBjdup1 :alice!u@h PRIVMSG pushtest :hello";
@@ -982,6 +1090,16 @@ describe("service worker push notifications (inline fallback, js/push.js not loa
 		expect(live).to.have.lengthOf(1);
 		expect(live[0].body).to.equal("**hi**\n**bye**");
 		expect(live[0].data.count).to.equal(2);
+	});
+
+	it("still shows the English actions when the chunk (and with it the catalog) is gone", async function () {
+		const sw = makeSW({noPushModule: true});
+
+		await firePush(sw, msgPayload("alice", "pushtest", "hello there"));
+
+		const actions = sw.shown[0].actions!;
+		expect(actions.map((a) => a.title)).to.deep.equal(["Mark read", "Reply"]);
+		expect(actions[1].placeholder).to.equal("Reply…");
 	});
 });
 
@@ -1561,5 +1679,34 @@ describe("service worker mark read", function () {
 
 		expect(sw.lastSent()).to.include(`MARKREAD alice timestamp=${T}`);
 		expect(sw.kv.get("outbox")).to.have.lengthOf(1);
+	});
+});
+
+describe("service worker copy fallback (SW_COPY_FALLBACK)", function () {
+	it("stays equal to the compiled en catalog's sw.* entries", function () {
+		// The worker's t() falls back to these literals when js/push.js did
+		// not load and no catalog exists anywhere. They must never drift from
+		// the pot's sw.* msgids — en.json is compiled from them, so this pin
+		// fails when either side changes alone.
+		const block = /const SW_COPY_FALLBACK = (\{[\s\S]*?\});/.exec(SW_SOURCE);
+		expect(block, "SW_COPY_FALLBACK found in service-worker.js").to.not.equal(null);
+
+		// The object literal is prettier-formatted (trailing comma), so drop
+		// it before parsing as JSON.
+		const literal = block![1].replace(/,(\s*\})$/, "$1");
+		const fallback = JSON.parse(literal) as Record<string, string>;
+		const en = JSON.parse(
+			readFileSync(path.join(__dirname, "../../client/locales/en.json"), "utf8")
+		) as Record<string, string>;
+		const swKeys = Object.keys(en)
+			.filter((key) => key.startsWith("sw."))
+			.sort();
+
+		expect(swKeys, "the pot carries sw.* keys").to.have.lengthOf.above(0);
+		expect(Object.keys(fallback).sort()).to.deep.equal(swKeys);
+
+		for (const key of swKeys) {
+			expect(fallback[key], key).to.equal(en[key]);
+		}
 	});
 });
