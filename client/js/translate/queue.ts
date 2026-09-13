@@ -12,9 +12,11 @@
 // routed when it runs, the marker form its engine reads (spans.ts
 // `renderMarkers`) is chosen here, once the route has answered, and kept on
 // the `Queued` record that both the request and the restore are built from.
+// A line judged untranslated (an echo, a narration, an answered question)
+// is retried once bare, the composer's `bareRetry` shape, before it fails.
 // Vue-free; reader.ts feeds it and writes its updates to the store.
 
-import {EngineName, PromptContext, TranslateChunk, TranslateRequest} from "./engine";
+import {EngineName, PromptContext, TranslateChunk, TranslateRequest, emptyContext} from "./engine";
 import {
 	ABORTED,
 	ANSWERED,
@@ -71,6 +73,12 @@ export interface QueueItem {
 	 * and it is what a channel falling behind has left to drop.
 	 */
 	history?: true;
+	/**
+	 * This is the automatic bare retry of a line judged untranslated
+	 * (`TranslateQueue.report`): it has had its second try, so the next
+	 * judged failure is reported. A user's retry clears it.
+	 */
+	bare?: true;
 }
 
 export type QueueUpdate =
@@ -147,6 +155,7 @@ export class TranslateQueue {
 			{
 				...item,
 				single: true,
+				bare: undefined,
 				// Someone asked for this line now, so it is no longer history:
 				// a burst of live chat must not push a retry to the back.
 				history: undefined,
@@ -245,7 +254,18 @@ export class TranslateQueue {
 		this.cancelled.set(chanId, this.generation(chanId) + 1);
 	}
 
-	private enqueueAt(item: QueueItem, front: boolean): void {
+	/**
+	 * `resumePaused`: a paused engine gets another chance (a user's retry);
+	 * the automatic bare retry never un-pauses one. `noRouteError`: what a
+	 * route that finds no engine reports instead of NO_ROUTE (the bare
+	 * retry's judged failure, which is what the line actually suffered).
+	 */
+	private enqueueAt(
+		item: QueueItem,
+		front: boolean,
+		resumePaused = front,
+		noRouteError = NO_ROUTE
+	): void {
 		const generation = this.generation(item.chanId);
 		const globalGeneration = this.globalGeneration;
 
@@ -260,7 +280,7 @@ export class TranslateQueue {
 				}
 
 				if (!engine) {
-					this.deps.onUpdate(item.id, {status: "failed", error: NO_ROUTE});
+					this.deps.onUpdate(item.id, {status: "failed", error: noRouteError});
 					return;
 				}
 
@@ -276,7 +296,7 @@ export class TranslateQueue {
 
 				this.waiting.push(queued);
 
-				if (front && this.pausedEngines.has(engine)) {
+				if (resumePaused && this.pausedEngines.has(engine)) {
 					// A retry is someone asking for this line now: the engine its
 					// failures paused gets another chance rather than leaving the
 					// item waiting for ever. resume() pumps.
@@ -646,6 +666,11 @@ export class TranslateQueue {
 	 * complete, and the line keeps its chip with Retry / Retranslate from…
 	 * Both sides of the comparison are restored (`restoreAll`), so whichever
 	 * marker form the route chose cancels out.
+	 *
+	 * An echo, a narration or an answered question is first retried once,
+	 * bare (`retryBare`), the way the composer retries a draft: measured on
+	 * casual English chat lines the bare shape translated all 8 of Qwen3-4B's
+	 * echoes and 2 of Qwen3-1.7B's 5. Only a second such answer is reported.
 	 */
 	private report(engine: EngineName, q: Queued, answer: string): void {
 		const original = restoreAll(q.info.text, q.info);
@@ -671,7 +696,7 @@ export class TranslateQueue {
 		// wants …") is no more a translation than an echo is, and no more the
 		// engine's fault.
 		if (isNarration(original, text)) {
-			this.deps.onUpdate(q.item.id, {status: "failed", error: NARRATION});
+			this.failJudged(q, NARRATION);
 			return;
 		}
 
@@ -679,16 +704,65 @@ export class TranslateQueue {
 		// start?" → "It starts at nine.") is not a translation either, and
 		// not the engine's failure.
 		if (isAnsweredQuestion(original, text, q.item.to)) {
-			this.deps.onUpdate(q.item.id, {status: "failed", error: ANSWERED});
+			this.failJudged(q, ANSWERED);
 			return;
 		}
 
 		if (isUnchanged(original, text)) {
-			this.deps.onUpdate(q.item.id, {status: "failed", error: UNCHANGED});
+			this.failJudged(q, UNCHANGED);
 			return;
 		}
 
 		this.deps.onUpdate(q.item.id, {status: "done", text, engine});
+	}
+
+	/** A judged failure: the bare retry if the line has not had it, else failed. */
+	private failJudged(q: Queued, error: string): void {
+		if (q.item.bare) {
+			this.deps.onUpdate(q.item.id, {status: "failed", error});
+			return;
+		}
+
+		this.retryBare(q.item, error);
+	}
+
+	/**
+	 * The line again in the composer's bare shape (outgoing.ts `bareRetry`,
+	 * which takes an `OutgoingRequest` and so is duplicated here): the source
+	 * left to the model, the context emptied but for formality and variant,
+	 * and the source kept as the routing hint a seq2seq route reads. It goes
+	 * to the front, like a user's retry, since the line is on screen now, and
+	 * is dropped by whatever drops a queued item; its status stays pending.
+	 */
+	private retryBare(item: QueueItem, error: string): void {
+		const context = emptyContext();
+
+		context.formality = item.context.formality;
+
+		if (item.context.variant) {
+			context.variant = item.context.variant;
+		}
+
+		const hint = item.from ?? item.context.sourceHint;
+
+		if (hint) {
+			context.sourceHint = hint;
+		}
+
+		this.enqueueAt(
+			{
+				...item,
+				from: null,
+				context,
+				single: true,
+				bare: true,
+				history: undefined,
+				arrivalsAtEnqueue: this.deps.arrivals(item.chanId),
+			},
+			true,
+			false,
+			error
+		);
 	}
 
 	/** The request deadline's timers: the page's own, and the service's load counter. */

@@ -532,6 +532,10 @@ describe("translate/queue", () => {
 			[2, {status: "failed", error: UNCHANGED}],
 			[3, {status: "failed", error: UNCHANGED}],
 		]);
+		// Each line had its bare retry before it failed: two answers apiece,
+		// six judged failures, and still no pause.
+		expect(r.requests).to.have.length(2 * PAUSE_AFTER_FAILURES);
+		expect(r.requests.filter((req) => req.from === null)).to.have.length(PAUSE_AFTER_FAILURES);
 		expect(r.paused).to.deep.equal([]);
 		expect(r.queue.paused("llm")).to.equal(false);
 
@@ -558,6 +562,7 @@ describe("translate/queue", () => {
 		expect(r.updates.filter(([, u]) => u.status === "failed")).to.deep.equal([
 			[1, {status: "failed", error: NARRATION}],
 		]);
+		expect(r.requests.map((req) => req.from)).to.deep.equal(["de", null]);
 		expect(r.paused).to.deep.equal([]);
 		expect(r.queue.paused("llm")).to.equal(false);
 	});
@@ -581,6 +586,7 @@ describe("translate/queue", () => {
 			[2, {status: "failed", error: ANSWERED}],
 			[3, {status: "failed", error: ANSWERED}],
 		]);
+		expect(r.requests).to.have.length(2 * PAUSE_AFTER_FAILURES);
 		expect(r.paused).to.deep.equal([]);
 		expect(r.queue.paused("llm")).to.equal(false);
 
@@ -619,6 +625,8 @@ describe("translate/queue", () => {
 			[2, {status: "failed", error: REPETITION}],
 			[3, {status: "failed", error: REPETITION}],
 		]);
+		// A loop is not retried: one answer per line.
+		expect(r.requests).to.have.length(PAUSE_AFTER_FAILURES);
 		expect(r.paused).to.deep.equal([]);
 		expect(r.queue.paused("llm")).to.equal(false);
 	});
@@ -631,6 +639,152 @@ describe("translate/queue", () => {
 
 		expect(r.updates.filter(([, u]) => u.status === "failed")).to.deep.equal([
 			[1, {status: "failed", error: EMPTY_TRANSLATION}],
+		]);
+		expect(r.requests).to.have.length(1);
+		expect(r.paused).to.deep.equal([]);
+	});
+
+	// Measured on the web build's weights, the shipped prompts hand back 5
+	// (Qwen3-1.7B) and 8 (Qwen3-4B) of 45 casual English lines, and the
+	// composer's bare shape translated all of 4B's and 2 of 1.7B's: the
+	// reading queue gives a line judged untranslated the same one retry.
+	it("retries a line judged untranslated once, bare, and reports the translation", async () => {
+		const seen = new Set<string>();
+		const r = rig((req) => {
+			const text = req.lines ? req.lines.join("\n") : req.text;
+
+			if (!seen.has(text)) {
+				seen.add(text);
+				return [text];
+			}
+
+			return [`[en] ${text}`];
+		});
+		clock = r.clock;
+
+		const hints: (string | null)[] = [];
+		const route = r.deps.route.bind(r.deps);
+
+		r.deps.route = (from, to, hint) => {
+			hints.push(hint);
+			return route(from, to, hint);
+		};
+
+		r.queue.enqueue(
+			item(1, "das ist eine zeile hier", {
+				context: {
+					...emptyContext(),
+					recent: [{nick: "anna", text: "hallo"}],
+					replyTo: {nick: "anna", text: "hallo"},
+					topic: "Thema",
+					names: ["anna"],
+					terms: [["Zug", "train"]],
+					formality: "formal",
+					variant: "en-GB",
+				},
+			})
+		);
+		await settle(r.clock);
+
+		expect(r.requests).to.have.length(2);
+		expect(r.requests[1].from).to.equal(null);
+		expect(r.requests[1].lines).to.equal(undefined);
+		expect(r.requests[1].text).to.equal("das ist eine zeile hier");
+		expect(r.requests[1].context).to.deep.equal({
+			...emptyContext(),
+			formality: "formal",
+			variant: "en-GB",
+			sourceHint: "de",
+		});
+		expect(hints).to.deep.equal([null, "de"]);
+		expect(r.updates.filter(([, u]) => u.status === "failed")).to.deep.equal([]);
+		expect(r.updates.filter(([, u]) => u.status === "done")).to.deep.equal([
+			[1, {status: "done", text: "[en] das ist eine zeile hier", engine: "llm"}],
+		]);
+
+		// An unknown source keeps the detector's guess as the hint.
+		r.queue.enqueue(
+			item(2, "une autre ligne ici", {
+				from: null,
+				context: {...emptyContext(), sourceHint: "fr"},
+			})
+		);
+		await settle(r.clock);
+
+		expect(r.requests).to.have.length(4);
+		expect(r.requests[3].context.sourceHint).to.equal("fr");
+		expect(r.updates.filter(([, u]) => u.status === "failed")).to.deep.equal([]);
+	});
+
+	it("retries a batch line judged unchanged alone", async () => {
+		const r = rig((req) =>
+			req.lines
+				? [
+						req.lines
+							.map(
+								(line, i) =>
+									`${i + 1}. ${line.includes("echo") ? line : `[en] ${line}`}`
+							)
+							.join("\n") + "\nEND",
+				  ]
+				: [`[en] ${req.text}`]
+		);
+		clock = r.clock;
+		r.queue.pauseForTest();
+		r.queue.enqueue(item(1, "das ist echo eins hier"));
+		r.queue.enqueue(item(2, "das ist zwei hier"));
+		r.queue.enqueue(item(3, "das ist drei hier"));
+		await settle(r.clock, 3);
+		r.queue.resumeForTest();
+		await settle(r.clock);
+
+		expect(r.requests).to.have.length(2);
+		expect(r.requests[0].lines).to.have.length(3);
+		expect(r.requests[1].lines).to.equal(undefined);
+		expect(r.requests[1].text).to.equal("das ist echo eins hier");
+		expect(r.requests[1].from).to.equal(null);
+		expect(r.updates.filter(([, u]) => u.status === "failed")).to.deep.equal([]);
+		expect(r.updates.filter(([, u]) => u.status === "done").map(([id]) => id)).to.have.members([
+			1, 2, 3,
+		]);
+	});
+
+	it("sends no bare retry for a line dropped before it runs", async () => {
+		const r = rig((req) => {
+			// The answer is about to be judged: hold the queue so the retry
+			// waits, the way a busy engine would make it.
+			r.queue.hold();
+			return [req.text];
+		});
+		clock = r.clock;
+		r.queue.enqueue(item(1, "das ist eine zeile hier"));
+		await settle(r.clock);
+
+		expect(r.queue.size()).to.equal(1);
+
+		r.queue.cancelChannel(1);
+		r.queue.release();
+		await settle(r.clock);
+
+		expect(r.requests).to.have.length(1);
+		expect(r.updates.filter(([, u]) => u.status === "failed")).to.deep.equal([]);
+		expect(r.updates[r.updates.length - 1]).to.deep.equal([1, {status: "dropped"}]);
+	});
+
+	it("a user's retry of a line that failed bare gets its own bare retry", async () => {
+		const r = rig((req) => [req.text]);
+		clock = r.clock;
+		const first = item(1, "das ist eine zeile hier");
+
+		r.queue.enqueue(first);
+		await settle(r.clock);
+		r.queue.retry(first);
+		await settle(r.clock);
+
+		expect(r.requests.map((req) => req.from)).to.deep.equal(["de", null, "de", null]);
+		expect(r.updates.filter(([, u]) => u.status === "failed")).to.deep.equal([
+			[1, {status: "failed", error: UNCHANGED}],
+			[1, {status: "failed", error: UNCHANGED}],
 		]);
 		expect(r.paused).to.deep.equal([]);
 	});
@@ -651,7 +805,9 @@ describe("translate/queue", () => {
 		r.queue.enqueue(item(2, "siehe https://x.test bitte hier"));
 		await settle(r.clock);
 
-		expect(r.requests[1].text).to.equal(`siehe ${placeholder(1)} bitte hier`);
+		// Item 1's bare retry went out in between, so the seq2seq request is
+		// found by what it carries.
+		expect(r.requests.map((req) => req.text)).to.include(`siehe ${placeholder(1)} bitte hier`);
 		expect(r.updates.filter(([, u]) => u.status === "failed")).to.deep.equal([
 			[1, {status: "failed", error: UNCHANGED}],
 			[2, {status: "failed", error: UNCHANGED}],

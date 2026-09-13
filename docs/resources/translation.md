@@ -528,6 +528,23 @@ and neither an echo nor a letterless answer joins the `voice` quoted to the
 model next time or the channel's term memory (`termPair`): a voice line in
 the wrong language would be quoted into every later prompt.
 
+**The reading queue retries once, bare, before it fails a line.** An echo,
+a narration or an answered question (`UNCHANGED`, `NARRATION`, `ANSWERED`)
+in a reading answer is not reported at once: `TranslateQueue.report`
+queues the line again, at the front of the channel's work and still
+pending, in the composer's `bareRetry` shape -- `from: null`, the context
+emptied but for formality and variant, the source kept as `sourceHint`
+for a seq2seq route -- never batched, and marked `bare` so only a second
+such answer shows "failed" with its reason. Measured on the web build's own
+weights, the shipped prompts still hand back 5 of 45 casual English chat
+lines on Qwen3-1.7B and 8 on Qwen3-4B, and the bare shape translated all 8
+of 4B's and 2 of 1.7B's 5; without the retry each of those lines showed
+Retry instead of a translation. An empty answer and a repetition fail at
+once, as before. The retry is dropped by whatever drops a queued line (the
+channel switched off, a language change, drop-behind), never un-pauses an
+engine, and counts toward no pause; a user's Retry asks in the normal shape
+again and gets its own bare retry.
+
 **An echo buys one more generation, and a bare one.** Before the strip
 reports "came back unchanged" the same draft goes out a second time in the
 shape `bareRetry()` (`outgoing.ts`) builds: the source left to the model
