@@ -112,12 +112,12 @@
 
 			<div v-if="message.whois.logonTime">
 				<dt>{{ t("whois.connectedAt") }}</dt>
-				<dd>{{ localetime(message.whois.logonTime) }}</dd>
+				<dd>{{ fullTime(message.whois.logonTime) }}</dd>
 			</div>
 
 			<div v-if="message.whois.idle">
 				<dt>{{ t("whois.idleSince") }}</dt>
-				<dd>{{ localetime(message.whois.idleTime) }}</dd>
+				<dd>{{ fullTime(message.whois.idleTime) }}</dd>
 			</div>
 		</dl>
 	</span>
@@ -125,7 +125,7 @@
 
 <script lang="ts">
 import {defineComponent, PropType} from "vue";
-import localetime from "../../js/helpers/localetime";
+import {formatDateTime} from "../../js/i18n/dates";
 import {ClientNetwork, ClientMessage} from "../../js/types";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
@@ -152,7 +152,7 @@ export default defineComponent({
 
 		return {
 			t,
-			localetime: (date: Date) => localetime(date),
+			fullTime: (date: number | Date) => formatDateTime(date),
 		};
 	},
 });

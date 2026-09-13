@@ -337,21 +337,38 @@ describe("i18n toolchain", () => {
 			expect(problems.missingContext).to.deep.equal([]);
 		});
 
-		it("keeps every allowlisted key pinned to the splash id/key table", () => {
+		it("keeps every allowlisted key pinned to the source that resolves it", () => {
 			// ALLOWED_UNREFERENCED keys are referenced from places the
-			// .ts/.vue scanner cannot see: client/index.html's static splash
-			// copy and the splash id/key table in client/js/i18n/index.ts —
-			// a data table, not t() call sites. Read that file's source text
-			// and pin each allowlisted key as a quoted literal in it, so a
-			// splash key that leaves the table cannot linger on the
-			// allowlist.
-			const source = readFileSync(resolve("client/js/i18n/index.ts"), "utf8");
+			// .ts/.vue scanner cannot see, and each group has one file that
+			// resolves it: the splash keys live in the splash id/key table in
+			// client/js/i18n/index.ts (a data table, not t() call sites, fed
+			// by client/index.html's static copy), and the dates.* labels are
+			// resolved inside client/js/i18n/dates.ts (formatRelativeDay
+			// takes the caller's t(), so DateMarker.vue — their UI owner —
+			// never names the keys). Pin each group's keys as quoted literals
+			// in its resolver's source text, so a key that leaves it cannot
+			// linger on the allowlist.
+			const groups: ReadonlyArray<{file: string; keys: readonly string[]}> = [
+				{
+					file: "client/js/i18n/index.ts",
+					keys: ["loading.reload", "loading.requiresJs", "loading.slow"],
+				},
+				{file: "client/js/i18n/dates.ts", keys: ["dates.today", "dates.yesterday"]},
+			];
 
-			for (const key of ALLOWED_UNREFERENCED) {
-				expect(
-					source,
-					`${key} is allowlisted in check.ts but no longer appears in client/js/i18n/index.ts`
-				).to.contain(`"${key}"`);
+			const allowlisted = [...ALLOWED_UNREFERENCED].sort();
+			const pinned = groups.flatMap((group) => group.keys).sort();
+			expect(allowlisted).to.deep.equal(pinned);
+
+			for (const group of groups) {
+				const source = readFileSync(resolve(group.file), "utf8");
+
+				for (const key of group.keys) {
+					expect(
+						source,
+						`${key} is allowlisted in check.ts but no longer appears in ${group.file}`
+					).to.contain(`"${key}"`);
+				}
 			}
 		});
 	});

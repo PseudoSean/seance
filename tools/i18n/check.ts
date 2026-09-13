@@ -32,8 +32,16 @@ export interface PotProblems {
  * a data table, not t() call sites. The live-tree assertion in
  * test/tests/i18n-toolchain.ts pins every key here to that table, so a
  * splash key that leaves it cannot linger on the allowlist.
+ *
+ * The dates.* labels are the second kind: formatRelativeDay() resolves them
+ * inside client/js/i18n/dates.ts, which the scan skips wholesale (date
+ * patterns are Intl's business, not the catalog's), and their UI owner is
+ * DateMarker.vue, which hands its t() over instead of naming keys. The same
+ * live-tree assertion pins them to dates.ts's source text.
  */
 export const ALLOWED_UNREFERENCED = new Set([
+	"dates.today",
+	"dates.yesterday",
 	"loading.reload",
 	"loading.requiresJs",
 	"loading.slow",

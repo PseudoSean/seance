@@ -873,6 +873,18 @@ msgctxt "connection.error"
 msgid "Connection error: {message}"
 msgstr ""
 
+#: client/components/DateMarker.vue:4
+#. Label of a date marker between message groups in the scrollback: tooltip of the divider between the messages sent today.
+msgctxt "dates.today"
+msgid "Today"
+msgstr ""
+
+#: client/components/DateMarker.vue:4
+#. Label of a date marker between message groups in the scrollback: tooltip of the divider between the messages sent the day before; older groups show the date itself.
+msgctxt "dates.yesterday"
+msgid "Yesterday"
+msgstr ""
+
 #: client/js/irc/disconnect.ts
 #. Name of WebSocket close code 1001 in a connection-failure report. Lowercase mid-sentence by position.
 msgctxt "disconnect.code1001"

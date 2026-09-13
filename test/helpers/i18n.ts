@@ -1,6 +1,7 @@
 import {expect} from "chai";
-import {describe, it} from "mocha";
+import {after, describe, it} from "mocha";
 import {readFileSync} from "node:fs";
+import enCatalog from "../../client/locales/en.json";
 import {
 	RTL_TAGS,
 	bestLocale,
@@ -11,6 +12,7 @@ import {
 	t,
 	tCount,
 } from "../../client/js/i18n/core";
+import {formatDayHeading, formatRelativeDay, formatTime} from "../../client/js/i18n/dates";
 
 describe("i18n core", () => {
 	const en = {
@@ -71,5 +73,33 @@ describe("i18n core", () => {
 		const inline = /\/\^\(([^)]*)\)\\b\//.exec(html)?.[1] ?? "";
 		const fromHtml = new Set(inline.split("|"));
 		expect([...fromHtml].sort()).to.deep.equal([...RTL_TAGS].sort());
+	});
+});
+
+describe("i18n date formatters", () => {
+	after(() => {
+		// The catalog is module state: hand the real English copy back, so the
+		// suites loaded after this file resolve the live keys again.
+		setCatalog("en", enCatalog, undefined);
+	});
+
+	it("writes the day heading in the active language", () => {
+		// 4 February 2026 at local midnight: the heading is built from the
+		// wall-clock date, so the assertion holds in every timezone.
+		setCatalog("de", enCatalog, undefined);
+		expect(formatDayHeading(new Date(2026, 1, 4).getTime())).to.contain("Februar");
+	});
+
+	it("resolves Today through the t() the caller passes", () => {
+		setCatalog("en", enCatalog, undefined);
+		const stubT = (key: string) => (key === "dates.today" ? "Today" : key);
+		expect(formatRelativeDay(Date.now(), stubT)).to.equal("Today");
+	});
+
+	it("writes a timestamp on the 24-hour clock when hour12: false", () => {
+		// 22 May 2014, 15:04 local: hour12: false must win over en's own
+		// 12-hour preference (Task 8 Step 1 pins "15:04").
+		setCatalog("en", enCatalog, undefined);
+		expect(formatTime(new Date(2014, 4, 22, 15, 4).getTime(), false, false)).to.equal("15:04");
 	});
 });

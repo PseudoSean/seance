@@ -183,10 +183,7 @@
 
 <script lang="ts">
 import {computed, defineComponent, PropType, ref} from "vue";
-import dayjs from "dayjs";
 
-import constants from "../js/constants";
-import localetime from "../js/helpers/localetime";
 import Username from "./Username.vue";
 import LinkPreview from "./LinkPreview.vue";
 import ParsedMessage from "./ParsedMessage.vue";
@@ -200,6 +197,7 @@ import {MessageType} from "../../shared/types/msg";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
 import {useStore} from "../js/store";
 import {hasVirtualKeyboard} from "../js/helpers/device";
+import {formatDateTime, formatTime} from "../js/i18n/dates";
 import {useI18n} from "../js/i18n";
 
 MessageTypes.ParsedMessage = ParsedMessage;
@@ -231,7 +229,7 @@ export default defineComponent({
 	},
 	setup(props) {
 		const store = useStore();
-		const {t} = useI18n();
+		const {t, locale} = useI18n();
 
 		// On a touch device the toolbar opens on a tap: the long press that
 		// fakes a hover is also how iOS starts a text selection (see the
@@ -244,30 +242,33 @@ export default defineComponent({
 			}
 		};
 
-		const timeFormat = computed(() => {
-			let format: keyof typeof constants.timeFormats;
-
-			if (store.state.settings.use12hClock) {
-				format = store.state.settings.showSeconds ? "msg12hWithSeconds" : "msg12h";
-			} else {
-				format = store.state.settings.showSeconds ? "msgWithSeconds" : "msgDefault";
-			}
-
-			return constants.timeFormats[format];
-		});
-
+		// The clock and the tooltip both follow the use12hClock setting; the
+		// tooltip always spells the seconds (the cell shows only what fits
+		// its fixed column) and adds the date. locale.value is read so a
+		// language change re-renders what Intl rendered.
 		const messageTime = computed(() => {
-			return dayjs(props.message.time).format(timeFormat.value);
+			void locale.value;
+			return formatTime(
+				props.message.time.getTime(),
+				store.state.settings.showSeconds,
+				store.state.settings.use12hClock
+			);
 		});
 
 		const messageTimeLocale = computed(() => {
-			return localetime(props.message.time);
+			void locale.value;
+			return formatDateTime(props.message.time, store.state.settings.use12hClock);
 		});
 
 		// An edit keeps its original's time (msg:edit); when it was made is editedAt.
 		const editedTitle = computed(() => {
 			return props.message.editedAt
-				? t("message.editedAt", {time: localetime(props.message.editedAt)})
+				? t("message.editedAt", {
+						time: formatDateTime(
+							props.message.editedAt,
+							store.state.settings.use12hClock
+						),
+				  })
 				: t("message.edited");
 		});
 
@@ -368,7 +369,6 @@ export default defineComponent({
 			store,
 			actionsOpen,
 			toggleActions,
-			timeFormat,
 			messageTime,
 			messageTimeLocale,
 			editedTitle,

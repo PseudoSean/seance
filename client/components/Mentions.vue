@@ -36,8 +36,8 @@
 								</template>
 								<template v-else>{{ t("mentions.inUnknown") }}</template> </span
 							>{{ ` ` }}
-							<span :title="message.localetime" class="time">
-								{{ messageTime(message.time.toString()) }}
+							<span :title="message.fullTime" class="time">
+								{{ messageTime(message.time) }}
 							</span>
 						</div>
 						<div>
@@ -156,9 +156,7 @@ import {
 	dismissAllMentions as dismissAllStoredMentions,
 } from "../js/mentions";
 import eventbus from "../js/eventbus";
-import localetime from "../js/helpers/localetime";
-import dayjs from "dayjs";
-import relativeTime from "dayjs/plugin/relativeTime";
+import {formatDateTime, formatRelativeTime} from "../js/i18n/dates";
 import {computed, watch, defineComponent, ref, onMounted, onUnmounted} from "vue";
 import {useStore} from "../js/store";
 import {useI18n} from "../js/i18n";
@@ -166,11 +164,9 @@ import type {SharedMention} from "../../shared/types/mention";
 import type {NetChan} from "../js/types";
 
 type MentionWithContext = SharedMention & {
-	localetime: string;
+	fullTime: string;
 	channel: NetChan | null;
 };
-
-dayjs.extend(relativeTime);
 
 export default defineComponent({
 	name: "Mentions",
@@ -180,16 +176,19 @@ export default defineComponent({
 	},
 	setup() {
 		const store = useStore();
-		const {t} = useI18n();
+		const {t, locale} = useI18n();
 		const isOpen = ref(false);
 		const isLoading = ref(false);
 		const resolvedMessages = computed(() => {
+			// locale.value is read so a language change re-renders the
+			// Intl-formatted timestamps (Intl itself is not reactive).
+			void locale.value;
 			return store.state.mentions
 				.slice()
 				.reverse()
 				.map((message) => ({
 					...message,
-					localetime: localetime(message.time),
+					fullTime: formatDateTime(message.time),
 					channel: store.getters.findChannel(message.chanId),
 				}))
 				.filter((message) => !message.channel?.channel.muted);
@@ -204,8 +203,9 @@ export default defineComponent({
 
 		const dismissLabel = computed(() => t("mentions.dismissOne"));
 
-		const messageTime = (time: string) => {
-			return dayjs(time).fromNow();
+		const messageTime = (time: Date) => {
+			void locale.value;
+			return formatRelativeTime(time.getTime());
 		};
 
 		const dismissMention = (message: MentionWithContext) => {

@@ -16,6 +16,7 @@
 
 import socket, {EventBus} from "../socket";
 import {t} from "../i18n/core";
+import {collator} from "../i18n/collation";
 import {brandingFeatures} from "../branding";
 import {createHighlightTester} from "../highlight";
 import {ChanState, ChanType} from "../../../shared/types/chan";
@@ -2217,8 +2218,11 @@ export class IrcClient {
 
 // ----------------------------------------------------------------- utilities
 
+/** Where a newly created channel/query lands in the sidebar: the active
+ * locale's collation, case-insensitively as before (sensitivity "base"
+ * matches the old localeCompare options). */
 function compareNames(a: string, b: string): number {
-	return a.localeCompare(b, undefined, {sensitivity: "base"});
+	return collator({sensitivity: "base"}).compare(a, b);
 }
 
 function sanitizeIdent(nick: string): string {

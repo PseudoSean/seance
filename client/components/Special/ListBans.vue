@@ -11,7 +11,7 @@
 			<tr v-for="ban in channel.data" :key="ban.hostmask">
 				<td class="hostmask"><ParsedMessage :network="network" :text="ban.hostmask" /></td>
 				<td class="banned_by">{{ ban.banned_by }}</td>
-				<td class="banned_at">{{ localetime(ban.banned_at) }}</td>
+				<td class="banned_at">{{ fullTime(ban.banned_at) }}</td>
 			</tr>
 		</tbody>
 	</table>
@@ -19,7 +19,7 @@
 
 <script lang="ts">
 import ParsedMessage from "../ParsedMessage.vue";
-import localeTime from "../../js/helpers/localetime";
+import {formatDateTime} from "../../js/i18n/dates";
 import {defineComponent, PropType} from "vue";
 import type {ClientNetwork, ClientChan} from "../../js/types";
 import {useI18n} from "../../js/i18n";
@@ -36,13 +36,13 @@ export default defineComponent({
 	setup() {
 		const {t} = useI18n();
 
-		const localetime = (date: number | Date) => {
-			return localeTime(date);
+		const fullTime = (date: number | Date) => {
+			return formatDateTime(date);
 		};
 
 		return {
 			t,
-			localetime,
+			fullTime,
 		};
 	},
 });

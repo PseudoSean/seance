@@ -17,17 +17,9 @@ const colorCodeMap = [
 	["15", "Light Grey"],
 ];
 
-const timeFormats = {
-	msgDefault: "HH:mm",
-	msgWithSeconds: "HH:mm:ss",
-	msg12h: "h:mma",
-	msg12hWithSeconds: "h:mm:ssa",
-};
-
 export default {
 	colorCodeMap,
 	commands: [] as string[],
-	timeFormats,
 	// Same value as media query in CSS that forces sidebars to become overlays
 	mobileViewportPixels: 768,
 };

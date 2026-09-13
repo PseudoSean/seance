@@ -13,7 +13,7 @@
 					<ParsedMessage :network="network" :text="invite.hostmask" />
 				</td>
 				<td class="invitened_by">{{ invite.invited_by }}</td>
-				<td class="invitened_at">{{ localetime(invite.invited_at) }}</td>
+				<td class="invitened_at">{{ fullTime(invite.invited_at) }}</td>
 			</tr>
 		</tbody>
 	</table>
@@ -21,7 +21,7 @@
 
 <script lang="ts">
 import ParsedMessage from "../ParsedMessage.vue";
-import localetime from "../../js/helpers/localetime";
+import {formatDateTime} from "../../js/i18n/dates";
 import {defineComponent, PropType} from "vue";
 import type {ClientNetwork, ClientChan} from "../../js/types";
 import {useI18n} from "../../js/i18n";
@@ -40,7 +40,7 @@ export default defineComponent({
 
 		return {
 			t,
-			localetime: (date: Date) => localetime(date),
+			fullTime: (date: number | Date) => formatDateTime(date),
 		};
 	},
 });
