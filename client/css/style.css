@@ -764,6 +764,39 @@ p {
 	content: "\f35d"; /* https://fontawesome.com/icons/external-link-alt?style=solid */
 }
 
+/* Glyphs that point along the reading direction mirror under RTL: the
+ * expand/collapse carets (right when closed, down when opened), the image
+ * viewer's previous/next arrows, and the reply hook. Everything else keeps
+ * its face: plain event icons, down- and up-pointing glyphs, the 45°-tilted
+ * plug, the + that turns ×, and the spinners — rotate transforms never
+ * mirror. */
+[dir="rtl"] #chat .toggle-button,
+[dir="rtl"] #chat .toggle-content .more-caret,
+[dir="rtl"] #image-viewer .previous-image-btn,
+[dir="rtl"] #image-viewer .next-image-btn,
+[dir="rtl"] #chat .msg-reply-arrow {
+	transform: scaleX(-1);
+}
+
+/* The reply hook is a bare span; transforms need a box. */
+[dir="rtl"] #chat .msg-reply-arrow {
+	display: inline-block;
+}
+
+/* Opened toggles point down either way: rotate the mirrored caret the same
+ * quarter turn — applied first, then the flip — and it still reads down. */
+[dir="rtl"] #chat .toggle-content.opened .more-caret,
+[dir="rtl"] #chat .toggle-button.opened,
+[dir="rtl"] #chat .msg:not(.closed)[data-type="condensed"] .toggle-button {
+	transform: scaleX(-1) rotate(90deg);
+}
+
+/* A collapsed network's caret points along the reading direction: right in
+ * LTR (the base rule turns the down caret -90°), left in RTL. */
+[dir="rtl"] #sidebar .network.collapsed .collapse-network-icon {
+	transform: rotate(90deg);
+}
+
 /* End icons */
 
 #app {
