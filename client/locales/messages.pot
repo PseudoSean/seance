@@ -7,6 +7,128 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#: client/components/ChatInput.vue:67
+#. aria-label of the ✕ button that leaves reply or edit mode in the compose bar above the message input; the keyboard key Escape does the same.
+msgctxt "composer.cancel"
+msgid "Cancel"
+msgstr ""
+
+#: client/components/ChatInput.vue:68
+#. Tooltip of the ✕ button that leaves reply or edit mode in the compose bar; it names the keyboard key that does the same thing.
+msgctxt "composer.cancelEscape"
+msgid "Cancel (Escape)"
+msgstr ""
+
+#: client/components/ChatInput.vue:45
+#. Tooltip and aria-label of the ✕ button on the upload progress bar above the message input; clicking it aborts the upload in progress.
+msgctxt "composer.cancelUpload"
+msgid "Cancel upload"
+msgstr ""
+
+#: client/components/ChatInput.vue:19
+#. Button in the connection bar shown above the message input when the connection to the chat network is down and no automatic retry is in progress; clicking it dials the network again.
+msgctxt "composer.connect"
+msgid "Connect"
+msgstr ""
+
+#: client/components/ChatInput.vue:19
+#. Button in the connection bar shown above the message input while the app waits to retry a dropped connection to the chat network; clicking it skips the wait and dials the network immediately.
+msgctxt "composer.connectNow"
+msgid "Connect now"
+msgstr ""
+
+#: client/components/ChatInput.vue:344
+#. Text of the connection bar shown above the message input while the dial to the chat network is in flight (a spinner turns beside it). {network} is the display name of the chat network.
+msgctxt "composer.connectingTo"
+msgid "Connecting to {network}…"
+msgstr ""
+
+#: client/components/ChatInput.vue:339
+#. Text of the connection bar shown above the message input when the chat network is down and no reconnect attempt is running yet. {network} is the display name of the chat network.
+msgctxt "composer.disconnectedFrom"
+msgid "Disconnected from {network}."
+msgstr ""
+
+#: client/components/ChatInput.vue:55
+#. Label at the left of the compose bar shown while the user edits a message they already sent; the edited text follows it in the same line.
+msgctxt "composer.editing"
+msgid "Editing message"
+msgstr ""
+
+#: client/components/ChatInput.vue:336
+#. Fallback name for a chat network whose configured name is empty; it is inserted into connection-bar sentences such as 'Connecting to {network}…' in place of the network name. Mid-sentence by position.
+msgctxt "composer.fallbackNetwork"
+msgid "the network"
+msgstr ""
+
+#: client/components/ChatInput.vue:75
+#. Visually hidden label of the message input field, read by screen readers; the field is where chat messages are typed.
+msgctxt "composer.inputLabel"
+msgid "Message input"
+msgstr ""
+
+#: client/components/ChatInput.vue:115
+#. Tooltip on the send button while the chat network is disconnected, explaining why messages cannot be sent right now.
+msgctxt "composer.notConnected"
+msgid "Not connected"
+msgstr ""
+
+#: client/components/ChatInput.vue:293
+#. Placeholder of the message input shown while it is empty. {name} is the name of the conversation being typed into: a channel's name, or the person's nick in a private one-on-one conversation.
+msgctxt "composer.placeholder"
+msgid "Write to {name}"
+msgstr ""
+
+#: client/components/ChatInput.vue:343
+#. Text of the connection bar shown above the message input while the client waits to reconnect to a chat network it lost. {network} is the display name of the chat network; {seconds} is the whole number of seconds until the retry starts, updating every half second. The singular form shows when one second remains, the plural for any other number.
+msgctxt "composer.reconnectIn"
+msgid "Reconnecting to {network} in {seconds}s…"
+msgid_plural "Reconnecting to {network} in {seconds}s…"
+msgstr[0] ""
+msgstr[1] ""
+
+#: client/components/ChatInput.vue:60
+#. Label at the left of the compose bar shown while a reply is being written. {nick} is the name of the user being replied to, shown emphasized; the quoted message preview follows it. Keep the trailing colon.
+msgctxt "composer.replyingTo"
+msgid "Replying to {nick}:"
+msgstr ""
+
+#: client/components/ChatInput.vue:123
+#. Tooltip and aria-label of the send button beside the message input.
+msgctxt "composer.send"
+msgid "Send message"
+msgstr ""
+
+#: client/components/ChatInput.vue:93
+#. Tooltip and aria-label of the paperclip button beside the message input; clicking it opens the file picker to send a file into the conversation.
+msgctxt "composer.uploadFile"
+msgid "Upload file"
+msgstr ""
+
+#: client/components/ChatInput.vue:580
+#. Part of the upload progress bar, appended after the uploading text when several files are queued: it says which file of how many is being sent now. {index} is the number of the current file, {count} the total number queued.
+msgctxt "composer.uploadIndex"
+msgid "{index} of {count}"
+msgstr ""
+
+#: client/components/ChatInput.vue:584
+#. Part of the upload progress bar, appended after the uploading text while the file is being prepared (re-encoded or stripped of metadata) before it is sent. Starts lowercase because it is joined with the other parts into one line.
+msgctxt "composer.uploadPreparing"
+msgid "preparing…"
+msgstr ""
+
+#: client/components/ChatInput.vue:586
+#. Part of the upload progress bar, appended after the uploading text while the file has been sent and the chat server has not confirmed it yet. Starts lowercase because it is joined with the other parts into one line.
+msgctxt "composer.uploadWaiting"
+msgid "waiting for the server…"
+msgstr ""
+
+#: client/components/ChatInput.vue:577
+#. First part of the upload progress bar shown above the message input while a file is being sent to the chat server. {file} is the name of the file currently going up.
+msgctxt "composer.uploading"
+msgid "Uploading {file}"
+msgstr ""
+
 #: client/components/Windows/Connect.vue:34
 #: client/components/Windows/Connect.vue:213
 #. Label of the services account (login name) text field on the connect form and on the network edit form.

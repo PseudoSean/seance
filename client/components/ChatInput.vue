@@ -16,7 +16,7 @@
 				class="connection-bar-connect"
 				@click="connectNetwork"
 			>
-				{{ network.status.connecting ? "Connect now" : "Connect" }}
+				{{ network.status.connecting ? t("composer.connectNow") : t("composer.connect") }}
 			</button>
 		</div>
 		<div
@@ -42,8 +42,8 @@
 			<button
 				type="button"
 				class="compose-bar-cancel"
-				aria-label="Cancel upload"
-				title="Cancel upload"
+				:aria-label="cancelUploadLabel"
+				:title="cancelUploadLabel"
 				@click="cancelUpload"
 			>
 				✕
@@ -52,27 +52,30 @@
 		<div v-if="channel.editing || channel.replyTo" class="compose-bar" role="status">
 			<span v-if="channel.editing" class="compose-bar-label">
 				<span class="compose-bar-icon" aria-hidden="true">✎</span>
-				Editing message
+				{{ t("composer.editing") }}
 				<span class="compose-bar-preview">{{ composePreview }}</span>
 			</span>
 			<span v-else class="compose-bar-label">
 				<span class="compose-bar-icon" aria-hidden="true">↩</span>
-				Replying to <strong class="compose-bar-nick">{{ composeNick }}</strong
-				>:
+				{{ replyingParts.prefix
+				}}<strong v-if="replyingParts.nick" class="compose-bar-nick">{{
+					replyingParts.nick
+				}}</strong
+				>{{ replyingParts.suffix }}
 				<span class="compose-bar-preview">{{ composePreview }}</span>
 			</span>
 			<button
 				type="button"
 				class="compose-bar-cancel"
-				aria-label="Cancel"
-				title="Cancel (Escape)"
+				:aria-label="cancelComposeLabel"
+				:title="cancelComposeTitle"
 				@click="cancelCompose(channel)"
 			>
 				✕
 			</button>
 		</div>
 		<span id="nick">{{ network.nick }}</span>
-		<label for="input" class="sr-only">Message input</label>
+		<label for="input" class="sr-only">{{ t("composer.inputLabel") }}</label>
 		<textarea
 			id="input"
 			ref="input"
@@ -90,7 +93,7 @@
 			v-if="store.state.serverConfiguration?.fileUpload"
 			id="upload-tooltip"
 			class="tooltipped tooltipped-w tooltipped-no-touch"
-			aria-label="Upload file"
+			:aria-label="uploadFileLabel"
 			@click="openFileUpload"
 		>
 			<input
@@ -105,14 +108,14 @@
 			<button
 				id="upload"
 				type="button"
-				aria-label="Upload file"
+				:aria-label="uploadFileLabel"
 				:disabled="!network.status.connected"
 			/>
 		</span>
 		<span
 			id="submit-tooltip"
 			class="tooltipped tooltipped-w tooltipped-no-touch"
-			:data-tooltip="canSend ? 'Send message' : 'Not connected'"
+			:data-tooltip="sendTooltip"
 		>
 			<!-- `mousedown.prevent` keeps focus in the textarea: a tap that blurs
 			it drops the keyboard, the viewport grows and the button moves out
@@ -120,7 +123,7 @@
 			<button
 				id="submit"
 				type="submit"
-				aria-label="Send message"
+				:aria-label="sendLabel"
 				:disabled="!canSend"
 				@mousedown.prevent
 			/>
@@ -158,6 +161,7 @@ import {
 	startEdit,
 } from "../js/helpers/compose";
 import {hasVirtualKeyboard} from "../js/helpers/device";
+import {useI18n} from "../js/i18n";
 
 /** How long after a Return its late-arriving newline is still recognised. */
 const ENTER_NEWLINE_WINDOW_MS = 500;
@@ -198,6 +202,7 @@ export default defineComponent({
 	},
 	setup(props) {
 		const store = useStore();
+		const {t, tCount} = useI18n();
 		const input = ref<HTMLTextAreaElement>();
 		const uploadInput = ref<HTMLInputElement>();
 		const autocompletionRef = ref<ReturnType<typeof autocompletion>>();
@@ -290,7 +295,7 @@ export default defineComponent({
 
 		const getInputPlaceholder = (channel: ClientChan) => {
 			if (channel.type === ChanType.CHANNEL || channel.type === ChanType.QUERY) {
-				return `Write to ${channel.name}`;
+				return t("composer.placeholder", {name: channel.name});
 			}
 
 			return "";
@@ -333,15 +338,18 @@ export default defineComponent({
 		});
 
 		const connectionLabel = computed(() => {
-			const name = props.network.name || "the network";
+			const name = props.network.name || t("composer.fallbackNetwork");
 
 			if (!props.network.status.connecting) {
-				return `Disconnected from ${name}.`;
+				return t("composer.disconnectedFrom", {network: name});
 			}
 
 			return retryInSeconds.value > 0
-				? `Reconnecting to ${name} in ${retryInSeconds.value}s…`
-				: `Connecting to ${name}…`;
+				? tCount("composer.reconnectIn", retryInSeconds.value, {
+						network: name,
+						seconds: retryInSeconds.value,
+				  })
+				: t("composer.connectingTo", {network: name});
 		});
 
 		// Idle, or waiting for a retry: a dial in flight offers nothing.
@@ -382,6 +390,25 @@ export default defineComponent({
 		const composeTarget = computed(() => props.channel.editing || props.channel.replyTo);
 
 		const composeNick = computed(() => composeTarget.value?.from?.nick ?? "");
+
+		// "Replying to {nick}:" keeps the nick emphasized across translations:
+		// the translated sentence is split around the substituted nick so it
+		// can stay inside its <strong> whatever word order the locale picks.
+		const replyingParts = computed(() => {
+			const nick = composeNick.value;
+			const label = t("composer.replyingTo", {nick});
+			const at = nick ? label.indexOf(nick) : -1;
+
+			if (at < 0) {
+				return {prefix: label, nick: "", suffix: ""};
+			}
+
+			return {
+				prefix: label.slice(0, at),
+				nick,
+				suffix: label.slice(at + nick.length),
+			};
+		});
 
 		const composePreview = computed(() => {
 			const text = (composeTarget.value?.text ?? "").replace(/\s+/g, " ").trim();
@@ -565,6 +592,16 @@ export default defineComponent({
 			return accept?.length ? accept.join(",") : undefined;
 		});
 
+		// Labels and tooltips of the composer's buttons.
+		const cancelUploadLabel = computed(() => t("composer.cancelUpload"));
+		const cancelComposeLabel = computed(() => t("composer.cancel"));
+		const cancelComposeTitle = computed(() => t("composer.cancelEscape"));
+		const uploadFileLabel = computed(() => t("composer.uploadFile"));
+		const sendLabel = computed(() => t("composer.send"));
+		const sendTooltip = computed(() =>
+			canSend.value ? t("composer.send") : t("composer.notConnected")
+		);
+
 		// The strip above the input while a file is going up
 		// (`store.state.uploadProgress`, written by `upload.ts`).
 		const uploadLabel = computed(() => {
@@ -574,16 +611,18 @@ export default defineComponent({
 				return "";
 			}
 
-			const parts = [`Uploading ${progress.fileName}`];
+			const parts = [t("composer.uploading", {file: progress.fileName})];
 
 			if (progress.count > 1) {
-				parts.push(`${progress.index} of ${progress.count}`);
+				parts.push(
+					t("composer.uploadIndex", {index: progress.index, count: progress.count})
+				);
 			}
 
 			if (progress.phase === "preparing") {
-				parts.push("preparing…");
+				parts.push(t("composer.uploadPreparing"));
 			} else if (progress.phase === "waiting") {
-				parts.push("waiting for the server…");
+				parts.push(t("composer.uploadWaiting"));
 			}
 
 			return parts.join(" · ");
@@ -858,6 +897,7 @@ export default defineComponent({
 
 		return {
 			store,
+			t,
 			input,
 			uploadInput,
 			onUploadInputChange,
@@ -866,6 +906,12 @@ export default defineComponent({
 			uploadLabel,
 			uploadPercent,
 			cancelUpload,
+			cancelUploadLabel,
+			cancelComposeLabel,
+			cancelComposeTitle,
+			uploadFileLabel,
+			sendLabel,
+			sendTooltip,
 			blurInput,
 			onBlur,
 			setInputSize,
@@ -875,7 +921,7 @@ export default defineComponent({
 			onEnterKey,
 			setPendingMessage,
 			cancelCompose,
-			composeNick,
+			replyingParts,
 			composePreview,
 			showConnectionBar,
 			canSend,
