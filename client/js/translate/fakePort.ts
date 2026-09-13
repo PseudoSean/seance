@@ -54,6 +54,14 @@ const ECHO_TOKEN = "[echo]";
  *  `[fail]`'s single failure, on the request's text -- and a retry is the
  *  same protected text, so it is the same key. */
 const ECHO_ONCE_TOKEN = "[echo-once]";
+/** The token a read request's text (or any of its lines) can carry to be
+ *  answered rather than translated: the fake replies with `ANSWER_REPLY`,
+ *  which has no question mark, so a scenario exercises the answered-question
+ *  rule (outgoing.ts `isAnsweredQuestion`) on an incoming question and on
+ *  the composer's read-back. Reads only: a draft's own translation (a write)
+ *  carries the token as well, and has to reach its read-back. */
+const ANSWER_TOKEN = "[answer]";
+const ANSWER_REPLY = "Yes, of course, it starts at nine.";
 
 interface TranslateFakeRequestLog {
 	id: number;
@@ -71,6 +79,8 @@ interface TranslateFakeRequestLog {
 	contextLines: number;
 	/** How many of the user's own lines the context quoted (`purpose: "write"`). */
 	voice: number;
+	/** The source the prompt calls probable (`context.sourceHint`), or null. */
+	sourceHint: string | null;
 }
 
 interface TranslateFakeGlobal {
@@ -97,6 +107,7 @@ function logRequest(req: TranslateRequest, engine: EngineName): void {
 		markers: req.markers ?? "placeholder",
 		contextLines: req.context.recent.length,
 		voice: req.context.voice.length,
+		sourceHint: req.context.sourceHint ?? null,
 	});
 }
 
@@ -193,7 +204,9 @@ class ScriptedEngine implements Engine {
 				// handing back one line of several would: a channel's backlog
 				// queued together (a switch-on, a language change) must not
 				// fail every line batched with one scripted echo.
-				const line = this.echoes(req.lines[i])
+				const line = this.answers(req, req.lines[i])
+					? `${i + 1}. ${ANSWER_REPLY}`
+					: this.echoes(req.lines[i])
 					? `${i + 1}. ${req.lines[i]}`
 					: `${i + 1}. [${languageName(req.to)}] ${req.lines[i]}`;
 
@@ -210,7 +223,11 @@ class ScriptedEngine implements Engine {
 		}
 
 		const words = (
-			this.echoes(req.text) ? req.text : `[${languageName(req.to)}] ${req.text}`
+			this.answers(req, req.text)
+				? ANSWER_REPLY
+				: this.echoes(req.text)
+				? req.text
+				: `[${languageName(req.to)}] ${req.text}`
 		).split(" ");
 		let text = "";
 
@@ -225,6 +242,11 @@ class ScriptedEngine implements Engine {
 		}
 
 		yield {id: req.id, text, done: true};
+	}
+
+	/** `[answer]` on a read request: replied to, not translated. */
+	private answers(req: TranslateRequest, text: string): boolean {
+		return req.purpose === "read" && text.includes(ANSWER_TOKEN);
 	}
 
 	/** `[echo]` every time; `[echo-once]` the first time this text is seen. */

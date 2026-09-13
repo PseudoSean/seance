@@ -90,8 +90,9 @@ The globe in a channel's header switches translation on for that channel
 (`Chat.vue`, `translate/reader.ts`): from then on every message in it,
 the user's own included, is detected (`detect.ts`, `franc` in its own chunk, with the
 channel's declared languages and then its dominant language settling near
-ties), skipped when it is
-already in the target or too short (`eligibility.ts`), given its context
+ties), skipped when it is too short (`eligibility.ts`) or detected as
+already in the target -- and marked when detection skips it (below) --
+given its context
 (`context.ts`: the last ten lines with the translations already shown,
 the reply target, the topic, the names in play, the newest twenty of the
 channel's terms and the deploy's glossary behind them) and queued
@@ -136,6 +137,40 @@ engine's, so they never go through the queue's `fail()`: nothing is marked
 down and neither counts toward the three-in-a-row pause, since the engine
 did complete and the next line may well be one it can do. The line keeps
 its chip and its Retry.
+
+**A line the detector cannot place still translates, unless it could be
+the reading language.** `detect.ts` `detectionSkip` decides: a line placed
+in the reading language is skipped (`same`); a line it could not place is
+skipped (`unsure`) only when the reading language is among its
+`candidates`, or when there are none (a line too short to look at), and is
+otherwise queued with `from: null` and no `sourceHint` -- neither the weak
+guess, which would send the line to a seq2seq model with the wrong source,
+nor the channel's prior, which announced an unsure Spanish line as
+"probably German" in a German channel. Measured on a real channel's
+history (71 lines, read in English), skipping every unsure line left 21
+untranslated -- 13 of one user's 15 Spanish lines, which franc ranks
+within a hundredth of Galician and Portuguese -- where the rule translates
+63 and the 8 it still skips are all English. On a device whose router has
+no engine for an unnamed source (CPU only) such a line cannot be routed,
+and the queue's "no translation engine" failure is written as the `unsure`
+mark instead (`reader.ts` `applyUpdate`).
+
+**A skipped line is marked.** Every line detection skips gets a store entry
+of its own -- `status: "skipped"`, `reason` `same` (with `from` the reading
+language) or `unsure` (with the candidates kept) -- which
+`TranslationLine.vue` renders as a small muted tag after the message: the
+language's name in the reader's language for `same`, "?" for `unsure`; no
+text row, no caret, and the original keeps its ink. The tag's menu offers
+**Translate anyway** (the forced `retranslate`; the toolbar's Translate is
+offered on such a line too), a **Retranslate from `<Language>`** per
+candidate (neither the line's own source nor the reading language) and
+**Retranslate from...** with the picker. Lines eligibility turns away
+(under `MIN_WORDS`, pending copies, types other than chat) stay unmarked. A
+mark is never a translation: `buildContext` quotes only `done` text, the
+menu has no Copy, a language change requeues the line like any other (the
+one entry `setReading` keeps is an own line's `done` read-back), a rebuilt
+retry does not take a mark's `from` as its source, and `takesReadBack` does
+not count a mark as the line's translation.
 
 **The channel's own languages weight detection.** The panel's _Languages
 spoken here_ records what people write in a channel (`channelStore.ts`
@@ -194,7 +229,9 @@ Nothing on a message object changes and nothing about unread or highlight
 counts does. Browser check: `tools/scenarios/translate-reading.mjs`, on
 the in-page fake engine (`?fakeTranslate`, `fakePort.ts`): it answers a
 batched request as numbered lines closed by `END`, fails a request whose
-text carries `[fail]` once (the retry succeeds), and logs every request
+text carries `[fail]` once (the retry succeeds), answers a read request
+carrying `[answer]` with a reply that has no question mark, and logs every
+request (its `from` and `sourceHint` among the fields)
 onto `globalThis.__seanceTranslateFake` so a scenario can tell a batch
 from a fallback to singles.
 
@@ -204,8 +241,8 @@ above -- pending copies, types other than chat, `MIN_WORDS`, detection
 -- never when it was said, and never who said it: the user's own lines are
 read too, so a line written before the switch-on, before a rejoin or a
 reload, or sent without a read-back gets its translation like anyone's
-(an own line already in the reading language is detected as such and
-skipped). The one own line the pipeline leaves alone is a posted
+(an own line already in the reading language is detected as such,
+skipped and marked). The one own line the pipeline leaves alone is a posted
 translation that keeps the composer's read-back (§ Writing in a channel). History is bounded per _load_, each
 load queueing at most `HISTORY_QUEUE_CAP` (40) of its lines, newest first
 (`eligibility.ts` `historyQueueOrder`, through `reader.ts` `queueHistory`,
@@ -402,7 +439,19 @@ or more times in a row, or in a script written without spaces the same run
 of one to three characters six or more times, and never when the source
 repeats itself too ("no no no no" and "hahahaha" pass). It is checked right
 after the letterless rule and handled exactly like a narration: one bare
-retry in the composer, an uncounted failure in the queue. The echo needs no `from !== to`
+retry in the composer, an uncounted failure in the queue. A fifth, from a
+live test: **an answer to the question** ("answered the question instead of
+translating it", `ANSWERED`) -- a Russian read-back that replied, in
+English, to the question it was given to translate. `isAnsweredQuestion(source, answer, to)` judges it by the mark alone, so the model's wording does not
+matter: the source ends in `?`, `？` or `؟` (closing quotes, brackets and
+emoji after it aside) and the answer carries none. It is never applied into
+a language whose questions often end without one (`ja`, `zh`, `ko`, `th`,
+`el`), and a mark inside the line ("Memorizar? Hm...") is not a question.
+`answerError(source, answer, to)` checks it after the narration rule and
+takes the language the answer is in -- the write target for a draft, the
+reading language for a read-back; the composer gives it the bare second try
+for the draft and the read-back, and the reading queue fails the line
+without counting it against the engine. The echo needs no `from !== to`
 guard any more -- a source is never the target -- so what it means is the
 model declining: a line with nothing to translate ("ok, brb", a bare nick)
 as much as one it would not touch. The offer the strip already makes is the
@@ -482,7 +531,8 @@ formality and variant, and the channel's terms for the translation's
 language into the reading language (`termsFor`). No voice: that is the
 writer's. A read-back given the line cold reads it differently from how
 the channel will, and showing how the channel will read it is the point.
-The bare second try on an echo, a narration or a loop still drops the
+The bare second try on an echo, a narration, an answered question or a
+loop still drops the
 context, all but the register; the routing hint stays.
 
 When the second Enter sends a translation whose read-back finished, the

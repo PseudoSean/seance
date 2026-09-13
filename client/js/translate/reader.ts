@@ -25,10 +25,10 @@ import {
 	termsFor,
 } from "./channelStore";
 import {buildContext} from "./context";
-import {LanguagePrior, detectLanguage, detectionSkip} from "./detect";
+import {type Detection, LanguagePrior, detectLanguage, detectionSkip} from "./detect";
 import {ReplayBatches, historyQueueOrder, isEligible, plainTextOf} from "./eligibility";
 import {translateService} from "./index";
-import {type QueueItem, type QueueUpdate, TranslateQueue} from "./queue";
+import {NO_ROUTE, type QueueItem, type QueueUpdate, TranslateQueue} from "./queue";
 import {sentReadBacks, takesReadBack} from "./sentReadBack";
 import {protect, stripCopiedNickPrefix} from "./spans";
 
@@ -42,8 +42,12 @@ const arrivals = new Map<number, number>();
  * into the new one — twice, or into a channel that is no longer there.
  */
 const generations = new Map<number, number>();
-/** The last item queued per message, for retries. */
-const items = new Map<number, {network: string; item: QueueItem}>();
+/**
+ * The last item queued per message, for retries. `unsure` marks one queued
+ * only because the detector could not place it (not a forced request): with
+ * no engine for an unnamed source it becomes the unsure mark, not a failure.
+ */
+const items = new Map<number, {network: string; item: QueueItem; unsure?: boolean}>();
 
 /** Composer requests holding the reading queues (writer.ts); nested holds count. */
 let holds = 0;
@@ -258,6 +262,19 @@ function applyUpdate(id: number, update: QueueUpdate): void {
 			});
 			break;
 		case "failed":
+			// A line queued with its source left to the engine because the
+			// detector could not place it, and no engine takes an unnamed
+			// source (a CPU-only device): what it would otherwise have been is
+			// the unsure mark, not a failure nobody asked for.
+			if (update.error === NO_ROUTE && known?.unsure) {
+				items.delete(id);
+				store.commit("translationPatch", {
+					id,
+					patch: {status: "skipped", reason: "unsure", from: "", error: null},
+				});
+				break;
+			}
+
 			store.commit("translationPatch", {id, patch: {status: "failed", error: update.error}});
 			break;
 		case "dropped":
@@ -318,9 +335,13 @@ export function setReading(network: ClientNetwork, channel: ClientChan, lang: st
 
 	forgetItems(({item}) => item.chanId === channel.id);
 
-	const requeued = channel.messages.filter(
-		(m) => !(m.self && store.state.translations[m.id]?.to === lang)
-	);
+	// Only a finished translation is kept: a skipped mark in the new
+	// language is detected again like everything else.
+	const requeued = channel.messages.filter((m) => {
+		const entry = store.state.translations[m.id];
+
+		return !(m.self && entry?.status === "done" && entry.to === lang);
+	});
 
 	store.commit(
 		"translationRemoveMany",
@@ -345,6 +366,40 @@ export function setChannelOptions(
 	patch: Partial<Pick<ChannelTranslation, "write" | "formality" | "variant" | "languages">>
 ): void {
 	commitChannel(network, channel, setChannelTranslation(network.uuid, channel.name, patch));
+}
+
+/**
+ * A line detection left alone gets a mark (`TranslationLine.vue`: the
+ * language it was taken for, or "?"), so a reader can tell it from a line
+ * nothing looked at, and translate it anyway from the mark's menu. A
+ * translation already there or on its way is never replaced by one.
+ */
+function markSkipped(
+	id: number,
+	reason: "same" | "unsure",
+	to: string,
+	detection: Detection
+): void {
+	const existing = store.state.translations[id];
+
+	if (existing && (existing.status === "done" || existing.status === "pending")) {
+		return;
+	}
+
+	store.commit("translationEntry", {
+		id,
+		entry: {
+			status: "skipped",
+			reason,
+			text: "",
+			from: reason === "same" ? to : "",
+			to,
+			candidates: detection.candidates,
+			engine: null,
+			error: null,
+			hidden: false,
+		},
+	});
 }
 
 function entryFor(from: string, to: string, candidates: string[]): TranslationEntry {
@@ -440,10 +495,13 @@ export async function translateMessage(
 	const to = settings.read ?? store.state.settings.translateTo;
 
 	// Placed in the reading language, or not placed with the reading language
-	// among the contenders: left alone (detect.ts `detectionSkip`). A line
-	// the detector could not place is otherwise translated with its source
-	// left to the engine.
-	if (!force && detectionSkip(detection, to) !== null) {
+	// among the contenders: left alone (detect.ts `detectionSkip`) and
+	// marked. A line the detector could not place is otherwise translated
+	// with its source left to the engine.
+	const skip = force ? null : detectionSkip(detection, to);
+
+	if (skip) {
+		markSkipped(message.id, skip, to, detection);
 		return;
 	}
 
@@ -490,7 +548,7 @@ export async function translateMessage(
 		...(!force && replay ? {history: true as const} : {}),
 	};
 
-	items.set(message.id, {network: network.uuid, item});
+	items.set(message.id, {network: network.uuid, item, unsure: unsure && !force});
 	store.commit("translationEntry", {
 		id: message.id,
 		entry: entryFor(source ?? "", to, detection.candidates),
@@ -548,6 +606,14 @@ export function showOriginal(id: number, hidden: boolean): void {
 	store.commit("translationPatch", {id, patch: {hidden}});
 }
 
+/**
+ * The source a rebuilt retry keeps: the failed line's own, never a skipped
+ * mark's (a `same` mark's `from` is the reading language itself).
+ */
+function retrySource(entry: TranslationEntry | undefined): string | undefined {
+	return entry && entry.status !== "skipped" && entry.from ? entry.from : undefined;
+}
+
 /** A failed line's retry: resumes a paused engine as well. */
 export function retryTranslation(
 	network: ClientNetwork,
@@ -565,12 +631,7 @@ export function retryTranslation(
 		// The remembered item is gone, so the request is built again — with
 		// the source the failed entry had, whether the detector or the reader
 		// chose it: a retry is the same translation, not a fresh guess.
-		retranslate(
-			network,
-			channel,
-			message,
-			store.state.translations[message.id]?.from || undefined
-		);
+		retranslate(network, channel, message, retrySource(store.state.translations[message.id]));
 	}
 }
 
@@ -610,7 +671,9 @@ export function initReader(): void {
 					target.channel.id,
 					data.msg,
 					false,
-					!!store.state.translations[data.msg.id],
+					// A skipped mark is no translation to keep.
+					!!store.state.translations[data.msg.id] &&
+						store.state.translations[data.msg.id].status !== "skipped",
 					Date.now()
 				)
 			) {

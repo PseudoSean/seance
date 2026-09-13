@@ -493,6 +493,19 @@ Emphasis marks on the LLM route, measured (2026-09-12):
 - **Incoming lines take the global formality where the channel says
   "auto"**, as the composer always did (`channelStore.ts`
   `effectiveFormality`).
+- **A line the detector cannot place is translated unless it could be the
+  reading language** (live test, 2026-09-13). § Reading pipeline skipped
+  every line detection could not place, which left 21 of a real channel's
+  71 lines untranslated, most of them Spanish that franc could not tell
+  from Galician. `detect.ts` `detectionSkip` skips an unplaced line only
+  when the reading language is among its candidates (or it has none) and
+  the reader queues the rest with `from: null` and no source hint.
+- **A line detection skips is marked** (`status: "skipped"`, `reason`
+  `same` or `unsure`), a muted tag after the message whose menu offers
+  "Translate anyway"; the spec had such a line show nothing.
+- **An answered question is a failure** (`ANSWERED`, live test,
+  2026-09-13): judged by the question mark alone (`isAnsweredQuestion`),
+  handled like a narration.
 
 ## Non-goals
 

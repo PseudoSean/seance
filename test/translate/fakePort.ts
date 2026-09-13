@@ -102,6 +102,8 @@ describe("translate/fakePort", () => {
 			// the composer's bare second try from the first request by these.
 			contextLines: 0,
 			voice: 0,
+			// The prompt's "probably …": none on this request.
+			sourceHint: null,
 		});
 
 		terminate();

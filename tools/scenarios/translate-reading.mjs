@@ -10,7 +10,10 @@
 // the switch-on's requeue of the backlog is let settle and every later
 // count is taken against it); a German
 // line gets a "German → English" line with the fake's "[English] …" echo; an
-// English line gets none; the chip's menu retranslates from another source
+// English line gets no translation but a muted "English" mark, whose menu's
+// "Translate anyway" translates it; a Spanish line franc cannot tell from
+// Galician is translated with no source named and no "probably" guess in its
+// request; the chip's menu retranslates from another source
 // (the detector's runners-up one click each, never the line's own source;
 // "Retranslate from…" opens the picker, Escape asks for nothing, French
 // makes the chip read "French → English" and the request carry `from: "fr"`, and
@@ -24,7 +27,8 @@
 // controls of equal width, each language named in itself (the endonym,
 // never a code) and a link to Settings, and closes on Escape; a line the fake hands back
 // unchanged (its `[echo]` token) fails with "came back unchanged" and costs the engine
-// nothing -- the next line is still translated; a line carrying the fake's `[fail]`
+// nothing -- the next line is still translated; a German question the fake answers
+// (its `[answer]` token) fails with "answered the question instead of translating it"; a line carrying the fake's `[fail]`
 // marker fails once and its retry button succeeds the second time; a line carrying `*Betonung*` and the page's own nick keeps both
 // (the chip's menu offers Copy translation and the line is selectable); a
 // `draft/multiline` message is translated line by line rather than losing
@@ -376,7 +380,9 @@ async function scenario(page) {
 		).includes("[English] Ich schreibe selbst")
 	);
 
-	const base = await settledLines(page, "the switch-on's requeue");
+	// Moved on where a step adds a done line the later counts must not see
+	// as theirs (Translate anyway on the English line, the Spanish line).
+	let base = await settledLines(page, "the switch-on's requeue");
 
 	const globeLabel = String(
 		await page.evaluate(
@@ -593,6 +599,103 @@ async function scenario(page) {
 		"an English line gets no translation",
 		(await page.evaluate(LINES)) === base + 1
 	);
+
+	// A line the detector places in the reading language is not left bare:
+	// it carries a small muted mark naming the language it was taken for,
+	// and the mark's menu translates it anyway.
+	const englishRow = newestRow("needs no line at all");
+
+	await page.waitFor(`!!(${englishRow})?.querySelector(".msg-translation-skipped-tag")`, {
+		timeout: 15000,
+		label: "the English line carries the skipped mark",
+	});
+
+	const englishRowId = String(await page.evaluate(`(${englishRow}).id`));
+	const ENGLISH_TAG = `#${englishRowId} .msg-translation-skipped-tag`;
+
+	await page.check(
+		"the mark names the language in the reader's language",
+		(await page.evaluate(
+			`document.querySelector(${JSON.stringify(ENGLISH_TAG)}).textContent.trim()`
+		)) === "English"
+	);
+	await page.check(
+		"the mark has no text row, no caret, and leaves the original its ink",
+		await page.evaluate(
+			`!document.querySelector(${JSON.stringify(
+				`#${englishRowId} .msg-translation`
+			)}) && !document.querySelector(${JSON.stringify(
+				`#${englishRowId} .msg-translation-caret`
+			)}) && !document.getElementById(${JSON.stringify(
+				englishRowId
+			)}).classList.contains("translated")`
+		)
+	);
+	await page.screenshot("skipped-mark");
+	await openChipMenu(page, ENGLISH_TAG, "the mark's menu opened");
+	await page.check(
+		"the mark's menu offers Translate anyway, and nothing to copy or hide",
+		await page.evaluate(
+			`!!document.querySelector(".context-menu-translate-anyway") && !document.querySelector(".context-menu-translate-copy") && !document.querySelector(".context-menu-translate-hide")`
+		)
+	);
+	await page.screenshot("skipped-mark-menu");
+	await page.click(".context-menu-translate-anyway");
+	await page.waitFor(
+		`!!document.querySelector(${JSON.stringify(
+			`#${englishRowId} .msg-translation[data-status="done"]`
+		)})`,
+		{timeout: 20000, label: "Translate anyway produced a translation"}
+	);
+	await page.check(
+		"the translation replaced the mark",
+		await page.evaluate(
+			`!document.querySelector(${JSON.stringify(
+				ENGLISH_TAG
+			)}) && document.querySelector(${JSON.stringify(
+				`#${englishRowId} .msg-translation-text`
+			)}).textContent.includes("[English] this one is already")`
+		)
+	);
+	// That translation is a done line the later counts must not see as theirs.
+	base += 1;
+	await page.check("one more done line", (await page.evaluate(LINES)) === base + 1);
+
+	// A line the detector cannot place, with no English among its candidates
+	// (franc ranks Spanish, Portuguese and Galician within a hundredth of each
+	// other here), is translated: its source left to the engine, and the
+	// request told no guess -- not "probably German" from this channel's prior.
+	const spanish = "claude es muy lento estos días";
+
+	other.say(spanish);
+	await page.waitFor(`${LINES} === ${base + 2}`, {
+		timeout: 20000,
+		label: "the Spanish line the detector could not place is translated",
+	});
+	await page.check(
+		"its chip names no source",
+		String(
+			await page.evaluate(
+				`((${newestRow(
+					spanish
+				)}).querySelector(".msg-translation-chip") || {}).textContent || ""`
+			)
+		).trim() === "→ English"
+	);
+
+	const spanishRequests = await page.evaluate(
+		`(${REQUESTS}).filter((r) => r.text.indexOf(${JSON.stringify(
+			spanish
+		)}) !== -1).map((r) => ({from: r.from, sourceHint: r.sourceHint}))`
+	);
+
+	await page.check(
+		`its request named no source and no probable one (${JSON.stringify(spanishRequests)})`,
+		Array.isArray(spanishRequests) &&
+			spanishRequests.length > 0 &&
+			spanishRequests.every((r) => r.from === null && r.sourceHint === null)
+	);
+	base += 1;
 
 	const requestsBeforeBurst = await page.evaluate(`(${REQUESTS}).length`);
 
@@ -1250,6 +1353,39 @@ async function scenario(page) {
 			await page.evaluate(`document.querySelector(${JSON.stringify(GLOBE)}).title`)
 		).includes("paused:")
 	);
+
+	// A question answered rather than translated is no translation either:
+	// the fake's `[answer]` token replies without a question mark, and the
+	// line fails with the answered reason -- the answer's failure, so no
+	// engine is paused for it.
+	const questionMarker = `Frageprobe${RUN}`;
+
+	other.say(
+		`Kannst du mir bitte sagen, wann das Treffen morgen beginnt, ${questionMarker} [answer]?`
+	);
+
+	const questionRow = newestRow(questionMarker);
+
+	await page.waitFor(
+		`!!(${questionRow}) && !!(${questionRow}).querySelector('.msg-translation[data-status="failed"]')`,
+		{timeout: 20000, label: "the answered question fails"}
+	);
+	await page.check(
+		"the reason says the question was answered",
+		String(
+			await page.evaluate(
+				`((${questionRow}).querySelector(".msg-translation-reason") || {}).textContent || ""`
+			)
+		).trim() === "answered the question instead of translating it"
+	);
+	await page.check(
+		"no engine was paused by the answer",
+		!String(
+			await page.evaluate(`document.querySelector(${JSON.stringify(GLOBE)}).title`)
+		).includes("paused:")
+	);
+	await page.evaluate(`(${questionRow}).scrollIntoView({block: "center"})`);
+	await page.screenshot("answered-question");
 
 	// Another reading language: the translations on screen are replaced by
 	// translations into it, and the chip names it -- in French, since a

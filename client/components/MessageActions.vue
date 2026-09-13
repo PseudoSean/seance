@@ -198,6 +198,8 @@ export default defineComponent({
 				!entry ||
 				entry.status === "failed" ||
 				entry.status === "dropped" ||
+				// A line detection left alone: the mark's "Translate anyway".
+				entry.status === "skipped" ||
 				hiddenTranslation.value
 			);
 		});

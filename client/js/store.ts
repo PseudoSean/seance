@@ -36,7 +36,12 @@ function detectDesktopNotificationState(): DesktopNotificationState {
 
 /** A message's translation (spec § Reading pipeline, 5): in memory only, keyed by the message's store id. */
 export interface TranslationEntry {
-	status: "pending" | "done" | "failed" | "dropped";
+	/**
+	 * `skipped`: detection left the line alone (`reason` says why) and no
+	 * request was made. A mark, never a translation: no text, nothing to
+	 * copy or quote as context.
+	 */
+	status: "pending" | "done" | "failed" | "dropped" | "skipped";
 	/** Restored text so far (pending) or the result (done). */
 	text: string;
 	/** Detected source (ISO 639-1) or "" when the engine detected it. */
@@ -53,6 +58,13 @@ export interface TranslationEntry {
 	error: string | null;
 	/** "Show original only": the line is kept but not rendered. */
 	hidden: boolean;
+	/**
+	 * Why a `skipped` line was not translated: `same`, detected as the
+	 * reading language (`from` names it); `unsure`, the detector could not
+	 * place it and the reading language is among its `candidates` (or it has
+	 * none). Unset on every other status.
+	 */
+	reason?: "same" | "unsure";
 }
 
 /** A draft's translation in the composer (spec § Composer), keyed by the channel's store id. */

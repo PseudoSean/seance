@@ -4780,6 +4780,37 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	font-style: italic;
 }
 
+/* A line the reader left alone on detection (TranslationLine.vue): a small
+ * muted tag after the message -- the language it was taken for, or "?" when
+ * that could not be told -- whose menu translates it anyway. No text row, no
+ * caret, and the original keeps its ink. */
+#chat .msg-translation-skipped {
+	margin-left: 0.4em;
+	white-space: nowrap;
+}
+
+#chat .msg-translation-skipped-tag {
+	padding: 0 0.3em;
+	border: 1px solid var(--body-color-muted);
+	border-radius: 0.2rem;
+	background: transparent;
+	color: var(--body-color-muted);
+	font: inherit;
+	font-size: 0.7em;
+	line-height: 1.5;
+	letter-spacing: 0.05em;
+	vertical-align: 0.1em;
+	opacity: 0.75;
+	cursor: pointer;
+}
+
+#chat .msg-translation-skipped-tag:hover,
+#chat .msg-translation-skipped-tag:focus-visible {
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	opacity: 1;
+	outline: 0;
+}
+
 /* A model downloading for this line (TranslationLine.vue). */
 #chat .msg-translation-download {
 	color: var(--body-color-muted);

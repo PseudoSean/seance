@@ -17,7 +17,9 @@
 // "[echo]" -- which the fake hands back as typed -- is tried a second time
 // with nothing but the draft (no context, no source) before the same strip
 // reports "came back unchanged", while "[echo-once]", handed back only the
-// first time, ends as the bare retry's translation; "/me" never
+// first time, ends as the bare retry's translation, and a question whose read-back the
+// fake answers ("[answer]") gets the bare second try there before the row
+// says it couldn't check; "/me" never
 // translates; a three-line draft translates as one numbered request and
 // ships as three lines; a draft carrying markdown, a nick, a URL and a code
 // span comes back with every one of them intact (the engine only ever saw
@@ -683,6 +685,64 @@ export default async function run(page) {
 		"the input cleared after the retry send",
 		(await page.evaluate(inputValue)) === ""
 	);
+
+	// 7d. A read-back that answers the question instead of translating it
+	// gets the bare second try an echo gets: the fake's "[answer]" token
+	// replies to a read request without a question mark (the draft's own
+	// translation, a write, keeps its mark), so the round trip asks twice,
+	// the second time bare, and then says it couldn't check.
+	const asked = `is the [answer] build green again ${RUN}?`;
+
+	await typeAndEnter(page, asked);
+	await page.waitFor(`${barText} === ${JSON.stringify(`[German] ${asked}`)}`, {
+		timeout: 30000,
+		label: "the question's translation keeps its mark",
+	});
+	await page.waitFor(`!!document.querySelector(".translate-bar-check .translate-bar-failed")`, {
+		timeout: 30000,
+		label: "the answered read-back fails the check",
+	});
+
+	const answeredReads = `${REQUESTS}.filter((r) => r.purpose === "read" && r.text.indexOf(${JSON.stringify(
+		`build green again ${RUN}`
+	)}) !== -1)`;
+
+	await page.check(
+		"the answered read-back was tried twice, the second time bare",
+		await page.evaluate(
+			`(() => {
+				const tries = ${answeredReads};
+				return (
+					tries.length === 2 &&
+					tries[0].contextLines > 0 &&
+					tries[1].from === null &&
+					tries[1].contextLines === 0
+				);
+			})()`
+		)
+	);
+	await page.check(
+		"the capture judged both read-backs answered",
+		await page.evaluate(
+			`(() => {
+				const log = (window.seanceTranslateLog || []).filter(
+					(e) => e.kind === "check" && e.draft === ${JSON.stringify(`[German] ${asked}`)}
+				);
+				return (
+					log.length === 2 &&
+					log[0].retry === false &&
+					log[1].retry === true &&
+					log.every((e) => e.error === "answered the question instead of translating it")
+				);
+			})()`
+		)
+	);
+	await page.screenshot("composer-answered-read-back");
+	await page.fill(INPUT, "");
+	await page.waitFor(`!document.querySelector(${JSON.stringify(BAR)})`, {
+		timeout: 10000,
+		label: "clearing the draft dropped the strip",
+	});
 
 	// 8. A command never translates.
 	await typeAndEnter(page, `/me waves ${RUN}`);

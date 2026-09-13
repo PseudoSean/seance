@@ -1,6 +1,30 @@
 <template>
+	<span
+		v-if="entry && entry.status === 'skipped' && !entry.hidden"
+		class="msg-translation-skipped"
+		:data-reason="entry.reason"
+	>
+		<button
+			ref="chip"
+			type="button"
+			class="msg-translation-skipped-tag"
+			:aria-label="chipLabel"
+			:title="chipLabel"
+			@click.stop="openMenu"
+		>
+			{{ chipText }}
+		</button>
+		<SourceLanguagePicker
+			v-if="pickerOpen"
+			:anchor="chip"
+			:selected="entry.from"
+			:candidates="entry.candidates"
+			@pick="pickSource"
+			@close="pickerOpen = false"
+		/>
+	</span>
 	<div
-		v-if="entry && !entry.hidden && entry.status !== 'dropped'"
+		v-else-if="entry && !entry.hidden && entry.status !== 'dropped'"
 		class="msg-translation"
 		:data-status="entry.status"
 	>
@@ -85,6 +109,8 @@ export default defineComponent({
 		const nameOf = (code: string) =>
 			languageName(code, readingLanguage(props.network, props.channel));
 		// Source → target; `from` is "" when the engine placed the source itself.
+		// A skipped line's tag is the language it was taken for, or "?" when
+		// the detector could not tell.
 		const chipText = computed(() => {
 			const value = entry.value;
 
@@ -92,13 +118,29 @@ export default defineComponent({
 				return "";
 			}
 
+			if (value.status === "skipped") {
+				return value.reason === "same" && value.from ? nameOf(value.from) : "?";
+			}
+
 			return value.from
 				? `${nameOf(value.from)} → ${nameOf(value.to)}`
 				: `→ ${nameOf(value.to)}`;
 		});
-		const chipLabel = computed(() =>
-			entry.value ? `${chipText.value}. Translation options` : ""
-		);
+		const chipLabel = computed(() => {
+			const value = entry.value;
+
+			if (!value) {
+				return "";
+			}
+
+			if (value.status === "skipped") {
+				return value.reason === "same" && value.from
+					? `Already in ${nameOf(value.from)}, not translated. Translation options`
+					: "Language not told apart, not translated. Translation options";
+			}
+
+			return `${chipText.value}. Translation options`;
+		});
 
 		// Nothing streamed yet and a model of this line's engine downloading:
 		// the line is waiting for that download, and says so.
@@ -128,11 +170,53 @@ export default defineComponent({
 		// not among them: "Retranslate from German" on a line already read as
 		// German is just "Retranslate". An explicit source keeps the list, so
 		// the way back to the detector's own guess is on the menu too.
-		const alternatives = computed(() =>
-			(entry.value?.candidates ?? []).filter((code) => code !== entry.value?.from)
-		);
+		// A skipped line leaves the reading language off as well: "Retranslate
+		// from English" into English is no translation.
+		const alternatives = computed(() => {
+			const value = entry.value;
+
+			return (value?.candidates ?? []).filter(
+				(code) =>
+					code !== value?.from && !(value?.status === "skipped" && code === value.to)
+			);
+		});
 
 		const openMenu = (event: MouseEvent) => {
+			const sources = [
+				...alternatives.value.map((code) => ({
+					label: `Retranslate from ${nameOf(code)}`,
+					type: "item",
+					class: "translate-retry-from",
+					action: () => retranslateFrom(code),
+				})),
+				{
+					label: "Retranslate from…",
+					type: "item",
+					class: "translate-retry-pick",
+					action() {
+						pickerOpen.value = true;
+					},
+				},
+			];
+
+			// A mark has no text to copy, hide or retranslate: what it offers
+			// is the translation it did not get.
+			if (entry.value?.status === "skipped") {
+				eventbus.emit("contextmenu:items", {
+					event,
+					items: [
+						{
+							label: "Translate anyway",
+							type: "item",
+							class: "translate-anyway",
+							action: () => retranslateFrom(),
+						},
+						...sources,
+					],
+				});
+				return;
+			}
+
 			eventbus.emit("contextmenu:items", {
 				event,
 				items: [
@@ -152,20 +236,7 @@ export default defineComponent({
 						class: "translate-retry",
 						action: () => retranslateFrom(),
 					},
-					...alternatives.value.map((code) => ({
-						label: `Retranslate from ${nameOf(code)}`,
-						type: "item",
-						class: "translate-retry-from",
-						action: () => retranslateFrom(code),
-					})),
-					{
-						label: "Retranslate from…",
-						type: "item",
-						class: "translate-retry-pick",
-						action() {
-							pickerOpen.value = true;
-						},
-					},
+					...sources,
 					{
 						label: "Show original only",
 						type: "item",
