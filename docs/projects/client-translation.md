@@ -538,7 +538,8 @@ The GPU model is a choice (2026-09-13):
   away from does not mark the new one down.
 - **One route table per GPU model** (`routes.default.ts`
   `routesFor(llmModelId)`, `limitedLanguagesFor`), each from its own
-  placement lists; 4B's start as 1.7B's until measured. The service merges
+  placement lists, each measured on its own model's 4-bit web weights
+  (`2026-09-13-web-weights.md`). The service merges
   the deploy's `translation.routes` over the selected model's table and
   rebuilds it on a switch (`ServiceOptions.routes` is now the deploy's
   overrides alone, `routesFor` the shipped tables).

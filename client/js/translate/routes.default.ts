@@ -96,57 +96,48 @@ export const QWEN3_1_7B: RoutePlacement = {
 	limited: LIMITED_LANGUAGES,
 };
 
-// ---- Qwen3-4B (starts as 1.7B's placements until its own measurement) ----
+// ---- Qwen3-4B (measured on its own 4-bit web weights, 2026-09-13-web-weights.md) ----
+// 4B brings back far more than 1.7B on the long tail (56% against 36%), so
+// NLLB leads by more than the tie band in fewer languages, and 4B leads
+// outright in pl, cs, sk, hu, hi and th.
 
 export const QWEN3_4B_NLLB_FIRST: readonly string[] = [
-	"sr",
 	"hr",
 	"sl",
 	"el",
 	"he",
-	"fa",
-	"bn",
 	"ta",
-	"et",
-	"lv",
 	"lt",
 	"eu",
+	"ga",
 	"cy",
-	"is",
 	"sw",
-	"af",
 	"tl",
 	"ur",
-	"fi",
-	"hu",
-	"hi",
-	// Not "ar", for the same reason as 1.7B's list.
+	// Not "ar" (4B 72%, NLLB 67%: a tie on these lines, and LLM-first by the
+	// same ruling as 1.7B's list).
 ];
 
 export const QWEN3_4B_NLLB_TIED: readonly string[] = [
-	"sk",
-	"ms",
-	"gl",
-	"th",
-	"cs",
 	"nb",
+	"fi",
 	"bg",
-	"id",
-];
-
-export const QWEN3_4B_OPUS_TIED: readonly string[] = ["de", "nl", "ru", "fr"];
-
-export const QWEN3_4B_LIMITED_LANGUAGES: readonly string[] = [
-	"is",
-	"lv",
-	"et",
-	"hi",
-	"lt",
+	"sr",
+	"fa",
 	"bn",
-	"hu",
-	"sk",
-	"ko",
+	"id",
+	"ms",
+	"et",
+	"lv",
+	"ca",
+	"gl",
+	"is",
+	"af",
 ];
+
+export const QWEN3_4B_OPUS_TIED: readonly string[] = ["de", "nl", "ru"];
+
+export const QWEN3_4B_LIMITED_LANGUAGES: readonly string[] = ["et", "lv", "lt", "is"];
 
 export const QWEN3_4B: RoutePlacement = {
 	nllbFirst: QWEN3_4B_NLLB_FIRST,

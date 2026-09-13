@@ -47,9 +47,13 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   1.7B; `QWEN3_4B_NLLB_FIRST`, `QWEN3_4B_NLLB_TIED`, `QWEN3_4B_OPUS_TIED`,
   `QWEN3_4B_LIMITED_LANGUAGES` for 4B) and `routesFor(llmModelId)` /
   `limitedLanguagesFor(llmModelId)` build from them; a model without lists
-  of its own (a deploy's) gets 1.7B's. 4B's lists start as 1.7B's
-  placements until its own measurement re-places them (`test/translate/routes.ts`
-  pins the two tables equal until then). The service builds its table from
+  of its own (a deploy's) gets 1.7B's. Each model's lists are placed from
+  a round trip on its own 4-bit web weights
+  (`tools/translate-eval/results/2026-09-13-web-weights.md`); 4B leads NLLB
+  outright in pl cs sk hu hi th, ties it in nb fi bg sr fa bn id ms et lv ca
+  gl is af, trails it in hr sl el he ta lt eu ga cy sw tl ur, and only et lv
+  lt is are limited (`test/translate/routes.ts` pins where the two tables
+  differ). The service builds its table from
   the selected model's with the deploy's `translation.routes` merged over
   it, and rebuilds it on a switch.
 - **One prompt profile per GPU model** (`prompts/`). The prompt was tuned
@@ -126,7 +130,7 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   code judged too weak to trust is what the prompt measurements warn
   against. The bare second try drops `context.sourceHint` as before and
   keeps `hint`, so it goes down the same route.
-- **The shipped 1.7B table follows a measurement** (4B's starts as a copy):
+- **The shipped 1.7B table follows a measurement** (4B's its own, above):
   `tools/translate-eval/results/2026-09-12-languages.md`, the share of an
   English line's content words that come back after a round trip through
   each engine (Qwen on 3-9 chat shapes, NLLB and OPUS-MT on a question, a

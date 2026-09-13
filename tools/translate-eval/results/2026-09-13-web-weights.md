@@ -87,5 +87,70 @@ The long tail (et, is, sw, ur, ta, eu, lt, cy) comes back near zero from the
 web 1.7B, lower than the ONNX build scored: the 4-bit output head costs most
 where the model was already weakest, which is what NLLB first is for.
 
-Qwen3-4B's placements are still a copy of these until its own round trip (on
-its own 4-bit web weights, on the GPU) is scored.
+Qwen3-4B is measured on its own weights below.
+
+## Qwen3-4B on its own web weights
+
+The WebLLM `Qwen3-4B-q4f16_1-MLC` weights as a 4-bit graph
+(`tmp/exp/gpu/mlc-to-q4.py`: MatMulNBits with MLC's own nibbles, scales and
+zero point 7, the tied head 4-bit, the embedding lookup at its exact
+dequantized values; layer norms in float32 so ONNX Runtime's CUDA provider
+returns numbers), on 4B's own prompt profile, on the GPU. On the prompts set
+it answers identically to the float16 web-equivalent on the CPU (13/15
+clean), 0.3-3.8 s an answer. Round trips: suite 77% mean (10 of 108 below
+50%), rest 56% (30 of 87); 1.7B had 65% and 36%.
+
+| Language | Qwen 1.7B (web) | Qwen 4B (web) | NLLB (split) | OPUS | 4B placement |
+| --- | --- | --- | --- | --- | --- |
+| de | 74% | 79% | 51% | 80% | Qwen = OPUS |
+| fr | 66% | 76% | — | 63% | Qwen, then OPUS |
+| es | 74% | 84% | — | 60% | Qwen, then OPUS |
+| it | 76% | 79% | — | 63% | Qwen, then OPUS |
+| pt | 75% | 83% | — | — | Qwen |
+| nl | 81% | 88% | — | 88% | Qwen = OPUS |
+| ru | 68% | 81% | — | 77% | Qwen = OPUS |
+| ja | 68% | 75% | 45% | — | Qwen |
+| zh | 73% | 73% | 65% | — | Qwen |
+| pl | 69% | 72% | 56% | — | Qwen, then NLLB |
+| uk | 59% | 66% | — | — | Qwen |
+| tr | 78% | 81% | — | — | Qwen |
+| ko | 53% | 56% | — | — | Qwen |
+| sv | 66% | 69% | — | — | Qwen |
+| cs | 63% | 78% | 61% | — | Qwen, then NLLB |
+| ar | 38% | 72% | 67% | — | Qwen, then NLLB (tie; LLM first by ruling) |
+| hi | 25% | 75% | 49% | — | Qwen, then NLLB |
+| vi | 81% | 84% | — | — | Qwen |
+| id | 69% | 69% | 78% | — | tie |
+| el | 19% | 47% | 77% | — | NLLB first |
+| tl | 50% | 53% | 89% | — | NLLB first |
+| da | 56% | 84% | — | — | Qwen |
+| nb | 75% | 72% | 72% | — | tie |
+| fi | 41% | 47% | 56% | — | tie |
+| sk | 44% | 72% | 51% | — | Qwen, then NLLB |
+| hu | 16% | 66% | 44% | — | Qwen, then NLLB |
+| ro | 72% | 72% | — | — | Qwen |
+| bg | 63% | 75% | 68% | — | tie |
+| sr | 34% | 66% | 71% | — | tie |
+| hr | 31% | 63% | 77% | — | NLLB first |
+| sl | 13% | 53% | 68% | — | NLLB first |
+| he | 38% | 56% | 71% | — | NLLB first |
+| fa | 16% | 56% | 62% | — | tie |
+| bn | 25% | 56% | 54% | — | tie |
+| ta | 0% | 16% | 68% | — | NLLB first |
+| th | 53% | 69% | 56% | — | Qwen, then NLLB |
+| ms | 69% | 66% | 66% | — | tie |
+| et | 0% | 44% | 49% | — | tie, limited |
+| lv | 31% | 41% | 43% | — | tie, limited |
+| lt | 3% | 25% | 54% | — | NLLB first, limited |
+| ca | 72% | 66% | 61% | — | tie |
+| eu | 6% | 3% | 57% | — | NLLB first |
+| gl | 72% | 78% | 77% | — | tie |
+| ga | 69% | 6% | 56% | — | NLLB first |
+| cy | 9% | 9% | 88% | — | NLLB first |
+| is | 0% | 41% | 43% | — | tie, limited |
+| sw | 0% | 34% | 62% | — | NLLB first |
+| af | 63% | 84% | 88% | — | tie |
+| ur | 0% | 44% | 66% | — | NLLB first |
+
+Irish is the odd one out: 1.7B 69%, 4B 6% on three cases. Three cases a
+language is a small sample; the placement follows the numbers.

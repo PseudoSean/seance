@@ -46,11 +46,31 @@ describe("translate/routes.default", () => {
 			.and.not.equal(LIMITED_LANGUAGES);
 	});
 
-	// Until the 4B measurement re-places languages: this is the test that
-	// change is meant to break.
-	it("the 4B table is 1.7B's today", () => {
-		expect(routesFor(QWEN3_4B_ID)).to.deep.equal(DEFAULT_ROUTES);
-		expect([...QWEN3_4B_LIMITED_LANGUAGES]).to.deep.equal([...LIMITED_LANGUAGES]);
+	// Each model placed from its own web weights (2026-09-13-web-weights.md):
+	// 4B leads NLLB outright where 1.7B trailed it, and fewer languages are
+	// limited.
+	it("4B's table differs from 1.7B's where 4B measured differently", () => {
+		const small = routesFor(QWEN3_1_7B_ID);
+		const large = routesFor(QWEN3_4B_ID);
+
+		expect(small).to.not.deep.equal(large);
+
+		// Hungarian and Hindi: NLLB first for 1.7B, the LLM first for 4B.
+		for (const code of ["hu", "hi"]) {
+			expect(NLLB_FIRST, code).to.include(code);
+			expect(QWEN3_4B_NLLB_FIRST, code).to.not.include(code);
+			expect(QWEN3_4B_NLLB_TIED, code).to.not.include(code);
+		}
+
+		// Irish: the LLM first for 1.7B, NLLB first for 4B.
+		expect(NLLB_FIRST).to.not.include("ga");
+		expect(QWEN3_4B_NLLB_FIRST).to.include("ga");
+		// French: tied with OPUS-MT for 1.7B, the LLM ahead for 4B.
+		expect(OPUS_TIED).to.include("fr");
+		expect(QWEN3_4B_OPUS_TIED).to.not.include("fr");
+		expect([...QWEN3_4B_LIMITED_LANGUAGES].sort()).to.deep.equal(["et", "is", "lt", "lv"]);
+		// Arabic stays LLM-first for both, by ruling.
+		expect([...NLLB_FIRST, ...QWEN3_4B_NLLB_FIRST, ...QWEN3_4B_NLLB_TIED]).to.not.include("ar");
 	});
 
 	it("a table follows its placement lists", () => {
@@ -71,8 +91,8 @@ describe("translate/routes.default", () => {
 		expect(limitedLanguagesFor(QWEN3_1_7B_ID)).to.equal(LIMITED_LANGUAGES);
 		expect(limitedLanguagesFor(QWEN3_4B_ID)).to.equal(QWEN3_4B_LIMITED_LANGUAGES);
 		expect(limitedLanguagesFor("gemma-3-1b-it-q4f16_1-MLC")).to.equal(LIMITED_LANGUAGES);
-		expect(isLimitedLanguage("hu", QWEN3_4B_ID)).to.equal(true);
-		expect(isLimitedLanguage("fi", QWEN3_4B_ID)).to.equal(false);
+		expect(isLimitedLanguage("et", QWEN3_4B_ID)).to.equal(true);
+		expect(isLimitedLanguage("hu", QWEN3_4B_ID)).to.equal(false);
 		expect(isLimitedLanguage("hu")).to.equal(true);
 		expect(isLimitedLanguage(null, QWEN3_4B_ID)).to.equal(false);
 	});
