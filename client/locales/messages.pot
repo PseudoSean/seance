@@ -73,6 +73,20 @@ msgctxt "chat.topicPlaceholder"
 msgid "Set channel topic"
 msgstr ""
 
+#: client/components/CodeBlock.vue
+#. Button under a long code block in a chat message that shows only its first lines; clicking reveals every line. {count} is the number of lines of code. The singular shows with exactly one line, the plural otherwise.
+msgctxt "code.showAllLines"
+msgid "Show all {count} line"
+msgid_plural "Show all {count} lines"
+msgstr[0] ""
+msgstr[1] ""
+
+#: client/components/CodeBlock.vue
+#. Button under a long code block in a chat message while all of its lines are shown; clicking folds the block back to its first lines.
+msgctxt "code.showLess"
+msgid "Show less"
+msgstr ""
+
 #: client/components/ChatInput.vue:67
 #. aria-label of the ✕ button that leaves reply or edit mode in the compose bar above the message input; the keyboard key Escape does the same.
 msgctxt "composer.cancel"
@@ -674,6 +688,24 @@ msgctxt "help.website"
 msgid "Website"
 msgstr ""
 
+#: client/components/ImageViewer.vue
+#. aria-label of the ✕ control of the image viewer that fills the screen; clicking closes it.
+msgctxt "image.close"
+msgid "Close"
+msgstr ""
+
+#: client/components/ImageViewer.vue
+#. aria-label of the forward arrow of the image viewer; clicking shows the next image from the conversation.
+msgctxt "image.next"
+msgid "Next image"
+msgstr ""
+
+#: client/components/ImageViewer.vue
+#. aria-label of the back arrow of the image viewer; clicking shows the previous image from the conversation.
+msgctxt "image.previous"
+msgid "Previous image"
+msgstr ""
+
 #: client/components/JoinChannel.vue:20
 #. Title (hover hint) of the channel name input in the sidebar's join-channel form, shown when the typed name is invalid.
 msgctxt "join.channelHint"
@@ -702,6 +734,132 @@ msgstr ""
 #. Submit button of the join-channel form under a network in the sidebar.
 msgctxt "join.submit"
 msgid "Join"
+msgstr ""
+
+#: client/components/LinkPreview.vue
+#. Title on the placeholder of a media preview that failed to load. {kind} is the media kind as a lowercase English word: 'image', 'video' or 'audio'.
+msgctxt "link.cannotLoad"
+msgid "Couldn't load this {kind}"
+msgstr ""
+
+#: client/components/LinkPreview.vue
+#. Hint on the placeholder of a media preview with no file name to show; clicking reveals the media.
+msgctxt "link.clickToShow"
+msgid "Click to show"
+msgstr ""
+
+#: client/components/LinkPreview.vue
+#. Hint appended to the file name on a media preview's placeholder that has not been revealed; clicking shows the media. The middle dot is part of the copy.
+msgctxt "link.clickToShowSuffix"
+msgid " · Click to show"
+msgstr ""
+
+#: client/components/LinkPreviewToggle.vue
+#. aria-label of the small toggle button on a message link preview while the preview is expanded; clicking folds it back to a plain link.
+msgctxt "link.collapse"
+msgid "Collapse preview"
+msgstr ""
+
+#: client/components/LinkPreviewToggle.vue
+#. aria-label of the button on a message link preview while the preview is folded; clicking expands the media inline.
+msgctxt "link.expand"
+msgid "Expand preview"
+msgstr ""
+
+#: client/components/LinkPreview.vue
+#. Title on the placeholder of a media preview before it is revealed. {Kind} is the media type capitalized ('Image', 'Video', 'Audio'), {host} the website the media comes from.
+msgctxt "link.fromHost"
+msgid "{Kind} from {host}"
+msgstr ""
+
+#: client/components/LinkPreview.vue
+#. Tooltip and aria-label of the hide button on a revealed media preview; clicking hides the media and restores the placeholder.
+msgctxt "link.hide"
+msgid "Hide this preview"
+msgstr ""
+
+#: client/components/LinkPreview.vue
+#. The word for a sound clip, filling {kind} in media-preview sentences such as 'Loading {kind}…'. Lowercase mid-sentence.
+msgctxt "link.kindAudio"
+msgid "audio"
+msgstr ""
+
+#: client/components/LinkPreview.vue
+#. The word for a picture, filling {kind} in media-preview sentences such as 'Loading {kind}…'. Lowercase mid-sentence.
+msgctxt "link.kindImage"
+msgid "image"
+msgstr ""
+
+#: client/components/LinkPreview.vue
+#. Generic word for a picture, sound or video, filling {kind} in media-preview sentences when the type is unknown. Lowercase mid-sentence.
+msgctxt "link.kindMedia"
+msgid "media"
+msgstr ""
+
+#: client/components/LinkPreview.vue
+#. The word for a moving picture, filling {kind} in media-preview sentences such as 'Loading {kind}…'. Lowercase mid-sentence.
+msgctxt "link.kindVideo"
+msgid "video"
+msgstr ""
+
+#: client/components/LinkPreview.vue
+#. Title on the placeholder of a media preview while its file is downloading after the reader revealed it. {kind} is 'image', 'video' or 'audio'.
+msgctxt "link.loadingKind"
+msgid "Loading {kind}…"
+msgstr ""
+
+#: client/components/LinkPreview.vue
+#. Tooltip and aria-label of the button that opens the media file in a new browser tab.
+msgctxt "link.openNewTab"
+msgid "Open in a new tab"
+msgstr ""
+
+#: client/components/LinkPreview.vue
+#. aria-label of the small toolbar on a revealed media preview, holding the hide, trust and open-in-new-tab buttons.
+msgctxt "link.previewActions"
+msgid "Preview actions"
+msgstr ""
+
+#: client/components/LinkPreview.vue
+#. aria-label of the placeholder button standing in for a hidden media preview, when the hosting site is unknown. {kind} is 'image', 'video' or 'audio'.
+msgctxt "link.showKind"
+msgid "Show {kind}"
+msgstr ""
+
+#: client/components/LinkPreview.vue
+#. aria-label of the placeholder button standing in for a hidden media preview. {kind} is 'image', 'video' or 'audio', {host} the website the media comes from.
+msgctxt "link.showKindFromHost"
+msgid "Show {kind} from {host}"
+msgstr ""
+
+#: client/components/LinkPreview.vue
+#. Text of the trust button on a media preview when nothing is trusted yet; clicking opens the menu that allows this media always. The caret follows it.
+msgctxt "link.trustButtonShow"
+msgid "Always show"
+msgstr ""
+
+#: client/components/LinkPreview.vue
+#. Text of the trust button on a media preview when at least one rule already always allows this media; clicking opens the menu of rules. The caret follows it.
+msgctxt "link.trustButtonShown"
+msgid "Always shown"
+msgstr ""
+
+#: client/components/LinkPreview.vue
+#. Tooltip of the trust button on a media preview when nothing is trusted yet; names the three scopes a rule can cover.
+msgctxt "link.trustTitleEmpty"
+msgid "Always show media from this site, this person or in this channel"
+msgstr ""
+
+#: client/components/LinkPreview.vue
+#. Tooltip of the trust button on a media preview when rules already allow it. {scopes} is a comma-joined list of what is trusted ('from example.com', 'in #chat'). Em dash is part of the copy.
+msgctxt "link.trustTitleShown"
+msgid "Always shown {scopes} — change"
+msgstr ""
+
+#: client/components/LinkPreview.vue
+#. Hint on the placeholder of a media preview that failed to load; clicking loads it again.
+msgctxt "link.tryAgain"
+msgid "Click to try again"
 msgstr ""
 
 #: client/index.html
@@ -1036,6 +1194,156 @@ msgstr ""
 #. Button of the push opt-in prompt; allows web push (the click doubles as the browser's permission gesture).
 msgctxt "push.yes"
 msgid "Yes"
+msgstr ""
+
+#: client/components/MessageReactions.vue
+#. Tooltip and aria-label of the ➕ button at the end of a message's reaction row; clicking opens the emoji picker.
+msgctxt "reactions.add"
+msgid "Add a reaction"
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. Preview-bar hint in the emoji picker while a reaction is being composed; shift-clicking an emoji appends it instead of sending.
+msgctxt "reactions.buildingHint"
+msgid "Shift-click to add more emoji"
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. Preview-bar title in the emoji picker while the user is composing a reaction out of several emoji or typing one.
+msgctxt "reactions.buildingName"
+msgid "Building a reaction"
+msgstr ""
+
+#: client/components/MessageReactions.vue
+#. aria-label of a reaction badge under a chat message. {reaction} is the emoji or word reaction, {users} the comma-joined names of who sent it.
+msgctxt "reactions.by"
+msgid "{reaction} by {users}"
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. Tooltip and aria-label of the ✕ button in the emoji picker's search field; clicking empties the field.
+msgctxt "reactions.clearSearch"
+msgid "Clear search"
+msgstr ""
+
+#: client/components/MessageReactions.vue
+#. Suffix appended to a reaction badge's aria-label when you took part in it, saying that clicking removes your reaction. Parenthesized.
+msgctxt "reactions.clickToRemoveSuffix"
+msgid "(click to remove yours)"
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. aria-label of the emoji picker popup that opens from a chat message to add a reaction to it.
+msgctxt "reactions.dialogAria"
+msgid "Add a reaction"
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. Preview-bar hint of the emoji picker when nothing is highlighted or being composed; sums up the three ways to react.
+msgctxt "reactions.emptyHint"
+msgid "Pick an emoji, type a word, or shift-click to combine several."
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. Label shown before the typed text on the emoji picker's free-text row, which sends what was typed as the reaction; the typed text follows it. Mid-sentence by position.
+msgctxt "reactions.freePrefix"
+msgid "React with"
+msgstr ""
+
+#: client/components/MessageReactions.vue
+#. aria-label of the row of reaction badges under a chat message, listing who reacted with what.
+msgctxt "reactions.groupAria"
+msgid "Reactions"
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. Preview-bar hint in the emoji picker for a single emoji; shift-clicking another appends it to the reaction instead of sending. Keep the shift symbol.
+msgctxt "reactions.hintCombine"
+msgid "⇧ to combine"
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. Preview-bar hint in the emoji picker when the highlighted emoji is already on the message; clicking it takes the reaction back off.
+msgctxt "reactions.hintRemove"
+msgid "Remove"
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. Preview-bar hint in the emoji picker for a typed reaction (a word or several emoji): pressing Enter sends it.
+msgctxt "reactions.hintSend"
+msgid "Enter to send"
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. aria-label of the emoji picker's scrollable grid of emoji to pick from.
+msgctxt "reactions.listAria"
+msgid "Emoji"
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. Error note shown inside the emoji picker when the emoji catalog failed to download; the search field above still accepts any reaction as text.
+msgctxt "reactions.loadFailed"
+msgid "The emoji list could not be loaded. You can still type a reaction above."
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. Note shown inside the emoji picker while its catalog is being fetched. Ellipsis is part of the copy.
+msgctxt "reactions.loading"
+msgid "Loading emoji…"
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. Heading of the emoji picker's list while a search matched nothing (what was typed can still be sent as a reaction).
+msgctxt "reactions.noMatch"
+msgid "No emoji match"
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. Heading of the emoji picker's section of suggested starter reactions, shown when nothing has been used recently, and the label of its tab.
+msgctxt "reactions.quickReactions"
+msgid "Quick reactions"
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. Heading of the emoji picker's section of recently sent reactions, and the label of its tab.
+msgctxt "reactions.recentlyUsed"
+msgid "Recently used"
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. Placeholder and aria-label of the emoji picker's search field; the same field doubles as the entry for a custom reaction (any text or emoji).
+msgctxt "reactions.searchPlaceholder"
+msgid "Search emoji, or type any reaction"
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. Heading of the emoji picker's list while a search is showing matches.
+msgctxt "reactions.searchResults"
+msgid "Search results"
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. Button in the emoji picker's preview bar; clicking sends the reaction being composed.
+msgctxt "reactions.send"
+msgid "Send"
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. Preview-bar note in the emoji picker for a remembered reaction that is not an emoji, saying it will be sent as words. Starts lowercase because it follows other text.
+msgctxt "reactions.sentAsText"
+msgid "sent as text"
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. aria-label of the row of tab buttons in the emoji picker that jumps to a group of emoji (smileys, animals, food…).
+msgctxt "reactions.tabsAria"
+msgid "Emoji groups"
+msgstr ""
+
+#: client/components/ReactionPicker.vue
+#. Tooltip of the emoji picker's free-text row and its spoken form, offering to send what was typed as the reaction. {reaction} is that text.
+msgctxt "reactions.titleTemplate"
+msgid "React with {reaction}"
 msgstr ""
 
 #: client/components/MessageSearchForm.vue:19

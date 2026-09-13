@@ -36,7 +36,11 @@
 					aria-haspopup="menu"
 					@click="openTrustMenu"
 				>
-					{{ trustedKinds.length > 0 ? "Always shown" : "Always show" }}
+					{{
+						trustedKinds.length > 0
+							? t("link.trustButtonShown")
+							: t("link.trustButtonShow")
+					}}
 					<span class="media-veil-caret" aria-hidden="true"></span>
 				</button>
 			</div>
@@ -90,12 +94,12 @@
 						<source :src="link.media" :type="link.mediaType" @error="onPreviewError" />
 					</audio>
 				</template>
-				<div class="media-tools" role="group" aria-label="Preview actions">
+				<div class="media-tools" role="group" :aria-label="previewActionsAria">
 					<button
 						type="button"
 						class="media-tool media-tool-hide"
-						title="Hide this preview"
-						aria-label="Hide this preview"
+						:title="hideAria"
+						:aria-label="hideAria"
 						@click="hide"
 					></button>
 					<button
@@ -116,8 +120,8 @@
 						:href="link.link"
 						target="_blank"
 						rel="noopener noreferrer"
-						title="Open in a new tab"
-						aria-label="Open in a new tab"
+						:title="openAria"
+						:aria-label="openAria"
 					></a>
 				</div>
 			</div>
@@ -128,6 +132,7 @@
 <script lang="ts">
 import {computed, defineComponent, inject, onUnmounted, PropType, ref, watch} from "vue";
 import {onBeforeRouteUpdate} from "vue-router";
+import {useI18n} from "../js/i18n";
 import {useStore} from "../js/store";
 import eventbus from "../js/eventbus";
 import type {ClientChan, ClientLinkPreview} from "../js/types";
@@ -152,11 +157,6 @@ import {imageViewerKey} from "./App.vue";
 // this preview or always for its host, its channel or its sender's account
 // (`helpers/mediaTrust.ts`, menu in `helpers/mediaTrustMenu.ts`). Revealed
 // media carries a small toolbar to hide it again or change that trust.
-const kindLabel: Record<string, string> = {
-	image: "image",
-	video: "video",
-	audio: "audio",
-};
 
 export default defineComponent({
 	name: "LinkPreview",
@@ -173,6 +173,10 @@ export default defineComponent({
 	},
 	setup(props) {
 		const store = useStore();
+		const {t} = useI18n();
+		const previewActionsAria = computed(() => t("link.previewActions"));
+		const hideAria = computed(() => t("link.hide"));
+		const openAria = computed(() => t("link.openNewTab"));
 		const imageViewer = inject(imageViewerKey);
 
 		onBeforeRouteUpdate((to, from, next) => {
@@ -197,32 +201,49 @@ export default defineComponent({
 			isPreviewRevealed(props.link, store.state.settings.mediaReveal === "always")
 		);
 
-		const kind = computed(() => kindLabel[props.link.type] ?? "media");
+		// The media kind as a word for the veil's sentences; unknown types
+		// fall back to the generic "media".
+		const kind = computed(() => {
+			switch (props.link.type) {
+				case "image":
+					return t("link.kindImage");
+				case "video":
+					return t("link.kindVideo");
+				case "audio":
+					return t("link.kindAudio");
+				default:
+					return t("link.kindMedia");
+			}
+		});
 		const veilTitle = computed(() => {
 			if (failed.value) {
-				return `Couldn't load this ${kind.value}`;
+				return t("link.cannotLoad", {kind: kind.value});
 			}
 
 			if (revealed.value) {
-				return `Loading ${kind.value}…`;
+				return t("link.loadingKind", {kind: kind.value});
 			}
 
 			const noun = kind.value.charAt(0).toUpperCase() + kind.value.slice(1);
-			return host.value ? `${noun} from ${host.value}` : noun;
+			return host.value ? t("link.fromHost", {Kind: noun, host: host.value}) : noun;
 		});
 		const veilHint = computed(() => {
 			if (failed.value) {
-				return "Click to try again";
+				return t("link.tryAgain");
 			}
 
 			if (revealed.value) {
 				return fileName.value;
 			}
 
-			return fileName.value ? `${fileName.value} · Click to show` : "Click to show";
+			return fileName.value
+				? `${fileName.value}${t("link.clickToShowSuffix")}`
+				: t("link.clickToShow");
 		});
 		const veilLabel = computed(() =>
-			host.value ? `Show ${kind.value} from ${host.value}` : `Show ${kind.value}`
+			host.value
+				? t("link.showKindFromHost", {kind: kind.value, host: host.value})
+				: t("link.showKind", {kind: kind.value})
 		);
 		const trustTitle = computed(() => {
 			const shown = mediaScopesOf(props.link)
@@ -230,8 +251,8 @@ export default defineComponent({
 				.map((s) => s.label);
 
 			return shown.length > 0
-				? `Always shown ${shown.join(", ")} — change`
-				: "Always show media from this site, this person or in this channel";
+				? t("link.trustTitleShown", {scopes: shown.join(", ")})
+				: t("link.trustTitleEmpty");
 		});
 
 		const onPreviewReady = () => {
@@ -334,6 +355,10 @@ export default defineComponent({
 		});
 
 		return {
+			t,
+			previewActionsAria,
+			hideAria,
+			openAria,
 			content,
 			container,
 			failed,
