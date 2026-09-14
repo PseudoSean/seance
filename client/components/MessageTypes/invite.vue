@@ -13,7 +13,7 @@ import {ClientNetwork, ClientMessage} from "../../js/types";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
 import {useI18n} from "../../js/i18n";
-import {frameSegments} from "../../js/i18n/core";
+import {frameSegments, KEEP} from "../../js/i18n/core";
 
 export default defineComponent({
 	name: "MessageTypeInvite",
@@ -38,8 +38,14 @@ export default defineComponent({
 		// interactive username element in the other.
 		const parts = computed(() =>
 			props.message.invitedYou
-				? frameSegments(t("system.inviteYou"), ["nick", "channel"])
-				: frameSegments(t("system.inviteTarget"), ["nick", "target", "channel"])
+				? frameSegments(t("system.inviteYou", {nick: KEEP, channel: KEEP}), [
+						"nick",
+						"channel",
+				  ])
+				: frameSegments(
+						t("system.inviteTarget", {nick: KEEP, target: KEEP, channel: KEEP}),
+						["nick", "target", "channel"]
+				  )
 		);
 
 		return {

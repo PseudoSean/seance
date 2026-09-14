@@ -9,7 +9,14 @@
 import enCatalog from "../../locales/en.json";
 import {STATIC_CALL_SITES} from "./call-sites";
 
-export type Vars = Record<string, string | number>;
+/** Sentinel var value for frame-splitting call sites: "this placeholder is
+ * known — leave it in the template". Components that split a translated
+ * frame on a placeholder (frameSegments) pass KEEP for each name, so the
+ * interpolation neither substitutes nor warns, and the split finds the
+ * placeholder intact. */
+export const KEEP = Symbol("i18n-keep-placeholder");
+
+export type Vars = Record<string, string | number | typeof KEEP>;
 export type Catalog = Record<string, string | Record<string, string>>;
 
 // en is the active catalog from the first import: the IRC layer resolves its
@@ -154,6 +161,10 @@ export function isRTL(locale: string = tag): boolean {
  * locale — digits, decimal separator, no grouping. */
 export function interpolate(template: string, vars: Vars, label?: string): string {
 	return template.replace(/\{(\w+)\}/g, (match, name: string) => {
+		if (vars[name] === KEEP) {
+			return match; // the caller splits on this placeholder itself
+		}
+
 		if (!Object.prototype.hasOwnProperty.call(vars, name)) {
 			warnOnce(
 				`${tag}\u0000var\u0000${label ?? template}\u0000${name}`,

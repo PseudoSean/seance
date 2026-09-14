@@ -11,7 +11,7 @@ import {computed, defineComponent, PropType} from "vue";
 import {ClientNetwork, ClientMessage} from "../../js/types";
 import Username from "../Username.vue";
 import {useI18n} from "../../js/i18n";
-import {frameSegments} from "../../js/i18n/core";
+import {frameSegments, KEEP} from "../../js/i18n/core";
 
 export default defineComponent({
 	name: "MessageTypeNick",
@@ -30,7 +30,9 @@ export default defineComponent({
 	},
 	setup() {
 		const {t} = useI18n();
-		const parts = computed(() => frameSegments(t("system.nick"), ["nick", "newNick"]));
+		const parts = computed(() =>
+			frameSegments(t("system.nick", {nick: KEEP, newNick: KEEP}), ["nick", "newNick"])
+		);
 
 		return {
 			parts,

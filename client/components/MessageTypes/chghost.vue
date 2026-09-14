@@ -19,7 +19,7 @@ import {ClientNetwork, ClientMessage} from "../../js/types";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
 import {useI18n} from "../../js/i18n";
-import {frameSegments} from "../../js/i18n/core";
+import {frameSegments, KEEP} from "../../js/i18n/core";
 
 export default defineComponent({
 	name: "MessageTypeChangeHost",
@@ -47,18 +47,27 @@ export default defineComponent({
 			const {new_ident: ident, new_host: host} = props.message;
 
 			if (ident && host) {
-				return frameSegments(t("system.chghostBoth"), ["nick", "ident", "host"]);
+				return frameSegments(
+					t("system.chghostBoth", {nick: KEEP, ident: KEEP, host: KEEP}),
+					["nick", "ident", "host"]
+				);
 			}
 
 			if (ident) {
-				return frameSegments(t("system.chghostIdent"), ["nick", "ident"]);
+				return frameSegments(t("system.chghostIdent", {nick: KEEP, ident: KEEP}), [
+					"nick",
+					"ident",
+				]);
 			}
 
 			if (host) {
-				return frameSegments(t("system.chghostHost"), ["nick", "host"]);
+				return frameSegments(t("system.chghostHost", {nick: KEEP, host: KEEP}), [
+					"nick",
+					"host",
+				]);
 			}
 
-			return frameSegments(t("system.chghost"), ["nick"]);
+			return frameSegments(t("system.chghost", {nick: KEEP}), ["nick"]);
 		});
 
 		return {

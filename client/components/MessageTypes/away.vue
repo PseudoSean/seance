@@ -14,7 +14,7 @@ import type {ClientNetwork, ClientMessage} from "../../js/types";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
 import {useI18n} from "../../js/i18n";
-import {frameSegments} from "../../js/i18n/core";
+import {frameSegments, KEEP} from "../../js/i18n/core";
 
 export default defineComponent({
 	name: "MessageTypeAway",
@@ -34,7 +34,7 @@ export default defineComponent({
 	},
 	setup() {
 		const {t} = useI18n();
-		const parts = computed(() => frameSegments(t("system.away"), ["nick"]));
+		const parts = computed(() => frameSegments(t("system.away", {nick: KEEP}), ["nick"]));
 
 		return {
 			parts,

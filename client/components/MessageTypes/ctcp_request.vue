@@ -13,7 +13,7 @@ import {ClientNetwork, ClientMessage} from "../../js/types";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
 import {useI18n} from "../../js/i18n";
-import {frameSegments} from "../../js/i18n/core";
+import {frameSegments, KEEP} from "../../js/i18n/core";
 
 export default defineComponent({
 	name: "MessageTypeRequestCTCP",
@@ -34,7 +34,11 @@ export default defineComponent({
 	setup() {
 		const {t} = useI18n();
 		const parts = computed(() =>
-			frameSegments(t("system.ctcpRequest"), ["nick", "ctcp", "message"])
+			frameSegments(t("system.ctcpRequest", {nick: KEEP, ctcp: KEEP, message: KEEP}), [
+				"nick",
+				"ctcp",
+				"message",
+			])
 		);
 		const ctcpTitle = computed(() => t("msg.ctcpTitle"));
 

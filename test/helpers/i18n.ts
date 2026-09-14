@@ -5,6 +5,7 @@ import vm from "node:vm";
 import sinon from "sinon";
 import enCatalog from "../../client/locales/en.json";
 import {
+	KEEP,
 	missingKeys,
 	RTL_TAGS,
 	bestLocale,
@@ -16,6 +17,7 @@ import {
 	t,
 	tCount,
 	untranslatedKeys,
+	frameSegments,
 } from "../../client/js/i18n/core";
 import {activate} from "../../client/js/i18n";
 import {formatDayHeading, formatRelativeDay, formatTime} from "../../client/js/i18n/dates";
@@ -258,6 +260,19 @@ describe("i18n dev warnings for dynamic strings", () => {
 			warns.getCalls().filter((call) => String(call.args[0]).includes("assembled at runtime"))
 				.length
 		).to.be.greaterThan(0);
+	});
+
+	it("the KEEP sentinel leaves a placeholder intact, without warning", () => {
+		// Frame-splitting call sites pass KEEP for each placeholder they
+		// split on themselves: no substitution, no unknown-var warning.
+		setCatalog("en", {frame: "{nick} sets mode {modes}"}, undefined);
+		expect(interpolate("x {nick} y", {nick: KEEP})).to.equal("x {nick} y");
+		expect(
+			warns.getCalls().filter((call) => String(call.args[0]).includes("unknown var")).length
+		).to.equal(0);
+		expect(
+			frameSegments(t("frame", {nick: KEEP, modes: KEEP}), ["nick", "modes"])
+		).to.deep.equal(["", " sets mode ", ""]);
 	});
 
 	it("warns on an unknown {var} left visible", () => {
