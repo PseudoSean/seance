@@ -70,6 +70,8 @@ function plainNumber(locale: string): Intl.NumberFormat {
 	return fmt;
 }
 
+const frameCache = new Map<string, string[]>();
+
 const DEV_I18N = process.env.NODE_ENV !== "production";
 const warned = new Set<string>();
 
@@ -146,6 +148,7 @@ export function setCatalog(locale: string, en: Catalog, overlay: Catalog | undef
 	}
 
 	warned.clear(); // a locale change re-derives what is worth warning about
+	frameCache.clear();
 }
 
 export function activeLocale(): string {
@@ -178,6 +181,61 @@ export function interpolate(template: string, vars: Vars, label?: string): strin
 		const value = vars[name];
 		return typeof value === "number" ? plainNumber(tag).format(value) : String(value);
 	});
+}
+
+// Per-key census of a template's {placeholders} — the class-3 audit. The
+// placeholder SHAPE is locale-independent (compile refuses a translation
+// that loses one), so the cache survives setCatalog.
+function frameVars(key: string): string[] {
+	let names = frameCache.get(key);
+
+	if (!names) {
+		names = [];
+		const entry = catalog[key];
+		const texts = typeof entry === "string" ? [entry] : entry ? Object.values(entry) : [];
+
+		for (const text of texts) {
+			for (const m of String(text).matchAll(/\{(\w+)\}/g)) {
+				if (!names.includes(m[1])) {
+					names.push(m[1]);
+				}
+			}
+		}
+
+		frameCache.set(key, names);
+	}
+
+	return names;
+}
+
+/** The class-3 audit: a {var} frame's rendered text is assembled at
+ * runtime from data (the translatable unit is the whole phrase — the
+ * endorsed pattern — but it is a dynamic label, and development builds
+ * name it once per key+locale so the census stays visible). */
+function warnFrame(key: string): void {
+	const names = frameVars(key);
+
+	if (names.length > 0) {
+		warnOnce(
+			`${tag}\u0000frame\u0000${key}`,
+			`dynamic label ({var} frame): "${key}" renders ${names.length} runtime value${
+				names.length === 1 ? "" : "s"
+			} (${names.join(
+				", "
+			)}) — the sentence is dynamic; the translatable unit is the whole phrase`
+		);
+	}
+}
+
+/** The class-2 audit: translated fragments combined into one line
+ * (MessageCondensed's Intl.ListFormat). The conjunction is locale-correct,
+ * but each fragment is translated without sentence context — development
+ * builds say so once per session. */
+export function warnFragmentJoin(count: number): void {
+	warnOnce(
+		"fragment-join",
+		`dynamic label (fragment combination): ${count} translated fragments joined via Intl.ListFormat — the condensed line is assembled, not one phrase`
+	);
 }
 
 /** The dynamic-key check, shared by t() and tCount(): a key that no static
@@ -216,11 +274,15 @@ export function t(key: string, vars: Vars = {}): string {
 			`${tag}\u0000key\u0000${key}`,
 			`missing key "${key}" (${tag}) — a dynamically composed key, or one the pot lost`
 		);
-	} else if (isUntranslated(key)) {
-		warnOnce(
-			`${tag}\u0000untranslated\u0000${key}`,
-			`untranslated in "${tag}": "${key}" — the English copy shows`
-		);
+	} else {
+		if (isUntranslated(key)) {
+			warnOnce(
+				`${tag}\u0000untranslated\u0000${key}`,
+				`untranslated in "${tag}": "${key}" — the English copy shows`
+			);
+		}
+
+		warnFrame(key);
 	}
 
 	return interpolate(typeof entry === "string" ? entry : key, vars, key);
@@ -239,6 +301,7 @@ export function tCount(key: string, count: number, vars: Vars = {}): string {
 			);
 		}
 
+		warnFrame(key);
 		return interpolate(entry, {...vars, count, n: count}, key);
 	}
 
@@ -256,6 +319,8 @@ export function tCount(key: string, count: number, vars: Vars = {}): string {
 			`untranslated in "${tag}": "${key}" — the English copy shows`
 		);
 	}
+
+	warnFrame(key);
 
 	const category = rulesFor(tag).select(count);
 	const template = entry[category] ?? entry.other ?? Object.values(entry)[0] ?? key;

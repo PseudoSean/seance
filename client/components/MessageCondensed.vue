@@ -22,6 +22,7 @@ import {condensedTypes} from "../../shared/irc";
 import {MessageType} from "../../shared/types/msg";
 import {ClientMessage, ClientNetwork} from "../js/types";
 import {localeRef, useI18n} from "../js/i18n";
+import {warnFragmentJoin} from "../js/i18n/core";
 import Message from "./Message.vue";
 
 export default defineComponent({
@@ -135,6 +136,10 @@ export default defineComponent({
 
 			// "3 users have joined, 1 mode was set and 1 user has left" — the
 			// list conjunction is the locale's, not ", and ".
+			if (parts.length > 1) {
+				warnFragmentJoin(parts.length);
+			}
+
 			return new Intl.ListFormat(localeRef.value, {type: "conjunction"}).format(parts);
 		});
 

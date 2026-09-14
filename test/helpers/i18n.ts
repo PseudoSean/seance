@@ -17,6 +17,7 @@ import {
 	t,
 	tCount,
 	untranslatedKeys,
+	warnFragmentJoin,
 	frameSegments,
 } from "../../client/js/i18n/core";
 import {activate} from "../../client/js/i18n";
@@ -273,6 +274,41 @@ describe("i18n dev warnings for dynamic strings", () => {
 		expect(
 			frameSegments(t("frame", {nick: KEEP, modes: KEEP}), ["nick", "modes"])
 		).to.deep.equal(["", " sets mode ", ""]);
+	});
+
+	it("the class-3 audit: a {var} frame warns once, naming its values", () => {
+		setCatalog("en", enCatalog, undefined);
+		t("connect.connectingTo", {host: "h", port: 1}); // "{host}:{port}…" frame
+		const frames = warns
+			.getCalls()
+			.filter((call) => String(call.args[0]).includes("dynamic label ({var} frame)"));
+		expect(frames.length).to.equal(1);
+		expect(String(frames[0].args[0])).to.contain('"connect.connectingTo"');
+		expect(String(frames[0].args[0])).to.contain("(host, port)");
+		// ...once per key+locale
+		t("connect.connectingTo", {host: "h", port: 1});
+		expect(
+			warns.getCalls().filter((call) => String(call.args[0]).includes("({var} frame)")).length
+		).to.equal(1);
+		// A key without placeholders is not a frame.
+		t("connect.submit");
+		expect(
+			warns
+				.getCalls()
+				.filter(
+					(call) =>
+						String(call.args[0]).includes("({var} frame)") &&
+						String(call.args[0]).includes("connect.submit")
+				).length
+		).to.equal(0);
+	});
+
+	it("the class-2 audit: fragment joins warn through warnFragmentJoin", () => {
+		warnFragmentJoin(3);
+		expect(
+			warns.getCalls().filter((call) => String(call.args[0]).includes("fragment combination"))
+				.length
+		).to.equal(1);
 	});
 
 	it("warns on an unknown {var} left visible", () => {
