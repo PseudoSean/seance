@@ -20,6 +20,7 @@ import {parsePo, PoEntry} from "./po";
 import {PLURAL_RULES, parsePluralForms, PluralRule} from "./plural";
 import {pseudo} from "./pseudo";
 import {AVAILABLE_PATH, LOCALES_DIR} from "./paths";
+import {generateTargets} from "./targets";
 
 /** What the runtime loads: strings, plurals keyed by CLDR category. */
 export type Catalog = Record<string, string | Record<string, string>>;
@@ -305,9 +306,10 @@ function main(): void {
 	}
 
 	const result = compileLocales();
+	const targets = generateTargets();
 	const locales = result.tags.filter((tag) => tag !== "en" && tag !== "qqx");
 	console.log(
-		`compile: en.json, qqx.json, ${locales.length} locale catalog(s), available.ts, tags.json` +
+		`compile: en.json, qqx.json, ${locales.length} locale catalog(s), available.ts, tags.json, ${targets.length} target language(s)` +
 			(result.warnings.length > 0 ? ` — ${result.warnings.length} fuzzy skipped` : "")
 	);
 }

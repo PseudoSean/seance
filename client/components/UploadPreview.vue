@@ -325,7 +325,6 @@ export default defineComponent({
 		const {t} = useI18n();
 		const request = ref<UploadConfirmRequest | null>(null);
 		const items = ref<PreviewItem[]>([]);
-		const title = ref("Upload this file?");
 		const confirmButton = ref<HTMLButtonElement>();
 		let nextKey = 1;
 

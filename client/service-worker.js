@@ -942,7 +942,8 @@ const SW_COPY_FALLBACK = {
 	"sw.newActivity": "New activity while you were away.",
 	"sw.newMessage": "New message",
 	"sw.titleChannel": "{nick} in {target}",
-	"sw.titleCount": "({count})",
+	"sw.titleChannelCount": "{nick} in {target} ({count})",
+	"sw.titleNickCount": "{nick} ({count})",
 };
 
 /** {name} interpolation over the fallback copy (core.ts's interpolate). */
@@ -1129,15 +1130,22 @@ async function handlePushNow(raw) {
 				P.notificationText(text, {markdown})
 			);
 
-			// Title fragments resolve whole — never concatenated — so a
-			// translation is free to reorder them; the unread count is a bare
-			// numeric suffix (no plurals in the worker; the separating space
-			// is added here), and a query title is the nick alone: nothing to
-			// translate.
-			const countSuffix = count > 1 ? " " + t("sw.titleCount", {count}) : "";
+			// Titles resolve as whole sentences — the unread count is inside
+			// the phrase, never glued on: a translation is free to reorder
+			// (or drop) the count. The worker has no plural rules, so the
+			// count > 1 shape is its own key; a query title below two
+			// messages is the nick alone: nothing to translate.
 			const title = isChannel
-				? t("sw.titleChannel", {nick: parsed.nick, target: parsed.target}) + countSuffix
-				: parsed.nick + countSuffix;
+				? count > 1
+					? t("sw.titleChannelCount", {
+							nick: parsed.nick,
+							target: parsed.target,
+							count,
+					  })
+					: t("sw.titleChannel", {nick: parsed.nick, target: parsed.target})
+				: count > 1
+				? t("sw.titleNickCount", {nick: parsed.nick, count})
+				: parsed.nick;
 
 			// Inline reply renders as a text field where the browser supports
 			// it (desktop Chrome) and degrades to a button that deep-links the

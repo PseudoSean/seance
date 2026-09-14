@@ -8,10 +8,54 @@ import fuzzy from "fuzzy";
 
 import emojiMap from "./helpers/simplemap.json";
 import {aliasNames} from "./helpers/aliases";
+import {brandingT} from "./branding";
 import {store} from "./store";
 import {ChanType} from "../../shared/types/chan";
 
 export default enableAutocomplete;
+
+/** The colour names a translator sees, resolved through the one
+ * override-aware chain. Every key is a literal (the pot ↔ call-site scanner
+ * only sees direct calls); the pair list in constants.ts stays the wire
+ * truth, matched against the English name and the translation alike. */
+const colorName = (code: string, en: string): string => {
+	switch (code) {
+		case "00":
+			return brandingT("irc.colorWhite");
+		case "01":
+			return brandingT("irc.colorBlack");
+		case "02":
+			return brandingT("irc.colorBlue");
+		case "03":
+			return brandingT("irc.colorGreen");
+		case "04":
+			return brandingT("irc.colorRed");
+		case "05":
+			return brandingT("irc.colorBrown");
+		case "06":
+			return brandingT("irc.colorMagenta");
+		case "07":
+			return brandingT("irc.colorOrange");
+		case "08":
+			return brandingT("irc.colorYellow");
+		case "09":
+			return brandingT("irc.colorLightGreen");
+		case "10":
+			return brandingT("irc.colorCyan");
+		case "11":
+			return brandingT("irc.colorLightCyan");
+		case "12":
+			return brandingT("irc.colorLightBlue");
+		case "13":
+			return brandingT("irc.colorPink");
+		case "14":
+			return brandingT("irc.colorGrey");
+		case "15":
+			return brandingT("irc.colorLightGrey");
+		default:
+			return en;
+	}
+};
 
 const emojiSearchTerms = Object.keys(emojiMap);
 const emojiStrategy: StrategyProps = {
@@ -91,20 +135,26 @@ const foregroundColorStrategy: StrategyProps = {
 		term = term.toLowerCase();
 
 		const matchingColorCodes = constants.colorCodeMap
-			.filter((i) => fuzzy.test(term, i[0]) || fuzzy.test(term, i[1]))
 			.map((i) => {
-				if (fuzzy.test(term, i[1])) {
+				const localized = colorName(i[0], i[1]);
+
+				if (fuzzy.test(term, localized)) {
 					return [
 						i[0],
-						fuzzy.match(term, i[1], {
+						fuzzy.match(term, localized, {
 							pre: "<b>",
 							post: "</b>",
 						}).rendered,
 					];
 				}
 
-				return i;
-			});
+				if (fuzzy.test(term, i[1])) {
+					return [i[0], localized]; // matched the English name, shown localized
+				}
+
+				return null;
+			})
+			.filter((pair): pair is string[] => pair !== null);
 
 		callback(matchingColorCodes);
 	},
@@ -123,20 +173,26 @@ const backgroundColorStrategy: StrategyProps = {
 	search(term: string, callback: (matchingColorCodes: string[][]) => void, match: string[]) {
 		term = term.toLowerCase();
 		const matchingColorCodes = constants.colorCodeMap
-			.filter((i) => fuzzy.test(term, i[0]) || fuzzy.test(term, i[1]))
 			.map((pair) => {
-				if (fuzzy.test(term, pair[1])) {
+				const localized = colorName(pair[0], pair[1]);
+
+				if (fuzzy.test(term, localized)) {
 					return [
 						pair[0],
-						fuzzy.match(term, pair[1], {
+						fuzzy.match(term, localized, {
 							pre: "<b>",
 							post: "</b>",
 						}).rendered,
 					];
 				}
 
-				return pair;
+				if (fuzzy.test(term, pair[1])) {
+					return [pair[0], localized]; // matched the English name, shown localized
+				}
+
+				return null;
 			})
+			.filter((entry): entry is string[] => entry !== null)
 			.map((pair) => pair.concat(match[1])); // Needed to pass fg color to `template`...
 
 		callback(matchingColorCodes);

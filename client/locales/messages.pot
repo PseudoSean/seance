@@ -951,10 +951,22 @@ msgctxt "disconnect.couldNotConnect"
 msgid "Could not connect to {url}{error}."
 msgstr ""
 
+#: client/js/irc/disconnect.ts:78
+#. Headline when a network the client is dialling never opened and the retry schedule is standing down (the browser refused or could not reach the address). {url} is the WebSocket URL that was dialled; {error} is the browser's error text in parentheses, or empty.
+msgctxt "disconnect.couldNotConnectNotReconnecting"
+msgid "Could not connect to {url}{error}. Not reconnecting."
+msgstr ""
+
 #: client/js/irc/disconnect.ts
 #. Connection-failure report once the network was registered. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
 msgctxt "disconnect.disconnected"
 msgid "Disconnected from {host}{detail}."
+msgstr ""
+
+#: client/js/irc/disconnect.ts:127
+#. Headline when a registered connection closed and the retry schedule is standing down. {host} is the host as the user typed it; {detail} is the close detail in parentheses, or empty.
+msgctxt "disconnect.disconnectedNotReconnecting"
+msgid "Disconnected from {host}{detail}. Not reconnecting."
 msgstr ""
 
 #: client/js/irc/disconnect.ts
@@ -988,15 +1000,15 @@ msgid "The browser does not reveal why. Likely causes: the server is down, the p
 msgstr ""
 
 #: client/js/irc/disconnect.ts
-#. Closing sentence of a connection-failure report, shown when the client gave up for good; otherwise the sentence is the report alone.
-msgctxt "disconnect.notReconnecting"
-msgid "Not reconnecting."
-msgstr ""
-
-#: client/js/irc/disconnect.ts
 #. Connection-failure report when the server dropped the socket before registration finished. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
 msgctxt "disconnect.registeringClosed"
 msgid "Connection to {host} closed during IRC registration{detail}."
+msgstr ""
+
+#: client/js/irc/disconnect.ts:112
+#. Headline when the connection was closed between connecting and completing IRC registration and the retry schedule is standing down. {host} is the host as the user typed it; {detail} is the close detail in parentheses (a server reason, a connection-lost note or the close code), or empty.
+msgctxt "disconnect.registeringClosedNotReconnecting"
+msgid "Connection to {host} closed during IRC registration{detail}. Not reconnecting."
 msgstr ""
 
 #: client/components/MessageTypes/error.vue
@@ -2095,6 +2107,102 @@ msgctxt "input.showPassword"
 msgid "Show password"
 msgstr ""
 
+#: client/js/autocompletion.ts:92
+#. Name of the mIRC colour with code 01 (black), offered by the colour autocomplete in the message input after Ctrl+K.
+msgctxt "irc.colorBlack"
+msgid "Black"
+msgstr ""
+
+#: client/js/autocompletion.ts:92
+#. Name of the mIRC colour with code 02 (blue), offered by the colour autocomplete in the message input after Ctrl+K.
+msgctxt "irc.colorBlue"
+msgid "Blue"
+msgstr ""
+
+#: client/js/autocompletion.ts:92
+#. Name of the mIRC colour with code 05 (brown), offered by the colour autocomplete in the message input after Ctrl+K.
+msgctxt "irc.colorBrown"
+msgid "Brown"
+msgstr ""
+
+#: client/js/autocompletion.ts:92
+#. Name of the mIRC colour with code 10 (cyan), offered by the colour autocomplete in the message input after Ctrl+K.
+msgctxt "irc.colorCyan"
+msgid "Cyan"
+msgstr ""
+
+#: client/js/autocompletion.ts:92
+#. Name of the mIRC colour with code 03 (green), offered by the colour autocomplete in the message input after Ctrl+K.
+msgctxt "irc.colorGreen"
+msgid "Green"
+msgstr ""
+
+#: client/js/autocompletion.ts:92
+#. Name of the mIRC colour with code 14 (grey), offered by the colour autocomplete in the message input after Ctrl+K.
+msgctxt "irc.colorGrey"
+msgid "Grey"
+msgstr ""
+
+#: client/js/autocompletion.ts:92
+#. Name of the mIRC colour with code 12 (light blue), offered by the colour autocomplete in the message input after Ctrl+K.
+msgctxt "irc.colorLightBlue"
+msgid "Light Blue"
+msgstr ""
+
+#: client/js/autocompletion.ts:92
+#. Name of the mIRC colour with code 11 (light cyan), offered by the colour autocomplete in the message input after Ctrl+K.
+msgctxt "irc.colorLightCyan"
+msgid "Light Cyan"
+msgstr ""
+
+#: client/js/autocompletion.ts:92
+#. Name of the mIRC colour with code 09 (light green), offered by the colour autocomplete in the message input after Ctrl+K.
+msgctxt "irc.colorLightGreen"
+msgid "Light Green"
+msgstr ""
+
+#: client/js/autocompletion.ts:92
+#. Name of the mIRC colour with code 15 (light grey), offered by the colour autocomplete in the message input after Ctrl+K.
+msgctxt "irc.colorLightGrey"
+msgid "Light Grey"
+msgstr ""
+
+#: client/js/autocompletion.ts:92
+#. Name of the mIRC colour with code 06 (magenta), offered by the colour autocomplete in the message input after Ctrl+K.
+msgctxt "irc.colorMagenta"
+msgid "Magenta"
+msgstr ""
+
+#: client/js/autocompletion.ts:92
+#. Name of the mIRC colour with code 07 (orange), offered by the colour autocomplete in the message input after Ctrl+K.
+msgctxt "irc.colorOrange"
+msgid "Orange"
+msgstr ""
+
+#: client/js/autocompletion.ts:92
+#. Name of the mIRC colour with code 13 (pink), offered by the colour autocomplete in the message input after Ctrl+K.
+msgctxt "irc.colorPink"
+msgid "Pink"
+msgstr ""
+
+#: client/js/autocompletion.ts:92
+#. Name of the mIRC colour with code 04 (red), offered by the colour autocomplete in the message input after Ctrl+K.
+msgctxt "irc.colorRed"
+msgid "Red"
+msgstr ""
+
+#: client/js/autocompletion.ts:92
+#. Name of the mIRC colour with code 00 (white), offered by the colour autocomplete in the message input after Ctrl+K. The name labels the suggestion; what gets inserted into the message is the number.
+msgctxt "irc.colorWhite"
+msgid "White"
+msgstr ""
+
+#: client/js/autocompletion.ts:92
+#. Name of the mIRC colour with code 08 (yellow), offered by the colour autocomplete in the message input after Ctrl+K.
+msgctxt "irc.colorYellow"
+msgid "Yellow"
+msgstr ""
+
 #: client/components/JoinChannel.vue:20
 #. Title (hover hint) of the channel name input in the sidebar's join-channel form, shown when the typed name is invalid.
 msgctxt "join.channelHint"
@@ -2333,6 +2441,24 @@ msgctxt "loading.connecting"
 msgid "Connecting…"
 msgstr ""
 
+#: client/js/loading-error-handlers.js:38
+#. Message shown in the loading splash when a script failed hard enough that the application cannot start.
+msgctxt "loading.error"
+msgid "An error has occurred that prevented the client from loading correctly."
+msgstr ""
+
+#: client/js/loading-error-handlers.js:41
+#. Disclosure heading of the box listing the error details on the loading-failure screen.
+msgctxt "loading.errorDetails"
+msgid "More details"
+msgstr ""
+
+#: client/js/loading-error-handlers.js:47
+#. Footer of the error details box on the loading-failure screen.
+msgctxt "loading.errorDevtools"
+msgid "Open the developer tools of your browser for more information."
+msgstr ""
+
 #: client/index.html
 #: client/js/i18n/index.ts
 #. Loading splash: button that reloads the page when the bundle never arrived.
@@ -2352,6 +2478,12 @@ msgstr ""
 #. Loading splash: the bundle is taking unusually long to arrive.
 msgctxt "loading.slow"
 msgid "This is taking longer than it should, there might be connectivity issues."
+msgstr ""
+
+#: client/js/loading-error-handlers.js:11
+#. Shown in the loading splash while the application code is loading, replacing the static splash text in index.html as soon as the first script runs. Resolved in the locale the pre-paint script picked, before the app's catalogs are available.
+msgctxt "loading.starting"
+msgid "Loading the app…"
 msgstr ""
 
 #: client/components/NetworkLobby.vue:156
@@ -2437,6 +2569,24 @@ msgstr ""
 #. Tooltip and aria-label of the bell icon on a sidebar network row when this device is subscribed to the network's push notifications.
 msgctxt "lobby.notificationsSubscribed"
 msgid "Notifications: subscribed to push"
+msgstr ""
+
+#: client/js/hooks/use-close-channel.ts:14
+#. Confirmation button of the remove-network dialog in the sidebar.
+msgctxt "lobby.removeButton"
+msgid "Remove network"
+msgstr ""
+
+#: client/js/hooks/use-close-channel.ts:13
+#. Body of the remove-network confirmation dialog in the sidebar. {name} is the display name of the chat network.
+msgctxt "lobby.removeText"
+msgid "Are you sure you want to quit and remove {name}? This cannot be undone."
+msgstr ""
+
+#: client/js/hooks/use-close-channel.ts:11
+#. Title of the confirmation dialog shown from the sidebar when removing a whole chat network: the connection quits and the saved network is deleted from this browser.
+msgctxt "lobby.removeTitle"
+msgid "Remove network"
 msgstr ""
 
 #: client/components/Mentions.vue:16
@@ -3076,10 +3226,10 @@ msgctxt "persistence.status"
 msgid "Session persistence (the server keeps you in your channels while disconnected): {state}"
 msgstr ""
 
-#: client/js/irc/handlers/persistence.ts
-#. Suffix of the persistence status line when the server's effective state differs from the setting this network asked for. {setting} is the ON/OFF token, verbatim. The leading space is glued in code.
-msgctxt "persistence.yourSetting"
-msgid "(your setting: {setting})"
+#: client/js/irc/handlers/persistence.ts:89
+#. Lobby status line reporting the bouncer session's state when the client's own persistence setting differs from what the server reports. {state} is the server's ON/OFF token, verbatim; {setting} is the client setting's value.
+msgctxt "persistence.statusClientSetting"
+msgid "Session persistence (the server keeps you in your channels while disconnected): {state} (your setting: {setting})"
 msgstr ""
 
 #: client/components/PushPrompt.vue
@@ -4107,6 +4257,12 @@ msgctxt "settings.locale.auto"
 msgid "System default"
 msgstr ""
 
+#: client/components/LanguageSelect.vue:70
+#. Tooltip of a language in the selector's list whose translation has not been filled in yet: the language is shown (its own name) but cannot be picked; English serves until its catalog ships.
+msgctxt "settings.locale.untranslated"
+msgid "Not translated yet — the interface stays in English until this language lands."
+msgstr ""
+
 #: client/components/Settings/Networks.vue
 #. Button on the networks settings page; opens the connect form to set up a new chat network connection.
 msgctxt "settings.networks.add"
@@ -4724,10 +4880,16 @@ msgctxt "sw.titleChannel"
 msgid "{nick} in {target}"
 msgstr ""
 
-#: client/service-worker.js:1132
-#. Unread-count suffix appended after the notification title once a conversation has more than one message; {count} is the number of unread messages. A bare numeric suffix with no plural forms; the space separating it from the title is added by the worker.
-msgctxt "sw.titleCount"
-msgid "({count})"
+#: client/service-worker.js:1137
+#. Push-notification title for a channel conversation carrying more than one unread message. {nick} is the nick of the newest message's author and {target} is the channel name — both verbatim, never translate them; {count} is the number of unread messages the notification carries.
+msgctxt "sw.titleChannelCount"
+msgid "{nick} in {target} ({count})"
+msgstr ""
+
+#: client/service-worker.js:1141
+#. Push-notification title for a query (direct-message) conversation carrying more than one unread message. {nick} is the other side's nick, verbatim — never translate it; {count} is the number of unread messages.
+msgctxt "sw.titleNickCount"
+msgid "{nick} ({count})"
 msgstr ""
 
 #: client/components/TypingIndicator.vue:31

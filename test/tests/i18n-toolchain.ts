@@ -6,9 +6,11 @@ import {tmpdir} from "node:os";
 import {join, resolve} from "node:path";
 import {parsePo} from "../../tools/i18n/po";
 import {addToPot} from "../../tools/i18n/add";
-import {ALLOWED_UNREFERENCED, checkPot} from "../../tools/i18n/check";
+import {ALLOWED_UNREFERENCED, ALLOWED_DYNAMIC, checkPot} from "../../tools/i18n/check";
 import {POT_PATH} from "../../tools/i18n/paths";
 import {compileLocales, Catalog, CompileResult} from "../../tools/i18n/compile";
+import {parseTargets, TARGETS_SOURCE} from "../../tools/i18n/targets";
+import {isRTL} from "../../client/js/i18n/core";
 import {pseudo} from "../../tools/i18n/pseudo";
 import {mergePo} from "../../tools/i18n/merge";
 
@@ -249,11 +251,13 @@ describe("i18n toolchain", () => {
 			// generated (the rig's artifact; the dev build copies it).
 			const saved = process.env.NODE_ENV;
 			process.env.NODE_ENV = "production";
+
 			try {
 				compileFixture("compile/plural");
 			} finally {
 				process.env.NODE_ENV = saved;
 			}
+
 			const text = readFileSync(join(tmp, "compile-plural", "available.ts"), "utf8");
 			expect(text).to.contain("export const DEV = false;");
 			expect(text).to.not.contain("qqx");
@@ -407,6 +411,107 @@ describe("i18n toolchain", () => {
 			// the missing list stays at the one genuinely missing key.
 			expect(problems.missing).to.deep.equal(["widget.missing"]);
 		});
+
+		it("flags every assembled call site, naming file, line and kind", () => {
+			// The dynamic fixture carries every assembly shape: a variable
+			// key, a template-literal key, a literal glued to code, a
+			// translated fragment concatenated with a literal and with
+			// another call. The two lookalikes (obj.t(, function t() {) must
+			// not appear. DOLLAR keeps the expected source text out of a
+			// ${…} string (the lint rule reads that as an interpolation).
+			const DOLLAR = "$";
+			const templateKeySite = `t(\`prefix.${DOLLAR}{key}\`);`;
+			const problems = checkPot(join(FIXTURES, "dynamic/messages.pot"), [
+				join(FIXTURES, "dynamic/client"),
+			]);
+			expect(problems.dynamic).to.deep.equal([
+				{file: "js/dynamic.ts", line: 3, kind: "key", code: "t(key);"},
+				{file: "js/dynamic.ts", line: 4, kind: "key", code: templateKeySite},
+				{
+					file: "js/dynamic.ts",
+					line: 5,
+					kind: "combined",
+					code: 't("glued." + key);',
+				},
+				{
+					file: "js/dynamic.ts",
+					line: 6,
+					kind: "combined",
+					code: 'const joined = t("clean.key") + " more";',
+				},
+				{
+					file: "js/dynamic.ts",
+					line: 7,
+					kind: "combined",
+					code: 'const gluedCall = "see " + t("clean.key");',
+				},
+			]);
+		});
+
+		it("honours the assembled-site ledger and reports stale entries", () => {
+			const options = {
+				allowedDynamic: new Set(["js/dynamic.ts", "js/clean.ts"]),
+			};
+			const problems = checkPot(
+				join(FIXTURES, "dynamic/messages.pot"),
+				[join(FIXTURES, "dynamic/client")],
+				options
+			);
+			// The whole file is ledgered: its sites are excused, clean.ts's
+			// zero hits visible for the staleness check.
+			expect(problems.dynamic).to.deep.equal([]);
+			expect(problems.dynamicHits["js/dynamic.ts"]).to.equal(5);
+			expect(problems.dynamicHits["js/clean.ts"]).to.equal(undefined);
+		});
+	});
+
+	describe("translation targets", () => {
+		// The generated selector list vs its source of truth, the curated
+		// translation-languages.txt, and the direction facts the selector
+		// derives from it.
+		const committed = JSON.parse(
+			readFileSync(resolve("client/js/i18n/targets.ts"), "utf8")
+				.replace(/^[\s\S]*?export const TRANSLATION_TARGETS = /, "")
+				.replace(/ as const;[\s\S]*$/, "")
+		) as {tag: string; en: string}[];
+
+		it("targets.ts is exactly translation-languages.txt, in order", () => {
+			const parsed = parseTargets(readFileSync(TARGETS_SOURCE, "utf8"));
+			expect(parsed.length, "target languages").to.be.greaterThan(0);
+			expect(committed).to.deep.equal(parsed);
+		});
+
+		it("maps every name to a unique lowercase primary tag", () => {
+			const tags = committed.map((target) => target.tag);
+			expect(new Set(tags).size).to.equal(tags.length);
+
+			for (const tag of tags) {
+				expect(tag, `${tag} is a primary subtag`).to.match(/^[a-z]{2,3}$/);
+			}
+		});
+
+		it("marks the right-to-left targets, and only those", () => {
+			// core's RTL_TAGS decides direction at runtime; the target list
+			// must agree with it for every tag it offers.
+			const rtl = committed.filter((target) => isRTL(target.tag)).map((t) => t.tag);
+			expect(new Set(rtl)).to.deep.equal(new Set(["ar", "fa", "he", "ur"]));
+		});
+
+		it("writes each language's own name for the four RTL targets", () => {
+			// The selector's label is Intl.DisplayNames of the tag itself —
+			// the native name, never the English one. Pinned for the RTL
+			// set (where a wrong name would hide the language from its own
+			// readers) and German as an LTR spot check; Node's CLDR and
+			// browsers agree on these mainstream tags.
+			const native = (tag: string) =>
+				new Intl.DisplayNames([tag], {type: "language"}).of(tag);
+			expect(native("ar")).to.equal("العربية");
+			expect(native("he")).to.equal("עברית");
+			expect(native("fa")).to.equal("فارسی");
+			expect(native("ur")).to.equal("اردو");
+			expect(native("de")).to.equal("Deutsch");
+			expect(native("en")).to.equal("English");
+		});
 	});
 
 	describe("the live tree", () => {
@@ -419,6 +524,19 @@ describe("i18n toolchain", () => {
 			expect(problems.missing).to.deep.equal([]);
 			expect(problems.unreferenced).to.deep.equal([]);
 			expect(problems.missingContext).to.deep.equal([]);
+			// No assembled call sites outside the ledger: every t() key is a
+			// literal and no translated fragment is glued into a sentence
+			// (the runtime warnings' build-time half — the ledger in
+			// ALLOWED_DYNAMIC is the only way out, and every entry must
+			// still be earning its place).
+			expect(problems.dynamic).to.deep.equal([]);
+
+			for (const file of ALLOWED_DYNAMIC) {
+				expect(
+					problems.dynamicHits[file],
+					`${file} is on the assembled-site ledger but has no site left — remove the entry`
+				).to.be.greaterThan(0);
+			}
 		});
 
 		it("keeps every allowlisted key pinned to the source that resolves it", () => {
@@ -438,6 +556,15 @@ describe("i18n toolchain", () => {
 					keys: ["loading.reload", "loading.requiresJs", "loading.slow"],
 				},
 				{file: "client/js/i18n/dates.ts", keys: ["dates.today", "dates.yesterday"]},
+				{
+					file: "client/js/loading-error-handlers.js",
+					keys: [
+						"loading.starting",
+						"loading.error",
+						"loading.errorDetails",
+						"loading.errorDevtools",
+					],
+				},
 			];
 
 			const allowlisted = [...ALLOWED_UNREFERENCED].sort();

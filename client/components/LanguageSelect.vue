@@ -1,7 +1,15 @@
 <template>
 	<select class="input" :value="modelValue" @change="onChange">
 		<option value="auto">{{ autoLabel }}</option>
-		<option v-for="entry in options" :key="entry.tag" :value="entry.tag">
+		<option
+			v-for="entry in options"
+			:key="entry.tag"
+			:value="entry.tag"
+			:lang="entry.tag"
+			:dir="entry.rtl ? 'rtl' : undefined"
+			:disabled="!entry.available"
+			:title="entry.available ? undefined : unavailableTitle"
+		>
 			{{ entry.label }}
 		</option>
 	</select>
@@ -10,6 +18,8 @@
 <script lang="ts">
 import {computed, defineComponent} from "vue";
 import {AVAILABLE, DEV} from "../js/i18n/available";
+import {TRANSLATION_TARGETS} from "../js/i18n/targets";
+import {isRTL} from "../js/i18n/core";
 import {useI18n} from "../js/i18n";
 
 export default defineComponent({
@@ -29,22 +39,60 @@ export default defineComponent({
 			}
 		};
 
-		// The same filter activate() applies to "auto": a dev-only locale (the
-		// qqx pseudo locale) is offered only in development builds. Explicit
-		// picks are not filtered here — the filter governs what is listed, and
-		// an explicitly stored tag activates as chosen in any build.
-		const options = computed(() =>
-			AVAILABLE.filter(
-				(entry: {tag: string; devOnly?: boolean}) => !entry.devOnly || DEV
-			).map((entry) => ({
-				tag: entry.tag,
-				label: nativeName(entry.tag),
-			}))
-		);
+		// The compiled catalogs, minus the dev-only pseudo locale outside
+		// development: what can actually activate.
+		const compiled = computed(() => {
+			const set = new Set<string>();
 
-		// Labelled in the language's own name, so the list is findable before
-		// the UI speaks the reader's language. Reading locale.value ties the
-		// auto label to the resolved tag: it re-renders on a locale change.
+			for (const entry of AVAILABLE) {
+				if (!entry.devOnly || DEV) {
+					set.add(entry.tag);
+				}
+			}
+
+			return set;
+		});
+
+		// Every target language from translation-languages.txt, in the
+		// file's order (English first), plus anything compiled the file does
+		// not list (the qqx rig in development). The name is the language's
+		// own name — the list is findable before the UI speaks the reader's
+		// language. A target whose catalog is not compiled yet is listed but
+		// disabled: its English shows until the translation lands, so the
+		// list is the roadmap without pretending to serve what it does not.
+		const options = computed(() => {
+			const merged = new Map<string, {tag: string; en: string | undefined}>();
+
+			for (const target of TRANSLATION_TARGETS) {
+				merged.set(target.tag, {tag: target.tag, en: target.en});
+			}
+
+			for (const entry of AVAILABLE) {
+				if (!merged.has(entry.tag) && (!entry.devOnly || DEV)) {
+					merged.set(entry.tag, {tag: entry.tag, en: undefined});
+				}
+			}
+
+			return [...merged.values()].map((entry) => {
+				const available = compiled.value.has(entry.tag);
+
+				return {
+					tag: entry.tag,
+					rtl: isRTL(entry.tag),
+					available,
+					// The language's own name — en resolves to "English", the
+					// one deliberate exception the list carries.
+					label: nativeName(entry.tag),
+				};
+			});
+		});
+
+		// A disabled option still shows its native name; the tooltip says
+		// why it cannot be picked yet.
+		const unavailableTitle = computed(() => t("settings.locale.untranslated"));
+
+		// Reading locale.value ties the auto label to the resolved tag: it
+		// re-renders on a locale change.
 		const autoLabel = computed(() => {
 			void locale.value; // the resolved tag, never "auto"
 			return `${t("settings.locale.auto")} (${nativeName(locale.value)})`;
@@ -54,7 +102,7 @@ export default defineComponent({
 			emit("change", (event.target as HTMLSelectElement).value);
 		};
 
-		return {autoLabel, options, onChange};
+		return {autoLabel, options, unavailableTitle, onChange};
 	},
 });
 </script>

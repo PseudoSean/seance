@@ -85,11 +85,12 @@ const persistence: Handler = (client, msg) => {
 		}
 
 		client.pushMessage(client.lobby, {
+			// Two whole sentences, never an appended fragment: the
+			// client-setting-differs variant is its own key.
 			text:
-				t("persistence.status", {state: effective}) +
-				(setting && setting !== effective
-					? ` ${t("persistence.yourSetting", {setting})}`
-					: ""),
+				setting && setting !== effective
+					? t("persistence.statusClientSetting", {state: effective, setting})
+					: t("persistence.status", {state: effective}),
 		});
 		return;
 	}

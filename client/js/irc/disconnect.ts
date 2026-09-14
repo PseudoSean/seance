@@ -71,12 +71,18 @@ function informative(message: string | undefined): message is string {
 }
 
 export function describeClose(ctx: CloseContext): CloseReport {
-	const notAgain = ctx.willReconnect ? "" : ` ${t("disconnect.notReconnecting")}`;
+	// The "not reconnecting" clause is part of the sentence, not an appended
+	// fragment: each base phrase carries a whole-sentence variant, so word
+	// order stays the translator's.
+	const retrying = ctx.willReconnect;
 
 	if (ctx.phase === "connecting") {
 		// The socket never opened: the browser knows why but will not tell us.
 		const error = informative(ctx.errorMessage) ? ` (${ctx.errorMessage})` : "";
-		const text = t("disconnect.couldNotConnect", {url: ctx.url, error}) + notAgain;
+		const vars = {url: ctx.url, error};
+		const text = retrying
+			? t("disconnect.couldNotConnect", vars)
+			: t("disconnect.couldNotConnectNotReconnecting", vars);
 		const secure = ctx.url.startsWith("wss:");
 
 		if (!secure && ctx.pageProtocol === "https:") {
@@ -107,13 +113,12 @@ export function describeClose(ctx: CloseContext): CloseReport {
 		// - the other client has to go (or die and be reclaimed, ~1 minute
 		// with the proxy's keepalive). Say that instead of the generic hint.
 		const sessionConflict = /active session/i.test(ctx.reason);
+		const vars = {host: ctx.host, detail: closeDetail(ctx.code, ctx.reason)};
 
 		return {
-			text:
-				t("disconnect.registeringClosed", {
-					host: ctx.host,
-					detail: closeDetail(ctx.code, ctx.reason),
-				}) + notAgain,
+			text: retrying
+				? t("disconnect.registeringClosed", vars)
+				: t("disconnect.registeringClosedNotReconnecting", vars),
 			hint: sessionConflict
 				? t("disconnect.hint.sessionConflict")
 				: t("disconnect.hint.registration"),
@@ -121,10 +126,14 @@ export function describeClose(ctx: CloseContext): CloseReport {
 	}
 
 	return {
-		text:
-			t("disconnect.disconnected", {
-				host: ctx.host,
-				detail: closeDetail(ctx.code, ctx.reason),
-			}) + notAgain,
+		text: retrying
+			? t("disconnect.disconnected", {
+					host: ctx.host,
+					detail: closeDetail(ctx.code, ctx.reason),
+			  })
+			: t("disconnect.disconnectedNotReconnecting", {
+					host: ctx.host,
+					detail: closeDetail(ctx.code, ctx.reason),
+			  }),
 	};
 }
