@@ -14,6 +14,7 @@ import {
 	type Catalog,
 	type Vars,
 } from "./core";
+import {dynamicStrings} from "./sentinel";
 import {brandingT} from "../branding";
 import {AVAILABLE, DEV} from "./available";
 import enCatalog from "../../locales/en.json";
@@ -147,5 +148,8 @@ if (DEV) {
 		missingKeys: () => missingKeys().map((id) => id.split("\u0000").join(" · ")),
 		// The active locale's untranslated keys, in pot order.
 		untranslated: () => untranslatedKeys(),
+		// The dynamic-string sentinel's haul: rendered labels no catalog
+		// produced, whatever the language.
+		dynamic: () => dynamicStrings(),
 	};
 }

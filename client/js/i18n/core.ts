@@ -226,6 +226,24 @@ export function tCount(key: string, count: number, vars: Vars = {}): string {
 	return interpolate(template, {...vars, count, n: count}, key);
 }
 
+/** Every string the active catalogs can render: singular values and every
+ * plural category's text, from the merged catalog. The development string
+ * sentinel (sentinel.ts) matches DOM text against these — a label on the
+ * screen that none of them produced never passed through t(). */
+export function i18nValueTexts(): string[] {
+	const texts: string[] = [];
+
+	for (const value of Object.values(catalog)) {
+		if (typeof value === "string") {
+			texts.push(value);
+		} else {
+			texts.push(...Object.values(value));
+		}
+	}
+
+	return texts;
+}
+
 /** "auto" resolution: exact tag first, then base language, then en. */
 export function bestLocale(preferred: readonly string[], available: readonly string[]): string {
 	for (const want of preferred) {
