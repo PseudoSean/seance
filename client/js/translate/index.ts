@@ -11,7 +11,7 @@ import {probeOnce} from "./capability";
 import {emptyContext} from "./engine";
 import {TranslateClient} from "./client";
 import {FAKE_CAPABILITY, fakePort} from "./fakePort";
-import {isSupported} from "./languages";
+import {browserLanguage, isSupported} from "./languages";
 import {buildCatalog} from "./models";
 import {MainPort} from "./protocol";
 import {RouteTable} from "./router";
@@ -77,6 +77,19 @@ function hasStoredSetting(name: string): boolean {
 // dispatches the same action Settings uses so the choice persists like any
 // other user setting.
 function applyDefaultTarget(defaultTarget: string | undefined): void {
+	// A reading language this build no longer offers (Estonian, Latvian,
+	// Lithuanian and Icelandic were dropped for translating poorly) is no
+	// choice: it would leave every line failing to route. It falls back like
+	// an unset one.
+	if (!isSupported(store.state.settings.translateTo)) {
+		const fallback =
+			defaultTarget && isSupported(defaultTarget)
+				? defaultTarget
+				: browserLanguage(navigator.language);
+		void store.dispatch("settings/update", {name: "translateTo", value: fallback});
+		return;
+	}
+
 	if (!defaultTarget || !isSupported(defaultTarget)) {
 		return;
 	}

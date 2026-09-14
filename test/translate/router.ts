@@ -297,17 +297,7 @@ describe("translate/router", () => {
 				expect(nllbCode(code), code).to.not.equal(null);
 			}
 
-			expect([...LIMITED_LANGUAGES].sort()).to.deep.equal([
-				"bn",
-				"et",
-				"hi",
-				"hu",
-				"is",
-				"ko",
-				"lt",
-				"lv",
-				"sk",
-			]);
+			expect([...LIMITED_LANGUAGES].sort()).to.deep.equal(["bn", "hi", "hu", "ko", "sk"]);
 			expect(isLimitedLanguage("hu")).to.equal(true);
 			expect(isLimitedLanguage("fi")).to.equal(false);
 			expect(isLimitedLanguage(null)).to.equal(false);

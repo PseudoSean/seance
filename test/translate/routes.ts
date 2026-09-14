@@ -68,7 +68,7 @@ describe("translate/routes.default", () => {
 		// French: tied with OPUS-MT for 1.7B, the LLM ahead for 4B.
 		expect(OPUS_TIED).to.include("fr");
 		expect(QWEN3_4B_OPUS_TIED).to.not.include("fr");
-		expect([...QWEN3_4B_LIMITED_LANGUAGES].sort()).to.deep.equal(["et", "is", "lt", "lv"]);
+		expect(QWEN3_4B_LIMITED_LANGUAGES).to.deep.equal([]);
 		// Arabic stays LLM-first for both, by ruling.
 		expect([...NLLB_FIRST, ...QWEN3_4B_NLLB_FIRST, ...QWEN3_4B_NLLB_TIED]).to.not.include("ar");
 	});
@@ -91,7 +91,8 @@ describe("translate/routes.default", () => {
 		expect(limitedLanguagesFor(QWEN3_1_7B_ID)).to.equal(LIMITED_LANGUAGES);
 		expect(limitedLanguagesFor(QWEN3_4B_ID)).to.equal(QWEN3_4B_LIMITED_LANGUAGES);
 		expect(limitedLanguagesFor("gemma-3-1b-it-q4f16_1-MLC")).to.equal(LIMITED_LANGUAGES);
-		expect(isLimitedLanguage("et", QWEN3_4B_ID)).to.equal(true);
+		expect(isLimitedLanguage("ko", QWEN3_4B_ID)).to.equal(false);
+		expect(isLimitedLanguage("ko")).to.equal(true);
 		expect(isLimitedLanguage("hu", QWEN3_4B_ID)).to.equal(false);
 		expect(isLimitedLanguage("hu")).to.equal(true);
 		expect(isLimitedLanguage(null, QWEN3_4B_ID)).to.equal(false);

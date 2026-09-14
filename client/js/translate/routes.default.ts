@@ -51,12 +51,8 @@ export const NLLB_FIRST: readonly string[] = [
 	"fa",
 	"bn",
 	"ta",
-	"et",
-	"lv",
-	"lt",
 	"eu",
 	"cy",
-	"is",
 	"sw",
 	"af",
 	"tl",
@@ -77,17 +73,7 @@ export const NLLB_TIED: readonly string[] = ["sk", "ms", "gl", "th", "cs", "nb",
 export const OPUS_TIED: readonly string[] = ["de", "nl", "ru", "fr"];
 
 /** Under 55% of a line's content words back from the best engine (see `RoutePlacement`). */
-export const LIMITED_LANGUAGES: readonly string[] = [
-	"is",
-	"lv",
-	"et",
-	"hi",
-	"lt",
-	"bn",
-	"hu",
-	"sk",
-	"ko",
-];
+export const LIMITED_LANGUAGES: readonly string[] = ["hi", "bn", "hu", "sk", "ko"];
 
 export const QWEN3_1_7B: RoutePlacement = {
 	nllbFirst: NLLB_FIRST,
@@ -107,7 +93,6 @@ export const QWEN3_4B_NLLB_FIRST: readonly string[] = [
 	"el",
 	"he",
 	"ta",
-	"lt",
 	"eu",
 	"ga",
 	"cy",
@@ -127,17 +112,16 @@ export const QWEN3_4B_NLLB_TIED: readonly string[] = [
 	"bn",
 	"id",
 	"ms",
-	"et",
-	"lv",
 	"ca",
 	"gl",
-	"is",
 	"af",
 ];
 
 export const QWEN3_4B_OPUS_TIED: readonly string[] = ["de", "nl", "ru"];
 
-export const QWEN3_4B_LIMITED_LANGUAGES: readonly string[] = ["et", "lv", "lt", "is"];
+// Empty: the four languages 4B measured under 55% (et lv lt is) were under it
+// for every engine, and are no longer offered (languages.ts).
+export const QWEN3_4B_LIMITED_LANGUAGES: readonly string[] = [];
 
 export const QWEN3_4B: RoutePlacement = {
 	nllbFirst: QWEN3_4B_NLLB_FIRST,

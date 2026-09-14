@@ -10,9 +10,9 @@
 // guess at when only one of them is not what the reader already reads.
 // Vue-free.
 //
-// franc does not carry every language we support: Estonian, Basque, Irish,
-// Welsh and Icelandic have no trigram or script data in it at all, so
-// `detectWith` never proposes them — those five are only translated on a
+// franc does not carry every language we support: Basque, Irish and Welsh
+// have no trigram or script data in it at all, so
+// `detectWith` never proposes them — those three are only translated on a
 // forced/manual request, never auto-detected. Malay is a near miss: franc
 // knows the code `zlm`, not NLLB's `zsm`, so `ISO3_OF`/`ISO1_OF` carry an
 // override for it (the same shape as the existing `cmn`/`zho` override for

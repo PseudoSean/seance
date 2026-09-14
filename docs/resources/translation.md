@@ -50,10 +50,22 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   of its own (a deploy's) gets 1.7B's. Each model's lists are placed from
   a round trip on its own 4-bit web weights
   (`tools/translate-eval/results/2026-09-13-web-weights.md`); 4B leads NLLB
-  outright in pl cs sk hu hi th, ties it in nb fi bg sr fa bn id ms et lv ca
-  gl is af, trails it in hr sl el he ta lt eu ga cy sw tl ur, and only et lv
-  lt is are limited (`test/translate/routes.ts` pins where the two tables
-  differ). The service builds its table from
+  outright in pl cs sk hu hi th, ties it in nb fi bg sr fa bn id ms ca gl
+  af, trails it in hr sl el he ta eu ga cy sw tl ur, and none of its
+  languages is limited (`test/translate/routes.ts` pins where the two tables
+  differ).
+- **Only the languages that translate well are offered.** Estonian,
+  Latvian, Lithuanian and Icelandic came back under 55% of a line's content
+  words from every engine (1.7B, 4B, NLLB), so they were dropped from
+  `SUPPORTED_LANGUAGES` and the route lists; the remaining 46 are listed in
+  `docs/resources/translation-languages.txt`. A line in a dropped language
+  is no longer detected as that language (franc's candidates are the
+  supported list), so it reads as unplaced; a stored reading language that
+  is no longer offered falls back to the deploy's default or the browser's
+  language (`index.ts` `applyDefaultTarget`), a per-channel one to none
+  (`channelStore.ts`). All four scores rest on three cases each
+  (`tools/translate-eval/results/2026-09-13-web-weights.md`); the best were
+  NLLB's, 43–54%. The service builds its table from
   the selected model's with the deploy's `translation.routes` merged over
   it, and rebuilds it on a switch.
 - **One prompt profile per GPU model** (`prompts/`). The prompt was tuned
