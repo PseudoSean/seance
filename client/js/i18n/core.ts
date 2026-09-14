@@ -279,6 +279,34 @@ if (DEV_I18N) {
 	(globalThis as unknown as Record<string, unknown>).__tDynC = tDynC;
 }
 
+/** Split a translated frame on its {placeholders}, in order: the segments
+ * a component renders around the inline elements (the interactive
+ * <Username>, a parsed hostmask) — so a translator writes one whole
+ * sentence with the verbatim value where it belongs, and the interactive
+ * element lands inside it. segments.length === names.length + 1. compile
+ * guarantees every placeholder survives translation, so a miss here is a
+ * degraded render, never a silent one. */
+export function frameSegments(template: string, names: string[]): string[] {
+	const segments: string[] = [];
+	let rest = template;
+
+	for (const name of names) {
+		const at = rest.indexOf(`{${name}}`);
+
+		if (at === -1) {
+			segments.push(rest);
+			rest = "";
+			continue;
+		}
+
+		segments.push(rest.slice(0, at));
+		rest = rest.slice(at + name.length + 2);
+	}
+
+	segments.push(rest);
+	return segments;
+}
+
 /** "auto" resolution: exact tag first, then base language, then en. */
 export function bestLocale(preferred: readonly string[], available: readonly string[]): string {
 	for (const want of preferred) {

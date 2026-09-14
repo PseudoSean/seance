@@ -2,19 +2,19 @@
 	<span class="content">
 		<ParsedMessage v-if="message.self" :network="network" :message="message" />
 		<template v-else>
-			<bdi><Username :user="message.from" /></bdi>
-			{{ t("msg.away") }}
+			{{ parts[0] }}<bdi><Username :user="message.from" /></bdi>{{ parts[1] }}
 			<i class="away-message">(<ParsedMessage :network="network" :message="message" />)</i>
 		</template>
 	</span>
 </template>
 
 <script lang="ts">
-import {defineComponent, PropType} from "vue";
+import {computed, defineComponent, PropType} from "vue";
 import type {ClientNetwork, ClientMessage} from "../../js/types";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
 import {useI18n} from "../../js/i18n";
+import {frameSegments} from "../../js/i18n/core";
 
 export default defineComponent({
 	name: "MessageTypeAway",
@@ -34,8 +34,10 @@ export default defineComponent({
 	},
 	setup() {
 		const {t} = useI18n();
+		const parts = computed(() => frameSegments(t("system.away"), ["nick"]));
 
 		return {
+			parts,
 			t,
 		};
 	},

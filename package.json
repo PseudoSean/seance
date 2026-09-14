@@ -12,7 +12,7 @@
     "url": "https://github.com/evilnet/seance/issues"
   },
   "scripts": {
-    "build:client": "webpack",
+    "build:client": "yarn i18n:compile && webpack",
     "i18n:compile": "tsx tools/i18n/compile.ts",
     "i18n:check": "tsx tools/i18n/check.ts",
     "i18n:merge": "tsx tools/i18n/merge.ts",

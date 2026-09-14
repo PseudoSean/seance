@@ -1,17 +1,17 @@
 <template>
 	<span class="content">
-		<bdi><Username :user="message.from" /></bdi>
-		{{ t("msg.mode") }}
-		<ParsedMessage :message="message" />
+		{{ parts[0] }}<bdi><Username :user="message.from" /></bdi>{{ parts[1]
+		}}<ParsedMessage :message="message" />{{ parts[2] }}
 	</span>
 </template>
 
 <script lang="ts">
-import {defineComponent, PropType} from "vue";
+import {computed, defineComponent, PropType} from "vue";
 import {ClientNetwork, ClientMessage} from "../../js/types";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
 import {useI18n} from "../../js/i18n";
+import {frameSegments} from "../../js/i18n/core";
 
 export default defineComponent({
 	name: "MessageTypeMode",
@@ -31,8 +31,10 @@ export default defineComponent({
 	},
 	setup() {
 		const {t} = useI18n();
+		const parts = computed(() => frameSegments(t("system.mode"), ["nick", "modes"]));
 
 		return {
+			parts,
 			t,
 		};
 	},

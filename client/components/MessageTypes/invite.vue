@@ -1,20 +1,19 @@
 <template>
 	<span class="content">
-		<bdi><Username :user="message.from" /></bdi>
-		{{ t("msg.invited") }}
-		<span v-if="message.invitedYou">{{ t("msg.invitedYou") }}</span>
-		<bdi v-else><Username :user="message.target" /></bdi>
-		{{ t("msg.invitedTo") }}
-		<ParsedMessage :network="network" :text="message.channel" />
+		{{ parts[0] }}<bdi><Username :user="message.from" /></bdi>{{ parts[1]
+		}}<span v-if="message.invitedYou">{{ parts[2] }}</span
+		><bdi v-else><Username :user="message.target" /></bdi>{{ parts[2]
+		}}<ParsedMessage :network="network" :text="message.channel" />{{ parts[3] }}
 	</span>
 </template>
 
 <script lang="ts">
-import {defineComponent, PropType} from "vue";
+import {computed, defineComponent, PropType} from "vue";
 import {ClientNetwork, ClientMessage} from "../../js/types";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
 import {useI18n} from "../../js/i18n";
+import {frameSegments} from "../../js/i18n/core";
 
 export default defineComponent({
 	name: "MessageTypeInvite",
@@ -32,10 +31,19 @@ export default defineComponent({
 			required: true,
 		},
 	},
-	setup() {
+	setup(props) {
 		const {t} = useI18n();
+		// Two whole sentences: the invite aimed at the reader or at someone
+		// else. The target slot is the reader's name in one and the
+		// interactive username element in the other.
+		const parts = computed(() =>
+			props.message.invitedYou
+				? frameSegments(t("system.inviteYou"), ["nick", "channel"])
+				: frameSegments(t("system.inviteTarget"), ["nick", "target", "channel"])
+		);
 
 		return {
+			parts,
 			t,
 		};
 	},

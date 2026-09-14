@@ -2967,88 +2967,10 @@ msgctxt "message.statusmsg"
 msgid "This message was only shown to users with {mode} mode"
 msgstr ""
 
-#: client/components/MessageTypes/away.vue
-#. System message when a user is marked away (away-notify). Renders after the user's name (direction-isolated in <bdi>); the away reason in parentheses is server text and stays verbatim.
-msgctxt "msg.away"
-msgid "is away"
-msgstr ""
-
-#: client/components/MessageTypes/back.vue
-#. System message when a user is no longer marked away. Renders after the user's name, which renders direction-isolated in <bdi>.
-msgctxt "msg.back"
-msgid "is back"
-msgstr ""
-
-#: client/components/MessageTypes/chghost.vue
-#. System message when a user changes their username (ident) or hostname (CHGHOST). First frame fragment, after the user's name (direction-isolated in <bdi>); 'username to'/'hostname to' follow as their own fragments.
-msgctxt "msg.chghost"
-msgid "has changed"
-msgstr ""
-
-#: client/components/MessageTypes/chghost.vue
-#. CHGHOST system message: leads the new hostname, which is server-supplied and stays verbatim.
-msgctxt "msg.chghostHost"
-msgid "hostname to"
-msgstr ""
-
-#: client/components/MessageTypes/chghost.vue
-#. CHGHOST system message: leads the new username (ident), which is user content and renders direction-isolated in <bdi>.
-msgctxt "msg.chghostUser"
-msgid "username to"
-msgstr ""
-
-#: client/components/MessageTypes/ctcp_request.vue
-#. CTCP request system message, first fragment after the user's name (direction-isolated in <bdi>). The literal 'CTCP' abbreviation element follows, then the second fragment.
-msgctxt "msg.ctcpRequest"
-msgid "sent a"
-msgstr ""
-
-#: client/components/MessageTypes/ctcp_request.vue
-#. CTCP request system message, second fragment. It follows the literal 'CTCP' abbreviation element and leads the request body, which the other client supplied and stays verbatim.
-msgctxt "msg.ctcpRequestTail"
-msgid "request:"
-msgstr ""
-
 #: client/components/MessageTypes/ctcp_request.vue
 #. Tooltip of the 'CTCP' abbreviation inside the CTCP-request system message; the abbreviation itself is the protocol's name and stays verbatim.
 msgctxt "msg.ctcpTitle"
 msgid "Client-to-client protocol"
-msgstr ""
-
-#: client/components/MessageTypes/invite.vue
-#. System message when a user invites someone to a channel. Renders after the inviter's name (direction-isolated in <bdi>) and before the invited name or 'you', then 'to <channel>'.
-msgctxt "msg.invited"
-msgid "invited"
-msgstr ""
-
-#: client/components/MessageTypes/invite.vue
-#. Invite system message, before the channel name, which is server data and stays verbatim.
-msgctxt "msg.invitedTo"
-msgid "to"
-msgstr ""
-
-#: client/components/MessageTypes/invite.vue
-#. Invite system message: the invited name when the invitation named the reader. Lowercase mid-sentence by position ('{nick} invited you to <channel>').
-msgctxt "msg.invitedYou"
-msgid "you"
-msgstr ""
-
-#: client/components/MessageTypes/join.vue
-#. System message when a user joins a channel. Renders after the user's name, which the frame renders direction-isolated in <bdi>; the name itself is user content and never translated. A translator reorders the name only through a placeholder variant — this frame stays after it.
-msgctxt "msg.join"
-msgid "has joined the channel"
-msgstr ""
-
-#: client/components/MessageTypes/kick.vue
-#. System message when a channel operator kicks a user. Renders between the operator's and the target's name; both render direction-isolated in <bdi>. The kick reason, if any, is server text and stays verbatim.
-msgctxt "msg.kick"
-msgid "has kicked"
-msgstr ""
-
-#: client/components/MessageTypes/mode.vue
-#. System message when a user sets channel or user modes. Renders after the user's name (direction-isolated in <bdi>); the mode string itself is protocol text and stays verbatim.
-msgctxt "msg.mode"
-msgid "sets mode"
 msgstr ""
 
 #: client/components/MessageTypes/mode_channel.vue
@@ -3061,12 +2983,6 @@ msgstr ""
 #. System message announcing the reader's own user modes (221). The mode string in <b> is protocol text and stays verbatim.
 msgctxt "msg.modeUserIs"
 msgid "Your user mode is"
-msgstr ""
-
-#: client/components/MessageTypes/nick.vue
-#. System message when a user renames. Renders between the old and the new name; both render direction-isolated in <bdi> and are user content, never translated.
-msgctxt "msg.nick"
-msgid "is now known as"
 msgstr ""
 
 #: client/js/irc/handlers/numerics.ts
@@ -3085,18 +3001,6 @@ msgstr ""
 #. Lobby error when a whois/whowas named a nick the server does not know; {nick} is the nick as typed, user input.
 msgctxt "msg.noSuchNick"
 msgid "No such nick: {nick}"
-msgstr ""
-
-#: client/components/MessageTypes/part.vue
-#. System message when a user leaves a channel. Renders after the user's name (direction-isolated in <bdi>) and before any part reason, which the server supplied and stays verbatim.
-msgctxt "msg.part"
-msgid "has left the channel"
-msgstr ""
-
-#: client/components/MessageTypes/quit.vue
-#. System message when a user disconnects from the network. Renders after the user's name (direction-isolated in <bdi>) and before any quit reason, which the server supplied and stays verbatim.
-msgctxt "msg.quit"
-msgid "has quit"
 msgstr ""
 
 #: client/components/MessageTypes/topic.vue
@@ -4896,6 +4800,96 @@ msgstr ""
 #. Push-notification title for a query (direct-message) conversation carrying more than one unread message. {nick} is the other side's nick, verbatim — never translate it; {count} is the number of unread messages.
 msgctxt "sw.titleNickCount"
 msgid "{nick} ({count})"
+msgstr ""
+
+#: client/components/MessageTypes/away.vue:10
+#. System line when a user is marked away. {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element. The away reason (user-set, verbatim) follows in parentheses.
+msgctxt "system.away"
+msgid "{nick} is away"
+msgstr ""
+
+#: client/components/MessageTypes/back.vue:10
+#. System line when a user returns from away. {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element.
+msgctxt "system.back"
+msgid "{nick} is back"
+msgstr ""
+
+#: client/components/MessageTypes/chghost.vue:4
+#. System line tail case: a user's username/hostname changed but neither value arrived (degenerate). {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element.
+msgctxt "system.chghost"
+msgid "{nick} has changed"
+msgstr ""
+
+#: client/components/MessageTypes/chghost.vue:12
+#. System line when a user's username AND hostname change together. {nick} and {ident} are VERBATIM user content; {host} is a verbatim technical value; {nick} renders as the interactive username element.
+msgctxt "system.chghostBoth"
+msgid "{nick} has changed username to {ident} and hostname to {host}"
+msgstr ""
+
+#: client/components/MessageTypes/chghost.vue:9
+#. System line when a user's hostname changes. {nick} is the user's nick (VERBATIM, renders as the interactive username element) and {host} the new hostname (verbatim technical value).
+msgctxt "system.chghostHost"
+msgid "{nick} has changed hostname to {host}"
+msgstr ""
+
+#: client/components/MessageTypes/chghost.vue:6
+#. System line when a user's username (ident) changes. {nick} is the user's nick and {ident} the new username — both VERBATIM, never translate; {nick} renders as the interactive username element.
+msgctxt "system.chghostIdent"
+msgid "{nick} has changed username to {ident}"
+msgstr ""
+
+#: client/components/MessageTypes/ctcp_request.vue:5
+#. System line for an incoming CTCP request. {nick} is the sender's nick (VERBATIM user content, renders as the interactive username element); {ctcp} is the fixed abbreviation CTCP (never translate); {message} is the verbatim CTCP payload.
+msgctxt "system.ctcpRequest"
+msgid "{nick} sent a {ctcp} request: {message}"
+msgstr ""
+
+#: client/components/MessageTypes/invite.vue:9
+#. System line when a user invites someone else. {nick} is the inviter's nick and {target} the invited user's nick — both VERBATIM user content, each rendering as an interactive username element where its placeholder stands; {channel} is the channel name (verbatim).
+msgctxt "system.inviteTarget"
+msgid "{nick} has invited {target} to {channel}"
+msgstr ""
+
+#: client/components/MessageTypes/invite.vue:7
+#. System line when the invite targets the reader. {nick} is the inviter's nick (VERBATIM user content, renders as the interactive username element) and {channel} the channel name (verbatim).
+msgctxt "system.inviteYou"
+msgid "{nick} has invited you to {channel}"
+msgstr ""
+
+#: client/components/MessageTypes/join.vue:8
+#. System line when a user joins a channel. {nick} is the joining user's nick, VERBATIM user content — never translate or inflect it; it renders as the interactive username element inline where the placeholder stands, so word order around it is the translator's.
+msgctxt "system.join"
+msgid "{nick} has joined the channel"
+msgstr ""
+
+#: client/components/MessageTypes/kick.vue:6
+#. System line when a user is kicked from a channel. {nick} is the kicker's nick and {target} the kicked user's nick — both VERBATIM user content, each rendering as an interactive username element where its placeholder stands.
+msgctxt "system.kick"
+msgid "{nick} has kicked {target}"
+msgstr ""
+
+#: client/components/MessageTypes/mode.vue:6
+#. System line when a channel or user mode changes. {nick} is the nick that set the mode, VERBATIM user content; {modes} is the verbatim mode change (e.g. +o nick), rendered as-is.
+msgctxt "system.mode"
+msgid "{nick} sets mode {modes}"
+msgstr ""
+
+#: client/components/MessageTypes/nick.vue:6
+#. System line when a user changes nick. {nick} is the old nick and {newNick} the new one — both VERBATIM user content, each rendering as an interactive username element where its placeholder stands.
+msgctxt "system.nick"
+msgid "{nick} is now known as {newNick}"
+msgstr ""
+
+#: client/components/MessageTypes/part.vue:6
+#. System line when a user parts a channel. {nick} is the parting user's nick, VERBATIM user content — never translate or inflect it; it renders as the interactive username element.
+msgctxt "system.part"
+msgid "{nick} has left the channel"
+msgstr ""
+
+#: client/components/MessageTypes/quit.vue:6
+#. System line when a user disconnects from the network. {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element. The quit reason (user-set, verbatim) follows the sentence in parentheses.
+msgctxt "system.quit"
+msgid "{nick} has quit"
 msgstr ""
 
 #: client/components/TypingIndicator.vue:31

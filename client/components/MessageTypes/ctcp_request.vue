@@ -1,10 +1,9 @@
 <template>
 	<span class="content">
-		<bdi><Username :user="message.from" /></bdi>
-		{{ t("msg.ctcpRequest") }}
-		<abbr :title="ctcpTitle">CTCP</abbr>
-		{{ t("msg.ctcpRequestTail") }}
-		<span class="ctcp-message"><ParsedMessage :text="message.ctcpMessage" /></span>
+		{{ parts[0] }}<bdi><Username :user="message.from" /></bdi>{{ parts[1]
+		}}<abbr :title="ctcpTitle">CTCP</abbr>{{ parts[2]
+		}}<span class="ctcp-message"><ParsedMessage :text="message.ctcpMessage" /></span
+		>{{ parts[3] }}
 	</span>
 </template>
 
@@ -14,6 +13,7 @@ import {ClientNetwork, ClientMessage} from "../../js/types";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
 import {useI18n} from "../../js/i18n";
+import {frameSegments} from "../../js/i18n/core";
 
 export default defineComponent({
 	name: "MessageTypeRequestCTCP",
@@ -33,9 +33,13 @@ export default defineComponent({
 	},
 	setup() {
 		const {t} = useI18n();
+		const parts = computed(() =>
+			frameSegments(t("system.ctcpRequest"), ["nick", "ctcp", "message"])
+		);
 		const ctcpTitle = computed(() => t("msg.ctcpTitle"));
 
 		return {
+			parts,
 			t,
 			ctcpTitle,
 		};

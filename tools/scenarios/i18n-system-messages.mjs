@@ -250,7 +250,7 @@ export default async function run(page) {
 		"the join frame is pseudo-localized (RLE + the compiled qqx copy)",
 		talkerJoin !== undefined &&
 			talkerJoin.includes(RLE) &&
-			talkerJoin.includes(frame("msg.join"))
+			talkerJoin.includes(frame("system.join"))
 	);
 	page.check(
 		"no English join copy leaked",
@@ -261,13 +261,13 @@ export default async function run(page) {
 	const talkerPart = parts.find((c) => c.includes(TALKER));
 	page.check(
 		"the part frame is pseudo-localized",
-		talkerPart !== undefined && talkerPart.includes(frame("msg.part"))
+		talkerPart !== undefined && talkerPart.includes(frame("system.part"))
 	);
 
 	const nicks = JSON.parse(await page.evaluate(`JSON.stringify(${CONTENTS("nick")})`));
 	page.check(
 		"the nick frame is pseudo-localized",
-		nicks.some((c) => c.includes(frame("msg.nick")))
+		nicks.some((c) => c.includes(frame("system.nick")))
 	);
 
 	// (b) Nicks stay verbatim — the raw ASCII nick, unlookaliked, inside a
