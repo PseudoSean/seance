@@ -1,0 +1,43 @@
+# German — the first target locale, seeded with a handful of strings so the
+# coverage warnings have real data. Fill the rest from the pot (see
+# docs/resources/i18n.md § Filling in a language); untranslated keys fall
+# back to the English copy (and say so, in development builds).
+msgid ""
+msgstr ""
+"Language: de\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: client/components/Windows/Connect.vue
+#. Heading of the connect form (features.signIn off).
+msgctxt "connect.title"
+msgid "Connect to IRC"
+msgstr "Mit IRC verbinden"
+
+#: client/components/Windows/Connect.vue
+#. Button on the connect form: submits it and dials the server.
+msgctxt "connect.submit"
+msgid "Connect"
+msgstr "Verbinden"
+
+#: client/components/Windows/Connect.vue:132
+#. The IRC server section of the connect form: heading above the server
+#. fields, and the label of the server host field.
+msgctxt "connect.server"
+msgid "Server"
+msgstr "Server"
+
+#: client/components/Sidebar.vue
+#. Tooltip and screen-reader label of the globe button beside the sidebar
+#. logo, which opens the language panel (the same selector the connect form
+#. and Settings → Appearance carry).
+msgctxt "sidebar.language"
+msgid "Display language"
+msgstr "Anzeigesprache"
+
+#: client/components/Sidebar.vue
+#. aria-label of the gear button in the sidebar footer: opens the settings
+#. window.
+msgctxt "sidebar.settings"
+msgid "Settings"
+msgstr "Einstellungen"

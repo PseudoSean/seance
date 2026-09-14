@@ -65,9 +65,19 @@ function plainNumber(locale: string): Intl.NumberFormat {
 const DEV_I18N = process.env.NODE_ENV !== "production";
 const warned = new Set<string>();
 
+// The keys the active locale's overlay carries — the rest of the en keys
+// are UNTRANSLATED in this locale, and development builds say so (see the
+// coverage warning in t()/tCount()). en itself has no overlay: nothing is
+// untranslated when en is the active locale. The base catalog is whatever
+// setCatalog was given as en (the en.json import in the live tree; a
+// fixture under test).
+const overlayKeys = new Set<string>();
+let baseCatalog: Catalog = enCatalog;
+
 let warnEnabled = DEV_I18N;
 
-/** Flip the missing-key/var warnings (tests; production never runs them). */
+/** Flip the missing-key/var/coverage warnings (tests; production never runs
+ * them). */
 export function setWarnMissing(on: boolean): void {
 	warnEnabled = on;
 }
@@ -87,10 +97,46 @@ function warnOnce(id: string, message: string): void {
 	console.warn(`[seance i18n] ${message}`);
 }
 
+/** The active locale's keys that en has but the overlay does not — the
+ * untranslated set. Intentionally-empty en copy (values with nothing in
+ * them) is not "untranslated": there is no copy to translate. en active →
+ * [] (en is the base catalog). */
+export function untranslatedKeys(): string[] {
+	if (tag === "en") {
+		return [];
+	}
+
+	return Object.keys(baseCatalog).filter(
+		(key) => !isEmptyEnValue(baseCatalog[key]) && !overlayKeys.has(key)
+	);
+}
+
+/** True when the key resolves through en rather than the active locale's
+ * overlay — the definition of untranslated (and never true for en). */
+function isUntranslated(key: string): boolean {
+	return tag !== "en" && !overlayKeys.has(key) && !isEmptyEnValue(baseCatalog[key]);
+}
+
+function isEmptyEnValue(value: string | Record<string, string> | undefined): boolean {
+	return (
+		value === "" ||
+		(typeof value === "object" && value !== null && Object.keys(value).length === 0)
+	);
+}
+
 /** Install the active catalog: en overlaid with the locale's entries. */
 export function setCatalog(locale: string, en: Catalog, overlay: Catalog | undefined): void {
 	tag = locale;
+	baseCatalog = en;
 	catalog = {...en, ...(overlay ?? {})};
+	overlayKeys.clear();
+
+	if (overlay) {
+		for (const key of Object.keys(overlay)) {
+			overlayKeys.add(key);
+		}
+	}
+
 	warned.clear(); // a locale change re-derives what is worth warning about
 }
 
@@ -124,7 +170,9 @@ export function interpolate(template: string, vars: Vars, label?: string): strin
 
 /** A UI label. Unknown keys render as the key itself — check.ts fails first
  * for static call sites; development builds warn (see the diagnostics
- * block) for the dynamic ones. */
+ * block) for the dynamic ones. A key the active locale has not translated
+ * yet warns too (dev only): the English copy shows, and the warning is how
+ * the remaining work names itself while you browse. */
 export function t(key: string, vars: Vars = {}): string {
 	const entry = catalog[key];
 
@@ -132,6 +180,11 @@ export function t(key: string, vars: Vars = {}): string {
 		warnOnce(
 			`${tag}\u0000key\u0000${key}`,
 			`missing key "${key}" (${tag}) — a dynamically composed key, or one the pot lost`
+		);
+	} else if (isUntranslated(key)) {
+		warnOnce(
+			`${tag}\u0000untranslated\u0000${key}`,
+			`untranslated in "${tag}": "${key}" — the English copy shows`
 		);
 	}
 
@@ -143,6 +196,13 @@ export function tCount(key: string, count: number, vars: Vars = {}): string {
 	const entry = catalog[key];
 
 	if (typeof entry === "string") {
+		if (isUntranslated(key)) {
+			warnOnce(
+				`${tag}\u0000untranslated\u0000${key}`,
+				`untranslated in "${tag}": "${key}" — the English copy shows`
+			);
+		}
+
 		return interpolate(entry, {...vars, count, n: count}, key);
 	}
 
@@ -152,6 +212,13 @@ export function tCount(key: string, count: number, vars: Vars = {}): string {
 			`missing key "${key}" (${tag}) — a dynamically composed key, or one the pot lost`
 		);
 		return interpolate(key, {...vars, count, n: count}, key);
+	}
+
+	if (isUntranslated(key)) {
+		warnOnce(
+			`${tag}\u0000untranslated\u0000${key}`,
+			`untranslated in "${tag}": "${key}" — the English copy shows`
+		);
 	}
 
 	const category = rulesFor(tag).select(count);

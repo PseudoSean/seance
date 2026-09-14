@@ -15,6 +15,7 @@ import {
 	setWarnMissing,
 	t,
 	tCount,
+	untranslatedKeys,
 } from "../../client/js/i18n/core";
 import {activate} from "../../client/js/i18n";
 import {formatDayHeading, formatRelativeDay, formatTime} from "../../client/js/i18n/dates";
@@ -273,5 +274,72 @@ describe("i18n dev warnings for dynamic strings", () => {
 		t("dyn.silenced");
 		expect(warns.callCount).to.equal(0);
 		expect(missingKeys().length).to.equal(0);
+	});
+});
+
+describe("i18n translation-coverage warnings", () => {
+	let warns: sinon.SinonStub;
+
+	beforeEach(() => {
+		warns = sinon.stub(console, "warn");
+		setWarnMissing(true);
+	});
+
+	afterEach(() => {
+		warns.restore();
+		setWarnMissing(false);
+	});
+
+	after(() => {
+		// The catalog is module state: hand the real English copy back.
+		setCatalog("en", enCatalog, undefined);
+	});
+
+	it("the en base catalog has no untranslated keys", () => {
+		setCatalog("en", enCatalog, undefined);
+		expect(untranslatedKeys()).to.deep.equal([]);
+	});
+
+	it("a partial overlay warns per rendered label — the English copy shows", () => {
+		// The de.po seed shape: a handful of keys translated, the rest
+		// falling through to en.
+		setCatalog("de", enCatalog, {"connect.submit": "Verbinden"});
+		expect(untranslatedKeys()).to.contain("sidebar.settings");
+		expect(untranslatedKeys()).to.not.contain("connect.submit");
+
+		t("sidebar.settings"); // untranslated → warns
+		t("sidebar.settings"); // ...once
+		t("connect.submit"); // translated → no coverage warn
+		const coverage = warns
+			.getCalls()
+			.filter((call) => String(call.args[0]).includes('untranslated in "de"'));
+		expect(coverage.length).to.equal(1);
+		expect(String(coverage[0].args[0])).to.contain('"sidebar.settings"');
+
+		// The rendered value is still the English copy.
+		expect(t("sidebar.settings")).to.equal("Settings");
+	});
+
+	it("intentionally-empty en copy is not 'untranslated'", () => {
+		setCatalog("de", {"a.key": "text", "empty.key": ""}, {"a.key": "Text"});
+		expect(untranslatedKeys()).to.deep.equal([]);
+	});
+
+	it("tCount warns for untranslated plural entries too", () => {
+		setCatalog("de", enCatalog, undefined); // nothing translated
+		tCount("condensed.join", 3);
+		const coverage = warns
+			.getCalls()
+			.filter((call) => String(call.args[0]).includes('untranslated in "de"'));
+		expect(coverage.length).to.equal(1);
+		// And the en plural still serves.
+		expect(tCount("condensed.join", 3)).to.equal("3 users have joined");
+	});
+
+	it("a locale change re-derives the untranslated set", () => {
+		setCatalog("de", enCatalog, {"connect.submit": "Verbinden"});
+		expect(untranslatedKeys().length).to.be.greaterThan(0);
+		setCatalog("en", enCatalog, undefined);
+		expect(untranslatedKeys()).to.deep.equal([]);
 	});
 });

@@ -10,6 +10,7 @@ import {
 	missingKeys,
 	resolvableTags,
 	setCatalog,
+	untranslatedKeys,
 	type Catalog,
 	type Vars,
 } from "./core";
@@ -67,6 +68,24 @@ export async function activate(setting: string): Promise<void> {
 		tag = "en";
 		setCatalog("en", enCatalog, undefined);
 	}
+
+	// Development only: the translation-coverage summary. A locale whose
+	// .po is partly filled shows the English copy for the rest, and this
+	// one line says how much that is; the per-label warnings fire as the
+	// labels render, and seanceI18n.untranslated() lists everything at
+	// once. Production folds the whole block away.
+	/* eslint-disable no-console -- the coverage summary is part of the same
+	 * sanctioned dev diagnostics family as core.ts's warnOnce. */
+	if (DEV && tag !== "en") {
+		const untranslated = untranslatedKeys().length;
+
+		if (untranslated > 0) {
+			console.warn(
+				`[seance i18n] ${tag}: ${untranslated} label(s) not translated yet — the English copy shows; seanceI18n.untranslated() lists them`
+			);
+		}
+	}
+	/* eslint-enable no-console */
 
 	localeRef.value = tag;
 
@@ -126,5 +145,7 @@ if (DEV) {
 		// The ids are locale\u0000kind\u0000name internally; the console gets
 		// the readable form ("en · key · bogus.demo.key").
 		missingKeys: () => missingKeys().map((id) => id.split("\u0000").join(" · ")),
+		// The active locale's untranslated keys, in pot order.
+		untranslated: () => untranslatedKeys(),
 	};
 }
