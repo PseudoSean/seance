@@ -4622,6 +4622,12 @@ msgctxt "sidebar.jumpTo"
 msgid "Jump to..."
 msgstr ""
 
+#: client/components/Sidebar.vue:8
+#. Tooltip and screen-reader label of the globe button beside the sidebar logo, which opens the language panel (the same selector the connect form and Settings → Appearance carry).
+msgctxt "sidebar.language"
+msgid "Display language"
+msgstr ""
+
 #: client/components/ChannelWrapper.vue:97
 #. Part of a sidebar channel row's aria-label and tooltip, after the channel name: how many messages highlight (mention) the user.
 msgctxt "sidebar.mentions"

@@ -4,6 +4,20 @@
 			<div class="logo-container">
 				<img src="img/logo-tile.png" class="logo" :alt="appName" role="presentation" />
 				<span
+					class="tooltipped tooltipped-n tooltipped-no-touch"
+					:aria-label="languageLabel"
+				>
+					<button
+						class="locale-toggle"
+						type="button"
+						:aria-label="languageLabel"
+						:aria-expanded="localeOpen"
+						@click="toggleLocale"
+					>
+						🌐
+					</button>
+				</span>
+				<span
 					v-if="isDevelopment"
 					:title="devBuildTitle"
 					:style="{
@@ -25,6 +39,17 @@
 				>
 					🐞
 				</button>
+				<div
+					v-if="localeOpen"
+					id="locale-popover"
+					class="locale-popover"
+					@keydown.esc="onLocaleKey"
+				>
+					<LanguageSelect
+						:model-value="store.state.settings.locale"
+						@change="onLocalePick"
+					/>
+				</div>
 			</div>
 			<NetworkList />
 		</div>
@@ -72,12 +97,15 @@ import {useRoute} from "vue-router";
 import {useStore} from "../js/store";
 import {useI18n} from "../js/i18n";
 import NetworkList from "./NetworkList.vue";
+import LanguageSelect from "./LanguageSelect.vue";
+import eventbus from "../js/eventbus";
 import {devtoolsAvailable, toggleDevtools} from "../js/devtools";
 
 export default defineComponent({
 	name: "Sidebar",
 	components: {
 		NetworkList,
+		LanguageSelect,
 	},
 	props: {
 		overlay: {type: Object as PropType<HTMLElement | null>, required: true},
@@ -312,6 +340,47 @@ export default defineComponent({
 		const devtoolsLabel = computed(() => t("sidebar.toggleDevtools"));
 		const devBuildTitle = computed(() => t("sidebar.devBuildTitle", {app: appName.value}));
 
+		// The globe beside the logo: the most primitive language access —
+		// no settings navigation, works on the connect form and over a dead
+		// network alike. The panel reuses LanguageSelect (the same list the
+		// connect form and Appearance render); a pick applies at once and
+		// closes the panel. Escape and a click outside close it.
+		const localeOpen = ref(false);
+		const languageLabel = computed(() => t("sidebar.language"));
+
+		const closeLocale = () => {
+			localeOpen.value = false;
+		};
+
+		const toggleLocale = () => {
+			localeOpen.value = !localeOpen.value;
+
+			if (localeOpen.value) {
+				void nextTick(() => {
+					(
+						document
+							.getElementById("locale-popover")
+							?.querySelector("select") as HTMLSelectElement | null
+					)?.focus();
+				});
+			}
+		};
+
+		const onLocalePick = (tag: string) => {
+			void store.dispatch("settings/update", {name: "locale", value: tag});
+			closeLocale();
+		};
+
+		// Escape with the focus inside the panel: keybinds.ts deliberately
+		// ignores Escape inside form fields, so the panel listens for its
+		// own (the select bubbles the keydown up here).
+		const onLocaleKey = () => {
+			closeLocale();
+		};
+
+		onMounted(() => eventbus.on("escapekey", closeLocale));
+		onUnmounted(() => eventbus.off("escapekey", closeLocale));
+
 		return {
 			appName,
 			isDevelopment,
@@ -321,6 +390,11 @@ export default defineComponent({
 			helpLabel,
 			devtoolsLabel,
 			devBuildTitle,
+			localeOpen,
+			languageLabel,
+			toggleLocale,
+			onLocalePick,
+			onLocaleKey,
 			store,
 			route,
 			sidebar,

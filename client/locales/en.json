@@ -800,6 +800,7 @@
   "sidebar.help": "Help",
   "sidebar.helpUpdate": "Help\n(update available)",
   "sidebar.jumpTo": "Jump to...",
+  "sidebar.language": "Display language",
   "sidebar.mentions": {
     "one": "{count} mention",
     "other": "{count} mentions"

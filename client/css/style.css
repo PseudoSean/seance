@@ -944,10 +944,49 @@ p {
 
 #sidebar .logo-container {
 	text-align: center;
+	position: relative;
 }
 
 #sidebar .logo {
 	height: 3rem;
+}
+
+#sidebar .locale-toggle {
+	margin-inline-start: 4px;
+	padding: 0 4px;
+	border: 0;
+	border-radius: 4px;
+	background: transparent;
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+	vertical-align: middle;
+	cursor: pointer;
+}
+
+#sidebar .locale-toggle:hover {
+	background: rgb(255 255 255 / 15%);
+}
+
+/* The language panel under the globe: anchored to the logo row, centred by
+ * a symmetric translate (not a directional offset), so RTL mirrors only
+ * through the logical inset. */
+#sidebar .locale-popover {
+	position: absolute;
+	top: calc(100% - 0.25rem);
+	inset-inline-start: 50%;
+	transform: translateX(-50%);
+	z-index: 20;
+	min-width: 15rem;
+	max-width: 18rem;
+	padding: 0.5rem;
+	background: var(--body-bg-color);
+	border: 1px solid rgb(128 128 128 / 40%);
+	border-radius: 4px;
+	box-shadow: 0 3px 12px rgb(0 0 0 / 35%);
+}
+
+#sidebar .locale-popover select.input {
+	width: 100%;
 }
 
 #sidebar .devtools-toggle {
