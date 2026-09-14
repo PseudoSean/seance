@@ -4,7 +4,15 @@
 // itself is the Vue-free core.ts (mocha loads that one, not this file).
 
 import {computed, ref} from "vue";
-import {bestLocale, isRTL, missingKeys, resolvableTags, setCatalog, type Catalog, type Vars} from "./core";
+import {
+	bestLocale,
+	isRTL,
+	missingKeys,
+	resolvableTags,
+	setCatalog,
+	type Catalog,
+	type Vars,
+} from "./core";
 import {brandingT} from "../branding";
 import {AVAILABLE, DEV} from "./available";
 import enCatalog from "../../locales/en.json";
