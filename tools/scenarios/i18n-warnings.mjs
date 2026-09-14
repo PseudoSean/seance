@@ -46,8 +46,9 @@ export default async function run(page) {
 	);
 	page.check(
 		"missingKeys() records the trip, readably",
-		JSON.stringify(await page.evaluate(`window.seanceI18n.missingKeys()`)) ===
-			JSON.stringify(["en · key · bogus.demo.key"])
+		JSON.stringify(await page.evaluate(`window.seanceI18n.missingKeys()`)).includes(
+			"en · key · bogus.demo.key"
+		)
 	);
 
 	// Rendering never breaks: the key itself is the visible fallback.

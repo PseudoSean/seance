@@ -7,6 +7,7 @@
 // RTL set in client/index.html is pinned by test/helpers/i18n.ts.
 
 import enCatalog from "../../locales/en.json";
+import {STATIC_CALL_SITES} from "./call-sites";
 
 export type Vars = Record<string, string | number>;
 export type Catalog = Record<string, string | Record<string, string>>;
@@ -168,12 +169,35 @@ export function interpolate(template: string, vars: Vars, label?: string): strin
 	});
 }
 
+/** The dynamic-key check, shared by t() and tCount(): a key that no static
+ * call site in the tree resolves (client/js/i18n/call-sites.ts, generated
+ * at compile) was ASSEMBLED at runtime — `t(\`mode.${m}\`)`, `"lobby." +
+ * name`, a table-driven lookup — and composed keys translate
+ * unpredictably, even when they happen to hit a catalog entry. Dev-only,
+ * once per key+locale, INDEPENDENT of whether the lookup succeeds: the
+ * warning is about how the label was built, not whether it resolves. */
+/** Keys resolved through data tables rather than literal call sites — the
+ * splash copy (client/js/i18n/index.ts's id/key table, fed by index.html's
+ * static copy). Legitimately indirect; exempt from the dynamic-key
+ * warning. The toolchain test pins these to their resolver. */
+const INDIRECT_KEYS = new Set(["loading.requiresJs", "loading.slow", "loading.reload"]);
+
+function warnDynamicKey(key: string): void {
+	if (!STATIC_CALL_SITES.has(key) && !INDIRECT_KEYS.has(key)) {
+		warnOnce(
+			`${tag}\u0000dynsite\u0000${key}`,
+			`dynamic label: "${key}" was assembled at runtime (no static call site resolves it) — composed keys translate unpredictably; use a whole-phrase key`
+		);
+	}
+}
+
 /** A UI label. Unknown keys render as the key itself — check.ts fails first
  * for static call sites; development builds warn (see the diagnostics
  * block) for the dynamic ones. A key the active locale has not translated
  * yet warns too (dev only): the English copy shows, and the warning is how
  * the remaining work names itself while you browse. */
 export function t(key: string, vars: Vars = {}): string {
+	warnDynamicKey(key);
 	const entry = catalog[key];
 
 	if (typeof entry !== "string") {
@@ -193,6 +217,7 @@ export function t(key: string, vars: Vars = {}): string {
 
 /** A counted label: the entry carries CLDR plural categories from compile.ts. */
 export function tCount(key: string, count: number, vars: Vars = {}): string {
+	warnDynamicKey(key);
 	const entry = catalog[key];
 
 	if (typeof entry === "string") {

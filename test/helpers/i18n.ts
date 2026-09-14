@@ -20,6 +20,12 @@ import {
 import {activate} from "../../client/js/i18n";
 import {formatDayHeading, formatRelativeDay, formatTime} from "../../client/js/i18n/dates";
 
+before(() => {
+	// The dynamic-key/coverage diagnostics are forced on per-test below; a
+	// quiet default keeps fixture-key calls in other tests from printing.
+	setWarnMissing(false);
+});
+
 describe("i18n core", () => {
 	const en = {
 		"connect.title": "Connect to IRC",
@@ -241,23 +247,34 @@ describe("i18n dev warnings for dynamic strings", () => {
 	it("warns once per missing key — the dynamically composed case", () => {
 		setCatalog("en", {known: "Port {port}"}, undefined);
 		expect(t(`dyn.${"x"}`)).to.equal("dyn.x"); // renders the key, as ever
-		expect(t("dyn.x")).to.equal("dyn.x"); // ...but warns only once
-		expect(warns.callCount).to.equal(1);
-		expect(missingKeys().length).to.equal(1);
+		expect(t("dyn.x")).to.equal("dyn.x"); // ...but warns only once per kind
+		const missing = warns
+			.getCalls()
+			.filter((call) => String(call.args[0]).includes("missing key"));
+		expect(missing.length).to.equal(1);
+		// An assembled key ALSO warns for being assembled — even before the
+		// lookup fails.
+		expect(
+			warns.getCalls().filter((call) => String(call.args[0]).includes("assembled at runtime"))
+				.length
+		).to.be.greaterThan(0);
 	});
 
 	it("warns on an unknown {var} left visible", () => {
 		setCatalog("en", {known: "Port {port}"}, undefined);
 		expect(t("known", {})).to.equal("Port {port}"); // placeholder stays visible
-		expect(warns.callCount).to.equal(1);
-		expect(missingKeys().some((id) => id.includes("\u0000var\u0000"))).to.equal(true);
+		expect(
+			warns.getCalls().filter((call) => String(call.args[0]).includes("unknown var")).length
+		).to.equal(1);
 	});
 
 	it("tCount warns on a missing key, accepts a flat string entry", () => {
 		setCatalog("en", {flat: "{count} things"}, undefined);
 		expect(tCount("flat", 3)).to.equal("3 things"); // no plural entry, no warn
 		tCount("dyn.count", 3);
-		expect(warns.callCount).to.equal(1);
+		expect(
+			warns.getCalls().filter((call) => String(call.args[0]).includes("missing key")).length
+		).to.equal(1);
 	});
 
 	it("a locale change re-arms the dedupe", () => {
@@ -265,7 +282,36 @@ describe("i18n dev warnings for dynamic strings", () => {
 		t("dyn.armed");
 		setCatalog("de", {known: "x"}, undefined);
 		t("dyn.armed");
-		expect(warns.callCount).to.equal(2);
+		expect(
+			warns.getCalls().filter((call) => String(call.args[0]).includes("missing key")).length
+		).to.equal(2);
+	});
+
+	it("warns for an assembled key THAT RESOLVES — the pure dynamic-label case", () => {
+		// The exact pattern the warnings exist for: a key composed at
+		// runtime that happens to hit a real catalog entry. The lookup
+		// succeeds; the warning fires anyway, because a composed key cannot
+		// be trusted to the translation dataset.
+		// A key only the runtime knows: in the catalog, no static call site
+		// anywhere resolves it.
+		setCatalog("en", {["assembled." + "key"]: "Resolved copy"}, undefined);
+		expect(t("assembled.key")).to.equal("Resolved copy"); // resolves fine
+		const dynsite = warns
+			.getCalls()
+			.filter((call) => String(call.args[0]).includes("dynamic label"));
+		expect(dynsite.length).to.equal(1);
+		expect(String(dynsite[0].args[0])).to.contain('"assembled.key"');
+		// And a plain static key never warns this way.
+		t("connect.submit");
+		expect(
+			warns
+				.getCalls()
+				.filter(
+					(call) =>
+						String(call.args[0]).includes("dynamic label") &&
+						String(call.args[0]).includes("connect.submit")
+				).length
+		).to.equal(0);
 	});
 
 	it("setWarnMissing(false) silences them — production's compiled-out stance", () => {

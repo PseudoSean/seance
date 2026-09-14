@@ -108,6 +108,12 @@ export async function boot(): Promise<void> {
 	// ships the watcher.
 	if (DEV) {
 		installStringSentinel();
+		/* eslint-disable no-console -- the dev console must say the
+		 * diagnostics exist, not sit silent while they watch. */
+		console.info(
+			"[seance i18n] developer diagnostics armed — dynamic-label, rogue-string and coverage warnings active (window.seanceI18n)"
+		);
+		/* eslint-enable no-console */
 	}
 
 	store.commit("appLoaded");
