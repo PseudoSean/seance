@@ -4,7 +4,7 @@
 // itself is the Vue-free core.ts (mocha loads that one, not this file).
 
 import {computed, ref} from "vue";
-import {bestLocale, isRTL, resolvableTags, setCatalog, type Catalog, type Vars} from "./core";
+import {bestLocale, isRTL, missingKeys, resolvableTags, setCatalog, type Catalog, type Vars} from "./core";
 import {brandingT} from "../branding";
 import {AVAILABLE, DEV} from "./available";
 import enCatalog from "../../locales/en.json";
@@ -104,4 +104,17 @@ export function useI18n() {
 	};
 
 	return {t, tCount, locale: computed(() => localeRef.value)};
+}
+
+// Development-only console hook: `seanceI18n.t("bogus.key")` in the devtools
+// console shows exactly what the missing-key tripwire does (the placeholder
+// renders, one console.warn fires), and `seanceI18n.missingKeys()` lists
+// every key/var the session has tripped. Production builds (DEV=false)
+// never assign it — no hook, no surface, no warnings.
+if (DEV) {
+	(window as unknown as {seanceI18n?: unknown}).seanceI18n = {
+		t: brandingT,
+		tCount: (key: string, count: number, vars?: Vars) => brandingT(key, vars, count),
+		missingKeys,
+	};
 }
