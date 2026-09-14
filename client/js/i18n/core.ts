@@ -93,10 +93,10 @@ export function bestLocale(preferred: readonly string[], available: readonly str
 	return "en";
 }
 
-/** The tags "auto" may resolve against: dev-only locales (the qqx pseudo
- * locale) exist for development testing only, so a production build never
- * auto-picks them. An explicitly stored tag bypasses this — the filter
- * governs auto-resolution and selector visibility, not explicit picks. */
+/** The tags "auto" may resolve against — and the tags a stored pick may
+ * activate (index.ts filters both through this): dev-only locales (the qqx
+ * pseudo locale) exist for development testing only, so a production build
+ * neither auto-picks, lists nor activates them. */
 export function resolvableTags(
 	available: ReadonlyArray<{tag: string; devOnly?: boolean}>,
 	dev: boolean

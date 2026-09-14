@@ -39,10 +39,12 @@ async function loadOverlay(tag: string): Promise<Catalog | undefined> {
  * localStorage). Runs from the setting's apply() at boot and on change.
  */
 export async function activate(setting: string): Promise<void> {
-	// "auto" never lands on a dev-only locale in a production build; an
-	// explicitly stored tag (a dev-forced qqx, say) activates as chosen.
+	// "auto" and any stored tag resolve against this build's list: a
+	// production build carries no qqx at all, so a stored qqx pick (a
+	// settings restore from a dev machine, say) falls back to the automatic
+	// resolution instead of activating the rig.
 	let tag =
-		setting === "auto"
+		setting === "auto" || !resolvableTags(AVAILABLE, DEV).includes(setting)
 			? bestLocale(navigator.languages ?? [], resolvableTags(AVAILABLE, DEV))
 			: setting;
 

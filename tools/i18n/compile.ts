@@ -263,10 +263,15 @@ export function compileLocales(options: CompileOptions = {}): CompileResult {
 		localeTags.push(tag);
 	}
 
+	// qqx exists for development only: development builds list it (selector,
+	// pre-paint list, runtime), production builds never see the tag at all —
+	// a stored qqx pick falls back to the automatic resolution. DEV below
+	// reads the same NODE_ENV, so the generated files can never disagree.
+	const dev = process.env.NODE_ENV !== "production";
 	const available: AvailableLocale[] = [
 		{tag: "en"},
 		...localeTags.map((tag) => ({tag})),
-		{tag: "qqx", devOnly: true},
+		...(dev ? [{tag: "qqx", devOnly: true} as AvailableLocale] : []),
 	];
 	const tags = available.map((entry) => entry.tag);
 

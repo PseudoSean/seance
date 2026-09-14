@@ -241,6 +241,26 @@ describe("i18n toolchain", () => {
 				JSON.parse(readFileSync(join(tmp, "compile-plural", "tags.json"), "utf8"))
 			).to.deep.equal(["en", "de", "qqx"]);
 		});
+
+		it("omits qqx from available.ts and tags.json under NODE_ENV=production", () => {
+			// The rig never ships: a production compile lists no qqx anywhere —
+			// not in the selector's list, not in the pre-paint tag list — so a
+			// stored qqx pick cannot survive a deploy. qqx.json itself is still
+			// generated (the rig's artifact; the dev build copies it).
+			const saved = process.env.NODE_ENV;
+			process.env.NODE_ENV = "production";
+			try {
+				compileFixture("compile/plural");
+			} finally {
+				process.env.NODE_ENV = saved;
+			}
+			const text = readFileSync(join(tmp, "compile-plural", "available.ts"), "utf8");
+			expect(text).to.contain("export const DEV = false;");
+			expect(text).to.not.contain("qqx");
+			expect(
+				JSON.parse(readFileSync(join(tmp, "compile-plural", "tags.json"), "utf8"))
+			).to.deep.equal(["en", "de"]);
+		});
 	});
 
 	describe("merge", () => {
