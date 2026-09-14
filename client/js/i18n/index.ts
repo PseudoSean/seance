@@ -123,6 +123,8 @@ if (DEV) {
 	(window as unknown as {seanceI18n?: unknown}).seanceI18n = {
 		t: brandingT,
 		tCount: (key: string, count: number, vars?: Vars) => brandingT(key, vars, count),
-		missingKeys,
+		// The ids are locale\u0000kind\u0000name internally; the console gets
+		// the readable form ("en · key · bogus.demo.key").
+		missingKeys: () => missingKeys().map((id) => id.split("\u0000").join(" · ")),
 	};
 }
