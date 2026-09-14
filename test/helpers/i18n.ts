@@ -1,15 +1,18 @@
 import {expect} from "chai";
-import {after, describe, it} from "mocha";
+import {after, afterEach, beforeEach, describe, it} from "mocha";
 import {readFileSync} from "node:fs";
 import vm from "node:vm";
+import sinon from "sinon";
 import enCatalog from "../../client/locales/en.json";
 import {
+	missingKeys,
 	RTL_TAGS,
 	bestLocale,
 	interpolate,
 	isRTL,
 	resolvableTags,
 	setCatalog,
+	setWarnMissing,
 	t,
 	tCount,
 } from "../../client/js/i18n/core";
@@ -99,14 +102,24 @@ describe("i18n core", () => {
 		return root;
 	}
 
-	it("the pre-paint script applies a stored tag this build ships (qqx included)", () => {
-		// tags.json is the real baked list: qqx is a tag like any other, so
-		// the dev-forced-qqx contract needs no special case.
-		expect(runPrePaint({locale: "qqx"}, [])).to.deep.equal({lang: "qqx", dir: "rtl"});
+	it("the pre-paint script applies a stored tag this build ships", () => {
+		// tags.json is the real baked list, whatever flavor this checkout
+		// carries (a development compile adds qqx to it, a production one
+		// does not — test/tests/i18n-toolchain.ts pins both): a stored tag in
+		// the list activates, with the direction its writing system takes.
+		const [tag] = JSON.parse(readFileSync("client/locales/tags.json", "utf8")) as string[];
+		expect(runPrePaint({locale: tag}, [])).to.deep.equal({
+			lang: tag,
+			dir: isRTL(tag) ? "rtl" : "ltr",
+		});
 	});
 
 	it("the pre-paint script still resolves auto: exact tag, then base", () => {
-		expect(runPrePaint({}, ["zz-Bork", "qqx-XP"])).to.deep.equal({lang: "qqx", dir: "rtl"});
+		const [tag] = JSON.parse(readFileSync("client/locales/tags.json", "utf8")) as string[];
+		expect(runPrePaint({}, ["zz-Bork", `${tag}-XP`])).to.deep.equal({
+			lang: tag,
+			dir: isRTL(tag) ? "rtl" : "ltr",
+		});
 		expect(runPrePaint({locale: "auto"}, ["en-GB"])).to.deep.equal({lang: "en", dir: "ltr"});
 	});
 
@@ -114,9 +127,15 @@ describe("i18n core", () => {
 		// A stale tag (a locale the deploy dropped, a blob restored from a
 		// backup) must not pin a direction no catalog backs — and must not
 		// fall through to auto-resolution either: boot's activate() lands on
-		// en, and the pre-paint claim has to agree.
-		expect(runPrePaint({locale: "de"}, [])).to.deep.equal({lang: "", dir: ""});
-		expect(runPrePaint({locale: "de"}, ["de"])).to.deep.equal({lang: "", dir: ""});
+		// en, and the pre-paint claim has to agree. A tag this build's baked
+		// list does not carry, whatever flavor it is.
+		const tags = new Set(
+			JSON.parse(readFileSync("client/locales/tags.json", "utf8")) as string[]
+		);
+		const stale = ["zz", "de", "qqx"].find((candidate) => !tags.has(candidate));
+		expect(stale, "a tag outside the baked list").to.exist;
+		expect(runPrePaint({locale: stale!}, [])).to.deep.equal({lang: "", dir: ""});
+		expect(runPrePaint({locale: stale!}, [stale!])).to.deep.equal({lang: "", dir: ""});
 	});
 
 	it("activate() falls back to en for a tag with no catalog, never rejecting", async function () {
@@ -165,5 +184,94 @@ describe("i18n date formatters", () => {
 		// 12-hour preference (Task 8 Step 1 pins "15:04").
 		setCatalog("en", enCatalog, undefined);
 		expect(formatTime(new Date(2014, 4, 22, 15, 4).getTime(), false, false)).to.equal("15:04");
+	});
+});
+
+describe("i18n number interpolation", () => {
+	const en = {"port.msg": "Port {port}", "new.msg": "{count} new"};
+
+	after(() => {
+		// The catalog is module state: hand the real English copy back.
+		setCatalog("en", enCatalog, undefined);
+	});
+
+	it("writes number vars with the active locale's digits and decimal separator", () => {
+		setCatalog("en", en, undefined);
+		expect(t("port.msg", {port: 6667})).to.equal("Port 6667");
+		setCatalog("de", en, undefined);
+		expect(t("port.msg", {port: 1.5})).to.equal("Port 1,5"); // de decimal comma
+		setCatalog("ar-EG", en, undefined);
+		expect(t("port.msg", {port: 6667})).to.equal("Port ٦٦٦٧"); // Arabic-Indic digits
+	});
+
+	it("interpolates {vars} without grouping — a port is 6667 everywhere", () => {
+		// en's own grouping writes 1,500; the frames say {port}/{count}, and
+		// neither reads well grouped. Grouping lives in numbers.ts's
+		// formatNumber() for call sites that render a standalone number.
+		setCatalog("en", en, undefined);
+		expect(t("new.msg", {count: 1500})).to.equal("1500 new");
+		setCatalog("de", en, undefined);
+		expect(t("new.msg", {count: 1500})).to.equal("1500 new");
+	});
+
+	it("localizes {count}/{n} through the plural path too", () => {
+		setCatalog("de", enCatalog, undefined);
+		expect(tCount("condensed.join", 1500)).to.equal("1500 users have joined"); // en plural, de digits
+	});
+});
+
+describe("i18n dev warnings for dynamic strings", () => {
+	let warns: sinon.SinonStub;
+
+	beforeEach(() => {
+		warns = sinon.stub(console, "warn");
+		setWarnMissing(true); // mocha runs under NODE_ENV=test; force the dev stance
+	});
+
+	afterEach(() => {
+		warns.restore();
+		setWarnMissing(false);
+	});
+
+	after(() => {
+		setCatalog("en", enCatalog, undefined);
+	});
+
+	it("warns once per missing key — the dynamically composed case", () => {
+		setCatalog("en", {known: "Port {port}"}, undefined);
+		expect(t(`dyn.${"x"}`)).to.equal("dyn.x"); // renders the key, as ever
+		expect(t("dyn.x")).to.equal("dyn.x"); // ...but warns only once
+		expect(warns.callCount).to.equal(1);
+		expect(missingKeys().length).to.equal(1);
+	});
+
+	it("warns on an unknown {var} left visible", () => {
+		setCatalog("en", {known: "Port {port}"}, undefined);
+		expect(t("known", {})).to.equal("Port {port}"); // placeholder stays visible
+		expect(warns.callCount).to.equal(1);
+		expect(missingKeys().some((id) => id.includes("\u0000var\u0000"))).to.equal(true);
+	});
+
+	it("tCount warns on a missing key, accepts a flat string entry", () => {
+		setCatalog("en", {flat: "{count} things"}, undefined);
+		expect(tCount("flat", 3)).to.equal("3 things"); // no plural entry, no warn
+		tCount("dyn.count", 3);
+		expect(warns.callCount).to.equal(1);
+	});
+
+	it("a locale change re-arms the dedupe", () => {
+		setCatalog("en", {known: "x"}, undefined);
+		t("dyn.armed");
+		setCatalog("de", {known: "x"}, undefined);
+		t("dyn.armed");
+		expect(warns.callCount).to.equal(2);
+	});
+
+	it("setWarnMissing(false) silences them — production's compiled-out stance", () => {
+		setCatalog("en", {known: "x"}, undefined);
+		setWarnMissing(false);
+		t("dyn.silenced");
+		expect(warns.callCount).to.equal(0);
+		expect(missingKeys().length).to.equal(0);
 	});
 });

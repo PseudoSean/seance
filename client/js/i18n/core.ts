@@ -1,3 +1,6 @@
+/* eslint-disable no-console -- the dev-only diagnostics in warnOnce() are the
+ * one sanctioned console.warn in the i18n runtime; production never reaches
+ * it (see the block below). */
 // Vue-free catalog resolution — mocha loads this file, so: no Vue, no DOM,
 // no storage (test/helpers/i18n.ts). The Vue/activation side lives in
 // index.ts; the settings wiring in settings.ts; the pre-paint copy of the
@@ -33,10 +36,62 @@ function rulesFor(locale: string): Intl.PluralRules {
 	return rules;
 }
 
+// --- dev-only diagnostics -------------------------------------------------
+// A build-time scanner (tools/i18n/check.ts) verifies every static t() call
+// site against the pot, so a key that goes missing at runtime is by
+// construction a dynamically composed one — `t(\`mode.${m}\`)`, a name built
+// from data — or a key a refactor left behind. Development builds warn once
+// per key (per locale) on the console; production compiles the check away:
+// webpack replaces process.env.NODE_ENV, the branch folds, nothing warns or
+// throws. setWarnMissing() exists for tests, which run under NODE_ENV=test.
+
+/** Number vars format through the active locale's digits and decimal
+ * separator, grouping off — a `{port}` stays 6667, a `{count}` in de stays
+ * 1500, Arabic-EG writes ٦٦٦٧. Call sites that want grouping use
+ * numbers.ts's formatNumber(). */
+const plainNumbers = new Map<string, Intl.NumberFormat>();
+
+function plainNumber(locale: string): Intl.NumberFormat {
+	let fmt = plainNumbers.get(locale);
+
+	if (!fmt) {
+		fmt = new Intl.NumberFormat(locale, {useGrouping: false});
+		plainNumbers.set(locale, fmt);
+	}
+
+	return fmt;
+}
+
+const DEV_I18N = process.env.NODE_ENV !== "production";
+const warned = new Set<string>();
+
+let warnEnabled = DEV_I18N;
+
+/** Flip the missing-key/var warnings (tests; production never runs them). */
+export function setWarnMissing(on: boolean): void {
+	warnEnabled = on;
+}
+
+/** What has been warned about so far (key or template+var ids). A browser
+ * scenario sweeps the UI and asserts this stays empty. */
+export function missingKeys(): readonly string[] {
+	return [...warned];
+}
+
+function warnOnce(id: string, message: string): void {
+	if (!DEV_I18N || !warnEnabled || warned.has(id)) {
+		return;
+	}
+
+	warned.add(id);
+	console.warn(`[seance i18n] ${message}`);
+}
+
 /** Install the active catalog: en overlaid with the locale's entries. */
 export function setCatalog(locale: string, en: Catalog, overlay: Catalog | undefined): void {
 	tag = locale;
 	catalog = {...en, ...(overlay ?? {})};
+	warned.clear(); // a locale change re-derives what is worth warning about
 }
 
 export function activeLocale(): string {
@@ -47,30 +102,61 @@ export function isRTL(locale: string = tag): boolean {
 	return RTL_TAGS.has(locale.split("-")[0]);
 }
 
-/** `{name}` interpolation; an unknown name stays visible for debugging. */
-export function interpolate(template: string, vars: Vars): string {
-	return template.replace(/\{(\w+)\}/g, (match, name: string) =>
-		name in vars ? String(vars[name]) : match
-	);
+/** `{name}` interpolation; an unknown name stays visible for debugging (a
+ * dev-only console.warn names it). A number var is written by the active
+ * locale — digits, decimal separator, no grouping. */
+export function interpolate(template: string, vars: Vars, label?: string): string {
+	return template.replace(/\{(\w+)\}/g, (match, name: string) => {
+		if (!Object.prototype.hasOwnProperty.call(vars, name)) {
+			warnOnce(
+				`${tag}\u0000var\u0000${label ?? template}\u0000${name}`,
+				`unknown var {${name}} in ${
+					label ? `"${label}"` : JSON.stringify(template)
+				} (${tag}) — the placeholder stays visible`
+			);
+			return match;
+		}
+
+		const value = vars[name];
+		return typeof value === "number" ? plainNumber(tag).format(value) : String(value);
+	});
 }
 
-/** A UI label. Unknown keys render as the key itself — check.ts fails first. */
+/** A UI label. Unknown keys render as the key itself — check.ts fails first
+ * for static call sites; development builds warn (see the diagnostics
+ * block) for the dynamic ones. */
 export function t(key: string, vars: Vars = {}): string {
 	const entry = catalog[key];
-	return interpolate(typeof entry === "string" ? entry : key, vars);
+
+	if (typeof entry !== "string") {
+		warnOnce(
+			`${tag}\u0000key\u0000${key}`,
+			`missing key "${key}" (${tag}) — a dynamically composed key, or one the pot lost`
+		);
+	}
+
+	return interpolate(typeof entry === "string" ? entry : key, vars, key);
 }
 
 /** A counted label: the entry carries CLDR plural categories from compile.ts. */
 export function tCount(key: string, count: number, vars: Vars = {}): string {
 	const entry = catalog[key];
 
+	if (typeof entry === "string") {
+		return interpolate(entry, {...vars, count, n: count}, key);
+	}
+
 	if (typeof entry !== "object" || entry === null) {
-		return interpolate(typeof entry === "string" ? entry : key, {...vars, count, n: count});
+		warnOnce(
+			`${tag}\u0000key\u0000${key}`,
+			`missing key "${key}" (${tag}) — a dynamically composed key, or one the pot lost`
+		);
+		return interpolate(key, {...vars, count, n: count}, key);
 	}
 
 	const category = rulesFor(tag).select(count);
 	const template = entry[category] ?? entry.other ?? Object.values(entry)[0] ?? key;
-	return interpolate(template, {...vars, count, n: count});
+	return interpolate(template, {...vars, count, n: count}, key);
 }
 
 /** "auto" resolution: exact tag first, then base language, then en. */
