@@ -30,7 +30,6 @@ import {installNativeHooks} from "./native";
 import {installForegroundHooks} from "./foreground";
 import {installViewportHooks} from "./helpers/viewport";
 import {onLaunch} from "./pwa";
-import {installStringSentinel} from "./i18n/sentinel";
 import {DEV} from "./i18n/available";
 // Also registers the IRC layer's bus handlers (input, names, more, network:*).
 import {autoconnectSavedNetworks, clientForNetwork, createNetwork} from "./irc/manager";
@@ -103,15 +102,13 @@ export async function boot(): Promise<void> {
 	installForegroundHooks();
 	installViewportHooks();
 
-	// Development only: the dynamic-string sentinel (i18n/sentinel.ts).
-	// available.ts's DEV is baked per compile, so a production bundle never
-	// ships the watcher.
+	// Development only: available.ts's DEV is baked per compile, so a
+	// production bundle never ships the diagnostics.
 	if (DEV) {
-		installStringSentinel();
 		/* eslint-disable no-console -- the dev console must say the
 		 * diagnostics exist, not sit silent while they watch. */
-		console.info(
-			"[seance i18n] developer diagnostics armed — dynamic-label, rogue-string and coverage warnings active (window.seanceI18n)"
+		console.warn(
+			"[seance i18n] developer diagnostics armed — dynamic-label and coverage warnings active (window.seanceI18n)"
 		);
 		/* eslint-enable no-console */
 	}

@@ -34,15 +34,25 @@ export default async function run(page) {
 		 console.warn = ((orig) => (...a) => { window.__warns.push(a.join(" ")); orig(...a); })(console.warn);`
 	);
 
-	// The missing-key case — twice, to prove the once-per-key dedupe.
+	// The missing-key case — twice, to prove the once-per-key dedupe. An
+	// assembled key warns twice by design (dynamic label + missing key).
 	await page.evaluate(
 		`window.seanceI18n.t("bogus.demo.key"); window.seanceI18n.t("bogus.demo.key");`
 	);
 	const warns = await page.evaluate(`window.__warns`);
-	page.check("one console.warn fired for the missing key", warns.length === 1);
+	page.check(
+		"one console.warn fired for the missing key",
+		warns.filter((line) => line.includes("missing key")).length === 1
+	);
 	page.check(
 		"the warning names the key and the locale",
-		warns[0].includes('[seance i18n] missing key "bogus.demo.key"') && warns[0].includes("(en)")
+		warns
+			.find((line) => line.includes("missing key"))
+			?.includes('[seance i18n] missing key "bogus.demo.key" (en)') === true
+	);
+	page.check(
+		"the same call also warns as a dynamic label",
+		warns.some((line) => line.includes("dynamic label") && line.includes('"bogus.demo.key"'))
 	);
 	page.check(
 		"missingKeys() records the trip, readably",

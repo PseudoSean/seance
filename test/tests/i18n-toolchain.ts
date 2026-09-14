@@ -13,6 +13,7 @@ import {parseTargets, TARGETS_SOURCE} from "../../tools/i18n/targets";
 import {isRTL} from "../../client/js/i18n/core";
 import {pseudo} from "../../tools/i18n/pseudo";
 import {mergePo} from "../../tools/i18n/merge";
+import instrument from "../../tools/i18n/instrument-loader.mjs";
 
 const FIXTURES = resolve("tools/i18n/fixtures");
 
@@ -511,6 +512,42 @@ describe("i18n toolchain", () => {
 			expect(native("ur")).to.equal("اردو");
 			expect(native("de")).to.equal("Deutsch");
 			expect(native("en")).to.equal("English");
+		});
+	});
+
+	describe("the instrument loader", () => {
+		const ctx = {resourcePath: "/repo/client/components/Foo.vue"};
+
+		it("renames non-literal t()/tCount() calls to the dynamic globals", () => {
+			const out = instrument.call(
+				ctx,
+				[
+					"const a = t(foo);",
+					"const b = tCount(bar, n);",
+					'const c = t("static.key");',
+					'const d = tCount("static.k", n);',
+					"const e = obj.t(x);",
+					"// t(commented)",
+					'const s = "call t(str) later";',
+				].join("\n")
+			) as string;
+			expect(out).to.contain("__tDyn(foo)");
+			expect(out).to.contain("__tDynC(bar, n)");
+			expect(out).to.contain('t("static.key")');
+			expect(out).to.contain('tCount("static.k", n)');
+			expect(out).to.contain("obj.t(x)");
+			expect(out).to.not.contain("__tDyn(commented");
+			expect(out).to.contain("call t(str) later");
+		});
+
+		it("stands down for the implementation's own files", () => {
+			const src = "const a = t(foo);";
+			expect(instrument.call({resourcePath: "/repo/client/js/i18n/core.ts"}, src)).to.equal(
+				src
+			);
+			expect(instrument.call({resourcePath: "/repo/client/js/branding.ts"}, src)).to.equal(
+				src
+			);
 		});
 	});
 

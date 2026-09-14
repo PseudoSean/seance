@@ -251,22 +251,32 @@ export function tCount(key: string, count: number, vars: Vars = {}): string {
 	return interpolate(template, {...vars, count, n: count}, key);
 }
 
-/** Every string the active catalogs can render: singular values and every
- * plural category's text, from the merged catalog. The development string
- * sentinel (sentinel.ts) matches DOM text against these — a label on the
- * screen that none of them produced never passed through t(). */
-export function i18nValueTexts(): string[] {
-	const texts: string[] = [];
+/** The dynamic-label path the instrument loader (tools/i18n/
+ * instrument-loader.mjs) routes every non-literal t()/tCount() call
+ * through in development builds. The warning belongs to the CALL SITE —
+ * how the label was built — not to what the string renders as: an
+ * assembled key warns even when it resolves, in any language, once per
+ * key+locale. Exposed as __tDyn/__tDynC globals below, because the loader
+ * renames call sites in modules that never import core by name. */
+export function tDyn(key: string, vars: Vars = {}): string {
+	warnOnce(
+		`${tag}\u0000dynsite\u0000${key}`,
+		`dynamic label: "${key}" was assembled at runtime — composed keys translate unpredictably; use a whole-phrase key`
+	);
+	return t(key, vars);
+}
 
-	for (const value of Object.values(catalog)) {
-		if (typeof value === "string") {
-			texts.push(value);
-		} else {
-			texts.push(...Object.values(value));
-		}
-	}
+export function tDynC(key: string, count: number, vars: Vars = {}): string {
+	warnOnce(
+		`${tag}\u0000dynsite\u0000${key}`,
+		`dynamic label: "${key}" was assembled at runtime — composed keys translate unpredictably; use a whole-phrase key`
+	);
+	return tCount(key, count, vars);
+}
 
-	return texts;
+if (DEV_I18N) {
+	(globalThis as unknown as Record<string, unknown>).__tDyn = tDyn;
+	(globalThis as unknown as Record<string, unknown>).__tDynC = tDynC;
 }
 
 /** "auto" resolution: exact tag first, then base language, then en. */

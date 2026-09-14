@@ -253,6 +253,23 @@ const config: webpack.Configuration = {
 	},
 	module: {
 		rules: [
+			// Development only: the dynamic-label instrument (tools/i18n/
+			// instrument-loader.mjs). Renames t()/tCount() calls whose key
+			// argument is not a string literal to __tDyn/__tDynC, so the
+			// runtime warning belongs to the call site — how the label was
+			// built — not to whether the lookup resolves. Production never
+			// transforms and never carries the globals.
+			...(isProduction
+				? []
+				: [
+						{
+							test: /\.(ts|vue)$/,
+							include: path.resolve(__dirname, "./client"),
+							exclude: /js[\\/]i18n([\\/]|$)|js[\\/]branding\.ts$/,
+							enforce: "pre" as const,
+							loader: path.resolve(__dirname, "tools/i18n/instrument-loader.mjs"),
+						},
+				  ]),
 			{
 				test: /\.vue$/,
 				use: {

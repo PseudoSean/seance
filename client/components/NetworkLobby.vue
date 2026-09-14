@@ -136,7 +136,7 @@ export default defineComponent({
 				: "is-disconnected"
 		);
 
-		const statusLabel = computed(() =>
+	const statusLabel = computed(() =>
 			props.network.status.connected
 				? t("lobby.connected")
 				: props.network.status.connecting

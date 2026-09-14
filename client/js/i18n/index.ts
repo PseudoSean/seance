@@ -10,11 +10,11 @@ import {
 	missingKeys,
 	resolvableTags,
 	setCatalog,
+	tDyn,
 	untranslatedKeys,
 	type Catalog,
 	type Vars,
 } from "./core";
-import {dynamicStrings} from "./sentinel";
 import {brandingT} from "../branding";
 import {AVAILABLE, DEV} from "./available";
 import enCatalog from "../../locales/en.json";
@@ -148,8 +148,9 @@ if (DEV) {
 		missingKeys: () => missingKeys().map((id) => id.split("\u0000").join(" · ")),
 		// The active locale's untranslated keys, in pot order.
 		untranslated: () => untranslatedKeys(),
-		// The dynamic-string sentinel's haul: rendered labels no catalog
-		// produced, whatever the language.
-		dynamic: () => dynamicStrings(),
+		// Fire a genuine dynamic-label warning on demand: routes through the
+		// same tDyn path the instrument loader gives every non-literal
+		// t()/tCount() call site.
+		demoDynamic: (key: string) => tDyn(key),
 	};
 }
