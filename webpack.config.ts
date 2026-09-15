@@ -572,10 +572,13 @@ export default (env: any, argv: any) => {
 		config.output!.path = path.resolve(__dirname, "test/public");
 		config.entry!["testclient.js"] = [path.resolve(__dirname, "test/client/index.ts")];
 
-		// Add the istanbul plugin to babel-loader options
+		// Add the istanbul plugin to babel-loader options. Rules may carry
+		// their loader at the top level (the i18n instrument-loader) or use
+		// an array `use` (css-loader), so a missing or non-object `use` is
+		// not a babel rule — skip it.
 		for (const rule of config.module!.rules!) {
 			// @ts-expect-error Property 'use' does not exist on type 'RuleSetRule | "..."'.
-			if (rule.use.loader === "babel-loader") {
+			if (rule.use?.loader === "babel-loader") {
 				// @ts-expect-error Property 'use' does not exist on type 'RuleSetRule | "..."'.
 				rule.use.options.plugins = ["istanbul"];
 			}
