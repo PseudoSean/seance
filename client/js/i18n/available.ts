@@ -2,6 +2,9 @@
 export const AVAILABLE = [
 	{
 		"tag": "en"
+	},
+	{
+		"tag": "de"
 	}
 ] as const;
 export type AvailableLocale = (typeof AVAILABLE)[number]["tag"];
