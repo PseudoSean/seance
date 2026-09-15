@@ -26,6 +26,14 @@ export interface ProbeEnv {
 	deviceMemory: number | null;
 	storage: {estimate(): Promise<{quota?: number}>} | null;
 	wasmSimd: boolean;
+	/**
+	 * Whether the page is a secure context (`window.isSecureContext`), when
+	 * that is known. A plain-HTTP origin away from localhost is the usual
+	 * reason `navigator.gpu` is missing entirely, and the one a reader can
+	 * do something about — the probe names it instead of a bare "no
+	 * WebGPU". Undefined where the question makes no sense (tests).
+	 */
+	secureContext?: boolean;
 }
 
 // WebLLM's own floor for a q4f16 model. Adapters report their limits with alignment
@@ -46,7 +54,11 @@ export async function probe(env: ProbeEnv): Promise<Capability> {
 	let gpuOk = false;
 
 	if (!env.gpu) {
-		reasons.push("no WebGPU");
+		reasons.push(
+			env.secureContext === false
+				? "insecure origin: WebGPU needs HTTPS or localhost — serve the app over HTTPS"
+				: "no WebGPU"
+		);
 	} else {
 		let adapter: AdapterLike | null = null;
 
@@ -119,6 +131,7 @@ export function browserEnv(): ProbeEnv {
 		deviceMemory: typeof nav.deviceMemory === "number" ? nav.deviceMemory : null,
 		storage: nav.storage && typeof nav.storage.estimate === "function" ? nav.storage : null,
 		wasmSimd,
+		secureContext: typeof window !== "undefined" ? window.isSecureContext : undefined,
 	};
 }
 

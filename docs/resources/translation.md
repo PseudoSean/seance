@@ -11,6 +11,11 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   the channel's context. Greedy at temperature 0.1, thinking off, one line
   of output. Needs an adapter with `shader-f16` and 1 GiB of buffer,
   WebLLM's floor for a q4f16 model; adapters report 2 GiB minus alignment slack (`capability.ts`).
+  There must be a `navigator.gpu` at all: away from localhost a plain-HTTP
+  origin is not a secure context and the API does not exist, so the probe's
+  reason says so — "insecure origin: WebGPU needs HTTPS or localhost —
+  serve the app over HTTPS" — where a bare "no WebGPU" would send someone
+  shopping for a GPU they already have. Settings' device note shows it.
 - **Two GPU models, one chosen.** `models.ts` `LLM_CHOICES`: `Qwen3-1.7B-q4f16_1-MLC`
   (the default, ~1.1 GB download, ~2.0 GB of GPU memory) and
   `Qwen3-4B-q4f16_1-MLC` (~2.3 GB, ~3.4 GB). On 45 casual chat lines into

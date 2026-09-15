@@ -1,0 +1,352 @@
+#!/usr/bin/env python3
+"""Single-port host for the Seance SPA: static files from public/ and a
+WebSocket reverse proxy in front of the ircd, on the same port.
+
+HTTPS is the default: a self-signed certificate (generated on first run,
+SAN covering localhost and every address the machine answers to) makes
+the origin a secure context from other devices too — which WebGPU needs,
+so the translation models unlock on a plain HTTP LAN address only after
+this switch. Browsers show the usual self-signed warning once; accepting
+it is enough. --http opts out, --cert/--key bring your own certificate.
+
+The browser dials the app's origin (ws://<this-host>:8000/); any request
+carrying `Upgrade: websocket` is proxied — handshake first, then a raw
+bidirectional byte pipe — to the upstream ircd WebSocket (default
+ws://127.0.0.1:8067, nefarious2's plain WS port). Frames are never parsed:
+IRC line framing, the text.ircv3.net subprotocol, permessage-deflate and
+ping/pong all survive as opaque bytes. Everything else is served from
+public/, with the MIME types the SPA and the ORT loader need (.mjs as
+text/javascript, .wasm as application/wasm — Python's default map serves
+.mjs as octet-stream and the WASM backend's dynamic import then fails
+with "no available backend found").
+
+Usage:
+    python3 tools/serve.py [--port 8000] [--bind 0.0.0.0] [--dir public]
+                           [--upstream ws://127.0.0.1:8067]
+                           [--verify-tls] [--verbose]
+
+The upstream may be wss:// (self-signed dev certificates are accepted
+unless --verify-tls is given). With no ircd listening on the upstream,
+static hosting still works and WebSocket dials fail with a 502.
+
+Note: http://127.0.0.1 is a browser secure context, so the service worker
+and the install prompt work there; over a LAN address without TLS they
+do not (basic chat still works).
+"""
+
+import argparse
+import http.server
+import selectors
+import socket
+import ssl
+import subprocess
+import sys
+import threading
+
+# --- configuration (filled by main()) -------------------------------------
+
+STATIC_DIR = "public"
+UPSTREAM_SCHEME = "ws"
+UPSTREAM_HOST = "127.0.0.1"
+UPSTREAM_PORT = 8067
+UPSTREAM_VERIFY_TLS = False
+VERBOSE = False
+
+
+class SpaHandler(http.server.SimpleHTTPRequestHandler):
+    """Static files, plus a WebSocket passthrough on Upgrade requests."""
+
+    protocol_version = "HTTP/1.1"
+    server_version = "seance-serve/1.0"
+    extensions_map = {
+        **http.server.SimpleHTTPRequestHandler.extensions_map,
+        ".mjs": "text/javascript",
+        ".wasm": "application/wasm",
+        ".woff2": "font/woff2",
+        ".webmanifest": "application/manifest+json",
+        ".json": "application/json",
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=STATIC_DIR, **kwargs)
+
+    def log_message(self, fmt, *args):
+        if VERBOSE:
+            sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
+
+    def end_headers(self):
+        # The isolation headers the deploy docs recommend (branding.md §
+        # Translation, Threads): multi-threaded WebAssembly for the CPU
+        # models, which the browser only allows on a cross-origin-isolated
+        # page. `credentialless` spares every cross-origin resource the app
+        # loads (link previews, media) the CORP header that `require-corp`
+        # would demand. WebGPU does not need these; the CPU speed does.
+        self.send_header("Cross-Origin-Opener-Policy", "same-origin")
+        self.send_header("Cross-Origin-Embedder-Policy", "credentialless")
+        super().end_headers()
+
+    def do_GET(self):
+        if self.headers.get("Upgrade", "").lower() == "websocket":
+            self.proxy_websocket()
+            return
+        super().do_GET()
+
+    def do_HEAD(self):
+        super().do_HEAD()
+
+    # -- the WebSocket reverse proxy ----------------------------------------
+
+    def proxy_websocket(self):
+        """Relay the upgrade handshake to the upstream, then pipe bytes."""
+        self.close_connection = True
+        try:
+            upstream = socket.create_connection((UPSTREAM_HOST, UPSTREAM_PORT), timeout=5)
+        except OSError as err:
+            self.log_error("upstream %s://%s:%d down: %s",
+                           UPSTREAM_SCHEME, UPSTREAM_HOST, UPSTREAM_PORT, err)
+            body = b"upstream ircd unreachable"
+            self.wfile.write(
+                b"HTTP/1.1 502 Bad Gateway\r\n"
+                b"Content-Type: text/plain; charset=utf-8\r\n"
+                b"Content-Length: " + str(len(body)).encode() + b"\r\n"
+                b"Connection: close\r\n\r\n" + body
+            )
+            return
+
+        upstream.settimeout(10)
+        try:
+            if UPSTREAM_SCHEME == "wss":
+                ctx = ssl.create_default_context()
+                if not UPSTREAM_VERIFY_TLS:
+                    ctx.check_hostname = False
+                    ctx.verify_mode = ssl.CERT_NONE
+                upstream = ctx.wrap_socket(upstream, server_hostname=UPSTREAM_HOST)
+
+            # Re-emit the client's handshake verbatim (the browser's
+            # Sec-WebSocket-* headers, the text.ircv3.net subprotocol and
+            # any extension offers all ride along untouched).
+            head = self.requestline + "\r\n"
+            for key, value in self.headers.items():
+                head += f"{key}: {value}\r\n"
+            head += "\r\n"
+            upstream.sendall(head.encode("latin-1"))
+
+            # Anything buffered behind the handshake head (browsers send
+            # nothing yet, but do not lose a byte if one ever arrives). The
+            # peek must not block waiting for a byte that may never come:
+            # flip the socket non-blocking around it.
+            self.connection.setblocking(False)
+            try:
+                extra = self.rfile.peek()
+            except (BlockingIOError, OSError):
+                extra = b""
+            finally:
+                self.connection.setblocking(True)
+            if extra:
+                upstream.sendall(extra)
+
+            # The upstream's 101 (or its rejection) goes back verbatim.
+            response = b""
+            while b"\r\n\r\n" not in response:
+                chunk = upstream.recv(4096)
+                if not chunk:
+                    break
+                response += chunk
+                if len(response) > 65536:
+                    break
+            marker = response.find(b"\r\n\r\n")
+            head_bytes = response if marker == -1 else response[: marker + 4]
+            tail = b"" if marker == -1 else response[marker + 4 :]
+            self.wfile.write(head_bytes)
+            if tail:
+                self.wfile.write(tail)
+
+            status = head_bytes.split(b"\r\n", 1)[0]
+            self.log_message("ws upgrade -> %s://%s:%d %s",
+                             UPSTREAM_SCHEME, UPSTREAM_HOST, UPSTREAM_PORT,
+                             status.decode("latin-1", "replace"))
+            if b" 101 " not in head_bytes.split(b"\r\n", 1)[0]:
+                return  # rejected; whatever head the upstream sent is relayed
+        except OSError as err:
+            self.log_error("ws handshake relay failed: %s", err)
+            try:
+                upstream.close()
+            except OSError:
+                pass
+            return
+
+        upstream.settimeout(None)
+        self.connection.settimeout(None)
+        self.pipe(self.connection, upstream)
+
+    @staticmethod
+    def pipe(client, upstream):
+        """Bidirectional byte pipe until either side closes."""
+        sel = selectors.DefaultSelector()
+        peers = {
+            client.fileno(): (client, upstream),
+            upstream.fileno(): (upstream, client),
+        }
+        for sock in peers:
+            sel.register(sock, selectors.EVENT_READ)
+        try:
+            while True:
+                for key, _ in sel.select():
+                    src, dst = peers[key.fd]
+                    try:
+                        data = src.recv(65536)
+                    except OSError:
+                        return
+                    if not data:
+                        return
+                    try:
+                        dst.sendall(data)
+                    except OSError:
+                        return
+        finally:
+            for sock in peers.values():
+                try:
+                    sock.close()
+                except OSError:
+                    pass
+            sel.close()
+
+
+class ThreadingSpaServer(http.server.ThreadingHTTPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
+
+# --- the self-signed certificate ------------------------------------------
+
+CERT_PATH = "tmp/serve/seance-serve.pem"
+KEY_PATH = "tmp/serve/seance-serve-key.pem"
+
+
+def local_addresses() -> list[str]:
+    """Every address this host probably answers to, for the cert's SAN."""
+    names = ["localhost"]
+    try:
+        out = subprocess.run(
+            ["hostname", "-I"], capture_output=True, text=True, timeout=5
+        ).stdout.split()
+        names.extend(out)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    try:
+        # The address a connection to the outside world would leave from —
+        # the one a phone on the same network dials.
+        probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            probe.connect(("8.8.8.8", 80))
+            names.append(probe.getsockname()[0])
+        finally:
+            probe.close()
+    except OSError:
+        pass
+    names.append(socket.gethostname())
+    seen: list[str] = []
+
+    for name in names:
+        if name and name not in seen:
+            seen.append(name)
+
+    return seen
+
+
+def ensure_certificate() -> tuple[str, str]:
+    """A self-signed cert with a wide SAN, generated once and reused."""
+    import os
+
+    if os.path.exists(CERT_PATH) and os.path.exists(KEY_PATH):
+        return CERT_PATH, KEY_PATH
+
+    os.makedirs(os.path.dirname(CERT_PATH), exist_ok=True)
+    san = ",".join(
+        (f"IP:{addr}" if addr.replace(".", "").isdigit() else f"DNS:{addr}")
+        for addr in ([*local_addresses(), "127.0.0.1"])
+    )
+    subprocess.run(
+        [
+            "openssl",
+            "req",
+            "-x509",
+            "-newkey",
+            "rsa:2048",
+            "-keyout",
+            KEY_PATH,
+            "-out",
+            CERT_PATH,
+            "-days",
+            "3650",
+            "-nodes",
+            "-subj",
+            "/CN=seance-serve",
+            "-addext",
+            f"subjectAltName={san}",
+        ],
+        check=True,
+        capture_output=True,
+    )
+    sys.stderr.write(f"seance-serve: self-signed certificate written to {CERT_PATH}\n")
+    return CERT_PATH, KEY_PATH
+
+
+def main():
+    global STATIC_DIR, UPSTREAM_SCHEME, UPSTREAM_HOST, UPSTREAM_PORT
+    global UPSTREAM_VERIFY_TLS, VERBOSE
+
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--bind", default="0.0.0.0", help="interface to bind (default: all)")
+    parser.add_argument("--dir", default="public", help="static root (default: public)")
+    parser.add_argument("--http", action="store_true",
+                        help="serve plain HTTP instead of HTTPS")
+    parser.add_argument("--cert", default=None, help="TLS certificate (default: generated)")
+    parser.add_argument("--key", default=None, help="TLS key (default: generated)")
+    parser.add_argument("--upstream", default="ws://127.0.0.1:8067",
+                        help="ircd WebSocket to proxy (default ws://127.0.0.1:8067)")
+    parser.add_argument("--verify-tls", action="store_true",
+                        help="verify a wss:// upstream's certificate (default: accept self-signed)")
+    parser.add_argument("--verbose", action="store_true", help="log static requests too")
+    args = parser.parse_args()
+
+    STATIC_DIR = args.dir
+    VERBOSE = args.verbose
+    UPSTREAM_VERIFY_TLS = args.verify_tls
+
+    scheme, _, rest = args.upstream.partition("://")
+    if scheme not in ("ws", "wss") or not rest:
+        parser.error("--upstream must be ws://host:port or wss://host:port")
+    UPSTREAM_SCHEME = scheme
+    host, _, port = rest.rpartition(":")
+    bracketed = host.startswith("[") and host.endswith("]")
+    UPSTREAM_HOST = host[1:-1] if bracketed else (host or "127.0.0.1")
+    try:
+        UPSTREAM_PORT = int(port)
+    except ValueError:
+        parser.error("--upstream port must be an integer")
+
+    server = ThreadingSpaServer((args.bind, args.port), SpaHandler)
+
+    if not args.http:
+        if args.cert and args.key:
+            cert, key = args.cert, args.key
+        else:
+            cert, key = ensure_certificate()
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ctx.load_cert_chain(cert, key)
+        server.socket = ctx.wrap_socket(server.socket, server_side=True)
+
+    sys.stderr.write(
+        f"seance-serve: {'https' if not args.http else 'http'}://{args.bind}:{args.port}/ "
+        f"(static: {STATIC_DIR}), ws proxy -> {args.upstream}\n"
+    )
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+
+
+if __name__ == "__main__":
+    main()

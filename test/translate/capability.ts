@@ -48,6 +48,28 @@ describe("translate/capability", () => {
 		expect(cap.reasons).to.deep.equal(["no WebGPU"]);
 	});
 
+	it("names the insecure origin as the reason there is no WebGPU", async () => {
+		// Plain HTTP away from localhost: isSecureContext is false and
+		// navigator.gpu does not exist at all. The reason says what to do
+		// about it, not just that the API is missing.
+		const cap = await probe(env({gpu: null, secureContext: false}));
+
+		expect(cap.tier).to.equal("cpu");
+		expect(cap.reasons).to.deep.equal([
+			"insecure origin: WebGPU needs HTTPS or localhost — serve the app over HTTPS",
+		]);
+	});
+
+	it("a secure context without WebGPU still says plain no WebGPU", async () => {
+		expect((await probe(env({gpu: null, secureContext: true}))).reasons).to.deep.equal([
+			"no WebGPU",
+		]);
+		// Unknown (tests, odd embeddings) behaves as today.
+		expect((await probe(env({gpu: null, secureContext: undefined}))).reasons).to.deep.equal([
+			"no WebGPU",
+		]);
+	});
+
 	it("is cpu when the adapter is missing, has no f16 or too small a buffer", async () => {
 		expect(
 			(await probe(env({gpu: {requestAdapter: () => Promise.resolve(null)}}))).reasons
