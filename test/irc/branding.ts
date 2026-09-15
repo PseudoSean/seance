@@ -551,7 +551,6 @@ describe("branding", function () {
 					cpu: {nllb: "mirror/nllb", opus: {"fi-en": "mirror/opus-fi-en"}},
 					routes: {en: {de: ["opus:de-en", "nllb"]}},
 					glossary: [["rig", "Testaufbau"]],
-					defaultTarget: "de",
 				},
 			});
 
@@ -565,7 +564,6 @@ describe("branding", function () {
 				cpu: {nllb: "mirror/nllb", opus: {"fi-en": "mirror/opus-fi-en"}},
 				routes: {en: {de: ["opus:de-en", "nllb"]}},
 				glossary: [["rig", "Testaufbau"]],
-				defaultTarget: "de",
 			});
 		});
 
@@ -592,7 +590,6 @@ describe("branding", function () {
 					cpu: {nllb: 7, opus: {"de-en": 1, "fr-en": "ok"}},
 					routes: {en: {de: "nllb", fr: ["llm", 3]}},
 					glossary: [["a", "b"], ["c"], "d"],
-					defaultTarget: 5,
 				},
 			});
 

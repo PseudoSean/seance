@@ -7,8 +7,6 @@
 			:value="entry.tag"
 			:lang="entry.tag"
 			:dir="entry.rtl ? 'rtl' : undefined"
-			:disabled="!entry.available"
-			:title="entry.available ? undefined : unavailableTitle"
 		>
 			{{ entry.label }}
 		</option>
@@ -39,27 +37,13 @@ export default defineComponent({
 			}
 		};
 
-		// The compiled catalogs, minus the dev-only pseudo locale outside
-		// development: what can actually activate.
-		const compiled = computed(() => {
-			const set = new Set<string>();
-
-			for (const entry of AVAILABLE) {
-				if (!entry.devOnly || DEV) {
-					set.add(entry.tag);
-				}
-			}
-
-			return set;
-		});
-
 		// Every target language from translation-languages.txt, in the
 		// file's order (English first), plus anything compiled the file does
 		// not list (the qqx rig in development). The name is the language's
 		// own name — the list is findable before the UI speaks the reader's
-		// language. A target whose catalog is not compiled yet is listed but
-		// disabled: its English shows until the translation lands, so the
-		// list is the roadmap without pretending to serve what it does not.
+		// language. Every entry is pickable: the unified setting is also the
+		// reading language, which needs no catalog, and one whose catalog is
+		// missing shows English copy until its translation lands.
 		const options = computed(() => {
 			const merged = new Map<string, {tag: string; en: string | undefined}>();
 
@@ -73,23 +57,14 @@ export default defineComponent({
 				}
 			}
 
-			return [...merged.values()].map((entry) => {
-				const available = compiled.value.has(entry.tag);
-
-				return {
-					tag: entry.tag,
-					rtl: isRTL(entry.tag),
-					available,
-					// The language's own name — en resolves to "English", the
-					// one deliberate exception the list carries.
-					label: nativeName(entry.tag),
-				};
-			});
+			return [...merged.values()].map((entry) => ({
+				tag: entry.tag,
+				rtl: isRTL(entry.tag),
+				// The language's own name — en resolves to "English", the
+				// one deliberate exception the list carries.
+				label: nativeName(entry.tag),
+			}));
 		});
-
-		// A disabled option still shows its native name; the tooltip says
-		// why it cannot be picked yet.
-		const unavailableTitle = computed(() => t("settings.locale.untranslated"));
 
 		// Reading locale.value ties the auto label to the resolved tag: it
 		// re-renders on a locale change.
@@ -102,7 +77,7 @@ export default defineComponent({
 			emit("change", (event.target as HTMLSelectElement).value);
 		};
 
-		return {autoLabel, options, unavailableTitle, onChange};
+		return {autoLabel, options, onChange};
 	},
 });
 </script>

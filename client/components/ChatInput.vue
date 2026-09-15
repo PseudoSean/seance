@@ -412,10 +412,7 @@ export default defineComponent({
 				const to = writeTarget(props.network, channel);
 
 				return to
-					? `Write to ${channel.name} · sent in ${languageName(
-							to,
-							readingLanguage(props.network, channel)
-					  )}`
+					? `Write to ${channel.name} · sent in ${languageName(to, readingLanguage())}`
 					: t("composer.placeholder", {name: channel.name});
 			}
 
@@ -543,8 +540,7 @@ export default defineComponent({
 
 		// The strip's labels name their languages in the language the user
 		// reads this channel in, not the browser's (reader.ts readingLanguage).
-		const readerName = (code: string) =>
-			languageName(code, readingLanguage(props.network, props.channel));
+		const readerName = (code: string) => languageName(code, readingLanguage());
 
 		// Source → target, "→ German" until (or unless) a source is named.
 		const outgoingChip = computed(() => {
@@ -563,9 +559,7 @@ export default defineComponent({
 		// is read back into, the user's reading language.
 		const outgoingCheckLabel = computed(() =>
 			outgoing.value
-				? `${readerName(outgoing.value.to)} → ${readerName(
-						readingLanguage(props.network, props.channel)
-				  )}`
+				? `${readerName(outgoing.value.to)} → ${readerName(readingLanguage())}`
 				: ""
 		);
 

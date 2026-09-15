@@ -133,13 +133,19 @@ export default async function run(page) {
 	);
 	page.check("LLM row not downloaded", (await page.evaluate(STATE(llmId))) === "Not downloaded");
 	page.check(
-		"target defaults to the locale's full name",
+		"target defaults to Automatic, named for the browser's language",
 		(await page.evaluate(
-			`document.querySelector('select[name="translateTo"] option:checked').textContent.trim()`
-		)) ===
-			(await page.evaluate(
-				`new Intl.DisplayNames([navigator.language], {type: "language"}).of(document.querySelector('select[name="translateTo"]').value)`
-			))
+			`document.querySelector('select[name="translateTo"] option:checked').value`
+		)) === "auto" &&
+			(
+				await page.evaluate(
+					`document.querySelector('select[name="translateTo"] option:checked').textContent.trim()`
+				)
+			).includes(
+				await page.evaluate(
+					`new Intl.DisplayNames([navigator.language], {type: "language"}).of(navigator.language.split("-")[0])`
+				)
+			)
 	);
 	await page.screenshot("translation-settings");
 
@@ -165,6 +171,12 @@ export default async function run(page) {
 			el.value = "de";
 			el.dispatchEvent(new Event("change", {bubbles: true}));
 		})()`
+	);
+	// The model dance above leaves the pane scrolled; the formality row
+	// would sit under the modal's sticky header, where a real mouse click
+	// hits the header instead of the radio.
+	await page.evaluate(
+		`document.querySelector('input[name="translateFormality"][value="formal"]').scrollIntoView({block: "center"})`
 	);
 	await page.click(`input[name="translateFormality"][value="formal"]`);
 	await page.click(`input[name="translateLlm"]`);

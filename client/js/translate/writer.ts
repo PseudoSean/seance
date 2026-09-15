@@ -259,7 +259,7 @@ export async function translateOutgoing(
 			return "plain";
 		}
 
-		const from = writeSource(detection, readingLanguage(network, channel), to);
+		const from = writeSource(detection, readingLanguage(), to);
 		// The detector's verdict, however weak, rides along as the routing
 		// hint: a seq2seq route takes it as its source, so a draft whose
 		// source is left to the LLM can still reach NLLB (router.ts). It is
@@ -486,7 +486,7 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 		return;
 	}
 
-	const target = reverseTarget(readingLanguage(network, channel), entry.to);
+	const target = reverseTarget(readingLanguage(), entry.to);
 
 	if (!target) {
 		return;

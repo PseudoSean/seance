@@ -17,12 +17,25 @@ import {
 } from "./core";
 import {brandingT} from "../branding";
 import {AVAILABLE, DEV} from "./available";
+import {TRANSLATION_TARGETS} from "./targets";
 import enCatalog from "../../locales/en.json";
 import {mirrorPushPrefs} from "../push-prefs";
 
 /** Read during every template call, so a locale change re-renders whatever
- * rendered a label. */
+ * rendered a label. The ACTIVE interface catalog's tag: the user's pick,
+ * or en when that catalog is not compiled yet (its copy shows English). */
 export const localeRef = ref("en");
+
+/**
+ * The user's language, unified with the interface's: the resolved locale
+ * pick ("auto" resolves against the whole roadmap, not just the compiled
+ * catalogs), before any catalog fallback. This is what reading translates
+ * into — a Swedish pick reads Swedish translations while the interface
+ * still shows English copy. A tag translation does not handle (the dev-only
+ * qqx rig) names en; consumer-side mapping lives in translate/languages.ts
+ * `fromLocaleTag`.
+ */
+export const userLanguageRef = ref("en");
 
 const overlayCache = new Map<string, Catalog>();
 
@@ -49,14 +62,28 @@ async function loadOverlay(tag: string): Promise<Catalog | undefined> {
  * localStorage). Runs from the setting's apply() at boot and on change.
  */
 export async function activate(setting: string): Promise<void> {
-	// "auto" and any stored tag resolve against this build's list: a
-	// production build carries no qqx at all, so a stored qqx pick (a
-	// settings restore from a dev machine, say) falls back to the automatic
+	// "auto" and any stored tag resolve against one set: a production
+	// build carries no qqx at all, so a stored qqx pick (a settings
+	// restore from a dev machine, say) falls back to the automatic
 	// resolution instead of activating the rig.
-	let tag =
-		setting === "auto" || !resolvableTags(AVAILABLE, DEV).includes(setting)
-			? bestLocale(navigator.languages ?? [], resolvableTags(AVAILABLE, DEV))
+	// One resolvable set for both consumers: the whole roadmap (a pick
+	// without a compiled catalog is still the user's language — the
+	// interface falls back to English copy, reading does not fall back at
+	// all) plus this build's own entries (qqx, dev-only).
+	const resolvable = [
+		...new Set([
+			...TRANSLATION_TARGETS.map((entry) => entry.tag),
+			...resolvableTags(AVAILABLE, DEV),
+		]),
+	];
+	const pick =
+		setting === "auto" || !resolvable.includes(setting)
+			? bestLocale(navigator.languages ?? [], resolvable)
 			: setting;
+
+	// The interface's catalog tag: the pick, or en when that catalog is
+	// not compiled (below). Everything that renders labels follows this.
+	let tag = pick;
 
 	// Best-effort, never a rejection: settingsBackup restores the whole
 	// settings blob, so a stored tag this build has no compiled catalog for
@@ -64,11 +91,16 @@ export async function activate(setting: string): Promise<void> {
 	// dynamic import there would cascade. Fall back to en, as the worker's
 	// applyLocale() does (client/js/push/i18n.ts).
 	try {
-		setCatalog(tag, enCatalog, await loadOverlay(tag));
+		setCatalog(pick, enCatalog, await loadOverlay(pick));
 	} catch {
+		// No compiled catalog for the pick: the interface shows English.
+		// The pick itself survives in userLanguageRef — the reading
+		// language does not fall back with the interface's.
 		tag = "en";
 		setCatalog("en", enCatalog, undefined);
 	}
+
+	userLanguageRef.value = pick;
 
 	// Development only: the translation-coverage summary. A locale whose
 	// .po is partly filled shows the English copy for the rest, and this
@@ -139,7 +171,10 @@ export function useI18n() {
 // renders, one console.warn fires), and `seanceI18n.missingKeys()` lists
 // every key/var the session has tripped. Production builds (DEV=false)
 // never assign it — no hook, no surface, no warnings.
-if (DEV) {
+if (DEV && typeof window !== "undefined") {
+	// The typeof guard keeps the module loadable under plain node (mocha
+	// loads it through reader.ts since the language unification): a dev
+	// build is browser-only anyway, so nothing real is folded away.
 	(window as unknown as {seanceI18n?: unknown}).seanceI18n = {
 		t: brandingT,
 		tCount: (key: string, count: number, vars?: Vars) => brandingT(key, vars, count),

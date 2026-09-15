@@ -231,7 +231,6 @@ export interface BrandingTranslation {
 	/** Network vocabulary seeded into every channel's term memory. */
 	glossary?: [string, string][];
 	/** The reading target when the user has not chosen one; defaults to the browser language. */
-	defaultTarget?: string;
 }
 
 export interface BrandingConfig {
@@ -727,7 +726,6 @@ export function normalizeTranslation(value: unknown): BrandingTranslation | unde
 	const translation: BrandingTranslation = {};
 	const enabled = optionalBoolean(value.enabled);
 	const modelBase = optionalUrl(value.modelBase);
-	const defaultTarget = optionalString(value.defaultTarget);
 
 	if (enabled !== undefined) {
 		translation.enabled = enabled;
@@ -782,10 +780,6 @@ export function normalizeTranslation(value: unknown): BrandingTranslation | unde
 
 	if (glossary) {
 		translation.glossary = glossary;
-	}
-
-	if (defaultTarget !== undefined) {
-		translation.defaultTarget = defaultTarget;
 	}
 
 	return Object.keys(translation).length > 0 ? translation : undefined;

@@ -10,7 +10,10 @@
 // setReading/setChannelOptions; the chip and the toolbar call
 // retranslate/showOriginal/retryTranslation.
 
+import {watch} from "vue";
+
 import {getBranding} from "../branding";
+import {userLanguageRef} from "../i18n";
 import socket from "../socket";
 import {store, type TranslationEntry} from "../store";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../types";
@@ -27,6 +30,7 @@ import {
 import {buildContext} from "./context";
 import {type Detection, LanguagePrior, detectLanguage, detectionSkip} from "./detect";
 import {ReplayBatches, historyQueueOrder, isEligible, plainTextOf} from "./eligibility";
+import {fromLocaleTag, isSupported} from "./languages";
 import {setTranslationUsage, translateService} from "./index";
 import {NO_ROUTE, type QueueItem, type QueueUpdate, TranslateQueue} from "./queue";
 import {sentReadBacks, takesReadBack} from "./sentReadBack";
@@ -79,20 +83,60 @@ export function channelTranslation(
 }
 
 /**
- * The language the user reads this channel in -- the channel's own panel
- * setting, the global one only as the fallback for a channel whose reading
- * is off. The one decision for everything that needs it: the composer
- * (`writer.ts`) places a draft it cannot detect and reads a translation
- * back into it, and the labels (`TranslationLine.vue`, the composer strip)
- * name their languages in it. A composer that read the global alone would
- * take a draft it could not place as written in the write target whenever
- * the panel read English while the global still named German, and ask for
- * a translation from German into German -- which the model answers by
- * handing the line back untranslated.
+ * The language the user reads in. One language everywhere: the Settings
+ * override when one is set, otherwise the interface's (`userLanguageRef`,
+ * the unified setting that "auto" resolves from the browser and a dev
+ * pick sets; `fromLocaleTag` maps it to a translation code). The one
+ * decision for everything that needs it: the queues translate into it,
+ * the composer (`writer.ts`) places a draft it cannot detect and reads a
+ * translation back into it, and the labels (`TranslationLine.vue`, the
+ * composer strip, the channel header's globe) name their languages in it.
+ * Reading itself is on or off per channel (`setReading`); the language is
+ * not, so a draft can no longer meet a panel language that differs from
+ * this one.
  */
-export function readingLanguage(network: ClientNetwork, channel: ClientChan): string {
-	return channelTranslation(network, channel).read ?? store.state.settings.translateTo;
+export function readingLanguage(): string {
+	const override = store.state.settings.translateTo;
+
+	return override !== "auto" && isSupported(override)
+		? override
+		: fromLocaleTag(userLanguageRef.value);
 }
+
+/**
+ * The reading language changed (the Settings override moved, or the
+ * interface's did and the override follows it): re-read every channel that
+ * is reading, through the same path a switch-on takes. A change that
+ * leaves the effective language alone restarts nothing; the first
+ * computation (module load, before any channel exists) also does.
+ */
+let lastReadingLanguage: string | null = null;
+
+function restartAllReading(): void {
+	const next = readingLanguage();
+
+	if (next === lastReadingLanguage) {
+		return;
+	}
+
+	const first = lastReadingLanguage === null;
+	lastReadingLanguage = next;
+
+	if (first) {
+		return;
+	}
+
+	for (const network of store.state.networks) {
+		for (const channel of network.channels) {
+			if (channelTranslation(network, channel).read) {
+				setReading(network, channel, true);
+			}
+		}
+	}
+}
+
+watch(userLanguageRef, restartAllReading);
+store.watch(() => store.state.settings.translateTo, restartAllReading);
 
 /**
  * Whether translation is wanted right now (service.ts `setInUse`): a
@@ -346,13 +390,13 @@ function commitChannel(
  * -- a posted line's read-back (writer.ts) -- which is kept, and which the
  * requeue then leaves alone rather than translating it a second time.
  */
-export function setReading(network: ClientNetwork, channel: ClientChan, lang: string | null): void {
+export function setReading(network: ClientNetwork, channel: ClientChan, on: boolean): void {
 	const before = channelTranslation(network, channel).read;
-	const value = setChannelTranslation(network.uuid, channel.name, {read: lang});
+	const value = setChannelTranslation(network.uuid, channel.name, {read: on});
 
 	commitChannel(network, channel, value);
 
-	if (lang === before) {
+	if (on === before) {
 		return;
 	}
 
@@ -360,14 +404,17 @@ export function setReading(network: ClientNetwork, channel: ClientChan, lang: st
 	replayBatches.drop(channel.id);
 	queues.get(network.uuid)?.cancelChannel(channel.id);
 
-	if (!lang) {
+	if (!on) {
 		return;
 	}
 
+	// The language is the global reading language (the interface's, or the
+	// Settings override): only a finished translation already in it is
+	// kept, a skipped mark is detected again like everything else.
+	const lang = readingLanguage();
+
 	forgetItems(({item}) => item.chanId === channel.id);
 
-	// Only a finished translation is kept: a skipped mark in the new
-	// language is detected again like everything else.
 	const requeued = channel.messages.filter((m) => {
 		const entry = store.state.translations[m.id];
 
@@ -505,7 +552,7 @@ export async function translateMessage(
 				// declares one other can place a line too short for franc. The
 				// switch is re-read after the await below; this is the target as
 				// it stands now, which is the one the reader is looking at.
-				exclude: initial.read ?? store.state.settings.translateTo,
+				exclude: readingLanguage(),
 		  });
 
 	// Detection (the first call also awaits the franc chunk download) can
@@ -523,7 +570,7 @@ export async function translateMessage(
 		return;
 	}
 
-	const to = settings.read ?? store.state.settings.translateTo;
+	const to = readingLanguage();
 
 	// Placed in the reading language, or not placed with the reading language
 	// among the contenders: left alone (detect.ts `detectionSkip`) and

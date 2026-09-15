@@ -109,8 +109,8 @@ A Settings row: cached, downloading (with a fraction), ready or failed.
 _Avoid_: model state, download entry
 
 **switch**:
-A channel's reading target: a language code, or off. Set from the header globe or the panel; the moment it was set (`since`) is recorded so older messages are never translated.
-_Avoid_: toggle state, read flag
+A channel's reading on/off. The language is not a per-channel choice: it is the interface's (the unified setting), with the Settings override as the exception; the header globe and the panel set the switch.
+_Avoid_: toggle state, read flag, read language
 
 **chip**:
 The "from German" button on a translated line (`TranslationLine.vue`), full language name; opens the retranslate/hide menu.

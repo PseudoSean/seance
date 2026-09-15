@@ -2,6 +2,7 @@ import {expect} from "chai";
 import {
 	SUPPORTED_LANGUAGES,
 	browserLanguage,
+	fromLocaleTag,
 	isSupported,
 	languageEndonym,
 	languageName,
@@ -19,6 +20,18 @@ describe("translate/languages", () => {
 	it("falls back to the bundled English table, then to the code", () => {
 		expect(languageName("de", "zz-not-a-locale")).to.equal("German");
 		expect(languageName("xx")).to.equal("xx");
+	});
+
+	it("maps an interface locale tag to a supported reading language", () => {
+		expect(fromLocaleTag("de")).to.equal("de");
+		expect(fromLocaleTag("pt-PT")).to.equal("pt");
+		// The interface roadmap names Tagalog by its BCP-47 tag; the
+		// translation engines know it as tl.
+		expect(fromLocaleTag("fil")).to.equal("tl");
+		expect(fromLocaleTag("sv")).to.equal("sv");
+		// The dev-only qqx rig is not a language anyone translates into.
+		expect(fromLocaleTag("qqx")).to.equal("en");
+		expect(fromLocaleTag("xx-not-a-language")).to.equal("en");
 	});
 
 	it("maps the browser language to a supported code", () => {

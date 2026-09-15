@@ -28,26 +28,39 @@
 			<div class="translation-panel-body">
 				<section class="translation-panel-section">
 					<h3>Reading</h3>
-					<label class="translation-panel-field">
-						<span class="translation-panel-label">Read messages in</span>
-						<select
-							name="translateRead"
-							class="input translation-panel-control"
-							:value="state.read ?? ''"
-							@change="onRead"
+					<!-- The reading language is not chosen here: it is the
+					     interface's (the unified setting), with the Settings
+					     override as the exception. This is only the switch. -->
+					<div class="translation-panel-field">
+						<span class="translation-panel-label"
+							>Read messages in {{ name(readingLanguage()) }}</span
 						>
-							<option value="">Off</option>
-							<option v-for="code in languages" :key="code" :value="code">
-								{{ name(code) }}
-							</option>
-						</select>
-						<span v-if="limited(state.read)" class="translation-panel-limited"
+						<div
+							class="translation-panel-segmented"
+							role="radiogroup"
+							aria-label="Reading"
+						>
+							<button
+								v-for="option in readingChoices"
+								:key="String(option.value)"
+								type="button"
+								role="radio"
+								class="translation-panel-segment"
+								:aria-checked="state.read === option.value"
+								@click="setRead(option.value)"
+							>
+								{{ option.label }}
+							</button>
+						</div>
+						<span
+							v-if="state.read && limited(readingLanguage())"
+							class="translation-panel-limited"
 							>Translations into and out of this language are often wrong.</span
 						>
 						<span class="translation-panel-hint"
 							>Lines others send are shown with a translation underneath.</span
 						>
-					</label>
+					</div>
 
 					<!-- The languages people write here. Not a multi-select: the
 					     list is fifty long and what a channel speaks is two or
@@ -189,7 +202,12 @@
 <script lang="ts">
 import {computed, defineComponent, onBeforeUnmount, onMounted, PropType, ref} from "vue";
 import {SUPPORTED_LANGUAGES, languageOptionLabel} from "../js/translate/languages";
-import {channelTranslation, setChannelOptions, setReading} from "../js/translate/reader";
+import {
+	channelTranslation,
+	readingLanguage,
+	setChannelOptions,
+	setReading,
+} from "../js/translate/reader";
 import {isLimitedLanguage} from "../js/translate/routes.default";
 import {translateService} from "../js/translate";
 import {llmChoice} from "../js/translate/models";
@@ -253,8 +271,12 @@ export default defineComponent({
 			languages.filter((code) => !state.value.languages.includes(code))
 		);
 
-		const onRead = (event: Event) =>
-			setReading(props.network, props.channel, valueOf(event) || null);
+		const readingChoices = [
+			{value: false, label: "Off"},
+			{value: true, label: "On"},
+		];
+
+		const setRead = (on: boolean) => setReading(props.network, props.channel, on);
 
 		const setLanguages = (next: string[]) =>
 			setChannelOptions(props.network, props.channel, {languages: next});
@@ -344,7 +366,9 @@ export default defineComponent({
 			formalities,
 			name,
 			limited,
-			onRead,
+			readingChoices,
+			readingLanguage,
+			setRead,
 			onAddLanguage,
 			removeLanguage,
 			onWrite,

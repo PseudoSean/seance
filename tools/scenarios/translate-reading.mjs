@@ -155,11 +155,7 @@ async function setReading(page, code) {
 	await page.waitFor(`!!document.querySelector(".translation-panel")`, {
 		label: "the tap opened the panel",
 	});
-	await page.evaluate(
-		`(() => { const s = document.querySelector('.translation-panel select[name="translateRead"]'); s.value = ${JSON.stringify(
-			code
-		)}; s.dispatchEvent(new Event("change", {bubbles: true})); })()`
-	);
+	await setPanelRead(page, Boolean(code));
 	await page.evaluate(`document.querySelector(".translation-panel-close").click()`);
 	await page.waitFor(`!document.querySelector(".translation-panel")`, {
 		label: "the close button put the panel away",
@@ -196,6 +192,43 @@ function setPanelSelect(page, name, value) {
 			value
 		)}; s.dispatchEvent(new Event("change", {bubbles: true})); })()`
 	);
+}
+
+/**
+ * The panel's reading switch (Off / On). The language is not chosen here:
+ * it is the interface's, with the Settings override as the exception.
+ */
+function setPanelRead(page, on) {
+	return page.evaluate(
+		`(() => { for (const s of document.querySelectorAll('.translation-panel-segmented .translation-panel-segment')) { if (s.textContent.trim() === (${JSON.stringify(
+			on
+		)} ? "On" : "Off")) { s.click(); return; } } throw new Error("no reading segment"); })()`
+	);
+}
+
+/**
+ * The reading-language override, set through Settings -> Translation (the
+ * one place the language is chosen since the per-channel picker went).
+ * Leaves through Done, which hands the view back to the channel.
+ */
+async function setReadOverride(page, code) {
+	await page.click(`#footer button.settings`);
+	await page.waitFor(`!!document.querySelector(".settings-menu button.translation")`, {
+		label: "settings open for the override",
+	});
+	await page.click(`.settings-menu button.translation`);
+	await page.waitFor(`!!document.querySelector('select[name="translateTo"]')`, {
+		label: "the translation tab",
+	});
+	await page.evaluate(
+		`(() => { const s = document.querySelector('select[name="translateTo"]'); s.value = ${JSON.stringify(
+			code
+		)}; s.dispatchEvent(new Event("change", {bubbles: true})); })()`
+	);
+	await page.click(`.settings-modal-done`);
+	await page.waitFor(`!document.querySelector(".settings-modal")`, {
+		label: "settings closed after the override",
+	});
 }
 
 /**
@@ -932,14 +965,15 @@ async function scenario(page) {
 		);
 	} else {
 		// One column: every setting is a label with its control under it, so
-		// the five controls come out the same width.
+		// The four selects and the variant input come out the same width
+		// (the reading switch is a segmented control, not a control row).
 		const controlWidths = await page.evaluate(
 			`[...document.querySelectorAll(".translation-panel .translation-panel-control")].map((c) => Math.round(c.getBoundingClientRect().width))`
 		);
 
 		await page.check(
-			`the five controls share one width (${controlWidths.join(", ")})`,
-			controlWidths.length === 5 && new Set(controlWidths).size === 1
+			`the four controls share one width (${controlWidths.join(", ")})`,
+			controlWidths.length === 4 && new Set(controlWidths).size === 1
 		);
 		await page.check(
 			"the hints stay out of the desktop panel",
@@ -951,17 +985,22 @@ async function scenario(page) {
 
 	await page.screenshot("translation-panel");
 
-	const readLabels = await page.evaluate(
-		`[...document.querySelectorAll('select[name="translateRead"] option')].map((o) => o.textContent.trim())`
+	const readLabel = String(
+		await page.evaluate(
+			`document.querySelector(".translation-panel-label")?.textContent.trim() ?? ""`
+		)
+	);
+	const readingEndonym = await page.evaluate(
+		`new Intl.DisplayNames([navigator.language], {type: "language"}).of(navigator.language.split("-")[0])`
 	);
 
 	await page.check(
-		`the "read" select names each language in itself (${readLabels.join(", ")})`,
-		// The options carry the endonym, not the English name: "Deutsch",
-		// never "German" and never the bare code.
-		readLabels.includes("Deutsch") &&
-			!readLabels.includes("German") &&
-			readLabels.every((label) => !/^[a-z]{2}$/i.test(label))
+		`the reading section names the language in itself (${readLabel})`,
+		// The language comes from the interface (the unified setting), and
+		// the label carries its endonym — "English", never the bare code.
+		readLabel.startsWith("Read messages in ") &&
+			readLabel.endsWith(readingEndonym) &&
+			!/^[a-z]{2}$/i.test(readLabel.replace("Read messages in ", ""))
 	);
 
 	await page.evaluate(
@@ -1228,7 +1267,7 @@ async function scenario(page) {
 	);
 	await page.screenshot("panel-languages");
 
-	await setPanelSelect(page, "translateRead", "en");
+	await setPanelRead(page, true);
 	await page.evaluate(`document.querySelector(".translation-panel-close").click()`);
 	await page.waitFor(`!document.querySelector(".translation-panel")`, {
 		label: "the panel closed after declaring German",
@@ -1457,17 +1496,13 @@ async function scenario(page) {
 	await page.evaluate(`(${questionRow}).scrollIntoView({block: "center"})`);
 	await page.screenshot("answered-question");
 
-	// Another reading language: the translations on screen are replaced by
-	// translations into it, and the chip names it -- in French, since a
-	// label is in the reader's language.
+	// Another reading language: the Settings override -- the per-channel
+	// picker went with the unification -- re-reads the channel into it, and
+	// the chip names the new target -- in French, since a label is in the
+	// reader's language.
 	const afterEchoText = `((${afterEchoRow}).querySelector('.msg-translation[data-status="done"] .msg-translation-text') || {}).textContent || ""`;
 
-	await openPanel(page);
-	await setPanelSelect(page, "translateRead", "fr");
-	await page.evaluate(`document.querySelector(".translation-panel-close").click()`);
-	await page.waitFor(`!document.querySelector(".translation-panel")`, {
-		label: "the panel closed after choosing French",
-	});
+	await setReadOverride(page, "fr");
 	await page.waitFor(`(${afterEchoText}).includes("[French]")`, {
 		timeout: 90000,
 		label: "the newest line is translated again, into French",

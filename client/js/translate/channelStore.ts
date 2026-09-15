@@ -29,8 +29,14 @@ export interface TermEntry {
 }
 
 export interface ChannelTranslation {
-	/** Reading target (ISO 639-1) or null when off. */
-	read: string | null;
+	/**
+	 * Reading on or off. The language is not per channel: it is the
+	 * interface's (the unified setting, with the Settings override as the
+	 * exception), so a stored record only remembers the switch. A record
+	 * from before the unification carries the language a per-channel
+	 * picker once set ("de"); anything truthy loads as on.
+	 */
+	read: boolean;
 	/** Outgoing target (plan 3) or null. */
 	write: string | null;
 	formality: Formality;
@@ -71,7 +77,7 @@ export function splitKey(key: string): {network: string; name: string} {
 
 export function defaultChannelTranslation(): ChannelTranslation {
 	return {
-		read: null,
+		read: false,
 		write: null,
 		formality: "auto",
 		variant: "",
@@ -151,10 +157,12 @@ function sanitize(value: unknown): ChannelTranslation | null {
 	// loses its extra keys the next time this one writes the blob.
 	const out = defaultChannelTranslation();
 
-	// A language this build cannot route (hand-edited, or dropped from
-	// SUPPORTED_LANGUAGES by a later version) is no target at all: it would
-	// leave the channel switched on with every line failing to route.
-	out.read = typeof raw.read === "string" && isSupported(raw.read) ? raw.read : null;
+	// A stored read is a switch: whatever language a per-channel picker
+	// once held, truthy means reading was on. The write target this build
+	// cannot route (hand-edited, or dropped from SUPPORTED_LANGUAGES by a
+	// later version) is no target at all: it would leave every outgoing
+	// line failing to route.
+	out.read = Boolean(raw.read);
 	out.write = typeof raw.write === "string" && isSupported(raw.write) ? raw.write : null;
 	out.formality = isFormality(raw.formality) ? raw.formality : "auto";
 	out.variant = typeof raw.variant === "string" ? raw.variant : "";

@@ -60,10 +60,11 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   `SUPPORTED_LANGUAGES` and the route lists; the remaining 46 are listed in
   `docs/resources/translation-languages.txt`. A line in a dropped language
   is no longer detected as that language (franc's candidates are the
-  supported list), so it reads as unplaced; a stored reading language that
-  is no longer offered falls back to the deploy's default or the browser's
-  language (`index.ts` `applyDefaultTarget`), a per-channel one to none
-  (`channelStore.ts`). All four scores rest on three cases each
+  supported list), so it reads as unplaced; a stored Settings override
+  that is no longer offered is treated as "auto" by the reading-language
+  guard (`reader.ts` `readingLanguage`), and a channel's stored read
+  language — the per-channel picker the unification removed — loads as
+  plain "on" (`channelStore.ts`). All four scores rest on three cases each
   (`tools/translate-eval/results/2026-09-13-web-weights.md`); the best were
   NLLB's, 43–54%. The service builds its table from
   the selected model's with the deploy's `translation.routes` merged over
@@ -163,7 +164,7 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   trip flatters benchmark-trained models in chat. Each placement
   applies to the language as source and as target. `LIMITED_LANGUAGES`
   (is lv et hi lt bn hu sk ko) are the languages whose best engine brought back
-  under 55%: the channel panel's pickers and Settings' reading target say
+  under 55%: the panel's write picker and the Settings override say
   "Translations into and out of this language are often wrong." when one is
   chosen — the selected GPU model's list.
 
@@ -202,9 +203,10 @@ taken it away.
 The line's chip, the composer strip's chip and the read-back row's label
 all read `<Source> → <Target>` -- no "from", "to", "into" or "reads back
 as" -- and every language name in them and in their titles is
-`languageName(code, readingLanguage(network, channel))`: the channel's
-reading language, else the global `translateTo` (`reader.ts`
-`readingLanguage`, the one helper the composer uses too). A user who reads
+`languageName(code, readingLanguage())`: the reading language
+(`reader.ts` `readingLanguage`, the one helper the composer uses too --
+the interface's language, or the Settings `translateTo` override when one
+is set). A user who reads
 English sees "French → English", one who reads German sees "Französisch →
 Englisch". The chip menu's actions keep their wording ("Retranslate from
 French") with the names chosen the same way; the language pickers keep
@@ -348,17 +350,21 @@ one line after another so the queue's order is that order):
 **Switching reading on, or to another language, retranslates what is on
 screen** (`reader.ts` `setReading`): the channel's queued work is
 cancelled, its remembered items, translations and language prior go, and
-its messages are queued again as one load. Setting the same language again
-does nothing, and switching off only cancels what is queued. A posted
-line's translation is the composer's read-back (§ Writing in a channel):
-it is kept, and left out of the requeue, when it is already in the new
-reading language; when it is not it goes with the rest and the line is
-translated again like any other.
+its messages are queued again as one load. Switching on again does
+nothing, and switching off only cancels what is queued. A posted line's
+translation is the composer's read-back (§ Writing in a channel): it is
+kept, and left out of the requeue, when it is already in the reading
+language; when it is not it goes with the rest and the line is translated
+again like any other. The same restart runs for every reading-on channel
+when the reading language itself moves -- the Settings override changed,
+or the interface's did and the override follows it (`reader.ts`
+`restartAllReading`).
 
 **Leaving a channel keeps its setting.** A part cancels that channel's
 queued work, forgets its queue items and drops the translations with its
-messages, but the record stays: a rejoin finds reading still on, in the
-same language, and translates the history the join loads. A network's quit
+messages, but the record stays: a rejoin finds reading still on, into the
+reading language as it stands then, and translates the history the join
+loads. A network's quit
 still forgets its channels' records. A per-channel generation stops a
 history run, or a detection still under way, once the reading restarts or
 the channel goes, so nothing is queued twice or into a channel that is no
@@ -373,11 +379,11 @@ switch-on, "load more", language-change and rejoin steps of
 
 ## The channel's panel
 
-The per-channel choices -- reading language, the languages spoken here,
+The per-channel choices -- reading on/off, the languages spoken here,
 outgoing target, formality, variant -- are one component
 (`TranslationPanel.vue`) in two layouts. Where
 there is a pointer it is a column anchored under the channel header: each
-setting a label with its control beneath it, so the five controls share one
+setting a label with its control beneath it, so the four controls share one
 width and one rhythm (20rem wide, 2.125rem controls); the section headings
 and the one-line hints are left out, and a footer carries a link to
 Settings -> Translation beside Done. Where `helpers/device.ts`
@@ -438,13 +444,15 @@ the last `VOICE_LINES` (5) of this channel's own sent translations to this
 target, session-only, so the model's phrasing stays consistent across a
 conversation without ever touching persisted storage.
 
-The language the user reads in is the **channel's** -- the panel's `read`,
-with the global Settings -> Translation target only as the fallback for a
-channel whose reading is switched off (`writer.ts` `readingLanguage`). The
-reader decides it the same way, and it has to be the same decision: a
-composer that read the global alone would take a channel reading English
-while the global still named German as reading German, and ask for a draft
-to be translated from German into German.
+The language the user reads in is **one language everywhere**
+(`reader.ts` `readingLanguage`): the interface's, since the reading and
+interface selections unified -- with the Settings → Translation override
+(`translateTo`, default "auto") as the exception a reader who wants
+translations into something else sets for themselves. Reading itself
+stays on or off per channel; the language does not, which is why the
+composer and the reader cannot disagree the way the per-channel picker
+once let them (a channel reading English while the global named German
+would have had a draft translated from German into German).
 
 `writeSource` has two rules. A draft too short for the detector to place
 (`Detection.lang === null`) is taken as the user's reading language when

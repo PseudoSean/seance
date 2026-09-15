@@ -4149,22 +4149,10 @@ msgstr ""
 #: client/components/Windows/Connect.vue:72
 #: client/components/Windows/Connect.vue:296
 #: client/components/Settings/Appearance.vue:253
-#: client/components/Settings/Appearance.vue:255
-#. Label of the interface-language row on the connect form and in Settings → Appearance; the gloss is part of the copy so the row explains itself while the UI still reads English.
-msgctxt "settings.locale"
-msgid "Language — display language of the whole interface."
-msgstr ""
-
 #: client/components/LanguageSelect.vue:50
 #. First option of the language selector: follow the browser's languages. The component appends the currently resolved tag in parentheses.
 msgctxt "settings.locale.auto"
 msgid "System default"
-msgstr ""
-
-#: client/components/LanguageSelect.vue:70
-#. Tooltip of a language in the selector's list whose translation has not been filled in yet: the language is shown (its own name) but cannot be picked; English serves until its catalog ships.
-msgctxt "settings.locale.untranslated"
-msgid "Not translated yet — the interface stays in English until this language lands."
 msgstr ""
 
 #: client/components/Settings/Networks.vue

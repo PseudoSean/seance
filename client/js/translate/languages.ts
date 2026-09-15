@@ -229,6 +229,19 @@ export function languageOptionLabel(code: string): string {
 	return languageEndonym(code);
 }
 
+/**
+ * An interface locale tag (the unified language: `TRANSLATION_TARGETS`,
+ * so Tagalog arrives as "fil") as a supported reading language. The one
+ * alias the two lists disagree on, and English for anything translation
+ * does not handle — the dev-only qqx rig, unknown tags.
+ */
+export function fromLocaleTag(tag: string): string {
+	const primary = (tag ?? "").toLowerCase().split(/[-_]/)[0];
+	const code = primary === "fil" ? "tl" : primary;
+
+	return isSupported(code) ? code : "en";
+}
+
 /** `navigator.language` → a supported code; English when nothing matches. */
 export function browserLanguage(navigatorLanguage: string | undefined): string {
 	const primary = (navigatorLanguage ?? "").toLowerCase().split(/[-_]/)[0];

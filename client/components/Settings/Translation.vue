@@ -11,15 +11,20 @@
 				header.
 			</div>
 			<label class="opt translate-target">
-				<span>Translate messages into</span>
+				<span>Read messages in</span>
 				<select name="translateTo" :value="store.state.settings.translateTo">
+					<option value="auto">{{ automaticLabel }}</option>
 					<option v-for="code in languages" :key="code" :value="code">
 						{{ name(code) }}
 					</option>
 				</select>
 			</label>
+			<div class="translate-hint">
+				The language incoming messages are translated into. Automatic follows the interface
+				language; a choice here overrides it for reading only.
+			</div>
 			<div
-				v-if="limited(store.state.settings.translateTo)"
+				v-if="effectiveReading && limited(effectiveReading)"
 				class="translate-hint translate-limited"
 			>
 				Translations into and out of this language are often wrong.
@@ -273,7 +278,12 @@ import {translateService} from "../../js/translate";
 import type {ModelRef} from "../../js/translate/engine";
 import {llmChoice, llmName} from "../../js/translate/models";
 import {isLimitedLanguage} from "../../js/translate/routes.default";
-import {SUPPORTED_LANGUAGES, languageOptionLabel} from "../../js/translate/languages";
+import {
+	SUPPORTED_LANGUAGES,
+	browserLanguage,
+	languageOptionLabel,
+} from "../../js/translate/languages";
+import {readingLanguage} from "../../js/translate/reader";
 import type {ModelView} from "../../js/translate/service";
 
 export default defineComponent({
@@ -286,6 +296,14 @@ export default defineComponent({
 		const capability = computed(() => store.state.translation.capability);
 		const name = (code: string) => languageOptionLabel(code);
 		const languages = [...SUPPORTED_LANGUAGES].sort((a, b) => name(a).localeCompare(name(b)));
+		// The Automatic option names the browser's language: what a new user
+		// sees selected is the language their browser asked for.
+		const automaticLabel = `Automatic — ${name(
+			browserLanguage(navigator.language)
+		)} (follows the interface)`;
+		// The reading language as it stands (override, or the interface's):
+		// reactivity rides on the store read and the i18n ref the helper reads.
+		const effectiveReading = computed(() => readingLanguage());
 		const loadError = ref<string | null>(null);
 		// Two ways the worker can disappoint this tab: a call it made rejected
 		// (loadError), or the worker reported a problem of its own that no call
@@ -360,6 +378,8 @@ export default defineComponent({
 			capability,
 			languages,
 			limited,
+			automaticLabel,
+			effectiveReading,
 			llmChoices,
 			selectedLlm,
 			llmName,

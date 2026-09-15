@@ -67,7 +67,7 @@ describe("translate/channelStore", () => {
 	it("an unknown channel is off with the defaults", () => {
 		expect(getChannelTranslation("n1", "#seance")).to.deep.equal(defaultChannelTranslation());
 		expect(defaultChannelTranslation()).to.deep.equal({
-			read: null,
+			read: false,
 			write: null,
 			formality: "auto",
 			variant: "",
@@ -84,7 +84,7 @@ describe("translate/channelStore", () => {
 		expect(getChannelTranslation("n1", "#seance").languages).to.deep.equal(["de", "en", "nb"]);
 
 		// A patch that does not mention them leaves them alone.
-		expect(setChannelTranslation("n1", "#seance", {read: "en"}).languages).to.deep.equal([
+		expect(setChannelTranslation("n1", "#seance", {read: true}).languages).to.deep.equal([
 			"de",
 			"en",
 			"nb",
@@ -105,35 +105,35 @@ describe("translate/channelStore", () => {
 
 		expect(all["n1/#a"].languages).to.deep.equal(["de"]);
 		expect(all["n1/#b"].languages).to.deep.equal([]);
+		// A stored read language from the per-channel picker the unified
+		// design removed migrates to plain "on".
+		expect(all["n1/#a"].read).to.equal(true);
+		expect(all["n1/#b"].read).to.equal(true);
 	});
 
 	it("switching reading on persists", () => {
-		const state = setChannelTranslation("n1", "#Seance", {read: "en"});
+		const state = setChannelTranslation("n1", "#Seance", {read: true});
 
-		expect(state.read).to.equal("en");
+		expect(state.read).to.equal(true);
 		expect(JSON.parse(backend.data.get(STORAGE_KEY) as string)["n1/#seance"].read).to.equal(
-			"en"
+			true
 		);
-		expect(getChannelTranslation("n1", "#seance").read).to.equal("en");
+		expect(getChannelTranslation("n1", "#seance").read).to.equal(true);
 	});
 
-	it("changing the language and switching off keep the rest of the record", () => {
-		setChannelTranslation("n1", "#seance", {read: "en", variant: "keep me"});
+	it("switching off keeps the rest of the record", () => {
+		setChannelTranslation("n1", "#seance", {read: true, variant: "keep me"});
 
-		expect(setChannelTranslation("n1", "#seance", {read: "de"})).to.include({
-			read: "de",
-			variant: "keep me",
-		});
-		expect(setChannelTranslation("n1", "#seance", {read: null})).to.include({
-			read: null,
+		expect(setChannelTranslation("n1", "#seance", {read: false})).to.include({
+			read: false,
 			variant: "keep me",
 		});
 	});
 
-	it("a stored switch-on moment from an earlier version is not carried", () => {
+	it("a stored read language from the old per-channel picker migrates to on", () => {
 		backend.set(STORAGE_KEY, JSON.stringify({"n1/#a": {read: "en", since: 1234}}));
 
-		expect(loadAll()["n1/#a"]).to.deep.equal({...defaultChannelTranslation(), read: "en"});
+		expect(loadAll()["n1/#a"]).to.deep.equal({...defaultChannelTranslation(), read: true});
 	});
 
 	it("term memory replaces a same-source same-language entry, keeps the newest, and is capped", () => {
@@ -227,9 +227,9 @@ describe("translate/channelStore", () => {
 	});
 
 	it("forgetting a channel or a network removes its entries", () => {
-		setChannelTranslation("n1", "#a", {read: "en"});
-		setChannelTranslation("n1", "#b", {read: "en"});
-		setChannelTranslation("n2", "#a", {read: "en"});
+		setChannelTranslation("n1", "#a", {read: true});
+		setChannelTranslation("n1", "#b", {read: true});
+		setChannelTranslation("n2", "#a", {read: true});
 		forgetChannel("n1", "#A");
 		expect(Object.keys(loadAll())).to.deep.equal(["n1/#b", "n2/#a"]);
 		forgetNetwork("n1");
@@ -240,7 +240,8 @@ describe("translate/channelStore", () => {
 		backend.set(STORAGE_KEY, "nonsense");
 		expect(loadAll()).to.deep.equal({});
 		backend.set(STORAGE_KEY, JSON.stringify({"n1/#a": {read: 7, terms: "x"}, "n1/#b": null}));
-		expect(loadAll()).to.deep.equal({"n1/#a": defaultChannelTranslation()});
+		// A truthy read is on, whatever it once held; the junk term list goes.
+		expect(loadAll()).to.deep.equal({"n1/#a": {...defaultChannelTranslation(), read: true}});
 	});
 
 	it("drops a stored target this build cannot route", () => {
@@ -254,21 +255,23 @@ describe("translate/channelStore", () => {
 
 		const all = loadAll();
 
-		expect(all["n1/#a"].read).to.equal(null);
+		// The unroutable write is no target at all; a stored read was a
+		// switch, and on is on whatever language it once named.
+		expect(all["n1/#a"].read).to.equal(true);
 		expect(all["n1/#a"].write).to.equal(null);
 		// The rest of the record stays.
 		expect(all["n1/#a"].variant).to.equal("keep me");
-		expect(all["n1/#b"].read).to.equal("de");
+		expect(all["n1/#b"].read).to.equal(true);
 		expect(all["n1/#b"].write).to.equal("en");
 	});
 
 	it("a patch cannot overwrite the term memory", () => {
-		setChannelTranslation("n1", "#seance", {read: "en"});
+		setChannelTranslation("n1", "#seance", {read: true});
 		rememberTerm("n1", "#seance", {source: "rig", target: "Testaufbau", from: "en", to: "de"});
 		const before = getChannelTranslation("n1", "#seance");
 		const next = setChannelTranslation("n1", "#seance", {
 			...before,
-			read: "de",
+			read: false,
 			terms: [],
 		} as Partial<Omit<ChannelTranslation, "terms">>);
 

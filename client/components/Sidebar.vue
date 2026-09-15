@@ -3,7 +3,10 @@
 		<div class="scrollable-area">
 			<div class="logo-container">
 				<img src="img/logo-tile.png" class="logo" :alt="appName" role="presentation" />
+				<!-- The one language selector, development builds only: in
+				     production the browser's language decides. -->
 				<span
+					v-if="isDevelopment"
 					class="tooltipped tooltipped-n tooltipped-no-touch"
 					:aria-label="languageLabel"
 				>
@@ -40,7 +43,7 @@
 					🐞
 				</button>
 				<div
-					v-if="localeOpen"
+					v-if="isDevelopment && localeOpen"
 					id="locale-popover"
 					class="locale-popover"
 					@keydown.esc="onLocaleKey"

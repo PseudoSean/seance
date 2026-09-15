@@ -167,6 +167,7 @@ import {layout, toPlainText} from "../js/helpers/ircmessageparser/layout";
 import {useI18n} from "../js/i18n";
 import {
 	channelTranslation,
+	readingLanguage,
 	setReading,
 	translationAvailable as translationAvailableNow,
 } from "../js/translate/reader";
@@ -320,7 +321,7 @@ export default defineComponent({
 				translationAvailableNow()
 		);
 		// The light means reading; a write target shows in the tooltip.
-		const translationOn = computed(() => translationState.value.read !== null);
+		const translationOn = computed(() => translationState.value.read);
 		// A touch device has no right-click, so the tap is what opens the
 		// panel there and the button says so; the click keeps toggling
 		// reading where there is a pointer.
@@ -338,7 +339,7 @@ export default defineComponent({
 			if (read) {
 				parts.push(`Translating into ${name(read)}`);
 			} else {
-				parts.push(`Translate messages into ${name(store.state.settings.translateTo)}`);
+				parts.push(`Translate messages into ${name(readingLanguage())}`);
 			}
 
 			if (write) {
@@ -357,13 +358,9 @@ export default defineComponent({
 		};
 
 		const toggleTranslation = () => {
-			const wasOn = translationState.value.read !== null;
+			const wasOn = translationState.value.read;
 
-			setReading(
-				props.network,
-				props.channel,
-				wasOn ? null : store.state.settings.translateTo
-			);
+			setReading(props.network, props.channel, !wasOn);
 
 			// Switching a channel on opens its panel with it: the reader sees
 			// which languages they just asked for and can adjust them at once,

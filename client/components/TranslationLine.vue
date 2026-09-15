@@ -107,8 +107,7 @@ export default defineComponent({
 		// reads (the channel's reading language, else the global one), not
 		// the browser's: "French → English" for an English reader,
 		// "Französisch → Englisch" for a German one.
-		const nameOf = (code: string) =>
-			languageName(code, readingLanguage(props.network, props.channel));
+		const nameOf = (code: string) => languageName(code, readingLanguage());
 		// Source → target; `from` is "" when the engine placed the source
 		// itself, and the detector's contenders are named instead (labels.ts).
 		// A skipped line's tag is the language it was taken for, or "?" when

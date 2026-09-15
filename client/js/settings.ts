@@ -3,7 +3,6 @@ import {mirrorPushPrefs} from "./push-prefs";
 import {activate} from "./i18n";
 import {normalizeFontSize} from "./helpers/fontSize";
 import {prefersTwelveHourClock} from "./helpers/hourCycle";
-import {browserLanguage} from "./translate/languages";
 
 const defaultSettingConfig = {
 	apply() {},
@@ -92,9 +91,14 @@ const defaultConfig = {
 	pushKeyChange: {
 		default: "ask",
 	},
-	/** Translation (client/js/translate): the language incoming messages are read in. */
+	/**
+	 * Translation (client/js/translate): the reading language override.
+	 * "auto" — the default — reads in the interface's language (the unified
+	 * setting, resolved from the browser in production); anything else
+	 * overrides it for reading only. reader.ts `readingLanguage()`.
+	 */
 	translateTo: {
-		default: browserLanguage(navigator.language),
+		default: "auto",
 	},
 	/** auto | formal | casual, one line of the prompt. */
 	translateFormality: {

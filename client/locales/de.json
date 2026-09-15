@@ -1,7 +1,7 @@
 {
-  "connect.title": "Mit IRC verbinden",
-  "connect.submit": "Verbinden",
   "connect.server": "Server",
+  "connect.submit": "Verbinden",
+  "connect.title": "Mit IRC verbinden",
   "sidebar.language": "Anzeigesprache",
   "sidebar.settings": "Einstellungen"
 }

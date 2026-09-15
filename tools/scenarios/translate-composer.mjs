@@ -927,7 +927,7 @@ export default async function run(page) {
 	// request is made for it.
 	await openPanel(page);
 	await page.evaluate(
-		`(() => { const s = document.querySelector('.translation-panel select[name="translateRead"]'); s.value = "en"; s.dispatchEvent(new Event("change", {bubbles: true})); })()`
+		`(() => { for (const s of document.querySelectorAll('.translation-panel-segmented .translation-panel-segment')) { if (s.textContent.trim() === "On") { s.click(); return; } } throw new Error("no On segment"); })()`
 	);
 	await page.evaluate(
 		`document.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", code: "Escape", keyCode: 27, which: 27, bubbles: true}))`

@@ -829,8 +829,10 @@ shows in the tooltip.
 - **`config.json`** (`branding.ts` `translation` block, all optional):
   `enabled` (default true), `modelBase`, `llm: {model, lib}`, `cpu: {nllb, opus: Record<pair, model>}`, `routes: RouteTable` (merged over the
   default), `glossary: [source, target][]` (seeded into every channel's term
-  memory), `defaultTarget`. Documented in `docs/resources/branding.md`
-  § Translation with the cross-origin isolation headers.
+  memory). Documented in `docs/resources/branding.md`
+  § Translation with the cross-origin isolation headers. (`defaultTarget`
+  was dropped when the reading language unified with the interface's:
+  `translation.md` § The language selections unify.)
 - **Caches.** Weights in Cache Storage under the two libraries' own keys;
   `service-worker.js` never intercepts those requests, so a shell update
   cannot evict a model. The detector profiles and the worker bundle are

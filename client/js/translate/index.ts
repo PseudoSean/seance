@@ -5,13 +5,11 @@
 
 import {getBranding} from "../branding";
 import {BUILD} from "../build";
-import storage from "../localStorage";
 import {store} from "../store";
 import {probeOnce} from "./capability";
 import {emptyContext} from "./engine";
 import {TranslateClient} from "./client";
 import {FAKE_CAPABILITY, fakePort} from "./fakePort";
-import {browserLanguage, isSupported} from "./languages";
 import {buildCatalog} from "./models";
 import {MainPort} from "./protocol";
 import {RouteTable} from "./router";
@@ -57,48 +55,6 @@ function workerUrl(): string {
 }
 
 /** Whether the user's stored settings carry `name` at all (a default is not a choice). */
-function hasStoredSetting(name: string): boolean {
-	let stored: Record<string, unknown> = {};
-
-	try {
-		stored = JSON.parse(storage.get("settings") || "{}");
-	} catch (e) {
-		stored = {};
-	}
-
-	return Object.prototype.hasOwnProperty.call(stored, name);
-}
-
-// The deploy's default reading target (branding.translation.defaultTarget)
-// only applies while the user has never chosen one. settings.ts computes
-// its `translateTo` default at import time, before config.json is fetched,
-// so it cannot see the branding value; this runs after the service (and so
-// after getBranding() has something to read) and, the first time only,
-// dispatches the same action Settings uses so the choice persists like any
-// other user setting.
-function applyDefaultTarget(defaultTarget: string | undefined): void {
-	// A reading language this build no longer offers (Estonian, Latvian,
-	// Lithuanian and Icelandic were dropped for translating poorly) is no
-	// choice: it would leave every line failing to route. It falls back like
-	// an unset one.
-	if (!isSupported(store.state.settings.translateTo)) {
-		const fallback =
-			defaultTarget && isSupported(defaultTarget)
-				? defaultTarget
-				: browserLanguage(navigator.language);
-		void store.dispatch("settings/update", {name: "translateTo", value: fallback});
-		return;
-	}
-
-	if (!defaultTarget || !isSupported(defaultTarget)) {
-		return;
-	}
-
-	if (!hasStoredSetting("translateTo")) {
-		void store.dispatch("settings/update", {name: "translateTo", value: defaultTarget});
-	}
-}
-
 function create(): TranslateService {
 	const branding = getBranding().translation ?? {};
 	const fake = useFake();
@@ -135,8 +91,6 @@ function create(): TranslateService {
 		},
 		{llm: store.state.settings.translateLlm, cpu: store.state.settings.translateCpu}
 	);
-
-	applyDefaultTarget(branding.defaultTarget);
 
 	store.watch(
 		() =>

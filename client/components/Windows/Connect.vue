@@ -70,17 +70,6 @@
 				</div>
 			</div>
 
-			<div class="connect-row connect-locale">
-				<label for="connect:locale">{{ t("settings.locale") }}</label>
-				<div class="input-wrap">
-					<LanguageSelect
-						id="connect:locale"
-						:model-value="store.state.settings.locale"
-						@change="setLocale"
-					/>
-				</div>
-			</div>
-
 			<div v-if="notice" class="connect-notice">{{ notice }}</div>
 			<div v-if="submitted" class="connect-notice">
 				{{
@@ -306,17 +295,6 @@
 				</div>
 			</div>
 
-			<div class="connect-row connect-locale">
-				<label for="connect:locale">{{ t("settings.locale") }}</label>
-				<div class="input-wrap">
-					<LanguageSelect
-						id="connect:locale"
-						:model-value="store.state.settings.locale"
-						@change="setLocale"
-					/>
-				</div>
-			</div>
-
 			<div v-if="notice" class="connect-notice">{{ notice }}</div>
 			<div v-if="submitted" class="connect-notice">
 				{{
@@ -432,7 +410,6 @@ import {mergeJoinLists} from "../../js/helpers/linkTarget";
 import {router, switchToChannel} from "../../js/router";
 import {useI18n} from "../../js/i18n";
 import type {ConnectOptions} from "../../js/irc/types";
-import LanguageSelect from "../LanguageSelect.vue";
 import RevealPassword from "../RevealPassword.vue";
 import SidebarToggle from "../SidebarToggle.vue";
 
@@ -448,7 +425,6 @@ const CONNECT_PARAMS = ["host", "port", "tls", "nick", "join", "channels", "sasl
 export default defineComponent({
 	name: "Connect",
 	components: {
-		LanguageSelect,
 		RevealPassword,
 		SidebarToggle,
 	},
@@ -473,9 +449,6 @@ export default defineComponent({
 		const serverAddressLabel = computed(() => t("connect.serverAddress"));
 		const serverPortLabel = computed(() => t("connect.serverPort"));
 		const channelsPlaceholder = computed(() => t("connect.channelsPlaceholder"));
-		const setLocale = (tag: string) =>
-			void store.dispatch("settings/update", {name: "locale", value: tag});
-
 		const tls = network?.tls ?? defaults?.tls ?? true;
 		// The server the deploy points at. Pinned when the host is locked.
 		const server = {
@@ -768,7 +741,6 @@ export default defineComponent({
 			serverAddressLabel,
 			serverPortLabel,
 			channelsPlaceholder,
-			setLocale,
 			signInMode,
 			guestAccess,
 			signInIntro,
