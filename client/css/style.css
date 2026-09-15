@@ -489,6 +489,7 @@ p {
 #viewport .lt::before,
 #viewport .rt::before,
 #chat button.mentions::before,
+#chat button.translate::before,
 #chat button.close::before,
 #chat button.menu::before,
 #chat button.search::before,
@@ -563,11 +564,17 @@ p {
 #viewport .rt::before { content: "\f0c0"; /* https://fontawesome.com/icons/users?style=solid */ }
 #chat button.menu::before { content: "\f142"; /* http://fontawesome.io/icon/ellipsis-v/ */ }
 #chat button.mentions::before { content: "\f1fa"; /* https://fontawesome.com/icons/at?style=solid */ }
+#chat button.translate::before { content: "\f0ac"; /* https://fontawesome.com/icons/globe?style=solid */ }
 #chat button.search::before { content: "\f002"; /* https://fontawesome.com/icons/search?style=solid */ }
 #chat button.close::before { content: "\f00d"; /* https://fontawesome.com/icons/times?style=solid */ }
 #chat .connecting-indicator::before { content: "\f021"; /* https://fontawesome.com/icons/sync?style=solid */ }
 
 .context-menu-join::before { content: "\f067"; /* http://fontawesome.io/icon/plus/ */ }
+.context-menu-translate-copy::before { content: "\f0c5"; /* https://fontawesome.com/icons/copy?style=solid */ }
+.context-menu-translate-retry::before { content: "\f2f1"; /* https://fontawesome.com/icons/sync-alt?style=solid */ }
+.context-menu-translate-retry-from::before { content: "\f2f1"; /* sync-alt, as retry */ }
+.context-menu-translate-retry-pick::before { content: "\f1ab"; /* fontawesome/icons/language */ }
+.context-menu-translate-hide::before { content: "\f070"; /* https://fontawesome.com/icons/eye-slash?style=solid */ }
 .context-menu-user::before { content: "\f007"; /* http://fontawesome.io/icon/user/ */ }
 .context-menu-close::before { content: "\f00d"; /* http://fontawesome.io/icon/times/ */ }
 .context-menu-list::before { content: "\f03a"; /* http://fontawesome.io/icon/list/ */ }
@@ -581,6 +588,7 @@ p {
 .context-menu-network::before { content: "\f233"; /* https://fontawesome.com/icons/server?style=solid */ }
 .context-menu-edit::before { content: "\f303"; /* https://fontawesome.com/icons/pencil-alt?style=solid */ }
 .context-menu-clear-history::before { content: "\f1f8"; /* https://fontawesome.com/icons/trash?style=solid */ }
+.context-menu-translate::before { content: "\f0ac"; /* https://fontawesome.com/icons/globe?style=solid */ }
 .context-menu-mute::before { content: "\f6a9"; /* https://fontawesome.com/v5.15/icons/volume-mute?style=solid */ }
 .context-menu-media-host::before { content: "\f0ac"; /* https://fontawesome.com/icons/globe?style=solid */ }
 .context-menu-media-account::before { content: "\f007"; /* https://fontawesome.com/icons/user?style=solid */ }
@@ -864,6 +872,7 @@ p {
 #viewport .lt,
 #viewport .rt,
 #chat button.mentions,
+#chat button.translate,
 #chat button.search,
 #chat button.menu,
 #chat button.close {
@@ -879,6 +888,7 @@ p {
 #viewport .lt::before,
 #viewport .rt::before,
 #chat button.mentions::before,
+#chat button.translate::before,
 #chat button.search::before,
 #chat button.menu::before,
 #chat button.close::before {
@@ -1632,6 +1642,426 @@ textarea.input {
 
 #chat .header {
 	border-bottom: 1px solid #e7e7e7;
+}
+
+#chat button.translate.on {
+	color: var(--chat-accent, var(--link-color));
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	border-radius: 0.25rem;
+}
+
+/* The per-channel translation choices, in two layouts from one markup: on a
+   pointer machine a column anchored under the header, on a touch device (or a
+   window as narrow as the phone's chat layout) a full-screen sheet that is
+   teleported to <body>, so none of these rules may hang off #chat. Every
+   setting is a label with its control beneath it, so the four controls share
+   one width; the controls are `.input`, which every theme already colours. */
+.translation-panel {
+	position: absolute;
+	top: 3rem;
+	right: 0.5rem;
+	z-index: 10;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	width: 20rem;
+	max-width: calc(100% - 1rem);
+
+	/* #chat clips its overflow, so a landscape phone scrolls the panel
+	   instead of losing its last rows. */
+	max-height: calc(var(--viewport-height, 100vh) * 0.8);
+	overflow: auto;
+	padding: 0.75rem;
+	border: 1px solid var(--window-border, rgb(128 128 128 / 30%));
+	border-radius: 0 0 0.375rem 0.375rem;
+	background: var(--body-bg-color);
+	box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 25%);
+}
+
+.translation-panel-title {
+	display: flex;
+	align-items: baseline;
+	gap: 0.5rem;
+}
+
+.translation-panel-heading {
+	font-weight: 600;
+}
+
+/* The channel the choices belong to; it gives way before the ✕ does. */
+.translation-panel-channel {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	color: var(--body-color-muted);
+}
+
+.translation-panel-close {
+	flex: 0 0 auto;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--body-color-muted);
+	font-size: 1rem;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.translation-panel-body,
+.translation-panel-section {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+/* The sections are the sheet's; the desktop panel is short enough to read
+   without them. */
+.translation-panel-section h3 {
+	display: none;
+}
+
+.translation-panel-field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+}
+
+.translation-panel-label {
+	font-size: 0.8125rem;
+	color: var(--body-color-muted);
+}
+
+/* One line of prose under a control: room for it is the sheet's luxury. */
+.translation-panel-hint {
+	display: none;
+}
+
+/* A language every engine measured poorly in (routes.default.ts
+   LIMITED_LANGUAGES): said wherever the panel is, not only in the sheet. */
+.translation-panel-limited {
+	display: block;
+	color: var(--body-color-muted);
+	font-size: 0.8125rem;
+	font-style: italic;
+}
+
+.translation-panel-control {
+	width: 100%;
+	box-sizing: border-box;
+	height: 2.125rem;
+	margin: 0;
+	padding: 0 0.625rem;
+	border-radius: 0.25rem;
+	font: inherit;
+	line-height: normal;
+}
+
+/* The channel's declared languages: as many as it takes, wrapping above
+   the picker that adds them. */
+.translation-panel-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+}
+
+.translation-panel-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	padding: 0.0625rem 0.25rem 0.0625rem 0.375rem;
+	border-radius: 0.75rem;
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	font-size: 0.8125rem;
+}
+
+.translation-panel-chip-remove {
+	padding: 0 0.125rem;
+	border: 0;
+	background: none;
+	color: var(--body-color-muted);
+	font: inherit;
+	font-size: 0.75rem;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.translation-panel-chip-remove:hover {
+	color: var(--body-color);
+}
+
+.translation-panel-foot {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	padding-top: 0.375rem;
+	border-top: 1px solid var(--window-border, rgb(128 128 128 / 30%));
+}
+
+.translation-panel-more {
+	font-size: 0.8125rem;
+}
+
+/* The sheet: the same choices with room to press them. It sits above the
+   sidebar and its overlay (10 and 9 inside #viewport); #context-menu-container
+   is 1000 but is only in the document while a menu is open, and no menu can be
+   opened from the sheet. */
+.translation-panel--sheet {
+	position: fixed;
+	inset: 0;
+	z-index: 1001;
+	width: auto;
+	max-width: none;
+
+	/* iOS never shrinks the layout viewport for the keyboard, so the sheet
+	   follows the visual viewport helpers/viewport.ts publishes. */
+	height: var(--viewport-height, 100%);
+	max-height: none;
+	overflow: hidden;
+	gap: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+}
+
+.translation-panel--sheet .translation-panel-title {
+	align-items: center;
+	padding: 1rem 1rem 0.75rem;
+	border-bottom: 1px solid var(--window-border, rgb(128 128 128 / 30%));
+}
+
+/* The sheet sits flush against the top of the page, above the sidebar's
+ * z-index: it needs #status-bar-tint's same reservation so the title clears
+ * it on an iOS home-screen app (see #status-bar-tint above). */
+@media (hover: none) and (pointer: coarse) {
+	@supports (-webkit-touch-callout: none) {
+		.translation-panel--sheet .translation-panel-title {
+			padding-top: calc(1rem + var(--status-bar-tint-height, 0px));
+		}
+	}
+}
+
+.translation-panel--sheet .translation-panel-heading {
+	font-size: 1.125rem;
+}
+
+.translation-panel--sheet .translation-panel-close {
+	padding: 0.25rem;
+	font-size: 1.25rem;
+}
+
+.translation-panel--sheet .translation-panel-body {
+	flex: 1;
+	overflow: auto;
+	gap: 1.5rem;
+	padding: 1rem 1rem 1.5rem;
+}
+
+.translation-panel--sheet .translation-panel-section {
+	gap: 0.875rem;
+}
+
+.translation-panel--sheet .translation-panel-section h3 {
+	display: block;
+	margin: 0;
+	color: var(--body-color-muted);
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+
+.translation-panel--sheet .translation-panel-field {
+	gap: 0.375rem;
+}
+
+.translation-panel--sheet .translation-panel-label {
+	color: var(--body-color);
+	font-size: 0.9375rem;
+}
+
+.translation-panel--sheet .translation-panel-hint {
+	display: block;
+	color: var(--body-color-muted);
+	font-size: 0.8125rem;
+}
+
+.translation-panel--sheet .translation-panel-control {
+	height: 2.75rem;
+	padding: 0 0.875rem;
+	border-radius: 0.375rem;
+	font-size: 1rem;
+}
+
+/* A chip's ✕ is a target on a phone, so the chip grows to hold one. */
+.translation-panel--sheet .translation-panel-chips {
+	gap: 0.375rem;
+}
+
+.translation-panel--sheet .translation-panel-chip {
+	padding: 0.1875rem 0.375rem 0.1875rem 0.625rem;
+	border-radius: 1rem;
+	font-size: 0.9375rem;
+}
+
+.translation-panel--sheet .translation-panel-chip-remove {
+	padding: 0.25rem;
+	font-size: 0.875rem;
+}
+
+/* Three choices are three targets, not a native picker. */
+.translation-panel-segmented {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	height: 2.75rem;
+	overflow: hidden;
+	border: 1px solid var(--composer-border, #cdd3da);
+	border-radius: 0.375rem;
+	background: var(--composer-bg, #fff);
+}
+
+.translation-panel-segment {
+	padding: 0 0.25rem;
+	border: 0;
+	border-right: 1px solid var(--composer-border, #cdd3da);
+	background: none;
+	color: inherit;
+	font: inherit;
+	font-size: 0.9375rem;
+	cursor: pointer;
+}
+
+.translation-panel-segment:last-child {
+	border-right: 0;
+}
+
+.translation-panel-segment[aria-checked="true"] {
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	color: var(--chat-accent, var(--link-color));
+	font-weight: 500;
+}
+
+.translation-panel--sheet .translation-panel-foot {
+	flex-direction: column;
+	gap: 0.5rem;
+
+	/* Above the home indicator, whatever the device says that is. */
+	padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 20px));
+	border-top: 1px solid var(--window-border, rgb(128 128 128 / 30%));
+}
+
+.translation-panel--sheet .translation-panel-more {
+	text-align: center;
+	font-size: 0.875rem;
+}
+
+/* The chip menu's "Retranslate from…": a language to translate this one line
+   from. Teleported to <body> like the reaction picker (the scrollback would
+   clip it) and positioned from SourceLanguagePicker.vue, which flips it above
+   the chip when there is no room below. On a phone it is a sheet along the
+   bottom edge, wearing the translation sheet's own header and footer. */
+.source-language-picker {
+	position: fixed;
+	z-index: 1000;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	width: 16rem;
+	max-width: calc(100vw - 1rem);
+	padding: 0.75rem;
+	border: 1px solid var(--window-border, rgb(128 128 128 / 30%));
+	border-radius: 0.375rem;
+	background: var(--window-bg-color, var(--body-bg-color));
+	box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 25%);
+	color: var(--body-color);
+	transform-origin: top left;
+}
+
+.source-language-picker.flipped {
+	transform-origin: bottom left;
+}
+
+.source-language-picker-field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+}
+
+.source-language-picker-label {
+	color: var(--body-color-muted);
+	font-size: 0.8125rem;
+}
+
+/* Sized like the translation panel's desktop controls. */
+.source-language-picker-control {
+	width: 100%;
+	box-sizing: border-box;
+	height: 2.125rem;
+	margin: 0;
+	padding: 0 0.625rem;
+	border-radius: 0.25rem;
+	font: inherit;
+	line-height: normal;
+}
+
+.source-language-picker-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.5rem;
+}
+
+/* `.btn` carries a bottom margin for prose columns; here the gap does it. */
+.source-language-picker-actions .btn {
+	margin-bottom: 0;
+}
+
+.source-language-picker-confirm {
+	background: var(--button-color);
+	color: var(--button-text-color-hover);
+}
+
+/* The sheet: the same choice with room to press it. Above the sidebar and
+   its overlay (10 and 9 inside #viewport), like the translation sheet. */
+.source-language-picker--sheet {
+	inset: auto 0 0 0;
+	width: auto;
+	max-width: none;
+	z-index: 1000;
+	gap: 0;
+	padding: 0;
+	border-width: 1px 0 0;
+	border-radius: 0.75rem 0.75rem 0 0;
+}
+
+.source-language-picker--sheet .source-language-picker-field {
+	gap: 0.375rem;
+	padding: 1rem;
+}
+
+.source-language-picker--sheet .source-language-picker-label {
+	color: var(--body-color);
+	font-size: 0.9375rem;
+}
+
+.source-language-picker--sheet .source-language-picker-control {
+	height: 2.75rem;
+	padding: 0 0.875rem;
+	border-radius: 0.375rem;
+	font-size: 1rem;
+}
+
+.source-language-picker--sheet .source-language-picker-actions {
+	/* Above the home indicator, whatever the device says that is. */
+	padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 20px));
+	border-top: 1px solid var(--window-border, rgb(128 128 128 / 30%));
+}
+
+.source-language-picker--sheet .source-language-picker-actions .btn {
+	flex: 1;
+	padding: 0.75em 1em;
 }
 
 /* A dial or a reconnect is a spinner in the header, not a banner */
@@ -4507,6 +4937,169 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	user-select: none;
 }
 
+/* The translated line under a message (client/components/TranslationLine.vue,
+ * docs/resources/translation.md): muted like the timestamps so the original
+ * reads first, the language chip in the accent, a caret while it streams. */
+#chat .msg-translation {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.25rem 0.4rem;
+	margin-top: 0.15rem;
+	color: var(--body-color-muted);
+	font-size: 0.95em;
+}
+
+#chat .msg-translation-chip {
+	flex: none;
+	padding: 0 0.3em;
+	border: 1px solid var(--chat-accent-rule, var(--link-color));
+	border-radius: 0.2rem;
+	background: transparent;
+	color: var(--chat-accent, var(--link-color));
+	font: inherit;
+	font-size: 0.7em;
+	line-height: 1.5;
+	letter-spacing: 0.05em;
+	cursor: pointer;
+}
+
+#chat .msg-translation-chip:hover,
+#chat .msg-translation-chip:focus-visible {
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	outline: 0;
+}
+
+/* `body` is `user-select: none` and only a few blocks opt back in, so the
+   translated copy of a line says so for itself: it is text to read, quote
+   and copy exactly like the original above it. */
+#chat .msg-translation-text {
+	flex: 1 1 auto;
+	min-width: 0;
+	user-select: text;
+}
+
+#chat .msg-translation-caret {
+	display: inline-block;
+	width: 0.5em;
+	height: 1em;
+	margin-left: 0.1em;
+	background: var(--chat-accent, var(--link-color));
+	vertical-align: text-bottom;
+	animation: msg-translation-blink 1s steps(2) infinite;
+}
+
+/* Once a translation is shown and done, it is the bright line and the
+ * original above it dims (docs/resources/translation.md § Reading a
+ * channel): `.content` carries the original's text, so muting it there is
+ * enough — links, mentions and inline code set their own colour rather than
+ * inheriting, and the translation chip keeps its accent. Pending, failed,
+ * dropped or hidden ("Show original only") translations do not add the
+ * `translated` class (Message.vue), so the original stays at full ink and
+ * the streaming text keeps today's muted treatment above. */
+#chat .msg.translated .content {
+	color: var(--body-color-muted);
+}
+
+#chat .msg.translated .msg-translation {
+	color: var(--body-color);
+	font-size: 1em;
+}
+
+#chat .msg.translated .msg-translation-text {
+	color: var(--body-color);
+}
+
+@keyframes msg-translation-blink {
+	50% {
+		opacity: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#chat .msg-translation-caret {
+		animation: none;
+	}
+}
+
+#chat .msg-translation-failed {
+	font-style: italic;
+}
+
+/* A line the reader left alone on detection (TranslationLine.vue): a small
+ * muted tag after the message -- the language it was taken for, or "?" when
+ * that could not be told -- whose menu translates it anyway. No text row, no
+ * caret, and the original keeps its ink. */
+#chat .msg-translation-skipped {
+	margin-left: 0.4em;
+	white-space: nowrap;
+}
+
+#chat .msg-translation-skipped-tag {
+	padding: 0 0.3em;
+	border: 1px solid var(--body-color-muted);
+	border-radius: 0.2rem;
+	background: transparent;
+	color: var(--body-color-muted);
+	font: inherit;
+	font-size: 0.7em;
+	line-height: 1.5;
+	letter-spacing: 0.05em;
+	vertical-align: 0.1em;
+	opacity: 0.75;
+	cursor: pointer;
+}
+
+#chat .msg-translation-skipped-tag:hover,
+#chat .msg-translation-skipped-tag:focus-visible {
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	opacity: 1;
+	outline: 0;
+}
+
+/* A model downloading for this line (TranslationLine.vue). */
+#chat .msg-translation-download {
+	color: var(--body-color-muted);
+	font-style: italic;
+}
+
+/* Why it failed, from the engine: an ORT session error or a model id, so it
+   is long, it is not prose, and it must not push the retry button off the
+   row. `anywhere` lets it break mid-token; the title has the untruncated
+   text. */
+#chat .msg-translation-reason {
+	/* `anywhere` breaks a long URL mid-token, and the break eats the space
+	   before the retry button: without a margin of its own the button reads
+	   as part of the reason ("…quantized.onnxretry"). */
+	margin-right: 0.4em;
+	color: var(--body-color-muted);
+	font-size: 0.85em;
+	overflow-wrap: anywhere;
+}
+
+/* An icon button, the word kept as the tooltip/accessible name. */
+#chat .msg-translation-retry {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--link-color);
+	font-size: 0.8125rem;
+	cursor: pointer;
+}
+
+#chat .msg-translation-retry::before {
+	content: "\f021"; /* https://fontawesome.com/icons/sync?style=solid */
+	font: normal normal normal 1em/1 FontAwesome;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
 #chat .msg-redacted {
 	border: 0;
 	padding: 0;
@@ -5111,6 +5704,167 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	background: rgb(0 0 0 / 8%);
 	color: var(--body-color);
 	outline: 0;
+}
+
+/* Outgoing translation above the input (client/components/ChatInput.vue,
+ * spec § Composer): the same row the reply/edit strip takes, the language
+ * chip in the accent, full ink for the text since it is what will be sent,
+ * a caret while it streams, the read-back line under it. */
+#form .translate-bar {
+	flex: 1 0 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	min-width: 0;
+
+	/* However long the translation, the composer keeps its place: the strip
+	 * scrolls instead of pushing the input off the screen. iOS never shrinks
+	 * the layout viewport for the keyboard, so the ceiling follows the visual
+	 * viewport helpers/viewport.ts publishes (px, touch devices only). */
+	max-height: calc(var(--viewport-height, 100vh) * 0.4);
+	overflow: auto;
+	margin: 0 0.25rem 0.125rem;
+	padding: 0.125rem 0.375rem;
+	border-left: 2px solid var(--chat-accent, var(--link-color));
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	border-radius: 0 0.1875rem 0.1875rem 0;
+	color: var(--body-color);
+	font-size: 0.875rem;
+	line-height: 1.5;
+}
+
+/* Narrow panes: the chip and the text share the first line and the three
+ * buttons drop to a line of their own, rather than each wrapping alone. */
+#form .translate-bar-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.375rem;
+	min-width: 0;
+}
+
+#form .translate-bar-actions {
+	display: flex;
+	flex: 0 0 auto;
+	gap: 0.375rem;
+	margin-left: auto;
+}
+
+#form .translate-bar-chip {
+	flex: none;
+	padding: 0 0.3em;
+	border: 1px solid var(--chat-accent-rule, var(--link-color));
+	border-radius: 0.2rem;
+	color: var(--chat-accent, var(--link-color));
+	font-size: 0.7em;
+	line-height: 1.5;
+	letter-spacing: 0.05em;
+	white-space: nowrap;
+}
+
+/* Both rows of the strip: the translation about to be sent, and the
+   read-back under it. `body` is `user-select: none`, so without this the
+   line the user is being asked to approve cannot be selected or copied. */
+#form .translate-bar-text {
+	flex: 1 1 12rem;
+	min-width: 0;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	user-select: text;
+}
+
+#form .translate-bar-caret {
+	display: inline-block;
+	width: 0.5em;
+	height: 1em;
+	margin-left: 0.1em;
+	background: var(--chat-accent, var(--link-color));
+	vertical-align: text-bottom;
+	animation: msg-translation-blink 1s steps(2) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#form .translate-bar-caret {
+		animation: none;
+	}
+}
+
+#form .translate-bar-failed,
+#form .translate-bar-download {
+	color: var(--body-color-muted);
+	font-style: italic;
+}
+
+/* The same reason in the composer's strip (see .msg-translation-reason). */
+#form .translate-bar-reason {
+	margin-left: 0.4em;
+	color: var(--body-color-muted);
+	font-size: 0.85em;
+	overflow-wrap: anywhere;
+}
+
+/* Icon buttons, the word kept as the tooltip/accessible name: a square
+   target with the glyph centred (see .translate-bar-copy etc. below for the
+   Font Awesome codes). */
+#form .translate-bar-button {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	padding: 0;
+	border: 1px solid var(--chat-accent-rule, var(--link-color));
+	border-radius: 0.1875rem;
+	background: transparent;
+	color: var(--chat-accent, var(--link-color));
+	font-size: 0.9375rem;
+	cursor: pointer;
+}
+
+#form .translate-bar-button::before {
+	font: normal normal normal 1em/1 FontAwesome;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+#form .translate-bar-copy::before { content: "\f0c5"; /* https://fontawesome.com/icons/copy?style=solid */ }
+#form .translate-bar-copy-done::before { content: "\f00c"; /* https://fontawesome.com/icons/check?style=solid */ }
+
+#form .translate-bar-send::before { content: "\f1d8"; /* https://fontawesome.com/icons/paper-plane?style=solid */ }
+#form .translate-bar-edit::before { content: "\f303"; /* https://fontawesome.com/icons/pencil-alt?style=solid */ }
+
+#form .translate-bar-button:hover,
+#form .translate-bar-button:focus-visible {
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	outline: 0;
+}
+
+#form .translate-bar-send {
+	border-color: var(--chat-accent, var(--link-color));
+	background: var(--chat-accent, var(--link-color));
+	color: var(--chat-accent-fg, #fff);
+}
+
+#form .translate-bar-send:hover,
+#form .translate-bar-send:focus-visible {
+	background: var(--chat-accent, var(--link-color));
+	opacity: 0.85;
+}
+
+#form .translate-bar-button[disabled] {
+	opacity: 0.5;
+	cursor: default;
+}
+
+#form .translate-bar-check {
+	color: var(--body-color-muted);
+	font-size: 0.8125rem;
+}
+
+#form .translate-bar-check-label {
+	flex: 0 0 auto;
+	font-style: italic;
 }
 
 /* The upload in flight: a row of its own above the input, like .compose-bar */

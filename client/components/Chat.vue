@@ -63,6 +63,21 @@
 							:aria-label="connectingLabel"
 						/>
 					</span>
+					<span
+						v-if="translationAvailable"
+						class="translate-tooltip tooltipped tooltipped-w tooltipped-no-touch"
+						:data-tooltip="translateLabel"
+					>
+						<button
+							class="translate"
+							:class="{on: translationOn}"
+							:aria-label="translateLabel"
+							:aria-pressed="touch ? undefined : translationOn"
+							:aria-expanded="translationPanelOpen"
+							@click="onTranslateClick"
+							@contextmenu.prevent="openTranslationPanel"
+						/>
+					</span>
 					<button class="mentions" :aria-label="mentionsLabel" @click="openMentions" />
 					<button class="menu" :aria-label="contextMenuLabel" @click="openContextMenu" />
 					<span
@@ -77,6 +92,12 @@
 						/>
 					</span>
 				</div>
+				<TranslationPanel
+					v-if="translationPanelOpen"
+					:channel="channel"
+					:network="network"
+					@close="translationPanelOpen = false"
+				/>
 				<div v-if="channel.type === 'special'" class="chat-content">
 					<div class="chat">
 						<div class="messages">
@@ -136,6 +157,7 @@ import ListInvites from "./Special/ListInvites.vue";
 import ListExcepts from "./Special/ListExcepts.vue";
 import ListChannels from "./Special/ListChannels.vue";
 import ListIgnored from "./Special/ListIgnored.vue";
+import TranslationPanel from "./TranslationPanel.vue";
 import {defineComponent, PropType, ref, computed, watch, nextTick, onMounted, Component} from "vue";
 import {channelOpened} from "../js/helpers/lastChannel";
 import type {ClientNetwork, ClientChan} from "../js/types";
@@ -143,6 +165,13 @@ import {useStore} from "../js/store";
 import {SpecialChanType, ChanType} from "../../shared/types/chan";
 import {layout, toPlainText} from "../js/helpers/ircmessageparser/layout";
 import {useI18n} from "../js/i18n";
+import {
+	channelTranslation,
+	setReading,
+	translationAvailable as translationAvailableNow,
+} from "../js/translate/reader";
+import {languageName} from "../js/translate/languages";
+import {hasVirtualKeyboard} from "../js/helpers/device";
 
 export default defineComponent({
 	name: "Chat",
@@ -153,6 +182,7 @@ export default defineComponent({
 		ChatUserList,
 		SidebarToggle,
 		MessageSearchForm,
+		TranslationPanel,
 	},
 	props: {
 		network: {type: Object as PropType<ClientNetwork>, required: true},
@@ -281,6 +311,98 @@ export default defineComponent({
 			});
 		};
 
+		const translationPanelOpen = ref(false);
+		const translationState = computed(() => channelTranslation(props.network, props.channel));
+		const translationAvailable = computed(
+			() =>
+				(props.channel.type === ChanType.CHANNEL ||
+					props.channel.type === ChanType.QUERY) &&
+				translationAvailableNow()
+		);
+		// The light means reading; a write target shows in the tooltip.
+		const translationOn = computed(() => translationState.value.read !== null);
+		// A touch device has no right-click, so the tap is what opens the
+		// panel there and the button says so; the click keeps toggling
+		// reading where there is a pointer.
+		const touch = hasVirtualKeyboard();
+		const translateLabel = computed(() => {
+			if (touch) {
+				return "Translation settings";
+			}
+
+			const name = (code: string) => languageName(code, navigator.language);
+			const {read, write} = translationState.value;
+			const paused = store.state.translation.paused;
+			const parts: string[] = [];
+
+			if (read) {
+				parts.push(`Translating into ${name(read)}`);
+			} else {
+				parts.push(`Translate messages into ${name(store.state.settings.translateTo)}`);
+			}
+
+			if (write) {
+				parts.push(`sending in ${name(write)}`);
+			}
+
+			if (paused) {
+				parts.push(`paused: ${paused.message}`);
+			}
+
+			return parts.join(", ");
+		});
+
+		const openTranslationPanel = () => {
+			translationPanelOpen.value = true;
+		};
+
+		const toggleTranslation = () => {
+			const wasOn = translationState.value.read !== null;
+
+			setReading(
+				props.network,
+				props.channel,
+				wasOn ? null : store.state.settings.translateTo
+			);
+
+			// Switching a channel on opens its panel with it: the reader sees
+			// which languages they just asked for and can adjust them at once,
+			// where the click alone would silently pick the global target.
+			// Switching off is the whole of what switching off means.
+			if (!wasOn) {
+				openTranslationPanel();
+			}
+		};
+
+		const onTranslateClick = () => {
+			if (touch) {
+				openTranslationPanel();
+			} else {
+				toggleTranslation();
+			}
+		};
+
+		watch(
+			() => props.channel.id,
+			() => {
+				translationPanelOpen.value = false;
+			}
+		);
+
+		// The channel menu's "Translation…" switches to the channel and
+		// leaves its id in the store, so the ask survives the switch: open
+		// the panel once this view is the channel that was asked for, and
+		// clear it. Registered after the watcher above, which closes the
+		// panel on a channel change and would otherwise undo this one.
+		const openPanelIfAsked = () => {
+			if (store.state.translation.panelFor === props.channel.id) {
+				translationPanelOpen.value = true;
+				store.commit("translationPanelFor", null);
+			}
+		};
+
+		watch(() => [props.channel.id, store.state.translation.panelFor], openPanelIfAsked);
+
 		watch(
 			() => props.channel,
 			() => {
@@ -301,6 +423,7 @@ export default defineComponent({
 
 		onMounted(() => {
 			channelChanged();
+			openPanelIfAsked();
 
 			if (props.channel.editTopic) {
 				void nextTick(() => {
@@ -330,6 +453,13 @@ export default defineComponent({
 			saveTopic,
 			openContextMenu,
 			openMentions,
+			translationPanelOpen,
+			translationAvailable,
+			translationOn,
+			translateLabel,
+			touch,
+			onTranslateClick,
+			openTranslationPanel,
 		};
 	},
 });

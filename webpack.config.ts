@@ -230,7 +230,7 @@ const config: webpack.Configuration = {
 		// Clean the output directory before emit — except the service worker's
 		// push chunk, which the second configuration below emits into the same
 		// tree (and runs after this one; see `dependencies`).
-		clean: {keep: /^js\/push\.js(\.map|\.LICENSE\.txt)?$/},
+		clean: {keep: /^js\/(push\.js|translate-worker\.js)(\.map|\.LICENSE\.txt)?$|^js\/ort\//},
 		path: path.resolve(__dirname, "public"),
 		filename: "[name]",
 		// Lazily loaded chunks (the highlighter, its Prism grammars, the
@@ -488,6 +488,82 @@ const pushConfig: webpack.Configuration = {
 	},
 };
 
+// The translation worker (client/js/translate/*), bundled for a dedicated
+// worker: its own configuration for the same reason as the push chunk (the
+// app's vendor cache group must not pull WebLLM and transformers.js into
+// js/bundle.vendor.js, which a worker cannot load). The ONNX Runtime wasm
+// files transformers.js loads at run time are copied next to it into
+// js/ort/ so a deploy needs no CDN; seq2seq.real.ts points the library
+// there. `dependencies` runs it after the app build (whose `clean` would
+// otherwise race its output).
+const translateConfig: webpack.Configuration = {
+	name: "translate",
+	dependencies: ["app"],
+	mode: isProduction ? "production" : "development",
+	target: "webworker",
+	entry: {
+		"js/translate-worker.js": [path.resolve(__dirname, "client/js/translate/worker-entry.ts")],
+	},
+	devtool: "source-map",
+	output: {
+		path: path.resolve(__dirname, "public"),
+		filename: "[name]",
+		publicPath: "auto",
+		clean: false,
+	},
+	performance: {
+		hints: false,
+	},
+	resolve: {
+		extensions: [".ts", ".js"],
+		// transformers.js references Node modules behind its `browser` field;
+		// the webworker target honours that field, these are belt and braces.
+		fallback: {fs: false, path: false, url: false, crypto: false},
+		// transformers.js imports the WebGPU ORT bundle unconditionally, but
+		// seq2seq.real.ts always requests `device: "wasm"`; alias it to the
+		// smaller wasm-only bundle so the WebGPU backend (and the wasm/mjs
+		// pair only it references) never enters the worker bundle.
+		alias: {
+			"onnxruntime-web/webgpu": "onnxruntime-web/wasm",
+		},
+	},
+	module: {
+		rules: [makeTsRule()],
+		// The ORT bundle's own `new URL(..., import.meta.url)` fallback
+		// resolution is never used at runtime — seq2seq.real.ts overrides
+		// wasmPaths to js/ort/ before any model loads — but webpack's
+		// default asset detection would otherwise re-emit the wasm/mjs
+		// files those expressions name as hashed assets at the root of
+		// public/, the deploy tree. Turning it off for this configuration
+		// keeps those bytes out of the deploy tree entirely.
+		parser: {
+			javascript: {url: false},
+		},
+	},
+	plugins: [
+		new CopyPlugin({
+			patterns: [
+				// Only the pair the aliased wasm-only ORT bundle references
+				// (grepped from node_modules/onnxruntime-web/dist/ort.wasm.bundle.min.mjs).
+				{
+					from: "ort-wasm-simd-threaded.mjs",
+					context: path.resolve(__dirname, "node_modules/onnxruntime-web/dist"),
+					to: "js/ort/[name][ext]",
+				},
+				{
+					from: "ort-wasm-simd-threaded.wasm",
+					context: path.resolve(__dirname, "node_modules/onnxruntime-web/dist"),
+					to: "js/ort/[name][ext]",
+				},
+			],
+		}),
+	],
+	optimization: {
+		splitChunks: false,
+		runtimeChunk: false,
+	},
+};
+
 export default (env: any, argv: any) => {
 	if (argv.mode === "development") {
 		config.target = "node";
@@ -525,5 +601,5 @@ export default (env: any, argv: any) => {
 		return config;
 	}
 
-	return [config, pushConfig];
+	return [config, pushConfig, translateConfig];
 };

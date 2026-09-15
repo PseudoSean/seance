@@ -51,3 +51,6 @@ client/locales/tags.json
 
 # Data fixtures that mimic call-site trees for the toolchain tests; never imported, deliberately not lint-clean.
 tools/i18n/fixtures/
+
+# Generated measurement tables (tools/translate-eval/roundtrip.ts); column padding would multiply their size.
+tools/translate-eval/results/

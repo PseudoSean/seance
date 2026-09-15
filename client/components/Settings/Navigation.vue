@@ -27,6 +27,7 @@
 				class-name="notifications"
 				to="notifications"
 			/>
+			<SettingTabItem name="Translation" class-name="translation" to="translation" />
 			<SettingTabItem name="Aliases" :label="tabAliases" class-name="aliases" to="aliases" />
 		</ul>
 	</aside>
@@ -94,6 +95,10 @@
 
 .settings-menu .notifications::before {
 	content: "\f0f3"; /* http://fontawesome.io/icon/bell/ */
+}
+
+.settings-menu .translation::before {
+	content: "\f0ac"; /* https://fontawesome.com/icons/globe?style=solid */
 }
 
 .settings-menu .general::before {

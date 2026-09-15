@@ -65,6 +65,37 @@ describe("public folder", function () {
 		expect(fs.existsSync(path.join(publicFolder, "js", "bundle.js"))).to.be.true;
 		expect(fs.existsSync(path.join(publicFolder, "js", "bundle.vendor.js"))).to.be.true;
 		expect(fs.existsSync(path.join(publicFolder, "js", "push.js"))).to.be.true;
+		expect(fs.existsSync(path.join(publicFolder, "js", "translate-worker.js"))).to.be.true;
+	});
+
+	it("the translation worker is self-contained and the ORT wasm files are copied", function () {
+		const worker = fs.readFileSync(
+			path.join(publicFolder, "js", "translate-worker.js"),
+			"utf8"
+		);
+
+		expect(worker).to.not.include("bundle.vendor.js");
+
+		const ort = fs.readdirSync(path.join(publicFolder, "js", "ort"));
+
+		expect(ort.some((name) => name.endsWith(".wasm"))).to.be.true;
+		expect(ort.some((name) => name.endsWith(".mjs"))).to.be.true;
+
+		// The worker bundles only the wasm ORT backend (device: "wasm"); the
+		// WebGPU backend transformers.js otherwise imports unconditionally
+		// is aliased away, and js/ort/ holds only the pair its bundle names.
+		expect(ort.sort()).to.deep.equal([
+			"ort-wasm-simd-threaded.mjs",
+			"ort-wasm-simd-threaded.wasm",
+		]);
+
+		// Nothing webpack's URL asset detection would otherwise re-emit
+		// (the ORT wasm binary and its hashed loader) leaks into the
+		// deploy tree's root, where nothing serves or cleans it up.
+		const root = fs.readdirSync(publicFolder);
+
+		expect(root.some((name) => name.endsWith(".wasm"))).to.be.false;
+		expect(root.some((name) => /^[0-9a-f]{16,}\.mjs$/.test(name))).to.be.false;
 	});
 
 	it("style files are built", function () {

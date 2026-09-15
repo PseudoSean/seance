@@ -5,6 +5,7 @@ import {setMuteStatus} from "../mute";
 import eventbus from "../eventbus";
 import type {ClientChan, ClientNetwork, ClientUser} from "../types";
 import {switchToChannel} from "../router";
+import {requestTranslationPanel} from "../translate/reader";
 import {TypedStore} from "../store";
 import useCloseChannel from "../hooks/use-close-channel";
 import {ChanType} from "../../../shared/types/chan";
@@ -198,6 +199,19 @@ export function generateChannelContextMenu(
 						clearHistory(channel.id);
 					}
 				);
+			},
+		});
+
+		items.push({
+			label: "Translation…",
+			type: "item",
+			class: "translate",
+			action() {
+				// The panel belongs to the open conversation, so the menu opens
+				// the channel first and leaves the ask in the store: Chat.vue
+				// takes it once it shows that channel.
+				switchToChannel(channel);
+				requestTranslationPanel(channel);
 			},
 		});
 	}

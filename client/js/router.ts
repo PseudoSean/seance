@@ -13,6 +13,7 @@ import {store} from "./store";
 import AppearanceSettings from "../components/Settings/Appearance.vue";
 import GeneralSettings from "../components/Settings/General.vue";
 import NotificationSettings from "../components/Settings/Notifications.vue";
+import TranslationSettings from "../components/Settings/Translation.vue";
 import AliasSettings from "../components/Settings/Aliases.vue";
 import NetworkSettings from "../components/Settings/Networks.vue";
 import {ClientChan} from "./types";
@@ -70,6 +71,11 @@ const router = createRouter({
 					name: "Notifications",
 					path: "notifications",
 					component: NotificationSettings,
+				},
+				{
+					name: "Translation",
+					path: "translation",
+					component: TranslationSettings,
 				},
 				{
 					name: "Aliases",
@@ -278,8 +284,15 @@ router.afterEach((to) => {
 		}
 
 		if (channel.messages?.length > 100) {
-			channel.messages.splice(0, channel.messages.length - 100);
+			const dropped = channel.messages.splice(0, channel.messages.length - 100);
 			channel.moreHistoryAvailable = true;
+
+			if (dropped.length > 0) {
+				store.commit(
+					"translationRemoveMany",
+					dropped.map((m) => m.id)
+				);
+			}
 		}
 	}
 });

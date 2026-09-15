@@ -24,6 +24,12 @@
 const cacheName = "__HASH__";
 const isDevBuild = cacheName === "dev";
 
+// Cache Storage the translation engines own (client/js/translate/): the
+// model weights a user downloaded once. transformers.js keeps
+// "transformers-cache", WebLLM keeps "webllm/model", "webllm/wasm" and
+// "webllm/config". A shell update must never evict them.
+const isModelCache = (name) => name === "transformers-cache" || name.startsWith("webllm/");
+
 // The push module (client/js/push/*, built to js/push.js): the line parser,
 // the strippers and the merged-body renderer, shared with the page so the
 // two agree. Loaded at start-up — a service worker may only importScripts
@@ -86,8 +92,12 @@ const shellPaths = [
 	"img/logo-tile.png",
 ];
 
-// Paths that must never be served from cache (Cloudflare challenge endpoints).
-const excludedPathsFromCache = /^cdn-cgi\//;
+// Paths that must never be served from cache: Cloudflare challenge
+// endpoints, and `models/`, where a deploy that mirrors the translation
+// weights next to the app puts them (config.json `translation.modelBase`);
+// a gigabyte of weights has no place in the shell cache, and the ML
+// libraries keep their own Cache Storage entries.
+const excludedPathsFromCache = /^(cdn-cgi|models)\//;
 
 self.addEventListener("install", function (event) {
 	// A push-only worker has no shell to cache (nothing lives under its
@@ -109,7 +119,9 @@ self.addEventListener("activate", function (event) {
 			.keys()
 			.then((names) =>
 				Promise.all(
-					names.filter((name) => name !== cacheName).map((name) => caches.delete(name))
+					names
+						.filter((name) => name !== cacheName && !isModelCache(name))
+						.map((name) => caches.delete(name))
 				)
 			)
 	);

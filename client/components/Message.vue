@@ -9,6 +9,7 @@
 				pending: message.pending,
 				'previous-source': isPreviousSource,
 				'actions-open': actionsOpen,
+				translated,
 			},
 		]"
 		:data-type="message.type"
@@ -77,6 +78,12 @@
 				<span v-if="message.editOf" class="msg-edited" :title="editedTitle">{{
 					t("message.editedBadge")
 				}}</span>
+				<TranslationLine
+					v-if="channel && (!message.redacted || revealed)"
+					:message="message"
+					:channel="channel"
+					:network="network"
+				/>
 				<!-- A deleted message hides its previews with its text: the
 				placeholder would otherwise sit above the very image it deleted.
 				Revealing the text brings them back. -->
@@ -157,6 +164,12 @@
 				<span v-if="message.editOf" class="msg-edited" :title="editedTitle">{{
 					t("message.editedBadge")
 				}}</span>
+				<TranslationLine
+					v-if="channel && (!message.redacted || revealed)"
+					:message="message"
+					:channel="channel"
+					:network="network"
+				/>
 				<!-- A deleted message hides its previews with its text: the
 				placeholder would otherwise sit above the very image it deleted.
 				Revealing the text brings them back. -->
@@ -191,6 +204,7 @@ import MessageTypes from "./MessageTypes";
 import StatusmsgMarker from "./StatusmsgMarker.vue";
 import MessageActions from "./MessageActions.vue";
 import MessageReactions from "./MessageReactions.vue";
+import TranslationLine from "./TranslationLine.vue";
 import {replyQuote} from "../js/helpers/messageUpdates";
 import {MessageType} from "../../shared/types/msg";
 
@@ -218,6 +232,7 @@ export default defineComponent({
 		StatusmsgMarker,
 		MessageActions,
 		MessageReactions,
+		TranslationLine,
 	},
 	props: {
 		message: {type: Object as PropType<ClientMessage>, required: true},
@@ -274,6 +289,16 @@ export default defineComponent({
 
 		const messageComponent = computed(() => {
 			return "message-" + (props.message.type || "invalid"); // TODO: force existence of type in sharedmsg
+		});
+
+		// A finished, shown translation is the bright line; the original dims
+		// (docs/resources/translation.md § Reading a channel). Pending,
+		// failed, dropped or hidden ("Show original only") keep the original
+		// at its normal colour.
+		const translated = computed(() => {
+			const entry = store.state.translations[props.message.id];
+
+			return !!entry && entry.status === "done" && !entry.hidden;
 		});
 
 		const isAction = () => {
@@ -385,6 +410,7 @@ export default defineComponent({
 			shownInActiveLabel,
 			hideRevealed,
 			canAct,
+			translated,
 		};
 	},
 });

@@ -1,0 +1,279 @@
+<template>
+	<span
+		v-if="entry && entry.status === 'skipped' && !entry.hidden"
+		class="msg-translation-skipped"
+		:data-reason="entry.reason"
+	>
+		<button
+			ref="chip"
+			type="button"
+			class="msg-translation-skipped-tag"
+			:aria-label="chipLabel"
+			:title="chipLabel"
+			@click.stop="openMenu"
+		>
+			{{ chipText }}
+		</button>
+		<SourceLanguagePicker
+			v-if="pickerOpen"
+			:anchor="chip"
+			:selected="entry.from"
+			:candidates="entry.candidates"
+			@pick="pickSource"
+			@close="pickerOpen = false"
+		/>
+	</span>
+	<div
+		v-else-if="entry && !entry.hidden && entry.status !== 'dropped'"
+		class="msg-translation"
+		:data-status="entry.status"
+	>
+		<button
+			ref="chip"
+			type="button"
+			class="msg-translation-chip"
+			:aria-label="chipLabel"
+			:title="chipLabel"
+			@click.stop="openMenu"
+		>
+			{{ chipText }}
+		</button>
+		<SourceLanguagePicker
+			v-if="pickerOpen"
+			:anchor="chip"
+			:selected="entry.from"
+			:candidates="entry.candidates"
+			@pick="pickSource"
+			@close="pickerOpen = false"
+		/>
+		<span v-if="entry.status === 'failed'" class="msg-translation-failed">
+			couldn't translate
+			<span v-if="entry.error" class="msg-translation-reason" :title="entry.error">{{
+				shortReason(entry.error)
+			}}</span>
+			<button
+				type="button"
+				class="msg-translation-retry"
+				title="Retry the translation"
+				aria-label="Retry the translation"
+				@click.stop="retry"
+			/>
+		</span>
+		<span v-else class="msg-translation-text" :lang="entry.to" dir="auto">
+			<ParsedMessage
+				v-if="entry.text"
+				:network="network"
+				:message="message"
+				:text="entry.text"
+			/>
+			<span v-if="download" class="msg-translation-download">{{ download }}</span>
+			<span
+				v-if="entry.status === 'pending'"
+				class="msg-translation-caret"
+				aria-hidden="true"
+			/>
+		</span>
+	</div>
+</template>
+
+<script lang="ts">
+import {computed, defineComponent, PropType, ref} from "vue";
+import {writeClipboard} from "../js/clipboard";
+import eventbus from "../js/eventbus";
+import {useStore} from "../js/store";
+import {readingLanguage, retranslate, retryTranslation, showOriginal} from "../js/translate/reader";
+import {languageName} from "../js/translate/languages";
+import {directionText} from "../js/translate/labels";
+import {loadNote} from "../js/translate/service";
+import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
+import ParsedMessage from "./ParsedMessage.vue";
+import SourceLanguagePicker from "./SourceLanguagePicker.vue";
+
+/** Characters of a failure reason the line shows; the title has all of it. */
+const REASON_MAX = 120;
+
+export default defineComponent({
+	name: "TranslationLine",
+	components: {ParsedMessage, SourceLanguagePicker},
+	props: {
+		message: {type: Object as PropType<ClientMessage>, required: true},
+		channel: {type: Object as PropType<ClientChan>, required: true},
+		network: {type: Object as PropType<ClientNetwork>, required: true},
+	},
+	setup(props) {
+		const store = useStore();
+		const entry = computed(() => store.state.translations[props.message.id]);
+		// Every language the line names is named in the language its reader
+		// reads (the channel's reading language, else the global one), not
+		// the browser's: "French → English" for an English reader,
+		// "Französisch → Englisch" for a German one.
+		const nameOf = (code: string) =>
+			languageName(code, readingLanguage(props.network, props.channel));
+		// Source → target; `from` is "" when the engine placed the source
+		// itself, and the detector's contenders are named instead (labels.ts).
+		// A skipped line's tag is the language it was taken for, or "?" when
+		// the detector could not tell.
+		const chipText = computed(() => {
+			const value = entry.value;
+
+			if (!value) {
+				return "";
+			}
+
+			if (value.status === "skipped") {
+				return value.reason === "same" && value.from ? nameOf(value.from) : "?";
+			}
+
+			return directionText(value.from, value.to, value.candidates ?? [], nameOf);
+		});
+		const chipLabel = computed(() => {
+			const value = entry.value;
+
+			if (!value) {
+				return "";
+			}
+
+			if (value.status === "skipped") {
+				return value.reason === "same" && value.from
+					? `Already in ${nameOf(value.from)}, not translated. Translation options`
+					: "Language not told apart, not translated. Translation options";
+			}
+
+			return `${chipText.value}. Translation options`;
+		});
+
+		// Nothing streamed yet and a model of this line's engine downloading:
+		// the line is waiting for that download, and says so.
+		const download = computed(() => {
+			const value = entry.value;
+
+			if (!value || value.status !== "pending" || value.text || !value.engine) {
+				return "";
+			}
+
+			const view = store.state.translation.models.find(
+				(v) => v.status === "downloading" && v.ref.engine === value.engine
+			);
+
+			return view ? loadNote(view) : "";
+		});
+
+		const chip = ref<HTMLButtonElement | null>(null);
+		const pickerOpen = ref(false);
+
+		const retranslateFrom = (from?: string) =>
+			retranslate(props.network, props.channel, props.message, from);
+
+		const pickSource = (code: string) => retranslateFrom(code);
+
+		// The detector's runners-up, one click each. The line's own source is
+		// not among them: "Retranslate from German" on a line already read as
+		// German is just "Retranslate". An explicit source keeps the list, so
+		// the way back to the detector's own guess is on the menu too.
+		// A skipped line leaves the reading language off as well: "Retranslate
+		// from English" into English is no translation.
+		const alternatives = computed(() => {
+			const value = entry.value;
+
+			return (value?.candidates ?? []).filter(
+				(code) =>
+					code !== value?.from && !(value?.status === "skipped" && code === value.to)
+			);
+		});
+
+		const openMenu = (event: MouseEvent) => {
+			const sources = [
+				...alternatives.value.map((code) => ({
+					label: `Retranslate from ${nameOf(code)}`,
+					type: "item",
+					class: "translate-retry-from",
+					action: () => retranslateFrom(code),
+				})),
+				{
+					label: "Retranslate from…",
+					type: "item",
+					class: "translate-retry-pick",
+					action() {
+						pickerOpen.value = true;
+					},
+				},
+			];
+
+			// A mark has no text to copy, hide or retranslate: what it offers
+			// is the translation it did not get.
+			if (entry.value?.status === "skipped") {
+				eventbus.emit("contextmenu:items", {
+					event,
+					items: [
+						{
+							label: "Translate anyway",
+							type: "item",
+							class: "translate-anyway",
+							action: () => retranslateFrom(),
+						},
+						...sources,
+					],
+				});
+				return;
+			}
+
+			eventbus.emit("contextmenu:items", {
+				event,
+				items: [
+					{
+						label: "Copy translation",
+						type: "item",
+						class: "translate-copy",
+						// Like the toolbar's Copy: nowhere to report a
+						// refused clipboard, so a failure is silent.
+						action() {
+							void writeClipboard(entry.value?.text ?? "");
+						},
+					},
+					{
+						label: "Retranslate",
+						type: "item",
+						class: "translate-retry",
+						action: () => retranslateFrom(),
+					},
+					...sources,
+					{
+						label: "Show original only",
+						type: "item",
+						class: "translate-hide",
+						action: () => showOriginal(props.message.id, true),
+					},
+				],
+			});
+		};
+
+		const retry = () => retryTranslation(props.network, props.channel, props.message);
+
+		// Why it failed, after "couldn't translate": an engine's error can be
+		// long and multi-line, so the line shows the head of it and the title
+		// carries the whole thing.
+		const shortReason = (error: string | null) => {
+			if (!error) {
+				return "";
+			}
+
+			const text = error.replace(/\s+/g, " ").trim();
+
+			return text.length > REASON_MAX ? `${text.slice(0, REASON_MAX - 1)}…` : text;
+		};
+
+		return {
+			entry,
+			chip,
+			pickerOpen,
+			chipText,
+			chipLabel,
+			download,
+			openMenu,
+			pickSource,
+			retry,
+			shortReason,
+		};
+	},
+});
+</script>

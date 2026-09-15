@@ -3,6 +3,7 @@ import {mirrorPushPrefs} from "./push-prefs";
 import {activate} from "./i18n";
 import {normalizeFontSize} from "./helpers/fontSize";
 import {prefersTwelveHourClock} from "./helpers/hourCycle";
+import {browserLanguage} from "./translate/languages";
 
 const defaultSettingConfig = {
 	apply() {},
@@ -90,6 +91,29 @@ const defaultConfig = {
 	 * (client/js/webpush.ts, helpers/pushKeys.ts keyChangePolicy). */
 	pushKeyChange: {
 		default: "ask",
+	},
+	/** Translation (client/js/translate): the language incoming messages are read in. */
+	translateTo: {
+		default: browserLanguage(navigator.language),
+	},
+	/** auto | formal | casual, one line of the prompt. */
+	translateFormality: {
+		default: "auto",
+	},
+	/** Let the router pick the GPU model / the CPU models. */
+	translateLlm: {
+		default: true,
+	},
+	translateCpu: {
+		default: true,
+	},
+	/** Which GPU model (translate/models.ts LLM_CHOICES, or the deploy's own) the
+	 * LLM candidate runs. "" until the user picks one: unset and a stored id that
+	 * is no longer a choice both resolve to the catalog's default at read time
+	 * (models.ts `llmChoice`), so a later deploy default still reaches users who
+	 * never chose. */
+	translateLlmModel: {
+		default: "",
 	},
 	// UI scale: the root font size everything in style.css is sized off in
 	// rem. The scale and its normalization live in helpers/fontSize.ts; the
