@@ -9,6 +9,9 @@ so the translation models unlock on a plain HTTP LAN address only after
 this switch. Browsers show the usual self-signed warning once; accepting
 it is enough. --http opts out, --cert/--key bring your own certificate.
 
+A plaintext request on the TLS port (a mistyped http:// URL) is answered
+with a 301 to its https:// equivalent instead of a dead connection.
+
 The browser dials the app's origin (ws://<this-host>:8000/); any request
 carrying `Upgrade: websocket` is proxied — handshake first, then a raw
 bidirectional byte pipe — to the upstream ircd WebSocket (default
@@ -93,6 +96,57 @@ class SpaHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_HEAD(self):
         super().do_HEAD()
+
+    def handle(self):
+        # A plaintext request on the TLS port (get_request flagged it): one
+        # redirect, then gone. The path carries over; the Host header names
+        # the address the browser dialed.
+        if getattr(self.server, "is_plain_http", lambda sock: False)(self.connection):
+            try:
+                self.connection.settimeout(5)
+                head = b""
+
+                while b"\r\n\r\n" not in head and len(head) < 8192:
+                    chunk = self.connection.recv(4096)
+
+                    if not chunk:
+                        break
+
+                    head += chunk
+
+                line = head.split(b"\r\n", 1)[0].decode("latin-1")
+                parts = line.split(" ")
+                path = parts[1] if len(parts) >= 2 else "/"
+                host = ""
+
+                for row in head.split(b"\r\n")[1:]:
+                    if row.lower().startswith(b"host:"):
+                        host = row.split(b":", 1)[1].strip().decode("latin-1")
+                        break
+
+                if not host:
+                    host = self.connection.getsockname()[0]
+
+                self.connection.sendall(
+                    (
+                        f"HTTP/1.1 301 Moved Permanently\r\n"
+                        f"Location: https://{host}{path}\r\n"
+                        f"Content-Length: 0\r\n"
+                        f"Connection: close\r\n\r\n"
+                    ).encode("latin-1")
+                )
+            except OSError:
+                pass
+            finally:
+                try:
+                    self.connection.close()
+                except OSError:
+                    pass
+
+            self.close_connection = True
+            return
+
+        return super().handle()
 
     # -- the WebSocket reverse proxy ----------------------------------------
 
@@ -212,9 +266,61 @@ class SpaHandler(http.server.SimpleHTTPRequestHandler):
             sel.close()
 
 
+# The first four bytes of the HTTP methods a mistyped http:// URL sends; a
+# TLS ClientHello begins 0x16 0x03 and never matches.
+PLAIN_HTTP_PREFIXES = (b"GET ", b"HEAD", b"OPTI", b"POST", b"PUT ", b"DELE", b"PATC")
+
+
 class ThreadingSpaServer(http.server.ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
+
+    def __init__(self, *args, tls_context: ssl.SSLContext | None = None, **kwargs):
+        self.tls_context = tls_context
+        # Filenames of sockets accepted as plaintext (a bare socket.socket
+        # has __slots__; there is nowhere on it to hang a flag).
+        self.plain_http_fds: set[int] = set()
+        super().__init__(*args, **kwargs)
+
+    def get_request(self):
+        sock, addr = self.socket.accept()
+
+        if self.tls_context is None:
+            return sock, addr
+
+        # A plaintext request on the TLS port is a mistyped scheme. Answer it
+        # with a redirect to https:// instead of a dead connection — the
+        # browser error a bare handshake failure produces ("site can't be
+        # reached") reads as the site being down.
+        sock.settimeout(5)
+
+        try:
+            first = sock.recv(5, socket.MSG_PEEK)
+        except (OSError, ssl.SSLError):
+            first = b""
+
+        if first[:4] in PLAIN_HTTP_PREFIXES:
+            self.plain_http_fds.add(sock.fileno())
+            return sock, addr
+
+        try:
+            sock = self.tls_context.wrap_socket(sock, server_side=True)
+        except (ssl.SSLError, OSError):
+            # A probe that never spoke TLS: drop it. The SSLError is an
+            # OSError, which socketserver's accept loop already swallows.
+            raise
+
+        sock.settimeout(None)
+        return sock, addr
+
+    def is_plain_http(self, sock: socket.socket) -> bool:
+        fileno = sock.fileno()
+        plain = fileno in self.plain_http_fds
+
+        if plain:
+            self.plain_http_fds.discard(fileno)
+
+        return plain
 
 
 # --- the self-signed certificate ------------------------------------------
@@ -327,16 +433,19 @@ def main():
     except ValueError:
         parser.error("--upstream port must be an integer")
 
-    server = ThreadingSpaServer((args.bind, args.port), SpaHandler)
-
-    if not args.http:
+    if args.http:
+        server = ThreadingSpaServer((args.bind, args.port), SpaHandler)
+    else:
         if args.cert and args.key:
             cert, key = args.cert, args.key
         else:
             cert, key = ensure_certificate()
+
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         ctx.load_cert_chain(cert, key)
-        server.socket = ctx.wrap_socket(server.socket, server_side=True)
+        # The context goes to the server: each accepted socket is wrapped in
+        # its own thread, so a bad handshake cannot stall the accept loop.
+        server = ThreadingSpaServer((args.bind, args.port), SpaHandler, tls_context=ctx)
 
     sys.stderr.write(
         f"seance-serve: {'https' if not args.http else 'http'}://{args.bind}:{args.port}/ "
