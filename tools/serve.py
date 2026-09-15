@@ -360,7 +360,7 @@ def local_addresses() -> list[str]:
     return seen
 
 
-def ensure_certificate() -> tuple[str, str]:
+def ensure_certificate(extra_sans: list[str] | None = None) -> tuple[str, str]:
     """A self-signed cert with a wide SAN, generated once and reused."""
     import os
 
@@ -370,7 +370,8 @@ def ensure_certificate() -> tuple[str, str]:
     os.makedirs(os.path.dirname(CERT_PATH), exist_ok=True)
     san = ",".join(
         (f"IP:{addr}" if addr.replace(".", "").isdigit() else f"DNS:{addr}")
-        for addr in ([*local_addresses(), "127.0.0.1"])
+        for addr in ([*local_addresses(), "127.0.0.1", *(extra_sans or [])])
+        if addr
     )
     subprocess.run(
         [
@@ -410,6 +411,12 @@ def main():
                         help="serve plain HTTP instead of HTTPS")
     parser.add_argument("--cert", default=None, help="TLS certificate (default: generated)")
     parser.add_argument("--key", default=None, help="TLS key (default: generated)")
+    parser.add_argument(
+        "--san",
+        action="append",
+        default=[],
+        help="extra subjectAltName for the generated certificate (repeatable, e.g. --san 10.0.0.41)",
+    )
     parser.add_argument("--upstream", default="ws://127.0.0.1:8067",
                         help="ircd WebSocket to proxy (default ws://127.0.0.1:8067)")
     parser.add_argument("--verify-tls", action="store_true",
@@ -439,7 +446,7 @@ def main():
         if args.cert and args.key:
             cert, key = args.cert, args.key
         else:
-            cert, key = ensure_certificate()
+            cert, key = ensure_certificate(args.san)
 
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         ctx.load_cert_chain(cert, key)
