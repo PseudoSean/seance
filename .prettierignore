@@ -15,6 +15,7 @@ docs/superpowers/
 *.wav
 *.tpl
 *.sh
+*.py
 *.opts
 *.txt
 yarn.lock
