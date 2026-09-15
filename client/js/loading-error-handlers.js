@@ -29,6 +29,8 @@
 		return typeof localized === "string" && localized.length > 0 ? localized : I18N_COPY[key];
 	};
 
+	const msg = document.getElementById("loading-page-message");
+
 	const say = (key) => {
 		lastKey = key;
 
@@ -37,7 +39,6 @@
 		}
 	};
 
-	const msg = document.getElementById("loading-page-message");
 	say("loading.starting");
 
 	// Best-effort overlay: the pre-paint script in index.html has already
