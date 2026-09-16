@@ -19,6 +19,7 @@ exists. This exists so the dev rig can exercise the app's SASL paths
 (persistence, bouncer, push) without running a services package.
 """
 import base64
+import os
 import sys
 
 ACCOUNT = "pushtest1"
@@ -38,11 +39,21 @@ def main() -> None:
     # fd -> (remote ip, remote port), learned from the C introduction.
     clients: dict[str, tuple[str, str]] = {}
 
+    debug = open("/tmp/iauth-debug.log", "a")
+
+    def log(text: str) -> None:
+        debug.write(text + "\n")
+        debug.flush()
+
+    log("=== agent started, pid " + str(os.getpid()))
+
     for raw in sys.stdin:
         line = raw.rstrip("\n")
 
         if not line:
             continue
+
+        log("in : " + line)
 
         parts = line.split(" ")
 
@@ -64,8 +75,14 @@ def main() -> None:
             # SASL start (`A S :PLAIN`) or abort (`A X`); nothing to do yet.
             continue
 
+        if cmd == "U":
+            # The username report (the USER command): the ircd waits for the
+            # verdict before it finishes registering — accept it as-is.
+            out(f"U{fd}")
+            continue
+
         if cmd != "a":
-            continue  # username report, hostname lookups, config churn…
+            continue  # hostname lookups, mode reports, config churn…
 
         b64 = parts[2].lstrip(":") if len(parts) > 2 else ""
 
