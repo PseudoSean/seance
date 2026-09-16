@@ -564,9 +564,30 @@ p {
 #viewport .rt::before { content: "\f0c0"; /* https://fontawesome.com/icons/users?style=solid */ }
 #chat button.menu::before { content: "\f142"; /* http://fontawesome.io/icon/ellipsis-v/ */ }
 #chat button.mentions::before { content: "\f1fa"; /* https://fontawesome.com/icons/at?style=solid */ }
-#chat button.translate::before { content: "\f0ac"; /* https://fontawesome.com/icons/globe?style=solid */ }
+#chat button.translate::before { content: "\f1ab"; /* https://fontawesome.com/icons/language?style=solid */ }
 #chat button.search::before { content: "\f002"; /* https://fontawesome.com/icons/search?style=solid */ }
 #chat button.close::before { content: "\f00d"; /* https://fontawesome.com/icons/times?style=solid */ }
+
+/* The two inline `<i class="fas">` glyphs the translation feature renders —
+ * MessageActions.vue's translate action and TranslationLine.vue's unchanged
+ * chip. The bundled fontawesome.css is the @font-face only, so the content
+ * and the font-family come from here (the same shape the
+ * .msg-translation-retry rule uses). The language icon marks everything that
+ * translates; the globe stays the language setting (the sidebar's dev
+ * locale toggle). */
+.fa-language::before {
+	content: "\f1ab"; /* https://fontawesome.com/icons/language?style=solid */
+	font: normal normal normal 1em/1 FontAwesome;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+.fa-equals::before {
+	content: "\f52c"; /* https://fontawesome.com/icons/equals?style=solid */
+	font: normal normal normal 1em/1 FontAwesome;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
 #chat .connecting-indicator::before { content: "\f021"; /* https://fontawesome.com/icons/sync?style=solid */ }
 
 .context-menu-join::before { content: "\f067"; /* http://fontawesome.io/icon/plus/ */ }
@@ -588,7 +609,7 @@ p {
 .context-menu-network::before { content: "\f233"; /* https://fontawesome.com/icons/server?style=solid */ }
 .context-menu-edit::before { content: "\f303"; /* https://fontawesome.com/icons/pencil-alt?style=solid */ }
 .context-menu-clear-history::before { content: "\f1f8"; /* https://fontawesome.com/icons/trash?style=solid */ }
-.context-menu-translate::before { content: "\f0ac"; /* https://fontawesome.com/icons/globe?style=solid */ }
+.context-menu-translate::before { content: "\f1ab"; /* https://fontawesome.com/icons/language?style=solid */ }
 .context-menu-mute::before { content: "\f6a9"; /* https://fontawesome.com/v5.15/icons/volume-mute?style=solid */ }
 .context-menu-media-host::before { content: "\f0ac"; /* https://fontawesome.com/icons/globe?style=solid */ }
 .context-menu-media-account::before { content: "\f007"; /* https://fontawesome.com/icons/user?style=solid */ }

@@ -98,7 +98,7 @@
 }
 
 .settings-menu .translation::before {
-	content: "\f0ac"; /* https://fontawesome.com/icons/globe?style=solid */
+	content: "\f1ab"; /* https://fontawesome.com/icons/language?style=solid */
 }
 
 .settings-menu .general::before {

@@ -45,7 +45,7 @@
 			:title="translateLabel"
 			@click.stop="translate"
 		>
-			🌐
+			<i class="fas fa-language" aria-hidden="true" />
 		</button>
 		<button
 			v-if="canEdit"

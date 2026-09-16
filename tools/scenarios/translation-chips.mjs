@@ -5,6 +5,12 @@
 // accent border and ink as .msg-translation-chip, and neither keeps the old
 // muted grey or the old 0.75 dim.
 //
+// Alongside it, the icon split: fa-language marks the translation surfaces
+// (the channel header's toggle and the message action's inline icon, both
+// \\f1ab) while the globe stays the language setting — the sidebar's dev
+// locale toggle still renders 🌐. The inline icons only draw because
+// style.css carries their content on top of the bundled @font-face.
+//
 // No ircd and no engine: the page boots to the connect form, a network is
 // fabricated in-page (lib/fake-network.mjs -- the same `init` bus dispatch
 // a registration makes) and two entries are committed into
@@ -65,6 +71,19 @@ const INJECT = `(() => {
 			hidden: false,
 		},
 	});
+
+	// The hover toolbar (Message.vue canAct) only renders for lines the IRC
+	// layer could address — the fabricated messages have no msgid, so stamp
+	// one on to bring .msg-action-translate into the DOM.
+	for (const net of store.state.networks) {
+		for (const chan of net.channels) {
+			for (const msg of chan.messages) {
+				if (!msg.msgid) {
+					msg.msgid = "seance-fake-" + msg.id;
+				}
+			}
+		}
+	}
 	return true;
 })()`;
 
@@ -107,6 +126,58 @@ const STYLES = `(() => {
 		chipCount: document.querySelectorAll("#chat .msg-translation-chip").length,
 		hasEquals: !!unchanged.querySelector(".fa-equals"),
 		unchangedTitle: unchanged.getAttribute("title"),
+	};
+})()`;
+
+/**
+ * The icon split as the rendered page tells it. Chrome may serialize a
+ * computed content either as the escape (`"\\f1ab"`) or as the literal
+ * private-use character, so each claim carries the glyph's code point as a
+ * number: the header toggle's ::before, the message action's inline
+ * .fa-language, the unchanged chip's .fa-equals, and the sidebar's dev
+ * locale toggle's text.
+ */
+const ICONS = `(() => {
+	const glyphCode = (content) => {
+		if (typeof content !== "string" || content.length < 2) {
+			return null;
+		}
+		const bare =
+			content.charAt(0) === '"' ? content.slice(1, content.length - 1) : content;
+		if (bare.length === 1) {
+			const cp = bare.codePointAt(0);
+			// FontAwesome solids live in the private-use area.
+			return cp >= 0xe000 && cp <= 0xf8ff ? cp : null;
+		}
+		if (bare.charAt(0) === "\\\\" && bare.length > 1) {
+			let hex = "";
+			for (let i = 1; i < bare.length; i++) {
+				const c = bare.charAt(i);
+				if (/[0-9a-fA-F]/.test(c)) {
+					hex += c;
+				} else {
+					break;
+				}
+			}
+			return hex ? parseInt(hex, 16) : null;
+		}
+		return null;
+	};
+
+	const toggle = document.querySelector("#chat button.translate");
+	const action = document.querySelector("#chat .msg-action-translate");
+	const actionIcon = action && action.querySelector(".fa-language");
+	const locale = document.querySelector("#sidebar .locale-toggle");
+	const equals = document.querySelector("#chat .msg-translation-failed .fa-equals");
+
+	return {
+		togglePresent: !!toggle,
+		toggleContent: toggle ? getComputedStyle(toggle, "::before").content : null,
+		toggleCode: toggle ? glyphCode(getComputedStyle(toggle, "::before").content) : null,
+		actionHasIcon: !!actionIcon,
+		actionCode: actionIcon ? glyphCode(getComputedStyle(actionIcon, "::before").content) : null,
+		equalsCode: equals ? glyphCode(getComputedStyle(equals, "::before").content) : null,
+		localeText: locale ? locale.textContent.trim() : null,
 	};
 })()`;
 
@@ -154,6 +225,22 @@ export default async function run(page) {
 		'the unchanged chip is titled "Not translated"',
 		s.unchangedTitle === "Not translated"
 	);
+
+	const icons = await page.evaluate(ICONS);
+	console.log("icons", JSON.stringify(icons, null, 1));
+
+	page.check("the header's translate toggle is on the page", icons.togglePresent === true);
+	page.check(
+		"the header toggle draws the language glyph, not the globe",
+		icons.toggleCode === 0xf1ab
+	);
+	page.check("the message action carries the language icon", icons.actionHasIcon === true);
+	page.check("the message action's icon draws the language glyph", icons.actionCode === 0xf1ab);
+	page.check(
+		"the unchanged chip's equals icon draws through the bundled face",
+		icons.equalsCode === 0xf52c
+	);
+	page.check("the sidebar's dev locale toggle is still the globe", icons.localeText === "🌐");
 
 	await page.screenshot("translation-chips");
 	page.check("no console errors", page.consoleErrors.length === 0);

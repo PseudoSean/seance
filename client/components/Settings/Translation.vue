@@ -7,8 +7,8 @@
 		<template v-else>
 			<div class="translate-hint">
 				Messages are translated on this device by a model it downloads once; nothing is sent
-				to a translation service. Turn it on per channel from the globe in the channel
-				header.
+				to a translation service. Turn it on per channel from the translate button in the
+				channel header.
 			</div>
 			<label class="opt translate-target">
 				<span>Read messages in</span>
