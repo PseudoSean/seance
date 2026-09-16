@@ -7,6 +7,7 @@ import {
 } from "../../client/js/translate/engine";
 import {
 	ABORTED,
+	DEGENERATE,
 	EMPTY_TRANSLATION,
 	ANSWERED,
 	NARRATION,
@@ -23,6 +24,7 @@ import {
 	tidyAnswer,
 	echoingSoFar,
 	hasNoLetters,
+	isDegenerate,
 	isNarration,
 	isRepetition,
 	isUnchanged,
@@ -354,6 +356,49 @@ describe("translate/outgoing", () => {
 		it("reports a letterless answer as letterless even where it is also the source", () => {
 			expect(answerError("", "", "en")).to.equal(EMPTY_TRANSLATION);
 			expect(answerError("--- ---", "--- ---", "en")).to.equal(EMPTY_TRANSLATION);
+		});
+
+		it("reports symbol padding as degenerate, and passes the source's own emphasis", () => {
+			// The measured OPUS failure: real words padded with dozens of dots.
+			expect(
+				answerError(
+					"Highlight exceptions",
+					`Ausnahmen von der Höchstgrenze${".".repeat(40)}`,
+					"de"
+				)
+			).to.equal(DEGENERATE);
+
+			// Spaced tildes over real words — the other measured shape.
+			expect(answerError("Highlight messages", "Wort ~ ~ ~ ~ ~", "de")).to.equal(DEGENERATE);
+
+			// A translation that carries the source's own run over is the
+			// line's emphasis, not the model's padding.
+			expect(answerError("che meraviglia!!!!!", "what a marvel!!!!!", "en")).to.equal(null);
+
+			// Three dots and a typographic ellipsis are ordinary punctuation.
+			expect(answerError("Loading...", "Wird geladen...", "de")).to.equal(null);
+			expect(answerError("Wait…", "Warte…", "de")).to.equal(null);
+		});
+	});
+
+	describe("isDegenerate", () => {
+		it("names the shapes the fill measured and nothing a chat line can be", () => {
+			expect(isDegenerate("~ ~ ~ ~ ~ ~ ~")).to.equal(true);
+			expect(isDegenerate("Ausnahmen von der Höchstgrenze..........")).to.equal(true);
+			expect(isDegenerate("a line, then @@@@@@")).to.equal(true);
+
+			// Six emoji nobody's source had is padding; three is excitement.
+			expect(isDegenerate("fantastic 😀😀😀😀😀😀")).to.equal(true);
+			expect(isDegenerate("fantastic 😀😀😀")).to.equal(false);
+
+			// Ordinary punctuation, and words with a stray mark in them.
+			expect(isDegenerate("Wird geladen...")).to.equal(false);
+			expect(isDegenerate("e.g. — see p. 12 (fig. 3)")).to.equal(false);
+		});
+
+		it("exempts a run the source carries itself", () => {
+			expect(isDegenerate("what a marvel!!!!!", "che meraviglia!!!!!")).to.equal(false);
+			expect(isDegenerate("what a marvel!!!!!", "che meraviglia!")).to.equal(true);
 		});
 	});
 

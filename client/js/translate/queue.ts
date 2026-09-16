@@ -20,6 +20,7 @@ import {EngineName, PromptContext, TranslateChunk, TranslateRequest, emptyContex
 import {
 	ABORTED,
 	ANSWERED,
+	DEGENERATE,
 	EMPTY_TRANSLATION,
 	NARRATION,
 	type OutgoingDeps,
@@ -28,6 +29,7 @@ import {
 	armDeadline,
 	hasNoLetters,
 	isAnsweredQuestion,
+	isDegenerate,
 	isNarration,
 	isRepetition,
 	isUnchanged,
@@ -681,6 +683,15 @@ export class TranslateQueue {
 
 		if (hasNoLetters(text)) {
 			this.deps.onUpdate(q.item.id, {status: "failed", error: EMPTY_TRANSLATION});
+			return;
+		}
+
+		// Symbol garbage the model padded its answer with (dozens of dots, a
+		// tilde run) is no more a translation than a letterless one, and is
+		// judged the same way: the engine completed, so retried bare once and
+		// only a second such answer is reported.
+		if (isDegenerate(text, original)) {
+			this.failJudged(q, DEGENERATE);
 			return;
 		}
 

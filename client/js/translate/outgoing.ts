@@ -44,6 +44,14 @@ export const ABORTED = "aborted";
 export const UNCHANGED = "came back unchanged";
 export const EMPTY_TRANSLATION = "empty translation";
 /**
+ * The answer is symbol garbage: runs of tildes, or a punctuation run the
+ * source never had (OPUS-MT pads strings it cannot place with dozens of
+ * dots — "Höchstgrenze.........." — and answers whole lines as "~ ~ ~");
+ * measured on the i18n fill's output, 2026-09-16. The answer's failure,
+ * like the ones above: retried bare once, then reported.
+ */
+export const DEGENERATE = "degenerate output";
+/**
  * The model talked about the request instead of answering it -- "okay,
  * let's see. The user wants the translation of …" -- and ran out of tokens
  * before it got to a translation (measured on the offline runner,
@@ -196,6 +204,48 @@ export function isUnchanged(source: string, translation: string): boolean {
  */
 export function hasNoLetters(text: string): boolean {
 	return !/[\p{L}\p{N}]/u.test(text.replace(/⟦\s*\d+\s*⟧/g, ""));
+}
+
+/**
+ * Symbol garbage a degenerate model answer is: a run of tildes or @ signs
+ * (three is enough — no chat line carries them), or a run of five or more
+ * of the same other punctuation mark the *source* does not carry a run of
+ * itself. The source check keeps a translation of an excited line honest:
+ * "che meraviglia!!!!!" for a source that already had "!!!!!" is the
+ * line's emphasis carried over, not the model padding. Letterless answers
+ * are `hasNoLetters`'s verdict; this catches the ones wearing words as a
+ * disguise. Shared with the i18n fill's quality gate (tools/i18n/quality.ts
+ * re-exports it), so the fill and the app reject the same shapes.
+ */
+export function isDegenerate(text: string, source = ""): boolean {
+	// Whitespace out first: the padding this judges is often spaced —
+	// "~ ~ ~ ~" — which no adjacent-run test would otherwise see.
+	const packed = text.replace(/\s+/g, "");
+
+	if (/[~@]{3,}/.test(packed)) {
+		return true;
+	}
+
+	const run = /([^\p{L}\p{N}])\1{4,}/u.exec(packed);
+
+	if (!run) {
+		return false;
+	}
+
+	// The source's own longest run of that character: three or more and the
+	// answer is carrying the line's emphasis over, not padding.
+	let longest = 0;
+	let current = 0;
+
+	for (const ch of source.replace(/\s+/g, "")) {
+		current = ch === run[1] ? current + 1 : 0;
+
+		if (current > longest) {
+			longest = current;
+		}
+	}
+
+	return longest < 3;
 }
 
 /**
@@ -433,6 +483,13 @@ export function tidyAnswer(source: string, answer: string): string {
 export function answerError(source: string, translation: string, to: string): string | null {
 	if (hasNoLetters(translation)) {
 		return EMPTY_TRANSLATION;
+	}
+
+	// Symbol garbage (a dot-padded line, a tilde run) is no translation
+	// either, and is judged before the loop rule: a padded answer is not a
+	// repetition of anything.
+	if (isDegenerate(translation, source)) {
+		return DEGENERATE;
 	}
 
 	// A line that repeats itself translates into one that does.

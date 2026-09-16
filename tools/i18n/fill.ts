@@ -28,6 +28,7 @@ import {placeholdersIn, protect, restoreAll} from "../../client/js/translate/spa
 import {parseBatchedOutput} from "../../client/js/translate/prompt";
 import {WebLlmEngine} from "../../client/js/translate/engines/webllm";
 import {parsePo, serializePo} from "./po";
+import {isDegenerate} from "./quality";
 import {NAME_TO_TAG, TARGETS_SOURCE} from "./targets";
 
 type EngineName = "llm" | "nllb" | "opus";
@@ -79,7 +80,10 @@ function parseArgs(argv: string[]): Options {
 		const arg = argv[i];
 
 		if (arg === "--langs") {
-			options.langs = (argv[++i] ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+			options.langs = (argv[++i] ?? "")
+				.split(",")
+				.map((s) => s.trim())
+				.filter(Boolean);
 		} else if (arg === "--engine") {
 			options.engine = argv[++i] as EngineName;
 		} else if (arg === "--repo") {
@@ -158,6 +162,17 @@ async function main(): Promise<void> {
 			deps.promptProfileFor = () => promptProfileFor(options.modelId);
 			llmEngine = new WebLlmEngine(deps, (code) => code);
 			llmEngine.configure(catalog);
+
+			console.log("fill: loading the converted 4B weights…");
+			let shown = -1;
+			await llmEngine.load(catalog.llm, (progress) => {
+				const percent = Math.floor(progress.fraction * 100);
+
+				if (percent >= shown + 10 || percent === 100) {
+					shown = percent;
+					console.log(`  load ${percent}% ${progress.text ?? ""}`.trimEnd());
+				}
+			});
 		}
 	}
 
@@ -178,8 +193,10 @@ async function main(): Promise<void> {
 		}
 
 		const po = parsePo(readFileSync(poPath, "utf8"));
+		// An empty msgid is a deliberately blank slot (the deploy fills it);
+		// translating "" only invents text, so those never enter the todo.
 		const todo = po.entries.filter(
-			(entry) => entry.msgstr.length === 0 || entry.msgstr[0] === ""
+			(entry) => entry.msgid && (entry.msgstr.length === 0 || entry.msgstr[0] === "")
 		);
 
 		if (todo.length === 0) {
@@ -208,7 +225,7 @@ async function main(): Promise<void> {
 			}
 		}
 
-		const batches: (typeof limited)[] = [];
+		const batches: typeof limited[] = [];
 
 		for (let i = 0; i < limited.length; i += engine === "llm" ? options.batch : BATCH_NLLB) {
 			batches.push(limited.slice(i, i + (engine === "llm" ? options.batch : BATCH_NLLB)));
@@ -233,11 +250,17 @@ async function main(): Promise<void> {
 						protectedEntries.map((p) => p.text),
 						{src_lang: SRC_NLLB, tgt_lang: tgt}
 					);
-					outputs = results.map((r: any) => r?.translation_text ?? null);
+					outputs = (results as Array<{translation_text?: string} | null>).map(
+						(r) => r?.translation_text ?? null
+					);
 				} else if (engine === "opus") {
 					const pipe = opusPipes.get(`Xenova/opus-mt-en-${tag}`);
-					const results = await (pipe as any)(protectedEntries.map((p) => p.text));
-					outputs = results.map((r: any) => r?.translation_text ?? null);
+					const results = await (
+						pipe as unknown as (
+							texts: string[]
+						) => Promise<Array<{translation_text?: string}>>
+					)(protectedEntries.map((p) => p.text));
+					outputs = results.map((r) => r?.translation_text ?? null);
 				} else {
 					const request: TranslateRequest = {
 						id: 1,
@@ -265,7 +288,7 @@ async function main(): Promise<void> {
 				}
 
 				batch.forEach((entry, index) => {
-					const spans = protectedEntries[index];
+					const info = protectedEntries[index];
 					const raw = outputs[index];
 
 					if (typeof raw !== "string") {
@@ -273,15 +296,44 @@ async function main(): Promise<void> {
 						return;
 					}
 
-					const restored = restoreAll(raw, protectedEntries[index]);
-					const before = placeholdersIn(entry.msgid).join("|");
-					const after = placeholdersIn(restored).join("|");
+					// Two gates: the model must carry every protection marker
+					// it was given (⟦n⟧ / <n>), and after the restore the
+					// {placeholder} braces of the original must survive — a
+					// renamed one breaks the label at render time, and the
+					// compile refuses the whole catalog for it.
+					const markersGiven = placeholdersIn(info.text).join("|");
+					const markersBack = placeholdersIn(raw).join("|");
 
-					if (before !== after) {
-						// A placeholder the model dropped or renamed would break
-						// the label at render time: leave the entry empty.
+					if (markersGiven !== markersBack) {
 						failed += 1;
-						console.warn(`fill: ${tag} "${entry.msgid}" lost placeholders (${before} → ${after})`);
+						console.warn(
+							`fill: ${tag} "${entry.msgid}" lost a protection marker (${markersGiven} → ${markersBack})`
+						);
+						return;
+					}
+
+					const restored = restoreAll(raw, info);
+					const braces = (text: string) =>
+						(text.match(/\{[^{}]*\}/g) ?? []).sort().join("|");
+
+					if (braces(entry.msgid) !== braces(restored)) {
+						failed += 1;
+						console.warn(
+							`fill: ${tag} "${entry.msgid}" placeholder mismatch (${braces(
+								entry.msgid
+							)} → ${braces(restored)})`
+						);
+						return;
+					}
+
+					if (isDegenerate(restored)) {
+						failed += 1;
+						console.warn(
+							`fill: ${tag} "${entry.msgid}" degenerate output (${restored.slice(
+								0,
+								40
+							)})`
+						);
 						return;
 					}
 
@@ -296,7 +348,10 @@ async function main(): Promise<void> {
 				);
 			} catch (error) {
 				failed += batch.length;
-				console.error(`fill: ${tag} batch failed:`, (error as Error).stack ?? (error as Error).message);
+				console.error(
+					`fill: ${tag} batch failed:`,
+					(error as Error).stack ?? (error as Error).message
+				);
 			}
 		}
 
