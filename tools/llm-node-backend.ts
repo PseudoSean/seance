@@ -16,7 +16,13 @@ import {
 	TextStreamer,
 	type ProgressInfo,
 } from "@huggingface/transformers";
-import {ChatDelta, ChatRequest, MlcLike, ModelRecord, WebLlmDeps} from "../client/js/translate/engines/webllm";
+import {
+	ChatDelta,
+	ChatRequest,
+	MlcLike,
+	ModelRecord,
+	WebLlmDeps,
+} from "../client/js/translate/engines/webllm";
 
 export type Device = "cpu" | "cuda";
 type Purpose = "read" | "write";
@@ -391,4 +397,3 @@ export function nodeDeps(
 		backend: () => made,
 	};
 }
-
