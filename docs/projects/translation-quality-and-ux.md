@@ -1,6 +1,6 @@
 # Translation quality and UX — spec
 
-**Status:** approved direction, 2026-09-17 (decisions recorded in §2)
+**Status:** implemented, 2026-09-17 (decisions recorded in §2)
 **Companion:** `docs/projects/client-translation.md` (the feature's design doc — this spec
 amends its detection, eligibility and failure-presentation sections)
 
@@ -38,7 +38,7 @@ Five reported defects share one root, plus two independent items:
 4. Removed tags **archive to `client/locales/attic/`**.
 5. Classifier data: **generated function-word tables for all 46 languages**
    (option B), vendored into the repo with the generation script.
-6. **`fa-language` (文A) becomes the translation mark**; the globe keeps the
+6. **`fa-language` (`文A`) becomes the translation mark**; the globe keeps the
    language-setting role (the sidebar's dev locale selector).
 
 ## 3. Design
@@ -100,7 +100,7 @@ touched only if they override these classes today (audit step).
 
 ### 3.5 Translation icon split
 
-- **`fa-language`** (文A, FA5 `\f1ab`, already bundled) becomes the translation
+- **`fa-language`** (`文A`, FA5 `\f1ab`, already bundled) becomes the translation
   mark on: the channel-header toggle (`Chat.vue` `button.translate` — CSS-drawn
   glyph, swap the mask/content), the message action (`MessageActions.vue` 🌐 →
   `fa-language`), and any other translation entry point found by the audit grep.
@@ -128,7 +128,7 @@ touched only if they override these classes today (audit step).
   scaffold function (new tag scaffolds, existing file untouched).
 - **Browser scenario** (`tools/scenarios/`, the suite has no DOM): extend
   `translate-reading.mjs` — the unchanged chip renders with icon + tooltip, the
-  skipped chip carries the accent style, the header toggle shows 文A.
+  skipped chip carries the accent style, the header toggle shows `文A`.
 
 ### 3.8 Out of scope
 

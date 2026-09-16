@@ -179,13 +179,18 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
 
 ## Reading a channel
 
-The globe in a channel's header switches translation on for that channel
-(`Chat.vue`, `translate/reader.ts`): from then on every message in it,
-the user's own included, is detected (`detect.ts`, `franc` in its own chunk, with the
-channel's declared languages and then its dominant language settling near
-ties), skipped when it is too short (`eligibility.ts`) or detected as
-already in the target -- and marked when detection skips it (below) --
-given its context
+The translate button in a channel's header switches translation on for that
+channel (`Chat.vue`, `translate/reader.ts`; the button carries the
+`fa-language` glyph (`文A`) -- the globe keeps only the dev locale
+selector's language-setting role): from then on every message in it, the
+user's own included, is detected (`detect.ts`: the function-word classifier
+first (below), then `franc` in its own chunk, with the channel's declared
+languages and then its dominant language settling near ties), skipped when
+nothing translatable is left of it (`eligibility.ts`: URLs, code, emoji,
+formatting codes and nick mentions stripped -- there is no word floor, a
+one-word line reads; a line stripped to nothing still does not queue) or
+detected as already in the target -- and marked when detection skips it
+(below) -- given its context
 (`context.ts`: the last ten lines with the translations already shown,
 the reply target, the topic, the names in play, the newest twenty of the
 channel's terms and the deploy's glossary behind them) and queued
@@ -198,8 +203,9 @@ chip (source → target; where the engine placed the source itself, the
 detector's contenders stand in for it -- "Norwegian / Danish → English",
 "French? → English", "? → English" with none -- `labels.ts`), the text streaming with a caret, a retry when it failed (an icon
 button, "Retry the translation" its tooltip and accessible name, with the
-engine's reason beside "couldn't translate" when there is one -- a model
-that would not load says so rather than leaving the tier looking broken); the chip's
+translated reason beside "Couldn't translate" when there is one -- a model
+that would not load says so rather than leaving the tier looking broken;
+the one `unchanged` failure renders as the compact chip below instead); the chip's
 menu copies, retranslates or hides the line ("Copy translation" puts the
 translated text on the clipboard through `js/clipboard.ts`, the helper the
 message toolbar's Copy uses, and says nothing when the browser refuses),
@@ -233,6 +239,46 @@ down and neither counts toward the three-in-a-row pause, since the engine
 did complete and the next line may well be one it can do. The line keeps
 its chip and its Retry.
 
+**Detection starts with the function words.** franc's trigram model
+misplaces chat-length lines confidently: measured against the app's own
+language set, "I just woke up again." came back Dutch at confidence 1.0,
+"good morning" Swedish and "helo their friend" Scots -- and a misdetection
+routes the line to an engine with a wrong source, which hands it back
+unchanged and the row reports a failure for perfectly ordinary English. So
+`detectLanguage` asks `chatdetect.ts` first: `stopwords.json` -- generated
+by `tools/generate-stopwords.py` (wordfreq's frequency-ordered function
+words per language, `stopwords-iso` where wordfreq lacks the tag, any word
+shared by four or more tables dropped as noise, ~60 words each, ~19 KB
+committed) -- scores each line's tokens against every candidate language's
+function words (by containment for ja/zh/ko, which write without spaces).
+A verdict two hits or more and strictly ahead of the runner-up wins over
+franc outright; on a line too short for trigrams (under `DETECT_MIN_LENGTH`,
+10 characters) a single classifier hit is already the answer, where before
+there was none; anything weaker falls through to the trigram flow
+unchanged. The classifier is misspelling-tolerant by shape: "helo
+**their** friend" still hits "their". The measured failures land where a
+reader would put them -- "I just woke up again." now reads as English
+(`same`, the chip names it) instead of an en→en request that failed as
+unchanged.
+
+**A failure is worded in the reader's language, and `unchanged` barely
+speaks at all.** The failed row's frame and its known reasons are catalog
+keys now -- "Couldn't translate" (`translate.failed`), and the reason
+constants (`ANSWERED`, `NARRATION`, `DEGENERATE`) each have a key of their
+own (`translate.reason.*`); an unknown engine error keeps its verbatim text
+in the title (server and technical text is never translated). The
+`unchanged` verdict -- the model handed the line back, which as often as
+not means there was nothing to translate -- drops the prose row for a
+compact chip: the `fa-equals` glyph carrying the translated "Not
+translated" as its tooltip and accessible name, wearing the same accent
+style as every other translation chip and opening the failed row's menu
+minus Copy (Retranslate, the per-candidate "Retranslate from
+`<Language>`", "Retranslate from...", Show original only -- there is no
+translation to copy). Production builds render the icon alone; a
+development build appends the reason ("the line came back unchanged") after
+it (`devtoolsAvailable`). Browser check:
+`tools/scenarios/translation-chips.mjs`.
+
 **A line the detector cannot place still translates, unless it could be
 the reading language.** `detect.ts` `detectionSkip` decides: a line placed
 in the reading language is skipped (`same`); a line it could not place is
@@ -253,14 +299,17 @@ mark instead (`reader.ts` `applyUpdate`).
 **A skipped line is marked.** Every line detection skips gets a store entry
 of its own -- `status: "skipped"`, `reason` `same` (with `from` the reading
 language) or `unsure` (with the candidates kept) -- which
-`TranslationLine.vue` renders as a small muted tag after the message: the
+`TranslationLine.vue` renders as a small chip after the message
+(`.msg-translation-skipped-tag`, the same accent style as the `lang → lang`
+chip -- the old muted look is gone): the
 language's name in the reader's language for `same`, "?" for `unsure`; no
 text row, no caret, and the original keeps its ink. The tag's menu offers
 **Translate anyway** (the forced `retranslate`; the toolbar's Translate is
 offered on such a line too), a **Retranslate from `<Language>`** per
 candidate (neither the line's own source nor the reading language) and
 **Retranslate from...** with the picker. Lines eligibility turns away
-(under `MIN_WORDS`, pending copies, types other than chat) stay unmarked. A
+(pending copies, types other than chat, a line with no words left after
+the stripping -- there is no word floor) stay unmarked. A
 mark is never a translation: `buildContext` quotes only `done` text, the
 menu has no Copy, a language change requeues the line like any other (the
 one entry `setReading` keeps is an own line's `done` read-back), a rebuilt
@@ -271,7 +320,9 @@ not count a mark as the line's translation.
 spoken here_ records what people write in a channel (`channelStore.ts`
 `languages`, ISO 639-1, supported codes only, persisted with the rest of
 the record), and `detect.ts` weighs them above its automatic prior in
-three ways. A declared language that franc ranks within `DECLARED_MARGIN`
+three ways. What they weigh is the trigram flow: a decisive classifier
+verdict (above) is already final before the declared languages are
+consulted. A declared language that franc ranks within `DECLARED_MARGIN`
 (0.25) of its best **wins** over an undeclared best -- a trigram lead that
 small is a weaker claim than the reader's; two declared contenders that
 close resolve by their own gap, then by the prior, and where neither
@@ -332,8 +383,9 @@ from a fallback to singles.
 
 **Reading covers what the channel shows, capped per load, newest first.**
 A line is considered however old it is: what keeps one out is the rules
-above -- pending copies, types other than chat, `MIN_WORDS`, detection
--- never when it was said, and never who said it: the user's own lines are
+above -- pending copies, types other than chat, a line stripped to
+nothing, detection -- never when it was said, and never who said it: the
+user's own lines are
 read too, so a line written before the switch-on, before a rejoin or a
 reload, or sent without a read-back gets its translation like anyone's
 (an own line already in the reading language is detected as such,
@@ -406,17 +458,17 @@ three-way segmented control (`role="radiogroup"`, "As written" / "Formally"
 safe area. The sheet's height follows `--viewport-height`
 (`helpers/viewport.ts`), so iOS's keyboard cannot push Done off the screen.
 
-How it opens splits the same way. With a pointer, a click on the globe
-toggles reading and a right-click opens the panel -- and a click that turns
-reading **on** opens the panel with it, so the reader sees and can adjust
-the languages at once (a click that turns reading off only turns it off);
-on touch there is no
+How it opens splits the same way. With a pointer, a click on the translate
+button toggles reading and a right-click opens the panel -- and a click
+that turns reading **on** opens the panel with it, so the reader sees and
+can adjust the languages at once (a click that turns reading off only
+turns it off); on touch there is no
 right-click, so the **tap** opens the panel (whose first control is the
-reading switch) and the globe's label says "Translation settings". The
+reading switch) and the button's label says "Translation settings". The
 channel menu's "Translation..." reaches it on both. It closes on the X, on
 Done, on Escape, and -- the anchored panel only, since the sheet has no
-outside -- on a click outside it; the caret goes back to the globe when the
-panel is what held it. Browser checks:
+outside -- on a click outside it; the caret goes back to the translate
+button when the panel is what held it. Browser checks:
 `tools/scenarios/translate-reading.mjs` (the column, and the sheet under
 `--mobile`) and `tools/scenarios/translate-composer.mjs --mobile --width=390 --height=844` (the sheet in full).
 

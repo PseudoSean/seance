@@ -26,10 +26,12 @@
 ### Task 1: Generate the stopword table
 
 **Files:**
+
 - Create: `tools/generate-stopwords.py`
 - Create: `client/js/translate/stopwords.json` (generated, committed)
 
 **Interfaces:**
+
 - Produces: `client/js/translate/stopwords.json` — `{[tag: string]: string[]}`, exactly the 46 tags of `client/js/i18n/targets.ts` minus `en` (45 reading-language tags; `en` still included as a source candidate — include `en`, exclude `qqx`), ≤60 words each, lowercase, deduplicated. Task 2 consumes it.
 
 - [ ] **Step 1: Write the generator**
@@ -119,11 +121,13 @@ git commit -m "translate: generated function-word tables for short-line detectio
 ### Task 2: The classifier (`chatdetect.ts`) and detection integration
 
 **Files:**
+
 - Create: `client/js/translate/chatdetect.ts`
 - Modify: `client/js/translate/detect.ts`
 - Test: `test/translate/chatdetect.ts` (new), `test/translate/detect.ts` (extend)
 
 **Interfaces:**
+
 - Consumes: `client/js/translate/stopwords.json` (Task 1).
 - Produces: `chatDetect(text: string, only: readonly string[]): ChatVerdict` where `ChatVerdict = {lang: string | null; strength: number}`. `detect.ts` imports it; nothing else.
 
@@ -133,44 +137,42 @@ git commit -m "translate: generated function-word tables for short-line detectio
 import {expect} from "chai";
 import {chatDetect} from "../../client/js/translate/chatdetect";
 
-const TABLE_LANGS = Object.keys(
-	require("../../client/js/translate/stopwords.json")
-);
+const TABLE_LANGS = Object.keys(require("../../client/js/translate/stopwords.json"));
 
 describe("translate/chatdetect", () => {
-	describe("table", () => {
-		it("covers the supported languages with clean tables", () => {
-			expect(TABLE_LANGS.length).to.be.at.least(45);
-			for (const words of TABLE_LANGS.map(
-				(t) => require("../../client/js/translate/stopwords.json")[t]
-			)) {
-				expect(words.length).to.be.within(10, 60);
-				expect(new Set(words).size).to.equal(words.length);
-			}
-		});
-	});
+  describe("table", () => {
+    it("covers the supported languages with clean tables", () => {
+      expect(TABLE_LANGS.length).to.be.at.least(45);
+      for (const words of TABLE_LANGS.map(
+        (t) => require("../../client/js/translate/stopwords.json")[t]
+      )) {
+        expect(words.length).to.be.within(10, 60);
+        expect(new Set(words).size).to.equal(words.length);
+      }
+    });
+  });
 
-	it("places the measured chat lines franc gets wrong", () => {
-		expect(chatDetect("I just woke up again.", ["en", "de", "nl"]).lang).to.equal("en");
-		expect(chatDetect("good morning", ["en", "sv", "da"]).lang).to.equal("en");
-		expect(chatDetect("helo their friend", ["en", "de"]).lang).to.equal("en");
-		expect(chatDetect("Guten Morgen, wie geht es dir?", ["en", "de"]).lang).to.equal("de");
-		expect(chatDetect("lol", ["en", "de"]).lang).to.equal("en");
-	});
+  it("places the measured chat lines franc gets wrong", () => {
+    expect(chatDetect("I just woke up again.", ["en", "de", "nl"]).lang).to.equal("en");
+    expect(chatDetect("good morning", ["en", "sv", "da"]).lang).to.equal("en");
+    expect(chatDetect("helo their friend", ["en", "de"]).lang).to.equal("en");
+    expect(chatDetect("Guten Morgen, wie geht es dir?", ["en", "de"]).lang).to.equal("de");
+    expect(chatDetect("lol", ["en", "de"]).lang).to.equal("en");
+  });
 
-	it("is substring-based for scripts without spaces", () => {
-		expect(chatDetect("おはよう、まだ眠い。", ["ja", "en"]).lang).to.equal("ja");
-		expect(chatDetect("我醒了。", ["zh", "en"]).lang).to.equal("zh");
-	});
+  it("is substring-based for scripts without spaces", () => {
+    expect(chatDetect("おはよう、まだ眠い。", ["ja", "en"]).lang).to.equal("ja");
+    expect(chatDetect("我醒了。", ["zh", "en"]).lang).to.equal("zh");
+  });
 
-	it("refuses to guess on noise", () => {
-		expect(chatDetect("xyzzy", ["en", "de"]).lang).to.equal(null);
-		expect(chatDetect("...", ["en", "de"]).lang).to.equal(null);
-	});
+  it("refuses to guess on noise", () => {
+    expect(chatDetect("xyzzy", ["en", "de"]).lang).to.equal(null);
+    expect(chatDetect("...", ["en", "de"]).lang).to.equal(null);
+  });
 
-	it("restricts its verdict to the allowed candidates", () => {
-		expect(chatDetect("I just woke up again.", ["de", "nl"]).lang).to.not.equal("en");
-	});
+  it("restricts its verdict to the allowed candidates", () => {
+    expect(chatDetect("I just woke up again.", ["de", "nl"]).lang).to.not.equal("en");
+  });
 });
 ```
 
@@ -192,65 +194,67 @@ import table from "./stopwords.json";
 const NO_SPACE = new Set(["ja", "zh", "ko"]);
 
 export interface ChatVerdict {
-	lang: string | null;
-	/** Function-word hits behind the verdict (0 when null). */
-	strength: number;
+  lang: string | null;
+  /** Function-word hits behind the verdict (0 when null). */
+  strength: number;
 }
 
 const TABLES: Record<string, Set<string>> = Object.fromEntries(
-	Object.entries(table).map(([tag, words]) => [tag, new Set(words)])
+  Object.entries(table).map(([tag, words]) => [tag, new Set(words)])
 );
 
 function tokens(text: string): string[] {
-	return text
-		.toLowerCase()
-		.split(/[^\p{L}\p{N}]+/u)
-		.filter((word) => word !== "");
+  return text
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((word) => word !== "");
 }
 
 export function chatDetect(text: string, only: readonly string[]): ChatVerdict {
-	const allowed = only.filter((lang) => TABLES[lang]);
-	const lower = text.toLowerCase();
-	const words = tokens(text);
-	const scores = new Map<string, number>();
+  const allowed = only.filter((lang) => TABLES[lang]);
+  const lower = text.toLowerCase();
+  const words = tokens(text);
+  const scores = new Map<string, number>();
 
-	for (const lang of allowed) {
-		const table_ = TABLES[lang];
-		let hits = 0;
+  for (const lang of allowed) {
+    const table_ = TABLES[lang];
+    let hits = 0;
 
-		if (NO_SPACE.has(lang)) {
-			for (const word of table_) {
-				if (word.length >= 1 && lower.includes(word)) {
-					hits += 1;
-				}
-			}
-		} else {
-			for (const word of words) {
-				if (table_.has(word)) {
-					hits += 1;
-				}
-			}
-		}
+    if (NO_SPACE.has(lang)) {
+      for (const word of table_) {
+        if (word.length >= 1 && lower.includes(word)) {
+          hits += 1;
+        }
+      }
+    } else {
+      for (const word of words) {
+        if (table_.has(word)) {
+          hits += 1;
+        }
+      }
+    }
 
-		if (hits > 0) {
-			scores.set(lang, hits);
-		}
-	}
+    if (hits > 0) {
+      scores.set(lang, hits);
+    }
+  }
 
-	const ranked = [...scores.entries()].sort((a, b) => b[1] - a[1]);
-	const best = ranked[0];
-	const second = ranked[1];
+  const ranked = [...scores.entries()].sort((a, b) => b[1] - a[1]);
+  const best = ranked[0];
+  const second = ranked[1];
 
-	if (!best) {
-		return {lang: null, strength: 0};
-	}
+  if (!best) {
+    return {lang: null, strength: 0};
+  }
 
-	// Decisive: a clear multi-hit lead, or one hit on a line too short for
-	// two ("lol" is English; a stray shared word on a long line is not).
-	const decisive =
-		best[1] >= 2 && (!second || best[1] - second[1] >= 1) ? true : words.length <= 2 && best[1] >= 1;
+  // Decisive: a clear multi-hit lead, or one hit on a line too short for
+  // two ("lol" is English; a stray shared word on a long line is not).
+  const decisive =
+    best[1] >= 2 && (!second || best[1] - second[1] >= 1)
+      ? true
+      : words.length <= 2 && best[1] >= 1;
 
-	return decisive ? {lang: best[0], strength: best[1]} : {lang: null, strength: best[1]};
+  return decisive ? {lang: best[0], strength: best[1]} : {lang: null, strength: best[1]};
 }
 ```
 
@@ -261,8 +265,12 @@ export function chatDetect(text: string, only: readonly string[]): ChatVerdict {
 ```ts
 // In detectLanguage, BEFORE the `text.length < DETECT_MIN_LENGTH` branch:
 const chat = chatDetect(
-	text,
-	declaredLanguages(declared).length > 0 ? declaredLanguages(declared) : Object.keys(ISO1_OF).map((c) => iso3ToIso1(c) ?? "").filter(Boolean)
+  text,
+  declaredLanguages(declared).length > 0
+    ? declaredLanguages(declared)
+    : Object.keys(ISO1_OF)
+        .map((c) => iso3ToIso1(c) ?? "")
+        .filter(Boolean)
 );
 ```
 
@@ -270,7 +278,7 @@ Simpler contract (use this): `chatDetect(text, Object.keys(ISO1_OF).map(iso3ToIs
 
 ```ts
 if (chat.lang !== null && chat.strength >= 2) {
-	return {lang: chat.lang, confidence: round(chat.strength / 10), candidates: [chat.lang]};
+  return {lang: chat.lang, confidence: round(chat.strength / 10), candidates: [chat.lang]};
 }
 ```
 
@@ -278,11 +286,11 @@ placed **before** the length check so 1-word lines classify ("lol" → en). When
 
 ```ts
 if (text.length < DETECT_MIN_LENGTH) {
-	const only = declaredLanguages(declared).filter((code) => code !== options.exclude);
-	if (only.length === 1) {
-		return {lang: only[0], confidence: 0, candidates: only};
-	}
-	return {lang: chat.lang, confidence: 0, candidates: chat.lang ? [chat.lang] : []};
+  const only = declaredLanguages(declared).filter((code) => code !== options.exclude);
+  if (only.length === 1) {
+    return {lang: only[0], confidence: 0, candidates: only};
+  }
+  return {lang: chat.lang, confidence: 0, candidates: chat.lang ? [chat.lang] : []};
 }
 ```
 
@@ -299,6 +307,7 @@ For the main franc path, keep `detectWith` unchanged — a decisive chat verdict
 ### Task 3: Drop the word floor
 
 **Files:**
+
 - Modify: `client/js/translate/eligibility.ts`
 - Modify: `test/translate/eligibility.ts`
 
@@ -317,10 +326,12 @@ For the main franc path, keep `detectWith` unchanged — a decisive chat verdict
 ### Task 4: The "Not translated" chip + t() copy
 
 **Files:**
+
 - Modify: `client/components/TranslationLine.vue`
 - Test: `tools/scenarios/translation-chips.mjs` (new; run in Task 6 after the build)
 
 **Interfaces:**
+
 - Consumes: `UNCHANGED` from `client/js/translate/outgoing.ts` (existing export); `devtoolsAvailable` from `client/js/devtools.ts` (existing); store entry shape unchanged (`{status: "failed", error: string}`).
 - Produces: i18n keys `translate.notTranslated`, `translate.failed`, `translate.reason.answered`, `translate.reason.narration`, `translate.reason.degenerate`, `translate.reason.generic`, `translate.unchangedReason`.
 
@@ -361,13 +372,13 @@ Script additions: `import {UNCHANGED} from "../js/translate/outgoing";`, `import
 
 ```ts
 const REASON_KEYS: Record<string, string> = {
-	[ANSWERED]: "translate.reason.answered",
-	[NARRATION]: "translate.reason.narration",
-	[DEGENERATE]: "translate.reason.degenerate",
+  [ANSWERED]: "translate.reason.answered",
+  [NARRATION]: "translate.reason.narration",
+  [DEGENERATE]: "translate.reason.degenerate",
 };
 const reasonText = computed(() => {
-	const error = entry.value?.error ?? "";
-	return REASON_KEYS[error] ? t(REASON_KEYS[error]) : error;
+  const error = entry.value?.error ?? "";
+  return REASON_KEYS[error] ? t(REASON_KEYS[error]) : error;
 });
 ```
 
@@ -384,6 +395,7 @@ The unchanged chip's menu reuses `openMenu` — extend the failed-row branch of 
 ### Task 5: Chip style unification
 
 **Files:**
+
 - Modify: `client/css/style.css` (`.msg-translation-skipped-tag` block ~line 5038)
 
 **Interfaces:** Pure CSS; consumed by `TranslationLine.vue`.
@@ -394,17 +406,17 @@ The unchanged chip's menu reuses `openMenu` — extend the failed-row branch of 
 
 ```css
 #chat .msg-translation-skipped-tag {
-	padding: 0 0.3em;
-	border: 1px solid var(--chat-accent-rule, var(--link-color));
-	border-radius: 0.2rem;
-	background: transparent;
-	color: var(--chat-accent, var(--link-color));
-	font: inherit;
-	font-size: 0.7em;
-	line-height: 1.5;
-	letter-spacing: 0.05em;
-	vertical-align: 0.1em;
-	cursor: pointer;
+  padding: 0 0.3em;
+  border: 1px solid var(--chat-accent-rule, var(--link-color));
+  border-radius: 0.2rem;
+  background: transparent;
+  color: var(--chat-accent, var(--link-color));
+  font: inherit;
+  font-size: 0.7em;
+  line-height: 1.5;
+  letter-spacing: 0.05em;
+  vertical-align: 0.1em;
+  cursor: pointer;
 }
 ```
 
@@ -419,6 +431,7 @@ The unchanged chip's menu reuses `openMenu` — extend the failed-row branch of 
 ### Task 6: The icon split
 
 **Files:**
+
 - Modify: `client/css/style.css` (line ~567)
 - Modify: `client/components/MessageActions.vue` (line ~47)
 - Modify: `client/components/Settings/Translation.vue` (copy)
@@ -429,7 +442,7 @@ The unchanged chip's menu reuses `openMenu` — extend the failed-row branch of 
 
 - [ ] **Step 2: Message action** — `MessageActions.vue`: replace the `🌐` text node inside `.msg-action-translate` with `<i class="fas fa-language" aria-hidden="true" />`.
 
-- [ ] **Step 3: Copy reword** — `Settings/Translation.vue` line ~10 says "the globe in the channel header": change the msgid to name the new icon ("the 文A button in the channel header" — final wording: "the translate button in the channel header"), run `npx tsx tools/i18n/merge.ts`. Audit `grep -rn 'globe' client/ --include='*.vue'` for any other translation-role copy.
+- [ ] **Step 3: Copy reword** — `Settings/Translation.vue` line ~10 says "the globe in the channel header": change the msgid to name the new icon ("the 文 A button in the channel header" — final wording: "the translate button in the channel header"), run `npx tsx tools/i18n/merge.ts`. Audit `grep -rn 'globe' client/ --include='*.vue'` for any other translation-role copy.
 
 - [ ] **Step 4: Build + scenario** — `corepack yarn build`; in `tools/scenarios/translation-chips.mjs` add: the header toggle's `::before` computed content is `"\f1ab"`, the message action contains `.fa-language`, and the sidebar's dev locale toggle still renders 🌐.
 
@@ -440,6 +453,7 @@ The unchanged chip's menu reuses `openMenu` — extend the failed-row branch of 
 ### Task 7: `tools/i18n/sync.ts` — the build tracks the language list
 
 **Files:**
+
 - Create: `tools/i18n/sync.ts`
 - Modify: `tools/i18n/scaffold.ts` (extract the per-tag writer)
 - Modify: `tools/i18n/compile.ts` (call `runSync()` before reading files)
@@ -447,6 +461,7 @@ The unchanged chip's menu reuses `openMenu` — extend the failed-row branch of 
 - Test: `test/translate/i18n-sync.ts` (new)
 
 **Interfaces:**
+
 - Produces: `runSync(localesDir?: string): {scaffolded: string[]; archived: string[]}` (exported, side-effect-free at import time; the CLI runs only under the `import.meta.url` guard). `compile.ts` imports `runSync`.
 - Consumes: `TARGETS_SOURCE`/`NAME_TO_TAG` from `./targets`, `parsePo`/`serializePo` from `./po`.
 
@@ -456,7 +471,7 @@ The unchanged chip's menu reuses `openMenu` — extend the failed-row branch of 
 
 ```ts
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-	runSync();
+  runSync();
 }
 ```
 
@@ -475,9 +490,10 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
 ### Task 8: Docs and the final pass
 
 **Files:**
+
 - Modify: `docs/resources/translation.md`, `docs/resources/i18n.md`, `CLAUDE.md`, `docs/projects/translation-quality-and-ux.md` (status line)
 
-- [ ] **Step 1: Docs** — translation.md: detection section (classifier before franc, the measured failures as the rationale), failure presentation (the "Not translated" chip, icon-only in production), eligibility (no word floor), the 文A mark. i18n.md: the sync step and attic. CLAUDE.md: the translate bullet's detection/eligibility sentences and the i18n sentence about `scaffold.ts` (add sync).
+- [ ] **Step 1: Docs** — translation.md: detection section (classifier before franc, the measured failures as the rationale), failure presentation (the "Not translated" chip, icon-only in production), eligibility (no word floor), the 文 A mark. i18n.md: the sync step and attic. CLAUDE.md: the translate bullet's detection/eligibility sentences and the i18n sentence about `scaffold.ts` (add sync).
 - [ ] **Step 2: Full gate** — `corepack yarn test` (lint + mocha) and `corepack yarn build`; run `tools/scenarios/translation-chips.mjs`.
 - [ ] **Step 3: Commit** — `git commit -m "docs: translation quality and UX changes"`
 
