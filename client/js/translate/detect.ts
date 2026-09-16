@@ -18,6 +18,7 @@
 // override for it (the same shape as the existing `cmn`/`zho` override for
 // Chinese).
 
+import {chatDetect} from "./chatdetect";
 import {NLLB_CODES, SUPPORTED_LANGUAGES, isSupported} from "./languages";
 
 export interface Detection {
@@ -299,6 +300,20 @@ export async function detectLanguage(
 	declared: string[] = [],
 	options: {exclude?: string} = {}
 ): Promise<Detection> {
+	// Function-word classification first (chatdetect.ts): decisive on
+	// chat-length lines franc misplaces, weak (strength 1) falls through to
+	// the trigram flow below.
+	const chat = chatDetect(
+		text,
+		Object.keys(ISO1_OF)
+			.map(iso3ToIso1)
+			.filter((code): code is string => code !== null)
+	);
+
+	if (chat.lang !== null && chat.strength >= 2) {
+		return {lang: chat.lang, confidence: round(chat.strength / 10), candidates: [chat.lang]};
+	}
+
 	if (text.length < DETECT_MIN_LENGTH) {
 		// Too short for trigrams — but a channel where German and English are
 		// written, read in English, leaves one answer. Confidence 0 says
@@ -310,7 +325,7 @@ export async function detectLanguage(
 			return {lang: only[0], confidence: 0, candidates: only};
 		}
 
-		return {lang: null, confidence: 0, candidates: []};
+		return {lang: chat.lang, confidence: 0, candidates: chat.lang ? [chat.lang] : []};
 	}
 
 	const detect = await loadDetector();

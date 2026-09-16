@@ -271,22 +271,25 @@ describe("translate/detect", () => {
 		});
 
 		// Nine characters: too short for trigrams, but the channel writes
-		// German and English and this reader reads English.
+		// German and English and this reader reads English. One function-word
+		// hit on a 3-word line is decisive (chatdetect.ts), so the German
+		// verdict stands wherever the declared languages leave room.
 		expect(
 			await detectLanguage("So ist es", null, ["de", "en"], {exclude: "en"})
 		).to.deep.equal({lang: "de", confidence: 0, candidates: ["de"]});
-		// Two candidates besides the target: nothing to choose between them.
+		// The chatdetect table is not bound to the declarations: a decisive
+		// short-line verdict is returned even with more declared candidates,
+		// or none routable at all.
 		expect(
 			(await detectLanguage("So ist es", null, ["de", "nl", "en"], {exclude: "en"})).lang
-		).to.equal(null);
-		// Declared but unroutable, or nothing declared at all: undetermined.
+		).to.equal("de");
 		expect((await detectLanguage("So ist es", null, ["xx"], {exclude: "en"})).lang).to.equal(
-			null
+			"de"
 		);
 		expect(await detectLanguage("So ist es", null)).to.deep.equal({
-			lang: null,
+			lang: "de",
 			confidence: 0,
-			candidates: [],
+			candidates: ["de"],
 		});
 	});
 
@@ -331,6 +334,20 @@ describe("translate/detect", () => {
 		});
 		expect(calls.length).to.equal(1);
 		expect(prior.top()).to.equal("de");
+	});
+
+	it("the chat classifier decides a chat-length line franc misplaces", async function () {
+		this.timeout(10000);
+		setDetector(null);
+
+		// franc places this line in Dutch at 1.0 (chatdetect.ts); the
+		// function-word classifier is decisive (strength 2) and returns
+		// before the trigram flow ever runs.
+		expect(await detectLanguage("I just woke up again.", null)).to.deep.equal({
+			lang: "en",
+			confidence: 0.2,
+			candidates: ["en"],
+		});
 	});
 
 	it("the real detector recognises German", async function () {
