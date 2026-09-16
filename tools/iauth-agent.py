@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+"""IAuth agent for the Seance dev ircd: SASL PLAIN against one fixed credential.
+
+Nefarious2's IAuth hook spawns this program over stdin/stdout. Wire shape
+(ircd -> agent): `<id> <COMMAND> [args...]`, e.g. `<fd> C <remoteip>
+<remoteport> <localip> <localport>` on connect, `<fd> A S :PLAIN` when a
+client starts SASL, `<fd> a :<base64>` per AUTHENTICATE payload. Replies go
+the other way with the command letter glued to the id and the client's
+address echoed back (`L<fd> <ip> <port> <account>` — the ircd consumes id,
+ip and port before the handler sees the account):
+
+    L<fd> <ip> <port> <account>   logged in (sets the account, sends 900)
+    Z<fd> <ip> <port>             SASL complete (sends 903)
+    f<fd> <ip> <port> :<reason>   SASL failed (sends ERR_SASLFAIL)
+
+The O line requests the r (account report) and S (SASL handling) policies;
+the W line is what makes CAP LS advertise `sasl` when no services link
+exists. This exists so the dev rig can exercise the app's SASL paths
+(persistence, bouncer, push) without running a services package.
+"""
+import base64
+import sys
+
+ACCOUNT = "pushtest1"
+PASSWORD = "pushtest1-pass"
+
+
+def out(line: str) -> None:
+    sys.stdout.write(line + "\n")
+    sys.stdout.flush()
+
+
+def main() -> None:
+    out("V :seance-iauth 1.0")
+    out("O rS")  # r: account report, S: SASL handling
+    out("W :PLAIN")
+
+    # fd -> (remote ip, remote port), learned from the C introduction.
+    clients: dict[str, tuple[str, str]] = {}
+
+    for raw in sys.stdin:
+        line = raw.rstrip("\n")
+
+        if not line:
+            continue
+
+        parts = line.split(" ")
+
+        # Agent-global lines (V/O/A-config announcements) carry no id.
+        if not parts[0].isdigit():
+            continue
+
+        fd, cmd = parts[0], parts[1] if len(parts) > 1 else ""
+
+        if cmd == "C" and len(parts) >= 4:
+            clients[fd] = (parts[2], parts[3])
+            continue
+
+        if cmd == "D":
+            clients.pop(fd, None)
+            continue
+
+        if cmd == "A":
+            # SASL start (`A S :PLAIN`) or abort (`A X`); nothing to do yet.
+            continue
+
+        if cmd != "a":
+            continue  # username report, hostname lookups, config churn…
+
+        b64 = parts[2].lstrip(":") if len(parts) > 2 else ""
+
+        try:
+            fields = base64.b64decode(b64, validate=False).split(b"\x00")
+            authcid = fields[1].decode("utf-8", "replace") if len(fields) > 1 else ""
+            passwd = fields[2].decode("utf-8", "replace") if len(fields) > 2 else ""
+        except Exception:
+            authcid = passwd = ""
+
+        addr = clients.get(fd, ("0.0.0.0", "0"))
+
+        if authcid == ACCOUNT and passwd == PASSWORD:
+            out(f"L{fd} {addr[0]} {addr[1]} {ACCOUNT}")
+            out(f"Z{fd} {addr[0]} {addr[1]}")
+        else:
+            out(f"f{fd} {addr[0]} {addr[1]} :invalid credentials")
+
+        clients.pop(fd, None)
+
+
+main()
