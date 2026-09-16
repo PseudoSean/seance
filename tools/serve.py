@@ -73,6 +73,44 @@ class SpaHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=STATIC_DIR, **kwargs)
 
+    def setup(self):
+        """Classify and wrap the connection in this connection's own thread.
+
+        A plaintext request on the TLS port is a mistyped scheme: it is
+        flagged for the 301 redirect instead of wrapped. A handshake that
+        goes nowhere (a port forward's probe that connects and sends
+        nothing) raises here and costs this thread only — doing this work
+        on the accept loop let one silent probe stall every new
+        connection, which read as the whole site being down.
+        """
+        ctx = getattr(self.server, "tls_context", None)
+
+        if ctx is None:
+            return super().setup()
+
+        # self.request is the accepted socket; self.connection does not
+        # exist until the base setup() runs.
+        sock = self.request
+        sock.settimeout(10)
+
+        try:
+            first = sock.recv(5, socket.MSG_PEEK)
+        except (OSError, ssl.SSLError):
+            first = b""
+
+        if first[:4] in PLAIN_HTTP_PREFIXES:
+            self.is_plain_http_connection = True
+        else:
+            try:
+                sock = ctx.wrap_socket(sock, server_side=True)
+            except (ssl.SSLError, OSError):
+                raise
+
+        sock.settimeout(None)
+        # Both, because the base setup() resets connection from request.
+        self.request = self.connection = sock
+        return super().setup()
+
     def log_message(self, fmt, *args):
         if VERBOSE:
             sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
@@ -101,7 +139,7 @@ class SpaHandler(http.server.SimpleHTTPRequestHandler):
         # A plaintext request on the TLS port (get_request flagged it): one
         # redirect, then gone. The path carries over; the Host header names
         # the address the browser dialed.
-        if getattr(self.server, "is_plain_http", lambda sock: False)(self.connection):
+        if getattr(self, "is_plain_http_connection", False):
             try:
                 self.connection.settimeout(5)
                 head = b""
@@ -277,9 +315,6 @@ class ThreadingSpaServer(http.server.ThreadingHTTPServer):
 
     def __init__(self, *args, tls_context: ssl.SSLContext | None = None, **kwargs):
         self.tls_context = tls_context
-        # Filenames of sockets accepted as plaintext (a bare socket.socket
-        # has __slots__; there is nowhere on it to hang a flag).
-        self.plain_http_fds: set[int] = set()
         super().__init__(*args, **kwargs)
 
     def get_request(self):
@@ -288,42 +323,7 @@ class ThreadingSpaServer(http.server.ThreadingHTTPServer):
         if VERBOSE:
             sys.stderr.write(f"accepted connection from {addr[0]}:{addr[1]}\n")
 
-        if self.tls_context is None:
-            return sock, addr
-
-        # A plaintext request on the TLS port is a mistyped scheme. Answer it
-        # with a redirect to https:// instead of a dead connection — the
-        # browser error a bare handshake failure produces ("site can't be
-        # reached") reads as the site being down.
-        sock.settimeout(5)
-
-        try:
-            first = sock.recv(5, socket.MSG_PEEK)
-        except (OSError, ssl.SSLError):
-            first = b""
-
-        if first[:4] in PLAIN_HTTP_PREFIXES:
-            self.plain_http_fds.add(sock.fileno())
-            return sock, addr
-
-        try:
-            sock = self.tls_context.wrap_socket(sock, server_side=True)
-        except (ssl.SSLError, OSError):
-            # A probe that never spoke TLS: drop it. The SSLError is an
-            # OSError, which socketserver's accept loop already swallows.
-            raise
-
-        sock.settimeout(None)
         return sock, addr
-
-    def is_plain_http(self, sock: socket.socket) -> bool:
-        fileno = sock.fileno()
-        plain = fileno in self.plain_http_fds
-
-        if plain:
-            self.plain_http_fds.discard(fileno)
-
-        return plain
 
 
 # --- the self-signed certificate ------------------------------------------
