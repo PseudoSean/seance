@@ -42,6 +42,12 @@ function main(): void {
 
 		const out = resolve(LOCALES, `${tag}.po`);
 
+		// English is compiled from the pot itself — a hand-written en.po is
+		// refused by the compile.
+		if (tag === "en") {
+			continue;
+		}
+
 		if (existsSync(out) && !force) {
 			skipped += 1;
 			continue;

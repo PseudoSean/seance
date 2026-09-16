@@ -95,14 +95,17 @@ function categoryIndexMap(tag: string, expr: string): Record<string, number> {
 /** {name} tokens must survive translation — an MT row that ate one is broken. */
 function assertPlaceholders(entry: PoEntry): void {
 	const tokens = (text: string): string => (text.match(/\{(\w+)\}/g) ?? []).sort().join(",");
-	const source = entry.msgidPlural ?? entry.msgid;
+	// A plural entry's forms may legitimately follow either source: the
+	// singular can carry fewer tokens ("once" vs "{count} times"), so a
+	// form matches when it agrees with the singular or the plural source.
+	const sources = [entry.msgid, entry.msgidPlural].filter(Boolean) as string[];
 
 	for (const text of entry.msgstr) {
-		if (text && tokens(text) !== tokens(source)) {
+		if (text && !sources.some((source) => tokens(text) === tokens(source))) {
 			throw new Error(
-				`compile: ${entry.msgctxt}: placeholder mismatch\n  source: ${tokens(
-					source
-				)}\n  translation: ${tokens(text)}`
+				`compile: ${entry.msgctxt}: placeholder mismatch\n  source: ${sources
+					.map(tokens)
+					.join(" | ")}\n  translation: ${tokens(text)}`
 			);
 		}
 	}

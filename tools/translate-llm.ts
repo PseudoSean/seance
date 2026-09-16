@@ -50,14 +50,12 @@ import {
 	TranslateRequest,
 	emptyContext,
 } from "../client/js/translate/engine";
+import {ModelRecord, WebLlmEngine} from "../client/js/translate/engines/webllm";
 import {
 	ChatDelta,
 	ChatRequest,
 	MlcLike,
-	ModelRecord,
 	WebLlmDeps,
-	WebLlmEngine,
-import {
 	asError,
 	message,
 	type Device,
