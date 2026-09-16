@@ -130,6 +130,13 @@ class SpaHandler(http.server.SimpleHTTPRequestHandler):
         # would demand. WebGPU does not need these; the CPU speed does.
         self.send_header("Cross-Origin-Opener-Policy", "same-origin")
         self.send_header("Cross-Origin-Embedder-Policy", "credentialless")
+        # `no-cache` (revalidate every time, not "never store"): without it a
+        # browser heuristic-caches assets for hours off Last-Modified, and a
+        # dev build's constant `?v=dev` token means a rebuild never changes
+        # the URL — the user stares at a stale app and sees "no difference".
+        # Revalidation is cheap: SimpleHTTPRequestHandler answers
+        # If-Modified-Since with 304 when the file is unchanged.
+        self.send_header("Cache-Control", "no-cache")
         super().end_headers()
 
     def do_GET(self):

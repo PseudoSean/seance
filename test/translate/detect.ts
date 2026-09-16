@@ -320,6 +320,7 @@ describe("translate/detect", () => {
 			lang: null,
 			confidence: 0,
 			candidates: [],
+			short: true,
 		});
 		expect(calls).to.deep.equal([]);
 
@@ -404,10 +405,19 @@ describe("translate/detect", () => {
 			).to.equal("unsure");
 		});
 
-		it("skips an unplaced line with no candidates at all as unsure", () => {
+		it("skips an unplaced long line with no candidates at all as unsure", () => {
 			expect(detectionSkip({lang: null, confidence: 0, candidates: []}, "en")).to.equal(
 				"unsure"
 			);
+		});
+
+		// A one-word line ("Hallo", "lol") carries no function words and is too
+		// short for franc — no verdict is not evidence it is already readable.
+		// The engine detects the source; an echo lands on the Not-translated chip.
+		it("translates a too-short line with no verdict instead of skipping it", () => {
+			expect(
+				detectionSkip({lang: null, confidence: 0, candidates: [], short: true}, "en")
+			).to.equal(null);
 		});
 	});
 });

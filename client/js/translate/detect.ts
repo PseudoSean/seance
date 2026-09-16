@@ -31,6 +31,15 @@ export interface Detection {
 	 * may be null while these still name the contenders.
 	 */
 	candidates: string[];
+	/**
+	 * The line is too short to judge (`DETECT_MIN_LENGTH`): no verdict is
+	 * possible, and that is not evidence the line is already in the reading
+	 * language — `detectionSkip` leaves it to the engine, which detects the
+	 * source itself; an echo of the reading language lands on the
+	 * "Not translated" chip (queue.ts), so the cost of guessing wrong is a
+	 * chip, not a wrong translation.
+	 */
+	short?: true;
 }
 
 /** `francAll`'s shape: `[iso639-3, weight]`, best first, best weight 1. */
@@ -210,6 +219,7 @@ export function detectionSkip(detection: Detection, to: string): DetectionSkip {
 
 	if (
 		detection.lang === null &&
+		!detection.short &&
 		(detection.candidates.length === 0 || detection.candidates.includes(to))
 	) {
 		return "unsure";
@@ -326,7 +336,13 @@ export async function detectLanguage(
 			return {lang: only[0], confidence: 0, candidates: only};
 		}
 
-		return {lang: chat.lang, confidence: 0, candidates: chat.lang ? [chat.lang] : []};
+		// No verdict is not evidence of the reading language: `short` tells
+		// `detectionSkip` to let the line through (the engine detects the
+		// source; "Hallo" translates, an English echo lands on the
+		// Not-translated chip).
+		return chat.lang
+			? {lang: chat.lang, confidence: 0, candidates: [chat.lang]}
+			: {lang: null, confidence: 0, candidates: [], short: true};
 	}
 
 	const detect = await loadDetector();
