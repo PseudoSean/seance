@@ -13,6 +13,11 @@
 // en per key); a translation that lost a {placeholder} the msgid has fails
 // the run with the key named. [--pseudo] is accepted for CLI compatibility;
 // there is no flag gating — qqx generation is unconditional.
+//
+// Before compiling, main() runs runSync() (tools/i18n/sync.ts), so the
+// build itself tracks the language list: .po files for new targets are
+// scaffolded and strays are moved into attic/ (a subdirectory, invisible
+// to the compile's non-recursive listing).
 
 import {mkdirSync, readFileSync, readdirSync, writeFileSync} from "node:fs";
 import {dirname, resolve} from "node:path";
@@ -22,6 +27,7 @@ import {pseudo} from "./pseudo";
 import {AVAILABLE_PATH, LOCALES_DIR} from "./paths";
 import {generateTargets} from "./targets";
 import {collectStaticCallSiteKeys} from "./check";
+import {runSync} from "./sync";
 
 /** What the runtime loads: strings, plurals keyed by CLDR category. */
 export type Catalog = Record<string, string | Record<string, string>>;
@@ -309,6 +315,9 @@ function main(): void {
 		return;
 	}
 
+	// Track the language list immediately before compileLocales() lists the
+	// directory: scaffold what the targets gained, archive what they lost.
+	runSync();
 	const result = compileLocales();
 	const targets = generateTargets();
 
