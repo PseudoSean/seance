@@ -528,7 +528,19 @@ const translateConfig: webpack.Configuration = {
 		},
 	},
 	module: {
-		rules: [makeTsRule()],
+		rules: [
+			makeTsRule(),
+			{
+				// transformers.js and onnxruntime-web use `import.meta`;
+				// webpack's shim for it references __webpack_module__
+				// unbound in production builds (the module param is marked
+				// unused), which kills the worker on load. The stub loader
+				// replaces the expressions — wasm paths are overridden by
+				// seq2seq.real.ts anyway.
+				test: /[\\/]node_modules[\\/](@huggingface[\\/]transformers|onnxruntime-web)[\\/].*\.(js|mjs)$/,
+				loader: path.resolve(__dirname, "tools/transformers-importmeta-loader.mjs"),
+			},
+		],
 		// The ORT bundle's own `new URL(..., import.meta.url)` fallback
 		// resolution is never used at runtime — seq2seq.real.ts overrides
 		// wasmPaths to js/ort/ before any model loads — but webpack's
