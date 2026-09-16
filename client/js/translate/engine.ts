@@ -20,6 +20,12 @@ export interface ModelRef {
 	label: string;
 	/** Approximate download size for Settings; 0 when unknown. */
 	sizeBytes: number;
+	/**
+	 * The graphics memory the model needs at runtime (GPU models only):
+	 * what the capability probe's adapter limit is checked against when
+	 * the default model is picked (models.ts `defaultLlmForAdapter`).
+	 */
+	vramBytes?: number;
 	/** OPUS-MT pair models: [from, to] in ISO 639-1. */
 	pair?: [string, string];
 	/**

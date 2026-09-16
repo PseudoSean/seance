@@ -21,7 +21,11 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   `Qwen3-4B-q4f16_1-MLC` (~2.3 GB, ~3.4 GB). On 45 casual chat lines into
   French, German and Spanish they scored alike (41 and 40 clean), and 4B's
   phrasing read noticeably more natural; it is also slower and needs more
-  memory, so it is a choice rather than the default. Settings → Translation's
+  memory. It is nonetheless the **default** when the adapter can run it
+  (the capability probe's buffer limit covers its ~3.4 GB — `models.ts`
+  `defaultLlmForAdapter`, applied once the probe lands, only for a user
+  who never picked and only when the deploy named no model of its own;
+  devices under the limit keep the 1.7B). Settings → Translation's
   "GPU model" select writes `translateLlmModel` (carried by the settings
   backup like any setting); the model manager lists both rows, whichever is
   selected, and marks the selected one "In use". The setting stays `""`

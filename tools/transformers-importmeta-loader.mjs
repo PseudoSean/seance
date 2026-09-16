@@ -19,7 +19,7 @@
 //   import.meta      → ({ url: "file:///transformers.web.js" })
 
 const STUB_URL = '"file:///transformers.web.js"';
-const STUB_OBJECT = '({url: ' + STUB_URL + '})';
+const STUB_OBJECT = "({url: " + STUB_URL + "})";
 
 export default function (source) {
 	return source

@@ -6,6 +6,7 @@ import {
 	QWEN3_1_7B_ID,
 	QWEN3_4B_ID,
 	buildCatalog,
+	defaultLlmForAdapter,
 	cacheStates,
 	candidateOf,
 	catalogModels,
@@ -87,6 +88,30 @@ describe("translate/models", () => {
 		expect(llmName(large)).to.equal("Qwen3 4B");
 		expect(small.label).to.equal("Qwen3 1.7B (GPU, all languages)");
 		expect(small.lib).to.equal(undefined);
+	});
+
+	it("defaults to the 4B when the adapter fits it, else the 1.7B", () => {
+		// A desktop-class adapter (the 4060-class machine this deploy runs
+		// on) fits the 4B's ~3.4 GB of graphics memory with room to spare.
+		expect(defaultLlmForAdapter(4 * 1024 * 1024 * 1024)).to.equal(QWEN3_4B_ID);
+		expect(defaultLlmForAdapter(3_400_000_000)).to.equal(QWEN3_4B_ID);
+		// Under the 4B's requirement the 1.7B is the best that fits.
+		expect(defaultLlmForAdapter(3_399_999_999)).to.equal(QWEN3_1_7B_ID);
+		expect(defaultLlmForAdapter(2 * 1024 * 1024 * 1024)).to.equal(QWEN3_1_7B_ID);
+		// Even the smallest gpu-tier adapter (the 1 GiB floor) gets an answer.
+		expect(defaultLlmForAdapter(1024 * 1024 * 1024)).to.equal(QWEN3_1_7B_ID);
+	});
+
+	it("the GPU choices carry their graphics-memory requirement", () => {
+		const byId = new Map(LLM_CHOICES.map((ref) => [ref.id, ref]));
+
+		expect(byId.get(QWEN3_4B_ID)?.vramBytes).to.be.greaterThan(
+			byId.get(QWEN3_1_7B_ID)?.vramBytes ?? 0
+		);
+		// The 4B's check is the one the default decision makes: above 1 GiB
+		// but below a 4 GiB adapter, or the default would never flip.
+		expect(byId.get(QWEN3_4B_ID)?.vramBytes).to.be.greaterThan(1024 * 1024 * 1024);
+		expect(byId.get(QWEN3_4B_ID)?.vramBytes).to.be.lessThan(4 * 1024 * 1024 * 1024);
 	});
 
 	it("selects the chosen GPU model; an id that is no choice selects the default", () => {

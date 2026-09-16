@@ -10,7 +10,7 @@ import {probeOnce} from "./capability";
 import {emptyContext} from "./engine";
 import {TranslateClient} from "./client";
 import {FAKE_CAPABILITY, fakePort} from "./fakePort";
-import {buildCatalog} from "./models";
+import {buildCatalog, defaultLlmForAdapter} from "./models";
 import {MainPort} from "./protocol";
 import {RouteTable} from "./router";
 import {ServiceDeps, TranslateService} from "./service";
@@ -124,9 +124,25 @@ function create(): TranslateService {
 	);
 	created.onModels((models) => store.commit("translationModels", models));
 	created.onWorkerError((message) => store.commit("translationWorkerError", message));
-	void created
-		.capabilities()
-		.then((capability) => store.commit("translationCapability", capability));
+	void created.capabilities().then((capability) => {
+		store.commit("translationCapability", capability);
+
+		// The default GPU model follows the adapter: the 4B when its
+		// graphics memory fits, else the 1.7B. Only for a user who never
+		// picked, and never over a deploy's own model — their choice (or
+		// the deploy's) is the default by definition.
+		if (
+			capability.tier === "gpu" &&
+			!store.state.settings.translateLlmModel &&
+			!branding.llm?.model
+		) {
+			const picked = defaultLlmForAdapter(capability.maxBufferBytes);
+
+			if (picked !== catalog.llm.id) {
+				void store.dispatch("settings/update", {name: "translateLlmModel", value: picked});
+			}
+		}
+	});
 	window.addEventListener("pagehide", () => created.pagehide());
 
 	return created;

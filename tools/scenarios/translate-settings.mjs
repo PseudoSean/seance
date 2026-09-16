@@ -122,7 +122,12 @@ export default async function run(page) {
 			`[...document.querySelectorAll('select[name="translateLlmModel"] option')].map((o) => o.textContent.trim()).join("|")`
 		)) === "Qwen3 1.7B · 1.1 GB|Qwen3 4B · 2.3 GB"
 	);
-	page.check("1.7B is in use by default", (await page.evaluate(IN_USE)) === SMALL);
+	// The fake capability's 4 GiB adapter fits the 4B, so the
+	// capability-based default picks it over the 1.7B.
+	page.check(
+		"4B is in use by default (the fake adapter fits it)",
+		(await page.evaluate(IN_USE)) === LARGE
+	);
 
 	await page.waitFor(`!!document.querySelector(".translate-device")`, {label: "device note"});
 	page.check(
@@ -239,6 +244,14 @@ export default async function run(page) {
 	page.check("1.7B stored again", (await page.evaluate(STORED("translateLlmModel"))) === SMALL);
 	await translateOnGpu(page);
 	page.check("the fake engine ran 1.7B again", (await page.evaluate(LAST_FAKE_MODEL)) === SMALL);
+	// Back to no explicit choice: the capability-based default (4B, the
+	// fake's adapter fits it) takes over again.
+	await page.evaluate(
+		`(() => { const el = document.querySelector('select[name="translateLlmModel"]'); el.value = ""; el.dispatchEvent(new Event("change", {bubbles: true})); })()`
+	);
+	await page.waitFor(`(${IN_USE}) === ${JSON.stringify(LARGE)}`, {
+		label: "clearing the pick returns to the capability-based default",
+	});
 	await page.screenshot("translation-llm-back");
 
 	// This page has no channel reading or writing through translation (it

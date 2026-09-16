@@ -101,6 +101,7 @@
 			<label class="opt translate-llm-model">
 				<span>GPU model</span>
 				<select name="translateLlmModel" :value="selectedLlm.id">
+					<option value="">Automatic — best for this device</option>
 					<option v-for="choice in llmChoices" :key="choice.id" :value="choice.id">
 						{{ llmName(choice) }} · {{ size(choice.sizeBytes) }}
 					</option>

@@ -80,8 +80,10 @@ const LLM_LABEL_SUFFIX = " (GPU, all languages)";
 
 /**
  * The GPU models Settings offers, both WebLLM prebuilt ids. `sizeBytes` is
- * the download; the graphics memory they need is WebLLM's
- * `vram_required_MB`, about 2.0 GB for 1.7B and 3.4 GB for 4B.
+ * the download; `vramBytes` is the graphics memory the model needs at
+ * runtime (WebLLM's `vram_required_MB`, about 2.0 GB for 1.7B and 3.4 GB
+ * for 4B) — what the capability probe's adapter limit is checked against
+ * when the default is picked.
  */
 export const LLM_CHOICES: readonly ModelRef[] = [
 	{
@@ -90,6 +92,7 @@ export const LLM_CHOICES: readonly ModelRef[] = [
 		id: QWEN3_1_7B_ID,
 		label: `Qwen3 1.7B${LLM_LABEL_SUFFIX}`,
 		sizeBytes: LLM_SIZE_BYTES,
+		vramBytes: 2_000_000_000,
 	},
 	{
 		engine: "llm",
@@ -97,8 +100,25 @@ export const LLM_CHOICES: readonly ModelRef[] = [
 		id: QWEN3_4B_ID,
 		label: `Qwen3 4B${LLM_LABEL_SUFFIX}`,
 		sizeBytes: 2_300_000_000,
+		vramBytes: 3_400_000_000,
 	},
 ];
+
+/**
+ * The default GPU model for an adapter with `maxBufferBytes` addressable:
+ * the most capable choice whose memory requirement fits. The gpu tier's
+ * own 1 GiB gate guarantees the last choice (1.7B) always fits, so this
+ * never returns nothing for a gpu-tier device.
+ */
+export function defaultLlmForAdapter(maxBufferBytes: number): string {
+	for (const ref of [...LLM_CHOICES].reverse()) {
+		if ((ref.vramBytes ?? 0) <= maxBufferBytes) {
+			return ref.id;
+		}
+	}
+
+	return LLM_CHOICES[0].id;
+}
 
 /** A GPU model's name without its "(GPU, all languages)" note, for the model select. */
 export function llmName(ref: ModelRef): string {
