@@ -142,7 +142,7 @@ describe("translate/eligibility", () => {
 	it("wordCount counts words, not punctuation", () => {
 		expect(wordCount("Ja, gestern.")).to.equal(2);
 		expect(wordCount("  ")).to.equal(0);
-		expect(MIN_WORDS).to.equal(3);
+		expect(MIN_WORDS).to.equal(1);
 	});
 
 	it("a message from someone else with three words qualifies, however old", () => {
@@ -165,12 +165,17 @@ describe("translate/eligibility", () => {
 		expect(isEligible(msg({self: true, type: "join"}), {nicks})).to.equal(false);
 	});
 
+	it("a single word is eligible, the user's own included", () => {
+		expect(isEligible(msg({text: "Hallo"}), {nicks})).to.equal(true);
+		expect(isEligible(msg({self: true, text: "Hallo"}), {nicks})).to.equal(true);
+	});
+
 	it("an own line under MIN_WORDS does not", () => {
-		expect(isEligible(msg({self: true, text: "ok danke"}), {nicks})).to.equal(false);
+		expect(isEligible(msg({self: true, text: "🎉 😂"}), {nicks})).to.equal(false);
 	});
 
 	it("too little text does not", () => {
-		expect(isEligible(msg({text: "ok danke"}), {nicks})).to.equal(false);
+		expect(isEligible(msg({text: "🎉 😂"}), {nicks})).to.equal(false);
 		expect(isEligible(msg({text: "https://example.test/a :tada: ada:"}), {nicks})).to.equal(
 			false
 		);

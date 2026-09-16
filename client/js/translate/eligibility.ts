@@ -1,12 +1,12 @@
 // Which incoming messages the reading pipeline considers (spec § Reading
-// pipeline, 1): anyone's, the user's own included, not pending, a chat type, and with enough
-// words once URLs, code, emoji, formatting codes and nick mentions are gone
+// pipeline, 1): anyone's, the user's own included, not pending, a chat type, and any
+// word once URLs, code, emoji, formatting codes and nick mentions are gone
 // -- however old: reading covers what is in the channel, not only what
 // arrives after the switch. History -- a join's fill, a replay or catch-up,
 // a "load more", the requeue of a switch-on or a language change -- is
 // bounded here as well: newest first, `HISTORY_QUEUE_CAP` per load. Vue-free.
 
-export const MIN_WORDS = 3;
+export const MIN_WORDS = 1;
 
 /**
  * How many of a channel's history lines one load may queue. A "load more",
