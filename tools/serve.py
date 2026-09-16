@@ -285,6 +285,9 @@ class ThreadingSpaServer(http.server.ThreadingHTTPServer):
     def get_request(self):
         sock, addr = self.socket.accept()
 
+        if VERBOSE:
+            sys.stderr.write(f"accepted connection from {addr[0]}:{addr[1]}\n")
+
         if self.tls_context is None:
             return sock, addr
 
