@@ -4,8 +4,144 @@ export const AVAILABLE = [
 		"tag": "en"
 	},
 	{
+		"tag": "af"
+	},
+	{
+		"tag": "ar"
+	},
+	{
+		"tag": "bg"
+	},
+	{
+		"tag": "bn"
+	},
+	{
+		"tag": "ca"
+	},
+	{
+		"tag": "cs"
+	},
+	{
+		"tag": "cy"
+	},
+	{
+		"tag": "da"
+	},
+	{
 		"tag": "de"
+	},
+	{
+		"tag": "el"
+	},
+	{
+		"tag": "es"
+	},
+	{
+		"tag": "eu"
+	},
+	{
+		"tag": "fa"
+	},
+	{
+		"tag": "fi"
+	},
+	{
+		"tag": "fil"
+	},
+	{
+		"tag": "fr"
+	},
+	{
+		"tag": "ga"
+	},
+	{
+		"tag": "gl"
+	},
+	{
+		"tag": "he"
+	},
+	{
+		"tag": "hi"
+	},
+	{
+		"tag": "hr"
+	},
+	{
+		"tag": "hu"
+	},
+	{
+		"tag": "id"
+	},
+	{
+		"tag": "it"
+	},
+	{
+		"tag": "ja"
+	},
+	{
+		"tag": "ko"
+	},
+	{
+		"tag": "ms"
+	},
+	{
+		"tag": "nb"
+	},
+	{
+		"tag": "nl"
+	},
+	{
+		"tag": "pl"
+	},
+	{
+		"tag": "pt"
+	},
+	{
+		"tag": "ro"
+	},
+	{
+		"tag": "ru"
+	},
+	{
+		"tag": "sk"
+	},
+	{
+		"tag": "sl"
+	},
+	{
+		"tag": "sr"
+	},
+	{
+		"tag": "sv"
+	},
+	{
+		"tag": "sw"
+	},
+	{
+		"tag": "ta"
+	},
+	{
+		"tag": "th"
+	},
+	{
+		"tag": "tr"
+	},
+	{
+		"tag": "uk"
+	},
+	{
+		"tag": "ur"
+	},
+	{
+		"tag": "vi"
+	},
+	{
+		"tag": "zh"
+	},
+	{
+		"tag": "qqx",
+		"devOnly": true
 	}
 ] as const;
 export type AvailableLocale = (typeof AVAILABLE)[number]["tag"];
-export const DEV = false;
+export const DEV = true;
