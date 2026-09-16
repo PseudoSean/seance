@@ -11,8 +11,8 @@
 				channel header.
 			</div>
 			<label class="opt translate-target">
-				<span>Read messages in</span>
-				<select name="translateTo" :value="store.state.settings.translateTo">
+				<span>Interface and reading language</span>
+				<select name="locale" :value="store.state.settings.locale">
 					<option value="auto">{{ automaticLabel }}</option>
 					<option v-for="code in languages" :key="code" :value="code">
 						{{ name(code) }}
@@ -20,8 +20,8 @@
 				</select>
 			</label>
 			<div class="translate-hint">
-				The language incoming messages are translated into. Automatic follows the interface
-				language; a choice here overrides it for reading only.
+				The language the interface is written in and messages are translated into — one
+				control. Automatic follows your browser's language.
 			</div>
 			<div
 				v-if="effectiveReading && limited(effectiveReading)"
@@ -301,9 +301,9 @@ export default defineComponent({
 		// sees selected is the language their browser asked for.
 		const automaticLabel = `Automatic — ${name(
 			browserLanguage(navigator.language)
-		)} (follows the interface)`;
-		// The reading language as it stands (override, or the interface's):
-		// reactivity rides on the store read and the i18n ref the helper reads.
+		)} (follows your browser)`;
+		// The reading language as it stands: the interface's (one control —
+		// reactivity rides on the store read and the i18n ref the helper reads).
 		const effectiveReading = computed(() => readingLanguage());
 		const loadError = ref<string | null>(null);
 		// Two ways the worker can disappoint this tab: a call it made rejected

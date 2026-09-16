@@ -30,7 +30,7 @@ import {
 import {buildContext} from "./context";
 import {type Detection, LanguagePrior, detectLanguage, detectionSkip} from "./detect";
 import {ReplayBatches, historyQueueOrder, isEligible, plainTextOf} from "./eligibility";
-import {fromLocaleTag, isSupported} from "./languages";
+import {fromLocaleTag} from "./languages";
 import {setTranslationUsage, translateService} from "./index";
 import {NO_ROUTE, type QueueItem, type QueueUpdate, TranslateQueue} from "./queue";
 import {sentReadBacks, takesReadBack} from "./sentReadBack";
@@ -83,24 +83,19 @@ export function channelTranslation(
 }
 
 /**
- * The language the user reads in. One language everywhere: the Settings
- * override when one is set, otherwise the interface's (`userLanguageRef`,
- * the unified setting that "auto" resolves from the browser and a dev
- * pick sets; `fromLocaleTag` maps it to a translation code). The one
- * decision for everything that needs it: the queues translate into it,
- * the composer (`writer.ts`) places a draft it cannot detect and reads a
- * translation back into it, and the labels (`TranslationLine.vue`, the
- * composer strip, the channel header's globe) name their languages in it.
- * Reading itself is on or off per channel (`setReading`); the language is
- * not, so a draft can no longer meet a panel language that differs from
- * this one.
+ * The language the user reads in: the interface's (`userLanguageRef`, the
+ * one language setting — the Settings → Translation select and the dev
+ * sidebar's globe both write it; `fromLocaleTag` maps it to a translation
+ * code). The one decision for everything that needs it: the queues
+ * translate into it, the composer (`writer.ts`) places a draft it cannot
+ * detect and reads a translation back into it, and the labels
+ * (`TranslationLine.vue`, the composer strip, the channel header's
+ * translate button) name their languages in it. Reading itself is on or
+ * off per channel (`setReading`); the language is not, so a draft can no
+ * longer meet a panel language that differs from this one.
  */
 export function readingLanguage(): string {
-	const override = store.state.settings.translateTo;
-
-	return override !== "auto" && isSupported(override)
-		? override
-		: fromLocaleTag(userLanguageRef.value);
+	return fromLocaleTag(userLanguageRef.value);
 }
 
 /**
@@ -136,7 +131,6 @@ function restartAllReading(): void {
 }
 
 watch(userLanguageRef, restartAllReading);
-store.watch(() => store.state.settings.translateTo, restartAllReading);
 
 /**
  * Whether translation is wanted right now (service.ts `setInUse`): a

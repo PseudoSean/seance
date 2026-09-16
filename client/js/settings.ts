@@ -3,6 +3,7 @@ import {mirrorPushPrefs} from "./push-prefs";
 import {activate} from "./i18n";
 import {normalizeFontSize} from "./helpers/fontSize";
 import {prefersTwelveHourClock} from "./helpers/hourCycle";
+import storage from "./localStorage";
 
 const defaultSettingConfig = {
 	apply() {},
@@ -92,14 +93,12 @@ const defaultConfig = {
 		default: "ask",
 	},
 	/**
-	 * Translation (client/js/translate): the reading language override.
-	 * "auto" — the default — reads in the interface's language (the unified
-	 * setting, resolved from the browser in production); anything else
-	 * overrides it for reading only. reader.ts `readingLanguage()`.
+	 * Translation (client/js/translate): one language everywhere — the
+	 * interface's and the reading target's (the unified control; the
+	 * Settings → Translation select and the dev sidebar globe both write
+	 * this). "auto" resolves from the browser. reader.ts
+	 * `readingLanguage()` reads it through `userLanguageRef`.
 	 */
-	translateTo: {
-		default: "auto",
-	},
 	/** auto | formal | casual, one line of the prompt. */
 	translateFormality: {
 		default: "auto",
@@ -233,3 +232,42 @@ function normalizeConfig(obj: any) {
 export type SettingsState = {
 	[key in keyof typeof defaultConfig]: typeof defaultConfig[key]["default"];
 };
+
+/**
+ * One-time migration for the removed "Read messages in" override
+ * (`translateTo`): the interface language and the reading language are one
+ * control now, so a user who had pinned a reading override keeps it as their
+ * interface language — unless they had already picked one, which wins. The
+ * old key is deleted either way, before the settings store's first write can
+ * drop it silently. No-op when the override was "auto" or absent.
+ */
+export function migrateReadingToLocale(): void {
+	let raw: string | null;
+
+	try {
+		raw = storage.get("settings");
+	} catch {
+		return;
+	}
+
+	let stored: Record<string, unknown>;
+
+	try {
+		stored = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+	} catch {
+		return; // garbage settings blob: leave it alone
+	}
+
+	const override = stored.translateTo;
+
+	if (typeof override !== "string" || override === "auto") {
+		return;
+	}
+
+	if (stored.locale === undefined || stored.locale === "auto") {
+		stored.locale = override;
+	}
+
+	delete stored.translateTo;
+	storage.set("settings", JSON.stringify(stored));
+}
