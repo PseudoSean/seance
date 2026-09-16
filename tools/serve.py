@@ -136,15 +136,27 @@ class SpaHandler(http.server.SimpleHTTPRequestHandler):
         if self.headers.get("Upgrade", "").lower() == "websocket":
             self.proxy_websocket()
             return
+
+        if self.path in ("/seance-serve.pem", "/seance-serve.crt"):
+            self.send_response(200)
+            self.send_header("Content-Type", "application/x-x509-ca-cert")
+            body = open(CERT_PATH, "rb").read()
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
         super().do_GET()
 
     def do_HEAD(self):
         super().do_HEAD()
 
     def handle(self):
-        # A plaintext request on the TLS port (get_request flagged it): one
-        # redirect, then gone. The path carries over; the Host header names
-        # the address the browser dialed.
+        # A plaintext request on the TLS port (setup flagged it): read the
+        # head here — requestline does not exist before the base handler's
+        # own parse — then either serve the certificate (public information;
+        # fetching it is how a device installs it as a trusted CA) or
+        # redirect to https:// with the path and Host carried over.
         if getattr(self, "is_plain_http_connection", False):
             try:
                 self.connection.settimeout(5)
@@ -171,14 +183,23 @@ class SpaHandler(http.server.SimpleHTTPRequestHandler):
                 if not host:
                     host = self.connection.getsockname()[0]
 
-                self.connection.sendall(
-                    (
-                        f"HTTP/1.1 301 Moved Permanently\r\n"
-                        f"Location: https://{host}{path}\r\n"
-                        f"Content-Length: 0\r\n"
-                        f"Connection: close\r\n\r\n"
-                    ).encode("latin-1")
-                )
+                if path in ("/seance-serve.pem", "/seance-serve.crt"):
+                    body = open(CERT_PATH, "rb").read()
+                    self.connection.sendall(
+                        b"HTTP/1.1 200 OK\r\n"
+                        b"Content-Type: application/x-x509-ca-cert\r\n"
+                        b"Content-Length: " + str(len(body)).encode() + b"\r\n"
+                        b"Connection: close\r\n\r\n" + body
+                    )
+                else:
+                    self.connection.sendall(
+                        (
+                            f"HTTP/1.1 301 Moved Permanently\r\n"
+                            f"Location: https://{host}{path}\r\n"
+                            f"Content-Length: 0\r\n"
+                            f"Connection: close\r\n\r\n"
+                        ).encode("latin-1")
+                    )
             except OSError:
                 pass
             finally:
@@ -302,7 +323,7 @@ class SpaHandler(http.server.SimpleHTTPRequestHandler):
                     except OSError:
                         return
         finally:
-            for sock in peers.values():
+            for sock in {client, upstream}:
                 try:
                     sock.close()
                 except OSError:
