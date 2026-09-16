@@ -47,17 +47,32 @@
 			@close="pickerOpen = false"
 		/>
 		<span v-if="entry.status === 'failed'" class="msg-translation-failed">
-			couldn't translate
-			<span v-if="entry.error" class="msg-translation-reason" :title="entry.error">{{
-				shortReason(entry.error)
-			}}</span>
 			<button
+				v-if="entry.error === UNCHANGED"
 				type="button"
-				class="msg-translation-retry"
-				title="Retry the translation"
-				aria-label="Retry the translation"
-				@click.stop="retry"
-			/>
+				class="msg-translation-skipped-tag"
+				:title="notTranslatedLabel"
+				:aria-label="notTranslatedLabel"
+				@click.stop="openMenu"
+			>
+				<i class="fas fa-equals" aria-hidden="true" />
+				<span v-if="devtoolsAvailable" class="msg-translation-reason">{{
+					t("translate.unchangedReason")
+				}}</span>
+			</button>
+			<template v-else>
+				{{ t("translate.failed") }}
+				<span v-if="entry.error" class="msg-translation-reason" :title="entry.error">{{
+					shortReason(reasonText)
+				}}</span>
+				<button
+					type="button"
+					class="msg-translation-retry"
+					:title="retryLabel"
+					:aria-label="retryLabel"
+					@click.stop="retry"
+				/>
+			</template>
 		</span>
 		<span v-else class="msg-translation-text" :lang="entry.to" dir="auto">
 			<ParsedMessage
@@ -79,9 +94,12 @@
 <script lang="ts">
 import {computed, defineComponent, PropType, ref} from "vue";
 import {writeClipboard} from "../js/clipboard";
+import {devtoolsAvailable} from "../js/devtools";
 import eventbus from "../js/eventbus";
+import {useI18n} from "../js/i18n";
 import {useStore} from "../js/store";
 import {readingLanguage, retranslate, retryTranslation, showOriginal} from "../js/translate/reader";
+import {ANSWERED, DEGENERATE, NARRATION, UNCHANGED} from "../js/translate/outgoing";
 import {languageName} from "../js/translate/languages";
 import {directionText} from "../js/translate/labels";
 import {loadNote} from "../js/translate/service";
@@ -102,7 +120,30 @@ export default defineComponent({
 	},
 	setup(props) {
 		const store = useStore();
+		const {t} = useI18n();
 		const entry = computed(() => store.state.translations[props.message.id]);
+		const notTranslatedLabel = computed(() => t("translate.notTranslated"));
+		const retryLabel = computed(() => t("translate.retry"));
+		// The failure reason after "Couldn't translate": the classifier's
+		// verdicts are phrases of our own and come from the pot; any other
+		// error string is the engine's own text and renders verbatim.
+		const reasonText = computed(() => {
+			const error = entry.value?.error ?? "";
+
+			if (error === ANSWERED) {
+				return t("translate.reason.answered");
+			}
+
+			if (error === NARRATION) {
+				return t("translate.reason.narration");
+			}
+
+			if (error === DEGENERATE) {
+				return t("translate.reason.degenerate");
+			}
+
+			return error;
+		});
 		// Every language the line names is named in the language its reader
 		// reads (the channel's reading language, else the global one), not
 		// the browser's: "French → English" for an English reader,
@@ -216,19 +257,27 @@ export default defineComponent({
 				return;
 			}
 
+			// An entry that failed as "unchanged" has no translation to copy,
+			// so its menu is the failed row's minus the Copy item.
+			const unchanged = entry.value?.status === "failed" && entry.value.error === UNCHANGED;
+
 			eventbus.emit("contextmenu:items", {
 				event,
 				items: [
-					{
-						label: "Copy translation",
-						type: "item",
-						class: "translate-copy",
-						// Like the toolbar's Copy: nowhere to report a
-						// refused clipboard, so a failure is silent.
-						action() {
-							void writeClipboard(entry.value?.text ?? "");
-						},
-					},
+					...(unchanged
+						? []
+						: [
+								{
+									label: "Copy translation",
+									type: "item",
+									class: "translate-copy",
+									// Like the toolbar's Copy: nowhere to report a
+									// refused clipboard, so a failure is silent.
+									action() {
+										void writeClipboard(entry.value?.text ?? "");
+									},
+								},
+						  ]),
 					{
 						label: "Retranslate",
 						type: "item",
@@ -272,6 +321,11 @@ export default defineComponent({
 			pickSource,
 			retry,
 			shortReason,
+			t,
+			UNCHANGED,
+			devtoolsAvailable,
+			notTranslatedLabel,
+			reasonText,
 		};
 	},
 });

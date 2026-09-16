@@ -848,6 +848,13 @@
   "system.nick": "{nick} is now known as {newNick}",
   "system.part": "{nick} has left the channel",
   "system.quit": "{nick} has quit",
+  "translate.failed": "Couldn't translate",
+  "translate.notTranslated": "Not translated",
+  "translate.reason.answered": "answered the question instead of translating it",
+  "translate.reason.degenerate": "the answer was symbol garbage",
+  "translate.reason.narration": "talked about the request instead of translating",
+  "translate.retry": "Retry the translation",
+  "translate.unchangedReason": "the line came back unchanged",
   "typing.many": {
     "one": "{nick1}, {nick2} and {count} other is typing…",
     "other": "{nick1}, {nick2} and {count} others are typing…"
