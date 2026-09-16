@@ -270,13 +270,13 @@ describe("translate/detect", () => {
 			throw new Error("the detector must not run on a line this short");
 		});
 
-		// Nine characters: too short for trigrams, but the channel writes
-		// German and English and this reader reads English. One function-word
-		// hit on a 3-word line is decisive (chatdetect.ts), so the German
-		// verdict stands wherever the declared languages leave room.
+		// Nine characters: too short for trigrams. One function-word hit on a
+		// 3-word line is decisive (chatdetect.ts), so the German verdict
+		// returns with the classifier's own confidence ahead of any
+		// declared-only placement.
 		expect(
 			await detectLanguage("So ist es", null, ["de", "en"], {exclude: "en"})
-		).to.deep.equal({lang: "de", confidence: 0, candidates: ["de"]});
+		).to.deep.equal({lang: "de", confidence: 0.1, candidates: ["de"]});
 		// The chatdetect table is not bound to the declarations: a decisive
 		// short-line verdict is returned even with more declared candidates,
 		// or none routable at all.
@@ -288,7 +288,7 @@ describe("translate/detect", () => {
 		);
 		expect(await detectLanguage("So ist es", null)).to.deep.equal({
 			lang: "de",
-			confidence: 0,
+			confidence: 0.1,
 			candidates: ["de"],
 		});
 	});
@@ -346,6 +346,21 @@ describe("translate/detect", () => {
 		expect(await detectLanguage("I just woke up again.", null)).to.deep.equal({
 			lang: "en",
 			confidence: 0.2,
+			candidates: ["en"],
+		});
+	});
+
+	it("a misspelled short line with one function word places via the classifier", async function () {
+		this.timeout(10000);
+		setDetector(null);
+
+		// "helo their friend" hits "their" — one distinctive hit on a 3-word
+		// line is decisive on chatDetect's own terms at 17 characters too, so
+		// it places as English instead of deferring to the trigrams that
+		// ranked it Scots and left it an unsure skip.
+		expect(await detectLanguage("helo their friend", null)).to.deep.equal({
+			lang: "en",
+			confidence: 0.1,
 			candidates: ["en"],
 		});
 	});

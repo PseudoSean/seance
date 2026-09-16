@@ -256,10 +256,12 @@ franc outright; on a line too short for trigrams (under `DETECT_MIN_LENGTH`,
 10 characters) a single classifier hit is already the answer, where before
 there was none; anything weaker falls through to the trigram flow
 unchanged. The classifier is misspelling-tolerant by shape: "helo
-**their** friend" still hits "their". The measured failures land where a
-reader would put them -- "I just woke up again." now reads as English
-(`same`, the chip names it) instead of an en→en request that failed as
-unchanged.
+**their** friend" still hits "their". What the measured failures do now:
+"I just woke up again." places as English via the classifier (`same`, the
+chip names it); "good morning" is chat content words the classifier
+leaves unplaced by design, so it falls through to the trigram flow; and a
+misspelled short line with one function word ("helo **their** friend")
+places via the classifier.
 
 **A failure is worded in the reader's language, and `unchanged` barely
 speaks at all.** The failed row's frame and its known reasons are catalog

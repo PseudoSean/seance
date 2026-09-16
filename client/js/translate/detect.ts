@@ -300,9 +300,10 @@ export async function detectLanguage(
 	declared: string[] = [],
 	options: {exclude?: string} = {}
 ): Promise<Detection> {
-	// Function-word classification first (chatdetect.ts): decisive on
-	// chat-length lines franc misplaces, weak (strength 1) falls through to
-	// the trigram flow below.
+	// Function-word classification first (chatdetect.ts): its own decisive
+	// verdict — a clear multi-hit lead, or a single hit on a line of at most
+	// three words — is trusted at every length; anything weaker falls
+	// through to the trigram flow below.
 	const chat = chatDetect(
 		text,
 		Object.keys(ISO1_OF)
@@ -310,7 +311,7 @@ export async function detectLanguage(
 			.filter((code): code is string => code !== null)
 	);
 
-	if (chat.lang !== null && chat.strength >= 2) {
+	if (chat.lang !== null) {
 		return {lang: chat.lang, confidence: round(chat.strength / 10), candidates: [chat.lang]};
 	}
 
