@@ -12,6 +12,12 @@ it is enough. --http opts out, --cert/--key bring your own certificate.
 A plaintext request on the TLS port (a mistyped http:// URL) is answered
 with a 301 to its https:// equivalent instead of a dead connection.
 
+Regenerating the certificate (delete tmp/serve/) locks out browsers that
+hold a service worker for this origin: worker fetches cannot show the
+"proceed anyway" interstitial, so every navigation fails with ERR_FAILED
+until the worker is unregistered (chrome://serviceworker-internals).
+Reusing the cert — the default — is what keeps that from happening.
+
 The browser dials the app's origin (ws://<this-host>:8000/); any request
 carrying `Upgrade: websocket` is proxied — handshake first, then a raw
 bidirectional byte pipe — to the upstream ircd WebSocket (default
