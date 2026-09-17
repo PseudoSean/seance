@@ -704,6 +704,17 @@ describe("i18n toolchain", () => {
 			expect(parsePo(outcome.text).entries).to.deep.equal(entries);
 		});
 
+		it("keeps the catalog's own translator comments", () => {
+			// "#." and "#:" are the pot's to own; a "# " note is the
+			// translator's and must survive a merge.
+			const {entries} = parsePo(mergePo(options).text);
+			const about = entries.find((entry) => entry.msgctxt === "help.about");
+			expect(about?.translatorComments).to.deep.equal([
+				"Kept short: the Help window's link column is narrow.",
+			]);
+			expect(about?.context).to.deep.equal(["About link in the Help window."]);
+		});
+
 		it("rewrites the Language and Plural-Forms headers from plural-rules.json", () => {
 			const {headers} = parsePo(mergePo(options).text);
 			expect(headers.language).to.equal("de");

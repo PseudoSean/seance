@@ -14,6 +14,7 @@ msgctxt "connect.title"
 msgid "Connect to IRC!"
 msgstr "Mit IRC verbinden"
 
+# Kept short: the Help window's link column is narrow.
 #. About link in the Help window.
 msgctxt "help.about"
 msgid "About"

@@ -86,6 +86,11 @@ export function mergePo(options: MergeOptions): MergeOutcome {
 			existing.msgid !== potEntry.msgid || existing.msgidPlural !== potEntry.msgidPlural;
 		entries.push({
 			...potEntry,
+			// The pot owns the "#." context and the "#:" locations; a
+			// translator's own "# " notes and the "#|" previous lines belong
+			// to the catalog and a merge must not spread them away.
+			translatorComments: existing.translatorComments,
+			previous: existing.previous,
 			msgstr: existing.msgstr,
 			// The drift mark joins the flags the entry already carries
 			// (c-format, no-wrap, …) instead of replacing them; a second
