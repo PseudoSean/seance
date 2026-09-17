@@ -1200,6 +1200,7 @@ describe("i18n toolchain", () => {
 				tags.filter((tag) => !(tag in EXPECTED_SCRIPTS)),
 				"tags with a .po and no EXPECTED_SCRIPTS entry"
 			).to.deep.equal([]);
+
 			// A target whose own script is demanded must be allowed to write
 			// in it, and in Latin besides: OWN_SCRIPTS says what a sentence
 			// has to contain, EXPECTED_SCRIPTS what a character may be, and a
