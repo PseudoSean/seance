@@ -52,7 +52,7 @@ function potNplurals(headers: Record<string, string>): number {
 export function addToPot(potPath: string, args: AddArgs): AddOutcome {
 	const file = existsSync(potPath)
 		? parsePo(readFileSync(potPath, "utf8"))
-		: {headers: {...FRESH_HEADERS}, entries: []};
+		: {headers: {...FRESH_HEADERS}, headerOrder: [], entries: []};
 	const nplurals = potNplurals(file.headers);
 	const existing = file.entries.find((entry) => entry.msgctxt === args.key);
 
@@ -63,9 +63,11 @@ export function addToPot(potPath: string, args: AddArgs): AddOutcome {
 	if (!existing) {
 		created = true;
 		entry = {
-			loc: [],
+			translatorComments: [],
 			context: [],
+			loc: [],
 			flags: [],
+			previous: [],
 			msgctxt: args.key,
 			msgid: args.msgid,
 			msgstr: args.plural !== undefined ? Array.from({length: nplurals}, () => "") : [],
@@ -97,7 +99,7 @@ export function addToPot(potPath: string, args: AddArgs): AddOutcome {
 	}
 
 	file.entries.sort((a, b) => (a.msgctxt < b.msgctxt ? -1 : a.msgctxt > b.msgctxt ? 1 : 0));
-	const text = serializePo(file.headers, file.entries);
+	const text = serializePo(file.headers, file.entries, file.headerOrder);
 	mkdirSync(dirname(potPath), {recursive: true});
 	writeFileSync(potPath, text);
 

@@ -264,7 +264,8 @@ async function main(): Promise<void> {
 		let filled = 0;
 		let failed = 0;
 
-		const flush = () => writeFileSync(poPath, serializePo(po.headers, po.entries));
+		const flush = () =>
+			writeFileSync(poPath, serializePo(po.headers, po.entries, po.headerOrder));
 
 		if (engine === "nllb" && !nllbPipe) {
 			console.log("fill: loading NLLB-200 (600M)…");

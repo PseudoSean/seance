@@ -12,7 +12,7 @@ import {
 } from "node:fs";
 import {tmpdir} from "node:os";
 import {join, resolve} from "node:path";
-import {parsePo} from "../../tools/i18n/po";
+import {parsePo, serializePo} from "../../tools/i18n/po";
 import {addToPot} from "../../tools/i18n/add";
 import {
 	ALLOWED_UNREFERENCED,
@@ -61,6 +61,45 @@ describe("i18n toolchain", () => {
 			tagsPath: join(outDir, "tags.json"),
 		});
 	}
+
+	describe("po", () => {
+		it("round-trips headers, translator comments, flags and previous lines byte for byte", () => {
+			const text = [
+				'msgid ""',
+				'msgstr ""',
+				'"Project-Id-Version: seance\\n"',
+				'"Language: de\\n"',
+				'"MIME-Version: 1.0\\n"',
+				'"Content-Type: text/plain; charset=UTF-8\\n"',
+				'"Content-Transfer-Encoding: 8bit\\n"',
+				'"Plural-Forms: nplurals=2; plural=(n != 1);\\n"',
+				'"Last-Translator: Jane Doe <jane@example.com>\\n"',
+				'"PO-Revision-Date: 2026-09-17 12:00+0000\\n"',
+				'"X-Generator: Poedit 3.4\\n"',
+				"",
+				"# translator note",
+				"#. Button on the connect form: submits it and dials the server.",
+				"#: client/components/Windows/Connect.vue:295",
+				"#, no-wrap",
+				'#| msgid "old"',
+				'msgctxt "connect.submit"',
+				'msgid "Connect"',
+				'msgstr "Verbinden"',
+				"",
+			].join("\n");
+
+			const {headers, headerOrder, entries} = parsePo(text);
+			expect(headers["last-translator"]).to.equal("Jane Doe <jane@example.com>");
+			expect(headers["po-revision-date"]).to.equal("2026-09-17 12:00+0000");
+			expect(headers["x-generator"]).to.equal("Poedit 3.4");
+			expect(entries[0].translatorComments).to.deep.equal(["translator note"]);
+			expect(entries[0].previous).to.deep.equal(['msgid "old"']);
+			expect(entries[0].flags).to.deep.equal(["no-wrap"]);
+
+			const again = serializePo(headers, entries, headerOrder);
+			expect(again).to.equal(text);
+		});
+	});
 
 	describe("compile", () => {
 		it("maps a CLDR category to the gettext slot of the count CLDR samples it with", () => {
@@ -690,9 +729,11 @@ describe("i18n toolchain", () => {
 			expect(headers["plural-forms"]).to.equal("nplurals=2; plural=(n != 1);");
 			expect(entries).to.deep.equal([
 				{
-					loc: ["client/js/branding.ts"],
+					translatorComments: [],
 					context: ["Heading of the connect form."],
+					loc: ["client/js/branding.ts"],
 					flags: [],
+					previous: [],
 					msgctxt: "connect.title",
 					msgid: "Connect to IRC",
 					// serializePo writes `msgstr ""`; parsing it back yields [""].

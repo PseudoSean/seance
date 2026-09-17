@@ -130,7 +130,7 @@ function main(): void {
 			}
 
 			if (!dry) {
-				writeFileSync(path, serializePo(po.headers, po.entries));
+				writeFileSync(path, serializePo(po.headers, po.entries, po.headerOrder));
 			}
 
 			console.log(`${tag}: emptied ${emptied} slots`);

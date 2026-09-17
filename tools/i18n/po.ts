@@ -7,12 +7,16 @@
  */
 
 export interface PoEntry {
-	/** "#: file:line" — where the label is rendered. */
-	loc: string[];
+	/** "# " translator comments, one entry per comment line (hand-added notes). */
+	translatorComments: string[];
 	/** "#." translator/MT context, one entry per comment line. */
 	context: string[];
+	/** "#: file:line" — where the label is rendered. */
+	loc: string[];
 	/** e.g. ["fuzzy"] — set by merge when a msgid drifted. */
 	flags: string[];
+	/** "#|" previous msgid/msgctxt, one entry per comment line, kept verbatim. */
+	previous: string[];
 	/** Semantic key in msgctxt position ("connect.submit"); "" when none. */
 	msgctxt: string;
 	msgid: string;
@@ -23,6 +27,8 @@ export interface PoEntry {
 
 export interface PoFile {
 	headers: Record<string, string>;
+	/** Header keys in their original casing, in file order (known and unknown alike). */
+	headerOrder: string[];
 	entries: PoEntry[];
 }
 
@@ -41,11 +47,21 @@ export function quote(text: string): string {
 }
 
 function newEntry(): PoEntry {
-	return {loc: [], context: [], flags: [], msgctxt: "", msgid: "", msgstr: []};
+	return {
+		translatorComments: [],
+		context: [],
+		loc: [],
+		flags: [],
+		previous: [],
+		msgctxt: "",
+		msgid: "",
+		msgstr: [],
+	};
 }
 
 export function parsePo(text: string): PoFile {
 	const headers: Record<string, string> = {};
+	const headerOrder: string[] = [];
 	const entries: PoEntry[] = [];
 	let entry: PoEntry | null = null;
 	let lastKeyword = "";
@@ -136,6 +152,11 @@ export function parsePo(text: string): PoFile {
 						.map((f) => f.trim())
 						.filter(Boolean)
 				);
+			} else if (rest.startsWith("|")) {
+				current.previous.push(rest.slice(1).trim());
+			} else {
+				// Bare "#" or "# note" — a hand-added translator comment.
+				current.translatorComments.push(rest.trim());
 			}
 
 			continue;
@@ -174,14 +195,20 @@ export function parsePo(text: string): PoFile {
 			const sep = line.indexOf(":");
 
 			if (sep > 0) {
-				headers[line.slice(0, sep).trim().toLowerCase()] = line.slice(sep + 1).trim();
+				const originalKey = line.slice(0, sep).trim();
+				const lowerKey = originalKey.toLowerCase();
+				headers[lowerKey] = line.slice(sep + 1).trim();
+
+				if (!headerOrder.some((k) => k.toLowerCase() === lowerKey)) {
+					headerOrder.push(originalKey);
+				}
 			}
 		}
 
 		entries.splice(headerEntryIndex, 1);
 	}
 
-	return {headers, entries};
+	return {headers, headerOrder, entries};
 }
 
 const HEADER_KEYS = [
@@ -193,7 +220,13 @@ const HEADER_KEYS = [
 	"Plural-Forms",
 ] as const;
 
-export function serializePo(headers: Record<string, string>, entries: PoEntry[]): string {
+const HEADER_KEYS_LOWER = new Set(HEADER_KEYS.map((k) => k.toLowerCase()));
+
+export function serializePo(
+	headers: Record<string, string>,
+	entries: PoEntry[],
+	headerOrder: string[] = []
+): string {
 	const out: string[] = [];
 	const allHeaders: Record<string, string> = {};
 
@@ -207,6 +240,24 @@ export function serializePo(headers: Record<string, string>, entries: PoEntry[])
 				: key === "Content-Transfer-Encoding"
 				? "8bit"
 				: "");
+	}
+
+	// Unknown headers (Last-Translator, PO-Revision-Date, X-Generator, ...)
+	// survive after the known ones, in their original casing and input order.
+	const extraKeys: string[] = [];
+	const seenExtra = new Set<string>();
+
+	for (const key of headerOrder) {
+		const lowerKey = key.toLowerCase();
+
+		if (!HEADER_KEYS_LOWER.has(lowerKey) && !seenExtra.has(lowerKey)) {
+			seenExtra.add(lowerKey);
+			extraKeys.push(key);
+		}
+	}
+
+	for (const key of extraKeys) {
+		allHeaders[key] = headers[key.toLowerCase()] ?? "";
 	}
 
 	out.push('msgid ""', 'msgstr ""');
@@ -223,16 +274,24 @@ export function serializePo(headers: Record<string, string>, entries: PoEntry[])
 	for (const entry of entries) {
 		out.push("");
 
-		for (const loc of entry.loc) {
-			out.push(`#: ${loc}`);
+		for (const c of entry.translatorComments) {
+			out.push(c ? `# ${c}` : "#");
 		}
 
 		for (const ctx of entry.context) {
 			out.push(`#. ${ctx}`);
 		}
 
+		for (const loc of entry.loc) {
+			out.push(`#: ${loc}`);
+		}
+
 		if (entry.flags.length > 0) {
 			out.push(`#, ${entry.flags.join(", ")}`);
+		}
+
+		for (const p of entry.previous) {
+			out.push(`#| ${p}`);
 		}
 
 		if (entry.msgctxt) {

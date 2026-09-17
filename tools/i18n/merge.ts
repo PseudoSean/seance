@@ -106,7 +106,7 @@ export function mergePo(options: MergeOptions): MergeOutcome {
 	headers.language = options.tag;
 	headers["plural-forms"] = formatPluralForms(rule);
 
-	return {text: serializePo(headers, entries), added, fuzzied, dropped};
+	return {text: serializePo(headers, entries, po.headerOrder), added, fuzzied, dropped};
 }
 
 function main(): void {
