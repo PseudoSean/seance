@@ -14,12 +14,13 @@
  */
 
 import {t} from "../../i18n/core";
-import {ChanType, SpecialChanType} from "../../../../shared/types/chan";
+import {SpecialChanType} from "../../../../shared/types/chan";
 import {MessageType} from "../../../../shared/types/msg";
 import type {Channel} from "../channel";
 import type {IrcClient} from "../client";
 import type {IrcMessage} from "../message";
 import type {Handler} from "../types";
+import {showSpecial} from "./list";
 
 /** Row shape `Special/ListBans.vue` and `Special/ListExcepts.vue` render. */
 export interface BanEntry {
@@ -165,23 +166,7 @@ function finish(kind: ListKind, client: IrcClient, msg: IrcMessage): void {
 	}
 
 	const name = t("list.windowTitle", {kind: kind.label(), channel});
-	const existing = client.findChannel(name);
-
-	if (existing) {
-		existing.shared.data = data;
-		client.dispatch("msg:special", {chan: existing.id, data});
-		return;
-	}
-
-	const {channel: chan, index} = client.createChannel(name, ChanType.SPECIAL);
-	chan.shared.special = kind.special;
-	chan.shared.data = data;
-	client.dispatch("join", {
-		network: client.uuid,
-		chan: chan.snapshot(),
-		index,
-		shouldOpen: false,
-	});
+	showSpecial(client, name, kind.special, data, channel);
 }
 
 const banList: Handler = (client, msg) => accumulate(BANS, client, msg);

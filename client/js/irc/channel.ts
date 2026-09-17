@@ -60,6 +60,12 @@ export class Channel {
 	modeText: string | undefined = undefined;
 	/** The user asked for the modes (`/mode #chan`): show the next 324 even if it is unchanged. */
 	modesAsked = false;
+	/**
+	 * For a `ChanType.SPECIAL` window, what it shows besides its kind: the
+	 * channel of a mode list (casefolded by the client). The title is a
+	 * translated string and cannot identify the window (findings F15).
+	 */
+	specialTarget: string | undefined = undefined;
 	/** Last away message seen for the peer of a query window. */
 	userAway: string | undefined = undefined;
 	/** Reference of every message handed to the UI, by id (`more` cursor lookup). */
