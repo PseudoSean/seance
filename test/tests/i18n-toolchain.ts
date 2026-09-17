@@ -30,12 +30,12 @@ import {isRTL} from "../../client/js/i18n/core";
 import {pseudo} from "../../tools/i18n/pseudo";
 import {mergePo} from "../../tools/i18n/merge";
 import {
-	fenceBraces,
+	fenceSpans,
 	fromTags,
 	planEngines,
 	targetName,
 	toTags,
-	unfenceBraces,
+	unfenceSpans,
 } from "../../tools/i18n/fill";
 import {protect, restoreAll} from "../../client/js/translate/spans";
 import {scaffoldTag} from "../../tools/i18n/scaffold";
@@ -742,6 +742,125 @@ describe("i18n toolchain", () => {
 				expect(slotVerdict("de", " ", " ")).to.equal(null);
 			});
 
+			it("refuses a machine-translation artifact the source never carried", () => {
+				// What NLLB and OPUS-MT leave behind when they run out of
+				// sentence: a sentencepiece control token written out as text
+				// (_BAR_ for a pipe), a stray musical note, an HTML entity
+				// where the source has a plain character, and an underscore
+				// glued onto the end of the sentence. 22 ru entries shipped
+				// with one, and every other gate found them well-formed.
+				expect(
+					slotVerdict(
+						"ru",
+						"Enter the password for {account} to connect.",
+						"Введите пароль для {account} для подключения._"
+					)
+				).to.equal("artifact");
+				expect(
+					slotVerdict(
+						"ru",
+						"Cannot join {channel}.",
+						"Невозможно присоединиться к {channel}._BAR_"
+					)
+				).to.equal("artifact");
+				expect(
+					slotVerdict(
+						"ru",
+						"You already have {max} aliases.",
+						"У вас уже есть {max} псевдонимы ♫ Aliases."
+					)
+				).to.equal("artifact");
+				expect(
+					slotVerdict(
+						"ru",
+						"Client-to-client protocol",
+						"Протокол &quot; клиент-клиент &quot;"
+					)
+				).to.equal("artifact");
+				// An underscore the SOURCE carries is copy, not an artifact:
+				// two catalogs name the character the way the English does,
+				// and a placeholder or a code span may hold a snake_case
+				// identifier of the deploy's own.
+				expect(
+					slotVerdict(
+						"de",
+						"Alias names are letters, digits, _ and - (up to {max} characters).",
+						"Alias-Namen sind Buchstaben, Ziffern, _ und - (bis zu {max} Zeichen)."
+					)
+				).to.equal(null);
+				expect(slotVerdict("de", "Rename {old_name}", "{old_name} umbenennen")).to.equal(
+					null
+				);
+				expect(
+					slotVerdict(
+						"de",
+						"Type `/alias my_alias` to start",
+						"Tippe `/alias my_alias` zum Starten"
+					)
+				).to.equal(null);
+			});
+
+			it("refuses an answer that dropped one of the source's sentences", () => {
+				// A destructive confirmation lost the sentence that said so:
+				// de's clear-history dialog kept the question and dropped
+				// "This cannot be undone." Nothing else noticed — the length
+				// is right, the script is right, the placeholders match.
+				expect(
+					slotVerdict(
+						"de",
+						"Are you sure you want to clear history for {channel}? This cannot be undone.",
+						"Bist du sicher, dass du die Geschichte für {channel} löschen willst?"
+					)
+				).to.equal("sentences");
+				expect(
+					slotVerdict(
+						"de",
+						"Disconnected from {host}{detail}. Not reconnecting.",
+						"Von {host}{detail} getrennt."
+					)
+				).to.equal("sentences");
+				// Both sentences there, in the punctuation the target writes
+				// them with: a CJK full stop needs no space after it, and a
+				// semicolon is a break a translator may legitimately choose.
+				expect(
+					slotVerdict(
+						"ja",
+						"This app only connects to {network}. The link to {host} was ignored.",
+						"このアプリは {network} にのみ接続します。{host} へのリンクは無視されました。"
+					)
+				).to.equal(null);
+				expect(
+					slotVerdict(
+						"de",
+						"Are you sure you want to clear history for {channel}? This cannot be undone.",
+						"Willst du den Verlauf für {channel} wirklich löschen? Das kann nicht rückgängig gemacht werden."
+					)
+				).to.equal(null);
+				// A one-sentence source is not judged on sentence count at
+				// all, an abbreviation is not a sentence end, and an ellipsis
+				// before a number is a continuation rather than a full stop.
+				expect(slotVerdict("de", "Connection lost.", "Verbindung verloren")).to.equal(null);
+				expect(
+					slotVerdict("de", "Nick postfix (e.g. ', ')", "Nick-Postfix (z. B. ', ')")
+				).to.equal(null);
+				expect(
+					slotVerdict(
+						"ja",
+						"Downloading {model}… {percent}%",
+						"{model}のダウンロード…{percent}%"
+					)
+				).to.equal(null);
+				// Thai marks a sentence break with a space, not with
+				// punctuation, so there is nothing for this rule to count.
+				expect(
+					slotVerdict(
+						"th",
+						"Disconnected from {host}{detail}. Not reconnecting.",
+						"แยกตัวจาก {host}{detail} ไม่พยายามเชื่อมต่อใหม่"
+					)
+				).to.equal(null);
+			});
+
 			it("re-pads a fill's answer rather than refusing it", () => {
 				// What fill.ts does before it judges: the engine trims, the
 				// source's own ends go back on, and the verdict is then about
@@ -781,7 +900,7 @@ describe("i18n toolchain", () => {
 			// spans.ts protects chat syntax; a {placeholder} is none of it, so
 			// the fill fences each one as a code span first — and the engine
 			// then only ever sees a numbered marker.
-			const fenced = fenceBraces("Connecting to {network} as {nick}…");
+			const fenced = fenceSpans("Connecting to {network} as {nick}…");
 			expect(fenced).to.equal("Connecting to `{network}` as `{nick}`…");
 
 			const info = protect(fenced, {nicks: [], markers: "tags"});
@@ -792,8 +911,47 @@ describe("i18n toolchain", () => {
 			const answer = info.text
 				.replace("Connecting to", "Verbinde mit")
 				.replace(" as ", " als ");
-			expect(unfenceBraces(restoreAll(answer, info))).to.equal(
+			expect(unfenceSpans(restoreAll(answer, info))).to.equal(
 				"Verbinde mit {network} als {nick}…"
+			);
+		});
+
+		it("fences a quoted UI label and a protocol token so they come back verbatim", () => {
+			// A label the user has to find on screen and a protocol word are
+			// not prose: ru answered "or pick \"No authentication\" there"
+			// with "выберите \"No trible\"" and de turned "SASL PLAIN" into
+			// "SASL-PLATZ". Fenced, the engine never sees either, and the
+			// marker gate refuses an answer that loses one.
+			const fenced = fenceSpans('or pick "No authentication" there (SASL PLAIN over TLS)');
+			expect(fenced).to.equal(
+				'or pick `"No authentication"` there (`SASL PLAIN` over `TLS`)'
+			);
+
+			const info = protect(fenced, {nicks: [], markers: "placeholder"});
+			expect(info.text).to.equal(
+				"or pick \u27E61\u27E7 there (\u27E62\u27E7 over \u27E63\u27E7)"
+			);
+
+			const answer = info.text
+				.replace("or pick", "oder wähle")
+				.replace(" there (", " dort (")
+				.replace(" over ", " über ");
+			expect(unfenceSpans(restoreAll(answer, info))).to.equal(
+				'oder wähle "No authentication" dort (SASL PLAIN über TLS)'
+			);
+		});
+
+		it("fences a quoted label around a {placeholder} as one span", () => {
+			// The two quoted msgids that hold nothing but a placeholder:
+			// fencing the quotes and the braces separately would nest, so the
+			// quoted segment wins and carries the brace back untouched.
+			const fenced = fenceSpans('Upload failed: no "{field}" URL');
+			expect(fenced).to.equal('Upload failed: no `"{field}"` URL');
+
+			const info = protect(fenced, {nicks: [], markers: "placeholder"});
+			expect(info.text).to.equal("Upload failed: no \u27E61\u27E7 URL");
+			expect(unfenceSpans(restoreAll(info.text, info))).to.equal(
+				'Upload failed: no "{field}" URL'
 			);
 		});
 

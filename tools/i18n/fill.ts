@@ -62,14 +62,78 @@ const SRC_NLLB = "eng_Latn";
 const BATCH_NLLB = 16;
 const BATCH_LLM = 20;
 
-// A catalog placeholder is not chat text, so spans.ts does not protect it —
-// and an engine handed a bare `{network}` translates the word inside it
-// ("{тип}"), which the placeholder gate then refuses, so the slot stays
-// empty. Fencing each one as a code span before the protection hands it to
-// the same machinery every URL and nick goes through: the engine only ever
-// sees a numbered marker, and the restore brings the placeholder back
-// character for character. No msgid carries a backtick of its own.
+// What a catalog string carries that is not prose, and that spans.ts does
+// not recognise on its own because none of it is chat syntax:
+//
+//   a {placeholder}  an engine handed a bare `{network}` translates the word
+//                    inside it ("{тип}"), which the placeholder gate then
+//                    refuses, so the slot stays empty
+//   a "quoted label" the words the user has to find on screen: ru answered
+//                    `or pick "No authentication" there` with `"No trible"`,
+//                    which sends the reader looking for a button that is not
+//                    there
+//   a protocol token the wire words and product names a translator leaves
+//                    alone: de turned "SASL PLAIN" into "SASL-PLATZ"
+//
+// Each is fenced as a code span before the protection, which hands it to the
+// same machinery every URL and nick goes through: the engine only ever sees
+// a numbered marker, the marker gate refuses an answer that lost one, and
+// the restore brings the text back character for character. No msgid carries
+// a backtick of its own (checked: the pot has none).
 const BRACE_RX = /\{[^{}\s]*\}/g;
+
+// Longest first, so "SASL PLAIN" is one token and "IRCv3" is not fenced as
+// "IRC" with a "v3" left outside. The list is every capitalised protocol
+// word and product name the pot uses (`grep` of messages.pot); "IRC" itself
+// is in it because it is a proper noun, even though several catalogs
+// legitimately transliterate it.
+const PROTOCOL_TOKENS = [
+	"SASL PLAIN",
+	"SASL EXTERNAL",
+	"WebSocket",
+	"WebGPU",
+	"NickServ",
+	"ChanServ",
+	"IRCv3",
+	"EXTERNAL",
+	"MARKREAD",
+	"PRIVMSG",
+	"NOTICE",
+	"VAPID",
+	"PLAIN",
+	"WHOIS",
+	"SASL",
+	"CTCP",
+	"IRC",
+	"TLS",
+	"CAP",
+];
+
+// One pass, leftmost-longest: an already-fenced span is left alone (so
+// nothing nests), a quoted segment wins over the braces inside it (the two
+// msgids that quote nothing but a {placeholder}), and a scheme is matched
+// without a word boundary behind it because `//` has no word character to
+// sit against.
+const FENCE_RX = new RegExp(
+	[
+		"`[^`\n]*`",
+		'"[^"\n]*"',
+		"wss?://",
+		`\\b(?:${PROTOCOL_TOKENS.join("|")})\\b`,
+		BRACE_RX.source,
+	].join("|"),
+	"g"
+);
+
+/** The same alternation, as the fence wrote it: what `unfenceSpans` undoes. */
+const UNFENCE_RX = new RegExp(
+	"`(" +
+		['"[^"\n]*"', "wss?://", `\\b(?:${PROTOCOL_TOKENS.join("|")})\\b`, BRACE_RX.source].join(
+			"|"
+		) +
+		")`",
+	"g"
+);
 
 /**
  * How the prompt names the target language. The engine is handed this, not
@@ -107,12 +171,12 @@ export function planEngines(
 	return plan;
 }
 
-export function fenceBraces(text: string): string {
-	return text.replace(BRACE_RX, (match) => "`" + match + "`");
+export function fenceSpans(text: string): string {
+	return text.replace(FENCE_RX, (match) => (match.startsWith("`") ? match : "`" + match + "`"));
 }
 
-export function unfenceBraces(text: string): string {
-	return text.replace(/`(\{[^{}\s]*\})`/g, "$1");
+export function unfenceSpans(text: string): string {
+	return text.replace(UNFENCE_RX, "$1");
 }
 
 // The seq2seq models do not carry ⟦n⟧: measured on Xenova/opus-mt-en-de,
@@ -391,7 +455,7 @@ async function main(): Promise<void> {
 			const markerForm = engine === "llm" ? "placeholder" : "tags";
 			const protectedEntries = batch.map((unit) => ({
 				unit,
-				...protect(fenceBraces(unit.text), {nicks: [], markers: markerForm}),
+				...protect(fenceSpans(unit.text), {nicks: [], markers: markerForm}),
 			}));
 
 			try {
@@ -471,7 +535,7 @@ async function main(): Promise<void> {
 						return;
 					}
 
-					const restored = unfenceBraces(restoreAll(raw, info));
+					const restored = unfenceSpans(restoreAll(raw, info));
 
 					// Judged against the slot's OWN source (a plural form
 					// legitimately carries {count} where the singular does

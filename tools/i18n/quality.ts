@@ -152,9 +152,16 @@ export function isSuspectCatalogEntry(
 
 /** Why a slot's fill cannot be kept: `isSuspectCatalogEntry`, plus the
  * {placeholder} braces the render and the compile depend on, plus an answer
- * that is its own English source, plus one that dropped the source's own
- * leading or trailing space. */
-export type SlotVerdict = SuspectReason | "placeholder" | "unchanged" | "padding";
+ * that is its own English source, one that dropped the source's own leading
+ * or trailing space, one carrying a machine-translation artifact, and one
+ * that came back with fewer sentences than it was given. */
+export type SlotVerdict =
+	| SuspectReason
+	| "placeholder"
+	| "unchanged"
+	| "padding"
+	| "artifact"
+	| "sentences";
 
 /**
  * The text as a comparison sees it: no {placeholder}s (their content is the
@@ -229,6 +236,129 @@ export function repad(source: string, text: string): string {
 }
 
 /**
+ * The text an artifact is looked for in: no {placeholder}s and no code
+ * spans. What a deploy writes inside a brace and what a msgid fences as
+ * code is an identifier, not prose — `{old_name}` and `` `ctcp_type` ``
+ * carry underscores that are nobody's mistake.
+ */
+const CODE_SPAN = /`[^`\n]*`/g;
+
+const withoutIdentifiers = (text: string): string =>
+	text.replace(CODE_SPAN, " ").replace(PLACEHOLDER, " ");
+
+/**
+ * Control tokens the seq2seq engines write out as text when they run out of
+ * sentence, found by comparing every 23 catalogs' msgstrs against their own
+ * msgids: NLLB's `_BAR_` for a pipe, its sentencepiece word mark, the
+ * end-of-stream tags, and the musical notes it pads a short answer with.
+ * None of them appears in any English source, so any of them is an artifact
+ * wherever it is found.
+ */
+const ARTIFACT_TOKENS = /_BAR_|<\/?s>|<unk>|<pad>|▁|[♪♫♬]/u;
+
+/** An HTML entity: the engines escape a character the source writes plainly. */
+const ENTITY = /&(?:quot|amp|lt|gt|apos|nbsp|#\d+);/gi;
+
+/**
+ * True when the answer carries a machine-translation artifact its English
+ * never did. 22 ru entries shipped one — `…подключения._`,
+ * `…каналов._BAR_`, `♫ Aliases.ий` — and every other gate found them
+ * well-formed: the length is right, the script is right, the placeholders
+ * match.
+ *
+ * The stray `_` and `|` are the delicate half. An underscore BETWEEN two
+ * alphanumerics is snake_case, and an underscore the source itself carries
+ * is copy (two msgids name the character: "letters, digits, _ and -"), so
+ * the rule fires only on a character the English has nowhere and that is
+ * not sitting inside a word — the `_` glued onto the end of a sentence, or
+ * onto the front of the English the model gave up translating.
+ */
+export function hasMtArtifact(source: string, text: string): boolean {
+	if (ARTIFACT_TOKENS.test(text)) {
+		return true;
+	}
+
+	for (const entity of text.match(ENTITY) ?? []) {
+		if (!source.includes(entity)) {
+			return true;
+		}
+	}
+
+	const body = withoutIdentifiers(text);
+	const english = withoutIdentifiers(source);
+
+	for (const character of ["_", "|"]) {
+		if (english.includes(character)) {
+			continue;
+		}
+
+		for (let i = body.indexOf(character); i >= 0; i = body.indexOf(character, i + 1)) {
+			const before = body[i - 1];
+			const after = body[i + 1];
+
+			if (!/[\p{L}\p{N}]/u.test(before ?? "") || !/[\p{L}\p{N}]/u.test(after ?? "")) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Abbreviations whose full stop ends no sentence. English only: the source
+ * is always the pot's English, and only the source is counted strictly.
+ */
+const SENTENCE_ABBR = /\b(?:e\.g|i\.e|etc|vs)\./giu;
+
+/**
+ * A sentence BREAK in the English source: a full stop, bang or question
+ * mark with another sentence behind it. Only an internal break counts — a
+ * translation that merely drops the final full stop has dropped no copy —
+ * and the next sentence has to open with a capital, a digit or a
+ * {placeholder}, so `Downloading {model}… {percent}%` is the continuation
+ * it looks like rather than two sentences. `…` is never a source break: the
+ * pot uses it for progress, not for prose.
+ */
+const SOURCE_BREAK = /[.!?]+\s+(?=[\p{Lu}\p{N}{])/gu;
+
+/**
+ * The same break in an answer, counted generously — the gate is about copy
+ * that went missing, so anything a target legitimately breaks a sentence
+ * with counts: an ellipsis, a semicolon, the Arabic question mark, the Urdu
+ * full stop, and the CJK marks, which take no space after them.
+ */
+const ANSWER_BREAK = /[.!?…;؟۔]+\s+(?=[\p{L}\p{N}{])|[。！？；]+\s*(?=[\p{L}\p{N}{])/gu;
+
+/**
+ * Targets that mark a sentence break with a space rather than with
+ * punctuation, so there is nothing here to count. Thai writes no full stop
+ * at all; counting terminators there refused 38 sound translations.
+ */
+const NO_SENTENCE_PUNCTUATION = new Set(["th"]);
+
+/**
+ * True when the answer came back with fewer sentences than its English had.
+ * A destructive confirmation lost the sentence that said so — de's
+ * clear-history dialog kept "Are you sure…?" and dropped "This cannot be
+ * undone." — and three more strings dropped "Not reconnecting."; nothing
+ * else notices, because what is left is a good translation of what is left.
+ */
+export function dropsSentences(tag: string, source: string, text: string): boolean {
+	if (NO_SENTENCE_PUNCTUATION.has(tag)) {
+		return false;
+	}
+
+	const wanted = (source.replace(SENTENCE_ABBR, "@").match(SOURCE_BREAK) ?? []).length;
+
+	if (wanted === 0) {
+		return false;
+	}
+
+	return (text.match(ANSWER_BREAK) ?? []).length < wanted;
+}
+
+/**
  * The one verdict the fill and the sweep both judge a filled slot by, so
  * that the fill refuses exactly what the sweep would empty: anything else
  * is a loop, each writing back what the other takes away. `source` is the
@@ -247,8 +377,19 @@ export function slotVerdict(tag: string, source: string, text: string): SlotVerd
 		return "padding";
 	}
 
+	if (hasMtArtifact(source, text)) {
+		return "artifact";
+	}
+
+	// After `unchanged`: an answer that is the English again has every
+	// sentence the English had, and reporting it as the echo it is keeps the
+	// sweep's counts honest.
 	if (isUnchanged(source, text)) {
 		return "unchanged";
+	}
+
+	if (dropsSentences(tag, source, text)) {
+		return "sentences";
 	}
 
 	return isSuspectCatalogEntry(tag, source, text);
