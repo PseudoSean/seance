@@ -23,6 +23,7 @@ import {isRTL} from "../../client/js/i18n/core";
 import {pseudo} from "../../tools/i18n/pseudo";
 import {mergePo} from "../../tools/i18n/merge";
 import {scaffoldTag} from "../../tools/i18n/scaffold";
+import {sweepEntries} from "../../tools/i18n/sweep";
 import instrument from "../../tools/i18n/instrument-loader.mjs";
 
 const FIXTURES = resolve("tools/i18n/fixtures");
@@ -409,6 +410,40 @@ describe("i18n toolchain", () => {
 
 		it("plans nothing for a singular entry", () => {
 			expect(planPluralSlots({msgid: "Connect"}, 2, "n != 1")).to.deep.equal([]);
+		});
+	});
+
+	describe("sweep", () => {
+		/** Parse a sweep fixture and empty what its placeholders no longer match. */
+		function sweepFixture(tag: string) {
+			const {entries} = parsePo(readFileSync(join(FIXTURES, "sweep", `${tag}.po`), "utf8"));
+			const changed = sweepEntries(entries, PLURAL_RULES[tag]);
+			return {entries, changed};
+		}
+
+		it("checks a one-form locale's only slot against the plural text it holds", () => {
+			// ja, zh, ko, th and vi have one form and it translates
+			// msgid_plural, so it carries {count} while the msgid does not.
+			// Checked against msgid, every such slot is emptied — and the next
+			// fill writes it again: a silent fill/sweep loop.
+			const {entries} = sweepFixture("ja");
+			const kept = entries.find((entry) => entry.msgctxt === "condensed.away");
+			expect(kept?.msgstr[0], "the plural text survives").to.equal("{count}回離席しました");
+
+			const lost = entries.find((entry) => entry.msgctxt === "condensed.back");
+			expect(lost?.msgstr[0], "the slot that lost {count} is emptied").to.equal("");
+
+			const singular = entries.find((entry) => entry.msgctxt === "connect.submit");
+			expect(singular?.msgstr[0]).to.equal("接続");
+		});
+
+		it("checks every slot of a three-form locale, not just the first two", () => {
+			// Slots >= 2 (ru, pl, uk, cs, sk, ro — and ar's six) were never
+			// brace-checked at all, so a form that ate {count} reached the
+			// compile, which then refuses the whole catalog.
+			const {entries} = sweepFixture("ru");
+			const entry = entries.find((item) => item.msgctxt === "condensed.away");
+			expect(entry?.msgstr).to.deep.equal(["помечено однажды", "помечено {count} раза", ""]);
 		});
 	});
 
