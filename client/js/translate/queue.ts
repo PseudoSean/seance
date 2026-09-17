@@ -4,7 +4,10 @@
 // engine so the GPU and CPU engines
 // overlap, LLM items of one channel and pair batched as numbered lines,
 // items that fell DROP_AFTER_LINES messages behind dropped, and an engine
-// paused after PAUSE_AFTER_FAILURES consecutive failures. A multi-line
+// paused after PAUSE_AFTER_FAILURES consecutive failures — for
+// PAUSE_RESUME_MS, since a pause is a minute off and not the end of
+// reading, and never for a torn-down worker or a foreign abort, which put
+// the batch back at the front of its engine's queue instead. A multi-line
 // message is never batched with others and goes through the composer's own
 // line logic (`translateDraft`), so every line of it is translated. The
 // queue owns span restoration: items arrive protected and updates carry
@@ -16,6 +19,7 @@
 // is retried once bare, the composer's `bareRetry` shape, before it fails.
 // Vue-free; reader.ts feeds it and writes its updates to the store.
 
+import {WORKER_DISPOSED} from "./client";
 import {EngineName, PromptContext, TranslateChunk, TranslateRequest, emptyContext} from "./engine";
 import {
 	ABORTED,
@@ -49,6 +53,22 @@ import {
 export const DROP_AFTER_LINES = 200;
 export const BATCH_MAX_LINES = 6;
 export const PAUSE_AFTER_FAILURES = 3;
+/**
+ * How long a paused engine waits before it tries again. A pause is meant to
+ * stop a broken engine burning the battery, not to switch reading off for
+ * the session: without this the only way back in was a user's retry on a
+ * line that had already failed, so three background/return cycles on a
+ * phone (each tearing the worker down mid-request) left every later line
+ * pending for ever.
+ */
+export const PAUSE_RESUME_MS = 60 * 1000;
+/**
+ * How long a batch put back by a torn-down worker or a foreign abort waits
+ * before its engine runs it again. Neither is the engine's failure, so
+ * nothing is marked down — but nor is the line retried in a tight loop:
+ * the wait is what keeps a worker that keeps dying to one attempt a second.
+ */
+export const REQUEUE_WAIT_MS = 1000;
 export const REQUEST_TIMEOUT_MS = 2 * 60 * 1000;
 export const NO_ROUTE = "no translation engine can take this request";
 export const TIMED_OUT = "timed out";
@@ -112,6 +132,12 @@ export interface QueueDeps {
 	onUpdate(id: number, update: QueueUpdate): void;
 	onPause(engine: EngineName, message: string): void;
 	/**
+	 * The engine runs again: the pause waited out (`PAUSE_RESUME_MS`) or
+	 * someone asked for a line on it. The banner the pause raised clears
+	 * here. Optional.
+	 */
+	onResume?(engine: EngineName): void;
+	/**
 	 * A counter that moves while a model downloads (service.ts `loadTicks`):
 	 * the request deadline is re-armed while it moves (outgoing.ts
 	 * `armDeadline`). Optional: without it the deadline is a plain timeout.
@@ -143,6 +169,10 @@ export class TranslateQueue {
 	private inFlight = new Map<EngineName, Running>();
 	private failures = new Map<EngineName, number>();
 	private pausedEngines = new Set<EngineName>();
+	/** The pause's own resume timer, per engine; `resume()` disarms it. */
+	private pauseTimers = new Map<EngineName, ReturnType<typeof setTimeout>>();
+	/** Engines waiting out `REQUEUE_WAIT_MS` after a requeue: `pump()` skips them. */
+	private requeueWaits = new Set<EngineName>();
 	/** Per-channel generation, bumped by cancelChannel/cancelAll: a route
 	 *  that resolves for an older generation is dropped instead of queued. */
 	private cancelled = new Map<number, number>();
@@ -226,9 +256,28 @@ export class TranslateQueue {
 		return this.pausedEngines.has(engine);
 	}
 
+	/**
+	 * The one door back in: the pause's own timer and a user's retry both
+	 * come through here, so the failure count goes back to zero, the waiting
+	 * timer is disarmed (a retry must not be followed by a second resume a
+	 * minute later) and whatever raised the banner is told to take it down.
+	 */
 	resume(engine: EngineName): void {
-		this.pausedEngines.delete(engine);
+		const timer = this.pauseTimers.get(engine);
+
+		if (timer !== undefined) {
+			clearTimeout(timer);
+			this.pauseTimers.delete(engine);
+		}
+
+		const was = this.pausedEngines.delete(engine);
+
 		this.failures.set(engine, 0);
+
+		if (was) {
+			this.deps.onResume?.(engine);
+		}
+
 		this.pump();
 	}
 
@@ -343,7 +392,11 @@ export class TranslateQueue {
 		);
 
 		for (const engine of ["llm", "seq2seq"] as EngineName[]) {
-			if (this.inFlight.has(engine) || this.pausedEngines.has(engine)) {
+			if (
+				this.inFlight.has(engine) ||
+				this.pausedEngines.has(engine) ||
+				this.requeueWaits.has(engine)
+			) {
 				continue;
 			}
 
@@ -558,7 +611,15 @@ export class TranslateQueue {
 
 			this.failures.set(engine, 0);
 		} catch (e) {
-			this.fail(engine, batch, e instanceof Error ? e.message : String(e));
+			const message = e instanceof Error ? e.message : String(e);
+
+			// A worker torn down under the request, or an abort the queue did
+			// not ask for, says nothing about the engine: the batch waits.
+			if (!aborted && notAFailure(message)) {
+				this.requeue(engine, batch);
+			} else {
+				this.fail(engine, batch, message);
+			}
 		} finally {
 			timer.clear();
 			this.inFlight.delete(engine);
@@ -659,12 +720,16 @@ export class TranslateQueue {
 		} catch (e) {
 			const message = e instanceof Error ? e.message : String(e);
 
-			// The queue's own abort is a drop (or the deadline); anything else
-			// is this engine's failure, and three in a row pause it.
+			// The queue's own abort is a drop (or the deadline); a torn-down
+			// worker or an abort from elsewhere puts the line back, still
+			// pending; anything else is this engine's failure, and three in a
+			// row pause it.
 			if (timedOut) {
 				this.fail(engine, [queued], TIMED_OUT);
-			} else if (aborted || message === ABORTED) {
+			} else if (aborted) {
 				this.deps.onUpdate(item.id, {status: "dropped"});
+			} else if (notAFailure(message)) {
+				this.requeue(engine, [queued]);
 			} else {
 				this.fail(engine, [queued], message);
 			}
@@ -816,7 +881,46 @@ export class TranslateQueue {
 		if (count >= PAUSE_AFTER_FAILURES) {
 			this.pausedEngines.add(engine);
 			this.deps.onPause(engine, message);
+			this.waitOutPause(engine);
 		}
+	}
+
+	/** A pause is a minute off, not the end of reading: `resume()` after it. */
+	private waitOutPause(engine: EngineName): void {
+		const existing = this.pauseTimers.get(engine);
+
+		if (existing !== undefined) {
+			clearTimeout(existing);
+		}
+
+		this.pauseTimers.set(
+			engine,
+			setTimeout(() => {
+				this.pauseTimers.delete(engine);
+				this.resume(engine);
+			}, PAUSE_RESUME_MS)
+		);
+	}
+
+	/**
+	 * Not this engine's failure: the worker was torn down under the request
+	 * (a pagehide, an idle unload) or something outside the queue aborted
+	 * it. The batch goes back to the front of its engine's queue with its
+	 * entries still pending — nothing is marked failed and nothing counts
+	 * toward a pause — and the engine waits `REQUEUE_WAIT_MS` before it is
+	 * pumped again, so a worker that keeps dying is retried rather than spun.
+	 */
+	private requeue(engine: EngineName, batch: Queued[]): void {
+		for (const q of batch) {
+			this.waiting.push({...q, seq: -++this.seq});
+		}
+
+		this.requeueWaits.add(engine);
+
+		setTimeout(() => {
+			this.requeueWaits.delete(engine);
+			this.pump();
+		}, REQUEUE_WAIT_MS);
 	}
 
 	/** Missing spans (spans.ts) are appended only to the final text: a
@@ -833,7 +937,6 @@ function protectedOf(item: QueueItem): Protected {
 	return {text: item.text, spans: item.spans, meta: item.meta, markers: "placeholder"};
 }
 
-/** A `draft/multiline` message: one message, several lines. */
 /**
  * What the router is told about the source (`QueueItem.routeHint`): an item
  * from before the prompt's hint and the router's were told apart carries
@@ -843,6 +946,16 @@ function routeHintOf(item: QueueItem): string | null {
 	return item.routeHint !== undefined ? item.routeHint : item.context.sourceHint ?? null;
 }
 
+/** A `draft/multiline` message: one message, several lines. */
 function isMultiline(item: QueueItem): boolean {
 	return item.text.includes("\n");
+}
+
+/**
+ * An error that is not the engine's: the worker was disposed under the
+ * request, or something outside the queue aborted it. The line is put back
+ * rather than failed (`TranslateQueue.requeue`).
+ */
+function notAFailure(message: string): boolean {
+	return message === WORKER_DISPOSED || message === ABORTED;
 }

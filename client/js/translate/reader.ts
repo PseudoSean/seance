@@ -239,6 +239,14 @@ function queueFor(network: ClientNetwork): TranslateQueue {
 			arrivals: (chanId) => arrivals.get(chanId) ?? 0,
 			onUpdate: (id, update) => applyUpdate(id, update),
 			onPause: (engine, message) => store.commit("translationPaused", {engine, message}),
+			// The pause waited itself out (`PAUSE_RESUME_MS`) or someone
+			// asked for a line on that engine: the banner goes, unless the
+			// one showing is another engine's.
+			onResume(engine) {
+				if (store.state.translation.paused?.engine === engine) {
+					store.commit("translationPaused", null);
+				}
+			},
 		});
 
 		if (holds > 0) {

@@ -1,11 +1,13 @@
 import {expect} from "chai";
 import sinon from "ts-sinon";
+import {WORKER_DISPOSED} from "../../client/js/translate/client";
 import {
 	emptyContext,
 	type TranslateChunk,
 	type TranslateRequest,
 } from "../../client/js/translate/engine";
 import {
+	ABORTED,
 	ANSWERED,
 	EMPTY_TRANSLATION,
 	NARRATION,
@@ -16,7 +18,9 @@ import {
 	BATCH_MAX_LINES,
 	DROP_AFTER_LINES,
 	PAUSE_AFTER_FAILURES,
+	PAUSE_RESUME_MS,
 	REQUEST_TIMEOUT_MS,
+	REQUEUE_WAIT_MS,
 	TranslateQueue,
 	type QueueDeps,
 	type QueueItem,
@@ -31,6 +35,7 @@ function rig(script: Script = (req) => [`[en] ${req.lines ? req.lines.join(" | "
 	const updates: [number, QueueUpdate][] = [];
 	const requests: Omit<TranslateRequest, "id" | "model">[] = [];
 	const paused: [string, string][] = [];
+	const resumed: string[] = [];
 	const arrivals = new Map<number, number>();
 	let engineFor: (from: string | null, to: string) => "llm" | "seq2seq" | null = () => "llm";
 	const deps: QueueDeps = {
@@ -56,6 +61,7 @@ function rig(script: Script = (req) => [`[en] ${req.lines ? req.lines.join(" | "
 		arrivals: (chanId) => arrivals.get(chanId) ?? 0,
 		onUpdate: (id, update) => updates.push([id, update]),
 		onPause: (engine, message) => paused.push([engine, message]),
+		onResume: (engine) => resumed.push(engine),
 	};
 	const queue = new TranslateQueue(deps);
 
@@ -66,6 +72,7 @@ function rig(script: Script = (req) => [`[en] ${req.lines ? req.lines.join(" | "
 		updates,
 		requests,
 		paused,
+		resumed,
 		arrivals,
 		setEngine(fn: typeof engineFor) {
 			engineFor = fn;
@@ -1140,6 +1147,132 @@ describe("translate/queue", () => {
 		expect(r.updates).to.deep.equal([
 			[1, {status: "failed", error: "no translation engine can take this request"}],
 		]);
+	});
+
+	// A worker torn down under a running request (the pagehide teardown, or a
+	// cancel that reached the client) says nothing about the engine: the line
+	// is put back at the front of its engine's queue, still pending, and no
+	// failure is counted -- three background/return cycles on a phone used to
+	// pause the engine for the rest of the session.
+	it("a torn-down worker is not a failure: the line waits, still pending", async () => {
+		let disposed = true;
+		const r = rig((req) => (disposed ? new Error(WORKER_DISPOSED) : [`[en] ${req.text}`]));
+		clock = r.clock;
+		r.queue.enqueue(item(1, "eins zwei drei", {single: true}));
+		await settle(r.clock);
+
+		expect(r.updates.map(([, u]) => u.status)).to.deep.equal(["pending"]);
+		expect(r.requests.length).to.equal(1);
+		expect(r.paused).to.deep.equal([]);
+
+		// It waits rather than spinning, then tries again.
+		await r.clock.tickAsync(REQUEUE_WAIT_MS);
+		await settle(r.clock);
+		expect(r.requests.length).to.equal(2);
+
+		disposed = false;
+		await r.clock.tickAsync(REQUEUE_WAIT_MS);
+		await settle(r.clock);
+
+		expect(r.updates[r.updates.length - 1]).to.deep.equal([
+			1,
+			{status: "done", text: "[en] eins zwei drei", engine: "llm"},
+		]);
+	});
+
+	it("an abort the queue did not ask for is not a failure either", async () => {
+		let abort = true;
+		const r = rig((req) => (abort ? new Error(ABORTED) : [`[en] ${req.text}`]));
+		clock = r.clock;
+		r.queue.enqueue(item(1, "eins zwei drei", {single: true}));
+		await settle(r.clock);
+
+		expect(r.updates.map(([, u]) => u.status)).to.deep.equal(["pending"]);
+		expect(r.paused).to.deep.equal([]);
+
+		abort = false;
+		await r.clock.tickAsync(REQUEUE_WAIT_MS);
+		await settle(r.clock);
+
+		expect(r.updates[r.updates.length - 1][1].status).to.equal("done");
+	});
+
+	it("a paused engine resumes on its own after a minute, and pauses again if it must", async () => {
+		let fail = true;
+		const r = rig((req) => (fail ? new Error("boom") : [`[en] ${req.text}`]));
+		clock = r.clock;
+
+		for (let i = 1; i <= PAUSE_AFTER_FAILURES; i++) {
+			r.queue.enqueue(item(i, `zeile ${i} hier`, {single: true}));
+		}
+
+		await settle(r.clock);
+		expect(r.queue.paused("llm")).to.equal(true);
+		expect(r.paused.length).to.equal(1);
+		expect(r.resumed).to.deep.equal([]);
+
+		// A line queued while the engine is paused waits for the resume.
+		r.queue.enqueue(item(10, "nach der pause", {single: true}));
+		await settle(r.clock);
+		expect(r.requests.length).to.equal(PAUSE_AFTER_FAILURES);
+
+		fail = false;
+		await r.clock.tickAsync(PAUSE_RESUME_MS);
+		await settle(r.clock);
+
+		expect(r.resumed).to.deep.equal(["llm"]);
+		expect(r.queue.paused("llm")).to.equal(false);
+		expect(r.requests.length).to.equal(PAUSE_AFTER_FAILURES + 1);
+		expect(r.updates[r.updates.length - 1][1].status).to.equal("done");
+
+		// The failure counter went back to zero with the resume, so it takes a
+		// fresh run of failures to pause it again -- and that pause waits too.
+		fail = true;
+
+		for (let i = 20; i < 20 + PAUSE_AFTER_FAILURES; i++) {
+			r.queue.enqueue(item(i, `wieder ${i} hier`, {single: true}));
+		}
+
+		await settle(r.clock);
+		expect(r.paused.length).to.equal(2);
+
+		fail = false;
+		r.queue.enqueue(item(30, "und danach", {single: true}));
+		await r.clock.tickAsync(PAUSE_RESUME_MS);
+		await settle(r.clock);
+
+		expect(r.resumed).to.deep.equal(["llm", "llm"]);
+		expect(r.updates[r.updates.length - 1]).to.deep.equal([
+			30,
+			{status: "done", text: "[en] und danach", engine: "llm"},
+		]);
+	});
+
+	// resume() is the one door back in: the timer and a user's retry both go
+	// through it, so the banner clears either way -- and a retry takes the
+	// pending timer with it, or it would clear the banner again a minute later.
+	it("a user's retry resumes the engine and disarms the waiting timer", async () => {
+		let fail = true;
+		const r = rig((req) => (fail ? new Error("boom") : [`[en] ${req.text}`]));
+		clock = r.clock;
+
+		for (let i = 1; i <= PAUSE_AFTER_FAILURES; i++) {
+			r.queue.enqueue(item(i, `zeile ${i} hier`, {single: true}));
+		}
+
+		await settle(r.clock);
+		expect(r.queue.paused("llm")).to.equal(true);
+
+		fail = false;
+		r.queue.resume("llm");
+		await settle(r.clock);
+
+		expect(r.resumed).to.deep.equal(["llm"]);
+
+		await r.clock.tickAsync(PAUSE_RESUME_MS);
+		await settle(r.clock);
+
+		expect(r.resumed).to.deep.equal(["llm"]);
 	});
 
 	it("hold() keeps new runs from starting and release() runs them", async () => {
