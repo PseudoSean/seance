@@ -370,6 +370,51 @@ describe("translate/prompt", () => {
 		);
 	});
 
+	// A batch is several people's lines, and only some of them are replies:
+	// the head's reply target used to be written above the whole block as
+	// "This line replies to …", pinned to a line the model cannot pick out.
+	it("a batched request names the line each reply note belongs to", () => {
+		const text = userPrompt(
+			request({
+				text: "",
+				lines: ["eins", "zwei", "drei"],
+				context: {...emptyContext(), replyTo: {nick: "ada", text: "anyone tried it?"}},
+				lineContexts: [
+					{},
+					{replyTo: {nick: "bob", text: "did it build?"}},
+					{replyTo: {nick: "cleo", text: "which branch?"}},
+				],
+			}),
+			name
+		);
+
+		expect(text).to.equal(
+			[
+				"Line 2 replies to <bob>: did it build?",
+				"Line 3 replies to <cleo>: which branch?",
+				ONLY_THE_TRANSLATION,
+				`Translate each line into English, same numbers, then ${END_SENTINEL} on its own line:`,
+				"1. eins\n2. zwei\n3. drei",
+			].join("\n")
+		);
+		// The notes stand above the numbered block, never inside it: the
+		// answer is parsed by strict numbering and an exact count.
+		expect(text).to.not.include("This line replies to");
+	});
+
+	it("a batch with no per-line context keeps the request's own reply note", () => {
+		const text = userPrompt(
+			request({
+				text: "",
+				lines: ["eins", "zwei"],
+				context: {...emptyContext(), replyTo: {nick: "ada", text: "anyone tried it?"}},
+			}),
+			name
+		);
+
+		expect(text).to.include("This line replies to <ada>: anyone tried it?");
+	});
+
 	it("parseBatchedOutput cleans each line", () => {
 		expect(parseBatchedOutput('1. "one"\n2. Translation: two', 2)).to.deep.equal([
 			"one",

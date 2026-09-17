@@ -254,6 +254,25 @@ export function formatBatchedInput(lines: string[]): string {
 	return lines.map((line, i) => `${i + 1}. ${line}`).join("\n");
 }
 
+/** `Line 2 replies to <bob>: …`, for whichever batched lines reply to something. */
+function replyNotes(req: TranslateRequest): string[] {
+	if (!req.lines || !req.lineContexts) {
+		return [];
+	}
+
+	const notes: string[] = [];
+
+	req.lines.forEach((_line, i) => {
+		const replyTo = req.lineContexts?.[i]?.replyTo;
+
+		if (replyTo) {
+			notes.push(`Line ${i + 1} replies to <${replyTo.nick}>: ${replyTo.text}`);
+		}
+	});
+
+	return notes;
+}
+
 export function userPrompt(req: TranslateRequest, name: (code: string) => string): string {
 	const c = req.context;
 	const parts: string[] = [];
@@ -271,7 +290,16 @@ export function userPrompt(req: TranslateRequest, name: (code: string) => string
 		parts.push(CONTEXT_HEADING, ...recent.map(contextLine));
 	}
 
-	if (c.replyTo) {
+	// A batch is several people's lines: each reply note is written against
+	// its own line number, above the numbered block rather than inside it
+	// (the answer is parsed by strict numbering and an exact count, so prose
+	// between the lines invites the model to renumber). A single request, and
+	// a batch from before the lines carried their own, keeps the one note.
+	const lineNotes = replyNotes(req);
+
+	if (lineNotes.length > 0) {
+		parts.push(...lineNotes);
+	} else if (c.replyTo) {
 		parts.push(`This line replies to <${c.replyTo.nick}>: ${c.replyTo.text}`);
 	}
 

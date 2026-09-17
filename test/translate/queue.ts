@@ -1275,6 +1275,54 @@ describe("translate/queue", () => {
 		expect(r.resumed).to.deep.equal(["llm"]);
 	});
 
+	// A batch is one request for several people's lines: the head's reply
+	// target used to stand for all of them, so line 3's answer was written as
+	// if it replied to whoever line 1 did.
+	it("a batch carries each line's own reply target", async () => {
+		const r = rig((req) => [
+			(req.lines ?? []).map((line, i) => `${i + 1}. [en] ${line}`).join("\n") + "\nEND",
+		]);
+		clock = r.clock;
+		r.queue.pauseForTest();
+		r.queue.enqueue(
+			item(1, "erste zeile hier", {
+				context: {...emptyContext(), replyTo: {nick: "ada", text: "anyone tried it?"}},
+			})
+		);
+		r.queue.enqueue(item(2, "zweite zeile hier"));
+		r.queue.enqueue(
+			item(3, "dritte zeile hier", {
+				context: {...emptyContext(), replyTo: {nick: "bob", text: "did it build?"}},
+			})
+		);
+		await settle(r.clock, 3);
+		r.queue.resumeForTest();
+		await settle(r.clock);
+
+		expect(r.requests.length).to.equal(1);
+		expect(r.requests[0].lines).to.have.length(3);
+		expect(r.requests[0].lineContexts).to.deep.equal([
+			{replyTo: {nick: "ada", text: "anyone tried it?"}},
+			{},
+			{replyTo: {nick: "bob", text: "did it build?"}},
+		]);
+	});
+
+	it("a batch of lines that reply to nothing carries no per-line context", async () => {
+		const r = rig((req) => [
+			(req.lines ?? []).map((line, i) => `${i + 1}. [en] ${line}`).join("\n") + "\nEND",
+		]);
+		clock = r.clock;
+		r.queue.pauseForTest();
+		r.queue.enqueue(item(1, "erste zeile hier"));
+		r.queue.enqueue(item(2, "zweite zeile hier"));
+		await settle(r.clock, 3);
+		r.queue.resumeForTest();
+		await settle(r.clock);
+
+		expect(r.requests[0].lineContexts).to.equal(undefined);
+	});
+
 	it("hold() keeps new runs from starting and release() runs them", async () => {
 		const r = rig();
 		clock = r.clock;

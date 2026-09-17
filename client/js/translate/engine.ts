@@ -62,6 +62,11 @@ export interface ContextLine {
 	translated?: string;
 }
 
+/** One batched line's own context (`TranslateRequest.lineContexts`). */
+export interface LineContext {
+	replyTo?: ContextLine;
+}
+
 /** What prompt.ts turns into the LLM's messages; seq2seq engines ignore it. */
 export interface PromptContext {
 	recent: ContextLine[];
@@ -100,6 +105,16 @@ export interface TranslateRequest {
 	markers?: MarkerForm;
 	/** A batched request: numbered lines in, numbered lines out (LLM only). */
 	lines?: string[];
+	/**
+	 * A batched request's per-line context, one entry per `lines` entry: a
+	 * batch is several people's lines, and each of them replies to whatever
+	 * it replies to. The prompt writes each note against its own line number
+	 * (prompt.ts `userPrompt`); without this the head's reply target stood
+	 * above the whole block. Everything else -- the earlier lines, the
+	 * topic, the names, the terms -- is the channel's and stays in
+	 * `context`, which is the batch head's.
+	 */
+	lineContexts?: LineContext[];
 	/** ISO 639-1 (639-3 codes are mapped by languages.ts); null = unknown. */
 	from: string | null;
 	/**

@@ -20,7 +20,14 @@
 // Vue-free; reader.ts feeds it and writes its updates to the store.
 
 import {WORKER_DISPOSED} from "./client";
-import {EngineName, PromptContext, TranslateChunk, TranslateRequest, emptyContext} from "./engine";
+import {
+	EngineName,
+	type LineContext,
+	PromptContext,
+	TranslateChunk,
+	TranslateRequest,
+	emptyContext,
+} from "./engine";
 import {
 	ABORTED,
 	ANSWERED,
@@ -488,6 +495,11 @@ export class TranslateQueue {
 		// takes its source from the prompt rather than the hint, so a batch
 		// whose lines were hinted differently is answered the same either way.
 		const hint = routeHintOf(first);
+		// The channel's own context -- the earlier lines, the topic, the names,
+		// the terms -- is the head's and stands above the whole block; what a
+		// line replies to is that line's alone, so it travels per line and the
+		// prompt writes each note against its own number.
+		const lineContexts = batch.map((q) => replyContext(q.item));
 		const request: Omit<TranslateRequest, "id" | "model"> =
 			batch.length > 1
 				? {
@@ -499,6 +511,7 @@ export class TranslateQueue {
 						purpose: "read",
 						context: first.context,
 						markers,
+						...(lineContexts.some((c) => c.replyTo) ? {lineContexts} : {}),
 				  }
 				: {
 						text: head.info.text,
@@ -944,6 +957,11 @@ function protectedOf(item: QueueItem): Protected {
  */
 function routeHintOf(item: QueueItem): string | null {
 	return item.routeHint !== undefined ? item.routeHint : item.context.sourceHint ?? null;
+}
+
+/** What a batched line replies to, as the request carries it (`LineContext`). */
+function replyContext(item: QueueItem): LineContext {
+	return item.context.replyTo ? {replyTo: item.context.replyTo} : {};
 }
 
 /** A `draft/multiline` message: one message, several lines. */
