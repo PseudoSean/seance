@@ -146,7 +146,7 @@ export default defineComponent({
 	name: "GeneralSettings",
 	setup() {
 		const store = useStore();
-		const {t, tCount} = useI18n();
+		const {t, tCount, locale} = useI18n();
 		const appName = computed(() => store.state.branding.appName);
 		const uploadCanvasHelp = computed(() => t("settings.general.uploadCanvasHelp"));
 		const sendTypingHelp = computed(() => t("settings.general.sendTypingHelp"));
@@ -222,6 +222,23 @@ export default defineComponent({
 			fileInput.value?.click();
 		};
 
+		/** The day the file was made, in the reader's language — or "" when
+		 * the envelope carries no usable date (it is optional, and a hand-made
+		 * file can hold anything). */
+		const exportedOn = (backup: SettingsBackup): string => {
+			if (!backup.exportedAt) {
+				return "";
+			}
+
+			const when = new Date(backup.exportedAt);
+
+			if (Number.isNaN(when.getTime())) {
+				return "";
+			}
+
+			return new Intl.DateTimeFormat(locale.value, {dateStyle: "long"}).format(when);
+		};
+
 		const describe = (backup: SettingsBackup, name: string) => {
 			const networks = networkCount(backup);
 			const parts = [
@@ -229,20 +246,28 @@ export default defineComponent({
 				tCount("settings.general.backupNetworks", networks),
 				t("settings.general.backupMutes"),
 			];
-			// Its own whole sentence, appended after the frame's. The warning
-			// went missing when the dialog was localized: the variable was
-			// kept and the use was not, so a file carrying network passwords
-			// was restored with nothing said about it. The separator is put
-			// in here rather than taken from the copy -- the English msgid
-			// opens with a space (it was authored for appending) and every
-			// filled translation dropped it, which would run the two
-			// sentences together in all 23 locales.
-			const passwords = hasPasswords(backup)
-				? ` ${t("settings.general.backupPasswords").trim()}`
-				: "";
-			return (
-				t("settings.general.backupFrame", {parts: parts.join(", "), file: name}) + passwords
-			);
+			// Two whole sentences the dialog may add after the frame's: what
+			// the file carries that the reader should know about, and when it
+			// was made. The warning went missing when the dialog was
+			// localized (the variable was kept and its use was not), and the
+			// date sentence went with it. The separating space belongs here,
+			// not to the copy: every catalog is a whole sentence of its own.
+			// `.trim()` guards a translation that padded itself anyway.
+			const sentences = [
+				t("settings.general.backupFrame", {parts: parts.join(", "), file: name}),
+			];
+
+			if (hasPasswords(backup)) {
+				sentences.push(t("settings.general.backupPasswords"));
+			}
+
+			const exported = exportedOn(backup);
+
+			if (exported) {
+				sentences.push(t("settings.general.backupExported", {date: exported}));
+			}
+
+			return sentences.map((sentence) => sentence.trim()).join(" ");
 		};
 
 		const restore = (backup: SettingsBackup, name: string) => {
