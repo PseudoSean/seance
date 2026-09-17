@@ -33,6 +33,42 @@ export type SuspectReason =
 const PLACEHOLDER = /\{[^{}]*\}/g;
 
 /**
+ * Words a catalog legitimately carries unchanged in every language: the
+ * acronyms and product names the pot uses (`grep` of messages.pot), plus the
+ * assent every locale writes the same way. An answer counts as unchanged
+ * only when its WHOLE text is these, so "Connected (TLS)" is still judged on
+ * its own words while a bare "TLS" is let through.
+ */
+const IDENTICAL_EVERYWHERE = new Set(
+	[
+		"ok",
+		"irc",
+		"ircv3",
+		"sasl",
+		"tls",
+		"webgpu",
+		"websocket",
+		"url",
+		"opus",
+		"mt",
+		"opus-mt",
+		"nllb",
+		"nllb-200",
+		"200",
+		"qwen",
+		"qwen3",
+		"gpu",
+		"cpu",
+		"gib",
+		"mib",
+		"kib",
+		"utc",
+		"markdown",
+		"emoji",
+	].map((word) => word.toLowerCase())
+);
+
+/**
  * The words of a text that could carry the target language: no
  * {placeholder}s (their content is the deploy's), none of the acronyms and
  * product names every language writes alike, and nothing under three
@@ -118,42 +154,6 @@ export function isSuspectCatalogEntry(
  * {placeholder} braces the render and the compile depend on, plus an answer
  * that is its own English source. */
 export type SlotVerdict = SuspectReason | "placeholder" | "unchanged";
-
-/**
- * Words a catalog legitimately carries unchanged in every language: the
- * acronyms and product names the pot uses (`grep` of messages.pot), plus the
- * assent every locale writes the same way. An answer counts as unchanged
- * only when its WHOLE text is these, so "Connected (TLS)" is still judged on
- * its own words while a bare "TLS" is let through.
- */
-const IDENTICAL_EVERYWHERE = new Set(
-	[
-		"ok",
-		"irc",
-		"ircv3",
-		"sasl",
-		"tls",
-		"webgpu",
-		"websocket",
-		"url",
-		"opus",
-		"mt",
-		"opus-mt",
-		"nllb",
-		"nllb-200",
-		"200",
-		"qwen",
-		"qwen3",
-		"gpu",
-		"cpu",
-		"gib",
-		"mib",
-		"kib",
-		"utc",
-		"markdown",
-		"emoji",
-	].map((word) => word.toLowerCase())
-);
 
 /**
  * The text as a comparison sees it: no {placeholder}s (their content is the
