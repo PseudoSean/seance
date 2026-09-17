@@ -812,7 +812,7 @@ msgstr "服务器提供SASL {offered}，而非{mechanism}"
 #: client/js/irc/client.ts
 msgctxt "connect.saslRequiredHint"
 msgid "Check the account name and password in this network's settings, or pick \"No authentication\" there to connect without logging in."
-msgstr "检查此网络设置中的账户名和密码，或选择“无需认证”以连接而不登录"
+msgstr "检查此网络设置中的账户名称和密码，或在此处选择\"No authentication\"连接而无需登录。"
 
 #. Checkbox on the connect form: reveals the account name and password fields used to authenticate with network services (SASL).
 #: client/components/Windows/Connect.vue:207
@@ -5687,7 +5687,7 @@ msgstr "上传失败：HTTP {status}"
 #: client/js/upload.ts:353
 msgctxt "upload.missingField"
 msgid "Upload failed: the uploader did not return a \"{field}\" URL"
-msgstr "上传失败：上传器未返回“{field}”URL"
+msgstr "上传失败：上传者未返回 \"{field}\" URL"
 
 #. Error notice when the browser offers no way to send a request, so the upload cannot even start.
 #: client/js/upload.ts:447

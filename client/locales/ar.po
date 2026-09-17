@@ -861,7 +861,7 @@ msgstr "يدعم الخدمة SASL {offered}، وليس {mechanism}"
 #: client/js/irc/client.ts
 msgctxt "connect.saslRequiredHint"
 msgid "Check the account name and password in this network's settings, or pick \"No authentication\" there to connect without logging in."
-msgstr "تحقق من اسم الحساب وكلمة المرور في إعدادات هذا الشبكة، أو اختر \"لا تحقق من الهوية\" هناك للاتصال دون تسجيل الدخول."
+msgstr "تحقق من اسم الحساب وكلمة المرور في إعدادات هذا الشبكة، أو اختر \"No authentication\" هناك للاتصال دون تسجيل الدخول."
 
 #. Checkbox on the connect form: reveals the account name and password fields used to authenticate with network services (SASL).
 #: client/components/Windows/Connect.vue:207
@@ -1252,7 +1252,7 @@ msgstr "أوامر"
 #: client/components/NetworkForm.vue:136
 msgctxt "form.commandsHelp"
 msgid "One /command per line.\nEach command will be executed in\nthe server tab on new connection"
-msgstr "أوامر واحدة لكل سطر."
+msgstr ""
 
 #. Status line on the network edit form while the network is online without TLS.
 #: client/components/NetworkForm.vue:490
@@ -1835,7 +1835,7 @@ msgstr "تُلغى الرسائل من المستخدم المُحدد في ال
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unmuteA"
 msgid "Un-mutes the given channel(s) or the current channel if no channel is provided. See"
-msgstr "تُلغى الصمت من القناة (أو القنوات) المُحددة أو القناة الحالية إذا لم تُحدد قناة."
+msgstr "يُزيل الصمت من القناة (أو القنوات) المحددة أو القناة الحالية إذا لم تُعطَ قنوات. راجع"
 
 #. End of the /unmute command description in the help window, after the /mute code fragment.
 #: client/components/Windows/Help.vue

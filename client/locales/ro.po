@@ -831,7 +831,7 @@ msgstr "serverul oferă SASL {offered}, nu {mechanism}"
 #: client/js/irc/client.ts
 msgctxt "connect.saslRequiredHint"
 msgid "Check the account name and password in this network's settings, or pick \"No authentication\" there to connect without logging in."
-msgstr "Verifică numele contului și parola din setările rețelei, sau alege \"Fără autentificare\" pentru a conecta fără autentificare."
+msgstr "Verifică numele contului și parola în setările acestui rețea, sau alege \"No authentication\" acolo pentru a conecta fără a te autentifica."
 
 #. Checkbox on the connect form: reveals the account name and password fields used to authenticate with network services (SASL).
 #: client/components/Windows/Connect.vue:207
@@ -4481,7 +4481,7 @@ msgstr "Activează sunetul notificărilor"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.stale"
 msgid "A server's push identity (its key) changed, so this device's push subscription for it no longer works. Renew it from that network's settings (Edit network → “Renew push notifications”) to keep being notified while the app is closed."
-msgstr "Cheia push a unui server a fost schimbată"
+msgstr "Identitatea serverului a fost actualizată, deci abonamentul pentru notificări push nu funcționează mai. Renuți-l din setările rețelei (Editare rețea → „Renuți notificări push”) pentru a rămâne notificat în timp ce aplicația este închisă."
 
 #. Warning line in Settings > Notifications when the browser cannot do web push; the parentheses name the browser features push requires.
 #: client/components/Settings/Notifications.vue

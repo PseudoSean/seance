@@ -160,7 +160,7 @@ msgstr "Это имя слишком длинное ({length} из максим�
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.tooMany"
 msgid "You already have {max} aliases; delete one in Settings → Aliases first."
-msgstr "У вас уже есть {max} псевдонимы; удалите один из параметров ♫ Aliases.ий."
+msgstr "У вас уже есть {max} алиасов; сначала удалите один в Настройках → Алиасы."
 
 #. Confirmation after /alias <name> <commands> overwrote an existing alias. {name} is the alias name as typed, verbatim.
 #: client/js/irc/commands/alias.ts
@@ -179,7 +179,7 @@ msgstr "Вы уже подключены."
 #: client/js/irc/commands/react.ts
 msgctxt "cmd.channelsAndQueriesOnly"
 msgid "{cmd} command can only be used in channels and queries."
-msgstr "Команда {cmd} может использоваться только в каналах и запросах.._"
+msgstr "{cmd} команда может использоваться только в каналах и запросах."
 
 #. Error when a channel-only command is typed in another window. {cmd} is the command as typed (its canonical lowercase name, e.g. 'ban', 'kickban', 'op'), user input, verbatim.
 #: client/js/irc/commands/ban.ts
@@ -345,7 +345,7 @@ msgstr "Использование: / ник < твой новый ник>"
 #: client/js/irc/commands/mode.ts
 msgctxt "cmd.usageNickMulti"
 msgid "Usage: /{cmd} <nick> [...nick]"
-msgstr "Использование: / {cmd} <ник> [...ник]_"
+msgstr "Использование: /{cmd} <nick> [...nick]"
 
 #. Usage line of /react when no reaction text is given. {cmd} is the command as typed, user input, verbatim; the rest is command syntax.
 #: client/js/irc/commands/react.ts
@@ -659,7 +659,7 @@ msgstr "Включенные возможности: {caps}"
 #: client/components/Windows/Connect.vue:572
 msgctxt "connect.enterPassword"
 msgid "Enter the password for {account} to connect."
-msgstr "Введите пароль для {account} для подключения._"
+msgstr "Введите пароль для {account}, чтобы подключиться."
 
 #. Error notice shown under the guest sign-in form when the guest nick field was left empty or invalid.
 #: client/components/Windows/Connect.vue:672
@@ -765,7 +765,7 @@ msgstr "Ошибка удостоверения подлинности SASL: {re
 #: client/js/irc/sasl.ts
 msgctxt "connect.saslMechanisms"
 msgid "Available SASL mechanisms: {mechanisms}"
-msgstr "Имеющиеся механизмы САСЛ: {mechanisms}"
+msgstr "Доступные SASL механизмы: {mechanisms}"
 
 #. Lobby error after a failed required SASL login: the network was dropped instead of registering unauthenticated. {host} is the chat network's configured host name.
 #: client/js/irc/client.ts
@@ -831,7 +831,7 @@ msgstr "сервер предлагает SASL {offered}, а не {mechanism}"
 #: client/js/irc/client.ts
 msgctxt "connect.saslRequiredHint"
 msgid "Check the account name and password in this network's settings, or pick \"No authentication\" there to connect without logging in."
-msgstr "Проверьте имя и пароль аккаунта в настройках этой сети или выберите \"No trible\" здесь, чтобы подключиться без регистрации."
+msgstr "Проверьте имя учетной записи и пароль в настройках этого сети, или выберите \"No authentication\" там, чтобы подключиться без входа."
 
 #. Checkbox on the connect form: reveals the account name and password fields used to authenticate with network services (SASL).
 #: client/components/Windows/Connect.vue:207
@@ -1120,7 +1120,7 @@ msgstr "Неверный пароль."
 #: client/components/MessageTypes/error.vue
 msgctxt "error.tooManyChannels"
 msgid "Cannot join {channel} - You've already reached the maximum number of channels allowed."
-msgstr "Невозможно присоединиться к {channel} - Вы уже достигли максимального числа разрешенных каналов._BAR_"
+msgstr "Невозможно присоединиться к {channel} - у вас уже достигнут максимальный лимит каналов."
 
 #. Server rejection (421) phrased by the client; {command} is the unknown slash command as typed, user input.
 #: client/components/MessageTypes/error.vue
@@ -1234,7 +1234,7 @@ msgstr "Подсоединены (не защищены)"
 #: client/components/NetworkForm.vue:490
 msgctxt "form.connectedTls"
 msgid "Connected (TLS)"
-msgstr "Подключено (ТСТ)"
+msgstr "Подключено (TLS)"
 
 #. Status line on the network edit form while the network is being dialled.
 #: client/components/NetworkForm.vue:493
@@ -1330,7 +1330,7 @@ msgstr "Запомнить пароль на этом устройстве"
 #: client/components/NetworkForm.vue:162
 msgctxt "form.saslPlain"
 msgid "Username + password (SASL PLAIN)"
-msgstr "Имя пользователя + пароль (SASL PPAIN)_"
+msgstr "Имя пользователя + пароль (SASL PLAIN)"
 
 #. Submit button of the network edit form.
 #: client/components/NetworkForm.vue:273
@@ -1421,7 +1421,7 @@ msgstr "Автозавершение"
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.introA"
 msgid "To auto-complete nicknames, channels, commands, and emoji, type one of the characters below to open a suggestion list. Use the"
-msgstr "Для автозаполнения прозвищ, каналов, команд и эмоджи наберите один из символов ниже, чтобы открыть список предложений."
+msgstr "Для автозаполнения nicknames, каналов, команд и эмодзи, введите один из символов ниже, чтобы открыть список предложений. Используйте"
 
 #. Word between the two arrow keycaps inside the autocompletion intro in the help window. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1535,7 +1535,7 @@ msgstr "Свернуть все предвыборные ролики на те�
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.connectA"
 msgid "Connect to a new IRC network. If"
-msgstr "Подключиться к новой сети ИЦИ.."
+msgstr "Подключиться к новой IRC сети. Если"
 
 #. Middle of the /connect command description in the help window, after the port parameter; a code fragment with the plus sign follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1559,7 +1559,7 @@ msgstr "Отправить"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcpB"
 msgid "request. Read more about this on"
-msgstr "Дополнительная информация об этом"
+msgstr "запрос. Узнайте больше об этом на"
 
 #. Text of the link at the end of the /ctcp command description in the help window; it opens the external Wikipedia article. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1571,7 +1571,7 @@ msgstr "Википедияять"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcpTitle"
 msgid "Client-to-client protocol"
-msgstr "Протокол &quot; клиент-клиент &quot;-"
+msgstr "протокол клиент-клиент"
 
 #. Start of the /deop command description in the help window; a code fragment with the -o mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1637,7 +1637,7 @@ msgstr "Приглашать пользователя на указанный к
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.inviteB"
 msgid "is omitted, user will be invited to the current channel."
-msgstr "опущен, пользователь будет приглашен на текущий канал.._"
+msgstr "исключен, пользователь будет приглашен в текущий канал"
 
 #. Description of the /join command in the help window.
 #: client/components/Windows/Help.vue
@@ -1661,7 +1661,7 @@ msgstr "Выйти и забанить ("
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kickbanB"
 msgid ") a user from the current channel. Unlike"
-msgstr ") пользователь с текущего канала..Х."
+msgstr "пользователь из текущего чата. В отличие от"
 
 #. End of the /kickban command description in the help window, after the /ban code fragment. Starts with a comma.
 #: client/components/Windows/Help.vue
@@ -1757,7 +1757,7 @@ msgstr "Отправьте сообщение в текущую сеть ИЦИ.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.rejoin"
 msgid "Leave and immediately rejoin the current channel. Useful to quickly get op from ChanServ in an empty channel, for example."
-msgstr "Уходи и немедленно возвращайся к текущему каналу. Полезно быстро получить операцию от Чансерва на пустом канале, например._BAR_"
+msgstr "Выход и немедленное возвращение в текущий чат. Полезно, чтобы быстро получить оп от ChanServ в пустом чате, например."
 
 #. Description of the /search command in the help window. No trailing period in the source; keep it as is.
 #: client/components/Windows/Help.vue
@@ -1775,7 +1775,7 @@ msgstr "Пошлёпай кого-нибудь в текущий канал фо
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.topicA"
 msgid "Get the topic in the current channel. If"
-msgstr "Поставьте тему в текущем канале..:"
+msgstr "Получить тему в текущем канале. Если"
 
 #. End of the /topic command description in the help window, after the newtopic-parameter code fragment.
 #: client/components/Windows/Help.vue
@@ -1799,7 +1799,7 @@ msgstr ") пользователь с текущего канала. Это мо
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unignore"
 msgid "Unblock messages from the specified user on the current network. This can be a nickname or a hostmask."
-msgstr "Отключить сообщения от конкретного пользователя в текущей сети. Это может быть прозвище или хостмаск.я._BAR_"
+msgstr "Разблокировать сообщения от указанного пользователя в текущей сети. Это может быть ник или хостмаск."
 
 #. Start of the /unmute command description in the help window; a code fragment with the /mute command follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1829,7 +1829,7 @@ msgstr ") одному или нескольким пользователям т
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.whois"
 msgid "Retrieve information about the given user on the current network."
-msgstr "Обновить информацию о данном пользователе в текущей сети._"
+msgstr "Получить информацию о указанном пользователе в текущей сети."
 
 #. Word inside the link of the help window's past-release sentence; the linked text names the source code commit the running build was made from, and the commit hash follows it. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1920,7 +1920,7 @@ msgstr "монопространство"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.reset"
 msgid "Mark all text typed after this shortcut to be reset to its original formatting."
-msgstr "Отметьте все тексты, набранные после этого сокращения, чтобы их перезагрузили в оригинальный формат._BAR_"
+msgstr "Отметить все введённый текст после этого сочетания клавиш как сбросить его в оригинальный формат."
 
 #. The example word shown with a line through it in the help window's Ctrl+S formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
@@ -3023,7 +3023,7 @@ msgstr "Это сообщение было показано пользовате
 #: client/components/MessageTypes/ctcp_request.vue
 msgctxt "msg.ctcpTitle"
 msgid "Client-to-client protocol"
-msgstr "Протокол &quot; клиент-клиент &quot;"
+msgstr "протокол клиент-клиент"
 
 #. System message announcing a channel's modes (324). The mode string in <b> is protocol text and stays verbatim.
 #: client/components/MessageTypes/mode_channel.vue
@@ -3186,7 +3186,7 @@ msgstr "Настойчивость сеанса (сервер держит ва�
 #: client/js/irc/handlers/persistence.ts:89
 msgctxt "persistence.statusClientSetting"
 msgid "Session persistence (the server keeps you in your channels while disconnected): {state} (your setting: {setting})"
-msgstr "Настойчивость сеанса (сервер держит вас в ваших каналах при отключении): {state} (ваша установка: {setting})_BAR_"
+msgstr "сессионная persistence (сервер сохраняет вас в ваших каналах при отсутствии соединения): {state} (ваша настройка: {setting})"
 
 #. Body of the push opt-in prompt; explains what allowing push does and that it is chosen per network.
 #: client/components/PushPrompt.vue
@@ -3378,7 +3378,7 @@ msgstr "направленное в виде текста-"
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.tabsAria"
 msgid "Emoji groups"
-msgstr "Группы &lt; &lt; Эмоджи &gt; &gt;"
+msgstr "Группы эмодзи"
 
 #. Tooltip of the emoji picker's free-text row and its spoken form, offering to send what was typed as the reaction. {reaction} is that text.
 #: client/components/ReactionPicker.vue
@@ -3456,7 +3456,7 @@ msgstr "Правка не отправлена: ответа от сервера
 #: client/js/irc/client.ts
 msgctxt "send.editWaiting"
 msgid "Edit not sent: an edit of that message is already waiting for the server."
-msgstr "Правка не отправлена: редактирование этого сообщения уже ждёт сервера._BAR_"
+msgstr "Редактирование не отправлено: редактирование этого сообщения уже ожидает сервера."
 
 #. Lobby error when a command or message was typed while the network is down; nothing was sent.
 #: client/js/irc/client.ts
@@ -3500,7 +3500,7 @@ msgstr "Сообщения можно удалить только по кана�
 #: client/js/irc/client.ts
 msgctxt "send.redactUnavailable"
 msgid "Deleting messages is not available: the server did not enable draft/message-redaction."
-msgstr "Отключить сообщения не представляется возможным: сервер не позволил подготовить/отправить сообщение-отказ._"
+msgstr "Удаление сообщений недоступно: сервер не разрешил редактирование черновиков/сообщений."
 
 #. Lobby error when a message's client tags exceed the IRC line limit; nothing was sent.
 #: client/js/irc/client.ts
@@ -3746,7 +3746,7 @@ msgstr "Обычный стиль"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.customStylesheetHelp"
 msgid "Custom stylesheet. You can override any style with CSS here."
-msgstr "Вы можете переключить любой стиль на CSS здесь."
+msgstr "Пользовательский стиль. Вы можете переопределить любой стиль с помощью CSS здесь."
 
 #. Placeholder of the custom stylesheet text area in Settings > Appearance, written as a CSS comment. Keep the /* */ comment markers.
 #: client/components/Settings/Appearance.vue
@@ -3884,7 +3884,7 @@ msgstr "Можете прочитать это без очков?"
 #: client/components/Settings/Appearance.vue:480
 msgctxt "settings.appearance.sampleSlide"
 msgid "Yes! Slide it until this is comfortable."
-msgstr "Да, помедленнее, пока не будет комфортно.."
+msgstr "Да! Поставьте его, пока это удобно."
 
 #. First word of the checkbox label in Settings > Appearance that displays the server's Message Of The Day; the untranslated acronym 'MOTD' follows it as a marked abbreviation, so only this word is translated.
 #: client/components/Settings/Appearance.vue
@@ -3968,7 +3968,7 @@ msgstr "Всегда показан"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.trustedHelpA"
 msgid "Media in these scopes loads without asking. Add one with"
-msgstr "В этих областях СМИ загружают не спрашивая.."
+msgstr "Медиа в этих объективах загружаются без запроса. Добавьте один с"
 
 #. Last part of the help line under the always-shown list in Settings > Appearance, after the words 'Always show' marking the preview button's name. Ends the sentence.
 #: client/components/Settings/Appearance.vue
@@ -4181,7 +4181,7 @@ msgstr "Отправить уведомления о печатании"
 #: client/components/Settings/General.vue
 msgctxt "settings.general.sendTypingHelp"
 msgid "Lets people in the channel see when you are typing (IRCv3 +typing)."
-msgstr "Позволяет людям на канале видеть, когда вы печатаете (IRCv3 + typing)._BAR_"
+msgstr "Позволяет людям в канале видеть, когда вы пишете (IRCv3 +typing)."
 
 #. Heading of the typing indicator section in Settings > General.
 #: client/components/Settings/General.vue
@@ -4253,7 +4253,7 @@ msgstr "Удалить сеть"
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.deleteText"
 msgid "This removes the saved network and disconnects it if it is running."
-msgstr "Это удаляет сохранённую сеть и отключает ее, если она работает._BAR_"
+msgstr "Это удаляет сохранённую сеть и отключает её, если она работает."
 
 #. Title of the confirmation dialog before removing a saved chat network. {name} is the network's display name.
 #: client/components/Settings/Networks.vue
@@ -4962,7 +4962,7 @@ msgstr "Перевод"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.cpu"
 msgid "The GPU model is unavailable here; the CPU models still work."
-msgstr "Модель GPU недоступна здесь; модели процессора все еще работают._BAR_"
+msgstr "GPU-модель недоступна здесь; CPU-модели всё ещё работают."
 
 #. Verdict of the device check in Settings → Translation: the graphics processor is good enough for the large model. GPU is the usual abbreviation for the graphics processor.
 #: client/components/Settings/Translation.vue
@@ -4980,7 +4980,7 @@ msgstr "Перевод не может быть осуществлен на эт
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.insecureOrigin"
 msgid "insecure origin: WebGPU needs HTTPS or localhost — serve the app over HTTPS"
-msgstr "Ненадежное происхождение: Веб-GPU нуждается в HTTPS или локальном приводе — обслуживает приложение по HTTPS"
+msgstr "не безопасный источник: WebGPU нуждается в HTTPS или localhost — запускайте приложение через HTTPS"
 
 #. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: the browser has WebGPU but gave out no device. WebGPU is a web standard's name.
 #: client/components/Settings/Translation.vue
@@ -5004,7 +5004,7 @@ msgstr "Нет веб-ассамблеи SIMD"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.noWebgpu"
 msgid "no WebGPU"
-msgstr "Нет Веб-GUP"
+msgstr "нет WebGPU"
 
 #. One reason listed under the device verdict in Settings → Translation: the check of what the device can do threw an error, so nothing could be measured.
 #: client/components/Settings/Translation.vue
@@ -5022,13 +5022,13 @@ msgstr ""
 #: client/components/TranslationLine.vue
 msgctxt "translate.chip.alreadyIn"
 msgid "Already in {language}, not translated. Translation options"
-msgstr "Уже в {language}, не переведен."
+msgstr "уже в {language}, не переведено. Варианты перевода"
 
 #. Tooltip and aria-label of a translation line's chip: the languages it names, then the standard suffix.
 #: client/components/TranslationLine.vue
 msgctxt "translate.chip.options"
 msgid "{languages}. Translation options"
-msgstr "{languages} Варианты перевода"
+msgstr "{languages}. Варианты перевода"
 
 #. Tooltip and aria-label of a translation line's chip, skipped because the detector could not tell the language apart.
 #: client/components/TranslationLine.vue
@@ -5495,7 +5495,7 @@ msgstr "На этом устройстве сообщения переводят
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.languageHint"
 msgid "The language the interface is written in and messages are translated into — one control. Automatic follows your browser's language."
-msgstr "Язык интерфейса записан, а сообщения переведены на — один контроль., что он говорит на языке браузера._BAR_"
+msgstr "Язык, на котором написана интерфейс и сообщения, переведённые — один контроль. Автоматически следует за языком вашего браузера."
 
 #. Label of the picker in Settings → Translation that chooses one language for both the interface and the translations of incoming messages.
 #: client/components/Settings/Translation.vue
@@ -5628,9 +5628,9 @@ msgstr "Удалить {language}"
 msgctxt "typing.many"
 msgid "{nick1}, {nick2} and {count} other is typing…"
 msgid_plural "{nick1}, {nick2} and {count} others are typing…"
-msgstr[0] "{nick1}, {nick2} и {count} другие печатают..._BAR_"
-msgstr[1] "{nick1}, {nick2} и {count} другие печатают..._BAR_"
-msgstr[2] "{nick1}, {nick2} и {count} другие печатают..._BAR_"
+msgstr[0] "{nick1}, {nick2} и {count} другой набирает…"
+msgstr[1] "{nick1}, {nick2} и {count} другие набирают…"
+msgstr[2] "{nick1}, {nick2} и {count} другие пишут..."
 
 #. Line above the message input saying that one user is writing a message right now. {nick} is that user's name.
 #: client/components/TypingIndicator.vue:31

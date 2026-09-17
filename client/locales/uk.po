@@ -831,7 +831,7 @@ msgstr "сервер пропонує SASL {offered}, не {mechanism}"
 #: client/js/irc/client.ts
 msgctxt "connect.saslRequiredHint"
 msgid "Check the account name and password in this network's settings, or pick \"No authentication\" there to connect without logging in."
-msgstr "Перевірте ім'я облікового запису та пароль у налаштуваннях цього мережевого підключення, або оберіть \"Не аутентифікувати\" там, щоб підключитися без входження."
+msgstr ""
 
 #. Checkbox on the connect form: reveals the account name and password fields used to authenticate with network services (SASL).
 #: client/components/Windows/Connect.vue:207
@@ -1300,7 +1300,7 @@ msgstr "Залиште порожнім, щоб залишити поточни�
 #: client/components/NetworkForm.vue:225
 msgctxt "form.pushHelp"
 msgid "Register this device for push notifications on this network. The server must support the draft/webpush capability. Push needs authentication, so this only appears with SASL configured. Each network is set up independently."
-msgstr "Реєструйте цей пристрій для оповіщень через підтримку push на цій мережі. Сервер має підтримувати засіб draft/webpush. Оповіщення push потребують автентифікації, тому це відображається лише при налаштуванні SASL."
+msgstr "Реєструйте цей пристрій для підкрійних оповіщень на цій мережі. Сервер повинен підтримувати здатність draft/webpush. Підкрійні оповіщення потребують автентифікацію, тому це відображається лише з SASL, який налаштований. Кожна мережа налаштовується окремо."
 
 #. Checkbox on the network edit form: register this device for this network's push notifications.
 #: client/components/NetworkForm.vue:222

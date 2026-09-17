@@ -821,7 +821,7 @@ msgstr "de server biedt SASL {offered} aan, niet {mechanism}"
 #: client/js/irc/client.ts
 msgctxt "connect.saslRequiredHint"
 msgid "Check the account name and password in this network's settings, or pick \"No authentication\" there to connect without logging in."
-msgstr "Controleer de naam en het wachtwoord van het account in de instellingen van dit netwerk, of kies \"Geen authenticatie\" om te verbinden zonder in te loggen."
+msgstr "Controleer de accountnaam en wachtwoord in de instellingen van deze netwerk, of kies \"No authentication\" daar om te verbinden zonder in te loggen."
 
 #. Checkbox on the connect form: reveals the account name and password fields used to authenticate with network services (SASL).
 #: client/components/Windows/Connect.vue:207
@@ -1411,7 +1411,7 @@ msgstr "Automatisch aanvullen"
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.introA"
 msgid "To auto-complete nicknames, channels, commands, and emoji, type one of the characters below to open a suggestion list. Use the"
-msgstr "Om nicknames, kanalen, commando's en emoji automatisch in te vullen, typ een van de onderstaande tekens om een suggestielijst te openen."
+msgstr "Typ één van de tekens hieronder om een suggestielijst te openen om nicknames, kanalen, opdrachten en emoji's automatisch te voltooien. Gebruik de"
 
 #. Word between the two arrow keycaps inside the autocompletion intro in the help window. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1525,7 +1525,7 @@ msgstr "Alle voorbeeldbestanden in het huidige kanaal invouwen (opposite of)"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.connectA"
 msgid "Connect to a new IRC network. If"
-msgstr "Verbinden met een nieuw IRC-netwerk."
+msgstr "Verbind met een nieuwe IRC netwerk. Als"
 
 #. Middle of the /connect command description in the help window, after the port parameter; a code fragment with the plus sign follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1621,7 +1621,7 @@ msgstr "Laad de lijst van genegeerde gebruikers voor het huidige netwerk."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.inviteA"
 msgid "Invite a user to the specified channel. If"
-msgstr "Nodig een gebruiker uit naar het opgegeven kanaal."
+msgstr "Belangwekt een gebruiker voor het opgegeven kanaal. Als"
 
 #. Continuation of the /invite command description in the help window, after the channel-parameter code fragment.
 #: client/components/Windows/Help.vue
@@ -1633,7 +1633,7 @@ msgstr "wordt weggelaten, zal de gebruiker worden uitgenodigd om het huidige kan
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.join"
 msgid "Join a channel. Password is only needed in protected channels and can usually be omitted."
-msgstr "Wachtwoord is alleen nodig in beveiligde kanalen en kan meestal worden weggelaten."
+msgstr "Voeg een kanal toe. Het wachtwoord is alleen vereist in beveiligde kanalen en kan meestal overgeslagen worden."
 
 #. Description of the /kick command in the help window; it removes the user from the channel (they may rejoin).
 #: client/components/Windows/Help.vue
@@ -1651,7 +1651,7 @@ msgstr "Kicks en ban ("
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kickbanB"
 msgid ") a user from the current channel. Unlike"
-msgstr ") een gebruiker van het huidige kanaal."
+msgstr ") Een gebruiker uit het huidige kanal. Ongeacht"
 
 #. End of the /kickban command description in the help window, after the /ban code fragment. Starts with a comma.
 #: client/components/Windows/Help.vue
@@ -1765,7 +1765,7 @@ msgstr "Sla iemand in het huidige kanaal met een forel!"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.topicA"
 msgid "Get the topic in the current channel. If"
-msgstr "Het onderwerp in het huidige kanaal versturen."
+msgstr "Haal het onderwerp uit het huidige channell. Als"
 
 #. End of the /topic command description in the help window, after the newtopic-parameter code fragment.
 #: client/components/Windows/Help.vue
@@ -3871,7 +3871,7 @@ msgstr "Kun je dit lezen zonder bril?"
 #: client/components/Settings/Appearance.vue:480
 msgctxt "settings.appearance.sampleSlide"
 msgid "Yes! Slide it until this is comfortable."
-msgstr "Schuif het weg tot dit comfortabel is."
+msgstr "Ja! Schuif het tot het is gemakkelijk."
 
 #. First word of the checkbox label in Settings > Appearance that displays the server's Message Of The Day; the untranslated acronym 'MOTD' follows it as a marked abbreviation, so only this word is translated.
 #: client/components/Settings/Appearance.vue
@@ -3955,7 +3955,7 @@ msgstr "Altijd getoond"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.trustedHelpA"
 msgid "Media in these scopes loads without asking. Add one with"
-msgstr "Media in deze scopes laadt zonder te vragen."
+msgstr "Media in deze scopes laden zonder om te vragen. Voeg er één toe met"
 
 #. Last part of the help line under the always-shown list in Settings > Appearance, after the words 'Always show' marking the preview button's name. Ends the sentence.
 #: client/components/Settings/Appearance.vue
@@ -5018,7 +5018,7 @@ msgstr "{languages}. Vertalingsopties"
 #: client/components/TranslationLine.vue
 msgctxt "translate.chip.unsure"
 msgid "Language not told apart, not translated. Translation options"
-msgstr "Taal niet apart verteld, niet vertaald."
+msgstr "Taal niet onderscheiden, niet geïntegreerd. Vertalingsopties"
 
 #. Placeholder of the message composer in a channel or private conversation whose outgoing messages are translated. {name} is the channel or nickname; {language} is the language messages are sent in.
 #: client/components/ChatInput.vue
@@ -5703,7 +5703,7 @@ msgstr "Uploaden mislukt: HTTP {status}"
 #: client/js/upload.ts:353
 msgctxt "upload.missingField"
 msgid "Upload failed: the uploader did not return a \"{field}\" URL"
-msgstr "Uploaden mislukt: de uploader heeft geen \"{field}'-URL teruggegeven"
+msgstr "Upload mislukt: de uploader heeft geen \"{field}\" URL teruggegeven."
 
 #. Error notice when the browser offers no way to send a request, so the upload cannot even start.
 #: client/js/upload.ts:447

@@ -816,7 +816,7 @@ msgstr "サーバーはSASL {offered}を提供していますが、{mechanism}�
 #: client/js/irc/client.ts
 msgctxt "connect.saslRequiredHint"
 msgid "Check the account name and password in this network's settings, or pick \"No authentication\" there to connect without logging in."
-msgstr "このネットワークの設定でアカウント名やパスワードを確認してください。ログインせずに接続したい場合は「認証なし」を選択してください"
+msgstr "このネットワークの設定でアカウント名とパスワードを確認してください。または、ここに\"No authentication\"を選択してログインせずに接続できます。"
 
 #. Checkbox on the connect form: reveals the account name and password fields used to authenticate with network services (SASL).
 #: client/components/Windows/Connect.vue:207
@@ -1207,7 +1207,7 @@ msgstr "コマンド"
 #: client/components/NetworkForm.vue:136
 msgctxt "form.commandsHelp"
 msgid "One /command per line.\nEach command will be executed in\nthe server tab on new connection"
-msgstr "1行目ずつコマンドを入力します。"
+msgstr ""
 
 #. Status line on the network edit form while the network is online without TLS.
 #: client/components/NetworkForm.vue:490

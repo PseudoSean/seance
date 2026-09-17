@@ -805,19 +805,19 @@ msgstr "알 수 없는 오류"
 #: client/js/irc/client.ts
 msgctxt "connect.saslReason.wrongMechanism"
 msgid "the server offers SASL {offered}, not {mechanism}"
-msgstr "서버는 {offered} 메커니즘을 제공하지만 {mechanism}을 제공하지 않습니다"
+msgstr "서버는 SASL {offered}를 제공하며, {mechanism}는 아닙니다."
 
 #. Follow-up to a failed required SASL login, telling the reader where to fix or drop the credentials.
 #: client/js/irc/client.ts
 msgctxt "connect.saslRequiredHint"
 msgid "Check the account name and password in this network's settings, or pick \"No authentication\" there to connect without logging in."
-msgstr "이 네트워크의 계정 이름과 비밀번호를 확인하십시오. 로그인하지 않고 연결하려면 \"인증 없이 연결\"을 선택하십시오"
+msgstr "이 네트워크의 설정에서 계정 이름과 비밀번호를 확인하거나, 여기서 \"No authentication\"를 선택하여 로그인 없이 연결할 수 있습니다."
 
 #. Checkbox on the connect form: reveals the account name and password fields used to authenticate with network services (SASL).
 #: client/components/Windows/Connect.vue:207
 msgctxt "connect.saslToggle"
 msgid "I have a services account (SASL)"
-msgstr "서비스 계정(SSL)이 있습니다"
+msgstr "저는 서비스 계정이 있어요 (SASL)"
 
 #. The IRC server section of the connect form: heading above the server fields, and the label of the server host field.
 #: client/components/Windows/Connect.vue:124
@@ -1641,7 +1641,7 @@ msgstr "추방하고 블록합니다 ("
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kickbanB"
 msgid ") a user from the current channel. Unlike"
-msgstr "현재 채널의 사용자를 제외하고"
+msgstr "현재 채널의 사용자입니다. 달라"
 
 #. End of the /kickban command description in the help window, after the /ban code fragment. Starts with a comma.
 #: client/components/Windows/Help.vue
@@ -4002,7 +4002,7 @@ msgstr "{appName}이 열려 있지 않으면 퇴근 메시지"
 #: client/components/Settings/General.vue
 msgctxt "settings.general.backupExported"
 msgid "Exported {date}."
-msgstr "{date}을 수출했습니다."
+msgstr ""
 
 #. Body of the confirmation dialog before restoring a settings backup in Settings > General. {parts} is a comma-joined list ('your settings, 1 network, mutes and ignore lists'), {file} the chosen backup file's name.
 #: client/components/Settings/General.vue
@@ -4315,7 +4315,7 @@ msgstr "예외 표시"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightExceptionsHelp"
 msgid "If a message contains any of these comma-separated expressions, it will not trigger a highlight even if it contains your nickname or expressions defined in custom highlights."
-msgstr "메시지에 이 표현들 중 하나라도 포함되어 있으면,_even if it contains your nickname or expressions defined in custom highlights, it will not trigger a highlight."
+msgstr ""
 
 #. Tooltip on the highlight checkbox in Settings > Notifications; explains the visual effect of highlights.
 #: client/components/Settings/Notifications.vue

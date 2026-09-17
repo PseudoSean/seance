@@ -821,7 +821,7 @@ msgstr "sunucu SASL {offered} sunuyor, {mechanism} değil"
 #: client/js/irc/client.ts
 msgctxt "connect.saslRequiredHint"
 msgid "Check the account name and password in this network's settings, or pick \"No authentication\" there to connect without logging in."
-msgstr "Bu ağın ayarlarında hesap adı ve şifresini kontrol edin veya \"Kimlik doğrulama yapma\" seçeneğini seçerek giriş yapmadan bağlanın."
+msgstr ""
 
 #. Checkbox on the connect form: reveals the account name and password fields used to authenticate with network services (SASL).
 #: client/components/Windows/Connect.vue:207
@@ -4015,7 +4015,7 @@ msgstr "{appName} açık değilse uzak mesaj"
 #: client/components/Settings/General.vue
 msgctxt "settings.general.backupExported"
 msgid "Exported {date}."
-msgstr "İmphac {date}."
+msgstr "{date} dışarı aktarıldı."
 
 #. Body of the confirmation dialog before restoring a settings backup in Settings > General. {parts} is a comma-joined list ('your settings, 1 network, mutes and ignore lists'), {file} the chosen backup file's name.
 #: client/components/Settings/General.vue

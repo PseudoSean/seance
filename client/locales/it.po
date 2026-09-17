@@ -1212,7 +1212,7 @@ msgstr "Comandi"
 #: client/components/NetworkForm.vue:136
 msgctxt "form.commandsHelp"
 msgid "One /command per line.\nEach command will be executed in\nthe server tab on new connection"
-msgstr "Un comando per linea."
+msgstr ""
 
 #. Status line on the network edit form while the network is online without TLS.
 #: client/components/NetworkForm.vue:490
@@ -1290,7 +1290,7 @@ msgstr "Lascia vuoto per mantenere la password corrente"
 #: client/components/NetworkForm.vue:225
 msgctxt "form.pushHelp"
 msgid "Register this device for push notifications on this network. The server must support the draft/webpush capability. Push needs authentication, so this only appears with SASL configured. Each network is set up independently."
-msgstr "Registra questo dispositivo per le notifiche per push su questa rete. Il server deve supportare la capacità draft/webpush. Le notifiche per push richiedono autenticazione, quindi questa opzione appare solo se SASL è configurato."
+msgstr "Registra questo dispositivo per le notifiche per push su questa rete. Il server deve supportare la capacità draft/webpush. Le notifiche per push richiedono l'autenticazione, quindi appare solo se SASL è configurato. Ogni rete è configurata in modo indipendente."
 
 #. Checkbox on the network edit form: register this device for this network's push notifications.
 #: client/components/NetworkForm.vue:222

@@ -149,7 +149,7 @@
   "connect.saslReason.unavailable": "เซิร์ฟเวอร์ไม่รองรับ SASL",
   "connect.saslReason.unknown": "ข้อผิดพลาดที่ไม่ทราบ",
   "connect.saslReason.wrongMechanism": "เซิร์ฟเวอร์รองรับ SASL {offered}, แต่ไม่รองรับ {mechanism}",
-  "connect.saslRequiredHint": "ตรวจสอบชื่อบัญชีและรหัสผ่านในตั้งค่าเครือข่าย หรือเลือก \"ไม่ใช้การตรวจสอบ\" เพื่อเชื่อมต่อโดยไม่ต้องเข้าสู่ระบบ",
+  "connect.saslRequiredHint": "ตรวจสอบชื่อบัญชีและรหัสผ่านในตั้งค่าเครือข่ายนี้ หรือเลือก \"No authentication\" เพื่อเชื่อมต่อโดยไม่ต้องเข้าสู่ระบบ",
   "connect.saslToggle": "มีบัญชีบริการ (SASL)",
   "connect.server": "เซิร์ฟเวอร์",
   "connect.serverAddress": "ที่อยู่เซิร์ฟเวอร์",

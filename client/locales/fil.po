@@ -821,7 +821,7 @@ msgstr "ang server ay nagpapakita ng SASL {offered}, di {mechanism}"
 #: client/js/irc/client.ts
 msgctxt "connect.saslRequiredHint"
 msgid "Check the account name and password in this network's settings, or pick \"No authentication\" there to connect without logging in."
-msgstr "Tumalaga ang pangalan ng account at password sa setting ng network, o pindutin \"Wala pang authentication\" dito para makonekta walang pag-login."
+msgstr "I-check ang pangalan ng account at password sa mga setting nito, o pindahin \"No authentication\" dito para makonekta walang pag-login."
 
 #. Checkbox on the connect form: reveals the account name and password fields used to authenticate with network services (SASL).
 #: client/components/Windows/Connect.vue:207
@@ -1651,7 +1651,7 @@ msgstr "Tumbok at ban ("
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kickbanB"
 msgid ") a user from the current channel. Unlike"
-msgstr ") Daliwan na walang mag-isa para mabawasan ang kasalungat na password"
+msgstr ") isang user mula sa kasalukuyang channel. Hindi naman"
 
 #. End of the /kickban command description in the help window, after the /ban code fragment. Starts with a comma.
 #: client/components/Windows/Help.vue
@@ -1795,7 +1795,7 @@ msgstr "Unblock ang mensahe mula sa nakasulat na user sa kasalukuyan network. It
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unmuteA"
 msgid "Un-mutes the given channel(s) or the current channel if no channel is provided. See"
-msgstr "Un-mutes ang kasalukuyan channel(s) o ang kasalukuyan channel kung walang channel ay nasa pagkakasali."
+msgstr "Nagsunod ang mga channel (o channel) na ibinigay o ang kasalukuyang channel kung walang channel na ibinigay. Tukuyan"
 
 #. End of the /unmute command description in the help window, after the /mute code fragment.
 #: client/components/Windows/Help.vue
@@ -3733,7 +3733,7 @@ msgstr ""
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.customStylesheetHelp"
 msgid "Custom stylesheet. You can override any style with CSS here."
-msgstr ""
+msgstr "Custom stylesheet. Maaari mong i-override ang anumang estilo gamit ang CSS dito."
 
 #. Placeholder of the custom stylesheet text area in Settings > Appearance, written as a CSS comment. Keep the /* */ comment markers.
 #: client/components/Settings/Appearance.vue

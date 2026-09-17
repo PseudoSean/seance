@@ -831,7 +831,7 @@ msgstr "server podporuje SASL {offered}, ne {mechanism}"
 #: client/js/irc/client.ts
 msgctxt "connect.saslRequiredHint"
 msgid "Check the account name and password in this network's settings, or pick \"No authentication\" there to connect without logging in."
-msgstr "Zkontrolujte jméno účtu a heslo v nastaveního tohoto sítě, nebo vyberte \"Žádné autentizace\" tam, abyste se připojili bez přihlášení."
+msgstr "Zkontrolujte název účtu a heslo v nastaveního sítě, nebo vyberte \"No authentication\" tam, abyste se připojili bez přihlášení."
 
 #. Checkbox on the connect form: reveals the account name and password fields used to authenticate with network services (SASL).
 #: client/components/Windows/Connect.vue:207
@@ -1000,7 +1000,7 @@ msgstr ""
 #: client/js/irc/disconnect.ts:78
 msgctxt "disconnect.couldNotConnectNotReconnecting"
 msgid "Could not connect to {url}{error}. Not reconnecting."
-msgstr ""
+msgstr "Nelze se připojit k {url}{error}. Nezkušební znovu připojení."
 
 #. Connection-failure report once the network was registered. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
 #: client/js/irc/disconnect.ts
@@ -1300,7 +1300,7 @@ msgstr "Nezapnout, abyste zachovali aktuální heslo"
 #: client/components/NetworkForm.vue:225
 msgctxt "form.pushHelp"
 msgid "Register this device for push notifications on this network. The server must support the draft/webpush capability. Push needs authentication, so this only appears with SASL configured. Each network is set up independently."
-msgstr "Zaregistrujte tento zařízení pro odesílání upozornění na tomto síti. Server musí podporovat schopnost draft/webpush. Odesílání vyžaduje autentizaci, takže je zobrazeno pouze pokud je konfigurován SASL."
+msgstr "Zaregistrujte tento zařízení pro oznámení přes síť. Server musí podporovat funkci draft/webpush. Oznámení vyžadují autentizaci, takže se objeví jenom pokud je SASL nakonfigurované. Každá síť je nastavená zvlášť."
 
 #. Checkbox on the network edit form: register this device for this network's push notifications.
 #: client/components/NetworkForm.vue:222
@@ -4433,7 +4433,7 @@ msgstr "Pushové oznámení"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushPerNetwork"
 msgid "Push is set up per network — turn it on or off in each network's settings (Edit network → “Push notifications for this network”), where the enrollment status is also shown. The browser delivers the notifications; each push-capable server decides whether to wake this app."
-msgstr "Push je nastavený pro každou síť – zapněte nebo vypněte v nastavení každé síti (Editovat síť → „Pushové oznámení pro tuto síť“), kde je také zobrazen status registrace."
+msgstr "Push je nastavený podle sítě — zapněte jej nebo vypněte v nastavení každé sítě (Edit network → „Push notifications for this network“), kde je také zobrazen status registrace. Prohlížeč doručuje upozornění; každý server schopný podpory push rozhoduje, zda budou vzbudit tuto aplikaci."
 
 #. Warning line in Settings > Notifications when the chat server itself does not offer web push; names the IRCv3 draft/webpush capability, which stays verbatim.
 #: client/components/Settings/Notifications.vue

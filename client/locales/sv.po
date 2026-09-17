@@ -821,7 +821,7 @@ msgstr "servern erbjuder SASL {offered}, inte {mechanism}"
 #: client/js/irc/client.ts
 msgctxt "connect.saslRequiredHint"
 msgid "Check the account name and password in this network's settings, or pick \"No authentication\" there to connect without logging in."
-msgstr "Kontrollera kontonamnet och lösenordet i detta nätverks inställningar, eller välj \"Ingen autentisering\" där för att ansluta utan att logga in."
+msgstr "Kontrollera kontonamnet och lösenordet i inställningarna för detta nätverk, eller välj \"No authentication\" där för att ansluta utan att logga in."
 
 #. Checkbox on the connect form: reveals the account name and password fields used to authenticate with network services (SASL).
 #: client/components/Windows/Connect.vue:207
@@ -1212,7 +1212,7 @@ msgstr "Kommandon"
 #: client/components/NetworkForm.vue:136
 msgctxt "form.commandsHelp"
 msgid "One /command per line.\nEach command will be executed in\nthe server tab on new connection"
-msgstr "En kommando per rad."
+msgstr ""
 
 #. Status line on the network edit form while the network is online without TLS.
 #: client/components/NetworkForm.vue:490
@@ -1747,7 +1747,7 @@ msgstr "Skicka ett råmeddelande till det aktuella IRC-nätverket."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.rejoin"
 msgid "Leave and immediately rejoin the current channel. Useful to quickly get op from ChanServ in an empty channel, for example."
-msgstr "Avsluta och direkt återgå till den aktuella kanalen. Det är användbart"
+msgstr "Avsluta och återkoppla till den aktuella kanalen. Det är användbart för att snabbt få op från ChanServ i en tom kanal, till exempel."
 
 #. Description of the /search command in the help window. No trailing period in the source; keep it as is.
 #: client/components/Windows/Help.vue

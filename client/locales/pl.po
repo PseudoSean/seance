@@ -831,7 +831,7 @@ msgstr "serwer oferuje SASL {offered}, nie {mechanism}"
 #: client/js/irc/client.ts
 msgctxt "connect.saslRequiredHint"
 msgid "Check the account name and password in this network's settings, or pick \"No authentication\" there to connect without logging in."
-msgstr "Sprawdź nazwę konta i hasło w ustawieniach tego sieci, lub wybierz \"Brak autoryzacji\" tam, aby połączyć bez logowania."
+msgstr "Sprawdź nazwę konta i hasło w ustawieniach tego sieci, lub wybierz \"No authentication\" tam, aby połączyć się bez logowania."
 
 #. Checkbox on the connect form: reveals the account name and password fields used to authenticate with network services (SASL).
 #: client/components/Windows/Connect.vue:207
@@ -1619,7 +1619,7 @@ msgstr "polecenia"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ignore"
 msgid "Block any messages from the specified user on the current network. This can be a nickname or a hostmask."
-msgstr "Zablokuj jakiejkolwiek wiadomości z określonego użytkownika na obecnym sieci."
+msgstr "Zablokuj komunikaty z określonego użytkownika na obecnym sieci. Może to być nick lub hostmask."
 
 #. Description of the /ignorelist command in the help window.
 #: client/components/Windows/Help.vue
@@ -4433,7 +4433,7 @@ msgstr ""
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushPerNetwork"
 msgid "Push is set up per network — turn it on or off in each network's settings (Edit network → “Push notifications for this network”), where the enrollment status is also shown. The browser delivers the notifications; each push-capable server decides whether to wake this app."
-msgstr "Push jest ustawiony na poziomie sieci — włącz lub wyłącz go w ustawieniach każdej sieci (Edytuj sieć → „Push notifications dla tej sieci”), gdzie również pokazano stan rejestracji."
+msgstr "Push jest konfigurowany na poziomie sieci — włącz lub wyłącz w ustawieniach każdej sieci (Edytuj sieć → „Powiadomienia Push dla tej sieci”), gdzie również pokazano stan rejestracji. Przeglądarka dostaje powiadomienia; każdy serwer z możliwością Push decyduje, czy awaktywować tę aplikację."
 
 #. Warning line in Settings > Notifications when the chat server itself does not offer web push; names the IRCv3 draft/webpush capability, which stays verbatim.
 #: client/components/Settings/Notifications.vue

@@ -149,7 +149,7 @@
   "connect.saslReason.unavailable": "server không hỗ trợ SASL",
   "connect.saslReason.unknown": "lỗi không xác định",
   "connect.saslReason.wrongMechanism": "server hỗ trợ SASL {offered}, không phải {mechanism}",
-  "connect.saslRequiredHint": "Kiểm tra tên tài khoản và mật khẩu trong cài đặt mạng này, hoặc chọn \"Không xác thực\" để kết nối mà không đăng nhập.",
+  "connect.saslRequiredHint": "Kiểm tra tên tài khoản và mật khẩu trong cài đặt mạng này, hoặc chọn \"No authentication\" ở đây để kết nối mà không cần đăng nhập.",
   "connect.saslToggle": "Tôi có tài khoản dịch vụ (SASL)",
   "connect.server": "máy chủ",
   "connect.serverAddress": "Địa chỉ server",
