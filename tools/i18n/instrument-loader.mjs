@@ -27,26 +27,26 @@
 const TOKEN = /(?<![\w$.])(?<!function\s)\bt(?:Count)?\(/g;
 const EXCLUDED = /js[\\/]i18n([\\/]|$)|js[\\/]branding\.ts$/;
 
-/** String/comment spans to skip, so a "t(" inside a literal or a comment
- * is never rewritten (a missed rewrite inside a template literal's
- * interpolation is accepted; a wrong rewrite is not). */
-function maskedSpans(source) {
-	const spans = [];
-	let i = 0;
+/** Scans [from, to) of `source` as JS, pushing every string/comment span it
+ * finds onto `spans`. Bounded so a caller can restrict the scan to one
+ * region (a .vue file's <script> block) without spilling past its edge. */
+function scanCode(source, from, to, spans) {
+	let i = from;
 
-	while (i < source.length) {
+	while (i < to) {
 		const ch = source[i];
 
 		if (ch === "/" && source[i + 1] === "/") {
 			const end = source.indexOf("\n", i);
-			spans.push([i, end === -1 ? source.length : end]);
-			i = end === -1 ? source.length : end;
+			const stop = end === -1 || end > to ? to : end;
+			spans.push([i, stop]);
+			i = stop;
 			continue;
 		}
 
 		if (ch === "/" && source[i + 1] === "*") {
 			const end = source.indexOf("*/", i + 2);
-			const stop = end === -1 ? source.length : end + 2;
+			const stop = end === -1 ? to : Math.min(end + 2, to);
 			spans.push([i, stop]);
 			i = stop;
 			continue;
@@ -56,7 +56,7 @@ function maskedSpans(source) {
 			const quote = ch;
 			let j = i + 1;
 
-			while (j < source.length) {
+			while (j < to) {
 				if (source[j] === "\\") {
 					j += 2;
 					continue;
@@ -70,12 +70,71 @@ function maskedSpans(source) {
 				j++;
 			}
 
-			spans.push([i, j]);
-			i = j;
+			spans.push([i, Math.min(j, to)]);
+			i = Math.min(j, to);
 			continue;
 		}
 
 		i++;
+	}
+}
+
+/** The [start, end) content ranges of every <script>…</script> block in a
+ * .vue file's source (the tag brackets themselves excluded). */
+function vueScriptRegions(source) {
+	const regions = [];
+	const open = /<script\b[^>]*>/gi;
+	let match;
+
+	while ((match = open.exec(source))) {
+		const start = match.index + match[0].length;
+		const close = source.indexOf("</script>", start);
+		const end = close === -1 ? source.length : close;
+
+		regions.push([start, end]);
+		open.lastIndex = end;
+	}
+
+	return regions;
+}
+
+/** String/comment spans to skip, so a "t(" inside a literal or a comment
+ * is never rewritten (a missed rewrite inside a template literal's
+ * interpolation is accepted; a wrong rewrite is not). For a .vue file this
+ * is also where the template is kept out of the scan entirely: template
+ * markup is not JS, and an apostrophe in its prose ("don't") desynchronises
+ * a whole-file quote scan. Everything outside a <script>…</script> block is
+ * masked as already-handled, and only the block's own content is scanned
+ * for real JS strings/comments. A .vue file with no <script> block at all
+ * (nothing to protect against) falls back to scanning the whole source. */
+function maskedSpans(source, isVue) {
+	const spans = [];
+
+	if (!isVue) {
+		scanCode(source, 0, source.length, spans);
+		return spans;
+	}
+
+	const regions = vueScriptRegions(source);
+
+	if (regions.length === 0) {
+		scanCode(source, 0, source.length, spans);
+		return spans;
+	}
+
+	let cursor = 0;
+
+	for (const [start, end] of regions) {
+		if (start > cursor) {
+			spans.push([cursor, start]);
+		}
+
+		scanCode(source, start, end, spans);
+		cursor = end;
+	}
+
+	if (cursor < source.length) {
+		spans.push([cursor, source.length]);
 	}
 
 	return spans;
@@ -135,7 +194,7 @@ export default function instrument(source) {
 		return source;
 	}
 
-	const spans = maskedSpans(source);
+	const spans = maskedSpans(source, /\.vue$/.test(file.replace(/\\/g, "/")));
 	let out = "";
 	let last = 0;
 

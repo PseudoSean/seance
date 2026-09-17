@@ -18,4 +18,8 @@ export function noContext(): string {
 	return t("nocontext.key");
 }
 
+export function singleQuoted(): string {
+	return t('widget.singleQuoted');
+}
+
 // t("widget.gone") — commented out, never a reference.

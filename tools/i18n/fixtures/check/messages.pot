@@ -27,3 +27,8 @@ msgstr ""
 msgctxt "nocontext.key"
 msgid "No context"
 msgstr ""
+
+#. Referenced with single quotes — check.ts must still see it.
+msgctxt "widget.singleQuoted"
+msgid "Single quoted"
+msgstr ""

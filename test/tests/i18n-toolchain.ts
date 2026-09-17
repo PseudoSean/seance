@@ -14,7 +14,12 @@ import {tmpdir} from "node:os";
 import {join, resolve} from "node:path";
 import {parsePo} from "../../tools/i18n/po";
 import {addToPot} from "../../tools/i18n/add";
-import {ALLOWED_UNREFERENCED, ALLOWED_DYNAMIC, checkPot} from "../../tools/i18n/check";
+import {
+	ALLOWED_UNREFERENCED,
+	ALLOWED_DYNAMIC,
+	checkPot,
+	collectStaticCallSiteKeys,
+} from "../../tools/i18n/check";
 import {POT_PATH} from "../../tools/i18n/paths";
 import {categoryIndexMap, compileLocales, Catalog, CompileResult} from "../../tools/i18n/compile";
 import {parseTargets, TARGETS_SOURCE} from "../../tools/i18n/targets";
@@ -705,6 +710,38 @@ describe("i18n toolchain", () => {
 			expect(problems.missingContext).to.deep.equal(["nocontext.key"]);
 		});
 
+		it("collects a single-quoted key as a call site, not an unreferenced one", () => {
+			// t('widget.singleQuoted') in widget.ts — CALL_SITE must accept
+			// single quotes the same as double quotes.
+			const keys = collectStaticCallSiteKeys(tree);
+			expect(keys.has("widget.singleQuoted")).to.equal(true);
+
+			const problems = checkPot(potPath, [tree]);
+			expect(problems.unreferenced).to.not.include("widget.singleQuoted");
+			expect(problems.missing).to.not.include("widget.singleQuoted");
+		});
+
+		it("reports a non-literal brandingT() call as a dynamic site", () => {
+			const potDir = mkdtempSync(join(tmpdir(), "seance-i18n-brandingt-"));
+			const clientDir = join(potDir, "client");
+			mkdirSync(clientDir, {recursive: true});
+			writeFileSync(
+				join(potDir, "messages.pot"),
+				'msgid ""\nmsgstr ""\n"Content-Type: text/plain; charset=UTF-8\\n"\n'
+			);
+			writeFileSync(
+				join(clientDir, "branded.ts"),
+				["const someVar = pick();", "brandingT(someVar);"].join("\n")
+			);
+
+			const problems = checkPot(join(potDir, "messages.pot"), [clientDir]);
+			expect(problems.dynamic).to.deep.equal([
+				{file: "branded.ts", line: 2, kind: "key", code: "brandingT(someVar);"},
+			]);
+
+			rmSync(potDir, {recursive: true, force: true});
+		});
+
 		it("ignores commented-out call sites and the i18n implementation itself", () => {
 			const problems = checkPot(potPath, [tree]);
 			// "widget.gone" appears only in a comment and "i18n.internal" only
@@ -835,6 +872,28 @@ describe("i18n toolchain", () => {
 			expect(out).to.contain("obj.t(x)");
 			expect(out).to.not.contain("__tDyn(commented");
 			expect(out).to.contain("call t(str) later");
+		});
+
+		it("masks only the <script> block of a .vue file, so template prose can't desync the scan", () => {
+			// The lone apostrophe in "don't" used to be read as a JS string
+			// delimiter with no matching close ahead of it, which swallowed
+			// everything after it — the whole <script> block included — as
+			// one long "string" and masked it from the scan.
+			const src = [
+				"<template>",
+				"  <p>don't stop</p>",
+				"</template>",
+				"<script>",
+				"const a = t(foo);",
+				'const s = "embed t(str) inside a literal";',
+				"</script>",
+			].join("\n");
+			const out = instrument.call(
+				{resourcePath: "/repo/client/components/Weird.vue"},
+				src
+			) as string;
+			expect(out).to.contain("__tDyn(foo)");
+			expect(out).to.contain('"embed t(str) inside a literal"');
 		});
 
 		it("stands down for the implementation's own files", () => {

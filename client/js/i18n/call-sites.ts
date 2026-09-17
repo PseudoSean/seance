@@ -816,6 +816,7 @@ export const STATIC_CALL_SITES = new Set<string>([
 	"translate.retry",
 	"translate.unchangedReason",
 	"translation.panel.languages",
+	"translation.panel.remove",
 	"typing.many",
 	"typing.one",
 	"typing.three",

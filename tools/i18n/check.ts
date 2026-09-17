@@ -12,7 +12,8 @@
 // predicted. Exits 1 listing every miss.
 //
 // The scan is a heuristic (a regex over comments-stripped source), which is
-// why call sites are written `t("key")` — double quotes, no concatenation.
+// why call sites are written `t("key")` or `t('key')` — a single string
+// literal, no concatenation.
 // Fixture coverage and the live-tree assertion (the real client/ tree and
 // messages.pot) live in test/tests/i18n-toolchain.ts.
 
@@ -83,16 +84,18 @@ export const ALLOWED_UNREFERENCED = new Set([
  */
 export const ALLOWED_DYNAMIC = new Set<string>([]);
 
-/** t("key") / tCount("key", …) / brandingT("key") — the only way a key
- * becomes a call site. The service worker's own t() (client/service-worker.js,
- * which prefers the push module's catalog) is written in the same shape on
- * purpose, so this one regex covers it too once its file is scanned
- * (SERVICE_WORKER_FILE). */
-const CALL_SITE = /\b(?:brandingT|t)(?:Count)?\(\s*"([^"]+)"/g;
+/** t("key") / t('key') / tCount("key", …) / brandingT("key") — the only way
+ * a key becomes a call site. Single and double quotes are both accepted (a
+ * key inside an HTML attribute is often single-quoted); the key is group 2,
+ * group 1 is the quote character the backreference matches against. The
+ * service worker's own t() (client/service-worker.js, which prefers the
+ * push module's catalog) is written in the same shape on purpose, so this
+ * one regex covers it too once its file is scanned (SERVICE_WORKER_FILE). */
+const CALL_SITE = /\b(?:brandingT|t)(?:Count)?\(\s*(["'])([^"']+)\1/g;
 
-/** A t() call to classify: not a property access (`.t(` is some object's
- * method) and not a definition (`function t(`). */
-const CALL_TOKEN = /(?<![\w$.])(?<!function\s)t(?:Count)?\(/g;
+/** A t()/brandingT() call to classify: not a property access (`.t(` is some
+ * object's method) and not a definition (`function t(`). */
+const CALL_TOKEN = /(?<![\w$.])(?<!function\s)(?:brandingT|t)(?:Count)?\(/g;
 
 /** A translated fragment glued into a longer string: any `+ t(` or `t(…) +`. */
 const COMBINED = /(?:\+\s*(?<![\w$.])t(?:Count)?\()|((?<![\w$.])t(?:Count)?\([^)]*\)\s*\+)/;
@@ -148,7 +151,7 @@ function collectCallSites(
 
 		for (const [index, line] of lines.entries()) {
 			for (const match of line.matchAll(CALL_SITE)) {
-				into.add(match[1]);
+				into.add(match[2]);
 			}
 
 			// Assembled sites: a non-literal key (the runtime composes what
@@ -253,7 +256,7 @@ export function collectStaticCallSiteKeys(root: string): Set<string> {
 			const source = stripComments(readFileSync(path, "utf8"));
 
 			for (const match of source.matchAll(CALL_SITE)) {
-				keys.add(match[1]);
+				keys.add(match[2]);
 			}
 		}
 	};

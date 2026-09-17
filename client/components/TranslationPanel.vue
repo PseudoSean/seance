@@ -80,10 +80,8 @@
 								<button
 									type="button"
 									class="translation-panel-chip-remove"
-									:aria-label="
-										t('translation.panel.remove', {language: name(code)})
-									"
-									:title="t('translation.panel.remove', {language: name(code)})"
+									:aria-label="removeLabel(code)"
+									:title="removeLabel(code)"
 									@click="removeLanguage(code)"
 								>
 									✕
@@ -301,6 +299,8 @@ export default defineComponent({
 		const removeLanguage = (code: string) =>
 			setLanguages(state.value.languages.filter((c) => c !== code));
 
+		const removeLabel = (code: string) => t("translation.panel.remove", {language: name(code)});
+
 		const onWrite = (event: Event) => {
 			// A strip already up was translated for the old target: it must not
 			// survive the change, finished or not.
@@ -376,6 +376,7 @@ export default defineComponent({
 			setRead,
 			onAddLanguage,
 			removeLanguage,
+			removeLabel,
 			onWrite,
 			setFormality,
 			onFormality,
