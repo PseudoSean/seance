@@ -1463,13 +1463,13 @@ msgstr "Załaduj listę zabronionych użytkowników dla obecnego kanału."
 #. Description of the /cleartopic command in the help window.
 msgctxt "help.commands.cleartopic"
 msgid "Clear the topic in the current channel."
-msgstr "Wyczyść temat w obecnym kanaле."
+msgstr ""
 
 #: client/components/Windows/Help.vue
 #. Description of the /collapse command in the help window; a code fragment with the /expand command follows it. Ends mid-sentence.
 msgctxt "help.commands.collapse"
 msgid "Collapse all previews in the current channel (opposite of"
-msgstr "Zminimalizuj wszystkie przewidywania w obecnym kanaле (przeciwieństwo"
+msgstr ""
 
 #: client/components/Windows/Help.vue
 #. Start of the /connect command description in the help window; a code fragment with the port parameter follows it. Ends mid-sentence.
@@ -3830,7 +3830,7 @@ msgstr "Pokaż"
 #. Checkbox in Settings > Appearance; when ticked, message timestamps include the seconds as well as hours and minutes.
 msgctxt "settings.appearance.showSeconds"
 msgid "Include seconds in timestamp"
-msgstr "Wключaj sekundy w czaszamigawki"
+msgstr ""
 
 #: client/components/Settings/Appearance.vue
 #. Radio option in Settings > Appearance; joins and parts are compressed into one summary line to keep the chat short.

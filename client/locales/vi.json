@@ -77,12 +77,6 @@
   "composer.uploadPreparing": "đang chuẩn bị…",
   "composer.uploadWaiting": "đang chờ máy chủ…",
   "composer.uploading": "Tải lên {file}",
-  "condensed.away": {
-    "other": "đã đánh dấu đi một lần"
-  },
-  "condensed.back": {
-    "other": "đã đánh dấu trở lại một lần"
-  },
   "condensed.chghost": {
     "other": "{count} người dùng đã thay đổi tên máy chủ"
   },
@@ -419,7 +413,6 @@
   "lobby.nickname": "Tên:",
   "lobby.notificationsOff": "Thông báo tắt cho mạng này",
   "lobby.notificationsOn": "Thông báo bật",
-  "lobby.notificationsSubscribed": "Thông báo: đăng ký推送",
   "lobby.removeButton": "Xóa mạng",
   "lobby.removeText": "Bạn chắc chắn muốn thoát và xóa {name}? Điều này không thể hủy bỏ.",
   "lobby.removeTitle": "Xóa mạng",
@@ -561,7 +554,6 @@
   "send.editWaiting": "Chỉnh sửa chưa gửi: chỉnh sửa thông điệp đó đã đang chờ máy chủ.",
   "send.notConnected": "Bạn không kết nối với mạng IRC, không thể gửi lệnh của bạn.",
   "send.notSent": "Chưa gửi: {message}",
-  "send.pushTooLong": "Chưa gửi: đăng ký推送 không thể hiển thị trên một dòng",
   "send.reactNeedsTags": "Phản ứng cần khả năng message-tags, nhưng máy chủ này chưa bật.",
   "send.reactTargets": "Phản ứng chỉ có thể gửi trong các kênh và truy vấn.",
   "send.redactChannels": "Tin nhắn chỉ có thể xóa trong các kênh.",
@@ -622,7 +614,6 @@
   "settings.appearance.nickPostfixHelp": "Tự động bổ sung hậu tố tên nick (ví dụ như dấu phẩy)",
   "settings.appearance.nickPostfixPlaceholder": "Tự động bổ sung hậu tố tên nick (ví dụ: ', ')",
   "settings.appearance.sampleEnds": "Các đầu cuối được thiết kế để quá nhỏ và quá lớn.",
-  "settings.appearance.sampleGlasses": "Bạn có thể đọc dòng này mà không cần kính吗?",
   "settings.appearance.sampleSlide": "Có! Di chuyển nó cho đến khi nó thoải mái.",
   "settings.appearance.showMotd": "Hiển thị",
   "settings.appearance.showSeconds": "Bao gồm giây trong thời gian bắt đầu",
@@ -672,9 +663,7 @@
   "settings.general.installApp": "Cài đặt {appName} như một ứng dụng",
   "settings.general.nativeApp": "Ứng dụng nguyên bản",
   "settings.general.openLinks": "Mở các liên kết web+irc:// bằng {appName}",
-  "settings.general.sendTyping": "Gửi thông báo gõ键盘",
   "settings.general.sendTypingHelp": "Cho phép người trong kênh biết khi bạn đang gõ (IRCv3 + typing).",
-  "settings.general.typingHeading": "Thông báo gõ键盘",
   "settings.general.uploadCanvas": "Nỗ lực loại bỏ dữ liệu metadata trước khi tải lên",
   "settings.general.uploadCanvasHelp": "Tùy chọn này sẽ chuyển hình ảnh thành phần tử canvas để loại bỏ metadata từ hình ảnh. Điều này có thể làm hỏng định hướng nếu trình duyệt của bạn không hỗ trợ điều này.",
   "settings.general.uploadsHeading": "Tải lên tệp",

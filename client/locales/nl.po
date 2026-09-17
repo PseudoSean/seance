@@ -766,7 +766,7 @@ msgstr "de server biedt SASL niet aan"
 #. Reason fragment of 'SASL authentication failed: {reason}' when the server's rejection named no cause. Lowercase mid-sentence by position.
 msgctxt "connect.saslReason.unknown"
 msgid "unknown error"
-msgstr "onbekende foute foute foute foute foute foute foute fout"
+msgstr ""
 
 #: client/js/irc/client.ts
 #. Reason fragment of 'SASL authentication failed: {reason}' when the server's SASL mechanisms do not include the saved network's. {offered} and {mechanism} are protocol mechanism tokens, never translated.
@@ -4574,7 +4574,7 @@ msgstr "Verboden"
 #. Column header of the channel-ban list: when the ban was set, locale-formatted.
 msgctxt "special.bans.bannedAt"
 msgid "Banned At"
-msgstr "Verboden opeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+msgstr ""
 
 #: client/components/Special/ListBans.vue
 #. Column header of the channel-ban list: the operator who set the ban, verbatim.

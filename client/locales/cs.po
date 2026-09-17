@@ -627,7 +627,7 @@ msgstr "Žádný účet?"
 #. Notice at the top of the connect form when a web+irc:// link named a server the deploy does not allow; {network} is this deploy's network name, {host} the refused server.
 msgctxt "connect.linkIgnored"
 msgid "This app only connects to {network}. The link to {host} was ignored."
-msgstr "Tento program se připojuje pouze k {network}. Připojení k {host} bylo z忽略."
+msgstr ""
 
 #: client/components/Windows/Connect.vue:610
 #. Notice on the connect approval dialog opened from a web+irc:// link without channels; {host}:{port} is the proposed server.
@@ -4676,7 +4676,7 @@ msgstr "mělo příliš mnoho řádků pro jedno víceřádkové zprávy (limit 
 #. Why fragment of 'Message not sent: {why}' when the server's rejection named no cause. Lowercase mid-sentence by position.
 msgctxt "sr.multiline.rejected"
 msgid "the server rejected the multi-line batch."
-msgstr "server odmítl批量 zprávy."
+msgstr ""
 
 #: client/js/irc/handlers/standard-replies.ts
 #. Channel error when the server threw away a whole multi-line message; {why} is one of the sr.multiline* copies or the server's own description, left verbatim.

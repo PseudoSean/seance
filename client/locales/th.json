@@ -58,8 +58,6 @@
   "composer.cancel": "ยกเลิก",
   "composer.cancelEscape": "ยกเลิก (การหนี)",
   "composer.cancelUpload": "ยกเลิกการอัปโหลด",
-  "composer.connect": "連接",
-  "composer.connectNow": "連接 now",
   "composer.connectingTo": "กำลังเชื่อมต่อกับ {network}…",
   "composer.disconnectedFrom": "ไม่เชื่อมต่อกับ {network}.",
   "composer.editing": "กำลังแก้ไขข้อความ",
@@ -77,12 +75,6 @@
   "composer.uploadPreparing": "กำลังเตรียม…",
   "composer.uploadWaiting": "กำลังรอเซิร์ฟเวอร์…",
   "composer.uploading": "กำลังอัปโหลด {file}",
-  "condensed.away": {
-    "other": "ถูกตั้งเครื่องหมายออกแล้ว"
-  },
-  "condensed.back": {
-    "other": "ถูกตั้งเครื่องหมายกลับมาแล้ว"
-  },
   "condensed.chghost": {
     "other": "{count} ผู้ใช้มีการเปลี่ยนชื่อเครื่อง"
   },

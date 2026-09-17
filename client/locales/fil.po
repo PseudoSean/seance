@@ -3326,13 +3326,13 @@ msgstr "Reaksyon nga {reaction}"
 #. aria-label of the magnifier button in a chat window's header; clicking it opens the message-search field for the conversation.
 msgctxt "search.openForm"
 msgid "Search messages in this channel"
-msgstr "Bumо mensahe sa channel na to"
+msgstr ""
 
 #: client/components/MessageSearchForm.vue:10
 #. Placeholder of the message-search field that opens from the magnifier in a chat window's header; it filters this conversation's history.
 msgctxt "search.placeholder"
 msgid "Search messages…"
-msgstr "Bumо mensahe…"
+msgstr ""
 
 #: client/components/Windows/SearchResults.vue
 #. aria-label of the search-results view of the chat window, which lists the messages matching a search.
@@ -3344,7 +3344,7 @@ msgstr "Resulta han pagsukod"
 #. Tooltip and aria-label of the ✕ button in the search-results header; clicking closes the search and returns to the conversation.
 msgctxt "search.results.close"
 msgid "Close search window"
-msgstr "Bumо pana nga pagsukod"
+msgstr ""
 
 #: client/components/Windows/SearchResults.vue
 #. Shown in the search-results view when the search matched no messages.

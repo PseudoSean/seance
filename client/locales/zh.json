@@ -55,12 +55,6 @@
   "composer.uploadPreparing": "正在准备…",
   "composer.uploadWaiting": "等待服务器…",
   "composer.uploading": "上传{file}",
-  "condensed.away": {
-    "other": "已标记为离开一次"
-  },
-  "condensed.back": {
-    "other": "已标记为回来一次"
-  },
   "condensed.chghost": {
     "other": "{count}名用户更改了主机名"
   },

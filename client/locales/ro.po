@@ -2250,7 +2250,7 @@ msgstr "Închide previzualizare"
 #. aria-label of the button on a message link preview while the preview is folded; clicking expands the media inline.
 msgctxt "link.expand"
 msgid "Expand preview"
-msgstr "Î扩展 previzualizare"
+msgstr ""
 
 #: client/components/LinkPreview.vue
 #. Title on the placeholder of a media preview before it is revealed. {Kind} is the media type capitalized ('Image', 'Video', 'Audio'), {host} the website the media comes from.

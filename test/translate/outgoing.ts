@@ -400,6 +400,36 @@ describe("translate/outgoing", () => {
 			expect(isDegenerate("what a marvel!!!!!", "che meraviglia!!!!!")).to.equal(false);
 			expect(isDegenerate("what a marvel!!!!!", "che meraviglia!")).to.equal(true);
 		});
+
+		it("catches a word or a phrase repeated four times over", () => {
+			// The shape the shipped af/hi catalogs are full of: a word the
+			// model could not leave, sometimes after a punctuation run the
+			// old rule was one character short of seeing.
+			expect(isDegenerate("Sluit - - - - Κοντά Κοντά Κοντά Κοντά Κοντά")).to.equal(true);
+			// A two-word phrase four times over, which no single-token run
+			// would see: the tokens alternate.
+			expect(isDegenerate("एक बार एक बार एक बार एक बार")).to.equal(true);
+			// Case and edge punctuation are not what makes a token different.
+			expect(isDegenerate("Kama, kama, KAMA. kama")).to.equal(true);
+			expect(isDegenerate("no no no no no")).to.equal(true);
+		});
+
+		it("leaves three of a thing, and a line that merely rhymes, alone", () => {
+			// Three is emphasis; the fourth token differs here, so the run
+			// the model is in is three long.
+			expect(isDegenerate("Ýary Ýary Ýary Ýaryş")).to.equal(false);
+			expect(isDegenerate("ha ha ha")).to.equal(false);
+			expect(
+				isDegenerate("the cat sat on the mat", "le chat est assis sur le tapis")
+			).to.equal(false);
+		});
+
+		it("exempts a repetition the source is in itself", () => {
+			// A chat line that really does say it five times translates into
+			// one that does; only the model inventing the run is degenerate.
+			expect(isDegenerate("no no no no no", "нет нет нет нет нет")).to.equal(false);
+			expect(isDegenerate("no no no no no", "нет")).to.equal(true);
+		});
 	});
 
 	describe("isAnsweredQuestion", () => {

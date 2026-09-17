@@ -1980,37 +1980,37 @@ msgstr "Gå till hjälp-menyn."
 #. Description of the Alt+Shift+Down keyboard shortcut in the help window; it moves to the next network's home view in the sidebar.
 msgctxt "help.shortcuts.nextLobby"
 msgid "Switch to the next lobby in the channel list."
-msgstr "Gå till nästa lobby i kanal列表."
+msgstr ""
 
 #: client/components/Windows/Help.vue
 #. Description of the Alt+Ctrl+Down keyboard shortcut in the help window; it jumps to the next conversation that has unread messages.
 msgctxt "help.shortcuts.nextUnread"
 msgid "Switch to the next window with unread messages in the channel list."
-msgstr "Gå till nästa fönster med obesvarade meddelanden i kanal列表."
+msgstr ""
 
 #: client/components/Windows/Help.vue
 #. Description of the Alt+Down keyboard shortcut and of the two-finger swipe-left gesture in the help window; both move to the conversation after the current one in the sidebar.
 msgctxt "help.shortcuts.nextWindow"
 msgid "Switch to the next window in the channel list."
-msgstr "Gå till nästa fönster i kanal列表."
+msgstr ""
 
 #: client/components/Windows/Help.vue
 #. Description of the Alt+Shift+Up keyboard shortcut in the help window; it moves to the previous network's home view in the sidebar.
 msgctxt "help.shortcuts.prevLobby"
 msgid "Switch to the previous lobby in the channel list."
-msgstr "Gå till det första fönstret i kanal列表."
+msgstr ""
 
 #: client/components/Windows/Help.vue
 #. Description of the Alt+Ctrl+Up keyboard shortcut in the help window; it jumps to the previous conversation that has unread messages.
 msgctxt "help.shortcuts.prevUnread"
 msgid "Switch to the previous window with unread messages in the channel list."
-msgstr "Gå till det första fönstret med obesvarade meddelanden i kanal列表."
+msgstr ""
 
 #: client/components/Windows/Help.vue
 #. Description of the Alt+Up keyboard shortcut and of the two-finger swipe-right gesture in the help window; both move to the conversation before the current one in the sidebar.
 msgctxt "help.shortcuts.prevWindow"
 msgid "Switch to the previous window in the channel list."
-msgstr "Gå till det första fönstret i kanal列表."
+msgstr ""
 
 #: client/components/Windows/Help.vue
 #. Description of the Alt+J keyboard shortcut in the help window; it opens or closes the search field for jumping to a conversation.
@@ -2618,7 +2618,7 @@ msgstr "Laddar…"
 #. Title of the popup that lists the messages in which you were mentioned recently.
 msgctxt "mentions.title"
 msgid "Recent mentions"
-msgstr "Sена meddelanden"
+msgstr ""
 
 #: client/js/helpers/contextMenu.ts
 #. The word for a group chat room, filling {type} in the context-menu mute items. Lowercase mid-sentence.
@@ -3081,7 +3081,7 @@ msgstr "{nick} säger:"
 #. Reason fragment of 'Not sent ({reason}): {text}' when the connection dropped with the message still unconfirmed. Lowercase mid-sentence by position.
 msgctxt "pending.connectionLost"
 msgid "connection lost"
-msgstr "förbindelsen gick丢失"
+msgstr ""
 
 #: client/js/irc/pending.ts
 #. Reason fragment of 'Not sent ({reason}): {text}' when the server stayed silent for a minute. Lowercase mid-sentence by position.

@@ -1617,7 +1617,7 @@ msgstr "Obtener una lista de canales disponibles en esta red."
 #. Description of the /me command in the help window. {appName} is the chat app's display name.
 msgctxt "help.commands.me"
 msgid "Send an action message to the current channel. {appName} will display it inline, as if the message was posted in the third person."
-msgstr "Enviar un mensaje de acción al canal actual. {appName} lo mostrará como si fuera un mensaje publicado en第三人称."
+msgstr ""
 
 #: client/components/Windows/Help.vue
 #. Description of the /mode command in the help window; explains whose modes the flags apply to depending on the active window.
@@ -1635,7 +1635,7 @@ msgstr "Enviar un mensaje al canal especificado."
 #. Description of the /mute command in the help window; a code fragment with the /unmute command follows it. Ends mid-sentence.
 msgctxt "help.commands.mute"
 msgid "Prevent messages from generating any feedback for a channel. This turns off the highlight indicator, hides mentions and inhibits push notifications. Muting a network lobby mutes the entire network. Not specifying any channel target mutes the current channel. Revert with"
-msgstr "Evitar que los mensajes generen cualquier feedback para un canal. Esto apaga el indicador de resaltado, oculta menciones y inhibe las notificaciones por推送. Silenciar un lobby de red silencia toda la red. No especificar ningún objetivo de canal silencia el canal actual. Volver con"
+msgstr ""
 
 #: client/components/Windows/Help.vue
 #. Description of the /nick command in the help window.

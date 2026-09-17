@@ -255,13 +255,13 @@ msgstr "لا يمكن فتح نافذة استفسار دون وجود حقل."
 #. Error when /query is given a name starting with a channel membership prefix (~&@%+); a prefixed nick needs the prefix dropped.
 msgctxt "cmd.query.prefix"
 msgid "You can not open query windows for names starting with a user prefix."
-msgstr "لا يمكن فتح نافذة الاستفسار للשמות التي تبدأ ب префикс مستخدم."
+msgstr ""
 
 #: client/js/irc/commands/msg.ts
 #. Error when /query is given a name with spaces; nicks cannot contain them.
 msgctxt "cmd.query.spaces"
 msgid "You can not open query windows for names containing spaces."
-msgstr "لا يمكن فتح نافذة الاستفسار للשמות التي تحتوي على فراغات."
+msgstr ""
 
 #: client/js/irc/commands/react.ts
 #. Error when /react is typed where no recent message can carry a reaction (e.g. a window without message-tags history).
@@ -463,14 +463,14 @@ msgstr ""
 msgctxt "condensed.away"
 msgid "marked away once"
 msgid_plural "marked away {count} times"
-msgstr[0] "ماركيت بعيداً مرة واحدة"
+msgstr[0] ""
 
 #: client/components/MessageCondensed.vue
 #. Condensed status block: back markings while the block was collapsed. The singular shows 'once' when one marking happened, the plural the number of markings; {count} is that number.
 msgctxt "condensed.back"
 msgid "marked back once"
 msgid_plural "marked back {count} times"
-msgstr[0] "ماركيت مرة واحدة"
+msgstr[0] ""
 
 #: client/components/MessageCondensed.vue
 #. Condensed status block: {count} users changed their username/hostname while the block was collapsed.
@@ -744,7 +744,7 @@ msgstr "رفض الخادم القدرة SASL"
 #. Reason fragment of 'SASL authentication failed: {reason}' when the saved network has no login credentials. Lowercase mid-sentence by position.
 msgctxt "connect.saslReason.noCredentials"
 msgid "no account name or password is configured"
-msgstr "لا يوجد اسم حساب أو كلمة مرور مُ설َّح"
+msgstr ""
 
 #: client/js/irc/sasl.ts
 #. Reason fragment of 'SASL authentication failed: {reason}' when a SASL failure numeric carries no text of its own. {code} is the numeric, verbatim. Lowercase mid-sentence by position.
@@ -1141,7 +1141,7 @@ msgstr "إشعارات المتصفح لهذا الشبكة"
 #. Tooltip of the question-mark icon next to the browser notifications checkbox on the network edit form.
 msgctxt "form.browserNotificationsHelp"
 msgid "Show browser notifications for highlights and queries on this network. Needs the browser's permission; asks when first saved. Each network is set up independently."
-msgstr "عرض إشعارات المتصفح للعناوين والنتائج على هذه الشبكة. يحتاج إلى إذن المتصفح؛ يسأل عند الحفظ لأول مرة. كل شبكة تُ설ت بشكل منفصل."
+msgstr ""
 
 #: client/components/NetworkForm.vue:119
 #. Label of the field listing channels to join automatically after connecting, on the network edit form.
@@ -1243,7 +1243,7 @@ msgstr "تركه فارغ لاحتفاظ بكلمة المرور الحالية"
 #. Tooltip of the question-mark icon next to the push notifications checkbox on the network edit form.
 msgctxt "form.pushHelp"
 msgid "Register this device for push notifications on this network. The server must support the draft/webpush capability. Push needs authentication, so this only appears with SASL configured. Each network is set up independently."
-msgstr "أرسل هذا الجهاز للإشعارات بالدفع على هذا الشبكة. يجب أن يدعم الخادم الميزة التصحيحية /webpush. يحتاج الدفع إلى التحقق من الهوية، لذلك يظهر هذا فقط عندما يكون مُ설َّحًا SASL. يتم تجهيز كل شبكة بشكل منفصل."
+msgstr ""
 
 #: client/components/NetworkForm.vue:222
 #. Checkbox on the network edit form: register this device for this network's push notifications.
@@ -1622,7 +1622,7 @@ msgstr "استرجاع قائمة القنوات المتاحة في هذا ال
 #. Description of the /me command in the help window. {appName} is the chat app's display name.
 msgctxt "help.commands.me"
 msgid "Send an action message to the current channel. {appName} will display it inline, as if the message was posted in the third person."
-msgstr "إرسال رسالة عمل إلى القناة الحالية. سيعرض {appName} الرسالة inline، كما لو كانت تمثل رسالة تم تدوينها بال третьة-party."
+msgstr ""
 
 #: client/components/Windows/Help.vue
 #. Description of the /mode command in the help window; explains whose modes the flags apply to depending on the active window.
@@ -3406,7 +3406,7 @@ msgstr "تعديل لم يتم إرساله: تعديل لهذه الرسالة 
 #. Lobby error when a command or message was typed while the network is down; nothing was sent.
 msgctxt "send.notConnected"
 msgid "You are not connected to the IRC network, unable to send your command."
-msgstr "لا توجد连通ية مع شبكة IRC، لا يمكن إرسال أوامرك."
+msgstr ""
 
 #: client/js/irc/client.ts
 #. Lobby error when an IRC line could not be written to the socket. {message} is a technical transport error, left verbatim.
@@ -3442,7 +3442,7 @@ msgstr "يمكن فقط حذف الرسائل في القنوات."
 #. Lobby error when deletion was tried on a server without the redaction capability.
 msgctxt "send.redactUnavailable"
 msgid "Deleting messages is not available: the server did not enable draft/message-redaction."
-msgstr "لا يمكن حذف الرسائل: لم يفعّل الخادم ميزة المسودات/редакция الرسائل."
+msgstr ""
 
 #: client/js/irc/client.ts
 #. Lobby error when a message's client tags exceed the IRC line limit; nothing was sent.
@@ -3644,7 +3644,7 @@ msgstr "اسمك على تلك الشبكة"
 #. Variable reference: what $1 expands to in an alias body.
 msgctxt "settings.aliases.varOne"
 msgid "one argument (empty when not given)"
-msgstr "واحد من المدخلات (пустой عندما لا يتم ت为其提供)"
+msgstr ""
 
 #: client/components/Settings/Aliases.vue
 #. Variable reference: what $2- expands to (everything from the second argument on).
@@ -3818,7 +3818,7 @@ msgstr "الأطراف مقصودة لتصبح صغيرة وكبيرة."
 #. First line of the sample chat under the font-size slider in Settings → Appearance, written by the sample nick grandma: it asks whether the text is comfortable to read.
 msgctxt "settings.appearance.sampleGlasses"
 msgid "Can you read this without your glasses?"
-msgstr "هل يمكنك قراءة هذا دون очки؟"
+msgstr ""
 
 #: client/components/Settings/Appearance.vue:480
 #. Second line of the sample chat under the font-size slider in Settings → Appearance, the reply telling the reader to drag the slider until the text is comfortable.
@@ -3974,7 +3974,7 @@ msgstr "هذا يُستبدل {parts} بمحتوى {file}، ثم يتم إعاد
 #. Heading of the settings backup section in Settings > General, which exports preferences to a file and restores them.
 msgctxt "settings.general.backupHeading"
 msgid "Backup and restore"
-msgstr "نسخة احتياطية و복اء"
+msgstr ""
 
 #: client/components/Settings/General.vue
 #. Intro line under the Backup and restore heading in Settings > General; says what exporting does.
@@ -5056,7 +5056,7 @@ msgstr "هل ترغب في تحميل هذا الملف؟"
 #. Error notice when the user tries to send a file while the network is disconnected. Shown in the error strip above the message input.
 msgctxt "upload.disconnected"
 msgid "You are currently disconnected, unable to initiate upload process."
-msgstr "أنت مُتص连 حالياً، لا يمكنك بدء عملية التحميل."
+msgstr ""
 
 #: client/js/upload.ts:464
 #. Frame for a failed upload; the underlying reason follows the colon. {reason} is the browser's or endpoint's own message, kept verbatim — its content is not our copy.

@@ -106,7 +106,7 @@ msgstr "アlias 名は文字、数字、_ および -（最大 {max} 文字ま�
 #. Reply to /alias <name> when that alias does not exist. {name} is the name as typed, user input, verbatim; the second '/alias …' part is command syntax.
 msgctxt "cmd.alias.missing"
 msgid "No alias /{name}. /alias {name} <commands> creates it."
-msgstr "そのアлиアスはありません /{name}。/alias {name} <commands> で作成します。"
+msgstr ""
 
 #: client/js/irc/commands/alias.ts
 #. Reply to a bare /alias when none are defined; the '/alias <name> <commands>' part is command syntax and stays verbatim.
@@ -463,14 +463,14 @@ msgstr ""
 msgctxt "condensed.away"
 msgid "marked away once"
 msgid_plural "marked away {count} times"
-msgstr[0] "一度だけ離線に設定されました"
+msgstr[0] ""
 
 #: client/components/MessageCondensed.vue
 #. Condensed status block: back markings while the block was collapsed. The singular shows 'once' when one marking happened, the plural the number of markings; {count} is that number.
 msgctxt "condensed.back"
 msgid "marked back once"
 msgid_plural "marked back {count} times"
-msgstr[0] "一度だけオンラインに戻されました"
+msgstr[0] ""
 
 #: client/components/MessageCondensed.vue
 #. Condensed status block: {count} users changed their username/hostname while the block was collapsed.

@@ -15,7 +15,6 @@
   "chat.topicPlaceholder": "チャンネルのトピックを設定",
   "cmd.alias.added": "アlias /{name} が追加されました。",
   "cmd.alias.badName": "アlias 名は文字、数字、_ および -（最大 {max} 文字まで）です。",
-  "cmd.alias.missing": "そのアлиアスはありません /{name}。/alias {name} <commands> で作成します。",
   "cmd.alias.none": "アリアスが定義されていません。/alias <name> <commands> で作成します。",
   "cmd.alias.tooLong": "そのアリアスは長すぎます（{length} 文字で、最大 {max} 文字まで）です。",
   "cmd.alias.tooMany": "すでに {max} つのアリアスがあります；設定 → アリアスで一つを削除してください。",
@@ -69,12 +68,6 @@
   "composer.uploadFile": "ファイルアップロード",
   "composer.uploadPreparing": "調整中…",
   "composer.uploadWaiting": "サーバー待機中…",
-  "condensed.away": {
-    "other": "一度だけ離線に設定されました"
-  },
-  "condensed.back": {
-    "other": "一度だけオンラインに戻されました"
-  },
   "condensed.modes": {
     "other": "{count} mode was set"
   },

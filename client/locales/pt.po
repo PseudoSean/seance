@@ -3903,7 +3903,7 @@ msgstr "Sempre exibido"
 #. First part of the help line under the always-shown list in Settings > Appearance; the second part and the words 'Always show' (the name of the button on any media preview) follow it. Ends mid-sentence.
 msgctxt "settings.appearance.trustedHelpA"
 msgid "Media in these scopes loads without asking. Add one with"
-msgstr "Meios em这些 escopos carregam sem pedir. Adicione um com"
+msgstr ""
 
 #: client/components/Settings/Appearance.vue
 #. Last part of the help line under the always-shown list in Settings > Appearance, after the words 'Always show' marking the preview button's name. Ends the sentence.

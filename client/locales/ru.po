@@ -124,7 +124,7 @@ msgstr ""
 #. Error when a new alias would exceed the count limit. {max} is the limit, a number; 'Settings → Aliases' names the settings tab where aliases are edited.
 msgctxt "cmd.alias.tooMany"
 msgid "You already have {max} aliases; delete one in Settings → Aliases first."
-msgstr "У вас уже есть {max} псевдонимы; удалите один из параметров β Aliases.ий."
+msgstr ""
 
 #: client/js/irc/commands/alias.ts
 #. Confirmation after /alias <name> <commands> overwrote an existing alias. {name} is the alias name as typed, verbatim.
@@ -952,7 +952,7 @@ msgstr ""
 #. Headline when a network the client is dialling never opened and the retry schedule is standing down (the browser refused or could not reach the address). {url} is the WebSocket URL that was dialled; {error} is the browser's error text in parentheses, or empty.
 msgctxt "disconnect.couldNotConnectNotReconnecting"
 msgid "Could not connect to {url}{error}. Not reconnecting."
-msgstr "Не удалось подключиться к {url} {error}. Не удалось подключиться._BAR__BAR__BAR_RALATIONALALATIONSHNALALATATATATATATATATATATATATATATATA:ADADADADADADATATATATATATADADADADATATATATATATATATATATATATATASHADADADADADATATATATATATATASHADADADADATATATATATATATADADADATATADADATSSSSADADAC"
+msgstr ""
 
 #: client/js/irc/disconnect.ts
 #. Connection-failure report once the network was registered. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
@@ -988,13 +988,13 @@ msgstr ""
 #. Follow-up hint when the server's close reason names a live session: retrying alone cannot fix it, the other client has to go.
 msgctxt "disconnect.hint.sessionConflict"
 msgid "This account is already connected on this network - another tab, window or device is using it. Close that client; this tab then connects on its next retry (a dead connection is reclaimed within about a minute)."
-msgstr "Этот счет уже подключен к этой сети - другой вкладка, окно или устройство использует его. Закройте клиент; эта вкладка подключается к следующей повторной системе (отключенное подключение восстанавливается в течение примерно минуты). under medium not not under new new not not not not not not not not not not not not not not not not not not not not not not not not not not not not not not not not not not is not is not not not not not not not not not not not not itemy note control not not not control not control not control not control new control not control comtrol. is is is is cond cond"
+msgstr ""
 
 #: client/js/irc/disconnect.ts
 #. Follow-up hint under a failed secure (wss://) dial. {url} is the network's address with https: in place of wss:, for accepting a self-signed certificate once.
 msgctxt "disconnect.hint.wssCauses"
 msgid "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or its TLS certificate is not trusted — for a self-signed certificate, open {url} in a new tab, accept the warning, then reconnect."
-msgstr "В браузере не указывается причину. Вероятно причины: сервер отключен, порт неверен, или его сертификат TLS не доверяется — для самоподписавшегося сертификата, открытого {url} в новой вкладке, принятия предупреждения, а затем повторного подключения. is is under under under under under under under under count under under or not or not not not not not is is is under under or el el el el el el el el el el el about election that election that is that is el is is is election that is is abile is an an election to control. that th that preat condge con cond condent conden cond cond con"
+msgstr ""
 
 #: client/js/irc/disconnect.ts
 #. Connection-failure report when the server dropped the socket before registration finished. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
@@ -1511,7 +1511,7 @@ msgstr ""
 #. Text of the link at the end of the /ctcp command description in the help window; it opens the external Wikipedia article. Mid-sentence.
 msgctxt "help.commands.ctcpLink"
 msgid "the dedicated Wikipedia article"
-msgstr "Википедияять.ме, что, что, что, что, что, что, что, что, что, что, что, что, что, что, что, что, что я, что и, что, что я, что - что - что - что - что - что - что - что - что - что - что - что - что - что - что - что - что - что - что - что - что - что - что - что - что - что - что - что - что - то, что - что - что - что - что - что - что - что - что - что - что - что - что - что - что - что -"
+msgstr ""
 
 #: client/components/Windows/Help.vue
 #. Expansion of the acronym CTCP, shown as the abbreviation's hover tooltip in the help window's /ctcp command description.
@@ -1535,7 +1535,7 @@ msgstr ""
 #. Start of the /devoice command description in the help window; a code fragment with the -v mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
 msgctxt "help.commands.devoiceA"
 msgid "Remove voice ("
-msgstr "Удалить голос ( ο))...."
+msgstr ""
 
 #: client/components/Windows/Help.vue
 #. Continuation of the /devoice command description in the help window, after the -v code fragment. Starts with the closing parenthesis.
@@ -1571,7 +1571,7 @@ msgstr ""
 #. Description of the /ignorelist command in the help window.
 msgctxt "help.commands.ignorelist"
 msgid "Load the list of ignored users for the current network."
-msgstr "Загрузить список неучтенных пользователей для текущей сети..Мее.... В. В... В. В. В. В. В. В. В. В. В. В. В. В. За"
+msgstr ""
 
 #: client/components/Windows/Help.vue
 #. Start of the /invite command description in the help window; a code fragment with the channel parameter follows it. Ends mid-sentence.
@@ -1601,7 +1601,7 @@ msgstr ""
 #. Start of the /kickban command description in the help window; a code fragment with the +b mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
 msgctxt "help.commands.kickbanA"
 msgid "Kick and ban ("
-msgstr "Удар и запрет ())хожих (в том числе в случае, если они не соответствуют требованиям, установленным в пункте 1 статьи 14). В.. В. В. В. В.. В. В. В.."
+msgstr ""
 
 #: client/components/Windows/Help.vue
 #. Middle of the /kickban command description in the help window, after the +b code fragment; a code fragment with the /ban command follows it. Starts with the closing parenthesis. Ends mid-sentence.
@@ -3137,7 +3137,7 @@ msgstr ""
 #. Body of the push opt-in prompt; explains what allowing push does and that it is chosen per network.
 msgctxt "push.enableBody"
 msgid "This server can wake this app when it has messages for you while it is closed. You can change this per network, in each network's settings."
-msgstr "Этот сервер может разбудить это приложение, когда у него есть сообщения для вас, пока он закрыт. Вы можете изменить это на сеть, в настройках каждой сети.) (порядку) нужного приложения.. является является является является является является является является является является является является является является является является"
+msgstr ""
 
 #: client/components/PushPrompt.vue
 #. Title of the prompt shown at connect time asking whether to enable web push notifications for that chat network.
@@ -3149,13 +3149,13 @@ msgstr ""
 #. Fallback for the network name in the push prompt's target line when no name is known for the chat network being asked about.
 msgctxt "push.fallbackNetwork"
 msgid "this network"
-msgstr "эта сеть,и,и,и, но что, что не очень и очень важно, что мы можем по-то, что мы можем сделать, что мы можем, что мы можем, но не можем, что мы можем, чтоб, чтоб, что, чтоб, что"
+msgstr ""
 
 #: client/components/PushPrompt.vue
 #. Button of the push opt-in prompt; declines and stops the app from ever asking again for that network.
 msgctxt "push.never"
 msgid "Never"
-msgstr "Никогдахожих. является: &lt;... В... В. В. В."
+msgstr ""
 
 #: client/components/PushPrompt.vue
 #. Button of the push opt-in prompt; declines for now without disabling future prompts.
@@ -3191,7 +3191,7 @@ msgstr ""
 #. Preview-bar hint in the emoji picker while a reaction is being composed; shift-clicking an emoji appends it instead of sending.
 msgctxt "reactions.buildingHint"
 msgid "Shift-click to add more emoji"
-msgstr "Смена клик для добавления эмоджи. В с в с с в с с с с с с с с с с с с сменом с с с в сменом"
+msgstr ""
 
 #: client/components/ReactionPicker.vue
 #. Preview-bar title in the emoji picker while the user is composing a reaction out of several emoji or typing one.
@@ -4312,7 +4312,7 @@ msgstr ""
 #. Radio choice in Settings > Notifications for the server's push-identity change behaviour: show a confirmation prompt before the device re-subscribes. Em dash is part of the copy.
 msgctxt "settings.notifications.keyChangeAsk"
 msgid "Wary — ask before renewing the subscription"
-msgstr "Осторожно - спросите перед тем, как продлить подписку.... В. В си - с. В В В В В В В В В В В В В В В В В В"
+msgstr ""
 
 #: client/components/Settings/Notifications.vue
 #. Radio choice in Settings > Notifications for the server's push-identity change behaviour: do nothing, so push stays off for that server until renewed from its network settings. Em dash is part of the copy.
@@ -4330,7 +4330,7 @@ msgstr ""
 #. Radio choice in Settings > Notifications for the server's push-identity change behaviour: re-subscribe immediately and silently. Em dash is part of the copy.
 msgctxt "settings.notifications.keyChangeTrust"
 msgid "Naive — renew it on the spot, without asking"
-msgstr "Наив: обновить его на месте, не спрашивая. На. На. На. На. На."
+msgstr ""
 
 #: client/components/Settings/Notifications.vue
 #. Warning line in Settings > Notifications when the page is not served over a secure connection, which browsers require for notifications.
@@ -4360,13 +4360,13 @@ msgstr "Сервер отказался подписываться на толк
 #. Warning line in Settings > Notifications when notification permission was denied; points at the browser's site settings to re-enable.
 msgctxt "settings.notifications.pushDenied"
 msgid "Notifications are blocked by your browser. Allow them in the browser's site settings, then try again."
-msgstr "Уведомления блокируются вашим браузером. Позволите им в настройках сайта браузера, затем попробуйте снова. is is is is is is is is is user internations this not not not not not not that not not not that that is that is is is is is is is is is is is new new new new new new new new show show show is is is is is is ised ister.@ treatles"
+msgstr ""
 
 #: client/components/Settings/Notifications.vue
 #. Heading of the push notification section in Settings > Notifications; push wakes the app on new messages while it is closed.
 msgctxt "settings.notifications.pushHeading"
 msgid "Push Notifications"
-msgstr "Направить уведомления. ) ВКЛЮЧЕН ВКЛЮЧЕЕЕЕ НИМ УЧРЕМ НИМ НИМ НИМ НИМ НИМ НИМ НИМ НИМ НИМ ОБ. ОБ ОБ ОБ Ч. ОБ Ч ОБ ОБ ОБ"
+msgstr ""
 
 #: client/components/Settings/Notifications.vue
 #. Intro line of the push section in Settings > Notifications; explains that push is enabled per chat network from that network's edit form (the quoted phrase names that setting) and that each server decides whether to support it. Keep the curly quotes and the arrow.
@@ -4426,7 +4426,7 @@ msgstr "Идентификация сервера (его ключ) измени
 #. Warning line in Settings > Notifications when the browser cannot do web push; the parentheses name the browser features push requires.
 msgctxt "settings.notifications.unsupported"
 msgid "Push notifications are not supported by this browser (they need the Push API, a service worker and a secure context)."
-msgstr "Уведомления о нажатии не подтверждаются этим браузером (им нужен Push API, сервисный работник и безопасный контекст). is is is is is is subsive not that is is about the Push API, under services control concerning concerning concury."
+msgstr ""
 
 #: client/components/Settings/Notifications.vue
 #. Word rendered bold at the start of several warning lines in Settings > Notifications (push and browser notification problems); a colon follows it.

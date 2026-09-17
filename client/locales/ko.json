@@ -77,12 +77,6 @@
   "composer.uploadPreparing": "준비 중...",
   "composer.uploadWaiting": "서버 기다리는 중...",
   "composer.uploading": "{file} 업로드 중",
-  "condensed.away": {
-    "other": "한 번 떠났습니다"
-  },
-  "condensed.back": {
-    "other": "한 번 돌아왔습니다"
-  },
   "condensed.chghost": {
     "other": "{count} 명의 사용자가 호스트명을 변경했습니다"
   },
@@ -160,7 +154,6 @@
   "dates.today": "오늘",
   "dates.yesterday": "어제",
   "disconnect.code1001": "서버가 떠났습니다",
-  "disconnect.code1002": "웹소크ет 프로토콜 오류",
   "disconnect.code1006": "연결이 끊어졌습니다",
   "disconnect.code1008": "정책 위반",
   "disconnect.code1009": "메시지가太大",
@@ -174,8 +167,6 @@
   "disconnect.disconnected": "{host}{detail}에서 연결이 끊어졌습니다.",
   "disconnect.disconnectedNotReconnecting": "{host}{detail}에서 연결이 끊어졌습니다. 재연결하지 않습니다.",
   "disconnect.hint.httpsBlocked": "이 페이지는 HTTPS로 로드되었기 때문에 브라우저는 plain ws:// 연결을 차단합니다. 이 네트워크에 TLS를 사용하도록 설정하거나, http://.을 통해 앱을 열어주세요",
-  "disconnect.hint.plainCauses": "브라우저는 이유를 안내하지 않습니다. 가능한 원인: 서버가 다운되었거나, 포트가 잘못되었거나, 해당 포트에서 웹소크ет 연결을 허용하지 않았습니다.",
-  "disconnect.hint.registration": "웹소크ет이 열렸지만 서버가 등록 완료 전에 연결을 끊어 버렸습니다 - 이 포트가 웹소크ет을 통해 IRC를 사용하고 있는지 확인하세요. 서버 알림을 확인해 주세요.",
   "disconnect.hint.sessionConflict": "이 계정이 이미 이 네트워크에서 연결되어 있습니다 - 다른 탭, 창 또는 기기에서 사용 중입니다. 해당 클라이언트를 닫고, 이 탭은 다음 재연결 시 연결을 재구성합니다 (사망한 연결은 약 1분 내에 회수됩니다).",
   "disconnect.hint.wssCauses": "브라우저는 이유를 안내하지 않습니다. 가능한 원인: 서버가 다운되었거나, 포트가 잘못되었거나, TLS 인증서가 신뢰되지 않았습니다 - 자사 서명 인증서인 경우, 새 탭에서 {url}을 열고 경고를 수락한 후 재연결하세요.",
   "disconnect.registeringClosedNotReconnecting": "{host}에 대한 IRC 등록 중 연결이 종료되었습니다.{detail}. 재연결하지 않습니다.",
@@ -287,10 +278,6 @@
   "help.gestures.heading": "감각",
   "help.gestures.hideSidebar": "사이드바 숨기기",
   "help.gestures.showSidebar": "사이드바 보이기",
-  "help.gestures.swipeLeft": "단일 손가락 왼쪽으로 스ワイ프",
-  "help.gestures.swipeRight": "단일 손가락 오른쪽으로 스ワイ프",
-  "help.gestures.twoSwipeLeft": "두 손가락 왼쪽으로 스ワイ프",
-  "help.gestures.twoSwipeRight": "두 손가락 오른쪽으로 스ワイ프",
   "help.privacy": "개인정보 정책",
   "help.releaseNotesLink": "릴리스 노트",
   "help.reload": "재로드",
@@ -734,7 +721,6 @@
   "sw.titleChannel": "{nick}가 {target}에 있습니다",
   "sw.titleChannelCount": "{nick}가 {target}에 있습니다 ({count})",
   "sw.titleNickCount": "{nick} ({count})",
-  "system.away": "{nick}가 어ウェ이입니다",
   "system.back": "{nick}가 돌아왔습니다",
   "system.chghost": "{nick}가 변경되었습니다",
   "system.chghostBoth": "{nick}가 이름을 {ident}로 변경하고 호스트명을 {host}로 변경했습니다",

@@ -1840,7 +1840,7 @@ msgstr "bir renk referansı bulabilirsiniz"
 #. Heading of the formatting-shortcuts section of the help window; each row shows a key combination and the message formatting it inserts.
 msgctxt "help.formatting.heading"
 msgid "Formatting Shortcuts"
-msgstr "Biçimлеştirme Kısayolları"
+msgstr ""
 
 #: client/components/Windows/Help.vue
 #. The example word shown in italics in the help window's Ctrl+I formatting description; it demonstrates the formatting. Lowercase mid-sentence.

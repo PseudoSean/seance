@@ -24,6 +24,7 @@ import {pseudo} from "../../tools/i18n/pseudo";
 import {mergePo} from "../../tools/i18n/merge";
 import {scaffoldTag} from "../../tools/i18n/scaffold";
 import {sweepEntries} from "../../tools/i18n/sweep";
+import {isSuspectCatalogEntry} from "../../tools/i18n/quality";
 import instrument from "../../tools/i18n/instrument-loader.mjs";
 
 const FIXTURES = resolve("tools/i18n/fixtures");
@@ -446,8 +447,8 @@ describe("i18n toolchain", () => {
 		/** Parse a sweep fixture and empty what its placeholders no longer match. */
 		function sweepFixture(tag: string) {
 			const {entries} = parsePo(readFileSync(join(FIXTURES, "sweep", `${tag}.po`), "utf8"));
-			const changed = sweepEntries(entries, PLURAL_RULES[tag]);
-			return {entries, changed};
+			const outcome = sweepEntries(entries, PLURAL_RULES[tag], tag);
+			return {entries, ...outcome};
 		}
 
 		it("checks a one-form locale's only slot against the plural text it holds", () => {
@@ -473,6 +474,67 @@ describe("i18n toolchain", () => {
 			const {entries} = sweepFixture("ru");
 			const entry = entries.find((item) => item.msgctxt === "condensed.away");
 			expect(entry?.msgstr).to.deep.equal(["помечено однажды", "помечено {count} раза", ""]);
+		});
+
+		it("empties a machine answer that loops, runs away or leaves the script", () => {
+			const {entries, reports} = sweepFixture("de");
+			const text = (key: string, slot = 0) =>
+				entries.find((entry) => entry.msgctxt === key)?.msgstr[slot];
+
+			expect(text("channel.close"), "the loop").to.equal("");
+			expect(text("connect.username"), "six times the English").to.equal("");
+			expect(text("connect.password"), "Devanagari in a Latin locale").to.equal("");
+			// An ordinary translation is left where it is.
+			expect(text("connect.submit")).to.equal("Verbinden");
+			// Per slot: each is judged against the English text IT holds, so
+			// the German singular survives its Cyrillic plural.
+			expect(text("condensed.away", 0)).to.equal("einmal abwesend gemeldet");
+			expect(text("condensed.away", 1)).to.equal("");
+
+			expect(reports).to.deep.equal([
+				{key: "channel.close", reason: "degenerate"},
+				{key: "connect.username", reason: "runaway-length"},
+				{key: "connect.password", reason: "foreign-script"},
+				{key: "condensed.away", reason: "foreign-script"},
+			]);
+		});
+
+		describe("isSuspectCatalogEntry", () => {
+			it("allows Latin everywhere and each target its own writing system", () => {
+				expect(isSuspectCatalogEntry("ru", "Connect", "Подключиться")).to.equal(null);
+				expect(isSuspectCatalogEntry("th", "Connect", "เชื่อมต่อ")).to.equal(null);
+				expect(isSuspectCatalogEntry("ko", "Connect", "연결")).to.equal(null);
+				expect(isSuspectCatalogEntry("zh", "Connect", "连接")).to.equal(null);
+				// Brand names and untranslatable terms stay Latin.
+				expect(isSuspectCatalogEntry("ja", "Connect to IRC", "IRC に接続")).to.equal(null);
+				// The marks that carry no script of their own: a Japanese long
+				// vowel and an Arabic tatweel are letters whose Script is
+				// Common, so a bare \p{Script=…} table would empty both.
+				expect(isSuspectCatalogEntry("ja", "Computer", "コンピューター")).to.equal(null);
+				expect(isSuspectCatalogEntry("ar", "Connect", "اتصـــال")).to.equal(null);
+				// A {placeholder}'s name belongs to the deploy, not to the
+				// translator, so nothing inside the braces is judged.
+				expect(
+					isSuspectCatalogEntry("de", "Network {ネット}", "Netzwerk {ネット}")
+				).to.equal(null);
+			});
+
+			it("names the reason, judging the loop first", () => {
+				expect(isSuspectCatalogEntry("fi" as string, "Close", "ไม่")).to.equal(null);
+				expect(isSuspectCatalogEntry("de", "Close", "Sluit ~~~~~~")).to.equal("degenerate");
+				expect(isSuspectCatalogEntry("de", "Close", "x".repeat(41))).to.equal(
+					"runaway-length"
+				);
+				expect(isSuspectCatalogEntry("de", "Close", "x".repeat(40))).to.equal(null);
+				expect(isSuspectCatalogEntry("fr", "Password", "パスワード")).to.equal(
+					"foreign-script"
+				);
+				// Cyrillic is not Ukrainian's mistake, and is not German's answer.
+				expect(isSuspectCatalogEntry("uk", "Password", "Пароль")).to.equal(null);
+				expect(isSuspectCatalogEntry("de", "Password", "Пароль")).to.equal(
+					"foreign-script"
+				);
+			});
 		});
 	});
 

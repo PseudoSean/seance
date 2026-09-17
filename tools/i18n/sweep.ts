@@ -4,7 +4,7 @@
 // the model fill produces. The compile refuses a whole catalog for one
 // mismatch, so this runs before every compile while the fills are landing.
 //
-//   npx tsx tools/i18n/sweep.ts [--tags de,fr,...]
+//   npx tsx tools/i18n/sweep.ts [--tags de,fr,...] [--dry]
 
 import {existsSync, readFileSync, writeFileSync} from "node:fs";
 import {pathToFileURL} from "node:url";
@@ -12,22 +12,47 @@ import {resolve} from "node:path";
 import {parsePo, PoEntry, serializePo} from "./po";
 import {NAME_TO_TAG, TARGETS_SOURCE} from "./targets";
 import {PLURAL_RULES, parsePluralForms, planPluralSlots, PluralRule} from "./plural";
-import {isDegenerate} from "./quality";
+import {isSuspectCatalogEntry, SuspectReason} from "./quality";
 
 const braces = (text: string): string => (text.match(/\{[^{}]*\}/g) ?? []).sort().join("|");
 
+export type SweepReason = SuspectReason | "empty-source" | "placeholder";
+
+/** What the sweep emptied, and why. */
+export interface SweepReport {
+	key: string;
+	reason: SweepReason;
+}
+
 /**
- * Empty every filled msgstr slot whose {placeholder} braces no longer match
- * the English text THAT slot translates. Which text that is comes from
- * planPluralSlots, the same plan fill.ts fills by: the slot n = 1 reads
- * holds the singular, every other slot the plural — and a one-form
- * language's only slot holds the plural too. Checking slot 0 against msgid
- * regardless emptied every one-form plural whose singular has no {count},
- * which the next fill wrote back: a silent fill/sweep loop. Returns how
- * many slots were emptied; the entries are mutated in place.
+ * Empty every filled msgstr slot the fill cannot be trusted to have got
+ * right: one whose {placeholder} braces no longer match the English text
+ * THAT slot translates, and one `isSuspectCatalogEntry` judges degenerate,
+ * runaway-long or written in the wrong script.
+ *
+ * Which English text a slot translates comes from planPluralSlots, the same
+ * plan fill.ts fills by: the slot n = 1 reads holds the singular, every
+ * other slot the plural -- and a one-form language's only slot holds the
+ * plural too. Checking slot 0 against msgid regardless emptied every
+ * one-form plural whose singular has no {count}, which the next fill wrote
+ * back: a silent fill/sweep loop. Slots are judged one by one for the same
+ * reason, so a sound singular is not thrown away with a bad plural.
+ *
+ * Returns what was emptied; the entries are mutated in place.
  */
-export function sweepEntries(entries: PoEntry[], rule: PluralRule): number {
-	let changed = 0;
+export function sweepEntries(
+	entries: PoEntry[],
+	rule: PluralRule,
+	tag: string
+): {emptied: number; reports: SweepReport[]} {
+	let emptied = 0;
+	const reports: SweepReport[] = [];
+
+	const empty = (entry: PoEntry, index: number, reason: SweepReason) => {
+		entry.msgstr[index] = "";
+		emptied += 1;
+		reports.push({key: entry.msgctxt ?? entry.msgid, reason});
+	};
 
 	for (const entry of entries) {
 		if (!entry.msgstr.some((text) => text)) {
@@ -37,43 +62,41 @@ export function sweepEntries(entries: PoEntry[], rule: PluralRule): number {
 		// An empty msgid is a deliberately blank slot (the deploy fills it);
 		// a model asked to translate "" only invents text.
 		if (!entry.msgid && !entry.msgidPlural) {
-			entry.msgstr[0] = "";
-			changed += 1;
+			empty(entry, 0, "empty-source");
 			continue;
 		}
 
-		// Degenerate model output ("~ ~ ~ …") reads as filled but is garbage.
-		if (entry.msgstr.some((text) => text && isDegenerate(text))) {
-			entry.msgstr = entry.msgstr.map(() => "");
-			changed += 1;
-			continue;
-		}
+		const slots =
+			entry.msgidPlural === undefined
+				? [{index: 0, english: entry.msgid}]
+				: planPluralSlots(entry, rule.nplurals, rule.expr).map(({index, source}) => ({
+						index,
+						english: source === "msgid" ? entry.msgid : (entry.msgidPlural as string),
+				  }));
 
-		if (entry.msgidPlural === undefined) {
-			if (entry.msgstr[0] && braces(entry.msgid) !== braces(entry.msgstr[0])) {
-				entry.msgstr[0] = "";
-				changed += 1;
+		for (const {index, english} of slots) {
+			const text = entry.msgstr[index];
+
+			if (!text) {
+				continue;
 			}
 
-			continue;
-		}
+			const reason =
+				isSuspectCatalogEntry(tag, english, text) ??
+				(braces(english) === braces(text) ? null : "placeholder");
 
-		for (const {index, source} of planPluralSlots(entry, rule.nplurals, rule.expr)) {
-			const text = entry.msgstr[index];
-			const english = source === "msgid" ? entry.msgid : entry.msgidPlural;
-
-			if (text && braces(english) !== braces(text)) {
-				entry.msgstr[index] = "";
-				changed += 1;
+			if (reason) {
+				empty(entry, index, reason);
 			}
 		}
 	}
 
-	return changed;
+	return {emptied, reports};
 }
 
 function main(): void {
 	const args = process.argv.slice(2);
+	const dry = args.includes("--dry");
 	const only = args.includes("--tags")
 		? args[args.indexOf("--tags") + 1]?.split(",").map((s) => s.trim())
 		: null;
@@ -103,16 +126,23 @@ function main(): void {
 			continue;
 		}
 
-		const changed = sweepEntries(po.entries, rule);
+		const {emptied, reports} = sweepEntries(po.entries, rule, tag);
 
-		if (changed) {
-			writeFileSync(path, serializePo(po.headers, po.entries));
-			console.log(`${tag}: emptied ${changed} placeholder-broken entries`);
-			swept += changed;
+		if (emptied) {
+			for (const {key, reason} of reports) {
+				console.log(`${tag} ${key} ${reason}`);
+			}
+
+			if (!dry) {
+				writeFileSync(path, serializePo(po.headers, po.entries));
+			}
+
+			console.log(`${tag}: emptied ${emptied} slots`);
+			swept += emptied;
 		}
 	}
 
-	console.log(`sweep: ${swept} entries emptied overall`);
+	console.log(`sweep: ${swept} slots emptied overall${dry ? " (--dry: nothing written)" : ""}`);
 }
 
 // Importing this module must not sweep the real catalogs (the toolchain

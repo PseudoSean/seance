@@ -462,14 +462,14 @@ msgstr "Tải lên {file}"
 msgctxt "condensed.away"
 msgid "marked away once"
 msgid_plural "marked away {count} times"
-msgstr[0] "đã đánh dấu đi một lần"
+msgstr[0] ""
 
 #: client/components/MessageCondensed.vue
 #. Condensed status block: back markings while the block was collapsed. The singular shows 'once' when one marking happened, the plural the number of markings; {count} is that number.
 msgctxt "condensed.back"
 msgid "marked back once"
 msgid_plural "marked back {count} times"
-msgstr[0] "đã đánh dấu trở lại một lần"
+msgstr[0] ""
 
 #: client/components/MessageCondensed.vue
 #. Condensed status block: {count} users changed their username/hostname while the block was collapsed.
@@ -2557,7 +2557,7 @@ msgstr "Thông báo bật"
 #. Tooltip and aria-label of the bell icon on a sidebar network row when this device is subscribed to the network's push notifications.
 msgctxt "lobby.notificationsSubscribed"
 msgid "Notifications: subscribed to push"
-msgstr "Thông báo: đăng ký推送"
+msgstr ""
 
 #: client/js/hooks/use-close-channel.ts:14
 #. Confirmation button of the remove-network dialog in the sidebar.
@@ -3412,7 +3412,7 @@ msgstr "Chưa gửi: {message}"
 #. Lobby error when the server's push-subscription registration line exceeds the IRC line limit; nothing was sent.
 msgctxt "send.pushTooLong"
 msgid "Not sent: the push subscription does not fit on one line"
-msgstr "Chưa gửi: đăng ký推送 không thể hiển thị trên một dòng"
+msgstr ""
 
 #: client/js/irc/client.ts
 #. Lobby error when a reaction was sent on a server without message-tags.
@@ -3812,7 +3812,7 @@ msgstr "Các đầu cuối được thiết kế để quá nhỏ và quá lớn
 #. First line of the sample chat under the font-size slider in Settings → Appearance, written by the sample nick grandma: it asks whether the text is comfortable to read.
 msgctxt "settings.appearance.sampleGlasses"
 msgid "Can you read this without your glasses?"
-msgstr "Bạn có thể đọc dòng này mà không cần kính吗?"
+msgstr ""
 
 #: client/components/Settings/Appearance.vue:480
 #. Second line of the sample chat under the font-size slider in Settings → Appearance, the reply telling the reader to drag the slider until the text is comfortable.
@@ -4101,7 +4101,7 @@ msgstr "Mở các liên kết web+irc:// bằng {appName}"
 #. Checkbox in Settings > General; when ticked, other people in the channel are told while you are typing a message.
 msgctxt "settings.general.sendTyping"
 msgid "Send typing notifications"
-msgstr "Gửi thông báo gõ键盘"
+msgstr ""
 
 #: client/components/Settings/General.vue
 #. Tooltip on the send-typing-notifications checkbox in Settings > General; mentions the IRCv3 +typing tag in parentheses.
@@ -4113,7 +4113,7 @@ msgstr "Cho phép người trong kênh biết khi bạn đang gõ (IRCv3 + typin
 #. Heading of the typing indicator section in Settings > General.
 msgctxt "settings.general.typingHeading"
 msgid "Typing notifications"
-msgstr "Thông báo gõ键盘"
+msgstr ""
 
 #: client/components/Settings/General.vue
 #. Checkbox in Settings > General. When ticked, images are re-drawn through a canvas before they are sent to the chat server, which strips photo metadata such as camera model and GPS location. Affects image uploads only.

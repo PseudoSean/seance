@@ -206,6 +206,57 @@ export function hasNoLetters(text: string): boolean {
 	return !/[\p{L}\p{N}]/u.test(text.replace(/⟦\s*\d+\s*⟧/g, ""));
 }
 
+/** The longest run of one repeated token, 2-gram or 3-gram a text is in. */
+const REPEAT_BLOCK_MAX = 3;
+
+/** How many times in a row a block has to repeat before it is a loop. */
+const BLOCK_REPEAT_MIN = 4;
+
+/**
+ * The words of a text as the repetition rule compares them: lower-cased,
+ * with the punctuation at either end taken off (`Kama,` and `KAMA.` are the
+ * same word), and nothing that is punctuation all the way through.
+ */
+function repeatTokens(text: string): string[] {
+	return text
+		.toLowerCase()
+		.split(/\s+/)
+		.map((token) => token.replace(/^[\p{P}\p{S}]+/u, "").replace(/[\p{P}\p{S}]+$/u, ""))
+		.filter((token) => token !== "");
+}
+
+/**
+ * Is a text a model stuck on one word or one short phrase -- the same token,
+ * or the same two or three tokens, BLOCK_REPEAT_MIN times in a row? Blocks
+ * are compared end to end, not sliding, because a phrase repeated is what is
+ * being looked for: the 2-grams of `एक बार एक बार …` alternate, so only the
+ * ones starting every second token are equal. Three in a row is emphasis
+ * ("ha ha ha"), four is the loop the shipped machine catalogs are full of.
+ */
+function isRepeatedBlock(text: string): boolean {
+	const tokens = repeatTokens(text);
+
+	for (let size = 1; size <= REPEAT_BLOCK_MAX; size++) {
+		for (let start = 0; start + size * BLOCK_REPEAT_MIN <= tokens.length; start++) {
+			const block = tokens.slice(start, start + size).join(" ");
+			let repeats = 1;
+
+			while (
+				tokens.slice(start + repeats * size, start + (repeats + 1) * size).join(" ") ===
+				block
+			) {
+				repeats++;
+
+				if (repeats >= BLOCK_REPEAT_MIN) {
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
 /**
  * Symbol garbage a degenerate model answer is: a run of tildes or @ signs
  * (three is enough — no chat line carries them), or a run of five or more
@@ -214,10 +265,20 @@ export function hasNoLetters(text: string): boolean {
  * "che meraviglia!!!!!" for a source that already had "!!!!!" is the
  * line's emphasis carried over, not the model padding. Letterless answers
  * are `hasNoLetters`'s verdict; this catches the ones wearing words as a
- * disguise. Shared with the i18n fill's quality gate (tools/i18n/quality.ts
- * re-exports it), so the fill and the app reject the same shapes.
+ * disguise. A word, or a two- or three-word phrase, four times in a row is
+ * the same failure wearing words: the machine catalogs this rule was
+ * measured against are full of it (`Κοντά Κοντά Κοντά Κοντά`). Both rules
+ * stand down when the SOURCE is in the same shape: a line that really does
+ * say it five times translates into one that does, and only the model
+ * inventing the run is degenerate. Shared with the i18n fill's quality gate
+ * (tools/i18n/quality.ts re-exports it), so the fill and the app reject the
+ * same shapes.
  */
 export function isDegenerate(text: string, source = ""): boolean {
+	if (isRepeatedBlock(text) && !isRepeatedBlock(source)) {
+		return true;
+	}
+
 	// Whitespace out first: the padding this judges is often spaced —
 	// "~ ~ ~ ~" — which no adjacent-run test would otherwise see.
 	const packed = text.replace(/\s+/g, "");
@@ -485,16 +546,17 @@ export function answerError(source: string, translation: string, to: string): st
 		return EMPTY_TRANSLATION;
 	}
 
-	// Symbol garbage (a dot-padded line, a tilde run) is no translation
-	// either, and is judged before the loop rule: a padded answer is not a
-	// repetition of anything.
-	if (isDegenerate(translation, source)) {
-		return DEGENERATE;
-	}
-
-	// A line that repeats itself translates into one that does.
+	// A line that repeats itself translates into one that does. The loop
+	// rule is judged first because isDegenerate now covers a shorter word
+	// loop too, and "got stuck repeating itself" is the truer report of one.
 	if (isRepetition(translation) && !isRepetition(source)) {
 		return REPETITION;
+	}
+
+	// Symbol garbage (a dot-padded line, a tilde run) is no translation
+	// either, and neither is a word four times over.
+	if (isDegenerate(translation, source)) {
+		return DEGENERATE;
 	}
 
 	if (isNarration(source, translation)) {

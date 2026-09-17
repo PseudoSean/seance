@@ -463,14 +463,14 @@ msgstr "上传{file}"
 msgctxt "condensed.away"
 msgid "marked away once"
 msgid_plural "marked away {count} times"
-msgstr[0] "已标记为离开一次"
+msgstr[0] ""
 
 #: client/components/MessageCondensed.vue
 #. Condensed status block: back markings while the block was collapsed. The singular shows 'once' when one marking happened, the plural the number of markings; {count} is that number.
 msgctxt "condensed.back"
 msgid "marked back once"
 msgid_plural "marked back {count} times"
-msgstr[0] "已标记为回来一次"
+msgstr[0] ""
 
 #: client/components/MessageCondensed.vue
 #. Condensed status block: {count} users changed their username/hostname while the block was collapsed.

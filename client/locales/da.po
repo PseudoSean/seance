@@ -4006,7 +4006,7 @@ msgstr "Filen indeholder nettverksparol."
 #. Button in Settings > General; downloads the settings backup file to the device. Ellipsis is part of the copy.
 msgctxt "settings.general.export"
 msgid "Export settings…"
-msgstr "Ekspортér indstillinger…"
+msgstr ""
 
 #: client/components/Settings/General.vue
 #. Error message in Settings > General shown when exporting the settings backup failed and no file was produced.

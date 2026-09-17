@@ -358,13 +358,13 @@ msgstr "ยกเลิกการอัปโหลด"
 #. Button in the connection bar shown above the message input when the connection to the chat network is down and no automatic retry is in progress; clicking it dials the network again.
 msgctxt "composer.connect"
 msgid "Connect"
-msgstr "連接"
+msgstr ""
 
 #: client/components/ChatInput.vue:19
 #. Button in the connection bar shown above the message input while the app waits to retry a dropped connection to the chat network; clicking it skips the wait and dials the network immediately.
 msgctxt "composer.connectNow"
 msgid "Connect now"
-msgstr "連接 now"
+msgstr ""
 
 #: client/components/ChatInput.vue:344
 #. Text of the connection bar shown above the message input while the dial to the chat network is in flight (a spinner turns beside it). {network} is the display name of the chat network.
@@ -462,14 +462,14 @@ msgstr "กำลังอัปโหลด {file}"
 msgctxt "condensed.away"
 msgid "marked away once"
 msgid_plural "marked away {count} times"
-msgstr[0] "ถูกตั้งเครื่องหมายออกแล้ว"
+msgstr[0] ""
 
 #: client/components/MessageCondensed.vue
 #. Condensed status block: back markings while the block was collapsed. The singular shows 'once' when one marking happened, the plural the number of markings; {count} is that number.
 msgctxt "condensed.back"
 msgid "marked back once"
 msgid_plural "marked back {count} times"
-msgstr[0] "ถูกตั้งเครื่องหมายกลับมาแล้ว"
+msgstr[0] ""
 
 #: client/components/MessageCondensed.vue
 #. Condensed status block: {count} users changed their username/hostname while the block was collapsed.

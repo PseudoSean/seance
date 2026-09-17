@@ -580,7 +580,6 @@
   "settings.general.backupMutes": "Muser og ignoreringslistes",
   "settings.general.backupPartSettings": "dine indstillinger",
   "settings.general.backupPasswords": "Filen indeholder nettverksparol.",
-  "settings.general.export": "Ekspортér indstillinger…",
   "settings.general.exportFailed": "Kunne ikke oprette filen.",
   "settings.general.fileAria": "Indstillingsfil til genopretning",
   "settings.general.import": "Importér indstillinger…",

@@ -686,21 +686,22 @@ export class TranslateQueue {
 			return;
 		}
 
-		// Symbol garbage the model padded its answer with (dozens of dots, a
-		// tilde run) is no more a translation than a letterless one, and is
-		// judged the same way: the engine completed, so retried bare once and
-		// only a second such answer is reported.
-		if (isDegenerate(text, original)) {
-			this.failJudged(q, DEGENERATE);
+		// A model stuck repeating a word ("ekki ekki ekki …") has not
+		// translated the line, and the engine did complete: judged like the
+		// narration below, retried once bare as the composer retries it
+		// (writer.ts), and counted toward no pause. Judged before the
+		// degenerate rule, which covers a shorter word loop too, because
+		// "got stuck repeating itself" is the truer report of one.
+		if (isRepetition(text) && !isRepetition(original)) {
+			this.failJudged(q, REPETITION);
 			return;
 		}
 
-		// A model stuck repeating a word ("ekki ekki ekki …") has not
-		// translated the line either, and the engine did complete: judged like
-		// the narration below, retried once bare as the composer retries it
-		// (writer.ts), and counted toward no pause.
-		if (isRepetition(text) && !isRepetition(original)) {
-			this.failJudged(q, REPETITION);
+		// Symbol garbage the model padded its answer with (dozens of dots, a
+		// tilde run), or a word four times over, is no more a translation
+		// than a letterless answer: judged the same way.
+		if (isDegenerate(text, original)) {
+			this.failJudged(q, DEGENERATE);
 			return;
 		}
 

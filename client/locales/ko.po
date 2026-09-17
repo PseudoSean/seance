@@ -462,14 +462,14 @@ msgstr "{file} 업로드 중"
 msgctxt "condensed.away"
 msgid "marked away once"
 msgid_plural "marked away {count} times"
-msgstr[0] "한 번 떠났습니다"
+msgstr[0] ""
 
 #: client/components/MessageCondensed.vue
 #. Condensed status block: back markings while the block was collapsed. The singular shows 'once' when one marking happened, the plural the number of markings; {count} is that number.
 msgctxt "condensed.back"
 msgid "marked back once"
 msgid_plural "marked back {count} times"
-msgstr[0] "한 번 돌아왔습니다"
+msgstr[0] ""
 
 #: client/components/MessageCondensed.vue
 #. Condensed status block: {count} users changed their username/hostname while the block was collapsed.
@@ -884,7 +884,7 @@ msgstr "서버가 떠났습니다"
 #. Name of WebSocket close code 1002 in a connection-failure report. Lowercase mid-sentence by position.
 msgctxt "disconnect.code1002"
 msgid "WebSocket protocol error"
-msgstr "웹소크ет 프로토콜 오류"
+msgstr ""
 
 #: client/js/irc/disconnect.ts
 #. Name of WebSocket close code 1006 (abnormal closure: refused, unreachable, TLS failure — the browser never says which) in a connection-failure report. Lowercase mid-sentence by position.
@@ -968,13 +968,13 @@ msgstr "이 페이지는 HTTPS로 로드되었기 때문에 브라우저는 plai
 #. Follow-up hint under a failed plain (ws://) dial from a non-secure page.
 msgctxt "disconnect.hint.plainCauses"
 msgid "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or it does not accept WebSocket connections on that port."
-msgstr "브라우저는 이유를 안내하지 않습니다. 가능한 원인: 서버가 다운되었거나, 포트가 잘못되었거나, 해당 포트에서 웹소크ет 연결을 허용하지 않았습니다."
+msgstr ""
 
 #: client/js/irc/disconnect.ts
 #. Follow-up hint under a connection the server dropped during IRC registration, when the close reason named no live session.
 msgctxt "disconnect.hint.registration"
 msgid "The WebSocket opened but the server dropped it before registration finished - check that this port really speaks IRC over WebSocket, and look for a server notice above for the reason."
-msgstr "웹소크ет이 열렸지만 서버가 등록 완료 전에 연결을 끊어 버렸습니다 - 이 포트가 웹소크ет을 통해 IRC를 사용하고 있는지 확인하세요. 서버 알림을 확인해 주세요."
+msgstr ""
 
 #: client/js/irc/disconnect.ts
 #. Follow-up hint when the server's close reason names a live session: retrying alone cannot fix it, the other client has to go.
@@ -1894,25 +1894,25 @@ msgstr "사이드바 보이기"
 #. Name of the touch gesture in the help window's gestures section: swiping the sidebar left with one finger. Its description follows.
 msgctxt "help.gestures.swipeLeft"
 msgid "Single-Finger Swipe Left"
-msgstr "단일 손가락 왼쪽으로 스ワイ프"
+msgstr ""
 
 #: client/components/Windows/Help.vue
 #. Name of the touch gesture in the help window's gestures section: swiping the sidebar right with one finger. Its description follows.
 msgctxt "help.gestures.swipeRight"
 msgid "Single-Finger Swipe Right"
-msgstr "단일 손가락 오른쪽으로 스ワイ프"
+msgstr ""
 
 #: client/components/Windows/Help.vue
 #. Name of the touch gesture in the help window's gestures section: swiping left with two fingers anywhere in the chat. Its description follows.
 msgctxt "help.gestures.twoSwipeLeft"
 msgid "Two-Finger Swipe Left"
-msgstr "두 손가락 왼쪽으로 스ワイ프"
+msgstr ""
 
 #: client/components/Windows/Help.vue
 #. Name of the touch gesture in the help window's gestures section: swiping right with two fingers anywhere in the chat. Its description follows.
 msgctxt "help.gestures.twoSwipeRight"
 msgid "Two-Finger Swipe Right"
-msgstr "두 손가락 오른쪽으로 스ワイ프"
+msgstr ""
 
 #: client/js/branding.ts
 #: client/components/Windows/Help.vue
@@ -4777,7 +4777,7 @@ msgstr "{nick} ({count})"
 #. System line when a user is marked away. {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element. The away reason (user-set, verbatim) follows in parentheses.
 msgctxt "system.away"
 msgid "{nick} is away"
-msgstr "{nick}가 어ウェ이입니다"
+msgstr ""
 
 #: client/components/MessageTypes/back.vue:10
 #. System line when a user returns from away. {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element.
