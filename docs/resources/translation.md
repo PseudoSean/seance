@@ -554,6 +554,25 @@ show the endonym alone (`Deutsch`, `Français`, `日本語`), from
 `languageOptionLabel()` (`Intl.DisplayNames` in the language's own locale),
 falling back to the bundled English table.
 
+**Every surface here speaks the interface's language.** There is no English
+literal left in the feature: the panel, Settings -> Translation, the chips,
+the strip, the failure rows, the model manager and the context menu all
+render catalog keys (`docs/resources/i18n.md`). The Vue-free modules stay
+Vue-free and i18n-free -- `models.ts`, `service.ts` and `capability.ts`
+return **codes** (a model's label, a load note's phase, a device verdict's
+reason) and the component that shows one maps it to a key, with a prose
+fallback for a code it does not know. Three consequences worth keeping:
+the Settings -> Translation language override is `LanguageSelect.vue`, the
+same control the sidebar globe and Appearance use, so there is one list of
+codes and not two that could disagree; the channel menu's "Translation…"
+is offered only where the deploy has translation at all
+(`reader.ts` `translationAvailable`); and the composer strip's live region
+is `aria-live="off"` while a translation is streaming in, `polite` once it
+is done or failed, so a screen reader reads the result rather than every
+token. The surfaces' CSS is written in logical properties throughout and
+verified in both directions through the `qqx` pseudo-locale
+(`tools/scenarios/i18n-rtl-layout.mjs`).
+
 ## Writing in a channel
 
 The panel also sets an outgoing target per channel (`write`, next to `read`

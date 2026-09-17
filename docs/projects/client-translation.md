@@ -1,8 +1,13 @@
 # Client-side translation
 
 _Started 2026-09-11 on the `client-translation` branch (from `origin/develop`
-at `d6b6624b`). Status: **phases 1, 2 and 3 implemented; phase 4
-pending** (plan 3, the composer: `docs/superpowers/plans/2026-09-12-client-translation-3-composer.md`, gitignored, local). This file is the spec; the implementation plan follows from it._
+at `d6b6624b`). Status: **all four delivery phases implemented** — the
+engine layer, reading, the composer and the evaluation that placed the
+default route table. What followed was localization (every surface through
+the catalog, `docs/resources/i18n.md`) and the `wild-international` review
+round of 2026-09-17, which is where this document's behaviour was last
+corrected; `docs/resources/translation.md` describes what the code does
+today. This file is the spec; the implementation plan follows from it._
 
 ## Goal
 
