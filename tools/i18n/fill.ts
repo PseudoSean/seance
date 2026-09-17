@@ -53,6 +53,37 @@ const SRC_NLLB = "eng_Latn";
 const BATCH_NLLB = 16;
 const BATCH_LLM = 20;
 
+// A catalog placeholder is not chat text, so spans.ts does not protect it —
+// and an engine handed a bare `{network}` translates the word inside it
+// ("{тип}"), which the placeholder gate then refuses, so the slot stays
+// empty. Fencing each one as a code span before the protection hands it to
+// the same machinery every URL and nick goes through: the engine only ever
+// sees a numbered marker, and the restore brings the placeholder back
+// character for character. No msgid carries a backtick of its own.
+const BRACE_RX = /\{[^{}\s]*\}/g;
+
+function fenceBraces(text: string): string {
+	return text.replace(BRACE_RX, (match) => "`" + match + "`");
+}
+
+function unfenceBraces(text: string): string {
+	return text.replace(/`(\{[^{}\s]*\})`/g, "$1");
+}
+
+// The seq2seq models do not carry ⟦n⟧: measured on Xenova/opus-mt-en-de,
+// "Connecting to ⟦1⟧" comes back "Verbindung zu ,1," — the brackets are not
+// in the Marian vocabulary and the restore then has nothing to put the span
+// back into, so every protected slot failed. `<n>` survives every engine
+// tested, so the seq2seq routes see that form and the answer is mapped back
+// before the marker gate and the restore, which both speak ⟦n⟧.
+function toTags(text: string): string {
+	return text.replace(/⟦\s*(\d+)\s*⟧/g, "<$1>");
+}
+
+function fromTags(text: string): string {
+	return text.replace(/<\s*(\d+)\s*>/g, "⟦$1⟧");
+}
+
 function engineFor(tag: string): EngineName {
 	const placement = placementFor(QWEN3_4B_ID);
 
@@ -294,7 +325,7 @@ async function main(): Promise<void> {
 			const markerForm = engine === "llm" ? "placeholder" : "tags";
 			const protectedEntries = batch.map((unit) => ({
 				unit,
-				...protect(unit.text, {nicks: [], markers: markerForm}),
+				...protect(fenceBraces(unit.text), {nicks: [], markers: markerForm}),
 			}));
 
 			try {
@@ -303,11 +334,13 @@ async function main(): Promise<void> {
 				if (engine === "nllb") {
 					const tgt = nllbCode(tag) ?? tag;
 					const results = await (nllbPipe as any)(
-						protectedEntries.map((p) => p.text),
+						protectedEntries.map((p) => toTags(p.text)),
 						{src_lang: SRC_NLLB, tgt_lang: tgt}
 					);
-					outputs = (results as Array<{translation_text?: string} | null>).map(
-						(r) => r?.translation_text ?? null
+					outputs = (results as Array<{translation_text?: string} | null>).map((r) =>
+						typeof r?.translation_text === "string"
+							? fromTags(r.translation_text)
+							: null
 					);
 				} else if (engine === "opus") {
 					const pipe = opusPipes.get(`Xenova/opus-mt-en-${tag}`);
@@ -315,8 +348,12 @@ async function main(): Promise<void> {
 						pipe as unknown as (
 							texts: string[]
 						) => Promise<Array<{translation_text?: string}>>
-					)(protectedEntries.map((p) => p.text));
-					outputs = results.map((r) => r?.translation_text ?? null);
+					)(protectedEntries.map((p) => toTags(p.text)));
+					outputs = results.map((r) =>
+						typeof r?.translation_text === "string"
+							? fromTags(r.translation_text)
+							: null
+					);
 				} else {
 					const request: TranslateRequest = {
 						id: 1,
@@ -368,7 +405,7 @@ async function main(): Promise<void> {
 						return;
 					}
 
-					const restored = restoreAll(raw, info);
+					const restored = unfenceBraces(restoreAll(raw, info));
 
 					// Judged against the slot's OWN source (a plural form
 					// legitimately carries {count} where the singular does
