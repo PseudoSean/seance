@@ -40,25 +40,25 @@ msgstr "{type}: {name} ({extra})"
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.channel"
 msgid "Channel"
-msgstr "Channel"
+msgstr "Canal"
 
 #. Names the kind of window in a sidebar row's aria-label: the chat network's own window. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.lobby"
 msgid "Network"
-msgstr "Network"
+msgstr "Rede"
 
 #. Names the kind of window in a sidebar row's aria-label: a private conversation with one person. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.query"
 msgid "Conversation"
-msgstr "Conversation"
+msgstr "Conversa"
 
 #. Names the kind of window in a sidebar row's aria-label: a results window such as a channel list or a ban list. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.special"
 msgid "List"
-msgstr "List"
+msgstr "Lista"
 
 #. Tooltip and aria-label of the spinner in a chat window's header while the connection is being established, when the network's display name is not known.
 #: client/components/Chat.vue:186
@@ -705,7 +705,7 @@ msgstr "Conectar a um novo servidor?"
 #: client/components/Windows/Connect.vue:173
 msgctxt "connect.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr "Nickname"
 
 #. Dismiss button on the connect screen shown as a dialog when the user followed a web+irc:// link; declines the connection without disconnecting the app.
 #: client/components/Windows/Connect.vue:91
@@ -1266,7 +1266,7 @@ msgstr "Configurações de rede"
 #: client/components/NetworkForm.vue:104
 msgctxt "form.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr ""
 
 #. Radio option on the network edit form: connect without a services account.
 #: client/components/NetworkForm.vue:158
@@ -1350,7 +1350,7 @@ msgstr "Porta do servidor"
 #: client/components/NetworkForm.vue:26
 msgctxt "form.status"
 msgid "Status"
-msgstr "Status"
+msgstr ""
 
 #. Checkbox on the network edit form: connect to this network over TLS instead of a plain connection.
 #: client/components/NetworkForm.vue:86
@@ -1471,13 +1471,13 @@ msgstr "é construído a partir de"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.alias"
 msgid "Alias:"
-msgstr "Alias:"
+msgstr ""
 
 #. Lead-in of the alias line under a command description in the help window when the command has several alternative names; the alternatives follow as code fragments. Keep the trailing colon.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.aliases"
 msgid "Aliases:"
-msgstr "Aliases:"
+msgstr ""
 
 #. Description of the /away command in the help window; the command syntax (/away [message]) is shown beside it and stays untranslated.
 #: client/components/Windows/Help.vue
@@ -1495,7 +1495,7 @@ msgstr "Remova seu status de ausência (definido com"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.banA"
 msgid "Ban ("
-msgstr "Ban ("
+msgstr ""
 
 #. Continuation of the /ban command description in the help window, after the +b code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1825,7 +1825,7 @@ msgstr "Recuperar informações sobre o usuário fornecido na rede atual."
 #: client/components/Windows/Help.vue
 msgctxt "help.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First word of the two list items under the help window's past-release sentence; each continues with a link comparing two versions. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1898,13 +1898,13 @@ msgstr "Atalhos de formatação"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.italic"
 msgid "italics"
-msgstr "italics"
+msgstr ""
 
 #. The example word shown in a monospaced font in the help window's Ctrl+M formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.monospace"
 msgid "monospaced"
-msgstr "monospaced"
+msgstr ""
 
 #. Description of the Ctrl+O formatting shortcut in the help window; it removes any formatting applied so far in the message.
 #: client/components/Windows/Help.vue
@@ -2212,7 +2212,7 @@ msgstr "Cinza claro"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorMagenta"
 msgid "Magenta"
-msgstr "Magenta"
+msgstr ""
 
 #. Name of the mIRC colour with code 07 (orange), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2814,13 +2814,13 @@ msgstr "Listar usuários ignorados"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeAdmin"
 msgid "admin"
-msgstr "admin"
+msgstr ""
 
 #. Name of the IRC half-operator role (the % prefix), filling {name} in the mode menu items. Lowercase mid-sentence; keep the hyphen if natural.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeHalfOp"
 msgid "half-op"
-msgstr "half-op"
+msgstr "meio-op"
 
 #. Name of the IRC channel operator role (the @ prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
@@ -3555,7 +3555,7 @@ msgstr "O corpo é muito longo (mais de {limit} caracteres)."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr "Alias"
+msgstr "Apelido"
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
@@ -3973,7 +3973,7 @@ msgstr "Pessoas"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.trustedSites"
 msgid "Sites"
-msgstr "Sites"
+msgstr ""
 
 #. Tooltip and aria-label of the remove button on an entry of the always-shown media list in Settings > Appearance, for a website or a person. {name} is that site's host or the person's name. Clicking stops their media from loading automatically.
 #: client/components/Settings/Appearance.vue
@@ -4429,7 +4429,7 @@ msgstr "As notificações por push precisam de um servidor conectado que suporte
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snooze15"
 msgid "15 min"
-msgstr "15 min"
+msgstr ""
 
 #. Snooze button in Settings > Notifications; pauses push notifications for eight hours.
 #: client/components/Settings/Notifications.vue
@@ -4484,7 +4484,7 @@ msgstr "Aviso"
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.aliases"
 msgid "Aliases"
-msgstr "Aliases"
+msgstr ""
 
 #. Label of the Settings modal's Appearance tab (tab strip); switching tabs navigates to the Appearance settings pane.
 #: client/components/Settings/Navigation.vue
@@ -4679,7 +4679,7 @@ msgstr "Excluído por"
 #: client/components/Special/ListIgnored.vue
 msgctxt "special.ignored.hostmask"
 msgid "Hostmask"
-msgstr "Hostmask"
+msgstr ""
 
 #. Column header of the ignore list: when the ignore was set, locale-formatted.
 #: client/components/Special/ListIgnored.vue
@@ -5665,7 +5665,7 @@ msgstr "Upload de {count} arquivos"
 #: client/components/UploadPreview.vue
 msgctxt "upload.confirmOne"
 msgid "Upload"
-msgstr "Upload"
+msgstr ""
 
 #. Title of the confirmation dialog shown before files are uploaded to the chat server, when several files were chosen.
 #: client/components/UploadPreview.vue
@@ -5919,7 +5919,7 @@ msgstr "ver todas as versões"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.aria"
 msgid "Changelog"
-msgstr "Changelog"
+msgstr ""
 
 #. Link at the top of the changelog window that goes back to the help page; the left double angle quote is part of the copy.
 #: client/components/Windows/Changelog.vue
@@ -5931,7 +5931,7 @@ msgstr "« Ajuda"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First sentence of the paragraph in the changelog window that says the release notes are read online; the following words are the two links.
 #: client/components/Windows/Changelog.vue

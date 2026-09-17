@@ -40,25 +40,25 @@ msgstr "{type}: {name} ({extra})"
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.channel"
 msgid "Channel"
-msgstr "Channel"
+msgstr "Canale"
 
 #. Names the kind of window in a sidebar row's aria-label: the chat network's own window. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.lobby"
 msgid "Network"
-msgstr "Network"
+msgstr "Rete"
 
 #. Names the kind of window in a sidebar row's aria-label: a private conversation with one person. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.query"
 msgid "Conversation"
-msgstr "Conversation"
+msgstr "Conversazione"
 
 #. Names the kind of window in a sidebar row's aria-label: a results window such as a channel list or a ban list. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.special"
 msgid "List"
-msgstr "List"
+msgstr "Elenco"
 
 #. Tooltip and aria-label of the spinner in a chat window's header while the connection is being established, when the network's display name is not known.
 #: client/components/Chat.vue:186
@@ -365,7 +365,7 @@ msgctxt "code.showAllLines"
 msgid "Show all {count} line"
 msgid_plural "Show all {count} lines"
 msgstr[0] "Mostra tutte le {count} righe"
-msgstr[1] "Show all {count} lines"
+msgstr[1] "Mostra tutte le righe di {count}"
 
 #. Button under a long code block in a chat message while all of its lines are shown; clicking folds the block back to its first lines.
 #: client/components/CodeBlock.vue
@@ -451,7 +451,7 @@ msgctxt "composer.reconnectIn"
 msgid "Reconnecting to {network} in {seconds}s…"
 msgid_plural "Reconnecting to {network} in {seconds}s…"
 msgstr[0] "Riconnessione a {network} in {seconds}s…"
-msgstr[1] "Reconnecting to {network} in {seconds}s…"
+msgstr[1] "Riconnessione a {network} in {seconds}s…"
 
 #. Label at the left of the compose bar shown while a reply is being written. {nick} is the name of the user being replied to, shown emphasized; the quoted message preview follows it. Keep the trailing colon.
 #: client/components/ChatInput.vue:60
@@ -501,7 +501,7 @@ msgctxt "condensed.away"
 msgid "marked away once"
 msgid_plural "marked away {count} times"
 msgstr[0] "segnato come assente una volta"
-msgstr[1] "marked away {count} times"
+msgstr[1] "segnato lontano {count} volte"
 
 #. Condensed status block: back markings while the block was collapsed. The singular shows 'once' when one marking happened, the plural the number of markings; {count} is that number.
 #: client/components/MessageCondensed.vue
@@ -509,7 +509,7 @@ msgctxt "condensed.back"
 msgid "marked back once"
 msgid_plural "marked back {count} times"
 msgstr[0] "segnato come presente una volta"
-msgstr[1] "marked back {count} times"
+msgstr[1] "segnato indietro {count} volte"
 
 #. Condensed status block: {count} users changed their username/hostname while the block was collapsed.
 #: client/components/MessageCondensed.vue
@@ -517,7 +517,7 @@ msgctxt "condensed.chghost"
 msgid "{count} user has changed hostname"
 msgid_plural "{count} users have changed hostname"
 msgstr[0] "{count} utente ha cambiato hostname"
-msgstr[1] "{count} users have changed hostname"
+msgstr[1] "{count} utenti hanno cambiato hostname"
 
 #. Condensed status block: {count} users joined while the block was collapsed. The counts of several kinds join into one sentence in the active locale's list format.
 #: client/components/MessageCondensed.vue
@@ -525,7 +525,7 @@ msgctxt "condensed.join"
 msgid "{count} user has joined"
 msgid_plural "{count} users have joined"
 msgstr[0] "{count} utente ha unito"
-msgstr[1] "{count} users have joined"
+msgstr[1] "{count} utenti hanno unito"
 
 #. Condensed status block: {count} users were kicked while the block was collapsed.
 #: client/components/MessageCondensed.vue
@@ -541,133 +541,133 @@ msgctxt "condensed.left"
 msgid "{count} user has left"
 msgid_plural "{count} users have left"
 msgstr[0] "{count} utente ha lasciato"
-msgstr[1] "{count} users have left"
+msgstr[1] "{count} utenti hanno lasciato"
 
 #. Condensed status block: {count} channel-mode changes were set while the block was collapsed (one MODE line can carry several).
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.modes"
 msgid "{count} mode was set"
 msgid_plural "{count} modes were set"
-msgstr[0] "{count} mode was set"
-msgstr[1] "{count} modes were set"
+msgstr[0] "{count} modalità è stata impostata"
+msgstr[1] "{count} modalità erano state impostate"
 
 #. Condensed status block: {count} users renamed while the block was collapsed.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.nick"
 msgid "{count} user has changed nick"
 msgid_plural "{count} users have changed nick"
-msgstr[0] "{count} user has changed nick"
-msgstr[1] "{count} users have changed nick"
+msgstr[0] "{count} utente ha cambiato il nickname"
+msgstr[1] "{count} utenti hanno cambiato il nickname"
 
 #. aria-label of the small toggle button that expands or collapses the condensed status block in a channel's scrollback.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.toggle"
 msgid "Toggle status messages"
-msgstr "Toggle status messages"
+msgstr "Attiva messaggi di stato"
 
 #. Button of every confirmation dialog in the app (delete message, delete network, restore settings, clear history…); clicking declines and closes the dialog.
 #: client/components/ConfirmDialog.vue
 msgctxt "confirm.cancel"
 msgid "Cancel"
-msgstr "Cancel"
+msgstr "Annulla"
 
 #. Label of the services account (login name) text field on the connect form and on the network edit form.
 #: client/components/Windows/Connect.vue:34
 #: client/components/Windows/Connect.vue:213
 msgctxt "connect.account"
 msgid "Account"
-msgstr "Account"
+msgstr "Conto"
 
 #. aria-label of the whole connect screen (the window/dialog element); announced by screen readers on arriving at the form.
 #: client/components/Windows/Connect.vue:7
 msgctxt "connect.ariaLabel"
 msgid "Connect"
-msgstr "Connect"
+msgstr "Collega"
 
 #. Heading of the authentication section on the connect form (the SASL toggle and account fields follow).
 #: client/components/Windows/Connect.vue:201
 msgctxt "connect.authentication"
 msgid "Authentication"
-msgstr "Authentication"
+msgstr "Autenticazione"
 
 #. Checkbox on the connect form: dial this network every time the app opens.
 #: client/components/Windows/Connect.vue:290
 msgctxt "connect.autoconnect"
 msgid "Connect automatically when the app starts"
-msgstr "Connect automatically when the app starts"
+msgstr "Connetti automaticamente quando l'app inizia"
 
 #. Checkbox at the bottom of the connect form: show desktop notifications for this network's messages; the browser's permission ask fires when it is first switched on.
 #: client/components/Windows/Connect.vue:280
 msgctxt "connect.browserNotifications"
 msgid "Browser notifications for this network"
-msgstr "Browser notifications for this network"
+msgstr "Notifiche per il browser per questa rete"
 
 #. Label of the field listing channels to join automatically after connecting, on the connect and network edit forms.
 #: client/components/Windows/Connect.vue:188
 msgctxt "connect.channels"
 msgid "Channels"
-msgstr "Channels"
+msgstr "Canali"
 
 #. Placeholder of the channels field on the connect form: example channel names, and a note that the field may stay empty.
 #: client/components/Windows/Connect.vue:194
 msgctxt "connect.channelsPlaceholder"
 msgid "#channel, #another (optional)"
-msgstr "#channel, #another (optional)"
+msgstr "#canale, #altro (opzionale)"
 
 #. Status line shown on the connect form right after submitting: the nick used and the network name (or host:port of the server) being dialled.
 #: client/components/Windows/Connect.vue:84
 #: client/components/Windows/Connect.vue:308
 msgctxt "connect.connectingAs"
 msgid "Connecting as {nick} to {network}…"
-msgstr "Connecting as {nick} to {network}…"
+msgstr "Connessione come {nick} a {network}…"
 
 #. Lobby status line while a chat network is being dialled. {host} and {port} come from the saved network's settings.
 #: client/js/irc/client.ts
 msgctxt "connect.connectingTo"
 msgid "Connecting to {host}:{port}…"
-msgstr "Connecting to {host}:{port}…"
+msgstr "Connessione a {host}:{port}…"
 
 #. Lobby status line while an automatic retry dials a chat network; {attempt} counts the retries this connection has seen.
 #: client/js/irc/client.ts
 msgctxt "connect.connectingToAttempt"
 msgid "Connecting to {host}:{port}… (attempt {attempt})"
-msgstr "Connecting to {host}:{port}… (attempt {attempt})"
+msgstr "Connessione a {host}:{port}… (tentativo {attempt})"
 
 #. Lobby status line when the user's own /quit closed the connection on purpose.
 #: client/js/irc/client.ts
 msgctxt "connect.disconnected"
 msgid "Disconnected."
-msgstr "Disconnected."
+msgstr "Disconnesso."
 
 #. Lobby status line after registration naming the IRCv3 capabilities the server enabled; {caps} is a comma-separated list of protocol tokens, never translated.
 #: client/js/irc/client.ts
 msgctxt "connect.enabledCaps"
 msgid "Enabled capabilities: {caps}"
-msgstr "Enabled capabilities: {caps}"
+msgstr "Abilità abilitate: {caps}"
 
 #. Notice on the connect form when it was opened by a link to a saved network whose password was not remembered; {account} is the services account name.
 #: client/components/Windows/Connect.vue:572
 msgctxt "connect.enterPassword"
 msgid "Enter the password for {account} to connect."
-msgstr "Enter the password for {account} to connect."
+msgstr "Inserisci la password per {account} per connetterti."
 
 #. Error notice shown under the guest sign-in form when the guest nick field was left empty or invalid.
 #: client/components/Windows/Connect.vue:672
 msgctxt "connect.guestNickRequired"
 msgid "Choose a nick to connect as a guest."
-msgstr "Choose a nick to connect as a guest."
+msgstr "Scegli un nickname per collegarti come ospite."
 
 #. Button that connects with just a nick instead of an account.
 #: client/js/branding.ts
 msgctxt "connect.guestSubmit"
 msgid "Connect as guest"
-msgstr "Connect as guest"
+msgstr "Collegati come ospite"
 
 #. Heading of the guest half of the sign-in form (features.guestAccess on).
 #: client/js/branding.ts
 msgctxt "connect.guestTitle"
 msgid "No account?"
-msgstr "No account?"
+msgstr "Nessun account?"
 
 #. Notice at the top of the connect form when a web+irc:// link named a server the deploy does not allow; {network} is this deploy's network name, {host} the refused server.
 #: client/components/Windows/Connect.vue:608
@@ -705,7 +705,7 @@ msgstr "Connettersi a un nuovo server?"
 #: client/components/Windows/Connect.vue:173
 msgctxt "connect.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr "Nickname"
 
 #. Dismiss button on the connect screen shown as a dialog when the user followed a web+irc:// link; declines the connection without disconnecting the app.
 #: client/components/Windows/Connect.vue:91
@@ -719,7 +719,7 @@ msgstr "Non adesso"
 #: client/components/Windows/Connect.vue:228
 msgctxt "connect.password"
 msgid "Password"
-msgstr "Password"
+msgstr ""
 
 #. Checkbox in the authentication section of the connect form: register this device for push notifications once the IRC server supports it.
 #: client/components/Windows/Connect.vue:251
@@ -815,7 +815,7 @@ msgstr "errore sconosciuto"
 #: client/js/irc/client.ts
 msgctxt "connect.saslReason.wrongMechanism"
 msgid "the server offers SASL {offered}, not {mechanism}"
-msgstr "the server offers SASL {offered}, not {mechanism}"
+msgstr "il server offre SASL {offered}, non {mechanism}"
 
 #. Follow-up to a failed required SASL login, telling the reader where to fix or drop the credentials.
 #: client/js/irc/client.ts
@@ -834,7 +834,7 @@ msgstr "Ho un account di servizio (SASL)"
 #: client/components/Windows/Connect.vue:132
 msgctxt "connect.server"
 msgid "Server"
-msgstr "Server"
+msgstr ""
 
 #. aria-label of the server host text input (e.g. irc.example.org) on the connect form; the visible label is on the row.
 #: client/components/Windows/Connect.vue:139
@@ -1038,19 +1038,19 @@ msgstr "Il browser non rivelano il motivo. Probabili cause: il server è down, i
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.registeringClosed"
 msgid "Connection to {host} closed during IRC registration{detail}."
-msgstr "Connection to {host} closed during IRC registration{detail}."
+msgstr "Connessione a {host} chiusa durante l'iscrizione a IRC{detail}."
 
 #. Headline when the connection was closed between connecting and completing IRC registration and the retry schedule is standing down. {host} is the host as the user typed it; {detail} is the close detail in parentheses (a server reason, a connection-lost note or the close code), or empty.
 #: client/js/irc/disconnect.ts:112
 msgctxt "disconnect.registeringClosedNotReconnecting"
 msgid "Connection to {host} closed during IRC registration{detail}. Not reconnecting."
-msgstr "Connection to {host} closed during IRC registration{detail}. Not reconnecting."
+msgstr "Connessione a {host} chiusa durante l'iscrizione a IRC{detail}. Non si riconnette."
 
 #. Join refusal (475) phrased by the client. {channel} is the refused channel name, user data, never translated; the '- <cause>.' layout follows the server's cause ordering.
 #: client/components/MessageTypes/error.vue
 msgctxt "error.badChannelKey"
 msgid "Cannot join {channel} - Bad channel key."
-msgstr "Cannot join {channel} - Bad channel key."
+msgstr "Non posso unirmi a {channel} - chiave canale errata."
 
 #. Join refusal (474) phrased by the client; {channel} is the refused channel name.
 #: client/components/MessageTypes/error.vue
@@ -1134,7 +1134,7 @@ msgstr "Utente {nick} è già nel canale."
 #: client/components/NetworkForm.vue:168
 msgctxt "form.account"
 msgid "Account"
-msgstr "Account"
+msgstr ""
 
 #. Button on the network edit form's status row while a connection is being dialled: stop trying.
 #: client/components/NetworkForm.vue:505
@@ -1212,13 +1212,13 @@ msgstr "Comandi"
 #: client/components/NetworkForm.vue:136
 msgctxt "form.commandsHelp"
 msgid "One /command per line.\nEach command will be executed in\nthe server tab on new connection"
-msgstr ""
+msgstr "Un comando per linea."
 
 #. Status line on the network edit form while the network is online without TLS.
 #: client/components/NetworkForm.vue:490
 msgctxt "form.connectedInsecure"
 msgid "Connected (not secure)"
-msgstr ""
+msgstr "Connesso (non sicuro)"
 
 #. Status line on the network edit form while the network is online over TLS.
 #: client/components/NetworkForm.vue:490
@@ -1266,7 +1266,7 @@ msgstr "Impostazioni rete"
 #: client/components/NetworkForm.vue:104
 msgctxt "form.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr ""
 
 #. Radio option on the network edit form: connect without a services account.
 #: client/components/NetworkForm.vue:158
@@ -1278,7 +1278,7 @@ msgstr "Nessun autenticazione"
 #: client/components/NetworkForm.vue:183
 msgctxt "form.password"
 msgid "Password"
-msgstr "Password"
+msgstr ""
 
 #. Placeholder of the SASL password field on the network edit form: saving without typing keeps the stored password.
 #: client/components/NetworkForm.vue:196
@@ -1332,7 +1332,7 @@ msgstr "Salva rete"
 #: client/components/NetworkForm.vue:53
 msgctxt "form.server"
 msgid "Server"
-msgstr "Server"
+msgstr ""
 
 #. aria-label of the server host text input (e.g. irc.example.org) on the network edit form; the visible label is on the row.
 #: client/components/NetworkForm.vue:60
@@ -1441,7 +1441,7 @@ msgstr "(o cliccando sull'elemento desiderato)."
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.nick"
 msgid "Nickname"
-msgstr "Nickname"
+msgstr ""
 
 #. Purpose clause ending the second compare item of the help window's past-release list (comparing the running build with the development branch). Starts lowercase because it follows the link.
 #: client/components/Windows/Help.vue
@@ -1471,7 +1471,7 @@ msgstr "è costruito da"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.alias"
 msgid "Alias:"
-msgstr "Alias:"
+msgstr ""
 
 #. Lead-in of the alias line under a command description in the help window when the command has several alternative names; the alternatives follow as code fragments. Keep the trailing colon.
 #: client/components/Windows/Help.vue
@@ -1495,7 +1495,7 @@ msgstr "Rimuovi lo stato \"away\" (impostato con"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.banA"
 msgid "Ban ("
-msgstr "Ban ("
+msgstr ""
 
 #. Continuation of the /ban command description in the help window, after the +b code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1825,7 +1825,7 @@ msgstr "Recupera informazioni sull'utente specificato nel network corrente."
 #: client/components/Windows/Help.vue
 msgctxt "help.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First word of the two list items under the help window's past-release sentence; each continues with a link comparing two versions. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1904,7 +1904,7 @@ msgstr "italic"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.monospace"
 msgid "monospaced"
-msgstr "monospaced"
+msgstr ""
 
 #. Description of the Ctrl+O formatting shortcut in the help window; it removes any formatting applied so far in the message.
 #: client/components/Windows/Help.vue
@@ -2212,7 +2212,7 @@ msgstr "Avorio grigio"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorMagenta"
 msgid "Magenta"
-msgstr "Magenta"
+msgstr ""
 
 #. Name of the mIRC colour with code 07 (orange), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2320,7 +2320,7 @@ msgstr "Nascondi questa preview"
 #: client/components/LinkPreview.vue
 msgctxt "link.kindAudio"
 msgid "audio"
-msgstr "audio"
+msgstr ""
 
 #. The word for a picture, filling {kind} in media-preview sentences such as 'Loading {kind}…'. Lowercase mid-sentence.
 #: client/components/LinkPreview.vue
@@ -2332,13 +2332,13 @@ msgstr "immagine"
 #: client/components/LinkPreview.vue
 msgctxt "link.kindMedia"
 msgid "media"
-msgstr "media"
+msgstr ""
 
 #. The word for a moving picture, filling {kind} in media-preview sentences such as 'Loading {kind}…'. Lowercase mid-sentence.
 #: client/components/LinkPreview.vue
 msgctxt "link.kindVideo"
 msgid "video"
-msgstr "video"
+msgstr ""
 
 #. Title on the placeholder of a media preview while its file is downloading after the reader revealed it. {kind} is 'image', 'video' or 'audio'.
 #: client/components/LinkPreview.vue
@@ -2400,7 +2400,7 @@ msgstr "da {name}"
 #: client/components/LinkPreview.vue
 msgctxt "link.trustInChannel"
 msgid "in {name}"
-msgstr "in {name}"
+msgstr ""
 
 #. Menu item on a media preview's trust menu: removes the existing rule that always loads this media for the named scope ('from example.com', 'in #chat', 'from alice').
 #: client/js/helpers/mediaTrustMenu.ts
@@ -2592,7 +2592,7 @@ msgstr "Il tuo nickname su {network}"
 #: client/components/NetworkLobby.vue:66
 msgctxt "lobby.nickname"
 msgid "Nickname: "
-msgstr "Nickname:"
+msgstr ""
 
 #. Tooltip and aria-label of the crossed-out bell icon on a sidebar network row: push and browser notifications are switched off for this network.
 #: client/components/NetworkLobby.vue:118
@@ -2820,7 +2820,7 @@ msgstr "amministratore"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeHalfOp"
 msgid "half-op"
-msgstr "half-op"
+msgstr ""
 
 #. Name of the IRC channel operator role (the @ prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
@@ -3157,7 +3157,7 @@ msgstr "errore {code}"
 #: client/js/irc/handlers/persistence.ts
 msgctxt "persistence.echo"
 msgid "Persistence: {params}"
-msgstr "Persistence: {params}"
+msgstr "Perseveranza: {params}"
 
 #. Lobby status line confirming the state change the user asked for. {state} is the server's ON/OFF token, verbatim.
 #: client/js/irc/handlers/persistence.ts
@@ -3205,7 +3205,7 @@ msgstr "Mai"
 #: client/components/PushPrompt.vue
 msgctxt "push.no"
 msgid "No"
-msgstr "No"
+msgstr ""
 
 #. Body of the push-renewal prompt; explains why the subscription broke and that re-subscribing can be done later from that network's settings.
 #: client/components/PushPrompt.vue
@@ -3555,7 +3555,7 @@ msgstr "Il corpo è troppo lungo (più di {limit} caratteri)."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr "Alias"
+msgstr ""
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
@@ -4041,7 +4041,7 @@ msgctxt "settings.general.backupNetworks"
 msgid "{count} network"
 msgid_plural "{count} networks"
 msgstr[0] "{count} rete"
-msgstr[1] "{count} networks"
+msgstr[1] "{count} reti"
 
 #. Part of the restore-confirmation sentence in Settings > General: fills the list of what the file replaces for the app's own preferences. Comma-joined with the other parts by position.
 #: client/components/Settings/General.vue
@@ -4195,7 +4195,7 @@ msgstr "Caricamento file"
 #: client/components/LanguageSelect.vue
 msgctxt "settings.locale.auto"
 msgid "System default ({language})"
-msgstr "System default ({language})"
+msgstr "Sistema predefinito ({language})"
 
 #. Button on the networks settings page; opens the connect form to set up a new chat network connection.
 #: client/components/Settings/Networks.vue
@@ -4339,7 +4339,7 @@ msgstr "I messaggi che menzionano te o corrispondono a un highlight personalizza
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlights"
 msgid "Custom highlights"
-msgstr "Custom highlights"
+msgstr "Sottolinevimenti personalizzati"
 
 #. Tooltip on the custom highlights field in Settings > Notifications; explains the field's comma-separated format.
 #: client/components/Settings/Notifications.vue
@@ -4393,7 +4393,7 @@ msgstr "Abilita le notifiche per tutti i messaggi"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.playSound"
 msgid "Play sound"
-msgstr "Play sound"
+msgstr "Suona un suono"
 
 #. Warning line in Settings > Notifications when the chat server refused the push subscription; SASL (the IRC login mechanism) stays verbatim.
 #: client/components/Settings/Notifications.vue
@@ -4411,7 +4411,7 @@ msgstr "Le notifiche sono bloccate dal browser. Abilitale nelle impostazioni del
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushHeading"
 msgid "Push Notifications"
-msgstr "Push Notifications"
+msgstr "Notifiche in push"
 
 #. Intro line of the push section in Settings > Notifications; explains that push is enabled per chat network from that network's edit form (the quoted phrase names that setting) and that each server decides whether to support it. Keep the curly quotes and the arrow.
 #: client/components/Settings/Notifications.vue
@@ -4429,7 +4429,7 @@ msgstr "Le notifiche per push richiedono un server connesso che supporta la capa
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snooze15"
 msgid "15 min"
-msgstr "15 min"
+msgstr "15 minuti"
 
 #. Snooze button in Settings > Notifications; pauses push notifications for eight hours.
 #: client/components/Settings/Notifications.vue
@@ -4447,31 +4447,31 @@ msgstr "1 ora"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snoozeIntro"
 msgid "Snooze pushes everywhere:"
-msgstr "Snooze pushes everywhere:"
+msgstr "Notifiche in push sospese:"
 
 #. Snooze button in Settings > Notifications; ends the pause and resumes push notifications immediately.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snoozeOff"
 msgid "Off"
-msgstr "Off"
+msgstr "Disattivato"
 
 #. Checkbox in Settings > Notifications; when ticked, a sound plays alongside a notification.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.sound"
 msgid "Enable notification sound"
-msgstr "Enable notification sound"
+msgstr "Abilita suono delle notifiche"
 
 #. Warning line in Settings > Notifications shown after a chat server changed its push identity; tells the reader to re-subscribe from that network's edit form, whose control is named in the quoted phrase.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.stale"
 msgid "A server's push identity (its key) changed, so this device's push subscription for it no longer works. Renew it from that network's settings (Edit network → “Renew push notifications”) to keep being notified while the app is closed."
-msgstr "A server's push identity (its key) changed, so this device's push subscription for it no longer works. Renew it from that network's settings (Edit network → “Renew push notifications”) to keep being notified while the app is closed."
+msgstr "L'identità di spinta del server (la sua chiave) è cambiata, quindi la sottoscrizione di spinta di questo dispositivo per essa non funziona più. Rinnovaela nelle impostazioni di quel network (Modifica rete → \"Rinnova notifiche per spinta\") per rimanere informato anche quando l'app è chiusa."
 
 #. Warning line in Settings > Notifications when the browser cannot do web push; the parentheses name the browser features push requires.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.unsupported"
 msgid "Push notifications are not supported by this browser (they need the Push API, a service worker and a secure context)."
-msgstr "Push notifications are not supported by this browser (they need the Push API, a service worker and a secure context)."
+msgstr "Le notifiche per spinta non sono supportate da questo browser (richiedono l'API Push, un worker di servizio e un contesto sicuro)."
 
 #. Word rendered bold at the start of several warning lines in Settings > Notifications (push and browser notification problems); a colon follows it.
 #: client/components/Settings/Notifications.vue
@@ -4536,7 +4536,7 @@ msgstr "{app} è stato sviluppato in modalità sviluppo"
 #: client/components/Sidebar.vue:16
 msgctxt "sidebar.developerBadge"
 msgid "DEVELOPER"
-msgstr "DEVELOPER"
+msgstr ""
 
 #. Message shown in the sidebar when there are no networks at all; the connect form is open beside it.
 #: client/components/NetworkList.vue:8
@@ -4824,13 +4824,13 @@ msgstr "Risposta…"
 #: client/service-worker.js:1134
 msgctxt "sw.titleChannel"
 msgid "{nick} in {target}"
-msgstr "{nick} in {target}"
+msgstr ""
 
 #. Push-notification title for a channel conversation carrying more than one unread message. {nick} is the nick of the newest message's author and {target} is the channel name — both verbatim, never translate them; {count} is the number of unread messages the notification carries.
 #: client/service-worker.js:1137
 msgctxt "sw.titleChannelCount"
 msgid "{nick} in {target} ({count})"
-msgstr "{nick} in {target} ({count})"
+msgstr ""
 
 #. Push-notification title for a query (direct-message) conversation carrying more than one unread message. {nick} is the other side's nick, verbatim — never translate it; {count} is the number of unread messages.
 #: client/service-worker.js:1141
@@ -5585,7 +5585,7 @@ msgstr "invia la traduzione"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sourceAuto"
 msgid "auto"
-msgstr "auto"
+msgstr ""
 
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue
@@ -5919,7 +5919,7 @@ msgstr "Vedi tutte le release"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.aria"
 msgid "Changelog"
-msgstr "Changelog"
+msgstr ""
 
 #. Link at the top of the changelog window that goes back to the help page; the left double angle quote is part of the copy.
 #: client/components/Windows/Changelog.vue
@@ -5931,7 +5931,7 @@ msgstr "« Aiuto"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First sentence of the paragraph in the changelog window that says the release notes are read online; the following words are the two links.
 #: client/components/Windows/Changelog.vue

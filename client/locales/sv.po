@@ -40,25 +40,25 @@ msgstr "{type}: {name} ({extra})"
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.channel"
 msgid "Channel"
-msgstr "Channel"
+msgstr "Kanal"
 
 #. Names the kind of window in a sidebar row's aria-label: the chat network's own window. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.lobby"
 msgid "Network"
-msgstr "Network"
+msgstr "Nätverk"
 
 #. Names the kind of window in a sidebar row's aria-label: a private conversation with one person. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.query"
 msgid "Conversation"
-msgstr "Conversation"
+msgstr "Konversation"
 
 #. Names the kind of window in a sidebar row's aria-label: a results window such as a channel list or a ban list. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.special"
 msgid "List"
-msgstr "List"
+msgstr "Lista"
 
 #. Tooltip and aria-label of the spinner in a chat window's header while the connection is being established, when the network's display name is not known.
 #: client/components/Chat.vue:186
@@ -705,7 +705,7 @@ msgstr "Ansluta till ett ny server?"
 #: client/components/Windows/Connect.vue:173
 msgctxt "connect.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr ""
 
 #. Dismiss button on the connect screen shown as a dialog when the user followed a web+irc:// link; declines the connection without disconnecting the app.
 #: client/components/Windows/Connect.vue:91
@@ -834,7 +834,7 @@ msgstr "Jag har en tjänstekonton (SASL)"
 #: client/components/Windows/Connect.vue:132
 msgctxt "connect.server"
 msgid "Server"
-msgstr "Server"
+msgstr ""
 
 #. aria-label of the server host text input (e.g. irc.example.org) on the connect form; the visible label is on the row.
 #: client/components/Windows/Connect.vue:139
@@ -1212,13 +1212,13 @@ msgstr "Kommandon"
 #: client/components/NetworkForm.vue:136
 msgctxt "form.commandsHelp"
 msgid "One /command per line.\nEach command will be executed in\nthe server tab on new connection"
-msgstr ""
+msgstr "En kommando per rad."
 
 #. Status line on the network edit form while the network is online without TLS.
 #: client/components/NetworkForm.vue:490
 msgctxt "form.connectedInsecure"
 msgid "Connected (not secure)"
-msgstr ""
+msgstr "Kördes i servern vid ny anslutning"
 
 #. Status line on the network edit form while the network is online over TLS.
 #: client/components/NetworkForm.vue:490
@@ -1266,7 +1266,7 @@ msgstr "Nätverksinställningar"
 #: client/components/NetworkForm.vue:104
 msgctxt "form.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr ""
 
 #. Radio option on the network edit form: connect without a services account.
 #: client/components/NetworkForm.vue:158
@@ -1332,7 +1332,7 @@ msgstr "Spara nätverk"
 #: client/components/NetworkForm.vue:53
 msgctxt "form.server"
 msgid "Server"
-msgstr "Server"
+msgstr ""
 
 #. aria-label of the server host text input (e.g. irc.example.org) on the network edit form; the visible label is on the row.
 #: client/components/NetworkForm.vue:60
@@ -1350,7 +1350,7 @@ msgstr "Serverport"
 #: client/components/NetworkForm.vue:26
 msgctxt "form.status"
 msgid "Status"
-msgstr "Status"
+msgstr ""
 
 #. Checkbox on the network edit form: connect to this network over TLS instead of a plain connection.
 #: client/components/NetworkForm.vue:86
@@ -1405,7 +1405,7 @@ msgstr "Emoji (anteckning: kräver två söktecken, för att undvika konflikt me
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.heading"
 msgid "Autocompletion"
-msgstr "Autocompletion"
+msgstr ""
 
 #. First part of the autocompletion intro in the help window; keycap symbols (arrow up) follow it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1471,7 +1471,7 @@ msgstr "byggs upp från"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.alias"
 msgid "Alias:"
-msgstr "Alias:"
+msgstr ""
 
 #. Lead-in of the alias line under a command description in the help window when the command has several alternative names; the alternatives follow as code fragments. Keep the trailing colon.
 #: client/components/Windows/Help.vue
@@ -1825,7 +1825,7 @@ msgstr "Hämta information om den givna användaren på det aktuella nätverket.
 #: client/components/Windows/Help.vue
 msgctxt "help.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First word of the two list items under the help window's past-release sentence; each continues with a link comparing two versions. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2049,13 +2049,13 @@ msgstr "Gå till nästa fönster i kanalisten."
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.prevLobby"
 msgid "Switch to the previous lobby in the channel list."
-msgstr ""
+msgstr "Gå till den första loyalen i kanalisten."
 
 #. Description of the Alt+Ctrl+Up keyboard shortcut in the help window; it jumps to the previous conversation that has unread messages.
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.prevUnread"
 msgid "Switch to the previous window with unread messages in the channel list."
-msgstr ""
+msgstr "Gå till första fönstret med oläst meddelanden i kanalisten."
 
 #. Description of the Alt+Up keyboard shortcut and of the two-finger swipe-right gesture in the help window; both move to the conversation before the current one in the sidebar.
 #: client/components/Windows/Help.vue
@@ -2170,7 +2170,7 @@ msgstr "Bränt röd"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorCyan"
 msgid "Cyan"
-msgstr "Cyan"
+msgstr ""
 
 #. Name of the mIRC colour with code 03 (green), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2212,13 +2212,13 @@ msgstr "Lila guld"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorMagenta"
 msgid "Magenta"
-msgstr "Magenta"
+msgstr ""
 
 #. Name of the mIRC colour with code 07 (orange), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorOrange"
 msgid "Orange"
-msgstr "Orange"
+msgstr ""
 
 #. Name of the mIRC colour with code 13 (pink), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2338,7 +2338,7 @@ msgstr "Medier"
 #: client/components/LinkPreview.vue
 msgctxt "link.kindVideo"
 msgid "video"
-msgstr "Video"
+msgstr ""
 
 #. Title on the placeholder of a media preview while its file is downloading after the reader revealed it. {kind} is 'image', 'video' or 'audio'.
 #: client/components/LinkPreview.vue
@@ -2760,7 +2760,7 @@ msgstr "Ge {name} (+{mode})"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.giveModeUnknown"
 msgid "Mode +{mode}"
-msgstr "Mode +{mode}"
+msgstr ""
 
 #. Context-menu item on a clickable channel name inside a chat message, when that channel is already open in this client; clicking switches to it.
 #: client/js/helpers/contextMenu.ts
@@ -2814,7 +2814,7 @@ msgstr "Lista ignorerade användare"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeAdmin"
 msgid "admin"
-msgstr "admin"
+msgstr ""
 
 #. Name of the IRC half-operator role (the % prefix), filling {name} in the mode menu items. Lowercase mid-sentence; keep the hyphen if natural.
 #: client/js/helpers/contextMenu.ts
@@ -2826,7 +2826,7 @@ msgstr "halv-op"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOperator"
 msgid "operator"
-msgstr "operator"
+msgstr ""
 
 #. Name of the highest IRC channel role (the ~ prefix), filling {name} in the mode menu items such as 'Revoke {name} (-a)'. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
@@ -2844,7 +2844,7 @@ msgstr "röst"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.muteType"
 msgid "Mute {type}"
-msgstr "Mute {type}"
+msgstr ""
 
 #. Context-menu item that takes an IRC channel role away from a user; {name} is the role's name ('operator'), {mode} the mode letter with its minus sign, e.g. -o.
 #: client/js/helpers/contextMenu.ts
@@ -2856,13 +2856,13 @@ msgstr "Återkalla {name} (-{mode})"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.revokeModeUnknown"
 msgid "Mode -{mode}"
-msgstr "Mode -{mode}"
+msgstr ""
 
 #. Context-menu item on a conversation whose messages are muted (not highlighted, not notified); clicking unmutes it. {type} names the kind of conversation in lowercase: 'network', 'channel' or 'conversation'.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.unmuteType"
 msgid "Unmute {type}"
-msgstr "Unmute {type}"
+msgstr ""
 
 #. Context-menu item on a user (in the user list, a message or a conversation); asks the server for that user's details (real name, account, idle time).
 #: client/js/helpers/contextMenu.ts
@@ -3555,7 +3555,7 @@ msgstr "Texten är för lång (över {limit} tecken)."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr "Alias"
+msgstr ""
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
@@ -4429,7 +4429,7 @@ msgstr "Push-notifikationer kräver en ansluten server som stöder funktionen we
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snooze15"
 msgid "15 min"
-msgstr "15 min"
+msgstr ""
 
 #. Snooze button in Settings > Notifications; pauses push notifications for eight hours.
 #: client/components/Settings/Notifications.vue
@@ -4679,31 +4679,31 @@ msgstr "Undantagen av"
 #: client/components/Special/ListIgnored.vue
 msgctxt "special.ignored.hostmask"
 msgid "Hostmask"
-msgstr "Hostmask"
+msgstr ""
 
 #. Column header of the ignore list: when the ignore was set, locale-formatted.
 #: client/components/Special/ListIgnored.vue
 msgctxt "special.ignored.ignoredAt"
 msgid "Ignored At"
-msgstr "Ignored At"
+msgstr "Övergick till"
 
 #. Column header of the channel-invite list: the invited hostmask, verbatim server data.
 #: client/components/Special/ListInvites.vue
 msgctxt "special.invites.invited"
 msgid "Invited"
-msgstr "Invited"
+msgstr "Inviterad"
 
 #. Column header of the channel-invite list: when the invite was set, locale-formatted.
 #: client/components/Special/ListInvites.vue
 msgctxt "special.invites.invitedAt"
 msgid "Invited At"
-msgstr "Invited At"
+msgstr "Inviterad Till"
 
 #. Column header of the channel-invite list: who set the invite, verbatim.
 #: client/components/Special/ListInvites.vue
 msgctxt "special.invites.invitedBy"
 msgid "Invited By"
-msgstr "Invited By"
+msgstr "Inviterad Av"
 
 #. Why fragment of 'Message not sent: {why}' (FAIL BATCH MULTILINE_INVALID_TARGET). Lowercase mid-sentence by position.
 #: client/js/irc/handlers/standard-replies.ts
@@ -5351,7 +5351,7 @@ msgstr "Översättning för {channel}"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.variant"
 msgid "Variant"
-msgstr "Variant"
+msgstr ""
 
 #. Explanatory note under the regional variety field in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -5585,7 +5585,7 @@ msgstr "Skicka translationen"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sourceAuto"
 msgid "auto"
-msgstr "auto"
+msgstr ""
 
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue
@@ -5847,61 +5847,61 @@ msgstr "Tillgänglig för hjälp:"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.hostmask"
 msgid "Host mask:"
-msgstr "Host mask:"
+msgstr "Mask:"
 
 #. Whois row: when the user was last active, locale-formatted.
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.idleSince"
 msgid "Idle since:"
-msgstr "Idle since:"
+msgstr "Idel sedan:"
 
 #. Whois row: the services account the user is logged into; the value is account data, verbatim.
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.loggedAs"
 msgid "Logged in as:"
-msgstr "Logged in as:"
+msgstr "Inloggad som:"
 
 #. Whois row: the user's modes, verbatim protocol text.
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.modes"
 msgid "Modes:"
-msgstr "Modes:"
+msgstr ""
 
 #. Shown after the nick of a user who left the network (WHOWAS), leading the last recorded whois data; the nick renders direction-isolated in <bdi>.
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.offline"
 msgid "is offline, last information:"
-msgstr "is offline, last information:"
+msgstr "är offline, senaste information:"
 
 #. Whois row: the user's IRC-operator status, verbatim server data.
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.operator"
 msgid "Operator:"
-msgstr "Operator:"
+msgstr ""
 
 #. Whois row: the user's realname field, user content, verbatim.
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.realName"
 msgid "Real name:"
-msgstr "Real name:"
+msgstr "Sanningsname:"
 
 #. Whois row: the user's services-registered nick, verbatim.
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.registeredNick"
 msgid "Registered nick:"
-msgstr "Registered nick:"
+msgstr "Registrerad nick:"
 
 #. Whois row naming a user connected over TLS; the value is a Yes.
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.secure"
 msgid "Secure connection:"
-msgstr "Secure connection:"
+msgstr "säker förbindelse:"
 
 #. Whois row: extra server-specific whois lines, verbatim server data.
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.special"
 msgid "Special:"
-msgstr "Special:"
+msgstr "speciell:"
 
 #. The value of whois rows whose answer is affirmative (help operator, bot, secure connection).
 #: client/components/MessageTypes/whois.vue
@@ -5919,25 +5919,25 @@ msgstr "se all releases"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.aria"
 msgid "Changelog"
-msgstr "Changelog"
+msgstr "ändringslogg"
 
 #. Link at the top of the changelog window that goes back to the help page; the left double angle quote is part of the copy.
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.back"
 msgid "« Help"
-msgstr "« Help"
+msgstr "« hjälp"
 
 #. Word inside the link of the changelog's past-release sentence: the linked text names the source code commit the running build was made from; the commit hash follows it. Mid-sentence.
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First sentence of the paragraph in the changelog window that says the release notes are read online; the following words are the two links.
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.notBundled"
 msgid "Release notes are not bundled with the build."
-msgstr "Release notes are not bundled with the build."
+msgstr "Release notes är inte bundet med bygget."
 
 #. Word joining the two links of the changelog window's last paragraph (the release notes and the list of all releases). Mid-sentence.
 #: client/components/Windows/Changelog.vue
@@ -5949,13 +5949,13 @@ msgstr "eller"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.pastRelease"
 msgid "This build is"
-msgstr "This build is"
+msgstr "Detta bygg är"
 
 #. Middle of the changelog's past-release sentence, after the link naming the source commit; introduces the link that lists what changed since the release. {version} is the release number the build follows. Keep the comma, colon and the v.
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.pastReleaseAfter"
 msgid ", after v{version}:"
-msgstr ", after v{version}:"
+msgstr ", efter v{version}:"
 
 #. Text of the link in the changelog window that opens the release notes for this release. {version} is the release number, with the v as in the source.
 #: client/components/Windows/Changelog.vue

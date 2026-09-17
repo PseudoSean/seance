@@ -705,7 +705,7 @@ msgstr "Conectar a un nuevo servidor?"
 #: client/components/Windows/Connect.vue:173
 msgctxt "connect.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr ""
 
 #. Dismiss button on the connect screen shown as a dialog when the user followed a web+irc:// link; declines the connection without disconnecting the app.
 #: client/components/Windows/Connect.vue:91
@@ -1266,7 +1266,7 @@ msgstr "Configuración de red"
 #: client/components/NetworkForm.vue:104
 msgctxt "form.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr ""
 
 #. Radio option on the network edit form: connect without a services account.
 #: client/components/NetworkForm.vue:158
@@ -1471,13 +1471,13 @@ msgstr "está construido a partir de"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.alias"
 msgid "Alias:"
-msgstr "Alias:"
+msgstr ""
 
 #. Lead-in of the alias line under a command description in the help window when the command has several alternative names; the alternatives follow as code fragments. Keep the trailing colon.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.aliases"
 msgid "Aliases:"
-msgstr "Aliases:"
+msgstr ""
 
 #. Description of the /away command in the help window; the command syntax (/away [message]) is shown beside it and stays untranslated.
 #: client/components/Windows/Help.vue
@@ -1495,7 +1495,7 @@ msgstr "Elimina tu estado \"away\" (establecido con"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.banA"
 msgid "Ban ("
-msgstr "Ban ("
+msgstr ""
 
 #. Continuation of the /ban command description in the help window, after the +b code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1825,7 +1825,7 @@ msgstr "Recupera información sobre el usuario dado en la red actual."
 #: client/components/Windows/Help.vue
 msgctxt "help.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First word of the two list items under the help window's past-release sentence; each continues with a link comparing two versions. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1898,13 +1898,13 @@ msgstr "Atajos de formato"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.italic"
 msgid "italics"
-msgstr "italics"
+msgstr ""
 
 #. The example word shown in a monospaced font in the help window's Ctrl+M formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.monospace"
 msgid "monospaced"
-msgstr "monospaced"
+msgstr ""
 
 #. Description of the Ctrl+O formatting shortcut in the help window; it removes any formatting applied so far in the message.
 #: client/components/Windows/Help.vue
@@ -2212,7 +2212,7 @@ msgstr "Gris claro"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorMagenta"
 msgid "Magenta"
-msgstr "Magenta"
+msgstr ""
 
 #. Name of the mIRC colour with code 07 (orange), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2320,7 +2320,7 @@ msgstr "Ocultar esta vista previa"
 #: client/components/LinkPreview.vue
 msgctxt "link.kindAudio"
 msgid "audio"
-msgstr "audio"
+msgstr ""
 
 #. The word for a picture, filling {kind} in media-preview sentences such as 'Loading {kind}…'. Lowercase mid-sentence.
 #: client/components/LinkPreview.vue
@@ -2338,7 +2338,7 @@ msgstr "medio"
 #: client/components/LinkPreview.vue
 msgctxt "link.kindVideo"
 msgid "video"
-msgstr "video"
+msgstr ""
 
 #. Title on the placeholder of a media preview while its file is downloading after the reader revealed it. {kind} is 'image', 'video' or 'audio'.
 #: client/components/LinkPreview.vue
@@ -2814,13 +2814,13 @@ msgstr "Listar usuarios ignorados"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeAdmin"
 msgid "admin"
-msgstr "admin"
+msgstr ""
 
 #. Name of the IRC half-operator role (the % prefix), filling {name} in the mode menu items. Lowercase mid-sentence; keep the hyphen if natural.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeHalfOp"
 msgid "half-op"
-msgstr "half-op"
+msgstr ""
 
 #. Name of the IRC channel operator role (the @ prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
@@ -3042,7 +3042,7 @@ msgstr "El apodo es inválido."
 #: client/js/irc/handlers/whois.ts
 msgctxt "msg.noSuchNick"
 msgid "No such nick: {nick}"
-msgstr "No such nick: {nick}"
+msgstr ""
 
 #. System message when a user changes a channel's topic. Renders after the user's name (direction-isolated in <bdi>); the new topic is channel content and stays verbatim.
 #: client/components/MessageTypes/topic.vue
@@ -3151,7 +3151,7 @@ msgstr "No enviado ({reason}): {text}"
 #: client/js/irc/handlers/numerics.ts
 msgctxt "pending.numericError"
 msgid "error {code}"
-msgstr "error {code}"
+msgstr ""
 
 #. Lobby passthrough of a PERSISTENCE reply the app does not otherwise understand; {params} is the server's own words, verbatim.
 #: client/js/irc/handlers/persistence.ts
@@ -3205,7 +3205,7 @@ msgstr "Nunca"
 #: client/components/PushPrompt.vue
 msgctxt "push.no"
 msgid "No"
-msgstr "No"
+msgstr ""
 
 #. Body of the push-renewal prompt; explains why the subscription broke and that re-subscribing can be done later from that network's settings.
 #: client/components/PushPrompt.vue
@@ -3555,7 +3555,7 @@ msgstr "El cuerpo es demasiado largo (más de {limit} caracteres)."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr "Alias"
+msgstr ""
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
@@ -3703,121 +3703,121 @@ msgstr "argumentos desde el segundo hasta el último"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.varStar"
 msgid "everything after the alias name"
-msgstr "everything after the alias name"
+msgstr ""
 
 #. Heading of the variables reference: the dollar placeholders an alias body can use.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.variablesHeading"
 msgid "Variables"
-msgstr "Variables"
+msgstr ""
 
 #. Checkbox in Settings > Appearance; when ticked, typing in the message input suggests completions for names, emoji and commands.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.autocomplete"
 msgid "Enable autocomplete"
-msgstr "Enable autocomplete"
+msgstr "Habilitar autocompletar"
 
 #. Checkbox in Settings > Appearance; when ticked, each user's name in chat is drawn in its own consistent color.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.coloredNicks"
 msgid "Enable colored nicknames"
-msgstr "Enable colored nicknames"
+msgstr "Habilitar nombres de usuario coloreados"
 
 #. Heading of the section in Settings > Appearance holding the user's own CSS. Keep the capitalization style of the source if possible.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.customStylesheet"
 msgid "Custom Stylesheet"
-msgstr "Custom Stylesheet"
+msgstr "Estilo personalizado"
 
 #. Visually hidden label of the custom stylesheet text area in Settings > Appearance, where CSS rules overriding the app's own styles can be entered.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.customStylesheetHelp"
 msgid "Custom stylesheet. You can override any style with CSS here."
-msgstr "Custom stylesheet. You can override any style with CSS here."
+msgstr "Estilo personalizado. Puedes sobrescribir cualquier estilo con CSS aquí."
 
 #. Placeholder of the custom stylesheet text area in Settings > Appearance, written as a CSS comment. Keep the /* */ comment markers.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.customStylesheetPlaceholder"
 msgid "/* You can override any style with CSS here */"
-msgstr "/* You can override any style with CSS here */"
+msgstr "/* Puedes sobreescribir cualquier estilo con CSS aquí */"
 
 #. aria-label of the slider in Settings > Appearance that changes the size of chat text and the interface with it.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.fontSizeAria"
 msgid "Message font size"
-msgstr "Message font size"
+msgstr "Tamaño de la fuente del mensaje"
 
 #. Heading of the text size control in Settings > Appearance; a slider that scales the whole interface.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.fontSizeHeading"
 msgid "Font size"
-msgstr "Font size"
+msgstr "Tamaño de la fuente"
 
 #. Label of the largest step of the font-size slider in Settings → Appearance. One word.
 #: client/components/Settings/Appearance.vue:458
 msgctxt "settings.appearance.fontSizeHuge"
 msgid "Huge"
-msgstr "Huge"
+msgstr "Gigante"
 
 #. Label of the default step of the font-size slider in Settings → Appearance. One word.
 #: client/components/Settings/Appearance.vue:456
 msgctxt "settings.appearance.fontSizeLarge"
 msgid "Large"
-msgstr "Large"
+msgstr "Grande"
 
 #. Label of the middle step of the font-size slider in Settings → Appearance: the browser's default size. One word.
 #: client/components/Settings/Appearance.vue:455
 msgctxt "settings.appearance.fontSizeMedium"
 msgid "Medium"
-msgstr "Medium"
+msgstr "Mediano"
 
 #. Label of the second step of the font-size slider in Settings → Appearance. One word.
 #: client/components/Settings/Appearance.vue:454
 msgctxt "settings.appearance.fontSizeSmall"
 msgid "Small"
-msgstr "Small"
+msgstr "Pequeño"
 
 #. Label of the smallest step of the font-size slider in Settings → Appearance: the datalist stop and the value shown while dragging. One word.
 #: client/components/Settings/Appearance.vue:453
 msgctxt "settings.appearance.fontSizeTiny"
 msgid "Tiny"
-msgstr "Tiny"
+msgstr "Chico"
 
 #. Label of the second-largest step of the font-size slider in Settings → Appearance.
 #: client/components/Settings/Appearance.vue:457
 msgctxt "settings.appearance.fontSizeXlarge"
 msgid "Extra large"
-msgstr "Extra large"
+msgstr "Extra grande"
 
 #. Checkbox in Settings > Appearance; when ticked, chat messages are rendered with Markdown styling such as bold text, code blocks and spoiler marks. Ellipsis is part of the copy.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.markdown"
 msgid "Render Markdown formatting (bold, code, spoilers…)"
-msgstr "Render Markdown formatting (bold, code, spoilers…"
+msgstr "Renderizar formato Markdown (negrita, código, spoilers...)"
 
 #. Checkbox in Settings > Appearance; when ticked, links to media are shown as an inline playable preview inside the chat instead of a plain link.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.media"
 msgid "Preview images, video and audio links inline"
-msgstr "Preview images, video and audio links inline"
+msgstr "Vistas previas de imágenes, videos y audios en línea"
 
 #. Radio option in Settings > Appearance; media previews load on their own as soon as a message contains one, which exposes your address to the media site. Em dash is part of the copy.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.mediaAlways"
 msgid "Show automatically — the media site sees your address as soon as a link appears"
-msgstr "Show automatically — the media site sees your address as soon as a link appears"
+msgstr "Mostrar automáticamente — el sitio de medios lo ve como tu dirección en cuanto aparece un enlace"
 
 #. Radio option in Settings > Appearance; media previews stay behind a placeholder until you click them, so nothing is loaded from the media site before that. Em dash is part of the copy.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.mediaClick"
 msgid "Click to reveal — nothing is fetched from the media site until you ask to see it"
-msgstr "Click to reveal — nothing is fetched from the media site until you ask to see it"
+msgstr "Hacer clic para revelar — nada se carga del sitio de medios hasta que lo pides"
 
 #. Heading of the media preview section in Settings > Appearance, which controls how links to images, video and audio are shown in chat.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.mediaHeading"
 msgid "Media previews"
-msgstr "Media previews"
+msgstr "Vistas previas de medios"
 
 #. Visually hidden group label of the two radio choices in Settings > Appearance that decide when media previews are fetched from their site.
 #: client/components/Settings/Appearance.vue
@@ -4504,7 +4504,7 @@ msgstr "pestañas de ajustes"
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.general"
 msgid "General"
-msgstr "General"
+msgstr ""
 
 #. Label of the Settings modal's Networks tab (tab strip); switching tabs navigates to the Networks settings pane.
 #: client/components/Settings/Navigation.vue
@@ -4679,7 +4679,7 @@ msgstr "Excluido por"
 #: client/components/Special/ListIgnored.vue
 msgctxt "special.ignored.hostmask"
 msgid "Hostmask"
-msgstr "Hostmask"
+msgstr ""
 
 #. Column header of the ignore list: when the ignore was set, locale-formatted.
 #: client/components/Special/ListIgnored.vue
@@ -4986,7 +4986,7 @@ msgstr "no hay WebAssembly SIMD"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.noWebgpu"
 msgid "no WebGPU"
-msgstr "no WebGPU"
+msgstr ""
 
 #. One reason listed under the device verdict in Settings → Translation: the check of what the device can do threw an error, so nothing could be measured.
 #: client/components/Settings/Translation.vue
@@ -5387,7 +5387,7 @@ msgstr "Escribiendo"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.cancel"
 msgid "Cancel"
-msgstr "Cancel"
+msgstr ""
 
 #. Button that translates the message again from the language picked in the retranslate-from dialog.
 #: client/components/SourceLanguagePicker.vue
@@ -5919,7 +5919,7 @@ msgstr "ver todas las versiones"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.aria"
 msgid "Changelog"
-msgstr "Changelog"
+msgstr ""
 
 #. Link at the top of the changelog window that goes back to the help page; the left double angle quote is part of the copy.
 #: client/components/Windows/Changelog.vue
@@ -5931,7 +5931,7 @@ msgstr "« Ayuda"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First sentence of the paragraph in the changelog window that says the release notes are read online; the following words are the two links.
 #: client/components/Windows/Changelog.vue

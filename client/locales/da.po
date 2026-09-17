@@ -40,25 +40,25 @@ msgstr "{type}: {name} ({extra})"
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.channel"
 msgid "Channel"
-msgstr "Channel"
+msgstr "Kanal"
 
 #. Names the kind of window in a sidebar row's aria-label: the chat network's own window. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.lobby"
 msgid "Network"
-msgstr "Network"
+msgstr "Netværk"
 
 #. Names the kind of window in a sidebar row's aria-label: a private conversation with one person. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.query"
 msgid "Conversation"
-msgstr "Conversation"
+msgstr "Forhandling"
 
 #. Names the kind of window in a sidebar row's aria-label: a results window such as a channel list or a ban list. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.special"
 msgid "List"
-msgstr "List"
+msgstr "Liste"
 
 #. Tooltip and aria-label of the spinner in a chat window's header while the connection is being established, when the network's display name is not known.
 #: client/components/Chat.vue:186
@@ -719,7 +719,7 @@ msgstr "Ikke nu"
 #: client/components/Windows/Connect.vue:228
 msgctxt "connect.password"
 msgid "Password"
-msgstr "Password"
+msgstr ""
 
 #. Checkbox in the authentication section of the connect form: register this device for push notifications once the IRC server supports it.
 #: client/components/Windows/Connect.vue:251
@@ -834,7 +834,7 @@ msgstr "Jeg har et serviceskonto (SASL)"
 #: client/components/Windows/Connect.vue:132
 msgctxt "connect.server"
 msgid "Server"
-msgstr "Server"
+msgstr ""
 
 #. aria-label of the server host text input (e.g. irc.example.org) on the connect form; the visible label is on the row.
 #: client/components/Windows/Connect.vue:139
@@ -1104,7 +1104,7 @@ msgstr "Kan ikke udføre handling: Du er ikke i kanalen."
 #: client/components/MessageTypes/error.vue
 msgctxt "error.passwordMismatch"
 msgid "Password mismatch."
-msgstr "Password mismatch."
+msgstr ""
 
 #. Join refusal (405) phrased by the client; {channel} is the refused channel name.
 #: client/components/MessageTypes/error.vue
@@ -1212,13 +1212,13 @@ msgstr "Kommandoer"
 #: client/components/NetworkForm.vue:136
 msgctxt "form.commandsHelp"
 msgid "One /command per line.\nEach command will be executed in\nthe server tab on new connection"
-msgstr ""
+msgstr "En kommando per linje."
 
 #. Status line on the network edit form while the network is online without TLS.
 #: client/components/NetworkForm.vue:490
 msgctxt "form.connectedInsecure"
 msgid "Connected (not secure)"
-msgstr ""
+msgstr "Forbindet (ikke sikker)"
 
 #. Status line on the network edit form while the network is online over TLS.
 #: client/components/NetworkForm.vue:490
@@ -1236,7 +1236,7 @@ msgstr "Forbindes..."
 #: client/components/NetworkForm.vue:493
 msgctxt "form.disconnected"
 msgid "Disconnected"
-msgstr "Disconnected"
+msgstr ""
 
 #. Heading of the network edit form; {name} is the network's current display name.
 #: client/components/NetworkForm.vue:14
@@ -1266,7 +1266,7 @@ msgstr "Netværksinstillinger"
 #: client/components/NetworkForm.vue:104
 msgctxt "form.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr ""
 
 #. Radio option on the network edit form: connect without a services account.
 #: client/components/NetworkForm.vue:158
@@ -1278,7 +1278,7 @@ msgstr "Ingen autentikering"
 #: client/components/NetworkForm.vue:183
 msgctxt "form.password"
 msgid "Password"
-msgstr "Password"
+msgstr ""
 
 #. Placeholder of the SASL password field on the network edit form: saving without typing keeps the stored password.
 #: client/components/NetworkForm.vue:196
@@ -1332,7 +1332,7 @@ msgstr "Gem netværk"
 #: client/components/NetworkForm.vue:53
 msgctxt "form.server"
 msgid "Server"
-msgstr "Server"
+msgstr ""
 
 #. aria-label of the server host text input (e.g. irc.example.org) on the network edit form; the visible label is on the row.
 #: client/components/NetworkForm.vue:60
@@ -1350,7 +1350,7 @@ msgstr "Serverport"
 #: client/components/NetworkForm.vue:26
 msgctxt "form.status"
 msgid "Status"
-msgstr "Status"
+msgstr ""
 
 #. Checkbox on the network edit form: connect to this network over TLS instead of a plain connection.
 #: client/components/NetworkForm.vue:86
@@ -1471,7 +1471,7 @@ msgstr "er bygget fra"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.alias"
 msgid "Alias:"
-msgstr "Alias:"
+msgstr ""
 
 #. Lead-in of the alias line under a command description in the help window when the command has several alternative names; the alternatives follow as code fragments. Keep the trailing colon.
 #: client/components/Windows/Help.vue
@@ -1825,13 +1825,13 @@ msgstr "Hent information om den angivne bruger på det aktuelle netværk."
 #: client/components/Windows/Help.vue
 msgctxt "help.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First word of the two list items under the help window's past-release sentence; each continues with a link comparing two versions. Mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.compare"
 msgid "Compare"
-msgstr "Compare"
+msgstr "sammenlign"
 
 #. Label of the documentation link in the Help window.
 #: client/js/branding.ts
@@ -1850,7 +1850,7 @@ msgstr "Markér alle tekst, der er tastet efter denne hurtiggang, som"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.bold"
 msgid "bold"
-msgstr "bold"
+msgstr ""
 
 #. Text of the link at the end of the Ctrl+K description in the help window's formatting section; it opens an external IRC color reference. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2170,7 +2170,7 @@ msgstr "Brune"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorCyan"
 msgid "Cyan"
-msgstr "Cyan"
+msgstr ""
 
 #. Name of the mIRC colour with code 03 (green), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2212,13 +2212,13 @@ msgstr "Lysegul"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorMagenta"
 msgid "Magenta"
-msgstr "Magenta"
+msgstr ""
 
 #. Name of the mIRC colour with code 07 (orange), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorOrange"
 msgid "Orange"
-msgstr "Orange"
+msgstr ""
 
 #. Name of the mIRC colour with code 13 (pink), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2338,7 +2338,7 @@ msgstr "Medier"
 #: client/components/LinkPreview.vue
 msgctxt "link.kindVideo"
 msgid "video"
-msgstr "Video"
+msgstr ""
 
 #. Title on the placeholder of a media preview while its file is downloading after the reader revealed it. {kind} is 'image', 'video' or 'audio'.
 #: client/components/LinkPreview.vue
@@ -2474,125 +2474,125 @@ msgstr "Indlæser kanal liste, dette kan tage et øjeblik..."
 #: client/js/irc/handlers/lists.ts
 msgctxt "list.windowTitle"
 msgid "{kind} for {channel}"
-msgstr "{kind} for {channel}"
+msgstr ""
 
 #. Splash-screen status shown while the app loads its page (the chat header's spinner takes over once a chat window exists).
 #: client/js/socket-events/connection.ts
 msgctxt "loading.connecting"
 msgid "Connecting…"
-msgstr "Connecting…"
+msgstr "Forbindes..."
 
 #. Message shown in the loading splash when a script failed hard enough that the application cannot start.
 #: client/js/loading-error-handlers.js:38
 msgctxt "loading.error"
 msgid "An error has occurred that prevented the client from loading correctly."
-msgstr "An error has occurred that prevented the client from loading correctly."
+msgstr "Der er opstået en fejl, der forhindrede klienten i at indlæses korrekt."
 
 #. Disclosure heading of the box listing the error details on the loading-failure screen.
 #: client/js/loading-error-handlers.js:41
 msgctxt "loading.errorDetails"
 msgid "More details"
-msgstr "More details"
+msgstr "Flere detaljer"
 
 #. Footer of the error details box on the loading-failure screen.
 #: client/js/loading-error-handlers.js:47
 msgctxt "loading.errorDevtools"
 msgid "Open the developer tools of your browser for more information."
-msgstr "Open the developer tools of your browser for more information."
+msgstr "Åbn udviklerverktøjerne i browseren for mere information."
 
 #. Loading splash: button that reloads the page when the bundle never arrived.
 #: client/index.html
 #: client/js/i18n/index.ts
 msgctxt "loading.reload"
 msgid "Reload page"
-msgstr "Reload page"
+msgstr "Gencharge side"
 
 #. Loading splash: the message for a browser without JavaScript; the static HTML copy in index.html matches it, so the en boot-time swap is invisible.
 #: client/index.html
 #: client/js/i18n/index.ts
 msgctxt "loading.requiresJs"
 msgid "This application requires a modern browser with JavaScript enabled."
-msgstr "This application requires a modern browser with JavaScript enabled."
+msgstr "Denne applikation kræver et moderne browser med JavaScript aktiveret."
 
 #. Loading splash: the bundle is taking unusually long to arrive.
 #: client/index.html
 #: client/js/i18n/index.ts
 msgctxt "loading.slow"
 msgid "This is taking longer than it should, there might be connectivity issues."
-msgstr "This is taking longer than it should, there might be connectivity issues."
+msgstr "Det tager længere end det burde, der måske er forbindelsesproblemer."
 
 #. Shown in the loading splash while the application code is loading, replacing the static splash text in index.html as soon as the first script runs. Resolved in the locale the pre-paint script picked, before the app's catalogs are available.
 #: client/js/loading-error-handlers.js:11
 msgctxt "loading.starting"
 msgid "Loading the app…"
-msgstr "Loading the app…"
+msgstr "Loader af appen…"
 
 #. aria-label of the plus button on a sidebar network row while the join-channel form is open: clicking closes it again.
 #: client/components/NetworkLobby.vue:156
 msgctxt "lobby.cancel"
 msgid "Cancel"
-msgstr "Cancel"
+msgstr "Annuller"
 
 #. aria-label of the chevron that collapses a network's channel list in the sidebar.
 #: client/components/NetworkLobby.vue:176
 msgctxt "lobby.collapse"
 msgid "Collapse"
-msgstr "Collapse"
+msgstr "Kollapser"
 
 #. Tooltip and aria-label of the connection-state dot on a sidebar network row while the network is online.
 #: client/components/NetworkLobby.vue:138
 msgctxt "lobby.connected"
 msgid "Connected"
-msgstr "Connected"
+msgstr "Forbundet"
 
 #. Tooltip and aria-label of the connection-state dot on a sidebar network row while a connection is being dialled; clicking cancels it.
 #: client/components/NetworkLobby.vue:140
 msgctxt "lobby.connectingCancel"
 msgid "Connecting… (click to cancel)"
-msgstr "Connecting… (click to cancel)"
+msgstr "Forbinder… (klik for at annullere)"
 
 #. Tooltip and aria-label of the connection-state dot on a sidebar network row when the network is down; clicking dials it again.
 #: client/components/NetworkLobby.vue:141
 msgctxt "lobby.disconnectedConnect"
 msgid "Disconnected (click to connect)"
-msgstr "Disconnected (click to connect)"
+msgstr "Disconnected (klik for at forbinde)"
 
 #. aria-label of the pencil button in the sidebar's network row (lobby): opens the network's edit form in Settings.
 #: client/components/NetworkLobby.vue:44
 #: client/components/NetworkLobby.vue:49
 msgctxt "lobby.edit"
 msgid "Edit this network…"
-msgstr "Edit this network…"
+msgstr "Rediger denne netværk…"
 
 #. aria-label of the chevron that expands a collapsed network's channel list in the sidebar.
 #: client/components/NetworkLobby.vue:176
 msgctxt "lobby.expand"
 msgid "Expand"
-msgstr "Expand"
+msgstr "Udvid"
 
 #. aria-label of the plus button on a sidebar network row: opens the small join-channel form under the network.
 #: client/components/NetworkLobby.vue:156
 msgctxt "lobby.joinChannel"
 msgid "Join a channel…"
-msgstr "Join a channel…"
+msgstr "Tilmeld dig et kanal…"
 
 #. Tooltip of the nick shown at the right of a sidebar network row before the network is connected; {network} is the network's display name.
 #: client/components/NetworkLobby.vue:164
 msgctxt "lobby.nickOffline"
 msgid "Your nickname for {network} (not connected)"
-msgstr "Your nickname for {network} (not connected)"
+msgstr "Din nik for {network} (ikke forbindet)"
 
 #. Tooltip of the nick shown at the right of a sidebar network row while the network is connected; {network} is the network's display name.
 #: client/components/NetworkLobby.vue:163
 msgctxt "lobby.nickOn"
 msgid "Your nickname on {network}"
-msgstr "Your nickname on {network}"
+msgstr "Din nicknavn på {network}"
 
 #. Screen-reader-only prefix read before the current nick at the right of a sidebar network row (visually hidden).
 #: client/components/NetworkLobby.vue:66
 msgctxt "lobby.nickname"
 msgid "Nickname: "
-msgstr "Nickname:"
+msgstr ""
 
 #. Tooltip and aria-label of the crossed-out bell icon on a sidebar network row: push and browser notifications are switched off for this network.
 #: client/components/NetworkLobby.vue:118
@@ -2754,13 +2754,13 @@ msgstr "Rediger emne"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.giveMode"
 msgid "Give {name} (+{mode})"
-msgstr "Give {name} (+{mode})"
+msgstr ""
 
 #. Context-menu item that grants an IRC mode whose role name is unknown; {mode} is the mode letter with its plus sign, e.g. +z.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.giveModeUnknown"
 msgid "Mode +{mode}"
-msgstr "Mode +{mode}"
+msgstr ""
 
 #. Context-menu item on a clickable channel name inside a chat message, when that channel is already open in this client; clicking switches to it.
 #: client/js/helpers/contextMenu.ts
@@ -2814,7 +2814,7 @@ msgstr "Vis ignorerede brugere"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeAdmin"
 msgid "admin"
-msgstr "admin"
+msgstr ""
 
 #. Name of the IRC half-operator role (the % prefix), filling {name} in the mode menu items. Lowercase mid-sentence; keep the hyphen if natural.
 #: client/js/helpers/contextMenu.ts
@@ -2844,7 +2844,7 @@ msgstr "stem"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.muteType"
 msgid "Mute {type}"
-msgstr "Mute {type}"
+msgstr ""
 
 #. Context-menu item that takes an IRC channel role away from a user; {name} is the role's name ('operator'), {mode} the mode letter with its minus sign, e.g. -o.
 #: client/js/helpers/contextMenu.ts
@@ -2856,7 +2856,7 @@ msgstr "Revoker {name} (-{mode})"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.revokeModeUnknown"
 msgid "Mode -{mode}"
-msgstr "Mode -{mode}"
+msgstr ""
 
 #. Context-menu item on a conversation whose messages are muted (not highlighted, not notified); clicking unmutes it. {type} names the kind of conversation in lowercase: 'network', 'channel' or 'conversation'.
 #: client/js/helpers/contextMenu.ts
@@ -3355,7 +3355,7 @@ msgstr "Søg resultater"
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.send"
 msgid "Send"
-msgstr "Send"
+msgstr ""
 
 #. Preview-bar note in the emoji picker for a remembered reaction that is not an emoji, saying it will be sent as words. Starts lowercase because it follows other text.
 #: client/components/ReactionPicker.vue
@@ -3415,7 +3415,7 @@ msgstr "Kun meddelester, der er lastet op i denne session, søges – ældre his
 #: client/components/Windows/SearchResults.vue:21
 msgctxt "search.results.searchingInAfter"
 msgid "for"
-msgstr "for"
+msgstr ""
 
 #. First fragment of the search-results window header, rendered before the styled channel-name element. That element (the channel's or query window's name — user content, never translated, like a <Username>) sits between this fragment and the one after it. Word order inside each fragment is free; the fragments cannot cross the element.
 #: client/components/Windows/SearchResults.vue:19
@@ -3555,7 +3555,7 @@ msgstr "Kroppen er for lang (over {limit} tegn)."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr "Alias"
+msgstr ""
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
@@ -3635,15 +3635,15 @@ msgctxt "settings.aliases.statusBroken"
 msgid "{count} alias saved — rows with errors are not saved."
 msgid_plural "{count} aliases saved — rows with errors are not saved."
 msgstr[0] "{count} alias gemt — rækker med fejl er ikke gemt."
-msgstr[1] "{count} aliases saved — rows with errors are not saved."
+msgstr[1] "{count} aliaser gemt – rækker med fejl er ikke gemt."
 
 #. Status line under the alias table: how many aliases are saved. {count} is the number; gettext plural, English index 0 is the singular.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.statusSaved"
 msgid "{count} alias saved."
 msgid_plural "{count} aliases saved."
-msgstr[0] "{count} alias saved."
-msgstr[1] "{count} aliases saved."
+msgstr[0] "{count} aliaser gemt."
+msgstr[1] "{count} aliaser gemt."
 
 #. Heading of the command-aliases pane in Settings, where the user defines their own slash commands.
 #: client/components/Settings/Aliases.vue
@@ -3661,7 +3661,7 @@ msgstr "Prøv et alias"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.tryExample"
 msgid "/{name} some arguments"
-msgstr "/{name} some arguments"
+msgstr "/{name} nogle argumenter"
 
 #. Heading of the live preview: type an alias invocation and see the commands it expands to.
 #: client/components/Settings/Aliases.vue
@@ -3769,7 +3769,7 @@ msgstr "Store"
 #: client/components/Settings/Appearance.vue:455
 msgctxt "settings.appearance.fontSizeMedium"
 msgid "Medium"
-msgstr "Medium"
+msgstr ""
 
 #. Label of the second step of the font-size slider in Settings → Appearance. One word.
 #: client/components/Settings/Appearance.vue:454
@@ -3979,13 +3979,13 @@ msgstr "Sider"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.untrustFrom"
 msgid "Stop always showing from {name}"
-msgstr "Stop always showing from {name}"
+msgstr "Stop altid vises fra {name}"
 
 #. Tooltip and aria-label of the remove button on an entry of the always-shown media list in Settings > Appearance, for a chat channel. {name} is that channel's name.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.untrustIn"
 msgid "Stop always showing in {name}"
-msgstr "Stop always showing in {name}"
+msgstr "Stop altid vises i {name}"
 
 #. Checkbox in Settings > Appearance; when ticked, message timestamps use a 12-hour clock (am/pm) instead of a 24-hour clock.
 #: client/components/Settings/Appearance.vue
@@ -4041,7 +4041,7 @@ msgctxt "settings.general.backupNetworks"
 msgid "{count} network"
 msgid_plural "{count} networks"
 msgstr[0] "{count} netværk"
-msgstr[1] "{count} networks"
+msgstr[1] "{count} netværk"
 
 #. Part of the restore-confirmation sentence in Settings > General: fills the list of what the file replaces for the app's own preferences. Comma-joined with the other parts by position.
 #: client/components/Settings/General.vue
@@ -4059,7 +4059,7 @@ msgstr "Filen indeholder nettverksparol."
 #: client/components/Settings/General.vue
 msgctxt "settings.general.export"
 msgid "Export settings…"
-msgstr "Export settings…"
+msgstr "Eksporter indstillinger…"
 
 #. Error message in Settings > General shown when exporting the settings backup failed and no file was produced.
 #: client/components/Settings/General.vue
@@ -4143,7 +4143,7 @@ msgstr "Installer {appName} som en app"
 #: client/components/Settings/General.vue
 msgctxt "settings.general.nativeApp"
 msgid "Native app"
-msgstr "Native app"
+msgstr "Indlægget app"
 
 #. Button in Settings > General; registers this web app as the handler for web+irc:// chat links so clicking one anywhere opens it in the app. Keep the web+irc:// scheme verbatim. {appName} is the chat app's display name.
 #: client/components/Settings/General.vue
@@ -4167,25 +4167,25 @@ msgstr "Lad personer i kanalen se, når du skriver (IRCv3 +typing)."
 #: client/components/Settings/General.vue
 msgctxt "settings.general.typingHeading"
 msgid "Typing notifications"
-msgstr "Typing notifications"
+msgstr ""
 
 #. Checkbox in Settings > General. When ticked, images are re-drawn through a canvas before they are sent to the chat server, which strips photo metadata such as camera model and GPS location. Affects image uploads only.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.uploadCanvas"
 msgid "Attempt to remove metadata from images before uploading"
-msgstr "Attempt to remove metadata from images before uploading"
+msgstr "Forsøg at fjerne metadata fra billeder før oploadning"
 
 #. Tooltip on the metadata-removal upload checkbox in Settings > General; explains how the option works and that it can mis-rotate photos in browsers without canvas orientation support.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.uploadCanvasHelp"
 msgid "This option renders the image into a canvas element to remove metadata from the image. This may break orientation if your browser does not support that."
-msgstr "This option renders the image into a canvas element to remove metadata from the image. This may break orientation if your browser does not support that."
+msgstr "Denne funktion omformer billedet til et canvas-element for at fjerne metadata fra billedet. Det kan påvirke retningen hvis din browser ikke understøtter det."
 
 #. Heading of the file upload options section in Settings > General.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.uploadsHeading"
 msgid "File uploads"
-msgstr "File uploads"
+msgstr "Filopload"
 
 #. The first option of the interface-language picker: the language the browser asks for is used. {language} is that language's name, written in itself.
 #: client/components/Windows/Connect.vue:72
@@ -4195,163 +4195,163 @@ msgstr "File uploads"
 #: client/components/LanguageSelect.vue
 msgctxt "settings.locale.auto"
 msgid "System default ({language})"
-msgstr "System default ({language})"
+msgstr "Systemstandard ({language})"
 
 #. Button on the networks settings page; opens the connect form to set up a new chat network connection.
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.add"
 msgid "Add network"
-msgstr "Add network"
+msgstr "Tilføj netværk"
 
 #. Button on a saved network row in the networks settings page while that network is offline; clicking dials the chat network again.
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.connect"
 msgid "Connect"
-msgstr "Connect"
+msgstr "Forbind"
 
 #. Status label on a saved network row in the networks settings page; the connection to that chat network is up.
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.connected"
 msgid "Connected"
-msgstr "Connected"
+msgstr "Forbundet"
 
 #. Status label on a saved network row in the networks settings page, and the caption of the same row's button, while the connection to that chat network is being established. Ellipsis is part of the copy.
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.connecting"
 msgid "Connecting…"
-msgstr "Connecting…"
+msgstr "Forbindes…"
 
 #. Button on a saved network row in the networks settings page; opens a confirmation before the saved network is removed.
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.delete"
 msgid "Delete"
-msgstr "Delete"
+msgstr "Slet"
 
 #. Confirmation button of the dialog that removes a saved chat network.
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.deleteButton"
 msgid "Delete network"
-msgstr "Delete network"
+msgstr "Slet netværk"
 
 #. Body of the confirmation dialog before removing a saved chat network; explains what the deletion does.
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.deleteText"
 msgid "This removes the saved network and disconnects it if it is running."
-msgstr "This removes the saved network and disconnects it if it is running."
+msgstr "Fjerner det oplagte netværk og afslutter det, hvis det kører."
 
 #. Title of the confirmation dialog before removing a saved chat network. {name} is the network's display name.
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.deleteTitle"
 msgid "Delete {name}?"
-msgstr "Delete {name}?"
+msgstr "Slet {name}?"
 
 #. Status label on a saved network row in the networks settings page; the connection to that chat network is down.
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.disconnected"
 msgid "Disconnected"
-msgstr "Disconnected"
+msgstr "Afsluttet"
 
 #. Button on a saved network row in the networks settings page; opens the form where that network's address and credentials are changed.
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.edit"
 msgid "Edit"
-msgstr "Edit"
+msgstr "Redigér"
 
 #. Empty state of the networks settings page, shown when no chat network has been saved in this browser.
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.empty"
 msgid "No networks saved yet."
-msgstr "No networks saved yet."
+msgstr "Ingen netværk er sat til at gemmes endnu."
 
 #. Heading of the networks page in the chat app's settings, which lists the IRC network connections saved in this browser.
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.heading"
 msgid "Networks"
-msgstr "Networks"
+msgstr "Netværk"
 
 #. Line under the Networks heading in the settings, saying what the page is for.
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.intro"
 msgid "Manage the IRC networks saved in this browser."
-msgstr "Manage the IRC networks saved in this browser."
+msgstr "Administrer de IRC-netværk, der er sat til at gemmes i denne browser."
 
 #. Button on a saved network row in the networks settings page while that network is connected; clicking opens the network's chat view.
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.open"
 msgid "Open"
-msgstr "Open"
+msgstr "Åben"
 
 #. Warning line in Settings > Notifications when notification permission has been denied in the browser.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.browserBlocked"
 msgid "Notifications are blocked by your browser."
-msgstr "Notifications are blocked by your browser."
+msgstr "Meldinger er blokeret af din browser."
 
 #. Heading of the section in Settings > Notifications about the browser's own notifications while the app is open.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.browserHeading"
 msgid "Browser Notifications"
-msgstr "Browser Notifications"
+msgstr "Browser-notifikationer"
 
 #. Intro line of the browser notifications section in Settings > Notifications; the quoted phrase names the toggle in each network's edit form. Keep the curly quotes.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.browserPerNetwork"
 msgid "Browser notifications are also per network — enabled by default, toggled in each network's settings (Edit network → “Browser notifications for this network”)."
-msgstr "Browser notifications are also per network — enabled by default, toggled in each network's settings (Edit network → “Browser notifications for this network”)."
+msgstr "Browser-notifikationer er også per netværk – aktiveret ved indgang, slået af i hvert netværks indstillinger (Rediger netværk → “Browser-notifikationer for dette netværk”)."
 
 #. Warning line in Settings > Notifications when the browser cannot show notifications at all.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.browserUnsupported"
 msgid "Notifications are not supported by your browser."
-msgstr "Notifications are not supported by your browser."
+msgstr "Din browser understøtter ikke notifikationer."
 
 #. Placeholder of the custom-highlights and highlight-exceptions fields in Settings > Notifications; shows the expected input format.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.commaList"
 msgid "Comma-separated, e.g.: word, some more words, anotherword"
-msgstr "Comma-separated, e.g.: word, some more words, anotherword"
+msgstr "Komma-afskilt, f.eks.: ord, lidt mere ord, et andet ord"
 
 #. Checkbox in Settings > Notifications; when ticked, messages mentioning you are drawn with a colored background and can notify.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlight"
 msgid "Highlight messages that mention you"
-msgstr "Highlight messages that mention you"
+msgstr "Markér beskederne, der beskeder dig"
 
 #. Label of the text field in Settings > Notifications for words that suppress highlights.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightExceptions"
 msgid "Highlight exceptions"
-msgstr "Highlight exceptions"
+msgstr "Mark exceptioner"
 
 #. Tooltip on the highlight-exceptions field in Settings > Notifications; explains that these words suppress highlight treatment.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightExceptionsHelp"
 msgid "If a message contains any of these comma-separated expressions, it will not trigger a highlight even if it contains your nickname or expressions defined in custom highlights."
-msgstr "If a message contains any of these comma-separated expressions, it will not trigger a highlight even if it contains your nickname or expressions defined in custom highlights."
+msgstr "Hvis en besked indeholder nogle af disse komma-afskilte udtryk, vil det ikke triggere en markering, selv hvis det indeholder din nickname eller udtryk defineret i brugerdefinerede markeringer."
 
 #. Tooltip on the highlight checkbox in Settings > Notifications; explains the visual effect of highlights.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightHelp"
 msgid "Messages that mention you or match a custom highlight get a colored background and border in the channel."
-msgstr "Messages that mention you or match a custom highlight get a colored background and border in the channel."
+msgstr "Beskeder, der nævner dig eller matcher et brugerdefineret markering, får en farget baggrund og rand i kanalen."
 
 #. Label of the text field in Settings > Notifications for extra words that count as mentions of you.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlights"
 msgid "Custom highlights"
-msgstr "Custom highlights"
+msgstr "Brugerdefinerede markeringer"
 
 #. Tooltip on the custom highlights field in Settings > Notifications; explains the field's comma-separated format.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightsHelp"
 msgid "If a message contains any of these comma-separated expressions, it will trigger a highlight."
-msgstr "If a message contains any of these comma-separated expressions, it will trigger a highlight."
+msgstr "Hvis en besked indeholder nogle af disse komma-afskilte udtryk, vil det triggere en markering."
 
 #. Warning line in Settings > Notifications, shown on an iPhone browsing the app without installing it; the parenthesized phrase is the iOS share menu's action.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.iosNotInstalled"
 msgid "On iOS, push notifications are only available after installing the app to the Home Screen (Share → Add to Home Screen)."
-msgstr "On iOS, push notifications are only available after installing the app to the Home Screen (Share → Add to Home Screen)."
+msgstr "På iOS er push-notifikationer kun tilgængelige efter at appen er installert til Hjemmen (Del → Tilføj til Hjemmen)."
 
 #. Radio choice in Settings > Notifications for the server's push-identity change behaviour: show a confirmation prompt before the device re-subscribes. Em dash is part of the copy.
 #: client/components/Settings/Notifications.vue
@@ -4429,7 +4429,7 @@ msgstr "Push-notifikationer kræver et forbundet server, der understøtter funkt
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snooze15"
 msgid "15 min"
-msgstr "15 min"
+msgstr ""
 
 #. Snooze button in Settings > Notifications; pauses push notifications for eight hours.
 #: client/components/Settings/Notifications.vue
@@ -4536,7 +4536,7 @@ msgstr "{app} er blevet bygget i udviklingsmode"
 #: client/components/Sidebar.vue:16
 msgctxt "sidebar.developerBadge"
 msgid "DEVELOPER"
-msgstr "DEVELOPER"
+msgstr ""
 
 #. Message shown in the sidebar when there are no networks at all; the connect form is open beside it.
 #: client/components/NetworkList.vue:8
@@ -4573,8 +4573,8 @@ msgstr "Visningsspråg"
 msgctxt "sidebar.mentions"
 msgid "{count} mention"
 msgid_plural "{count} mentions"
-msgstr[0] "{count} mention"
-msgstr[1] "{count} mentions"
+msgstr[0] ""
+msgstr[1] ""
 
 #. aria-label of the sidebar's navigation region (the network/channel list).
 #: client/components/NetworkList.vue:6
@@ -4625,19 +4625,19 @@ msgstr[1] "{count} ubesvarede beskeder"
 #: client/components/Special/ListBans.vue
 msgctxt "special.bans.banned"
 msgid "Banned"
-msgstr "Banned"
+msgstr ""
 
 #. Column header of the channel-ban list: when the ban was set, locale-formatted.
 #: client/components/Special/ListBans.vue
 msgctxt "special.bans.bannedAt"
 msgid "Banned At"
-msgstr "Banned At"
+msgstr ""
 
 #. Column header of the channel-ban list: the operator who set the ban, verbatim.
 #: client/components/Special/ListBans.vue
 msgctxt "special.bans.bannedBy"
 msgid "Banned By"
-msgstr "Banned By"
+msgstr ""
 
 #. Column header of the channel list: the channel name, verbatim server data.
 #: client/components/Special/ListChannels.vue
@@ -4679,7 +4679,7 @@ msgstr "Undtaget af"
 #: client/components/Special/ListIgnored.vue
 msgctxt "special.ignored.hostmask"
 msgid "Hostmask"
-msgstr "Hostmask"
+msgstr ""
 
 #. Column header of the ignore list: when the ignore was set, locale-formatted.
 #: client/components/Special/ListIgnored.vue
@@ -5585,7 +5585,7 @@ msgstr "Send oversættelsen"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sourceAuto"
 msgid "auto"
-msgstr "auto"
+msgstr ""
 
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue
@@ -5665,7 +5665,7 @@ msgstr "Upload {count} filer"
 #: client/components/UploadPreview.vue
 msgctxt "upload.confirmOne"
 msgid "Upload"
-msgstr "Upload"
+msgstr ""
 
 #. Title of the confirmation dialog shown before files are uploaded to the chat server, when several files were chosen.
 #: client/components/UploadPreview.vue
@@ -5847,7 +5847,7 @@ msgstr "Tilgængelig for hjælp:"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.hostmask"
 msgid "Host mask:"
-msgstr "Host mask:"
+msgstr ""
 
 #. Whois row: when the user was last active, locale-formatted.
 #: client/components/MessageTypes/whois.vue
@@ -5877,7 +5877,7 @@ msgstr "er offline, sidst opdatering:"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.operator"
 msgid "Operator:"
-msgstr "Operator:"
+msgstr ""
 
 #. Whois row: the user's realname field, user content, verbatim.
 #: client/components/MessageTypes/whois.vue
@@ -5919,7 +5919,7 @@ msgstr "se alle udgaver"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.aria"
 msgid "Changelog"
-msgstr "Changelog"
+msgstr ""
 
 #. Link at the top of the changelog window that goes back to the help page; the left double angle quote is part of the copy.
 #: client/components/Windows/Changelog.vue
@@ -5931,7 +5931,7 @@ msgstr "« Hjælp"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First sentence of the paragraph in the changelog window that says the release notes are read online; the following words are the two links.
 #: client/components/Windows/Changelog.vue

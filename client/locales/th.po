@@ -40,25 +40,25 @@ msgstr "{type}: {name} ({extra})"
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.channel"
 msgid "Channel"
-msgstr "Channel"
+msgstr "ช่องทาง"
 
 #. Names the kind of window in a sidebar row's aria-label: the chat network's own window. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.lobby"
 msgid "Network"
-msgstr "Network"
+msgstr "เครือข่าย"
 
 #. Names the kind of window in a sidebar row's aria-label: a private conversation with one person. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.query"
 msgid "Conversation"
-msgstr "Conversation"
+msgstr "การสนทนา"
 
 #. Names the kind of window in a sidebar row's aria-label: a results window such as a channel list or a ban list. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.special"
 msgid "List"
-msgstr "List"
+msgstr "รายการ"
 
 #. Tooltip and aria-label of the spinner in a chat window's header while the connection is being established, when the network's display name is not known.
 #: client/components/Chat.vue:186
@@ -394,13 +394,13 @@ msgstr "ยกเลิกการอัปโหลด"
 #: client/components/ChatInput.vue:19
 msgctxt "composer.connect"
 msgid "Connect"
-msgstr "Connect"
+msgstr "เชื่อมต่อ"
 
 #. Button in the connection bar shown above the message input while the app waits to retry a dropped connection to the chat network; clicking it skips the wait and dials the network immediately.
 #: client/components/ChatInput.vue:19
 msgctxt "composer.connectNow"
 msgid "Connect now"
-msgstr "Connect now"
+msgstr "ต่อตั้งตอนนี้"
 
 #. Text of the connection bar shown above the message input while the dial to the chat network is in flight (a spinner turns beside it). {network} is the display name of the chat network.
 #: client/components/ChatInput.vue:344
@@ -498,14 +498,14 @@ msgstr "กำลังอัปโหลด {file}"
 msgctxt "condensed.away"
 msgid "marked away once"
 msgid_plural "marked away {count} times"
-msgstr[0] "marked away {count} times"
+msgstr[0] "ถูกตั้งเครื่องหมายออกไป {count} ครั้ง"
 
 #. Condensed status block: back markings while the block was collapsed. The singular shows 'once' when one marking happened, the plural the number of markings; {count} is that number.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.back"
 msgid "marked back once"
 msgid_plural "marked back {count} times"
-msgstr[0] "marked back {count} times"
+msgstr[0] "ถูกตั้งเครื่องหมายคืนมา {count} ครั้ง"
 
 #. Condensed status block: {count} users changed their username/hostname while the block was collapsed.
 #: client/components/MessageCondensed.vue
@@ -914,61 +914,61 @@ msgstr "วันก่อนหน้า"
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1001"
 msgid "server going away"
-msgstr "server going away"
+msgstr "เซิร์ฟเวอร์กำลังถูกตั้งเครื่องหมายออกไป"
 
 #. Name of WebSocket close code 1002 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1002"
 msgid "WebSocket protocol error"
-msgstr "WebSocket protocol error"
+msgstr "ข้อผิดพลาดของโปรโตคอล WebSocket"
 
 #. Name of WebSocket close code 1006 (abnormal closure: refused, unreachable, TLS failure — the browser never says which) in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1006"
 msgid "connection lost"
-msgstr "connection lost"
+msgstr "ความเชื่อมต่อขาดหาย"
 
 #. Name of WebSocket close code 1008 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1008"
 msgid "policy violation"
-msgstr "policy violation"
+msgstr "การฝ่าฝืนนโยบาย"
 
 #. Name of WebSocket close code 1009 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1009"
 msgid "message too large"
-msgstr "message too large"
+msgstr "ข้อความมีขนาดใหญ่เกินไป"
 
 #. Name of WebSocket close code 1011 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1011"
 msgid "server error"
-msgstr "server error"
+msgstr "ข้อผิดพลาดของเซิร์ฟเวอร์"
 
 #. Name of WebSocket close code 1012 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1012"
 msgid "server restarting"
-msgstr "server restarting"
+msgstr "เซิร์ฟเวอร์กำลังเริ่มต้นใหม่"
 
 #. Name of WebSocket close code 1013 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1013"
 msgid "server asked to try again later"
-msgstr "server asked to try again later"
+msgstr ""
 
 #. Name of WebSocket close code 1015 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1015"
 msgid "TLS handshake failed"
-msgstr "TLS handshake failed"
+msgstr ""
 
 #. Detail of a connection-failure report when the WebSocket closed with a code the app has no name for. {code} is the numeric close code, verbatim.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.codeUnknown"
 msgid "code {code}"
-msgstr "code {code}"
+msgstr ""
 
 #. Connection-failure report when the WebSocket never opened. {url} is the address that was dialled, verbatim. {error} is ' (<the browser's error text>)' or empty — the browser hides why a dial failed, so the slot often stays empty.
 #: client/js/irc/disconnect.ts
@@ -2804,31 +2804,31 @@ msgstr "แสดงรายการผู้ใช้ที่ไม่สน
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeAdmin"
 msgid "admin"
-msgstr "admin"
+msgstr "ผู้ดูแล"
 
 #. Name of the IRC half-operator role (the % prefix), filling {name} in the mode menu items. Lowercase mid-sentence; keep the hyphen if natural.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeHalfOp"
 msgid "half-op"
-msgstr "half-op"
+msgstr "ผู้ควบคุม"
 
 #. Name of the IRC channel operator role (the @ prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOperator"
 msgid "operator"
-msgstr "operator"
+msgstr "ผู้ดำเนินการ"
 
 #. Name of the highest IRC channel role (the ~ prefix), filling {name} in the mode menu items such as 'Revoke {name} (-a)'. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOwner"
 msgid "owner"
-msgstr "owner"
+msgstr "ผู้เป็นเจ้าของ"
 
 #. Name of the IRC voiced role (the + prefix; may speak in a moderated channel), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeVoice"
 msgid "voice"
-msgstr "voice"
+msgstr "นักพูด"
 
 #. Context-menu item on a conversation; clicking mutes it (no highlights, no notifications from it). {type} names the kind of conversation in lowercase: 'network', 'channel' or 'conversation'.
 #: client/js/helpers/contextMenu.ts

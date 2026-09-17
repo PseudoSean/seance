@@ -40,25 +40,25 @@ msgstr "{type}: {name} ({extra})"
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.channel"
 msgid "Channel"
-msgstr "Channel"
+msgstr "Kanál"
 
 #. Names the kind of window in a sidebar row's aria-label: the chat network's own window. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.lobby"
 msgid "Network"
-msgstr "Network"
+msgstr "Síť"
 
 #. Names the kind of window in a sidebar row's aria-label: a private conversation with one person. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.query"
 msgid "Conversation"
-msgstr "Conversation"
+msgstr "Živé rozprávky"
 
 #. Names the kind of window in a sidebar row's aria-label: a results window such as a channel list or a ban list. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.special"
 msgid "List"
-msgstr "List"
+msgstr "Seznam"
 
 #. Tooltip and aria-label of the spinner in a chat window's header while the connection is being established, when the network's display name is not known.
 #: client/components/Chat.vue:186
@@ -683,7 +683,7 @@ msgstr "Žádný účet?"
 #: client/components/Windows/Connect.vue:608
 msgctxt "connect.linkIgnored"
 msgid "This app only connects to {network}. The link to {host} was ignored."
-msgstr ""
+msgstr "Tato aplikace se připojuje pouze k {network}. Odkaz k {host} byl zahájene."
 
 #. Notice on the connect approval dialog opened from a web+irc:// link without channels; {host}:{port} is the proposed server.
 #: client/components/Windows/Connect.vue:610
@@ -715,7 +715,7 @@ msgstr "Připojit se k novému serveru?"
 #: client/components/Windows/Connect.vue:173
 msgctxt "connect.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr ""
 
 #. Dismiss button on the connect screen shown as a dialog when the user followed a web+irc:// link; declines the connection without disconnecting the app.
 #: client/components/Windows/Connect.vue:91
@@ -844,7 +844,7 @@ msgstr "mám účet služby (SASL)"
 #: client/components/Windows/Connect.vue:132
 msgctxt "connect.server"
 msgid "Server"
-msgstr "Server"
+msgstr ""
 
 #. aria-label of the server host text input (e.g. irc.example.org) on the connect form; the visible label is on the row.
 #: client/components/Windows/Connect.vue:139
@@ -934,121 +934,121 @@ msgstr "Předtím"
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1001"
 msgid "server going away"
-msgstr "server going away"
+msgstr "server přichází"
 
 #. Name of WebSocket close code 1002 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1002"
 msgid "WebSocket protocol error"
-msgstr "WebSocket protocol error"
+msgstr "chyba protokolu WebSocket"
 
 #. Name of WebSocket close code 1006 (abnormal closure: refused, unreachable, TLS failure — the browser never says which) in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1006"
 msgid "connection lost"
-msgstr "connection lost"
+msgstr "spojení ztraceno"
 
 #. Name of WebSocket close code 1008 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1008"
 msgid "policy violation"
-msgstr "policy violation"
+msgstr "porušení politiky"
 
 #. Name of WebSocket close code 1009 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1009"
 msgid "message too large"
-msgstr "message too large"
+msgstr "zpráva je příliš větší"
 
 #. Name of WebSocket close code 1011 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1011"
 msgid "server error"
-msgstr "server error"
+msgstr "chyba serveru"
 
 #. Name of WebSocket close code 1012 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1012"
 msgid "server restarting"
-msgstr "server restarting"
+msgstr "server se obnovuje"
 
 #. Name of WebSocket close code 1013 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1013"
 msgid "server asked to try again later"
-msgstr "server asked to try again later"
+msgstr "server požádal o opakování později"
 
 #. Name of WebSocket close code 1015 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1015"
 msgid "TLS handshake failed"
-msgstr "TLS handshake failed"
+msgstr ""
 
 #. Detail of a connection-failure report when the WebSocket closed with a code the app has no name for. {code} is the numeric close code, verbatim.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.codeUnknown"
 msgid "code {code}"
-msgstr "code {code}"
+msgstr ""
 
 #. Connection-failure report when the WebSocket never opened. {url} is the address that was dialled, verbatim. {error} is ' (<the browser's error text>)' or empty — the browser hides why a dial failed, so the slot often stays empty.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.couldNotConnect"
 msgid "Could not connect to {url}{error}."
-msgstr "Could not connect to {url}{error}."
+msgstr ""
 
 #. Headline when a network the client is dialling never opened and the retry schedule is standing down (the browser refused or could not reach the address). {url} is the WebSocket URL that was dialled; {error} is the browser's error text in parentheses, or empty.
 #: client/js/irc/disconnect.ts:78
 msgctxt "disconnect.couldNotConnectNotReconnecting"
 msgid "Could not connect to {url}{error}. Not reconnecting."
-msgstr "Could not connect to {url}{error}. Not reconnecting."
+msgstr ""
 
 #. Connection-failure report once the network was registered. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.disconnected"
 msgid "Disconnected from {host}{detail}."
-msgstr "Disconnected from {host}{detail}."
+msgstr ""
 
 #. Headline when a registered connection closed and the retry schedule is standing down. {host} is the host as the user typed it; {detail} is the close detail in parentheses, or empty.
 #: client/js/irc/disconnect.ts:127
 msgctxt "disconnect.disconnectedNotReconnecting"
 msgid "Disconnected from {host}{detail}. Not reconnecting."
-msgstr "Disconnected from {host}{detail}. Not reconnecting."
+msgstr "Odpojený od {host}{detail}. Nezachovávám spojení."
 
 #. Follow-up hint under a failed connection dialled with ws:// from an https:// page: the browser blocks mixed content, so the fix is on the network's settings.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.httpsBlocked"
 msgid "This page was loaded over HTTPS, so the browser blocks plain ws:// connections. Enable TLS for this network, or open the app over http://."
-msgstr "This page was loaded over HTTPS, so the browser blocks plain ws:// connections. Enable TLS for this network, or open the app over http://."
+msgstr "Tato stránka byla naloadována přes HTTPS, protože prohlížeč blokuje prosté ws:// připojení. Aktivujte TLS pro tento sítě, nebo spusťte aplikaci přes http://."
 
 #. Follow-up hint under a failed plain (ws://) dial from a non-secure page.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.plainCauses"
 msgid "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or it does not accept WebSocket connections on that port."
-msgstr "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or it does not accept WebSocket connections on that port."
+msgstr "Prohlížeč nezobrazuje důvod. Pravděpodobné příčiny: server je offline, port je špatný, nebo server nepřijímá připojení WebSocket na tomto portu."
 
 #. Follow-up hint under a connection the server dropped during IRC registration, when the close reason named no live session.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.registration"
 msgid "The WebSocket opened but the server dropped it before registration finished - check that this port really speaks IRC over WebSocket, and look for a server notice above for the reason."
-msgstr "The WebSocket opened but the server dropped it before registration finished - check that this port really speaks IRC over WebSocket, and look for a server notice above for the reason."
+msgstr "WebSocket byl otevřen, ale server ho ztratil před registrací – zkontrolujte, že tento port skutečně používá IRC přes WebSocket, a podívejte se na upozornění serveru nahoře pro důvod."
 
 #. Follow-up hint when the server's close reason names a live session: retrying alone cannot fix it, the other client has to go.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.sessionConflict"
 msgid "This account is already connected on this network - another tab, window or device is using it. Close that client; this tab then connects on its next retry (a dead connection is reclaimed within about a minute)."
-msgstr "This account is already connected on this network - another tab, window or device is using it. Close that client; this tab then connects on its next retry (a dead connection is reclaimed within about a minute)."
+msgstr "Tento účet je už připojen na tomto síti – jiný okno, okno nebo zařízení používá toto připojení. Zavři ten klient; tento okno se pak připojí na další pokus (nemocné připojení je obnovováno za několik minut)."
 
 #. Follow-up hint under a failed secure (wss://) dial. {url} is the network's address with https: in place of wss:, for accepting a self-signed certificate once.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.wssCauses"
 msgid "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or its TLS certificate is not trusted — for a self-signed certificate, open {url} in a new tab, accept the warning, then reconnect."
-msgstr "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or its TLS certificate is not trusted — for a self-signed certificate, open {url} in a new tab, accept the warning, then reconnect."
+msgstr ""
 
 #. Connection-failure report when the server dropped the socket before registration finished. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.registeringClosed"
 msgid "Connection to {host} closed during IRC registration{detail}."
-msgstr "Connection to {host} closed during IRC registration{detail}."
+msgstr ""
 
 #. Headline when the connection was closed between connecting and completing IRC registration and the retry schedule is standing down. {host} is the host as the user typed it; {detail} is the close detail in parentheses (a server reason, a connection-lost note or the close code), or empty.
 #: client/js/irc/disconnect.ts:112
@@ -1252,49 +1252,49 @@ msgstr "Odpojené"
 #: client/components/NetworkForm.vue:14
 msgctxt "form.editTitle"
 msgid "Edit {name}"
-msgstr "Edit {name}"
+msgstr ""
 
 #. Label of the display-name field of a saved network on the network edit form.
 #: client/components/NetworkForm.vue:42
 msgctxt "form.name"
 msgid "Name"
-msgstr "Name"
+msgstr "Jakým jménem"
 
 #. Placeholder of the network display-name field on the network edit form: the field may stay empty.
 #: client/components/NetworkForm.vue:49
 msgctxt "form.namePlaceholder"
 msgid "Optional, defaults to the server's network name"
-msgstr "Optional, defaults to the server's network name"
+msgstr "Volitelný, výchozí hodnota je název sítě serveru"
 
 #. Heading of the server half of the network edit form (name, server, TLS, autoconnect).
 #: client/components/NetworkForm.vue:40
 msgctxt "form.networkSettings"
 msgid "Network settings"
-msgstr "Network settings"
+msgstr "Nastavení sítě"
 
 #. Label of the nickname field on the network edit form.
 #: client/components/NetworkForm.vue:104
 msgctxt "form.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr "Přezdívka"
 
 #. Radio option on the network edit form: connect without a services account.
 #: client/components/NetworkForm.vue:158
 msgctxt "form.noAuth"
 msgid "No authentication"
-msgstr "No authentication"
+msgstr "Bez ověřování"
 
 #. Label of the services account password field on the network edit form, shown when SASL is on.
 #: client/components/NetworkForm.vue:183
 msgctxt "form.password"
 msgid "Password"
-msgstr "Password"
+msgstr "Heslo"
 
 #. Placeholder of the SASL password field on the network edit form: saving without typing keeps the stored password.
 #: client/components/NetworkForm.vue:196
 msgctxt "form.passwordPlaceholder"
 msgid "Leave empty to keep the current password"
-msgstr "Leave empty to keep the current password"
+msgstr "Nezapnout, abyste zachovali aktuální heslo"
 
 #. Tooltip of the question-mark icon next to the push notifications checkbox on the network edit form.
 #: client/components/NetworkForm.vue:225
@@ -1342,7 +1342,7 @@ msgstr "Uložit síti"
 #: client/components/NetworkForm.vue:53
 msgctxt "form.server"
 msgid "Server"
-msgstr "Server"
+msgstr ""
 
 #. aria-label of the server host text input (e.g. irc.example.org) on the network edit form; the visible label is on the row.
 #: client/components/NetworkForm.vue:60
@@ -1469,7 +1469,7 @@ msgstr "mezi"
 #: client/components/Windows/Help.vue
 msgctxt "help.builtAfter"
 msgid ", after v{version}"
-msgstr ", after v{version}"
+msgstr ", po v{version}"
 
 #. Part of the sentence in the help window shown when the running build is newer than its release; the app's name precedes it and a link naming the source commit follows. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1481,7 +1481,7 @@ msgstr "je sestaveno z"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.alias"
 msgid "Alias:"
-msgstr "Alias:"
+msgstr "Příslušenství:"
 
 #. Lead-in of the alias line under a command description in the help window when the command has several alternative names; the alternatives follow as code fragments. Keep the trailing colon.
 #: client/components/Windows/Help.vue
@@ -1661,67 +1661,67 @@ msgstr "vyhodit a zakázat ("
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kickbanB"
 msgid ") a user from the current channel. Unlike"
-msgstr ") a user from the current channel. Unlike"
+msgstr ") uživatel z aktuálního kanálu. Různý"
 
 #. End of the /kickban command description in the help window, after the /ban code fragment. Starts with a comma.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kickbanC"
 msgid ", only nicknames (and not host masks) can be used."
-msgstr ", only nicknames (and not host masks) can be used."
+msgstr ", pouze nicknáma (a ne host masks) mohou být použity."
 
 #. Description of the /list command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.list"
 msgid "Retrieve a list of available channels on this network."
-msgstr "Retrieve a list of available channels on this network."
+msgstr "Získejte seznam dostupných kanálů na tomto síti."
 
 #. Description of the /me command in the help window. {appName} is the chat app's display name.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.me"
 msgid "Send an action message to the current channel. {appName} will display it inline, as if the message was posted in the third person."
-msgstr "Send an action message to the current channel. {appName} will display it inline, as if the message was posted in the third person."
+msgstr "Odesílání akce do aktuálního kanálu. {appName} bude zobrazeno v rámci, jako by zpráva byla napísaná v třetí osobě."
 
 #. Description of the /mode command in the help window; explains whose modes the flags apply to depending on the active window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.mode"
 msgid "Set the given flags to the current channel if the active window is a channel, another user if the active window is a private message window, or yourself if the current window is a server window."
-msgstr "Set the given flags to the current channel if the active window is a channel, another user if the active window is a private message window, or yourself if the current window is a server window."
+msgstr "Nastavte dané vlajky pro aktuální kanál, pokud aktivní okno je kanál, jiného uživatele, pokud aktivní okno je okno soukromého zprávy, nebo sebe, pokud aktuální okno je serverové okno."
 
 #. Description of the /msg command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.msg"
 msgid "Send a message to the specified channel."
-msgstr "Send a message to the specified channel."
+msgstr "Odesílání zprávy do určeného kanálu."
 
 #. Description of the /mute command in the help window; a code fragment with the /unmute command follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.mute"
 msgid "Prevent messages from generating any feedback for a channel. This turns off the highlight indicator, hides mentions and inhibits push notifications. Muting a network lobby mutes the entire network. Not specifying any channel target mutes the current channel. Revert with"
-msgstr "Prevent messages from generating any feedback for a channel. This turns off the highlight indicator, hides mentions and inhibits push notifications. Muting a network lobby mutes the entire network. Not specifying any channel target mutes the current channel. Revert with"
+msgstr "Zakáže generování zpětné vazby pro kanál. Toto vypne oznamovací indikátor, skryje zmínky a zastaví oznámení přes push. Zakázání mluvení v síti vypne celou síť. Pokud nezadáte cílový kanál, zakažete aktuální kanál. Revert with"
 
 #. Description of the /nick command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.nick"
 msgid "Change your nickname on the current network."
-msgstr "Change your nickname on the current network."
+msgstr "Změníte své nickname na aktuální síti."
 
 #. Description of the /notice command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.notice"
 msgid "Sends a notice message to the specified channel."
-msgstr "Sends a notice message to the specified channel."
+msgstr "Odesílá upozornění zprávu do určeného kanálu."
 
 #. Start of the /op command description in the help window; a code fragment with the +o mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.opA"
 msgid "Give op ("
-msgstr "Give op ("
+msgstr "Uděluje op ("
 
 #. Continuation of the /op command description in the help window, after the +o code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.opB"
 msgid ") to one or several users in the current channel."
-msgstr ") to one or several users in the current channel."
+msgstr ") jednom nebo několika uživatelům v aktuálním kanále."
 
 #. Start of the /part command description in the help window; a code fragment with the channel parameter follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1787,7 +1787,7 @@ msgstr "Je určený, nastaví téma v aktuálním kanále."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unbanA"
 msgid "Unban ("
-msgstr "Unban ("
+msgstr "Zrušit zákaz ("
 
 #. Continuation of the /unban command description in the help window, after the -b code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1817,7 +1817,7 @@ msgstr "pro více informací."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.voiceA"
 msgid "Give voice ("
-msgstr "Give voice ("
+msgstr "Přidat hlas ("
 
 #. Continuation of the /voice command description in the help window, after the +v code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1835,13 +1835,13 @@ msgstr "Získat informace o daném uživateli v aktuální síti."
 #: client/components/Windows/Help.vue
 msgctxt "help.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr "dodržovat"
 
 #. First word of the two list items under the help window's past-release sentence; each continues with a link comparing two versions. Mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.compare"
 msgid "Compare"
-msgstr "Compare"
+msgstr "Porovnat"
 
 #. Label of the documentation link in the Help window.
 #: client/js/branding.ts
@@ -1908,13 +1908,13 @@ msgstr "Formátování zkratky"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.italic"
 msgid "italics"
-msgstr "italics"
+msgstr "uvozovky"
 
 #. The example word shown in a monospaced font in the help window's Ctrl+M formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.monospace"
 msgid "monospaced"
-msgstr "monospaced"
+msgstr ""
 
 #. Description of the Ctrl+O formatting shortcut in the help window; it removes any formatting applied so far in the message.
 #: client/components/Windows/Help.vue
@@ -2180,7 +2180,7 @@ msgstr "oříškový"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorCyan"
 msgid "Cyan"
-msgstr "cyan"
+msgstr ""
 
 #. Name of the mIRC colour with code 03 (green), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2222,7 +2222,7 @@ msgstr "světlý stříbrný"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorMagenta"
 msgid "Magenta"
-msgstr "magenta"
+msgstr ""
 
 #. Name of the mIRC colour with code 07 (orange), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2348,7 +2348,7 @@ msgstr "médium"
 #: client/components/LinkPreview.vue
 msgctxt "link.kindVideo"
 msgid "video"
-msgstr "video"
+msgstr ""
 
 #. Title on the placeholder of a media preview while its file is downloading after the reader revealed it. {kind} is 'image', 'video' or 'audio'.
 #: client/components/LinkPreview.vue
@@ -2753,121 +2753,121 @@ msgstr "Odpojit"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.editNetwork"
 msgid "Edit this network…"
-msgstr "Edit this network…"
+msgstr "Upravte tento síť…"
 
 #. Context-menu item on a chat channel in the sidebar; opens the editor for the channel's topic line.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.editTopic"
 msgid "Edit topic"
-msgstr "Edit topic"
+msgstr "Upravi téma"
 
 #. Context-menu item that grants an IRC channel role to a user; {name} is the role's name ('operator'), {mode} the mode letter with its plus sign, e.g. +o.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.giveMode"
 msgid "Give {name} (+{mode})"
-msgstr "Give {name} (+{mode})"
+msgstr "Přidat {name} (+{mode})"
 
 #. Context-menu item that grants an IRC mode whose role name is unknown; {mode} is the mode letter with its plus sign, e.g. +z.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.giveModeUnknown"
 msgid "Mode +{mode}"
-msgstr "Mode +{mode}"
+msgstr "Režim +{mode}"
 
 #. Context-menu item on a clickable channel name inside a chat message, when that channel is already open in this client; clicking switches to it.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.goToChannel"
 msgid "Go to channel"
-msgstr "Go to channel"
+msgstr "Přejít do kanálu"
 
 #. Context-menu item on a user; hides all further messages from that user on the network.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.ignore"
 msgid "Ignore user"
-msgstr "Ignore user"
+msgstr "Zobrazit uživatele"
 
 #. Context-menu item on a chat network's home row; opens the field to join a channel on that network. Ellipsis is part of the copy.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.joinChannel"
 msgid "Join a channel…"
-msgstr "Join a channel…"
+msgstr "Připojte se do kanálu…"
 
 #. Context-menu item on a clickable channel name inside a chat message, when that channel is not open yet; clicking joins it.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.joinInline"
 msgid "Join channel"
-msgstr "Join channel"
+msgstr "Připojit do kanálu"
 
 #. Context-menu item on a user in a channel you have permission in; removes that user from the channel (they may rejoin).
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.kick"
 msgid "Kick"
-msgstr "Kick"
+msgstr "Odstranit"
 
 #. Context-menu item on a chat channel in the sidebar; asks the server for the channel's ban list.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.listBanned"
 msgid "List banned users"
-msgstr "List banned users"
+msgstr "Seznam zakázaných uživatelů"
 
 #. Context-menu item on a chat network's home row; asks the server for the list of every public channel on that network.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.listChannels"
 msgid "List all channels"
-msgstr "List all channels"
+msgstr "Seznam všech kanálů"
 
 #. Context-menu item on a chat network's home row; shows the list of users whose messages are hidden on that network.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.listIgnored"
 msgid "List ignored users"
-msgstr "List ignored users"
+msgstr "Seznam z ignorovanými uživateli"
 
 #. Name of the IRC channel administrator role (the & prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeAdmin"
 msgid "admin"
-msgstr "admin"
+msgstr ""
 
 #. Name of the IRC half-operator role (the % prefix), filling {name} in the mode menu items. Lowercase mid-sentence; keep the hyphen if natural.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeHalfOp"
 msgid "half-op"
-msgstr "half-op"
+msgstr "polovinový operátor"
 
 #. Name of the IRC channel operator role (the @ prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOperator"
 msgid "operator"
-msgstr "operator"
+msgstr "operátor"
 
 #. Name of the highest IRC channel role (the ~ prefix), filling {name} in the mode menu items such as 'Revoke {name} (-a)'. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOwner"
 msgid "owner"
-msgstr "owner"
+msgstr "vlastník"
 
 #. Name of the IRC voiced role (the + prefix; may speak in a moderated channel), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeVoice"
 msgid "voice"
-msgstr "voice"
+msgstr "hluk"
 
 #. Context-menu item on a conversation; clicking mutes it (no highlights, no notifications from it). {type} names the kind of conversation in lowercase: 'network', 'channel' or 'conversation'.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.muteType"
 msgid "Mute {type}"
-msgstr "Mute {type}"
+msgstr "Zvýraznit {type}"
 
 #. Context-menu item that takes an IRC channel role away from a user; {name} is the role's name ('operator'), {mode} the mode letter with its minus sign, e.g. -o.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.revokeMode"
 msgid "Revoke {name} (-{mode})"
-msgstr "Revoke {name} (-{mode})"
+msgstr "Zrušit {name} (-{mode})"
 
 #. Context-menu item that removes an IRC mode whose role name is unknown; {mode} is the mode letter with its minus sign, e.g. -z.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.revokeModeUnknown"
 msgid "Mode -{mode}"
-msgstr "Mode -{mode}"
+msgstr "Režim -{mode}"
 
 #. Context-menu item on a conversation whose messages are muted (not highlighted, not notified); clicking unmutes it. {type} names the kind of conversation in lowercase: 'network', 'channel' or 'conversation'.
 #: client/js/helpers/contextMenu.ts
@@ -3168,7 +3168,7 @@ msgstr "chyba {code}"
 #: client/js/irc/handlers/persistence.ts
 msgctxt "persistence.echo"
 msgid "Persistence: {params}"
-msgstr "Persistence: {params}"
+msgstr "Trvalost: {params}"
 
 #. Lobby status line confirming the state change the user asked for. {state} is the server's ON/OFF token, verbatim.
 #: client/js/irc/handlers/persistence.ts
@@ -3566,7 +3566,7 @@ msgstr "Tělo je příliš dlouhé (více než {limit} znaků)."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr "Alias"
+msgstr ""
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
@@ -4695,7 +4695,7 @@ msgstr "Vyhraněný pouze"
 #: client/components/Special/ListIgnored.vue
 msgctxt "special.ignored.hostmask"
 msgid "Hostmask"
-msgstr "Hostmask"
+msgstr ""
 
 #. Column header of the ignore list: when the ignore was set, locale-formatted.
 #: client/components/Special/ListIgnored.vue
@@ -5199,85 +5199,85 @@ msgstr "Překlady…"
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.retranslate"
 msgid "Retranslate"
-msgstr "Retranslate"
+msgstr ""
 
 #. A translation chip's menu item. {language} is the language's name in the reading language.
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.retranslateFrom"
 msgid "Retranslate from: {language}"
-msgstr "Retranslate from: {language}"
+msgstr "Retranslatovat z: {language}"
 
 #. A translation chip's menu item.
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.retranslateFromPicker"
 msgid "Retranslate from…"
-msgstr "Retranslate from…"
+msgstr "Retranslatovat z…"
 
 #. A translation chip's menu item.
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.showOriginal"
 msgid "Show original only"
-msgstr "Show original only"
+msgstr "Zobrazit originál"
 
 #. A translation chip's menu item.
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.translateAnyway"
 msgid "Translate anyway"
-msgstr "Translate anyway"
+msgstr "Překlad však"
 
 #. Button on a model row in Settings → Translation that removes the downloaded model from this device.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.delete"
 msgid "Delete"
-msgstr "Delete"
+msgstr "Vymazat"
 
 #. Button on a model row in Settings → Translation that fetches the model onto this device.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.download"
 msgid "Download"
-msgstr "Download"
+msgstr "Stáhnutí"
 
 #. State of a model row in Settings → Translation: the model is on this device.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.downloaded"
 msgid "Downloaded"
-msgstr "Downloaded"
+msgstr "Stáhnuto"
 
 #. State of a model row in Settings → Translation after a download failed. {error} is the library's own untranslated message.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.failed"
 msgid "Failed: {error}"
-msgstr "Failed: {error}"
+msgstr "Selhalo: {error}"
 
 #. State of a model row in Settings → Translation after a download failed with no message of its own.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.failedUnknown"
 msgid "Failed: unknown error"
-msgstr "Failed: unknown error"
+msgstr "Selhalo: neznámá chyba"
 
 #. The name of a translation model in Settings → Translation: a large language model that runs on the graphics processor. {name} is the model's product name, never translated; GPU is the usual abbreviation for the graphics processor.
 #: client/js/helpers/modelLabel.ts
 msgctxt "translate.model.llm"
 msgid "{name} (GPU, all languages)"
-msgstr "{name} (GPU, all languages)"
+msgstr "{name} (GPU, všechny jazyky)"
 
 #. State of a model row in Settings → Translation: it is already on the device and is being loaded into memory. {percent} is a number from 0 to 100.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.loadingPercent"
 msgid "Loading… {percent}%"
-msgstr "Loading… {percent}%"
+msgstr "Načítání… {percent}%"
 
 #. The name of a translation model in Settings → Translation. NLLB-200 600M is a product name; CPU is the usual abbreviation for the main processor; it covers 200 languages.
 #: client/js/helpers/modelLabel.ts
 msgctxt "translate.model.nllb"
 msgid "NLLB-200 600M (CPU, 200 languages)"
-msgstr "NLLB-200 600M (CPU, 200 languages)"
+msgstr "NLLB-200 600M (CPU, 200 jazyků)"
 
 #. State of a model row in Settings → Translation: the model is not on this device yet.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.notDownloaded"
 msgid "Not downloaded"
-msgstr "Not downloaded"
+msgstr "Nebyl stříbrný"
 
 #. The name of a translation model in Settings → Translation: an OPUS-MT pair that runs on the main processor. {from} and {to} are language names. OPUS-MT is a product name and CPU is the usual abbreviation for the main processor.
 #: client/js/helpers/modelLabel.ts
@@ -5295,25 +5295,25 @@ msgstr "{percent}%"
 #: client/components/TranslationLine.vue
 msgctxt "translate.notTranslated"
 msgid "Not translated"
-msgstr "Not translated"
+msgstr "Nebyl překladený"
 
 #. The placeholder option of the picker that adds a language to the list of languages spoken in this conversation, in the translation panel.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.addLanguage"
 msgid "Add a language…"
-msgstr "Add a language…"
+msgstr "Přidej jazyk…"
 
 #. Tooltip and aria-label of the ✕ button that closes the translation panel.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.close"
 msgid "Close"
-msgstr "Close"
+msgstr "Zavřít"
 
 #. Heading of the translation panel, a dialog of translation settings for one conversation; the conversation's name is shown next to it.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.heading"
 msgid "Translation"
-msgstr "Translation"
+msgstr "Překlady"
 
 #. Explanatory note under the list of languages spoken in this conversation, in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -5601,7 +5601,7 @@ msgstr "Odeslat preklad"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sourceAuto"
 msgid "auto"
-msgstr "auto"
+msgstr "automatický"
 
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue
@@ -5937,7 +5937,7 @@ msgstr "zobrazit všechny verze"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.aria"
 msgid "Changelog"
-msgstr "Changelog"
+msgstr ""
 
 #. Link at the top of the changelog window that goes back to the help page; the left double angle quote is part of the copy.
 #: client/components/Windows/Changelog.vue
@@ -5949,7 +5949,7 @@ msgstr "« Pomoc"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First sentence of the paragraph in the changelog window that says the release notes are read online; the following words are the two links.
 #: client/components/Windows/Changelog.vue

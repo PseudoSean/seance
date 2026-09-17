@@ -40,25 +40,25 @@ msgstr "{type}: {name} ({extra})"
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.channel"
 msgid "Channel"
-msgstr "Channel"
+msgstr "频道"
 
 #. Names the kind of window in a sidebar row's aria-label: the chat network's own window. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.lobby"
 msgid "Network"
-msgstr "Network"
+msgstr "网络"
 
 #. Names the kind of window in a sidebar row's aria-label: a private conversation with one person. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.query"
 msgid "Conversation"
-msgstr "Conversation"
+msgstr "对话"
 
 #. Names the kind of window in a sidebar row's aria-label: a results window such as a channel list or a ban list. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.special"
 msgid "List"
-msgstr "List"
+msgstr "列表"
 
 #. Tooltip and aria-label of the spinner in a chat window's header while the connection is being established, when the network's display name is not known.
 #: client/components/Chat.vue:186
@@ -474,7 +474,7 @@ msgstr "上传文件"
 #: client/components/ChatInput.vue:580
 msgctxt "composer.uploadIndex"
 msgid "{index} of {count}"
-msgstr "{index} of {count}"
+msgstr ""
 
 #. Part of the upload progress bar, appended after the uploading text while the file is being prepared (re-encoded or stripped of metadata) before it is sent. Starts lowercase because it is joined with the other parts into one line.
 #: client/components/ChatInput.vue:584
@@ -969,7 +969,7 @@ msgstr "TLS握手失败"
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.codeUnknown"
 msgid "code {code}"
-msgstr "code {code}"
+msgstr ""
 
 #. Connection-failure report when the WebSocket never opened. {url} is the address that was dialled, verbatim. {error} is ' (<the browser's error text>)' or empty — the browser hides why a dial failed, so the slot often stays empty.
 #: client/js/irc/disconnect.ts
@@ -5570,7 +5570,7 @@ msgstr "发送翻译"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sourceAuto"
 msgid "auto"
-msgstr "auto"
+msgstr ""
 
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue

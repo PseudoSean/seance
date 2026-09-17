@@ -40,25 +40,25 @@ msgstr "{type}: {name} ({extra})"
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.channel"
 msgid "Channel"
-msgstr "Channel"
+msgstr "القناة"
 
 #. Names the kind of window in a sidebar row's aria-label: the chat network's own window. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.lobby"
 msgid "Network"
-msgstr "Network"
+msgstr "الشبكة"
 
 #. Names the kind of window in a sidebar row's aria-label: a private conversation with one person. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.query"
 msgid "Conversation"
-msgstr "Conversation"
+msgstr "المحادثة"
 
 #. Names the kind of window in a sidebar row's aria-label: a results window such as a channel list or a ban list. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.special"
 msgid "List"
-msgstr "List"
+msgstr "القائمة"
 
 #. Tooltip and aria-label of the spinner in a chat window's header while the connection is being established, when the network's display name is not known.
 #: client/components/Chat.vue:186
@@ -291,13 +291,13 @@ msgstr "لا يمكن فتح نافذة استفسار دون وجود حقل."
 #: client/js/irc/commands/msg.ts
 msgctxt "cmd.query.prefix"
 msgid "You can not open query windows for names starting with a user prefix."
-msgstr "You can not open query windows for names starting with a user prefix."
+msgstr ""
 
 #. Error when /query is given a name with spaces; nicks cannot contain them.
 #: client/js/irc/commands/msg.ts
 msgctxt "cmd.query.spaces"
 msgid "You can not open query windows for names containing spaces."
-msgstr "You can not open query windows for names containing spaces."
+msgstr ""
 
 #. Error when /react is typed where no recent message can carry a reaction (e.g. a window without message-tags history).
 #: client/js/irc/commands/react.ts
@@ -365,11 +365,11 @@ msgctxt "code.showAllLines"
 msgid "Show all {count} line"
 msgid_plural "Show all {count} lines"
 msgstr[0] "عرض جميع {count} خط"
-msgstr[1] "Show all {count} line"
-msgstr[2] "Show all {count} lines"
-msgstr[3] "Show all {count} lines"
-msgstr[4] "Show all {count} lines"
-msgstr[5] "Show all {count} lines"
+msgstr[1] "أظهر كل {count} خط"
+msgstr[2] "أظهر كل {count} خطوط"
+msgstr[3] "أظهر كل {count} خطوط"
+msgstr[4] "أظهر كل {count} خطوط"
+msgstr[5] "أظهر كل {count} خطوط"
 
 #. Button under a long code block in a chat message while all of its lines are shown; clicking folds the block back to its first lines.
 #: client/components/CodeBlock.vue
@@ -417,7 +417,7 @@ msgstr "الاتصال بـ {network}…"
 #: client/components/ChatInput.vue:339
 msgctxt "composer.disconnectedFrom"
 msgid "Disconnected from {network}."
-msgstr "Disconnected from {network}."
+msgstr "متصصل من {network}."
 
 #. Label at the left of the compose bar shown while the user edits a message they already sent; the edited text follows it in the same line.
 #: client/components/ChatInput.vue:55
@@ -447,18 +447,18 @@ msgstr "غير متصصل"
 #: client/components/ChatInput.vue:293
 msgctxt "composer.placeholder"
 msgid "Write to {name}"
-msgstr "Write to {name}"
+msgstr "كتابة إلى {name}"
 
 #. Text of the connection bar shown above the message input while the client waits to reconnect to a chat network it lost. {network} is the display name of the chat network; {seconds} is the whole number of seconds until the retry starts, updating every half second. The singular form shows when one second remains, the plural for any other number.
 #: client/components/ChatInput.vue:343
 msgctxt "composer.reconnectIn"
 msgid "Reconnecting to {network} in {seconds}s…"
 msgid_plural "Reconnecting to {network} in {seconds}s…"
-msgstr[0] "Reconnecting to {network} in {seconds}s…"
-msgstr[1] "Reconnecting to {network} in {seconds}s…"
-msgstr[2] "Reconnecting to {network} in {seconds}s…"
-msgstr[3] "Reconnecting to {network} in {seconds}s…"
-msgstr[4] "Reconnecting to {network} in {seconds}s…"
+msgstr[0] "إعادة الاتصال بـ {network} في {seconds}s…"
+msgstr[1] "إعادة الاتصال بـ {network} في {seconds}s…"
+msgstr[2] "إعادة الاتصال بـ {network} في {seconds}s…"
+msgstr[3] "إعادة الاتصال بـ {network} في {seconds}s…"
+msgstr[4] "إعادة الاتصال بـ {network} في {seconds}s…"
 msgstr[5] "إعادة الاتصال بـ {network} في {seconds}s…"
 
 #. Label at the left of the compose bar shown while a reply is being written. {nick} is the name of the user being replied to, shown emphasized; the quoted message preview follows it. Keep the trailing colon.
@@ -581,11 +581,11 @@ msgctxt "condensed.modes"
 msgid "{count} mode was set"
 msgid_plural "{count} modes were set"
 msgstr[0] "تم تعيين الوضع {count}"
-msgstr[1] "{count} mode was set"
-msgstr[2] "{count} modes were set"
-msgstr[3] "{count} modes were set"
-msgstr[4] "{count} modes were set"
-msgstr[5] "{count} modes were set"
+msgstr[1] "تم تعيين {count} mode"
+msgstr[2] "تم تعيين {count} modes"
+msgstr[3] "{count} تم تعيين الوضعيات"
+msgstr[4] "{count} تم تعيين الوضعيات"
+msgstr[5] "{count} تم تعيين الوضعيات"
 
 #. Condensed status block: {count} users renamed while the block was collapsed.
 #: client/components/MessageCondensed.vue
@@ -593,11 +593,11 @@ msgctxt "condensed.nick"
 msgid "{count} user has changed nick"
 msgid_plural "{count} users have changed nick"
 msgstr[0] "تغيّر {count} المستخدم لاسم المستخدم"
-msgstr[1] "{count} user has changed nick"
-msgstr[2] "{count} users have changed nick"
-msgstr[3] "{count} users have changed nick"
-msgstr[4] "{count} users have changed nick"
-msgstr[5] "{count} users have changed nick"
+msgstr[1] "{count} مستخدم تغير اسمه"
+msgstr[2] "{count} مستخدمين تغير اسمهم"
+msgstr[3] "{count} مستخدمين تغيّر لاعبهم"
+msgstr[4] "{count} مستخدمين تغيّر لاعبهم"
+msgstr[5] "{count} مستخدمين تغيّر لاعبهم"
 
 #. aria-label of the small toggle button that expands or collapses the condensed status block in a channel's scrollback.
 #: client/components/MessageCondensed.vue
@@ -825,7 +825,7 @@ msgstr "رفض الخادم القدرة SASL"
 #: client/js/irc/client.ts
 msgctxt "connect.saslReason.noCredentials"
 msgid "no account name or password is configured"
-msgstr "no account name or password is configured"
+msgstr "لا يوجد اسم حساب أو كلمة مرور مُحدَّث"
 
 #. Reason fragment of 'SASL authentication failed: {reason}' when a SASL failure numeric carries no text of its own. {code} is the numeric, verbatim. Lowercase mid-sentence by position.
 #: client/js/irc/sasl.ts
@@ -1126,7 +1126,7 @@ msgstr "لا يمكن الانضمام إلى {channel} - القناة مغلق�
 #: client/js/irc/handlers/cap.ts
 msgctxt "error.missingCaps"
 msgid "Missing required capabilities: {caps}"
-msgstr "Missing required capabilities: {caps}"
+msgstr "نقص في المزايا المطلوبة: {caps}"
 
 #. Send refusal (401) phrased by the client; {nick} is the addressed nick, user data.
 #: client/components/MessageTypes/error.vue
@@ -1228,7 +1228,7 @@ msgstr "إشعارات المتصفح لهذا الشبكة"
 #: client/components/NetworkForm.vue:263
 msgctxt "form.browserNotificationsHelp"
 msgid "Show browser notifications for highlights and queries on this network. Needs the browser's permission; asks when first saved. Each network is set up independently."
-msgstr "Show browser notifications for highlights and queries on this network. Needs the browser's permission; asks when first saved. Each network is set up independently."
+msgstr "أظهر إشعارات المتصفح للإضاءات والأسئلة على هذا الشبكة. يحتاج إلى إذن المتصفح؛ يسأل عند الحفظ لأول مرة. كل شبكة تُجهز بشكل منفصل."
 
 #. Label of the field listing channels to join automatically after connecting, on the network edit form.
 #: client/components/NetworkForm.vue:119
@@ -1282,7 +1282,7 @@ msgstr "مُقطع"
 #: client/components/NetworkForm.vue:14
 msgctxt "form.editTitle"
 msgid "Edit {name}"
-msgstr "Edit {name}"
+msgstr "تعديل {name}"
 
 #. Label of the display-name field of a saved network on the network edit form.
 #: client/components/NetworkForm.vue:42
@@ -1330,7 +1330,7 @@ msgstr "تركه فارغ لاحتفاظ بكلمة المرور الحالية"
 #: client/components/NetworkForm.vue:225
 msgctxt "form.pushHelp"
 msgid "Register this device for push notifications on this network. The server must support the draft/webpush capability. Push needs authentication, so this only appears with SASL configured. Each network is set up independently."
-msgstr "Register this device for push notifications on this network. The server must support the draft/webpush capability. Push needs authentication, so this only appears with SASL configured. Each network is set up independently."
+msgstr ""
 
 #. Checkbox on the network edit form: register this device for this network's push notifications.
 #: client/components/NetworkForm.vue:222
@@ -1709,7 +1709,7 @@ msgstr "استرجاع قائمة القنوات المتاحة في هذا ال
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.me"
 msgid "Send an action message to the current channel. {appName} will display it inline, as if the message was posted in the third person."
-msgstr "Send an action message to the current channel. {appName} will display it inline, as if the message was posted in the third person."
+msgstr ""
 
 #. Description of the /mode command in the help window; explains whose modes the flags apply to depending on the active window.
 #: client/components/Windows/Help.vue
@@ -2414,7 +2414,7 @@ msgstr "إظهار {kind} من {host}"
 #: client/js/helpers/mediaTrustMenu.ts
 msgctxt "link.trustAdd"
 msgid "Always show {scope}"
-msgstr "Always show {scope}"
+msgstr "أظهر دائمًا {scope}"
 
 #. Text of the trust button on a media preview when nothing is trusted yet; clicking opens the menu that allows this media always. The caret follows it.
 #: client/components/LinkPreview.vue
@@ -2433,20 +2433,20 @@ msgstr "تم إظهاره دائمًا"
 #: client/components/LinkPreview.vue
 msgctxt "link.trustFromHost"
 msgid "from {name}"
-msgstr "from {name}"
+msgstr "من {name}"
 
 #. Name of a media-trust scope in the trust menu of a media preview and in the toolbar tooltip summarizing active rules: always allowing media posted in the chat channel. {name} is that channel's name. Starts lowercase; it follows the words 'Always show' or 'Stop always showing'.
 #: client/js/helpers/mediaTrustMenu.ts
 #: client/components/LinkPreview.vue
 msgctxt "link.trustInChannel"
 msgid "in {name}"
-msgstr "in {name}"
+msgstr "في {name}"
 
 #. Menu item on a media preview's trust menu: removes the existing rule that always loads this media for the named scope ('from example.com', 'in #chat', 'from alice').
 #: client/js/helpers/mediaTrustMenu.ts
 msgctxt "link.trustRemove"
 msgid "Stop always showing {scope}"
-msgstr "Stop always showing {scope}"
+msgstr "توقف عن عرض {scope} دائمًا"
 
 #. Tooltip of the trust button on a media preview when nothing is trusted yet; names the three scopes a rule can cover.
 #: client/components/LinkPreview.vue
@@ -2858,7 +2858,7 @@ msgstr "قائمة المستخدمين المتجاهلين"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeAdmin"
 msgid "admin"
-msgstr "admin"
+msgstr ""
 
 #. Name of the IRC half-operator role (the % prefix), filling {name} in the mode menu items. Lowercase mid-sentence; keep the hyphen if natural.
 #: client/js/helpers/contextMenu.ts
@@ -3243,13 +3243,13 @@ msgstr "هذه الشبكة"
 #: client/components/PushPrompt.vue
 msgctxt "push.never"
 msgid "Never"
-msgstr "Never"
+msgstr "لا"
 
 #. Button of the push opt-in prompt; declines for now without disabling future prompts.
 #: client/components/PushPrompt.vue
 msgctxt "push.no"
 msgid "No"
-msgstr "No"
+msgstr "لا"
 
 #. Body of the push-renewal prompt; explains why the subscription broke and that re-subscribing can be done later from that network's settings.
 #: client/components/PushPrompt.vue
@@ -4093,11 +4093,11 @@ msgctxt "settings.general.backupNetworks"
 msgid "{count} network"
 msgid_plural "{count} networks"
 msgstr[0] "{count} شبكة"
-msgstr[1] "{count} network"
-msgstr[2] "{count} networks"
-msgstr[3] "{count} networks"
-msgstr[4] "{count} networks"
-msgstr[5] "{count} networks"
+msgstr[1] "{count} شبكة"
+msgstr[2] "{count} شبكات"
+msgstr[3] "{count} شبكات"
+msgstr[4] "{count} شبكات"
+msgstr[5] ""
 
 #. Part of the restore-confirmation sentence in Settings > General: fills the list of what the file replaces for the app's own preferences. Comma-joined with the other parts by position.
 #: client/components/Settings/General.vue
@@ -4616,7 +4616,7 @@ msgstr ""
 #: client/components/NetworkList.vue:17
 msgctxt "sidebar.jumpTo"
 msgid "Jump to..."
-msgstr ""
+msgstr "انتقل إلى..."
 
 #. Tooltip and screen-reader label of the globe button beside the sidebar logo, which opens the language panel (the same selector the connect form and Settings → Appearance carry).
 #: client/components/Sidebar.vue:8
@@ -5373,7 +5373,7 @@ msgstr "تمت إدراك الأسطر في هذه اللغات حتى لو كا
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.off"
 msgid "Off"
-msgstr "off"
+msgstr "إيقاف"
 
 #. The on choice of the segmented switch for translating incoming messages, in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -5619,7 +5619,7 @@ msgstr "{from} → {to} · {model} (CPU)"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.routeCpuRetried"
 msgid "{from} → {to} · {model} (CPU) · retried without a source"
-msgstr "{from} → {to} · {model} (CPU) · retried without a source"
+msgstr "{from} → {to} · {model} (CPU) · تم التكرار دون مصدر"
 
 #. Tooltip of the composer translation strip's direction chip, naming the route a translation took. {from} and {to} are language names (or the word from translate.strip.sourceAuto), {model} is the model's technical id. This one ran on the graphics processor.
 #: client/components/ChatInput.vue
@@ -5631,43 +5631,43 @@ msgstr "{from} → {to} · {model} (GPU)"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.routeGpuRetried"
 msgid "{from} → {to} · {model} (GPU) · retried without a source"
-msgstr "{from} → {to} · {model} (GPU) · retried without a source"
+msgstr "{from} → {to} · {model} (GPU) · تم التكرار دون مصدر"
 
 #. Tooltip and aria-label of the send button in the composer's translation strip after the translation failed: the message goes out in the language the user typed it in.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sendAsWritten"
 msgid "Send as written"
-msgstr "Send as written"
+msgstr "أرسل كما هو"
 
 #. Tooltip and aria-label of the send button in the composer's translation strip: the translated text is what gets sent.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sendTranslation"
 msgid "Send the translation"
-msgstr "Send the translation"
+msgstr "أرسل الترجمة"
 
 #. Stands in for the source language in the composer translation strip's route tooltip when no source was named and the model was left to work it out. Substituted as {from} in translate.strip.routeGpu and its siblings.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sourceAuto"
 msgid "auto"
-msgstr "auto"
+msgstr ""
 
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue
 msgctxt "translate.unchangedReason"
 msgid "the line came back unchanged"
-msgstr "the line came back unchanged"
+msgstr "عادed النص كما كان"
 
 #. Translation panel, channel languages field. {channel} is the channel's name (#seance).
 #: client/components/TranslationPanel.vue
 msgctxt "translation.panel.languages"
 msgid "Languages: {channel}"
-msgstr "Languages: {channel}"
+msgstr "اللغات: {channel}"
 
 #. Translation panel, a language chip's remove button. {language} is the language's name in the interface language.
 #: client/components/TranslationPanel.vue
 msgctxt "translation.panel.remove"
 msgid "Remove {language}"
-msgstr "Remove {language}"
+msgstr "احذف {language}"
 
 #. Line above the message input naming the two longest-typing users and summarizing everyone else. {nick1} and {nick2} are those users' names; {count} is how many further users are typing. The singular form shows when one further user is meant, the plural for any other number.
 #: client/components/TypingIndicator.vue:31
@@ -5675,11 +5675,11 @@ msgctxt "typing.many"
 msgid "{nick1}, {nick2} and {count} other is typing…"
 msgid_plural "{nick1}, {nick2} and {count} others are typing…"
 msgstr[0] "{nick1}, {nick2} و {count} آخر هو يكتب..."
-msgstr[1] "{nick1}, {nick2} and {count} other is typing…"
-msgstr[2] "{nick1}, {nick2} and {count} others are typing…"
-msgstr[3] "{nick1}, {nick2} and {count} others are typing…"
-msgstr[4] "{nick1}, {nick2} and {count} others are typing…"
-msgstr[5] "{nick1}, {nick2} and {count} others are typing…"
+msgstr[1] "{nick1}، {nick2} و {count} الآخرون يكتبون..."
+msgstr[2] "{nick1}، {nick2} و {count} الآخرون يكتبون..."
+msgstr[3] "{nick1}، {nick2} و {count} الآخرون يكتبون..."
+msgstr[4] "{nick1}، {nick2} و {count} الآخرون يكتبون..."
+msgstr[5] "{nick1}، {nick2} و {count} الآخرون يكتبون..."
 
 #. Line above the message input saying that one user is writing a message right now. {nick} is that user's name.
 #: client/components/TypingIndicator.vue:31
@@ -5751,7 +5751,7 @@ msgstr "هل ترغب في تحميل هذا الملف؟"
 #: client/js/upload.ts:765
 msgctxt "upload.disconnected"
 msgid "You are currently disconnected, unable to initiate upload process."
-msgstr "You are currently disconnected, unable to initiate upload process."
+msgstr "لا يمكنك البدء في عملية التحميل الآن لأنك مُتصصل."
 
 #. Frame for a failed upload; the underlying reason follows the colon. {reason} is the browser's or endpoint's own message, kept verbatim — its content is not our copy.
 #: client/js/upload.ts:464
@@ -5837,11 +5837,11 @@ msgctxt "userlist.count"
 msgid "{count} user"
 msgid_plural "{count} users"
 msgstr[0] "{count} مستخدم"
-msgstr[1] "{count} user"
-msgstr[2] "{count} users"
-msgstr[3] "{count} users"
-msgstr[4] "{count} users"
-msgstr[5] "{count} users"
+msgstr[1] "{count} مستخدم"
+msgstr[2] "{count} مستخدمين"
+msgstr[3] "{count} مستخدم"
+msgstr[4] "{count} مستخدمين"
+msgstr[5] "مستخدمين {count}"
 
 #. Visually hidden but screen-reader-spoken label of the search field at the top of the channel member panel, used to filter the member list by name.
 #: client/components/ChatUserList.vue:17

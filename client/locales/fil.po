@@ -40,25 +40,25 @@ msgstr "{type}: {name} ({extra})"
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.channel"
 msgid "Channel"
-msgstr "Channel"
+msgstr ""
 
 #. Names the kind of window in a sidebar row's aria-label: the chat network's own window. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.lobby"
 msgid "Network"
-msgstr "Network"
+msgstr ""
 
 #. Names the kind of window in a sidebar row's aria-label: a private conversation with one person. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.query"
 msgid "Conversation"
-msgstr "Conversation"
+msgstr ""
 
 #. Names the kind of window in a sidebar row's aria-label: a results window such as a channel list or a ban list. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.special"
 msgid "List"
-msgstr "List"
+msgstr ""
 
 #. Tooltip and aria-label of the spinner in a chat window's header while the connection is being established, when the network's display name is not known.
 #: client/components/Chat.vue:186
@@ -364,50 +364,50 @@ msgstr "Paggamit: /{cmd} <msgid> [babasa]"
 msgctxt "code.showAllLines"
 msgid "Show all {count} line"
 msgid_plural "Show all {count} lines"
-msgstr[0] "Show all {count} line"
-msgstr[1] "Show all {count} lines"
+msgstr[0] ""
+msgstr[1] "Sumayawan la mga line {count}"
 
 #. Button under a long code block in a chat message while all of its lines are shown; clicking folds the block back to its first lines.
 #: client/components/CodeBlock.vue
 msgctxt "code.showLess"
 msgid "Show less"
-msgstr "Show less"
+msgstr "Hugot"
 
 #. aria-label of the ✕ button that leaves reply or edit mode in the compose bar above the message input; the keyboard key Escape does the same.
 #: client/components/ChatInput.vue:67
 msgctxt "composer.cancel"
 msgid "Cancel"
-msgstr "Cancel"
+msgstr "I-una"
 
 #. Tooltip of the ✕ button that leaves reply or edit mode in the compose bar; it names the keyboard key that does the same thing.
 #: client/components/ChatInput.vue:68
 msgctxt "composer.cancelEscape"
 msgid "Cancel (Escape)"
-msgstr "Cancel (Escape)"
+msgstr "I-una (Escape)"
 
 #. Tooltip and aria-label of the ✕ button on the upload progress bar above the message input; clicking it aborts the upload in progress.
 #: client/components/ChatInput.vue:45
 msgctxt "composer.cancelUpload"
 msgid "Cancel upload"
-msgstr "Cancel upload"
+msgstr "I-una pag-upload"
 
 #. Button in the connection bar shown above the message input when the connection to the chat network is down and no automatic retry is in progress; clicking it dials the network again.
 #: client/components/ChatInput.vue:19
 msgctxt "composer.connect"
 msgid "Connect"
-msgstr "Connect"
+msgstr "Kumple"
 
 #. Button in the connection bar shown above the message input while the app waits to retry a dropped connection to the chat network; clicking it skips the wait and dials the network immediately.
 #: client/components/ChatInput.vue:19
 msgctxt "composer.connectNow"
 msgid "Connect now"
-msgstr "Connect now"
+msgstr "Kumple ngayon"
 
 #. Text of the connection bar shown above the message input while the dial to the chat network is in flight (a spinner turns beside it). {network} is the display name of the chat network.
 #: client/components/ChatInput.vue:344
 msgctxt "composer.connectingTo"
 msgid "Connecting to {network}…"
-msgstr "Connecting to {network}…"
+msgstr "Kumplehan sa {network}…"
 
 #. Text of the connection bar shown above the message input when the chat network is down and no reconnect attempt is running yet. {network} is the display name of the chat network.
 #: client/components/ChatInput.vue:339
@@ -451,7 +451,7 @@ msgctxt "composer.reconnectIn"
 msgid "Reconnecting to {network} in {seconds}s…"
 msgid_plural "Reconnecting to {network} in {seconds}s…"
 msgstr[0] "Nagsasalikay sa {network} sa {seconds}s…"
-msgstr[1] "Reconnecting to {network} in {seconds}s…"
+msgstr[1] "Kumplehan uli sa {network} sa {seconds}s…"
 
 #. Label at the left of the compose bar shown while a reply is being written. {nick} is the name of the user being replied to, shown emphasized; the quoted message preview follows it. Keep the trailing colon.
 #: client/components/ChatInput.vue:60
@@ -501,7 +501,7 @@ msgctxt "condensed.away"
 msgid "marked away once"
 msgid_plural "marked away {count} times"
 msgstr[0] "Nagsasagawa ng pag-una sa pag-una"
-msgstr[1] "marked away {count} times"
+msgstr[1] "nakalibot na {count} beses"
 
 #. Condensed status block: back markings while the block was collapsed. The singular shows 'once' when one marking happened, the plural the number of markings; {count} is that number.
 #: client/components/MessageCondensed.vue
@@ -509,7 +509,7 @@ msgctxt "condensed.back"
 msgid "marked back once"
 msgid_plural "marked back {count} times"
 msgstr[0] "Nagsasagawa ng pag-una sa pag-iba"
-msgstr[1] "marked back {count} times"
+msgstr[1] "napala na wala na {count} beses"
 
 #. Condensed status block: {count} users changed their username/hostname while the block was collapsed.
 #: client/components/MessageCondensed.vue
@@ -517,7 +517,7 @@ msgctxt "condensed.chghost"
 msgid "{count} user has changed hostname"
 msgid_plural "{count} users have changed hostname"
 msgstr[0] "{count} user ay nagbabago ng hostname"
-msgstr[1] "{count} users have changed hostname"
+msgstr[1] "{count} mga miembro na nag-change han hostname"
 
 #. Condensed status block: {count} users joined while the block was collapsed. The counts of several kinds join into one sentence in the active locale's list format.
 #: client/components/MessageCondensed.vue
@@ -525,7 +525,7 @@ msgctxt "condensed.join"
 msgid "{count} user has joined"
 msgid_plural "{count} users have joined"
 msgstr[0] "{count} user ay nagsali"
-msgstr[1] "{count} users have joined"
+msgstr[1] "{count} mga miembro na nagsalibay"
 
 #. Condensed status block: {count} users were kicked while the block was collapsed.
 #: client/components/MessageCondensed.vue
@@ -541,7 +541,7 @@ msgctxt "condensed.left"
 msgid "{count} user has left"
 msgid_plural "{count} users have left"
 msgstr[0] "{count} user ay nagsali ng pag-ibayo"
-msgstr[1] "{count} users have left"
+msgstr[1] "{count} mga miembro na nagsalibay"
 
 #. Condensed status block: {count} channel-mode changes were set while the block was collapsed (one MODE line can carry several).
 #: client/components/MessageCondensed.vue
@@ -549,7 +549,7 @@ msgctxt "condensed.modes"
 msgid "{count} mode was set"
 msgid_plural "{count} modes were set"
 msgstr[0] "{count} mode ay nais set"
-msgstr[1] "{count} modes were set"
+msgstr[1] "{count} mga mode na nagsalibay"
 
 #. Condensed status block: {count} users renamed while the block was collapsed.
 #: client/components/MessageCondensed.vue
@@ -557,7 +557,7 @@ msgctxt "condensed.nick"
 msgid "{count} user has changed nick"
 msgid_plural "{count} users have changed nick"
 msgstr[0] "{count} user ay naging nag-change ng nick"
-msgstr[1] "{count} users have changed nick"
+msgstr[1] ""
 
 #. aria-label of the small toggle button that expands or collapses the condensed status block in a channel's scrollback.
 #: client/components/MessageCondensed.vue
@@ -576,7 +576,7 @@ msgstr "I-terminate"
 #: client/components/Windows/Connect.vue:213
 msgctxt "connect.account"
 msgid "Account"
-msgstr "Account"
+msgstr ""
 
 #. aria-label of the whole connect screen (the window/dialog element); announced by screen readers on arriving at the form.
 #: client/components/Windows/Connect.vue:7
@@ -692,7 +692,7 @@ msgstr "Ang link ay nagpapahiwatay na magkakasali sa {host}:{port} at mag-join s
 #: client/components/Windows/Connect.vue:126
 msgctxt "connect.network"
 msgid "Network"
-msgstr "Network"
+msgstr ""
 
 #. Heading of the connect form when it opened from a web+irc:// link that proposes a server the user has not approved yet.
 #: client/components/Windows/Connect.vue:118
@@ -705,7 +705,7 @@ msgstr "Magkakasali sa isang bagong server?"
 #: client/components/Windows/Connect.vue:173
 msgctxt "connect.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr ""
 
 #. Dismiss button on the connect screen shown as a dialog when the user followed a web+irc:// link; declines the connection without disconnecting the app.
 #: client/components/Windows/Connect.vue:91
@@ -719,7 +719,7 @@ msgstr "Hindi ngayon"
 #: client/components/Windows/Connect.vue:228
 msgctxt "connect.password"
 msgid "Password"
-msgstr "Password"
+msgstr ""
 
 #. Checkbox in the authentication section of the connect form: register this device for push notifications once the IRC server supports it.
 #: client/components/Windows/Connect.vue:251
@@ -791,7 +791,7 @@ msgstr "walang pangalan ng account o password na nakakasali"
 #: client/js/irc/sasl.ts
 msgctxt "connect.saslReason.numeric"
 msgid "numeric {code}"
-msgstr "numeric {code}"
+msgstr ""
 
 #. Reason fragment of 'SASL authentication failed: {reason}' when the server took too long to answer the login. Lowercase mid-sentence by position.
 #: client/js/irc/client.ts
@@ -834,7 +834,7 @@ msgstr "May account ng serbisyo (SASL)"
 #: client/components/Windows/Connect.vue:132
 msgctxt "connect.server"
 msgid "Server"
-msgstr "Server"
+msgstr ""
 
 #. aria-label of the server host text input (e.g. irc.example.org) on the connect form; the visible label is on the row.
 #: client/components/Windows/Connect.vue:139
@@ -900,7 +900,7 @@ msgstr "Gamitin secure connection (TLS)"
 #: client/components/Windows/Connect.vue:171
 msgctxt "connect.user"
 msgid "User"
-msgstr "User"
+msgstr ""
 
 #. Error line the app shows when the connection to the chat server failed (also flashed on the loading splash). {message} is the verbatim technical message from the server or browser — never translate or reword its content.
 #: client/js/socket-events/connection.ts
@@ -924,121 +924,121 @@ msgstr "Ngayon pa noong kumpleto"
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1001"
 msgid "server going away"
-msgstr "server going away"
+msgstr ""
 
 #. Name of WebSocket close code 1002 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1002"
 msgid "WebSocket protocol error"
-msgstr "WebSocket protocol error"
+msgstr ""
 
 #. Name of WebSocket close code 1006 (abnormal closure: refused, unreachable, TLS failure — the browser never says which) in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1006"
 msgid "connection lost"
-msgstr "connection lost"
+msgstr "nakakalat ang koneksyon"
 
 #. Name of WebSocket close code 1008 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1008"
 msgid "policy violation"
-msgstr "policy violation"
+msgstr "pag-ibig na nakakalat"
 
 #. Name of WebSocket close code 1009 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1009"
 msgid "message too large"
-msgstr "message too large"
+msgstr "mensahe na too malaki"
 
 #. Name of WebSocket close code 1011 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1011"
 msgid "server error"
-msgstr "server error"
+msgstr "error sa server"
 
 #. Name of WebSocket close code 1012 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1012"
 msgid "server restarting"
-msgstr "server restarting"
+msgstr "server nagsimula na mag-umpisa"
 
 #. Name of WebSocket close code 1013 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1013"
 msgid "server asked to try again later"
-msgstr "server asked to try again later"
+msgstr "server nag-uusap na i-try ulit pagkatapos"
 
 #. Name of WebSocket close code 1015 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1015"
 msgid "TLS handshake failed"
-msgstr "TLS handshake failed"
+msgstr "handshake sa TLS nagsimula ng mali"
 
 #. Detail of a connection-failure report when the WebSocket closed with a code the app has no name for. {code} is the numeric close code, verbatim.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.codeUnknown"
 msgid "code {code}"
-msgstr "code {code}"
+msgstr ""
 
 #. Connection-failure report when the WebSocket never opened. {url} is the address that was dialled, verbatim. {error} is ' (<the browser's error text>)' or empty — the browser hides why a dial failed, so the slot often stays empty.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.couldNotConnect"
 msgid "Could not connect to {url}{error}."
-msgstr "Could not connect to {url}{error}."
+msgstr "Wala na mag-connection sa {url}{error}."
 
 #. Headline when a network the client is dialling never opened and the retry schedule is standing down (the browser refused or could not reach the address). {url} is the WebSocket URL that was dialled; {error} is the browser's error text in parentheses, or empty.
 #: client/js/irc/disconnect.ts:78
 msgctxt "disconnect.couldNotConnectNotReconnecting"
 msgid "Could not connect to {url}{error}. Not reconnecting."
-msgstr "Could not connect to {url}{error}. Not reconnecting."
+msgstr "Wala na mag-connection sa {url}{error}. Hindi na i-reconnect."
 
 #. Connection-failure report once the network was registered. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.disconnected"
 msgid "Disconnected from {host}{detail}."
-msgstr "Disconnected from {host}{detail}."
+msgstr "Nagsusulat na nangangalaga sa {host}{detail}."
 
 #. Headline when a registered connection closed and the retry schedule is standing down. {host} is the host as the user typed it; {detail} is the close detail in parentheses, or empty.
 #: client/js/irc/disconnect.ts:127
 msgctxt "disconnect.disconnectedNotReconnecting"
 msgid "Disconnected from {host}{detail}. Not reconnecting."
-msgstr "Disconnected from {host}{detail}. Not reconnecting."
+msgstr "Nagsusulit na nangangalaga sa {host}{detail}. Hindi nagreconnect."
 
 #. Follow-up hint under a failed connection dialled with ws:// from an https:// page: the browser blocks mixed content, so the fix is on the network's settings.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.httpsBlocked"
 msgid "This page was loaded over HTTPS, so the browser blocks plain ws:// connections. Enable TLS for this network, or open the app over http://."
-msgstr "This page was loaded over HTTPS, so the browser blocks plain ws:// connections. Enable TLS for this network, or open the app over http://."
+msgstr "Ito ay naka-load sa HTTPS, kaya ang browser ay nagbalewala sa mga ws:// koneksyon. I-enable ang TLS para sa network na ito, o i-ope ang app sa http://."
 
 #. Follow-up hint under a failed plain (ws://) dial from a non-secure page.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.plainCauses"
 msgid "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or it does not accept WebSocket connections on that port."
-msgstr "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or it does not accept WebSocket connections on that port."
+msgstr "Ang browser ay hindi nagpapakita bakit. Mga dahilan: ang server ay nagsimula, ang port ay mali, o hindi ito nagpapahiwatay sa WebSocket sa port na iyon."
 
 #. Follow-up hint under a connection the server dropped during IRC registration, when the close reason named no live session.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.registration"
 msgid "The WebSocket opened but the server dropped it before registration finished - check that this port really speaks IRC over WebSocket, and look for a server notice above for the reason."
-msgstr "The WebSocket opened but the server dropped it before registration finished - check that this port really speaks IRC over WebSocket, and look for a server notice above for the reason."
+msgstr "Ang WebSocket ay nagsimula ngunit ang server ay nagsilbing ito bago matapos ang pagregister - tukuyin na ang port ay nagsasalita ng IRC sa WebSocket, at tingnan ang notisasyon ng server sa itaas para sa dahilan."
 
 #. Follow-up hint when the server's close reason names a live session: retrying alone cannot fix it, the other client has to go.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.sessionConflict"
 msgid "This account is already connected on this network - another tab, window or device is using it. Close that client; this tab then connects on its next retry (a dead connection is reclaimed within about a minute)."
-msgstr "This account is already connected on this network - another tab, window or device is using it. Close that client; this tab then connects on its next retry (a dead connection is reclaimed within about a minute)."
+msgstr "Ang account na ito ay na-connect na naman sa network na ito - may iba pang tab, window o device na nagamit nito. I-close yon; ang tab na ito ay makakapunta sa pag-iretry nito (ang dead connection ay nababalik sa isang minuto)."
 
 #. Follow-up hint under a failed secure (wss://) dial. {url} is the network's address with https: in place of wss:, for accepting a self-signed certificate once.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.wssCauses"
 msgid "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or its TLS certificate is not trusted — for a self-signed certificate, open {url} in a new tab, accept the warning, then reconnect."
-msgstr "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or its TLS certificate is not trusted — for a self-signed certificate, open {url} in a new tab, accept the warning, then reconnect."
+msgstr "Ang browser ay wala nang ipapakita bakit. Mga dahilan: ang server ay nagsimula, ang port ay mali, o ang TLS certificate ay hindi tinanggap - para sa self-signed certificate, i-open {url} sa isang bagong tab, i-accept ang pagwawarning, pagkatapos i-reconnect."
 
 #. Connection-failure report when the server dropped the socket before registration finished. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.registeringClosed"
 msgid "Connection to {host} closed during IRC registration{detail}."
-msgstr "Connection to {host} closed during IRC registration{detail}."
+msgstr "Pag-connection sa {host} ay nangyari sa pag-iregister sa IRC{detail}."
 
 #. Headline when the connection was closed between connecting and completing IRC registration and the retry schedule is standing down. {host} is the host as the user typed it; {detail} is the close detail in parentheses (a server reason, a connection-lost note or the close code), or empty.
 #: client/js/irc/disconnect.ts:112
@@ -1086,7 +1086,7 @@ msgstr "Di ma-access ang {channel} - Naka-ikot na ang channel."
 #: client/js/irc/handlers/cap.ts
 msgctxt "error.missingCaps"
 msgid "Missing required capabilities: {caps}"
-msgstr "Missing required capabilities: {caps}"
+msgstr "Nakakakuha ng mga kagustuhan na kinakailangan: {caps}"
 
 #. Send refusal (401) phrased by the client; {nick} is the addressed nick, user data.
 #: client/components/MessageTypes/error.vue
@@ -1134,7 +1134,7 @@ msgstr "User {nick} na nangunguna na sa channel."
 #: client/components/NetworkForm.vue:168
 msgctxt "form.account"
 msgid "Account"
-msgstr "Account"
+msgstr ""
 
 #. Button on the network edit form's status row while a connection is being dialled: stop trying.
 #: client/components/NetworkForm.vue:505
@@ -1170,19 +1170,19 @@ msgstr "Ikaibaw ang network"
 #: client/components/NetworkForm.vue:154
 msgctxt "form.authentication"
 msgid "Authentication"
-msgstr "Authentication"
+msgstr ""
 
 #. Checkbox on the network edit form: dial this network every time the app opens.
 #: client/components/NetworkForm.vue:90
 msgctxt "form.autoconnect"
 msgid "Connect automatically when the app starts"
-msgstr "Connect automatically when the app starts"
+msgstr "Kumonekta automatikong kapag ang app nagsimula"
 
 #. Checkbox on the network edit form: show desktop notifications for this network's messages; the browser's permission ask fires when first saved.
 #: client/components/NetworkForm.vue:260
 msgctxt "form.browserNotifications"
 msgid "Browser notifications for this network"
-msgstr "Browser notifications for this network"
+msgstr "Notifikasyon ng browser para sa network na ito"
 
 #. Tooltip of the question-mark icon next to the browser notifications checkbox on the network edit form.
 #: client/components/NetworkForm.vue:263
@@ -1194,7 +1194,7 @@ msgstr "Magbigay ng mga pahayag ng browser para sa mga highlight at mga query sa
 #: client/components/NetworkForm.vue:119
 msgctxt "form.channels"
 msgid "Channels"
-msgstr "Channels"
+msgstr ""
 
 #. Placeholder of the channels field on the network edit form: example channel names, where a name may be followed by its door key.
 #: client/components/NetworkForm.vue:125
@@ -1266,7 +1266,7 @@ msgstr "Mga setting ng network"
 #: client/components/NetworkForm.vue:104
 msgctxt "form.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr ""
 
 #. Radio option on the network edit form: connect without a services account.
 #: client/components/NetworkForm.vue:158
@@ -1278,7 +1278,7 @@ msgstr "Walang pag-authentikasyon"
 #: client/components/NetworkForm.vue:183
 msgctxt "form.password"
 msgid "Password"
-msgstr "Password"
+msgstr ""
 
 #. Placeholder of the SASL password field on the network edit form: saving without typing keeps the stored password.
 #: client/components/NetworkForm.vue:196
@@ -1320,7 +1320,7 @@ msgstr "Taya ang password sa device na ito"
 #: client/components/NetworkForm.vue:162
 msgctxt "form.saslPlain"
 msgid "Username + password (SASL PLAIN)"
-msgstr "Username + password (SASL PLAIN)"
+msgstr ""
 
 #. Submit button of the network edit form.
 #: client/components/NetworkForm.vue:273
@@ -1332,25 +1332,25 @@ msgstr "I-save ang network"
 #: client/components/NetworkForm.vue:53
 msgctxt "form.server"
 msgid "Server"
-msgstr "Server"
+msgstr ""
 
 #. aria-label of the server host text input (e.g. irc.example.org) on the network edit form; the visible label is on the row.
 #: client/components/NetworkForm.vue:60
 msgctxt "form.serverAddress"
 msgid "Server address"
-msgstr "Server address"
+msgstr "Address ng server"
 
 #. aria-label of the numeric port input next to the server host field on the network edit form.
 #: client/components/NetworkForm.vue:76
 msgctxt "form.serverPort"
 msgid "Server port"
-msgstr "Server port"
+msgstr "Port na server"
 
 #. Label of the connection-status row at the top of the network edit form (shown only while the app knows the network's live state).
 #: client/components/NetworkForm.vue:26
 msgctxt "form.status"
 msgid "Status"
-msgstr "Status"
+msgstr "Estado"
 
 #. Checkbox on the network edit form: connect to this network over TLS instead of a plain connection.
 #: client/components/NetworkForm.vue:86
@@ -1362,14 +1362,14 @@ msgstr "Gamitin secure connection (TLS)"
 #: client/components/NetworkForm.vue:102
 msgctxt "form.userPreferences"
 msgid "User preferences"
-msgstr "User preferences"
+msgstr "Paboritong mga pangungusay"
 
 #. About line at the top of the Help window, before the app name.
 #: client/js/branding.ts
 #: client/components/Windows/Help.vue
 msgctxt "help.about"
 msgid "About"
-msgstr "About"
+msgstr "Tungkol sa"
 
 #. Word between the two version numbers inside the compare links of the help window's past-release list. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1381,7 +1381,7 @@ msgstr "at"
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.channel"
 msgid "Channel"
-msgstr "Channel"
+msgstr "Kanal"
 
 #. Description of the / autocompletion trigger in the help window: typing / suggests slash commands; the parenthesized phrase points at the command list further down this page.
 #: client/components/Windows/Help.vue
@@ -1405,7 +1405,7 @@ msgstr "Emoji (tandaan: kailangan dalawang search characters, upang mai-avoid an
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.heading"
 msgid "Autocompletion"
-msgstr "Autocompletion"
+msgstr "Autocompletions"
 
 #. First part of the autocompletion intro in the help window; keycap symbols (arrow up) follow it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1441,7 +1441,7 @@ msgstr "(o sa pamamagitan ng pag-click sa item na nais mo)."
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.nick"
 msgid "Nickname"
-msgstr "Nickname"
+msgstr "Pangalang personal"
 
 #. Purpose clause ending the second compare item of the help window's past-release list (comparing the running build with the development branch). Starts lowercase because it follows the link.
 #: client/components/Windows/Help.vue
@@ -1471,13 +1471,13 @@ msgstr "ay nagsisimula mula sa"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.alias"
 msgid "Alias:"
-msgstr "Alias:"
+msgstr "Pangalang pangungusap"
 
 #. Lead-in of the alias line under a command description in the help window when the command has several alternative names; the alternatives follow as code fragments. Keep the trailing colon.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.aliases"
 msgid "Aliases:"
-msgstr "Aliases:"
+msgstr "Aliwali:"
 
 #. Description of the /away command in the help window; the command syntax (/away [message]) is shown beside it and stays untranslated.
 #: client/components/Windows/Help.vue
@@ -1495,7 +1495,7 @@ msgstr "I-eliminahin ang iyong status ng pagkakaaway (nakuha sa"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.banA"
 msgid "Ban ("
-msgstr "Ban ("
+msgstr ""
 
 #. Continuation of the /ban command description in the help window, after the +b code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1543,7 +1543,7 @@ msgstr "pananampalataya, ang pagkakasali ay gagawin na mapayag na gamit TLS."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcpA"
 msgid "Send a"
-msgstr "Send a"
+msgstr "Sumayawin a"
 
 #. Continuation of the /ctcp command description in the help window, after the CTCP abbreviation; the link text follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1645,7 +1645,7 @@ msgstr "I-kick ang isang user mula sa kasalukuyang channel."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kickbanA"
 msgid "Kick and ban ("
-msgstr "Kick and ban ("
+msgstr "Tumbok at ban ("
 
 #. Middle of the /kickban command description in the help window, after the +b code fragment; a code fragment with the /ban command follows it. Starts with the closing parenthesis. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1699,7 +1699,7 @@ msgstr "I-change ang nickname mo sa kasalukuyan na network."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.notice"
 msgid "Sends a notice message to the specified channel."
-msgstr ""
+msgstr "Sumayawin isyu na mensahe sa nangungunang channel."
 
 #. Start of the /op command description in the help window; a code fragment with the +o mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1777,7 +1777,7 @@ msgstr "Nakikilala, pinagpapalit ang tópiko sa kasalukuyan channel."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unbanA"
 msgid "Unban ("
-msgstr "Unban ("
+msgstr "Ban kabalik ("
 
 #. Continuation of the /unban command description in the help window, after the -b code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1807,7 +1807,7 @@ msgstr "para sa mas maraming impormasyon."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.voiceA"
 msgid "Give voice ("
-msgstr "Give voice ("
+msgstr "Bawasan ("
 
 #. Continuation of the /voice command description in the help window, after the +v code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1825,20 +1825,20 @@ msgstr "I-identify ang impormasyon ng nakasulat na user sa kasalukuyan network."
 #: client/components/Windows/Help.vue
 msgctxt "help.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First word of the two list items under the help window's past-release sentence; each continues with a link comparing two versions. Mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.compare"
 msgid "Compare"
-msgstr "Compare"
+msgstr "Kumpara"
 
 #. Label of the documentation link in the Help window.
 #: client/js/branding.ts
 #: client/components/Windows/Help.vue
 msgctxt "help.documentation"
 msgid "Documentation"
-msgstr "Documentation"
+msgstr "Dokumentasyon"
 
 #. Shared first part of the descriptions of the Ctrl+B, Ctrl+U, Ctrl+I, Ctrl+S and Ctrl+M formatting shortcuts in the help window; the formatted example word (bold, underlined, italics, struck through, monospaced) follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1850,7 +1850,7 @@ msgstr "Mark ang lahat ng teksto na nagsasalungat sa shortcut na ito bilang"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.bold"
 msgid "bold"
-msgstr "bold"
+msgstr ""
 
 #. Text of the link at the end of the Ctrl+K description in the help window's formatting section; it opens an external IRC color reference. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1904,7 +1904,7 @@ msgstr "italik"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.monospace"
 msgid "monospaced"
-msgstr "monospaced"
+msgstr ""
 
 #. Description of the Ctrl+O formatting shortcut in the help window; it removes any formatting applied so far in the message.
 #: client/components/Windows/Help.vue
@@ -1946,25 +1946,25 @@ msgstr "I-iyot ang sidebar."
 #: client/components/Windows/Help.vue
 msgctxt "help.gestures.swipeLeft"
 msgid "Single-Finger Swipe Left"
-msgstr "Single-Finger Swipe Left"
+msgstr "Una pagkakaibang pindot ng karampat na kaliwa"
 
 #. Name of the touch gesture in the help window's gestures section: swiping the sidebar right with one finger. Its description follows.
 #: client/components/Windows/Help.vue
 msgctxt "help.gestures.swipeRight"
 msgid "Single-Finger Swipe Right"
-msgstr "Single-Finger Swipe Right"
+msgstr "Una pagkakaibang pindot ng karampat na kanan"
 
 #. Name of the touch gesture in the help window's gestures section: swiping left with two fingers anywhere in the chat. Its description follows.
 #: client/components/Windows/Help.vue
 msgctxt "help.gestures.twoSwipeLeft"
 msgid "Two-Finger Swipe Left"
-msgstr "Two-Finger Swipe Left"
+msgstr "Dalawang pagkakaibang pindot ng karampat na kaliwa"
 
 #. Name of the touch gesture in the help window's gestures section: swiping right with two fingers anywhere in the chat. Its description follows.
 #: client/components/Windows/Help.vue
 msgctxt "help.gestures.twoSwipeRight"
 msgid "Two-Finger Swipe Right"
-msgstr "Two-Finger Swipe Right"
+msgstr "Dalawang pagkakaibang pindot ng karampat na kanan"
 
 #. Label of the privacy policy link in the Help window.
 #: client/js/branding.ts
@@ -2019,7 +2019,7 @@ msgstr "Pindah sa unang window na may mga mensahe na hindi nabasa."
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.heading"
 msgid "Keyboard Shortcuts"
-msgstr "Keyboard Shortcuts"
+msgstr "Mga shortcut ng kahon"
 
 #. Description of the Alt+/ keyboard shortcut in the help window; it opens this help page.
 #: client/components/Windows/Help.vue
@@ -2103,7 +2103,7 @@ msgstr "Para maunawaan ano ang nangyari sa pagbabago sa pagpapalabas"
 #: client/components/Windows/Help.vue
 msgctxt "help.title"
 msgid "Help"
-msgstr "Help"
+msgstr "Tulong"
 
 #. Text of the banner at the top of the help window shown when a newer build of the app was published; a Reload button follows it.
 #: client/components/Windows/Help.vue
@@ -2116,7 +2116,7 @@ msgstr "May bagong bersyon"
 #: client/components/Windows/Help.vue
 msgctxt "help.website"
 msgid "Website"
-msgstr "Website"
+msgstr "Web site"
 
 #. aria-label of the ✕ control of the image viewer that fills the screen; clicking closes it.
 #: client/components/ImageViewer.vue
@@ -2152,97 +2152,97 @@ msgstr "Ikaibigan ang password"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorBlack"
 msgid "Black"
-msgstr "Black"
+msgstr "Kahapon"
 
 #. Name of the mIRC colour with code 02 (blue), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorBlue"
 msgid "Blue"
-msgstr "Blue"
+msgstr "Aking pula"
 
 #. Name of the mIRC colour with code 05 (brown), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorBrown"
 msgid "Brown"
-msgstr "Brown"
+msgstr "Kahapon"
 
 #. Name of the mIRC colour with code 10 (cyan), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorCyan"
 msgid "Cyan"
-msgstr "Cyan"
+msgstr "silya"
 
 #. Name of the mIRC colour with code 03 (green), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorGreen"
 msgid "Green"
-msgstr "Green"
+msgstr "pula"
 
 #. Name of the mIRC colour with code 14 (grey), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorGrey"
 msgid "Grey"
-msgstr "Grey"
+msgstr "asawa"
 
 #. Name of the mIRC colour with code 12 (light blue), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorLightBlue"
 msgid "Light Blue"
-msgstr "Light Blue"
+msgstr "dili na pula"
 
 #. Name of the mIRC colour with code 11 (light cyan), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorLightCyan"
 msgid "Light Cyan"
-msgstr "Light Cyan"
+msgstr "silya na pula"
 
 #. Name of the mIRC colour with code 09 (light green), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorLightGreen"
 msgid "Light Green"
-msgstr "Light Green"
+msgstr "Aparador nga bulan"
 
 #. Name of the mIRC colour with code 15 (light grey), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorLightGrey"
 msgid "Light Grey"
-msgstr "Light Grey"
+msgstr "Aparador nga asawa"
 
 #. Name of the mIRC colour with code 06 (magenta), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorMagenta"
 msgid "Magenta"
-msgstr "Magenta"
+msgstr ""
 
 #. Name of the mIRC colour with code 07 (orange), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorOrange"
 msgid "Orange"
-msgstr "Orange"
+msgstr "Aparador nga pula"
 
 #. Name of the mIRC colour with code 13 (pink), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorPink"
 msgid "Pink"
-msgstr "Pink"
+msgstr "Aparador nga pula"
 
 #. Name of the mIRC colour with code 04 (red), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorRed"
 msgid "Red"
-msgstr "Red"
+msgstr "Pula"
 
 #. Name of the mIRC colour with code 00 (white), offered by the colour autocomplete in the message input after Ctrl+K. The name labels the suggestion; what gets inserted into the message is the number.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorWhite"
 msgid "White"
-msgstr "White"
+msgstr "Puti"
 
 #. Name of the mIRC colour with code 08 (yellow), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorYellow"
 msgid "Yellow"
-msgstr "Yellow"
+msgstr "Agham"
 
 #. Title (hover hint) of the channel name input in the sidebar's join-channel form, shown when the typed name is invalid.
 #: client/components/JoinChannel.vue:20
@@ -2254,7 +2254,7 @@ msgstr "Hindi maaari mag-include ng espasyo sa pangalan ng channel"
 #: client/components/JoinChannel.vue:17
 msgctxt "join.channelPlaceholder"
 msgid "Channel"
-msgstr "Channel"
+msgstr ""
 
 #. Title (hover hint) of the channel key input in the sidebar's join-channel form, shown when the typed key is invalid.
 #: client/components/JoinChannel.vue:31
@@ -2320,25 +2320,25 @@ msgstr "I-iyak ang preview"
 #: client/components/LinkPreview.vue
 msgctxt "link.kindAudio"
 msgid "audio"
-msgstr "audio"
+msgstr ""
 
 #. The word for a picture, filling {kind} in media-preview sentences such as 'Loading {kind}…'. Lowercase mid-sentence.
 #: client/components/LinkPreview.vue
 msgctxt "link.kindImage"
 msgid "image"
-msgstr "image"
+msgstr "laraw"
 
 #. Generic word for a picture, sound or video, filling {kind} in media-preview sentences when the type is unknown. Lowercase mid-sentence.
 #: client/components/LinkPreview.vue
 msgctxt "link.kindMedia"
 msgid "media"
-msgstr "media"
+msgstr ""
 
 #. The word for a moving picture, filling {kind} in media-preview sentences such as 'Loading {kind}…'. Lowercase mid-sentence.
 #: client/components/LinkPreview.vue
 msgctxt "link.kindVideo"
 msgid "video"
-msgstr "video"
+msgstr ""
 
 #. Title on the placeholder of a media preview while its file is downloading after the reader revealed it. {kind} is 'image', 'video' or 'audio'.
 #: client/components/LinkPreview.vue
@@ -2592,7 +2592,7 @@ msgstr "Ang iyong nickname sa {network}"
 #: client/components/NetworkLobby.vue:66
 msgctxt "lobby.nickname"
 msgid "Nickname: "
-msgstr "Nickname:"
+msgstr "Kwalipikasyon:"
 
 #. Tooltip and aria-label of the crossed-out bell icon on a sidebar network row: push and browser notifications are switched off for this network.
 #: client/components/NetworkLobby.vue:118
@@ -2676,13 +2676,13 @@ msgstr "Mga nangyari na mensahe"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.chanTypeChannel"
 msgid "channel"
-msgstr "channel"
+msgstr "kanal"
 
 #. Word for a whole chat server connection, filling {type} in the context-menu mute items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.chanTypeNetwork"
 msgid "network"
-msgstr "network"
+msgstr ""
 
 #. The word for a private one-on-one chat, filling {type} in the context-menu mute items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
@@ -2814,31 +2814,31 @@ msgstr "I-lista na ignored users"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeAdmin"
 msgid "admin"
-msgstr "admin"
+msgstr ""
 
 #. Name of the IRC half-operator role (the % prefix), filling {name} in the mode menu items. Lowercase mid-sentence; keep the hyphen if natural.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeHalfOp"
 msgid "half-op"
-msgstr "half-op"
+msgstr ""
 
 #. Name of the IRC channel operator role (the @ prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOperator"
 msgid "operator"
-msgstr "operator"
+msgstr ""
 
 #. Name of the highest IRC channel role (the ~ prefix), filling {name} in the mode menu items such as 'Revoke {name} (-a)'. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOwner"
 msgid "owner"
-msgstr "owner"
+msgstr ""
 
 #. Name of the IRC voiced role (the + prefix; may speak in a moderated channel), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeVoice"
 msgid "voice"
-msgstr "voice"
+msgstr ""
 
 #. Context-menu item on a conversation; clicking mutes it (no highlights, no notifications from it). {type} names the kind of conversation in lowercase: 'network', 'channel' or 'conversation'.
 #: client/js/helpers/contextMenu.ts
@@ -2958,7 +2958,7 @@ msgstr "(naganap)"
 #: client/components/MessageActions.vue:21
 msgctxt "message.react"
 msgid "React"
-msgstr "React"
+msgstr ""
 
 #. Tooltip on the revealed text of a deleted chat message; clicking hides the text again.
 #: client/components/Message.vue:72
@@ -3151,7 +3151,7 @@ msgstr "Walang pagpahayag ({reason}): {text}"
 #: client/js/irc/handlers/numerics.ts
 msgctxt "pending.numericError"
 msgid "error {code}"
-msgstr "error {code}"
+msgstr ""
 
 #. Lobby passthrough of a PERSISTENCE reply the app does not otherwise understand; {params} is the server's own words, verbatim.
 #: client/js/irc/handlers/persistence.ts
@@ -3193,7 +3193,7 @@ msgstr "I-enable ang pahintulot para sa pag-notify?"
 #: client/components/PushPrompt.vue
 msgctxt "push.fallbackNetwork"
 msgid "this network"
-msgstr "this network"
+msgstr "ang network"
 
 #. Button of the push opt-in prompt; declines and stops the app from ever asking again for that network.
 #: client/components/PushPrompt.vue
@@ -3555,13 +3555,13 @@ msgstr "Ang body ay too mabilis (higit sa {limit} karakter)."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr "Alias"
+msgstr ""
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headRuns"
 msgid "Runs"
-msgstr "Runs"
+msgstr "Narorun"
 
 #. Joins the last two entries of the alias-body variable list ($2- or $*). Single word; the spaces around it come from the template.
 #: client/components/Settings/Aliases.vue
@@ -3709,7 +3709,7 @@ msgstr "lahat ng mga araw pagkatapos ang pangalawas na pangalan"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.variablesHeading"
 msgid "Variables"
-msgstr "Variables"
+msgstr ""
 
 #. Checkbox in Settings > Appearance; when ticked, typing in the message input suggests completions for names, emoji and commands.
 #: client/components/Settings/Appearance.vue
@@ -3727,19 +3727,19 @@ msgstr "Pag-allow colored nicknames"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.customStylesheet"
 msgid "Custom Stylesheet"
-msgstr "Custom Stylesheet"
+msgstr ""
 
 #. Visually hidden label of the custom stylesheet text area in Settings > Appearance, where CSS rules overriding the app's own styles can be entered.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.customStylesheetHelp"
 msgid "Custom stylesheet. You can override any style with CSS here."
-msgstr "Custom stylesheet. You can override any style with CSS here."
+msgstr ""
 
 #. Placeholder of the custom stylesheet text area in Settings > Appearance, written as a CSS comment. Keep the /* */ comment markers.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.customStylesheetPlaceholder"
 msgid "/* You can override any style with CSS here */"
-msgstr "/* You can override any style with CSS here */"
+msgstr ""
 
 #. aria-label of the slider in Settings > Appearance that changes the size of chat text and the interface with it.
 #: client/components/Settings/Appearance.vue
@@ -3877,7 +3877,7 @@ msgstr "Oo! Pindito ito hanggang mapayag ito."
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.showMotd"
 msgid "Show"
-msgstr "Show"
+msgstr ""
 
 #. Checkbox in Settings > Appearance; when ticked, message timestamps include the seconds as well as hours and minutes.
 #: client/components/Settings/Appearance.vue
@@ -4040,7 +4040,7 @@ msgstr "Mga pahiwatig at mga listahan"
 msgctxt "settings.general.backupNetworks"
 msgid "{count} network"
 msgid_plural "{count} networks"
-msgstr[0] "{count} network"
+msgstr[0] ""
 msgstr[1] "{count} mga network"
 
 #. Part of the restore-confirmation sentence in Settings > General: fills the list of what the file replaces for the app's own preferences. Comma-joined with the other parts by position.
@@ -4267,7 +4267,7 @@ msgstr "Walang network na naka-save pa."
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.heading"
 msgid "Networks"
-msgstr "Networks"
+msgstr ""
 
 #. Line under the Networks heading in the settings, saying what the page is for.
 #: client/components/Settings/Networks.vue
@@ -4291,7 +4291,7 @@ msgstr "Notification ay naka-block sa iyong browser."
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.browserHeading"
 msgid "Browser Notifications"
-msgstr "Browser Notifications"
+msgstr "Notifikasyon ng Browser"
 
 #. Intro line of the browser notifications section in Settings > Notifications; the quoted phrase names the toggle in each network's edit form. Keep the curly quotes.
 #: client/components/Settings/Notifications.vue
@@ -4411,7 +4411,7 @@ msgstr "Ang mga notisasyon ay nagsisimula sa iyong browser. I-allow sila sa mga 
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushHeading"
 msgid "Push Notifications"
-msgstr "Push Notifications"
+msgstr "Notifikasyon ng Push"
 
 #. Intro line of the push section in Settings > Notifications; explains that push is enabled per chat network from that network's edit form (the quoted phrase names that setting) and that each server decides whether to support it. Keep the curly quotes and the arrow.
 #: client/components/Settings/Notifications.vue
@@ -4429,31 +4429,31 @@ msgstr "Ang push notifications ay kailangan ng isang konektadong server na nagpa
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snooze15"
 msgid "15 min"
-msgstr "15 min"
+msgstr "15 minuto"
 
 #. Snooze button in Settings > Notifications; pauses push notifications for eight hours.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snooze480"
 msgid "8 hours"
-msgstr "8 hours"
+msgstr "8 oras"
 
 #. Snooze button in Settings > Notifications; pauses push notifications for one hour.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snooze60"
 msgid "1 hour"
-msgstr "1 hour"
+msgstr "1 oras"
 
 #. Lead-in above the snooze buttons in Settings > Notifications, shown while push is enabled; the buttons pause push notifications for all networks. Keep the trailing colon.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snoozeIntro"
 msgid "Snooze pushes everywhere:"
-msgstr "Snooze pushes everywhere:"
+msgstr "Ang snooze ay nagpapalabas lahat:"
 
 #. Snooze button in Settings > Notifications; ends the pause and resumes push notifications immediately.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snoozeOff"
 msgid "Off"
-msgstr "Off"
+msgstr "Ibabaw"
 
 #. Checkbox in Settings > Notifications; when ticked, a sound plays alongside a notification.
 #: client/components/Settings/Notifications.vue
@@ -4477,41 +4477,41 @@ msgstr "Ang push notifications ay hindi nakasubscribe sa browser na iyan (kailan
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.warning"
 msgid "Warning"
-msgstr "Warning"
+msgstr "Diwa"
 
 #. Label of the Settings modal's Aliases tab (tab strip); switching tabs navigates to the Aliases settings pane.
 #: client/components/Settings/Navigation.vue
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.aliases"
 msgid "Aliases"
-msgstr "Aliases"
+msgstr "Aliwaliw"
 
 #. Label of the Settings modal's Appearance tab (tab strip); switching tabs navigates to the Appearance settings pane.
 #: client/components/Settings/Navigation.vue
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.appearance"
 msgid "Appearance"
-msgstr "Appearance"
+msgstr "Pagkaugnay"
 
 #. aria-label of the row of tab buttons across the top of the settings window, used to switch between its pages.
 #: client/components/Settings/Navigation.vue
 msgctxt "settings.tabs.aria"
 msgid "Settings tabs"
-msgstr "Settings tabs"
+msgstr "Pahina ng mga setting"
 
 #. Label of the Settings modal's General tab (tab strip); switching tabs navigates to the General settings pane.
 #: client/components/Settings/Navigation.vue
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.general"
 msgid "General"
-msgstr "General"
+msgstr ""
 
 #. Label of the Settings modal's Networks tab (tab strip); switching tabs navigates to the Networks settings pane.
 #: client/components/Settings/Navigation.vue
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.networks"
 msgid "Networks"
-msgstr "Networks"
+msgstr ""
 
 #. Label of the Settings modal's Notifications tab (tab strip); switching tabs navigates to the Notifications settings pane.
 #: client/components/Settings/Navigation.vue
@@ -4536,7 +4536,7 @@ msgstr "{app} nakabuo sa pag-unlad na modo"
 #: client/components/Sidebar.vue:16
 msgctxt "sidebar.developerBadge"
 msgid "DEVELOPER"
-msgstr "DEVELOPER"
+msgstr ""
 
 #. Message shown in the sidebar when there are no networks at all; the connect form is open beside it.
 #: client/components/NetworkList.vue:8
@@ -4643,7 +4643,7 @@ msgstr "Nagsasalungat noong"
 #: client/components/Special/ListChannels.vue
 msgctxt "special.channels.channel"
 msgid "Channel"
-msgstr "Channel"
+msgstr ""
 
 #. Column header of the channel list: the channel's topic, verbatim server data.
 #: client/components/Special/ListChannels.vue
@@ -4679,7 +4679,7 @@ msgstr "Nagsasalungat noong"
 #: client/components/Special/ListIgnored.vue
 msgctxt "special.ignored.hostmask"
 msgid "Hostmask"
-msgstr "Hostmask"
+msgstr ""
 
 #. Column header of the ignore list: when the ignore was set, locale-formatted.
 #: client/components/Special/ListIgnored.vue
@@ -5585,7 +5585,7 @@ msgstr "Send ang tradusyon"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sourceAuto"
 msgid "auto"
-msgstr "auto"
+msgstr ""
 
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue
@@ -5768,7 +5768,7 @@ msgstr "Ang file {file} ay nangunguna sa pinakamabigat na limitasyon"
 msgctxt "userlist.count"
 msgid "{count} user"
 msgid_plural "{count} users"
-msgstr[0] "{count} user"
+msgstr[0] ""
 msgstr[1] "mga user na {count}"
 
 #. Visually hidden but screen-reader-spoken label of the search field at the top of the channel member panel, used to filter the member list by name.
@@ -5877,7 +5877,7 @@ msgstr "Nakakalat, nakatutuloy:"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.operator"
 msgid "Operator:"
-msgstr "Operator:"
+msgstr ""
 
 #. Whois row: the user's realname field, user content, verbatim.
 #: client/components/MessageTypes/whois.vue
@@ -5931,7 +5931,7 @@ msgstr "« Tulong"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First sentence of the paragraph in the changelog window that says the release notes are read online; the following words are the two links.
 #: client/components/Windows/Changelog.vue
@@ -5979,7 +5979,7 @@ msgstr "Mga note ng pagsusulit para sa v{version}"
 #: client/components/Windows/NetworkEdit.vue
 msgctxt "windows.networkEdit.back"
 msgid "← Networks"
-msgstr "← Networks"
+msgstr "← Ang mga network"
 
 #. aria-label of the ✕ button at the top right of the settings window; clicking closes the settings and returns to the chat.
 #: client/components/Windows/Settings.vue

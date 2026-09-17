@@ -40,25 +40,25 @@ msgstr "{type}: {name} ({extra})"
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.channel"
 msgid "Channel"
-msgstr "Channel"
+msgstr ""
 
 #. Names the kind of window in a sidebar row's aria-label: the chat network's own window. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.lobby"
 msgid "Network"
-msgstr "Network"
+msgstr "Hálózat"
 
 #. Names the kind of window in a sidebar row's aria-label: a private conversation with one person. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.query"
 msgid "Conversation"
-msgstr "Conversation"
+msgstr "Szóvalás"
 
 #. Names the kind of window in a sidebar row's aria-label: a results window such as a channel list or a ban list. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.special"
 msgid "List"
-msgstr "List"
+msgstr "Lista"
 
 #. Tooltip and aria-label of the spinner in a chat window's header while the connection is being established, when the network's display name is not known.
 #: client/components/Chat.vue:186
@@ -705,7 +705,7 @@ msgstr "Új szerverhez csatlakozás?"
 #: client/components/Windows/Connect.vue:173
 msgctxt "connect.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr "Nickneve"
 
 #. Dismiss button on the connect screen shown as a dialog when the user followed a web+irc:// link; declines the connection without disconnecting the app.
 #: client/components/Windows/Connect.vue:91
@@ -978,7 +978,7 @@ msgstr "TLS kapcsolat megszakadt"
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.codeUnknown"
 msgid "code {code}"
-msgstr "code {code}"
+msgstr ""
 
 #. Connection-failure report when the WebSocket never opened. {url} is the address that was dialled, verbatim. {error} is ' (<the browser's error text>)' or empty — the browser hides why a dial failed, so the slot often stays empty.
 #: client/js/irc/disconnect.ts
@@ -1266,7 +1266,7 @@ msgstr "Hálózati beállítások"
 #: client/components/NetworkForm.vue:104
 msgctxt "form.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr ""
 
 #. Radio option on the network edit form: connect without a services account.
 #: client/components/NetworkForm.vue:158
@@ -1441,7 +1441,7 @@ msgstr "(vagy kattintson a kívánt elemre)."
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.nick"
 msgid "Nickname"
-msgstr "Nickname"
+msgstr "Kivonult nevetség"
 
 #. Purpose clause ending the second compare item of the help window's past-release list (comparing the running build with the development branch). Starts lowercase because it follows the link.
 #: client/components/Windows/Help.vue
@@ -1723,7 +1723,7 @@ msgstr "Zárja meg a megadott csatornát vagy személyes üzenetablakot, vagy a 
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.partB"
 msgid "is omitted."
-msgstr ""
+msgstr "elhagyva"
 
 #. Description of the /query command in the help window.
 #: client/components/Windows/Help.vue
@@ -1759,13 +1759,13 @@ msgstr "Keresés üzenetek a jelenlegi csatornában / felhasználónál"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.slap"
 msgid "Slap someone in the current channel with a trout!"
-msgstr "Slap someone in the current channel with a trout!"
+msgstr "csap egy trout-t a jelenlegi csatornában!"
 
 #. Start of the /topic command description in the help window; a code fragment with the newtopic parameter follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.topicA"
 msgid "Get the topic in the current channel. If"
-msgstr "Get the topic in the current channel. If"
+msgstr "nyugodj a jelenlegi csatorna témájára. Ha"
 
 #. End of the /topic command description in the help window, after the newtopic-parameter code fragment.
 #: client/components/Windows/Help.vue
@@ -1801,7 +1801,7 @@ msgstr "A megadott csatornák vagy a jelenlegi csatorna eltiltása. További inf
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unmuteB"
 msgid "for more information."
-msgstr "for more information."
+msgstr "több információra szükség van."
 
 #. Start of the /voice command description in the help window; a code fragment with the +v mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1825,7 +1825,7 @@ msgstr "A megadott felhasználó információjának lekérdezése a jelenlegi h�
 #: client/components/Windows/Help.vue
 msgctxt "help.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First word of the two list items under the help window's past-release sentence; each continues with a link comparing two versions. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1880,7 +1880,7 @@ msgstr "A háttér színe kijelölhető a megadott előtt szám kijelölésével
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorP2b"
 msgid "after the foreground color number (autocompletion works too)."
-msgstr "after the foreground color number (autocompletion works too)."
+msgstr "a fölötti szín szám után (a teljesítés is működik)."
 
 #. Start of the last paragraph of the Ctrl+K description in the help window's formatting section; the link text follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1898,13 +1898,13 @@ msgstr "Rövidítések"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.italic"
 msgid "italics"
-msgstr "italics"
+msgstr "ívek"
 
 #. The example word shown in a monospaced font in the help window's Ctrl+M formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.monospace"
 msgid "monospaced"
-msgstr "monospaced"
+msgstr ""
 
 #. Description of the Ctrl+O formatting shortcut in the help window; it removes any formatting applied so far in the message.
 #: client/components/Windows/Help.vue
@@ -2462,7 +2462,7 @@ msgctxt "list.loaded"
 msgid "Loaded {count} channel..."
 msgid_plural "Loaded {count} channels..."
 msgstr[0] "{count} csatorna betöltve..."
-msgstr[1] "Loaded {count} channels..."
+msgstr[1] "Betöltve {count} csatornákat..."
 
 #. Status line in the 'Channel List' window while the server sends its channels.
 #: client/js/irc/handlers/list.ts
@@ -2580,19 +2580,19 @@ msgstr "Egy csatornához csatlakozás…"
 #: client/components/NetworkLobby.vue:164
 msgctxt "lobby.nickOffline"
 msgid "Your nickname for {network} (not connected)"
-msgstr "Your nickname for {network} (not connected)"
+msgstr "A nickname azonosítója {network} (nem kapcsolódik)"
 
 #. Tooltip of the nick shown at the right of a sidebar network row while the network is connected; {network} is the network's display name.
 #: client/components/NetworkLobby.vue:163
 msgctxt "lobby.nickOn"
 msgid "Your nickname on {network}"
-msgstr "Your nickname on {network}"
+msgstr "A nickname azonosítója {network}"
 
 #. Screen-reader-only prefix read before the current nick at the right of a sidebar network row (visually hidden).
 #: client/components/NetworkLobby.vue:66
 msgctxt "lobby.nickname"
 msgid "Nickname: "
-msgstr "Nickname:"
+msgstr ""
 
 #. Tooltip and aria-label of the crossed-out bell icon on a sidebar network row: push and browser notifications are switched off for this network.
 #: client/components/NetworkLobby.vue:118
@@ -2814,31 +2814,31 @@ msgstr "Elhanyagolt felhasználók listázása"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeAdmin"
 msgid "admin"
-msgstr "admin"
+msgstr ""
 
 #. Name of the IRC half-operator role (the % prefix), filling {name} in the mode menu items. Lowercase mid-sentence; keep the hyphen if natural.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeHalfOp"
 msgid "half-op"
-msgstr "half-op"
+msgstr ""
 
 #. Name of the IRC channel operator role (the @ prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOperator"
 msgid "operator"
-msgstr "operator"
+msgstr "operátor"
 
 #. Name of the highest IRC channel role (the ~ prefix), filling {name} in the mode menu items such as 'Revoke {name} (-a)'. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOwner"
 msgid "owner"
-msgstr "owner"
+msgstr "tulajdonos"
 
 #. Name of the IRC voiced role (the + prefix; may speak in a moderated channel), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeVoice"
 msgid "voice"
-msgstr "voice"
+msgstr "hang"
 
 #. Context-menu item on a conversation; clicking mutes it (no highlights, no notifications from it). {type} names the kind of conversation in lowercase: 'network', 'channel' or 'conversation'.
 #: client/js/helpers/contextMenu.ts
@@ -3054,7 +3054,7 @@ msgstr "Átváltotta a témát:"
 #: client/js/irc/handlers/topic.ts
 msgctxt "msg.topicFor"
 msgid "Topic for {channel}: {topic}"
-msgstr "Topic for {channel}: {topic}"
+msgstr "Téma {channel}: {topic}"
 
 #. System message announcing a channel's topic (no changer known, e.g. on join). The topic itself is channel content and stays verbatim.
 #: client/components/MessageTypes/topic.vue
@@ -3072,7 +3072,7 @@ msgstr "A témát beállította"
 #: client/components/MessageTypes/topic_set_by.vue
 msgctxt "msg.topicSetOn"
 msgid "on {time}"
-msgstr "on {time}"
+msgstr "{time}-n"
 
 #. Channel message answering a topic request when the channel has none (331).
 #: client/js/irc/handlers/topic.ts
@@ -3084,7 +3084,7 @@ msgstr "Nincs témája"
 #: client/js/irc/handlers/topic.ts
 msgctxt "msg.topicUnsetFor"
 msgid "No topic is set for {channel}."
-msgstr "No topic is set for {channel}."
+msgstr "Nincs témája {channel}-nek."
 
 #. Lobby status line when your own nick change is confirmed. {nick} is the new nick, user content, never translated.
 #: client/js/irc/handlers/nick.ts
@@ -3145,7 +3145,7 @@ msgstr "nincs megerősítés a szervertől"
 #: client/js/irc/pending.ts
 msgctxt "pending.notSent"
 msgid "Not sent ({reason}): {text}"
-msgstr "Not sent ({reason}): {text}"
+msgstr "Nem küldve ({reason}): {text}"
 
 #. Reason fragment of 'Not sent ({reason}): {text}' when a labelled rejection numeric names no text. {code} is the numeric, verbatim. Lowercase mid-sentence by position.
 #: client/js/irc/handlers/numerics.ts
@@ -3247,7 +3247,7 @@ msgstr "Reakció készítése"
 #: client/components/MessageReactions.vue
 msgctxt "reactions.by"
 msgid "{reaction} by {users}"
-msgstr "{reaction} by {users}"
+msgstr "{reaction} által {users}"
 
 #. Tooltip and aria-label of the ✕ button in the emoji picker's search field; clicking empties the field.
 #: client/components/ReactionPicker.vue
@@ -3585,7 +3585,7 @@ msgstr "fut, amit itt definiál, egy parancs egy sorra, a szövegben a paraméte
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.nameAria"
 msgid "Alias name {number}"
-msgstr "Alias name {number}"
+msgstr "Állítólagos neve {number}"
 
 #. Placeholder of the alias-name input: the alias's name goes here.
 #: client/components/Settings/Aliases.vue
@@ -3627,23 +3627,23 @@ msgstr "Nem egy állomás — ez úgy lenne elküldve, ahogy beírva."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.removeAria"
 msgid "Remove alias {name}"
-msgstr "Remove alias {name}"
+msgstr "Elhelyezés megnevezése {name}"
 
 #. Status line when some rows have errors and are not saved yet. {count} is the number of saved aliases; gettext plural, English index 0 is the singular.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.statusBroken"
 msgid "{count} alias saved — rows with errors are not saved."
 msgid_plural "{count} aliases saved — rows with errors are not saved."
-msgstr[0] "{count} alias saved — rows with errors are not saved."
-msgstr[1] "{count} aliases saved — rows with errors are not saved."
+msgstr[0] "{count} alias mentes — a hibás sorok nem mentik."
+msgstr[1] "{count} alias mentes — a hibás sorok nem mentik."
 
 #. Status line under the alias table: how many aliases are saved. {count} is the number; gettext plural, English index 0 is the singular.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.statusSaved"
 msgid "{count} alias saved."
 msgid_plural "{count} aliases saved."
-msgstr[0] "{count} alias saved."
-msgstr[1] "{count} aliases saved."
+msgstr[0] "{count} alias mentes."
+msgstr[1] "{count} alias mentes."
 
 #. Heading of the command-aliases pane in Settings, where the user defines their own slash commands.
 #: client/components/Settings/Aliases.vue
@@ -3661,7 +3661,7 @@ msgstr "Próbálj egy állomást"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.tryExample"
 msgid "/{name} some arguments"
-msgstr "/{name} some arguments"
+msgstr "/{name} valamelyik argumentum"
 
 #. Heading of the live preview: type an alias invocation and see the commands it expands to.
 #: client/components/Settings/Aliases.vue
@@ -4015,7 +4015,7 @@ msgstr "Távolság üzenet, ha a {appName} nem nyitva"
 #: client/components/Settings/General.vue
 msgctxt "settings.general.backupFrame"
 msgid "This replaces {parts} with the contents of {file}, then reloads."
-msgstr "This replaces {parts} with the contents of {file}, then reloads."
+msgstr ""
 
 #. Heading of the settings backup section in Settings > General, which exports preferences to a file and restores them.
 #: client/components/Settings/General.vue
@@ -4536,7 +4536,7 @@ msgstr "{app} fejlesztési módban van építve"
 #: client/components/Sidebar.vue:16
 msgctxt "sidebar.developerBadge"
 msgid "DEVELOPER"
-msgstr "DEVELOPER"
+msgstr ""
 
 #. Message shown in the sidebar when there are no networks at all; the connect form is open beside it.
 #: client/components/NetworkList.vue:8
@@ -4560,7 +4560,7 @@ msgstr ""
 #: client/components/NetworkList.vue:17
 msgctxt "sidebar.jumpTo"
 msgid "Jump to..."
-msgstr ""
+msgstr "Ugrás..."
 
 #. Tooltip and screen-reader label of the globe button beside the sidebar logo, which opens the language panel (the same selector the connect form and Settings → Appearance carry).
 #: client/components/Sidebar.vue:8
@@ -4679,7 +4679,7 @@ msgstr "Kivétel által"
 #: client/components/Special/ListIgnored.vue
 msgctxt "special.ignored.hostmask"
 msgid "Hostmask"
-msgstr "Hostmask"
+msgstr ""
 
 #. Column header of the ignore list: when the ignore was set, locale-formatted.
 #: client/components/Special/ListIgnored.vue
@@ -5931,7 +5931,7 @@ msgstr "« Segítség"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First sentence of the paragraph in the changelog window that says the release notes are read online; the following words are the two links.
 #: client/components/Windows/Changelog.vue

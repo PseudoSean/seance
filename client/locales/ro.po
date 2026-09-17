@@ -40,13 +40,13 @@ msgstr "{type}: {name} ({extra})"
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.channel"
 msgid "Channel"
-msgstr "Channel"
+msgstr "Canal"
 
 #. Names the kind of window in a sidebar row's aria-label: the chat network's own window. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.lobby"
 msgid "Network"
-msgstr "Network"
+msgstr "Rețea"
 
 #. Names the kind of window in a sidebar row's aria-label: a private conversation with one person. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
@@ -715,7 +715,7 @@ msgstr "Conectează-te la un server nou?"
 #: client/components/Windows/Connect.vue:173
 msgctxt "connect.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr ""
 
 #. Dismiss button on the connect screen shown as a dialog when the user followed a web+irc:// link; declines the connection without disconnecting the app.
 #: client/components/Windows/Connect.vue:91
@@ -844,7 +844,7 @@ msgstr "Am un cont de servicii (SASL)"
 #: client/components/Windows/Connect.vue:132
 msgctxt "connect.server"
 msgid "Server"
-msgstr "Server"
+msgstr ""
 
 #. aria-label of the server host text input (e.g. irc.example.org) on the connect form; the visible label is on the row.
 #: client/components/Windows/Connect.vue:139
@@ -934,121 +934,121 @@ msgstr "Ieri"
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1001"
 msgid "server going away"
-msgstr "server going away"
+msgstr "server care se îndepărtează"
 
 #. Name of WebSocket close code 1002 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1002"
 msgid "WebSocket protocol error"
-msgstr "WebSocket protocol error"
+msgstr "eroare protocol WebSocket"
 
 #. Name of WebSocket close code 1006 (abnormal closure: refused, unreachable, TLS failure — the browser never says which) in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1006"
 msgid "connection lost"
-msgstr "connection lost"
+msgstr "conexiune pierdută"
 
 #. Name of WebSocket close code 1008 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1008"
 msgid "policy violation"
-msgstr "policy violation"
+msgstr "violare politică"
 
 #. Name of WebSocket close code 1009 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1009"
 msgid "message too large"
-msgstr "message too large"
+msgstr "mesaj prea mare"
 
 #. Name of WebSocket close code 1011 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1011"
 msgid "server error"
-msgstr "server error"
+msgstr "eroare server"
 
 #. Name of WebSocket close code 1012 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1012"
 msgid "server restarting"
-msgstr "server restarting"
+msgstr "server se reia"
 
 #. Name of WebSocket close code 1013 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1013"
 msgid "server asked to try again later"
-msgstr "server asked to try again later"
+msgstr "server a cerut să începi din nou mai târziu"
 
 #. Name of WebSocket close code 1015 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1015"
 msgid "TLS handshake failed"
-msgstr "TLS handshake failed"
+msgstr "handshake TLS a eșuat"
 
 #. Detail of a connection-failure report when the WebSocket closed with a code the app has no name for. {code} is the numeric close code, verbatim.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.codeUnknown"
 msgid "code {code}"
-msgstr "code {code}"
+msgstr ""
 
 #. Connection-failure report when the WebSocket never opened. {url} is the address that was dialled, verbatim. {error} is ' (<the browser's error text>)' or empty — the browser hides why a dial failed, so the slot often stays empty.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.couldNotConnect"
 msgid "Could not connect to {url}{error}."
-msgstr "Could not connect to {url}{error}."
+msgstr "Nu s-a putut conecta la {url}{error}."
 
 #. Headline when a network the client is dialling never opened and the retry schedule is standing down (the browser refused or could not reach the address). {url} is the WebSocket URL that was dialled; {error} is the browser's error text in parentheses, or empty.
 #: client/js/irc/disconnect.ts:78
 msgctxt "disconnect.couldNotConnectNotReconnecting"
 msgid "Could not connect to {url}{error}. Not reconnecting."
-msgstr "Could not connect to {url}{error}. Not reconnecting."
+msgstr "Nu s-a putut conecta la {url}{error}. Nu se reconecteaza."
 
 #. Connection-failure report once the network was registered. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.disconnected"
 msgid "Disconnected from {host}{detail}."
-msgstr "Disconnected from {host}{detail}."
+msgstr "S-a dezconectat de la {host}{detail}."
 
 #. Headline when a registered connection closed and the retry schedule is standing down. {host} is the host as the user typed it; {detail} is the close detail in parentheses, or empty.
 #: client/js/irc/disconnect.ts:127
 msgctxt "disconnect.disconnectedNotReconnecting"
 msgid "Disconnected from {host}{detail}. Not reconnecting."
-msgstr "Disconnected from {host}{detail}. Not reconnecting."
+msgstr "S-a dezconectat de la {host}{detail}. Nu se reconecteaza."
 
 #. Follow-up hint under a failed connection dialled with ws:// from an https:// page: the browser blocks mixed content, so the fix is on the network's settings.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.httpsBlocked"
 msgid "This page was loaded over HTTPS, so the browser blocks plain ws:// connections. Enable TLS for this network, or open the app over http://."
-msgstr "This page was loaded over HTTPS, so the browser blocks plain ws:// connections. Enable TLS for this network, or open the app over http://."
+msgstr "Această pagină a fost încărcată prin HTTPS, deci browserul blochează conexiunile ws:// simple. Activă TLS pentru această rețea, sau deschide aplicația prin http://."
 
 #. Follow-up hint under a failed plain (ws://) dial from a non-secure page.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.plainCauses"
 msgid "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or it does not accept WebSocket connections on that port."
-msgstr "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or it does not accept WebSocket connections on that port."
+msgstr "Browserul nu arată motivul. Cauze posibile: serverul este down, portul este greșit, sau serverul nu acceptă conexiuni WebSocket pe acel port."
 
 #. Follow-up hint under a connection the server dropped during IRC registration, when the close reason named no live session.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.registration"
 msgid "The WebSocket opened but the server dropped it before registration finished - check that this port really speaks IRC over WebSocket, and look for a server notice above for the reason."
-msgstr "The WebSocket opened but the server dropped it before registration finished - check that this port really speaks IRC over WebSocket, and look for a server notice above for the reason."
+msgstr "S-a deschis WebSocket, dar serverul l-a lovit înainte de înregistrare - verifică că acest port este într-adevăr IRC pe WebSocket, și caută un mesaj de la server mai sus pentru cauză."
 
 #. Follow-up hint when the server's close reason names a live session: retrying alone cannot fix it, the other client has to go.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.sessionConflict"
 msgid "This account is already connected on this network - another tab, window or device is using it. Close that client; this tab then connects on its next retry (a dead connection is reclaimed within about a minute)."
-msgstr "This account is already connected on this network - another tab, window or device is using it. Close that client; this tab then connects on its next retry (a dead connection is reclaimed within about a minute)."
+msgstr "Acest cont este deja conectat pe această rețea - altă tablă, fereastră sau dispoativ folosește acesta. Închide acel client; această tablă se conectează din nou la următoarea încercare (o conexiune moartă este recuperață în jur de o oră)."
 
 #. Follow-up hint under a failed secure (wss://) dial. {url} is the network's address with https: in place of wss:, for accepting a self-signed certificate once.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.wssCauses"
 msgid "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or its TLS certificate is not trusted — for a self-signed certificate, open {url} in a new tab, accept the warning, then reconnect."
-msgstr "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or its TLS certificate is not trusted — for a self-signed certificate, open {url} in a new tab, accept the warning, then reconnect."
+msgstr "Navigarea nu arată de ce. Cauze posibile: serverul este down, portul este greșit, sau certificatul TLS nu este încredut - pentru un certificat propriu, deschide {url} într-o nouă tablă, acceptă avertizarea, apoi reconectează-te."
 
 #. Connection-failure report when the server dropped the socket before registration finished. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.registeringClosed"
 msgid "Connection to {host} closed during IRC registration{detail}."
-msgstr "Connection to {host} closed during IRC registration{detail}."
+msgstr ""
 
 #. Headline when the connection was closed between connecting and completing IRC registration and the retry schedule is standing down. {host} is the host as the user typed it; {detail} is the close detail in parentheses (a server reason, a connection-lost note or the close code), or empty.
 #: client/js/irc/disconnect.ts:112
@@ -1276,7 +1276,7 @@ msgstr "Setări rețea"
 #: client/components/NetworkForm.vue:104
 msgctxt "form.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr ""
 
 #. Radio option on the network edit form: connect without a services account.
 #: client/components/NetworkForm.vue:158
@@ -1342,7 +1342,7 @@ msgstr "Salvați rețeaua"
 #: client/components/NetworkForm.vue:53
 msgctxt "form.server"
 msgid "Server"
-msgstr "Server"
+msgstr ""
 
 #. aria-label of the server host text input (e.g. irc.example.org) on the network edit form; the visible label is on the row.
 #: client/components/NetworkForm.vue:60
@@ -1451,7 +1451,7 @@ msgstr "(sau prin click pe itemul dorit)."
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.nick"
 msgid "Nickname"
-msgstr "Nickname"
+msgstr ""
 
 #. Purpose clause ending the second compare item of the help window's past-release list (comparing the running build with the development branch). Starts lowercase because it follows the link.
 #: client/components/Windows/Help.vue
@@ -1481,7 +1481,7 @@ msgstr "este construit din"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.alias"
 msgid "Alias:"
-msgstr "Alias:"
+msgstr ""
 
 #. Lead-in of the alias line under a command description in the help window when the command has several alternative names; the alternatives follow as code fragments. Keep the trailing colon.
 #: client/components/Windows/Help.vue
@@ -1505,7 +1505,7 @@ msgstr "Eliminați statusul your away (setat cu"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.banA"
 msgid "Ban ("
-msgstr "Ban ("
+msgstr ""
 
 #. Continuation of the /ban command description in the help window, after the +b code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1835,7 +1835,7 @@ msgstr "Recuperează informații despre utilizatorul specificat din rețeaua cur
 #: client/components/Windows/Help.vue
 msgctxt "help.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First word of the two list items under the help window's past-release sentence; each continues with a link comparing two versions. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1860,7 +1860,7 @@ msgstr "Marcați toate textul tipărit după acest shortcut ca"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.bold"
 msgid "bold"
-msgstr "bold"
+msgstr ""
 
 #. Text of the link at the end of the Ctrl+K description in the help window's formatting section; it opens an external IRC color reference. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1914,7 +1914,7 @@ msgstr "italic"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.monospace"
 msgid "monospaced"
-msgstr "monospaced"
+msgstr ""
 
 #. Description of the Ctrl+O formatting shortcut in the help window; it removes any formatting applied so far in the message.
 #: client/components/Windows/Help.vue
@@ -2222,7 +2222,7 @@ msgstr "Argintiu deschis"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorMagenta"
 msgid "Magenta"
-msgstr "Magenta"
+msgstr ""
 
 #. Name of the mIRC colour with code 07 (orange), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2330,7 +2330,7 @@ msgstr "Ascunde această previzualizare"
 #: client/components/LinkPreview.vue
 msgctxt "link.kindAudio"
 msgid "audio"
-msgstr "audio"
+msgstr ""
 
 #. The word for a picture, filling {kind} in media-preview sentences such as 'Loading {kind}…'. Lowercase mid-sentence.
 #: client/components/LinkPreview.vue
@@ -2348,7 +2348,7 @@ msgstr "medii"
 #: client/components/LinkPreview.vue
 msgctxt "link.kindVideo"
 msgid "video"
-msgstr "video"
+msgstr ""
 
 #. Title on the placeholder of a media preview while its file is downloading after the reader revealed it. {kind} is 'image', 'video' or 'audio'.
 #: client/components/LinkPreview.vue
@@ -2825,7 +2825,7 @@ msgstr "Lista utilizatorilor ignorați"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeAdmin"
 msgid "admin"
-msgstr "admin"
+msgstr ""
 
 #. Name of the IRC half-operator role (the % prefix), filling {name} in the mode menu items. Lowercase mid-sentence; keep the hyphen if natural.
 #: client/js/helpers/contextMenu.ts
@@ -2837,13 +2837,13 @@ msgstr "jumătate de op"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOperator"
 msgid "operator"
-msgstr "operator"
+msgstr ""
 
 #. Name of the highest IRC channel role (the ~ prefix), filling {name} in the mode menu items such as 'Revoke {name} (-a)'. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOwner"
 msgid "owner"
-msgstr "owner"
+msgstr ""
 
 #. Name of the IRC voiced role (the + prefix; may speak in a moderated channel), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
@@ -3566,7 +3566,7 @@ msgstr "Corpul este prea lung (mai mult de {limit} caractere)."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr "Alias"
+msgstr ""
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
@@ -4518,27 +4518,27 @@ msgstr "Ghidă de setări"
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.general"
 msgid "General"
-msgstr "General"
+msgstr "Generală"
 
 #. Label of the Settings modal's Networks tab (tab strip); switching tabs navigates to the Networks settings pane.
 #: client/components/Settings/Navigation.vue
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.networks"
 msgid "Networks"
-msgstr "Networks"
+msgstr "Rețele"
 
 #. Label of the Settings modal's Notifications tab (tab strip); switching tabs navigates to the Notifications settings pane.
 #: client/components/Settings/Navigation.vue
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.notifications"
 msgid "Notifications"
-msgstr "Notifications"
+msgstr "Notificări"
 
 #. Name of the Translation tab in the Settings tab strip: on-device translation of messages.
 #: client/components/Settings/Navigation.vue
 msgctxt "settings.tabs.translation"
 msgid "Translation"
-msgstr "Translation"
+msgstr "Traducere"
 
 #. Tooltip of the developer badge next to the sidebar logo, shown only in development builds; {app} is the app's display name.
 #: client/components/Sidebar.vue:8
@@ -4695,7 +4695,7 @@ msgstr "Exemptat de"
 #: client/components/Special/ListIgnored.vue
 msgctxt "special.ignored.hostmask"
 msgid "Hostmask"
-msgstr "Hostmask"
+msgstr ""
 
 #. Column header of the ignore list: when the ignore was set, locale-formatted.
 #: client/components/Special/ListIgnored.vue
@@ -5601,7 +5601,7 @@ msgstr "Trimite traducerea"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sourceAuto"
 msgid "auto"
-msgstr "auto"
+msgstr ""
 
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue
@@ -5895,7 +5895,7 @@ msgstr "este offline, ultima informatie:"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.operator"
 msgid "Operator:"
-msgstr "Operator:"
+msgstr ""
 
 #. Whois row: the user's realname field, user content, verbatim.
 #: client/components/MessageTypes/whois.vue
@@ -5919,7 +5919,7 @@ msgstr "Conexiune sigură:"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.special"
 msgid "Special:"
-msgstr "Special:"
+msgstr ""
 
 #. The value of whois rows whose answer is affirmative (help operator, bot, secure connection).
 #: client/components/MessageTypes/whois.vue
@@ -5937,7 +5937,7 @@ msgstr "vedere toate release-urile"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.aria"
 msgid "Changelog"
-msgstr "Changelog"
+msgstr ""
 
 #. Link at the top of the changelog window that goes back to the help page; the left double angle quote is part of the copy.
 #: client/components/Windows/Changelog.vue
@@ -5949,7 +5949,7 @@ msgstr "« Ajutor"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr "comitet"
 
 #. First sentence of the paragraph in the changelog window that says the release notes are read online; the following words are the two links.
 #: client/components/Windows/Changelog.vue

@@ -481,7 +481,7 @@ msgstr "{index} van {count}"
 #: client/components/ChatInput.vue:584
 msgctxt "composer.uploadPreparing"
 msgid "preparing…"
-msgstr ""
+msgstr "voorbereiding…"
 
 #. Part of the upload progress bar, appended after the uploading text while the file has been sent and the chat server has not confirmed it yet. Starts lowercase because it is joined with the other parts into one line.
 #: client/components/ChatInput.vue:586
@@ -576,7 +576,7 @@ msgstr "Annuleren"
 #: client/components/Windows/Connect.vue:213
 msgctxt "connect.account"
 msgid "Account"
-msgstr "Account"
+msgstr ""
 
 #. aria-label of the whole connect screen (the window/dialog element); announced by screen readers on arriving at the form.
 #: client/components/Windows/Connect.vue:7
@@ -637,7 +637,7 @@ msgstr "Verbinden met {host}:{port}. (toevoegen {attempt})"
 #: client/js/irc/client.ts
 msgctxt "connect.disconnected"
 msgid "Disconnected."
-msgstr ""
+msgstr "ongekend."
 
 #. Lobby status line after registration naming the IRCv3 capabilities the server enabled; {caps} is a comma-separated list of protocol tokens, never translated.
 #: client/js/irc/client.ts
@@ -705,7 +705,7 @@ msgstr "Verbinden met een nieuwe server?"
 #: client/components/Windows/Connect.vue:173
 msgctxt "connect.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr ""
 
 #. Dismiss button on the connect screen shown as a dialog when the user followed a web+irc:// link; declines the connection without disconnecting the app.
 #: client/components/Windows/Connect.vue:91
@@ -809,7 +809,7 @@ msgstr "de server biedt SASL niet aan"
 #: client/js/irc/client.ts
 msgctxt "connect.saslReason.unknown"
 msgid "unknown error"
-msgstr ""
+msgstr "onbekende fout"
 
 #. Reason fragment of 'SASL authentication failed: {reason}' when the server's SASL mechanisms do not include the saved network's. {offered} and {mechanism} are protocol mechanism tokens, never translated.
 #: client/js/irc/client.ts
@@ -834,7 +834,7 @@ msgstr "Ik heb een service account (SASL)"
 #: client/components/Windows/Connect.vue:132
 msgctxt "connect.server"
 msgid "Server"
-msgstr "Server"
+msgstr ""
 
 #. aria-label of the server host text input (e.g. irc.example.org) on the connect form; the visible label is on the row.
 #: client/components/Windows/Connect.vue:139
@@ -978,7 +978,7 @@ msgstr "TLS-handdruk mislukt"
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.codeUnknown"
 msgid "code {code}"
-msgstr "code {code}"
+msgstr ""
 
 #. Connection-failure report when the WebSocket never opened. {url} is the address that was dialled, verbatim. {error} is ' (<the browser's error text>)' or empty — the browser hides why a dial failed, so the slot often stays empty.
 #: client/js/irc/disconnect.ts
@@ -1134,7 +1134,7 @@ msgstr "Gebruiker {nick} is al op het kanaal."
 #: client/components/NetworkForm.vue:168
 msgctxt "form.account"
 msgid "Account"
-msgstr "Account"
+msgstr ""
 
 #. Button on the network edit form's status row while a connection is being dialled: stop trying.
 #: client/components/NetworkForm.vue:505
@@ -1200,7 +1200,7 @@ msgstr "Kanalen"
 #: client/components/NetworkForm.vue:125
 msgctxt "form.channelsPlaceholder"
 msgid "#channel, #another key (joined on connect)"
-msgstr "#channel, # another key (joined on connect)"
+msgstr "#channel, #another key (gevoegd bij connectie)"
 
 #. Label of the field holding IRC commands sent automatically when this network connects, on the network edit form.
 #: client/components/NetworkForm.vue:133
@@ -1242,7 +1242,7 @@ msgstr "Verbinding verbroken"
 #: client/components/NetworkForm.vue:14
 msgctxt "form.editTitle"
 msgid "Edit {name}"
-msgstr "Edit {name}"
+msgstr "Bewerk {name}"
 
 #. Label of the display-name field of a saved network on the network edit form.
 #: client/components/NetworkForm.vue:42
@@ -1266,7 +1266,7 @@ msgstr "Netwerkinstellingen"
 #: client/components/NetworkForm.vue:104
 msgctxt "form.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr "Nicknaam"
 
 #. Radio option on the network edit form: connect without a services account.
 #: client/components/NetworkForm.vue:158
@@ -1332,7 +1332,7 @@ msgstr "Netwerk opslaan"
 #: client/components/NetworkForm.vue:53
 msgctxt "form.server"
 msgid "Server"
-msgstr "Server"
+msgstr ""
 
 #. aria-label of the server host text input (e.g. irc.example.org) on the network edit form; the visible label is on the row.
 #: client/components/NetworkForm.vue:60
@@ -1350,7 +1350,7 @@ msgstr "Serverpoort"
 #: client/components/NetworkForm.vue:26
 msgctxt "form.status"
 msgid "Status"
-msgstr "Status"
+msgstr ""
 
 #. Checkbox on the network edit form: connect to this network over TLS instead of a plain connection.
 #: client/components/NetworkForm.vue:86
@@ -1471,7 +1471,7 @@ msgstr "is gebouwd uit"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.alias"
 msgid "Alias:"
-msgstr "Alias:"
+msgstr ""
 
 #. Lead-in of the alias line under a command description in the help window when the command has several alternative names; the alternatives follow as code fragments. Keep the trailing colon.
 #: client/components/Windows/Help.vue
@@ -1645,7 +1645,7 @@ msgstr "Schop een gebruiker van het huidige kanaal."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kickbanA"
 msgid "Kick and ban ("
-msgstr "Kick and ban () ()"
+msgstr "Kicks en ban ("
 
 #. Middle of the /kickban command description in the help window, after the +b code fragment; a code fragment with the /ban command follows it. Starts with the closing parenthesis. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1825,7 +1825,7 @@ msgstr "Informatie over de gegeven gebruiker ophalen op het huidige netwerk."
 #: client/components/Windows/Help.vue
 msgctxt "help.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First word of the two list items under the help window's past-release sentence; each continues with a link comparing two versions. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1904,7 +1904,7 @@ msgstr "cursief"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.monospace"
 msgid "monospaced"
-msgstr "monospaced"
+msgstr ""
 
 #. Description of the Ctrl+O formatting shortcut in the help window; it removes any formatting applied so far in the message.
 #: client/components/Windows/Help.vue
@@ -1977,7 +1977,7 @@ msgstr "Privacybeleid"
 #: client/components/Windows/Help.vue
 msgctxt "help.releaseNotesLink"
 msgid "release notes"
-msgstr "release notes"
+msgstr ""
 
 #. Button of the update banner in the help window; clicking reloads the app to pick up the new build.
 #: client/components/Windows/Help.vue
@@ -2116,7 +2116,7 @@ msgstr "Nieuwe versie beschikbaar"
 #: client/components/Windows/Help.vue
 msgctxt "help.website"
 msgid "Website"
-msgstr "Website"
+msgstr ""
 
 #. aria-label of the ✕ control of the image viewer that fills the screen; clicking closes it.
 #: client/components/ImageViewer.vue
@@ -2212,7 +2212,7 @@ msgstr "Lichtgrijs"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorMagenta"
 msgid "Magenta"
-msgstr "Magenta"
+msgstr ""
 
 #. Name of the mIRC colour with code 07 (orange), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2320,7 +2320,7 @@ msgstr "Dit voorbeeld verbergen"
 #: client/components/LinkPreview.vue
 msgctxt "link.kindAudio"
 msgid "audio"
-msgstr "audio"
+msgstr ""
 
 #. The word for a picture, filling {kind} in media-preview sentences such as 'Loading {kind}…'. Lowercase mid-sentence.
 #: client/components/LinkPreview.vue
@@ -2332,13 +2332,13 @@ msgstr "afbeelding"
 #: client/components/LinkPreview.vue
 msgctxt "link.kindMedia"
 msgid "media"
-msgstr "media"
+msgstr ""
 
 #. The word for a moving picture, filling {kind} in media-preview sentences such as 'Loading {kind}…'. Lowercase mid-sentence.
 #: client/components/LinkPreview.vue
 msgctxt "link.kindVideo"
 msgid "video"
-msgstr "video"
+msgstr ""
 
 #. Title on the placeholder of a media preview while its file is downloading after the reader revealed it. {kind} is 'image', 'video' or 'audio'.
 #: client/components/LinkPreview.vue
@@ -2400,7 +2400,7 @@ msgstr "van {name}"
 #: client/components/LinkPreview.vue
 msgctxt "link.trustInChannel"
 msgid "in {name}"
-msgstr "in {name}"
+msgstr ""
 
 #. Menu item on a media preview's trust menu: removes the existing rule that always loads this media for the named scope ('from example.com', 'in #chat', 'from alice').
 #: client/js/helpers/mediaTrustMenu.ts
@@ -2814,7 +2814,7 @@ msgstr "Lijst genegeerde gebruikers"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeAdmin"
 msgid "admin"
-msgstr "admin"
+msgstr ""
 
 #. Name of the IRC half-operator role (the % prefix), filling {name} in the mode menu items. Lowercase mid-sentence; keep the hyphen if natural.
 #: client/js/helpers/contextMenu.ts
@@ -2922,7 +2922,7 @@ msgstr "uw bericht"
 #: client/components/Message.vue:333
 msgctxt "message.deleted"
 msgid "[Message deleted by {nick}]"
-msgstr "[Message deleted by {nick}]"
+msgstr "[Bericht verwijderd door {nick}]"
 
 #. Visible text standing in for a deleted chat message when the deletion gave a reason. {nick} is the name of the user who deleted it, {reason} the reason they gave. Square brackets are part of the copy.
 #: client/components/Message.vue:331
@@ -2946,7 +2946,7 @@ msgstr "Dit bericht is bewerkt"
 #: client/components/Message.vue:264
 msgctxt "message.editedAt"
 msgid "Edited {time}"
-msgstr "Edited {time}"
+msgstr "Bewerkt door {time}"
 
 #. Small marker shown after a chat message that was edited after being sent. Parenthesized; keep the lowercase form.
 #: client/components/Message.vue:77
@@ -3555,13 +3555,13 @@ msgstr "Het lichaam is te lang (over {limit} tekens)."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr "Alias"
+msgstr ""
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headRuns"
 msgid "Runs"
-msgstr "Runs"
+msgstr "Draait op"
 
 #. Joins the last two entries of the alias-body variable list ($2- or $*). Single word; the spaces around it come from the template.
 #: client/components/Settings/Aliases.vue
@@ -3739,7 +3739,7 @@ msgstr "Aangepaste stylesheet. U kunt elke stijl met CSS hier overschrijven."
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.customStylesheetPlaceholder"
 msgid "/* You can override any style with CSS here */"
-msgstr "# You can override any style with CSS here #"
+msgstr "/* U kunt elke stijl hier overschrijven met CSS */"
 
 #. aria-label of the slider in Settings > Appearance that changes the size of chat text and the interface with it.
 #: client/components/Settings/Appearance.vue
@@ -3757,7 +3757,7 @@ msgstr "Fontgrootte"
 #: client/components/Settings/Appearance.vue:458
 msgctxt "settings.appearance.fontSizeHuge"
 msgid "Huge"
-msgstr "Huge"
+msgstr "Groot"
 
 #. Label of the default step of the font-size slider in Settings → Appearance. One word.
 #: client/components/Settings/Appearance.vue:456
@@ -3973,7 +3973,7 @@ msgstr "Mensen"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.trustedSites"
 msgid "Sites"
-msgstr "Sites"
+msgstr "Websites"
 
 #. Tooltip and aria-label of the remove button on an entry of the always-shown media list in Settings > Appearance, for a website or a person. {name} is that site's host or the person's name. Clicking stops their media from loading automatically.
 #: client/components/Settings/Appearance.vue
@@ -4429,7 +4429,7 @@ msgstr "Push notificaties hebben een verbonden server nodig die de concept/webpu
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snooze15"
 msgid "15 min"
-msgstr "15 min."
+msgstr ""
 
 #. Snooze button in Settings > Notifications; pauses push notifications for eight hours.
 #: client/components/Settings/Notifications.vue
@@ -4536,7 +4536,7 @@ msgstr "{app} is ingebouwd in de ontwikkelingsmodus"
 #: client/components/Sidebar.vue:16
 msgctxt "sidebar.developerBadge"
 msgid "DEVELOPER"
-msgstr "DEVELOPER"
+msgstr ""
 
 #. Message shown in the sidebar when there are no networks at all; the connect form is open beside it.
 #: client/components/NetworkList.vue:8
@@ -4824,13 +4824,13 @@ msgstr "Antwoord."
 #: client/service-worker.js:1134
 msgctxt "sw.titleChannel"
 msgid "{nick} in {target}"
-msgstr "{nick} in {target}"
+msgstr ""
 
 #. Push-notification title for a channel conversation carrying more than one unread message. {nick} is the nick of the newest message's author and {target} is the channel name — both verbatim, never translate them; {count} is the number of unread messages the notification carries.
 #: client/service-worker.js:1137
 msgctxt "sw.titleChannelCount"
 msgid "{nick} in {target} ({count})"
-msgstr "{nick} in {target} ({count})"
+msgstr ""
 
 #. Push-notification title for a query (direct-message) conversation carrying more than one unread message. {nick} is the other side's nick, verbatim — never translate it; {count} is the number of unread messages.
 #: client/service-worker.js:1141
@@ -5078,7 +5078,7 @@ msgstr "Zoals geschreven"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.casual"
 msgid "Casually"
-msgstr "Casually"
+msgstr ""
 
 #. Choice for how formally a translation addresses people: always use the polite form.
 #: client/components/TranslationPanel.vue
@@ -5351,7 +5351,7 @@ msgstr "Vertaling voor {channel}"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.variant"
 msgid "Variant"
-msgstr "Variant"
+msgstr ""
 
 #. Explanatory note under the regional variety field in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -5447,7 +5447,7 @@ msgstr "Automatisch. beste voor dit apparaat"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.gpuModel"
 msgid "GPU model"
-msgstr "GPU model"
+msgstr ""
 
 #. Explanatory note under the GPU model picker in Settings → Translation.
 #: client/components/Settings/Translation.vue
@@ -5585,7 +5585,7 @@ msgstr "Verzend de vertaling"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sourceAuto"
 msgid "auto"
-msgstr "auto"
+msgstr ""
 
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue
@@ -5877,7 +5877,7 @@ msgstr "offline is, laatste informatie:"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.operator"
 msgid "Operator:"
-msgstr "Operator:"
+msgstr ""
 
 #. Whois row: the user's realname field, user content, verbatim.
 #: client/components/MessageTypes/whois.vue
@@ -5919,19 +5919,19 @@ msgstr "zie alle releases"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.aria"
 msgid "Changelog"
-msgstr "Changelog"
+msgstr ""
 
 #. Link at the top of the changelog window that goes back to the help page; the left double angle quote is part of the copy.
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.back"
 msgid "« Help"
-msgstr ". Help"
+msgstr ""
 
 #. Word inside the link of the changelog's past-release sentence: the linked text names the source code commit the running build was made from; the commit hash follows it. Mid-sentence.
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First sentence of the paragraph in the changelog window that says the release notes are read online; the following words are the two links.
 #: client/components/Windows/Changelog.vue
@@ -5973,7 +5973,7 @@ msgstr "wat is er veranderd sinds de release"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.title"
 msgid "Release notes for v{version}"
-msgstr "Release notes for v{version}"
+msgstr "Release notes voor v{version}"
 
 #. Link at the top of the network-editing form that goes back to the list of saved networks; the left arrow is part of the copy.
 #: client/components/Windows/NetworkEdit.vue

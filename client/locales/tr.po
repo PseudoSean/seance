@@ -475,7 +475,7 @@ msgstr "Dosya yükle"
 #: client/components/ChatInput.vue:580
 msgctxt "composer.uploadIndex"
 msgid "{index} of {count}"
-msgstr "{index} of {count}"
+msgstr ""
 
 #. Part of the upload progress bar, appended after the uploading text while the file is being prepared (re-encoded or stripped of metadata) before it is sent. Starts lowercase because it is joined with the other parts into one line.
 #: client/components/ChatInput.vue:584
@@ -1242,49 +1242,49 @@ msgstr "Bağlantı kesildi"
 #: client/components/NetworkForm.vue:14
 msgctxt "form.editTitle"
 msgid "Edit {name}"
-msgstr "Edit {name}"
+msgstr ""
 
 #. Label of the display-name field of a saved network on the network edit form.
 #: client/components/NetworkForm.vue:42
 msgctxt "form.name"
 msgid "Name"
-msgstr "Name"
+msgstr "İsim"
 
 #. Placeholder of the network display-name field on the network edit form: the field may stay empty.
 #: client/components/NetworkForm.vue:49
 msgctxt "form.namePlaceholder"
 msgid "Optional, defaults to the server's network name"
-msgstr "Optional, defaults to the server's network name"
+msgstr "Opsiyonel, sunucunun ağına göre varsayılan olarak ayarlanır"
 
 #. Heading of the server half of the network edit form (name, server, TLS, autoconnect).
 #: client/components/NetworkForm.vue:40
 msgctxt "form.networkSettings"
 msgid "Network settings"
-msgstr "Network settings"
+msgstr "Ağ ayarları"
 
 #. Label of the nickname field on the network edit form.
 #: client/components/NetworkForm.vue:104
 msgctxt "form.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr "Kullanıcı adı"
 
 #. Radio option on the network edit form: connect without a services account.
 #: client/components/NetworkForm.vue:158
 msgctxt "form.noAuth"
 msgid "No authentication"
-msgstr "No authentication"
+msgstr "Kimlik doğrulaması yok"
 
 #. Label of the services account password field on the network edit form, shown when SASL is on.
 #: client/components/NetworkForm.vue:183
 msgctxt "form.password"
 msgid "Password"
-msgstr "Password"
+msgstr "Şifre"
 
 #. Placeholder of the SASL password field on the network edit form: saving without typing keeps the stored password.
 #: client/components/NetworkForm.vue:196
 msgctxt "form.passwordPlaceholder"
 msgid "Leave empty to keep the current password"
-msgstr "Leave empty to keep the current password"
+msgstr "Boş bırakmak için mevcut şifreyi koru"
 
 #. Tooltip of the question-mark icon next to the push notifications checkbox on the network edit form.
 #: client/components/NetworkForm.vue:225
@@ -1441,7 +1441,7 @@ msgstr "(veya istenen öğeyi tıklayarak)"
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.nick"
 msgid "Nickname"
-msgstr "Nickname"
+msgstr "Kullanıcı adı"
 
 #. Purpose clause ending the second compare item of the help window's past-release list (comparing the running build with the development branch). Starts lowercase because it follows the link.
 #: client/components/Windows/Help.vue
@@ -1471,13 +1471,13 @@ msgstr "şifrelenmiştir"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.alias"
 msgid "Alias:"
-msgstr "Alias:"
+msgstr "İsim:"
 
 #. Lead-in of the alias line under a command description in the help window when the command has several alternative names; the alternatives follow as code fragments. Keep the trailing colon.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.aliases"
 msgid "Aliases:"
-msgstr "Aliases:"
+msgstr "İsimler:"
 
 #. Description of the /away command in the help window; the command syntax (/away [message]) is shown beside it and stays untranslated.
 #: client/components/Windows/Help.vue
@@ -1495,7 +1495,7 @@ msgstr "Kendini uzak olarak işaretlediğinizi kaldırın (set ile"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.banA"
 msgid "Ban ("
-msgstr "Ban ("
+msgstr "Yasakla ("
 
 #. Continuation of the /ban command description in the help window, after the +b code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1531,73 +1531,73 @@ msgstr "Yeni bir IRC ağına bağlanın. Eğer"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.connectB"
 msgid "starts with a"
-msgstr "starts with a"
+msgstr "a ile başlar"
 
 #. End of the /connect command description in the help window, after the plus-sign code fragment; TLS stays verbatim.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.connectC"
 msgid "sign, the connection will be made secure using TLS."
-msgstr "sign, the connection will be made secure using TLS."
+msgstr "işareti, bağlantı TLS ile güvenli hale getirilecektir."
 
 #. Start of the /ctcp command description in the help window; the CTCP abbreviation follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcpA"
 msgid "Send a"
-msgstr "Send a"
+msgstr "Gönderin"
 
 #. Continuation of the /ctcp command description in the help window, after the CTCP abbreviation; the link text follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcpB"
 msgid "request. Read more about this on"
-msgstr "request. Read more about this on"
+msgstr "isteği. Bu konuda daha fazla bilgi için"
 
 #. Text of the link at the end of the /ctcp command description in the help window; it opens the external Wikipedia article. Mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcpLink"
 msgid "the dedicated Wikipedia article"
-msgstr "the dedicated Wikipedia article"
+msgstr "ayrıntılı Wikipedia makalesi"
 
 #. Expansion of the acronym CTCP, shown as the abbreviation's hover tooltip in the help window's /ctcp command description.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcpTitle"
 msgid "Client-to-client protocol"
-msgstr "Client-to-client protocol"
+msgstr "Kullanıcı-araya-kullanıcı protokolü"
 
 #. Start of the /deop command description in the help window; a code fragment with the -o mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.deopA"
 msgid "Remove op ("
-msgstr "Remove op ("
+msgstr "Ops kaldır ("
 
 #. Continuation of the /deop command description in the help window, after the -o code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.deopB"
 msgid ") from one or several users in the current channel."
-msgstr ") from one or several users in the current channel."
+msgstr ") bir veya birkaç kullanıcıyı mevcut kanalda kaldır"
 
 #. Start of the /devoice command description in the help window; a code fragment with the -v mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.devoiceA"
 msgid "Remove voice ("
-msgstr "Remove voice ("
+msgstr "Ses ("
 
 #. Continuation of the /devoice command description in the help window, after the -v code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.devoiceB"
 msgid ") from one or several users in the current channel."
-msgstr ") from one or several users in the current channel."
+msgstr ") şu anki kanalda bir veya birkaç kullanıcıdan."
 
 #. Description of the /disconnect command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.disconnectLong"
 msgid "Disconnect from the current network with an optionally-provided message."
-msgstr "Disconnect from the current network with an optionally-provided message."
+msgstr "Şu anki ağa bağlanmayı kesin."
 
 #. Description of the /expand command in the help window; a code fragment with the /collapse command follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.expand"
 msgid "Expand all previews in the current channel (opposite of"
-msgstr "Expand all previews in the current channel (opposite of"
+msgstr "Şu anki kanalda tüm önizlemleri açın (karşı zıtı"
 
 #. Heading of the commands section of the help window; one row per slash command with its syntax and description.
 #: client/components/Windows/Help.vue
@@ -1777,7 +1777,7 @@ msgstr "Belirtilen, mevcut kanalda konuyu belirler."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unbanA"
 msgid "Unban ("
-msgstr "Unban ("
+msgstr "Engelle ("
 
 #. Continuation of the /unban command description in the help window, after the -b code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1825,13 +1825,13 @@ msgstr "Mevcut ağa ait belirtilen kullanıcı hakkındaki bilgileri alır."
 #: client/components/Windows/Help.vue
 msgctxt "help.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First word of the two list items under the help window's past-release sentence; each continues with a link comparing two versions. Mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.compare"
 msgid "Compare"
-msgstr "Compare"
+msgstr "Karşılaştır"
 
 #. Label of the documentation link in the Help window.
 #: client/js/branding.ts
@@ -2170,7 +2170,7 @@ msgstr "Ahşap"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorCyan"
 msgid "Cyan"
-msgstr "Cyan"
+msgstr "Mavi"
 
 #. Name of the mIRC colour with code 03 (green), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2212,7 +2212,7 @@ msgstr "Açık gri"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorMagenta"
 msgid "Magenta"
-msgstr "Magenta"
+msgstr "Mor"
 
 #. Name of the mIRC colour with code 07 (orange), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2338,7 +2338,7 @@ msgstr "medya"
 #: client/components/LinkPreview.vue
 msgctxt "link.kindVideo"
 msgid "video"
-msgstr "video"
+msgstr ""
 
 #. Title on the placeholder of a media preview while its file is downloading after the reader revealed it. {kind} is 'image', 'video' or 'audio'.
 #: client/components/LinkPreview.vue
@@ -2592,7 +2592,7 @@ msgstr "{network} için nick adınız"
 #: client/components/NetworkLobby.vue:66
 msgctxt "lobby.nickname"
 msgid "Nickname: "
-msgstr "Nickname:"
+msgstr "Kullanıcı Adı:"
 
 #. Tooltip and aria-label of the crossed-out bell icon on a sidebar network row: push and browser notifications are switched off for this network.
 #: client/components/NetworkLobby.vue:118
@@ -2814,31 +2814,31 @@ msgstr "Ignore edilen kullanıcıları listele"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeAdmin"
 msgid "admin"
-msgstr "admin"
+msgstr "yönetici"
 
 #. Name of the IRC half-operator role (the % prefix), filling {name} in the mode menu items. Lowercase mid-sentence; keep the hyphen if natural.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeHalfOp"
 msgid "half-op"
-msgstr "half-op"
+msgstr "yarım kontrol"
 
 #. Name of the IRC channel operator role (the @ prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOperator"
 msgid "operator"
-msgstr "operator"
+msgstr "operatör"
 
 #. Name of the highest IRC channel role (the ~ prefix), filling {name} in the mode menu items such as 'Revoke {name} (-a)'. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOwner"
 msgid "owner"
-msgstr "owner"
+msgstr "sahibi"
 
 #. Name of the IRC voiced role (the + prefix; may speak in a moderated channel), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeVoice"
 msgid "voice"
-msgstr "voice"
+msgstr "ses"
 
 #. Context-menu item on a conversation; clicking mutes it (no highlights, no notifications from it). {type} names the kind of conversation in lowercase: 'network', 'channel' or 'conversation'.
 #: client/js/helpers/contextMenu.ts
@@ -3555,7 +3555,7 @@ msgstr "Cümle çok uzun ( {limit} karakterden fazla)"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr "Alias"
+msgstr ""
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
@@ -4679,7 +4679,7 @@ msgstr "Hariç Bırakan Nedeni"
 #: client/components/Special/ListIgnored.vue
 msgctxt "special.ignored.hostmask"
 msgid "Hostmask"
-msgstr "Hostmask"
+msgstr ""
 
 #. Column header of the ignore list: when the ignore was set, locale-formatted.
 #: client/components/Special/ListIgnored.vue
@@ -4878,19 +4878,19 @@ msgstr "{nick} kullanıcı adını {ident} olarak değiştirdi"
 #: client/components/MessageTypes/ctcp_request.vue:5
 msgctxt "system.ctcpRequest"
 msgid "{nick} sent a {ctcp} request: {message}"
-msgstr "{nick} sent a {ctcp} request: {message}"
+msgstr ""
 
 #. System line when a user invites someone else. {nick} is the inviter's nick and {target} the invited user's nick — both VERBATIM user content, each rendering as an interactive username element where its placeholder stands; {channel} is the channel name (verbatim).
 #: client/components/MessageTypes/invite.vue:9
 msgctxt "system.inviteTarget"
 msgid "{nick} has invited {target} to {channel}"
-msgstr "{nick} has invited {target} to {channel}"
+msgstr ""
 
 #. System line when the invite targets the reader. {nick} is the inviter's nick (VERBATIM user content, renders as the interactive username element) and {channel} the channel name (verbatim).
 #: client/components/MessageTypes/invite.vue:7
 msgctxt "system.inviteYou"
 msgid "{nick} has invited you to {channel}"
-msgstr "{nick} has invited you to {channel}"
+msgstr "{nick}, sizeye {channel}'ye davet etti"
 
 #. System line when a user joins a channel. {nick} is the joining user's nick, VERBATIM user content — never translate or inflect it; it renders as the interactive username element inline where the placeholder stands, so word order around it is the translator's.
 #: client/components/MessageTypes/join.vue:8
@@ -4902,19 +4902,19 @@ msgstr "{nick} kanala katıldı"
 #: client/components/MessageTypes/kick.vue:6
 msgctxt "system.kick"
 msgid "{nick} has kicked {target}"
-msgstr "{nick} has kicked {target}"
+msgstr "{nick}, {target}'yi atladı"
 
 #. System line when a channel or user mode changes. {nick} is the nick that set the mode, VERBATIM user content; {modes} is the verbatim mode change (e.g. +o nick), rendered as-is.
 #: client/components/MessageTypes/mode.vue:6
 msgctxt "system.mode"
 msgid "{nick} sets mode {modes}"
-msgstr "{nick} sets mode {modes}"
+msgstr "{nick}, modu {modes}'ye ayarladı"
 
 #. System line when a user changes nick. {nick} is the old nick and {newNick} the new one — both VERBATIM user content, each rendering as an interactive username element where its placeholder stands.
 #: client/components/MessageTypes/nick.vue:6
 msgctxt "system.nick"
 msgid "{nick} is now known as {newNick}"
-msgstr "{nick} is now known as {newNick}"
+msgstr "{nick}, artık {newNick} olarak bilinir"
 
 #. System line when a user parts a channel. {nick} is the parting user's nick, VERBATIM user content — never translate or inflect it; it renders as the interactive username element.
 #: client/components/MessageTypes/part.vue:6
@@ -4932,13 +4932,13 @@ msgstr "{nick} ayrıldı"
 #: client/components/MessageActions.vue
 msgctxt "translate.action.showTranslation"
 msgid "Show translation"
-msgstr "Show translation"
+msgstr "Çeviri göster"
 
 #. Tooltip and aria-label of the translate button in a message's hover toolbar: it translates that one message.
 #: client/components/MessageActions.vue
 msgctxt "translate.action.translate"
 msgid "Translate"
-msgstr "Translate"
+msgstr "Çevir"
 
 #. Verdict of the device check in Settings → Translation: the large graphics-processor model cannot run, the smaller main-processor ones can. Any reasons follow as their own list.
 #: client/components/Settings/Translation.vue
@@ -5931,7 +5931,7 @@ msgstr "« Yardım"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr "veriye geç"
 
 #. First sentence of the paragraph in the changelog window that says the release notes are read online; the following words are the two links.
 #: client/components/Windows/Changelog.vue

@@ -40,19 +40,19 @@ msgstr "{type}: {name} ({extra})"
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.channel"
 msgid "Channel"
-msgstr "Channel"
+msgstr "kênh"
 
 #. Names the kind of window in a sidebar row's aria-label: the chat network's own window. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.lobby"
 msgid "Network"
-msgstr "Network"
+msgstr "mạng"
 
 #. Names the kind of window in a sidebar row's aria-label: a private conversation with one person. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.query"
 msgid "Conversation"
-msgstr "Conversation"
+msgstr "cuộc trò chuyện"
 
 #. Names the kind of window in a sidebar row's aria-label: a results window such as a channel list or a ban list. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
@@ -824,7 +824,7 @@ msgstr "Tôi có tài khoản dịch vụ (SASL)"
 #: client/components/Windows/Connect.vue:132
 msgctxt "connect.server"
 msgid "Server"
-msgstr "Server"
+msgstr "máy chủ"
 
 #. aria-label of the server host text input (e.g. irc.example.org) on the connect form; the visible label is on the row.
 #: client/components/Windows/Connect.vue:139
@@ -914,121 +914,121 @@ msgstr "Hôm qua"
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1001"
 msgid "server going away"
-msgstr "server going away"
+msgstr "máy chủ đang rời đi"
 
 #. Name of WebSocket close code 1002 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1002"
 msgid "WebSocket protocol error"
-msgstr "WebSocket protocol error"
+msgstr "lỗi giao thức WebSocket"
 
 #. Name of WebSocket close code 1006 (abnormal closure: refused, unreachable, TLS failure — the browser never says which) in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1006"
 msgid "connection lost"
-msgstr "connection lost"
+msgstr "kết nối bị mất"
 
 #. Name of WebSocket close code 1008 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1008"
 msgid "policy violation"
-msgstr "policy violation"
+msgstr "vi phạm chính sách"
 
 #. Name of WebSocket close code 1009 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1009"
 msgid "message too large"
-msgstr "message too large"
+msgstr "tin nhắn quá lớn"
 
 #. Name of WebSocket close code 1011 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1011"
 msgid "server error"
-msgstr "server error"
+msgstr "lỗi server"
 
 #. Name of WebSocket close code 1012 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1012"
 msgid "server restarting"
-msgstr "server restarting"
+msgstr "máy chủ đang khởi động lại"
 
 #. Name of WebSocket close code 1013 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1013"
 msgid "server asked to try again later"
-msgstr "server asked to try again later"
+msgstr "máy chủ yêu cầu thử lại sau này"
 
 #. Name of WebSocket close code 1015 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1015"
 msgid "TLS handshake failed"
-msgstr "TLS handshake failed"
+msgstr "handshake TLS thất bại"
 
 #. Detail of a connection-failure report when the WebSocket closed with a code the app has no name for. {code} is the numeric close code, verbatim.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.codeUnknown"
 msgid "code {code}"
-msgstr "code {code}"
+msgstr ""
 
 #. Connection-failure report when the WebSocket never opened. {url} is the address that was dialled, verbatim. {error} is ' (<the browser's error text>)' or empty — the browser hides why a dial failed, so the slot often stays empty.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.couldNotConnect"
 msgid "Could not connect to {url}{error}."
-msgstr "Could not connect to {url}{error}."
+msgstr "không thể kết nối đến {url}{error}."
 
 #. Headline when a network the client is dialling never opened and the retry schedule is standing down (the browser refused or could not reach the address). {url} is the WebSocket URL that was dialled; {error} is the browser's error text in parentheses, or empty.
 #: client/js/irc/disconnect.ts:78
 msgctxt "disconnect.couldNotConnectNotReconnecting"
 msgid "Could not connect to {url}{error}. Not reconnecting."
-msgstr "Could not connect to {url}{error}. Not reconnecting."
+msgstr "Không thể kết nối với {url}{error}. Không reconnect."
 
 #. Connection-failure report once the network was registered. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.disconnected"
 msgid "Disconnected from {host}{detail}."
-msgstr "Disconnected from {host}{detail}."
+msgstr "Đã bị ngắt kết nối từ {host}{detail}."
 
 #. Headline when a registered connection closed and the retry schedule is standing down. {host} is the host as the user typed it; {detail} is the close detail in parentheses, or empty.
 #: client/js/irc/disconnect.ts:127
 msgctxt "disconnect.disconnectedNotReconnecting"
 msgid "Disconnected from {host}{detail}. Not reconnecting."
-msgstr "Disconnected from {host}{detail}. Not reconnecting."
+msgstr "Đã bị ngắt kết nối từ {host}{detail}. Không reconnect."
 
 #. Follow-up hint under a failed connection dialled with ws:// from an https:// page: the browser blocks mixed content, so the fix is on the network's settings.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.httpsBlocked"
 msgid "This page was loaded over HTTPS, so the browser blocks plain ws:// connections. Enable TLS for this network, or open the app over http://."
-msgstr "This page was loaded over HTTPS, so the browser blocks plain ws:// connections. Enable TLS for this network, or open the app over http://."
+msgstr "Trang này được tải qua HTTPS, do đó trình duyệt chặn các kết nối ws:// nguyên bản. Vui lòng bật TLS cho mạng này, hoặc mở ứng dụng qua http://."
 
 #. Follow-up hint under a failed plain (ws://) dial from a non-secure page.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.plainCauses"
 msgid "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or it does not accept WebSocket connections on that port."
-msgstr "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or it does not accept WebSocket connections on that port."
+msgstr "Trình duyệt không cho biết lý do. Nguyên nhân có thể là: máy chủ bị down, cổng sai, hoặc máy chủ không chấp nhận kết nối WebSocket trên cổng đó."
 
 #. Follow-up hint under a connection the server dropped during IRC registration, when the close reason named no live session.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.registration"
 msgid "The WebSocket opened but the server dropped it before registration finished - check that this port really speaks IRC over WebSocket, and look for a server notice above for the reason."
-msgstr "The WebSocket opened but the server dropped it before registration finished - check that this port really speaks IRC over WebSocket, and look for a server notice above for the reason."
+msgstr "WebSocket đã mở nhưng server đã từ chối nó trước khi hoàn thành đăng ký - kiểm tra xem cổng này thực sự sử dụng IRC qua WebSocket, và tìm thông báo từ server ở trên để biết lý do."
 
 #. Follow-up hint when the server's close reason names a live session: retrying alone cannot fix it, the other client has to go.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.sessionConflict"
 msgid "This account is already connected on this network - another tab, window or device is using it. Close that client; this tab then connects on its next retry (a dead connection is reclaimed within about a minute)."
-msgstr "This account is already connected on this network - another tab, window or device is using it. Close that client; this tab then connects on its next retry (a dead connection is reclaimed within about a minute)."
+msgstr "Tài khoản này đã được kết nối trên mạng này - một tab, cửa sổ hoặc thiết bị khác đang sử dụng nó. Đóng client đó; tab này sẽ kết nối lại khi nó thử lại lần tiếp theo (một kết nối chết sẽ được thu hồi trong khoảng 1 phút)."
 
 #. Follow-up hint under a failed secure (wss://) dial. {url} is the network's address with https: in place of wss:, for accepting a self-signed certificate once.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.wssCauses"
 msgid "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or its TLS certificate is not trusted — for a self-signed certificate, open {url} in a new tab, accept the warning, then reconnect."
-msgstr "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or its TLS certificate is not trusted — for a self-signed certificate, open {url} in a new tab, accept the warning, then reconnect."
+msgstr "Browser không cho biết lý do. Nguyên nhân có thể là server đang down, cổng sai, hoặc chứng chỉ TLS không được tin tưởng - với chứng chỉ tự ký, mở {url} trong tab mới, chấp nhận cảnh báo, rồi reconnect."
 
 #. Connection-failure report when the server dropped the socket before registration finished. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.registeringClosed"
 msgid "Connection to {host} closed during IRC registration{detail}."
-msgstr "Connection to {host} closed during IRC registration{detail}."
+msgstr "Kết nối đến {host} đã bị đóng trong quá trình đăng ký IRC{detail}."
 
 #. Headline when the connection was closed between connecting and completing IRC registration and the retry schedule is standing down. {host} is the host as the user typed it; {detail} is the close detail in parentheses (a server reason, a connection-lost note or the close code), or empty.
 #: client/js/irc/disconnect.ts:112
@@ -1196,7 +1196,7 @@ msgstr "#channel, #key khác (tham gia khi kết nối)"
 #: client/components/NetworkForm.vue:133
 msgctxt "form.commands"
 msgid "Commands"
-msgstr ""
+msgstr "Lệnh"
 
 #. Tooltip of the question-mark icon next to the Commands field on the network edit form (three lines).
 #: client/components/NetworkForm.vue:136
@@ -1256,7 +1256,7 @@ msgstr "Cài đặt mạng"
 #: client/components/NetworkForm.vue:104
 msgctxt "form.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr ""
 
 #. Radio option on the network edit form: connect without a services account.
 #: client/components/NetworkForm.vue:158
@@ -1815,7 +1815,7 @@ msgstr "Truy vấn thông tin về người dùng được chỉ định trên m
 #: client/components/Windows/Help.vue
 msgctxt "help.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First word of the two list items under the help window's past-release sentence; each continues with a link comparing two versions. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2160,7 +2160,7 @@ msgstr "Nâu"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorCyan"
 msgid "Cyan"
-msgstr "Cyan"
+msgstr ""
 
 #. Name of the mIRC colour with code 03 (green), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2202,7 +2202,7 @@ msgstr "Xám nhạt"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorMagenta"
 msgid "Magenta"
-msgstr "Magenta"
+msgstr ""
 
 #. Name of the mIRC colour with code 07 (orange), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2328,7 +2328,7 @@ msgstr "Nội dung"
 #: client/components/LinkPreview.vue
 msgctxt "link.kindVideo"
 msgid "video"
-msgstr "Video"
+msgstr ""
 
 #. Title on the placeholder of a media preview while its file is downloading after the reader revealed it. {kind} is 'image', 'video' or 'audio'.
 #: client/components/LinkPreview.vue
@@ -2779,7 +2779,7 @@ msgstr "Tham gia kênh"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.kick"
 msgid "Kick"
-msgstr "Kick"
+msgstr ""
 
 #. Context-menu item on a chat channel in the sidebar; asks the server for the channel's ban list.
 #: client/js/helpers/contextMenu.ts
@@ -2803,37 +2803,37 @@ msgstr "Danh sách người dùng bị bỏ qua"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeAdmin"
 msgid "admin"
-msgstr "admin"
+msgstr ""
 
 #. Name of the IRC half-operator role (the % prefix), filling {name} in the mode menu items. Lowercase mid-sentence; keep the hyphen if natural.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeHalfOp"
 msgid "half-op"
-msgstr "half-op"
+msgstr ""
 
 #. Name of the IRC channel operator role (the @ prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOperator"
 msgid "operator"
-msgstr "operator"
+msgstr "nhà điều hành"
 
 #. Name of the highest IRC channel role (the ~ prefix), filling {name} in the mode menu items such as 'Revoke {name} (-a)'. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOwner"
 msgid "owner"
-msgstr "owner"
+msgstr "chủ sở hữu"
 
 #. Name of the IRC voiced role (the + prefix; may speak in a moderated channel), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeVoice"
 msgid "voice"
-msgstr "voice"
+msgstr "giọng nói"
 
 #. Context-menu item on a conversation; clicking mutes it (no highlights, no notifications from it). {type} names the kind of conversation in lowercase: 'network', 'channel' or 'conversation'.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.muteType"
 msgid "Mute {type}"
-msgstr "Mute {type}"
+msgstr ""
 
 #. Context-menu item that takes an IRC channel role away from a user; {name} is the role's name ('operator'), {mode} the mode letter with its minus sign, e.g. -o.
 #: client/js/helpers/contextMenu.ts
@@ -3188,7 +3188,7 @@ msgstr "Mạng này"
 #: client/components/PushPrompt.vue
 msgctxt "push.never"
 msgid "Never"
-msgstr "Never"
+msgstr "Bao giờ cũng không"
 
 #. Button of the push opt-in prompt; declines for now without disabling future prompts.
 #: client/components/PushPrompt.vue
@@ -4524,7 +4524,7 @@ msgstr "{app} đã được xây dựng trong chế độ phát triển"
 #: client/components/Sidebar.vue:16
 msgctxt "sidebar.developerBadge"
 msgid "DEVELOPER"
-msgstr "DEVELOPER"
+msgstr ""
 
 #. Message shown in the sidebar when there are no networks at all; the connect form is open beside it.
 #: client/components/NetworkList.vue:8
@@ -4611,19 +4611,19 @@ msgstr[0] "{count} tin nhắn chưa đọc"
 #: client/components/Special/ListBans.vue
 msgctxt "special.bans.banned"
 msgid "Banned"
-msgstr "Banned"
+msgstr ""
 
 #. Column header of the channel-ban list: when the ban was set, locale-formatted.
 #: client/components/Special/ListBans.vue
 msgctxt "special.bans.bannedAt"
 msgid "Banned At"
-msgstr "Banned At"
+msgstr ""
 
 #. Column header of the channel-ban list: the operator who set the ban, verbatim.
 #: client/components/Special/ListBans.vue
 msgctxt "special.bans.bannedBy"
 msgid "Banned By"
-msgstr "Banned By"
+msgstr ""
 
 #. Column header of the channel list: the channel name, verbatim server data.
 #: client/components/Special/ListChannels.vue
@@ -4665,7 +4665,7 @@ msgstr "Được miễn trừ By"
 #: client/components/Special/ListIgnored.vue
 msgctxt "special.ignored.hostmask"
 msgid "Hostmask"
-msgstr "Hostmask"
+msgstr "mask host"
 
 #. Column header of the ignore list: when the ignore was set, locale-formatted.
 #: client/components/Special/ListIgnored.vue

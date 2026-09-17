@@ -34,7 +34,7 @@ msgstr "{type}: {name}"
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.rowLabelCount"
 msgid "{type}: {name} ({extra})"
-msgstr ""
+msgstr "{type}: {name} ({extra})"
 
 #. Names the kind of window in a sidebar row's aria-label: a chat channel. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
@@ -70,7 +70,7 @@ msgstr "Подключение...."
 #: client/components/Chat.vue:186
 msgctxt "chat.connectingTo"
 msgid "Connecting to {network}…"
-msgstr ""
+msgstr "Подключение к {network}…"
 
 #. aria-label of the ☰ button in a chat window's header; clicking opens the menu of actions for the current conversation.
 #: client/components/Chat.vue:72
@@ -142,7 +142,7 @@ msgstr "Алиазы - буквы, цифры, _ и - (до {max} знаков).
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.missing"
 msgid "No alias /{name}. /alias {name} <commands> creates it."
-msgstr ""
+msgstr "Нет алиаса /{name}. /alias {name} <commands> создает его."
 
 #. Reply to a bare /alias when none are defined; the '/alias <name> <commands>' part is command syntax and stays verbatim.
 #: client/js/irc/commands/alias.ts
@@ -172,7 +172,7 @@ msgstr "Alias /{name} обновлено.."
 #: client/js/irc/commands/connect.ts
 msgctxt "cmd.alreadyConnected"
 msgid "You are already connected."
-msgstr ""
+msgstr "Вы уже подключены."
 
 #. Error when a command that needs a conversation is typed in a network's lobby. {cmd} is the command as typed, user input, verbatim.
 #: client/js/irc/commands/me.ts
@@ -408,13 +408,13 @@ msgstr "Подключайся.."
 #: client/components/ChatInput.vue:344
 msgctxt "composer.connectingTo"
 msgid "Connecting to {network}…"
-msgstr ""
+msgstr "Подключение к {network}…"
 
 #. Text of the connection bar shown above the message input when the chat network is down and no reconnect attempt is running yet. {network} is the display name of the chat network.
 #: client/components/ChatInput.vue:339
 msgctxt "composer.disconnectedFrom"
 msgid "Disconnected from {network}."
-msgstr ""
+msgstr "Отключен от {network}."
 
 #. Label at the left of the compose bar shown while the user edits a message they already sent; the edited text follows it in the same line.
 #: client/components/ChatInput.vue:55
@@ -483,7 +483,7 @@ msgstr "{index} {count}"
 #: client/components/ChatInput.vue:584
 msgctxt "composer.uploadPreparing"
 msgid "preparing…"
-msgstr ""
+msgstr "подготовка…"
 
 #. Part of the upload progress bar, appended after the uploading text while the file has been sent and the chat server has not confirmed it yet. Starts lowercase because it is joined with the other parts into one line.
 #: client/components/ChatInput.vue:586
@@ -629,19 +629,19 @@ msgstr "#channel #other (необязательно)"
 #: client/components/Windows/Connect.vue:308
 msgctxt "connect.connectingAs"
 msgid "Connecting as {nick} to {network}…"
-msgstr ""
+msgstr "Подключение как {nick} к {network}…"
 
 #. Lobby status line while a chat network is being dialled. {host} and {port} come from the saved network's settings.
 #: client/js/irc/client.ts
 msgctxt "connect.connectingTo"
 msgid "Connecting to {host}:{port}…"
-msgstr ""
+msgstr "Подключение к {host}:{port}…"
 
 #. Lobby status line while an automatic retry dials a chat network; {attempt} counts the retries this connection has seen.
 #: client/js/irc/client.ts
 msgctxt "connect.connectingToAttempt"
 msgid "Connecting to {host}:{port}… (attempt {attempt})"
-msgstr ""
+msgstr "Подключение к {host}:{port}… (попытка {attempt})"
 
 #. Lobby status line when the user's own /quit closed the connection on purpose.
 #: client/js/irc/client.ts
@@ -677,25 +677,25 @@ msgstr "Подключайтесь в качестве гостя"
 #: client/js/branding.ts
 msgctxt "connect.guestTitle"
 msgid "No account?"
-msgstr ""
+msgstr "Нет аккаунта?"
 
 #. Notice at the top of the connect form when a web+irc:// link named a server the deploy does not allow; {network} is this deploy's network name, {host} the refused server.
 #: client/components/Windows/Connect.vue:608
 msgctxt "connect.linkIgnored"
 msgid "This app only connects to {network}. The link to {host} was ignored."
-msgstr ""
+msgstr "Эта программа подключается только к {network}. Ссылка на {host} была проигнорирована."
 
 #. Notice on the connect approval dialog opened from a web+irc:// link without channels; {host}:{port} is the proposed server.
 #: client/components/Windows/Connect.vue:610
 msgctxt "connect.linkSuggest"
 msgid "This link suggests connecting to {host}:{port}. Nothing is saved until you choose to connect."
-msgstr ""
+msgstr "Эта ссылка предлагает подключиться к {host}:{port}. Ничего не сохраняется, пока вы не выберете подключение."
 
 #. Notice on the connect approval dialog opened from a web+irc:// link that also names channels to join; {channels} is the comma-separated channel list.
 #: client/components/Windows/Connect.vue:611
 msgctxt "connect.linkSuggestJoin"
 msgid "This link suggests connecting to {host}:{port} and joining {channels}. Nothing is saved until you choose to connect."
-msgstr ""
+msgstr "Эта ссылка предлагает подключиться к {host}:{port} и присоединиться к {channels}. Ничего не сохраняется, пока вы не выберете подключение."
 
 #. Read-only row label on the connect/sign-in form, above the name of the network being connected to (shown instead of an editable server field).
 #: client/components/Windows/Connect.vue:28
@@ -708,7 +708,7 @@ msgstr "Сеть"
 #: client/components/Windows/Connect.vue:118
 msgctxt "connect.newServerTitle"
 msgid "Connect to a new server?"
-msgstr ""
+msgstr "Подключиться к новому серверу?"
 
 #. Label of the nickname text field: on the connect form and in the guest half of the sign-in panel.
 #: client/components/Windows/Connect.vue:101
@@ -880,7 +880,7 @@ msgstr "Подпишитесь"
 #: client/js/irc/client.ts
 msgctxt "connect.stsReconnect"
 msgid "Server requires a secure connection (STS): reconnecting on port {port}…"
-msgstr ""
+msgstr "Сервер требует безопасное соединение (STS): переподключение на порту {port}…"
 
 #. Lobby status line when the server's strict-transport-security policy upgrades a plain connection to TLS. {port} is the new TLS port.
 #: client/js/irc/client.ts
@@ -988,37 +988,37 @@ msgstr "Пожатие рук TLS не сработало"
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.codeUnknown"
 msgid "code {code}"
-msgstr ""
+msgstr "код {code}"
 
 #. Connection-failure report when the WebSocket never opened. {url} is the address that was dialled, verbatim. {error} is ' (<the browser's error text>)' or empty — the browser hides why a dial failed, so the slot often stays empty.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.couldNotConnect"
 msgid "Could not connect to {url}{error}."
-msgstr ""
+msgstr "Не удалось подключиться к {url}{error}."
 
 #. Headline when a network the client is dialling never opened and the retry schedule is standing down (the browser refused or could not reach the address). {url} is the WebSocket URL that was dialled; {error} is the browser's error text in parentheses, or empty.
 #: client/js/irc/disconnect.ts:78
 msgctxt "disconnect.couldNotConnectNotReconnecting"
 msgid "Could not connect to {url}{error}. Not reconnecting."
-msgstr ""
+msgstr "Не удалось подключиться к {url}{error}. Не переподключается."
 
 #. Connection-failure report once the network was registered. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.disconnected"
 msgid "Disconnected from {host}{detail}."
-msgstr ""
+msgstr "Отключено от {host}{detail}."
 
 #. Headline when a registered connection closed and the retry schedule is standing down. {host} is the host as the user typed it; {detail} is the close detail in parentheses, or empty.
 #: client/js/irc/disconnect.ts:127
 msgctxt "disconnect.disconnectedNotReconnecting"
 msgid "Disconnected from {host}{detail}. Not reconnecting."
-msgstr ""
+msgstr "Отключен от {host}{detail}. Не переподключается."
 
 #. Follow-up hint under a failed connection dialled with ws:// from an https:// page: the browser blocks mixed content, so the fix is on the network's settings.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.httpsBlocked"
 msgid "This page was loaded over HTTPS, so the browser blocks plain ws:// connections. Enable TLS for this network, or open the app over http://."
-msgstr ""
+msgstr "Эта страница была загружена через HTTPS, поэтому браузер блокирует обычные ws:// соединения. Включите TLS для этой сети, или запустите приложение через http://."
 
 #. Follow-up hint under a failed plain (ws://) dial from a non-secure page.
 #: client/js/irc/disconnect.ts
@@ -1030,67 +1030,67 @@ msgstr "В браузере не указано, почему. Вероятно,
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.registration"
 msgid "The WebSocket opened but the server dropped it before registration finished - check that this port really speaks IRC over WebSocket, and look for a server notice above for the reason."
-msgstr ""
+msgstr "WebSocket открыт, но сервер его отбросил до завершения регистрации — проверьте, что этот порт действительно использует IRC через WebSocket, и обратите внимание на уведомление сервера выше."
 
 #. Follow-up hint when the server's close reason names a live session: retrying alone cannot fix it, the other client has to go.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.sessionConflict"
 msgid "This account is already connected on this network - another tab, window or device is using it. Close that client; this tab then connects on its next retry (a dead connection is reclaimed within about a minute)."
-msgstr ""
+msgstr "Эта учетная запись уже подключена к этой сети — другая вкладка, окно или устройство использует её. Закройте тот клиент; эта вкладка затем подключится при следующей попытке (мертвое соединение освобождается примерно через минуту)."
 
 #. Follow-up hint under a failed secure (wss://) dial. {url} is the network's address with https: in place of wss:, for accepting a self-signed certificate once.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.wssCauses"
 msgid "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or its TLS certificate is not trusted — for a self-signed certificate, open {url} in a new tab, accept the warning, then reconnect."
-msgstr ""
+msgstr "Браузер не показывает причину. Вероятные причины: сервер не работает, порт неверный, или его TLS-сертификат не доверен — для самоподписанного сертификата откройте {url} в новой вкладке, примите предупреждение, затем переподключитесь."
 
 #. Connection-failure report when the server dropped the socket before registration finished. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.registeringClosed"
 msgid "Connection to {host} closed during IRC registration{detail}."
-msgstr ""
+msgstr "Соединение с {host} было закрыто во время регистрации в IRC {detail}."
 
 #. Headline when the connection was closed between connecting and completing IRC registration and the retry schedule is standing down. {host} is the host as the user typed it; {detail} is the close detail in parentheses (a server reason, a connection-lost note or the close code), or empty.
 #: client/js/irc/disconnect.ts:112
 msgctxt "disconnect.registeringClosedNotReconnecting"
 msgid "Connection to {host} closed during IRC registration{detail}. Not reconnecting."
-msgstr ""
+msgstr "Соединение с {host} было закрыто во время регистрации в IRC {detail}. Не переподключаться."
 
 #. Join refusal (475) phrased by the client. {channel} is the refused channel name, user data, never translated; the '- <cause>.' layout follows the server's cause ordering.
 #: client/components/MessageTypes/error.vue
 msgctxt "error.badChannelKey"
 msgid "Cannot join {channel} - Bad channel key."
-msgstr ""
+msgstr "Невозможно присоединиться к {channel} - неверный ключ канала."
 
 #. Join refusal (474) phrased by the client; {channel} is the refused channel name.
 #: client/components/MessageTypes/error.vue
 msgctxt "error.bannedFromChannel"
 msgid "Cannot join {channel} - You have been banned from the channel."
-msgstr ""
+msgstr "Невозможно присоединиться к {channel} - вы были забанены из канала."
 
 #. Send refusal (404) phrased by the client; {channel} is the refused channel name.
 #: client/components/MessageTypes/error.vue
 msgctxt "error.cannotSendToChannel"
 msgid "Cannot send to channel {channel}"
-msgstr ""
+msgstr "Невозможно отправить сообщение в канал {channel}"
 
 #. Join refusal (471) phrased by the client; {channel} is the refused channel name.
 #: client/components/MessageTypes/error.vue
 msgctxt "error.channelIsFull"
 msgid "Cannot join {channel} - Channel is full."
-msgstr ""
+msgstr "Невозможно присоединиться к {channel} - канал заполнен."
 
 #. Refusal (482) phrased by the client, e.g. a mode change without operator status.
 #: client/components/MessageTypes/error.vue
 msgctxt "error.chanopPrivsNeeded"
 msgid "Cannot perform action: You're not a channel operator."
-msgstr ""
+msgstr "Невозможно выполнить действие: вы не оператор канала."
 
 #. Join refusal (473) phrased by the client; {channel} is the refused channel name.
 #: client/components/MessageTypes/error.vue
 msgctxt "error.inviteOnlyChannel"
 msgid "Cannot join {channel} - Channel is invite only."
-msgstr ""
+msgstr "Невозможно присоединиться к {channel} - канал только для приглашённых."
 
 #. Error shown in a network's own window when the chat server does not offer a protocol capability the client requires. {caps} is the server's own list of capability names, space separated and never translated.
 #: client/js/irc/handlers/cap.ts
@@ -1108,13 +1108,13 @@ msgstr "Пользователь {nick} не записался или не су
 #: client/components/MessageTypes/error.vue
 msgctxt "error.notOnChannel"
 msgid "Cannot perform action: You're not on the channel."
-msgstr ""
+msgstr "Невозможно выполнить действие: вы не в канале."
 
 #. Login refusal (464) phrased by the client.
 #: client/components/MessageTypes/error.vue
 msgctxt "error.passwordMismatch"
 msgid "Password mismatch."
-msgstr ""
+msgstr "Неверный пароль."
 
 #. Join refusal (405) phrased by the client; {channel} is the refused channel name.
 #: client/components/MessageTypes/error.vue
@@ -1469,7 +1469,7 @@ msgstr "междухоласти"
 #: client/components/Windows/Help.vue
 msgctxt "help.builtAfter"
 msgid ", after v{version}"
-msgstr ""
+msgstr ", после v{version}"
 
 #. Part of the sentence in the help window shown when the running build is newer than its release; the app's name precedes it and a link naming the source commit follows. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1589,7 +1589,7 @@ msgstr ") от одного или нескольких пользователе
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.devoiceA"
 msgid "Remove voice ("
-msgstr ""
+msgstr "Удалить голос ("
 
 #. Continuation of the /devoice command description in the help window, after the -v code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1643,19 +1643,19 @@ msgstr "опущен, пользователь будет приглашен н�
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.join"
 msgid "Join a channel. Password is only needed in protected channels and can usually be omitted."
-msgstr ""
+msgstr "Присоединиться к каналу. Пароль требуется только в защищенных каналах и обычно можно пропустить."
 
 #. Description of the /kick command in the help window; it removes the user from the channel (they may rejoin).
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kick"
 msgid "Kick a user from the current channel."
-msgstr ""
+msgstr "Выйти из текущего канала."
 
 #. Start of the /kickban command description in the help window; a code fragment with the +b mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kickbanA"
 msgid "Kick and ban ("
-msgstr ""
+msgstr "Выйти и забанить ("
 
 #. Middle of the /kickban command description in the help window, after the +b code fragment; a code fragment with the /ban command follows it. Starts with the closing parenthesis. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1673,49 +1673,49 @@ msgstr ", могут использоваться только прозвища 
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.list"
 msgid "Retrieve a list of available channels on this network."
-msgstr ""
+msgstr "Получить список доступных каналов в этом сети."
 
 #. Description of the /me command in the help window. {appName} is the chat app's display name.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.me"
 msgid "Send an action message to the current channel. {appName} will display it inline, as if the message was posted in the third person."
-msgstr ""
+msgstr "Отправить сообщение действия в текущий канал. {appName} будет отображаться inline, как если бы сообщение было отправлено третьим лицом."
 
 #. Description of the /mode command in the help window; explains whose modes the flags apply to depending on the active window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.mode"
 msgid "Set the given flags to the current channel if the active window is a channel, another user if the active window is a private message window, or yourself if the current window is a server window."
-msgstr ""
+msgstr "Установить указанные флаги для текущего канала, если активное окно — канал, другому пользователю, если активное окно — окно личного сообщения, или самому себе, если текущее окно — окно сервера."
 
 #. Description of the /msg command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.msg"
 msgid "Send a message to the specified channel."
-msgstr ""
+msgstr "Отправить сообщение в указаннный канал."
 
 #. Description of the /mute command in the help window; a code fragment with the /unmute command follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.mute"
 msgid "Prevent messages from generating any feedback for a channel. This turns off the highlight indicator, hides mentions and inhibits push notifications. Muting a network lobby mutes the entire network. Not specifying any channel target mutes the current channel. Revert with"
-msgstr ""
+msgstr "Запретить генерацию обратной связи от сообщений для канала. Это отключает индикатор выделения, скрывает упоминания и запрещает уведомления. Запрет сети lobby мутит всю сеть. Если не указывать конкретный канал, мутит текущий канал. Отменить"
 
 #. Description of the /nick command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.nick"
 msgid "Change your nickname on the current network."
-msgstr ""
+msgstr "Измените ваше прозвище на текущей сети."
 
 #. Description of the /notice command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.notice"
 msgid "Sends a notice message to the specified channel."
-msgstr ""
+msgstr "Отправляет уведомление в указанную чат-комнату."
 
 #. Start of the /op command description in the help window; a code fragment with the +o mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.opA"
 msgid "Give op ("
-msgstr ""
+msgstr "Присваивает оператора ("
 
 #. Continuation of the /op command description in the help window, after the +o code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -2354,7 +2354,7 @@ msgstr "видео"
 #: client/components/LinkPreview.vue
 msgctxt "link.loadingKind"
 msgid "Loading {kind}…"
-msgstr ""
+msgstr "Загрузка {kind}…"
 
 #. Tooltip and aria-label of the button that opens the media file in a new browser tab.
 #: client/components/LinkPreview.vue
@@ -2765,7 +2765,7 @@ msgstr "Изменить тему"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.giveMode"
 msgid "Give {name} (+{mode})"
-msgstr ""
+msgstr "Присваивает {name} (+{mode})"
 
 #. Context-menu item that grants an IRC mode whose role name is unknown; {mode} is the mode letter with its plus sign, e.g. +z.
 #: client/js/helpers/contextMenu.ts
@@ -2867,7 +2867,7 @@ msgstr "Отмена {name} (-{mode})"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.revokeModeUnknown"
 msgid "Mode -{mode}"
-msgstr ""
+msgstr "Режим -{mode}"
 
 #. Context-menu item on a conversation whose messages are muted (not highlighted, not notified); clicking unmutes it. {type} names the kind of conversation in lowercase: 'network', 'channel' or 'conversation'.
 #: client/js/helpers/contextMenu.ts
@@ -2909,7 +2909,7 @@ msgstr "Исключить"
 #: client/components/MessageActions.vue:196
 msgctxt "message.deleteConfirm"
 msgid "Delete {who}? \"{preview}\""
-msgstr ""
+msgstr "Удалить {who}? \"{preview}\""
 
 #. Title of the confirmation dialog shown before a chat message is deleted.
 #: client/components/MessageActions.vue:195
@@ -3095,7 +3095,7 @@ msgstr "Тема не определена..."
 #: client/js/irc/handlers/topic.ts
 msgctxt "msg.topicUnsetFor"
 msgid "No topic is set for {channel}."
-msgstr ""
+msgstr "Темы нет для {channel}."
 
 #. Lobby status line when your own nick change is confirmed. {nick} is the new nick, user content, never translated.
 #: client/js/irc/handlers/nick.ts
@@ -3125,13 +3125,13 @@ msgstr "{nick} пригласил вас на {channel}"
 #: client/js/socket-events/msg.ts
 msgctxt "notify.titleChannel"
 msgid "{nick} ({channel})"
-msgstr ""
+msgstr "{nick} ({channel})"
 
 #. Desktop notification title for a channel message; {nick} is the sender's name and {channel} the channel name, both verbatim.
 #: client/js/socket-events/msg.ts
 msgctxt "notify.titleChannelSays"
 msgid "{nick} ({channel}) says:"
-msgstr ""
+msgstr "{nick} ({channel}) говорит:"
 
 #. Desktop notification title for a private message; {nick} is the sender's name, verbatim.
 #: client/js/socket-events/msg.ts
@@ -3438,13 +3438,13 @@ msgstr "Поиск"
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.results.showOlder"
 msgid "Show older results ({count} more)"
-msgstr ""
+msgstr "Показать более старые результаты ({count})"
 
 #. Shown in the search-results view when the search field is empty; invites typing a query.
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.results.typePrompt"
 msgid "Type something to search for."
-msgstr ""
+msgstr "Введите что-нибудь для поиска."
 
 #. Lobby error when the server never answered the redaction an edit depends on.
 #: client/js/irc/client.ts
@@ -3464,13 +3464,13 @@ msgstr "Правка не отправлена: редактирование э�
 #: client/js/irc/commands/index.ts:224
 msgctxt "send.notConnected"
 msgid "You are not connected to the IRC network, unable to send your command."
-msgstr ""
+msgstr "Вы не подключены к IRC-сети, невозможно отправить команду."
 
 #. Lobby error when an IRC line could not be written to the socket. {message} is a technical transport error, left verbatim.
 #: client/js/irc/client.ts
 msgctxt "send.notSent"
 msgid "Not sent: {message}"
-msgstr ""
+msgstr "Не отправлено: {message}"
 
 #. Lobby error when the server's push-subscription registration line exceeds the IRC line limit; nothing was sent.
 #: client/js/irc/client.ts
@@ -3530,25 +3530,25 @@ msgstr "/Моя волна в 1 доллар."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.empty"
 msgid "No aliases yet."
-msgstr ""
+msgstr "Нет алиасов."
 
 #. Row error: the alias has a name but no commands.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.errorBody"
 msgid "Say what the alias runs."
-msgstr ""
+msgstr "Скажи, что делает алиас."
 
 #. Row error: another row already defines this alias. {name} is the other alias's name, verbatim user content; the slash before it is the command prefix.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.errorDuplicate"
 msgid "There is already a /{name}."
-msgstr ""
+msgstr "Уже есть /{name}."
 
 #. Row error under an alias row: the alias has no name.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.errorName"
 msgid "Give the alias a name."
-msgstr ""
+msgstr "Дайте алиасу имя."
 
 #. Row error: the alias name contains characters other than letters, digits, hyphen and underscore. The - and _ are literal characters, keep them.
 #: client/components/Settings/Aliases.vue
@@ -3560,7 +3560,7 @@ msgstr "Имена - буквы, цифры и... - и никаких пропу
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.errorTooLong"
 msgid "The body is too long (over {limit} characters)."
-msgstr ""
+msgstr "Тело слишком длинное (более {limit} символов)."
 
 #. Column heading of the alias editor table: the name of the slash command being defined. The header row is aria-hidden; each input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
@@ -3584,7 +3584,7 @@ msgstr "илихожих"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.introOwn"
 msgid "An alias is a slash command of your own. Typing"
-msgstr ""
+msgstr "Алиас — это команда slash вашего собственного. Ввод"
 
 #. Intro fragment between the example invocation and the variable list: what defining an alias does. Sits in front of the $1 token.
 #: client/components/Settings/Aliases.vue
@@ -3596,13 +3596,13 @@ msgstr "Пробки, которые вы определяете здесь — 
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.nameAria"
 msgid "Alias name {number}"
-msgstr ""
+msgstr "Название алиаса {number}"
 
 #. Placeholder of the alias-name input: the alias's name goes here.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.namePlaceholder"
 msgid "name"
-msgstr ""
+msgstr "имя"
 
 #. Nested-alias fragment between the two example commands: the first command can be rewritten as the second.
 #: client/components/Settings/Aliases.vue
@@ -3620,7 +3620,7 @@ msgstr "Линия тела может называть другое имя, и 
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.nestedTail"
 msgid "without looping."
-msgstr ""
+msgstr "без циклов."
 
 #. aria-label of the whole aliases pane (a role=group in Settings); heard by screen readers when they enter the pane.
 #: client/components/Settings/Aliases.vue
@@ -3878,7 +3878,7 @@ msgstr "Концы должны быть слишком маленькими и 
 #: client/components/Settings/Appearance.vue:474
 msgctxt "settings.appearance.sampleGlasses"
 msgid "Can you read this without your glasses?"
-msgstr ""
+msgstr "Можете прочитать это без очков?"
 
 #. Second line of the sample chat under the font-size slider in Settings → Appearance, the reply telling the reader to drag the slider until the text is comfortable.
 #: client/components/Settings/Appearance.vue:480
@@ -3956,7 +3956,7 @@ msgstr "Очистить все"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.trustedEmpty"
 msgid "Nothing yet."
-msgstr ""
+msgstr "Всё ещё ничего."
 
 #. Heading of the list in Settings > Appearance of sites, people and channels whose media always loads without asking.
 #: client/components/Settings/Appearance.vue
@@ -4055,7 +4055,7 @@ msgid "{count} network"
 msgid_plural "{count} networks"
 msgstr[0] "{count} сеть"
 msgstr[1] "{count} сети"
-msgstr[2] ""
+msgstr[2] "сети {count}"
 
 #. Part of the restore-confirmation sentence in Settings > General: fills the list of what the file replaces for the app's own preferences. Comma-joined with the other parts by position.
 #: client/components/Settings/General.vue
@@ -4151,7 +4151,7 @@ msgstr "Пароли хранятся в файле без шифрования.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.installApp"
 msgid "Install {appName} as an app"
-msgstr ""
+msgstr "Установите {appName} как приложение"
 
 #. Heading of the Native app section in Settings > General; groups the install and link-handler options for using the chat app as an installed application.
 #: client/components/Settings/General.vue
@@ -4163,7 +4163,7 @@ msgstr "Приложение для коренных народов"
 #: client/components/Settings/General.vue
 msgctxt "settings.general.openLinks"
 msgid "Open web+irc:// links with {appName}"
-msgstr ""
+msgstr "Откройте ссылки web+irc:// с {appName}"
 
 #. Checkbox in Settings > General; when ticked, other people in the channel are told while you are typing a message.
 #: client/components/Settings/General.vue
@@ -4209,7 +4209,7 @@ msgstr "Файл Загрузка"
 #: client/components/LanguageSelect.vue
 msgctxt "settings.locale.auto"
 msgid "System default ({language})"
-msgstr ""
+msgstr "Системный стандарт ({language})"
 
 #. Button on the networks settings page; opens the connect form to set up a new chat network connection.
 #: client/components/Settings/Networks.vue
@@ -4257,7 +4257,7 @@ msgstr "Это удаляет сохранённую сеть и отключа�
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.deleteTitle"
 msgid "Delete {name}?"
-msgstr ""
+msgstr "Удалить {name}?"
 
 #. Status label on a saved network row in the networks settings page; the connection to that chat network is down.
 #: client/components/Settings/Networks.vue
@@ -4275,7 +4275,7 @@ msgstr "Правка"
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.empty"
 msgid "No networks saved yet."
-msgstr ""
+msgstr "Нет сохранённых сетей."
 
 #. Heading of the networks page in the chat app's settings, which lists the IRC network connections saved in this browser.
 #: client/components/Settings/Networks.vue
@@ -4299,7 +4299,7 @@ msgstr "Открыто"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.browserBlocked"
 msgid "Notifications are blocked by your browser."
-msgstr ""
+msgstr "Уведомления заблокированы браузером."
 
 #. Heading of the section in Settings > Notifications about the browser's own notifications while the app is open.
 #: client/components/Settings/Notifications.vue
@@ -4359,49 +4359,49 @@ msgstr "Обычные основные моменты"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightsHelp"
 msgid "If a message contains any of these comma-separated expressions, it will trigger a highlight."
-msgstr ""
+msgstr "Если сообщение содержит любое из этих выражений, разделённых запятыми, оно сработает."
 
 #. Warning line in Settings > Notifications, shown on an iPhone browsing the app without installing it; the parenthesized phrase is the iOS share menu's action.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.iosNotInstalled"
 msgid "On iOS, push notifications are only available after installing the app to the Home Screen (Share → Add to Home Screen)."
-msgstr ""
+msgstr "На iOS уведомления push доступны только после установки приложения на домашнюю страницу (Поделиться → Добавить в домашнюю страницу)."
 
 #. Radio choice in Settings > Notifications for the server's push-identity change behaviour: show a confirmation prompt before the device re-subscribes. Em dash is part of the copy.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.keyChangeAsk"
 msgid "Wary — ask before renewing the subscription"
-msgstr ""
+msgstr "Осторожно — спросить перед продлением подписки"
 
 #. Radio choice in Settings > Notifications for the server's push-identity change behaviour: do nothing, so push stays off for that server until renewed from its network settings. Em dash is part of the copy.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.keyChangeIgnore"
 msgid "Suspicious — leave it alone; push from that server stays off until you renew from the network settings"
-msgstr ""
+msgstr "Подозрительный — оставь его как есть; пуш от этого сервера останется отключённым, пока ты не обновишь настройки сети"
 
 #. Heading-like line in Settings > Notifications introducing the three radio choices for what to do when a chat server's push identity changes; the colon leads into the choices.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.keyChangeIntro"
 msgid "When a server's push identity (its key) changes, this device's subscription for it stops working. Then:"
-msgstr ""
+msgstr "Когда идентичность сервера (его ключ) меняется, подписка этого устройства на него перестаёт работать. Потом:"
 
 #. Radio choice in Settings > Notifications for the server's push-identity change behaviour: re-subscribe immediately and silently. Em dash is part of the copy.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.keyChangeTrust"
 msgid "Naive — renew it on the spot, without asking"
-msgstr ""
+msgstr "Новаторский — обнови его на месте, не спрашивая"
 
 #. Warning line in Settings > Notifications when the page is not served over a secure connection, which browsers require for notifications.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.noHttps"
 msgid "Notifications are only supported over HTTPS connections."
-msgstr ""
+msgstr "Уведомления поддерживаются только через HTTPS-соединения."
 
 #. Checkbox in Settings > Notifications; when ticked, every chat message notifies, not only mentions and highlights.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.notifyAll"
 msgid "Enable notification for all messages"
-msgstr ""
+msgstr "Включить уведомления для всех сообщений"
 
 #. Button in Settings > Notifications beside the notification-sound checkbox; clicking plays the notification sound once as a preview.
 #: client/components/Settings/Notifications.vue
@@ -4419,19 +4419,19 @@ msgstr "Сервер отказался подписываться на толк
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushDenied"
 msgid "Notifications are blocked by your browser. Allow them in the browser's site settings, then try again."
-msgstr ""
+msgstr "Уведомления заблокированы браузером. Разрешите их в настройках сайта браузера, затем попробуйте снова."
 
 #. Heading of the push notification section in Settings > Notifications; push wakes the app on new messages while it is closed.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushHeading"
 msgid "Push Notifications"
-msgstr ""
+msgstr "Пуш-уведомления"
 
 #. Intro line of the push section in Settings > Notifications; explains that push is enabled per chat network from that network's edit form (the quoted phrase names that setting) and that each server decides whether to support it. Keep the curly quotes and the arrow.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushPerNetwork"
 msgid "Push is set up per network — turn it on or off in each network's settings (Edit network → “Push notifications for this network”), where the enrollment status is also shown. The browser delivers the notifications; each push-capable server decides whether to wake this app."
-msgstr ""
+msgstr "Пуш настроен per network — включите или выключите его в настройках каждой сети (Редактировать сеть → «Пуш-уведомления для этой сети»), где также отображается статус регистрации. Браузер отправляет уведомления; каждый push-способный сервер решает, просыпать это приложение."
 
 #. Warning line in Settings > Notifications when the chat server itself does not offer web push; names the IRCv3 draft/webpush capability, which stays verbatim.
 #: client/components/Settings/Notifications.vue
@@ -4485,7 +4485,7 @@ msgstr "Идентификация сервера (его ключ) измени
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.unsupported"
 msgid "Push notifications are not supported by this browser (they need the Push API, a service worker and a secure context)."
-msgstr ""
+msgstr "Пуш-уведомления не поддерживаются этим браузером (они требуют API Push, сервисного работера и безопасного контекста)."
 
 #. Word rendered bold at the start of several warning lines in Settings > Notifications (push and browser notification problems); a colon follows it.
 #: client/components/Settings/Notifications.vue
@@ -4544,7 +4544,7 @@ msgstr "Письменный перевод"
 #: client/components/Sidebar.vue:8
 msgctxt "sidebar.devBuildTitle"
 msgid "{app} has been built in development mode"
-msgstr ""
+msgstr "{app} был создан в режиме разработки"
 
 #. Small orange badge next to the sidebar logo, shown only in development builds so a dev build is never mistaken for a deploy.
 #: client/components/Sidebar.vue:16
@@ -4587,9 +4587,9 @@ msgstr "Показать язык"
 msgctxt "sidebar.mentions"
 msgid "{count} mention"
 msgid_plural "{count} mentions"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "{count} упоминание"
+msgstr[1] "{count} упоминает"
+msgstr[2] "{count} упоминает"
 
 #. aria-label of the sidebar's navigation region (the network/channel list).
 #: client/components/NetworkList.vue:6
@@ -4633,9 +4633,9 @@ msgstr "Настройка девизов"
 msgctxt "sidebar.unread"
 msgid "{count} unread message"
 msgid_plural "{count} unread messages"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "{count} непрочитанное сообщение"
+msgstr[1] "{count} непрочитанные сообщения"
+msgstr[2] "{count} непрочитанные сообщения"
 
 #. Column header of the channel-ban list: the banned hostmask, verbatim server data.
 #: client/components/Special/ListBans.vue
@@ -4749,19 +4749,19 @@ msgstr "У него было слишком много строк для одн�
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.multiline.maxLinesLimit"
 msgid "it had too many lines for one multi-line message (the server's limit is {limit})."
-msgstr ""
+msgstr "у него было слишком много строк для одного многострочного сообщения (лимит сервера — {limit})."
 
 #. Why fragment of 'Message not sent: {why}' when the server's rejection named no cause. Lowercase mid-sentence by position.
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.multiline.rejected"
 msgid "the server rejected the multi-line batch."
-msgstr ""
+msgstr "сервер отклонил многострочную группу."
 
 #. Channel error when the server threw away a whole multi-line message; {why} is one of the sr.multiline* copies or the server's own description, left verbatim.
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.multilineNotSent"
 msgid "Message not sent: {why}"
-msgstr ""
+msgstr "Сообщение не отправлено: {why}"
 
 #. Channel error for a refused deletion (FAIL REDACT DISABLED); the server's own copy is replaced with this phrasing.
 #: client/js/irc/handlers/standard-replies.ts
@@ -4773,13 +4773,13 @@ msgstr "Удаление сообщений отключено на этом с�
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.redactEditPrefix"
 msgid "Edit not sent: {why}"
-msgstr ""
+msgstr "Редактирование не отправлено: {why}"
 
 #. Channel error for a refused deletion (FAIL REDACT REDACT_FORBIDDEN).
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.redactForbidden"
 msgid "You are not allowed to delete that message."
-msgstr ""
+msgstr "Вы не можете удалить это сообщение."
 
 #. Channel error for a refused deletion aimed at a non-channel (FAIL REDACT INVALID_TARGET).
 #: client/js/irc/handlers/standard-replies.ts
@@ -4834,7 +4834,7 @@ msgstr "Ответ"
 #: client/service-worker.js:1151
 msgctxt "sw.replyPlaceholder"
 msgid "Reply…"
-msgstr ""
+msgstr "Ответьте…"
 
 #. Notification title for a message in a channel: {nick} is the sender's nickname, {target} the channel name. Translated as a whole so word order is free; the unread-count suffix is appended after it, never inside.
 #: client/service-worker.js:1134
@@ -4846,13 +4846,13 @@ msgstr "{nick} в {target}"
 #: client/service-worker.js:1137
 msgctxt "sw.titleChannelCount"
 msgid "{nick} in {target} ({count})"
-msgstr ""
+msgstr "{nick} в {target} ({count})"
 
 #. Push-notification title for a query (direct-message) conversation carrying more than one unread message. {nick} is the other side's nick, verbatim — never translate it; {count} is the number of unread messages.
 #: client/service-worker.js:1141
 msgctxt "sw.titleNickCount"
 msgid "{nick} ({count})"
-msgstr ""
+msgstr "{nick} ({count})"
 
 #. System line when a user is marked away. {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element. The away reason (user-set, verbatim) follows in parentheses.
 #: client/components/MessageTypes/away.vue:10
@@ -5211,7 +5211,7 @@ msgstr "Переведено из {language}"
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.retranslateFromPicker"
 msgid "Retranslate from…"
-msgstr ""
+msgstr "Переведите снова с…"
 
 #. A translation chip's menu item.
 #: client/components/TranslationLine.vue
@@ -5565,25 +5565,25 @@ msgstr "Продолжайте печатать (Escape)"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.routeCpu"
 msgid "{from} → {to} · {model} (CPU)"
-msgstr ""
+msgstr "{from} → {to} · {model} (CPU)"
 
 #. Tooltip of the composer translation strip's direction chip when the first attempt was tried again with no source language named. {from} and {to} are language names, {model} is the model's technical id. This one ran on the main processor.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.routeCpuRetried"
 msgid "{from} → {to} · {model} (CPU) · retried without a source"
-msgstr ""
+msgstr "{from} → {to} · {model} (CPU) · повторно попытался без источника"
 
 #. Tooltip of the composer translation strip's direction chip, naming the route a translation took. {from} and {to} are language names (or the word from translate.strip.sourceAuto), {model} is the model's technical id. This one ran on the graphics processor.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.routeGpu"
 msgid "{from} → {to} · {model} (GPU)"
-msgstr ""
+msgstr "{from} → {to} · {model} (GPU)"
 
 #. Tooltip of the composer translation strip's direction chip when the first attempt was tried again with no source language named. {from} and {to} are language names, {model} is the model's technical id. This one ran on the graphics processor.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.routeGpuRetried"
 msgid "{from} → {to} · {model} (GPU) · retried without a source"
-msgstr ""
+msgstr "{from} → {to} · {model} (GPU) · повторно попытался без источника"
 
 #. Tooltip and aria-label of the send button in the composer's translation strip after the translation failed: the message goes out in the language the user typed it in.
 #: client/components/ChatInput.vue
@@ -5652,7 +5652,7 @@ msgstr "{nick1} и {nick2} печатают..."
 #: client/js/upload.ts:788
 msgctxt "upload.badType"
 msgid "File {file} is not a type this uploader accepts ({types})"
-msgstr ""
+msgstr "Файл {file} не является типом, который этот uploader принимает ({types})"
 
 #. Button of the upload confirmation dialog; clicking cancels the whole upload and sends nothing.
 #: client/components/UploadPreview.vue
@@ -5718,7 +5718,7 @@ msgstr "Ошибка загрузки: HTTP {status}"
 #: client/js/upload.ts:353
 msgctxt "upload.missingField"
 msgid "Upload failed: the uploader did not return a \"{field}\" URL"
-msgstr ""
+msgstr "Загрузка завершилась ошибкой: отправитель не вернул URL \"{field}\""
 
 #. Error notice when the browser offers no way to send a request, so the upload cannot even start.
 #: client/js/upload.ts:447

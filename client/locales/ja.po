@@ -40,25 +40,25 @@ msgstr "{type}: {name} ({extra})"
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.channel"
 msgid "Channel"
-msgstr "Channel"
+msgstr "チャンネル"
 
 #. Names the kind of window in a sidebar row's aria-label: the chat network's own window. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.lobby"
 msgid "Network"
-msgstr "Network"
+msgstr "ネットワーク"
 
 #. Names the kind of window in a sidebar row's aria-label: a private conversation with one person. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.query"
 msgid "Conversation"
-msgstr "Conversation"
+msgstr "詳細"
 
 #. Names the kind of window in a sidebar row's aria-label: a results window such as a channel list or a ban list. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.special"
 msgid "List"
-msgstr "List"
+msgstr "一覧"
 
 #. Tooltip and aria-label of the spinner in a chat window's header while the connection is being established, when the network's display name is not known.
 #: client/components/Chat.vue:186
@@ -142,7 +142,7 @@ msgstr "アlias 名は文字、数字、_ および -（最大 {max} 文字ま�
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.missing"
 msgid "No alias /{name}. /alias {name} <commands> creates it."
-msgstr "No alias /{name}. /alias {name} <commands> creates it."
+msgstr "アリアスなし /{name}. /alias {name} <commands> 作成します。"
 
 #. Reply to a bare /alias when none are defined; the '/alias <name> <commands>' part is command syntax and stays verbatim.
 #: client/js/irc/commands/alias.ts
@@ -412,7 +412,7 @@ msgstr "{network}に接続中…"
 #: client/components/ChatInput.vue:339
 msgctxt "composer.disconnectedFrom"
 msgid "Disconnected from {network}."
-msgstr "Disconnected from {network}."
+msgstr "{network} と切断されました。"
 
 #. Label at the left of the compose bar shown while the user edits a message they already sent; the edited text follows it in the same line.
 #: client/components/ChatInput.vue:55
@@ -442,21 +442,21 @@ msgstr "接続されていません"
 #: client/components/ChatInput.vue:293
 msgctxt "composer.placeholder"
 msgid "Write to {name}"
-msgstr "Write to {name}"
+msgstr "{name} へ書き込みます"
 
 #. Text of the connection bar shown above the message input while the client waits to reconnect to a chat network it lost. {network} is the display name of the chat network; {seconds} is the whole number of seconds until the retry starts, updating every half second. The singular form shows when one second remains, the plural for any other number.
 #: client/components/ChatInput.vue:343
 msgctxt "composer.reconnectIn"
 msgid "Reconnecting to {network} in {seconds}s…"
 msgid_plural "Reconnecting to {network} in {seconds}s…"
-msgstr[0] "Reconnecting to {network} in {seconds}s…"
+msgstr[0] "{network} に再接続中… {seconds}s"
 msgstr[1] ""
 
 #. Label at the left of the compose bar shown while a reply is being written. {nick} is the name of the user being replied to, shown emphasized; the quoted message preview follows it. Keep the trailing colon.
 #: client/components/ChatInput.vue:60
 msgctxt "composer.replyingTo"
 msgid "Replying to {nick}:"
-msgstr "Replying to {nick}:"
+msgstr "{nick} への返信:"
 
 #. Tooltip and aria-label of the send button beside the message input.
 #: client/components/ChatInput.vue:123
@@ -474,7 +474,7 @@ msgstr "ファイルアップロード"
 #: client/components/ChatInput.vue:580
 msgctxt "composer.uploadIndex"
 msgid "{index} of {count}"
-msgstr "{index} of {count}"
+msgstr "{index} 件目 of {count}"
 
 #. Part of the upload progress bar, appended after the uploading text while the file is being prepared (re-encoded or stripped of metadata) before it is sent. Starts lowercase because it is joined with the other parts into one line.
 #: client/components/ChatInput.vue:584
@@ -492,28 +492,28 @@ msgstr "サーバー待機中…"
 #: client/components/ChatInput.vue:577
 msgctxt "composer.uploading"
 msgid "Uploading {file}"
-msgstr "Uploading {file}"
+msgstr "{file}アップロード中"
 
 #. Condensed status block: away markings while the block was collapsed. The singular shows 'once' when one marking happened, the plural the number of markings; {count} is that number.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.away"
 msgid "marked away once"
 msgid_plural "marked away {count} times"
-msgstr[0] "marked away {count} times"
+msgstr[0] "{count}回マークアウト"
 
 #. Condensed status block: back markings while the block was collapsed. The singular shows 'once' when one marking happened, the plural the number of markings; {count} is that number.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.back"
 msgid "marked back once"
 msgid_plural "marked back {count} times"
-msgstr[0] "marked back {count} times"
+msgstr[0] "{count}回マークイン"
 
 #. Condensed status block: {count} users changed their username/hostname while the block was collapsed.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.chghost"
 msgid "{count} user has changed hostname"
 msgid_plural "{count} users have changed hostname"
-msgstr[0] "{count} users have changed hostname"
+msgstr[0] "{count}ユーザーがホスト名を変更しました"
 msgstr[1] ""
 
 #. Condensed status block: {count} users joined while the block was collapsed. The counts of several kinds join into one sentence in the active locale's list format.
@@ -521,7 +521,7 @@ msgstr[1] ""
 msgctxt "condensed.join"
 msgid "{count} user has joined"
 msgid_plural "{count} users have joined"
-msgstr[0] "{count} users have joined"
+msgstr[0] "{count}ユーザーが参加しました"
 msgstr[1] ""
 
 #. Condensed status block: {count} users were kicked while the block was collapsed.
@@ -537,7 +537,7 @@ msgstr[1] ""
 msgctxt "condensed.left"
 msgid "{count} user has left"
 msgid_plural "{count} users have left"
-msgstr[0] "{count} users have left"
+msgstr[0] "{count}ユーザーが離脱しました"
 msgstr[1] ""
 
 #. Condensed status block: {count} channel-mode changes were set while the block was collapsed (one MODE line can carry several).
@@ -558,111 +558,111 @@ msgstr[0] "{count} user has changed nick"
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.toggle"
 msgid "Toggle status messages"
-msgstr "Toggle status messages"
+msgstr "ステータスメッセージを切り替える"
 
 #. Button of every confirmation dialog in the app (delete message, delete network, restore settings, clear history…); clicking declines and closes the dialog.
 #: client/components/ConfirmDialog.vue
 msgctxt "confirm.cancel"
 msgid "Cancel"
-msgstr "Cancel"
+msgstr "キャンセル"
 
 #. Label of the services account (login name) text field on the connect form and on the network edit form.
 #: client/components/Windows/Connect.vue:34
 #: client/components/Windows/Connect.vue:213
 msgctxt "connect.account"
 msgid "Account"
-msgstr "Account"
+msgstr "アカウント"
 
 #. aria-label of the whole connect screen (the window/dialog element); announced by screen readers on arriving at the form.
 #: client/components/Windows/Connect.vue:7
 msgctxt "connect.ariaLabel"
 msgid "Connect"
-msgstr "Connect"
+msgstr "コネクト"
 
 #. Heading of the authentication section on the connect form (the SASL toggle and account fields follow).
 #: client/components/Windows/Connect.vue:201
 msgctxt "connect.authentication"
 msgid "Authentication"
-msgstr "Authentication"
+msgstr "認証"
 
 #. Checkbox on the connect form: dial this network every time the app opens.
 #: client/components/Windows/Connect.vue:290
 msgctxt "connect.autoconnect"
 msgid "Connect automatically when the app starts"
-msgstr "Connect automatically when the app starts"
+msgstr "アプリが起動時に自動で接続"
 
 #. Checkbox at the bottom of the connect form: show desktop notifications for this network's messages; the browser's permission ask fires when it is first switched on.
 #: client/components/Windows/Connect.vue:280
 msgctxt "connect.browserNotifications"
 msgid "Browser notifications for this network"
-msgstr "Browser notifications for this network"
+msgstr "このネットワークに関するブラウザ通知"
 
 #. Label of the field listing channels to join automatically after connecting, on the connect and network edit forms.
 #: client/components/Windows/Connect.vue:188
 msgctxt "connect.channels"
 msgid "Channels"
-msgstr "Channels"
+msgstr "チャンネル"
 
 #. Placeholder of the channels field on the connect form: example channel names, and a note that the field may stay empty.
 #: client/components/Windows/Connect.vue:194
 msgctxt "connect.channelsPlaceholder"
 msgid "#channel, #another (optional)"
-msgstr "#channel, #another (optional)"
+msgstr "#channel, #another (任意)"
 
 #. Status line shown on the connect form right after submitting: the nick used and the network name (or host:port of the server) being dialled.
 #: client/components/Windows/Connect.vue:84
 #: client/components/Windows/Connect.vue:308
 msgctxt "connect.connectingAs"
 msgid "Connecting as {nick} to {network}…"
-msgstr "Connecting as {nick} to {network}…"
+msgstr "{nick} に接続中… {network}…"
 
 #. Lobby status line while a chat network is being dialled. {host} and {port} come from the saved network's settings.
 #: client/js/irc/client.ts
 msgctxt "connect.connectingTo"
 msgid "Connecting to {host}:{port}…"
-msgstr "Connecting to {host}:{port}…"
+msgstr "{host} に接続中:{port}…"
 
 #. Lobby status line while an automatic retry dials a chat network; {attempt} counts the retries this connection has seen.
 #: client/js/irc/client.ts
 msgctxt "connect.connectingToAttempt"
 msgid "Connecting to {host}:{port}… (attempt {attempt})"
-msgstr "Connecting to {host}:{port}… (attempt {attempt})"
+msgstr "{host} に接続中:{port}…（試行 {attempt}）"
 
 #. Lobby status line when the user's own /quit closed the connection on purpose.
 #: client/js/irc/client.ts
 msgctxt "connect.disconnected"
 msgid "Disconnected."
-msgstr "Disconnected."
+msgstr "接続切断。"
 
 #. Lobby status line after registration naming the IRCv3 capabilities the server enabled; {caps} is a comma-separated list of protocol tokens, never translated.
 #: client/js/irc/client.ts
 msgctxt "connect.enabledCaps"
 msgid "Enabled capabilities: {caps}"
-msgstr "Enabled capabilities: {caps}"
+msgstr "有効な機能: {caps}"
 
 #. Notice on the connect form when it was opened by a link to a saved network whose password was not remembered; {account} is the services account name.
 #: client/components/Windows/Connect.vue:572
 msgctxt "connect.enterPassword"
 msgid "Enter the password for {account} to connect."
-msgstr "Enter the password for {account} to connect."
+msgstr "{account}に接続するためにパスワードを入力してください。"
 
 #. Error notice shown under the guest sign-in form when the guest nick field was left empty or invalid.
 #: client/components/Windows/Connect.vue:672
 msgctxt "connect.guestNickRequired"
 msgid "Choose a nick to connect as a guest."
-msgstr "Choose a nick to connect as a guest."
+msgstr "ゲストとして接続するためのニックネームを選択してください。"
 
 #. Button that connects with just a nick instead of an account.
 #: client/js/branding.ts
 msgctxt "connect.guestSubmit"
 msgid "Connect as guest"
-msgstr "Connect as guest"
+msgstr "ゲストとして接続"
 
 #. Heading of the guest half of the sign-in form (features.guestAccess on).
 #: client/js/branding.ts
 msgctxt "connect.guestTitle"
 msgid "No account?"
-msgstr "No account?"
+msgstr "アカウントがない？"
 
 #. Notice at the top of the connect form when a web+irc:// link named a server the deploy does not allow; {network} is this deploy's network name, {host} the refused server.
 #: client/components/Windows/Connect.vue:608
@@ -1081,7 +1081,7 @@ msgstr "{channel}に参加できません - インビテーションのみ許可
 #: client/js/irc/handlers/cap.ts
 msgctxt "error.missingCaps"
 msgid "Missing required capabilities: {caps}"
-msgstr "Missing required capabilities: {caps}"
+msgstr "必要な権能が不足しています: {caps}"
 
 #. Send refusal (401) phrased by the client; {nick} is the addressed nick, user data.
 #: client/components/MessageTypes/error.vue
@@ -1652,7 +1652,7 @@ msgstr "現在のチャンネルからのユーザー。それ以外は"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kickbanC"
 msgid ", only nicknames (and not host masks) can be used."
-msgstr "only nicknames (and not host masks) can be used."
+msgstr ""
 
 #. Description of the /list command in the help window.
 #: client/components/Windows/Help.vue
@@ -1730,7 +1730,7 @@ msgstr "指定されたユーザーにプライベートメッセージを送信
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.quit"
 msgid "Disconnect from the current network with an optional message."
-msgstr ""
+msgstr "現在のネットワークから接続を切断します。オプションでメッセージを指定できます。"
 
 #. Description of the /raw command in the help window.
 #: client/components/Windows/Help.vue
@@ -1772,7 +1772,7 @@ msgstr "これは、現在のチャンネルでトピックを設定します。
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unbanA"
 msgid "Unban ("
-msgstr "Unban ("
+msgstr ""
 
 #. Continuation of the /unban command description in the help window, after the -b code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1802,7 +1802,7 @@ msgstr "について詳しくはここにあります。"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.voiceA"
 msgid "Give voice ("
-msgstr "Give voice ("
+msgstr ""
 
 #. Continuation of the /voice command description in the help window, after the +v code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1820,20 +1820,20 @@ msgstr "現在のネットワークで指定されたユーザーに関する情
 #: client/components/Windows/Help.vue
 msgctxt "help.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First word of the two list items under the help window's past-release sentence; each continues with a link comparing two versions. Mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.compare"
 msgid "Compare"
-msgstr "Compare"
+msgstr "比較"
 
 #. Label of the documentation link in the Help window.
 #: client/js/branding.ts
 #: client/components/Windows/Help.vue
 msgctxt "help.documentation"
 msgid "Documentation"
-msgstr "Documentation"
+msgstr "ドキュメント"
 
 #. Shared first part of the descriptions of the Ctrl+B, Ctrl+U, Ctrl+I, Ctrl+S and Ctrl+M formatting shortcuts in the help window; the formatted example word (bold, underlined, italics, struck through, monospaced) follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1845,13 +1845,13 @@ msgstr "このショートカット以降にタイプされたテキストをす
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.bold"
 msgid "bold"
-msgstr "bold"
+msgstr "うすい"
 
 #. Text of the link at the end of the Ctrl+K description in the help window's formatting section; it opens an external IRC color reference. Mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorHere"
 msgid "here"
-msgstr "here"
+msgstr "ここ"
 
 #. First part of the Ctrl+K description in the help window's formatting section; a code fragment with the numeric range follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2808,31 +2808,31 @@ msgstr "無視されたユーザーを一覧表示"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeAdmin"
 msgid "admin"
-msgstr "admin"
+msgstr "管理者"
 
 #. Name of the IRC half-operator role (the % prefix), filling {name} in the mode menu items. Lowercase mid-sentence; keep the hyphen if natural.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeHalfOp"
 msgid "half-op"
-msgstr "half-op"
+msgstr "半開式"
 
 #. Name of the IRC channel operator role (the @ prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOperator"
 msgid "operator"
-msgstr "operator"
+msgstr "運算子"
 
 #. Name of the highest IRC channel role (the ~ prefix), filling {name} in the mode menu items such as 'Revoke {name} (-a)'. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOwner"
 msgid "owner"
-msgstr "owner"
+msgstr "所有者"
 
 #. Name of the IRC voiced role (the + prefix; may speak in a moderated channel), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeVoice"
 msgid "voice"
-msgstr "voice"
+msgstr "声"
 
 #. Context-menu item on a conversation; clicking mutes it (no highlights, no notifications from it). {type} names the kind of conversation in lowercase: 'network', 'channel' or 'conversation'.
 #: client/js/helpers/contextMenu.ts
@@ -3409,7 +3409,7 @@ msgstr "only this session's loaded messages are searched — older history is no
 #: client/components/Windows/SearchResults.vue:21
 msgctxt "search.results.searchingInAfter"
 msgid "for"
-msgstr "for"
+msgstr "ため"
 
 #. First fragment of the search-results window header, rendered before the styled channel-name element. That element (the channel's or query window's name — user content, never translated, like a <Username>) sits between this fragment and the one after it. Word order inside each fragment is free; the fragments cannot cross the element.
 #: client/components/Windows/SearchResults.vue:19
@@ -4564,7 +4564,7 @@ msgstr "ディスプレイ言語"
 msgctxt "sidebar.mentions"
 msgid "{count} mention"
 msgid_plural "{count} mentions"
-msgstr[0] "{count} mentions"
+msgstr[0] ""
 
 #. aria-label of the sidebar's navigation region (the network/channel list).
 #: client/components/NetworkList.vue:6
@@ -5556,25 +5556,25 @@ msgstr "{from} → {to} · {model} (GPU)"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.routeGpuRetried"
 msgid "{from} → {to} · {model} (GPU) · retried without a source"
-msgstr "{from} → {to} · {model} (GPU) · retried without a source"
+msgstr ""
 
 #. Tooltip and aria-label of the send button in the composer's translation strip after the translation failed: the message goes out in the language the user typed it in.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sendAsWritten"
 msgid "Send as written"
-msgstr "Send as written"
+msgstr ""
 
 #. Tooltip and aria-label of the send button in the composer's translation strip: the translated text is what gets sent.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sendTranslation"
 msgid "Send the translation"
-msgstr "Send the translation"
+msgstr "翻訳を送ってください"
 
 #. Stands in for the source language in the composer translation strip's route tooltip when no source was named and the model was left to work it out. Substituted as {from} in translate.strip.routeGpu and its siblings.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sourceAuto"
 msgid "auto"
-msgstr "auto"
+msgstr "アウト"
 
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue
@@ -5586,13 +5586,13 @@ msgstr "その行は変わりませんでした"
 #: client/components/TranslationPanel.vue
 msgctxt "translation.panel.languages"
 msgid "Languages: {channel}"
-msgstr "Languages: {channel}"
+msgstr "言語: {channel}"
 
 #. Translation panel, a language chip's remove button. {language} is the language's name in the interface language.
 #: client/components/TranslationPanel.vue
 msgctxt "translation.panel.remove"
 msgid "Remove {language}"
-msgstr "Remove {language}"
+msgstr "{language} を削除"
 
 #. Line above the message input naming the two longest-typing users and summarizing everyone else. {nick1} and {nick2} are those users' names; {count} is how many further users are typing. The singular form shows when one further user is meant, the plural for any other number.
 #: client/components/TypingIndicator.vue:31

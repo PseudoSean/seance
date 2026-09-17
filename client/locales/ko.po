@@ -1359,7 +1359,7 @@ msgstr "사용자 선호 설정"
 #: client/components/Windows/Help.vue
 msgctxt "help.about"
 msgid "About"
-msgstr "About"
+msgstr ""
 
 #. Word between the two version numbers inside the compare links of the help window's past-release list. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1695,7 +1695,7 @@ msgstr "지정된 채널로 메시지를 보내세요."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.opA"
 msgid "Give op ("
-msgstr "Give op ("
+msgstr ""
 
 #. Continuation of the /op command description in the help window, after the +o code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1767,7 +1767,7 @@ msgstr "이는 현재 채널의 주제를 설정합니다."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unbanA"
 msgid "Unban ("
-msgstr "Unban ("
+msgstr ""
 
 #. Continuation of the /unban command description in the help window, after the -b code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1797,7 +1797,7 @@ msgstr "을 참조하십시오."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.voiceA"
 msgid "Give voice ("
-msgstr "Give voice ("
+msgstr "말을 주세요 ("
 
 #. Continuation of the /voice command description in the help window, after the +v code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1815,20 +1815,20 @@ msgstr "현재 네트워크의 주어진 사용자에 대한 정보를 검색합
 #: client/components/Windows/Help.vue
 msgctxt "help.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr "충성"
 
 #. First word of the two list items under the help window's past-release sentence; each continues with a link comparing two versions. Mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.compare"
 msgid "Compare"
-msgstr "Compare"
+msgstr "비교"
 
 #. Label of the documentation link in the Help window.
 #: client/js/branding.ts
 #: client/components/Windows/Help.vue
 msgctxt "help.documentation"
 msgid "Documentation"
-msgstr "Documentation"
+msgstr "문서화"
 
 #. Shared first part of the descriptions of the Ctrl+B, Ctrl+U, Ctrl+I, Ctrl+S and Ctrl+M formatting shortcuts in the help window; the formatted example word (bold, underlined, italics, struck through, monospaced) follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1846,7 +1846,7 @@ msgstr "굵게 표시합니다."
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorHere"
 msgid "here"
-msgstr "here"
+msgstr "여기서"
 
 #. First part of the Ctrl+K description in the help window's formatting section; a code fragment with the numeric range follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2298,7 +2298,7 @@ msgstr "미리보기 확장"
 #: client/components/LinkPreview.vue
 msgctxt "link.fromHost"
 msgid "{Kind} from {host}"
-msgstr "{Kind} from {host}"
+msgstr "{Kind}에서 {host}로"
 
 #. Tooltip and aria-label of the hide button on a revealed media preview; clicking hides the media and restores the placeholder.
 #: client/components/LinkPreview.vue
@@ -3061,7 +3061,7 @@ msgstr "주제는"
 #: client/components/MessageTypes/topic_set_by.vue
 msgctxt "msg.topicSetOn"
 msgid "on {time}"
-msgstr "on {time}"
+msgstr ""
 
 #. Channel message answering a topic request when the channel has none (331).
 #: client/js/irc/handlers/topic.ts
@@ -3109,13 +3109,13 @@ msgstr "{nick} ({channel})"
 #: client/js/socket-events/msg.ts
 msgctxt "notify.titleChannelSays"
 msgid "{nick} ({channel}) says:"
-msgstr "{nick} ({channel}) says:"
+msgstr ""
 
 #. Desktop notification title for a private message; {nick} is the sender's name, verbatim.
 #: client/js/socket-events/msg.ts
 msgctxt "notify.titleSays"
 msgid "{nick} says:"
-msgstr "{nick} says:"
+msgstr ""
 
 #. Reason fragment of 'Not sent ({reason}): {text}' when the connection dropped with the message still unconfirmed. Lowercase mid-sentence by position.
 #: client/js/irc/client.ts
@@ -3146,7 +3146,7 @@ msgstr "오류 {code}"
 #: client/js/irc/handlers/persistence.ts
 msgctxt "persistence.echo"
 msgid "Persistence: {params}"
-msgstr "Persistence: {params}"
+msgstr ""
 
 #. Lobby status line confirming the state change the user asked for. {state} is the server's ON/OFF token, verbatim.
 #: client/js/irc/handlers/persistence.ts
@@ -3188,13 +3188,13 @@ msgstr "이 네트워크"
 #: client/components/PushPrompt.vue
 msgctxt "push.never"
 msgid "Never"
-msgstr "Never"
+msgstr ""
 
 #. Button of the push opt-in prompt; declines for now without disabling future prompts.
 #: client/components/PushPrompt.vue
 msgctxt "push.no"
 msgid "No"
-msgstr "No"
+msgstr "아니요"
 
 #. Body of the push-renewal prompt; explains why the subscription broke and that re-subscribing can be done later from that network's settings.
 #: client/components/PushPrompt.vue
@@ -4033,7 +4033,7 @@ msgstr[0] "{count} 네트워크"
 #: client/components/Settings/General.vue
 msgctxt "settings.general.backupPartSettings"
 msgid "your settings"
-msgstr "your settings"
+msgstr "설정"
 
 #. Sentence appended to the restore-confirmation dialog in Settings > General when the backup file contains saved network passwords. The leading space is part of the copy; it follows the previous sentence.
 #: client/components/Settings/General.vue
@@ -4325,7 +4325,7 @@ msgstr "메시지가 당신이나 custom highlight와 일치하면 채널에서 
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlights"
 msgid "Custom highlights"
-msgstr "Custom highlights"
+msgstr "커스텀 강조"
 
 #. Tooltip on the custom highlights field in Settings > Notifications; explains the field's comma-separated format.
 #: client/components/Settings/Notifications.vue
@@ -4433,13 +4433,13 @@ msgstr "1시간"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snoozeIntro"
 msgid "Snooze pushes everywhere:"
-msgstr "Snooze pushes everywhere:"
+msgstr "무시가 전역으로 퍼져서:"
 
 #. Snooze button in Settings > Notifications; ends the pause and resumes push notifications immediately.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snoozeOff"
 msgid "Off"
-msgstr "Off"
+msgstr "꺼짐"
 
 #. Checkbox in Settings > Notifications; when ticked, a sound plays alongside a notification.
 #: client/components/Settings/Notifications.vue
@@ -5030,13 +5030,13 @@ msgstr "번역 엔진이 이 요청을 처리할 수 없습니다"
 #: client/js/helpers/translateErrors.ts
 msgctxt "translate.error.unavailableDetail"
 msgid "no translation engine can take this request: {detail}"
-msgstr "no translation engine can take this request: {detail}"
+msgstr ""
 
 #. Why a translation failed, shown after 'Couldn't translate': the background process doing the translating was shut down. Lowercase: it follows a colon or a dash.
 #: client/js/helpers/translateErrors.ts
 msgctxt "translate.error.workerDisposed"
 msgid "translation worker disposed"
-msgstr "translation worker disposed"
+msgstr ""
 
 #. Text in front of the failure reason on a message whose translation failed (with a retry button beside it).
 #: client/components/TranslationLine.vue
@@ -5049,113 +5049,113 @@ msgstr "번역할 수 없었습니다"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.auto"
 msgid "As the original does"
-msgstr "As the original does"
+msgstr ""
 
 #. The same choice as translate.formality.auto, shortened for the narrow segmented control on a phone: keep whatever the original message did.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.formality.autoShort"
 msgid "As written"
-msgstr "As written"
+msgstr "쓰인 대로"
 
 #. Choice for how formally a translation addresses people: always use the familiar form.
 #: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.casual"
 msgid "Casually"
-msgstr "Casually"
+msgstr "친근하게"
 
 #. Choice for how formally a translation addresses people: always use the polite form.
 #: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.formal"
 msgid "Formally"
-msgstr "Formally"
+msgstr "공식적으로"
 
 #. Label of the control that chooses how formally the translation addresses people, in the translation panel and in Settings.
 #: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.label"
 msgid "Address people"
-msgstr "Address people"
+msgstr "사람들을 주소하라"
 
 #. Tooltip of the translate button in a chat window's header while translation is off; clicking it turns reading on. {reading} is a language name.
 #: client/components/Chat.vue
 msgctxt "translate.header.off"
 msgid "Translate messages into {reading}"
-msgstr "Translate messages into {reading}"
+msgstr "메시지를 {reading}로 번역하라"
 
 #. Tooltip of the translate button in a chat window's header when translation is off and the engine has paused. {reading} is a language name; {reason} is the engine's own untranslated message.
 #: client/components/Chat.vue
 msgctxt "translate.header.offPaused"
 msgid "Translate messages into {reading}, paused: {reason}"
-msgstr "Translate messages into {reading}, paused: {reason}"
+msgstr "{reading}로 메시지 번역, 일시 중지: {reason}"
 
 #. Tooltip of the translate button in a chat window's header while incoming messages are not translated but outgoing ones are. {reading} and {writing} are language names.
 #: client/components/Chat.vue
 msgctxt "translate.header.offWrite"
 msgid "Translate messages into {reading}, sending in {writing}"
-msgstr "Translate messages into {reading}, sending in {writing}"
+msgstr "{reading}로 메시지 번역, {writing} 송신"
 
 #. Tooltip of the translate button in a chat window's header when only outgoing messages are translated and the engine has paused. {reading} and {writing} are language names; {reason} is the engine's own untranslated message.
 #: client/components/Chat.vue
 msgctxt "translate.header.offWritePaused"
 msgid "Translate messages into {reading}, sending in {writing}, paused: {reason}"
-msgstr "Translate messages into {reading}, sending in {writing}, paused: {reason}"
+msgstr "{reading}로 메시지 번역, {writing} 송신, 일시 중지: {reason}"
 
 #. Tooltip of the translate button in a chat window's header while incoming messages are being translated. {reading} is a language name.
 #: client/components/Chat.vue
 msgctxt "translate.header.read"
 msgid "Translating into {reading}"
-msgstr "Translating into {reading}"
+msgstr "{reading}로 번역 중"
 
 #. Tooltip of the translate button in a chat window's header when translation is on but the engine has paused. {reading} is a language name; {reason} is the engine's own untranslated message.
 #: client/components/Chat.vue
 msgctxt "translate.header.readPaused"
 msgid "Translating into {reading}, paused: {reason}"
-msgstr "Translating into {reading}, paused: {reason}"
+msgstr "{reading}로 번역 중, 일시 중지: {reason}"
 
 #. Tooltip of the translate button in a chat window's header while incoming messages are translated and outgoing ones are too. {reading} and {writing} are language names.
 #: client/components/Chat.vue
 msgctxt "translate.header.readWrite"
 msgid "Translating into {reading}, sending in {writing}"
-msgstr "Translating into {reading}, sending in {writing}"
+msgstr "{reading}로 번역 중, {writing} 전송 중"
 
 #. Tooltip of the translate button in a chat window's header when reading and writing are both translated but the engine has paused. {reading} and {writing} are language names; {reason} is the engine's own untranslated message.
 #: client/components/Chat.vue
 msgctxt "translate.header.readWritePaused"
 msgid "Translating into {reading}, sending in {writing}, paused: {reason}"
-msgstr "Translating into {reading}, sending in {writing}, paused: {reason}"
+msgstr "{reading}로 번역 중, {writing} 전송 중, 일시 중지: {reason}"
 
 #. Tooltip and aria-label of the translate button in a chat window's header on a touch device, where tapping it opens the translation panel.
 #: client/components/Chat.vue
 msgctxt "translate.header.settings"
 msgid "Translation settings"
-msgstr "Translation settings"
+msgstr "번역 설정"
 
 #. Warning shown under a language choice, in the translation panel and in Settings, when the available models translate that language poorly.
 #: client/components/TranslationPanel.vue
 #: client/components/Settings/Translation.vue
 msgctxt "translate.limitedLanguage"
 msgid "Translations into and out of this language are often wrong."
-msgstr "Translations into and out of this language are often wrong."
+msgstr "이 언어로의 번역과 이 언어에서의 번역은 종종 오류가 있습니다."
 
 #. Note shown in the composer's translation strip or under a message while the model it needs is being fetched for the first time. {model} is the model's name, {percent} a number from 0 to 100.
 #: client/js/helpers/modelLabel.ts
 msgctxt "translate.load.downloading"
 msgid "Downloading {model}… {percent}%"
-msgstr "Downloading {model}… {percent}%"
+msgstr "{model} 다운로드 중… {percent}%"
 
 #. Note shown in the composer's translation strip or under a message while a model already on the device is being loaded back into memory. {model} is the model's name, {percent} a number from 0 to 100.
 #: client/js/helpers/modelLabel.ts
 msgctxt "translate.load.loading"
 msgid "Loading {model} into memory… {percent}%"
-msgstr "Loading {model} into memory… {percent}%"
+msgstr "{model} 로드 중… {percent}%"
 
 #. A translation chip's menu item.
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.copy"
 msgid "Copy translation"
-msgstr "Copy translation"
+msgstr "번역 복사"
 
 #. Item in a channel's context menu in the sidebar; it opens that channel's translation panel.
 #: client/js/helpers/contextMenu.ts
@@ -5293,13 +5293,13 @@ msgstr "이러한 언어의 줄들은 짧거나 유사해도 인식됩니다."
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.off"
 msgid "Off"
-msgstr "Off"
+msgstr "꺼짐"
 
 #. The on choice of the segmented switch for translating incoming messages, in the translation panel.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.on"
 msgid "On"
-msgstr "On"
+msgstr "켜짐"
 
 #. Explanatory note under the reading switch in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -5551,25 +5551,25 @@ msgstr "{from} → {to} · {model} (GPU)"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.routeGpuRetried"
 msgid "{from} → {to} · {model} (GPU) · retried without a source"
-msgstr "{from} → {to} · {model} (GPU) · retried without a source"
+msgstr "{from} → {to} · {model} (GPU) · 원천이 없이 재시도"
 
 #. Tooltip and aria-label of the send button in the composer's translation strip after the translation failed: the message goes out in the language the user typed it in.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sendAsWritten"
 msgid "Send as written"
-msgstr "Send as written"
+msgstr "그대로 보내세요"
 
 #. Tooltip and aria-label of the send button in the composer's translation strip: the translated text is what gets sent.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sendTranslation"
 msgid "Send the translation"
-msgstr "Send the translation"
+msgstr "번역을 보내세요"
 
 #. Stands in for the source language in the composer translation strip's route tooltip when no source was named and the model was left to work it out. Substituted as {from} in translate.strip.routeGpu and its siblings.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sourceAuto"
 msgid "auto"
-msgstr "auto"
+msgstr "자동"
 
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue
@@ -5581,13 +5581,13 @@ msgstr "줄이 변하지 않았습니다"
 #: client/components/TranslationPanel.vue
 msgctxt "translation.panel.languages"
 msgid "Languages: {channel}"
-msgstr "Languages: {channel}"
+msgstr "언어: {channel}"
 
 #. Translation panel, a language chip's remove button. {language} is the language's name in the interface language.
 #: client/components/TranslationPanel.vue
 msgctxt "translation.panel.remove"
 msgid "Remove {language}"
-msgstr "Remove {language}"
+msgstr "{language} 제거"
 
 #. Line above the message input naming the two longest-typing users and summarizing everyone else. {nick1} and {nick2} are those users' names; {count} is how many further users are typing. The singular form shows when one further user is meant, the plural for any other number.
 #: client/components/TypingIndicator.vue:31

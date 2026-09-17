@@ -40,25 +40,25 @@ msgstr "{type}: {name} ({extra})"
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.channel"
 msgid "Channel"
-msgstr "Channel"
+msgstr ""
 
 #. Names the kind of window in a sidebar row's aria-label: the chat network's own window. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.lobby"
 msgid "Network"
-msgstr "Network"
+msgstr "Réseau"
 
 #. Names the kind of window in a sidebar row's aria-label: a private conversation with one person. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.query"
 msgid "Conversation"
-msgstr "Conversation"
+msgstr ""
 
 #. Names the kind of window in a sidebar row's aria-label: a results window such as a channel list or a ban list. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.special"
 msgid "List"
-msgstr "List"
+msgstr "Liste"
 
 #. Tooltip and aria-label of the spinner in a chat window's header while the connection is being established, when the network's display name is not known.
 #: client/components/Chat.vue:186
@@ -365,7 +365,7 @@ msgctxt "code.showAllLines"
 msgid "Show all {count} line"
 msgid_plural "Show all {count} lines"
 msgstr[0] "Afficher tous {count} ligne"
-msgstr[1] "Show all {count} lines"
+msgstr[1] "Afficher toutes les lignes {count}"
 
 #. Button under a long code block in a chat message while all of its lines are shown; clicking folds the block back to its first lines.
 #: client/components/CodeBlock.vue
@@ -451,7 +451,7 @@ msgctxt "composer.reconnectIn"
 msgid "Reconnecting to {network} in {seconds}s…"
 msgid_plural "Reconnecting to {network} in {seconds}s…"
 msgstr[0] "Réconnexion à {network} en {seconds}s…"
-msgstr[1] "Reconnecting to {network} in {seconds}s…"
+msgstr[1] "Reconnection à {network} dans {seconds}s…"
 
 #. Label at the left of the compose bar shown while a reply is being written. {nick} is the name of the user being replied to, shown emphasized; the quoted message preview follows it. Keep the trailing colon.
 #: client/components/ChatInput.vue:60
@@ -501,7 +501,7 @@ msgctxt "condensed.away"
 msgid "marked away once"
 msgid_plural "marked away {count} times"
 msgstr[0] "Marqué hors ligne une fois"
-msgstr[1] "marked away {count} times"
+msgstr[1] "marqué loin {count} fois"
 
 #. Condensed status block: back markings while the block was collapsed. The singular shows 'once' when one marking happened, the plural the number of markings; {count} is that number.
 #: client/components/MessageCondensed.vue
@@ -509,7 +509,7 @@ msgctxt "condensed.back"
 msgid "marked back once"
 msgid_plural "marked back {count} times"
 msgstr[0] "Marqué en ligne une fois"
-msgstr[1] "marked back {count} times"
+msgstr[1] "marqué près {count} fois"
 
 #. Condensed status block: {count} users changed their username/hostname while the block was collapsed.
 #: client/components/MessageCondensed.vue
@@ -517,7 +517,7 @@ msgctxt "condensed.chghost"
 msgid "{count} user has changed hostname"
 msgid_plural "{count} users have changed hostname"
 msgstr[0] "{count} utilisateur a changé d'hôte"
-msgstr[1] "{count} users have changed hostname"
+msgstr[1] "{count} utilisateurs ont changé le nom d'hôte"
 
 #. Condensed status block: {count} users joined while the block was collapsed. The counts of several kinds join into one sentence in the active locale's list format.
 #: client/components/MessageCondensed.vue
@@ -525,7 +525,7 @@ msgctxt "condensed.join"
 msgid "{count} user has joined"
 msgid_plural "{count} users have joined"
 msgstr[0] "{count} utilisateur a rejoint"
-msgstr[1] "{count} users have joined"
+msgstr[1] "{count} utilisateurs ont rejoint"
 
 #. Condensed status block: {count} users were kicked while the block was collapsed.
 #: client/components/MessageCondensed.vue
@@ -541,7 +541,7 @@ msgctxt "condensed.left"
 msgid "{count} user has left"
 msgid_plural "{count} users have left"
 msgstr[0] "{count} utilisateur a quitté"
-msgstr[1] "{count} users have left"
+msgstr[1] "{count} utilisateurs sont partis"
 
 #. Condensed status block: {count} channel-mode changes were set while the block was collapsed (one MODE line can carry several).
 #: client/components/MessageCondensed.vue
@@ -549,7 +549,7 @@ msgctxt "condensed.modes"
 msgid "{count} mode was set"
 msgid_plural "{count} modes were set"
 msgstr[0] "{count} mode a été défini"
-msgstr[1] "{count} modes were set"
+msgstr[1] "{count} modes ont été définis"
 
 #. Condensed status block: {count} users renamed while the block was collapsed.
 #: client/components/MessageCondensed.vue
@@ -557,7 +557,7 @@ msgctxt "condensed.nick"
 msgid "{count} user has changed nick"
 msgid_plural "{count} users have changed nick"
 msgstr[0] "{count} utilisateur a changé de pseudonyme"
-msgstr[1] "{count} users have changed nick"
+msgstr[1] "{count} utilisateurs ont changé de nick"
 
 #. aria-label of the small toggle button that expands or collapses the condensed status block in a channel's scrollback.
 #: client/components/MessageCondensed.vue
@@ -749,25 +749,25 @@ msgstr "Garder le mot de passe sur ce dispositif"
 #: client/js/irc/client.ts
 msgctxt "connect.saslFailed"
 msgid "SASL authentication failed: {reason}"
-msgstr "SASL authentication failed: {reason}"
+msgstr "Authentification SASL échouée : {reason}"
 
 #. Lobby status line listing the SASL mechanisms the server offers (902-adjacent RPL_SASLMECHS). {mechanisms} is the server's comma-separated token list, verbatim.
 #: client/js/irc/sasl.ts
 msgctxt "connect.saslMechanisms"
 msgid "Available SASL mechanisms: {mechanisms}"
-msgstr "Available SASL mechanisms: {mechanisms}"
+msgstr "Mécanismes SASL disponibles : {mechanisms}"
 
 #. Lobby error after a failed required SASL login: the network was dropped instead of registering unauthenticated. {host} is the chat network's configured host name.
 #: client/js/irc/client.ts
 msgctxt "connect.saslQuitHint"
 msgid "Not connecting to {host} without the login you asked for."
-msgstr "Not connecting to {host} without the login you asked for."
+msgstr "Pas de connexion à {host} sans le login que vous avez demandé."
 
 #. Lobby error after a required SASL login that merely timed out (a slow login service, not a wrong password): the connection is redialled on the usual schedule. {host} is the configured host name.
 #: client/js/irc/client.ts
 msgctxt "connect.saslQuitHintRetry"
 msgid "Not connecting to {host} without the login you asked for; trying again."
-msgstr "Not connecting to {host} without the login you asked for; trying again."
+msgstr "Pas de connexion à {host} sans le login que vous avez demandé ; tentative de réconnexion."
 
 #. Reason fragment of 'SASL authentication failed: {reason}' when the server's AUTHENTICATE challenge is not the empty one PLAIN and EXTERNAL expect. {mechanism} is the mechanism token, verbatim. Lowercase mid-sentence by position.
 #: client/js/irc/sasl.ts
@@ -978,7 +978,7 @@ msgstr "main d'authentification TLS échouée"
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.codeUnknown"
 msgid "code {code}"
-msgstr "code {code}"
+msgstr ""
 
 #. Connection-failure report when the WebSocket never opened. {url} is the address that was dialled, verbatim. {error} is ' (<the browser's error text>)' or empty — the browser hides why a dial failed, so the slot often stays empty.
 #: client/js/irc/disconnect.ts
@@ -1381,7 +1381,7 @@ msgstr "et"
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.channel"
 msgid "Channel"
-msgstr "Channel"
+msgstr ""
 
 #. Description of the / autocompletion trigger in the help window: typing / suggests slash commands; the parenthesized phrase points at the command list further down this page.
 #: client/components/Windows/Help.vue
@@ -1471,7 +1471,7 @@ msgstr "est construit à partir de"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.alias"
 msgid "Alias:"
-msgstr "Alias :"
+msgstr ""
 
 #. Lead-in of the alias line under a command description in the help window when the command has several alternative names; the alternatives follow as code fragments. Keep the trailing colon.
 #: client/components/Windows/Help.vue
@@ -1825,7 +1825,7 @@ msgstr "Récupérer des informations sur l'utilisateur donné sur le réseau act
 #: client/components/Windows/Help.vue
 msgctxt "help.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First word of the two list items under the help window's past-release sentence; each continues with a link comparing two versions. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1838,7 +1838,7 @@ msgstr "Comparer"
 #: client/components/Windows/Help.vue
 msgctxt "help.documentation"
 msgid "Documentation"
-msgstr "Documentation"
+msgstr ""
 
 #. Shared first part of the descriptions of the Ctrl+B, Ctrl+U, Ctrl+I, Ctrl+S and Ctrl+M formatting shortcuts in the help window; the formatted example word (bold, underlined, italics, struck through, monospaced) follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1904,7 +1904,7 @@ msgstr "italiques"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.monospace"
 msgid "monospaced"
-msgstr "monospaced"
+msgstr ""
 
 #. Description of the Ctrl+O formatting shortcut in the help window; it removes any formatting applied so far in the message.
 #: client/components/Windows/Help.vue
@@ -2170,7 +2170,7 @@ msgstr "Marron"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorCyan"
 msgid "Cyan"
-msgstr "Cyan"
+msgstr ""
 
 #. Name of the mIRC colour with code 03 (green), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2212,13 +2212,13 @@ msgstr "Gris clair"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorMagenta"
 msgid "Magenta"
-msgstr "Magenta"
+msgstr ""
 
 #. Name of the mIRC colour with code 07 (orange), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorOrange"
 msgid "Orange"
-msgstr "Orange"
+msgstr ""
 
 #. Name of the mIRC colour with code 13 (pink), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2320,13 +2320,13 @@ msgstr "Cacher cet aperçu"
 #: client/components/LinkPreview.vue
 msgctxt "link.kindAudio"
 msgid "audio"
-msgstr "audio"
+msgstr ""
 
 #. The word for a picture, filling {kind} in media-preview sentences such as 'Loading {kind}…'. Lowercase mid-sentence.
 #: client/components/LinkPreview.vue
 msgctxt "link.kindImage"
 msgid "image"
-msgstr "image"
+msgstr ""
 
 #. Generic word for a picture, sound or video, filling {kind} in media-preview sentences when the type is unknown. Lowercase mid-sentence.
 #: client/components/LinkPreview.vue
@@ -2688,7 +2688,7 @@ msgstr "réseau"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.chanTypeQuery"
 msgid "conversation"
-msgstr "conversation"
+msgstr ""
 
 #. Context-menu item on a conversation; deletes the locally loaded messages of that conversation after a confirmation. Also the title and confirmation button of that dialog.
 #: client/js/helpers/contextMenu.ts
@@ -2760,7 +2760,7 @@ msgstr "Donner {name} (+{mode})"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.giveModeUnknown"
 msgid "Mode +{mode}"
-msgstr "Mode +{mode}"
+msgstr ""
 
 #. Context-menu item on a clickable channel name inside a chat message, when that channel is already open in this client; clicking switches to it.
 #: client/js/helpers/contextMenu.ts
@@ -2814,13 +2814,13 @@ msgstr "Liste des utilisateurs ignorés"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeAdmin"
 msgid "admin"
-msgstr "admin"
+msgstr ""
 
 #. Name of the IRC half-operator role (the % prefix), filling {name} in the mode menu items. Lowercase mid-sentence; keep the hyphen if natural.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeHalfOp"
 msgid "half-op"
-msgstr "half-op"
+msgstr ""
 
 #. Name of the IRC channel operator role (the @ prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
@@ -2856,7 +2856,7 @@ msgstr "Révoquer {name} (-{mode})"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.revokeModeUnknown"
 msgid "Mode -{mode}"
-msgstr "Mode -{mode}"
+msgstr ""
 
 #. Context-menu item on a conversation whose messages are muted (not highlighted, not notified); clicking unmutes it. {type} names the kind of conversation in lowercase: 'network', 'channel' or 'conversation'.
 #: client/js/helpers/contextMenu.ts
@@ -3157,7 +3157,7 @@ msgstr "erreur {code}"
 #: client/js/irc/handlers/persistence.ts
 msgctxt "persistence.echo"
 msgid "Persistence: {params}"
-msgstr "Persistence: {params}"
+msgstr ""
 
 #. Lobby status line confirming the state change the user asked for. {state} is the server's ON/OFF token, verbatim.
 #: client/js/irc/handlers/persistence.ts
@@ -3555,7 +3555,7 @@ msgstr "Le corps est trop long (plus de {limit} caractères)."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr "Alias"
+msgstr ""
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
@@ -3709,7 +3709,7 @@ msgstr "tout après le nom d'alias"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.variablesHeading"
 msgid "Variables"
-msgstr "Variables"
+msgstr ""
 
 #. Checkbox in Settings > Appearance; when ticked, typing in the message input suggests completions for names, emoji and commands.
 #: client/components/Settings/Appearance.vue
@@ -3829,7 +3829,7 @@ msgstr "Quand charger les aperçus"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.messagesHeading"
 msgid "Messages"
-msgstr "Messages"
+msgstr ""
 
 #. Expansion of the acronym MOTD, shown as the abbreviation's hover tooltip on the Message Of The Day checkbox in Settings > Appearance.
 #: client/components/Settings/Appearance.vue
@@ -3973,7 +3973,7 @@ msgstr "Personnes"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.trustedSites"
 msgid "Sites"
-msgstr "Sites"
+msgstr ""
 
 #. Tooltip and aria-label of the remove button on an entry of the always-shown media list in Settings > Appearance, for a website or a person. {name} is that site's host or the person's name. Clicking stops their media from loading automatically.
 #: client/components/Settings/Appearance.vue
@@ -4429,7 +4429,7 @@ msgstr "Les notifications par push nécessitent un serveur connecté qui prend e
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snooze15"
 msgid "15 min"
-msgstr "15 min"
+msgstr ""
 
 #. Snooze button in Settings > Notifications; pauses push notifications for eight hours.
 #: client/components/Settings/Notifications.vue
@@ -4518,7 +4518,7 @@ msgstr "Réseaux"
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.notifications"
 msgid "Notifications"
-msgstr "notifications"
+msgstr ""
 
 #. Name of the Translation tab in the Settings tab strip: on-device translation of messages.
 #: client/components/Settings/Navigation.vue
@@ -4560,7 +4560,7 @@ msgstr ""
 #: client/components/NetworkList.vue:17
 msgctxt "sidebar.jumpTo"
 msgid "Jump to..."
-msgstr ""
+msgstr "Sautez vers..."
 
 #. Tooltip and screen-reader label of the globe button beside the sidebar logo, which opens the language panel (the same selector the connect form and Settings → Appearance carry).
 #: client/components/Sidebar.vue:8
@@ -4573,8 +4573,8 @@ msgstr "Langue d'affichage"
 msgctxt "sidebar.mentions"
 msgid "{count} mention"
 msgid_plural "{count} mentions"
-msgstr[0] "{count} mention"
-msgstr[1] "{count} mentions"
+msgstr[0] ""
+msgstr[1] "{count} mentionne"
 
 #. aria-label of the sidebar's navigation region (the network/channel list).
 #: client/components/NetworkList.vue:6
@@ -5189,79 +5189,79 @@ msgstr "Traduire à nouveau"
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.retranslateFrom"
 msgid "Retranslate from: {language}"
-msgstr "Retranslate from: {language}"
+msgstr "Retranslation depuis : {language}"
 
 #. A translation chip's menu item.
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.retranslateFromPicker"
 msgid "Retranslate from…"
-msgstr "Retranslate from…"
+msgstr "Retranslation depuis…"
 
 #. A translation chip's menu item.
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.showOriginal"
 msgid "Show original only"
-msgstr "Show original only"
+msgstr "Afficher uniquement l'original"
 
 #. A translation chip's menu item.
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.translateAnyway"
 msgid "Translate anyway"
-msgstr "Translate anyway"
+msgstr "Traduisez tout de même"
 
 #. Button on a model row in Settings → Translation that removes the downloaded model from this device.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.delete"
 msgid "Delete"
-msgstr "Delete"
+msgstr "Supprimer"
 
 #. Button on a model row in Settings → Translation that fetches the model onto this device.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.download"
 msgid "Download"
-msgstr "Download"
+msgstr "Télécharger"
 
 #. State of a model row in Settings → Translation: the model is on this device.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.downloaded"
 msgid "Downloaded"
-msgstr "Downloaded"
+msgstr "Téléchargé"
 
 #. State of a model row in Settings → Translation after a download failed. {error} is the library's own untranslated message.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.failed"
 msgid "Failed: {error}"
-msgstr "Failed: {error}"
+msgstr "Échoué: {error}"
 
 #. State of a model row in Settings → Translation after a download failed with no message of its own.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.failedUnknown"
 msgid "Failed: unknown error"
-msgstr "Failed: unknown error"
+msgstr "Échoué: erreur inconnue"
 
 #. The name of a translation model in Settings → Translation: a large language model that runs on the graphics processor. {name} is the model's product name, never translated; GPU is the usual abbreviation for the graphics processor.
 #: client/js/helpers/modelLabel.ts
 msgctxt "translate.model.llm"
 msgid "{name} (GPU, all languages)"
-msgstr "{name} (GPU, all languages)"
+msgstr "{name} (GPU, tous les langues)"
 
 #. State of a model row in Settings → Translation: it is already on the device and is being loaded into memory. {percent} is a number from 0 to 100.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.loadingPercent"
 msgid "Loading… {percent}%"
-msgstr "Loading… {percent}%"
+msgstr "Chargement… {percent}%"
 
 #. The name of a translation model in Settings → Translation. NLLB-200 600M is a product name; CPU is the usual abbreviation for the main processor; it covers 200 languages.
 #: client/js/helpers/modelLabel.ts
 msgctxt "translate.model.nllb"
 msgid "NLLB-200 600M (CPU, 200 languages)"
-msgstr "NLLB-200 600M (CPU, 200 languages)"
+msgstr "NLLB-200 600M (CPU, 200 langues)"
 
 #. State of a model row in Settings → Translation: the model is not on this device yet.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.notDownloaded"
 msgid "Not downloaded"
-msgstr "Not downloaded"
+msgstr "Non téléchargé"
 
 #. The name of a translation model in Settings → Translation: an OPUS-MT pair that runs on the main processor. {from} and {to} are language names. OPUS-MT is a product name and CPU is the usual abbreviation for the main processor.
 #: client/js/helpers/modelLabel.ts
@@ -5279,31 +5279,31 @@ msgstr "{percent}%"
 #: client/components/TranslationLine.vue
 msgctxt "translate.notTranslated"
 msgid "Not translated"
-msgstr "Not translated"
+msgstr "Non traduit"
 
 #. The placeholder option of the picker that adds a language to the list of languages spoken in this conversation, in the translation panel.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.addLanguage"
 msgid "Add a language…"
-msgstr "Add a language…"
+msgstr "Ajouter une langue…"
 
 #. Tooltip and aria-label of the ✕ button that closes the translation panel.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.close"
 msgid "Close"
-msgstr "Close"
+msgstr "Fermer"
 
 #. Heading of the translation panel, a dialog of translation settings for one conversation; the conversation's name is shown next to it.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.heading"
 msgid "Translation"
-msgstr "Translation"
+msgstr "Traduction"
 
 #. Explanatory note under the list of languages spoken in this conversation, in the translation panel.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.languagesHint"
 msgid "Lines in these languages are recognised even when they are short or look alike."
-msgstr "Lines in these languages are recognised even when they are short or look alike."
+msgstr "Les lignes dans ces langues sont reconnues même si elles sont courtes ou ressemblent."
 
 #. The off choice: the segmented switch for translating incoming messages, and the first option of the 'send my messages in' picker, both in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -5519,7 +5519,7 @@ msgstr "Impossible de rejoindre le travailleur de traduction: {error}"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.checkFailed"
 msgid "couldn't check"
-msgstr "couldn't check"
+msgstr "Impossible de vérifier"
 
 #. Tooltip and aria-label of the copy button in the composer's translation strip, for two seconds after the translation was put on the clipboard.
 #: client/components/ChatInput.vue
@@ -5555,7 +5555,7 @@ msgstr "{from} → {to} · {model} (CPU)"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.routeCpuRetried"
 msgid "{from} → {to} · {model} (CPU) · retried without a source"
-msgstr "{from} → {to} · {model} (CPU) · retried without a source"
+msgstr "{from} → {to} · {model} (CPU) · retrouvé sans source"
 
 #. Tooltip of the composer translation strip's direction chip, naming the route a translation took. {from} and {to} are language names (or the word from translate.strip.sourceAuto), {model} is the model's technical id. This one ran on the graphics processor.
 #: client/components/ChatInput.vue
@@ -5567,7 +5567,7 @@ msgstr "{from} → {to} · {model} (GPU)"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.routeGpuRetried"
 msgid "{from} → {to} · {model} (GPU) · retried without a source"
-msgstr "{from} → {to} · {model} (GPU) · retried without a source"
+msgstr "{from} → {to} · {model} (GPU) · retrouvé sans source"
 
 #. Tooltip and aria-label of the send button in the composer's translation strip after the translation failed: the message goes out in the language the user typed it in.
 #: client/components/ChatInput.vue
@@ -5585,7 +5585,7 @@ msgstr "Envoyez la traduction"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sourceAuto"
 msgid "auto"
-msgstr "auto"
+msgstr ""
 
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue
@@ -5865,7 +5865,7 @@ msgstr "Connecté en tant que :"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.modes"
 msgid "Modes:"
-msgstr "Modes :"
+msgstr ""
 
 #. Shown after the nick of a user who left the network (WHOWAS), leading the last recorded whois data; the nick renders direction-isolated in <bdi>.
 #: client/components/MessageTypes/whois.vue
@@ -5919,7 +5919,7 @@ msgstr "voir toutes les versions"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.aria"
 msgid "Changelog"
-msgstr "Changelog"
+msgstr ""
 
 #. Link at the top of the changelog window that goes back to the help page; the left double angle quote is part of the copy.
 #: client/components/Windows/Changelog.vue
@@ -5931,7 +5931,7 @@ msgstr "« Aide"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First sentence of the paragraph in the changelog window that says the release notes are read online; the following words are the two links.
 #: client/components/Windows/Changelog.vue

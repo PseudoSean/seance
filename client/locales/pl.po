@@ -715,7 +715,7 @@ msgstr "Połącz się z nowym serwerem?"
 #: client/components/Windows/Connect.vue:173
 msgctxt "connect.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr ""
 
 #. Dismiss button on the connect screen shown as a dialog when the user followed a web+irc:// link; declines the connection without disconnecting the app.
 #: client/components/Windows/Connect.vue:91
@@ -1276,7 +1276,7 @@ msgstr "Ustawienia sieci"
 #: client/components/NetworkForm.vue:104
 msgctxt "form.nick"
 msgid "Nick"
-msgstr "Nick"
+msgstr ""
 
 #. Radio option on the network edit form: connect without a services account.
 #: client/components/NetworkForm.vue:158
@@ -1360,7 +1360,7 @@ msgstr "Port serwera"
 #: client/components/NetworkForm.vue:26
 msgctxt "form.status"
 msgid "Status"
-msgstr "Status"
+msgstr ""
 
 #. Checkbox on the network edit form: connect to this network over TLS instead of a plain connection.
 #: client/components/NetworkForm.vue:86
@@ -1481,7 +1481,7 @@ msgstr "jest zbudowany z"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.alias"
 msgid "Alias:"
-msgstr "Alias:"
+msgstr ""
 
 #. Lead-in of the alias line under a command description in the help window when the command has several alternative names; the alternatives follow as code fragments. Keep the trailing colon.
 #: client/components/Windows/Help.vue
@@ -1835,7 +1835,7 @@ msgstr "Pobierz informacje o określonym użytkowniku w obecnym sieci."
 #: client/components/Windows/Help.vue
 msgctxt "help.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First word of the two list items under the help window's past-release sentence; each continues with a link comparing two versions. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2222,7 +2222,7 @@ msgstr "Jasny szary"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorMagenta"
 msgid "Magenta"
-msgstr "Magenta"
+msgstr ""
 
 #. Name of the mIRC colour with code 07 (orange), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2330,7 +2330,7 @@ msgstr "Ukryj ten przewodnik"
 #: client/components/LinkPreview.vue
 msgctxt "link.kindAudio"
 msgid "audio"
-msgstr "audio"
+msgstr ""
 
 #. The word for a picture, filling {kind} in media-preview sentences such as 'Loading {kind}…'. Lowercase mid-sentence.
 #: client/components/LinkPreview.vue
@@ -2825,7 +2825,7 @@ msgstr "Wyświetl ignorowane użytkowniki"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeAdmin"
 msgid "admin"
-msgstr "admin"
+msgstr ""
 
 #. Name of the IRC half-operator role (the % prefix), filling {name} in the mode menu items. Lowercase mid-sentence; keep the hyphen if natural.
 #: client/js/helpers/contextMenu.ts
@@ -2837,7 +2837,7 @@ msgstr "połowa op"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOperator"
 msgid "operator"
-msgstr "operator"
+msgstr ""
 
 #. Name of the highest IRC channel role (the ~ prefix), filling {name} in the mode menu items such as 'Revoke {name} (-a)'. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
@@ -3566,7 +3566,7 @@ msgstr "Treść jest zbyt długa (ponad {limit} znaków)."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr "Alias"
+msgstr ""
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
@@ -4425,7 +4425,7 @@ msgstr "Uwagi są zablokowane przez twojego przeglądarkę. Pozwól je w ustawie
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushHeading"
 msgid "Push Notifications"
-msgstr "Push Notifications"
+msgstr ""
 
 #. Intro line of the push section in Settings > Notifications; explains that push is enabled per chat network from that network's edit form (the quoted phrase names that setting) and that each server decides whether to support it. Keep the curly quotes and the arrow.
 #: client/components/Settings/Notifications.vue
@@ -4443,7 +4443,7 @@ msgstr "Push notifications potrzebują połączonego serwera, który obsługuje 
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snooze15"
 msgid "15 min"
-msgstr "15 min"
+msgstr ""
 
 #. Snooze button in Settings > Notifications; pauses push notifications for eight hours.
 #: client/components/Settings/Notifications.vue
@@ -4461,7 +4461,7 @@ msgstr "1 godina"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snoozeIntro"
 msgid "Snooze pushes everywhere:"
-msgstr "Snooze pushes everywhere:"
+msgstr ""
 
 #. Snooze button in Settings > Notifications; ends the pause and resumes push notifications immediately.
 #: client/components/Settings/Notifications.vue
@@ -4544,25 +4544,25 @@ msgstr "Przetłumaczenie"
 #: client/components/Sidebar.vue:8
 msgctxt "sidebar.devBuildTitle"
 msgid "{app} has been built in development mode"
-msgstr "{app} has been built in development mode"
+msgstr ""
 
 #. Small orange badge next to the sidebar logo, shown only in development builds so a dev build is never mistaken for a deploy.
 #: client/components/Sidebar.vue:16
 msgctxt "sidebar.developerBadge"
 msgid "DEVELOPER"
-msgstr "DEVELOPER"
+msgstr ""
 
 #. Message shown in the sidebar when there are no networks at all; the connect form is open beside it.
 #: client/components/NetworkList.vue:8
 msgctxt "sidebar.empty"
 msgid "You are not connected to any networks yet."
-msgstr "You are not connected to any networks yet."
+msgstr ""
 
 #. aria-label of the question-mark button in the sidebar footer: opens the help window.
 #: client/components/Sidebar.vue:51
 msgctxt "sidebar.help"
 msgid "Help"
-msgstr "Help"
+msgstr ""
 
 #. aria-label of the help button in the sidebar footer when a newer build is available; the parenthetical sits on its own line.
 #: client/components/Sidebar.vue:50
@@ -4695,7 +4695,7 @@ msgstr "Wyłączone przez"
 #: client/components/Special/ListIgnored.vue
 msgctxt "special.ignored.hostmask"
 msgid "Hostmask"
-msgstr "Hostmask"
+msgstr ""
 
 #. Column header of the ignore list: when the ignore was set, locale-formatted.
 #: client/components/Special/ListIgnored.vue
@@ -5601,7 +5601,7 @@ msgstr "Wysłaj przekład"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sourceAuto"
 msgid "auto"
-msgstr "auto"
+msgstr ""
 
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue
@@ -5895,7 +5895,7 @@ msgstr "jest offline, ostatnia informacja:"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.operator"
 msgid "Operator:"
-msgstr "Operator:"
+msgstr ""
 
 #. Whois row: the user's realname field, user content, verbatim.
 #: client/components/MessageTypes/whois.vue
@@ -5937,7 +5937,7 @@ msgstr "zobacz wszystkie wersje"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.aria"
 msgid "Changelog"
-msgstr "Changelog"
+msgstr ""
 
 #. Link at the top of the changelog window that goes back to the help page; the left double angle quote is part of the copy.
 #: client/components/Windows/Changelog.vue
@@ -5949,7 +5949,7 @@ msgstr "« Pomoc"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.commitLink"
 msgid "commit"
-msgstr "commit"
+msgstr ""
 
 #. First sentence of the paragraph in the changelog window that says the release notes are read online; the following words are the two links.
 #: client/components/Windows/Changelog.vue
