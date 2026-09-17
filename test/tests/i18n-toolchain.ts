@@ -661,6 +661,24 @@ describe("i18n toolchain", () => {
 					slotVerdict("de", "marked away {count} times", "{count}-mal abwesend")
 				).to.equal(null);
 			});
+
+			it("refuses an answer that is its English source again", () => {
+				// The engines hand the English back often enough to fill a
+				// catalog with it (uk came back 864 entries English) and
+				// nothing else notices: Latin letters are allowed in every
+				// script, the length is right, the placeholders match.
+				expect(slotVerdict("uk", "Close", "Close")).to.equal("unchanged");
+				expect(slotVerdict("cs", "Channel", "channel.")).to.equal("unchanged");
+				expect(
+					slotVerdict("fil", "Currently open {type}", "Currently open {type}")
+				).to.equal("unchanged");
+				// A real translation is not an echo, and neither is a word
+				// every language writes the same way or a source with no
+				// letters of its own to translate.
+				expect(slotVerdict("uk", "Close", "Закрити")).to.equal(null);
+				expect(slotVerdict("de", "OK", "OK")).to.equal(null);
+				expect(slotVerdict("de", "{count}", "{count}")).to.equal(null);
+			});
 		});
 	});
 

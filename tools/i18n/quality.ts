@@ -77,8 +77,84 @@ export function isSuspectCatalogEntry(
 }
 
 /** Why a slot's fill cannot be kept: `isSuspectCatalogEntry`, plus the
- * {placeholder} braces the render and the compile depend on. */
-export type SlotVerdict = SuspectReason | "placeholder";
+ * {placeholder} braces the render and the compile depend on, plus an answer
+ * that is its own English source. */
+export type SlotVerdict = SuspectReason | "placeholder" | "unchanged";
+
+/**
+ * Words a catalog legitimately carries unchanged in every language: the
+ * acronyms and product names the pot uses (`grep` of messages.pot), plus the
+ * assent every locale writes the same way. An answer counts as unchanged
+ * only when its WHOLE text is these, so "Connected (TLS)" is still judged on
+ * its own words while a bare "TLS" is let through.
+ */
+const IDENTICAL_EVERYWHERE = new Set(
+	[
+		"ok",
+		"irc",
+		"ircv3",
+		"sasl",
+		"tls",
+		"webgpu",
+		"websocket",
+		"url",
+		"opus",
+		"mt",
+		"opus-mt",
+		"nllb",
+		"nllb-200",
+		"200",
+		"qwen",
+		"qwen3",
+		"gpu",
+		"cpu",
+		"gib",
+		"mib",
+		"kib",
+		"utc",
+		"markdown",
+		"emoji",
+	].map((word) => word.toLowerCase())
+);
+
+/**
+ * The text as a comparison sees it: no {placeholder}s (their content is the
+ * deploy's, not the translator's), no case, no punctuation, one space
+ * between words. "Close" and "close." are the same answer.
+ */
+function echoForm(text: string): string {
+	return text
+		.replace(PLACEHOLDER, " ")
+		.toLowerCase()
+		.replace(/[^\p{L}\p{N}-]+/gu, " ")
+		.trim()
+		.replace(/\s+/g, " ");
+}
+
+/**
+ * True when `text` is `source` again rather than a translation of it. The
+ * engines answer with the English they were given often enough that a
+ * catalog fills up with it (uk came back 864 entries English), and nothing
+ * else notices: English letters are allowed in every script, the length is
+ * right and the placeholders match. The slot is better left empty — the
+ * runtime serves English for a missing key anyway, and an empty slot is
+ * what the next fill looks for.
+ */
+export function isUnchanged(source: string, text: string): boolean {
+	const left = echoForm(source);
+
+	// Nothing to translate: no letters at all, or only {placeholder}s and
+	// punctuation.
+	if (!left || !/\p{L}/u.test(left)) {
+		return false;
+	}
+
+	if (left !== echoForm(text)) {
+		return false;
+	}
+
+	return !left.split(" ").every((word) => IDENTICAL_EVERYWHERE.has(word));
+}
 
 const braces = (text: string): string => (text.match(PLACEHOLDER) ?? []).sort().join("|");
 
@@ -95,6 +171,10 @@ export function slotVerdict(tag: string, source: string, text: string): SlotVerd
 
 	if (braces(source) !== braces(text)) {
 		return "placeholder";
+	}
+
+	if (isUnchanged(source, text)) {
+		return "unchanged";
 	}
 
 	return isSuspectCatalogEntry(tag, source, text);
