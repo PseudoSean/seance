@@ -956,19 +956,19 @@ msgstr "เซิร์ฟเวอร์กำลังเริ่มต้น
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1013"
 msgid "server asked to try again later"
-msgstr ""
+msgstr "เซิร์ฟเวอร์ขอให้ลองใหม่ในภายหลัง"
 
 #. Name of WebSocket close code 1015 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1015"
 msgid "TLS handshake failed"
-msgstr ""
+msgstr "การเจรจา TLS ล้มเหลว"
 
 #. Detail of a connection-failure report when the WebSocket closed with a code the app has no name for. {code} is the numeric close code, verbatim.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.codeUnknown"
 msgid "code {code}"
-msgstr ""
+msgstr "โค้ด {code}"
 
 #. Connection-failure report when the WebSocket never opened. {url} is the address that was dialled, verbatim. {error} is ' (<the browser's error text>)' or empty — the browser hides why a dial failed, so the slot often stays empty.
 #: client/js/irc/disconnect.ts
@@ -1196,7 +1196,7 @@ msgstr "#channel, #another key (เข้าร่วมเมื่อเชื
 #: client/components/NetworkForm.vue:133
 msgctxt "form.commands"
 msgid "Commands"
-msgstr ""
+msgstr "คำสั่ง"
 
 #. Tooltip of the question-mark icon next to the Commands field on the network edit form (three lines).
 #: client/components/NetworkForm.vue:136
@@ -1713,7 +1713,7 @@ msgstr "ปิดช่องทางหรือหน้าต่างข้
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.partB"
 msgid "is omitted."
-msgstr "END"
+msgstr ""
 
 #. Description of the /query command in the help window.
 #: client/components/Windows/Help.vue

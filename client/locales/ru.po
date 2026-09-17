@@ -5032,7 +5032,7 @@ msgstr "{languages} Варианты перевода"
 #: client/components/TranslationLine.vue
 msgctxt "translate.chip.unsure"
 msgid "Language not told apart, not translated. Translation options"
-msgstr "Язык не различается, не переводится."
+msgstr "Язык не определен, не переведен. Варианты перевода"
 
 #. Placeholder of the message composer in a channel or private conversation whose outgoing messages are translated. {name} is the channel or nickname; {language} is the language messages are sent in.
 #: client/components/ChatInput.vue

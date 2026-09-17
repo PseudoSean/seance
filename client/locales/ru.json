@@ -901,7 +901,7 @@
   "translate.capability.reason.smallBuffer": "Предел буфера GPU при 1 ГиБхожиххохватных плавучих веществ",
   "translate.chip.alreadyIn": "Уже в {language}, не переведен.",
   "translate.chip.options": "{languages} Варианты перевода",
-  "translate.chip.unsure": "Язык не различается, не переводится.",
+  "translate.chip.unsure": "Язык не определен, не переведен. Варианты перевода",
   "translate.composer.placeholder": "Напишите на {name} · отправлено в {language}",
   "translate.error.aborted": "Прерван",
   "translate.error.timedOut": "Время ожидания",

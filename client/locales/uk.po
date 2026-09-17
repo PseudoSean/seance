@@ -52,13 +52,13 @@ msgstr "мережа"
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.query"
 msgid "Conversation"
-msgstr "Converse"
+msgstr "Діалог"
 
 #. Names the kind of window in a sidebar row's aria-label: a results window such as a channel list or a ban list. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.special"
 msgid "List"
-msgstr "Llist"
+msgstr "Список"
 
 #. Tooltip and aria-label of the spinner in a chat window's header while the connection is being established, when the network's display name is not known.
 #: client/components/Chat.vue:186
@@ -207,13 +207,13 @@ msgstr "{mask} додано до ignorelist"
 #: client/js/irc/commands/ignore.ts
 msgctxt "cmd.ignore.already"
 msgid "The specified user/hostmask is already ignored"
-msgstr "The specified user/hostmask is already being ignored"
+msgstr "Вказаний користувач/хостмаск вже ігнорується"
 
 #. Error when /unignore names a hostmask that is not on the ignore list.
 #: client/js/irc/commands/ignore.ts
 msgctxt "cmd.ignore.notIgnored"
 msgid "The specified user/hostmask is not ignored"
-msgstr "The specified user/hostmask is not being ignored"
+msgstr "Вказаний користувач/хостмаск не ігнорується"
 
 #. Confirmation after /unignore. {mask} is the hostmask, user data, wrapped in bold formatting codes, verbatim.
 #: client/js/irc/commands/ignore.ts
@@ -273,13 +273,13 @@ msgstr "Нім’я не може бути таким довжини."
 #: client/js/irc/commands/part.ts
 msgctxt "cmd.partLobby"
 msgid "You can not part from networks, use /quit instead."
-msgstr "You cannot leave networks, use /quit instead."
+msgstr "Ви не можете вийти з мережі, використовуйте /quit."
 
 #. Error when /query is given a channel name; the '/join' part is a command name, verbatim.
 #: client/js/irc/commands/msg.ts
 msgctxt "cmd.query.channel"
 msgid "You can not open query windows for channels, use /join instead."
-msgstr "You cannot open query windows for channels, use /join instead."
+msgstr "Ви не можете відкрити вікна запитів для каналів, використовуйте /join."
 
 #. Error when /query is typed with no nick.
 #: client/js/irc/commands/msg.ts
@@ -291,13 +291,13 @@ msgstr "Ви не можете відкрити вікно запиту без �
 #: client/js/irc/commands/msg.ts
 msgctxt "cmd.query.prefix"
 msgid "You can not open query windows for names starting with a user prefix."
-msgstr "You cannot open query windows for names starting with a user prefix."
+msgstr "Ви не можете відкрити вікна запитів для імен, що починуються з префікса користувача."
 
 #. Error when /query is given a name with spaces; nicks cannot contain them.
 #: client/js/irc/commands/msg.ts
 msgctxt "cmd.query.spaces"
 msgid "You can not open query windows for names containing spaces."
-msgstr "You can't open query windows for names containing spaces."
+msgstr "Ви не можете відкрити вікна запитів для імен, що містять пробіли."
 
 #. Error when /react is typed where no recent message can carry a reaction (e.g. a window without message-tags history).
 #: client/js/irc/commands/react.ts
@@ -378,19 +378,19 @@ msgstr "Показати менше"
 #: client/components/ChatInput.vue:67
 msgctxt "composer.cancel"
 msgid "Cancel"
-msgstr "Cance"
+msgstr "Скасувати"
 
 #. Tooltip of the ✕ button that leaves reply or edit mode in the compose bar; it names the keyboard key that does the same thing.
 #: client/components/ChatInput.vue:68
 msgctxt "composer.cancelEscape"
 msgid "Cancel (Escape)"
-msgstr "Cance (Escape)"
+msgstr "Скасувати (Вихід)"
 
 #. Tooltip and aria-label of the ✕ button on the upload progress bar above the message input; clicking it aborts the upload in progress.
 #: client/components/ChatInput.vue:45
 msgctxt "composer.cancelUpload"
 msgid "Cancel upload"
-msgstr "Cance upload"
+msgstr "Скасувати завантаження"
 
 #. Button in the connection bar shown above the message input when the connection to the chat network is down and no automatic retry is in progress; clicking it dials the network again.
 #: client/components/ChatInput.vue:19
@@ -459,7 +459,7 @@ msgstr[2] "Повторне підключення до {network} через {se
 #: client/components/ChatInput.vue:60
 msgctxt "composer.replyingTo"
 msgid "Replying to {nick}:"
-msgstr "Replied to {nick}:"
+msgstr "Відповідь на {nick}:"
 
 #. Tooltip and aria-label of the send button beside the message input.
 #: client/components/ChatInput.vue:123
@@ -558,22 +558,22 @@ msgid "{count} mode was set"
 msgid_plural "{count} modes were set"
 msgstr[0] "{count} режим був встановлений"
 msgstr[1] "{count} режими були встановлені"
-msgstr[2] ""
+msgstr[2] "{count} modes були встановлені"
 
 #. Condensed status block: {count} users renamed while the block was collapsed.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.nick"
 msgid "{count} user has changed nick"
 msgid_plural "{count} users have changed nick"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "{count} користувач змінив нік"
+msgstr[1] "{count} користувачів змінили нік"
+msgstr[2] "{count} користувачів змінили нік"
 
 #. aria-label of the small toggle button that expands or collapses the condensed status block in a channel's scrollback.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.toggle"
 msgid "Toggle status messages"
-msgstr ""
+msgstr "Вимкніть повідомлення стану"
 
 #. Button of every confirmation dialog in the app (delete message, delete network, restore settings, clear history…); clicking declines and closes the dialog.
 #: client/components/ConfirmDialog.vue
@@ -598,31 +598,31 @@ msgstr "Підключити"
 #: client/components/Windows/Connect.vue:201
 msgctxt "connect.authentication"
 msgid "Authentication"
-msgstr "Autentikasi"
+msgstr "Аутентифікація"
 
 #. Checkbox on the connect form: dial this network every time the app opens.
 #: client/components/Windows/Connect.vue:290
 msgctxt "connect.autoconnect"
 msgid "Connect automatically when the app starts"
-msgstr "Sambungkan secara automatik apabila aplikasi dibuka"
+msgstr "Після запуску додатка автоматично підключитися"
 
 #. Checkbox at the bottom of the connect form: show desktop notifications for this network's messages; the browser's permission ask fires when it is first switched on.
 #: client/components/Windows/Connect.vue:280
 msgctxt "connect.browserNotifications"
 msgid "Browser notifications for this network"
-msgstr "Notifikasi perusak untuk jaringan ini"
+msgstr "Наговіщення браузера для цієї мережі"
 
 #. Label of the field listing channels to join automatically after connecting, on the connect and network edit forms.
 #: client/components/Windows/Connect.vue:188
 msgctxt "connect.channels"
 msgid "Channels"
-msgstr "Saluran"
+msgstr "Канали"
 
 #. Placeholder of the channels field on the connect form: example channel names, and a note that the field may stay empty.
 #: client/components/Windows/Connect.vue:194
 msgctxt "connect.channelsPlaceholder"
 msgid "#channel, #another (optional)"
-msgstr "#saluran, #lainnya (pilihan)"
+msgstr "#канал, #єще (опціонально)"
 
 #. Status line shown on the connect form right after submitting: the nick used and the network name (or host:port of the server) being dialled.
 #: client/components/Windows/Connect.vue:84
@@ -940,31 +940,31 @@ msgstr "сервер відходить"
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1002"
 msgid "WebSocket protocol error"
-msgstr "error dans le protocole web socket"
+msgstr "Помилка протоколу WebSocket"
 
 #. Name of WebSocket close code 1006 (abnormal closure: refused, unreachable, TLS failure — the browser never says which) in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1006"
 msgid "connection lost"
-msgstr "connexion perdue"
+msgstr "з'єднання втрачено"
 
 #. Name of WebSocket close code 1008 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1008"
 msgid "policy violation"
-msgstr "violation de politique"
+msgstr "порушення політики"
 
 #. Name of WebSocket close code 1009 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1009"
 msgid "message too large"
-msgstr "message trop grand"
+msgstr "повідомлення занадто велике"
 
 #. Name of WebSocket close code 1011 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1011"
 msgid "server error"
-msgstr "erreur du serveur"
+msgstr "помилка сервера"
 
 #. Name of WebSocket close code 1012 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
@@ -1150,7 +1150,7 @@ msgstr "Аккаунт"
 #: client/components/NetworkForm.vue:505
 msgctxt "form.actionCancel"
 msgid "Cancel"
-msgstr "Cance"
+msgstr "Скасувати"
 
 #. Button on the network edit form's status row: dial this network now.
 #: client/components/NetworkForm.vue:505
@@ -1180,31 +1180,31 @@ msgstr "Редагувати мережу"
 #: client/components/NetworkForm.vue:154
 msgctxt "form.authentication"
 msgid "Authentication"
-msgstr "Autentikasi"
+msgstr "Аутентифікація"
 
 #. Checkbox on the network edit form: dial this network every time the app opens.
 #: client/components/NetworkForm.vue:90
 msgctxt "form.autoconnect"
 msgid "Connect automatically when the app starts"
-msgstr "Sambungkan secara automatik apabila aplikasi dibuka"
+msgstr "Підключати автоматично, коли запускається додаток"
 
 #. Checkbox on the network edit form: show desktop notifications for this network's messages; the browser's permission ask fires when first saved.
 #: client/components/NetworkForm.vue:260
 msgctxt "form.browserNotifications"
 msgid "Browser notifications for this network"
-msgstr "Notifikasi perusak untuk jaringan ini"
+msgstr "Нотифікації браузера для цієї мережі"
 
 #. Tooltip of the question-mark icon next to the browser notifications checkbox on the network edit form.
 #: client/components/NetworkForm.vue:263
 msgctxt "form.browserNotificationsHelp"
 msgid "Show browser notifications for highlights and queries on this network. Needs the browser's permission; asks when first saved. Each network is set up independently."
-msgstr "Tunjukkan notifikasi perusak untuk kemenarikan dan carian pada jaringan ini. Memerlukan izin browser; ditanya apabila pertama disimpan. Setiap jaringan disetel secara independen."
+msgstr "Відображати нотифікації браузера для відміток і запитів на цій мережі. Потрібно дозвіл браузера; запитується, коли перша зберігається. Кожна мережа налаштовується окремо."
 
 #. Label of the field listing channels to join automatically after connecting, on the network edit form.
 #: client/components/NetworkForm.vue:119
 msgctxt "form.channels"
 msgid "Channels"
-msgstr "Saluran"
+msgstr "Канали"
 
 #. Placeholder of the channels field on the network edit form: example channel names, where a name may be followed by its door key.
 #: client/components/NetworkForm.vue:125
@@ -1391,37 +1391,37 @@ msgstr "і"
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.channel"
 msgid "Channel"
-msgstr "Kanal"
+msgstr "Канал"
 
 #. Description of the / autocompletion trigger in the help window: typing / suggests slash commands; the parenthesized phrase points at the command list further down this page.
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.commands"
 msgid "Commands (see list of commands below)"
-msgstr "Komendy (dowiedź się poniżej)"
+msgstr "Команди (див. список команд нижче)"
 
 #. Line after the autocompletion intro in the help window; points at the app's settings.
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.disabled"
 msgid "Autocompletion can be disabled in settings."
-msgstr "Uzupełnienie może być wyłączone w ustawieniach."
+msgstr "Автозавершення може бути вимкнене в налаштуваннях."
 
 #. Description of the : autocompletion trigger in the help window; a code fragment with a smiley example follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.emoji"
 msgid "Emoji (note: requires two search characters, to avoid conflicting with common emoticons like"
-msgstr "Emoji (uwaga: wymaga dwóch znaków wyszukiwania, aby uniknąć konfliktu z powszechnymi emoji takimi jak"
+msgstr "Емодзи (увага: вимагає двох символів пошуку, щоб уникнути конфліктів з звичайними емоджі, такими як"
 
 #. Heading of the autocompletion section of the help window; explains the prefix characters that open suggestion lists.
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.heading"
 msgid "Autocompletion"
-msgstr "Uzupełnienie"
+msgstr "Автозавершення"
 
 #. First part of the autocompletion intro in the help window; keycap symbols (arrow up) follow it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.introA"
 msgid "To auto-complete nicknames, channels, commands, and emoji, type one of the characters below to open a suggestion list. Use the"
-msgstr "For auto-complete nicknames, channels, commands, and emoji, type one of the characters below to open a suggestion list. Use the"
+msgstr "Для автозавершення ніків, каналів, команд і емодзи, введіть один з символів нижче, щоб відкрити список запропонованих варіантів. Використовуйте"
 
 #. Word between the two arrow keycaps inside the autocompletion intro in the help window. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1571,31 +1571,31 @@ msgstr "відповідь на спеціальну статтю Вікіпед
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcpTitle"
 msgid "Client-to-client protocol"
-msgstr "protocole client à client"
+msgstr "Протокол клієнт-кlient"
 
 #. Start of the /deop command description in the help window; a code fragment with the -o mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.deopA"
 msgid "Remove op ("
-msgstr "Enlever op ("
+msgstr "Вилучити оп"
 
 #. Continuation of the /deop command description in the help window, after the -o code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.deopB"
 msgid ") from one or several users in the current channel."
-msgstr ") d'un ou plusieurs utilisateurs dans le canal actuel."
+msgstr ") з одного або кількох користувачів у поточному каналі."
 
 #. Start of the /devoice command description in the help window; a code fragment with the -v mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.devoiceA"
 msgid "Remove voice ("
-msgstr "Enlever voix ("
+msgstr "Вилучити голос ("
 
 #. Continuation of the /devoice command description in the help window, after the -v code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.devoiceB"
 msgid ") from one or several users in the current channel."
-msgstr ") d'un ou plusieurs utilisateurs dans le canal actuel."
+msgstr ") з одного або кількох користувачів у поточному каналі."
 
 #. Description of the /disconnect command in the help window.
 #: client/components/Windows/Help.vue
@@ -1631,31 +1631,31 @@ msgstr "Завантажте список ігнорованих користу�
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.inviteA"
 msgid "Invite a user to the specified channel. If"
-msgstr "Ezet yuzyr yn y spekifid channell. Os"
+msgstr "Запитати користувача до вказаних каналів. Якщо"
 
 #. Continuation of the /invite command description in the help window, after the channel-parameter code fragment.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.inviteB"
 msgid "is omitted, user will be invited to the current channel."
-msgstr "yw nglwyddo, yuzyr yw ezet yn y currant channell."
+msgstr "Відсутність учасника, користувач буде завідомо викликаний у поточний канал."
 
 #. Description of the /join command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.join"
 msgid "Join a channel. Password is only needed in protected channels and can usually be omitted."
-msgstr "Cymryd y channell. Y passwurd yw yn rhwym yn channellau sy'n gweithredu, ac mae'n gallu i ddelio."
+msgstr "Приєднання до каналу. Пароль потрібен лише в захищених каналах і може бути зневажений."
 
 #. Description of the /kick command in the help window; it removes the user from the channel (they may rejoin).
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kick"
 msgid "Kick a user from the current channel."
-msgstr "Cymryd yuzyr yn y currant channell."
+msgstr "Вибірчі вибірки користувача з поточного каналу."
 
 #. Start of the /kickban command description in the help window; a code fragment with the +b mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kickbanA"
 msgid "Kick and ban ("
-msgstr "Cymryd a chymeradwy ("
+msgstr "Вибірчі вибірки користувача та забанування ("
 
 #. Middle of the /kickban command description in the help window, after the +b code fragment; a code fragment with the /ban command follows it. Starts with the closing parenthesis. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1715,31 +1715,31 @@ msgstr "Відправте повідомлення про увагу в вка�
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.opA"
 msgid "Give op ("
-msgstr ""
+msgstr "Віддайте op ("
 
 #. Continuation of the /op command description in the help window, after the +o code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.opB"
 msgid ") to one or several users in the current channel."
-msgstr ""
+msgstr ") одному або кільком користувачам в поточному каналі."
 
 #. Start of the /part command description in the help window; a code fragment with the channel parameter follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.part"
 msgid "Close the specified channel or private message window, or the current channel if"
-msgstr ""
+msgstr "Закрийте вказаний канал або особисте повідомлення, або поточний канал, якщо він відсутній."
 
 #. End of the /part command description in the help window, after the channel-parameter code fragment.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.partB"
 msgid "is omitted."
-msgstr ""
+msgstr "або відсутній."
 
 #. Description of the /query command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.query"
 msgid "Send a private message to the specified user."
-msgstr ""
+msgstr "Надішли особисте повідомлення вказаним користувачеві."
 
 #. Description of the /quit command in the help window.
 #: client/components/Windows/Help.vue
@@ -1841,62 +1841,62 @@ msgstr "виконати"
 #: client/components/Windows/Help.vue
 msgctxt "help.compare"
 msgid "Compare"
-msgstr "Porównaj"
+msgstr "Порівняти"
 
 #. Label of the documentation link in the Help window.
 #: client/js/branding.ts
 #: client/components/Windows/Help.vue
 msgctxt "help.documentation"
 msgid "Documentation"
-msgstr "Dokumentacja"
+msgstr "Документація"
 
 #. Shared first part of the descriptions of the Ctrl+B, Ctrl+U, Ctrl+I, Ctrl+S and Ctrl+M formatting shortcuts in the help window; the formatted example word (bold, underlined, italics, struck through, monospaced) follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.as"
 msgid "Mark all text typed after this shortcut as"
-msgstr "Oznacz wszystki tekst wpisany po tym skrótem jako"
+msgstr "Відмітити всі текстові введення після цього швидкозапису як"
 
 #. The example word shown in bold lettering in the help window's Ctrl+B formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.bold"
 msgid "bold"
-msgstr "czerwony"
+msgstr "жирний"
 
 #. Text of the link at the end of the Ctrl+K description in the help window's formatting section; it opens an external IRC color reference. Mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorHere"
 msgid "here"
-msgstr "tutaj"
+msgstr "тут"
 
 #. First part of the Ctrl+K description in the help window's formatting section; a code fragment with the numeric range follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorP1a"
 msgid "Mark any text typed after this shortcut to be colored. After hitting this shortcut, enter an integer in the range"
-msgstr "Mark any text typed after this shortcut to be coloured. After hitting this shortcut, enter an integer in the range"
+msgstr "Виберіть текст, який буде відмічений після цього швидкозапису, для кольору. Після натискання цього швидкозапису, введіть ціле число в діапазоні"
 
 #. Continuation of the Ctrl+K description in the help window's formatting section, after the code fragment with the numeric range.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorP1b"
 msgid "to select the desired color, or use the autocompletion menu to choose a color name (see below)."
-msgstr "to select the desired colour, or use the autocompletion menu to choose a colour name (see below)."
+msgstr "щоб вибрати потрібний колір, або використовуйте меню автозаповнення, щоб вибрати ім'я колору (див. нижче)."
 
 #. Start of the second paragraph of the Ctrl+K description in the help window's formatting section; a code fragment with the numeric range follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorP2a"
 msgid "Background color can be specified by putting a comma and another integer in the range"
-msgstr "Background colour can be specified by putting a comma and another integer in the range"
+msgstr "Колір фон може бути вказаний, поклавши кому і друге ціле число в діапазоні"
 
 #. Continuation of the second paragraph of the Ctrl+K description in the help window's formatting section, after the code fragment with the numeric range.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorP2b"
 msgid "after the foreground color number (autocompletion works too)."
-msgstr "after the foreground colour number (autocompletion works too)."
+msgstr "після номера колору фон (також працює автозаповнення)."
 
 #. Start of the last paragraph of the Ctrl+K description in the help window's formatting section; the link text follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorRef"
 msgid "A color reference can be found"
-msgstr "A colour reference can be found"
+msgstr "Ви можете знайти посилання на колір"
 
 #. Heading of the formatting-shortcuts section of the help window; each row shows a key combination and the message formatting it inserts.
 #: client/components/Windows/Help.vue
@@ -2083,25 +2083,25 @@ msgstr "Вимкніть переключувач для переходу до �
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.toggleMarkdown"
 msgid "Toggle Markdown rendering."
-msgstr "Switch markdown rendering."
+msgstr "Вимкніть відображення Markdown."
 
 #. Description of the Alt+M keyboard shortcut in the help window; it opens or closes the popup listing messages that mention you.
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.toggleMentions"
 msgid "Toggle recent mentions popup."
-msgstr "Switch recent mentions popup."
+msgstr "Вимкніть/включіть вікно з недавніми відповідями."
 
 #. Description of the Alt+S keyboard shortcut in the help window; it shows or hides the sidebar network list.
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.toggleSidebar"
 msgid "Toggle sidebar."
-msgstr "Switch sidebar."
+msgstr "Вимкніть/включіть біквен."
 
 #. Description of the Alt+U keyboard shortcut in the help window; it shows or hides the panel listing the channel's members.
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.toggleUserlist"
 msgid "Toggle channel user list."
-msgstr "Switch channel user list."
+msgstr "Вимкніть список користувачів канала."
 
 #. Purpose clause ending the first compare item of the help window's past-release list (comparing the release with the running build). Starts lowercase because it follows the link.
 #: client/components/Windows/Help.vue
@@ -2234,7 +2234,7 @@ msgstr "Оранжевий"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorPink"
 msgid "Pink"
-msgstr "Rose"
+msgstr "Рідний"
 
 #. Name of the mIRC colour with code 04 (red), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2252,7 +2252,7 @@ msgstr "Білий"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorYellow"
 msgid "Yellow"
-msgstr "Amber"
+msgstr "Желтий"
 
 #. Title (hover hint) of the channel name input in the sidebar's join-channel form, shown when the typed name is invalid.
 #: client/components/JoinChannel.vue:20
@@ -2384,19 +2384,19 @@ msgstr "Показати {kind} з {host}"
 #: client/js/helpers/mediaTrustMenu.ts
 msgctxt "link.trustAdd"
 msgid "Always show {scope}"
-msgstr "Alway show {scope}"
+msgstr "завжди показуй {scope}"
 
 #. Text of the trust button on a media preview when nothing is trusted yet; clicking opens the menu that allows this media always. The caret follows it.
 #: client/components/LinkPreview.vue
 msgctxt "link.trustButtonShow"
 msgid "Always show"
-msgstr "Alway show"
+msgstr "завжди показуй"
 
 #. Text of the trust button on a media preview when at least one rule already always allows this media; clicking opens the menu of rules. The caret follows it.
 #: client/components/LinkPreview.vue
 msgctxt "link.trustButtonShown"
 msgid "Always shown"
-msgstr "Alway shown"
+msgstr "завжди показується"
 
 #. Name of a media-trust scope in the trust menu of a media preview and in the toolbar tooltip summarizing active rules: always allowing media from the website or from the person it was posted by. {name} is that site's host or the person's account name. Starts lowercase; it follows the words 'Always show' or 'Stop always showing'.
 #: client/js/helpers/mediaTrustMenu.ts
@@ -2416,19 +2416,19 @@ msgstr "в {name}"
 #: client/js/helpers/mediaTrustMenu.ts
 msgctxt "link.trustRemove"
 msgid "Stop always showing {scope}"
-msgstr "Stop alway show {scope}"
+msgstr "Завжди зупиняйся, коли завжди показуєш {scope}"
 
 #. Tooltip of the trust button on a media preview when nothing is trusted yet; names the three scopes a rule can cover.
 #: client/components/LinkPreview.vue
 msgctxt "link.trustTitleEmpty"
 msgid "Always show media from this site, this person or in this channel"
-msgstr "Alway show media from this site, this person or in this channel"
+msgstr "Завжди показуй медіа з цього сайту, цю людину або в цьому каналі"
 
 #. Tooltip of the trust button on a media preview when rules already allow it. {scopes} is a comma-joined list of what is trusted ('from example.com', 'in #chat'). Em dash is part of the copy.
 #: client/components/LinkPreview.vue
 msgctxt "link.trustTitleShown"
 msgid "Always shown {scopes} — change"
-msgstr "Alway shown {scopes} — change"
+msgstr "завжди показується {scopes} — змінити"
 
 #. Hint on the placeholder of a media preview that failed to load; clicking loads it again.
 #: client/components/LinkPreview.vue
@@ -2753,73 +2753,73 @@ msgstr "Відключити"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.editNetwork"
 msgid "Edit this network…"
-msgstr "Edytuj ten sieć…"
+msgstr "редагувати цю мережу…"
 
 #. Context-menu item on a chat channel in the sidebar; opens the editor for the channel's topic line.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.editTopic"
 msgid "Edit topic"
-msgstr "Edytuj temat"
+msgstr "Редагувати тему"
 
 #. Context-menu item that grants an IRC channel role to a user; {name} is the role's name ('operator'), {mode} the mode letter with its plus sign, e.g. +o.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.giveMode"
 msgid "Give {name} (+{mode})"
-msgstr "Daj {name} (+{mode})"
+msgstr "Відправити {name} (+{mode})"
 
 #. Context-menu item that grants an IRC mode whose role name is unknown; {mode} is the mode letter with its plus sign, e.g. +z.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.giveModeUnknown"
 msgid "Mode +{mode}"
-msgstr "Tryb +{mode}"
+msgstr "Режим +{mode}"
 
 #. Context-menu item on a clickable channel name inside a chat message, when that channel is already open in this client; clicking switches to it.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.goToChannel"
 msgid "Go to channel"
-msgstr "Przejdź do kanału"
+msgstr "Підйди до каналу"
 
 #. Context-menu item on a user; hides all further messages from that user on the network.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.ignore"
 msgid "Ignore user"
-msgstr "Ignoruj użytkownika"
+msgstr "Ігнорувати користувача"
 
 #. Context-menu item on a chat network's home row; opens the field to join a channel on that network. Ellipsis is part of the copy.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.joinChannel"
 msgid "Join a channel…"
-msgstr "Dołącz do kanału…"
+msgstr "Приєднатися до каналу…"
 
 #. Context-menu item on a clickable channel name inside a chat message, when that channel is not open yet; clicking joins it.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.joinInline"
 msgid "Join channel"
-msgstr "Dołącz do kanału"
+msgstr "Приєднайся до каналу"
 
 #. Context-menu item on a user in a channel you have permission in; removes that user from the channel (they may rejoin).
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.kick"
 msgid "Kick"
-msgstr "Wyłacz"
+msgstr "Вибий"
 
 #. Context-menu item on a chat channel in the sidebar; asks the server for the channel's ban list.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.listBanned"
 msgid "List banned users"
-msgstr "Wyświetl zbanowanych użytkowników"
+msgstr "Перелічіть заблокованих користувачів"
 
 #. Context-menu item on a chat network's home row; asks the server for the list of every public channel on that network.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.listChannels"
 msgid "List all channels"
-msgstr "Wyświetl wszystkie kanały"
+msgstr "Перелічіть всі канали"
 
 #. Context-menu item on a chat network's home row; shows the list of users whose messages are hidden on that network.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.listIgnored"
 msgid "List ignored users"
-msgstr "Wyświetl ignorowane użytkowników"
+msgstr "Перелік ігнорованих користувачів"
 
 #. Name of the IRC channel administrator role (the & prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
@@ -2855,19 +2855,19 @@ msgstr "голос"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.muteType"
 msgid "Mute {type}"
-msgstr "Zamurować {type}"
+msgstr "Затихнення {type}"
 
 #. Context-menu item that takes an IRC channel role away from a user; {name} is the role's name ('operator'), {mode} the mode letter with its minus sign, e.g. -o.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.revokeMode"
 msgid "Revoke {name} (-{mode})"
-msgstr "Anuluj {name} (-{mode})"
+msgstr "скасувати {name} (-{mode})"
 
 #. Context-menu item that removes an IRC mode whose role name is unknown; {mode} is the mode letter with its minus sign, e.g. -z.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.revokeModeUnknown"
 msgid "Mode -{mode}"
-msgstr "Tryb -{mode}"
+msgstr "режим -{mode}"
 
 #. Context-menu item on a conversation whose messages are muted (not highlighted, not notified); clicking unmutes it. {type} names the kind of conversation in lowercase: 'network', 'channel' or 'conversation'.
 #: client/js/helpers/contextMenu.ts
@@ -2993,7 +2993,7 @@ msgstr "Відповідь"
 #: client/components/Message.vue:294
 msgctxt "message.replyMissing"
 msgid "Replying to a message that is not loaded"
-msgstr "Replied to a message that is not loaded"
+msgstr "Відповідається до повідомлення, яке не завантажено"
 
 #. Visible text of the quoted-message button on a chat message when the message being replied to is not in the loaded scrollback; it stands in for the quoted text. Parenthesized.
 #: client/components/Message.vue:53
@@ -3005,7 +3005,7 @@ msgstr "(незвідоме повідомлення)"
 #: client/components/Message.vue:291
 msgctxt "message.replyingTo"
 msgid "Replying to {nick}: {text}. Jump to that message."
-msgstr "Replied to {nick}: {text}. Jump to that message."
+msgstr "Відповідається до {nick}: {text}. Перейти до цього повідомлення"
 
 #. Tooltip of the small marker on a chat message that arrived while you had another channel open; the server delivered it to the active window only.
 #: client/components/Message.vue:118
@@ -3186,25 +3186,25 @@ msgstr "ПERSISTENCE SESIY (сервер зберігає вас у ваших �
 #: client/js/irc/handlers/persistence.ts:89
 msgctxt "persistence.statusClientSetting"
 msgid "Session persistence (the server keeps you in your channels while disconnected): {state} (your setting: {setting})"
-msgstr "Persistence de sessió (el servidor manté el seu estat a canals mentre està desconnectat): {state} (la teva configuració: {setting})"
+msgstr "ПERSISTENCE СЕСІЇ (сервер зберігає вас у каналах, коли ви відключились): {state} (ваша налаштування: {setting})"
 
 #. Body of the push opt-in prompt; explains what allowing push does and that it is chosen per network.
 #: client/components/PushPrompt.vue
 msgctxt "push.enableBody"
 msgid "This server can wake this app when it has messages for you while it is closed. You can change this per network, in each network's settings."
-msgstr "Aquest servidor pot despertar aquest aplicació quan té missatges per a tu mentre està tancada. Pots canviar això per cada xarxa, a les configuracions de cada xarxa."
+msgstr "Цей сервер може відкрити цю програму, коли вона закрита, і має повідомлення для вас. Ви можете змінити це для кожного мережі, у налаштуваннях кожної мережі."
 
 #. Title of the prompt shown at connect time asking whether to enable web push notifications for that chat network.
 #: client/components/PushPrompt.vue
 msgctxt "push.enableTitle"
 msgid "Enable push notifications?"
-msgstr "Activar notificacions per push?"
+msgstr "Включити push-нотифікації?"
 
 #. Fallback for the network name in the push prompt's target line when no name is known for the chat network being asked about.
 #: client/components/PushPrompt.vue
 msgctxt "push.fallbackNetwork"
 msgid "this network"
-msgstr "aquesta xarxa"
+msgstr "цей мережевий пакет"
 
 #. Button of the push opt-in prompt; declines and stops the app from ever asking again for that network.
 #: client/components/PushPrompt.vue
@@ -3222,7 +3222,7 @@ msgstr "Ні"
 #: client/components/PushPrompt.vue
 msgctxt "push.renewBody"
 msgid "This server's push key changed, so this device's push subscription for it no longer works. Subscribe again to keep being notified while the app is closed. You can also do this later from this network's settings."
-msgstr "This server's push key has changed, so this device's push subscription for it no longer works. Subscribe again to keep being notified while the app is closed. You can also do this later from this network's settings."
+msgstr "Змінилися параметри пуш-ключі цього сервера, тому пуш-підписка цього пристрою для нього більше не працює. Підпишіться знову, щоб залишатися повідомлятися, коли додаток закривається. Також можна зробити це пізніше у налаштуваннях цього мережі."
 
 #. Title of the prompt shown at connect time when a chat server's push identity (its key) changed and the device's subscription must be renewed.
 #: client/components/PushPrompt.vue
@@ -3306,7 +3306,7 @@ msgstr "⇧ для поєднання"
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.hintRemove"
 msgid "Remove"
-msgstr "Verge"
+msgstr "Видалити"
 
 #. Preview-bar hint in the emoji picker for a typed reaction (a word or several emoji): pressing Enter sends it.
 #: client/components/ReactionPicker.vue
@@ -3354,109 +3354,109 @@ msgstr "Нові"
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.searchPlaceholder"
 msgid "Search emoji, or type any reaction"
-msgstr "Buscar emoji, o escribir alguna reacción"
+msgstr "Пошук емодзи, або введіть будь-яку реакцію"
 
 #. Heading of the emoji picker's list while a search is showing matches.
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.searchResults"
 msgid "Search results"
-msgstr "Resultados de búsqueda"
+msgstr "Результати пошуку"
 
 #. Button in the emoji picker's preview bar; clicking sends the reaction being composed.
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.send"
 msgid "Send"
-msgstr "Enviar"
+msgstr "Відправити"
 
 #. Preview-bar note in the emoji picker for a remembered reaction that is not an emoji, saying it will be sent as words. Starts lowercase because it follows other text.
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.sentAsText"
 msgid "sent as text"
-msgstr "Enviar como texto"
+msgstr "відправлено як текст"
 
 #. aria-label of the row of tab buttons in the emoji picker that jumps to a group of emoji (smileys, animals, food…).
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.tabsAria"
 msgid "Emoji groups"
-msgstr "Grupos de emoji"
+msgstr "Групи емодзи"
 
 #. Tooltip of the emoji picker's free-text row and its spoken form, offering to send what was typed as the reaction. {reaction} is that text.
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.titleTemplate"
 msgid "React with {reaction}"
-msgstr "Reaccionar con {reaction}"
+msgstr "Реактивуйся {reaction}"
 
 #. aria-label of the magnifier button in a chat window's header; clicking it opens the message-search field for the conversation.
 #: client/components/MessageSearchForm.vue:19
 msgctxt "search.openForm"
 msgid "Search messages in this channel"
-msgstr "Buscar mensajes en este canal"
+msgstr "Шукати повідомлення в цьому каналі"
 
 #. Placeholder of the message-search field that opens from the magnifier in a chat window's header; it filters this conversation's history.
 #: client/components/MessageSearchForm.vue:10
 msgctxt "search.placeholder"
 msgid "Search messages…"
-msgstr "Buscar mensajes…"
+msgstr "Шукати повідомлення…"
 
 #. aria-label of the search-results view of the chat window, which lists the messages matching a search.
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.results.aria"
 msgid "Search results"
-msgstr "Resultados de búsqueda"
+msgstr "Результати пошуку"
 
 #. Tooltip and aria-label of the ✕ button in the search-results header; clicking closes the search and returns to the conversation.
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.results.close"
 msgid "Close search window"
-msgstr "Cerrar ventana de búsqueda"
+msgstr "Закрити вікно пошуку"
 
 #. Shown in the search-results view when the search matched no messages.
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.results.none"
 msgid "No results found."
-msgstr "No se encontraron resultados."
+msgstr "Нема результатів."
 
 #. Note under the search results, explaining that the search covers only the messages currently loaded in the app, not the full history on the server. Em dash is part of the copy.
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.results.scopeNote"
 msgid "Only messages loaded in this session are searched — older history is not searched."
-msgstr "Solo los mensajes cargados en esta sesión se buscan — el historial anterior no se busca."
+msgstr "Шукаються лише повідомлення, завантажені в цій сесії — старі записи не шукаються."
 
 #. Second fragment of the search-results window header, rendered after the styled channel-name element; the search term itself follows the header. The element (the channel's or query window's name — user content, never translated) sits between this fragment and the one before it. Word order inside each fragment is free; the fragments cannot cross the element. Ends mid-sentence.
 #: client/components/Windows/SearchResults.vue:21
 msgctxt "search.results.searchingInAfter"
 msgid "for"
-msgstr "para"
+msgstr "для"
 
 #. First fragment of the search-results window header, rendered before the styled channel-name element. That element (the channel's or query window's name — user content, never translated, like a <Username>) sits between this fragment and the one after it. Word order inside each fragment is free; the fragments cannot cross the element.
 #: client/components/Windows/SearchResults.vue:19
 msgctxt "search.results.searchingInBefore"
 msgid "Searching in"
-msgstr "Búsqueda en"
+msgstr "шукання в"
 
 #. Button at the top of the search results list that fetches more matches. {count} is how many further matches are available.
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.results.showOlder"
 msgid "Show older results ({count} more)"
-msgstr "Mostrar resultados antiguos ({count} más)"
+msgstr "Показати старіші результати ({count} більше)"
 
 #. Shown in the search-results view when the search field is empty; invites typing a query.
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.results.typePrompt"
 msgid "Type something to search for."
-msgstr "Escribe algo para buscar."
+msgstr "Введіть щось для пошуку."
 
 #. Lobby error when the server never answered the redaction an edit depends on.
 #: client/js/irc/client.ts
 msgctxt "send.editNoReply"
 msgid "Edit not sent: no reply from the server."
-msgstr "Edición no enviada: no hay respuesta del servidor."
+msgstr "Редагування не відправлено: відповідь від сервера відсутня."
 
 #. Lobby error when a second edit of the same message was sent before the first one settled.
 #: client/js/irc/client.ts
 msgctxt "send.editWaiting"
 msgid "Edit not sent: an edit of that message is already waiting for the server."
-msgstr "Edición no enviada: una edición de ese mensaje ya está esperando al servidor."
+msgstr "Редагування не відправлено: редагування цього повідомлення вже чекає на відповідь від сервера."
 
 #. Lobby error when a command or message was typed while the network is down; nothing was sent.
 #: client/js/irc/client.ts
@@ -3464,13 +3464,13 @@ msgstr "Edición no enviada: una edición de ese mensaje ya está esperando al s
 #: client/js/irc/commands/index.ts:224
 msgctxt "send.notConnected"
 msgid "You are not connected to the IRC network, unable to send your command."
-msgstr "No estás conectado a la red IRC, no puedes enviar tu comando."
+msgstr "Ви не підключені до мережі IRC, не ви можете відправити ваш команду."
 
 #. Lobby error when an IRC line could not be written to the socket. {message} is a technical transport error, left verbatim.
 #: client/js/irc/client.ts
 msgctxt "send.notSent"
 msgid "Not sent: {message}"
-msgstr "No enviado: {message}"
+msgstr "Не відправлено: {message}"
 
 #. Lobby error when the server's push-subscription registration line exceeds the IRC line limit; nothing was sent.
 #: client/js/irc/client.ts
@@ -3734,7 +3734,7 @@ msgstr "Включити автозаповнення"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.coloredNicks"
 msgid "Enable colored nicknames"
-msgstr "Enable coloured nicknames"
+msgstr "Ввімкніть життєві ніки"
 
 #. Heading of the section in Settings > Appearance holding the user's own CSS. Keep the capitalization style of the source if possible.
 #: client/components/Settings/Appearance.vue
@@ -3902,7 +3902,7 @@ msgstr "Включити секунди у часотвір"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.statusCondensed"
 msgid "Condense status messages together"
-msgstr "Combine status messages"
+msgstr "Згрупуйте повідомлення про стан"
 
 #. Heading of the section in Settings > Appearance that controls how join, part and similar service notices are shown in chat.
 #: client/components/Settings/Appearance.vue
@@ -3932,19 +3932,19 @@ msgstr "Показати всі повідомлення стану окремо
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.theme"
 msgid "Theme"
-msgstr "Tema"
+msgstr "Тема"
 
 #. The name of the button on a media preview that marks its site, sender or channel as always allowed to load; the words appear quoted inside the always-shown list's help sentence in Settings > Appearance.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.trustedButtonName"
 msgid "Always show"
-msgstr "Altways shew"
+msgstr "завжди показуйте"
 
 #. Subheading in the always-shown media list of Settings > Appearance above the chat channel entries.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.trustedChannels"
 msgid "Channels"
-msgstr "Kanaels"
+msgstr "Канали"
 
 #. Button in Settings > Appearance beside the always-shown list heading; clicking removes every entry from that list.
 #: client/components/Settings/Appearance.vue
@@ -3956,13 +3956,13 @@ msgstr "Очистити все"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.trustedEmpty"
 msgid "Nothing yet."
-msgstr "Nuthin yet."
+msgstr "ще нічого"
 
 #. Heading of the list in Settings > Appearance of sites, people and channels whose media always loads without asking.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.trustedHeading"
 msgid "Always shown"
-msgstr "Alway shown"
+msgstr "завжди відображається"
 
 #. First part of the help line under the always-shown list in Settings > Appearance; the second part and the words 'Always show' (the name of the button on any media preview) follow it. Ends mid-sentence.
 #: client/components/Settings/Appearance.vue
@@ -4079,127 +4079,127 @@ msgstr "Експорт налашувань…"
 #: client/components/Settings/General.vue
 msgctxt "settings.general.exportFailed"
 msgid "Couldn't create the file."
-msgstr "Could not create the file."
+msgstr "не вдалося створити файл"
 
 #. Visually hidden but screen-reader-spoken label of the hidden file picker behind the Import settings button; it accepts a previously exported settings file.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.fileAria"
 msgid "Settings file to restore"
-msgstr "File de configuració per restablir"
+msgstr "Файл настроїн для відновлення"
 
 #. Button in Settings > General; opens a file picker to restore a previously exported settings backup file. Ellipsis is part of the copy.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.import"
 msgid "Import settings…"
-msgstr "Importar configuració…"
+msgstr "Експортувати настройки…"
 
 #. Confirmation button of the settings-restore dialog in Settings > General; clicking restores the file and reloads the app.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.importButton"
 msgid "Import and reload"
-msgstr "Importar i carregar"
+msgstr "Експортувати та перезавантажити"
 
 #. Error notice under the import control in Settings → General when the backup file is corrupt or truncated. Starts a short sentence.
 #: client/components/Settings/General.vue:259
 msgctxt "settings.general.importDamaged"
 msgid "This file is damaged."
-msgstr "Aquest fitxer està dañat."
+msgstr "Цей файл пошкоджено"
 
 #. Error message in Settings > General shown when the chosen file could not be read as a settings backup.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.importFailed"
 msgid "Couldn't read the file."
-msgstr "No es pot llegir el fitxer."
+msgstr "Неможливо читати файл."
 
 #. Error notice under the import control in Settings → General when the backup was written by a newer build of the app that this one cannot read. Starts a short sentence.
 #: client/components/Settings/General.vue:259
 msgctxt "settings.general.importNewer"
 msgid "This file was made by a newer version."
-msgstr "Aquest fitxer ha estat creat amb una versió més recent."
+msgstr "Цей файл створено новішою версією."
 
 #. Error notice under the import control in Settings → General when the browser lacks the DecompressionStream API the compressed backup needs. Starts a short sentence.
 #: client/components/Settings/General.vue:259
 msgctxt "settings.general.importNoDecompression"
 msgid "This browser can't read compressed files."
-msgstr "Aquest navegador no pot llegir fitxers compressats."
+msgstr "Цей браузер не може читати стиснуті файли."
 
 #. Error notice under the import control in Settings → General when the chosen file is not a settings backup (wrong shape, unparseable). Starts a short sentence.
 #: client/components/Settings/General.vue:259
 msgctxt "settings.general.importNotSettings"
 msgid "This isn't a settings file."
-msgstr "Aquest no és un fitxer de configuració."
+msgstr "Це не файл налаштувань."
 
 #. Title of the confirmation dialog shown before a settings backup file is restored from Settings > General.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.importTitle"
 msgid "Import settings?"
-msgstr "Importar configuració?"
+msgstr "Що зберегти?"
 
 #. Checkbox in Settings > General's backup section; when ticked, the exported settings file also contains the saved chat network passwords.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.includePasswords"
 msgid "Include network passwords"
-msgstr "Incloure contrasenyes de xarxa"
+msgstr "Включити пароли для мережі"
 
 #. Tooltip on the include-network-passwords checkbox in Settings > General; warns that the export keeps passwords in plain text.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.includePasswordsHelp"
 msgid "Passwords are stored in the file unencrypted."
-msgstr "Les contrasenyes estan emmagatzemades en el fitxer sense encriptar."
+msgstr "Паролі зберігаються в файлі без шифрування."
 
 #. Button in Settings > General; clicking shows the browser's prompt that installs this web app to the device's home screen or app list. {appName} is the chat app's display name.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.installApp"
 msgid "Install {appName} as an app"
-msgstr "Instal·lar {appName} com a aplicació"
+msgstr "Встановіть {appName} як додаток"
 
 #. Heading of the Native app section in Settings > General; groups the install and link-handler options for using the chat app as an installed application.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.nativeApp"
 msgid "Native app"
-msgstr "Aplicació nativa"
+msgstr "Нативний додаток"
 
 #. Button in Settings > General; registers this web app as the handler for web+irc:// chat links so clicking one anywhere opens it in the app. Keep the web+irc:// scheme verbatim. {appName} is the chat app's display name.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.openLinks"
 msgid "Open web+irc:// links with {appName}"
-msgstr "Obrir llocs web+irc:// amb {appName}"
+msgstr "Відкрити web+irc:// посилання з {appName}"
 
 #. Checkbox in Settings > General; when ticked, other people in the channel are told while you are typing a message.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.sendTyping"
 msgid "Send typing notifications"
-msgstr "Notificacions de tipografia"
+msgstr "Надсилає повідомлення про набору тексту"
 
 #. Tooltip on the send-typing-notifications checkbox in Settings > General; mentions the IRCv3 +typing tag in parentheses.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.sendTypingHelp"
 msgid "Lets people in the channel see when you are typing (IRCv3 +typing)."
-msgstr "Permet que les persones del canal vein quan estàs tipant (IRCv3 +tipografia)."
+msgstr "Дозволяє людям у каналі бачити, коли ви набираєте текст (IRCv3 +typing)."
 
 #. Heading of the typing indicator section in Settings > General.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.typingHeading"
 msgid "Typing notifications"
-msgstr "Notificacions de tipografia"
+msgstr "Повідомлення про введення тексту"
 
 #. Checkbox in Settings > General. When ticked, images are re-drawn through a canvas before they are sent to the chat server, which strips photo metadata such as camera model and GPS location. Affects image uploads only.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.uploadCanvas"
 msgid "Attempt to remove metadata from images before uploading"
-msgstr "Intentar eliminar metadades d'imatges abans de subir-les"
+msgstr "Спроба видалення метаданних зображень перед завантаженням"
 
 #. Tooltip on the metadata-removal upload checkbox in Settings > General; explains how the option works and that it can mis-rotate photos in browsers without canvas orientation support.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.uploadCanvasHelp"
 msgid "This option renders the image into a canvas element to remove metadata from the image. This may break orientation if your browser does not support that."
-msgstr "Aquesta opció converteix l'imatge en un element canvas per eliminar les metadades de l'imatge. Això pot rompre l'orientació si el navegador no suporta això."
+msgstr "Ця опція перетворює зображення в елемент canvas, щоб видалити метадані зображення. Це може призвести до помилки орієнтації, якщо ваш браузер не підтримує це."
 
 #. Heading of the file upload options section in Settings > General.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.uploadsHeading"
 msgid "File uploads"
-msgstr "Subir fitxers"
+msgstr "Завантаження файлів"
 
 #. The first option of the interface-language picker: the language the browser asks for is used. {language} is that language's name, written in itself.
 #: client/components/Windows/Connect.vue:72
@@ -4347,7 +4347,7 @@ msgstr "Якщо повідомлення містить будь-які з ци
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightHelp"
 msgid "Messages that mention you or match a custom highlight get a colored background and border in the channel."
-msgstr "Messages that mention you or match a custom highlight get a coloured background and border in the channel."
+msgstr "Повідомлення, які відповідають вам або відповідають на власні вибрані акценти, мають колірного фон і колірну рамку в каналі."
 
 #. Label of the text field in Settings > Notifications for extra words that count as mentions of you.
 #: client/components/Settings/Notifications.vue
@@ -4359,7 +4359,7 @@ msgstr "Власні підкреслення"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightsHelp"
 msgid "If a message contains any of these comma-separated expressions, it will trigger a highlight."
-msgstr "If a message includes any of these comma-separated expressions, it will trigger a highlight."
+msgstr "Якщо повідомлення містить будь-яке з цих виражень, розділених комами, воно викликатиме акцент."
 
 #. Warning line in Settings > Notifications, shown on an iPhone browsing the app without installing it; the parenthesized phrase is the iOS share menu's action.
 #: client/components/Settings/Notifications.vue
@@ -4419,7 +4419,7 @@ msgstr "Сервер відмовився від підписки на поті�
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushDenied"
 msgid "Notifications are blocked by your browser. Allow them in the browser's site settings, then try again."
-msgstr "The notifications are blocked by your browser. Allow them in the browser's settings, then try again."
+msgstr "Повідомлення заблоковані браузером. Дозвольте їх у налаштуваннях сайту, а потім спробуйте знову."
 
 #. Heading of the push notification section in Settings > Notifications; push wakes the app on new messages while it is closed.
 #: client/components/Settings/Notifications.vue
@@ -4431,7 +4431,7 @@ msgstr "Повідомлення про потік"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushPerNetwork"
 msgid "Push is set up per network — turn it on or off in each network's settings (Edit network → “Push notifications for this network”), where the enrollment status is also shown. The browser delivers the notifications; each push-capable server decides whether to wake this app."
-msgstr "Push is set up per network — turn it on or off in each network's settings (Edit network → “Push notifications for this network”), where the enrolment status is also shown. The browser delivers the notifications; each push-capable server decides whether to wake this app."
+msgstr "Підтримка ввімкнена для кожного мережі — ввімкніть або вимкніть її у налаштуваннях кожного мережі (Редагувати мережу → «Повідомлення про цю мережу»), де також показується статус реєстрації. Браузер відправляє повідомлення; кожна push-захоплювача сервера вирішує, чи буде цей додаток відкритий."
 
 #. Warning line in Settings > Notifications when the chat server itself does not offer web push; names the IRCv3 draft/webpush capability, which stays verbatim.
 #: client/components/Settings/Notifications.vue
@@ -4473,7 +4473,7 @@ msgstr "Вимкнено"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.sound"
 msgid "Enable notification sound"
-msgstr "Turn on notification sound"
+msgstr ""
 
 #. Warning line in Settings > Notifications shown after a chat server changed its push identity; tells the reader to re-subscribe from that network's edit form, whose control is named in the quoted phrase.
 #: client/components/Settings/Notifications.vue
@@ -4574,7 +4574,7 @@ msgstr ""
 #: client/components/NetworkList.vue:17
 msgctxt "sidebar.jumpTo"
 msgid "Jump to..."
-msgstr ""
+msgstr "Перейти..."
 
 #. Tooltip and screen-reader label of the globe button beside the sidebar logo, which opens the language panel (the same selector the connect form and Settings → Appearance carry).
 #: client/components/Sidebar.vue:8
@@ -4633,9 +4633,9 @@ msgstr "Вимкніть/включіть розробникові інстру�
 msgctxt "sidebar.unread"
 msgid "{count} unread message"
 msgid_plural "{count} unread messages"
-msgstr[0] "{count} message non-lu"
-msgstr[1] "{count} messages non-lus"
-msgstr[2] "{count} messages non-lus"
+msgstr[0] "{count} непрочитане повідомлення"
+msgstr[1] "{count} непрочитані повідомлення"
+msgstr[2] "{count} непрочитані повідомлення"
 
 #. Column header of the channel-ban list: the banned hostmask, verbatim server data.
 #: client/components/Special/ListBans.vue
@@ -5144,7 +5144,7 @@ msgstr "Перекладається у {reading}"
 #: client/components/Chat.vue
 msgctxt "translate.header.readPaused"
 msgid "Translating into {reading}, paused: {reason}"
-msgstr ""
+msgstr "Перекладання у {reading}, призупинено: {reason}"
 
 #. Tooltip of the translate button in a chat window's header while incoming messages are translated and outgoing ones are too. {reading} and {writing} are language names.
 #: client/components/Chat.vue
@@ -5337,13 +5337,13 @@ msgstr "Включено"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.readHint"
 msgid "Lines others send are shown with a translation underneath."
-msgstr "Línes othér send are showd with a tránslation nderneath."
+msgstr "Рядки, які відправляють інші, показуються з перекладом під ними."
 
 #. Label of the on/off switch for translating incoming messages in the translation panel. {language} is the language name they would be translated into.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.readIn"
 msgid "Read messages in {language}"
-msgstr "Read messeg in {language}"
+msgstr "Читаю повідомлення в {language}"
 
 #. Heading of the translation panel's section about incoming messages, and the label of the on/off control in it.
 #: client/components/TranslationPanel.vue
@@ -5355,13 +5355,13 @@ msgstr "Читає"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.settingsLink"
 msgid "Language and models in Settings"
-msgstr "Lánguage an models in Settins"
+msgstr "Мови та моделі в Налаштування"
 
 #. aria-label of the translation panel, a dialog of translation settings for one conversation. {channel} is the channel name or nickname.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.title"
 msgid "Translation for {channel}"
-msgstr "Tránslation for {channel}"
+msgstr "Переклад для {channel}"
 
 #. Label of the free-text field naming a regional variety of the target language, in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -5487,7 +5487,7 @@ msgstr "Використання"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.intro"
 msgid "Messages are translated on this device by a model it downloads once; nothing is sent to a translation service. Turn it on per channel from the translate button in the channel header."
-msgstr "The messages are translated on this device by a model it downloads once; nothing is sent to a translation service. Turn it on per channel from the translate button in the channel header."
+msgstr "Повідомлення перекладаються на цьому пристрої, модель завантажується один раз; нічого не відправляється в службу перекладу. Включити його для каналу з кнопки перекладу у заголовку каналу."
 
 #. Explanatory note under the language picker in Settings → Translation.
 #: client/components/Settings/Translation.vue
@@ -5736,19 +5736,19 @@ msgstr "Невдається завантажити: uploader не поверн�
 #: client/js/upload.ts:758
 msgctxt "upload.notConfigured"
 msgid "File uploads are not configured in this client."
-msgstr "The client is not configured for file uploads"
+msgstr "Файлові завантаження не налаштовані в цьому клієнті."
 
 #. Note under an animated image in the upload confirmation dialog; it is not re-drawn, so its animation survives. Em dash is part of the copy.
 #: client/components/UploadPreview.vue
 msgctxt "upload.noteAnimated"
 msgid "Animated — sent as it is, so the animation is kept"
-msgstr "Animated - sent as is, so the animation is kept"
+msgstr "Анімований — відправлено як є, тому анімація зберігається"
 
 #. Note under a file in the upload confirmation dialog when it will be sent unchanged, with its metadata. Starts the note.
 #: client/components/UploadPreview.vue
 msgctxt "upload.noteOff"
 msgid "Sent as it is, metadata included"
-msgstr "Sent as is, metadata included"
+msgstr "Відправлено як є, включено метадані"
 
 #. Note under a file in the upload confirmation dialog when the remove-metadata setting is on and the image will be re-drawn to strip its EXIF metadata. Capitalized; starts the note.
 #: client/components/UploadPreview.vue
@@ -5760,7 +5760,7 @@ msgstr "Метадані (EXIF) видаляться перед завантаж
 #: client/components/UploadPreview.vue
 msgctxt "upload.noteUnsupported"
 msgid "Sent as it is"
-msgstr "Sent as is"
+msgstr "Відправлено як є"
 
 #. aria-label of the ✕ button on a file in the upload confirmation dialog; clicking removes that file from the upload. {name} is the file's name.
 #: client/components/UploadPreview.vue
@@ -5991,34 +5991,34 @@ msgstr "що змінилося після релізу"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.title"
 msgid "Release notes for v{version}"
-msgstr "Notes d'extension pour v{version}"
+msgstr "Повідомлення про версію v{version}"
 
 #. Link at the top of the network-editing form that goes back to the list of saved networks; the left arrow is part of the copy.
 #: client/components/Windows/NetworkEdit.vue
 msgctxt "windows.networkEdit.back"
 msgid "← Networks"
-msgstr "← Réseaux"
+msgstr "← мережі"
 
 #. aria-label of the ✕ button at the top right of the settings window; clicking closes the settings and returns to the chat.
 #: client/components/Windows/Settings.vue
 msgctxt "windows.settings.close"
 msgid "Close settings"
-msgstr "Fermer les paramètres"
+msgstr "закрити налаштування"
 
 #. Button in the footer of the settings window; clicking closes the settings and returns to the chat.
 #: client/components/Windows/Settings.vue
 msgctxt "windows.settings.done"
 msgid "Done"
-msgstr "Terminé"
+msgstr "Виконано"
 
 #. Line in the footer of the settings window, beside the Done button; explains that settings apply instantly and nothing needs saving.
 #: client/components/Windows/Settings.vue
 msgctxt "windows.settings.note"
 msgid "Changes are saved as you make them."
-msgstr "Les changements sont enregistrés à mesure qu'ils sont faits."
+msgstr "Зміни зберігаються, коли ви їх робите"
 
 #. Title of the settings window: the heading of the modal, its dialog aria-label, and the accessible name of the whole settings pane.
 #: client/components/Windows/Settings.vue
 msgctxt "windows.settings.title"
 msgid "Settings"
-msgstr "Paramètres"
+msgstr "Налаштування"

@@ -48,7 +48,7 @@
   "cmd.query.prefix": "ユーザー前缀で始まる名前については、クエリウィンドウを開けません。",
   "cmd.query.spaces": "名前がスペースを含む場合は、クエリウィンドウを開けません。",
   "cmd.reactNoTarget": "反応すべきメッセージはありません: ここにはmsgidがありません。",
-  "cmd.rejoinChannels": "only channels to rejoin.",
+  "cmd.rejoinChannels": "チャンネルに戻れることはできません。",
   "cmd.usageCtcp": "使い方: /ctcp <nick> <ctcp_type>",
   "cmd.usageIgnore": "使い方: /{cmd} <nick>[!ident][@host]",
   "cmd.usageJoin": "使い方: /join <channel> [key]",
@@ -96,16 +96,16 @@
     "other": "{count}ユーザーが参加しました"
   },
   "condensed.kicked": {
-    "other": "{count} users have been kicked"
+    "other": "{count}ユーザーがキックされました"
   },
   "condensed.left": {
     "other": "{count}ユーザーが離脱しました"
   },
   "condensed.modes": {
-    "other": "{count} mode was set"
+    "other": "{count}モードが設定されました"
   },
   "condensed.nick": {
-    "other": "{count} user has changed nick"
+    "other": "{count}ユーザーがニックネームを変更しました"
   },
   "condensed.toggle": "ステータスメッセージを切り替える",
   "confirm.cancel": "キャンセル",
@@ -287,6 +287,7 @@
   "help.commands.kick": "現在のチャンネルからユーザーを除きます。",
   "help.commands.kickbanA": "除きながら禁止（",
   "help.commands.kickbanB": "現在のチャンネルからのユーザー。それ以外は",
+  "help.commands.kickbanC": "ニックネーム（ホストマスクではなく）のみ使用可能です。",
   "help.commands.list": "このネットワークで利用可能なチャンネルの一覧を取得します。",
   "help.commands.me": "現在のチャンネルにアクションメッセージを送信します。{appName}は、メッセージが第三者視点で表示されるように inline で表示されます。",
   "help.commands.mode": "アクティブなウィンドウがチャンネルの場合、現在のチャンネルに指定されたフラグを設定します。アクティブなウィンドウがプライベートメッセージウィンドウの場合、別のユーザーに設定します。現在のウィンドウがサーバーウィンドウの場合、自分自身に設定します。END",
@@ -306,12 +307,15 @@
   "help.commands.slap": "現在のチャンネルでトROUTで誰かを殴ります！",
   "help.commands.topicA": "現在のチャンネルのトピックを取得します。もし",
   "help.commands.topicB": "これは、現在のチャンネルでトピックを設定します。",
+  "help.commands.unbanA": "バン解除（",
   "help.commands.unbanB": ") 現在のチャンネルからユーザーを禁止リストから解除します。これはニックネームまたはホストマスクである可能性があります。",
   "help.commands.unignore": "現在のネットワークで指定されたユーザーからのメッセージをブロックします。これはニックネームまたはホストマスクである可能性があります。",
   "help.commands.unmuteA": "指定されたチャンネルまたは現在のチャンネルをミュート解除します。チャンネルが指定されていない場合は現在のチャンネルになります。See",
   "help.commands.unmuteB": "について詳しくはここにあります。",
+  "help.commands.voiceA": "声を出す(",
   "help.commands.voiceB": ") 現在のチャンネル内の1人または複数のユーザーに声を付与します。",
   "help.commands.whois": "現在のネットワークで指定されたユーザーに関する情報を取得します。",
+  "help.commitLink": "結局",
   "help.compare": "比較",
   "help.documentation": "ドキュメント",
   "help.formatting.as": "このショートカット以降にタイプされたテキストをすべてマークします",
@@ -575,10 +579,10 @@
   "search.results.aria": "検索結果",
   "search.results.close": "検索ウィンドウを閉じる",
   "search.results.none": "結果が見つかりません。",
-  "search.results.scopeNote": "only this session's loaded messages are searched — older history is not searched.",
+  "search.results.scopeNote": "このセッションでロードされたみすてきのみが検索されます — 旧しい履歴は検索されません。",
   "search.results.searchingInAfter": "ため",
   "search.results.searchingInBefore": "検索中",
-  "search.results.showOlder": "older results ({count} more)",
+  "search.results.showOlder": "旧しい結果を表示（{count} 件 more）",
   "search.results.typePrompt": "何かをタイプして検索してください。",
   "send.editNoReply": "編集未送信: サーバーからの返信がありません。",
   "send.editWaiting": "編集未送信: そのメッセージの編集がすでにサーバーに送信されています。",
@@ -936,6 +940,8 @@
   "translate.strip.routeCpu": "{from} → {to} · {model} (CPU)",
   "translate.strip.routeCpuRetried": "{from} → {to} · {model} (CPU) · ソースなしで再試行しました",
   "translate.strip.routeGpu": "{from} → {to} · {model} (GPU)",
+  "translate.strip.routeGpuRetried": "{from} → {to} · {model} (GPU) · ソースなしで再試行",
+  "translate.strip.sendAsWritten": "送る",
   "translate.strip.sendTranslation": "翻訳を送ってください",
   "translate.strip.sourceAuto": "アウト",
   "translate.unchangedReason": "その行は変わりませんでした",

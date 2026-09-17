@@ -309,7 +309,7 @@ msgstr "反応すべきメッセージはありません: ここにはmsgidが�
 #: client/js/irc/commands/rejoin.ts
 msgctxt "cmd.rejoinChannels"
 msgid "You can only rejoin channels."
-msgstr "only channels to rejoin."
+msgstr "チャンネルに戻れることはできません。"
 
 #. Usage line of /ctcp when arguments are missing; the placeholders are command syntax.
 #: client/js/irc/commands/ctcp.ts
@@ -529,7 +529,7 @@ msgstr[1] ""
 msgctxt "condensed.kicked"
 msgid "{count} user was kicked"
 msgid_plural "{count} users were kicked"
-msgstr[0] "{count} users have been kicked"
+msgstr[0] "{count}ユーザーがキックされました"
 msgstr[1] ""
 
 #. Condensed status block: {count} users left the channel (quits are counted as parts) while the block was collapsed.
@@ -545,14 +545,14 @@ msgstr[1] ""
 msgctxt "condensed.modes"
 msgid "{count} mode was set"
 msgid_plural "{count} modes were set"
-msgstr[0] "{count} mode was set"
+msgstr[0] "{count}モードが設定されました"
 
 #. Condensed status block: {count} users renamed while the block was collapsed.
 #: client/components/MessageCondensed.vue
 msgctxt "condensed.nick"
 msgid "{count} user has changed nick"
 msgid_plural "{count} users have changed nick"
-msgstr[0] "{count} user has changed nick"
+msgstr[0] "{count}ユーザーがニックネームを変更しました"
 
 #. aria-label of the small toggle button that expands or collapses the condensed status block in a channel's scrollback.
 #: client/components/MessageCondensed.vue
@@ -1652,7 +1652,7 @@ msgstr "現在のチャンネルからのユーザー。それ以外は"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kickbanC"
 msgid ", only nicknames (and not host masks) can be used."
-msgstr ""
+msgstr "ニックネーム（ホストマスクではなく）のみ使用可能です。"
 
 #. Description of the /list command in the help window.
 #: client/components/Windows/Help.vue
@@ -1772,7 +1772,7 @@ msgstr "これは、現在のチャンネルでトピックを設定します。
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unbanA"
 msgid "Unban ("
-msgstr ""
+msgstr "バン解除（"
 
 #. Continuation of the /unban command description in the help window, after the -b code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1802,7 +1802,7 @@ msgstr "について詳しくはここにあります。"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.voiceA"
 msgid "Give voice ("
-msgstr ""
+msgstr "声を出す("
 
 #. Continuation of the /voice command description in the help window, after the +v code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1820,7 +1820,7 @@ msgstr "現在のネットワークで指定されたユーザーに関する情
 #: client/components/Windows/Help.vue
 msgctxt "help.commitLink"
 msgid "commit"
-msgstr ""
+msgstr "結局"
 
 #. First word of the two list items under the help window's past-release sentence; each continues with a link comparing two versions. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -3403,7 +3403,7 @@ msgstr "結果が見つかりません。"
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.results.scopeNote"
 msgid "Only messages loaded in this session are searched — older history is not searched."
-msgstr "only this session's loaded messages are searched — older history is not searched."
+msgstr "このセッションでロードされたみすてきのみが検索されます — 旧しい履歴は検索されません。"
 
 #. Second fragment of the search-results window header, rendered after the styled channel-name element; the search term itself follows the header. The element (the channel's or query window's name — user content, never translated) sits between this fragment and the one before it. Word order inside each fragment is free; the fragments cannot cross the element. Ends mid-sentence.
 #: client/components/Windows/SearchResults.vue:21
@@ -3421,7 +3421,7 @@ msgstr "検索中"
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.results.showOlder"
 msgid "Show older results ({count} more)"
-msgstr "older results ({count} more)"
+msgstr "旧しい結果を表示（{count} 件 more）"
 
 #. Shown in the search-results view when the search field is empty; invites typing a query.
 #: client/components/Windows/SearchResults.vue
@@ -5556,13 +5556,13 @@ msgstr "{from} → {to} · {model} (GPU)"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.routeGpuRetried"
 msgid "{from} → {to} · {model} (GPU) · retried without a source"
-msgstr ""
+msgstr "{from} → {to} · {model} (GPU) · ソースなしで再試行"
 
 #. Tooltip and aria-label of the send button in the composer's translation strip after the translation failed: the message goes out in the language the user typed it in.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sendAsWritten"
 msgid "Send as written"
-msgstr ""
+msgstr "送る"
 
 #. Tooltip and aria-label of the send button in the composer's translation strip: the translated text is what gets sent.
 #: client/components/ChatInput.vue
