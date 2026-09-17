@@ -176,12 +176,13 @@ export class TranslateQueue {
 	private inFlight = new Map<EngineName, Running>();
 	private failures = new Map<EngineName, number>();
 	private pausedEngines = new Set<EngineName>();
-	/** The pause's own resume timer, per engine; `resume()` disarms it. */
-	private pauseTimers = new Map<EngineName, ReturnType<typeof setTimeout>>();
+	/** The pause's own resume timer, per engine; `resume()` disarms it.
+	 *  The handle is whatever `this.timers()` hands back (`OutgoingDeps`). */
+	private pauseTimers = new Map<EngineName, unknown>();
 	/** Engines waiting out `REQUEUE_WAIT_MS` after a requeue: `pump()` skips them. */
 	private requeueWaits = new Set<EngineName>();
 	/** That wait's own timer, per engine, so `cancelAll()` can disarm it. */
-	private requeueTimers = new Map<EngineName, ReturnType<typeof setTimeout>>();
+	private requeueTimers = new Map<EngineName, unknown>();
 	/** Per-channel generation, bumped by cancelChannel/cancelAll: a route
 	 *  that resolves for an older generation is dropped instead of queued. */
 	private cancelled = new Map<number, number>();
@@ -301,7 +302,7 @@ export class TranslateQueue {
 		const timer = this.pauseTimers.get(engine);
 
 		if (timer !== undefined) {
-			clearTimeout(timer);
+			this.timers().clearTimeout(timer);
 			this.pauseTimers.delete(engine);
 		}
 
@@ -939,12 +940,11 @@ export class TranslateQueue {
 	/** A pause is a minute off, not the end of reading: `resume()` after it. */
 	private waitOutPause(engine: EngineName): void {
 		const existing = this.pauseTimers.get(engine);
+		const timers = this.timers();
 
 		if (existing !== undefined) {
-			clearTimeout(existing);
+			timers.clearTimeout(existing);
 		}
-
-		const timers = this.timers();
 
 		this.pauseTimers.set(
 			engine,
