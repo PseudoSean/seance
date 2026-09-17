@@ -45,9 +45,6 @@
   "composer.inputLabel": "Meddelandeskap",
   "composer.notConnected": "Ottsatt",
   "composer.placeholder": "Skriv till {name}",
-  "composer.reconnectIn": {
-    "one": "Ansluter till {network} i {seconds}s…"
-  },
   "composer.replyingTo": "Svarar på {nick}:",
   "composer.send": "Skicka meddelande",
   "composer.uploadFile": "Laddar upp fil",
@@ -55,30 +52,6 @@
   "composer.uploadPreparing": "förbereder…",
   "composer.uploadWaiting": "väntar på servern…",
   "composer.uploading": "Laddar upp {file}",
-  "condensed.away": {
-    "one": "markerat bort en gång"
-  },
-  "condensed.back": {
-    "one": "markerat tillbaka en gång"
-  },
-  "condensed.chghost": {
-    "one": "{count} användare har ändrat hostname"
-  },
-  "condensed.join": {
-    "one": "{count} användare har gått in"
-  },
-  "condensed.kicked": {
-    "one": "{count} användare har blivit kastad"
-  },
-  "condensed.left": {
-    "one": "{count} användare har lämnat"
-  },
-  "condensed.modes": {
-    "one": "{count} mode var inställt"
-  },
-  "condensed.nick": {
-    "one": "{count} användare har ändrat nick"
-  },
   "condensed.toggle": "Växla statusmeddelanden",
   "confirm.cancel": "Avbryt",
   "connect.account": "Konto",
@@ -371,9 +344,6 @@
   "list.kindBans": "Bannlist",
   "list.kindExcepts": "Undantagslista",
   "list.kindInvites": "Invitlist",
-  "list.loaded": {
-    "one": "Laddad {count} kanal..."
-  },
   "list.loading": "Laddar kanallista, detta kan ta några sekunder...",
   "list.windowTitle": "{kind} för {channel}",
   "loading.connecting": "Ansluter...",
@@ -616,9 +586,6 @@
   "settings.general.backupHeading": "Backup och återställning",
   "settings.general.backupIntro": "Spara dina inställningar till ett fil. Du kan återställa här eller på ett annat enhet.",
   "settings.general.backupMutes": "Muser och ignoreringslistor",
-  "settings.general.backupNetworks": {
-    "one": "{count} nätverk"
-  },
   "settings.general.backupPartSettings": "Dina inställningar",
   "settings.general.backupPasswords": "Filen innehåller nätverkslösenord.",
   "settings.general.export": "Exportera inställningar…",
@@ -702,18 +669,12 @@
   "sidebar.empty": "Du är inte ansluten till något nätverk än.",
   "sidebar.jumpTo": "Hoppa till...",
   "sidebar.language": "Visningsspråk",
-  "sidebar.mentions": {
-    "one": "{count} nämndning"
-  },
   "sidebar.networkList": "Nätverk och kanallista",
   "sidebar.noResults": "Inga resultat hittades.",
   "sidebar.searchLabel": "Sök bland kanalerna",
   "sidebar.settings": "Inställningar",
   "sidebar.toggle": "Växla kanallista",
   "sidebar.toggleDevtools": "Växla eruda devtools",
-  "sidebar.unread": {
-    "one": "{count} oläst meddelande"
-  },
   "special.bans.banned": "Bannad",
   "special.bans.bannedAt": "Bannad vid",
   "special.bans.bannedBy": "Bannad av",
@@ -765,9 +726,6 @@
   "system.nick": "{nick} är nu känd som {newNick}",
   "system.part": "{nick} har lämnat kanalen",
   "system.quit": "{nick} har avslutat",
-  "typing.many": {
-    "one": "{nick1}, {nick2} och {count} andra skriver..."
-  },
   "typing.one": "{nick} skriver...",
   "typing.three": "{nick1}, {nick2} och {nick3} skriver...",
   "typing.two": "{nick1} och {nick2} skriver...",
@@ -793,9 +751,6 @@
   "upload.removeOne": "Skicka inte {name}",
   "upload.removeTitle": "Skicka inte detta filen",
   "upload.tooLarge": "Fil {file} är över det maximala tillåtna störrelsen",
-  "userlist.count": {
-    "one": "{count} användare"
-  },
   "userlist.searchLabel": "Sök bland användarlistan",
   "userlist.title": "Användarlistan för {name}",
   "whois.actualHost": "Självständig host:",

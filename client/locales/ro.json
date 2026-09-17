@@ -51,9 +51,6 @@
   "cmd.usageNickMulti": "Utilizare: /{cmd} <nick> [...nick]",
   "cmd.usageReact": "Utilizare: /{cmd} <text> [msgid]",
   "cmd.usageRedact": "Utilizare: /{cmd} <msgid> [motiv]",
-  "code.showAllLines": {
-    "one": "Arată toate {count} linii"
-  },
   "code.showLess": "Arată mai puțin",
   "composer.cancel": "Anulă",
   "composer.cancelEscape": "Anulă (Ieșire)",
@@ -67,9 +64,6 @@
   "composer.inputLabel": "Intrare mesaj",
   "composer.notConnected": "Nu este conectat",
   "composer.placeholder": "Scrie către {name}",
-  "composer.reconnectIn": {
-    "one": "Reconectare la {network} în {seconds}s…"
-  },
   "composer.replyingTo": "Răspuns la {nick}:",
   "composer.send": "Trimite mesaj",
   "composer.uploadFile": "Încarc fișier",
@@ -77,30 +71,6 @@
   "composer.uploadPreparing": "pregătire…",
   "composer.uploadWaiting": "așteptare server…",
   "composer.uploading": "Încărcare {file}",
-  "condensed.away": {
-    "one": "marcat o dată"
-  },
-  "condensed.back": {
-    "one": "marcat înapoi o dată"
-  },
-  "condensed.chghost": {
-    "one": "{count} utilizator a schimbat numele"
-  },
-  "condensed.join": {
-    "one": "{count} utilizator a intrat"
-  },
-  "condensed.kicked": {
-    "one": "{count} utilizator a fost kickat"
-  },
-  "condensed.left": {
-    "one": "{count} utilizator a părăsit"
-  },
-  "condensed.modes": {
-    "one": "{count} modul a fost setat"
-  },
-  "condensed.nick": {
-    "one": "{count} utilizator a schimbat nickul"
-  },
   "condensed.toggle": "Comutare mesajele de stare",
   "confirm.cancel": "Anulare",
   "connect.account": "Cont",
@@ -393,9 +363,6 @@
   "list.kindBans": "Lista blocărilor",
   "list.kindExcepts": "Lista excepțiilor",
   "list.kindInvites": "Lista invitațiilor",
-  "list.loaded": {
-    "one": "încărcat {count} canal..."
-  },
   "list.loading": "Încărcarea listei canalelor, acest lucru poate dura câteva minute...",
   "loading.connecting": "Conectare...",
   "loading.error": "A apărut o eroare care a împiedicat clientul să încarce corect.",
@@ -640,9 +607,6 @@
   "settings.general.backupHeading": "Backup și restabilire",
   "settings.general.backupIntro": "Salvați setările dumneavoastră într-un fișier. Poți restabili aici sau pe un alt dispozitiv.",
   "settings.general.backupMutes": "Mute și liste de ignorare",
-  "settings.general.backupNetworks": {
-    "one": "{count} rețea"
-  },
   "settings.general.backupPartSettings": "setările dumneavoastră",
   "settings.general.backupPasswords": "Fișierul include parolele de rețea.",
   "settings.general.export": "Exportare setări…",
@@ -687,18 +651,12 @@
   "settings.notifications.browserUnsupported": "Notificările nu sunt suportate de către browser.",
   "settings.notifications.commaList": "Separare prin virgulă, de exemplu: cuvânt, alte cuvinte, altcuvânt",
   "sidebar.language": "Limbă de afișare",
-  "sidebar.mentions": {
-    "one": "{count} mențiune"
-  },
   "sidebar.networkList": "Lista rețele și canale",
   "sidebar.noResults": "Nu au fost găsite rezultate.",
   "sidebar.searchLabel": "Cautare în lista de canale",
   "sidebar.settings": "Setări",
   "sidebar.toggle": "Comutare listă canale",
   "sidebar.toggleDevtools": "Comutare Eruda DevTools",
-  "sidebar.unread": {
-    "one": "{count} mesaj nesăruit"
-  },
   "special.bans.banned": "Bannat",
   "special.bans.bannedAt": "Bannat la",
   "special.bans.bannedBy": "Bannat de",
@@ -748,9 +706,6 @@
   "system.nick": "{nick} este acum cunoscut sub numele {newNick}",
   "system.part": "{nick} a părăsit canalul",
   "system.quit": "{nick} a părăsit",
-  "typing.many": {
-    "one": "{nick1}, {nick2} și {count} alți utilizator este tipărit..."
-  },
   "typing.one": "{nick} este tipărit...",
   "typing.three": "{nick1}, {nick2} și {nick3} sunt tipărite...",
   "typing.two": "{nick1} și {nick2} sunt tipărite...",
@@ -776,9 +731,6 @@
   "upload.removeOne": "Nu încarcă {name}",
   "upload.removeTitle": "Nu încarcă acest fișier",
   "upload.tooLarge": "Fișierul {file} e mai mare decât limita maximă admisă",
-  "userlist.count": {
-    "one": "{count} utilizator"
-  },
   "userlist.searchLabel": "Caută printre lista utilizatorilor",
   "userlist.title": "Listă utilizatori pentru {name}",
   "whois.actualHost": "Host real:",

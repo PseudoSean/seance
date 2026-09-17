@@ -45,9 +45,6 @@
   "composer.inputLabel": "Message input",
   "composer.notConnected": "Not connected",
   "composer.placeholder": "Write to {name}",
-  "composer.reconnectIn": {
-    "one": "Reconnecting to {network} in {seconds}s…"
-  },
   "composer.replyingTo": "Replying to {nick}:",
   "composer.send": "Send message",
   "composer.uploadFile": "Upload file",
@@ -55,30 +52,6 @@
   "composer.uploadPreparing": "preparing…",
   "composer.uploadWaiting": "waiting for the server…",
   "composer.uploading": "Uploading {file}",
-  "condensed.away": {
-    "one": "marked away once"
-  },
-  "condensed.back": {
-    "one": "marked back once"
-  },
-  "condensed.chghost": {
-    "one": "{count} user has changed hostname"
-  },
-  "condensed.join": {
-    "one": "{count} user has joined"
-  },
-  "condensed.kicked": {
-    "one": "{count} user was kicked"
-  },
-  "condensed.left": {
-    "one": "{count} user has left"
-  },
-  "condensed.modes": {
-    "one": "{count} mode was set"
-  },
-  "condensed.nick": {
-    "one": "{count} user has changed nick"
-  },
   "condensed.toggle": "Toggle status messages",
   "confirm.cancel": "Cancel",
   "connect.account": "Account",
@@ -331,9 +304,6 @@
   "list.kindBans": "Ban list",
   "list.kindExcepts": "Exception list",
   "list.kindInvites": "Invite list",
-  "list.loaded": {
-    "one": "Loaded {count} channel..."
-  },
   "list.loading": "Loading channel list, this can take a moment...",
   "list.windowTitle": "{kind} for {channel}",
   "loading.connecting": "Connecting…",
@@ -527,12 +497,6 @@
   "settings.aliases.paneAria": "Command aliases",
   "settings.aliases.previewMiss": "Not an alias — this would be sent as typed.",
   "settings.aliases.removeAria": "Remove alias {name}",
-  "settings.aliases.statusBroken": {
-    "one": "{count} alias saved — rows with errors are not saved."
-  },
-  "settings.aliases.statusSaved": {
-    "one": "{count} alias saved."
-  },
   "settings.aliases.titleHeading": "Command aliases",
   "settings.aliases.tryAria": "Try an alias",
   "settings.aliases.tryExample": "/{name} some arguments",
@@ -598,9 +562,6 @@
   "settings.general.backupHeading": "Backup and restore",
   "settings.general.backupIntro": "Save your settings to a file. You can restore here or on another device.",
   "settings.general.backupMutes": "mutes and ignore lists",
-  "settings.general.backupNetworks": {
-    "one": "{count} network"
-  },
   "settings.general.backupPartSettings": "your settings",
   "settings.general.backupPasswords": "The file includes network passwords.",
   "settings.general.export": "Export settings…",
@@ -646,18 +607,12 @@
   "settings.notifications.browserUnsupported": "Notifications are not supported by your browser.",
   "settings.notifications.commaList": "Comma-separated, e.g.: word, some more words, anotherword",
   "sidebar.language": "Display language",
-  "sidebar.mentions": {
-    "one": "{count} mention"
-  },
   "sidebar.networkList": "Network and Channel list",
   "sidebar.noResults": "No results found.",
   "sidebar.searchLabel": "Search among the channel list",
   "sidebar.settings": "Settings",
   "sidebar.toggle": "Toggle channel list",
   "sidebar.toggleDevtools": "Toggle eruda devtools",
-  "sidebar.unread": {
-    "one": "{count} unread message"
-  },
   "special.bans.banned": "Banned",
   "special.bans.bannedAt": "Banned At",
   "special.bans.bannedBy": "Banned By",
@@ -689,9 +644,6 @@
   "sw.markRead": "Mark read",
   "sw.newActivity": "New activity while you were away.",
   "sw.newMessage": "New message",
-  "typing.many": {
-    "one": "{nick1}, {nick2} and {count} other is typing…"
-  },
   "typing.one": "{nick} is typing…",
   "typing.three": "{nick1}, {nick2} and {nick3} are typing…",
   "typing.two": "{nick1} and {nick2} are typing…",
@@ -717,9 +669,6 @@
   "upload.removeOne": "Don't upload {name}",
   "upload.removeTitle": "Don't upload this file",
   "upload.tooLarge": "File {file} is over the maximum allowed size",
-  "userlist.count": {
-    "one": "{count} user"
-  },
   "userlist.searchLabel": "Search among the user list",
   "userlist.title": "User list for {name}",
   "whois.actualHost": "Actual host:",

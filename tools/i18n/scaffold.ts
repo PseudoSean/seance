@@ -47,9 +47,12 @@ export function scaffoldTag(tag: string, localesDir: string, force = false): boo
 		...(rule ? {"plural-forms": formatPluralForms(rule)} : {}),
 	};
 
+	// One empty slot per gettext form: a two-slot plural in a three-form
+	// language has no slot for the third and the compile drops the key.
+	const nplurals = rule?.nplurals ?? 2;
 	const entries = pot.entries.map((entry) => ({
 		...entry,
-		msgstr: entry.msgidPlural ? ["", ""] : [""],
+		msgstr: entry.msgidPlural ? Array.from({length: nplurals}, () => "") : [""],
 	}));
 
 	writeFileSync(out, serializePo(headers, entries));

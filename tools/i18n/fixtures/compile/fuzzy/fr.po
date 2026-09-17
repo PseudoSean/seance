@@ -34,3 +34,10 @@ msgstr[1] ""
 msgctxt "intentional.empty"
 msgid ""
 msgstr ""
+
+#. Half-translated plural: the singular form only.
+msgctxt "partial.plural"
+msgid "marked away once"
+msgid_plural "marked away {count} times"
+msgstr[0] "marqué absent une fois"
+msgstr[1] ""

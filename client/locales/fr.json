@@ -51,9 +51,6 @@
   "cmd.usageNickMulti": "Utilisation : /{cmd} <nick> [...nick]",
   "cmd.usageReact": "Utilisation : /{cmd} <texte> [msgid]",
   "cmd.usageRedact": "Utilisation : /{cmd} <msgid> [raison]",
-  "code.showAllLines": {
-    "one": "Afficher tous {count} ligne"
-  },
   "code.showLess": "Afficher moins",
   "composer.cancel": "Annuler",
   "composer.cancelEscape": "Annuler (Échappement)",
@@ -67,9 +64,6 @@
   "composer.inputLabel": "Entrée de message",
   "composer.notConnected": "Pas connecté",
   "composer.placeholder": "Écrire à {name}",
-  "composer.reconnectIn": {
-    "one": "Réconnexion à {network} en {seconds}s…"
-  },
   "composer.replyingTo": "Répondre à {nick} :",
   "composer.send": "Envoyer message",
   "composer.uploadFile": "Télécharger fichier",
@@ -77,30 +71,6 @@
   "composer.uploadPreparing": "Préparation…",
   "composer.uploadWaiting": "En attente du serveur…",
   "composer.uploading": "Téléchargement de {file}",
-  "condensed.away": {
-    "one": "Marqué hors ligne une fois"
-  },
-  "condensed.back": {
-    "one": "Marqué en ligne une fois"
-  },
-  "condensed.chghost": {
-    "one": "{count} utilisateur a changé d'hôte"
-  },
-  "condensed.join": {
-    "one": "{count} utilisateur a rejoint"
-  },
-  "condensed.kicked": {
-    "one": "{count} utilisateur a été expulsé"
-  },
-  "condensed.left": {
-    "one": "{count} utilisateur a quitté"
-  },
-  "condensed.modes": {
-    "one": "{count} mode a été défini"
-  },
-  "condensed.nick": {
-    "one": "{count} utilisateur a changé de pseudonyme"
-  },
   "condensed.toggle": "Alterner les messages d'état",
   "confirm.cancel": "Annuler",
   "connect.account": "Compte",
@@ -393,9 +363,6 @@
   "list.kindBans": "Liste des bannis",
   "list.kindExcepts": "Liste d'exceptions",
   "list.kindInvites": "Liste d'invitations",
-  "list.loaded": {
-    "one": "Chargé {count} canal..."
-  },
   "list.loading": "En charge de la liste de canaux, cela peut prendre un moment...",
   "list.windowTitle": "{kind} pour {channel}",
   "loading.connecting": "Connexion…",
@@ -589,12 +556,6 @@
   "settings.aliases.paneAria": "Alias de commande",
   "settings.aliases.previewMiss": "Pas un alias — cela serait envoyé tel quel.",
   "settings.aliases.removeAria": "Supprimer l'alias {name}",
-  "settings.aliases.statusBroken": {
-    "one": "{count} alias sauvegardés — les lignes avec des erreurs ne sont pas sauvegardées."
-  },
-  "settings.aliases.statusSaved": {
-    "one": "{count} alias sauvegardés."
-  },
   "settings.aliases.titleHeading": "Alias de commandes",
   "settings.aliases.tryAria": "Essayez un alias",
   "settings.aliases.tryExample": "/{name} quelques arguments",
@@ -660,9 +621,6 @@
   "settings.general.backupHeading": "Sauvegarde et restauration",
   "settings.general.backupIntro": "Enregistrez vos paramètres dans un fichier. Vous pouvez le restaurer ici ou sur un autre appareil.",
   "settings.general.backupMutes": "Listes de mise en pause et d'ignoration",
-  "settings.general.backupNetworks": {
-    "one": "{count} réseau"
-  },
   "settings.general.backupPartSettings": "vos paramètres",
   "settings.general.backupPasswords": "Le fichier inclut les mots de passe réseau.",
   "settings.general.export": "Exporter les paramètres…",
@@ -742,9 +700,6 @@
   "settings.tabs.networks": "Réseaux",
   "sidebar.toggle": "Activer la liste des canaux",
   "sidebar.toggleDevtools": "Activer les outils de développement Eruda",
-  "sidebar.unread": {
-    "one": "{count} message non lu"
-  },
   "special.bans.banned": "Banni",
   "special.bans.bannedAt": "Banni le",
   "special.bans.bannedBy": "Banni par",
@@ -796,9 +751,6 @@
   "system.nick": "{nick} est maintenant connu sous le nom {newNick}",
   "system.part": "{nick} a quitté le canal",
   "system.quit": "{nick} a quitté",
-  "typing.many": {
-    "one": "{nick1}, {nick2} et {count} autre est en train d'écrire…"
-  },
   "typing.one": "{nick} est en train d'écrire…",
   "typing.three": "{nick1}, {nick2} et {nick3} sont en train d'écrire…",
   "typing.two": "{nick1} et {nick2} sont en train d'écrire…",
@@ -824,9 +776,6 @@
   "upload.removeOne": "Ne pas envoyer {name}",
   "upload.removeTitle": "Ne pas envoyer ce fichier",
   "upload.tooLarge": "Le fichier {file} dépasse la taille maximale autorisée",
-  "userlist.count": {
-    "one": "{count} utilisateur"
-  },
   "userlist.searchLabel": "Chercher parmi la liste d'utilisateurs",
   "userlist.title": "Liste d'utilisateurs pour {name}",
   "whois.actualHost": "Hôte réel :",

@@ -31,3 +31,48 @@ export function parsePluralForms(header: string): PluralRule | undefined {
 export function formatPluralForms(rule: PluralRule): string {
 	return `nplurals=${rule.nplurals}; plural=(${rule.expr});`;
 }
+
+/** Evaluate gettext's C plural expression for `n`; the result indexes msgstr[N]. */
+export function pluralEval(expr: string, n: number): number {
+	if (!/^[n0-9 ():!=<>+\-*/%&|?:]+$/.test(expr)) {
+		throw new Error(`unsafe plural expression: ${expr}`);
+	}
+
+	// gettext's C expressions yield 0/1; the JS forms of simple rules ("n != 1")
+	// yield booleans, so coerce — the result indexes msgstr[N]. The regex
+	// allowlist above is the only thing that reaches here.
+	// eslint-disable-next-line @typescript-eslint/no-implied-eval
+	return Number(Function("n", `"use strict"; return (${expr});`)(n));
+}
+
+/** One gettext slot of a plural entry and which source text fills it. */
+export interface PluralSlot {
+	/** The msgstr[N] index. */
+	index: number;
+	/** Which of the entry's two English forms this slot translates. */
+	source: "msgid" | "msgidPlural";
+}
+
+/**
+ * Every gettext slot of a plural entry, with the source text each one
+ * translates: the slot the expression yields for n = 1 is the singular
+ * (msgid), every other slot is the plural (msgid_plural). Complete and
+ * independent of what is already filled — the caller decides which slots
+ * it still needs.
+ */
+export function planPluralSlots(
+	entry: {msgid: string; msgidPlural?: string},
+	nplurals: number,
+	expr: string
+): PluralSlot[] {
+	if (entry.msgidPlural === undefined) {
+		return [];
+	}
+
+	const singular = pluralEval(expr, 1);
+
+	return Array.from({length: nplurals}, (_, index) => ({
+		index,
+		source: index === singular ? ("msgid" as const) : ("msgidPlural" as const),
+	}));
+}

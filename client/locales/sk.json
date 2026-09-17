@@ -51,9 +51,6 @@
   "cmd.usageNickMulti": "Použitie: /{cmd} <nick> [...nick]",
   "cmd.usageReact": "Použitie: /{cmd} <text> [msgid]",
   "cmd.usageRedact": "Použitie: /{cmd} <msgid> [dôvod]",
-  "code.showAllLines": {
-    "one": "Zobrazovať všetky {count} riadok"
-  },
   "code.showLess": "Zobrazovať menej",
   "composer.cancel": "Zrušiť",
   "composer.cancelEscape": "Zrušiť (Ukážka)",
@@ -70,18 +67,6 @@
   "composer.uploadFile": "Nahrať súbor",
   "composer.uploadPreparing": "pripravujem…",
   "composer.uploadWaiting": "čakajúci na server…",
-  "condensed.away": {
-    "one": "označený ako odchýlený raz"
-  },
-  "condensed.back": {
-    "one": "označený späť raz"
-  },
-  "condensed.modes": {
-    "one": "Režim {count} bol nastavený"
-  },
-  "condensed.nick": {
-    "one": "{count} používateľ zmenil nick"
-  },
   "condensed.toggle": "Prehľadajte štátové správy",
   "confirm.cancel": "Zrušiť",
   "connect.account": "Účet",
@@ -313,9 +298,6 @@
   "list.kindBans": "Zoznam zabanovaných",
   "list.kindExcepts": "Zoznam výnimiek",
   "list.kindInvites": "Zoznam pozvánok",
-  "list.loaded": {
-    "one": "Naloadované {count} kanál..."
-  },
   "list.loading": "Načítavanie zoznamu kanálov, to môže trvať okamžik...",
   "loading.connecting": "Pripojujem...",
   "loading.error": "Došlo k chybe, ktorá zabránila klientovi správne načítanie.",
@@ -502,12 +484,6 @@
   "settings.aliases.paneAria": "Aliasy príkazov",
   "settings.aliases.previewMiss": "Nie je alias – tento by bol odoslaný ako napísaný.",
   "settings.aliases.removeAria": "Odstrániť alias {name}",
-  "settings.aliases.statusBroken": {
-    "one": "{count} aliasy uložené – riadky s chybami sa nepresúvajú."
-  },
-  "settings.aliases.statusSaved": {
-    "one": "{count} aliasy uložené."
-  },
   "settings.aliases.titleHeading": "Aliasy príkazov",
   "settings.aliases.tryAria": "Skúsiť alias",
   "settings.aliases.tryExample": "/{name} niektoré argumenty",
@@ -599,18 +575,12 @@
   "settings.notifications.browserUnsupported": "Upozornenia nie sú podporované vaším prehliadkou.",
   "settings.notifications.commaList": "Rozdelené čiarkami, napr.: slovo, ďalšie slová, iné slovo",
   "sidebar.language": "Zobrazovanie jazyka",
-  "sidebar.mentions": {
-    "one": "{count} spomenutie"
-  },
   "sidebar.networkList": "Sieť a zoznam kanálov",
   "sidebar.noResults": "Nie sú nájdené výsledky.",
   "sidebar.searchLabel": "Hľadanie v zozname kanálov",
   "sidebar.settings": "Nastavenia",
   "sidebar.toggle": "Prehľad zoznamu kanálov",
   "sidebar.toggleDevtools": "Prehľad eruda devtools",
-  "sidebar.unread": {
-    "one": "{count} nepřečtené správy"
-  },
   "special.bans.banned": "Zabrané",
   "special.bans.bannedAt": "Zabrané o",
   "special.bans.bannedBy": "Zabrané od",
@@ -662,9 +632,6 @@
   "system.nick": "{nick} je teraz známy ako {newNick}",
   "system.part": "{nick} opustil kanál",
   "system.quit": "{nick} opustil",
-  "typing.many": {
-    "one": "{nick1}, {nick2} a {count} inéš je typuje…"
-  },
   "typing.one": "{nick} je typuje…",
   "typing.three": "{nick1}, {nick2} a {nick3} sú typujú…",
   "typing.two": "{nick1} a {nick2} sú typujú…",
@@ -690,9 +657,6 @@
   "upload.removeOne": "Návádzaj {name}",
   "upload.removeTitle": "Návádzaj tento súbor",
   "upload.tooLarge": "Súbor {file} je vyšší ako maximálny povolený rozsah",
-  "userlist.count": {
-    "one": "{count} užívateľ"
-  },
   "userlist.searchLabel": "Hľadanie medzi zoznamom užívateľov",
   "userlist.title": "Zoznam užívateľov pre {name}",
   "whois.actualHost": "Skutočný host:",

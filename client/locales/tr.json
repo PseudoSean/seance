@@ -51,10 +51,6 @@
   "cmd.usageNickMulti": "Kullanım: /{cmd} <nick> [...nick]",
   "cmd.usageReact": "Kullanım: /{cmd} <metin> [msgid]",
   "cmd.usageRedact": "Kullanım: /{cmd} <msgid> [neden]",
-  "code.showAllLines": {
-    "one": "Tüm {count} satırı göster",
-    "other": "Tüm {count} satırı göster"
-  },
   "code.showLess": "Azalt",
   "composer.cancel": "İptal",
   "composer.cancelEscape": "İptal (Çıkış)",
@@ -68,10 +64,6 @@
   "composer.inputLabel": "Mesaj girişi",
   "composer.notConnected": "Bağlantı yok",
   "composer.placeholder": "{name} yaz",
-  "composer.reconnectIn": {
-    "one": "{network} a geri bağlanıyor... {seconds}s",
-    "other": "{network} a geri bağlanıyor... {seconds}s"
-  },
   "composer.replyingTo": "{nick} cevabı:",
   "composer.send": "Mesaj gönder",
   "composer.uploadFile": "Dosya yükle",
@@ -79,38 +71,6 @@
   "composer.uploadPreparing": "hazırlanıyor...",
   "composer.uploadWaiting": "sunucuya bekliyorum...",
   "composer.uploading": "{file} yüklendi",
-  "condensed.away": {
-    "one": "bir kez uzaklaştırıldı",
-    "other": "bir kez uzaklaştırıldı"
-  },
-  "condensed.back": {
-    "one": "bir kez geri getirildi",
-    "other": "bir kez geri getirildi"
-  },
-  "condensed.chghost": {
-    "one": "{count} kullanıcı adını değiştirdi",
-    "other": "{count} kullanıcı adını değiştirdi"
-  },
-  "condensed.join": {
-    "one": "{count} kullanıcı katıldı",
-    "other": "{count} kullanıcı katıldı"
-  },
-  "condensed.kicked": {
-    "one": "{count} kullanıcı atıldı",
-    "other": "{count} kullanıcı atıldı"
-  },
-  "condensed.left": {
-    "one": "{count} kullanıcı ayrıldı",
-    "other": "{count} kullanıcı ayrıldı"
-  },
-  "condensed.modes": {
-    "one": "{count} modu ayarlandı",
-    "other": "{count} modu ayarlandı"
-  },
-  "condensed.nick": {
-    "one": "{count} kullanıcı nick değişti",
-    "other": "{count} kullanıcı nick değişti"
-  },
   "condensed.toggle": "Durum mesajları aç/kapa",
   "confirm.cancel": "İptal",
   "connect.account": "Hesap",
@@ -351,10 +311,6 @@
   "list.kindBans": "Yasak listesi",
   "list.kindExcepts": "İstatik liste",
   "list.kindInvites": "Dilem liste",
-  "list.loaded": {
-    "one": "{count} kanal yüklendi...",
-    "other": "{count} kanal yüklendi..."
-  },
   "list.loading": "Kanal listesi yükleniyor, bu bir anlık sürebilir...",
   "list.windowTitle": "{channel} için {kind}",
   "loading.connecting": "Bağlantı...",
@@ -595,10 +551,6 @@
   "settings.general.backupHeading": "Kayıt ve geri yükleme",
   "settings.general.backupIntro": "Ayarlarınızı bir dosyaya kaydedin. Buradan veya başka bir cihazdan geri yükleyebilirsiniz.",
   "settings.general.backupMutes": "sessizleştirme ve ignore listeleri",
-  "settings.general.backupNetworks": {
-    "one": "{count} ağaç",
-    "other": "{count} ağaç"
-  },
   "settings.general.backupPartSettings": "Ayarlarınız",
   "settings.general.backupPasswords": "Dosya ağaç şifrelerini içerir.",
   "settings.general.export": "Ayarları dışarı aktar...",
@@ -644,20 +596,12 @@
   "settings.notifications.browserUnsupported": "Tarayıcınız tarafından bildirim desteklenmiyor.",
   "settings.notifications.commaList": "Virgülle ayrılmış, örneğin: kelime, daha fazla kelime, başka bir kelime",
   "sidebar.language": "Gösterim dili",
-  "sidebar.mentions": {
-    "one": "{count} atıf",
-    "other": "{count} atıf"
-  },
   "sidebar.networkList": "Ağ ve Kanal listesi",
   "sidebar.noResults": "Sonuç bulunamadı.",
   "sidebar.searchLabel": "Kanal listesinde arama",
   "sidebar.settings": "Ayarlar",
   "sidebar.toggle": "Kanal listesi geçişini aç/kapa",
   "sidebar.toggleDevtools": "Eruda devtools'u aç/kapa",
-  "sidebar.unread": {
-    "one": "{count} okunmamış mesaj",
-    "other": "{count} okunmamış mesaj"
-  },
   "special.bans.banned": "Yasaklanan",
   "special.bans.bannedAt": "Yasaklanma Tarihi",
   "special.bans.bannedBy": "Yasaklanma Nedeni",
@@ -700,10 +644,6 @@
   "system.join": "{nick} kanala katıldı",
   "system.part": "{nick} kanaldan ayrıldı",
   "system.quit": "{nick} ayrıldı",
-  "typing.many": {
-    "one": "{nick1}, {nick2} ve {count} diğer kişi typing…",
-    "other": "{nick1}, {nick2} ve {count} diğer kişi typing…"
-  },
   "typing.one": "{nick} typing…",
   "typing.three": "{nick1}, {nick2} ve {nick3} typing…",
   "typing.two": "{nick1} ve {nick2} typing…",
@@ -728,10 +668,6 @@
   "upload.removeOne": "{name} yükleme",
   "upload.removeTitle": "Bu dosyayı yükleyin",
   "upload.tooLarge": "{file} dosyası izin verilen maksimum boyutu aştı",
-  "userlist.count": {
-    "one": "{count} kullanıcı",
-    "other": "{count} kullanıcı"
-  },
   "userlist.searchLabel": "Kullanıcı listesinden arama",
   "userlist.title": "{name} için kullanıcı listesi",
   "whois.actualHost": "Gerçek sunucu:",

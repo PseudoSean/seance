@@ -11,11 +11,14 @@
 //       [--repo <converted model dir>] [--model-id Qwen3-4B-q4f16_1-MLC]
 //       [--device cuda|cpu] [--batch 20] [--limit N] [--dry]
 //
-// Every entry's msgid is protected (spans.ts, the marker form the engine's
+// The unit of work is a msgstr SLOT: a singular entry has one, a plural
+// entry one per gettext form — the slot n = 1 reads translates msgid, the
+// rest translate msgid_plural (tools/i18n/plural.ts planPluralSlots). Each
+// slot's source text is protected (spans.ts, the marker form the engine's
 // route asks for) before the request and restored after; a translation that
 // does not keep all of the original's placeholders is left empty. The .po is
 // rewritten after every batch, so a run can be interrupted and resumed —
-// filled entries are skipped on the next pass.
+// filled slots are skipped on the next pass.
 
 import {existsSync, readFileSync, writeFileSync} from "node:fs";
 import {resolve} from "node:path";
@@ -27,11 +30,21 @@ import {placementFor} from "../../client/js/translate/routes.default";
 import {placeholdersIn, protect, restoreAll} from "../../client/js/translate/spans";
 import {parseBatchedOutput} from "../../client/js/translate/prompt";
 import {WebLlmEngine} from "../../client/js/translate/engines/webllm";
-import {parsePo, serializePo} from "./po";
+import {parsePo, PoEntry, serializePo} from "./po";
+import {PLURAL_RULES, parsePluralForms, planPluralSlots} from "./plural";
 import {isDegenerate} from "./quality";
 import {NAME_TO_TAG, TARGETS_SOURCE} from "./targets";
 
 type EngineName = "llm" | "nllb" | "opus";
+
+/** One msgstr slot to fill and the English text that fills it. */
+interface Unit {
+	entry: PoEntry;
+	/** The msgstr[N] index this translation is written to. */
+	slot: number;
+	/** msgid for a singular entry and for a plural's n = 1 slot; msgid_plural otherwise. */
+	text: string;
+}
 
 const LOCALES = resolve("client/locales");
 const NLLB_MODEL = "Xenova/nllb-200-distilled-600M";
@@ -193,11 +206,52 @@ async function main(): Promise<void> {
 		}
 
 		const po = parsePo(readFileSync(poPath, "utf8"));
-		// An empty msgid is a deliberately blank slot (the deploy fills it);
-		// translating "" only invents text, so those never enter the todo.
-		const todo = po.entries.filter(
-			(entry) => entry.msgid && (entry.msgstr.length === 0 || entry.msgstr[0] === "")
-		);
+		const rule = PLURAL_RULES[tag] ?? parsePluralForms(po.headers["plural-forms"] ?? "");
+
+		if (!rule) {
+			console.warn(
+				`fill: no plural rule for ${tag} — add it to tools/i18n/plural-rules.json`
+			);
+			continue;
+		}
+
+		// The unit of work is a msgstr SLOT, not an entry: a plural entry
+		// carries one slot per gettext form, the slot n = 1 reads translates
+		// msgid and every other one translates msgid_plural. Filling only the
+		// first slot left the rest empty, and the compile then drops the whole
+		// key (or, before that ruling, served the singular for every count).
+		const todo: Unit[] = [];
+
+		for (const entry of po.entries) {
+			// An empty msgid is a deliberately blank slot (the deploy fills
+			// it); translating "" only invents text, so it never enters the
+			// todo.
+			if (!entry.msgid) {
+				continue;
+			}
+
+			if (entry.msgidPlural === undefined) {
+				if (!entry.msgstr[0]) {
+					todo.push({entry, slot: 0, text: entry.msgid});
+				}
+
+				continue;
+			}
+
+			while (entry.msgstr.length < rule.nplurals) {
+				entry.msgstr.push("");
+			}
+
+			for (const {index, source} of planPluralSlots(entry, rule.nplurals, rule.expr)) {
+				if (!entry.msgstr[index]) {
+					todo.push({
+						entry,
+						slot: index,
+						text: source === "msgid" ? entry.msgid : entry.msgidPlural,
+					});
+				}
+			}
+		}
 
 		if (todo.length === 0) {
 			console.log(`fill: ${tag} — already complete`);
@@ -236,9 +290,9 @@ async function main(): Promise<void> {
 			// asks for (spans.ts): numbered tags for the seq2seq engines,
 			// placeholders for the LLM.
 			const markerForm = engine === "llm" ? "placeholder" : "tags";
-			const protectedEntries = batch.map((entry) => ({
-				entry,
-				...protect(entry.msgid, {nicks: [], markers: markerForm}),
+			const protectedEntries = batch.map((unit) => ({
+				unit,
+				...protect(unit.text, {nicks: [], markers: markerForm}),
 			}));
 
 			try {
@@ -287,7 +341,7 @@ async function main(): Promise<void> {
 					outputs = parsed ?? batch.map(() => null);
 				}
 
-				batch.forEach((entry, index) => {
+				batch.forEach((unit, index) => {
 					const info = protectedEntries[index];
 					const raw = outputs[index];
 
@@ -307,7 +361,7 @@ async function main(): Promise<void> {
 					if (markersGiven !== markersBack) {
 						failed += 1;
 						console.warn(
-							`fill: ${tag} "${entry.msgid}" lost a protection marker (${markersGiven} → ${markersBack})`
+							`fill: ${tag} "${unit.text}" lost a protection marker (${markersGiven} → ${markersBack})`
 						);
 						return;
 					}
@@ -316,11 +370,13 @@ async function main(): Promise<void> {
 					const braces = (text: string) =>
 						(text.match(/\{[^{}]*\}/g) ?? []).sort().join("|");
 
-					if (braces(entry.msgid) !== braces(restored)) {
+					// Against the slot's OWN source: a plural form legitimately
+					// carries {count} where the singular does not.
+					if (braces(unit.text) !== braces(restored)) {
 						failed += 1;
 						console.warn(
-							`fill: ${tag} "${entry.msgid}" placeholder mismatch (${braces(
-								entry.msgid
+							`fill: ${tag} "${unit.text}" placeholder mismatch (${braces(
+								unit.text
 							)} → ${braces(restored)})`
 						);
 						return;
@@ -329,7 +385,7 @@ async function main(): Promise<void> {
 					if (isDegenerate(restored)) {
 						failed += 1;
 						console.warn(
-							`fill: ${tag} "${entry.msgid}" degenerate output (${restored.slice(
+							`fill: ${tag} "${unit.text}" degenerate output (${restored.slice(
 								0,
 								40
 							)})`
@@ -337,7 +393,7 @@ async function main(): Promise<void> {
 						return;
 					}
 
-					entry.msgstr = [restored];
+					unit.entry.msgstr[unit.slot] = restored;
 					filled += 1;
 				});
 

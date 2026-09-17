@@ -47,9 +47,6 @@
   "cmd.usageNickMulti": "Gebruik: /{cmd} <nick> [.nick]",
   "cmd.usageReact": "Gebruik: /{cmd} <tekst> [msgid]",
   "cmd.usageRedact": "Gebruik: /{cmd} <msgid> [reden]",
-  "code.showAllLines": {
-    "one": "Alle {count}-regel tonen"
-  },
   "code.showLess": "Minder tonen",
   "composer.cancel": "Annuleren",
   "composer.cancelEscape": "Annuleren (Escape)",
@@ -65,24 +62,6 @@
   "composer.send": "Bericht versturen",
   "composer.uploadFile": "Bestand uploaden",
   "composer.uploadWaiting": "wachten op de server.",
-  "condensed.away": {
-    "one": "eenmaal weggestreept"
-  },
-  "condensed.back": {
-    "one": "één keer terug gemerkt"
-  },
-  "condensed.chghost": {
-    "one": "{count} gebruiker heeft de hostnaam gewijzigd"
-  },
-  "condensed.join": {
-    "one": "{count} gebruiker is toegetreden"
-  },
-  "condensed.left": {
-    "one": "{count} gebruiker is vertrokken"
-  },
-  "condensed.nick": {
-    "one": "{count} gebruiker is nick veranderd"
-  },
   "condensed.toggle": "Statusberichten aan/uit",
   "confirm.cancel": "Annuleren",
   "connect.account": "Account",
@@ -547,9 +526,6 @@
   "settings.aliases.nestedTail": "zonder looping.",
   "settings.aliases.paneAria": "Commandodeneseeeeeeeee",
   "settings.aliases.previewMiss": "Geen.... dit zou worden verstuurd als getypt.",
-  "settings.aliases.statusBroken": {
-    "one": "{count}. Opgeslagen. rijen met fouten worden niet opgeslagen."
-  },
   "settings.aliases.titleHeading": "Commandodeneseeeeeeeee",
   "settings.aliases.tryAria": "Probeer een",
   "settings.aliases.tryExample": "/{name} enkele argumenten",
@@ -752,9 +728,6 @@
   "system.nick": "{nick} staat nu bekend als {newNick}",
   "system.part": "{nick} heeft het kanaal verlaten",
   "system.quit": "{nick} is gestopt",
-  "typing.many": {
-    "one": "{nick1}, {nick2} en {count} andere is aan het typen."
-  },
   "typing.three": "{nick1}, {nick2} en {nick3} typen.",
   "typing.two": "{nick1} en {nick2} typen.",
   "upload.cancel": "Annuleren",

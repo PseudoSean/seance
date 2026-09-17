@@ -51,9 +51,6 @@
   "cmd.usageNickMulti": "Příkaz: /{cmd} <nick> [...nick]",
   "cmd.usageReact": "Příkaz: /{cmd} <text> [msgid]",
   "cmd.usageRedact": "Příkaz: /{cmd} <msgid> [důvod]",
-  "code.showAllLines": {
-    "one": "Zobrazit vše {count} řádek"
-  },
   "code.showLess": "Zobrazit méně",
   "composer.cancel": "Zrušit",
   "composer.cancelEscape": "Zrušit (Ukázkový)",
@@ -67,9 +64,6 @@
   "composer.inputLabel": "Vstupní zpráva",
   "composer.notConnected": "Neodpojený",
   "composer.placeholder": "Zapisovat do {name}",
-  "composer.reconnectIn": {
-    "one": "Připojují se k {network} za {seconds}s…"
-  },
   "composer.replyingTo": "Odpovídáme {nick}:",
   "composer.send": "Odeslat zprávu",
   "composer.uploadFile": "Nahrát soubor",
@@ -77,30 +71,6 @@
   "composer.uploadPreparing": "připravuje se…",
   "composer.uploadWaiting": "čeká na server…",
   "composer.uploading": "Nahrává se {file}",
-  "condensed.away": {
-    "one": "označen jako pryč"
-  },
-  "condensed.back": {
-    "one": "označen jako zpátky"
-  },
-  "condensed.chghost": {
-    "one": "{count} uživatel změnil hostname"
-  },
-  "condensed.join": {
-    "one": "{count} uživatel se připojil"
-  },
-  "condensed.kicked": {
-    "one": "{count} uživatel byl vystřelen"
-  },
-  "condensed.left": {
-    "one": "{count} uživatel se odpojil"
-  },
-  "condensed.modes": {
-    "one": "Režim {count} byl nastaven"
-  },
-  "condensed.nick": {
-    "one": "Uživatel {count} změnil nickname"
-  },
   "condensed.toggle": "Přepnout stavové zprávy",
   "confirm.cancel": "Zrušit",
   "connect.account": "Účet",
@@ -372,9 +342,6 @@
   "list.kindBans": "Seznam zabanovaných",
   "list.kindExcepts": "Seznam výjimk",
   "list.kindInvites": "Seznam pozvání",
-  "list.loaded": {
-    "one": "Načteno {count} kanál..."
-  },
   "list.loading": "Načítám seznam kanálů, může to trvat chvíli...",
   "list.windowTitle": "{kind} pro {channel}",
   "loading.connecting": "Připojují...",
@@ -620,9 +587,6 @@
   "settings.general.backupHeading": "Zálohování a obnovení",
   "settings.general.backupIntro": "Uložte své nastavení do souboru. Můžete ho zde obnovit nebo na jiném zařízení.",
   "settings.general.backupMutes": "Zvukové a ignorování seznamy",
-  "settings.general.backupNetworks": {
-    "one": "{count} síť"
-  },
   "settings.general.backupPartSettings": "Vaše nastavení",
   "settings.general.backupPasswords": "Soubor zahrnuje síťové hesla.",
   "settings.general.export": "Export nastavení…",
@@ -668,18 +632,12 @@
   "settings.notifications.browserUnsupported": "Upozornění nejsou podporovány váš prohlížeč.",
   "settings.notifications.commaList": "Oddělené čárkou, např.: slovo, něco dalších slov, další slovo",
   "sidebar.language": "Zobrazit jazyk",
-  "sidebar.mentions": {
-    "one": "{count} zmínka"
-  },
   "sidebar.networkList": "Síť a seznam kanálů",
   "sidebar.noResults": "Nebyl nalezen žádný výsledek.",
   "sidebar.searchLabel": "Hledání v seznamu kanálů",
   "sidebar.settings": "Nastavení",
   "sidebar.toggle": "Přepnout seznam kanálů",
   "sidebar.toggleDevtools": "Přepnout eruda devtools",
-  "sidebar.unread": {
-    "one": "{count} nepřečtené zprávy"
-  },
   "special.bans.banned": "Zablokován",
   "special.bans.bannedAt": "Zablokován dne",
   "special.bans.bannedBy": "Zablokován pouze",
@@ -731,9 +689,6 @@
   "system.nick": "{nick} je nyní známý jako {newNick}",
   "system.part": "{nick} se odpojil z kanálu",
   "system.quit": "{nick} opustil kanál",
-  "typing.many": {
-    "one": "{nick1}, {nick2} a {count} jiného typuje…"
-  },
   "typing.one": "{nick} typuje…",
   "typing.three": "{nick1}, {nick2} a {nick3} typují…",
   "typing.two": "{nick1} a {nick2} typují…",
@@ -759,9 +714,6 @@
   "upload.removeOne": "Neodesílat {name}",
   "upload.removeTitle": "Neodesílat tento soubor",
   "upload.tooLarge": "Soubor {file} je větší než maximální povolený rozsah",
-  "userlist.count": {
-    "one": "{count} uživatel"
-  },
   "userlist.searchLabel": "Hledání mezi seznamem uživatelů",
   "userlist.title": "Seznam uživatelů pro {name}",
   "whois.actualHost": "Skutečný host:",

@@ -87,7 +87,10 @@ export function mergePo(options: MergeOptions): MergeOutcome {
 		entries.push({
 			...potEntry,
 			msgstr: existing.msgstr,
-			flags: drifted ? ["fuzzy"] : existing.flags,
+			// The drift mark joins the flags the entry already carries
+			// (c-format, no-wrap, …) instead of replacing them; a second
+			// drift on an already-fuzzy entry adds nothing.
+			flags: drifted ? [...new Set([...existing.flags, "fuzzy"])] : existing.flags,
 		});
 
 		if (drifted) {

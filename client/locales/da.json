@@ -45,9 +45,6 @@
   "composer.inputLabel": "Besked indtastning",
   "composer.notConnected": "Ikke forbundet",
   "composer.placeholder": "Skriv til {name}",
-  "composer.reconnectIn": {
-    "one": "Genforbindelse til {network} i {seconds}s…"
-  },
   "composer.replyingTo": "Svarer til {nick}:",
   "composer.send": "Send besked",
   "composer.uploadFile": "Upload fil",
@@ -55,30 +52,6 @@
   "composer.uploadPreparing": "forbereder…",
   "composer.uploadWaiting": "venter på servern…",
   "composer.uploading": "Upload {file}",
-  "condensed.away": {
-    "one": "markert væk en gang"
-  },
-  "condensed.back": {
-    "one": "markert tilbage en gang"
-  },
-  "condensed.chghost": {
-    "one": "{count} bruger har ændret hostname"
-  },
-  "condensed.join": {
-    "one": "{count} bruger har trænnet"
-  },
-  "condensed.kicked": {
-    "one": "{count} bruger blev kastet"
-  },
-  "condensed.left": {
-    "one": "{count} bruger har forladt"
-  },
-  "condensed.modes": {
-    "one": "{count} mode var sat"
-  },
-  "condensed.nick": {
-    "one": "{count} bruger har ændret nick"
-  },
   "condensed.toggle": "Vekslinger statusmeldinger",
   "confirm.cancel": "Annuller",
   "connect.account": "Konto",
@@ -364,9 +337,6 @@
   "list.kindBans": "Bannelist",
   "list.kindExcepts": "Undtagelsesliste",
   "list.kindInvites": "Invitationsliste",
-  "list.loaded": {
-    "one": "Indlæst {count} kanal..."
-  },
   "list.loading": "Indlæser kanal liste, dette kan tage et øjeblik...",
   "list.windowTitle": "{kind} for {channel}",
   "loading.connecting": "Connecting…",
@@ -608,9 +578,6 @@
   "settings.general.backupHeading": "Backup og genopretning",
   "settings.general.backupIntro": "Gem dine indstillinger i en fil. Du kan genoprette her eller på et andet enhed.",
   "settings.general.backupMutes": "Muser og ignoreringslistes",
-  "settings.general.backupNetworks": {
-    "one": "{count} netværk"
-  },
   "settings.general.backupPartSettings": "dine indstillinger",
   "settings.general.backupPasswords": "Filen indeholder nettverksparol.",
   "settings.general.export": "Ekspортér indstillinger…",
@@ -715,9 +682,6 @@
   "system.nick": "{nick} er nu kendt som {newNick}",
   "system.part": "{nick} har forladt canalen",
   "system.quit": "{nick} har quit",
-  "typing.many": {
-    "one": "{nick1}, {nick2} og {count} anden skriver..."
-  },
   "typing.one": "{nick} skriver...",
   "typing.three": "{nick1}, {nick2} og {nick3} skriver...",
   "typing.two": "{nick1} og {nick2} skriver...",
@@ -743,9 +707,6 @@
   "upload.removeOne": "Upload {name} ikke",
   "upload.removeTitle": "Upload denne fil ikke",
   "upload.tooLarge": "Fil {file} er over det maksimale tilladte størrelse",
-  "userlist.count": {
-    "one": "{count} bruger"
-  },
   "userlist.searchLabel": "Søg i brugerlisten",
   "userlist.title": "Brugerliste for {name}",
   "whois.actualHost": "Virkelig host:",

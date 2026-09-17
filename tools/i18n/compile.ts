@@ -19,10 +19,10 @@
 // scaffolded and strays are moved into attic/ (a subdirectory, invisible
 // to the compile's non-recursive listing).
 
-import {mkdirSync, readFileSync, readdirSync, writeFileSync} from "node:fs";
-import {dirname, resolve} from "node:path";
+import {mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync} from "node:fs";
+import {basename, dirname, resolve} from "node:path";
 import {parsePo, PoEntry} from "./po";
-import {PLURAL_RULES, parsePluralForms, PluralRule} from "./plural";
+import {PLURAL_RULES, parsePluralForms, pluralEval, PluralRule} from "./plural";
 import {pseudo} from "./pseudo";
 import {AVAILABLE_PATH, LOCALES_DIR} from "./paths";
 import {generateTargets} from "./targets";
@@ -56,34 +56,66 @@ export interface CompileResult {
 	catalogs: Record<string, Catalog>;
 	/** The fuzzy-skip warnings (also printed on stderr). */
 	warnings: string[];
-}
-
-/** gettext's C plural expression, restricted to the arithmetic it allows. */
-function pluralEval(expr: string, n: number): number {
-	if (!/^[n0-9 ():!=<>+\-*/%&|?:]+$/.test(expr)) {
-		throw new Error(`unsafe plural expression: ${expr}`);
-	}
-
-	// gettext's C expressions yield 0/1; the JS forms of simple rules ("n != 1")
-	// yield booleans, so coerce — the result indexes msgstr[N]. The regex
-	// allowlist above is the only thing that reaches here.
-	// eslint-disable-next-line @typescript-eslint/no-implied-eval
-	return Number(Function("n", `"use strict"; return (${expr});`)(n));
+	/** Catalog files removed from outDir: tags that are no longer targets. */
+	pruned: string[];
 }
 
 const CLDR_CATEGORIES = ["zero", "one", "two", "few", "many", "other"] as const;
 
-/** CLDR category -> gettext msgstr index, probed over n = 0..199. */
-function categoryIndexMap(tag: string, expr: string): Record<string, number> {
+// How far the probe counts. Load-bearing, not arbitrary: it has to reach
+// the first integer of every category a locale actually uses for chat
+// counts (ar's "other" first appears at 100), and it has to STOP before
+// the categories CLDR keeps for compact millions (pt/fr put 1e6 in
+// "many"). A category the scan never sees is simply left out of the map,
+// which is safe because core.ts's tCount falls back
+// `entry[category] ?? entry.other`.
+const PROBE_LIMIT = 199;
+
+/**
+ * CLDR category -> gettext msgstr index, mapped by the counts CLDR samples
+ * each category with: "zero" at n = 0, "one" at n = 1, "two" at n = 2 and
+ * "few"/"many"/"other" at the smallest n >= 2 that CLDR puts in them. The
+ * naive reading — the first n from 0 that the gettext expression sends to a
+ * slot — disagrees with CLDR wherever the two systems draw the line
+ * differently (CLDR counts pt's 0 as "one" while `n != 1` sends it to the
+ * plural slot; tr's `(n > 1)` is 0 at n = 0, which CLDR calls "other"), and
+ * the runtime asks Intl.PluralRules, so CLDR's reading is the one that
+ * matters.
+ */
+export function categoryIndexMap(tag: string, expr: string): Record<string, number> {
 	const rules = new Intl.PluralRules(tag);
 	const probed: Record<string, number> = {};
 
-	for (let n = 0; n <= 199; n++) {
-		const category = rules.select(n); // "zero"|"one"|"two"|"few"|"many"|"other"
-
-		if (!(category in probed)) {
+	const sample = (category: string, n: number) => {
+		if (!(category in probed) && rules.select(n) === category) {
 			probed[category] = pluralEval(expr, n);
 		}
+	};
+
+	sample("zero", 0);
+	sample("one", 1);
+	sample("two", 2);
+
+	for (let n = 2; n <= PROBE_LIMIT; n++) {
+		const category = rules.select(n);
+
+		if (category === "few" || category === "many" || category === "other") {
+			sample(category, n);
+		}
+	}
+
+	// Every locale has an "other", but in the Slavic rules it is the
+	// fractions' category and no integer ever lands in it. gettext has no
+	// such slot either: its catch-all branch — the highest index the
+	// expression yields — is what those counts read, so "other" takes it.
+	if (!("other" in probed)) {
+		let catchAll = 0;
+
+		for (let n = 0; n <= PROBE_LIMIT; n++) {
+			catchAll = Math.max(catchAll, pluralEval(expr, n));
+		}
+
+		probed.other = catchAll;
 	}
 
 	// Emit in CLDR's canonical order so the compiled JSON reads stably.
@@ -118,17 +150,25 @@ function assertPlaceholders(entry: PoEntry): void {
 }
 
 /** Entry → compiled value. Untranslated entries compile to "" — no invention. */
-function compileEntry(entry: PoEntry, tag: string, expr: string): string | Record<string, string> {
+function compileEntry(
+	entry: PoEntry,
+	map: Record<string, number>
+): string | Record<string, string> {
 	if (entry.msgidPlural !== undefined) {
-		const map = categoryIndexMap(tag, expr);
 		const forms: Record<string, string> = {};
 
 		for (const [category, index] of Object.entries(map)) {
 			const text = entry.msgstr[index];
 
-			if (text) {
-				forms[category] = text;
+			// A half-filled plural used to compile to whatever categories it
+			// had, and tCount then served the singular for every count. All
+			// or nothing: an incomplete entry is dropped and en serves the
+			// whole key.
+			if (!text) {
+				return {};
 			}
+
+			forms[category] = text;
 		}
 
 		return forms;
@@ -247,6 +287,8 @@ export function compileLocales(options: CompileOptions = {}): CompileResult {
 		}
 
 		const catalog: Catalog = {};
+		// A per-locale fact, not a per-entry one.
+		const categories = categoryIndexMap(tag, rule.expr);
 
 		for (const entry of entries) {
 			if (entry.flags.includes("fuzzy")) {
@@ -259,7 +301,7 @@ export function compileLocales(options: CompileOptions = {}): CompileResult {
 			}
 
 			assertPlaceholders(entry);
-			const value = compileEntry(entry, tag, rule.expr);
+			const value = compileEntry(entry, categories);
 
 			// The runtime falls back to en on key ABSENCE, so an entry with
 			// nothing compiled must be left out — a present "" (or an empty
@@ -292,6 +334,23 @@ export function compileLocales(options: CompileOptions = {}): CompileResult {
 		writeFileSync(resolve(outDir, `${tag}.json`), JSON.stringify(catalog, null, 2) + "\n");
 	}
 
+	// A catalog whose tag is no longer a target has to go: sync.ts archives
+	// the .po, but the compiled .json would stay behind and the build copies
+	// whatever it finds into public/. The generated tag list is not a
+	// catalog, so it is spared by name.
+	const kept = new Set([
+		...Object.keys(catalogs).map((tag) => `${tag}.json`),
+		basename(tagsPath),
+	]);
+	const pruned: string[] = [];
+
+	for (const file of readdirSync(outDir)) {
+		if (file.endsWith(".json") && !kept.has(file)) {
+			rmSync(resolve(outDir, file));
+			pruned.push(file);
+		}
+	}
+
 	mkdirSync(dirname(availablePath), {recursive: true});
 	writeFileSync(availablePath, renderAvailable(available));
 	mkdirSync(dirname(tagsPath), {recursive: true});
@@ -301,7 +360,7 @@ export function compileLocales(options: CompileOptions = {}): CompileResult {
 	// formatting — so regeneration is byte-stable.
 	writeFileSync(tagsPath, JSON.stringify(tags, null, "\t") + "\n");
 
-	return {tags, catalogs, warnings};
+	return {tags, catalogs, warnings, pruned};
 }
 
 function main(): void {
@@ -343,7 +402,8 @@ function main(): void {
 	const locales = result.tags.filter((tag) => tag !== "en" && tag !== "qqx");
 	console.log(
 		`compile: en.json, qqx.json, ${locales.length} locale catalog(s), available.ts, tags.json, ${targets.length} target language(s), ${callSites.length} static call-site key(s)` +
-			(result.warnings.length > 0 ? ` — ${result.warnings.length} fuzzy skipped` : "")
+			(result.warnings.length > 0 ? ` — ${result.warnings.length} fuzzy skipped` : "") +
+			(result.pruned.length > 0 ? ` — pruned ${result.pruned.join(", ")}` : "")
 	);
 }
 

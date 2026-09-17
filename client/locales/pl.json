@@ -51,9 +51,6 @@
   "cmd.usageNickMulti": "Użycie: /{cmd} <nick> [...nick]",
   "cmd.usageReact": "Użycie: /{cmd} <text> [msgid]",
   "cmd.usageRedact": "Użycie: /{cmd} <msgid> [przyczyna]",
-  "code.showAllLines": {
-    "one": "Pokaż wszystkie {count} wierszy"
-  },
   "code.showLess": "Pokaż mniej",
   "composer.cancel": "Anuluj",
   "composer.cancelEscape": "Anuluj (Ucieczka)",
@@ -67,9 +64,6 @@
   "composer.inputLabel": "Wprowadzanie wiadomości",
   "composer.notConnected": "Niepołączony",
   "composer.placeholder": "Wyślij do {name}",
-  "composer.reconnectIn": {
-    "one": "Przywracanie połączenia z {network} w {seconds}s…"
-  },
   "composer.replyingTo": "Odpowiadając {nick}:",
   "composer.send": "Wyślij wiadomość",
   "composer.uploadFile": "Przesłanie pliku",
@@ -77,24 +71,6 @@
   "composer.uploadPreparing": "przygotowywanie…",
   "composer.uploadWaiting": "czekanie na serwer…",
   "composer.uploading": "Przesyłanie {file}",
-  "condensed.away": {
-    "one": "oznaczony jako odchodziący raz"
-  },
-  "condensed.back": {
-    "one": "oznaczony jako z powrotem raz"
-  },
-  "condensed.chghost": {
-    "one": "{count} użytkownik zmienił hostname"
-  },
-  "condensed.join": {
-    "one": "{count} użytkownik dołączył"
-  },
-  "condensed.kicked": {
-    "one": "{count} użytkownik został wyrzucony"
-  },
-  "condensed.left": {
-    "one": "{count} użytkownik opuścił"
-  },
   "condensed.toggle": "Włącz komunikaty statusu",
   "confirm.cancel": "Anuluj",
   "connect.account": "Konto",
@@ -347,9 +323,6 @@
   "list.kindBans": "Lista zakazów",
   "list.kindExcepts": "Lista wyjątków",
   "list.kindInvites": "Lista zaproszeń",
-  "list.loaded": {
-    "one": "Załadowano {count} kanał..."
-  },
   "list.loading": "Ładowanie listy kanałów, może to zająć chwilę...",
   "list.windowTitle": "{kind} dla {channel}",
   "loading.connecting": "Połączanie…",
@@ -539,12 +512,6 @@
   "settings.aliases.paneAria": "Aliasy poleceń",
   "settings.aliases.previewMiss": "Nie jest aliasem — byłby wysłany jak wpisany.",
   "settings.aliases.removeAria": "Usuń alias {name}",
-  "settings.aliases.statusBroken": {
-    "one": "{count} aliasy zapisane — wiersze z błędami nie są zapisane."
-  },
-  "settings.aliases.statusSaved": {
-    "one": "{count} aliasy zapisane."
-  },
   "settings.aliases.titleHeading": "Aliasy poleceń",
   "settings.aliases.tryAria": "Spróbuj alias",
   "settings.aliases.tryExample": "/{name} niektóre argumenty",
@@ -610,9 +577,6 @@
   "settings.general.backupHeading": "Zapisywanie i przywracanie",
   "settings.general.backupIntro": "Zapisz ustawienia do pliku. Możesz je przywrócić tutaj lub na innym urządzeniu.",
   "settings.general.backupMutes": "Zamykanie i ignorowanie",
-  "settings.general.backupNetworks": {
-    "one": "{count} sieć"
-  },
   "settings.general.backupPartSettings": "Twoje ustawienia",
   "settings.general.backupPasswords": "Plik zawiera hasła sieciowe.",
   "settings.general.export": "Eksportuj ustawienia…",
@@ -658,18 +622,12 @@
   "settings.notifications.browserUnsupported": "Powiadomienia nie są wspierane przez przeglądarkę.",
   "settings.notifications.commaList": "Oddzielone przecinkiem, np.: słowo, inne słowa, kolejne słowo",
   "sidebar.language": "Język wyświetlania",
-  "sidebar.mentions": {
-    "one": "{count} wypowiedź"
-  },
   "sidebar.networkList": "Lista sieci i kanałów",
   "sidebar.noResults": "Brak wyników.",
   "sidebar.searchLabel": "Wyszukaj w liście kanałów",
   "sidebar.settings": "Ustawienia",
   "sidebar.toggle": "Przełącz lista kanałów",
   "sidebar.toggleDevtools": "Przełącz Eruda DevTools",
-  "sidebar.unread": {
-    "one": "{count} nereadowe wiadomość"
-  },
   "special.bans.banned": "Zabronione",
   "special.bans.bannedAt": "Zabronione w",
   "special.bans.bannedBy": "Zabronione przez",
@@ -721,9 +679,6 @@
   "system.nick": "{nick} jest teraz znany jako {newNick}",
   "system.part": "{nick} opuścił kanal",
   "system.quit": "{nick} wylogował się",
-  "typing.many": {
-    "one": "{nick1}, {nick2} i {count} innych typią…"
-  },
   "typing.one": "{nick} typią…",
   "typing.three": "{nick1}, {nick2} i {nick3} typią…",
   "typing.two": "{nick1} i {nick2} typią…",
@@ -749,9 +704,6 @@
   "upload.removeOne": "Nie wysyłaj {name}",
   "upload.removeTitle": "Nie wysyłaj tego pliku",
   "upload.tooLarge": "Plik {file} jest większy niż maksymalny dozwolony rozmiar",
-  "userlist.count": {
-    "one": "{count} użytkownik"
-  },
   "userlist.searchLabel": "Wyszukaj w liście użytkowników",
   "userlist.title": "Lista użytkowników dla {name}",
   "whois.actualHost": "Aktualny host:",

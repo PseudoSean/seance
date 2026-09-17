@@ -7,6 +7,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#, c-format
 #. Heading of the connect form — the English copy drifted ("!" added).
 #: client/components/Windows/Connect.vue:107
 msgctxt "connect.title"

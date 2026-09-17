@@ -50,9 +50,6 @@
   "cmd.usageNickMulti": "Használat: /{cmd} <nick> [...nick]",
   "cmd.usageReact": "Használat: /{cmd} <text> [msgid]",
   "cmd.usageRedact": "Használat: /{cmd} <msgid> [reason]",
-  "code.showAllLines": {
-    "one": "Minden {count} sor megjelenítése"
-  },
   "code.showLess": "Kisebb megjelenítés",
   "composer.cancel": "Mégsem",
   "composer.cancelEscape": "Mégsem (Futó)",
@@ -66,9 +63,6 @@
   "composer.inputLabel": "Üzenet beküldése",
   "composer.notConnected": "Nem kapcsolódik",
   "composer.placeholder": "Írás {name}hez",
-  "composer.reconnectIn": {
-    "one": "Új kapcsolódás a {network} hálózathoz {seconds}s..."
-  },
   "composer.replyingTo": "Válasz {nick} részére:",
   "composer.send": "Üzenet küldése",
   "composer.uploadFile": "Fájl feltöltése",
@@ -76,30 +70,6 @@
   "composer.uploadPreparing": "készülés...",
   "composer.uploadWaiting": "vár a szerver részére...",
   "composer.uploading": "{file} feltöltése",
-  "condensed.away": {
-    "one": "egyszer elvált"
-  },
-  "condensed.back": {
-    "one": "egyszer visszatért"
-  },
-  "condensed.chghost": {
-    "one": "{count} felhasználó megváltoztatta a hostname-t"
-  },
-  "condensed.join": {
-    "one": "{count} felhasználó csatlakozott"
-  },
-  "condensed.kicked": {
-    "one": "{count} felhasználó elbocsátásra került"
-  },
-  "condensed.left": {
-    "one": "{count} felhasználó távozott"
-  },
-  "condensed.modes": {
-    "one": "{count} módus beállítva"
-  },
-  "condensed.nick": {
-    "one": "{count} felhasználó megváltoztatta a nicket"
-  },
   "condensed.toggle": "Állapotüzenetek kapcsolása",
   "confirm.cancel": "Mégsem",
   "connect.account": "Felhasználó",
@@ -346,9 +316,6 @@
   "list.kindBans": "Tiltság lista",
   "list.kindExcepts": "Kivétel lista",
   "list.kindInvites": "Kijelölt lista",
-  "list.loaded": {
-    "one": "{count} csatorna betöltve..."
-  },
   "list.loading": "Csatorna lista betöltése, ez időben meghosszabbítható...",
   "list.windowTitle": "{kind} {channel} esetén",
   "loading.connecting": "Kapcsolódás...",
@@ -596,9 +563,6 @@
   "settings.general.backupHeading": "Biztosítás és visszaállítás",
   "settings.general.backupIntro": "Mentsd be beállításaid egy fájlba. Itt visszaállíthatod, vagy egy másik eszközön.",
   "settings.general.backupMutes": "Nyomtatás és figyelmen kívül tartás listák",
-  "settings.general.backupNetworks": {
-    "one": "{count} hálózat"
-  },
   "settings.general.backupPartSettings": "Beállításaid",
   "settings.general.backupPasswords": "A fájl tartalmazza a hálózati jelszavakat.",
   "settings.general.export": "Beállítások exportálása…",
@@ -644,18 +608,12 @@
   "settings.notifications.browserUnsupported": "A böngésző nem támogatja az értesítéseket.",
   "settings.notifications.commaList": "Vesszővel elválasztott, például: szó, még több szó, egyéb szó",
   "sidebar.language": "Nyelv megjelenítése",
-  "sidebar.mentions": {
-    "one": "{count} említés"
-  },
   "sidebar.networkList": "Hálózat és Canál lista",
   "sidebar.noResults": "Nincs eredmény.",
   "sidebar.searchLabel": "Keresés a canál listában",
   "sidebar.settings": "Beállítások",
   "sidebar.toggle": "Canál lista kapcsolítása",
   "sidebar.toggleDevtools": "Kapcsolódás eruda devtools",
-  "sidebar.unread": {
-    "one": "{count} olvasatlan üzenet"
-  },
   "special.bans.banned": "Tiltság",
   "special.bans.bannedAt": "Tiltság ideje",
   "special.bans.bannedBy": "Tiltság által",
@@ -707,9 +665,6 @@
   "system.nick": "{nick} most {newNick} néven ismert",
   "system.part": "{nick} távozott a canális",
   "system.quit": "{nick} kilépett",
-  "typing.many": {
-    "one": "{nick1}, {nick2} és {count} másik típelt…"
-  },
   "typing.one": "{nick} típelt…",
   "typing.three": "{nick1}, {nick2} és {nick3} típelt…",
   "typing.two": "{nick1} és {nick2} típelt…",
@@ -735,9 +690,6 @@
   "upload.removeOne": "Ne töltse fel {name}",
   "upload.removeTitle": "Ne töltse fel ez a fájl",
   "upload.tooLarge": "A {file} fájl mérete meghaladja a megengedett maximum méretet",
-  "userlist.count": {
-    "one": "{count} felhasználó"
-  },
   "userlist.searchLabel": "Keresés a felhasználók listájában",
   "userlist.title": "Felhasználók lista {name} számára",
   "whois.actualHost": "Valódi host:",

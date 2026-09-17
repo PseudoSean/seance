@@ -49,12 +49,6 @@
   "composer.send": "Отправить сообщение",
   "composer.uploadFile": "Загрузить файл",
   "composer.uploadWaiting": "Жду сервера....",
-  "condensed.away": {
-    "one": "помечено однажды"
-  },
-  "condensed.back": {
-    "one": "помечено назад один раз"
-  },
   "condensed.toggle": "Сообщения о состоянии панели",
   "confirm.cancel": "Отмена",
   "connect.account": "Счет",

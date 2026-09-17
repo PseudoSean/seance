@@ -32,9 +32,6 @@
   "cmd.usageNickMulti": "Verwendung: /{cmd} <nick> [...nick]",
   "cmd.usageReact": "Verwendung: /{cmd} <text> [msgid]",
   "cmd.usageRedact": "Verwendung: /{cmd} <msgid> [Vernunft]",
-  "code.showAllLines": {
-    "one": "Alle Zeile {count} anzeigen"
-  },
   "code.showLess": "Weniger anzeigen",
   "composer.cancel": "Abbrechen",
   "composer.cancelEscape": "Abbrechen (Ausweichen)",
@@ -52,30 +49,6 @@
   "composer.uploadFile": "Datei hochladen",
   "composer.uploadPreparing": "Vorbereitung...",
   "composer.uploadWaiting": "warten auf den Server...",
-  "condensed.away": {
-    "one": "einmal markiert"
-  },
-  "condensed.back": {
-    "one": "einmal markiert"
-  },
-  "condensed.chghost": {
-    "one": "{count} Benutzer hat den Hostnamen geändert"
-  },
-  "condensed.join": {
-    "one": "{count} Benutzer hat sich angeschlossen"
-  },
-  "condensed.kicked": {
-    "one": "{count} Benutzer wurde getreten"
-  },
-  "condensed.left": {
-    "one": "{count} Benutzer hat verlassen"
-  },
-  "condensed.modes": {
-    "one": "{count}-Modus wurde eingestellt"
-  },
-  "condensed.nick": {
-    "one": "{count} Benutzer hat sich geändert nick"
-  },
   "condensed.toggle": "Statusmeldungen umschalten",
   "confirm.cancel": "Abbrechen",
   "connect.account": "Konto",
@@ -538,9 +511,6 @@
   "settings.aliases.nestedTail": "ohne Schleifen.",
   "settings.aliases.paneAria": "Befehls-Aliasen",
   "settings.aliases.previewMiss": "Kein Alias — das würde als eingegeben gesendet.",
-  "settings.aliases.statusBroken": {
-    "one": "{count} alias stored — Zeilen mit Fehlern werden nicht gespeichert."
-  },
   "settings.aliases.titleHeading": "Befehls-Aliasen",
   "settings.aliases.tryAria": "Versuch einen Alias",
   "settings.aliases.tryExample": "/{name} einige Argumente",
@@ -725,9 +695,6 @@
   "system.nick": "{nick} ist jetzt als {newNick} bekannt",
   "system.part": "{nick} hat den Kanal verlassen",
   "system.quit": "{nick} hat aufgehört",
-  "typing.many": {
-    "one": "{nick1}, {nick2} und {count} andere tippt..."
-  },
   "typing.one": "{nick} tippt...",
   "typing.three": "{nick1}, {nick2} und {nick3} tippen...",
   "typing.two": "{nick1} und {nick2} tippen...",
@@ -749,9 +716,6 @@
   "upload.noteStrip": "Metadaten (EXIF) werden vor dem Hochladen entfernt",
   "upload.noteUnsupported": "So ist es.",
   "upload.removeTitle": "Laden Sie diese Datei nicht hoch",
-  "userlist.count": {
-    "one": "Benutzer {count}"
-  },
   "userlist.searchLabel": "Suche unter der Benutzerliste",
   "whois.actualHost": "Tatsächlicher Host:",
   "whois.actualUsername": "Tatsächlicher Benutzername:",

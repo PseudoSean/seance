@@ -1,18 +1,28 @@
 import {expect} from "chai";
 import {after, before, describe, it} from "mocha";
 import sinon from "sinon";
-import {mkdtempSync, readFileSync, rmSync} from "node:fs";
+import {
+	copyFileSync,
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import {tmpdir} from "node:os";
 import {join, resolve} from "node:path";
 import {parsePo} from "../../tools/i18n/po";
 import {addToPot} from "../../tools/i18n/add";
 import {ALLOWED_UNREFERENCED, ALLOWED_DYNAMIC, checkPot} from "../../tools/i18n/check";
 import {POT_PATH} from "../../tools/i18n/paths";
-import {compileLocales, Catalog, CompileResult} from "../../tools/i18n/compile";
+import {categoryIndexMap, compileLocales, Catalog, CompileResult} from "../../tools/i18n/compile";
 import {parseTargets, TARGETS_SOURCE} from "../../tools/i18n/targets";
+import {planPluralSlots} from "../../tools/i18n/plural";
 import {isRTL} from "../../client/js/i18n/core";
 import {pseudo} from "../../tools/i18n/pseudo";
 import {mergePo} from "../../tools/i18n/merge";
+import {scaffoldTag} from "../../tools/i18n/scaffold";
 import instrument from "../../tools/i18n/instrument-loader.mjs";
 
 const FIXTURES = resolve("tools/i18n/fixtures");
@@ -45,6 +55,44 @@ describe("i18n toolchain", () => {
 	}
 
 	describe("compile", () => {
+		it("maps a CLDR category to the gettext slot of the count CLDR samples it with", () => {
+			// The probe is what CLDR's categories expect, not what gettext's
+			// expression hits first: CLDR puts pt's 0 in "one" while the
+			// expression (n != 1) puts it in slot 1, so scanning from n = 0
+			// used to send "one" to the plural slot and leave the singular
+			// slot unreadable (pt lost condensed.away entirely).
+			expect(categoryIndexMap("pt", "n != 1")).to.deep.equal({one: 0, other: 1});
+			// tr's (n > 1) is 0 at n = 0, where CLDR says "other" — the
+			// singular slot would swallow the plural.
+			expect(categoryIndexMap("tr", "(n > 1)")).to.deep.equal({one: 0, other: 1});
+			// A five-slot rule, every category reached by an integer.
+			expect(
+				categoryIndexMap("ga", "(n==1) ? 0 : (n==2) ? 1 : (n<7) ? 2 : (n<11) ? 3 : 4")
+			).to.deep.equal({one: 0, two: 1, few: 2, many: 3, other: 4});
+			// ru has no integer in CLDR "other" (it is the fractions'
+			// category), so "other" takes the expression's catch-all slot.
+			expect(
+				categoryIndexMap(
+					"ru",
+					"(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2)"
+				)
+			).to.deep.equal({one: 0, few: 1, many: 2, other: 2});
+		});
+
+		it("omits a plural entry that has not filled every mapped slot", () => {
+			// "partial.plural" carries msgstr[0] only. A half-translated
+			// plural rendered every count as the singular; the key is left
+			// out instead, so the runtime serves the whole entry from en.
+			const warn = sinon.stub(console, "warn");
+
+			try {
+				const result = compileFixture("compile/fuzzy");
+				expect(result.catalogs.fr).to.not.have.property("partial.plural");
+			} finally {
+				warn.restore();
+			}
+		});
+
 		it("maps a de.po plural entry through nplurals=2 onto the CLDR categories", () => {
 			expect(new Intl.PluralRules("de").select(1)).to.equal("one");
 			expect(new Intl.PluralRules("de").select(3)).to.equal("other");
@@ -62,6 +110,22 @@ describe("i18n toolchain", () => {
 				readFileSync(join(tmp, "compile-plural", "de.json"), "utf8")
 			);
 			expect(written).to.deep.equal(result.catalogs.de);
+		});
+
+		it("prunes a compiled catalog whose tag is no longer a target", () => {
+			// A dropped language leaves its .po behind (sync.ts archives it)
+			// but its compiled catalog used to sit in client/locales until
+			// someone deleted it by hand — and the build copies whatever is
+			// there into public/.
+			const outDir = join(tmp, "compile-plural");
+			compileFixture("compile/plural");
+			writeFileSync(join(outDir, "zz.json"), "{}\n");
+			compileFixture("compile/plural");
+			expect(existsSync(join(outDir, "zz.json")), "stray zz.json pruned").to.equal(false);
+			// The catalogs of this run, and the generated tag list, stay.
+			expect(existsSync(join(outDir, "de.json"))).to.equal(true);
+			expect(existsSync(join(outDir, "en.json"))).to.equal(true);
+			expect(existsSync(join(outDir, "tags.json"))).to.equal(true);
 		});
 
 		it("compiles en from the pot itself: the msgids are the English copy", () => {
@@ -268,6 +332,66 @@ describe("i18n toolchain", () => {
 		});
 	});
 
+	describe("scaffold", () => {
+		it("writes one empty msgstr slot per nplurals, not always two", () => {
+			// ru's rule has three forms. Two slots meant the fill could never
+			// write the third, and the compile then dropped every plural key.
+			const dir = join(tmp, "scaffold");
+			mkdirSync(dir, {recursive: true});
+			copyFileSync(join(FIXTURES, "compile/plural/messages.pot"), join(dir, "messages.pot"));
+			expect(scaffoldTag("ru", dir)).to.equal(true);
+
+			const {headers, entries} = parsePo(readFileSync(join(dir, "ru.po"), "utf8"));
+			expect(headers["plural-forms"]).to.contain("nplurals=3;");
+
+			const plural = entries.find((entry) => entry.msgctxt === "condensed.join");
+			expect(plural?.msgstr).to.deep.equal(["", "", ""]);
+			const singular = entries.find((entry) => entry.msgctxt === "connect.submit");
+			expect(singular?.msgstr).to.deep.equal([""]);
+		});
+	});
+
+	describe("the plural slot planner", () => {
+		// What fill.ts translates into each gettext slot. The singular form
+		// belongs to the slot the expression yields for n = 1 — slot 0 for
+		// (n != 1), but slot 1 where the rule orders them the other way —
+		// and every other slot
+		// translates msgid_plural. The fill used to write one slot and leave
+		// the rest empty, which the compile then dropped (or, worse, served
+		// as the singular for every count).
+		const entry = {msgid: "marked away once", msgidPlural: "marked away {count} times"};
+
+		it("sends msgid to the n = 1 slot and msgid_plural to every other one", () => {
+			expect(planPluralSlots(entry, 2, "n != 1")).to.deep.equal([
+				{index: 0, source: "msgid"},
+				{index: 1, source: "msgidPlural"},
+			]);
+			// A rule that does not put the singular first (fa's "n > 0 ? 1 : 0"):
+			// slot 1 is the one n = 1 reads, so that is where msgid goes.
+			expect(planPluralSlots(entry, 2, "n > 0 ? 1 : 0")).to.deep.equal([
+				{index: 0, source: "msgidPlural"},
+				{index: 1, source: "msgid"},
+			]);
+			expect(
+				planPluralSlots(
+					entry,
+					3,
+					"(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2)"
+				)
+			).to.deep.equal([
+				{index: 0, source: "msgid"},
+				{index: 1, source: "msgidPlural"},
+				{index: 2, source: "msgidPlural"},
+			]);
+			// One slot (ja, zh, ko, th, vi): the singular is what it holds.
+			expect(planPluralSlots(entry, 1, "0")).to.deep.equal([{index: 0, source: "msgid"}]);
+		});
+
+		it("plans nothing for a singular entry", () => {
+			expect(planPluralSlots({msgid: "Connect"}, 2, "n != 1")).to.deep.equal([]);
+		});
+	});
+
 	describe("merge", () => {
 		const options = {
 			potPath: join(FIXTURES, "merge/messages.pot"),
@@ -291,7 +415,9 @@ describe("i18n toolchain", () => {
 			// entry is marked for review.
 			expect(entries[0].msgid).to.equal("Connect to IRC");
 			expect(entries[0].msgstr).to.deep.equal(["Mit IRC verbinden"]);
-			expect(entries[0].flags).to.deep.equal(["fuzzy"]);
+			// The drift mark is ADDED to the flags the entry carried; a
+			// fuzzy entry that drifts again does not collect two marks.
+			expect(entries[0].flags).to.deep.equal(["c-format", "fuzzy"]);
 			expect(entries[0].context).to.deep.equal([
 				"Heading of the connect form (features.signIn off).",
 			]);

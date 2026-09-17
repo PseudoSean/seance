@@ -51,9 +51,6 @@
   "cmd.usageNickMulti": "Uso: /{cmd} <nick> [...nick]",
   "cmd.usageReact": "Uso: /{cmd} <testo> [msgid]",
   "cmd.usageRedact": "Uso: /{cmd} <msgid> [motivo]",
-  "code.showAllLines": {
-    "one": "Mostra tutte le {count} righe"
-  },
   "code.showLess": "Mostra meno",
   "composer.cancel": "Annulla",
   "composer.cancelEscape": "Annulla (Escape)",
@@ -67,9 +64,6 @@
   "composer.inputLabel": "Inserisci messaggio",
   "composer.notConnected": "Non connesso",
   "composer.placeholder": "Scrivi a {name}",
-  "composer.reconnectIn": {
-    "one": "Riconnessione a {network} in {seconds}s…"
-  },
   "composer.replyingTo": "Rispondi a {nick}:",
   "composer.send": "Invia messaggio",
   "composer.uploadFile": "Carica file",
@@ -77,30 +71,6 @@
   "composer.uploadPreparing": "preparazione…",
   "composer.uploadWaiting": "in attesa del server…",
   "composer.uploading": "Caricamento {file}",
-  "condensed.away": {
-    "one": "segnato come assente una volta"
-  },
-  "condensed.back": {
-    "one": "segnato come presente una volta"
-  },
-  "condensed.chghost": {
-    "one": "{count} utente ha cambiato hostname"
-  },
-  "condensed.join": {
-    "one": "{count} utente ha unito"
-  },
-  "condensed.kicked": {
-    "one": "{count} utente è stato kickato"
-  },
-  "condensed.left": {
-    "one": "{count} utente ha lasciato"
-  },
-  "condensed.modes": {
-    "one": "{count} mode was set"
-  },
-  "condensed.nick": {
-    "one": "{count} user has changed nick"
-  },
   "condensed.toggle": "Toggle status messages",
   "confirm.cancel": "Cancel",
   "connect.account": "Account",
@@ -393,9 +363,6 @@
   "list.kindBans": "Elenco dei bannati",
   "list.kindExcepts": "Elenco delle eccezioni",
   "list.kindInvites": "Elenco degli inviti",
-  "list.loaded": {
-    "one": "Caricato {count} canale..."
-  },
   "list.loading": "Caricamento elenco dei canali, questo può prendere un momento...",
   "list.windowTitle": "{kind} per {channel}",
   "loading.connecting": "Connessione...",
@@ -589,12 +556,6 @@
   "settings.aliases.paneAria": "Alias dei comandi",
   "settings.aliases.previewMiss": "Non un alias — questo sarebbe inviato come digitato.",
   "settings.aliases.removeAria": "Rimuovi l'alias {name}",
-  "settings.aliases.statusBroken": {
-    "one": "{count} alias salvati — le righe con errori non vengono salvate."
-  },
-  "settings.aliases.statusSaved": {
-    "one": "{count} alias salvati."
-  },
   "settings.aliases.titleHeading": "Alias dei comandi",
   "settings.aliases.tryAria": "Prova un alias",
   "settings.aliases.tryExample": "/{name} alcuni argomenti",
@@ -660,9 +621,6 @@
   "settings.general.backupHeading": "Backup e ripristino",
   "settings.general.backupIntro": "Salva le tue impostazioni in un file. Puoi ripristinarle qui o su un altro dispositivo.",
   "settings.general.backupMutes": "Elenchi di silenzio e ignoranza",
-  "settings.general.backupNetworks": {
-    "one": "{count} rete"
-  },
   "settings.general.backupPartSettings": "le tue impostazioni",
   "settings.general.backupPasswords": "Il file include le password di rete.",
   "settings.general.export": "Esporta le impostazioni…",
@@ -733,18 +691,12 @@
   "settings.notifications.snoozeOff": "Off",
   "sidebar.jumpTo": "Salta a...",
   "sidebar.language": "Lingua di display",
-  "sidebar.mentions": {
-    "one": "{count} menzione"
-  },
   "sidebar.networkList": "Elenco di rete e canali",
   "sidebar.noResults": "Nessun risultato trovato.",
   "sidebar.searchLabel": "Cerca tra l'elenco dei canali",
   "sidebar.settings": "Impostazioni",
   "sidebar.toggle": "Attiva/Disattiva elenco canali",
   "sidebar.toggleDevtools": "Attiva/Disattiva eruda devtools",
-  "sidebar.unread": {
-    "one": "{count} messaggio non letto"
-  },
   "special.bans.banned": "Bannato",
   "special.bans.bannedAt": "Bannato Il",
   "special.bans.bannedBy": "Bannato Da",
@@ -796,9 +748,6 @@
   "system.nick": "{nick} è ora noto come {newNick}",
   "system.part": "{nick} ha lasciato il canale",
   "system.quit": "{nick} è uscito",
-  "typing.many": {
-    "one": "{nick1}, {nick2} e {count} altri stanno digitando…"
-  },
   "typing.one": "{nick} sta digitando…",
   "typing.three": "{nick1}, {nick2} e {nick3} stanno digitando…",
   "typing.two": "{nick1} e {nick2} stanno digitando…",
@@ -824,9 +773,6 @@
   "upload.removeOne": "Non caricare {name}",
   "upload.removeTitle": "Non caricare questo file",
   "upload.tooLarge": "Il file {file} è superiore alla dimensione massima consentita",
-  "userlist.count": {
-    "one": "{count} utente"
-  },
   "userlist.searchLabel": "Cercare tra l'elenco degli utenti",
   "userlist.title": "Elenco utenti per {name}",
   "whois.actualHost": "Host effettivo:",

@@ -51,9 +51,6 @@
   "cmd.usageNickMulti": "الاستخدام: /{cmd} <nick> [...nick]",
   "cmd.usageReact": "الاستخدام: /{cmd} <text> [msgid]",
   "cmd.usageRedact": "الاستخدام: /{cmd} <msgid> [reason]",
-  "code.showAllLines": {
-    "zero": "عرض جميع {count} خط"
-  },
   "code.showLess": "عرض أقل",
   "composer.cancel": "إلغاء",
   "composer.cancelEscape": "إلغاء (هروب)",
@@ -69,18 +66,6 @@
   "composer.uploadFile": "تحميل الملف",
   "composer.uploadPreparing": "في التحضير…",
   "composer.uploadWaiting": "في الانتظار للخادم…",
-  "condensed.away": {
-    "zero": "ماركيت بعيداً مرة واحدة"
-  },
-  "condensed.back": {
-    "zero": "ماركيت مرة واحدة"
-  },
-  "condensed.modes": {
-    "zero": "تم تعيين الوضع {count}"
-  },
-  "condensed.nick": {
-    "zero": "تغيّر {count} المستخدم لاسم المستخدم"
-  },
   "condensed.toggle": "تفعيل رسالة الحالة",
   "confirm.cancel": "إلغاء",
   "connect.account": "الحساب",
@@ -630,9 +615,6 @@
   "settings.general.backupHeading": "نسخة احتياطية و복اء",
   "settings.general.backupIntro": "احفظ إعداداتك في ملف. يمكنك إعادة تثبيته هنا أو على جهاز آخر.",
   "settings.general.backupMutes": "الصمت وقائمة الإهمال",
-  "settings.general.backupNetworks": {
-    "zero": "{count} شبكة"
-  },
   "settings.general.backupPartSettings": "إعداداتك",
   "settings.general.backupPasswords": "الملف يحتوي على أسرار الشبكة.",
   "settings.general.export": "تصدير الإعدادات…",
@@ -677,18 +659,12 @@
   "settings.notifications.browserUnsupported": "لا تدعم الإشعارات في متصفحك.",
   "settings.notifications.commaList": "مُفصَّلة بفاصلة ممولة، مثال: كلمة، كلمات أكثر، كلمة أخرى",
   "sidebar.language": "لغة العرض",
-  "sidebar.mentions": {
-    "zero": "{count} ذكر"
-  },
   "sidebar.networkList": "قائمة الشبكة والقناة",
   "sidebar.noResults": "لم يتم العثور على نتائج.",
   "sidebar.searchLabel": "البحث في قائمة القناة",
   "sidebar.settings": "الإعدادات",
   "sidebar.toggle": "تبديل قائمة القناة",
   "sidebar.toggleDevtools": "تبديل أدوات eruda",
-  "sidebar.unread": {
-    "zero": "{count} رسالة غير مقرأة"
-  },
   "special.bans.banned": "ممنوع",
   "special.bans.bannedAt": "وقت الممنوع",
   "special.bans.bannedBy": "من قام بالمنع",
@@ -740,9 +716,6 @@
   "system.nick": "{nick} الآن يُعرف باسم {newNick}",
   "system.part": "{nick} غادر القناة",
   "system.quit": "{nick} غادر",
-  "typing.many": {
-    "zero": "{nick1}, {nick2} و {count} آخر هو يكتب..."
-  },
   "typing.one": "{nick} يكتب...",
   "typing.three": "{nick1}, {nick2} و {nick3} هم يكتبون...",
   "typing.two": "{nick1} و {nick2} هم يكتبون...",
@@ -768,9 +741,6 @@
   "upload.removeOne": "لا يتم تحميل {name}",
   "upload.removeTitle": "لا يتم تحميل هذا الملف",
   "upload.tooLarge": "الملف {file} يتجاوز الحد الأقصى المسموح به من الحجم",
-  "userlist.count": {
-    "zero": "{count} مستخدم"
-  },
   "userlist.searchLabel": "البحث بين قائمة المستخدمين",
   "userlist.title": "قائمة المستخدمين لـ {name}",
   "whois.actualHost": "المضيف الحقيقي:",
