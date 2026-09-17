@@ -111,6 +111,35 @@ const PROTOCOL_TOKENS = [
 	"CAP",
 ];
 
+// The quotation marks a catalog writes. English quotes what it quotes with
+// ASCII double quotes, but an answer comes back in the target's own
+// typography — German „…“, French/Russian «…», Japanese 「…」 — and the label
+// rules below have to recognise a quoted segment in either text.
+const QUOTE_PAIRS: [string, string][] = [
+	['"', '"'],
+	["«", "»"],
+	["„", "“"],
+	["「", "」"],
+];
+
+const QUOTED_SOURCE = QUOTE_PAIRS.map(([open, close]) => `${open}[^${close}\n]*${close}`).join("|");
+
+/** The text inside a quoted segment, or null if `match` is not one. */
+export function quotedText(match: string): string | null {
+	for (const [open, close] of QUOTE_PAIRS) {
+		if (match.length >= open.length + close.length) {
+			if (match.startsWith(open) && match.endsWith(close)) {
+				return match.slice(open.length, -close.length);
+			}
+		}
+	}
+
+	return null;
+}
+
+/** Every quoted segment of a text, in order. */
+const QUOTED_RX = new RegExp(QUOTED_SOURCE, "g");
+
 // One pass, leftmost-longest: an already-fenced span is left alone (so
 // nothing nests), a quoted segment wins over the braces inside it (the two
 // msgids that quote nothing but a {placeholder}), and a scheme is matched
@@ -119,7 +148,7 @@ const PROTOCOL_TOKENS = [
 const FENCE_RX = new RegExp(
 	[
 		"`[^`\n]*`",
-		'"[^"\n]*"',
+		QUOTED_SOURCE,
 		"wss?://",
 		`\\b(?:${PROTOCOL_TOKENS.join("|")})\\b`,
 		BRACE_RX.source,
@@ -130,7 +159,7 @@ const FENCE_RX = new RegExp(
 /** The same alternation, as the fence wrote it: what `unfenceSpans` undoes. */
 const UNFENCE_RX = new RegExp(
 	"`(" +
-		['"[^"\n]*"', "wss?://", `\\b(?:${PROTOCOL_TOKENS.join("|")})\\b`, BRACE_RX.source].join(
+		[QUOTED_SOURCE, "wss?://", `\\b(?:${PROTOCOL_TOKENS.join("|")})\\b`, BRACE_RX.source].join(
 			"|"
 		) +
 		")`",
@@ -186,17 +215,67 @@ export function planEngines(
  * of the sentence (the existing gates still judge the answer); a quoted
  * segment that matches no msgid is not a label and stays fenced.
  */
-export function fenceSpans(text: string, ownKeyLabels?: ReadonlySet<string>): string {
+export function fenceSpans(text: string, ownKeyLabels?: {has(label: string): boolean}): string {
 	return text.replace(FENCE_RX, (match) => {
 		if (match.startsWith("`")) {
 			return match;
 		}
 
-		if (match.startsWith('"') && match.endsWith('"') && ownKeyLabels?.has(match.slice(1, -1))) {
+		const quoted = quotedText(match);
+
+		if (quoted !== null && ownKeyLabels?.has(quoted)) {
 			return match;
 		}
 
 		return "`" + match + "`";
+	});
+}
+
+/**
+ * Put the deploy's own translation of a quoted UI label into the answer.
+ *
+ * The fence carve-out lets the model translate a label that has a key of its
+ * own, which is right — but what the user has to find on screen is the string
+ * THAT key renders, and the model has no idea what that is: asked twice it
+ * writes two different buttons. So after the restore, a quoted segment of the
+ * source that is another entry's msgid is replaced, in the answer, by that
+ * entry's own msgstr in the same catalog. A label the catalog has not
+ * translated yet keeps whatever the model wrote (English serves both).
+ *
+ * The answer's own quotation marks are kept — a German answer quotes with
+ * „…“ — and the substitution only runs when the answer came back with exactly
+ * as many quoted segments as the source had, because nothing else says which
+ * segment is which.
+ */
+export function substituteLabels(
+	source: string,
+	answer: string,
+	labels: ReadonlyMap<string, string>
+): string {
+	const sourceQuotes = source.match(QUOTED_RX) ?? [];
+	const answerQuotes = answer.match(QUOTED_RX) ?? [];
+
+	if (sourceQuotes.length === 0 || sourceQuotes.length !== answerQuotes.length) {
+		return answer;
+	}
+
+	let index = -1;
+
+	return answer.replace(QUOTED_RX, (match) => {
+		index += 1;
+
+		const label = quotedText(sourceQuotes[index] ?? "");
+		const translated = label === null ? undefined : labels.get(label);
+
+		if (translated === undefined || translated === "") {
+			return match;
+		}
+
+		const pair = QUOTE_PAIRS.find(
+			([open, close]) => match.startsWith(open) && match.endsWith(close)
+		);
+
+		return pair ? `${pair[0]}${translated}${pair[1]}` : match;
 	});
 }
 
@@ -445,10 +524,21 @@ async function main(): Promise<void> {
 			continue;
 		}
 
-		// Every UI label that has a key of its own, built once per catalog: a
-		// .po's msgids are the pot's English copy after the merge, so this is
-		// the pot's label set without a second read (fenceSpans).
-		const ownKeyLabels = new Set(po.entries.map((entry) => entry.msgid).filter(Boolean));
+		// Every UI label that has a key of its own, with this catalog's own
+		// translation of it, built once per catalog: a .po's msgids are the
+		// pot's English copy after the merge, so this is the pot's label set
+		// without a second read. The keys carve a quoted segment out of the
+		// fence (`fenceSpans`) and the values replace it in the answer
+		// (`substituteLabels`), so the sentence names the button the user
+		// actually sees. A plural entry's msgid_plural is a sentence about a
+		// count, never a label, so only msgid enters the table.
+		const ownKeyLabels = new Map<string, string>();
+
+		for (const entry of po.entries) {
+			if (entry.msgid && entry.msgidPlural === undefined) {
+				ownKeyLabels.set(entry.msgid, entry.msgstr[0] ?? "");
+			}
+		}
 
 		const limited = options.limit ? todo.slice(0, options.limit) : todo;
 		const started = Date.now();
@@ -568,7 +658,11 @@ async function main(): Promise<void> {
 						return;
 					}
 
-					const restored = unfenceSpans(restoreAll(raw, info));
+					const restored = substituteLabels(
+						unit.text,
+						unfenceSpans(restoreAll(raw, info)),
+						ownKeyLabels
+					);
 
 					// Judged against the slot's OWN source (a plural form
 					// legitimately carries {count} where the singular does
