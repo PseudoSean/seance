@@ -36,9 +36,11 @@
 // and so is the newline-first keyboard: with a strip up, the Return's
 // newline reaches the draft before the keypress does, the strip survives
 // it and that Enter sends the translation rather than translating afresh
-// (prose and `/me` alike). That path is a touch-primary device's --
-// with a hardware keyboard the Return is preventDefaulted and no newline
-// is ever typed -- so it runs under `--mobile` only.
+// (prose and `/me` alike). That path is a touch-primary device's -- with a
+// hardware keyboard the Return is preventDefaulted and no newline is ever
+// typed -- so it runs under `--mobile` only, and the desktop run asserts
+// the opposite instead: there a trailing newline is a deliberate
+// Shift+Enter, an edit of the draft, and it drops the strip.
 // Detection is real (franc); only the engine is scripted.
 //
 //   corepack yarn build && python3 -m http.server -d public 8021 &
@@ -319,7 +321,7 @@ async function newlineFirstKeyboard(page, other) {
  * watcher flushes in a microtask, so putting them in one call would let the
  * case pass whether or not the draft-comparison tolerates the newline.
  */
-async function newlineThenEnter(page, label) {
+async function appendNewline(page) {
 	await page.evaluate(
 		`(() => {
 			const el = document.querySelector(${JSON.stringify(INPUT)});
@@ -331,11 +333,40 @@ async function newlineThenEnter(page, label) {
 			el.dispatchEvent(new Event("input", {bubbles: true}));
 		})()`
 	);
+}
+
+async function newlineThenEnter(page, label) {
+	await appendNewline(page);
 	await page.check(
 		`the strip survived the trailing newline (${label})`,
 		await page.evaluate(`!!document.querySelector(${JSON.stringify(BAR)})`)
 	);
 	await page.evaluate(ENTER);
+}
+
+/**
+ * The other half of the same rule, on a hardware keyboard: the Return is
+ * preventDefaulted and never reaches the draft, so a trailing newline is a
+ * deliberate Shift+Enter -- an edit of the draft like any other, and the
+ * strip the draft was translated into goes.
+ */
+async function hardwareNewlineIsAnEdit(page) {
+	const draft = `shift and enter is an edit ${RUN}`;
+
+	await typeAndEnter(page, draft);
+	await page.waitFor(`${barText} === ${JSON.stringify(`[German] ${draft}`)}`, {
+		timeout: 20000,
+		label: "a strip to edit",
+	});
+	await appendNewline(page);
+	await page.waitFor(`!document.querySelector(${JSON.stringify(BAR)})`, {
+		label: "the hardware keyboard's newline dropped the strip",
+	});
+	await page.check(
+		"the draft kept its newline (nothing stripped it)",
+		(await page.evaluate(inputValue)) === `${draft}\n`
+	);
+	await page.fill(INPUT, "");
 }
 
 export default async function run(page) {
@@ -595,10 +626,14 @@ export default async function run(page) {
 	//
 	// Only under --mobile: ChatInput.vue's onEnterKey takes the
 	// newline-tolerating path (onSubmit(true), which strips the newline
-	// back off) on a touch-primary device alone -- with a hardware keyboard
-	// it preventDefaults the Return and no newline ever reaches the draft.
+	// back off) on a touch-primary device alone. With a hardware keyboard
+	// it preventDefaults the Return, so no newline ever reaches the draft
+	// that way and one that does is a deliberate Shift+Enter -- the
+	// desktop run asserts that opposite.
 	if (MOBILE) {
 		await newlineFirstKeyboard(page, other);
+	} else {
+		await hardwareNewlineIsAnEdit(page);
 	}
 
 	// 6. Escape drops a strip and keeps the draft.

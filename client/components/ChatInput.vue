@@ -1069,14 +1069,19 @@ export default defineComponent({
 
 				// Against the part of the draft the strip is a translation of
 				// (a `/me`'s text, not the command in front of it), with one
-				// trailing newline tolerated: on a keyboard whose Return puts
-				// its newline in the draft before `keypress` fires, the draft
-				// reads "…\n" for the moment between the two, and `onSubmit`
-				// strips exactly that newline back off. Without the tolerance
-				// the second Enter would find the strip already cancelled and
-				// translate afresh instead of sending.
+				// trailing newline tolerated on a touch-primary device: there
+				// the Return puts its newline in the draft before `keypress`
+				// fires, so the draft reads "…\n" for the moment between the
+				// two and `onEnterKey` -> `onSubmit(true)` strips exactly that
+				// newline back off. Without the tolerance the second Enter
+				// would find the strip already cancelled and translate afresh
+				// instead of sending. Only there: with a hardware keyboard the
+				// Return is preventDefaulted and never reaches the draft, so a
+				// trailing newline is a deliberate Shift+Enter -- an edit of
+				// the draft like any other, and the strip goes.
 				const gated = draftGate(value, !!props.channel.editing).text;
-				const typed = gated.endsWith("\n") ? gated.slice(0, -1) : gated;
+				const typed =
+					hasVirtualKeyboard() && gated.endsWith("\n") ? gated.slice(0, -1) : gated;
 
 				if (entry && typed !== entry.draft) {
 					cancelOutgoing(props.channel);
