@@ -5014,7 +5014,7 @@ msgstr "Проверка само устройство не состоялась
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.smallBuffer"
 msgid "GPU buffer limit under 1 GiB"
-msgstr "Предел буфера GPU при 1 ГиБхожиххохватных плавучих веществ"
+msgstr ""
 
 #. Tooltip and aria-label of a translation line's chip, skipped because the line is already in the reading language. {language} is its name in the reading language.
 #: client/components/TranslationLine.vue
@@ -5283,7 +5283,7 @@ msgstr "Не загружается"
 #: client/js/helpers/modelLabel.ts
 msgctxt "translate.model.opus"
 msgid "OPUS-MT {from} → {to} (CPU)"
-msgstr "OPUS-MT {from} ≥ {to} (CPU)"
+msgstr "OPUS-MT {from} → {to} (CPU)"
 
 #. State of a model row in Settings → Translation while it downloads: how far it has got. {percent} is a number from 0 to 100.
 #: client/components/Settings/Translation.vue

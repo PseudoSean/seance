@@ -4188,10 +4188,6 @@ msgctxt "settings.general.uploadsHeading"
 msgid "File uploads"
 msgstr ""
 
-#: client/components/Windows/Connect.vue:72
-#: client/components/Windows/Connect.vue:296
-#: client/components/Settings/Appearance.vue:253
-#: client/components/LanguageSelect.vue:50
 #: client/components/LanguageSelect.vue
 #. The first option of the interface-language picker: the language the browser asks for is used. {language} is that language's name, written in itself.
 msgctxt "settings.locale.auto"

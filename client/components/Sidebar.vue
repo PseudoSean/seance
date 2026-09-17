@@ -3,8 +3,10 @@
 		<div class="scrollable-area">
 			<div class="logo-container">
 				<img src="img/logo-tile.png" class="logo" :alt="appName" role="presentation" />
-				<!-- The one language selector, development builds only: in
-				     production the browser's language decides. -->
+				<!-- The language selector's development-build entry point:
+				     a popover holding the same LanguageSelect that Settings
+				     -> Translation carries, reachable without leaving the
+				     page. Production builds have the Settings one only. -->
 				<span
 					v-if="isDevelopment"
 					class="tooltipped tooltipped-n tooltipped-no-touch"

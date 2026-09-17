@@ -19,7 +19,15 @@
 // browser-testing.md, trap 8), so every choice that has to survive a
 // reload is made before the one there is.
 
+import {readFileSync} from "node:fs";
+
 const BASE = "http://localhost:8021/";
+
+// The English copy the tab renders, read from the compiled catalog rather
+// than spelled out here: client/locales/messages.pot is the only source of
+// English copy, so a scenario that hardcodes a label goes stale the moment
+// someone rewords it (and would have passed a wrong rewording).
+const EN = JSON.parse(readFileSync("client/locales/en.json", "utf8"));
 
 export const url = `${BASE}?fakeTranslate`;
 
@@ -123,7 +131,10 @@ export default async function run(page) {
 		"the GPU model select offers Automatic and both models, with sizes",
 		(await page.evaluate(
 			`[...document.querySelectorAll('select[name="translateLlmModel"] option')].map((o) => o.textContent.trim()).join("|")`
-		)) === "Automatic — best for this device|Qwen3 1.7B · 1 GiB|Qwen3 4B · 2.1 GiB"
+		)) ===
+			// The model names and their sizes are not copy: a product name and
+			// a formatted byte count, neither of which the catalog carries.
+			`${EN["translate.settings.gpuAutomatic"]}|Qwen3 1.7B · 1 GiB|Qwen3 4B · 2.1 GiB`
 	);
 	// The fake capability's 4 GiB adapter fits the 4B, so the
 	// capability-based default picks it over the 1.7B.
@@ -136,10 +147,13 @@ export default async function run(page) {
 	page.check(
 		"device note says gpu",
 		(await page.evaluate(`document.querySelector(".translate-device")?.textContent`)).includes(
-			"can run the GPU model"
+			EN["translate.capability.gpu"]
 		)
 	);
-	page.check("LLM row not downloaded", (await page.evaluate(STATE(llmId))) === "Not downloaded");
+	page.check(
+		"LLM row not downloaded",
+		(await page.evaluate(STATE(llmId))) === EN["translate.model.notDownloaded"]
+	);
 	page.check(
 		"language defaults to Automatic, named for the browser's language",
 		(await page.evaluate(
@@ -163,14 +177,20 @@ export default async function run(page) {
 		label: "progress bar up",
 	});
 	await page.screenshot("translation-downloading");
-	await page.waitFor(`${STATE(llmId)} === "Downloaded"`, {timeout: 10000, label: "downloaded"});
+	await page.waitFor(`${STATE(llmId)} === ${JSON.stringify(EN["translate.model.downloaded"])}`, {
+		timeout: 10000,
+		label: "downloaded",
+	});
 	page.check(
 		"delete offered",
 		!!(await page.evaluate(`document.querySelector('${ROW(llmId)} .translate-model-delete')`))
 	);
 
 	await page.click(`${ROW(llmId)} .translate-model-delete`);
-	await page.waitFor(`${STATE(llmId)} === "Not downloaded"`, {label: "deleted"});
+	await page.waitFor(
+		`${STATE(llmId)} === ${JSON.stringify(EN["translate.model.notDownloaded"])}`,
+		{label: "deleted"}
+	);
 
 	// The settings write through the window's onChange handler. The language
 	// select IS the interface's (one control, two entry points): picking de

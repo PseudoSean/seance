@@ -6,6 +6,7 @@ import {
 	existsSync,
 	mkdirSync,
 	mkdtempSync,
+	readdirSync,
 	readFileSync,
 	rmSync,
 	writeFileSync,
@@ -40,6 +41,7 @@ import {protect, restoreAll} from "../../client/js/translate/spans";
 import {scaffoldTag} from "../../tools/i18n/scaffold";
 import {sweepEntries} from "../../tools/i18n/sweep";
 import {isSuspectCatalogEntry, slotVerdict} from "../../tools/i18n/quality";
+import {EXPECTED_SCRIPTS, OWN_SCRIPTS} from "../../tools/i18n/scripts";
 import instrument from "../../tools/i18n/instrument-loader.mjs";
 
 const FIXTURES = resolve("tools/i18n/fixtures");
@@ -1145,6 +1147,30 @@ describe("i18n toolchain", () => {
 	});
 
 	describe("the live tree", () => {
+		it("gives every shipped catalog a writing system to be judged by", () => {
+			// The sweep's script rules are table-driven: a tag missing from
+			// EXPECTED_SCRIPTS is never judged on its script at all, so a new
+			// language could ship machine noise in the wrong alphabet and the
+			// sweep would pass it. The tables must therefore cover every tag
+			// that has a catalog -- the archived ones under attic/ are
+			// deliberately not targets and are not read.
+			const tags = readdirSync(resolve("client/locales"))
+				.filter((name) => name.endsWith(".po"))
+				.map((name) => name.replace(/\.po$/, ""));
+			expect(tags.length, "catalogs to cover").to.be.greaterThan(0);
+			expect(
+				tags.filter((tag) => !(tag in EXPECTED_SCRIPTS)),
+				"tags with a .po and no EXPECTED_SCRIPTS entry"
+			).to.deep.equal([]);
+			// A target whose own script is named must also be allowed to
+			// write in it: OWN_SCRIPTS demands, EXPECTED_SCRIPTS permits, and
+			// a tag in the first and not the second would empty every entry.
+			expect(
+				Object.keys(OWN_SCRIPTS).filter((tag) => !(tag in EXPECTED_SCRIPTS)),
+				"tags demanding a script they are not allowed to write in"
+			).to.deep.equal([]);
+		});
+
 		it("messages.pot and the real client/ call sites agree", () => {
 			// The gate Task 6 Step 1 mandates: from this task on, yarn test
 			// fails when a t()/tCount() key is missing from the pot or a pot
