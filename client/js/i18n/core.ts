@@ -7,7 +7,6 @@
 // RTL set in client/index.html is pinned by test/helpers/i18n.ts.
 
 import enCatalog from "../../locales/en.json";
-import {STATIC_CALL_SITES} from "./call-sites";
 
 /** Sentinel var value for frame-splitting call sites: "this placeholder is
  * known — leave it in the template". Components that split a translated
@@ -72,7 +71,10 @@ function plainNumber(locale: string): Intl.NumberFormat {
 
 const frameCache = new Map<string, string[]>();
 
-const DEV_I18N = process.env.NODE_ENV !== "production";
+/** Whether this build carries the i18n diagnostics — and the dev-only
+ * locales (the qqx rig) with them. The bundler folds it: a production build
+ * removes every branch below, and every branch its importers hang on it. */
+export const DEV_I18N = process.env.NODE_ENV !== "production";
 const warned = new Set<string>();
 
 // The keys the active locale's overlay carries — the rest of the en keys
@@ -251,8 +253,34 @@ export function warnFragmentJoin(count: number): void {
  * warning. The toolchain test pins these to their resolver. */
 const INDIRECT_KEYS = new Set(["loading.requiresJs", "loading.slow", "loading.reload"]);
 
+/**
+ * The generated call-site table, loaded for development builds only: it is
+ * ~1000 keys of diagnostics data with nothing to do in a production bundle.
+ * The import sits in a branch the bundler's NODE_ENV fold removes whole —
+ * written inline rather than through DEV_I18N so webpack evaluates the
+ * condition at parse time and never records the dependency — and `eager`
+ * keeps it in the same chunk, so it is there from the first microtask.
+ * Until it is, a dynamic key simply does not warn.
+ */
+let staticCallSites: ReadonlySet<string> | null = null;
+
+/** Resolved once the call-site table is in hand (immediately in a
+ * production build, which loads none). Tests await it before asserting on
+ * the dynamic-label warning. */
+export let callSitesReady: Promise<void> = Promise.resolve();
+
+if (process.env.NODE_ENV !== "production") {
+	callSitesReady = import(/* webpackMode: "eager" */ "./call-sites").then((module) => {
+		staticCallSites = module.STATIC_CALL_SITES;
+	});
+}
+
 function warnDynamicKey(key: string): void {
-	if (!STATIC_CALL_SITES.has(key) && !INDIRECT_KEYS.has(key)) {
+	if (!DEV_I18N || !staticCallSites) {
+		return;
+	}
+
+	if (!staticCallSites.has(key) && !INDIRECT_KEYS.has(key)) {
 		warnOnce(
 			`${tag}\u0000dynsite\u0000${key}`,
 			`dynamic label: "${key}" was assembled at runtime (no static call site resolves it) — composed keys translate unpredictably; use a whole-phrase key`

@@ -318,18 +318,32 @@ describe("i18n toolchain", () => {
 				{tag: "qqx", devOnly: true},
 			]);
 			expect(text).to.contain("export type AvailableLocale = ");
-			expect(text).to.match(/^export const DEV = (?:true|false);\n$/m);
+			// No DEV constant: the runtime reads the bundler's own NODE_ENV
+			// fold (core.ts DEV_I18N), so a tracked generated file never
+			// carries a build mode.
+			expect(text).to.not.contain("DEV");
+			// The pre-paint list is substituted at build time and can run no
+			// check of its own, so the dev-only rig stays out of it.
 			expect(
 				JSON.parse(readFileSync(join(tmp, "compile-plural", "tags.json"), "utf8"))
-			).to.deep.equal(["en", "de", "qqx"]);
+			).to.deep.equal(["en", "de"]);
 		});
 
-		it("omits qqx from available.ts and tags.json under NODE_ENV=production", () => {
-			// The rig never ships: a production compile lists no qqx anywhere —
-			// not in the selector's list, not in the pre-paint tag list — so a
-			// stored qqx pick cannot survive a deploy. qqx.json itself is still
-			// generated (the rig's artifact; the dev build copies it).
+		it("writes the same available.ts and tags.json whatever NODE_ENV says", () => {
+			// The generated files are tracked, and `yarn watch`, `yarn test:e2e`
+			// and a bare `webpack` skip the compile: a mode-dependent generator
+			// meant those builds shipped whichever flavor was committed last,
+			// and that a production build dirtied the tree.
+			const read = () => ({
+				available: readFileSync(join(tmp, "compile-plural", "available.ts"), "utf8"),
+				tags: readFileSync(join(tmp, "compile-plural", "tags.json"), "utf8"),
+			});
+
+			compileFixture("compile/plural");
+
+			const development = read();
 			const saved = process.env.NODE_ENV;
+
 			process.env.NODE_ENV = "production";
 
 			try {
@@ -338,12 +352,11 @@ describe("i18n toolchain", () => {
 				process.env.NODE_ENV = saved;
 			}
 
-			const text = readFileSync(join(tmp, "compile-plural", "available.ts"), "utf8");
-			expect(text).to.contain("export const DEV = false;");
-			expect(text).to.not.contain("qqx");
-			expect(
-				JSON.parse(readFileSync(join(tmp, "compile-plural", "tags.json"), "utf8"))
-			).to.deep.equal(["en", "de"]);
+			expect(read()).to.deep.equal(development);
+			// qqx.json itself is generated either way (the rig's artifact);
+			// the production copy into public/ is what leaves it out
+			// (webpack.config.ts CopyPlugin).
+			expect(existsSync(join(tmp, "compile-plural", "qqx.json"))).to.equal(true);
 		});
 	});
 

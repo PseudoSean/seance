@@ -15,9 +15,9 @@
 
 <script lang="ts">
 import {computed, defineComponent} from "vue";
-import {AVAILABLE, DEV} from "../js/i18n/available";
+import {AVAILABLE} from "../js/i18n/available";
 import {TRANSLATION_TARGETS} from "../js/i18n/targets";
-import {isRTL} from "../js/i18n/core";
+import {DEV_I18N, isRTL} from "../js/i18n/core";
 import {useI18n} from "../js/i18n";
 
 export default defineComponent({
@@ -51,8 +51,11 @@ export default defineComponent({
 				merged.set(target.tag, {tag: target.tag, en: target.en});
 			}
 
+			// available.ts lists every compiled catalog, the dev-only qqx rig
+			// included: the build's own fold is what keeps it out of a
+			// production selector.
 			for (const entry of AVAILABLE) {
-				if (!merged.has(entry.tag) && (!entry.devOnly || DEV)) {
+				if (!merged.has(entry.tag) && (!entry.devOnly || DEV_I18N)) {
 					merged.set(entry.tag, {tag: entry.tag, en: undefined});
 				}
 			}

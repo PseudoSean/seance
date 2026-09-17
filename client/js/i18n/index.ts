@@ -5,6 +5,7 @@
 
 import {computed, ref} from "vue";
 import {
+	DEV_I18N,
 	bestLocale,
 	isRTL,
 	missingKeys,
@@ -16,7 +17,7 @@ import {
 	type Vars,
 } from "./core";
 import {brandingT} from "../branding";
-import {AVAILABLE, DEV} from "./available";
+import {AVAILABLE} from "./available";
 import {TRANSLATION_TARGETS} from "./targets";
 import enCatalog from "../../locales/en.json";
 import {mirrorPushPrefs} from "../push-prefs";
@@ -44,8 +45,19 @@ export type OverlayLoader = (tag: string) => Promise<Catalog>;
 
 const importOverlay: OverlayLoader = async (tag) =>
 	// One lazy webpack chunk per locale JSON. Overlay catalogs omit
-	// untranslated entries (compile.ts), so missing keys fall to en.
-	((await import(`../../locales/${tag}.json`)) as {default: Catalog}).default;
+	// untranslated entries (compile.ts), so missing keys fall to en. The
+	// directory holds two JSONs that are no catalog: the qqx rig, which a
+	// production build never activates, and the generated tag list the
+	// pre-paint script is given at build time — a production build emits no
+	// chunk for either. The condition is inline (not DEV_I18N) so webpack
+	// folds it at parse time and reads only one of the two imports.
+	process.env.NODE_ENV === "production"
+		? (
+				(await import(
+					/* webpackExclude: /(qqx|tags)\.json$/ */ `../../locales/${tag}.json`
+				)) as {default: Catalog}
+		  ).default
+		: ((await import(`../../locales/${tag}.json`)) as {default: Catalog}).default;
 
 let overlayLoader: OverlayLoader = importOverlay;
 
@@ -99,7 +111,7 @@ export async function activate(setting: string): Promise<void> {
 	const resolvable = [
 		...new Set([
 			...TRANSLATION_TARGETS.map((entry) => entry.tag),
-			...resolvableTags(AVAILABLE, DEV),
+			...resolvableTags(AVAILABLE, DEV_I18N),
 		]),
 	];
 	const pick =
@@ -144,7 +156,7 @@ export async function activate(setting: string): Promise<void> {
 	// once. Production folds the whole block away.
 	/* eslint-disable no-console -- the coverage summary is part of the same
 	 * sanctioned dev diagnostics family as core.ts's warnOnce. */
-	if (DEV && tag !== "en") {
+	if (DEV_I18N && tag !== "en") {
 		const untranslated = untranslatedKeys().length;
 
 		if (untranslated > 0) {
@@ -204,9 +216,9 @@ export function useI18n() {
 // Development-only console hook: `seanceI18n.t("bogus.key")` in the devtools
 // console shows exactly what the missing-key tripwire does (the placeholder
 // renders, one console.warn fires), and `seanceI18n.missingKeys()` lists
-// every key/var the session has tripped. Production builds (DEV=false)
+// every key/var the session has tripped. Production builds (DEV_I18N false)
 // never assign it — no hook, no surface, no warnings.
-if (DEV && typeof window !== "undefined") {
+if (DEV_I18N && typeof window !== "undefined") {
 	// The typeof guard keeps the module loadable under plain node (mocha
 	// loads it through reader.ts since the language unification): a dev
 	// build is browser-only anyway, so nothing real is folded away.

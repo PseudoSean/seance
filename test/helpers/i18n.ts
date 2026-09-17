@@ -6,6 +6,7 @@ import sinon from "sinon";
 import enCatalog from "../../client/locales/en.json";
 import {
 	KEEP,
+	callSitesReady,
 	missingKeys,
 	RTL_TAGS,
 	bestLocale,
@@ -23,10 +24,13 @@ import {
 import {activate, useOverlayLoader} from "../../client/js/i18n";
 import {formatDayHeading, formatRelativeDay, formatTime} from "../../client/js/i18n/dates";
 
-before(() => {
+before(async () => {
 	// The dynamic-key/coverage diagnostics are forced on per-test below; a
 	// quiet default keeps fixture-key calls in other tests from printing.
 	setWarnMissing(false);
+	// The static call-site table is loaded only by a build that carries the
+	// diagnostics (core.ts); the dynamic-label assertions need it in hand.
+	await callSitesReady;
 });
 
 describe("i18n core", () => {
@@ -73,8 +77,10 @@ describe("i18n core", () => {
 	});
 
 	it("auto-resolution may pick a dev-only locale in development, never in production", () => {
-		// The generated available.ts carries DEV as a baked const, so the
-		// filter is a pure helper over (entries, DEV) — both outcomes pinned.
+		// available.ts lists every compiled catalog whatever the build mode
+		// is (the generated file is tracked), so this filter over
+		// (entries, DEV_I18N) is what keeps the rig out of a production
+		// build — the selector and activate() both run it.
 		const available: ReadonlyArray<{tag: string; devOnly?: boolean}> = [
 			{tag: "en"},
 			{tag: "qqx", devOnly: true},
@@ -113,10 +119,10 @@ describe("i18n core", () => {
 	}
 
 	it("the pre-paint script applies a stored tag this build ships", () => {
-		// tags.json is the real baked list, whatever flavor this checkout
-		// carries (a development compile adds qqx to it, a production one
-		// does not — test/tests/i18n-toolchain.ts pins both): a stored tag in
-		// the list activates, with the direction its writing system takes.
+		// tags.json is the real baked list — the same one whatever mode the
+		// compile ran in, dev-only tags excluded (test/tests/i18n-toolchain.ts
+		// pins that): a stored tag in the list activates, with the direction
+		// its writing system takes.
 		const [tag] = JSON.parse(readFileSync("client/locales/tags.json", "utf8")) as string[];
 		expect(runPrePaint({locale: tag}, [])).to.deep.equal({
 			lang: tag,

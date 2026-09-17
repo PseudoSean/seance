@@ -31,7 +31,7 @@ import {installNativeHooks} from "./native";
 import {installForegroundHooks} from "./foreground";
 import {installViewportHooks} from "./helpers/viewport";
 import {onLaunch} from "./pwa";
-import {DEV} from "./i18n/available";
+import {DEV_I18N} from "./i18n/core";
 // Also registers the IRC layer's bus handlers (input, names, more, network:*).
 import {autoconnectSavedNetworks, clientForNetwork, createNetwork} from "./irc/manager";
 
@@ -106,9 +106,9 @@ export async function boot(): Promise<void> {
 	installForegroundHooks();
 	installViewportHooks();
 
-	// Development only: available.ts's DEV is baked per compile, so a
+	// Development only: the bundler folds DEV_I18N (core.ts), so a
 	// production bundle never ships the diagnostics.
-	if (DEV) {
+	if (DEV_I18N) {
 		/* eslint-disable no-console -- the dev console must say the
 		 * diagnostics exist, not sit silent while they watch. */
 		console.warn(

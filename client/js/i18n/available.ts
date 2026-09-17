@@ -78,4 +78,3 @@ export const AVAILABLE = [
 	}
 ] as const;
 export type AvailableLocale = (typeof AVAILABLE)[number]["tag"];
-export const DEV = true;
