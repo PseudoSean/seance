@@ -340,9 +340,13 @@ export default defineComponent({
 
 		// Why the GPU tier is out of reach, one whole phrase per code
 		// (translate/capability.ts is Vue-free and reports codes). Every code
-		// has a case of its own and the default is an exhaustiveness check:
-		// a reason added to CapabilityReason without a phrase here is a
-		// compile error, not a silent "no WebGPU".
+		// has a case of its own, including NO_WEBGPU, which used to be the
+		// unnamed default. The `never` binding is the exhaustiveness check a
+		// type-checker that reads this script block would trip over -- nothing
+		// in this build's pipeline does today (webpack strips the SFC's types
+		// and ForkTsChecker does not read .vue), so the default still returns
+		// prose: a code with no phrase reads as "no WebGPU" rather than
+		// putting a raw enum token, untranslated, on the screen.
 		const reasonText = (reason: CapabilityReason): string => {
 			switch (reason) {
 				case "NO_WEBGPU":
@@ -363,7 +367,9 @@ export default defineComponent({
 				default: {
 					const unhandled: never = reason;
 
-					return unhandled;
+					void unhandled;
+
+					return t("translate.capability.reason.noWebgpu");
 				}
 			}
 		};
