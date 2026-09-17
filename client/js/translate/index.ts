@@ -10,7 +10,7 @@ import {probeOnce} from "./capability";
 import {emptyContext} from "./engine";
 import {TranslateClient} from "./client";
 import {FAKE_CAPABILITY, fakePort} from "./fakePort";
-import {buildCatalog, defaultLlmForAdapter} from "./models";
+import {buildCatalog} from "./models";
 import {MainPort} from "./protocol";
 import {RouteTable} from "./router";
 import {ServiceDeps, TranslateService} from "./service";
@@ -77,14 +77,18 @@ function create(): TranslateService {
 		setTimeout: (fn, ms) => window.setTimeout(fn, ms),
 		clearTimeout: (handle) => window.clearTimeout(handle as number),
 	};
-	// An unset GPU model ("") is no choice: it resolves to the catalog's
-	// default (the deploy's model, else 1.7B) every time it is read, so a later
-	// deploy default reaches everyone who never picked one.
-	const catalog = buildCatalog(branding, store.state.settings.translateLlmModel || null);
+	// An unset GPU model ("") is no choice: it resolves every time it is read
+	// — the deploy's model, else what the device probe fits, else the shipped
+	// default (models.ts `llmChoice`) — so a later deploy default, and a
+	// device the probe has since measured, both reach everyone who never
+	// picked one. Nothing writes a resolved id back to the settings.
+	const selectedLlm = store.state.settings.translateLlmModel || null;
+	const catalog = buildCatalog(branding, selectedLlm);
 	const created = new TranslateService(
 		deps,
 		{
 			catalog,
+			selectedLlm,
 			routes: (branding.routes ?? {}) as RouteTable,
 			ortBase: new URL("js/ort/", document.baseURI).href,
 			enabled: branding.enabled !== false,
@@ -124,24 +128,11 @@ function create(): TranslateService {
 	);
 	created.onModels((models) => store.commit("translationModels", models));
 	created.onWorkerError((message) => store.commit("translationWorkerError", message));
+	// The service resolves an unset choice against the probe itself once it
+	// lands (service.ts `capabilities`), and the store's capability is what
+	// Settings reads it through: the pick is never persisted as a choice.
 	void created.capabilities().then((capability) => {
 		store.commit("translationCapability", capability);
-
-		// The default GPU model follows the adapter: the 4B when its
-		// graphics memory fits, else the 1.7B. Only for a user who never
-		// picked, and never over a deploy's own model — their choice (or
-		// the deploy's) is the default by definition.
-		if (
-			capability.tier === "gpu" &&
-			!store.state.settings.translateLlmModel &&
-			!branding.llm?.model
-		) {
-			const picked = defaultLlmForAdapter(capability.maxBufferBytes);
-
-			if (picked !== catalog.llm.id) {
-				void store.dispatch("settings/update", {name: "translateLlmModel", value: picked});
-			}
-		}
 	});
 	window.addEventListener("pagehide", () => created.pagehide());
 

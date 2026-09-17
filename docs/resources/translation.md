@@ -21,21 +21,29 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   `Qwen3-4B-q4f16_1-MLC` (~2.3 GB, ~3.4 GB). On 45 casual chat lines into
   French, German and Spanish they scored alike (41 and 40 clean), and 4B's
   phrasing read noticeably more natural; it is also slower and needs more
-  memory. It is nonetheless the **default** when the adapter can run it
-  (the capability probe's buffer limit covers its ~3.4 GB — `models.ts`
-  `defaultLlmForAdapter`, applied once the probe lands, only for a user
-  who never picked and only when the deploy named no model of its own;
-  devices under the limit keep the 1.7B). Settings → Translation's
+  memory. It is nonetheless the **default** on a device with the memory for
+  it (`models.ts` `defaultLlmForAdapter`): where the probe read
+  `navigator.deviceMemory`, the 4B needs **6 GiB** of device memory
+  (`LARGE_LLM_MIN_MEMORY_GIB`), because Chrome clamps the adapter's
+  addressable buffer to ~2 GiB on most desktop GPUs and the buffer rule
+  would never reach the 4B there; without that reading (Safari, Firefox)
+  the adapter's addressable buffer must cover the model's ~3.4 GB. The pick
+  stands in for an unset setting **at read time and is never persisted as a
+  choice** — a user who never picked and a deploy that named no model of its
+  own follow the device, and the resolution is redone when the probe lands
+  (`service.ts` `capabilities`, `llmChoice(catalog, setting, capability)`).
+  Settings → Translation's
   "GPU model" select writes `translateLlmModel` (carried by the settings
   backup like any setting); the model manager lists both rows, whichever is
   selected, and marks the selected one "In use". The setting stays `""`
   until the user picks a model, and an unset value resolves to the
-  catalog's default each time it is read, so a deploy's
+  deploy's model, else the device's pick, else the catalog's default each
+  time it is read, so a deploy's
   `translation.llm.model` is the default for everyone who never chose (and
   a later deploy default reaches them too); it is added to the choices when
   it is neither shipped model, its `lib` on its own ref only
-  (`ModelRef.lib`). A stored id that is no longer a choice selects the
-  default (`llmChoice`). **GPU work is one model at a time**: a request or
+  (`ModelRef.lib`). A stored id that is no longer a choice resolves like
+  an unset one (`llmChoice`). **GPU work is one model at a time**: a request or
   a Settings download claims its model (`llmStarted`), and work on another
   model — a request, a download, a switch's unload — waits until those
   claims are released, since WebLLM loading one model tears down the

@@ -91,16 +91,65 @@ describe("translate/models", () => {
 		expect(small.lib).to.equal(undefined);
 	});
 
+	it("defaults from the device's memory when the probe reports it", () => {
+		// Chrome clamps maxStorageBufferBindingSize to ~2 GiB on most
+		// desktop GPUs, so the buffer rule alone never reaches the 4B there:
+		// where `navigator.deviceMemory` answers, that is the better probe.
+		const buffer = 2 * 1024 * 1024 * 1024;
+
+		expect(defaultLlmForAdapter({maxBufferBytes: buffer, deviceMemoryGiB: 8})).to.equal(
+			QWEN3_4B_ID
+		);
+		expect(defaultLlmForAdapter({maxBufferBytes: buffer, deviceMemoryGiB: 6})).to.equal(
+			QWEN3_4B_ID
+		);
+		expect(defaultLlmForAdapter({maxBufferBytes: buffer, deviceMemoryGiB: 4})).to.equal(
+			QWEN3_1_7B_ID
+		);
+		// A phone-class report, whatever the adapter claims to address.
+		expect(
+			defaultLlmForAdapter({maxBufferBytes: 8 * 1024 * 1024 * 1024, deviceMemoryGiB: 2})
+		).to.equal(QWEN3_1_7B_ID);
+	});
+
 	it("defaults to the 4B when the adapter fits it, else the 1.7B", () => {
-		// A desktop-class adapter (the 4060-class machine this deploy runs
-		// on) fits the 4B's ~3.4 GB of graphics memory with room to spare.
-		expect(defaultLlmForAdapter(4 * 1024 * 1024 * 1024)).to.equal(QWEN3_4B_ID);
-		expect(defaultLlmForAdapter(3_400_000_000)).to.equal(QWEN3_4B_ID);
+		// No `deviceMemory` (Safari, Firefox): the adapter's addressable
+		// buffer is all there is. A desktop-class adapter fits the 4B's
+		// ~3.4 GB of graphics memory with room to spare.
+		const mem = (maxBufferBytes: number) => ({maxBufferBytes, deviceMemoryGiB: null});
+
+		expect(defaultLlmForAdapter(mem(4 * 1024 * 1024 * 1024))).to.equal(QWEN3_4B_ID);
+		expect(defaultLlmForAdapter(mem(3_400_000_000))).to.equal(QWEN3_4B_ID);
 		// Under the 4B's requirement the 1.7B is the best that fits.
-		expect(defaultLlmForAdapter(3_399_999_999)).to.equal(QWEN3_1_7B_ID);
-		expect(defaultLlmForAdapter(2 * 1024 * 1024 * 1024)).to.equal(QWEN3_1_7B_ID);
+		expect(defaultLlmForAdapter(mem(3_399_999_999))).to.equal(QWEN3_1_7B_ID);
+		expect(defaultLlmForAdapter(mem(2 * 1024 * 1024 * 1024))).to.equal(QWEN3_1_7B_ID);
 		// Even the smallest gpu-tier adapter (the 1 GiB floor) gets an answer.
-		expect(defaultLlmForAdapter(1024 * 1024 * 1024)).to.equal(QWEN3_1_7B_ID);
+		expect(defaultLlmForAdapter(mem(1024 * 1024 * 1024))).to.equal(QWEN3_1_7B_ID);
+		// No probe at all: the shipped default.
+		expect(defaultLlmForAdapter(null)).to.equal(QWEN3_1_7B_ID);
+	});
+
+	it("an unset choice resolves at read time: the deploy's model, else the adapter's pick", () => {
+		const shipped = buildCatalog();
+		const gpu = {maxBufferBytes: 4 * 1024 * 1024 * 1024, deviceMemoryGiB: 16};
+		const small = {maxBufferBytes: 2 * 1024 * 1024 * 1024, deviceMemoryGiB: 4};
+
+		// Nothing stored and no deploy model: the device decides, and the
+		// pick is never written back to the settings (translate/index.ts).
+		expect(llmChoice(shipped, "", gpu).id).to.equal(QWEN3_4B_ID);
+		expect(llmChoice(shipped, null, small).id).to.equal(QWEN3_1_7B_ID);
+		// The capability is not probed yet: the catalog default serves until
+		// it lands, and the same call answers anew once it has.
+		expect(llmChoice(shipped, "", null).id).to.equal(QWEN3_1_7B_ID);
+		expect(llmChoice(shipped, "").id).to.equal(QWEN3_1_7B_ID);
+		// A choice the user made outranks the device.
+		expect(llmChoice(shipped, QWEN3_1_7B_ID, gpu).id).to.equal(QWEN3_1_7B_ID);
+		// So does the deploy's own model — including a deploy that picks the
+		// shipped 1.7B on purpose.
+		const deploy = buildCatalog({llm: {model: QWEN3_1_7B_ID}});
+
+		expect(llmChoice(deploy, "", gpu).id).to.equal(QWEN3_1_7B_ID);
+		expect(selectLlm(shipped, "", gpu).llm.id).to.equal(QWEN3_4B_ID);
 	});
 
 	it("the GPU choices carry their graphics-memory requirement", () => {

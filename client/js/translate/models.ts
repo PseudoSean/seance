@@ -24,8 +24,18 @@ export interface ModelCatalog {
 	 * either can be downloaded or deleted whichever is selected.
 	 */
 	llmChoices: ModelRef[];
-	/** The id selected while the user has chosen none: the deploy's model, else 1.7B. */
+	/**
+	 * The catalog's own fallback GPU model: the deploy's model, else the
+	 * shipped 1.7B. What an unresolvable selection lands on when the device
+	 * has not been probed (`llmChoice`).
+	 */
 	llmDefault: string;
+	/**
+	 * The deploy's `translation.llm.model`, when it named one. A deploy's
+	 * model is a decision, so it outranks the device pick for a user who
+	 * never chose (`llmChoice`); the shipped default is not.
+	 */
+	llmDeploy?: string;
 	/**
 	 * The deploy's `translation.llm.lib`, as given. The engines read it off
 	 * the model's own ref (`ModelRef.lib`), which only the deploy's model
@@ -101,15 +111,32 @@ export const LLM_CHOICES: readonly ModelRef[] = [
 	},
 ];
 
+/** What the default GPU model is decided from (capability.ts `Capability`). */
+export interface AdapterMemory {
+	maxBufferBytes: number;
+	deviceMemoryGiB: number | null;
+}
+
+/** The device memory a 4B model asks for, in GiB. */
+export const LARGE_LLM_MIN_MEMORY_GIB = 6;
+
 /**
- * The default GPU model for an adapter with `maxBufferBytes` addressable:
- * the most capable choice whose memory requirement fits. The gpu tier's
- * own 1 GiB gate guarantees the last choice (1.7B) always fits, so this
- * never returns nothing for a gpu-tier device.
+ * The default GPU model for this device: the most capable choice its memory
+ * holds. `navigator.deviceMemory` (`deviceMemoryGiB`) decides where the
+ * probe has it — Chrome clamps `maxStorageBufferBindingSize` to ~2 GiB on
+ * most desktop GPUs, so the addressable buffer alone would never reach the
+ * 4B there. Without it (Safari, Firefox) the adapter's addressable buffer
+ * is all there is, and the most capable choice whose requirement fits wins.
+ * The gpu tier's own 1 GiB gate guarantees the first choice (1.7B) always
+ * fits, so this never returns nothing.
  */
-export function defaultLlmForAdapter(maxBufferBytes: number): string {
+export function defaultLlmForAdapter(memory: AdapterMemory | null | undefined): string {
+	if (memory && typeof memory.deviceMemoryGiB === "number") {
+		return memory.deviceMemoryGiB >= LARGE_LLM_MIN_MEMORY_GIB ? QWEN3_4B_ID : LLM_CHOICES[0].id;
+	}
+
 	for (const ref of [...LLM_CHOICES].reverse()) {
-		if ((ref.vramBytes ?? 0) <= maxBufferBytes) {
+		if ((ref.vramBytes ?? 0) <= (memory?.maxBufferBytes ?? 0)) {
 			return ref.id;
 		}
 	}
@@ -141,12 +168,28 @@ function deployLlmRef(id: string, lib: string | undefined): ModelRef {
 
 /**
  * The GPU model `selected` names among the choices; an id that is none of
- * them (a stored setting a later deploy no longer offers, an empty one)
- * gets the default.
+ * them (a stored setting a later deploy no longer offers, an empty one — an
+ * unset setting is no choice) is resolved here, at read time, and never
+ * written back: the deploy's own model, else what `memory` fits, else the
+ * catalog default. `memory` is the device probe (store `translationCapability`),
+ * null while it is still running — the catalog default serves until it lands
+ * and this answers anew once it has.
  */
-export function llmChoice(catalog: ModelCatalog, selected: string | null | undefined): ModelRef {
+export function llmChoice(
+	catalog: ModelCatalog,
+	selected: string | null | undefined,
+	memory?: AdapterMemory | null
+): ModelRef {
+	const chosen = catalog.llmChoices.find((ref) => ref.id === selected);
+
+	if (chosen) {
+		return chosen;
+	}
+
+	const unset = catalog.llmDeploy ?? (memory ? defaultLlmForAdapter(memory) : undefined);
+
 	return (
-		catalog.llmChoices.find((ref) => ref.id === selected) ??
+		catalog.llmChoices.find((ref) => ref.id === unset) ??
 		catalog.llmChoices.find((ref) => ref.id === catalog.llmDefault) ??
 		catalog.llm
 	);
@@ -155,9 +198,10 @@ export function llmChoice(catalog: ModelCatalog, selected: string | null | undef
 /** The catalog with `selected` (see `llmChoice`) as its GPU model. */
 export function selectLlm(
 	catalog: ModelCatalog,
-	selected: string | null | undefined
+	selected: string | null | undefined,
+	memory?: AdapterMemory | null
 ): ModelCatalog {
-	const llm = llmChoice(catalog, selected);
+	const llm = llmChoice(catalog, selected, memory);
 
 	return llm === catalog.llm ? catalog : {...catalog, llm};
 }
@@ -202,6 +246,10 @@ export function buildCatalog(
 		},
 		opus,
 	};
+
+	if (options.llm?.model) {
+		catalog.llmDeploy = options.llm.model;
+	}
 
 	if (options.llm?.lib) {
 		catalog.llmLib = options.llm.lib;

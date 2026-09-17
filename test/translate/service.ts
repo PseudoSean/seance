@@ -111,7 +111,15 @@ function rig(
 	};
 	const service = new TranslateService(
 		deps,
-		{catalog, routesFor: () => routes, ortBase: "https://app.test/js/ort/", enabled},
+		{
+			catalog,
+			// A chosen model, so the probe's own default (an unset choice
+			// resolves against the device) leaves these rigs alone.
+			selectedLlm: QWEN3_1_7B_ID,
+			routesFor: () => routes,
+			ortBase: "https://app.test/js/ort/",
+			enabled,
+		},
 		{llm: true, cpu: true}
 	);
 
@@ -503,17 +511,22 @@ describe("translate/service", () => {
 		r.service.dispose();
 	});
 
-	it("a switch to the model already selected, or to no choice from the default, changes nothing", async () => {
+	it("a switch to the model already selected changes nothing; an id that is no choice follows the device", async () => {
 		const r = rig("gpu");
 		clock = r.clock;
 		await text(r.service.translate(base));
 		const before = r.service.catalog;
 
 		r.service.setLlmModel(QWEN3_1_7B_ID);
-		r.service.setLlmModel("gone-model-q4f16_1-MLC");
 		await r.clock.tickAsync(0);
 		expect(r.service.catalog).to.equal(before);
 		expect(r.llm.calls.unload).to.equal(0);
+
+		// A stored id a later deploy no longer offers is no choice at all:
+		// it resolves like an unset one, against the device (8 GiB here).
+		r.service.setLlmModel("gone-model-q4f16_1-MLC");
+		await r.clock.tickAsync(0);
+		expect(r.service.catalog.llm.id).to.equal(QWEN3_4B_ID);
 		r.service.dispose();
 	});
 
@@ -568,6 +581,24 @@ describe("translate/service", () => {
 			QWEN3_1_7B_ID,
 			QWEN3_4B_ID,
 		]);
+		r.service.dispose();
+	});
+
+	it("an unset GPU choice follows the device once the probe lands", async () => {
+		// "" is no choice: the service resolves it against the probe's
+		// answer, and the resolution happens when that answer arrives — the
+		// catalog starts on the shipped default and moves to the 4B because
+		// the rig's device reports 8 GiB.
+		const r = rig("gpu");
+
+		clock = r.clock;
+		r.service.setLlmModel("");
+		expect(r.service.catalog.llm.id).to.equal(QWEN3_1_7B_ID);
+		expect(await r.service.capabilities()).to.include({tier: "gpu"});
+		expect(r.service.catalog.llm.id).to.equal(QWEN3_4B_ID);
+		// A choice of the user's outranks it, and survives the probe.
+		r.service.setLlmModel(QWEN3_1_7B_ID);
+		expect(r.service.catalog.llm.id).to.equal(QWEN3_1_7B_ID);
 		r.service.dispose();
 	});
 
@@ -738,6 +769,7 @@ describe("translate/service", () => {
 			},
 			{
 				catalog,
+				selectedLlm: QWEN3_1_7B_ID,
 				routesFor(id) {
 					asked.push(id);
 					return id === QWEN3_4B_ID ? {"*": {"*": ["nllb"]}} : {"*": {"*": ["llm"]}};

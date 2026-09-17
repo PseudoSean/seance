@@ -243,7 +243,11 @@ export default defineComponent({
 		const limited = (code: string | null) =>
 			isLimitedLanguage(
 				code,
-				llmChoice(translateService().catalog, store.state.settings.translateLlmModel).id
+				llmChoice(
+					translateService().catalog,
+					store.state.settings.translateLlmModel,
+					store.state.translation.capability
+				).id
 			);
 		const name = (code: string) => languageName(code, readingLanguage());
 		// Both the names and their order follow the active locale, so the

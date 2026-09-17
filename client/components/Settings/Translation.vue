@@ -318,9 +318,15 @@ export default defineComponent({
 		const problem = computed(() => store.state.translation.workerError ?? loadError.value);
 		const llmChoices = service.catalog.llmChoices;
 		// The setting as the service reads it: an id that is no longer a
-		// choice shows (and runs) the default.
+		// choice — an unset one included — shows (and runs) what the service
+		// resolves it to. The device probe is read here, not captured, so
+		// the "in use" tag moves to the adapter's pick when it lands.
 		const selectedLlm = computed(() =>
-			llmChoice(service.catalog, store.state.settings.translateLlmModel)
+			llmChoice(
+				service.catalog,
+				store.state.settings.translateLlmModel,
+				store.state.translation.capability
+			)
 		);
 		const limited = (code: string | null) => isLimitedLanguage(code, selectedLlm.value.id);
 

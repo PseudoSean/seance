@@ -33,6 +33,13 @@ export interface ServiceDeps {
 export interface ServiceOptions {
 	/** Its `llm` is the selected GPU model; `setLlmModel` changes it. */
 	catalog: ModelCatalog;
+	/**
+	 * The `translateLlmModel` setting as stored — "" (or null) is no choice,
+	 * and resolves against the device probe once it lands (models.ts
+	 * `llmChoice`). Kept as given so the resolution can be redone; nothing
+	 * writes a resolved id back to the settings.
+	 */
+	selectedLlm?: string | null;
 	/** The deploy's `translation.routes`, merged over the selected model's table. */
 	routes?: RouteTable;
 	/** The shipped table for a GPU model id; `routes.default.ts` `routesFor` unless a test swaps it. */
@@ -83,6 +90,9 @@ export function loadNote(view: ModelView): LoadNote {
 export class TranslateService {
 	private worker: {client: TranslateClient; terminate(): void} | null = null;
 	private capability: Promise<Capability> | null = null;
+	/** The probe's answer once it has one; the GPU default follows it. */
+	private probed: Capability | null = null;
+	private selectedLlm: string | null = null;
 	private down = new Set<Candidate>();
 	private idleTimer: unknown = null;
 	private inFlight = 0;
@@ -131,6 +141,7 @@ export class TranslateService {
 			this.views.set(ref.id, {ref, cached: false, status: "idle", fraction: 0, error: null});
 		}
 
+		this.selectedLlm = options.selectedLlm ?? null;
 		this.table = this.buildTable();
 	}
 
@@ -152,7 +163,13 @@ export class TranslateService {
 	 * model's.
 	 */
 	setLlmModel(id: string | null): void {
-		const next = selectLlm(this.options.catalog, id);
+		this.selectedLlm = id;
+		this.applyLlmSelection();
+	}
+
+	/** Re-resolve the stored selection (a change, or the probe landing). */
+	private applyLlmSelection(): void {
+		const next = selectLlm(this.options.catalog, this.selectedLlm, this.probed);
 
 		if (next === this.options.catalog) {
 			return;
@@ -271,16 +288,25 @@ export class TranslateService {
 
 	capabilities(): Promise<Capability> {
 		if (!this.capability) {
-			this.capability = this.deps.probe().catch(
-				(): Capability => ({
-					tier: "none",
-					reasons: ["PROBE_FAILED"],
-					f16: false,
-					maxBufferBytes: 0,
-					deviceMemoryGiB: null,
-					storageQuotaBytes: null,
-				})
-			);
+			this.capability = this.deps
+				.probe()
+				.catch(
+					(): Capability => ({
+						tier: "none",
+						reasons: ["PROBE_FAILED"],
+						f16: false,
+						maxBufferBytes: 0,
+						deviceMemoryGiB: null,
+						storageQuotaBytes: null,
+					})
+				)
+				.then((capability) => {
+					this.probed = capability;
+					// An unset choice is the device's: now that the device
+					// has answered, the selection is resolved again.
+					this.applyLlmSelection();
+					return capability;
+				});
 		}
 
 		return this.capability;
