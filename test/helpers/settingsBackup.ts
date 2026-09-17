@@ -45,6 +45,10 @@ describe("settings backup (helpers/settingsBackup.ts)", function () {
 			JSON.stringify([{nick: "spam", ident: "*", hostname: "*", when: 1}])
 		);
 		store.set("thelounge.muted", JSON.stringify(["a/#x"]));
+		store.set(
+			"thelounge.translate",
+			JSON.stringify({"a/#x": {read: true, languages: ["de"], terms: {}}})
+		);
 		store.set("thelounge.sts", JSON.stringify({}));
 		store.set("thelounge.push", JSON.stringify({a: {}}));
 		store.set("thelounge.state.lastChannel", JSON.stringify({}));
@@ -63,6 +67,7 @@ describe("settings backup (helpers/settingsBackup.ts)", function () {
 
 	it("knows which keys are preferences", function () {
 		expect(isBackupKey("settings")).to.equal(true);
+		expect(isBackupKey("thelounge.translate")).to.equal(true);
 		expect(isBackupKey("thelounge.ignore.some-uuid")).to.equal(true);
 		expect(isBackupKey("thelounge.sts")).to.equal(false);
 		expect(isBackupKey("thelounge.push")).to.equal(false);
@@ -83,7 +88,13 @@ describe("settings backup (helpers/settingsBackup.ts)", function () {
 			"thelounge.ignore.a",
 			"thelounge.muted",
 			"thelounge.networks",
+			"thelounge.translate",
 		]);
+		// The per-channel translation state travels with the rest: which
+		// channels read, into what, and their term memory.
+		expect(backup.entries["thelounge.translate"]).to.deep.equal({
+			"a/#x": {read: true, languages: ["de"], terms: {}},
+		});
 		expect(backup.entries.settings).to.deep.equal({theme: "creama", coloredNicks: false});
 	});
 
@@ -129,6 +140,17 @@ describe("settings backup (helpers/settingsBackup.ts)", function () {
 		expect(bytes[0]).to.equal(0x1f);
 		expect(bytes[1]).to.equal(0x8b);
 		expect(await decodeBackup(bytes)).to.deep.equal(backup);
+	});
+
+	it("carries the per-channel translation state through a whole round trip", async function () {
+		seed();
+		const bytes = await encodeBackup(collectBackup());
+
+		store.set("thelounge.translate", JSON.stringify({"a/#x": {read: false}}));
+		applyBackup(await decodeBackup(bytes));
+		expect(JSON.parse(store.get("thelounge.translate") as string)).to.deep.equal({
+			"a/#x": {read: true, languages: ["de"], terms: {}},
+		});
 	});
 
 	it("reads a plain JSON file too", async function () {

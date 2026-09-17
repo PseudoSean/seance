@@ -4,7 +4,8 @@
  *
  * The file is the localStorage entries that hold preferences — the settings
  * object, the saved networks, sort orders, mutes, ignore lists, trusted media
- * hosts, recent reactions, command aliases — wrapped in a small envelope and
+ * hosts, recent reactions, command aliases, the per-channel translation state
+ * — wrapped in a small envelope and
  * gzipped with the
  * browser's own `CompressionStream` (no dependency; a plain-JSON file is
  * accepted too, the loader sniffs the gzip magic). Extension:
@@ -38,6 +39,7 @@ export const BACKUP_KEYS: readonly string[] = [
 	"thelounge.media.trusted",
 	"thelounge.reactions.recent",
 	"thelounge.aliases",
+	"thelounge.translate",
 ];
 
 /** Key prefixes the backup carries: one entry per network. */

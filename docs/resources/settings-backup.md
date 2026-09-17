@@ -33,18 +33,19 @@ file from a newer version is refused with a message.
 
 ## What is in it
 
-| Key                            | What                                       |
-| ------------------------------ | ------------------------------------------ |
-| `settings`                     | the settings object (the store's live one) |
-| `thelounge.networks`           | saved networks                             |
-| `thelounge.networks.collapsed` | collapsed networks in the sidebar          |
-| `thelounge.sort.networks`      | network order                              |
-| `thelounge.sort.channels`      | channel order per network                  |
-| `thelounge.muted`              | muted channels                             |
-| `thelounge.media.trusted`      | trusted media hosts / channels / accounts  |
-| `thelounge.reactions.recent`   | the reaction picker's recents              |
-| `thelounge.aliases`            | command aliases (Settings → Aliases)       |
-| `thelounge.ignore.<uuid>`      | ignore list per network                    |
+| Key                            | What                                                                                                            |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `settings`                     | the settings object (the store's live one)                                                                      |
+| `thelounge.networks`           | saved networks                                                                                                  |
+| `thelounge.networks.collapsed` | collapsed networks in the sidebar                                                                               |
+| `thelounge.sort.networks`      | network order                                                                                                   |
+| `thelounge.sort.channels`      | channel order per network                                                                                       |
+| `thelounge.muted`              | muted channels                                                                                                  |
+| `thelounge.media.trusted`      | trusted media hosts / channels / accounts                                                                       |
+| `thelounge.reactions.recent`   | the reaction picker's recents                                                                                   |
+| `thelounge.aliases`            | command aliases (Settings → Aliases)                                                                            |
+| `thelounge.translate`          | per-channel translation state (what each channel reads and writes, its formality, variant, languages and terms) |
+| `thelounge.ignore.<uuid>`      | ignore list per network                                                                                         |
 
 Left out on purpose: `thelounge.sts` (a cache), `thelounge.push*` (this
 device's push subscriptions, bound to its service worker registration),
