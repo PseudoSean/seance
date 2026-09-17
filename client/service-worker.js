@@ -202,8 +202,8 @@ function isNavigation(request) {
 }
 
 // The shell cache exists so an installed app opens offline; it is not a
-// general-purpose store, and a browser evicts the whole origin's storage at
-// once when it fills up. A large same-origin response — a mirrored model
+// general-purpose cache, and a browser that runs out of quota evicts the
+// whole origin at once. A large same-origin response — a mirrored model
 // shard, a video, an archive a deploy serves next to the app — is served
 // and forgotten. (Weights under `models/` never reach the fetch handler at
 // all, `excludedPathsFromCache` above; this is the catch-all.)

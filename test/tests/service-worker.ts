@@ -1793,7 +1793,7 @@ describe("service worker shell cache", function () {
 		sw.sandbox.caches.open = (): Promise<any> =>
 			Promise.resolve({
 				match: (): Promise<undefined> => Promise.resolve(undefined),
-				put: (request: any): Promise<void> => {
+				put(request: any): Promise<void> {
 					put.push(typeof request === "string" ? request : request.url);
 					return Promise.resolve();
 				},
@@ -1804,7 +1804,7 @@ describe("service worker shell cache", function () {
 		for (const handler of sw.handlers.fetch ?? []) {
 			handler({
 				request,
-				respondWith: (p: Promise<unknown>) => {
+				respondWith(p: Promise<unknown>) {
 					responded = p;
 				},
 				waitUntil: (p: Promise<unknown>) => waited.push(p),
