@@ -19,8 +19,8 @@
 // reports "came back unchanged", while "[echo-once]", handed back only the
 // first time, ends as the bare retry's translation, and a question whose read-back the
 // fake answers ("[answer]") gets the bare second try there before the row
-// says it couldn't check; "/me" never
-// translates; a three-line draft translates as one numbered request and
+// says it couldn't check; a "/me" draft translates its text and goes out as
+// an ACTION behind the command, while every other command is left alone; a three-line draft translates as one numbered request and
 // ships as three lines; a draft carrying markdown, a nick, a URL and a code
 // span comes back with every one of them intact (the engine only ever saw
 // placeholders), the strip's Copy button's tooltip reads "Copied" and its
@@ -771,11 +771,45 @@ export default async function run(page) {
 		label: "clearing the draft dropped the strip",
 	});
 
-	// 8. A command never translates.
-	await typeAndEnter(page, `/me waves ${RUN}`);
-	await page.waitFor(`document.body.innerText.includes(${JSON.stringify(`waves ${RUN}`)})`, {
+	// 8. `/me` is prose: its text translates and the command goes back on
+	// the front of the translation. Every other command is left alone.
+	const action = `waves ${RUN}`;
+
+	await typeAndEnter(page, `/me ${action}`);
+	await page.waitFor(`${barText} === ${JSON.stringify(`[German] ${action}`)}`, {
 		timeout: 20000,
-		label: "the /me line",
+		label: "the action's text translated",
+	});
+	await page.check(
+		"the draft kept its command while the strip is up",
+		(await page.evaluate(inputValue)) === `/me ${action}`
+	);
+	await page.waitFor(
+		`!!document.querySelector(".translate-bar-send") && !document.querySelector(".translate-bar-send").disabled`,
+		{timeout: 25000, label: "the action's read-back finished"}
+	);
+	await page.evaluate(ENTER);
+	await page.waitFor(`!document.querySelector(${JSON.stringify(BAR)})`, {
+		label: "the strip went with the action",
+	});
+	await page.waitFor(settledSelf(`[German] ${action}`), {
+		timeout: 20000,
+		label: "the action in the timeline",
+	});
+	await page.check(
+		"the other user heard it as an ACTION, translated",
+		await heard(other, `\u0001ACTION [German] ${action}\u0001`)
+	);
+	await page.check(
+		"the input cleared after the action",
+		(await page.evaluate(inputValue)) === ""
+	);
+
+	// A command that is not `/me` still goes out as typed, with no strip.
+	await typeAndEnter(page, "/topic");
+	await page.waitFor(`${inputValue} === ""`, {
+		timeout: 20000,
+		label: "the command was sent",
 	});
 	await page.check(
 		"no strip for a command",
