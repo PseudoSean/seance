@@ -30,9 +30,12 @@ export interface RouteInput {
 	from: string | null;
 	/**
 	 * The language the caller's detector placed the text in when the verdict
-	 * was too weak to name as `from` (`PromptContext.sourceHint`). It picks
-	 * the table row when `from` is null, and lets a seq2seq candidate run
-	 * with it as its source; the LLM request keeps `from: null`.
+	 * was too weak to name as `from`: the reading queue's
+	 * `QueueItem.routeHint` and the composer's `sourceHintFor`, which travel
+	 * as `TranslateRequest.hint` -- routing only, never the prompt's
+	 * `PromptContext.sourceHint`. It picks the table row when `from` is
+	 * null, and lets a seq2seq candidate run with it as its source; the LLM
+	 * request keeps `from: null`.
 	 */
 	hint: string | null;
 	to: string;

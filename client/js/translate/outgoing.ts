@@ -753,6 +753,23 @@ export function sourceHintFor(
 }
 
 /**
+ * The judged failures a bare second try can answer: the answer's own
+ * failures, every one of them the same model looking at the same
+ * confounding request. The reading queue retries all five (`queue.ts`
+ * `failJudged`) and the composer tests membership here, so the two cannot
+ * drift apart again -- a draft the model looped on in four or five repeats
+ * (DEGENERATE) used to get no second try while a six-repeat one
+ * (REPETITION) did.
+ */
+export const BARE_RETRY_ERRORS: ReadonlySet<string> = new Set([
+	UNCHANGED,
+	NARRATION,
+	ANSWERED,
+	REPETITION,
+	DEGENERATE,
+]);
+
+/**
  * The second try for an answer that came back unchanged: the same draft,
  * the source left to the model, no context but the register. The routing
  * hint (`hint`, not part of the prompt) stays, because a seq2seq route

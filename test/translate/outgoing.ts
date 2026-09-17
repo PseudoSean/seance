@@ -7,6 +7,7 @@ import {
 } from "../../client/js/translate/engine";
 import {
 	ABORTED,
+	BARE_RETRY_ERRORS,
 	DEGENERATE,
 	EMPTY_TRANSLATION,
 	ANSWERED,
@@ -142,6 +143,21 @@ describe("translate/outgoing", () => {
 			});
 			// Editing is editing, whatever the line says.
 			expect(draftGate("/me waves", true)).to.deep.equal({kind: "edit", text: "/me waves"});
+		});
+	});
+
+	// The queue retries all five judged failures bare (`failJudged`); the
+	// composer used to name four of them, so a draft the model looped on in
+	// four or five repeats (DEGENERATE) got no second try while a six-repeat
+	// one (REPETITION) did.
+	describe("BARE_RETRY_ERRORS", () => {
+		it("is every judged failure a bare second try can answer", () => {
+			expect([...BARE_RETRY_ERRORS].sort()).to.deep.equal(
+				[UNCHANGED, NARRATION, ANSWERED, REPETITION, DEGENERATE].sort()
+			);
+			expect(BARE_RETRY_ERRORS.has(DEGENERATE)).to.equal(true);
+			// Not a judged failure: nothing came back at all.
+			expect(BARE_RETRY_ERRORS.has(EMPTY_TRANSLATION)).to.equal(false);
 		});
 	});
 

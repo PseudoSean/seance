@@ -26,13 +26,10 @@ import {type EngineName, type PromptContext} from "./engine";
 import {translateService} from "./index";
 import {
 	ABORTED,
-	ANSWERED,
-	NARRATION,
+	BARE_RETRY_ERRORS,
 	type OutgoingDeps,
 	type OutgoingRequest,
-	REPETITION,
 	type TranslateCapture,
-	UNCHANGED,
 	WRITE_DETECT_MIN_GAP,
 	answerError,
 	bareRetry,
@@ -404,12 +401,7 @@ export async function translateOutgoing(
 			// confounding request, and the bare one translates. So does one
 			// stuck repeating a word ("Höfðu ekki ekki ekki …"), and one that
 			// answered the draft's question instead of translating it.
-			if (
-				error === UNCHANGED ||
-				error === NARRATION ||
-				error === ANSWERED ||
-				error === REPETITION
-			) {
+			if (error !== null && BARE_RETRY_ERRORS.has(error)) {
 				store.commit("outgoingTranslationPatch", {
 					chanId: channel.id,
 					patch: {requestFrom: null, retried: true},
@@ -619,12 +611,7 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 			// stays, for a seq2seq route).
 			const first = answerError(entry.text, read, target);
 
-			if (
-				first === UNCHANGED ||
-				first === NARRATION ||
-				first === ANSWERED ||
-				first === REPETITION
-			) {
+			if (first !== null && BARE_RETRY_ERRORS.has(first)) {
 				read = await attempt(bareRetry(request), true);
 
 				if (!current(channel, draft, controller)) {
