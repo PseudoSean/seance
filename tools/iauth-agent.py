@@ -33,7 +33,10 @@ def out(line: str) -> None:
 
 def main() -> None:
     out("V :seance-iauth 1.0")
-    out("O rS")  # r: account report, S: SASL handling
+    # U: UNDERNET username reports (the ircd sends `U <username>...` and waits
+    # for the agent's `U<fd>` verdict — without this every non-SASL
+    # registration stalls in the HURRY state); r: account report; S: SASL.
+    out("O UrS")
     out("W :PLAIN")
 
     # fd -> (remote ip, remote port), learned from the C introduction.
@@ -77,8 +80,14 @@ def main() -> None:
 
         if cmd == "U":
             # The username report (the USER command): the ircd waits for the
-            # verdict before it finishes registering — accept it as-is.
-            out(f"U{fd}")
+            # verdict before it finishes registering — accept it as-is. The
+            # reply carries <id> <ip> <port>: without the address the ircd
+            # answers "E Missing" and never registers the client. Then the
+            # done-checking, which is what actually completes the
+            # registration — without it the ircd waits in HURRY forever.
+            addr = clients.get(fd, ("0.0.0.0", "0"))
+            out(f"U{fd} {addr[0]} {addr[1]}")
+            out(f"D{fd} {addr[0]} {addr[1]}")
             continue
 
         if cmd != "a":
