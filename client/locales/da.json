@@ -601,7 +601,6 @@
   "settings.general.uploadCanvas": "Attempt to remove metadata from images before uploading",
   "settings.general.uploadCanvasHelp": "This option renders the image into a canvas element to remove metadata from the image. This may break orientation if your browser does not support that.",
   "settings.general.uploadsHeading": "File uploads",
-  "settings.locale.auto": "System default",
   "settings.networks.add": "Add network",
   "settings.networks.connect": "Connect",
   "settings.networks.connected": "Connected",

@@ -70,7 +70,7 @@ export default defineComponent({
 		// re-renders on a locale change.
 		const autoLabel = computed(() => {
 			void locale.value; // the resolved tag, never "auto"
-			return `${t("settings.locale.auto")} (${nativeName(locale.value)})`;
+			return t("settings.locale.auto", {language: nativeName(locale.value)});
 		});
 
 		const onChange = (event: Event) => {

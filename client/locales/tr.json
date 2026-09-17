@@ -574,7 +574,6 @@
   "settings.general.uploadCanvas": "Görüntüyü yüklemeden önce resim metadatalarını kaldırma denemek",
   "settings.general.uploadCanvasHelp": "Bu seçenek, görüntüyü bir canvas öğesine dönüştürerek resim metadatalarını kaldırır. Bu, tarayıcınızın bu özelliğe destek ifa etmediği durumda yönü bozabilir.",
   "settings.general.uploadsHeading": "Dosya yükleme",
-  "settings.locale.auto": "Sistem varsayılanı",
   "settings.networks.add": "Ağaç ekle",
   "settings.networks.connect": "Bağlantı",
   "settings.networks.connected": "Bağlantı kuruldu",

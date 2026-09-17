@@ -656,7 +656,6 @@
   "settings.general.uploadCanvas": "尝试在上传前从图像中删除元数据",
   "settings.general.uploadCanvasHelp": "该选项会将图像转换为画布元素以删除图像元数据。这可能会破坏方向，如果浏览器不支持该功能的话。",
   "settings.general.uploadsHeading": "文件上传",
-  "settings.locale.auto": "系统默认",
   "settings.networks.add": "添加网络",
   "settings.networks.connect": "连接",
   "settings.networks.connected": "已连接",

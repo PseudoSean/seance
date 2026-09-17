@@ -203,7 +203,7 @@ export function generateChannelContextMenu(
 		});
 
 		items.push({
-			label: "Translation…",
+			label: t("translate.menu.panel"),
 			type: "item",
 			class: "translate",
 			action() {

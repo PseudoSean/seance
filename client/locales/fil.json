@@ -600,7 +600,6 @@
   "settings.general.uploadCanvas": "I-angat ang pag-eliminahin ng metadata mula sa mga larawan bago i-upload",
   "settings.general.uploadCanvasHelp": "Ang pagpipilian na ito ay nagpapalabas ng larawan sa isang canvas element upang i-eliminahin ang metadata mula sa larawan. Ito ay maaaring mabawasan ang pagkaka-orientation kung ang browser ay hindi nakakapag-allow nito.",
   "settings.general.uploadsHeading": "I-upload ang mga file",
-  "settings.locale.auto": "Sistema default",
   "settings.networks.add": "Mag-agawa ng network",
   "settings.networks.connect": "Kumonekta",
   "settings.networks.connected": "Naka konekta",

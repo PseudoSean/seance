@@ -652,7 +652,6 @@
   "settings.general.uploadCanvas": "파일 업로드 전에 이미지의 메타데이터를 제거하려고 시도합니다",
   "settings.general.uploadCanvasHelp": "이 옵션은 이미지를 캔버스 요소로 변환하여 메타데이터를 제거합니다. 이 옵션은 브라우저가 해당 기능을 지원하지 않을 경우 방향성에 문제가 생길 수 있습니다.",
   "settings.general.uploadsHeading": "파일 업로드",
-  "settings.locale.auto": "시스템 기본",
   "settings.networks.add": "네트워크 추가",
   "settings.networks.connect": "연결",
   "settings.networks.connected": "연결됨",

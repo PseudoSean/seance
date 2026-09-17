@@ -27,8 +27,17 @@ const cap: Handler = (client, msg) => {
 		client.abortSasl(t("connect.saslReason.capRefused"));
 	}
 
-	if (result.error) {
-		client.pushMessage(client.lobby, {type: MessageType.ERROR, text: result.error}, true);
+	if (result.errorCode === "MISSING_CAPS") {
+		// The cap names are the server's own words: a verbatim value inside
+		// the translated frame.
+		client.pushMessage(
+			client.lobby,
+			{
+				type: MessageType.ERROR,
+				text: t("error.missingCaps", {caps: result.missingRequired.join(" ")}),
+			},
+			true
+		);
 	}
 };
 

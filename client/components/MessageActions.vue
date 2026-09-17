@@ -189,7 +189,9 @@ export default defineComponent({
 		});
 
 		const translateLabel = computed(() =>
-			hiddenTranslation.value ? "Show translation" : "Translate"
+			hiddenTranslation.value
+				? t("translate.action.showTranslation")
+				: t("translate.action.translate")
 		);
 
 		const canTranslate = computed(() => {

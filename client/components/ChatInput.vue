@@ -87,7 +87,8 @@
 				<span
 					v-if="outgoing.status === 'failed'"
 					class="translate-bar-text translate-bar-failed"
-					>couldn't translate, send as written?<span
+					>{{ t("translate.strip.failed")
+					}}<span
 						v-if="outgoing.error"
 						class="translate-bar-reason"
 						:title="outgoing.error"
@@ -114,8 +115,8 @@
 							'translate-bar-copy',
 							{'translate-bar-copy-done': copiedOutgoing},
 						]"
-						:title="copiedOutgoing ? 'Copied' : 'Copy the translation'"
-						:aria-label="copiedOutgoing ? 'Copied' : 'Copy the translation'"
+						:title="copyLabel"
+						:aria-label="copyLabel"
 						@mousedown.prevent
 						@click="copyOutgoing"
 					/>
@@ -123,24 +124,16 @@
 						type="button"
 						class="translate-bar-button translate-bar-send"
 						:disabled="outgoingBusy || !canSend"
-						:title="
-							outgoing.status === 'failed'
-								? 'Send as written'
-								: 'Send the translation'
-						"
-						:aria-label="
-							outgoing.status === 'failed'
-								? 'Send as written'
-								: 'Send the translation'
-						"
+						:title="outgoingSendLabel"
+						:aria-label="outgoingSendLabel"
 						@mousedown.prevent
 						@click="onSubmit()"
 					/>
 					<button
 						type="button"
 						class="translate-bar-button translate-bar-edit"
-						title="Keep typing (Escape)"
-						aria-label="Keep typing (Escape)"
+						:title="keepTypingLabel"
+						:aria-label="keepTypingLabel"
 						@mousedown.prevent
 						@click="cancelOutgoingNow"
 					/>
@@ -151,9 +144,9 @@
 				class="translate-bar-row translate-bar-check"
 			>
 				<span class="translate-bar-check-label">{{ outgoingCheckLabel }}</span>
-				<span v-if="outgoing.check.status === 'failed'" class="translate-bar-failed"
-					>couldn't check</span
-				>
+				<span v-if="outgoing.check.status === 'failed'" class="translate-bar-failed">{{
+					t("translate.strip.checkFailed")
+				}}</span>
 				<span
 					v-else
 					class="translate-bar-text"
@@ -412,7 +405,10 @@ export default defineComponent({
 				const to = writeTarget(props.network, channel);
 
 				return to
-					? `Write to ${channel.name} · sent in ${languageName(to, readingLanguage())}`
+					? t("translate.composer.placeholder", {
+							name: channel.name,
+							language: languageName(to, readingLanguage()),
+					  })
 					: t("composer.placeholder", {name: channel.name});
 			}
 
@@ -576,12 +572,22 @@ export default defineComponent({
 				return undefined;
 			}
 
-			const from = entry.requestFrom ? readerName(entry.requestFrom) : "auto";
-			const route = `${from} → ${readerName(entry.to)} · ${entry.model} (${
-				entry.engine === "llm" ? "GPU" : "CPU"
-			})`;
+			const from = entry.requestFrom
+				? readerName(entry.requestFrom)
+				: t("translate.strip.sourceAuto");
+			const gpu = entry.engine === "llm";
+			// One whole phrase per shape (device × retried): no translated
+			// fragment is ever glued onto another, and every key is a literal
+			// the pot check can see.
+			const vars = {from, to: readerName(entry.to), model: entry.model};
 
-			return entry.retried ? `${route} · retried without a source` : route;
+			if (entry.retried) {
+				return gpu
+					? t("translate.strip.routeGpuRetried", vars)
+					: t("translate.strip.routeCpuRetried", vars);
+			}
+
+			return gpu ? t("translate.strip.routeGpu", vars) : t("translate.strip.routeCpu", vars);
 		});
 
 		// The route's model downloading for this draft (service.ts loads it on
@@ -643,6 +649,18 @@ export default defineComponent({
 			});
 		};
 
+		// The strip's three buttons: whole phrases from the catalog, never a
+		// ternary over two literals in the template.
+		const copyLabel = computed(() =>
+			copiedOutgoing.value ? t("translate.strip.copied") : t("translate.strip.copy")
+		);
+		const keepTypingLabel = computed(() => t("translate.strip.keepTyping"));
+		const outgoingSendLabel = computed(() =>
+			outgoing.value?.status === "failed"
+				? t("translate.strip.sendAsWritten")
+				: t("translate.strip.sendTranslation")
+		);
+
 		// Send waits for the translation, and for the automatic check.
 		const outgoingBusy = computed(() => {
 			const entry = outgoing.value;
@@ -663,7 +681,7 @@ export default defineComponent({
 				return t("composer.send");
 			}
 
-			return outgoing.value.status === "failed" ? "Send as written" : "Send the translation";
+			return outgoingSendLabel.value;
 		});
 
 		/**
@@ -1295,6 +1313,9 @@ export default defineComponent({
 			cancelOutgoingNow,
 			copiedOutgoing,
 			copyOutgoing,
+			copyLabel,
+			keepTypingLabel,
+			outgoingSendLabel,
 		};
 	},
 });

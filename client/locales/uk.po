@@ -24,6 +24,42 @@ msgctxt "channel.partedAria"
 msgid "Not currently joined"
 msgstr "Not currently joined"
 
+#: client/components/ChannelWrapper.vue
+#. aria-label of a row in the sidebar's network list. {type} is the kind of window (see the channel.type.* keys); {name} is the channel name or nickname.
+msgctxt "channel.rowLabel"
+msgid "{type}: {name}"
+msgstr ""
+
+#: client/components/ChannelWrapper.vue
+#. aria-label of a row in the sidebar's network list that has unread messages or mentions. {type} is the kind of window (see the channel.type.* keys), {name} is the channel name or nickname, {extra} is a count phrase such as '3 mentions'.
+msgctxt "channel.rowLabelCount"
+msgid "{type}: {name} ({extra})"
+msgstr ""
+
+#: client/components/ChannelWrapper.vue
+#. Names the kind of window in a sidebar row's aria-label: a chat channel. Substituted as {type} in channel.rowLabel.
+msgctxt "channel.type.channel"
+msgid "Channel"
+msgstr ""
+
+#: client/components/ChannelWrapper.vue
+#. Names the kind of window in a sidebar row's aria-label: the chat network's own window. Substituted as {type} in channel.rowLabel.
+msgctxt "channel.type.lobby"
+msgid "Network"
+msgstr ""
+
+#: client/components/ChannelWrapper.vue
+#. Names the kind of window in a sidebar row's aria-label: a private conversation with one person. Substituted as {type} in channel.rowLabel.
+msgctxt "channel.type.query"
+msgid "Conversation"
+msgstr ""
+
+#: client/components/ChannelWrapper.vue
+#. Names the kind of window in a sidebar row's aria-label: a results window such as a channel list or a ban list. Substituted as {type} in channel.rowLabel.
+msgctxt "channel.type.special"
+msgid "List"
+msgstr ""
+
 #: client/components/Chat.vue:186
 #. Tooltip and aria-label of the spinner in a chat window's header while the connection is being established, when the network's display name is not known.
 msgctxt "chat.connecting"
@@ -1036,6 +1072,12 @@ msgstr "Cannot perform action: You're not a channel operator."
 msgctxt "error.inviteOnlyChannel"
 msgid "Cannot join {channel} - Channel is invite only."
 msgstr "Cannot join {channel} - Channel is invite only."
+
+#: client/js/irc/handlers/cap.ts
+#. Error shown in a network's own window when the chat server does not offer a protocol capability the client requires. {caps} is the server's own list of capability names, space separated and never translated.
+msgctxt "error.missingCaps"
+msgid "Missing required capabilities: {caps}"
+msgstr ""
 
 #: client/components/MessageTypes/error.vue
 #. Send refusal (401) phrased by the client; {nick} is the addressed nick, user data.
@@ -4136,9 +4178,11 @@ msgstr "Subir fitxers"
 #: client/components/Windows/Connect.vue:296
 #: client/components/Settings/Appearance.vue:253
 #: client/components/LanguageSelect.vue:50
-#. First option of the language selector: follow the browser's languages. The component appends the currently resolved tag in parentheses.
+#: client/components/LanguageSelect.vue
+#. The first option of the interface-language picker: the language the browser asks for is used. {language} is that language's name, written in itself.
+#, fuzzy
 msgctxt "settings.locale.auto"
-msgid "System default"
+msgid "System default ({language})"
 msgstr "System default"
 
 #: client/components/Settings/Networks.vue
@@ -4864,6 +4908,18 @@ msgctxt "system.quit"
 msgid "{nick} has quit"
 msgstr ""
 
+#: client/components/MessageActions.vue
+#. Tooltip and aria-label of the translate button in a message's hover toolbar when the message's translation was hidden; it brings it back.
+msgctxt "translate.action.showTranslation"
+msgid "Show translation"
+msgstr ""
+
+#: client/components/MessageActions.vue
+#. Tooltip and aria-label of the translate button in a message's hover toolbar: it translates that one message.
+msgctxt "translate.action.translate"
+msgid "Translate"
+msgstr ""
+
 #: client/components/TranslationLine.vue
 #. Tooltip and aria-label of a translation line's chip, skipped because the line is already in the reading language. {language} is its name in the reading language.
 msgctxt "translate.chip.alreadyIn"
@@ -4882,16 +4938,123 @@ msgctxt "translate.chip.unsure"
 msgid "Language not told apart, not translated. Translation options"
 msgstr ""
 
+#: client/components/ChatInput.vue
+#. Placeholder of the message composer in a channel or private conversation whose outgoing messages are translated. {name} is the channel or nickname; {language} is the language messages are sent in.
+msgctxt "translate.composer.placeholder"
+msgid "Write to {name} · sent in {language}"
+msgstr ""
+
 #: client/components/TranslationLine.vue
 #. Text in front of the failure reason on a message whose translation failed (with a retry button beside it).
 msgctxt "translate.failed"
 msgid "Couldn't translate"
 msgstr ""
 
+#: client/components/TranslationPanel.vue
+#: client/components/Settings/Translation.vue
+#. Choice for how formally a translation addresses people: keep whatever the original message did.
+msgctxt "translate.formality.auto"
+msgid "As the original does"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. The same choice as translate.formality.auto, shortened for the narrow segmented control on a phone: keep whatever the original message did.
+msgctxt "translate.formality.autoShort"
+msgid "As written"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#: client/components/Settings/Translation.vue
+#. Choice for how formally a translation addresses people: always use the familiar form.
+msgctxt "translate.formality.casual"
+msgid "Casually"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#: client/components/Settings/Translation.vue
+#. Choice for how formally a translation addresses people: always use the polite form.
+msgctxt "translate.formality.formal"
+msgid "Formally"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#: client/components/Settings/Translation.vue
+#. Label of the control that chooses how formally the translation addresses people, in the translation panel and in Settings.
+msgctxt "translate.formality.label"
+msgid "Address people"
+msgstr ""
+
+#: client/components/Chat.vue
+#. Tooltip of the translate button in a chat window's header while translation is off; clicking it turns reading on. {reading} is a language name.
+msgctxt "translate.header.off"
+msgid "Translate messages into {reading}"
+msgstr ""
+
+#: client/components/Chat.vue
+#. Tooltip of the translate button in a chat window's header when translation is off and the engine has paused. {reading} is a language name; {reason} is the engine's own untranslated message.
+msgctxt "translate.header.offPaused"
+msgid "Translate messages into {reading}, paused: {reason}"
+msgstr ""
+
+#: client/components/Chat.vue
+#. Tooltip of the translate button in a chat window's header while incoming messages are not translated but outgoing ones are. {reading} and {writing} are language names.
+msgctxt "translate.header.offWrite"
+msgid "Translate messages into {reading}, sending in {writing}"
+msgstr ""
+
+#: client/components/Chat.vue
+#. Tooltip of the translate button in a chat window's header when only outgoing messages are translated and the engine has paused. {reading} and {writing} are language names; {reason} is the engine's own untranslated message.
+msgctxt "translate.header.offWritePaused"
+msgid "Translate messages into {reading}, sending in {writing}, paused: {reason}"
+msgstr ""
+
+#: client/components/Chat.vue
+#. Tooltip of the translate button in a chat window's header while incoming messages are being translated. {reading} is a language name.
+msgctxt "translate.header.read"
+msgid "Translating into {reading}"
+msgstr ""
+
+#: client/components/Chat.vue
+#. Tooltip of the translate button in a chat window's header when translation is on but the engine has paused. {reading} is a language name; {reason} is the engine's own untranslated message.
+msgctxt "translate.header.readPaused"
+msgid "Translating into {reading}, paused: {reason}"
+msgstr ""
+
+#: client/components/Chat.vue
+#. Tooltip of the translate button in a chat window's header while incoming messages are translated and outgoing ones are too. {reading} and {writing} are language names.
+msgctxt "translate.header.readWrite"
+msgid "Translating into {reading}, sending in {writing}"
+msgstr ""
+
+#: client/components/Chat.vue
+#. Tooltip of the translate button in a chat window's header when reading and writing are both translated but the engine has paused. {reading} and {writing} are language names; {reason} is the engine's own untranslated message.
+msgctxt "translate.header.readWritePaused"
+msgid "Translating into {reading}, sending in {writing}, paused: {reason}"
+msgstr ""
+
+#: client/components/Chat.vue
+#. Tooltip and aria-label of the translate button in a chat window's header on a touch device, where tapping it opens the translation panel.
+msgctxt "translate.header.settings"
+msgid "Translation settings"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#: client/components/Settings/Translation.vue
+#. Warning shown under a language choice, in the translation panel and in Settings, when the available models translate that language poorly.
+msgctxt "translate.limitedLanguage"
+msgid "Translations into and out of this language are often wrong."
+msgstr ""
+
 #: client/components/TranslationLine.vue
 #. A translation chip's menu item.
 msgctxt "translate.menu.copy"
 msgid "Copy translation"
+msgstr ""
+
+#: client/js/helpers/contextMenu.ts
+#. Item in a channel's context menu in the sidebar; it opens that channel's translation panel.
+msgctxt "translate.menu.panel"
+msgid "Translation…"
 msgstr ""
 
 #: client/components/TranslationLine.vue
@@ -4930,6 +5093,132 @@ msgctxt "translate.notTranslated"
 msgid "Not translated"
 msgstr ""
 
+#: client/components/TranslationPanel.vue
+#. The placeholder option of the picker that adds a language to the list of languages spoken in this conversation, in the translation panel.
+msgctxt "translate.panel.addLanguage"
+msgid "Add a language…"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. Tooltip and aria-label of the ✕ button that closes the translation panel.
+msgctxt "translate.panel.close"
+msgid "Close"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. Heading of the translation panel, a dialog of translation settings for one conversation; the conversation's name is shown next to it.
+msgctxt "translate.panel.heading"
+msgid "Translation"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. Explanatory note under the list of languages spoken in this conversation, in the translation panel.
+msgctxt "translate.panel.languagesHint"
+msgid "Lines in these languages are recognised even when they are short or look alike."
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. The off choice: the segmented switch for translating incoming messages, and the first option of the 'send my messages in' picker, both in the translation panel.
+msgctxt "translate.panel.off"
+msgid "Off"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. The on choice of the segmented switch for translating incoming messages, in the translation panel.
+msgctxt "translate.panel.on"
+msgid "On"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. Explanatory note under the reading switch in the translation panel.
+msgctxt "translate.panel.readHint"
+msgid "Lines others send are shown with a translation underneath."
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. Label of the on/off switch for translating incoming messages in the translation panel. {language} is the language name they would be translated into.
+msgctxt "translate.panel.readIn"
+msgid "Read messages in {language}"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. Heading of the translation panel's section about incoming messages, and the label of the on/off control in it.
+msgctxt "translate.panel.reading"
+msgid "Reading"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. Link at the foot of the translation panel; it opens the application's Translation settings page.
+msgctxt "translate.panel.settingsLink"
+msgid "Language and models in Settings"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. aria-label of the translation panel, a dialog of translation settings for one conversation. {channel} is the channel name or nickname.
+msgctxt "translate.panel.title"
+msgid "Translation for {channel}"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. Label of the free-text field naming a regional variety of the target language, in the translation panel.
+msgctxt "translate.panel.variant"
+msgid "Variant"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. Explanatory note under the regional variety field in the translation panel.
+msgctxt "translate.panel.variantHint"
+msgid "A regional flavour the model should aim for."
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. Placeholder of the free-text field naming a regional variety of the target language, in the translation panel. Replace the example with one that suits the target language.
+msgctxt "translate.panel.variantPlaceholder"
+msgid "e.g. Brazilian Portuguese"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. Explanatory note under the 'send my messages in' picker in the translation panel. Enter is the keyboard key of that name.
+msgctxt "translate.panel.writeHint"
+msgid "Enter shows the translation first; Enter again sends it."
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. Label of the picker that chooses the language the user's own messages are translated into before sending, in the translation panel.
+msgctxt "translate.panel.writeLabel"
+msgid "Send my messages in"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. Heading of the translation panel's section about the messages the user sends.
+msgctxt "translate.panel.writing"
+msgid "Writing"
+msgstr ""
+
+#: client/components/SourceLanguagePicker.vue
+#. Button that closes the retranslate-from dialog without doing anything.
+msgctxt "translate.picker.cancel"
+msgid "Cancel"
+msgstr ""
+
+#: client/components/SourceLanguagePicker.vue
+#. Button that translates the message again from the language picked in the retranslate-from dialog.
+msgctxt "translate.picker.confirm"
+msgid "Translate"
+msgstr ""
+
+#: client/components/SourceLanguagePicker.vue
+#. aria-label of the small dialog that translates one message again from a language the user picks.
+msgctxt "translate.picker.dialog"
+msgid "Retranslate from another language"
+msgstr ""
+
+#: client/components/SourceLanguagePicker.vue
+#. Label of the language picker in the dialog that translates one message again from a language the user picks.
+msgctxt "translate.picker.label"
+msgid "Translate this line from"
+msgstr ""
+
 #: client/components/TranslationLine.vue
 #. Failure reason after 'Couldn't translate': the model replied to a question it found in the message rather than translating the message. Lowercase; reads as the tail of that sentence.
 msgctxt "translate.reason.answered"
@@ -4952,6 +5241,78 @@ msgstr ""
 #. Tooltip and aria-label of the circular-arrow button that retries a failed translation.
 msgctxt "translate.retry"
 msgid "Retry the translation"
+msgstr ""
+
+#: client/components/ChatInput.vue
+#. Text of the second row of the composer's translation strip when translating the translation back into the user's own language failed.
+msgctxt "translate.strip.checkFailed"
+msgid "couldn't check"
+msgstr ""
+
+#: client/components/ChatInput.vue
+#. Tooltip and aria-label of the copy button in the composer's translation strip, for two seconds after the translation was put on the clipboard.
+msgctxt "translate.strip.copied"
+msgid "Copied"
+msgstr ""
+
+#: client/components/ChatInput.vue
+#. Tooltip and aria-label of the copy button in the composer's translation strip; it puts the translated text on the clipboard.
+msgctxt "translate.strip.copy"
+msgid "Copy the translation"
+msgstr ""
+
+#: client/components/ChatInput.vue
+#. Text of the strip above the message composer when the outgoing translation failed; the user can press Enter again to send the message as they wrote it.
+msgctxt "translate.strip.failed"
+msgid "couldn't translate, send as written?"
+msgstr ""
+
+#: client/components/ChatInput.vue
+#. Tooltip and aria-label of the button in the composer's translation strip that dismisses the translation and returns to the draft. Escape is the keyboard key of the same name.
+msgctxt "translate.strip.keepTyping"
+msgid "Keep typing (Escape)"
+msgstr ""
+
+#: client/components/ChatInput.vue
+#. Tooltip of the composer translation strip's direction chip, naming the route a translation took. {from} and {to} are language names (or the word from translate.strip.sourceAuto), {model} is the model's technical id. This one ran on the main processor.
+msgctxt "translate.strip.routeCpu"
+msgid "{from} → {to} · {model} (CPU)"
+msgstr ""
+
+#: client/components/ChatInput.vue
+#. Tooltip of the composer translation strip's direction chip when the first attempt was tried again with no source language named. {from} and {to} are language names, {model} is the model's technical id. This one ran on the main processor.
+msgctxt "translate.strip.routeCpuRetried"
+msgid "{from} → {to} · {model} (CPU) · retried without a source"
+msgstr ""
+
+#: client/components/ChatInput.vue
+#. Tooltip of the composer translation strip's direction chip, naming the route a translation took. {from} and {to} are language names (or the word from translate.strip.sourceAuto), {model} is the model's technical id. This one ran on the graphics processor.
+msgctxt "translate.strip.routeGpu"
+msgid "{from} → {to} · {model} (GPU)"
+msgstr ""
+
+#: client/components/ChatInput.vue
+#. Tooltip of the composer translation strip's direction chip when the first attempt was tried again with no source language named. {from} and {to} are language names, {model} is the model's technical id. This one ran on the graphics processor.
+msgctxt "translate.strip.routeGpuRetried"
+msgid "{from} → {to} · {model} (GPU) · retried without a source"
+msgstr ""
+
+#: client/components/ChatInput.vue
+#. Tooltip and aria-label of the send button in the composer's translation strip after the translation failed: the message goes out in the language the user typed it in.
+msgctxt "translate.strip.sendAsWritten"
+msgid "Send as written"
+msgstr ""
+
+#: client/components/ChatInput.vue
+#. Tooltip and aria-label of the send button in the composer's translation strip: the translated text is what gets sent.
+msgctxt "translate.strip.sendTranslation"
+msgid "Send the translation"
+msgstr ""
+
+#: client/components/ChatInput.vue
+#. Stands in for the source language in the composer translation strip's route tooltip when no source was named and the model was left to work it out. Substituted as {from} in translate.strip.routeGpu and its siblings.
+msgctxt "translate.strip.sourceAuto"
+msgid "auto"
 msgstr ""
 
 #: client/components/TranslationLine.vue

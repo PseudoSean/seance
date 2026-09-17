@@ -554,7 +554,6 @@
   "settings.general.uploadCanvas": "Skúsiť odstrániť metadat umiestnené v obrázkoch pred návratom",
   "settings.general.uploadCanvasHelp": "Táto možnosť prevedie obrázok na príslušný príkazový príkaz, aby sa odstránili metadatumy z obrázku. To môže zničiť orientáciu, ak prehliadací program ne podporuje túto funkciu.",
   "settings.general.uploadsHeading": "Návratové súbory",
-  "settings.locale.auto": "predvolená štandardná",
   "settings.networks.add": "Pridať sieť",
   "settings.networks.connect": "Pripojiť",
   "settings.networks.connected": "Pripojené",

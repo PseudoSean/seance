@@ -9,16 +9,16 @@
 			:class="{'translation-panel--sheet': phone}"
 			role="dialog"
 			:aria-modal="phone ? 'true' : undefined"
-			:aria-label="'Translation for ' + channel.name"
+			:aria-label="panelLabel"
 		>
 			<div class="translation-panel-title">
-				<span class="translation-panel-heading">Translation</span>
+				<span class="translation-panel-heading">{{ t("translate.panel.heading") }}</span>
 				<span class="translation-panel-channel">{{ channel.name }}</span>
 				<button
 					type="button"
 					class="translation-panel-close"
-					aria-label="Close"
-					title="Close"
+					:aria-label="closeLabel"
+					:title="closeLabel"
 					@click="$emit('close')"
 				>
 					✕
@@ -27,18 +27,18 @@
 
 			<div class="translation-panel-body">
 				<section class="translation-panel-section">
-					<h3>Reading</h3>
+					<h3>{{ t("translate.panel.reading") }}</h3>
 					<!-- The reading language is not chosen here: it is the
 					     interface's (the unified setting), with the Settings
 					     override as the exception. This is only the switch. -->
 					<div class="translation-panel-field">
-						<span class="translation-panel-label"
-							>Read messages in {{ name(readingLanguage()) }}</span
-						>
+						<span class="translation-panel-label">{{
+							t("translate.panel.readIn", {language: name(readingLanguage())})
+						}}</span>
 						<div
 							class="translation-panel-segmented"
 							role="radiogroup"
-							aria-label="Reading"
+							:aria-label="readingLabel"
 						>
 							<button
 								v-for="option in readingChoices"
@@ -55,11 +55,11 @@
 						<span
 							v-if="state.read && limited(readingLanguage())"
 							class="translation-panel-limited"
-							>Translations into and out of this language are often wrong.</span
+							>{{ t("translate.limitedLanguage") }}</span
 						>
-						<span class="translation-panel-hint"
-							>Lines others send are shown with a translation underneath.</span
-						>
+						<span class="translation-panel-hint">{{
+							t("translate.panel.readHint")
+						}}</span>
 					</div>
 
 					<!-- The languages people write here. Not a multi-select: the
@@ -95,47 +95,48 @@
 							value=""
 							@change="onAddLanguage"
 						>
-							<option value="">Add a language…</option>
+							<option value="">{{ t("translate.panel.addLanguage") }}</option>
 							<option v-for="code in addable" :key="code" :value="code">
 								{{ name(code) }}
 							</option>
 						</select>
-						<span class="translation-panel-hint"
-							>Lines in these languages are recognised even when they are short or
-							look alike.</span
-						>
+						<span class="translation-panel-hint">{{
+							t("translate.panel.languagesHint")
+						}}</span>
 					</div>
 				</section>
 
 				<section class="translation-panel-section">
-					<h3>Writing</h3>
+					<h3>{{ t("translate.panel.writing") }}</h3>
 					<label class="translation-panel-field">
-						<span class="translation-panel-label">Send my messages in</span>
+						<span class="translation-panel-label">{{
+							t("translate.panel.writeLabel")
+						}}</span>
 						<select
 							name="translateWrite"
 							class="input translation-panel-control"
 							:value="state.write ?? ''"
 							@change="onWrite"
 						>
-							<option value="">Off</option>
+							<option value="">{{ t("translate.panel.off") }}</option>
 							<option v-for="code in languages" :key="code" :value="code">
 								{{ name(code) }}
 							</option>
 						</select>
-						<span v-if="limited(state.write)" class="translation-panel-limited"
-							>Translations into and out of this language are often wrong.</span
-						>
-						<span class="translation-panel-hint"
-							>Enter shows the translation first; Enter again sends it.</span
-						>
+						<span v-if="limited(state.write)" class="translation-panel-limited">{{
+							t("translate.limitedLanguage")
+						}}</span>
+						<span class="translation-panel-hint">{{
+							t("translate.panel.writeHint")
+						}}</span>
 					</label>
 
 					<!-- A native picker is a poor target on a phone: the three
 					     choices are a segmented control there. -->
 					<div v-if="phone" class="translation-panel-field">
-						<span id="translation-panel-formality" class="translation-panel-label"
-							>Address people</span
-						>
+						<span id="translation-panel-formality" class="translation-panel-label">{{
+							t("translate.formality.label")
+						}}</span>
 						<div
 							class="translation-panel-segmented"
 							role="radiogroup"
@@ -156,32 +157,36 @@
 						</div>
 					</div>
 					<label v-else class="translation-panel-field">
-						<span class="translation-panel-label">Address people</span>
+						<span class="translation-panel-label">{{
+							t("translate.formality.label")
+						}}</span>
 						<select
 							name="translateFormality"
 							class="input translation-panel-control"
 							:value="state.formality"
 							@change="onFormality"
 						>
-							<option value="auto">As the original does</option>
-							<option value="formal">Formally</option>
-							<option value="casual">Casually</option>
+							<option value="auto">{{ t("translate.formality.auto") }}</option>
+							<option value="formal">{{ t("translate.formality.formal") }}</option>
+							<option value="casual">{{ t("translate.formality.casual") }}</option>
 						</select>
 					</label>
 
 					<label class="translation-panel-field">
-						<span class="translation-panel-label">Variant</span>
+						<span class="translation-panel-label">{{
+							t("translate.panel.variant")
+						}}</span>
 						<input
 							name="translateVariant"
 							type="text"
 							class="input translation-panel-control"
 							:value="state.variant"
-							placeholder="e.g. Brazilian Portuguese"
+							:placeholder="variantPlaceholder"
 							@change="onVariant"
 						/>
-						<span class="translation-panel-hint"
-							>A regional flavour the model should aim for.</span
-						>
+						<span class="translation-panel-hint">{{
+							t("translate.panel.variantHint")
+						}}</span>
 					</label>
 				</section>
 			</div>
@@ -192,7 +197,7 @@
 					to="/settings/translation"
 					@click="$emit('close')"
 				>
-					Language and models in Settings
+					{{ t("translate.panel.settingsLink") }}
 				</router-link>
 			</div>
 		</div>
@@ -215,17 +220,12 @@ import {llmChoice} from "../js/translate/models";
 import {useStore} from "../js/store";
 import {cancelOutgoing} from "../js/translate/writer";
 import {hasVirtualKeyboard} from "../js/helpers/device";
+import {collator} from "../js/i18n/collation";
 import type {ClientChan, ClientNetwork} from "../js/types";
 import type {Formality} from "../js/translate/channelStore";
 
 /** The width below which the panel is a sheet: the phone layout's breakpoint. */
 const NARROW = "(max-width: 479px)";
-
-const FORMALITIES: {value: Formality; label: string}[] = [
-	{value: "auto", label: "As written"},
-	{value: "formal", label: "Formally"},
-	{value: "casual", label: "Casually"},
-];
 
 export default defineComponent({
 	name: "TranslationPanel",
@@ -246,8 +246,23 @@ export default defineComponent({
 				llmChoice(translateService().catalog, store.state.settings.translateLlmModel).id
 			);
 		const name = (code: string) => languageName(code, readingLanguage());
-		const languages = [...SUPPORTED_LANGUAGES].sort((a, b) => name(a).localeCompare(name(b)));
-		const formalities = FORMALITIES;
+		// Both the names and their order follow the active locale, so the
+		// list is a computed: a locale change re-sorts it (i18n/collation.ts).
+		const languages = computed(() =>
+			[...SUPPORTED_LANGUAGES].sort((a, b) => collator().compare(name(a), name(b)))
+		);
+		// The segmented control's short labels (the phone layout).
+		const formalities = computed((): {value: Formality; label: string}[] => [
+			{value: "auto", label: t("translate.formality.autoShort")},
+			{value: "formal", label: t("translate.formality.formal")},
+			{value: "casual", label: t("translate.formality.casual")},
+		]);
+		const panelLabel = computed(() =>
+			t("translate.panel.title", {channel: props.channel.name})
+		);
+		const closeLabel = computed(() => t("translate.panel.close"));
+		const readingLabel = computed(() => t("translate.panel.reading"));
+		const variantPlaceholder = computed(() => t("translate.panel.variantPlaceholder"));
 		const valueOf = (event: Event) =>
 			(event.target as HTMLSelectElement | HTMLInputElement).value;
 
@@ -270,13 +285,13 @@ export default defineComponent({
 		// What is left to declare, so the picker never offers a language the
 		// channel already lists.
 		const addable = computed(() =>
-			languages.filter((code) => !state.value.languages.includes(code))
+			languages.value.filter((code) => !state.value.languages.includes(code))
 		);
 
-		const readingChoices = [
-			{value: false, label: "Off"},
-			{value: true, label: "On"},
-		];
+		const readingChoices = computed(() => [
+			{value: false, label: t("translate.panel.off")},
+			{value: true, label: t("translate.panel.on")},
+		]);
 
 		const setRead = (on: boolean) => setReading(props.network, props.channel, on);
 
@@ -373,6 +388,10 @@ export default defineComponent({
 			limited,
 			readingChoices,
 			readingLanguage,
+			panelLabel,
+			closeLabel,
+			readingLabel,
+			variantPlaceholder,
 			setRead,
 			onAddLanguage,
 			removeLanguage,

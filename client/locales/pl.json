@@ -598,7 +598,6 @@
   "settings.general.uploadCanvas": "Próbuj usuwać metadane z obrazów przed przesłaniem",
   "settings.general.uploadCanvasHelp": "Ta opcja przekształca obraz w element canvas, aby usunąć metadane z obrazu. To może zniszczyć orientację, jeśli przegladarka nie wspiera tego.",
   "settings.general.uploadsHeading": "Przesyłanie plików",
-  "settings.locale.auto": "domyślny system",
   "settings.networks.add": "Dodaj sieć",
   "settings.networks.connect": "Połącz",
   "settings.networks.connected": "Połączony",

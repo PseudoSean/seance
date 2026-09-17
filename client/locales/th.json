@@ -589,7 +589,6 @@
   "settings.general.uploadCanvas": "ลองลบข้อมูลตัวตนจากภาพก่อนอัปโหลด",
   "settings.general.uploadCanvasHelp": "ตัวเลือคนี้จะแปลงภาพให้เป็นองค์ประกอบของ canvas เพื่อลบข้อมูลตัวตนจากภาพ อาจทำให้การจัดทิศทางล้มเหลวหากเบราว์เซอร์ของคุณไม่รองรับ",
   "settings.general.uploadsHeading": "การอัปโหลดไฟล์",
-  "settings.locale.auto": "ระบบค่าเริ่มต้น",
   "settings.networks.add": "เพิ่มเครือข่าย",
   "settings.networks.connect": "เชื่อมต่อ",
   "settings.networks.connected": "เชื่อมต่อแล้ว",

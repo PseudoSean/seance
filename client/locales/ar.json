@@ -628,7 +628,6 @@
   "settings.general.uploadCanvas": "المحاولة لحذف البيانات المُستمدة من الصور قبل التحميل",
   "settings.general.uploadCanvasHelp": "تُحول هذه الخيارة الصورة إلى عنصر canvas لحذف البيانات المُستمدة من الصورة. قد يُسبب هذا التغيير في الاتجاه إذا لم يدعم المتصفح ذلك.",
   "settings.general.uploadsHeading": "تحميل الملفات",
-  "settings.locale.auto": "الوضع الافتراضي للنظام",
   "settings.networks.add": "إضافة شبكة",
   "settings.networks.connect": "الاتصال",
   "settings.networks.connected": "متصل",

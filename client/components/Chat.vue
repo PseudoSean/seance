@@ -328,29 +328,43 @@ export default defineComponent({
 		const touch = hasVirtualKeyboard();
 		const translateLabel = computed(() => {
 			if (touch) {
-				return "Translation settings";
+				return t("translate.header.settings");
 			}
 
-			const name = (code: string) => languageName(code, navigator.language);
+			// Every language the tooltip names is named in the language the
+			// reader reads this channel in (F40), like every other label.
+			const name = (code: string) => languageName(code, readingLanguage());
 			const {read, write} = translationState.value;
 			const paused = store.state.translation.paused;
-			const parts: string[] = [];
-
-			if (read) {
-				parts.push(`Translating into ${name(read)}`);
-			} else {
-				parts.push(`Translate messages into ${name(readingLanguage())}`);
-			}
-
-			if (write) {
-				parts.push(`sending in ${name(write)}`);
-			}
+			// One whole phrase per state (reading on/off × a write target ×
+			// paused): the tooltip is never assembled from translated pieces,
+			// and every key is a literal the pot check can see.
+			const vars = {
+				reading: name(read || readingLanguage()),
+				writing: write ? name(write) : "",
+				// The engine's own text: a verbatim value, never translated.
+				reason: paused ? paused.message : "",
+			};
 
 			if (paused) {
-				parts.push(`paused: ${paused.message}`);
+				if (read) {
+					return write
+						? t("translate.header.readWritePaused", vars)
+						: t("translate.header.readPaused", vars);
+				}
+
+				return write
+					? t("translate.header.offWritePaused", vars)
+					: t("translate.header.offPaused", vars);
 			}
 
-			return parts.join(", ");
+			if (read) {
+				return write
+					? t("translate.header.readWrite", vars)
+					: t("translate.header.read", vars);
+			}
+
+			return write ? t("translate.header.offWrite", vars) : t("translate.header.off", vars);
 		});
 
 		const openTranslationPanel = () => {

@@ -586,7 +586,6 @@
   "settings.general.uploadCanvas": "Intentar eliminar metadades d'imatges abans de subir-les",
   "settings.general.uploadCanvasHelp": "Aquesta opció converteix l'imatge en un element canvas per eliminar les metadades de l'imatge. Això pot rompre l'orientació si el navegador no suporta això.",
   "settings.general.uploadsHeading": "Subir fitxers",
-  "settings.locale.auto": "System default",
   "settings.networks.add": "Add network",
   "settings.networks.connect": "Connect",
   "settings.networks.connected": "Connected",

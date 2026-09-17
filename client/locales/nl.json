@@ -614,7 +614,6 @@
   "settings.general.uploadCanvas": "Poging om metadata uit afbeeldingen te verwijderen voordat u uploadt",
   "settings.general.uploadCanvasHelp": "Deze optie maakt van de afbeelding een canvas-element om metadata uit de afbeelding te verwijderen. Dit kan de oriëntatie breken als uw browser dat niet ondersteunt.",
   "settings.general.uploadsHeading": "Bestandsuploads",
-  "settings.locale.auto": "Systeemstandaard",
   "settings.networks.add": "Netwerk toevoegen",
   "settings.networks.connect": "Verbinden",
   "settings.networks.connected": "Verbonden",

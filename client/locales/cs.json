@@ -610,7 +610,6 @@
   "settings.general.uploadCanvas": "Snažit se odebírat metadat z obrázků před návratem",
   "settings.general.uploadCanvasHelp": "Tato možnost převádí obrázek do prvků canvas pro odstranění metadat z obrázku. To může způsobit problém s orientací, pokud prohlížeč nepodporuje toto.",
   "settings.general.uploadsHeading": "Návrat souborů",
-  "settings.locale.auto": "Výchozí systém",
   "settings.networks.add": "Přidat síť",
   "settings.networks.connect": "Připojit",
   "settings.networks.connected": "Připojen",

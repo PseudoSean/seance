@@ -587,7 +587,6 @@
   "settings.general.uploadCanvas": "Próbálja meg eltávolítani a képeken lévő metadatát a feltöltés előtt",
   "settings.general.uploadCanvasHelp": "Ez a beállítás a képet egy canvas elemre átformázva történik, hogy eltávolítsa a kép metadatáját. Ez megszakíthatja a megjelenítést, ha a böngésző nem támogatja ezt.",
   "settings.general.uploadsHeading": "Fájl feltöltések",
-  "settings.locale.auto": "Alapértelmezett rendszer",
   "settings.networks.add": "Hálózat hozzáadása",
   "settings.networks.connect": "Kapcsolódás",
   "settings.networks.connected": "Kapcsolódva",

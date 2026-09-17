@@ -602,7 +602,6 @@
   "settings.general.uploadCanvas": "Försök ta bort metadata från bilder innan uppladdning",
   "settings.general.uploadCanvasHelp": "Den här alternativet gör bilden till en canvas-element för att ta bort metadata från bilden. Detta kan påverka orienteringen om din webbläsare inte stöder det.",
   "settings.general.uploadsHeading": "Filuppladdning",
-  "settings.locale.auto": "Systemstandard",
   "settings.networks.add": "Lägg till nätverk",
   "settings.networks.connect": "Koppla an",
   "settings.networks.connected": "Kopplad",

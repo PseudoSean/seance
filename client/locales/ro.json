@@ -630,7 +630,6 @@
   "settings.general.uploadCanvas": "Încearcă să elimini metadatele din imagini înainte de încărcare",
   "settings.general.uploadCanvasHelp": "Opțiunea aceasta transformă imaginea într-un element canvas pentru a elimina metadatele din imagine. Aceasta poate ruina orientarea dacă browserul nu suportă aceasta.",
   "settings.general.uploadsHeading": "Încărcare fișiere",
-  "settings.locale.auto": "Setare implicită",
   "settings.networks.add": "Adaugă rețea",
   "settings.networks.connect": "Conectează-te",
   "settings.networks.connected": "Conectat",

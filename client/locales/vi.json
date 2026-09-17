@@ -667,7 +667,6 @@
   "settings.general.uploadCanvas": "Nỗ lực loại bỏ dữ liệu metadata trước khi tải lên",
   "settings.general.uploadCanvasHelp": "Tùy chọn này sẽ chuyển hình ảnh thành phần tử canvas để loại bỏ metadata từ hình ảnh. Điều này có thể làm hỏng định hướng nếu trình duyệt của bạn không hỗ trợ điều này.",
   "settings.general.uploadsHeading": "Tải lên tệp",
-  "settings.locale.auto": "Mực mặc định",
   "settings.networks.add": "Thêm mạng",
   "settings.networks.connect": "Kết nối",
   "settings.networks.connected": "Đã kết nối",

@@ -8,11 +8,11 @@
 			:class="{'source-language-picker--sheet': phone, flipped}"
 			:style="style"
 			role="dialog"
-			aria-label="Retranslate from another language"
+			:aria-label="dialogLabel"
 			@keydown.esc.stop.prevent="$emit('close')"
 		>
 			<label class="source-language-picker-field">
-				<span class="source-language-picker-label">Translate this line from</span>
+				<span class="source-language-picker-label">{{ t("translate.picker.label") }}</span>
 				<select
 					ref="select"
 					v-model="choice"
@@ -30,14 +30,14 @@
 					class="btn btn-sm source-language-picker-cancel"
 					@click="$emit('close')"
 				>
-					Cancel
+					{{ t("translate.picker.cancel") }}
 				</button>
 				<button
 					type="button"
 					class="btn btn-sm source-language-picker-confirm"
 					@click="confirm"
 				>
-					Translate
+					{{ t("translate.picker.confirm") }}
 				</button>
 			</div>
 		</div>
@@ -47,6 +47,8 @@
 <script lang="ts">
 import {computed, defineComponent, nextTick, onBeforeUnmount, onMounted, PropType, ref} from "vue";
 import {hasVirtualKeyboard} from "../js/helpers/device";
+import {useI18n} from "../js/i18n";
+import {collator} from "../js/i18n/collation";
 import {SUPPORTED_LANGUAGES, languageOptionLabel} from "../js/translate/languages";
 
 /** Gap between the chip and the popover, and the margin it keeps off screen edges. */
@@ -67,13 +69,18 @@ export default defineComponent({
 	},
 	emits: ["pick", "close"],
 	setup(props, {emit}) {
+		const {t} = useI18n();
 		const root = ref<HTMLDivElement | null>(null);
 		const select = ref<HTMLSelectElement | null>(null);
 		const name = (code: string) => languageOptionLabel(code);
 		// Every language, named in itself and sorted by that name: the reader
 		// is looking for the word they would write, not its English name.
-		const languages = [...SUPPORTED_LANGUAGES].sort((a, b) => name(a).localeCompare(name(b)));
-		const choice = ref(props.selected || props.candidates[0] || languages[0]);
+		// Names and order both follow the active locale (i18n/collation.ts).
+		const languages = computed(() =>
+			[...SUPPORTED_LANGUAGES].sort((a, b) => collator().compare(name(a), name(b)))
+		);
+		const dialogLabel = computed(() => t("translate.picker.dialog"));
+		const choice = ref(props.selected || props.candidates[0] || languages.value[0]);
 
 		const narrowQuery =
 			typeof window !== "undefined" && typeof window.matchMedia === "function"
@@ -188,7 +195,19 @@ export default defineComponent({
 			}
 		});
 
-		return {root, select, choice, languages, name, phone, flipped, style, confirm};
+		return {
+			t,
+			root,
+			select,
+			choice,
+			languages,
+			dialogLabel,
+			name,
+			phone,
+			flipped,
+			style,
+			confirm,
+		};
 	},
 });
 </script>

@@ -645,7 +645,6 @@
   "settings.general.uploadCanvas": "Tenter de supprimer les métadonnées des images avant de les envoyer",
   "settings.general.uploadCanvasHelp": "Cette option transforme l'image en un élément canvas pour supprimer les métadonnées de l'image. Cela peut endommager l'orientation si votre navigateur ne prend pas en charge cette fonctionnalité.",
   "settings.general.uploadsHeading": "Uploads de fichiers",
-  "settings.locale.auto": "Défaut système",
   "settings.networks.add": "Ajouter un réseau",
   "settings.networks.connect": "Se connecter",
   "settings.networks.connected": "Connecté",

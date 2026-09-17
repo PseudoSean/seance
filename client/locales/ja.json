@@ -660,7 +660,6 @@
   "settings.general.uploadCanvas": "画像のメタデータをアップロード前に削除しようとします",
   "settings.general.uploadCanvasHelp": "このオプションは画像をキャンバス要素に変換してメタデータを削除します。これはブラウザがそのサポートしていない場合、方向性が破損する可能性があります。",
   "settings.general.uploadsHeading": "ファイルアップロード",
-  "settings.locale.auto": "デフォルトのシステム",
   "settings.networks.add": "ネットワークを追加",
   "settings.networks.connect": "接続",
   "settings.networks.connected": "接続中",

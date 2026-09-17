@@ -458,7 +458,6 @@
   "settings.general.uploadCanvas": "Попытка удалить метаданные из изображений до загрузки",
   "settings.general.uploadCanvasHelp": "Эта опция превращает изображение в холст-элемент для удаления метаданных из изображения. Это может нарушить ориентацию, если ваш браузер не поддерживает это.",
   "settings.general.uploadsHeading": "Файл Загрузка",
-  "settings.locale.auto": "По умолчанию системы",
   "settings.networks.add": "Добавить сеть",
   "settings.networks.connect": "Подключиться",
   "settings.networks.connected": "Подключено",
