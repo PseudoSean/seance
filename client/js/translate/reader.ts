@@ -559,11 +559,16 @@ export async function translateMessage(
 	// Every name this line may carry, not only the user list: the sender
 	// (who may have left), a query's other party, and whoever has spoken
 	// here lately (names.ts `namesFor`). The same set is fenced and listed.
+	// Up to this message, not to the channel's tail: the speaker window is
+	// capped, and the prompt's `Names:` list is drawn from the lines just
+	// before this one, so the two windows have to end at the same place or a
+	// history line could be told to keep a name nothing fenced.
+	const at = channel.messages.findIndex((m) => m.id === message.id);
 	const nicks = namesFor({
 		users: channel.users,
 		sender: message.from?.nick,
 		target: channel.name,
-		messages: channel.messages,
+		messages: at >= 0 ? channel.messages.slice(0, at + 1) : channel.messages,
 	});
 	const generation = generationOf(channel.id);
 

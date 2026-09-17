@@ -33,7 +33,10 @@
 // German question the fake answers
 // (its `[answer]` token) fails with "answered the question instead of translating it"; a line carrying the fake's `[fail]`
 // marker fails once and its retry button succeeds the second time; a line carrying `*Betonung*` and the page's own nick keeps both
-// (the chip's menu offers Copy translation and the line is selectable); a
+// (the chip's menu offers Copy translation and the line is selectable); a line
+// naming a speaker who has since left the channel and the channel itself
+// keeps both byte for byte and the fake's request log shows neither ever
+// reached the engine; a
 // `draft/multiline` message is translated line by line rather than losing
 // all but its first; a two-line `$$…$$` display-math block survives a
 // translation byte for byte, embedded line break included; switching off
@@ -1153,6 +1156,71 @@ async function scenario(page) {
 		)
 	);
 
+	// A name is a name whoever holds it and a channel name is an address:
+	// neither ever reaches the model. The nick here belongs to someone who
+	// spoke and then left, so the user list no longer has them -- which is
+	// exactly the case the user list alone used to miss -- and the channel
+	// name is one nothing fenced at all before. The proof is the request
+	// the fake logged: the protected text carries placeholders where both
+	// were, while the rendered translation carries them byte for byte.
+	const goneNick = `weg${RUN}`;
+	const gone = speaker(goneNick);
+
+	await gone.joined;
+	gone.say("Ich bin nur kurz da und sage schnell noch etwas dazu.");
+	await page.waitFor(`${newestRow("Ich bin nur kurz da")} !== undefined`, {
+		timeout: 15000,
+		label: "the departing speaker's line arrived",
+	});
+	gone.quit();
+	await page.waitFor(`!document.querySelector('.userlist .user[data-name="${goneNick}"]')`, {
+		timeout: 15000,
+		label: "the speaker left the user list",
+	});
+
+	const nameMarker = `Namensprobe${RUN}`;
+
+	other.say(
+		`Frag doch mal ${goneNick} im ${CHANNEL} nach der ${nameMarker}, er weiß da sicher Bescheid.`
+	);
+
+	const nameRow = newestRow(nameMarker);
+
+	await page.waitFor(
+		`!!(${nameRow}) && !!(${nameRow}).querySelector('.msg-translation[data-status="done"]')`,
+		{timeout: 20000, label: "the line naming a departed nick and a channel is translated"}
+	);
+
+	const nameTranslation = await page.evaluate(
+		`(${nameRow}).querySelector(".msg-translation-text").textContent`
+	);
+
+	await page.check(
+		"the departed speaker's nick came back byte for byte",
+		nameTranslation.includes(goneNick)
+	);
+	await page.check("the channel name came back byte for byte", nameTranslation.includes(CHANNEL));
+
+	const nameRequest = await page.evaluate(
+		`JSON.stringify((${REQUESTS}).filter((r) => (r.text || "").includes(${JSON.stringify(
+			nameMarker
+		)})).pop() || null)`
+	);
+	const nameRequestText = nameRequest ? JSON.parse(nameRequest).text : "";
+
+	await page.check(
+		`the nick never reached the engine (request text: ${JSON.stringify(nameRequestText)})`,
+		nameRequestText !== "" && !nameRequestText.includes(goneNick)
+	);
+	await page.check(
+		"the channel name never reached the engine",
+		nameRequestText !== "" && !nameRequestText.includes(CHANNEL)
+	);
+	await page.check(
+		"both travelled as placeholders",
+		(nameRequestText.match(/\u27e6\s*\d+\s*\u27e7/g) || []).length >= 2
+	);
+
 	// A draft/multiline message is one message with newlines in it: every
 	// line of it is translated, not just the first.
 	const multiMarker = `Mehrzeiler${RUN}`;
@@ -1263,9 +1331,14 @@ async function scenario(page) {
 		label: "post-switch line arrived",
 	});
 	await page.sleep(1500);
+
+	// base + 14: the nine of the count above, the emphasised line, the two
+	// of the departed-nick step, the multi-line message and the math block.
+	const afterOff = await page.evaluate(LINES);
+
 	await page.check(
-		"no translation after switching off",
-		(await page.evaluate(LINES)) === base + 12
+		`no translation after switching off (${afterOff} vs ${base + 14})`,
+		afterOff === base + 14
 	);
 
 	// A deleted message keeps neither its text nor its translation: the
@@ -1303,9 +1376,11 @@ async function scenario(page) {
 		"the deleted row keeps no translation",
 		await page.evaluate(`!(${burstRow}).querySelector(".msg-translation")`)
 	);
+	const afterRedact = await page.evaluate(LINES);
+
 	await page.check(
-		"the redaction took exactly one translated line away",
-		(await page.evaluate(LINES)) === base + 11
+		`the redaction took exactly one translated line away (${afterRedact} vs ${base + 13})`,
+		afterRedact === base + 13
 	);
 	await page.screenshot("redacted-translation");
 
