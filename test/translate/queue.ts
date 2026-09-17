@@ -1306,8 +1306,12 @@ describe("translate/queue", () => {
 
 		// Everything the pause was about is gone, so the pause goes with it —
 		// disarming its resume timer and leaving the engine paused would have
-		// parked it for the rest of the session.
+		// parked it for the rest of the session. It goes through resume(), so
+		// the banner comes down with it: the one caller is reader.ts on a
+		// network's `quit`, and a "translation paused" banner for a network
+		// that is no longer there is worse than none.
 		expect(r.queue.paused("llm")).to.equal(false);
+		expect(r.resumed).to.deep.equal(["llm"]);
 
 		fail = false;
 		r.queue.enqueue(item(9, "vier fuenf sechs", {single: true}));
