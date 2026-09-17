@@ -3313,7 +3313,7 @@ msgstr "Emojik"
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.loadFailed"
 msgid "The emoji list could not be loaded. You can still type a reaction above."
-msgstr "Az emoji lista betölthetetlen. A reakció írására még fel lehet tükrözni."
+msgstr "Az emojilista nem tölthető be. Fent továbbra is beírhatsz egy reakciót."
 
 #. Note shown inside the emoji picker while its catalog is being fetched. Ellipsis is part of the copy.
 #: client/components/ReactionPicker.vue

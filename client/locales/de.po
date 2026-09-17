@@ -267,7 +267,7 @@ msgstr "Nicknamen dürfen keine Leerzeichen enthalten."
 #: client/js/irc/commands/nick.ts
 msgctxt "cmd.nickTooLong"
 msgid "Nicknames may not be this long."
-msgstr "Nicknamen sind vielleicht nicht so lange.."
+msgstr "Zuname dürfen nicht so lang sein."
 
 #. Error when /part is typed in a network's lobby; the '/quit' part is a command name, verbatim.
 #: client/js/irc/commands/part.ts
@@ -1002,7 +1002,7 @@ msgstr "Von {host}{detail} getrennt."
 #: client/js/irc/disconnect.ts:127
 msgctxt "disconnect.disconnectedNotReconnecting"
 msgid "Disconnected from {host}{detail}. Not reconnecting."
-msgstr "Verloren verbunden mit {host}{detail}. Nicht erneut verbinden."
+msgstr "Von {host}{detail} getrennt. Es wird nicht erneut verbunden."
 
 #. Follow-up hint under a failed connection dialled with ws:// from an https:// page: the browser blocks mixed content, so the fix is on the network's settings.
 #: client/js/irc/disconnect.ts
@@ -1573,7 +1573,7 @@ msgstr "Entfernen ("
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.deopB"
 msgid ") from one or several users in the current channel."
-msgstr ") von einem oder mehreren Benutzern im aktuellen Kanal.."
+msgstr ") von einem oder mehreren Nutzern im aktuellen Kanal."
 
 #. Start of the /devoice command description in the help window; a code fragment with the -v mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1585,7 +1585,7 @@ msgstr "Stimme entfernen ("
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.devoiceB"
 msgid ") from one or several users in the current channel."
-msgstr ") von einem oder mehreren Benutzern im aktuellen Kanal.."
+msgstr ") von einem oder mehreren Nutzern im aktuellen Kanal."
 
 #. Description of the /disconnect command in the help window.
 #: client/components/Windows/Help.vue
@@ -1633,7 +1633,7 @@ msgstr "wird weggelassen, der Benutzer wird zum aktuellen Kanal eingeladen."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.join"
 msgid "Join a channel. Password is only needed in protected channels and can usually be omitted."
-msgstr "Schließen Sie sich einem Kanal an. Passwort wird nur in geschützten Kanälen benötigt und kann normalerweise weggelassen werden.."
+msgstr "Ein Kanal beitreten. Das Passwort ist nur erforderlich in geschützten Kanälen und kann meist weggelassen werden."
 
 #. Description of the /kick command in the help window; it removes the user from the channel (they may rejoin).
 #: client/components/Windows/Help.vue
@@ -1711,7 +1711,7 @@ msgstr "Geben Sie op ("
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.opB"
 msgid ") to one or several users in the current channel."
-msgstr ") an einen oder mehrere Benutzer im aktuellen Kanal..."
+msgstr ") an einen oder mehreren Benutzern im aktuellen Kanal."
 
 #. Start of the /part command description in the help window; a code fragment with the channel parameter follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1813,7 +1813,7 @@ msgstr "Gib mir eine Stimme ("
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.voiceB"
 msgid ") to one or several users in the current channel."
-msgstr ") an einen oder mehrere Benutzer im aktuellen Kanal.."
+msgstr ") an einen oder mehreren Benutzern im aktuellen Kanal."
 
 #. Description of the /whois command in the help window.
 #: client/components/Windows/Help.vue
@@ -3537,7 +3537,7 @@ msgstr "Es gibt bereits einen /{name}."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.errorName"
 msgid "Give the alias a name."
-msgstr "Nennen Sie dem Alias einen Namen.."
+msgstr "Benenne den Alias."
 
 #. Row error: the alias name contains characters other than letters, digits, hyphen and underscore. The - and _ are literal characters, keep them.
 #: client/components/Settings/Aliases.vue
@@ -4347,7 +4347,7 @@ msgstr "Benutzerdefinierte Highlights"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightsHelp"
 msgid "If a message contains any of these comma-separated expressions, it will trigger a highlight."
-msgstr "Wenn eine Nachricht einen dieser durch Komma getrennten Ausdrücke enthält, wird ein Highlight ausgelöst.."
+msgstr "Wenn eine Nachricht any of these comma-separated expressions enthält, wird sie hervorgehoben."
 
 #. Warning line in Settings > Notifications, shown on an iPhone browsing the app without installing it; the parenthesized phrase is the iOS share menu's action.
 #: client/components/Settings/Notifications.vue
@@ -4383,7 +4383,7 @@ msgstr "Naive — erneuern Sie es vor Ort, ohne zu fragen"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.noHttps"
 msgid "Notifications are only supported over HTTPS connections."
-msgstr "Benachrichtigungen werden nur über HTTPS-Verbindungen unterstützt.."
+msgstr "Benachrichtigungen sind nur über HTTPS-Verbindungen unterstützt."
 
 #. Checkbox in Settings > Notifications; when ticked, every chat message notifies, not only mentions and highlights.
 #: client/components/Settings/Notifications.vue
@@ -4401,7 +4401,7 @@ msgstr "Klang abspielen"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushBlocked"
 msgid "The server refused the push subscription. It may require logging in (SASL) before subscribing."
-msgstr "Der Server lehnte das Push-Abonnement ab. Es kann eine Anmeldung (SASL) vor der Anmeldung erfordern.."
+msgstr "Der Server hat die Push-Abonnierung abgelehnt. Es könnte erforderlich sein, sich (SASL) anzumelden, bevor abonniert wird."
 
 #. Warning line in Settings > Notifications when notification permission was denied; points at the browser's site settings to re-enable.
 #: client/components/Settings/Notifications.vue
@@ -4717,7 +4717,7 @@ msgstr "Die Linien gingen nicht alle zum gleichen Ziel."
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.multiline.maxBytes"
 msgid "it was too long for one multi-line message."
-msgstr "Es war zu lang für eine mehrzeilige Nachricht..."
+msgstr "es war zu lang für eine mehrzeilige Nachricht."
 
 #. Why fragment of 'Message not sent: {why}'; {limit} is the byte limit the server named.
 #: client/js/irc/handlers/standard-replies.ts
@@ -4729,7 +4729,7 @@ msgstr "Es war zu lang für eine Multi-Line-Nachricht (das Limit des Servers ist
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.multiline.maxLines"
 msgid "it had too many lines for one multi-line message."
-msgstr "Es hatte zu viele Zeilen für eine Mehrliniennachricht.."
+msgstr "es hatte zu viele Zeilen für eine mehrzeilige Nachricht."
 
 #. Why fragment of 'Message not sent: {why}'; {limit} is the line limit the server named.
 #: client/js/irc/handlers/standard-replies.ts
@@ -4802,7 +4802,7 @@ msgstr "Markieren gelesen"
 #: client/service-worker.js:1212
 msgctxt "sw.newActivity"
 msgid "New activity while you were away."
-msgstr "Neue Aktivität, während du weg warst..."
+msgstr "Neue Aktivität während deiner Abwesenheit"
 
 #. Body of a notification for a push payload that named no message text (a degraded opt-down tier): the conversation saw activity whose content was not delivered.
 #: client/service-worker.js:992

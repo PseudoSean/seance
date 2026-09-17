@@ -563,7 +563,7 @@
   "reactions.hintRemove": "Törlés",
   "reactions.hintSend": "Enter gombbal küldés",
   "reactions.listAria": "Emojik",
-  "reactions.loadFailed": "Az emoji lista betölthetetlen. A reakció írására még fel lehet tükrözni.",
+  "reactions.loadFailed": "Az emojilista nem tölthető be. Fent továbbra is beírhatsz egy reakciót.",
   "reactions.loading": "Emojik betöltése...",
   "reactions.noMatch": "Nincs megfelelő emojik",
   "reactions.quickReactions": "Gyors reakciók",

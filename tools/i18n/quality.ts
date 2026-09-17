@@ -266,6 +266,8 @@ const ENTITY = /&(?:quot|amp|lt|gt|apos|nbsp|#\d+);/gi;
  * well-formed: the length is right, the script is right, the placeholders
  * match.
  *
+ * A doubled full stop is one of these too (`doublesTerminator`).
+ *
  * The stray `_` and `|` are the delicate half. An underscore BETWEEN two
  * alphanumerics is snake_case, and an underscore the source itself carries
  * is copy (two msgids name the character: "letters, digits, _ and -"), so
@@ -273,8 +275,27 @@ const ENTITY = /&(?:quot|amp|lt|gt|apos|nbsp|#\d+);/gi;
  * not sitting inside a word — the `_` glued onto the end of a sentence, or
  * onto the front of the English the model gave up translating.
  */
+/**
+ * True when the answer padded the end of a sentence the source had already
+ * finished: ru came back with `…в этом браузере..` and `…сеть IRC...` for
+ * msgids ending in one period. The rule is as narrow as the evidence — the
+ * source's trailing run of periods is exactly one and the answer's is two or
+ * more — because an ellipsis IS the copy in a good many msgids ("Loading…",
+ * and the pot says so in their contexts), and a source that writes three
+ * periods wants three back.
+ */
+function doublesTerminator(source: string, text: string): boolean {
+	const run = (value: string) => (/\.+$/.exec(value.trimEnd()) ?? [""])[0].length;
+
+	return run(source) === 1 && run(text) >= 2;
+}
+
 export function hasMtArtifact(source: string, text: string): boolean {
 	if (ARTIFACT_TOKENS.test(text)) {
+		return true;
+	}
+
+	if (doublesTerminator(source, text)) {
 		return true;
 	}
 
@@ -381,13 +402,13 @@ export function slotVerdict(tag: string, source: string, text: string): SlotVerd
 		return "artifact";
 	}
 
-	// After `unchanged`: an answer that is the English again has every
-	// sentence the English had, and reporting it as the echo it is keeps the
-	// sweep's counts honest.
 	if (isUnchanged(source, text)) {
 		return "unchanged";
 	}
 
+	// After `unchanged`: an answer that is the English again has every
+	// sentence the English had, and reporting it as the echo it is keeps the
+	// sweep's counts honest.
 	if (dropsSentences(tag, source, text)) {
 		return "sentences";
 	}

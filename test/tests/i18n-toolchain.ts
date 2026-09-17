@@ -800,6 +800,34 @@ describe("i18n toolchain", () => {
 				).to.equal(null);
 			});
 
+			it("refuses an answer that doubled the source's full stop", () => {
+				// ru shipped "…в этом браузере.." and "…сеть IRC..." for
+				// sources ending in one period: the engine padded the end of
+				// a sentence it had already finished.
+				expect(
+					slotVerdict(
+						"ru",
+						"Manage the IRC networks saved in this browser.",
+						"Управлять сетями IRC, сохраненными в этом браузере.."
+					)
+				).to.equal("artifact");
+				expect(
+					slotVerdict(
+						"ru",
+						"Send a raw message to the current IRC network.",
+						"Отправьте сообщение в текущую сеть IRC..."
+					)
+				).to.equal("artifact");
+
+				// A source that ends in an ellipsis of its own — "…" or the
+				// three periods some copy writes — is asking for exactly that
+				// back, and a single period matching a single period is the
+				// normal case.
+				expect(slotVerdict("de", "Loading…", "Wird geladen…")).to.equal(null);
+				expect(slotVerdict("de", "Loading...", "Wird geladen...")).to.equal(null);
+				expect(slotVerdict("de", "Close the window.", "Fenster schließen.")).to.equal(null);
+			});
+
 			it("refuses an answer that dropped one of the source's sentences", () => {
 				// A destructive confirmation lost the sentence that said so:
 				// de's clear-history dialog kept the question and dropped
