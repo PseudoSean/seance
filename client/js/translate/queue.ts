@@ -277,6 +277,13 @@ export class TranslateQueue {
 		// A pause is about work that no longer exists, and disarming the timer
 		// that would lift it would park the engine for good — so the pause is
 		// lifted rather than merely disarmed, through the one door back in.
+		// The lift is engine-wide and so is the banner it takes down
+		// (`state.translation.paused` is keyed by engine, and there is one
+		// queue for every network): a quit on one network clears a banner
+		// another network's traffic raised on the same engine, and the next
+		// failure there raises it again. That is the accepted cost — the
+		// alternative leaves an engine nothing ever lifts, silently skipped
+		// by `pump()` for the rest of the session.
 		for (const engine of [...this.pausedEngines]) {
 			this.resume(engine);
 		}
