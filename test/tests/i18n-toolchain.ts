@@ -830,10 +830,24 @@ describe("i18n toolchain", () => {
 
 				// Japanese writes Han, Hiragana and Katakana in one run with
 				// no spaces, so a "word" there is a whole clause: it is never
-				// judged by this rule.
+				// judged by this rule. Thai writes without spaces too, and a
+				// Latin token glued to Thai is one such clause, not a mangled
+				// word.
 				expect(slotVerdict("ja", "Connect to IRC", "IRCサーバーに接続します")).to.equal(
 					null
 				);
+				expect(
+					slotVerdict(
+						"th",
+						"No message to react to: none here carries a msgid.",
+						"ไม่มีข้อความใดที่มีmsgid"
+					)
+				).to.equal(null);
+
+				// A combining mark carries the Script_Extensions of every
+				// script that uses it, so a marked word is not a mixed one:
+				// U+0301 is the Russian stress accent.
+				expect(slotVerdict("ru", "word", "сло́во")).to.equal(null);
 			});
 
 			it("refuses an answer that doubled the source's full stop", () => {
@@ -1100,6 +1114,30 @@ describe("i18n toolchain", () => {
 			expect(fenceSpans("「No authentication」を選択", labels)).to.equal(
 				"「No authentication」を選択"
 			);
+
+			// The two curly pairs most catalogs actually write: “…” in 15 of
+			// them, „…” in hu, pl and ro. Missing either one leaves
+			// substituteLabels with no quoted segment to work on there.
+			expect(fenceSpans("vyberte “No authentication” tam", labels)).to.equal(
+				"vyberte “No authentication” tam"
+			);
+			expect(fenceSpans("válaszd a „No authentication” lehetőséget", labels)).to.equal(
+				"válaszd a „No authentication” lehetőséget"
+			);
+			expect(
+				substituteLabels(
+					'Pick "No authentication" to skip SASL.',
+					"Válaszd a „Nincs hitelesítés” lehetőséget.",
+					new Map([["No authentication", "Nincs autentikáció"]])
+				)
+			).to.equal("Válaszd a „Nincs autentikáció” lehetőséget.");
+			expect(
+				substituteLabels(
+					'Pick "No authentication" to skip SASL.',
+					"Vyberte “Žádné ověření” zde.",
+					new Map([["No authentication", "Bez ověřování"]])
+				)
+			).to.equal("Vyberte “Bez ověřování” zde.");
 			expect(fenceSpans("wähle „SASL PLAIN“ aus", labels)).to.equal(
 				"wähle `„SASL PLAIN“` aus"
 			);

@@ -303,7 +303,7 @@ msgstr "คุณไม่สามารถเปิดหน้าต่าง
 #: client/js/irc/commands/react.ts
 msgctxt "cmd.reactNoTarget"
 msgid "No message to react to: none here carries a msgid."
-msgstr ""
+msgstr "ไม่มีข้อความที่ต้องตอบ: ไม่มีข้อความใดที่มีmsgid"
 
 #. Error when /rejoin is typed outside a channel window.
 #: client/js/irc/commands/rejoin.ts

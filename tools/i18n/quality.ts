@@ -279,13 +279,21 @@ const WORD_SCRIPTS: RegExp[] = [
 ];
 
 /**
- * Chinese, Japanese and Korean run their scripts together without spaces, so
- * a "word" there is a whole clause and legitimately holds Han, Hiragana,
- * Katakana, Hangul and a Latin brand name at once. Nothing in such a run is
- * judged by the mixed-script rule.
+ * The scripts that write without spaces between words. A "word" in such a run
+ * is a whole clause, and legitimately holds several scripts at once — Han,
+ * Hiragana, Katakana and a Latin brand name in Japanese; a Latin token glued
+ * to Thai, which is how th renders "…that carries a msgid". Nothing in such a
+ * run is judged by the mixed-script rule; the rule cannot tell a clause from a
+ * word there, and refusing the clause threw away good translations.
  */
-const UNSEGMENTED =
-	/[\p{Script_Extensions=Han}\p{Script_Extensions=Hiragana}\p{Script_Extensions=Katakana}\p{Script_Extensions=Hangul}]/u;
+const UNSEGMENTED = new RegExp(
+	"[" +
+		["Han", "Hiragana", "Katakana", "Hangul", "Thai", "Lao", "Khmer", "Myanmar", "Tibetan"]
+			.map((script) => `\\p{Script_Extensions=${script}}`)
+			.join("") +
+		"]",
+	"u"
+);
 
 /**
  * True when one WORD of the answer is written in two scripts at once. ru came
@@ -305,10 +313,15 @@ export function hasMixedScriptWord(text: string): boolean {
 			continue;
 		}
 
+		// A combining mark belongs to whatever letter it sits on: U+0301 (the
+		// Russian stress accent, `сло́во`) and U+0308 carry the Script_Extensions
+		// of every script that uses them, so leaving them in makes every marked
+		// word look mixed.
+		const letters = word.replace(/\p{M}/gu, "");
 		let seen = 0;
 
 		for (const script of WORD_SCRIPTS) {
-			if (script.test(word)) {
+			if (script.test(letters)) {
 				seen += 1;
 			}
 		}

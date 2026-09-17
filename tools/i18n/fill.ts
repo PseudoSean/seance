@@ -113,12 +113,19 @@ const PROTOCOL_TOKENS = [
 
 // The quotation marks a catalog writes. English quotes what it quotes with
 // ASCII double quotes, but an answer comes back in the target's own
-// typography — German „…“, French/Russian «…», Japanese 「…」 — and the label
-// rules below have to recognise a quoted segment in either text.
+// typography, and the label rules below have to recognise a quoted segment in
+// either text. Counted over the 23 shipped catalogs: “…” in 15 of them
+// (cs, da, es, fil, it, pt, sv, th, vi, zh …), „…” in hu, pl and ro, „…“ in
+// German, «…» in French and Russian, 「…」 in Japanese. A pair missing from
+// this table is not a missing nicety — `substituteLabels` finds no quoted
+// segment at all in that catalog and silently leaves the model's own label
+// standing.
 const QUOTE_PAIRS: [string, string][] = [
 	['"', '"'],
 	["«", "»"],
 	["„", "“"],
+	["„", "”"],
+	["“", "”"],
 	["「", "」"],
 ];
 
