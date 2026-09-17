@@ -16,8 +16,9 @@
 //
 // Two builds, one scenario — the qqx pick needs a development build, the
 // dev-only filter needs a production one (the selector filters AVAILABLE by
-// devOnly, matching activate()'s "auto" resolution; an explicitly stored
-// pick still activates, which is exactly what the reload half proves):
+// devOnly, and a production build folds the rig out of activate()'s
+// resolvable set and out of the baked pre-paint list too, so not even a
+// stored pick brings it back — which is what the reload half proves):
 //
 //   NODE_ENV=production corepack yarn build   # DEV=false: qqx not offered
 //   node tools/browser-drive.mjs tools/scenarios/i18n-language-switch.mjs
@@ -482,28 +483,35 @@ export default async function run(page) {
 		);
 		await page.screenshot("i18n-language-switch-prod");
 
-		// (f) An explicitly stored dev-only pick still activates in a
-		// production build — the LanguageSelect comment's claim, now proven:
-		// the pre-paint script flips the direction from the blob, and
-		// activate() serves the qqx catalog over en at runtime.
+		// (f) A stored dev-only pick does NOT activate in a production
+		// build — it used to, and the rig's fold made that a hole: a
+		// settings backup restored from a development machine would have
+		// pinned the whole interface to the pseudo-locale. The build folds
+		// qqx out of activate()'s resolvable set, the baked pre-paint list
+		// leaves it out (readAvailableLocales drops DEV_ONLY_TAGS), and the
+		// page comes up in English, left to right, as if nothing were
+		// stored.
 		await page.evaluate(`localStorage.setItem("settings", JSON.stringify({locale: "qqx"}))`);
 		// The route is /settings/translation by now (router.push is a
 		// replace), so the reload lands back on the tab the label lives in.
 		await reload(page, SELECT);
 		page.check(
-			"prod: stored qqx pick flips the direction to rtl",
-			(await page.evaluate(DIR)) === "rtl"
+			"prod: a stored qqx pick leaves the direction alone",
+			(await page.evaluate(DIR)) === "ltr"
 		);
-		page.check("prod: stored qqx pick sets lang=qqx", (await page.evaluate(LANG)) === "qqx");
-		const prodFirst = await page.evaluate(`(window.__dirHistory ?? [])[0]`);
 		page.check(
-			"prod: the flip was pre-paint (first write at readyState loading)",
-			!!prodFirst && prodFirst.dir === "rtl" && prodFirst.readyState === "loading"
+			"prod: a stored qqx pick never becomes the document language",
+			(await page.evaluate(LANG)) !== "qqx"
+		);
+		page.check(
+			"prod: the pre-paint script wrote no direction for it",
+			((await page.evaluate(`(window.__dirHistory ?? []).length`)) ?? 0) === 0 ||
+				(await page.evaluate(`(window.__dirHistory ?? []).every((w) => w.dir !== "rtl")`))
 		);
 		const prodLabel = await page.evaluate(LABEL_TEXT);
 		page.check(
-			"prod: the runtime catalog switched too (row label RLE-wrapped)",
-			prodLabel.includes(RLE) && prodLabel !== EN_LABEL
+			"prod: the runtime catalog stayed English",
+			!prodLabel.includes(RLE) && prodLabel === EN_LABEL
 		);
 		await page.screenshot("i18n-language-switch-prod-qqx");
 	}
