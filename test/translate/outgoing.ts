@@ -102,12 +102,46 @@ describe("translate/outgoing", () => {
 
 	describe("draftGate", () => {
 		it("lets text through and stops commands, edits and empty drafts", () => {
-			expect(draftGate("hello there", false)).to.equal("ok");
-			expect(draftGate("//not a command", false)).to.equal("ok");
-			expect(draftGate("/me waves", false)).to.equal("command");
-			expect(draftGate("/connect", false)).to.equal("command");
-			expect(draftGate("hello there", true)).to.equal("edit");
-			expect(draftGate("   \n", false)).to.equal("empty");
+			expect(draftGate("hello there", false)).to.deep.equal({
+				kind: "ok",
+				text: "hello there",
+			});
+			// `//x` is the text `/x` to the IRC layer, and the escape is the
+			// text: what goes out is what is translated.
+			expect(draftGate("//not a command", false)).to.deep.equal({
+				kind: "ok",
+				text: "//not a command",
+			});
+			expect(draftGate("/connect", false)).to.deep.equal({
+				kind: "command",
+				text: "/connect",
+			});
+			expect(draftGate("hello there", true)).to.deep.equal({
+				kind: "edit",
+				text: "hello there",
+			});
+			expect(draftGate("   \n", false)).to.deep.equal({kind: "empty", text: "   \n"});
+		});
+
+		// An ACTION is prose -- the reading side translates everyone else's --
+		// so what follows `/me ` is translated and the composer puts the
+		// command back on the front of the translation.
+		it("takes the text of a /me as a draft to translate", () => {
+			expect(draftGate("/me waves", false)).to.deep.equal({kind: "action", text: "waves"});
+			expect(draftGate("/ME WAVES slowly", false)).to.deep.equal({
+				kind: "action",
+				text: "WAVES slowly",
+			});
+			// Nothing to translate: an empty action is the command's business.
+			expect(draftGate("/me", false)).to.deep.equal({kind: "command", text: "/me"});
+			expect(draftGate("/me   ", false)).to.deep.equal({kind: "command", text: "/me   "});
+			// A command that merely starts with the letters is not one.
+			expect(draftGate("/mention bob", false)).to.deep.equal({
+				kind: "command",
+				text: "/mention bob",
+			});
+			// Editing is editing, whatever the line says.
+			expect(draftGate("/me waves", true)).to.deep.equal({kind: "edit", text: "/me waves"});
 		});
 	});
 

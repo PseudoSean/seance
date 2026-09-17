@@ -91,28 +91,48 @@ const SPACELESS_CLASS =
 const SPACELESS_RUN_LOOP = new RegExp(`(${SPACELESS_CLASS}{2,3})\\1{${REPEAT_MIN - 1},}`, "u");
 const SPACELESS_CHAR_LOOP = new RegExp(`(${SPACELESS_CLASS})\\1{${SINGLE_REPEAT_MIN - 1},}`, "u");
 
-export type DraftGate = "empty" | "command" | "edit" | "ok";
+export type DraftKind = "empty" | "command" | "edit" | "ok" | "action";
+
+export interface DraftGate {
+	kind: DraftKind;
+	/**
+	 * The part of the draft a translation is of: the draft itself, or what
+	 * follows `/me ` in an action. The composer keys its strip on this and
+	 * puts the command back in front of the translation when it sends.
+	 */
+	text: string;
+}
+
+/** `/me ` and what follows it: an ACTION with something in it to translate. */
+const ACTION_RX = /^\/me\s+(\S.*)$/is;
 
 /**
  * What the first Enter does with a draft. A slash command never translates
  * (`//text` is the text `/text`, so it does); neither does a message edit —
  * startEdit pre-fills the draft with the sent text, already in the write
  * language.
+ *
+ * `/me …` is the exception among the commands: an ACTION is prose, and the
+ * reading side translates everyone else's, so what follows the command is
+ * the draft and the composer re-prefixes the translation. An action with
+ * nothing after it is the command's own business.
  */
 export function draftGate(text: string, editing: boolean): DraftGate {
 	if (text.trim().length === 0) {
-		return "empty";
+		return {kind: "empty", text};
 	}
 
 	if (editing) {
-		return "edit";
+		return {kind: "edit", text};
 	}
 
 	if (text[0] === "/" && text[1] !== "/") {
-		return "command";
+		const action = ACTION_RX.exec(text);
+
+		return action ? {kind: "action", text: action[1]} : {kind: "command", text};
 	}
 
-	return "ok";
+	return {kind: "ok", text};
 }
 
 /**

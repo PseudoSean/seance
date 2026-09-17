@@ -839,8 +839,11 @@ export default defineComponent({
 			// while it is still translating (or, with the automatic check,
 			// still reading back).
 			const entry = store.state.outgoingTranslations[props.channel.id];
+			// What of the draft a translation is of: the draft itself, or the
+			// text of a `/me`, which goes back out behind the command.
+			const gate = draftGate(text, !!editing);
 
-			if (entry && entry.draft === text) {
+			if (entry && entry.draft === gate.text) {
 				if (outgoingBusy.value) {
 					return false;
 				}
@@ -848,10 +851,14 @@ export default defineComponent({
 				const translated = entry.status === "done" ? entry.text : null;
 				let line = translated ?? text;
 
-				// A translation that begins with "/" is text, not a command:
-				// the IRC layer sends `//x` as the text `/x`, and deliver's
-				// own slash intercept would otherwise take it for a UI one.
-				if (translated !== null && translated.startsWith("/")) {
+				if (translated !== null && gate.kind === "action") {
+					// The translation is the action's text: the command goes
+					// back on the front of it, never escaped.
+					line = `/me ${translated}`;
+				} else if (translated !== null && translated.startsWith("/")) {
+					// A translation that begins with "/" is text, not a command:
+					// the IRC layer sends `//x` as the text `/x`, and deliver's
+					// own slash intercept would otherwise take it for a UI one.
 					line = `/${translated}`;
 				}
 
@@ -868,7 +875,7 @@ export default defineComponent({
 					noteOutgoingSent(
 						props.network,
 						props.channel,
-						text,
+						gate.text,
 						translated,
 						entry.to,
 						entry.from
@@ -885,14 +892,17 @@ export default defineComponent({
 
 			// The first Enter (spec § Composer 1-3): translate, and send only
 			// when the draft turns out to need none.
-			if (writeTarget(props.network, props.channel) && draftGate(text, !!editing) === "ok") {
+			if (
+				writeTarget(props.network, props.channel) &&
+				(gate.kind === "ok" || gate.kind === "action")
+			) {
 				// The verdict can be seconds late (a cold engine, a slow
 				// device), so it is checked against the composer it started
 				// in: another conversation, a changed draft or a network that
 				// went down in the meantime all leave the draft where it is.
 				const startedFor = props.channel.id;
 
-				void translateOutgoing(props.network, props.channel, text).then((verdict) => {
+				void translateOutgoing(props.network, props.channel, gate.text).then((verdict) => {
 					if (
 						verdict === "plain" &&
 						props.channel.id === startedFor &&
@@ -1053,7 +1063,9 @@ export default defineComponent({
 				// § Composer 3): the next Enter translates afresh.
 				const entry = store.state.outgoingTranslations[props.channel.id];
 
-				if (entry && value !== entry.draft) {
+				// Against the part of the draft the strip is a translation of
+				// (a `/me`'s text, not the command in front of it).
+				if (entry && draftGate(value, !!props.channel.editing).text !== entry.draft) {
 					cancelOutgoing(props.channel);
 				}
 			}
