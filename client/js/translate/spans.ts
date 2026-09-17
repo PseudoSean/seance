@@ -404,6 +404,26 @@ function protectPrefixes(text: string, spans: Spans): string {
 		.join("\n");
 }
 
+/**
+ * An IRC channel name: `#` or `&` and at least two more characters that are
+ * neither whitespace nor a comma (the separator of a channel list), not
+ * preceded by a word character, and never running into a placeholder an
+ * earlier stage left. A name is an address — nothing in it is prose — so it
+ * is one verbatim span.
+ *
+ * The stage runs *after* `protectPrefixes`, which is what keeps `### Heading`
+ * a header: `###` satisfies "two more characters", so a channel stage run
+ * first would eat the header's marker and leave a bogus span behind. By the
+ * time this runs the prefix is already a placeholder and there is no `#`
+ * left to match. It is still after PATTERNS, so a channel inside a code
+ * span or a URL belongs to them, and before `protectNicks`.
+ */
+export const CHANNEL_RX = /(?<![\p{L}\p{N}_])[#&][^\s,\u27e6\u27e7]{2,}/gu;
+
+function protectChannels(text: string, spans: Spans): string {
+	return text.replace(CHANNEL_RX, (match: string) => spans.push(match, {kind: "verbatim"}));
+}
+
 // The channel's names, whole-word, longest first, never inside a
 // placeholder an earlier stage left. The prompt still lists the names as
 // data, so the model sees both the placeholder and the name it stands for.
@@ -455,8 +475,8 @@ function protectNicks(text: string, nicks: string[], spans: Spans): string {
  * Protect, stage by stage: each stage runs on the previous one's output, so
  * a placeholder never matches a later pattern. Fenced blocks, then TeX,
  * then pipe tables, then the opaque spans (code, URLs, shortcodes,
- * formatting codes), then links, emphasis pairs, line prefixes and finally
- * the nicknames.
+ * formatting codes), then links, emphasis pairs, line prefixes, the channel
+ * names and finally the nicknames.
  */
 export function protect(text: string, options: ProtectOptions = {}): Protected {
 	const spans = new Spans();
@@ -479,6 +499,7 @@ export function protect(text: string, options: ProtectOptions = {}): Protected {
 	out = protectLinks(out, spans);
 	out = protectEmphasis(out, spans);
 	out = protectPrefixes(out, spans);
+	out = protectChannels(out, spans);
 	out = protectNicks(out, options.nicks ?? [], spans);
 
 	return renderMarkers(

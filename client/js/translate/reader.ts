@@ -30,6 +30,7 @@ import {
 import {buildContext} from "./context";
 import {type Detection, LanguagePrior, detectLanguage, detectionSkip, sourceFor} from "./detect";
 import {ReplayBatches, historyQueueOrder, isChatLine, isEligible, plainTextOf} from "./eligibility";
+import {namesFor} from "./names";
 import {fromLocaleTag} from "./languages";
 import {setTranslationUsage, translateService} from "./index";
 import {NO_ROUTE, type QueueItem, type QueueUpdate, TranslateQueue} from "./queue";
@@ -555,7 +556,15 @@ export async function translateMessage(
 	}
 
 	const initial = channelTranslation(network, channel);
-	const nicks = channel.users.map((u) => u.nick);
+	// Every name this line may carry, not only the user list: the sender
+	// (who may have left), a query's other party, and whoever has spoken
+	// here lately (names.ts `namesFor`). The same set is fenced and listed.
+	const nicks = namesFor({
+		users: channel.users,
+		sender: message.from?.nick,
+		target: channel.name,
+		messages: channel.messages,
+	});
 	const generation = generationOf(channel.id);
 
 	if (!force && (!initial.read || !isEligible(message, {nicks}))) {
@@ -646,6 +655,7 @@ export async function translateMessage(
 			),
 			variant: settings.variant,
 			sourceHint: source ?? (unsure ? null : prior.top()),
+			nicks,
 		}),
 		arrivalsAtEnqueue: arrivals.get(channel.id) ?? 0,
 		single: force,

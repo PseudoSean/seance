@@ -3,7 +3,9 @@
 // already have, the reply target (the parent by msgid, else the last line
 // of the nick the text addresses), the topic, the names the model must not
 // translate (capped: the nicks in the context and the ones the text
-// mentions, never the whole NAMES list), the newest TERM_LINES of the
+// mentions, never the whole NAMES list; drawn from `opts.nicks`, the set
+// `names.ts` built and `spans.ts` fenced, so every name listed was
+// protected), the newest TERM_LINES of the
 // channel's term memory merged with the deploy's glossary, and the
 // detector's source hint. Vue-free: it reads plain channel-shaped objects.
 
@@ -46,6 +48,13 @@ export interface ContextOptions {
 	sourceHint: string | null;
 	/** The user's earlier lines in the target language, oldest first (a write only). */
 	voice?: string[];
+	/**
+	 * The names to match a mention and an address against, and the pool the
+	 * prompt's `Names:` list is drawn from: `names.ts` `namesFor`, the same
+	 * set `spans.ts` fenced. Without it the channel's user list stands in,
+	 * which is what a caller with no message in hand (a tool, a test) has.
+	 */
+	nicks?: string[];
 }
 
 function nickMatching(word: string, nicks: string[]): string | null {
@@ -105,9 +114,9 @@ export function buildContext(
 	const before = index >= 0 ? channel.messages.slice(0, index) : channel.messages;
 	const recentMessages = before.filter(isChat).slice(-CONTEXT_LINES);
 	const recent = recentMessages.map((m) => lineOf(m, opts.translated(m.id)));
-	const nicks = channel.users
-		.map((u) => u.nick)
-		.filter((n): n is string => typeof n === "string");
+	const nicks =
+		opts.nicks ??
+		channel.users.map((u) => u.nick).filter((n): n is string => typeof n === "string");
 	const text = message.text ?? "";
 
 	let replyTo: ContextLine | undefined;

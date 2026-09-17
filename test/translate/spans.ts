@@ -592,4 +592,68 @@ describe("translate/spans", () => {
 			expect(protect("⟦9⟧").spans).to.deep.equal(["⟦9⟧"]);
 		});
 	});
+
+	// Bug A: a channel name is an address, not prose. Fenced whole, after the
+	// line prefixes (so `### Heading` is still a header) and before the
+	// nicknames.
+	describe("channel names", () => {
+		it("fences every channel name as its own verbatim span", () => {
+			const source = "join #seance and #help-desk, not #1";
+			const info = protect(source);
+
+			expect(info.spans).to.deep.equal(["#seance", "#help-desk"]);
+			expect(info.text).to.equal(`join ${placeholder(1)} and ${placeholder(2)}, not #1`);
+			expect(restoreAll(info.text, info)).to.equal(source);
+		});
+
+		it("an ampersand channel is one too, a lone ampersand is not", () => {
+			const info = protect("say hi in &local, Tom & Jerry, R&D");
+
+			expect(info.spans).to.deep.equal(["&local"]);
+			expect(restoreAll(info.text, info)).to.equal("say hi in &local, Tom & Jerry, R&D");
+		});
+
+		it("a header is still a header, at every level", () => {
+			for (const source of ["# Heading", "### Heading", "###### x"]) {
+				const info = protect(source);
+
+				expect(info.meta[0]).to.deep.equal({kind: "prefix", line: 0});
+				expect(restoreAll(info.text, info)).to.equal(source);
+			}
+		});
+
+		it("a quoted or bulleted channel keeps both", () => {
+			const info = protect("> #seance\n- #help");
+
+			expect(info.spans).to.include("#seance");
+			expect(info.spans).to.include("#help");
+			expect(restoreAll(info.text, info)).to.equal("> #seance\n- #help");
+		});
+
+		it("a channel inside a code span or a URL is left to them", () => {
+			const code = protect("run `join #seance` now");
+
+			expect(code.spans).to.deep.equal(["`join #seance`"]);
+
+			const url = protect("see https://example.test/a#seance now");
+
+			expect(url.spans).to.deep.equal(["https://example.test/a#seance"]);
+		});
+
+		it("an emphasised channel keeps its pair whole", () => {
+			const source = "*#seance* now";
+			const info = protect(source);
+
+			expect(restoreAll(info.text, info)).to.equal(source);
+		});
+
+		it("a channel and a nickname in one line both come back", () => {
+			const source = "frag jonas im #seance-translate";
+			const info = protect(source, {nicks: ["jonas"]});
+
+			expect(info.text).to.not.contain("jonas");
+			expect(info.text).to.not.contain("#seance-translate");
+			expect(restoreAll(info.text, info)).to.equal(source);
+		});
+	});
 });

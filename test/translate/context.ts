@@ -244,4 +244,28 @@ describe("translate/context", () => {
 			voice.slice(-VOICE_LINES)
 		);
 	});
+
+	// Bug A: the names the prompt lists must be the names the protection
+	// fenced, so `opts.nicks` — the one set (`names.ts` `namesFor`) — is what
+	// a mention is matched against, the user list only its fallback.
+	it("matches mentions against the given nick set, not only the user list", () => {
+		const channel: ContextChannel = {
+			topic: "",
+			users: [{nick: "ada"}],
+			messages: [m(1, "ada", "hi"), m(2, "ada", "frag gone mal")],
+		};
+		const opts = {
+			translated: () => undefined,
+			terms: [] as [string, string][],
+			glossary: [] as [string, string][],
+			formality: "auto" as const,
+			variant: "",
+			sourceHint: null,
+		};
+
+		expect(buildContext(channel, channel.messages[1], opts).names).to.deep.equal(["ada"]);
+		expect(
+			buildContext(channel, channel.messages[1], {...opts, nicks: ["ada", "gone"]}).names
+		).to.deep.equal(["ada", "gone"]);
+	});
 });

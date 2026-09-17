@@ -22,6 +22,7 @@ import {
 import {buildContext} from "./context";
 import {detectLanguage} from "./detect";
 import {plainTextOf} from "./eligibility";
+import {namesFor} from "./names";
 import {type EngineName, type PromptContext} from "./engine";
 import {translateService} from "./index";
 import {
@@ -231,7 +232,15 @@ export async function translateOutgoing(
 			return "plain";
 		}
 
-		const nicks = channel.users.map((u) => u.nick);
+		// Every name the draft may carry (names.ts `namesFor`): the user
+		// list, the user's own nick, a query's other party and whoever has
+		// spoken here lately. The same set is fenced, listed and stripped.
+		const nicks = namesFor({
+			users: channel.users,
+			sender: network.nick,
+			target: channel.name,
+			messages: channel.messages,
+		});
 		// No channel prior and no declared languages: both describe what
 		// others write here, and this is the user's own line.
 		const detection = await detectLanguage(plainTextOf(draft, nicks), null, []);
@@ -284,6 +293,7 @@ export async function translateOutgoing(
 				formality: formalityOf(settings.formality),
 				variant: settings.variant,
 				sourceHint: from,
+				nicks,
 				voice: voiceFor(channel, to),
 			}
 		);
@@ -498,6 +508,12 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 	try {
 		const route = await translateService().route(entry.to, target, entry.to);
 		const settings = channelTranslation(network, channel);
+		const nicks = namesFor({
+			users: channel.users,
+			sender: network.nick,
+			target: channel.name,
+			messages: channel.messages,
+		});
 		// The context a reader of this channel would give the model for the
 		// line the user is about to post, built the way reader.ts builds one
 		// for a line arriving here: recent lines with the translations the
@@ -525,10 +541,10 @@ export async function checkOutgoing(network: ClientNetwork, channel: ClientChan)
 				formality: formalityOf(settings.formality),
 				variant: settings.variant,
 				sourceHint: entry.to,
+				nicks,
 			}
 		);
 
-		const nicks = channel.users.map((u) => u.nick);
 		const request: OutgoingRequest = {
 			text: entry.text,
 			from: entry.to,
