@@ -201,7 +201,28 @@ function isNavigation(request) {
 	return request.mode === "navigate" || request.destination === "document";
 }
 
+// The shell cache exists so an installed app opens offline; it is not a
+// general-purpose store, and a browser evicts the whole origin's storage at
+// once when it fills up. A large same-origin response — a mirrored model
+// shard, a video, an archive a deploy serves next to the app — is served
+// and forgotten. (Weights under `models/` never reach the fetch handler at
+// all, `excludedPathsFromCache` above; this is the catch-all.)
+const MAX_SHELL_CACHE_BYTES = 8 * 1024 * 1024;
+
+function tooBigToCache(response) {
+	const length = Number(response.headers.get("content-length"));
+
+	// No `content-length` (a streamed or compressed response) means "cache
+	// it": the shell's own files all have one, and guessing is worse than
+	// the status quo.
+	return Number.isFinite(length) && length > MAX_SHELL_CACHE_BYTES;
+}
+
 async function putInCache(request, response) {
+	if (tooBigToCache(response)) {
+		return;
+	}
+
 	const cache = await caches.open(cacheName);
 	await cache.put(request, response);
 }

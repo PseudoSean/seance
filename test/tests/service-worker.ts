@@ -1764,3 +1764,88 @@ describe("service worker push module surface", function () {
 		}
 	});
 });
+
+describe("service worker shell cache", function () {
+	/**
+	 * Drive one `fetch` event through the worker and report what it put into
+	 * the shell cache. `length` is the response's `content-length` header,
+	 * `null` for a response that carries none.
+	 */
+	async function cached(sw: SWHarness, url: string, length: string | null): Promise<string[]> {
+		const put: string[] = [];
+		const waited: Promise<unknown>[] = [];
+		let responded: Promise<unknown> = Promise.resolve();
+
+		sw.sandbox.fetch = (): Promise<any> =>
+			Promise.resolve({
+				ok: true,
+				status: 200,
+				redirected: false,
+				headers: {
+					get: (name: string): string | null =>
+						name.toLowerCase() === "content-length" ? length : null,
+				},
+				clone(): unknown {
+					return this;
+				},
+			});
+
+		sw.sandbox.caches.open = (): Promise<any> =>
+			Promise.resolve({
+				match: (): Promise<undefined> => Promise.resolve(undefined),
+				put: (request: any): Promise<void> => {
+					put.push(typeof request === "string" ? request : request.url);
+					return Promise.resolve();
+				},
+			});
+
+		const request = {url, method: "GET", mode: "no-cors", destination: "script"};
+
+		for (const handler of sw.handlers.fetch ?? []) {
+			handler({
+				request,
+				respondWith: (p: Promise<unknown>) => {
+					responded = p;
+				},
+				waitUntil: (p: Promise<unknown>) => waited.push(p),
+			});
+		}
+
+		await Promise.all([responded, ...waited]);
+		return put;
+	}
+
+	it("caches an ordinary asset", async function () {
+		const sw = makeSW();
+
+		expect(await cached(sw, `${SCOPE}js/bundle.js`, String(900 * 1024))).to.deep.equal([
+			`${SCOPE}js/bundle.js`,
+		]);
+	});
+
+	it("caches a response that does not say how big it is", async function () {
+		const sw = makeSW();
+
+		expect(await cached(sw, `${SCOPE}css/style.css`, null)).to.deep.equal([
+			`${SCOPE}css/style.css`,
+		]);
+	});
+
+	it("does not put a response over 8 MiB into the shell cache", async function () {
+		const sw = makeSW();
+
+		// A 9 MiB same-origin GET: served, never stored. The shell cache is
+		// what makes the app open offline, not a general-purpose store.
+		expect(await cached(sw, `${SCOPE}media/clip.webm`, String(9 * 1024 * 1024))).to.deep.equal(
+			[]
+		);
+	});
+
+	it("never sees a request under models/ (a same-origin mirror is excluded)", async function () {
+		const sw = makeSW();
+
+		expect(await cached(sw, `${SCOPE}models/Xenova/nllb/onnx/x.onnx`, "1024")).to.deep.equal(
+			[]
+		);
+	});
+});
