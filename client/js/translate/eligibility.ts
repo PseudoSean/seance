@@ -92,6 +92,17 @@ export interface EligibilityMsg {
 
 const CHAT_TYPES = new Set(["message", "action", "notice"]);
 
+/**
+ * A line someone said, as opposed to the channel's own bookkeeping (a join,
+ * a mode, a topic). The pipeline's counter of what the channel has said
+ * since a line was queued (`reader.ts` `arrivals`, which decides whether a
+ * translation is still worth finishing) counts these and nothing else: a
+ * netsplit's quits are not the conversation moving on.
+ */
+export function isChatLine(msg: EligibilityMsg): boolean {
+	return !!msg.type && CHAT_TYPES.has(msg.type);
+}
+
 // A shortcode body must contain at least one letter, but :+1: and :-1: are
 // special cases.
 const SHORTCODE = /:(?:[+-]1|(?=[a-z0-9_+-]*[a-z])[a-z0-9_+-]{2,}):/gi;

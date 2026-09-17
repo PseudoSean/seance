@@ -317,7 +317,7 @@ candidate (neither the line's own source nor the reading language) and
 the stripping -- there is no word floor) stay unmarked. A
 mark is never a translation: `buildContext` quotes only `done` text, the
 menu has no Copy, a language change requeues the line like any other (the
-one entry `setReading` keeps is an own line's `done` read-back), a rebuilt
+one entry the requeue keeps is an own line's `done` read-back), a rebuilt
 retry does not take a mark's `from` as its source, and `takesReadBack` does
 not count a mark as the line's translation.
 
@@ -369,7 +369,9 @@ rather than the queue's single-line request: numbered lines to an LLM, one
 line at a time to a seq2seq engine, blank lines where they were, and never
 batched with the other lines of the channel. Without that the engine's cut
 kept the first line and the rest of the message was silently lost. An entry leaves when its message does: an edit or a REDACT
-drops it, and so do the message-limit trim, a part and a quit. The
+drops it, and so do the message-limit trim, a part and a quit -- and with
+the entry goes the queue item the pipeline remembered for that message
+(`reader.ts` `forgetTranslations`), which nothing could reach again. The
 switch, the outgoing target (plan 3), formality, variant, the languages
 spoken here and the term memory are per channel under
 `thelounge.translate` (`channelStore.ts`); leaving a channel keeps them,
@@ -414,17 +416,20 @@ one line after another so the queue's order is that order):
 - the requeue of a switch-on or a language change (below).
 
 **Switching reading on, or to another language, retranslates what is on
-screen** (`reader.ts` `setReading`): the channel's queued work is
+screen** (`reader.ts` `requeueReading`): the channel's queued work is
 cancelled, its remembered items, translations and language prior go, and
 its messages are queued again as one load. Switching on again does
 nothing, and switching off only cancels what is queued. A posted line's
 translation is the composer's read-back (§ Writing in a channel): it is
 kept, and left out of the requeue, when it is already in the reading
 language; when it is not it goes with the rest and the line is translated
-again like any other. The same restart runs for every reading-on channel
+again like any other. The same requeue runs for every reading-on channel
 when the reading language itself moves -- the Settings override changed,
 or the interface's did and the override follows it (`reader.ts`
-`restartAllReading`).
+`restartAllReading`). That path calls `requeueReading` itself: reading is
+already on, so `setReading` would return at its no-op guard and retranslate
+nothing. The language reading started in is recorded in `initReader`, so
+the first change after a page load counts like any other.
 
 **Leaving a channel keeps its setting.** A part cancels that channel's
 queued work, forgets its queue items and drops the translations with its
@@ -439,7 +444,11 @@ longer there.
 The queue then runs a channel's live lines ahead of its history ones
 (`QueueItem.history`, cleared by a retry, since a retry is someone asking
 for that line now), and the history ones are what a channel that has
-fallen `DROP_AFTER_LINES` behind has left to drop. Browser check: the
+fallen `DROP_AFTER_LINES` behind has left to drop. What counts as falling
+behind is what the channel has *said* since -- `reader.ts` `arrivals`
+counts `message`, `action` and `notice` lines alone (`eligibility.ts`
+`isChatLine`), so a netsplit's quits or a burst of joins never look like
+the conversation moving on. Browser check: the
 switch-on, "load more", language-change and rejoin steps of
 `tools/scenarios/translate-reading.mjs`.
 

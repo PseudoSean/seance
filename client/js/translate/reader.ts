@@ -29,7 +29,7 @@ import {
 } from "./channelStore";
 import {buildContext} from "./context";
 import {type Detection, LanguagePrior, detectLanguage, detectionSkip} from "./detect";
-import {ReplayBatches, historyQueueOrder, isEligible, plainTextOf} from "./eligibility";
+import {ReplayBatches, historyQueueOrder, isChatLine, isEligible, plainTextOf} from "./eligibility";
 import {fromLocaleTag} from "./languages";
 import {setTranslationUsage, translateService} from "./index";
 import {NO_ROUTE, type QueueItem, type QueueUpdate, TranslateQueue} from "./queue";
@@ -101,9 +101,11 @@ export function readingLanguage(): string {
 /**
  * The reading language changed (the Settings override moved, or the
  * interface's did and the override follows it): re-read every channel that
- * is reading, through the same path a switch-on takes. A change that
- * leaves the effective language alone restarts nothing; the first
- * computation (module load, before any channel exists) also does.
+ * is reading, the way a switch-on does (`requeueReading` -- not
+ * `setReading`, which is already on and would return at its no-op guard).
+ * A change that leaves the effective language alone restarts nothing; the
+ * language the reader is initialised with is the one to measure the first
+ * change against, so it is recorded there rather than guessed at here.
  */
 let lastReadingLanguage: string | null = null;
 
@@ -114,17 +116,12 @@ function restartAllReading(): void {
 		return;
 	}
 
-	const first = lastReadingLanguage === null;
 	lastReadingLanguage = next;
-
-	if (first) {
-		return;
-	}
 
 	for (const network of store.state.networks) {
 		for (const channel of network.channels) {
 			if (channelTranslation(network, channel).read) {
-				setReading(network, channel, true);
+				requeueReading(network, channel);
 			}
 		}
 	}
@@ -364,6 +361,19 @@ function forgetItems(match: (entry: {network: string; item: QueueItem}) => boole
 	}
 }
 
+/**
+ * Messages that are gone for good -- a trim, a cleared history, a redaction,
+ * an edit's original -- take the pipeline's memory of them with them. The
+ * store's own `translationRemove`/`translationRemoveMany` drops the
+ * translation; this drops the queue item the chip's retry would have reused,
+ * which is keyed by the same message id and could never be reached again.
+ */
+export function forgetTranslations(ids: readonly number[]): void {
+	for (const id of ids) {
+		items.delete(id);
+	}
+}
+
 function commitChannel(
 	network: ClientNetwork,
 	channel: ClientChan,
@@ -373,16 +383,9 @@ function commitChannel(
 }
 
 /**
- * Turn reading on (a language) or off (null) for a channel. Off cancels
- * what is queued. On, or another language, starts the channel's reading
- * over on what it shows: its queued work and translations go, its language
- * prior with them, and its messages are queued again, newest first and
- * capped like a history load. The same language again changes nothing.
- *
- * Own lines go with the rest and are queued again like anyone's. The one
- * exception is an own line whose translation is already in the new language
- * -- a posted line's read-back (writer.ts) -- which is kept, and which the
- * requeue then leaves alone rather than translating it a second time.
+ * Turn reading on or off for a channel. Off cancels what is queued; on
+ * starts the channel over on what it shows (`requeueReading`). The same
+ * setting again changes nothing.
  */
 export function setReading(network: ClientNetwork, channel: ClientChan, on: boolean): void {
 	const before = channelTranslation(network, channel).read;
@@ -394,13 +397,33 @@ export function setReading(network: ClientNetwork, channel: ClientChan, on: bool
 		return;
 	}
 
+	if (!on) {
+		generations.set(channel.id, generationOf(channel.id) + 1);
+		replayBatches.drop(channel.id);
+		queues.get(network.uuid)?.cancelChannel(channel.id);
+		return;
+	}
+
+	requeueReading(network, channel);
+}
+
+/**
+ * Start a reading channel over on what it shows: its queued work and
+ * translations go, its language prior with them, and its messages are
+ * queued again, newest first and capped like a history load. Both ways
+ * into a fresh read go through here -- a switch-on, and a change of the
+ * reading language (`restartAllReading`), which leaves the switch alone
+ * and so never reaches `setReading`'s body.
+ *
+ * Own lines go with the rest and are queued again like anyone's. The one
+ * exception is an own line whose translation is already in the new language
+ * -- a posted line's read-back (writer.ts) -- which is kept, and which the
+ * requeue then leaves alone rather than translating it a second time.
+ */
+export function requeueReading(network: ClientNetwork, channel: ClientChan): void {
 	generations.set(channel.id, generationOf(channel.id) + 1);
 	replayBatches.drop(channel.id);
 	queues.get(network.uuid)?.cancelChannel(channel.id);
-
-	if (!on) {
-		return;
-	}
 
 	// The language is the global reading language (the interface's, or the
 	// Settings override): only a finished translation already in it is
@@ -710,6 +733,9 @@ export function retryTranslation(
 export function initReader(): void {
 	store.commit("translateChannelsLoaded", loadAll());
 	setTranslationUsage(translationInUse);
+	// The language reading starts in: the first change after boot is measured
+	// against this, so it counts like any other.
+	lastReadingLanguage = readingLanguage();
 
 	// After socket-events/msg.ts pushed the message (import order in
 	// socket-events/index.ts): the object in `data.msg` is the one in
@@ -721,7 +747,12 @@ export function initReader(): void {
 			return;
 		}
 
-		arrivals.set(target.channel.id, (arrivals.get(target.channel.id) ?? 0) + 1);
+		// What the channel has said since a line was queued, which is how the
+		// queue decides a translation has been left behind: only lines
+		// someone said count, never a join, a quit or a mode.
+		if (isChatLine(data.msg)) {
+			arrivals.set(target.channel.id, (arrivals.get(target.channel.id) ?? 0) + 1);
+		}
 
 		if (!channelTranslation(target.network, target.channel).read) {
 			return;

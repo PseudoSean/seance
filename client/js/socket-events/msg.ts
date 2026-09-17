@@ -11,6 +11,7 @@ import {recordSeenMsgid} from "../push-seen";
 import {attachMediaPreviews} from "../helpers/messagePreviews";
 import * as saved from "../irc/saved-networks";
 import {insertMessage} from "../helpers/messageUpdates";
+import {forgetTranslations} from "../translate/reader";
 
 let pop;
 
@@ -130,11 +131,12 @@ socket.on("msg", function (data) {
 		const trimmed = channel.messages.splice(0, channel.messages.length - messageLimit);
 
 		// Their translations (client/js/translate/reader.ts) are keyed by
-		// message id and can never be reached again: they leave with them.
-		store.commit(
-			"translationRemoveMany",
-			trimmed.map((m) => m.id)
-		);
+		// message id and can never be reached again: they leave with them,
+		// and so does the pipeline's memory of the work behind them.
+		const trimmedIds = trimmed.map((m) => m.id);
+
+		store.commit("translationRemoveMany", trimmedIds);
+		forgetTranslations(trimmedIds);
 		channel.moreHistoryAvailable = true;
 	}
 

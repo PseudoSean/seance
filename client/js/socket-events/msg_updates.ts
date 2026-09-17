@@ -12,6 +12,7 @@ import {
 	findMessageById,
 	removePending,
 } from "../helpers/messageUpdates";
+import {forgetTranslations} from "../translate/reader";
 
 function lookup(chan: number, id: number) {
 	const target = store.getters.findChannel(chan);
@@ -42,6 +43,7 @@ socket.on("msg:redact", function (data) {
 	// translation is a second, unhidden copy of that text: drop it, so a
 	// reveal shows the original alone (Message.vue gates the line too).
 	store.commit("translationRemove", data.id);
+	forgetTranslations([data.id]);
 });
 
 socket.on("msg:edit", function (data) {
@@ -58,6 +60,7 @@ socket.on("msg:edit", function (data) {
 	// exists; the edit arrives as its own `msg` and is read/translated on
 	// its own terms.
 	store.commit("translationRemove", data.replaces);
+	forgetTranslations([data.replaces]);
 
 	// A pending copy only stands in until its echo does (`msg:settled` shows
 	// the original again), so the compose bar follows the real replacement

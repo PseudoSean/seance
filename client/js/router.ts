@@ -18,6 +18,7 @@ import AliasSettings from "../components/Settings/Aliases.vue";
 import NetworkSettings from "../components/Settings/Networks.vue";
 import {ClientChan} from "./types";
 import {shouldShowGeneralSettings} from "./helpers/settingsTabs";
+import {forgetTranslations} from "./translate/reader";
 import * as saved from "./irc/saved-networks";
 import {clearPendingTarget, setPendingTarget} from "./helpers/pendingTarget";
 
@@ -288,10 +289,10 @@ router.afterEach((to) => {
 			channel.moreHistoryAvailable = true;
 
 			if (dropped.length > 0) {
-				store.commit(
-					"translationRemoveMany",
-					dropped.map((m) => m.id)
-				);
+				const droppedIds = dropped.map((m) => m.id);
+
+				store.commit("translationRemoveMany", droppedIds);
+				forgetTranslations(droppedIds);
 			}
 		}
 	}

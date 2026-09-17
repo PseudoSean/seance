@@ -43,9 +43,9 @@
 // back on and the nine-character "So ist es" line translates; a "load more" is
 // translated, newest row first and no more than `HISTORY_QUEUE_CAP` of the
 // page; changing the reading language in Settings re-points reading (the
-// interface follows it): what arrives after the move is read into the new
-// language and the rejoin's history is read into it (the chip names it),
-// while finished translations keep their English; and leaving the channel
+// interface follows it): every translation already on screen is replaced by
+// one in the new language, what arrives after the move is read into it and
+// the rejoin's history too (the chip names it); and leaving the channel
 // with /part and joining it again keeps the
 // globe on and translates the history the rejoin loads, the page's own
 // line from before the part included.
@@ -1547,8 +1547,9 @@ async function scenario(page) {
 	// Another reading language: the Settings override (the locale setting,
 	// "Interface and reading language" -- one control since the
 	// unification). The interface switches to French and reading follows it
-	// for what arrives next; a finished translation keeps its English, only
-	// its chip is renamed in the reader's language.
+	// -- for what arrives next, and for what is already on screen: the move
+	// requeues every reading channel (reader.ts `requeueReading`), so the
+	// finished English translations go and come back in French.
 	const afterEchoText = `((${afterEchoRow}).querySelector('.msg-translation[data-status="done"] .msg-translation-text') || {}).textContent || ""`;
 
 	await setReadOverride(page, "fr");
@@ -1556,9 +1557,12 @@ async function scenario(page) {
 	const frenchName = String(
 		await page.evaluate(`new Intl.DisplayNames(["fr"], {type: "language"}).of("fr")`)
 	);
-	const englishName = String(
-		await page.evaluate(`new Intl.DisplayNames(["fr"], {type: "language"}).of("en")`)
-	);
+
+	await page.waitFor(`(${afterEchoText}).includes("[French] ")`, {
+		timeout: 90000,
+		label: "a translation already on screen is replaced with one in the new language",
+	});
+
 	const afterEchoChip = String(
 		await page.evaluate(
 			`((${afterEchoRow}).querySelector(".msg-translation-chip") || {}).textContent || ""`
@@ -1566,10 +1570,22 @@ async function scenario(page) {
 	).trim();
 
 	await page.check(
-		`the finished translation keeps its English target (${afterEchoChip})`,
-		afterEchoChip.endsWith(`→ ${englishName}`) &&
-			(await page.evaluate(`(${afterEchoText}).includes("[English] ")`))
+		`the requeued translation's chip names the new target (${afterEchoChip})`,
+		afterEchoChip.endsWith(`→ ${frenchName}`)
 	);
+	// Nothing on screen still reads as English: a line the requeue's cap left
+	// behind has no translation at all, never a stale one.
+	await page.check(
+		"no finished translation on screen is still in the old language",
+		await page.evaluate(
+			`[...document.querySelectorAll('.msg-translation[data-status="done"] .msg-translation-text')].every((n) => !n.textContent.includes("[English] "))`
+		)
+	);
+
+	// The requeue is a backlog like a switch-on's: let it drain before the
+	// next line is said, so that line is a request of its own rather than
+	// one batched behind the channel's scripted failures.
+	await settledLines(page, "the reading-language change's requeue");
 
 	// What arrives after the move is read into French: the request targets
 	// the new reading language and the chip names it in the reader's.
