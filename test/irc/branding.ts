@@ -102,6 +102,22 @@ describe("branding", function () {
 			expect(config.strings).to.deep.equal({"connect.submit": "Go"});
 		});
 
+		it("drops a relative links.* value even when a page base exists, unlike a mirror path", function () {
+			// A typo'd `links.source: "github"` must never resolve against the
+			// app's own origin (https://<app-origin>/github); only translation's
+			// model mirror may be a relative path.
+			(global as unknown as {document: {baseURI: string}}).document = {
+				baseURI: "https://irc.example/client/index.html",
+			};
+
+			try {
+				const config = normalizeBranding({links: {source: "github"}});
+				expect(config.links?.source).to.equal(DEFAULT_BRANDING.links?.source);
+			} finally {
+				delete (global as {document?: unknown}).document;
+			}
+		});
+
 		it("validates the default network and normalises its channels", function () {
 			const config = normalizeBranding({
 				defaultNetwork: {

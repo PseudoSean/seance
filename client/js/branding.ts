@@ -411,7 +411,10 @@ function pageBase(): string | undefined {
 	return undefined; // no DOM (mocha): only absolute URLs are usable
 }
 
-function optionalUrl(value: unknown, base: string | undefined = pageBase()): string | undefined {
+// `base` has no default: relative resolution is opt-in per caller — a
+// literal `undefined` (links.*, which must stay on the strict http(s)://
+// path) means exactly that, not "fall back to the page".
+function optionalUrl(value: unknown, base: string | undefined): string | undefined {
 	const url = optionalString(value);
 
 	if (url === undefined) {
@@ -833,7 +836,11 @@ export function normalizeBranding(
 	const links: BrandingLinks = {};
 
 	for (const key of ["website", "help", "privacy", "source"] as const) {
-		const link = optionalUrl(rawLinks[key]) ?? defaults.links?.[key];
+		// Only the translation model mirror may be a relative path; a link is
+		// rendered as an anchor or opened directly and stays on the strict
+		// http(s):// path — a typo like "github" must never resolve against
+		// the app's own origin.
+		const link = optionalUrl(rawLinks[key], undefined) ?? defaults.links?.[key];
 
 		if (link !== undefined) {
 			links[key] = link;
