@@ -940,7 +940,7 @@ export class TranslateQueue {
 	 *  streaming chunk restores placeholders in place but does not yet know
 	 *  whether a later chunk will still be missing one. */
 	private restoreText(info: Protected, text: string, final: boolean): string {
-		return final ? restoreAll(text, info) : restore(text, info.spans).text;
+		return final ? restoreAll(text, info) : restore(text, info.spans, info.meta).text;
 	}
 }
 

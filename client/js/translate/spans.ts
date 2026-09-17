@@ -31,6 +31,13 @@ export const PLACEHOLDER_CLOSE = "⟧"; // ⟧
 
 export type SpanMeta =
 	| {kind: "verbatim"}
+	/**
+	 * A placeholder the user typed (`protectTypedMarkers`). Verbatim in
+	 * every restore policy, but never expanded as a nested span: its own
+	 * text is placeholder-shaped, and reading it as one is the bug it is
+	 * protected against.
+	 */
+	| {kind: "typed"}
 	/** 1-based index of the other half of the pair. */
 	| {kind: "marker"; partner: number}
 	/** 0-based line of the protected text the prefix opened. */
@@ -453,7 +460,14 @@ function protectNicks(text: string, nicks: string[], spans: Spans): string {
  */
 export function protect(text: string, options: ProtectOptions = {}): Protected {
 	const spans = new Spans();
-	let out = protectFences(text, spans);
+	// The user's own brackets first, before anything can be numbered: `⟦2⟧`
+	// is text somebody typed, and left alone it would be read as span 2 on
+	// the way back and splice that span -- a URL, a nickname, half a code
+	// span -- into the middle of the line. Protected here, it is a span like
+	// any other: the engine never sees it, and it comes back as itself.
+	let out = protectTypedMarkers(text, spans);
+
+	out = protectFences(out, spans);
 
 	out = protectMath(out, spans);
 	out = protectTables(out, spans);
@@ -471,6 +485,16 @@ export function protect(text: string, options: ProtectOptions = {}): Protected {
 		{text: out, spans: spans.spans, meta: spans.meta, markers: "placeholder"},
 		options.markers ?? "placeholder"
 	);
+}
+
+/**
+ * A placeholder the user typed, as one verbatim span. First of the stages,
+ * so no later pattern and no restore ever mistakes it for one of the
+ * protection's own numbers; a single `replace` pass never re-reads its own
+ * output, so the placeholder it leaves behind is not matched again.
+ */
+function protectTypedMarkers(text: string, spans: Spans): string {
+	return text.replace(PLACEHOLDER_RX, (match: string) => spans.push(match, {kind: "typed"}));
 }
 
 /** `<1>` and `</1>`: a marker pair in `tags` form. */
@@ -566,10 +590,17 @@ function untag(text: string, info: Protected): string {
  * otherwise leave that number showing. `seen` collects what came back that
  * way, so a nested span is never also reported lost.
  */
-function expandSpan(spans: string[], index: number, seen: Set<number>, depth = 0): string {
+function expandSpan(
+	spans: string[],
+	index: number,
+	seen: Set<number>,
+	depth = 0,
+	meta?: SpanMeta[]
+): string {
 	const raw = spans[index - 1];
 
-	if (depth >= 4 || !raw.includes(PLACEHOLDER_OPEN)) {
+	// A placeholder the user typed is its own text, whatever number is in it.
+	if (depth >= 4 || meta?.[index - 1]?.kind === "typed" || !raw.includes(PLACEHOLDER_OPEN)) {
 		return raw;
 	}
 
@@ -582,18 +613,23 @@ function expandSpan(spans: string[], index: number, seen: Set<number>, depth = 0
 
 		seen.add(nested);
 
-		return expandSpan(spans, nested, seen, depth + 1);
+		return expandSpan(spans, nested, seen, depth + 1, meta);
 	});
 }
 
-export function restore(text: string, spans: string[]): {text: string; missing: number[]} {
+/** `meta` tells a placeholder the user typed from one of the protection's own. */
+export function restore(
+	text: string,
+	spans: string[],
+	meta?: SpanMeta[]
+): {text: string; missing: number[]} {
 	const seen = new Set<number>();
 	const out = text.replace(PLACEHOLDER_RX, (match, n: string) => {
 		const index = Number(n);
 
 		if (index >= 1 && index <= spans.length) {
 			seen.add(index);
-			return expandSpan(spans, index, seen);
+			return expandSpan(spans, index, seen, 0, meta);
 		}
 
 		return match;
@@ -647,7 +683,7 @@ export function restoreAll(text: string, info: Protected, expected?: number[]): 
 			return "";
 		}
 
-		return expandSpan(info.spans, index, found);
+		return expandSpan(info.spans, index, found, 0, info.meta);
 	});
 
 	const missing = want.filter((i) => !found.has(i) || orphaned.has(i));
@@ -670,11 +706,15 @@ export function restoreAll(text: string, info: Protected, expected?: number[]): 
 	// A lost marker takes its partner with it and neither is appended; a
 	// lost prefix is back on its line. What is left is verbatim: better
 	// shown late than lost.
-	const lost = missing.filter((i) => info.meta[i - 1]?.kind === "verbatim");
+	const lost = missing.filter((i) => {
+		const kind = info.meta[i - 1]?.kind;
+
+		return kind === "verbatim" || kind === "typed";
+	});
 
 	return lost.length === 0
 		? out
-		: `${out} ${lost.map((i) => expandSpan(info.spans, i, new Set())).join(" ")}`;
+		: `${out} ${lost.map((i) => expandSpan(info.spans, i, new Set(), 0, info.meta)).join(" ")}`;
 }
 
 /**

@@ -1,4 +1,5 @@
 import {expect} from "chai";
+import {hasNoLetters} from "../../client/js/translate/outgoing";
 import {
 	LLM_MARKERS,
 	type MarkerForm,
@@ -548,6 +549,47 @@ describe("translate/spans", () => {
 			expect(stripCopiedNickPrefix("hello there", "hallo zusammen", nicks)).to.equal(
 				"hello there"
 			);
+		});
+	});
+
+	// The brackets are ordinary characters someone can type, and a line that
+	// carried `⟦2⟧` used to come back as span 2 -- a URL, a nickname, half a
+	// code span -- spliced into the middle of it.
+	describe("a marker the user typed", () => {
+		it("is a span of its own, and comes back as itself", () => {
+			const info = protect("keep ⟦9⟧ please");
+
+			expect(info.spans).to.deep.equal(["⟦9⟧"]);
+			expect(info.text).to.equal(`keep ${placeholder(1)} please`);
+			expect(restoreAll(info.text, info)).to.equal("keep ⟦9⟧ please");
+		});
+
+		it("never stands for another span in the answer", () => {
+			const info = protect("siehe ⟦2⟧ und https://x.test bitte");
+
+			// The engine is shown numbers of the protection's own making, and
+			// the one the user typed is not among them.
+			expect(info.text).to.not.include("⟦2⟧ und");
+			expect(restoreAll(`see ${placeholder(1)} and ${placeholder(2)} please`, info)).to.equal(
+				"see ⟦2⟧ and https://x.test please"
+			);
+		});
+
+		it("survives inside a fenced block and inside code", () => {
+			const info = protect("```\ndraw ⟦1⟧ here\n```");
+
+			expect(restoreAll(info.text, info)).to.equal("```\ndraw ⟦1⟧ here\n```");
+
+			const inline = protect("run `echo ⟦3⟧` now");
+
+			expect(restoreAll(inline.text, inline)).to.equal("run `echo ⟦3⟧` now");
+		});
+
+		// A whole line of them is still nothing a language could be: the
+		// judgement `hasNoLetters` makes of a protected text is unchanged.
+		it("is still no content at all on its own", () => {
+			expect(hasNoLetters("⟦9⟧")).to.equal(true);
+			expect(protect("⟦9⟧").spans).to.deep.equal(["⟦9⟧"]);
 		});
 	});
 });
