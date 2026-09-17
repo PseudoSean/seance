@@ -14,7 +14,7 @@ to a friend who wants the same setup. Code: `client/js/helpers/settingsBackup.ts
 ```json
 {
   "format": "seance-settings",
-  "version": 1,
+  "version": 2,
   "exportedAt": "2026-09-09T10:00:00.000Z",
   "app": "Seance",
   "entries": {
@@ -28,8 +28,12 @@ to a friend who wants the same setup. Code: `client/js/helpers/settingsBackup.ts
 `entries` maps localStorage keys to their parsed values. Compression is the
 browser's own `CompressionStream("gzip")`, so there is no dependency; a
 browser without it writes plain JSON, and the loader accepts either (it sniffs
-the gzip magic). `version` is bumped when a restore would need a migration; a
-file from a newer version is refused with a message.
+the gzip magic). `version` is bumped when the covered keys change or a restore
+would need a migration; a file from a newer version is refused with a message.
+An **older** file is applied as far as it goes: a key added after its version
+(`KEY_SINCE` in `settingsBackup.ts` — `thelounge.translate` arrived in
+version 2) is left as it is on the device rather than cleared, since that file
+could never have carried it.
 
 ## What is in it
 
@@ -68,8 +72,8 @@ still carries every setting.
 
 Choosing a file decodes and validates it, then asks through the app's confirm
 dialog (naming the file, the number of networks and whether it carries
-passwords). On confirm, `applyBackup` removes every covered key
-present in storage and writes the file's, and the page reloads — that is how
+passwords). On confirm, `applyBackup` removes every key the file's version
+covers and writes the file's entries, and the page reloads — that is how
 every module re-reads its storage (the settings store, `saved-networks.ts`,
 `sort.ts`, `mute.ts`, `ignore.ts`, `mediaTrust.ts` all load at boot). Nothing
 runs between the writes and the reload, so in-memory state cannot overwrite

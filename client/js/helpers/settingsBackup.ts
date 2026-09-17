@@ -26,7 +26,21 @@ import storage from "../localStorage";
 
 export const FILE_EXTENSION = ".seance-settings";
 export const FORMAT = "seance-settings";
-export const VERSION = 1;
+export const VERSION = 2;
+
+/**
+ * The file version a key first travelled in. A restore empties the keys the
+ * file covers, so an older file must not be read as "this key was empty on
+ * that device": a key the format did not carry yet is left alone, because
+ * that file could never have held it. Keys from version 1 are not listed.
+ */
+const KEY_SINCE: Record<string, number> = {"thelounge.translate": 2};
+
+/** Whether a file of `version` says anything about `key` — a missing entry
+ * for a key it covers means "not set", and the restore removes it. */
+function coveredBy(version: number, key: string): boolean {
+	return (KEY_SINCE[key] ?? 1) <= version;
+}
 
 /** Whole keys the backup carries. `settings` has no prefix (store-settings.ts). */
 export const BACKUP_KEYS: readonly string[] = [
@@ -155,11 +169,15 @@ export function networkCount(backup: SettingsBackup): number {
 
 /**
  * Replace every covered entry with the backup's. Keys the backup does not
- * carry are removed, so the device ends up exactly as the file says.
+ * carry are removed, so the device ends up exactly as the file says — except
+ * for keys the file's own version did not cover yet (`coveredBy`), which a
+ * restore from an older app leaves as they are.
  */
 export function applyBackup(backup: SettingsBackup): void {
 	for (const key of storedBackupKeys()) {
-		backend.remove(key);
+		if (coveredBy(backup.version, key)) {
+			backend.remove(key);
+		}
 	}
 
 	for (const [key, value] of Object.entries(backup.entries)) {

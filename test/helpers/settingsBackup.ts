@@ -205,6 +205,26 @@ describe("settings backup (helpers/settingsBackup.ts)", function () {
 		expect(store.get("thelounge.mentions")).to.equal("[]");
 	});
 
+	it("an older file leaves a key its version never carried alone", function () {
+		// thelounge.translate joined the format in version 2: a v1 file says
+		// nothing about it, so a restore must not read its absence as "this
+		// device had no translation state".
+		seed();
+		applyBackup({
+			format: FORMAT,
+			version: 1,
+			exportedAt: "",
+			entries: {settings: {theme: "day"}},
+		});
+
+		expect(JSON.parse(store.get("thelounge.translate") as string)).to.deep.equal({
+			"a/#x": {read: true, languages: ["de"], terms: {}},
+		});
+		// Everything version 1 did carry is still replaced by the file.
+		expect(store.has("thelounge.muted")).to.equal(false);
+		expect(store.get("settings")).to.equal(JSON.stringify({theme: "day"}));
+	});
+
 	it("names the file after the deploy and the day", function () {
 		expect(fileName("Seance", new Date("2026-09-09T23:00:00Z"))).to.equal(
 			"seance-2026-09-09.seance-settings"
