@@ -229,8 +229,15 @@ export default defineComponent({
 				tCount("settings.general.backupNetworks", networks),
 				t("settings.general.backupMutes"),
 			];
+			// Its own sentence, appended -- the key's msgid opens with a
+			// space because that is what it is for. The warning went missing
+			// when the dialog was localized: the variable was kept and the
+			// use was not, so a file carrying network passwords was restored
+			// with nothing said about it.
 			const passwords = hasPasswords(backup) ? t("settings.general.backupPasswords") : "";
-			return t("settings.general.backupFrame", {parts: parts.join(", "), file: name});
+			return (
+				t("settings.general.backupFrame", {parts: parts.join(", "), file: name}) + passwords
+			);
 		};
 
 		const restore = (backup: SettingsBackup, name: string) => {
