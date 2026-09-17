@@ -327,6 +327,7 @@ export default defineComponent({
 			UNCHANGED,
 			devtoolsAvailable,
 			notTranslatedLabel,
+			retryLabel,
 			reasonText,
 		};
 	},
