@@ -2296,11 +2296,11 @@ msgctxt "link.clickToShow"
 msgid "Click to show"
 msgstr "Kliknij by wyświetlić"
 
-#. Hint appended to the file name on a media preview's placeholder that has not been revealed; clicking shows the media. The middle dot is part of the copy.
+#. Hint on the placeholder of a media preview that has not been revealed, when the file name is known: clicking reveals the media. {file} is the file's own name, shown verbatim — never translate it. The middle dot separates the two; move or replace it as the language wants.
 #: client/components/LinkPreview.vue
-msgctxt "link.clickToShowSuffix"
-msgid " · Click to show"
-msgstr "· Kliknij by wyświetlić"
+msgctxt "link.clickToShowFile"
+msgid "{file} · Click to show"
+msgstr "{file} · Kliknij, aby wyświetlić"
 
 #. aria-label of the small toggle button on a message link preview while the preview is expanded; clicking folds it back to a plain link.
 #: client/components/LinkPreviewToggle.vue
@@ -2603,7 +2603,7 @@ msgstr "Twoje imię na {network}"
 #: client/components/NetworkLobby.vue:66
 msgctxt "lobby.nickname"
 msgid "Nickname: "
-msgstr "Imię:"
+msgstr "Imię: "
 
 #. Tooltip and aria-label of the crossed-out bell icon on a sidebar network row: push and browser notifications are switched off for this network.
 #: client/components/NetworkLobby.vue:118
@@ -4024,6 +4024,12 @@ msgctxt "settings.general.awayPlaceholder"
 msgid "Away message if {appName} is not open"
 msgstr "Komunikat o odwiedzaniu, jeśli {appName} nie jest otwierany"
 
+#. Sentence shown in the restore-confirmation dialog in Settings > General, saying when the backup file was made. {date} is that day written out in the reader's language (e.g. 9 September 2026). A whole sentence: the dialog puts the separating space in.
+#: client/components/Settings/General.vue
+msgctxt "settings.general.backupExported"
+msgid "Exported {date}."
+msgstr "Eksportowany {date}."
+
 #. Body of the confirmation dialog before restoring a settings backup in Settings > General. {parts} is a comma-joined list ('your settings, 1 network, mutes and ignore lists'), {file} the chosen backup file's name.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.backupFrame"
@@ -4063,10 +4069,10 @@ msgctxt "settings.general.backupPartSettings"
 msgid "your settings"
 msgstr "Twoje ustawienia"
 
-#. Sentence appended to the restore-confirmation dialog in Settings > General when the backup file contains saved network passwords. The leading space is part of the copy; it follows the previous sentence.
+#. Sentence shown in the restore-confirmation dialog in Settings > General when the backup file contains saved network passwords. It is a whole sentence: the dialog puts the separating space in, so the translation needs no padding of its own.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.backupPasswords"
-msgid " The file includes network passwords."
+msgid "The file includes network passwords."
 msgstr "Plik zawiera hasła sieciowe."
 
 #. Button in Settings > General; downloads the settings backup file to the device. Ellipsis is part of the copy.
@@ -4202,10 +4208,6 @@ msgid "File uploads"
 msgstr "Przesyłanie plików"
 
 #. The first option of the interface-language picker: the language the browser asks for is used. {language} is that language's name, written in itself.
-#: client/components/Windows/Connect.vue:72
-#: client/components/Windows/Connect.vue:296
-#: client/components/Settings/Appearance.vue:253
-#: client/components/LanguageSelect.vue:50
 #: client/components/LanguageSelect.vue
 msgctxt "settings.locale.auto"
 msgid "System default ({language})"
