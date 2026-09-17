@@ -20,7 +20,8 @@ import {
 	checkPot,
 	collectStaticCallSiteKeys,
 } from "../../tools/i18n/check";
-import {DEV_ONLY_TAGS, POT_PATH} from "../../tools/i18n/paths";
+import {POT_PATH} from "../../tools/i18n/paths";
+import {DEV_ONLY_TAGS, readAvailableLocales} from "../../tools/i18n/available-locales";
 import {categoryIndexMap, compileLocales, Catalog, CompileResult} from "../../tools/i18n/compile";
 import {parseTargets, TARGETS_SOURCE} from "../../tools/i18n/targets";
 import {PLURAL_RULES, planPluralSlots, pluralEval} from "../../tools/i18n/plural";
@@ -330,16 +331,41 @@ describe("i18n toolchain", () => {
 			).to.deep.equal(["en", "de", "qqx"]);
 		});
 
-		it("webpack's dev-only tag list agrees with the toolchain's", () => {
-			// The pre-paint list is baked into index.html at build time, so
-			// webpack.config.ts is where the rig is dropped for a production
-			// build; tools/ is a separate TS project, so it spells the list
-			// out instead of importing it. Pinned here, as the RTL set is
-			// pinned between core.ts and index.html.
-			const config = readFileSync(resolve("webpack.config.ts"), "utf8");
-			const literal = /const DEV_ONLY_TAGS = (\[[^\]]*\]);/.exec(config);
-			expect(literal, "webpack.config.ts declares DEV_ONLY_TAGS").to.not.equal(null);
-			expect(JSON.parse(literal![1].replace(/'/g, '"'))).to.deep.equal([...DEV_ONLY_TAGS]);
+		it("the pre-paint list drops the dev-only rig for a production build only", () => {
+			// webpack.config.ts bakes this list into index.html, so it is the
+			// one consumer that cannot fold on NODE_ENV at runtime. Asserted
+			// on the real generated file, through the very function
+			// webpack.config.ts calls.
+			const file = resolve("client/locales/tags.json");
+			const development = readAvailableLocales(file, false);
+			const production = readAvailableLocales(file, true);
+			const all = JSON.parse(readFileSync(file, "utf8")) as string[];
+
+			expect(development).to.deep.equal(all);
+			expect(DEV_ONLY_TAGS.length).to.be.greaterThan(0);
+
+			for (const tag of DEV_ONLY_TAGS) {
+				expect(development, `${tag} in a development build`).to.include(tag);
+				expect(production, `${tag} out of a production build`).to.not.include(tag);
+			}
+
+			expect(production).to.deep.equal(all.filter((tag) => !DEV_ONLY_TAGS.includes(tag)));
+			expect(() => readAvailableLocales(resolve("client/locales/nope.json"), false)).to.throw(
+				'run "yarn i18n:compile" first'
+			);
+		});
+
+		it("the lazy locale import excludes the rig and the tag list in production", () => {
+			// Nothing in this suite bundles, so the magic comment is what
+			// there is to pin: without it a production build emits a chunk
+			// for qqx.json and one for tags.json, neither of which it can
+			// ever load (F27).
+			const source = readFileSync(resolve("client/js/i18n/index.ts"), "utf8");
+
+			expect(source).to.contain('process.env.NODE_ENV === "production"');
+			expect(source).to.match(
+				/webpackExclude: \/\(qqx\|tags\)\\\.json\$\/[\s\S]{0,80}locales\/\$\{tag\}\.json/
+			);
 		});
 
 		it("writes the same available.ts and tags.json whatever NODE_ENV says", () => {

@@ -25,6 +25,7 @@ import {parsePo, PoEntry} from "./po";
 import {PLURAL_RULES, parsePluralForms, pluralEval, PluralRule} from "./plural";
 import {pseudo} from "./pseudo";
 import {AVAILABLE_PATH, LOCALES_DIR} from "./paths";
+import {DEV_ONLY_TAGS} from "./available-locales";
 import {generateTargets} from "./targets";
 import {collectStaticCallSiteKeys} from "./check";
 import {runSync} from "./sync";
@@ -323,7 +324,7 @@ export function compileLocales(options: CompileOptions = {}): CompileResult {
 	const available: AvailableLocale[] = [
 		{tag: "en"},
 		...localeTags.map((tag) => ({tag})),
-		{tag: "qqx", devOnly: true} as AvailableLocale,
+		...DEV_ONLY_TAGS.map((tag) => ({tag, devOnly: true} as AvailableLocale)),
 	];
 	// The pre-paint script's list (webpack bakes it into index.html) carries
 	// the dev-only tags too, so a stored qqx pick gets its lang/dir from the
