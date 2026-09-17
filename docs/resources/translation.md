@@ -282,7 +282,14 @@ English line alone for an English reader; what weak changes is
 what a line is translated _from_: a chosen source wins, a verdict that is
 neither missing nor weak is the source, and anything else queues the line
 with no source named and `unsure` set -- the engine places it, which an
-LLM does well and a wrong `from` makes impossible.
+LLM does well and a wrong `from` makes impossible. The router is told more
+than the prompt is: `sourceFor` also returns a `routeHint` (the channel's
+prior first, the weak verdict as the last resort), which rides on
+`QueueItem.routeHint` into `TranslateRequest.hint` and never into the
+prompt. Without it a weak line would be unroutable on a CPU-only device --
+`router.ts` skips every seq2seq candidate when no source is known at all --
+which would mean no translation where there used to be a wrong one. The
+composer has the same split (`outgoing.ts` `sourceHintFor`).
 
 **A failure is worded in the reader's language, and `unchanged` barely
 speaks at all.** The failed row's frame and its known reasons are catalog

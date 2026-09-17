@@ -133,6 +133,51 @@ describe("translate/queue", () => {
 		).to.deep.equal(["[en] das ist *wichtig*", "[en] das ist *wichtig*"]);
 	});
 
+	// The prompt's hint and the router's are two different things (detect.ts
+	// `sourceFor`): a weak verdict must not put "probably Vietnamese" in
+	// front of the model, but a seq2seq route has no other way to know a
+	// source, and on a CPU-only device an unhinted request routes nowhere.
+	it("routes on the item's routeHint and leaves the prompt's source hint alone", async () => {
+		const r = rig((req) => [`[en] ${req.text}`]);
+		clock = r.clock;
+
+		const hints: (string | null)[] = [];
+		const route = r.deps.route.bind(r.deps);
+
+		r.deps.route = (from, to, hint) => {
+			hints.push(hint);
+			return route(from, to, hint);
+		};
+
+		r.setEngine(() => "seq2seq");
+		r.queue.enqueue(
+			item(1, "das ist eine zeile hier", {
+				from: null,
+				routeHint: "de",
+				context: emptyContext(),
+			})
+		);
+		await settle(r.clock);
+
+		expect(hints).to.deep.equal(["de"]);
+		expect(r.requests[0].hint).to.equal("de");
+		expect(r.requests[0].from).to.equal(null);
+		expect(r.requests[0].context.sourceHint).to.equal(undefined);
+
+		// An item from before the two were told apart still routes on its
+		// prompt hint.
+		r.queue.enqueue(
+			item(2, "eine weitere zeile hier", {
+				from: null,
+				context: {...emptyContext(), sourceHint: "fr"},
+			})
+		);
+		await settle(r.clock);
+
+		expect(hints).to.deep.equal(["de", "fr"]);
+		expect(r.requests[1].hint).to.equal("fr");
+	});
+
 	it("translates one item, streaming, and restores the placeholders", async () => {
 		const r = rig((req) => [`[en] ${req.text}`]);
 		clock = r.clock;

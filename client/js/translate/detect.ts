@@ -248,30 +248,50 @@ export function detectionSkip(detection: Detection, to: string): DetectionSkip {
 }
 
 /**
- * What the reader translates a line *from*, and whether the source is left
- * to the engine. A source someone chose (the chip's menu, a retry) is used
- * as it stands, even when it is the reading language: they asked for that
- * translation. Otherwise the detector's verdict is the source only when it
- * named a language, that language is not the one being read, and the
- * verdict is not `weak` -- a single function-word hit or a trigram lead
- * under `WEAK_CONFIDENCE` would send the line to a seq2seq model with the
- * wrong source, where an LLM places it itself. `unsure` says exactly that:
- * the prompt names no source and the router gets no hint.
+ * What the reader translates a line *from*, whether the source is left to
+ * the engine, and what the router may still be told.
+ *
+ * `source` is a source someone chose (the chip's menu, a retry) as it
+ * stands, even when it is the reading language -- they asked for that
+ * translation -- or else the detector's verdict, but only when it named a
+ * language, that language is not the one being read, and the verdict is not
+ * `weak`: a single function-word hit or a trigram lead under
+ * `WEAK_CONFIDENCE` would translate the line *from* the wrong language.
+ * `unsure` says the prompt names no source, so an LLM places the line
+ * itself.
+ *
+ * `routeHint` is routing only (`QueueItem.routeHint` →
+ * `TranslateRequest.hint`, never the prompt). A seq2seq model has no prompt
+ * to detect a source in, so on a CPU-only device a request with no source at
+ * all cannot be routed anywhere (router.ts skips every non-LLM candidate):
+ * a weak verdict would mean no translation instead of a wrong one. So it
+ * still steers the router -- the channel's prior first, since it is the
+ * better guess, then the weak verdict itself. The LLM route ignores it.
  */
 export function sourceFor(
 	detection: Detection,
 	from: string | null,
-	to: string
-): {source: string | null; unsure: boolean} {
+	to: string,
+	priorTop: string | null = null
+): {source: string | null; unsure: boolean; routeHint: string | null} {
 	if (from) {
-		return {source: from, unsure: false};
+		return {source: from, unsure: false, routeHint: from};
 	}
 
-	if (detection.lang === null || detection.weak) {
-		return {source: null, unsure: true};
+	// Nothing was placed at all: the prior is no better a guess -- it
+	// announced a Spanish line in a German channel as German -- so the line
+	// goes to an engine that can place it, or nowhere.
+	if (detection.lang === null) {
+		return {source: null, unsure: true, routeHint: null};
 	}
 
-	return {source: detection.lang === to ? null : detection.lang, unsure: false};
+	if (detection.weak) {
+		return {source: null, unsure: true, routeHint: priorTop ?? detection.lang};
+	}
+
+	const source = detection.lang === to ? null : detection.lang;
+
+	return {source, unsure: false, routeHint: source ?? priorTop};
 }
 
 /** The dominant language of a channel's recent messages. */

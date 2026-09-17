@@ -470,28 +470,34 @@ describe("translate/detect", () => {
 	});
 
 	describe("sourceFor", () => {
+		const weakVi = {lang: "vi", weak: true, confidence: 0.1, candidates: []};
+
 		it("names no source for a weak verdict, and marks the line unsure", () => {
-			expect(
-				sourceFor({lang: "vi", weak: true, confidence: 0.1, candidates: []}, null, "en")
-			).to.deep.equal({source: null, unsure: true});
+			expect(sourceFor(weakVi, null, "en")).to.deep.equal({
+				source: null,
+				unsure: true,
+				routeHint: "vi",
+			});
 		});
 
 		it("names the source of a verdict that is not weak", () => {
 			expect(
 				sourceFor({lang: "fr", confidence: 0.4, candidates: []}, null, "en")
-			).to.deep.equal({source: "fr", unsure: false});
+			).to.deep.equal({source: "fr", unsure: false, routeHint: "fr"});
 		});
 
 		it("lets a chosen source win over any verdict", () => {
-			expect(
-				sourceFor({lang: "vi", weak: true, confidence: 0.1, candidates: []}, "es", "en")
-			).to.deep.equal({source: "es", unsure: false});
+			expect(sourceFor(weakVi, "es", "en")).to.deep.equal({
+				source: "es",
+				unsure: false,
+				routeHint: "es",
+			});
 		});
 
 		it("names no source for a line already in the reading language, and is sure of it", () => {
 			expect(
 				sourceFor({lang: "en", confidence: 0.4, candidates: []}, null, "en")
-			).to.deep.equal({source: null, unsure: false});
+			).to.deep.equal({source: null, unsure: false, routeHint: null});
 		});
 
 		it("marks a line it could not place unsure", () => {
@@ -500,6 +506,41 @@ describe("translate/detect", () => {
 			).to.deep.equal({
 				source: null,
 				unsure: true,
+				routeHint: null,
+			});
+		});
+
+		// A weak verdict names no source in the prompt, but a seq2seq route
+		// has no other way to know one: without a hint a CPU-only device
+		// cannot route the line at all (router.ts), which would leave it
+		// untranslated rather than translated from a guess.
+		describe("the routing hint", () => {
+			it("prefers the channel's prior to a weak verdict", () => {
+				expect(sourceFor(weakVi, null, "en", "fr").routeHint).to.equal("fr");
+			});
+
+			it("falls back to the weak verdict when there is no prior", () => {
+				expect(sourceFor(weakVi, null, "en", null).routeHint).to.equal("vi");
+			});
+
+			it("is the source itself when the verdict is not weak", () => {
+				expect(
+					sourceFor({lang: "fr", confidence: 0.4, candidates: []}, null, "en", "de")
+						.routeHint
+				).to.equal("fr");
+			});
+
+			it("is a chosen source whatever the prior says", () => {
+				expect(sourceFor(weakVi, "es", "en", "fr").routeHint).to.equal("es");
+			});
+
+			// Nothing was placed at all: the prior announced a Spanish line in
+			// a German channel as German, so it is not offered here either.
+			it("stays empty for a line the detector could not place", () => {
+				expect(
+					sourceFor({lang: null, confidence: 0, candidates: []}, null, "en", "de")
+						.routeHint
+				).to.equal(null);
 			});
 		});
 	});

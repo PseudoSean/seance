@@ -600,14 +600,14 @@ export async function translateMessage(
 		return;
 	}
 
-	// What the line is translated from, and whether the source is left to the
-	// engine (detect.ts `sourceFor`): a chosen source as it stands, a verdict
-	// that is neither missing nor weak, or nothing at all. Unsure means the
-	// prompt says nothing about the source and the router gets no hint (the
-	// item's `context.sourceHint` is both) -- the channel's prior is no
+	// What the line is translated from, whether the source is left to the
+	// engine, and what the router may still be told (detect.ts `sourceFor`):
+	// a chosen source as it stands, a verdict that is neither missing nor
+	// weak, or nothing at all. Unsure means the prompt says nothing about the
+	// source (`context.sourceHint` is null) -- the channel's prior is no
 	// better a guess, having announced a Spanish line in a German channel as
-	// "probably German".
-	const {source, unsure} = sourceFor(detection, from ?? null, to);
+	// "probably German" -- while `routeHint` keeps the line routable.
+	const {source, unsure, routeHint} = sourceFor(detection, from ?? null, to, prior.top());
 	const protectedText = protect(message.text, {nicks});
 	const item: QueueItem = {
 		id: message.id,
@@ -616,6 +616,11 @@ export async function translateMessage(
 		spans: protectedText.spans,
 		meta: protectedText.meta,
 		from: source,
+		// Routing only, never the prompt: a weak verdict names no source in
+		// the request the model reads, but still steers the router, so a
+		// CPU-only device can route the line to a seq2seq model instead of
+		// leaving it untranslated (detect.ts `sourceFor`).
+		routeHint,
 		to,
 		context: buildContext(channel, message, {
 			translated(id) {

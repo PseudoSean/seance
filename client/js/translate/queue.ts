@@ -70,6 +70,15 @@ export interface QueueItem {
 	/** Never batch this item (a retry, or a batch that failed to parse). */
 	single: boolean;
 	/**
+	 * Routing only (`TranslateRequest.hint`, never the prompt): a seq2seq
+	 * route takes it as its source when `from` is null, so a line whose
+	 * source the prompt must not name -- a weak verdict (detect.ts
+	 * `sourceFor`) -- can still be routed on a CPU-only device. Left out, the
+	 * item's `context.sourceHint` is the hint, as it was before the two were
+	 * told apart.
+	 */
+	routeHint?: string | null;
+	/**
 	 * A history line (a join replay, or a page the reader loaded) rather
 	 * than one that just arrived: it runs behind the channel's live items,
 	 * and it is what a channel falling behind has left to drop.
@@ -90,7 +99,7 @@ export type QueueUpdate =
 	| {status: "dropped"};
 
 export interface QueueDeps {
-	/** `hint` is the item's `context.sourceHint`: a seq2seq route takes it as the source. */
+	/** `hint` is the item's `routeHint`: a seq2seq route takes it as the source. */
 	route(from: string | null, to: string, hint: string | null): Promise<EngineName | null>;
 	translate(
 		req: Omit<TranslateRequest, "id" | "model">,
@@ -271,7 +280,7 @@ export class TranslateQueue {
 		const generation = this.generation(item.chanId);
 		const globalGeneration = this.globalGeneration;
 
-		void this.deps.route(item.from, item.to, item.context.sourceHint ?? null).then(
+		void this.deps.route(item.from, item.to, routeHintOf(item)).then(
 			(engine) => {
 				if (
 					this.generation(item.chanId) !== generation ||
@@ -422,12 +431,17 @@ export class TranslateQueue {
 		// Every item of a batch went through the same route, so the marker
 		// form is the batch's, not each line's.
 		const markers = head.info.markers;
+		// The hint the head was routed on. Only LLM items batch, and the LLM
+		// takes its source from the prompt rather than the hint, so a batch
+		// whose lines were hinted differently is answered the same either way.
+		const hint = routeHintOf(first);
 		const request: Omit<TranslateRequest, "id" | "model"> =
 			batch.length > 1
 				? {
 						text: "",
 						lines: batch.map((q) => q.info.text),
 						from: first.from,
+						hint,
 						to: first.to,
 						purpose: "read",
 						context: first.context,
@@ -436,6 +450,7 @@ export class TranslateQueue {
 				: {
 						text: head.info.text,
 						from: first.from,
+						hint,
 						to: first.to,
 						purpose: "read",
 						context: first.context,
@@ -608,6 +623,7 @@ export class TranslateQueue {
 					text: info.text,
 					protected: info,
 					from: item.from,
+					hint: routeHintOf(item),
 					to: item.to,
 					purpose: "read",
 					context: item.context,
@@ -818,6 +834,15 @@ function protectedOf(item: QueueItem): Protected {
 }
 
 /** A `draft/multiline` message: one message, several lines. */
+/**
+ * What the router is told about the source (`QueueItem.routeHint`): an item
+ * from before the prompt's hint and the router's were told apart carries
+ * only the one.
+ */
+function routeHintOf(item: QueueItem): string | null {
+	return item.routeHint !== undefined ? item.routeHint : item.context.sourceHint ?? null;
+}
+
 function isMultiline(item: QueueItem): boolean {
 	return item.text.includes("\n");
 }

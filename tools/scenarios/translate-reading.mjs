@@ -63,7 +63,10 @@
 //   CHROME_BIN=/seance/tmp/chrome-pw.sh node tools/browser-drive.mjs tools/scenarios/translate-reading.mjs
 //   … --mobile --width=390 --height=844
 //
-// Needs the dev ircd's plain-WS port on 127.0.0.1:8067. NODE_ENV must be
+// Needs the dev ircd's plain-WS port on 127.0.0.1:8067. The run flips a
+// server feature through an oper, so a rig whose oper is not the Docker
+// default wants `SEANCE_OPER=seanceop SEANCE_OPER_PASSWORD=seance` (the
+// native rig's, tools/nefarious-dev/local.conf) in the environment. NODE_ENV must be
 // unset for the build: a production build compiles the fake out. Under
 // `--mobile` the globe's tap opens the panel rather than switching reading
 // (there is no right-click on a phone), so the switch is thrown through the

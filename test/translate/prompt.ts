@@ -142,6 +142,13 @@ describe("translate/prompt", () => {
 				name
 			)
 		).to.include("probably Portuguese");
+		// The routing hint is not the prompt's: a weak verdict (detect.ts
+		// `sourceFor`) steers a seq2seq route while the model is told nothing
+		// about the source, so it places the line itself.
+		const routed = systemPrompt(request({from: null, hint: "pt"}), name);
+
+		expect(routed).to.include("Detect the source language");
+		expect(routed).to.not.include("probably");
 	});
 
 	it("a batched request's system prompt asks for numbered lines, not one message", () => {
