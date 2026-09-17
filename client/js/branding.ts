@@ -230,7 +230,6 @@ export interface BrandingTranslation {
 	routes?: Record<string, Record<string, (string | string[])[]>>;
 	/** Network vocabulary seeded into every channel's term memory. */
 	glossary?: [string, string][];
-	/** The reading target when the user has not chosen one; defaults to the browser language. */
 }
 
 export interface BrandingConfig {
@@ -245,9 +244,10 @@ export interface BrandingConfig {
 	links?: BrandingLinks;
 	features?: BrandingFeatures;
 	/**
-	 * Overrides for a small set of UI strings, keyed like `connect.title`.
-	 * An override is the deploy's voice and wins in every locale; unknown
-	 * keys are dropped by `normalizeStrings`.
+	 * Overrides for UI strings, keyed like `connect.title`: every key of the
+	 * English catalog (`client/locales/messages.pot`) may be overridden. An
+	 * override is the deploy's voice and wins in every locale; unknown keys
+	 * are dropped by `normalizeStrings`.
 	 */
 	strings?: Record<string, string>;
 	/** File uploader endpoint. Absent means uploads are off. */
