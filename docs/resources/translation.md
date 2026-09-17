@@ -67,7 +67,10 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   Latvian, Lithuanian and Icelandic came back under 55% of a line's content
   words from every engine (1.7B, 4B, NLLB), so they were dropped from
   `SUPPORTED_LANGUAGES` and the route lists; the remaining 46 are listed in
-  `docs/resources/translation-languages.txt`. A line in a dropped language
+  `SUPPORTED_LANGUAGES` itself (`client/js/translate/languages.ts`) — a
+  translation-engine list independent of the interface's target list at
+  `translation-languages.txt`, which the beta trimmed to 24 (§ i18n.md
+  "Adding a language"). A line in a dropped language
   is no longer detected as that language (franc's candidates are the
   supported list), so it reads as unplaced; a stored Settings override
   that is no longer offered is treated as "auto" by the reading-language

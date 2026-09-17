@@ -40,14 +40,6 @@ export const TRANSLATION_TARGETS = [
 		"en": "Danish"
 	},
 	{
-		"tag": "nb",
-		"en": "Norwegian Bokmål"
-	},
-	{
-		"tag": "fi",
-		"en": "Finnish"
-	},
-	{
 		"tag": "pl",
 		"en": "Polish"
 	},
@@ -68,32 +60,12 @@ export const TRANSLATION_TARGETS = [
 		"en": "Romanian"
 	},
 	{
-		"tag": "bg",
-		"en": "Bulgarian"
-	},
-	{
 		"tag": "ru",
 		"en": "Russian"
 	},
 	{
 		"tag": "uk",
 		"en": "Ukrainian"
-	},
-	{
-		"tag": "sr",
-		"en": "Serbian"
-	},
-	{
-		"tag": "hr",
-		"en": "Croatian"
-	},
-	{
-		"tag": "sl",
-		"en": "Slovenian"
-	},
-	{
-		"tag": "el",
-		"en": "Greek"
 	},
 	{
 		"tag": "tr",
@@ -104,40 +76,12 @@ export const TRANSLATION_TARGETS = [
 		"en": "Arabic"
 	},
 	{
-		"tag": "he",
-		"en": "Hebrew"
-	},
-	{
-		"tag": "fa",
-		"en": "Persian"
-	},
-	{
-		"tag": "hi",
-		"en": "Hindi"
-	},
-	{
-		"tag": "bn",
-		"en": "Bangla"
-	},
-	{
-		"tag": "ta",
-		"en": "Tamil"
-	},
-	{
 		"tag": "th",
 		"en": "Thai"
 	},
 	{
 		"tag": "vi",
 		"en": "Vietnamese"
-	},
-	{
-		"tag": "id",
-		"en": "Indonesian"
-	},
-	{
-		"tag": "ms",
-		"en": "Malay"
 	},
 	{
 		"tag": "zh",
@@ -152,40 +96,8 @@ export const TRANSLATION_TARGETS = [
 		"en": "Korean"
 	},
 	{
-		"tag": "ca",
-		"en": "Catalan"
-	},
-	{
-		"tag": "eu",
-		"en": "Basque"
-	},
-	{
-		"tag": "gl",
-		"en": "Galician"
-	},
-	{
-		"tag": "ga",
-		"en": "Irish"
-	},
-	{
-		"tag": "cy",
-		"en": "Welsh"
-	},
-	{
-		"tag": "sw",
-		"en": "Swahili"
-	},
-	{
-		"tag": "af",
-		"en": "Afrikaans"
-	},
-	{
 		"tag": "fil",
 		"en": "Tagalog"
-	},
-	{
-		"tag": "ur",
-		"en": "Urdu"
 	}
 ] as const;
 export type TranslationTarget = (typeof TRANSLATION_TARGETS)[number];

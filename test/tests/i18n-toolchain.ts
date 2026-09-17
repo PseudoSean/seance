@@ -495,21 +495,18 @@ describe("i18n toolchain", () => {
 			// core's RTL_TAGS decides direction at runtime; the target list
 			// must agree with it for every tag it offers.
 			const rtl = committed.filter((target) => isRTL(target.tag)).map((t) => t.tag);
-			expect(new Set(rtl)).to.deep.equal(new Set(["ar", "fa", "he", "ur"]));
+			expect(new Set(rtl)).to.deep.equal(new Set(["ar"]));
 		});
 
-		it("writes each language's own name for the four RTL targets", () => {
+		it("writes each language's own name for the one RTL target", () => {
 			// The selector's label is Intl.DisplayNames of the tag itself —
 			// the native name, never the English one. Pinned for the RTL
-			// set (where a wrong name would hide the language from its own
-			// readers) and German as an LTR spot check; Node's CLDR and
+			// target (where a wrong name would hide the language from its
+			// own readers) and German as an LTR spot check; Node's CLDR and
 			// browsers agree on these mainstream tags.
 			const native = (tag: string) =>
 				new Intl.DisplayNames([tag], {type: "language"}).of(tag);
 			expect(native("ar")).to.equal("العربية");
-			expect(native("he")).to.equal("עברית");
-			expect(native("fa")).to.equal("فارسی");
-			expect(native("ur")).to.equal("اردو");
 			expect(native("de")).to.equal("Deutsch");
 			expect(native("en")).to.equal("English");
 		});

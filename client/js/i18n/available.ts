@@ -4,25 +4,10 @@ export const AVAILABLE = [
 		"tag": "en"
 	},
 	{
-		"tag": "af"
-	},
-	{
 		"tag": "ar"
 	},
 	{
-		"tag": "bg"
-	},
-	{
-		"tag": "bn"
-	},
-	{
-		"tag": "ca"
-	},
-	{
 		"tag": "cs"
-	},
-	{
-		"tag": "cy"
 	},
 	{
 		"tag": "da"
@@ -31,19 +16,7 @@ export const AVAILABLE = [
 		"tag": "de"
 	},
 	{
-		"tag": "el"
-	},
-	{
 		"tag": "es"
-	},
-	{
-		"tag": "eu"
-	},
-	{
-		"tag": "fa"
-	},
-	{
-		"tag": "fi"
 	},
 	{
 		"tag": "fil"
@@ -52,25 +25,7 @@ export const AVAILABLE = [
 		"tag": "fr"
 	},
 	{
-		"tag": "ga"
-	},
-	{
-		"tag": "gl"
-	},
-	{
-		"tag": "he"
-	},
-	{
-		"tag": "hi"
-	},
-	{
-		"tag": "hr"
-	},
-	{
 		"tag": "hu"
-	},
-	{
-		"tag": "id"
 	},
 	{
 		"tag": "it"
@@ -80,12 +35,6 @@ export const AVAILABLE = [
 	},
 	{
 		"tag": "ko"
-	},
-	{
-		"tag": "ms"
-	},
-	{
-		"tag": "nb"
 	},
 	{
 		"tag": "nl"
@@ -106,19 +55,7 @@ export const AVAILABLE = [
 		"tag": "sk"
 	},
 	{
-		"tag": "sl"
-	},
-	{
-		"tag": "sr"
-	},
-	{
 		"tag": "sv"
-	},
-	{
-		"tag": "sw"
-	},
-	{
-		"tag": "ta"
 	},
 	{
 		"tag": "th"
@@ -128,9 +65,6 @@ export const AVAILABLE = [
 	},
 	{
 		"tag": "uk"
-	},
-	{
-		"tag": "ur"
 	},
 	{
 		"tag": "vi"
