@@ -62,11 +62,11 @@ const BATCH_LLM = 20;
 // character for character. No msgid carries a backtick of its own.
 const BRACE_RX = /\{[^{}\s]*\}/g;
 
-function fenceBraces(text: string): string {
+export function fenceBraces(text: string): string {
 	return text.replace(BRACE_RX, (match) => "`" + match + "`");
 }
 
-function unfenceBraces(text: string): string {
+export function unfenceBraces(text: string): string {
 	return text.replace(/`(\{[^{}\s]*\})`/g, "$1");
 }
 
@@ -76,11 +76,11 @@ function unfenceBraces(text: string): string {
 // back into, so every protected slot failed. `<n>` survives every engine
 // tested, so the seq2seq routes see that form and the answer is mapped back
 // before the marker gate and the restore, which both speak ⟦n⟧.
-function toTags(text: string): string {
+export function toTags(text: string): string {
 	return text.replace(/⟦\s*(\d+)\s*⟧/g, "<$1>");
 }
 
-function fromTags(text: string): string {
+export function fromTags(text: string): string {
 	return text.replace(/<\s*(\d+)\s*>/g, "⟦$1⟧");
 }
 
@@ -453,7 +453,9 @@ async function main(): Promise<void> {
 	process.exit(0);
 }
 
-main().catch((error) => {
-	console.error(error);
-	process.exit(1);
-});
+if (require.main === module) {
+	main().catch((error) => {
+		console.error(error);
+		process.exit(1);
+	});
+}

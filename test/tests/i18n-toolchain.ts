@@ -28,6 +28,8 @@ import {PLURAL_RULES, planPluralSlots, pluralEval} from "../../tools/i18n/plural
 import {isRTL} from "../../client/js/i18n/core";
 import {pseudo} from "../../tools/i18n/pseudo";
 import {mergePo} from "../../tools/i18n/merge";
+import {fenceBraces, fromTags, toTags, unfenceBraces} from "../../tools/i18n/fill";
+import {protect, restoreAll} from "../../client/js/translate/spans";
 import {scaffoldTag} from "../../tools/i18n/scaffold";
 import {sweepEntries} from "../../tools/i18n/sweep";
 import {isSuspectCatalogEntry, slotVerdict} from "../../tools/i18n/quality";
@@ -659,6 +661,38 @@ describe("i18n toolchain", () => {
 					slotVerdict("de", "marked away {count} times", "{count}-mal abwesend")
 				).to.equal(null);
 			});
+		});
+	});
+
+	describe("the fill's placeholder protection", () => {
+		it("fences a catalog placeholder so the protection carries it", () => {
+			// spans.ts protects chat syntax; a {placeholder} is none of it, so
+			// the fill fences each one as a code span first — and the engine
+			// then only ever sees a numbered marker.
+			const fenced = fenceBraces("Connecting to {network} as {nick}…");
+			expect(fenced).to.equal("Connecting to `{network}` as `{nick}`…");
+
+			const info = protect(fenced, {nicks: [], markers: "tags"});
+			expect(info.text).to.equal("Connecting to \u27E61\u27E7 as \u27E62\u27E7…");
+
+			// What an engine hands back, with the sentence translated around
+			// the markers it was told to keep.
+			const answer = info.text
+				.replace("Connecting to", "Verbinde mit")
+				.replace(" as ", " als ");
+			expect(unfenceBraces(restoreAll(answer, info))).to.equal(
+				"Verbinde mit {network} als {nick}…"
+			);
+		});
+
+		it("speaks the seq2seq engines' marker form both ways", () => {
+			// ⟦n⟧ is not in the Marian vocabulary — measured, it comes back as
+			// ",1," — so the seq2seq routes are handed <n> and mapped back.
+			expect(toTags("Connecting to \u27E61\u27E7…")).to.equal("Connecting to <1>…");
+			expect(fromTags("Verbindung zu < 1 >…")).to.equal("Verbindung zu \u27E61\u27E7…");
+			expect(fromTags(toTags("a \u27E61\u27E7 b \u27E62\u27E7"))).to.equal(
+				"a \u27E61\u27E7 b \u27E62\u27E7"
+			);
 		});
 	});
 
