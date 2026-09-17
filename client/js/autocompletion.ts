@@ -7,6 +7,7 @@ import {TextareaEditor} from "@textcomplete/textarea";
 import fuzzy from "fuzzy";
 
 import emojiMap from "./helpers/simplemap.json";
+import {matchColorCodes} from "./helpers/colorMatch";
 import {aliasNames} from "./helpers/aliases";
 import {brandingT} from "./branding";
 import {store} from "./store";
@@ -132,31 +133,7 @@ const foregroundColorStrategy: StrategyProps = {
 	id: "foreground-colors",
 	match: /\x03(\d{0,2}|[A-Za-z ]{0,10})$/,
 	search(term: string, callback: (matches: string[][]) => void) {
-		term = term.toLowerCase();
-
-		const matchingColorCodes = constants.colorCodeMap
-			.map((i) => {
-				const localized = colorName(i[0], i[1]);
-
-				if (fuzzy.test(term, localized)) {
-					return [
-						i[0],
-						fuzzy.match(term, localized, {
-							pre: "<b>",
-							post: "</b>",
-						}).rendered,
-					];
-				}
-
-				if (fuzzy.test(term, i[1])) {
-					return [i[0], localized]; // matched the English name, shown localized
-				}
-
-				return null;
-			})
-			.filter((pair): pair is string[] => pair !== null);
-
-		callback(matchingColorCodes);
+		callback(matchColorCodes(term, constants.colorCodeMap, colorName));
 	},
 	template(value: string[]) {
 		return `<span class="irc-fg${parseInt(value[0], 10)}">${value[1]}</span>`;
@@ -171,29 +148,9 @@ const backgroundColorStrategy: StrategyProps = {
 	id: "background-colors",
 	match: /\x03(\d{2}),(\d{0,2}|[A-Za-z ]{0,10})$/,
 	search(term: string, callback: (matchingColorCodes: string[][]) => void, match: string[]) {
-		term = term.toLowerCase();
-		const matchingColorCodes = constants.colorCodeMap
-			.map((pair) => {
-				const localized = colorName(pair[0], pair[1]);
-
-				if (fuzzy.test(term, localized)) {
-					return [
-						pair[0],
-						fuzzy.match(term, localized, {
-							pre: "<b>",
-							post: "</b>",
-						}).rendered,
-					];
-				}
-
-				if (fuzzy.test(term, pair[1])) {
-					return [pair[0], localized]; // matched the English name, shown localized
-				}
-
-				return null;
-			})
-			.filter((entry): entry is string[] => entry !== null)
-			.map((pair) => pair.concat(match[1])); // Needed to pass fg color to `template`...
+		const matchingColorCodes = matchColorCodes(term, constants.colorCodeMap, colorName).map(
+			(pair) => pair.concat(match[1])
+		); // Needed to pass fg color to `template`...
 
 		callback(matchingColorCodes);
 	},
