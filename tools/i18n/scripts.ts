@@ -47,13 +47,24 @@ const LATIN_TAGS = [
 	"fil",
 ];
 
+/**
+ * The script a tag writes its OWN words in, for the tags that have one
+ * besides Latin. Latin being allowed everywhere means a French answer in a
+ * Ukrainian catalog passes every other rule, so this is the table that says
+ * what a Ukrainian sentence has to contain (`quality.ts`: a body with
+ * letters and none of these is not in the target language at all).
+ */
+export const OWN_SCRIPTS: Record<string, RegExp[]> = {
+	ru: [CYRILLIC],
+	uk: [CYRILLIC],
+	ar: [ARABIC],
+	th: [THAI],
+	zh: [HAN],
+	ja: [HAN, HIRAGANA, KATAKANA],
+	ko: [HANGUL, HAN],
+};
+
 export const EXPECTED_SCRIPTS: Record<string, RegExp[]> = {
 	...Object.fromEntries(LATIN_TAGS.map((tag) => [tag, writes()])),
-	ru: writes(CYRILLIC),
-	uk: writes(CYRILLIC),
-	ar: writes(ARABIC),
-	th: writes(THAI),
-	zh: writes(HAN),
-	ja: writes(HAN, HIRAGANA, KATAKANA),
-	ko: writes(HANGUL, HAN),
+	...Object.fromEntries(Object.entries(OWN_SCRIPTS).map(([tag, own]) => [tag, writes(...own)])),
 };

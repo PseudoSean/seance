@@ -28,7 +28,14 @@ import {PLURAL_RULES, planPluralSlots, pluralEval} from "../../tools/i18n/plural
 import {isRTL} from "../../client/js/i18n/core";
 import {pseudo} from "../../tools/i18n/pseudo";
 import {mergePo} from "../../tools/i18n/merge";
-import {fenceBraces, fromTags, toTags, unfenceBraces} from "../../tools/i18n/fill";
+import {
+	fenceBraces,
+	fromTags,
+	planEngines,
+	targetName,
+	toTags,
+	unfenceBraces,
+} from "../../tools/i18n/fill";
 import {protect, restoreAll} from "../../client/js/translate/spans";
 import {scaffoldTag} from "../../tools/i18n/scaffold";
 import {sweepEntries} from "../../tools/i18n/sweep";
@@ -662,6 +669,35 @@ describe("i18n toolchain", () => {
 				).to.equal(null);
 			});
 
+			it("refuses an answer with none of the target's own script in it", () => {
+				// Latin is allowed in every catalog (brand names, protocol
+				// words, {placeholder} names), so an answer in the wrong
+				// LATIN language passed every other rule: uk shipped French,
+				// Polish, Malay and invented pseudo-Welsh.
+				expect(slotVerdict("uk", "Connection lost", "connexion perdue")).to.equal(
+					"foreign-script:no-target-script"
+				);
+				expect(slotVerdict("uk", "Edit this network", "Edytuj ten sieć")).to.equal(
+					"foreign-script:no-target-script"
+				);
+				expect(slotVerdict("uk", "Cancel upload", "Cance upload")).to.equal(
+					"foreign-script:no-target-script"
+				);
+				expect(isSuspectCatalogEntry("ja", "Translate", "Translation")).to.equal(
+					"foreign-script:no-target-script"
+				);
+				// Its own script is all it takes; so is a body that is only
+				// product words, acronyms and language tags, which every
+				// catalog writes the same way.
+				expect(slotVerdict("uk", "Close", "Закрити")).to.equal(null);
+				expect(slotVerdict("ja", "Translation", "翻訳")).to.equal(null);
+				expect(
+					slotVerdict("ru", "OPUS-MT {from} → {to} (CPU)", "OPUS-MT {from} → {to} (CPU)")
+				).to.equal(null);
+				// A Latin-script target is judged by the old rule alone.
+				expect(slotVerdict("de", "Connection lost", "Verbindung verloren")).to.equal(null);
+			});
+
 			it("refuses an answer that is its English source again", () => {
 				// The engines hand the English back often enough to fill a
 				// catalog with it (uk came back 864 entries English) and
@@ -679,6 +715,24 @@ describe("i18n toolchain", () => {
 				expect(slotVerdict("de", "OK", "OK")).to.equal(null);
 				expect(slotVerdict("de", "{count}", "{count}")).to.equal(null);
 			});
+		});
+	});
+
+	describe("the fill's engine plan and prompt", () => {
+		it("--force-engine overrides the route table's placement", () => {
+			// ru is OPUS-placed by routes.default.ts; --engine only scopes to
+			// that placement, --force-engine moves it.
+			expect(planEngines(["ru"], {})).to.deep.equal([{tag: "ru", engine: "opus"}]);
+			expect(planEngines(["ru"], {engine: "llm"})).to.deep.equal([]);
+			expect(planEngines(["ru"], {forceEngine: "llm"})).to.deep.equal([
+				{tag: "ru", engine: "llm"},
+			]);
+		});
+
+		it("names the target language for the prompt instead of passing the tag", () => {
+			// "translate into uk" came back in English (UK).
+			expect(targetName("uk")).to.equal("Ukrainian");
+			expect(targetName("fil")).to.equal("Filipino");
 		});
 	});
 

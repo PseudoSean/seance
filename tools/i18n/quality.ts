@@ -15,7 +15,7 @@
  * whatever script its author typed.
  */
 import {isDegenerate} from "../../client/js/translate/outgoing";
-import {EXPECTED_SCRIPTS} from "./scripts";
+import {EXPECTED_SCRIPTS, OWN_SCRIPTS} from "./scripts";
 
 export {isDegenerate};
 
@@ -23,10 +23,36 @@ export {isDegenerate};
 export const LENGTH_FACTOR = 4;
 export const LENGTH_ALLOWANCE = 20;
 
-export type SuspectReason = "degenerate" | "runaway-length" | "foreign-script";
+export type SuspectReason =
+	| "degenerate"
+	| "runaway-length"
+	| "foreign-script"
+	| "foreign-script:no-target-script";
 
 /** A {placeholder}'s content is the deploy's, never the translator's. */
 const PLACEHOLDER = /\{[^{}]*\}/g;
+
+/**
+ * The words of a text that could carry the target language: no
+ * {placeholder}s (their content is the deploy's), none of the acronyms and
+ * product names every language writes alike, and nothing under three
+ * letters — a language tag ("de", "en") or an initial is no evidence of what
+ * language a sentence is in, and "OPUS-MT de → en (CPU)" is a legitimate
+ * row in every catalog.
+ */
+function bodyWords(text: string): string[] {
+	return text
+		.replace(PLACEHOLDER, " ")
+		.toLowerCase()
+		.split(/[^\p{L}\p{N}-]+/u)
+		.filter(
+			(word) =>
+				word.length > 2 &&
+				/\p{L}/u.test(word) &&
+				!IDENTICAL_EVERYWHERE.has(word) &&
+				!word.split("-").every((part) => part === "" || IDENTICAL_EVERYWHERE.has(part))
+		);
+}
 
 /**
  * Why a catalog entry's translation cannot be what it claims to be, or null
@@ -55,6 +81,18 @@ export function isSuspectCatalogEntry(
 
 	if (text.length > LENGTH_FACTOR * source.length + LENGTH_ALLOWANCE) {
 		return "runaway-length";
+	}
+
+	const own = OWN_SCRIPTS[tag];
+
+	// A target with a script of its own has to answer in it. Latin is allowed
+	// in every catalog (brand names, protocol words, {placeholder} names), so
+	// an answer in French, Polish or invented pseudo-Welsh passed every other
+	// rule and sat in the Ukrainian catalog looking well-formed. A body with
+	// letters of its own and not one character of the target's script is not
+	// in the target language at all.
+	if (own && bodyWords(text).length > 0 && !own.some((script) => script.test(text))) {
+		return "foreign-script:no-target-script";
 	}
 
 	const allowed = EXPECTED_SCRIPTS[tag];

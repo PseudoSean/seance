@@ -70,6 +70,42 @@ const BATCH_LLM = 20;
 // character for character. No msgid carries a backtick of its own.
 const BRACE_RX = /\{[^{}\s]*\}/g;
 
+/**
+ * How the prompt names the target language. The engine is handed this, not
+ * the tag: "translate into uk" was answered in English (UK), and the whole
+ * Ukrainian catalog came back English for it.
+ */
+export function targetName(code: string): string {
+	return languageName(code, "en");
+}
+
+/**
+ * Which engine each language of a run goes to. `--engine` SCOPES the run to
+ * the languages the route table already places there; `--force-engine` puts
+ * every language on one engine whatever the table says.
+ */
+export function planEngines(
+	tags: string[],
+	options: {engine?: EngineName | null; forceEngine?: EngineName | null} = {}
+): {tag: string; engine: EngineName}[] {
+	const plan: {tag: string; engine: EngineName}[] = [];
+
+	for (const tag of tags) {
+		const placed = engineFor(tag);
+
+		if (options.forceEngine) {
+			plan.push({tag, engine: options.forceEngine});
+			continue;
+		}
+
+		if (!options.engine || options.engine === placed) {
+			plan.push({tag, engine: placed});
+		}
+	}
+
+	return plan;
+}
+
 export function fenceBraces(text: string): string {
 	return text.replace(BRACE_RX, (match) => "`" + match + "`");
 }
@@ -171,22 +207,9 @@ async function main(): Promise<void> {
 	const allTags = names.map((name) => NAME_TO_TAG[name]).filter(Boolean);
 	const langs = (options.langs ?? allTags).map((lang) => NAME_TO_TAG[lang] ?? lang);
 
-	// The route table's placement decides the engine — --engine only scopes
-	// the run to the languages the route table sends to that engine.
-	const plan: {tag: string; engine: EngineName}[] = [];
-
-	for (const tag of langs) {
-		const placed = engineFor(tag);
-
-		if (options.forceEngine) {
-			plan.push({tag, engine: options.forceEngine});
-			continue;
-		}
-
-		if (!options.engine || options.engine === placed) {
-			plan.push({tag, engine: placed});
-		}
-	}
+	// The route table's placement decides the engine unless --force-engine
+	// overrides it; --engine only scopes the run (planEngines).
+	const plan = planEngines(langs, options);
 
 	if (options.dry) {
 		for (const {tag, engine} of plan) {
@@ -228,7 +251,7 @@ async function main(): Promise<void> {
 			// English (UK), which the unchanged gate now catches but the
 			// catalog wore for a whole round. The app passes a resolver
 			// here; so does the fill.
-			llmEngine = new WebLlmEngine(deps, (code) => languageName(code, "en"));
+			llmEngine = new WebLlmEngine(deps, targetName);
 			llmEngine.configure(catalog);
 
 			console.log("fill: loading the converted 4B weights…");
