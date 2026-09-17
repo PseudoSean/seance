@@ -153,6 +153,25 @@ function gateLlm(r: ReturnType<typeof rig>): () => void {
 	return release;
 }
 
+/** Hold the rig's first seq2seq request before its first chunk until the returned function is called. */
+function gateSeq(r: ReturnType<typeof rig>): () => void {
+	let release!: () => void;
+	const gate = new Promise<void>((resolve) => (release = resolve));
+	const original = r.seq2seq.translate.bind(r.seq2seq);
+	let first = true;
+
+	r.seq2seq.translate = async function* (req, signal) {
+		if (first) {
+			first = false;
+			await gate;
+		}
+
+		yield* original(req, signal);
+	};
+
+	return release;
+}
+
 /** Hold the rig's LLM load of `id` until `release` is called; `asked` records every load asked for. */
 function gateLlmLoad(
 	r: ReturnType<typeof rig>,
@@ -651,6 +670,33 @@ describe("translate/service", () => {
 		await deleting;
 		expect(r.llm.calls.unload).to.equal(1);
 		expect(r.llm.isLoaded(QWEN3_1_7B_ID)).to.equal(false);
+		r.service.dispose();
+	});
+
+	// The GPU path has waited for its model's work since the switch landed;
+	// the CPU path unloaded the engine under whatever was running on it, so
+	// deleting a model from Settings killed a translation in flight.
+	it("deleting a CPU model waits for the request running on it, then unloads it", async () => {
+		const r = rig("cpu");
+		clock = r.clock;
+		r.cached.add(catalog.nllb.id);
+
+		const release = gateSeq(r);
+		const running = text(r.service.translate(base));
+
+		await r.clock.tickAsync(0);
+
+		const deleting = r.service.deleteModel(catalog.nllb);
+
+		await r.clock.tickAsync(0);
+		expect(r.seq2seq.calls.unload).to.equal(0);
+
+		release();
+		expect(await running).to.equal("seq:Hallo");
+		await deleting;
+
+		expect(r.seq2seq.calls.unload).to.equal(1);
+		expect(r.cached.has(catalog.nllb.id)).to.equal(false);
 		r.service.dispose();
 	});
 

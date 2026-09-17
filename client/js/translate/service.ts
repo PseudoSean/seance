@@ -113,6 +113,8 @@ export class TranslateService {
 	private llmSwitch: Promise<void> | null = null;
 	/** Requests and downloads running per engine: an engine is never unloaded under one. */
 	private engineRunning: Record<EngineName, number> = {llm: 0, seq2seq: 0};
+	/** Waiting for an engine to fall idle: a delete that must not unload under a request. */
+	private engineWaiters: {engine: EngineName; resolve: () => void}[] = [];
 	/** Engines given a model since they were last unloaded. */
 	private loadedEngines = new Set<EngineName>();
 	private engineTimers: Record<EngineName, unknown> = {llm: null, seq2seq: null};
@@ -755,8 +757,7 @@ export class TranslateService {
 			if (ref.engine === "llm") {
 				await this.releaseLlmForDelete(ref.id);
 			} else {
-				await this.client().unload(ref.engine);
-				this.loadedEngines.delete(ref.engine);
+				await this.releaseEngineForDelete(ref.engine);
 			}
 
 			await this.client().deleteModel(ref);
@@ -805,6 +806,53 @@ export class TranslateService {
 
 		await client.unload("llm");
 		this.loadedEngines.delete("llm");
+	}
+
+	/**
+	 * Before a CPU model's files are deleted: the engine holds every seq2seq
+	 * model at once, so it is unloaded — but not out from under a request
+	 * still generating on it, the way the GPU path waits in
+	 * `releaseLlmForDelete`. `engineRunning` counts downloads too, so a
+	 * delete also waits behind another seq2seq download, exactly as the GPU
+	 * path does. Only the unload waits: the files go either way.
+	 *
+	 * Not `async`: with nothing running the unload is posted in the caller's
+	 * own tick, so a teardown in that same tick rejects it as a disposal
+	 * rather than leaving it posted to a worker that will never answer.
+	 */
+	private releaseEngineForDelete(engine: EngineName): Promise<void> {
+		if (this.engineRunning[engine] === 0) {
+			return this.unloadForDelete(engine);
+		}
+
+		const worker = this.worker;
+
+		return this.whenEngineIdle(engine).then(() => {
+			// Work on it started again while we waited, or the worker went
+			// with a teardown that unloaded everything anyway.
+			if (this.engineRunning[engine] > 0 || this.worker !== worker || !this.worker) {
+				return;
+			}
+
+			return this.unloadForDelete(engine);
+		});
+	}
+
+	private unloadForDelete(engine: EngineName): Promise<void> {
+		return this.client()
+			.unload(engine)
+			.then(() => {
+				this.loadedEngines.delete(engine);
+			});
+	}
+
+	/** Resolves once nothing runs on `engine`; at once when nothing does. */
+	private whenEngineIdle(engine: EngineName): Promise<void> {
+		if (this.engineRunning[engine] === 0) {
+			return Promise.resolve();
+		}
+
+		return new Promise((resolve) => this.engineWaiters.push({engine, resolve}));
 	}
 
 	/** Drop every loaded model and the worker with them. */
@@ -902,6 +950,19 @@ export class TranslateService {
 
 	private engineEnded(engine: EngineName): void {
 		this.engineRunning[engine] = Math.max(0, this.engineRunning[engine] - 1);
+
+		if (this.engineRunning[engine] === 0) {
+			const waiting = this.engineWaiters;
+
+			this.engineWaiters = waiting.filter((w) => w.engine !== engine);
+
+			for (const waiter of waiting) {
+				if (waiter.engine === engine) {
+					waiter.resolve();
+				}
+			}
+		}
+
 		this.afterEngineIdle(engine);
 	}
 
