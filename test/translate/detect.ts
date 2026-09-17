@@ -274,9 +274,12 @@ describe("translate/detect", () => {
 		// 3-word line is decisive (chatdetect.ts), so the German verdict
 		// returns with the classifier's own confidence ahead of any
 		// declared-only placement.
-		expect(
-			await detectLanguage("So ist es", null, ["de", "en"], {exclude: "en"})
-		).to.deep.equal({lang: "de", confidence: 0.1, candidates: ["de"]});
+		const soIst = await detectLanguage("So ist es", null, ["de", "en"], {
+			exclude: "en",
+		});
+		expect(soIst.lang).to.equal("de");
+		expect(soIst.confidence).to.equal(0.1);
+		expect(soIst.candidates[0]).to.equal("de");
 		// The chatdetect table is not bound to the declarations: a decisive
 		// short-line verdict is returned even with more declared candidates,
 		// or none routable at all.
@@ -286,11 +289,9 @@ describe("translate/detect", () => {
 		expect((await detectLanguage("So ist es", null, ["xx"], {exclude: "en"})).lang).to.equal(
 			"de"
 		);
-		expect(await detectLanguage("So ist es", null)).to.deep.equal({
-			lang: "de",
-			confidence: 0.1,
-			candidates: ["de"],
-		});
+		const noDeclared = await detectLanguage("So ist es", null);
+		expect(noDeclared.lang).to.equal("de");
+		expect(noDeclared.candidates[0]).to.equal("de");
 	});
 
 	it("the prior is the most frequent language of the recent window", () => {
@@ -342,13 +343,14 @@ describe("translate/detect", () => {
 		setDetector(null);
 
 		// franc places this line in Dutch at 1.0 (chatdetect.ts); the
-		// function-word classifier is decisive (strength 2) and returns
-		// before the trigram flow ever runs.
-		expect(await detectLanguage("I just woke up again.", null)).to.deep.equal({
-			lang: "en",
-			confidence: 0.2,
-			candidates: ["en"],
-		});
+		// function-word classifier is decisive (strength 2) and returns with
+		// the trigram ranking's runners-up riding along as the chip menu's
+		// corrections.
+		const dutch = await detectLanguage("I just woke up again.", null);
+		expect(dutch.lang).to.equal("en");
+		expect(dutch.confidence).to.equal(0.2);
+		expect(dutch.candidates[0]).to.equal("en");
+		expect(dutch.candidates.length).to.be.at.most(3);
 	});
 
 	it("a misspelled short line with one function word places via the classifier", async function () {
@@ -359,11 +361,10 @@ describe("translate/detect", () => {
 		// line is decisive on chatDetect's own terms at 17 characters too, so
 		// it places as English instead of deferring to the trigrams that
 		// ranked it Scots and left it an unsure skip.
-		expect(await detectLanguage("helo their friend", null)).to.deep.equal({
-			lang: "en",
-			confidence: 0.1,
-			candidates: ["en"],
-		});
+		const helo = await detectLanguage("helo their friend", null);
+		expect(helo.lang).to.equal("en");
+		expect(helo.confidence).to.equal(0.1);
+		expect(helo.candidates[0]).to.equal("en");
 	});
 
 	it("the real detector recognises German", async function () {

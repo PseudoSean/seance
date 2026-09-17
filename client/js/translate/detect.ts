@@ -313,7 +313,8 @@ export async function detectLanguage(
 	// Function-word classification first (chatdetect.ts): its own decisive
 	// verdict — a clear multi-hit lead, or a single hit on a line of at most
 	// three words — is trusted at every length; anything weaker falls
-	// through to the trigram flow below.
+	// through to the trigram flow below. The trigram ranking still runs for
+	// a decisive verdict: its runners-up are the chip menu's corrections.
 	const chat = chatDetect(
 		text,
 		Object.keys(ISO1_OF)
@@ -322,7 +323,26 @@ export async function detectLanguage(
 	);
 
 	if (chat.lang !== null) {
-		return {lang: chat.lang, confidence: round(chat.strength / 10), candidates: [chat.lang]};
+		// The trigram ranking rides along as the chip menu's corrections — but
+		// only where franc would have been asked anyway: a sub-minimum line
+		// never runs the detector (it is why the classifier exists).
+		if (text.length < DETECT_MIN_LENGTH) {
+			return {lang: chat.lang, confidence: round(chat.strength / 10), candidates: [chat.lang]};
+		}
+
+		const detect = await loadDetector();
+		const runnersUp = detect(text, {only: ONLY})
+			.map(([code]) => iso3ToIso1(code))
+			.filter(
+				(code): code is string => code !== null && code !== chat.lang
+			)
+			.slice(0, DETECT_CANDIDATES - 1);
+
+		return {
+			lang: chat.lang,
+			confidence: round(chat.strength / 10),
+			candidates: [chat.lang, ...runnersUp],
+		};
 	}
 
 	if (text.length < DETECT_MIN_LENGTH) {
