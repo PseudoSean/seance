@@ -97,8 +97,10 @@ const CALL_SITE = /\b(?:brandingT|t)(?:Count)?\(\s*(["'])([^"']+)\1/g;
  * object's method) and not a definition (`function t(`). */
 const CALL_TOKEN = /(?<![\w$.])(?<!function\s)(?:brandingT|t)(?:Count)?\(/g;
 
-/** A translated fragment glued into a longer string: any `+ t(` or `t(…) +`. */
-const COMBINED = /(?:\+\s*(?<![\w$.])t(?:Count)?\()|((?<![\w$.])t(?:Count)?\([^)]*\)\s*\+)/;
+/** A translated fragment glued into a longer string: any `+ t(`/`+ brandingT(`
+ * or `t(…) +`/`brandingT(…) +`. */
+const COMBINED =
+	/(?:\+\s*(?<![\w$.])(?:brandingT|t)(?:Count)?\()|((?<![\w$.])(?:brandingT|t)(?:Count)?\([^)]*\)\s*\+)/;
 
 /** The service worker composes reader-visible copy (notification actions,
  * title fragments, the fallback body) through the same resolver shape, but
@@ -171,7 +173,7 @@ function collectCallSites(
 
 			for (const match of line.matchAll(CALL_TOKEN)) {
 				const rest = line.slice(match.index! + match[0].length);
-				const literal = /^\s*"([^"]*)"/.exec(rest);
+				const literal = /^\s*(["'])[^"']*\1/.exec(rest);
 
 				if (!literal) {
 					flag("key");

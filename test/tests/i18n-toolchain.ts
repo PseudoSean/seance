@@ -719,6 +719,9 @@ describe("i18n toolchain", () => {
 			const problems = checkPot(potPath, [tree]);
 			expect(problems.unreferenced).to.not.include("widget.singleQuoted");
 			expect(problems.missing).to.not.include("widget.singleQuoted");
+			// A single-quoted literal is still a literal: the assembled-site
+			// scan must not mistake it for a non-literal key.
+			expect(problems.dynamic).to.deep.equal([]);
 		});
 
 		it("reports a non-literal brandingT() call as a dynamic site", () => {
@@ -737,6 +740,30 @@ describe("i18n toolchain", () => {
 			const problems = checkPot(join(potDir, "messages.pot"), [clientDir]);
 			expect(problems.dynamic).to.deep.equal([
 				{file: "branded.ts", line: 2, kind: "key", code: "brandingT(someVar);"},
+			]);
+
+			rmSync(potDir, {recursive: true, force: true});
+		});
+
+		it("reports a translated fragment glued to brandingT() as combined", () => {
+			const potDir = mkdtempSync(join(tmpdir(), "seance-i18n-brandingt-combined-"));
+			const clientDir = join(potDir, "client");
+			mkdirSync(clientDir, {recursive: true});
+			writeFileSync(
+				join(potDir, "messages.pot"),
+				'msgid ""\nmsgstr ""\n"Content-Type: text/plain; charset=UTF-8\\n"\n' +
+					'\n#. k\nmsgctxt "k"\nmsgid "K"\nmsgstr ""\n'
+			);
+			writeFileSync(join(clientDir, "branded.ts"), 'const s = "x " + brandingT("k");');
+
+			const problems = checkPot(join(potDir, "messages.pot"), [clientDir]);
+			expect(problems.dynamic).to.deep.equal([
+				{
+					file: "branded.ts",
+					line: 1,
+					kind: "combined",
+					code: 'const s = "x " + brandingT("k");',
+				},
 			]);
 
 			rmSync(potDir, {recursive: true, force: true});
