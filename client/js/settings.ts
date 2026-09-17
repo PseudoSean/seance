@@ -111,10 +111,13 @@ const defaultConfig = {
 		default: true,
 	},
 	/** Which GPU model (translate/models.ts LLM_CHOICES, or the deploy's own) the
-	 * LLM candidate runs. "" until the user picks one: unset and a stored id that
-	 * is no longer a choice both resolve to the catalog's default at read time
-	 * (models.ts `llmChoice`), so a later deploy default still reaches users who
-	 * never chose. */
+	 * LLM candidate runs. "" until the user picks one, and a stored id that is no
+	 * longer a choice counts as unset: both resolve at read time (models.ts
+	 * `llmChoice`) to the deploy's own model, else — on a gpu-tier device — the
+	 * one its memory fits (`defaultLlmForAdapter`), else the catalog's default.
+	 * Nothing writes a resolved id back here, so a later deploy default, and a
+	 * device the probe has since measured, both still reach users who never
+	 * chose. */
 	translateLlmModel: {
 		default: "",
 	},
