@@ -4866,6 +4866,114 @@ msgctxt "system.quit"
 msgid "{nick} has quit"
 msgstr "{nick} saiu"
 
+#: client/components/TranslationLine.vue
+#. Tooltip and aria-label of a translation line's chip, skipped because the line is already in the reading language. {language} is its name in the reading language.
+msgctxt "translate.chip.alreadyIn"
+msgid "Already in {language}, not translated. Translation options"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. Tooltip and aria-label of a translation line's chip: the languages it names, then the standard suffix.
+msgctxt "translate.chip.options"
+msgid "{languages}. Translation options"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. Tooltip and aria-label of a translation line's chip, skipped because the detector could not tell the language apart.
+msgctxt "translate.chip.unsure"
+msgid "Language not told apart, not translated. Translation options"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. Text in front of the failure reason on a message whose translation failed (with a retry button beside it).
+msgctxt "translate.failed"
+msgid "Couldn't translate"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. A translation chip's menu item.
+msgctxt "translate.menu.copy"
+msgid "Copy translation"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. A translation chip's menu item.
+msgctxt "translate.menu.retranslate"
+msgid "Retranslate"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. A translation chip's menu item. {language} is the language's name in the reading language.
+msgctxt "translate.menu.retranslateFrom"
+msgid "Retranslate from: {language}"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. A translation chip's menu item.
+msgctxt "translate.menu.retranslateFromPicker"
+msgid "Retranslate from…"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. A translation chip's menu item.
+msgctxt "translate.menu.showOriginal"
+msgid "Show original only"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. A translation chip's menu item.
+msgctxt "translate.menu.translateAnyway"
+msgid "Translate anyway"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. Label of the compact equals-icon chip shown in place of a translation that failed because the engine returned the source line as its own answer. Also the chip's tooltip and aria-label; the reason text beside it only appears in development builds.
+msgctxt "translate.notTranslated"
+msgid "Not translated"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. Failure reason after 'Couldn't translate': the model replied to a question it found in the message rather than translating the message. Lowercase; reads as the tail of that sentence.
+msgctxt "translate.reason.answered"
+msgid "answered the question instead of translating it"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. Failure reason after 'Couldn't translate': the model returned runs of symbols or punctuation with no usable words. Lowercase; reads as the tail of that sentence.
+msgctxt "translate.reason.degenerate"
+msgid "the answer was symbol garbage"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. Failure reason after 'Couldn't translate': the model replied to the message's request (acknowledging it, describing what it would do) rather than translating the message. Lowercase; reads as the tail of that sentence.
+msgctxt "translate.reason.narration"
+msgid "talked about the request instead of translating"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. Tooltip and aria-label of the circular-arrow button that retries a failed translation.
+msgctxt "translate.retry"
+msgid "Retry the translation"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
+msgctxt "translate.unchangedReason"
+msgid "the line came back unchanged"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. Translation panel, channel languages field. {channel} is the channel's name (#seance).
+msgctxt "translation.panel.languages"
+msgid "Languages: {channel}"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. Translation panel, a language chip's remove button. {language} is the language's name in the interface language.
+msgctxt "translation.panel.remove"
+msgid "Remove {language}"
+msgstr ""
+
 #: client/components/TypingIndicator.vue:31
 #. Line above the message input naming the two longest-typing users and summarizing everyone else. {nick1} and {nick2} are those users' names; {count} is how many further users are typing. The singular form shows when one further user is meant, the plural for any other number.
 msgctxt "typing.many"

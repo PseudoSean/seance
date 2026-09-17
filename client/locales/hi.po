@@ -2092,121 +2092,121 @@ msgstr ""
 #. aria-label of the back arrow of the image viewer; clicking shows the previous image from the conversation.
 msgctxt "image.previous"
 msgid "Previous image"
-msgstr ""
+msgstr "पिछली तस्वीर"
 
 #: client/components/RevealPassword.vue
 #. Password input eye toggle, shown when the password is currently visible; clicking hides it.
 msgctxt "input.hidePassword"
 msgid "Hide password"
-msgstr ""
+msgstr "जावाब छिकाना"
 
 #: client/components/RevealPassword.vue
 #. Password input eye toggle, shown while the password is masked.
 msgctxt "input.showPassword"
 msgid "Show password"
-msgstr ""
+msgstr "जावाब दिखाना"
 
 #: client/js/autocompletion.ts:92
 #. Name of the mIRC colour with code 01 (black), offered by the colour autocomplete in the message input after Ctrl+K.
 msgctxt "irc.colorBlack"
 msgid "Black"
-msgstr ""
+msgstr "काला"
 
 #: client/js/autocompletion.ts:92
 #. Name of the mIRC colour with code 02 (blue), offered by the colour autocomplete in the message input after Ctrl+K.
 msgctxt "irc.colorBlue"
 msgid "Blue"
-msgstr ""
+msgstr "नीला"
 
 #: client/js/autocompletion.ts:92
 #. Name of the mIRC colour with code 05 (brown), offered by the colour autocomplete in the message input after Ctrl+K.
 msgctxt "irc.colorBrown"
 msgid "Brown"
-msgstr ""
+msgstr "भूरा"
 
 #: client/js/autocompletion.ts:92
 #. Name of the mIRC colour with code 10 (cyan), offered by the colour autocomplete in the message input after Ctrl+K.
 msgctxt "irc.colorCyan"
 msgid "Cyan"
-msgstr ""
+msgstr "सादा"
 
 #: client/js/autocompletion.ts:92
 #. Name of the mIRC colour with code 03 (green), offered by the colour autocomplete in the message input after Ctrl+K.
 msgctxt "irc.colorGreen"
 msgid "Green"
-msgstr ""
+msgstr "हरा"
 
 #: client/js/autocompletion.ts:92
 #. Name of the mIRC colour with code 14 (grey), offered by the colour autocomplete in the message input after Ctrl+K.
 msgctxt "irc.colorGrey"
 msgid "Grey"
-msgstr ""
+msgstr "धूप"
 
 #: client/js/autocompletion.ts:92
 #. Name of the mIRC colour with code 12 (light blue), offered by the colour autocomplete in the message input after Ctrl+K.
 msgctxt "irc.colorLightBlue"
 msgid "Light Blue"
-msgstr ""
+msgstr "लाल नीला"
 
 #: client/js/autocompletion.ts:92
 #. Name of the mIRC colour with code 11 (light cyan), offered by the colour autocomplete in the message input after Ctrl+K.
 msgctxt "irc.colorLightCyan"
 msgid "Light Cyan"
-msgstr ""
+msgstr "लाल सादा"
 
 #: client/js/autocompletion.ts:92
 #. Name of the mIRC colour with code 09 (light green), offered by the colour autocomplete in the message input after Ctrl+K.
 msgctxt "irc.colorLightGreen"
 msgid "Light Green"
-msgstr ""
+msgstr "लाल हरा"
 
 #: client/js/autocompletion.ts:92
 #. Name of the mIRC colour with code 15 (light grey), offered by the colour autocomplete in the message input after Ctrl+K.
 msgctxt "irc.colorLightGrey"
 msgid "Light Grey"
-msgstr ""
+msgstr "लाल धूप"
 
 #: client/js/autocompletion.ts:92
 #. Name of the mIRC colour with code 06 (magenta), offered by the colour autocomplete in the message input after Ctrl+K.
 msgctxt "irc.colorMagenta"
 msgid "Magenta"
-msgstr ""
+msgstr "मांसला"
 
 #: client/js/autocompletion.ts:92
 #. Name of the mIRC colour with code 07 (orange), offered by the colour autocomplete in the message input after Ctrl+K.
 msgctxt "irc.colorOrange"
 msgid "Orange"
-msgstr ""
+msgstr "संगमा"
 
 #: client/js/autocompletion.ts:92
 #. Name of the mIRC colour with code 13 (pink), offered by the colour autocomplete in the message input after Ctrl+K.
 msgctxt "irc.colorPink"
 msgid "Pink"
-msgstr ""
+msgstr "लाल पिंक"
 
 #: client/js/autocompletion.ts:92
 #. Name of the mIRC colour with code 04 (red), offered by the colour autocomplete in the message input after Ctrl+K.
 msgctxt "irc.colorRed"
 msgid "Red"
-msgstr ""
+msgstr "लाल"
 
 #: client/js/autocompletion.ts:92
 #. Name of the mIRC colour with code 00 (white), offered by the colour autocomplete in the message input after Ctrl+K. The name labels the suggestion; what gets inserted into the message is the number.
 msgctxt "irc.colorWhite"
 msgid "White"
-msgstr ""
+msgstr "सफ़ेद"
 
 #: client/js/autocompletion.ts:92
 #. Name of the mIRC colour with code 08 (yellow), offered by the colour autocomplete in the message input after Ctrl+K.
 msgctxt "irc.colorYellow"
 msgid "Yellow"
-msgstr ""
+msgstr "सांगीनी"
 
 #: client/components/JoinChannel.vue:20
 #. Title (hover hint) of the channel name input in the sidebar's join-channel form, shown when the typed name is invalid.
 msgctxt "join.channelHint"
 msgid "The channel name may not contain spaces"
-msgstr ""
+msgstr "चैनल नाम"
 
 #: client/components/JoinChannel.vue:17
 #. Placeholder of the channel name input in the join-channel form that opens under a network in the sidebar.
@@ -4763,120 +4763,228 @@ msgstr ""
 #. Title of the right action button on a push notification; where the platform has an inline reply field it opens that, else it opens the conversation. Kept last so a thumb lands on it.
 msgctxt "sw.reply"
 msgid "Reply"
-msgstr ""
+msgstr "جواب دیں"
 
 #: client/service-worker.js:1151
 #. Placeholder of the notification's inline reply text field (platforms that show one, e.g. desktop Chrome); what the reader types goes to the conversation as one IRC message.
 msgctxt "sw.replyPlaceholder"
 msgid "Reply…"
-msgstr ""
+msgstr "جواب دیں..."
 
 #: client/service-worker.js:1134
 #. Notification title for a message in a channel: {nick} is the sender's nickname, {target} the channel name. Translated as a whole so word order is free; the unread-count suffix is appended after it, never inside.
 msgctxt "sw.titleChannel"
 msgid "{nick} in {target}"
-msgstr ""
+msgstr "{nick} {target} میں"
 
 #: client/service-worker.js:1137
 #. Push-notification title for a channel conversation carrying more than one unread message. {nick} is the nick of the newest message's author and {target} is the channel name — both verbatim, never translate them; {count} is the number of unread messages the notification carries.
 msgctxt "sw.titleChannelCount"
 msgid "{nick} in {target} ({count})"
-msgstr ""
+msgstr "{nick} {target} میں ({count})"
 
 #: client/service-worker.js:1141
 #. Push-notification title for a query (direct-message) conversation carrying more than one unread message. {nick} is the other side's nick, verbatim — never translate it; {count} is the number of unread messages.
 msgctxt "sw.titleNickCount"
 msgid "{nick} ({count})"
-msgstr ""
+msgstr "{nick} ({count})"
 
 #: client/components/MessageTypes/away.vue:10
 #. System line when a user is marked away. {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element. The away reason (user-set, verbatim) follows in parentheses.
 msgctxt "system.away"
 msgid "{nick} is away"
-msgstr ""
+msgstr "{nick} دستے میں ہیں"
 
 #: client/components/MessageTypes/back.vue:10
 #. System line when a user returns from away. {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element.
 msgctxt "system.back"
 msgid "{nick} is back"
-msgstr ""
+msgstr "{nick} دستے میں نہیں ہیں"
 
 #: client/components/MessageTypes/chghost.vue:4
 #. System line tail case: a user's username/hostname changed but neither value arrived (degenerate). {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element.
 msgctxt "system.chghost"
 msgid "{nick} has changed"
-msgstr ""
+msgstr "{nick} نام تبدیل کر دیا"
 
 #: client/components/MessageTypes/chghost.vue:12
 #. System line when a user's username AND hostname change together. {nick} and {ident} are VERBATIM user content; {host} is a verbatim technical value; {nick} renders as the interactive username element.
 msgctxt "system.chghostBoth"
 msgid "{nick} has changed username to {ident} and hostname to {host}"
-msgstr ""
+msgstr "{nick} نام {ident} اور ہومホست {host} تبدیل کر دیا"
 
 #: client/components/MessageTypes/chghost.vue:9
 #. System line when a user's hostname changes. {nick} is the user's nick (VERBATIM, renders as the interactive username element) and {host} the new hostname (verbatim technical value).
 msgctxt "system.chghostHost"
 msgid "{nick} has changed hostname to {host}"
-msgstr ""
+msgstr "{nick} ہومホست {host} تبدیل کر دیا"
 
 #: client/components/MessageTypes/chghost.vue:6
 #. System line when a user's username (ident) changes. {nick} is the user's nick and {ident} the new username — both VERBATIM, never translate; {nick} renders as the interactive username element.
 msgctxt "system.chghostIdent"
 msgid "{nick} has changed username to {ident}"
-msgstr ""
+msgstr "{nick} نام {ident} تبدیل کر دیا"
 
 #: client/components/MessageTypes/ctcp_request.vue:5
 #. System line for an incoming CTCP request. {nick} is the sender's nick (VERBATIM user content, renders as the interactive username element); {ctcp} is the fixed abbreviation CTCP (never translate); {message} is the verbatim CTCP payload.
 msgctxt "system.ctcpRequest"
 msgid "{nick} sent a {ctcp} request: {message}"
-msgstr ""
+msgstr "{nick} {ctcp} درخواست کر دیا: {message}"
 
 #: client/components/MessageTypes/invite.vue:9
 #. System line when a user invites someone else. {nick} is the inviter's nick and {target} the invited user's nick — both VERBATIM user content, each rendering as an interactive username element where its placeholder stands; {channel} is the channel name (verbatim).
 msgctxt "system.inviteTarget"
 msgid "{nick} has invited {target} to {channel}"
-msgstr ""
+msgstr "{nick} {target} کو {channel} میں کھول دیا"
 
 #: client/components/MessageTypes/invite.vue:7
 #. System line when the invite targets the reader. {nick} is the inviter's nick (VERBATIM user content, renders as the interactive username element) and {channel} the channel name (verbatim).
 msgctxt "system.inviteYou"
 msgid "{nick} has invited you to {channel}"
-msgstr ""
+msgstr "{nick} آپ کو {channel} میں کھول دیا"
 
 #: client/components/MessageTypes/join.vue:8
 #. System line when a user joins a channel. {nick} is the joining user's nick, VERBATIM user content — never translate or inflect it; it renders as the interactive username element inline where the placeholder stands, so word order around it is the translator's.
 msgctxt "system.join"
 msgid "{nick} has joined the channel"
-msgstr ""
+msgstr "{nick} چینل میں شرکت کر گیا"
 
 #: client/components/MessageTypes/kick.vue:6
 #. System line when a user is kicked from a channel. {nick} is the kicker's nick and {target} the kicked user's nick — both VERBATIM user content, each rendering as an interactive username element where its placeholder stands.
 msgctxt "system.kick"
 msgid "{nick} has kicked {target}"
-msgstr ""
+msgstr "{nick} {target} کو نکال دیا"
 
 #: client/components/MessageTypes/mode.vue:6
 #. System line when a channel or user mode changes. {nick} is the nick that set the mode, VERBATIM user content; {modes} is the verbatim mode change (e.g. +o nick), rendered as-is.
 msgctxt "system.mode"
 msgid "{nick} sets mode {modes}"
-msgstr ""
+msgstr "{nick} مود {modes} سے تبدیل کر دیا"
 
 #: client/components/MessageTypes/nick.vue:6
 #. System line when a user changes nick. {nick} is the old nick and {newNick} the new one — both VERBATIM user content, each rendering as an interactive username element where its placeholder stands.
 msgctxt "system.nick"
 msgid "{nick} is now known as {newNick}"
-msgstr ""
+msgstr "{nick} اب {newNick} ہیں"
 
 #: client/components/MessageTypes/part.vue:6
 #. System line when a user parts a channel. {nick} is the parting user's nick, VERBATIM user content — never translate or inflect it; it renders as the interactive username element.
 msgctxt "system.part"
 msgid "{nick} has left the channel"
-msgstr ""
+msgstr "{nick} چینل سے نکال دیا"
 
 #: client/components/MessageTypes/quit.vue:6
 #. System line when a user disconnects from the network. {nick} is the user's nick, VERBATIM user content; it renders as the interactive username element. The quit reason (user-set, verbatim) follows the sentence in parentheses.
 msgctxt "system.quit"
 msgid "{nick} has quit"
+msgstr "{nick} چھوڑ دیا"
+
+#: client/components/TranslationLine.vue
+#. Tooltip and aria-label of a translation line's chip, skipped because the line is already in the reading language. {language} is its name in the reading language.
+msgctxt "translate.chip.alreadyIn"
+msgid "Already in {language}, not translated. Translation options"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. Tooltip and aria-label of a translation line's chip: the languages it names, then the standard suffix.
+msgctxt "translate.chip.options"
+msgid "{languages}. Translation options"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. Tooltip and aria-label of a translation line's chip, skipped because the detector could not tell the language apart.
+msgctxt "translate.chip.unsure"
+msgid "Language not told apart, not translated. Translation options"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. Text in front of the failure reason on a message whose translation failed (with a retry button beside it).
+msgctxt "translate.failed"
+msgid "Couldn't translate"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. A translation chip's menu item.
+msgctxt "translate.menu.copy"
+msgid "Copy translation"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. A translation chip's menu item.
+msgctxt "translate.menu.retranslate"
+msgid "Retranslate"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. A translation chip's menu item. {language} is the language's name in the reading language.
+msgctxt "translate.menu.retranslateFrom"
+msgid "Retranslate from: {language}"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. A translation chip's menu item.
+msgctxt "translate.menu.retranslateFromPicker"
+msgid "Retranslate from…"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. A translation chip's menu item.
+msgctxt "translate.menu.showOriginal"
+msgid "Show original only"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. A translation chip's menu item.
+msgctxt "translate.menu.translateAnyway"
+msgid "Translate anyway"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. Label of the compact equals-icon chip shown in place of a translation that failed because the engine returned the source line as its own answer. Also the chip's tooltip and aria-label; the reason text beside it only appears in development builds.
+msgctxt "translate.notTranslated"
+msgid "Not translated"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. Failure reason after 'Couldn't translate': the model replied to a question it found in the message rather than translating the message. Lowercase; reads as the tail of that sentence.
+msgctxt "translate.reason.answered"
+msgid "answered the question instead of translating it"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. Failure reason after 'Couldn't translate': the model returned runs of symbols or punctuation with no usable words. Lowercase; reads as the tail of that sentence.
+msgctxt "translate.reason.degenerate"
+msgid "the answer was symbol garbage"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. Failure reason after 'Couldn't translate': the model replied to the message's request (acknowledging it, describing what it would do) rather than translating the message. Lowercase; reads as the tail of that sentence.
+msgctxt "translate.reason.narration"
+msgid "talked about the request instead of translating"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. Tooltip and aria-label of the circular-arrow button that retries a failed translation.
+msgctxt "translate.retry"
+msgid "Retry the translation"
+msgstr ""
+
+#: client/components/TranslationLine.vue
+#. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
+msgctxt "translate.unchangedReason"
+msgid "the line came back unchanged"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. Translation panel, channel languages field. {channel} is the channel's name (#seance).
+msgctxt "translation.panel.languages"
+msgid "Languages: {channel}"
+msgstr ""
+
+#: client/components/TranslationPanel.vue
+#. Translation panel, a language chip's remove button. {language} is the language's name in the interface language.
+msgctxt "translation.panel.remove"
+msgid "Remove {language}"
 msgstr ""
 
 #: client/components/TypingIndicator.vue:31
@@ -5127,121 +5235,121 @@ msgstr ""
 #. Whois row: when the user was last active, locale-formatted.
 msgctxt "whois.idleSince"
 msgid "Idle since:"
-msgstr ""
+msgstr "आईडल से:"
 
 #: client/components/MessageTypes/whois.vue
 #. Whois row: the services account the user is logged into; the value is account data, verbatim.
 msgctxt "whois.loggedAs"
 msgid "Logged in as:"
-msgstr ""
+msgstr "लॉगिन के रूप में:"
 
 #: client/components/MessageTypes/whois.vue
 #. Whois row: the user's modes, verbatim protocol text.
 msgctxt "whois.modes"
 msgid "Modes:"
-msgstr ""
+msgstr "मोड:"
 
 #: client/components/MessageTypes/whois.vue
 #. Shown after the nick of a user who left the network (WHOWAS), leading the last recorded whois data; the nick renders direction-isolated in <bdi>.
 msgctxt "whois.offline"
 msgid "is offline, last information:"
-msgstr ""
+msgstr "ऑफलाइन है, अंतिम जानकारी:"
 
 #: client/components/MessageTypes/whois.vue
 #. Whois row: the user's IRC-operator status, verbatim server data.
 msgctxt "whois.operator"
 msgid "Operator:"
-msgstr ""
+msgstr "ऑपरेटर:"
 
 #: client/components/MessageTypes/whois.vue
 #. Whois row: the user's realname field, user content, verbatim.
 msgctxt "whois.realName"
 msgid "Real name:"
-msgstr ""
+msgstr "वास्तविक नाम:"
 
 #: client/components/MessageTypes/whois.vue
 #. Whois row: the user's services-registered nick, verbatim.
 msgctxt "whois.registeredNick"
 msgid "Registered nick:"
-msgstr ""
+msgstr "रजिस्टर्ड निक:"
 
 #: client/components/MessageTypes/whois.vue
 #. Whois row naming a user connected over TLS; the value is a Yes.
 msgctxt "whois.secure"
 msgid "Secure connection:"
-msgstr ""
+msgstr "सुरक्षित संचार:"
 
 #: client/components/MessageTypes/whois.vue
 #. Whois row: extra server-specific whois lines, verbatim server data.
 msgctxt "whois.special"
 msgid "Special:"
-msgstr ""
+msgstr "विशेष:"
 
 #: client/components/MessageTypes/whois.vue
 #. The value of whois rows whose answer is affirmative (help operator, bot, secure connection).
 msgctxt "whois.yes"
 msgid "Yes"
-msgstr ""
+msgstr "हाँ"
 
 #: client/components/Windows/Changelog.vue
 #. Text of the link in the changelog window that opens the list of every release.
 msgctxt "windows.changelog.allReleasesLink"
 msgid "see all releases"
-msgstr ""
+msgstr "सभी रिलीज़ देखें"
 
 #: client/components/Windows/Changelog.vue
 #. aria-label of the changelog window, which shows the app's release notes.
 msgctxt "windows.changelog.aria"
 msgid "Changelog"
-msgstr ""
+msgstr "चैंगलॉग"
 
 #: client/components/Windows/Changelog.vue
 #. Link at the top of the changelog window that goes back to the help page; the left double angle quote is part of the copy.
 msgctxt "windows.changelog.back"
 msgid "« Help"
-msgstr ""
+msgstr "« मदद"
 
 #: client/components/Windows/Changelog.vue
 #. Word inside the link of the changelog's past-release sentence: the linked text names the source code commit the running build was made from; the commit hash follows it. Mid-sentence.
 msgctxt "windows.changelog.commitLink"
 msgid "commit"
-msgstr ""
+msgstr "कमिट"
 
 #: client/components/Windows/Changelog.vue
 #. First sentence of the paragraph in the changelog window that says the release notes are read online; the following words are the two links.
 msgctxt "windows.changelog.notBundled"
 msgid "Release notes are not bundled with the build."
-msgstr ""
+msgstr "रिलीज़ नोट्स बिल्ड से साथ नहीं आते हैं।"
 
 #: client/components/Windows/Changelog.vue
 #. Word joining the two links of the changelog window's last paragraph (the release notes and the list of all releases). Mid-sentence.
 msgctxt "windows.changelog.or"
 msgid "or"
-msgstr ""
+msgstr "या"
 
 #: client/components/Windows/Changelog.vue
 #. Start of the sentence in the changelog window shown when the running build is newer than its release; what follows names the source commit and the changes since the release. Ends mid-sentence.
 msgctxt "windows.changelog.pastRelease"
 msgid "This build is"
-msgstr ""
+msgstr "यह बिल्ड है"
 
 #: client/components/Windows/Changelog.vue
 #. Middle of the changelog's past-release sentence, after the link naming the source commit; introduces the link that lists what changed since the release. {version} is the release number the build follows. Keep the comma, colon and the v.
 msgctxt "windows.changelog.pastReleaseAfter"
 msgid ", after v{version}:"
-msgstr ""
+msgstr ", बाद में v{version}:"
 
 #: client/components/Windows/Changelog.vue
 #. Text of the link in the changelog window that opens the release notes for this release. {version} is the release number, with the v as in the source.
 msgctxt "windows.changelog.readNotesLink"
 msgid "Read the notes for v{version}"
-msgstr ""
+msgstr "v{version} के लिए नोट्स पढ़ें"
 
 #: client/components/Windows/Changelog.vue
 #. Text of the link in the changelog's past-release sentence that opens the list of changes between the release and this build. Mid-sentence.
 msgctxt "windows.changelog.sinceReleaseLink"
 msgid "what changed since the release"
-msgstr ""
+msgstr "रि�"
 
 #: client/components/Windows/Changelog.vue
 #. Heading of the changelog window. {version} is the release version number, kept as written (a v followed by the number).
@@ -5253,28 +5361,28 @@ msgstr ""
 #. Link at the top of the network-editing form that goes back to the list of saved networks; the left arrow is part of the copy.
 msgctxt "windows.networkEdit.back"
 msgid "← Networks"
-msgstr ""
+msgstr "← नेटवर्क"
 
 #: client/components/Windows/Settings.vue
 #. aria-label of the ✕ button at the top right of the settings window; clicking closes the settings and returns to the chat.
 msgctxt "windows.settings.close"
 msgid "Close settings"
-msgstr ""
+msgstr "सेटिंग्स बंद करें"
 
 #: client/components/Windows/Settings.vue
 #. Button in the footer of the settings window; clicking closes the settings and returns to the chat.
 msgctxt "windows.settings.done"
 msgid "Done"
-msgstr ""
+msgstr "समाप्त"
 
 #: client/components/Windows/Settings.vue
 #. Line in the footer of the settings window, beside the Done button; explains that settings apply instantly and nothing needs saving.
 msgctxt "windows.settings.note"
 msgid "Changes are saved as you make them."
-msgstr ""
+msgstr "आप बदलाव करते समय बदलाव बर्बरता से बचाए जाते हैं"
 
 #: client/components/Windows/Settings.vue
 #. Title of the settings window: the heading of the modal, its dialog aria-label, and the accessible name of the whole settings pane.
 msgctxt "windows.settings.title"
 msgid "Settings"
-msgstr ""
+msgstr "सेटिंग्स"
