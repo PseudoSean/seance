@@ -217,6 +217,24 @@ message on request in a channel that is off -- and brings a hidden
 translation back, at no cost, once the chip's "Show original only" has
 taken it away.
 
+**A pause is a minute off, not the end of reading.** Three failures in a
+row take an engine out of the rotation (`PAUSE_AFTER_FAILURES`), and
+`PAUSE_RESUME_MS` (60 s) later it resumes itself: the failure count goes
+back to zero and `QueueDeps.onResume` clears the header's paused banner.
+A user's Retry goes through the same `resume()` and disarms the waiting
+timer, so the banner is never cleared twice; a second pause waits again.
+Two errors never count toward a pause at all -- `WORKER_DISPOSED` (the
+pagehide teardown, an idle unload) and an `ABORTED` the queue did not ask
+for. Neither says anything about the engine, so the batch goes back to the
+front of that engine's queue with its lines still pending, nothing marked
+failed, and the engine waits `REQUEUE_WAIT_MS` (1 s) before running it
+again -- without that, three background/return cycles on a phone paused
+the engine and every line after that stayed pending for the session. An
+abort is also honoured **before** the request is posted: `service.ts`
+re-reads the signal after resolving the route, after a GPU model switch
+settles and after another model's work finishes, so a line the queue has
+given up on never starts a model download.
+
 **The labels on the text are a language pair, in the reader's language.**
 The line's chip, the composer strip's chip and the read-back row's label
 all read `<Source> → <Target>` -- no "from", "to", "into" or "reads back
@@ -536,7 +554,13 @@ is picked.
 
 The first Enter on a non-empty, non-command, non-edit draft
 (`outgoing.ts` `draftGate`) calls `writer.ts` `translateOutgoing` instead
-of sending: it detects the draft's language (no channel prior -- it is the
+of sending. **`/me` is the one command that translates**: an ACTION is
+prose, and the reading side translates everyone else's, so `draftGate`
+answers `{kind: "action", text}` with what follows `/me ` and that text is
+what the strip holds, what the watcher compares against and what the voice
+and term memory record; the second Enter sends `/me <translation>`, the
+command back on the front and never escaped. An action with nothing after
+it is the command's own business. The call itself: it detects the draft's language (no channel prior -- it is the
 user's own line, not what the channel has been saying), decides the source
 with `writeSource` (`outgoing.ts`), and builds context the same way the reader does
 (recent lines, reply target, topic, names, terms, glossary) plus a `voice`:
@@ -672,7 +696,9 @@ weights, the shipped prompts still hand back 5 of 45 casual English chat
 lines on Qwen3-1.7B and 8 on Qwen3-4B, and the bare shape translated all 8
 of 4B's and 2 of 1.7B's 5; without the retry each of those lines showed
 Retry instead of a translation. An empty answer fails at once, as before;
-the composer retries the same four failures. The retry is dropped by whatever drops a queued line (the
+the composer retries the same five (`BARE_RETRY_ERRORS` in `outgoing.ts`,
+which both sides test against: `DEGENERATE` -- a word four or five times
+over -- used to be in the queue's set and not the composer's). The retry is dropped by whatever drops a queued line (the
 channel switched off, a language change, drop-behind), never un-pauses an
 engine, and counts toward no pause; a user's Retry asks in the normal shape
 again and gets its own bare retry.
@@ -903,6 +929,14 @@ Where the choice is made:
   request against the canonical protection is _accidentally_ right for
   `literal` and wrong for `tags`.)
 
+**A placeholder somebody typed is text.** `⟦` and `⟧` are ordinary
+characters, so `protect()`'s first stage takes any `⟦n⟧` already in the
+line as a span of its own, before anything else is numbered: the engine
+never sees the user's number and `restoreAll` puts the brackets back as
+they were written. That span's `typed` meta kind is verbatim in every
+restore policy but is never expanded as a nested span -- its own text is
+placeholder-shaped, and reading it as one is the bug it guards against.
+
 `restoreAll` reads whichever form its `Protected` says it is in: a `tags`
 answer has its pairs turned back into placeholders first (only the numbers
 the spans actually account for, so a `<3>` somebody typed stays text), and
@@ -924,7 +958,13 @@ data block (names, terms, and when the user is writing, their own earlier
 lines), then the earlier lines as `nick: text`, the reply target, and last
 the cue that holds the message -- `Translate into German: <text>` on one
 line, no fence. A batched (drafted) request numbers its lines in and out
-and ends with `END`.
+and ends with `END`. **A batch is several people's lines, and each replies
+to whatever it replies to**: the reply targets travel per line
+(`TranslateRequest.lineContexts`, filled by the queue from each item's own
+context) and are written against their own numbers -- `Line 3 replies to <bob>: …` -- above the numbered block, never inside it, since the answer is
+parsed by strict numbering and an exact count. The rest of the channel's
+context (the earlier lines, the topic, the names, the terms) is the batch
+head's, as it always was.
 
 Five things about that shape were **measured against the model itself**
 (`tools/translate-llm.ts` over `tools/translate-eval/prompts.json`; the
