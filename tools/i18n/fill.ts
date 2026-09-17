@@ -8,8 +8,16 @@
 // converted, CUDA-safe model dir — tools/translate-eval/norm-fp32.py).
 //
 //   npx tsx tools/i18n/fill.ts [--langs de,fr,...] [--engine llm|nllb|opus]
-//       [--repo <converted model dir>] [--model-id Qwen3-4B-q4f16_1-MLC]
-//       [--device cuda|cpu] [--batch 20] [--limit N] [--dry]
+//       [--force-engine llm|nllb|opus] [--repo <converted model dir>]
+//       [--model-id Qwen3-4B-q4f16_1-MLC] [--device cuda|cpu] [--batch 20]
+//       [--limit N] [--dry]
+//
+// `--engine` SCOPES the run to the languages the route table already places
+// on that engine; `--force-engine` puts every language in the run ON it,
+// whatever the table says. The table is the app's measured runtime routing,
+// where a request is one chat line under a latency budget; a catalog is
+// filled once, offline, and the better engine wins — the 4B LLM writes
+// Russian the OPUS-MT pair answers degenerately.
 //
 // The unit of work is a msgstr SLOT: a singular entry has one, a plural
 // entry one per gettext form — the slot n = 1 reads translates msgid, the
@@ -101,6 +109,8 @@ function engineFor(tag: string): EngineName {
 interface Options {
 	langs: string[] | null;
 	engine: EngineName | null;
+	/** Every language in the run goes to this engine, route table or not. */
+	forceEngine: EngineName | null;
 	repo: string | null;
 	modelId: string;
 	device: "cpu" | "cuda";
@@ -113,6 +123,7 @@ function parseArgs(argv: string[]): Options {
 	const options: Options = {
 		langs: null,
 		engine: null,
+		forceEngine: null,
 		repo: null,
 		modelId: QWEN3_4B_ID,
 		device: "cuda",
@@ -131,6 +142,8 @@ function parseArgs(argv: string[]): Options {
 				.filter(Boolean);
 		} else if (arg === "--engine") {
 			options.engine = argv[++i] as EngineName;
+		} else if (arg === "--force-engine") {
+			options.forceEngine = argv[++i] as EngineName;
 		} else if (arg === "--repo") {
 			options.repo = resolve(argv[++i] ?? "");
 		} else if (arg === "--model-id") {
@@ -163,10 +176,15 @@ async function main(): Promise<void> {
 	const plan: {tag: string; engine: EngineName}[] = [];
 
 	for (const tag of langs) {
-		const engine = engineFor(tag);
+		const placed = engineFor(tag);
 
-		if (!options.engine || options.engine === engine) {
-			plan.push({tag, engine});
+		if (options.forceEngine) {
+			plan.push({tag, engine: options.forceEngine});
+			continue;
+		}
+
+		if (!options.engine || options.engine === placed) {
+			plan.push({tag, engine: placed});
 		}
 	}
 
