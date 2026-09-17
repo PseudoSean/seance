@@ -67,9 +67,9 @@
 					     three of them, so they go in one at a time and come out
 					     as chips. -->
 					<div class="translation-panel-field">
-						<span id="translation-panel-languages" class="translation-panel-label"
-							>Languages spoken here</span
-						>
+						<span id="translation-panel-languages" class="translation-panel-label">{{
+							t("translation.panel.languages", {channel: channel.name})
+						}}</span>
 						<div v-if="state.languages.length" class="translation-panel-chips">
 							<span
 								v-for="code in state.languages"
@@ -80,8 +80,10 @@
 								<button
 									type="button"
 									class="translation-panel-chip-remove"
-									:aria-label="'Remove ' + name(code)"
-									:title="'Remove ' + name(code)"
+									:aria-label="
+										t('translation.panel.remove', {language: name(code)})
+									"
+									:title="t('translation.panel.remove', {language: name(code)})"
 									@click="removeLanguage(code)"
 								>
 									✕
@@ -201,7 +203,8 @@
 
 <script lang="ts">
 import {computed, defineComponent, onBeforeUnmount, onMounted, PropType, ref} from "vue";
-import {SUPPORTED_LANGUAGES, languageOptionLabel} from "../js/translate/languages";
+import {useI18n} from "../js/i18n";
+import {SUPPORTED_LANGUAGES, languageName} from "../js/translate/languages";
 import {
 	channelTranslation,
 	readingLanguage,
@@ -234,6 +237,7 @@ export default defineComponent({
 	},
 	emits: ["close"],
 	setup(props, {emit}) {
+		const {t} = useI18n();
 		const panel = ref<HTMLElement | null>(null);
 		const store = useStore();
 		const state = computed(() => channelTranslation(props.network, props.channel));
@@ -243,7 +247,7 @@ export default defineComponent({
 				code,
 				llmChoice(translateService().catalog, store.state.settings.translateLlmModel).id
 			);
-		const name = (code: string) => languageOptionLabel(code);
+		const name = (code: string) => languageName(code, readingLanguage());
 		const languages = [...SUPPORTED_LANGUAGES].sort((a, b) => name(a).localeCompare(name(b)));
 		const formalities = FORMALITIES;
 		const valueOf = (event: Event) =>
@@ -358,6 +362,7 @@ export default defineComponent({
 		});
 
 		return {
+			t,
 			panel,
 			phone,
 			state,

@@ -175,11 +175,11 @@ export default defineComponent({
 
 			if (value.status === "skipped") {
 				return value.reason === "same" && value.from
-					? `Already in ${nameOf(value.from)}, not translated. Translation options`
-					: "Language not told apart, not translated. Translation options";
+					? t("translate.chip.alreadyIn", {language: nameOf(value.from)})
+					: t("translate.chip.unsure");
 			}
 
-			return `${chipText.value}. Translation options`;
+			return t("translate.chip.options", {languages: chipText.value});
 		});
 
 		// Nothing streamed yet and a model of this line's engine downloading:
@@ -224,13 +224,13 @@ export default defineComponent({
 		const openMenu = (event: MouseEvent) => {
 			const sources = [
 				...alternatives.value.map((code) => ({
-					label: `Retranslate from ${nameOf(code)}`,
+					label: t("translate.menu.retranslateFrom", {language: nameOf(code)}),
 					type: "item",
 					class: "translate-retry-from",
 					action: () => retranslateFrom(code),
 				})),
 				{
-					label: "Retranslate from…",
+					label: t("translate.menu.retranslateFromPicker"),
 					type: "item",
 					class: "translate-retry-pick",
 					action() {
@@ -246,7 +246,7 @@ export default defineComponent({
 					event,
 					items: [
 						{
-							label: "Translate anyway",
+							label: t("translate.menu.translateAnyway"),
 							type: "item",
 							class: "translate-anyway",
 							action: () => retranslateFrom(),
@@ -268,7 +268,7 @@ export default defineComponent({
 						? []
 						: [
 								{
-									label: "Copy translation",
+									label: t("translate.menu.copy"),
 									type: "item",
 									class: "translate-copy",
 									// Like the toolbar's Copy: nowhere to report a
@@ -279,14 +279,14 @@ export default defineComponent({
 								},
 						  ]),
 					{
-						label: "Retranslate",
+						label: t("translate.menu.retranslate"),
 						type: "item",
 						class: "translate-retry",
 						action: () => retranslateFrom(),
 					},
 					...sources,
 					{
-						label: "Show original only",
+						label: t("translate.menu.showOriginal"),
 						type: "item",
 						class: "translate-hide",
 						action: () => showOriginal(props.message.id, true),
