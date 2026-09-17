@@ -75,3 +75,27 @@ export function isSuspectCatalogEntry(
 
 	return null;
 }
+
+/** Why a slot's fill cannot be kept: `isSuspectCatalogEntry`, plus the
+ * {placeholder} braces the render and the compile depend on. */
+export type SlotVerdict = SuspectReason | "placeholder";
+
+const braces = (text: string): string => (text.match(PLACEHOLDER) ?? []).sort().join("|");
+
+/**
+ * The one verdict the fill and the sweep both judge a filled slot by, so
+ * that the fill refuses exactly what the sweep would empty: anything else
+ * is a loop, each writing back what the other takes away. `source` is the
+ * English text THAT SLOT translates, never the entry as a whole.
+ */
+export function slotVerdict(tag: string, source: string, text: string): SlotVerdict | null {
+	if (!text) {
+		return null;
+	}
+
+	if (braces(source) !== braces(text)) {
+		return "placeholder";
+	}
+
+	return isSuspectCatalogEntry(tag, source, text);
+}

@@ -24,7 +24,7 @@ import {pseudo} from "../../tools/i18n/pseudo";
 import {mergePo} from "../../tools/i18n/merge";
 import {scaffoldTag} from "../../tools/i18n/scaffold";
 import {sweepEntries} from "../../tools/i18n/sweep";
-import {isSuspectCatalogEntry} from "../../tools/i18n/quality";
+import {isSuspectCatalogEntry, slotVerdict} from "../../tools/i18n/quality";
 import instrument from "../../tools/i18n/instrument-loader.mjs";
 
 const FIXTURES = resolve("tools/i18n/fixtures");
@@ -534,6 +534,34 @@ describe("i18n toolchain", () => {
 				expect(isSuspectCatalogEntry("de", "Password", "Пароль")).to.equal(
 					"foreign-script"
 				);
+			});
+		});
+
+		describe("slotVerdict", () => {
+			// fill.ts cannot be imported (it runs main() on import), so the
+			// verdict the fill refuses a slot by lives in quality.ts and is
+			// tested here. The fill and the sweep MUST judge by the same one:
+			// a fill that writes back what the sweep empties is a loop.
+			it("is what the fill refuses a filled slot by, and the sweep empties one by", () => {
+				expect(slotVerdict("de", "Password", "Passwort")).to.equal(null);
+				expect(slotVerdict("de", "Password", "पासवर्ड")).to.equal("foreign-script");
+				expect(
+					slotVerdict(
+						"de",
+						"Username",
+						"Benutzername, also der Name, unter dem du dich hier anmeldest und der dann oben steht"
+					)
+				).to.equal("runaway-length");
+				expect(slotVerdict("de", "Close", "zu zu zu zu zu")).to.equal("degenerate");
+				// The brace gate the fill had of its own, judged against the
+				// slot's own source: a plural form carries {count} where the
+				// singular does not.
+				expect(slotVerdict("de", "Network {network}", "Netzwerk {netz}")).to.equal(
+					"placeholder"
+				);
+				expect(
+					slotVerdict("de", "marked away {count} times", "{count}-mal abwesend")
+				).to.equal(null);
 			});
 		});
 	});

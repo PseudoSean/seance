@@ -12,11 +12,9 @@ import {resolve} from "node:path";
 import {parsePo, PoEntry, serializePo} from "./po";
 import {NAME_TO_TAG, TARGETS_SOURCE} from "./targets";
 import {PLURAL_RULES, parsePluralForms, planPluralSlots, PluralRule} from "./plural";
-import {isSuspectCatalogEntry, SuspectReason} from "./quality";
+import {slotVerdict, SlotVerdict} from "./quality";
 
-const braces = (text: string): string => (text.match(/\{[^{}]*\}/g) ?? []).sort().join("|");
-
-export type SweepReason = SuspectReason | "empty-source" | "placeholder";
+export type SweepReason = SlotVerdict | "empty-source";
 
 /** What the sweep emptied, and why. */
 export interface SweepReport {
@@ -81,9 +79,7 @@ export function sweepEntries(
 				continue;
 			}
 
-			const reason =
-				isSuspectCatalogEntry(tag, english, text) ??
-				(braces(english) === braces(text) ? null : "placeholder");
+			const reason = slotVerdict(tag, english, text);
 
 			if (reason) {
 				empty(entry, index, reason);

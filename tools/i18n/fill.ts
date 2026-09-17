@@ -33,7 +33,7 @@ import {parseBatchedOutput} from "../../client/js/translate/prompt";
 import {WebLlmEngine} from "../../client/js/translate/engines/webllm";
 import {parsePo, PoEntry, serializePo} from "./po";
 import {PLURAL_RULES, parsePluralForms, planPluralSlots} from "./plural";
-import {isDegenerate} from "./quality";
+import {slotVerdict} from "./quality";
 import {NAME_TO_TAG, TARGETS_SOURCE} from "./targets";
 
 type EngineName = "llm" | "nllb" | "opus";
@@ -368,28 +368,19 @@ async function main(): Promise<void> {
 					}
 
 					const restored = restoreAll(raw, info);
-					const braces = (text: string) =>
-						(text.match(/\{[^{}]*\}/g) ?? []).sort().join("|");
 
-					// Against the slot's OWN source: a plural form legitimately
-					// carries {count} where the singular does not.
-					if (braces(unit.text) !== braces(restored)) {
+					// Judged against the slot's OWN source (a plural form
+					// legitimately carries {count} where the singular does
+					// not) and by the verdict the sweep uses, so the fill
+					// refuses exactly what the sweep would empty: a renamed
+					// {placeholder}, a loop, an essay where a label was asked
+					// for, an answer in the wrong writing system.
+					const verdict = slotVerdict(tag, unit.text, restored);
+
+					if (verdict) {
 						failed += 1;
 						console.warn(
-							`fill: ${tag} "${unit.text}" placeholder mismatch (${braces(
-								unit.text
-							)} → ${braces(restored)})`
-						);
-						return;
-					}
-
-					if (isDegenerate(restored)) {
-						failed += 1;
-						console.warn(
-							`fill: ${tag} "${unit.text}" degenerate output (${restored.slice(
-								0,
-								40
-							)})`
+							`fill: ${tag} "${unit.text}" ${verdict} (${restored.slice(0, 40)})`
 						);
 						return;
 					}
