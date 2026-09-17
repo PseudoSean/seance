@@ -182,4 +182,53 @@ describe("translate/eligibility", () => {
 		expect(isEligible(msg({text: "`nur code hier drin`"}), {nicks})).to.equal(false);
 		expect(isEligible(msg({text: undefined}), {nicks})).to.equal(false);
 	});
+
+	// Bug B: the detector must see prose. Formatting bytes, Markdown
+	// markers, code, URLs, channel names and the channel's own names are
+	// syntax, and a classifier shown `*test*` or `#seance` is being asked
+	// what language a piece of punctuation is.
+	describe("plainTextOf strips everything that is not prose", () => {
+		it("takes the Markdown markers off", () => {
+			expect(plainTextOf("*test*", [])).to.equal("test");
+			expect(plainTextOf("~~weg~~ und _kursiv_", [])).to.equal("weg und kursiv");
+		});
+
+		it("a channel name is not a word", () => {
+			expect(plainTextOf("**hola** #seance", [])).to.equal("hola");
+			expect(plainTextOf("#seance", [])).to.equal("");
+			expect(plainTextOf("frag im &local nach", [])).to.equal("frag im nach");
+		});
+
+		it("a quote marker is not a word", () => {
+			expect(plainTextOf("> quoted line", [])).to.equal("quoted line");
+		});
+
+		it("a link keeps its text and loses its target", () => {
+			expect(plainTextOf("[see this](https://x.y)", [])).to.equal("see this");
+		});
+
+		// CommonMark: `# ` at a line start is a header however the line reads.
+		it("a leading hash is a header, not a channel", () => {
+			expect(plainTextOf("# not a header?", [])).to.equal("not a header?");
+		});
+
+		it("code is gone and the URL beside it with it", () => {
+			expect(plainTextOf("`code` *bold* http://x", [])).to.equal("bold");
+			expect(plainTextOf("a\n```\ncode\n```\nb", [])).to.equal("a b");
+		});
+
+		it("the IRC formatting bytes are gone", () => {
+			expect(plainTextOf("\x02fett\x02 \x0304rot\x03", [])).to.equal("fett rot");
+		});
+
+		it("the names are still gone, Markdown or not", () => {
+			expect(plainTextOf("*ada* fragt jonas", ["ada", "jonas"])).to.equal("fragt");
+		});
+
+		it("a line that is nothing but syntax is no line at all", () => {
+			expect(plainTextOf("#seance", [])).to.equal("");
+			expect(wordCount(plainTextOf("#seance", []))).to.equal(0);
+			expect(isEligible(msg({text: "#seance"}), {nicks: []})).to.equal(false);
+		});
+	});
 });

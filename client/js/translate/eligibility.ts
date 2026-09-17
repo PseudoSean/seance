@@ -1,10 +1,14 @@
 // Which incoming messages the reading pipeline considers (spec § Reading
 // pipeline, 1): anyone's, the user's own included, not pending, a chat type, and any
-// word once URLs, code, emoji, formatting codes and nick mentions are gone
+// word once formatting, Markdown, URLs, code, emoji, channel names and nick
+// mentions are gone (`plainTextOf`, which is also what the detector sees)
 // -- however old: reading covers what is in the channel, not only what
 // arrives after the switch. History -- a join's fill, a replay or catch-up,
 // a "load more", the requeue of a switch-on or a language change -- is
 // bounded here as well: newest first, `HISTORY_QUEUE_CAP` per load. Vue-free.
+
+import {stripFormatting, stripMarkdown} from "../push/strip";
+import {CHANNEL_RX} from "./spans";
 
 export const MIN_WORDS = 1;
 
@@ -110,15 +114,37 @@ const SHORTCODE = /:(?:[+-]1|(?=[a-z0-9_+-]*[a-z])[a-z0-9_+-]{2,}):/gi;
 // eslint-disable-next-line no-misleading-character-class
 const EMOJI = /[\p{Extended_Pictographic}‍️]/gu;
 
+/** A fenced code block, opener and closer included. */
+const FENCE = /^```[\s\S]*?^```[^\n]*$/gm;
+/** An unclosed fence: the rest of the message is code all the same. */
+const OPEN_FENCE = /^```[\s\S]*$/m;
+
+/**
+ * The prose of a line, for the detector and the word count: everything the
+ * client treats as syntax rather than language is gone — the IRC formatting
+ * bytes, the Markdown markers (through the page's own layout tree, so what
+ * the detector reads is what the reader sees), code, URLs, emoji and their
+ * shortcodes, the channel names and the channel's own nicknames.
+ *
+ * The order is the one thing here that is not free. `stripMarkdown`
+ * flattens the layout tree to its *text*, so a code span's content survives
+ * it — code has to go first, by its backticks, while it still has them. A
+ * URL has to go after, because `[see this](https://x.y)` loses its target
+ * to the link node and would otherwise lose its text as well.
+ */
 export function plainTextOf(text: string, nicks: string[]): string {
 	const lower = new Set(nicks.map((nick) => nick.toLowerCase()));
-	let out = text
-		.replace(/`[^`\n]+`/g, " ")
+	let out = stripFormatting(text)
+		.replace(FENCE, " ")
+		.replace(OPEN_FENCE, " ")
+		.replace(/`[^`\n]+`/g, " ");
+
+	out = stripMarkdown(out)
 		.replace(/\bhttps?:\/\/[^\s<>()]+/gi, " ")
 		.replace(/\bwww\.[^\s<>()]+/gi, " ")
 		.replace(SHORTCODE, " ")
-		.replace(/\x03(?:\d{1,2}(?:,\d{1,2})?)?|[\x02\x0f\x11\x16\x1d\x1e\x1f]/g, "")
-		.replace(EMOJI, " ");
+		.replace(EMOJI, " ")
+		.replace(CHANNEL_RX, " ");
 
 	out = out
 		.split(/\s+/)
