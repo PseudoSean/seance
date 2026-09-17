@@ -119,9 +119,10 @@ describe("i18n core", () => {
 	}
 
 	it("the pre-paint script applies a stored tag this build ships", () => {
-		// tags.json is the real baked list — the same one whatever mode the
-		// compile ran in, dev-only tags excluded (test/tests/i18n-toolchain.ts
-		// pins that): a stored tag in the list activates, with the direction
+		// tags.json is the real generated list — the same one whatever mode
+		// the compile ran in (test/tests/i18n-toolchain.ts pins that; the
+		// production build drops the dev-only tags as it bakes the list into
+		// index.html): a stored tag in the list activates, with the direction
 		// its writing system takes.
 		const [tag] = JSON.parse(readFileSync("client/locales/tags.json", "utf8")) as string[];
 		expect(runPrePaint({locale: tag}, [])).to.deep.equal({

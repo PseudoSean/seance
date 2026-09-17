@@ -20,7 +20,7 @@ import {
 	checkPot,
 	collectStaticCallSiteKeys,
 } from "../../tools/i18n/check";
-import {POT_PATH} from "../../tools/i18n/paths";
+import {DEV_ONLY_TAGS, POT_PATH} from "../../tools/i18n/paths";
 import {categoryIndexMap, compileLocales, Catalog, CompileResult} from "../../tools/i18n/compile";
 import {parseTargets, TARGETS_SOURCE} from "../../tools/i18n/targets";
 import {PLURAL_RULES, planPluralSlots, pluralEval} from "../../tools/i18n/plural";
@@ -322,11 +322,24 @@ describe("i18n toolchain", () => {
 			// fold (core.ts DEV_I18N), so a tracked generated file never
 			// carries a build mode.
 			expect(text).to.not.contain("DEV");
-			// The pre-paint list is substituted at build time and can run no
-			// check of its own, so the dev-only rig stays out of it.
+			// The pre-paint list carries the rig too — it is the generated
+			// file, mode-free like available.ts; webpack.config.ts drops the
+			// dev-only tags when it bakes the list into index.html.
 			expect(
 				JSON.parse(readFileSync(join(tmp, "compile-plural", "tags.json"), "utf8"))
-			).to.deep.equal(["en", "de"]);
+			).to.deep.equal(["en", "de", "qqx"]);
+		});
+
+		it("webpack's dev-only tag list agrees with the toolchain's", () => {
+			// The pre-paint list is baked into index.html at build time, so
+			// webpack.config.ts is where the rig is dropped for a production
+			// build; tools/ is a separate TS project, so it spells the list
+			// out instead of importing it. Pinned here, as the RTL set is
+			// pinned between core.ts and index.html.
+			const config = readFileSync(resolve("webpack.config.ts"), "utf8");
+			const literal = /const DEV_ONLY_TAGS = (\[[^\]]*\]);/.exec(config);
+			expect(literal, "webpack.config.ts declares DEV_ONLY_TAGS").to.not.equal(null);
+			expect(JSON.parse(literal![1].replace(/'/g, '"'))).to.deep.equal([...DEV_ONLY_TAGS]);
 		});
 
 		it("writes the same available.ts and tags.json whatever NODE_ENV says", () => {

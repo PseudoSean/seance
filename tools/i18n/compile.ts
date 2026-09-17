@@ -325,12 +325,12 @@ export function compileLocales(options: CompileOptions = {}): CompileResult {
 		...localeTags.map((tag) => ({tag})),
 		{tag: "qqx", devOnly: true} as AvailableLocale,
 	];
-	// The pre-paint script's list (webpack bakes it into index.html) is the
-	// one consumer that cannot run a check of its own — a build-time
-	// substitution in an inline script — so the dev-only tags are left out
-	// of it. A stored qqx pick simply gets no pre-paint lang/dir; activate()
-	// applies it a moment later, on a development build.
-	const tags = available.filter((entry) => !entry.devOnly).map((entry) => entry.tag);
+	// The pre-paint script's list (webpack bakes it into index.html) carries
+	// the dev-only tags too, so a stored qqx pick gets its lang/dir from the
+	// first paint like any other; webpack.config.ts drops them for a
+	// production build, which is the one consumer that cannot check at
+	// runtime.
+	const tags = available.map((entry) => entry.tag);
 
 	mkdirSync(outDir, {recursive: true});
 
