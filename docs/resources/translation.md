@@ -270,6 +270,24 @@ down and neither counts toward the three-in-a-row pause, since the engine
 did complete and the next line may well be one it can do. The line keeps
 its chip and its Retry.
 
+**The detector is shown prose and nothing else.** Every detection site --
+the reader's, the toolbar's Translate, the chip's "Translate anyway" and
+"Retry", and the composer's draft -- passes the line through
+`eligibility.ts` `plainTextOf` first, which is also what the word count
+behind eligibility measures. Gone before the detector sees it: the IRC
+colour and style bytes, the Markdown markers (through the page's own layout
+tree, `push/strip.ts` `stripMarkdown`, so the detector reads what the reader
+sees -- `*test*` is `test`, `> quoted line` is `quoted line`,
+`[see this](https://x.y)` is `see this`, `# not a header?` is a CommonMark
+header and reads `not a header?`), fenced and inline code, URLs and `www.`
+links, emoji and their shortcodes, the channel names, and every nick in the
+fenced set. The order inside it is not free: `stripMarkdown` flattens the
+tree to its _text_, so a code span's content survives it and code must go
+first, by its backticks, while it still has them; URLs must go after, since
+a link loses its target to the link node and would otherwise lose its text
+with it. A line that is nothing but syntax -- a bare `#seance` -- is left
+with no words at all and is not eligible.
+
 **Detection starts with the function words.** franc's trigram model
 misplaces chat-length lines confidently: measured against the app's own
 language set, "I just woke up again." came back Dutch at confidence 1.0,
@@ -872,12 +890,31 @@ inline code, URLs, `www.` links, emoji shortcodes and IRC formatting codes,
 then Markdown links, then emphasis pairs (`**`, `__`, `~~`, `||`, then `*`,
 `_`, longest first, only same-line pairs and only where the usual emphasis
 rule holds -- `2*3*4` is arithmetic), then a line's leading syntax (`#` to
-`######`, `-`/`*`/`+`, `1.`/`1)`, `>` with nesting), then the channel's
+`######`, `-`/`*`/`+`, `1.`/`1)`, `>` with nesting), then the channel names
+(`#` or `&` and at least two more characters that are neither whitespace nor
+a comma, not preceded by a word character -- `#seance`, `&local`, `#1` is
+not one and `Tom & Jerry` is not one either), and finally the
 nicknames (whole word, case-insensitive, longest first, at least two
-characters, never inside an earlier placeholder). This is a conservative
+characters, never inside an earlier placeholder). Channel names run _after_
+the line prefixes on purpose: `###` satisfies "at least two more
+characters", so a channel stage run first would eat `### Heading`'s marker
+and leave a bogus span where the header was. This is a conservative
 reading of the client's own grammar
 (`helpers/ircmessageparser/parseMarkdown.ts`); protecting a little more
 than the client renders is safe, because a span is put back byte for byte.
+
+**Which names are fenced.** The channel's user list is only part of the
+answer, so `names.ts` `namesFor` builds one set and everything takes it: the
+user list, the **sender** of this very line (still a name once they have
+left the channel), a **query's target** (the other party, where there is no
+user list at all -- a channel's own name is never a nick, it is a channel
+name and fenced as one), and the channel's **recent speakers**, newest
+first up to `RECENT_SPEAKERS` (50), so someone who spoke ten lines ago and
+is quoted now is still a name. The same set is what the prompt's `Names:`
+list is drawn from (`buildContext`'s `opts.nicks`), so what the model is
+told to keep is exactly what it never sees; it is also what
+`stripNickPrefix`/`stripCopiedNickPrefix` judge a copied prefix against, and
+what `plainTextOf` removes before the detector reads a line.
 
 Every span says what it is, and each kind has its own restore policy
 (`restoreAll`):
