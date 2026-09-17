@@ -984,6 +984,35 @@ describe("i18n toolchain", () => {
 			expect(fenceSpans('or pick "foo" there', labels)).to.equal('or pick `"foo"` there');
 		});
 
+		it("matches the label against the msgid as the po parser decodes it", () => {
+			// The fill builds its label set from the catalog's own entries, so
+			// the carve-out only fires if parsePo hands back the DECODED text:
+			// a msgid holding \" on disk is a plain quote in the sentence the
+			// fence runs over.
+			const {entries} = parsePo(
+				[
+					'msgid ""',
+					'msgstr ""',
+					"",
+					'msgctxt "form.noAuth"',
+					'msgid "No authentication"',
+					'msgstr ""',
+					"",
+					'msgctxt "connect.saslRequiredHint"',
+					'msgid "Pick \\"No authentication\\" to skip SASL."',
+					'msgstr ""',
+					"",
+				].join("\n")
+			);
+
+			const labels = new Set(entries.map((entry) => entry.msgid).filter(Boolean));
+			const hint = entries.find((e) => e.msgctxt === "connect.saslRequiredHint")!;
+
+			expect(fenceSpans(hint.msgid, labels)).to.equal(
+				'Pick "No authentication" to skip `SASL`.'
+			);
+		});
+
 		it("fences a quoted label around a {placeholder} as one span", () => {
 			// The two quoted msgids that hold nothing but a placeholder:
 			// fencing the quotes and the braces separately would nest, so the

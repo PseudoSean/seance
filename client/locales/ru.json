@@ -655,6 +655,12 @@
     "many": "{count} сохраненные псевдонимы — ряды с ошибками не сохранены.",
     "other": "{count} сохраненные псевдонимы — ряды с ошибками не сохранены."
   },
+  "settings.aliases.statusSaved": {
+    "one": "{count}, имя сохранено.",
+    "few": "{count} алиасы сохранены.",
+    "many": "{count} алиасы сохранены.",
+    "other": "{count} алиасы сохранены."
+  },
   "settings.aliases.titleHeading": "Командные псевдонимы",
   "settings.aliases.tryAria": "Попробуй псевдоним",
   "settings.aliases.tryExample": "/ {name} некоторые аргументы",

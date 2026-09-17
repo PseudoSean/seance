@@ -3655,8 +3655,8 @@ msgctxt "settings.aliases.statusSaved"
 msgid "{count} alias saved."
 msgid_plural "{count} aliases saved."
 msgstr[0] "{count}, имя сохранено."
-msgstr[1] ""
-msgstr[2] ""
+msgstr[1] "{count} алиасы сохранены."
+msgstr[2] "{count} алиасы сохранены."
 
 #. Heading of the command-aliases pane in Settings, where the user defines their own slash commands.
 #: client/components/Settings/Aliases.vue
