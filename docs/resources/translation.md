@@ -1115,6 +1115,37 @@ only caller:
 
 **Trying the engine before plan 2.** On a development build, `await seanceTranslate("Hallo Welt", "en", "de")` in the console returns the translation and `seanceTranslate(text, to, from, console.log)` streams it; `from` null leaves detection to the LLM (the seq2seq engines need a source).
 
+## Installing
+
+`@huggingface/transformers` (4.2.0, the seq2seq engine) hard-depends on two
+packages the browser build never loads, and both make `yarn install` more
+than a download of JavaScript:
+
+- **`onnxruntime-node` (pinned 1.24.3)** runs a postinstall script that
+  fetches the native runtime for the host platform — about 371 MB under
+  `node_modules/onnxruntime-node/bin/napi-v6/`. The install needs network
+  access to that CDN, not only to the npm registry, and a machine behind a
+  proxy that allows only the registry fails there.
+- **`sharp` (^0.34.5)** installs a platform prebuilt; where none exists for
+  the platform/libc it falls back to a `node-gyp` build, which needs a
+  toolchain.
+
+**`yarn install --ignore-scripts` is not a safe shortcut.** It skips the
+`onnxruntime-node` download, so the package is present but has no binary,
+and anything that loads it (`tools/i18n/fill.ts`, `tools/translate-llm.ts`,
+and any `require` of `@huggingface/transformers` under Node) throws at
+import. The browser bundle is unaffected — it only ever reaches
+`onnxruntime-web` — so a CI job that does nothing but `yarn build` can get
+away with it; a job that runs the Node-side translation tools cannot.
+
+**`onnxruntime-web` is a nightly pin** (`1.26.0-dev.20260416-b7804b056c`,
+transitively, from `@huggingface/transformers`): it is what ships in
+`public/js/ort/`. It is not a stable release, its tarball is a dev build on
+the registry, and an upgrade of `@huggingface/transformers` moves it
+without notice — re-run the CPU-model browser check
+(`SEANCE_REAL_MODELS=1 node tools/browser-drive.mjs tools/scenarios/translate-cpu-real.mjs`)
+after any such bump.
+
 ## Weights
 
 **Serving.** The worker loads ONNX Runtime with a dynamic `import()` of `js/ort/ort-wasm-simd-threaded.mjs`, and a browser refuses a module served with anything but a JavaScript MIME type ("Failed to fetch dynamically imported module", surfaced by the tab as "no available backend found"). A deploy must serve `.mjs` as `text/javascript` and `.wasm` as `application/wasm` (the latter for streaming compilation; a wrong type there only slows the load). GitHub Pages and nginx do; Python's `http.server` only does where the system MIME table has an `.mjs` entry (on Debian it has none, and the module comes back as `application/octet-stream`), and a hand-rolled static server with its own table may not. For a local check, add the two types on the way in:
