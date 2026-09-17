@@ -1064,8 +1064,17 @@ export default defineComponent({
 				const entry = store.state.outgoingTranslations[props.channel.id];
 
 				// Against the part of the draft the strip is a translation of
-				// (a `/me`'s text, not the command in front of it).
-				if (entry && draftGate(value, !!props.channel.editing).text !== entry.draft) {
+				// (a `/me`'s text, not the command in front of it), with one
+				// trailing newline tolerated: on a keyboard whose Return puts
+				// its newline in the draft before `keypress` fires, the draft
+				// reads "…\n" for the moment between the two, and `onSubmit`
+				// strips exactly that newline back off. Without the tolerance
+				// the second Enter would find the strip already cancelled and
+				// translate afresh instead of sending.
+				const gated = draftGate(value, !!props.channel.editing).text;
+				const typed = gated.endsWith("\n") ? gated.slice(0, -1) : gated;
+
+				if (entry && typed !== entry.draft) {
 					cancelOutgoing(props.channel);
 				}
 			}

@@ -32,7 +32,13 @@
 // reading pipeline asks for no translation of it; switching the target off
 // restores plain sending.
 // Under `--mobile` the panel is asserted to be the full-screen sheet, with
-// formality as a segmented control and the close button putting it away.
+// formality as a segmented control and the close button putting it away,
+// and so is the newline-first keyboard: with a strip up, the Return's
+// newline reaches the draft before the keypress does, the strip survives
+// it and that Enter sends the translation rather than translating afresh
+// (prose and `/me` alike). That path is a touch-primary device's --
+// with a hardware keyboard the Return is preventDefaulted and no newline
+// is ever typed -- so it runs under `--mobile` only.
 // Detection is real (franc); only the engine is scripted.
 //
 //   corepack yarn build && python3 -m http.server -d public 8021 &
@@ -209,8 +215,10 @@ async function panelIsASheet(page) {
 		)
 	);
 
+	// The formality group alone: the reading switch above it is a segmented
+	// control of its own (Off/On) in this layout.
 	const segments = await page.evaluate(
-		`[...document.querySelectorAll('.translation-panel-segment[role="radio"]')].map((b) => b.textContent.trim())`
+		`[...document.querySelectorAll('.translation-panel-segment[name="translateFormality"]')].map((b) => b.textContent.trim())`
 	);
 
 	await page.check(
@@ -247,6 +255,86 @@ async function panelIsASheet(page) {
 
 async function typeAndEnter(page, text) {
 	await page.fill(INPUT, text);
+	await page.evaluate(ENTER);
+}
+
+/**
+ * The newline-first keyboard case (F8): with a strip up, the Return's
+ * newline arrives as an `input` event before the keypress, and the strip
+ * must survive it so that Enter sends the translation instead of
+ * translating the draft afresh.
+ */
+async function newlineFirstKeyboard(page, other) {
+	const nlDraft = `the keyboard sends its newline first ${RUN}`;
+
+	await typeAndEnter(page, nlDraft);
+	await page.waitFor(`${barText} === ${JSON.stringify(`[German] ${nlDraft}`)}`, {
+		timeout: 20000,
+		label: "the newline case translated",
+	});
+	await page.waitFor(
+		`!!document.querySelector(".translate-bar-send") && !document.querySelector(".translate-bar-send").disabled`,
+		{timeout: 25000, label: "its read-back finished"}
+	);
+	await newlineThenEnter(page, "prose");
+	await page.waitFor(`!document.querySelector(${JSON.stringify(BAR)})`, {
+		label: "the newline-first Enter sent the translation",
+	});
+	await page.check(
+		"the other user heard the translation, not the draft",
+		(await heard(other, `[German] ${nlDraft}`)) && !other.heard().includes(nlDraft)
+	);
+	await page.check(
+		"the input cleared, newline and all",
+		(await page.evaluate(inputValue)) === ""
+	);
+
+	const nlAction = `nods at the keyboard ${RUN}`;
+
+	await typeAndEnter(page, `/me ${nlAction}`);
+	await page.waitFor(`${barText} === ${JSON.stringify(`[German] ${nlAction}`)}`, {
+		timeout: 20000,
+		label: "the action's newline case translated",
+	});
+	await page.waitFor(
+		`!!document.querySelector(".translate-bar-send") && !document.querySelector(".translate-bar-send").disabled`,
+		{timeout: 25000, label: "the action's read-back finished"}
+	);
+	await newlineThenEnter(page, "/me");
+	await page.waitFor(`!document.querySelector(${JSON.stringify(BAR)})`, {
+		label: "the newline-first Enter sent the action",
+	});
+	await page.check(
+		"the other user heard the translated ACTION",
+		await heard(other, `\u0001ACTION [German] ${nlAction}\u0001`)
+	);
+	await page.fill(INPUT, "");
+}
+
+/**
+ * The second Enter as a newline-first keyboard delivers it: the Return's
+ * newline lands in the draft as an `input` event and only then does the
+ * `keypress` arrive (ChatInput.vue onSubmit strips exactly that newline
+ * back off). The two go out as separate evaluates on purpose -- the strip's
+ * watcher flushes in a microtask, so putting them in one call would let the
+ * case pass whether or not the draft-comparison tolerates the newline.
+ */
+async function newlineThenEnter(page, label) {
+	await page.evaluate(
+		`(() => {
+			const el = document.querySelector(${JSON.stringify(INPUT)});
+			const set = Object.getOwnPropertyDescriptor(
+				HTMLTextAreaElement.prototype,
+				"value"
+			).set;
+			set.call(el, el.value + "\\n");
+			el.dispatchEvent(new Event("input", {bubbles: true}));
+		})()`
+	);
+	await page.check(
+		`the strip survived the trailing newline (${label})`,
+		await page.evaluate(`!!document.querySelector(${JSON.stringify(BAR)})`)
+	);
 	await page.evaluate(ENTER);
 }
 
@@ -496,6 +584,22 @@ export default async function run(page) {
 		(await page.evaluate(inputValue)) === `${draft} edited`
 	);
 	await page.fill(INPUT, "");
+
+	// 5b. The Return of a newline-first keyboard (Android's, iOS's) puts
+	// its newline in the draft before the keypress reaches the composer.
+	// The strip is a translation of the draft, and that newline is not an
+	// edit of it: it must not cancel the strip, or the Enter that follows
+	// would translate afresh instead of sending what is on screen. Both
+	// shapes of draft, since the comparison is against the part the strip
+	// translated: plain prose, and a `/me` whose command is not in it.
+	//
+	// Only under --mobile: ChatInput.vue's onEnterKey takes the
+	// newline-tolerating path (onSubmit(true), which strips the newline
+	// back off) on a touch-primary device alone -- with a hardware keyboard
+	// it preventDefaults the Return and no newline ever reaches the draft.
+	if (MOBILE) {
+		await newlineFirstKeyboard(page, other);
+	}
 
 	// 6. Escape drops a strip and keeps the draft.
 	const kept = `this one I will keep typing ${RUN}`;
