@@ -398,15 +398,44 @@ function optionalPort(value: unknown): number | undefined {
 	return port;
 }
 
-function optionalUrl(value: unknown): string | undefined {
+/** Where a relative URL in `config.json` is resolved from: the page. */
+function pageBase(): string | undefined {
+	if (typeof document !== "undefined" && document.baseURI) {
+		return document.baseURI;
+	}
+
+	if (typeof location !== "undefined" && location.href) {
+		return location.href;
+	}
+
+	return undefined; // no DOM (mocha): only absolute URLs are usable
+}
+
+function optionalUrl(value: unknown, base: string | undefined = pageBase()): string | undefined {
 	const url = optionalString(value);
 
 	if (url === undefined) {
 		return undefined;
 	}
 
-	// Only http(s) links are ever rendered as anchors.
-	return /^https?:\/\//i.test(url) ? url : undefined;
+	// Only http(s) is ever rendered as an anchor or fetched from.
+	if (/^https?:\/\//i.test(url)) {
+		return url;
+	}
+
+	// A relative path is the in-tree mirror branding.md describes
+	// (`models/` next to the app); it resolves against the page. Anything
+	// carrying another scheme, or a space, is not a path — drop it.
+	if (base === undefined || /^[a-z][a-z0-9+.-]*:/i.test(url) || /\s/.test(url)) {
+		return undefined;
+	}
+
+	try {
+		const resolved = new URL(url, base);
+		return /^https?:$/i.test(resolved.protocol) ? resolved.href : undefined;
+	} catch {
+		return undefined;
+	}
 }
 
 function normalizeChannels(value: unknown): string[] | undefined {
@@ -718,14 +747,17 @@ function normalizeGlossary(value: unknown): [string, string][] | undefined {
 	return pairs.length > 0 ? pairs : undefined;
 }
 
-export function normalizeTranslation(value: unknown): BrandingTranslation | undefined {
+export function normalizeTranslation(
+	value: unknown,
+	base: string | undefined = pageBase()
+): BrandingTranslation | undefined {
 	if (!isRecord(value)) {
 		return undefined;
 	}
 
 	const translation: BrandingTranslation = {};
 	const enabled = optionalBoolean(value.enabled);
-	const modelBase = optionalUrl(value.modelBase);
+	const modelBase = optionalUrl(value.modelBase, base);
 
 	if (enabled !== undefined) {
 		translation.enabled = enabled;
@@ -738,7 +770,7 @@ export function normalizeTranslation(value: unknown): BrandingTranslation | unde
 	if (isRecord(value.llm)) {
 		const llm: {model?: string; lib?: string} = {};
 		const model = optionalString(value.llm.model);
-		const lib = optionalUrl(value.llm.lib);
+		const lib = optionalUrl(value.llm.lib, base);
 
 		if (model !== undefined) {
 			llm.model = model;

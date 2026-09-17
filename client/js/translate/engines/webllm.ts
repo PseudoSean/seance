@@ -67,6 +67,8 @@ export interface ModelRecord {
 	model_lib: string;
 	vram_required_MB?: number;
 	low_resource_required?: boolean;
+	/** WebLLM's per-model config overrides (context window, sliding window, …). */
+	overrides?: Record<string, unknown>;
 }
 
 export interface WebLlmDeps {
@@ -81,27 +83,41 @@ export interface WebLlmDeps {
 
 const HF_MLC = "https://huggingface.co/mlc-ai/";
 
+/**
+ * The `model_list` WebLLM is created with for `ref`: the prebuilt record as
+ * it stands, or that record pointed at the deploy's mirror.
+ *
+ * A mirror is a whole mirror. `translation.modelBase` moves the weights
+ * *and* the compiled GPU library, which otherwise comes from
+ * raw.githubusercontent.com — a deploy that mirrors to keep its users off
+ * third-party hosts (or to work at all behind a firewall) must not be left
+ * fetching a WASM from GitHub (findings F18). `translation.llm.lib` names
+ * the library outright and wins. Everything else the prebuilt record
+ * carries — `overrides`, `vram_required_MB`, `low_resource_required` — is
+ * kept: it describes the model, not where it is served from.
+ */
 export function appConfigFor(
 	ref: ModelRef,
 	prebuilt: ModelRecord[],
 	mirror: {modelBase?: string; lib?: string}
 ): {model_list: ModelRecord[]} {
 	const known = prebuilt.find((record) => record.model_id === ref.id);
-	const lib = mirror.lib ?? known?.model_lib;
+	const base = mirror.modelBase?.replace(/\/+$/, "");
+	const mirroredLib =
+		base && known?.model_lib ? `${base}/${known.model_lib.split("/").pop()!}` : undefined;
+	const lib = mirror.lib ?? mirroredLib ?? known?.model_lib;
 
 	if (!lib) {
 		throw new Error(`unknown WebLLM model ${ref.id}: set translation.llm.lib`);
 	}
 
-	if (known && !mirror.modelBase && !mirror.lib) {
+	if (known && !base && !mirror.lib) {
 		return {model_list: [known]};
 	}
 
-	const model = mirror.modelBase
-		? `${mirror.modelBase}/${ref.id}/`
-		: known?.model ?? `${HF_MLC}${ref.id}/resolve/main/`;
+	const model = base ? `${base}/${ref.id}/` : known?.model ?? `${HF_MLC}${ref.id}/resolve/main/`;
 
-	return {model_list: [{model_id: ref.id, model, model_lib: lib}]};
+	return {model_list: [{...known, model_id: ref.id, model, model_lib: lib}]};
 }
 
 /** Qwen3-1.7B's token budget (prompts/qwen3-1.7b.ts); each profile has its own. */

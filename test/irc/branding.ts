@@ -10,6 +10,7 @@ import {
 	nickFromAccount,
 	loadBranding,
 	normalizeBranding,
+	normalizeTranslation,
 	resetBranding,
 	setBranding,
 } from "../../client/js/branding";
@@ -599,6 +600,31 @@ describe("branding", function () {
 				glossary: [["a", "b"]],
 			});
 			expect(normalizeBranding({translation: "off"}).translation).to.equal(undefined);
+		});
+
+		it("resolves a relative mirror against the page", function () {
+			// The in-tree mirror branding.md describes: `models/` next to the
+			// app, whatever path the deploy is served from.
+			const translation = normalizeTranslation(
+				{modelBase: "models/", llm: {lib: "../libs/qwen3.wasm"}},
+				"https://irc.example/client/index.html"
+			);
+
+			expect(translation).to.deep.equal({
+				modelBase: "https://irc.example/client/models/",
+				llm: {lib: "https://irc.example/libs/qwen3.wasm"},
+			});
+		});
+
+		it("still drops a mirror that is not a URL at all", function () {
+			const base = "https://irc.example/client/";
+
+			expect(normalizeTranslation({modelBase: "not a url"}, base)).to.equal(undefined);
+			expect(normalizeTranslation({modelBase: "javascript:alert(1)"}, base)).to.equal(
+				undefined
+			);
+			// Nothing to resolve against (no document, no base): relative is dropped.
+			expect(normalizeTranslation({modelBase: "models/"})).to.equal(undefined);
 		});
 	});
 });

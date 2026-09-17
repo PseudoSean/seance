@@ -24,6 +24,9 @@ const prebuilt: ModelRecord[] = [
 		model_id: catalog.llm.id,
 		model: `https://huggingface.co/mlc-ai/${catalog.llm.id}/resolve/main/`,
 		model_lib: "https://raw.githubusercontent.com/mlc-ai/binary-mlc-llm-libs/main/qwen3.wasm",
+		vram_required_MB: 2036.66,
+		low_resource_required: true,
+		overrides: {context_window_size: 4096},
 	},
 ];
 
@@ -188,11 +191,19 @@ describe("translate/engines/webllm", () => {
 		expect(appConfigFor(catalog.llm, prebuilt, {})).to.deep.equal({model_list: [prebuilt[0]]});
 	});
 
-	it("appConfigFor points a mirrored model at the mirror, keeping or overriding the library", () => {
+	it("appConfigFor points a mirrored model at the mirror, library included", () => {
 		const mirrored = appConfigFor(catalog.llm, prebuilt, {modelBase: "https://m.test/models"});
 
 		expect(mirrored.model_list[0].model).to.equal(`https://m.test/models/${catalog.llm.id}/`);
-		expect(mirrored.model_list[0].model_lib).to.equal(prebuilt[0].model_lib);
+		// A mirror is a mirror: the GPU library comes from it too, by its
+		// file name, not from raw.githubusercontent.com.
+		expect(mirrored.model_list[0].model_lib).to.equal("https://m.test/models/qwen3.wasm");
+
+		// A trailing slash on the mirror is not a double slash in the result.
+		expect(
+			appConfigFor(catalog.llm, prebuilt, {modelBase: "https://m.test/models/"}).model_list[0]
+				.model_lib
+		).to.equal("https://m.test/models/qwen3.wasm");
 
 		const own = appConfigFor(catalog.llm, prebuilt, {
 			modelBase: "https://m.test/models",
@@ -200,6 +211,14 @@ describe("translate/engines/webllm", () => {
 		});
 
 		expect(own.model_list[0].model_lib).to.equal("https://m.test/libs/qwen3.wasm");
+	});
+
+	it("appConfigFor keeps the prebuilt record's own fields when mirroring", () => {
+		const mirrored = appConfigFor(catalog.llm, prebuilt, {modelBase: "https://m.test/models"});
+
+		expect(mirrored.model_list[0].vram_required_MB).to.equal(prebuilt[0].vram_required_MB);
+		expect(mirrored.model_list[0].low_resource_required).to.equal(true);
+		expect(mirrored.model_list[0].overrides).to.deep.equal({context_window_size: 4096});
 	});
 
 	it("appConfigFor refuses an unknown model without a library", () => {
