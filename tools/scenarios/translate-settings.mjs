@@ -123,7 +123,7 @@ export default async function run(page) {
 		"the GPU model select offers Automatic and both models, with sizes",
 		(await page.evaluate(
 			`[...document.querySelectorAll('select[name="translateLlmModel"] option')].map((o) => o.textContent.trim()).join("|")`
-		)) === "Automatic — best for this device|Qwen3 1.7B · 1.1 GB|Qwen3 4B · 2.3 GB"
+		)) === "Automatic — best for this device|Qwen3 1.7B · 1 GiB|Qwen3 4B · 2.1 GiB"
 	);
 	// The fake capability's 4 GiB adapter fits the 4B, so the
 	// capability-based default picks it over the 1.7B.

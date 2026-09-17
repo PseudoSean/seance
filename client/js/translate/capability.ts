@@ -7,9 +7,24 @@
 
 export type Tier = "gpu" | "cpu" | "none";
 
+/**
+ * Why the GPU tier (or translation itself) is out of reach, as a code:
+ * this module is Vue-free and never imports the i18n runtime, so Settings
+ * renders each code through its own `translate.capability.reason.*` key.
+ */
+export type CapabilityReason =
+	| "NO_WEBGPU"
+	| "INSECURE_ORIGIN"
+	| "NO_ADAPTER"
+	| "NO_F16"
+	| "SMALL_BUFFER"
+	| "NO_WASM_SIMD"
+	/** The probe itself threw: nothing could be measured (service.ts). */
+	| "PROBE_FAILED";
+
 export interface Capability {
 	tier: Tier;
-	reasons: string[];
+	reasons: CapabilityReason[];
 	f16: boolean;
 	maxBufferBytes: number;
 	deviceMemoryGiB: number | null;
@@ -48,17 +63,13 @@ export const WASM_SIMD_PROBE = new Uint8Array([
 ]);
 
 export async function probe(env: ProbeEnv): Promise<Capability> {
-	const reasons: string[] = [];
+	const reasons: CapabilityReason[] = [];
 	let f16 = false;
 	let maxBufferBytes = 0;
 	let gpuOk = false;
 
 	if (!env.gpu) {
-		reasons.push(
-			env.secureContext === false
-				? "insecure origin: WebGPU needs HTTPS or localhost — serve the app over HTTPS"
-				: "no WebGPU"
-		);
+		reasons.push(env.secureContext === false ? "INSECURE_ORIGIN" : "NO_WEBGPU");
 	} else {
 		let adapter: AdapterLike | null = null;
 
@@ -69,7 +80,7 @@ export async function probe(env: ProbeEnv): Promise<Capability> {
 		}
 
 		if (!adapter) {
-			reasons.push("WebGPU adapter unavailable");
+			reasons.push("NO_ADAPTER");
 		} else {
 			f16 = adapter.features.has("shader-f16");
 			maxBufferBytes = Math.min(
@@ -78,9 +89,9 @@ export async function probe(env: ProbeEnv): Promise<Capability> {
 			);
 
 			if (!f16) {
-				reasons.push("no 16-bit float shaders");
+				reasons.push("NO_F16");
 			} else if (maxBufferBytes < GPU_MIN_BUFFER_BYTES) {
-				reasons.push("GPU buffer limit under 1 GiB");
+				reasons.push("SMALL_BUFFER");
 			} else {
 				gpuOk = true;
 			}
@@ -88,7 +99,7 @@ export async function probe(env: ProbeEnv): Promise<Capability> {
 	}
 
 	if (!env.wasmSimd) {
-		reasons.push("no WebAssembly SIMD");
+		reasons.push("NO_WASM_SIMD");
 	}
 
 	let storageQuotaBytes: number | null = null;

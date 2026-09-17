@@ -11,13 +11,27 @@ export type EngineName = "llm" | "seq2seq";
 export type ModelFamily = "llm" | "nllb" | "opus";
 export type EngineStatus = "cold" | "loading" | "ready" | "failed";
 
+/**
+ * How a model is named in the interface, as a code plus the values the
+ * phrase needs: an OPUS-MT pair names its two languages, NLLB names
+ * itself, a GPU model carries its own product name.
+ */
+export type ModelLabel =
+	| {kind: "opus"; from: string; to: string}
+	| {kind: "nllb"}
+	| {kind: "llm"; name: string};
+
 export interface ModelRef {
 	engine: EngineName;
 	family: ModelFamily;
 	/** The library's own id: a WebLLM `model_id` or a Hugging Face repo. */
 	id: string;
-	/** What Settings shows. */
-	label: string;
+	/**
+	 * What Settings shows, as data: this module is Vue-free and never
+	 * imports the i18n runtime, so the catalog entry names its kind and
+	 * the component renders it (helpers/modelLabel.ts).
+	 */
+	label: ModelLabel;
 	/** Approximate download size for Settings; 0 when unknown. */
 	sizeBytes: number;
 	/**

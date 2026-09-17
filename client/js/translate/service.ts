@@ -55,19 +55,28 @@ export interface ModelView {
 	error: string | null;
 }
 
-/**
- * What a strip or a reading line says while its model loads. A model not yet
- * on this device is being downloaded; one already downloaded (`cached`,
- * known before the load from the worker's cache state) is being loaded back
- * into memory -- after an idle unload, a GPU model switch or a page reload --
- * which the user should not mistake for another download.
- */
-export function loadNote(view: ModelView): string {
-	const percent = Math.round(view.fraction * 100);
+/** What `loadNote` reports; the phrase itself is the component's (helpers/modelLabel.ts). */
+export interface LoadNote {
+	phase: "downloading" | "loading";
+	ref: ModelRef;
+	/** 0-100, already rounded. */
+	percent: number;
+}
 
-	return view.cached
-		? `Loading ${view.ref.label} into memory… ${percent}%`
-		: `Downloading ${view.ref.label}… ${percent}%`;
+/**
+ * What a strip or a reading line says while its model loads, as data. A model
+ * not yet on this device is being downloaded; one already downloaded
+ * (`cached`, known before the load from the worker's cache state) is being
+ * loaded back into memory -- after an idle unload, a GPU model switch or a
+ * page reload -- which the user should not mistake for another download.
+ * This module is Vue-free and has no copy of its own.
+ */
+export function loadNote(view: ModelView): LoadNote {
+	return {
+		phase: view.cached ? "loading" : "downloading",
+		ref: view.ref,
+		percent: Math.round(view.fraction * 100),
+	};
 }
 
 export class TranslateService {
@@ -260,9 +269,9 @@ export class TranslateService {
 	capabilities(): Promise<Capability> {
 		if (!this.capability) {
 			this.capability = this.deps.probe().catch(
-				(e): Capability => ({
+				(): Capability => ({
 					tier: "none",
-					reasons: [e instanceof Error ? e.message : String(e)],
+					reasons: ["PROBE_FAILED"],
 					f16: false,
 					maxBufferBytes: 0,
 					deviceMemoryGiB: null,

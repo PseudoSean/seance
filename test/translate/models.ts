@@ -30,7 +30,8 @@ describe("translate/models", () => {
 			id: "Xenova/opus-mt-de-en",
 			pair: ["de", "en"],
 		});
-		expect(catalog.opus["de-en"].label).to.equal("OPUS-MT German → English (CPU)");
+		// The label is data, not copy: helpers/modelLabel.ts renders it.
+		expect(catalog.opus["de-en"].label).to.deep.equal({kind: "opus", from: "de", to: "en"});
 		expect(catalog.modelBase).to.equal(undefined);
 	});
 
@@ -86,7 +87,7 @@ describe("translate/models", () => {
 		expect(large).to.include({engine: "llm", family: "llm", sizeBytes: 2_300_000_000});
 		expect(llmName(small)).to.equal("Qwen3 1.7B");
 		expect(llmName(large)).to.equal("Qwen3 4B");
-		expect(small.label).to.equal("Qwen3 1.7B (GPU, all languages)");
+		expect(small.label).to.deep.equal({kind: "llm", name: "Qwen3 1.7B"});
 		expect(small.lib).to.equal(undefined);
 	});
 

@@ -29,7 +29,13 @@ describe("translate/engine", () => {
 	it("the fake engine streams cumulative chunks and ends with done", async () => {
 		const engine = new FakeEngine("llm", (req) => [`Hello`, `Hello world`]);
 		await engine.load(
-			{engine: "llm", family: "llm", id: "fake-model", label: "Fake", sizeBytes: 0},
+			{
+				engine: "llm",
+				family: "llm",
+				id: "fake-model",
+				label: {kind: "llm", name: "Fake"},
+				sizeBytes: 0,
+			},
 			() => {}
 		);
 		const seen: {text: string; done: boolean}[] = [];
@@ -52,7 +58,13 @@ describe("translate/engine", () => {
 	it("the fake engine stops when the signal aborts", async () => {
 		const engine = new FakeEngine("llm", () => ["a", "ab", "abc"]);
 		await engine.load(
-			{engine: "llm", family: "llm", id: "fake-model", label: "Fake", sizeBytes: 0},
+			{
+				engine: "llm",
+				family: "llm",
+				id: "fake-model",
+				label: {kind: "llm", name: "Fake"},
+				sizeBytes: 0,
+			},
 			() => {}
 		);
 		const controller = new AbortController();

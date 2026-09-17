@@ -4507,6 +4507,12 @@ msgctxt "settings.tabs.notifications"
 msgid "Notifications"
 msgstr ""
 
+#: client/components/Settings/Navigation.vue
+#. Name of the Translation tab in the Settings tab strip: on-device translation of messages.
+msgctxt "settings.tabs.translation"
+msgid "Translation"
+msgstr ""
+
 #: client/components/Sidebar.vue:8
 #. Tooltip of the developer badge next to the sidebar logo, shown only in development builds; {app} is the app's display name.
 msgctxt "sidebar.devBuildTitle"
@@ -4920,6 +4926,66 @@ msgctxt "translate.action.translate"
 msgid "Translate"
 msgstr ""
 
+#: client/components/Settings/Translation.vue
+#. Verdict of the device check in Settings → Translation: the large graphics-processor model cannot run, the smaller main-processor ones can. Any reasons follow as their own list.
+msgctxt "translate.capability.cpu"
+msgid "The GPU model is unavailable here; the CPU models still work."
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. Verdict of the device check in Settings → Translation: the graphics processor is good enough for the large model. GPU is the usual abbreviation for the graphics processor.
+msgctxt "translate.capability.gpu"
+msgid "This device can run the GPU model."
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. Verdict of the device check in Settings → Translation: no model can run at all. Any reasons follow as their own list.
+msgctxt "translate.capability.none"
+msgid "Translation cannot run on this device."
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: the page is not served securely. WebGPU, HTTPS and localhost are technical names.
+msgctxt "translate.capability.reason.insecureOrigin"
+msgid "insecure origin: WebGPU needs HTTPS or localhost — serve the app over HTTPS"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: the browser has WebGPU but gave out no device. WebGPU is a web standard's name.
+msgctxt "translate.capability.reason.noAdapter"
+msgid "WebGPU adapter unavailable"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: the graphics hardware lacks half-precision arithmetic.
+msgctxt "translate.capability.reason.noF16"
+msgid "no 16-bit float shaders"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. One reason no model can run, listed under the device verdict in Settings → Translation: the browser lacks the WebAssembly SIMD instructions. Both are technical names.
+msgctxt "translate.capability.reason.noWasmSimd"
+msgid "no WebAssembly SIMD"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: the browser offers no WebGPU. WebGPU is a web standard's name.
+msgctxt "translate.capability.reason.noWebgpu"
+msgid "no WebGPU"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. One reason listed under the device verdict in Settings → Translation: the check of what the device can do threw an error, so nothing could be measured.
+msgctxt "translate.capability.reason.probeFailed"
+msgid "the device check itself failed"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: too little addressable graphics memory. GiB is the binary gigabyte symbol and stays as it is.
+msgctxt "translate.capability.reason.smallBuffer"
+msgid "GPU buffer limit under 1 GiB"
+msgstr ""
+
 #: client/components/TranslationLine.vue
 #. Tooltip and aria-label of a translation line's chip, skipped because the line is already in the reading language. {language} is its name in the reading language.
 msgctxt "translate.chip.alreadyIn"
@@ -4942,6 +5008,36 @@ msgstr ""
 #. Placeholder of the message composer in a channel or private conversation whose outgoing messages are translated. {name} is the channel or nickname; {language} is the language messages are sent in.
 msgctxt "translate.composer.placeholder"
 msgid "Write to {name} · sent in {language}"
+msgstr ""
+
+#: client/js/helpers/translateErrors.ts
+#. Why a translation failed, shown after 'Couldn't translate': the request was cancelled before it finished. Lowercase: it follows a colon or a dash.
+msgctxt "translate.error.aborted"
+msgid "aborted"
+msgstr ""
+
+#: client/js/helpers/translateErrors.ts
+#. Why a translation failed, shown after 'Couldn't translate': the engine did not answer in time. Lowercase: it follows a colon or a dash.
+msgctxt "translate.error.timedOut"
+msgid "timed out"
+msgstr ""
+
+#: client/js/helpers/translateErrors.ts
+#. Why a translation failed, shown after 'Couldn't translate': no model on this device can handle that pair of languages. Lowercase: it follows a colon or a dash.
+msgctxt "translate.error.unavailable"
+msgid "no translation engine can take this request"
+msgstr ""
+
+#: client/js/helpers/translateErrors.ts
+#. Why a translation failed, shown after 'Couldn't translate': no model on this device can handle that pair of languages. {detail} is the library's own untranslated error text. Lowercase: it follows a colon or a dash.
+msgctxt "translate.error.unavailableDetail"
+msgid "no translation engine can take this request: {detail}"
+msgstr ""
+
+#: client/js/helpers/translateErrors.ts
+#. Why a translation failed, shown after 'Couldn't translate': the background process doing the translating was shut down. Lowercase: it follows a colon or a dash.
+msgctxt "translate.error.workerDisposed"
+msgid "translation worker disposed"
 msgstr ""
 
 #: client/components/TranslationLine.vue
@@ -5045,6 +5141,18 @@ msgctxt "translate.limitedLanguage"
 msgid "Translations into and out of this language are often wrong."
 msgstr ""
 
+#: client/js/helpers/modelLabel.ts
+#. Note shown in the composer's translation strip or under a message while the model it needs is being fetched for the first time. {model} is the model's name, {percent} a number from 0 to 100.
+msgctxt "translate.load.downloading"
+msgid "Downloading {model}… {percent}%"
+msgstr ""
+
+#: client/js/helpers/modelLabel.ts
+#. Note shown in the composer's translation strip or under a message while a model already on the device is being loaded back into memory. {model} is the model's name, {percent} a number from 0 to 100.
+msgctxt "translate.load.loading"
+msgid "Loading {model} into memory… {percent}%"
+msgstr ""
+
 #: client/components/TranslationLine.vue
 #. A translation chip's menu item.
 msgctxt "translate.menu.copy"
@@ -5085,6 +5193,72 @@ msgstr ""
 #. A translation chip's menu item.
 msgctxt "translate.menu.translateAnyway"
 msgid "Translate anyway"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. Button on a model row in Settings → Translation that removes the downloaded model from this device.
+msgctxt "translate.model.delete"
+msgid "Delete"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. Button on a model row in Settings → Translation that fetches the model onto this device.
+msgctxt "translate.model.download"
+msgid "Download"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. State of a model row in Settings → Translation: the model is on this device.
+msgctxt "translate.model.downloaded"
+msgid "Downloaded"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. State of a model row in Settings → Translation after a download failed. {error} is the library's own untranslated message.
+msgctxt "translate.model.failed"
+msgid "Failed: {error}"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. State of a model row in Settings → Translation after a download failed with no message of its own.
+msgctxt "translate.model.failedUnknown"
+msgid "Failed: unknown error"
+msgstr ""
+
+#: client/js/helpers/modelLabel.ts
+#. The name of a translation model in Settings → Translation: a large language model that runs on the graphics processor. {name} is the model's product name, never translated; GPU is the usual abbreviation for the graphics processor.
+msgctxt "translate.model.llm"
+msgid "{name} (GPU, all languages)"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. State of a model row in Settings → Translation: it is already on the device and is being loaded into memory. {percent} is a number from 0 to 100.
+msgctxt "translate.model.loadingPercent"
+msgid "Loading… {percent}%"
+msgstr ""
+
+#: client/js/helpers/modelLabel.ts
+#. The name of a translation model in Settings → Translation. NLLB-200 600M is a product name; CPU is the usual abbreviation for the main processor; it covers 200 languages.
+msgctxt "translate.model.nllb"
+msgid "NLLB-200 600M (CPU, 200 languages)"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. State of a model row in Settings → Translation: the model is not on this device yet.
+msgctxt "translate.model.notDownloaded"
+msgid "Not downloaded"
+msgstr ""
+
+#: client/js/helpers/modelLabel.ts
+#. The name of a translation model in Settings → Translation: an OPUS-MT pair that runs on the main processor. {from} and {to} are language names. OPUS-MT is a product name and CPU is the usual abbreviation for the main processor.
+msgctxt "translate.model.opus"
+msgid "OPUS-MT {from} → {to} (CPU)"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. State of a model row in Settings → Translation while it downloads: how far it has got. {percent} is a number from 0 to 100.
+msgctxt "translate.model.percent"
+msgid "{percent}%"
 msgstr ""
 
 #: client/components/TranslationLine.vue
@@ -5241,6 +5415,96 @@ msgstr ""
 #. Tooltip and aria-label of the circular-arrow button that retries a failed translation.
 msgctxt "translate.retry"
 msgid "Retry the translation"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. The first option of the language picker in Settings → Translation: the browser's own language is used. {language} is that language's name.
+msgctxt "translate.settings.automatic"
+msgid "Automatic — {language} (follows your browser)"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. Shown in place of the Translation settings when the site's operator has disabled the feature.
+msgctxt "translate.settings.disabled"
+msgid "Translation is turned off in this deployment."
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. The first option of the GPU model picker in Settings → Translation: the client picks the largest model the device can run.
+msgctxt "translate.settings.gpuAutomatic"
+msgid "Automatic — best for this device"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. Label of the picker in Settings → Translation that chooses which large graphics-processor model to use. GPU is the usual abbreviation for the graphics processor.
+msgctxt "translate.settings.gpuModel"
+msgid "GPU model"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. Explanatory note under the GPU model picker in Settings → Translation.
+msgctxt "translate.settings.gpuModelHint"
+msgid "The larger model translates more naturally, needs about 3.4 GB of graphics memory and is slower."
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. Heading of the Translation tab in Settings.
+msgctxt "translate.settings.heading"
+msgid "Translation"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. Badge next to the model row in Settings → Translation that the GPU model picker currently selects.
+msgctxt "translate.settings.inUse"
+msgid "In use"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. Introductory paragraph of the Translation tab in Settings, explaining that translation runs locally.
+msgctxt "translate.settings.intro"
+msgid "Messages are translated on this device by a model it downloads once; nothing is sent to a translation service. Turn it on per channel from the translate button in the channel header."
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. Explanatory note under the language picker in Settings → Translation.
+msgctxt "translate.settings.languageHint"
+msgid "The language the interface is written in and messages are translated into — one control. Automatic follows your browser's language."
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. Label of the picker in Settings → Translation that chooses one language for both the interface and the translations of incoming messages.
+msgctxt "translate.settings.languageLabel"
+msgid "Interface and reading language"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. One option of the GPU model picker in Settings → Translation. {name} is the model's product name, {size} its download size.
+msgctxt "translate.settings.modelOption"
+msgid "{name} · {size}"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. Heading of the section of Settings → Translation that lists the translation models and lets them be downloaded or deleted.
+msgctxt "translate.settings.models"
+msgid "Models"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. Label of the checkbox in Settings → Translation that allows the smaller main-processor models. CPU is the usual abbreviation for the main processor.
+msgctxt "translate.settings.useCpu"
+msgid "Use the CPU models where they are the better choice"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. Label of the checkbox in Settings → Translation that allows the large graphics-processor model. GPU is the usual abbreviation for the graphics processor.
+msgctxt "translate.settings.useGpu"
+msgid "Use the GPU model where it is the better choice"
+msgstr ""
+
+#: client/components/Settings/Translation.vue
+#. Error shown in Settings → Translation when the background process that does the translating could not be reached. {error} is its own untranslated message.
+msgctxt "translate.settings.workerError"
+msgid "Could not reach the translation worker: {error}"
 msgstr ""
 
 #: client/components/ChatInput.vue

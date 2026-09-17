@@ -28,7 +28,7 @@ const catalog = buildCatalog();
 function capability(tier: Capability["tier"]): Capability {
 	return {
 		tier,
-		reasons: tier === "gpu" ? [] : ["no WebGPU"],
+		reasons: tier === "gpu" ? [] : ["NO_WEBGPU" as const],
 		f16: tier === "gpu",
 		maxBufferBytes: 0,
 		deviceMemoryGiB: 8,
@@ -311,7 +311,7 @@ describe("translate/service", () => {
 		r.service.dispose();
 	});
 
-	it("loadNote names the model and how far it has got, downloading or loading", () => {
+	it("loadNote reports the phase, the model and how far it has got", () => {
 		const view = {
 			ref: catalog.nllb,
 			cached: false,
@@ -320,11 +320,18 @@ describe("translate/service", () => {
 			error: null,
 		};
 
-		expect(loadNote(view)).to.equal("Downloading NLLB-200 600M (CPU, 200 languages)\u2026 42%");
+		// Data, not copy: the phrase is helpers/modelLabel.ts's.
+		expect(loadNote(view)).to.deep.equal({
+			phase: "downloading",
+			ref: catalog.nllb,
+			percent: 42,
+		});
 		// Already on this device: loaded back into memory, not downloaded again.
-		expect(loadNote({...view, cached: true})).to.equal(
-			"Loading NLLB-200 600M (CPU, 200 languages) into memory\u2026 42%"
-		);
+		expect(loadNote({...view, cached: true})).to.deep.equal({
+			phase: "loading",
+			ref: catalog.nllb,
+			percent: 42,
+		});
 	});
 
 	it("marks a candidate down when its model fails to load and takes the next", async () => {

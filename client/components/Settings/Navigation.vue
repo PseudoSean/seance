@@ -27,7 +27,12 @@
 				class-name="notifications"
 				to="notifications"
 			/>
-			<SettingTabItem name="Translation" class-name="translation" to="translation" />
+			<SettingTabItem
+				name="Translation"
+				:label="tabTranslation"
+				class-name="translation"
+				to="translation"
+			/>
 			<SettingTabItem name="Aliases" :label="tabAliases" class-name="aliases" to="aliases" />
 		</ul>
 	</aside>
@@ -162,6 +167,7 @@ export default defineComponent({
 		const tabGeneral = computed(() => t("settings.tabs.general"));
 		const tabAppearance = computed(() => t("settings.tabs.appearance"));
 		const tabNotifications = computed(() => t("settings.tabs.notifications"));
+		const tabTranslation = computed(() => t("settings.tabs.translation"));
 		const tabAliases = computed(() => t("settings.tabs.aliases"));
 
 		// The strip scrolls, so the active tab may sit off screen (opening
@@ -184,6 +190,7 @@ export default defineComponent({
 			tabGeneral,
 			tabAppearance,
 			tabNotifications,
+			tabTranslation,
 			tabAliases,
 			showGeneral: shouldShowGeneralSettings(),
 			showNetworks: brandingFeatures(store.state.branding).saveNetworks,

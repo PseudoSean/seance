@@ -4,7 +4,6 @@
 // with. A router candidate names a catalog entry, never a URL.
 
 import {ModelRef} from "./engine";
-import {languageName} from "./languages";
 
 /** What the route table lists: the LLM, NLLB, or an OPUS-MT pair. */
 export type Candidate = "llm" | "nllb" | `opus:${string}`;
@@ -70,13 +69,11 @@ function opusRef(pairKey: string, id: string): ModelRef {
 		engine: "seq2seq",
 		family: "opus",
 		id,
-		label: `OPUS-MT ${languageName(from)} → ${languageName(to)} (CPU)`,
+		label: {kind: "opus", from, to},
 		sizeBytes: OPUS_SIZE_BYTES,
 		pair: [from, to],
 	};
 }
-
-const LLM_LABEL_SUFFIX = " (GPU, all languages)";
 
 /**
  * The GPU models Settings offers, both WebLLM prebuilt ids. `sizeBytes` is
@@ -90,7 +87,7 @@ export const LLM_CHOICES: readonly ModelRef[] = [
 		engine: "llm",
 		family: "llm",
 		id: QWEN3_1_7B_ID,
-		label: `Qwen3 1.7B${LLM_LABEL_SUFFIX}`,
+		label: {kind: "llm", name: "Qwen3 1.7B"},
 		sizeBytes: LLM_SIZE_BYTES,
 		vramBytes: 2_000_000_000,
 	},
@@ -98,7 +95,7 @@ export const LLM_CHOICES: readonly ModelRef[] = [
 		engine: "llm",
 		family: "llm",
 		id: QWEN3_4B_ID,
-		label: `Qwen3 4B${LLM_LABEL_SUFFIX}`,
+		label: {kind: "llm", name: "Qwen3 4B"},
 		sizeBytes: 2_300_000_000,
 		vramBytes: 3_400_000_000,
 	},
@@ -120,11 +117,9 @@ export function defaultLlmForAdapter(maxBufferBytes: number): string {
 	return LLM_CHOICES[0].id;
 }
 
-/** A GPU model's name without its "(GPU, all languages)" note, for the model select. */
+/** A GPU model's own product name, for the model select. */
 export function llmName(ref: ModelRef): string {
-	return ref.label.endsWith(LLM_LABEL_SUFFIX)
-		? ref.label.slice(0, -LLM_LABEL_SUFFIX.length)
-		: ref.label;
+	return ref.label.kind === "llm" ? ref.label.name : ref.id;
 }
 
 /** A deploy's own GPU model, neither of the shipped choices. */
@@ -133,7 +128,7 @@ function deployLlmRef(id: string, lib: string | undefined): ModelRef {
 		engine: "llm",
 		family: "llm",
 		id,
-		label: `${id.replace(/-q4f16_1-MLC$/, "").replace(/-/g, " ")}${LLM_LABEL_SUFFIX}`,
+		label: {kind: "llm", name: id.replace(/-q4f16_1-MLC$/, "").replace(/-/g, " ")},
 		sizeBytes: LLM_SIZE_BYTES,
 	};
 
@@ -202,7 +197,7 @@ export function buildCatalog(
 			engine: "seq2seq",
 			family: "nllb",
 			id: nllbId,
-			label: "NLLB-200 600M (CPU, 200 languages)",
+			label: {kind: "nllb"},
 			sizeBytes: NLLB_SIZE_BYTES,
 		},
 		opus,

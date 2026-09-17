@@ -253,6 +253,8 @@ import {useI18n} from "../js/i18n";
 import {languageName} from "../js/translate/languages";
 import {draftGate} from "../js/translate/outgoing";
 import {readingLanguage} from "../js/translate/reader";
+import {loadNoteText} from "../js/helpers/modelLabel";
+import {translateErrorText} from "../js/helpers/translateErrors";
 import {loadNote} from "../js/translate/service";
 import {
 	cancelOutgoing,
@@ -602,7 +604,7 @@ export default defineComponent({
 
 			const view = store.state.translation.models.find((v) => v.ref.id === entry.model);
 
-			return view && view.status === "downloading" ? loadNote(view) : "";
+			return view && view.status === "downloading" ? loadNoteText(loadNote(view)) : "";
 		});
 
 		// Why it failed, beside "couldn't translate": an ORT session error or
@@ -613,7 +615,7 @@ export default defineComponent({
 				return "";
 			}
 
-			const text = error.replace(/\s+/g, " ").trim();
+			const text = translateErrorText(error).replace(/\s+/g, " ").trim();
 
 			return text.length > REASON_MAX ? `${text.slice(0, REASON_MAX - 1)}…` : text;
 		};

@@ -1,17 +1,13 @@
 <template>
 	<div>
-		<h2>Translation</h2>
+		<h2>{{ t("translate.settings.heading") }}</h2>
 		<div v-if="!enabled" class="translate-hint">
-			Translation is turned off in this deployment.
+			{{ t("translate.settings.disabled") }}
 		</div>
 		<template v-else>
-			<div class="translate-hint">
-				Messages are translated on this device by a model it downloads once; nothing is sent
-				to a translation service. Turn it on per channel from the translate button in the
-				channel header.
-			</div>
+			<div class="translate-hint">{{ t("translate.settings.intro") }}</div>
 			<label class="opt translate-target">
-				<span>Interface and reading language</span>
+				<span>{{ t("translate.settings.languageLabel") }}</span>
 				<select name="locale" :value="store.state.settings.locale">
 					<option value="auto">{{ automaticLabel }}</option>
 					<option v-for="code in languages" :key="code" :value="code">
@@ -19,15 +15,12 @@
 					</option>
 				</select>
 			</label>
-			<div class="translate-hint">
-				The language the interface is written in and messages are translated into — one
-				control. Automatic follows your browser's language.
-			</div>
+			<div class="translate-hint">{{ t("translate.settings.languageHint") }}</div>
 			<div
 				v-if="effectiveReading && limited(effectiveReading)"
 				class="translate-hint translate-limited"
 			>
-				Translations into and out of this language are often wrong.
+				{{ t("translate.limitedLanguage") }}
 			</div>
 			<div
 				id="label-translate-formality"
@@ -35,7 +28,7 @@
 				role="heading"
 				aria-level="3"
 			>
-				Address people
+				{{ t("translate.formality.label") }}
 			</div>
 			<div role="group" aria-labelledby="label-translate-formality">
 				<label class="opt">
@@ -45,7 +38,7 @@
 						name="translateFormality"
 						value="auto"
 					/>
-					As the original does
+					{{ t("translate.formality.auto") }}
 				</label>
 				<label class="opt">
 					<input
@@ -54,7 +47,7 @@
 						name="translateFormality"
 						value="formal"
 					/>
-					Formally
+					{{ t("translate.formality.formal") }}
 				</label>
 				<label class="opt">
 					<input
@@ -63,24 +56,28 @@
 						name="translateFormality"
 						value="casual"
 					/>
-					Casually
+					{{ t("translate.formality.casual") }}
 				</label>
 			</div>
-			<h3>Models</h3>
+			<h3>{{ t("translate.settings.models") }}</h3>
 			<div v-if="problem" class="translate-hint translate-error">
-				Could not reach the translation worker: {{ problem }}
+				{{ t("translate.settings.workerError", {error: problem}) }}
 			</div>
 			<div v-if="capability" class="translate-hint translate-device">
-				<template v-if="capability.tier === 'gpu'"
-					>This device can run the GPU model.</template
-				>
-				<template v-else-if="capability.tier === 'cpu'">
-					The GPU model is unavailable here ({{ capability.reasons.join(", ") }}); the CPU
-					models still work.
-				</template>
-				<template v-else>
-					Translation cannot run on this device ({{ capability.reasons.join(", ") }}).
-				</template>
+				<template v-if="capability.tier === 'gpu'">{{
+					t("translate.capability.gpu")
+				}}</template>
+				<template v-else-if="capability.tier === 'cpu'">{{
+					t("translate.capability.cpu")
+				}}</template>
+				<template v-else>{{ t("translate.capability.none") }}</template>
+				<!-- Each reason is a phrase of its own: a translator is never
+				     handed a list glued together with a comma. -->
+				<ul v-if="capability.reasons.length" class="translate-device-reasons">
+					<li v-for="reason in capability.reasons" :key="reason">
+						{{ reasonText(reason) }}
+					</li>
+				</ul>
 			</div>
 			<label class="opt">
 				<input
@@ -88,7 +85,7 @@
 					type="checkbox"
 					name="translateLlm"
 				/>
-				Use the GPU model where it is the better choice
+				{{ t("translate.settings.useGpu") }}
 			</label>
 			<label class="opt">
 				<input
@@ -96,20 +93,24 @@
 					type="checkbox"
 					name="translateCpu"
 				/>
-				Use the CPU models where they are the better choice
+				{{ t("translate.settings.useCpu") }}
 			</label>
 			<label class="opt translate-llm-model">
-				<span>GPU model</span>
+				<span>{{ t("translate.settings.gpuModel") }}</span>
 				<select name="translateLlmModel" :value="selectedLlm.id">
-					<option value="">Automatic — best for this device</option>
+					<option value="">{{ t("translate.settings.gpuAutomatic") }}</option>
 					<option v-for="choice in llmChoices" :key="choice.id" :value="choice.id">
-						{{ llmName(choice) }} · {{ size(choice.sizeBytes) }}
+						{{
+							t("translate.settings.modelOption", {
+								name: llmName(choice),
+								size: size(choice.sizeBytes),
+							})
+						}}
 					</option>
 				</select>
 			</label>
 			<div class="translate-hint translate-llm-hint">
-				The larger model translates more naturally, needs about 3.4 GB of graphics memory
-				and is slower.
+				{{ t("translate.settings.gpuModelHint") }}
 			</div>
 			<ul class="translate-models">
 				<li
@@ -120,11 +121,11 @@
 					:data-status="view.status"
 				>
 					<span class="translate-model-name"
-						>{{ view.ref.label }}
+						>{{ modelLabel(view.ref) }}
 						<span
 							v-if="view.ref.engine === 'llm' && view.ref.id === selectedLlm.id"
 							class="translate-model-in-use"
-							>In use</span
+							>{{ t("translate.settings.inUse") }}</span
 						></span
 					>
 					<span class="translate-model-size">{{ size(view.ref.sizeBytes) }}</span>
@@ -142,7 +143,7 @@
 						:disabled="!allowed(view.ref)"
 						@click.prevent="download(view.ref)"
 					>
-						Download
+						{{ t("translate.model.download") }}
 					</button>
 					<button
 						v-else-if="view.cached"
@@ -150,7 +151,7 @@
 						class="btn translate-model-delete"
 						@click.prevent="remove(view.ref)"
 					>
-						Delete
+						{{ t("translate.model.delete") }}
 					</button>
 				</li>
 			</ul>
@@ -233,6 +234,12 @@
 	color: var(--error-fg, #c33);
 }
 
+/* The device-tier reasons: each a phrase of its own, not a comma list. */
+.translate-device-reasons {
+	margin: 0.25rem 0 0;
+	padding-inline-start: 1.25rem;
+}
+
 .translate-error {
 	color: var(--error-fg, #c33);
 }
@@ -274,6 +281,10 @@
 
 <script lang="ts">
 import {computed, defineComponent, onMounted, ref, toRaw} from "vue";
+import {useI18n} from "../../js/i18n";
+import {collator} from "../../js/i18n/collation";
+import friendlysize from "../../js/helpers/friendlysize";
+import {modelLabel} from "../../js/helpers/modelLabel";
 import {useStore} from "../../js/store";
 import {translateService} from "../../js/translate";
 import type {ModelRef} from "../../js/translate/engine";
@@ -285,23 +296,32 @@ import {
 	languageOptionLabel,
 } from "../../js/translate/languages";
 import {readingLanguage} from "../../js/translate/reader";
+import type {CapabilityReason} from "../../js/translate/capability";
 import type {ModelView} from "../../js/translate/service";
 
 export default defineComponent({
 	name: "TranslationSettings",
 	setup() {
+		const {t} = useI18n();
 		const store = useStore();
 		const service = translateService();
 		const enabled = service.enabled;
 		const models = computed(() => store.state.translation.models);
 		const capability = computed(() => store.state.translation.capability);
 		const name = (code: string) => languageOptionLabel(code);
-		const languages = [...SUPPORTED_LANGUAGES].sort((a, b) => name(a).localeCompare(name(b)));
+		// Both the names and their order follow the active locale, so the
+		// list is a computed: a locale change re-sorts it (i18n/collation.ts).
+		const languages = computed(() =>
+			[...SUPPORTED_LANGUAGES].sort((a, b) => collator().compare(name(a), name(b)))
+		);
 		// The Automatic option names the browser's language: what a new user
-		// sees selected is the language their browser asked for.
-		const automaticLabel = `Automatic — ${name(
-			browserLanguage(navigator.language)
-		)} (follows your browser)`;
+		// sees selected is the language their browser asked for. A computed,
+		// so a locale change in this very tab rewrites it.
+		const automaticLabel = computed(() =>
+			t("translate.settings.automatic", {
+				language: name(browserLanguage(navigator.language)),
+			})
+		);
 		// The reading language as it stands: the interface's (one control —
 		// reactivity rides on the store read and the i18n ref the helper reads).
 		const effectiveReading = computed(() => readingLanguage());
@@ -328,22 +348,50 @@ export default defineComponent({
 			}
 		});
 
-		const size = (bytes: number) =>
-			bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} GB` : `${Math.round(bytes / 1e6)} MB`;
+		// The shared size formatter: the number is written by the active
+		// locale, the IEC unit symbol is universal (helpers/friendlysize.ts).
+		const size = (bytes: number) => friendlysize(bytes);
+
+		// Why the GPU tier is out of reach, one whole phrase per code
+		// (translate/capability.ts is Vue-free and reports codes).
+		const reasonText = (reason: CapabilityReason) => {
+			switch (reason) {
+				case "INSECURE_ORIGIN":
+					return t("translate.capability.reason.insecureOrigin");
+				case "NO_ADAPTER":
+					return t("translate.capability.reason.noAdapter");
+				case "NO_F16":
+					return t("translate.capability.reason.noF16");
+				case "SMALL_BUFFER":
+					return t("translate.capability.reason.smallBuffer");
+				case "NO_WASM_SIMD":
+					return t("translate.capability.reason.noWasmSimd");
+				case "PROBE_FAILED":
+					return t("translate.capability.reason.probeFailed");
+				default:
+					return t("translate.capability.reason.noWebgpu");
+			}
+		};
 
 		const stateLabel = (view: ModelView) => {
+			const percent = Math.round(view.fraction * 100);
+
 			switch (view.status) {
 				case "downloading":
 					// Already on this device: the row is loading it, not downloading it.
 					return view.cached
-						? `Loading… ${Math.round(view.fraction * 100)}%`
-						: `${Math.round(view.fraction * 100)}%`;
+						? t("translate.model.loadingPercent", {percent})
+						: t("translate.model.percent", {percent});
 				case "ready":
-					return "Downloaded";
+					return t("translate.model.downloaded");
 				case "failed":
-					return `Failed: ${view.error ?? "unknown error"}`;
+					return view.error
+						? t("translate.model.failed", {error: view.error})
+						: t("translate.model.failedUnknown");
 				default:
-					return view.cached ? "Downloaded" : "Not downloaded";
+					return view.cached
+						? t("translate.model.downloaded")
+						: t("translate.model.notDownloaded");
 			}
 		};
 
@@ -373,6 +421,9 @@ export default defineComponent({
 		};
 
 		return {
+			t,
+			modelLabel,
+			reasonText,
 			store,
 			enabled,
 			models,

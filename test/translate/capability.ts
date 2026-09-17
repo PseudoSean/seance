@@ -41,11 +41,11 @@ describe("translate/capability", () => {
 		expect(cap.storageQuotaBytes).to.equal(50 * 1024 * 1024 * 1024);
 	});
 
-	it("is cpu without WebGPU and says why", async () => {
+	it("is cpu without WebGPU and reports the code why", async () => {
 		const cap = await probe(env({gpu: null}));
 
 		expect(cap.tier).to.equal("cpu");
-		expect(cap.reasons).to.deep.equal(["no WebGPU"]);
+		expect(cap.reasons).to.deep.equal(["NO_WEBGPU"]);
 	});
 
 	it("names the insecure origin as the reason there is no WebGPU", async () => {
@@ -55,32 +55,30 @@ describe("translate/capability", () => {
 		const cap = await probe(env({gpu: null, secureContext: false}));
 
 		expect(cap.tier).to.equal("cpu");
-		expect(cap.reasons).to.deep.equal([
-			"insecure origin: WebGPU needs HTTPS or localhost — serve the app over HTTPS",
-		]);
+		expect(cap.reasons).to.deep.equal(["INSECURE_ORIGIN"]);
 	});
 
 	it("a secure context without WebGPU still says plain no WebGPU", async () => {
 		expect((await probe(env({gpu: null, secureContext: true}))).reasons).to.deep.equal([
-			"no WebGPU",
+			"NO_WEBGPU",
 		]);
 		// Unknown (tests, odd embeddings) behaves as today.
 		expect((await probe(env({gpu: null, secureContext: undefined}))).reasons).to.deep.equal([
-			"no WebGPU",
+			"NO_WEBGPU",
 		]);
 	});
 
 	it("is cpu when the adapter is missing, has no f16 or too small a buffer", async () => {
 		expect(
 			(await probe(env({gpu: {requestAdapter: () => Promise.resolve(null)}}))).reasons
-		).to.deep.equal(["WebGPU adapter unavailable"]);
+		).to.deep.equal(["NO_ADAPTER"]);
 		expect(
 			(
 				await probe(
 					env({gpu: {requestAdapter: () => Promise.resolve(adapter({f16: false}))}})
 				)
 			).reasons
-		).to.deep.equal(["no 16-bit float shaders"]);
+		).to.deep.equal(["NO_F16"]);
 		expect(
 			(
 				await probe(
@@ -92,7 +90,7 @@ describe("translate/capability", () => {
 					})
 				)
 			).reasons
-		).to.deep.equal(["GPU buffer limit under 1 GiB"]);
+		).to.deep.equal(["SMALL_BUFFER"]);
 	});
 
 	it("rates gpu an adapter whose binding limit is 2 GiB minus the alignment slack", async () => {
@@ -109,7 +107,7 @@ describe("translate/capability", () => {
 		const cap = await probe(env({gpu: null, wasmSimd: false}));
 
 		expect(cap.tier).to.equal("none");
-		expect(cap.reasons).to.deep.equal(["no WebGPU", "no WebAssembly SIMD"]);
+		expect(cap.reasons).to.deep.equal(["NO_WEBGPU", "NO_WASM_SIMD"]);
 	});
 
 	it("survives a throwing adapter request and missing optional APIs", async () => {
@@ -126,7 +124,7 @@ describe("translate/capability", () => {
 		);
 
 		expect(cap.tier).to.equal("cpu");
-		expect(cap.reasons).to.deep.equal(["WebGPU adapter unavailable"]);
+		expect(cap.reasons).to.deep.equal(["NO_ADAPTER"]);
 		expect(cap.deviceMemoryGiB).to.equal(null);
 		expect(cap.storageQuotaBytes).to.equal(null);
 	});

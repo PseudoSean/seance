@@ -102,6 +102,8 @@ import {readingLanguage, retranslate, retryTranslation, showOriginal} from "../j
 import {ANSWERED, DEGENERATE, NARRATION, UNCHANGED} from "../js/translate/outgoing";
 import {languageName} from "../js/translate/languages";
 import {directionText} from "../js/translate/labels";
+import {loadNoteText} from "../js/helpers/modelLabel";
+import {translateErrorText} from "../js/helpers/translateErrors";
 import {loadNote} from "../js/translate/service";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
 import ParsedMessage from "./ParsedMessage.vue";
@@ -142,7 +144,7 @@ export default defineComponent({
 				return t("translate.reason.degenerate");
 			}
 
-			return error;
+			return translateErrorText(error);
 		});
 		// Every language the line names is named in the language its reader
 		// reads (the channel's reading language, else the global one), not
@@ -195,7 +197,7 @@ export default defineComponent({
 				(v) => v.status === "downloading" && v.ref.engine === value.engine
 			);
 
-			return view ? loadNote(view) : "";
+			return view ? loadNoteText(loadNote(view)) : "";
 		});
 
 		const chip = ref<HTMLButtonElement | null>(null);

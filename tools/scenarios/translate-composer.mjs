@@ -282,12 +282,18 @@ export default async function run(page) {
 	// 1. The write target.
 	await openPanel(page);
 	await page.check(
-		"the write target options are named in themselves (Deutsch, Français)",
+		"the write target options are named in the interface language",
 		await page.evaluate(
 			`(() => {
 				const s = document.querySelector('.translation-panel select[name="translateWrite"]');
 				const text = (v) => s.querySelector('option[value="' + v + '"]').textContent.trim();
-				return text("de") === "Deutsch" && text("fr") === "Français";
+				// The panel names a language in the language the channel is
+				// read in, not in itself (TranslationPanel.vue name()).
+				const names = new Intl.DisplayNames(
+					[document.documentElement.lang || "en"],
+					{type: "language"}
+				);
+				return text("de") === names.of("de") && text("fr") === names.of("fr");
 			})()`
 		)
 	);
