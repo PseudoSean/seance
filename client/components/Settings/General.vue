@@ -229,12 +229,17 @@ export default defineComponent({
 				tCount("settings.general.backupNetworks", networks),
 				t("settings.general.backupMutes"),
 			];
-			// Its own sentence, appended -- the key's msgid opens with a
-			// space because that is what it is for. The warning went missing
-			// when the dialog was localized: the variable was kept and the
-			// use was not, so a file carrying network passwords was restored
-			// with nothing said about it.
-			const passwords = hasPasswords(backup) ? t("settings.general.backupPasswords") : "";
+			// Its own whole sentence, appended after the frame's. The warning
+			// went missing when the dialog was localized: the variable was
+			// kept and the use was not, so a file carrying network passwords
+			// was restored with nothing said about it. The separator is put
+			// in here rather than taken from the copy -- the English msgid
+			// opens with a space (it was authored for appending) and every
+			// filled translation dropped it, which would run the two
+			// sentences together in all 23 locales.
+			const passwords = hasPasswords(backup)
+				? ` ${t("settings.general.backupPasswords").trim()}`
+				: "";
 			return (
 				t("settings.general.backupFrame", {parts: parts.join(", "), file: name}) + passwords
 			);
