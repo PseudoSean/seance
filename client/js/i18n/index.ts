@@ -39,22 +39,47 @@ export const userLanguageRef = ref("en");
 
 const overlayCache = new Map<string, Catalog>();
 
+/** How a locale's overlay catalog is fetched; swapped by tests. */
+export type OverlayLoader = (tag: string) => Promise<Catalog>;
+
+const importOverlay: OverlayLoader = async (tag) =>
+	// One lazy webpack chunk per locale JSON. Overlay catalogs omit
+	// untranslated entries (compile.ts), so missing keys fall to en.
+	((await import(`../../locales/${tag}.json`)) as {default: Catalog}).default;
+
+let overlayLoader: OverlayLoader = importOverlay;
+
+/**
+ * Swap how an overlay is fetched (tests: a real dynamic import cannot be
+ * made to resolve out of order); `null` restores the bundler's import. The
+ * cache is dropped with the loader, as {@link useStorageBackend} does in
+ * helpers/settingsBackup.ts.
+ */
+export function useOverlayLoader(loader: OverlayLoader | null): void {
+	overlayLoader = loader ?? importOverlay;
+	overlayCache.clear();
+}
+
 async function loadOverlay(tag: string): Promise<Catalog | undefined> {
 	if (tag === "en") {
 		return undefined;
 	}
 
 	if (!overlayCache.has(tag)) {
-		// One lazy webpack chunk per locale JSON. Overlay catalogs omit
-		// untranslated entries (compile.ts), so missing keys fall to en.
-		overlayCache.set(
-			tag,
-			((await import(`../../locales/${tag}.json`)) as {default: Catalog}).default
-		);
+		overlayCache.set(tag, await overlayLoader(tag));
 	}
 
 	return overlayCache.get(tag);
 }
+
+/**
+ * Which activation is the current one. Two locale changes in quick
+ * succession race on their overlay loads, and whichever resolved last used
+ * to install its catalog — the older pick could overwrite the newer one.
+ * Each call takes the next token and drops everything it was going to do
+ * once the token has moved on.
+ */
+let activation = 0;
 
 /**
  * Apply the `locale` setting ("auto" or a tag): resolve, load, install,
@@ -62,6 +87,7 @@ async function loadOverlay(tag: string): Promise<Catalog | undefined> {
  * localStorage). Runs from the setting's apply() at boot and on change.
  */
 export async function activate(setting: string): Promise<void> {
+	const mine = ++activation;
 	// "auto" and any stored tag resolve against one set: a production
 	// build carries no qqx at all, so a stored qqx pick (a settings
 	// restore from a dev machine, say) falls back to the automatic
@@ -84,6 +110,7 @@ export async function activate(setting: string): Promise<void> {
 	// The interface's catalog tag: the pick, or en when that catalog is
 	// not compiled (below). Everything that renders labels follows this.
 	let tag = pick;
+	let overlay: Catalog | undefined;
 
 	// Best-effort, never a rejection: settingsBackup restores the whole
 	// settings blob, so a stored tag this build has no compiled catalog for
@@ -91,14 +118,22 @@ export async function activate(setting: string): Promise<void> {
 	// dynamic import there would cascade. Fall back to en, as the worker's
 	// applyLocale() does (client/js/push/i18n.ts).
 	try {
-		setCatalog(pick, enCatalog, await loadOverlay(pick));
+		overlay = await loadOverlay(pick);
 	} catch {
 		// No compiled catalog for the pick: the interface shows English.
 		// The pick itself survives in userLanguageRef — the reading
 		// language does not fall back with the interface's.
 		tag = "en";
-		setCatalog("en", enCatalog, undefined);
 	}
+
+	// A newer activation started while this one was loading: it owns the
+	// catalog, the refs and the document from here on. Nothing below has run
+	// yet, so there is nothing to undo.
+	if (mine !== activation) {
+		return;
+	}
+
+	setCatalog(tag, enCatalog, overlay);
 
 	userLanguageRef.value = pick;
 

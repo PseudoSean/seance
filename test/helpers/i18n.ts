@@ -20,7 +20,7 @@ import {
 	warnFragmentJoin,
 	frameSegments,
 } from "../../client/js/i18n/core";
-import {activate} from "../../client/js/i18n";
+import {activate, useOverlayLoader} from "../../client/js/i18n";
 import {formatDayHeading, formatRelativeDay, formatTime} from "../../client/js/i18n/dates";
 
 before(() => {
@@ -146,6 +146,46 @@ describe("i18n core", () => {
 		expect(stale, "a tag outside the baked list").to.exist;
 		expect(runPrePaint({locale: stale!}, [])).to.deep.equal({lang: "", dir: ""});
 		expect(runPrePaint({locale: stale!}, [stale!])).to.deep.equal({lang: "", dir: ""});
+	});
+
+	it("the slower of two activations never installs its catalog", async function () {
+		// Two locale changes in quick succession: the first one's overlay
+		// resolves LAST, and must not overwrite the language the user
+		// actually asked for.
+		const root = {lang: "before", dir: "before"};
+		(globalThis as {document?: unknown}).document = {
+			documentElement: root,
+			getElementById: () => null,
+		};
+
+		const pending = new Map<string, (catalog: Record<string, string>) => void>();
+
+		useOverlayLoader(
+			(tag) =>
+				new Promise((resolve) => {
+					pending.set(tag, resolve as (c: Record<string, string>) => void);
+				})
+		);
+
+		try {
+			const first = activate("de");
+			const second = activate("fr");
+
+			// The second pick wins although the first answers last.
+			pending.get("fr")!({"connect.title": "Connexion"});
+			await second;
+			expect(t("connect.title")).to.equal("Connexion");
+			expect(root).to.deep.equal({lang: "fr", dir: "ltr"});
+
+			pending.get("de")!({"connect.title": "Mit IRC verbinden"});
+			await first;
+			expect(t("connect.title")).to.equal("Connexion");
+			expect(root).to.deep.equal({lang: "fr", dir: "ltr"});
+		} finally {
+			useOverlayLoader(null);
+			delete (globalThis as {document?: unknown}).document;
+			setCatalog("en", enCatalog, undefined);
+		}
 	});
 
 	it("activate() falls back to en for a tag with no catalog, never rejecting", async function () {
