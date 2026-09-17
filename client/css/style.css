@@ -1935,7 +1935,11 @@ textarea.input {
 }
 
 .translation-panel--sheet .translation-panel-chip {
-	padding: 0.1875rem 0.375rem 0.1875rem 0.625rem;
+	/* The base rule's logical padding, at the sheet's touch size: a
+	   shorthand here would reset `padding-inline` and put the extra room
+	   before the label on the wrong side under RTL. Start first. */
+	padding-block: 0.1875rem;
+	padding-inline: 0.625rem 0.375rem;
 	border-radius: 1rem;
 	font-size: 0.9375rem;
 }
