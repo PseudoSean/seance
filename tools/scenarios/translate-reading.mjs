@@ -1527,12 +1527,27 @@ async function scenario(page) {
 		`the echo cost the engine nothing (${doneBeforeNext} then ${doneAfterNext} done lines)`,
 		doneAfterNext === doneBeforeNext + 1
 	);
-	// The globe's title is where a pause shows (Chat.vue `translateLabel`).
+	// The globe's label is where a pause shows (Chat.vue `translateLabel`, its aria-label).
 	await page.check(
 		"no engine was paused",
 		!String(
-			await page.evaluate(`document.querySelector(${JSON.stringify(GLOBE)}).title`)
+			await page.evaluate(
+				`document.querySelector(${JSON.stringify(GLOBE)}).getAttribute("aria-label")`
+			)
 		).includes("paused:")
+	);
+	// The tooltip names the reading language itself, never the channel's
+	// on/off flag: `translateLabel`'s `reading` var once took the boolean
+	// and rendered "Translating into true".
+	const globeTitle = String(
+		await page.evaluate(
+			`document.querySelector(${JSON.stringify(GLOBE)}).getAttribute("aria-label")`
+		)
+	);
+
+	await page.check(
+		`the globe names the reading language (${globeTitle})`,
+		globeTitle.startsWith("Translating into English") && !/\btrue\b/.test(globeTitle)
 	);
 
 	// A question answered rather than translated is no translation either:
@@ -1562,7 +1577,9 @@ async function scenario(page) {
 	await page.check(
 		"no engine was paused by the answer",
 		!String(
-			await page.evaluate(`document.querySelector(${JSON.stringify(GLOBE)}).title`)
+			await page.evaluate(
+				`document.querySelector(${JSON.stringify(GLOBE)}).getAttribute("aria-label")`
+			)
 		).includes("paused:")
 	);
 	await page.evaluate(`(${questionRow}).scrollIntoView({block: "center"})`);

@@ -340,7 +340,7 @@ export default defineComponent({
 			// paused): the tooltip is never assembled from translated pieces,
 			// and every key is a literal the pot check can see.
 			const vars = {
-				reading: name(read || readingLanguage()),
+				reading: name(readingLanguage()),
 				writing: write ? name(write) : "",
 				// The engine's own text: a verbatim value, never translated.
 				reason: paused ? paused.message : "",
