@@ -197,7 +197,7 @@
   "connect.saslReason.unavailable": "لا يدعم الخدمة SASL",
   "connect.saslReason.unknown": "خطأ غير معروف",
   "connect.saslReason.wrongMechanism": "يدعم الخدمة SASL {offered}، وليس {mechanism}",
-  "connect.saslRequiredHint": "تحقق من اسم الحساب وكلمة المرور في إعدادات هذا الشبكة، أو اختر \"No authentication\" هناك للاتصال دون تسجيل الدخول.",
+  "connect.saslRequiredHint": "تحقق من اسم الحساب وكلمة المرور في إعدادات هذا الشبكة، أو اختر \"بدون التحقق من الهوية\" هناك للاتصال دون تسجيل الدخول.",
   "connect.saslToggle": "لدي حساب خدمات (SASL)",
   "connect.server": "الخدمة",
   "connect.serverAddress": "عنوان الخدمة",

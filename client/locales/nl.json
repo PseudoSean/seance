@@ -157,7 +157,7 @@
   "connect.saslReason.unavailable": "de server biedt SASL niet aan",
   "connect.saslReason.unknown": "onbekende fout",
   "connect.saslReason.wrongMechanism": "de server biedt SASL {offered} aan, niet {mechanism}",
-  "connect.saslRequiredHint": "Controleer de accountnaam en wachtwoord in de instellingen van deze netwerk, of kies \"No authentication\" daar om te verbinden zonder in te loggen.",
+  "connect.saslRequiredHint": "Controleer de accountnaam en wachtwoord in de instellingen van deze netwerk, of kies \"Geen aanmeldingscontrole\" daar om te verbinden zonder in te loggen.",
   "connect.saslToggle": "Ik heb een service account (SASL)",
   "connect.serverAddress": "Adres van de server",
   "connect.serverPort": "Serverpoort",

@@ -149,7 +149,7 @@
   "connect.saslReason.unavailable": "サーバーはSASLを提供していません",
   "connect.saslReason.unknown": "未知のエラー",
   "connect.saslReason.wrongMechanism": "サーバーはSASL {offered}を提供していますが、{mechanism}は提供していません",
-  "connect.saslRequiredHint": "このネットワークの設定でアカウント名とパスワードを確認してください。または、ここに\"No authentication\"を選択してログインせずに接続できます。",
+  "connect.saslRequiredHint": "このネットワークの設定でアカウント名とパスワードを確認してください。または、ここに\"認証なし\"を選択してログインせずに接続できます。",
   "connect.saslToggle": "サービスアカウント（SASL）があります",
   "connect.server": "サーバー",
   "connect.serverAddress": "サーバーのアドレス",

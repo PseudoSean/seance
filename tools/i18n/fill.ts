@@ -71,7 +71,9 @@ const BATCH_LLM = 20;
 //   a "quoted label" the words the user has to find on screen: ru answered
 //                    `or pick "No authentication" there` with `"No trible"`,
 //                    which sends the reader looking for a button that is not
-//                    there
+//                    there — unless the label has a key of its own, in which
+//                    case the button IS translated and the sentence has to
+//                    follow it (fenceSpans's `ownKeyLabels`)
 //   a protocol token the wire words and product names a translator leaves
 //                    alone: de turned "SASL PLAIN" into "SASL-PLATZ"
 //
@@ -171,8 +173,31 @@ export function planEngines(
 	return plan;
 }
 
-export function fenceSpans(text: string): string {
-	return text.replace(FENCE_RX, (match) => (match.startsWith("`") ? match : "`" + match + "`"));
+/**
+ * Fence every span the engine must not touch: a {placeholder}, a scheme, a
+ * protocol token, a quoted segment.
+ *
+ * `ownKeyLabels` is the one carve-out, and it is the msgids of the catalog
+ * being filled: a quoted segment whose text IS another entry's msgid is a UI
+ * label with a key of its own, so the button the sentence tells the user to
+ * find is rendered from that key in the user's language. Fencing it shipped
+ * `wähle "No authentication" dort aus` in 21 catalogs while the button read
+ * `Keine Authentifizierung`. Unfenced, the model translates it like the rest
+ * of the sentence (the existing gates still judge the answer); a quoted
+ * segment that matches no msgid is not a label and stays fenced.
+ */
+export function fenceSpans(text: string, ownKeyLabels?: ReadonlySet<string>): string {
+	return text.replace(FENCE_RX, (match) => {
+		if (match.startsWith("`")) {
+			return match;
+		}
+
+		if (match.startsWith('"') && match.endsWith('"') && ownKeyLabels?.has(match.slice(1, -1))) {
+			return match;
+		}
+
+		return "`" + match + "`";
+	});
 }
 
 export function unfenceSpans(text: string): string {
@@ -420,6 +445,11 @@ async function main(): Promise<void> {
 			continue;
 		}
 
+		// Every UI label that has a key of its own, built once per catalog: a
+		// .po's msgids are the pot's English copy after the merge, so this is
+		// the pot's label set without a second read (fenceSpans).
+		const ownKeyLabels = new Set(po.entries.map((entry) => entry.msgid).filter(Boolean));
+
 		const limited = options.limit ? todo.slice(0, options.limit) : todo;
 		const started = Date.now();
 		let filled = 0;
@@ -455,7 +485,10 @@ async function main(): Promise<void> {
 			const markerForm = engine === "llm" ? "placeholder" : "tags";
 			const protectedEntries = batch.map((unit) => ({
 				unit,
-				...protect(fenceSpans(unit.text), {nicks: [], markers: markerForm}),
+				...protect(fenceSpans(unit.text, ownKeyLabels), {
+					nicks: [],
+					markers: markerForm,
+				}),
 			}));
 
 			try {

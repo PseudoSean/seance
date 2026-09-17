@@ -142,7 +142,7 @@
   "connect.saslReason.unavailable": "walang SASL sa server",
   "connect.saslReason.unknown": "maliwanag na error",
   "connect.saslReason.wrongMechanism": "ang server ay nagpapakita ng SASL {offered}, di {mechanism}",
-  "connect.saslRequiredHint": "I-check ang pangalan ng account at password sa mga setting nito, o pindahin \"No authentication\" dito para makonekta walang pag-login.",
+  "connect.saslRequiredHint": "I-check ang pangalan ng account at password sa mga setting nito, o pindahin \"Walang pag-authentikasyon\" dito para makonekta walang pag-login.",
   "connect.saslToggle": "May account ng serbisyo (SASL)",
   "connect.serverAddress": "Address ng server",
   "connect.serverPort": "Port ng server",

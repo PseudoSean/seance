@@ -916,8 +916,8 @@ describe("i18n toolchain", () => {
 			);
 		});
 
-		it("fences a quoted UI label and a protocol token so they come back verbatim", () => {
-			// A label the user has to find on screen and a protocol word are
+		it("fences an unkeyed quoted segment and a protocol token so they come back verbatim", () => {
+			// A quoted segment with no key of its own and a protocol word are
 			// not prose: ru answered "or pick \"No authentication\" there"
 			// with "выберите \"No trible\"" and de turned "SASL PLAIN" into
 			// "SASL-PLATZ". Fenced, the engine never sees either, and the
@@ -939,6 +939,21 @@ describe("i18n toolchain", () => {
 			expect(unfenceSpans(restoreAll(answer, info))).to.equal(
 				'oder wähle "No authentication" dort (SASL PLAIN über TLS)'
 			);
+		});
+
+		it("leaves a quoted UI label with a key of its own unfenced", () => {
+			// connect.saslRequiredHint tells the user to pick the button
+			// form.noAuth renders, and that button is in their language: the
+			// label has to be translated with the sentence, not carried
+			// through in English. A quoted segment matching no msgid is not a
+			// label and is still fenced.
+			const labels = new Set(["No authentication", "Connect"]);
+
+			expect(
+				fenceSpans('or pick "No authentication" there to connect (TLS)', labels)
+			).to.equal('or pick "No authentication" there to connect (`TLS`)');
+
+			expect(fenceSpans('or pick "foo" there', labels)).to.equal('or pick `"foo"` there');
 		});
 
 		it("fences a quoted label around a {placeholder} as one span", () => {

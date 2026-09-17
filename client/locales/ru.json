@@ -179,7 +179,7 @@
   "connect.saslReason.unavailable": "сервер не предлагает SASL",
   "connect.saslReason.unknown": "неизвестная ошибкахож на неизвестную ошибку",
   "connect.saslReason.wrongMechanism": "сервер предлагает SASL {offered}, а не {mechanism}",
-  "connect.saslRequiredHint": "Проверьте имя учетной записи и пароль в настройках этого сети, или выберите \"No authentication\" там, чтобы подключиться без входа.",
+  "connect.saslRequiredHint": "Проверьте имя учетной записи и пароль в настройках этого сети, или выберите \"Нет аутентификации\" там, чтобы подключиться без входа.",
   "connect.saslToggle": "У меня есть счет услуг (SASL).",
   "connect.server": "Сервер",
   "connect.serverAddress": "Адрес сервера",

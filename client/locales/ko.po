@@ -811,7 +811,7 @@ msgstr "서버는 SASL {offered}를 제공하며, {mechanism}는 아닙니다."
 #: client/js/irc/client.ts
 msgctxt "connect.saslRequiredHint"
 msgid "Check the account name and password in this network's settings, or pick \"No authentication\" there to connect without logging in."
-msgstr "이 네트워크의 설정에서 계정 이름과 비밀번호를 확인하거나, 여기서 \"No authentication\"를 선택하여 로그인 없이 연결할 수 있습니다."
+msgstr "이 네트워크의 설정에서 계정 이름과 비밀번호를 확인하거나, 여기서 \"인증되지 않음\"를 선택하여 로그인 없이 연결할 수 있습니다."
 
 #. Checkbox on the connect form: reveals the account name and password fields used to authenticate with network services (SASL).
 #: client/components/Windows/Connect.vue:207

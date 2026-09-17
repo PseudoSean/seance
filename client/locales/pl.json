@@ -178,7 +178,7 @@
   "connect.saslReason.unavailable": "serwer nie oferuje SASL",
   "connect.saslReason.unknown": "nieznany błąd",
   "connect.saslReason.wrongMechanism": "serwer oferuje SASL {offered}, nie {mechanism}",
-  "connect.saslRequiredHint": "Sprawdź nazwę konta i hasło w ustawieniach tego sieci, lub wybierz \"No authentication\" tam, aby połączyć się bez logowania.",
+  "connect.saslRequiredHint": "Sprawdź nazwę konta i hasło w ustawieniach tego sieci, lub wybierz \"Brak autoryzacji\" tam, aby połączyć się bez logowania.",
   "connect.saslToggle": "Mam konto usługowe (SASL)",
   "connect.server": "Serwer",
   "connect.serverAddress": "Adres serwera",

@@ -158,7 +158,7 @@
   "connect.saslReason.unavailable": "a szerver nem támogatja a SASL-t",
   "connect.saslReason.unknown": "ismeretlen hiba",
   "connect.saslReason.wrongMechanism": "a szerver SASL-t nyújt {offered}, de nem {mechanism}",
-  "connect.saslRequiredHint": "Ellenőrizd a fióknevet és jelszót ebben a hálózat beállításain, vagy válaszd ki \"No authentication\" itt a kapcsolódásra, nem jelentkezve be.",
+  "connect.saslRequiredHint": "Ellenőrizd a fióknevet és jelszót ebben a hálózat beállításain, vagy válaszd ki \"Nincs autentikáció\" itt a kapcsolódásra, nem jelentkezve be.",
   "connect.saslToggle": "van egy szolgáltatási fiók (SASL)",
   "connect.server": "Szerver",
   "connect.serverAddress": "Szerver cím",

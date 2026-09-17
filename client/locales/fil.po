@@ -821,7 +821,7 @@ msgstr "ang server ay nagpapakita ng SASL {offered}, di {mechanism}"
 #: client/js/irc/client.ts
 msgctxt "connect.saslRequiredHint"
 msgid "Check the account name and password in this network's settings, or pick \"No authentication\" there to connect without logging in."
-msgstr "I-check ang pangalan ng account at password sa mga setting nito, o pindahin \"No authentication\" dito para makonekta walang pag-login."
+msgstr "I-check ang pangalan ng account at password sa mga setting nito, o pindahin \"Walang pag-authentikasyon\" dito para makonekta walang pag-login."
 
 #. Checkbox on the connect form: reveals the account name and password fields used to authenticate with network services (SASL).
 #: client/components/Windows/Connect.vue:207

@@ -168,7 +168,7 @@
   "connect.saslReason.unavailable": "server nezariadí SASL",
   "connect.saslReason.unknown": "neznána chyba",
   "connect.saslReason.wrongMechanism": "server ponúka SASL {offered}, nie {mechanism}",
-  "connect.saslRequiredHint": "Skontrolujte názov účtu a heslo v nastaveniach tohto sieti, alebo vyberte \"No authentication\" tam, aby ste sa pripojili bez prihlásenia.",
+  "connect.saslRequiredHint": "Skontrolujte názov účtu a heslo v nastaveniach tohto sieti, alebo vyberte \"Bez autentifikácie\" tam, aby ste sa pripojili bez prihlásenia.",
   "connect.saslToggle": "mám účet služby (SASL)",
   "connect.serverAddress": "Adresa servera",
   "connect.serverPort": "Port servera",

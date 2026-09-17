@@ -168,7 +168,7 @@
   "connect.saslReason.unavailable": "serverul nu oferă SASL",
   "connect.saslReason.unknown": "eroare necunoscută",
   "connect.saslReason.wrongMechanism": "serverul oferă SASL {offered}, nu {mechanism}",
-  "connect.saslRequiredHint": "Verifică numele contului și parola în setările acestui rețea, sau alege \"No authentication\" acolo pentru a conecta fără a te autentifica.",
+  "connect.saslRequiredHint": "Verifică numele contului și parola în setările acestui rețea, sau alege \"Fără autentificare\" acolo pentru a conecta fără a te autentifica.",
   "connect.saslToggle": "Am un cont de servicii (SASL)",
   "connect.serverAddress": "Adresa server",
   "connect.serverPort": "Portul server",
