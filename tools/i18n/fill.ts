@@ -33,7 +33,7 @@ import {existsSync, readFileSync, writeFileSync} from "node:fs";
 import {resolve} from "node:path";
 import {emptyContext, TranslateRequest} from "../../client/js/translate/engine";
 import {QWEN3_4B_ID} from "../../client/js/translate/models";
-import {nllbCode} from "../../client/js/translate/languages";
+import {languageName, nllbCode} from "../../client/js/translate/languages";
 import {promptProfileFor} from "../../client/js/translate/prompts";
 import {placementFor} from "../../client/js/translate/routes.default";
 import {placeholdersIn, protect, restoreAll} from "../../client/js/translate/spans";
@@ -223,7 +223,12 @@ async function main(): Promise<void> {
 				log: (text) => console.log(text),
 			});
 			deps.promptProfileFor = () => promptProfileFor(options.modelId);
-			llmEngine = new WebLlmEngine(deps, (code) => code);
+			// The prompt names the target language, and a bare tag is not a
+			// name: asked to translate "into uk" the model answered in
+			// English (UK), which the unchanged gate now catches but the
+			// catalog wore for a whole round. The app passes a resolver
+			// here; so does the fill.
+			llmEngine = new WebLlmEngine(deps, (code) => languageName(code, "en"));
 			llmEngine.configure(catalog);
 
 			console.log("fill: loading the converted 4B weights…");
