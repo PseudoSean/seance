@@ -1,6 +1,9 @@
 {
   "extends": "../tsconfig.base.json" /* Path to base configuration file to inherit from. */,
   "include": ["./**/*.ts"] /* The .ts tools; the client modules they import come along. */,
+  "exclude": [
+    "./i18n/fixtures/**" /* Deliberately broken inputs for tools/i18n/check.ts's own tests. */
+  ],
   "compilerOptions": {
     /* Not a referenced project: nothing is emitted, it is type-checked in place
        (`npx tsc --noEmit -p tools`) and named by .eslintrc.cjs so the type-aware

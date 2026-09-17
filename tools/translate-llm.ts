@@ -54,11 +54,17 @@ import {ModelRecord, WebLlmEngine} from "../client/js/translate/engines/webllm";
 import {
 	ChatDelta,
 	ChatRequest,
+	DTYPE,
+	DTYPES,
 	MlcLike,
+	NodeMlc,
+	ONNX_REPO,
 	WebLlmDeps,
 	asError,
 	message,
 	type Device,
+	type Dtype,
+	type Purpose,
 	nodeDeps,
 } from "./llm-node-backend";
 import {languageName} from "../client/js/translate/languages";

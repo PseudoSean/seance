@@ -24,14 +24,19 @@ import {
 	WebLlmDeps,
 } from "../client/js/translate/engines/webllm";
 
+// The engine surface the CLIs build on travels with this module, so a tool
+// imports the backend alone (tools/translate-llm.ts, tools/i18n/fill.ts).
+export type {ChatDelta, ChatRequest, MlcLike, ModelRecord, WebLlmDeps};
+
 export type Device = "cpu" | "cuda";
-type Purpose = "read" | "write";
+export type Purpose = "read" | "write";
 type Tokenizer = Awaited<ReturnType<typeof AutoTokenizer.from_pretrained>>;
 type Model = Awaited<ReturnType<typeof AutoModelForCausalLM.from_pretrained>>;
 
 /** The Hugging Face repository the MLC model id is served from here. */
-const ONNX_REPO = "onnx-community/Qwen3-1.7B-ONNX";
-const DTYPE = "q4f16";
+export const ONNX_REPO = "onnx-community/Qwen3-1.7B-ONNX";
+/** The default ONNX export (`--dtype`). */
+export const DTYPE = "q4f16";
 /** The ONNX exports transformers.js can load by name (`--dtype`). */
 export const DTYPES = ["q4f16", "fp16", "fp32", "int8", "uint8", "q4", "q8", "bnb4"] as const;
 

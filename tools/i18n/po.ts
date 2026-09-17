@@ -50,7 +50,12 @@ export function parsePo(text: string): PoFile {
 	let entry: PoEntry | null = null;
 	let lastKeyword = "";
 	let sawString = false;
-	// Where continued string chunks land until the next keyword/comment.
+	/**
+	 * Where continued string chunks land until the next keyword/comment.
+	 * `startField` hands its setter back to the loop rather than assigning
+	 * here: an assignment made inside a closure is invisible to TypeScript's
+	 * flow analysis, which then narrows every later read to `null`.
+	 */
 	let append: ((chunk: string) => void) | null = null;
 
 	const flush = () => {
@@ -72,7 +77,7 @@ export function parsePo(text: string): PoFile {
 		return entry;
 	};
 
-	const startField = (keyword: string, first: string) => {
+	const startField = (keyword: string, first: string): ((chunk: string) => void) => {
 		// msgctxt always begins an entry; anything non-msgstr after msgstr does too.
 		if (
 			(sawString && keyword === "msgctxt") ||
@@ -98,9 +103,9 @@ export function parsePo(text: string): PoFile {
 		};
 
 		set(first);
-		append = set;
 		sawString = true;
 		lastKeyword = keyword;
+		return set;
 	};
 
 	for (const raw of text.split("\n")) {
@@ -141,7 +146,7 @@ export function parsePo(text: string): PoFile {
 		);
 
 		if (keywordMatch) {
-			startField(keywordMatch[1], unquote(keywordMatch[2]));
+			append = startField(keywordMatch[1], unquote(keywordMatch[2]));
 			continue;
 		}
 
