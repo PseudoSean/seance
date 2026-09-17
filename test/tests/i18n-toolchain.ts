@@ -18,7 +18,7 @@ import {ALLOWED_UNREFERENCED, ALLOWED_DYNAMIC, checkPot} from "../../tools/i18n/
 import {POT_PATH} from "../../tools/i18n/paths";
 import {categoryIndexMap, compileLocales, Catalog, CompileResult} from "../../tools/i18n/compile";
 import {parseTargets, TARGETS_SOURCE} from "../../tools/i18n/targets";
-import {planPluralSlots} from "../../tools/i18n/plural";
+import {PLURAL_RULES, planPluralSlots, pluralEval} from "../../tools/i18n/plural";
 import {isRTL} from "../../client/js/i18n/core";
 import {pseudo} from "../../tools/i18n/pseudo";
 import {mergePo} from "../../tools/i18n/merge";
@@ -385,6 +385,22 @@ describe("i18n toolchain", () => {
 			]);
 			// One slot (ja, zh, ko, th, vi): the singular is what it holds.
 			expect(planPluralSlots(entry, 1, "0")).to.deep.equal([{index: 0, source: "msgid"}]);
+		});
+
+		it("gives every rule in the table as many slots as its expression yields", () => {
+			// The invariant compileEntry now depends on: too few slots and the
+			// map asks for an index the fill never writes, so the key is
+			// dropped however well it is translated; too many (ru said 4 for a
+			// three-branch rule) and the fill translates a slot nothing reads.
+			for (const [tag, rule] of Object.entries(PLURAL_RULES)) {
+				let highest = 0;
+
+				for (let n = 0; n <= 999; n++) {
+					highest = Math.max(highest, pluralEval(rule.expr, n));
+				}
+
+				expect(rule.nplurals, `${tag} nplurals`).to.equal(highest + 1);
+			}
 		});
 
 		it("plans nothing for a singular entry", () => {
