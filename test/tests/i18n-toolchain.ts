@@ -40,7 +40,7 @@ import {
 import {protect, restoreAll} from "../../client/js/translate/spans";
 import {scaffoldTag} from "../../tools/i18n/scaffold";
 import {sweepEntries} from "../../tools/i18n/sweep";
-import {isSuspectCatalogEntry, slotVerdict} from "../../tools/i18n/quality";
+import {isSuspectCatalogEntry, repad, slotVerdict} from "../../tools/i18n/quality";
 import {EXPECTED_SCRIPTS, OWN_SCRIPTS} from "../../tools/i18n/scripts";
 import instrument from "../../tools/i18n/instrument-loader.mjs";
 
@@ -717,6 +717,44 @@ describe("i18n toolchain", () => {
 				expect(slotVerdict("de", "OK", "OK")).to.equal(null);
 				expect(slotVerdict("de", "{count}", "{count}")).to.equal(null);
 			});
+
+			it("refuses an answer that dropped the source's own padding", () => {
+				// A msgid with a space at one end has it on purpose: it is
+				// rendered beside something else (a screen-reader prefix
+				// before a nick). Every engine trims its answer, so all 23
+				// catalogs came back with the padding gone and the two texts
+				// ran together — and nothing else noticed, because the words
+				// themselves were a fine translation.
+				expect(slotVerdict("de", "Nickname: ", "Name:")).to.equal("padding");
+				expect(
+					slotVerdict("de", " The file includes it.", "Die Datei enthält es.")
+				).to.equal("padding");
+				// Kept, and the words judged as usual.
+				expect(slotVerdict("de", "Nickname: ", "Name: ")).to.equal(null);
+				expect(slotVerdict("de", "Nickname: ", "Nickname: ")).to.equal("unchanged");
+				// Padding the source does not have is refused the same way:
+				// it would show as a gap nobody asked for.
+				expect(slotVerdict("de", "Close", " Schließen")).to.equal("padding");
+				expect(slotVerdict("de", "Close", "Schließen ")).to.equal("padding");
+				// An unpadded source is not judged on whitespace at all, and
+				// an all-whitespace slot is nobody's mistake.
+				expect(slotVerdict("de", "Close", "Schließen")).to.equal(null);
+				expect(slotVerdict("de", " ", " ")).to.equal(null);
+			});
+
+			it("re-pads a fill's answer rather than refusing it", () => {
+				// What fill.ts does before it judges: the engine trims, the
+				// source's own ends go back on, and the verdict is then about
+				// the words. Nothing is invented for a source with no padding,
+				// and an answer with nothing in it is left alone.
+				expect(repad("Nickname: ", "Name:")).to.equal("Name: ");
+				expect(repad(" It includes it.", "Es enthält es.")).to.equal(" Es enthält es.");
+				expect(repad("Close", "  Schließen ")).to.equal("Schließen");
+				expect(repad("Nickname: ", "")).to.equal("");
+				expect(slotVerdict("de", "Nickname: ", repad("Nickname: ", "Name:"))).to.equal(
+					null
+				);
+			});
 		});
 	});
 
@@ -1162,13 +1200,27 @@ describe("i18n toolchain", () => {
 				tags.filter((tag) => !(tag in EXPECTED_SCRIPTS)),
 				"tags with a .po and no EXPECTED_SCRIPTS entry"
 			).to.deep.equal([]);
-			// A target whose own script is named must also be allowed to
-			// write in it: OWN_SCRIPTS demands, EXPECTED_SCRIPTS permits, and
-			// a tag in the first and not the second would empty every entry.
-			expect(
-				Object.keys(OWN_SCRIPTS).filter((tag) => !(tag in EXPECTED_SCRIPTS)),
-				"tags demanding a script they are not allowed to write in"
-			).to.deep.equal([]);
+			// A target whose own script is demanded must be allowed to write
+			// in it, and in Latin besides: OWN_SCRIPTS says what a sentence
+			// has to contain, EXPECTED_SCRIPTS what a character may be, and a
+			// script in the first that is missing from the second would empty
+			// every entry of that catalog. Compared by the regexes themselves
+			// — the tables share their constants, so identity is the check.
+			for (const [tag, own] of Object.entries(OWN_SCRIPTS)) {
+				const allowed = EXPECTED_SCRIPTS[tag] ?? [];
+
+				for (const script of own) {
+					expect(
+						allowed.includes(script),
+						`${tag} demands ${String(script)} and is not allowed to write it`
+					).to.equal(true);
+				}
+
+				expect(
+					allowed.some((script) => script.test("Latin")),
+					`${tag} must allow Latin for brand names and {placeholder}s`
+				).to.equal(true);
+			}
 		});
 
 		it("messages.pot and the real client/ call sites agree", () => {

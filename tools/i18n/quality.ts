@@ -152,8 +152,9 @@ export function isSuspectCatalogEntry(
 
 /** Why a slot's fill cannot be kept: `isSuspectCatalogEntry`, plus the
  * {placeholder} braces the render and the compile depend on, plus an answer
- * that is its own English source. */
-export type SlotVerdict = SuspectReason | "placeholder" | "unchanged";
+ * that is its own English source, plus one that dropped the source's own
+ * leading or trailing space. */
+export type SlotVerdict = SuspectReason | "placeholder" | "unchanged" | "padding";
 
 /**
  * The text as a comparison sees it: no {placeholder}s (their content is the
@@ -196,6 +197,37 @@ export function isUnchanged(source: string, text: string): boolean {
 
 const braces = (text: string): string => (text.match(PLACEHOLDER) ?? []).sort().join("|");
 
+/** A string's own leading and trailing whitespace, as one comparable pair. */
+const padding = (text: string): string =>
+	`${/^\s*/.exec(text)![0]}|${text.trim() === "" ? "" : /\s*$/.exec(text)![0]}`;
+
+/**
+ * True when the translation dropped (or invented) the padding its English
+ * carries. A msgid with a space at one end has it on purpose -- it is read
+ * out beside something else, like the screen-reader prefix before a nick --
+ * and every engine trims its answer, so all 23 catalogs came back with the
+ * padding gone and the two texts run together. Whitespace is not copy: the
+ * translation has to carry exactly what the source does.
+ */
+export function isMispadded(source: string, text: string): boolean {
+	return padding(source) !== padding(text);
+}
+
+/**
+ * The answer with the source's own padding put back around it. Whitespace at
+ * the ends is structure, not copy -- no engine keeps it and no translator
+ * should have to -- so the fill re-pads before judging, and `isMispadded`
+ * stays the net under the catalogs nothing re-pads (a hand edit, a fill that
+ * ran before this rule).
+ */
+export function repad(source: string, text: string): string {
+	if (!text.trim()) {
+		return text;
+	}
+
+	return `${/^\s*/.exec(source)![0]}${text.trim()}${/\s*$/.exec(source)![0]}`;
+}
+
 /**
  * The one verdict the fill and the sweep both judge a filled slot by, so
  * that the fill refuses exactly what the sweep would empty: anything else
@@ -209,6 +241,10 @@ export function slotVerdict(tag: string, source: string, text: string): SlotVerd
 
 	if (braces(source) !== braces(text)) {
 		return "placeholder";
+	}
+
+	if (isMispadded(source, text)) {
+		return "padding";
 	}
 
 	if (isUnchanged(source, text)) {

@@ -236,8 +236,12 @@ export default defineComponent({
 				return fileName.value;
 			}
 
+			// One phrase with the file name in it, not a translated tail glued
+			// to a runtime value: where the separator goes is the language's
+			// business, and the old suffix key lost its leading space in every
+			// filled catalog, which ran the two together.
 			return fileName.value
-				? `${fileName.value}${t("link.clickToShowSuffix")}`
+				? t("link.clickToShowFile", {file: fileName.value})
 				: t("link.clickToShow");
 		});
 		const veilLabel = computed(() =>

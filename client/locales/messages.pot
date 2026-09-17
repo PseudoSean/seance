@@ -2287,10 +2287,10 @@ msgctxt "link.clickToShow"
 msgid "Click to show"
 msgstr ""
 
-#. Hint appended to the file name on a media preview's placeholder that has not been revealed; clicking shows the media. The middle dot is part of the copy.
+#. Hint on the placeholder of a media preview that has not been revealed, when the file name is known: clicking reveals the media. {file} is the file's own name, shown verbatim — never translate it. The middle dot separates the two; move or replace it as the language wants.
 #: client/components/LinkPreview.vue
-msgctxt "link.clickToShowSuffix"
-msgid " · Click to show"
+msgctxt "link.clickToShowFile"
+msgid "{file} · Click to show"
 msgstr ""
 
 #. aria-label of the small toggle button on a message link preview while the preview is expanded; clicking folds it back to a plain link.

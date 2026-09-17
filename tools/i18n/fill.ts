@@ -7,7 +7,8 @@
 // (both CPU seq2seq, fast), and the rest to the GPU LLM (which needs a
 // converted, CUDA-safe model dir — tools/translate-eval/norm-fp32.py).
 //
-//   npx tsx tools/i18n/fill.ts [--langs de,fr,...] [--engine llm|nllb|opus]
+//   npx tsx tools/i18n/fill.ts [--langs de,fr,...] [--keys a.b,c.d]
+//       [--engine llm|nllb|opus]
 //       [--force-engine llm|nllb|opus] [--repo <converted model dir>]
 //       [--model-id Qwen3-4B-q4f16_1-MLC] [--device cuda|cpu] [--batch 20]
 //       [--limit N] [--dry]
@@ -41,7 +42,7 @@ import {parseBatchedOutput} from "../../client/js/translate/prompt";
 import {WebLlmEngine} from "../../client/js/translate/engines/webllm";
 import {parsePo, PoEntry, serializePo} from "./po";
 import {PLURAL_RULES, parsePluralForms, planPluralSlots} from "./plural";
-import {slotVerdict} from "./quality";
+import {repad, slotVerdict} from "./quality";
 import {NAME_TO_TAG, TARGETS_SOURCE} from "./targets";
 
 type EngineName = "llm" | "nllb" | "opus";
@@ -147,6 +148,8 @@ interface Options {
 	engine: EngineName | null;
 	/** Every language in the run goes to this engine, route table or not. */
 	forceEngine: EngineName | null;
+	/** Only these msgctxt keys, when given. */
+	keys: Set<string> | null;
 	repo: string | null;
 	modelId: string;
 	device: "cpu" | "cuda";
@@ -160,6 +163,7 @@ function parseArgs(argv: string[]): Options {
 		langs: null,
 		engine: null,
 		forceEngine: null,
+		keys: null,
 		repo: null,
 		modelId: QWEN3_4B_ID,
 		device: "cuda",
@@ -178,6 +182,14 @@ function parseArgs(argv: string[]): Options {
 				.filter(Boolean);
 		} else if (arg === "--engine") {
 			options.engine = argv[++i] as EngineName;
+		} else if (arg === "--keys") {
+			const value = argv[++i];
+
+			if (!value) {
+				throw new Error("fill: --keys needs a comma-separated list of msgctxt keys");
+			}
+
+			options.keys = new Set(value.split(",").map((key) => key.trim()));
 		} else if (arg === "--force-engine") {
 			options.forceEngine = argv[++i] as EngineName;
 		} else if (arg === "--repo") {
@@ -305,6 +317,14 @@ async function main(): Promise<void> {
 			// it); translating "" only invents text, so it never enters the
 			// todo.
 			if (!entry.msgid) {
+				continue;
+			}
+
+			// --keys narrows a run to the keys named: a round that adds or
+			// rewords three msgids should not re-ask the model for every slot
+			// an earlier sweep left empty (there are hundreds, and they were
+			// left empty because the answers were refused).
+			if (options.keys && !options.keys.has(entry.msgctxt ?? "")) {
 				continue;
 			}
 
@@ -459,17 +479,22 @@ async function main(): Promise<void> {
 					// refuses exactly what the sweep would empty: a renamed
 					// {placeholder}, a loop, an essay where a label was asked
 					// for, an answer in the wrong writing system.
-					const verdict = slotVerdict(tag, unit.text, restored);
+					// Whitespace at the ends belongs to the source, not to
+					// the answer: every engine trims, so a msgid that carries
+					// a space (a screen-reader prefix read before a nick) gets
+					// it put back rather than refused.
+					const padded = repad(unit.text, restored);
+					const verdict = slotVerdict(tag, unit.text, padded);
 
 					if (verdict) {
 						failed += 1;
 						console.warn(
-							`fill: ${tag} "${unit.text}" ${verdict} (${restored.slice(0, 40)})`
+							`fill: ${tag} "${unit.text}" ${verdict} (${padded.slice(0, 40)})`
 						);
 						return;
 					}
 
-					unit.entry.msgstr[unit.slot] = restored;
+					unit.entry.msgstr[unit.slot] = padded;
 					filled += 1;
 				});
 
