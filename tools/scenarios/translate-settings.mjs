@@ -217,6 +217,36 @@ export default async function run(page) {
 	page.check("4B stored", (await page.evaluate(STORED("translateLlmModel"))) === LARGE);
 	await page.screenshot("translation-llm-4b");
 
+	// Automatic is a choice that can be come back to: the picker is bound to
+	// the raw setting, so picking it stores "" and stays there, while the
+	// "in use" tag goes on naming what "" resolves to on this device.
+	// Bound to the resolved choice instead, the select would snap straight
+	// back to the model it resolves to and Automatic could never be seen.
+	const picked = `document.querySelector('select[name="translateLlmModel"] option:checked').value`;
+
+	await page.evaluate(
+		`(() => {
+			const el = document.querySelector('select[name="translateLlmModel"]');
+			el.value = "";
+			el.dispatchEvent(new Event("change", {bubbles: true}));
+		})()`
+	);
+	page.check("Automatic stored", (await page.evaluate(STORED("translateLlmModel"))) === "");
+	page.check("the picker stays on Automatic", (await page.evaluate(picked)) === "");
+	// Which model "" resolves to is the router's business (and the subject
+	// of its own finding); what this pins is that Automatic still names one,
+	// so the reader is never left without an answer to "what runs, then?".
+	const inUseUnderAuto = await page.evaluate(IN_USE);
+
+	page.check(
+		`Automatic still names the model it runs (${inUseUnderAuto || "none"})`,
+		inUseUnderAuto === SMALL || inUseUnderAuto === LARGE
+	);
+
+	// Back to the explicit pick: the reload assertions below are about a
+	// stored choice surviving a boot.
+	await chooseLlm(page, LARGE);
+
 	// No page.reload in the harness: navigate back to the boot URL (the app
 	// reboots and, with no saved network, lands on the connect page again)
 	// and re-open Settings → Translation the way the scenario did the first time.

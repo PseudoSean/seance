@@ -5,7 +5,7 @@ import {setMuteStatus} from "../mute";
 import eventbus from "../eventbus";
 import type {ClientChan, ClientNetwork, ClientUser} from "../types";
 import {switchToChannel} from "../router";
-import {requestTranslationPanel} from "../translate/reader";
+import {requestTranslationPanel, translationAvailable} from "../translate/reader";
 import {TypedStore} from "../store";
 import useCloseChannel from "../hooks/use-close-channel";
 import {ChanType} from "../../../shared/types/chan";
@@ -202,18 +202,23 @@ export function generateChannelContextMenu(
 			},
 		});
 
-		items.push({
-			label: t("translate.menu.panel"),
-			type: "item",
-			class: "translate",
-			action() {
-				// The panel belongs to the open conversation, so the menu opens
-				// the channel first and leaves the ask in the store: Chat.vue
-				// takes it once it shows that channel.
-				switchToChannel(channel);
-				requestTranslationPanel(channel);
-			},
-		});
+		// Only where translation can actually run: a deploy with the feature
+		// off, or a device whose probe found neither a GPU nor WASM SIMD,
+		// offers no panel to open (translate/reader.ts translationAvailable).
+		if (translationAvailable()) {
+			items.push({
+				label: t("translate.menu.panel"),
+				type: "item",
+				class: "translate",
+				action() {
+					// The panel belongs to the open conversation, so the menu
+					// opens the channel first and leaves the ask in the store:
+					// Chat.vue takes it once it shows that channel.
+					switchToChannel(channel);
+					requestTranslationPanel(channel);
+				},
+			});
+		}
 	}
 
 	const humanFriendlyChanTypeMap: Record<string, string> = {

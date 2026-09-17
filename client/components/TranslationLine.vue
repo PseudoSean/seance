@@ -223,7 +223,31 @@ export default defineComponent({
 			);
 		});
 
-		const openMenu = (event: MouseEvent) => {
+		// The context menu positions itself at the pointer, and a keyboard
+		// activation (Enter or Space on the chip) carries none — clientX and
+		// clientY are 0, so the menu opened in the top-left corner of the
+		// window, nowhere near the line it belongs to. Every way in gets the
+		// same anchor instead: under the chip that was pressed, whichever of
+		// the three buttons that is (only one of them carries the `chip`
+		// ref, so the rect comes off the event's own target).
+		const anchorOf = (event: MouseEvent): MouseEvent => {
+			const target = event.currentTarget as HTMLElement | null;
+
+			if (!target) {
+				return event;
+			}
+
+			const rect = target.getBoundingClientRect();
+
+			return new MouseEvent("click", {
+				clientX: rect.left,
+				clientY: rect.bottom,
+				bubbles: false,
+			});
+		};
+
+		const openMenu = (mouseEvent: MouseEvent) => {
+			const event = anchorOf(mouseEvent);
 			const sources = [
 				...alternatives.value.map((code) => ({
 					label: t("translate.menu.retranslateFrom", {language: nameOf(code)}),

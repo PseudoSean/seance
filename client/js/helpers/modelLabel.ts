@@ -8,15 +8,20 @@
 import {t} from "../i18n/core";
 import type {ModelRef} from "../translate/engine";
 import {languageName} from "../translate/languages";
+import {readingLanguage} from "../translate/reader";
 import type {LoadNote} from "../translate/service";
 
 /** The model's full name, as Settings lists it. */
 export function modelLabel(ref: ModelRef): string {
 	switch (ref.label.kind) {
 		case "opus":
+			// An OPUS-MT model is named by the pair it translates, and the
+			// pair is named in the language its reader reads — the same
+			// languageName(code, readingLanguage()) every other translation
+			// surface uses, not languageName()'s English default.
 			return t("translate.model.opus", {
-				from: languageName(ref.label.from),
-				to: languageName(ref.label.to),
+				from: languageName(ref.label.from, readingLanguage()),
+				to: languageName(ref.label.to, readingLanguage()),
 			});
 		case "nllb":
 			return t("translate.model.nllb");

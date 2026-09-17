@@ -5419,12 +5419,6 @@ msgid "Retry the translation"
 msgstr ""
 
 #: client/components/Settings/Translation.vue
-#. The first option of the language picker in Settings → Translation: the browser's own language is used. {language} is that language's name.
-msgctxt "translate.settings.automatic"
-msgid "Automatic — {language} (follows your browser)"
-msgstr ""
-
-#: client/components/Settings/Translation.vue
 #. Shown in place of the Translation settings when the site's operator has disabled the feature.
 msgctxt "translate.settings.disabled"
 msgid "Translation is turned off in this deployment."

@@ -74,11 +74,15 @@
 				✕
 			</button>
 		</div>
+		<!-- A translation streams in token by token, and every token is a
+		     patch of this region: announced live, a screen reader would read
+		     the strip out again on each one. It stays quiet while it streams
+		     and announces itself once, whole, when it is done or has failed. -->
 		<div
 			v-if="outgoing"
 			:class="['translate-bar', {failed: outgoing.status === 'failed'}]"
 			role="status"
-			aria-live="polite"
+			:aria-live="outgoing.status === 'pending' ? 'off' : 'polite'"
 		>
 			<div class="translate-bar-row">
 				<span class="translate-bar-chip" :title="outgoingChipTitle">{{

@@ -890,7 +890,6 @@ export const STATIC_CALL_SITES = new Set<string>([
 	"translate.reason.degenerate",
 	"translate.reason.narration",
 	"translate.retry",
-	"translate.settings.automatic",
 	"translate.settings.disabled",
 	"translate.settings.gpuAutomatic",
 	"translate.settings.gpuModel",

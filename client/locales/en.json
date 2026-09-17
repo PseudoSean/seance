@@ -939,7 +939,6 @@
   "translate.reason.degenerate": "the answer was symbol garbage",
   "translate.reason.narration": "talked about the request instead of translating",
   "translate.retry": "Retry the translation",
-  "translate.settings.automatic": "Automatic — {language} (follows your browser)",
   "translate.settings.disabled": "Translation is turned off in this deployment.",
   "translate.settings.gpuAutomatic": "Automatic — best for this device",
   "translate.settings.gpuModel": "GPU model",

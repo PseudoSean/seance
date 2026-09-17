@@ -8,12 +8,12 @@
 			<div class="translate-hint">{{ t("translate.settings.intro") }}</div>
 			<label class="opt translate-target">
 				<span>{{ t("translate.settings.languageLabel") }}</span>
-				<select name="locale" :value="store.state.settings.locale">
-					<option value="auto">{{ automaticLabel }}</option>
-					<option v-for="code in languages" :key="code" :value="code">
-						{{ name(code) }}
-					</option>
-				</select>
+				<!-- The one language control the whole app uses (the sidebar
+				     globe renders the same component): one list of codes, one
+				     "Automatic" label. `name` is not a prop, so it falls
+				     through onto the <select> and the settings container's
+				     change handler stores it like any other field. -->
+				<LanguageSelect name="locale" :model-value="store.state.settings.locale" />
 			</label>
 			<div class="translate-hint">{{ t("translate.settings.languageHint") }}</div>
 			<div
@@ -97,7 +97,11 @@
 			</label>
 			<label class="opt translate-llm-model">
 				<span>{{ t("translate.settings.gpuModel") }}</span>
-				<select name="translateLlmModel" :value="selectedLlm.id">
+				<!-- The raw setting, not the resolved choice: "" is Automatic, and
+					     binding the resolved id would show the deploy's default as
+					     an explicit pick that Automatic could never win back. The
+					     "in use" tag below names what "" resolves to. -->
+				<select name="translateLlmModel" :value="store.state.settings.translateLlmModel">
 					<option value="">{{ t("translate.settings.gpuAutomatic") }}</option>
 					<option v-for="choice in llmChoices" :key="choice.id" :value="choice.id">
 						{{
@@ -167,11 +171,11 @@
 
 .translate-target select,
 .translate-llm-model select {
-	margin-left: 0.5rem;
+	margin-inline-start: 0.5rem;
 }
 
 .translate-model-in-use {
-	margin-left: 0.5rem;
+	margin-inline-start: 0.5rem;
 	padding: 0 0.375rem;
 	border-radius: 0.25rem;
 	font-size: 0.85em;
@@ -282,7 +286,6 @@
 <script lang="ts">
 import {computed, defineComponent, onMounted, ref, toRaw} from "vue";
 import {useI18n} from "../../js/i18n";
-import {collator} from "../../js/i18n/collation";
 import friendlysize from "../../js/helpers/friendlysize";
 import {modelLabel} from "../../js/helpers/modelLabel";
 import {useStore} from "../../js/store";
@@ -290,17 +293,14 @@ import {translateService} from "../../js/translate";
 import type {ModelRef} from "../../js/translate/engine";
 import {llmChoice, llmName} from "../../js/translate/models";
 import {isLimitedLanguage} from "../../js/translate/routes.default";
-import {
-	SUPPORTED_LANGUAGES,
-	browserLanguage,
-	languageOptionLabel,
-} from "../../js/translate/languages";
 import {readingLanguage} from "../../js/translate/reader";
 import type {CapabilityReason} from "../../js/translate/capability";
 import type {ModelView} from "../../js/translate/service";
+import LanguageSelect from "../LanguageSelect.vue";
 
 export default defineComponent({
 	name: "TranslationSettings",
+	components: {LanguageSelect},
 	setup() {
 		const {t} = useI18n();
 		const store = useStore();
@@ -308,20 +308,6 @@ export default defineComponent({
 		const enabled = service.enabled;
 		const models = computed(() => store.state.translation.models);
 		const capability = computed(() => store.state.translation.capability);
-		const name = (code: string) => languageOptionLabel(code);
-		// Both the names and their order follow the active locale, so the
-		// list is a computed: a locale change re-sorts it (i18n/collation.ts).
-		const languages = computed(() =>
-			[...SUPPORTED_LANGUAGES].sort((a, b) => collator().compare(name(a), name(b)))
-		);
-		// The Automatic option names the browser's language: what a new user
-		// sees selected is the language their browser asked for. A computed,
-		// so a locale change in this very tab rewrites it.
-		const automaticLabel = computed(() =>
-			t("translate.settings.automatic", {
-				language: name(browserLanguage(navigator.language)),
-			})
-		);
 		// The reading language as it stands: the interface's (one control —
 		// reactivity rides on the store read and the i18n ref the helper reads).
 		const effectiveReading = computed(() => readingLanguage());
@@ -353,9 +339,14 @@ export default defineComponent({
 		const size = (bytes: number) => friendlysize(bytes);
 
 		// Why the GPU tier is out of reach, one whole phrase per code
-		// (translate/capability.ts is Vue-free and reports codes).
-		const reasonText = (reason: CapabilityReason) => {
+		// (translate/capability.ts is Vue-free and reports codes). Every code
+		// has a case of its own and the default is an exhaustiveness check:
+		// a reason added to CapabilityReason without a phrase here is a
+		// compile error, not a silent "no WebGPU".
+		const reasonText = (reason: CapabilityReason): string => {
 			switch (reason) {
+				case "NO_WEBGPU":
+					return t("translate.capability.reason.noWebgpu");
 				case "INSECURE_ORIGIN":
 					return t("translate.capability.reason.insecureOrigin");
 				case "NO_ADAPTER":
@@ -368,8 +359,12 @@ export default defineComponent({
 					return t("translate.capability.reason.noWasmSimd");
 				case "PROBE_FAILED":
 					return t("translate.capability.reason.probeFailed");
-				default:
-					return t("translate.capability.reason.noWebgpu");
+
+				default: {
+					const unhandled: never = reason;
+
+					return unhandled;
+				}
 			}
 		};
 
@@ -428,16 +423,13 @@ export default defineComponent({
 			enabled,
 			models,
 			capability,
-			languages,
 			limited,
-			automaticLabel,
 			effectiveReading,
 			llmChoices,
 			selectedLlm,
 			llmName,
 			loadError,
 			problem,
-			name,
 			size,
 			stateLabel,
 			allowed,
