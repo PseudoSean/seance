@@ -994,13 +994,13 @@ msgstr "код {code}"
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.couldNotConnect"
 msgid "Could not connect to {url}{error}."
-msgstr "Не вдалося пі podключитися до {url}{error}."
+msgstr ""
 
 #. Headline when a network the client is dialling never opened and the retry schedule is standing down (the browser refused or could not reach the address). {url} is the WebSocket URL that was dialled; {error} is the browser's error text in parentheses, or empty.
 #: client/js/irc/disconnect.ts:78
 msgctxt "disconnect.couldNotConnectNotReconnecting"
 msgid "Could not connect to {url}{error}. Not reconnecting."
-msgstr "Не вдалося пі podключитися до {url}{error}. Не відновлюється."
+msgstr ""
 
 #. Connection-failure report once the network was registered. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
 #: client/js/irc/disconnect.ts
@@ -1571,7 +1571,7 @@ msgstr "відповідь на спеціальну статтю Вікіпед
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcpTitle"
 msgid "Client-to-client protocol"
-msgstr "Протокол клієнт-кlient"
+msgstr ""
 
 #. Start of the /deop command description in the help window; a code fragment with the -o mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1769,7 +1769,7 @@ msgstr "Шукати повідомлення в поточному каналі
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.slap"
 msgid "Slap someone in the current channel with a trout!"
-msgstr "Захопити когось в поточному каналі з трout!"
+msgstr ""
 
 #. Start of the /topic command description in the help window; a code fragment with the newtopic parameter follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -3023,7 +3023,7 @@ msgstr "Це повідомлення відображається лише дл
 #: client/components/MessageTypes/ctcp_request.vue
 msgctxt "msg.ctcpTitle"
 msgid "Client-to-client protocol"
-msgstr "Протокол клієнт-кlient"
+msgstr ""
 
 #. System message announcing a channel's modes (324). The mode string in <b> is protocol text and stays verbatim.
 #: client/components/MessageTypes/mode_channel.vue
@@ -3168,25 +3168,25 @@ msgstr "помилка {code}"
 #: client/js/irc/handlers/persistence.ts
 msgctxt "persistence.echo"
 msgid "Persistence: {params}"
-msgstr "ПERSISTENCE: {params}"
+msgstr ""
 
 #. Lobby status line confirming the state change the user asked for. {state} is the server's ON/OFF token, verbatim.
 #: client/js/irc/handlers/persistence.ts
 msgctxt "persistence.set"
 msgid "Session persistence set to: {state}"
-msgstr "ПERSISTENCE SESIY: {state}"
+msgstr ""
 
 #. Lobby status line reporting the bouncer session's state. {state} is the server's ON/OFF token, verbatim.
 #: client/js/irc/handlers/persistence.ts
 msgctxt "persistence.status"
 msgid "Session persistence (the server keeps you in your channels while disconnected): {state}"
-msgstr "ПERSISTENCE SESIY (сервер зберігає вас у ваших каналах під час відключення): {state}"
+msgstr ""
 
 #. Lobby status line reporting the bouncer session's state when the client's own persistence setting differs from what the server reports. {state} is the server's ON/OFF token, verbatim; {setting} is the client setting's value.
 #: client/js/irc/handlers/persistence.ts:89
 msgctxt "persistence.statusClientSetting"
 msgid "Session persistence (the server keeps you in your channels while disconnected): {state} (your setting: {setting})"
-msgstr "ПERSISTENCE СЕСІЇ (сервер зберігає вас у каналах, коли ви відключились): {state} (ваша налаштування: {setting})"
+msgstr ""
 
 #. Body of the push opt-in prompt; explains what allowing push does and that it is chosen per network.
 #: client/components/PushPrompt.vue
@@ -3854,19 +3854,19 @@ msgstr "Деньове повідомлення"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.nickPostfix"
 msgid "Nick autocomplete postfix"
-msgstr "Апостроф для автocompletінгу nick"
+msgstr ""
 
 #. Tooltip on the nick autocomplete postfix field in Settings > Appearance; explains what the field sets.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.nickPostfixHelp"
 msgid "Nick autocomplete postfix (for example a comma)"
-msgstr "Апостроф для автocompletінгу nick (наприклад, кома)"
+msgstr ""
 
 #. Placeholder of the nick autocomplete postfix field in Settings > Appearance; keep the example punctuation (the quoted comma) as it shows what would be typed.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.nickPostfixPlaceholder"
 msgid "Nick autocomplete postfix (e.g. ', ')"
-msgstr "Апостроф для автocompletінгу nick (наприклад, ', ')"
+msgstr ""
 
 #. Third line of the sample chat under the font-size slider in Settings → Appearance: the extreme steps are intentionally unusable.
 #: client/components/Settings/Appearance.vue:486
@@ -3914,7 +3914,7 @@ msgstr "Повідомлення про стан"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.statusHelp"
 msgid "Joins, parts, quits, kicks, nick changes, and mode changes"
-msgstr "Пřисоюження, відкликання, відступ, видалення, зміна псевдоніма та зміна режиму"
+msgstr ""
 
 #. Radio option in Settings > Appearance; joins, parts and similar service notices are not shown at all.
 #: client/components/Settings/Appearance.vue
@@ -4397,7 +4397,7 @@ msgstr "Найпростіший — відновіть його на місці
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.noHttps"
 msgid "Notifications are only supported over HTTPS connections."
-msgstr "Повідомлення підтримуються лише через HTTPс"
+msgstr ""
 
 #. Checkbox in Settings > Notifications; when ticked, every chat message notifies, not only mentions and highlights.
 #: client/components/Settings/Notifications.vue

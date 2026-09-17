@@ -4347,7 +4347,7 @@ msgstr "Benutzerdefinierte Highlights"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightsHelp"
 msgid "If a message contains any of these comma-separated expressions, it will trigger a highlight."
-msgstr "Wenn eine Nachricht any of these comma-separated expressions enthält, wird sie hervorgehoben."
+msgstr "Wenn eine Nachricht einen dieser durch Kommas getrennten Ausdrücke enthält, wird sie hervorgehoben."
 
 #. Warning line in Settings > Notifications, shown on an iPhone browsing the app without installing it; the parenthesized phrase is the iOS share menu's action.
 #: client/components/Settings/Notifications.vue

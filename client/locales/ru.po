@@ -315,7 +315,7 @@ msgstr "Вы можете только присоединиться к кана�
 #: client/js/irc/commands/ctcp.ts
 msgctxt "cmd.usageCtcp"
 msgid "Usage: /ctcp <nick> <ctcp_type>"
-msgstr "Использование: /ХХIVcp < ник> <ХХНp_тип>е"
+msgstr "Использование: /ctcp <ник> <ctcp_type>"
 
 #. Usage line of /ignore and /unignore when no target is given. {cmd} is the command as typed, user input, verbatim; the rest is command syntax.
 #: client/js/irc/commands/ignore.ts
@@ -1511,7 +1511,7 @@ msgstr "Запретхожих"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.banB"
 msgid ") a user from the current channel. This can be a nickname or a hostmask."
-msgstr ") Пользователя из текущего канала. Это может быть нickname или hostmask."
+msgstr ") пользователя из текущего канала. Это может быть ник или маска хоста."
 
 #. Description of the /banlist command in the help window.
 #: client/components/Windows/Help.vue
@@ -1541,7 +1541,7 @@ msgstr "Подключиться к новой IRC сети. Если"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.connectB"
 msgid "starts with a"
-msgstr "начинается с aхожих не не"
+msgstr ""
 
 #. End of the /connect command description in the help window, after the plus-sign code fragment; TLS stays verbatim.
 #: client/components/Windows/Help.vue
@@ -2222,7 +2222,7 @@ msgstr "Легкий серый"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorMagenta"
 msgid "Magenta"
-msgstr "Мажентa"
+msgstr "Пурпурный"
 
 #. Name of the mIRC colour with code 07 (orange), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92

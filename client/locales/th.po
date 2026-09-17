@@ -303,7 +303,7 @@ msgstr "คุณไม่สามารถเปิดหน้าต่าง
 #: client/js/irc/commands/react.ts
 msgctxt "cmd.reactNoTarget"
 msgid "No message to react to: none here carries a msgid."
-msgstr "ไม่มีข้อความที่ต้องตอบ: ไม่มีข้อความใดที่มีmsgid"
+msgstr ""
 
 #. Error when /rejoin is typed outside a channel window.
 #: client/js/irc/commands/rejoin.ts
@@ -1828,7 +1828,7 @@ msgstr "เปรียบเทียบ"
 #: client/components/Windows/Help.vue
 msgctxt "help.documentation"
 msgid "Documentation"
-msgstr "เอกสารation"
+msgstr ""
 
 #. Shared first part of the descriptions of the Ctrl+B, Ctrl+U, Ctrl+I, Ctrl+S and Ctrl+M formatting shortcuts in the help window; the formatted example word (bold, underlined, italics, struck through, monospaced) follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1864,7 +1864,7 @@ msgstr "เพื่อเลือกสีที่ต้องการ ห�
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.colorP2a"
 msgid "Background color can be specified by putting a comma and another integer in the range"
-msgstr "สีพื้นหลังสามารถระบุได้โดยการใส่เครื่องหมายcommaและจำนวนเต็มในช่วง"
+msgstr ""
 
 #. Continuation of the second paragraph of the Ctrl+K description in the help window's formatting section, after the code fragment with the numeric range.
 #: client/components/Windows/Help.vue
@@ -2063,7 +2063,7 @@ msgstr "กระตุ้นการเปิดตัวการดูช่
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.toggleMarkdown"
 msgid "Toggle Markdown rendering."
-msgstr "กระตุ้นการเรnder Markdown"
+msgstr ""
 
 #. Description of the Alt+M keyboard shortcut in the help window; it opens or closes the popup listing messages that mention you.
 #: client/components/Windows/Help.vue

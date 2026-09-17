@@ -737,7 +737,7 @@
   "settings.notifications.highlightExceptionsHelp": "Wenn eine Nachricht einen dieser durch Komma getrennten Ausdrücke enthält, wird sie kein Highlight auslösen, auch wenn sie Ihren Spitznamen oder Ausdrücke enthält, die in benutzerdefinierten Highlights definiert sind.",
   "settings.notifications.highlightHelp": "Nachrichten, die Sie erwähnen oder mit einem benutzerdefinierten Highlight übereinstimmen, erhalten einen farbigen Hintergrund und einen Rand im Kanal.",
   "settings.notifications.highlights": "Benutzerdefinierte Highlights",
-  "settings.notifications.highlightsHelp": "Wenn eine Nachricht any of these comma-separated expressions enthält, wird sie hervorgehoben.",
+  "settings.notifications.highlightsHelp": "Wenn eine Nachricht einen dieser durch Kommas getrennten Ausdrücke enthält, wird sie hervorgehoben.",
   "settings.notifications.iosNotInstalled": "Auf iOS sind Push-Benachrichtigungen nur nach der Installation der App auf dem Home Screen verfügbar (Teilen → Zu Home Screen hinzufügen).",
   "settings.notifications.keyChangeAsk": "Vor der Verlängerung des Abonnements fragen",
   "settings.notifications.keyChangeIgnore": "Verdächtige — lassen Sie es in Ruhe; Push von diesem Server bleibt aus, bis Sie von den Netzwerkeinstellungen erneuern",

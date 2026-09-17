@@ -153,14 +153,16 @@ export function isSuspectCatalogEntry(
 /** Why a slot's fill cannot be kept: `isSuspectCatalogEntry`, plus the
  * {placeholder} braces the render and the compile depend on, plus an answer
  * that is its own English source, one that dropped the source's own leading
- * or trailing space, one carrying a machine-translation artifact, and one
- * that came back with fewer sentences than it was given. */
+ * or trailing space, one carrying a machine-translation artifact, one with a
+ * word written half in one script and half in another, and one that came back
+ * with fewer sentences than it was given. */
 export type SlotVerdict =
 	| SuspectReason
 	| "placeholder"
 	| "unchanged"
 	| "padding"
 	| "artifact"
+	| "mixed-script"
 	| "sentences";
 
 /**
@@ -260,21 +262,65 @@ const ARTIFACT_TOKENS = /_BAR_|<\/?s>|<unk>|<pad>|▁|[♪♫♬]/u;
 const ENTITY = /&(?:quot|amp|lt|gt|apos|nbsp|#\d+);/gi;
 
 /**
- * True when the answer carries a machine-translation artifact its English
- * never did. 22 ru entries shipped one — `…подключения._`,
- * `…каналов._BAR_`, `♫ Aliases.ий` — and every other gate found them
- * well-formed: the length is right, the script is right, the placeholders
- * match.
- *
- * A doubled full stop is one of these too (`doublesTerminator`).
- *
- * The stray `_` and `|` are the delicate half. An underscore BETWEEN two
- * alphanumerics is snake_case, and an underscore the source itself carries
- * is copy (two msgids name the character: "letters, digits, _ and -"), so
- * the rule fires only on a character the English has nowhere and that is
- * not sitting inside a word — the `_` glued onto the end of a sentence, or
- * onto the front of the English the model gave up translating.
+ * The alphabetic scripts a single word is judged across. A letter belongs to
+ * exactly one of them in practice, so a word touching two of them is half in
+ * one language and half in another.
  */
+const WORD_SCRIPTS: RegExp[] = [
+	/\p{Script_Extensions=Latin}/u,
+	/\p{Script_Extensions=Cyrillic}/u,
+	/\p{Script_Extensions=Greek}/u,
+	/\p{Script_Extensions=Arabic}/u,
+	/\p{Script_Extensions=Hebrew}/u,
+	/\p{Script_Extensions=Thai}/u,
+	/\p{Script_Extensions=Devanagari}/u,
+	/\p{Script_Extensions=Armenian}/u,
+	/\p{Script_Extensions=Georgian}/u,
+];
+
+/**
+ * Chinese, Japanese and Korean run their scripts together without spaces, so
+ * a "word" there is a whole clause and legitimately holds Han, Hiragana,
+ * Katakana, Hangul and a Latin brand name at once. Nothing in such a run is
+ * judged by the mixed-script rule.
+ */
+const UNSEGMENTED =
+	/[\p{Script_Extensions=Han}\p{Script_Extensions=Hiragana}\p{Script_Extensions=Katakana}\p{Script_Extensions=Hangul}]/u;
+
+/**
+ * True when one WORD of the answer is written in two scripts at once. ru came
+ * back with `нickname` — a Cyrillic н glued to the English word the model gave
+ * up translating — and nothing saw it: the answer is otherwise Cyrillic, so
+ * the script rules pass, and the English is not the whole text, so the echo
+ * rule passes.
+ *
+ * A whole Latin word inside Cyrillic prose is how every catalog writes a
+ * protocol word or a brand name, so the rule is per word, and a hyphen, an
+ * apostrophe or a {placeholder} ends a word like any other separator
+ * (`IRC-сеть` is two words, not one mixed one).
+ */
+export function hasMixedScriptWord(text: string): boolean {
+	for (const word of text.replace(PLACEHOLDER, " ").split(/[^\p{L}\p{M}\p{N}]+/u)) {
+		if (!word || UNSEGMENTED.test(word)) {
+			continue;
+		}
+
+		let seen = 0;
+
+		for (const script of WORD_SCRIPTS) {
+			if (script.test(word)) {
+				seen += 1;
+			}
+		}
+
+		if (seen > 1) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 /**
  * True when the answer padded the end of a sentence the source had already
  * finished: ru came back with `…в этом браузере..` and `…сеть IRC...` for
@@ -290,6 +336,22 @@ function doublesTerminator(source: string, text: string): boolean {
 	return run(source) === 1 && run(text) >= 2;
 }
 
+/**
+ * True when the answer carries a machine-translation artifact its English
+ * never did. 22 ru entries shipped one — `…подключения._`,
+ * `…каналов._BAR_`, `♫ Aliases.ий` — and every other gate found them
+ * well-formed: the length is right, the script is right, the placeholders
+ * match.
+ *
+ * A doubled full stop is one of these too (`doublesTerminator`).
+ *
+ * The stray `_` and `|` are the delicate half. An underscore BETWEEN two
+ * alphanumerics is snake_case, and an underscore the source itself carries
+ * is copy (two msgids name the character: "letters, digits, _ and -"), so
+ * the rule fires only on a character the English has nowhere and that is
+ * not sitting inside a word — the `_` glued onto the end of a sentence, or
+ * onto the front of the English the model gave up translating.
+ */
 export function hasMtArtifact(source: string, text: string): boolean {
 	if (ARTIFACT_TOKENS.test(text)) {
 		return true;
@@ -400,6 +462,10 @@ export function slotVerdict(tag: string, source: string, text: string): SlotVerd
 
 	if (hasMtArtifact(source, text)) {
 		return "artifact";
+	}
+
+	if (hasMixedScriptWord(text)) {
+		return "mixed-script";
 	}
 
 	if (isUnchanged(source, text)) {

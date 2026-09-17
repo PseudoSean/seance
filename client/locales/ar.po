@@ -130,7 +130,7 @@ msgstr "تحديد موضوع القناة"
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.added"
 msgid "Alias /{name} added."
-msgstr "تم إضافة الاسم الابreviated /{name}."
+msgstr ""
 
 #. Error when an /alias name is invalid. {max} is the length limit, a number.
 #: client/js/irc/commands/alias.ts
@@ -142,7 +142,7 @@ msgstr "أسماء الابراج تتكون من الحروف والارقام 
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.missing"
 msgid "No alias /{name}. /alias {name} <commands> creates it."
-msgstr "لا يوجد اسم ابreviated /{name}. يُنشئ /alias {name} <commands> له."
+msgstr ""
 
 #. Reply to a bare /alias when none are defined; the '/alias <name> <commands>' part is command syntax and stays verbatim.
 #: client/js/irc/commands/alias.ts
@@ -154,7 +154,7 @@ msgstr "لا توجد أسماء ابراج. يُنشئ /alias <name> <commands>
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.tooLong"
 msgid "That alias is too long ({length} of at most {max} characters)."
-msgstr "هذا الاسم الابreviated طويل جدًا ({length} من أقصى {max} رمز)."
+msgstr ""
 
 #. Error when a new alias would exceed the count limit. {max} is the limit, a number; 'Settings → Aliases' names the settings tab where aliases are edited.
 #: client/js/irc/commands/alias.ts
@@ -886,7 +886,7 @@ msgstr "عنوان الخدمة"
 #: client/components/Windows/Connect.vue:156
 msgctxt "connect.serverPort"
 msgid "Server port"
-msgstr "cổة الخدمة"
+msgstr ""
 
 #. Intro line above the sign-in form; intentionally empty by default, fill only if the deploy wants one.
 #: client/js/branding.ts
@@ -910,13 +910,13 @@ msgstr "تسجيل الدخول"
 #: client/js/irc/client.ts
 msgctxt "connect.stsReconnect"
 msgid "Server requires a secure connection (STS): reconnecting on port {port}…"
-msgstr "يتطلب الخدمة اتصال آمن (STS): إعادة الاتصال على cổة {port}…"
+msgstr ""
 
 #. Lobby status line when the server's strict-transport-security policy upgrades a plain connection to TLS. {port} is the new TLS port.
 #: client/js/irc/client.ts
 msgctxt "connect.stsUpgrade"
 msgid "Upgrading to TLS on port {port} (STS policy)"
-msgstr "تحديث إلى TLS على cổة {port} (سياسة STS)"
+msgstr ""
 
 #. Button on the connect form: submits it and dials the server.
 #: client/js/branding.ts
@@ -1439,7 +1439,7 @@ msgstr "يمكن تعطيل التكملة تلقائيًا في الإعداد�
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.emoji"
 msgid "Emoji (note: requires two search characters, to avoid conflicting with common emoticons like"
-msgstr "الرموز الفريدة (ملاحظة: يتطلب اثنين من أحرف البحث، لتجنب التعارض مع الإيموJI الشائعة مثل"
+msgstr ""
 
 #. Heading of the autocompletion section of the help window; explains the prefix characters that open suggestion lists.
 #: client/components/Windows/Help.vue
@@ -2071,7 +2071,7 @@ msgstr "انتقل إلى قائمة المساعدة."
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.nextLobby"
 msgid "Switch to the next lobby in the channel list."
-msgstr "انتقل إلى الlobby التالي في قائمة القنوات."
+msgstr ""
 
 #. Description of the Alt+Ctrl+Down keyboard shortcut in the help window; it jumps to the next conversation that has unread messages.
 #: client/components/Windows/Help.vue
@@ -2089,7 +2089,7 @@ msgstr "انتقل إلى النافذة التالية في قائمة القن
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.prevLobby"
 msgid "Switch to the previous lobby in the channel list."
-msgstr "انتقل إلى الlobby السابق في قائمة القنوات."
+msgstr ""
 
 #. Description of the Alt+Ctrl+Up keyboard shortcut in the help window; it jumps to the previous conversation that has unread messages.
 #: client/components/Windows/Help.vue
@@ -3719,7 +3719,7 @@ msgstr "/{name} بعض الأدلة"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.tryHeading"
 msgid "Try it"
-msgstr "ا thửها"
+msgstr ""
 
 #. Variable reference: what $chan expands to.
 #: client/components/Settings/Aliases.vue
@@ -5273,7 +5273,7 @@ msgstr "أظهر الأصلي فقط"
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.translateAnyway"
 msgid "Translate anyway"
-msgstr "ترجمAnyway"
+msgstr ""
 
 #. Button on a model row in Settings → Translation that removes the downloaded model from this device.
 #: client/components/Settings/Translation.vue
@@ -5405,7 +5405,7 @@ msgstr "قراءة"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.settingsLink"
 msgid "Language and models in Settings"
-msgstr "اللغة والmodels في الإعدادات"
+msgstr ""
 
 #. aria-label of the translation panel, a dialog of translation settings for one conversation. {channel} is the channel name or nickname.
 #: client/components/TranslationPanel.vue
@@ -5657,7 +5657,7 @@ msgstr ""
 #: client/components/TranslationLine.vue
 msgctxt "translate.unchangedReason"
 msgid "the line came back unchanged"
-msgstr "عادed النص كما كان"
+msgstr ""
 
 #. Translation panel, channel languages field. {channel} is the channel's name (#seance).
 #: client/components/TranslationPanel.vue

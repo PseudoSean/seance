@@ -33,6 +33,7 @@ import {
 	fenceSpans,
 	fromTags,
 	planEngines,
+	substituteLabels,
 	targetName,
 	toTags,
 	unfenceSpans,
@@ -800,6 +801,41 @@ describe("i18n toolchain", () => {
 				).to.equal(null);
 			});
 
+			it("refuses a word that mixes two scripts", () => {
+				// ru came back with "нickname" — a Cyrillic н glued to the
+				// English word the model gave up on. Every other gate found it
+				// well-formed: the answer is mostly Cyrillic, so the script
+				// rules pass, and the English word is not the whole text, so
+				// the echo rule passes.
+				expect(
+					slotVerdict(
+						"ru",
+						") a user from the current channel. This can be a nickname or a hostmask.",
+						") Пользователя из текущего канала. Это может быть нickname или hostmask."
+					)
+				).to.equal("mixed-script");
+
+				// A whole Latin word inside Cyrillic prose is how every
+				// catalog writes a protocol word or a brand, and a hyphen or a
+				// {placeholder} ends a word like any other separator.
+				expect(slotVerdict("ru", "Connect to IRC", "Подключиться к IRC")).to.equal(null);
+				expect(slotVerdict("ru", "{count} bytes", "{count} байт")).to.equal(null);
+				expect(
+					slotVerdict(
+						"ru",
+						"The WebSocket closed.",
+						"Соединение WebSocket закрыто, IRC-сеть недоступна."
+					)
+				).to.equal(null);
+
+				// Japanese writes Han, Hiragana and Katakana in one run with
+				// no spaces, so a "word" there is a whole clause: it is never
+				// judged by this rule.
+				expect(slotVerdict("ja", "Connect to IRC", "IRCサーバーに接続します")).to.equal(
+					null
+				);
+			});
+
 			it("refuses an answer that doubled the source's full stop", () => {
 				// ru shipped "…в этом браузере.." and "…сеть IRC..." for
 				// sources ending in one period: the engine padded the end of
@@ -1010,6 +1046,62 @@ describe("i18n toolchain", () => {
 
 			expect(fenceSpans(hint.msgid, labels)).to.equal(
 				'Pick "No authentication" to skip `SASL`.'
+			);
+		});
+
+		it("puts the catalog's own translation of a label into the answer", () => {
+			// The carve-out lets the model translate the label, and the model
+			// invents a different button every time it is asked. What the user
+			// has to find is the string form.noAuth renders, so the answer's
+			// quoted segment is replaced with that catalog's own msgstr —
+			// keeping the answer's own quotation marks, since a German answer
+			// quotes with „…“.
+			const labels = new Map([
+				["No authentication", "Keine Authentifizierung"],
+				["Connect", ""],
+			]);
+
+			expect(
+				substituteLabels(
+					'Pick "No authentication" to skip SASL.',
+					"Wähle „Keine Anmeldung“, um SASL zu überspringen.",
+					labels
+				)
+			).to.equal("Wähle „Keine Authentifizierung“, um SASL zu überspringen.");
+
+			// A label the catalog has not translated yet keeps what the model
+			// wrote: English serves both the button and the sentence.
+			expect(
+				substituteLabels('Press "Connect" now.', "Нажмите «Подключить» сейчас.", labels)
+			).to.equal("Нажмите «Подключить» сейчас.");
+
+			// A quoted segment that is no key at all is left alone, and so is
+			// an answer that came back with a different number of quoted
+			// segments — nothing then says which segment is which.
+			expect(substituteLabels('Say "hello".', "Sag „hallo“.", labels)).to.equal(
+				"Sag „hallo“."
+			);
+			expect(
+				substituteLabels('Pick "No authentication".', "Wähle etwas aus.", labels)
+			).to.equal("Wähle etwas aus.");
+		});
+
+		it("reads a quoted label in the target's own quotation marks", () => {
+			// The label rules run over both texts, and an answer quotes the
+			// way its language does: „…“, «…», 「…」.
+			const labels = new Set(["No authentication"]);
+
+			expect(fenceSpans("wähle „No authentication“ aus", labels)).to.equal(
+				"wähle „No authentication“ aus"
+			);
+			expect(fenceSpans("выберите «No authentication» там", labels)).to.equal(
+				"выберите «No authentication» там"
+			);
+			expect(fenceSpans("「No authentication」を選択", labels)).to.equal(
+				"「No authentication」を選択"
+			);
+			expect(fenceSpans("wähle „SASL PLAIN“ aus", labels)).to.equal(
+				"wähle `„SASL PLAIN“` aus"
 			);
 		});
 
