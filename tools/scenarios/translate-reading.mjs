@@ -40,7 +40,8 @@
 // stops new ones; a REDACT of a translated line takes its translation
 // away with the original text; declaring German in the panel (a chip named
 // in the reader's language, gone from the picker's options) turns reading
-// back on and the nine-character "So ist es" line translates; a "load more" is
+// back on and the nine-character "So ist es" line translates from a source
+// it only guesses at; a "load more" is
 // translated, newest row first and no more than `HISTORY_QUEUE_CAP` of the
 // page; changing the reading language in Settings re-points reading (the
 // interface follows it): every translation already on screen is replaced by
@@ -875,8 +876,11 @@ async function scenario(page) {
 
 	// No word floor: a two-word line the classifier places ("ist" is a German
 	// function word, and a single hit decides a line of three words or fewer)
-	// translates by itself now. Like "ja so gut" above, no RUN marker fits,
-	// so the rows with this text are counted first and the new one is newest.
+	// translates by itself now. One hit is a hint, not a source
+	// (detect.ts `Detection.weak`), so the line goes to the engine with no
+	// source named and the chip offers the guess with a question mark. Like
+	// "ja so gut" above, no RUN marker fits, so the rows with this text are
+	// counted first and the new one is newest.
 	const shortAsk = "ist gut";
 	const shortRows = `[...document.querySelectorAll(".msg")].filter((m) => m.textContent.includes(${JSON.stringify(
 		shortAsk
@@ -898,12 +902,27 @@ async function scenario(page) {
 		{timeout: 20000, label: "the two-word line is translated by itself"}
 	);
 	await page.check(
-		"the two-word line's chip reads German → English",
+		"the two-word line's chip offers the guess (German? → English)",
 		(
 			await page.evaluate(
 				`document.querySelector('#${shortRowId} .msg-translation-chip').textContent`
 			)
-		).trim() === "German → English"
+		).trim() === "German? → English"
+	);
+
+	const shortRequests = await page.evaluate(
+		`(${REQUESTS}).filter((r) => r.text.indexOf(${JSON.stringify(
+			shortAsk
+		)}) !== -1).map((r) => ({from: r.from}))`
+	);
+
+	await page.check(
+		`a one-hit verdict is no source: its request left it to the engine (${JSON.stringify(
+			shortRequests
+		)})`,
+		Array.isArray(shortRequests) &&
+			shortRequests.length > 0 &&
+			shortRequests.every((r) => r.from === null)
 	);
 
 	// The toolbar's Translate on a line the pipeline leaves alone: an English
@@ -1331,6 +1350,8 @@ async function scenario(page) {
 	// never asked; the classifier places it ("ist" is a German function word
 	// and a single hit decides a line of three words or fewer). German is
 	// declared as spoken here by now, though the verdict does not need it.
+	// One hit is a hint: the line translates with no source named and the
+	// chip offers German as a guess.
 	const shortLine = "So ist es";
 
 	other.say(shortLine);
@@ -1344,10 +1365,10 @@ async function scenario(page) {
 	)})).pop()`;
 
 	await page.check(
-		"the short line's chip reads German → English",
+		"the short line's chip offers the guess (German? → English)",
 		(await page.evaluate(
 			`((${shortRow}).querySelector(".msg-translation-chip") || {}).textContent.trim()`
-		)) === "German → English"
+		)) === "German? → English"
 	);
 
 	// History the reader asks for: a "load more" is translated, newest line

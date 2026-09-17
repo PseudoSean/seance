@@ -28,7 +28,7 @@ import {
 	termsFor,
 } from "./channelStore";
 import {buildContext} from "./context";
-import {type Detection, LanguagePrior, detectLanguage, detectionSkip} from "./detect";
+import {type Detection, LanguagePrior, detectLanguage, detectionSkip, sourceFor} from "./detect";
 import {ReplayBatches, historyQueueOrder, isChatLine, isEligible, plainTextOf} from "./eligibility";
 import {fromLocaleTag} from "./languages";
 import {setTranslationUsage, translateService} from "./index";
@@ -600,15 +600,14 @@ export async function translateMessage(
 		return;
 	}
 
-	// A chosen source is used as it stands, even when it is the target: the
-	// reader asked for that translation.
-	const source = from ?? (detection.lang && detection.lang !== to ? detection.lang : null);
-	// Not placed: the prompt says nothing about the source and the router gets
-	// no hint (the item's `context.sourceHint` is both). The channel's prior
-	// is no better a guess -- a Spanish line in a German channel would be
-	// announced as "probably German" -- and a weak guess would send the line
-	// to a seq2seq model with the wrong source, where the LLM places it itself.
-	const unsure = detection.lang === null;
+	// What the line is translated from, and whether the source is left to the
+	// engine (detect.ts `sourceFor`): a chosen source as it stands, a verdict
+	// that is neither missing nor weak, or nothing at all. Unsure means the
+	// prompt says nothing about the source and the router gets no hint (the
+	// item's `context.sourceHint` is both) -- the channel's prior is no
+	// better a guess, having announced a Spanish line in a German channel as
+	// "probably German".
+	const {source, unsure} = sourceFor(detection, from ?? null, to);
 	const protectedText = protect(message.text, {nicks});
 	const item: QueueItem = {
 		id: message.id,

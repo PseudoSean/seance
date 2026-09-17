@@ -196,6 +196,19 @@ describe("translate/fakePort", () => {
 			"[English] this line will [fail] in a batch"
 		);
 
+		// And a batch holding it again -- what a requeue sends -- still falls
+		// back to singles rather than failing every line beside it.
+		let failAgain = "x";
+
+		for await (const chunk of client.translate(
+			{...base, text: "", lines: failLines},
+			catalog.llm
+		)) {
+			failAgain = chunk.text;
+		}
+
+		expect(parseBatchedOutput(failAgain, failLines.length)).to.equal(null);
+
 		terminate();
 	});
 

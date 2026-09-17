@@ -1,5 +1,6 @@
 import {expect} from "chai";
 import {
+	CHAT_STRENGTH_MIN,
 	DECLARED_MARGIN,
 	DETECT_CANDIDATES,
 	DETECT_MIN_GAP,
@@ -7,11 +8,13 @@ import {
 	ISO3_OF,
 	LanguagePrior,
 	type Scores,
+	WEAK_CONFIDENCE,
 	detectLanguage,
 	detectWith,
 	detectionSkip,
 	iso3ToIso1,
 	setDetector,
+	sourceFor,
 } from "../../client/js/translate/detect";
 import {SUPPORTED_LANGUAGES} from "../../client/js/translate/languages";
 
@@ -377,6 +380,128 @@ describe("translate/detect", () => {
 		// German leads, and there is more than one contender to correct to.
 		expect(result.candidates[0]).to.equal("de");
 		expect(result.candidates.length).to.equal(DETECT_CANDIDATES);
+	});
+
+	// F4: one function word on a short line places "je suis la" in Vietnamese
+	// and "hasta luego" in Polish. Such a verdict is a hint -- good enough to
+	// skip a line that could be the reading language, never good enough to
+	// translate *from*.
+	describe("a thin verdict is weak", () => {
+		it("marks a single-hit classifier verdict weak", async function () {
+			this.timeout(10000);
+			setDetector(null);
+
+			expect(CHAT_STRENGTH_MIN).to.equal(2);
+
+			const vi = await detectLanguage("je suis là", null);
+
+			expect(vi.lang).to.equal("vi");
+			expect(vi.weak).to.equal(true);
+
+			const fr = await detectLanguage("bonjour à tous", null);
+
+			expect(fr.lang).to.equal("fr");
+			expect(fr.weak).to.equal(true);
+
+			// A short line the classifier places on one hit is weak too.
+			const short = await detectLanguage("helo their friend", null);
+
+			expect(short.lang).to.equal("en");
+			expect(short.weak).to.equal(true);
+		});
+
+		it("leaves a multi-hit classifier verdict alone", async function () {
+			this.timeout(10000);
+			setDetector(null);
+
+			const fr = await detectLanguage("Nous allons manger avec les amis ce soir", null);
+
+			expect(fr.lang).to.equal("fr");
+			expect(fr.confidence).to.be.at.least(0.2);
+			expect(fr.weak).to.equal(undefined);
+		});
+
+		it("marks a trigram lead under WEAK_CONFIDENCE weak, and no wider one", () => {
+			expect(WEAK_CONFIDENCE).to.equal(0.2);
+			expect(
+				detectWith(
+					[
+						["deu", 1],
+						["nld", 0.85],
+					],
+					null
+				)
+			).to.deep.equal({lang: "de", confidence: 0.15, candidates: ["de", "nl"], weak: true});
+			expect(
+				detectWith(
+					[
+						["deu", 1],
+						["nld", 0.8],
+					],
+					null
+				).weak
+			).to.equal(undefined);
+		});
+
+		// The reader's claim, not a measurement: a declared language or the
+		// channel's prior placed the line, and `DETECT_MIN_GAP` is what that
+		// is written as. Those are not thin trigram leads.
+		it("never calls a declared or prior placement weak", () => {
+			expect(
+				detectWith(
+					[
+						["nld", 1],
+						["deu", 0.8],
+					],
+					null,
+					["de"]
+				).weak
+			).to.equal(undefined);
+			expect(
+				detectWith(
+					[
+						["nob", 1],
+						["dan", 0.97],
+					],
+					"da"
+				).weak
+			).to.equal(undefined);
+		});
+	});
+
+	describe("sourceFor", () => {
+		it("names no source for a weak verdict, and marks the line unsure", () => {
+			expect(
+				sourceFor({lang: "vi", weak: true, confidence: 0.1, candidates: []}, null, "en")
+			).to.deep.equal({source: null, unsure: true});
+		});
+
+		it("names the source of a verdict that is not weak", () => {
+			expect(
+				sourceFor({lang: "fr", confidence: 0.4, candidates: []}, null, "en")
+			).to.deep.equal({source: "fr", unsure: false});
+		});
+
+		it("lets a chosen source win over any verdict", () => {
+			expect(
+				sourceFor({lang: "vi", weak: true, confidence: 0.1, candidates: []}, "es", "en")
+			).to.deep.equal({source: "es", unsure: false});
+		});
+
+		it("names no source for a line already in the reading language, and is sure of it", () => {
+			expect(
+				sourceFor({lang: "en", confidence: 0.4, candidates: []}, null, "en")
+			).to.deep.equal({source: null, unsure: false});
+		});
+
+		it("marks a line it could not place unsure", () => {
+			expect(
+				sourceFor({lang: null, confidence: 0, candidates: []}, null, "en")
+			).to.deep.equal({
+				source: null,
+				unsure: true,
+			});
+		});
 	});
 
 	describe("detectionSkip", () => {

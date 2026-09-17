@@ -266,6 +266,24 @@ leaves unplaced by design, so it falls through to the trigram flow; and a
 misspelled short line with one function word ("helo **their** friend")
 places via the classifier.
 
+**A thin verdict is a hint, never a source.** A single function-word hit
+places "je suis la" in Vietnamese (the noise cut in
+`tools/generate-stopwords.py` drops a word shared by four tables or more,
+so `je`, `suis` and `la` are all gone from French while `la` survives in
+Vietnamese) and a narrow trigram lead places "hasta luego" in Polish.
+`Detection.weak` marks both: a classifier verdict under
+`CHAT_STRENGTH_MIN` (2) hits, and a franc verdict whose measured lead is
+under `WEAK_CONFIDENCE` (0.2). A language the channel declared, or its
+prior, is never weak -- `DETECT_MIN_GAP` there is how "the reader's claim
+decided it" is written down, not a measurement. `detectionSkip` reads
+`lang` whatever its weight, so a weak English verdict still leaves an
+English line alone for an English reader; what weak changes is
+`detect.ts` `sourceFor(detection, from, to)`, the one place that decides
+what a line is translated _from_: a chosen source wins, a verdict that is
+neither missing nor weak is the source, and anything else queues the line
+with no source named and `unsure` set -- the engine places it, which an
+LLM does well and a wrong `from` makes impossible.
+
 **A failure is worded in the reader's language, and `unchanged` barely
 speaks at all.** The failed row's frame and its known reasons are catalog
 keys now -- "Couldn't translate" (`translate.failed`), and the reason
@@ -289,10 +307,10 @@ the reading language.** `detect.ts` `detectionSkip` decides: a line placed
 in the reading language is skipped (`same`); a line it could not place is
 skipped (`unsure`) only when the reading language is among its
 `candidates`, or when there are none (a line too short to look at), and is
-otherwise queued with `from: null` and no `sourceHint` -- neither the weak
-guess, which would send the line to a seq2seq model with the wrong source,
-nor the channel's prior, which announced an unsure Spanish line as
-"probably German" in a German channel. Measured on a real channel's
+otherwise queued with `from: null` and no `sourceHint` (`sourceFor`, above)
+-- neither the weak guess, which would send the line to a seq2seq model
+with the wrong source, nor the channel's prior, which announced an unsure
+Spanish line as "probably German" in a German channel. Measured on a real channel's
 history (71 lines, read in English), skipping every unsure line left 21
 untranslated -- 13 of one user's 15 Spanish lines, which franc ranks
 within a hundredth of Galician and Portuguese -- where the rule translates
@@ -445,7 +463,7 @@ The queue then runs a channel's live lines ahead of its history ones
 (`QueueItem.history`, cleared by a retry, since a retry is someone asking
 for that line now), and the history ones are what a channel that has
 fallen `DROP_AFTER_LINES` behind has left to drop. What counts as falling
-behind is what the channel has *said* since -- `reader.ts` `arrivals`
+behind is what the channel has _said_ since -- `reader.ts` `arrivals`
 counts `message`, `action` and `notice` lines alone (`eligibility.ts`
 `isChatLine`), so a netsplit's quits or a burst of joins never look like
 the conversation moving on. Browser check: the

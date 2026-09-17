@@ -40,6 +40,18 @@ export interface Detection {
 	 * chip, not a wrong translation.
 	 */
 	short?: true;
+	/**
+	 * The verdict is a hint, not a source: one function-word hit
+	 * (`chatdetect.ts` `strength` below `CHAT_STRENGTH_MIN`, which places
+	 * "je suis la" in Vietnamese and "hasta luego" in Polish), or a trigram
+	 * lead narrower than `WEAK_CONFIDENCE`. `detectionSkip` still reads
+	 * `lang` -- a weak verdict in the reading language is reason enough to
+	 * leave the line alone -- but `sourceFor` will not translate *from* it:
+	 * the line goes to the engine with no source named. A language the
+	 * channel declared, or its prior, is never weak: that is the reader's
+	 * own claim, not a measurement.
+	 */
+	weak?: boolean;
 }
 
 /** `francAll`'s shape: `[iso639-3, weight]`, best first, best weight 1. */
@@ -47,6 +59,10 @@ export type Scores = [string, number][];
 export type Detector = (text: string, options: {only: string[]}) => Scores;
 
 export const DETECT_MIN_GAP = 0.1;
+/** Function-word hits a classifier verdict needs to be a source, not a hint. */
+export const CHAT_STRENGTH_MIN = 2;
+/** The trigram lead a franc verdict needs to be a source, not a hint. */
+export const WEAK_CONFIDENCE = 0.2;
 export const DETECT_MIN_LENGTH = 10;
 /**
  * How far behind franc's best a declared language may rank and still win it:
@@ -93,6 +109,9 @@ export function declaredLanguages(declared: readonly string[]): string[] {
 }
 
 const round = (value: number) => Math.round(value * 1000) / 1000;
+
+/** The `weak` half of a verdict franc measured: spread into it. */
+const weakIf = (confidence: number) => (confidence < WEAK_CONFIDENCE ? {weak: true} : {});
 
 export function detectWith(
 	scores: Scores,
@@ -170,7 +189,7 @@ export function detectWith(
 		const own = top.weight - next.weight;
 
 		if (own >= DETECT_MIN_GAP) {
-			return {lang: top.lang, confidence: round(own), candidates};
+			return {lang: top.lang, confidence: round(own), candidates, ...weakIf(round(own))};
 		}
 
 		// Two of the channel's own languages, too close to separate: the
@@ -185,7 +204,7 @@ export function detectWith(
 	}
 
 	if (gap >= DETECT_MIN_GAP) {
-		return {lang: best.lang, confidence, candidates};
+		return {lang: best.lang, confidence, candidates, ...weakIf(confidence)};
 	}
 
 	// A near tie: the prior wins when it is one of the contenders.
@@ -226,6 +245,33 @@ export function detectionSkip(detection: Detection, to: string): DetectionSkip {
 	}
 
 	return null;
+}
+
+/**
+ * What the reader translates a line *from*, and whether the source is left
+ * to the engine. A source someone chose (the chip's menu, a retry) is used
+ * as it stands, even when it is the reading language: they asked for that
+ * translation. Otherwise the detector's verdict is the source only when it
+ * named a language, that language is not the one being read, and the
+ * verdict is not `weak` -- a single function-word hit or a trigram lead
+ * under `WEAK_CONFIDENCE` would send the line to a seq2seq model with the
+ * wrong source, where an LLM places it itself. `unsure` says exactly that:
+ * the prompt names no source and the router gets no hint.
+ */
+export function sourceFor(
+	detection: Detection,
+	from: string | null,
+	to: string
+): {source: string | null; unsure: boolean} {
+	if (from) {
+		return {source: from, unsure: false};
+	}
+
+	if (detection.lang === null || detection.weak) {
+		return {source: null, unsure: true};
+	}
+
+	return {source: detection.lang === to ? null : detection.lang, unsure: false};
 }
 
 /** The dominant language of a channel's recent messages. */
@@ -326,22 +372,28 @@ export async function detectLanguage(
 		// The trigram ranking rides along as the chip menu's corrections — but
 		// only where franc would have been asked anyway: a sub-minimum line
 		// never runs the detector (it is why the classifier exists).
+		const hint = chat.strength < CHAT_STRENGTH_MIN ? {weak: true} : {};
+
 		if (text.length < DETECT_MIN_LENGTH) {
-			return {lang: chat.lang, confidence: round(chat.strength / 10), candidates: [chat.lang]};
+			return {
+				lang: chat.lang,
+				confidence: round(chat.strength / 10),
+				candidates: [chat.lang],
+				...hint,
+			};
 		}
 
 		const detect = await loadDetector();
 		const runnersUp = detect(text, {only: ONLY})
 			.map(([code]) => iso3ToIso1(code))
-			.filter(
-				(code): code is string => code !== null && code !== chat.lang
-			)
+			.filter((code): code is string => code !== null && code !== chat.lang)
 			.slice(0, DETECT_CANDIDATES - 1);
 
 		return {
 			lang: chat.lang,
 			confidence: round(chat.strength / 10),
 			candidates: [chat.lang, ...runnersUp],
+			...hint,
 		};
 	}
 
@@ -359,10 +411,9 @@ export async function detectLanguage(
 		// No verdict is not evidence of the reading language: `short` tells
 		// `detectionSkip` to let the line through (the engine detects the
 		// source; "Hallo" translates, an English echo lands on the
-		// Not-translated chip).
-		return chat.lang
-			? {lang: chat.lang, confidence: 0, candidates: [chat.lang]}
-			: {lang: null, confidence: 0, candidates: [], short: true};
+		// Not-translated chip). The classifier named nothing -- a verdict of
+		// its own returned above -- so there is nothing else to say.
+		return {lang: null, confidence: 0, candidates: [], short: true};
 	}
 
 	const detect = await loadDetector();

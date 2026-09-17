@@ -186,16 +186,20 @@ class ScriptedEngine implements Engine {
 
 		logRequest(req, this.name);
 
-		// A batch holding a line that has not failed yet answers with nothing
-		// a batch parser accepts, so the queue sends its lines again one at a
-		// time (what it does with a batch a model botched) and only that
-		// line's own request fails: a channel's backlog queued together must
-		// not fail every line beside one scripted failure. A multi-line draft
-		// (`purpose` "write") keeps failing as one request.
+		// A batch holding a failing line answers with nothing a batch parser
+		// accepts, so the queue sends its lines again one at a time (what it
+		// does with a batch a model botched) and only that line's own request
+		// fails: a channel's backlog queued together must not fail every line
+		// beside one scripted failure. Whether that line has had its one
+		// failure already makes no difference -- the failure is keyed on the
+		// request's text, and a batch is a text of its own, so a batch that
+		// threw would take its neighbours down every time it is queued again
+		// (a requeue does exactly that). A multi-line draft (`purpose`
+		// "write") keeps failing as one request.
 		if (
 			req.lines &&
 			req.purpose === "read" &&
-			req.lines.some((line) => line.includes(FAIL_TOKEN) && !this.failedOnce.has(line))
+			req.lines.some((line) => line.includes(FAIL_TOKEN))
 		) {
 			yield {id: req.id, text: "", done: true};
 			return;
