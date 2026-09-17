@@ -22,8 +22,13 @@ import base64
 import os
 import sys
 
-ACCOUNT = "pushtest1"
-PASSWORD = "pushtest1-pass"
+# The one credential the rig accepts, and where the wire trace goes. All
+# three are environment variables (docs/resources/nefarious2-dev.md): the
+# log is written only when IAUTH_DEBUG_LOG names a path, because the agent
+# runs for the life of the ircd and its trace carries every SASL exchange.
+ACCOUNT = os.environ.get("IAUTH_TEST_USER", "pushtest1")
+PASSWORD = os.environ.get("IAUTH_TEST_PASS", "pushtest1-pass")
+DEBUG_LOG = os.environ.get("IAUTH_DEBUG_LOG", "")
 
 
 def out(line: str) -> None:
@@ -42,9 +47,12 @@ def main() -> None:
     # fd -> (remote ip, remote port), learned from the C introduction.
     clients: dict[str, tuple[str, str]] = {}
 
-    debug = open("/tmp/iauth-debug.log", "a")
+    debug = open(DEBUG_LOG, "a") if DEBUG_LOG else None
 
     def log(text: str) -> None:
+        if debug is None:
+            return
+
         debug.write(text + "\n")
         debug.flush()
 
