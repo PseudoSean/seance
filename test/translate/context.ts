@@ -264,6 +264,12 @@ describe("translate/context", () => {
 		};
 
 		expect(buildContext(channel, channel.messages[1], opts).names).to.deep.equal(["ada"]);
+		// Structural, not incidental: a speaker outside the set is not listed,
+		// because a name the prompt asks the model to keep it never saw
+		// fenced is the inversion this option exists to rule out.
+		expect(
+			buildContext(channel, channel.messages[1], {...opts, nicks: ["gone"]}).names
+		).to.deep.equal(["gone"]);
 		expect(
 			buildContext(channel, channel.messages[1], {...opts, nicks: ["ada", "gone"]}).names
 		).to.deep.equal(["ada", "gone"]);

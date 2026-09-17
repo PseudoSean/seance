@@ -893,7 +893,12 @@ rule holds -- `2*3*4` is arithmetic), then a line's leading syntax (`#` to
 `######`, `-`/`*`/`+`, `1.`/`1)`, `>` with nesting), then the channel names
 (`#` or `&` and at least two more characters that are neither whitespace nor
 a comma, not preceded by a word character -- `#seance`, `&local`, `#1` is
-not one and `Tom & Jerry` is not one either), and finally the
+not one and `Tom & Jerry` is not one either; `#1234` is fenced like any
+other channel, and numbers are never translated anyway). A trailing run of
+`.,;:!?)` is the **sentence's**, not the name's, and stays in the text
+(`treffen in #seance.` fences `#seance` and keeps its full stop, so the
+model still sees a sentence that ends), while a dot or a colon inside the
+name is part of it -- `#a.b` is whole. Then, finally, the
 nicknames (whole word, case-insensitive, longest first, at least two
 characters, never inside an earlier placeholder). Channel names run _after_
 the line prefixes on purpose: `###` satisfies "at least two more
@@ -911,8 +916,11 @@ user list at all -- a channel's own name is never a nick, it is a channel
 name and fenced as one), and the channel's **recent speakers**, newest
 first up to `RECENT_SPEAKERS` (50), so someone who spoke ten lines ago and
 is quoted now is still a name. The same set is what the prompt's `Names:`
-list is drawn from (`buildContext`'s `opts.nicks`), so what the model is
-told to keep is exactly what it never sees; it is also what
+list is drawn from (`buildContext`'s `opts.nicks`, which every listed name
+is filtered through -- a recent speaker outside the set is dropped rather
+than listed, so the invariant is structural and not a coincidence of the
+two windows lining up), so what the model is told to keep is exactly what
+it never sees; it is also what
 `stripNickPrefix`/`stripCopiedNickPrefix` judge a copied prefix against, and
 what `plainTextOf` removes before the detector reads a line.
 

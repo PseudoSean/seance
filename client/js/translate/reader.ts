@@ -274,16 +274,26 @@ function withoutCopiedNick(id: number, known: {item: QueueItem} | undefined, tex
 	}
 
 	const target = store.getters.findChannel(known.item.chanId);
-	const source = target?.channel.messages.find((m) => m.id === id)?.text;
+	const at = target?.channel.messages.findIndex((m) => m.id === id) ?? -1;
+	const message = at >= 0 ? target?.channel.messages[at] : undefined;
+	const source = message?.text;
 
 	if (!target || !source) {
 		return text;
 	}
 
+	// The set the line was fenced with, not the user list: a prefix the model
+	// copied out of the context is the model's to lose whoever holds the name,
+	// and the name may be someone who has since left (names.ts `namesFor`).
 	return stripCopiedNickPrefix(
 		text,
 		source,
-		target.channel.users.map((u) => u.nick)
+		namesFor({
+			users: target.channel.users,
+			sender: message?.from?.nick,
+			target: target.channel.name,
+			messages: target.channel.messages.slice(0, at + 1),
+		})
 	);
 }
 

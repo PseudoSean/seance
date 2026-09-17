@@ -417,11 +417,34 @@ function protectPrefixes(text: string, spans: Spans): string {
  * time this runs the prefix is already a placeholder and there is no `#`
  * left to match. It is still after PATTERNS, so a channel inside a code
  * span or a URL belongs to them, and before `protectNicks`.
+ *
+ * It carries the `g` flag, so it is safe under `String.replace` (which
+ * resets `lastIndex`) and **only** there: a `.test()` or a bare `.exec()`
+ * against it would carry state from the previous call and answer for the
+ * wrong offset. `eligibility.ts` uses it the same way.
  */
 export const CHANNEL_RX = /(?<![\p{L}\p{N}_])[#&][^\s,\u27e6\u27e7]{2,}/gu;
 
+/**
+ * A sentence's punctuation off the end of a channel name. `.` and `:` are
+ * legal in a channel name, so only a *trailing* run is the sentence's:
+ * `#a.b` is whole, `treffen in #seance.` keeps its full stop as text (the
+ * model needs the sentence to end) and fences the name alone.
+ */
+const CHANNEL_TAIL = /[.,;:!?)]+$/;
+
 function protectChannels(text: string, spans: Spans): string {
-	return text.replace(CHANNEL_RX, (match: string) => spans.push(match, {kind: "verbatim"}));
+	return text.replace(CHANNEL_RX, (match: string) => {
+		const name = match.replace(CHANNEL_TAIL, "");
+
+		// Trimmed below the sigil and two characters it was never a channel
+		// name to begin with, so it stays the text it is.
+		if (name.length < 3) {
+			return match;
+		}
+
+		return `${spans.push(name, {kind: "verbatim"})}${match.slice(name.length)}`;
+	});
 }
 
 // The channel's names, whole-word, longest first, never inside a

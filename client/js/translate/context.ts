@@ -143,10 +143,16 @@ export function buildContext(
 		}
 	}
 
+	// Every name listed is a name the protection fenced, by construction and
+	// not by the two windows happening to coincide: a recent speaker outside
+	// `nicks` is dropped rather than listed, since asking the model to keep a
+	// name it was never shown a placeholder for is the one thing this list
+	// must not do. `mentionedNicks` is already drawn from `nicks`.
+	const fenced = new Map(nicks.map((nick) => [nick.toLowerCase(), nick]));
 	const names: string[] = [];
 
 	for (const nick of [
-		...recentMessages.map((m) => m.from?.nick ?? ""),
+		...recentMessages.map((m) => fenced.get((m.from?.nick ?? "").toLowerCase()) ?? ""),
 		...mentionedNicks(text, nicks),
 	]) {
 		if (nick && !names.includes(nick)) {

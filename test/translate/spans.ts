@@ -606,6 +606,28 @@ describe("translate/spans", () => {
 			expect(restoreAll(info.text, info)).to.equal(source);
 		});
 
+		it("the span ends before the sentence's punctuation", () => {
+			const info = protect("treffen in #seance.");
+
+			expect(info.spans).to.deep.equal(["#seance"]);
+			expect(info.text).to.equal(`treffen in ${placeholder(1)}.`);
+			expect(restoreAll(info.text, info)).to.equal("treffen in #seance.");
+
+			// A dot inside the name is part of it: only a trailing run goes.
+			expect(protect("siehe #a.b dort").spans).to.deep.equal(["#a.b"]);
+			expect(protect("sag es in #seance!!").spans).to.deep.equal(["#seance"]);
+			expect(protect("(siehe #seance)").spans).to.deep.equal(["#seance"]);
+
+			// Trimmed below two characters it was never a channel name.
+			expect(protect("das #a. dort").spans).to.deep.equal([]);
+		});
+
+		// Numbers are never translated anyway, and a numeric channel is a
+		// real one on IRC: `#1234` is fenced, `#1` is too short to be.
+		it("a numeric channel is a channel", () => {
+			expect(protect("siehe #1234 und #1").spans).to.deep.equal(["#1234"]);
+		});
+
 		it("an ampersand channel is one too, a lone ampersand is not", () => {
 			const info = protect("say hi in &local, Tom & Jerry, R&D");
 
