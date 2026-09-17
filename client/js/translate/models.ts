@@ -4,6 +4,7 @@
 // with. A router candidate names a catalog entry, never a URL.
 
 import {ModelRef} from "./engine";
+import type {Tier} from "./capability";
 
 /** What the route table lists: the LLM, NLLB, or an OPUS-MT pair. */
 export type Candidate = "llm" | "nllb" | `opus:${string}`;
@@ -115,6 +116,14 @@ export const LLM_CHOICES: readonly ModelRef[] = [
 export interface AdapterMemory {
 	maxBufferBytes: number;
 	deviceMemoryGiB: number | null;
+	/**
+	 * The probe's verdict, when it is known. Only a `gpu` device gets a GPU
+	 * default: on a cpu-tier device the selected model still picks the route
+	 * table (`service.ts` `buildTable`), whose non-LLM entries differ between
+	 * the two models, so a device that can run neither must stay on the
+	 * catalog's own default.
+	 */
+	tier?: Tier;
 }
 
 /** The device memory a 4B model asks for, in GiB. */
@@ -128,7 +137,8 @@ export const LARGE_LLM_MIN_MEMORY_GIB = 6;
  * 4B there. Without it (Safari, Firefox) the adapter's addressable buffer
  * is all there is, and the most capable choice whose requirement fits wins.
  * The gpu tier's own 1 GiB gate guarantees the first choice (1.7B) always
- * fits, so this never returns nothing.
+ * fits, so this never returns nothing. It answers for a gpu-tier device;
+ * gating on the tier is the caller's (`llmChoice`).
  */
 export function defaultLlmForAdapter(memory: AdapterMemory | null | undefined): string {
 	if (memory && typeof memory.deviceMemoryGiB === "number") {
@@ -186,7 +196,9 @@ export function llmChoice(
 		return chosen;
 	}
 
-	const unset = catalog.llmDeploy ?? (memory ? defaultLlmForAdapter(memory) : undefined);
+	// A probe that found no GPU names no GPU model (see AdapterMemory.tier).
+	const device = memory && (memory.tier ?? "gpu") === "gpu" ? memory : null;
+	const unset = catalog.llmDeploy ?? (device ? defaultLlmForAdapter(device) : undefined);
 
 	return (
 		catalog.llmChoices.find((ref) => ref.id === unset) ??

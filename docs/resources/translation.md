@@ -29,8 +29,10 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   would never reach the 4B there; without that reading (Safari, Firefox)
   the adapter's addressable buffer must cover the model's ~3.4 GB. The pick
   stands in for an unset setting **at read time and is never persisted as a
-  choice** — a user who never picked and a deploy that named no model of its
-  own follow the device, and the resolution is redone when the probe lands
+  choice**, and only on a `gpu`-tier device — the selected model also picks
+  the route table, whose non-LLM entries differ between the two, so a device
+  that can run neither keeps the catalog's default. A user who never picked
+  and a deploy that named no model of its own follow the device, and the resolution is redone when the probe lands
   (`service.ts` `capabilities`, `llmChoice(catalog, setting, capability)`).
   Settings → Translation's
   "GPU model" select writes `translateLlmModel` (carried by the settings

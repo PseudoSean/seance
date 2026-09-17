@@ -142,6 +142,11 @@ describe("translate/models", () => {
 		// it lands, and the same call answers anew once it has.
 		expect(llmChoice(shipped, "", null).id).to.equal(QWEN3_1_7B_ID);
 		expect(llmChoice(shipped, "").id).to.equal(QWEN3_1_7B_ID);
+		// A device that found no GPU names no GPU model: the selected model
+		// also picks the route table, whose non-LLM entries differ between
+		// the two, so a cpu-tier device stays on the catalog default.
+		expect(llmChoice(shipped, "", {...gpu, tier: "cpu"}).id).to.equal(QWEN3_1_7B_ID);
+		expect(llmChoice(shipped, "", {...gpu, tier: "gpu"}).id).to.equal(QWEN3_4B_ID);
 		// A choice the user made outranks the device.
 		expect(llmChoice(shipped, QWEN3_1_7B_ID, gpu).id).to.equal(QWEN3_1_7B_ID);
 		// So does the deploy's own model — including a deploy that picks the
