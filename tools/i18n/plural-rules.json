@@ -29,7 +29,7 @@
   },
   "fa": {
     "nplurals": 2,
-    "expr": "n > 0 ? 1 : 0"
+    "expr": "n > 1"
   },
   "ja": {
     "nplurals": 1,

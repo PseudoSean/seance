@@ -78,6 +78,14 @@ describe("i18n toolchain", () => {
 					"(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2)"
 				)
 			).to.deep.equal({one: 0, few: 1, many: 2, other: 2});
+			// fa is not a shipped target, but its rule is in the table and
+			// "n > 0 ? 1 : 0" sent both categories to slot 1 — the singular
+			// for every count, invisibly (the slot is filled, so the
+			// all-or-nothing gate is happy).
+			expect(categoryIndexMap("fa", PLURAL_RULES.fa.expr)).to.deep.equal({
+				one: 0,
+				other: 1,
+			});
 		});
 
 		it("omits a plural entry that has not filled every mapped slot", () => {
@@ -367,8 +375,10 @@ describe("i18n toolchain", () => {
 				{index: 0, source: "msgid"},
 				{index: 1, source: "msgidPlural"},
 			]);
-			// A rule that does not put the singular first (fa's "n > 0 ? 1 : 0"):
-			// slot 1 is the one n = 1 reads, so that is where msgid goes.
+			// A rule that does not put the singular first: slot 1 is the one
+			// n = 1 reads, so that is where msgid goes. (No target ships this
+			// shape — fa's rule was one and is now "n > 1" — but the planner
+			// must not assume slot 0.)
 			expect(planPluralSlots(entry, 2, "n > 0 ? 1 : 0")).to.deep.equal([
 				{index: 0, source: "msgidPlural"},
 				{index: 1, source: "msgid"},
@@ -390,6 +400,25 @@ describe("i18n toolchain", () => {
 			expect(planPluralSlots(entry, 1, "0")).to.deep.equal([
 				{index: 0, source: "msgidPlural"},
 			]);
+		});
+
+		it("maps a target's categories onto distinct slots — all nplurals of them", () => {
+			// Two categories sharing one slot is the bug that made fa's
+			// "n > 0 ? 1 : 0" render the singular for every count: both
+			// categories read slot 1, which the fill writes msgid into, and
+			// the all-or-nothing gate cannot see it (the slot IS filled).
+			// Scoped to the shipped targets: cy's four-form rule genuinely
+			// collapses categories onto slots and is not a target.
+			const targets = parseTargets(readFileSync(TARGETS_SOURCE, "utf8"));
+			expect(targets.length, "target languages").to.be.greaterThan(0);
+
+			for (const {tag} of targets) {
+				const rule = PLURAL_RULES[tag];
+				expect(rule, `${tag} has a plural rule`).to.not.equal(undefined);
+
+				const slots = Object.values(categoryIndexMap(tag, rule.expr));
+				expect(new Set(slots).size, `${tag} distinct slots`).to.equal(rule.nplurals);
+			}
 		});
 
 		it("gives every rule in the table as many slots as its expression yields", () => {
