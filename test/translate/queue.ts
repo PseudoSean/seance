@@ -1197,6 +1197,125 @@ describe("translate/queue", () => {
 		expect(r.updates[r.updates.length - 1][1].status).to.equal("done");
 	});
 
+	// The queue's own abort usually wins the race against the request and
+	// leaves through the `aborted` branch, but it does not have to: an engine
+	// that rejects with ABORTED in the same turn the cancel arrives lands in
+	// the catch instead, and a cancelled line is not the engine's failure.
+	// runMultiline() has said so since it was written; run() had not.
+	it("an abort that lands as a rejection is dropped, not failed", async () => {
+		const r = rig();
+		clock = r.clock;
+		// The cancel and the rejection in one turn, hand-rolled rather than a
+		// generator so that the rejection is queued before the abort is: this
+		// is the ordering that reaches the catch with `aborted` already set.
+		r.deps.translate = () =>
+			({
+				[Symbol.asyncIterator]: () => ({
+					next() {
+						r.queue.cancelChannel(1);
+						return Promise.reject(new Error(ABORTED));
+					},
+				}),
+			} as AsyncIterable<TranslateChunk>);
+
+		r.queue.enqueue(item(1, "eins zwei drei", {single: true}));
+		await settle(r.clock);
+
+		expect(r.updates.map(([, u]) => u.status)).to.deep.equal(["pending", "dropped"]);
+		expect(r.paused).to.deep.equal([]);
+		expect(r.queue.paused("llm")).to.equal(false);
+	});
+
+	it("a requeued batch goes back in the order it was sent in", async () => {
+		let disposed = true;
+		const r = rig((req) =>
+			disposed
+				? new Error(WORKER_DISPOSED)
+				: [
+						(req.lines ?? [req.text])
+							.map((line, i) => `${i + 1}. [en] ${line}`)
+							.join("\n") + "\nEND",
+				  ]
+		);
+		clock = r.clock;
+
+		r.queue.pauseForTest();
+
+		for (let i = 1; i <= 3; i++) {
+			r.queue.enqueue(item(i, `zeile ${i} hier`));
+		}
+
+		await settle(r.clock);
+		r.queue.resumeForTest();
+		await settle(r.clock);
+		expect(r.requests.length).to.equal(1);
+		expect(r.requests[0].lines).to.have.length(3);
+
+		disposed = false;
+		await r.clock.tickAsync(REQUEUE_WAIT_MS);
+		await settle(r.clock);
+
+		expect(r.requests.length).to.equal(2);
+		// Each item was pushed with its own more-negative sequence number, so
+		// the batch came back reversed and the reader read line 3 first.
+		expect(r.requests[1].lines).to.deep.equal(r.requests[0].lines);
+	});
+
+	it("cancelAll clears the requeue wait and the pause timer it left behind", async () => {
+		const r = rig(() => new Error(WORKER_DISPOSED));
+		clock = r.clock;
+		r.queue.enqueue(item(1, "eins zwei drei", {single: true}));
+		await settle(r.clock);
+
+		expect(r.requests.length).to.equal(1);
+
+		r.queue.cancelAll();
+		await settle(r.clock);
+
+		// The engine is free again straight away: the wait was cancelled with
+		// everything else, rather than left running to pump a queue that was
+		// emptied under it.
+		r.deps.translate = (req) =>
+			(async function* (): AsyncIterable<TranslateChunk> {
+				await Promise.resolve();
+				yield {id: 0, text: `[en] ${req.text}`, done: true};
+			})();
+		r.queue.enqueue(item(2, "vier fuenf sechs", {single: true}));
+		await settle(r.clock);
+
+		expect(r.updates[r.updates.length - 1]).to.deep.equal([
+			2,
+			{status: "done", text: "[en] vier fuenf sechs", engine: "llm"},
+		]);
+	});
+
+	it("cancelAll lifts a pause rather than clearing the timer that would lift it", async () => {
+		let fail = true;
+		const r = rig((req) => (fail ? new Error("boom") : [`[en] ${req.text}`]));
+		clock = r.clock;
+
+		for (let i = 1; i <= PAUSE_AFTER_FAILURES; i++) {
+			r.queue.enqueue(item(i, `zeile ${i} hier`, {single: true}));
+		}
+
+		await settle(r.clock);
+		expect(r.queue.paused("llm")).to.equal(true);
+
+		r.queue.cancelAll();
+		await settle(r.clock);
+
+		// Everything the pause was about is gone, so the pause goes with it —
+		// disarming its resume timer and leaving the engine paused would have
+		// parked it for the rest of the session.
+		expect(r.queue.paused("llm")).to.equal(false);
+
+		fail = false;
+		r.queue.enqueue(item(9, "vier fuenf sechs", {single: true}));
+		await settle(r.clock);
+
+		expect(r.updates[r.updates.length - 1][1].status).to.equal("done");
+	});
+
 	it("a paused engine resumes on its own after a minute, and pauses again if it must", async () => {
 		let fail = true;
 		const r = rig((req) => (fail ? new Error("boom") : [`[en] ${req.text}`]));

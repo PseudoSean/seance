@@ -180,6 +180,8 @@ export class TranslateQueue {
 	private pauseTimers = new Map<EngineName, ReturnType<typeof setTimeout>>();
 	/** Engines waiting out `REQUEUE_WAIT_MS` after a requeue: `pump()` skips them. */
 	private requeueWaits = new Set<EngineName>();
+	/** That wait's own timer, per engine, so `cancelAll()` can disarm it. */
+	private requeueTimers = new Map<EngineName, ReturnType<typeof setTimeout>>();
 	/** Per-channel generation, bumped by cancelChannel/cancelAll: a route
 	 *  that resolves for an older generation is dropped instead of queued. */
 	private cancelled = new Map<number, number>();
@@ -257,6 +259,32 @@ export class TranslateQueue {
 		for (const running of this.inFlight.values()) {
 			running.abort();
 		}
+
+		// Both of the queue's own waits go with everything else: a requeue
+		// wait left running would pump a queue that was emptied under it, and
+		// an engine whose wait is never cleared is skipped by `pump()` for the
+		// rest of the session.
+		const timers = this.timers();
+
+		for (const [engine, timer] of this.requeueTimers) {
+			timers.clearTimeout(timer);
+			this.requeueWaits.delete(engine);
+		}
+
+		this.requeueTimers.clear();
+
+		// A pause is about work that no longer exists, and disarming the timer
+		// that would lift it would park the engine for good — so the pause is
+		// lifted rather than merely disarmed, through the one door back in.
+		for (const engine of [...this.pausedEngines]) {
+			this.resume(engine);
+		}
+
+		for (const timer of this.pauseTimers.values()) {
+			timers.clearTimeout(timer);
+		}
+
+		this.pauseTimers.clear();
 	}
 
 	paused(engine: EngineName): boolean {
@@ -628,8 +656,18 @@ export class TranslateQueue {
 
 			// A worker torn down under the request, or an abort the queue did
 			// not ask for, says nothing about the engine: the batch waits.
+			// The queue's OWN abort usually leaves through the `aborted`
+			// branch above, but an engine that rejects in the same turn the
+			// cancel arrives lands here instead — and a line the reader
+			// cancelled is dropped, not failed, or three cancels in a row
+			// pause the engine. runMultiline has said so since it was
+			// written.
 			if (!aborted && notAFailure(message)) {
 				this.requeue(engine, batch);
+			} else if (aborted && !timedOut) {
+				for (const q of batch) {
+					this.deps.onUpdate(q.item.id, {status: "dropped"});
+				}
 			} else {
 				this.fail(engine, batch, message);
 			}
@@ -906,9 +944,11 @@ export class TranslateQueue {
 			clearTimeout(existing);
 		}
 
+		const timers = this.timers();
+
 		this.pauseTimers.set(
 			engine,
-			setTimeout(() => {
+			timers.setTimeout(() => {
 				this.pauseTimers.delete(engine);
 				this.resume(engine);
 			}, PAUSE_RESUME_MS)
@@ -924,16 +964,28 @@ export class TranslateQueue {
 	 * pumped again, so a worker that keeps dying is retried rather than spun.
 	 */
 	private requeue(engine: EngineName, batch: Queued[]): void {
-		for (const q of batch) {
-			this.waiting.push({...q, seq: -++this.seq});
-		}
+		// One base for the whole batch, counting down through it: a sequence
+		// number of its own per item made the last line the most negative and
+		// the batch came back reversed, so the reader read a paragraph from
+		// the bottom up.
+		const base = (this.seq += batch.length);
+
+		batch.forEach((q, index) => {
+			this.waiting.push({...q, seq: -(base - index)});
+		});
 
 		this.requeueWaits.add(engine);
 
-		setTimeout(() => {
-			this.requeueWaits.delete(engine);
-			this.pump();
-		}, REQUEUE_WAIT_MS);
+		const timers = this.timers();
+
+		this.requeueTimers.set(
+			engine,
+			timers.setTimeout(() => {
+				this.requeueTimers.delete(engine);
+				this.requeueWaits.delete(engine);
+				this.pump();
+			}, REQUEUE_WAIT_MS)
+		);
 	}
 
 	/** Missing spans (spans.ts) are appended only to the final text: a
