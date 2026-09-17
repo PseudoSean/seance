@@ -8,6 +8,7 @@ import {
 	buildCatalog,
 	type CacheApi,
 } from "../../client/js/translate/models";
+import {ABORTED} from "../../client/js/translate/outgoing";
 import {createPortPair} from "../../client/js/translate/protocol";
 import type {RouteTable} from "../../client/js/translate/router";
 import {DEFAULT_ROUTES} from "../../client/js/translate/routes.default";
@@ -1264,5 +1265,47 @@ describe("translate/service", () => {
 
 		expect(message).to.equal(WORKER_DISPOSED);
 		expect(r.workers.length).to.equal(1);
+	});
+
+	// The wait phase is everything before the request is posted: the route
+	// (whose first call asks the worker what is downloaded), a GPU model
+	// switch settling, another model's work finishing. An abort there used to
+	// cancel nothing -- the listener was registered `{once: true}` while the
+	// request had no id yet -- and the request was then sent to the worker,
+	// model download included, long after the queue had moved on.
+	it("an abort while the route is still being resolved never reaches the worker", async () => {
+		const r = rig("gpu");
+		clock = r.clock;
+		await r.service.capabilities();
+
+		let release!: () => void;
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		const route = r.service.route.bind(r.service);
+
+		r.service.route = async (from, to, hint) => {
+			await gate;
+			return route(from, to, hint);
+		};
+
+		const controller = new AbortController();
+		let message = "";
+		const iteration = (async () => {
+			for await (const chunk of r.service.translate(base, controller.signal)) {
+				void chunk; // unreachable: aborted before the request is posted
+			}
+		})().catch((e: Error) => {
+			message = e.message;
+		});
+
+		await Promise.resolve();
+		controller.abort();
+		release();
+		await iteration;
+
+		expect(message).to.equal(ABORTED);
+		expect(r.llm.calls.translate).to.deep.equal([]);
+		r.service.dispose();
 	});
 });

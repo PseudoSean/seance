@@ -12,6 +12,7 @@
 import {Capability} from "./capability";
 import {TranslateClient, TranslateError, WORKER_DISPOSED} from "./client";
 import {EngineName, LoadProgress, ModelRef, TranslateChunk, TranslateRequest} from "./engine";
+import {ABORTED} from "./outgoing";
 import {Candidate, ModelCatalog, candidateOf, catalogModels, selectLlm} from "./models";
 import {Route, RouteTable, mergeRoutes, resolveRoute} from "./router";
 import {routesFor as shippedRoutesFor} from "./routes.default";
@@ -420,15 +421,33 @@ export class TranslateService {
 			}
 		};
 
-		signal?.addEventListener("abort", onAbort, {once: true});
+		// Not `{once: true}`: the listener has to survive every candidate this
+		// call tries, and an abort before the request has an id is re-read
+		// after each await below rather than fired and forgotten.
+		signal?.addEventListener("abort", onAbort);
+
+		// Every await before the request is posted is a wait the caller may
+		// abort: the route (whose first call asks the worker what is
+		// downloaded), a GPU model switch settling, another model's work
+		// finishing. Without this the queue had already given the line up
+		// while the request went to the worker, model download and all.
+		const checkAborted = () => {
+			if (signal?.aborted) {
+				throw new Error(ABORTED);
+			}
+		};
 
 		try {
 			for (;;) {
 				const route = await this.route(request.from, request.to, hint);
 
+				// After the teardown check: a worker torn down while the route
+				// resolved is the truer report of the two.
 				if (this.generation !== startGeneration) {
 					throw new Error(WORKER_DISPOSED);
 				}
+
+				checkAborted();
 
 				if (!route) {
 					throw new Error(
@@ -444,6 +463,7 @@ export class TranslateService {
 				// selection may have moved on meanwhile.
 				if (route.ref.engine === "llm" && this.llmSwitch) {
 					await this.llmSwitch;
+					checkAborted();
 					continue;
 				}
 
@@ -454,6 +474,7 @@ export class TranslateService {
 					const waitingFor = route.ref.id;
 
 					await this.whenLlm(() => !this.otherLlmWork(waitingFor));
+					checkAborted();
 					continue;
 				}
 
