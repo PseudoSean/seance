@@ -56,9 +56,11 @@ export interface PluralSlot {
 /**
  * Every gettext slot of a plural entry, with the source text each one
  * translates: the slot the expression yields for n = 1 is the singular
- * (msgid), every other slot is the plural (msgid_plural). Complete and
- * independent of what is already filled — the caller decides which slots
- * it still needs.
+ * (msgid), every other slot is the plural (msgid_plural). A one-form
+ * language (ja, zh, ko, th, vi) is the exception — its single slot serves
+ * every count, so it translates the plural text, the form that carries
+ * {count}. Complete and independent of what is already filled — the caller
+ * decides which slots it still needs.
  */
 export function planPluralSlots(
 	entry: {msgid: string; msgidPlural?: string},
@@ -69,7 +71,9 @@ export function planPluralSlots(
 		return [];
 	}
 
-	const singular = pluralEval(expr, 1);
+	// Only a language that HAS a singular gets one: with one form there is
+	// nothing to contrast it with, and the count shows every time.
+	const singular = nplurals > 1 ? pluralEval(expr, 1) : -1;
 
 	return Array.from({length: nplurals}, (_, index) => ({
 		index,

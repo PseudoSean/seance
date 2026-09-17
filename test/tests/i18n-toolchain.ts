@@ -383,8 +383,12 @@ describe("i18n toolchain", () => {
 				{index: 1, source: "msgidPlural"},
 				{index: 2, source: "msgidPlural"},
 			]);
-			// One slot (ja, zh, ko, th, vi): the singular is what it holds.
-			expect(planPluralSlots(entry, 1, "0")).to.deep.equal([{index: 0, source: "msgid"}]);
+			// One slot (ja, zh, ko, th, vi): the only form has to serve every
+			// count, so it translates the plural text — the one carrying
+			// {count}. The n = 1 rule is for languages that HAVE a singular.
+			expect(planPluralSlots(entry, 1, "0")).to.deep.equal([
+				{index: 0, source: "msgidPlural"},
+			]);
 		});
 
 		it("gives every rule in the table as many slots as its expression yields", () => {

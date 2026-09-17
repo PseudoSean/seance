@@ -13,7 +13,8 @@
 //
 // The unit of work is a msgstr SLOT: a singular entry has one, a plural
 // entry one per gettext form — the slot n = 1 reads translates msgid, the
-// rest translate msgid_plural (tools/i18n/plural.ts planPluralSlots). Each
+// rest translate msgid_plural, and a one-form language's single slot takes
+// the plural text (tools/i18n/plural.ts planPluralSlots). Each
 // slot's source text is protected (spans.ts, the marker form the engine's
 // route asks for) before the request and restored after; a translation that
 // does not keep all of the original's placeholders is left empty. The .po is
