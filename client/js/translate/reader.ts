@@ -620,7 +620,9 @@ export function requestTranslationPanel(channel: ClientChan): void {
 export function setChannelOptions(
 	network: ClientNetwork,
 	channel: ClientChan,
-	patch: Partial<Pick<ChannelTranslation, "write" | "formality" | "variant" | "languages">>
+	patch: Partial<
+		Pick<ChannelTranslation, "write" | "formality" | "variant" | "languages" | "once">
+	>
 ): void {
 	commitChannel(network, channel, setChannelTranslation(network.uuid, channel.name, patch));
 }

@@ -840,7 +840,9 @@ the strip comes up as it does for a write target, and the next Enter
 sends what it holds. The button is live for a draft the gate would
 translate (prose, or a `/me`), wherever translation can run at all; the
 dialog preselects the channel's last one-off language, else its write
-target (`lastOnceTarget`, session only). Browser check:
+target (`lastOnceTarget`; the last pick is kept with the channel's record,
+`channelStore.ts` `once`, so it survives a reload and travels in the
+settings backup). Browser check:
 `tools/scenarios/translate-composer.mjs` § 0.
 
 **An echo buys one more generation, and a bare one.** Before the strip

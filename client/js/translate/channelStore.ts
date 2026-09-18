@@ -50,6 +50,12 @@ export interface ChannelTranslation {
 	languages: string[];
 	/** Term memory, oldest first, one entry per source term and target language. */
 	terms: TermEntry[];
+	/**
+	 * The language the composer's translate button last translated a
+	 * message into here (writer.ts `translateOnce`), preselected by its
+	 * dialog next time; null until it has been used.
+	 */
+	once: string | null;
 }
 
 export interface StorageBackend {
@@ -83,6 +89,7 @@ export function defaultChannelTranslation(): ChannelTranslation {
 		variant: "",
 		languages: [],
 		terms: [],
+		once: null,
 	};
 }
 
@@ -164,6 +171,7 @@ function sanitize(value: unknown): ChannelTranslation | null {
 	// line failing to route.
 	out.read = Boolean(raw.read);
 	out.write = typeof raw.write === "string" && isSupported(raw.write) ? raw.write : null;
+	out.once = typeof raw.once === "string" && isSupported(raw.once) ? raw.once : null;
 	out.formality = isFormality(raw.formality) ? raw.formality : "auto";
 	out.variant = typeof raw.variant === "string" ? raw.variant : "";
 	out.languages = languagesOf(raw.languages);

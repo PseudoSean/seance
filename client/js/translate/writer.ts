@@ -44,7 +44,13 @@ import {
 	translateDraft,
 	writeSource,
 } from "./outgoing";
-import {channelTranslation, holdReading, readingLanguage, releaseReading} from "./reader";
+import {
+	channelTranslation,
+	holdReading,
+	readingLanguage,
+	releaseReading,
+	setChannelOptions,
+} from "./reader";
 import type {Route} from "./router";
 import {sentReadBacks} from "./sentReadBack";
 import {LLM_MARKERS, type MarkerForm, stripCopiedNickPrefix} from "./spans";
@@ -153,14 +159,13 @@ export function writeTarget(network: ClientNetwork, channel: ClientChan): string
 	return translateService().enabled ? channelTranslation(network, channel).write : null;
 }
 
-/** The language each channel's last one-off translation went into (session only). */
-const onceTargets = new Map<number, string>();
-
 /**
  * The composer's translate button: the draft into `to`, this once, whether
  * or not the channel has a write target -- the strip comes up as it does
  * for a write target, and the next Enter sends what it holds. The choice
- * is remembered per channel for the button's next pick (`lastOnceTarget`).
+ * is kept with the channel's record (channelStore.ts `once`, so it
+ * survives a reload and travels in the settings backup) for the button's
+ * next pick (`lastOnceTarget`).
  */
 export function translateOnce(
 	network: ClientNetwork,
@@ -168,14 +173,18 @@ export function translateOnce(
 	draft: string,
 	to: string
 ): Promise<"strip" | "plain"> {
-	onceTargets.set(channel.id, to);
+	if (channelTranslation(network, channel).once !== to) {
+		setChannelOptions(network, channel, {once: to});
+	}
 
 	return translateOutgoing(network, channel, draft, to);
 }
 
 /** The picker's preselection: the channel's last one-off target, else its write target. */
 export function lastOnceTarget(network: ClientNetwork, channel: ClientChan): string {
-	return onceTargets.get(channel.id) ?? channelTranslation(network, channel).write ?? "";
+	const settings = channelTranslation(network, channel);
+
+	return settings.once ?? settings.write ?? "";
 }
 
 export function outgoingTranslation(channel: ClientChan): OutgoingTranslation | undefined {

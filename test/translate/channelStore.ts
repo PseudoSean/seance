@@ -73,6 +73,7 @@ describe("translate/channelStore", () => {
 			variant: "",
 			languages: [],
 			terms: [],
+			once: null,
 		});
 	});
 
@@ -128,6 +129,18 @@ describe("translate/channelStore", () => {
 			read: false,
 			variant: "keep me",
 		});
+	});
+
+	it("the translate button's last language is kept with the record", () => {
+		expect(getChannelTranslation("n1", "#seance").once).to.equal(null);
+		setChannelTranslation("n1", "#seance", {once: "es"});
+		expect(getChannelTranslation("n1", "#seance").once).to.equal("es");
+		expect(JSON.parse(backend.data.get(STORAGE_KEY) as string)["n1/#seance"].once).to.equal(
+			"es"
+		);
+		// A language this build cannot route loads as none.
+		backend.data.set(STORAGE_KEY, JSON.stringify({"n1/#seance": {read: false, once: "xx"}}));
+		expect(getChannelTranslation("n1", "#seance").once).to.equal(null);
 	});
 
 	it("a stored read language from the old per-channel picker migrates to on", () => {
