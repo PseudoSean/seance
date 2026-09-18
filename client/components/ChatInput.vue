@@ -192,9 +192,11 @@
 				id="translate-once"
 				ref="translateOnceButton"
 				type="button"
+				:class="{on: !!sendTarget}"
 				:aria-label="translateOnceLabel"
+				:aria-pressed="!!sendTarget"
 				:aria-expanded="translateOncePickerOpen"
-				:disabled="!canTranslateOnce"
+				:disabled="!canSend"
 				@mousedown.prevent
 				@click="openTranslateOnce"
 			/>
@@ -204,6 +206,7 @@
 				:selected="translateOncePreselected"
 				:selected-from="translateOnceFrom"
 				:polish-available="polishAvailable"
+				:once-offered="canTranslateOnce"
 				purpose="target"
 				@pick="translateOnce"
 				@close="translateOncePickerOpen = false"
@@ -286,7 +289,7 @@ import {hasVirtualKeyboard} from "../js/helpers/device";
 import {useI18n} from "../js/i18n";
 import {languageName} from "../js/translate/languages";
 import {draftGate} from "../js/translate/outgoing";
-import {readingLanguage, translationAvailable} from "../js/translate/reader";
+import {readingLanguage, setChannelOptions, translationAvailable} from "../js/translate/reader";
 import SourceLanguagePicker from "./SourceLanguagePicker.vue";
 import {loadNoteText} from "../js/helpers/modelLabel";
 import {translateErrorText} from "../js/helpers/translateErrors";
@@ -1095,11 +1098,14 @@ export default defineComponent({
 			});
 		};
 
-		// The translate button: the draft into a language picked for this one
-		// message (writer.ts `translateOnce`), the way the toolbar's Translate
-		// reads one line without switching the channel on. Shown wherever
-		// translation can run at all; live for a draft the gate would
-		// translate (prose, or a /me), whatever the channel's write target.
+		// The translate button is the channel's send target as a toggle,
+		// independent of the globe (which is reading): off, a click opens
+		// the dialog and the pick becomes the write target (channelStore
+		// `write`, the same setting the panel's "Send my messages in" shows)
+		// until the button is clicked again; the dialog's "This message
+		// only" makes the pick a one-off instead (writer.ts `translateOnce`),
+		// the way the toolbar's Translate reads one line. Shown wherever
+		// translation can run at all.
 		const translateOnceButton = ref<HTMLButtonElement | null>(null);
 		const translateOncePickerOpen = ref(false);
 		const translateOnceAvailable = computed(
@@ -1117,7 +1123,21 @@ export default defineComponent({
 				!outgoingBusy.value
 			);
 		});
-		const translateOnceLabel = computed(() => t("translate.composer.translateOnce"));
+		// The channel's send target: the button is lit while one is set.
+		const sendTarget = computed(() => writeTarget(props.network, props.channel));
+		const translateOnceLabel = computed(() => {
+			const to = sendTarget.value;
+
+			if (!to) {
+				return t("translate.composer.sendOff");
+			}
+
+			const language = languageName(to, readingLanguage());
+
+			return to === readingLanguage()
+				? t("translate.composer.sendCorrectedOn", {language})
+				: t("translate.composer.sendOn", {language});
+		});
 		// Read when the dialog opens: the last pick is plain session memory
 		// (writer.ts), not store state, so nothing would recompute it.
 		const translateOncePreselected = ref("");
@@ -1125,10 +1145,21 @@ export default defineComponent({
 		const translateOnceFrom = computed(() => readingLanguage());
 
 		const openTranslateOnce = () => {
-			if (canTranslateOnce.value) {
-				translateOncePreselected.value = lastOnceTarget(props.network, props.channel);
-				translateOncePickerOpen.value = !translateOncePickerOpen.value;
+			if (!canSend.value) {
+				return;
 			}
+
+			// On: the click turns the send target off; a strip in flight for
+			// it goes too. Off: the dialog.
+			if (sendTarget.value) {
+				setChannelOptions(props.network, props.channel, {write: null});
+				cancelOutgoing(props.channel);
+				focusForTyping();
+				return;
+			}
+
+			translateOncePreselected.value = lastOnceTarget(props.network, props.channel);
+			translateOncePickerOpen.value = !translateOncePickerOpen.value;
 		};
 
 		// A same-language pick is a cleanup pass on the GPU model
@@ -1140,21 +1171,35 @@ export default defineComponent({
 				!!store.state.settings.translateLlm
 		);
 
-		const translateOnce = (to: string, from: string | null = null) => {
+		const translateOnce = (to: string, from: string | null = null, once = false) => {
 			translateOncePickerOpen.value = false;
 
 			const draft = props.channel.pendingMessage ?? "";
 			const gate = draftGate(draft, !!props.channel.editing);
+			const translatable =
+				canTranslateOnce.value && (gate.kind === "ok" || gate.kind === "action");
 
-			if (!canTranslateOnce.value || !(gate.kind === "ok" || gate.kind === "action")) {
+			if (once) {
+				// The verdict is checked against the composer it started in,
+				// as the first Enter's is: a "plain" verdict (the draft is
+				// already in that language) leaves the draft where it is --
+				// the dialog asked for a translation, not a send.
+				if (translatable) {
+					void translateDraftOnce(props.network, props.channel, gate.text, to, from);
+				}
+
+				focusForTyping();
 				return;
 			}
 
-			// The verdict is checked against the composer it started in, as
-			// the first Enter's is: a "plain" verdict (the draft is already in
-			// that language) leaves the draft where it is -- the button asked
-			// for a translation, not a send.
-			void translateDraftOnce(props.network, props.channel, gate.text, to, from);
+			// The mode: the channel's send target, from here on. A draft
+			// already typed gets the strip now rather than on its Enter.
+			setChannelOptions(props.network, props.channel, {write: to});
+
+			if (translatable) {
+				void translateOutgoing(props.network, props.channel, gate.text);
+			}
+
 			focusForTyping();
 		};
 
@@ -1480,6 +1525,7 @@ export default defineComponent({
 			translateOnceLabel,
 			translateOncePreselected,
 			translateOnceFrom,
+			sendTarget,
 			polishAvailable,
 			openTranslateOnce,
 			translateOnce,

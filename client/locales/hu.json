@@ -874,7 +874,6 @@
   "translate.chip.unsure": "Nyelv nem különbztet, nem fordítva. Fordítási opciók",
   "translate.composer.placeholder": "Írjon {name}-nek · elküldve {language}-ben",
   "translate.composer.placeholderCorrected": "írjon {name}-nek · helyesbített",
-  "translate.composer.translateOnce": "Ezt a üzenetet fordítsd le…",
   "translate.error.aborted": "megszakítva",
   "translate.error.timedOut": "időközben leállítva",
   "translate.error.unavailable": "nincs fordító engedéllyel",

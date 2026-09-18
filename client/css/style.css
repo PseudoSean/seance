@@ -2070,6 +2070,19 @@ textarea.input {
 	line-height: normal;
 }
 
+/* "This message only": a checkbox row between the selects and the buttons. */
+.source-language-picker-once {
+	display: flex;
+	align-items: center;
+	gap: 0.4em;
+	font-size: 0.875rem;
+	cursor: pointer;
+}
+
+.source-language-picker-once-box {
+	margin: 0;
+}
+
 /* One line of prose under the selects: what a same-language pick does. */
 .source-language-picker-hint {
 	margin: 0;
@@ -4001,7 +4014,10 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	font-size: 1.25rem;
 }
 
-#form #translate-once[aria-expanded="true"] {
+/* Lit while the channel has a send target (the button is its toggle), and
+ * while its dialog is open. */
+#form #translate-once[aria-expanded="true"],
+#form #translate-once.on {
 	color: var(--chat-accent, var(--link-color));
 }
 

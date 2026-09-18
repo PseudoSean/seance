@@ -882,7 +882,6 @@
   "translate.chip.unsure": "Limbă nu a fost distinsă, nu a fost tradusă. Opțiuni de traducere",
   "translate.composer.placeholder": "Scrie în {name} · trimis în {language}",
   "translate.composer.placeholderCorrected": "Scrie către {name} · trimis corectat",
-  "translate.composer.translateOnce": "Traduc această mesaj în…",
   "translate.error.aborted": "anulat",
   "translate.error.timedOut": "expirat",
   "translate.error.unavailable": "Niciun motor de traducere nu poate lua această cerere",

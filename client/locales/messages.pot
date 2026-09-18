@@ -5083,10 +5083,22 @@ msgctxt "translate.composer.placeholderCorrected"
 msgid "Write to {name} · sent corrected"
 msgstr ""
 
-#. Tooltip and aria-label of the composer's translate button (the language mark beside the attachment and send buttons); it opens a language picker and translates the draft into the picked language this once, without switching the channel's translation on. Ends with an ellipsis.
+#. Tooltip and aria-label of the composer's translate button while the channel corrects every message (spelling and grammar) in {language}, the user's own language, before sending; a click turns that off. The middle dot is part of the copy.
 #: client/components/ChatInput.vue
-msgctxt "translate.composer.translateOnce"
-msgid "Translate this message into…"
+msgctxt "translate.composer.sendCorrectedOn"
+msgid "Sending corrected in {language} · click to stop"
+msgstr ""
+
+#. Tooltip and aria-label of the composer's translate button (the language mark beside the attachment and send buttons) while no send target is set; a click opens a dialog to pick the language every message is sent in, or a correction pass. Ends with an ellipsis.
+#: client/components/ChatInput.vue
+msgctxt "translate.composer.sendOff"
+msgid "Translate what I send…"
+msgstr ""
+
+#. Tooltip and aria-label of the composer's translate button while the channel sends every message translated into {language} (a language name in the interface language); a click turns that off. The middle dot is part of the copy.
+#: client/components/ChatInput.vue
+msgctxt "translate.composer.sendOn"
+msgid "Sending in {language} · click to stop"
 msgstr ""
 
 #. Why a translation failed, shown after 'Couldn't translate': the request was cancelled before it finished. Lowercase: it follows a colon or a dash.
@@ -5512,6 +5524,12 @@ msgstr ""
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetLabel"
 msgid "Translate into"
+msgstr ""
+
+#. Checkbox in the composer's translate dialog: ticked, the picked language applies to the draft alone (a one-off) rather than becoming the channel's send target.
+#: client/components/SourceLanguagePicker.vue
+msgctxt "translate.picker.thisMessageOnly"
+msgid "This message only"
 msgstr ""
 
 #. Failure reason after 'Couldn't translate': the model replied to a question it found in the message rather than translating the message. Lowercase; reads as the tail of that sentence.

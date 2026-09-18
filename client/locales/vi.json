@@ -855,7 +855,6 @@
   "translate.chip.unsure": "Ngôn ngữ không thể phân biệt, không dịch. Các tùy chọn dịch",
   "translate.composer.placeholder": "Ghi vào {name} · gửi vào {language}",
   "translate.composer.placeholderCorrected": "Gửi {name} · đã gửi sửa lỗi",
-  "translate.composer.translateOnce": "Dịch thông báo này sang…",
   "translate.error.aborted": "đã bị hủy bỏ",
   "translate.error.timedOut": "đã hết hạn",
   "translate.error.unavailable": "không có engine dịch nào có thể nhận yêu cầu này",

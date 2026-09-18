@@ -855,7 +855,6 @@
   "translate.chip.unsure": "언어가 구분되지 않아 번역되지 않았습니다. 번역 옵션",
   "translate.composer.placeholder": "{name}로 작성 · {language}에서 전송",
   "translate.composer.placeholderCorrected": "{name}에게 쓰기 · 수정된 메시지 전송",
-  "translate.composer.translateOnce": "이 메시지를 번역하세요…",
   "translate.error.aborted": "중단",
   "translate.error.timedOut": "시간 초과",
   "translate.error.unavailable": "번역 엔진이 이 요청을 처리할 수 없습니다",

@@ -854,7 +854,6 @@
   "translate.chip.unsure": "Sprog ikke forskelgøres, ikke oversat. Oversætningsvalg",
   "translate.composer.placeholder": "Skriv til {name} · sendt i {language}",
   "translate.composer.placeholderCorrected": "Skriv til {name} · sendt rettet",
-  "translate.composer.translateOnce": "Oversæt denne besked til…",
   "translate.error.aborted": "afbrudt",
   "translate.error.timedOut": "tidsbegrenset",
   "translate.error.unavailable": "ingen oversætningsmotor kan tage denne anmodning",

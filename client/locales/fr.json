@@ -854,7 +854,6 @@
   "translate.chip.unsure": "Langue non distinguée, non traduite. Options de traduction",
   "translate.composer.placeholder": "Écrire dans {name} · envoyé dans {language}",
   "translate.composer.placeholderCorrected": "Écrire à {name} · envoyé corrigé",
-  "translate.composer.translateOnce": "Traduisez ce message en…",
   "translate.error.aborted": "Annulé",
   "translate.error.timedOut": "Dépassé",
   "translate.error.unavailable": "Aucun moteur de traduction ne peut prendre ce demande",

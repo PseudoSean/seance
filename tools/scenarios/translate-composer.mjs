@@ -410,14 +410,19 @@ export default async function run(page) {
 	await page.waitFor(`!!document.querySelector(${JSON.stringify(ONCE)})`, {
 		label: "the composer's translate button",
 	});
+	// The button is the send target's toggle, live with or without a
+	// draft; with one, the dialog offers "This message only".
 	await page.check(
-		"the translate button is disabled on an empty draft",
-		await page.evaluate(`document.querySelector(${JSON.stringify(ONCE)}).disabled`)
+		"the translate button is live on an empty draft",
+		!(await page.evaluate(`document.querySelector(${JSON.stringify(ONCE)}).disabled`))
+	);
+	await page.check(
+		"the translate button is off with no send target",
+		(await page.evaluate(
+			`document.querySelector(${JSON.stringify(ONCE)}).getAttribute("aria-pressed")`
+		)) === "false"
 	);
 	await page.fill(INPUT, onceDraft);
-	await page.waitFor(`!document.querySelector(${JSON.stringify(ONCE)}).disabled`, {
-		label: "the translate button is live with a draft",
-	});
 	await page.click(ONCE);
 	await page.waitFor(`!!document.querySelector(${JSON.stringify(ONCE_SELECT)})`, {
 		label: "the translate-into dialog",
@@ -427,6 +432,7 @@ export default async function run(page) {
 			ONCE_SELECT
 		)}); s.value = "es"; s.dispatchEvent(new Event("change", {bubbles: true})); })()`
 	);
+	await page.click(".source-language-picker-once-box");
 	await page.click(".source-language-picker-confirm");
 	await page.waitFor(
 		`(document.querySelector(${JSON.stringify(
@@ -484,6 +490,7 @@ export default async function run(page) {
 	await page.waitFor(`!!document.querySelector(".source-language-picker-hint")`, {
 		label: "the same-language hint",
 	});
+	await page.click(".source-language-picker-once-box");
 	await page.click(".source-language-picker-confirm");
 	await page.waitFor(
 		`(document.querySelector(${JSON.stringify(
@@ -509,6 +516,69 @@ export default async function run(page) {
 	await page.waitFor(`!document.querySelector(${JSON.stringify(BAR)})`, {
 		label: "the strip is gone after the corrected send",
 	});
+
+	// The button as a toggle: with no draft, a pick without "This message
+	// only" becomes the channel's send target -- the button lit, the
+	// placeholder saying so -- until the button is clicked again.
+	await page.fill(INPUT, "");
+	await page.click(ONCE);
+	await page.waitFor(`!!document.querySelector(${JSON.stringify(ONCE_SELECT)})`, {
+		label: "the dialog on an empty draft",
+	});
+	await page.check(
+		"no one-off box without a draft",
+		(await page.count(".source-language-picker-once-box")) === 0
+	);
+	await page.evaluate(
+		`(() => { const s = document.querySelector(${JSON.stringify(
+			ONCE_SELECT
+		)}); s.value = "de"; s.dispatchEvent(new Event("change", {bubbles: true})); })()`
+	);
+	await page.click(".source-language-picker-confirm");
+	await page.waitFor(
+		`document.querySelector(${JSON.stringify(ONCE)}).getAttribute("aria-pressed") === "true"`,
+		{label: "the button is on"}
+	);
+	await page.check(
+		"the placeholder says the channel sends in German",
+		(await page.evaluate(
+			`document.querySelector("#form #input").getAttribute("placeholder")`
+		)) === `Write to ${CHANNEL} · sent in German`
+	);
+	const modeDraft = `sent while the button is on ${RUN}`;
+
+	await typeAndEnter(page, modeDraft);
+	await page.waitFor(
+		`(document.querySelector(${JSON.stringify(
+			BAR_TEXT
+		)}) || {}).textContent === ${JSON.stringify(`[German] ${modeDraft}`)}`,
+		{timeout: 30000, label: "the first Enter translates under the button's target"}
+	);
+	await page.waitFor(
+		`(document.querySelector(".translate-bar-check .translate-bar-text") || {}).textContent === ${JSON.stringify(
+			`[English] [German] ${modeDraft}`
+		)}`,
+		{timeout: 30000, label: "its read-back"}
+	);
+	await page.evaluate(ENTER);
+	await page.check(
+		"the second Enter sends it in German",
+		await heard(other, `[German] ${modeDraft}`)
+	);
+	await page.waitFor(`!document.querySelector(${JSON.stringify(BAR)})`, {
+		label: "the strip is gone after the German send",
+	});
+	await page.click(ONCE);
+	await page.waitFor(
+		`document.querySelector(${JSON.stringify(ONCE)}).getAttribute("aria-pressed") === "false"`,
+		{label: "the button is off again"}
+	);
+	await page.check(
+		"the placeholder is plain again",
+		(await page.evaluate(
+			`document.querySelector("#form #input").getAttribute("placeholder")`
+		)) === `Write to ${CHANNEL}`
+	);
 
 	// The next pick starts from the language picked last time.
 	await page.fill(INPUT, `and this one too ${RUN}`);

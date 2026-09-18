@@ -828,21 +828,24 @@ channel switched off, a language change, drop-behind), never un-pauses an
 engine, and counts toward no pause; a user's Retry asks in the normal shape
 again and gets its own bare retry.
 
-**One message, one language.** The composer has a translate button (the
-language mark beside the paperclip and the plane, `ChatInput.vue`
-`translateOnce`), the writing side of the toolbar's Translate: it opens the
-language picker in its "translate into" form (`SourceLanguagePicker.vue`
-`purpose="target"`), and the pick translates the draft into that language
-this once -- `writer.ts` `translateOnce`, which is `translateOutgoing` with
-its target named rather than read off the channel, so it runs with no
-write target set and is not invalidated by the panel's target moving --
-the strip comes up as it does for a write target, and the next Enter
-sends what it holds. The button is live for a draft the gate would
-translate (prose, or a `/me`), wherever translation can run at all; the
-dialog preselects the channel's last one-off language, else its write
-target (`lastOnceTarget`; the last pick is kept with the channel's record,
-`channelStore.ts` `once`, so it survives a reload and travels in the
-settings backup). The dialog also asks what to translate **from**,
+**The composer's translate button is the send target's toggle.** The
+language mark beside the paperclip and the plane (`ChatInput.vue`
+`translateOnce`) is independent of the globe, which is reading: off, a
+click opens the language picker in its "translate into" form
+(`SourceLanguagePicker.vue` `purpose="target"`), and the pick becomes the
+channel's write target -- `channelStore.ts` `write`, the very setting the
+panel's "Send my messages in" shows, so the two controls never disagree --
+until the button, lit and `aria-pressed` while a target is set, is clicked
+again (the panel's Off does the same). A draft already typed gets its
+strip at once. The dialog's **"This message only"** (offered when there is
+a draft) makes the pick a one-off instead: `writer.ts` `translateOnce`,
+`translateOutgoing` with its target named rather than read off the
+channel, so it runs with no write target set and is not invalidated by
+the panel's target moving; the strip comes up as it does for a write
+target and the next Enter sends what it holds. The dialog preselects the
+channel's last one-off language, else its write target (`lastOnceTarget`;
+the last pick is kept with the channel's record, `channelStore.ts` `once`,
+so it survives a reload and travels in the settings backup). The dialog also asks what to translate **from**,
 preselected to the language the user reads, with "Detect automatically"
 as the write target has it. **The same language twice is a cleanup**: a
 draft already in the language it is asked into is not sent as typed the

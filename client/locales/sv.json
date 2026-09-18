@@ -862,7 +862,6 @@
   "translate.chip.unsure": "språk kan inte skillas åt, inte översatt. Översättningsalternativ",
   "translate.composer.placeholder": "skriv till {name} · skickad i {language}",
   "translate.composer.placeholderCorrected": "Skriv till {name} · skickad korrigering",
-  "translate.composer.translateOnce": "Översätt detta meddelande till…",
   "translate.error.aborted": "avbröts",
   "translate.error.timedOut": "tidsbunden",
   "translate.error.unavailable": "inga översättningsmotor kan ta detta begäran",

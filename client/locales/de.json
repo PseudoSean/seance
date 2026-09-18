@@ -866,7 +866,6 @@
   "translate.chip.unsure": "Sprache nicht getrennt, nicht übersetzt. Übersetzungsoptionen",
   "translate.composer.placeholder": "Schreiben Sie an {name} · gesendet in {language}",
   "translate.composer.placeholderCorrected": "Schreiben an {name} · korrigiert gesendet",
-  "translate.composer.translateOnce": "Übersetzen Sie diese Nachricht…",
   "translate.error.aborted": "Abgedeckt",
   "translate.error.timedOut": "Zeitverzögerung",
   "translate.error.unavailable": "keine Übersetzung Maschine kann diese Anfrage zu nehmen",

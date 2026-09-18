@@ -927,7 +927,6 @@
   "translate.chip.unsure": "لغة لم يتم تمييزها، لم يتم الترجمة. خيارات الترجمة",
   "translate.composer.placeholder": "كتابة في {name} · تم إرسالها في {language}",
   "translate.composer.placeholderCorrected": "اكتب إلى {name} · أرسلت تصحيح",
-  "translate.composer.translateOnce": "اترجم هذا الرسالة إلى...",
   "translate.error.aborted": "تم الإلغاء",
   "translate.error.timedOut": "تجاوز الزمن",
   "translate.error.unavailable": "لا يمكن للنظام الترجمي أن يقبل هذا الطلب",

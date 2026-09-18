@@ -871,7 +871,6 @@
   "translate.chip.unsure": "Linguagem não distinguível, não traduzida. Opções de tradução",
   "translate.composer.placeholder": "Escrever para {name} · enviado para {language}",
   "translate.composer.placeholderCorrected": "Escreva para {name} · enviada corrigida",
-  "translate.composer.translateOnce": "Traduza esta mensagem…",
   "translate.error.aborted": "abordado",
   "translate.error.timedOut": "expirou",
   "translate.error.unavailable": "nenhum motor de tradução pode aceitar esse pedido",

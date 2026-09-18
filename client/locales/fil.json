@@ -844,7 +844,6 @@
   "translate.chip.unsure": "Wala nang pagkakaiba ng wika, di nagsasalungat. Pagpipilian ng pag-translata",
   "translate.composer.placeholder": "Isulat sa {name} · ipasok sa {language}",
   "translate.composer.placeholderCorrected": "Sumayaw sa {name} · ipinahayag ang tamang pagbabago",
-  "translate.composer.translateOnce": "Ibigay ito pangungusap sa Filipino...",
   "translate.error.aborted": "nakalayag",
   "translate.error.timedOut": "nawala ang oras",
   "translate.error.unavailable": "walang engine ng pag-translata na maaari mag-angat sa kahilingan",

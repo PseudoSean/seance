@@ -39,6 +39,10 @@
 					</option>
 				</select>
 			</label>
+			<label v-if="purpose === 'target' && onceOffered" class="source-language-picker-once">
+				<input v-model="once" type="checkbox" class="source-language-picker-once-box" />
+				{{ t("translate.picker.thisMessageOnly") }}
+			</label>
 			<p v-if="sameLanguage" class="source-language-picker-hint">
 				{{
 					polishAvailable
@@ -98,6 +102,8 @@ export default defineComponent({
 		selectedFrom: {type: String, default: ""},
 		/** `target` only: whether a same-language pick (a cleanup pass) can run here. */
 		polishAvailable: {type: Boolean, default: false},
+		/** `target` only: a draft is there, so "This message only" is on offer. */
+		onceOffered: {type: Boolean, default: false},
 	},
 	emits: ["pick", "close"],
 	setup(props, {emit}) {
@@ -130,6 +136,8 @@ export default defineComponent({
 		// The source of a one-off: the language the user reads, or "" for
 		// detection. Picking the same language twice asks for a cleanup.
 		const from = ref(props.purpose === "target" ? props.selectedFrom : "");
+		// "This message only": a one-off rather than the send target.
+		const once = ref(false);
 		const sameLanguage = computed(
 			() => props.purpose === "target" && from.value !== "" && from.value === choice.value
 		);
@@ -200,7 +208,12 @@ export default defineComponent({
 		const close = () => emit("close");
 
 		const confirm = () => {
-			emit("pick", choice.value, props.purpose === "target" ? from.value || null : undefined);
+			emit(
+				"pick",
+				choice.value,
+				props.purpose === "target" ? from.value || null : undefined,
+				props.purpose === "target" ? once.value && props.onceOffered : undefined
+			);
 			close();
 		};
 
@@ -257,6 +270,7 @@ export default defineComponent({
 			fieldLabel,
 			confirmLabel,
 			from,
+			once,
 			sameLanguage,
 			name,
 			phone,
