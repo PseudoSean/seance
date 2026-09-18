@@ -52,13 +52,13 @@ msgstr ""
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.query"
 msgid "Conversation"
-msgstr ""
+msgstr "Paghahalay"
 
 #. Names the kind of window in a sidebar row's aria-label: a results window such as a channel list or a ban list. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.special"
 msgid "List"
-msgstr ""
+msgstr "Listahan"
 
 #. Tooltip and aria-label of the spinner in a chat window's header while the connection is being established, when the network's display name is not known.
 #: client/components/Chat.vue:186
@@ -364,7 +364,7 @@ msgstr "Paggamit: /{cmd} <msgid> [babasa]"
 msgctxt "code.showAllLines"
 msgid "Show all {count} line"
 msgid_plural "Show all {count} lines"
-msgstr[0] ""
+msgstr[0] "Magpakita lahat {count} line"
 msgstr[1] "Sumayawan la mga line {count}"
 
 #. Button under a long code block in a chat message while all of its lines are shown; clicking folds the block back to its first lines.
@@ -557,7 +557,7 @@ msgctxt "condensed.nick"
 msgid "{count} user has changed nick"
 msgid_plural "{count} users have changed nick"
 msgstr[0] "{count} user ay naging nag-change ng nick"
-msgstr[1] ""
+msgstr[1] "{count} users ay nag-change ng nickname"
 
 #. aria-label of the small toggle button that expands or collapses the condensed status block in a channel's scrollback.
 #: client/components/MessageCondensed.vue
@@ -576,7 +576,7 @@ msgstr "I-terminate"
 #: client/components/Windows/Connect.vue:213
 msgctxt "connect.account"
 msgid "Account"
-msgstr ""
+msgstr "Akaungan"
 
 #. aria-label of the whole connect screen (the window/dialog element); announced by screen readers on arriving at the form.
 #: client/components/Windows/Connect.vue:7
@@ -924,13 +924,13 @@ msgstr "Ngayon pa noong kumpleto"
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1001"
 msgid "server going away"
-msgstr ""
+msgstr "server ay umalis"
 
 #. Name of WebSocket close code 1002 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1002"
 msgid "WebSocket protocol error"
-msgstr ""
+msgstr "WebSocket error sa protokol"
 
 #. Name of WebSocket close code 1006 (abnormal closure: refused, unreachable, TLS failure — the browser never says which) in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
@@ -1134,7 +1134,7 @@ msgstr "User {nick} na nangunguna na sa channel."
 #: client/components/NetworkForm.vue:168
 msgctxt "form.account"
 msgid "Account"
-msgstr ""
+msgstr "Akaungan"
 
 #. Button on the network edit form's status row while a connection is being dialled: stop trying.
 #: client/components/NetworkForm.vue:505
@@ -1170,7 +1170,7 @@ msgstr "Ikaibaw ang network"
 #: client/components/NetworkForm.vue:154
 msgctxt "form.authentication"
 msgid "Authentication"
-msgstr ""
+msgstr "Pagpapahalal"
 
 #. Checkbox on the network edit form: dial this network every time the app opens.
 #: client/components/NetworkForm.vue:90
@@ -1194,7 +1194,7 @@ msgstr "Magbigay ng mga pahayag ng browser para sa mga highlight at mga query sa
 #: client/components/NetworkForm.vue:119
 msgctxt "form.channels"
 msgid "Channels"
-msgstr ""
+msgstr "Kanal"
 
 #. Placeholder of the channels field on the network edit form: example channel names, where a name may be followed by its door key.
 #: client/components/NetworkForm.vue:125
@@ -1825,7 +1825,7 @@ msgstr "I-identify ang impormasyon ng nakasulat na user sa kasalukuyan network."
 #: client/components/Windows/Help.vue
 msgctxt "help.commitLink"
 msgid "commit"
-msgstr ""
+msgstr "mag-apply"
 
 #. First word of the two list items under the help window's past-release sentence; each continues with a link comparing two versions. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1850,7 +1850,7 @@ msgstr "Mark ang lahat ng teksto na nagsasalungat sa shortcut na ito bilang"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.bold"
 msgid "bold"
-msgstr ""
+msgstr "malakas"
 
 #. Text of the link at the end of the Ctrl+K description in the help window's formatting section; it opens an external IRC color reference. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2820,7 +2820,7 @@ msgstr ""
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeHalfOp"
 msgid "half-op"
-msgstr ""
+msgstr "nakauna na kahilwa"
 
 #. Name of the IRC channel operator role (the @ prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
@@ -2832,13 +2832,13 @@ msgstr ""
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOwner"
 msgid "owner"
-msgstr ""
+msgstr "may-ari"
 
 #. Name of the IRC voiced role (the + prefix; may speak in a moderated channel), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeVoice"
 msgid "voice"
-msgstr ""
+msgstr "pag-ibig"
 
 #. Context-menu item on a conversation; clicking mutes it (no highlights, no notifications from it). {type} names the kind of conversation in lowercase: 'network', 'channel' or 'conversation'.
 #: client/js/helpers/contextMenu.ts
@@ -3555,7 +3555,7 @@ msgstr "Ang body ay too mabilis (higit sa {limit} karakter)."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr ""
+msgstr "Kwenterno"
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
@@ -3709,7 +3709,7 @@ msgstr "lahat ng mga araw pagkatapos ang pangalawas na pangalan"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.variablesHeading"
 msgid "Variables"
-msgstr ""
+msgstr "Variable"
 
 #. Checkbox in Settings > Appearance; when ticked, typing in the message input suggests completions for names, emoji and commands.
 #: client/components/Settings/Appearance.vue
@@ -3727,7 +3727,7 @@ msgstr "Pag-allow colored nicknames"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.customStylesheet"
 msgid "Custom Stylesheet"
-msgstr ""
+msgstr "Kasunduan na Stylesheet"
 
 #. Visually hidden label of the custom stylesheet text area in Settings > Appearance, where CSS rules overriding the app's own styles can be entered.
 #: client/components/Settings/Appearance.vue
@@ -3739,7 +3739,7 @@ msgstr "Custom stylesheet. Maaari mong i-override ang anumang estilo gamit ang C
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.customStylesheetPlaceholder"
 msgid "/* You can override any style with CSS here */"
-msgstr ""
+msgstr "/* Maaari mong i-override ang anumang estilo dito gamit ang CSS */"
 
 #. aria-label of the slider in Settings > Appearance that changes the size of chat text and the interface with it.
 #: client/components/Settings/Appearance.vue
@@ -4269,7 +4269,7 @@ msgstr "Walang network na naka-save pa."
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.heading"
 msgid "Networks"
-msgstr ""
+msgstr "Network"
 
 #. Line under the Networks heading in the settings, saying what the page is for.
 #: client/components/Settings/Networks.vue
@@ -4513,7 +4513,7 @@ msgstr ""
 #: client/components/Settings/SettingTabItem.vue
 msgctxt "settings.tabs.networks"
 msgid "Networks"
-msgstr ""
+msgstr "Network"
 
 #. Label of the Settings modal's Notifications tab (tab strip); switching tabs navigates to the Notifications settings pane.
 #: client/components/Settings/Navigation.vue
@@ -4562,7 +4562,7 @@ msgstr ""
 #: client/components/NetworkList.vue:17
 msgctxt "sidebar.jumpTo"
 msgid "Jump to..."
-msgstr ""
+msgstr "Pumunta ka..."
 
 #. Tooltip and screen-reader label of the globe button beside the sidebar logo, which opens the language panel (the same selector the connect form and Settings → Appearance carry).
 #: client/components/Sidebar.vue:8
@@ -5933,7 +5933,7 @@ msgstr "« Tulong"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.commitLink"
 msgid "commit"
-msgstr ""
+msgstr "mag-apply"
 
 #. First sentence of the paragraph in the changelog window that says the release notes are read online; the following words are the two links.
 #: client/components/Windows/Changelog.vue

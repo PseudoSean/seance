@@ -821,7 +821,7 @@ msgstr "sunucu SASL {offered} sunuyor, {mechanism} değil"
 #: client/js/irc/client.ts
 msgctxt "connect.saslRequiredHint"
 msgid "Check the account name and password in this network's settings, or pick \"No authentication\" there to connect without logging in."
-msgstr ""
+msgstr "Bu ağın ayarlarında hesap adı ve parolasını kontrol edin veya \"Kimlik doğrulaması yok\" seçeneğini seçerek giriş yapmadan bağlanın."
 
 #. Checkbox on the connect form: reveals the account name and password fields used to authenticate with network services (SASL).
 #: client/components/Windows/Connect.vue:207
@@ -1218,7 +1218,7 @@ msgstr ""
 #: client/components/NetworkForm.vue:490
 msgctxt "form.connectedInsecure"
 msgid "Connected (not secure)"
-msgstr ""
+msgstr "Bağlandı (güvenli değil)"
 
 #. Status line on the network edit form while the network is online over TLS.
 #: client/components/NetworkForm.vue:490
@@ -1242,7 +1242,7 @@ msgstr "Bağlantı kesildi"
 #: client/components/NetworkForm.vue:14
 msgctxt "form.editTitle"
 msgid "Edit {name}"
-msgstr ""
+msgstr "Düzenle {name}"
 
 #. Label of the display-name field of a saved network on the network edit form.
 #: client/components/NetworkForm.vue:42
@@ -3555,7 +3555,7 @@ msgstr "Cümle çok uzun ( {limit} karakterden fazla)"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr ""
+msgstr "İsimli ad"
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
@@ -4880,7 +4880,7 @@ msgstr "{nick} kullanıcı adını {ident} olarak değiştirdi"
 #: client/components/MessageTypes/ctcp_request.vue:5
 msgctxt "system.ctcpRequest"
 msgid "{nick} sent a {ctcp} request: {message}"
-msgstr ""
+msgstr "{nick}, {ctcp} isteği gönderdi: {message}"
 
 #. System line when a user invites someone else. {nick} is the inviter's nick and {target} the invited user's nick — both VERBATIM user content, each rendering as an interactive username element where its placeholder stands; {channel} is the channel name (verbatim).
 #: client/components/MessageTypes/invite.vue:9

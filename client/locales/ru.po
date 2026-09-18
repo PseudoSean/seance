@@ -1541,7 +1541,7 @@ msgstr "Подключиться к новой IRC сети. Если"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.connectB"
 msgid "starts with a"
-msgstr ""
+msgstr "начинается с а"
 
 #. End of the /connect command description in the help window, after the plus-sign code fragment; TLS stays verbatim.
 #: client/components/Windows/Help.vue
@@ -5016,7 +5016,7 @@ msgstr "Проверка само устройство не состоялась
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.smallBuffer"
 msgid "GPU buffer limit under 1 GiB"
-msgstr ""
+msgstr "ограничение буфера GPU менее 1 ГБ"
 
 #. Tooltip and aria-label of a translation line's chip, skipped because the line is already in the reading language. {language} is its name in the reading language.
 #: client/components/TranslationLine.vue

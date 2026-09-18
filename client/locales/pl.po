@@ -1216,7 +1216,7 @@ msgstr "#kanał, #inny klucz (dołączony przy połączeniu)"
 #: client/components/NetworkForm.vue:133
 msgctxt "form.commands"
 msgid "Commands"
-msgstr ""
+msgstr "Komendy"
 
 #. Tooltip of the question-mark icon next to the Commands field on the network edit form (three lines).
 #: client/components/NetworkForm.vue:136
@@ -1240,7 +1240,7 @@ msgstr "Połączony (TLS)"
 #: client/components/NetworkForm.vue:493
 msgctxt "form.connecting"
 msgid "Connecting…"
-msgstr ""
+msgstr "Połączenie…"
 
 #. Status line on the network edit form when the network is not connected.
 #: client/components/NetworkForm.vue:493
@@ -4427,7 +4427,7 @@ msgstr "Uwagi są zablokowane przez twojego przeglądarkę. Pozwól je w ustawie
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushHeading"
 msgid "Push Notifications"
-msgstr ""
+msgstr "Powiadomienia o przesyłaniu"
 
 #. Intro line of the push section in Settings > Notifications; explains that push is enabled per chat network from that network's edit form (the quoted phrase names that setting) and that each server decides whether to support it. Keep the curly quotes and the arrow.
 #: client/components/Settings/Notifications.vue
@@ -4445,7 +4445,7 @@ msgstr "Push notifications potrzebują połączonego serwera, który obsługuje 
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snooze15"
 msgid "15 min"
-msgstr ""
+msgstr "15 minut"
 
 #. Snooze button in Settings > Notifications; pauses push notifications for eight hours.
 #: client/components/Settings/Notifications.vue
@@ -4463,7 +4463,7 @@ msgstr "1 godina"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snoozeIntro"
 msgid "Snooze pushes everywhere:"
-msgstr ""
+msgstr "Przycisk \"Snooze\" działa w każdym przypadku:"
 
 #. Snooze button in Settings > Notifications; ends the pause and resumes push notifications immediately.
 #: client/components/Settings/Notifications.vue
@@ -4546,25 +4546,25 @@ msgstr "Przetłumaczenie"
 #: client/components/Sidebar.vue:8
 msgctxt "sidebar.devBuildTitle"
 msgid "{app} has been built in development mode"
-msgstr ""
+msgstr "{app} został zbudowany w trybie rozwojowym"
 
 #. Small orange badge next to the sidebar logo, shown only in development builds so a dev build is never mistaken for a deploy.
 #: client/components/Sidebar.vue:16
 msgctxt "sidebar.developerBadge"
 msgid "DEVELOPER"
-msgstr ""
+msgstr "ROZWIĄZANIE"
 
 #. Message shown in the sidebar when there are no networks at all; the connect form is open beside it.
 #: client/components/NetworkList.vue:8
 msgctxt "sidebar.empty"
 msgid "You are not connected to any networks yet."
-msgstr ""
+msgstr "Nie jesteś połączony z żadnymi sieciami."
 
 #. aria-label of the question-mark button in the sidebar footer: opens the help window.
 #: client/components/Sidebar.vue:51
 msgctxt "sidebar.help"
 msgid "Help"
-msgstr ""
+msgstr "Pomoc"
 
 #. aria-label of the help button in the sidebar footer when a newer build is available; the parenthetical sits on its own line.
 #: client/components/Sidebar.vue:50
@@ -4697,7 +4697,7 @@ msgstr "Wyłączone przez"
 #: client/components/Special/ListIgnored.vue
 msgctxt "special.ignored.hostmask"
 msgid "Hostmask"
-msgstr ""
+msgstr "maska hosta"
 
 #. Column header of the ignore list: when the ignore was set, locale-formatted.
 #: client/components/Special/ListIgnored.vue

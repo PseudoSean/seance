@@ -40,7 +40,7 @@ msgstr "{type}: {name} ({extra})"
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.channel"
 msgid "Channel"
-msgstr ""
+msgstr "Canal"
 
 #. Names the kind of window in a sidebar row's aria-label: the chat network's own window. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
@@ -1381,7 +1381,7 @@ msgstr "et"
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.channel"
 msgid "Channel"
-msgstr ""
+msgstr "Canal"
 
 #. Description of the / autocompletion trigger in the help window: typing / suggests slash commands; the parenthesized phrase points at the command list further down this page.
 #: client/components/Windows/Help.vue
@@ -2820,7 +2820,7 @@ msgstr ""
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeHalfOp"
 msgid "half-op"
-msgstr ""
+msgstr "demi-op"
 
 #. Name of the IRC channel operator role (the @ prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
@@ -3157,7 +3157,7 @@ msgstr "erreur {code}"
 #: client/js/irc/handlers/persistence.ts
 msgctxt "persistence.echo"
 msgid "Persistence: {params}"
-msgstr ""
+msgstr "Persistance : {params}"
 
 #. Lobby status line confirming the state change the user asked for. {state} is the server's ON/OFF token, verbatim.
 #: client/js/irc/handlers/persistence.ts
@@ -4431,7 +4431,7 @@ msgstr "Les notifications par push nécessitent un serveur connecté qui prend e
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snooze15"
 msgid "15 min"
-msgstr ""
+msgstr "15 minutes"
 
 #. Snooze button in Settings > Notifications; pauses push notifications for eight hours.
 #: client/components/Settings/Notifications.vue

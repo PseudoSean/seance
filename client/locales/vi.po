@@ -2160,7 +2160,7 @@ msgstr "Nâu"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorCyan"
 msgid "Cyan"
-msgstr ""
+msgstr "Tím"
 
 #. Name of the mIRC colour with code 03 (green), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2779,7 +2779,7 @@ msgstr "Tham gia kênh"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.kick"
 msgid "Kick"
-msgstr ""
+msgstr "Đập"
 
 #. Context-menu item on a chat channel in the sidebar; asks the server for the channel's ban list.
 #: client/js/helpers/contextMenu.ts
@@ -2803,13 +2803,13 @@ msgstr "Danh sách người dùng bị bỏ qua"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeAdmin"
 msgid "admin"
-msgstr ""
+msgstr "quản trị viên"
 
 #. Name of the IRC half-operator role (the % prefix), filling {name} in the mode menu items. Lowercase mid-sentence; keep the hyphen if natural.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeHalfOp"
 msgid "half-op"
-msgstr ""
+msgstr "nửa mở"
 
 #. Name of the IRC channel operator role (the @ prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
@@ -4526,7 +4526,7 @@ msgstr "{app} đã được xây dựng trong chế độ phát triển"
 #: client/components/Sidebar.vue:16
 msgctxt "sidebar.developerBadge"
 msgid "DEVELOPER"
-msgstr ""
+msgstr "PHÁT TRIỂN VIÊN"
 
 #. Message shown in the sidebar when there are no networks at all; the connect form is open beside it.
 #: client/components/NetworkList.vue:8
@@ -4613,13 +4613,13 @@ msgstr[0] "{count} tin nhắn chưa đọc"
 #: client/components/Special/ListBans.vue
 msgctxt "special.bans.banned"
 msgid "Banned"
-msgstr ""
+msgstr "Cấm"
 
 #. Column header of the channel-ban list: when the ban was set, locale-formatted.
 #: client/components/Special/ListBans.vue
 msgctxt "special.bans.bannedAt"
 msgid "Banned At"
-msgstr ""
+msgstr "Cấm vào lúc"
 
 #. Column header of the channel-ban list: the operator who set the ban, verbatim.
 #: client/components/Special/ListBans.vue

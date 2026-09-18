@@ -988,13 +988,13 @@ msgstr ""
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.codeUnknown"
 msgid "code {code}"
-msgstr ""
+msgstr "kód {code}"
 
 #. Connection-failure report when the WebSocket never opened. {url} is the address that was dialled, verbatim. {error} is ' (<the browser's error text>)' or empty — the browser hides why a dial failed, so the slot often stays empty.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.couldNotConnect"
 msgid "Could not connect to {url}{error}."
-msgstr ""
+msgstr "Nelze se připojit k {url}{error}."
 
 #. Headline when a network the client is dialling never opened and the retry schedule is standing down (the browser refused or could not reach the address). {url} is the WebSocket URL that was dialled; {error} is the browser's error text in parentheses, or empty.
 #: client/js/irc/disconnect.ts:78
@@ -1006,7 +1006,7 @@ msgstr "Nelze se připojit k {url}{error}. Nezkušební znovu připojení."
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.disconnected"
 msgid "Disconnected from {host}{detail}."
-msgstr ""
+msgstr "Připojení ke {host}{detail} bylo ukončeno."
 
 #. Headline when a registered connection closed and the retry schedule is standing down. {host} is the host as the user typed it; {detail} is the close detail in parentheses, or empty.
 #: client/js/irc/disconnect.ts:127
@@ -1042,13 +1042,13 @@ msgstr "Tento účet je už připojen na tomto síti – jiný okno, okno nebo z
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.wssCauses"
 msgid "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or its TLS certificate is not trusted — for a self-signed certificate, open {url} in a new tab, accept the warning, then reconnect."
-msgstr ""
+msgstr "Prohlížeč nezobrazuje důvod. Pravděpodobné příčiny: server je offline, špatný port, nebo je certifikát TLS neznámý – pro samozřízený certifikát, otevři {url} v nové tabulce, přijmi varování, pak se opět povezme."
 
 #. Connection-failure report when the server dropped the socket before registration finished. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.registeringClosed"
 msgid "Connection to {host} closed during IRC registration{detail}."
-msgstr ""
+msgstr "Připojení k {host} bylo ukončeno během IRC registrace{detail}."
 
 #. Headline when the connection was closed between connecting and completing IRC registration and the retry schedule is standing down. {host} is the host as the user typed it; {detail} is the close detail in parentheses (a server reason, a connection-lost note or the close code), or empty.
 #: client/js/irc/disconnect.ts:112
@@ -1252,7 +1252,7 @@ msgstr "Odpojené"
 #: client/components/NetworkForm.vue:14
 msgctxt "form.editTitle"
 msgid "Edit {name}"
-msgstr ""
+msgstr "Upravit {name}"
 
 #. Label of the display-name field of a saved network on the network edit form.
 #: client/components/NetworkForm.vue:42
@@ -2180,7 +2180,7 @@ msgstr "oříškový"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorCyan"
 msgid "Cyan"
-msgstr ""
+msgstr "Cyán"
 
 #. Name of the mIRC colour with code 03 (green), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -3566,7 +3566,7 @@ msgstr "Tělo je příliš dlouhé (více než {limit} znaků)."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr ""
+msgstr "Příslušenství"
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
@@ -4564,7 +4564,7 @@ msgstr "Nejsete připojeni k žádné síti."
 #: client/components/Sidebar.vue:51
 msgctxt "sidebar.help"
 msgid "Help"
-msgstr ""
+msgstr "Pomoc"
 
 #. aria-label of the help button in the sidebar footer when a newer build is available; the parenthetical sits on its own line.
 #: client/components/Sidebar.vue:50
@@ -5201,7 +5201,7 @@ msgstr "Překlady…"
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.retranslate"
 msgid "Retranslate"
-msgstr ""
+msgstr "Přepojovat"
 
 #. A translation chip's menu item. {language} is the language's name in the reading language.
 #: client/components/TranslationLine.vue

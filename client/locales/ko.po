@@ -1208,7 +1208,7 @@ msgstr ""
 #: client/components/NetworkForm.vue:490
 msgctxt "form.connectedInsecure"
 msgid "Connected (not secure)"
-msgstr ""
+msgstr "연결됨 (불안전)"
 
 #. Status line on the network edit form while the network is online over TLS.
 #: client/components/NetworkForm.vue:490
@@ -1359,7 +1359,7 @@ msgstr "사용자 선호 설정"
 #: client/components/Windows/Help.vue
 msgctxt "help.about"
 msgid "About"
-msgstr ""
+msgstr "대한 부분"
 
 #. Word between the two version numbers inside the compare links of the help window's past-release list. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -1695,7 +1695,7 @@ msgstr "지정된 채널로 메시지를 보내세요."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.opA"
 msgid "Give op ("
-msgstr ""
+msgstr "줌 오픈 ("
 
 #. Continuation of the /op command description in the help window, after the +o code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1767,7 +1767,7 @@ msgstr "이는 현재 채널의 주제를 설정합니다."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unbanA"
 msgid "Unban ("
-msgstr ""
+msgstr "차단 해제 ("
 
 #. Continuation of the /unban command description in the help window, after the -b code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -3061,7 +3061,7 @@ msgstr "주제는"
 #: client/components/MessageTypes/topic_set_by.vue
 msgctxt "msg.topicSetOn"
 msgid "on {time}"
-msgstr ""
+msgstr "{time}에 있어"
 
 #. Channel message answering a topic request when the channel has none (331).
 #: client/js/irc/handlers/topic.ts
@@ -3146,7 +3146,7 @@ msgstr "오류 {code}"
 #: client/js/irc/handlers/persistence.ts
 msgctxt "persistence.echo"
 msgid "Persistence: {params}"
-msgstr ""
+msgstr "끝까지 버티는 것: {params}"
 
 #. Lobby status line confirming the state change the user asked for. {state} is the server's ON/OFF token, verbatim.
 #: client/js/irc/handlers/persistence.ts
@@ -3188,7 +3188,7 @@ msgstr "이 네트워크"
 #: client/components/PushPrompt.vue
 msgctxt "push.never"
 msgid "Never"
-msgstr ""
+msgstr "절대 안해요"
 
 #. Button of the push opt-in prompt; declines for now without disabling future prompts.
 #: client/components/PushPrompt.vue
@@ -4002,7 +4002,7 @@ msgstr "{appName}이 열려 있지 않으면 퇴근 메시지"
 #: client/components/Settings/General.vue
 msgctxt "settings.general.backupExported"
 msgid "Exported {date}."
-msgstr ""
+msgstr "{date}가 수출되었습니다."
 
 #. Body of the confirmation dialog before restoring a settings backup in Settings > General. {parts} is a comma-joined list ('your settings, 1 network, mutes and ignore lists'), {file} the chosen backup file's name.
 #: client/components/Settings/General.vue
@@ -4536,7 +4536,7 @@ msgstr "현재 연결된 네트워크가 없습니다."
 #: client/components/Sidebar.vue:51
 msgctxt "sidebar.help"
 msgid "Help"
-msgstr ""
+msgstr "도와주세요."
 
 #. aria-label of the help button in the sidebar footer when a newer build is available; the parenthetical sits on its own line.
 #: client/components/Sidebar.vue:50
@@ -5032,13 +5032,13 @@ msgstr "번역 엔진이 이 요청을 처리할 수 없습니다"
 #: client/js/helpers/translateErrors.ts
 msgctxt "translate.error.unavailableDetail"
 msgid "no translation engine can take this request: {detail}"
-msgstr ""
+msgstr "번역 엔진이 이 요청을 처리할 수 없습니다: {detail}"
 
 #. Why a translation failed, shown after 'Couldn't translate': the background process doing the translating was shut down. Lowercase: it follows a colon or a dash.
 #: client/js/helpers/translateErrors.ts
 msgctxt "translate.error.workerDisposed"
 msgid "translation worker disposed"
-msgstr ""
+msgstr "번역 작업자가 처리되었습니다."
 
 #. Text in front of the failure reason on a message whose translation failed (with a retry button beside it).
 #: client/components/TranslationLine.vue
@@ -5051,7 +5051,7 @@ msgstr "번역할 수 없었습니다"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.auto"
 msgid "As the original does"
-msgstr ""
+msgstr "원래대로"
 
 #. The same choice as translate.formality.auto, shortened for the narrow segmented control on a phone: keep whatever the original message did.
 #: client/components/TranslationPanel.vue

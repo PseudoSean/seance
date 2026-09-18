@@ -1477,7 +1477,7 @@ msgstr ""
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.aliases"
 msgid "Aliases:"
-msgstr ""
+msgstr "Aliasen:"
 
 #. Description of the /away command in the help window; the command syntax (/away [message]) is shown beside it and stays untranslated.
 #: client/components/Windows/Help.vue
@@ -1977,7 +1977,7 @@ msgstr "Privacybeleid"
 #: client/components/Windows/Help.vue
 msgctxt "help.releaseNotesLink"
 msgid "release notes"
-msgstr ""
+msgstr "release notities"
 
 #. Button of the update banner in the help window; clicking reloads the app to pick up the new build.
 #: client/components/Windows/Help.vue
@@ -3289,7 +3289,7 @@ msgstr "Reacties"
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.hintCombine"
 msgid "⇧ to combine"
-msgstr ""
+msgstr "⇧ om te combineren"
 
 #. Preview-bar hint in the emoji picker when the highlighted emoji is already on the message; clicking it takes the reaction back off.
 #: client/components/ReactionPicker.vue
@@ -4431,7 +4431,7 @@ msgstr "Push notificaties hebben een verbonden server nodig die de concept/webpu
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snooze15"
 msgid "15 min"
-msgstr ""
+msgstr "15 minuten"
 
 #. Snooze button in Settings > Notifications; pauses push notifications for eight hours.
 #: client/components/Settings/Notifications.vue
@@ -5080,7 +5080,7 @@ msgstr "Zoals geschreven"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.formality.casual"
 msgid "Casually"
-msgstr ""
+msgstr "Gezellig"
 
 #. Choice for how formally a translation addresses people: always use the polite form.
 #: client/components/TranslationPanel.vue
@@ -5449,7 +5449,7 @@ msgstr "Automatisch. beste voor dit apparaat"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.gpuModel"
 msgid "GPU model"
-msgstr ""
+msgstr "GPU-model"
 
 #. Explanatory note under the GPU model picker in Settings → Translation.
 #: client/components/Settings/Translation.vue

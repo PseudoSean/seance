@@ -1777,7 +1777,7 @@ msgstr "wird angegeben, setzt das Thema im aktuellen Kanal."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unbanA"
 msgid "Unban ("
-msgstr ""
+msgstr "Entbanen ("
 
 #. Continuation of the /unban command description in the help window, after the -b code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -2844,7 +2844,7 @@ msgstr "Stimme"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.muteType"
 msgid "Mute {type}"
-msgstr ""
+msgstr "Stummschaltung {type}"
 
 #. Context-menu item that takes an IRC channel role away from a user; {name} is the role's name ('operator'), {mode} the mode letter with its minus sign, e.g. -o.
 #: client/js/helpers/contextMenu.ts
@@ -3289,7 +3289,7 @@ msgstr "Reaktionen"
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.hintCombine"
 msgid "⇧ to combine"
-msgstr ""
+msgstr "⇧ zur Kombination"
 
 #. Preview-bar hint in the emoji picker when the highlighted emoji is already on the message; clicking it takes the reaction back off.
 #: client/components/ReactionPicker.vue
@@ -4197,7 +4197,7 @@ msgstr "Datei-Uploads"
 #: client/components/LanguageSelect.vue
 msgctxt "settings.locale.auto"
 msgid "System default ({language})"
-msgstr ""
+msgstr "System-Standard ({language})"
 
 #. Button on the networks settings page; opens the connect form to set up a new chat network connection.
 #: client/components/Settings/Networks.vue

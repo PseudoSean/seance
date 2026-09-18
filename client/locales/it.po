@@ -1134,7 +1134,7 @@ msgstr "Utente {nick} è già nel canale."
 #: client/components/NetworkForm.vue:168
 msgctxt "form.account"
 msgid "Account"
-msgstr ""
+msgstr "Conto"
 
 #. Button on the network edit form's status row while a connection is being dialled: stop trying.
 #: client/components/NetworkForm.vue:505
@@ -1441,7 +1441,7 @@ msgstr "(o cliccando sull'elemento desiderato)."
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.nick"
 msgid "Nickname"
-msgstr ""
+msgstr "battesimo"
 
 #. Purpose clause ending the second compare item of the help window's past-release list (comparing the running build with the development branch). Starts lowercase because it follows the link.
 #: client/components/Windows/Help.vue
@@ -1495,7 +1495,7 @@ msgstr "Rimuovi lo stato \"away\" (impostato con"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.banA"
 msgid "Ban ("
-msgstr ""
+msgstr "Bannarebbe"
 
 #. Continuation of the /ban command description in the help window, after the +b code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -2820,7 +2820,7 @@ msgstr "amministratore"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeHalfOp"
 msgid "half-op"
-msgstr ""
+msgstr "metà op"
 
 #. Name of the IRC channel operator role (the @ prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
@@ -4550,7 +4550,7 @@ msgstr "Sei connesso a nessun rete."
 #: client/components/Sidebar.vue:51
 msgctxt "sidebar.help"
 msgid "Help"
-msgstr ""
+msgstr "Aiuto"
 
 #. aria-label of the help button in the sidebar footer when a newer build is available; the parenthetical sits on its own line.
 #: client/components/Sidebar.vue:50

@@ -1405,7 +1405,7 @@ msgstr "Emoji (anteckning: kräver två söktecken, för att undvika konflikt me
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.heading"
 msgid "Autocompletion"
-msgstr ""
+msgstr "Autocompletions"
 
 #. First part of the autocompletion intro in the help window; keycap symbols (arrow up) follow it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2862,7 +2862,7 @@ msgstr ""
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.unmuteType"
 msgid "Unmute {type}"
-msgstr ""
+msgstr "Öppna för meddelanden {type}"
 
 #. Context-menu item on a user (in the user list, a message or a conversation); asks the server for that user's details (real name, account, idle time).
 #: client/js/helpers/contextMenu.ts
@@ -3555,7 +3555,7 @@ msgstr "Texten är för lång (över {limit} tecken)."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr ""
+msgstr "Släpp namn"
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
@@ -4431,7 +4431,7 @@ msgstr "Push-notifikationer kräver en ansluten server som stöder funktionen we
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snooze15"
 msgid "15 min"
-msgstr ""
+msgstr "15 minuter"
 
 #. Snooze button in Settings > Notifications; pauses push notifications for eight hours.
 #: client/components/Settings/Notifications.vue
@@ -4576,7 +4576,7 @@ msgctxt "sidebar.mentions"
 msgid "{count} mention"
 msgid_plural "{count} mentions"
 msgstr[0] "{count} nämndning"
-msgstr[1] ""
+msgstr[1] "{count} nämner"
 
 #. aria-label of the sidebar's navigation region (the network/channel list).
 #: client/components/NetworkList.vue:6
@@ -5353,7 +5353,7 @@ msgstr "Översättning för {channel}"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.variant"
 msgid "Variant"
-msgstr ""
+msgstr "Varians"
 
 #. Explanatory note under the regional variety field in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -5587,7 +5587,7 @@ msgstr "Skicka translationen"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sourceAuto"
 msgid "auto"
-msgstr ""
+msgstr "automatisk"
 
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue
@@ -5867,7 +5867,7 @@ msgstr "Inloggad som:"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.modes"
 msgid "Modes:"
-msgstr ""
+msgstr "Modus:"
 
 #. Shown after the nick of a user who left the network (WHOWAS), leading the last recorded whois data; the nick renders direction-isolated in <bdi>.
 #: client/components/MessageTypes/whois.vue

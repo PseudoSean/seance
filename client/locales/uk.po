@@ -831,7 +831,7 @@ msgstr "сервер пропонує SASL {offered}, не {mechanism}"
 #: client/js/irc/client.ts
 msgctxt "connect.saslRequiredHint"
 msgid "Check the account name and password in this network's settings, or pick \"No authentication\" there to connect without logging in."
-msgstr ""
+msgstr "Перевірте ім'я облікового запису та пароль у налашуваннях цієї мережі, або виберіть \"Без автентифікації\", щоб підключитися без входження."
 
 #. Checkbox on the connect form: reveals the account name and password fields used to authenticate with network services (SASL).
 #: client/components/Windows/Connect.vue:207
@@ -994,7 +994,7 @@ msgstr "код {code}"
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.couldNotConnect"
 msgid "Could not connect to {url}{error}."
-msgstr ""
+msgstr "Не вдалося підключитися до {url}{error}."
 
 #. Headline when a network the client is dialling never opened and the retry schedule is standing down (the browser refused or could not reach the address). {url} is the WebSocket URL that was dialled; {error} is the browser's error text in parentheses, or empty.
 #: client/js/irc/disconnect.ts:78
@@ -1216,7 +1216,7 @@ msgstr ""
 #: client/components/NetworkForm.vue:133
 msgctxt "form.commands"
 msgid "Commands"
-msgstr ""
+msgstr "Команди"
 
 #. Tooltip of the question-mark icon next to the Commands field on the network edit form (three lines).
 #: client/components/NetworkForm.vue:136
@@ -1769,7 +1769,7 @@ msgstr "Шукати повідомлення в поточному каналі
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.slap"
 msgid "Slap someone in the current channel with a trout!"
-msgstr ""
+msgstr "Вдарити когось в поточному каналі з лососем!"
 
 #. Start of the /topic command description in the help window; a code fragment with the newtopic parameter follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -3646,8 +3646,8 @@ msgctxt "settings.aliases.statusBroken"
 msgid "{count} alias saved — rows with errors are not saved."
 msgid_plural "{count} aliases saved — rows with errors are not saved."
 msgstr[0] "{count} алиас збережено — рядки з помилками не зберігаються."
-msgstr[1] ""
-msgstr[2] ""
+msgstr[1] "{count} алиаси збережені — рядки з помилками не зберігаються."
+msgstr[2] "{count} алиаси збережені — рядки з помилками не зберігаються."
 
 #. Status line under the alias table: how many aliases are saved. {count} is the number; gettext plural, English index 0 is the singular.
 #: client/components/Settings/Aliases.vue
@@ -3854,19 +3854,19 @@ msgstr "Деньове повідомлення"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.nickPostfix"
 msgid "Nick autocomplete postfix"
-msgstr ""
+msgstr "автозавершення nick постфікс"
 
 #. Tooltip on the nick autocomplete postfix field in Settings > Appearance; explains what the field sets.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.nickPostfixHelp"
 msgid "Nick autocomplete postfix (for example a comma)"
-msgstr ""
+msgstr "Автозаповнення nick після слова (наприклад, кома)"
 
 #. Placeholder of the nick autocomplete postfix field in Settings > Appearance; keep the example punctuation (the quoted comma) as it shows what would be typed.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.nickPostfixPlaceholder"
 msgid "Nick autocomplete postfix (e.g. ', ')"
-msgstr ""
+msgstr "Автозаповнення nick після слова (наприклад, ', ')"
 
 #. Third line of the sample chat under the font-size slider in Settings → Appearance: the extreme steps are intentionally unusable.
 #: client/components/Settings/Appearance.vue:486
@@ -4397,7 +4397,7 @@ msgstr "Найпростіший — відновіть його на місці
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.noHttps"
 msgid "Notifications are only supported over HTTPS connections."
-msgstr ""
+msgstr "Повідомлення доступні лише через HTTPs-з'єднання."
 
 #. Checkbox in Settings > Notifications; when ticked, every chat message notifies, not only mentions and highlights.
 #: client/components/Settings/Notifications.vue
@@ -4475,7 +4475,7 @@ msgstr "Вимкнено"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.sound"
 msgid "Enable notification sound"
-msgstr ""
+msgstr "Ввімкніть звук наголосу"
 
 #. Warning line in Settings > Notifications shown after a chat server changed its push identity; tells the reader to re-subscribe from that network's edit form, whose control is named in the quoted phrase.
 #: client/components/Settings/Notifications.vue
@@ -4564,7 +4564,7 @@ msgstr "Ви не підключились до жодної мережі."
 #: client/components/Sidebar.vue:51
 msgctxt "sidebar.help"
 msgid "Help"
-msgstr ""
+msgstr "Помоги"
 
 #. aria-label of the help button in the sidebar footer when a newer build is available; the parenthetical sits on its own line.
 #: client/components/Sidebar.vue:50

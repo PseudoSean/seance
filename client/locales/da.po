@@ -719,7 +719,7 @@ msgstr "Ikke nu"
 #: client/components/Windows/Connect.vue:228
 msgctxt "connect.password"
 msgid "Password"
-msgstr ""
+msgstr "adgangskode"
 
 #. Checkbox in the authentication section of the connect form: register this device for push notifications once the IRC server supports it.
 #: client/components/Windows/Connect.vue:251
@@ -1236,7 +1236,7 @@ msgstr "Forbindes..."
 #: client/components/NetworkForm.vue:493
 msgctxt "form.disconnected"
 msgid "Disconnected"
-msgstr ""
+msgstr "Forbundet"
 
 #. Heading of the network edit form; {name} is the network's current display name.
 #: client/components/NetworkForm.vue:14
@@ -1278,7 +1278,7 @@ msgstr "Ingen autentikering"
 #: client/components/NetworkForm.vue:183
 msgctxt "form.password"
 msgid "Password"
-msgstr ""
+msgstr "adgangskode"
 
 #. Placeholder of the SASL password field on the network edit form: saving without typing keeps the stored password.
 #: client/components/NetworkForm.vue:196
@@ -1850,7 +1850,7 @@ msgstr "Markér alle tekst, der er tastet efter denne hurtiggang, som"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.bold"
 msgid "bold"
-msgstr ""
+msgstr "fuktig"
 
 #. Text of the link at the end of the Ctrl+K description in the help window's formatting section; it opens an external IRC color reference. Mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2212,7 +2212,7 @@ msgstr "Lysegul"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorMagenta"
 msgid "Magenta"
-msgstr ""
+msgstr "Magentafarve"
 
 #. Name of the mIRC colour with code 07 (orange), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2592,7 +2592,7 @@ msgstr "Din nicknavn på {network}"
 #: client/components/NetworkLobby.vue:66
 msgctxt "lobby.nickname"
 msgid "Nickname: "
-msgstr ""
+msgstr "Nicknavn: "
 
 #. Tooltip and aria-label of the crossed-out bell icon on a sidebar network row: push and browser notifications are switched off for this network.
 #: client/components/NetworkLobby.vue:118
@@ -3555,7 +3555,7 @@ msgstr "Kroppen er for lang (over {limit} tegn)."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr ""
+msgstr "Aliase"
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
@@ -4173,7 +4173,7 @@ msgstr "Lad personer i kanalen se, når du skriver (IRCv3 +typing)."
 #: client/components/Settings/General.vue
 msgctxt "settings.general.typingHeading"
 msgid "Typing notifications"
-msgstr ""
+msgstr "Typing meddelelser"
 
 #. Checkbox in Settings > General. When ticked, images are re-drawn through a canvas before they are sent to the chat server, which strips photo metadata such as camera model and GPS location. Affects image uploads only.
 #: client/components/Settings/General.vue
@@ -4431,7 +4431,7 @@ msgstr "Push-notifikationer kræver et forbundet server, der understøtter funkt
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snooze15"
 msgid "15 min"
-msgstr ""
+msgstr "15 minutter"
 
 #. Snooze button in Settings > Notifications; pauses push notifications for eight hours.
 #: client/components/Settings/Notifications.vue
@@ -4538,7 +4538,7 @@ msgstr "{app} er blevet bygget i udviklingsmode"
 #: client/components/Sidebar.vue:16
 msgctxt "sidebar.developerBadge"
 msgid "DEVELOPER"
-msgstr ""
+msgstr "Uviksforlønner"
 
 #. Message shown in the sidebar when there are no networks at all; the connect form is open beside it.
 #: client/components/NetworkList.vue:8
@@ -4550,7 +4550,7 @@ msgstr "Du er ikke forbundet til nogen netværk endnu."
 #: client/components/Sidebar.vue:51
 msgctxt "sidebar.help"
 msgid "Help"
-msgstr ""
+msgstr "Hjælp"
 
 #. aria-label of the help button in the sidebar footer when a newer build is available; the parenthetical sits on its own line.
 #: client/components/Sidebar.vue:50
@@ -4576,7 +4576,7 @@ msgctxt "sidebar.mentions"
 msgid "{count} mention"
 msgid_plural "{count} mentions"
 msgstr[0] ""
-msgstr[1] ""
+msgstr[1] "{count} nævner"
 
 #. aria-label of the sidebar's navigation region (the network/channel list).
 #: client/components/NetworkList.vue:6
@@ -4633,13 +4633,13 @@ msgstr ""
 #: client/components/Special/ListBans.vue
 msgctxt "special.bans.bannedAt"
 msgid "Banned At"
-msgstr ""
+msgstr "Banned I"
 
 #. Column header of the channel-ban list: the operator who set the ban, verbatim.
 #: client/components/Special/ListBans.vue
 msgctxt "special.bans.bannedBy"
 msgid "Banned By"
-msgstr ""
+msgstr "Banned af"
 
 #. Column header of the channel list: the channel name, verbatim server data.
 #: client/components/Special/ListChannels.vue
@@ -5587,7 +5587,7 @@ msgstr "Send oversættelsen"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sourceAuto"
 msgid "auto"
-msgstr ""
+msgstr "automatisk"
 
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue
@@ -5849,7 +5849,7 @@ msgstr "Tilgængelig for hjælp:"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.hostmask"
 msgid "Host mask:"
-msgstr ""
+msgstr "Mask for host:"
 
 #. Whois row: when the user was last active, locale-formatted.
 #: client/components/MessageTypes/whois.vue

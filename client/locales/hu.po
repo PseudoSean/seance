@@ -40,7 +40,7 @@ msgstr "{type}: {name} ({extra})"
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.channel"
 msgid "Channel"
-msgstr ""
+msgstr "Canál"
 
 #. Names the kind of window in a sidebar row's aria-label: the chat network's own window. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
@@ -978,7 +978,7 @@ msgstr "TLS kapcsolat megszakadt"
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.codeUnknown"
 msgid "code {code}"
-msgstr ""
+msgstr "kód {code}"
 
 #. Connection-failure report when the WebSocket never opened. {url} is the address that was dialled, verbatim. {error} is ' (<the browser's error text>)' or empty — the browser hides why a dial failed, so the slot often stays empty.
 #: client/js/irc/disconnect.ts
@@ -1038,7 +1038,7 @@ msgstr "A böngésző nem mutatja meg, miért. Valószínű okok: a szerver leá
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.registeringClosed"
 msgid "Connection to {host} closed during IRC registration{detail}."
-msgstr ""
+msgstr "A kapcsolat lezárult {host} során a IRC regisztráció {detail} idején."
 
 #. Headline when the connection was closed between connecting and completing IRC registration and the retry schedule is standing down. {host} is the host as the user typed it; {detail} is the close detail in parentheses (a server reason, a connection-lost note or the close code), or empty.
 #: client/js/irc/disconnect.ts:112
@@ -1206,7 +1206,7 @@ msgstr "#channel, #másik kulcs (csatlakozásra)"
 #: client/components/NetworkForm.vue:133
 msgctxt "form.commands"
 msgid "Commands"
-msgstr ""
+msgstr "Parancsok"
 
 #. Tooltip of the question-mark icon next to the Commands field on the network edit form (three lines).
 #: client/components/NetworkForm.vue:136
@@ -2592,7 +2592,7 @@ msgstr "A nickname azonosítója {network}"
 #: client/components/NetworkLobby.vue:66
 msgctxt "lobby.nickname"
 msgid "Nickname: "
-msgstr ""
+msgstr "Kivonó: "
 
 #. Tooltip and aria-label of the crossed-out bell icon on a sidebar network row: push and browser notifications are switched off for this network.
 #: client/components/NetworkLobby.vue:118
@@ -2820,7 +2820,7 @@ msgstr ""
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeHalfOp"
 msgid "half-op"
-msgstr ""
+msgstr "felvétel"
 
 #. Name of the IRC channel operator role (the @ prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
@@ -4021,7 +4021,7 @@ msgstr "Exportált {date}."
 #: client/components/Settings/General.vue
 msgctxt "settings.general.backupFrame"
 msgid "This replaces {parts} with the contents of {file}, then reloads."
-msgstr ""
+msgstr "Ez a {parts}-et a {file}-tartalmával helyettesíti, majd újraindítja."
 
 #. Heading of the settings backup section in Settings > General, which exports preferences to a file and restores them.
 #: client/components/Settings/General.vue
@@ -4538,7 +4538,7 @@ msgstr "{app} fejlesztési módban van építve"
 #: client/components/Sidebar.vue:16
 msgctxt "sidebar.developerBadge"
 msgid "DEVELOPER"
-msgstr ""
+msgstr "FEJLESZTÜ"
 
 #. Message shown in the sidebar when there are no networks at all; the connect form is open beside it.
 #: client/components/NetworkList.vue:8
@@ -4550,7 +4550,7 @@ msgstr "Nincs hálózat megkapcsolva."
 #: client/components/Sidebar.vue:51
 msgctxt "sidebar.help"
 msgid "Help"
-msgstr ""
+msgstr "Segítség"
 
 #. aria-label of the help button in the sidebar footer when a newer build is available; the parenthetical sits on its own line.
 #: client/components/Sidebar.vue:50

@@ -1216,7 +1216,7 @@ msgstr "#kanál, #iný klúč (pripojený po pripojení)"
 #: client/components/NetworkForm.vue:133
 msgctxt "form.commands"
 msgid "Commands"
-msgstr ""
+msgstr "Příkazy"
 
 #. Tooltip of the question-mark icon next to the Commands field on the network edit form (three lines).
 #: client/components/NetworkForm.vue:136
@@ -2861,13 +2861,13 @@ msgstr "Zatvoriť {type}"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.revokeMode"
 msgid "Revoke {name} (-{mode})"
-msgstr ""
+msgstr "Zrušiť {name} (-{mode})"
 
 #. Context-menu item that removes an IRC mode whose role name is unknown; {mode} is the mode letter with its minus sign, e.g. -z.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.revokeModeUnknown"
 msgid "Mode -{mode}"
-msgstr ""
+msgstr "Režim -{mode}"
 
 #. Context-menu item on a conversation whose messages are muted (not highlighted, not notified); clicking unmutes it. {type} names the kind of conversation in lowercase: 'network', 'channel' or 'conversation'.
 #: client/js/helpers/contextMenu.ts
@@ -3566,7 +3566,7 @@ msgstr "Telo je príliš dlhé (viac ako {limit} znakov)."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr ""
+msgstr "Aliás"
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
@@ -4564,7 +4564,7 @@ msgstr "Žiadny sietový pripojenie sa nepripojil."
 #: client/components/Sidebar.vue:51
 msgctxt "sidebar.help"
 msgid "Help"
-msgstr ""
+msgstr "Pomôž mi"
 
 #. aria-label of the help button in the sidebar footer when a newer build is available; the parenthetical sits on its own line.
 #: client/components/Sidebar.vue:50
@@ -5207,19 +5207,19 @@ msgstr "Preklad znovu"
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.retranslateFrom"
 msgid "Retranslate from: {language}"
-msgstr ""
+msgstr "Prevedené z: {language}"
 
 #. A translation chip's menu item.
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.retranslateFromPicker"
 msgid "Retranslate from…"
-msgstr ""
+msgstr "Prevedieť znovu…"
 
 #. A translation chip's menu item.
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.showOriginal"
 msgid "Show original only"
-msgstr ""
+msgstr "Zobraziť len pôvodný"
 
 #. A translation chip's menu item.
 #: client/components/TranslationLine.vue
@@ -5867,7 +5867,7 @@ msgstr "Dostupné pre pomoc:"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.hostmask"
 msgid "Host mask:"
-msgstr ""
+msgstr "Mask hosta:"
 
 #. Whois row: when the user was last active, locale-formatted.
 #: client/components/MessageTypes/whois.vue

@@ -1471,13 +1471,13 @@ msgstr "está construido a partir de"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.alias"
 msgid "Alias:"
-msgstr ""
+msgstr "Apodo:"
 
 #. Lead-in of the alias line under a command description in the help window when the command has several alternative names; the alternatives follow as code fragments. Keep the trailing colon.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.aliases"
 msgid "Aliases:"
-msgstr ""
+msgstr "Apodos:"
 
 #. Description of the /away command in the help window; the command syntax (/away [message]) is shown beside it and stays untranslated.
 #: client/components/Windows/Help.vue
@@ -1495,7 +1495,7 @@ msgstr "Elimina tu estado \"away\" (establecido con"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.banA"
 msgid "Ban ("
-msgstr ""
+msgstr "Baneo ("
 
 #. Continuation of the /ban command description in the help window, after the +b code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
@@ -1898,13 +1898,13 @@ msgstr "Atajos de formato"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.italic"
 msgid "italics"
-msgstr ""
+msgstr "italicos"
 
 #. The example word shown in a monospaced font in the help window's Ctrl+M formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.monospace"
 msgid "monospaced"
-msgstr ""
+msgstr "monoespaciado"
 
 #. Description of the Ctrl+O formatting shortcut in the help window; it removes any formatting applied so far in the message.
 #: client/components/Windows/Help.vue
@@ -2820,7 +2820,7 @@ msgstr ""
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeHalfOp"
 msgid "half-op"
-msgstr ""
+msgstr "medio-op"
 
 #. Name of the IRC channel operator role (the @ prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
@@ -3555,7 +3555,7 @@ msgstr "El cuerpo es demasiado largo (más de {limit} caracteres)."
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr ""
+msgstr "Apodo"
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
@@ -4576,7 +4576,7 @@ msgctxt "sidebar.mentions"
 msgid "{count} mention"
 msgid_plural "{count} mentions"
 msgstr[0] "{count} mención"
-msgstr[1] ""
+msgstr[1] "{count} menciona"
 
 #. aria-label of the sidebar's navigation region (the network/channel list).
 #: client/components/NetworkList.vue:6
@@ -4681,7 +4681,7 @@ msgstr "Excluido por"
 #: client/components/Special/ListIgnored.vue
 msgctxt "special.ignored.hostmask"
 msgid "Hostmask"
-msgstr ""
+msgstr "máscara de host"
 
 #. Column header of the ignore list: when the ignore was set, locale-formatted.
 #: client/components/Special/ListIgnored.vue
@@ -5389,7 +5389,7 @@ msgstr "Escribiendo"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.cancel"
 msgid "Cancel"
-msgstr ""
+msgstr "Cancelar"
 
 #. Button that translates the message again from the language picked in the retranslate-from dialog.
 #: client/components/SourceLanguagePicker.vue
@@ -5921,7 +5921,7 @@ msgstr "ver todas las versiones"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.aria"
 msgid "Changelog"
-msgstr ""
+msgstr "Historial de cambios"
 
 #. Link at the top of the changelog window that goes back to the help page; the left double angle quote is part of the copy.
 #: client/components/Windows/Changelog.vue

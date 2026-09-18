@@ -1218,7 +1218,7 @@ msgstr ""
 #: client/components/NetworkForm.vue:490
 msgctxt "form.connectedInsecure"
 msgid "Connected (not secure)"
-msgstr ""
+msgstr "Conectado (não seguro)"
 
 #. Status line on the network edit form while the network is online over TLS.
 #: client/components/NetworkForm.vue:490
@@ -1471,13 +1471,13 @@ msgstr "é construído a partir de"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.alias"
 msgid "Alias:"
-msgstr ""
+msgstr "Apelido:"
 
 #. Lead-in of the alias line under a command description in the help window when the command has several alternative names; the alternatives follow as code fragments. Keep the trailing colon.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.aliases"
 msgid "Aliases:"
-msgstr ""
+msgstr "Apelidos:"
 
 #. Description of the /away command in the help window; the command syntax (/away [message]) is shown beside it and stays untranslated.
 #: client/components/Windows/Help.vue
@@ -1898,7 +1898,7 @@ msgstr "Atalhos de formatação"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.italic"
 msgid "italics"
-msgstr ""
+msgstr "itálicos"
 
 #. The example word shown in a monospaced font in the help window's Ctrl+M formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
@@ -3973,7 +3973,7 @@ msgstr "Pessoas"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.trustedSites"
 msgid "Sites"
-msgstr ""
+msgstr "Sítios"
 
 #. Tooltip and aria-label of the remove button on an entry of the always-shown media list in Settings > Appearance, for a website or a person. {name} is that site's host or the person's name. Clicking stops their media from loading automatically.
 #: client/components/Settings/Appearance.vue
@@ -4431,7 +4431,7 @@ msgstr "As notificações por push precisam de um servidor conectado que suporte
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.snooze15"
 msgid "15 min"
-msgstr ""
+msgstr "15 minutos"
 
 #. Snooze button in Settings > Notifications; pauses push notifications for eight hours.
 #: client/components/Settings/Notifications.vue
@@ -4550,7 +4550,7 @@ msgstr "Você não está conectado a nenhum rede ainda."
 #: client/components/Sidebar.vue:51
 msgctxt "sidebar.help"
 msgid "Help"
-msgstr ""
+msgstr "Ajuda"
 
 #. aria-label of the help button in the sidebar footer when a newer build is available; the parenthetical sits on its own line.
 #: client/components/Sidebar.vue:50
@@ -4681,7 +4681,7 @@ msgstr "Excluído por"
 #: client/components/Special/ListIgnored.vue
 msgctxt "special.ignored.hostmask"
 msgid "Hostmask"
-msgstr ""
+msgstr "máscara de host"
 
 #. Column header of the ignore list: when the ignore was set, locale-formatted.
 #: client/components/Special/ListIgnored.vue
@@ -5667,7 +5667,7 @@ msgstr "Upload de {count} arquivos"
 #: client/components/UploadPreview.vue
 msgctxt "upload.confirmOne"
 msgid "Upload"
-msgstr ""
+msgstr "Carregue"
 
 #. Title of the confirmation dialog shown before files are uploaded to the chat server, when several files were chosen.
 #: client/components/UploadPreview.vue
