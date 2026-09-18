@@ -43,7 +43,10 @@ test("a file dropped on a network with draft/FILEHOST goes up with an authtoken 
 			// The nick we end up with: a SASL login may revive a held bouncer
 			// session and keep its nick (helpers do the same in the testnet).
 			const m = /^(?:@\S+ )?:\S+ 001 (\S+) /.exec(String(f.payload));
-			if (m) welcomed = m[1];
+
+			if (m) {
+				welcomed = m[1];
+			}
 		});
 	});
 
