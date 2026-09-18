@@ -5459,11 +5459,35 @@ msgctxt "translate.picker.dialog"
 msgid "Retranslate from another language"
 msgstr "Traduzir novamente de outro idioma"
 
+#. First option of the source-language picker in the composer's translate-into dialog: the draft's language is detected rather than named.
+#: client/components/SourceLanguagePicker.vue
+msgctxt "translate.picker.fromAuto"
+msgid "Detect automatically"
+msgstr "Detectar automaticamente"
+
+#. Label of the source-language picker in the dialog the composer's translate button opens; preselected to the language the user reads.
+#: client/components/SourceLanguagePicker.vue
+msgctxt "translate.picker.fromLabel"
+msgid "Translate from"
+msgstr "Traduzir a partir de"
+
 #. Label of the language picker in the dialog that translates one message again from a language the user picks.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.label"
 msgid "Translate this line from"
 msgstr "Traduza esta linha de"
+
+#. Hint under the selects in the composer's translate-into dialog when the source and the target are the same language: the draft is corrected, not translated.
+#: client/components/SourceLanguagePicker.vue
+msgctxt "translate.picker.sameLanguage"
+msgid "Same language: spelling and grammar are corrected instead."
+msgstr "Idioma igual: a ortografia e a gramática são corrigidas em vez disso."
+
+#. Hint under the selects in the composer's translate-into dialog when the source and the target are the same language but the on-device language model that does the correcting cannot run here (switched off in Settings, or no capable GPU).
+#: client/components/SourceLanguagePicker.vue
+msgctxt "translate.picker.sameLanguageNeedsGpu"
+msgid "Correcting a message needs the GPU model, which is off or not available on this device."
+msgstr "A correção de uma mensagem exige o modelo GPU, que está desativado ou não disponível neste dispositivo."
 
 #. Button that translates the draft into the language picked in the composer's translate-into dialog.
 #: client/components/SourceLanguagePicker.vue
@@ -5620,6 +5644,12 @@ msgstr "Não consegui traduzir, enviar como está?"
 msgctxt "translate.strip.keepTyping"
 msgid "Keep typing (Escape)"
 msgstr "Continue digitando (Escape)"
+
+#. Chip at the start of the composer's translation strip when the draft was corrected in its own language rather than translated. {language} is that language's name, in the interface language.
+#: client/components/ChatInput.vue
+msgctxt "translate.strip.polishChip"
+msgid "{language}, corrected"
+msgstr "{language}, corrigido"
 
 #. Tooltip of the composer translation strip's direction chip, naming the route a translation took. {from} and {to} are language names (or the word from translate.strip.sourceAuto), {model} is the model's technical id. This one ran on the main processor.
 #: client/components/ChatInput.vue
