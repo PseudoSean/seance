@@ -68,6 +68,21 @@ describe("public folder", function () {
 		expect(fs.existsSync(path.join(publicFolder, "js", "translate-worker.js"))).to.be.true;
 	});
 
+	it("the short-line word list is its own chunk, not part of the bundle", function () {
+		// client/js/translate/wordlist.json is ~390 KB of frequency data the
+		// lookup (wordlookup.ts) fetches on the first short line it has to
+		// place. It rides in its own chunk, like franc's: in the bundle it
+		// would be paid for by every page load.
+		const chunk = path.join(publicFolder, "js", "wordlist.js");
+
+		expect(fs.existsSync(chunk)).to.be.true;
+		expect(fs.readFileSync(chunk, "utf8")).to.include("gracias");
+
+		const bundle = fs.readFileSync(path.join(publicFolder, "js", "bundle.js"), "utf8");
+
+		expect(bundle.includes("gracias")).to.be.false;
+	});
+
 	it("the translation worker is self-contained and the ORT wasm files are copied", function () {
 		const worker = fs.readFileSync(
 			path.join(publicFolder, "js", "translate-worker.js"),

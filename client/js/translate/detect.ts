@@ -18,7 +18,8 @@
 // override for it (the same shape as the existing `cmn`/`zho` override for
 // Chinese).
 
-import {chatDetect} from "./chatdetect";
+import {chatDetect, tokens} from "./chatdetect";
+import {LOOKUP_MAX_WORDS, lookupShortLine} from "./wordlookup";
 import {NLLB_CODES, SUPPORTED_LANGUAGES, isSupported} from "./languages";
 
 export interface Detection {
@@ -417,17 +418,39 @@ export async function detectLanguage(
 		};
 	}
 
-	if (text.length < DETECT_MIN_LENGTH) {
+	const words = tokens(text);
+	const short = text.length < DETECT_MIN_LENGTH;
+
+	if (short) {
 		// Too short for trigrams — but a channel where German and English are
 		// written, read in English, leaves one answer. Confidence 0 says
 		// where it came from, and nothing is noted into the prior: a line the
-		// detector never saw is no evidence about the channel.
+		// detector never saw is no evidence about the channel. The reader's
+		// own claim about the channel outranks the word list below.
 		const only = declaredLanguages(declared).filter((code) => code !== options.exclude);
 
 		if (only.length === 1) {
 			return {lang: only[0], confidence: 0, candidates: only};
 		}
+	}
 
+	// The frequency lookup (wordlookup.ts): a line of at most
+	// LOOKUP_MAX_WORDS words that carries no function words is placed by the
+	// words themselves — "test" is English, "hola" Spanish — where franc
+	// would either not be asked at all or guess from three words of trigrams.
+	// A line it cannot place is only answered here when franc is out of the
+	// question anyway; otherwise the trigram flow below runs as before.
+	// Nothing is noted into the prior: one word is no evidence about a
+	// channel.
+	if (short || words.length <= LOOKUP_MAX_WORDS) {
+		const looked = await lookupShortLine(words, prior, options.exclude);
+
+		if (looked && (looked.lang !== null || short)) {
+			return looked;
+		}
+	}
+
+	if (short) {
 		// No verdict is not evidence of the reading language: `short` tells
 		// `detectionSkip` to let the line through (the engine detects the
 		// source; "Hallo" translates, an English echo lands on the

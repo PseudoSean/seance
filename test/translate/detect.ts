@@ -17,6 +17,10 @@ import {
 	sourceFor,
 } from "../../client/js/translate/detect";
 import {SUPPORTED_LANGUAGES} from "../../client/js/translate/languages";
+import {setWordlist, type Wordlist} from "../../client/js/translate/wordlookup";
+import rawWordlist from "../../client/js/translate/wordlist.json";
+
+const wordlist = rawWordlist as unknown as Wordlist;
 
 describe("translate/detect", () => {
 	afterEach(() => setDetector(null));
@@ -320,7 +324,11 @@ describe("translate/detect", () => {
 				["eng", 0.3],
 			];
 		});
-		expect(await detectLanguage("kurz", null)).to.deep.equal({
+		// "lol": no function word, and no language's frequency table lists it
+		// either, so neither the classifier nor the lookup has anything to say
+		// and franc is never asked ("kurz" would now be placed German by the
+		// lookup — see "the short-line lookup" below).
+		expect(await detectLanguage("lol", null)).to.deep.equal({
 			lang: null,
 			confidence: 0,
 			candidates: [],
@@ -585,6 +593,115 @@ describe("translate/detect", () => {
 			expect(
 				detectionSkip({lang: null, confidence: 0, candidates: [], short: true}, "en")
 			).to.equal(null);
+		});
+	});
+
+	// The short-line lookup (wordlookup.ts): a line of one to three words the
+	// function-word classifier cannot place is placed by frequency instead of
+	// being left to the engine with no source named.
+	describe("the short-line lookup", () => {
+		before(() => setWordlist(wordlist));
+		after(() => setWordlist(null));
+
+		const never = () => {
+			throw new Error("the detector must not run on a line the lookup answers");
+		};
+
+		it("places a lone word only one language lists", async () => {
+			setDetector(never);
+
+			const test = await detectLanguage("test", null, [], {exclude: "es"});
+
+			expect(test.lang).to.equal("en");
+			expect(test.weak).to.equal(undefined);
+			expect(test.short).to.equal(undefined);
+			expect(test.candidates).to.deep.equal(["en"]);
+			// It is a source, not a hint: the line translates *from* English.
+			expect(sourceFor(test, null, "es").source).to.equal("en");
+			expect((await detectLanguage("Hola", null)).lang).to.equal("es");
+		});
+
+		it("never overrules the function-word classifier", async () => {
+			setDetector(never);
+
+			// "So ist es" scores in the word list too; the classifier's own
+			// verdict is what comes back.
+			expect((await detectLanguage("So ist es", null)).lang).to.equal("de");
+		});
+
+		it("leaves a word it cannot place short, as before", async () => {
+			setDetector(never);
+
+			expect(await detectLanguage("lol", null)).to.deep.equal({
+				lang: null,
+				confidence: 0,
+				candidates: [],
+				short: true,
+			});
+		});
+
+		it("names the contenders of a word it will not choose between", async () => {
+			setDetector(never);
+
+			const no = await detectLanguage("no", null);
+
+			expect(no.lang).to.equal(null);
+			expect(no.short).to.equal(true);
+			expect(no.candidates[0]).to.equal("es");
+			// Still translated: short says the line is no evidence of English.
+			expect(detectionSkip(no, "en")).to.equal(null);
+			// The channel's prior settles it.
+			const prior = new LanguagePrior();
+
+			prior.note("es");
+			expect((await detectLanguage("no", prior)).lang).to.equal("es");
+		});
+
+		it("places a line too long for the lookup's own minimum, before franc", async () => {
+			setDetector(never);
+
+			// Eleven characters: franc would be asked, and the lookup answers
+			// first because two words are too few for trigrams to be trusted.
+			const hasta = await detectLanguage("hasta luego", null);
+
+			expect(hasta.lang).to.equal("es");
+			expect(hasta.short).to.equal(undefined);
+		});
+
+		it("hands a line it cannot place back to franc when it is long enough", async () => {
+			let asked = 0;
+
+			setDetector((text) => {
+				asked += 1;
+				return [
+					["deu", 1],
+					["swe", 0.5],
+				] as Scores;
+			});
+
+			const musik = await detectLanguage("musik video", null);
+
+			expect(asked).to.equal(1);
+			expect(musik.lang).to.equal("de");
+		});
+
+		it("leaves the channel's prior untouched", async () => {
+			setDetector(never);
+
+			const prior = new LanguagePrior();
+
+			await detectLanguage("test", prior);
+			expect(prior.top()).to.equal(null);
+		});
+
+		it("a single declared language still places a line the lookup would", async () => {
+			setDetector(never);
+
+			// The reader's own claim about the channel outranks a frequency
+			// guess: "hola" in a channel declared German, read in English.
+			const hola = await detectLanguage("hola", null, ["de", "en"], {exclude: "en"});
+
+			expect(hola.lang).to.equal("de");
 		});
 	});
 });

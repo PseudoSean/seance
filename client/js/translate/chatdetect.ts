@@ -20,7 +20,8 @@ const TABLES: Record<string, Set<string>> = Object.fromEntries(
 	Object.entries(table).map(([tag, words]) => [tag, new Set(words)])
 );
 
-function tokens(text: string): string[] {
+/** The words of a line: the lookup (wordlookup.ts) counts the same ones. */
+export function tokens(text: string): string[] {
 	return text
 		.toLowerCase()
 		.split(/[^\p{L}\p{N}]+/u)
