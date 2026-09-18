@@ -19,6 +19,7 @@ import {AVAILABLE} from "../js/i18n/available";
 import {TRANSLATION_TARGETS} from "../js/i18n/targets";
 import {DEV_I18N, isRTL} from "../js/i18n/core";
 import {useI18n} from "../js/i18n";
+import {languageEndonym} from "../js/translate/languages";
 
 export default defineComponent({
 	name: "LanguageSelect",
@@ -29,13 +30,11 @@ export default defineComponent({
 	setup(props, {emit}) {
 		const {t, locale} = useI18n();
 
-		const nativeName = (tag: string): string => {
-			try {
-				return new Intl.DisplayNames([tag], {type: "language"}).of(tag) ?? tag;
-			} catch {
-				return tag; // runtime without that locale data
-			}
-		};
+		// The language's own name as a picker entry stands alone: with its
+		// initial capital where its script has one ("Français", not the
+		// mid-sentence "français" the runtime spells), like the translation
+		// pickers (languages.ts `languageEndonym`).
+		const nativeName = (tag: string): string => languageEndonym(tag);
 
 		// Every target language from translation-languages.txt, in the
 		// file's order (English first), plus anything compiled the file does
