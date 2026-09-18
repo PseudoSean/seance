@@ -503,6 +503,7 @@ p {
 #settings .settings-menu .icon::before,
 #form #upload::before,
 #form #submit::before,
+#form #translate-once::before,
 #chat .msg[data-type="away"] .from::before,
 #chat .msg[data-type="back"] .from::before,
 #chat .msg[data-type="invite"] .from::before,
@@ -654,6 +655,7 @@ p {
 #footer .help::before { content: "\f059"; /* http://fontawesome.io/icon/question/ */ }
 
 #form #upload::before { content: "\f0c6"; /* https://fontawesome.com/icons/paperclip?style=solid */ }
+#form #translate-once::before { content: "\f1ab"; /* https://fontawesome.com/icons/language?style=solid */ }
 #form #submit::before { content: "\f1d8"; /* http://fontawesome.io/icon/paper-plane/ */ }
 
 #chat .msg[data-type="away"] .from::before,
@@ -3970,7 +3972,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #form #upload,
-#form #submit {
+#form #submit,
+#form #translate-once {
 	color: #607992;
 	font-size: 1.0625rem;
 	height: 2.25rem;
@@ -3979,8 +3982,20 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #form #upload[disabled],
-#form #submit[disabled] {
+#form #submit[disabled],
+#form #translate-once[disabled] {
 	opacity: 0.5;
+}
+
+/* The composer's translate button (ChatInput.vue `translateOnce`): the
+ * language mark, a size up like the header's toggle, since the glyph's
+ * em-box leaves it small beside the paperclip and the plane. */
+#form #translate-once {
+	font-size: 1.25rem;
+}
+
+#form #translate-once[aria-expanded="true"] {
+	color: var(--chat-accent, var(--link-color));
 }
 
 #mentions-popup-container,

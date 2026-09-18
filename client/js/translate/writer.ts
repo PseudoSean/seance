@@ -153,6 +153,31 @@ export function writeTarget(network: ClientNetwork, channel: ClientChan): string
 	return translateService().enabled ? channelTranslation(network, channel).write : null;
 }
 
+/** The language each channel's last one-off translation went into (session only). */
+const onceTargets = new Map<number, string>();
+
+/**
+ * The composer's translate button: the draft into `to`, this once, whether
+ * or not the channel has a write target -- the strip comes up as it does
+ * for a write target, and the next Enter sends what it holds. The choice
+ * is remembered per channel for the button's next pick (`lastOnceTarget`).
+ */
+export function translateOnce(
+	network: ClientNetwork,
+	channel: ClientChan,
+	draft: string,
+	to: string
+): Promise<"strip" | "plain"> {
+	onceTargets.set(channel.id, to);
+
+	return translateOutgoing(network, channel, draft, to);
+}
+
+/** The picker's preselection: the channel's last one-off target, else its write target. */
+export function lastOnceTarget(network: ClientNetwork, channel: ClientChan): string {
+	return onceTargets.get(channel.id) ?? channelTranslation(network, channel).write ?? "";
+}
+
 export function outgoingTranslation(channel: ClientChan): OutgoingTranslation | undefined {
 	return store.state.outgoingTranslations[channel.id];
 }
@@ -183,9 +208,13 @@ function current(channel: ClientChan, draft: string, controller: AbortController
 export async function translateOutgoing(
 	network: ClientNetwork,
 	channel: ClientChan,
-	draft: string
+	draft: string,
+	once?: string
 ): Promise<"strip" | "plain"> {
-	const to = writeTarget(network, channel);
+	// A one-off (the composer's translate button, `once`) names its own
+	// target and needs no write target on the channel; the panel's target
+	// moving mid-flight cannot invalidate it either.
+	const to = once ?? writeTarget(network, channel);
 
 	if (!to) {
 		return "plain";
@@ -255,7 +284,7 @@ export async function translateOutgoing(
 		// into the new target.
 		const settings = channelTranslation(network, channel);
 
-		if (settings.write !== to) {
+		if (!once && settings.write !== to) {
 			cancelOutgoing(channel);
 			return "strip";
 		}

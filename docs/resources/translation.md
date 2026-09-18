@@ -828,6 +828,21 @@ channel switched off, a language change, drop-behind), never un-pauses an
 engine, and counts toward no pause; a user's Retry asks in the normal shape
 again and gets its own bare retry.
 
+**One message, one language.** The composer has a translate button (the
+language mark beside the paperclip and the plane, `ChatInput.vue`
+`translateOnce`), the writing side of the toolbar's Translate: it opens the
+language picker in its "translate into" form (`SourceLanguagePicker.vue`
+`purpose="target"`), and the pick translates the draft into that language
+this once -- `writer.ts` `translateOnce`, which is `translateOutgoing` with
+its target named rather than read off the channel, so it runs with no
+write target set and is not invalidated by the panel's target moving --
+the strip comes up as it does for a write target, and the next Enter
+sends what it holds. The button is live for a draft the gate would
+translate (prose, or a `/me`), wherever translation can run at all; the
+dialog preselects the channel's last one-off language, else its write
+target (`lastOnceTarget`, session only). Browser check:
+`tools/scenarios/translate-composer.mjs` § 0.
+
 **An echo buys one more generation, and a bare one.** Before the strip
 reports "came back unchanged" the same draft goes out a second time in the
 shape `bareRetry()` (`outgoing.ts`) builds: the source left to the model

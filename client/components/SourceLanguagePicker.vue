@@ -12,11 +12,11 @@
 			@keydown.esc.stop.prevent="$emit('close')"
 		>
 			<label class="source-language-picker-field">
-				<span class="source-language-picker-label">{{ t("translate.picker.label") }}</span>
+				<span class="source-language-picker-label">{{ fieldLabel }}</span>
 				<select
 					ref="select"
 					v-model="choice"
-					name="translateFrom"
+					:name="purpose === 'target' ? 'translateInto' : 'translateFrom'"
 					class="input source-language-picker-control"
 				>
 					<option v-for="code in languages" :key="code" :value="code">
@@ -37,7 +37,7 @@
 					class="btn btn-sm source-language-picker-confirm"
 					@click="confirm"
 				>
-					{{ t("translate.picker.confirm") }}
+					{{ confirmLabel }}
 				</button>
 			</div>
 		</div>
@@ -66,6 +66,12 @@ export default defineComponent({
 		selected: {type: String, default: ""},
 		/** The detector's runners-up, for the preselection when there is no source. */
 		candidates: {type: Array as PropType<string[]>, default: () => []},
+		/**
+		 * What the language is for: `source` retranslates a line from it
+		 * (the chip menu's "Retranslate from…"), `target` translates the
+		 * composer's draft into it, this once (the translate button).
+		 */
+		purpose: {type: String as PropType<"source" | "target">, default: "source"},
 	},
 	emits: ["pick", "close"],
 	setup(props, {emit}) {
@@ -79,7 +85,21 @@ export default defineComponent({
 		const languages = computed(() =>
 			[...SUPPORTED_LANGUAGES].sort((a, b) => collator().compare(name(a), name(b)))
 		);
-		const dialogLabel = computed(() => t("translate.picker.dialog"));
+		const dialogLabel = computed(() =>
+			props.purpose === "target"
+				? t("translate.picker.targetDialog")
+				: t("translate.picker.dialog")
+		);
+		const fieldLabel = computed(() =>
+			props.purpose === "target"
+				? t("translate.picker.targetLabel")
+				: t("translate.picker.label")
+		);
+		const confirmLabel = computed(() =>
+			props.purpose === "target"
+				? t("translate.picker.targetConfirm")
+				: t("translate.picker.confirm")
+		);
 		const choice = ref(props.selected || props.candidates[0] || languages.value[0]);
 
 		const narrowQuery =
@@ -202,6 +222,8 @@ export default defineComponent({
 			choice,
 			languages,
 			dialogLabel,
+			fieldLabel,
+			confirmLabel,
 			name,
 			phone,
 			flipped,

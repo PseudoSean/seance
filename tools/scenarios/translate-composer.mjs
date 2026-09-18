@@ -398,6 +398,88 @@ export default async function run(page) {
 		label: "the other user's line in the channel",
 	});
 
+	// 0. One message, one language: no write target on the channel, and the
+	// composer's translate button translates the draft this once into a
+	// language picked in its dialog; the strip comes up as for a write
+	// target and Enter sends the translation. The button is dead on an
+	// empty draft, and the dialog remembers the language for the next pick.
+	const ONCE = "#form #translate-once";
+	const ONCE_SELECT = '.source-language-picker select[name="translateInto"]';
+	const onceDraft = `could someone translate just this one line ${RUN}`;
+
+	await page.waitFor(`!!document.querySelector(${JSON.stringify(ONCE)})`, {
+		label: "the composer's translate button",
+	});
+	await page.check(
+		"the translate button is disabled on an empty draft",
+		await page.evaluate(`document.querySelector(${JSON.stringify(ONCE)}).disabled`)
+	);
+	await page.fill(INPUT, onceDraft);
+	await page.waitFor(`!document.querySelector(${JSON.stringify(ONCE)}).disabled`, {
+		label: "the translate button is live with a draft",
+	});
+	await page.click(ONCE);
+	await page.waitFor(`!!document.querySelector(${JSON.stringify(ONCE_SELECT)})`, {
+		label: "the translate-into dialog",
+	});
+	await page.evaluate(
+		`(() => { const s = document.querySelector(${JSON.stringify(
+			ONCE_SELECT
+		)}); s.value = "es"; s.dispatchEvent(new Event("change", {bubbles: true})); })()`
+	);
+	await page.click(".source-language-picker-confirm");
+	await page.waitFor(
+		`(document.querySelector(${JSON.stringify(
+			BAR_TEXT
+		)}) || {}).textContent === ${JSON.stringify(`[Spanish] ${onceDraft}`)}`,
+		{timeout: 30000, label: "the one-off translation is in the strip"}
+	);
+	await page.check(
+		"the strip's chip names the picked language",
+		String(
+			await page.evaluate(`(document.querySelector(".translate-bar-chip") || {}).textContent`)
+		).includes("Spanish")
+	);
+	await page.check(
+		"the channel still has no write target",
+		(await page.evaluate(
+			`document.querySelector("#form #input").getAttribute("placeholder")`
+		)) === `Write to ${CHANNEL}`
+	);
+	// The read-back under the strip runs first; a send waits for it.
+	await page.waitFor(
+		`(document.querySelector(".translate-bar-check .translate-bar-text") || {}).textContent === ${JSON.stringify(
+			`[English] [Spanish] ${onceDraft}`
+		)}`,
+		{timeout: 30000, label: "the one-off translation's read-back"}
+	);
+	await page.evaluate(ENTER);
+	await page.check(
+		"Enter sent the one-off translation",
+		await heard(other, `[Spanish] ${onceDraft}`)
+	);
+	await page.waitFor(`!document.querySelector(${JSON.stringify(BAR)})`, {
+		label: "the strip is gone after the send",
+	});
+
+	// The next pick starts from the language picked last time.
+	await page.fill(INPUT, `and this one too ${RUN}`);
+	await page.click(ONCE);
+	await page.waitFor(`!!document.querySelector(${JSON.stringify(ONCE_SELECT)})`, {
+		label: "the dialog again",
+	});
+	await page.check(
+		"the dialog remembers Spanish",
+		(await page.evaluate(`document.querySelector(${JSON.stringify(ONCE_SELECT)}).value`)) ===
+			"es"
+	);
+	await page.screenshot("translate-once", {selector: "#form"});
+	await page.click(".source-language-picker-cancel");
+	await page.waitFor(`!document.querySelector(${JSON.stringify(ONCE_SELECT)})`, {
+		label: "the dialog closed",
+	});
+	await page.fill(INPUT, "");
+
 	// 1. The write target.
 	await openPanel(page);
 	await page.check(
