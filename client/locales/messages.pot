@@ -5830,6 +5830,42 @@ msgid_plural "{count} users"
 msgstr[0] ""
 msgstr[1] ""
 
+#. Heading of the channel administrators group in the user list (channel mode +a, the & prefix).
+#: client/components/ChatUserList.vue
+msgctxt "userlist.mode.admins"
+msgid "Administrators"
+msgstr ""
+
+#. Heading of the half-operators group in the user list (channel mode +h, the % prefix).
+#: client/components/ChatUserList.vue
+msgctxt "userlist.mode.halfOperators"
+msgid "Half-Operators"
+msgstr ""
+
+#. Heading of the channel operators group in the user list (channel mode +o, the @ prefix).
+#: client/components/ChatUserList.vue
+msgctxt "userlist.mode.operators"
+msgid "Operators"
+msgstr ""
+
+#. Heading of the channel owners group in the user list (channel mode +q, the ~ prefix).
+#: client/components/ChatUserList.vue
+msgctxt "userlist.mode.owners"
+msgid "Owners"
+msgstr ""
+
+#. Heading of the group of users without a channel mode in the user list.
+#: client/components/ChatUserList.vue
+msgctxt "userlist.mode.users"
+msgid "Users"
+msgstr ""
+
+#. Heading of the voiced users group in the user list (channel mode +v, the + prefix): users allowed to speak in a moderated channel.
+#: client/components/ChatUserList.vue
+msgctxt "userlist.mode.voiced"
+msgid "Voiced"
+msgstr ""
+
 #. Visually hidden but screen-reader-spoken label of the search field at the top of the channel member panel, used to filter the member list by name.
 #: client/components/ChatUserList.vue:17
 msgctxt "userlist.searchLabel"

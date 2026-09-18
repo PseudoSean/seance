@@ -23,6 +23,7 @@
 				v-for="(users, mode) in groupedUsers"
 				:key="mode"
 				:class="['user-mode', getModeClass(String(mode))]"
+				:data-label="modeLabel(String(mode))"
 			>
 				<template v-if="userSearchInput.length > 0">
 					<!-- eslint-disable vue/no-v-text-v-html-on-component -->
@@ -146,6 +147,20 @@ export default defineComponent({
 			return modes[mode] as typeof modes;
 		};
 
+		// The group's heading, drawn by CSS from this attribute
+		// (`#chat .user-mode[data-label]::before`): a mode the map does not
+		// know gets no heading, as before.
+		const modeLabels = computed<Record<string, string>>(() => ({
+			owner: t("userlist.mode.owners"),
+			admin: t("userlist.mode.admins"),
+			op: t("userlist.mode.operators"),
+			"half-op": t("userlist.mode.halfOperators"),
+			voice: t("userlist.mode.voiced"),
+			normal: t("userlist.mode.users"),
+		}));
+		const modeLabel = (mode: string): string | undefined =>
+			modeLabels.value[getModeClass(mode) as unknown as string];
+
 		const selectUser = () => {
 			// Simulate a click on the active user to open the context menu.
 			// Coordinates are provided to position the menu correctly.
@@ -251,6 +266,7 @@ export default defineComponent({
 
 			setUserSearchInput,
 			getModeClass,
+			modeLabel,
 			selectUser,
 			hoverUser,
 			removeHoverUser,
