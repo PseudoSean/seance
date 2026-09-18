@@ -4,7 +4,6 @@
   "channel.partedAria": "Hindi kasali pa",
   "channel.rowLabel": "{type}: {name}",
   "channel.rowLabelCount": "{type}: {name} ({extra})",
-  "channel.type.query": "Paghahalay",
   "channel.type.special": "Listahan",
   "chat.connecting": "Naka-connection...",
   "chat.connectingTo": "Naka-connection sa {network}...",

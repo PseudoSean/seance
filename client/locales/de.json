@@ -312,7 +312,7 @@
   "help.commands.slap": "Schlagt jemanden mit einer Forelle in den aktuellen Kanal!",
   "help.commands.topicA": "Holen Sie den Themeninhalt des aktuellen Kanals. Wenn",
   "help.commands.topicB": "wird angegeben, setzt das Thema im aktuellen Kanal.",
-  "help.commands.unbanA": "Entbanen (",
+  "help.commands.unbanA": "Entbannen (",
   "help.commands.unbanB": ") ein Benutzer aus dem aktuellen Kanal. Dies kann ein Spitzname oder eine Hostmaske sein.",
   "help.commands.unignore": "Entsperren von Nachrichten des angegebenen Benutzers im aktuellen Netzwerk. Dies kann ein Spitzname oder eine Hostmaske sein.",
   "help.commands.unmuteA": "Schaltet den angegebenen Kanal oder den aktuellen Kanal aus, wenn kein Kanal zur Verfügung gestellt wird. Siehe",

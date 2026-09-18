@@ -1359,7 +1359,7 @@ msgstr "사용자 선호 설정"
 #: client/components/Windows/Help.vue
 msgctxt "help.about"
 msgid "About"
-msgstr "대한 부분"
+msgstr ""
 
 #. Word between the two version numbers inside the compare links of the help window's past-release list. Mid-sentence.
 #: client/components/Windows/Help.vue

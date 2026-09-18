@@ -130,7 +130,7 @@ msgstr "تحديد موضوع القناة"
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.added"
 msgid "Alias /{name} added."
-msgstr "تم إضافة الاسم البارئ /{name}."
+msgstr "تمت إضافة الاسم المستعار /{name}."
 
 #. Error when an /alias name is invalid. {max} is the length limit, a number.
 #: client/js/irc/commands/alias.ts

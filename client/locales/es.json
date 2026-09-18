@@ -263,8 +263,7 @@
   "help.between": "entre",
   "help.builtAfter": ", después de v{version}",
   "help.builtFrom": "está construido a partir de",
-  "help.commands.alias": "Apodo:",
-  "help.commands.aliases": "Apodos:",
+  "help.commands.aliases": "Alias:",
   "help.commands.away": "Marca tu estado como \"away\" con un mensaje opcional.",
   "help.commands.back": "Elimina tu estado \"away\" (establecido con",
   "help.commands.banA": "Baneo (",
@@ -332,7 +331,7 @@
   "help.formatting.colorP2b": "después del número de color del frente (también funciona la autocompleción).",
   "help.formatting.colorRef": "Puede encontrarse una referencia de color",
   "help.formatting.heading": "Atajos de formato",
-  "help.formatting.italic": "italicos",
+  "help.formatting.italic": "cursiva",
   "help.formatting.monospace": "monoespaciado",
   "help.formatting.reset": "Marcar todo el texto tipado después de este atajo para que se restablezca su formato original.",
   "help.formatting.strikethrough": "Tachado",
@@ -777,7 +776,7 @@
   "sidebar.language": "Idioma de display",
   "sidebar.mentions": {
     "one": "{count} mención",
-    "other": "{count} menciona"
+    "other": "{count} menciones"
   },
   "sidebar.networkList": "Lista de red y canales",
   "sidebar.noResults": "No se encontraron resultados.",

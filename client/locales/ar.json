@@ -19,7 +19,7 @@
   "chat.showOlder": "عرض الرسائل الأقدم",
   "chat.toggleUserlist": "تبديل قائمة المستخدمين",
   "chat.topicPlaceholder": "تحديد موضوع القناة",
-  "cmd.alias.added": "تم إضافة الاسم البارئ /{name}.",
+  "cmd.alias.added": "تمت إضافة الاسم المستعار /{name}.",
   "cmd.alias.badName": "أسماء الابراج تتكون من الحروف والارقام و_ و- (حتى {max} رمز).",
   "cmd.alias.missing": "لا يوجد اسم البارئ /{name}. /alias {name} <commands> يخلقها.",
   "cmd.alias.none": "لا توجد أسماء ابراج. يُنشئ /alias <name> <commands> واحدة.",

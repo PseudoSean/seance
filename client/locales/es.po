@@ -1471,13 +1471,13 @@ msgstr "está construido a partir de"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.alias"
 msgid "Alias:"
-msgstr "Apodo:"
+msgstr ""
 
 #. Lead-in of the alias line under a command description in the help window when the command has several alternative names; the alternatives follow as code fragments. Keep the trailing colon.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.aliases"
 msgid "Aliases:"
-msgstr "Apodos:"
+msgstr "Alias:"
 
 #. Description of the /away command in the help window; the command syntax (/away [message]) is shown beside it and stays untranslated.
 #: client/components/Windows/Help.vue
@@ -1898,7 +1898,7 @@ msgstr "Atajos de formato"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.italic"
 msgid "italics"
-msgstr "italicos"
+msgstr "cursiva"
 
 #. The example word shown in a monospaced font in the help window's Ctrl+M formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
@@ -4576,7 +4576,7 @@ msgctxt "sidebar.mentions"
 msgid "{count} mention"
 msgid_plural "{count} mentions"
 msgstr[0] "{count} mención"
-msgstr[1] "{count} menciona"
+msgstr[1] "{count} menciones"
 
 #. aria-label of the sidebar's navigation region (the network/channel list).
 #: client/components/NetworkList.vue:6

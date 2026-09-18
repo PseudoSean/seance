@@ -52,7 +52,7 @@ msgstr ""
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.query"
 msgid "Conversation"
-msgstr "Paghahalay"
+msgstr ""
 
 #. Names the kind of window in a sidebar row's aria-label: a results window such as a channel list or a ban list. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue

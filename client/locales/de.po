@@ -1777,7 +1777,7 @@ msgstr "wird angegeben, setzt das Thema im aktuellen Kanal."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unbanA"
 msgid "Unban ("
-msgstr "Entbanen ("
+msgstr "Entbannen ("
 
 #. Continuation of the /unban command description in the help window, after the -b code fragment. Starts with the closing parenthesis.
 #: client/components/Windows/Help.vue
