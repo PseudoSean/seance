@@ -769,13 +769,14 @@ async function scenario(page) {
 	base += 1;
 
 	// A short line with no function words ("ja so gut": nine characters, three
-	// words, under DETECT_MIN_LENGTH so franc is never asked) and no language
-	// declared here to place it: the classifier has no verdict for it and
-	// detection returns short — detectionSkip lets it through, the engine
-	// places the source itself, and the fake's echo lands on a done
-	// translation named with no source ("? → English"). No RUN marker fits
-	// under ten characters, so the rows with this text are counted first and
-	// the new one is the newest.
+	// words, under DETECT_MIN_LENGTH so franc is never asked): the classifier
+	// has no verdict for it, and the short-line lookup (wordlookup.ts) finds
+	// German, Slovak, Polish and English all listing some of its words, with
+	// German only 1.8x ahead — too close to place on its own. The channel's
+	// prior is what settles it: everything said here has been German, German
+	// is among the contenders, so the line is placed German and translated
+	// *from* German. No RUN marker fits under ten characters, so the rows with
+	// this text are counted first and the new one is the newest.
 	const unsureLine = "ja so gut";
 	const unsureRows = `[...document.querySelectorAll(".msg")].filter((m) => m.textContent.includes(${JSON.stringify(
 		unsureLine
@@ -798,12 +799,12 @@ async function scenario(page) {
 		{timeout: 20000, label: "the short German line translated"}
 	);
 	await page.check(
-		"the short line's chip names no source (? → English)",
+		"the short line's chip names German (the prior settled the lookup's tie)",
 		(
 			await page.evaluate(
 				`document.querySelector('#${unsureRowId} .msg-translation-chip').textContent`
 			)
-		).trim() === "? → English"
+		).trim() === "German → English"
 	);
 	const unsureRequests = await page.evaluate(
 		`(${REQUESTS}).filter((r) => r.text.indexOf(${JSON.stringify(
@@ -811,11 +812,112 @@ async function scenario(page) {
 		)}) !== -1).map((r) => ({from: r.from}))`
 	);
 	await page.check(
-		`its request left the source to the engine (${JSON.stringify(unsureRequests)})`,
+		`its request asked for German as the source (${JSON.stringify(unsureRequests)})`,
 		Array.isArray(unsureRequests) &&
 			unsureRequests.length > 0 &&
-			unsureRequests.every((r) => r.from === null)
+			unsureRequests.every((r) => r.from === "de")
 	);
+	base += 1;
+	await page.check("one more done line", (await page.evaluate(LINES)) === base + 1);
+
+	// A word nothing can place at all: no function word, and no language's
+	// frequency table lists "lol" either, so the lookup has no opinion, the
+	// line stays short, and it goes to the engine with no source named —
+	// the behaviour every unplaceable short line had before the lookup.
+	const unplaceable = "lol";
+	const unplaceableRows = `[...document.querySelectorAll(".msg")].filter((m) => m.textContent.includes(${JSON.stringify(
+		unplaceable
+	)}))`;
+	const unplaceableBefore = await page.evaluate(`${unplaceableRows}.length`);
+
+	other.say(unplaceable);
+	await page.waitFor(`${unplaceableRows}.length > ${unplaceableBefore}`, {
+		timeout: 15000,
+		label: "the unplaceable word arrived",
+	});
+
+	const unplaceableRowId = String(await page.evaluate(`${unplaceableRows}.pop().id`));
+
+	await page.waitFor(
+		`!!document.querySelector(${JSON.stringify(
+			`#${unplaceableRowId} .msg-translation[data-status="done"]`
+		)})`,
+		{timeout: 20000, label: "the unplaceable word translated"}
+	);
+	await page.check(
+		"the unplaceable word's chip names no source (? → English)",
+		(
+			await page.evaluate(
+				`document.querySelector('#${unplaceableRowId} .msg-translation-chip').textContent`
+			)
+		).trim() === "? → English"
+	);
+	const unplaceableRequests = await page.evaluate(
+		`(${REQUESTS}).filter((r) => r.text.trim() === ${JSON.stringify(
+			unplaceable
+		)}).map((r) => ({from: r.from}))`
+	);
+	await page.check(
+		`its request left the source to the engine (${JSON.stringify(unplaceableRequests)})`,
+		Array.isArray(unplaceableRequests) &&
+			unplaceableRequests.length > 0 &&
+			unplaceableRequests.every((r) => r.from === null)
+	);
+	base += 1;
+	await page.check("one more done line", (await page.evaluate(LINES)) === base + 1);
+
+	// A lone word, from the same German-speaking user, that no function word
+	// and no trigram can place: the short-line lookup (wordlookup.ts) reads it
+	// out of the frequency table instead, where "hola" is Spanish and nothing
+	// else. The chip names Spanish -- not the channel's German prior, and not
+	// a bare "? → English" -- and the request carries `from: "es"`, which is
+	// what makes the engine translate *from* Spanish rather than echo the word
+	// back. Counted like the line above: four characters fit no RUN marker.
+	const loneWord = "hola";
+	const loneRows = `[...document.querySelectorAll(".msg")].filter((m) => m.textContent.includes(${JSON.stringify(
+		loneWord
+	)}))`;
+	const loneBefore = await page.evaluate(`${loneRows}.length`);
+
+	other.say(loneWord);
+	await page.waitFor(`${loneRows}.length > ${loneBefore}`, {
+		timeout: 15000,
+		label: "the lone Spanish word arrived",
+	});
+
+	const loneRowId = String(await page.evaluate(`${loneRows}.pop().id`));
+
+	await page.waitFor(
+		`!!document.querySelector(${JSON.stringify(
+			`#${loneRowId} .msg-translation[data-status="done"]`
+		)})`,
+		{timeout: 20000, label: "the lone word translated"}
+	);
+
+	const loneChip = String(
+		await page.evaluate(
+			`document.querySelector('#${loneRowId} .msg-translation-chip').textContent`
+		)
+	).trim();
+
+	await page.check(
+		`the lone word's chip names Spanish (${JSON.stringify(loneChip)})`,
+		loneChip === "Spanish → English"
+	);
+
+	const loneRequests = await page.evaluate(
+		`(${REQUESTS}).filter((r) => r.text.trim() === ${JSON.stringify(
+			loneWord
+		)}).map((r) => ({from: r.from}))`
+	);
+
+	await page.check(
+		`its request asked for Spanish as the source (${JSON.stringify(loneRequests)})`,
+		Array.isArray(loneRequests) &&
+			loneRequests.length > 0 &&
+			loneRequests.every((r) => r.from === "es")
+	);
+	await page.screenshot("lone-word-placed");
 	base += 1;
 	await page.check("one more done line", (await page.evaluate(LINES)) === base + 1);
 
