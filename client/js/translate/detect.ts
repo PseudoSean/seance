@@ -443,7 +443,12 @@ export async function detectLanguage(
 	// Nothing is noted into the prior: one word is no evidence about a
 	// channel.
 	if (short || words.length <= LOOKUP_MAX_WORDS) {
-		const looked = await lookupShortLine(words, prior, options.exclude);
+		// The table is a chunk: offline, or with the deploy's chunks rotated
+		// under an open page, fetching it fails. A short line needed no chunk
+		// at all before the lookup existed, and it must not start needing
+		// one -- a rejection here is no verdict, not a line that never
+		// translates (every caller `void`s this promise).
+		const looked = await lookupShortLine(words, prior, options.exclude).catch(() => null);
 
 		if (looked && (looked.lang !== null || short)) {
 			return looked;

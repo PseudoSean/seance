@@ -325,11 +325,14 @@ chunk on the first short line that reaches it -- gives every language
 1/rank for each of the line's words, so a word at rank 5 counts far more
 than one at rank 700. One language carrying the words places the line
 ("test" is English and nothing else, "hola" Spanish); several are settled
-by the channel's prior when it names one of them ("ja so gut" is German,
-Slovak, Polish and English, German only 1.8x ahead, and a German channel
-decides it), or by a leader `LOOKUP_LEAD` (3x) ahead of the runner-up
-("hasta luego" leads 17x); anything else stays unplaced with its contenders
-named, exactly as before. The lookup runs only on a line of at most
+first by a leader `LOOKUP_LEAD` (3x) ahead of the runner-up ("hasta luego"
+leads 17x), and only where nothing leads by the channel's prior naming one
+of the contenders ("ja so gut" is German, Slovak, Polish and English,
+German 1.8x ahead, and a German channel decides it). The order is the
+point: "the" is English rank 1 against Spanish rank 301, a ~300x lead, and
+a Spanish channel's prior must not turn a lone "the" into a line translated
+from Spanish. Anything else stays unplaced with its contenders named,
+exactly as before. The lookup runs only on a line of at most
 `LOOKUP_MAX_WORDS` (3) words the classifier did not place, never overrules
 it, never takes a line off franc that franc could have had (a line it will
 not place and franc can still see goes to the trigram flow), and notes
@@ -337,9 +340,19 @@ nothing into the channel's prior -- one word is no evidence about a
 channel. Its verdict is _not_ weak: that is the point, since `sourceFor`
 only translates _from_ a verdict that is not weak, and "test" read in
 Spanish has to become "prueba". Two limits worth knowing: a word no table
-lists ("lol") leaves the lookup silent, and ja/zh/ko write without spaces,
-so their lines arrive as one token that matches nothing -- the classifier's
-containment matching is what serves those languages. Thai is the one
+lists ("lol") leaves the lookup silent, and ja/zh/ko/th write without
+spaces, so a sentence in one of them arrives as one token that matches
+nothing -- the classifier's containment matching is what serves those
+languages. That case never fetches the chunk: a line with no letter in it,
+or a single space-free token longer than `LOOKUP_MAX_SCRIPTLESS` (9, the
+longest entry any of those languages has), is answered before the table is
+asked for, so a Japanese reader does not download 390 KB for nothing (a
+lone word still is looked up -- "ありがとう" places as Japanese).
+A lookup verdict's `confidence` is the 1/rank score, 0.001 to 0.15 in
+practice, so it never reaches `WRITE_DETECT_MIN_GAP` (0.3): the composer's
+`reverseSource` does not trust it for a draft, which is the intended
+reading -- the lookup is the reading pipeline's answer for other people's
+short lines, not a claim about what the user is typing. Thai is the one
 language whose words come from a stopword list rather than a frequency one
 (the table lists it under `partial`). Both generators read the same tag list
 and source ladder (`tools/wordsources.py`) and both need wordfreq and

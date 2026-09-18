@@ -12,9 +12,9 @@
 // A verdict from here is a source, not a hint: it is not `weak`, so
 // `sourceFor` translates *from* it and "test" read in Spanish becomes
 // "prueba". That is only safe because the rule refuses to guess: one language
-// carrying the words, or the channel's prior among those that do, or a
-// runaway leader -- anything else returns an unplaced verdict and the engine
-// places the line as before.
+// carrying the words, or a runaway leader, or -- only when nothing leads --
+// the channel's prior among the contenders; anything else returns an
+// unplaced verdict and the engine places the line as before.
 //
 // Nothing is noted into the channel's prior from here: one word is no
 // evidence about what a channel speaks.
@@ -45,13 +45,46 @@ export const LOOKUP_MAX_WORDS = 3;
  * wrong language, which costs a wrong translation rather than a chip.
  */
 export const LOOKUP_LEAD = 3;
+/**
+ * The longest word any of the space-free languages (ja, zh, ko, th) has in
+ * the table: Thai 9, Japanese 7, Korean 4, Chinese 3. `tokens()` splits on
+ * spaces, so a whole Japanese sentence arrives as one token -- longer than
+ * this, it can match nothing, and the 390 KB chunk is not worth fetching to
+ * find that out. A lone word in one of those scripts still is (the table
+ * places "ありがとう" as Japanese).
+ */
+export const LOOKUP_MAX_SCRIPTLESS = 9;
+
+const SCRIPTLESS =
+	/^[\p{sc=Han}\p{sc=Hiragana}\p{sc=Katakana}\p{sc=Hangul}\p{sc=Thai}\u30fc\u3005\u3006]+$/u;
+const HAS_LETTER = /\p{L}/u;
+
+/** Whether any word of the line could be a key at all, without the table. */
+function couldMatch(words: readonly string[]): boolean {
+	return words.some(
+		(word) =>
+			HAS_LETTER.test(word) && !(SCRIPTLESS.test(word) && word.length > LOOKUP_MAX_SCRIPTLESS)
+	);
+}
 
 let table: Wordlist | null = null;
 let loading: Promise<Wordlist> | null = null;
+let loader: (() => Promise<Wordlist>) | null = null;
 
 /** Tests: the table without the chunk; `null` restores the real one. */
 export function setWordlist(next: Wordlist | null): void {
 	table = next;
+	loading = null;
+}
+
+/**
+ * Tests: what `loadWordlist` calls instead of the chunk import -- a loader
+ * that rejects stands in for a chunk that cannot be fetched, and one that
+ * throws proves the lookup never asked. `null` restores the import.
+ */
+export function setWordlistLoader(next: (() => Promise<Wordlist>) | null): void {
+	loader = next;
+	table = null;
 	loading = null;
 }
 
@@ -61,10 +94,17 @@ export function loadWordlist(): Promise<Wordlist> {
 	}
 
 	if (!loading) {
-		loading = import(/* webpackChunkName: "wordlist" */ "./wordlist.json")
-			.then((module) => {
-				table = (module.default ?? module) as unknown as Wordlist;
-				return table;
+		const fetchTable =
+			loader ??
+			(() =>
+				import(/* webpackChunkName: "wordlist" */ "./wordlist.json").then(
+					(module) => (module.default ?? module) as unknown as Wordlist
+				));
+
+		loading = fetchTable()
+			.then((next) => {
+				table = next;
+				return next;
 			})
 			.catch((error) => {
 				loading = null;
@@ -92,7 +132,7 @@ export async function lookupShortLine(
 	prior: LanguagePrior | null,
 	exclude?: string
 ): Promise<Detection | null> {
-	if (words.length === 0 || words.length > LOOKUP_MAX_WORDS) {
+	if (words.length === 0 || words.length > LOOKUP_MAX_WORDS || !couldMatch(words)) {
 		return null;
 	}
 
@@ -121,14 +161,18 @@ export async function lookupShortLine(
 		return placed(ranked[0][0], ranked[0][1]);
 	}
 
+	// A landslide is not a tie: "the" scores 1.0 for English (rank 1) against
+	// 0.0033 for Spanish (rank 301), and a Spanish channel's prior must not
+	// turn a lone "the" into a line translated from Spanish. The lead is read
+	// first; the prior decides only when nothing leads.
+	if (ranked[0][1] >= ranked[1][1] * LOOKUP_LEAD) {
+		return placed(ranked[0][0], ranked[0][1]);
+	}
+
 	const top = prior?.top() ?? null;
 
 	if (top !== null && scores.has(top)) {
 		return placed(top, scores.get(top)!);
-	}
-
-	if (ranked[0][1] >= ranked[1][1] * LOOKUP_LEAD) {
-		return placed(ranked[0][0], ranked[0][1]);
 	}
 
 	// Several languages, none of them backed: today's answer, with the

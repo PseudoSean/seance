@@ -5,6 +5,7 @@ import {
 	LOOKUP_MAX_WORDS,
 	lookupShortLine,
 	setWordlist,
+	setWordlistLoader,
 	type Wordlist,
 } from "../../client/js/translate/wordlookup";
 // The JSON import widens the `[tag, rank]` tuples, hence the cast.
@@ -113,6 +114,35 @@ describe("translate/wordlookup", () => {
 		const test = await lookupShortLine(["test"], null, "en");
 
 		expect(test!.lang).to.equal("en");
+	});
+
+	it("lets a runaway leader win before the prior is asked", async () => {
+		// "the" is English rank 1 (score 1.0) and Spanish rank 301 (0.0033):
+		// a 300x lead is not a tie for the channel to settle, or a lone "the"
+		// in a Spanish channel would be translated from Spanish.
+		expect((await lookupShortLine(["the"], prior("es", "es")))!.lang).to.equal("en");
+		// Where nothing leads, the prior still decides.
+		expect((await lookupShortLine(["no"], prior("es", "es")))!.lang).to.equal("es");
+	});
+
+	it("does not fetch the table for a line that cannot match it", async () => {
+		setWordlistLoader(() => {
+			throw new Error("the table must not be fetched for this line");
+		});
+
+		// A Japanese sentence is one token (tokens() splits on spaces), longer
+		// than any space-free language's longest entry, so it can match
+		// nothing; punctuation carries no letter at all.
+		expect(await lookupShortLine(["こんにちは元気ですか今日はいい天気ですね"], null)).to.equal(
+			null
+		);
+		expect(await lookupShortLine(["!!!"], null)).to.equal(null);
+		expect(await lookupShortLine(["123"], null)).to.equal(null);
+
+		setWordlistLoader(null);
+		setWordlist(table);
+		// A lone word in one of those scripts is still looked up.
+		expect((await lookupShortLine(["ありがとう"], null))!.lang).to.equal("ja");
 	});
 
 	it("is case-insensitive", async () => {

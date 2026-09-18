@@ -17,7 +17,7 @@ import {
 	sourceFor,
 } from "../../client/js/translate/detect";
 import {SUPPORTED_LANGUAGES} from "../../client/js/translate/languages";
-import {setWordlist, type Wordlist} from "../../client/js/translate/wordlookup";
+import {setWordlist, setWordlistLoader, type Wordlist} from "../../client/js/translate/wordlookup";
 import rawWordlist from "../../client/js/translate/wordlist.json";
 
 const wordlist = rawWordlist as unknown as Wordlist;
@@ -683,6 +683,26 @@ describe("translate/detect", () => {
 
 			expect(asked).to.equal(1);
 			expect(musik.lang).to.equal("de");
+		});
+
+		it("falls back to the bare short verdict when the table cannot be fetched", async () => {
+			// A short line needed no chunk before the lookup existed. Offline,
+			// or with the deploy's chunks rotated under an open page, the
+			// fetch fails -- and detectLanguage still answers, or the line
+			// would never be translated at all (its callers `void` it).
+			setDetector(never);
+			setWordlistLoader(() => Promise.reject(new Error("chunk gone")));
+
+			expect(await detectLanguage("hola", null)).to.deep.equal({
+				lang: null,
+				confidence: 0,
+				candidates: [],
+				short: true,
+			});
+
+			setWordlistLoader(null);
+			setWordlist(wordlist);
+			expect((await detectLanguage("hola", null)).lang).to.equal("es");
 		});
 
 		it("leaves the channel's prior untouched", async () => {
