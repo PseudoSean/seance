@@ -430,6 +430,26 @@ no engine for an unnamed source (CPU only) such a line cannot be routed,
 and the queue's "no translation engine" failure is written as the `unsure`
 mark instead (`reader.ts` `applyUpdate`).
 
+**The topic is read too.** A channel's topic is the line everyone in it
+is looking at, so a reading channel reads it like its lines: `reader.ts`
+`readTopic` detects it (markdown stripped, nicks fenced, the channel's
+prior and declared languages weighed as for a line), leaves it alone when
+it is already in the reading language, and otherwise queues it -- never
+batched, at the front, with the channel's recent lines and names as
+context and the topic itself left out of that context -- under an id no
+message can have (`topic.ts` `topicEntryId`, a billion below every history
+id) in the same `state.translations` slice. The header (`Chat.vue`) shows
+the translation **in the topic's place**, so the header grows no row for
+it, with a small flipper before it wearing the chips' accent look: it
+swaps the translation and the original (the entry's `hidden`, through
+`showOriginal` like a line's), and the tooltip carries whichever is not
+showing. The header asks for the read whenever the channel, its topic, the
+switch or the reading language changes (idempotent on the topic as it
+stands); a switch-off or a fresh read (`requeueReading`) drops the entry
+(`forgetTopic`); a double-click still edits the original. Browser check:
+`tools/scenarios/translate-reading.mjs` (the speaker sets a German topic
+before the switch-on and another after).
+
 **A skipped line is marked.** Every line detection skips gets a store entry
 of its own -- `status: "skipped"`, `reason` `same` (with `from` the reading
 language) or `unsure` (with the candidates kept) -- which

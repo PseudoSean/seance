@@ -314,6 +314,8 @@ function speaker(nick) {
 	return {
 		joined,
 		say: (text) => ws.send(`PRIVMSG ${CHANNEL} :${text}`),
+		// The speaker joined first, so the channel is its to set the topic of.
+		topic: (text) => ws.send(`TOPIC ${CHANNEL} :${text}`),
 		/** One `draft/multiline` message: the page joins the batch's lines with newlines. */
 		sayMultiline(lines) {
 			const tag = `ml${Date.now().toString(36)}${(batchSeq++).toString(36)}`;
@@ -388,6 +390,22 @@ async function scenario(page) {
 		))
 	);
 
+	// A German topic before the switch: the header shows it as set while
+	// reading is off, and the switch-on reads it like the lines (reader.ts
+	// `readTopic`) -- in the topic's place, with a flipper before it.
+	const TOPIC = ".header .topic";
+	const FLIP = ".header .topic .topic-flip";
+	const topicText = `(document.querySelector(${JSON.stringify(TOPIC)}) || {}).textContent || ""`;
+	const topicHeight = `(document.querySelector(".header") || {}).offsetHeight`;
+	const topicBefore = `Willkommen im Kanal, hier wird ueber alles Moegliche geredet ${RUN}`;
+
+	other.topic(topicBefore);
+	await page.waitFor(`(${topicText}).includes(${JSON.stringify(topicBefore)})`, {
+		label: "the header shows the speaker's topic",
+	});
+	await page.check("no flipper while reading is off", (await page.count(FLIP)) === 0);
+	const headerHeightBefore = Number(await page.evaluate(topicHeight));
+
 	// Two German lines before the switch: nothing is translated while reading
 	// is off, and switching it on translates what the channel shows -- these
 	// two lines, and the backlog of earlier runs the join loaded.
@@ -444,6 +462,65 @@ async function scenario(page) {
 			)
 		).includes("[English] Ich schreibe selbst")
 	);
+
+	// The topic, read with the lines: the fake's English copy stands where
+	// the topic stood, the header no taller for it, and the flipper swaps
+	// the two. A new topic is read again.
+	await page.waitFor(`(${topicText}).includes("[English] " + ${JSON.stringify(topicBefore)})`, {
+		timeout: 90000,
+		label: "the switch-on translated the topic",
+	});
+	await page.check(
+		"the translated topic takes no extra room in the header",
+		Number(await page.evaluate(topicHeight)) === headerHeightBefore
+	);
+	await page.check("the topic has its flipper", (await page.count(FLIP)) === 1);
+	await page.check(
+		"the flipper offers the original",
+		String(
+			await page.evaluate(
+				`document.querySelector(${JSON.stringify(FLIP)}).getAttribute("aria-label")`
+			)
+		) === "Show the original topic"
+	);
+	await page.check(
+		"the header's tooltip carries the original while the translation shows",
+		String(
+			await page.evaluate(
+				`document.querySelector(${JSON.stringify(TOPIC)}).getAttribute("title")`
+			)
+		) === topicBefore
+	);
+	await page.click(FLIP);
+	await page.waitFor(
+		`!(${topicText}).includes("[English]") && (${topicText}).includes(${JSON.stringify(
+			topicBefore
+		)})`,
+		{
+			label: "the flipper shows the original topic",
+		}
+	);
+	await page.check(
+		"the flipper then offers the translation",
+		String(
+			await page.evaluate(
+				`document.querySelector(${JSON.stringify(FLIP)}).getAttribute("aria-label")`
+			)
+		) === "Show the translated topic"
+	);
+	await page.click(FLIP);
+	await page.waitFor(`(${topicText}).includes("[English] ")`, {
+		label: "the flipper shows the translation again",
+	});
+	await page.screenshot("translated-topic", {selector: "#chat .header"});
+
+	const topicAfter = `Neues Thema fuer heute, bitte hoeflich bleiben ${RUN}`;
+
+	other.topic(topicAfter);
+	await page.waitFor(`(${topicText}).includes("[English] " + ${JSON.stringify(topicAfter)})`, {
+		timeout: 90000,
+		label: "a changed topic is read again",
+	});
 
 	// Moved on where a step adds a done line the later counts must not see
 	// as theirs (Translate anyway on the English line, the Spanish line).

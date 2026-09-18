@@ -39,13 +39,22 @@
 					</div>
 					<span
 						v-else
-						:title="plainTopic"
+						:title="topicTitle"
 						:class="{topic: true, empty: !channel.topic}"
 						@dblclick="editTopic"
-						><ParsedMessage
-							v-if="channel.topic"
-							:network="network"
-							:text="channel.topic"
+						><button
+							v-if="topicTranslation"
+							type="button"
+							class="topic-flip"
+							:class="{original: topicTranslation.hidden}"
+							:aria-label="topicFlipLabel"
+							:title="topicFlipLabel"
+							:aria-pressed="!topicTranslation.hidden"
+							@click.stop="flipTopic"
+							@dblclick.stop
+						>
+							<i class="fas fa-language" aria-hidden="true" /></button
+						><ParsedMessage v-if="channel.topic" :network="network" :text="topicShown"
 					/></span>
 					<MessageSearchForm
 						v-if="['channel', 'query'].includes(channel.type)"
@@ -167,10 +176,13 @@ import {layout, toPlainText} from "../js/helpers/ircmessageparser/layout";
 import {useI18n} from "../js/i18n";
 import {
 	channelTranslation,
+	readTopic,
 	readingLanguage,
 	setReading,
+	showOriginal,
 	translationAvailable as translationAvailableNow,
 } from "../js/translate/reader";
+import {topicEntryId} from "../js/translate/topic";
 import {languageName} from "../js/translate/languages";
 import {hasVirtualKeyboard} from "../js/helpers/device";
 
@@ -215,6 +227,56 @@ export default defineComponent({
 
 		const topicPlaceholder = computed(() => t("chat.topicPlaceholder"));
 		const saveTopicLabel = computed(() => t("chat.saveTopic"));
+
+		// The topic, read like the channel's lines (reader.ts `readTopic`,
+		// topic.ts): a finished translation takes the topic's place in the
+		// header rather than a row of its own, and the flipper before it
+		// swaps the two. The tooltip carries whichever is not shown.
+		const topicTranslation = computed(() => {
+			const entry = store.state.translations[topicEntryId(props.channel.id)];
+
+			return entry && entry.status === "done" && entry.text ? entry : undefined;
+		});
+		const topicShown = computed(() =>
+			topicTranslation.value && !topicTranslation.value.hidden
+				? topicTranslation.value.text
+				: props.channel.topic
+		);
+		const topicTitle = computed(() => {
+			const entry = topicTranslation.value;
+
+			if (!entry || entry.hidden) {
+				return entry
+					? toPlainText(layout(entry.text, {markdown: store.state.settings.markdown}))
+					: plainTopic.value;
+			}
+
+			return plainTopic.value;
+		});
+		const topicFlipLabel = computed(() =>
+			topicTranslation.value?.hidden
+				? t("translate.topic.showTranslation")
+				: t("translate.topic.showOriginal")
+		);
+
+		const flipTopic = () => {
+			const entry = topicTranslation.value;
+
+			if (entry) {
+				showOriginal(topicEntryId(props.channel.id), !entry.hidden);
+			}
+		};
+
+		watch(
+			() => [
+				props.channel.id,
+				props.channel.topic,
+				channelTranslation(props.network, props.channel).read,
+				readingLanguage(),
+			],
+			() => void readTopic(props.network, props.channel),
+			{immediate: true}
+		);
 		const mentionsLabel = computed(() => t("chat.mentions"));
 		const contextMenuLabel = computed(() => t("chat.contextMenu"));
 		const toggleUserlistLabel = computed(() => t("chat.toggleUserlist"));
@@ -452,6 +514,11 @@ export default defineComponent({
 			openTitle,
 			topicPlaceholder,
 			saveTopicLabel,
+			topicTranslation,
+			topicShown,
+			topicTitle,
+			topicFlipLabel,
+			flipTopic,
 			mentionsLabel,
 			contextMenuLabel,
 			toggleUserlistLabel,

@@ -5640,6 +5640,18 @@ msgctxt "translate.strip.sourceAuto"
 msgid "auto"
 msgstr ""
 
+#. Tooltip and aria-label of the small button before a translated channel topic in the chat header; pressing it shows the topic as it was set.
+#: client/components/Chat.vue
+msgctxt "translate.topic.showOriginal"
+msgid "Show the original topic"
+msgstr ""
+
+#. Tooltip and aria-label of the small button before a channel topic in the chat header while the original is showing; pressing it shows the translation again.
+#: client/components/Chat.vue
+msgctxt "translate.topic.showTranslation"
+msgid "Show the translated topic"
+msgstr ""
+
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue
 msgctxt "translate.unchangedReason"

@@ -2214,6 +2214,37 @@ textarea.input {
 	min-width: 0;
 }
 
+/* The translated topic stands where the topic stood (Chat.vue
+ * `topicShown`): no second row in the header. The flipper before it swaps
+ * the translation and the original, wearing the translation chips' accent
+ * look, and dimmed while the original is the one showing. */
+.header .topic-flip {
+	display: inline-flex;
+	align-items: center;
+	vertical-align: -0.1em;
+	margin-inline-end: 0.35em;
+	padding: 0 0.3em;
+	border: 1px solid var(--chat-accent-rule, var(--link-color));
+	border-radius: 0.2rem;
+	background: transparent;
+	color: var(--chat-accent, var(--link-color));
+	font: inherit;
+	font-size: 0.75em;
+	line-height: 1.5;
+	cursor: pointer;
+}
+
+.header .topic-flip.original {
+	border-color: currentcolor;
+	color: var(--body-color-muted);
+}
+
+.header .topic-flip:hover,
+.header .topic-flip:focus-visible {
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	outline: 0;
+}
+
 .header .topic-input {
 	color: inherit;
 	background: transparent;

@@ -36,6 +36,7 @@ import {setTranslationUsage, translateService} from "./index";
 import {NO_ROUTE, type QueueItem, type QueueUpdate, TranslateQueue} from "./queue";
 import {sentReadBacks, takesReadBack} from "./sentReadBack";
 import {protect, stripCopiedNickPrefix} from "./spans";
+import {topicEntryId} from "./topic";
 
 const queues = new Map<string, TranslateQueue>();
 const priors = new Map<string, LanguagePrior>();
@@ -420,6 +421,7 @@ export function setReading(network: ClientNetwork, channel: ClientChan, on: bool
 		generations.set(channel.id, generationOf(channel.id) + 1);
 		replayBatches.drop(channel.id);
 		queues.get(network.uuid)?.cancelChannel(channel.id);
+		forgetTopic(channel.id);
 		return;
 	}
 
@@ -462,7 +464,148 @@ export function requeueReading(network: ClientNetwork, channel: ClientChan): voi
 		requeued.map((m) => m.id)
 	);
 	priors.delete(channelKey(network.uuid, channel.name));
+	forgetTopic(channel.id);
 	void queueHistory(network, channel, historyQueueOrder(requeued));
+	void readTopic(network, channel);
+}
+
+/** The topic each channel's translation was made from (topic.ts). */
+const topicSources = new Map<number, string>();
+
+/**
+ * Drop a channel's topic translation: reading switched off, a fresh read
+ * (`requeueReading`), or a topic that is gone.
+ */
+export function forgetTopic(chanId: number): void {
+	const id = topicEntryId(chanId);
+
+	topicSources.delete(chanId);
+	items.delete(id);
+	store.commit("translationRemoveMany", [id]);
+}
+
+/**
+ * Read a channel's topic the way its lines are read: detected, left alone
+ * when it is already in the reading language, and otherwise translated
+ * into it and kept under the channel's topic id (topic.ts) for the header
+ * to show in the topic's place. Idempotent on the topic as it stands --
+ * the header calls it whenever the channel, its topic or the reading
+ * language changes -- and a dropped or failed request is asked again the
+ * next time. Never batched, and at the front of the queue: the topic is
+ * the line the reader is looking at.
+ */
+export async function readTopic(network: ClientNetwork, channel: ClientChan): Promise<void> {
+	const id = topicEntryId(channel.id);
+	const topic = channel.topic;
+	const initial = channelTranslation(network, channel);
+
+	if (!initial.read || !topic) {
+		forgetTopic(channel.id);
+		return;
+	}
+
+	const existing = store.state.translations[id];
+
+	if (
+		topicSources.get(channel.id) === topic &&
+		existing &&
+		existing.to === readingLanguage() &&
+		(existing.status === "pending" || existing.status === "done")
+	) {
+		return;
+	}
+
+	topicSources.set(channel.id, topic);
+
+	if (!store.state.translation.capability) {
+		await translateService().capabilities();
+	}
+
+	if (!translationAvailable()) {
+		return;
+	}
+
+	const nicks = namesFor({
+		users: channel.users,
+		target: channel.name,
+		messages: channel.messages,
+	});
+	const plain = plainTextOf(topic, nicks);
+
+	if (plain.trim() === "") {
+		forgetTopic(channel.id);
+		return;
+	}
+
+	const generation = generationOf(channel.id);
+	const prior = priorFor(network, channel);
+	const detection = await detectLanguage(plain, prior, initial.languages, {
+		exclude: readingLanguage(),
+	});
+
+	// The wait above is where the world moves: the switch, the language,
+	// the topic itself and the channel are all re-read (cf. translateMessage).
+	const settings = channelTranslation(network, channel);
+
+	if (
+		!store.getters.findChannel(channel.id) ||
+		!settings.read ||
+		generationOf(channel.id) !== generation ||
+		channel.topic !== topic
+	) {
+		return;
+	}
+
+	const to = readingLanguage();
+
+	if (detectionSkip(detection, to)) {
+		// Already readable: no entry, the header shows the topic as it is.
+		items.delete(id);
+		store.commit("translationRemoveMany", [id]);
+		return;
+	}
+
+	const {source, unsure, routeHint} = sourceFor(detection, null, to, prior.top());
+	const protectedText = protect(topic, {nicks});
+	const item: QueueItem = {
+		id,
+		chanId: channel.id,
+		text: protectedText.text,
+		spans: protectedText.spans,
+		meta: protectedText.meta,
+		from: source,
+		routeHint,
+		to,
+		// The channel's recent lines and names as context, the topic itself
+		// left out of it: the prompt would otherwise quote the line it is
+		// about to translate.
+		context: buildContext(
+			{messages: channel.messages, users: channel.users, topic: ""},
+			{id, text: topic},
+			{
+				translated(messageId) {
+					const entry = store.state.translations[messageId];
+
+					return entry && entry.status === "done" ? entry.text : undefined;
+				},
+				terms: termsFor(settings.terms, source, to),
+				glossary: getBranding().translation?.glossary ?? [],
+				formality: effectiveFormality(
+					settings.formality,
+					store.state.settings.translateFormality
+				),
+				variant: settings.variant,
+				sourceHint: source ?? (unsure ? null : prior.top()),
+				nicks,
+			}
+		),
+		arrivalsAtEnqueue: arrivals.get(channel.id) ?? 0,
+		single: true,
+	};
+
+	items.set(id, {network: network.uuid, item, unsure});
+	store.commit("translationEntry", {id, entry: entryFor(source ?? "", to, detection.candidates)});
+	queueFor(network).retry(item);
 }
 
 /**
