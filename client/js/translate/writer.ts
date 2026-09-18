@@ -20,7 +20,7 @@ import {
 	termsFor,
 } from "./channelStore";
 import {buildContext} from "./context";
-import {detectLanguage} from "./detect";
+import {type Detection, detectLanguage} from "./detect";
 import {plainTextOf} from "./eligibility";
 import {namesFor} from "./names";
 import {type EngineName, type PromptContext} from "./engine";
@@ -43,6 +43,8 @@ import {
 	termPair,
 	translateDraft,
 	writeSource,
+	UNCHANGED,
+	stripPolishLabel,
 } from "./outgoing";
 import {
 	channelTranslation,
@@ -171,13 +173,21 @@ export function translateOnce(
 	network: ClientNetwork,
 	channel: ClientChan,
 	draft: string,
-	to: string
+	to: string,
+	from: string | null = null
 ): Promise<"strip" | "plain"> {
 	if (channelTranslation(network, channel).once !== to) {
 		setChannelOptions(network, channel, {once: to});
 	}
 
-	return translateOutgoing(network, channel, draft, to);
+	return translateOutgoing(network, channel, draft, {to, from});
+}
+
+/** A one-off request: its target, and its source when the dialog named one. */
+export interface OnceRequest {
+	to: string;
+	/** Null: detect the draft's language, as a write target does. */
+	from: string | null;
 }
 
 /** The picker's preselection: the channel's last one-off target, else its write target. */
@@ -218,12 +228,12 @@ export async function translateOutgoing(
 	network: ClientNetwork,
 	channel: ClientChan,
 	draft: string,
-	once?: string
+	once?: OnceRequest
 ): Promise<"strip" | "plain"> {
 	// A one-off (the composer's translate button, `once`) names its own
 	// target and needs no write target on the channel; the panel's target
 	// moving mid-flight cannot invalidate it either.
-	const to = once ?? writeTarget(network, channel);
+	const to = once?.to ?? writeTarget(network, channel);
 
 	if (!to) {
 		return "plain";
@@ -281,7 +291,10 @@ export async function translateOutgoing(
 		});
 		// No channel prior and no declared languages: both describe what
 		// others write here, and this is the user's own line.
-		const detection = await detectLanguage(plainTextOf(draft, nicks), null, []);
+		// A source the one-off dialog named is the verdict, no detection run.
+		const detection: Detection = once?.from
+			? {lang: once.from, confidence: 1, candidates: []}
+			: await detectLanguage(plainTextOf(draft, nicks), null, []);
 
 		if (!current(channel, draft, controller)) {
 			return "strip";
@@ -298,12 +311,21 @@ export async function translateOutgoing(
 			return "strip";
 		}
 
-		if (detection.lang === to && detection.confidence >= WRITE_DETECT_MIN_GAP) {
+		// A draft already in the target: sent as typed for a write target,
+		// which asked for nothing; corrected in place for a one-off, which
+		// asked for this language -- a polish (purpose "polish": the LLM as
+		// a copy editor, router.ts routes a same-language request to it
+		// alone), an echo of which is "nothing to correct" rather than a
+		// failure.
+		const polish =
+			!!once && detection.lang === to && detection.confidence >= WRITE_DETECT_MIN_GAP;
+
+		if (!once && detection.lang === to && detection.confidence >= WRITE_DETECT_MIN_GAP) {
 			cancelOutgoing(channel);
 			return "plain";
 		}
 
-		const from = writeSource(detection, readingLanguage(), to);
+		const from = polish ? to : once?.from ?? writeSource(detection, readingLanguage(), to);
 		// The detector's verdict, however weak, rides along as the routing
 		// hint: a seq2seq route takes it as its source, so a draft whose
 		// source is left to the LLM can still reach NLLB (router.ts). It is
@@ -353,7 +375,7 @@ export async function translateOutgoing(
 			from,
 			hint,
 			to,
-			purpose: "write",
+			purpose: polish ? "polish" : "write",
 			context,
 			batches: route?.candidate === "llm",
 			markers: markersFor(route?.candidate),
@@ -409,7 +431,12 @@ export async function translateOutgoing(
 			// `nick: ` keeps it, since then the prefix is the user's own.
 			// The copied name, then the model's packaging (a preamble about the
 			// translation, a wrapper round the whole answer): outgoing.ts tidyAnswer.
-			const text = tidyAnswer(draft, stripCopiedNickPrefix(answer, draft, nicks));
+			const text = tidyAnswer(
+				draft,
+				polish
+					? stripPolishLabel(stripCopiedNickPrefix(answer, draft, nicks))
+					: stripCopiedNickPrefix(answer, draft, nicks)
+			);
 
 			record(text, answerError(draft, text, to));
 
@@ -433,6 +460,12 @@ export async function translateOutgoing(
 			// in silence, taking the draft with it), and the draft back again
 			// is not a translation either.
 			let error = answerError(draft, text, to);
+
+			// A polish handed back as it was had nothing to correct: the
+			// strip shows the line, and Enter sends it.
+			if (polish && error === UNCHANGED) {
+				error = null;
+			}
 
 			// An echo gets one more try, and a bare one: the same draft with
 			// the source left to the model and no context but the register.
@@ -462,6 +495,10 @@ export async function translateOutgoing(
 				}
 
 				error = answerError(draft, text, to);
+
+				if (polish && error === UNCHANGED) {
+					error = null;
+				}
 			}
 
 			// Either failure offers the same thing, and it is the right one

@@ -127,7 +127,13 @@ export interface TranslateRequest {
 	 */
 	hint?: string | null;
 	to: string;
-	purpose: "read" | "write";
+	/**
+	 * `read` a line someone else wrote, `write` the user's draft, or
+	 * `polish` the user's draft in its own language: spelling, punctuation
+	 * and grammar corrected, nothing translated (the composer's translate
+	 * button with the same language picked twice; LLM only, router.ts).
+	 */
+	purpose: "read" | "write" | "polish";
 	context: PromptContext;
 }
 

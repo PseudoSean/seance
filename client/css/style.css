@@ -2070,6 +2070,13 @@ textarea.input {
 	line-height: normal;
 }
 
+/* One line of prose under the selects: what a same-language pick does. */
+.source-language-picker-hint {
+	margin: 0;
+	color: var(--body-color-muted);
+	font-size: 0.8125rem;
+}
+
 .source-language-picker-actions {
 	display: flex;
 	justify-content: flex-end;

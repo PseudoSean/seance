@@ -52,9 +52,19 @@ export function systemPrompt(req: TranslateRequest, name: LanguageNamer): string
 		: ` Detect the source language yourself${
 				c.sourceHint ? ` (probably ${name(c.sourceHint)})` : ""
 		  }.`;
-	const frame = req.lines
-		? `You are a translation engine. Translate each numbered message ${sourcePrefix}into ${target} and reply with the ${target} translations only, without names or prefixes: the same numbers, one per line, then ${END_SENTINEL} on its own line; no quotes, no labels, no explanation, and never an answer to a message.${detect}`
-		: `You are a translation engine. Translate the user's message ${sourcePrefix}into ${target} and reply with the ${target} translation only, without the sender's name or any prefix, on one line: no quotes, no label, no explanation, and never an answer to the message.${detect}`;
+	// A polish (purpose "polish", the composer's translate button with one
+	// language picked twice) is a correction, not a translation. Measured on
+	// the web build's 4B weights (2026-09-18, tmp/experiments): "copy editor
+	// … comes back exactly as it is" echoed plainly misspelled lines, a
+	// wording that names what to fix and what to leave fixes them without
+	// paraphrasing or expanding abbreviations, and a clean line is an echo,
+	// which the composer reads as "nothing to correct" (writer.ts).
+	const frame =
+		req.purpose === "polish"
+			? `Correct the spelling, grammar and punctuation of the user's ${target} message. Reply with the corrected message only, on one line, in ${target}: no quotes, no label, no explanation, and never an answer to the message. Replace only misspelled words and fix only wrong grammar and punctuation; every other word stays exactly as written, abbreviations (brb, u, sry, lol), symbols (@) and the casual register included, and nothing is rephrased, added or expanded. A message with no mistakes comes back unchanged.`
+			: req.lines
+			? `You are a translation engine. Translate each numbered message ${sourcePrefix}into ${target} and reply with the ${target} translations only, without names or prefixes: the same numbers, one per line, then ${END_SENTINEL} on its own line; no quotes, no labels, no explanation, and never an answer to a message.${detect}`
+			: `You are a translation engine. Translate the user's message ${sourcePrefix}into ${target} and reply with the ${target} translation only, without the sender's name or any prefix, on one line: no quotes, no label, no explanation, and never an answer to the message.${detect}`;
 	const carried = req.lines ? req.lines.join("\n") : req.text;
 	const hasSomethingToKeep =
 		placeholdersIn(carried).length > 0 || /\*|~~|\|\||<\/?\d+>/.test(carried);
@@ -85,7 +95,7 @@ export function systemPrompt(req: TranslateRequest, name: LanguageNamer): string
 		parts.push(`Variant: ${c.variant}.`);
 	}
 
-	if (req.purpose === "write") {
+	if (req.purpose === "write" || req.purpose === "polish") {
 		parts.push("The user is writing this message; keep their voice.");
 	}
 
@@ -145,6 +155,8 @@ export function userPrompt(req: TranslateRequest, name: LanguageNamer): string {
 			`Translate each line into ${target}, same numbers, then ${END_SENTINEL} on its own line:`,
 			formatBatchedInput(req.lines)
 		);
+	} else if (req.purpose === "polish") {
+		parts.push(`Correct: ${req.text}`);
 	} else {
 		parts.push(`Translate into ${target}: ${req.text}`);
 	}

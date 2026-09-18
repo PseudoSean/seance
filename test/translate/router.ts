@@ -63,6 +63,26 @@ describe("translate/router", () => {
 		expect(candidatesFor({}, "en", "de")).to.deep.equal([]);
 	});
 
+	it("routes a same-language request to the LLM alone", () => {
+		// The composer's cleanup pass: English corrected in English.
+		expect(resolveRoute(table, catalog, input({from: "en", to: "en"}))?.candidate).to.equal(
+			"llm"
+		);
+		expect(resolveRoute(table, catalog, input({from: "en", to: "en", tier: "cpu"}))).to.equal(
+			null
+		);
+		expect(
+			resolveRoute(table, catalog, input({from: "en", to: "en", allowLlm: false}))
+		).to.equal(null);
+		expect(
+			resolveRoute(table, catalog, input({from: "en", to: "en", down: new Set(["llm"])}))
+		).to.equal(null);
+		// The hint counts as the source here too.
+		expect(
+			resolveRoute(table, catalog, input({from: null, hint: "en", to: "en"}))?.candidate
+		).to.equal("llm");
+	});
+
 	it("takes the first class with a candidate the device, the settings and the session allow", () => {
 		expect(resolveRoute(table, catalog, input())?.candidate).to.equal("llm");
 		expect(resolveRoute(table, catalog, input({tier: "cpu"}))?.candidate).to.equal(

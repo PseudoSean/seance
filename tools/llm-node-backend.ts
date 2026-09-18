@@ -29,7 +29,7 @@ import {
 export type {ChatDelta, ChatRequest, MlcLike, ModelRecord, WebLlmDeps};
 
 export type Device = "cpu" | "cuda";
-export type Purpose = "read" | "write";
+export type Purpose = "read" | "write" | "polish";
 type Tokenizer = Awaited<ReturnType<typeof AutoTokenizer.from_pretrained>>;
 type Model = Awaited<ReturnType<typeof AutoModelForCausalLM.from_pretrained>>;
 

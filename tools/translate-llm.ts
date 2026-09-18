@@ -5,7 +5,7 @@
 // command line without a WebGPU browser.
 //
 //   npx tsx tools/translate-llm.ts "hello, how are you?" --to de [--from en]
-//       [--purpose read|write] [--context fixture.json] [--show-prompt]
+//       [--purpose read|write|polish] [--context fixture.json] [--show-prompt]
 //       [--raw] [--device cpu|cuda] [--markers placeholder|literal|tags]
 //   npx tsx tools/translate-llm.ts --capture capture.json
 //   npx tsx tools/translate-llm.ts --eval tools/translate-eval/prompts.json [--to de]
@@ -123,7 +123,7 @@ interface Options {
 }
 
 const USAGE = [
-	'usage: npx tsx tools/translate-llm.ts "text" --to de [--from en] [--purpose read|write]',
+	'usage: npx tsx tools/translate-llm.ts "text" --to de [--from en] [--purpose read|write|polish]',
 	"                                     [--context fixture.json] [--show-prompt] [--raw]",
 	"                                     [--device cpu|cuda] [--threads N] [--repo <hf repo>] [--dtype q4f16|fp16|int8|…]",
 	"                                     [--local tmp/models/web/<model id>]",
@@ -182,7 +182,7 @@ function parseArgs(argv: string[]): Options {
 		} else if (arg === "--purpose") {
 			const purpose = value();
 
-			if (purpose !== "read" && purpose !== "write") {
+			if (purpose !== "read" && purpose !== "write" && purpose !== "polish") {
 				throw new Error(`--purpose is read or write, not ${purpose}`);
 			}
 

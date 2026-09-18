@@ -36,6 +36,7 @@ import {
 	writeSource,
 	type OutgoingDeps,
 	type OutgoingRequest,
+	stripPolishLabel,
 } from "../../client/js/translate/outgoing";
 import {protect} from "../../client/js/translate/spans";
 
@@ -565,6 +566,20 @@ describe("translate/outgoing", () => {
 			expect(echoingSoFar("ps, are you coming?", "ps, kommst")).to.equal(false);
 			expect(echoingSoFar("hello there", "")).to.equal(false);
 			expect(echoingSoFar("hello there", "   ")).to.equal(false);
+		});
+	});
+
+	describe("stripPolishLabel", () => {
+		it("takes the copied label off a corrected line", () => {
+			expect(stripPolishLabel("Correct: the quick brown fox")).to.equal(
+				"the quick brown fox"
+			);
+			expect(stripPolishLabel("Corrected: fine")).to.equal("fine");
+			expect(stripPolishLabel("correction: fine")).to.equal("fine");
+			expect(stripPolishLabel("fine")).to.equal("fine");
+			expect(stripPolishLabel("Correct me if I am wrong")).to.equal(
+				"Correct me if I am wrong"
+			);
 		});
 	});
 

@@ -462,6 +462,54 @@ export default async function run(page) {
 		label: "the strip is gone after the send",
 	});
 
+	// The same language twice is a cleanup pass: the fake "corrects" the
+	// line, the chip says so, and Enter sends the corrected line.
+	const ONCE_FROM = '.source-language-picker select[name="translateFrom"]';
+	const polishDraft = `pls fix my speling here ${RUN}`;
+
+	await page.fill(INPUT, polishDraft);
+	await page.click(ONCE);
+	await page.waitFor(`!!document.querySelector(${JSON.stringify(ONCE_SELECT)})`, {
+		label: "the dialog for the cleanup",
+	});
+	await page.check(
+		"the dialog's source starts as the language the page reads",
+		(await page.evaluate(`document.querySelector(${JSON.stringify(ONCE_FROM)}).value`)) === "en"
+	);
+	await page.evaluate(
+		`(() => { const s = document.querySelector(${JSON.stringify(
+			ONCE_SELECT
+		)}); s.value = "en"; s.dispatchEvent(new Event("change", {bubbles: true})); })()`
+	);
+	await page.waitFor(`!!document.querySelector(".source-language-picker-hint")`, {
+		label: "the same-language hint",
+	});
+	await page.click(".source-language-picker-confirm");
+	await page.waitFor(
+		`(document.querySelector(${JSON.stringify(
+			BAR_TEXT
+		)}) || {}).textContent === ${JSON.stringify(`[Corrected] ${polishDraft}`)}`,
+		{timeout: 30000, label: "the cleanup is in the strip"}
+	);
+	await page.check(
+		"the strip's chip says the line was corrected",
+		String(
+			await page.evaluate(`(document.querySelector(".translate-bar-chip") || {}).textContent`)
+		).includes("corrected")
+	);
+	await page.check(
+		"no read-back row under a corrected line",
+		(await page.count(".translate-bar-check")) === 0
+	);
+	await page.evaluate(ENTER);
+	await page.check(
+		"Enter sent the corrected line",
+		await heard(other, `[Corrected] ${polishDraft}`)
+	);
+	await page.waitFor(`!document.querySelector(${JSON.stringify(BAR)})`, {
+		label: "the strip is gone after the corrected send",
+	});
+
 	// The next pick starts from the language picked last time.
 	await page.fill(INPUT, `and this one too ${RUN}`);
 	await page.click(ONCE);
@@ -469,9 +517,9 @@ export default async function run(page) {
 		label: "the dialog again",
 	});
 	await page.check(
-		"the dialog remembers Spanish",
+		"the dialog remembers English, the last pick",
 		(await page.evaluate(`document.querySelector(${JSON.stringify(ONCE_SELECT)}).value`)) ===
-			"es"
+			"en"
 	);
 	await page.screenshot("translate-once", {selector: "#form"});
 	await page.click(".source-language-picker-cancel");

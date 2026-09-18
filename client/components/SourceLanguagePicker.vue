@@ -11,6 +11,21 @@
 			:aria-label="dialogLabel"
 			@keydown.esc.stop.prevent="$emit('close')"
 		>
+			<label v-if="purpose === 'target'" class="source-language-picker-field">
+				<span class="source-language-picker-label">{{
+					t("translate.picker.fromLabel")
+				}}</span>
+				<select
+					v-model="from"
+					name="translateFrom"
+					class="input source-language-picker-control"
+				>
+					<option value="">{{ t("translate.picker.fromAuto") }}</option>
+					<option v-for="code in languages" :key="code" :value="code">
+						{{ name(code) }}
+					</option>
+				</select>
+			</label>
 			<label class="source-language-picker-field">
 				<span class="source-language-picker-label">{{ fieldLabel }}</span>
 				<select
@@ -24,6 +39,13 @@
 					</option>
 				</select>
 			</label>
+			<p v-if="sameLanguage" class="source-language-picker-hint">
+				{{
+					polishAvailable
+						? t("translate.picker.sameLanguage")
+						: t("translate.picker.sameLanguageNeedsGpu")
+				}}
+			</p>
 			<div class="source-language-picker-actions">
 				<button
 					type="button"
@@ -72,6 +94,10 @@ export default defineComponent({
 		 * composer's draft into it, this once (the translate button).
 		 */
 		purpose: {type: String as PropType<"source" | "target">, default: "source"},
+		/** `target` only: the source preselected -- the language the user reads. */
+		selectedFrom: {type: String, default: ""},
+		/** `target` only: whether a same-language pick (a cleanup pass) can run here. */
+		polishAvailable: {type: Boolean, default: false},
 	},
 	emits: ["pick", "close"],
 	setup(props, {emit}) {
@@ -101,6 +127,12 @@ export default defineComponent({
 				: t("translate.picker.confirm")
 		);
 		const choice = ref(props.selected || props.candidates[0] || languages.value[0]);
+		// The source of a one-off: the language the user reads, or "" for
+		// detection. Picking the same language twice asks for a cleanup.
+		const from = ref(props.purpose === "target" ? props.selectedFrom : "");
+		const sameLanguage = computed(
+			() => props.purpose === "target" && from.value !== "" && from.value === choice.value
+		);
 
 		const narrowQuery =
 			typeof window !== "undefined" && typeof window.matchMedia === "function"
@@ -168,7 +200,7 @@ export default defineComponent({
 		const close = () => emit("close");
 
 		const confirm = () => {
-			emit("pick", choice.value);
+			emit("pick", choice.value, props.purpose === "target" ? from.value || null : undefined);
 			close();
 		};
 
@@ -224,6 +256,8 @@ export default defineComponent({
 			dialogLabel,
 			fieldLabel,
 			confirmLabel,
+			from,
+			sameLanguage,
 			name,
 			phone,
 			flipped,

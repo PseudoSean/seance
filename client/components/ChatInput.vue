@@ -202,6 +202,8 @@
 				v-if="translateOncePickerOpen"
 				:anchor="translateOnceButton"
 				:selected="translateOncePreselected"
+				:selected-from="translateOnceFrom"
+				:polish-available="polishAvailable"
 				purpose="target"
 				@pick="translateOnce"
 				@close="translateOncePickerOpen = false"
@@ -583,6 +585,12 @@ export default defineComponent({
 				return "";
 			}
 
+			// A cleanup pass (writer.ts: from and to the same) is not a
+			// translation, and its chip says what it is.
+			if (entry.from && entry.from === entry.to) {
+				return t("translate.strip.polishChip", {language: readerName(entry.to)});
+			}
+
 			return entry.from
 				? `${readerName(entry.from)} → ${readerName(entry.to)}`
 				: `→ ${readerName(entry.to)}`;
@@ -899,14 +907,18 @@ export default defineComponent({
 
 				// Before the send: the IRC layer puts the line in the store
 				// inside deliver's emit, and cancelOutgoing takes the strip.
-				if (translated !== null) {
+				// A corrected line (from and to the same) is the line itself:
+				// nothing to read back, no voice or term to learn from it.
+				const polished = entry.from !== null && entry.from === entry.to;
+
+				if (translated !== null && !polished) {
 					recordSentReadBack(props.channel, entry);
 				}
 
 				cancelOutgoing(props.channel);
 				deliver(line, text);
 
-				if (translated !== null) {
+				if (translated !== null && !polished) {
 					noteOutgoingSent(
 						props.network,
 						props.channel,
@@ -1103,6 +1115,8 @@ export default defineComponent({
 		// Read when the dialog opens: the last pick is plain session memory
 		// (writer.ts), not store state, so nothing would recompute it.
 		const translateOncePreselected = ref("");
+		// The dialog's source: the language the user reads.
+		const translateOnceFrom = computed(() => readingLanguage());
 
 		const openTranslateOnce = () => {
 			if (canTranslateOnce.value) {
@@ -1111,7 +1125,16 @@ export default defineComponent({
 			}
 		};
 
-		const translateOnce = (to: string) => {
+		// A same-language pick is a cleanup pass on the GPU model
+		// (writer.ts, router.ts): the dialog says so, and says when the
+		// model is off or the device has none.
+		const polishAvailable = computed(
+			() =>
+				store.state.translation.capability?.tier === "gpu" &&
+				!!store.state.settings.translateLlm
+		);
+
+		const translateOnce = (to: string, from: string | null = null) => {
 			translateOncePickerOpen.value = false;
 
 			const draft = props.channel.pendingMessage ?? "";
@@ -1125,7 +1148,7 @@ export default defineComponent({
 			// the first Enter's is: a "plain" verdict (the draft is already in
 			// that language) leaves the draft where it is -- the button asked
 			// for a translation, not a send.
-			void translateDraftOnce(props.network, props.channel, gate.text, to);
+			void translateDraftOnce(props.network, props.channel, gate.text, to, from);
 			focusForTyping();
 		};
 
@@ -1450,6 +1473,8 @@ export default defineComponent({
 			canTranslateOnce,
 			translateOnceLabel,
 			translateOncePreselected,
+			translateOnceFrom,
+			polishAvailable,
 			openTranslateOnce,
 			translateOnce,
 		};

@@ -91,6 +91,20 @@ export function resolveRoute(
 
 	const source = input.from ?? input.hint;
 
+	// A request in one language (purpose "polish": the composer's cleanup
+	// pass) is prose work only a language model can do: the LLM where it
+	// may run, else no route -- a seq2seq model asked to translate English
+	// into English would mangle the line.
+	if (source !== null && source === input.to) {
+		if (input.tier !== "gpu" || !input.allowLlm || input.down.has("llm")) {
+			return null;
+		}
+
+		const ref = refFor(catalog, "llm");
+
+		return ref ? {candidate: "llm", ref} : null;
+	}
+
 	for (const group of candidatesFor(table, source, input.to)) {
 		let first: Route | null = null;
 

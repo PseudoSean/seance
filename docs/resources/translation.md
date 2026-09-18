@@ -842,7 +842,21 @@ translate (prose, or a `/me`), wherever translation can run at all; the
 dialog preselects the channel's last one-off language, else its write
 target (`lastOnceTarget`; the last pick is kept with the channel's record,
 `channelStore.ts` `once`, so it survives a reload and travels in the
-settings backup). Browser check:
+settings backup). The dialog also asks what to translate **from**,
+preselected to the language the user reads, with "Detect automatically"
+as the write target has it. **The same language twice is a cleanup**: a
+draft already in the language it is asked into is not sent as typed the
+way a write target would (the user asked for something) but corrected in
+place -- `purpose: "polish"`, the LLM as a copy editor with a wording
+measured on the 4B weights (`prompt.ts`, `prompts/qwen3-4b.ts`: spelling,
+grammar and punctuation fixed, every other word kept, abbreviations and
+symbols included, nothing rephrased), the router sending a same-language
+request to the LLM alone (`router.ts`; no GPU model, no route, and the
+dialog says so), and an echo read as "nothing to correct" rather than a
+failure. The strip's chip reads "English, corrected"; a corrected line is
+no translation, so it is neither read back nor noted into the voice and
+term memory. The same happens when detection finds the draft already in
+the picked language. Browser check:
 `tools/scenarios/translate-composer.mjs` § 0.
 
 **An echo buys one more generation, and a bare one.** Before the strip

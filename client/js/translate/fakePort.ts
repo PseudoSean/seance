@@ -67,7 +67,7 @@ interface TranslateFakeRequestLog {
 	id: number;
 	model: string;
 	text: string;
-	purpose: "read" | "write";
+	purpose: "read" | "write" | "polish";
 	lines: number;
 	/** The source the request asked for: null when it was left to the engine. */
 	from: string | null;
@@ -249,6 +249,8 @@ class ScriptedEngine implements Engine {
 				? ANSWER_REPLY
 				: this.echoes(req.text)
 				? req.text
+				: req.purpose === "polish"
+				? `[Corrected] ${req.text}`
 				: `[${languageName(req.to)}] ${req.text}`
 		).split(" ");
 		let text = "";

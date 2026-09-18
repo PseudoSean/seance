@@ -561,6 +561,15 @@ export function tidyAnswer(source: string, answer: string): string {
  * (`isAnsweredQuestion`) is not applied to targets whose questions often
  * end without a mark.
  */
+/**
+ * The label a polish's user turn carries ("Correct: …"), copied in front of
+ * the answer by a smaller model (measured on Qwen3-1.7B, 2026-09-18): off
+ * it comes, as a copied nick prefix does.
+ */
+export function stripPolishLabel(answer: string): string {
+	return answer.replace(/^\s*correct(?:ed|ion)?\s*:\s*/i, "");
+}
+
 export function answerError(source: string, translation: string, to: string): string | null {
 	if (hasNoLetters(translation)) {
 		return EMPTY_TRANSLATION;
@@ -710,7 +719,7 @@ export interface OutgoingRequest {
 	/** Routing only (`TranslateRequest.hint`): a seq2seq route's source when `from` is null. */
 	hint?: string | null;
 	to: string;
-	purpose: "write" | "read";
+	purpose: "write" | "read" | "polish";
 	context: PromptContext;
 	/** The route's engine takes numbered lines (the LLM does; seq2seq does not). */
 	batches: boolean;
