@@ -10,6 +10,7 @@
 				'previous-source': isPreviousSource,
 				'actions-open': actionsOpen,
 				translated,
+				unchanged,
 			},
 		]"
 		:data-type="message.type"
@@ -205,6 +206,7 @@ import StatusmsgMarker from "./StatusmsgMarker.vue";
 import MessageActions from "./MessageActions.vue";
 import MessageReactions from "./MessageReactions.vue";
 import TranslationLine from "./TranslationLine.vue";
+import {UNCHANGED} from "../js/translate/outgoing";
 import {replyQuote} from "../js/helpers/messageUpdates";
 import {MessageType} from "../../shared/types/msg";
 
@@ -299,6 +301,18 @@ export default defineComponent({
 			const entry = store.state.translations[props.message.id];
 
 			return !!entry && entry.status === "done" && !entry.hidden;
+		});
+
+		// A line the engine handed back as it was (the `unchanged` verdict,
+		// shown as the "=" chip) has no translation row to be the bright
+		// line, so the original is it: it takes the translated ink, which
+		// matters for an own line, dimmed by `.self` like every other.
+		const unchanged = computed(() => {
+			const entry = store.state.translations[props.message.id];
+
+			return (
+				!!entry && entry.status === "failed" && entry.error === UNCHANGED && !entry.hidden
+			);
 		});
 
 		const isAction = () => {
@@ -411,6 +425,7 @@ export default defineComponent({
 			hideRevealed,
 			canAct,
 			translated,
+			unchanged,
 		};
 	},
 });

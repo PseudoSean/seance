@@ -5059,6 +5059,16 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	color: var(--body-color);
 }
 
+/* A line that came back unchanged (the "=" chip, `unchanged` in Message.vue)
+ * has no translation row to be the bright line, so the original is read in
+ * its place and wears the translation's ink -- over `.self`'s dimming too,
+ * since an own line that translated shows a bright row and an own line that
+ * did not should read the same. A detection skip is not this: its original
+ * keeps whatever ink it had. */
+#chat .msg.unchanged .content {
+	color: var(--body-color);
+}
+
 @keyframes msg-translation-blink {
 	50% {
 		opacity: 0;

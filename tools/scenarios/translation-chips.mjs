@@ -3,7 +3,9 @@
 // .msg-translation-skipped) and the unchanged-failure chip (the same class
 // inside .msg-translation-failed, a fas fa-equals icon) both wear the same
 // accent border and ink as .msg-translation-chip, and neither keeps the old
-// muted grey or the old 0.75 dim.
+// muted grey or the old 0.75 dim. The unchanged line's original is the line
+// to read, so it wears the translation's ink (#chat .msg.unchanged .content)
+// over the own-line dimming an untranslated `.self` row keeps.
 //
 // Alongside it, the icon split: fa-language marks the translation surfaces
 // (the channel header's toggle and the message action's inline icon, both
@@ -29,9 +31,11 @@ import {fakeNetworkSnippet} from "./lib/fake-network.mjs";
 export const url = `${process.env.SEANCE_BASE || "https://127.0.0.1:8000/"}`;
 
 // The fabricated channel's message ids (fake-network.mjs defaults, baseId
-// 0): two of the three rendered rows in #seance.
+// 0): two of the three rendered rows in #seance. The unchanged one is the
+// page's own line ("short one"), dimmed by `.self` until the verdict lands,
+// so the ink claim below is about the one row where it shows.
 const SKIPPED_MSG = 21;
-const UNCHANGED_MSG = 23;
+const UNCHANGED_MSG = 22;
 
 const INJECT = `(() => {
 	const root = document.getElementById("app");
@@ -110,7 +114,12 @@ const STYLES = `(() => {
 	probe.style.color = "var(--body-color-muted)";
 	document.body.appendChild(probe);
 	const muted = getComputedStyle(probe).color;
+	probe.style.color = "var(--body-color)";
+	const ink = getComputedStyle(probe).color;
 	probe.remove();
+
+	const unchangedRow = unchanged.closest(".msg");
+	const skippedRow = skipped.closest(".msg");
 
 	const s = getComputedStyle(skipped);
 	const u = getComputedStyle(unchanged);
@@ -123,6 +132,13 @@ const STYLES = `(() => {
 		skippedOpacity: s.opacity,
 		unchangedOpacity: u.opacity,
 		muted,
+		ink,
+		unchangedRowIsOwn: !!unchangedRow && unchangedRow.classList.contains("self"),
+		unchangedRowClass: !!unchangedRow && unchangedRow.classList.contains("unchanged"),
+		unchangedOriginal: unchangedRow
+			? getComputedStyle(unchangedRow.querySelector(".content")).color
+			: null,
+		skippedRowClass: !!skippedRow && skippedRow.classList.contains("unchanged"),
 		chipCount: document.querySelectorAll("#chat .msg-translation-chip").length,
 		hasEquals: !!unchanged.querySelector(".fa-equals"),
 		unchangedTitle: unchanged.getAttribute("title"),
@@ -195,6 +211,11 @@ export default async function run(page) {
 		label: "the fabricated channel's messages",
 	});
 
+	// Before any verdict, the own line reads dimmed like every own line.
+	const ownBefore = await page.evaluate(
+		`getComputedStyle(document.querySelector("#msg-${UNCHANGED_MSG} .content")).color`
+	);
+
 	page.check("the translation entries injected", (await page.evaluate(INJECT)) === true);
 	await page.waitFor(`(${STYLES}) !== null`, {
 		label: "both chips and the accent chip rendered",
@@ -221,6 +242,14 @@ export default async function run(page) {
 		s.skippedOpacity === "1" && s.unchangedOpacity === "1"
 	);
 	page.check("the unchanged chip is the equals icon", s.hasEquals === true);
+	page.check("the unchanged line is the page's own", s.unchangedRowIsOwn === true);
+	page.check("an own line is dimmed before the verdict", ownBefore === s.muted);
+	page.check("the unchanged line's row carries the class", s.unchangedRowClass === true);
+	page.check(
+		"the unchanged line's original wears the translation's ink, not the own-line dim",
+		s.unchangedOriginal === s.ink && s.unchangedOriginal !== s.muted
+	);
+	page.check("a detection skip is not marked unchanged", s.skippedRowClass === false);
 	page.check(
 		'the unchanged chip is titled "Not translated"',
 		s.unchangedTitle === "Not translated"
