@@ -4,6 +4,7 @@ import socket from "../socket";
 import {store} from "../store";
 import {extractInputHistory} from "../helpers/inputHistory";
 import {attachMediaPreviews} from "../helpers/messagePreviews";
+import {settled} from "../helpers/scrollSettle";
 
 socket.on("more", async (data) => {
 	const found = store.getters.findChannel(data.chan);
@@ -13,6 +14,19 @@ socket.on("more", async (data) => {
 	}
 
 	const {network, channel} = found;
+
+	// A page landing in the channel on screen while it is still moving (a
+	// fling, a finger down) cannot be placed: WebKit drops the position
+	// write and the list has to kill the momentum to restore it, a jolt.
+	// Hold the rows until the list settles (helpers/scrollSettle.ts); the
+	// button keeps showing "Loading…" meanwhile.
+	if (
+		data.messages.length > 0 &&
+		store.state.activeChannel?.channel === channel &&
+		!channel.scrolledToBottom
+	) {
+		await settled();
+	}
 
 	// History arrives as a batch rather than through `msg`, so it needs the
 	// same client-side previews the live path gets.

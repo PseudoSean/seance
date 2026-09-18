@@ -89,7 +89,12 @@ leaves it running afterwards, `--no-ws` silences frames, `--quiet` drops
 everything but failures and scenario output. The viewport is 1280×900 unless
 `--width=`/`--height=` say otherwise; `--mobile` adds touch emulation and the
 mobile viewport flag, so `--width=390 --height=844 --mobile` is a phone (the
-`max-width: 768px` layout, off-canvas sidebar and user list).
+`max-width: 768px` layout, off-canvas sidebar and user list). Without
+`--mobile` the run declares a mouse (`--blink-settings` hover type 2, pointer
+type 4): a headless Chromium with no input device answers `(hover: none)` and
+`(pointer: none)`, which is neither a desktop nor a phone, and the
+`@media (hover: none)` rules — the message action toolbar's touch mode, say —
+would otherwise apply to a run that hovers.
 
 ## Scenarios
 

@@ -128,16 +128,18 @@ socket.on("msg", function (data) {
 	}
 
 	if (messageLimit > 0 && channel.messages.length > messageLimit) {
-		const trimmed = channel.messages.splice(0, channel.messages.length - messageLimit);
+		const dropped = channel.messages.splice(0, channel.messages.length - messageLimit);
 
 		// Their translations (client/js/translate/reader.ts) are keyed by
 		// message id and can never be reached again: they leave with them,
 		// and so does the pipeline's memory of the work behind them.
-		const trimmedIds = trimmed.map((m) => m.id);
+		const droppedIds = dropped.map((m) => m.id);
 
-		store.commit("translationRemoveMany", trimmedIds);
-		forgetTranslations(trimmedIds);
+		store.commit("translationRemoveMany", droppedIds);
+		forgetTranslations(droppedIds);
 		channel.moreHistoryAvailable = true;
+		// The IRC layer must stop counting them as shown (bus-contract § 2).
+		socket.emit("history:trim", {target: channel.id, ids: droppedIds});
 	}
 
 	if (channel.type === ChanType.CHANNEL) {

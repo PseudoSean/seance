@@ -532,6 +532,19 @@
 
 			<div class="help-item">
 				<div class="subject">
+					<code>/ver nick</code>
+				</div>
+				<div class="description">
+					<p>
+						{{ t("help.commands.verA") }} <abbr :title="ctcpTitle">CTCP</abbr>
+						{{ t("help.commands.verB") }} <code>/ctcp nick version</code>.
+						{{ t("help.commands.verC") }}
+					</p>
+				</div>
+			</div>
+
+			<div class="help-item">
+				<div class="subject">
 					<code>/deop nick [...nick]</code>
 				</div>
 				<div class="description">

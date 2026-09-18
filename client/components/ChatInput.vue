@@ -181,7 +181,7 @@
 			@blur="onBlur"
 		/>
 		<span
-			v-if="store.state.serverConfiguration?.fileUpload"
+			v-if="store.state.serverConfiguration?.fileUpload || networkFilehost"
 			id="upload-tooltip"
 			class="tooltipped tooltipped-w tooltipped-no-touch"
 			:aria-label="uploadFileLabel"
@@ -230,6 +230,7 @@ import {commands} from "../js/commands/index";
 import {writeClipboard} from "../js/clipboard";
 import {expandAlias} from "../js/helpers/aliases";
 import socket from "../js/socket";
+import {clientForNetwork} from "../js/irc/manager";
 import upload from "../js/upload";
 import eventbus from "../js/eventbus";
 import {
@@ -954,9 +955,21 @@ export default defineComponent({
 			uploadInput.value?.click();
 		};
 
+		// The network's own upload host (`draft/FILEHOST` ISUPPORT, kept on
+		// the network's serverOptions by `network:options`); it takes
+		// precedence over the deploy's uploader (`upload.ts`).
+		const networkFilehost = computed(
+			() => store.state.activeChannel?.network.serverOptions?.FILEHOST !== undefined
+		);
+
 		// The file dialog offers what the uploader takes; the drop and paste
-		// paths check the same list in `Uploader.triggerUpload`.
+		// paths check the same list in `Uploader.triggerUpload`. A FILEHOST
+		// says what it takes only over HTTP, so the dialog stays open-ended.
 		const uploadAccept = computed(() => {
+			if (networkFilehost.value) {
+				return undefined;
+			}
+
 			const accept = store.state.branding.uploads?.accept;
 			return accept?.length ? accept.join(",") : undefined;
 		});
@@ -1274,7 +1287,7 @@ export default defineComponent({
 			// Always listen for drops and pastes: without a configured uploader
 			// the handler swallows them and shows a one-off notice instead of
 			// letting the browser navigate to the dropped file.
-			upload.mounted(store);
+			upload.mounted(store, clientForNetwork);
 		});
 
 		onUnmounted(() => {
@@ -1309,6 +1322,7 @@ export default defineComponent({
 			onUploadInputChange,
 			openFileUpload,
 			uploadAccept,
+			networkFilehost,
 			uploadLabel,
 			uploadPercent,
 			cancelUpload,

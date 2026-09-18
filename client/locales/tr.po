@@ -359,6 +359,12 @@ msgctxt "cmd.usageRedact"
 msgid "Usage: /{cmd} <msgid> [reason]"
 msgstr "Kullanım: /{cmd} <msgid> [neden]"
 
+#. Usage line of /ver (a CTCP VERSION request) when it is not given exactly one nick; the rest is command syntax.
+#: client/js/irc/commands/ctcp.ts
+msgctxt "cmd.usageVer"
+msgid "Usage: /ver <nick>"
+msgstr ""
+
 #. Button under a long code block in a chat message that shows only its first lines; clicking reveals every line. {count} is the number of lines of code. The singular shows with exactly one line, the plural otherwise.
 #: client/components/CodeBlock.vue
 msgctxt "code.showAllLines"
@@ -1803,6 +1809,24 @@ msgctxt "help.commands.unmuteB"
 msgid "for more information."
 msgstr "bakınız."
 
+#. Start of the /ver command description in the help window; the CTCP abbreviation follows it. Ends mid-sentence.
+#: client/components/Windows/Help.vue
+msgctxt "help.commands.verA"
+msgid "Ask a user which client they run: a"
+msgstr ""
+
+#. Middle of the /ver command description in the help window: follows the CTCP abbreviation, and the literal command '/ctcp nick version' follows it. Ends mid-sentence.
+#: client/components/Windows/Help.vue
+msgctxt "help.commands.verB"
+msgid "VERSION request, the same as"
+msgstr ""
+
+#. Last sentence of the /ver command description in the help window; a whole sentence on its own.
+#: client/components/Windows/Help.vue
+msgctxt "help.commands.verC"
+msgid "The answer shows where you asked."
+msgstr ""
+
 #. Start of the /voice command description in the help window; a code fragment with the +v mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.voiceA"
@@ -2888,8 +2912,15 @@ msgctxt "message.copyCode"
 msgid "Copy code"
 msgstr "Kod kopyala"
 
-#. Tooltip and aria-label of the ✕ button in a chat message's hover toolbar, and the label of the confirmation button in the dialog it opens; both delete the message.
+#. Tooltip and aria-label of the message toolbar button that copies the whole message text; shown on touch devices, where the text cannot be selected. Toggles to 'Copied' after a copy.
+#: client/components/MessageActions.vue
+msgctxt "message.copyText"
+msgid "Copy text"
+msgstr ""
+
+#. Label of the confirmation button in the dialog shown before a chat message is deleted.
 #: client/components/MessageActions.vue:54
+#: client/components/MessageActions.vue
 msgctxt "message.delete"
 msgid "Delete"
 msgstr "Sil"
@@ -2900,8 +2931,9 @@ msgctxt "message.deleteConfirm"
 msgid "Delete {who}? \"{preview}\""
 msgstr "Sil {who}? \"{preview}\""
 
-#. Title of the confirmation dialog shown before a chat message is deleted.
+#. Title of the confirmation dialog shown before a chat message is deleted, and the tooltip and aria-label of the message toolbar's delete button (a trash can) that opens it.
 #: client/components/MessageActions.vue:195
+#: client/components/MessageActions.vue
 msgctxt "message.deleteTitle"
 msgid "Delete message"
 msgstr "Mesaj sil"
@@ -4930,6 +4962,24 @@ msgctxt "system.quit"
 msgid "{nick} has quit"
 msgstr "{nick} ayrıldı"
 
+#. Reason given when pending token requests (upload tokens) are dropped because the connection closed; shown inside the upload error notice.
+#: client/js/irc/authtoken.ts
+msgctxt "token.disconnected"
+msgid "Disconnected"
+msgstr ""
+
+#. Reason given when the server answered a TOKEN GENERATE request with a FAIL that carried no text; shown inside the upload error notice. {code} is the server's error code, verbatim.
+#: client/js/irc/authtoken.ts
+msgctxt "token.failed"
+msgid "Token request failed ({code})"
+msgstr ""
+
+#. Reason given when a TOKEN GENERATE request (an upload token from the network's own file host) got no answer in time; shown inside the upload error notice.
+#: client/js/irc/authtoken.ts
+msgctxt "token.timeout"
+msgid "The server did not answer the token request"
+msgstr ""
+
 #. Tooltip and aria-label of the translate button in a message's hover toolbar when the message's translation was hidden; it brings it back.
 #: client/components/MessageActions.vue
 msgctxt "translate.action.showTranslation"
@@ -5746,6 +5796,12 @@ msgstr "Metadata (EXIF) yüklenmeden önce kaldırılacak"
 msgctxt "upload.noteUnsupported"
 msgid "Sent as it is"
 msgstr "Metadata dahil olmak üzere gönderildi"
+
+#. Error notice when the network's own upload host (IRCv3 FILEHOST) would not issue an upload token. {reason} is the server's text or a client-side reason, verbatim.
+#: client/js/upload.ts
+msgctxt "upload.refused"
+msgid "Upload refused by the network: {reason}"
+msgstr ""
 
 #. aria-label of the ✕ button on a file in the upload confirmation dialog; clicking removes that file from the upload. {name} is the file's name.
 #: client/components/UploadPreview.vue

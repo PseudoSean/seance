@@ -16,7 +16,12 @@
 		:data-type="message.type"
 		:data-command="message.command"
 		:data-from="message.from && message.from.nick"
-		@click="toggleActions"
+		@touchstart.passive="onTouchStart"
+		@touchmove.passive="onTouchMove"
+		@touchend="onTouchEnd"
+		@touchcancel="onTouchEnd"
+		@contextmenu="onContextMenu"
+		@click="onClick"
 	>
 		<span
 			aria-hidden="true"
@@ -196,7 +201,7 @@
 </template>
 
 <script lang="ts">
-import {computed, defineComponent, PropType, ref} from "vue";
+import {computed, defineComponent, onUnmounted, PropType, ref, watch} from "vue";
 
 import Username from "./Username.vue";
 import LinkPreview from "./LinkPreview.vue";
@@ -221,11 +226,18 @@ MessageTypes.LinkPreview = LinkPreview;
 MessageTypes.Username = Username;
 
 /**
- * The id of the one message showing its tap-opened action toolbar. Shared by
- * every Message so opening one closes the last; ids are unique across
- * networks (js/irc/ids.ts), so no channel scope is needed.
+ * The id of the one message showing its long-press-opened action toolbar.
+ * Shared by every Message so opening one closes the last; ids are unique
+ * across networks (js/irc/ids.ts), so no channel scope is needed.
  */
 const openActions = ref<number | null>(null);
+
+/** How long a finger has to stay down before the toolbar opens. Android's own
+ * long press is 500 ms too, so the gesture feels like the platform's. */
+const LONG_PRESS_MS = 500;
+
+/** A finger that travels further than this is scrolling, not pressing. */
+const LONG_PRESS_SLOP_PX = 10;
 
 export default defineComponent({
 	name: "Message",
@@ -248,16 +260,131 @@ export default defineComponent({
 		const store = useStore();
 		const {t, locale} = useI18n();
 
-		// On a touch device the toolbar opens on a tap: the long press that
-		// fakes a hover is also how iOS starts a text selection (see the
-		// `hover: none` rules in style.css). Pointer devices keep hovering.
+		// On a touch device the toolbar opens on a long press, as it does in
+		// every native chat client, and a tap anywhere puts it away. The
+		// message text is not selectable there (style.css, the coarse-pointer
+		// rule on `.msg`), so the platform's own long press — a text selection
+		// — does not race this one; the toolbar's Copy text stands in for it.
+		// Pointer devices keep hovering. Presses that start on a link, a
+		// button or a nick are theirs: a link long press is its preview, a
+		// nick tap is a whois.
 		const actionsOpen = computed(() => openActions.value === props.message.id);
 
-		const toggleActions = () => {
-			if (hasVirtualKeyboard()) {
-				openActions.value = actionsOpen.value ? null : props.message.id;
+		let pressTimer: ReturnType<typeof setTimeout> | undefined;
+		let pressStart: {x: number; y: number} | null = null;
+		let swallowClick = false;
+
+		const cancelPress = () => {
+			if (pressTimer !== undefined) {
+				clearTimeout(pressTimer);
+				pressTimer = undefined;
+			}
+
+			pressStart = null;
+		};
+
+		const onTouchStart = (e: TouchEvent) => {
+			if (!hasVirtualKeyboard() || e.touches.length !== 1) {
+				return;
+			}
+
+			// A new gesture: a long press whose click never came (Android fires
+			// contextmenu instead) must not eat this one's.
+			swallowClick = false;
+
+			const target = e.target as HTMLElement | null;
+
+			if (target?.closest("a, button, [role='button'], .msg-actions, .reaction-picker")) {
+				return;
+			}
+
+			const touch = e.touches[0];
+			pressStart = {x: touch.clientX, y: touch.clientY};
+			pressTimer = setTimeout(() => {
+				pressTimer = undefined;
+				pressStart = null;
+				swallowClick = true;
+				openActions.value = props.message.id;
+
+				// A nudge says the press was taken; nothing where the API is missing (iOS).
+				if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+					navigator.vibrate(15);
+				}
+			}, LONG_PRESS_MS);
+		};
+
+		const onTouchMove = (e: TouchEvent) => {
+			if (!pressStart) {
+				return;
+			}
+
+			const touch = e.touches[0];
+
+			if (
+				Math.abs(touch.clientX - pressStart.x) > LONG_PRESS_SLOP_PX ||
+				Math.abs(touch.clientY - pressStart.y) > LONG_PRESS_SLOP_PX
+			) {
+				cancelPress();
 			}
 		};
+
+		const onTouchEnd = () => cancelPress();
+
+		// The browser's own long-press menu (Android) would open over ours.
+		const onContextMenu = (e: MouseEvent) => {
+			if (hasVirtualKeyboard()) {
+				e.preventDefault();
+			}
+		};
+
+		// A tap on the row while a toolbar is open (this row's or another's)
+		// closes it; the tap that ends the long press itself is not that tap.
+		const onClick = (e: MouseEvent) => {
+			if (!hasVirtualKeyboard()) {
+				return;
+			}
+
+			if (swallowClick) {
+				swallowClick = false;
+				e.preventDefault();
+				e.stopPropagation();
+				return;
+			}
+
+			if ((e.target as HTMLElement | null)?.closest(".msg-actions, .reaction-picker")) {
+				return;
+			}
+
+			if (openActions.value !== null) {
+				openActions.value = null;
+			}
+		};
+
+		// A tap outside the scrollback (the header, the input) closes it too.
+		const closeFromOutside = (e: Event) => {
+			const target = e.target as HTMLElement | null;
+
+			if (!target?.closest(".msg.actions-open, .reaction-picker")) {
+				openActions.value = null;
+			}
+		};
+
+		watch(actionsOpen, (open) => {
+			if (open) {
+				document.addEventListener("click", closeFromOutside, true);
+			} else {
+				document.removeEventListener("click", closeFromOutside, true);
+			}
+		});
+
+		onUnmounted(() => {
+			cancelPress();
+			document.removeEventListener("click", closeFromOutside, true);
+
+			if (actionsOpen.value) {
+				openActions.value = null;
+			}
+		});
 
 		// The clock and the tooltip both follow the use12hClock setting; the
 		// tooltip always spells the seconds (the cell shows only what fits
@@ -407,7 +534,11 @@ export default defineComponent({
 		return {
 			store,
 			actionsOpen,
-			toggleActions,
+			onTouchStart,
+			onTouchMove,
+			onTouchEnd,
+			onContextMenu,
+			onClick,
 			messageTime,
 			messageTimeLocale,
 			editedTitle,

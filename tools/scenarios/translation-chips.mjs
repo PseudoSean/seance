@@ -8,7 +8,7 @@
 // over the own-line dimming an untranslated `.self` row keeps.
 //
 // Alongside it, the icon split: fa-language marks the translation surfaces
-// (the channel header's toggle and the message action's inline icon, both
+// (the channel header's toggle and the message action's ::before glyph, both
 // \\f1ab) while the globe stays the language setting — the sidebar's dev
 // locale toggle still renders 🌐. The inline icons only draw because
 // style.css carries their content on top of the bundled @font-face.
@@ -182,7 +182,6 @@ const ICONS = `(() => {
 
 	const toggle = document.querySelector("#chat button.translate");
 	const action = document.querySelector("#chat .msg-action-translate");
-	const actionIcon = action && action.querySelector(".fa-language");
 	const locale = document.querySelector("#sidebar .locale-toggle");
 	const equals = document.querySelector("#chat .msg-translation-failed .fa-equals");
 
@@ -190,8 +189,8 @@ const ICONS = `(() => {
 		togglePresent: !!toggle,
 		toggleContent: toggle ? getComputedStyle(toggle, "::before").content : null,
 		toggleCode: toggle ? glyphCode(getComputedStyle(toggle, "::before").content) : null,
-		actionHasIcon: !!actionIcon,
-		actionCode: actionIcon ? glyphCode(getComputedStyle(actionIcon, "::before").content) : null,
+		actionPresent: !!action,
+		actionCode: action ? glyphCode(getComputedStyle(action, "::before").content) : null,
 		equalsCode: equals ? glyphCode(getComputedStyle(equals, "::before").content) : null,
 		localeText: locale ? locale.textContent.trim() : null,
 	};
@@ -263,7 +262,7 @@ export default async function run(page) {
 		"the header toggle draws the language glyph, not the globe",
 		icons.toggleCode === 0xf1ab
 	);
-	page.check("the message action carries the language icon", icons.actionHasIcon === true);
+	page.check("the message action is on the page", icons.actionPresent === true);
 	page.check("the message action's icon draws the language glyph", icons.actionCode === 0xf1ab);
 	page.check(
 		"the unchanged chip's equals icon draws through the bundled face",

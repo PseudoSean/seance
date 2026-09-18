@@ -11,9 +11,7 @@
 			:aria-label="replyLabel"
 			:title="replyLabel"
 			@click="reply"
-		>
-			↩
-		</button>
+		/>
 		<button
 			ref="reactButton"
 			type="button"
@@ -24,19 +22,25 @@
 			@mouseenter="preloadEmoji"
 			@mousedown.stop
 			@click="pickerOpen = !pickerOpen"
-		>
-			😀
-		</button>
+		/>
+		<button
+			v-if="canCopyText"
+			type="button"
+			class="msg-action msg-action-copy-text"
+			:class="{copied: copied === 'text'}"
+			:aria-label="copyTextLabel"
+			:title="copyTextLabel"
+			@click.stop="copyText"
+		/>
 		<button
 			v-if="codeBlocks.length > 0"
 			type="button"
 			class="msg-action msg-action-copy"
+			:class="{copied: copied === 'code'}"
 			:aria-label="copyCodeLabel"
 			:title="copyCodeLabel"
 			@click.stop="copyCode"
-		>
-			{{ copied ? "✓" : "⧉" }}
-		</button>
+		/>
 		<button
 			v-if="canTranslate"
 			type="button"
@@ -44,9 +48,7 @@
 			:aria-label="translateLabel"
 			:title="translateLabel"
 			@click.stop="translate"
-		>
-			<i class="fas fa-language" aria-hidden="true" />
-		</button>
+		/>
 		<button
 			v-if="canEdit"
 			type="button"
@@ -54,19 +56,17 @@
 			:aria-label="editLabel"
 			:title="editLabel"
 			@click="edit"
-		>
-			✎
-		</button>
-		<button
-			v-if="canDelete"
-			type="button"
-			class="msg-action msg-action-delete"
-			:aria-label="deleteLabel"
-			:title="deleteLabel"
-			@click="remove"
-		>
-			✕
-		</button>
+		/>
+		<template v-if="canDelete">
+			<span class="msg-action-divider" role="separator" aria-orientation="vertical" />
+			<button
+				type="button"
+				class="msg-action msg-action-delete"
+				:aria-label="deleteLabel"
+				:title="deleteLabel"
+				@click="remove"
+			/>
+		</template>
 		<ReactionPicker
 			v-if="pickerOpen"
 			:anchor="reactButton"
@@ -88,6 +88,7 @@ import {startEdit, startReply} from "../js/helpers/compose";
 import {myReactions} from "../js/helpers/messageUpdates";
 import {loadEmojiCatalog} from "../js/helpers/emoji";
 import {retranslate, showOriginal, translationAvailable} from "../js/translate/reader";
+import {hasVirtualKeyboard} from "../js/helpers/device";
 import {ChanType} from "../../shared/types/chan";
 import {MessageType} from "../../shared/types/msg";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
@@ -132,11 +133,12 @@ export default defineComponent({
 			return codeBlocksOf(layout(text, {markdown: true}));
 		});
 
-		const copied = ref(false);
+		// Which copy button is saying "Copied" right now, if any.
+		const copied = ref<"text" | "code" | null>(null);
 		let copiedTimer: ReturnType<typeof setTimeout> | undefined;
 
 		const clearCopied = () => {
-			copied.value = false;
+			copied.value = null;
 
 			if (copiedTimer !== undefined) {
 				clearTimeout(copiedTimer);
@@ -146,28 +148,41 @@ export default defineComponent({
 
 		onUnmounted(clearCopied);
 
-		// Toolbar labels (the copy button toggles between them).
+		// Toolbar labels (the copy buttons toggle between theirs).
 		const toolbarLabel = computed(() => t("message.actionsToolbar"));
 		const replyLabel = computed(() => t("message.reply"));
 		const reactLabel = computed(() => t("message.react"));
 		const editLabel = computed(() => t("message.edit"));
-		const deleteLabel = computed(() => t("message.delete"));
+		const deleteLabel = computed(() => t("message.deleteTitle"));
 		const copyCodeLabel = computed(() =>
-			copied.value ? t("message.copied") : t("message.copyCode")
+			copied.value === "code" ? t("message.copied") : t("message.copyCode")
+		);
+		const copyTextLabel = computed(() =>
+			copied.value === "text" ? t("message.copied") : t("message.copyText")
 		);
 
-		// Several blocks are one copy, a blank line apart: they were blocks of
-		// their own, and a copy that ran them together would be a different
-		// program. A copy that did not happen says nothing and changes nothing.
-		const copyCode = async () => {
-			if (!(await writeClipboard(codeBlocks.value.join("\n\n")))) {
+		// A copy that did not happen says nothing and changes nothing.
+		const copy = async (what: "text" | "code", text: string) => {
+			if (!(await writeClipboard(text))) {
 				return;
 			}
 
 			clearCopied();
-			copied.value = true;
+			copied.value = what;
 			copiedTimer = setTimeout(clearCopied, COPIED_MS);
 		};
+
+		// Several blocks are one copy, a blank line apart: they were blocks of
+		// their own, and a copy that ran them together would be a different
+		// program.
+		const copyCode = () => copy("code", codeBlocks.value.join("\n\n"));
+
+		// On a touch device the message text is not selectable (the long press
+		// that would select it opens this toolbar instead — see Message.vue),
+		// so the toolbar is how the text is copied there. A pointer device
+		// selects and copies as it always has, and does not get the button.
+		const canCopyText = hasVirtualKeyboard() && !!props.message.text;
+		const copyText = () => copy("text", props.message.text ?? "");
 
 		// Only plain text can be edited (the IRC layer resends it tagged).
 		const canEdit = computed(
@@ -298,6 +313,8 @@ export default defineComponent({
 			editLabel,
 			deleteLabel,
 			copyCodeLabel,
+			copyTextLabel,
+			canCopyText,
 			reply,
 			edit,
 			translate,
@@ -306,6 +323,7 @@ export default defineComponent({
 			preloadEmoji,
 			remove,
 			copyCode,
+			copyText,
 		};
 	},
 });

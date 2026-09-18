@@ -13,6 +13,7 @@
 
 import {MessageType} from "../../../../shared/types/msg";
 import history, {chathistoryBatch} from "../history";
+import {AUTHTOKEN_BATCH} from "../authtoken";
 import {MULTILINE_CAP, multilineBatch} from "../multiline";
 import {BOUNCER_REPLAY_BATCH, bouncerReplayBatch, persistenceBatch} from "../persistence";
 import type {Handler} from "../types";
@@ -42,6 +43,7 @@ import redact from "./redact";
 import sasl from "./sasl";
 import standardReplies from "./standard-replies";
 import tagmsg from "./tagmsg";
+import token, {authtokenBatch} from "./token";
 import topic from "./topic";
 import whois from "./whois";
 
@@ -72,6 +74,7 @@ const modules: Record<string, Handler>[] = [
 	sasl,
 	standardReplies,
 	tagmsg,
+	token,
 	topic,
 	webpush,
 	whois,
@@ -82,6 +85,7 @@ export const handlers = new Map<string, Handler>();
 // Batch types delivered as a unit (everything else is unwrapped in order).
 registerBatchHandler("chathistory", chathistoryBatch);
 registerBatchHandler(MULTILINE_CAP, multilineBatch);
+registerBatchHandler(AUTHTOKEN_BATCH, authtokenBatch);
 registerBatchHandler("draft/persistence", persistenceBatch);
 registerBatchHandler(BOUNCER_REPLAY_BATCH, bouncerReplayBatch);
 

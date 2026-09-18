@@ -191,6 +191,10 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 		});
 	});
 
+	bus.handle("history:trim", ({target, ids}) => {
+		registry.clientForChannel(target)?.channelById(target)?.forget(ids);
+	});
+
 	bus.handle("network:get", (uuid) => {
 		const info = networkInfo(registry, uuid);
 

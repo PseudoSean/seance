@@ -61,6 +61,18 @@ export const CATCHUP_FUZZ_MS = 5_000;
 
 export type HistorySubcommand = "LATEST" | "BEFORE" | "AFTER";
 
+export interface HistorySpec {
+	subcommand: HistorySubcommand;
+	/** Reference message (required for BEFORE / AFTER). */
+	ref?: MsgRef;
+	limit: number;
+	mode: "prepend" | "append";
+	pagesLeft?: number;
+	floor?: MsgRef;
+	/** Re-issue after a reconnect when the answer never came (the `more` pages). */
+	retry?: boolean;
+}
+
 export interface HistoryRequest {
 	chan: Channel;
 	target: string;
@@ -71,6 +83,12 @@ export interface HistoryRequest {
 	mode: "prepend" | "append";
 	/** Limit as sent; a reply of this many lines means more may exist. */
 	limit: number;
+	/**
+	 * A `more` page: what to ask again when the connection dies before the
+	 * answer (see {@link abortHistory}). The other requests are re-made by
+	 * the reconnect itself (the JOIN fill and its catch-up walk).
+	 */
+	retry?: HistorySpec;
 	/** Further BEFORE pages allowed (append mode). */
 	pagesLeft: number;
 	/** Catch-up: the newest message the previous session saw; the walk back stops on reaching it. */
@@ -131,16 +149,6 @@ export function formatRef(client: IrcClient, ref: MsgRef): string {
 	return `timestamp=${ref.time.toISOString()}`;
 }
 
-export interface HistorySpec {
-	subcommand: HistorySubcommand;
-	/** Reference message (required for BEFORE / AFTER). */
-	ref?: MsgRef;
-	limit: number;
-	mode: "prepend" | "append";
-	pagesLeft?: number;
-	floor?: MsgRef;
-}
-
 /**
  * Send one CHATHISTORY request for `chan`. Returns the pending request, or
  * undefined when history is unavailable (cap off, disconnected, lobby).
@@ -181,6 +189,7 @@ export function requestHistory(
 		label,
 		mode: spec.mode,
 		limit,
+		retry: spec.retry ? {...spec, retry: false} : undefined,
 		pagesLeft: spec.pagesLeft ?? 0,
 		floor: spec.floor,
 		gap: [],
@@ -203,12 +212,23 @@ export function requestMore(client: IrcClient, chan: Channel, lastId: number): b
 		return false;
 	}
 
+	// A fresh page for this channel supersedes one parked by a dead socket.
+	chan.lostMore = undefined;
+
+	// A page is already on its way (the JOIN fill, or a page re-asked after
+	// a reconnect): its answer is the `more` the UI is waiting for. One
+	// prepend in flight per channel; two would answer the same rows twice.
+	if (pendingOf(client).some((r) => r.chan === chan && r.mode === "prepend")) {
+		return true;
+	}
+
 	if (lastId === -1) {
 		return (
 			requestHistory(client, chan, {
 				subcommand: "LATEST",
 				limit: MORE_PAGE_SIZE,
 				mode: "prepend",
+				retry: true,
 			}) !== undefined
 		);
 	}
@@ -225,6 +245,7 @@ export function requestMore(client: IrcClient, chan: Channel, lastId: number): b
 			ref,
 			limit: MORE_PAGE_SIZE,
 			mode: "prepend",
+			retry: true,
 		}) !== undefined
 	);
 }
@@ -259,11 +280,39 @@ export function requestChannelHistory(
 	});
 }
 
-/** Transport closed: answer every pending request with nothing. */
+/**
+ * Transport closed: answer every pending request with nothing. A `more`
+ * page among them is parked on its channel and asked again once the
+ * connection is back ({@link retryLostHistory}): the UI was released with
+ * an empty page, and at the top of a buffer there is no scroll left to
+ * make it ask a second time (a phone returning from the background scrolls
+ * up while the transport still believes its dead socket is open, and the
+ * request goes into that socket).
+ */
 export function abortHistory(client: IrcClient): void {
 	for (const request of [...pendingOf(client)]) {
+		if (request.retry) {
+			request.chan.lostMore = request.retry;
+		}
+
 		resolve(client, request, null, "timeout");
 	}
+}
+
+/**
+ * Re-issue the `more` page `chan` lost with the previous connection, if
+ * any. Called once the channel can answer again: behind the JOIN fill for
+ * a channel, at registration for a query.
+ */
+export function retryLostHistory(client: IrcClient, chan: Channel): void {
+	const spec = chan.lostMore;
+
+	if (!spec) {
+		return;
+	}
+
+	chan.lostMore = undefined;
+	requestHistory(client, chan, {...spec, retry: true});
 }
 
 // ---------------------------------------------------------------- replies

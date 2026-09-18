@@ -524,7 +524,6 @@ p {
 #chat .msg[data-type="whois"] .from::before,
 #chat .msg[data-type="nick"] .from::before,
 #chat .msg[data-type="chghost"] .from::before,
-#chat .msg[data-type="action"] .from::before,
 #chat .msg[data-type="plugin"] .from::before,
 #chat .msg[data-type="raw"] .from::before,
 #chat .msg-statusmsg span::before,
@@ -536,6 +535,7 @@ p {
 #chat .media-tool::before,
 #settings .trusted-host-remove::before,
 #chat .scroll-down-arrow::after,
+#chat .msg-action::before,
 #chat .topic-container .save-topic span::before,
 #version-checker::before,
 .context-menu-item::before,
@@ -576,13 +576,13 @@ p {
 #chat button.search::before { content: "\f002"; /* https://fontawesome.com/icons/search?style=solid */ }
 #chat button.close::before { content: "\f00d"; /* https://fontawesome.com/icons/times?style=solid */ }
 
-/* The two inline `<i class="fas">` glyphs the translation feature renders —
- * MessageActions.vue's translate action and TranslationLine.vue's unchanged
- * chip. The bundled fontawesome.css is the @font-face only, so the content
- * and the font-family come from here (the same shape the
- * .msg-translation-retry rule uses). The language icon marks everything that
- * translates; the globe stays the language setting (the sidebar's dev
- * locale toggle). */
+/* The inline `<i class="fas">` glyphs the translation feature renders (the
+ * header toggle's language mark, TranslationLine.vue's unchanged chip; the
+ * toolbar's translate action is a ::before like its neighbours). The bundled
+ * fontawesome.css is the @font-face only, so the content and the font-family
+ * come from here (the same shape the .msg-translation-retry rule uses). The
+ * language icon marks everything that translates; the globe stays the
+ * language setting (the sidebar's dev locale toggle). */
 .fa-language::before {
 	content: "\f1ab"; /* https://fontawesome.com/icons/language?style=solid */
 	font: normal normal normal 1em/1 FontAwesome;
@@ -763,8 +763,12 @@ p {
 	color: #2ecc40;
 }
 
+/* An action (/me) is the speaker playing a part: the masks, not the
+ * FontAwesome star the rest of the gutter glyphs come from, so this rule is
+ * not in the icon-font list above and the emoji renders in the system's
+ * colour emoji face. */
 #chat .msg[data-type="action"] .from::before {
-	content: "\f005"; /* http://fontawesome.io/icon/star/ */
+	content: "\1F3AD"; /* 🎭 performing arts */
 }
 
 #chat .msg[data-type="plugin"] .from::before {
@@ -884,6 +888,14 @@ p {
 	 * viewport, which iOS never shrinks for the keyboard, they would outgrow
 	 * the app and the sidebar's footer would sit below the screen. */
 	position: relative;
+
+	/* Its height is the visible band (--viewport-height on touch devices),
+	 * which no media query can see: iOS keeps the layout viewport at the
+	 * screen's size while the keyboard is up. A container query can. */
+	/* stylelint-disable-next-line property-no-unknown */
+	container-type: size;
+	/* stylelint-disable-next-line property-no-unknown */
+	container-name: viewport;
 }
 
 #form button,
@@ -2113,6 +2125,39 @@ textarea.input {
 	padding: 0.75em 1em;
 }
 
+/* Compose mode. A phone in landscape has ~430px; the keyboard and Safari's
+ * form bar take ~250 of them, so the header and the composer leave a single
+ * line of scrollback. While the composer has the caret in a band that short
+ * the header goes: the placeholder names the channel, and the keyboard's Done
+ * brings the header (and its buttons) back. Gated on the caret, not on the
+ * height alone, or a landscape phone at a large font step would lose the
+ * header — and the way to the sidebar and the menu — for good. 18rem is
+ * above what any keyboard leaves and below any phone's screen in portrait
+ * with the keyboard up (iPhone SE: ~400px). */
+/* stylelint-disable-next-line at-rule-no-unknown */
+@container viewport (max-height: 18rem) {
+	body:has(#form #input:focus) #chat .header {
+		display: none;
+	}
+
+	/* The "alice is typing…" strip shares the composer's row instead of
+	 * taking one of its own: between the text and the buttons, a third of
+	 * the row at most, ellipsised. Its reserved (empty) form has no width,
+	 * so nothing bounces either way. */
+	body:has(#form #input:focus) #form .typing-indicator {
+		flex: 0 1 auto;
+		order: 1;
+		max-width: 33%;
+		min-width: 0;
+		margin: 0 0.25rem;
+		align-self: center;
+	}
+
+	body:has(#form #input:focus) #form > .tooltipped {
+		order: 2;
+	}
+}
+
 /* A dial or a reconnect is a spinner in the header, not a banner */
 #chat .connecting-tooltip {
 	display: flex;
@@ -2207,6 +2252,12 @@ textarea.input {
 }
 
 #chat {
+	/* The jump-to-recent arrow's size and inset: variables because the
+	 * message action toolbar keeps clear of its column while it is up (see
+	 * `.msg-actions`); they stay in px as the arrow always was. */
+	--scroll-down-size: 36px;
+	--scroll-down-inset: 16px;
+
 	overflow: hidden;
 	flex: 1 0 auto;
 	position: relative;
@@ -2345,9 +2396,9 @@ textarea.input {
 
 .scroll-down {
 	position: absolute;
-	bottom: 16px;
-	inset-inline-end: 16px;
-	z-index: 2;
+	bottom: var(--scroll-down-inset);
+	inset-inline-end: var(--scroll-down-inset);
+	z-index: 3; /* over a message's action toolbar: jumping back wins the click */
 	pointer-events: none;
 	opacity: 0;
 	transform: translateY(16px);
@@ -2367,9 +2418,9 @@ textarea.input {
 }
 
 .scroll-down-arrow {
-	width: 36px;
-	height: 36px;
-	line-height: 34px;
+	width: var(--scroll-down-size);
+	height: var(--scroll-down-size);
+	line-height: calc(var(--scroll-down-size) - 2px);
 	border-radius: 50%;
 	background: var(--window-bg-color);
 	color: var(--button-color);
@@ -3837,8 +3888,11 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 			padding-bottom: 34px;
 		}
 
-		/* The keyboard covers the indicator while a field is focused. */
-		body:has(#form #input:focus) #form {
+		/* The keyboard covers the indicator while it is up. That is the
+		 * viewport measurement in helpers/viewport.ts, not the caret: iOS's
+		 * shake-to-undo alert gives the composer its focus back with the
+		 * keyboard down, and a rule on :focus left it in the indicator. */
+		html[data-keyboard="up"] #form {
 			padding-bottom: 0.375rem;
 		}
 	}
@@ -4562,7 +4616,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	font-size: 0.8125rem;
 }
 
-@media (max-width: 768px) {
+/* The phone layout; the same list as PHONE_LAYOUT_QUERY in helpers/device.ts. */
+@media (max-width: 768px), (max-height: 500px) and (hover: none) and (pointer: coarse) {
 	/**
 	  * TODO Replace this with `@media (hover: hover)` when Firefox supports it
 	  * See:
@@ -5298,19 +5353,40 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	opacity: 1;
 }
 
+/* The message action toolbar: reply, react, copy, edit, delete. It floats
+ * above the row it belongs to — its bottom edge on the row's top padding —
+ * so it never covers the text it acts on, and it is a child of the row, so
+ * hovering it keeps `.msg:hover` true; the hair of overlap means there is no
+ * gap for the pointer to fall through on the way up. Every glyph is a
+ * FontAwesome solid: the Unicode arrows and crosses this used to be
+ * rendered differently on every OS, and a ✕ at the end of a bar reads as
+ * "close this box" — the delete button is a trash can behind a divider for
+ * that reason. */
 #chat .msg-actions {
 	position: absolute;
-	top: -8px;
-	inset-inline-end: 8px;
+	top: auto;
+	bottom: calc(100% - 0.125rem);
+	inset-inline-end: 0.5rem;
 	z-index: 2;
 	display: none;
 	align-items: center;
-	padding: 1px;
+	gap: 0.125rem;
+	padding: 0.125rem;
 	border: 1px solid rgb(128 128 128 / 35%);
-	border-radius: 4px;
+	border-radius: 0.375rem;
 	background: var(--window-bg-color);
-	box-shadow: 0 1px 4px rgb(0 0 0 / 15%);
+	box-shadow: 0 0.125rem 0.5rem rgb(0 0 0 / 15%);
 	user-select: none;
+	transition: right 0.2s; /* the same glide as the arrow it makes room for */
+}
+
+/* The first message in the scrollback has nothing above it to float over:
+ * that one's toolbar tucks inside the row instead of being clipped by the
+ * scroll edge. A leading date marker does not change that. */
+#chat .messages > .msg:first-child .msg-actions,
+#chat .messages > .date-marker-container:first-child + .msg .msg-actions {
+	top: 0.125rem;
+	bottom: auto;
 }
 
 #chat .msg:hover .msg-actions,
@@ -5319,9 +5395,27 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	display: flex;
 }
 
-/* A touch device fakes hover on long press, which is also how a text
- * selection starts, so on touch the toolbar opens on a tap instead
- * (Message.vue sets `actions-open`). */
+/* A drag across the scrollback is a text selection (MessageList.vue sets
+ * `selecting` while the button is down and the pointer has moved): no row
+ * shows its toolbar under it. */
+#chat .chat.selecting .msg-actions {
+	display: none;
+}
+
+/* While the jump-to-recent arrow is up (the view is scrolled back) it owns
+ * the bottom-right corner: the toolbar moves left of its column so the two
+ * never overlap, whichever row is hovered. */
+#chat .chat-content:has(.scroll-down-shown) .msg-actions {
+	inset-inline-end: calc(var(--scroll-down-inset) + var(--scroll-down-size) + 0.5rem);
+}
+
+/* A touch device fakes hover on a long press; here the long press is what
+ * opens the toolbar (Message.vue sets `actions-open`, one message at a
+ * time), and hover is never trusted. The message text is not selectable
+ * there, so the platform's own long press — a text selection — cannot race
+ * ours; the toolbar's Copy text is how the text is copied on a phone. Links
+ * keep their own long press (the preview), and are excluded from it in
+ * Message.vue. */
 @media (hover: none) {
 	#chat .msg:hover .msg-actions {
 		display: none;
@@ -5329,6 +5423,17 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 	#chat .msg.actions-open .msg-actions {
 		display: flex;
+	}
+}
+
+@media (hover: none) and (pointer: coarse) {
+	#chat .messages .msg {
+		user-select: none;
+		-webkit-touch-callout: none;
+	}
+
+	#chat .messages .msg a {
+		-webkit-touch-callout: default;
 	}
 }
 
@@ -5340,34 +5445,64 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #chat .msg-action {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	width: 2.25rem;
 	height: 2rem;
 	padding: 0;
 	border: 0;
-	border-radius: 3px;
+	border-radius: 0.25rem;
 	background: transparent;
 	color: var(--body-color-muted);
 	font: inherit;
-	font-size: 1rem;
-	line-height: 2rem;
 	cursor: pointer;
 }
 
-/* The language glyph reads small next to the toolbar's emoji-scale glyphs
-   (the same em-box shortfall the header toggle compensates for). */
-#chat .msg-action-translate {
-	font-size: 1.1875rem;
+#chat .msg-action::before {
+	font-size: 0.875rem;
+}
+
+#chat .msg-action-reply::before { content: "\f3e5"; /* https://fontawesome.com/icons/reply?style=solid */ }
+#chat .msg-action-react::before { content: "\f118"; /* https://fontawesome.com/icons/smile?style=solid */ }
+
+#chat .msg-action-copy::before,
+#chat .msg-action-copy-text::before { content: "\f0c5"; /* https://fontawesome.com/icons/copy?style=solid */ }
+
+#chat .msg-action-copy.copied::before,
+#chat .msg-action-copy-text.copied::before { content: "\f00c"; /* https://fontawesome.com/icons/check?style=solid */ }
+
+#chat .msg-action-edit::before { content: "\f304"; /* https://fontawesome.com/icons/pen?style=solid */ }
+#chat .msg-action-delete::before { content: "\f2ed"; /* https://fontawesome.com/icons/trash-alt?style=solid */ }
+
+/* The language glyph is wider than the others and reads small at their
+ * size (the same em-box shortfall the header toggle compensates for). */
+#chat .msg-action-translate::before {
+	content: "\f1ab"; /* https://fontawesome.com/icons/language?style=solid */
+	font-size: 1rem;
+}
+
+#chat .msg-action.copied {
+	color: var(--body-color);
 }
 
 #chat .msg-action:hover,
 #chat .msg-action:focus-visible {
-	background: rgb(0 0 0 / 8%);
+	background: rgb(128 128 128 / 15%);
 	color: var(--body-color);
 	outline: 0;
 }
 
+#chat .msg-action-divider {
+	width: 1px;
+	height: 1.25rem;
+	margin: 0 0.125rem;
+	background: rgb(128 128 128 / 35%);
+}
+
 #chat .msg-action-delete:hover,
 #chat .msg-action-delete:focus-visible {
+	background: rgb(231 76 60 / 12%);
 	color: #e74c3c;
 }
 

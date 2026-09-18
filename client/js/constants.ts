@@ -22,6 +22,4 @@ const colorCodeMap: [string, string][] = [
 export default {
 	colorCodeMap,
 	commands: [] as string[],
-	// Same value as media query in CSS that forces sidebars to become overlays
-	mobileViewportPixels: 768,
 };

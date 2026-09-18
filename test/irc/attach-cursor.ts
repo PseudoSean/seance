@@ -8,7 +8,7 @@
 import {expect} from "chai";
 import sinon from "ts-sinon";
 import {CURSOR_SAVE_INTERVAL_MS} from "../../client/js/irc/client";
-import {requestHistory} from "../../client/js/irc/history";
+import {requestHistory, requestMore} from "../../client/js/irc/history";
 import * as saved from "../../client/js/irc/saved-networks";
 import type {StorageBackend} from "../../client/js/irc/saved-networks";
 import {MessageType, SharedMsg} from "../../shared/types/msg";
@@ -473,6 +473,41 @@ describe("PERSISTENCE ATTACH catch-up cursor (irc/persistence.ts)", function () 
 			expect(h.transport.sent).to.include("PERSISTENCE ATTACH default m1");
 			expect(chathistory(h.sent())).to.deep.equal([]);
 			expect(h.sent().filter((l) => l.startsWith("JOIN"))).to.deep.equal([]);
+		});
+
+		it("re-asks a `more` page the drop swallowed, once the server gave the channel back", function () {
+			const h = saslClient();
+			h.client.open(h.client.findChannel("#seance")!.id);
+			authenticate(h);
+			finishRegistration(h);
+			h.transport.lines(
+				"@time=2026-08-28T12:00:01.000Z;msgid=join-1 :alice!alice@host JOIN #seance",
+				":irc.test 353 alice = #seance :@alice bob",
+				":irc.test 366 alice #seance :End of /NAMES list."
+			);
+			batch(h, [], {label: labelOf(h.sent())});
+			h.transport.line(
+				"@time=2026-08-28T12:00:02.000Z;msgid=m1 :bob!bob@host PRIVMSG #seance :hi"
+			);
+
+			// The user scrolls up; the socket dies before the page comes back.
+			const chan = h.client.findChannel("#seance")!;
+			expect(requestMore(h.client, chan, chan.idByMsgid.get("m1")!)).to.equal(true);
+			expect(chathistory(h.sent())[0]).to.match(/CHATHISTORY BEFORE #seance msgid=m1 100$/);
+			h.transport.closed();
+
+			authenticate(h);
+			h.transport.line(":irc.test PERSISTENCE ATTACH default");
+			finishRegistration(h, HOLD);
+			h.sent();
+			restore(h);
+
+			// The cursor's replay covers the gap, so the channel asks for no
+			// LATEST — but the lost page is asked again.
+			expect(h.client.serverReplay).to.equal(true);
+			const asked = chathistory(h.sent());
+			expect(asked).to.have.length(1);
+			expect(asked[0]).to.match(/CHATHISTORY BEFORE #seance msgid=m1 100$/);
 		});
 
 		it("keeps the old dance when the cursor was refused", function () {
