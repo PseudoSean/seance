@@ -5076,6 +5076,12 @@ msgctxt "translate.composer.placeholder"
 msgid "Write to {name} · sent in {language}"
 msgstr "Isulat sa {name} · ipasok sa {language}"
 
+#. Tooltip and aria-label of the composer's translate button (the language mark beside the attachment and send buttons); it opens a language picker and translates the draft into the picked language this once, without switching the channel's translation on. Ends with an ellipsis.
+#: client/components/ChatInput.vue
+msgctxt "translate.composer.translateOnce"
+msgid "Translate this message into…"
+msgstr "Ibigay ito pangungusap sa Filipino..."
+
 #. Why a translation failed, shown after 'Couldn't translate': the request was cancelled before it finished. Lowercase: it follows a colon or a dash.
 #: client/js/helpers/translateErrors.ts
 msgctxt "translate.error.aborted"
@@ -5458,6 +5464,24 @@ msgstr "Ibabahagi ulit mula sa iba't ibang wika"
 msgctxt "translate.picker.label"
 msgid "Translate this line from"
 msgstr "Ibabahagi ang linya iyon mula sa"
+
+#. Button that translates the draft into the language picked in the composer's translate-into dialog.
+#: client/components/SourceLanguagePicker.vue
+msgctxt "translate.picker.targetConfirm"
+msgid "Translate"
+msgstr "Ibigay ito sa Filipino..."
+
+#. aria-label of the small dialog the composer's translate button opens: pick the language the draft is translated into, this once.
+#: client/components/SourceLanguagePicker.vue
+msgctxt "translate.picker.targetDialog"
+msgid "Translate this message into a language"
+msgstr "Ibigay ito na mensahe sa isang wika"
+
+#. Label of the language picker in the dialog the composer's translate button opens; the draft is translated into the picked language.
+#: client/components/SourceLanguagePicker.vue
+msgctxt "translate.picker.targetLabel"
+msgid "Translate into"
+msgstr "Ibigay ito sa wika"
 
 #. Failure reason after 'Couldn't translate': the model replied to a question it found in the message rather than translating the message. Lowercase; reads as the tail of that sentence.
 #: client/components/TranslationLine.vue

@@ -5092,6 +5092,12 @@ msgctxt "translate.composer.placeholder"
 msgid "Write to {name} · sent in {language}"
 msgstr "Напишите на {name} · отправлено в {language}"
 
+#. Tooltip and aria-label of the composer's translate button (the language mark beside the attachment and send buttons); it opens a language picker and translates the draft into the picked language this once, without switching the channel's translation on. Ends with an ellipsis.
+#: client/components/ChatInput.vue
+msgctxt "translate.composer.translateOnce"
+msgid "Translate this message into…"
+msgstr "Переведите это сообщение на…"
+
 #. Why a translation failed, shown after 'Couldn't translate': the request was cancelled before it finished. Lowercase: it follows a colon or a dash.
 #: client/js/helpers/translateErrors.ts
 msgctxt "translate.error.aborted"
@@ -5474,6 +5480,24 @@ msgstr "Переведено с другого языка"
 msgctxt "translate.picker.label"
 msgid "Translate this line from"
 msgstr "Переведите эту линию с"
+
+#. Button that translates the draft into the language picked in the composer's translate-into dialog.
+#: client/components/SourceLanguagePicker.vue
+msgctxt "translate.picker.targetConfirm"
+msgid "Translate"
+msgstr "Переведите"
+
+#. aria-label of the small dialog the composer's translate button opens: pick the language the draft is translated into, this once.
+#: client/components/SourceLanguagePicker.vue
+msgctxt "translate.picker.targetDialog"
+msgid "Translate this message into a language"
+msgstr "Переведи это сообщение на язык"
+
+#. Label of the language picker in the dialog the composer's translate button opens; the draft is translated into the picked language.
+#: client/components/SourceLanguagePicker.vue
+msgctxt "translate.picker.targetLabel"
+msgid "Translate into"
+msgstr "Переведи на"
 
 #. Failure reason after 'Couldn't translate': the model replied to a question it found in the message rather than translating the message. Lowercase; reads as the tail of that sentence.
 #: client/components/TranslationLine.vue
