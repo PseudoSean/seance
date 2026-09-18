@@ -551,6 +551,42 @@ export default async function run(page) {
 	);
 	await page.waitFor(`!document.querySelector(".translation-panel")`, {label: "panel closed"});
 
+	// A write target that is the page's own language: every draft in it is
+	// corrected on the first Enter, and the placeholder says so.
+	const correctedDraft = `my speling is awful in here ${RUN}`;
+
+	await setWriteTarget(page, "en");
+	await page.check(
+		"the placeholder says the channel sends corrected",
+		(await page.evaluate(
+			`document.querySelector("#form #input").getAttribute("placeholder")`
+		)) === `Write to ${CHANNEL} · sent corrected`
+	);
+	await typeAndEnter(page, correctedDraft);
+	await page.waitFor(
+		`(document.querySelector(${JSON.stringify(
+			BAR_TEXT
+		)}) || {}).textContent === ${JSON.stringify(`[Corrected] ${correctedDraft}`)}`,
+		{
+			timeout: 30000,
+			label: "the first Enter corrects a draft in the write target's own language",
+		}
+	);
+	await page.check(
+		"its chip says corrected",
+		String(
+			await page.evaluate(`(document.querySelector(".translate-bar-chip") || {}).textContent`)
+		).includes("corrected")
+	);
+	await page.evaluate(ENTER);
+	await page.check(
+		"the second Enter sends the corrected line",
+		await heard(other, `[Corrected] ${correctedDraft}`)
+	);
+	await page.waitFor(`!document.querySelector(${JSON.stringify(BAR)})`, {
+		label: "the strip is gone after the corrected send",
+	});
+
 	await setWriteTarget(page, "de");
 	await page.check(
 		"the placeholder says the channel sends in German",

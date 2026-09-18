@@ -311,21 +311,32 @@ export async function translateOutgoing(
 			return "strip";
 		}
 
-		// A draft already in the target: sent as typed for a write target,
-		// which asked for nothing; corrected in place for a one-off, which
-		// asked for this language -- a polish (purpose "polish": the LLM as
-		// a copy editor, router.ts routes a same-language request to it
-		// alone), an echo of which is "nothing to correct" rather than a
-		// failure.
-		const polish =
-			!!once && detection.lang === to && detection.confidence >= WRITE_DETECT_MIN_GAP;
+		// A draft already in the target. Corrected in place -- a polish
+		// (purpose "polish": the LLM as a copy editor, router.ts routes a
+		// same-language request to it alone), an echo of which is "nothing
+		// to correct" rather than a failure -- when someone asked for that
+		// language: a one-off, or a write target set to the user's own
+		// language, which can only mean "send my lines corrected". Sent as
+		// typed when a foreign write target finds the draft already in it:
+		// that target asked for nothing.
+		const ownLanguage = to === readingLanguage();
+		const inTarget = detection.lang === to && detection.confidence >= WRITE_DETECT_MIN_GAP;
 
-		if (!once && detection.lang === to && detection.confidence >= WRITE_DETECT_MIN_GAP) {
+		if (inTarget && !once && !ownLanguage) {
 			cancelOutgoing(channel);
 			return "plain";
 		}
 
-		const from = polish ? to : once?.from ?? writeSource(detection, readingLanguage(), to);
+		// Under an own-language write target a draft the detector cannot
+		// place is the user's own language by every odd (`writeSource` has
+		// no other fallback there), so it is corrected rather than sent to
+		// the engine to guess at; a one-off with "detect" and no verdict is
+		// left to the engine, since the line may well be a foreign one
+		// pasted in to be translated.
+		const guessed = once?.from ?? writeSource(detection, readingLanguage(), to);
+		const polish =
+			inTarget || (ownLanguage && !once && guessed === null) || (!!once && once.from === to);
+		const from = polish ? to : guessed;
 		// The detector's verdict, however weak, rides along as the routing
 		// hint: a seq2seq route takes it as its source, so a draft whose
 		// source is left to the LLM can still reach NLLB (router.ts). It is

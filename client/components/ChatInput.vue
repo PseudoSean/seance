@@ -443,6 +443,12 @@ export default defineComponent({
 			if (channel.type === ChanType.CHANNEL || channel.type === ChanType.QUERY) {
 				const to = writeTarget(props.network, channel);
 
+				// A write target that is the user's own language sends their
+				// lines corrected (writer.ts), and the placeholder says so.
+				if (to === readingLanguage()) {
+					return t("translate.composer.placeholderCorrected", {name: channel.name});
+				}
+
 				return to
 					? t("translate.composer.placeholder", {
 							name: channel.name,

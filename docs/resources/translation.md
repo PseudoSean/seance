@@ -856,7 +856,12 @@ dialog says so), and an echo read as "nothing to correct" rather than a
 failure. The strip's chip reads "English, corrected"; a corrected line is
 no translation, so it is neither read back nor noted into the voice and
 term memory. The same happens when detection finds the draft already in
-the picked language. Browser check:
+the picked language -- and **when the channel's write target is the
+language the user reads**: a write target set to one's own language can
+only mean "send my lines corrected", so the first Enter brings up the
+cleanup strip (the placeholder reads "sent corrected") and the second
+sends it, where a foreign write target that finds the draft already in
+it still sends as typed. Browser check:
 `tools/scenarios/translate-composer.mjs` § 0.
 
 **An echo buys one more generation, and a bare one.** Before the strip
