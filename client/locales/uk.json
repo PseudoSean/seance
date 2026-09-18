@@ -900,6 +900,7 @@
   "translate.chip.options": "{languages}. Варіанти перекладу",
   "translate.chip.unsure": "мова не відрізняється, не перекладено. Варіанти перекладу",
   "translate.composer.placeholder": "Написати до {name} · відправлено в {language}",
+  "translate.composer.placeholderCorrected": "Написати {name} · відправлено виправлене",
   "translate.composer.translateOnce": "Перекладіть цей повідомлення…",
   "translate.error.aborted": "скасовано",
   "translate.error.timedOut": "вичерпано",

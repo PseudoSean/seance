@@ -5076,6 +5076,12 @@ msgctxt "translate.composer.placeholder"
 msgid "Write to {name} · sent in {language}"
 msgstr "Escribir a {name} · enviado en {language}"
 
+#. Placeholder of the message input when the channel's write target is the language the user reads: every line is corrected (spelling and grammar) before it is sent. {name} is the channel or user name, verbatim; the middle dot is part of the copy.
+#: client/components/ChatInput.vue
+msgctxt "translate.composer.placeholderCorrected"
+msgid "Write to {name} · sent corrected"
+msgstr "Escribir a {name} · enviado corregido"
+
 #. Tooltip and aria-label of the composer's translate button (the language mark beside the attachment and send buttons); it opens a language picker and translates the draft into the picked language this once, without switching the channel's translation on. Ends with an ellipsis.
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.translateOnce"

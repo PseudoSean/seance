@@ -859,6 +859,7 @@
   "translate.chip.options": "{languages}. 翻訳オプション",
   "translate.chip.unsure": "言語が区別されない、翻訳されません。翻訳オプション",
   "translate.composer.placeholder": "{name}へ書く · {language}で送る",
+  "translate.composer.placeholderCorrected": "{name}へ書く · 正しいもの送った",
   "translate.composer.translateOnce": "このメッセージを翻訳してください…",
   "translate.error.aborted": "中止",
   "translate.error.timedOut": "タイムアウト",

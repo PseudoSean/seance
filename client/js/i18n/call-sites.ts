@@ -832,6 +832,7 @@ export const STATIC_CALL_SITES = new Set<string>([
 	"translate.chip.options",
 	"translate.chip.unsure",
 	"translate.composer.placeholder",
+	"translate.composer.placeholderCorrected",
 	"translate.composer.translateOnce",
 	"translate.error.aborted",
 	"translate.error.timedOut",

@@ -859,6 +859,7 @@
   "translate.chip.options": "{languages}. Vertalingsopties",
   "translate.chip.unsure": "Taal niet onderscheiden, niet geïntegreerd. Vertalingsopties",
   "translate.composer.placeholder": "Schrijf naar {name} · verzonden in {language}",
+  "translate.composer.placeholderCorrected": "Schrijf naar {name} · verzonden met correctie",
   "translate.composer.translateOnce": "Dit bericht vertaal naar…",
   "translate.error.aborted": "afgebroken",
   "translate.error.timedOut": "time-out",

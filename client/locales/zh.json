@@ -861,6 +861,7 @@
   "translate.chip.options": "{languages}。翻译选项",
   "translate.chip.unsure": "语言无法区分，未翻译。翻译选项",
   "translate.composer.placeholder": "写入{name} · 传入{language}",
+  "translate.composer.placeholderCorrected": "写给 {name} · 已发送修正版",
   "translate.composer.translateOnce": "将这条消息翻译成…",
   "translate.error.aborted": "中止",
   "translate.error.timedOut": "超时",

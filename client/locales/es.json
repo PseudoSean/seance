@@ -862,6 +862,7 @@
   "translate.chip.options": "{languages}. Opciones de traducción",
   "translate.chip.unsure": "El lenguaje no se distingue, no se traduce. Opciones de traducción",
   "translate.composer.placeholder": "Escribir a {name} · enviado en {language}",
+  "translate.composer.placeholderCorrected": "Escribir a {name} · enviado corregido",
   "translate.composer.translateOnce": "Traducir este mensaje a…",
   "translate.error.aborted": "abortado",
   "translate.error.timedOut": "tiempo agotado",

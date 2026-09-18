@@ -882,6 +882,7 @@
   "translate.chip.options": "{languages}. Možnosti prevedenia",
   "translate.chip.unsure": "Jazyk sa nedokáže oddeliť, nie je prevedený. Možnosti prevedenia",
   "translate.composer.placeholder": "Zapísať do {name} · odoslané do {language}",
+  "translate.composer.placeholderCorrected": "Napísať na {name} · odoslané opravené",
   "translate.composer.translateOnce": "Prevedenéto túto zprávu na…",
   "translate.error.aborted": "zrušené",
   "translate.error.timedOut": "vypršlo čas",

@@ -881,6 +881,7 @@
   "translate.chip.options": "{languages}. Translation options",
   "translate.chip.unsure": "Language not told apart, not translated. Translation options",
   "translate.composer.placeholder": "Write to {name} · sent in {language}",
+  "translate.composer.placeholderCorrected": "Write to {name} · sent corrected",
   "translate.composer.translateOnce": "Translate this message into…",
   "translate.error.aborted": "aborted",
   "translate.error.timedOut": "timed out",

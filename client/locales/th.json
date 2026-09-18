@@ -861,6 +861,7 @@
   "translate.chip.options": "{languages}. ตัวเลือกการแปล",
   "translate.chip.unsure": "ภาษาไม่สามารถแยกได้ ไม่ได้แปล ตัวเลือกการแปล",
   "translate.composer.placeholder": "เขียนไปที่ {name} · ส่งไปที่ {language}",
+  "translate.composer.placeholderCorrected": "เขียนไปที่ {name} · ส่งข้อความถูกต้องแล้ว",
   "translate.composer.translateOnce": "แปลข้อความนี้เป็น…",
   "translate.error.aborted": "ยกเลิก",
   "translate.error.timedOut": "หมดเวลา",

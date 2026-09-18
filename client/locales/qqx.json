@@ -880,6 +880,7 @@
   "translate.chip.options": "‫{languages}. ţŕàñśľàţïöñ öṗţïöñś{languages}. ţŕàñśľàţïöñ öṗţïöñś‬",
   "translate.chip.unsure": "‫ľàñġüàġé ñöţ ţöľḋ àṗàŕţ, ñöţ ţŕàñśľàţéḋ. ţŕàñśľàţïöñ öṗţïöñśľàñġüàġé ñöţ ţöľḋ àṗàŕţ, ñöţ ţŕàñśľàţéḋ. ţŕàñśľàţïöñ öṗţïöñś‬",
   "translate.composer.placeholder": "‫ẃŕïţé ţö {name} · śéñţ ïñ {language}ẃŕïţé ţö {name} · śéñţ ïñ {language}‬",
+  "translate.composer.placeholderCorrected": "‫ẃŕïţé ţö {name} · śéñţ ċöŕŕéċţéḋẃŕïţé ţö {name} · śéñţ ċöŕŕéċţéḋ‬",
   "translate.composer.translateOnce": "‫ţŕàñśľàţé ţḣïś ṁéśśàġé ïñţö…ţŕàñśľàţé ţḣïś ṁéśśàġé ïñţö…‬",
   "translate.error.aborted": "‫àḃöŕţéḋàḃöŕţéḋ‬",
   "translate.error.timedOut": "‫ţïṁéḋ öüţţïṁéḋ öüţ‬",

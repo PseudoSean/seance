@@ -900,6 +900,7 @@
   "translate.chip.options": "{languages}. Opcje tłumaczenia",
   "translate.chip.unsure": "Język nie rozpoznano, nie przetwarzane. Opcje tłumaczenia",
   "translate.composer.placeholder": "Zapis do {name} · wysłane w {language}",
+  "translate.composer.placeholderCorrected": "Napisz do {name} · wysłano poprawione",
   "translate.composer.translateOnce": "Przetłumacz tę wiadomość na…",
   "translate.error.aborted": "anulowane",
   "translate.error.timedOut": "przekroczono czas",

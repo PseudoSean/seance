@@ -872,6 +872,7 @@
   "translate.chip.options": "{languages}. Çeviri seçenekleri",
   "translate.chip.unsure": "Dil ayrılmadı, çeviri yapılmadı. Çeviri seçenekleri",
   "translate.composer.placeholder": "Yazmak için {name} · göndermek için {language}",
+  "translate.composer.placeholderCorrected": "{name} yaz · düzeltilmiş gönderildi",
   "translate.composer.translateOnce": "Bu mesajı çeviri yapın…",
   "translate.error.aborted": "iptal edildi",
   "translate.error.timedOut": "zaman aşımı",
