@@ -348,11 +348,15 @@ or a single space-free token longer than `LOOKUP_MAX_SCRIPTLESS` (9, the
 longest entry any of those languages has), is answered before the table is
 asked for, so a Japanese reader does not download 390 KB for nothing (a
 lone word still is looked up -- "ありがとう" places as Japanese).
-A lookup verdict's `confidence` is the 1/rank score, 0.001 to 0.15 in
-practice, so it never reaches `WRITE_DETECT_MIN_GAP` (0.3): the composer's
-`reverseSource` does not trust it for a draft, which is the intended
-reading -- the lookup is the reading pipeline's answer for other people's
-short lines, not a claim about what the user is typing. Thai is the one
+A lookup verdict's `confidence` is `min(1, Σ 1/rank)`, so it says how
+common the words are: only a word ranked about 4th or better in its
+language clears `WRITE_DETECT_MIN_GAP` (0.3), the floor the composer's
+`reverseSource` trusts a verdict from. That is the right split for a draft:
+a lone "the" (English rank 1, confidence 1) is English and the composer
+takes it, while "hola" (Spanish rank 416, confidence 0.0024) or "danke"
+(German rank 204) is too thin a claim about what the user is typing and the
+composer falls back as before. The reading pipeline has no such floor -- it
+reads `weak`, which a lookup verdict never is. Thai is the one
 language whose words come from a stopword list rather than a frequency one
 (the table lists it under `partial`). Both generators read the same tag list
 and source ladder (`tools/wordsources.py`) and both need wordfreq and
