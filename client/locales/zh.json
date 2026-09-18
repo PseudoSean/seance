@@ -954,6 +954,8 @@
   "translate.strip.sendAsWritten": "如书面发送",
   "translate.strip.sendTranslation": "发送翻译",
   "translate.strip.sourceAuto": "自动驾驶",
+  "translate.topic.showOriginal": "显示原始主题",
+  "translate.topic.showTranslation": "显示翻译后的话题",
   "translate.unchangedReason": "该行返回未更改",
   "translation.panel.languages": "语言：{channel}",
   "translation.panel.remove": "移除{language}",
@@ -989,6 +991,12 @@
   "userlist.count": {
     "other": "{count} 个用户"
   },
+  "userlist.mode.admins": "管理员",
+  "userlist.mode.halfOperators": "半操作员",
+  "userlist.mode.operators": "操作员",
+  "userlist.mode.owners": "所有者",
+  "userlist.mode.users": "用户",
+  "userlist.mode.voiced": "有发言权",
   "userlist.searchLabel": "在用户列表中搜索",
   "userlist.title": "{name} 的用户列表",
   "whois.actualHost": "实际主机：",

@@ -952,6 +952,8 @@
   "translate.strip.sendAsWritten": "送る",
   "translate.strip.sendTranslation": "翻訳を送ってください",
   "translate.strip.sourceAuto": "アウト",
+  "translate.topic.showOriginal": "原始的なトピックを示してください",
+  "translate.topic.showTranslation": "翻訳されたトピックを示してください",
   "translate.unchangedReason": "その行は変わりませんでした",
   "translation.panel.languages": "言語: {channel}",
   "translation.panel.remove": "{language} を削除",
@@ -987,6 +989,12 @@
   "userlist.count": {
     "other": "{count} 人"
   },
+  "userlist.mode.admins": "管理者",
+  "userlist.mode.halfOperators": "半オペレーター",
+  "userlist.mode.operators": "オペレーター",
+  "userlist.mode.owners": "所有者",
+  "userlist.mode.users": "ユーザー",
+  "userlist.mode.voiced": "発言権あり",
   "userlist.searchLabel": "ユーザー一覧から検索",
   "userlist.title": "{name} のユーザー一覧",
   "whois.actualHost": "実際のホスト:",

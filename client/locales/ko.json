@@ -946,6 +946,8 @@
   "translate.strip.sendAsWritten": "그대로 보내세요",
   "translate.strip.sendTranslation": "번역을 보내세요",
   "translate.strip.sourceAuto": "자동",
+  "translate.topic.showOriginal": "원래 주제를 보여주세요",
+  "translate.topic.showTranslation": "번역된 주제를 보여주세요",
   "translate.unchangedReason": "줄이 변하지 않았습니다",
   "translation.panel.languages": "언어: {channel}",
   "translation.panel.remove": "{language} 제거",
@@ -981,6 +983,12 @@
   "userlist.count": {
     "other": "{count} 사용자"
   },
+  "userlist.mode.admins": "관리자",
+  "userlist.mode.halfOperators": "반 관리자",
+  "userlist.mode.operators": "운영자",
+  "userlist.mode.owners": "소유자",
+  "userlist.mode.users": "사용자",
+  "userlist.mode.voiced": "구두로",
   "userlist.searchLabel": "사용자 목록에서 검색",
   "userlist.title": "{name} 사용자 목록",
   "whois.actualHost": "실제 호스트:",

@@ -954,6 +954,8 @@
   "translate.strip.sendAsWritten": "ส่งเหมือนเดิม",
   "translate.strip.sendTranslation": "ส่งการแปล",
   "translate.strip.sourceAuto": "อัตโนมัติ",
+  "translate.topic.showOriginal": "แสดงหัวข้อเดิม",
+  "translate.topic.showTranslation": "แสดงหัวข้อที่แปล",
   "translate.unchangedReason": "บรรทัดกลับมาไม่เปลี่ยน",
   "translation.panel.languages": "ภาษา: {channel}",
   "translation.panel.remove": "ลบ {language}",
@@ -989,6 +991,12 @@
   "userlist.count": {
     "other": "{count} ผู้ใช้"
   },
+  "userlist.mode.admins": "ผู้ดูแลระบบ",
+  "userlist.mode.halfOperators": "ผู้ดำเนินการครึ่งทาง",
+  "userlist.mode.operators": "ผู้ดำเนินการ",
+  "userlist.mode.owners": "ผู้เป็นเจ้าของ",
+  "userlist.mode.users": "ผู้ใช้",
+  "userlist.mode.voiced": "ที่พูดเสียง",
   "userlist.searchLabel": "ค้นหาในรายการผู้ใช้",
   "userlist.title": "รายการผู้ใช้สำหรับ {name}",
   "whois.actualHost": "โฮสต์จริง:",

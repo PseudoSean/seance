@@ -5639,6 +5639,18 @@ msgctxt "translate.strip.sourceAuto"
 msgid "auto"
 msgstr ""
 
+#. Tooltip and aria-label of the small button before a translated channel topic in the chat header; pressing it shows the topic as it was set.
+#: client/components/Chat.vue
+msgctxt "translate.topic.showOriginal"
+msgid "Show the original topic"
+msgstr "Ipakita ang orihinal na tema"
+
+#. Tooltip and aria-label of the small button before a channel topic in the chat header while the original is showing; pressing it shows the translation again.
+#: client/components/Chat.vue
+msgctxt "translate.topic.showTranslation"
+msgid "Show the translated topic"
+msgstr "Ipakita ang napakalat na tema"
+
 #. Failure reason shown inside the Not-translated chip in development builds only: the model returned the source line as its own translation, so there is nothing to show. Lowercase; it reads as the reason the chip stands for.
 #: client/components/TranslationLine.vue
 msgctxt "translate.unchangedReason"
@@ -5828,6 +5840,42 @@ msgid "{count} user"
 msgid_plural "{count} users"
 msgstr[0] ""
 msgstr[1] "mga user na {count}"
+
+#. Heading of the channel administrators group in the user list (channel mode +a, the & prefix).
+#: client/components/ChatUserList.vue
+msgctxt "userlist.mode.admins"
+msgid "Administrators"
+msgstr "Mga Administrator"
+
+#. Heading of the half-operators group in the user list (channel mode +h, the % prefix).
+#: client/components/ChatUserList.vue
+msgctxt "userlist.mode.halfOperators"
+msgid "Half-Operators"
+msgstr "Mga Half-Operator"
+
+#. Heading of the channel operators group in the user list (channel mode +o, the @ prefix).
+#: client/components/ChatUserList.vue
+msgctxt "userlist.mode.operators"
+msgid "Operators"
+msgstr "Mga operator"
+
+#. Heading of the channel owners group in the user list (channel mode +q, the ~ prefix).
+#: client/components/ChatUserList.vue
+msgctxt "userlist.mode.owners"
+msgid "Owners"
+msgstr "Mga propesyador"
+
+#. Heading of the group of users without a channel mode in the user list.
+#: client/components/ChatUserList.vue
+msgctxt "userlist.mode.users"
+msgid "Users"
+msgstr "Mga user"
+
+#. Heading of the voiced users group in the user list (channel mode +v, the + prefix): users allowed to speak in a moderated channel.
+#: client/components/ChatUserList.vue
+msgctxt "userlist.mode.voiced"
+msgid "Voiced"
+msgstr "Nagsasalita"
 
 #. Visually hidden but screen-reader-spoken label of the search field at the top of the channel member panel, used to filter the member list by name.
 #: client/components/ChatUserList.vue:17

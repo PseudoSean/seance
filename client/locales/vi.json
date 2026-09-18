@@ -947,6 +947,8 @@
   "translate.strip.sendAsWritten": "Gửi nguyên văn",
   "translate.strip.sendTranslation": "Gửi bản dịch",
   "translate.strip.sourceAuto": "tự động",
+  "translate.topic.showOriginal": "Hiển thị chủ đề gốc",
+  "translate.topic.showTranslation": "Hiển thị chủ đề được dịch",
   "translate.unchangedReason": "Dòng lệnh trở lại không thay đổi",
   "translation.panel.languages": "Ngôn ngữ: {channel}",
   "translation.panel.remove": "Loại bỏ {language}",
@@ -982,6 +984,12 @@
   "userlist.count": {
     "other": "{count} người dùng"
   },
+  "userlist.mode.admins": "Quan lý",
+  "userlist.mode.halfOperators": "Người điều hành nửa",
+  "userlist.mode.operators": "Người điều khiển",
+  "userlist.mode.owners": "Chủ sở hữu",
+  "userlist.mode.users": "Người dùng",
+  "userlist.mode.voiced": "Nhạc nói",
   "userlist.searchLabel": "Tìm kiếm trong danh sách người dùng",
   "userlist.title": "Danh sách người dùng cho {name}",
   "whois.actualHost": "Chủ thực tế:",
