@@ -363,7 +363,7 @@ msgstr "사용법: /{cmd} <msgid> [reason]"
 #: client/js/irc/commands/ctcp.ts
 msgctxt "cmd.usageVer"
 msgid "Usage: /ver <nick>"
-msgstr ""
+msgstr "사용법: /ver <nick>"
 
 #. Button under a long code block in a chat message that shows only its first lines; clicking reveals every line. {count} is the number of lines of code. The singular shows with exactly one line, the plural otherwise.
 #: client/components/CodeBlock.vue
@@ -1803,19 +1803,19 @@ msgstr "을 참조하십시오."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.verA"
 msgid "Ask a user which client they run: a"
-msgstr ""
+msgstr "사용자에게 어떤 클라이언트를 사용하고 있는지 물어보세요: a"
 
 #. Middle of the /ver command description in the help window: follows the CTCP abbreviation, and the literal command '/ctcp nick version' follows it. Ends mid-sentence.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.verB"
 msgid "VERSION request, the same as"
-msgstr ""
+msgstr "버전 요청, 동일하게"
 
 #. Last sentence of the /ver command description in the help window; a whole sentence on its own.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.verC"
 msgid "The answer shows where you asked."
-msgstr ""
+msgstr "답변은 어디서 물어보셨는지 보여줍니다."
 
 #. Start of the /voice command description in the help window; a code fragment with the +v mode follows it. The parenthesis is part of the copy. Ends mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2905,7 +2905,7 @@ msgstr "코드 복사"
 #: client/components/MessageActions.vue
 msgctxt "message.copyText"
 msgid "Copy text"
-msgstr ""
+msgstr "텍스트 복사"
 
 #. Label of the confirmation button in the dialog shown before a chat message is deleted.
 #: client/components/MessageActions.vue:54
@@ -4950,19 +4950,19 @@ msgstr "{nick}이 채널을 떠났습니다"
 #: client/js/irc/authtoken.ts
 msgctxt "token.disconnected"
 msgid "Disconnected"
-msgstr ""
+msgstr "연결 해제"
 
 #. Reason given when the server answered a TOKEN GENERATE request with a FAIL that carried no text; shown inside the upload error notice. {code} is the server's error code, verbatim.
 #: client/js/irc/authtoken.ts
 msgctxt "token.failed"
 msgid "Token request failed ({code})"
-msgstr ""
+msgstr "토큰 요청 실패 ({code})"
 
 #. Reason given when a TOKEN GENERATE request (an upload token from the network's own file host) got no answer in time; shown inside the upload error notice.
 #: client/js/irc/authtoken.ts
 msgctxt "token.timeout"
 msgid "The server did not answer the token request"
-msgstr ""
+msgstr "서버가 토큰 요청에 답하지 않았습니다."
 
 #. Tooltip and aria-label of the translate button in a message's hover toolbar when the message's translation was hidden; it brings it back.
 #: client/components/MessageActions.vue
@@ -5784,7 +5784,7 @@ msgstr "그대로 전송됩니다"
 #: client/js/upload.ts
 msgctxt "upload.refused"
 msgid "Upload refused by the network: {reason}"
-msgstr ""
+msgstr "네트워크가 거부한 업로드: {reason}"
 
 #. aria-label of the ✕ button on a file in the upload confirmation dialog; clicking removes that file from the upload. {name} is the file's name.
 #: client/components/UploadPreview.vue
