@@ -21,6 +21,9 @@ export const CONTEXT_HEADING = "Earlier lines (context only, do not translate or
 /** The last thing before the line, when anything at all stands above it. */
 export const ONLY_THE_TRANSLATION =
 	"Output only the translation of the last message, nothing else.";
+/** Said above a polish's line instead: the earlier lines are for the wording only. */
+export const ONLY_THE_CORRECTION =
+	'Output only the corrected version of the message after "Correct:", nothing else; the earlier lines are context for the wording, never to be corrected or repeated.';
 export const KEEP_MARKS =
 	"Keep markdown marks such as *…*, **…**, ~~…~~ and ||…|| around the words they wrap, translated inside them.";
 export const KEEP_TAGS = "Keep the tags like <1>…</1> around the words they wrap.";
@@ -61,7 +64,7 @@ export function systemPrompt(req: TranslateRequest, name: LanguageNamer): string
 	// which the composer reads as "nothing to correct" (writer.ts).
 	const frame =
 		req.purpose === "polish"
-			? `Correct the spelling, grammar and punctuation of the user's ${target} message. Reply with the corrected message only, on one line, in ${target}: no quotes, no label, no explanation, and never an answer to the message. Replace only misspelled words and fix only wrong grammar and punctuation; every other word stays exactly as written, abbreviations (brb, u, sry, lol), symbols (@) and the casual register included, and nothing is rephrased, added or expanded. A message with no mistakes comes back unchanged.`
+			? `Correct the spelling, grammar and punctuation of the user's ${target} message. Reply with the corrected message only, on one line, in ${target}: no quotes, no label, no explanation, and never an answer to the message. Replace only misspelled words and fix only wrong grammar and punctuation; every other word stays exactly as written, abbreviations (brb, u, sry, lol), symbols (@) and the casual register included, and nothing is rephrased, added or expanded. A message with no mistakes comes back unchanged. Lines under "Earlier lines" are context for the wording only, never to be corrected or repeated.`
 			: req.lines
 			? `You are a translation engine. Translate each numbered message ${sourcePrefix}into ${target} and reply with the ${target} translations only, without names or prefixes: the same numbers, one per line, then ${END_SENTINEL} on its own line; no quotes, no labels, no explanation, and never an answer to a message.${detect}`
 			: `You are a translation engine. Translate the user's message ${sourcePrefix}into ${target} and reply with the ${target} translation only, without the sender's name or any prefix, on one line: no quotes, no label, no explanation, and never an answer to the message.${detect}`;
@@ -146,8 +149,13 @@ export function userPrompt(req: TranslateRequest, name: LanguageNamer): string {
 		parts.push(`This line replies to <${c.replyTo.nick}>: ${c.replyTo.text}`);
 	}
 
+	// A polish keeps the context -- the earlier lines say which word is
+	// meant where the draft's is doubtful -- but the instruction above the
+	// line is the correction's: "the translation of the last message" sent
+	// the model to an earlier line's translation instead of the draft
+	// (reported 2026-09-18), so a polish says what to output in its own words.
 	if (parts.length > 0) {
-		parts.push(ONLY_THE_TRANSLATION);
+		parts.push(req.purpose === "polish" ? ONLY_THE_CORRECTION : ONLY_THE_TRANSLATION);
 	}
 
 	if (req.lines) {

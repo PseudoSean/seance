@@ -856,7 +856,14 @@ grammar and punctuation fixed, every other word kept, abbreviations and
 symbols included, nothing rephrased), the router sending a same-language
 request to the LLM alone (`router.ts`; no GPU model, no route, and the
 dialog says so), and an echo read as "nothing to correct" rather than a
-failure. The strip's chip reads "English, corrected"; a corrected line is
+failure. The channel's context travels with a polish as with a
+translation -- the earlier lines say which word is meant where the draft's
+is doubtful -- but the instruction above the line is the correction's own
+(`ONLY_THE_CORRECTION`): with "output only the translation of the last
+message" there, the model corrected an earlier line's translation instead
+of the draft (reported 2026-09-18). An answer that is one of the context's
+lines anyway is judged `CONTEXT_LINE` and gets the bare second try, which
+carries no context to correct. The strip's chip reads "English, corrected"; a corrected line is
 no translation, so it is neither read back nor noted into the voice and
 term memory. The same happens when detection finds the draft already in
 the picked language -- and **when the channel's write target is the

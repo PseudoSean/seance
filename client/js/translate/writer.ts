@@ -23,7 +23,7 @@ import {buildContext} from "./context";
 import {type Detection, detectLanguage} from "./detect";
 import {plainTextOf} from "./eligibility";
 import {namesFor} from "./names";
-import {type EngineName, type PromptContext} from "./engine";
+import {type EngineName, type PromptContext, emptyContext} from "./engine";
 import {translateService} from "./index";
 import {
 	ABORTED,
@@ -45,6 +45,8 @@ import {
 	writeSource,
 	UNCHANGED,
 	stripPolishLabel,
+	CONTEXT_LINE,
+	isContextLine,
 } from "./outgoing";
 import {
 	channelTranslation,
@@ -473,9 +475,15 @@ export async function translateOutgoing(
 			let error = answerError(draft, text, to);
 
 			// A polish handed back as it was had nothing to correct: the
-			// strip shows the line, and Enter sends it.
+			// strip shows the line, and Enter sends it. One that came back
+			// as an earlier line of the channel (or its translation) had the
+			// context corrected instead of the draft: judged like a
+			// narration, and the bare retry, which carries no context, has
+			// only the draft to correct.
 			if (polish && error === UNCHANGED) {
 				error = null;
+			} else if (polish && error === null && isContextLine(text, request.context)) {
+				error = CONTEXT_LINE;
 			}
 
 			// An echo gets one more try, and a bare one: the same draft with
