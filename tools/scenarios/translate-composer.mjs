@@ -503,6 +503,13 @@ export default async function run(page) {
 	await page.waitFor(`!!document.querySelector(${JSON.stringify(ONCE_SELECT)})`, {
 		label: "the dialog for the cleanup",
 	});
+	// The channel's last one-off, not the interface's language: a
+	// remembered pick still outranks the default (`lastOnceTarget`).
+	await page.check(
+		"the dialog remembers Spanish, the one-off picked before it",
+		(await page.evaluate(`document.querySelector(${JSON.stringify(ONCE_SELECT)}).value`)) ===
+			"es"
+	);
 	await page.check(
 		"the dialog's source starts as the language the page reads",
 		(await page.evaluate(`document.querySelector(${JSON.stringify(ONCE_FROM)}).value`)) === "en"

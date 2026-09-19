@@ -640,10 +640,21 @@ async function scenario(page) {
 		`[...document.querySelectorAll('select[name="translateFrom"] option')].map((o) => o.textContent.trim())`
 	);
 
+	// In the interface's language, not in the language's own: an English
+	// interface offers "German" (SourceLanguagePicker.vue name()).
+	const fromExpected = await page.evaluate(
+		`(() => {
+			const names = new Intl.DisplayNames([document.documentElement.lang || "en"], {
+				type: "language",
+			});
+			return names.of("de");
+		})()`
+	);
+
 	await page.check(
-		`the picker names each language in itself (${fromLabels.length} options)`,
-		fromLabels.includes("Deutsch") &&
-			!fromLabels.includes("German") &&
+		`the picker names each language in the interface's (${fromLabels.length} options)`,
+		fromLabels.includes(fromExpected) &&
+			!fromLabels.includes("Deutsch") &&
 			fromLabels.every((label) => !/^[a-z]{2}$/i.test(label))
 	);
 	await page.screenshot("source-language-picker");
