@@ -5102,19 +5102,19 @@ msgstr "Napisz do {name} · wysłano poprawione"
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.sendCorrectedOn"
 msgid "Sending corrected in {language} · click to stop"
-msgstr ""
+msgstr "Wyślij poprawiony w {language} · kliknij by zatrzymać"
 
 #. Tooltip and aria-label of the composer's translate button (the language mark beside the attachment and send buttons) while no send target is set; a click opens a dialog to pick the language every message is sent in, or a correction pass. Ends with an ellipsis.
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.sendOff"
 msgid "Translate what I send…"
-msgstr ""
+msgstr "Przetłumacz to, co wysyłam…"
 
 #. Tooltip and aria-label of the composer's translate button while the channel sends every message translated into {language} (a language name in the interface language); a click turns that off. The middle dot is part of the copy.
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.sendOn"
 msgid "Sending in {language} · click to stop"
-msgstr ""
+msgstr "Wysyłanie {language} · kliknij by zatrzymać"
 
 #. Why a translation failed, shown after 'Couldn't translate': the request was cancelled before it finished. Lowercase: it follows a colon or a dash.
 #: client/js/helpers/translateErrors.ts
@@ -5545,7 +5545,7 @@ msgstr "Przetłumacz na"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.thisMessageOnly"
 msgid "This message only"
-msgstr ""
+msgstr "Tego wiadomości tylko"
 
 #. Failure reason after 'Couldn't translate': the model replied to a question it found in the message rather than translating the message. Lowercase; reads as the tail of that sentence.
 #: client/components/TranslationLine.vue

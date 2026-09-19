@@ -5156,13 +5156,13 @@ msgstr ""
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.sendOff"
 msgid "Translate what I send…"
-msgstr ""
+msgstr "أقوم بترجمة ما أرسله..."
 
 #. Tooltip and aria-label of the composer's translate button while the channel sends every message translated into {language} (a language name in the interface language); a click turns that off. The middle dot is part of the copy.
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.sendOn"
 msgid "Sending in {language} · click to stop"
-msgstr ""
+msgstr "إرسال {language} · اضغط للإيقاف"
 
 #. Why a translation failed, shown after 'Couldn't translate': the request was cancelled before it finished. Lowercase: it follows a colon or a dash.
 #: client/js/helpers/translateErrors.ts
@@ -5593,7 +5593,7 @@ msgstr "اترجم إلى"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.thisMessageOnly"
 msgid "This message only"
-msgstr ""
+msgstr "هذا الرسالة فقط"
 
 #. Failure reason after 'Couldn't translate': the model replied to a question it found in the message rather than translating the message. Lowercase; reads as the tail of that sentence.
 #: client/components/TranslationLine.vue
