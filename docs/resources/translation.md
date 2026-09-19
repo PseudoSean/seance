@@ -851,9 +851,10 @@ as the write target has it. **The same language twice is a cleanup**: a
 draft already in the language it is asked into is not sent as typed the
 way a write target would (the user asked for something) but corrected in
 place -- `purpose: "polish"`, the LLM as a copy editor with a wording
-measured on the 4B weights (`prompt.ts`, `prompts/qwen3-4b.ts`: spelling,
-grammar and punctuation fixed, every other word kept, abbreviations and
-symbols included, nothing rephrased), the router sending a same-language
+measured on the 4B weights (`prompt.ts`, `prompts/qwen3-4b.ts`:
+misspellings, grammar, punctuation **and a word that is the wrong word
+though it is spelled correctly** fixed, every other word kept,
+abbreviations and symbols included, nothing rephrased), the router sending a same-language
 request to the LLM alone (`router.ts`; no GPU model, no route, and the
 dialog says so), and an echo read as "nothing to correct" rather than a
 failure. **A polish carries none of the channel**: its prompt is the
@@ -879,7 +880,30 @@ corrections and saved no jargon the bare shape had lost ("nefarious2",
 what stops a correction, and a polish goes up alone. The wording that
 ships was measured as it ships: the frame's last clause, which named the
 earlier lines a polish no longer sends, went with them and the lines were
-run again. The strip's chip reads "English, corrected"; a corrected line is
+run again.
+
+**What the frame names is what gets fixed.** Measured over ten lines whose
+only faults are confusable words (2026-09-19,
+`tmp/experiments/polish-grammar.ts`), with three casual lines that were
+already right as controls: "Correct the user's message" with the no-rewrite
+guard and nothing else fixed **0** of the ten -- the guard smothers it --
+the first shipped wording, "Replace only misspelled words and fix only
+wrong grammar and punctuation", **4**, since it reads as a bar against
+touching a word that is spelled right, which `your` for `you're` is; and
+naming that case -- "words that are the wrong word for the sentence even
+though they are spelled correctly, such as a word confused with another
+that sounds the same" -- **7**: `your going` into `you're going`,
+`its to late` into `it's too late`, `dosnt effect` into `doesn't affect`,
+`should of` into `should have`, `loose … alot` into `lose … a lot`. Three
+lines still beat it: a sentence whose every word is the wrong one
+(`there going to they're house over their`), `who's`/`whose`, and
+`effect`/`affect` where the spelling is wrong as well. The controls came
+back untouched under every wording. **No list of pairs**: a list of English
+confusables scored _below_ the plain sentence and would be dead weight in a
+German channel, while the sentence alone corrects `das es` into `dass es`,
+`ihr seit` into `ihr seid` and `je suis aller a` into `je suis allé à`.
+
+The strip's chip reads "English, corrected"; a corrected line is
 no translation, so it is neither read back nor noted into the voice and
 term memory. The same happens when detection finds the draft already in
 the picked language -- and **when the channel's write target is the

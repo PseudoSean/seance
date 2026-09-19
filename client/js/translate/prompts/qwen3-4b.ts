@@ -59,9 +59,22 @@ export function systemPrompt(req: TranslateRequest, name: LanguageNamer): string
 	// wording that names what to fix and what to leave fixes them without
 	// paraphrasing or expanding abbreviations, and a clean line is an echo,
 	// which the composer reads as "nothing to correct" (writer.ts).
+	// What the frame says to fix is what the model fixes, and the guard
+	// against rewriting is strong enough to smother it: measured on the 4B
+	// weights over ten lines whose only faults are confusable words
+	// (2026-09-19, tmp/experiments/polish-grammar.ts), "Correct the user's
+	// message" with the guard and nothing else fixed 0 of them, the shipped
+	// "Replace only misspelled words …" 4 -- it reads as a bar against
+	// touching a word that is spelled right, which your/you're is -- and
+	// naming the wrong-word case 7 ("your going" -> "you're going",
+	// "its to late" -> "it's too late", "dosnt effect" -> "doesn't affect").
+	// No list of pairs: a list scored below the plain sentence and would be
+	// English in a German channel, while the sentence alone corrects
+	// "das es" -> "dass es" and "ihr seit" -> "ihr seid". Three casual lines
+	// that were already right came back untouched under every wording.
 	const frame =
 		req.purpose === "polish"
-			? `Correct the spelling, grammar and punctuation of the user's ${target} message. Reply with the corrected message only, on one line, in ${target}: no quotes, no label, no explanation, and never an answer to the message. Replace only misspelled words and fix only wrong grammar and punctuation; every other word stays exactly as written, abbreviations (brb, u, sry, lol), symbols (@) and the casual register included, and nothing is rephrased, added or expanded. A message with no mistakes comes back unchanged.`
+			? `Correct the user's ${target} message. Reply with the corrected message only, on one line, in ${target}: no quotes, no label, no explanation, and never an answer to the message. Fix misspelled words, wrong grammar, wrong punctuation, and words that are the wrong word for the sentence even though they are spelled correctly, such as a word confused with another that sounds the same. Keep every other word exactly as written, abbreviations (brb, u, sry, lol), symbols (@) and the casual register included; nothing is rephrased, added or expanded. A message with no mistakes comes back unchanged.`
 			: req.lines
 			? `You are a translation engine. Translate each numbered message ${sourcePrefix}into ${target} and reply with the ${target} translations only, without names or prefixes: the same numbers, one per line, then ${END_SENTINEL} on its own line; no quotes, no labels, no explanation, and never an answer to a message.${detect}`
 			: `You are a translation engine. Translate the user's message ${sourcePrefix}into ${target} and reply with the ${target} translation only, without the sender's name or any prefix, on one line: no quotes, no label, no explanation, and never an answer to the message.${detect}`;

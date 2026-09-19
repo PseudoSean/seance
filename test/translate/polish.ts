@@ -54,7 +54,9 @@ describe("translate/polish", () => {
 		it(`${label}: the system prompt is the copy editor's, not the engine's`, () => {
 			const text = system(polish("corected text being sent hear"), name);
 
-			expect(text).to.include("Correct the spelling, grammar and punctuation");
+			expect(text).to.include("Correct the user's English message");
+			// The clause that makes it fix a word that is spelled right.
+			expect(text).to.include("the wrong word for the sentence");
 			expect(text).to.include("comes back unchanged");
 			expect(text).to.not.include("translation engine");
 			// The sentence about the data block and the earlier lines stays
