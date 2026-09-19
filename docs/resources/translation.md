@@ -645,10 +645,15 @@ languages a channel speaks. It offers only what the channel has not
 declared yet. On the sheet its hint reads "Lines in these languages are
 recognised even when they are short or look alike."
 
-Every language picker's options -- here and in Settings -> Translation --
-show the endonym alone (`Deutsch`, `Français`, `日本語`), from
-`languageOptionLabel()` (`Intl.DisplayNames` in the language's own locale),
-falling back to the bundled English table.
+A language a translation is _about_ is named in the language the interface
+is in: the panel's lists, the composer's translate-into dialog and the
+chip menu's retranslate-from dialog all call `languageName(code, readingLanguage())` (`Intl.DisplayNames` in the reading language, the
+bundled English table behind it), so an English interface offers "French"
+and not "Français". The one list that keeps the endonym is the interface's
+own language selector (`LanguageSelect.vue` -- Settings -> Appearance, the
+Settings -> Translation override and the sidebar globe, `languageEndonym()`):
+someone looking for a language to read the app in is looking for its own
+name.
 
 **Every surface here speaks the interface's language.** There is no English
 literal left in the feature: the panel, Settings -> Translation, the chips,
@@ -845,7 +850,9 @@ the panel's target moving; the strip comes up as it does for a write
 target and the next Enter sends what it holds. The dialog preselects the
 channel's last one-off language, else its write target (`lastOnceTarget`;
 the last pick is kept with the channel's record, `channelStore.ts` `once`,
-so it survives a reload and travels in the settings backup). The dialog also asks what to translate **from**,
+so it survives a reload and travels in the settings backup), and, with
+neither, **the language the interface is in** -- what the user reads and
+writes, rather than whatever the list happens to sort first. The dialog also asks what to translate **from**,
 preselected to the language the user reads, with "Detect automatically"
 as the write target has it. **The same language twice is a cleanup**: a
 draft already in the language it is asked into is not sent as typed the
@@ -857,7 +864,12 @@ though it is spelled correctly** fixed, every other word kept,
 abbreviations and symbols included, nothing rephrased), the router sending a same-language
 request to the LLM alone (`router.ts`; no GPU model, no route, and the
 dialog says so), and an echo read as "nothing to correct" rather than a
-failure. **A polish carries none of the channel**: its prompt is the
+failure. The dialog says what it will do rather than what it is: with the
+source and the target the same, its confirm button reads **Correct**, not
+Translate -- and it is disabled where the cleanup cannot run at all (no
+GPU model, the hint under the selects saying why), which is the state a
+freshly opened dialog is in on a CPU-only device, both languages having
+defaulted to the interface's. **A polish carries none of the channel**: its prompt is the
 copy editor's system message and `Correct: <line>`, nothing above it, and
 `writer.ts` gives the request an empty context but for the register.
 Measured on the web build's 4B weights (2026-09-19,

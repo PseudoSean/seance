@@ -5497,6 +5497,12 @@ msgctxt "translate.picker.targetConfirm"
 msgid "Translate"
 msgstr "번역하세요"
 
+#. Button of the composer's translate dialog when the source and the target are the same language: the draft is corrected in that language rather than translated. Imperative verb ('correct this draft'), not the adjective.
+#: client/components/SourceLanguagePicker.vue
+msgctxt "translate.picker.targetConfirmCorrect"
+msgid "Correct"
+msgstr ""
+
 #. aria-label of the small dialog the composer's translate button opens: pick the language the draft is translated into, this once.
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetDialog"

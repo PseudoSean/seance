@@ -61,6 +61,7 @@
 				<button
 					type="button"
 					class="btn btn-sm source-language-picker-confirm"
+					:disabled="sameLanguage && !polishAvailable"
 					@click="confirm"
 				>
 					{{ confirmLabel }}
@@ -75,7 +76,8 @@ import {computed, defineComponent, nextTick, onBeforeUnmount, onMounted, PropTyp
 import {hasVirtualKeyboard} from "../js/helpers/device";
 import {useI18n} from "../js/i18n";
 import {collator} from "../js/i18n/collation";
-import {SUPPORTED_LANGUAGES, languageOptionLabel} from "../js/translate/languages";
+import {SUPPORTED_LANGUAGES, languageName} from "../js/translate/languages";
+import {readingLanguage} from "../js/translate/reader";
 
 /** Gap between the chip and the popover, and the margin it keeps off screen edges. */
 const GAP = 6;
@@ -110,9 +112,10 @@ export default defineComponent({
 		const {t} = useI18n();
 		const root = ref<HTMLDivElement | null>(null);
 		const select = ref<HTMLSelectElement | null>(null);
-		const name = (code: string) => languageOptionLabel(code);
-		// Every language, named in itself and sorted by that name: the reader
-		// is looking for the word they would write, not its English name.
+		const name = (code: string) => languageName(code, readingLanguage());
+		// Every language, named in the language the interface is in -- not in
+		// itself: a reader who set the app to English is looking for "French",
+		// not "Français" (TranslationPanel.vue names them the same way).
 		// Names and order both follow the active locale (i18n/collation.ts).
 		const languages = computed(() =>
 			[...SUPPORTED_LANGUAGES].sort((a, b) => collator().compare(name(a), name(b)))
@@ -127,11 +130,6 @@ export default defineComponent({
 				? t("translate.picker.targetLabel")
 				: t("translate.picker.label")
 		);
-		const confirmLabel = computed(() =>
-			props.purpose === "target"
-				? t("translate.picker.targetConfirm")
-				: t("translate.picker.confirm")
-		);
 		const choice = ref(props.selected || props.candidates[0] || languages.value[0]);
 		// The source of a one-off: the language the user reads, or "" for
 		// detection. Picking the same language twice asks for a cleanup.
@@ -141,6 +139,18 @@ export default defineComponent({
 		const sameLanguage = computed(
 			() => props.purpose === "target" && from.value !== "" && from.value === choice.value
 		);
+
+		// A target that is the source is a cleanup pass, not a translation:
+		// the button says what it will do (writer.ts, the strip's chip).
+		const confirmLabel = computed(() => {
+			if (props.purpose !== "target") {
+				return t("translate.picker.confirm");
+			}
+
+			return sameLanguage.value
+				? t("translate.picker.targetConfirmCorrect")
+				: t("translate.picker.targetConfirm");
+		});
 
 		const narrowQuery =
 			typeof window !== "undefined" && typeof window.matchMedia === "function"

@@ -953,6 +953,7 @@
   "translate.picker.sameLanguage": "Same language: spelling and grammar are corrected instead.",
   "translate.picker.sameLanguageNeedsGpu": "Correcting a message needs the GPU model, which is off or not available on this device.",
   "translate.picker.targetConfirm": "Translate",
+  "translate.picker.targetConfirmCorrect": "Correct",
   "translate.picker.targetDialog": "Translate this message into a language",
   "translate.picker.targetLabel": "Translate into",
   "translate.picker.thisMessageOnly": "This message only",

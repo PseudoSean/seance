@@ -3,8 +3,10 @@
 // #seance-translate (its own channel, not #seance, so these lines never
 // land in a tester's own context) over a raw WebSocket who hears what the
 // page actually sends.
-// Steps, in order: the panel sets the write target and the placeholder
-// says so; the first Enter puts an "English → German" strip above the input with
+// Steps, in order: the composer's translate dialog opens on the interface's
+// own language, names every language in it (not in itself) and says
+// "Correct" where the source and the target are the same; the panel sets
+// the write target and the placeholder says so; the first Enter puts an "English → German" strip above the input with
 // the fake's "[German] …" streaming in, Send disabled until it ends, the
 // draft still in the input, the request logged with purpose "write";
 // typing drops the strip; the check runs automatically once the
@@ -427,6 +429,29 @@ export default async function run(page) {
 	await page.waitFor(`!!document.querySelector(${JSON.stringify(ONCE_SELECT)})`, {
 		label: "the translate-into dialog",
 	});
+	// Nothing picked on this channel yet: the target starts as the language
+	// the interface is in, not as whatever sorts first in the list.
+	await page.check(
+		"the dialog starts on the interface's own language",
+		(await page.evaluate(`document.querySelector(${JSON.stringify(ONCE_SELECT)}).value`)) ===
+			"en"
+	);
+	await page.check(
+		"the dialog's languages are named in the interface language",
+		await page.evaluate(
+			`(() => {
+				const s = document.querySelector(${JSON.stringify(ONCE_SELECT)});
+				const text = (v) => s.querySelector('option[value="' + v + '"]').textContent.trim();
+				// Not the endonym: an English interface offers "French"
+				// (SourceLanguagePicker.vue name()).
+				const names = new Intl.DisplayNames(
+					[document.documentElement.lang || "en"],
+					{type: "language"}
+				);
+				return text("de") === names.of("de") && text("fr") === names.of("fr");
+			})()`
+		)
+	);
 	await page.evaluate(
 		`(() => { const s = document.querySelector(${JSON.stringify(
 			ONCE_SELECT
@@ -490,6 +515,14 @@ export default async function run(page) {
 	await page.waitFor(`!!document.querySelector(".source-language-picker-hint")`, {
 		label: "the same-language hint",
 	});
+	// The same language twice corrects rather than translates, and the
+	// button says which of the two it is.
+	await page.check(
+		"the confirm button says Correct for a same-language pick",
+		(await page.evaluate(
+			`document.querySelector(".source-language-picker-confirm").textContent.trim()`
+		)) === "Correct"
+	);
 	await page.click(".source-language-picker-once-box");
 	await page.click(".source-language-picker-confirm");
 	await page.waitFor(

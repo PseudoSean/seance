@@ -904,6 +904,7 @@ export const STATIC_CALL_SITES = new Set<string>([
 	"translate.picker.sameLanguage",
 	"translate.picker.sameLanguageNeedsGpu",
 	"translate.picker.targetConfirm",
+	"translate.picker.targetConfirmCorrect",
 	"translate.picker.targetDialog",
 	"translate.picker.targetLabel",
 	"translate.picker.thisMessageOnly",

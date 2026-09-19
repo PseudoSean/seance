@@ -6,7 +6,6 @@ import {
 	isSupported,
 	languageEndonym,
 	languageName,
-	languageOptionLabel,
 	nllbCode,
 } from "../../client/js/translate/languages";
 
@@ -61,12 +60,6 @@ describe("translate/languages", () => {
 	it("falls back without throwing for a made-up code", () => {
 		expect(() => languageEndonym("xx")).to.not.throw();
 		expect(languageEndonym("xx")).to.equal("xx");
-	});
-
-	it("the option label is the endonym alone", () => {
-		expect(languageOptionLabel("de")).to.equal("Deutsch");
-		expect(languageOptionLabel("fr")).to.equal("Français");
-		expect(languageOptionLabel("en")).to.equal("English");
 	});
 
 	it("isSupported is the list membership", () => {

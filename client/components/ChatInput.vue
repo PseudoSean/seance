@@ -1158,7 +1158,11 @@ export default defineComponent({
 				return;
 			}
 
-			translateOncePreselected.value = lastOnceTarget(props.network, props.channel);
+			// The channel's last pick, else the language the interface is in:
+			// a first pick starts from what the user reads and writes, not
+			// from whatever sorts first in the list.
+			translateOncePreselected.value =
+				lastOnceTarget(props.network, props.channel) || readingLanguage();
 			translateOncePickerOpen.value = !translateOncePickerOpen.value;
 		};
 
