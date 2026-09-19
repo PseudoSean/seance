@@ -474,15 +474,17 @@ export async function translateOutgoing(
 			// is not a translation either.
 			let error = answerError(draft, text, to);
 
-			// A polish handed back as it was had nothing to correct: the
-			// strip shows the line, and Enter sends it. One that came back
-			// as an earlier line of the channel (or its translation) had the
+			// A polish handed back as it was on the first try gets the bare
+			// second try like any echo: the bare shape (no context) is the one
+			// measured to fix misspellings (2026-09-18, tmp/experiments),
+			// and a line the model left alone with the channel around it
+			// ("corected text being sent hear", reported 2026-09-19) may
+			// still be corrected without it. One that came back as an
+			// earlier line of the channel (or its translation) had the
 			// context corrected instead of the draft: judged like a
-			// narration, and the bare retry, which carries no context, has
-			// only the draft to correct.
-			if (polish && error === UNCHANGED) {
-				error = null;
-			} else if (polish && error === null && isContextLine(text, request.context)) {
+			// narration, and the same bare retry has only the draft to
+			// correct.
+			if (polish && error === null && isContextLine(text, request.context)) {
 				error = CONTEXT_LINE;
 			}
 
@@ -515,6 +517,8 @@ export async function translateOutgoing(
 
 				error = answerError(draft, text, to);
 
+				// Echoed twice, bare as well: nothing to correct. The strip
+				// shows the line, and Enter sends it.
 				if (polish && error === UNCHANGED) {
 					error = null;
 				}

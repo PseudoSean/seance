@@ -856,7 +856,10 @@ grammar and punctuation fixed, every other word kept, abbreviations and
 symbols included, nothing rephrased), the router sending a same-language
 request to the LLM alone (`router.ts`; no GPU model, no route, and the
 dialog says so), and an echo read as "nothing to correct" rather than a
-failure. The channel's context travels with a polish as with a
+failure -- after the bare second try every echo gets: the bare shape is
+the one measured to fix misspellings, so a line the model left alone
+with the channel around it is asked once more without it, and only a
+line echoed twice is taken as clean. The channel's context travels with a polish as with a
 translation -- the earlier lines say which word is meant where the draft's
 is doubtful -- but the instruction above the line is the correction's own
 (`ONLY_THE_CORRECTION`): with "output only the translation of the last
