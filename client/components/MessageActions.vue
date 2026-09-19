@@ -43,10 +43,12 @@
 		/>
 		<button
 			v-if="canTranslate"
+			ref="translateButton"
 			type="button"
 			class="msg-action msg-action-translate"
 			:aria-label="translateLabel"
 			:title="translateLabel"
+			:aria-haspopup="hiddenTranslation ? undefined : 'menu'"
 			@click.stop="translate"
 		/>
 		<button
@@ -74,6 +76,13 @@
 			@pick="react"
 			@close="pickerOpen = false"
 		/>
+		<SourceLanguagePicker
+			v-if="sourcePickerOpen"
+			:anchor="translateButton"
+			:candidates="channelLanguages"
+			@pick="translateFrom"
+			@close="sourcePickerOpen = false"
+		/>
 	</span>
 </template>
 
@@ -87,12 +96,18 @@ import {useStore} from "../js/store";
 import {startEdit, startReply} from "../js/helpers/compose";
 import {myReactions} from "../js/helpers/messageUpdates";
 import {loadEmojiCatalog} from "../js/helpers/emoji";
-import {retranslate, showOriginal, translationAvailable} from "../js/translate/reader";
+import {
+	channelTranslation,
+	retranslate,
+	showOriginal,
+	translationAvailable,
+} from "../js/translate/reader";
 import {hasVirtualKeyboard} from "../js/helpers/device";
 import {ChanType} from "../../shared/types/chan";
 import {MessageType} from "../../shared/types/msg";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
 import ReactionPicker from "./ReactionPicker.vue";
+import SourceLanguagePicker from "./SourceLanguagePicker.vue";
 import {useI18n} from "../js/i18n";
 
 // How long the button says so after a copy that worked
@@ -100,7 +115,7 @@ const COPIED_MS = 1500;
 
 export default defineComponent({
 	name: "MessageActions",
-	components: {ReactionPicker},
+	components: {ReactionPicker, SourceLanguagePicker},
 	props: {
 		message: {type: Object as PropType<ClientMessage>, required: true},
 		channel: {type: Object as PropType<ClientChan>, required: true},
@@ -111,6 +126,8 @@ export default defineComponent({
 		const {t} = useI18n();
 		const pickerOpen = ref(false);
 		const reactButton = ref<HTMLButtonElement | null>(null);
+		const sourcePickerOpen = ref(false);
+		const translateButton = ref<HTMLButtonElement | null>(null);
 
 		// What we have already reacted with: the picker ticks these, and
 		// picking one again takes it back off (bus-contract §1.4 `remove`).
@@ -240,14 +257,67 @@ export default defineComponent({
 		const reply = () => startReply(props.channel, props.message);
 		const edit = () => startEdit(props.channel, props.message);
 
-		const translate = () => {
+		// Nothing has placed this line, so the dialog opens on what the
+		// channel is known to speak (the panel's declared languages) rather
+		// than on whatever sorts first; with none declared it opens on the
+		// list, as the chip's picker does for a line with no source.
+		const channelLanguages = computed(
+			() => channelTranslation(props.network, props.channel).languages
+		);
+
+		const translateFrom = (from?: string) =>
+			retranslate(props.network, props.channel, props.message, from);
+
+		/**
+		 * The action's menu: translate now, with the line's language left to
+		 * the detector, or name that language first. Nothing detected this
+		 * line yet -- that is what the action is for -- so the detector's
+		 * runners-up are not on offer the way the chip's menu has them
+		 * (`TranslationLine.vue`); after the translation the chip carries
+		 * them. A keyboard activation gives the menu no pointer to open at,
+		 * so it is anchored under the button, as the chip's is.
+		 */
+		const openMenu = (mouseEvent: MouseEvent) => {
+			const target = mouseEvent.currentTarget as HTMLElement | null;
+			const rect = target?.getBoundingClientRect();
+			const event = rect
+				? new MouseEvent("click", {
+						clientX: rect.left,
+						clientY: rect.bottom,
+						bubbles: false,
+				  })
+				: mouseEvent;
+
+			eventbus.emit("contextmenu:items", {
+				event,
+				items: [
+					{
+						label: t("translate.menu.translateNow"),
+						type: "item",
+						class: "translate-now",
+						action: () => translateFrom(),
+					},
+					{
+						label: t("translate.menu.translateFromPicker"),
+						type: "item",
+						class: "translate-from-pick",
+						action() {
+							sourcePickerOpen.value = true;
+						},
+					},
+				],
+			});
+		};
+
+		const translate = (event: MouseEvent) => {
 			if (hiddenTranslation.value) {
-				// Showing it again must not cost a new translation.
+				// Showing it again must not cost a new translation, and there
+				// is nothing to choose: no menu on this one.
 				showOriginal(props.message.id, false);
 				return;
 			}
 
-			retranslate(props.network, props.channel, props.message);
+			openMenu(event);
 		};
 
 		const react = (text: string) => {
@@ -295,12 +365,17 @@ export default defineComponent({
 			() => props.channel.id,
 			() => {
 				pickerOpen.value = false;
+				sourcePickerOpen.value = false;
 			}
 		);
 
 		return {
 			pickerOpen,
 			reactButton,
+			sourcePickerOpen,
+			translateButton,
+			channelLanguages,
+			hiddenTranslation,
 			mine,
 			canEdit,
 			canDelete,
@@ -318,6 +393,7 @@ export default defineComponent({
 			reply,
 			edit,
 			translate,
+			translateFrom,
 			translateLabel,
 			react,
 			preloadEmoji,

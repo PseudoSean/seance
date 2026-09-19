@@ -23,11 +23,11 @@
 // a five-line burst is translated and proved
 // batched (the in-page request log shows one multi-line LLM request, not
 // five singles, and every burst line's echo is rendered); the chip's menu
-// can hide a translation; the toolbar's Translate does one message on
-// request; the page's own German line is translated like anyone's; the
+// can hide a translation; the toolbar's Translate opens a menu that
+// translates one message on request or names its language first; the page's own German line is translated like anyone's; the
 // translation panel opens on the globe's context menu as one column of
-// controls of equal width, each language named in itself (the endonym,
-// never a code) and a link to Settings, and closes on Escape; a line the fake hands back
+// controls of equal width, each language named in the interface's
+// language (never a code) and a link to Settings, and closes on Escape; a line the fake hands back
 // unchanged (its `[echo]` token) fails with "the line came back unchanged"
 // and costs the engine nothing -- the next line is still translated; a
 // German question the fake answers
@@ -52,7 +52,9 @@
 // the rejoin's history too (the chip names it); and leaving the channel
 // with /part and joining it again keeps the
 // globe on and translates the history the rejoin loads, the page's own
-// line from before the part included.
+// line from before the part included; and, with the channel switched off
+// again at the end, the toolbar's Translate still translates one line ad
+// hoc from a language picked in its menu's dialog.
 // Detection is real (franc); only the engine is scripted.
 //
 // The speaker negotiates message-tags + echo-message so it learns the
@@ -1143,7 +1145,17 @@ async function scenario(page) {
 		await page.hover(`#${await page.evaluate(`${shortAskRow}.id`)}`);
 	}
 
+	// The action opens a menu: translate now, or name the line's language
+	// first. The mark's own menu still carries "Translate anyway".
 	await page.evaluate(`${shortAskRow}.querySelector(".msg-action-translate").click()`);
+	await page.waitFor(`!!document.querySelector(".context-menu-translate-now")`, {
+		label: "the toolbar's Translate opened its menu",
+	});
+	await page.check(
+		"the menu offers naming the line's language too",
+		(await page.count(".context-menu-translate-from-pick")) === 1
+	);
+	await page.click(".context-menu-translate-now");
 	await page.waitFor(`${LINES} === ${base + 7}`, {timeout: 15000, label: "translate on request"});
 	await page.screenshot("translated-burst");
 
@@ -1983,6 +1995,80 @@ async function scenario(page) {
 		`!document.querySelector(${JSON.stringify(GLOBE)}).classList.contains("on")`,
 		{label: "reading off again at the end"}
 	);
+
+	// Ad hoc, on a channel that is switched off: the toolbar's Translate is
+	// still there, its menu names the line's language, and the pick is the
+	// source the request goes out with. The target is the reading language,
+	// French by now.
+	const adhocMarker = `Einzelzeile${RUN}`;
+	const adhocLine = `Diese Zeile uebersetze ich von Hand, ${adhocMarker}, obwohl der Kanal aus ist.`;
+
+	other.say(adhocLine);
+	await page.waitFor(`!!(${newestRow(adhocMarker)})`, {label: "the ad-hoc line arrived"});
+
+	const adhocRow = newestRow(adhocMarker);
+	const adhocId = String(await page.evaluate(`(${adhocRow}).id`));
+
+	await page.evaluate(`(${adhocRow}).scrollIntoView({block: "center"})`);
+
+	if (MOBILE) {
+		await page.evaluate(`(${adhocRow}).click()`);
+	} else {
+		await page.hover(`#${adhocId}`);
+	}
+
+	await page.check(
+		"the switched-off channel still offers Translate on the line",
+		(await page.evaluate(`!!(${adhocRow}).querySelector(".msg-action-translate")`)) === true
+	);
+	await page.evaluate(`(${adhocRow}).querySelector(".msg-action-translate").click()`);
+	await page.waitFor(`!!document.querySelector(".context-menu-translate-from-pick")`, {
+		label: "the ad-hoc menu",
+	});
+	await page.click(".context-menu-translate-from-pick");
+	await page.waitFor(`!!document.querySelector(".source-language-picker")`, {
+		label: "the source picker opened from the toolbar",
+	});
+	await page.evaluate(
+		`(() => {
+			const s = document.querySelector('.source-language-picker select[name="translateFrom"]');
+			s.value = "de";
+			s.dispatchEvent(new Event("change", {bubbles: true}));
+		})()`
+	);
+	await page.click(".source-language-picker-confirm");
+	await page.waitFor(
+		`!!(${adhocRow}) && !!(${adhocRow}).querySelector('.msg-translation[data-status="done"]')`,
+		{timeout: 30000, label: "the ad-hoc translation arrived"}
+	);
+
+	const adhocChip = String(
+		await page.evaluate(
+			`((${adhocRow}).querySelector(".msg-translation-chip") || {}).textContent || ""`
+		)
+	).trim();
+
+	// Both ends named in the interface's language, French by now.
+	const germanInFrench = String(
+		await page.evaluate(`new Intl.DisplayNames(["fr"], {type: "language"}).of("de")`)
+	);
+
+	await page.check(
+		`the ad-hoc chip names the picked source and the reading language (${adhocChip})`,
+		adhocChip === `${germanInFrench} → ${frenchName}`
+	);
+
+	const adhocRequest = await page.evaluate(
+		`JSON.stringify((${REQUESTS}).filter((r) => (r.text || "").includes(${JSON.stringify(
+			adhocMarker
+		)})).pop() || null)`
+	);
+
+	await page.check(
+		`the request carried the picked source (${adhocRequest})`,
+		!!adhocRequest && JSON.parse(adhocRequest).from === "de"
+	);
+	await page.screenshot("adhoc-translate");
 
 	other.quit();
 	await page.check("no console errors", page.consoleErrors.length === 0);

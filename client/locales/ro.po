@@ -5301,6 +5301,18 @@ msgctxt "translate.menu.translateAnyway"
 msgid "Translate anyway"
 msgstr "Traduce oricum"
 
+#. Item of the menu the message toolbar's Translate action opens: pick the language this line is in before translating it. Ends in an ellipsis because a dialog follows.
+#: client/components/MessageActions.vue
+msgctxt "translate.menu.translateFromPicker"
+msgid "Translate from another language…"
+msgstr ""
+
+#. First item of the menu the message toolbar's Translate action opens: translate this one line, with its language left to the detector.
+#: client/components/MessageActions.vue
+msgctxt "translate.menu.translateNow"
+msgid "Translate"
+msgstr ""
+
 #. Button on a model row in Settings → Translation that removes the downloaded model from this device.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.delete"

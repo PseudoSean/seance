@@ -227,6 +227,23 @@ message on request in a channel that is off -- and brings a hidden
 translation back, at no cost, once the chip's "Show original only" has
 taken it away.
 
+**The toolbar's Translate asks before it guesses.** A line nobody asked
+about has not been detected, so an ad-hoc translation of it would be the
+detector's guess or nothing; the action therefore opens a menu
+(`MessageActions.vue` `openMenu`, the same `contextmenu:items` the chip's
+menu uses) of two items -- **Translate**, which is the guess
+(`retranslate` with no source), and **Translate from another language…**,
+which opens `SourceLanguagePicker.vue` in its `source` form anchored on
+the button and retranslates from the pick. The picker opens on the
+channel's declared languages (`channelStore.ts` `languages`, the panel's
+chips) rather than on whatever sorts first; the detector's runners-up are
+not on the menu, since nothing has run a detector on this line yet -- the
+chip that follows the translation carries them, and that is where a wrong
+guess is corrected. The one click that stays a click is the hidden
+translation's: "Show translation" has nothing to choose. The target is
+the reading language, here as everywhere; a line is read in the language
+the app is read in.
+
 **A pause is a minute off, not the end of reading.** Three failures in a
 row take an engine out of the rotation (`PAUSE_AFTER_FAILURES`), and
 `PAUSE_RESUME_MS` (60 s) later it resumes itself: the failure count goes

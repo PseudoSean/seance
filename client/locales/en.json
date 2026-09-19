@@ -915,6 +915,8 @@
   "translate.menu.retranslateFromPicker": "Retranslate from…",
   "translate.menu.showOriginal": "Show original only",
   "translate.menu.translateAnyway": "Translate anyway",
+  "translate.menu.translateFromPicker": "Translate from another language…",
+  "translate.menu.translateNow": "Translate",
   "translate.model.delete": "Delete",
   "translate.model.download": "Download",
   "translate.model.downloaded": "Downloaded",

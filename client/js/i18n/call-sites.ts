@@ -866,6 +866,8 @@ export const STATIC_CALL_SITES = new Set<string>([
 	"translate.menu.retranslateFromPicker",
 	"translate.menu.showOriginal",
 	"translate.menu.translateAnyway",
+	"translate.menu.translateFromPicker",
+	"translate.menu.translateNow",
 	"translate.model.delete",
 	"translate.model.download",
 	"translate.model.downloaded",
