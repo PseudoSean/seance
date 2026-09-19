@@ -867,13 +867,19 @@ terms **or** its earlier lines above the line, the model stopped
 correcting -- 4 of 5 lines handed back as written, the fifth with the
 `Correct:` label copied in front, and, reported 2026-09-18, one draft
 answered with an earlier line's translation instead; with nothing above
-it, 5 of 5 corrected, "corected text being sent hear" (reported
-2026-09-19) into "Corrected text being sent here", homophone included. A
+it, every line that carried a mistake was corrected and only "Thanks!"
+came back as it was, which is the right answer for it -- "corected text
+being sent hear" (reported 2026-09-19) into "Corrected text being sent
+here", the homophone included, and the channel's own jargon
+("nefarious2", "rig") left alone. A
 keep-list of the channel's jargon inside the system message, tried so
 that a polish might still help with a doubtful word, cost two of those
 corrections and saved no jargon the bare shape had lost ("nefarious2",
 "rig" survive either way). So the context that helps a translation is
-what stops a correction, and a polish goes up alone. The strip's chip reads "English, corrected"; a corrected line is
+what stops a correction, and a polish goes up alone. The wording that
+ships was measured as it ships: the frame's last clause, which named the
+earlier lines a polish no longer sends, went with them and the lines were
+run again. The strip's chip reads "English, corrected"; a corrected line is
 no translation, so it is neither read back nor noted into the voice and
 term memory. The same happens when detection finds the draft already in
 the picked language -- and **when the channel's write target is the
