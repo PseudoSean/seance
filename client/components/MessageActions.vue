@@ -1,7 +1,7 @@
 <template>
 	<span
 		class="msg-actions"
-		:class="{active: pickerOpen}"
+		:class="{active: pickerOpen || sourcePickerOpen}"
 		role="toolbar"
 		:aria-label="toolbarLabel"
 	>

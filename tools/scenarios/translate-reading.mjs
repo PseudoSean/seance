@@ -2036,6 +2036,16 @@ async function scenario(page) {
 			s.dispatchEvent(new Event("change", {bubbles: true}));
 		})()`
 	);
+	// The toolbar is `display: none` off hover, and the picker is positioned
+	// against the button's rect: a toolbar that went away while the pointer
+	// was in the dialog would leave the picker measuring zeros and jumping
+	// to the corner of the screen. It stays up while the picker is open.
+	await page.check(
+		"the toolbar stays up while its picker is open",
+		(await page.evaluate(
+			`getComputedStyle((${adhocRow}).querySelector(".msg-actions")).display`
+		)) !== "none"
+	);
 	await page.click(".source-language-picker-confirm");
 	await page.waitFor(
 		`!!(${adhocRow}) && !!(${adhocRow}).querySelector('.msg-translation[data-status="done"]')`,
