@@ -874,6 +874,7 @@
   "translate.chip.unsure": "Nyelv nem különbztet, nem fordítva. Fordítási opciók",
   "translate.composer.placeholder": "Írjon {name}-nek · elküldve {language}-ben",
   "translate.composer.placeholderCorrected": "írjon {name}-nek · helyesbített",
+  "translate.composer.sendCorrectedOn": "{language}-ben a javított küldés küldésre kerül · kattintva megakadályozható",
   "translate.composer.sendOff": "Fordítom, amit elküldök...",
   "translate.composer.sendOn": "{language} elküldése · kattintva megáll",
   "translate.error.aborted": "megszakítva",

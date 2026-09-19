@@ -5086,7 +5086,7 @@ msgstr "írjon {name}-nek · helyesbített"
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.sendCorrectedOn"
 msgid "Sending corrected in {language} · click to stop"
-msgstr ""
+msgstr "{language}-ben a javított küldés küldésre kerül · kattintva megakadályozható"
 
 #. Tooltip and aria-label of the composer's translate button (the language mark beside the attachment and send buttons) while no send target is set; a click opens a dialog to pick the language every message is sent in, or a correction pass. Ends with an ellipsis.
 #: client/components/ChatInput.vue
