@@ -37,8 +37,6 @@ import {
 	type OutgoingDeps,
 	type OutgoingRequest,
 	stripPolishLabel,
-	CONTEXT_LINE,
-	isContextLine,
 } from "../../client/js/translate/outgoing";
 import {protect} from "../../client/js/translate/spans";
 
@@ -156,7 +154,7 @@ describe("translate/outgoing", () => {
 	describe("BARE_RETRY_ERRORS", () => {
 		it("is every judged failure a bare second try can answer", () => {
 			expect([...BARE_RETRY_ERRORS].sort()).to.deep.equal(
-				[UNCHANGED, NARRATION, ANSWERED, REPETITION, DEGENERATE, CONTEXT_LINE].sort()
+				[UNCHANGED, NARRATION, ANSWERED, REPETITION, DEGENERATE].sort()
 			);
 			expect(BARE_RETRY_ERRORS.has(DEGENERATE)).to.equal(true);
 			// Not a judged failure: nothing came back at all.
@@ -568,33 +566,6 @@ describe("translate/outgoing", () => {
 			expect(echoingSoFar("ps, are you coming?", "ps, kommst")).to.equal(false);
 			expect(echoingSoFar("hello there", "")).to.equal(false);
 			expect(echoingSoFar("hello there", "   ")).to.equal(false);
-		});
-	});
-
-	describe("isContextLine", () => {
-		const context = () => {
-			const c = emptyContext();
-
-			c.recent = [
-				{nick: "me", text: "Todavia estoy probando", translated: "I'm still testing."},
-				{nick: "ada", text: "hat jemand das Log?"},
-			];
-			c.voice = ["see you at nine"];
-
-			return c;
-		};
-
-		it("spots an earlier line, its translation or an own earlier line, loosely", () => {
-			expect(isContextLine("I'm still testing.)", context())).to.equal(true);
-			expect(isContextLine("i'm still testing", context())).to.equal(true);
-			expect(isContextLine("Todavia estoy probando", context())).to.equal(true);
-			expect(isContextLine("See you at nine!", context())).to.equal(true);
-		});
-
-		it("leaves a correction of the draft alone", () => {
-			expect(isContextLine("corrected text being sent here", context())).to.equal(false);
-			expect(isContextLine("", context())).to.equal(false);
-			expect(isContextLine("I'm still testing.", emptyContext())).to.equal(false);
 		});
 	});
 

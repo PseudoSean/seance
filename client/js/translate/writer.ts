@@ -45,8 +45,6 @@ import {
 	writeSource,
 	UNCHANGED,
 	stripPolishLabel,
-	CONTEXT_LINE,
-	isContextLine,
 } from "./outgoing";
 import {
 	channelTranslation,
@@ -346,30 +344,42 @@ export async function translateOutgoing(
 		// code judged too weak to trust.
 		const hint = sourceHintFor(detection, from, to);
 		const route = await translateService().route(from, to, hint);
-		const context = buildContext(
-			channel,
-			{
-				id: DRAFT_ID,
-				type: "message",
-				text: draft,
-				from: {nick: network.nick},
-				replyTo: channel.replyTo?.msgid,
-			},
-			{
-				translated(id) {
-					const entry = store.state.translations[id];
+		// Nothing of the channel travels with a polish (the prompt profiles
+		// say why): the register is all it keeps.
+		const polishContext = emptyContext();
 
-					return entry && entry.status === "done" ? entry.text : undefined;
-				},
-				terms: termsFor(settings.terms, from, to),
-				glossary: getBranding().translation?.glossary ?? [],
-				formality: formalityOf(settings.formality),
-				variant: settings.variant,
-				sourceHint: from,
-				nicks,
-				voice: voiceFor(channel, to),
-			}
-		);
+		polishContext.formality = formalityOf(settings.formality);
+
+		if (settings.variant) {
+			polishContext.variant = settings.variant;
+		}
+
+		const context = polish
+			? polishContext
+			: buildContext(
+					channel,
+					{
+						id: DRAFT_ID,
+						type: "message",
+						text: draft,
+						from: {nick: network.nick},
+						replyTo: channel.replyTo?.msgid,
+					},
+					{
+						translated(id) {
+							const entry = store.state.translations[id];
+
+							return entry && entry.status === "done" ? entry.text : undefined;
+						},
+						terms: termsFor(settings.terms, from, to),
+						glossary: getBranding().translation?.glossary ?? [],
+						formality: formalityOf(settings.formality),
+						variant: settings.variant,
+						sourceHint: from,
+						nicks,
+						voice: voiceFor(channel, to),
+					}
+			  );
 
 		if (current(channel, draft, controller)) {
 			store.commit("outgoingTranslationPatch", {
@@ -474,18 +484,12 @@ export async function translateOutgoing(
 			// is not a translation either.
 			let error = answerError(draft, text, to);
 
-			// A polish handed back as it was on the first try gets the bare
-			// second try like any echo: the bare shape (no context) is the one
-			// measured to fix misspellings (2026-09-18, tmp/experiments),
-			// and a line the model left alone with the channel around it
-			// ("corected text being sent hear", reported 2026-09-19) may
-			// still be corrected without it. One that came back as an
-			// earlier line of the channel (or its translation) had the
-			// context corrected instead of the draft: judged like a
-			// narration, and the same bare retry has only the draft to
-			// correct.
-			if (polish && error === null && isContextLine(text, request.context)) {
-				error = CONTEXT_LINE;
+			// A polish handed back as it was had nothing to correct: the
+			// strip shows the line, and Enter sends it. There is no second
+			// try to make -- a polish already goes out in the bare shape a
+			// retry would ask in.
+			if (polish && error === UNCHANGED) {
+				error = null;
 			}
 
 			// An echo gets one more try, and a bare one: the same draft with

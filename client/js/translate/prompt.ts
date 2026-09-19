@@ -62,9 +62,6 @@ export const CONTEXT_HEADING = "Earlier lines (context only, do not translate or
 /** The last thing before the line, when anything at all stands above it. */
 export const ONLY_THE_TRANSLATION =
 	"Output only the translation of the last message, nothing else.";
-/** Said above a polish's line instead: the earlier lines are for the wording only. */
-export const ONLY_THE_CORRECTION =
-	'Output only the corrected version of the message after "Correct:", nothing else; the earlier lines are context for the wording, never to be corrected or repeated.';
 
 /**
  * What the LLM route is told about the marks it can see. Placeholders are
@@ -177,7 +174,7 @@ export function systemPrompt(req: TranslateRequest, name: (code: string) => stri
 	// which the composer reads as "nothing to correct" (writer.ts).
 	const frame =
 		req.purpose === "polish"
-			? `Correct the spelling, grammar and punctuation of the user's ${target} message. Reply with the corrected message only, on one line, in ${target}: no quotes, no label, no explanation, and never an answer to the message. Replace only misspelled words and fix only wrong grammar and punctuation; every other word stays exactly as written, abbreviations (brb, u, sry, lol), symbols (@) and the casual register included, and nothing is rephrased, added or expanded. A message with no mistakes comes back unchanged. Lines under "Earlier lines" are context for the wording only, never to be corrected or repeated.`
+			? `Correct the spelling, grammar and punctuation of the user's ${target} message. Reply with the corrected message only, on one line, in ${target}: no quotes, no label, no explanation, and never an answer to the message. Replace only misspelled words and fix only wrong grammar and punctuation; every other word stays exactly as written, abbreviations (brb, u, sry, lol), symbols (@) and the casual register included, and nothing is rephrased, added or expanded. A message with no mistakes comes back unchanged.`
 			: req.lines
 			? `You are a translation engine. Translate each numbered message ${sourcePrefix}into ${target} and reply with the ${target} translations only, without names or prefixes: the same numbers, one per line, then ${END_SENTINEL} on its own line; no quotes, no labels, no explanation, and never an answer to a message.${detect}`
 			: `You are a translation engine. Translate the user's message ${sourcePrefix}into ${target} and reply with the ${target} translation only, without the sender's name or any prefix, on one line: no quotes, no label, no explanation, and never an answer to the message.${detect}`;
@@ -291,6 +288,20 @@ export function userPrompt(req: TranslateRequest, name: (code: string) => string
 	const parts: string[] = [];
 	const target = name(req.to);
 
+	// A polish (the composer's cleanup pass) is asked bare. Measured on the
+	// web build's 4B weights (2026-09-19, tmp/experiments/polish-context.ts):
+	// with any block above the line -- the channel's names, its terms or its
+	// earlier lines -- the model stopped correcting, handing 4 of 5 lines
+	// back as written and copying the "Correct:" label in front of the
+	// fifth; with nothing above it, it corrected 5 of 5 ("corected text
+	// being sent hear" -> "Corrected text being sent here"). A keep-list of
+	// the channel's jargon inside the system prompt cost two of those
+	// corrections and saved no jargon the bare shape had kept, so the line
+	// goes up on its own.
+	if (req.purpose === "polish") {
+		return `Correct: ${req.text}`;
+	}
+
 	if (c.topic) {
 		parts.push(`Topic: ${c.topic}`);
 	}
@@ -318,13 +329,8 @@ export function userPrompt(req: TranslateRequest, name: (code: string) => string
 
 	// Only when something stands above the line for the model to mistake
 	// for it; on a bare request this sentence costs the translation.
-	// A polish keeps the context -- the earlier lines say which word is
-	// meant where the draft's is doubtful -- but the instruction above the
-	// line is the correction's: "the translation of the last message" sent
-	// the model to an earlier line's translation instead of the draft
-	// (reported 2026-09-18), so a polish says what to output in its own words.
 	if (parts.length > 0) {
-		parts.push(req.purpose === "polish" ? ONLY_THE_CORRECTION : ONLY_THE_TRANSLATION);
+		parts.push(ONLY_THE_TRANSLATION);
 	}
 
 	// The instruction and the text are one line, and the source language is
@@ -335,8 +341,6 @@ export function userPrompt(req: TranslateRequest, name: (code: string) => string
 			`Translate each line into ${target}, same numbers, then ${END_SENTINEL} on its own line:`,
 			formatBatchedInput(req.lines)
 		);
-	} else if (req.purpose === "polish") {
-		parts.push(`Correct: ${req.text}`);
 	} else {
 		parts.push(`Translate into ${target}: ${req.text}`);
 	}

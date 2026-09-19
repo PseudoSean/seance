@@ -856,17 +856,24 @@ grammar and punctuation fixed, every other word kept, abbreviations and
 symbols included, nothing rephrased), the router sending a same-language
 request to the LLM alone (`router.ts`; no GPU model, no route, and the
 dialog says so), and an echo read as "nothing to correct" rather than a
-failure -- after the bare second try every echo gets: the bare shape is
-the one measured to fix misspellings, so a line the model left alone
-with the channel around it is asked once more without it, and only a
-line echoed twice is taken as clean. The channel's context travels with a polish as with a
-translation -- the earlier lines say which word is meant where the draft's
-is doubtful -- but the instruction above the line is the correction's own
-(`ONLY_THE_CORRECTION`): with "output only the translation of the last
-message" there, the model corrected an earlier line's translation instead
-of the draft (reported 2026-09-18). An answer that is one of the context's
-lines anyway is judged `CONTEXT_LINE` and gets the bare second try, which
-carries no context to correct. The strip's chip reads "English, corrected"; a corrected line is
+failure. **A polish carries none of the channel**: its prompt is the
+copy editor's system message and `Correct: <line>`, nothing above it, and
+`writer.ts` gives the request an empty context but for the register.
+Measured on the web build's 4B weights (2026-09-19,
+`tmp/experiments/polish-context.ts`), and the one measurement that had
+never been run, since every earlier wording was scored on an empty
+context while the app sent a full one: with the channel's names, its
+terms **or** its earlier lines above the line, the model stopped
+correcting -- 4 of 5 lines handed back as written, the fifth with the
+`Correct:` label copied in front, and, reported 2026-09-18, one draft
+answered with an earlier line's translation instead; with nothing above
+it, 5 of 5 corrected, "corected text being sent hear" (reported
+2026-09-19) into "Corrected text being sent here", homophone included. A
+keep-list of the channel's jargon inside the system message, tried so
+that a polish might still help with a doubtful word, cost two of those
+corrections and saved no jargon the bare shape had lost ("nefarious2",
+"rig" survive either way). So the context that helps a translation is
+what stops a correction, and a polish goes up alone. The strip's chip reads "English, corrected"; a corrected line is
 no translation, so it is neither read back nor noted into the voice and
 term memory. The same happens when detection finds the draft already in
 the picked language -- and **when the channel's write target is the

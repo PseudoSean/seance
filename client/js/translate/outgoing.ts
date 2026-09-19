@@ -73,14 +73,6 @@ export const ANSWERED = "answered the question instead of translating it";
  */
 export const REPETITION = "got stuck repeating itself";
 /**
- * A polish (purpose "polish") that came back as one of the channel's earlier
- * lines, or the translation of one: the model corrected the context instead
- * of the draft (reported 2026-09-18 -- "corected text being sent hear" came
- * back as the previous line's translation). Retried bare, where there is no
- * context to correct.
- */
-export const CONTEXT_LINE = "corrected an earlier line instead of the message";
-/**
  * How many times in a row a word, or a run of two or three characters in a
  * script without spaces, makes a loop.
  */
@@ -784,36 +776,7 @@ export const BARE_RETRY_ERRORS: ReadonlySet<string> = new Set([
 	ANSWERED,
 	REPETITION,
 	DEGENERATE,
-	CONTEXT_LINE,
 ]);
-
-/**
- * Whether a polish's answer is one of the context's lines rather than the
- * draft: an earlier line as written or as translated, or one of the user's
- * own earlier lines. Compared loosely, as `isUnchanged` compares -- case,
- * spacing and a closing mark aside.
- */
-export function isContextLine(answer: string, context: PromptContext): boolean {
-	const key = (text: string) =>
-		text
-			.trim()
-			.replace(/\s+/g, " ")
-			.toLowerCase()
-			.replace(/[.!?)]+$/, "");
-	const needle = key(answer);
-
-	if (needle === "") {
-		return false;
-	}
-
-	for (const line of context.recent) {
-		if (key(line.text) === needle || (line.translated && key(line.translated) === needle)) {
-			return true;
-		}
-	}
-
-	return context.voice.some((line) => key(line) === needle);
-}
 
 /**
  * The second try for an answer that came back unchanged: the same draft,
