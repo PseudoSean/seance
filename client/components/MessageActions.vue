@@ -6,12 +6,20 @@
 		aria-label="Message actions"
 	>
 		<button
+			v-for="text in quick"
+			:key="text"
 			type="button"
-			class="msg-action msg-action-reply"
-			aria-label="Reply"
-			title="Reply"
-			@click="reply"
-		/>
+			class="msg-action msg-action-quick"
+			:class="{selected: mine.includes(text)}"
+			:aria-label="
+				mine.includes(text) ? `Remove your ${text} reaction` : `React with ${text}`
+			"
+			:title="mine.includes(text) ? `Remove ${text}` : `React with ${text}`"
+			:aria-pressed="mine.includes(text)"
+			@click="quickReact(text)"
+		>
+			{{ text }}
+		</button>
 		<button
 			ref="reactButton"
 			type="button"
@@ -22,6 +30,14 @@
 			@mouseenter="preloadEmoji"
 			@mousedown.stop
 			@click="pickerOpen = !pickerOpen"
+		/>
+		<span class="msg-action-divider" role="separator" aria-orientation="vertical" />
+		<button
+			type="button"
+			class="msg-action msg-action-reply"
+			aria-label="Reply"
+			title="Reply"
+			@click="reply"
 		/>
 		<button
 			v-if="canCopyText"
@@ -79,6 +95,7 @@ import {useStore} from "../js/store";
 import {startEdit, startReply} from "../js/helpers/compose";
 import {myReactions} from "../js/helpers/messageUpdates";
 import {loadEmojiCatalog} from "../js/helpers/emoji";
+import {onRecentsChange, quickReactions, rememberReaction} from "../js/helpers/reactionRecents";
 import {hasVirtualKeyboard} from "../js/helpers/device";
 import {ChanType} from "../../shared/types/chan";
 import {MessageType} from "../../shared/types/msg";
@@ -88,6 +105,13 @@ import ReactionPicker from "./ReactionPicker.vue";
 // How long the button says so after a copy that worked
 const COPIED_MS = 1500;
 
+// The one-tap reactions, shared by every toolbar on screen: a pick anywhere
+// moves it to the front everywhere.
+const quick = ref(quickReactions());
+onRecentsChange(() => {
+	quick.value = quickReactions();
+});
+
 export default defineComponent({
 	name: "MessageActions",
 	components: {ReactionPicker},
@@ -96,7 +120,11 @@ export default defineComponent({
 		channel: {type: Object as PropType<ClientChan>, required: true},
 		network: {type: Object as PropType<ClientNetwork>, required: true},
 	},
-	setup(props) {
+	// `done`: an action was taken, the toolbar has served its purpose. On a
+	// touch device Message.vue closes it, as every native menu closes on a
+	// choice; a copy is not one — its button is saying "Copied".
+	emits: ["done"],
+	setup(props, {emit}) {
 		const store = useStore();
 		const pickerOpen = ref(false);
 		const reactButton = ref<HTMLButtonElement | null>(null);
@@ -175,8 +203,15 @@ export default defineComponent({
 		// so the grid is there the moment the picker opens.
 		const preloadEmoji = () => void loadEmojiCatalog().catch(() => undefined);
 
-		const reply = () => startReply(props.channel, props.message);
-		const edit = () => startEdit(props.channel, props.message);
+		const reply = () => {
+			startReply(props.channel, props.message);
+			emit("done");
+		};
+
+		const edit = () => {
+			startEdit(props.channel, props.message);
+			emit("done");
+		};
 
 		const react = (text: string) => {
 			if (!props.message.msgid) {
@@ -189,6 +224,17 @@ export default defineComponent({
 				text,
 				remove: mine.value.includes(text),
 			});
+			emit("done");
+		};
+
+		// A quick reaction is the picker's pick without the picker: it counts
+		// as a use the same way (taking one back off does not, see the picker).
+		const quickReact = (text: string) => {
+			if (!mine.value.includes(text)) {
+				rememberReaction(text);
+			}
+
+			react(text);
 		};
 
 		const remove = () => {
@@ -203,6 +249,7 @@ export default defineComponent({
 				? "your message"
 				: `${props.message.from?.nick}'s message`;
 
+			emit("done");
 			eventbus.emit(
 				"confirm-dialog",
 				{
@@ -235,6 +282,8 @@ export default defineComponent({
 			codeBlocks,
 			copied,
 			canCopyText,
+			quick,
+			quickReact,
 			reply,
 			edit,
 			react,

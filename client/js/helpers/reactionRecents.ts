@@ -9,7 +9,7 @@
  */
 
 import storage from "../localStorage";
-import {MAX_REACTION_LENGTH} from "./emoji";
+import {isSingleEmoji, MAX_REACTION_LENGTH} from "./emoji";
 
 export const STORAGE_KEY = "thelounge.reactions.recent";
 
@@ -19,6 +19,9 @@ export const MAX_RECENT = 36;
 /** What the recent row shows before there is any history to show. */
 export const DEFAULT_REACTIONS = ["👍", "❤️", "😂", "🎉", "😮", "😢", "🔥", "👀"];
 
+/** How many one-tap reactions the message toolbar carries. */
+export const QUICK_REACTIONS = 3;
+
 /** The subset of the localStorage wrapper this module needs. */
 export interface StorageBackend {
 	get(key: string): string | null;
@@ -27,6 +30,20 @@ export interface StorageBackend {
 }
 
 let backend: StorageBackend = storage;
+
+type Listener = () => void;
+const listeners = new Set<Listener>();
+
+/**
+ * Called after every {@link rememberReaction}. The toolbar of every message
+ * on screen shows the quick reactions, and a pick in one has to show up in
+ * all of them; localStorage has no change event within one page.
+ */
+export function onRecentsChange(fn: Listener): () => void {
+	listeners.add(fn);
+
+	return () => void listeners.delete(fn);
+}
 
 /** Swap the persistence backend (tests); `null` restores localStorage. */
 export function useStorageBackend(next: StorageBackend | null): void {
@@ -79,4 +96,30 @@ export function rememberReaction(text: string): void {
 	}
 
 	backend.set(STORAGE_KEY, JSON.stringify(mergeRecent(recentReactions(), text)));
+
+	for (const fn of listeners) {
+		fn();
+	}
+}
+
+/**
+ * The one-tap reactions for a message toolbar: the newest single-emoji
+ * reactions used, topped up from {@link DEFAULT_REACTIONS} so there are
+ * always {@link QUICK_REACTIONS} of them. Words and combinations stay in the
+ * picker — they would not fit a button the width of a glyph.
+ */
+export function quickReactions(recent: string[] = recentReactions()): string[] {
+	const out: string[] = [];
+
+	for (const text of [...recent, ...DEFAULT_REACTIONS]) {
+		if (out.length === QUICK_REACTIONS) {
+			break;
+		}
+
+		if (isSingleEmoji(text) && !out.includes(text)) {
+			out.push(text);
+		}
+	}
+
+	return out;
 }

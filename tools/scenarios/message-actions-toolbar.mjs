@@ -196,7 +196,34 @@ export default async function run(page) {
 	);
 	await page.check(
 		"a divider separates delete from the other actions",
-		(await page.count(`${target} .msg-action-divider`)) === 1
+		await page.evaluate(
+			`document.querySelector(${JSON.stringify(
+				`${target} .msg-action-delete`
+			)}).previousElementSibling.classList.contains("msg-action-divider")`
+		)
+	);
+	// The one-tap reactions lead, then the picker's smiley, then a divider
+	// before the rest — three of them, emoji glyphs, none of them a word.
+	const quick = JSON.parse(
+		await page.evaluate(
+			`JSON.stringify(Array.from(document.querySelectorAll(${JSON.stringify(
+				`${target} .msg-action-quick`
+			)})).map((b) => b.textContent.trim()))`
+		)
+	);
+	await page.check(
+		`three quick reactions lead the toolbar (${quick.join(" ")})`,
+		quick.length === 3 &&
+			(await page.evaluate(
+				`(() => {
+					const bar = document.querySelector(${JSON.stringify(`${target} .msg-actions`)});
+					const kids = Array.from(bar.children);
+					return kids[0].classList.contains("msg-action-quick") &&
+						kids[3].classList.contains("msg-action-react") &&
+						kids[4].classList.contains("msg-action-divider") &&
+						kids[5].classList.contains("msg-action-reply");
+				})()`
+			))
 	);
 	const label = await page.evaluate(
 		`document.querySelector(${JSON.stringify(
@@ -264,12 +291,22 @@ export default async function run(page) {
 			`document.querySelector("#chat .chat").classList.contains("selecting")`
 		))
 	);
+	// The selection is live now, and a live selection in the scrollback
+	// keeps every toolbar away (`selection-live`, helpers/touchSelection.ts)
+	// so none covers what was selected; collapsing it brings hover back.
 	await page.check(
-		"the hovered row's toolbar is back once the button is up",
-		(await visibleBars(page)).length === 1
+		"the toolbars stay away while the selection stands",
+		(await visibleBars(page)).length === 0
 	);
 
 	await page.evaluate(`window.getSelection().removeAllRanges()`);
+	await page.sleep(100);
+	await page.send("Input.dispatchMouseEvent", {type: "mouseMoved", x: finish.x + 1, y: finish.y});
+	await page.sleep(100);
+	await page.check(
+		"the hovered row's toolbar is back once the selection is gone",
+		(await visibleBars(page)).length === 1
+	);
 
 	// 4. Scrolled back, the jump-to-recent arrow is up and owns its corner:
 	//    the toolbar of a row beside it moves left of it, and the arrow is

@@ -4645,8 +4645,36 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 		display: none;
 	}
 
+	/* The long press is a gesture, so its result arrives like one: a short
+	   grow-in says the press was taken (with the nudge Message.vue asks for).
+	   A hover toolbar stays instant — it follows the pointer, not a gesture. */
 	#chat .msg.actions-open .msg-actions {
 		display: flex;
+		animation: msg-actions-in 100ms ease-out;
+		transform-origin: bottom right;
+	}
+
+	#chat .messages > .msg:first-child.actions-open .msg-actions,
+	#chat .messages > .date-marker-container:first-child + .msg.actions-open .msg-actions {
+		transform-origin: top right;
+	}
+}
+
+@keyframes msg-actions-in {
+	from {
+		opacity: 0;
+		transform: scale(0.92);
+	}
+
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#chat .msg.actions-open .msg-actions {
+		animation: none;
 	}
 }
 
@@ -4717,6 +4745,57 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 #chat .msg-action.copied {
 	color: var(--body-color);
+}
+
+/* The one-tap reactions (the newest used, helpers/reactionRecents.ts
+   `quickReactions`): an emoji glyph in a button the size of the others. One
+   already on the message from us reads as pressed, and tapping it again takes
+   it off — the same rule as the picker. */
+#chat .msg-action-quick {
+	font-size: 1.125rem;
+	line-height: 1;
+}
+
+#chat .msg-action-quick.selected {
+	background: rgb(128 128 128 / 22%);
+	box-shadow: inset 0 0 0 1px var(--button-color);
+}
+
+/* The bar is one row, always. An own message's eight buttons are ~20.75rem
+   with the right inset, and the pane is 19.5rem on a 390px phone at the
+   default step and less at the bigger ones, so the quick reactions stand
+   down one at a time as the pane narrows — the smiley still opens the
+   picker. In rem off the pane, not px off the window: what has to follow
+   the font scale asks a container query (`#chat` is the `chat` container). */
+/* stylelint-disable-next-line at-rule-no-unknown */
+@container chat (max-width: 21rem) {
+	#chat .msg-action-quick:nth-of-type(3) {
+		display: none;
+	}
+}
+
+/* stylelint-disable-next-line at-rule-no-unknown */
+@container chat (max-width: 18.5rem) {
+	#chat .msg-action-quick:nth-of-type(2) {
+		display: none;
+	}
+}
+
+/* stylelint-disable-next-line at-rule-no-unknown */
+@container chat (max-width: 16rem) {
+	#chat .msg-action-quick {
+		display: none;
+	}
+}
+
+/* Narrower still (a phone at the biggest steps) the five that are left do
+   not fit at 2.25rem either, and there is nothing else to drop: the buttons
+   themselves narrow, glyphs unchanged. */
+/* stylelint-disable-next-line at-rule-no-unknown */
+@container chat (max-width: 14rem) {
+	#chat .msg-action {
+		width: 1.75rem;
+	}
 }
 
 #chat .msg-action:hover,

@@ -180,6 +180,7 @@
 			:message="message"
 			:channel="channel"
 			:network="network"
+			@done="onActionDone"
 		/>
 	</div>
 </template>
@@ -205,6 +206,7 @@ import {MessageType} from "../../shared/types/msg";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
 import {useStore} from "../js/store";
 import {hasVirtualKeyboard} from "../js/helpers/device";
+import {loadEmojiCatalog} from "../js/helpers/emoji";
 import {selectionActive} from "../js/helpers/touchSelection";
 
 MessageTypes.ParsedMessage = ParsedMessage;
@@ -340,6 +342,11 @@ export default defineComponent({
 				swallowClick = true;
 				openActions.value = props.message.id;
 
+				// The pointer's hover preloads the catalog on a desktop; a
+				// finger has no hover, so the press that opens the toolbar
+				// is the earliest sign the picker may be next.
+				void loadEmojiCatalog().catch(() => undefined);
+
 				// A nudge says the press was taken; nothing where the API is missing (iOS).
 				if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
 					navigator.vibrate(15);
@@ -408,6 +415,14 @@ export default defineComponent({
 			}
 
 			if (openActions.value !== null) {
+				openActions.value = null;
+			}
+		};
+
+		// An action taken from the toolbar is the end of it on a touch device
+		// (a pointer's toolbar is hover, and goes with the pointer).
+		const onActionDone = () => {
+			if (actionsOpen.value) {
 				openActions.value = null;
 			}
 		};
@@ -555,6 +570,7 @@ export default defineComponent({
 		return {
 			store,
 			actionsOpen,
+			onActionDone,
 			selectArmed,
 			onTouchStart,
 			onTouchMove,

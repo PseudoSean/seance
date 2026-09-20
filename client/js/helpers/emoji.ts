@@ -145,6 +145,17 @@ export function isEmojiOnly(text: string): boolean {
 	return trimmed.length > 0 && trimmed.replace(emojiRx, "").trim().length === 0;
 }
 
+/**
+ * True when `text` is exactly one emoji — a flag, a keycap or a ZWJ family
+ * counts as one, `🎉🎉🎉` and `👍 ❤️` do not. What fits in a toolbar button
+ * the width of a glyph.
+ */
+export function isSingleEmoji(text: string): boolean {
+	const trimmed = text.trim();
+
+	return isEmojiOnly(trimmed) && Array.from(trimmed.matchAll(emojiRx)).length === 1;
+}
+
 // A query is split on whitespace and the separators shortcodes use, so
 // "flag de", "thumbs_up" and "thumbs up" all find what they mean to.
 const SEPARATORS = /[\s_-]+/;
