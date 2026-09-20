@@ -5,21 +5,21 @@
 		role="toolbar"
 		aria-label="Message actions"
 	>
-		<button
-			v-for="text in quick"
-			:key="text"
-			type="button"
-			class="msg-action msg-action-quick"
-			:class="{selected: mine.includes(text)}"
-			:aria-label="
-				mine.includes(text) ? `Remove your ${text} reaction` : `React with ${text}`
-			"
-			:title="mine.includes(text) ? `Remove ${text}` : `React with ${text}`"
-			:aria-pressed="mine.includes(text)"
-			@click="quickReact(text)"
-		>
-			{{ text }}
-		</button>
+		<span class="msg-actions-quick">
+			<button
+				v-for="q in quickButtons"
+				:key="q.text"
+				type="button"
+				class="msg-action msg-action-quick"
+				:class="{selected: q.on}"
+				:aria-label="q.label"
+				:title="q.label"
+				:aria-pressed="q.on"
+				@click="react(q.text)"
+			>
+				{{ q.text }}
+			</button>
+		</span>
 		<button
 			ref="reactButton"
 			type="button"
@@ -86,7 +86,7 @@
 </template>
 
 <script lang="ts">
-import {computed, defineComponent, onUnmounted, PropType, ref, watch} from "vue";
+import {computed, defineComponent, onUnmounted, PropType, Ref, ref, watch} from "vue";
 import eventbus from "../js/eventbus";
 import socket from "../js/socket";
 import {writeClipboard} from "../js/clipboard";
@@ -95,7 +95,7 @@ import {useStore} from "../js/store";
 import {startEdit, startReply} from "../js/helpers/compose";
 import {myReactions} from "../js/helpers/messageUpdates";
 import {loadEmojiCatalog} from "../js/helpers/emoji";
-import {onRecentsChange, quickReactions, rememberReaction} from "../js/helpers/reactionRecents";
+import {quickReactions, RECENTS_CHANGED, rememberReaction} from "../js/helpers/reactionRecents";
 import {hasVirtualKeyboard} from "../js/helpers/device";
 import {ChanType} from "../../shared/types/chan";
 import {MessageType} from "../../shared/types/msg";
@@ -106,11 +106,21 @@ import ReactionPicker from "./ReactionPicker.vue";
 const COPIED_MS = 1500;
 
 // The one-tap reactions, shared by every toolbar on screen: a pick anywhere
-// moves it to the front everywhere.
-const quick = ref(quickReactions());
-onRecentsChange(() => {
-	quick.value = quickReactions();
-});
+// moves it to the front everywhere. Read from storage when the first toolbar
+// mounts, not when the bundle loads.
+let quick: Ref<string[]> | undefined;
+
+const sharedQuick = () => {
+	if (!quick) {
+		const shared = ref(quickReactions());
+		eventbus.on(RECENTS_CHANGED, (recent: string[]) => {
+			shared.value = quickReactions(recent);
+		});
+		quick = shared;
+	}
+
+	return quick;
+};
 
 export default defineComponent({
 	name: "MessageActions",
@@ -132,6 +142,16 @@ export default defineComponent({
 		// What we have already reacted with: the picker ticks these, and
 		// picking one again takes it back off (bus-contract §1.4 `remove`).
 		const mine = computed(() => myReactions(props.message, props.network.nick || ""));
+
+		// One already on the message from us reads as pressed, and the tap
+		// takes it off — the same toggle as the picker and the badge row.
+		const quickButtons = computed(() =>
+			sharedQuick().value.map((text) => {
+				const on = mine.value.includes(text);
+
+				return {text, on, label: on ? `Remove ${text}` : `React with ${text}`};
+			})
+		);
 
 		// The code blocks the message renders, in order, each as its own
 		// characters — the fence and the gutter are presentation, so neither is
@@ -213,28 +233,27 @@ export default defineComponent({
 			emit("done");
 		};
 
+		// From a quick button or the picker alike. Taking one of ours back off
+		// is not a use of it: it would jump to the front of the recents on its
+		// way out (MessageReactions.vue keeps the same rule for the badges).
 		const react = (text: string) => {
 			if (!props.message.msgid) {
 				return;
+			}
+
+			const remove = mine.value.includes(text);
+
+			if (!remove) {
+				rememberReaction(text);
 			}
 
 			socket.emit("msg:react", {
 				target: props.channel.id,
 				msgid: props.message.msgid,
 				text,
-				remove: mine.value.includes(text),
+				remove,
 			});
 			emit("done");
-		};
-
-		// A quick reaction is the picker's pick without the picker: it counts
-		// as a use the same way (taking one back off does not, see the picker).
-		const quickReact = (text: string) => {
-			if (!mine.value.includes(text)) {
-				rememberReaction(text);
-			}
-
-			react(text);
 		};
 
 		const remove = () => {
@@ -282,8 +301,7 @@ export default defineComponent({
 			codeBlocks,
 			copied,
 			canCopyText,
-			quick,
-			quickReact,
+			quickButtons,
 			reply,
 			edit,
 			react,

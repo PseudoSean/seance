@@ -9,6 +9,7 @@
  */
 
 import storage from "../localStorage";
+import eventbus from "../eventbus";
 import {isSingleEmoji, MAX_REACTION_LENGTH} from "./emoji";
 
 export const STORAGE_KEY = "thelounge.reactions.recent";
@@ -31,19 +32,13 @@ export interface StorageBackend {
 
 let backend: StorageBackend = storage;
 
-type Listener = () => void;
-const listeners = new Set<Listener>();
-
 /**
- * Called after every {@link rememberReaction}. The toolbar of every message
- * on screen shows the quick reactions, and a pick in one has to show up in
- * all of them; localStorage has no change event within one page.
+ * Emitted on the event bus after every {@link rememberReaction}, with the
+ * new list: the toolbar of every message on screen shows the quick
+ * reactions, and a pick in one has to show up in all of them — localStorage
+ * has no change event within one page.
  */
-export function onRecentsChange(fn: Listener): () => void {
-	listeners.add(fn);
-
-	return () => void listeners.delete(fn);
-}
+export const RECENTS_CHANGED = "reactions:recent";
 
 /** Swap the persistence backend (tests); `null` restores localStorage. */
 export function useStorageBackend(next: StorageBackend | null): void {
@@ -95,11 +90,9 @@ export function rememberReaction(text: string): void {
 		return;
 	}
 
-	backend.set(STORAGE_KEY, JSON.stringify(mergeRecent(recentReactions(), text)));
-
-	for (const fn of listeners) {
-		fn();
-	}
+	const next = mergeRecent(recentReactions(), text);
+	backend.set(STORAGE_KEY, JSON.stringify(next));
+	eventbus.emit(RECENTS_CHANGED, next);
 }
 
 /**

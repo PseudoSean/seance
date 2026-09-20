@@ -218,10 +218,10 @@ export default async function run(page) {
 				`(() => {
 					const bar = document.querySelector(${JSON.stringify(`${target} .msg-actions`)});
 					const kids = Array.from(bar.children);
-					return kids[0].classList.contains("msg-action-quick") &&
-						kids[3].classList.contains("msg-action-react") &&
-						kids[4].classList.contains("msg-action-divider") &&
-						kids[5].classList.contains("msg-action-reply");
+					return kids[0].classList.contains("msg-actions-quick") &&
+						kids[1].classList.contains("msg-action-react") &&
+						kids[2].classList.contains("msg-action-divider") &&
+						kids[3].classList.contains("msg-action-reply");
 				})()`
 			))
 	);

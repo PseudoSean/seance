@@ -51,27 +51,20 @@ export function loadEmojiCatalog(): Promise<EmojiGroup[]> {
 /** How long a busy page may put the prefetch off before it goes anyway. */
 const PREFETCH_TIMEOUT_MS = 10000;
 
-let prefetched = false;
-
 /**
  * Fetch the catalog when the page has nothing better to do, so the first
  * picker opens on a grid and not on "Loading emoji…". Hover preloads it on a
- * desktop and the long press does on touch, but both give a slow phone on a
- * slow network well under a second; the first conversation opening gives it
- * the whole idle period after connecting. Once per page; a failed fetch lets
- * the next call try again (the picker's own load does the same).
+ * desktop, but that gives a slow phone on a slow network well under a
+ * second; the first conversation opening gives it the whole idle period
+ * after connecting. `loadEmojiCatalog` is the memo: a second call while a
+ * load is pending or done schedules nothing.
  */
 export function prefetchEmojiCatalog(): void {
-	if (prefetched) {
+	if (pending) {
 		return;
 	}
 
-	prefetched = true;
-
-	const go = () =>
-		void loadEmojiCatalog().catch(() => {
-			prefetched = false;
-		});
+	const go = () => void loadEmojiCatalog().catch(() => undefined);
 
 	if (typeof requestIdleCallback === "function") {
 		requestIdleCallback(go, {timeout: PREFETCH_TIMEOUT_MS});
@@ -185,8 +178,9 @@ export function isEmojiOnly(text: string): boolean {
  */
 export function isSingleEmoji(text: string): boolean {
 	const trimmed = text.trim();
+	const found = Array.from(trimmed.matchAll(emojiRx));
 
-	return isEmojiOnly(trimmed) && Array.from(trimmed.matchAll(emojiRx)).length === 1;
+	return found.length === 1 && found[0][0] === trimmed;
 }
 
 // A query is split on whitespace and the separators shortcodes use, so

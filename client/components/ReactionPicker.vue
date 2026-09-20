@@ -85,10 +85,10 @@
 				>
 					<h2 class="reaction-picker-heading" aria-hidden="true">{{ section.label }}</h2>
 					<div
-						v-if="!isRendered(section.key)"
+						v-if="section.options.length === 0"
 						class="reaction-picker-grid reaction-picker-placeholder"
 						role="presentation"
-						:style="{height: placeholderHeight(section)}"
+						:style="{'--rows': Math.ceil(section.count / columns)}"
 					/>
 					<div v-else class="reaction-picker-grid" role="presentation">
 						<button
@@ -165,8 +165,8 @@ import {
 	nextTick,
 	onBeforeUnmount,
 	onMounted,
-	onUpdated,
 	PropType,
+	reactive,
 	ref,
 	watch,
 } from "vue";
@@ -183,7 +183,7 @@ import {
 	normalizeReaction,
 	searchEmoji,
 } from "../js/helpers/emoji";
-import {DEFAULT_REACTIONS, recentReactions, rememberReaction} from "../js/helpers/reactionRecents";
+import {DEFAULT_REACTIONS, recentReactions} from "../js/helpers/reactionRecents";
 import {settle, visibleHeight} from "../js/helpers/viewport";
 
 /** One thing the list offers: an emoji, a remembered reaction, or typed text. */
@@ -206,7 +206,12 @@ type Option = {
 	free?: boolean;
 };
 
-type Section = {key: string; label: string; options: Option[]};
+/**
+ * One group of the list. `start`/`count` place it in the flat index space
+ * the keyboard walks; `options` is built only for a rendered group (the
+ * rest are placeholders, see `rendered`), so it is empty for the others.
+ */
+type Section = {key: string; label: string; start: number; count: number; options: Option[]};
 
 /** Gap between the anchor and the popover, and the margin it keeps off screen edges. */
 const GAP = 6;
@@ -216,10 +221,10 @@ const MAX_HEIGHT = 360;
 const MIN_HEIGHT = 180;
 /** Options considered when an arrow key looks for the row above or below. */
 const NEIGHBOURHOOD = 40;
-/** How far below the fold a group is rendered ahead of the scroll reaching it. */
-const RENDER_AHEAD = "320px";
-/** The grid before it has been measured: cells 2.125rem tall, 2px apart, 8 across. */
-const FALLBACK_COLUMNS = 8;
+/** How far below the fold, in px, a group is rendered ahead of the scroll reaching it. */
+const RENDER_AHEAD = 320;
+/** Columns of the popover's grid before one has been counted (21.25rem wide, 2.25rem cells). */
+const DEFAULT_COLUMNS = 8;
 
 // Unique per open picker, so ARIA ids never collide with a closing one.
 let instances = 0;
@@ -331,10 +336,38 @@ export default defineComponent({
 			return typed.length > 0 && isEmojiOnly(typed);
 		});
 
+		/**
+		 * Which groups have their buttons in the DOM. The catalog is ~1900
+		 * emoji, and a button each took the open past 100 ms on a throttled
+		 * CPU — and on Android every glyph in the DOM is rasterised whether
+		 * or not it is on screen. So a group is a sized placeholder until the
+		 * scroll comes near it (or its tab, or the keyboard, asks for it),
+		 * and from then on it stays rendered. The first two sections — the
+		 * recents and the first group, or the search results — are always
+		 * rendered; that is what the picker opens on.
+		 */
+		const rendered = reactive(new Set<string>());
+		const render = (key: string) => void rendered.add(key);
+
 		const sections = computed<Section[]>(() => {
-			let index = 0;
-			const number = (options: Omit<Option, "index">[]): Option[] =>
-				options.map((option) => ({...option, index: index++}));
+			const firstGroup = catalog.value?.[0]?.key;
+			let start = 0;
+
+			const section = (
+				key: string,
+				label: string,
+				count: number,
+				build: () => Omit<Option, "index">[]
+			): Section => {
+				const at = start;
+				start += count;
+				const options =
+					at === 0 || key === firstGroup || rendered.has(key)
+						? build().map((option, i) => ({...option, index: at + i}))
+						: [];
+
+				return {key, label, start: at, count, options};
+			};
 
 			const typed = query.value.trim();
 
@@ -362,29 +395,31 @@ export default defineComponent({
 				}
 
 				return [
-					{
-						key: "results",
-						label: hits.length > 0 ? "Search results" : "No emoji match",
-						options: number(options),
-					},
+					section(
+						"results",
+						hits.length > 0 ? "Search results" : "No emoji match",
+						options.length,
+						() => options
+					),
 				];
 			}
 
-			const known = recent.value;
+			const known = recent.value.length > 0 ? recent.value : DEFAULT_REACTIONS;
 			const out: Section[] = [
-				{
-					key: "recent",
-					label: known.length > 0 ? "Recently used" : "Quick reactions",
-					options: number((known.length > 0 ? known : DEFAULT_REACTIONS).map(textOption)),
-				},
+				section(
+					"recent",
+					recent.value.length > 0 ? "Recently used" : "Quick reactions",
+					known.length,
+					() => known.map(textOption)
+				),
 			];
 
 			for (const group of catalog.value ?? []) {
-				out.push({
-					key: group.key,
-					label: group.label,
-					options: number(group.emoji.map(entryOption)),
-				});
+				out.push(
+					section(group.key, group.label, group.emoji.length, () =>
+						group.emoji.map(entryOption)
+					)
+				);
 			}
 
 			return out;
@@ -403,139 +438,73 @@ export default defineComponent({
 			})),
 		]);
 
-		const options = computed<Option[]>(() =>
-			sections.value.flatMap((section) => section.options)
-		);
+		/** How many options there are in all, rendered or not: the keyboard's bound. */
+		const total = computed(() => {
+			const last = sections.value[sections.value.length - 1];
 
-		/**
-		 * Which groups have their buttons in the DOM. The catalog is ~1900
-		 * emoji, and a button each took the open past 100 ms on a throttled
-		 * CPU — and on Android every glyph in the DOM is rasterised whether
-		 * or not it is on screen. So a group is a sized placeholder until the
-		 * scroll comes near it (or its tab, or the keyboard, asks for it),
-		 * and from then on it stays rendered. The recents and the first group
-		 * are what the picker opens on; search results are always rendered.
-		 */
-		const rendered = ref(new Set<string>(["recent", "results"]));
-
-		const isRendered = (key: string) => rendered.value.has(key);
-
-		const render = (key: string) => {
-			if (!rendered.value.has(key)) {
-				rendered.value = new Set([...rendered.value, key]);
-			}
-		};
-
-		watch(
-			catalog,
-			(groups) => {
-				const first = groups?.[0];
-
-				if (first) {
-					render(first.key);
-				}
-			},
-			{immediate: true}
-		);
-
-		/** The grid's row pitch and column count, measured off a rendered group. */
-		const cell = ref<{pitch: number; gap: number; columns: number} | null>(null);
-
-		const measureCell = () => {
-			// The first catalog group is always rendered while browsing, and
-			// unlike the recents it holds nothing but emoji cells.
-			const first = catalog.value?.[0];
-			const grid = first
-				? list.value?.querySelector<HTMLElement>(
-						`[data-key="${first.key}"] .reaction-picker-grid:not(.reaction-picker-placeholder)`
-				  )
-				: null;
-			const sample = grid?.querySelector<HTMLElement>(".reaction-picker-option");
-
-			if (!grid || !sample) {
-				return;
-			}
-
-			// Layout sizes, not `getBoundingClientRect`: the picker is still
-			// in its scale-in animation when this first runs. The pitch comes
-			// from the whole grid rather than one cell, so a half-pixel cell
-			// height is rounded once and not once per row.
-			const gap = parseFloat(getComputedStyle(grid).rowGap) || 0;
-			const columns = Math.max(
-				1,
-				Math.floor((grid.clientWidth + gap) / (sample.offsetWidth + gap))
-			);
-			const rows = Math.ceil(first.emoji.length / columns);
-			const pitch = (grid.offsetHeight + gap) / rows;
-
-			if (!cell.value || cell.value.columns !== columns || cell.value.pitch !== pitch) {
-				cell.value = {pitch, gap, columns};
-			}
-		};
-
-		/**
-		 * The height the group's grid will have, so the scrollbar and the
-		 * tabs' `offsetTop` are right before it is rendered — and nothing
-		 * shifts when it is. Cells are uniform (a word is never in a catalog
-		 * group), so rows × cell height is exact once a cell was measured.
-		 */
-		const placeholderHeight = (section: Section) => {
-			const metrics = cell.value;
-			const rows = Math.ceil(section.options.length / (metrics?.columns ?? FALLBACK_COLUMNS));
-
-			if (!metrics) {
-				return `calc(${rows} * (2.125rem + 2px) - 2px)`;
-			}
-
-			return `${Math.round(rows * metrics.pitch - metrics.gap)}px`;
-		};
-
-		/** The section an option index belongs to, for the keyboard. */
-		const sectionOf = (index: number) =>
-			sections.value.find(
-				(section) =>
-					section.options.length > 0 &&
-					index >= section.options[0].index &&
-					index <= section.options[section.options.length - 1].index
-			);
-
-		/** Render a group the moment its placeholder is about to scroll into view. */
-		let observer: IntersectionObserver | undefined;
-
-		const observePlaceholders = () => {
-			const container = list.value;
-
-			if (!container || typeof IntersectionObserver === "undefined") {
-				return;
-			}
-
-			observer?.disconnect();
-			observer = new IntersectionObserver(
-				(entries) => {
-					for (const entry of entries) {
-						if (entry.isIntersecting) {
-							render((entry.target as HTMLElement).dataset.key ?? "");
-						}
-					}
-				},
-				{root: container, rootMargin: `${RENDER_AHEAD} 0px`}
-			);
-
-			for (const section of container.querySelectorAll<HTMLElement>("[data-key]")) {
-				if (!isRendered(section.dataset.key ?? "")) {
-					observer.observe(section);
-				}
-			}
-		};
-
-		// After every render: pick up new placeholders (a cleared search puts
-		// the groups back) and measure a cell if there is one to measure.
-		onUpdated(() => {
-			measureCell();
-			observePlaceholders();
+			return last ? last.start + last.count : 0;
 		});
 
-		const active = computed<Option | undefined>(() => options.value[activeIndex.value]);
+		/** The section an option index belongs to. */
+		const sectionOf = (index: number) =>
+			sections.value.find((s) => index >= s.start && index < s.start + s.count);
+
+		/** The option at a flat index — undefined past the end or in a placeholder. */
+		const optionAt = (index: number) => {
+			const s = sectionOf(index);
+
+			return s?.options[index - s.start];
+		};
+
+		/**
+		 * Columns of the grid, counted off the first row of a rendered group,
+		 * so a placeholder's row count (its height is `--rows` × the cell
+		 * pitch, in style.css) is right at any width. Cells are uniform in a
+		 * catalog group, which is why the recents row is skipped.
+		 */
+		const columns = ref(DEFAULT_COLUMNS);
+
+		const countColumns = () => {
+			const cells = list.value?.querySelectorAll<HTMLElement>(
+				`[data-key="${catalog.value?.[0]?.key ?? ""}"] .reaction-picker-option`
+			);
+			const first = cells?.[0];
+
+			if (!first) {
+				return;
+			}
+
+			let n = 0;
+
+			for (const cell of cells) {
+				if (cell.offsetTop !== first.offsetTop) {
+					break;
+				}
+
+				n++;
+			}
+
+			columns.value = n;
+		};
+
+		/** Render every group whose placeholder is within reach of the scroll. */
+		const renderNear = () => {
+			const container = list.value;
+
+			if (!container) {
+				return;
+			}
+
+			const reach = container.scrollTop + container.clientHeight + RENDER_AHEAD;
+
+			for (const el of container.querySelectorAll<HTMLElement>("[data-key]")) {
+				if (el.offsetTop < reach) {
+					render(el.dataset.key ?? "");
+				}
+			}
+		};
+
+		const active = computed<Option | undefined>(() => optionAt(activeIndex.value));
 		const isSelected = (option: Option) => props.selected.includes(option.text);
 
 		/** The reaction being built, shown by the preview bar while it is. */
@@ -561,17 +530,9 @@ export default defineComponent({
 				return;
 			}
 
-			// Taking one of ours back off is not a use of it: it would jump to
-			// the front of the recents on its way out.
-			if (!props.selected.includes(normalized)) {
-				rememberReaction(normalized);
-			}
-
 			emit("pick", normalized);
 			emit("close");
 		};
-
-		const optionAt = (index: number) => options.value[index];
 
 		/**
 		 * Add `text` to what is being built instead of sending it — the
@@ -609,7 +570,7 @@ export default defineComponent({
 		};
 
 		const setActive = (index: number) => {
-			if (index < 0 || index >= options.value.length) {
+			if (index < 0 || index >= total.value) {
 				return;
 			}
 
@@ -622,20 +583,6 @@ export default defineComponent({
 
 			activeIndex.value = index;
 			void nextTick(scrollActiveIntoView);
-		};
-
-		/**
-		 * The first option of the group after the active one's — where the
-		 * down arrow goes when the row below is not rendered yet. Rendering
-		 * it and measuring would be the alternative; the first cell of the
-		 * next group is where the eye goes anyway.
-		 */
-		const nextSectionStart = () => {
-			const current = sectionOf(activeIndex.value);
-			const at = current ? sections.value.indexOf(current) : -1;
-			const next = sections.value[at + 1];
-
-			return next && next.options.length > 0 ? next.options[0].index : activeIndex.value;
 		};
 
 		/**
@@ -660,7 +607,7 @@ export default defineComponent({
 
 			for (
 				let i = Math.max(0, activeIndex.value - NEIGHBOURHOOD);
-				i <= Math.min(options.value.length - 1, activeIndex.value + NEIGHBOURHOOD);
+				i <= Math.min(total.value - 1, activeIndex.value + NEIGHBOURHOOD);
 				i++
 			) {
 				if (i === activeIndex.value) {
@@ -712,8 +659,14 @@ export default defineComponent({
 						break;
 					}
 
+					// Nothing rendered below: the next group's first cell, which
+					// is where the eye goes anyway (indices run on across groups;
+					// past the last one, setActive declines).
 					const below = rowNeighbour(true);
-					setActive(below === activeIndex.value ? nextSectionStart() : below);
+					const here = sectionOf(activeIndex.value);
+					setActive(
+						below === activeIndex.value && here ? here.start + here.count : below
+					);
 					break;
 				}
 
@@ -729,7 +682,11 @@ export default defineComponent({
 				// Left and right walk the grid, but only once the caret has
 				// nowhere left to go — editing what you typed comes first.
 				case "ArrowRight":
-					if (collapsed && caret === el.value.length && optionAt(activeIndex.value + 1)) {
+					if (
+						collapsed &&
+						caret === el.value.length &&
+						activeIndex.value + 1 < total.value
+					) {
 						e.preventDefault();
 						setActive(activeIndex.value + 1);
 					}
@@ -847,6 +804,7 @@ export default defineComponent({
 			}
 
 			currentTab.value = key;
+			renderNear();
 		};
 
 		// A phone gets the sheet at the bottom of the screen; there is no room
@@ -925,13 +883,22 @@ export default defineComponent({
 			};
 		};
 
+		// The list has a new shape: place the popover, count the grid's
+		// columns and render the groups in reach. On mount, when the catalog
+		// lands, and whenever the width may have changed.
+		const layoutChanged = () => {
+			reposition();
+			countColumns();
+			renderNear();
+		};
+
 		// The visual viewport's resize that announces the keyboard carries a
 		// mid-animation height (helpers/viewport.ts), so it is re-read.
 		let cancelSettle = () => {};
 
 		const repositionSettled = () => {
 			cancelSettle();
-			cancelSettle = settle(reposition);
+			cancelSettle = settle(layoutChanged);
 		};
 
 		const close = () => emit("close");
@@ -957,9 +924,12 @@ export default defineComponent({
 			if (list.value && previous.trim() !== next.trim()) {
 				list.value.scrollTop = 0;
 			}
+
+			// A cleared search puts the groups back as placeholders.
+			void nextTick(renderNear);
 		});
 
-		watch(catalog, () => void nextTick(reposition));
+		watch(catalog, () => void nextTick(layoutChanged));
 
 		const onOtherOpened = (other: string) => {
 			if (other !== uid) {
@@ -977,11 +947,7 @@ export default defineComponent({
 			sheetQuery.addEventListener("change", onSheetChange);
 			eventbus.on("escapekey", close);
 
-			void nextTick(() => {
-				reposition();
-				measureCell();
-				observePlaceholders();
-			});
+			void nextTick(layoutChanged);
 
 			// Focusing the field on a touch screen throws up the keyboard over
 			// the emoji the user came here to tap.
@@ -991,7 +957,6 @@ export default defineComponent({
 		});
 
 		onBeforeUnmount(() => {
-			observer?.disconnect();
 			eventbus.off(PICKER_OPENED, onOtherOpened);
 			document.removeEventListener("mousedown", onDocumentMouseDown);
 			window.removeEventListener("scroll", reposition, true);
@@ -1027,8 +992,7 @@ export default defineComponent({
 			building,
 			hint,
 			isSelected,
-			isRendered,
-			placeholderHeight,
+			columns,
 			pickTyped,
 			onKeydown,
 			onListClick,

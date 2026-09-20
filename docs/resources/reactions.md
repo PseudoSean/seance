@@ -36,8 +36,9 @@ has sent (`quickReactions()` in `reactionRecents.ts`, topped up from
 the picker — it would not fit a button the width of a glyph), then the 😀 that
 opens the picker, then a divider and the rest. One tap reacts; one you already
 have reads as pressed (`aria-pressed`, `.selected`) and a tap takes it off.
-Every toolbar on screen shows the same list — `onRecentsChange` tells them
-when a pick anywhere moves something to the front. The bar is one row,
+Every toolbar on screen shows the same list — `rememberReaction` emits
+`RECENTS_CHANGED` on the event bus with the new list, and a pick anywhere
+moves something to the front everywhere. The bar is one row,
 always: as the `chat` pane narrows (container queries in `rem`, so the font
 step counts — an own message's eight buttons are ~20.75rem and a 390px phone
 is 19.5rem at the default step) the quick reactions stand down one at a time
@@ -48,9 +49,7 @@ rest.
 An action taken from the toolbar — a reaction, Reply, Edit, Delete — emits
 `done`, and on a touch device `Message.vue` closes the toolbar on it, as every
 native menu closes on a choice. Copy is not one: its button is saying
-"Copied". The long press that opens the toolbar also asks for the catalog
-chunk, since a finger has no hover to preload on (normally the conversation
-has prefetched it already, see below). Browser check:
+"Copied". Browser check:
 `tools/scenarios/quick-reactions.mjs --mobile`.
 
 ## The picker (`ReactionPicker.vue`)
@@ -124,27 +123,31 @@ bus as it mounts (`reaction-picker-opened`) and any other closes.
 
 The catalog is prefetched at idle once a conversation is open (`Chat.vue` →
 `prefetchEmojiCatalog()` in `emoji.ts`: `requestIdleCallback` with a 10 s
-timeout, a 3 s timer on Safari; once per page, a failed fetch lets the next
-call retry), so the first picker opens on a grid — hover on an opener and the
-long press that opens the toolbar (`Message.vue`) ask for it too, for a page
-whose idle has not come yet. The lobby does not prefetch: nothing there reacts.
+timeout, a 3 s timer on Safari; `loadEmojiCatalog`'s own memo makes it once
+per page, and a failed fetch lets the next call retry), so the first picker opens on a grid — hover on an opener asks
+for it too, for a page whose idle has not come yet, and the picker loads it
+itself if all else failed. The lobby does not prefetch: nothing there reacts.
 
 **Only the groups near the scroll are buttons.** The catalog is 1870 emoji,
 and a `<button>` each put 1924 nodes in the DOM and the open at 180 ms on a
 4×-throttled CPU (109 ms of it one task) — and on Android every glyph in the
 DOM is rasterised whether or not it is on screen. So the picker opens on the
 recents and Smileys only (~220 nodes, 93 ms, no long task); every other group
-is a placeholder `div` sized to the grid it will become, rendered when an
-`IntersectionObserver` sees it coming within `RENDER_AHEAD` (320px), when its
-tab is tapped (`goToSection` renders first, then scrolls) or when the keyboard
-lands in it (`setActive`; a down arrow with nothing rendered below goes to the
-first cell of the next group). Once rendered a group stays rendered. The
-placeholder height is exact: cells are uniform in a catalog group, so it is
-rows × the row pitch measured off the whole rendered Smileys grid
-(`measureCell`, layout sizes rather than `getBoundingClientRect` — the picker
-is mid scale-in when it first runs, and one rounding for the grid rather than
-one per row: `offsetHeight` on a 42.5px cell made 46 rows 23px too tall).
-Search results are always rendered (≤ 121). The numbers are from
+is a placeholder `div` whose height is `--rows` × the cell pitch in
+`style.css` (`.reaction-picker-placeholder`, next to the cell rule it
+depends on), rendered when the scroll brings it within `RENDER_AHEAD`
+(320px; `renderNear`, from the list's `scroll` handler and whenever the
+layout changes), when its tab is tapped (`goToSection` renders first, then
+scrolls) or when the keyboard lands in it (`setActive`; a down arrow with
+nothing rendered below goes to the first cell of the next group). Once
+rendered a group stays rendered (`rendered`, a reactive Set). A placeholder
+group's `Option` objects are not built either — `sections` carries
+`start`/`count` for every group and `options` only for rendered ones, so a
+keystroke that clears the search allocates ~200 options, not 1900. The row
+count needs the column count, which is read off the first row of the
+rendered Smileys grid (`countColumns`, on mount, when the catalog lands and
+on resize); the placeholder height then matches the rendered grid to the
+pixel. Search results are always rendered (≤ 121). The numbers are from
 `tools/scenarios/reaction-picker-profile.mjs`, which prints them for a before
 and after (`SEANCE_CPU=6` for a cheaper phone).
 
