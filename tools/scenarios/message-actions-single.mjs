@@ -236,6 +236,30 @@ export default async function run(page) {
 	);
 	await page.screenshot("1-first-open");
 
+	// 2b. Copy is the end of it: the bar closes on the tap — the next thing
+	//     is a paste somewhere else — and the one word it leaves takes no
+	//     tap and is gone within the second.
+	await page.grantPermissions(["clipboardReadWrite", "clipboardSanitizedWrite"]);
+	await tap(page, `${first} .msg-action-copy-text`);
+	await page.check("a tap on Copy closes the toolbar", (await openIds()).length === 0);
+	await page.check(
+		"and leaves a Copied label over the row",
+		(await page.evaluate(`document.querySelector("${first} .msg-copied")?.textContent`)) ===
+			"Copied"
+	);
+	await page.check(
+		"the label takes no tap",
+		(await page.evaluate(
+			`getComputedStyle(document.querySelector("${first} .msg-copied")).pointerEvents`
+		)) === "none"
+	);
+	await page.screenshot("2b-copied");
+	await page.sleep(1100);
+	await page.check(
+		"the label is gone within the second",
+		(await page.count(`${first} .msg-copied`)) === 0
+	);
+
 	// 3. A long press on a second message moves the toolbar rather than
 	//    adding one: a phone must never accumulate one per message.
 	await longPress(page, `${second} .content`);

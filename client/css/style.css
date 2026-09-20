@@ -4715,14 +4715,63 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 #chat .msg-action-copy::before,
 #chat .msg-action-copy-text::before { content: "\f0c5"; /* https://fontawesome.com/icons/copy?style=solid */ }
 
-#chat .msg-action-copy.copied::before,
-#chat .msg-action-copy-text.copied::before { content: "\f00c"; /* https://fontawesome.com/icons/check?style=solid */ }
-
 #chat .msg-action-edit::before { content: "\f304"; /* https://fontawesome.com/icons/pen?style=solid */ }
 #chat .msg-action-delete::before { content: "\f2ed"; /* https://fontawesome.com/icons/trash-alt?style=solid */ }
 
-#chat .msg-action.copied {
+/* What a copy leaves behind: the one word, where the toolbar was (the same
+ * corner, the same first-row exception), fading over the second it is up
+ * (MessageActions.vue COPIED_MS). It is a label and takes no tap: the reader
+ * is on the way to paste somewhere, and nothing here waits for them. */
+#chat .msg-copied {
+	position: absolute;
+	top: auto;
+	bottom: calc(100% - 0.125rem);
+	right: 0.5rem;
+	z-index: 2;
+	padding: 0.125rem 0.5rem;
+	border: 1px solid rgb(128 128 128 / 35%);
+	border-radius: 0.375rem;
+	background: var(--window-bg-color);
+	box-shadow: 0 0.125rem 0.5rem rgb(0 0 0 / 15%);
 	color: var(--body-color);
+	font-size: 0.875em;
+	line-height: 1.5rem;
+	pointer-events: none;
+	user-select: none;
+	animation: msg-copied-fade 1s ease-in forwards;
+}
+
+/* The bar gives its corner to the label (a pointer's hover bar too: the
+ * copy ended it, and the hover brings it back once the word is gone). */
+#chat .msg:has(.msg-copied) .msg-actions {
+	display: none;
+}
+
+#chat .messages > .msg:first-child .msg-copied,
+#chat .messages > .date-marker-container:first-child + .msg .msg-copied {
+	top: 0.125rem;
+	bottom: auto;
+}
+
+#chat .chat-content:has(.scroll-down-shown) .msg-copied {
+	right: calc(var(--scroll-down-inset) + var(--scroll-down-size) + 0.5rem);
+}
+
+@keyframes msg-copied-fade {
+	0%,
+	40% {
+		opacity: 1;
+	}
+
+	100% {
+		opacity: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#chat .msg-copied {
+		animation: none;
+	}
 }
 
 /* The one-tap reactions (the newest used, helpers/reactionRecents.ts

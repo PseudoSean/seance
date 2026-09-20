@@ -43,18 +43,16 @@
 			v-if="canCopyText"
 			type="button"
 			class="msg-action msg-action-copy-text"
-			:class="{copied: copied === 'text'}"
-			:aria-label="copied === 'text' ? 'Copied' : 'Copy text'"
-			:title="copied === 'text' ? 'Copied' : 'Copy text'"
+			aria-label="Copy text"
+			title="Copy text"
 			@click.stop="copyText"
 		/>
 		<button
 			v-if="codeBlocks.length > 0"
 			type="button"
 			class="msg-action msg-action-copy"
-			:class="{copied: copied === 'code'}"
-			:aria-label="copied === 'code' ? 'Copied' : 'Copy code'"
-			:title="copied === 'code' ? 'Copied' : 'Copy code'"
+			aria-label="Copy code"
+			title="Copy code"
 			@click.stop="copyCode"
 		/>
 		<button
@@ -83,6 +81,9 @@
 			@close="pickerOpen = false"
 		/>
 	</span>
+	<!-- The word a copy leaves behind, where the toolbar was. Inert: it is a
+	label, not a control, so a finger on its way elsewhere goes through it. -->
+	<span v-if="copied" class="msg-copied" role="status">Copied</span>
 </template>
 
 <script lang="ts">
@@ -102,8 +103,9 @@ import {MessageType} from "../../shared/types/msg";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
 import ReactionPicker from "./ReactionPicker.vue";
 
-// How long the button says so after a copy that worked
-const COPIED_MS = 1500;
+// How long the "Copied" label stays over the row (its fade in style.css
+// takes as long)
+const COPIED_MS = 1000;
 
 // The one-tap reactions, shared by every toolbar on screen: a pick anywhere
 // moves it to the front everywhere. Read from storage when the first toolbar
@@ -132,7 +134,8 @@ export default defineComponent({
 	},
 	// `done`: an action was taken, the toolbar has served its purpose. On a
 	// touch device Message.vue closes it, as every native menu closes on a
-	// choice; a copy is not one — its button is saying "Copied".
+	// choice — a copy included: the next thing after a copy is a paste
+	// somewhere else, and the bar only stood in the way of getting there.
 	emits: ["done"],
 	setup(props, {emit}) {
 		const store = useStore();
@@ -170,12 +173,12 @@ export default defineComponent({
 			return codeBlocksOf(layout(text, {markdown: true}));
 		});
 
-		// Which copy button is saying "Copied" right now, if any.
-		const copied = ref<"text" | "code" | null>(null);
+		// Whether the "Copied" label is up
+		const copied = ref(false);
 		let copiedTimer: ReturnType<typeof setTimeout> | undefined;
 
 		const clearCopied = () => {
-			copied.value = null;
+			copied.value = false;
 
 			if (copiedTimer !== undefined) {
 				clearTimeout(copiedTimer);
@@ -185,28 +188,31 @@ export default defineComponent({
 
 		onUnmounted(clearCopied);
 
-		// A copy that did not happen says nothing and changes nothing.
-		const copy = async (what: "text" | "code", text: string) => {
+		// A copy that did not happen says nothing and changes nothing. One
+		// that did is the end of the toolbar (a pointer's stays with the
+		// hover, as ever); the label outlives it, over the row.
+		const copy = async (text: string) => {
 			if (!(await writeClipboard(text))) {
 				return;
 			}
 
+			emit("done");
 			clearCopied();
-			copied.value = what;
+			copied.value = true;
 			copiedTimer = setTimeout(clearCopied, COPIED_MS);
 		};
 
 		// Several blocks are one copy, a blank line apart: they were blocks of
 		// their own, and a copy that ran them together would be a different
 		// program.
-		const copyCode = () => copy("code", codeBlocks.value.join("\n\n"));
+		const copyCode = () => copy(codeBlocks.value.join("\n\n"));
 
 		// On a touch device the message text is not selectable (the long press
 		// that would select it opens this toolbar instead — see Message.vue),
 		// so the toolbar is how the text is copied there. A pointer device
 		// selects and copies as it always has, and does not get the button.
 		const canCopyText = hasVirtualKeyboard() && !!props.message.text;
-		const copyText = () => copy("text", props.message.text ?? "");
+		const copyText = () => copy(props.message.text ?? "");
 
 		// Only plain text can be edited (the IRC layer resends it tagged).
 		const canEdit = computed(

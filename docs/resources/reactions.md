@@ -46,11 +46,14 @@ at 21 / 18.5 / 16rem, and under 14rem the buttons themselves narrow to
 1.75rem. This is how most reactions are meant to be sent; the picker is for the
 rest.
 
-An action taken from the toolbar — a reaction, Reply, Edit, Delete — emits
-`done`, and on a touch device `Message.vue` closes the toolbar on it, as every
-native menu closes on a choice. Copy is not one: its button is saying
-"Copied". Browser check:
-`tools/scenarios/quick-reactions.mjs --mobile`.
+An action taken from the toolbar — a reaction, Reply, Edit, Delete, a copy
+that worked — emits `done`, and on a touch device `Message.vue` closes the
+toolbar on it, as every native menu closes on a choice. A copy leaves one
+word behind where the bar was, `Copied` (`.msg-copied`, `role="status"`),
+fading over a second and taking no tap: the next thing after a copy is a
+paste somewhere else. Browser checks:
+`tools/scenarios/quick-reactions.mjs --mobile`,
+`tools/scenarios/message-actions-single.mjs --mobile`.
 
 ## The picker (`ReactionPicker.vue`)
 
