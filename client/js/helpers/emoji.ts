@@ -48,6 +48,39 @@ export function loadEmojiCatalog(): Promise<EmojiGroup[]> {
 	return pending;
 }
 
+/** How long a busy page may put the prefetch off before it goes anyway. */
+const PREFETCH_TIMEOUT_MS = 10000;
+
+let prefetched = false;
+
+/**
+ * Fetch the catalog when the page has nothing better to do, so the first
+ * picker opens on a grid and not on "Loading emoji…". Hover preloads it on a
+ * desktop and the long press does on touch, but both give a slow phone on a
+ * slow network well under a second; the first conversation opening gives it
+ * the whole idle period after connecting. Once per page; a failed fetch lets
+ * the next call try again (the picker's own load does the same).
+ */
+export function prefetchEmojiCatalog(): void {
+	if (prefetched) {
+		return;
+	}
+
+	prefetched = true;
+
+	const go = () =>
+		void loadEmojiCatalog().catch(() => {
+			prefetched = false;
+		});
+
+	if (typeof requestIdleCallback === "function") {
+		requestIdleCallback(go, {timeout: PREFETCH_TIMEOUT_MS});
+	} else {
+		// Safari: no idle callback, so a pause is what stands in for one.
+		setTimeout(go, 3000);
+	}
+}
+
 const aliases = shortcodes as Record<string, string>;
 
 /**

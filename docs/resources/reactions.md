@@ -48,8 +48,9 @@ rest.
 An action taken from the toolbar — a reaction, Reply, Edit, Delete — emits
 `done`, and on a touch device `Message.vue` closes the toolbar on it, as every
 native menu closes on a choice. Copy is not one: its button is saying
-"Copied". The long press that opens the toolbar also fetches the catalog
-chunk, since a finger has no hover to preload on. Browser check:
+"Copied". The long press that opens the toolbar also asks for the catalog
+chunk, since a finger has no hover to preload on (normally the conversation
+has prefetched it already, see below). Browser check:
 `tools/scenarios/quick-reactions.mjs --mobile`.
 
 ## The picker (`ReactionPicker.vue`)
@@ -121,9 +122,12 @@ is also the event the outside-click handler waits for, so a second picker
 would otherwise leave the first on screen. Each announces itself on the event
 bus as it mounts (`reaction-picker-opened`) and any other closes.
 
-The catalog is fetched on `mouseenter` of either opener, so by the time the
-click lands the grid is usually already there; on touch the long press that
-opens the toolbar fetches it (`Message.vue`).
+The catalog is prefetched at idle once a conversation is open (`Chat.vue` →
+`prefetchEmojiCatalog()` in `emoji.ts`: `requestIdleCallback` with a 10 s
+timeout, a 3 s timer on Safari; once per page, a failed fetch lets the next
+call retry), so the first picker opens on a grid — hover on an opener and the
+long press that opens the toolbar (`Message.vue`) ask for it too, for a page
+whose idle has not come yet. The lobby does not prefetch: nothing there reacts.
 
 **Only the groups near the scroll are buttons.** The catalog is 1870 emoji,
 and a `<button>` each put 1924 nodes in the DOM and the open at 180 ms on a

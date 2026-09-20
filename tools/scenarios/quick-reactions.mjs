@@ -1,8 +1,8 @@
 // Quick reactions on a touch device: a long press opens the toolbar, whose
 // first three buttons are the newest single-emoji reactions used (or the
 // defaults) — one tap reacts, no picker. An action taken from the toolbar
-// closes it, as every native menu closes on a choice. And the long press is
-// what fetches the emoji catalog chunk, so the picker has it when opened.
+// closes it, as every native menu closes on a choice. And the catalog chunk
+// is prefetched once a conversation is open, so the picker has it when opened.
 //
 //   corepack yarn build && python3 -m http.server -d public 8000 &
 //   tools/nefarious-dev/run.sh -d
@@ -205,9 +205,19 @@ export default async function run(page) {
 			`performance.getEntriesByType("resource").some((e) => e.name.includes("emoji-catalog"))`
 		);
 
-	// 1. Before anything, the catalog chunk has not been fetched: the toolbar
-	//    is what asks for it.
-	await page.check("the emoji catalog is not fetched at boot", !(await catalogFetched()));
+	// 1. Opening the conversation prefetched the catalog chunk at idle
+	//    (helpers/emoji.ts `prefetchEmojiCatalog`, from Chat.vue), so the
+	//    first picker opens on a grid. The long press preloads it too, for a
+	//    page whose prefetch has not fired yet; that path is not separable
+	//    here, since the prefetch always wins the race in a quiet browser.
+	await page.waitFor(
+		`performance.getEntriesByType("resource").some((e) => e.name.includes("emoji-catalog"))`,
+		{timeout: 12000, label: "the catalog chunk to be prefetched"}
+	);
+	await page.check(
+		"the conversation prefetched the emoji catalog before any toolbar opened",
+		await catalogFetched()
+	);
 
 	// 2. A long press opens the toolbar with the three defaults leading it,
 	//    and the press fetched the catalog.
@@ -217,8 +227,6 @@ export default async function run(page) {
 		`the toolbar leads with three quick reactions (${quick.join(" ")})`,
 		(await openIds()).length === 1 && quick.join(" ") === "👍 ❤️ 😂"
 	);
-	await page.sleep(300);
-	await page.check("the long press fetched the emoji catalog", await catalogFetched());
 	await page.screenshot("1-toolbar-quick", {selector: first, pad: 60});
 
 	// 3. One tap on ❤️ reacts, closes the toolbar, and opens no picker.
