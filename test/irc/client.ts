@@ -3,6 +3,7 @@ import sinon from "ts-sinon";
 import socket from "../../client/js/socket";
 import {IrcClient, IrcClientOptions, parseJoinList, buildUrl} from "../../client/js/irc/client";
 import {IdAllocator} from "../../client/js/irc/ids";
+import * as saved from "../../client/js/irc/saved-networks";
 import {registerBusHandlers} from "../../client/js/irc/bus";
 import {utf8ByteLength} from "../../client/js/irc/message";
 import type {Transport} from "../../client/js/irc/types";
@@ -1280,5 +1281,58 @@ describe("IrcClient", function () {
 			]);
 			expect(parseJoinList("")).to.deep.equal([]);
 		});
+	});
+});
+
+describe("IrcClient channel order", function () {
+	const data = new Map<string, string>();
+
+	beforeEach(function () {
+		data.clear();
+		saved.useStorageBackend({
+			get: (key) => data.get(key) ?? null,
+			set: (key, value) => void data.set(key, value),
+			remove: (key) => void data.delete(key),
+		});
+	});
+
+	afterEach(function () {
+		saved.useStorageBackend(null);
+	});
+
+	it("inserts alphabetically when nothing is remembered", function () {
+		const {client} = setup({join: "#zeta,#alpha,#mid"});
+		expect(client.channels.map((c) => c.name)).to.deep.equal([
+			"irc.test",
+			"#alpha",
+			"#mid",
+			"#zeta",
+		]);
+	});
+
+	it("places channels in the remembered order, unknown names after, alphabetically", function () {
+		saved.setChannelOrder("net-1", ["#zeta", "#Mid"]);
+		const h = setup({uuid: "net-1", join: "#alpha,#mid,#zeta"});
+		const {client, transport} = h;
+
+		expect(client.channels.map((c) => c.name)).to.deep.equal([
+			"irc.test",
+			"#zeta",
+			"#mid",
+			"#alpha",
+		]);
+
+		// A JOIN nobody listed (a held session's restore) lands by the same rule.
+		register(h);
+		transport.line(":alice!a@h JOIN #beta");
+		transport.line(":alice!a@h JOIN #aaa");
+
+		expect(client.channels.map((c) => c.name).slice(1)).to.deep.equal([
+			"#zeta",
+			"#mid",
+			"#aaa",
+			"#alpha",
+			"#beta",
+		]);
 	});
 });

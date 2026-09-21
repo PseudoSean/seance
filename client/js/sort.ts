@@ -9,11 +9,10 @@ import storage from "./localStorage";
 import {store} from "./store";
 import {ClientNetwork} from "./types";
 import {ChanType} from "../../shared/types/chan";
+import * as saved from "./irc/saved-networks";
+import {parseJoinList} from "./irc/client";
 
 const NETWORKS_KEY = "thelounge.sort.networks";
-const CHANNELS_KEY = "thelounge.sort.channels";
-
-type StoredChannelOrder = Record<string, string[]>;
 
 function readJson<T>(key: string, fallback: T): T {
 	try {
@@ -50,9 +49,40 @@ export function sortChannels(networkUuid: string, order: number[]): void {
 	});
 
 	// Channel ids are per-session, so remember channel *names* instead
-	const stored = readJson<StoredChannelOrder>(CHANNELS_KEY, {});
-	stored[networkUuid] = network.channels.map((c) => c.name);
-	storage.set(CHANNELS_KEY, JSON.stringify(stored));
+	const names = network.channels.map((c) => c.name);
+	saved.setChannelOrder(networkUuid, names);
+	reorderJoinList(networkUuid, names);
+}
+
+/**
+ * The saved network's autojoin list follows the sidebar: the edit form
+ * shows the channels in the order they are seen, and a settings restore
+ * carries it. Entries not in the sidebar (never joined this session) keep
+ * their place at the end; keys are kept.
+ */
+function reorderJoinList(networkUuid: string, names: string[]): void {
+	const net = saved.get(networkUuid);
+
+	if (!net) {
+		return;
+	}
+
+	const lower = names.map((n) => n.toLowerCase());
+
+	const rank = (name: string) => {
+		const i = lower.indexOf(name.toLowerCase());
+		return i === -1 ? Infinity : i;
+	};
+
+	const entries = parseJoinList(net.join)
+		.map((entry, i) => ({entry, i}))
+		.sort((a, b) => rank(a.entry.name) - rank(b.entry.name) || a.i - b.i)
+		.map(({entry}) => (entry.key ? `${entry.name} ${entry.key}` : entry.name));
+	const join = entries.join(",");
+
+	if (join !== net.join) {
+		saved.save({...net, join});
+	}
 }
 
 /** Re-apply a previously stored ordering to the networks currently in the store. */
@@ -82,10 +112,9 @@ export function applyStoredNetworkOrder(): void {
 
 /** Re-apply a previously stored channel ordering to a network. */
 export function applyStoredChannelOrder(network: ClientNetwork): void {
-	const stored = readJson<StoredChannelOrder>(CHANNELS_KEY, {});
-	const order = stored[network.uuid];
+	const order = saved.channelOrder(network.uuid);
 
-	if (!order || order.length === 0) {
+	if (order.length === 0) {
 		return;
 	}
 
