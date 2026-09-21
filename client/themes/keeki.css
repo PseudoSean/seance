@@ -4,8 +4,8 @@
  * onto coffee's tokens; the flourishes are this file's own: a rail of purple
  * with four layers of 1–2px glitter in rose gold, pink, lavender and white
  * (drifting where a pointer hovers and motion is allowed), the active row filled rose
- * gold, own messages on a lighter band, a hot-pink mention badge, a ♡ before
- * the open conversation and a 🐾 after every network's name — and, for
+ * gold, own messages on a lighter band, a hot-pink mention badge and a 🐾
+ * after every network's name — and, for
  * Keeki, sunflowers and red roses drawn among the glitter and opening the
  * day and new-message dividers.
  *
@@ -268,11 +268,8 @@
 	content: "❀ New messages ❀";
 }
 
-/* ♡ before the open conversation, 🐾 after every network. */
-.channel-list-item.active .name::before {
-	content: "♡ ";
-}
-
+/* 🐾 after every network. The open conversation carries no glyph: a heart
+ * there read as a favourite. */
 .channel-list-item[data-type="lobby"] .name::after {
 	content: " 🐾";
 }
