@@ -176,24 +176,33 @@
 /* The drift repaints the rail every frame for as long as the tab is open —
  * fine for a desktop's 250×900px, battery on a phone whose rail is off-screen
  * most of the time — so it needs a pointer that hovers as well as no
- * reduced-motion preference. */
+ * reduced-motion preference.
+ *
+ * A tiled layer loops without a seam only when the cycle moves it a whole
+ * number of its own periods: at the end its position is then the start's
+ * position again, and the restart is invisible. So every `to` value below is
+ * the layer's `background-position` plus an exact multiple of its
+ * `background-size` — three periods for the glitter, one for the flowers —
+ * and the cycle is 120 s so the flowers cross one tile at 2.2 px/s while the
+ * glitter keeps its 2.4 px/s. (The first cut moved the flowers 70×90px in
+ * 40 s, no multiple of a 263×293px tile, so every 40 s they snapped back.) */
 @media (prefers-reduced-motion: no-preference) and (hover: hover) {
 	#sidebar {
-		animation: keeki-twinkle 40s linear infinite;
+		animation: keeki-twinkle 120s linear infinite;
 	}
 
 	@keyframes keeki-twinkle {
 		to {
 			background-position:
-				110px 120px,
-				172px 132px,
-				178px 242px,
-				90px 106px,
+				304px 346px,
+				434px 290px,
+				524px 544px,
+				212px 284px,
 				0 0,
 				0 0,
-				101px 179px,
-				247px 291px,
-				281px 103px,
+				294px 382px,
+				340px 558px,
+				388px 274px,
 				0 0;
 		}
 	}
