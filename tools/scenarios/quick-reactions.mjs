@@ -1,24 +1,17 @@
-// On a touch device the message action toolbar opens on a long press, one
-// message at a time, and a tap puts it away.
+// Quick reactions on a touch device: a long press opens the toolbar, whose
+// first three buttons are the newest single-emoji reactions used (or the
+// defaults) — one tap reacts, no picker. An action taken from the toolbar
+// closes it, as every native menu closes on a choice. And the catalog chunk
+// is prefetched once a conversation is open, so the picker has it when opened.
 //
 //   corepack yarn build && python3 -m http.server -d public 8000 &
 //   tools/nefarious-dev/run.sh -d
-//   node tools/browser-drive.mjs tools/scenarios/message-actions-single.mjs --mobile
+//   node tools/browser-drive.mjs tools/scenarios/quick-reactions.mjs --mobile
 //
-// `SEANCE_IRC_URL` and `SEANCE_IRC_CHANNEL` point it at another network:
-//
-//   SEANCE_IRC_URL=wss://irc.example.org:9998/ws SEANCE_IRC_CHANNEL='#textual' \
-//     node tools/browser-drive.mjs tools/scenarios/message-actions-single.mjs --mobile
-//
-// It joins the channel twice (the app and a second user), says three lines
-// and quits, so pick a channel where that is welcome.
-//
-// `--mobile` is required: the toolbar only opens on a long press where
-// `(hover: none) and (pointer: coarse)` matches, and the scenario refuses to
-// pass vacuously on a desktop viewport. The pointer-device behaviour (hover,
-// drag, the jump arrow) is tools/scenarios/message-actions-toolbar.mjs. Nothing in `yarn test` mounts a
-// component, which is why this exists. The second user is driven over the
-// same WebSocket the app uses, as tools/scenarios/reaction-picker.mjs does.
+// `--mobile` is required (the toolbar opens on a long press only where
+// `(hover: none) and (pointer: coarse)` matches). The desktop toolbar's
+// quick buttons are checked in message-actions-toolbar.mjs; the picker
+// itself in reaction-picker.mjs. A second user posts the lines to react to.
 
 const IRCD = process.env.SEANCE_IRC_URL ?? "wss://localhost:8443/";
 const CHANNEL = process.env.SEANCE_IRC_CHANNEL ?? "#seance";
@@ -34,8 +27,8 @@ if (ircd.hostname === "localhost" || ircd.hostname === "127.0.0.1") {
 // connection would answer the reused one with 433 and the app has no second
 // guess to make.
 const stamp = Math.random().toString(36).slice(2, 6);
-const NICK = `tapbar${stamp}`;
-const TALKER = `taptalk${stamp}`;
+const NICK = `qrbar${stamp}`;
+const TALKER = `qrtalk${stamp}`;
 
 // `host` carries a path when the ircd's WebSocket lives under one
 // (`irc.example.org/wockets/secure`); see the comment on it in js/irc/types.ts.
@@ -152,13 +145,11 @@ async function drag(page, selector) {
 
 export default async function run(page) {
 	await page.goto(page.url, {waitForSelector: "#connect form"});
+	await page.evaluate(`window.localStorage.removeItem("thelounge.reactions.recent")`);
 
-	const touchDevice = await page.evaluate(
-		`window.matchMedia("(hover: none) and (pointer: coarse)").matches`
-	);
 	await page.check(
-		"the browser is emulating a touch device (else nothing here can open; pass --mobile)",
-		touchDevice
+		"the browser is emulating a touch device (pass --mobile)",
+		await page.evaluate(`window.matchMedia("(hover: none) and (pointer: coarse)").matches`)
 	);
 
 	await page.evaluate(`document.querySelector("#connect form").requestSubmit()`);
@@ -168,120 +159,134 @@ export default async function run(page) {
 	});
 	await page.click(`.channel-list-item[data-name="${CHANNEL}"]`);
 
-	// The channel has history, so previous runs are on screen too: mark this
-	// run's messages and work only on the elements carrying the mark.
-	const token = `tap-${Date.now().toString(36)}`;
+	const token = `qr-${Date.now().toString(36)}`;
 	const talker = speaker(TALKER);
 	await talker.joined;
 
-	for (const n of [1, 2, 3]) {
+	for (const n of [1, 2]) {
 		talker.say(`line ${n} of ${token}`);
 	}
 
 	await page.waitFor(
 		`Array.from(document.querySelectorAll("#chat .msg .content")).filter((c) => c.textContent.includes(${JSON.stringify(
 			token
-		)})).length === 3`,
-		{timeout: 15000, label: "three messages to tap"}
+		)})).length === 2`,
+		{timeout: 15000, label: "two messages to react to"}
 	);
 	await page.sleep(400);
 
-	const ids = await page.evaluate(
-		`JSON.stringify(Array.from(document.querySelectorAll("#chat .msg")).filter((m) => m.textContent.includes(${JSON.stringify(
-			token
-		)})).map((m) => m.id))`
-	);
-	const [first, second, third] = JSON.parse(ids).map((id) => `#${id}`);
+	const [first, second] = JSON.parse(
+		await page.evaluate(
+			`JSON.stringify(Array.from(document.querySelectorAll("#chat .msg")).filter((m) => m.textContent.includes(${JSON.stringify(
+				token
+			)})).map((m) => m.id))`
+		)
+	).map((id) => `#${id}`);
 
 	const openIds = async () => JSON.parse(await page.evaluate(`JSON.stringify(${OPEN})`));
+	const quickOf = async (msg) =>
+		JSON.parse(
+			await page.evaluate(
+				`JSON.stringify(Array.from(document.querySelectorAll(${JSON.stringify(
+					`${msg} .msg-action-quick`
+				)})).map((b) => b.textContent.trim()))`
+			)
+		);
+	const badgesOf = async (msg) =>
+		JSON.parse(
+			await page.evaluate(
+				`JSON.stringify(Array.from(document.querySelectorAll(${JSON.stringify(
+					`${msg} .msg-reaction:not(.msg-reaction-add) .msg-reaction-text`
+				)})).map((b) => b.textContent.trim()))`
+			)
+		);
+	const catalogFetched = () =>
+		page.evaluate(
+			`performance.getEntriesByType("resource").some((e) => e.name.includes("emoji-catalog"))`
+		);
 
-	// 0. Message text is not selectable on a touch device: the platform's
-	//    long press would otherwise start a selection under ours.
+	// 1. Opening the conversation prefetched the catalog chunk at idle
+	//    (helpers/emoji.ts `prefetchEmojiCatalog`, from Chat.vue), so the
+	//    first picker opens on a grid. The long press preloads it too, for a
+	//    page whose prefetch has not fired yet; that path is not separable
+	//    here, since the prefetch always wins the race in a quiet browser.
+	await page.waitFor(
+		`performance.getEntriesByType("resource").some((e) => e.name.includes("emoji-catalog"))`,
+		{timeout: 12000, label: "the catalog chunk to be prefetched"}
+	);
 	await page.check(
-		"message text is not selectable on touch",
-		(await page.evaluate(
-			`getComputedStyle(document.querySelector(${JSON.stringify(first)})).userSelect`
-		)) === "none"
+		"the conversation prefetched the emoji catalog before any toolbar opened",
+		await catalogFetched()
 	);
 
-	// 1. A tap opens nothing — that is what used to happen, and it fired
-	//    while scrolling and reading.
-	await tap(page, `${first} .content`);
-	await page.check(
-		`a tap opens no toolbar (${JSON.stringify(await openIds())})`,
-		(await openIds()).length === 0
-	);
-
-	// A finger that moves is a scroll, however long it stays down.
-	await drag(page, `${first} .content`);
-	await page.check("a finger that moves opens nothing", (await openIds()).length === 0);
-
-	// 2. A long press opens that message's toolbar, and it is really on
-	//    screen — `actions-open` is only a class until the `hover: none` rule
-	//    reveals the toolbar it names.
+	// 2. A long press opens the toolbar with the three defaults leading it,
+	//    and the press fetched the catalog.
 	await longPress(page, `${first} .content`);
+	const quick = await quickOf(first);
 	await page.check(
-		`a long press opens one toolbar (${JSON.stringify(await openIds())})`,
-		(await openIds()).join() === first.slice(1)
+		`the toolbar leads with three quick reactions (${quick.join(" ")})`,
+		(await openIds()).length === 1 && quick.join(" ") === "👍 ❤️ 😂"
+	);
+	await page.screenshot("1-toolbar-quick", {selector: first, pad: 60});
+
+	// 3. One tap on ❤️ reacts, closes the toolbar, and opens no picker.
+	await tap(page, `${first} .msg-action-quick:nth-child(2)`);
+	await page.waitFor(
+		`document.querySelectorAll(${JSON.stringify(
+			`${first} .msg-reaction:not(.msg-reaction-add)`
+		)}).length === 1`,
+		{timeout: 5000, label: "the reaction badge"}
+	);
+	await page.check(
+		`the reaction arrived as a badge (${JSON.stringify(await badgesOf(first))})`,
+		(await badgesOf(first))[0] === "❤️"
+	);
+	await page.check("the toolbar closed on the tap", (await openIds()).length === 0);
+	await page.check("no picker opened", (await page.count("body > .reaction-picker")) === 0);
+	await page.screenshot("2-reacted", {selector: first, pad: 60});
+
+	// 4. Reopened, ❤️ leads the row now and reads as pressed; the other row's
+	//    toolbar shows the same order — one list for every toolbar.
+	await longPress(page, `${first} .content`);
+	const again = await quickOf(first);
+	const pressed = await page.evaluate(
+		`document.querySelector(${JSON.stringify(
+			`${first} .msg-action-quick`
+		)}).getAttribute("aria-pressed")`
+	);
+	await page.check(
+		`the used reaction leads and is pressed (${again.join(" ")}, aria-pressed=${pressed})`,
+		again.join(" ") === "❤️ 👍 😂" && pressed === "true"
+	);
+	await tap(page, `${first} .msg-action-quick:nth-child(1)`);
+	await page.waitFor(
+		`document.querySelectorAll(${JSON.stringify(
+			`${first} .msg-reaction:not(.msg-reaction-add)`
+		)}).length === 0`,
+		{timeout: 5000, label: "the badge to go"}
+	);
+	await page.check(
+		"tapping it again takes the reaction off",
+		(await badgesOf(first)).length === 0
 	);
 
-	const bar = await page.rect(`${first} .msg-actions`);
-	await page.check(
-		`the toolbar it names is visible (${JSON.stringify(bar)})`,
-		bar && bar.width > 0 && bar.height > 0
-	);
-	await page.check(
-		"the toolbar offers Copy text, since the text cannot be selected",
-		(await page.count(`${first} .msg-action-copy-text`)) === 1
-	);
-	await page.screenshot("1-first-open");
-
-	// 2b. Copy is the end of it: the bar closes on the tap — the next thing
-	//     is a paste somewhere else — and the one word it leaves takes no
-	//     tap and is gone within the second.
-	await page.grantPermissions(["clipboardReadWrite", "clipboardSanitizedWrite"]);
-	await tap(page, `${first} .msg-action-copy-text`);
-	await page.check("a tap on Copy closes the toolbar", (await openIds()).length === 0);
-	await page.check(
-		"and leaves a Copied label over the row",
-		(await page.evaluate(`document.querySelector("${first} .msg-copied")?.textContent`)) ===
-			"Copied"
-	);
-	await page.check(
-		"the label takes no tap",
-		(await page.evaluate(
-			`getComputedStyle(document.querySelector("${first} .msg-copied")).pointerEvents`
-		)) === "none"
-	);
-	await page.screenshot("2b-copied");
-	await page.sleep(1100);
-	await page.check(
-		"the label is gone within the second",
-		(await page.count(`${first} .msg-copied`)) === 0
-	);
-
-	// 3. A long press on a second message moves the toolbar rather than
-	//    adding one: a phone must never accumulate one per message.
 	await longPress(page, `${second} .content`);
-
-	const open = await openIds();
 	await page.check(
-		`a long press on another message moves the toolbar (${JSON.stringify(open)})`,
-		open.length === 1 && open[0] === second.slice(1)
+		`the other message's toolbar has the same order (${(await quickOf(second)).join(" ")})`,
+		(await quickOf(second)).join(" ") === "❤️ 👍 😂"
 	);
-	await page.screenshot("2-moved-to-second");
 
-	// 4. A tap puts it away: on the open message, or anywhere else.
-	await tap(page, `${second} .content`);
-	await page.check("a tap on the open message closes it", (await openIds()).length === 0);
-
-	// The toolbar floats above its row — over the row before it, on a phone
-	// over most of that row's width — so the other message tapped here is
-	// the one below, where the tap lands on the message and not on the bar.
-	await longPress(page, `${second} .content`);
-	await tap(page, `${third} .content`);
-	await page.check("a tap on another message closes it too", (await openIds()).length === 0);
-	await page.screenshot("3-closed-again");
+	// 5. Reply closes the toolbar and puts the caret in the composer with
+	//    the quote above it.
+	await tap(page, `${second} .msg-action-reply`);
+	await page.sleep(200);
+	await page.check("Reply closes the toolbar", (await openIds()).length === 0);
+	await page.check(
+		"the composer is replying to that message",
+		(await page.count("#form .compose-bar")) === 1
+	);
+	await page.screenshot("3-reply", {selector: "#form", pad: 40});
 
 	talker.quit();
+	page.check("no console errors", page.consoleErrors.length === 0);
 }

@@ -249,8 +249,52 @@ export default async function run(page) {
 		timeout: 10000,
 		label: "the emoji catalog chunk",
 	});
+	// Only the recents and the first group are buttons at this point: the
+	// other groups are placeholders sized like the grid they will become,
+	// rendered as the scroll (or a tab, or the keyboard) reaches them — the
+	// catalog is ~1900 emoji, and a button each is what made Android slow.
 	const options = await page.count(OPTION);
-	await page.check(`the whole catalog is browsable (${options} options)`, options > 1500);
+	const placeholders = await page.count(".reaction-picker-placeholder");
+	await page.check(
+		`the picker opens on the first group only (${options} options, ${placeholders} placeholders)`,
+		options < 400 && placeholders >= 7
+	);
+	await page.click(".reaction-picker-tab:last-child");
+	await page.sleep(250);
+	const flags = await page.evaluate(
+		`(() => {
+			const list = document.querySelector(".reaction-picker-list");
+			const section = list.querySelector('[data-key="flags"]');
+			return {
+				rendered: !!section.querySelector(".reaction-picker-option"),
+				buttons: section.querySelectorAll(".reaction-picker-option").length,
+				offBy: Math.round(section.getBoundingClientRect().top - list.getBoundingClientRect().top),
+				tab: document.querySelector(".reaction-picker-tab.active").title,
+			};
+		})()`
+	);
+	await page.check(
+		`the Flags tab renders its group and lands on it (${JSON.stringify(flags)})`,
+		flags.rendered && flags.buttons > 200 && Math.abs(flags.offBy) <= 2 && flags.tab === "Flags"
+	);
+	// Scroll so the People placeholder is within the render-ahead margin (the
+	// list is short in this window), and the observer is what renders it.
+	await page.evaluate(
+		`(() => {
+			const list = document.querySelector(".reaction-picker-list");
+			list.scrollTop = list.querySelector('[data-key="people"]').offsetTop - list.clientHeight - 100;
+		})()`
+	);
+	await page.sleep(300);
+	const afterScroll = await page.evaluate(
+		`document.querySelectorAll('[data-key="people"] .reaction-picker-option').length`
+	);
+	await page.check(
+		`scrolling renders the group coming into view (${afterScroll} People & Body buttons)`,
+		afterScroll > 100
+	);
+	await page.click(".reaction-picker-tab:first-child");
+	await page.sleep(150);
 	await page.check(
 		"the quick reactions come first before anything is remembered",
 		(await page.evaluate(`document.querySelector(".reaction-picker-heading").textContent`)) ===

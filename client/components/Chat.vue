@@ -145,6 +145,7 @@ import ListChannels from "./Special/ListChannels.vue";
 import ListIgnored from "./Special/ListIgnored.vue";
 import {defineComponent, PropType, ref, computed, watch, nextTick, onMounted, Component} from "vue";
 import {channelOpened} from "../js/helpers/lastChannel";
+import {prefetchEmojiCatalog} from "../js/helpers/emoji";
 import type {ClientNetwork, ClientChan} from "../js/types";
 import {useStore} from "../js/store";
 import {SpecialChanType, ChanType} from "../../shared/types/chan";
@@ -222,6 +223,13 @@ export default defineComponent({
 			// (helpers/lastChannel.ts); the lobby and special windows do
 			// not count, and this calls off a restore the user got ahead of.
 			channelOpened(props.network.uuid, props.channel.name, props.channel.type);
+
+			// A conversation is where reactions happen: the emoji catalog
+			// chunk is fetched now, at idle, so the picker never waits for it
+			// (helpers/emoji.ts). Not from the lobby — nothing there reacts.
+			if (props.channel.type !== ChanType.LOBBY) {
+				prefetchEmojiCatalog();
+			}
 
 			if (props.channel.usersOutdated) {
 				props.channel.usersOutdated = false;

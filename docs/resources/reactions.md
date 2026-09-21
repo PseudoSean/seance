@@ -9,7 +9,8 @@ even one word.
 
 | Entry point                                         | Lives in                                 |
 | --------------------------------------------------- | ---------------------------------------- |
-| The 😀 button on a message's hover toolbar          | `client/components/MessageActions.vue`   |
+| A quick reaction on a message's toolbar (one tap)   | `client/components/MessageActions.vue`   |
+| The 😀 button on the same toolbar (the picker)      | `MessageActions.vue`                     |
 | The `+` at the end of an existing reaction row      | `client/components/MessageReactions.vue` |
 | Clicking a reaction badge (adds or takes yours off) | `MessageReactions.vue`                   |
 | `/react <text> [msgid]`, `/unreact …`               | `client/js/irc/commands/react.ts`        |
@@ -26,6 +27,33 @@ names a message **loaded in this channel** (`Channel.idOf`) — the client knows
 which msgids are real here, and no shape heuristic could tell `awesome` from
 an opaque id. `:shortcodes:` are expanded on the way out, the same as in the
 picker.
+
+## Quick reactions (`MessageActions.vue`)
+
+The toolbar leads with the three newest **single-emoji** reactions this browser
+has sent (`quickReactions()` in `reactionRecents.ts`, topped up from
+`DEFAULT_REACTIONS` so there are always three; a word or a `🎉🎉🎉` stays in
+the picker — it would not fit a button the width of a glyph), then the 😀 that
+opens the picker, then a divider and the rest. One tap reacts; one you already
+have reads as pressed (`aria-pressed`, `.selected`) and a tap takes it off.
+Every toolbar on screen shows the same list — `rememberReaction` emits
+`RECENTS_CHANGED` on the event bus with the new list, and a pick anywhere
+moves something to the front everywhere. The bar is one row,
+always: as the `chat` pane narrows (container queries in `rem`, so the font
+step counts — an own message's eight buttons are ~20.75rem and a 390px phone
+is 19.5rem at the default step) the quick reactions stand down one at a time
+at 21 / 18.5 / 16rem, and under 14rem the buttons themselves narrow to
+1.75rem. This is how most reactions are meant to be sent; the picker is for the
+rest.
+
+An action taken from the toolbar — a reaction, Reply, Edit, Delete, a copy
+that worked — emits `done`, and on a touch device `Message.vue` closes the
+toolbar on it, as every native menu closes on a choice. A copy leaves one
+word behind where the bar was, `Copied` (`.msg-copied`, `role="status"`),
+fading over a second and taking no tap: the next thing after a copy is a
+paste somewhere else. Browser checks:
+`tools/scenarios/quick-reactions.mjs --mobile`,
+`tools/scenarios/message-actions-single.mjs --mobile`.
 
 ## The picker (`ReactionPicker.vue`)
 
@@ -96,8 +124,35 @@ is also the event the outside-click handler waits for, so a second picker
 would otherwise leave the first on screen. Each announces itself on the event
 bus as it mounts (`reaction-picker-opened`) and any other closes.
 
-The catalog is fetched on `mouseenter` of either opener, so by the time the
-click lands the grid is usually already there.
+The catalog is prefetched at idle once a conversation is open (`Chat.vue` →
+`prefetchEmojiCatalog()` in `emoji.ts`: `requestIdleCallback` with a 10 s
+timeout, a 3 s timer on Safari; `loadEmojiCatalog`'s own memo makes it once
+per page, and a failed fetch lets the next call retry), so the first picker opens on a grid — hover on an opener asks
+for it too, for a page whose idle has not come yet, and the picker loads it
+itself if all else failed. The lobby does not prefetch: nothing there reacts.
+
+**Only the groups near the scroll are buttons.** The catalog is 1870 emoji,
+and a `<button>` each put 1924 nodes in the DOM and the open at 180 ms on a
+4×-throttled CPU (109 ms of it one task) — and on Android every glyph in the
+DOM is rasterised whether or not it is on screen. So the picker opens on the
+recents and Smileys only (~220 nodes, 93 ms, no long task); every other group
+is a placeholder `div` whose height is `--rows` × the cell pitch in
+`style.css` (`.reaction-picker-placeholder`, next to the cell rule it
+depends on), rendered when the scroll brings it within `RENDER_AHEAD`
+(320px; `renderNear`, from the list's `scroll` handler and whenever the
+layout changes), when its tab is tapped (`goToSection` renders first, then
+scrolls) or when the keyboard lands in it (`setActive`; a down arrow with
+nothing rendered below goes to the first cell of the next group). Once
+rendered a group stays rendered (`rendered`, a reactive Set). A placeholder
+group's `Option` objects are not built either — `sections` carries
+`start`/`count` for every group and `options` only for rendered ones, so a
+keystroke that clears the search allocates ~200 options, not 1900. The row
+count needs the column count, which is read off the first row of the
+rendered Smileys grid (`countColumns`, on mount, when the catalog lands and
+on resize); the placeholder height then matches the rendered grid to the
+pixel. Search results are always rendered (≤ 121). The numbers are from
+`tools/scenarios/reaction-picker-profile.mjs`, which prints them for a before
+and after (`SEANCE_CPU=6` for a cheaper phone).
 
 ### Recently used
 
@@ -154,7 +209,7 @@ drawn do not, which is what `appear` being off buys.
 ## Tests
 
 - `test/helpers/emoji.ts` — catalog shape, search ranking, normalisation.
-- `test/helpers/reactionRecents.ts` — the MRU list and its storage.
+- `test/helpers/reactionRecents.ts` — the MRU list, its storage, `quickReactions` and the change listener.
 - `test/tests/messageUpdates.ts` — `applyReaction` and `myReactions`.
 - `test/irc/reactions.ts` — the wire side and `/react`'s argument rules.
 

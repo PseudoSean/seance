@@ -180,6 +180,7 @@
 			:message="message"
 			:channel="channel"
 			:network="network"
+			@done="onActionDone"
 		/>
 	</div>
 </template>
@@ -412,6 +413,14 @@ export default defineComponent({
 			}
 		};
 
+		// An action taken from the toolbar is the end of it on a touch device
+		// (a pointer's toolbar is hover, and goes with the pointer).
+		const onActionDone = () => {
+			if (actionsOpen.value) {
+				openActions.value = null;
+			}
+		};
+
 		// A tap outside the scrollback (the header, the input) closes it too.
 		const closeFromOutside = (e: Event) => {
 			const target = e.target as HTMLElement | null;
@@ -555,6 +564,7 @@ export default defineComponent({
 		return {
 			store,
 			actionsOpen,
+			onActionDone,
 			selectArmed,
 			onTouchStart,
 			onTouchMove,
