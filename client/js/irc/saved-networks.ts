@@ -426,31 +426,23 @@ export function setCursor(uuid: string, cursor: NetworkCursor): void {
  * autojoin placeholder, a held session's restore, `/join`.
  */
 export function channelOrder(uuid: string): string[] {
-	try {
-		const raw = backend.get(CHANNEL_ORDER_KEY);
-		const parsed: unknown = raw ? JSON.parse(raw) : {};
-		const order =
-			parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>)[uuid] : [];
-		return Array.isArray(order) ? order.filter((n): n is string => typeof n === "string") : [];
-	} catch (e) {
-		backend.remove(CHANNEL_ORDER_KEY);
-		return [];
-	}
+	const order = readOrders()[uuid];
+	return Array.isArray(order) ? order.filter((n): n is string => typeof n === "string") : [];
 }
 
 export function setChannelOrder(uuid: string, names: string[]): void {
-	let all: Record<string, string[]> = {};
+	backend.set(CHANNEL_ORDER_KEY, JSON.stringify({...readOrders(), [uuid]: names}));
+}
 
+function readOrders(): Record<string, unknown> {
 	try {
 		const raw = backend.get(CHANNEL_ORDER_KEY);
 		const parsed: unknown = raw ? JSON.parse(raw) : {};
-		all = parsed && typeof parsed === "object" ? (parsed as Record<string, string[]>) : {};
+		return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
 	} catch (e) {
-		all = {};
+		backend.remove(CHANNEL_ORDER_KEY);
+		return {};
 	}
-
-	all[uuid] = names;
-	backend.set(CHANNEL_ORDER_KEY, JSON.stringify(all));
 }
 
 export function lastUsed(): SavedNetwork | undefined {
