@@ -19,6 +19,9 @@ import type {ConnectOptions} from "./types";
 
 export const STORAGE_KEY = "thelounge.networks";
 
+/** Channel names per network uuid, in the order the sidebar shows them. */
+export const CHANNEL_ORDER_KEY = "thelounge.sort.channels";
+
 /**
  * The newest message the client has shown on a network: the catch-up
  * cursor offered to nefarious2 as `PERSISTENCE ATTACH <profile> <msgid>`
@@ -416,6 +419,40 @@ export function setCursor(uuid: string, cursor: NetworkCursor): void {
 }
 
 /** The entry to pre-fill the connect form with, if any. */
+/**
+ * The order the user gave a network's channels (drag-and-drop in the
+ * sidebar), by name. `IrcClient.createChannel` places a channel by it, so
+ * the order holds across reloads whichever way the channel arrives —
+ * autojoin placeholder, a held session's restore, `/join`.
+ */
+export function channelOrder(uuid: string): string[] {
+	try {
+		const raw = backend.get(CHANNEL_ORDER_KEY);
+		const parsed: unknown = raw ? JSON.parse(raw) : {};
+		const order =
+			parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>)[uuid] : [];
+		return Array.isArray(order) ? order.filter((n): n is string => typeof n === "string") : [];
+	} catch (e) {
+		backend.remove(CHANNEL_ORDER_KEY);
+		return [];
+	}
+}
+
+export function setChannelOrder(uuid: string, names: string[]): void {
+	let all: Record<string, string[]> = {};
+
+	try {
+		const raw = backend.get(CHANNEL_ORDER_KEY);
+		const parsed: unknown = raw ? JSON.parse(raw) : {};
+		all = parsed && typeof parsed === "object" ? (parsed as Record<string, string[]>) : {};
+	} catch (e) {
+		all = {};
+	}
+
+	all[uuid] = names;
+	backend.set(CHANNEL_ORDER_KEY, JSON.stringify(all));
+}
+
 export function lastUsed(): SavedNetwork | undefined {
 	return list().find((net) => net.lastUsed !== undefined);
 }

@@ -47,6 +47,23 @@ describe("saved-networks", function () {
 		saved.useStorageBackend(null);
 	});
 
+	it("remembers a channel order per network under thelounge.sort.channels", function () {
+		expect(saved.channelOrder("a")).to.deep.equal([]);
+
+		saved.setChannelOrder("a", ["#zeta", "#alpha"]);
+		saved.setChannelOrder("b", ["#one"]);
+
+		expect(saved.channelOrder("a")).to.deep.equal(["#zeta", "#alpha"]);
+		expect(saved.channelOrder("b")).to.deep.equal(["#one"]);
+		expect(JSON.parse(backend.get(saved.CHANNEL_ORDER_KEY) as string)).to.deep.equal({
+			a: ["#zeta", "#alpha"],
+			b: ["#one"],
+		});
+
+		backend.set(saved.CHANNEL_ORDER_KEY, "{not json");
+		expect(saved.channelOrder("a")).to.deep.equal([]);
+	});
+
 	it("starts empty and tolerates missing storage", function () {
 		expect(saved.list()).to.deep.equal([]);
 		expect(saved.get("nope")).to.equal(undefined);
