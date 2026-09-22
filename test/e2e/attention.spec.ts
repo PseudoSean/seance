@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- a diagnostic trace of the frames and the page log, printed for a failing run */
 /**
  * Attention in a real browser against a real ircd (client/js/irc/presence.ts).
  *
@@ -147,8 +148,10 @@ test("a hidden page says AWAY *, marks nothing read, and comes back with AWAY an
 		});
 		ws.on("framereceived", (f) => {
 			const p = String(f.payload);
-			if (/ (301|305|306|318|PONG|ERROR)/.test(p) || /^PONG|^ERROR/.test(p))
+
+			if (/ (301|305|306|318|PONG|ERROR)/.test(p) || /^PONG|^ERROR/.test(p)) {
 				console.warn(`${stamp()} ws${id} < ${p.slice(0, 100)}`);
+			}
 		});
 		ws.on("close", () => console.warn(`${stamp()} ws${id} CLOSED`));
 	});
@@ -157,11 +160,14 @@ test("a hidden page says AWAY *, marks nothing read, and comes back with AWAY an
 			m.type() === "error" ||
 			m.type() === "warning" ||
 			/transport|reconnect|probe/i.test(m.text())
-		)
+		) {
 			console.warn(`${stamp()} [page ${m.type()}] ${m.text().slice(0, 160)}`);
+		}
 	});
 	page.on("framenavigated", (fr) => {
-		if (fr === page.mainFrame()) console.warn(`${stamp()} NAVIGATED ${fr.url()}`);
+		if (fr === page.mainFrame()) {
+			console.warn(`${stamp()} NAVIGATED ${fr.url()}`);
+		}
 	});
 
 	const nick = await connect(page);

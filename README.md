@@ -25,7 +25,7 @@ can operate without a seperate service.
 
 Seance is a static site: A browser-based IRC client with **no server of its own**.
 The page opens a WebSocket directly to a compatable IRC server. It supports modern
-IRC features: 
+IRC features:
 
 SASL, `message-tags`,
 `server-time`, `batch`, `echo-message`, `labeled-response`, `draft/chathistory`,
@@ -41,20 +41,20 @@ SASL, `message-tags`,
 - **Modern chat features.** Replies, reactions, editing and deletion, typing
   indicators, inline media previews, search, mentions, multiple networks.
 - **Installable.** Seance also supports use as a Chrome/Edge/Android PWA
-  (Progressive Web App) ([`docs/resources/pwa.md`](docs/resources/pwa.md)), 
+  (Progressive Web App) ([`docs/resources/pwa.md`](docs/resources/pwa.md)),
   and has a framework for being built as an Electron and
   Capacitor app for desktop and mobile stores (ios/apple/etc) under [`shells/`](shells/).
 
 Seance is built primarily and tested for **nefarious2** (`ircv3.2-upgrade` beta
 branch), EvilNet's ircd, but any ircd that offers IRC over WebSocket and the
 same caps should work, degrading gracefully where a cap is missing. It works on
-Nefarious ircd, Unrealircd etc. 
+Nefarious ircd, Unrealircd etc.
 
 Try it out on these networks:
 
-  - AfterNET: webirc.afternet.org port 9998 (web+irc://webirc.afternet.org:9998/#seance)
-  - Swiftirc: fiery.swiftirc.net port 4443 (web+irc://fiery.swiftirc.net:4443/#swiftric)
-  - Unreal ircd: irc.unrealircd.org port 443 (web+irc://irc.unrealircd.org/#chat)
+- AfterNET: webirc.afternet.org port 9998 (web+irc://webirc.afternet.org:9998/#seance)
+- Swiftirc: fiery.swiftirc.net port 4443 (web+irc://fiery.swiftirc.net:4443/#swiftric)
+- Unreal ircd: irc.unrealircd.org port 443 (web+irc://irc.unrealircd.org/#chat)
 
 If you have religious anti-AI beliefs, this project is not for you. The project
 is built mainly with Claude Code (fable). ("But where are all the apps!")
@@ -71,9 +71,8 @@ it. Seance is MIT licensed (like they were).
 We are greatful for, and lean heavily on the [ircv3](https://ircv3.net/) project
 which has been working for a very long time on some of these expanded IRC capabilities
 and extensions to the IRC protocol. But we also feel their incentives and taste differ
-from our own, so we embrace our own path in some areas choosing to create alternative 
+from our own, so we embrace our own path in some areas choosing to create alternative
 CAPs or modify the implementation to suit us.
-
 
 ## Building and serving
 
@@ -139,6 +138,6 @@ conventions.
 
 Usable as a daily client against nefarious2; branding, PWA, and Electron
 packaging are in place, mobile shells are scaffolded. Push notifications
-work on chrome/PWA but not yet in the app frameworks (it needs the 
+work on chrome/PWA but not yet in the app frameworks (it needs the
 ircd's `draft/webpush` to send). The original plan and its checklist are in
 [`docs/projects/initial_conversion.md`](docs/projects/initial_conversion.md).
