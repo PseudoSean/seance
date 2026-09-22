@@ -17,36 +17,63 @@
 
 ## Overview
 
-Seance is a browser IRC client with **no server of its own**. The page opens a
-WebSocket directly to the IRC server (one IRC line per frame, `text.ircv3.net`
-subprotocol) and speaks IRCv3 itself — CAP 302, SASL, `message-tags`,
+Traditional Web based IRC clients (TheLounge, KiwiIRC etc) require you to host
+a service somewhere to translate between http requests and IRC. But that era is
+coming to an end. Modern IRC servers like Nefarious2 have support for
+web-sockets directly, and chat history, and fast-reconnect. This means Seance
+can operate without a seperate service.
+
+Seance is a static site: A browser-based IRC client with **no server of its own**.
+The page opens a WebSocket directly to a compatable IRC server. It supports modern
+IRC features: 
+
+SASL, `message-tags`,
 `server-time`, `batch`, `echo-message`, `labeled-response`, `draft/chathistory`,
-`draft/read-marker`, `draft/message-redaction`, `+typing`, STS and more. There is
-nothing to host but a directory of static files.
+`draft/read-marker`, `draft/message-redaction`, `+typing`, STS and more.
 
 - **Just files.** Build once, drop `public/` on any web server (or GitHub Pages),
   done. No Node process, no database, no accounts on the client side.
-- **Yours to brand.** One `config.json` sets the network name, default server,
+- **Brandable** `config.json` can set the network name, default server,
   theme, logo, help links, uploader and feature switches; see
   [`docs/resources/branding.md`](docs/resources/branding.md).
-- **History without a bouncer.** Backlog, read markers and catch-up after a
-  reconnect come from the ircd's `CHATHISTORY` support.
+- **Chat History.** Backlog, read markers and catch-up after a
+  reconnect all come from the ircd's `CHATHISTORY` capability.
 - **Modern chat features.** Replies, reactions, editing and deletion, typing
   indicators, inline media previews, search, mentions, multiple networks.
-- **Installable.** A Chrome/Edge/Android PWA out of the box
-  ([`docs/resources/pwa.md`](docs/resources/pwa.md)), with Electron and
-  Capacitor shells for desktop and mobile stores under [`shells/`](shells/).
+- **Installable.** Seance also supports use as a Chrome/Edge/Android PWA
+  (Progressive Web App) ([`docs/resources/pwa.md`](docs/resources/pwa.md)), 
+  and has a framework for being built as an Electron and
+  Capacitor app for desktop and mobile stores (ios/apple/etc) under [`shells/`](shells/).
 
-The target server is **nefarious2** (`ircv3.2-upgrade` branch), EvilNet's ircd
-with a WebSocket listener and the IRCv3.2 capability set; any ircd that offers
-IRC over WebSocket and the same caps should work, degrading gracefully where a
-cap is missing.
+Seance is built primarily and tested for **nefarious2** (`ircv3.2-upgrade` beta
+branch), EvilNet's ircd, but any ircd that offers IRC over WebSocket and the
+same caps should work, degrading gracefully where a cap is missing. It works on
+Nefarious ircd, Unrealircd etc. 
+
+Try it out on these networks:
+
+  - AfterNET: webirc.afternet.org port 9998 (web+irc://webirc.afternet.org:9998/#seance)
+  - Swiftirc: fiery.swiftirc.net port 4443 (web+irc://fiery.swiftirc.net:4443/#swiftric)
+  - Unreal ircd: irc.unrealircd.org port 443 (web+irc://irc.unrealircd.org/#chat)
+
+If you have religious anti-AI beliefs, this project is not for you. The project
+is built mainly with Claude Code (fable). ("But where are all the apps!")
+
+Driving claude, however, are seasoned IRC veterans who "get it" with regards
+to classic IRC culture but also strive to expand the IRC experience with modern
+features normal folks have rightly become used to in apps like Discord and Slack.
 
 Seance began as a fork of [The Lounge](https://github.com/thelounge/thelounge)
-— its Vue client, themes and years of interface polish are the foundation this
-is built on, and its Node/Socket.IO server is what Seance removed. Thank you to
-The Lounge contributors, and to [Shout](https://github.com/erming/shout) before
-it. Seance is MIT licensed like both.
+— The Vuejs user interface, themes and years of polish built the foundation this
+inherits. Thank you to The Lounge contributors, and to [Shout](https://github.com/erming/shout) before
+it. Seance is MIT licensed (like they were).
+
+We are greatful for, and lean heavily on the [ircv3](https://ircv3.net/) project
+which has been working for a very long time on some of these expanded IRC capabilities
+and extensions to the IRC protocol. But we also feel their incentives and taste differ
+from our own, so we embrace our own path in some areas choosing to create alternative 
+CAPs or modify the implementation to suit us.
+
 
 ## Building and serving
 
@@ -111,7 +138,7 @@ conventions.
 ## Status
 
 Usable as a daily client against nefarious2; branding, PWA, and Electron
-packaging are in place, mobile shells are scaffolded, web push is not yet
-available (it needs the ircd's `draft/webpush` to send). The plan and its
-checklist are in
+packaging are in place, mobile shells are scaffolded. Push notifications
+work on chrome/PWA but not yet in the app frameworks (it needs the 
+ircd's `draft/webpush` to send). The original plan and its checklist are in
 [`docs/projects/initial_conversion.md`](docs/projects/initial_conversion.md).
