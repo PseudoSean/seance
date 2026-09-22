@@ -104,7 +104,9 @@ const join: Handler = (client, msg) => {
 		(message as {account?: string}).account = account;
 	}
 
-	if (gecos) {
+	// A realname the user never set is the nick again (nefarious2 fills it
+	// from the nick when USER's is empty); printing "dave (dave)" says nothing.
+	if (gecos && !client.namesEqual(gecos, nick)) {
 		message.gecos = gecos;
 	}
 

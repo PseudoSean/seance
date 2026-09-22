@@ -53,13 +53,17 @@
 			<span v-if="channel.editing" class="compose-bar-label">
 				<span class="compose-bar-icon" aria-hidden="true">✎</span>
 				Editing message
-				<span class="compose-bar-preview">{{ composePreview }}</span>
+				<span class="compose-bar-preview"
+					><QuotePreview :text="composeTarget?.text ?? ''"
+				/></span>
 			</span>
 			<span v-else class="compose-bar-label">
 				<span class="compose-bar-icon" aria-hidden="true">↩</span>
 				Replying to <strong class="compose-bar-nick">{{ composeNick }}</strong
 				>:
-				<span class="compose-bar-preview">{{ composePreview }}</span>
+				<span class="compose-bar-preview"
+					><QuotePreview :text="composeTarget?.text ?? ''"
+				/></span>
 			</span>
 			<button
 				type="button"
@@ -87,7 +91,7 @@
 			@blur="onBlur"
 		/>
 		<span
-			v-if="store.state.serverConfiguration?.fileUpload"
+			v-if="store.state.serverConfiguration?.fileUpload || networkFilehost"
 			id="upload-tooltip"
 			class="tooltipped tooltipped-w tooltipped-no-touch"
 			aria-label="Upload file"
@@ -133,7 +137,9 @@ import Mousetrap from "mousetrap";
 import {wrapCursor} from "undate";
 import autocompletion from "../js/autocompletion";
 import {commands} from "../js/commands/index";
+import {expandAlias} from "../js/helpers/aliases";
 import socket from "../js/socket";
+import {clientForNetwork} from "../js/irc/manager";
 import upload from "../js/upload";
 import eventbus from "../js/eventbus";
 import {
@@ -162,6 +168,7 @@ import {hasVirtualKeyboard} from "../js/helpers/device";
 const ENTER_NEWLINE_WINDOW_MS = 500;
 import {TypingReporter} from "../js/helpers/typingReporter";
 import TypingIndicator from "./TypingIndicator.vue";
+import QuotePreview from "./QuotePreview.vue";
 
 const formattingHotkeys = {
 	"mod+k": "\x03",
@@ -190,7 +197,7 @@ const bracketWraps = {
 
 export default defineComponent({
 	name: "ChatInput",
-	components: {TypingIndicator},
+	components: {TypingIndicator, QuotePreview},
 	props: {
 		network: {type: Object as PropType<ClientNetwork>, required: true},
 		channel: {type: Object as PropType<ClientChan>, required: true},
@@ -230,16 +237,23 @@ export default defineComponent({
 				const style = window.getComputedStyle(input.value);
 				const lineHeight = parseFloat(style.lineHeight) || 1;
 
-				// Start by resetting height before computing as scrollHeight does not
-				// decrease when deleting characters
+				// Measuring means collapsing the box to one line first, since
+				// scrollHeight never shrinks below the box. Hold the form's height
+				// meanwhile: the list above is sized by it, and WebKit clamps the
+				// list's scroll position to the taller box it sees during that
+				// moment, leaving the newest rows under the composer afterwards.
+				const form = input.value.form!;
+
+				form.style.minHeight = `${form.offsetHeight}px`;
 				input.value.style.height = "";
 
-				// Use scrollHeight to calculate how many lines there are in input, and ceil the value
-				// because some browsers tend to incorrently round the values when using high density
-				// displays or using page zoom feature
+				// scrollHeight is an integer and the line height is 1.4 × the font
+				// size, fractional at every font step but the default: two lines of
+				// 22.4px report 45, and ceil would give a third, blank line. Round.
 				input.value.style.height = `${
-					Math.ceil(input.value.scrollHeight / lineHeight) * lineHeight
+					Math.round(input.value.scrollHeight / lineHeight) * lineHeight
 				}px`;
+				form.style.minHeight = "";
 			});
 		};
 
@@ -375,10 +389,27 @@ export default defineComponent({
 
 		const composeNick = computed(() => composeTarget.value?.from?.nick ?? "");
 
-		const composePreview = computed(() => {
-			const text = (composeTarget.value?.text ?? "").replace(/\s+/g, " ").trim();
-			return text.length > 80 ? text.slice(0, 79) + "…" : text;
-		});
+		/**
+		 * Run `line` as a UI-only command (`/collapse`, `/search`, …).
+		 * True when the line is consumed here and must not reach the bus —
+		 * also for a bare `/`, which is not a command at all.
+		 */
+		const runClientCommand = (line: string): boolean => {
+			if (line[0] !== "/" || line[1] === "/") {
+				return false;
+			}
+
+			const args = line.substring(1).split(" ");
+			const cmd = args.shift()?.toLowerCase();
+
+			if (!cmd) {
+				return true;
+			}
+
+			return (
+				Object.prototype.hasOwnProperty.call(commands, cmd) && commands[cmd](args) === true
+			);
+		};
 
 		const onSubmit = (fromEnterKey = false) => {
 			if (!input.value) {
@@ -455,17 +486,30 @@ export default defineComponent({
 				props.channel.inputHistory.pop();
 			}
 
-			if (text[0] === "/") {
-				const args = text.substring(1).split(" ");
-				const cmd = args.shift()?.toLowerCase();
+			// A user-defined alias replaces the line before anything looks at
+			// it, so its expansion reaches the UI-only commands below as well
+			// as the IRC layer. Never while editing: the edit body is text.
+			if (!editing) {
+				const expanded = expandAlias(text, {
+					chan: props.channel.name,
+					me: props.network.nick,
+				});
 
-				if (!cmd) {
-					return false;
-				}
+				if (expanded) {
+					for (const line of expanded) {
+						if (!runClientCommand(line)) {
+							socket.emit("input", {target, text: line});
+						}
+					}
 
-				if (Object.prototype.hasOwnProperty.call(commands, cmd) && commands[cmd](args)) {
-					return false;
+					props.channel.replyTo = null;
+					props.channel.editing = null;
+					return;
 				}
+			}
+
+			if (text[0] === "/" && runClientCommand(text)) {
+				return false;
 			}
 
 			// An edit keeps the parent of the message it replaces; the IRC layer
@@ -515,9 +559,21 @@ export default defineComponent({
 			uploadInput.value?.click();
 		};
 
+		// The network's own upload host (`draft/FILEHOST` ISUPPORT, kept on
+		// the network's serverOptions by `network:options`); it takes
+		// precedence over the deploy's uploader (`upload.ts`).
+		const networkFilehost = computed(
+			() => store.state.activeChannel?.network.serverOptions?.FILEHOST !== undefined
+		);
+
 		// The file dialog offers what the uploader takes; the drop and paste
-		// paths check the same list in `Uploader.triggerUpload`.
+		// paths check the same list in `Uploader.triggerUpload`. A FILEHOST
+		// says what it takes only over HTTP, so the dialog stays open-ended.
 		const uploadAccept = computed(() => {
+			if (networkFilehost.value) {
+				return undefined;
+			}
+
 			const accept = store.state.branding.uploads?.accept;
 			return accept?.length ? accept.join(",") : undefined;
 		});
@@ -791,7 +847,7 @@ export default defineComponent({
 			// Always listen for drops and pastes: without a configured uploader
 			// the handler swallows them and shows a one-off notice instead of
 			// letting the browser navigate to the dropped file.
-			upload.mounted(store);
+			upload.mounted(store, clientForNetwork);
 		});
 
 		onUnmounted(() => {
@@ -820,6 +876,7 @@ export default defineComponent({
 			onUploadInputChange,
 			openFileUpload,
 			uploadAccept,
+			networkFilehost,
 			uploadLabel,
 			uploadPercent,
 			cancelUpload,
@@ -833,7 +890,7 @@ export default defineComponent({
 			setPendingMessage,
 			cancelCompose,
 			composeNick,
-			composePreview,
+			composeTarget,
 			showConnectionBar,
 			canSend,
 			connectionLabel,

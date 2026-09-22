@@ -126,8 +126,10 @@ socket.on("msg", function (data) {
 	}
 
 	if (messageLimit > 0 && channel.messages.length > messageLimit) {
-		channel.messages.splice(0, channel.messages.length - messageLimit);
+		const dropped = channel.messages.splice(0, channel.messages.length - messageLimit);
 		channel.moreHistoryAvailable = true;
+		// The IRC layer must stop counting them as shown (bus-contract § 2).
+		socket.emit("history:trim", {target: channel.id, ids: dropped.map((m) => m.id)});
 	}
 
 	if (channel.type === ChanType.CHANNEL) {

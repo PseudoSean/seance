@@ -1,16 +1,21 @@
 /**
- * AWAY (`away-notify`, and the server's echo of our own). Channel users get
- * `away` set silently; query windows show a message; our own goes to the lobby.
+ * AWAY (`away-notify`, and the server's echo of our own), plus the 305/306
+ * confirmations of our own `/away`. Channel users get `away` set silently;
+ * query windows show a message; our own goes to the lobby — the 305/306,
+ * being a reply the user asked for, follows to the active tab.
  */
 
 import {ChanType} from "../../../../shared/types/chan";
 import {MessageType} from "../../../../shared/types/msg";
 import type {Handler} from "../types";
+import {AWAY_STAR, takeQuietAwayReply} from "../presence";
 
 const away: Handler = (client, msg) => {
 	const nick = msg.source?.name ?? "";
-	const text = msg.params[0] ?? "";
-	const type = text ? MessageType.AWAY : MessageType.BACK;
+	const raw = msg.params[0] ?? "";
+	// `draft/pre-away`: `*` is away for an unspecified reason — away, no text.
+	const text = raw === "*" ? "" : raw;
+	const type = raw ? MessageType.AWAY : MessageType.BACK;
 	const time = client.timeOf(msg);
 
 	if (!nick) {
@@ -18,7 +23,12 @@ const away: Handler = (client, msg) => {
 	}
 
 	if (client.isSelf(nick)) {
-		client.pushMessage(client.lobby, {type, time, text, self: true}, true);
+		// Our own star (another connection of the account, typically) is the
+		// attention signal, not something to announce.
+		if (raw !== AWAY_STAR) {
+			client.pushMessage(client.lobby, {type, time, text, self: true}, true);
+		}
+
 		return;
 	}
 
@@ -29,7 +39,13 @@ const away: Handler = (client, msg) => {
 			}
 
 			chan.userAway = text;
-			client.pushMessage(chan, {type, time, text, from: chan.userRef(nick)});
+
+			// Someone else's star is their client saying it is not looking
+			// (`draft/pre-away`); the server only shows it to us because we
+			// speak pre-away too. State, not news: no line in the query.
+			if (raw !== AWAY_STAR) {
+				client.pushMessage(chan, {type, time, text, from: chan.userRef(nick)});
+			}
 		} else if (chan.type === ChanType.CHANNEL) {
 			const user = chan.findUser(nick);
 
@@ -40,4 +56,25 @@ const away: Handler = (client, msg) => {
 	}
 };
 
-export default {AWAY: away};
+/** RPL_UNAWAY / RPL_NOWAWAY: <me> :You are no longer marked as being away… */
+function selfAway(type: MessageType): Handler {
+	return (client, msg) => {
+		if (takeQuietAwayReply(client)) {
+			return;
+		}
+
+		client.pushMessage(
+			client.lobby,
+			{
+				type,
+				time: client.timeOf(msg),
+				text: msg.params[msg.params.length - 1] ?? "",
+				self: true,
+				showInActive: true,
+			},
+			true
+		);
+	};
+}
+
+export default {AWAY: away, "305": selfAway(MessageType.BACK), "306": selfAway(MessageType.AWAY)};

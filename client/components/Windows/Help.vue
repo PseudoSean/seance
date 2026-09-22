@@ -16,15 +16,17 @@
 			</h2>
 
 			<div class="about">
-				<p
+				<div
 					v-if="store.state.serverConfiguration?.isUpdateAvailable"
-					class="update-available"
+					class="update-banner"
+					role="status"
 				>
-					A newer version of {{ appName }} has been downloaded and is ready to use.
-					<button type="button" class="btn" @click="reloadForUpdate">
-						Reload to update
+					<span class="update-banner-icon" aria-hidden="true"></span>
+					<span class="update-banner-text">New version available</span>
+					<button type="button" class="update-banner-reload" @click="reloadForUpdate">
+						Reload
 					</button>
-				</p>
+				</div>
 
 				<template v-if="pastRelease">
 					<p>
@@ -516,6 +518,19 @@
 							rel="noopener"
 							>the dedicated Wikipedia article</a
 						>.
+					</p>
+				</div>
+			</div>
+
+			<div class="help-item">
+				<div class="subject">
+					<code>/ver nick</code>
+				</div>
+				<div class="description">
+					<p>
+						Ask a user which client they run: a
+						<abbr title="Client-to-client protocol">CTCP</abbr> VERSION request, the
+						same as <code>/ctcp nick version</code>. The answer shows where you asked.
 					</p>
 				</div>
 			</div>

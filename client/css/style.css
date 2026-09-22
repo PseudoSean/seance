@@ -295,6 +295,9 @@ button {
 code,
 pre,
 #chat .msg[data-type="monospace_block"] .text,
+/* Unhandled numerics are server-formatted for a fixed-width column
+   (/map trees, /stats tables): keep their spacing honest. */
+#chat .msg[data-type="unhandled"] .content,
 .irc-monospace,
 textarea#user-specified-css-input {
 	font-family: Consolas, Menlo, Monaco, "Lucida Console", "DejaVu Sans Mono", "Courier New", monospace;
@@ -469,7 +472,6 @@ p {
 #chat .msg[data-type="whois"] .from::before,
 #chat .msg[data-type="nick"] .from::before,
 #chat .msg[data-type="chghost"] .from::before,
-#chat .msg[data-type="action"] .from::before,
 #chat .msg[data-type="plugin"] .from::before,
 #chat .msg[data-type="raw"] .from::before,
 #chat .msg-statusmsg span::before,
@@ -481,6 +483,7 @@ p {
 #chat .media-tool::before,
 #settings .trusted-host-remove::before,
 #chat .scroll-down-arrow::after,
+#chat .msg-action::before,
 #chat .topic-container .save-topic span::before,
 #version-checker::before,
 .context-menu-item::before,
@@ -672,8 +675,12 @@ p {
 	color: #2ecc40;
 }
 
+/* An action (/me) is the speaker playing a part: the masks, not the
+ * FontAwesome star the rest of the gutter glyphs come from, so this rule is
+ * not in the icon-font list above and the emoji renders in the system's
+ * colour emoji face. */
 #chat .msg[data-type="action"] .from::before {
-	content: "\f005"; /* http://fontawesome.io/icon/star/ */
+	content: "\1F3AD"; /* 🎭 performing arts */
 }
 
 #chat .msg[data-type="plugin"] .from::before {
@@ -760,6 +767,14 @@ p {
 	 * viewport, which iOS never shrinks for the keyboard, they would outgrow
 	 * the app and the sidebar's footer would sit below the screen. */
 	position: relative;
+
+	/* Its height is the visible band (--viewport-height on touch devices),
+	 * which no media query can see: iOS keeps the layout viewport at the
+	 * screen's size while the keyboard is up. A container query can. */
+	/* stylelint-disable-next-line property-no-unknown */
+	container-type: size;
+	/* stylelint-disable-next-line property-no-unknown */
+	container-name: viewport;
 }
 
 #form button,
@@ -1392,15 +1407,10 @@ so the toolbar has one weight; green is what marks a subscribed bell. */
 	font-size: 1rem;
 }
 
-/* A size container, so the settings menu can ask whether the window is wide
- * enough for it to sit beside the content (Navigation.vue) in rem, which a
- * media query cannot see. */
-#settings {
-	/* stylelint-disable-next-line property-no-unknown */
-	container-type: inline-size;
-	/* stylelint-disable-next-line property-no-unknown */
-	container-name: settings;
-}
+/* The `settings` size container is the modal pane itself
+ * (Windows/Settings.vue .settings-modal): the tab strip asks it whether
+ * there is room for labels (Navigation.vue) in rem, which a media query
+ * cannot see. */
 
 /* Native checkboxes and radios do not follow the font; size them off it so
  * the big scales get a target that matches their label. */
@@ -1504,6 +1514,39 @@ textarea.input {
 	border-bottom: 1px solid #e7e7e7;
 }
 
+/* Compose mode. A phone in landscape has ~430px; the keyboard and Safari's
+ * form bar take ~250 of them, so the header and the composer leave a single
+ * line of scrollback. While the composer has the caret in a band that short
+ * the header goes: the placeholder names the channel, and the keyboard's Done
+ * brings the header (and its buttons) back. Gated on the caret, not on the
+ * height alone, or a landscape phone at a large font step would lose the
+ * header — and the way to the sidebar and the menu — for good. 18rem is
+ * above what any keyboard leaves and below any phone's screen in portrait
+ * with the keyboard up (iPhone SE: ~400px). */
+/* stylelint-disable-next-line at-rule-no-unknown */
+@container viewport (max-height: 18rem) {
+	body:has(#form #input:focus) #chat .header {
+		display: none;
+	}
+
+	/* The "alice is typing…" strip shares the composer's row instead of
+	 * taking one of its own: between the text and the buttons, a third of
+	 * the row at most, ellipsised. Its reserved (empty) form has no width,
+	 * so nothing bounces either way. */
+	body:has(#form #input:focus) #form .typing-indicator {
+		flex: 0 1 auto;
+		order: 1;
+		max-width: 33%;
+		min-width: 0;
+		margin: 0 0.25rem;
+		align-self: center;
+	}
+
+	body:has(#form #input:focus) #form > .tooltipped {
+		order: 2;
+	}
+}
+
 /* A dial or a reconnect is a spinner in the header, not a banner */
 #chat .connecting-tooltip {
 	display: flex;
@@ -1598,6 +1641,12 @@ textarea.input {
 }
 
 #chat {
+	/* The jump-to-recent arrow's size and inset: variables because the
+	 * message action toolbar keeps clear of its column while it is up (see
+	 * `.msg-actions`); they stay in px as the arrow always was. */
+	--scroll-down-size: 36px;
+	--scroll-down-inset: 16px;
+
 	overflow: hidden;
 	flex: 1 0 auto;
 	position: relative;
@@ -1736,9 +1785,9 @@ textarea.input {
 
 .scroll-down {
 	position: absolute;
-	bottom: 16px;
-	right: 16px;
-	z-index: 2;
+	bottom: var(--scroll-down-inset);
+	right: var(--scroll-down-inset);
+	z-index: 3; /* over a message's action toolbar: jumping back wins the click */
 	pointer-events: none;
 	opacity: 0;
 	transform: translateY(16px);
@@ -1758,9 +1807,9 @@ textarea.input {
 }
 
 .scroll-down-arrow {
-	width: 36px;
-	height: 36px;
-	line-height: 34px;
+	width: var(--scroll-down-size);
+	height: var(--scroll-down-size);
+	line-height: calc(var(--scroll-down-size) - 2px);
 	border-radius: 50%;
 	background: var(--window-bg-color);
 	color: var(--button-color);
@@ -1978,8 +2027,33 @@ textarea.input {
 .user.color-31 { color: #eb0400; }
 .user.color-32 { color: #e60082; }
 
+/* Your own messages (Settings → Appearance → Your own messages, applied as
+ * <html data-own-messages>, helpers/ownMessages.ts): three looks that do
+ * not overlap. "muted", the default, is TheLounge's — the text in the muted
+ * colour, no band. "band" keeps the text and puts the row on a band: a
+ * theme names its own with `--own-bg`, otherwise the text colour at 7% over
+ * the row. "plain" makes an own row like anyone else's. A band a theme
+ * paints on `.msg.self` itself (princess, keeki) shows only under "band" —
+ * the html[data-…] prefix is what beats the theme's `#chat .msg.self`. A
+ * mention row keeps its tint, and own join/mode lines are `.self` too but
+ * are left to the theme in every mode: the band is for what we said. */
 #chat .self .content {
 	color: var(--body-color-muted);
+}
+
+html[data-own-messages="band"] #chat .self .content,
+html[data-own-messages="plain"] #chat .self .content {
+	color: inherit;
+}
+
+html:not([data-own-messages="band"]) #chat .msg.self[data-type="message"],
+html:not([data-own-messages="band"]) #chat .msg.self[data-type="action"] {
+	background-color: transparent;
+}
+
+html[data-own-messages="band"] #chat .msg.self[data-type="message"]:not(.highlight),
+html[data-own-messages="band"] #chat .msg.self[data-type="action"]:not(.highlight) {
+	background-color: var(--own-bg, color-mix(in srgb, currentcolor 7%, transparent));
 }
 
 /* A copy of our own message the server has not echoed yet (bus-contract
@@ -2975,6 +3049,59 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	justify-content: space-between;
 }
 
+/* A newer build's service worker is waiting (Help.vue): one quiet strip,
+ * accent-edged like the composer's status bars, with a small solid Reload. */
+#help .update-banner {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin: 0 0 1rem;
+	padding: 0.5rem 0.75rem;
+	border-left: 3px solid var(--button-color);
+	border-radius: 0 3px 3px 0;
+	background: rgb(0 0 0 / 4%);
+}
+
+#help .update-banner-icon::before {
+	content: "\f0aa"; /* https://fontawesome.com/icons/arrow-circle-up?style=solid */
+	display: inline-block;
+	font: normal normal normal 1em/1 FontAwesome;
+	color: var(--button-color);
+}
+
+#help .update-banner-text {
+	flex: 1 1 auto;
+	min-width: 0;
+	font-weight: bold;
+}
+
+#help .update-banner-reload {
+	flex: 0 0 auto;
+	padding: 0.3em 1em;
+	border: 0;
+	border-radius: 3px;
+	background: var(--button-color);
+	color: var(--button-text-color-hover);
+	font: inherit;
+	font-size: 0.875rem;
+	font-weight: bold;
+	cursor: pointer;
+	transition: opacity 0.2s, box-shadow 0.2s;
+}
+
+#help .update-banner-reload:hover {
+	opacity: 0.85;
+}
+
+#help .update-banner-reload:focus-visible {
+	outline: 0;
+	box-shadow: 0 0 0 3px rgb(132 206 136 / 50%);
+}
+
+#help .update-banner-reload:active {
+	opacity: 0.7;
+}
+
 #help .help-item {
 	display: table-row;
 	font-size: 1rem;
@@ -2999,19 +3126,36 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	margin-bottom: 0;
 }
 
+/* Each dt/dd pair is one row (whois.vue wraps them in divs). The label is
+ * lifted out of the content column into the gutter — absolutely positioned
+ * left of the separator bar, right-aligned against it like a nick — which
+ * the row leaves empty below its first line. `1rem + 1px` retraces the
+ * content padding (0.5rem), the separator border (1px) and the gutter's own
+ * 0.5rem of padding, so the label's right edge lands where a nick ends. A
+ * long label runs on into the (equally empty) time column. */
 .whois {
-	display: grid;
-	grid-template-columns: max-content auto;
 	margin: 0;
 }
 
-.whois dt {
-	grid-column-start: 1;
-	margin-right: 20px;
+.whois > div {
+	position: relative;
+}
+
+#chat .whois dt {
+	position: absolute;
+	top: 0;
+	right: calc(100% + 1rem + 1px);
+	white-space: nowrap;
+	color: var(--body-color-muted);
 }
 
 .whois dd {
-	grid-column-start: 2;
+	margin: 0;
+}
+
+/* The labels escape the content column, so it must not clip. */
+#chat .msg[data-type="whois"] .content {
+	overflow: visible;
 }
 
 .changelog-text {
@@ -3123,15 +3267,22 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
  *
  * iOS only: Android's navigation bar is outside the browser viewport, so the
  * strip would be dead space there. `-webkit-touch-callout` exists in WebKit
- * alone, and every iOS browser is WebKit. */
-@media (hover: none) and (pointer: coarse) {
+ * alone, and every iOS browser is WebKit.
+ *
+ * Portrait only: in landscape the indicator is thinner and the composer is
+ * tappable without the strip (phone-verified 2026-09-11), so the strip would
+ * only take rows from a viewport that has few to spare. */
+@media (hover: none) and (pointer: coarse) and (orientation: portrait) {
 	@supports (-webkit-touch-callout: none) {
 		#form {
 			padding-bottom: 34px;
 		}
 
-		/* The keyboard covers the indicator while a field is focused. */
-		body:has(#form #input:focus) #form {
+		/* The keyboard covers the indicator while it is up. That is the
+		 * viewport measurement in helpers/viewport.ts, not the caret: iOS's
+		 * shake-to-undo alert gives the composer its focus back with the
+		 * keyboard down, and a rule on :focus left it in the indicator. */
+		html[data-keyboard="up"] #form {
 			padding-bottom: 0.375rem;
 		}
 	}
@@ -3177,7 +3328,12 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	margin: 5px;
 	padding: 0;
 	resize: none;
-	flex: 1 0 auto;
+
+	/* Fill what the buttons leave, never the textarea's own 20-column width:
+	   at large font steps on a phone that is wider than the form, and iOS
+	   then pans the page to the caret. */
+	flex: 1 1 0;
+	min-width: 0;
 	align-self: center;
 	touch-action: pan-y;
 	caret-color: var(--link-color);
@@ -3850,7 +4006,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	font-size: 0.8125rem;
 }
 
-@media (max-width: 768px) {
+/* The phone layout; the same list as PHONE_LAYOUT_QUERY in helpers/device.ts. */
+@media (max-width: 768px), (max-height: 500px) and (hover: none) and (pointer: coarse) {
 	/**
 	  * TODO Replace this with `@media (hover: hover)` when Firefox supports it
 	  * See:
@@ -4016,6 +4173,18 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	#chat .condensed-summary .time,
 	#chat .condensed-summary .from {
 		display: none;
+	}
+
+	/* Inline flow has no gutter to project the whois labels into: back to
+	 * "Label: value" run-in lines. */
+	#chat .whois dt {
+		position: static;
+		display: inline;
+		white-space: normal;
+	}
+
+	#chat .whois dd {
+		display: inline;
 	}
 }
 
@@ -4194,6 +4363,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 #chat .msg[data-type="message"] .content,
 #chat .msg[data-type="monospace_block"] .content,
 #chat .msg[data-type="notice"] .content,
+#chat .msg[data-type="unhandled"] .content,
 #chat .ctcp-message,
 #chat .part-reason,
 #chat .quit-reason,
@@ -4397,19 +4567,42 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	opacity: 1;
 }
 
+/* The message action toolbar: reply, react, copy, edit, delete. It floats
+ * above the row it belongs to — its bottom edge on the row's top padding —
+ * so it never covers the text it acts on, and it is a child of the row, so
+ * hovering it keeps `.msg:hover` true; the hair of overlap means there is no
+ * gap for the pointer to fall through on the way up. Every glyph is a
+ * FontAwesome solid: the Unicode arrows and crosses this used to be
+ * rendered differently on every OS, and a ✕ at the end of a bar reads as
+ * "close this box" — the delete button is a trash can behind a divider for
+ * that reason. */
 #chat .msg-actions {
 	position: absolute;
-	top: -8px;
-	right: 8px;
+	top: auto;
+	bottom: calc(100% - 0.125rem);
+	right: 0.5rem;
 	z-index: 2;
 	display: none;
 	align-items: center;
-	padding: 1px;
+	gap: 0.125rem;
+	padding: 0.125rem;
 	border: 1px solid rgb(128 128 128 / 35%);
-	border-radius: 4px;
+	border-radius: 0.375rem;
 	background: var(--window-bg-color);
-	box-shadow: 0 1px 4px rgb(0 0 0 / 15%);
+	box-shadow: 0 0.125rem 0.5rem rgb(0 0 0 / 15%);
 	user-select: none;
+	transition: right 0.2s; /* the same glide as the arrow it makes room for */
+	transform-origin: bottom right; /* for the long press's pop-in */
+}
+
+/* The first message in the scrollback has nothing above it to float over:
+ * that one's toolbar tucks inside the row instead of being clipped by the
+ * scroll edge. A leading date marker does not change that. */
+#chat .messages > .msg:first-child .msg-actions,
+#chat .messages > .date-marker-container:first-child + .msg .msg-actions {
+	top: 0.125rem;
+	bottom: auto;
+	transform-origin: top right;
 }
 
 #chat .msg:hover .msg-actions,
@@ -4418,16 +4611,75 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	display: flex;
 }
 
-/* A touch device fakes hover on long press, which is also how a text
- * selection starts, so on touch the toolbar opens on a tap instead
- * (Message.vue sets `actions-open`). */
+/* A drag across the scrollback is a text selection (MessageList.vue sets
+ * `selecting` while the button is down and the pointer has moved): no row
+ * shows its toolbar under it. */
+#chat .chat.selecting .msg-actions {
+	display: none;
+}
+
+/* A live selection in the scrollback puts every toolbar away too
+ * (Message.vue closes the open one; this also keeps a :focus-within
+ * leftover from covering the selection). */
+#chat .chat.selection-live .msg-actions {
+	display: none;
+}
+
+/* While the jump-to-recent arrow is up (the view is scrolled back) it owns
+ * the bottom-right corner: the toolbar moves left of its column so the two
+ * never overlap, whichever row is hovered. */
+#chat .chat-content:has(.scroll-down-shown) .msg-actions {
+	right: calc(var(--scroll-down-inset) + var(--scroll-down-size) + 0.5rem);
+}
+
+/* A touch device fakes hover on a long press; here the long press is what
+ * opens the toolbar (Message.vue sets `actions-open`, one message at a
+ * time), and hover is never trusted. The text of a message that has a
+ * toolbar (`has-actions`, Message.vue's `canAct`) is not selectable there,
+ * so the platform's own long press — a text selection — cannot race ours;
+ * the toolbar's Copy text is how the text is copied on a phone. A row
+ * without one — the topic, a mode change, a notice, a condensed join — has
+ * nothing to open, so it stays selectable and its first long press is the
+ * platform's. Links keep their own long press (the preview), and are
+ * excluded from it in Message.vue. */
 @media (hover: none) {
 	#chat .msg:hover .msg-actions {
 		display: none;
 	}
 
+	/* The long press is a gesture, so its result arrives like one: a short
+	   grow-in says the press was taken (with the nudge Message.vue asks for).
+	   A hover toolbar stays instant — it follows the pointer, not a gesture. */
 	#chat .msg.actions-open .msg-actions {
 		display: flex;
+		animation: pop-in 100ms ease-out;
+	}
+}
+
+@media (hover: none) and (pointer: coarse) {
+	#chat .messages .msg.has-actions {
+		user-select: none;
+		-webkit-touch-callout: none;
+	}
+
+	#chat .messages .msg a {
+		-webkit-touch-callout: default;
+	}
+
+	/* The message whose toolbar is open is selectable again — but only once
+	 * the press that opened it has ended (`select-armed`, Message.vue):
+	 * flipped mid-press, the platform's own long-press detector would start
+	 * a selection off that same held finger. From the next press on it is
+	 * the platform's — a native selection with its handles — and the moment
+	 * one exists (`selection-live`, MessageList.vue via
+	 * helpers/touchSelection.ts) the whole scrollback is selectable, so the
+	 * handles can be dragged across messages: how several lines are copied
+	 * at once on a phone. A tap collapses the selection, which puts the
+	 * rule back by itself. */
+	#chat .messages .msg.select-armed,
+	#chat .chat.selection-live .messages .msg {
+		user-select: text;
+		-webkit-touch-callout: default;
 	}
 }
 
@@ -4439,28 +4691,163 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #chat .msg-action {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	width: 2.25rem;
 	height: 2rem;
 	padding: 0;
 	border: 0;
-	border-radius: 3px;
+	border-radius: 0.25rem;
 	background: transparent;
 	color: var(--body-color-muted);
 	font: inherit;
-	font-size: 1rem;
-	line-height: 2rem;
 	cursor: pointer;
+}
+
+#chat .msg-action::before {
+	font-size: 0.875rem;
+}
+
+#chat .msg-action-reply::before { content: "\f3e5"; /* https://fontawesome.com/icons/reply?style=solid */ }
+#chat .msg-action-react::before { content: "\f118"; /* https://fontawesome.com/icons/smile?style=solid */ }
+
+#chat .msg-action-copy::before,
+#chat .msg-action-copy-text::before { content: "\f0c5"; /* https://fontawesome.com/icons/copy?style=solid */ }
+
+#chat .msg-action-edit::before { content: "\f304"; /* https://fontawesome.com/icons/pen?style=solid */ }
+#chat .msg-action-delete::before { content: "\f2ed"; /* https://fontawesome.com/icons/trash-alt?style=solid */ }
+
+/* What a copy leaves behind: the one word, where the toolbar was (the same
+ * corner, the same first-row exception), fading over the second it is up
+ * (MessageActions.vue COPIED_MS). It is a label and takes no tap: the reader
+ * is on the way to paste somewhere, and nothing here waits for them. */
+#chat .msg-copied {
+	position: absolute;
+	top: auto;
+	bottom: calc(100% - 0.125rem);
+	right: 0.5rem;
+	z-index: 2;
+	padding: 0.125rem 0.5rem;
+	border: 1px solid rgb(128 128 128 / 35%);
+	border-radius: 0.375rem;
+	background: var(--window-bg-color);
+	box-shadow: 0 0.125rem 0.5rem rgb(0 0 0 / 15%);
+	color: var(--body-color);
+	font-size: 0.875em;
+	line-height: 1.5rem;
+	pointer-events: none;
+	user-select: none;
+	animation: msg-copied-fade 1s ease-in forwards;
+}
+
+/* The bar gives its corner to the label (a pointer's hover bar too: the
+ * copy ended it, and the hover brings it back once the word is gone). */
+#chat .msg:has(.msg-copied) .msg-actions {
+	display: none;
+}
+
+#chat .messages > .msg:first-child .msg-copied,
+#chat .messages > .date-marker-container:first-child + .msg .msg-copied {
+	top: 0.125rem;
+	bottom: auto;
+}
+
+#chat .chat-content:has(.scroll-down-shown) .msg-copied {
+	right: calc(var(--scroll-down-inset) + var(--scroll-down-size) + 0.5rem);
+}
+
+@keyframes msg-copied-fade {
+	0%,
+	40% {
+		opacity: 1;
+	}
+
+	100% {
+		opacity: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#chat .msg-copied {
+		animation: none;
+	}
+}
+
+/* The one-tap reactions (the newest used, helpers/reactionRecents.ts
+   `quickReactions`): an emoji glyph in a button the size of the others. One
+   already on the message from us reads as pressed, and tapping it again takes
+   it off — the same rule as the picker. */
+#chat .msg-action-quick {
+	font-size: 1.125rem;
+	line-height: 1;
+}
+
+#chat .msg-action-quick.selected {
+	box-shadow: inset 0 0 0 2px var(--button-color);
+}
+
+/* The bar is one row, always. An own message's eight buttons are ~20.75rem
+   with the right inset, and the pane is 19.5rem on a 390px phone at the
+   default step and less at the bigger ones, so the quick reactions stand
+   down one at a time as the pane narrows — the smiley still opens the
+   picker — and narrower still the buttons themselves narrow, glyphs
+   unchanged. In rem off the pane, not px off the window: what has to follow
+   the font scale asks a container query (`#chat` is the `chat` container).
+   Thresholds are for the widest bar (an own message), so a shorter one gives
+   a quick reaction up a little early; the alternative — letting a flex
+   wrapper wrap the ones that do not fit — cannot be made to work in
+   Chromium, whose fit-content for the bar stops at the wrapper's min-content
+   (one button) and sizes it from shrinkable items' minimums. */
+#chat .msg-actions-quick {
+	display: contents;
+}
+
+/* stylelint-disable-next-line at-rule-no-unknown */
+@container chat (max-width: 21rem) {
+	#chat .msg-actions-quick .msg-action:nth-child(3) {
+		display: none;
+	}
+}
+
+/* stylelint-disable-next-line at-rule-no-unknown */
+@container chat (max-width: 18.5rem) {
+	#chat .msg-actions-quick .msg-action:nth-child(2) {
+		display: none;
+	}
+}
+
+/* stylelint-disable-next-line at-rule-no-unknown */
+@container chat (max-width: 16rem) {
+	#chat .msg-actions-quick {
+		display: none;
+	}
+}
+
+/* stylelint-disable-next-line at-rule-no-unknown */
+@container chat (max-width: 14rem) {
+	#chat .msg-action {
+		width: 1.75rem;
+	}
 }
 
 #chat .msg-action:hover,
 #chat .msg-action:focus-visible {
-	background: rgb(0 0 0 / 8%);
+	background: rgb(128 128 128 / 15%);
 	color: var(--body-color);
 	outline: 0;
 }
 
+#chat .msg-action-divider {
+	width: 1px;
+	height: 1.25rem;
+	margin: 0 0.125rem;
+	background: rgb(128 128 128 / 35%);
+}
+
 #chat .msg-action-delete:hover,
 #chat .msg-action-delete:focus-visible {
+	background: rgb(231 76 60 / 12%);
 	color: #e74c3c;
 }
 
@@ -4482,7 +4869,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	box-shadow: 0 8px 28px rgb(0 0 0 / 22%);
 	color: var(--body-color);
 	font-size: 1rem;
-	animation: reaction-picker-in 120ms ease-out;
+	animation: pop-in 120ms ease-out;
 	transform-origin: top right;
 }
 
@@ -4491,24 +4878,62 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 /* On a phone the on-screen keyboard leaves no room for a popover, so the
-   picker becomes a sheet along the bottom edge instead. */
+   picker becomes a sheet along the bottom edge instead. The bottom edge is the
+   visual viewport's, not the layout viewport's: iOS keeps `100%` of a fixed
+   element at the full window height under the keyboard, so `bottom: 0` put
+   the sheet's list behind it as soon as the search field took the caret.
+   `--viewport-height` (helpers/viewport.ts) is the visible band; the
+   difference is the keyboard, and the sheet takes 70% of what is left. */
 .reaction-picker.sheet {
 	top: auto;
 	right: 0;
-	bottom: 0;
+	bottom: calc(100% - var(--viewport-height, 100%));
 	left: 0;
 	width: 100%;
 	max-width: none;
-	max-height: 70vh;
+	max-height: calc(var(--viewport-height, 100%) * 0.7);
 	border-width: 1px 0 0;
 	border-radius: 12px 12px 0 0;
 	transform-origin: bottom center;
 }
 
-@keyframes reaction-picker-in {
+/* A phone on its side with the keyboard up keeps ~190px (helpers/viewport.ts
+   sets data-keyboard from the same measurement). 70% of that held the search
+   field and the tabs and no emoji, so there the sheet takes the whole band —
+   what it would leave is under the keyboard — and the tab strip stands down
+   while the filter being typed is what picks the group; the list keeps two
+   rows. The band is the visible height, so this cannot be a container query. */
+@media (max-height: 500px) and (hover: none) and (pointer: coarse) {
+	html[data-keyboard="up"] .reaction-picker.sheet {
+		max-height: var(--viewport-height, 100%);
+		border-radius: 0;
+	}
+
+	html[data-keyboard="up"] .reaction-picker.sheet .reaction-picker-tabs {
+		display: none;
+	}
+
+	/* The rest of the chrome tightens for the same reason: at the default
+	   paddings the search row and the preview bar took 106px of 190. */
+	html[data-keyboard="up"] .reaction-picker.sheet .reaction-picker-search {
+		padding: 4px 8px;
+	}
+
+	html[data-keyboard="up"] .reaction-picker.sheet .reaction-picker-heading {
+		padding: 4px 2px 2px;
+	}
+
+	html[data-keyboard="up"] .reaction-picker.sheet .reaction-picker-preview {
+		min-height: 2rem;
+		padding: 2px 10px;
+	}
+}
+
+/* The one "appears" motion: the picker's, and the toolbar's on a long press. */
+@keyframes pop-in {
 	from {
 		opacity: 0;
-		transform: scale(0.97);
+		transform: scale(0.95);
 	}
 
 	to {
@@ -4518,7 +4943,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.reaction-picker {
+	.reaction-picker,
+	#chat .msg.actions-open .msg-actions {
 		animation: none;
 	}
 }
@@ -4658,6 +5084,13 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	font-size: 1.375rem;
 	line-height: 1;
 	cursor: pointer;
+}
+
+/* A group not yet rendered (ReactionPicker.vue `rendered`) is this: the
+   height of the grid it will become, `--rows` of the cell above plus the
+   grid's gap between them. The cell size lives here and nowhere else. */
+.reaction-picker-placeholder {
+	height: calc(var(--rows) * (2.125rem + 2px) - 2px);
 }
 
 /* A reaction can be a word, and remembered ones often are: those are set as

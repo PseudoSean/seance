@@ -31,6 +31,13 @@ export default {
 			//
 		}
 	},
+	keys(): string[] {
+		try {
+			return Object.keys(window.localStorage);
+		} catch (e) {
+			return [];
+		}
+	},
 	clear() {
 		try {
 			window.localStorage.clear();

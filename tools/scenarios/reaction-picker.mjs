@@ -135,6 +135,30 @@ async function shiftClick(page, selector, index = 0) {
 	await page.sleep(120);
 }
 
+/**
+ * Scrolls the message to the middle of the pane and waits until its
+ * reaction "+" has stopped moving and is on screen. A fixed sleep after
+ * `scrollIntoView` raced the scrollback: the open picker's scroll listener
+ * repositions or closes it, the list can re-anchor, and a click measured
+ * mid-move landed beside the button (seen once in eight runs).
+ */
+async function scrollToMessage(page, selector) {
+	await page.evaluate(
+		`document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block: "center"})`
+	);
+	await page.waitFor(
+		`(() => {
+			const el = document.querySelector(${JSON.stringify(`${selector} .msg-reaction-add`)});
+			if (!el) return false;
+			const r = el.getBoundingClientRect();
+			const same = window.__seanceLastTop === r.top;
+			window.__seanceLastTop = r.top;
+			return same && r.top >= 0 && r.bottom <= innerHeight;
+		})()`,
+		{label: "the message's reaction button to settle on screen"}
+	);
+}
+
 /** A real key press on whatever has focus (the picker's search field). */
 async function press(page, key, code = key) {
 	const enter = key === "Enter";
@@ -152,6 +176,10 @@ async function press(page, key, code = key) {
 
 const keyCode = (key) =>
 	({ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40, Escape: 27}[key] ?? 0);
+
+const KEYBOARD_UP = (px) =>
+	`document.documentElement.style.setProperty("--viewport-height", "${px}px"); document.documentElement.dataset.keyboard = "up"`;
+const KEYBOARD_DOWN = `document.documentElement.style.removeProperty("--viewport-height"); delete document.documentElement.dataset.keyboard`;
 
 export default async function run(page) {
 	await page.goto(page.url, {waitForSelector: "#connect form"});
@@ -221,8 +249,52 @@ export default async function run(page) {
 		timeout: 10000,
 		label: "the emoji catalog chunk",
 	});
+	// Only the recents and the first group are buttons at this point: the
+	// other groups are placeholders sized like the grid they will become,
+	// rendered as the scroll (or a tab, or the keyboard) reaches them — the
+	// catalog is ~1900 emoji, and a button each is what made Android slow.
 	const options = await page.count(OPTION);
-	await page.check(`the whole catalog is browsable (${options} options)`, options > 1500);
+	const placeholders = await page.count(".reaction-picker-placeholder");
+	await page.check(
+		`the picker opens on the first group only (${options} options, ${placeholders} placeholders)`,
+		options < 400 && placeholders >= 7
+	);
+	await page.click(".reaction-picker-tab:last-child");
+	await page.sleep(250);
+	const flags = await page.evaluate(
+		`(() => {
+			const list = document.querySelector(".reaction-picker-list");
+			const section = list.querySelector('[data-key="flags"]');
+			return {
+				rendered: !!section.querySelector(".reaction-picker-option"),
+				buttons: section.querySelectorAll(".reaction-picker-option").length,
+				offBy: Math.round(section.getBoundingClientRect().top - list.getBoundingClientRect().top),
+				tab: document.querySelector(".reaction-picker-tab.active").title,
+			};
+		})()`
+	);
+	await page.check(
+		`the Flags tab renders its group and lands on it (${JSON.stringify(flags)})`,
+		flags.rendered && flags.buttons > 200 && Math.abs(flags.offBy) <= 2 && flags.tab === "Flags"
+	);
+	// Scroll so the People placeholder is within the render-ahead margin (the
+	// list is short in this window), and the observer is what renders it.
+	await page.evaluate(
+		`(() => {
+			const list = document.querySelector(".reaction-picker-list");
+			list.scrollTop = list.querySelector('[data-key="people"]').offsetTop - list.clientHeight - 100;
+		})()`
+	);
+	await page.sleep(300);
+	const afterScroll = await page.evaluate(
+		`document.querySelectorAll('[data-key="people"] .reaction-picker-option').length`
+	);
+	await page.check(
+		`scrolling renders the group coming into view (${afterScroll} People & Body buttons)`,
+		afterScroll > 100
+	);
+	await page.click(".reaction-picker-tab:first-child");
+	await page.sleep(150);
 	await page.check(
 		"the quick reactions come first before anything is remembered",
 		(await page.evaluate(`document.querySelector(".reaction-picker-heading").textContent`)) ===
@@ -431,10 +503,7 @@ export default async function run(page) {
 
 	// Opening one from another message closes this one: the opener stops the
 	// mousedown the outside-click handler would have seen.
-	await page.evaluate(
-		`document.querySelector(${JSON.stringify(MSG)}).scrollIntoView({block: "center"})`
-	);
-	await page.sleep(200);
+	await scrollToMessage(page, MSG);
 	await page.click(`${MSG} .msg-reaction-add`);
 	await page.sleep(400);
 	await page.check("only one picker is ever open", (await page.count(PICKER)) === 1);
@@ -457,10 +526,7 @@ export default async function run(page) {
 	// channel puts the conversation back on screen.
 	await page.click(`.channel-list-item[data-name="${CHANNEL}"]`);
 	await page.sleep(400);
-	await page.evaluate(
-		`document.querySelector(${JSON.stringify(MSG)}).scrollIntoView({block: "center"})`
-	);
-	await page.sleep(300);
+	await scrollToMessage(page, MSG);
 	await page.click(`${MSG} .msg-reaction-add`);
 	await page.waitFor(`document.querySelector(${JSON.stringify(PICKER)})`, {
 		label: "the picker on a narrow viewport",
@@ -478,6 +544,71 @@ export default async function run(page) {
 			Math.round(sheet.y + sheet.height) === 780
 	);
 	await page.screenshot("8-sheet", {selector: "body", pad: 0});
+
+	// The sheet ends where the visible band ends, not where the window does:
+	// on iOS the keyboard covers the bottom 300px or so of a fixed element's
+	// `bottom: 0` without shrinking the window. helpers/viewport.ts publishes
+	// the band as `--viewport-height`; a headless Chromium has no keyboard, so
+	// the scenario publishes one of 480px by hand and expects the sheet to
+	// move up out of the covered part and shrink to 70% of what is left.
+	await page.evaluate(KEYBOARD_UP(480));
+	await page.sleep(200);
+	const raised = await page.rect(PICKER);
+	await page.check(
+		`the sheet keeps above the keyboard (${JSON.stringify(raised)})`,
+		Math.round(raised.y + raised.height) === 480 && Math.round(raised.height) === 336
+	);
+	await page.screenshot("8b-sheet-keyboard", {selector: "body", pad: 0});
+	await page.evaluate(KEYBOARD_DOWN);
+	await press(page, "Escape");
+	await page.sleep(200);
+
+	// A phone turned sideways is 812px and up wide but under 500px tall, and
+	// with the keyboard up it keeps ~190px: the popover showed one row of
+	// emoji there, so a touch device that short gets the sheet as well (the
+	// landscape clause of PHONE_LAYOUT_QUERY). Touch emulation is what makes
+	// `(hover: none) and (pointer: coarse)` true.
+	await page.send("Emulation.setDeviceMetricsOverride", {
+		width: 844,
+		height: 390,
+		deviceScaleFactor: 1,
+		mobile: true,
+	});
+	await page.send("Emulation.setTouchEmulationEnabled", {enabled: true, maxTouchPoints: 5});
+	await page.sleep(400);
+	await page.evaluate(`document.querySelector("#sidebar")?.classList.remove("open")`);
+	await scrollToMessage(page, MSG);
+	await page.click(`${MSG} .msg-reaction-add`);
+	await page.waitFor(`document.querySelector(${JSON.stringify(PICKER)})`, {
+		label: "the picker on a landscape phone",
+	});
+	// The keyboard comes up once the search field is tapped, after the open.
+	// The sheet then takes the whole band and drops its tab strip, which is
+	// what leaves room for two rows of emoji.
+	await page.evaluate(KEYBOARD_UP(190));
+	await page.sleep(300);
+
+	const landscape = await page.rect(PICKER);
+	const landscapeList = await page.rect(`${PICKER} .reaction-picker-list`);
+	const option = await page.rect(`${PICKER} .reaction-picker-option`);
+	await page.check(
+		`a landscape phone gets the sheet above the keyboard (${JSON.stringify(
+			landscape
+		)}, list ${Math.round(landscapeList.height)}px, option ${Math.round(option.height)}px)`,
+		(await page.evaluate(
+			`document.querySelector(${JSON.stringify(PICKER)}).classList.contains("sheet")`
+		)) &&
+			landscape.x === 0 &&
+			Math.round(landscape.width) === 844 &&
+			Math.round(landscape.y) === 0 &&
+			Math.round(landscape.y + landscape.height) === 190 &&
+			(await page.count(`${PICKER} .reaction-picker-tabs`)) === 1 &&
+			(await page.rect(`${PICKER} .reaction-picker-tabs`)).height === 0 &&
+			landscapeList.height >= 2 * option.height
+	);
+	await page.screenshot("8c-sheet-landscape", {selector: "html", pad: 0});
+	await page.evaluate(KEYBOARD_DOWN);
+	await page.send("Emulation.setTouchEmulationEnabled", {enabled: false, maxTouchPoints: 1});
 	await page.send("Emulation.clearDeviceMetricsOverride");
 	await page.sleep(400);
 

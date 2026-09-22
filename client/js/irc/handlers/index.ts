@@ -3,13 +3,17 @@
  *
  * To handle a new command, add a file exporting `{COMMAND: handler, ...}`
  * and list it in `modules` below. Numerics not registered here fall through
- * to {@link unhandled}, which shows them raw in the lobby (or in the channel
- * their first parameter names), like the old server's unhandled.ts. 4xx/5xx
+ * to {@link unhandled}, which shows them raw where the user is — stored in
+ * the lobby (or the channel their first parameter names) and re-targeted to
+ * the active tab (`showInActive`): they are almost always the reply to a
+ * command the user just typed (/stats, /map, /time, /raw …), and replies
+ * come to the tab that asked (docs/projects/reply-routing.md). 4xx/5xx
  * numerics without a specific handler become ERROR messages instead.
  */
 
 import {MessageType} from "../../../../shared/types/msg";
 import history, {chathistoryBatch} from "../history";
+import {AUTHTOKEN_BATCH} from "../authtoken";
 import {MULTILINE_CAP, multilineBatch} from "../multiline";
 import {BOUNCER_REPLAY_BATCH, bouncerReplayBatch, persistenceBatch} from "../persistence";
 import type {Handler} from "../types";
@@ -39,6 +43,7 @@ import redact from "./redact";
 import sasl from "./sasl";
 import standardReplies from "./standard-replies";
 import tagmsg from "./tagmsg";
+import token, {authtokenBatch} from "./token";
 import topic from "./topic";
 import whois from "./whois";
 
@@ -69,6 +74,7 @@ const modules: Record<string, Handler>[] = [
 	sasl,
 	standardReplies,
 	tagmsg,
+	token,
 	topic,
 	webpush,
 	whois,
@@ -79,6 +85,7 @@ export const handlers = new Map<string, Handler>();
 // Batch types delivered as a unit (everything else is unwrapped in order).
 registerBatchHandler("chathistory", chathistoryBatch);
 registerBatchHandler(MULTILINE_CAP, multilineBatch);
+registerBatchHandler(AUTHTOKEN_BATCH, authtokenBatch);
 registerBatchHandler("draft/persistence", persistenceBatch);
 registerBatchHandler(BOUNCER_REPLAY_BATCH, bouncerReplayBatch);
 
@@ -112,6 +119,7 @@ export const unhandled: Handler = (client, msg) => {
 			command: msg.command,
 			params,
 			text: `${msg.command} ${params.join(" ")}`,
+			showInActive: true,
 		},
 		true
 	);

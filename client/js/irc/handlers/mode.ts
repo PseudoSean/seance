@@ -132,6 +132,17 @@ const channelModeIs: Handler = (client, msg) => {
 	const chan = name ? client.findChannel(name) : undefined;
 
 	if (!chan) {
+		// Only the reply to a `/mode #chan` we are not in; otherwise state
+		// for a channel we do not show, which has nowhere to go.
+		if (name && client.takeInfoAsked(name)) {
+			client.pushMessage(client.lobby, {
+				type: MessageType.MODE_CHANNEL,
+				time: client.timeOf(msg),
+				text: `${name} ${modes} ${params.join(" ")}`.trim(),
+				showInActive: true,
+			});
+		}
+
 		return;
 	}
 
@@ -140,9 +151,10 @@ const channelModeIs: Handler = (client, msg) => {
 	// The modes are asked for after every (re)JOIN — lazily on first open,
 	// or with the active channel's catch-up (catchup.ts) — so a reconnect
 	// brings the same line back each time. Say it when it is news, or when
-	// asked (/mode #chan).
+	// asked (/mode #chan) — an asked-for answer follows the user's tab.
+	const asked = chan.modesAsked;
 	const text = `${modes} ${params.join(" ")}`.trim();
-	const quiet = text === chan.modeText && !chan.modesAsked;
+	const quiet = text === chan.modeText && !asked;
 	chan.modesAsked = false;
 	chan.modeText = text;
 
@@ -154,6 +166,7 @@ const channelModeIs: Handler = (client, msg) => {
 		type: MessageType.MODE_CHANNEL,
 		time: client.timeOf(msg),
 		text,
+		showInActive: asked || undefined,
 	});
 };
 

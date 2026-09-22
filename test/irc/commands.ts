@@ -5,6 +5,7 @@ import storage from "../../client/js/localStorage";
 import {IrcClient, IrcClientOptions} from "../../client/js/irc/client";
 import {IdAllocator} from "../../client/js/irc/ids";
 import {commandNames} from "../../client/js/irc/commands";
+import {loadAliases} from "../../client/js/helpers/aliases";
 import {ignoreListFor} from "../../client/js/ignore";
 import type {Transport} from "../../client/js/irc/types";
 import type {TransportEvent, TransportState} from "../../client/js/irc/transport";
@@ -140,11 +141,18 @@ function lastMessage(chanId?: number): SharedMsg {
 }
 
 /** Register (with echo-message) and join #seance with a small NAMES burst. */
-function joined(h: Harness, isupportExtra = ""): number {
+function joined(h: Harness, isupportExtra = "", capsExtra = ""): number {
+	const ls = `echo-message multi-prefix ${capsExtra}`.trim();
+	// ACK names the caps without their LS values.
+	const ack = ls
+		.split(" ")
+		.map((cap) => cap.split("=")[0])
+		.join(" ");
+
 	h.client.connect();
 	h.transport.open();
-	h.transport.line(":irc.test CAP * LS :echo-message multi-prefix");
-	h.transport.line(":irc.test CAP alice ACK :echo-message multi-prefix");
+	h.transport.line(`:irc.test CAP * LS :${ls}`);
+	h.transport.line(`:irc.test CAP alice ACK :${ack}`);
 	h.transport.lines(
 		":irc.test 001 alice :Welcome",
 		`:irc.test 005 alice CHANTYPES=#& PREFIX=(ov)@+ CASEMAPPING=rfc1459 ${isupportExtra} :are supported`,
@@ -177,6 +185,7 @@ describe("irc commands", function () {
 		const names = commandNames();
 
 		for (const name of [
+			"/alias",
 			"/ban",
 			"/unban",
 			"/banlist",
@@ -195,6 +204,7 @@ describe("irc commands", function () {
 			"/devoice",
 			"/notice",
 			"/ctcp",
+			"/ver",
 			"/away",
 			"/back",
 			"/invite",
@@ -288,7 +298,7 @@ describe("irc commands", function () {
 			expect(h.sentAfter()).to.deep.equal(["WHOIS bob bob", "WHOIS irc.other bob", "WHOIS"]);
 		});
 
-		it("assembles the numerics into one whois message in a new query window", function () {
+		it("assembles the numerics into one whois message where the user is", function () {
 			const h = setup();
 			joined(h);
 			h.transport.lines(
@@ -310,13 +320,12 @@ describe("irc commands", function () {
 				":irc.test 318 alice bob :End of /WHOIS list."
 			);
 
-			const [join] = payloads<{chan: SharedNetworkChan; shouldOpen: boolean}>("join");
-			expect(join.chan.name).to.equal("bob");
-			expect(join.chan.type).to.equal(ChanType.QUERY);
-			expect(join.shouldOpen).to.equal(true);
+			// No query window opens; the summary follows the user instead.
+			expect(payloads("join")).to.have.length(0);
 
-			const msg = lastMessage(join.chan.id);
+			const msg = lastMessage(1);
 			expect(msg.type).to.equal(MessageType.WHOIS);
+			expect(msg.showInActive).to.equal(true);
 			expect(msg.whois).to.include({
 				nick: "bob",
 				ident: "~bob",
@@ -362,8 +371,8 @@ describe("irc commands", function () {
 				":irc.test 314 alice bob ~old host.old * :Older",
 				":irc.test 369 alice bob :End of WHOWAS"
 			);
-			const [join] = payloads<{chan: SharedNetworkChan}>("join");
-			const msg = lastMessage(join.chan.id);
+			expect(payloads("join")).to.have.length(0);
+			const msg = lastMessage(1);
 			expect(msg.type).to.equal(MessageType.WHOIS);
 			expect(msg.whois).to.include({whowas: true, ident: "~new", hostname: "host.new"});
 		});
@@ -379,6 +388,109 @@ describe("irc commands", function () {
 			expect(away).to.have.length(1);
 			expect(away[0].text).to.equal("gone fishing");
 			expect(away[0].from?.nick).to.equal("bob");
+		});
+	});
+
+	describe("reply routing", function () {
+		it("shows an asked-for topic again, following the user", function () {
+			const h = setup();
+			const id = joined(h);
+			h.transport.line(":irc.test 332 alice #seance :Welcome");
+			expect(lastMessage(id).type).to.equal(MessageType.TOPIC);
+			expect(lastMessage(id).showInActive).to.equal(undefined);
+
+			h.client.input(id, "/topic");
+			expect(h.sentAfter()).to.deep.equal(["TOPIC #seance"]);
+			h.transport.lines(
+				":irc.test 332 alice #seance :Welcome",
+				":irc.test 333 alice #seance bob!bob@host 1756000000"
+			);
+			const [topic, setBy] = messages(id).slice(-2);
+			expect(topic.type).to.equal(MessageType.TOPIC);
+			expect(topic.showInActive).to.equal(true);
+			expect(setBy.type).to.equal(MessageType.TOPIC_SET_BY);
+			expect(setBy.showInActive).to.equal(true);
+		});
+
+		it("queries and sets the topic of a named channel", function () {
+			const h = setup();
+			const id = joined(h);
+			h.transport.lines(
+				":alice!alice@host.example JOIN #other",
+				":irc.test 366 alice #other :End of /NAMES list."
+			);
+			const other = h.client.findChannel("#other")!;
+			h.sentAfter();
+
+			h.client.input(id, "/topic #other");
+			h.client.input(id, "/topic #other fresh paint");
+			expect(h.sentAfter()).to.deep.equal(["TOPIC #other", "TOPIC #other :fresh paint"]);
+
+			h.transport.line(":irc.test 332 alice #other :fresh paint");
+			expect(lastMessage(other.id).type).to.equal(MessageType.TOPIC);
+			expect(lastMessage(other.id).showInActive).to.equal(true);
+		});
+
+		it("shows the topic of a channel we are not in, in the lobby, once", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.input(id, "/topic #secret");
+			expect(h.sentAfter()).to.deep.equal(["TOPIC #secret"]);
+
+			h.transport.line(":irc.test 332 alice #secret :Hidden gem");
+			expect(lastMessage(1).text).to.equal("Topic for #secret: Hidden gem");
+			expect(lastMessage(1).showInActive).to.equal(true);
+
+			// Unasked, the same numeric is state with nowhere to go.
+			const before = messages().length;
+			h.transport.line(":irc.test 332 alice #secret :Hidden gem");
+			expect(messages()).to.have.length(before);
+
+			h.client.input(id, "/topic #void");
+			h.transport.line(":irc.test 331 alice #void :No topic is set");
+			expect(lastMessage(1).text).to.equal("No topic is set for #void.");
+			expect(lastMessage(1).showInActive).to.equal(true);
+		});
+
+		it("shows the modes of a channel we are not in, in the lobby, once", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.input(id, "/mode #secret");
+			expect(h.sentAfter()).to.deep.equal(["MODE #secret"]);
+
+			h.transport.line(":irc.test 324 alice #secret +ntk hunter2");
+			expect(lastMessage(1).type).to.equal(MessageType.MODE_CHANNEL);
+			expect(lastMessage(1).text).to.equal("#secret +ntk hunter2");
+			expect(lastMessage(1).showInActive).to.equal(true);
+
+			const before = messages().length;
+			h.transport.line(":irc.test 324 alice #secret +ntk hunter2");
+			expect(messages()).to.have.length(before);
+		});
+
+		it("shows unhandled numerics where the user is", function () {
+			const h = setup();
+			joined(h);
+			h.transport.line(":irc.test 391 alice irc.test :Thursday afternoon");
+			expect(lastMessage(1).type).to.equal(MessageType.UNHANDLED);
+			expect(lastMessage(1).text).to.equal("391 irc.test Thursday afternoon");
+			expect(lastMessage(1).showInActive).to.equal(true);
+		});
+
+		it("confirms /away and /back where the user is", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.input(id, "/away gone fishing");
+			h.transport.line(":irc.test 306 alice :You have been marked as being away");
+			expect(lastMessage(1).type).to.equal(MessageType.AWAY);
+			expect(lastMessage(1).self).to.equal(true);
+			expect(lastMessage(1).text).to.equal("You have been marked as being away");
+			expect(lastMessage(1).showInActive).to.equal(true);
+
+			h.client.input(id, "/back");
+			h.transport.line(":irc.test 305 alice :You are no longer marked as being away");
+			expect(lastMessage(1).type).to.equal(MessageType.BACK);
+			expect(lastMessage(1).showInActive).to.equal(true);
 		});
 	});
 
@@ -494,6 +606,21 @@ describe("irc commands", function () {
 
 			h.client.input(id, "/ctcp bob");
 			expect(lastMessage(id).text).to.equal("Usage: /ctcp <nick> <ctcp_type>");
+		});
+
+		it("/ver is a CTCP VERSION request", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.input(id, "/ver bob");
+			expect(h.sentAfter()).to.deep.equal(["PRIVMSG bob :\x01VERSION\x01"]);
+			const note = messages(id).find((m) => m.type === MessageType.CTCP_REQUEST);
+			expect(note?.ctcpMessage).to.equal('"VERSION" to bob');
+
+			h.client.input(id, "/ver");
+			expect(lastMessage(id).text).to.equal("Usage: /ver <nick>");
+			h.client.input(id, "/ver bob carol");
+			expect(lastMessage(id).text).to.equal("Usage: /ver <nick>");
+			expect(h.sentAfter()).to.deep.equal([]);
 		});
 	});
 
@@ -750,6 +877,90 @@ describe("irc commands", function () {
 				},
 			]);
 			expect(h.sentAfter()).to.deep.equal([]);
+		});
+	});
+
+	describe("/alias", function () {
+		it("says so when there are no aliases", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.input(id, "/alias");
+			expect(lastMessage(id).type).to.equal(MessageType.ERROR);
+			expect(lastMessage(id).text).to.contain("No aliases defined");
+			expect(h.sentAfter()).to.deep.equal([]);
+		});
+
+		it("adds an alias, and nothing reaches the server", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.input(id, "/alias greet /say Hello, $1!");
+			expect(lastMessage(id).text).to.equal("Alias /greet added.");
+			expect(loadAliases()).to.deep.equal([{name: "greet", body: "/say Hello, $1!"}]);
+			expect(h.sentAfter()).to.deep.equal([]);
+		});
+
+		it("overwrites in place, matching the name case-insensitively", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.input(id, "/alias greet /say hi");
+			h.client.input(id, "/alias wave /me waves");
+			h.client.input(id, "/alias GREET /say hello");
+			expect(lastMessage(id).text).to.equal("Alias /GREET updated.");
+			expect(loadAliases()).to.deep.equal([
+				{name: "GREET", body: "/say hello"},
+				{name: "wave", body: "/me waves"},
+			]);
+		});
+
+		it("lists every alias verbatim in a monospace block", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.input(id, "/alias greet /say Hello, $1!");
+			h.client.input(id, "/alias wave /me waves");
+			h.client.input(id, "/alias");
+			expect(lastMessage(id).type).to.equal(MessageType.MONOSPACE_BLOCK);
+			expect(lastMessage(id).text).to.equal("/greet /say Hello, $1!\n/wave /me waves");
+		});
+
+		it("shows one alias, continuation lines of a multi-line body indented", function () {
+			const h = setup();
+			// The whole multi-line input is one /alias only under draft/multiline.
+			const id = joined(
+				h,
+				"",
+				"batch message-tags draft/multiline=max-bytes=4096,max-lines=24"
+			);
+			h.client.input(id, "/alias hi /say hello\n/me waves");
+			h.client.input(id, "/alias hi");
+			expect(lastMessage(id).type).to.equal(MessageType.MONOSPACE_BLOCK);
+			expect(lastMessage(id).text).to.equal("/hi /say hello\n    /me waves");
+		});
+
+		it("accepts the name typed with its slash", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.input(id, "/alias /greet /say hi");
+			expect(loadAliases()).to.deep.equal([{name: "greet", body: "/say hi"}]);
+		});
+
+		it("rejects an invalid name and an unknown lookup", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.input(id, "/alias bad!name /say hi");
+			expect(lastMessage(id).type).to.equal(MessageType.ERROR);
+			expect(loadAliases()).to.deep.equal([]);
+
+			h.client.input(id, "/alias nosuch");
+			expect(lastMessage(id).type).to.equal(MessageType.ERROR);
+			expect(lastMessage(id).text).to.contain("No alias /nosuch");
+		});
+
+		it("works disconnected, from the lobby", function () {
+			const h = setup();
+			const lobby = h.client.lobby.id;
+			h.client.input(lobby, "/alias greet /say hi");
+			expect(lastMessage(lobby).text).to.equal("Alias /greet added.");
+			expect(loadAliases()).to.deep.equal([{name: "greet", body: "/say hi"}]);
 		});
 	});
 });

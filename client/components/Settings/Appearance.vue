@@ -33,6 +33,19 @@
 				Use 12-hour timestamps
 			</label>
 		</div>
+		<h2 id="label-own-messages">Your own messages</h2>
+		<div role="group" aria-labelledby="label-own-messages" class="own-messages-options">
+			<label v-for="style in ownMessageStyles" :key="style" class="opt">
+				<input
+					:checked="ownMessages === style"
+					type="radio"
+					name="ownMessages"
+					:value="style"
+				/>
+				{{ ownMessageStyleLabels[style] }}
+				<span class="own-messages-hint">{{ ownMessageHints[style] }}</span>
+			</label>
+		</div>
 		<h2 id="label-media-previews">Media previews</h2>
 		<div role="group" aria-labelledby="label-media-previews">
 			<label class="opt">
@@ -267,6 +280,14 @@ textarea#user-specified-css-input {
 	height: 100px;
 }
 
+.own-messages-options .own-messages-hint {
+	color: var(--body-color-muted);
+}
+
+.own-messages-options .own-messages-hint::before {
+	content: " — ";
+}
+
 .font-size-setting {
 	display: flex;
 	flex-wrap: wrap;
@@ -348,6 +369,12 @@ import {
 	type FontSize,
 } from "../../js/helpers/fontSize";
 import {
+	normalizeOwnMessageStyle,
+	ownMessageStyleLabels,
+	ownMessageStyles,
+	OwnMessageStyle,
+} from "../../js/helpers/ownMessages";
+import {
 	clearTrusted,
 	splitKey,
 	trustedMedia,
@@ -396,6 +423,15 @@ export default defineComponent({
 		);
 
 		const fontSize = computed(() => normalizeFontSize(store.state.settings.fontSize));
+
+		const ownMessages = computed(() =>
+			normalizeOwnMessageStyle(store.state.settings.ownMessages)
+		);
+		const ownMessageHints: Record<OwnMessageStyle, string> = {
+			muted: "the text in the muted colour, as before",
+			band: "the row on a lighter or darker band, the text like everyone else's",
+			plain: "nothing marks them",
+		};
 
 		// The step under the slider while it is being dragged. Applying every
 		// step live re-laid out the whole page (rem chrome) under the pointer
@@ -456,6 +492,10 @@ export default defineComponent({
 			clearTrusted,
 			fontSizes,
 			fontSizeLabels,
+			ownMessages,
+			ownMessageStyles,
+			ownMessageStyleLabels,
+			ownMessageHints,
 			shownIndex,
 			shownLabel,
 			sampleFontSize,

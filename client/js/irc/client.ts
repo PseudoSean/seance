@@ -31,6 +31,7 @@ import {Channel, MsgRef} from "./channel";
 import {commandNames, dispatchInput} from "./commands";
 import {describeClose} from "./disconnect";
 import {handlers, unhandled} from "./handlers";
+import {FILEHOST_SERVICE, TokenRequests, filehostUrlOf} from "./authtoken";
 import {interceptBatchLine, resetBatches} from "./handlers/batch";
 import {
 	CONCAT_LINE_TAG_BYTES,
@@ -43,7 +44,8 @@ import {
 	sendMultiline,
 } from "./multiline";
 import {cancelMarkRead, markReadAt, scheduleMarkRead} from "./handlers/markread";
-import {abortHistory} from "./history";
+import {PresenceState, initialPresence, presenceRegistered, setAttended} from "./presence";
+import {abortHistory, retryLostHistory} from "./history";
 import {
 	cancelCatchup,
 	dropFromCatchup,
@@ -82,7 +84,7 @@ import {
 	StsUpgrade,
 	upgradeOptions,
 } from "./sts";
-import {get as getSavedNetwork, NetworkCursor, setCursor} from "./saved-networks";
+import {channelOrder, get as getSavedNetwork, NetworkCursor, setCursor} from "./saved-networks";
 import {ReconnectOptions, TransportEvent, TransportOptions, WsTransport} from "./transport";
 import type {ConnectOptions, InputOptions, IrcClientState, Transport} from "./types";
 import {
@@ -222,6 +224,10 @@ export class IrcClient {
 	/** Swapped for a new one on an STS upgrade; always subscribed via {@link reconfigure}. */
 	transport: Transport;
 	readonly isupport = new ISupport();
+	/** Attention and away bookkeeping (presence.ts). */
+	readonly presence: PresenceState = initialPresence();
+	/** Outstanding `TOKEN GENERATE` requests (draft/authtoken). */
+	readonly authtoken = new TokenRequests();
 	readonly channels: Channel[] = [];
 	readonly lobby: Channel;
 	caps = new CapNegotiator(SEANCE_CAPS);
@@ -341,6 +347,27 @@ export class IrcClient {
 		return this.quitting;
 	}
 
+	/**
+	 * The upload host the network advertises (`draft/FILEHOST` ISUPPORT,
+	 * or soju's `soju.im/FILEHOST`), usable from this connection; undefined
+	 * when there is none. Read at 005 and after a reconnect.
+	 */
+	filehostUrl(): string | undefined {
+		return filehostUrlOf(this.isupport, this.options.tls);
+	}
+
+	/**
+	 * Ask the server for a `draft/authtoken` token for `service` (the
+	 * upload host: `FILEHOST`), scoped to `scope` (a channel) when given.
+	 * Resolves with the opaque token; rejects with a `TokenError` on
+	 * `FAIL TOKEN …`, timeout or disconnect.
+	 */
+	generateToken(service = FILEHOST_SERVICE, scope?: string): Promise<string> {
+		return this.authtoken.request(service, () =>
+			this.send(scope ? `TOKEN GENERATE ${service} ${scope}` : `TOKEN GENERATE ${service}`)
+		);
+	}
+
 	get serverOptions(): SharedServerOptions {
 		const {modes, symbols} = this.isupport.prefix;
 		const prefix = modes.split("").map((mode, i) => ({mode, symbol: symbols[i]}));
@@ -354,6 +381,7 @@ export class IrcClient {
 			CHANTYPES: this.isupport.chantypes.split(""),
 			PREFIX: {prefix, modeToSymbol, symbols: symbols.split("")},
 			NETWORK: this.isupport.network ?? this.networkName,
+			FILEHOST: this.filehostUrl(),
 		};
 	}
 
@@ -681,6 +709,7 @@ export class IrcClient {
 		this.retryAt = undefined;
 		this.closeHintShown = false;
 		this.isupport.reset();
+		this.authtoken.clear("Reconnecting");
 		this.motdBuffer = null;
 		this.host = "";
 		this.account = "";
@@ -969,6 +998,7 @@ export class IrcClient {
 				: undefined;
 		this.stsUpgradeTried = false;
 		this.endSasl();
+		this.authtoken.clear();
 
 		if (this.options.tls) {
 			refreshPolicy(this.options.host);
@@ -1068,6 +1098,7 @@ export class IrcClient {
 			secure: this.options.tls,
 		});
 		this.bus.dispatch("commands", commandNames());
+		presenceRegistered(this);
 
 		if (this.caps.enabled.size > 0) {
 			this.pushMessage(
@@ -1080,6 +1111,14 @@ export class IrcClient {
 		// Whatever a bouncer says in the next few seconds is setup chatter,
 		// on any build (persistence.ts).
 		beginSettling(this);
+
+		// Queries have no JOIN to hang it on: a `more` page the last
+		// connection died on is asked again here (channels: catchup.ts).
+		for (const chan of this.channels) {
+			if (chan.type === ChanType.QUERY) {
+				retryLostHistory(this, chan);
+			}
+		}
 
 		// Opt this connection into session persistence: `PERSISTENCE SET ON`
 		// creates the server's bouncer session and turns its hold on, which
@@ -1762,6 +1801,16 @@ export class IrcClient {
 	 * a pending catch-up is served now, and the channel modes are asked for
 	 * the first time round.
 	 */
+	/** The channel the UI shows for this network, if any. */
+	activeChannel(): Channel | undefined {
+		return this.activeChanId ? this.channelById(this.activeChanId) : undefined;
+	}
+
+	/** Attention changed (foreground.ts); see presence.ts. */
+	setAttended(attended: boolean): void {
+		setAttended(this, attended);
+	}
+
 	open(chanId: number): void {
 		this.activeChanId = chanId;
 		const chan = this.channelById(chanId);
@@ -1851,6 +1900,10 @@ export class IrcClient {
 				// now, the rest one at a time so the server's flood penalty
 				// never queues the user's own lines.
 				enqueueCatchup(this, chan, beforeJoin);
+			} else if (chan) {
+				// The replay fills the gap, not a `more` page the last
+				// connection died on: that one is asked again here.
+				retryLostHistory(this, chan);
 			}
 		}
 	}
@@ -1958,13 +2011,33 @@ export class IrcClient {
 		return this.requestedJoins.delete(this.casefold(name));
 	}
 
+	/**
+	 * Channels (casefolded) whose topic/modes the user asked about without
+	 * being in them (`/topic #chan`, `/mode #chan`). The 331/332/324 for a
+	 * channel not in the channel list is normally dropped; one that was asked
+	 * for renders in the lobby with `showInActive` instead.
+	 */
+	private infoAsked = new Set<string>();
+
+	/** Note a topic/modes query for a channel we are not in (commands/). */
+	markInfoAsked(name: string): void {
+		this.infoAsked.add(this.casefold(name));
+	}
+
+	/** Whether the user asked about this channel — once: the request is consumed. */
+	takeInfoAsked(name: string): boolean {
+		return this.infoAsked.delete(this.casefold(name));
+	}
+
 	channelById(id: number): Channel | undefined {
 		return this.channels.find((chan) => chan.id === id);
 	}
 
 	/**
-	 * Create a channel/query and insert it alphabetically after the lobby
-	 * (the index is what `join` needs; always >= 1).
+	 * Create a channel/query and insert it after the lobby (the index is what
+	 * `join` needs; always >= 1): in the order the user gave the sidebar
+	 * (saved-networks `channelOrder`, names the user dragged) first, then
+	 * alphabetically among the names that order does not know.
 	 */
 	createChannel(
 		name: string,
@@ -1978,13 +2051,23 @@ export class IrcClient {
 			(s) => this.casefold(s),
 			options
 		);
+		const order = channelOrder(this.uuid).map((n) => this.casefold(n));
+
+		const rank = (n: string) => {
+			const i = order.indexOf(this.casefold(n));
+			return i === -1 ? Infinity : i;
+		};
+
+		const mine = rank(name);
 		let index = this.channels.length;
 
 		for (let i = 1; i < this.channels.length; i++) {
 			const other = this.channels[i];
 			const sortable = other.type === ChanType.CHANNEL || other.type === ChanType.QUERY;
+			const theirs = rank(other.name);
+			const before = mine === theirs ? compareNames(name, other.name) <= 0 : mine < theirs;
 
-			if (!sortable || compareNames(name, other.name) <= 0) {
+			if (!sortable || before) {
 				index = i;
 				break;
 			}
@@ -2073,7 +2156,9 @@ export class IrcClient {
 			if (SELF_READ_TYPES.has(msg.type ?? MessageType.MESSAGE)) {
 				scheduleMarkRead(this, chan);
 			}
-		} else if (chan.id === this.activeChanId) {
+		} else if (chan.id === this.activeChanId && this.presence.attended) {
+			// Only a person looking reads it; a hidden page marks nothing
+			// (presence.ts marks the open channel when attention returns).
 			scheduleMarkRead(this, chan);
 		} else if (!read) {
 			if (!shared.firstUnread) {

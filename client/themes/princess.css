@@ -1,0 +1,256 @@
+/* Princess — light: a white chat surface, a pale blue rail, and rows banded
+ * by kind. Colour only, like cobalt.css and molokai.css: every rule the app
+ * needs already reads a token in coffee.css, so this file is token values
+ * plus the bands, the nick palette and the mIRC table. Its dark counterpart
+ * is princess_.css — the underscore is the alt, for the same reason a second
+ * connection takes one.
+ *
+ * This is an IRCCloud-style theme: the palette derives from the IRCCloud
+ * client, whose source is published under the Apache License 2.0, and is
+ * used here with that attribution, so that switching from it costs our users
+ * who came from there nothing. The values taken as a starting point were
+ * tuned until they clear the 4.5:1 that tools/scenarios/themes.mjs pins
+ * (docs/projects/accessibility.md), each checked on the surface it actually
+ * sits on:
+ *
+ *   timestamps            #aaa    -> #5f5f5f  (2.32 -> 4.51 on the mention row)
+ *   collapsed rows, hints #afafaf -> #898989  (2.19 -> 3.02 on the composer)
+ *   links, the focus ring #1e72ff -> #1b69ed  (4.28 -> 4.89 on white)
+ *   the inactive buffer   #9cc7ff -> #516989  (1.40 -> 4.51 on the rail)
+ *
+ * Two things here are firsts for this project. The rail is light rather than
+ * a dark gutter, so --rail-* inverts relative to every other theme — which is
+ * how the themes scenario came to be measuring the selected channel's label
+ * against the wrong background for four themes without anyone noticing. And
+ * rows are banded by kind: own messages #e2edff, notices #d9e7ff, server
+ * events #f2f7fc. The bands need nothing from style.css, because the hover
+ * state is painted as a background-image gradient and leaves background-color
+ * free for the row; a mention still wins over both from style.css's more
+ * specific selector.
+ *
+ * The mention row, #c0dbff, is the constraint that shapes the rest. It is a
+ * strong tint, so everything drawn over it has to clear 4.5:1 against it
+ * rather than against white. That is why the 32 nick slots below are darker
+ * and less saturated than a white-only palette would need — 20 hues carried
+ * over, 12 more filling the widest gaps, each at the lightest tone that still
+ * passes on white, on the own-message tint and on the mention row, worst slot
+ * 4.60:1 — and why links are restated at #1558c9 on the two strongest bands.
+ * Lightening the mention row instead would have bought brighter nicks at the
+ * cost of the colour this palette is recognised by.
+ *
+ * The mIRC table is the classic 16 rather than style.css's flat palette;
+ * slots 0, 1 and 16-98 already match, so only 2-15 are restated. Codes 8-11
+ * (yellow, lime, cyan) are low-contrast on white, and left that way: a colour
+ * code is the sender's choice, not the theme's. */
+@import "coffee.css";
+
+:root {
+	color-scheme: light;
+
+	/* Chat surface: white paper, near-black ink. */
+	--chat-bg: #fff;
+	--chat-fg: #333;
+	--chat-fg-muted: #5f5f5f; /* the source grey #aaa, darkened */
+	--chat-fg-faint: #898989; /* #afafaf, darkened */
+	--chat-heading: #4d5c70;
+	--chat-rule: #dde7f3;
+	--chat-accent: #1b69ed; /* the source blue #1e72ff, darkened */
+	--chat-accent-fg: #fff;
+	--chat-accent-rule: rgb(30 114 255 / 50%);
+	--chat-highlight-bg: #c0dbff; /* the mention row */
+	--chat-selection: #d9e7ff; /* text selection */
+	--composer-bg: #eee; /* the composer strip */
+	--composer-border: #dcdcdc;
+	--window-border: #dde7f3;
+	--window-shadow: 0 0 25px rgb(0 0 0 / 40%);
+	--menu-bg: #fff; /* menus */
+
+	/* Sidebar rail — light, not dark: this is the one theme here whose
+	 * rail is lighter than its chat surface is dark. */
+	--rail-bg-top: #e6f0ff;
+	--rail-bg-bottom: #d9e7ff; /* the rail body */
+	--rail-fg: #1d40ff; /* a channel label */
+	--rail-fg-strong: #0f2ab0;
+	--rail-fg-active: #fff; /* the selected channel label */
+	--rail-fg-muted: #516989; /* a parted or idle channel, darkened */
+	--own-bg: #e2edff; /* the own-message band, also what the "Highlighted row" setting uses */
+	--rail-item-active-bg: #1d6ef8; /* a shade down from the source blue so its
+		* white label clears 4.5:1 (#1e72ff is 4.28) */
+	--rail-item-hover-bg: rgb(30 114 255 / 12%);
+	--rail-accent: #1d6ef8;
+	--rail-accent-fg: #fff;
+	--rail-badge-bg: #1d6ef8; /* the unread badge */
+	--rail-badge-fg: #fff;
+	--rail-input-bg: #fff;
+	--rail-input-border: #b9d0f0;
+
+	/* Message semantics */
+	--event-join: #1f7a3d;
+	--event-quit: #b3261e;
+	--nick-default: #2a4bd0;
+	--notice-color: #33507a;
+	--action-color: #a412a4;
+
+	/* Notice boxes: the chat blue for notes, and the standard semantics
+	 * for the rest. */
+	--note-bg: #eef4fc;
+	--note-fg: #3b4a5e;
+	--warn-bg: #fffbe6;
+	--warn-fg: #6b5504;
+	--error-bg: #fdecea;
+	--error-fg: #a12318;
+	--ok-bg: #e9f5ec;
+	--ok-fg: #1f6b38;
+
+	/* Tints, focus ring, scrollbars */
+	--tint-soft: rgb(0 0 0 / 4%);
+	--tint-strong: rgb(0 0 0 / 8%);
+	--accent-tint-20: rgb(30 114 255 / 18%);
+	--accent-tint-30: rgb(30 114 255 / 28%);
+	--focus-ring: rgb(30 114 255 / 45%);
+	--scrollbar-track: rgb(51 51 51 / 9%);
+	--scrollbar-thumb: rgb(51 51 51 / 45%);
+	--scrollbar-thumb-active: rgb(51 51 51 / 60%);
+
+	/* Code blocks */
+	--tok-comment: #5f6b7a;
+	--tok-keyword: #b31469;
+	--tok-string: #0c6d0c;
+	--tok-number: #954811;
+	--tok-function: #7726e7;
+	--tok-operator: #b3261e;
+	--tok-punctuation: #4d5c70;
+	--tok-tag: #0c6963;
+	--tok-attr: #9416c9;
+}
+
+/* The row bands. style.css paints the hover band as a
+ * `background-image` gradient precisely so `background-color` stays free for
+ * a row colour, so these compose with hover rather than fight it; the mention
+ * row wins over both from a more specific selector in style.css, which is
+ * the right outcome. `.self` comes last so an own notice reads as own. */
+#chat .msg[data-type="away"],
+#chat .msg[data-type="back"],
+#chat .msg[data-type="chghost"],
+#chat .msg[data-type="ctcp"],
+#chat .msg[data-type="ctcp_request"],
+#chat .msg[data-type="invite"],
+#chat .msg[data-type="join"],
+#chat .msg[data-type="kick"],
+#chat .msg[data-type="login"],
+#chat .msg[data-type="logout"],
+#chat .msg[data-type="mode"],
+#chat .msg[data-type="mode_channel"],
+#chat .msg[data-type="mode_user"],
+#chat .msg[data-type="nick"],
+#chat .msg[data-type="part"],
+#chat .msg[data-type="quit"],
+#chat .msg[data-type="raw"],
+#chat .msg[data-type="topic"],
+#chat .msg[data-type="whois"],
+#chat .msg[data-command="motd"],
+#chat .msg[data-command="help"],
+#chat .msg[data-command="info"] {
+	background-color: #f2f7fc; /* server events */
+}
+
+#chat .msg[data-type="notice"],
+#chat .msg[data-type="plugin"] {
+	background-color: #d9e7ff; /* notices */
+}
+
+#chat .msg.self {
+	background-color: var(--own-bg); /* your own messages */
+}
+
+/* A condensed wrapper holds its own `.msg` children, which carry the band
+ * themselves; banding the wrapper too would double the tint at its edges. */
+#chat .msg[data-type="condensed"] {
+	background-color: transparent;
+}
+
+/* The accent is sized for white. On the two strongest bands it lands at
+ * 3.92:1 (notice) and 3.55:1 (mention), so links there take the same blue a
+ * step down: 5.14:1 and 4.53:1. */
+#chat .msg[data-type="notice"] a,
+#chat .msg[data-type="plugin"] a,
+#chat .chat-view[data-type="channel"] .msg.highlight a {
+	color: #1558c9;
+}
+
+/* Nicks are drawn bold, the way IRCCloud draws them. The member list keeps
+ * the regular weight it has there. */
+.msg .user {
+	font-weight: 700;
+}
+
+/* The nick hues, at the lightest tone that clears 4.6:1 on the
+ * chat surface, the own-message tint and the mention row. */
+.user.color-1 { color: #ba1515; }
+.user.color-2 { color: #b42414; }
+.user.color-3 { color: #a43b12; }
+.user.color-4 { color: #954811; }
+.user.color-5 { color: #87510f; }
+.user.color-6 { color: #725b0d; }
+.user.color-7 { color: #60600b; }
+.user.color-8 { color: #55640b; }
+.user.color-9 { color: #48670b; }
+.user.color-10 { color: #3b690c; }
+.user.color-11 { color: #2c6b0c; }
+.user.color-12 { color: #1c6c0c; }
+.user.color-13 { color: #0c6d0c; }
+.user.color-14 { color: #0c6c21; }
+.user.color-15 { color: #0c6c36; }
+.user.color-16 { color: #0c6b4a; }
+.user.color-17 { color: #0c6963; }
+.user.color-18 { color: #0c686c; }
+.user.color-19 { color: #0e6582; }
+.user.color-20 { color: #1260a1; }
+.user.color-21 { color: #1559bf; }
+.user.color-22 { color: #194ce5; }
+.user.color-23 { color: #3a45e9; }
+.user.color-24 { color: #543de9; }
+.user.color-25 { color: #7726e7; }
+.user.color-26 { color: #8619df; }
+.user.color-27 { color: #9416c9; }
+.user.color-28 { color: #9a15bc; }
+.user.color-29 { color: #a412a4; }
+.user.color-30 { color: #ac1389; }
+.user.color-31 { color: #b31469; }
+.user.color-32 { color: #b81440; }
+
+/* The classic mIRC 16. Slots 0, 1 and 16-98 already match style.css. */
+.irc-fg2 { color: #000080; }
+.irc-fg3 { color: #008000; }
+.irc-fg4 { color: #f00; }
+.irc-fg5 { color: #800000; }
+.irc-fg6 { color: #800080; }
+.irc-fg7 { color: #ffa500; }
+.irc-fg8 { color: #ff0; }
+.irc-fg9 { color: #0f0; }
+.irc-fg10 { color: #008080; }
+.irc-fg11 { color: #0ff; }
+.irc-fg12 { color: #00f; }
+.irc-fg13 { color: #f0f; }
+.irc-fg14 { color: #808080; }
+.irc-fg15 { color: silver; }
+.irc-bg2 { background: #000080; }
+.irc-bg3 { background: #008000; }
+.irc-bg4 { background: #f00; }
+.irc-bg5 { background: #800000; }
+.irc-bg6 { background: #800080; }
+.irc-bg7 { background: #ffa500; }
+.irc-bg8 { background: #ff0; }
+.irc-bg9 { background: #0f0; }
+.irc-bg10 { background: #008080; }
+.irc-bg11 { background: #0ff; }
+.irc-bg12 { background: #00f; }
+.irc-bg13 { background: #f0f; }
+.irc-bg14 { background: #808080; }
+.irc-bg15 { background: silver; }
+
+/* The ✕ on the selected row sits on the blue pill, so it takes the pill's
+ * text colour: the rail's dark-blue glyph at 40% was lost on it. */
+.channel-list-item.active .close::before {
+	color: var(--rail-fg-active);
+}

@@ -18,15 +18,40 @@
 
 const RUN = Date.now().toString(36);
 const NICK = `th${RUN}`;
-const CHANNEL = "#seance";
-const BASE = "http://localhost:8021/";
+const CHANNEL = process.env.SEANCE_IRC_CHANNEL ?? "#seance";
+const BASE = process.env.SEANCE_SCENARIO_BASE ?? "http://localhost:8021/";
 const IRCD = process.env.SEANCE_IRC_WS ?? "ws://127.0.0.1:8067/";
+// The page dials whatever IRCD points at, so the two cannot drift apart.
+const TARGET = new URL(IRCD);
 // Coffee last: it is what the page boots on, and the store only writes a
 // setting that changed.
-const THEMES = ["creama", "cobalt", "frost", "day", "morning", "coffee"];
-const OWN_COLOR = {coffee: "#1a1816", creama: "#efe9de", cobalt: "#101720", frost: "#eef2f7"};
+const THEMES = [
+	"creama",
+	"cobalt",
+	"frost",
+	"molokai",
+	"princess",
+	"princess_",
+	"keeki",
+	"day",
+	"morning",
+	"coffee",
+];
+const OWN_COLOR = {
+	coffee: "#1a1816",
+	creama: "#efe9de",
+	cobalt: "#101720",
+	frost: "#eef2f7",
+	molokai: "#1b1d1e",
+	princess: "#f2f7fc",
+	princess_: "#000000",
+	keeki: "#22143a",
+};
 
-export const url = `${BASE}?host=127.0.0.1&port=8067&tls=false&nick=${NICK}&join=%23seance`;
+export const url =
+	`${BASE}?host=${TARGET.hostname}&port=${TARGET.port}` +
+	`&tls=${TARGET.protocol === "wss:"}&nick=${NICK}` +
+	`&join=${encodeURIComponent(CHANNEL)}`;
 
 const THEME_HREF = `document.getElementById("theme").getAttribute("href")`;
 const STORED = `JSON.parse(localStorage.getItem("settings") ?? "{}").theme ?? null`;
@@ -61,7 +86,21 @@ const INSTALL_CONTRAST = `(() => {
 		return el ? getComputedStyle(el, pseudo || null)[prop] : null;
 	};
 	const root = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-	window.__themeCheck = {ratio, cs, root};
+	// The background the text actually sits on: the first painted one at or
+	// above the element. A row with a background of its own — a mention, one
+	// of princess_'s bands, the selected channel's pill — is what its text
+	// has to clear, not whatever the surface behind the row happens to be.
+	const bgOf = (sel) => {
+		let el = document.querySelector(sel);
+		while (el) {
+			const bg = getComputedStyle(el).backgroundColor;
+			const parts = (bg.match(/[\d.]+/g) || []).map(Number);
+			if (parts.length < 4 || parts[3] > 0.95) return bg;
+			el = el.parentElement;
+		}
+		return root("--window-bg-color");
+	};
+	window.__themeCheck = {ratio, cs, root, bgOf};
 	return true;
 })()`;
 
@@ -96,7 +135,7 @@ const PAIRS = [
 	[
 		"a channel row on the sidebar",
 		`cs('.channel-list-item[data-type="channel"] .name', "color")`,
-		`root("--body-bg-color")`,
+		`bgOf('.channel-list-item[data-type="channel"]')`,
 		4.5,
 	],
 	[
@@ -160,6 +199,13 @@ function speaker(nick) {
 	};
 }
 
+/** A real Enter keystroke in the focused input (keydown with text → keypress). */
+async function pressEnter(page) {
+	const key = {key: "Enter", code: "Enter", windowsVirtualKeyCode: 13};
+	await page.send("Input.dispatchKeyEvent", {type: "keyDown", text: "\r", ...key});
+	await page.send("Input.dispatchKeyEvent", {type: "keyUp", ...key});
+}
+
 export default async function run(page) {
 	// A ?host link only pre-fills the connect form (a link is a suggestion,
 	// boot.ts handleQueryParams); connect for real.
@@ -187,6 +233,17 @@ export default async function run(page) {
 	await page.waitFor(`!!document.querySelector("#chat .msg.highlight .user")`, {
 		label: "the mention is highlighted",
 	});
+	// One message of our own, so every screenshot shows an own row and a theme
+	// that bands them (keeki) is seen doing it.
+	await page.click("#input");
+	await page.fill("#input", "on it, give me five");
+	await pressEnter(page);
+	await page.waitFor(
+		`!!document.querySelector('#chat .msg.self[data-type="message"]:not(.pending) .content')`,
+		{
+			label: "our own message is echoed",
+		}
+	);
 	await page.evaluate(INSTALL_CONTRAST);
 
 	const setTheme = async (name) => {
@@ -209,7 +266,8 @@ export default async function run(page) {
 		);
 		await page.sleep(700);
 		await page.screenshot(`settings-${name}`);
-		await page.click(`.channel-list-item[data-name="${CHANNEL}"]`);
+		// Settings is a modal; Done returns to the channel it covered.
+		await page.click(".settings-modal-done");
 		await page.waitFor(`document.querySelector("#input")`, {label: "back in the channel"});
 		await page.sleep(300);
 	};

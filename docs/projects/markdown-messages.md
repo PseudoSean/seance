@@ -121,8 +121,8 @@ runs on the whole message and it is the block that drops what it found.
 
 A message that renders at least one code block gets a **Copy code** action in
 its own hover toolbar (`MessageActions.vue`, `.msg-action-copy`, next to
-reply/react/edit; the glyph turns into a check mark and the `aria-label`/`title`
-into "Copied" for 1.5 s). It is not a control on the block: the toolbar already
+reply/react/edit; a copy that worked closes the bar and leaves a `Copied`
+label in its corner for a second, `.msg-copied`). It is not a control on the block: the toolbar already
 appears on hover and works on touch (`.msg-actions.active`), and a second
 control in the same corner was neither reachable with a mouse nor with a thumb.
 Which blocks a message holds is decided on the layout tree, not on the DOM:

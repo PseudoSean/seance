@@ -549,20 +549,40 @@ describe("Chat history (history.ts)", function () {
 			const h = setup();
 			const id = joined(h);
 
+			// A second channel, joined and its automatic fill answered (one
+			// prepend per channel is in flight at most, so the second request
+			// needs a second channel).
+			h.transport.lines(
+				"@time=2026-08-25T12:01:00.000Z;msgid=join-2 :alice!alice@host JOIN #other alice :Alice",
+				":irc.test 353 alice = #other :@alice dave",
+				":irc.test 366 alice #other :End of /NAMES list."
+			);
+			batch(h, [], {
+				ref: "hist2",
+				target: "#other",
+				label: labelOf(h.sent().find((l) => l.includes("CHATHISTORY"))),
+			});
+			dispatch.resetHistory();
+			const other = h.client.findChannel("#other")!.id;
+
 			socket.emit("more", {target: id, lastId: -1, condensed: false});
 			const [first] = h.sent();
-			socket.emit("more", {target: id, lastId: -1, condensed: false});
+			socket.emit("more", {target: other, lastId: -1, condensed: false});
 			const [second] = h.sent();
 			expect(pendingHistory(h.client)).to.have.length(2);
 
-			batch(h, [hist(2)], {label: labelOf(second), target: "#SEANCE", ref: "r2"});
+			// #other's label on a batch whose target reads like #seance: the
+			// label decides.
+			batch(h, [hist(2, "dave", "message 2")], {
+				label: labelOf(second),
+				target: "#SEANCE",
+				ref: "r2",
+			});
 			expect(pendingHistory(h.client).map((r) => r.label)).to.deep.equal([labelOf(first)]);
 			batch(h, [hist(1)], {label: labelOf(first), ref: "r1"});
 
-			expect(mores(id).map((m) => m.messages[0].text)).to.deep.equal([
-				"message 2",
-				"message 1",
-			]);
+			expect(mores(other).map((m) => m.messages[0].text)).to.deep.equal(["message 2"]);
+			expect(mores(id).map((m) => m.messages[0].text)).to.deep.equal(["message 1"]);
 			expect(pendingHistory(h.client)).to.have.length(0);
 		});
 
@@ -888,6 +908,97 @@ describe("Chat history (history.ts)", function () {
 			);
 			return h.sent();
 		}
+
+		it("delivers a page again after the UI dropped its rows (history:trim)", function () {
+			const h = setup();
+			const id = joined(h, [hist(1), hist(2), hist(3)]);
+			const chan = h.client.findChannel("#seance")!;
+			const dropped = [chan.idOf("m1")!, chan.idOf("m2")!];
+			const total = chan.shared.totalMessages;
+
+			// The UI keeps only the newest row of the channel (router.ts /
+			// socket-events/msg.ts keep 100): the IRC layer forgets the rest.
+			socket.emit("history:trim", {target: id, ids: dropped});
+			expect(chan.idOf("m1")).to.equal(undefined);
+			expect(chan.msgRefs.has(dropped[0])).to.equal(false);
+			expect(chan.shared.totalMessages).to.equal(total - 2);
+
+			// Scrolling up asks for the page before the row that is left, and
+			// the same two rows come back: shown again, under fresh ids.
+			socket.emit("more", {target: id, lastId: chan.idOf("m3")!, condensed: false});
+			expect(h.sent()[0]).to.match(/ CHATHISTORY BEFORE #seance msgid=m3 100$/);
+			batch(h, [hist(1), hist(2)], {
+				label: labelOf(h.transport.sent[h.transport.sent.length - 1]),
+			});
+			expect(mores(id)).to.have.length(1);
+			expect(mores(id)[0].messages.map((m) => m.text)).to.deep.equal([
+				"message 1",
+				"message 2",
+			]);
+			expect(mores(id)[0].messages.map((m) => m.id)).to.not.include.members(dropped);
+			expect(chan.idOf("m1")).to.equal(mores(id)[0].messages[0].id);
+		});
+
+		it("folds a `more` onto a page already in flight for the channel", function () {
+			const h = setup();
+			const id = joined(h);
+			h.transport.line(
+				"@msgid=live-7;time=2026-08-25T12:01:00.000Z :bob!bob@host PRIVMSG #seance :hi"
+			);
+			const [{msg}] = msgs(id);
+			socket.emit("more", {target: id, lastId: msg.id, condensed: false});
+			h.transport.closed();
+
+			// The lost page is re-asked behind the JOIN; the UI asks again at
+			// the same moment (the button was left in view): one request.
+			const sent = reconnect(h);
+			socket.emit("more", {target: id, lastId: msg.id, condensed: false});
+			expect(h.sent()).to.deep.equal([]);
+			expect(sent.filter((l) => / CHATHISTORY BEFORE /.test(l))).to.have.length(1);
+
+			// Its answer is the `more` the UI is waiting for, once.
+			batch(h, [hist(1)], {label: labelOf(sent.find((l) => / BEFORE /.test(l)))});
+			expect(mores(id)).to.have.length(1);
+			expect(mores(id)[0].messages.map((m) => m.text)).to.deep.equal(["message 1"]);
+		});
+
+		it("re-asks for a `more` page that was lost with the connection, once the channel is back", function () {
+			const h = setup();
+			const id = joined(h);
+			h.transport.line(
+				"@msgid=live-7;time=2026-08-25T12:01:00.000Z :bob!bob@host PRIVMSG #seance :hi"
+			);
+			const [{msg}] = msgs(id);
+
+			// The page is asked for; the socket dies before the answer (a phone
+			// coming back from the background scrolls up while the transport
+			// still believes its dead socket is open).
+			socket.emit("more", {target: id, lastId: msg.id, condensed: false});
+			expect(
+				h.sent().some((l) => / CHATHISTORY BEFORE #seance msgid=live-7 100$/.test(l))
+			).to.equal(true);
+			h.transport.closed();
+			expect(mores(id), "the UI is released at once").to.have.length(1);
+			expect(mores(id)[0].messages).to.deep.equal([]);
+			expect(mores(id)[0].moreAvailable, "and keeps its button").to.equal(true);
+
+			// Back: the channel's fill goes out as usual, and the lost page with it.
+			const sent = reconnect(h);
+			const retry = sent.find((l) => / CHATHISTORY BEFORE #seance msgid=live-7 100$/.test(l));
+			expect(retry, `no retry among:\n${sent.join("\n")}`).to.not.equal(undefined);
+
+			// Its answer reaches the UI as the page it asked for (`reconnect`
+			// reset the spy, so this is the first `more` it sees).
+			batch(h, [hist(1), hist(2)], {label: labelOf(retry)});
+			expect(mores(id)).to.have.length(1);
+			expect(mores(id)[0].messages.map((m) => m.text)).to.deep.equal([
+				"message 1",
+				"message 2",
+			]);
+
+			// Once is enough: a further reconnect does not ask again.
+			expect(reconnect(h).some((l) => / CHATHISTORY BEFORE /.test(l))).to.equal(false);
+		});
 
 		it("fills the gap from LATEST back to the newest message seen, appended in order without unread effects", function () {
 			const h = setup();
