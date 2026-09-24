@@ -54,7 +54,7 @@ function declared(prefix: string): Array<[string, string]> {
 	return out;
 }
 
-describe("ps: the words over the plains keep their floors on the sampled days and minutes, against the sky-and-land grounds", function () {
+describe("ps: the words over the plains keep their floors on nine sampled days, every five minutes, in all six weathers, against the sky-and-land grounds", function () {
 	this.timeout(60000);
 
 	it("the generated block exists", function () {
