@@ -31,34 +31,74 @@
 
 /* ---- fonts ---- */
 
-/* Nunito and Baloo 2 as Google Fonts' variable files (tools/heart/fetch-fonts.mjs):
- * one file per style carrying a weight range, the same builds the mockups
- * loaded from Google — a single-weight instance cut from them renders
- * visibly differently in some browsers. Latin subset; other scripts fall
- * back to the system stack mid-line. */
+/* ps:fonts:start — Mulish and Fraunces, fetched by `node tools/ps/fetch-fonts.mjs`:
+ * Google Fonts' variable woff2 files, one file per style carrying a weight
+ * range, Latin and Latin Extended as separate files (a face needs both, or
+ * plain or accented text draws in the fallback font — the latin-ext trap,
+ * docs/projects/ps-theme.md §8). Cyrillic, Greek and every other script
+ * this theme does not bundle fall back to the system stack mid-line. */
+
 @font-face {
-	font-family: Nunito;
+	font-family: Mulish;
 	font-style: normal;
 	font-weight: 400 800;
 	font-display: swap;
-	src: url("ps/nunito-variable.woff2") format("woff2");
+	src: url("ps/mulish-latin.woff2") format("woff2");
+	/* stylelint-disable-next-line max-line-length -- Google's unicode-range list, unbroken as served */
+	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 @font-face {
-	font-family: Nunito;
+	font-family: Mulish;
+	font-style: normal;
+	font-weight: 400 800;
+	font-display: swap;
+	src: url("ps/mulish-latin-ext.woff2") format("woff2");
+	/* stylelint-disable-next-line max-line-length -- Google's unicode-range list, unbroken as served */
+	unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+	font-family: Mulish;
 	font-style: italic;
-	font-weight: 400 700;
+	font-weight: 400 800;
 	font-display: swap;
-	src: url("ps/nunito-variable-italic.woff2") format("woff2");
+	src: url("ps/mulish-italic-latin.woff2") format("woff2");
+	/* stylelint-disable-next-line max-line-length -- Google's unicode-range list, unbroken as served */
+	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 @font-face {
-	font-family: "Baloo 2";
-	font-style: normal;
+	font-family: Mulish;
+	font-style: italic;
 	font-weight: 400 800;
 	font-display: swap;
-	src: url("ps/baloo2-variable.woff2") format("woff2");
+	src: url("ps/mulish-italic-latin-ext.woff2") format("woff2");
+	/* stylelint-disable-next-line max-line-length -- Google's unicode-range list, unbroken as served */
+	unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
+
+@font-face {
+	font-family: Fraunces;
+	font-style: normal;
+	font-weight: 600 700;
+	font-display: swap;
+	src: url("ps/fraunces-latin.woff2") format("woff2");
+	/* stylelint-disable-next-line max-line-length -- Google's unicode-range list, unbroken as served */
+	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+	font-family: Fraunces;
+	font-style: normal;
+	font-weight: 600 700;
+	font-display: swap;
+	src: url("ps/fraunces-latin-ext.woff2") format("woff2");
+	/* stylelint-disable-next-line max-line-length -- Google's unicode-range list, unbroken as served */
+	unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ps:fonts:end */
 
 /* ---- tokens ---- */
 :root {
@@ -207,11 +247,11 @@
 
 /* ---- type ---- */
 
-/* Nunito 600 everywhere text is read (the weight the mockup was approved at;
- * a round at 400 was the user's call while the fonts were suspected of not
- * loading, reversed once they were seen to); 800 is its bold. Baloo 2 for
- * the names the eye jumps to: nicks, channel and network names, the header
- * title.
+/* Mulish 500 everywhere text is read (docs/projects/ps-theme.md §8, the
+ * weight the mockup was approved at); 800 is its bold. Fraunces 700 for the
+ * names the eye jumps to: nicks, channel and network names, the header
+ * title — it has no Cyrillic or Greek, so a name in either falls back to
+ * the system serif; Mulish covers Cyrillic.
  * .context-menu substituted for #context-menu: ContextMenu.vue renders
  * <ul id="context-menu">, not a class. */
 body,
@@ -221,8 +261,8 @@ body,
 #context-menu,
 #settings,
 #help {
-	font-family: Nunito, "Segoe UI", system-ui, sans-serif;
-	font-weight: 600;
+	font-family: Mulish, "Segoe UI", system-ui, sans-serif;
+	font-weight: 500;
 }
 
 b,
@@ -237,7 +277,7 @@ strong,
 .channel-list-item .name,
 .network .lobby-title .name,
 #sidebar .lobby-title {
-	font-family: "Baloo 2", Nunito, sans-serif;
+	font-family: Fraunces, Georgia, serif;
 	font-weight: 700;
 }
 
@@ -255,18 +295,12 @@ strong,
 	border-left-color: transparent;
 }
 
-/* Nunito 600 + tabular-nums measures wider than style.css's fixed 12h
- * columns (07:13 AM at 82.9px vs. a 4.75rem/5.75rem box), wrapping to two
- * lines; restated here, same selectors, so this file's cascade position
- * wins. The 24h-only width (also 4.75rem, shared with the seconds-only
- * selector above it in style.css) is left alone. */
-#chat.time-12h .time {
-	width: 5.5rem;
-}
-
-#chat.time-seconds.time-12h .time {
-	width: 7.25rem;
-}
+/* Mulish's tabular-nums numerals measure narrow enough that style.css's own
+ * ch-based #chat.time-12h/#chat.time-seconds widths hold every clock format
+ * (12h, 12h+s, 24h, 24h+s) at every font-size step with room to spare
+ * (measured with SEANCE_THEME=ps tools/scenarios/message-gutter.mjs; the
+ * widest case, 12h+s at xlarge, is 129px of text in a 180px column), unlike
+ * the previous bundled font — so nothing is restated here. */
 
 /* ---- motion ---- */
 

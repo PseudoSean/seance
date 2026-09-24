@@ -156,42 +156,60 @@ describe("the ps theme's colours", function () {
 });
 
 describe("the ps theme's type", function () {
-	it("bundles Nunito and Baloo 2 as variable fonts and sets them at the chosen weights", function () {
-		for (const file of [
-			"ps/nunito-variable.woff2",
-			"ps/nunito-variable-italic.woff2",
-			"ps/baloo2-variable.woff2",
+	const fontsBlock = css.slice(
+		css.indexOf("/* ps:fonts:start"),
+		css.indexOf("/* ps:fonts:end */")
+	);
+
+	it("bundles Mulish (upright and italic) and Fraunces, Latin and Latin Extended, as files that exist", function () {
+		const faces = [...fontsBlock.matchAll(/@font-face\s*\{([^}]*)\}/g)].map((m) => m[1]);
+		const has = (family: string, style: string) =>
+			faces.filter(
+				(f) => f.includes(`font-family: ${family}`) && f.includes(`font-style: ${style}`)
+			);
+
+		for (const [family, style] of [
+			["Mulish", "normal"],
+			["Mulish", "italic"],
+			["Fraunces", "normal"],
 		]) {
-			expect(css).to.include(`url("${file}")`);
+			const set = has(family, style);
+			expect(set, `${family} ${style}`).to.have.length(2); // latin + latin-ext
+
+			for (const face of set) {
+				expect(face).to.match(/unicode-range:\s*U\+/);
+				const file = face.match(/url\("ps\/([^"]+\.woff2)"\)/)?.[1];
+				expect(file, `${family} ${style} src`).to.be.a("string");
+				expect(fs.existsSync(path.resolve(__dirname, "../../client/themes/ps", file!))).to
+					.be.true;
+			}
 		}
 
-		expect(css, "weight ranges").to.match(
-			/font-family: Nunito;\s*font-style: normal;\s*font-weight: 400 800;/
-		);
-		expect(css, "italic range").to.match(/font-style: italic;\s*font-weight: 400 700;/);
-		expect(css, "Baloo range").to.match(
-			/font-family: "Baloo 2";\s*font-style: normal;\s*font-weight: 400 800;/
-		);
-		expect(css).to.match(/#chat \.msg \.user[\s\S]{0,160}font-family:\s*"Baloo 2"/);
-		expect(css, "no rule between nick and text").to.match(
-			/#chat \.content \{\s*border-left-color: transparent;/
-		);
-		expect(css, "the header is paper like the composer").to.match(
-			/#chat \.header \{\s*background: var\(--ps-paper\);/
-		);
-		expect(css).to.match(
-			/body,[\s\S]{0,200}font-family:\s*Nunito[\s\S]{0,80}font-weight:\s*600/
-		);
+		expect(fs.existsSync(path.resolve(__dirname, "../../client/themes/ps/OFL-Mulish.txt"))).to
+			.be.true;
+		expect(fs.existsSync(path.resolve(__dirname, "../../client/themes/ps/OFL-Fraunces.txt"))).to
+			.be.true;
 	});
 
-	it("widens the 12h timestamp column past a 4.5rem/5.75rem wrap under Nunito", function () {
-		const typeSection = css.slice(
-			css.indexOf("/* ---- type ---- */"),
-			css.indexOf("/* ---- motion ---- */")
-		);
-		expect(typeSection).to.match(/#chat\.time-12h \.time \{\s*width: 5\.5rem;/);
-		expect(typeSection).to.match(/#chat\.time-seconds\.time-12h \.time \{\s*width: 7\.25rem;/);
-		expect(typeSection).to.not.match(/font-variant-numeric:\s*tabular-nums/);
+	it("no longer carries Nunito or Baloo 2", function () {
+		expect(css).to.not.match(/Nunito|Baloo/);
+
+		for (const f of [
+			"nunito-variable.woff2",
+			"nunito-variable-italic.woff2",
+			"baloo2-variable.woff2",
+			"OFL-Nunito.txt",
+			"OFL-Baloo2.txt",
+		]) {
+			expect(fs.existsSync(path.resolve(__dirname, "../../client/themes/ps", f)), f).to.be
+				.false;
+		}
+	});
+
+	it("sets words in Mulish 500 with 800 for bold, and names in Fraunces 700", function () {
+		expect(css).to.match(/font-family:\s*Mulish,[^;]*;\s*font-weight:\s*500;/);
+		expect(css).to.match(/font-weight:\s*800;/);
+		expect(css).to.match(/font-family:\s*Fraunces,[^;]*;\s*font-weight:\s*700;/);
 	});
 });
 

@@ -7,6 +7,11 @@
 //
 //   corepack yarn build && python3 -m http.server -d public 8000 &
 //   node tools/browser-drive.mjs tools/scenarios/message-gutter.mjs
+//
+// SEANCE_THEME=<name> picks the Appearance theme the run boots into (a
+// bundled font's own metrics can widen or narrow the gutter past
+// style.css's numbers, as the ps theme's fonts do — docs/projects/ps-theme.md
+// §8); left unset, the run boots into the default theme.
 
 const RUN = Date.now().toString(36);
 const NICK = `gut${RUN}`;
@@ -18,7 +23,11 @@ const STEPS = ["tiny", "small", "medium", "large", "xlarge", "huge"];
 // SEANCE_CLOCK=24h|12h|24h+s|12h+s picks the clock setting for the run; the
 // format the DOM shows follows the setting, so it is set before boot.
 const CLOCK = process.env.SEANCE_CLOCK ?? "12h";
-const SETTINGS = {use12hClock: CLOCK.startsWith("12"), showSeconds: CLOCK.endsWith("+s")};
+const SETTINGS = {
+	use12hClock: CLOCK.startsWith("12"),
+	showSeconds: CLOCK.endsWith("+s"),
+	...(process.env.SEANCE_THEME ? {theme: process.env.SEANCE_THEME} : {}),
+};
 
 // Text width against column width for the last own message, in px.
 const MEASURE = `(() => {
