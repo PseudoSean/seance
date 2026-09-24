@@ -171,6 +171,14 @@ async function devtoolsTarget() {
 
 const pending = new Map();
 const consoleLogs = [];
+/**
+ * What the browser itself writes to the console (CDP Log.entryAdded): a
+ * failed resource load (a 404; a request DevTools blocked logs nothing), an
+ * intervention, a deprecation. Kept apart
+ * from `consoleLogs` (the page's own console.* calls and exceptions), so a
+ * scenario's "no console errors" does not start counting a 404.
+ */
+const logEntries = [];
 const wsFrames = [];
 const failures = [];
 /**
@@ -229,6 +237,20 @@ function onEvent(msg) {
 		const text = d.exception?.description ?? d.text;
 		consoleLogs.push({type: "exception", text});
 		console.log(`page exception ${text}`);
+		return;
+	}
+
+	if (method === "Log.entryAdded") {
+		const {source, level, text, url} = params.entry;
+		logEntries.push({source, level, text, url: url ?? ""});
+		const line = `log.${level} [${source}] ${text}${url ? ` ${url}` : ""}`;
+
+		if (["error", "warning"].includes(level)) {
+			console.log(line);
+		} else {
+			note(line);
+		}
+
 		return;
 	}
 
@@ -517,6 +539,11 @@ const page = {
 	expectWsErrors: false,
 	get consoleLogs() {
 		return consoleLogs;
+	},
+	/** The browser's own console entries (Log.entryAdded), e.g. a failed
+	 * load: `{source, level, text, url}`. */
+	get logEntries() {
+		return logEntries;
 	},
 	get wsFrames() {
 		return wsFrames;
