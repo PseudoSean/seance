@@ -44,3 +44,6 @@ shells/capacitor/ios/
 .claude-config/
 .llama-stats.log
 testnet/
+
+# A design handoff kept byte-for-byte as the user approved it (its README says why).
+docs/resources/themes/ps-plains/mockup.html
