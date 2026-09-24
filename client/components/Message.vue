@@ -8,9 +8,11 @@
 				highlight: (message.highlight && store.state.settings.highlightMessages) || focused,
 				pending: message.pending,
 				'previous-source': isPreviousSource,
+				'has-actions': canAct,
 				'actions-open': actionsOpen,
 				translated,
 				unchanged,
+				'select-armed': actionsOpen && selectArmed,
 			},
 		]"
 		:data-type="message.type"
@@ -49,14 +51,14 @@
 					class="msg-reply-quote"
 					:class="{unknown: !quote}"
 					:aria-label="quoteLabel"
-					:title="quote ? quote.text : undefined"
+					:title="quote ? quotePlain : undefined"
 					@click="jumpToParent"
 				>
 					<span class="msg-reply-arrow" aria-hidden="true">↩</span>
 					<template v-if="quote"
 						><span class="msg-reply-nick">{{ quote.nick }}</span
-						>&#32;<span class="msg-reply-text">{{ quote.text }}</span></template
-					>
+						>&#32;<span class="msg-reply-text"><QuotePreview :text="quote.text" /></span
+					></template>
 					<span v-else class="msg-reply-text">{{ t("message.replyUnknown") }}</span>
 				</button>
 				<StatusmsgMarker :group="message.statusmsgGroup" />
@@ -140,14 +142,14 @@
 					class="msg-reply-quote"
 					:class="{unknown: !quote}"
 					:aria-label="quoteLabel"
-					:title="quote ? quote.text : undefined"
+					:title="quote ? quotePlain : undefined"
 					@click="jumpToParent"
 				>
 					<span class="msg-reply-arrow" aria-hidden="true">↩</span>
 					<template v-if="quote"
 						><span class="msg-reply-nick">{{ quote.nick }}</span
-						>&#32;<span class="msg-reply-text">{{ quote.text }}</span></template
-					>
+						>&#32;<span class="msg-reply-text"><QuotePreview :text="quote.text" /></span
+					></template>
 					<span v-else class="msg-reply-text">{{ t("message.replyUnknown") }}</span>
 				</button>
 				<StatusmsgMarker :group="message.statusmsgGroup" />
@@ -196,6 +198,7 @@
 			:message="message"
 			:channel="channel"
 			:network="network"
+			@done="onActionDone"
 		/>
 	</div>
 </template>
@@ -212,7 +215,9 @@ import MessageActions from "./MessageActions.vue";
 import MessageReactions from "./MessageReactions.vue";
 import TranslationLine from "./TranslationLine.vue";
 import {UNCHANGED} from "../js/translate/outgoing";
+import QuotePreview from "./QuotePreview.vue";
 import {replyQuote} from "../js/helpers/messageUpdates";
+import {quoteLayout, toPlainText} from "../js/helpers/ircmessageparser/layout";
 import {MessageType} from "../../shared/types/msg";
 
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
@@ -220,6 +225,7 @@ import {useStore} from "../js/store";
 import {hasVirtualKeyboard} from "../js/helpers/device";
 import {formatDateTime, formatTime} from "../js/i18n/dates";
 import {useI18n} from "../js/i18n";
+import {selectionActive} from "../js/helpers/touchSelection";
 
 MessageTypes.ParsedMessage = ParsedMessage;
 MessageTypes.LinkPreview = LinkPreview;
@@ -232,12 +238,37 @@ MessageTypes.Username = Username;
  */
 const openActions = ref<number | null>(null);
 
+/**
+ * Whether the open message's text is selectable yet (`select-armed` in the
+ * template, the coarse-pointer rule in style.css). Not until the press that
+ * opened the toolbar has ended: the flip happens at the same 500 ms as the
+ * platform's own long-press detector, and on a finger still held down that
+ * detector, a beat later, would find the text selectable and start a
+ * selection off the very press that opened the toolbar. Armed on the
+ * opening press's touchend, cleared whenever the toolbar moves or closes.
+ */
+const selectArmed = ref(false);
+
+watch(openActions, () => {
+	selectArmed.value = false;
+});
+
 /** How long a finger has to stay down before the toolbar opens. Android's own
  * long press is 500 ms too, so the gesture feels like the platform's. */
 const LONG_PRESS_MS = 500;
 
 /** A finger that travels further than this is scrolling, not pressing. */
 const LONG_PRESS_SLOP_PX = 10;
+
+// The moment a selection exists in the scrollback the toolbar stands down:
+// the selection was made from it (a second long press on the open message)
+// and now covers the text it floated over. Selectability survives the close
+// through `.chat.selection-live` (helpers/touchSelection.ts).
+watch(selectionActive, (live) => {
+	if (live) {
+		openActions.value = null;
+	}
+});
 
 export default defineComponent({
 	name: "Message",
@@ -247,6 +278,7 @@ export default defineComponent({
 		MessageActions,
 		MessageReactions,
 		TranslationLine,
+		QuotePreview,
 	},
 	props: {
 		message: {type: Object as PropType<ClientMessage>, required: true},
@@ -263,12 +295,26 @@ export default defineComponent({
 		// On a touch device the toolbar opens on a long press, as it does in
 		// every native chat client, and a tap anywhere puts it away. The
 		// message text is not selectable there (style.css, the coarse-pointer
-		// rule on `.msg`), so the platform's own long press — a text selection
-		// — does not race this one; the toolbar's Copy text stands in for it.
+		// rule on `.msg.has-actions`), so the platform's own long press — a
+		// text selection — does not race this one; the toolbar's Copy text
+		// stands in for it.
 		// Pointer devices keep hovering. Presses that start on a link, a
 		// button or a nick are theirs: a link long press is its preview, a
 		// nick tap is a whois.
 		const actionsOpen = computed(() => openActions.value === props.message.id);
+
+		// Hover action bar: only for real chat lines we can address by msgid,
+		// and only while the network is connected. A row without one (the
+		// topic, a mode change, a notice) gets no long press of ours and stays
+		// selectable on touch: its first long press is the platform's.
+		const canAct = computed(
+			() =>
+				(props.message.type === MessageType.MESSAGE ||
+					props.message.type === MessageType.ACTION) &&
+				!!props.message.msgid &&
+				!props.message.redacted &&
+				props.network.status.connected
+		);
 
 		let pressTimer: ReturnType<typeof setTimeout> | undefined;
 		let pressStart: {x: number; y: number} | null = null;
@@ -284,13 +330,23 @@ export default defineComponent({
 		};
 
 		const onTouchStart = (e: TouchEvent) => {
-			if (!hasVirtualKeyboard() || e.touches.length !== 1) {
+			if (!hasVirtualKeyboard() || e.touches.length !== 1 || !canAct.value) {
 				return;
 			}
 
 			// A new gesture: a long press whose click never came (Android fires
 			// contextmenu instead) must not eat this one's.
 			swallowClick = false;
+
+			// A press on the message whose toolbar is already open — or
+			// anywhere while a selection is live — is the platform's: the
+			// text is selectable there (style.css), so its own long press
+			// selects, with its handles. Ours stands down. (After the
+			// swallowClick reset: a cleared flag is also what tells
+			// onContextMenu this is a fresh press, not the opening one.)
+			if (selectionActive.value || openActions.value === props.message.id) {
+				return;
+			}
 
 			const target = e.target as HTMLElement | null;
 
@@ -328,13 +384,31 @@ export default defineComponent({
 			}
 		};
 
-		const onTouchEnd = () => cancelPress();
+		const onTouchEnd = () => {
+			cancelPress();
 
-		// The browser's own long-press menu (Android) would open over ours.
-		const onContextMenu = (e: MouseEvent) => {
-			if (hasVirtualKeyboard()) {
-				e.preventDefault();
+			// The press on the open message is over: from here a long press
+			// is the platform's, so now the text may turn selectable.
+			if (openActions.value === props.message.id) {
+				selectArmed.value = true;
 			}
+		};
+
+		// The browser's own long-press menu (Android) would open over ours —
+		// except when the long press was the platform's: a live selection's
+		// menu, or a fresh press on the message whose toolbar is already
+		// open. `swallowClick` still set means this very press is the one
+		// that opened the toolbar, and that race stays prevented.
+		const onContextMenu = (e: MouseEvent) => {
+			if (!hasVirtualKeyboard() || !canAct.value) {
+				return;
+			}
+
+			if (selectionActive.value || (actionsOpen.value && !swallowClick)) {
+				return;
+			}
+
+			e.preventDefault();
 		};
 
 		// A tap on the row while a toolbar is open (this row's or another's)
@@ -356,6 +430,14 @@ export default defineComponent({
 			}
 
 			if (openActions.value !== null) {
+				openActions.value = null;
+			}
+		};
+
+		// An action taken from the toolbar is the end of it on a touch device
+		// (a pointer's toolbar is hover, and goes with the pointer).
+		const onActionDone = () => {
+			if (actionsOpen.value) {
 				openActions.value = null;
 			}
 		};
@@ -461,9 +543,19 @@ export default defineComponent({
 			return replyQuote(props.channel.messages, props.message.replyTo);
 		});
 
+		// The quote as plain text (tooltip, screen readers), cut like the
+		// rendered one
+		const quotePlain = computed(() =>
+			quote.value
+				? toPlainText(
+						quoteLayout(quote.value.text, 80, {markdown: store.state.settings.markdown})
+				  )
+				: ""
+		);
+
 		const quoteLabel = computed(() =>
 			quote.value
-				? t("message.replyingTo", {nick: quote.value.nick, text: quote.value.text})
+				? t("message.replyingTo", {nick: quote.value.nick, text: quotePlain.value})
 				: t("message.replyMissing")
 		);
 
@@ -520,20 +612,11 @@ export default defineComponent({
 			revealed.value = false;
 		};
 
-		// Hover action bar: only for real chat lines we can address by msgid,
-		// and only while the network is connected.
-		const canAct = computed(
-			() =>
-				(props.message.type === MessageType.MESSAGE ||
-					props.message.type === MessageType.ACTION) &&
-				!!props.message.msgid &&
-				!props.message.redacted &&
-				props.network.status.connected
-		);
-
 		return {
 			store,
 			actionsOpen,
+			onActionDone,
+			selectArmed,
 			onTouchStart,
 			onTouchMove,
 			onTouchEnd,
@@ -545,6 +628,7 @@ export default defineComponent({
 			messageComponent,
 			isAction,
 			quote,
+			quotePlain,
 			quoteLabel,
 			jumpToParent,
 			t,

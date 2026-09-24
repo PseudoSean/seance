@@ -1,5 +1,6 @@
 import {h as createElement, VNode} from "vue";
-import {layout, LayoutNode, Style, toPlainText} from "./ircmessageparser/layout";
+import {layout, LayoutNode, toPlainText} from "./ircmessageparser/layout";
+import {createFragment} from "./fragment";
 import emojiMap from "./fullnamemap.json";
 import LinkPreviewToggle from "../../components/LinkPreviewToggle.vue";
 import LinkPreviewFileSize from "../../components/LinkPreviewFileSize.vue";
@@ -16,7 +17,6 @@ export type ParseOptions = {
 };
 
 type Rendered = VNode | string | undefined | Rendered[];
-type TextNode = Extract<LayoutNode, {kind: "text"}>;
 type WrapNode = Extract<LayoutNode, {kind: "wrap"}>;
 type PartNode = Extract<LayoutNode, {kind: "link" | "channel" | "emoji" | "nick"}>;
 
@@ -163,68 +163,6 @@ function wrapNode(node: WrapNode, children: Rendered[], message?: ClientMessage)
 				children
 			);
 	}
-}
-
-// Create an HTML `span` with styling information for a given text node
-function createFragment(node: TextNode): VNode | string {
-	const style: Style = node.style;
-	const classes: string[] = [];
-
-	if (style.bold) {
-		classes.push("irc-bold");
-	}
-
-	if (style.textColor !== undefined) {
-		classes.push("irc-fg" + style.textColor);
-	}
-
-	if (style.bgColor !== undefined) {
-		classes.push("irc-bg" + style.bgColor);
-	}
-
-	if (style.italic) {
-		classes.push("irc-italic");
-	}
-
-	if (style.underline) {
-		classes.push("irc-underline");
-	}
-
-	if (style.strikethrough) {
-		classes.push("irc-strikethrough");
-	}
-
-	if (style.monospace) {
-		classes.push("irc-monospace");
-	}
-
-	const data: {
-		class?: string[];
-		style?: Record<string, string>;
-	} = {
-		class: undefined,
-		style: undefined,
-	};
-
-	let hasData = false;
-
-	if (classes.length > 0) {
-		hasData = true;
-		data.class = classes;
-	}
-
-	if (style.hexColor) {
-		hasData = true;
-		data.style = {
-			color: `#${style.hexColor}`,
-		};
-
-		if (style.hexBgColor) {
-			data.style["background-color"] = `#${style.hexBgColor}`;
-		}
-	}
-
-	return hasData ? createElement("span", data, node.text) : node.text;
 }
 
 // Transform an IRC message potentially filled with styling control codes, URLs,

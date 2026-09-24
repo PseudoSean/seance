@@ -56,6 +56,26 @@ function isTextField(el: Element | null): el is HTMLElement {
 	return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
 }
 
+/**
+ * The height of the band the user can see, in CSS px — what `--viewport-height`
+ * is set to, read live for code that positions against the viewport
+ * (`position: fixed` popovers): on iOS `innerHeight` still counts the part
+ * under the keyboard. `innerHeight` where the hooks do not apply.
+ */
+export function visibleHeight(): number {
+	const viewport = window.visualViewport;
+
+	if (!viewport || !hasVirtualKeyboard()) {
+		return window.innerHeight;
+	}
+
+	return effectiveHeight(
+		viewport.height,
+		window.innerHeight,
+		isTextField(document.activeElement)
+	);
+}
+
 export function installViewportHooks(): void {
 	const viewport = window.visualViewport;
 

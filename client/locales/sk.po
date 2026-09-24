@@ -2911,8 +2911,9 @@ msgctxt "message.actionsToolbar"
 msgid "Message actions"
 msgstr "Akcie správy"
 
-#. Tooltip and aria-label of a chat message's copy-code button for a moment after the copy succeeded.
+#. Short label shown for a moment over a chat message after its text or code was copied to the clipboard from the message toolbar.
 #: client/components/MessageActions.vue:34
+#: client/components/MessageActions.vue
 msgctxt "message.copied"
 msgid "Copied"
 msgstr "Skopírované"
@@ -2996,6 +2997,18 @@ msgstr "Upravené {time}"
 msgctxt "message.editedBadge"
 msgid "(edited)"
 msgstr "(upravené)"
+
+#. Tooltip and aria-label of a one-tap reaction button on a chat message's toolbar. {reaction} is the emoji (or word) it sends.
+#: client/components/MessageActions.vue
+msgctxt "message.quickReact"
+msgid "React with {reaction}"
+msgstr ""
+
+#. Tooltip and aria-label of a one-tap reaction button on a chat message's toolbar when you already reacted with it; tapping takes your reaction off. {reaction} is the emoji (or word).
+#: client/components/MessageActions.vue
+msgctxt "message.quickRemove"
+msgid "Remove {reaction}"
+msgstr ""
 
 #. Tooltip and aria-label of the smiley button in a chat message's hover toolbar; clicking opens the emoji picker to add a reaction to that message.
 #: client/components/MessageActions.vue:21
@@ -3899,6 +3912,48 @@ msgstr "doplnenie nicku (napr. čiarka)"
 msgctxt "settings.appearance.nickPostfixPlaceholder"
 msgid "Nick autocomplete postfix (e.g. ', ')"
 msgstr "doplnenie nicku (napr. ', ')"
+
+#. Settings → Appearance → Your own messages, radio option: your own messages sit on a lighter or darker background band.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.ownMessagesBand"
+msgid "Highlighted row"
+msgstr ""
+
+#. Settings → Appearance → Your own messages, lowercase hint after the 'Highlighted row' option (a dash is drawn before it).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.ownMessagesBandHint"
+msgid "the row on a lighter or darker band, the text like everyone else's"
+msgstr ""
+
+#. Settings → Appearance, heading of the radio group choosing how the user's own chat messages are told apart from everyone else's.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.ownMessagesHeading"
+msgid "Your own messages"
+msgstr ""
+
+#. Settings → Appearance → Your own messages, radio option: your own messages' text is drawn in the muted grey colour.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.ownMessagesMuted"
+msgid "Greyed text"
+msgstr ""
+
+#. Settings → Appearance → Your own messages, lowercase hint after the 'Greyed text' option (a dash is drawn before it). 'as before' = this is how the app always looked.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.ownMessagesMutedHint"
+msgid "the text in the muted colour, as before"
+msgstr ""
+
+#. Settings → Appearance → Your own messages, radio option: your own messages look exactly like other people's.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.ownMessagesPlain"
+msgid "Same as everyone else's"
+msgstr ""
+
+#. Settings → Appearance → Your own messages, lowercase hint after the 'Same as everyone else's' option (a dash is drawn before it); 'them' = your own messages.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.ownMessagesPlainHint"
+msgid "nothing marks them"
+msgstr ""
 
 #. Third line of the sample chat under the font-size slider in Settings → Appearance: the extreme steps are intentionally unusable.
 #: client/components/Settings/Appearance.vue:486

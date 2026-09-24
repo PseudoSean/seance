@@ -161,6 +161,106 @@ export function toPlainText(nodes: LayoutNode[]): string {
 	return out;
 }
 
+type TextNode = Extract<LayoutNode, {kind: "text"}>;
+
+// A quote of the message (the reply quote under a message, the composer's
+// "Replying to" bar): one line of styled text nodes, at most `maxLength`
+// visible characters, an ellipsis where it was cut. Every wrap folds into a
+// style — a code block or TeX is monospace, a header bold, a spoiler stays
+// unread as "(spoiler)" — and the finder-made parts (links, channels, nicks,
+// emoji) are their text: the quote sits inside a button, so nothing in it can
+// be interactive. Whitespace collapses the way it does in a rendered line,
+// and the cut counts characters the reader sees, never markers.
+export function quoteLayout(text: string, maxLength = 80, options: LayoutOptions = {}): TextNode[] {
+	const flat = foldQuote(layout(text, options), {});
+	const out: TextNode[] = [];
+
+	// Collapse runs of whitespace, across nodes too, and drop the leading run
+	for (const node of flat) {
+		let value = node.text.replace(/\s+/g, " ");
+		const last = out[out.length - 1];
+
+		if (value.startsWith(" ") && (!last || last.text.endsWith(" "))) {
+			value = value.slice(1);
+		}
+
+		if (value) {
+			out.push({kind: "text", text: value, style: node.style});
+		}
+	}
+
+	// ...and the trailing one
+	while (out.length) {
+		const last = out[out.length - 1];
+		last.text = last.text.replace(/ $/, "");
+
+		if (last.text) {
+			break;
+		}
+
+		out.pop();
+	}
+
+	// Cut at `maxLength` visible characters (code points, so an emoji is one)
+	let seen = 0;
+
+	for (let i = 0; i < out.length; i++) {
+		const chars = Array.from(out[i].text);
+
+		if (seen + chars.length <= maxLength) {
+			seen += chars.length;
+			continue;
+		}
+
+		const keep = chars.slice(0, Math.max(0, maxLength - 1 - seen)).join("");
+		out.splice(i, out.length - i, {kind: "text", text: keep + "…", style: out[i].style});
+		break;
+	}
+
+	return out;
+}
+
+// The wraps that take a line of their own: the parser eats the newline that
+// ended them, so on one line a space has to stand in for it.
+const BLOCK_WRAPS = new Set(["quote", "header", "list", "table", "codeBlock", "mathBlock"]);
+
+function foldQuote(nodes: LayoutNode[], extra: Style): TextNode[] {
+	const out: TextNode[] = [];
+	const space = (): TextNode => ({kind: "text", text: " ", style: {}});
+
+	for (const node of nodes) {
+		if (node.kind === "text") {
+			out.push({kind: "text", text: node.text, style: {...node.style, ...extra}});
+			continue;
+		}
+
+		if (node.kind !== "wrap") {
+			out.push(...foldQuote(node.children, extra));
+			continue;
+		}
+
+		if (BLOCK_WRAPS.has(node.wrap)) {
+			out.push(space());
+		}
+
+		if (node.wrap === "spoiler") {
+			out.push({kind: "text", text: "(spoiler)", style: {}});
+		} else if (node.wrap === "codeBlock" || node.wrap === "math" || node.wrap === "mathBlock") {
+			out.push(...foldQuote(node.children, {...extra, monospace: true}));
+		} else if (node.wrap === "header") {
+			out.push(...foldQuote(node.children, {...extra, bold: true}));
+		} else {
+			out.push(...foldQuote(node.children, extra));
+		}
+
+		if (BLOCK_WRAPS.has(node.wrap)) {
+			out.push(space());
+		}
+	}
+
+	return out;
+}
+
 // Every code block in a tree, outermost first and in the order they render,
 // as the characters each one holds — what a copy of a message's code is made
 // of. A block's own children are text and (flattened) parts, never another

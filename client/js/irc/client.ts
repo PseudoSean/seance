@@ -46,6 +46,7 @@ import {
 	sendMultiline,
 } from "./multiline";
 import {cancelMarkRead, markReadAt, scheduleMarkRead} from "./handlers/markread";
+import {PresenceState, initialPresence, presenceRegistered, setAttended} from "./presence";
 import {abortHistory, retryLostHistory} from "./history";
 import {
 	cancelCatchup,
@@ -85,7 +86,7 @@ import {
 	StsUpgrade,
 	upgradeOptions,
 } from "./sts";
-import {get as getSavedNetwork, NetworkCursor, setCursor} from "./saved-networks";
+import {channelOrder, get as getSavedNetwork, NetworkCursor, setCursor} from "./saved-networks";
 import {ReconnectOptions, TransportEvent, TransportOptions, WsTransport} from "./transport";
 import type {ConnectOptions, InputOptions, IrcClientState, Transport} from "./types";
 import {
@@ -222,6 +223,8 @@ export class IrcClient {
 	/** Swapped for a new one on an STS upgrade; always subscribed via {@link reconfigure}. */
 	transport: Transport;
 	readonly isupport = new ISupport();
+	/** Attention and away bookkeeping (presence.ts). */
+	readonly presence: PresenceState = initialPresence();
 	/** Outstanding `TOKEN GENERATE` requests (draft/authtoken). */
 	readonly authtoken = new TokenRequests();
 	readonly channels: Channel[] = [];
@@ -1088,6 +1091,7 @@ export class IrcClient {
 			secure: this.options.tls,
 		});
 		this.bus.dispatch("commands", commandNames());
+		presenceRegistered(this);
 
 		if (this.caps.enabled.size > 0) {
 			this.pushMessage(
@@ -1796,6 +1800,16 @@ export class IrcClient {
 	 * a pending catch-up is served now, and the channel modes are asked for
 	 * the first time round.
 	 */
+	/** The channel the UI shows for this network, if any. */
+	activeChannel(): Channel | undefined {
+		return this.activeChanId ? this.channelById(this.activeChanId) : undefined;
+	}
+
+	/** Attention changed (foreground.ts); see presence.ts. */
+	setAttended(attended: boolean): void {
+		setAttended(this, attended);
+	}
+
 	open(chanId: number): void {
 		this.activeChanId = chanId;
 		const chan = this.channelById(chanId);
@@ -2019,8 +2033,10 @@ export class IrcClient {
 	}
 
 	/**
-	 * Create a channel/query and insert it alphabetically after the lobby
-	 * (the index is what `join` needs; always >= 1).
+	 * Create a channel/query and insert it after the lobby (the index is what
+	 * `join` needs; always >= 1): in the order the user gave the sidebar
+	 * (saved-networks `channelOrder`, names the user dragged) first, then
+	 * alphabetically among the names that order does not know.
 	 */
 	createChannel(
 		name: string,
@@ -2034,13 +2050,23 @@ export class IrcClient {
 			(s) => this.casefold(s),
 			options
 		);
+		const order = channelOrder(this.uuid).map((n) => this.casefold(n));
+
+		const rank = (n: string) => {
+			const i = order.indexOf(this.casefold(n));
+			return i === -1 ? Infinity : i;
+		};
+
+		const mine = rank(name);
 		let index = this.channels.length;
 
 		for (let i = 1; i < this.channels.length; i++) {
 			const other = this.channels[i];
 			const sortable = other.type === ChanType.CHANNEL || other.type === ChanType.QUERY;
+			const theirs = rank(other.name);
+			const before = mine === theirs ? compareNames(name, other.name) <= 0 : mine < theirs;
 
-			if (!sortable || compareNames(name, other.name) <= 0) {
+			if (!sortable || before) {
 				index = i;
 				break;
 			}
@@ -2129,7 +2155,9 @@ export class IrcClient {
 			if (SELF_READ_TYPES.has(msg.type ?? MessageType.MESSAGE)) {
 				scheduleMarkRead(this, chan);
 			}
-		} else if (chan.id === this.activeChanId) {
+		} else if (chan.id === this.activeChanId && this.presence.attended) {
+			// Only a person looking reads it; a hidden page marks nothing
+			// (presence.ts marks the open channel when attention returns).
 			scheduleMarkRead(this, chan);
 		} else if (!read) {
 			if (!shared.firstUnread) {

@@ -171,8 +171,8 @@ describe("message updates (msg:react / msg:redact / msg:edit)", function () {
 		const quote = replyQuote(list, "m1");
 		expect(quote?.id).to.equal(1);
 		expect(quote?.nick).to.equal("nick1");
-		expect(quote?.text.length).to.equal(80);
-		expect(quote?.text.endsWith("…")).to.be.true;
+		// raw and whole: QuotePreview.vue styles and cuts it
+		expect(quote?.text).to.equal("  a   very\n long ".padEnd(120, "x"));
 
 		// superseded message is skipped, the replacement (same msgid here) wins
 		expect(replyQuote(list, "m2")?.text).to.equal("new text");

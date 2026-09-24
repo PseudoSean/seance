@@ -5,13 +5,21 @@
 		role="toolbar"
 		:aria-label="toolbarLabel"
 	>
-		<button
-			type="button"
-			class="msg-action msg-action-reply"
-			:aria-label="replyLabel"
-			:title="replyLabel"
-			@click="reply"
-		/>
+		<span class="msg-actions-quick">
+			<button
+				v-for="q in quickButtons"
+				:key="q.text"
+				type="button"
+				class="msg-action msg-action-quick"
+				:class="{selected: q.on}"
+				:aria-label="q.label"
+				:title="q.label"
+				:aria-pressed="q.on"
+				@click="react(q.text)"
+			>
+				{{ q.text }}
+			</button>
+		</span>
 		<button
 			ref="reactButton"
 			type="button"
@@ -23,11 +31,18 @@
 			@mousedown.stop
 			@click="pickerOpen = !pickerOpen"
 		/>
+		<span class="msg-action-divider" role="separator" aria-orientation="vertical" />
+		<button
+			type="button"
+			class="msg-action msg-action-reply"
+			:aria-label="replyLabel"
+			:title="replyLabel"
+			@click="reply"
+		/>
 		<button
 			v-if="canCopyText"
 			type="button"
 			class="msg-action msg-action-copy-text"
-			:class="{copied: copied === 'text'}"
 			:aria-label="copyTextLabel"
 			:title="copyTextLabel"
 			@click.stop="copyText"
@@ -36,7 +51,6 @@
 			v-if="codeBlocks.length > 0"
 			type="button"
 			class="msg-action msg-action-copy"
-			:class="{copied: copied === 'code'}"
 			:aria-label="copyCodeLabel"
 			:title="copyCodeLabel"
 			@click.stop="copyCode"
@@ -84,10 +98,13 @@
 			@close="sourcePickerOpen = false"
 		/>
 	</span>
+	<!-- The word a copy leaves behind, where the toolbar was. Inert: it is a
+	label, not a control, so a finger on its way elsewhere goes through it. -->
+	<span v-if="copied" class="msg-copied" role="status">{{ t("message.copied") }}</span>
 </template>
 
 <script lang="ts">
-import {computed, defineComponent, onUnmounted, PropType, ref, watch} from "vue";
+import {computed, defineComponent, onUnmounted, PropType, Ref, ref, watch} from "vue";
 import eventbus from "../js/eventbus";
 import socket from "../js/socket";
 import {writeClipboard} from "../js/clipboard";
@@ -102,6 +119,7 @@ import {
 	showOriginal,
 	translationAvailable,
 } from "../js/translate/reader";
+import {quickReactions, RECENTS_CHANGED, rememberReaction} from "../js/helpers/reactionRecents";
 import {hasVirtualKeyboard} from "../js/helpers/device";
 import {ChanType} from "../../shared/types/chan";
 import {MessageType} from "../../shared/types/msg";
@@ -110,8 +128,26 @@ import ReactionPicker from "./ReactionPicker.vue";
 import SourceLanguagePicker from "./SourceLanguagePicker.vue";
 import {useI18n} from "../js/i18n";
 
-// How long the button says so after a copy that worked
-const COPIED_MS = 1500;
+// How long the "Copied" label stays over the row (its fade in style.css
+// takes as long)
+const COPIED_MS = 1000;
+
+// The one-tap reactions, shared by every toolbar on screen: a pick anywhere
+// moves it to the front everywhere. Read from storage when the first toolbar
+// mounts, not when the bundle loads.
+let quick: Ref<string[]> | undefined;
+
+const sharedQuick = () => {
+	if (!quick) {
+		const shared = ref(quickReactions());
+		eventbus.on(RECENTS_CHANGED, (recent: string[]) => {
+			shared.value = quickReactions(recent);
+		});
+		quick = shared;
+	}
+
+	return quick;
+};
 
 export default defineComponent({
 	name: "MessageActions",
@@ -121,7 +157,12 @@ export default defineComponent({
 		channel: {type: Object as PropType<ClientChan>, required: true},
 		network: {type: Object as PropType<ClientNetwork>, required: true},
 	},
-	setup(props) {
+	// `done`: an action was taken, the toolbar has served its purpose. On a
+	// touch device Message.vue closes it, as every native menu closes on a
+	// choice — a copy included: the next thing after a copy is a paste
+	// somewhere else, and the bar only stood in the way of getting there.
+	emits: ["done"],
+	setup(props, {emit}) {
 		const store = useStore();
 		const {t} = useI18n();
 		const pickerOpen = ref(false);
@@ -132,6 +173,22 @@ export default defineComponent({
 		// What we have already reacted with: the picker ticks these, and
 		// picking one again takes it back off (bus-contract §1.4 `remove`).
 		const mine = computed(() => myReactions(props.message, props.network.nick || ""));
+
+		// One already on the message from us reads as pressed, and the tap
+		// takes it off — the same toggle as the picker and the badge row.
+		const quickButtons = computed(() =>
+			sharedQuick().value.map((text) => {
+				const on = mine.value.includes(text);
+
+				return {
+					text,
+					on,
+					label: on
+						? t("message.quickRemove", {reaction: text})
+						: t("message.quickReact", {reaction: text}),
+				};
+			})
+		);
 
 		// The code blocks the message renders, in order, each as its own
 		// characters — the fence and the gutter are presentation, so neither is
@@ -150,12 +207,12 @@ export default defineComponent({
 			return codeBlocksOf(layout(text, {markdown: true}));
 		});
 
-		// Which copy button is saying "Copied" right now, if any.
-		const copied = ref<"text" | "code" | null>(null);
+		// Whether the "Copied" label is up
+		const copied = ref(false);
 		let copiedTimer: ReturnType<typeof setTimeout> | undefined;
 
 		const clearCopied = () => {
-			copied.value = null;
+			copied.value = false;
 
 			if (copiedTimer !== undefined) {
 				clearTimeout(copiedTimer);
@@ -165,41 +222,40 @@ export default defineComponent({
 
 		onUnmounted(clearCopied);
 
-		// Toolbar labels (the copy buttons toggle between theirs).
+		// Toolbar labels.
 		const toolbarLabel = computed(() => t("message.actionsToolbar"));
 		const replyLabel = computed(() => t("message.reply"));
 		const reactLabel = computed(() => t("message.react"));
 		const editLabel = computed(() => t("message.edit"));
 		const deleteLabel = computed(() => t("message.deleteTitle"));
-		const copyCodeLabel = computed(() =>
-			copied.value === "code" ? t("message.copied") : t("message.copyCode")
-		);
-		const copyTextLabel = computed(() =>
-			copied.value === "text" ? t("message.copied") : t("message.copyText")
-		);
+		const copyCodeLabel = computed(() => t("message.copyCode"));
+		const copyTextLabel = computed(() => t("message.copyText"));
 
-		// A copy that did not happen says nothing and changes nothing.
-		const copy = async (what: "text" | "code", text: string) => {
+		// A copy that did not happen says nothing and changes nothing. One
+		// that did is the end of the toolbar (a pointer's stays with the
+		// hover, as ever); the label outlives it, over the row.
+		const copy = async (text: string) => {
 			if (!(await writeClipboard(text))) {
 				return;
 			}
 
+			emit("done");
 			clearCopied();
-			copied.value = what;
+			copied.value = true;
 			copiedTimer = setTimeout(clearCopied, COPIED_MS);
 		};
 
 		// Several blocks are one copy, a blank line apart: they were blocks of
 		// their own, and a copy that ran them together would be a different
 		// program.
-		const copyCode = () => copy("code", codeBlocks.value.join("\n\n"));
+		const copyCode = () => copy(codeBlocks.value.join("\n\n"));
 
 		// On a touch device the message text is not selectable (the long press
 		// that would select it opens this toolbar instead — see Message.vue),
 		// so the toolbar is how the text is copied there. A pointer device
 		// selects and copies as it always has, and does not get the button.
 		const canCopyText = hasVirtualKeyboard() && !!props.message.text;
-		const copyText = () => copy("text", props.message.text ?? "");
+		const copyText = () => copy(props.message.text ?? "");
 
 		// Only plain text can be edited (the IRC layer resends it tagged).
 		const canEdit = computed(
@@ -254,8 +310,10 @@ export default defineComponent({
 		// so the grid is there the moment the picker opens.
 		const preloadEmoji = () => void loadEmojiCatalog().catch(() => undefined);
 
-		const reply = () => startReply(props.channel, props.message);
-		const edit = () => startEdit(props.channel, props.message);
+		const reply = () => {
+			startReply(props.channel, props.message);
+			emit("done");
+		};
 
 		// Nothing has placed this line, so the dialog opens on what the
 		// channel is known to speak (the panel's declared languages) rather
@@ -320,17 +378,32 @@ export default defineComponent({
 			openMenu(event);
 		};
 
+		const edit = () => {
+			startEdit(props.channel, props.message);
+			emit("done");
+		};
+
+		// From a quick button or the picker alike. Taking one of ours back off
+		// is not a use of it: it would jump to the front of the recents on its
+		// way out (MessageReactions.vue keeps the same rule for the badges).
 		const react = (text: string) => {
 			if (!props.message.msgid) {
 				return;
+			}
+
+			const remove = mine.value.includes(text);
+
+			if (!remove) {
+				rememberReaction(text);
 			}
 
 			socket.emit("msg:react", {
 				target: props.channel.id,
 				msgid: props.message.msgid,
 				text,
-				remove: mine.value.includes(text),
+				remove,
 			});
+			emit("done");
 		};
 
 		const remove = () => {
@@ -345,6 +418,7 @@ export default defineComponent({
 				? t("message.deleteWhoSelf")
 				: t("message.deleteWhoOther", {nick: props.message.from?.nick ?? ""});
 
+			emit("done");
 			eventbus.emit(
 				"confirm-dialog",
 				{
@@ -370,6 +444,7 @@ export default defineComponent({
 		);
 
 		return {
+			t,
 			pickerOpen,
 			reactButton,
 			sourcePickerOpen,
@@ -390,6 +465,7 @@ export default defineComponent({
 			copyCodeLabel,
 			copyTextLabel,
 			canCopyText,
+			quickButtons,
 			reply,
 			edit,
 			translate,

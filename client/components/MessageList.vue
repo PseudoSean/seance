@@ -1,5 +1,10 @@
 <template>
-	<div ref="chat" class="chat" :class="{selecting}" tabindex="-1">
+	<div
+		ref="chat"
+		class="chat"
+		:class="{selecting, 'selection-live': selectionActive}"
+		tabindex="-1"
+	>
 		<div v-show="channel.moreHistoryAvailable" class="show-more">
 			<button
 				ref="loadMoreButton"
@@ -64,6 +69,7 @@ import {ChanState, ChanType} from "../../shared/types/chan";
 import {MessageType, SharedMsg} from "../../shared/types/msg";
 import clipboard from "../js/clipboard";
 import {noteScroll, noteTouch} from "../js/helpers/scrollSettle";
+import {selectionActive, unwatchSelection, watchSelection} from "../js/helpers/touchSelection";
 import socket from "../js/socket";
 import Message from "./Message.vue";
 import MessageCondensed from "./MessageCondensed.vue";
@@ -594,6 +600,7 @@ export default defineComponent({
 		});
 
 		onMounted(() => {
+			watchSelection();
 			chat.value?.addEventListener("scroll", handleScroll, {passive: true});
 			chat.value?.addEventListener("touchmove", dismissKeyboard, {passive: true});
 			chat.value?.addEventListener("touchstart", touchDown, {passive: true});
@@ -684,6 +691,8 @@ export default defineComponent({
 		});
 
 		onUnmounted(() => {
+			unwatchSelection();
+
 			if (verifyTimer !== null) {
 				clearTimeout(verifyTimer);
 			}
@@ -714,6 +723,7 @@ export default defineComponent({
 			jumpToBottom,
 			onLinkPreviewToggle,
 			selecting,
+			selectionActive,
 			onPointerDown,
 		};
 	},

@@ -8,11 +8,14 @@
 import {ChanType} from "../../../../shared/types/chan";
 import {MessageType} from "../../../../shared/types/msg";
 import type {Handler} from "../types";
+import {AWAY_STAR, takeQuietAwayReply} from "../presence";
 
 const away: Handler = (client, msg) => {
 	const nick = msg.source?.name ?? "";
-	const text = msg.params[0] ?? "";
-	const type = text ? MessageType.AWAY : MessageType.BACK;
+	const raw = msg.params[0] ?? "";
+	// `draft/pre-away`: `*` is away for an unspecified reason — away, no text.
+	const text = raw === "*" ? "" : raw;
+	const type = raw ? MessageType.AWAY : MessageType.BACK;
 	const time = client.timeOf(msg);
 
 	if (!nick) {
@@ -20,7 +23,12 @@ const away: Handler = (client, msg) => {
 	}
 
 	if (client.isSelf(nick)) {
-		client.pushMessage(client.lobby, {type, time, text, self: true}, true);
+		// Our own star (another connection of the account, typically) is the
+		// attention signal, not something to announce.
+		if (raw !== AWAY_STAR) {
+			client.pushMessage(client.lobby, {type, time, text, self: true}, true);
+		}
+
 		return;
 	}
 
@@ -31,7 +39,13 @@ const away: Handler = (client, msg) => {
 			}
 
 			chan.userAway = text;
-			client.pushMessage(chan, {type, time, text, from: chan.userRef(nick)});
+
+			// Someone else's star is their client saying it is not looking
+			// (`draft/pre-away`); the server only shows it to us because we
+			// speak pre-away too. State, not news: no line in the query.
+			if (raw !== AWAY_STAR) {
+				client.pushMessage(chan, {type, time, text, from: chan.userRef(nick)});
+			}
 		} else if (chan.type === ChanType.CHANNEL) {
 			const user = chan.findUser(nick);
 
@@ -45,6 +59,10 @@ const away: Handler = (client, msg) => {
 /** RPL_UNAWAY / RPL_NOWAWAY: <me> :You are no longer marked as being away… */
 function selfAway(type: MessageType): Handler {
 	return (client, msg) => {
+		if (takeQuietAwayReply(client)) {
+			return;
+		}
+
 		client.pushMessage(
 			client.lobby,
 			{

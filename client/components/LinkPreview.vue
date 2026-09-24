@@ -68,15 +68,19 @@
 						/>
 					</a>
 				</template>
-				<!-- Media elements with <source> children fire `error` on the
+				<!-- Shown on `loadedmetadata`, not `canplay`: iOS Safari does not
+				fire `canplay` for `preload="metadata"` until playback starts, so a
+				video gated on it never appeared there.
+				Media elements with <source> children fire `error` on the
 				last <source>, not on themselves, hence the listener on both. -->
 				<template v-else-if="link.type === 'video'">
 					<video
 						v-show="link.sourceLoaded"
 						preload="metadata"
 						controls
+						playsinline
 						referrerpolicy="no-referrer"
-						@canplay="onPreviewReady"
+						@loadedmetadata="onPreviewReady"
 						@error="onPreviewError"
 					>
 						<source :src="link.media" :type="link.mediaType" @error="onPreviewError" />
@@ -88,7 +92,7 @@
 						controls
 						preload="metadata"
 						referrerpolicy="no-referrer"
-						@canplay="onPreviewReady"
+						@loadedmetadata="onPreviewReady"
 						@error="onPreviewError"
 					>
 						<source :src="link.media" :type="link.mediaType" @error="onPreviewError" />
@@ -353,7 +357,7 @@ export default defineComponent({
 		);
 
 		onUnmounted(() => {
-			// Let this preview go through load/canplay events again,
+			// Let this preview go through load/loadedmetadata events again,
 			// Otherwise the browser can cause a resize on video elements
 			props.link.sourceLoaded = false;
 		});

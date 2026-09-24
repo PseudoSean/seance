@@ -9,7 +9,8 @@
  * tools/scenarios/themes.mjs pins (docs/projects/accessibility.md).
  *
  * The surface is #000000 and the bands climb in near-black steps — #191919
- * for server events, #1e1e1e for your own messages, #262626 for notices,
+ * for server events, #1f2530 for your own messages (the one cool band, so
+ * it tells apart from the events band under it), #262626 for notices,
  * #2b2b2b for a mention. Because every band sits within a few points of the
  * background, text contrast barely moves across them, which is the opposite
  * of princess.css, where the mention row drove the whole palette.
@@ -67,6 +68,9 @@
 	--rail-fg-strong: #f2f2f2; /* an unread channel */
 	--rail-fg-active: #333; /* dark on a light pill */
 	--rail-fg-muted: #999; /* a parted or idle channel */
+	--own-bg: #1f2530; /* the own-message band, also what the "Highlighted row"
+	setting uses: a cool step, so it is not mistaken for the server-event band
+	five points below it */
 	--rail-item-active-bg: #e5e5e5; /* the selected pill */
 	--rail-item-hover-bg: rgb(255 255 255 / 8%);
 	--rail-accent: #e5e5e5;
@@ -149,7 +153,7 @@
 }
 
 #chat .msg.self {
-	background-color: #1e1e1e; /* your own messages */
+	background-color: var(--own-bg); /* your own messages */
 }
 
 #chat .msg[data-type="condensed"] {
@@ -221,3 +225,9 @@
 .irc-bg13 { background: #f0f; }
 .irc-bg14 { background: #808080; }
 .irc-bg15 { background: silver; }
+
+/* The ✕ on the selected row sits on the light pill, so it takes the pill's
+ * text colour: the rail's near-white glyph at 40% was invisible there. */
+.channel-list-item.active .close::before {
+	color: var(--rail-fg-active);
+}

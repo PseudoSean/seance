@@ -2,6 +2,7 @@ import type {TypedStore} from "./store";
 import {mirrorPushPrefs} from "./push-prefs";
 import {activate} from "./i18n";
 import {normalizeFontSize} from "./helpers/fontSize";
+import {normalizeOwnMessageStyle} from "./helpers/ownMessages";
 import {prefersTwelveHourClock} from "./helpers/hourCycle";
 import storage from "./localStorage";
 
@@ -129,6 +130,15 @@ const defaultConfig = {
 		default: "large",
 		apply(store: TypedStore, value: string) {
 			document.documentElement.dataset.fontSize = normalizeFontSize(value);
+		},
+	},
+	// How own messages stand out: greyed text (TheLounge's look), a band, or
+	// nothing. Applied as <html data-own-messages="...">; the looks are in
+	// style.css so every theme gets all three (helpers/ownMessages.ts).
+	ownMessages: {
+		default: "muted",
+		apply(store: TypedStore, value: string) {
+			document.documentElement.dataset.ownMessages = normalizeOwnMessageStyle(value);
 		},
 	},
 	theme: {

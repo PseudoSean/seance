@@ -34,6 +34,19 @@
 				{{ t("settings.appearance.use12hClock") }}
 			</label>
 		</div>
+		<h2 id="label-own-messages">{{ t("settings.appearance.ownMessagesHeading") }}</h2>
+		<div role="group" aria-labelledby="label-own-messages" class="own-messages-options">
+			<label v-for="style in ownMessageStyles" :key="style" class="opt">
+				<input
+					:checked="ownMessages === style"
+					type="radio"
+					name="ownMessages"
+					:value="style"
+				/>
+				{{ ownMessageStyleLabels[style] }}
+				<span class="own-messages-hint">{{ ownMessageHints[style] }}</span>
+			</label>
+		</div>
 		<h2 id="label-media-previews">{{ t("settings.appearance.mediaHeading") }}</h2>
 		<div role="group" aria-labelledby="label-media-previews">
 			<label class="opt">
@@ -272,6 +285,14 @@ textarea#user-specified-css-input {
 	height: 100px;
 }
 
+.own-messages-options .own-messages-hint {
+	color: var(--body-color-muted);
+}
+
+.own-messages-options .own-messages-hint::before {
+	content: " — ";
+}
+
 .font-size-setting {
 	display: flex;
 	flex-wrap: wrap;
@@ -353,6 +374,11 @@ import {
 	type FontSize,
 } from "../../js/helpers/fontSize";
 import {
+	normalizeOwnMessageStyle,
+	ownMessageStyles,
+	OwnMessageStyle,
+} from "../../js/helpers/ownMessages";
+import {
 	clearTrusted,
 	splitKey,
 	trustedMedia,
@@ -424,6 +450,22 @@ export default defineComponent({
 		);
 
 		const fontSize = computed(() => normalizeFontSize(store.state.settings.fontSize));
+
+		const ownMessages = computed(() =>
+			normalizeOwnMessageStyle(store.state.settings.ownMessages)
+		);
+		// Labels and hints translate here, at the render site, like the font
+		// size steps below: the module is Vue-free.
+		const ownMessageStyleLabels = computed<Record<OwnMessageStyle, string>>(() => ({
+			muted: t("settings.appearance.ownMessagesMuted"),
+			band: t("settings.appearance.ownMessagesBand"),
+			plain: t("settings.appearance.ownMessagesPlain"),
+		}));
+		const ownMessageHints = computed<Record<OwnMessageStyle, string>>(() => ({
+			muted: t("settings.appearance.ownMessagesMutedHint"),
+			band: t("settings.appearance.ownMessagesBandHint"),
+			plain: t("settings.appearance.ownMessagesPlainHint"),
+		}));
 
 		// The step under the slider while it is being dragged. Applying every
 		// step live re-laid out the whole page (rem chrome) under the pointer
@@ -506,6 +548,10 @@ export default defineComponent({
 			clearTrusted,
 			fontSizes,
 			fontSizeLabels,
+			ownMessages,
+			ownMessageStyles,
+			ownMessageStyleLabels,
+			ownMessageHints,
 			shownIndex,
 			shownLabel,
 			sampleFontSize,

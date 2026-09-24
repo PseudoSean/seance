@@ -53,7 +53,9 @@
 			<span v-if="channel.editing" class="compose-bar-label">
 				<span class="compose-bar-icon" aria-hidden="true">✎</span>
 				{{ t("composer.editing") }}
-				<span class="compose-bar-preview">{{ composePreview }}</span>
+				<span class="compose-bar-preview"
+					><QuotePreview :text="composeTarget?.text ?? ''"
+				/></span>
 			</span>
 			<span v-else class="compose-bar-label">
 				<span class="compose-bar-icon" aria-hidden="true">↩</span>
@@ -62,7 +64,9 @@
 					replyingParts.nick
 				}}</strong
 				>{{ replyingParts.suffix }}
-				<span class="compose-bar-preview">{{ composePreview }}</span>
+				<span class="compose-bar-preview"
+					><QuotePreview :text="composeTarget?.text ?? ''"
+				/></span>
 			</span>
 			<button
 				type="button"
@@ -314,6 +318,7 @@ const REASON_MAX = 120;
 const COPIED_LABEL_MS = 2000;
 import {TypingReporter} from "../js/helpers/typingReporter";
 import TypingIndicator from "./TypingIndicator.vue";
+import QuotePreview from "./QuotePreview.vue";
 
 const formattingHotkeys = {
 	"mod+k": "\x03",
@@ -342,7 +347,7 @@ const bracketWraps = {
 
 export default defineComponent({
 	name: "ChatInput",
-	components: {SourceLanguagePicker, TypingIndicator},
+	components: {SourceLanguagePicker, TypingIndicator, QuotePreview},
 	props: {
 		network: {type: Object as PropType<ClientNetwork>, required: true},
 		channel: {type: Object as PropType<ClientChan>, required: true},
@@ -570,11 +575,6 @@ export default defineComponent({
 				nick,
 				suffix: label.slice(at + nick.length),
 			};
-		});
-
-		const composePreview = computed(() => {
-			const text = (composeTarget.value?.text ?? "").replace(/\s+/g, " ").trim();
-			return text.length > 80 ? text.slice(0, 79) + "…" : text;
 		});
 
 		// The outgoing translation (spec § Composer): the strip above the
@@ -1501,7 +1501,7 @@ export default defineComponent({
 			setPendingMessage,
 			cancelCompose,
 			replyingParts,
-			composePreview,
+			composeTarget,
 			showConnectionBar,
 			canSend,
 			connectionLabel,
