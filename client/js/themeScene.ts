@@ -69,7 +69,9 @@ export function createSceneHost(opts: {
 			asked = name;
 			const mine = ++ticket;
 			unmount();
-			const load = opts.loaders[name];
+			// Object.hasOwn: a stored theme name of "toString" or the like must not
+			// resolve to an inherited Object.prototype member.
+			const load = Object.hasOwn(opts.loaders, name) ? opts.loaders[name] : undefined;
 
 			if (!load) {
 				return;
@@ -97,8 +99,19 @@ export function createSceneHost(opts: {
 				return;
 			}
 
-			handle = mod.mount(root, {...state});
-			mounted = name;
+			// A scene's mount can throw synchronously (bad markup, a bad measurement);
+			// caught here so it never becomes an unhandled rejection through the
+			// `void` call in settings.ts, and never leaves a half-built scene.
+			try {
+				handle = mod.mount(root, {...state});
+				mounted = name;
+			} catch (error) {
+				opts.warn?.(
+					`The ${name} theme's scene failed to mount; its daylight fallback stays.`,
+					error
+				);
+				root.replaceChildren();
+			}
 		},
 
 		setVisible(visible: boolean): void {
