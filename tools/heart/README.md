@@ -1,8 +1,15 @@
-# tools/heart — the `<3` theme's generator
+# tools/heart — the meadow animals' generator
+
+This directory keeps its historical name from the `<3` theme (`heart`), which the `ps` theme
+is forked from (`docs/projects/ps-theme.md`). In `ps` the animals are **disabled, not
+removed**: the rigs here, the files they generate under `client/themes/ps/` and every scene's
+cast stay, and one block after the scene table in `client/themes/ps.css` empties the three
+animal slots, so no animal is painted or fetched. Delete that block and they come back.
+Everything below still holds for the day they do.
 
 The meadow's animals are silhouettes drawn by a rig and rendered into self-animating SVG
 files that the theme paints as background layers (`docs/projects/heart-theme.md`). Nothing
-here runs in the browser: the files under `client/themes/heart/` are committed, and this
+here runs in the browser: the files under `client/themes/ps/` are committed, and this
 directory is how they are made.
 
 ## Regenerate
@@ -35,7 +42,7 @@ the driver passes. The audit says whether a rig is sound; the sheet is the only 
 says whether the animal looks like the animal.
 
 The ground band under the animal is a share of a _strip_, so drawing it needs the animal's
-`--heart-<animal>-h` — which the tool reads from the rig's own `theme` block, so footing is
+`--ps-<animal>-h` — which the tool reads from the rig's own `theme` block, so footing is
 right without passing anything (`--slot=<token>` still overrides, to see an animal against
 some other slot's band). **`--all` shoots the whole cast**, one row per animal, four moments
 of one visit each, into a single PNG: eight visits end to end, about four minutes. Each row
@@ -280,16 +287,16 @@ the causes out:
   polygon's own slop (sampled extremes, the fillet, integer rounding), not a budget: give a rig
   a few units of real clearance. **Growing a box is never a one-number change** — the theme
   scales an animal by `viewBox.h` and the stage is `aspect × viewBox.h`, so `viewBox.h`,
-  `--heart-<animal>-h` (× new/old), that animal's far slot height in every scene (the same way)
+  `--ps-<animal>-h` (× new/old), that animal's far slot height in every scene (the same way)
   and `stage.aspect` (× old/new) move together, or the animal changes size and travel on screen.
   The puppy's rig header is the worked example, twice over.
   **Two of those four numbers are in a stylesheet no audit here can read**, so the rig records
   what the theme must say: `theme: {height, box, stageWidth}` in every cast rig — the token, the
   `viewBox.h` it was picked against, and the stage width in rig units that a box change must
-  preserve. `test/themes/heart.ts` derives the stylesheet's numbers from those and fails with
+  preserve. `test/themes/ps.ts` derives the stylesheet's numbers from those and fails with
   the arithmetic spelled out ("scale the token by 100/91 to 0.4835, scale stage.aspect by
   91/100, and set theme.box to 100"). A far slot is no longer a number at all: the scenes say
-  `calc(0.7 * var(--heart-<animal>-h))`. Bring a held animal back and it needs a `theme` block
+  `calc(0.7 * var(--ps-<animal>-h))`. Bring a held animal back and it needs a `theme` block
   before the theme can cast it;
 - the outline's length changes ≤ 5 % between stored frames (near), ≤ 10 % (a far leg).
   Current headroom across the cast of eight: near runs 0.84 % (horse) to **4.68 % (kitten)**,
@@ -355,14 +362,19 @@ and a `url()` sitting in a CSS custom property that no resolved `background-imag
 is never fetched, so a page pulls three animal files out of the directory however many are
 committed.
 
-**That claim is the whole budget argument, so it is a check and not a memory.** The theme's
-browser scenario (`tools/scenarios/theme-heart.mjs`) reads the open conversation's cast off the
-computed `--heart-slot-a/-b/-f`, reads what the browser actually requested out of Resource
-Timing, and asserts the two sets are equal — both derived from the running page, since a
-hardcoded cast in that file has already gone stale once. Measured 2026-09-12: 3 of the theme's
-32 animal files fetched on a scene-3 channel, 5 after a second scene, and 29 never requested.
-Watched failing, too: with one rule added to the built stylesheet so a real `background-image`
-substitutes `var(--heart-horse)`, the run reports "4 … also horse.svg" and exits non-zero. Chromium runs SMIL —
+**That claim is the whole budget argument, so it is a check and not a memory.** Under the
+`<3` theme the browser scenario read the open conversation's cast off the computed slot
+tokens, read what the browser actually requested out of Resource Timing, and asserted the two
+sets were equal. Measured 2026-09-12: 3 of the theme's 32 animal files fetched on a scene-3
+channel, 5 after a second scene, and 29 never requested. With the animals switched off in `ps`,
+the same claim is what keeps the 32 files that are still shipped free: the scenario
+(`tools/scenarios/theme-ps.mjs`) now asserts that **no** animal file is fetched, in a first and
+a second scene and under emulated reduced motion (the stills). It does that behind a control:
+Resource Timing has to be recording the theme's own stylesheet and fonts, so an empty list is
+evidence and not a blind spot. Measured 2026-09-24: 0 of 32 in all three. Watched failing,
+too: with one rule added to the built stylesheet so a real `background-image` substitutes
+`var(--ps-horse)`, the run reports "no animal file was fetched — horse.svg" (and
+"horse-still.svg horse.svg" under reduced motion) and exits non-zero. Chromium runs SMIL —
 chained clips, additive transforms, path morphs — inside a CSS `background-image`
 (`spike-svg-background/`). Firefox and Safari still need their rows in that spike's README
 filled in.
