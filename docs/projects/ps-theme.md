@@ -11,7 +11,7 @@ The design was drawn and decided with the user over nine rounds of a live mockup
 The mockup settled how the theme looks and behaves. Building it into the app needs these engineering calls too. None of them changes what you see, but each one is a real choice, so they are listed first.
 
 1. **The scene is real page elements, loaded only for `ps`.** Every other theme is one CSS file, and so was the `<3` meadow: background images painted on the chat pane. The plains cannot be built that way. A background image cannot be recoloured by the hour, cannot carry its own filter (the fiery sun, the heat haze over the land and yurt together) and cannot host the birds' wingbeats. So the scene is SVG and HTML, as in the mockup, in its own script chunk that only `ps` loads. Other themes download nothing new.
-2. **The app gains one small, theme-neutral hook** so a theme can bring a scene. A theme entry may name a scene; when that theme is applied, the app mounts the scene behind everything, and when the theme changes it is removed. Only `ps` names one.
+2. **The app gains one small, theme-neutral hook** so a theme can bring a scene. The hook keeps a table of the themes that have one; when such a theme is applied, the app mounts its scene behind everything, and when the theme changes the scene is removed. Only `ps` has one.
 3. **The colours of the day are computed in a TypeScript module, not in the stylesheet.** The `<3` plan kept every colour in CSS. Here that would mean 13 times of day × 4 seasons × 6 weathers of CSS rules. More importantly, a module lets the test suite check text contrast at every minute of every season, and the suite has no browser. The chrome's two palettes (day glass and night glass) stay in `ps.css`, where a person retinting the theme would look.
 4. **The animals stay off, and stay removable-to-restore.** The old meadow is replaced, and with it the layers the "animals off" switch lived in. The new scene keeps one animal layer on the ground with a fixed cast (horse, bunny, a deer far off) and the same off switch: one block empties it, and deleting that block brings them back. The files, rigs and generator are untouched, and the tests still prove no animal file is downloaded.
 5. **Every channel shows the same place.** The per-channel seed (`channelSeed.ts`, `data-scene`) is shared code the `<3` theme uses, so it stays in the app; `ps` just stops reading it.
@@ -68,17 +68,17 @@ client/js/scenes/ps/scene.ts   builds and updates the scene's elements (DOM, no 
 client/themes/ps.css           the chrome, the type, the fallback daylight, the scene's static styling
 ```
 
-**The hook** (`themeScene.ts`) is the only change the app itself sees. A theme entry in `configuration.ts` may carry `scene: () => import("./scenes/ps/scene")`. When `settings.ts` applies a theme (and on boot's fallback path, when a stored theme no longer exists), the hook unmounts any current scene and mounts the new theme's, if it has one. The mount target is one empty element that the app renders once, behind `#viewport` (`<div id="theme-scene" aria-hidden="true">`). The hook also tells the scene which kind of conversation is open (`channel`, `query` or `other`) and when the page is hidden or shown. It never reads colours, times or anything else theme-specific. A scene module exports `mount(el): {update(view), destroy()}`.
+**The hook** (`themeScene.ts`) is the only change the app itself sees. It keeps a small table of the themes that have a scene, keyed by theme name (`{ps: () => import("./scenes/ps/scene")}`), so `configuration.ts` stays plain data. When `settings.ts` applies a theme (and on boot's fallback path, when a stored theme no longer exists), the hook unmounts any current scene and mounts the new theme's, if it has one. The mount target is one empty element in `client/index.html`, `<div id="theme-scene" aria-hidden="true">`, placed after `#status-bar-tint` and before the app's root, and fixed behind `#viewport`. The hook also tells the scene which kind of conversation is open (`channel`, `query` or `other`) and when the page is hidden or shown. It never reads colours, times or anything else theme-specific. A scene module exports `mount(el): {update(view), destroy()}`.
 
 **The engine** is pure arithmetic from a `Date`: minutes since local midnight, day of year, sunrise and sunset, the canonical-day position, season weights, the day's weather, the sun's and moon's positions on their arcs, the moon's elongation, and the scalar levels (darkness, star and Milky Way opacity, glow, smoke, fireflies, birds, water, snow cover, flowers). It loads under mocha.
 
-**The palette module** holds the colour tables and turns the engine's output into colours: the scene's continuous colours (sky, land, felt, glow, cloud, sun) and the one continuous colour the chrome needs outside the scene, the daytime text halo. Tables and interpolation follow the mockup exactly (§5.2).
+**The palette module** holds the colour tables and turns the engine's output into colours: the scene's continuous colours (sky, land, felt, glow, cloud, sun) and the two continuous colours needed outside the scene: the daytime text halo and the sky-top colour that the page canvas and the iOS status bar take. Tables and interpolation follow the mockup exactly (§5.2).
 
 **The scene module** builds the elements once (stars, clouds, land, yurt, grass, fireflies, birds; weather particles only while that weather is on), then on each tick writes the engine's and palette's output as custom properties on its own root. All motion is CSS animation or SVG animation; **no script runs per frame**. It ticks once a minute, aligned to the minute, and again whenever the page becomes visible.
 
-**The chrome** reads two discrete states the scene publishes on `<html>`: `data-ps-light="day|night"` (the glass panels flip at darkness 0.5) and `data-ps-text="ink|light"` (the words over the open scene flip at darkness 0.05), plus `--ps-halo` for the daytime text. Everything else about the chrome is ordinary CSS in `ps.css`.
+**The chrome** reads what the scene publishes on `<html>`: two discrete states, `data-ps-light="day|night"` (the glass panels flip at darkness 0.5) and `data-ps-text="ink|light"` (the words over the open scene flip at darkness 0.05), and two colours, `--ps-halo` for the daytime text and `--canvas-bg-color`, the sky-top colour of the hour (§6). Everything else about the chrome is ordinary CSS in `ps.css`.
 
-**Without the scene** (the chunk has not loaded yet, failed to load, or an older build is running), `ps.css` alone renders a legible daytime version: a fixed daylight sky on the page canvas, the day glass and ink text. It never falls back to an unstyled or midnight state.
+**Without the scene** (the chunk has not loaded yet, failed to load, or an older build is running), `ps.css` alone renders a legible daytime version: a fixed daylight sky on the page canvas, the day glass and ink text, with daylight values for `--ps-halo` and `--canvas-bg-color` defined outside any state selector. It never falls back to an unstyled or midnight state.
 
 ## 4. The model of time
 
@@ -136,7 +136,7 @@ The sun's colours (core, edge, flame, bloom) mix from noon gold to horizon orang
 
 The mockup's drawing: felt walls and roof with a rope band and ribs, a patterned band, a carved and painted door, a crown ring with a stove pipe, stones and a woodpile beside it, a worn path to the door, desaturated so text over it stays readable.
 
-- **Placement: the far third.** It stands at 72 % of the chat pane's width, measured from the pane's reading-start edge, on the ground band. The scene measures the chat pane and re-measures it when it resizes. With no chat pane on screen, it keeps its last place.
+- **Placement: the far third.** It stands at 72 % of the message column's width, measured from the column's reading-start edge, on the ground band. The message column is `#chat .chat` (`MessageList.vue`'s scroll container), which excludes the user list: `#chat` itself includes the user list and would push the yurt behind it. The scene measures the column and re-measures it when it resizes. With no message column on screen (Settings, Help, the connect form), the yurt keeps its last place.
 - **It never moves.** When its place changes by more than 1.5 rem (the user list opens, the pane resizes, a private conversation opens), it fades out where it stood, jumps while unseen and fades back in where it now stands, 0.4 s each way, and its smoke goes with it. A smaller change, such as a window being resized, simply follows the layout with no animation. Nothing may transition its position.
 - **At night**: the door, the seams and the crown glow warm from inside, a soft spill of light falls on the path, and smoke rises from the crown. By day there is no smoke and no glow, and nobody is ever drawn.
 - **In winter** the roof carries snow.
@@ -182,7 +182,11 @@ Two palettes, both in `ps.css`, switched by `data-ps-light` with a 0.8 s transit
 
 Every coffee token the app reads (`--chat-*`, `--rail-*`, `--composer-*`, notice boxes, code tokens, scrollbars, focus ring) is defined for both, which makes the night palette a second full palette, not a tint pass (`heart-theme.md` §12).
 
-**The iOS status bar** reads `#status-bar-tint`, which must paint and must not carry a backdrop filter (`CLAUDE.md`, "The iOS status bar"). Its colour and the page canvas's are `--canvas-bg-color`, which `ps` sets to the scene's sky-top colour of the hour, so the bar matches the sky under it.
+**The iOS status bar** reads `#status-bar-tint`, which must paint and must not carry a backdrop filter (`CLAUDE.md`, "The iOS status bar"). Its colour and the page canvas's are `--canvas-bg-color`, which `ps` sets to the scene's sky-top colour of the hour, so the bar matches the sky under it. The scene's own element is a second candidate for iOS to sample: it is fixed, full width and flush with the top, and nothing documents which element iOS picks when two qualify. So:
+
+- `#theme-scene` comes after `#status-bar-tint` in the document;
+- its `background-color` is also `--canvas-bg-color`, with the sky gradient in `background-image` above it, so the bar is right whichever element iOS samples;
+- this needs checking on a real device, with the icon removed and re-added (§12), because no scenario can prove it.
 
 ## 7. The words over the plains
 
@@ -247,6 +251,7 @@ The browser check also samples rendered glyphs against their surrounding pixels 
   - a hidden page pauses the scene;
   - `#status-bar-tint` paints the sky colour;
   - a failed scene chunk still leaves the daylight fallback.
+- **On a real iPhone**, once, after plan 2: the status bar takes the sky colour at two times of day, installed fresh from the home screen. This is the one check the scenario cannot make.
 
 ## 13. Plans
 
