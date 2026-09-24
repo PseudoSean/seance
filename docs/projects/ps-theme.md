@@ -2,7 +2,7 @@
 
 Date: 2026-09-24. Branch `theme-ps` (worktree `.claude/worktrees/theme-ps`), forked from `theme-heart` at `a64a16cb`.
 
-Status: **design approved, not yet built.** The groundwork is done (§14): the fork is renamed, its animals are off and its glitter is gone. This document is the spec for the rest: the scene, the glass chrome, the type, the embers and the private view. The implementation plans are written from it (§13).
+Status: **plan 1 (the seam) landed, 2026-09-24** (commits `2a59116e`..`eda1a57b`, branch `theme-ps`). The groundwork (§14) and plan 1 (§13) are built: the engine, the palette, the hook, a minimal scene on the real clock, the daylight fallback, and — moved up from plan 2 — the message column's own palette and its two text treatments. This document is still the spec for what plans 2–4 (the glass chrome, the plains, the rest) have yet to build.
 
 The design was drawn and decided with the user over nine rounds of a live mockup. Its approved state is kept in the repository at `docs/resources/themes/ps-plains/mockup.html` (the README beside it explains how to drive it), and was published as https://claude.ai/artifact/4n67vQ1gJtPyuHwf22HrGQ. **The mockup's window is the reference drawing for everything visual here.** Where this document and the mockup disagree, this document wins: it records decisions made after drawing, and it converts the mockup's px and page script into the repo's conventions.
 
@@ -101,6 +101,8 @@ All of this is the mockup's arithmetic, moved into `engine.ts` and made testable
 
 - **The sun** rides one arc from the reading start (sunrise) to the reading end (sunset); it grows up to 45 % larger and warms from gold to deep orange as it nears the horizon. **The moon** rides the same arc through the night.
 - **The moon's phase** is the true elongation: the moon's ecliptic longitude minus the sun's, with the six largest periodic terms (`heart-theme.md` §11.2b). Illumination is `(1 − cos D) / 2`. Drawn with three shapes (a dark disc, the lit half, one ellipse of horizontal radius `R · |cos D|`), mirrored when waning, northern-hemisphere orientation. **Within 9° of new, there is no moon at all**, and the night is darker and starrier for it.
+
+The tests pin the true instants against measured values, not the mean month: full moon 2026-09-26 16:52 UTC (published 16:49) and new moon 2026-10-10 16:00 UTC (published 15:50) — both well inside the gap the true and mean instants can leave (`test/scenes/ps/engine.ts`). The `<3` design record's worked examples, 15:02 and 14:02, were an hour or two off; these are the ones the engine is checked against.
 
 ## 5. The scene
 
@@ -236,6 +238,8 @@ Held at **every minute of every season and every weather**, and checked in mocha
 
 The browser check also samples rendered glyphs against their surrounding pixels at noon, golden hour, sunset, dusk, midnight and first light, in summer and in snowy winter, because dusk is where a palette that is fine at both ends goes wrong.
 
+**The tightest grounds, plan 1.** The generator (`tools/ps/message-palette.ts`) solves every semantic and nick colour against the single worst ground its treatment can meet, taken from `tools/ps/legibility.ts`'s sampled minutes: the darkest daytime ground is `#cba38c` (doy 305, 995 min, storm, on `#7c453e` — an early-November storm at 16:35), and the brightest dusk-and-night ground is `#665a48` (doy 32, 500 min, clear, on `#ffe2b3` — 1 February at 08:20). Both are printed in `client/themes/ps.css`'s generated block header and reproduced by `npx tsx tools/ps/message-palette.ts`; regenerating after a table change in `palette.ts` or `engine.ts` finds the new worst grounds itself.
+
 ## 12. Verification
 
 - **mocha**: the engine (sunrise and sunset against known values at 45° N, the canonical mapping continuous across a whole day, season weights summing to 1, weather deterministic per day with the stated odds over a long run, moon elongation against known new and full moons, a new moon hiding the moon), the palette (continuity at every stop, the contrast floors of §11 across minutes × seasons × weathers), both nick sweeps against their floors, and `test/themes/ps.ts` (the fallback daylight palette is defined outside any state selector, the animal off-switch, no glitter, the fonts).
@@ -262,6 +266,20 @@ One spec, four plans, each shippable on its own:
 3. **The plains.** Land, river, yurt (placement and fade), smoke, grass, clouds, fireflies, birds, weather, seasons and the animal layer with its off switch, plus the performance rules and the measured budget.
 4. **The rest.** Embers, the frosted still private view, right-to-left, reduced motion, pausing when hidden, the full browser check, and the documentation (`docs/resources/themes.md`, `CLAUDE.md`).
 
+**Plan 1, landed 2026-09-24** (commits `2a59116e`..`eda1a57b`): everything the seam promised, built to the letter — the hook (`client/js/themeScene.ts`), the engine and palette (`client/js/scenes/ps/{engine,colour,palette}.ts`), a minimal scene (sky, sun, moon, stars) on the real clock, `data-ps-light`/`data-ps-text`/`--ps-halo`/`--canvas-bg-color` published, and the daylight fallback for a chunk that never loads.
+
+**One scope move, out of plan 2.** Clearing the old meadow for the scene left the message column's text sitting straight on open sky, day and night, with none of plan 2's glass between them yet — the spec's own colours went dark ink on a dark night sky. A plan has to ship legible on its own, so plan 1 also carries: the message column's own palette (§7) and both its text treatments, both generated nick sweeps for that column, the nick column's shadow-safe clipping, and the contrast floors in mocha (§11) that hold all of it there. What plan 2 still owns: the glass chrome's two palettes, the shadow-safe clipping everywhere else text is clipped (channel names), Mulish and Fraunces, `--canvas-bg-color`'s glass-side use, and the §11 α calibration.
+
+**Known items handed to plan 2, from the ledger:**
+
+- **The α calibration.** §11's model layer runs at α = 0.6, not yet calibrated against rendered pixels. Dusk legibility of the pastel semantic colours (notice, link, action, the reply quote) over the bright amber lower sky rests on that guess; the generated colours pass their floor through it but read soft in a screenshot. Plan 2 measures α from real glyphs and can only tighten it.
+- **The spec's own faint ink** `#4c5a72` clears its 3:1 floor at 2.995:1 — under the floor — on a day the check does not sample (doy 303, 16:40, storm, ground `#79443e`, α 0.6); every day the check does sample clears it. A ruling kept the spec's colour and the sampling for plan 1; plan 2 either samples every day or moves the colour.
+- **The generated ink** holds its floor at 4.534:1 on a denser sweep, inside the generator's 0.1 margin (light ink 4.583:1); plan 2 re-solves with a denser sample.
+- **The chrome** — sidebar, user list, composer — stays in its day colours at night until plan 2's glass lands (§6).
+- **The reaction row's "+"** is faint on the coral dusk sky; nothing asserts it yet.
+
+**How it was checked.** `tools/scenarios/theme-ps.mjs` runs 64 checks against a production build: the scene mounts only under `ps` (sky, stars, sun, moon), the four published values at noon, night and dusk, a hidden page stopping the scene (and staying stopped under reduced motion), the view following the open conversation, a theme switch mounting and unmounting cleanly (including one applied while the page is hidden), and the daylight fallback when the scene chunk is blocked. It was watched failing twice on purpose: hiding `#theme-scene` outright dropped it to 57 of 64, and repainting an animal plus reviving the old glitter rule dropped it to 51 of 64.
+
 ## 14. The groundwork (done 2026-09-24)
 
 `ps` is a fork of the `<3` theme ("ps <3", `heart`), whose design record stays in `docs/projects/heart-theme.md`.
@@ -273,7 +291,7 @@ The user's request:
 What the groundwork did:
 
 - **Renamed.** The theme's id is `ps` and its display name is `ps` (`client/js/configuration.ts`). No `ps <3` is left anywhere a user can see it. The stylesheet is `client/themes/ps.css`, and its fonts, licences and animal files are in `client/themes/ps/`. Both were moved with `git mv`, and the bytes are unchanged: `node tools/heart/generate.mjs` regenerates the SVGs into the new folder with no diff. The custom properties are `--ps-*`, the keyframes are `ps-*`, the test is `test/themes/ps.ts` and the browser check is `tools/scenarios/theme-ps.mjs`. The generator in `tools/heart/` and its tests in `test/tools/heart/` keep their historical names, but everything they read and write points at `client/themes/ps/` and `client/themes/ps.css`.
-- **Animals off, not removed.** One commented block after the scene rules sets `--ps-slot-a`, `-b` and `-f` to `none` in every scene. Deleting the block brings the animals back. `test/themes/ps.ts` checks that the block is there once, after every scene, covers all three slots, and that nothing after it refills a slot. The scenario checks in a real browser that **no** animal file is fetched: not in `#seance`, not in a second scene, and not under emulated reduced motion. A control makes sure Resource Timing is recording the theme's own stylesheet and fonts, so an empty list is evidence and not a blind spot. (Plan 3 moves this switch into the new scene's animal layer, §5.6.)
+- **Animals off, not removed.** One commented block after the scene rules sets `--ps-slot-a`, `-b` and `-f` to `none` in every scene. Deleting the block brings the animals back. `test/themes/ps.ts` checks that the block is there once, after every scene, covers all three slots, and that nothing after it refills a slot. The scenario checks in a real browser that **no** animal file is fetched: not in `#seance`, not in a second scene, and not under emulated reduced motion. A control makes sure Resource Timing is recording the theme's own stylesheet and fonts, so an empty list is evidence and not a blind spot. (Plan 1 moved this switch into the new scene's animal layer, `#theme-scene .ps-animals`, §5.6, done 2026-09-24; the layer already carries its fixed cast — horse, bunny, a deer far off, sized from `--strip` — and the off block sits right after it. What plan 3 still owes is the ground band it sits on: nothing paints under it yet.)
 - **Glitter out.** From the stylesheet only: the four burst token sets and their heart and star icons, the sparkle keyframes, the send burst on `.msg.self:last-child` and the text-column offsets it hung off, the reaction burst, and `heart-hold`. The reaction pop is `style.css`'s 160 ms `reaction-pop`, the same for every theme. The gentle motion stays: message fade-in, the chrome rising into place, the mention glow.
 
 How it was checked:
