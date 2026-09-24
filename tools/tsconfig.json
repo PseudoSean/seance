@@ -14,8 +14,10 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     /* The client modules were written for the browser: engine.ts wants DOM's
-       AbortSignal. The tools themselves want Node. */
-    "lib": ["ESNext", "DOM"],
+       AbortSignal, and scene.ts (whose sceneVars the ps legibility model reads)
+       iterates a NodeList, as client/tsconfig.json allows. The tools themselves
+       want Node. */
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "types": ["node"],
     "allowJs": false,
     "checkJs": false,

@@ -1,15 +1,33 @@
 /**
- * The legibility rule for words over the plains (docs/projects/ps-theme.md
- * §11), shared by the floors test (test/scenes/ps/legibility.ts) and the
- * palette generator (tools/ps/message-palette.ts). A message can sit on any sky
- * or land colour of its minute, bare or under the day's weather veil. Its
- * treatment's own layer, the halo by day or the shadow while the light changes
- * and all night, lies between it and that ground at the strength measured in
- * rendered pixels: ALPHA_HALO or ALPHA_SHADOW (§11).
+ * The legibility model for words over the plains (docs/projects/ps-theme.md
+ * §6, §7, §11), shared by the floors test (test/scenes/ps/legibility.ts) and
+ * the palette generator (tools/ps/palette-blocks.ts).
+ *
+ * **The grounds (ruling, 2026-09-24).** Plan 2 checks only what the scene
+ * paints today: the sky (skyTop, skyMid, skyHorizon) and two bodies, the
+ * moon's disc and the sun's core. The land (mount, far, hill2, hill1, grass,
+ * blade) and the weather veil are not painted until plan 3, which adds them
+ * back here when it draws them, and designs the land under the message column
+ * as it does.
+ *
+ * **The surfaces.** A word sits on one of two:
+ * - `column`: the message column, straight on the scene, through its
+ *   treatment's own layer (the halo by day; the shadow and outline while the
+ *   light changes and all night) at the strength measured in rendered pixels,
+ *   ALPHA_HALO or ALPHA_SHADOW;
+ * - `glass`: the chrome, the glass tint (GLASS) composited over the scene,
+ *   with no layer under the text. The backdrop blur is left out: it only
+ *   averages neighbouring grounds, so leaving it out is conservative.
+ *
+ * **What is sampled.** Moments, not a continuum: SAMPLING lists the days, the
+ * minute step and the weathers of the two sweeps (eachChecked). A floor this
+ * model holds is held at those samples; nothing here measures between them.
  */
+import {defaultFontSize, fontSizes, type FontSize} from "../../client/js/helpers/fontSize";
 import {luminance, mix} from "../../client/js/scenes/ps/colour";
-import {momentFor, WEATHERS, type Weather} from "../../client/js/scenes/ps/engine";
-import {paletteAt, publishedFor, WEATHER, type Palette} from "../../client/js/scenes/ps/palette";
+import {momentFor, WEATHERS, type Moment, type Weather} from "../../client/js/scenes/ps/engine";
+import {paletteAt, publishedFor, type Palette} from "../../client/js/scenes/ps/palette";
+import {sceneVars} from "../../client/js/scenes/ps/scene";
 
 /**
  * How far each treatment moves the ground right around a word toward its own
@@ -50,69 +68,325 @@ export const ALPHA_HALO = Math.min(0.6, 0.2119);
 export const ALPHA_SHADOW = Math.min(0.6, 0.5457);
 export const INK = "#1b2638";
 export const INK_FAINT = "#4c5a72";
-/** The days checked: each season's anchor, the solstices and equinoxes, and 1 January. */
-export const DOYS = [1, 32, 79, 121, 172, 213, 265, 305, 355];
-export const MINUTE_STEP = 5;
 
-export function messageGrounds(p: Palette, weather: Weather): string[] {
-	const bare = [
-		p.skyTop,
-		p.skyMid,
-		p.skyHorizon,
-		p.mount,
-		p.far,
-		p.hill2,
-		p.hill1,
-		p.grass,
-		p.blade,
-	];
-	const wx = WEATHER[weather];
-	return wx.dim > 0 ? [...bare, ...bare.map((g) => mix(g, wx.dimc, wx.dim))] : bare;
+export type Surface = "column" | "glass";
+/** The message column's treatment (data-ps-text). */
+export type Text = "ink" | "light";
+/** The glass's palette (data-ps-light). */
+export type Light = "day" | "night";
+
+/**
+ * The glass (spec §6): its tint, the spec's opacity and the most the
+ * generator may raise it to (Global Constraints, pre-ruled fix 1), and the
+ * spec-fixed colours drawn on it.
+ */
+export const GLASS = {
+	day: {
+		tint: "#fffbf4",
+		base: 0.62,
+		cap: 0.78,
+		ink: "#1f2a3d",
+		soft: "#55627a",
+		accent: "#c2562b",
+	},
+	night: {
+		tint: "#0c1120",
+		base: 0.58,
+		cap: 0.74,
+		ink: "#e9eef7",
+		soft: "#a7b3c8",
+		accent: "#d9784a",
+	},
+} as const;
+
+/**
+ * What coloured text in the light treatment (every generated colour there:
+ * nicks, the semantic colours, the code tokens) is held to over the moon's
+ * disc and the sun's core. White and faint white are held over every ground
+ * whatever this says. The three settings:
+ * - `strict`: all of it solved to 4.6 and held at 4.5 over the sky and the
+ *   bodies;
+ * - `sky`: solved and held over the sky alone;
+ * - `names-large`: the 32 nick colours solved to 3.1 and held at 3 over the
+ *   sky and the bodies (bold Fraunces 700 at the default step is WCAG large
+ *   text; at the medium step, 16px, it is not), everything else strict.
+ * The generator and the floors test both read it.
+ *
+ * **The user chose `names-large`** (2026-09-24: "names-large is easiest to read").
+ * **Its guard:** below the default font-size step the names are not large text, so there they take the `sky` set (smallStepSweep).
+ */
+export type LightSweep = "strict" | "sky" | "names-large";
+export const LIGHT_SWEEP: LightSweep = "names-large";
+
+/**
+ * The font-size steps at or above the default (client/js/helpers/fontSize.ts),
+ * where bold Fraunces 700 nicks are WCAG large text: the default, `large`,
+ * sets them at 20px, 15pt bold, over the 14pt bold line. Every step below it
+ * (tiny, small, medium), and an <html> that carries no step yet (the root at
+ * 100 %, medium's size), sets them smaller.
+ */
+export const LARGE_TEXT_STEPS: readonly FontSize[] = fontSizes.slice(
+	fontSizes.indexOf(defaultFontSize)
+);
+
+/** The set light nicks take where they are not large text, or null when the sweep does not lean on large text. */
+export function smallStepSweep(sweep: LightSweep): LightSweep | null {
+	return sweep === "names-large" ? "sky" : null;
 }
 
-export function effectiveGround(ground: string, text: "ink" | "light", halo: string): string {
+/**
+ * Where the small-step light nicks are written: the light treatment on an
+ * <html> at no large-text step. The step test sits in :where(), which weighs
+ * nothing, so these rules are exactly as specific as the light nick rules and
+ * win by coming after them, while ps.css's action and notice nick rules,
+ * after the block, still win over both.
+ */
+export const SMALL_STEPS_ROOT = `:root:where(:not(${LARGE_TEXT_STEPS.map(
+	(step) => `[data-font-size="${step}"]`
+).join(", ")}))[data-ps-text="light"] #chat .chat`;
+
+export interface SweepFloor {
+	/** What the floors test holds. */
+	floor: number;
+	/** What the generator solves to: the floor and 0.1 of margin for rounding. */
+	solveTo: number;
+	/** Whether the moon's disc and the sun's core are among the grounds. */
+	bodies: boolean;
+}
+
+export function lightSweepFloors(sweep: LightSweep): {nicks: SweepFloor; colours: SweepFloor} {
+	const text = {floor: 4.5, solveTo: 4.6, bodies: sweep !== "sky"};
+	return {
+		nicks: sweep === "names-large" ? {floor: 3, solveTo: 3.1, bodies: true} : text,
+		colours: text,
+	};
+}
+
+/** The days checked: each season's anchor, the solstices and equinoxes, and 1 January. */
+export const DOYS = [1, 32, 79, 121, 172, 213, 265, 305, 355];
+
+export type Days = "sparse" | "dense";
+
+/**
+ * The two sweeps, both over all six weathers. `sparse` is mocha's: every 7th
+ * day from day 1 plus DOYS, every 10 minutes. `dense` is the generator's:
+ * every day of a 365-day year, every 5 minutes (it takes about a minute).
+ */
+export const SAMPLING: Record<Days, {days: number[]; step: number}> = {
+	sparse: {
+		days: [...new Set([...Array.from({length: 53}, (_, i) => 1 + 7 * i), ...DOYS])].sort(
+			(a, b) => a - b
+		),
+		step: 10,
+	},
+	dense: {days: Array.from({length: 365}, (_, i) => i + 1), step: 5},
+};
+
+/** One sampled moment. The moon's phase does not matter here (bodyGrounds), so epochDays is fixed. */
+export function momentOf(doy: number, minute: number, weather: Weather): Moment {
+	return momentFor({minute, doy, dayNumber: doy, epochDays: 20000, weather});
+}
+
+export type Body = "sky" | "moon" | "sun";
+
+export interface Ground {
+	hex: string;
+	/** What paints it, for the headers and failure messages. */
+	name: string;
+	body: Body;
+	/** A body counted up while under the horizon line (altitude below 0): plan 3's land hides it, nothing does today. */
+	below: boolean;
+}
+
+export function skyGrounds(p: Palette): Ground[] {
+	return (["skyTop", "skyMid", "skyHorizon"] as const).map((band) => ({
+		hex: p[band],
+		name: `${band} ${p[band]}`,
+		body: "sky",
+		below: false,
+	}));
+}
+
+/** The two lightest stops of the moon's disc and of the sun's core (scene.ts, MOON and SUN). */
+const MOON_DISC = ["#fdfaf0", "#ece5cf"];
+const SUN_CORE = ["#fffef6", "#fff3c2"];
+
+/**
+ * The moon's disc and the sun's core over the sky bands they cross, at the
+ * opacity the scene gives them (scene.ts sceneVars, --ps-moon-op and
+ * --ps-sun-op, read from it rather than mirrored). The disc counts whenever
+ * the moon is up, whatever its phase: sceneVars is asked as if the moon were
+ * present, which is conservative. The sun counts whenever it is up, which
+ * includes the minutes around sunrise and sunset when it stands under the
+ * horizon line (`below`).
+ */
+export function bodyGrounds(m: Moment, p: Palette): Ground[] {
+	const vars = sceneVars({...m, phase: {...m.phase, present: true}}, p);
+	const out: Ground[] = [];
+
+	const add = (
+		body: "moon" | "sun",
+		stops: string[],
+		bands: Array<"skyTop" | "skyMid" | "skyHorizon">,
+		op: number
+	) => {
+		if (op <= 0) {
+			return;
+		}
+
+		const below = (body === "moon" ? m.moon.alt : m.sun.alt) < 0;
+
+		for (const stop of stops) {
+			for (const band of bands) {
+				const sky = p[band];
+				out.push({
+					hex: mix(sky, stop, op),
+					name: `${body} ${stop} at ${op.toFixed(2)} over ${band} ${sky}${
+						below ? " (under the horizon)" : ""
+					}`,
+					body,
+					below,
+				});
+			}
+		}
+	};
+
+	if (m.moon.up) {
+		add("moon", MOON_DISC, ["skyTop", "skyMid"], Number(vars["--ps-moon-op"]));
+	}
+
+	if (m.sun.up) {
+		add("sun", SUN_CORE, ["skyMid", "skyHorizon"], Number(vars["--ps-sun-op"]));
+	}
+
+	return out;
+}
+
+export function effectiveGround(ground: string, text: Text, halo: string): string {
 	return text === "ink" ? mix(ground, halo, ALPHA_HALO) : mix(ground, "#000000", ALPHA_SHADOW);
 }
 
-/** Every effective ground a message can meet, with the treatment in force at that moment. */
-export function eachChecked(
-	visit: (text: "ink" | "light", effective: string, where: string) => void
-): void {
-	for (const doy of DOYS) {
-		for (let minute = 0; minute < 1440; minute += MINUTE_STEP) {
-			for (const weather of WEATHERS) {
-				const p = paletteAt(
-					momentFor({minute, doy, dayNumber: doy, epochDays: 20000, weather})
-				);
-				const {text, halo} = publishedFor(p);
+export function glassGround(ground: string, light: Light, alpha: number): string {
+	return mix(ground, GLASS[light].tint, alpha);
+}
 
-				for (const g of messageGrounds(p, weather)) {
-					visit(
-						text,
-						effectiveGround(g, text, halo),
-						`doy ${doy} ${minute} min ${weather} on ${g}`
-					);
-				}
+/**
+ * Every ground a surface meets at one moment, composited: through the
+ * treatment in force for the column, under the glass at `alpha` (the spec's
+ * opacity when left out) for the glass.
+ */
+export function surfaceGrounds(
+	surface: "column",
+	m: Moment,
+	p: Palette
+): {state: Text; grounds: Ground[]};
+export function surfaceGrounds(
+	surface: "glass",
+	m: Moment,
+	p: Palette,
+	alpha?: number
+): {state: Light; grounds: Ground[]};
+
+export function surfaceGrounds(
+	surface: Surface,
+	m: Moment,
+	p: Palette,
+	alpha?: number
+): {state: Text | Light; grounds: Ground[]} {
+	const scene = [...skyGrounds(p), ...bodyGrounds(m, p)];
+	return surface === "column" ? throughTreatment(scene, p) : underTint(scene, p, alpha);
+}
+
+function throughTreatment(scene: Ground[], p: Palette): {state: Text; grounds: Ground[]} {
+	const {text, halo} = publishedFor(p);
+	return {
+		state: text,
+		grounds: scene.map((g) => ({...g, hex: effectiveGround(g.hex, text, halo)})),
+	};
+}
+
+function underTint(scene: Ground[], p: Palette, alpha?: number): {state: Light; grounds: Ground[]} {
+	const {light} = publishedFor(p);
+	const a = alpha ?? GLASS[light].base;
+	return {state: light, grounds: scene.map((g) => ({...g, hex: glassGround(g.hex, light, a)}))};
+}
+
+/** Visit every sampled moment of a sweep, with its palette and a `doy D M min W` label the headers pin by. */
+export function eachChecked(
+	visit: (m: Moment, p: Palette, where: string) => void,
+	days: Days
+): void {
+	const {days: list, step} = SAMPLING[days];
+
+	for (const doy of list) {
+		for (let minute = 0; minute < 1440; minute += step) {
+			for (const weather of WEATHERS) {
+				const m = momentOf(doy, minute, weather);
+				visit(m, paletteAt(m), `doy ${doy} ${minute} min ${weather}`);
 			}
 		}
 	}
 }
 
-export interface CheckedGround {
-	hex: string;
+export interface CheckedGround extends Ground {
 	lum: number;
+	/** The moment, as `doy D M min W`. */
 	where: string;
 }
 
-let cache: Record<"ink" | "light", CheckedGround[]> | undefined;
+export interface Checked {
+	/** Effective grounds, through the treatment in force. */
+	column: Record<Text, CheckedGround[]>;
+	/** Scene grounds before the tint, which the generator solves the opacity of and the test reads from ps.css. */
+	glass: Record<Light, CheckedGround[]>;
+}
 
-/** eachChecked's grounds, computed once per process with their luminance: about 15,000 palettes. */
-export function checkedGrounds(): Record<"ink" | "light", CheckedGround[]> {
-	if (!cache) {
-		const out: Record<"ink" | "light", CheckedGround[]> = {ink: [], light: []};
-		eachChecked((text, hex, where) => out[text].push({hex, lum: luminance(hex), where}));
-		cache = out;
+/** One moment's grounds for both surfaces: the column's effective, the glass's raw. */
+export function groundsAt(m: Moment, p: Palette, where: string): Checked {
+	const raw = [...skyGrounds(p), ...bodyGrounds(m, p)];
+	const column = throughTreatment(raw, p);
+	const {light} = publishedFor(p);
+	const out: Checked = {column: {ink: [], light: []}, glass: {day: [], night: []}};
+	const checked = (g: Ground) => ({...g, lum: luminance(g.hex), where});
+	out.column[column.state] = column.grounds.map(checked);
+	out.glass[light] = raw.map(checked);
+	return out;
+}
+
+const cache: Partial<Record<Days, Checked>> = {};
+
+/**
+ * Every distinct ground of a sweep (the same colour from the same kind of
+ * ground kept once, at the first moment that meets it): the sparse sweep is
+ * about 50,000 moments, the dense one about 630,000.
+ */
+export function checkedGrounds(days: Days): Checked {
+	const hit = cache[days];
+
+	if (hit) {
+		return hit;
 	}
 
-	return cache;
+	const out: Checked = {column: {ink: [], light: []}, glass: {day: [], night: []}};
+	const seen = new Set<string>();
+	eachChecked((m, p, where) => {
+		const at = groundsAt(m, p, where);
+
+		for (const [surface, states] of Object.entries(at) as Array<
+			[keyof Checked, Record<string, CheckedGround[]>]
+		>) {
+			for (const [state, grounds] of Object.entries(states)) {
+				for (const g of grounds) {
+					const key = `${surface} ${state} ${g.hex} ${g.body} ${g.below}`;
+
+					if (!seen.has(key)) {
+						seen.add(key);
+						(out[surface] as Record<string, CheckedGround[]>)[state].push(g);
+					}
+				}
+			}
+		}
+	}, days);
+	cache[days] = out;
+	return out;
 }

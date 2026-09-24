@@ -2,131 +2,463 @@ import {expect} from "chai";
 import fs from "fs";
 import path from "path";
 import {contrast, luminance, mix} from "../../../client/js/scenes/ps/colour";
-import {checkedGrounds, INK, INK_FAINT} from "../../../tools/ps/legibility";
+import {WEATHERS, type Weather} from "../../../client/js/scenes/ps/engine";
+import {paletteAt, publishedFor} from "../../../client/js/scenes/ps/palette";
+import {
+	bodyGrounds,
+	checkedGrounds,
+	GLASS,
+	glassGround,
+	groundsAt,
+	INK,
+	LARGE_TEXT_STEPS,
+	LIGHT_SWEEP,
+	lightSweepFloors,
+	momentOf,
+	SMALL_STEPS_ROOT,
+	smallStepSweep,
+	type Checked,
+	type CheckedGround,
+	type Light,
+	type Text,
+} from "../../../tools/ps/legibility";
 
-const css = fs.readFileSync(path.resolve(__dirname, "../../../client/themes/ps.css"), "utf8");
-const block = css.slice(
-	css.indexOf("/* ps:message-palette:start"),
-	css.indexOf("/* ps:message-palette:end */")
-);
+/* The two lines a run against another sweep's copy of ps.css changes. */
+const CSS_FILE = path.resolve(__dirname, "../../../client/themes/ps.css");
+const SWEEP = LIGHT_SWEEP;
 
-/** The worst (lowest-contrast) effective ground for a colour under one treatment, over every checked moment. */
-function worst(
-	colour: string,
-	text: "ink" | "light",
-	faint = false
-): {ratio: number; where: string} {
+const css = fs.readFileSync(CSS_FILE, "utf8");
+const blockOf = (name: string) =>
+	css.slice(css.indexOf(`/* ps:${name}:start`), css.indexOf(`/* ps:${name}:end */`));
+const messageBlock = blockOf("message-palette");
+const glassBlock = blockOf("glass-palette");
+const headerOf = (block: string) => block.slice(0, block.indexOf("*/"));
+const uncommented = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, "");
+
+interface Rule {
+	selector: string;
+	decls: Array<[string, string]>;
+}
+
+/** Every rule in `text`, comments dropped (a header glued to the first rule would hide its selector), with every declaration. */
+function rulesOf(text: string): Rule[] {
+	return [...uncommented(text).matchAll(/([^{}]+)\{([^}]*)\}/g)].map((m) => ({
+		selector: m[1].trim(),
+		decls: m[2]
+			.split(";")
+			.map((d) => d.trim())
+			.filter(Boolean)
+			.map((d) => [d.slice(0, d.indexOf(":")).trim(), d.slice(d.indexOf(":") + 1).trim()]),
+	}));
+}
+
+/** The moments the block headers name (their worst grounds and the Review Focus pins), as `doy D M min W`. */
+function pinned(): string[] {
+	const found = [
+		...(headerOf(messageBlock) + headerOf(glassBlock)).matchAll(
+			/doy (\d+) (\d+) min ([a-z]+)/g
+		),
+	];
+	return [...new Set(found.map((m) => m[0]))];
+}
+
+function momentAt(where: string) {
+	const [, doy, minute, weather] = /doy (\d+) (\d+) min ([a-z]+)/.exec(where)!;
+
+	if (!(WEATHERS as readonly string[]).includes(weather)) {
+		throw new Error(`a header pins an unknown weather: ${where}`);
+	}
+
+	return momentOf(Number(doy), Number(minute), weather as Weather);
+}
+
+let merged: Checked | undefined;
+
+/** The sparse sweep's grounds and every pinned moment's. */
+function grounds(): Checked {
+	if (!merged) {
+		const sparse = checkedGrounds("sparse");
+		const out: Checked = {
+			column: {ink: [...sparse.column.ink], light: [...sparse.column.light]},
+			glass: {day: [...sparse.glass.day], night: [...sparse.glass.night]},
+		};
+
+		for (const where of pinned()) {
+			const m = momentAt(where);
+			const at = groundsAt(m, paletteAt(m), where);
+			out.column.ink.push(...at.column.ink);
+			out.column.light.push(...at.column.light);
+			out.glass.day.push(...at.glass.day);
+			out.glass.night.push(...at.glass.night);
+		}
+
+		merged = out;
+	}
+
+	return merged;
+}
+
+/** The lowest contrast `colour` meets over `list`, and where. */
+function worst(colour: string, list: CheckedGround[]): {ratio: number; where: string} {
 	const lc = luminance(colour);
 	let best = {ratio: Infinity, where: ""};
 
-	for (const g of checkedGrounds()[text]) {
-		// Faint light text is white at 80 % over its own ground.
-		const lf = faint ? luminance(mix(g.hex, "#ffffff", 0.8)) : lc;
-		const ratio = (Math.max(lf, g.lum) + 0.05) / (Math.min(lf, g.lum) + 0.05);
+	for (const g of list) {
+		const ratio = (Math.max(lc, g.lum) + 0.05) / (Math.min(lc, g.lum) + 0.05);
 
 		if (ratio < best.ratio) {
-			best = {ratio, where: g.where};
+			best = {ratio, where: `${g.where}, ${g.name} (${g.hex})`};
 		}
 	}
 
 	return best;
 }
 
-/** The block without its comments, so the header comment glued to the first rule does not hide that rule's selector. */
-const rules = block.replace(/\/\*[\s\S]*?\*\//g, "");
+/** Faint white is white at 80 % over its own ground. */
+function worstFaintWhite(list: CheckedGround[]): {ratio: number; where: string} {
+	let best = {ratio: Infinity, where: ""};
 
-/** `name: #rrggbb` pairs declared in the block under a selector that starts with `prefix`; faint ink has its own floor and is left out. */
-function declared(prefix: string): Array<[string, string]> {
-	const out: Array<[string, string]> = [];
+	for (const g of list) {
+		const ratio = contrast(mix(g.hex, "#ffffff", 0.8), g.hex);
 
-	for (const rule of rules.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
-		if (!rule[1].trim().startsWith(prefix)) {
+		if (ratio < best.ratio) {
+			best = {ratio, where: `${g.where}, ${g.name} (${g.hex})`};
+		}
+	}
+
+	return best;
+}
+
+/** One colour the message block declares, with the floor and the grounds it is held to. */
+interface Held {
+	what: string;
+	value: string;
+	text: Text;
+	floor: number;
+	/** Over the bodies too, or the sky alone. */
+	bodies: boolean;
+	faintWhite: boolean;
+}
+
+const LIGHT_ROOT = ':root[data-ps-text="light"] #chat .chat';
+const HEX = /^#[0-9a-f]{6}$/;
+
+/** The sweep the light nicks take below the default font-size step, if the light sweep needs one. */
+const SMALL = smallStepSweep(SWEEP);
+
+/**
+ * Every declaration of the message block, classified, so that a colour
+ * written in another form fails rather than slipping past: white and faint
+ * white over every ground, other colours by LIGHT_SWEEP at night (the nicks
+ * under SMALL_STEPS_ROOT by its small-step set), faint ink at 3:1 by day.
+ * Anything else it cannot read is an error.
+ */
+function heldColours(): {held: Held[]; unread: string[]} {
+	const floors = lightSweepFloors(SWEEP);
+	const held: Held[] = [];
+	const unread: string[] = [];
+
+	for (const {selector, decls} of rulesOf(messageBlock)) {
+		const text: Text = selector.includes('[data-ps-text="light"]') ? "light" : "ink";
+		const nick = selector.includes(".user.color-");
+		const small = selector.startsWith(`${SMALL_STEPS_ROOT} `);
+
+		if (small && !SMALL) {
+			unread.push(
+				`${selector}: a small-step rule under LIGHT_SWEEP "${SWEEP}", which needs none`
+			);
 			continue;
 		}
 
-		for (const d of rule[2].matchAll(/(--[a-z0-9-]+|color):\s*(#[0-9a-f]{6});/g)) {
-			if (!d[1].includes("-faint")) {
-				out.push([`${rule[1].trim()} ${d[1]}`, d[2]]);
+		for (const [name, value] of decls) {
+			const what = `${selector} ${name}`;
+
+			if (name === "color" && value === "var(--chat-fg)" && selector === "#chat .chat") {
+				continue;
+			}
+
+			if (
+				text === "light" &&
+				name === "--chat-fg-faint" &&
+				value === "rgb(255 255 255 / 80%)"
+			) {
+				held.push({what, value: "#ffffff", text, floor: 3, bodies: true, faintWhite: true});
+			} else if (!HEX.test(value)) {
+				unread.push(`${what}: ${value}`);
+			} else if (text === "ink") {
+				const floor = name === "--chat-fg-faint" ? 3 : 4.5;
+				held.push({what, value, text, floor, bodies: true, faintWhite: false});
+			} else if (value === "#ffffff") {
+				held.push({what, value, text, floor: 4.5, bodies: true, faintWhite: false});
+			} else {
+				const rule = small
+					? lightSweepFloors(SMALL!).nicks
+					: nick
+					? floors.nicks
+					: floors.colours;
+				held.push({
+					what,
+					value,
+					text,
+					floor: rule.floor,
+					bodies: rule.bodies,
+					faintWhite: false,
+				});
 			}
 		}
 	}
 
-	return out;
+	return {held, unread};
 }
 
-describe("ps: the words over the plains keep their floors on nine sampled days, every five minutes, in all six weathers, against the sky-and-land grounds", function () {
+const groundsFor = (h: Held, list: CheckedGround[]) =>
+	h.bodies ? list : list.filter((g) => g.body === "sky");
+
+/** The glass block's declared values. */
+function glassDeclared() {
+	const rules = rulesOf(glassBlock);
+
+	const tokens = (selector: string) => {
+		const rule = rules.find((r) => r.selector === selector)!;
+		return Object.fromEntries(rule.decls);
+	};
+
+	const nicks = (prefix: string) =>
+		rules
+			.filter((r) => new RegExp(`^${prefix}\\.user\\.color-\\d+$`).test(r.selector))
+			.map((r) => ({selector: r.selector, decls: r.decls}));
+	const night = ':root[data-ps-light="night"]';
+	return {
+		rules,
+		day: {tokens: tokens(":root"), nicks: nicks("")},
+		night: {tokens: tokens(night), nicks: nicks(`${night.replace(/[[\]]/g, "\\$&")} `)},
+	};
+}
+
+/** The glass grounds of one light at its declared opacity. */
+function underGlass(light: Light, list = grounds().glass[light]): CheckedGround[] {
+	const alpha = Number(glassDeclared()[light].tokens["--ps-g-tint-a"]);
+	return list.map((g) => {
+		const hex = glassGround(g.hex, light, alpha);
+		return {...g, hex, lum: luminance(hex)};
+	});
+}
+
+describe("ps: the words over the plains and on the glass keep their floors: every 7th day and the season anchors, every 10 minutes, all six weathers, and every moment the generated blocks pin; against the sky and the bodies", function () {
 	this.timeout(60000);
 
-	it("the generated block exists", function () {
-		expect(block.length).to.be.greaterThan(100);
-	});
+	it("finds both generated blocks, and grounds for every surface and state", function () {
+		expect(messageBlock.length).to.be.greaterThan(100);
+		expect(glassBlock.length).to.be.greaterThan(100);
+		expect(pinned().length).to.be.greaterThan(10);
+		const g = grounds();
 
-	it("holds the spec's own ink and faint ink by day, and white by night (a failure here is reported, not tuned)", function () {
-		expect(worst(INK, "ink").ratio).to.be.at.least(4.5);
-		expect(worst(INK_FAINT, "ink").ratio).to.be.at.least(3);
-		expect(worst("#ffffff", "light").ratio).to.be.at.least(4.5);
-		expect(worst("#ffffff", "light", true).ratio).to.be.at.least(3);
-	});
-
-	it("holds every generated daytime colour at 4.5:1", function () {
-		for (const [name, hex] of declared("#chat .chat")) {
-			const w = worst(hex, "ink");
-			expect(w.ratio, `${name} ${hex} at ${w.where}`).to.be.at.least(4.5);
+		for (const list of [g.column.ink, g.column.light, g.glass.day, g.glass.night]) {
+			expect(list.length).to.be.greaterThan(1000);
 		}
+
+		expect(contrast(INK, "#ffffff")).to.be.greaterThan(4.5);
 	});
 
-	it("holds every generated dusk-and-night colour at 4.5:1", function () {
-		for (const [name, hex] of declared(':root[data-ps-text="light"] #chat .chat')) {
-			const w = worst(hex, "light");
-			expect(w.ratio, `${name} ${hex} at ${w.where}`).to.be.at.least(4.5);
-		}
+	it("holds the spec's own ink by day, and white and faint white while the light changes and all night, over the sky and the bodies (a failure here is reported, not tuned)", function () {
+		const g = grounds();
+		expect(worst(INK, g.column.ink).ratio).to.be.at.least(4.5);
+		expect(worst("#ffffff", g.column.light).ratio).to.be.at.least(4.5);
+		expect(worstFaintWhite(g.column.light).ratio).to.be.at.least(3);
 	});
 
-	it("covers all 32 nick colours in both treatments", function () {
-		const ink = declared("#chat .chat .user.color-").length;
-		const light = declared(':root[data-ps-text="light"] #chat .chat .user.color-').length;
-		expect([ink, light]).to.deep.equal([32, 32]);
+	it("reads every declaration of the message block, in the forms it holds, and counts them", function () {
+		const {held, unread} = heldColours();
+		expect(unread).to.deep.equal([]);
+		const rules = rulesOf(messageBlock);
+		const count = (selector: string) =>
+			rules.find((r) => r.selector === selector)!.decls.length;
+		// 19 tokens and `color` by day; the same 19 and nine code tokens while the light changes.
+		expect(count("#chat .chat")).to.equal(20);
+		expect(count(LIGHT_ROOT)).to.equal(28);
+		const nicks = (prefix: string) =>
+			rules.filter((r) => r.selector.startsWith(`${prefix} .user.color-`));
+		expect(nicks("#chat .chat").map((r) => r.decls.length)).to.deep.equal(Array(32).fill(1));
+		expect(nicks(LIGHT_ROOT).map((r) => r.decls.length)).to.deep.equal(Array(32).fill(1));
+		// Under names-large, a second light set for the steps below the default.
+		const small = nicks(SMALL_STEPS_ROOT);
+		expect(small.map((r) => r.decls.length)).to.deep.equal(SMALL ? Array(32).fill(1) : []);
+		expect(rules.length).to.equal(66 + small.length);
+		expect(held.length).to.equal(19 + 28 + 64 + small.length);
+		const names = held.map((h) => h.what);
+		expect(names).to.include("#chat .chat --chat-fg");
+		expect(names).to.include("#chat .chat --link-color");
+		expect(names).to.include(`${LIGHT_ROOT} --link-color`);
+		expect(names).to.include(`${LIGHT_ROOT} --chat-fg-faint`);
 	});
 
-	it("reads the semantic rules in both treatments, not only the nicks", function () {
-		// The header comment is glued to the first rule's selector; a reader
-		// that kept it would skip that rule and hold nothing but the nicks.
-		const names = (prefix: string) => declared(prefix).map(([name]) => name);
-		expect(names("#chat .chat")).to.include("#chat .chat --chat-fg");
-		expect(names("#chat .chat")).to.include("#chat .chat --link-color");
-		expect(names(':root[data-ps-text="light"] #chat .chat')).to.include(
-			':root[data-ps-text="light"] #chat .chat --link-color'
+	it("gives the names below the default font-size step (tiny, small, medium, or no step yet) their own light set, after the light rules and before the action and notice rules", function () {
+		// Bold Fraunces is WCAG large text from the default step up (fontSize.ts).
+		expect(LARGE_TEXT_STEPS).to.deep.equal(["large", "xlarge", "huge"]);
+		expect(SMALL_STEPS_ROOT).to.equal(
+			':root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat'
 		);
+		const selectors = rulesOf(messageBlock).map((r) => r.selector);
+		const small = selectors.filter((sel) => sel.startsWith(`${SMALL_STEPS_ROOT} `));
+
+		if (!SMALL) {
+			expect(small).to.deep.equal([]);
+			return;
+		}
+
+		expect(small).to.deep.equal(
+			Array.from({length: 32}, (_, i) => `${SMALL_STEPS_ROOT} .user.color-${i + 1}`)
+		);
+		// Same specificity as the light nick rules (:where weighs nothing), so order decides.
+		expect(selectors.indexOf(small[0])).to.be.above(
+			selectors.indexOf(`${LIGHT_ROOT} .user.color-32`)
+		);
+		const after = css.slice(css.indexOf("/* ps:message-palette:end */"));
+		expect(after).to.include(':root #chat .chat .msg[data-type="action"] .user');
+		expect(after).to.include(':root #chat .chat .msg[data-type="notice"] .user');
 	});
 
-	it("holds every generated colour on a mentioned row, under its wash by day and by night", function () {
-		const cases: Array<[Array<[string, string]>, "ink" | "light", string, number]> = [
-			[declared("#chat .chat"), "ink", "#ffd6e6", 0.85],
-			[declared(':root[data-ps-text="light"] #chat .chat'), "light", "#140e1e", 0.5],
-		];
+	it("holds every daytime colour at 4.5:1, and faint ink at 3:1", function () {
+		for (const h of heldColours().held.filter((x) => x.text === "ink")) {
+			const w = worst(h.value, grounds().column.ink);
+			expect(w.ratio, `${h.what} ${h.value} at ${w.where}`).to.be.at.least(h.floor);
+		}
+	});
 
-		for (const [colours, text, wash, strength] of cases) {
-			const lums = colours.map(([name, hex]) => ({name, hex, lum: luminance(hex)}));
+	it(`holds every dusk-and-night colour to its floor under LIGHT_SWEEP "${SWEEP}"`, function () {
+		for (const h of heldColours().held.filter((x) => x.text === "light")) {
+			const list = groundsFor(h, grounds().column.light);
+			const w = h.faintWhite ? worstFaintWhite(list) : worst(h.value, list);
+			expect(w.ratio, `${h.what} ${h.value} at ${w.where}`).to.be.at.least(h.floor);
+		}
+	});
 
-			for (const g of checkedGrounds()[text]) {
-				const lw = luminance(mix(g.hex, wash, strength));
+	it("holds every colour on a mentioned row, under the washes ps.css paints by day and by night", function () {
+		const washes = rulesOf(css)
+			.filter((r) => r.selector.includes(".msg.highlight"))
+			.flatMap((r) =>
+				r.decls
+					.filter(([name]) => name === "background")
+					.map(([, value]) => {
+						const m = /^rgb\((\d+) (\d+) (\d+) \/ (\d+)%\)$/.exec(value);
 
-				for (const c of lums) {
-					const ratio = (Math.max(c.lum, lw) + 0.05) / (Math.min(c.lum, lw) + 0.05);
+						if (!m) {
+							throw new Error(`a mention wash this test cannot read: ${value}`);
+						}
 
-					if (ratio < 4.5) {
-						expect.fail(
-							`${c.name} ${c.hex} on a mention at ${g.where}: ${ratio.toFixed(2)}:1`
-						);
-					}
-				}
+						const hex = `#${m
+							.slice(1, 4)
+							.map((c) => Number(c).toString(16).padStart(2, "0"))
+							.join("")}`;
+						const text: Text = r.selector.includes('data-ps-text="light"')
+							? "light"
+							: "ink";
+						return {text, hex, strength: Number(m[4]) / 100};
+					})
+			);
+		expect(washes.map((w) => w.text).sort()).to.deep.equal(["ink", "light"]);
+
+		for (const wash of washes) {
+			// The wash is mixed over the ground as the treatment leaves it: for these
+			// washes and treatments that is the harder order (the ground ends up
+			// darker by day, lighter by night) than the wash under the layer.
+			const washed = grounds().column[wash.text].map((g) => {
+				const hex = mix(g.hex, wash.hex, wash.strength);
+				return {...g, hex, lum: luminance(hex)};
+			});
+
+			for (const h of heldColours().held.filter((x) => x.text === wash.text)) {
+				const list = groundsFor(h, washed);
+				const w = h.faintWhite ? worstFaintWhite(list) : worst(h.value, list);
+				expect(w.ratio, `${h.what} ${h.value} on a mention at ${w.where}`).to.be.at.least(
+					h.floor
+				);
 			}
 		}
 	});
 
-	it("names its worst grounds, so a failure says where", function () {
-		expect(contrast(INK, "#ffffff")).to.be.greaterThan(4.5);
-		expect(checkedGrounds().ink.length).to.be.greaterThan(1000);
-		expect(checkedGrounds().light.length).to.be.greaterThan(1000);
+	it("reads the glass block: a token rule and 32 nicks for each light, nothing else", function () {
+		const g = glassDeclared();
+		expect(g.rules.length).to.equal(66);
+
+		for (const light of ["day", "night"] as const) {
+			expect(Object.keys(g[light].tokens).sort()).to.deep.equal([
+				"--ps-g-badge",
+				"--ps-g-soft",
+				"--ps-g-tint-a",
+			]);
+			const alpha = Number(g[light].tokens["--ps-g-tint-a"]);
+			expect(alpha).to.be.within(GLASS[light].base, GLASS[light].cap);
+			expect(g[light].tokens["--ps-g-soft"]).to.match(HEX);
+			expect(g[light].tokens["--ps-g-badge"]).to.match(HEX);
+			expect(g[light].nicks.map((n) => n.decls.length)).to.deep.equal(Array(32).fill(1));
+
+			for (const n of g[light].nicks) {
+				expect(n.decls[0][0]).to.equal("color");
+				expect(n.decls[0][1], n.selector).to.match(HEX);
+			}
+		}
+	});
+
+	for (const light of ["day", "night"] as const) {
+		it(`holds the ${light} glass at its declared opacity: ink, soft ink and every nick at 4.5:1, the badge's white numeral at 4.5:1`, function () {
+			const g = glassDeclared()[light];
+			const list = underGlass(light);
+
+			for (const [what, colour] of [
+				["ink", GLASS[light].ink],
+				["--ps-g-soft", g.tokens["--ps-g-soft"]],
+				...g.nicks.map((n) => [n.selector, n.decls[0][1]]),
+			]) {
+				const w = worst(colour, list);
+				expect(w.ratio, `${light} glass ${what} ${colour} at ${w.where}`).to.be.at.least(
+					4.5
+				);
+			}
+
+			expect(contrast("#ffffff", g.tokens["--ps-g-badge"])).to.be.at.least(4.5);
+		});
+	}
+
+	/** The moment a header pins by name, e.g. `dusk: doy 29 445 min clear`. */
+	const pin = (name: string) => {
+		const m = new RegExp(`${name}: (doy \\d+ \\d+ min [a-z]+)`).exec(headerOf(glassBlock));
+
+		if (!m) {
+			throw new Error(`the glass block's header pins no ${name} moment`);
+		}
+
+		return {where: m[1], moment: momentAt(m[1])};
+	};
+
+	it("Review Focus 1, dusk: at the darkest moment still under day glass, the glass ink and soft ink hold over the dusk sky", function () {
+		const {where, moment} = pin("dusk");
+		const p = paletteAt(moment);
+		expect(publishedFor(p).light, where).to.equal("day");
+		expect(p.dark, where).to.be.above(0.49);
+		const list = underGlass("day", groundsAt(moment, p, where).glass.day);
+		expect(list.length).to.be.at.least(3);
+
+		for (const colour of [GLASS.day.ink, glassDeclared().day.tokens["--ps-g-soft"]]) {
+			const w = worst(colour, list);
+			expect(w.ratio, `${colour} at ${w.where}`).to.be.at.least(4.5);
+		}
+	});
+
+	it("Review Focus 2, moon: the moon's disc at full strength behind night glass, the glass ink and soft ink hold", function () {
+		const {where, moment} = pin("moon");
+		const p = paletteAt(moment);
+		expect(publishedFor(p).light, where).to.equal("night");
+		const discs = bodyGrounds(moment, p).filter((g) => g.body === "moon");
+		expect(discs.map((g) => g.name).join()).to.include("#fdfaf0 at 1.00");
+		const list = underGlass(
+			"night",
+			groundsAt(moment, p, where).glass.night.filter((g) => g.body === "moon")
+		);
+
+		for (const colour of [GLASS.night.ink, glassDeclared().night.tokens["--ps-g-soft"]]) {
+			const w = worst(colour, list);
+			expect(w.ratio, `${colour} at ${w.where}`).to.be.at.least(4.5);
+		}
 	});
 });
