@@ -173,8 +173,9 @@ const pending = new Map();
 const consoleLogs = [];
 /**
  * What the browser itself writes to the console (CDP Log.entryAdded): a
- * failed resource load (a 404; a request DevTools blocked logs nothing), an
- * intervention, a deprecation. Kept apart
+ * failed resource load ("Failed to load resource: …", net::ERR_FAILED when
+ * the service worker answered it; a request DevTools blocked logs nothing),
+ * an intervention, a deprecation. Kept apart
  * from `consoleLogs` (the page's own console.* calls and exceptions), so a
  * scenario's "no console errors" does not start counting a 404.
  */
