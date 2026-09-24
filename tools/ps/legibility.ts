@@ -4,14 +4,39 @@
  * palette generator (tools/ps/message-palette.ts). A message can sit on any sky
  * or land colour of its minute, bare or under the day's weather veil. Its
  * treatment's own layer, the halo by day or the shadow while the light changes
- * and all night, lies between it and that ground at strength ALPHA (0.6 until
- * a rendered-pixel calibration says otherwise; §11).
+ * and all night, lies between it and that ground at the strength measured in
+ * rendered pixels: ALPHA_HALO or ALPHA_SHADOW (§11).
  */
 import {luminance, mix} from "../../client/js/scenes/ps/colour";
 import {momentFor, WEATHERS, type Weather} from "../../client/js/scenes/ps/engine";
 import {paletteAt, publishedFor, WEATHER, type Palette} from "../../client/js/scenes/ps/palette";
 
-export const ALPHA = 0.6;
+/**
+ * How far each treatment moves the ground right around a word toward its own
+ * colour, measured once in rendered pixels on 2026-09-24 and used as
+ * min(0.6, measured), so the measurement could only make the check stricter
+ * (docs/projects/ps-theme.md §11):
+ *
+ *   node tools/browser-drive.mjs tools/ps/calibrate.mjs --out=<dir>
+ *
+ * against a production build. Headless Chromium drew swatches of 360 × 48 CSS
+ * px at the default font-size step (html 20px), in the treatments computed off
+ * a real message: Mulish 500 20px ("The quick brown fox 0123") and Fraunces
+ * 700 20px ("Marigold Ősz"), at device scale factor 1 and 2. White with the
+ * shadow was drawn over #ffb96f, #fdfaf0, #fffef6, #eef2f7, #9ccaf5 and
+ * #69b04a; #1b2638 with the halo (#ebf5fd) over #9ccaf5, #69b04a and #ffc478
+ * (over #eef2f7 the halo is too close to the ground to measure). The ring is
+ * the pixels one CSS px out from the glyphs. At each ring pixel the strength
+ * is the projection of its colour onto ground → treatment colour. Each swatch
+ * gives the 10th percentile over its ring, and the lowest swatch counts:
+ *
+ * - halo: 0.2175 (Mulish, DPR 1, over #ffc478), median 0.39;
+ * - shadow: 0.1099 (Mulish, DPR 2, over #fffef6), median 0.25.
+ *
+ * Both are written rounded down.
+ */
+export const ALPHA_HALO = Math.min(0.6, 0.2174);
+export const ALPHA_SHADOW = Math.min(0.6, 0.1099);
 export const INK = "#1b2638";
 export const INK_FAINT = "#4c5a72";
 /** The days checked: each season's anchor, the solstices and equinoxes, and 1 January. */
@@ -35,7 +60,7 @@ export function messageGrounds(p: Palette, weather: Weather): string[] {
 }
 
 export function effectiveGround(ground: string, text: "ink" | "light", halo: string): string {
-	return mix(ground, text === "ink" ? halo : "#000000", ALPHA);
+	return text === "ink" ? mix(ground, halo, ALPHA_HALO) : mix(ground, "#000000", ALPHA_SHADOW);
 }
 
 /** Every effective ground a message can meet, with the treatment in force at that moment. */
