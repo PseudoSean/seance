@@ -3,8 +3,8 @@
 // conversation's seed, the message area carries the meadow as fourteen
 // background layers with every animal slot empty, **the browser fetches no
 // animal file at all** — not in a second scene, not as a still under reduced
-// motion — a message fades in, an own pending message carries its glitter, a
-// reaction bursts on arrival, text keeps its contrast on the sky, and two
+// motion — a message fades in, sending and reacting show no glitter while the
+// reaction still pops in, text keeps its contrast on the sky, and two
 // channels grow two different meadows.
 //
 // The animals are switched off, not removed (client/themes/ps.css, the block
@@ -37,11 +37,11 @@ const HOLD_MS = 1500;
 /**
  * Hold back the echo of our own message (tools/scenarios/pending-messages.mjs's
  * technique): a real echo on this rig comes back in a couple of
- * milliseconds, too fast for the pending copy — and the burst that plays
- * while a message is pending — to survive even one CDP round trip. Every
- * other frame passes straight through. Installed once, right after
- * navigation and before the connect form is submitted, so the client's own
- * WebSocket is the shimmed one.
+ * milliseconds, too fast for the pending copy — which is where the <3 theme
+ * started its send burst — to survive even one CDP round trip. Every other
+ * frame passes straight through. Installed once, right after navigation and
+ * before the connect form is submitted, so the client's own WebSocket is the
+ * shimmed one.
  */
 const INSTALL_SHIM = `(() => {
 	const Native = WebSocket;
@@ -62,6 +62,38 @@ const INSTALL_SHIM = `(() => {
 	};
 	return true;
 })()`;
+
+/**
+ * Every CSS animation that starts inside #chat, pseudo-elements included
+ * (`animationstart` carries `pseudoElement`), logged into `window.__animLog`.
+ * An event log rather than a poll of computed styles: the reaction's enter
+ * class now lives only as long as style.css's 160 ms pop, which a poll across
+ * CDP round trips can miss, and a burst on a `::before` is exactly what a
+ * poll of the element itself would never see.
+ */
+const INSTALL_ANIMATION_LOG = `(() => {
+	if (window.__animLog) return true;
+	window.__animLog = [];
+	document.addEventListener(
+		"animationstart",
+		(e) => {
+			const t = e.target;
+			if (!(t instanceof Element) || !t.closest("#chat")) return;
+			window.__animLog.push({
+				name: e.animationName,
+				pseudo: e.pseudoElement || "",
+				cls: String(t.className),
+				reaction: !!t.closest(".msg-reactions"),
+			});
+		},
+		true
+	);
+	return true;
+})()`;
+
+/** One line per logged animation, for a check's label. */
+const describeLog = (log) =>
+	log.map((e) => `${e.name}${e.pseudo} on .${e.cls.split(/\s+/)[0]}`).join(", ") || "none";
 
 /** Colour helpers installed once: any CSS colour (a hex from a custom
  * property, an rgb() from a computed style) resolved through a probe
@@ -293,8 +325,13 @@ export default async function run(page) {
 		timeMetrics[0] < timeMetrics[1] * 1.6
 	);
 
-	// The echo of this line is held back by INSTALL_SHIM, so the pending
-	// copy (and its burst) stays on screen long enough to read.
+	// No glitter on a send. The echo of this line is held back by
+	// INSTALL_SHIM, so the pending copy — where the <3 theme's burst began —
+	// is on screen for a while before the echo replaces it; every animation
+	// that starts in #chat meanwhile is logged. The echo's own fade is the
+	// control that the log is live.
+	await page.evaluate(INSTALL_ANIMATION_LOG);
+	await page.evaluate(`window.__animLog.length = 0`);
 	await page.evaluate(
 		`(() => {
 			const i = document.getElementById("input");
@@ -306,38 +343,47 @@ export default async function run(page) {
 	await page.waitFor(`document.querySelector("#chat .msg.self.pending")`, {
 		label: "the pending own message",
 	});
-	const burst = await page.evaluate(
-		`getComputedStyle(document.querySelector("#chat .msg.self.pending"), "::before").animationName`
-	);
-	page.check(`an own message bursts (${burst})`, burst.includes("ps-sparkle"));
 	await page.waitFor(`!document.querySelector("#chat .msg.pending")`, {
 		timeout: HOLD_MS + 10000,
 		label: "the held-back echo",
 	});
+	await page.sleep(1500); // the <3 theme's longest burst ran 1.4 s
+	const sendLog = await page.evaluate(`window.__animLog.slice()`);
+	page.check(
+		`the echo fades in (${describeLog(sendLog)})`,
+		sendLog.some((e) => e.name === "ps-fade" && !e.pseudo)
+	);
+	page.check(
+		`sending shows no glitter: nothing animates on a pseudo-element`,
+		sendLog.every((e) => !e.pseudo)
+	);
 
-	// The first reaction on a message enters the whole group; the theme
-	// bursts on it. The enter class lives 0.9 s (ps-hold), long enough
-	// for one round trip — but it can also be gone before a separate poll
-	// catches it, so submit and poll in one evaluate (requestAnimationFrame,
-	// up to 4 s) rather than a submit followed by a separate page.waitFor.
-	const reactionBurst = await page.evaluate(
-		`(async () => {
+	// The first reaction on a message enters the whole group
+	// (.reactions-enter-active); style.css pops it in over 160 ms, and that
+	// pop is every theme's. The pop must still happen, and nothing else.
+	await page.evaluate(`window.__animLog.length = 0`);
+	await page.evaluate(
+		`(() => {
 			const i = document.getElementById("input");
 			i.value = "/react 💖";
 			i.dispatchEvent(new Event("input", {bubbles: true}));
 			document.getElementById("form").requestSubmit();
-			const deadline = performance.now() + 4000;
-			for (;;) {
-				const el = document.querySelector(
-					"#chat .reactions-enter-active .msg-reaction:not(.msg-reaction-add)"
-				);
-				if (el) return getComputedStyle(el, "::before").animationName;
-				if (performance.now() > deadline) return "none";
-				await new Promise(requestAnimationFrame);
-			}
 		})()`
 	);
-	page.check(`a reaction bursts (${reactionBurst})`, reactionBurst.includes("ps-sparkle"));
+	await page.waitFor(`window.__animLog.some((e) => e.name === "reaction-pop")`, {
+		timeout: 8000,
+		label: "the reaction's pop",
+	});
+	await page.sleep(1500);
+	const reactLog = await page.evaluate(`window.__animLog.slice()`);
+	page.check(
+		`a reaction still pops in (${describeLog(reactLog)})`,
+		reactLog.some((e) => e.name === "reaction-pop" && !e.pseudo)
+	);
+	page.check(
+		`a reaction shows no glitter: nothing on a pseudo-element, only the pop on the reaction`,
+		reactLog.every((e) => !e.pseudo && (!e.reaction || e.name === "reaction-pop"))
+	);
 
 	for (const [label, fg, bg] of [
 		[

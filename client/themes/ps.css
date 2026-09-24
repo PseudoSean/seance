@@ -3,12 +3,13 @@
  * docs/projects/ps-theme.md), and still its pastels on a blue sky while the
  * scene is redesigned. coffee.css's rules (the token-driven set every
  * handoff theme shares) with this theme's tokens, plus what no other theme
- * has: bundled fonts, motion, glitter, and a meadow behind the chat that
+ * has: bundled fonts, gentle motion, and a meadow behind the chat that
  * belongs to the channel. The meadow's animals are switched off, not
- * removed (the block after the scene table).
+ * removed (the block after the scene table), and the `<3` theme's glitter
+ * bursts on send and on reactions are gone.
  *
- * Sections, in order: fonts · tokens · nick palette · type · motion · glitter
- * · meadow · phones · reduced motion.
+ * Sections, in order: fonts · tokens · nick palette · type · motion · meadow
+ * · phones · reduced motion.
  *
  * Muted ink (--chat-fg-muted / --ps-ink-muted) is darkened from the
  * planned #5a7399 to #536a8e: at #5a7399 it read 4.07:1 on the sky
@@ -318,252 +319,6 @@ strong,
 .channel-list-item:nth-child(n + 9) { animation-delay: 400ms; }
 #form { animation-delay: 150ms; }
 #form #input { caret-color: var(--ps-rose); }
-
-/* ---- glitter ---- */
-
-/* Bursts are backgrounds on pseudo-elements: gradient sparks, confetti
- * strips, and data-URI hearts and four-point stars. Four bursts, cycled by
- * the message's position so consecutive sends differ. A burst runs once,
- * when the pseudo-element appears: an own message while it is the newest
- * thing in the channel, or a reaction group or chip entering. No hovered
- * row — that glitter was dropped. */
-/* stylelint-disable-next-line no-duplicate-selectors -- glitter's own tokens, kept with this section */
-:root {
-	--ps-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M10 17.5S2.5 12.8 2.5 7.6A3.9 3.9 0 0 1 10 5.3a3.9 3.9 0 0 1 7.5 2.3c0 5.2-7.5 9.9-7.5 9.9z' fill='%23d9457f'/%3E%3C/svg%3E");
-	--ps-icon-soft: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M10 17.5S2.5 12.8 2.5 7.6A3.9 3.9 0 0 1 10 5.3a3.9 3.9 0 0 1 7.5 2.3c0 5.2-7.5 9.9-7.5 9.9z' fill='%23f4a3c1'/%3E%3C/svg%3E");
-	--ps-star: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M10 0c.6 5.6 4.4 9.4 10 10-5.6.6-9.4 4.4-10 10-.6-5.6-4.4-9.4-10-10 5.6-.6 9.4-4.4 10-10z' fill='%23ffd166'/%3E%3C/svg%3E");
-	--ps-star-rose: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M10 0c.6 5.6 4.4 9.4 10 10-5.6.6-9.4 4.4-10 10-.6-5.6-4.4-9.4-10-10 5.6-.6 9.4-4.4 10-10z' fill='%23d9457f'/%3E%3C/svg%3E");
-	--ps-star-sky: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M10 0c.6 5.6 4.4 9.4 10 10-5.6.6-9.4 4.4-10 10-.6-5.6-4.4-9.4-10-10 5.6-.6 9.4-4.4 10-10z' fill='%237cc3ff'/%3E%3C/svg%3E");
-
-	/* 1 · sparks */
-	/* stylelint-disable-next-line max-line-length -- one flat gradient list reads better than a wrap mid-value */
-	--ps-burst-1: radial-gradient(circle at 12% 30%, #d9457f 0 6%, transparent 7%), radial-gradient(circle at 80% 20%, #ffd166 0 5%, transparent 6%), radial-gradient(circle at 50% 8%, #f08fb4 0 5%, transparent 6%), radial-gradient(circle at 90% 70%, #ffd166 0 4%, transparent 5%), radial-gradient(circle at 25% 85%, #d9457f 0 5%, transparent 6%), radial-gradient(circle at 65% 90%, #a8dcff 0 5%, transparent 6%), radial-gradient(circle at 5% 60%, #a8dcff 0 4%, transparent 5%), radial-gradient(circle at 40% 45%, #ffd166 0 3%, transparent 4%);
-
-	/* 2 · hearts rising */
-	/* stylelint-disable-next-line max-line-length -- one flat gradient list reads better than a wrap mid-value */
-	--ps-burst-2: var(--ps-icon) 8% 25% / 1em no-repeat, var(--ps-icon-soft) 62% 5% / 0.7em no-repeat, var(--ps-icon) 88% 60% / 0.8em no-repeat, var(--ps-icon-soft) 35% 75% / 0.55em no-repeat, radial-gradient(circle at 48% 30%, #ffd166 0 4%, transparent 5%), radial-gradient(circle at 75% 85%, #a8dcff 0 4%, transparent 5%), radial-gradient(circle at 20% 90%, #f08fb4 0 3%, transparent 4%);
-
-	/* 3 · four-point stars twinkling */
-	/* stylelint-disable-next-line max-line-length -- one flat gradient list reads better than a wrap mid-value */
-	--ps-burst-3: var(--ps-star) 10% 20% / 1.1em no-repeat, var(--ps-star-rose) 55% 0% / 0.8em no-repeat, var(--ps-star-sky) 85% 55% / 0.9em no-repeat, var(--ps-star) 35% 80% / 0.6em no-repeat, var(--ps-star-rose) 95% 10% / 0.5em no-repeat, radial-gradient(circle at 70% 90%, #ffd166 0 3%, transparent 4%);
-
-	/* 4 · confetti with stars */
-	/* stylelint-disable-next-line max-line-length -- one flat gradient list reads better than a wrap mid-value */
-	--ps-burst-4: linear-gradient(35deg, transparent 40%, #d9457f 40% 60%, transparent 60%) 8% 30% / 0.9em 0.9em no-repeat, linear-gradient(-30deg, transparent 42%, #ffd166 42% 58%, transparent 58%) 30% 70% / 0.8em 0.8em no-repeat, linear-gradient(60deg, transparent 42%, #7cc3ff 42% 58%, transparent 58%) 55% 10% / 0.8em 0.8em no-repeat, linear-gradient(-60deg, transparent 42%, #c9b6ff 42% 58%, transparent 58%) 78% 60% / 0.9em 0.9em no-repeat, linear-gradient(15deg, transparent 42%, #f08fb4 42% 58%, transparent 58%) 92% 20% / 0.7em 0.7em no-repeat, var(--ps-star) 20% 5% / 0.7em no-repeat, var(--ps-star-rose) 68% 78% / 0.6em no-repeat, var(--ps-star-sky) 42% 40% / 0.5em no-repeat, radial-gradient(circle at 88% 90%, #ffd166 0 3%, transparent 4%);
-}
-
-@keyframes ps-sparkle {
-	0% {
-		opacity: 0;
-		transform: scale(0.5) rotate(0deg);
-	}
-
-	20% {
-		opacity: 1;
-	}
-
-	100% {
-		opacity: 0;
-		transform: scale(1.5) rotate(25deg);
-	}
-}
-
-@keyframes ps-sparkle-rise {
-	0% {
-		opacity: 0;
-		transform: translateY(0.3em) scale(0.8);
-	}
-
-	20% {
-		opacity: 1;
-	}
-
-	100% {
-		opacity: 0;
-		transform: translateY(-1.4em) scale(1.15);
-	}
-}
-
-@keyframes ps-sparkle-pop {
-	0% {
-		opacity: 0;
-		transform: scale(0.3);
-	}
-
-	35% {
-		opacity: 1;
-		transform: scale(1.15);
-	}
-
-	60% {
-		transform: scale(1);
-	}
-
-	100% {
-		opacity: 0;
-		transform: scale(1.05);
-	}
-}
-
-@keyframes ps-sparkle-twinkle {
-	0% {
-		opacity: 0;
-		transform: scale(0.9);
-	}
-
-	25% {
-		opacity: 1;
-	}
-
-	45% {
-		opacity: 0.3;
-	}
-
-	65% {
-		opacity: 1;
-		transform: scale(1.1);
-	}
-
-	100% {
-		opacity: 0;
-		transform: scale(1.2);
-	}
-}
-
-/* Where a row's text starts, so a burst can hang off it: style.css's time
- * column (3.5rem plus its 0.625rem padding; 4.75rem with seconds; the type
- * section's 5.5rem / 7.25rem for a 12-hour clock) plus the 8.5rem nick
- * column and the content's 0.625rem padding. The mockup's burst sat 0.4em
- * before the text and its second one 3em after; the app's row has two
- * columns in front of the text where the mockup had one. Under 480px
- * style.css flows the row inline and the burst starts at its left edge. */
-#chat {
-	--ps-text-x: 13.25rem;
-}
-
-#chat.time-seconds {
-	--ps-text-x: 14.5rem;
-}
-
-#chat.time-12h {
-	--ps-text-x: 15.25rem;
-}
-
-#chat.time-seconds.time-12h {
-	--ps-text-x: 17rem;
-}
-
-/* Send: an own message bursts once while it is the newest thing in the channel.
- * The pending copy shows first, then the echo that replaces it milliseconds
- * later (each is a new element, so the burst restarts on the echo and is what
- * the eye sees); an own message loaded as history only bursts when it is the
- * last one, on opening the channel. */
-#chat .msg.self:last-child::before,
-#chat .msg.self:last-child::after {
-	content: "";
-	position: absolute;
-	left: calc(var(--ps-text-x) - 0.4em);
-	top: -0.6em;
-	width: 10em;
-	height: 2.6em;
-	pointer-events: none;
-	background: var(--ps-burst-1);
-	animation: ps-sparkle 0.9s ease-out both;
-}
-
-#chat .msg.self:last-child::after {
-	left: calc(var(--ps-text-x) + 3em);
-	animation-delay: 0.12s;
-}
-
-#chat .msg.self:last-child:nth-child(4n + 1)::before {
-	background: var(--ps-burst-1);
-	animation-name: ps-sparkle;
-}
-
-#chat .msg.self:last-child:nth-child(4n + 2)::before {
-	background: var(--ps-burst-2);
-	animation-name: ps-sparkle-rise;
-	animation-duration: 1.3s;
-}
-
-#chat .msg.self:last-child:nth-child(4n + 2)::after {
-	background: var(--ps-burst-3);
-	animation-name: ps-sparkle-twinkle;
-}
-
-#chat .msg.self:last-child:nth-child(4n + 3)::before {
-	background: var(--ps-burst-3);
-	animation-name: ps-sparkle-twinkle;
-	animation-duration: 1.1s;
-}
-
-#chat .msg.self:last-child:nth-child(4n + 3)::after {
-	background: var(--ps-burst-1);
-	animation-name: ps-sparkle-pop;
-}
-
-#chat .msg.self:last-child:nth-child(4n + 4)::before {
-	background: var(--ps-burst-4);
-	animation-name: ps-sparkle-pop;
-	animation-duration: 1s;
-}
-
-#chat .msg.self:last-child:nth-child(4n + 4)::after {
-	background: var(--ps-burst-2);
-	animation-name: ps-sparkle-rise;
-	animation-duration: 1.4s;
-	animation-delay: 0.2s;
-}
-
-/* Reactions: a chip arriving bursts hearts. Not .msg-reaction.self on its
- * own — that class is persistent, so its ::before/::after would burst
- * again on every redraw of the row (a channel re-opened, a reaction added
- * beside it), not just when a chip enters. */
-#chat .msg-reaction {
-	position: relative;
-}
-
-/* Vue keeps an enter class only as long as the element's own animation
- * runs (style.css's 160 ms pop), which would cut the burst off at once; a
- * do-nothing animation as long as the burst holds the class open. The whole
- * group enters when the first reaction lands (.reactions-enter-active,
- * MessageReactions.vue), a later chip on its own (.reaction-enter-active);
- * both keep style.css's pop, restated because the shorthand replaces it. */
-#chat .reaction-enter-active,
-#chat .reactions-enter-active {
-	animation:
-		reaction-pop 160ms ease-out,
-		ps-hold 0.9s linear;
-}
-
-@keyframes ps-hold {
-	to {
-		visibility: visible;
-	}
-}
-
-#chat .reaction-enter-active::before,
-#chat .reaction-enter-active::after,
-#chat .reactions-enter-active .msg-reaction:not(.msg-reaction-add)::before,
-#chat .reactions-enter-active .msg-reaction:not(.msg-reaction-add)::after {
-	content: "";
-	position: absolute;
-	left: -0.8em;
-	top: -1.2em;
-	width: 5em;
-	height: 2.4em;
-	pointer-events: none;
-	background: var(--ps-burst-2);
-	animation: ps-sparkle-rise 0.9s ease-out both;
-}
-
-#chat .reaction-enter-active::after,
-#chat .reactions-enter-active .msg-reaction:not(.msg-reaction-add)::after {
-	left: 0.6em;
-	background: var(--ps-burst-3);
-	animation: ps-sparkle-twinkle 0.9s ease-out both;
-}
 
 /* ---- meadow ---- */
 
@@ -1009,32 +764,20 @@ strong,
 	}
 }
 
-/* style.css's breakpoint for the inline message row. */
-@media (max-width: 479px) {
-	#chat {
-		--ps-text-x: 0.4em;
-	}
-}
-
 /* ---- reduced motion ---- */
 @media (prefers-reduced-motion: reduce) {
 	#chat .msg,
-	#chat .msg::before,
-	#chat .msg::after,
 	.channel-list-item,
 	#chat .header,
 	#form,
-	.msg-reaction::before,
-	.msg-reaction::after,
-	#chat .reaction-enter-active,
-	#chat .reactions-enter-active,
 	#chat .chat {
 		animation: none !important;
 		transition: none !important;
 	}
 
 	/* The animals as stills: the slot tokens point at the animal tokens, so
-	 * repointing those is enough. */
+	 * repointing those is enough. In ps the override after the scene table
+	 * empties the slots, so no still is painted (or fetched) either. */
 	/* stylelint-disable-next-line no-duplicate-selectors -- the reduced-motion swap to stills */
 	:root {
 		--ps-horse: url("ps/horse-still.svg");
