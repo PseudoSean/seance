@@ -164,6 +164,13 @@
 .irc-fg5 { color: #85144b; }
 .irc-fg12 { color: #0074d9; }
 
+/* Those three are dark-on-light; at night the message column carries
+ * data-ps-text="light" on a dark sky, so restate coffee's own (brighter)
+ * values there, scoped to the message column alone. */
+:root[data-ps-text="light"] #chat .chat .irc-fg2 { color: #0074d9; }
+:root[data-ps-text="light"] #chat .chat .irc-fg5 { color: #e969a7; }
+:root[data-ps-text="light"] #chat .chat .irc-fg12 { color: #50a8ff; }
+
 /* ---- nick palette ---- */
 .user.color-1 { color: #8a4b85; }
 .user.color-2 { color: #8e4a7f; }
