@@ -99,10 +99,12 @@ All of this is the mockup's arithmetic, moved into `engine.ts` and made testable
 
   Each weather sets the dimming veil, cloud greying, how much of the sun and moon it hides, particles, wind (sway amplitude, faster clouds, seeds on the air), lightning (storm) and heat (daylight only). The values are the mockup's `WX` table.
 
+  Not the mockup's, by necessity: `engine.ts`'s `rng` (the seeded generator behind this hash and the star positions) is mulberry32; the mockup's page script used an LCG. Every table and formula is copied verbatim, but the two generators do not produce the same sequence from the same seed, so a given day's drawn weather and where the stars sit differ from what the mockup showed for that day.
+
 - **The sun** rides one arc from the reading start (sunrise) to the reading end (sunset); it grows up to 45 % larger and warms from gold to deep orange as it nears the horizon. **The moon** rides the same arc through the night.
 - **The moon's phase** is the true elongation: the moon's ecliptic longitude minus the sun's, with the six largest periodic terms (`heart-theme.md` §11.2b). Illumination is `(1 − cos D) / 2`. Drawn with three shapes (a dark disc, the lit half, one ellipse of horizontal radius `R · |cos D|`), mirrored when waning, northern-hemisphere orientation. **Within 9° of new, there is no moon at all**, and the night is darker and starrier for it.
 
-The tests pin the true instants against measured values, not the mean month: full moon 2026-09-26 16:52 UTC (published 16:49, 3 minutes off) and new moon 2026-10-10 16:00 UTC (published 15:50, 10 minutes off; `test/scenes/ps/engine.ts`). An earlier `<3` figure for the same two events — 2026-09-26 15:02 UTC and 2026-10-10 14:02 UTC, computed for that theme's day/night plan — was an hour or two off; these are the ones the engine is checked against.
+The tests pin the true instants against measured values, not the mean month, to within 0.1° of elongation (about 12 minutes, `test/scenes/ps/engine.ts`): full moon 2026-09-26 16:52 UTC (published 16:49, 3 minutes off) and new moon 2026-10-10 16:00 UTC (published 15:50, 10 minutes off). An earlier `<3` figure for the same two events — 2026-09-26 15:02 UTC and 2026-10-10 14:02 UTC, computed for that theme's day/night plan — was an hour or two off; these are the ones the engine is checked against.
 
 ## 5. The scene
 
@@ -277,6 +279,7 @@ One spec, four plans, each shippable on its own:
 - **The generated ink** holds its floor at 4.534:1 on a denser sweep, inside the generator's 0.1 margin over 4.5 (light ink 4.583:1); plan 2 re-solves with a denser sample.
 - **The chrome** — sidebar, user list, composer — stays in its day colours at night until plan 2's glass lands (§6).
 - **The reaction row's "+"** is faint on the coral dusk sky; nothing asserts it yet.
+- **The moon disc and the low sun's core are not among the checked grounds.** `messageGrounds()` (`tools/ps/legibility.ts`) lists sky and land colours only; behind the message column the scene also paints the moon's disc (`#fdfaf0` to `#ece5cf`, 17% of the viewport height, opacity 1 on clear nights) and the sun's core at dawn and dusk (`#fffef6` to `#fff3c2`, about 120px wide), and neither is sampled. Under the model (α 0.6) the light sweep's worst nick or semantic colour reaches about 4.05:1 over the moon and 3.94:1 over the sun core — under the 4.5:1 floor; white reaches 5.9 and 5.8, faint white at 80% reaches 4.48 and 4.37. Plan 2's α calibration must sample glyphs over the moon and over a low sun on a phone, and then decide how to treat the bodies: a stronger shadow, dimmer discs, or accept the dip.
 
 **How it was checked.** `tools/scenarios/theme-ps.mjs` runs 64 checks against a production build: the scene mounts only under `ps` (sky, stars, sun, moon), the four published values at noon, night and dusk, a hidden page stopping the scene (and staying stopped under reduced motion), the view following the open conversation, a theme switch mounting and unmounting cleanly (including one applied while the page is hidden), and the daylight fallback when the scene chunk is blocked. It was watched failing twice on purpose: hiding `#theme-scene` outright dropped it to 57 of 64, and repainting an animal plus reviving the old glitter rule dropped it to 51 of 64.
 
