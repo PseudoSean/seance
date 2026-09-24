@@ -237,130 +237,41 @@ describe("the ps theme has no glitter", function () {
 	});
 });
 
-describe("the ps theme's meadow", function () {
-	it("paints sky, hills and clouds behind channels and queries, seeded per conversation", function () {
+describe("the ps theme's scene", function () {
+	const style = fs.readFileSync(path.resolve(__dirname, "../../client/css/style.css"), "utf8");
+
+	it("is hidden by style.css for every theme, and shown by ps", function () {
+		expect(style).to.match(/#theme-scene\s*\{\s*display:\s*none;\s*\}/);
+		expect(css).to.match(/#theme-scene\s*\{[^}]*display:\s*block;/);
+	});
+
+	it("paints daylight when the scene is absent: sky and canvas from the midday stop, and a halo, outside any state selector", function () {
+		expect(css).to.match(/#theme-scene\s*\{[^}]*var\(--ps-sky-top,\s*#3f8fe6\)/);
+		const root = css.match(/:root\s*\{[^}]*--canvas-bg-color:\s*#3f8fe6;[^}]*\}/);
+		expect(root, "a :root block defines the daylight canvas").to.not.equal(null);
+		expect(css).to.match(/--ps-halo:\s*#ebf5fd;/);
+		expect(css).to.not.match(/\[data-ps-(light|text)[^\]]*\][^{]*\{[^}]*--canvas-bg-color/);
+	});
+
+	it("stops every scene animation while paused and under reduced motion", function () {
 		expect(css).to.match(
-			/#chat \.chat-view\[data-type="channel"\] \.chat,\s*#chat \.chat-view\[data-type="query"\] \.chat \{/
+			/#theme-scene\.ps-paused \*\s*\{\s*animation-play-state:\s*paused !important;/
 		);
-		expect(css).to.include("var(--channel-seed, 0.5)");
-
-		for (const n of [0, 1, 2, 3, 4, 5]) {
-			expect(css).to.include(`#chat-container[data-scene="${n}"]`);
-		}
-
-		const scene1Start = css.indexOf('#chat-container[data-scene="1"]');
-		const scene1Body = css.slice(scene1Start, css.indexOf("}", scene1Start));
-		expect(scene1Body, "scene 1 hides the second cloud").to.include("--ps-cloud-2");
-
-		expect(css).to.include("@keyframes ps-clouds");
-		expect(css, "the meadow never pauses while typing").to.not.include(
-			"animation-play-state: paused"
-		);
-		expect(css).to.match(/@media \(max-width: 600px\)[\s\S]*--strip: 6\.5rem/);
-		expect(css).to.match(/text-shadow: 0 0 6px var\(--ps-sky\)/);
-		expect(css, "spoilers keep no halo").to.match(
-			/\.md-spoiler:not\(\.md-spoiler-shown\) \{[^}]*text-shadow: none/
-		);
+		const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
+		expect(reduced).to.match(/#theme-scene \*[^{]*\{\s*animation:\s*none !important;/);
 	});
 
-	it("computes the seeded hue on #chat-container, not on :root, so the tint actually varies", function () {
-		const meadowSection = css.slice(css.indexOf("/* ---- meadow ---- */"));
-
-		const bareStart = meadowSection.indexOf("#chat-container {");
-		expect(bareStart, "a bare #chat-container rule").to.be.greaterThan(-1);
-		const bodyStart = meadowSection.indexOf("{", bareStart) + 1;
-		const bodyEnd = meadowSection.indexOf("}", bodyStart);
-		const chatContainerRule = meadowSection.slice(bodyStart, bodyEnd);
-
-		expect(chatContainerRule).to.include("--ps-hill-hue:");
-		expect(chatContainerRule).to.include("var(--channel-seed, 0.5)");
-
-		for (const match of meadowSection.matchAll(/:root\s*\{([^}]*)\}/g)) {
-			expect(match[1]).to.not.include("--ps-hill-hue:");
-		}
-	});
-
-	it("keeps the clouds on screen, just still, under reduced motion", function () {
-		const reducedMotionBlock = css.slice(
-			css.indexOf("@media (prefers-reduced-motion: reduce)")
-		);
-
-		expect(reducedMotionBlock).to.include("background-position");
-		expect(reducedMotionBlock).to.include("22%");
-		expect(reducedMotionBlock).to.include("68%");
+	it("no longer paints a meadow on the message area or reads the channel seed", function () {
+		expect(css).to.not.include("--channel-seed");
+		expect(css).to.not.include("data-scene");
+		expect(css).to.not.include("ps-rainbow");
+		expect(css).to.not.include("ps-clouds");
 	});
 });
 
 describe("the ps theme's animals", function () {
 	/** The cast (tools/heart/README.md); the teddy and the dolphin are held. */
 	const CAST = ["horse", "deer", "puppy", "bunny", "kitten", "frog", "ladybug", "bird"];
-
-	/** One scene rule's body. */
-	const sceneBody = (n: number) => {
-		const start = css.indexOf(`#chat-container[data-scene="${n}"]`);
-		expect(start, `scene ${n}`).to.be.greaterThan(-1);
-		return css.slice(start, css.indexOf("\n}", start));
-	};
-
-	/** The meadow rule's body. */
-	const meadowRule = () => {
-		const start = css.indexOf(
-			'#chat .chat-view[data-type="channel"] .chat,\n#chat .chat-view[data-type="query"] .chat {'
-		);
-		expect(start, "the meadow rule").to.be.greaterThan(-1);
-		return css.slice(start, css.indexOf("\n}", start));
-	};
-
-	/** Top-level comma-separated entries of a declaration's value, var(--ps-cloud-2) counted as two. */
-	const entries = (block: string, prop: string) => {
-		const m = block.match(new RegExp(`\\n\\t${prop}:([^;]*);`));
-		expect(m, prop).to.not.be.null;
-		const value = m![1];
-		let depth = 0;
-		let count = 1;
-
-		for (const c of value) {
-			if (c === "(") {
-				depth++;
-			} else if (c === ")") {
-				depth--;
-			} else if (c === "," && depth === 0) {
-				count++;
-			}
-		}
-
-		return count + (value.includes("var(--ps-cloud-2)") ? 1 : 0);
-	};
-
-	it("paints three animal slots and a rainbow slot as layers, fourteen deep in every list", function () {
-		const rule = meadowRule();
-
-		for (const prop of ["background-image", "background-size", "background-position"]) {
-			expect(entries(rule, prop), prop).to.equal(14);
-		}
-
-		const image = rule.match(/\n\tbackground-image:([^;]*);/)![1];
-		const order = [
-			"var(--ps-cloud-2)",
-			"var(--ps-slot-b)",
-			"var(--ps-slot-a)",
-			"var(--ps-ground)",
-			"var(--ps-slot-f)",
-			"var(--ps-hill-far)",
-			"var(--ps-rainbow)",
-			"var(--ps-sky-deep)",
-		];
-		let at = -1;
-
-		for (const token of order) {
-			const next = image.indexOf(token, at + 1);
-			expect(next, `${token} after the previous layer`).to.be.greaterThan(at);
-			at = next;
-		}
-
-		expect(rule).to.include("auto calc(var(--strip) * var(--ps-slot-a-h))");
-		expect(rule).to.include("calc(100% - var(--strip) * 0.295)"); // the visitor stands on the plateau
-	});
 
 	it("declares the eight animals' files, and every file it names exists", function () {
 		for (const animal of CAST) {
@@ -375,35 +286,6 @@ describe("the ps theme's animals", function () {
 				`${file} exists`
 			).to.be.true;
 		}
-	});
-
-	it("casts all eight, every scene, and holds no animal the user set aside", function () {
-		const cast = new Map(CAST.map((animal) => [animal, [] as number[]]));
-		const near = `var\\(--ps-(${CAST.join("|")})\\)`;
-
-		for (const n of [0, 1, 2, 3, 4, 5]) {
-			const body = sceneBody(n);
-			expect(body, `scene ${n} casts slot a`).to.match(new RegExp(`--ps-slot-a: ${near};`));
-			expect(body, `scene ${n} sizes slot a`).to.match(
-				new RegExp(`--ps-slot-a-h: var\\(--ps-(${CAST.join("|")})-h\\);`)
-			);
-			expect(body, `scene ${n} decides slot b`).to.match(
-				new RegExp(`--ps-slot-b: (none|${near});`)
-			);
-			expect(body, `scene ${n} decides slot f`).to.match(
-				new RegExp(`--ps-slot-f: (none|var\\(--ps-(${CAST.join("|")})-far\\));`)
-			);
-
-			for (const [, animal] of body.matchAll(
-				/--ps-slot-[abf]: var\(--ps-([a-z]+?)(?:-far)?\);/g
-			)) {
-				cast.get(animal)!.push(n);
-			}
-		}
-
-		for (const [animal, scenes] of cast) {
-			expect(scenes, `${animal} is cast somewhere`).to.not.be.empty;
-		}
 
 		// The teddy bear and the dolphin were held: their rigs stay, their
 		// files are gone (test/tools/heart/files.ts), and the theme must not
@@ -414,121 +296,30 @@ describe("the ps theme's animals", function () {
 			expect(css, `no ps/${held} file`).to.not.include(`url("ps/${held}`);
 		}
 	});
+});
 
-	it("gives a phone a mid or large animal in every scene", function () {
-		// Phones keep slot A and the distant visitor and drop slot B, so an
-		// animal cast only into B never shows on one. Whichever way a pair is
-		// cast, what survives must not be only a small creature.
-		const small = ["frog", "ladybug", "bird"];
-
-		for (const n of [0, 1, 2, 3, 4, 5]) {
-			const body = sceneBody(n);
-			const a = body.match(/--ps-slot-a: var\(--ps-([a-z]+)\);/)![1];
-			expect(small, `scene ${n}'s near animal on a phone`).to.not.include(a);
-		}
+describe("the ps theme's animals, switched off in the scene's animal layer", function () {
+	it("casts a horse and a bunny near and a deer far off", function () {
+		const root = css.match(/:root\s*\{[^}]*--ps-slot-a:[^}]*\}/)?.[0] ?? "";
+		expect(root).to.include("--ps-slot-a: var(--ps-horse);");
+		expect(root).to.include("--ps-slot-b: var(--ps-bunny);");
+		expect(root).to.include("--ps-slot-f: var(--ps-deer-far);");
 	});
 
-	it("switches every animal off with one override after the scene table, which nothing undoes", function () {
-		// ps disables the animals without removing them: the scene table
-		// above is intact (the tests around this one hold it to that), and
-		// one block after it empties all three slots in every scene.
-		const selector = "\n#chat-container,\n#chat-container[data-scene] {";
-		const at = css.indexOf(selector);
-		expect(at, "the override block").to.be.greaterThan(-1);
-		expect(css.indexOf(selector, at + 1), "exactly one override block").to.equal(-1);
-
-		const body = css.slice(at, css.indexOf("\n}", at));
-
-		for (const slot of ["a", "b", "f"]) {
-			expect(body, `the override empties slot ${slot}`).to.include(
-				`--ps-slot-${slot}: none;`
-			);
-		}
-
-		for (const n of [0, 1, 2, 3, 4, 5]) {
-			expect(
-				css.lastIndexOf(`#chat-container[data-scene="${n}"]`),
-				`scene ${n} comes before the override`
-			).to.be.lessThan(at);
-		}
-
-		const comment = css.slice(css.lastIndexOf("/*", at), at);
-		expect(comment, "the comment says why").to.match(/disabled in ps, not removed/);
-		expect(comment, "and how to undo it").to.match(
-			/Delete this block and the animals come back/
+	it("paints the three slots as the animal layer's background layers", function () {
+		const layer = css.match(/#theme-scene \.ps-animals\s*\{[^}]*\}/)?.[0] ?? "";
+		expect(layer).to.match(
+			/background-image:\s*var\(--ps-slot-b\),\s*var\(--ps-slot-a\),\s*var\(--ps-slot-f\);/
 		);
-
-		// Later rules (the phones' slot B, reduced motion's stills) may empty
-		// a slot, never fill one: the stills would otherwise be painted.
-		const after = css.slice(css.indexOf("\n}", at));
-		const later = [...after.matchAll(/--ps-slot-([abf]):\s*([^;]*);/g)];
-		expect(later, "the phones' rule still empties slot b").to.not.be.empty;
-
-		for (const [, slot, value] of later) {
-			expect(value, `slot ${slot} after the override`).to.equal("none");
-		}
 	});
 
-	it("moves only x in the cloud keyframes, fourteen entries", function () {
-		const start = css.indexOf("@keyframes ps-clouds");
-		const block = css.slice(start, css.indexOf("\n}", start));
-		expect(block).to.include("background-position-x:");
-		expect(block).to.not.include("background-position-y");
-		expect(block).to.not.match(/\n\t\tbackground-position:/);
-		expect(entries(block.replace(/\n\t\t/g, "\n\t"), "background-position-x")).to.equal(14);
-	});
-
-	it("keeps two slots on phones and shows stills under reduced motion", function () {
-		const phones = css.slice(
-			css.indexOf("@media (max-width: 600px)"),
-			css.indexOf("@media (prefers-reduced-motion: reduce)")
-		);
-		expect(phones).to.match(/#chat-container\[data-scene\] \{[^}]*--ps-slot-b: none;/);
-		const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
-
-		for (const animal of CAST) {
-			expect(reduced).to.include(`--ps-${animal}: url("ps/${animal}-still.svg");`);
-			expect(reduced).to.include(`--ps-${animal}-far: url("ps/${animal}-far-still.svg");`);
-		}
-
-		expect(entries(reduced.replace(/\n\t\t/g, "\n\t"), "background-position")).to.equal(14);
-	});
-
-	it("raises a rainbow in scenes 2 and 5 on y alone", function () {
-		expect(css).to.match(/--ps-rainbow-arc: radial-gradient\(circle farthest-side at 50% 100%/);
-
-		for (const n of [2, 5]) {
-			const start = css.indexOf(`#chat-container[data-scene="${n}"]`);
-			expect(css.slice(start, css.indexOf("}", start)), `scene ${n}`).to.include(
-				"--ps-rainbow: var(--ps-rainbow-arc);"
-			);
-		}
-
-		const rule = meadowRule();
-		expect(rule).to.match(
-			/animation:\s*ps-clouds 90s linear infinite,\s*ps-rainbow 300s ease-in-out infinite;/
-		);
-		const start = css.indexOf("@keyframes ps-rainbow");
-		const block = css.slice(start, css.indexOf("\n}", start));
-		expect(block).to.include("background-position-y:");
-		expect(block).to.not.include("background-position-x");
-		expect(block).to.include("calc(100% - var(--strip) * 0.3)");
-		const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
-		expect(reduced).to.include("--ps-rainbow-y: calc(100% - var(--strip) * 0.3);");
-	});
-
-	it("keeps fourteen background-position-y entries in each of the rainbow's three keyframe groups", function () {
-		const start = css.indexOf("@keyframes ps-rainbow");
-		const block = css.slice(start, css.indexOf("\n}", start)).replace(/\n\t\t/g, "\n\t");
-		let from = 0;
-
-		for (let i = 0; i < 3; i++) {
-			const idx = block.indexOf("background-position-y:", from);
-			expect(idx, `group ${i}`).to.be.greaterThan(-1);
-			const group = block.slice(block.lastIndexOf("\n", idx));
-			expect(entries(group, "background-position-y"), `group ${i}`).to.equal(14);
-			from = idx + 1;
-		}
+	it("empties every slot with one block after the cast, which nothing after it undoes", function () {
+		const off =
+			/#theme-scene \.ps-animals\s*\{\s*--ps-slot-a:\s*none;\s*--ps-slot-b:\s*none;\s*--ps-slot-f:\s*none;\s*\}/g;
+		const matches = [...css.matchAll(off)];
+		expect(matches, "exactly one off block").to.have.length(1);
+		const after = css.slice(matches[0].index! + matches[0][0].length);
+		expect(after).to.not.match(/--ps-slot-[abf]:\s*var\(/);
 	});
 });
 
@@ -537,7 +328,7 @@ describe("the ps theme's animals", function () {
  *
  * An animal's size and travel on screen are four numbers that have to move
  * together: the rig's `viewBox.h` and `stage.aspect`, the theme's
- * `--ps-<animal>-h`, and the far slot the scenes give it. The generator's
+ * `--ps-<animal>-h`, and the far slot the cast gives it. The generator's
  * audit can see the two in the rig and nothing at all in the stylesheet, and
  * that gap has already cost a round — four boxes grew to stop clipping their
  * animals (`lib/build.mjs` `boxOverflow`) and every one of them needed a
@@ -552,14 +343,14 @@ describe("the ps theme's animals are the size their rigs say", function () {
 	/** The cast, by the name its tokens and files use. */
 	const RIGS: Record<string, any> = {horse, deer, puppy, bunny, kitten, frog, ladybug, bird};
 
-	/** A distant visitor is 0.7 of its animal (the meadow's comment in ps.css). */
+	/** A distant visitor is 0.7 of its animal (the animal tokens' comment in ps.css). */
 	const FAR_RATIO = 0.7;
 
-	/** One scene rule's body. */
-	const sceneBody = (n: number) => {
-		const start = css.indexOf(`#chat-container[data-scene="${n}"]`);
-		expect(start, `scene ${n}`).to.be.greaterThan(-1);
-		return css.slice(start, css.indexOf("\n}", start));
+	/** The :root block that casts the scene's animal layer. */
+	const cast = () => {
+		const block = css.match(/:root\s*\{[^}]*--ps-slot-a:[^}]*\}/);
+		expect(block, "the cast's :root block").to.not.equal(null);
+		return block![0];
 	};
 
 	for (const [name, def] of Object.entries(RIGS)) {
@@ -594,41 +385,24 @@ describe("the ps theme's animals are the size their rigs say", function () {
 		});
 	}
 
-	it("gives every slot the height token of the animal in it", function () {
-		for (const n of [0, 1, 2, 3, 4, 5]) {
-			const body = sceneBody(n);
+	it("gives each near slot the height token of the animal in it", function () {
+		const body = cast();
 
-			for (const slot of ["a", "b"]) {
-				const animal = body.match(new RegExp(`--ps-slot-${slot}: var\\(--ps-([a-z]+)\\);`));
-
-				if (!animal) {
-					continue; // an empty slot: `none`, and its height sizes nothing
-				}
-
-				expect(body, `scene ${n}'s slot ${slot} is a ${animal[1]}`).to.include(
-					`--ps-slot-${slot}-h: var(--ps-${animal[1]}-h);`
-				);
-			}
+		for (const slot of ["a", "b"]) {
+			const animal = body.match(new RegExp(`--ps-slot-${slot}: var\\(--ps-([a-z]+)\\);`));
+			expect(animal, `slot ${slot} casts an animal`).to.not.equal(null);
+			expect(body, `slot ${slot} is a ${animal![1]}`).to.include(
+				`--ps-slot-${slot}-h: var(--ps-${animal![1]}-h);`
+			);
 		}
 	});
 
-	it("derives every distant visitor's height from its animal's own token", function () {
-		let visitors = 0;
-
-		for (const n of [0, 1, 2, 3, 4, 5]) {
-			const body = sceneBody(n);
-			const animal = body.match(/--ps-slot-f: var\(--ps-([a-z]+)-far\);/);
-
-			if (!animal) {
-				continue; // no visitor on that scene's plateau
-			}
-
-			visitors++;
-			expect(body, `scene ${n}'s visitor is a ${animal[1]}`).to.include(
-				`--ps-slot-f-h: calc(${FAR_RATIO} * var(--ps-${animal[1]}-h));`
-			);
-		}
-
-		expect(visitors, "scenes with a distant visitor").to.equal(5);
+	it("derives the distant visitor's height from its animal's own token", function () {
+		const body = cast();
+		const animal = body.match(/--ps-slot-f: var\(--ps-([a-z]+)-far\);/);
+		expect(animal, "slot f casts a distant visitor").to.not.equal(null);
+		expect(body, `the visitor is a ${animal![1]}`).to.include(
+			`--ps-slot-f-h: calc(${FAR_RATIO} * var(--ps-${animal![1]}-h));`
+		);
 	});
 });

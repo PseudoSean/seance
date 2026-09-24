@@ -1,15 +1,16 @@
 /* ps — peace on the plains. Forked from the `<3` theme (heart.css; its design
  * record is docs/projects/heart-theme.md, this fork's is
- * docs/projects/ps-theme.md), and still its pastels on a blue sky while the
- * scene is redesigned. coffee.css's rules (the token-driven set every
+ * docs/projects/ps-theme.md). coffee.css's rules (the token-driven set every
  * handoff theme shares) with this theme's tokens, plus what no other theme
- * has: bundled fonts, gentle motion, and a meadow behind the chat that
- * belongs to the channel. The meadow's animals are switched off, not
- * removed (the block after the scene table), and the `<3` theme's glitter
- * bursts on send and on reactions are gone.
+ * has: bundled fonts, gentle motion, and the plains behind the whole app —
+ * a scene that keeps the viewer's clock and calendar, built by
+ * client/js/scenes/ps/ and styled here. Without the scene this file alone
+ * paints a daylight sky. The animals are switched off, not removed (the
+ * block after the animal layer), and the `<3` theme's glitter bursts on send
+ * and on reactions are gone.
  *
- * Sections, in order: fonts · tokens · nick palette · type · motion · meadow
- * · phones · reduced motion.
+ * Sections, in order: fonts · tokens · nick palette · type · motion · scene
+ * · animals · phones · reduced motion.
  *
  * Muted ink (--chat-fg-muted / --ps-ink-muted) is darkened from the
  * planned #5a7399 to #536a8e: at #5a7399 it read 4.07:1 on the sky
@@ -62,10 +63,14 @@
 :root {
 	color-scheme: light;
 
+	/* Daylight until the scene says otherwise (docs/projects/ps-theme.md §3):
+	 * the midday stop's sky-top, and its horizon lifted 55 % toward white. The
+	 * scene overwrites both on <html> once a minute. */
+	--canvas-bg-color: #3f8fe6;
+	--ps-halo: #ebf5fd;
+
 	/* The theme's own names, used by the sections below. Rose as text is
 	 * darker than rose as a fill so it reaches 4.5:1 on the sky. */
-	--ps-sky: #dbeeff;
-	--ps-sky-deep: #c6dffa;
 	--ps-paper: #f4f9ff;
 	--ps-ink: #1e3a6e;
 	--ps-ink-muted: #536a8e;
@@ -78,9 +83,6 @@
 	--ps-lilac: #e6d9ff;
 	--ps-peach: #ffe3d1;
 	--ps-mint: #1f7354;
-	--ps-hill-far: #dbeee1;
-	--ps-hill-mid: #cbe6d3;
-	--ps-ground: #b7dcc2;
 	--strip: 8.75rem;
 
 	/* Chat surface (coffee.css's tokens) */
@@ -320,39 +322,171 @@ strong,
 #form { animation-delay: 150ms; }
 #form #input { caret-color: var(--ps-rose); }
 
-/* ---- meadow ---- */
+/* stylelint-disable-next-line no-duplicate-selectors -- same rows the motion section animates, now with the fill */
+#chat .chat-view[data-type="channel"] .msg.highlight,
+#chat .chat-view[data-type="query"] .msg.highlight {
+	background: rgb(255 214 230 / 85%);
+}
 
-/* Behind every channel and query: a sky that fills the message area and,
- * at its foot, hills and a ground line sized from --strip (never from the
- * area's height), with clouds drifting across. All of it is background layers
- * on the scroll container, so it stays put while messages scroll. Which
- * hills, where, and the tint of the green come from the conversation's seed
- * (data-scene, --channel-seed on #chat-container). The animals are
- * background layers too: see the tokens below. In ps they are switched
- * off by the block after the scene rules. */
-/* stylelint-disable-next-line no-duplicate-selectors -- the meadow's neutral hill-layout defaults */
-:root {
-	/* two mid hills: x (left edge as % of width), w (width %), h (height as a share of --strip) */
-	--ps-hill-1-x: 10%;
-	--ps-hill-1-w: 60%;
-	--ps-hill-1-h: 0.24;
-	--ps-hill-2-x: 55%;
-	--ps-hill-2-w: 55%;
-	--ps-hill-2-h: 0.19;
+/* ---- scene ---- */
 
-	/* The second cloud, as two overlapping ellipses sharing one box (the
-	 * offsets are the gradients' own "at %" position, not background-position
-	 * — see the background-image comment below). Scenes 1 and 4 (§5.3) hide
-	 * it by swapping both gradients for transparent ones. */
+/* The plains behind the whole app (client/js/scenes/ps/scene.ts, mounted by
+ * client/js/themeScene.ts). style.css hides #theme-scene for every theme; ps
+ * shows it. It sits behind #viewport at z-index -1, so every surface between
+ * it and the message column must be clear (the rules after this block).
+ * Without the scene, the element still paints this daylight gradient on
+ * --canvas-bg-color: the fallback. Inside the scene, left and top are the
+ * picture's own coordinates; right-to-left mirrors the whole of it (plan 4). */
+#theme-scene {
+	display: block;
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	overflow: hidden;
+	pointer-events: none;
+	background-color: var(--canvas-bg-color);
 	/* stylelint-disable-next-line max-line-length -- one flat gradient list reads better than a wrap mid-value */
-	--ps-cloud-2: radial-gradient(closest-side at 40% 60%, #fff 0 60%, transparent 61%), radial-gradient(closest-side at 65% 45%, #fff 0 50%, transparent 51%);
+	background-image: linear-gradient(180deg, var(--ps-sky-top, #3f8fe6) 0%, var(--ps-sky-mid, #8cc2f4) 50%, var(--ps-sky-hor, #d2e9fb) 62%, var(--ps-sky-hor, #d2e9fb) 100%);
+}
 
+#theme-scene > * {
+	position: absolute;
+}
+
+#theme-scene .ps-milky {
+	left: -10%;
+	top: 2%;
+	width: 130%;
+	height: 34%;
+	transform: rotate(-15deg);
+	opacity: var(--ps-milky, 0);
+	background: radial-gradient(50% 50% at 50% 50%, rgb(214 206 255 / 42%), rgb(160 170 230 / 16%) 45%, transparent 72%);
+	filter: blur(0.875rem);
+}
+
+#theme-scene .ps-stars {
+	inset: 0 0 40%;
+	opacity: var(--ps-stars, 0);
+}
+
+#theme-scene .ps-stars i {
+	position: absolute;
+	width: 0.125rem;
+	height: 0.125rem;
+	border-radius: 50%;
+	background: #fff;
+}
+
+#theme-scene .ps-stars i.b {
+	width: 0.1875rem;
+	height: 0.1875rem;
+	box-shadow: 0 0 0.375rem 0.0625rem rgb(255 255 255 / 55%);
+}
+
+#theme-scene .ps-stars i.tw {
+	animation: ps-twinkle var(--tw, 4s) ease-in-out infinite alternate;
+}
+
+@keyframes ps-twinkle {
+	from { opacity: 0.25; }
+	to { opacity: 1; }
+}
+
+#theme-scene .ps-glow {
+	width: 80%;
+	aspect-ratio: 2.4;
+	left: var(--ps-glow-x, 50%);
+	top: 57%;
+	transform: translate(-50%, -50%);
+	/* stylelint-disable-next-line max-line-length -- one flat gradient list reads better than a wrap mid-value */
+	background: radial-gradient(50% 50% at 50% 50%, var(--ps-glow, transparent) 0%, color-mix(in oklab, var(--ps-glow, transparent) 45%, transparent) 38%, transparent 70%);
+	opacity: var(--ps-glow-op, 0);
+}
+
+#theme-scene .ps-sun,
+#theme-scene .ps-moon {
+	aspect-ratio: 1;
+	transform: translate(-50%, -50%);
+}
+
+#theme-scene .ps-sun {
+	left: var(--ps-sun-x, 50%);
+	top: var(--ps-sun-y, 12%);
+	height: calc(27% * var(--ps-sun-scale, 1));
+	opacity: var(--ps-sun-op, 0);
+}
+
+#theme-scene .ps-moon {
+	left: var(--ps-moon-x, 50%);
+	top: var(--ps-moon-y, 12%);
+	height: 17%;
+	opacity: var(--ps-moon-op, 0);
+}
+
+#theme-scene .ps-sun svg,
+#theme-scene .ps-moon svg {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	overflow: visible;
+}
+
+/* The sun's slow rays: a turning conic, masked to a ring. */
+#theme-scene .ps-rays {
+	position: absolute;
+	inset: 14%;
+	border-radius: 50%;
+	/* stylelint-disable-next-line max-line-length -- one flat gradient list reads better than a wrap mid-value */
+	background: repeating-conic-gradient(from 0deg, color-mix(in oklab, var(--ps-sun-flame) 55%, transparent) 0 4deg, transparent 4deg 13deg);
+	mask: radial-gradient(closest-side, transparent 30%, #000 40%, transparent 100%);
+	animation: ps-spin 90s linear infinite;
+	filter: blur(0.09rem);
+	opacity: 0.85;
+}
+
+@keyframes ps-spin {
+	to { transform: rotate(360deg); }
+}
+
+/* A hidden page's scene is stopped (scene.ts pauses the SVG animations too). */
+#theme-scene.ps-paused * {
+	animation-play-state: paused !important;
+}
+
+/* Clear from the message column down to the scene: nothing between them paints.
+ * Named element by element; the shared tokens (--body-bg-color,
+ * --window-bg-color, --chat-bg) still paint popovers and menus. */
+body {
+	background: transparent;
+}
+
+/* The conversation's window (Chat.vue's root, and the search results', which
+ * reuse its id and its #chat): style.css paints every .window with
+ * --window-bg-color. Only this one is cleared; Help, Settings and the connect
+ * form keep theirs. */
+#chat-container {
+	background: transparent;
+}
+
+/* The user list is not between them, but as a side panel it has no
+ * background of its own and showed the window's colour through; it keeps that
+ * look (as an overlay style.css already paints it so) until it turns to
+ * glass (docs/projects/ps-theme.md §6). */
+#chat .userlist {
+	background-color: var(--window-bg-color);
+}
+
+/* ---- animals ---- */
+
+/* stylelint-disable-next-line no-duplicate-selectors -- the animals' files and the scene's fixed cast */
+:root {
 	/* The animals: self-animating SVG stages (tools/heart/README.md), each
-	 * one background layer. A scene casts them into three slots — two near,
-	 * one distant visitor on the plateau — by pointing the slot tokens at
-	 * the animal tokens; reduced motion repoints the animal tokens at the
-	 * stills, so no scene is restated there. Heights are shares of --strip;
-	 * a distant visitor is 0.7 of its animal's.
+	 * one background layer. The cast below puts them into three slots — two
+	 * near, one distant visitor far off — by pointing the slot tokens at the
+	 * animal tokens; reduced motion repoints the animal tokens at the
+	 * stills, so the cast is not restated there. Heights are shares of
+	 * --strip; a distant visitor is 0.7 of its animal's.
 	 *
 	 * A height token sizes the animal's *box*, and several boxes carry
 	 * deliberate empty space — the bird's is 800 units tall for 76 units of
@@ -412,54 +546,7 @@ strong,
 	--ps-ladybug-h: 0.19;
 	--ps-bird-h: 1.2;
 
-	/* The neutral cast, in case a conversation ever paints the meadow with
-	 * no scene: one horse. Slots B and F are `none`, so their heights size
-	 * nothing and stay literals; a slot that carries an animal takes that
-	 * animal's own token, and a distant visitor 0.7 of it — written as the
-	 * `calc` it is, so the two cannot drift apart. */
-	--ps-slot-a: var(--ps-horse);
-	--ps-slot-a-h: var(--ps-horse-h);
-	--ps-slot-b: none;
-	--ps-slot-b-h: 0.44;
-	--ps-slot-f: none;
-	--ps-slot-f-h: 0.31;
-
-	/* The rainbow's layer (Task 9 fills it in for two scenes): parked below
-	 * the box, where a layer paints nothing. */
-	--ps-rainbow: none;
-	--ps-rainbow-y: calc(100% + var(--strip) * 1.3);
-
-	/* Six pastel bands, translucent, as a half-ring on a 2:1 box whose
-	 * height sets the radius, so the arc spans the box. A circle centred at
-	 * the box's bottom edge sits *on* that edge, so the distance to the
-	 * *closest* side is zero: `closest-side` would collapse it to a point.
-	 * The box's other three sides (left, right, top) are all one
-	 * strip-and-a-fifth away — that shared, larger distance is what
-	 * `farthest-side` picks. */
-	/* stylelint-disable-next-line max-line-length -- one flat gradient list reads better than a wrap mid-value */
-	--ps-rainbow-arc: radial-gradient(circle farthest-side at 50% 100%, transparent 0 74%, rgb(240 143 180 / 55%) 74% 78%, rgb(255 205 170 / 55%) 78% 82%, rgb(255 240 190 / 55%) 82% 86%, rgb(190 230 205 / 55%) 86% 90%, rgb(180 205 255 / 55%) 90% 94%, rgb(215 200 255 / 55%) 94% 98%, transparent 98%);
-}
-
-/* The seeded hue and the greens derived from it: --channel-seed only ever
- * exists as an inline style on #chat-container, so these have to be declared
- * here (not on :root, which never sees it) or var(--channel-seed) always
- * falls back and the tint never varies. */
-#chat-container {
-	--ps-hill-hue: calc(140deg + (var(--channel-seed, 0.5) - 0.5) * 60deg);
-	--ps-hill-far: hsl(var(--ps-hill-hue) 36% 90%);
-	--ps-hill-mid: hsl(var(--ps-hill-hue) 36% 84%);
-	--ps-ground: hsl(var(--ps-hill-hue) 34% 78%);
-}
-
-#chat-container[data-scene="0"] {
-	--ps-hill-1-x: -10%;
-	--ps-hill-1-w: 55%;
-	--ps-hill-1-h: 0.26;
-	--ps-hill-2-x: 60%;
-	--ps-hill-2-w: 50%;
-	--ps-hill-2-h: 0.18;
-
-	/* scene 0: horse and bunny near, a deer on the plateau */
+	/* The cast: a horse and a bunny near, a deer far off. */
 	--ps-slot-a: var(--ps-horse);
 	--ps-slot-a-h: var(--ps-horse-h);
 	--ps-slot-b: var(--ps-bunny);
@@ -468,299 +555,42 @@ strong,
 	--ps-slot-f-h: calc(0.7 * var(--ps-deer-h));
 }
 
-#chat-container[data-scene="1"] {
-	--ps-hill-1-x: 20%;
-	--ps-hill-1-w: 70%;
-	--ps-hill-1-h: 0.22;
-	--ps-hill-2-x: -20%;
-	--ps-hill-2-w: 45%;
-	--ps-hill-2-h: 0.2;
-
-	/* One cloud in this scene (§5.3): both of the second cloud's ellipses go transparent. */
-	--ps-cloud-2: linear-gradient(transparent, transparent), linear-gradient(transparent, transparent);
-
-	/* scene 1: a deer with a frog at its feet, a puppy on the plateau */
-	--ps-slot-a: var(--ps-deer);
-	--ps-slot-a-h: var(--ps-deer-h);
-	--ps-slot-b: var(--ps-frog);
-	--ps-slot-b-h: var(--ps-frog-h);
-	--ps-slot-f: var(--ps-puppy-far);
-	--ps-slot-f-h: calc(0.7 * var(--ps-puppy-h));
+/* The animals are switched off, not removed (docs/projects/ps-theme.md §5.6):
+ * the scene keeps one animal layer on the ground with a fixed cast, and the
+ * block after it empties all three slots. Delete that block and they come
+ * back. Reduced motion repoints the animal tokens at their stills, never the
+ * slots, so no still is painted or fetched either. */
+#theme-scene .ps-animals {
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: calc(var(--strip) * 1.2);
+	background-image: var(--ps-slot-b), var(--ps-slot-a), var(--ps-slot-f);
+	background-repeat: no-repeat;
+	background-size:
+		auto calc(var(--strip) * var(--ps-slot-b-h)),
+		auto calc(var(--strip) * var(--ps-slot-a-h)),
+		auto calc(var(--strip) * var(--ps-slot-f-h));
+	background-position:
+		70% calc(100% - var(--strip) * 0.12),
+		30% calc(100% - var(--strip) * 0.12),
+		50% calc(100% - var(--strip) * 0.295);
 }
 
-#chat-container[data-scene="2"] {
-	--ps-hill-1-x: 35%;
-	--ps-hill-1-w: 40%;
-	--ps-hill-1-h: 0.27;
-	--ps-hill-2-x: 70%;
-	--ps-hill-2-w: 60%;
-	--ps-hill-2-h: 0.17;
-
-	/* scene 2: a kitten and a ladybug, a horse on the plateau */
-	--ps-slot-a: var(--ps-kitten);
-	--ps-slot-a-h: var(--ps-kitten-h);
-	--ps-slot-b: var(--ps-ladybug);
-	--ps-slot-b-h: var(--ps-ladybug-h);
-	--ps-slot-f: var(--ps-horse-far);
-	--ps-slot-f-h: calc(0.7 * var(--ps-horse-h));
-
-	/* one of the two rainbow scenes (§5.3) */
-	--ps-rainbow: var(--ps-rainbow-arc);
-}
-
-#chat-container[data-scene="3"] {
-	--ps-hill-1-x: 0%;
-	--ps-hill-1-w: 90%;
-	--ps-hill-1-h: 0.19;
-	--ps-hill-2-x: 45%;
-	--ps-hill-2-w: 35%;
-	--ps-hill-2-h: 0.25;
-
-	/* scene 3: the puppy's scene — it sits and its hearts rise — with a frog
-	 * beside it and a bunny on the plateau */
-	--ps-slot-a: var(--ps-puppy);
-	--ps-slot-a-h: var(--ps-puppy-h);
-	--ps-slot-b: var(--ps-frog);
-	--ps-slot-b-h: var(--ps-frog-h);
-	--ps-slot-f: var(--ps-bunny-far);
-	--ps-slot-f-h: calc(0.7 * var(--ps-bunny-h));
-}
-
-#chat-container[data-scene="4"] {
-	--ps-hill-1-x: -25%;
-	--ps-hill-1-w: 65%;
-	--ps-hill-1-h: 0.21;
-	--ps-hill-2-x: 30%;
-	--ps-hill-2-w: 80%;
-	--ps-hill-2-h: 0.2;
-
-	/* One cloud in this scene (§5.3): both of the second cloud's ellipses go transparent. */
-	--ps-cloud-2: linear-gradient(transparent, transparent), linear-gradient(transparent, transparent);
-
-	/* scene 4: the sparse one — a kitten under a bird, and nobody on the
-	 * plateau. The kitten takes the near slot and the bird the one phones
-	 * drop: a phone that kept only the bird would show an empty sky. */
-	--ps-slot-a: var(--ps-kitten);
-	--ps-slot-a-h: var(--ps-kitten-h);
-	--ps-slot-b: var(--ps-bird);
-	--ps-slot-b-h: var(--ps-bird-h);
-	--ps-slot-f: none;
-	--ps-slot-f-h: 0.31;
-}
-
-#chat-container[data-scene="5"] {
-	--ps-hill-1-x: 15%;
-	--ps-hill-1-w: 50%;
-	--ps-hill-1-h: 0.25;
-	--ps-hill-2-x: 75%;
-	--ps-hill-2-w: 45%;
-	--ps-hill-2-h: 0.23;
-
-	/* scene 5: a bunny with a horse passing in front, a kitten on the plateau */
-	--ps-slot-a: var(--ps-bunny);
-	--ps-slot-a-h: var(--ps-bunny-h);
-	--ps-slot-b: var(--ps-horse);
-	--ps-slot-b-h: var(--ps-horse-h);
-	--ps-slot-f: var(--ps-kitten-far);
-	--ps-slot-f-h: calc(0.7 * var(--ps-kitten-h));
-
-	/* one of the two rainbow scenes (§5.3) */
-	--ps-rainbow: var(--ps-rainbow-arc);
-}
-
-/* The animals are disabled in ps, not removed. Every rig, every file under
- * ps/ and every scene's cast above stays as it was; this block alone keeps
- * them off the meadow by emptying all three slots, whatever the scene says.
- * It ties with the scene rules on specificity and wins by coming after them;
- * the bare #chat-container covers a conversation with no scene, which would
- * otherwise inherit :root's neutral horse. Reduced motion repoints the
- * animal tokens at their stills, never the slots, so the stills stay
- * unpainted too, and a `url()` no painted layer substitutes is never
- * fetched. Nothing after this block may put an animal back into a slot
- * (test/themes/ps.ts). Delete this block and the animals come back. */
-#chat-container,
-#chat-container[data-scene] {
+/* Nothing after this block may put an animal back into a slot (test/themes/ps.ts). */
+/* stylelint-disable-next-line no-duplicate-selectors -- the off switch is its own block on purpose */
+#theme-scene .ps-animals {
 	--ps-slot-a: none;
 	--ps-slot-b: none;
 	--ps-slot-f: none;
 }
 
-#chat .chat-view[data-type="channel"] .chat,
-#chat .chat-view[data-type="query"] .chat {
-	background-color: var(--ps-sky);
-
-	/* Top layer first: cloud 1 (two ellipses) · cloud 2 (two, var) · near
-	 * animal B · near animal A · ground · mid hill 2 · mid hill 1 · the
-	 * distant visitor · far plateau · far hill · rainbow · sky. Fourteen
-	 * layers (var(--ps-cloud-2) expands to two); every list below, the
-	 * keyframes and the reduced-motion block carry fourteen entries in this
-	 * order. A near animal sits above the ground band so its feet show; the
-	 * visitor sits between the mid hills and the plateau so a nearer hill
-	 * passes in front of its feet. Each animal is a wide stage (tools/heart)
-	 * sized from its height, framed left or right by the seed. */
-	/* stylelint-disable-next-line max-line-length -- one flat gradient list reads better than a wrap mid-value */
-	background-image: radial-gradient(closest-side at 40% 60%, #fff 0 60%, transparent 61%), radial-gradient(closest-side at 65% 45%, #fff 0 50%, transparent 51%), var(--ps-cloud-2), var(--ps-slot-b), var(--ps-slot-a), linear-gradient(var(--ps-ground), var(--ps-ground)), radial-gradient(ellipse 50% 100% at 50% 100%, var(--ps-hill-mid) 0 68%, transparent 69%), radial-gradient(ellipse 50% 100% at 50% 100%, var(--ps-hill-mid) 0 68%, transparent 69%), var(--ps-slot-f), linear-gradient(var(--ps-hill-far), var(--ps-hill-far)), radial-gradient(ellipse 60% 100% at 30% 100%, var(--ps-hill-far) 0 70%, transparent 71%), var(--ps-rainbow), linear-gradient(180deg, var(--ps-sky) 0%, var(--ps-sky-deep) 100%);
-	background-repeat: no-repeat;
-	background-size:
-		3.6rem 1.3rem,
-		3.6rem 1.3rem,
-		2.4rem 0.9rem,
-		2.4rem 0.9rem,
-		auto calc(var(--strip) * var(--ps-slot-b-h)),
-		auto calc(var(--strip) * var(--ps-slot-a-h)),
-		100% calc(var(--strip) * 0.14),
-		var(--ps-hill-2-w) calc(var(--strip) * var(--ps-hill-2-h)),
-		var(--ps-hill-1-w) calc(var(--strip) * var(--ps-hill-1-h)),
-		auto calc(var(--strip) * var(--ps-slot-f-h)),
-		100% calc(var(--strip) * 0.31),
-		110% calc(var(--strip) * 0.48),
-		calc(var(--strip) * 2.4) calc(var(--strip) * 1.2),
-		100% 100%;
-	background-position:
-		-4rem calc(100% - var(--strip) * 0.8),
-		-4rem calc(100% - var(--strip) * 0.8),
-		-3rem calc(100% - var(--strip) * 0.6),
-		-3rem calc(100% - var(--strip) * 0.6),
-		calc(80% - var(--channel-seed, 0.5) * 60%) calc(100% - var(--strip) * 0.12),
-		calc(20% + var(--channel-seed, 0.5) * 60%) calc(100% - var(--strip) * 0.12),
-		0 100%,
-		var(--ps-hill-2-x) 100%,
-		var(--ps-hill-1-x) 100%,
-		calc(50% + (var(--channel-seed, 0.5) - 0.5) * 40%) calc(100% - var(--strip) * 0.295),
-		0 100%,
-		-5% 100%,
-		calc(30% + var(--channel-seed, 0.5) * 40%) var(--ps-rainbow-y),
-		0 0;
-	animation:
-		ps-clouds 90s linear infinite,
-		ps-rainbow 300s ease-in-out infinite;
-	animation-delay:
-		calc(var(--channel-seed, 0.5) * -90s),
-		calc(var(--channel-seed, 0.5) * -300s);
-}
-
-/* Only the two clouds' four layers move (each pair together, so the two
- * ellipses of one cloud stay put relative to each other); every other x is
- * restated. This animates the x longhand alone so the rainbow's rise
- * (ps-rainbow, on y) composes with it. */
-@keyframes ps-clouds {
-	to {
-		background-position-x:
-			calc(100% + 4rem),
-			calc(100% + 4rem),
-			calc(100% + 3rem),
-			calc(100% + 3rem),
-			calc(80% - var(--channel-seed, 0.5) * 60%),
-			calc(20% + var(--channel-seed, 0.5) * 60%),
-			0,
-			var(--ps-hill-2-x),
-			var(--ps-hill-1-x),
-			calc(50% + (var(--channel-seed, 0.5) - 0.5) * 40%),
-			0,
-			-5%,
-			calc(30% + var(--channel-seed, 0.5) * 40%),
-			0;
-	}
-}
-
-/* The rainbow (scenes 2 and 5) rises from behind the hills for a minute
- * every five — a layer has no opacity to fade, but its y is a longhand the
- * clouds' animation does not touch. Every other y is restated; the scenes
- * without a rainbow animate a `none` layer, which costs nothing. */
-@keyframes ps-rainbow {
-	0%,
-	8% {
-		background-position-y:
-			calc(100% - var(--strip) * 0.8),
-			calc(100% - var(--strip) * 0.8),
-			calc(100% - var(--strip) * 0.6),
-			calc(100% - var(--strip) * 0.6),
-			calc(100% - var(--strip) * 0.12),
-			calc(100% - var(--strip) * 0.12),
-			100%,
-			100%,
-			100%,
-			calc(100% - var(--strip) * 0.295),
-			100%,
-			100%,
-			calc(100% + var(--strip) * 1.3),
-			0;
-	}
-
-	14%,
-	34% {
-		background-position-y:
-			calc(100% - var(--strip) * 0.8),
-			calc(100% - var(--strip) * 0.8),
-			calc(100% - var(--strip) * 0.6),
-			calc(100% - var(--strip) * 0.6),
-			calc(100% - var(--strip) * 0.12),
-			calc(100% - var(--strip) * 0.12),
-			100%,
-			100%,
-			100%,
-			calc(100% - var(--strip) * 0.295),
-			100%,
-			100%,
-			calc(100% - var(--strip) * 0.3),
-			0;
-	}
-
-	40%,
-	100% {
-		background-position-y:
-			calc(100% - var(--strip) * 0.8),
-			calc(100% - var(--strip) * 0.8),
-			calc(100% - var(--strip) * 0.6),
-			calc(100% - var(--strip) * 0.6),
-			calc(100% - var(--strip) * 0.12),
-			calc(100% - var(--strip) * 0.12),
-			100%,
-			100%,
-			100%,
-			calc(100% - var(--strip) * 0.295),
-			100%,
-			100%,
-			calc(100% + var(--strip) * 1.3),
-			0;
-	}
-}
-
-/* The messages sit on the sky: a faint halo keeps ink clean over hills and, later, animals. */
-#chat .chat-view[data-type="channel"] .msg,
-#chat .chat-view[data-type="query"] .msg {
-	text-shadow: 0 0 6px var(--ps-sky), 0 0 2px var(--ps-sky);
-}
-
-/* A spoiler hides its text by making it transparent; the halo would draw the
- * glyphs as a readable blur, so it gets no halo until revealed. */
-#chat .msg .md-spoiler:not(.md-spoiler-shown) {
-	text-shadow: none;
-}
-
-/* stylelint-disable-next-line no-duplicate-selectors -- same rows the motion section animates, now with the fill */
-#chat .chat-view[data-type="channel"] .msg.highlight,
-#chat .chat-view[data-type="query"] .msg.highlight {
-	background: rgb(255 214 230 / 85%);
-}
-
 /* ---- phones ---- */
+
+/* A shorter strip for the animal layer on a small screen. */
 @media (max-width: 600px) {
 	:root {
 		--strip: 6.5rem;
-	}
-
-	/* Two animal slots stay (spec §5.7): the first near one and the distant
-	 * visitor. Same specificity as the scene rules, later in the file.
-	 *
-	 * Every scene therefore keeps a mid or large animal on a phone — that is
-	 * what decides which way round a pair is cast. The three animals only
-	 * ever cast into slot B (frog, ladybug, bird) are desktop-only by that
-	 * rule: promoting one into slot A would leave a phone showing nothing
-	 * but a small creature, or in scene 4's case an empty sky. Scene 4 keeps
-	 * its empty plateau, so on a phone it is its kitten alone. */
-	#chat-container[data-scene] {
-		--ps-slot-b: none;
 	}
 }
 
@@ -770,13 +600,13 @@ strong,
 	.channel-list-item,
 	#chat .header,
 	#form,
-	#chat .chat {
+	#theme-scene * {
 		animation: none !important;
 		transition: none !important;
 	}
 
 	/* The animals as stills: the slot tokens point at the animal tokens, so
-	 * repointing those is enough. In ps the override after the scene table
+	 * repointing those is enough. In ps the off block after the animal layer
 	 * empties the slots, so no still is painted (or fetched) either. */
 	/* stylelint-disable-next-line no-duplicate-selectors -- the reduced-motion swap to stills */
 	:root {
@@ -796,32 +626,5 @@ strong,
 		--ps-ladybug-far: url("ps/ladybug-far-still.svg");
 		--ps-bird: url("ps/bird-still.svg");
 		--ps-bird-far: url("ps/bird-far-still.svg");
-		--ps-rainbow-y: calc(100% - var(--strip) * 0.3);
-	}
-
-	/* The clouds' animation is off, but they still show: parked inside the
-	 * box (22 %, 68 %) instead of at the off-screen start position the
-	 * animation begins from. Slot B, slot A, slot F and the rainbow (entries
-	 * 5, 6, 10, 13) take fixed positions here too (70 %, 30 %, 50 %, 50 %)
-	 * instead of the seed-framed calc() the base rule uses — under reduced
-	 * motion the seed frames nothing, though the hills and hue still vary.
-	 * The remaining entries restate the base rule. */
-	#chat .chat-view[data-type="channel"] .chat,
-	#chat .chat-view[data-type="query"] .chat {
-		background-position:
-			22% calc(100% - var(--strip) * 0.8),
-			22% calc(100% - var(--strip) * 0.8),
-			68% calc(100% - var(--strip) * 0.6),
-			68% calc(100% - var(--strip) * 0.6),
-			70% calc(100% - var(--strip) * 0.12),
-			30% calc(100% - var(--strip) * 0.12),
-			0 100%,
-			var(--ps-hill-2-x) 100%,
-			var(--ps-hill-1-x) 100%,
-			50% calc(100% - var(--strip) * 0.295),
-			0 100%,
-			-5% 100%,
-			50% var(--ps-rainbow-y),
-			0 0;
 	}
 }
