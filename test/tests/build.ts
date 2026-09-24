@@ -94,11 +94,14 @@ describe("public folder", function () {
 
 	it("the ps theme's fonts and animals are copied beside it", function () {
 		for (const file of [
-			"nunito-variable.woff2",
-			"nunito-variable-italic.woff2",
-			"baloo2-variable.woff2",
-			"OFL-Nunito.txt",
-			"OFL-Baloo2.txt",
+			"mulish-latin.woff2",
+			"mulish-latin-ext.woff2",
+			"mulish-italic-latin.woff2",
+			"mulish-italic-latin-ext.woff2",
+			"fraunces-latin.woff2",
+			"fraunces-latin-ext.woff2",
+			"OFL-Mulish.txt",
+			"OFL-Fraunces.txt",
 			"horse.svg",
 			"horse-far.svg",
 			"horse-still.svg",
