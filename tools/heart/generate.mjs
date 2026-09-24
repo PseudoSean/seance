@@ -1,4 +1,4 @@
-// Regenerates the <3 theme's animals — client/themes/heart/<animal>.svg, the
+// Regenerates the meadow's animals — client/themes/ps/<animal>.svg, the
 // distant-visitor -far.svg and the two -still.svg files — from the rigs
 // under tools/heart/rigs/. The files are committed; run this after changing
 // a rig or a sequence, read the audit, then commit what it wrote:
@@ -14,12 +14,12 @@ import {writeFileSync} from "fs";
 import path from "path";
 import {buildAnimal} from "./lib/build.mjs";
 
-const OUT = path.resolve(import.meta.dirname, "../../client/themes/heart");
+const OUT = path.resolve(import.meta.dirname, "../../client/themes/ps");
 const ALL = ["horse", "puppy", "bunny", "deer", "kitten", "frog", "ladybug", "bird"];
 
 /**
  * Rigs that are built and reviewed but not currently cast in any scene, so
- * their files are not generated and not shipped. `client/themes/heart/` is
+ * their files are not generated and not shipped. `client/themes/ps/` is
  * copied into `public/` whole, so a file no scene casts is dead weight in
  * every deploy — the rigs stay, the output does not.
  *
@@ -31,7 +31,7 @@ const ALL = ["horse", "puppy", "bunny", "deer", "kitten", "frog", "ladybug", "bi
  *
  * Both still build: `node tools/heart/generate.mjs teddy` works, since names
  * given on the command line are imported directly. To bring one back, add it
- * to ALL, regenerate, and cast it in a scene in `client/themes/heart.css`.
+ * to ALL, regenerate, and cast it in a scene in `client/themes/ps.css`.
  */
 const HELD = ["teddy", "dolphin"];
 const names = process.argv.slice(2).length ? process.argv.slice(2) : ALL;

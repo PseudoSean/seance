@@ -59,7 +59,7 @@
 // pond reads as water rather than as a lens with visible ends.
 //
 // Its fill is a fixed pale blue rather than anything derived from
-// `--heart-hill-hue`: the hue varies by scene and a hue-matched pond would
+// `--ps-hill-hue`: the hue varies by scene and a hue-matched pond would
 // read as another hill.
 //
 // ── Reading as a dolphin ─────────────────────────────────────────────────

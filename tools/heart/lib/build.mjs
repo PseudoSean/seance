@@ -513,7 +513,7 @@ export function buildAnimal(def) {
 				`x ${fmt(vb.x)}…${fmt(vb.x + vb.w)}, y ${fmt(vb.y)}…${fmt(vb.y + vb.h)} and the ` +
 				`outline reaches x ${fmt(box.bounds.minX, 1)}…${fmt(box.bounds.maxX, 1)}, ` +
 				`y ${fmt(box.bounds.minY, 1)}…${fmt(box.bounds.maxY, 1)}. Grow the box, and with ` +
-				`it the theme's --heart-<animal>-h (× the new h / the old) and this rig's ` +
+				`it the theme's --ps-<animal>-h (× the new h / the old) and this rig's ` +
 				`stage.aspect (× the old h / the new), or the animal changes size and travel`
 		);
 

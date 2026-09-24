@@ -6,7 +6,7 @@
 // Drawn at the same unit scale as every other animal — 86 units of standing
 // beetle in a 121 × 65 box — because `n`, `fillet` and the audit's outline
 // rules are tuned for a body that size. Its tiny size on screen comes
-// entirely from `--heart-ladybug-h` in the theme, not from the drawing.
+// entirely from `--ps-ladybug-h` in the theme, not from the drawing.
 //
 // Rotation sign: paper.js rotates clockwise on screen for a positive angle
 // (y points down), so a part drawn pointing forward (local +x) swings *up*
@@ -651,11 +651,11 @@ export default {
 	colours: {near: "#d4574e", far: "#eaa9a3"},
 	budget: 100 * 1024,
 	/**
-	 * What `client/themes/heart.css` has to say about this animal — the half of
-	 * the box coupling no audit can reach, checked by `test/themes/heart.ts`
+	 * What `client/themes/ps.css` has to say about this animal — the half of
+	 * the box coupling no audit can reach, checked by `test/themes/ps.ts`
 	 * (tools/heart/README.md § The audit):
 	 *
-	 * - `height` is `--heart-ladybug-h`, the on-screen height of the *box*, in
+	 * - `height` is `--ps-ladybug-h`, the on-screen height of the *box*, in
 	 *   strips;
 	 * - `box` is the `viewBox.h` it was picked against, so a box that grows
 	 *   without its token growing by the same ratio fails there instead of

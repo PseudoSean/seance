@@ -135,13 +135,13 @@ describe("public folder", function () {
 			"panasync",
 			"day",
 			"morning",
-			"heart",
+			"ps",
 		]) {
 			expect(fs.existsSync(path.join(publicFolder, "themes", `${theme}.css`))).to.be.true;
 		}
 	});
 
-	it("the <3 theme's fonts and animals are copied beside it", function () {
+	it("the ps theme's fonts and animals are copied beside it", function () {
 		for (const file of [
 			"nunito-variable.woff2",
 			"nunito-variable-italic.woff2",
@@ -161,7 +161,7 @@ describe("public folder", function () {
 			"bunny-still.svg",
 			"bunny-far-still.svg",
 		]) {
-			expect(fs.existsSync(path.join(publicFolder, "themes", "heart", file))).to.be.true;
+			expect(fs.existsSync(path.join(publicFolder, "themes", "ps", file))).to.be.true;
 		}
 	});
 

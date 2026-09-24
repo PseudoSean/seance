@@ -1,4 +1,4 @@
-// The <3 theme in a real browser (docs/projects/heart-theme.md): picking it
+// The ps theme in a real browser (docs/projects/ps-theme.md): picking it
 // in Appearance swaps the stylesheet, the chat root carries the
 // conversation's seed, the message area carries the meadow and its animals
 // as fourteen background layers, **the browser fetches the animals the scene
@@ -8,7 +8,7 @@
 // of #seance's visitors.
 //
 //   corepack yarn build && python3 -m http.server -d public 8021 &
-//   node tools/browser-drive.mjs tools/scenarios/theme-heart.mjs
+//   node tools/browser-drive.mjs tools/scenarios/theme-ps.mjs
 //
 // The default target is a plain-WS ircd on 127.0.0.1:8067 (the dev ircd's
 // ws:// port); SEANCE_IRC_PORT overrides the port for a different rig, and
@@ -17,7 +17,7 @@
 // a *different* build and every check below then reports on that one.
 
 const RUN = Date.now().toString(36);
-const NICK = `hb${RUN}`;
+const NICK = `ps${RUN}`;
 const BASE = `http://localhost:${process.env.SEANCE_HTTP_PORT ?? "8021"}/`;
 const PORT = process.env.SEANCE_IRC_PORT ?? "8067";
 
@@ -94,10 +94,10 @@ const INSTALL_CONTRAST = `(() => {
 /**
  * What the meadow's animal files are doing, from the page's own point of view:
  *
- * - `declared`: every `heart/<file>.svg` the theme's stylesheet names anywhere
+ * - `declared`: every `ps/<file>.svg` the theme's stylesheet names anywhere
  *   — the animal tokens, their `-far` tints and the reduced-motion stills.
  * - `cast`: the files the open conversation's scene actually substitutes into
- *   the three slots, read off the computed `--heart-slot-a/-b/-f`.
+ *   the three slots, read off the computed `--ps-slot-a/-b/-f`.
  * - `fetched`: what the browser has actually asked the network for, from
  *   Resource Timing. Background images fetched by CSS appear here like any
  *   other subresource.
@@ -107,7 +107,7 @@ const INSTALL_CONTRAST = `(() => {
  * scene was recast.
  */
 const MEADOW_FILES = `(() => {
-	const files = (s) => [...String(s).matchAll(/heart\\/([a-z-]+\\.svg)/g)].map((m) => m[1]);
+	const files = (s) => [...String(s).matchAll(/(?<![a-z])ps\\/([a-z-]+\\.svg)/g)].map((m) => m[1]);
 	const declared = new Set();
 
 	for (const sheet of document.styleSheets) {
@@ -124,7 +124,7 @@ const MEADOW_FILES = `(() => {
 	const cast = new Set();
 
 	for (const slot of ["a", "b", "f"]) {
-		for (const f of files(cs.getPropertyValue("--heart-slot-" + slot))) cast.add(f);
+		for (const f of files(cs.getPropertyValue("--ps-slot-" + slot))) cast.add(f);
 	}
 
 	const fetched = new Set(
@@ -166,7 +166,7 @@ export default async function run(page) {
 	await page.sleep(1000); // let the join burst and the catch-up settle
 	await page.evaluate(INSTALL_CONTRAST);
 
-	// Pick the <3 theme from Appearance.
+	// Pick the ps theme from Appearance.
 	await page.click(`#footer button.settings`);
 	await page.waitFor(`document.querySelector(".settings-menu button.appearance")`, {
 		label: "settings open",
@@ -178,7 +178,7 @@ export default async function run(page) {
 	await page.evaluate(
 		`(() => {
 			const el = document.querySelector("#theme-select");
-			el.value = "heart";
+			el.value = "ps";
 			el.dispatchEvent(new Event("change", {bubbles: true}));
 		})()`
 	);
@@ -187,12 +187,12 @@ export default async function run(page) {
 	await page.waitFor(`document.querySelector("#input")`, {label: "back in #seance"});
 	await page.sleep(300);
 	// When the meadow's animal layers started animating: each file's visit is
-	// timed from its own load, and "heart-visitor" below waits out that clock.
+	// timed from its own load, and "ps-visitor" below waits out that clock.
 	const meadowSince = Date.now();
 
 	page.check(
-		"the stylesheet is themes/heart.css",
-		(await page.evaluate(THEME_HREF)) === "themes/heart.css"
+		"the stylesheet is themes/ps.css",
+		(await page.evaluate(THEME_HREF)) === "themes/ps.css"
 	);
 
 	const seedA = await page.evaluate(
@@ -212,7 +212,7 @@ export default async function run(page) {
 	);
 	page.check(
 		"the meadow carries the animals as layers",
-		/heart\/(horse|deer|puppy|bunny|kitten|frog|ladybug|bird)(-far)?\.svg/.test(bg)
+		/(?<![a-z])ps\/(horse|deer|puppy|bunny|kitten|frog|ladybug|bird)(-far)?\.svg/.test(bg)
 	);
 	const layers = await page.evaluate(
 		`getComputedStyle(document.querySelector('#chat .chat-view[data-type="channel"] .chat')).backgroundSize.split(",").length`
@@ -249,7 +249,7 @@ export default async function run(page) {
 		uncast.length > 0 && uncast.every((f) => !meadow.fetched.includes(f))
 	);
 
-	// A scene sizes its distant visitor as `calc(0.7 * var(--heart-<animal>-h))`
+	// A scene sizes its distant visitor as `calc(0.7 * var(--ps-<animal>-h))`
 	// — a calc nested inside the slot's own `calc(var(--strip) * …)`. That is
 	// valid CSS, but nothing without a browser can confirm it resolves, and a
 	// layer that computed to nothing would simply not be painted, in silence.
@@ -266,7 +266,7 @@ export default async function run(page) {
 			probe.remove();
 			const token = parseFloat(
 				getComputedStyle(document.getElementById("chat-container")).getPropertyValue(
-					"--heart-${visitor}-h"
+					"--ps-${visitor}-h"
 				)
 			);
 			const sizes = getComputedStyle(chat).backgroundSize.split(",");
@@ -284,7 +284,7 @@ export default async function run(page) {
 	const anim = await page.evaluate(
 		`getComputedStyle(document.querySelector("#chat .msg")).animationName`
 	);
-	page.check(`messages fade in (${anim})`, anim.includes("heart-fade"));
+	page.check(`messages fade in (${anim})`, anim.includes("ps-fade"));
 
 	const timeMetrics = await page.evaluate(
 		`(() => {
@@ -316,14 +316,14 @@ export default async function run(page) {
 	const burst = await page.evaluate(
 		`getComputedStyle(document.querySelector("#chat .msg.self.pending"), "::before").animationName`
 	);
-	page.check(`an own message bursts (${burst})`, burst.includes("heart-sparkle"));
+	page.check(`an own message bursts (${burst})`, burst.includes("ps-sparkle"));
 	await page.waitFor(`!document.querySelector("#chat .msg.pending")`, {
 		timeout: HOLD_MS + 10000,
 		label: "the held-back echo",
 	});
 
 	// The first reaction on a message enters the whole group; the theme
-	// bursts on it. The enter class lives 0.9 s (heart-hold), long enough
+	// bursts on it. The enter class lives 0.9 s (ps-hold), long enough
 	// for one round trip — but it can also be gone before a separate poll
 	// catches it, so submit and poll in one evaluate (requestAnimationFrame,
 	// up to 4 s) rather than a submit followed by a separate page.waitFor.
@@ -344,7 +344,7 @@ export default async function run(page) {
 			}
 		})()`
 	);
-	page.check(`a reaction bursts (${reactionBurst})`, reactionBurst.includes("heart-sparkle"));
+	page.check(`a reaction bursts (${reactionBurst})`, reactionBurst.includes("ps-sparkle"));
 
 	for (const [label, fg, bg] of [
 		[
@@ -362,7 +362,7 @@ export default async function run(page) {
 		page.check(`${label} ${ratio}:1 ≥ 4.5`, ratio >= 4.5);
 	}
 
-	await page.screenshot("heart-seance");
+	await page.screenshot("ps-seance");
 
 	// #seance is scene 3: puppy (slot A), frog (slot B), a bunny on the
 	// plateau. Each file's visit is timed from when it loaded, and the three
@@ -371,7 +371,7 @@ export default async function run(page) {
 	// fixed pause, which the checks above may already have outrun.
 	const VISITOR_AT = 20000;
 	await page.sleep(Math.max(500, VISITOR_AT - (Date.now() - meadowSince)));
-	await page.screenshot("heart-visitor");
+	await page.screenshot("ps-visitor");
 
 	await page.click(`.channel-list-item[data-name="#kittens"]`);
 	await page.waitFor(`document.querySelector("#input")`, {label: "in #kittens"});
@@ -399,7 +399,7 @@ export default async function run(page) {
 			`(${union.join(" ")})`,
 		meadowB.fetched.join(" ") === union.join(" ")
 	);
-	await page.screenshot("heart-kittens");
+	await page.screenshot("ps-kittens");
 
 	await page.click(`.channel-list-item[data-type="lobby"]`);
 	await page.sleep(300);

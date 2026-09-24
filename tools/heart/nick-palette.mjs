@@ -5,7 +5,7 @@
 // a highlighted row (#ffd6e6), so a nick reads on both. Lightness is
 // lowered per slot until it clears the bar.
 //
-//   node tools/heart/nick-palette.mjs   → paste into client/themes/heart.css
+//   node tools/heart/nick-palette.mjs   → paste into client/themes/ps.css
 const SKY = [0xdb, 0xee, 0xff];
 const BLUSH = [0xff, 0xd6, 0xe6];
 const CHROMA = 0.115;

@@ -330,7 +330,7 @@ export const rig = {
 	// cut 5.7 units off the top, 2.5 off the bottom, 3.6 off the left and
 	// 8.2 off the right — ear tips, a hoof and the muzzle at full stretch.
 	// Extremes reach y 24.3…204.5 and x -3.6…238.2, so this clears them by
-	// 3.3, 3.5, 3.4 and 2.8. The theme's `--heart-horse-h` is scaled by
+	// 3.3, 3.5, 3.4 and 2.8. The theme's `--ps-horse-h` is scaled by
 	// 187/172 and `stage.aspect` by 172/187 to match, so the horse is the
 	// same size on screen and crosses the same distance.
 	viewBox: {x: -7, y: 21, w: 248, h: 187},
@@ -389,11 +389,11 @@ export default {
 	colours: {near: "#d97a9c", far: "#ecbccb"},
 	budget: 200 * 1024,
 	/**
-	 * What `client/themes/heart.css` has to say about this animal — the half of
-	 * the box coupling no audit can reach, checked by `test/themes/heart.ts`
+	 * What `client/themes/ps.css` has to say about this animal — the half of
+	 * the box coupling no audit can reach, checked by `test/themes/ps.ts`
 	 * (tools/heart/README.md § The audit):
 	 *
-	 * - `height` is `--heart-horse-h`, the on-screen height of the *box*, in
+	 * - `height` is `--ps-horse-h`, the on-screen height of the *box*, in
 	 *   strips;
 	 * - `box` is the `viewBox.h` it was picked against, so a box that grows
 	 *   without its token growing by the same ratio fails there instead of

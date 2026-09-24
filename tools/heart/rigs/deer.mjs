@@ -392,7 +392,7 @@ export const rig = {
 	// muzzle through the graze, which reaches furthest forward of anything
 	// this rig does. Extremes reach y 5.8…204.2 and x 37…255.8, so this
 	// clears them by 3.8 (above), 3.8 (below), 3 (left) and 3.2 (right). The
-	// theme's `--heart-deer-h` is scaled by 206/196 and `stage.aspect` by
+	// theme's `--ps-deer-h` is scaled by 206/196 and `stage.aspect` by
 	// 196/206 to match, so the deer is the same size on screen and crosses
 	// the same distance.
 	viewBox: {x: 34, y: 2, w: 225, h: 206},
@@ -452,11 +452,11 @@ export default {
 	colours: {near: "#c98fb4", far: "#e8c9dd"},
 	budget: 150 * 1024,
 	/**
-	 * What `client/themes/heart.css` has to say about this animal — the half of
-	 * the box coupling no audit can reach, checked by `test/themes/heart.ts`
+	 * What `client/themes/ps.css` has to say about this animal — the half of
+	 * the box coupling no audit can reach, checked by `test/themes/ps.ts`
 	 * (tools/heart/README.md § The audit):
 	 *
-	 * - `height` is `--heart-deer-h`, the on-screen height of the *box*, in
+	 * - `height` is `--ps-deer-h`, the on-screen height of the *box*, in
 	 *   strips;
 	 * - `box` is the `viewBox.h` it was picked against, so a box that grows
 	 *   without its token growing by the same ratio fails there instead of
