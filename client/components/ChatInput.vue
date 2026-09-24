@@ -16,7 +16,7 @@
 				class="connection-bar-connect"
 				@click="connectNetwork"
 			>
-				{{ network.status.connecting ? "Connect now" : "Connect" }}
+				{{ network.status.connecting ? t("composer.connectNow") : t("composer.connect") }}
 			</button>
 		</div>
 		<div
@@ -42,8 +42,8 @@
 			<button
 				type="button"
 				class="compose-bar-cancel"
-				aria-label="Cancel upload"
-				title="Cancel upload"
+				:aria-label="cancelUploadLabel"
+				:title="cancelUploadLabel"
 				@click="cancelUpload"
 			>
 				✕
@@ -52,27 +52,125 @@
 		<div v-if="channel.editing || channel.replyTo" class="compose-bar" role="status">
 			<span v-if="channel.editing" class="compose-bar-label">
 				<span class="compose-bar-icon" aria-hidden="true">✎</span>
-				Editing message
-				<span class="compose-bar-preview">{{ composePreview }}</span>
+				{{ t("composer.editing") }}
+				<span class="compose-bar-preview"
+					><QuotePreview :text="composeTarget?.text ?? ''"
+				/></span>
 			</span>
 			<span v-else class="compose-bar-label">
 				<span class="compose-bar-icon" aria-hidden="true">↩</span>
-				Replying to <strong class="compose-bar-nick">{{ composeNick }}</strong
-				>:
-				<span class="compose-bar-preview">{{ composePreview }}</span>
+				{{ replyingParts.prefix
+				}}<strong v-if="replyingParts.nick" class="compose-bar-nick">{{
+					replyingParts.nick
+				}}</strong
+				>{{ replyingParts.suffix }}
+				<span class="compose-bar-preview"
+					><QuotePreview :text="composeTarget?.text ?? ''"
+				/></span>
 			</span>
 			<button
 				type="button"
 				class="compose-bar-cancel"
-				aria-label="Cancel"
-				title="Cancel (Escape)"
+				:aria-label="cancelComposeLabel"
+				:title="cancelComposeTitle"
 				@click="cancelCompose(channel)"
 			>
 				✕
 			</button>
 		</div>
+		<!-- A translation streams in token by token, and every token is a
+		     patch of this region: announced live, a screen reader would read
+		     the strip out again on each one. It stays quiet while it streams
+		     and announces itself once, whole, when it is done or has failed. -->
+		<div
+			v-if="outgoing"
+			:class="['translate-bar', {failed: outgoing.status === 'failed'}]"
+			role="status"
+			:aria-live="outgoing.status === 'pending' ? 'off' : 'polite'"
+		>
+			<div class="translate-bar-row">
+				<span class="translate-bar-chip" :title="outgoingChipTitle">{{
+					outgoingChip
+				}}</span>
+				<span
+					v-if="outgoing.status === 'failed'"
+					class="translate-bar-text translate-bar-failed"
+					>{{ t("translate.strip.failed")
+					}}<span
+						v-if="outgoing.error"
+						class="translate-bar-reason"
+						:title="outgoing.error"
+						>{{ shortReason(outgoing.error) }}</span
+					></span
+				>
+				<span v-else class="translate-bar-text" dir="auto" :lang="outgoing.to"
+					>{{ outgoing.text
+					}}<span v-if="outgoingDownload" class="translate-bar-download">{{
+						outgoingDownload
+					}}</span
+					><span
+						v-if="outgoing.status === 'pending'"
+						class="translate-bar-caret"
+						aria-hidden="true"
+					></span
+				></span>
+				<span class="translate-bar-actions">
+					<button
+						v-if="outgoing.status === 'done'"
+						type="button"
+						:class="[
+							'translate-bar-button',
+							'translate-bar-copy',
+							{'translate-bar-copy-done': copiedOutgoing},
+						]"
+						:title="copyLabel"
+						:aria-label="copyLabel"
+						@mousedown.prevent
+						@click="copyOutgoing"
+					/>
+					<button
+						type="button"
+						class="translate-bar-button translate-bar-send"
+						:disabled="outgoingBusy || !canSend"
+						:title="outgoingSendLabel"
+						:aria-label="outgoingSendLabel"
+						@mousedown.prevent
+						@click="onSubmit()"
+					/>
+					<button
+						type="button"
+						class="translate-bar-button translate-bar-edit"
+						:title="keepTypingLabel"
+						:aria-label="keepTypingLabel"
+						@mousedown.prevent
+						@click="cancelOutgoingNow"
+					/>
+				</span>
+			</div>
+			<div
+				v-if="outgoing.check.status !== 'idle'"
+				class="translate-bar-row translate-bar-check"
+			>
+				<span class="translate-bar-check-label">{{ outgoingCheckLabel }}</span>
+				<span v-if="outgoing.check.status === 'failed'" class="translate-bar-failed">{{
+					t("translate.strip.checkFailed")
+				}}</span>
+				<span
+					v-else
+					class="translate-bar-text"
+					dir="auto"
+					:lang="outgoing.check.to ?? undefined"
+					>{{ outgoing.check.text
+					}}<span
+						v-if="outgoing.check.status === 'pending'"
+						class="translate-bar-caret"
+						aria-hidden="true"
+					></span
+				></span>
+			</div>
+		</div>
 		<span id="nick">{{ network.nick }}</span>
-		<label for="input" class="sr-only">Message input</label>
+		<label for="input" class="sr-only">{{ t("composer.inputLabel") }}</label>
 		<textarea
 			id="input"
 			ref="input"
@@ -87,10 +185,42 @@
 			@blur="onBlur"
 		/>
 		<span
-			v-if="store.state.serverConfiguration?.fileUpload"
+			v-if="translateOnceAvailable"
+			id="translate-once-tooltip"
+			class="tooltipped tooltipped-w tooltipped-no-touch"
+			:aria-label="translateOnceLabel"
+		>
+			<!-- `mousedown.prevent`, like the send button: the caret stays in the
+			textarea, so the picker's pick translates the draft that is there. -->
+			<button
+				id="translate-once"
+				ref="translateOnceButton"
+				type="button"
+				:class="{on: !!sendTarget}"
+				:aria-label="translateOnceLabel"
+				:aria-pressed="!!sendTarget"
+				:aria-expanded="translateOncePickerOpen"
+				:disabled="!canSend"
+				@mousedown.prevent
+				@click="openTranslateOnce"
+			/>
+			<SourceLanguagePicker
+				v-if="translateOncePickerOpen"
+				:anchor="translateOnceButton"
+				:selected="translateOncePreselected"
+				:selected-from="translateOnceFrom"
+				:polish-available="polishAvailable"
+				:once-offered="canTranslateOnce"
+				purpose="target"
+				@pick="translateOnce"
+				@close="translateOncePickerOpen = false"
+			/>
+		</span>
+		<span
+			v-if="store.state.serverConfiguration?.fileUpload || networkFilehost"
 			id="upload-tooltip"
 			class="tooltipped tooltipped-w tooltipped-no-touch"
-			aria-label="Upload file"
+			:aria-label="uploadFileLabel"
 			@click="openFileUpload"
 		>
 			<input
@@ -105,14 +235,14 @@
 			<button
 				id="upload"
 				type="button"
-				aria-label="Upload file"
+				:aria-label="uploadFileLabel"
 				:disabled="!network.status.connected"
 			/>
 		</span>
 		<span
 			id="submit-tooltip"
 			class="tooltipped tooltipped-w tooltipped-no-touch"
-			:data-tooltip="canSend ? 'Send message' : 'Not connected'"
+			:data-tooltip="sendTooltip"
 		>
 			<!-- `mousedown.prevent` keeps focus in the textarea: a tap that blurs
 			it drops the keyboard, the viewport grows and the button moves out
@@ -120,8 +250,8 @@
 			<button
 				id="submit"
 				type="submit"
-				aria-label="Send message"
-				:disabled="!canSend"
+				:aria-label="sendLabel"
+				:disabled="!canSend || outgoingBusy"
 				@mousedown.prevent
 			/>
 		</span>
@@ -133,7 +263,10 @@ import Mousetrap from "mousetrap";
 import {wrapCursor} from "undate";
 import autocompletion from "../js/autocompletion";
 import {commands} from "../js/commands/index";
+import {writeClipboard} from "../js/clipboard";
+import {expandAlias} from "../js/helpers/aliases";
 import socket from "../js/socket";
+import {clientForNetwork} from "../js/irc/manager";
 import upload from "../js/upload";
 import eventbus from "../js/eventbus";
 import {
@@ -157,11 +290,35 @@ import {
 	startEdit,
 } from "../js/helpers/compose";
 import {hasVirtualKeyboard} from "../js/helpers/device";
+import {useI18n} from "../js/i18n";
+import {languageName} from "../js/translate/languages";
+import {draftGate} from "../js/translate/outgoing";
+import {readingLanguage, setChannelOptions, translationAvailable} from "../js/translate/reader";
+import SourceLanguagePicker from "./SourceLanguagePicker.vue";
+import {loadNoteText} from "../js/helpers/modelLabel";
+import {translateErrorText} from "../js/helpers/translateErrors";
+import {loadNote} from "../js/translate/service";
+import {
+	cancelOutgoing,
+	lastOnceTarget,
+	noteOutgoingSent,
+	recordSentReadBack,
+	translateOnce as translateDraftOnce,
+	translateOutgoing,
+	writeTarget,
+} from "../js/translate/writer";
 
 /** How long after a Return its late-arriving newline is still recognised. */
 const ENTER_NEWLINE_WINDOW_MS = 500;
+
+/** Characters of a failure reason the strip shows; the title has all of it. */
+const REASON_MAX = 120;
+
+/** How long the strip's Copy button reads "Copied" after a successful copy. */
+const COPIED_LABEL_MS = 2000;
 import {TypingReporter} from "../js/helpers/typingReporter";
 import TypingIndicator from "./TypingIndicator.vue";
+import QuotePreview from "./QuotePreview.vue";
 
 const formattingHotkeys = {
 	"mod+k": "\x03",
@@ -190,13 +347,14 @@ const bracketWraps = {
 
 export default defineComponent({
 	name: "ChatInput",
-	components: {TypingIndicator},
+	components: {SourceLanguagePicker, TypingIndicator, QuotePreview},
 	props: {
 		network: {type: Object as PropType<ClientNetwork>, required: true},
 		channel: {type: Object as PropType<ClientChan>, required: true},
 	},
 	setup(props) {
 		const store = useStore();
+		const {t, tCount} = useI18n();
 		const input = ref<HTMLTextAreaElement>();
 		const uploadInput = ref<HTMLInputElement>();
 		const autocompletionRef = ref<ReturnType<typeof autocompletion>>();
@@ -230,16 +388,23 @@ export default defineComponent({
 				const style = window.getComputedStyle(input.value);
 				const lineHeight = parseFloat(style.lineHeight) || 1;
 
-				// Start by resetting height before computing as scrollHeight does not
-				// decrease when deleting characters
+				// Measuring means collapsing the box to one line first, since
+				// scrollHeight never shrinks below the box. Hold the form's height
+				// meanwhile: the list above is sized by it, and WebKit clamps the
+				// list's scroll position to the taller box it sees during that
+				// moment, leaving the newest rows under the composer afterwards.
+				const form = input.value.form!;
+
+				form.style.minHeight = `${form.offsetHeight}px`;
 				input.value.style.height = "";
 
-				// Use scrollHeight to calculate how many lines there are in input, and ceil the value
-				// because some browsers tend to incorrently round the values when using high density
-				// displays or using page zoom feature
+				// scrollHeight is an integer and the line height is 1.4 × the font
+				// size, fractional at every font step but the default: two lines of
+				// 22.4px report 45, and ceil would give a third, blank line. Round.
 				input.value.style.height = `${
-					Math.ceil(input.value.scrollHeight / lineHeight) * lineHeight
+					Math.round(input.value.scrollHeight / lineHeight) * lineHeight
 				}px`;
+				form.style.minHeight = "";
 			});
 		};
 
@@ -262,11 +427,13 @@ export default defineComponent({
 		const setPendingMessage = (e: Event) => {
 			const el = e.target as HTMLTextAreaElement;
 
-			// The Return that already sent, landing late (see onEnterKey).
-			if (enterNewlineDeadline > performance.now() && /^\n+$/.test(el.value)) {
+			// The Return that already sent, or translated, landing late (see onEnterKey).
+			if (
+				enterNewlineDeadline > performance.now() &&
+				(/^\n+$/.test(el.value) || el.value === `${props.channel.pendingMessage}\n`)
+			) {
 				enterNewlineDeadline = 0;
-				el.value = "";
-				props.channel.pendingMessage = "";
+				el.value = props.channel.pendingMessage;
 				setInputSize();
 				return;
 			}
@@ -282,7 +449,20 @@ export default defineComponent({
 
 		const getInputPlaceholder = (channel: ClientChan) => {
 			if (channel.type === ChanType.CHANNEL || channel.type === ChanType.QUERY) {
-				return `Write to ${channel.name}`;
+				const to = writeTarget(props.network, channel);
+
+				// A write target that is the user's own language sends their
+				// lines corrected (writer.ts), and the placeholder says so.
+				if (to === readingLanguage()) {
+					return t("translate.composer.placeholderCorrected", {name: channel.name});
+				}
+
+				return to
+					? t("translate.composer.placeholder", {
+							name: channel.name,
+							language: languageName(to, readingLanguage()),
+					  })
+					: t("composer.placeholder", {name: channel.name});
 			}
 
 			return "";
@@ -325,15 +505,18 @@ export default defineComponent({
 		});
 
 		const connectionLabel = computed(() => {
-			const name = props.network.name || "the network";
+			const name = props.network.name || t("composer.fallbackNetwork");
 
 			if (!props.network.status.connecting) {
-				return `Disconnected from ${name}.`;
+				return t("composer.disconnectedFrom", {network: name});
 			}
 
 			return retryInSeconds.value > 0
-				? `Reconnecting to ${name} in ${retryInSeconds.value}s…`
-				: `Connecting to ${name}…`;
+				? tCount("composer.reconnectIn", retryInSeconds.value, {
+						network: name,
+						seconds: retryInSeconds.value,
+				  })
+				: t("composer.connectingTo", {network: name});
 		});
 
 		// Idle, or waiting for a retry: a dial in flight offers nothing.
@@ -375,10 +558,286 @@ export default defineComponent({
 
 		const composeNick = computed(() => composeTarget.value?.from?.nick ?? "");
 
-		const composePreview = computed(() => {
-			const text = (composeTarget.value?.text ?? "").replace(/\s+/g, " ").trim();
-			return text.length > 80 ? text.slice(0, 79) + "…" : text;
+		// "Replying to {nick}:" keeps the nick emphasized across translations:
+		// the translated sentence is split around the substituted nick so it
+		// can stay inside its <strong> whatever word order the locale picks.
+		const replyingParts = computed(() => {
+			const nick = composeNick.value;
+			const label = t("composer.replyingTo", {nick});
+			const at = nick ? label.indexOf(nick) : -1;
+
+			if (at < 0) {
+				return {prefix: label, nick: "", suffix: ""};
+			}
+
+			return {
+				prefix: label.slice(0, at),
+				nick,
+				suffix: label.slice(at + nick.length),
+			};
 		});
+
+		// The outgoing translation (spec § Composer): the strip above the
+		// input is store state per channel (writer.ts), so a channel switch
+		// keeps it like it keeps the draft.
+		const outgoing = computed(() => store.state.outgoingTranslations[props.channel.id]);
+
+		// The strip's labels name their languages in the language the user
+		// reads this channel in, not the browser's (reader.ts readingLanguage).
+		const readerName = (code: string) => languageName(code, readingLanguage());
+
+		// Source → target, "→ German" until (or unless) a source is named.
+		const outgoingChip = computed(() => {
+			const entry = outgoing.value;
+
+			if (!entry) {
+				return "";
+			}
+
+			// A cleanup pass (writer.ts: from and to the same) is not a
+			// translation, and its chip says what it is.
+			if (entry.from && entry.from === entry.to) {
+				return t("translate.strip.polishChip", {language: readerName(entry.to)});
+			}
+
+			return entry.from
+				? `${readerName(entry.from)} → ${readerName(entry.to)}`
+				: `→ ${readerName(entry.to)}`;
+		});
+
+		// The read-back row's label: the translation's language → the one it
+		// is read back into, the user's reading language.
+		const outgoingCheckLabel = computed(() =>
+			outgoing.value
+				? `${readerName(outgoing.value.to)} → ${readerName(readingLanguage())}`
+				: ""
+		);
+
+		// Which route the strip's text came down, in the chip's title: the
+		// pair as the request asked for it ("auto" where the source was left
+		// to the model), the model's own id, whether it ran on the GPU, and
+		// whether the bare second try ran. The chip's visible text stays the
+		// draft's direction -- this is for someone wondering why a
+		// translation reads as it does. No title until the route has answered.
+		const outgoingChipTitle = computed(() => {
+			const entry = outgoing.value;
+
+			if (!entry || !entry.model) {
+				return undefined;
+			}
+
+			const from = entry.requestFrom
+				? readerName(entry.requestFrom)
+				: t("translate.strip.sourceAuto");
+			const gpu = entry.engine === "llm";
+			// One whole phrase per shape (device × retried): no translated
+			// fragment is ever glued onto another, and every key is a literal
+			// the pot check can see.
+			const vars = {from, to: readerName(entry.to), model: entry.model};
+
+			if (entry.retried) {
+				return gpu
+					? t("translate.strip.routeGpuRetried", vars)
+					: t("translate.strip.routeCpuRetried", vars);
+			}
+
+			return gpu ? t("translate.strip.routeGpu", vars) : t("translate.strip.routeCpu", vars);
+		});
+
+		// The route's model downloading for this draft (service.ts loads it on
+		// demand, and the deadline waits for it): the strip says so rather
+		// than blink a caret for minutes.
+		const outgoingDownload = computed(() => {
+			const entry = outgoing.value;
+
+			if (!entry || entry.status !== "pending" || entry.text || !entry.model) {
+				return "";
+			}
+
+			const view = store.state.translation.models.find((v) => v.ref.id === entry.model);
+
+			return view && view.status === "downloading" ? loadNoteText(loadNote(view)) : "";
+		});
+
+		// Why it failed, beside "couldn't translate": an ORT session error or
+		// a model id is long and multi-line, so the strip shows the head of it
+		// and the title carries the whole thing.
+		const shortReason = (error: string | null) => {
+			if (!error) {
+				return "";
+			}
+
+			const text = translateErrorText(error).replace(/\s+/g, " ").trim();
+
+			return text.length > REASON_MAX ? `${text.slice(0, REASON_MAX - 1)}…` : text;
+		};
+
+		// Copy: the translation is what the strip is showing, so it is what
+		// the button puts on the clipboard. The label says so for two
+		// seconds, since nothing else about the page changes.
+		const copiedOutgoing = ref(false);
+		let copiedTimer: number | null = null;
+
+		const copyOutgoing = () => {
+			const entry = outgoing.value;
+
+			if (!entry) {
+				return;
+			}
+
+			void writeClipboard(entry.text).then((copied) => {
+				if (!copied) {
+					return;
+				}
+
+				copiedOutgoing.value = true;
+
+				if (copiedTimer !== null) {
+					window.clearTimeout(copiedTimer);
+				}
+
+				copiedTimer = window.setTimeout(() => {
+					copiedOutgoing.value = false;
+					copiedTimer = null;
+				}, COPIED_LABEL_MS);
+			});
+		};
+
+		// The strip's three buttons: whole phrases from the catalog, never a
+		// ternary over two literals in the template.
+		const copyLabel = computed(() =>
+			copiedOutgoing.value ? t("translate.strip.copied") : t("translate.strip.copy")
+		);
+		const keepTypingLabel = computed(() => t("translate.strip.keepTyping"));
+		const outgoingSendLabel = computed(() =>
+			outgoing.value?.status === "failed"
+				? t("translate.strip.sendAsWritten")
+				: t("translate.strip.sendTranslation")
+		);
+
+		// Send waits for the translation, and for the automatic check.
+		const outgoingBusy = computed(() => {
+			const entry = outgoing.value;
+
+			if (!entry) {
+				return false;
+			}
+
+			return entry.status === "pending" || entry.check.status === "pending";
+		});
+
+		const sendTooltip = computed(() => {
+			if (!canSend.value) {
+				return t("composer.notConnected");
+			}
+
+			if (!outgoing.value) {
+				return t("composer.send");
+			}
+
+			return outgoingSendLabel.value;
+		});
+
+		/**
+		 * Run `line` as a UI-only command (`/collapse`, `/search`, …).
+		 * True when the line is consumed here and must not reach the bus —
+		 * also for a bare `/`, which is not a command at all.
+		 */
+		const runClientCommand = (line: string): boolean => {
+			if (line[0] !== "/" || line[1] === "/") {
+				return false;
+			}
+
+			const args = line.substring(1).split(" ");
+			const cmd = args.shift()?.toLowerCase();
+
+			if (!cmd) {
+				return true;
+			}
+
+			return (
+				Object.prototype.hasOwnProperty.call(commands, cmd) && commands[cmd](args) === true
+			);
+		};
+
+		/**
+		 * Ship `text` as the message; `original` is what the input history
+		 * remembers (the draft, when `text` is its translation). Everything
+		 * a send does lives here so the plain path, the translated path and
+		 * the "send as written" path cannot drift apart.
+		 */
+		const deliver = (text: string, original: string) => {
+			const target = props.channel.id;
+			const editing = props.channel.editing;
+			const replyTo = props.channel.replyTo;
+
+			if (autocompletionRef.value) {
+				autocompletionRef.value.hide();
+			}
+
+			props.channel.inputHistoryPosition = 0;
+			props.channel.pendingMessage = "";
+			clearInput();
+			setInputSize();
+
+			// No `done` on submit: the `input` emit below makes the IRC layer
+			// reset its typing state when it sends the PRIVMSG (the message
+			// itself ends typing on the receiver), so only forget the
+			// announcement here. Slash commands were already `done` when the
+			// leading "/" was typed.
+			typing.sent(target);
+
+			// Store new message in history if last message isn't already equal
+			if (props.channel.inputHistory[1] !== original) {
+				props.channel.inputHistory.splice(1, 0, original);
+			}
+
+			// Limit input history to a 100 entries
+			if (props.channel.inputHistory.length > 100) {
+				props.channel.inputHistory.pop();
+			}
+
+			// A user-defined alias replaces the line before anything looks at
+			// it, so its expansion reaches the UI-only commands below as well
+			// as the IRC layer. Never while editing: the edit body is text.
+			if (!editing) {
+				const expanded = expandAlias(text, {
+					chan: props.channel.name,
+					me: props.network.nick,
+				});
+
+				if (expanded) {
+					for (const line of expanded) {
+						if (!runClientCommand(line)) {
+							socket.emit("input", {target, text: line});
+						}
+					}
+
+					props.channel.replyTo = null;
+					props.channel.editing = null;
+					return;
+				}
+			}
+
+			if (text[0] === "/" && runClientCommand(text)) {
+				return false;
+			}
+
+			// An edit keeps the parent of the message it replaces; the IRC layer
+			// only honours `reply`/`edit` for plain text (and `reply` for /me).
+			const reply = editing ? editing.replyTo : replyTo?.msgid;
+			const edit = editing?.msgid;
+
+			socket.emit("input", {
+				target,
+				text,
+				...(reply ? {reply} : {}),
+				...(edit ? {edit} : {}),
+			});
+
+			props.channel.replyTo = null;
+			props.channel.editing = null;
+		};
 
 		const onSubmit = (fromEnterKey = false) => {
 			if (!input.value) {
@@ -394,8 +853,7 @@ export default defineComponent({
 			// disconnected network. Plain text in a conversation on a
 			// network that is down stays as the draft (`canSend`, the same
 			// rule that disables the send button); elsewhere the IRC layer
-			// answers it with NOT_CONNECTED_TEXT.
-			const target = props.channel.id;
+			// answers it with the `send.notConnected` error.
 
 			// A keyboard that inserts the Return's newline before the keypress
 			// fires has already put it in the draft.
@@ -418,7 +876,6 @@ export default defineComponent({
 			}
 
 			const editing = props.channel.editing;
-			const replyTo = props.channel.replyTo;
 
 			// Editing to the identical text is a no-op: just leave edit mode.
 			if (editing && text === editing.text) {
@@ -429,59 +886,93 @@ export default defineComponent({
 				return false;
 			}
 
-			if (autocompletionRef.value) {
-				autocompletionRef.value.hide();
-			}
+			// The second Enter (spec § Composer 5): the strip's translation
+			// goes, or after a failure the draft as written. Nothing goes
+			// while it is still translating (or, with the automatic check,
+			// still reading back).
+			const entry = store.state.outgoingTranslations[props.channel.id];
+			// What of the draft a translation is of: the draft itself, or the
+			// text of a `/me`, which goes back out behind the command.
+			const gate = draftGate(text, !!editing);
 
-			props.channel.inputHistoryPosition = 0;
-			props.channel.pendingMessage = "";
-			clearInput();
-			setInputSize();
-
-			// No `done` on submit: the `input` emit below makes the IRC layer
-			// reset its typing state when it sends the PRIVMSG (the message
-			// itself ends typing on the receiver), so only forget the
-			// announcement here. Slash commands were already `done` when the
-			// leading "/" was typed.
-			typing.sent(target);
-
-			// Store new message in history if last message isn't already equal
-			if (props.channel.inputHistory[1] !== text) {
-				props.channel.inputHistory.splice(1, 0, text);
-			}
-
-			// Limit input history to a 100 entries
-			if (props.channel.inputHistory.length > 100) {
-				props.channel.inputHistory.pop();
-			}
-
-			if (text[0] === "/") {
-				const args = text.substring(1).split(" ");
-				const cmd = args.shift()?.toLowerCase();
-
-				if (!cmd) {
+			if (entry && entry.draft === gate.text) {
+				if (outgoingBusy.value) {
 					return false;
 				}
 
-				if (Object.prototype.hasOwnProperty.call(commands, cmd) && commands[cmd](args)) {
-					return false;
+				const translated = entry.status === "done" ? entry.text : null;
+				let line = translated ?? text;
+
+				if (translated !== null && gate.kind === "action") {
+					// The translation is the action's text: the command goes
+					// back on the front of it, never escaped.
+					line = `/me ${translated}`;
+				} else if (translated !== null && translated.startsWith("/")) {
+					// A translation that begins with "/" is text, not a command:
+					// the IRC layer sends `//x` as the text `/x`, and deliver's
+					// own slash intercept would otherwise take it for a UI one.
+					line = `/${translated}`;
 				}
+
+				// Before the send: the IRC layer puts the line in the store
+				// inside deliver's emit, and cancelOutgoing takes the strip.
+				// A corrected line (from and to the same) is the line itself:
+				// nothing to read back, no voice or term to learn from it.
+				const polished = entry.from !== null && entry.from === entry.to;
+
+				if (translated !== null && !polished) {
+					recordSentReadBack(props.channel, entry);
+				}
+
+				cancelOutgoing(props.channel);
+				deliver(line, text);
+
+				if (translated !== null && !polished) {
+					noteOutgoingSent(
+						props.network,
+						props.channel,
+						gate.text,
+						translated,
+						entry.to,
+						entry.from
+					);
+				}
+
+				return;
 			}
 
-			// An edit keeps the parent of the message it replaces; the IRC layer
-			// only honours `reply`/`edit` for plain text (and `reply` for /me).
-			const reply = editing ? editing.replyTo : replyTo?.msgid;
-			const edit = editing?.msgid;
+			if (entry) {
+				// A strip for another draft (the watch below normally removes it first).
+				cancelOutgoing(props.channel);
+			}
 
-			socket.emit("input", {
-				target,
-				text,
-				...(reply ? {reply} : {}),
-				...(edit ? {edit} : {}),
-			});
+			// The first Enter (spec § Composer 1-3): translate, and send only
+			// when the draft turns out to need none.
+			if (
+				writeTarget(props.network, props.channel) &&
+				(gate.kind === "ok" || gate.kind === "action")
+			) {
+				// The verdict can be seconds late (a cold engine, a slow
+				// device), so it is checked against the composer it started
+				// in: another conversation, a changed draft or a network that
+				// went down in the meantime all leave the draft where it is.
+				const startedFor = props.channel.id;
 
-			props.channel.replyTo = null;
-			props.channel.editing = null;
+				void translateOutgoing(props.network, props.channel, gate.text).then((verdict) => {
+					if (
+						verdict === "plain" &&
+						props.channel.id === startedFor &&
+						props.channel.pendingMessage === text &&
+						canSend.value
+					) {
+						deliver(text, text);
+					}
+				});
+
+				return false;
+			}
+
+			deliver(text, text);
 		};
 
 		/**
@@ -515,12 +1006,31 @@ export default defineComponent({
 			uploadInput.value?.click();
 		};
 
+		// The network's own upload host (`draft/FILEHOST` ISUPPORT, kept on
+		// the network's serverOptions by `network:options`); it takes
+		// precedence over the deploy's uploader (`upload.ts`).
+		const networkFilehost = computed(
+			() => store.state.activeChannel?.network.serverOptions?.FILEHOST !== undefined
+		);
+
 		// The file dialog offers what the uploader takes; the drop and paste
-		// paths check the same list in `Uploader.triggerUpload`.
+		// paths check the same list in `Uploader.triggerUpload`. A FILEHOST
+		// says what it takes only over HTTP, so the dialog stays open-ended.
 		const uploadAccept = computed(() => {
+			if (networkFilehost.value) {
+				return undefined;
+			}
+
 			const accept = store.state.branding.uploads?.accept;
 			return accept?.length ? accept.join(",") : undefined;
 		});
+
+		// Labels and tooltips of the composer's buttons.
+		const cancelUploadLabel = computed(() => t("composer.cancelUpload"));
+		const cancelComposeLabel = computed(() => t("composer.cancel"));
+		const cancelComposeTitle = computed(() => t("composer.cancelEscape"));
+		const uploadFileLabel = computed(() => t("composer.uploadFile"));
+		const sendLabel = computed(() => t("composer.send"));
 
 		// The strip above the input while a file is going up
 		// (`store.state.uploadProgress`, written by `upload.ts`).
@@ -531,16 +1041,18 @@ export default defineComponent({
 				return "";
 			}
 
-			const parts = [`Uploading ${progress.fileName}`];
+			const parts = [t("composer.uploading", {file: progress.fileName})];
 
 			if (progress.count > 1) {
-				parts.push(`${progress.index} of ${progress.count}`);
+				parts.push(
+					t("composer.uploadIndex", {index: progress.index, count: progress.count})
+				);
 			}
 
 			if (progress.phase === "preparing") {
-				parts.push("preparing…");
+				parts.push(t("composer.uploadPreparing"));
 			} else if (progress.phase === "waiting") {
-				parts.push("waiting for the server…");
+				parts.push(t("composer.uploadWaiting"));
 			}
 
 			return parts.join(" · ");
@@ -586,6 +1098,120 @@ export default defineComponent({
 			});
 		};
 
+		// The translate button is the channel's send target as a toggle,
+		// independent of the globe (which is reading): off, a click opens
+		// the dialog and the pick becomes the write target (channelStore
+		// `write`, the same setting the panel's "Send my messages in" shows)
+		// until the button is clicked again; the dialog's "This message
+		// only" makes the pick a one-off instead (writer.ts `translateOnce`),
+		// the way the toolbar's Translate reads one line. Shown wherever
+		// translation can run at all.
+		const translateOnceButton = ref<HTMLButtonElement | null>(null);
+		const translateOncePickerOpen = ref(false);
+		const translateOnceAvailable = computed(
+			() =>
+				translationAvailable() &&
+				(props.channel.type === ChanType.CHANNEL || props.channel.type === ChanType.QUERY)
+		);
+		const canTranslateOnce = computed(() => {
+			const gate = draftGate(props.channel.pendingMessage ?? "", !!props.channel.editing);
+
+			return (
+				(gate.kind === "ok" || gate.kind === "action") &&
+				gate.text.trim() !== "" &&
+				canSend.value &&
+				!outgoingBusy.value
+			);
+		});
+		// The channel's send target: the button is lit while one is set.
+		const sendTarget = computed(() => writeTarget(props.network, props.channel));
+		const translateOnceLabel = computed(() => {
+			const to = sendTarget.value;
+
+			if (!to) {
+				return t("translate.composer.sendOff");
+			}
+
+			const language = languageName(to, readingLanguage());
+
+			return to === readingLanguage()
+				? t("translate.composer.sendCorrectedOn", {language})
+				: t("translate.composer.sendOn", {language});
+		});
+		// Read when the dialog opens: the last pick is plain session memory
+		// (writer.ts), not store state, so nothing would recompute it.
+		const translateOncePreselected = ref("");
+		// The dialog's source: the language the user reads.
+		const translateOnceFrom = computed(() => readingLanguage());
+
+		const openTranslateOnce = () => {
+			if (!canSend.value) {
+				return;
+			}
+
+			// On: the click turns the send target off; a strip in flight for
+			// it goes too. Off: the dialog.
+			if (sendTarget.value) {
+				setChannelOptions(props.network, props.channel, {write: null});
+				cancelOutgoing(props.channel);
+				focusForTyping();
+				return;
+			}
+
+			// The channel's last pick, else the language the interface is in:
+			// a first pick starts from what the user reads and writes, not
+			// from whatever sorts first in the list.
+			translateOncePreselected.value =
+				lastOnceTarget(props.network, props.channel) || readingLanguage();
+			translateOncePickerOpen.value = !translateOncePickerOpen.value;
+		};
+
+		// A same-language pick is a cleanup pass on the GPU model
+		// (writer.ts, router.ts): the dialog says so, and says when the
+		// model is off or the device has none.
+		const polishAvailable = computed(
+			() =>
+				store.state.translation.capability?.tier === "gpu" &&
+				!!store.state.settings.translateLlm
+		);
+
+		const translateOnce = (to: string, from: string | null = null, once = false) => {
+			translateOncePickerOpen.value = false;
+
+			const draft = props.channel.pendingMessage ?? "";
+			const gate = draftGate(draft, !!props.channel.editing);
+			const translatable =
+				canTranslateOnce.value && (gate.kind === "ok" || gate.kind === "action");
+
+			if (once) {
+				// The verdict is checked against the composer it started in,
+				// as the first Enter's is: a "plain" verdict (the draft is
+				// already in that language) leaves the draft where it is --
+				// the dialog asked for a translation, not a send.
+				if (translatable) {
+					void translateDraftOnce(props.network, props.channel, gate.text, to, from);
+				}
+
+				focusForTyping();
+				return;
+			}
+
+			// The mode: the channel's send target, from here on. A draft
+			// already typed gets the strip now rather than on its Enter.
+			setChannelOptions(props.network, props.channel, {write: to});
+
+			if (translatable) {
+				void translateOutgoing(props.network, props.channel, gate.text);
+			}
+
+			focusForTyping();
+		};
+
+		const cancelOutgoingNow = () => {
+			cancelOutgoing(props.channel);
+			focusForTyping();
+		};
+
 		const onBlur = () => {
 			if (autocompletionRef.value) {
 				autocompletionRef.value.hide();
@@ -607,8 +1233,32 @@ export default defineComponent({
 
 		watch(
 			() => props.channel.pendingMessage,
-			() => {
+			(value) => {
 				setInputSize();
+
+				// Typing, or walking the history, invalidates the strip (spec
+				// § Composer 3): the next Enter translates afresh.
+				const entry = store.state.outgoingTranslations[props.channel.id];
+
+				// Against the part of the draft the strip is a translation of
+				// (a `/me`'s text, not the command in front of it), with one
+				// trailing newline tolerated on a touch-primary device: there
+				// the Return puts its newline in the draft before `keypress`
+				// fires, so the draft reads "…\n" for the moment between the
+				// two and `onEnterKey` -> `onSubmit(true)` strips exactly that
+				// newline back off. Without the tolerance the second Enter
+				// would find the strip already cancelled and translate afresh
+				// instead of sending. Only there: with a hardware keyboard the
+				// Return is preventDefaulted and never reaches the draft, so a
+				// trailing newline is a deliberate Shift+Enter -- an edit of
+				// the draft like any other, and the strip goes.
+				const gated = draftGate(value, !!props.channel.editing).text;
+				const typed =
+					hasVirtualKeyboard() && gated.endsWith("\n") ? gated.slice(0, -1) : gated;
+
+				if (entry && typed !== entry.draft) {
+					cancelOutgoing(props.channel);
+				}
 			}
 		);
 
@@ -662,6 +1312,12 @@ export default defineComponent({
 			// Escape cancels a pending reply/edit before anything else gets it
 			// (the global handler in App.vue blurs the input otherwise).
 			inputTrap.bind("esc", () => {
+				// A translation strip goes first (spec § Composer 6); the draft stays.
+				if (store.state.outgoingTranslations[props.channel.id]) {
+					cancelOutgoing(props.channel);
+					return false;
+				}
+
 				if (!props.channel.replyTo && !props.channel.editing) {
 					return;
 				}
@@ -791,13 +1447,18 @@ export default defineComponent({
 			// Always listen for drops and pastes: without a configured uploader
 			// the handler swallows them and shows a one-off notice instead of
 			// letting the browser navigate to the dropped file.
-			upload.mounted(store);
+			upload.mounted(store, clientForNetwork);
 		});
 
 		onUnmounted(() => {
 			if (ticker !== null) {
 				clearInterval(ticker);
 				ticker = null;
+			}
+
+			if (copiedTimer !== null) {
+				window.clearTimeout(copiedTimer);
+				copiedTimer = null;
 			}
 
 			eventbus.off("escapekey", blurInput);
@@ -815,14 +1476,21 @@ export default defineComponent({
 
 		return {
 			store,
+			t,
 			input,
 			uploadInput,
 			onUploadInputChange,
 			openFileUpload,
 			uploadAccept,
+			networkFilehost,
 			uploadLabel,
 			uploadPercent,
 			cancelUpload,
+			cancelUploadLabel,
+			cancelComposeLabel,
+			cancelComposeTitle,
+			uploadFileLabel,
+			sendLabel,
 			blurInput,
 			onBlur,
 			setInputSize,
@@ -832,14 +1500,39 @@ export default defineComponent({
 			onEnterKey,
 			setPendingMessage,
 			cancelCompose,
-			composeNick,
-			composePreview,
+			replyingParts,
+			composeTarget,
 			showConnectionBar,
 			canSend,
 			connectionLabel,
 			retryInSeconds,
 			canConnectNow,
 			connectNetwork,
+			outgoing,
+			outgoingChip,
+			outgoingCheckLabel,
+			outgoingChipTitle,
+			outgoingDownload,
+			shortReason,
+			outgoingBusy,
+			sendTooltip,
+			cancelOutgoingNow,
+			copiedOutgoing,
+			copyOutgoing,
+			copyLabel,
+			keepTypingLabel,
+			outgoingSendLabel,
+			translateOnceButton,
+			translateOncePickerOpen,
+			translateOnceAvailable,
+			canTranslateOnce,
+			translateOnceLabel,
+			translateOncePreselected,
+			translateOnceFrom,
+			sendTarget,
+			polishAvailable,
+			openTranslateOnce,
+			translateOnce,
 		};
 	},
 });

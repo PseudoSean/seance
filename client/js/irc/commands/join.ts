@@ -6,6 +6,7 @@
 import {ChanType} from "../../../../shared/types/chan";
 import {MessageType} from "../../../../shared/types/msg";
 import {formatLine} from "../message";
+import {t} from "../../i18n/core";
 import type {Command} from "../types";
 
 const join: Command = {
@@ -18,7 +19,7 @@ const join: Command = {
 			if (chan.type !== ChanType.CHANNEL) {
 				client.pushMessage(chan, {
 					type: MessageType.ERROR,
-					text: "Usage: /join <channel> [key]",
+					text: t("cmd.usageJoin"),
 				});
 				return;
 			}

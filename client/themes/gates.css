@@ -1,0 +1,306 @@
+/* Gates — a DOS-era IDE (QBasic, the Turbo languages): light text on the CGA
+ * blue (#0000aa), and the blue is the whole screen — rail, window, command
+ * line, menus, panels; nothing is black. One big window in a double
+ * bright-blue frame, titles in yellow. coffee.css's rules with the sixteen-colour EGA palette, a monospace
+ * face and no rounded corner anywhere. bourbaki.css is the same palette laid
+ * out as the directory manager's boxes on black.
+ *
+ * Contrast on the blue: white 8.6:1, cyan 10.4:1, yellow 11.6:1, the light
+ * grey used for muted text (#c0c0c0) 4.9:1, the dimmer grey for icons
+ * (#a0a0a0) 3.6:1. Light red (#ff5555) is 3.3:1 on the blue, so it is only
+ * ever a marker, never text.
+ *
+ * The nick palette is 32 slots (style.css hashes nicks into 32) and DOS has
+ * six bright colours that read on the blue (cyan, green, magenta, yellow,
+ * white, light grey); the slots cycle through them. */
+@import "coffee.css";
+
+:root {
+	color-scheme: dark;
+
+	/* The EGA palette. */
+	--dos-black: #000;
+	--dos-blue: #00a;
+	--dos-bright-blue: #55f;
+	--dos-cyan: #5ff;
+	--dos-green: #5f5;
+	--dos-magenta: #f5f;
+	--dos-red: #f55;
+	--dos-yellow: #ff5;
+	--dos-white: #fff;
+	--dos-grey: #c0c0c0;
+	--dos-dark-grey: #555;
+
+	/* Chat surface: the blue screen, white text, cyan for the second voice. */
+	--chat-bg: var(--dos-blue);
+	--chat-fg: var(--dos-white);
+	--chat-fg-muted: var(--dos-grey);
+	--chat-fg-faint: #a0a0e0;
+	--dos-blue-lit: #1c1cc8; /* hover, the active and the highlighted row */
+	--chat-heading: var(--dos-yellow);
+	--chat-rule: var(--dos-bright-blue);
+	--chat-accent: var(--dos-yellow);
+	--chat-accent-fg: var(--dos-blue);
+	--chat-accent-rule: var(--dos-yellow);
+	--chat-highlight-bg: var(--dos-blue-lit);
+	--chat-selection: var(--dos-white);
+	--composer-bg: var(--dos-blue);
+	--composer-border: var(--dos-bright-blue);
+	--window-border: var(--dos-bright-blue);
+	--window-shadow: none;
+	--menu-bg: var(--dos-blue);
+
+	/* Sidebar rail: the same blue, grey text, yellow for the current item
+	 * and red for the one that wants you. */
+	--rail-bg-top: var(--dos-blue);
+	--rail-bg-bottom: var(--dos-blue);
+	--rail-fg: var(--dos-grey);
+	--rail-fg-strong: var(--dos-white);
+	--rail-fg-active: var(--dos-yellow);
+	--rail-fg-muted: #a0a0a0;
+	--rail-item-active-bg: var(--dos-blue-lit);
+	--rail-item-hover-bg: var(--dos-blue-lit);
+	--rail-accent: var(--dos-red);
+	--rail-accent-fg: var(--dos-white);
+	--rail-badge-bg: var(--dos-bright-blue);
+	--rail-badge-fg: var(--dos-white);
+	--rail-input-bg: var(--dos-blue);
+	--rail-input-border: var(--dos-bright-blue);
+
+	/* Message semantics. */
+	--event-join: var(--dos-green);
+	--event-quit: var(--dos-magenta);
+	--nick-default: var(--dos-cyan);
+	--notice-color: var(--dos-yellow);
+	--action-color: var(--dos-magenta);
+
+	/* Notice boxes: the blue, one colour each. */
+	--note-bg: var(--dos-blue);
+	--note-fg: var(--dos-grey);
+	--warn-bg: var(--dos-blue);
+	--warn-fg: var(--dos-yellow);
+	--error-bg: var(--dos-blue);
+	--error-fg: var(--dos-magenta);
+	--ok-bg: var(--dos-blue);
+	--ok-fg: var(--dos-green);
+
+	/* Tints, focus ring, scrollbars. */
+	--tint-soft: rgb(255 255 255 / 8%);
+	--tint-strong: rgb(255 255 255 / 16%);
+	--accent-tint-20: rgb(255 255 85 / 20%);
+	--accent-tint-30: rgb(255 255 85 / 30%);
+	--focus-ring: rgb(85 255 255 / 60%);
+	--scrollbar-track: var(--dos-blue);
+	--scrollbar-thumb: var(--dos-grey);
+	--scrollbar-thumb-active: var(--dos-white);
+
+	/* Code blocks, on the blue. */
+	--tok-comment: #909090;
+	--tok-keyword: var(--dos-magenta);
+	--tok-string: var(--dos-cyan);
+	--tok-number: var(--dos-yellow);
+	--tok-function: var(--dos-green);
+	--tok-operator: var(--dos-white);
+	--tok-punctuation: var(--dos-grey);
+	--tok-tag: var(--dos-green);
+	--tok-attr: var(--dos-cyan);
+}
+
+/* A DOS screen is monospaced and has no rounded corners. */
+body,
+#chat,
+#sidebar,
+#form #input,
+button,
+input,
+select,
+textarea {
+	font-family: "IBM Plex Mono", "DejaVu Sans Mono", "Fira Mono", Menlo, Consolas, monospace;
+}
+
+*,
+*::before,
+*::after {
+	border-radius: 0 !important;
+}
+
+/* The whole screen is the blue: no gradient, no black. */
+body,
+#sidebar {
+	background: var(--dos-blue);
+}
+
+/* Double-line box rules in bright blue: the window frame is a real border
+ * (an outline painted over the content put the command line's rule under
+ * the frame); the rail's edge, the channel header, the user list and the
+ * command line are inset shadows, so nothing moves. The rail takes the same
+ * 0.25rem top and bottom as the frame, so its list ends on the same row as
+ * the scrollback and its footer lines up with the command line. */
+.window {
+	box-shadow: none;
+	border: 0.25rem double var(--dos-bright-blue);
+}
+
+#sidebar {
+	padding: 0.25rem 0;
+	box-shadow:
+		inset -1px 0 0 var(--dos-bright-blue),
+		inset -2px 0 0 var(--dos-blue),
+		inset -3px 0 0 var(--dos-bright-blue);
+}
+
+/* The window frames' inner edges face the chat; in RTL both panes sit on
+ * the other side, so the rules move with them. */
+[dir="rtl"] #sidebar {
+	box-shadow:
+		inset 1px 0 0 var(--dos-bright-blue),
+		inset 2px 0 0 var(--dos-blue),
+		inset 3px 0 0 var(--dos-bright-blue);
+}
+
+#chat .header {
+	border-bottom-color: var(--dos-bright-blue);
+	box-shadow:
+		inset 0 -1px 0 var(--dos-bright-blue),
+		inset 0 -2px 0 var(--dos-blue),
+		inset 0 -3px 0 var(--dos-bright-blue);
+}
+
+#chat .userlist {
+	border-inline-start-color: var(--dos-bright-blue);
+	box-shadow:
+		inset 1px 0 0 var(--dos-bright-blue),
+		inset 2px 0 0 var(--dos-blue),
+		inset 3px 0 0 var(--dos-bright-blue);
+}
+
+[dir="rtl"] #chat .userlist {
+	box-shadow:
+		inset -1px 0 0 var(--dos-bright-blue),
+		inset -2px 0 0 var(--dos-blue),
+		inset -3px 0 0 var(--dos-bright-blue);
+}
+
+#form {
+	border-top: 0; /* the rule is the shadow below; a 1px border would push the command line off the rail's grid */
+	box-shadow:
+		inset 0 1px 0 var(--dos-bright-blue),
+		inset 0 2px 0 var(--dos-blue),
+		inset 0 3px 0 var(--dos-bright-blue);
+}
+
+/* The focus ring is the frame turning cyan, the caret a yellow block. */
+#form:focus-within {
+	border-top-color: var(--dos-cyan);
+	box-shadow:
+		inset 0 1px 0 var(--dos-cyan),
+		inset 0 2px 0 var(--dos-blue),
+		inset 0 3px 0 var(--dos-cyan);
+}
+
+/* Box titles are yellow, like "Volume Status". */
+#chat .header .title,
+.window h2,
+#chat .userlist .count {
+	color: var(--dos-yellow);
+}
+
+/* Selection is the DOS inverse: blue on white. */
+::selection {
+	background: var(--dos-white);
+	color: var(--dos-blue);
+}
+
+/* The current item is white on blue and gets the red marker; unread rows
+ * are cyan, a highlight is yellow. */
+.channel-list-item.active {
+	color: var(--dos-white);
+	box-shadow: inset 2px 0 0 var(--dos-red);
+}
+
+[dir="rtl"] .channel-list-item.active {
+	box-shadow: inset -2px 0 0 var(--dos-red);
+}
+
+.channel-list-item.has-unread .name {
+	color: var(--dos-cyan);
+}
+
+.channel-list-item.has-highlight:not(.is-muted) .name {
+	color: var(--dos-yellow);
+}
+
+.channel-list-item[data-type="lobby"] {
+	color: var(--dos-yellow);
+}
+
+/* Timestamps in cyan, the way the size column sits beside the names. */
+#chat .time {
+	color: var(--dos-cyan);
+}
+
+/* A monospace face is wider than the base stylesheet's timestamp column
+ * allows for; room for "07:52 PM" and "07:52:30 PM". */
+#chat.time-12h .time,
+#chat.time-seconds .time {
+	width: 5.25rem;
+}
+
+#chat.time-seconds.time-12h .time {
+	width: 7rem;
+}
+
+/* mIRC colours that vanish on the blue or the black. */
+.irc-fg1 { color: var(--dos-dark-grey); }
+.irc-fg2 { color: var(--dos-bright-blue); }
+.irc-fg5 { color: var(--dos-red); }
+.irc-fg6 { color: var(--dos-magenta); }
+.irc-fg12 { color: var(--dos-cyan); }
+
+/* Buttons are the menu bar's boxes: blue, grey text, yellow when lit. */
+.btn {
+	background: var(--dos-blue);
+	border-color: var(--dos-bright-blue);
+	color: var(--dos-grey);
+}
+
+.btn:hover,
+.btn:focus-visible {
+	background: var(--dos-blue);
+	border-color: var(--dos-cyan);
+	color: var(--dos-yellow);
+}
+
+/* Nick palette: the six bright DOS colours that read on the blue, cycled. */
+.user.color-1 { color: #5ff; }
+.user.color-2 { color: #fff; }
+.user.color-3 { color: #5f5; }
+.user.color-4 { color: #ff5; }
+.user.color-5 { color: #f5f; }
+.user.color-6 { color: #c0c0c0; }
+.user.color-7 { color: #5ff; }
+.user.color-8 { color: #fff; }
+.user.color-9 { color: #5f5; }
+.user.color-10 { color: #ff5; }
+.user.color-11 { color: #f5f; }
+.user.color-12 { color: #c0c0c0; }
+.user.color-13 { color: #5ff; }
+.user.color-14 { color: #fff; }
+.user.color-15 { color: #5f5; }
+.user.color-16 { color: #ff5; }
+.user.color-17 { color: #f5f; }
+.user.color-18 { color: #c0c0c0; }
+.user.color-19 { color: #5ff; }
+.user.color-20 { color: #fff; }
+.user.color-21 { color: #5f5; }
+.user.color-22 { color: #ff5; }
+.user.color-23 { color: #f5f; }
+.user.color-24 { color: #c0c0c0; }
+.user.color-25 { color: #5ff; }
+.user.color-26 { color: #fff; }
+.user.color-27 { color: #5f5; }
+.user.color-28 { color: #ff5; }
+.user.color-29 { color: #f5f; }
+.user.color-30 { color: #c0c0c0; }
+.user.color-31 { color: #5ff; }
+.user.color-32 { color: #fff; }

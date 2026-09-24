@@ -12,6 +12,7 @@ import {brandingFeatures, DEFAULT_UPLOAD_MAX_BYTES, loadBranding} from "./brandi
 import {router, navigate, switchToChannel} from "./router";
 import type {LocationQueryRaw} from "vue-router";
 import {store} from "./store";
+import {migrateReadingToLocale} from "./settings";
 import parseIrcUri from "./helpers/parseIrcUri";
 import {
 	decideLinkTarget,
@@ -30,6 +31,7 @@ import {installNativeHooks} from "./native";
 import {installForegroundHooks} from "./foreground";
 import {installViewportHooks} from "./helpers/viewport";
 import {onLaunch} from "./pwa";
+import {DEV_I18N} from "./i18n/core";
 // Also registers the IRC layer's bus handlers (input, names, more, network:*).
 import {autoconnectSavedNetworks, clientForNetwork, createNetwork} from "./irc/manager";
 
@@ -67,8 +69,11 @@ export async function boot(): Promise<void> {
 	store.commit("serverConfiguration", configuration);
 
 	// Before the settings store's first write (which would drop the old key):
-	// the removed global "Enable browser notifications" checkbox, when it was
-	// off, stamps notifyEnabled: false onto every saved network.
+	// the removed "Read messages in" override stamps itself onto the interface
+	// language (one control now), and the removed global "Enable browser
+	// notifications" checkbox, when it was off, stamps notifyEnabled: false
+	// onto every saved network.
+	migrateReadingToLocale();
 	saved.migrateGlobalNotify();
 
 	// 'theme' setting depends on serverConfiguration.themes so
@@ -100,6 +105,17 @@ export async function boot(): Promise<void> {
 	installNativeHooks();
 	installForegroundHooks();
 	installViewportHooks();
+
+	// Development only: the bundler folds DEV_I18N (core.ts), so a
+	// production bundle never ships the diagnostics.
+	if (DEV_I18N) {
+		/* eslint-disable no-console -- the dev console must say the
+		 * diagnostics exist, not sit silent while they watch. */
+		console.warn(
+			"[seance i18n] developer diagnostics armed — dynamic-label and coverage warnings active (window.seanceI18n)"
+		);
+		/* eslint-enable no-console */
+	}
 
 	store.commit("appLoaded");
 

@@ -1,29 +1,35 @@
 <template>
-	<div id="changelog" class="window" aria-label="Changelog">
+	<div id="changelog" class="window" :aria-label="ariaLabel">
 		<div class="header">
 			<SidebarToggle />
 		</div>
 		<div class="container">
-			<router-link id="back-to-help" to="/help">« Help</router-link>
+			<router-link id="back-to-help" to="/help">{{
+				t("windows.changelog.back")
+			}}</router-link>
 
-			<h1 class="title">Release notes for v{{ build.release }}</h1>
+			<h1 class="title">{{ t("windows.changelog.title", {version: build.release}) }}</h1>
 
 			<p v-if="pastRelease">
-				This build is
+				{{ t("windows.changelog.pastRelease") }}
 				<a :href="source.commit" target="_blank" rel="noopener"
-					>commit <code>{{ build.gitCommit }}</code></a
-				>, after v{{ build.release }}:
-				<a :href="source.sinceRelease" target="_blank" rel="noopener"
-					>what changed since the release</a
+					>{{ t("windows.changelog.commitLink") }} <code>{{ build.gitCommit }}</code></a
+				>{{ t("windows.changelog.pastReleaseAfter", {version: build.release}) }}
+				<a :href="source.sinceRelease" target="_blank" rel="noopener">{{
+					t("windows.changelog.sinceReleaseLink")
+				}}</a
 				>.
 			</p>
 			<p>
-				Release notes are not bundled with the build.
-				<a :href="source.releaseNotes" target="_blank" rel="noopener"
-					>Read the notes for v{{ build.release }}</a
-				>
-				or
-				<a :href="source.releases" target="_blank" rel="noopener">see all releases</a>.
+				{{ t("windows.changelog.notBundled") }}
+				<a :href="source.releaseNotes" target="_blank" rel="noopener">{{
+					t("windows.changelog.readNotesLink", {version: build.release})
+				}}</a>
+				{{ t("windows.changelog.or") }}
+				<a :href="source.releases" target="_blank" rel="noopener">{{
+					t("windows.changelog.allReleasesLink")
+				}}</a
+				>.
 			</p>
 		</div>
 	</div>
@@ -32,6 +38,7 @@
 <script lang="ts">
 import {computed, defineComponent} from "vue";
 import {useStore} from "../../js/store";
+import {useI18n} from "../../js/i18n";
 import {buildIdentityOf, isPastRelease, sourceLinks} from "../../js/helpers/sourceLinks";
 import SidebarToggle from "../SidebarToggle.vue";
 
@@ -42,11 +49,15 @@ export default defineComponent({
 	},
 	setup() {
 		const store = useStore();
+		const {t} = useI18n();
 		const build = computed(() => buildIdentityOf(store.state.serverConfiguration));
 		const pastRelease = computed(() => isPastRelease(build.value));
 		const source = computed(() => sourceLinks(store.state.branding.links?.source, build.value));
+		const ariaLabel = computed(() => t("windows.changelog.aria"));
 
 		return {
+			t,
+			ariaLabel,
 			build,
 			pastRelease,
 			source,

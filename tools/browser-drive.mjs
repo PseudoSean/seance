@@ -44,7 +44,8 @@
 //   --timeout=<ms>    default wait timeout inside a scenario (default 20000)
 //   --profile=<dir>   reuse a profile dir instead of a throwaway one
 //   --width=<px>      viewport width (default 1280); --height=<px> (default 900)
-//   --mobile          emulate a touch device (mobile viewport, no hover)
+//   --mobile          emulate a touch device (mobile viewport, no hover); without it
+//                     the run answers (hover: hover) and (pointer: fine) like a desktop
 //
 // A throwaway profile is the default on purpose: localStorage (saved
 // networks, settings, `thelounge.media.trusted`) survives inside one profile,
@@ -101,6 +102,17 @@ const chrome = spawn(
 		// The dev ircd and the dev web server use self-signed certificates.
 		"--ignore-certificate-errors",
 		"--window-size=1280,900",
+		// A headless Chromium with no input device answers `(hover: none)` and
+		// `(pointer: none)`, which is neither a desktop nor a phone: the
+		// `@media (hover: none)` rules (the message action toolbar's touch
+		// mode, say) would apply to a run that hovers with a mouse. Without
+		// --mobile, say what a desktop says: hover type 2 = hover, pointer
+		// type 4 = fine (the touch emulation of --mobile overrides these).
+		...(flags.has("--mobile")
+			? []
+			: [
+					"--blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4",
+			  ]),
 		`--remote-debugging-port=${port}`,
 		`--user-data-dir=${profile}`,
 		"about:blank",

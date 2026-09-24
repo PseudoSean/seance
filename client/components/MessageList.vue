@@ -1,5 +1,10 @@
 <template>
-	<div ref="chat" class="chat" tabindex="-1">
+	<div
+		ref="chat"
+		class="chat"
+		:class="{selecting, 'selection-live': selectionActive}"
+		tabindex="-1"
+	>
 		<div v-show="channel.moreHistoryAvailable" class="show-more">
 			<button
 				ref="loadMoreButton"
@@ -7,8 +12,8 @@
 				class="btn"
 				@click="onShowMoreClick"
 			>
-				<span v-if="channel.historyLoading">Loading…</span>
-				<span v-else>Show older messages</span>
+				<span v-if="channel.historyLoading">{{ t("chat.historyLoading") }}</span>
+				<span v-else>{{ t("chat.showOlder") }}</span>
 			</button>
 		</div>
 		<div
@@ -17,6 +22,7 @@
 			aria-live="polite"
 			aria-relevant="additions"
 			@copy="onCopy"
+			@pointerdown="onPointerDown"
 		>
 			<template v-for="(message, id) in condensedMessages">
 				<DateMarker
@@ -59,10 +65,11 @@
 
 <script lang="ts">
 import {condensedTypes} from "../../shared/irc";
-import {ChanType} from "../../shared/types/chan";
+import {ChanState, ChanType} from "../../shared/types/chan";
 import {MessageType, SharedMsg} from "../../shared/types/msg";
-import eventbus from "../js/eventbus";
 import clipboard from "../js/clipboard";
+import {noteScroll, noteTouch} from "../js/helpers/scrollSettle";
+import {selectionActive, unwatchSelection, watchSelection} from "../js/helpers/touchSelection";
 import socket from "../js/socket";
 import Message from "./Message.vue";
 import MessageCondensed from "./MessageCondensed.vue";
@@ -80,8 +87,11 @@ import {
 	watch,
 } from "vue";
 import {useStore} from "../js/store";
+import {useI18n} from "../js/i18n";
 import {ClientChan, ClientMessage, ClientNetwork, ClientLinkPreview} from "../js/types";
-import {KEYBOARD_SETTLE_MS} from "../js/helpers/viewport";
+
+/** A pressed pointer that travels this far is dragging out a selection. */
+const DRAG_SLOP_PX = 4;
 
 type CondensedMessageContainer = {
 	type: "condensed";
@@ -107,6 +117,7 @@ export default defineComponent({
 	},
 	setup(props) {
 		const store = useStore();
+		const {t} = useI18n();
 
 		const chat = ref<HTMLDivElement | null>(null);
 		const loadMoreButton = ref<HTMLButtonElement | null>(null);
@@ -115,14 +126,91 @@ export default defineComponent({
 
 		const isWaitingForNextTick = ref(false);
 
+		/**
+		 * Auto-loading older history is armed by a real scroll and disarmed
+		 * by each load. A page that lands while the scroller is still moving
+		 * (a fling, a held finger: WebKit drops the programmatic scrollTop the
+		 * compensation writes) leaves the view at the top with the button
+		 * still in view, and the button re-renders with every page, which
+		 * re-fires the observer -- so without this gate one lost compensation
+		 * chain-loads page after page ("hours past where you were"). Now a
+		 * lost compensation costs at most one page, and the next load needs a
+		 * scroll of the user's own.
+		 */
+		let autoLoadArmed = true;
+		/** When the last prepend was compensated, for the re-arm delay. */
+		let lastPrependAt = 0;
+		/** The anchor the last compensation restored, verified afterwards. */
+		let pendingAnchor: {heightOld: number; at: number} | null = null;
+		let verifyTimer: ReturnType<typeof setTimeout> | null = null;
+
+		/** Re-arm on a scroll that is not the tail of the last prepend. */
+		const REARM_AFTER_MS = 400;
+		/** How long a compensation is re-checked against a momentum scroll. */
+		const VERIFY_FOR_MS = 600;
+		const ANCHOR_TOLERANCE = 4;
+
+		/**
+		 * Our own scroll write. A scroll event follows only if something
+		 * moved: a flag armed for nothing swallows the user's next real
+		 * scroll, and with it the "at the bottom" state and the auto-load
+		 * re-arm that scroll should have set. (A page answered empty, or a
+		 * jump to a bottom we are already at, moves nothing.)
+		 */
+		const setScrollTop = (el: HTMLElement, top: number) => {
+			const before = el.scrollTop;
+
+			el.scrollTop = top;
+
+			if (el.scrollTop !== before) {
+				skipNextScrollEvent.value = true;
+			}
+		};
+
+		/**
+		 * Confirm the compensation stuck. WebKit ignores a scrollTop written
+		 * during momentum scrolling and rubber-banding; when the anchor is
+		 * lost within VERIFY_FOR_MS of the write, stop the momentum (toggling
+		 * overflow is the one thing that does) and write it again.
+		 */
+		const verifyAnchor = () => {
+			const el = chat.value;
+			const anchor = pendingAnchor;
+
+			if (!el || !anchor) {
+				return;
+			}
+
+			if (Date.now() - anchor.at > VERIFY_FOR_MS) {
+				pendingAnchor = null; // the user has moved on; leave them be
+				return;
+			}
+
+			if (verifyTimer !== null) {
+				clearTimeout(verifyTimer);
+			}
+
+			if (Math.abs(el.scrollHeight - el.scrollTop - anchor.heightOld) <= ANCHOR_TOLERANCE) {
+				// Holding, for now: momentum can still take it within the window.
+				verifyTimer = setTimeout(verifyAnchor, 100);
+				return;
+			}
+
+			el.style.overflow = "hidden";
+			void el.offsetHeight; // flush: this is what kills the momentum
+			el.style.overflow = "";
+			setScrollTop(el, el.scrollHeight - anchor.heightOld);
+			verifyTimer = setTimeout(verifyAnchor, 100);
+		};
+
 		const jumpToBottom = () => {
-			skipNextScrollEvent.value = true;
+			pendingAnchor = null; // a jump supersedes any anchor being verified
 			props.channel.scrolledToBottom = true;
 
 			const el = chat.value;
 
 			if (el) {
-				el.scrollTop = el.scrollHeight;
+				setScrollTop(el, el.scrollHeight);
 			}
 		};
 
@@ -166,9 +254,26 @@ export default defineComponent({
 					return;
 				}
 
+				if (!autoLoadArmed) {
+					return; // the button stays for a tap; see autoLoadArmed
+				}
+
+				// Not connected: nothing can be asked, so the scroll that
+				// brought the button here is not spent. The page goes out when
+				// the channel is back (the readiness watch below re-observes).
+				if (!props.network.status.connected) {
+					return;
+				}
+
+				autoLoadArmed = false;
 				onShowMoreClick();
 			});
 		};
+
+		/** The button can be acted on: connected, and for a channel, joined. */
+		const canLoadMore = () =>
+			props.network.status.connected &&
+			(props.channel.type !== ChanType.CHANNEL || props.channel.state === ChanState.JOINED);
 
 		nextTick(() => {
 			if (!chat.value) {
@@ -337,9 +442,17 @@ export default defineComponent({
 					await nextTick();
 
 					isWaitingForNextTick.value = false;
-					skipNextScrollEvent.value = true;
+					setScrollTop(el, el.scrollHeight - heightOld);
 
-					el.scrollTop = el.scrollHeight - heightOld;
+					// Not final until it has survived the scroller's own motion.
+					lastPrependAt = Date.now();
+					pendingAnchor = {heightOld, at: lastPrependAt};
+
+					if (verifyTimer !== null) {
+						clearTimeout(verifyTimer);
+					}
+
+					verifyTimer = setTimeout(verifyAnchor, 50);
 				}
 
 				return;
@@ -365,6 +478,50 @@ export default defineComponent({
 			return !!selection && !selection.isCollapsed;
 		};
 
+		// --- a drag is a text selection: the action toolbar stands down ---
+		//
+		// `selecting` is a class on the root while the primary mouse button
+		// is down and the pointer has moved: style.css hides every row's
+		// toolbar under it, so the bar does not pop over the rows the drag
+		// crosses. Only a pointer that started on message text counts; a
+		// press on a button or a link is a click, and touch scrolls.
+		const selecting = ref(false);
+		let dragStart: {x: number; y: number} | null = null;
+
+		const onDragMove = (e: PointerEvent) => {
+			if (
+				dragStart &&
+				!selecting.value &&
+				(Math.abs(e.clientX - dragStart.x) > DRAG_SLOP_PX ||
+					Math.abs(e.clientY - dragStart.y) > DRAG_SLOP_PX)
+			) {
+				selecting.value = true;
+			}
+		};
+
+		const endDrag = () => {
+			dragStart = null;
+			selecting.value = false;
+			window.removeEventListener("pointermove", onDragMove);
+			window.removeEventListener("pointerup", endDrag);
+			window.removeEventListener("pointercancel", endDrag);
+		};
+
+		const onPointerDown = (e: PointerEvent) => {
+			if (e.pointerType !== "mouse" || e.button !== 0) {
+				return;
+			}
+
+			if ((e.target as HTMLElement | null)?.closest("a, button, .msg-actions")) {
+				return;
+			}
+
+			dragStart = {x: e.clientX, y: e.clientY};
+			window.addEventListener("pointermove", onDragMove);
+			window.addEventListener("pointerup", endDrag);
+			window.addEventListener("pointercancel", endDrag);
+		};
+
 		/**
 		 * A finger drag on the scrollback puts the keyboard away, like a native
 		 * scroll view's `keyboardDismissMode = .onDrag`. On `touchmove`, not
@@ -384,47 +541,75 @@ export default defineComponent({
 			}
 		};
 
+		// The box height the list was last seen at. A scroll event that
+		// arrives with a different one is the browser moving the list as it
+		// re-lays it out (a rotation, the keyboard, a toolbar) and comes
+		// before the resize observer in the same frame: not the user, so it
+		// must not decide whether the list is still pinned.
+		let seenHeight = 0;
+
+		const touchDown = () => noteTouch(true);
+		const touchUp = () => noteTouch(false);
+
 		const handleScroll = () => {
+			// The list is moving: a page arriving now is held (scrollSettle.ts).
+			noteScroll();
+
 			// Setting scrollTop also triggers scroll event
 			// We don't want to perform calculations for that
 			if (skipNextScrollEvent.value) {
 				skipNextScrollEvent.value = false;
+
+				// Our own write, or a user scroll coalesced into the same frame:
+				// either way the anchor under verification gets a look.
+				if (pendingAnchor) {
+					verifyAnchor();
+				}
+
 				return;
 			}
 
 			const el = chat.value;
 
-			if (!el) {
+			if (!el || el.clientHeight !== seenHeight) {
 				return;
 			}
 
 			props.channel.scrolledToBottom = el.scrollHeight - el.scrollTop - el.offsetHeight <= 30;
-		};
 
-		const handleResize = () => {
-			// Keep the list at the bottom through a resize, except under a
-			// selection: the keyboard leaving is a resize too.
-			if (!props.channel.scrolledToBottom || hasSelection()) {
-				return;
+			// A scroll of the user's own, not the tail of the last prepend's
+			// gesture: the next auto-load may fire.
+			if (!pendingAnchor && Date.now() - lastPrependAt > REARM_AFTER_MS) {
+				autoLoadArmed = true;
 			}
 
-			jumpToBottom();
-
-			// The keyboard animates, so the first resize is measured midway and
-			// the scroll lands short of the settled bottom. Go again once it is
-			// done (helpers/viewport.ts re-measures on the same schedule).
-			setTimeout(() => {
-				if (!hasSelection()) {
-					jumpToBottom();
-				}
-			}, KEYBOARD_SETTLE_MS);
+			if (pendingAnchor) {
+				verifyAnchor();
+			}
 		};
 
+		// The list's box follows the composer, the typing indicator, the user
+		// list, the window and iOS's stepped keyboard shrink: one observer,
+		// after layout. Not under a selection, which the scroll would lose.
+		const resizeObserver = new ResizeObserver(() => {
+			seenHeight = chat.value?.clientHeight ?? 0;
+
+			if (props.channel.scrolledToBottom && !hasSelection()) {
+				jumpToBottom();
+			}
+		});
+
 		onMounted(() => {
+			watchSelection();
 			chat.value?.addEventListener("scroll", handleScroll, {passive: true});
 			chat.value?.addEventListener("touchmove", dismissKeyboard, {passive: true});
+			chat.value?.addEventListener("touchstart", touchDown, {passive: true});
+			chat.value?.addEventListener("touchend", touchUp, {passive: true});
+			chat.value?.addEventListener("touchcancel", touchUp, {passive: true});
 
-			eventbus.on("resize", handleResize);
+			if (chat.value) {
+				resizeObserver.observe(chat.value);
+			}
 
 			void nextTick(() => {
 				if (historyObserver.value && loadMoreButton.value) {
@@ -441,11 +626,24 @@ export default defineComponent({
 				// Re-add the intersection observer to trigger the check again on channel switch
 				// Otherwise if last channel had the button visible, switching to a new channel won't trigger the history
 				if (historyObserver.value && loadMoreButton.value) {
+					autoLoadArmed = true; // a fresh channel gets its first page unasked
 					historyObserver.value.unobserve(loadMoreButton.value);
 					historyObserver.value.observe(loadMoreButton.value);
 				}
 			}
 		);
+
+		// Back after a drop (reconnect, then the JOIN): a button left in view
+		// while it could not be used gets its look again. At the top of the
+		// buffer there is no scroll left to bring it back into view, so
+		// without this the page the user asked for during the reconnect
+		// never comes.
+		watch(canLoadMore, (ready) => {
+			if (ready && historyObserver.value && loadMoreButton.value) {
+				historyObserver.value.unobserve(loadMoreButton.value);
+				historyObserver.value.observe(loadMoreButton.value);
+			}
+		});
 
 		watch(
 			() => props.channel.messages,
@@ -467,14 +665,6 @@ export default defineComponent({
 			}
 		);
 
-		watch(
-			() => props.channel.pendingMessage,
-			async () => {
-				// Keep the scroll stuck when input gets resized while typing
-				await keepScrollPosition();
-			}
-		);
-
 		// Release the typing indicator's reserved line when a new message is
 		// actually rendered (last rendered item changed — a history prepend
 		// does not count). This runs before the DOM update, so the new line
@@ -490,27 +680,28 @@ export default defineComponent({
 			}
 		);
 
-		watch(
-			() => props.channel.typing.length > 0 || props.channel.typingReserved,
-			async () => {
-				// The typing indicator line above the input appears (and is later
-				// released by a new message): keep the list stuck to the bottom
-				// across that height change, like an input resize.
-				await keepScrollPosition();
-			}
-		);
-
 		onBeforeUpdate(() => {
 			unreadMarkerShown = false;
 		});
 
 		onBeforeUnmount(() => {
-			eventbus.off("resize", handleResize);
+			resizeObserver.disconnect();
 			chat.value?.removeEventListener("scroll", handleScroll);
+			endDrag();
 		});
 
 		onUnmounted(() => {
+			unwatchSelection();
+
+			if (verifyTimer !== null) {
+				clearTimeout(verifyTimer);
+			}
+
 			chat.value?.removeEventListener("touchmove", dismissKeyboard);
+			chat.value?.removeEventListener("touchstart", touchDown);
+			chat.value?.removeEventListener("touchend", touchUp);
+			chat.value?.removeEventListener("touchcancel", touchUp);
+			noteTouch(false);
 
 			if (historyObserver.value) {
 				historyObserver.value.disconnect();
@@ -520,6 +711,7 @@ export default defineComponent({
 		return {
 			chat,
 			store,
+			t,
 			onShowMoreClick,
 			loadMoreButton,
 			onCopy,
@@ -530,6 +722,9 @@ export default defineComponent({
 			isPreviousSource,
 			jumpToBottom,
 			onLinkPreviewToggle,
+			selecting,
+			selectionActive,
+			onPointerDown,
 		};
 	},
 });

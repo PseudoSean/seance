@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 <!-- New entries go after this line -->
 
+## Unreleased
+
+- Attention: a hidden page (or one unfocused for a minute) tells the server `AWAY *` (`draft/pre-away`: away for an unspecified reason, per connection, never overriding a `/away` the user set) and clears it on return, so the server's push rule stops treating "spoke a moment ago, then switched apps" as attended. A hidden page no longer marks the open channel read; attention returning does. Another user's `AWAY *` shows as away without a reason.
+- Settings → Appearance → Your own messages: greyed text (the default, as before), a highlighted row, or nothing — one of the three, on every theme. The grey that marks your own lines is hard to see on an iPhone with a dark theme; the setting applies to every theme (`html[data-own-messages]`, `--own-bg` for a theme that names its band).
+- A join line no longer repeats the nick as the realname (`dave (dave) has joined`): a realname that is only the nick again — what the server fills in when none was set — is left out.
+- Princess themes: the ✕ on the selected channel takes the pill's own text colour (it was the rail's, near-invisible on the pill in both), and the dark theme's own-message band is a cool `#1f2530` instead of a grey five points off the server-event band.
+- File uploads go to the network's own upload host when the server advertises one (IRCv3 `draft/FILEHOST` ISUPPORT + `draft/authtoken`): a one-shot token from `TOKEN GENERATE FILEHOST`, the file as a bearer-authenticated `POST`, `Location` inserted into the input. Takes precedence over the deploy's `uploads` config for that network; the paperclip appears without any `config.json` entry. See `docs/resources/branding.md` § Uploads.
+- Scrollback on a phone: a page of older messages that arrives while the list is still moving (a fling running, a finger down) is held until the scrolling settles, then inserted in one go, instead of stopping the fling dead to put the view back.
+- Scrollback in a busy channel: the 100 messages the client keeps of a channel it is not showing are now also forgotten by the IRC layer, so the pages that bring the rest back are shown again instead of being dropped as already seen (the channel stopped scrolling back, on that channel only, until a restart).
+- Scrollback after a reconnect (a PWA back from the background): a page of older messages asked for while the connection was already dead, or while the reconnect was still in progress, is asked once the channel is back instead of leaving the view at the top with nothing more to scroll; and a scroll write of the list's own that moved nothing no longer swallows the user's next scroll (which left the list believing it was at the bottom and jumped it there on the next page).
+- Scrollback: a history page landing while the list is still moving (a fling, a held finger; WebKit drops the scroll position the compensation writes) no longer leaves the view at the top and loads page after page. The compensation is re-checked for 600 ms and re-applied (stopping the momentum) if it was lost, and auto-loading older messages needs a scroll of the user's own after each page.
+
 ## v4.5.0-rc.3 - 2026-05-12 [Pre-release]
 
 [See the full changelog](https://github.com/thelounge/thelounge/compare/v4.5.0-rc.2...v4.5.0-rc.3)

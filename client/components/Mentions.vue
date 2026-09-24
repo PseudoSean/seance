@@ -7,18 +7,18 @@
 	>
 		<div class="mentions-popup">
 			<div class="mentions-popup-title">
-				Recent mentions
+				{{ t("mentions.title") }}
 				<button
 					v-if="resolvedMessages.length"
 					class="btn dismiss-all-mentions"
 					@click="dismissAllMentions()"
 				>
-					Dismiss all
+					{{ t("mentions.dismissAll") }}
 				</button>
 			</div>
 			<template v-if="resolvedMessages.length === 0">
-				<p v-if="isLoading">Loading…</p>
-				<p v-else>You have no recent mentions.</p>
+				<p v-if="isLoading">{{ t("mentions.loading") }}</p>
+				<p v-else>{{ t("mentions.empty") }}</p>
 			</template>
 			<template v-for="message in resolvedMessages" v-else :key="message.msgId">
 				<div :class="['msg', message.type]">
@@ -27,23 +27,27 @@
 							<span class="from">
 								<Username :user="(message.from as any)" />
 								<template v-if="message.channel">
-									in {{ message.channel.channel.name }} on
-									{{ message.channel.network.name }}
+									{{
+										t("mentions.inOn", {
+											channel: message.channel.channel.name,
+											network: message.channel.network.name,
+										})
+									}}
 								</template>
-								<template v-else> in unknown channel </template> </span
+								<template v-else>{{ t("mentions.inUnknown") }}</template> </span
 							>{{ ` ` }}
-							<span :title="message.localetime" class="time">
-								{{ messageTime(message.time.toString()) }}
+							<span :title="message.fullTime" class="time">
+								{{ messageTime(message.time) }}
 							</span>
 						</div>
 						<div>
 							<span
 								class="close-tooltip tooltipped tooltipped-w"
-								aria-label="Dismiss this mention"
+								:aria-label="dismissLabel"
 							>
 								<button
 									class="msg-dismiss"
-									aria-label="Dismiss this mention"
+									:aria-label="dismissLabel"
 									@click="dismissMention(message)"
 								></button>
 							</span>
@@ -67,7 +71,7 @@
 	background-color: var(--window-bg-color);
 	position: absolute;
 	width: 400px;
-	right: 80px;
+	inset-inline-end: 80px;
 	top: 55px;
 	max-height: 400px;
 	overflow-y: auto;
@@ -129,7 +133,7 @@
 	}
 }
 
-@media (max-width: 768px) {
+@media (max-width: 768px), (max-height: 500px) and (hover: none) and (pointer: coarse) {
 	.mentions-popup {
 		border-radius: 0;
 		border: 0;
@@ -152,20 +156,17 @@ import {
 	dismissAllMentions as dismissAllStoredMentions,
 } from "../js/mentions";
 import eventbus from "../js/eventbus";
-import localetime from "../js/helpers/localetime";
-import dayjs from "dayjs";
-import relativeTime from "dayjs/plugin/relativeTime";
+import {formatDateTime, formatRelativeTime} from "../js/i18n/dates";
 import {computed, watch, defineComponent, ref, onMounted, onUnmounted} from "vue";
 import {useStore} from "../js/store";
+import {useI18n} from "../js/i18n";
 import type {SharedMention} from "../../shared/types/mention";
 import type {NetChan} from "../js/types";
 
 type MentionWithContext = SharedMention & {
-	localetime: string;
+	fullTime: string;
 	channel: NetChan | null;
 };
-
-dayjs.extend(relativeTime);
 
 export default defineComponent({
 	name: "Mentions",
@@ -175,15 +176,19 @@ export default defineComponent({
 	},
 	setup() {
 		const store = useStore();
+		const {t, locale} = useI18n();
 		const isOpen = ref(false);
 		const isLoading = ref(false);
 		const resolvedMessages = computed(() => {
+			// locale.value is read so a language change re-renders the
+			// Intl-formatted timestamps (Intl itself is not reactive).
+			void locale.value;
 			return store.state.mentions
 				.slice()
 				.reverse()
 				.map((message) => ({
 					...message,
-					localetime: localetime(message.time),
+					fullTime: formatDateTime(message.time),
 					channel: store.getters.findChannel(message.chanId),
 				}))
 				.filter((message) => !message.channel?.channel.muted);
@@ -196,8 +201,11 @@ export default defineComponent({
 			}
 		);
 
-		const messageTime = (time: string) => {
-			return dayjs(time).fromNow();
+		const dismissLabel = computed(() => t("mentions.dismissOne"));
+
+		const messageTime = (time: Date) => {
+			void locale.value;
+			return formatRelativeTime(time.getTime());
 		};
 
 		const dismissMention = (message: MentionWithContext) => {
@@ -239,6 +247,8 @@ export default defineComponent({
 			isOpen,
 			isLoading,
 			resolvedMessages,
+			t,
+			dismissLabel,
 			messageTime,
 			dismissMention,
 			dismissAllMentions,

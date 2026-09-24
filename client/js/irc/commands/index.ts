@@ -12,11 +12,13 @@
  * before the bus ever sees them.
  */
 
+import {t} from "../../i18n/core";
 import {ChanType} from "../../../../shared/types/chan";
 import {MessageType} from "../../../../shared/types/msg";
 import type {Channel} from "../channel";
 import type {IrcClient} from "../client";
 import type {Command, InputOptions} from "../types";
+import alias from "./alias";
 import away from "./away";
 import ban from "./ban";
 import connect from "./connect";
@@ -45,6 +47,7 @@ import topic from "./topic";
 import whois from "./whois";
 
 const modules: Command[] = [
+	alias,
 	away,
 	ban,
 	connect,
@@ -95,14 +98,14 @@ export function commandNames(): string[] {
 		.sort();
 }
 
-export const NOT_CONNECTED =
-	"You are not connected to the IRC network, unable to send your command.";
-
 /**
  * Commands whose argument *is* the message, so multi-line input stays one
  * message instead of one command per line (see {@link dispatchInput}).
+ * `alias` is here for the same reason with a different noun: its argument is
+ * the alias body, and a body typed with Shift+Enter is one definition, not a
+ * definition followed by stray input.
  */
-const multilineCommands = new Set(["me", "notice", "msg", "query", "say"]);
+const multilineCommands = new Set(["alias", "me", "notice", "msg", "query", "say"]);
 
 /**
  * Handle everything the user typed into `chan` (may span several lines).
@@ -187,7 +190,7 @@ function inputLine(
 		if (chan.type === ChanType.LOBBY) {
 			client.pushMessage(chan, {
 				type: MessageType.ERROR,
-				text: "Messages can not be sent to lobbies.",
+				text: t("cmd.lobbySend"),
 			});
 			return;
 		}
@@ -209,7 +212,7 @@ function inputLine(
 
 	if (command) {
 		if (!client.isConnected && !command.allowDisconnected) {
-			client.pushMessage(chan, {type: MessageType.ERROR, text: NOT_CONNECTED});
+			client.pushMessage(chan, {type: MessageType.ERROR, text: t("send.notConnected")});
 			return;
 		}
 
@@ -218,7 +221,7 @@ function inputLine(
 	}
 
 	if (!client.isConnected) {
-		client.pushMessage(chan, {type: MessageType.ERROR, text: NOT_CONNECTED});
+		client.pushMessage(chan, {type: MessageType.ERROR, text: t("send.notConnected")});
 		return;
 	}
 

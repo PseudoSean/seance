@@ -1,26 +1,31 @@
 <template>
 	<span class="content">
 		<p>
-			<Username :user="{nick: message.whois.nick}" />
-			<span v-if="message.whois.whowas"> is offline, last information:</span>
+			<bdi><Username :user="{nick: message.whois.nick}" /></bdi>
+			<span v-if="message.whois.whowas"> {{ t("whois.offline") }}</span>
 		</p>
 
+		<!-- Each dt/dd pair is wrapped in a div (valid in a dl) so the label
+		     can be positioned into the empty gutter column, right-aligned
+		     against the row separator like a nick (style.css `.whois`). -->
 		<dl class="whois">
-			<template v-if="message.whois.account">
-				<dt>Logged in as:</dt>
+			<div v-if="message.whois.account">
+				<dt>{{ t("whois.loggedAs") }}</dt>
 				<dd>{{ message.whois.account }}</dd>
-			</template>
+			</div>
 
-			<dt>Host mask:</dt>
-			<dd class="hostmask">
-				<ParsedMessage
-					:network="network"
-					:text="message.whois.ident + '@' + message.whois.hostname"
-				/>
-			</dd>
+			<div>
+				<dt>{{ t("whois.hostmask") }}</dt>
+				<dd class="hostmask">
+					<ParsedMessage
+						:network="network"
+						:text="message.whois.ident + '@' + message.whois.hostname"
+					/>
+				</dd>
+			</div>
 
-			<template v-if="message.whois.actual_hostname">
-				<dt>Actual host:</dt>
+			<div v-if="message.whois.actual_hostname">
+				<dt>{{ t("whois.actualHost") }}</dt>
 				<dd class="hostmask">
 					<a
 						:href="'https://ipinfo.io/' + message.whois.actual_ip"
@@ -32,98 +37,99 @@
 						({{ message.whois.actual_hostname }})</i
 					>
 				</dd>
-			</template>
+			</div>
 
-			<template v-if="message.whois.actual_username">
-				<dt>Actual username:</dt>
+			<div v-if="message.whois.actual_username">
+				<dt>{{ t("whois.actualUsername") }}</dt>
 				<dd>{{ message.whois.actual_username }}</dd>
-			</template>
+			</div>
 
-			<template v-if="message.whois.real_name">
-				<dt>Real name:</dt>
+			<div v-if="message.whois.real_name">
+				<dt>{{ t("whois.realName") }}</dt>
 				<dd><ParsedMessage :network="network" :text="message.whois.real_name" /></dd>
-			</template>
+			</div>
 
-			<template v-if="message.whois.registered_nick">
-				<dt>Registered nick:</dt>
+			<div v-if="message.whois.registered_nick">
+				<dt>{{ t("whois.registeredNick") }}</dt>
 				<dd>{{ message.whois.registered_nick }}</dd>
-			</template>
+			</div>
 
-			<template v-if="message.whois.channels">
-				<dt>Channels:</dt>
+			<div v-if="message.whois.channels">
+				<dt>{{ t("whois.channels") }}</dt>
 				<dd><ParsedMessage :network="network" :text="message.whois.channels" /></dd>
-			</template>
+			</div>
 
-			<template v-if="message.whois.modes">
-				<dt>Modes:</dt>
+			<div v-if="message.whois.modes">
+				<dt>{{ t("whois.modes") }}</dt>
 				<dd>{{ message.whois.modes }}</dd>
-			</template>
+			</div>
 
 			<template v-if="message.whois.special">
-				<template v-for="special in message.whois.special" :key="special">
-					<dt>Special:</dt>
+				<div v-for="special in message.whois.special" :key="special">
+					<dt>{{ t("whois.special") }}</dt>
 					<dd>{{ special }}</dd>
-				</template>
+				</div>
 			</template>
 
-			<template v-if="message.whois.operator">
-				<dt>Operator:</dt>
+			<div v-if="message.whois.operator">
+				<dt>{{ t("whois.operator") }}</dt>
 				<dd>{{ message.whois.operator }}</dd>
-			</template>
+			</div>
 
-			<template v-if="message.whois.helpop">
-				<dt>Available for help:</dt>
-				<dd>Yes</dd>
-			</template>
+			<div v-if="message.whois.helpop">
+				<dt>{{ t("whois.helpop") }}</dt>
+				<dd>{{ t("whois.yes") }}</dd>
+			</div>
 
-			<template v-if="message.whois.bot">
-				<dt>Is a bot:</dt>
-				<dd>Yes</dd>
-			</template>
+			<div v-if="message.whois.bot">
+				<dt>{{ t("whois.bot") }}</dt>
+				<dd>{{ t("whois.yes") }}</dd>
+			</div>
 
-			<template v-if="message.whois.away">
-				<dt>Away:</dt>
+			<div v-if="message.whois.away">
+				<dt>{{ t("whois.awayLabel") }}</dt>
 				<dd><ParsedMessage :network="network" :text="message.whois.away" /></dd>
-			</template>
+			</div>
 
-			<template v-if="message.whois.secure">
-				<dt>Secure connection:</dt>
-				<dd>Yes</dd>
-			</template>
+			<div v-if="message.whois.secure">
+				<dt>{{ t("whois.secure") }}</dt>
+				<dd>{{ t("whois.yes") }}</dd>
+			</div>
 
 			<template v-if="message.whois.certfps">
-				<template v-for="certfp in message.whois.certfps" :key="certfp">
-					<dt>Certificate:</dt>
+				<div v-for="certfp in message.whois.certfps" :key="certfp">
+					<dt>{{ t("whois.cert") }}</dt>
 					<dd>{{ certfp }}</dd>
-				</template>
+				</div>
 			</template>
 
-			<template v-if="message.whois.server">
-				<dt>Connected to:</dt>
+			<div v-if="message.whois.server">
+				<dt>{{ t("whois.connectedTo") }}</dt>
 				<dd>
 					{{ message.whois.server }} <i>({{ message.whois.server_info }})</i>
 				</dd>
-			</template>
+			</div>
 
-			<template v-if="message.whois.logonTime">
-				<dt>Connected at:</dt>
-				<dd>{{ localetime(message.whois.logonTime) }}</dd>
-			</template>
+			<div v-if="message.whois.logonTime">
+				<dt>{{ t("whois.connectedAt") }}</dt>
+				<dd>{{ fullTime(message.whois.logonTime) }}</dd>
+			</div>
 
-			<template v-if="message.whois.idle">
-				<dt>Idle since:</dt>
-				<dd>{{ localetime(message.whois.idleTime) }}</dd>
-			</template>
+			<div v-if="message.whois.idle">
+				<dt>{{ t("whois.idleSince") }}</dt>
+				<dd>{{ fullTime(message.whois.idleTime) }}</dd>
+			</div>
 		</dl>
 	</span>
 </template>
 
 <script lang="ts">
 import {defineComponent, PropType} from "vue";
-import localetime from "../../js/helpers/localetime";
+import {formatDateTime} from "../../js/i18n/dates";
 import {ClientNetwork, ClientMessage} from "../../js/types";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
+import {useI18n} from "../../js/i18n";
 
 export default defineComponent({
 	name: "MessageTypeWhois",
@@ -142,8 +148,11 @@ export default defineComponent({
 		},
 	},
 	setup() {
+		const {t} = useI18n();
+
 		return {
-			localetime: (date: Date) => localetime(date),
+			t,
+			fullTime: (date: number | Date) => formatDateTime(date),
 		};
 	},
 });

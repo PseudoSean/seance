@@ -1,0 +1,340 @@
+/* Zelenzy — named for X-Chat's author; X-Chat 2 on Windows XP: Luna's light
+ * grey chrome with rounded blue-bordered buttons, the channel window's title
+ * bar the XP blue gradient with white bold text, and inside the chrome the
+ * panes X-Chat drew for itself — the scrollback, the user list and the input
+ * box in bright green on black. mardam.css's rules (the title bar, the
+ * switchbar, the sunken fields, the bevel tokens) with the XP chrome and the
+ * terminal panes.
+ *
+ * Contrast: the green (#33ff33) on black 15.3:1, the dimmer green for
+ * timestamps and events (#1fa64a) 6.3:1, the placeholder (#178a3c) 4.5:1;
+ * on the chrome (#ece9d8) black text 17.4:1, muted (#5a5a5a) 5.6:1; the
+ * title text on the gradient's light end (#3d8af0) 3.6:1 as bold 1.1rem
+ * text (large-text threshold 3:1), 5.6:1 on its dark end.
+ *
+ * The nick palette is 32 slots (style.css hashes nicks into 32) in greens —
+ * X-Chat's window was one colour — varied by lightness and a touch of hue,
+ * with four of X-Chat's own nick colours (cyan, yellow, light blue, pink)
+ * folded in at every eighth slot so a long conversation still separates. */
+@import "mardam.css";
+
+:root {
+	color-scheme: dark;
+
+	/* Luna. */
+	--win-face: #ece9d8;
+	--win-face-light: #f7f6f0;
+	--win-light: #fff;
+	--win-shadow: #aca899;
+	--win-dark-shadow: #716f64;
+	--win-border: #003c74;
+	--win-title-start: #0a5ed8;
+	--win-title-end: #3d8af0;
+	--win-select: #316ac5;
+
+	/* XP controls: a 1px blue-grey border with a white inner highlight, and
+	 * the pressed state a darker fill with the highlight gone. */
+	--bevel-raised: inset 0 0 0 1px var(--win-border), inset 0 0 0 2px var(--win-light);
+	--bevel-sunken: inset 0 0 0 1px var(--win-shadow), inset 1px 1px 0 1px var(--win-dark-shadow);
+
+	/* The panes: X-Chat's black, green text. */
+	--chat-bg: #000;
+	--chat-fg: #3f3;
+	--chat-fg-muted: #1fa64a;
+	--chat-fg-faint: #178a3c;
+	--chat-heading: #6f9;
+	--chat-rule: #1a3a1a;
+	--chat-accent: #6f9;
+	--chat-accent-fg: #000;
+	--chat-accent-rule: #1f7a3a;
+	--chat-highlight-bg: #0a1f0f;
+	--chat-selection: #316ac5;
+	--composer-bg: #0a0a0a;
+	--composer-border: #aca899;
+	--window-border: #aca899;
+	--window-shadow: none;
+	--menu-bg: #ece9d8;
+
+	/* The rail is the chrome. */
+	--rail-bg-top: #ece9d8;
+	--rail-bg-bottom: #ece9d8;
+	--rail-fg: #000;
+	--rail-fg-strong: #000;
+	--rail-fg-active: #000;
+	--rail-fg-muted: #5a5a5a;
+	--rail-item-active-bg: #d6d3c6;
+	--rail-item-hover-bg: #f7f6f0;
+	--rail-accent: #316ac5;
+	--rail-accent-fg: #fff;
+	--rail-badge-bg: #316ac5;
+	--rail-badge-fg: #fff;
+	--rail-input-bg: #fff;
+	--rail-input-border: #7f9db9;
+
+	/* Message semantics, in the window's green with X-Chat's accents. */
+	--event-join: #1fa64a;
+	--event-quit: #ff7a5c;
+	--nick-default: #6f9;
+	--notice-color: #ff5;
+	--action-color: #f7f;
+
+	/* Notice boxes on the chrome. */
+	--note-bg: #f7f6f0;
+	--note-fg: #000;
+	--warn-bg: #fff3c4;
+	--warn-fg: #5a3d00;
+	--error-bg: #fbe3e3;
+	--error-fg: #7f0000;
+	--ok-bg: #e3f3e3;
+	--ok-fg: #006e00;
+
+	/* Tints over the black panes are light; the focus ring is XP's blue. */
+	--tint-soft: rgb(255 255 255 / 6%);
+	--tint-strong: rgb(255 255 255 / 12%);
+	--accent-tint-20: rgb(102 255 153 / 20%);
+	--accent-tint-30: rgb(102 255 153 / 30%);
+	--focus-ring: rgb(49 106 197 / 55%);
+	--scrollbar-track: #f0efe6;
+	--scrollbar-thumb: #c4c1b1;
+	--scrollbar-thumb-active: #aca899;
+
+	/* Code blocks. */
+	--tok-comment: #1fa64a;
+	--tok-keyword: #f7f;
+	--tok-string: #6fc;
+	--tok-number: #ff5;
+	--tok-function: #6f9;
+	--tok-operator: #3f3;
+	--tok-punctuation: #1fa64a;
+	--tok-tag: #6f9;
+	--tok-attr: #6fc;
+	--highlight-border-color: #6f9;
+	--unread-marker-color: #6f9;
+}
+
+/* Luna's rounder corners on the controls; everything else stays square. */
+.btn,
+.channel-list-item,
+#footer button,
+.input,
+.jump-to-input .input,
+#form #input,
+#chat .userlist .count,
+.context-menu-item,
+.textcomplete-item {
+	border-radius: 3px !important;
+}
+
+/* The title bar: XP's vertical blue gradient, rounded at the top. */
+#chat .header {
+	background:
+		linear-gradient(
+			180deg,
+			var(--win-title-end) 0%,
+			var(--win-title-start) 60%,
+			#0846b0 100%
+		);
+	border-radius: 6px 6px 0 0 !important;
+	text-shadow: 0 1px 0 rgb(0 0 0 / 35%);
+}
+
+#chat .header .topic,
+#chat .header .topic a {
+	color: #e8f0ff;
+}
+
+/* X-Chat set its panes in a monospace face; the chrome is Tahoma. */
+#chat .chat,
+#chat .userlist,
+#form #input {
+	font-family: "DejaVu Sans Mono", "Fira Mono", Consolas, Menlo, monospace;
+}
+
+/* The scrollback and the user list are black panes in a sunken XP frame. */
+.window {
+	box-shadow: inset 0 0 0 1px var(--win-shadow);
+}
+
+/* Only the chat window has the terminal panes. The dialogs — settings, help,
+ * the connect form, the changelog, search results — are XP dialogs on the
+ * face grey: the window tokens are re-mapped on those windows, so everything
+ * in them that reads a token follows. Black on the face 17.4:1, muted 5.6:1,
+ * the selection blue for links and buttons 4.6:1. */
+.window:not(#chat) {
+	--window-bg-color: var(--win-face);
+	--body-color: #000;
+	--body-color-muted: #5a5a5a;
+	--window-heading-color: #000;
+	--link-color: var(--win-select);
+	--button-color: var(--win-select);
+	--button-text-color-hover: #fff;
+
+	background: var(--window-bg-color); /* mardam paints .window with --chat-bg */
+	color: var(--body-color);
+}
+
+#chat .userlist {
+	background: var(--chat-bg);
+	border-inline-start: 0;
+	box-shadow: inset 1px 0 0 var(--win-shadow);
+}
+
+/* The list's inner edge faces the scrollback; in RTL it sits on the other
+ * side of the pane. */
+[dir="rtl"] #chat .userlist {
+	box-shadow: inset -1px 0 0 var(--win-shadow);
+}
+
+#chat .userlist .count {
+	background: var(--win-face);
+	box-shadow: var(--bevel-raised);
+	color: #000;
+}
+
+#chat .userlist .count::before {
+	color: var(--rail-fg-muted);
+}
+
+/* The count field and the header's search button sit on chrome, not on the
+ * pane: black text, a grey placeholder, a white icon. */
+#chat .userlist .count input.search {
+	color: #000;
+}
+
+#chat .userlist .count input.search::placeholder {
+	color: var(--rail-fg-muted);
+}
+
+#chat form.message-search button {
+	color: #fff;
+}
+
+form.message-search input {
+	background-color: #fff;
+	color: #000;
+}
+
+form.message-search input::placeholder {
+	color: var(--rail-fg-muted);
+}
+
+#chat .userlist .user.active {
+	background: var(--win-select);
+	color: #fff;
+}
+
+/* The input box: black, green, a green caret. */
+#form #input {
+	background: var(--chat-bg);
+	color: var(--chat-fg);
+	caret-color: var(--chat-fg);
+}
+
+#form #input::placeholder {
+	color: var(--chat-fg-faint);
+}
+
+/* Timestamps in the pane's dim green. */
+#chat .time {
+	color: var(--chat-fg-muted);
+}
+
+/* A monospace pane is wider than the timestamp column allows for. */
+#chat.time-12h .time,
+#chat.time-seconds .time {
+	width: 5.25rem;
+}
+
+#chat.time-seconds.time-12h .time {
+	width: 7rem;
+}
+
+/* The switchbar buttons: XP's border, a white highlight, the current one
+ * pressed and darker. */
+.channel-list-item.active,
+#footer button.active,
+.btn:active {
+	background: var(--rail-item-active-bg);
+	box-shadow: inset 0 0 0 1px var(--win-border), inset 1px 1px 2px rgb(0 0 0 / 20%);
+}
+
+/* The shadows here are a ring and corner lighting — direction-neutral —
+ * but they restate themselves for the active row under RTL, or coffee's
+ * RTL marker override (higher specificity, imported file) and then
+ * mardam's bevel restate would both paint over them. */
+[dir="rtl"] .channel-list-item.active {
+	box-shadow: inset 0 0 0 1px var(--win-border), inset 1px 1px 2px rgb(0 0 0 / 20%);
+}
+
+.channel-list-item.has-unread .name {
+	color: var(--win-select);
+	font-weight: 700;
+}
+
+.channel-list-item.has-highlight:not(.is-muted) .name {
+	color: #c00000;
+}
+
+/* Selection is XP's blue; code and monospace blocks stay on the pane. */
+::selection {
+	background: var(--win-select);
+	color: #fff;
+}
+
+#chat .msg[data-type="monospace_block"] .text,
+#chat .toggle-content,
+code,
+.irc-monospace,
+pre {
+	background: var(--composer-bg);
+	color: var(--chat-fg);
+	box-shadow: inset 0 0 0 1px var(--chat-rule);
+}
+
+/* mIRC colours that vanish on black (mardam lightened the ones that vanish
+ * on white; put those back and fix the dark ones). */
+.irc-fg0 { color: #fff; }
+.irc-fg1 { color: #555; }
+.irc-fg2 { color: #55f; }
+.irc-fg5 { color: #f55; }
+.irc-fg6 { color: #f5f; }
+.irc-fg8 { color: #ffdc00; }
+.irc-fg9 { color: #01ff70; }
+.irc-fg11 { color: #7fdbff; }
+.irc-fg12 { color: #5ff; }
+.irc-fg15 { color: #ddd; }
+
+/* Nick palette: greens, with X-Chat's cyan, yellow, light blue and pink at
+ * every eighth slot. */
+.user.color-1 { color: #7dff9e; }
+.user.color-2 { color: #a6ff7a; }
+.user.color-3 { color: #5cf58a; }
+.user.color-4 { color: #5ff; }
+.user.color-5 { color: #6dffc2; }
+.user.color-6 { color: #8ef77c; }
+.user.color-7 { color: #4de08a; }
+.user.color-8 { color: #ff5; }
+.user.color-9 { color: #62ffb0; }
+.user.color-10 { color: #9cff66; }
+.user.color-11 { color: #7aeaa0; }
+.user.color-12 { color: #7fdbff; }
+.user.color-13 { color: #5cffd0; }
+.user.color-14 { color: #88e070; }
+.user.color-15 { color: #40f070; }
+.user.color-16 { color: #ff8ad8; }
+.user.color-17 { color: #70ff88; }
+.user.color-18 { color: #b0ff5c; }
+.user.color-19 { color: #55e8a8; }
+.user.color-20 { color: #5ff; }
+.user.color-21 { color: #66f5d8; }
+.user.color-22 { color: #9ae688; }
+.user.color-23 { color: #48d878; }
+.user.color-24 { color: #ff5; }
+.user.color-25 { color: #78ffb8; }
+.user.color-26 { color: #90f060; }
+.user.color-27 { color: #6ad8a0; }
+.user.color-28 { color: #7fdbff; }
+.user.color-29 { color: #50ffc0; }
+.user.color-30 { color: #80d870; }
+.user.color-31 { color: #38e070; }
+.user.color-32 { color: #ff8ad8; }

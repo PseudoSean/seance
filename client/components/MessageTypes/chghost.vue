@@ -1,22 +1,25 @@
 <template>
 	<span class="content">
-		<Username :user="message.from" />
-		has changed
-		<span v-if="message.new_ident"
-			>username to <b>{{ message.new_ident }}</b></span
+		{{ parts[0] }}<bdi><Username :user="message.from" /></bdi>{{ parts[1]
+		}}<span v-if="message.new_ident"
+			><b
+				><bdi>{{ message.new_ident }}</bdi></b
+			></span
+		>{{ parts[2]
+		}}<span v-if="message.new_host"
+			><i class="hostmask"><ParsedMessage :network="network" :text="message.new_host" /></i
+			>{{ parts[3] }}</span
 		>
-		<span v-if="message.new_host"
-			>hostname to
-			<i class="hostmask"><ParsedMessage :network="network" :text="message.new_host" /></i
-		></span>
 	</span>
 </template>
 
 <script lang="ts">
-import {defineComponent, PropType} from "vue";
+import {computed, defineComponent, PropType} from "vue";
 import {ClientNetwork, ClientMessage} from "../../js/types";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
+import {useI18n} from "../../js/i18n";
+import {frameSegments, KEEP} from "../../js/i18n/core";
 
 export default defineComponent({
 	name: "MessageTypeChangeHost",
@@ -33,6 +36,44 @@ export default defineComponent({
 			type: Object as PropType<ClientMessage>,
 			required: true,
 		},
+	},
+	setup(props) {
+		const {t} = useI18n();
+		// One whole sentence per shape: ident only, host only, both, or
+		// neither — the translator writes each variant with the values where
+		// they belong. The frames carry a trailing segment even when the
+		// value's element is absent, so the segments and the v-ifs agree.
+		const parts = computed(() => {
+			const {new_ident: ident, new_host: host} = props.message;
+
+			if (ident && host) {
+				return frameSegments(
+					t("system.chghostBoth", {nick: KEEP, ident: KEEP, host: KEEP}),
+					["nick", "ident", "host"]
+				);
+			}
+
+			if (ident) {
+				return frameSegments(t("system.chghostIdent", {nick: KEEP, ident: KEEP}), [
+					"nick",
+					"ident",
+				]);
+			}
+
+			if (host) {
+				return frameSegments(t("system.chghostHost", {nick: KEEP, host: KEEP}), [
+					"nick",
+					"host",
+				]);
+			}
+
+			return frameSegments(t("system.chghost", {nick: KEEP}), ["nick"]);
+		});
+
+		return {
+			parts,
+			t,
+		};
 	},
 });
 </script>

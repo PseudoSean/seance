@@ -8,6 +8,7 @@ import {ChanState, ChanType} from "../../../shared/types/chan";
 import type {SharedNetworkChan} from "../../../shared/types/network";
 import type {SharedUser} from "../../../shared/types/user";
 import type {SharedMsg, UserInMessage} from "../../../shared/types/msg";
+import type {HistorySpec} from "./history";
 
 export type Casefold = (s: string) => string;
 
@@ -54,10 +55,18 @@ export class Channel {
 	topicQuiet = false;
 	/** The user asked for the topic (`/topic`): show the next 331/332 even if it is unchanged. */
 	topicAsked = false;
+	/** The 332 just shown was asked for: it and its 333 follow the user to the active tab. */
+	topicAskedActive = false;
 	/** The modes 324 last showed; a reconnect asks again and gets the same answer back. */
 	modeText: string | undefined = undefined;
 	/** The user asked for the modes (`/mode #chan`): show the next 324 even if it is unchanged. */
 	modesAsked = false;
+	/**
+	 * For a `ChanType.SPECIAL` window, what it shows besides its kind: the
+	 * channel of a mode list (casefolded by the client). The title is a
+	 * translated string and cannot identify the window (findings F15).
+	 */
+	specialTarget: string | undefined = undefined;
 	/** Last away message seen for the peer of a query window. */
 	userAway: string | undefined = undefined;
 	/** Reference of every message handed to the UI, by id (`more` cursor lookup). */
@@ -72,6 +81,8 @@ export class Channel {
 	newestRef: MsgRef | undefined = undefined;
 	/** History has been requested at least once (so `newestRef` is a valid catch-up reference). */
 	historyRequested = false;
+	/** A `more` page the connection died on; asked again once we are back (history.ts). */
+	lostMore: HistorySpec | undefined = undefined;
 	/**
 	 * Read marker (`draft/read-marker`): the newest time we have sent or the
 	 * server has told us was read, on any of the account's sessions. Messages
@@ -138,6 +149,33 @@ export class Channel {
 
 		this.msgRefs.set(msg.id, ref);
 		return ref;
+	}
+
+	/**
+	 * The UI dropped these messages from its buffer (it keeps 100 for a
+	 * channel it is not showing, router.ts / socket-events/msg.ts): forget
+	 * them here too, or every page that brings them back is deduplicated
+	 * away and the channel can never scroll past that point again. They
+	 * are re-remembered, under fresh ids, when a page delivers them.
+	 */
+	forget(ids: number[]): void {
+		for (const id of ids) {
+			const ref = this.msgRefs.get(id);
+
+			if (!ref) {
+				continue;
+			}
+
+			this.msgRefs.delete(id);
+
+			if (ref.msgid && this.idByMsgid.get(ref.msgid) === id) {
+				this.idByMsgid.delete(ref.msgid);
+			}
+
+			if (this.shared.totalMessages > 0) {
+				this.shared.totalMessages--;
+			}
+		}
 	}
 
 	/** Id of the loaded message with `msgid`, if we have shown it. */

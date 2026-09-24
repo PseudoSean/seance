@@ -1,0 +1,439 @@
+/* Mardam — named for Khaled Mardam-Bey, whose mIRC is the IRC client most
+ * people learned on; this is that client as it looked on Windows 2000:
+ * warm-grey chrome (#d4d0c8) with bevelled edges, a white scrollback in
+ * mIRC's own colour table (joins green, quits navy, notices maroon, /me in
+ * purple, links blue), the channel window's title bar a navy-to-steel
+ * gradient with white text, the channel list a switchbar of raised buttons
+ * with the current one pressed, and a sunken white input on a grey bar.
+ * coffee.css's rules with a light palette; the bevels and the title bar are
+ * the rules this file adds.
+ *
+ * Contrast: text on the white is 21:1, muted text (#646464) 5.9:1, links
+ * (#0000cc) 11.2:1, the title text on the light end of the gradient
+ * (#3a6ea5) 5.3:1, the chrome's muted grey (#5a5a5a on #d4d0c8) 4.5:1.
+ *
+ * The nick palette is 32 slots (style.css hashes nicks into 32) over twelve
+ * darkened mIRC colours — navy, green, red, maroon, purple, teal, blue,
+ * orange, pink, olive, grey, brown — every one >= 6.4:1 on white and >= 5.7:1
+ * on the highlighted row. */
+@import "coffee.css";
+
+:root {
+	color-scheme: light;
+
+	/* The Windows 2000 chrome. */
+	--win-face: #d4d0c8;
+	--win-face-light: #e8e6e1;
+	--win-light: #fff;
+	--win-shadow: #808080;
+	--win-dark-shadow: #404040;
+	--win-title-start: #0a246a;
+	--win-title-end: #3a6ea5;
+	--win-select: #0a246a;
+
+	/* The raised and sunken bevels, as inset shadows so nothing moves. */
+	--bevel-raised:
+		inset 1px 1px 0 var(--win-light),
+		inset -1px -1px 0 var(--win-dark-shadow),
+		inset 2px 2px 0 var(--win-face-light),
+		inset -2px -2px 0 var(--win-shadow);
+	--bevel-sunken:
+		inset 1px 1px 0 var(--win-shadow),
+		inset -1px -1px 0 var(--win-light),
+		inset 2px 2px 0 var(--win-dark-shadow),
+		inset -2px -2px 0 var(--win-face);
+
+	/* Chat surface: mIRC's white scrollback, black text. */
+	--chat-bg: #fff;
+	--chat-fg: #000;
+	--chat-fg-muted: #646464;
+	--chat-fg-faint: #6a6a6a;
+	--chat-heading: #0a246a;
+	--chat-rule: #d4d0c8;
+	--chat-accent: #00c;
+	--chat-accent-fg: #fff;
+	--chat-accent-rule: #c00;
+	--chat-highlight-bg: #fff3c4;
+	--chat-selection: #0a246a;
+	--composer-bg: #f2f1ee;
+	--composer-border: #808080;
+	--window-border: #808080;
+	--window-shadow: none;
+	--menu-bg: #d4d0c8;
+
+	/* The rail is the grey chrome; the rows are buttons, below. */
+	--rail-bg-top: #d4d0c8;
+	--rail-bg-bottom: #d4d0c8;
+	--rail-fg: #000;
+	--rail-fg-strong: #000;
+	--rail-fg-active: #000;
+	--rail-fg-muted: #5a5a5a;
+	--rail-item-active-bg: #e8e6e1;
+	--rail-item-hover-bg: #dedbd5;
+	--rail-accent: #0a246a;
+	--rail-accent-fg: #fff;
+	--rail-badge-bg: #0a246a;
+	--rail-badge-fg: #fff;
+	--rail-input-bg: #fff;
+	--rail-input-border: #808080;
+
+	/* mIRC's colour table for message kinds. */
+	--event-join: #006e00;
+	--event-quit: #00007f;
+	--nick-default: #00007f;
+	--notice-color: #7f0000;
+	--action-color: #8a008a;
+
+	/* Notice boxes: Windows' pale tints. */
+	--note-bg: #f2f1ee;
+	--note-fg: #000;
+	--warn-bg: #fff3c4;
+	--warn-fg: #5a3d00;
+	--error-bg: #fbe3e3;
+	--error-fg: #7f0000;
+	--ok-bg: #e3f3e3;
+	--ok-fg: #006e00;
+
+	/* Tints on a light surface are dark; the focus ring is Windows' dotted
+	 * blue, approximated. */
+	--tint-soft: rgb(0 0 0 / 5%);
+	--tint-strong: rgb(0 0 0 / 10%);
+	--accent-tint-20: rgb(10 36 106 / 15%);
+	--accent-tint-30: rgb(10 36 106 / 25%);
+	--focus-ring: rgb(10 36 106 / 45%);
+	--scrollbar-track: #e8e6e1;
+	--scrollbar-thumb: #b8b4ac;
+	--scrollbar-thumb-active: #9a968e;
+
+	/* Code blocks. */
+	--tok-comment: #646464;
+	--tok-keyword: #00007f;
+	--tok-string: #7f0000;
+	--tok-number: #8a008a;
+	--tok-function: #006e00;
+	--tok-operator: #000;
+	--tok-punctuation: #404040;
+	--tok-tag: #00007f;
+	--tok-attr: #006a6a;
+
+	/* The highlighted row's mark is red, the mIRC way. */
+	--highlight-border-color: #c00;
+}
+
+/* The Windows face. */
+body,
+button,
+input,
+select,
+textarea {
+	font-family: "Segoe UI", Tahoma, Verdana, "DejaVu Sans", Geneva, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+	border-radius: 0 !important;
+}
+
+body,
+#sidebar {
+	background: var(--win-face);
+}
+
+/* The window is an MDI child: a raised grey frame around a sunken white
+ * client area. */
+.window {
+	background: var(--chat-bg);
+	box-shadow: var(--bevel-sunken);
+}
+
+/* The channel window's title bar: the navy gradient, white bold title,
+ * white icons. */
+#chat .header {
+	background: linear-gradient(90deg, var(--win-title-start), var(--win-title-end));
+	border-bottom: 0;
+	box-shadow: none;
+	color: #fff;
+}
+
+#chat .header .title {
+	color: #fff;
+	font-weight: 700;
+}
+
+#chat .header .topic,
+#chat .header .topic a {
+	color: #dbe6f5;
+}
+
+/* Only on the bar: on the other windows (settings, help, the changelog, a
+ * network's form) the toggle sits on the window and keeps coffee's muted
+ * tone. */
+#chat .header .lt,
+#chat .header .rt,
+#chat button.mentions,
+#chat button.search,
+#chat button.menu,
+#chat button.close {
+	color: #fff;
+}
+
+#chat .header .lt::after {
+	background-color: #fff;
+}
+
+/* The nick list: a sunken white list beside the scrollback, its search box
+ * on the grey. */
+#chat .userlist {
+	border-inline-start: 0;
+	box-shadow: var(--bevel-sunken);
+}
+
+#chat .userlist .count {
+	background: var(--win-face);
+	box-shadow: var(--bevel-raised);
+}
+
+#chat .userlist .count::before {
+	color: var(--win-shadow);
+}
+
+#chat .userlist .user.active {
+	background: var(--win-select);
+	color: #fff;
+}
+
+/* The switchbar: every channel a raised button, the current one pressed. */
+#sidebar .scrollable-area {
+	padding: 0.25rem 0.375rem;
+}
+
+.channel-list-item {
+	margin: 0.125rem 0;
+	background: var(--win-face);
+	box-shadow: var(--bevel-raised);
+}
+
+.channel-list-item:hover {
+	background: var(--rail-item-hover-bg);
+}
+
+.channel-list-item.active {
+	background: var(--rail-item-active-bg);
+	box-shadow: var(--bevel-sunken);
+}
+
+/* The bevel is corner lighting, not direction — it restates itself under
+ * RTL so coffee's RTL marker override (higher specificity, imported file)
+ * does not paint the active row amber instead. */
+[dir="rtl"] .channel-list-item.active {
+	box-shadow: var(--bevel-sunken);
+}
+
+/* The restate above out-specifies the lobby rule: keep LTR's bare lobby row. */
+[dir="rtl"] .channel-list-item[data-type="lobby"] {
+	box-shadow: none;
+}
+
+.channel-list-item[data-type="lobby"] {
+	font-weight: 700;
+	background: transparent;
+	box-shadow: none;
+}
+
+.channel-list-item[data-type="lobby"]:hover {
+	background: transparent;
+}
+
+.channel-list-item.has-unread .name {
+	color: var(--win-select);
+}
+
+.channel-list-item.has-highlight:not(.is-muted) .name {
+	color: #c00;
+}
+
+.channel-list-item.not-connected,
+.channel-list-item.parted-channel {
+	color: var(--win-shadow);
+}
+
+/* The jump-to box is a sunken field. */
+.jump-to-input .input {
+	box-shadow: var(--bevel-sunken);
+}
+
+.jump-to-input .input:focus {
+	box-shadow: var(--bevel-sunken), 0 0 0 2px var(--focus-ring);
+}
+
+/* The footer: two raised buttons on the grey, in a band the message bar's
+ * height (3rem) so the switchbar ends where the window's client area does. */
+#footer {
+	padding: 0.25rem 0.375rem;
+	gap: 0.375rem;
+	height: 3rem;
+}
+
+#footer button {
+	background: var(--win-face);
+	box-shadow: var(--bevel-raised);
+	color: var(--rail-fg-muted);
+}
+
+#footer button:hover {
+	background: var(--rail-item-hover-bg);
+}
+
+#footer button.active {
+	background: var(--rail-item-active-bg);
+	box-shadow: var(--bevel-sunken);
+	color: #000;
+}
+
+/* The message bar: grey, with the input a sunken white field. */
+#form {
+	background: var(--win-face);
+	border-top: 0;
+	box-shadow: inset 0 1px 0 var(--win-light);
+	padding: 0.375rem 0.5rem;
+	gap: 0.375rem;
+}
+
+#form:focus-within {
+	border-top-color: transparent;
+	box-shadow: inset 0 1px 0 var(--win-light);
+}
+
+#form #input {
+	background: #fff;
+	box-shadow: var(--bevel-sunken);
+	padding: 0 0.5rem; /* no vertical padding: the composer sizes the field from its line-height */
+	caret-color: #000;
+}
+
+#form:focus-within #input {
+	box-shadow: var(--bevel-sunken), 0 0 0 2px var(--focus-ring);
+}
+
+#form #nick {
+	background: transparent;
+	color: #000;
+	font-weight: 700;
+}
+
+#form #upload,
+#form #submit,
+#form #submit::before {
+	color: #000;
+}
+
+/* Selection and the highlighted row: Windows navy, mIRC's pale yellow. */
+::selection {
+	background: var(--win-select);
+	color: #fff;
+}
+
+#chat .msg.highlight {
+	border-inline-start-color: #c00;
+}
+
+/* Timestamps in the scrollback's own black, the way mIRC prints them. */
+#chat .time {
+	color: var(--chat-fg-muted);
+}
+
+/* Buttons, inputs and menus are Windows controls. */
+.btn {
+	background: var(--win-face);
+	border: 0;
+	box-shadow: var(--bevel-raised);
+	color: #000;
+}
+
+.btn:hover,
+.btn:focus-visible {
+	background: var(--rail-item-hover-bg);
+	color: #000;
+}
+
+.btn:active {
+	box-shadow: var(--bevel-sunken);
+}
+
+.input {
+	background-color: #fff;
+	border-color: transparent;
+	box-shadow: var(--bevel-sunken);
+	color: #000;
+}
+
+.input:not(:disabled):hover,
+.input:not(:disabled):focus {
+	border-color: transparent;
+}
+
+.input:focus {
+	box-shadow: var(--bevel-sunken), 0 0 0 2px var(--focus-ring);
+}
+
+.mentions-popup,
+#context-menu,
+.textcomplete-menu {
+	border: 0;
+	box-shadow: var(--bevel-raised), 2px 2px 0 var(--win-dark-shadow);
+}
+
+.context-menu-item.active,
+.textcomplete-item:focus,
+.textcomplete-item:hover,
+.textcomplete-menu .active {
+	background-color: var(--win-select);
+	color: #fff;
+}
+
+.context-menu-item.active,
+.textcomplete-menu .active a {
+	color: #fff;
+}
+
+/* mIRC colours that vanish on white. */
+.irc-fg0 { color: #7a7a7a; }
+.irc-fg8 { color: #9a8600; }
+.irc-fg9 { color: #009a45; }
+.irc-fg11 { color: #007a9a; }
+.irc-fg15 { color: #8a8a8a; }
+
+/* Nick palette: twelve darkened mIRC colours, cycled. */
+.user.color-1 { color: #00007f; }
+.user.color-2 { color: #006e00; }
+.user.color-3 { color: #b80000; }
+.user.color-4 { color: #7f0000; }
+.user.color-5 { color: #8a008a; }
+.user.color-6 { color: #006a6a; }
+.user.color-7 { color: #0000d0; }
+.user.color-8 { color: #9a4300; }
+.user.color-9 { color: #a8007e; }
+.user.color-10 { color: #5f5f00; }
+.user.color-11 { color: #4f4f4f; }
+.user.color-12 { color: #6b3a00; }
+.user.color-13 { color: #00007f; }
+.user.color-14 { color: #006e00; }
+.user.color-15 { color: #b80000; }
+.user.color-16 { color: #7f0000; }
+.user.color-17 { color: #8a008a; }
+.user.color-18 { color: #006a6a; }
+.user.color-19 { color: #0000d0; }
+.user.color-20 { color: #9a4300; }
+.user.color-21 { color: #a8007e; }
+.user.color-22 { color: #5f5f00; }
+.user.color-23 { color: #4f4f4f; }
+.user.color-24 { color: #6b3a00; }
+.user.color-25 { color: #00007f; }
+.user.color-26 { color: #006e00; }
+.user.color-27 { color: #b80000; }
+.user.color-28 { color: #7f0000; }
+.user.color-29 { color: #8a008a; }
+.user.color-30 { color: #006a6a; }
+.user.color-31 { color: #0000d0; }
+.user.color-32 { color: #9a4300; }

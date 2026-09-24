@@ -262,6 +262,8 @@ interface ClientToServerEvents {
 	"mentions:get": NoPayloadEventHandler;
 
 	more: EventHandler<{target: number; lastId: number; condensed: boolean}>;
+	/** The UI dropped these messages from a channel's buffer (see bus-contract § 2). */
+	"history:trim": EventHandler<{target: number; ids: number[]}>;
 
 	"msg:preview:toggle": EventHandler<{
 		target: number;

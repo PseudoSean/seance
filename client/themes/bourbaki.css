@@ -1,0 +1,350 @@
+/* Bourbaki — the DOS directory manager (1DIR Plus). Not one framed window like an IDE:
+ * a set of separate boxes on black, each ruled with a double line in bright
+ * blue and set apart by a gutter, titles in yellow, names in cyan, sizes in
+ * white, the one hot item in light red with a pointer, and a row of small
+ * boxed buttons along the bottom for the function keys.
+ *
+ * coffee.css's rules with the sixteen-colour EGA palette, a monospace face,
+ * no rounded corner anywhere, and the frames: the rail's list, the channel
+ * header, the scrollback, the user list, the command line and each footer
+ * button are their own box (day.css's 5px viewport padding becomes the
+ * gutter). gates.css is the same palette as one IDE window on the CGA blue.
+ *
+ * Everything reads on black; the dimmest text (#a0a0a0, icons) is 8:1 and
+ * the bright-blue rules are 3.7:1. Light red (#ff5555) is 5.7:1 on black, so
+ * here it can be text as well as the pointer.
+ *
+ * The nick palette is 32 slots (style.css hashes nicks into 32) and DOS has
+ * six bright colours (cyan, green, magenta, yellow, white, light grey); the
+ * slots cycle through them, so a channel reads like a directory listing
+ * rather than a rainbow. */
+@import "coffee.css";
+
+:root {
+	color-scheme: dark;
+
+	/* The EGA palette. */
+	--dos-black: #000;
+	--dos-black-lift: #141414; /* inputs, code, menus */
+	--dos-black-lit: #1c1c40; /* hover, the highlighted row: a touch of blue */
+	--dos-bright-blue: #55f;
+	--dos-cyan: #5ff;
+	--dos-green: #5f5;
+	--dos-magenta: #f5f;
+	--dos-red: #f55;
+	--dos-yellow: #ff5;
+	--dos-white: #fff;
+	--dos-grey: #c0c0c0;
+	--dos-grey-dim: #a0a0a0;
+
+	/* The box rule and the gutter between boxes. */
+	--dos-frame: 0.25rem double var(--dos-bright-blue);
+	--dos-gap: 0.5rem;
+
+	/* Chat surface: black, white text, cyan for the second voice. */
+	--chat-bg: var(--dos-black);
+	--chat-fg: var(--dos-white);
+	--chat-fg-muted: var(--dos-grey);
+	--chat-fg-faint: #8a8a8a;
+	--chat-heading: var(--dos-yellow);
+	--chat-rule: var(--dos-bright-blue);
+	--chat-accent: var(--dos-yellow);
+	--chat-accent-fg: var(--dos-black);
+	--chat-accent-rule: var(--dos-yellow);
+	--chat-highlight-bg: var(--dos-black-lit);
+	--chat-selection: var(--dos-white);
+	--composer-bg: var(--dos-black-lift);
+	--composer-border: var(--dos-bright-blue);
+	--window-border: var(--dos-bright-blue);
+	--window-shadow: none;
+	--menu-bg: var(--dos-black-lift);
+
+	/* Sidebar rail: the same black; grey text, white for the network, yellow
+	 * for what has your attention. The current item is not a fill but a red
+	 * pointer, below. */
+	--rail-bg-top: var(--dos-black);
+	--rail-bg-bottom: var(--dos-black);
+	--rail-fg: var(--dos-grey);
+	--rail-fg-strong: var(--dos-white);
+	--rail-fg-active: var(--dos-white);
+	--rail-fg-muted: var(--dos-grey-dim);
+	--rail-item-active-bg: var(--dos-black);
+	--rail-item-hover-bg: var(--dos-black-lit);
+	--rail-accent: var(--dos-yellow);
+	--rail-accent-fg: var(--dos-black);
+	--rail-badge-bg: var(--dos-bright-blue);
+	--rail-badge-fg: var(--dos-white);
+	--rail-input-bg: var(--dos-black-lift);
+	--rail-input-border: var(--dos-bright-blue);
+
+	/* Message semantics. */
+	--event-join: var(--dos-green);
+	--event-quit: var(--dos-magenta);
+	--nick-default: var(--dos-cyan);
+	--notice-color: var(--dos-yellow);
+	--action-color: var(--dos-magenta);
+
+	/* Notice boxes: a lifted black panel, one colour each. */
+	--note-bg: var(--dos-black-lift);
+	--note-fg: var(--dos-grey);
+	--warn-bg: var(--dos-black-lift);
+	--warn-fg: var(--dos-yellow);
+	--error-bg: var(--dos-black-lift);
+	--error-fg: var(--dos-magenta);
+	--ok-bg: var(--dos-black-lift);
+	--ok-fg: var(--dos-green);
+
+	/* Tints, focus ring, scrollbars. */
+	--tint-soft: rgb(255 255 255 / 8%);
+	--tint-strong: rgb(255 255 255 / 16%);
+	--accent-tint-20: rgb(255 255 85 / 20%);
+	--accent-tint-30: rgb(255 255 85 / 30%);
+	--focus-ring: rgb(85 255 255 / 60%);
+	--scrollbar-track: var(--dos-black-lift);
+	--scrollbar-thumb: var(--dos-grey);
+	--scrollbar-thumb-active: var(--dos-white);
+
+	/* Code blocks, on the lifted black. */
+	--tok-comment: var(--dos-grey-dim);
+	--tok-keyword: var(--dos-magenta);
+	--tok-string: var(--dos-cyan);
+	--tok-number: var(--dos-yellow);
+	--tok-function: var(--dos-green);
+	--tok-operator: var(--dos-white);
+	--tok-punctuation: var(--dos-grey);
+	--tok-tag: var(--dos-green);
+	--tok-attr: var(--dos-cyan);
+}
+
+/* A DOS screen is monospaced and has no rounded corners. */
+body,
+#chat,
+#sidebar,
+#form #input,
+button,
+input,
+select,
+textarea {
+	font-family: "IBM Plex Mono", "DejaVu Sans Mono", "Fira Mono", Menlo, Consolas, monospace;
+}
+
+*,
+*::before,
+*::after {
+	border-radius: 0 !important;
+}
+
+/* The whole screen is black: no gradient. */
+body,
+#viewport,
+#sidebar {
+	background: var(--dos-black);
+}
+
+/* The gutter: the viewport's padding, and the gap between rail and window. */
+#viewport,
+#viewport.menu-open {
+	padding: var(--dos-gap);
+	gap: var(--dos-gap);
+}
+
+/* The boxes. Real borders, so every side is there and the gutter shows
+ * between them; the sizes are border-box, so nothing grows. */
+#sidebar .scrollable-area,
+.window,
+#chat .header,
+#chat .chat,
+#chat .userlist,
+#form,
+#footer button,
+.mentions-popup,
+#context-menu,
+.textcomplete-menu {
+	border: var(--dos-frame);
+}
+
+.window {
+	box-shadow: none;
+}
+
+/* The chat window is not one box but four: the header, the scrollback, the
+ * user list and the command line, each in its own frame. */
+#chat-container.window {
+	border: 0;
+	background: var(--dos-black);
+}
+
+#chat .header {
+	height: 3.5rem; /* 3rem of line, 0.25rem of rule top and bottom */
+	margin-bottom: var(--dos-gap);
+	box-shadow: none;
+}
+
+#chat .chat-content {
+	gap: var(--dos-gap);
+}
+
+#chat .userlist {
+	box-shadow: none;
+}
+
+#chat .userlist .count {
+	background: var(--dos-black);
+	border-bottom: var(--dos-frame);
+}
+
+#form {
+	margin-top: var(--dos-gap);
+	border-top: var(--dos-frame);
+	background: var(--dos-black);
+	box-shadow: none;
+}
+
+/* Focus is the command line's frame turning cyan. */
+#form:focus-within {
+	border-color: var(--dos-cyan);
+	box-shadow: none;
+}
+
+/* The function-key row: each button its own little box, on the grid: the
+ * row is exactly the command line's height (3.5rem, like the header) below
+ * the same gutter, so the rail's list ends where the scrollback does. */
+#footer {
+	height: auto;
+	padding-top: var(--dos-gap);
+	gap: 0.25rem;
+}
+
+#footer button {
+	height: 3.5rem;
+}
+
+#footer button:hover,
+#footer button.active {
+	background: var(--dos-black);
+	border-color: var(--dos-yellow);
+	color: var(--dos-yellow);
+}
+
+/* Box titles are yellow, like "Volume Status"; column headings white. */
+#chat .header .title,
+.window h2,
+#chat .userlist .count,
+.channel-list-item[data-type="lobby"] {
+	color: var(--dos-yellow);
+}
+
+/* Selection is the DOS inverse: black on white. */
+::selection {
+	background: var(--dos-white);
+	color: var(--dos-black);
+}
+
+/* The current item is the red pointer, not a fill. Unread rows are cyan,
+ * a highlight is yellow, a query or channel that is gone is magenta. */
+.channel-list-item.active {
+	background: transparent;
+	color: var(--dos-red);
+	box-shadow: inset 0.375rem 0 0 var(--dos-red);
+}
+
+/* The pointer rides the row's inline-start edge; RTL rows mirror. */
+[dir="rtl"] .channel-list-item.active {
+	box-shadow: inset -0.375rem 0 0 var(--dos-red);
+}
+
+.channel-list-item.active .name {
+	color: var(--dos-red);
+}
+
+.channel-list-item.has-unread .name {
+	color: var(--dos-cyan);
+}
+
+.channel-list-item.has-highlight:not(.is-muted) .name {
+	color: var(--dos-yellow);
+}
+
+.channel-list-item .badge.highlight {
+	background: var(--dos-red);
+	color: var(--dos-white);
+}
+
+/* Timestamps are the size column: white; the names beside them are cyan. */
+#chat .time {
+	color: var(--dos-white);
+}
+
+/* A monospace face is wider than the base stylesheet's timestamp column
+ * allows for; room for "07:52 PM" and "07:52:30 PM". */
+#chat.time-12h .time,
+#chat.time-seconds .time {
+	width: 5.25rem;
+}
+
+#chat.time-seconds.time-12h .time {
+	width: 7rem;
+}
+
+/* mIRC colours that vanish on black (or nearly). */
+.irc-fg1 { color: #555; }
+.irc-fg2 { color: var(--dos-bright-blue); }
+.irc-fg5 { color: var(--dos-red); }
+.irc-fg6 { color: var(--dos-magenta); }
+.irc-fg12 { color: var(--dos-cyan); }
+
+/* Buttons are the menu bar's boxes: black, grey text, yellow when lit. */
+.btn {
+	background: var(--dos-black);
+	border: var(--dos-frame);
+	color: var(--dos-grey);
+}
+
+.btn:hover,
+.btn:focus-visible {
+	background: var(--dos-black);
+	border-color: var(--dos-yellow);
+	color: var(--dos-yellow);
+}
+
+/* Inputs are the lifted black in a single bright rule. */
+.input,
+.jump-to-input .input {
+	background-color: var(--dos-black-lift);
+	border-color: var(--dos-bright-blue);
+	color: var(--dos-white);
+}
+
+/* Nick palette: the six bright DOS colours, cycled. */
+.user.color-1 { color: #5ff; }
+.user.color-2 { color: #fff; }
+.user.color-3 { color: #5f5; }
+.user.color-4 { color: #ff5; }
+.user.color-5 { color: #f5f; }
+.user.color-6 { color: #c0c0c0; }
+.user.color-7 { color: #5ff; }
+.user.color-8 { color: #fff; }
+.user.color-9 { color: #5f5; }
+.user.color-10 { color: #ff5; }
+.user.color-11 { color: #f5f; }
+.user.color-12 { color: #c0c0c0; }
+.user.color-13 { color: #5ff; }
+.user.color-14 { color: #fff; }
+.user.color-15 { color: #5f5; }
+.user.color-16 { color: #ff5; }
+.user.color-17 { color: #f5f; }
+.user.color-18 { color: #c0c0c0; }
+.user.color-19 { color: #5ff; }
+.user.color-20 { color: #fff; }
+.user.color-21 { color: #5f5; }
+.user.color-22 { color: #ff5; }
+.user.color-23 { color: #f5f; }
+.user.color-24 { color: #c0c0c0; }
+.user.color-25 { color: #5ff; }
+.user.color-26 { color: #fff; }
+.user.color-27 { color: #5f5; }
+.user.color-28 { color: #ff5; }
+.user.color-29 { color: #f5f; }
+.user.color-30 { color: #c0c0c0; }
+.user.color-31 { color: #5ff; }
+.user.color-32 { color: #fff; }

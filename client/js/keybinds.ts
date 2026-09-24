@@ -202,9 +202,20 @@ const ignoredKeys = {
 };
 
 document.addEventListener("keydown", (e) => {
-	// Escape leaves the help screen. Not `router.go(-1)`: the history is kept
-	// one deep (router.ts).
-	if (e.key === "Escape" && router.currentRoute.value.name === "Help") {
+	// Escape leaves the help screen and the settings modal. Not
+	// `router.go(-1)`: the history is kept one deep (router.ts). Never from
+	// inside a form field — settings are full of them, and Escape there
+	// means "leave the field", not "throw me out of the page".
+	if (
+		e.key === "Escape" &&
+		(router.currentRoute.value.name === "Help" ||
+			router.currentRoute.value.path.startsWith("/settings")) &&
+		!(
+			e.target instanceof HTMLInputElement ||
+			e.target instanceof HTMLTextAreaElement ||
+			e.target instanceof HTMLSelectElement
+		)
+	) {
 		leavePage();
 		return;
 	}

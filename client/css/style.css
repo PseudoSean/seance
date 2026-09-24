@@ -8,6 +8,41 @@
 	content: attr(data-tooltip);
 }
 
+/* The vendor tooltip css is physical (left/right, margin-left/right), and
+ * the east/west pair is asymmetric in use: the time, the status marker and
+ * the active-window hook point east, the part/close and connecting hints
+ * point west. North and south centre on the anchor either way, but a
+ * tooltip pinned to one side of its anchor lands on the wrong side once
+ * the reading direction flips — mirror e↔w under RTL, caret included
+ * (the vendor's #1b1f23 arrow colour matches its own tooltip background). */
+[dir="rtl"] .tooltipped-e::after {
+	left: auto;
+	right: 100%;
+	margin-left: 0;
+	margin-right: 6px;
+}
+
+[dir="rtl"] .tooltipped-e::before {
+	right: auto;
+	left: -7px;
+	border-right-color: transparent;
+	border-left-color: #1b1f23;
+}
+
+[dir="rtl"] .tooltipped-w::after {
+	right: auto;
+	left: 100%;
+	margin-right: 0;
+	margin-left: 6px;
+}
+
+[dir="rtl"] .tooltipped-w::before {
+	left: auto;
+	right: -7px;
+	border-left-color: transparent;
+	border-right-color: #1b1f23;
+}
+
 :root {
 	/* Main text color */
 	--body-color: #222;
@@ -93,13 +128,33 @@
 	 * sensible on purpose: the ends exist for eyes that need them. */
 	font-size: 100%;
 
-	/* The sidebar scales at half rate — 16rem at medium, but a full 16rem of
-	 * a 34px root would not fit a phone — and never past the screen. */
-	--sidebar-width: min(calc(8rem + 128px), 85vw);
+	/* The sidebar scales at half rate — 220px at medium, 248px at large; a
+	 * full 14rem of a 34px root would not fit a phone — and never past the
+	 * screen. */
+	--sidebar-width: min(calc(7rem + 108px), 85vw);
+
+	/* The user list likewise: 180px at medium, 204px at large. */
+	--userlist-width: min(calc(6rem + 84px), 85vw);
+
+	/* Slide distances for the panes that hide off a phone screen: the sidebar
+	 * docks at the inline-start edge and slides out past it, the user list
+	 * docks at the inline-end edge and slides out past that one. The
+	 * magnitudes are the panes' own widths, whatever those end up being
+	 * (--sidebar-width is capped to the screen, so a literal length here
+	 * would leave a strip visible). */
+	--slide-away: calc(-1 * var(--sidebar-width));
+	--slide-end-away: var(--userlist-width);
 
 	/* #status-bar-tint's height, and the room the sidebar leaves for it. In px:
 	 * it answers to iOS's sampler, not to the UI scale. */
 	--status-bar-tint-height: 8px;
+}
+
+/* RTL flips which edge each pane hides past: same magnitudes, swapped
+ * signs. :root[dir] and not [dir] :root — the attribute sits on <html>. */
+:root[dir="rtl"] {
+	--slide-away: var(--sidebar-width);
+	--slide-end-away: calc(-1 * var(--userlist-width));
 }
 
 /* The font-size setting's scale (client/js/helpers/fontSize.ts). */
@@ -291,6 +346,9 @@ button {
 code,
 pre,
 #chat .msg[data-type="monospace_block"] .text,
+/* Unhandled numerics are server-formatted for a fixed-width column
+   (/map trees, /stats tables): keep their spacing honest. */
+#chat .msg[data-type="unhandled"] .content,
 .irc-monospace,
 textarea#user-specified-css-input {
 	font-family: Consolas, Menlo, Monaco, "Lucida Console", "DejaVu Sans Mono", "Courier New", monospace;
@@ -431,6 +489,7 @@ p {
 #viewport .lt::before,
 #viewport .rt::before,
 #chat button.mentions::before,
+#chat button.translate::before,
 #chat button.close::before,
 #chat button.menu::before,
 #chat button.search::before,
@@ -444,6 +503,7 @@ p {
 #settings .settings-menu .icon::before,
 #form #upload::before,
 #form #submit::before,
+#form #translate-once::before,
 #chat .msg[data-type="away"] .from::before,
 #chat .msg[data-type="back"] .from::before,
 #chat .msg[data-type="invite"] .from::before,
@@ -465,7 +525,6 @@ p {
 #chat .msg[data-type="whois"] .from::before,
 #chat .msg[data-type="nick"] .from::before,
 #chat .msg[data-type="chghost"] .from::before,
-#chat .msg[data-type="action"] .from::before,
 #chat .msg[data-type="plugin"] .from::before,
 #chat .msg[data-type="raw"] .from::before,
 #chat .msg-statusmsg span::before,
@@ -477,6 +536,7 @@ p {
 #chat .media-tool::before,
 #settings .trusted-host-remove::before,
 #chat .scroll-down-arrow::after,
+#chat .msg-action::before,
 #chat .topic-container .save-topic span::before,
 #version-checker::before,
 .context-menu-item::before,
@@ -505,11 +565,46 @@ p {
 #viewport .rt::before { content: "\f0c0"; /* https://fontawesome.com/icons/users?style=solid */ }
 #chat button.menu::before { content: "\f142"; /* http://fontawesome.io/icon/ellipsis-v/ */ }
 #chat button.mentions::before { content: "\f1fa"; /* https://fontawesome.com/icons/at?style=solid */ }
+
+#chat button.translate::before {
+	content: "\f1ab"; /* https://fontawesome.com/icons/language?style=solid */
+
+	/* The language glyph's ink is smaller within its em box than the globe it
+	   replaced (which was nearly full-bleed), so at the shared header size it
+	   read faint — sized up to carry the same visual weight as its neighbours. */
+	font-size: 1.3125rem;
+}
 #chat button.search::before { content: "\f002"; /* https://fontawesome.com/icons/search?style=solid */ }
 #chat button.close::before { content: "\f00d"; /* https://fontawesome.com/icons/times?style=solid */ }
+
+/* The inline `<i class="fas">` glyphs the translation feature renders (the
+ * header toggle's language mark, TranslationLine.vue's unchanged chip; the
+ * toolbar's translate action is a ::before like its neighbours). The bundled
+ * fontawesome.css is the @font-face only, so the content and the font-family
+ * come from here (the same shape the .msg-translation-retry rule uses). The
+ * language icon marks everything that translates; the globe stays the
+ * language setting (the sidebar's dev locale toggle). */
+.fa-language::before {
+	content: "\f1ab"; /* https://fontawesome.com/icons/language?style=solid */
+	font: normal normal normal 1em/1 FontAwesome;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+.fa-equals::before {
+	content: "\f52c"; /* https://fontawesome.com/icons/equals?style=solid */
+	font: normal normal normal 1em/1 FontAwesome;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
 #chat .connecting-indicator::before { content: "\f021"; /* https://fontawesome.com/icons/sync?style=solid */ }
 
 .context-menu-join::before { content: "\f067"; /* http://fontawesome.io/icon/plus/ */ }
+.context-menu-translate-copy::before { content: "\f0c5"; /* https://fontawesome.com/icons/copy?style=solid */ }
+.context-menu-translate-retry::before { content: "\f2f1"; /* https://fontawesome.com/icons/sync-alt?style=solid */ }
+.context-menu-translate-retry-from::before { content: "\f2f1"; /* sync-alt, as retry */ }
+.context-menu-translate-retry-pick::before { content: "\f1ab"; /* fontawesome/icons/language */ }
+.context-menu-translate-hide::before { content: "\f070"; /* https://fontawesome.com/icons/eye-slash?style=solid */ }
 .context-menu-user::before { content: "\f007"; /* http://fontawesome.io/icon/user/ */ }
 .context-menu-close::before { content: "\f00d"; /* http://fontawesome.io/icon/times/ */ }
 .context-menu-list::before { content: "\f03a"; /* http://fontawesome.io/icon/list/ */ }
@@ -523,6 +618,7 @@ p {
 .context-menu-network::before { content: "\f233"; /* https://fontawesome.com/icons/server?style=solid */ }
 .context-menu-edit::before { content: "\f303"; /* https://fontawesome.com/icons/pencil-alt?style=solid */ }
 .context-menu-clear-history::before { content: "\f1f8"; /* https://fontawesome.com/icons/trash?style=solid */ }
+.context-menu-translate::before { content: "\f1ab"; /* https://fontawesome.com/icons/language?style=solid */ }
 .context-menu-mute::before { content: "\f6a9"; /* https://fontawesome.com/v5.15/icons/volume-mute?style=solid */ }
 .context-menu-media-host::before { content: "\f0ac"; /* https://fontawesome.com/icons/globe?style=solid */ }
 .context-menu-media-account::before { content: "\f007"; /* https://fontawesome.com/icons/user?style=solid */ }
@@ -559,6 +655,7 @@ p {
 #footer .help::before { content: "\f059"; /* http://fontawesome.io/icon/question/ */ }
 
 #form #upload::before { content: "\f0c6"; /* https://fontawesome.com/icons/paperclip?style=solid */ }
+#form #translate-once::before { content: "\f1ab"; /* https://fontawesome.com/icons/language?style=solid */ }
 #form #submit::before { content: "\f1d8"; /* http://fontawesome.io/icon/paper-plane/ */ }
 
 #chat .msg[data-type="away"] .from::before,
@@ -571,7 +668,7 @@ p {
 #help .documentation-link::before,
 #help .report-issue-link::before {
 	display: inline-block;
-	margin-right: 5px;
+	margin-inline-end: 5px;
 
 	/* These 2 directives are loosely taken from .fa-fw */
 	width: 1.35em;
@@ -668,8 +765,12 @@ p {
 	color: #2ecc40;
 }
 
+/* An action (/me) is the speaker playing a part: the masks, not the
+ * FontAwesome star the rest of the gutter glyphs come from, so this rule is
+ * not in the icon-font list above and the emoji renders in the system's
+ * colour emoji face. */
 #chat .msg[data-type="action"] .from::before {
-	content: "\f005"; /* http://fontawesome.io/icon/star/ */
+	content: "\1F3AD"; /* 🎭 performing arts */
 }
 
 #chat .msg[data-type="plugin"] .from::before {
@@ -682,7 +783,7 @@ p {
 #chat .msg-statusmsg,
 #chat .msg-shown-in-active {
 	cursor: help;
-	margin-right: 5px;
+	margin-inline-end: 5px;
 }
 
 #chat .msg-statusmsg span::before,
@@ -715,7 +816,7 @@ p {
 	color: #cfcfcf;
 	content: "\f002"; /* http://fontawesome.io/icon/search/ */
 	position: absolute;
-	right: 13px;
+	inset-inline-end: 13px;
 	line-height: 3rem;
 }
 
@@ -726,7 +827,7 @@ p {
 
 #settings #play::before {
 	content: "\f028"; /* http://fontawesome.io/icon/volume-up/ */
-	margin-right: 9px;
+	margin-inline-end: 9px;
 }
 
 #image-viewer .previous-image-btn::before {
@@ -739,6 +840,39 @@ p {
 
 #image-viewer .open-btn::before {
 	content: "\f35d"; /* https://fontawesome.com/icons/external-link-alt?style=solid */
+}
+
+/* Glyphs that point along the reading direction mirror under RTL: the
+ * expand/collapse carets (right when closed, down when opened), the image
+ * viewer's previous/next arrows, and the reply hook. Everything else keeps
+ * its face: plain event icons, down- and up-pointing glyphs, the 45°-tilted
+ * plug, the + that turns ×, and the spinners — rotate transforms never
+ * mirror. */
+[dir="rtl"] #chat .toggle-button,
+[dir="rtl"] #chat .toggle-content .more-caret,
+[dir="rtl"] #image-viewer .previous-image-btn,
+[dir="rtl"] #image-viewer .next-image-btn,
+[dir="rtl"] #chat .msg-reply-arrow {
+	transform: scaleX(-1);
+}
+
+/* The reply hook is a bare span; transforms need a box. */
+[dir="rtl"] #chat .msg-reply-arrow {
+	display: inline-block;
+}
+
+/* Opened toggles point down either way: rotate the mirrored caret the same
+ * quarter turn — applied first, then the flip — and it still reads down. */
+[dir="rtl"] #chat .toggle-content.opened .more-caret,
+[dir="rtl"] #chat .toggle-button.opened,
+[dir="rtl"] #chat .msg:not(.closed)[data-type="condensed"] .toggle-button {
+	transform: scaleX(-1) rotate(90deg);
+}
+
+/* A collapsed network's caret points along the reading direction: right in
+ * LTR (the base rule turns the down caret -90°), left in RTL. */
+[dir="rtl"] #sidebar .network.collapsed .collapse-network-icon {
+	transform: rotate(90deg);
 }
 
 /* End icons */
@@ -756,6 +890,14 @@ p {
 	 * viewport, which iOS never shrinks for the keyboard, they would outgrow
 	 * the app and the sidebar's footer would sit below the screen. */
 	position: relative;
+
+	/* Its height is the visible band (--viewport-height on touch devices),
+	 * which no media query can see: iOS keeps the layout viewport at the
+	 * screen's size while the keyboard is up. A container query can. */
+	/* stylelint-disable-next-line property-no-unknown */
+	container-type: size;
+	/* stylelint-disable-next-line property-no-unknown */
+	container-name: viewport;
 }
 
 #form button,
@@ -773,6 +915,7 @@ p {
 #viewport .lt,
 #viewport .rt,
 #chat button.mentions,
+#chat button.translate,
 #chat button.search,
 #chat button.menu,
 #chat button.close {
@@ -788,6 +931,7 @@ p {
 #viewport .lt::before,
 #viewport .rt::before,
 #chat button.mentions::before,
+#chat button.translate::before,
 #chat button.search::before,
 #chat button.menu::before,
 #chat button.close::before {
@@ -853,14 +997,53 @@ p {
 
 #sidebar .logo-container {
 	text-align: center;
+	position: relative;
 }
 
 #sidebar .logo {
 	height: 3rem;
 }
 
+#sidebar .locale-toggle {
+	margin-inline-start: 4px;
+	padding: 0 4px;
+	border: 0;
+	border-radius: 4px;
+	background: transparent;
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+	vertical-align: middle;
+	cursor: pointer;
+}
+
+#sidebar .locale-toggle:hover {
+	background: rgb(255 255 255 / 15%);
+}
+
+/* The language panel under the globe: anchored to the logo row, centred by
+ * a symmetric translate (not a directional offset), so RTL mirrors only
+ * through the logical inset. */
+#sidebar .locale-popover {
+	position: absolute;
+	top: calc(100% - 0.25rem);
+	inset-inline-start: 50%;
+	transform: translateX(-50%);
+	z-index: 20;
+	min-width: 15rem;
+	max-width: 18rem;
+	padding: 0.5rem;
+	background: var(--body-bg-color);
+	border: 1px solid rgb(128 128 128 / 40%);
+	border-radius: 4px;
+	box-shadow: 0 3px 12px rgb(0 0 0 / 35%);
+}
+
+#sidebar .locale-popover select.input {
+	width: 100%;
+}
+
 #sidebar .devtools-toggle {
-	margin-left: 4px;
+	margin-inline-start: 4px;
 	padding: 0 4px;
 	border: 0;
 	border-radius: 4px;
@@ -957,7 +1140,8 @@ background on hover (unless active) */
 	color: #84ce88;
 	font-size: 1.0625rem;
 	font-weight: bold;
-	padding: 0.375rem 0.875rem 0.25rem 0;
+	padding-block: 0.375rem 0.25rem;
+	padding-inline: 0 0.875rem;
 }
 
 /* The network header is two rows inside one tab — one click target, one drag
@@ -985,7 +1169,7 @@ wrapper is what the jump-to results' server glyph (::before) sits beside. */
 
 .channel-list-item .lobby-status {
 	margin-top: 0.125rem;
-	padding-left: 0.875rem; /* the channel rows' own padding, so the toolbar sits on their icon column */
+	padding-inline-start: 0.875rem; /* the channel rows' own padding, so the toolbar sits on their icon column */
 	gap: 0.5rem;
 	font-size: 0.75rem;
 	font-weight: normal;
@@ -1004,7 +1188,7 @@ wrapper is what the jump-to results' server glyph (::before) sits beside. */
 	overflow: hidden;
 	white-space: nowrap;
 	text-overflow: ellipsis;
-	text-align: right;
+	text-align: end;
 
 	/* A theme with a rail palette (coffee, creama) lends its muted rail text;
 	the fallback is day's sidebar #b7c5d1, stepped back. */
@@ -1046,7 +1230,7 @@ way of the click. */
 
 .channel-list-item::before {
 	width: 1em;
-	margin-right: 0.75em;
+	margin-inline-end: 0.75em;
 	line-height: 1.2;
 }
 
@@ -1106,12 +1290,19 @@ of one that has already passed — and only one `animation` can hold the icon. *
 	flex-grow: 1;
 	overflow: hidden;
 	white-space: nowrap;
-	margin-right: 5px;
+	margin-inline-end: 5px;
 }
 
 .header .topic,
 .channel-list-item .name {
 	mask-image: linear-gradient(to left, transparent, black 20px);
+}
+
+/* The fade sits at the clip end — the inline end of the row — so the mask
+ * flips with the reading direction. */
+[dir="rtl"] .header .topic,
+[dir="rtl"] .channel-list-item .name {
+	mask-image: linear-gradient(to right, transparent, black 20px);
 }
 
 .channel-list-item .badge,
@@ -1328,7 +1519,7 @@ so the toolbar has one weight; green is what marks a subscribed bell. */
 #sidebar .network .collapse-network {
 	width: 2.5rem;
 	opacity: 0.4;
-	padding-left: 0.6875rem;
+	padding-inline-start: 0.6875rem;
 	transition: opacity 0.2s;
 	flex-shrink: 0;
 }
@@ -1388,15 +1579,10 @@ so the toolbar has one weight; green is what marks a subscribed bell. */
 	font-size: 1rem;
 }
 
-/* A size container, so the settings menu can ask whether the window is wide
- * enough for it to sit beside the content (Navigation.vue) in rem, which a
- * media query cannot see. */
-#settings {
-	/* stylelint-disable-next-line property-no-unknown */
-	container-type: inline-size;
-	/* stylelint-disable-next-line property-no-unknown */
-	container-name: settings;
-}
+/* The `settings` size container is the modal pane itself
+ * (Windows/Settings.vue .settings-modal): the tab strip asks it whether
+ * there is room for labels (Navigation.vue) in rem, which a media query
+ * cannot see. */
 
 /* Native checkboxes and radios do not follow the font; size them off it so
  * the big scales get a target that matches their label. */
@@ -1404,7 +1590,8 @@ input[type="checkbox"],
 input[type="radio"] {
 	width: 1em;
 	height: 1em;
-	margin: 0 0.4em 0 0;
+	margin-block: 0;
+	margin-inline: 0 0.4em;
 	vertical-align: -0.1em;
 	flex: 0 0 auto;
 }
@@ -1500,6 +1687,499 @@ textarea.input {
 	border-bottom: 1px solid #e7e7e7;
 }
 
+#chat button.translate.on {
+	color: var(--chat-accent, var(--link-color));
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	border-radius: 0.25rem;
+}
+
+/* The per-channel translation choices, in two layouts from one markup: on a
+   pointer machine a column anchored under the header, on a touch device (or a
+   window as narrow as the phone's chat layout) a full-screen sheet that is
+   teleported to <body>, so none of these rules may hang off #chat. Every
+   setting is a label with its control beneath it, so the four controls share
+   one width; the controls are `.input`, which every theme already colours. */
+.translation-panel {
+	position: absolute;
+	top: 3rem;
+	inset-inline-end: 0.5rem;
+	z-index: 10;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	width: 20rem;
+	max-width: calc(100% - 1rem);
+
+	/* #chat clips its overflow, so a landscape phone scrolls the panel
+	   instead of losing its last rows. */
+	max-height: calc(var(--viewport-height, 100vh) * 0.8);
+	overflow: auto;
+	padding: 0.75rem;
+	border: 1px solid var(--window-border, rgb(128 128 128 / 30%));
+	border-radius: 0 0 0.375rem 0.375rem;
+	background: var(--body-bg-color);
+	box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 25%);
+}
+
+.translation-panel-title {
+	display: flex;
+	align-items: baseline;
+	gap: 0.5rem;
+}
+
+.translation-panel-heading {
+	font-weight: 600;
+}
+
+/* The channel the choices belong to; it gives way before the ✕ does. */
+.translation-panel-channel {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	color: var(--body-color-muted);
+}
+
+.translation-panel-close {
+	flex: 0 0 auto;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--body-color-muted);
+	font-size: 1rem;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.translation-panel-body,
+.translation-panel-section {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+/* The sections are the sheet's; the desktop panel is short enough to read
+   without them. */
+.translation-panel-section h3 {
+	display: none;
+}
+
+.translation-panel-field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+}
+
+.translation-panel-label {
+	font-size: 0.8125rem;
+	color: var(--body-color-muted);
+}
+
+/* One line of prose under a control: room for it is the sheet's luxury. */
+.translation-panel-hint {
+	display: none;
+}
+
+/* A language every engine measured poorly in (routes.default.ts
+   LIMITED_LANGUAGES): said wherever the panel is, not only in the sheet. */
+.translation-panel-limited {
+	display: block;
+	color: var(--body-color-muted);
+	font-size: 0.8125rem;
+	font-style: italic;
+}
+
+.translation-panel-control {
+	width: 100%;
+	box-sizing: border-box;
+	height: 2.125rem;
+	margin: 0;
+	padding: 0 0.625rem;
+	border-radius: 0.25rem;
+	font: inherit;
+	line-height: normal;
+}
+
+/* The channel's declared languages: as many as it takes, wrapping above
+   the picker that adds them. */
+.translation-panel-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+}
+
+.translation-panel-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+
+	/* More room before the label than after it: the remove button sits at
+	   the inline end and brings its own padding. Start first. */
+	padding-block: 0.0625rem;
+	padding-inline: 0.375rem 0.25rem;
+	border-radius: 0.75rem;
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	font-size: 0.8125rem;
+}
+
+.translation-panel-chip-remove {
+	padding: 0 0.125rem;
+	border: 0;
+	background: none;
+	color: var(--body-color-muted);
+	font: inherit;
+	font-size: 0.75rem;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.translation-panel-chip-remove:hover {
+	color: var(--body-color);
+}
+
+.translation-panel-foot {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	padding-top: 0.375rem;
+	border-top: 1px solid var(--window-border, rgb(128 128 128 / 30%));
+}
+
+.translation-panel-more {
+	font-size: 0.8125rem;
+}
+
+/* The sheet: the same choices with room to press them. It sits above the
+   sidebar and its overlay (10 and 9 inside #viewport); #context-menu-container
+   is 1000 but is only in the document while a menu is open, and no menu can be
+   opened from the sheet. */
+.translation-panel--sheet {
+	position: fixed;
+	inset: 0;
+	z-index: 1001;
+	width: auto;
+	max-width: none;
+
+	/* iOS never shrinks the layout viewport for the keyboard, so the sheet
+	   follows the visual viewport helpers/viewport.ts publishes. */
+	height: var(--viewport-height, 100%);
+	max-height: none;
+	overflow: hidden;
+	gap: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+}
+
+.translation-panel--sheet .translation-panel-title {
+	align-items: center;
+	padding: 1rem 1rem 0.75rem;
+	border-bottom: 1px solid var(--window-border, rgb(128 128 128 / 30%));
+}
+
+/* The sheet sits flush against the top of the page, above the sidebar's
+ * z-index: it needs #status-bar-tint's same reservation so the title clears
+ * it on an iOS home-screen app (see #status-bar-tint above). */
+@media (hover: none) and (pointer: coarse) {
+	@supports (-webkit-touch-callout: none) {
+		.translation-panel--sheet .translation-panel-title {
+			padding-top: calc(1rem + var(--status-bar-tint-height, 0px));
+		}
+	}
+}
+
+.translation-panel--sheet .translation-panel-heading {
+	font-size: 1.125rem;
+}
+
+.translation-panel--sheet .translation-panel-close {
+	padding: 0.25rem;
+	font-size: 1.25rem;
+}
+
+.translation-panel--sheet .translation-panel-body {
+	flex: 1;
+	overflow: auto;
+	gap: 1.5rem;
+	padding: 1rem 1rem 1.5rem;
+}
+
+.translation-panel--sheet .translation-panel-section {
+	gap: 0.875rem;
+}
+
+.translation-panel--sheet .translation-panel-section h3 {
+	display: block;
+	margin: 0;
+	color: var(--body-color-muted);
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+
+.translation-panel--sheet .translation-panel-field {
+	gap: 0.375rem;
+}
+
+.translation-panel--sheet .translation-panel-label {
+	color: var(--body-color);
+	font-size: 0.9375rem;
+}
+
+.translation-panel--sheet .translation-panel-hint {
+	display: block;
+	color: var(--body-color-muted);
+	font-size: 0.8125rem;
+}
+
+.translation-panel--sheet .translation-panel-control {
+	height: 2.75rem;
+	padding: 0 0.875rem;
+	border-radius: 0.375rem;
+	font-size: 1rem;
+}
+
+/* A chip's ✕ is a target on a phone, so the chip grows to hold one. */
+.translation-panel--sheet .translation-panel-chips {
+	gap: 0.375rem;
+}
+
+.translation-panel--sheet .translation-panel-chip {
+	/* The base rule's logical padding, at the sheet's touch size: a
+	   shorthand here would reset `padding-inline` and put the extra room
+	   before the label on the wrong side under RTL. Start first. */
+	padding-block: 0.1875rem;
+	padding-inline: 0.625rem 0.375rem;
+	border-radius: 1rem;
+	font-size: 0.9375rem;
+}
+
+.translation-panel--sheet .translation-panel-chip-remove {
+	padding: 0.25rem;
+	font-size: 0.875rem;
+}
+
+/* Three choices are three targets, not a native picker. */
+.translation-panel-segmented {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	height: 2.75rem;
+	overflow: hidden;
+	border: 1px solid var(--composer-border, #cdd3da);
+	border-radius: 0.375rem;
+	background: var(--composer-bg, #fff);
+}
+
+.translation-panel-segment {
+	padding: 0 0.25rem;
+	border: 0;
+	border-inline-end: 1px solid var(--composer-border, #cdd3da);
+	background: none;
+	color: inherit;
+	font: inherit;
+	font-size: 0.9375rem;
+	cursor: pointer;
+}
+
+.translation-panel-segment:last-child {
+	border-inline-end: 0;
+}
+
+.translation-panel-segment[aria-checked="true"] {
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	color: var(--chat-accent, var(--link-color));
+	font-weight: 500;
+}
+
+.translation-panel--sheet .translation-panel-foot {
+	flex-direction: column;
+	gap: 0.5rem;
+
+	/* Above the home indicator, whatever the device says that is. */
+	padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 20px));
+	border-top: 1px solid var(--window-border, rgb(128 128 128 / 30%));
+}
+
+.translation-panel--sheet .translation-panel-more {
+	text-align: center;
+	font-size: 0.875rem;
+}
+
+/* The chip menu's "Retranslate from…": a language to translate this one line
+   from. Teleported to <body> like the reaction picker (the scrollback would
+   clip it) and positioned from SourceLanguagePicker.vue, which flips it above
+   the chip when there is no room below. On a phone it is a sheet along the
+   bottom edge, wearing the translation sheet's own header and footer. */
+.source-language-picker {
+	position: fixed;
+	z-index: 1000;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	width: 16rem;
+	max-width: calc(100vw - 1rem);
+	padding: 0.75rem;
+	border: 1px solid var(--window-border, rgb(128 128 128 / 30%));
+	border-radius: 0.375rem;
+	background: var(--window-bg-color, var(--body-bg-color));
+	box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 25%);
+	color: var(--body-color);
+
+	/* The picker grows out of the corner it is anchored to, which is the
+	   inline start of its own writing mode: `transform-origin` takes no
+	   logical keywords, so RTL mirrors it below. */
+	transform-origin: top left;
+}
+
+.source-language-picker.flipped {
+	transform-origin: bottom left;
+}
+
+[dir="rtl"] .source-language-picker {
+	transform-origin: top right;
+}
+
+[dir="rtl"] .source-language-picker.flipped {
+	transform-origin: bottom right;
+}
+
+.source-language-picker-field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+}
+
+.source-language-picker-label {
+	color: var(--body-color-muted);
+	font-size: 0.8125rem;
+}
+
+/* Sized like the translation panel's desktop controls. */
+.source-language-picker-control {
+	width: 100%;
+	box-sizing: border-box;
+	height: 2.125rem;
+	margin: 0;
+	padding: 0 0.625rem;
+	border-radius: 0.25rem;
+	font: inherit;
+	line-height: normal;
+}
+
+/* "This message only": a checkbox row between the selects and the buttons. */
+.source-language-picker-once {
+	display: flex;
+	align-items: center;
+	gap: 0.4em;
+	font-size: 0.875rem;
+	cursor: pointer;
+}
+
+.source-language-picker-once-box {
+	margin: 0;
+}
+
+/* One line of prose under the selects: what a same-language pick does. */
+.source-language-picker-hint {
+	margin: 0;
+	color: var(--body-color-muted);
+	font-size: 0.8125rem;
+}
+
+.source-language-picker-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.5rem;
+}
+
+/* `.btn` carries a bottom margin for prose columns; here the gap does it. */
+.source-language-picker-actions .btn {
+	margin-bottom: 0;
+}
+
+.source-language-picker-confirm {
+	background: var(--button-color);
+	color: var(--button-text-color-hover);
+}
+
+/* The sheet: the same choice with room to press it. Above the sidebar and
+   its overlay (10 and 9 inside #viewport), like the translation sheet. */
+.source-language-picker--sheet {
+	inset: auto 0 0 0;
+	width: auto;
+	max-width: none;
+	z-index: 1000;
+	gap: 0;
+	padding: 0;
+	border-width: 1px 0 0;
+	border-radius: 0.75rem 0.75rem 0 0;
+}
+
+.source-language-picker--sheet .source-language-picker-field {
+	gap: 0.375rem;
+	padding: 1rem;
+}
+
+.source-language-picker--sheet .source-language-picker-label {
+	color: var(--body-color);
+	font-size: 0.9375rem;
+}
+
+.source-language-picker--sheet .source-language-picker-control {
+	height: 2.75rem;
+	padding: 0 0.875rem;
+	border-radius: 0.375rem;
+	font-size: 1rem;
+}
+
+.source-language-picker--sheet .source-language-picker-actions {
+	/* Above the home indicator, whatever the device says that is. */
+	padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 20px));
+	border-top: 1px solid var(--window-border, rgb(128 128 128 / 30%));
+}
+
+.source-language-picker--sheet .source-language-picker-actions .btn {
+	flex: 1;
+	padding: 0.75em 1em;
+}
+
+/* Compose mode. A phone in landscape has ~430px; the keyboard and Safari's
+ * form bar take ~250 of them, so the header and the composer leave a single
+ * line of scrollback. While the composer has the caret in a band that short
+ * the header goes: the placeholder names the channel, and the keyboard's Done
+ * brings the header (and its buttons) back. Gated on the caret, not on the
+ * height alone, or a landscape phone at a large font step would lose the
+ * header — and the way to the sidebar and the menu — for good. 18rem is
+ * above what any keyboard leaves and below any phone's screen in portrait
+ * with the keyboard up (iPhone SE: ~400px). */
+/* stylelint-disable-next-line at-rule-no-unknown */
+@container viewport (max-height: 18rem) {
+	body:has(#form #input:focus) #chat .header {
+		display: none;
+	}
+
+	/* The "alice is typing…" strip shares the composer's row instead of
+	 * taking one of its own: between the text and the buttons, a third of
+	 * the row at most, ellipsised. Its reserved (empty) form has no width,
+	 * so nothing bounces either way. */
+	body:has(#form #input:focus) #form .typing-indicator {
+		flex: 0 1 auto;
+		order: 1;
+		max-width: 33%;
+		min-width: 0;
+		margin: 0 0.25rem;
+		align-self: center;
+	}
+
+	body:has(#form #input:focus) #form > .tooltipped {
+		order: 2;
+	}
+}
+
 /* A dial or a reconnect is a spinner in the header, not a banner */
 #chat .connecting-tooltip {
 	display: flex;
@@ -1528,7 +2208,7 @@ textarea.input {
 
 .header .title {
 	font-size: 1.0625rem;
-	padding-left: 6px;
+	padding-inline-start: 6px;
 	flex-shrink: 1;
 	white-space: nowrap;
 	overflow: hidden;
@@ -1538,12 +2218,12 @@ textarea.input {
 .topic-container {
 	position: relative;
 	flex-grow: 1;
-	padding-left: 10px;
+	padding-inline-start: 10px;
 }
 
 .header .topic {
 	color: var(--body-color-muted);
-	margin-left: 8px;
+	margin-inline-start: 8px;
 	word-break: break-all;
 	flex-grow: 1;
 	overflow: hidden;
@@ -1556,13 +2236,44 @@ textarea.input {
 	min-width: 0;
 }
 
+/* The translated topic stands where the topic stood (Chat.vue
+ * `topicShown`): no second row in the header. The flipper before it swaps
+ * the translation and the original, wearing the translation chips' accent
+ * look, and dimmed while the original is the one showing. */
+.header .topic-flip {
+	display: inline-flex;
+	align-items: center;
+	vertical-align: -0.1em;
+	margin-inline-end: 0.35em;
+	padding: 0 0.3em;
+	border: 1px solid var(--chat-accent-rule, var(--link-color));
+	border-radius: 0.2rem;
+	background: transparent;
+	color: var(--chat-accent, var(--link-color));
+	font: inherit;
+	font-size: 0.75em;
+	line-height: 1.5;
+	cursor: pointer;
+}
+
+.header .topic-flip.original {
+	border-color: currentcolor;
+	color: var(--body-color-muted);
+}
+
+.header .topic-flip:hover,
+.header .topic-flip:focus-visible {
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	outline: 0;
+}
+
 .header .topic-input {
 	color: inherit;
 	background: transparent;
 	border: 1px solid #cdd3da;
 	border-radius: 2px;
-	padding-right: 2.5rem;
-	padding-left: 0.625rem;
+	padding-inline-end: 2.5rem;
+	padding-inline-start: 0.625rem;
 	width: 100%;
 	height: 2.5rem;
 	overflow: hidden;
@@ -1574,7 +2285,7 @@ textarea.input {
 .topic-container .save-topic {
 	position: absolute;
 	top: 0.25rem;
-	right: 0;
+	inset-inline-end: 0;
 }
 
 .topic-container .save-topic span {
@@ -1594,9 +2305,23 @@ textarea.input {
 }
 
 #chat {
+	/* The jump-to-recent arrow's size and inset: variables because the
+	 * message action toolbar keeps clear of its column while it is up (see
+	 * `.msg-actions`); they stay in px as the arrow always was. */
+	--scroll-down-size: 36px;
+	--scroll-down-inset: 16px;
+
 	overflow: hidden;
 	flex: 1 0 auto;
 	position: relative;
+
+	/* A size container, so the user list can ask whether the chat pane is
+	 * wide enough for it to sit beside the messages (below) in rem and ch,
+	 * which a media query cannot see. */
+	/* stylelint-disable-next-line property-no-unknown */
+	container-type: inline-size;
+	/* stylelint-disable-next-line property-no-unknown */
+	container-name: chat;
 }
 
 #chat .chat-view {
@@ -1668,12 +2393,28 @@ textarea.input {
 }
 
 #chat .userlist {
-	border-left: 1px solid #e7e7e7;
-	width: 12rem;
+	border-inline-start: 1px solid #e7e7e7;
+	width: var(--userlist-width);
 	display: none;
 	flex-direction: column;
 	flex-shrink: 0;
 	touch-action: pan-y;
+	position: relative;
+}
+
+/* Several themes draw the list's edge as an inset box-shadow (a sunken
+ * frame, a coloured rule). An inset shadow paints under the children, and
+ * the sticky mode headings ("Operators", "Users") have a background, so
+ * the edge went missing behind every heading. This overlay paints the
+ * same shadow again above everything; the themes keep setting it on the
+ * list itself. */
+#chat .userlist::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 1;
+	box-shadow: inherit;
 }
 
 /**
@@ -1708,9 +2449,9 @@ textarea.input {
 
 .scroll-down {
 	position: absolute;
-	bottom: 16px;
-	right: 16px;
-	z-index: 2;
+	bottom: var(--scroll-down-inset);
+	inset-inline-end: var(--scroll-down-inset);
+	z-index: 3; /* over a message's action toolbar: jumping back wins the click */
 	pointer-events: none;
 	opacity: 0;
 	transform: translateY(16px);
@@ -1730,9 +2471,9 @@ textarea.input {
 }
 
 .scroll-down-arrow {
-	width: 36px;
-	height: 36px;
-	line-height: 34px;
+	width: var(--scroll-down-size);
+	height: var(--scroll-down-size);
+	line-height: calc(var(--scroll-down-size) - 2px);
 	border-radius: 50%;
 	background: var(--window-bg-color);
 	color: var(--button-color);
@@ -1752,7 +2493,7 @@ textarea.input {
 }
 
 .userlist-open .chat-view[data-type="channel"] .scroll-down {
-	right: calc(12rem + 1rem);
+	inset-inline-end: calc(var(--userlist-width) + 1rem);
 }
 
 #chat .messages {
@@ -1831,40 +2572,73 @@ textarea.input {
 	flex: 0 0 auto;
 }
 
+/* The gutter — time and nick — and the text share the row like this: the
+ * text wants 30 characters, the nick column its full 12ch, and when the row
+ * has no room for both the nick column gives way first, down to 9ch and an
+ * ellipsis, before the text is squeezed. Every row has the same width and
+ * the same bases, so the columns shrink alike in every row and stay
+ * aligned. Widths are in ch, the width of a figure in the theme's own
+ * font, so a monospace theme gets the same character counts as a
+ * proportional one. Under the mobile breakpoint the row is inline flow
+ * and none of this applies. */
 #chat .time {
 	color: var(--body-color-muted);
-	padding-left: 0.625rem;
-	width: 3.5rem;
+	padding-inline-start: 0.625rem;
+
+	/* 00:00 is 5ch exactly; the letters of pm and the colons are narrower
+	 * than a figure in most faces, so the 12-hour forms carry less slack
+	 * than they look. */
+	width: 5.5ch;
+	white-space: nowrap;
 	font-variant-numeric: tabular-nums;
-	box-sizing: content-box; /* highlights have a border-left */
+	box-sizing: content-box; /* highlights have a border-inline-start */
 }
 
-#chat.time-12h .time,
+#chat.time-12h .time {
+	width: 7.5ch;
+}
+
 #chat.time-seconds .time {
-	width: 4.75rem;
+	width: 8.5ch;
 }
 
 #chat.time-seconds.time-12h .time {
-	width: 5.75rem;
+	width: 10.5ch;
 }
 
 #chat .from {
-	padding-right: 0.625rem;
-	text-align: right;
-	width: 8.5rem;
+	padding: 0.2em 0.5rem;
+	text-align: end;
+	box-sizing: content-box;
+	flex: 0 1000 12ch; /* the shrink weight is what makes it give way before .content */
+	min-width: 9ch;
+
+	/* A nick wider than the column overflows at its inline end whatever the
+	 * alignment, so that is where it is cut: an ellipsis, so the start of
+	 * the nick is what stays. */
 	overflow: hidden;
+	text-overflow: ellipsis;
 	white-space: nowrap;
 	position: relative;
 }
 
 #chat .content {
-	flex: 1 1 auto;
+	flex: 1 1 30ch;
 	min-width: 0;
-	padding-left: 0.625rem;
-	padding-right: 0.375rem;
-	border-left: 1px solid #f6f6f6;
+	padding-inline-start: 0.5rem;
+	padding-inline-end: 0.375rem;
+	border-inline-start: 1px solid #f6f6f6;
 	overflow: hidden; /* Prevents Zalgo text to expand beyond messages */
-	text-align: left; /* so RTL text will still be aligned left, not right */
+	text-align: start; /* follows the paragraph direction resolved below */
+
+	/* Chat text lays out by its own first strong character, per paragraph —
+	 * a Hebrew or Arabic line in an otherwise Latin window reads right, and
+	 * the other way around — instead of by the chrome's direction. One
+	 * isolation here, at the container: the parser's inline spans stay as
+	 * they are, and the system-message frames' <bdi> nicks isolate their own
+	 * little run inside the paragraph, which is exactly one level down, not
+	 * a second wrap of the same text. */
+	unicode-bidi: plaintext;
 }
 
 #chat .msg[data-type="unhandled"] .from {
@@ -1926,8 +2700,33 @@ textarea.input {
 .user.color-31 { color: #eb0400; }
 .user.color-32 { color: #e60082; }
 
+/* Your own messages (Settings → Appearance → Your own messages, applied as
+ * <html data-own-messages>, helpers/ownMessages.ts): three looks that do
+ * not overlap. "muted", the default, is TheLounge's — the text in the muted
+ * colour, no band. "band" keeps the text and puts the row on a band: a
+ * theme names its own with `--own-bg`, otherwise the text colour at 7% over
+ * the row. "plain" makes an own row like anyone else's. A band a theme
+ * paints on `.msg.self` itself (princess, keeki) shows only under "band" —
+ * the html[data-…] prefix is what beats the theme's `#chat .msg.self`. A
+ * mention row keeps its tint, and own join/mode lines are `.self` too but
+ * are left to the theme in every mode: the band is for what we said. */
 #chat .self .content {
 	color: var(--body-color-muted);
+}
+
+html[data-own-messages="band"] #chat .self .content,
+html[data-own-messages="plain"] #chat .self .content {
+	color: inherit;
+}
+
+html:not([data-own-messages="band"]) #chat .msg.self[data-type="message"],
+html:not([data-own-messages="band"]) #chat .msg.self[data-type="action"] {
+	background-color: transparent;
+}
+
+html[data-own-messages="band"] #chat .msg.self[data-type="message"]:not(.highlight),
+html[data-own-messages="band"] #chat .msg.self[data-type="action"]:not(.highlight) {
+	background-color: var(--own-bg, color-mix(in srgb, currentcolor 7%, transparent));
 }
 
 /* A copy of our own message the server has not echoed yet (bus-contract
@@ -1952,12 +2751,12 @@ textarea.input {
 #chat .msg.channel_list_loading .text {
 	color: #999;
 	font-style: italic;
-	padding-left: 20px;
+	padding-inline-start: 20px;
 }
 
 #chat .msg.channel_list_truncated .text {
 	color: #f00;
-	padding-left: 20px;
+	padding-inline-start: 20px;
 }
 
 #chat table.channel-list,
@@ -1991,7 +2790,7 @@ textarea.input {
 #chat table.ban-list .banned_at,
 #chat table.ignore-list .hostmask,
 #chat table.ignore-list .when {
-	text-align: left;
+	text-align: start;
 }
 
 #chat table.channel-list .users {
@@ -2055,20 +2854,20 @@ textarea.input {
 
 #chat .chat-view[data-type="channel"] .msg.highlight {
 	background-color: var(--highlight-bg-color);
-	border-left: 5px solid var(--highlight-border-color);
+	border-inline-start: 5px solid var(--highlight-border-color);
 }
 
 #chat .chat-view[data-type="channel"] .msg.highlight .time {
-	padding-left: 5px;
+	padding-inline-start: 5px;
 	color: #696969;
 }
 
 #chat .chat-view[data-type="channel"] .msg.highlight .content {
-	border-left: 1px solid var(--highlight-bg-color);
+	border-inline-start: 1px solid var(--highlight-bg-color);
 }
 
 #chat .preview-size {
-	margin-left: 5px;
+	margin-inline-start: 5px;
 	user-select: none;
 }
 
@@ -2163,7 +2962,7 @@ textarea.input {
 #chat .toggle-content .more {
 	color: var(--link-color);
 	font-weight: normal;
-	margin-left: 10px;
+	margin-inline-start: 10px;
 	flex-shrink: 0;
 }
 
@@ -2217,7 +3016,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	min-width: min(320px, 100%);
 	max-width: 100%;
 	min-height: 64px;
-	padding: 6px 10px 6px 6px;
+	padding-block: 6px;
+	padding-inline: 6px 10px;
 }
 
 #chat .media-veil-main {
@@ -2226,10 +3026,11 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	align-items: center;
 	gap: 10px;
 	min-width: 0;
-	padding: 5px 8px 5px 5px;
+	padding-block: 5px;
+	padding-inline: 5px 8px;
 	border-radius: 6px;
 	color: inherit;
-	text-align: left;
+	text-align: start;
 	transition: background-color 0.15s;
 }
 
@@ -2318,7 +3119,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 #chat .media-veil-trust {
 	flex: 0 0 auto;
-	margin-left: auto;
+	margin-inline-start: auto;
 	padding: 4px 10px;
 	border: 1px solid rgb(127 127 127 / 40%);
 	border-radius: 999px;
@@ -2339,7 +3140,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #chat .media-veil-caret {
-	margin-left: 4px;
+	margin-inline-start: 4px;
 	font-size: 0.7rem;
 }
 
@@ -2362,7 +3163,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 #chat .media-tools {
 	position: absolute;
 	top: 6px;
-	right: 6px;
+	inset-inline-end: 6px;
 	display: flex;
 	gap: 2px;
 	padding: 2px;
@@ -2424,7 +3225,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
-	padding-right: 4px;
+	padding-inline-end: 4px;
 }
 
 #chat .toggle-type-audio .media-tools {
@@ -2502,7 +3303,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	font: inherit;
 	outline: 0;
 	padding: 0.8125rem;
-	padding-right: 1.875rem;
+	padding-inline-end: 1.875rem;
 	width: 100%;
 }
 
@@ -2529,7 +3330,11 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	margin-bottom: 15px;
 }
 
-#chat .user-mode::before {
+/* A group's heading is its `data-label`, which ChatUserList.vue fills from
+ * the catalog (a `content:` string here would be English the i18n check
+ * cannot see); a group with no label has no heading. */
+#chat .user-mode[data-label]::before {
+	content: attr(data-label);
 	background: var(--window-bg-color);
 	color: var(--body-color-muted);
 	display: block;
@@ -2538,34 +3343,6 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	padding: 0.3125rem 1rem;
 	position: sticky;
 	top: 0;
-}
-
-#chat .user-mode.owner::before {
-	content: "Owners";
-}
-
-#chat .user-mode.admin::before {
-	content: "Administrators";
-}
-
-#chat .user-mode.op::before {
-	content: "Operators";
-}
-
-#chat .user-mode.half-op::before {
-	content: "Half-Operators";
-}
-
-#chat .user-mode.voice::before {
-	content: "Voiced";
-}
-
-#chat .user-mode.normal::before {
-	content: "Users";
-}
-
-#chat .user-mode-search::before {
-	content: "Search Results";
 }
 
 #loading {
@@ -2595,7 +3372,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #loading pre {
-	text-align: left;
+	text-align: start;
 	white-space: normal;
 }
 
@@ -2642,6 +3419,11 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	width: 25%;
 	flex-shrink: 0;
 	margin-top: 11px;
+
+	/* A label that cannot shrink must still be able to break a word: a
+	 * single long term (qqx doubles every string) otherwise bleeds across
+	 * the row and over the input. */
+	overflow-wrap: anywhere;
 }
 
 #connect .tls {
@@ -2652,7 +3434,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 #connect .tls input,
 #connect input[name="proxyEnabled"] {
-	margin: 3px 10px 0 0;
+	margin-block: 3px 0;
+	margin-inline: 0 10px;
 }
 
 #connect\:host,
@@ -2708,13 +3491,14 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 #settings .opt {
 	display: block;
-	padding: 5px 0 5px 1px;
+	padding-block: 5px;
+	padding-inline: 1px 0;
 }
 
 /* Adjacent buttons in a settings row keep a gap between them (snooze row,
  * prompt actions, anything else that ends up inline). */
 #settings .opt .btn + .btn {
-	margin-left: 8px;
+	margin-inline-start: 8px;
 }
 
 /* The push snooze buttons sit on their own line under their label. */
@@ -2723,12 +3507,12 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #settings .opt input {
-	margin-right: 0.4em;
+	margin-inline-end: 0.4em;
 }
 
 /* Media previews: reveal policy and trusted hosts (Settings/Appearance.vue) */
 #settings .media-reveal-options {
-	margin-left: 22px;
+	margin-inline-start: 22px;
 	transition: opacity 0.2s;
 }
 
@@ -2737,7 +3521,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #settings .trusted-hosts {
-	margin: 8px 0 0 22px;
+	margin-block: 8px 0;
+	margin-inline: 22px 0;
 	padding: 10px 12px;
 	border: 1px solid rgb(127 127 127 / 25%);
 	border-radius: 6px;
@@ -2806,7 +3591,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
-	padding: 3px 4px 3px 10px;
+	padding-block: 3px;
+	padding-inline: 10px 4px;
 	border: 1px solid rgb(127 127 127 / 40%);
 	border-radius: 999px;
 	font-size: 0.875rem;
@@ -2876,7 +3662,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 .password-container input {
-	padding-right: 37px;
+	padding-inline-end: 37px;
 }
 
 #sign-in .password-container {
@@ -2890,7 +3676,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 .password-container .reveal-password {
 	position: absolute;
 	top: 2px;
-	right: 0;
+	inset-inline-end: 0;
 	appearance: none;
 }
 
@@ -2923,6 +3709,62 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	justify-content: space-between;
 }
 
+/* A newer build's service worker is waiting (Help.vue): one quiet strip,
+ * accent-edged like the composer's status bars, with a small solid Reload. */
+#help .update-banner {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin: 0 0 1rem;
+	padding: 0.5rem 0.75rem;
+	border-inline-start: 3px solid var(--button-color);
+	border-start-start-radius: 0;
+	border-start-end-radius: 3px;
+	border-end-end-radius: 3px;
+	border-end-start-radius: 0;
+	background: rgb(0 0 0 / 4%);
+}
+
+#help .update-banner-icon::before {
+	content: "\f0aa"; /* https://fontawesome.com/icons/arrow-circle-up?style=solid */
+	display: inline-block;
+	font: normal normal normal 1em/1 FontAwesome;
+	color: var(--button-color);
+}
+
+#help .update-banner-text {
+	flex: 1 1 auto;
+	min-width: 0;
+	font-weight: bold;
+}
+
+#help .update-banner-reload {
+	flex: 0 0 auto;
+	padding: 0.3em 1em;
+	border: 0;
+	border-radius: 3px;
+	background: var(--button-color);
+	color: var(--button-text-color-hover);
+	font: inherit;
+	font-size: 0.875rem;
+	font-weight: bold;
+	cursor: pointer;
+	transition: opacity 0.2s, box-shadow 0.2s;
+}
+
+#help .update-banner-reload:hover {
+	opacity: 0.85;
+}
+
+#help .update-banner-reload:focus-visible {
+	outline: 0;
+	box-shadow: 0 0 0 3px rgb(132 206 136 / 50%);
+}
+
+#help .update-banner-reload:active {
+	opacity: 0.7;
+}
+
 #help .help-item {
 	display: table-row;
 	font-size: 1rem;
@@ -2936,7 +3778,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 #help .help-item .subject {
 	white-space: nowrap;
-	padding-right: 15px;
+	padding-inline-end: 15px;
 }
 
 #help .help-item .subject.gesture {
@@ -2947,19 +3789,37 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	margin-bottom: 0;
 }
 
+/* Each dt/dd pair is one row (whois.vue wraps them in divs). The label is
+ * lifted out of the content column into the gutter — absolutely positioned
+ * past the separator bar on its inline-start side, end-aligned against it
+ * like a nick — which the row leaves empty below its first line.
+ * `1rem + 1px` retraces the content padding (0.5rem), the separator border
+ * (1px) and the gutter's own 0.5rem of padding, so the label's end edge
+ * lands where a nick ends. A long label runs on into the (equally empty)
+ * time column. */
 .whois {
-	display: grid;
-	grid-template-columns: max-content auto;
 	margin: 0;
 }
 
-.whois dt {
-	grid-column-start: 1;
-	margin-right: 20px;
+.whois > div {
+	position: relative;
+}
+
+#chat .whois dt {
+	position: absolute;
+	top: 0;
+	inset-inline-end: calc(100% + 1rem + 1px);
+	white-space: nowrap;
+	color: var(--body-color-muted);
 }
 
 .whois dd {
-	grid-column-start: 2;
+	margin: 0;
+}
+
+/* The labels escape the content column, so it must not clip. */
+#chat .msg[data-type="whois"] .content {
+	overflow: visible;
 }
 
 .changelog-text {
@@ -3007,8 +3867,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #version-checker::before {
-	margin-left: 6px;
-	margin-right: 12px;
+	margin-inline-start: 6px;
+	margin-inline-end: 12px;
 	font-size: 1.2em;
 }
 
@@ -3071,15 +3931,22 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
  *
  * iOS only: Android's navigation bar is outside the browser viewport, so the
  * strip would be dead space there. `-webkit-touch-callout` exists in WebKit
- * alone, and every iOS browser is WebKit. */
-@media (hover: none) and (pointer: coarse) {
+ * alone, and every iOS browser is WebKit.
+ *
+ * Portrait only: in landscape the indicator is thinner and the composer is
+ * tappable without the strip (phone-verified 2026-09-11), so the strip would
+ * only take rows from a viewport that has few to spare. */
+@media (hover: none) and (pointer: coarse) and (orientation: portrait) {
 	@supports (-webkit-touch-callout: none) {
 		#form {
 			padding-bottom: 34px;
 		}
 
-		/* The keyboard covers the indicator while a field is focused. */
-		body:has(#form #input:focus) #form {
+		/* The keyboard covers the indicator while it is up. That is the
+		 * viewport measurement in helpers/viewport.ts, not the caret: iOS's
+		 * shake-to-undo alert gives the composer its focus back with the
+		 * keyboard down, and a rule on :focus left it in the indicator. */
+		html[data-keyboard="up"] #form {
 			padding-bottom: 0.375rem;
 		}
 	}
@@ -3125,7 +3992,12 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	margin: 5px;
 	padding: 0;
 	resize: none;
-	flex: 1 0 auto;
+
+	/* Fill what the buttons leave, never the textarea's own 20-column width:
+	   at large font steps on a phone that is wider than the form, and iOS
+	   then pans the page to the caret. */
+	flex: 1 1 0;
+	min-width: 0;
 	align-self: center;
 	touch-action: pan-y;
 	caret-color: var(--link-color);
@@ -3145,7 +4017,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #form #upload,
-#form #submit {
+#form #submit,
+#form #translate-once {
 	color: #607992;
 	font-size: 1.0625rem;
 	height: 2.25rem;
@@ -3154,8 +4027,23 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #form #upload[disabled],
-#form #submit[disabled] {
+#form #submit[disabled],
+#form #translate-once[disabled] {
 	opacity: 0.5;
+}
+
+/* The composer's translate button (ChatInput.vue `translateOnce`): the
+ * language mark, a size up like the header's toggle, since the glyph's
+ * em-box leaves it small beside the paperclip and the plane. */
+#form #translate-once {
+	font-size: 1.25rem;
+}
+
+/* Lit while the channel has a send target (the button is its toggle), and
+ * while its dialog is open. */
+#form #translate-once[aria-expanded="true"],
+#form #translate-once.on {
+	color: var(--chat-accent, var(--link-color));
 }
 
 #mentions-popup-container,
@@ -3476,8 +4364,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 .md-quote {
 	display: block;
-	border-left: 3px solid var(--body-color-muted, #bbb);
-	padding-left: 8px;
+	border-inline-start: 3px solid var(--body-color-muted, #bbb);
+	padding-inline-start: 8px;
 	margin: 2px 0;
 }
 
@@ -3565,9 +4453,9 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	 * outgrows the guess still gets its room instead of spilling into the
 	 * code; `tabular-nums` keeps the digits in one column. */
 	min-width: var(--md-gutter, 1ch);
-	margin-right: 0.6em;
+	margin-inline-end: 0.6em;
 	font-variant-numeric: tabular-nums;
-	text-align: right;
+	text-align: end;
 	opacity: 0.5;
 	user-select: none;
 	counter-increment: line;
@@ -3588,7 +4476,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	color: var(--body-color-muted);
 	font: inherit;
 	font-size: 0.9em;
-	text-align: left;
+	text-align: start;
 	cursor: pointer;
 	user-select: none;
 }
@@ -3612,14 +4500,14 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 .md-list .md-li {
 	display: block;
-	padding-left: 1.5em;
+	padding-inline-start: 1.5em;
 }
 
 .md-list .md-li::before {
 	display: inline-block;
 	min-width: 1.5em;
-	margin-left: -1.5em;
-	text-align: right;
+	margin-inline-start: -1.5em;
+	text-align: end;
 	user-select: none;
 }
 
@@ -3798,15 +4686,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	font-size: 0.8125rem;
 }
 
-@media (min-width: 480px) {
-	/* Fade out for long usernames */
-	#chat .from {
-		padding-left: 10px;
-		mask-image: linear-gradient(to left, transparent, black 10px);
-	}
-}
-
-@media (max-width: 768px) {
+/* The phone layout; the same list as PHONE_LAYOUT_QUERY in helpers/device.ts. */
+@media (max-width: 768px), (max-height: 500px) and (hover: none) and (pointer: coarse) {
 	/**
 	  * TODO Replace this with `@media (hover: hover)` when Firefox supports it
 	  * See:
@@ -3830,10 +4711,10 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 		background: var(--body-bg-color);
 		height: 100%;
 		position: absolute;
-		right: 100%; /* its own width off screen, whatever that width is */
+		inset-inline-start: 0; /* docked at the start edge; hidden by the slide below */
 		z-index: 10;
 		transition: transform 160ms;
-		transform: translateZ(0);
+		transform: translate3d(var(--slide-away), 0, 0);
 	}
 
 	#sidebar-overlay {
@@ -3856,7 +4737,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	}
 
 	#viewport.menu-open #sidebar {
-		transform: translate3d(100%, 0, 0);
+		transform: translate3d(0, 0, 0);
 	}
 
 	#viewport.menu-dragging #sidebar-overlay,
@@ -3883,8 +4764,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 		background-color: var(--window-bg-color);
 		height: 100%;
 		position: absolute;
-		right: 0;
-		transform: translateX(12rem);
+		inset-inline-end: 0;
+		transform: translateX(var(--slide-end-away));
 		transition: transform 0.2s;
 		z-index: 1;
 	}
@@ -3894,12 +4775,96 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	}
 
 	#chat .header .title {
-		padding-left: 6px;
+		padding-inline-start: 6px;
 	}
 
 	#chat .toggle-content .thumb {
 		max-height: 58px;
 		max-width: 104px;
+	}
+}
+
+/* The user list is a side panel only while the messages keep their 30
+ * characters beside it: the widest time column (10.5ch), the nick column
+ * at its floor (9ch), the text (30ch), their paddings (2.5rem) and the
+ * list itself (6rem + 84px, --userlist-width, which a query cannot read).
+ * Narrower than that it lies over the chat instead, as it does on a
+ * phone. The threshold moves with the font-size setting by itself. */
+/* stylelint-disable-next-line at-rule-no-unknown */
+@container chat (max-width: calc(50ch + 8.5rem + 84px)) {
+	#chat .userlist {
+		background-color: var(--window-bg-color);
+		height: 100%;
+		position: absolute;
+		inset-inline-end: 0;
+		top: 0;
+		z-index: 1;
+	}
+
+	.userlist-open .chat-view[data-type="channel"] .scroll-down {
+		inset-inline-end: 1rem;
+	}
+}
+
+/* Narrower still and the columns themselves do not fit — the widest time
+ * column, the nick column at its floor and 30 characters of text — so the
+ * row becomes inline flow: time, nick and text run on like a line of a
+ * log and wrap. This used to be the phone's layout, chosen at 479px of
+ * screen; chosen by the pane's width it also covers a big font step in a
+ * modest window. */
+/* stylelint-disable-next-line at-rule-no-unknown */
+@container chat (max-width: calc(50ch + 2.5rem)) {
+	#chat .messages {
+		display: block;
+		padding: 5px 0;
+	}
+
+	#chat .msg {
+		display: block;
+		padding: 2px 10px;
+	}
+
+	#chat .msg[data-type="condensed"] .msg {
+		padding: 2px 0;
+	}
+
+	#chat .time,
+	#chat .from,
+	#chat .content {
+		border: 0;
+		display: inline;
+		padding: 0;
+	}
+
+	#chat .from::after {
+		/* A space, since inline flow has no padding between the columns. */
+		content: " ";
+		white-space: pre;
+	}
+
+	#chat .chat-view[data-type="channel"] .msg.highlight {
+		padding-inline-start: 5px;
+	}
+
+	#chat .chat-view[data-type="channel"] .msg.highlight .time {
+		padding-inline-start: 0;
+	}
+
+	#chat .condensed-summary .time,
+	#chat .condensed-summary .from {
+		display: none;
+	}
+
+	/* Inline flow has no gutter to project the whois labels into: back to
+	 * "Label: value" run-in lines. */
+	#chat .whois dt {
+		position: static;
+		display: inline;
+		white-space: normal;
+	}
+
+	#chat .whois dd {
+		display: inline;
 	}
 }
 
@@ -3928,47 +4893,6 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 	#help .help-version-title {
 		flex-direction: column;
-	}
-
-	#chat .messages {
-		display: block;
-		padding: 5px 0;
-	}
-
-	#chat .msg {
-		display: block;
-		padding: 2px 10px;
-	}
-
-	#chat .msg[data-type="condensed"] .msg {
-		padding: 2px 0;
-	}
-
-	#chat .time,
-	#chat .from,
-	#chat .content {
-		border: 0;
-		display: inline;
-		padding: 0;
-	}
-
-	#chat .from::after {
-		/* Add a space because mobile view changes to block display without paddings */
-		content: " ";
-		white-space: pre;
-	}
-
-	#chat .chat-view[data-type="channel"] .msg.highlight {
-		padding-left: 5px;
-	}
-
-	#chat .chat-view[data-type="channel"] .msg.highlight .time {
-		padding-left: 0;
-	}
-
-	#chat .condensed-summary .time,
-	#chat .condensed-summary .from {
-		display: none;
 	}
 
 	#help .help-item .subject {
@@ -4063,7 +4987,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #image-viewer .close-btn {
-	right: 0;
+	inset-inline-end: 0;
 	height: 2em;
 	z-index: 1002;
 }
@@ -4073,7 +4997,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #image-viewer .open-btn {
-	right: 0;
+	inset-inline-end: 0;
 	bottom: 0;
 	top: auto;
 	height: 2em;
@@ -4087,11 +5011,11 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #image-viewer .previous-image-btn {
-	left: 0;
+	inset-inline-start: 0;
 }
 
 #image-viewer .next-image-btn {
-	right: 0;
+	inset-inline-end: 0;
 }
 
 #image-viewer .close-btn:hover,
@@ -4119,6 +5043,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 #chat .msg[data-type="message"] .content,
 #chat .msg[data-type="monospace_block"] .content,
 #chat .msg[data-type="notice"] .content,
+#chat .msg[data-type="unhandled"] .content,
 #chat .ctcp-message,
 #chat .part-reason,
 #chat .quit-reason,
@@ -4146,13 +5071,13 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	margin: 0 0 2px;
 	padding: 0 6px;
 	border: 0;
-	border-left: 2px solid var(--body-color-muted);
+	border-inline-start: 2px solid var(--body-color-muted);
 	background: transparent;
 	color: var(--body-color-muted);
 	font: inherit;
 	font-size: 0.9em;
 	line-height: 1.3;
-	text-align: left;
+	text-align: start;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -4162,7 +5087,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 #chat .msg-reply-quote:hover,
 #chat .msg-reply-quote:focus-visible {
 	color: var(--body-color);
-	border-left-color: var(--link-color);
+	border-inline-start-color: var(--link-color);
 	outline: 0;
 }
 
@@ -4172,7 +5097,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #chat .msg-reply-arrow {
-	margin-right: 4px;
+	margin-inline-end: 4px;
 }
 
 #chat .msg-reply-nick {
@@ -4180,10 +5105,186 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #chat .msg-edited {
-	margin-left: 4px;
+	margin-inline-start: 4px;
 	color: var(--body-color-muted);
 	font-size: 0.85em;
 	user-select: none;
+}
+
+/* The translated line under a message (client/components/TranslationLine.vue,
+ * docs/resources/translation.md): muted like the timestamps so the original
+ * reads first, the language chip in the accent, a caret while it streams. */
+#chat .msg-translation {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.25rem 0.4rem;
+	margin-top: 0.15rem;
+	color: var(--body-color-muted);
+	font-size: 0.95em;
+}
+
+#chat .msg-translation-chip {
+	flex: none;
+	padding: 0 0.3em;
+	border: 1px solid var(--chat-accent-rule, var(--link-color));
+	border-radius: 0.2rem;
+	background: transparent;
+	color: var(--chat-accent, var(--link-color));
+	font: inherit;
+	font-size: 0.7em;
+	line-height: 1.5;
+	letter-spacing: 0.05em;
+	cursor: pointer;
+}
+
+#chat .msg-translation-chip:hover,
+#chat .msg-translation-chip:focus-visible {
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	outline: 0;
+}
+
+/* `body` is `user-select: none` and only a few blocks opt back in, so the
+   translated copy of a line says so for itself: it is text to read, quote
+   and copy exactly like the original above it. */
+#chat .msg-translation-text {
+	flex: 1 1 auto;
+	min-width: 0;
+	user-select: text;
+}
+
+#chat .msg-translation-caret {
+	display: inline-block;
+	width: 0.5em;
+	height: 1em;
+	margin-inline-start: 0.1em;
+	background: var(--chat-accent, var(--link-color));
+	vertical-align: text-bottom;
+	animation: msg-translation-blink 1s steps(2) infinite;
+}
+
+/* Once a translation is shown and done, it is the bright line and the
+ * original above it dims (docs/resources/translation.md § Reading a
+ * channel): `.content` carries the original's text, so muting it there is
+ * enough — links, mentions and inline code set their own colour rather than
+ * inheriting, and the translation chip keeps its accent. Pending, failed,
+ * dropped or hidden ("Show original only") translations do not add the
+ * `translated` class (Message.vue), so the original stays at full ink and
+ * the streaming text keeps today's muted treatment above. */
+#chat .msg.translated .content {
+	color: var(--body-color-muted);
+}
+
+#chat .msg.translated .msg-translation {
+	color: var(--body-color);
+	font-size: 1em;
+}
+
+#chat .msg.translated .msg-translation-text {
+	color: var(--body-color);
+}
+
+/* A line that came back unchanged (the "=" chip, `unchanged` in Message.vue)
+ * has no translation row to be the bright line, so the original is read in
+ * its place and wears the translation's ink -- over `.self`'s dimming too,
+ * since an own line that translated shows a bright row and an own line that
+ * did not should read the same. A detection skip is not this: its original
+ * keeps whatever ink it had. */
+#chat .msg.unchanged .content {
+	color: var(--body-color);
+}
+
+@keyframes msg-translation-blink {
+	50% {
+		opacity: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#chat .msg-translation-caret {
+		animation: none;
+	}
+}
+
+#chat .msg-translation-failed {
+	font-style: italic;
+}
+
+/* A line the reader left alone on detection (TranslationLine.vue): a small
+ * tag after the message -- the language it was taken for, or "?" when
+ * that could not be told -- whose menu translates it anyway. No text row, no
+ * caret, and the original keeps its ink. The tag itself is shared with the
+ * unchanged-failure chip and wears the same accent look as
+ * .msg-translation-chip below. */
+#chat .msg-translation-skipped {
+	margin-inline-start: 0.4em;
+	white-space: nowrap;
+}
+
+/* Shared with the unchanged-failure chip inside .msg-translation-failed:
+ * one accent look for every translation chip, detection mark included. */
+#chat .msg-translation-skipped-tag {
+	padding: 0 0.3em;
+	border: 1px solid var(--chat-accent-rule, var(--link-color));
+	border-radius: 0.2rem;
+	background: transparent;
+	color: var(--chat-accent, var(--link-color));
+	font: inherit;
+	font-size: 0.7em;
+	line-height: 1.5;
+	letter-spacing: 0.05em;
+	vertical-align: 0.1em;
+	cursor: pointer;
+}
+
+#chat .msg-translation-skipped-tag:hover,
+#chat .msg-translation-skipped-tag:focus-visible {
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	opacity: 1;
+	outline: 0;
+}
+
+/* A model downloading for this line (TranslationLine.vue). */
+#chat .msg-translation-download {
+	color: var(--body-color-muted);
+	font-style: italic;
+}
+
+/* Why it failed, from the engine: an ORT session error or a model id, so it
+   is long, it is not prose, and it must not push the retry button off the
+   row. `anywhere` lets it break mid-token; the title has the untruncated
+   text. */
+#chat .msg-translation-reason {
+	/* `anywhere` breaks a long URL mid-token, and the break eats the space
+	   before the retry button: without a margin of its own the button reads
+	   as part of the reason ("…quantized.onnxretry"). */
+	margin-inline-end: 0.4em;
+	color: var(--body-color-muted);
+	font-size: 0.85em;
+	overflow-wrap: anywhere;
+}
+
+/* An icon button, the word kept as the tooltip/accessible name. */
+#chat .msg-translation-retry {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--link-color);
+	font-size: 0.8125rem;
+	cursor: pointer;
+}
+
+#chat .msg-translation-retry::before {
+	content: "\f021"; /* https://fontawesome.com/icons/sync?style=solid */
+	font: normal normal normal 1em/1 FontAwesome;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }
 
 #chat .msg-redacted {
@@ -4194,7 +5295,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	font: inherit;
 	font-style: italic;
 	cursor: pointer;
-	text-align: left;
+	text-align: start;
 }
 
 #chat .msg-redacted:hover,
@@ -4208,7 +5309,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #chat .msg-redacted-note {
-	margin-left: 4px;
+	margin-inline-start: 4px;
 	color: var(--body-color-muted);
 	font-style: italic;
 	font-size: 0.85em;
@@ -4329,19 +5430,42 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	opacity: 1;
 }
 
+/* The message action toolbar: reply, react, copy, edit, delete. It floats
+ * above the row it belongs to — its bottom edge on the row's top padding —
+ * so it never covers the text it acts on, and it is a child of the row, so
+ * hovering it keeps `.msg:hover` true; the hair of overlap means there is no
+ * gap for the pointer to fall through on the way up. Every glyph is a
+ * FontAwesome solid: the Unicode arrows and crosses this used to be
+ * rendered differently on every OS, and a ✕ at the end of a bar reads as
+ * "close this box" — the delete button is a trash can behind a divider for
+ * that reason. */
 #chat .msg-actions {
 	position: absolute;
-	top: -8px;
-	right: 8px;
+	top: auto;
+	bottom: calc(100% - 0.125rem);
+	inset-inline-end: 0.5rem;
 	z-index: 2;
 	display: none;
 	align-items: center;
-	padding: 1px;
+	gap: 0.125rem;
+	padding: 0.125rem;
 	border: 1px solid rgb(128 128 128 / 35%);
-	border-radius: 4px;
+	border-radius: 0.375rem;
 	background: var(--window-bg-color);
-	box-shadow: 0 1px 4px rgb(0 0 0 / 15%);
+	box-shadow: 0 0.125rem 0.5rem rgb(0 0 0 / 15%);
 	user-select: none;
+	transition: right 0.2s; /* the same glide as the arrow it makes room for */
+	transform-origin: bottom right; /* for the long press's pop-in */
+}
+
+/* The first message in the scrollback has nothing above it to float over:
+ * that one's toolbar tucks inside the row instead of being clipped by the
+ * scroll edge. A leading date marker does not change that. */
+#chat .messages > .msg:first-child .msg-actions,
+#chat .messages > .date-marker-container:first-child + .msg .msg-actions {
+	top: 0.125rem;
+	bottom: auto;
+	transform-origin: top right;
 }
 
 #chat .msg:hover .msg-actions,
@@ -4350,16 +5474,75 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	display: flex;
 }
 
-/* A touch device fakes hover on long press, which is also how a text
- * selection starts, so on touch the toolbar opens on a tap instead
- * (Message.vue sets `actions-open`). */
+/* A drag across the scrollback is a text selection (MessageList.vue sets
+ * `selecting` while the button is down and the pointer has moved): no row
+ * shows its toolbar under it. */
+#chat .chat.selecting .msg-actions {
+	display: none;
+}
+
+/* A live selection in the scrollback puts every toolbar away too
+ * (Message.vue closes the open one; this also keeps a :focus-within
+ * leftover from covering the selection). */
+#chat .chat.selection-live .msg-actions {
+	display: none;
+}
+
+/* While the jump-to-recent arrow is up (the view is scrolled back) it owns
+ * the bottom-right corner: the toolbar moves left of its column so the two
+ * never overlap, whichever row is hovered. */
+#chat .chat-content:has(.scroll-down-shown) .msg-actions {
+	inset-inline-end: calc(var(--scroll-down-inset) + var(--scroll-down-size) + 0.5rem);
+}
+
+/* A touch device fakes hover on a long press; here the long press is what
+ * opens the toolbar (Message.vue sets `actions-open`, one message at a
+ * time), and hover is never trusted. The text of a message that has a
+ * toolbar (`has-actions`, Message.vue's `canAct`) is not selectable there,
+ * so the platform's own long press — a text selection — cannot race ours;
+ * the toolbar's Copy text is how the text is copied on a phone. A row
+ * without one — the topic, a mode change, a notice, a condensed join — has
+ * nothing to open, so it stays selectable and its first long press is the
+ * platform's. Links keep their own long press (the preview), and are
+ * excluded from it in Message.vue. */
 @media (hover: none) {
 	#chat .msg:hover .msg-actions {
 		display: none;
 	}
 
+	/* The long press is a gesture, so its result arrives like one: a short
+	   grow-in says the press was taken (with the nudge Message.vue asks for).
+	   A hover toolbar stays instant — it follows the pointer, not a gesture. */
 	#chat .msg.actions-open .msg-actions {
 		display: flex;
+		animation: pop-in 100ms ease-out;
+	}
+}
+
+@media (hover: none) and (pointer: coarse) {
+	#chat .messages .msg.has-actions {
+		user-select: none;
+		-webkit-touch-callout: none;
+	}
+
+	#chat .messages .msg a {
+		-webkit-touch-callout: default;
+	}
+
+	/* The message whose toolbar is open is selectable again — but only once
+	 * the press that opened it has ended (`select-armed`, Message.vue):
+	 * flipped mid-press, the platform's own long-press detector would start
+	 * a selection off that same held finger. From the next press on it is
+	 * the platform's — a native selection with its handles — and the moment
+	 * one exists (`selection-live`, MessageList.vue via
+	 * helpers/touchSelection.ts) the whole scrollback is selectable, so the
+	 * handles can be dragged across messages: how several lines are copied
+	 * at once on a phone. A tap collapses the selection, which puts the
+	 * rule back by itself. */
+	#chat .messages .msg.select-armed,
+	#chat .chat.selection-live .messages .msg {
+		user-select: text;
+		-webkit-touch-callout: default;
 	}
 }
 
@@ -4371,28 +5554,170 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #chat .msg-action {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	width: 2.25rem;
 	height: 2rem;
 	padding: 0;
 	border: 0;
-	border-radius: 3px;
+	border-radius: 0.25rem;
 	background: transparent;
 	color: var(--body-color-muted);
 	font: inherit;
-	font-size: 1rem;
-	line-height: 2rem;
 	cursor: pointer;
+}
+
+#chat .msg-action::before {
+	font-size: 0.875rem;
+}
+
+#chat .msg-action-reply::before { content: "\f3e5"; /* https://fontawesome.com/icons/reply?style=solid */ }
+#chat .msg-action-react::before { content: "\f118"; /* https://fontawesome.com/icons/smile?style=solid */ }
+
+#chat .msg-action-copy::before,
+#chat .msg-action-copy-text::before { content: "\f0c5"; /* https://fontawesome.com/icons/copy?style=solid */ }
+
+#chat .msg-action-edit::before { content: "\f304"; /* https://fontawesome.com/icons/pen?style=solid */ }
+#chat .msg-action-delete::before { content: "\f2ed"; /* https://fontawesome.com/icons/trash-alt?style=solid */ }
+
+/* The language glyph is wider than the others and reads small at their
+ * size (the same em-box shortfall the header toggle compensates for). */
+#chat .msg-action-translate::before {
+	content: "\f1ab"; /* https://fontawesome.com/icons/language?style=solid */
+	font-size: 1rem;
+}
+
+/* What a copy leaves behind: the one word, where the toolbar was (the same
+ * corner, the same first-row exception), fading over the second it is up
+ * (MessageActions.vue COPIED_MS). It is a label and takes no tap: the reader
+ * is on the way to paste somewhere, and nothing here waits for them. */
+#chat .msg-copied {
+	position: absolute;
+	top: auto;
+	bottom: calc(100% - 0.125rem);
+	right: 0.5rem;
+	z-index: 2;
+	padding: 0.125rem 0.5rem;
+	border: 1px solid rgb(128 128 128 / 35%);
+	border-radius: 0.375rem;
+	background: var(--window-bg-color);
+	box-shadow: 0 0.125rem 0.5rem rgb(0 0 0 / 15%);
+	color: var(--body-color);
+	font-size: 0.875em;
+	line-height: 1.5rem;
+	pointer-events: none;
+	user-select: none;
+	animation: msg-copied-fade 1s ease-in forwards;
+}
+
+/* The bar gives its corner to the label (a pointer's hover bar too: the
+ * copy ended it, and the hover brings it back once the word is gone). */
+#chat .msg:has(.msg-copied) .msg-actions {
+	display: none;
+}
+
+#chat .messages > .msg:first-child .msg-copied,
+#chat .messages > .date-marker-container:first-child + .msg .msg-copied {
+	top: 0.125rem;
+	bottom: auto;
+}
+
+#chat .chat-content:has(.scroll-down-shown) .msg-copied {
+	right: calc(var(--scroll-down-inset) + var(--scroll-down-size) + 0.5rem);
+}
+
+@keyframes msg-copied-fade {
+	0%,
+	40% {
+		opacity: 1;
+	}
+
+	100% {
+		opacity: 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#chat .msg-copied {
+		animation: none;
+	}
+}
+
+/* The one-tap reactions (the newest used, helpers/reactionRecents.ts
+   `quickReactions`): an emoji glyph in a button the size of the others. One
+   already on the message from us reads as pressed, and tapping it again takes
+   it off — the same rule as the picker. */
+#chat .msg-action-quick {
+	font-size: 1.125rem;
+	line-height: 1;
+}
+
+#chat .msg-action-quick.selected {
+	box-shadow: inset 0 0 0 2px var(--button-color);
+}
+
+/* The bar is one row, always. An own message's eight buttons are ~20.75rem
+   with the right inset, and the pane is 19.5rem on a 390px phone at the
+   default step and less at the bigger ones, so the quick reactions stand
+   down one at a time as the pane narrows — the smiley still opens the
+   picker — and narrower still the buttons themselves narrow, glyphs
+   unchanged. In rem off the pane, not px off the window: what has to follow
+   the font scale asks a container query (`#chat` is the `chat` container).
+   Thresholds are for the widest bar (an own message), so a shorter one gives
+   a quick reaction up a little early; the alternative — letting a flex
+   wrapper wrap the ones that do not fit — cannot be made to work in
+   Chromium, whose fit-content for the bar stops at the wrapper's min-content
+   (one button) and sizes it from shrinkable items' minimums. */
+#chat .msg-actions-quick {
+	display: contents;
+}
+
+/* stylelint-disable-next-line at-rule-no-unknown */
+@container chat (max-width: 21rem) {
+	#chat .msg-actions-quick .msg-action:nth-child(3) {
+		display: none;
+	}
+}
+
+/* stylelint-disable-next-line at-rule-no-unknown */
+@container chat (max-width: 18.5rem) {
+	#chat .msg-actions-quick .msg-action:nth-child(2) {
+		display: none;
+	}
+}
+
+/* stylelint-disable-next-line at-rule-no-unknown */
+@container chat (max-width: 16rem) {
+	#chat .msg-actions-quick {
+		display: none;
+	}
+}
+
+/* stylelint-disable-next-line at-rule-no-unknown */
+@container chat (max-width: 14rem) {
+	#chat .msg-action {
+		width: 1.75rem;
+	}
 }
 
 #chat .msg-action:hover,
 #chat .msg-action:focus-visible {
-	background: rgb(0 0 0 / 8%);
+	background: rgb(128 128 128 / 15%);
 	color: var(--body-color);
 	outline: 0;
 }
 
+#chat .msg-action-divider {
+	width: 1px;
+	height: 1.25rem;
+	margin: 0 0.125rem;
+	background: rgb(128 128 128 / 35%);
+}
+
 #chat .msg-action-delete:hover,
 #chat .msg-action-delete:focus-visible {
+	background: rgb(231 76 60 / 12%);
 	color: #e74c3c;
 }
 
@@ -4414,7 +5739,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	box-shadow: 0 8px 28px rgb(0 0 0 / 22%);
 	color: var(--body-color);
 	font-size: 1rem;
-	animation: reaction-picker-in 120ms ease-out;
+	animation: pop-in 120ms ease-out;
 	transform-origin: top right;
 }
 
@@ -4423,24 +5748,62 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 /* On a phone the on-screen keyboard leaves no room for a popover, so the
-   picker becomes a sheet along the bottom edge instead. */
+   picker becomes a sheet along the bottom edge instead. The bottom edge is the
+   visual viewport's, not the layout viewport's: iOS keeps `100%` of a fixed
+   element at the full window height under the keyboard, so `bottom: 0` put
+   the sheet's list behind it as soon as the search field took the caret.
+   `--viewport-height` (helpers/viewport.ts) is the visible band; the
+   difference is the keyboard, and the sheet takes 70% of what is left. */
 .reaction-picker.sheet {
 	top: auto;
 	right: 0;
-	bottom: 0;
+	bottom: calc(100% - var(--viewport-height, 100%));
 	left: 0;
 	width: 100%;
 	max-width: none;
-	max-height: 70vh;
+	max-height: calc(var(--viewport-height, 100%) * 0.7);
 	border-width: 1px 0 0;
 	border-radius: 12px 12px 0 0;
 	transform-origin: bottom center;
 }
 
-@keyframes reaction-picker-in {
+/* A phone on its side with the keyboard up keeps ~190px (helpers/viewport.ts
+   sets data-keyboard from the same measurement). 70% of that held the search
+   field and the tabs and no emoji, so there the sheet takes the whole band —
+   what it would leave is under the keyboard — and the tab strip stands down
+   while the filter being typed is what picks the group; the list keeps two
+   rows. The band is the visible height, so this cannot be a container query. */
+@media (max-height: 500px) and (hover: none) and (pointer: coarse) {
+	html[data-keyboard="up"] .reaction-picker.sheet {
+		max-height: var(--viewport-height, 100%);
+		border-radius: 0;
+	}
+
+	html[data-keyboard="up"] .reaction-picker.sheet .reaction-picker-tabs {
+		display: none;
+	}
+
+	/* The rest of the chrome tightens for the same reason: at the default
+	   paddings the search row and the preview bar took 106px of 190. */
+	html[data-keyboard="up"] .reaction-picker.sheet .reaction-picker-search {
+		padding: 4px 8px;
+	}
+
+	html[data-keyboard="up"] .reaction-picker.sheet .reaction-picker-heading {
+		padding: 4px 2px 2px;
+	}
+
+	html[data-keyboard="up"] .reaction-picker.sheet .reaction-picker-preview {
+		min-height: 2rem;
+		padding: 2px 10px;
+	}
+}
+
+/* The one "appears" motion: the picker's, and the toolbar's on a long press. */
+@keyframes pop-in {
 	from {
 		opacity: 0;
-		transform: scale(0.97);
+		transform: scale(0.95);
 	}
 
 	to {
@@ -4450,7 +5813,8 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.reaction-picker {
+	.reaction-picker,
+	#chat .msg.actions-open .msg-actions {
 		animation: none;
 	}
 }
@@ -4592,6 +5956,13 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	cursor: pointer;
 }
 
+/* A group not yet rendered (ReactionPicker.vue `rendered`) is this: the
+   height of the grid it will become, `--rows` of the cell above plus the
+   grid's gap between them. The cell size lives here and nowhere else. */
+.reaction-picker-placeholder {
+	height: calc(var(--rows) * (2.125rem + 2px) - 2px);
+}
+
 /* A reaction can be a word, and remembered ones often are: those are set as
    text in a pill rather than as a 20px glyph. */
 .reaction-picker-option.word {
@@ -4613,7 +5984,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 .reaction-picker-free-label {
-	margin-right: 6px;
+	margin-inline-end: 6px;
 	color: var(--body-color-muted);
 	font-size: 0.8125rem;
 }
@@ -4694,7 +6065,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
    composition while shift-clicks add to it). */
 .reaction-picker-send {
 	flex: 0 0 auto;
-	margin-left: auto;
+	margin-inline-start: auto;
 	padding: 3px 10px;
 	border: 1px solid var(--button-color);
 	border-radius: 4px;
@@ -4715,7 +6086,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 .reaction-picker-preview-hint {
 	flex: 0 1 auto;
-	margin-left: auto;
+	margin-inline-start: auto;
 	color: var(--body-color-muted);
 	font-size: 0.8125rem;
 }
@@ -4746,9 +6117,12 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	min-width: 0;
 	margin: 0 4px 2px;
 	padding: 2px 6px;
-	border-left: 2px solid var(--button-color);
+	border-inline-start: 2px solid var(--button-color);
 	background: rgb(0 0 0 / 4%);
-	border-radius: 0 3px 3px 0;
+	border-start-start-radius: 0;
+	border-start-end-radius: 3px;
+	border-end-end-radius: 3px;
+	border-end-start-radius: 0;
 	color: var(--body-color-muted);
 	font-size: 0.875rem;
 	line-height: 1.5;
@@ -4763,7 +6137,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 #form .compose-bar-icon {
-	margin-right: 2px;
+	margin-inline-end: 2px;
 }
 
 #form .compose-bar-nick {
@@ -4796,6 +6170,170 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	outline: 0;
 }
 
+/* Outgoing translation above the input (client/components/ChatInput.vue,
+ * spec § Composer): the same row the reply/edit strip takes, the language
+ * chip in the accent, full ink for the text since it is what will be sent,
+ * a caret while it streams, the read-back line under it. */
+#form .translate-bar {
+	flex: 1 0 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	min-width: 0;
+
+	/* However long the translation, the composer keeps its place: the strip
+	 * scrolls instead of pushing the input off the screen. iOS never shrinks
+	 * the layout viewport for the keyboard, so the ceiling follows the visual
+	 * viewport helpers/viewport.ts publishes (px, touch devices only). */
+	max-height: calc(var(--viewport-height, 100vh) * 0.4);
+	overflow: auto;
+	margin: 0 0.25rem 0.125rem;
+	padding: 0.125rem 0.375rem;
+	border-inline-start: 2px solid var(--chat-accent, var(--link-color));
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+
+	/* Square against its own accent rule, rounded away from it. */
+	border-start-end-radius: 0.1875rem;
+	border-end-end-radius: 0.1875rem;
+	color: var(--body-color);
+	font-size: 0.875rem;
+	line-height: 1.5;
+}
+
+/* Narrow panes: the chip and the text share the first line and the three
+ * buttons drop to a line of their own, rather than each wrapping alone. */
+#form .translate-bar-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.375rem;
+	min-width: 0;
+}
+
+#form .translate-bar-actions {
+	display: flex;
+	flex: 0 0 auto;
+	gap: 0.375rem;
+	margin-inline-start: auto;
+}
+
+#form .translate-bar-chip {
+	flex: none;
+	padding: 0 0.3em;
+	border: 1px solid var(--chat-accent-rule, var(--link-color));
+	border-radius: 0.2rem;
+	color: var(--chat-accent, var(--link-color));
+	font-size: 0.7em;
+	line-height: 1.5;
+	letter-spacing: 0.05em;
+	white-space: nowrap;
+}
+
+/* Both rows of the strip: the translation about to be sent, and the
+   read-back under it. `body` is `user-select: none`, so without this the
+   line the user is being asked to approve cannot be selected or copied. */
+#form .translate-bar-text {
+	flex: 1 1 12rem;
+	min-width: 0;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	user-select: text;
+}
+
+#form .translate-bar-caret {
+	display: inline-block;
+	width: 0.5em;
+	height: 1em;
+	margin-inline-start: 0.1em;
+	background: var(--chat-accent, var(--link-color));
+	vertical-align: text-bottom;
+	animation: msg-translation-blink 1s steps(2) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#form .translate-bar-caret {
+		animation: none;
+	}
+}
+
+#form .translate-bar-failed,
+#form .translate-bar-download {
+	color: var(--body-color-muted);
+	font-style: italic;
+}
+
+/* The same reason in the composer's strip (see .msg-translation-reason). */
+#form .translate-bar-reason {
+	margin-inline-start: 0.4em;
+	color: var(--body-color-muted);
+	font-size: 0.85em;
+	overflow-wrap: anywhere;
+}
+
+/* Icon buttons, the word kept as the tooltip/accessible name: a square
+   target with the glyph centred (see .translate-bar-copy etc. below for the
+   Font Awesome codes). */
+#form .translate-bar-button {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	padding: 0;
+	border: 1px solid var(--chat-accent-rule, var(--link-color));
+	border-radius: 0.1875rem;
+	background: transparent;
+	color: var(--chat-accent, var(--link-color));
+	font-size: 0.9375rem;
+	cursor: pointer;
+}
+
+#form .translate-bar-button::before {
+	font: normal normal normal 1em/1 FontAwesome;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+#form .translate-bar-copy::before { content: "\f0c5"; /* https://fontawesome.com/icons/copy?style=solid */ }
+#form .translate-bar-copy-done::before { content: "\f00c"; /* https://fontawesome.com/icons/check?style=solid */ }
+
+#form .translate-bar-send::before { content: "\f1d8"; /* https://fontawesome.com/icons/paper-plane?style=solid */ }
+#form .translate-bar-edit::before { content: "\f303"; /* https://fontawesome.com/icons/pencil-alt?style=solid */ }
+
+#form .translate-bar-button:hover,
+#form .translate-bar-button:focus-visible {
+	background: var(--accent-tint-20, rgb(128 128 128 / 15%));
+	outline: 0;
+}
+
+#form .translate-bar-send {
+	border-color: var(--chat-accent, var(--link-color));
+	background: var(--chat-accent, var(--link-color));
+	color: var(--chat-accent-fg, #fff);
+}
+
+#form .translate-bar-send:hover,
+#form .translate-bar-send:focus-visible {
+	background: var(--chat-accent, var(--link-color));
+	opacity: 0.85;
+}
+
+#form .translate-bar-button[disabled] {
+	opacity: 0.5;
+	cursor: default;
+}
+
+#form .translate-bar-check {
+	color: var(--body-color-muted);
+	font-size: 0.8125rem;
+}
+
+#form .translate-bar-check-label {
+	flex: 0 0 auto;
+	font-style: italic;
+}
+
 /* The upload in flight: a row of its own above the input, like .compose-bar */
 #form .upload-bar {
 	flex: 1 0 100%;
@@ -4805,9 +6343,12 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	min-width: 0;
 	margin: 0 4px 2px;
 	padding: 3px 6px;
-	border-left: 2px solid var(--upload-progressbar-color);
+	border-inline-start: 2px solid var(--upload-progressbar-color);
 	background: rgb(0 0 0 / 4%);
-	border-radius: 0 3px 3px 0;
+	border-start-start-radius: 0;
+	border-start-end-radius: 3px;
+	border-end-end-radius: 3px;
+	border-end-start-radius: 0;
 	color: var(--body-color-muted);
 	font-size: 0.875rem;
 	line-height: 1.4;
@@ -4824,7 +6365,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 #form .upload-bar-icon::before {
 	content: "\f0c6"; /* https://fontawesome.com/icons/paperclip?style=solid */
 	font: normal normal normal 0.9em/1 FontAwesome;
-	margin-right: 4px;
+	margin-inline-end: 4px;
 }
 
 #form .upload-bar-track {
@@ -4854,11 +6395,11 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 
 @keyframes upload-bar-sweep {
 	from {
-		left: -40%;
+		inset-inline-start: -40%;
 	}
 
 	to {
-		left: 100%;
+		inset-inline-start: 100%;
 	}
 }
 
@@ -4875,9 +6416,12 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	min-width: 0;
 	margin: 0 4px 2px;
 	padding: 2px 6px;
-	border-left: 2px solid var(--body-color-muted);
+	border-inline-start: 2px solid var(--body-color-muted);
 	background: rgb(0 0 0 / 4%);
-	border-radius: 0 3px 3px 0;
+	border-start-start-radius: 0;
+	border-start-end-radius: 3px;
+	border-end-end-radius: 3px;
+	border-end-start-radius: 0;
 	color: var(--body-color-muted);
 	font-size: 0.875rem;
 	line-height: 1.5;
@@ -4940,7 +6484,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 @media (prefers-reduced-motion: reduce) {
 	#form .upload-bar-track.indeterminate .upload-bar-fill {
 		animation: none;
-		left: 0;
+		inset-inline-start: 0;
 		width: 100%;
 		opacity: 0.5;
 	}
@@ -4949,7 +6493,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 #form .upload-bar-percent {
 	flex: 0 0 auto;
 	min-width: 3.2em;
-	text-align: right;
+	text-align: end;
 	font-variant-numeric: tabular-nums;
 	color: var(--body-color);
 }
@@ -4999,7 +6543,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 }
 
 .push-network-state {
-	margin-left: auto;
+	margin-inline-start: auto;
 	font-size: 0.8125rem;
 	font-weight: bold;
 	color: var(--body-color-muted);
@@ -5038,7 +6582,7 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 	font-size: 0.8125rem;
 	font-weight: bold;
 	text-align: center;
-	margin-right: 8px;
+	margin-inline-end: 8px;
 	color: #fff;
 	background: var(--body-color-muted);
 }

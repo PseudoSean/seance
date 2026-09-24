@@ -8,9 +8,18 @@
 const DB_NAME = "seance-push";
 const STORE = "kv";
 
+/** The IndexedDB factory in use. Tests swap it (the useStorageBackend
+ * pattern) so they never patch a global — mocha runs with check-leaks. */
+let factory: IDBFactory | null = null;
+
+/** Swap the IndexedDB factory; null restores the browser's. */
+export function useIDBFactory(next: IDBFactory | null): void {
+	factory = next;
+}
+
 function open(): Promise<IDBDatabase> {
 	return new Promise((resolve, reject) => {
-		const req = indexedDB.open(DB_NAME, 1);
+		const req = (factory ?? indexedDB).open(DB_NAME, 1);
 		req.onupgradeneeded = () => req.result.createObjectStore(STORE);
 		req.onsuccess = () => resolve(req.result);
 		req.onerror = () => reject(req.error);

@@ -1,0 +1,368 @@
+/* Panasync — named for BitchX's author; an ircII-family client on a black
+ * terminal: grey-white text, nicks in bold white between blue angle
+ * brackets, "***" in cyan before every event line, and the status bar —
+ * BitchX's signature, ANSI blue with white and cyan text — where this app
+ * keeps its only bar, the channel header. The network's row in the rail is a
+ * second one. coffee.css's rules with the sixteen ANSI colours and a
+ * monospace face.
+ *
+ * Contrast on black: the text (#c0c0c0) 11.7:1, timestamps (#8a8a8a) 5.9:1,
+ * cyan 16.4:1, the join line 16.4:1, red (#ff5555) 5.7:1; on the blue bar
+ * (#0000aa) white 8.6:1 and cyan 10.4:1. The brackets are bright blue
+ * (#5555ff, 3.7:1): punctuation, not information.
+ *
+ * The nick palette is 32 slots (style.css hashes nicks into 32) over the
+ * seven bright ANSI colours that read on black — white, cyan, green, yellow,
+ * magenta, red, grey — cycled, so a busy channel looks like a colour script
+ * on a terminal. */
+@import "coffee.css";
+
+:root {
+	color-scheme: dark;
+
+	/* The ANSI sixteen, the ones this file uses. */
+	--ansi-black: #000;
+	--ansi-blue: #00a;
+	--ansi-bright-blue: #55f;
+	--ansi-cyan-dim: #0aa;
+	--ansi-cyan: #5ff;
+	--ansi-green: #5f5;
+	--ansi-yellow: #ff5;
+	--ansi-magenta: #f5f;
+	--ansi-red: #f55;
+	--ansi-white: #fff;
+	--ansi-grey: #c0c0c0;
+	--ansi-grey-dim: #8a8a8a;
+	--ansi-lift: #121212; /* inputs, code, menus */
+	--ansi-lit: #10102e; /* hover, the highlighted row: a touch of blue */
+
+	/* Chat surface: black, the terminal's grey-white. */
+	--chat-bg: var(--ansi-black);
+	--chat-fg: var(--ansi-grey);
+	--chat-fg-muted: var(--ansi-grey-dim);
+	--chat-fg-faint: #767676;
+	--chat-heading: var(--ansi-cyan);
+	--chat-rule: #2a2a2a;
+	--chat-accent: var(--ansi-cyan);
+	--chat-accent-fg: var(--ansi-black);
+	--chat-accent-rule: var(--ansi-blue);
+	--chat-highlight-bg: var(--ansi-lit);
+	--chat-selection: var(--ansi-blue);
+	--composer-bg: var(--ansi-lift);
+	--composer-border: var(--ansi-blue);
+	--window-border: #2a2a2a;
+	--window-shadow: none;
+	--menu-bg: var(--ansi-lift);
+
+	/* The rail: black, grey text, white for what has your attention. */
+	--rail-bg-top: var(--ansi-black);
+	--rail-bg-bottom: var(--ansi-black);
+	--rail-fg: var(--ansi-grey);
+	--rail-fg-strong: var(--ansi-white);
+	--rail-fg-active: var(--ansi-white);
+	--rail-fg-muted: var(--ansi-grey-dim);
+	--rail-item-active-bg: var(--ansi-lift);
+	--rail-item-hover-bg: var(--ansi-lit);
+	--rail-accent: var(--ansi-cyan);
+	--rail-accent-fg: var(--ansi-black);
+	--rail-badge-bg: var(--ansi-blue);
+	--rail-badge-fg: var(--ansi-white);
+	--rail-input-bg: var(--ansi-lift);
+	--rail-input-border: var(--ansi-blue);
+
+	/* Message semantics: events cyan, the way "***" lines are, quits red,
+	 * notices yellow, /me magenta, nicks bold white. */
+	--event-join: var(--ansi-cyan);
+	--event-quit: var(--ansi-red);
+	--nick-default: var(--ansi-white);
+	--notice-color: var(--ansi-yellow);
+	--action-color: var(--ansi-magenta);
+
+	/* Notice boxes. */
+	--note-bg: var(--ansi-lift);
+	--note-fg: var(--ansi-grey);
+	--warn-bg: var(--ansi-lift);
+	--warn-fg: var(--ansi-yellow);
+	--error-bg: var(--ansi-lift);
+	--error-fg: var(--ansi-red);
+	--ok-bg: var(--ansi-lift);
+	--ok-fg: var(--ansi-green);
+
+	/* Tints, focus ring, scrollbars. */
+	--tint-soft: rgb(255 255 255 / 6%);
+	--tint-strong: rgb(255 255 255 / 12%);
+	--accent-tint-20: rgb(85 255 255 / 20%);
+	--accent-tint-30: rgb(85 255 255 / 30%);
+	--focus-ring: rgb(85 255 255 / 55%);
+	--scrollbar-track: var(--ansi-lift);
+	--scrollbar-thumb: #4a4a4a;
+	--scrollbar-thumb-active: var(--ansi-grey-dim);
+
+	/* Code blocks. */
+	--tok-comment: var(--ansi-grey-dim);
+	--tok-keyword: var(--ansi-magenta);
+	--tok-string: var(--ansi-cyan);
+	--tok-number: var(--ansi-yellow);
+	--tok-function: var(--ansi-green);
+	--tok-operator: var(--ansi-white);
+	--tok-punctuation: var(--ansi-grey);
+	--tok-tag: var(--ansi-cyan);
+	--tok-attr: var(--ansi-green);
+
+	/* The unread marker and the highlight's mark are the bar's blue. */
+	--highlight-border-color: var(--ansi-bright-blue);
+	--unread-marker-color: var(--ansi-cyan);
+}
+
+/* A terminal is monospaced and square. */
+body,
+#chat,
+#sidebar,
+#form #input,
+button,
+input,
+select,
+textarea {
+	font-family: "DejaVu Sans Mono", "Fira Mono", "SF Mono", Menlo, Consolas, monospace;
+}
+
+*,
+*::before,
+*::after {
+	border-radius: 0 !important;
+}
+
+body,
+#sidebar {
+	background: var(--ansi-black);
+}
+
+.window {
+	box-shadow: none;
+}
+
+/* The status bar: ANSI blue, the channel in bold cyan, the topic and the
+ * icons white. */
+#chat .header {
+	background: var(--ansi-blue);
+	border-bottom: 0;
+	color: var(--ansi-white);
+}
+
+#chat .header .title {
+	color: var(--ansi-cyan);
+	font-weight: 700;
+}
+
+#chat .header .topic,
+#chat .header .topic a {
+	color: var(--ansi-white);
+}
+
+/* Only on the bar: on the other windows (settings, help, the changelog, a
+ * network's form) the toggle sits on the window and keeps coffee's muted
+ * tone. */
+#chat .header .lt,
+#chat .header .rt,
+#chat button.mentions,
+#chat button.search,
+#chat button.menu,
+#chat button.close {
+	color: var(--ansi-white);
+}
+
+#chat .header .lt::after {
+	background-color: var(--ansi-cyan);
+}
+
+/* The user list's count is a status bar too. */
+#chat .userlist {
+	border-inline-start-color: var(--ansi-blue);
+}
+
+#chat .userlist .count {
+	background: var(--ansi-blue);
+	color: var(--ansi-white);
+}
+
+#chat .userlist .count::before {
+	color: var(--ansi-cyan);
+}
+
+/* The network's row in the rail is the second bar: blue, the name in
+ * cyan, the tools white. */
+.channel-list-item[data-type="lobby"] {
+	background: var(--ansi-blue);
+	color: var(--ansi-cyan);
+}
+
+.channel-list-item[data-type="lobby"]:hover,
+.channel-list-item[data-type="lobby"].active {
+	background: var(--ansi-blue);
+	color: var(--ansi-cyan);
+}
+
+.channel-list-item[data-type="lobby"] .lobby-nick,
+.channel-list-item[data-type="lobby"] .add-channel::before,
+.channel-list-item[data-type="lobby"] .edit-network::before,
+.channel-list-item[data-type="lobby"] .notify-status-icon::before,
+#sidebar .network .collapse-network-icon::before {
+	color: var(--ansi-white);
+}
+
+.channel-list-item.not-connected,
+.channel-list-item.not-connected:hover,
+.channel-list-item.not-connected.active {
+	color: var(--ansi-red);
+}
+
+/* The current channel is white with a cyan mark; unread ones cyan. */
+.channel-list-item.active {
+	box-shadow: inset 0.25rem 0 0 var(--ansi-cyan);
+}
+
+/* The mark rides the row's inline-start edge; RTL rows mirror. Without
+ * this restate coffee's RTL marker override — a higher-specificity
+ * selector in the imported file — would paint the active row amber. */
+[dir="rtl"] .channel-list-item.active {
+	box-shadow: inset -0.25rem 0 0 var(--ansi-cyan);
+}
+
+.channel-list-item.has-unread .name {
+	color: var(--ansi-cyan);
+}
+
+.channel-list-item.has-highlight:not(.is-muted) .name {
+	color: var(--ansi-yellow);
+}
+
+/* <nick>: the brackets are in the markup for copying; show them, in blue,
+ * and set the nick in bold. */
+#chat .msg[data-type="message"] .from .only-copy {
+	font-size: inherit;
+	opacity: 1;
+	width: auto;
+	color: var(--ansi-bright-blue);
+}
+
+#chat .msg[data-type="message"] .from .user {
+	font-weight: 700;
+}
+
+/* "*** nick has joined": the prefix is in the markup too; show it in cyan
+ * instead of the icon. */
+#chat .msg[data-type="join"] .from .only-copy,
+#chat .msg[data-type="part"] .from .only-copy,
+#chat .msg[data-type="quit"] .from .only-copy,
+#chat .msg[data-type="kick"] .from .only-copy,
+#chat .msg[data-type="nick"] .from .only-copy,
+#chat .msg[data-type="mode"] .from .only-copy,
+#chat .msg[data-type="mode_channel"] .from .only-copy,
+#chat .msg[data-type="mode_user"] .from .only-copy,
+#chat .msg[data-type="topic"] .from .only-copy,
+#chat .msg[data-type="chghost"] .from .only-copy {
+	font-size: inherit;
+	opacity: 1;
+	width: auto;
+	color: var(--ansi-cyan);
+}
+
+#chat .msg[data-type="join"] .from::before,
+#chat .msg[data-type="part"] .from::before,
+#chat .msg[data-type="quit"] .from::before,
+#chat .msg[data-type="kick"] .from::before,
+#chat .msg[data-type="nick"] .from::before,
+#chat .msg[data-type="mode"] .from::before,
+#chat .msg[data-type="mode_channel"] .from::before,
+#chat .msg[data-type="mode_user"] .from::before,
+#chat .msg[data-type="topic"] .from::before,
+#chat .msg[data-type="chghost"] .from::before {
+	content: none;
+}
+
+/* A monospace face is wider than the timestamp column allows for. */
+#chat.time-12h .time,
+#chat.time-seconds .time {
+	width: 5.25rem;
+}
+
+#chat.time-seconds.time-12h .time {
+	width: 7rem;
+}
+
+/* Selection is reverse video in the bar's blue. */
+::selection {
+	background: var(--ansi-blue);
+	color: var(--ansi-white);
+}
+
+/* The input line: black, a blue rule above, a cyan caret. */
+#form {
+	background: var(--ansi-black);
+	border-top: 0; /* the rule is a shadow: a border would push the input line off the rail's grid */
+	box-shadow: inset 0 1px 0 var(--ansi-blue);
+}
+
+#form:focus-within {
+	box-shadow: inset 0 1px 0 var(--ansi-cyan);
+}
+
+#form #nick {
+	background: var(--ansi-black);
+	color: var(--ansi-cyan);
+}
+
+/* Buttons and inputs: lifted black with a blue rule. */
+.btn {
+	background: var(--ansi-lift);
+	border-color: var(--ansi-blue);
+	color: var(--ansi-grey);
+}
+
+.btn:hover,
+.btn:focus-visible {
+	background: var(--ansi-blue);
+	border-color: var(--ansi-blue);
+	color: var(--ansi-white);
+}
+
+/* mIRC colours that vanish on black. */
+.irc-fg1 { color: #555; }
+.irc-fg2 { color: var(--ansi-bright-blue); }
+.irc-fg5 { color: var(--ansi-red); }
+.irc-fg6 { color: var(--ansi-magenta); }
+.irc-fg12 { color: var(--ansi-cyan); }
+
+/* Nick palette: the seven bright ANSI colours that read on black, cycled. */
+.user.color-1 { color: #fff; }
+.user.color-2 { color: #5ff; }
+.user.color-3 { color: #5f5; }
+.user.color-4 { color: #ff5; }
+.user.color-5 { color: #f5f; }
+.user.color-6 { color: #f55; }
+.user.color-7 { color: #c0c0c0; }
+.user.color-8 { color: #fff; }
+.user.color-9 { color: #5ff; }
+.user.color-10 { color: #5f5; }
+.user.color-11 { color: #ff5; }
+.user.color-12 { color: #f5f; }
+.user.color-13 { color: #f55; }
+.user.color-14 { color: #c0c0c0; }
+.user.color-15 { color: #fff; }
+.user.color-16 { color: #5ff; }
+.user.color-17 { color: #5f5; }
+.user.color-18 { color: #ff5; }
+.user.color-19 { color: #f5f; }
+.user.color-20 { color: #f55; }
+.user.color-21 { color: #c0c0c0; }
+.user.color-22 { color: #fff; }
+.user.color-23 { color: #5ff; }
+.user.color-24 { color: #5f5; }
+.user.color-25 { color: #ff5; }
+.user.color-26 { color: #f5f; }
+.user.color-27 { color: #f55; }
+.user.color-28 { color: #c0c0c0; }
+.user.color-29 { color: #fff; }
+.user.color-30 { color: #5ff; }
+.user.color-31 { color: #5f5; }
+.user.color-32 { color: #ff5; }

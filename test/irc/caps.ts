@@ -5,7 +5,7 @@ import {IrcMessage, MAX_LINE_BYTES, parseLine, utf8ByteLength} from "../../clien
 // The CAP LS exchange nefarious2 (ircv3.2-upgrade) produced in the prototype
 // run, see docs/resources/nefarious2-websocket.md §Prototype status.
 const NEFARIOUS_LS_1 =
-	":irc.seance.test CAP * LS * :multi-prefix userhost-in-names extended-join away-notify account-notify cap-notify server-time echo-message account-tag chghost invite-notify labeled-response batch setname standard-replies message-tags no-implicit-names draft/no-implicit-names draft/extended-isupport draft/pre-away draft/multiline=max-bytes=16384,max-lines=100 draft/chathistory=100 draft/event-playback draft/message-redaction draft/read-marker draft/metadata-2=before-connect,max-subs=50,max-keys=20,max-value-bytes=300 draft/webpush=vapid=BLB6-4OioBPa__W4w93qeXLpdHYwSr8xONZjy_8uA1CpBkiyd_lc8ztobgKxEs1F7dFHQGB3yW5mgi54GkJBnGU draft/bouncer draft/persistence";
+	":irc.seance.test CAP * LS * :multi-prefix userhost-in-names extended-join away-notify account-notify cap-notify server-time echo-message account-tag chghost invite-notify labeled-response batch setname standard-replies message-tags no-implicit-names draft/no-implicit-names draft/extended-isupport draft/pre-away draft/multiline=max-bytes=16384,max-lines=100 draft/chathistory=100 draft/event-playback draft/message-redaction draft/read-marker draft/metadata-2=before-connect,max-subs=50,max-keys=20,max-value-bytes=300 draft/webpush=vapid=BLB6-4OioBPa__W4w93qeXLpdHYwSr8xONZjy_8uA1CpBkiyd_lc8ztobgKxEs1F7dFHQGB3yW5mgi54GkJBnGU draft/bouncer draft/persistence draft/authtoken";
 const NEFARIOUS_LS_2 = ":irc.seance.test CAP * LS : tls";
 
 // nefarious2 master: no CAP 302 support, one unversioned line.
@@ -144,7 +144,7 @@ describe("irc/caps", function () {
 			const res = feed(neg, ":s CAP * LS :multi-prefix");
 
 			expect(res.missingRequired).to.deep.equal(["server-time", "batch"]);
-			expect(res.error).to.be.a("string");
+			expect(res.errorCode).to.equal("MISSING_CAPS");
 			expect(res.send).to.deep.equal([]);
 			expect(res.done).to.equal(false);
 		});
@@ -172,7 +172,7 @@ describe("irc/caps", function () {
 			const nak2 = feed(neg, ":s CAP * NAK :server-time");
 			expect(nak2.send).to.deep.equal([]);
 			expect(nak2.missingRequired).to.deep.equal(["server-time"]);
-			expect(nak2.error).to.be.a("string");
+			expect(nak2.errorCode).to.equal("MISSING_CAPS");
 			expect(feed(neg, ":s CAP * ACK :multi-prefix").send).to.deep.equal([]);
 			expect(Array.from(neg.enabled)).to.deep.equal(["multi-prefix"]);
 		});
@@ -350,7 +350,7 @@ describe("irc/caps", function () {
 
 			const res = feed(neg, ":s CAP nick DEL :batch");
 			expect(res.missingRequired).to.deep.equal(["batch"]);
-			expect(res.error).to.be.a("string");
+			expect(res.errorCode).to.equal("MISSING_CAPS");
 		});
 
 		it("folds a NEW that arrives mid-LS into the single REQ", function () {

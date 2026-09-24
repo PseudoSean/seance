@@ -15,9 +15,13 @@
  */
 
 import storage from "../localStorage";
+import {collator} from "../i18n/collation";
 import type {ConnectOptions} from "./types";
 
 export const STORAGE_KEY = "thelounge.networks";
+
+/** Channel names per network uuid, in the order the sidebar shows them. */
+export const CHANNEL_ORDER_KEY = "thelounge.sort.channels";
 
 /**
  * The newest message the client has shown on a network: the catch-up
@@ -341,7 +345,8 @@ function forStorage(net: SavedNetwork): SavedNetwork {
 
 function byRecency(a: SavedNetwork, b: SavedNetwork): number {
 	const diff = (b.lastUsed ?? 0) - (a.lastUsed ?? 0);
-	return diff !== 0 ? diff : displayName(a).localeCompare(displayName(b));
+	// Recency ties break by the active locale's collation of the names.
+	return diff !== 0 ? diff : collator().compare(displayName(a), displayName(b));
 }
 
 /** Every saved network, most recently used first. */
@@ -416,6 +421,32 @@ export function setCursor(uuid: string, cursor: NetworkCursor): void {
 }
 
 /** The entry to pre-fill the connect form with, if any. */
+/**
+ * The order the user gave a network's channels (drag-and-drop in the
+ * sidebar), by name. `IrcClient.createChannel` places a channel by it, so
+ * the order holds across reloads whichever way the channel arrives —
+ * autojoin placeholder, a held session's restore, `/join`.
+ */
+export function channelOrder(uuid: string): string[] {
+	const order = readOrders()[uuid];
+	return Array.isArray(order) ? order.filter((n): n is string => typeof n === "string") : [];
+}
+
+export function setChannelOrder(uuid: string, names: string[]): void {
+	backend.set(CHANNEL_ORDER_KEY, JSON.stringify({...readOrders(), [uuid]: names}));
+}
+
+function readOrders(): Record<string, unknown> {
+	try {
+		const raw = backend.get(CHANNEL_ORDER_KEY);
+		const parsed: unknown = raw ? JSON.parse(raw) : {};
+		return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
+	} catch (e) {
+		backend.remove(CHANNEL_ORDER_KEY);
+		return {};
+	}
+}
+
 export function lastUsed(): SavedNetwork | undefined {
 	return list().find((net) => net.lastUsed !== undefined);
 }

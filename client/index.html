@@ -15,6 +15,64 @@
 			}
 		</style>
 
+		<!-- Before first paint: the stored (or system) language decides <html
+		     lang> and the text direction, so an RTL language never flashes
+		     left-to-right. Reads the same settings blob as client/js/settings.ts;
+		     resolves "auto" against the baked locale list — __AVAILABLE_LOCALES__
+		     is substituted at build from client/locales/tags.json. The match
+		     order differs from client/js/i18n bestLocale() — exact-or-base per
+		     candidate here, exact-then-base per preference there — which can
+		     pick a different tag of the same language; harmless, and moot while
+		     the list ships no subtags. The RTL tag
+		     list is pinned to client/js/i18n/core.ts by test/helpers/i18n.ts.
+		     Fail-closed: any error means English/left-to-right until boot. -->
+		<script>
+			(function () {
+				try {
+					var stored = JSON.parse(localStorage.getItem("settings") || "{}");
+					var available = "__AVAILABLE_LOCALES__".split(",");
+					var storedLocale =
+						typeof stored.locale === "string" && stored.locale !== "auto"
+							? stored.locale
+							: "";
+					var tag = "";
+					if (storedLocale) {
+						// The stored tag activates as chosen only when this build
+						// still ships it: a stale one (a locale the deploy dropped,
+						// a settings blob restored from a backup) must not pin a
+						// lang/dir no catalog backs — boot's activate() falls back
+						// to en for the same reason, so auto-resolution is skipped
+						// here too and lang/dir stay as authored.
+						for (var k = 0; k < available.length && !tag; k++) {
+							if (available[k].toLowerCase() === storedLocale.toLowerCase()) {
+								tag = available[k];
+							}
+						}
+					} else {
+						for (var i = 0; i < (navigator.languages || []).length && !tag; i++) {
+							var want = navigator.languages[i].toLowerCase();
+							for (var j = 0; j < available.length && !tag; j++) {
+								if (
+									want === available[j].toLowerCase() ||
+									want.split("-")[0] === available[j].toLowerCase()
+								) {
+									tag = available[j];
+								}
+							}
+						}
+					}
+					if (tag) {
+						document.documentElement.lang = tag;
+						document.documentElement.dir = /^(ar|fa|he|ur|ps|sd|ug|yi|qqx)\b/.test(tag)
+							? "rtl"
+							: "ltr";
+					}
+				} catch (e) {
+					/* blocked storage or an unparseable blob: boot decides instead */
+				}
+			})();
+		</script>
+
 		<link rel="preload" as="script" href="js/loading-error-handlers.js?v=__HASH__" />
 		<link rel="preload" as="script" href="js/bundle.vendor.js?v=__HASH__" />
 		<link rel="preload" as="script" href="js/bundle.js?v=__HASH__" />
@@ -72,7 +130,7 @@
 				<div id="loading-status-container">
 					<img src="img/logo-tile.png" alt="" width="160" height="160" />
 					<p id="loading-page-message">
-						__APP_NAME__ requires a modern browser with JavaScript enabled.
+						This application requires a modern browser with JavaScript enabled.
 					</p>
 				</div>
 				<div id="loading-reload-container">

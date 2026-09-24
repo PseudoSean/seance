@@ -94,7 +94,7 @@ slider did, since it reached three selectors):
       first cut topped out at 131.25 % (21 px), which was not large for
       anyone who needs large, and spent half its stops under 16 px. The
       ends are meant to be too small and too large for most people. The
-      sidebar is `--sidebar-width` = `min(8rem + 128px, 85vw)`, half rate
+      sidebar is `--sidebar-width` = `min(7rem + 108px, 85vw)`, half rate
       and never past a phone screen.
 - [x] Every px font size and the chrome's box sizes in `style.css` and the
       component styles are rem/em: header and footer 3 rem, header and form

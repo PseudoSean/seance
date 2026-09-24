@@ -27,6 +27,16 @@ tools/nefarious-dev/run.sh -d             # dev ircd, when IRC is involved
 when you switch branches** — rebuild after a checkout or you test the wrong
 code. Screenshots go to `tmp/browser-drive/<timestamp>/` (also gitignored).
 
+`http.server` serves `.mjs` as `application/octet-stream` where the system MIME
+table has no entry for it (Debian has none), and a browser refuses a module
+with that type — which breaks the translation worker's ONNX Runtime import and
+nothing else. A scenario that touches the real translation engines
+(`translate-cpu-real.mjs`) needs the types added on the way in:
+
+```sh
+python3 -c 'import http.server as h, mimetypes as m, functools; m.add_type("text/javascript", ".mjs"); m.add_type("application/wasm", ".wasm"); h.test(functools.partial(h.SimpleHTTPRequestHandler, directory="public"), h.ThreadingHTTPServer, port=8021)' &
+```
+
 Chromium comes from `$CHROME_BIN` or `chromium`; `--chrome=` overrides. The
 tool passes `--ignore-certificate-errors` because the dev ircd's certificate is
 self-signed.
@@ -79,14 +89,22 @@ leaves it running afterwards, `--no-ws` silences frames, `--quiet` drops
 everything but failures and scenario output. The viewport is 1280×900 unless
 `--width=`/`--height=` say otherwise; `--mobile` adds touch emulation and the
 mobile viewport flag, so `--width=390 --height=844 --mobile` is a phone (the
-`max-width: 768px` layout, off-canvas sidebar and user list).
+`max-width: 768px` layout, off-canvas sidebar and user list). Without
+`--mobile` the run declares a mouse (`--blink-settings` hover type 2, pointer
+type 4): a headless Chromium with no input device answers `(hover: none)` and
+`(pointer: none)`, which is neither a desktop nor a phone, and the
+`@media (hover: none)` rules — the message action toolbar's touch mode, say —
+would otherwise apply to a run that hovers.
 
 ## Scenarios
 
 A scenario is a `.mjs` module in `tools/scenarios/` whose default export is
 `async (page) => {…}`. It may also export `url` as its default target;
 `--url=` overrides. The process exits non-zero if any check failed, so a
-scenario doubles as a smoke check.
+scenario doubles as a smoke check. `translate-reading.mjs`,
+`translate-composer.mjs` and `translate-cpu-real.mjs` run in
+`#seance-translate` rather than `#seance`, so their scripted lines never land
+in a tester's own channel context.
 
 A WebSocket frame error is normally counted as a failure of its own, because
 one usually means the client sent something the browser or the ircd would not

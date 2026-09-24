@@ -7,6 +7,7 @@
 import {ChanType} from "../../../../shared/types/chan";
 import {MessageType} from "../../../../shared/types/msg";
 import {formatLine} from "../message";
+import {t} from "../../i18n/core";
 import type {Command} from "../types";
 
 const shortcuts: Record<string, string> = {
@@ -32,7 +33,7 @@ const mode: Command = {
 			if (chan.type !== ChanType.CHANNEL) {
 				client.pushMessage(chan, {
 					type: MessageType.ERROR,
-					text: `${cmd} command can only be used in channels.`,
+					text: t("cmd.channelsOnly", {cmd}),
 				});
 				return;
 			}
@@ -40,7 +41,7 @@ const mode: Command = {
 			if (params.length === 0) {
 				client.pushMessage(chan, {
 					type: MessageType.ERROR,
-					text: `Usage: /${cmd} <nick> [...nick]`,
+					text: t("cmd.usageNickMulti", {cmd}),
 				});
 				return;
 			}
@@ -67,11 +68,14 @@ const mode: Command = {
 
 		if (params.length === 1) {
 			// A query: show the reply even when it repeats the modes we
-			// already display (handlers/mode.ts hides join-burst repeats).
+			// already display (handlers/mode.ts hides join-burst repeats),
+			// and even for a channel we are not in (normally dropped).
 			const target = client.findChannel(params[0]);
 
 			if (target) {
 				target.modesAsked = true;
+			} else if (client.isupport.chantypes.includes(params[0][0])) {
+				client.markInfoAsked(params[0]);
 			}
 		}
 

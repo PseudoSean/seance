@@ -1,0 +1,172 @@
+/* Oikarinen — named for IRC's creator; the same CRT as sandrof.css in amber
+ * phosphor (P3, the other monitor on the desk). sandrof.css's rules, every
+ * green an amber: the glow, the scanlines' grid, the active row's light and
+ * the nick palette are restated here because they carry literal colours.
+ *
+ * Contrast on the chat's near-black: the amber text (#ffb000) 11:1, muted
+ * text (#b37800) 5.4:1, the placeholder and icon tone (#996600) 4.1:1, the
+ * headings (#ffc84d) 13:1, the quit orange-red (#ff7a5c) 7.9:1.
+ *
+ * The nick palette is 32 slots (style.css hashes nicks into 32); the theme
+ * is monochrome so nicks stay in the amber family and differ by lightness
+ * and a touch of hue (orange to yellow), all >= 9:1 on --chat-bg. */
+@import "sandrof.css";
+
+:root {
+	color-scheme: dark;
+
+	/* Chat surface: nearly black, faintly warm. */
+	--chat-bg: #090604;
+	--chat-fg: #ffb000;
+	--chat-fg-muted: #b37800;
+	--chat-fg-faint: #960;
+	--chat-heading: #ffc84d;
+	--chat-rule: #2a1c05;
+	--chat-accent: #ffc84d;
+	--chat-accent-fg: #090604;
+	--chat-accent-rule: #7a5210;
+	--chat-highlight-bg: #1f1408;
+	--chat-selection: #40300f;
+	--composer-bg: #0d0905;
+	--composer-border: #3d2a0a;
+	--window-border: #2a1c05;
+	--window-shadow: 0 0 25px rgb(40 25 0 / 80%);
+	--menu-bg: #0d0905;
+
+	/* Sidebar rail: CRT black. The pattern is painted on #sidebar below. */
+	--rail-bg-top: #100a04;
+	--rail-bg-bottom: #040301;
+	--rail-fg: #e6a000;
+	--rail-fg-strong: #ffc84d;
+	--rail-fg-active: #ffd680;
+	--rail-fg-muted: #9a6a00;
+	--rail-item-active-bg: rgb(140 90 10 / 28%);
+	--rail-item-hover-bg: rgb(140 90 10 / 16%);
+	--rail-accent: #ffc84d;
+	--rail-accent-fg: #040301;
+	--rail-badge-bg: #3a2a0c;
+	--rail-badge-fg: #ffd680;
+	--rail-input-bg: #040301;
+	--rail-input-border: #5a3f10;
+
+	/* Message semantics. */
+	--event-join: #ffc84d;
+	--event-quit: #ff7a5c;
+	--nick-default: #ffd680;
+	--notice-color: #fd5;
+	--action-color: #ff9a3c;
+
+	/* Notice boxes. */
+	--note-bg: #1a1207;
+	--note-fg: #ffc84d;
+	--warn-bg: #1f1a05;
+	--warn-fg: #ffd966;
+	--error-bg: #2a0a0a;
+	--error-fg: #ff6b6b;
+	--ok-bg: #1a1207;
+	--ok-fg: #ffc84d;
+
+	/* Tints, focus ring, scrollbars. */
+	--tint-soft: rgb(255 176 0 / 5%);
+	--tint-strong: rgb(255 176 0 / 10%);
+	--accent-tint-20: rgb(255 200 77 / 20%);
+	--accent-tint-30: rgb(255 200 77 / 30%);
+	--focus-ring: rgb(255 200 77 / 55%);
+	--scrollbar-track: rgb(255 176 0 / 6%);
+	--scrollbar-thumb: rgb(255 176 0 / 25%);
+	--scrollbar-thumb-active: rgb(255 176 0 / 45%);
+
+	/* Code blocks. */
+	--tok-comment: #b37800;
+	--tok-keyword: #fd5;
+	--tok-string: #ff9a3c;
+	--tok-number: #ffd680;
+	--tok-function: #ffe699;
+	--tok-operator: #ffc84d;
+	--tok-punctuation: #e6a000;
+	--tok-tag: #ffc84d;
+	--tok-attr: #fd5;
+}
+
+/* Text glows a little, like phosphor. */
+#chat .msg .text,
+#chat .from .user,
+#sidebar .name {
+	text-shadow: 0 0 0.35em rgb(255 176 0 / 30%);
+}
+
+/* The rail is a CRT: scanlines over a phosphor glow that fades towards the
+ * bottom, and a faint grid so the pattern reads even with nothing on it. */
+#sidebar,
+body {
+	background:
+		repeating-linear-gradient(
+			180deg,
+			rgb(0 0 0 / 0%) 0,
+			rgb(0 0 0 / 0%) 2px,
+			rgb(0 0 0 / 35%) 2px,
+			rgb(0 0 0 / 35%) 3px
+		),
+		repeating-linear-gradient(
+			90deg,
+			rgb(255 176 0 / 0%) 0,
+			rgb(255 176 0 / 0%) 23px,
+			rgb(255 176 0 / 4%) 23px,
+			rgb(255 176 0 / 4%) 24px
+		),
+		radial-gradient(ellipse at 50% 0%, rgb(110 70 10 / 55%) 0%, rgb(16 10 4 / 0%) 60%),
+		linear-gradient(180deg, var(--rail-bg-top) 0%, var(--rail-bg-bottom) 100%);
+}
+
+#sidebar {
+	box-shadow: inset -1px 0 0 rgb(255 176 0 / 12%);
+}
+
+/* The rail's inner edge faces the chat; in RTL the rail sits on the other
+ * side, so the edge moves with it. */
+[dir="rtl"] #sidebar {
+	box-shadow: inset 1px 0 0 rgb(255 176 0 / 12%);
+}
+
+/* The active row lights up its edge in phosphor, not a flat fill. */
+#sidebar .channel-list-item.active {
+	box-shadow: inset 2px 0 0 var(--rail-accent), inset 0 0 1.5em rgb(255 176 0 / 8%);
+}
+
+[dir="rtl"] #sidebar .channel-list-item.active {
+	box-shadow: inset -2px 0 0 var(--rail-accent), inset 0 0 1.5em rgb(255 176 0 / 8%);
+}
+
+/* Nick palette: ambers only, varied by lightness and a touch of hue. */
+.user.color-1 { color: #ff9233; }
+.user.color-2 { color: #ffb255; }
+.user.color-3 { color: #ffcc78; }
+.user.color-4 { color: #ffc53e; }
+.user.color-5 { color: #ffdc61; }
+.user.color-6 { color: #ffed83; }
+.user.color-7 { color: #fff34a; }
+.user.color-8 { color: #ffb86c; }
+.user.color-9 { color: #ffac33; }
+.user.color-10 { color: #ffc755; }
+.user.color-11 { color: #ffdd78; }
+.user.color-12 { color: #ffde3e; }
+.user.color-13 { color: #fff061; }
+.user.color-14 { color: #ffbf83; }
+.user.color-15 { color: #ffaf4a; }
+.user.color-16 { color: #ffca6c; }
+.user.color-17 { color: #ffc533; }
+.user.color-18 { color: #ffdc55; }
+.user.color-19 { color: #ffee78; }
+.user.color-20 { color: #fff63e; }
+.user.color-21 { color: #ffb561; }
+.user.color-22 { color: #ffce83; }
+.user.color-23 { color: #ffc64a; }
+.user.color-24 { color: #ffdc6c; }
+.user.color-25 { color: #ffdf33; }
+.user.color-26 { color: #fff155; }
+.user.color-27 { color: #ffbb78; }
+.user.color-28 { color: #ffad3e; }
+.user.color-29 { color: #ffc861; }
+.user.color-30 { color: #ffde83; }
+.user.color-31 { color: #ffdd4a; }
+.user.color-32 { color: #ffef6c; }

@@ -7,18 +7,19 @@
 			:class="{sheet, flipped}"
 			:style="style"
 			role="dialog"
-			aria-label="Add a reaction"
+			:aria-label="dialogAria"
 			@keydown.esc.stop.prevent="$emit('close')"
 		>
 			<div class="reaction-picker-search">
 				<input
 					ref="input"
 					v-model="query"
+					dir="auto"
 					type="text"
 					class="reaction-picker-input"
 					:maxlength="MAX_REACTION_LENGTH * 2"
-					placeholder="Search emoji, or type any reaction"
-					aria-label="Search emoji, or type any reaction"
+					:placeholder="searchPlaceholder"
+					:aria-label="searchPlaceholder"
 					role="combobox"
 					aria-expanded="true"
 					aria-autocomplete="list"
@@ -33,8 +34,8 @@
 					v-if="query"
 					type="button"
 					class="reaction-picker-clear"
-					aria-label="Clear search"
-					title="Clear search"
+					:aria-label="clearSearch"
+					:title="clearSearch"
 					@mousedown.prevent
 					@click="clear"
 				>
@@ -42,7 +43,7 @@
 				</button>
 			</div>
 
-			<div class="reaction-picker-tabs" role="tablist" aria-label="Emoji groups">
+			<div class="reaction-picker-tabs" role="tablist" :aria-label="tabsAria">
 				<button
 					v-for="tab in tabs"
 					:key="tab.key"
@@ -65,7 +66,7 @@
 				ref="list"
 				class="reaction-picker-list"
 				role="listbox"
-				aria-label="Emoji"
+				:aria-label="listAria"
 				@scroll.passive="onScroll"
 				@mousedown.prevent
 				@click="onListClick"
@@ -73,7 +74,7 @@
 				@mouseleave="onListLeave"
 			>
 				<p v-if="failed" class="reaction-picker-note">
-					The emoji list could not be loaded. You can still type a reaction above.
+					{{ t("reactions.loadFailed") }}
 				</p>
 				<section
 					v-for="section in sections"
@@ -84,7 +85,13 @@
 					:aria-label="section.label"
 				>
 					<h2 class="reaction-picker-heading" aria-hidden="true">{{ section.label }}</h2>
-					<div class="reaction-picker-grid" role="presentation">
+					<div
+						v-if="section.options.length === 0"
+						class="reaction-picker-grid reaction-picker-placeholder"
+						role="presentation"
+						:style="{'--rows': Math.ceil(section.count / columns)}"
+					/>
+					<div v-else class="reaction-picker-grid" role="presentation">
 						<button
 							v-for="option in section.options"
 							:id="`${uid}-opt-${option.index}`"
@@ -103,13 +110,16 @@
 							:aria-label="option.spoken"
 							:data-index="option.index"
 						>
-							<span v-if="option.free" class="reaction-picker-free-label"
-								>React with</span
+							<span v-if="option.free" class="reaction-picker-free-label">{{
+								t("reactions.freePrefix")
+							}}</span
 							>{{ option.label }}
 						</button>
 					</div>
 				</section>
-				<p v-if="!failed && !catalog" class="reaction-picker-note">Loading emoji…</p>
+				<p v-if="!failed && !catalog" class="reaction-picker-note">
+					{{ t("reactions.loading") }}
+				</p>
 			</div>
 
 			<div class="reaction-picker-preview">
@@ -130,10 +140,12 @@
 				<template v-else-if="building">
 					<span class="reaction-picker-preview-emoji">{{ building }}</span>
 					<span class="reaction-picker-preview-text">
-						<span class="reaction-picker-preview-name">Building a reaction</span>
-						<span class="reaction-picker-preview-desc"
-							>Shift-click to add more emoji</span
-						>
+						<span class="reaction-picker-preview-name">{{
+							t("reactions.buildingName")
+						}}</span>
+						<span class="reaction-picker-preview-desc">{{
+							t("reactions.buildingHint")
+						}}</span>
 					</span>
 					<button
 						type="button"
@@ -141,12 +153,12 @@
 						@mousedown.prevent
 						@click="pickTyped"
 					>
-						Send
+						{{ t("reactions.send") }}
 					</button>
 				</template>
-				<span v-else class="reaction-picker-preview-hint"
-					>Pick an emoji, type a word, or shift-click to combine several.</span
-				>
+				<span v-else class="reaction-picker-preview-hint">{{
+					t("reactions.emptyHint")
+				}}</span>
 			</div>
 		</div>
 	</Teleport>
@@ -160,10 +172,12 @@ import {
 	onBeforeUnmount,
 	onMounted,
 	PropType,
+	reactive,
 	ref,
 	watch,
 } from "vue";
 import eventbus from "../js/eventbus";
+import {useI18n} from "../js/i18n";
 import {
 	appendReaction,
 	EmojiEntry,
@@ -176,7 +190,8 @@ import {
 	normalizeReaction,
 	searchEmoji,
 } from "../js/helpers/emoji";
-import {DEFAULT_REACTIONS, recentReactions, rememberReaction} from "../js/helpers/reactionRecents";
+import {DEFAULT_REACTIONS, recentReactions} from "../js/helpers/reactionRecents";
+import {settle, visibleHeight} from "../js/helpers/viewport";
 
 /** One thing the list offers: an emoji, a remembered reaction, or typed text. */
 type Option = {
@@ -198,7 +213,12 @@ type Option = {
 	free?: boolean;
 };
 
-type Section = {key: string; label: string; options: Option[]};
+/**
+ * One group of the list. `start`/`count` place it in the flat index space
+ * the keyboard walks; `options` is built only for a rendered group (the
+ * rest are placeholders, see `rendered`), so it is empty for the others.
+ */
+type Section = {key: string; label: string; start: number; count: number; options: Option[]};
 
 /** Gap between the anchor and the popover, and the margin it keeps off screen edges. */
 const GAP = 6;
@@ -208,6 +228,10 @@ const MAX_HEIGHT = 360;
 const MIN_HEIGHT = 180;
 /** Options considered when an arrow key looks for the row above or below. */
 const NEIGHBOURHOOD = 40;
+/** How far below the fold, in px, a group is rendered ahead of the scroll reaching it. */
+const RENDER_AHEAD = 320;
+/** Columns of the popover's grid before one has been counted (21.25rem wide, 2.25rem cells). */
+const DEFAULT_COLUMNS = 8;
 
 // Unique per open picker, so ARIA ids never collide with a closing one.
 let instances = 0;
@@ -230,6 +254,12 @@ export default defineComponent({
 	},
 	emits: ["pick", "close"],
 	setup(props, {emit}) {
+		const {t} = useI18n();
+		const dialogAria = computed(() => t("reactions.dialogAria"));
+		const searchPlaceholder = computed(() => t("reactions.searchPlaceholder"));
+		const clearSearch = computed(() => t("reactions.clearSearch"));
+		const tabsAria = computed(() => t("reactions.tabsAria"));
+		const listAria = computed(() => t("reactions.listAria"));
 		const uid = `reaction-picker-${++instances}`;
 		const root = ref<HTMLDivElement | null>(null);
 		const input = ref<HTMLInputElement | null>(null);
@@ -289,7 +319,7 @@ export default defineComponent({
 				label: text,
 				title: text,
 				name: text,
-				description: emoji ? "" : "sent as text",
+				description: emoji ? "" : t("reactions.sentAsText"),
 				spoken: text,
 				emoji,
 			};
@@ -299,10 +329,10 @@ export default defineComponent({
 		const freeOption = (text: string): Omit<Option, "index"> => ({
 			text,
 			label: text,
-			title: `React with ${text}`,
+			title: t("reactions.titleTemplate", {reaction: text}),
 			name: text,
-			description: "sent as text",
-			spoken: `React with ${text}`,
+			description: t("reactions.sentAsText"),
+			spoken: t("reactions.titleTemplate", {reaction: text}),
 			emoji: isEmojiOnly(text),
 			free: true,
 		});
@@ -319,10 +349,38 @@ export default defineComponent({
 			return typed.length > 0 && isEmojiOnly(typed);
 		});
 
+		/**
+		 * Which groups have their buttons in the DOM. The catalog is ~1900
+		 * emoji, and a button each took the open past 100 ms on a throttled
+		 * CPU — and on Android every glyph in the DOM is rasterised whether
+		 * or not it is on screen. So a group is a sized placeholder until the
+		 * scroll comes near it (or its tab, or the keyboard, asks for it),
+		 * and from then on it stays rendered. The first two sections — the
+		 * recents and the first group, or the search results — are always
+		 * rendered; that is what the picker opens on.
+		 */
+		const rendered = reactive(new Set<string>());
+		const render = (key: string) => void rendered.add(key);
+
 		const sections = computed<Section[]>(() => {
-			let index = 0;
-			const number = (options: Omit<Option, "index">[]): Option[] =>
-				options.map((option) => ({...option, index: index++}));
+			const firstGroup = catalog.value?.[0]?.key;
+			let start = 0;
+
+			const section = (
+				key: string,
+				label: string,
+				count: number,
+				build: () => Omit<Option, "index">[]
+			): Section => {
+				const at = start;
+				start += count;
+				const options =
+					at === 0 || key === firstGroup || rendered.has(key)
+						? build().map((option, i) => ({...option, index: at + i}))
+						: [];
+
+				return {key, label, start: at, count, options};
+			};
 
 			const typed = query.value.trim();
 
@@ -350,29 +408,33 @@ export default defineComponent({
 				}
 
 				return [
-					{
-						key: "results",
-						label: hits.length > 0 ? "Search results" : "No emoji match",
-						options: number(options),
-					},
+					section(
+						"results",
+						hits.length > 0 ? t("reactions.searchResults") : t("reactions.noMatch"),
+						options.length,
+						() => options
+					),
 				];
 			}
 
-			const known = recent.value;
+			const known = recent.value.length > 0 ? recent.value : DEFAULT_REACTIONS;
 			const out: Section[] = [
-				{
-					key: "recent",
-					label: known.length > 0 ? "Recently used" : "Quick reactions",
-					options: number((known.length > 0 ? known : DEFAULT_REACTIONS).map(textOption)),
-				},
+				section(
+					"recent",
+					recent.value.length > 0
+						? t("reactions.recentlyUsed")
+						: t("reactions.quickReactions"),
+					known.length,
+					() => known.map(textOption)
+				),
 			];
 
 			for (const group of catalog.value ?? []) {
-				out.push({
-					key: group.key,
-					label: group.label,
-					options: number(group.emoji.map(entryOption)),
-				});
+				out.push(
+					section(group.key, group.label, group.emoji.length, () =>
+						group.emoji.map(entryOption)
+					)
+				);
 			}
 
 			return out;
@@ -381,7 +443,10 @@ export default defineComponent({
 		const tabs = computed(() => [
 			{
 				key: "recent",
-				label: recent.value.length > 0 ? "Recently used" : "Quick reactions",
+				label:
+					recent.value.length > 0
+						? t("reactions.recentlyUsed")
+						: t("reactions.quickReactions"),
 				icon: "🕘",
 			},
 			...(catalog.value ?? []).map((group) => ({
@@ -391,11 +456,73 @@ export default defineComponent({
 			})),
 		]);
 
-		const options = computed<Option[]>(() =>
-			sections.value.flatMap((section) => section.options)
-		);
+		/** How many options there are in all, rendered or not: the keyboard's bound. */
+		const total = computed(() => {
+			const last = sections.value[sections.value.length - 1];
 
-		const active = computed<Option | undefined>(() => options.value[activeIndex.value]);
+			return last ? last.start + last.count : 0;
+		});
+
+		/** The section an option index belongs to. */
+		const sectionOf = (index: number) =>
+			sections.value.find((s) => index >= s.start && index < s.start + s.count);
+
+		/** The option at a flat index — undefined past the end or in a placeholder. */
+		const optionAt = (index: number) => {
+			const s = sectionOf(index);
+
+			return s?.options[index - s.start];
+		};
+
+		/**
+		 * Columns of the grid, counted off the first row of a rendered group,
+		 * so a placeholder's row count (its height is `--rows` × the cell
+		 * pitch, in style.css) is right at any width. Cells are uniform in a
+		 * catalog group, which is why the recents row is skipped.
+		 */
+		const columns = ref(DEFAULT_COLUMNS);
+
+		const countColumns = () => {
+			const cells = list.value?.querySelectorAll<HTMLElement>(
+				`[data-key="${catalog.value?.[0]?.key ?? ""}"] .reaction-picker-option`
+			);
+			const first = cells?.[0];
+
+			if (!first) {
+				return;
+			}
+
+			let n = 0;
+
+			for (const cell of cells) {
+				if (cell.offsetTop !== first.offsetTop) {
+					break;
+				}
+
+				n++;
+			}
+
+			columns.value = n;
+		};
+
+		/** Render every group whose placeholder is within reach of the scroll. */
+		const renderNear = () => {
+			const container = list.value;
+
+			if (!container) {
+				return;
+			}
+
+			const reach = container.scrollTop + container.clientHeight + RENDER_AHEAD;
+
+			for (const el of container.querySelectorAll<HTMLElement>("[data-key]")) {
+				if (el.offsetTop < reach) {
+					render(el.dataset.key ?? "");
+				}
+			}
+		};
+
+		const active = computed<Option | undefined>(() => optionAt(activeIndex.value));
 		const isSelected = (option: Option) => props.selected.includes(option.text);
 
 		/** The reaction being built, shown by the preview bar while it is. */
@@ -408,10 +535,10 @@ export default defineComponent({
 			}
 
 			if (isSelected(active.value)) {
-				return "Remove";
+				return t("reactions.hintRemove");
 			}
 
-			return active.value.free ? "Enter to send" : "⇧ to combine";
+			return active.value.free ? t("reactions.hintSend") : t("reactions.hintCombine");
 		});
 
 		const pick = (text: string) => {
@@ -421,17 +548,9 @@ export default defineComponent({
 				return;
 			}
 
-			// Taking one of ours back off is not a use of it: it would jump to
-			// the front of the recents on its way out.
-			if (!props.selected.includes(normalized)) {
-				rememberReaction(normalized);
-			}
-
 			emit("pick", normalized);
 			emit("close");
 		};
-
-		const optionAt = (index: number) => options.value[index];
 
 		/**
 		 * Add `text` to what is being built instead of sending it — the
@@ -469,8 +588,15 @@ export default defineComponent({
 		};
 
 		const setActive = (index: number) => {
-			if (index < 0 || index >= options.value.length) {
+			if (index < 0 || index >= total.value) {
 				return;
+			}
+
+			// The keyboard can land in a group that is still a placeholder.
+			const section = sectionOf(index);
+
+			if (section) {
+				render(section.key);
 			}
 
 			activeIndex.value = index;
@@ -499,7 +625,7 @@ export default defineComponent({
 
 			for (
 				let i = Math.max(0, activeIndex.value - NEIGHBOURHOOD);
-				i <= Math.min(options.value.length - 1, activeIndex.value + NEIGHBOURHOOD);
+				i <= Math.min(total.value - 1, activeIndex.value + NEIGHBOURHOOD);
 				i++
 			) {
 				if (i === activeIndex.value) {
@@ -543,10 +669,24 @@ export default defineComponent({
 			const collapsed = caret === (el.selectionEnd ?? 0);
 
 			switch (e.key) {
-				case "ArrowDown":
+				case "ArrowDown": {
 					e.preventDefault();
-					setActive(activeIndex.value < 0 ? 0 : rowNeighbour(true));
+
+					if (activeIndex.value < 0) {
+						setActive(0);
+						break;
+					}
+
+					// Nothing rendered below: the next group's first cell, which
+					// is where the eye goes anyway (indices run on across groups;
+					// past the last one, setActive declines).
+					const below = rowNeighbour(true);
+					const here = sectionOf(activeIndex.value);
+					setActive(
+						below === activeIndex.value && here ? here.start + here.count : below
+					);
 					break;
+				}
 
 				case "ArrowUp":
 					e.preventDefault();
@@ -560,7 +700,11 @@ export default defineComponent({
 				// Left and right walk the grid, but only once the caret has
 				// nowhere left to go — editing what you typed comes first.
 				case "ArrowRight":
-					if (collapsed && caret === el.value.length && optionAt(activeIndex.value + 1)) {
+					if (
+						collapsed &&
+						caret === el.value.length &&
+						activeIndex.value + 1 < total.value
+					) {
 						e.preventDefault();
 						setActive(activeIndex.value + 1);
 					}
@@ -646,6 +790,7 @@ export default defineComponent({
 
 		const goToSection = (key: string) => {
 			query.value = "";
+			render(key);
 
 			void nextTick(() => {
 				const container = list.value;
@@ -677,11 +822,17 @@ export default defineComponent({
 			}
 
 			currentTab.value = key;
+			renderNear();
 		};
 
 		// A phone gets the sheet at the bottom of the screen; there is no room
-		// for a popover once the on-screen keyboard is up.
-		const sheetQuery = window.matchMedia("(max-width: 479px)");
+		// for a popover once the on-screen keyboard is up. Sideways too: the
+		// second clause is the landscape-phone half of `PHONE_LAYOUT_QUERY`
+		// (helpers/device.ts) — a touch device under 500px tall with the
+		// keyboard up keeps ~190px, and a 21rem popover there showed one row.
+		const sheetQuery = window.matchMedia(
+			"(max-width: 479px), (max-height: 500px) and (hover: none) and (pointer: coarse)"
+		);
 		const sheet = ref(sheetQuery.matches);
 
 		const onSheetChange = (e: MediaQueryListEvent) => {
@@ -714,12 +865,18 @@ export default defineComponent({
 			}
 
 			const rect = anchor.getBoundingClientRect();
-			const vh = window.innerHeight;
+			// Room is measured against the visible band, not `innerHeight`: on
+			// iOS the keyboard covers the bottom of the layout viewport without
+			// shrinking it. Offsets stay in layout-viewport terms, which is
+			// what `position: fixed` resolves `top` and `bottom` against.
+			const vh = visibleHeight();
 			const vw = window.innerWidth;
 
 			// Scrolled past the message the picker belongs to: close rather
-			// than float over an unrelated part of the conversation.
-			if (rect.bottom < 0 || rect.top > vh) {
+			// than float over an unrelated part of the conversation. Against
+			// the layout viewport on purpose — an anchor under the keyboard
+			// is covered, not scrolled away.
+			if (rect.bottom < 0 || rect.top > window.innerHeight) {
 				emit("close");
 				return;
 			}
@@ -739,9 +896,27 @@ export default defineComponent({
 				left: `${Math.round(left)}px`,
 				"max-height": `${Math.round(room)}px`,
 				...(flip
-					? {bottom: `${Math.round(vh - rect.top + GAP)}px`}
+					? {bottom: `${Math.round(window.innerHeight - rect.top + GAP)}px`}
 					: {top: `${Math.round(rect.bottom + GAP)}px`}),
 			};
+		};
+
+		// The list has a new shape: place the popover, count the grid's
+		// columns and render the groups in reach. On mount, when the catalog
+		// lands, and whenever the width may have changed.
+		const layoutChanged = () => {
+			reposition();
+			countColumns();
+			renderNear();
+		};
+
+		// The visual viewport's resize that announces the keyboard carries a
+		// mid-animation height (helpers/viewport.ts), so it is re-read.
+		let cancelSettle = () => {};
+
+		const repositionSettled = () => {
+			cancelSettle();
+			cancelSettle = settle(layoutChanged);
 		};
 
 		const close = () => emit("close");
@@ -767,9 +942,12 @@ export default defineComponent({
 			if (list.value && previous.trim() !== next.trim()) {
 				list.value.scrollTop = 0;
 			}
+
+			// A cleared search puts the groups back as placeholders.
+			void nextTick(renderNear);
 		});
 
-		watch(catalog, () => void nextTick(reposition));
+		watch(catalog, () => void nextTick(layoutChanged));
 
 		const onOtherOpened = (other: string) => {
 			if (other !== uid) {
@@ -782,11 +960,12 @@ export default defineComponent({
 			eventbus.on(PICKER_OPENED, onOtherOpened);
 			document.addEventListener("mousedown", onDocumentMouseDown);
 			window.addEventListener("scroll", reposition, true);
-			window.addEventListener("resize", reposition);
+			window.addEventListener("resize", repositionSettled);
+			window.visualViewport?.addEventListener("resize", repositionSettled);
 			sheetQuery.addEventListener("change", onSheetChange);
 			eventbus.on("escapekey", close);
 
-			void nextTick(reposition);
+			void nextTick(layoutChanged);
 
 			// Focusing the field on a touch screen throws up the keyboard over
 			// the emoji the user came here to tap.
@@ -799,7 +978,9 @@ export default defineComponent({
 			eventbus.off(PICKER_OPENED, onOtherOpened);
 			document.removeEventListener("mousedown", onDocumentMouseDown);
 			window.removeEventListener("scroll", reposition, true);
-			window.removeEventListener("resize", reposition);
+			window.removeEventListener("resize", repositionSettled);
+			window.visualViewport?.removeEventListener("resize", repositionSettled);
+			cancelSettle();
 			sheetQuery.removeEventListener("change", onSheetChange);
 			eventbus.off("escapekey", close);
 
@@ -810,6 +991,12 @@ export default defineComponent({
 		});
 
 		return {
+			t,
+			dialogAria,
+			searchPlaceholder,
+			clearSearch,
+			tabsAria,
+			listAria,
 			MAX_REACTION_LENGTH,
 			uid,
 			root,
@@ -829,6 +1016,7 @@ export default defineComponent({
 			building,
 			hint,
 			isSelected,
+			columns,
 			pickTyped,
 			onKeydown,
 			onListClick,

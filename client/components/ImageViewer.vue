@@ -8,18 +8,18 @@
 		@click="onClick"
 	>
 		<template v-if="link !== null">
-			<button class="close-btn" aria-label="Close"></button>
+			<button class="close-btn" :aria-label="closeAria"></button>
 
 			<button
 				v-if="previousImage"
 				class="previous-image-btn"
-				aria-label="Previous image"
+				:aria-label="previousAria"
 				@click.stop="previous"
 			></button>
 			<button
 				v-if="nextImage"
 				class="next-image-btn"
-				aria-label="Next image"
+				:aria-label="nextAria"
 				@click.stop="next"
 			></button>
 
@@ -43,8 +43,10 @@
 import Mousetrap from "mousetrap";
 import {computed, defineComponent, ref, watch} from "vue";
 import eventbus from "../js/eventbus";
+import {useI18n} from "../js/i18n";
 import {useStore} from "../js/store";
 import {isPreviewRevealed} from "../js/helpers/mediaTrust";
+import {setImageViewerClose} from "../js/helpers/imageViewer";
 import {ClientChan, ClientLinkPreview} from "../js/types";
 import {SharedMsg} from "../../shared/types/msg";
 
@@ -52,6 +54,10 @@ export default defineComponent({
 	name: "ImageViewer",
 	setup() {
 		const store = useStore();
+		const {t} = useI18n();
+		const closeAria = computed(() => t("image.close"));
+		const previousAria = computed(() => t("image.previous"));
+		const nextAria = computed(() => t("image.next"));
 		const viewer = ref<HTMLDivElement>();
 		const image = ref<HTMLImageElement>();
 
@@ -449,6 +455,7 @@ export default defineComponent({
 		watch(link, (newLink, oldLink) => {
 			// TODO: history.pushState
 			if (newLink === null) {
+				setImageViewerClose(null);
 				eventbus.off("escapekey", closeViewer);
 				eventbus.off("resize", correctPosition);
 				Mousetrap.unbind("left");
@@ -459,6 +466,7 @@ export default defineComponent({
 			setPrevNextImages();
 
 			if (!oldLink) {
+				setImageViewerClose(closeViewer);
 				eventbus.on("escapekey", closeViewer);
 				eventbus.on("resize", correctPosition);
 				Mousetrap.bind("left", previous);
@@ -467,6 +475,10 @@ export default defineComponent({
 		});
 
 		return {
+			t,
+			closeAria,
+			previousAria,
+			nextAria,
 			link,
 			channel,
 			image,

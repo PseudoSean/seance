@@ -1,8 +1,8 @@
 import {expect} from "chai";
 import sinon from "ts-sinon";
 import {BrandingUploads, DEFAULT_UPLOAD_MAX_BYTES} from "../../client/js/branding";
+import {t} from "../../client/js/i18n/core";
 import {
-	UPLOADS_NOT_CONFIGURED,
 	UploadHost,
 	UploadProgress,
 	Uploader,
@@ -30,8 +30,18 @@ const BOXLABS: BrandingUploads = {
 	optionalFields: ["strip_exif"],
 	responseUrlKey: "results.0.filePath",
 	responseErrorKey: "results.0.error",
-	accept: ["image/png", "image/jpeg", "image/gif", "image/webp"],
-	maxSizeBytes: 10 * 1024 * 1024,
+	accept: [
+		"image/png",
+		"image/jpeg",
+		"image/gif",
+		"image/webp",
+		"video/mp4",
+		"video/quicktime",
+		"video/webm",
+		"video/x-msvideo",
+		"video/x-matroska",
+	],
+	maxSizeBytes: 25 * 1024 * 1024,
 };
 
 function imageFile(name = "pasted.png", type = "image/png"): File {
@@ -265,13 +275,13 @@ describe("upload", function () {
 			const config = {endpoint: ENDPOINT};
 
 			expect(() => parseUploadResponse('{"url":"javascript:alert(1)"}', config)).to.throw(
-				'did not return a "url" URL'
+				t("upload.missingField", {field: "url"})
 			);
 			expect(() => parseUploadResponse('{"error":"quota exceeded"}', config)).to.throw(
 				"quota exceeded"
 			);
 			expect(() => parseUploadResponse("<html>nope</html>", config)).to.throw(
-				"did not return a URL"
+				t("upload.noUrl")
 			);
 		});
 	});
@@ -306,7 +316,7 @@ describe("upload", function () {
 			);
 
 			expect(await rejectionMessage(uploadFile(textFile(), {endpoint: ENDPOINT}))).to.equal(
-				"Upload failed: HTTP 502"
+				t("upload.failedHttp", {status: 502})
 			);
 		});
 
@@ -314,7 +324,7 @@ describe("upload", function () {
 			stubFetch(new TypeError("Failed to fetch"));
 
 			expect(await rejectionMessage(uploadFile(textFile(), {endpoint: ENDPOINT}))).to.equal(
-				"Upload failed: Failed to fetch"
+				t("upload.failed", {reason: "Failed to fetch"})
 			);
 		});
 	});
@@ -406,18 +416,35 @@ describe("upload", function () {
 			expect(fetchStub.callCount).to.equal(2);
 		});
 
-		it("refuses a video before contacting the endpoint", async function () {
-			const fetchStub = stubFetch();
+		it("uploads a video, which the endpoint takes despite its /img/ path", async function () {
+			const fetchStub = stubFetch(
+				jsonResponse({results: [{success: true, filePath: "/img/vid_1.mp4"}]})
+			);
 			const host = fakeHost(BOXLABS);
 
 			await new Uploader(host).triggerUpload([
 				new File(["x"], "clip.mp4", {type: "video/mp4"}),
 			]);
 
-			expect(host.errors).to.deep.equal([
-				"File clip.mp4 is not a type this uploader accepts " +
-					"(image/png, image/jpeg, image/gif, image/webp)",
+			expect(host.errors).to.deep.equal([]);
+			expect(host.urls).to.deep.equal(["https://paste.boxlabs.uk/img/vid_1.mp4"]);
+			expect(fetchStub.called).to.be.true;
+		});
+
+		it("refuses a type the endpoint does not take, before contacting it", async function () {
+			const fetchStub = stubFetch();
+			const host = fakeHost(BOXLABS);
+
+			// Audio is refused by the service as "Unsupported type .ogg", so
+			// there is no reason to spend the upload finding that out.
+			await new Uploader(host).triggerUpload([
+				new File(["x"], "sound.ogg", {type: "audio/ogg"}),
 			]);
+
+			expect(host.errors.length).to.equal(1);
+			expect(host.errors[0]).to.equal(
+				t("upload.badType", {file: "sound.ogg", types: BOXLABS.accept?.join(", ")})
+			);
 			expect(fetchStub.called).to.be.false;
 		});
 
@@ -542,7 +569,7 @@ describe("upload", function () {
 			await uploader.triggerUpload([textFile()]);
 			await uploader.triggerUpload([textFile()]);
 
-			expect(host.errors).to.deep.equal([UPLOADS_NOT_CONFIGURED]);
+			expect(host.errors).to.deep.equal([t("upload.notConfigured")]);
 			expect(host.urls).to.deep.equal([]);
 			expect(fetchStub.called).to.be.false;
 		});
@@ -557,7 +584,7 @@ describe("upload", function () {
 				textFile("ok.txt", "ok"),
 			]);
 
-			expect(host.errors).to.deep.equal(["File big.txt is over the maximum allowed size"]);
+			expect(host.errors).to.deep.equal([t("upload.tooLarge", {file: "big.txt"})]);
 			expect(host.urls).to.deep.equal(["https://cdn.example.test/small"]);
 			expect(fetchStub.calledOnce).to.be.true;
 		});
@@ -588,7 +615,7 @@ describe("upload", function () {
 
 			await uploader.triggerUpload([textFile("a.txt"), textFile("b.txt")]);
 
-			expect(host.errors).to.deep.equal(["Upload failed: Failed to fetch"]);
+			expect(host.errors).to.deep.equal([t("upload.failed", {reason: "Failed to fetch"})]);
 			expect(host.urls).to.deep.equal(["https://x.test/ok"]);
 		});
 
@@ -599,9 +626,7 @@ describe("upload", function () {
 
 			await new Uploader(host).triggerUpload([textFile()]);
 
-			expect(host.errors).to.deep.equal([
-				"You are currently disconnected, unable to initiate upload process.",
-			]);
+			expect(host.errors).to.deep.equal([t("upload.disconnected")]);
 			expect(fetchStub.called).to.be.false;
 		});
 	});
@@ -621,7 +646,7 @@ describe("upload", function () {
 			expect(host.confirmed.map((files) => files.map((f) => f.name))).to.deep.equal([
 				["a.png", "b.png"],
 			]);
-			expect(host.errors).to.deep.equal(["File big.txt is over the maximum allowed size"]);
+			expect(host.errors).to.deep.equal([t("upload.tooLarge", {file: "big.txt"})]);
 			expect(host.urls).to.deep.equal(["https://cdn.example.test/b"]);
 			expect(fetchStub.calledOnce).to.be.true;
 			expect(
@@ -770,7 +795,7 @@ describe("upload", function () {
 			(await lastXhr()).fail();
 			await run;
 
-			expect(host.errors).to.deep.equal(["Upload failed: Failed to fetch"]);
+			expect(host.errors).to.deep.equal([t("upload.failed", {reason: "Failed to fetch"})]);
 			expect(host.progressLog[host.progressLog.length - 1]).to.equal(null);
 		});
 	});
@@ -931,7 +956,9 @@ describe("upload", function () {
 			xhr.progress(2, 5);
 			xhr.fail();
 
-			expect(await rejectionMessage(pending)).to.equal("Upload failed: Failed to fetch");
+			expect(await rejectionMessage(pending)).to.equal(
+				t("upload.failed", {reason: "Failed to fetch"})
+			);
 			expect(FakeXhr.instances).to.have.length(1);
 			expect(unavailable).to.equal(0);
 		});
@@ -940,7 +967,9 @@ describe("upload", function () {
 			const pending = uploadFile(textFile(), {endpoint: ENDPOINT}, {xhr: XHR});
 			(await lastXhr()).fail();
 
-			expect(await rejectionMessage(pending)).to.equal("Upload failed: Failed to fetch");
+			expect(await rejectionMessage(pending)).to.equal(
+				t("upload.failed", {reason: "Failed to fetch"})
+			);
 			expect(FakeXhr.instances).to.have.length(1);
 		});
 

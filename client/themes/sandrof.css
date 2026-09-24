@@ -1,0 +1,188 @@
+/* Sandrof — named for ircII's author; phosphor green on black. coffee.css's
+ * rules with a terminal palette: the chat on a near-black with a hint of
+ * green, the rail a CRT with scanlines and a soft phosphor glow, everything
+ * in green. Colour (and a monospace face) only. oikarinen.css is the same
+ * screen in amber and imports this one.
+ *
+ * The nick palette is 32 slots (style.css hashes nicks into 32); the theme is
+ * monochrome so nicks stay in the green family and differ by lightness and a
+ * touch of hue (yellow-green to blue-green), all >= 5:1 on --chat-bg. */
+@import "coffee.css";
+
+:root {
+	color-scheme: dark;
+
+	/* Chat surface: nearly black, faintly green. */
+	--chat-bg: #050905;
+	--chat-fg: #3f6;
+	--chat-fg-muted: #1fa64a;
+	--chat-fg-faint: #1a8a3e;
+	--chat-heading: #6f9;
+	--chat-rule: #0f2a17;
+	--chat-accent: #6f9;
+	--chat-accent-fg: #050905;
+	--chat-accent-rule: #1f7a3a;
+	--chat-highlight-bg: #0a1f0f;
+	--chat-selection: #12402a;
+	--composer-bg: #070d08;
+	--composer-border: #143d20;
+	--window-border: #0f2a17;
+	--window-shadow: 0 0 25px rgb(0 40 0 / 80%);
+	--menu-bg: #070d08;
+
+	/* Sidebar rail: CRT black. The pattern is painted on #sidebar below. */
+	--rail-bg-top: #061006;
+	--rail-bg-bottom: #020402;
+	--rail-fg: #2ed45c;
+	--rail-fg-strong: #6f9;
+	--rail-fg-active: #8cffb3;
+	--rail-fg-muted: #1c8a3f;
+	--rail-item-active-bg: rgb(30 120 50 / 28%);
+	--rail-item-hover-bg: rgb(30 120 50 / 16%);
+	--rail-accent: #6f9;
+	--rail-accent-fg: #020402;
+	--rail-badge-bg: #0f3a1c;
+	--rail-badge-fg: #8cffb3;
+	--rail-input-bg: #020402;
+	--rail-input-border: #1a5a2c;
+
+	/* Message semantics. */
+	--event-join: #6f9;
+	--event-quit: #ffb347;
+	--nick-default: #8cffb3;
+	--notice-color: #b3ff66;
+	--action-color: #6fc;
+
+	/* Notice boxes. */
+	--note-bg: #071a0c;
+	--note-fg: #6f9;
+	--warn-bg: #1f1a05;
+	--warn-fg: #ffd966;
+	--error-bg: #2a0a0a;
+	--error-fg: #ff6b6b;
+	--ok-bg: #071a0c;
+	--ok-fg: #6f9;
+
+	/* Tints, focus ring, scrollbars. */
+	--tint-soft: rgb(51 255 102 / 5%);
+	--tint-strong: rgb(51 255 102 / 10%);
+	--accent-tint-20: rgb(102 255 153 / 20%);
+	--accent-tint-30: rgb(102 255 153 / 30%);
+	--focus-ring: rgb(102 255 153 / 55%);
+	--scrollbar-track: rgb(51 255 102 / 6%);
+	--scrollbar-thumb: rgb(51 255 102 / 25%);
+	--scrollbar-thumb-active: rgb(51 255 102 / 45%);
+
+	/* Code blocks. */
+	--tok-comment: #1fa64a;
+	--tok-keyword: #b3ff66;
+	--tok-string: #6fc;
+	--tok-number: #8cffb3;
+	--tok-function: #cf9;
+	--tok-operator: #6f9;
+	--tok-punctuation: #2ed45c;
+	--tok-tag: #6f9;
+	--tok-attr: #b3ff66;
+}
+
+/* A terminal is monospaced. */
+body,
+#chat,
+#sidebar,
+#form #input,
+button,
+input,
+select,
+textarea {
+	font-family: "DejaVu Sans Mono", "Fira Mono", "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* A monospace face is wider than the base stylesheet's timestamp column
+ * allows for; room for "07:52 PM" and "07:52:30 PM". */
+#chat.time-12h .time,
+#chat.time-seconds .time {
+	width: 5.25rem;
+}
+
+#chat.time-seconds.time-12h .time {
+	width: 7rem;
+}
+
+/* Text glows a little, like phosphor. */
+#chat .msg .text,
+#chat .from .user,
+#sidebar .name {
+	text-shadow: 0 0 0.35em rgb(51 255 102 / 30%);
+}
+
+/* The rail is a CRT: horizontal scanlines (about 4 per character height,
+ * coarser than a real tube's 8 so they read as lines, not texture) over a phosphor glow that is
+ * brightest near the top and fades down the tube, with a darker vignette at
+ * the edges the way a curved screen falls off. */
+#sidebar,
+body {
+	background:
+		repeating-linear-gradient(
+			180deg,
+			rgb(0 0 0 / 0%) 0,
+			rgb(0 0 0 / 0%) 0.2rem,
+			rgb(0 0 0 / 45%) 0.2rem,
+			rgb(0 0 0 / 45%) 0.3rem
+		),
+		radial-gradient(ellipse 120% 90% at 50% 50%, rgb(0 0 0 / 0%) 55%, rgb(0 0 0 / 55%) 100%),
+		radial-gradient(ellipse 90% 45% at 50% 0%, rgb(20 110 45 / 50%) 0%, rgb(6 16 6 / 0%) 100%),
+		linear-gradient(180deg, var(--rail-bg-top) 0%, var(--rail-bg-bottom) 100%);
+}
+
+#sidebar {
+	box-shadow: inset -1px 0 0 rgb(51 255 102 / 12%);
+}
+
+/* The rail's inner edge faces the chat; in RTL the rail sits on the other
+ * side, so the edge moves with it. */
+[dir="rtl"] #sidebar {
+	box-shadow: inset 1px 0 0 rgb(51 255 102 / 12%);
+}
+
+/* The active row lights up its edge in phosphor, not a flat fill. */
+#sidebar .channel-list-item.active {
+	box-shadow: inset 2px 0 0 var(--rail-accent), inset 0 0 1.5em rgb(51 255 102 / 8%);
+}
+
+[dir="rtl"] #sidebar .channel-list-item.active {
+	box-shadow: inset -2px 0 0 var(--rail-accent), inset 0 0 1.5em rgb(51 255 102 / 8%);
+}
+
+/* Nick palette: greens only, varied by lightness and a touch of hue. */
+.user.color-1 { color: #7dff9e; }
+.user.color-2 { color: #a6ff7a; }
+.user.color-3 { color: #5cf58a; }
+.user.color-4 { color: #c4ff8c; }
+.user.color-5 { color: #6dffc2; }
+.user.color-6 { color: #8ef77c; }
+.user.color-7 { color: #4de08a; }
+.user.color-8 { color: #b8ffb0; }
+.user.color-9 { color: #62ffb0; }
+.user.color-10 { color: #9cff66; }
+.user.color-11 { color: #7aeaa0; }
+.user.color-12 { color: #d0ff70; }
+.user.color-13 { color: #5cffd0; }
+.user.color-14 { color: #88e070; }
+.user.color-15 { color: #40f070; }
+.user.color-16 { color: #afc; }
+.user.color-17 { color: #70ff88; }
+.user.color-18 { color: #b0ff5c; }
+.user.color-19 { color: #55e8a8; }
+.user.color-20 { color: #cfa; }
+.user.color-21 { color: #66f5d8; }
+.user.color-22 { color: #9ae688; }
+.user.color-23 { color: #48d878; }
+.user.color-24 { color: #c8ffd0; }
+.user.color-25 { color: #78ffb8; }
+.user.color-26 { color: #90f060; }
+.user.color-27 { color: #6ad8a0; }
+.user.color-28 { color: #e0ff88; }
+.user.color-29 { color: #50ffc0; }
+.user.color-30 { color: #80d870; }
+.user.color-31 { color: #38e070; }
+.user.color-32 { color: #a0ffb8; }

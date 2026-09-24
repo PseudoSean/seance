@@ -23,7 +23,7 @@ import {ChanState} from "../../../shared/types/chan";
 import type {Channel, MsgRef} from "./channel";
 import type {IrcClient} from "./client";
 import {fetchReadMarker} from "./handlers/markread";
-import {requestChannelHistory} from "./history";
+import {requestChannelHistory, retryLostHistory} from "./history";
 import {formatLine} from "./message";
 
 /** Spacing between background catch-up steps (one channel each). */
@@ -201,6 +201,7 @@ function step(client: IrcClient, state: CatchupState): void {
 
 function fetchFor(client: IrcClient, chan: Channel, before: MsgRef | undefined): void {
 	requestChannelHistory(client, chan, before);
+	retryLostHistory(client, chan);
 
 	// nefarious2 volunteers the marker after JOIN for logged-in accounts; only
 	// ask when we still have none.

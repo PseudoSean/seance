@@ -1,8 +1,8 @@
 /**
  * WHOIS / WHOWAS replies, accumulated per nick until 318 / 369 and then
- * shown as one `whois` message in the user's query window (opened if
- * needed), as attic/server/plugins/irc-events/whois.ts did on top of
- * irc-framework's `whois` event. Field names match irc-framework's so
+ * shown as one `whois` message where the user is (lobby + `showInActive`,
+ * docs/projects/reply-routing.md) — never opening a query window. Field
+ * names match irc-framework's so
  * `client/components/MessageTypes/whois.vue` renders unchanged.
  */
 
@@ -10,6 +10,7 @@ import {ChanType} from "../../../../shared/types/chan";
 import {MessageType} from "../../../../shared/types/msg";
 import type {IrcClient} from "../client";
 import type {IrcMessage} from "../message";
+import {t} from "../../i18n/core";
 import type {Handler} from "../types";
 
 export interface WhoisData {
@@ -113,7 +114,7 @@ function finish(client: IrcClient, msg: IrcMessage, whowas: boolean): void {
 		client.pushMessage(client.lobby, {
 			type: MessageType.ERROR,
 			time: client.timeOf(msg),
-			text: `No such nick: ${nick}`,
+			text: t("msg.noSuchNick", {nick}),
 			showInActive: true,
 		});
 		return;
@@ -131,11 +132,12 @@ function finish(client: IrcClient, msg: IrcMessage, whowas: boolean): void {
 		data.logonTime = parseInt(data.logon, 10) * 1000;
 	}
 
-	const chan =
-		client.findChannel(data.nick) ??
-		client.announceChannel(data.nick, ChanType.QUERY, {shouldOpen: true});
-
-	client.pushMessage(chan, {type: MessageType.WHOIS, time: client.timeOf(msg), whois: data});
+	client.pushMessage(client.lobby, {
+		type: MessageType.WHOIS,
+		time: client.timeOf(msg),
+		whois: data,
+		showInActive: true,
+	});
 }
 
 // RPL_WHOISUSER / RPL_WHOWASUSER: <me> <nick> <user> <host> * :<real name>
@@ -282,7 +284,7 @@ const away: Handler = (client, msg) => {
 		return;
 	}
 
-	const text = last(msg) || "is away";
+	const text = last(msg) || t("whois.awayNoReason");
 	const inProgress = pendingFor(client).get(client.casefold(nick));
 
 	if (inProgress) {

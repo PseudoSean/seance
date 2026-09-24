@@ -1,12 +1,13 @@
 <template>
 	<span class="content">
-		Channel mode is <b>{{ message.text }}</b>
+		{{ t("msg.modeChannelIs") }} <b>{{ message.text }}</b>
 	</span>
 </template>
 
 <script lang="ts">
 import {defineComponent, PropType} from "vue";
 import {ClientNetwork, ClientMessage} from "../../js/types";
+import {useI18n} from "../../js/i18n";
 
 export default defineComponent({
 	name: "MessageChannelMode",
@@ -19,6 +20,13 @@ export default defineComponent({
 			type: Object as PropType<ClientMessage>,
 			required: true,
 		},
+	},
+	setup() {
+		const {t} = useI18n();
+
+		return {
+			t,
+		};
 	},
 });
 </script>

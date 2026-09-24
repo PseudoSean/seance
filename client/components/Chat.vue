@@ -26,32 +26,42 @@
 			>
 				<div class="header">
 					<SidebarToggle />
-					<span class="title" :aria-label="'Currently open ' + channel.type">{{
-						channel.name
-					}}</span>
+					<span class="title" :aria-label="openTitle"
+						><bdi>{{ channel.name }}</bdi></span
+					>
 					<div v-if="channel.editTopic === true" class="topic-container">
 						<input
 							ref="topicInput"
+							dir="auto"
 							:value="channel.topic"
 							class="topic-input"
-							placeholder="Set channel topic"
+							:placeholder="topicPlaceholder"
 							enterkeyhint="done"
 							@keyup.enter="saveTopic"
 							@keyup.esc="channel.editTopic = false"
 						/>
-						<span aria-label="Save topic" class="save-topic" @click="saveTopic">
-							<span type="button" aria-label="Save topic"></span>
+						<span :aria-label="saveTopicLabel" class="save-topic" @click="saveTopic">
+							<span type="button" :aria-label="saveTopicLabel"></span>
 						</span>
 					</div>
 					<span
 						v-else
-						:title="plainTopic"
+						:title="topicTitle"
 						:class="{topic: true, empty: !channel.topic}"
 						@dblclick="editTopic"
-						><ParsedMessage
-							v-if="channel.topic"
-							:network="network"
-							:text="channel.topic"
+						><button
+							v-if="topicTranslation"
+							type="button"
+							class="topic-flip"
+							:class="{original: topicTranslation.hidden}"
+							:aria-label="topicFlipLabel"
+							:title="topicFlipLabel"
+							:aria-pressed="!topicTranslation.hidden"
+							@click.stop="flipTopic"
+							@dblclick.stop
+						>
+							<i class="fas fa-language" aria-hidden="true" /></button
+						><ParsedMessage v-if="channel.topic" :network="network" :text="topicShown"
 					/></span>
 					<MessageSearchForm
 						v-if="['channel', 'query'].includes(channel.type)"
@@ -69,28 +79,41 @@
 							:aria-label="connectingLabel"
 						/>
 					</span>
-					<button
-						class="mentions"
-						aria-label="Open your mentions"
-						@click="openMentions"
-					/>
-					<button
-						class="menu"
-						aria-label="Open the context menu"
-						@click="openContextMenu"
-					/>
+					<span
+						v-if="translationAvailable"
+						class="translate-tooltip tooltipped tooltipped-w tooltipped-no-touch"
+						:data-tooltip="translateLabel"
+					>
+						<button
+							class="translate"
+							:class="{on: translationOn}"
+							:aria-label="translateLabel"
+							:aria-pressed="touch ? undefined : translationOn"
+							:aria-expanded="translationPanelOpen"
+							@click="onTranslateClick"
+							@contextmenu.prevent="openTranslationPanel"
+						/>
+					</span>
+					<button class="mentions" :aria-label="mentionsLabel" @click="openMentions" />
+					<button class="menu" :aria-label="contextMenuLabel" @click="openContextMenu" />
 					<span
 						v-if="channel.type === 'channel'"
 						class="rt-tooltip tooltipped tooltipped-w"
-						aria-label="Toggle user list"
+						:aria-label="toggleUserlistLabel"
 					>
 						<button
 							class="rt"
-							aria-label="Toggle user list"
+							:aria-label="toggleUserlistLabel"
 							@click="store.commit('toggleUserlist')"
 						/>
 					</span>
 				</div>
+				<TranslationPanel
+					v-if="translationPanelOpen"
+					:channel="channel"
+					:network="network"
+					@close="translationPanelOpen = false"
+				/>
 				<div v-if="channel.type === 'special'" class="chat-content">
 					<div class="chat">
 						<div class="messages">
@@ -110,7 +133,7 @@
 							'scroll-down tooltipped tooltipped-w tooltipped-no-touch',
 							{'scroll-down-shown': !channel.scrolledToBottom},
 						]"
-						aria-label="Jump to recent messages"
+						:aria-label="jumpToRecentLabel"
 						@click="messageList?.jumpToBottom()"
 					>
 						<div class="scroll-down-arrow" />
@@ -150,13 +173,27 @@ import ListInvites from "./Special/ListInvites.vue";
 import ListExcepts from "./Special/ListExcepts.vue";
 import ListChannels from "./Special/ListChannels.vue";
 import ListIgnored from "./Special/ListIgnored.vue";
+import TranslationPanel from "./TranslationPanel.vue";
 import {defineComponent, PropType, ref, computed, watch, nextTick, onMounted, Component} from "vue";
 import {channelOpened} from "../js/helpers/lastChannel";
 import {conversationSeed} from "../js/helpers/channelSeed";
+import {prefetchEmojiCatalog} from "../js/helpers/emoji";
 import type {ClientNetwork, ClientChan} from "../js/types";
 import {useStore} from "../js/store";
 import {SpecialChanType, ChanType} from "../../shared/types/chan";
 import {layout, toPlainText} from "../js/helpers/ircmessageparser/layout";
+import {useI18n} from "../js/i18n";
+import {
+	channelTranslation,
+	readTopic,
+	readingLanguage,
+	setReading,
+	showOriginal,
+	translationAvailable as translationAvailableNow,
+} from "../js/translate/reader";
+import {topicEntryId} from "../js/translate/topic";
+import {languageName} from "../js/translate/languages";
+import {hasVirtualKeyboard} from "../js/helpers/device";
 
 export default defineComponent({
 	name: "Chat",
@@ -167,6 +204,7 @@ export default defineComponent({
 		ChatUserList,
 		SidebarToggle,
 		MessageSearchForm,
+		TranslationPanel,
 	},
 	props: {
 		network: {type: Object as PropType<ClientNetwork>, required: true},
@@ -176,6 +214,7 @@ export default defineComponent({
 	emits: ["channel-changed"],
 	setup(props, {emit}) {
 		const store = useStore();
+		const {t} = useI18n();
 
 		const messageList = ref<typeof MessageList>();
 		const topicInput = ref<HTMLInputElement | null>(null);
@@ -190,8 +229,72 @@ export default defineComponent({
 			return toPlainText(layout(topic, {markdown: store.state.settings.markdown}));
 		});
 
+		// Screen-reader frame around the conversation name in the header;
+		// {type} is the app's internal kind ("channel", "query", "lobby",
+		// "special") and is inserted as-is.
+		const openTitle = computed(() => t("chat.currentlyOpen", {type: props.channel.type}));
+
+		const topicPlaceholder = computed(() => t("chat.topicPlaceholder"));
+		const saveTopicLabel = computed(() => t("chat.saveTopic"));
+
+		// The topic, read like the channel's lines (reader.ts `readTopic`,
+		// topic.ts): a finished translation takes the topic's place in the
+		// header rather than a row of its own, and the flipper before it
+		// swaps the two. The tooltip carries whichever is not shown.
+		const topicTranslation = computed(() => {
+			const entry = store.state.translations[topicEntryId(props.channel.id)];
+
+			return entry && entry.status === "done" && entry.text ? entry : undefined;
+		});
+		const topicShown = computed(() =>
+			topicTranslation.value && !topicTranslation.value.hidden
+				? topicTranslation.value.text
+				: props.channel.topic
+		);
+		const topicTitle = computed(() => {
+			const entry = topicTranslation.value;
+
+			if (!entry || entry.hidden) {
+				return entry
+					? toPlainText(layout(entry.text, {markdown: store.state.settings.markdown}))
+					: plainTopic.value;
+			}
+
+			return plainTopic.value;
+		});
+		const topicFlipLabel = computed(() =>
+			topicTranslation.value?.hidden
+				? t("translate.topic.showTranslation")
+				: t("translate.topic.showOriginal")
+		);
+
+		const flipTopic = () => {
+			const entry = topicTranslation.value;
+
+			if (entry) {
+				showOriginal(topicEntryId(props.channel.id), !entry.hidden);
+			}
+		};
+
+		watch(
+			() => [
+				props.channel.id,
+				props.channel.topic,
+				channelTranslation(props.network, props.channel).read,
+				readingLanguage(),
+			],
+			() => void readTopic(props.network, props.channel),
+			{immediate: true}
+		);
+		const mentionsLabel = computed(() => t("chat.mentions"));
+		const contextMenuLabel = computed(() => t("chat.contextMenu"));
+		const toggleUserlistLabel = computed(() => t("chat.toggleUserlist"));
+		const jumpToRecentLabel = computed(() => t("chat.jumpToRecent"));
+
 		const connectingLabel = computed(() =>
-			props.network.name ? `Connecting to ${props.network.name}…` : "Connecting…"
+			props.network.name
+				? t("chat.connectingTo", {network: props.network.name})
+				: t("chat.connecting")
 		);
 
 		// A conversation whose network is down is faded (like a pending
@@ -238,6 +341,13 @@ export default defineComponent({
 			// (helpers/lastChannel.ts); the lobby and special windows do
 			// not count, and this calls off a restore the user got ahead of.
 			channelOpened(props.network.uuid, props.channel.name, props.channel.type);
+
+			// A conversation is where reactions happen: the emoji catalog
+			// chunk is fetched now, at idle, so the picker never waits for it
+			// (helpers/emoji.ts). Not from the lobby — nothing there reacts.
+			if (props.channel.type !== ChanType.LOBBY) {
+				prefetchEmojiCatalog();
+			}
 
 			if (props.channel.usersOutdated) {
 				props.channel.usersOutdated = false;
@@ -288,6 +398,108 @@ export default defineComponent({
 			});
 		};
 
+		const translationPanelOpen = ref(false);
+		const translationState = computed(() => channelTranslation(props.network, props.channel));
+		const translationAvailable = computed(
+			() =>
+				(props.channel.type === ChanType.CHANNEL ||
+					props.channel.type === ChanType.QUERY) &&
+				translationAvailableNow()
+		);
+		// The light means reading; a write target shows in the tooltip.
+		const translationOn = computed(() => translationState.value.read);
+		// A touch device has no right-click, so the tap is what opens the
+		// panel there and the button says so; the click keeps toggling
+		// reading where there is a pointer.
+		const touch = hasVirtualKeyboard();
+		const translateLabel = computed(() => {
+			if (touch) {
+				return t("translate.header.settings");
+			}
+
+			// Every language the tooltip names is named in the language the
+			// reader reads this channel in (F40), like every other label.
+			const name = (code: string) => languageName(code, readingLanguage());
+			const {read, write} = translationState.value;
+			const paused = store.state.translation.paused;
+			// One whole phrase per state (reading on/off × a write target ×
+			// paused): the tooltip is never assembled from translated pieces,
+			// and every key is a literal the pot check can see.
+			const vars = {
+				reading: name(readingLanguage()),
+				writing: write ? name(write) : "",
+				// The engine's own text: a verbatim value, never translated.
+				reason: paused ? paused.message : "",
+			};
+
+			if (paused) {
+				if (read) {
+					return write
+						? t("translate.header.readWritePaused", vars)
+						: t("translate.header.readPaused", vars);
+				}
+
+				return write
+					? t("translate.header.offWritePaused", vars)
+					: t("translate.header.offPaused", vars);
+			}
+
+			if (read) {
+				return write
+					? t("translate.header.readWrite", vars)
+					: t("translate.header.read", vars);
+			}
+
+			return write ? t("translate.header.offWrite", vars) : t("translate.header.off", vars);
+		});
+
+		const openTranslationPanel = () => {
+			translationPanelOpen.value = true;
+		};
+
+		const toggleTranslation = () => {
+			const wasOn = translationState.value.read;
+
+			setReading(props.network, props.channel, !wasOn);
+
+			// Switching a channel on opens its panel with it: the reader sees
+			// which languages they just asked for and can adjust them at once,
+			// where the click alone would silently pick the global target.
+			// Switching off is the whole of what switching off means.
+			if (!wasOn) {
+				openTranslationPanel();
+			}
+		};
+
+		const onTranslateClick = () => {
+			if (touch) {
+				openTranslationPanel();
+			} else {
+				toggleTranslation();
+			}
+		};
+
+		watch(
+			() => props.channel.id,
+			() => {
+				translationPanelOpen.value = false;
+			}
+		);
+
+		// The channel menu's "Translation…" switches to the channel and
+		// leaves its id in the store, so the ask survives the switch: open
+		// the panel once this view is the channel that was asked for, and
+		// clear it. Registered after the watcher above, which closes the
+		// panel on a channel change and would otherwise undo this one.
+		const openPanelIfAsked = () => {
+			if (store.state.translation.panelFor === props.channel.id) {
+				translationPanelOpen.value = true;
+				store.commit("translationPanelFor", null);
+			}
+		};
+
+		watch(() => [props.channel.id, store.state.translation.panelFor], openPanelIfAsked);
+
 		watch(
 			() => props.channel,
 			() => {
@@ -308,6 +520,7 @@ export default defineComponent({
 
 		onMounted(() => {
 			channelChanged();
+			openPanelIfAsked();
 
 			if (props.channel.editTopic) {
 				void nextTick(() => {
@@ -318,9 +531,22 @@ export default defineComponent({
 
 		return {
 			store,
+			t,
 			messageList,
 			topicInput,
 			plainTopic,
+			openTitle,
+			topicPlaceholder,
+			saveTopicLabel,
+			topicTranslation,
+			topicShown,
+			topicTitle,
+			topicFlipLabel,
+			flipTopic,
+			mentionsLabel,
+			contextMenuLabel,
+			toggleUserlistLabel,
+			jumpToRecentLabel,
 			connectingLabel,
 			isDisconnected,
 			scene,
@@ -330,6 +556,13 @@ export default defineComponent({
 			saveTopic,
 			openContextMenu,
 			openMentions,
+			translationPanelOpen,
+			translationAvailable,
+			translationOn,
+			translateLabel,
+			touch,
+			onTranslateClick,
+			openTranslationPanel,
 		};
 	},
 });

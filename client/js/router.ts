@@ -1,4 +1,4 @@
-import constants from "./constants";
+import {isPhoneLayout} from "./helpers/device";
 
 import {createRouter, createWebHashHistory, type RouteLocationRaw} from "vue-router";
 import Connect from "../components/Windows/Connect.vue";
@@ -9,14 +9,17 @@ import NetworkEdit from "../components/Windows/NetworkEdit.vue";
 import SearchResults from "../components/Windows/SearchResults.vue";
 import RoutedChat from "../components/RoutedChat.vue";
 import {store} from "./store";
+import socket from "./socket";
 
 import AppearanceSettings from "../components/Settings/Appearance.vue";
 import GeneralSettings from "../components/Settings/General.vue";
-import AccountSettings from "../components/Settings/Account.vue";
 import NotificationSettings from "../components/Settings/Notifications.vue";
+import TranslationSettings from "../components/Settings/Translation.vue";
+import AliasSettings from "../components/Settings/Aliases.vue";
 import NetworkSettings from "../components/Settings/Networks.vue";
 import {ClientChan} from "./types";
 import {shouldShowGeneralSettings} from "./helpers/settingsTabs";
+import {forgetTranslations} from "./translate/reader";
 import * as saved from "./irc/saved-networks";
 import {clearPendingTarget, setPendingTarget} from "./helpers/pendingTarget";
 
@@ -67,15 +70,19 @@ const router = createRouter({
 					component: AppearanceSettings,
 				},
 				{
-					name: "Account",
-					path: "account",
-					component: AccountSettings,
-					props: true,
-				},
-				{
 					name: "Notifications",
 					path: "notifications",
 					component: NotificationSettings,
+				},
+				{
+					name: "Translation",
+					path: "translation",
+					component: TranslationSettings,
+				},
+				{
+					name: "Aliases",
+					path: "aliases",
+					component: AliasSettings,
 				},
 			],
 		},
@@ -261,7 +268,7 @@ router.afterEach((to) => {
 	}
 
 	if (store.state.appLoaded) {
-		if (window.innerWidth <= constants.mobileViewportPixels) {
+		if (isPhoneLayout()) {
 			store.commit("sidebarOpen", false);
 		}
 	}
@@ -279,8 +286,17 @@ router.afterEach((to) => {
 		}
 
 		if (channel.messages?.length > 100) {
-			channel.messages.splice(0, channel.messages.length - 100);
+			const dropped = channel.messages.splice(0, channel.messages.length - 100);
 			channel.moreHistoryAvailable = true;
+
+			if (dropped.length > 0) {
+				const droppedIds = dropped.map((m) => m.id);
+
+				store.commit("translationRemoveMany", droppedIds);
+				forgetTranslations(droppedIds);
+				// The IRC layer must stop counting them as shown (bus-contract § 2).
+				socket.emit("history:trim", {target: channel.id, ids: droppedIds});
+			}
 		}
 	}
 });

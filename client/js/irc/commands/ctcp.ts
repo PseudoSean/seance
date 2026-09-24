@@ -1,20 +1,25 @@
 /**
  * `/ctcp <nick> <type> [args]`: send a CTCP request and note it locally.
+ * `/ver <nick>` is the everyday one, a CTCP VERSION request.
  */
 
 import {MessageType} from "../../../../shared/types/msg";
 import {trailingLine} from "../wire";
+import {t} from "../../i18n/core";
 import type {Command} from "../types";
 
 const ctcp: Command = {
-	commands: ["ctcp"],
-	input({client, chan, args}) {
-		const params = args.filter((arg) => arg.length > 0);
+	commands: ["ctcp", "ver"],
+	input({client, chan, cmd, args}) {
+		const words = args.filter((arg) => arg.length > 0);
 
-		if (params.length < 2) {
+		// `/ver bob` is `/ctcp bob VERSION`
+		const params = cmd === "ver" ? [words[0], "VERSION"] : words;
+
+		if (cmd === "ver" ? words.length !== 1 : params.length < 2) {
 			client.pushMessage(chan, {
 				type: MessageType.ERROR,
-				text: "Usage: /ctcp <nick> <ctcp_type>",
+				text: cmd === "ver" ? t("cmd.usageVer") : t("cmd.usageCtcp"),
 			});
 			return;
 		}

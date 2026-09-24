@@ -184,18 +184,23 @@ export default async function run(page) {
 			"join form"
 		);
 
-		// From a page that is not a conversation: the chat mounts afresh.
+		// From a page that is not a conversation the chat mounts afresh:
+		// settings is a modal over the whole app, so the way out is its
+		// Done button (or Escape/backdrop), which returns to the
+		// conversation it covered — and that conversation must come back
+		// with the caret in its input.
+		const covered = await page.evaluate(ACTIVE_ROW);
 		await switchTo(
-			"#seance",
-			async (name) => {
+			covered,
+			async () => {
 				await page.click("#sidebar button.settings");
 				await page.waitFor(`document.querySelector('#settings')`, {
 					timeout: 5000,
 					label: "the settings page",
 				});
-				await page.click(ROW(name));
+				await page.click(".settings-modal-done");
 			},
-			"row click from settings"
+			"Done from settings"
 		);
 	}
 

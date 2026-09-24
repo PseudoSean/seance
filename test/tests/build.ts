@@ -35,6 +35,9 @@ describe("public folder", function () {
 
 		expect(html.includes("__APP_NAME__")).to.be.false;
 		expect(html.includes("__THEME_COLOR__")).to.be.false;
+		// Substituted at build from client/locales/tags.json for the pre-paint
+		// script; a leftover token would break the language resolution.
+		expect(html.includes("__AVAILABLE_LOCALES__")).to.be.false;
 		expect(html.includes(`<title>${config.appName}</title>`)).to.be.true;
 		expect(html.includes("The Lounge")).to.be.false;
 		expect(manifest.name).to.equal(config.appName);
@@ -62,13 +65,78 @@ describe("public folder", function () {
 		expect(fs.existsSync(path.join(publicFolder, "js", "bundle.js"))).to.be.true;
 		expect(fs.existsSync(path.join(publicFolder, "js", "bundle.vendor.js"))).to.be.true;
 		expect(fs.existsSync(path.join(publicFolder, "js", "push.js"))).to.be.true;
+		expect(fs.existsSync(path.join(publicFolder, "js", "translate-worker.js"))).to.be.true;
+	});
+
+	it("the short-line word list is its own chunk, not part of the bundle", function () {
+		// client/js/translate/wordlist.json is ~390 KB of frequency data the
+		// lookup (wordlookup.ts) fetches on the first short line it has to
+		// place. It rides in its own chunk, like franc's: in the bundle it
+		// would be paid for by every page load.
+		const chunk = path.join(publicFolder, "js", "wordlist.js");
+
+		expect(fs.existsSync(chunk)).to.be.true;
+		expect(fs.readFileSync(chunk, "utf8")).to.include("gracias");
+
+		const bundle = fs.readFileSync(path.join(publicFolder, "js", "bundle.js"), "utf8");
+
+		expect(bundle.includes("gracias")).to.be.false;
+	});
+
+	it("the translation worker is self-contained and the ORT wasm files are copied", function () {
+		const worker = fs.readFileSync(
+			path.join(publicFolder, "js", "translate-worker.js"),
+			"utf8"
+		);
+
+		expect(worker).to.not.include("bundle.vendor.js");
+
+		const ort = fs.readdirSync(path.join(publicFolder, "js", "ort"));
+
+		expect(ort.some((name) => name.endsWith(".wasm"))).to.be.true;
+		expect(ort.some((name) => name.endsWith(".mjs"))).to.be.true;
+
+		// The worker bundles only the wasm ORT backend (device: "wasm"); the
+		// WebGPU backend transformers.js otherwise imports unconditionally
+		// is aliased away, and js/ort/ holds only the pair its bundle names.
+		expect(ort.sort()).to.deep.equal([
+			"ort-wasm-simd-threaded.mjs",
+			"ort-wasm-simd-threaded.wasm",
+		]);
+
+		// Nothing webpack's URL asset detection would otherwise re-emit
+		// (the ORT wasm binary and its hashed loader) leaks into the
+		// deploy tree's root, where nothing serves or cleans it up.
+		const root = fs.readdirSync(publicFolder);
+
+		expect(root.some((name) => name.endsWith(".wasm"))).to.be.false;
+		expect(root.some((name) => /^[0-9a-f]{16,}\.mjs$/.test(name))).to.be.false;
 	});
 
 	it("style files are built", function () {
 		expect(fs.existsSync(path.join(publicFolder, "css", "style.css"))).to.be.true;
 		expect(fs.existsSync(path.join(publicFolder, "css", "style.css.map"))).to.be.true;
 
-		for (const theme of ["coffee", "creama", "cobalt", "frost", "day", "morning", "heart"]) {
+		for (const theme of [
+			"coffee",
+			"creama",
+			"cobalt",
+			"frost",
+			"molokai",
+			"princess",
+			"princess_",
+			"keeki",
+			"sandrof",
+			"oikarinen",
+			"bourbaki",
+			"gates",
+			"mardam",
+			"zelenzy",
+			"panasync",
+			"day",
+			"morning",
+			"heart",
+		]) {
 			expect(fs.existsSync(path.join(publicFolder, "themes", `${theme}.css`))).to.be.true;
 		}
 	});
