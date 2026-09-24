@@ -28,8 +28,8 @@
 // sky, grass, amber and snow. Beside each swatch is its twin: the same
 // swatch at an integer offset, with the text in #ff00ff.
 //
-// **The measurement**, at device scale factor 1 and then 2, at the default
-// font-size step:
+// **The measurement**, at device scale factors 1, 2 and then 3 (a phone), at
+// the default font-size step:
 //
 // 1. Page.captureScreenshot of the overlay, clipped at its top left. The PNG
 //    goes back into the page and is decoded there (Image → canvas →
@@ -127,7 +127,7 @@ const FACES = {
 };
 /** The twin's text colour: far from every ground and every treatment colour. */
 const TWIN_TEXT = "#ff00ff";
-const DPRS = [1, 2];
+const DPRS = [1, 2, 3];
 
 /** Layout, in whole CSS px so rect × DPR indexes exactly. */
 const SWATCH_W = 360;
@@ -555,6 +555,12 @@ export default async function run(page) {
 		/rgba\(0, 0, 0, 0\.7\).*rgba\(0, 0, 0, 0\.45\).*rgba\(0, 0, 0, 0\.35\)/.test(
 			read.light.words.textShadow
 		)
+	);
+	page.check(
+		`the light treatment's outline (B) is eight 1px offsets at 78 % black (${
+			read.light.words.textShadow.split("0.78)").length - 1
+		} found)`,
+		read.light.words.textShadow.split("0.78)").length - 1 === 8
 	);
 	page.check(
 		`ink text is #1b2638 (${read.ink.words.color})`,

@@ -665,8 +665,14 @@ body {
 :root[data-ps-text="light"] #chat .chat .show-more,
 :root[data-ps-text="light"] #chat .chat .search-status,
 :root[data-ps-text="light"] #chat .chat .search-scope-note {
-	/* stylelint-disable-next-line max-line-length -- the three layers read best on one line, as the halo's do */
-	text-shadow: 0 0.0625rem 0.094rem rgb(0 0 0 / 70%), 0 0 0.1875rem rgb(0 0 0 / 45%), 0 0.0625rem 0.625rem rgb(0 0 0 / 35%);
+	/* The calibration (§11) showed the soft shadow alone cannot carry white
+	 * text over the brightest grounds (the moon's disc, the sun's low core,
+	 * a bright dawn/dusk horizon). Shown three measured candidates, the user
+	 * chose "B" (https://claude.ai/artifact/TGGrXDMs2fxLrV9NekKMWJ): an
+	 * eight-way 1px outline at 78% black, drawn under the approved soft
+	 * shadow — listed first, since the first shadow paints on top. */
+	/* stylelint-disable-next-line max-line-length -- the layers read best on one line, as the halo's do */
+	text-shadow: 0 0.0625rem 0.094rem rgb(0 0 0 / 70%), 0 0 0.1875rem rgb(0 0 0 / 45%), 0 0.0625rem 0.625rem rgb(0 0 0 / 35%), 0.0625rem 0 0.0625rem rgb(0 0 0 / 78%), -0.0625rem 0 0.0625rem rgb(0 0 0 / 78%), 0 0.0625rem 0.0625rem rgb(0 0 0 / 78%), 0 -0.0625rem 0.0625rem rgb(0 0 0 / 78%), 0.0625rem 0.0625rem 0.0625rem rgb(0 0 0 / 78%), -0.0625rem 0.0625rem 0.0625rem rgb(0 0 0 / 78%), 0.0625rem -0.0625rem 0.0625rem rgb(0 0 0 / 78%), -0.0625rem -0.0625rem 0.0625rem rgb(0 0 0 / 78%);
 }
 
 /* The browser gives a button `text-shadow: none` rather than the inherited

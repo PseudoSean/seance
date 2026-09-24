@@ -13,30 +13,41 @@ import {paletteAt, publishedFor, WEATHER, type Palette} from "../../client/js/sc
 
 /**
  * How far each treatment moves the ground right around a word toward its own
- * colour, measured once in rendered pixels on 2026-09-24 and used as
- * min(0.6, measured), so the measurement could only make the check stricter
- * (docs/projects/ps-theme.md §11):
+ * colour, measured once in rendered pixels and used as min(0.6, measured), so
+ * the measurement could only make the check stricter (docs/projects/ps-theme.md
+ * §11):
  *
  *   node tools/browser-drive.mjs tools/ps/calibrate.mjs --out=<dir>
  *
  * against a production build. Headless Chromium drew swatches of 360 × 48 CSS
  * px at the default font-size step (html 20px), in the treatments computed off
  * a real message: Mulish 500 20px ("The quick brown fox 0123") and Fraunces
- * 700 20px ("Marigold Ősz"), at device scale factor 1 and 2. White with the
+ * 700 20px ("Marigold Ősz"), at device scale factor 1, 2 and 3. White with the
  * shadow was drawn over #ffb96f, #fdfaf0, #fffef6, #eef2f7, #9ccaf5 and
  * #69b04a; #1b2638 with the halo (#ebf5fd) over #9ccaf5, #69b04a and #ffc478
  * (over #eef2f7 the halo is too close to the ground to measure). The ring is
  * the pixels one CSS px out from the glyphs. At each ring pixel the strength
  * is the projection of its colour onto ground → treatment colour. Each swatch
- * gives the 10th percentile over its ring, and the lowest swatch counts:
+ * gives the 10th percentile over its ring, and the lowest swatch counts.
  *
- * - halo: 0.2175 (Mulish, DPR 1, over #ffc478), median 0.39;
- * - shadow: 0.1099 (Mulish, DPR 2, over #fffef6), median 0.25.
+ * **2026-09-24, first pass (DPR 1 and 2 only, the shadow alone):**
+ * halo 0.2175 (Mulish, DPR 1, over #ffc478), median 0.39; shadow 0.1099
+ * (Mulish, DPR 2, over #fffef6), median 0.25. That shadow could not carry
+ * white text over the brightest grounds (the moon's disc, the sun's low core,
+ * a bright dawn/dusk horizon); shown three measured candidates, the user
+ * chose "B" (https://claude.ai/artifact/TGGrXDMs2fxLrV9NekKMWJ): an eight-way
+ * 1px outline at 78% black, drawn under the soft shadow (client/themes/ps.css,
+ * the light treatment).
  *
- * Both are written rounded down.
+ * **2026-09-24, second pass (DPR 1, 2 and 3, the shadow plus outline B):**
+ * halo 0.2120 (Mulish, DPR 3, over #ffc478), median 0.40 — DPR 3 found a new,
+ * slightly lower minimum for the halo too (the ink treatment did not change;
+ * only the swept DPR range did); shadow 0.5457 (Mulish, DPR 1, over #fffef6),
+ * median 0.87 — the outline more than quadruples the shadow's floor. Both
+ * are written rounded down.
  */
-export const ALPHA_HALO = Math.min(0.6, 0.2174);
-export const ALPHA_SHADOW = Math.min(0.6, 0.1099);
+export const ALPHA_HALO = Math.min(0.6, 0.2119);
+export const ALPHA_SHADOW = Math.min(0.6, 0.5457);
 export const INK = "#1b2638";
 export const INK_FAINT = "#4c5a72";
 /** The days checked: each season's anchor, the solstices and equinoxes, and 1 January. */
