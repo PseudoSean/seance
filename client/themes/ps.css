@@ -513,6 +513,8 @@ body {
  *   #747370  doy 1 460 min clear  sun #fffef6 at 1.00 over skyMid #95778f (under the horizon)
  * Faint ink, rule 2: #4c5a72 → #38455c, OKLCH L −0.0748;
  *   3.02:1 on #7890c1 at doy 8 970 min clear.
+ * Code boxes paint --ps-code-bg, opaque (ps.css, after the block): the --tok-*
+ * colours are solved against it, #f4f9ff by day and #121827 otherwise.
  * Six-digit hex throughout: the floors test reads every colour in that form. */
 /* stylelint-disable color-hex-length */
 #chat .chat {
@@ -520,6 +522,7 @@ body {
 	--body-color: #1b2638;
 	--md-code-color: #1b2638;
 	--chat-fg-faint: #38455c;
+	--ps-code-bg: #f4f9ff;
 	--chat-fg-muted: #142847;
 	--body-color-muted: #142847;
 	--date-marker-color: #142847;
@@ -535,6 +538,15 @@ body {
 	--notice-color: #042d2d;
 	--nick-default: #002461;
 	--channel-activity-color: #002461;
+	--tok-comment: #5f7292;
+	--tok-keyword: #c34073;
+	--tok-string: #2d7f5f;
+	--tok-number: #2f6dd7;
+	--tok-function: #7a5bd7;
+	--tok-operator: #c34073;
+	--tok-punctuation: #5d7199;
+	--tok-tag: #2d7f5f;
+	--tok-attr: #8255de;
 
 	color: var(--chat-fg);
 }
@@ -544,6 +556,7 @@ body {
 	--body-color: #ffffff;
 	--md-code-color: #ffffff;
 	--chat-fg-faint: rgb(255 255 255 / 80%);
+	--ps-code-bg: #121827;
 	--chat-fg-muted: #f9fcff;
 	--body-color-muted: #f9fcff;
 	--date-marker-color: #f9fcff;
@@ -559,15 +572,15 @@ body {
 	--notice-color: #eeffff;
 	--nick-default: #f9fcff;
 	--channel-activity-color: #f9fcff;
-	--tok-comment: #f9fcff;
-	--tok-keyword: #fffbfc;
-	--tok-string: #f1fff7;
-	--tok-number: #f9fcff;
-	--tok-function: #fcfbff;
-	--tok-operator: #fffbfc;
-	--tok-punctuation: #fafcff;
-	--tok-tag: #f1fff7;
-	--tok-attr: #fcfbff;
+	--tok-comment: #6f83a4;
+	--tok-keyword: #d75384;
+	--tok-string: #419170;
+	--tok-number: #4080ea;
+	--tok-function: #8a6dea;
+	--tok-operator: #d75384;
+	--tok-punctuation: #6d83aa;
+	--tok-tag: #419170;
+	--tok-attr: #9367f2;
 }
 
 #chat .chat .user.color-1 { color: #530529; }
@@ -693,7 +706,7 @@ body {
  *     soft #a7b3c8 → #b4c1d6 (rule 2, OKLCH L +0.0426)
  *     badge #d9784a → #b85a2b (white on it 4.63:1)
  * Pinned for the floors test (plan 2's Review Focus 1 and 2):
- *   dusk: doy 29 445 min clear, darkness 0.49999:
+ *   dusk: doy 151 1215 min clear, darkness 0.49992:
  *     the darkest moment still under day glass;
  *   moon: doy 1 0 min clear, the brightest disc behind night glass:
  *     moon #fdfaf0 at 1.00 over skyTop #080c1f.
@@ -860,7 +873,28 @@ body {
 	color: var(--notice-color);
 }
 
-/* What paints its own box in the message column (code, the link preview,
+/* The column's code boxes (a code block, inline code, inline monospace, the
+ * monospace block) paint their own surface, --ps-code-bg, which the
+ * generated block sets per treatment (tools/ps/legibility.ts CODE_BOX: :root's
+ * paper by day, the night glass's solid surface otherwise). They no longer
+ * ride on --composer-bg, which belongs to the chrome. The --tok-* colours and
+ * --md-code-color are solved and held against this box, not the plains. */
+#chat .chat code,
+#chat .chat pre,
+#chat .chat .irc-monospace,
+#chat .chat .msg[data-type="monospace_block"] .text {
+	background: var(--ps-code-bg);
+}
+
+/* Under the light treatment a link is near-white like the text around it (the
+ * strict light sweep), so its colour no longer marks it (WCAG 1.4.1): it is
+ * underlined. By day the ink treatment's link colour still does. */
+:root[data-ps-text="light"] #chat .chat a {
+	text-decoration: underline;
+	text-underline-offset: 0.15em;
+}
+
+/* What else paints its own box in the message column (the link preview,
  * the message toolbar and its "copied" note, the day and new-messages
  * labels) reads these two surfaces. By day they keep :root's paper; while
  * the light changes and all night they turn to the night glass's solid

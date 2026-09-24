@@ -7,11 +7,14 @@ import {paletteAt, publishedFor} from "../../../client/js/scenes/ps/palette";
 import {
 	bodyGrounds,
 	checkedGrounds,
+	CODE_BOX,
 	GLASS,
 	glassGround,
 	groundsAt,
 	INK,
+	INK_FAINT,
 	LARGE_TEXT_STEPS,
+	LIGHT_ROOT,
 	LIGHT_SWEEP,
 	lightSweepFloors,
 	momentOf,
@@ -22,6 +25,7 @@ import {
 	type Light,
 	type Text,
 } from "../../../tools/ps/legibility";
+import {hexToOklch} from "../../../tools/ps/oklch";
 
 /* The two lines a run against another sweep's copy of ps.css changes. */
 const CSS_FILE = path.resolve(__dirname, "../../../client/themes/ps.css");
@@ -138,23 +142,43 @@ interface Held {
 	/** Over the bodies too, or the sky alone. */
 	bodies: boolean;
 	faintWhite: boolean;
+	/** Drawn in a code box (--ps-code-bg): held against the box, not the plains. */
+	box?: string;
 }
 
-const LIGHT_ROOT = ':root[data-ps-text="light"] #chat .chat';
 const HEX = /^#[0-9a-f]{6}$/;
+/** What a code box draws: the highlighter's tokens and the block's own text. */
+const ON_CODE_BOX = /^--tok-[a-z]+$|^--md-code-color$/;
 
 /** The sweep the light nicks take below the default font-size step, if the light sweep needs one. */
 const SMALL = smallStepSweep(SWEEP);
+
+/** --ps-code-bg as each treatment's rule declares it. */
+function codeBoxes(): Partial<Record<Text, string>> {
+	const out: Partial<Record<Text, string>> = {};
+
+	for (const {selector, decls} of rulesOf(messageBlock)) {
+		const box = decls.find(([name]) => name === "--ps-code-bg");
+
+		if (box && (selector === "#chat .chat" || selector === LIGHT_ROOT)) {
+			out[selector === LIGHT_ROOT ? "light" : "ink"] = box[1];
+		}
+	}
+
+	return out;
+}
 
 /**
  * Every declaration of the message block, classified, so that a colour
  * written in another form fails rather than slipping past: white and faint
  * white over every ground, other colours by LIGHT_SWEEP at night (the nicks
- * under SMALL_STEPS_ROOT by its small-step set), faint ink at 3:1 by day.
- * Anything else it cannot read is an error.
+ * under SMALL_STEPS_ROOT by its small-step set), faint ink at 3:1 by day, and
+ * what a code box draws against the box. Anything else it cannot read is an
+ * error.
  */
 function heldColours(): {held: Held[]; unread: string[]} {
 	const floors = lightSweepFloors(SWEEP);
+	const boxes = codeBoxes();
 	const held: Held[] = [];
 	const unread: string[] = [];
 
@@ -177,7 +201,28 @@ function heldColours(): {held: Held[]; unread: string[]} {
 				continue;
 			}
 
-			if (
+			// The box itself is a surface: codeBoxes() reads it, the code test holds it opaque.
+			if (name === "--ps-code-bg" && HEX.test(value)) {
+				continue;
+			}
+
+			if (ON_CODE_BOX.test(name)) {
+				const box = boxes[text];
+
+				if (!HEX.test(value) || !box) {
+					unread.push(`${what}: ${value} (code box ${box ?? "missing"})`);
+				} else {
+					held.push({
+						what,
+						value,
+						text,
+						floor: 4.5,
+						bodies: true,
+						faintWhite: false,
+						box,
+					});
+				}
+			} else if (
 				text === "light" &&
 				name === "--chat-fg-faint" &&
 				value === "rgb(255 255 255 / 80%)"
@@ -213,6 +258,9 @@ function heldColours(): {held: Held[]; unread: string[]} {
 
 const groundsFor = (h: Held, list: CheckedGround[]) =>
 	h.bodies ? list : list.filter((g) => g.body === "sky");
+
+/** A colour drawn in a code box, against the box. */
+const onBox = (h: Held) => ({ratio: contrast(h.value, h.box!), where: `the code box ${h.box}`});
 
 /** The glass block's declared values. */
 function glassDeclared() {
@@ -273,9 +321,10 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 		const rules = rulesOf(messageBlock);
 		const count = (selector: string) =>
 			rules.find((r) => r.selector === selector)!.decls.length;
-		// 19 tokens and `color` by day; the same 19 and nine code tokens while the light changes.
-		expect(count("#chat .chat")).to.equal(20);
-		expect(count(LIGHT_ROOT)).to.equal(28);
+		// 19 tokens, the code box, nine code tokens and `color` by day; the same 19, the box
+		// and the nine tokens while the light changes.
+		expect(count("#chat .chat")).to.equal(30);
+		expect(count(LIGHT_ROOT)).to.equal(29);
 		const nicks = (prefix: string) =>
 			rules.filter((r) => r.selector.startsWith(`${prefix} .user.color-`));
 		expect(nicks("#chat .chat").map((r) => r.decls.length)).to.deep.equal(Array(32).fill(1));
@@ -284,7 +333,7 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 		const small = nicks(SMALL_STEPS_ROOT);
 		expect(small.map((r) => r.decls.length)).to.deep.equal(SMALL ? Array(32).fill(1) : []);
 		expect(rules.length).to.equal(66 + small.length);
-		expect(held.length).to.equal(19 + 28 + 64 + small.length);
+		expect(held.length).to.equal(28 + 28 + 64 + small.length);
 		const names = held.map((h) => h.what);
 		expect(names).to.include("#chat .chat --chat-fg");
 		expect(names).to.include("#chat .chat --link-color");
@@ -318,9 +367,54 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 		expect(after).to.include(':root #chat .chat .msg[data-type="notice"] .user');
 	});
 
+	it("paints the column's code boxes with their own opaque surface, not the chrome's, in both treatments", function () {
+		expect(codeBoxes()).to.deep.equal(CODE_BOX);
+
+		for (const box of Object.values(codeBoxes())) {
+			expect(box).to.match(HEX);
+		}
+
+		// Outside the block: the rule that puts every code box on it.
+		const rule = rulesOf(css).find((r) => r.selector.startsWith("#chat .chat code,"));
+		expect(rule, "the code box rule").to.not.equal(undefined);
+		expect(rule!.selector.split(/,\s*/)).to.deep.equal([
+			"#chat .chat code",
+			"#chat .chat pre",
+			"#chat .chat .irc-monospace",
+			'#chat .chat .msg[data-type="monospace_block"] .text',
+		]);
+		expect(rule!.decls).to.deep.equal([["background", "var(--ps-code-bg)"]]);
+	});
+
+	it("underlines links in the column while the light changes and all night, when their colour no longer marks them", function () {
+		const rule = rulesOf(css).find((r) => r.selector === `${LIGHT_ROOT} a`);
+		expect(rule, "the light treatment's link rule").to.not.equal(undefined);
+		expect(Object.fromEntries(rule!.decls)).to.include({"text-decoration": "underline"});
+	});
+
+	it("keeps every rule-2 colour within 0.08 OKLCH lightness of the spec's", function () {
+		const L = (hex: string) => hexToOklch(hex)[0];
+		const glass = glassDeclared();
+		const faint = rulesOf(messageBlock)
+			.find((r) => r.selector === "#chat .chat")!
+			.decls.find(([name]) => name === "--chat-fg-faint")![1];
+
+		for (const [what, now, spec] of [
+			["day --ps-g-soft", glass.day.tokens["--ps-g-soft"], GLASS.day.soft],
+			["night --ps-g-soft", glass.night.tokens["--ps-g-soft"], GLASS.night.soft],
+			["--chat-fg-faint", faint, INK_FAINT],
+		]) {
+			expect(now, what).to.match(HEX);
+			expect(
+				Math.abs(L(now) - L(spec)),
+				`${what} ${now} against the spec's ${spec}`
+			).to.be.at.most(0.08);
+		}
+	});
+
 	it("holds every daytime colour at 4.5:1, and faint ink at 3:1", function () {
 		for (const h of heldColours().held.filter((x) => x.text === "ink")) {
-			const w = worst(h.value, grounds().column.ink);
+			const w = h.box ? onBox(h) : worst(h.value, grounds().column.ink);
 			expect(w.ratio, `${h.what} ${h.value} at ${w.where}`).to.be.at.least(h.floor);
 		}
 	});
@@ -328,7 +422,11 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 	it(`holds every dusk-and-night colour to its floor under LIGHT_SWEEP "${SWEEP}"`, function () {
 		for (const h of heldColours().held.filter((x) => x.text === "light")) {
 			const list = groundsFor(h, grounds().column.light);
-			const w = h.faintWhite ? worstFaintWhite(list) : worst(h.value, list);
+			const w = h.box
+				? onBox(h)
+				: h.faintWhite
+				? worstFaintWhite(list)
+				: worst(h.value, list);
 			expect(w.ratio, `${h.what} ${h.value} at ${w.where}`).to.be.at.least(h.floor);
 		}
 	});
@@ -367,7 +465,8 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 				return {...g, hex, lum: luminance(hex)};
 			});
 
-			for (const h of heldColours().held.filter((x) => x.text === wash.text)) {
+			// A code box is opaque: the wash never reaches what it draws.
+			for (const h of heldColours().held.filter((x) => x.text === wash.text && !x.box)) {
 				const list = groundsFor(h, washed);
 				const w = h.faintWhite ? worstFaintWhite(list) : worst(h.value, list);
 				expect(w.ratio, `${h.what} ${h.value} on a mention at ${w.where}`).to.be.at.least(

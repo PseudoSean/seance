@@ -51,15 +51,18 @@ import {readFileSync, writeFileSync} from "node:fs";
 import {resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 import {contrast, luminance, mix} from "../../client/js/scenes/ps/colour";
+import {SOLAR_NOON} from "../../client/js/scenes/ps/engine";
 import {paletteAt, publishedFor} from "../../client/js/scenes/ps/palette";
 import {
 	ALPHA_HALO,
 	ALPHA_SHADOW,
 	checkedGrounds,
+	CODE_BOX,
 	GLASS,
 	glassGround,
 	INK,
 	INK_FAINT,
+	LIGHT_ROOT,
 	LIGHT_SWEEP,
 	lightSweepFloors,
 	momentOf,
@@ -145,11 +148,10 @@ export function nickBases(): string[] {
 }
 
 /**
- * The code highlighter's tokens, solved for the light treatment only. By day a
- * code block keeps its paper box and :root's token colours with it; at night
- * the box goes dark (the rule after the block), where those colours fall to
- * about 3:1, so they get light ones. Their bases are :root's own values, read
- * from the tokens section.
+ * The code highlighter's tokens, solved in both treatments against the code
+ * box they are drawn in (CODE_BOX, written as --ps-code-bg), never the plains:
+ * the box is opaque. Their bases are :root's own values, read from the tokens
+ * section.
  */
 function codeTokens(css: string): Array<{names: string[]; base: string}> {
 	const from = css.indexOf("/* ---- tokens ---- */");
@@ -403,14 +405,20 @@ function solveGlass(light: Light, raw: CheckedGround[]): GlassSolved {
 	};
 }
 
-/** The darkest moment still under day glass (darkness ≤ GLASS_NIGHT_AT) in the dense sweep: the first, if several tie. */
+/**
+ * The darkest evening moment still under day glass (darkness ≤ GLASS_NIGHT_AT,
+ * after solar noon) in the dense sweep: late dusk, just before the chrome
+ * turns to night; the first, if several tie. Mornings are left out: the dawn
+ * twin of the same darkness is not what Review Focus 1 pins.
+ */
 function duskPin(): {where: string; dark: number} {
 	let best = {where: "", dark: -1};
 	const {days, step} = SAMPLING.dense;
+	const noon = Math.ceil(SOLAR_NOON / step) * step;
 
 	// Darkness is the canonical stop's own and does not depend on the weather.
 	for (const doy of days) {
-		for (let minute = 0; minute < 1440; minute += step) {
+		for (let minute = noon; minute < 1440; minute += step) {
 			const p = paletteAt(momentOf(doy, minute, "clear"));
 
 			if (publishedFor(p).light === "day" && p.dark > best.dark) {
@@ -446,6 +454,18 @@ export function solvePalettes(css: string, options: Partial<Options> = {}): Solv
 		);
 	}
 
+	// A code block's own text, on its box.
+	for (const [text, ink] of [
+		["ink", FIXED.ink["--md-code-color"]],
+		["light", FIXED.light["--md-code-color"]],
+	] as const) {
+		if (contrast(ink, CODE_BOX[text]) < TEXT) {
+			throw new Error(
+				`rule 3: ${text} --md-code-color ${ink} fails on the code box ${CODE_BOX[text]}`
+			);
+		}
+	}
+
 	const inkWorst = worstFor("ink", g.column.ink);
 	const lightNicks = worstFor("light", lightFor(floors.nicks.bodies));
 	const lightColours = worstFor("light", lightFor(floors.colours.bodies));
@@ -453,12 +473,15 @@ export function solvePalettes(css: string, options: Partial<Options> = {}): Solv
 	const ink = {
 		...FIXED.ink,
 		"--chat-fg-faint": faint.now,
+		"--ps-code-bg": CODE_BOX.ink,
 		...solveAll(SEMANTIC, "ink", inkWorst.hex),
+		...solveAll(codeTokens(css), "ink", CODE_BOX.ink),
 	};
 	const light = {
 		...FIXED.light,
+		"--ps-code-bg": CODE_BOX.light,
 		...solveAll(SEMANTIC, "light", lightColours.hex, floors.colours.solveTo),
-		...solveAll(codeTokens(css), "light", lightColours.hex, floors.colours.solveTo),
+		...solveAll(codeTokens(css), "light", CODE_BOX.light),
 	};
 	const bases = nickBases();
 	const nicks = {
@@ -538,7 +561,7 @@ const SWEEP_TEXT: Record<LightSweep, string> = {
 /** The message column's block, markers included. */
 export function messageBlock(s: Solved): string {
 	const c = s.column;
-	const lightRoot = ':root[data-ps-text="light"] #chat .chat';
+	const lightRoot = LIGHT_ROOT;
 	const floors = lightSweepFloors(s.sweep);
 
 	return [
@@ -579,6 +602,8 @@ export function messageBlock(s: Solved): string {
 					groundLine(c.lightColours),
 			  ]),
 		...moveLines("Faint ink", c.faint),
+		" * Code boxes paint --ps-code-bg, opaque (ps.css, after the block): the --tok-*",
+		` * colours are solved against it, ${CODE_BOX.ink} by day and ${CODE_BOX.light} otherwise.`,
 		" * Six-digit hex throughout: the floors test reads every colour in that form. */",
 		"/* stylelint-disable color-hex-length */",
 		"#chat .chat {",

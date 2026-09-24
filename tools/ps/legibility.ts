@@ -145,6 +145,19 @@ export const SMALL_STEPS_ROOT = `:root:where(:not(${LARGE_TEXT_STEPS.map(
 	(step) => `[data-font-size="${step}"]`
 ).join(", ")}))[data-ps-text="light"] #chat .chat`;
 
+/** The message column under the light treatment: the generated block's second rule, and every light nick rule's prefix. */
+export const LIGHT_ROOT = ':root[data-ps-text="light"] #chat .chat';
+
+/**
+ * The message column's code boxes (code, pre, the monospace block, inline
+ * monospace), which paint their own opaque surface, --ps-code-bg, rather than
+ * the plains: by day :root's paper (#f4f9ff, what the box painted through
+ * --composer-bg until now), while the light changes and all night the night
+ * glass's solid surface (spec §6). The --tok-* colours and --md-code-color
+ * are held against this box, not the sky.
+ */
+export const CODE_BOX: Record<Text, string> = {ink: "#f4f9ff", light: "#121827"};
+
 export interface SweepFloor {
 	/** What the floors test holds. */
 	floor: number;
@@ -293,7 +306,21 @@ export function surfaceGrounds(
 	p: Palette,
 	alpha?: number
 ): {state: Text | Light; grounds: Ground[]} {
-	const scene = [...skyGrounds(p), ...bodyGrounds(m, p)];
+	return onSurface(surface, sceneGrounds(m, p), p, alpha);
+}
+
+/** What the scene paints at one moment: the sky and the bodies (plan 2's grounds). */
+export function sceneGrounds(m: Moment, p: Palette): Ground[] {
+	return [...skyGrounds(p), ...bodyGrounds(m, p)];
+}
+
+/** The one path from the scene's grounds to a surface's, which surfaceGrounds and groundsAt share. */
+function onSurface(
+	surface: Surface,
+	scene: Ground[],
+	p: Palette,
+	alpha?: number
+): {state: Text | Light; grounds: Ground[]} {
 	return surface === "column" ? throughTreatment(scene, p) : underTint(scene, p, alpha);
 }
 
@@ -311,7 +338,13 @@ function underTint(scene: Ground[], p: Palette, alpha?: number): {state: Light; 
 	return {state: light, grounds: scene.map((g) => ({...g, hex: glassGround(g.hex, light, a)}))};
 }
 
-/** Visit every sampled moment of a sweep, with its palette and a `doy D M min W` label the headers pin by. */
+/**
+ * Visit every sampled moment of a sweep (SAMPLING[days]: its days, every
+ * `step` minutes, all six weathers), with its palette and a `doy D M min W`
+ * label the headers pin by. The grounds a moment holds are groundsAt's: the
+ * sky (skyTop, skyMid, skyHorizon) and the bodies (bodyGrounds), through the
+ * column's treatment and, untinted, for the glass.
+ */
 export function eachChecked(
 	visit: (m: Moment, p: Palette, where: string) => void,
 	days: Days
@@ -341,15 +374,20 @@ export interface Checked {
 	glass: Record<Light, CheckedGround[]>;
 }
 
-/** One moment's grounds for both surfaces: the column's effective, the glass's raw. */
+/**
+ * One moment's grounds for both surfaces, by surfaceGrounds' own path (the
+ * scene's grounds computed once): the column's through its treatment, the
+ * glass's under the tint at opacity 0, i.e. the scene's own colours, which the
+ * generator and the floors test tint at the opacity they solve or read.
+ */
 export function groundsAt(m: Moment, p: Palette, where: string): Checked {
-	const raw = [...skyGrounds(p), ...bodyGrounds(m, p)];
-	const column = throughTreatment(raw, p);
-	const {light} = publishedFor(p);
+	const scene = sceneGrounds(m, p);
+	const column = onSurface("column", scene, p);
+	const glass = onSurface("glass", scene, p, 0);
 	const out: Checked = {column: {ink: [], light: []}, glass: {day: [], night: []}};
 	const checked = (g: Ground) => ({...g, lum: luminance(g.hex), where});
-	out.column[column.state] = column.grounds.map(checked);
-	out.glass[light] = raw.map(checked);
+	out.column[column.state as Text] = column.grounds.map(checked);
+	out.glass[glass.state as Light] = glass.grounds.map(checked);
 	return out;
 }
 
