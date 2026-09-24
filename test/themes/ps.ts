@@ -208,58 +208,32 @@ describe("the ps theme's motion", function () {
 	});
 });
 
-describe("the ps theme's glitter", function () {
-	it("has four bursts, cycled on send, and fires on reactions; nothing on hover", function () {
-		for (const n of [1, 2, 3, 4]) {
-			expect(css).to.include(`--ps-burst-${n}:`);
-		}
-
-		for (const n of [1, 2, 3, 4]) {
-			expect(css).to.match(
-				new RegExp(`\\.msg\\.self:last-child:nth-child\\(4n\\s*\\+\\s*${n}\\)::before`)
-			);
-		}
-
-		expect(css, "no hover glitter").to.not.include(":hover::");
-		expect(css, "the send burst hangs off the text column").to.match(
-			/#chat \.msg\.self:last-child::before,\s*#chat \.msg\.self:last-child::after \{[^}]*left: calc\(var\(--ps-text-x\) - 0\.4em\)/
+describe("the ps theme has no glitter", function () {
+	// The <3 theme burst sparks, hearts and stars off an own message and a
+	// reaction's arrival. ps is peace on the plains: the bursts are gone and
+	// nothing has replaced them yet (docs/projects/ps-theme.md).
+	it("hangs nothing off a message, a reaction or an enter class", function () {
+		expect(css, "no burst tokens").to.not.match(/--ps-burst-/);
+		expect(css, "no sparkle keyframes").to.not.match(/@keyframes [\w-]*sparkle/);
+		expect(css, "no send burst").to.not.match(/\.msg\.self:last-child/);
+		expect(css, "no pseudo-element on a message").to.not.match(
+			/\.msg\b[^{},]*::(before|after)/
 		);
-
-		for (const [cls, x] of [
-			["", "13.25rem"],
-			[".time-seconds", "14.5rem"],
-			[".time-12h", "15.25rem"],
-			[".time-seconds.time-12h", "17rem"],
-		]) {
-			expect(css, `text start with ${cls || "the default clock"}`).to.match(
-				new RegExp(`#chat${cls.replace(/\./g, "\\.")} \\{\\s*--ps-text-x: ${x};`)
-			);
-		}
-
-		expect(css).to.match(/@media \(max-width: 479px\) \{\s*#chat \{\s*--ps-text-x: 0\.4em;/);
-		expect(css).to.include(".reaction-enter-active::before");
-		expect(css, "the first reaction's group bursts too").to.include(
-			".reactions-enter-active .msg-reaction:not(.msg-reaction-add)::before"
+		expect(css, "no pseudo-element on a reaction").to.not.match(
+			/msg-reaction[^{},]*::(before|after)/
 		);
-		expect(css, "the enter class is held open for the burst").to.match(
-			/#chat \.reaction-enter-active,\s*#chat \.reactions-enter-active \{[^}]*ps-hold 0\.9s/
+		expect(css, "no pseudo-element on an enter class").to.not.match(
+			/enter-active[^{},]*::(before|after)/
 		);
 	});
 
-	it("does not burst .msg-reaction.self on its own, a persistent class that would burst on every redraw", function () {
-		const glitterSection = css.slice(
-			css.indexOf("/* ---- glitter ---- */"),
-			css.indexOf("/* ---- meadow ---- */")
-		);
-		expect(glitterSection).to.not.include(".msg-reaction.self::");
-	});
-
-	it("leaves burst sizing to the burst variables, not a stretching background-size", function () {
-		const glitterSection = css.slice(
-			css.indexOf("/* ---- glitter ---- */"),
-			css.indexOf("/* ---- meadow ---- */")
-		);
-		expect(glitterSection).to.not.include("background-size");
+	it("leaves the reaction pop to style.css, restating neither enter class", function () {
+		// MessageReactions.vue's Transition wrappers and style.css's 160 ms
+		// reaction-pop serve every theme; the <3 theme restated them to hold the
+		// class open for its burst (heart-hold), which ps does not need.
+		expect(css).to.not.include(".reaction-enter-active");
+		expect(css).to.not.include(".reactions-enter-active");
+		expect(css, "no do-nothing hold animation").to.not.match(/@keyframes [\w-]*hold\b/);
 	});
 });
 

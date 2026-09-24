@@ -4,8 +4,8 @@
 	     first draw), and a badge that arrives after that pops in on its own.
 	     A badge is keyed on its text alone, so toggling yours on and off
 	     never remounts it — it keeps its identity (and a keyboard user's
-	     focus) across the toggle. Themes hang their own flourishes on the
-	     same enter classes (heart.css's glitter). -->
+	     focus) across the toggle. A theme can hang its own flourish on the
+	     same enter classes. -->
 	<Transition name="reactions">
 		<span v-if="badges.length" class="msg-reactions" role="group" :aria-label="groupAria">
 			<TransitionGroup name="reaction" tag="span" class="msg-reactions-list">
