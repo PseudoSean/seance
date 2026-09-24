@@ -11,7 +11,9 @@
 // after the scene table). The network check must stay able to fail: append
 // `#chat .header{background-image:var(--ps-horse)}` to the served
 // public/themes/ps.css and the run names horse.svg (and horse-still.svg under
-// reduced motion) and exits non-zero.
+// reduced motion) and exits non-zero; append
+// `#chat .msg.self:last-child::before{content:"";animation:ps-fade .9s}` and
+// the send's glitter check fails too. Both watched failing on 2026-09-24.
 //
 //   corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/theme-ps.mjs
@@ -260,6 +262,18 @@ export default async function run(page) {
 	});
 	await page.click(`.settings-menu button.appearance`);
 	await page.waitFor(`document.querySelector("#theme-select")`, {label: "the theme select"});
+	// The theme is called ps, shown as "ps"; the ancestor's "ps <3" is gone.
+	const options = await page.evaluate(
+		`[...document.querySelectorAll("#theme-select option")].map((o) => [o.value, o.textContent.trim()])`
+	);
+	page.check(
+		`the theme list offers ps as "ps" (${JSON.stringify(options.find(([v]) => v === "ps"))})`,
+		options.some(([v, text]) => v === "ps" && text === "ps")
+	);
+	page.check(
+		`no theme is called heart or shown as "ps <3" (${options.length} themes)`,
+		options.every(([v, text]) => v !== "heart" && !text.includes("<3"))
+	);
 	// The window's generic @change handler stores the select's value as the
 	// setting; a bubbling `change` is what picking an option produces.
 	await page.evaluate(
@@ -270,6 +284,12 @@ export default async function run(page) {
 		})()`
 	);
 	await page.sleep(700);
+	// Settings is a modal over the whole app: nothing behind its backdrop
+	// takes a click, so leave through Done before touching the sidebar.
+	await page.click(`.settings-modal-done`);
+	await page.waitFor(`!document.querySelector(".settings-modal-done")`, {
+		label: "settings closed",
+	});
 	await page.click(`.channel-list-item[data-name="#seance"]`);
 	await page.waitFor(`document.querySelector("#input")`, {label: "back in #seance"});
 	await page.sleep(300);
@@ -445,6 +465,11 @@ export default async function run(page) {
 		`document.getElementById("chat-container").dataset.scene ?? "none"`
 	);
 	page.check(`the lobby has no scene (${lobbyScene})`, lobbyScene === "none");
+
+	const oldName = await page.evaluate(
+		`/ps\\s*(<|&lt;)3/.test(document.documentElement.outerHTML + document.title)`
+	);
+	page.check(`the page says "ps <3" nowhere`, oldName === false);
 
 	page.check(`no console errors (${page.consoleErrors.length})`, page.consoleErrors.length === 0);
 }
