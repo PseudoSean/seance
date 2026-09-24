@@ -4,7 +4,8 @@
  * scene is redesigned. coffee.css's rules (the token-driven set every
  * handoff theme shares) with this theme's tokens, plus what no other theme
  * has: bundled fonts, motion, glitter, and a meadow behind the chat that
- * belongs to the channel.
+ * belongs to the channel. The meadow's animals are switched off, not
+ * removed (the block after the scene table).
  *
  * Sections, in order: fonts · tokens · nick palette · type · motion · glitter
  * · meadow · phones · reduced motion.
@@ -572,7 +573,8 @@ strong,
  * on the scroll container, so it stays put while messages scroll. Which
  * hills, where, and the tint of the green come from the conversation's seed
  * (data-scene, --channel-seed on #chat-container). The animals are
- * background layers too: see the tokens below. */
+ * background layers too: see the tokens below. In ps they are switched
+ * off by the block after the scene rules. */
 /* stylelint-disable-next-line no-duplicate-selectors -- the meadow's neutral hill-layout defaults */
 :root {
 	/* two mid hills: x (left edge as % of width), w (width %), h (height as a share of --strip) */
@@ -809,6 +811,23 @@ strong,
 
 	/* one of the two rainbow scenes (§5.3) */
 	--ps-rainbow: var(--ps-rainbow-arc);
+}
+
+/* The animals are disabled in ps, not removed. Every rig, every file under
+ * ps/ and every scene's cast above stays as it was; this block alone keeps
+ * them off the meadow by emptying all three slots, whatever the scene says.
+ * It ties with the scene rules on specificity and wins by coming after them;
+ * the bare #chat-container covers a conversation with no scene, which would
+ * otherwise inherit :root's neutral horse. Reduced motion repoints the
+ * animal tokens at their stills, never the slots, so the stills stay
+ * unpainted too, and a `url()` no painted layer substitutes is never
+ * fetched. Nothing after this block may put an animal back into a slot
+ * (test/themes/ps.ts). Delete this block and the animals come back. */
+#chat-container,
+#chat-container[data-scene] {
+	--ps-slot-a: none;
+	--ps-slot-b: none;
+	--ps-slot-f: none;
 }
 
 #chat .chat-view[data-type="channel"] .chat,
