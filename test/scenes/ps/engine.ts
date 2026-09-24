@@ -157,9 +157,9 @@ describe("ps engine: the sun and the moon", function () {
 
 	it("finds the true full and new moons (true elongation, not the mean month)", function () {
 		// Scanned with this very method to the minute; published times are 16:49 and 15:50 UTC.
-		expect(elongation(epochDays("2026-09-26T16:52:00Z"))).to.be.closeTo(180, 0.5);
+		expect(elongation(epochDays("2026-09-26T16:52:00Z"))).to.be.closeTo(180, 0.1);
 		const e = elongation(epochDays("2026-10-10T16:00:00Z"));
-		expect(Math.min(e, 360 - e)).to.be.below(0.5);
+		expect(Math.min(e, 360 - e)).to.be.below(0.1);
 	});
 
 	it("lights the moon by (1 − cos D) / 2 and leaves no moon within 9° of new", function () {
