@@ -189,6 +189,8 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 		}
 	};
 
+	// A scene mounted into a hidden page starts stopped; the first visible update starts it.
+	motion(false);
 	update(initial);
 
 	return {
