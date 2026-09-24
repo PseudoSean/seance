@@ -1,11 +1,17 @@
 // The ps theme in a real browser (docs/projects/ps-theme.md): picking it
 // in Appearance swaps the stylesheet, the chat root carries the
-// conversation's seed, the message area carries the meadow and its animals
-// as fourteen background layers, **the browser fetches the animals the scene
-// casts and no others**, a message fades in, an own pending message carries
-// its glitter, a reaction bursts on arrival, text keeps its contrast on the
-// sky, two channels grow two different meadows, and a screenshot catches one
-// of #seance's visitors.
+// conversation's seed, the message area carries the meadow as fourteen
+// background layers with every animal slot empty, **the browser fetches no
+// animal file at all** — not in a second scene, not as a still under reduced
+// motion — a message fades in, an own pending message carries its glitter, a
+// reaction bursts on arrival, text keeps its contrast on the sky, and two
+// channels grow two different meadows.
+//
+// The animals are switched off, not removed (client/themes/ps.css, the block
+// after the scene table). The network check must stay able to fail: append
+// `#chat .header{background-image:var(--ps-horse)}` to the served
+// public/themes/ps.css and the run names horse.svg (and horse-still.svg under
+// reduced motion) and exits non-zero.
 //
 //   corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/theme-ps.mjs
@@ -96,13 +102,19 @@ const INSTALL_CONTRAST = `(() => {
  *
  * - `declared`: every `ps/<file>.svg` the theme's stylesheet names anywhere
  *   — the animal tokens, their `-far` tints and the reduced-motion stills.
- * - `cast`: the files the open conversation's scene actually substitutes into
- *   the three slots, read off the computed `--ps-slot-a/-b/-f`.
+ *   The files are kept, so this is never empty.
+ * - `cast`: the files the open conversation's slots would substitute, read
+ *   off the computed `--ps-slot-a/-b/-f` of both `#chat-container` (where the
+ *   scene sets them) and the meadow's `.chat` (which paints them).
+ * - `painted`: animal files in the meadow's computed `background-image`.
  * - `fetched`: what the browser has actually asked the network for, from
  *   Resource Timing. Background images fetched by CSS appear here like any
  *   other subresource.
+ * - `control`: whether Resource Timing is recording this theme's own
+ *   subresources at all — the stylesheet and a font from `ps/`. Without it an
+ *   empty `fetched` proves nothing (a full buffer, a read before the swap).
  *
- * All three are read out of the running page rather than written down here:
+ * All of it is read out of the running page rather than written down here:
  * this file has already shipped a hardcoded cast that went stale the moment a
  * scene was recast.
  */
@@ -120,40 +132,83 @@ const MEADOW_FILES = `(() => {
 		for (const rule of rules) for (const f of files(rule.cssText || "")) declared.add(f);
 	}
 
-	const cs = getComputedStyle(document.getElementById("chat-container"));
+	const chat = document.querySelector(
+		'#chat .chat-view[data-type="channel"] .chat, #chat .chat-view[data-type="query"] .chat'
+	);
 	const cast = new Set();
 
-	for (const slot of ["a", "b", "f"]) {
-		for (const f of files(cs.getPropertyValue("--ps-slot-" + slot))) cast.add(f);
+	for (const el of [document.getElementById("chat-container"), chat]) {
+		if (!el) continue;
+		const cs = getComputedStyle(el);
+		for (const slot of ["a", "b", "f"]) {
+			for (const f of files(cs.getPropertyValue("--ps-slot-" + slot))) cast.add(f);
+		}
 	}
 
-	const fetched = new Set(
-		files(performance.getEntriesByType("resource").map((e) => e.name).join(" "))
-	);
+	const painted = chat ? files(getComputedStyle(chat).backgroundImage) : [];
+	const names = performance.getEntriesByType("resource").map((e) => e.name);
 	return {
 		declared: [...declared].sort(),
 		cast: [...cast].sort(),
-		fetched: [...fetched].sort(),
+		painted: painted.sort(),
+		fetched: [...new Set(files(names.join(" ")))].sort(),
+		entries: names.length,
+		control:
+			names.some((n) => /\\/themes\\/ps\\.css(\\?|$)/.test(n)) &&
+			names.some((n) => /\\/themes\\/ps\\/[a-z0-9-]+\\.woff2/.test(n)),
 	};
 })()`;
 
-/** MEADOW_FILES once the scene's own animals have arrived (they are fetched
- * asynchronously, a moment after the stylesheet swap paints). */
+/** How long after the meadow is painted a background image, had one been
+ * substituted, has been requested and has finished on a local server. The
+ * falsification in the header is what shows this is long enough. */
+const SETTLE_MS = 2500;
+
+/** MEADOW_FILES once the theme's own subresources are on the record and the
+ * meadow has had time to request anything it was going to. */
 async function meadowFiles(page, label) {
-	await page.waitFor(
-		`(() => {
-			const m = ${MEADOW_FILES};
-			return m.cast.length > 0 && m.cast.every((f) => m.fetched.includes(f));
-		})()`,
-		{label}
-	);
+	await page.waitFor(`${MEADOW_FILES}.control`, {label});
+	await page.sleep(SETTLE_MS);
 	return page.evaluate(MEADOW_FILES);
+}
+
+/** Every check that no animal is cast, painted or fetched, at one moment of
+ * the run. */
+function checkNoAnimals(page, m, where) {
+	page.check(
+		`${where}: Resource Timing records the theme's stylesheet and fonts (${m.entries} entries)`,
+		m.control
+	);
+	page.check(
+		`${where}: the stylesheet still names ${m.declared.length} animal files`,
+		m.declared.length > 0
+	);
+	page.check(
+		`${where}: every animal slot is empty${m.cast.length ? ` — ${m.cast.join(" ")}` : ""}`,
+		m.cast.length === 0
+	);
+	page.check(
+		`${where}: the meadow paints no animal${
+			m.painted.length ? ` — ${m.painted.join(" ")}` : ""
+		}`,
+		m.painted.length === 0
+	);
+	page.check(
+		`${where}: no animal file was fetched${
+			m.fetched.length ? ` — ${m.fetched.join(" ")}` : ""
+		}`,
+		m.fetched.length === 0
+	);
 }
 
 export default async function run(page) {
 	// A ?host link only pre-fills the connect form (a link is a suggestion,
 	// boot.ts handleQueryParams); connect for real.
 	await page.goto(page.url, {waitForSelector: "#connect form"});
+	// Resource Timing drops entries silently past its default 250, which would
+	// let "no animal file was fetched" pass on a busy page; the control in
+	// MEADOW_FILES catches that too, this makes it not happen.
+	await page.evaluate(`performance.setResourceTimingBufferSize(10000)`);
 	await page.evaluate(INSTALL_SHIM);
 	await page.evaluate(`document.querySelector("#connect form").requestSubmit()`);
 	await page.waitFor(`document.querySelector('.channel-list-item[data-name="#seance"]')`, {
@@ -186,9 +241,6 @@ export default async function run(page) {
 	await page.click(`.channel-list-item[data-name="#seance"]`);
 	await page.waitFor(`document.querySelector("#input")`, {label: "back in #seance"});
 	await page.sleep(300);
-	// When the meadow's animal layers started animating: each file's visit is
-	// timed from its own load, and "ps-visitor" below waits out that clock.
-	const meadowSince = Date.now();
 
 	page.check(
 		"the stylesheet is themes/ps.css",
@@ -210,76 +262,17 @@ export default async function run(page) {
 		"the message area carries the meadow's layers",
 		bg.split("radial-gradient").length >= 5
 	);
-	page.check(
-		"the meadow carries the animals as layers",
-		/(?<![a-z])ps\/(horse|deer|puppy|bunny|kitten|frog|ladybug|bird)(-far)?\.svg/.test(bg)
-	);
 	const layers = await page.evaluate(
 		`getComputedStyle(document.querySelector('#chat .chat-view[data-type="channel"] .chat')).backgroundSize.split(",").length`
 	);
 	page.check(`fourteen background layers (${layers})`, layers === 14);
 
-	// The whole of the theme's size argument (tools/heart/README.md § Budget
-	// and browsers): the directory holds every animal, a scene casts three,
-	// and a `url()` sitting in a custom property that no resolved
-	// background-image substitutes is never fetched. If that is wrong the
-	// budget is wrong, so it is checked here rather than remembered.
-	const meadow = await meadowFiles(page, "the scene's animals fetched");
-	const seen = new Set(meadow.cast);
-	const extra = meadow.fetched.filter((f) => !meadow.cast.includes(f));
-	const uncast = meadow.declared.filter((f) => !meadow.cast.includes(f));
-	// Two or three: every scene casts two near animals and most a distant
-	// visitor, but scene 4's plateau is deliberately empty and a phone drops
-	// slot B — so the count is reported, and only the sets below are pinned.
-	page.check(
-		`the scene casts ${meadow.cast.length} animals (${meadow.cast.join(" ")})`,
-		meadow.cast.length >= 2 && meadow.cast.length <= 3
-	);
-	page.check(
-		`${meadow.fetched.length} of the theme's ${meadow.declared.length} animal files were ` +
-			`fetched, and they are exactly the cast${
-				extra.length ? ` — also ${extra.join(" ")}` : ""
-			}`,
-		extra.length === 0
-	);
-	page.check(
-		`the ${uncast.length} uncast files were never requested (${uncast.slice(0, 4).join(" ")}${
-			uncast.length > 4 ? " …" : ""
-		})`,
-		uncast.length > 0 && uncast.every((f) => !meadow.fetched.includes(f))
-	);
-
-	// A scene sizes its distant visitor as `calc(0.7 * var(--ps-<animal>-h))`
-	// — a calc nested inside the slot's own `calc(var(--strip) * …)`. That is
-	// valid CSS, but nothing without a browser can confirm it resolves, and a
-	// layer that computed to nothing would simply not be painted, in silence.
-	// Measure it: the tenth background layer of fourteen is the visitor, and it
-	// should be 0.7 of its own animal's token, in strips.
-	const visitor = (meadow.cast.find((f) => f.endsWith("-far.svg")) ?? "").replace("-far.svg", "");
-	const slotPx = await page.evaluate(
-		`(() => {
-			const chat = document.querySelector('#chat .chat-view[data-type="channel"] .chat');
-			const probe = document.createElement("div");
-			probe.style.cssText = "position:absolute;visibility:hidden;height:var(--strip)";
-			chat.appendChild(probe);
-			const strip = probe.getBoundingClientRect().height;
-			probe.remove();
-			const token = parseFloat(
-				getComputedStyle(document.getElementById("chat-container")).getPropertyValue(
-					"--ps-${visitor}-h"
-				)
-			);
-			const sizes = getComputedStyle(chat).backgroundSize.split(",");
-			const far = parseFloat(sizes[9].trim().split(/\\s+/).pop());
-			return {far, expected: 0.7 * token * strip, token, strip};
-		})()`
-	);
-	page.check(
-		`the ${visitor} on the plateau is ${slotPx.far.toFixed(1)}px — 0.7 of its own ` +
-			`${slotPx.token} token on a ${slotPx.strip.toFixed(0)}px strip, ` +
-			`${slotPx.expected.toFixed(1)}px`,
-		slotPx.far > 1 && Math.abs(slotPx.far - slotPx.expected) < 1
-	);
+	// The animals are off: every slot empty, nothing painted, and — the part
+	// only a browser can say — no animal file requested, although the
+	// stylesheet still names all of them. A `url()` sitting in a custom
+	// property that no resolved background-image substitutes is never fetched
+	// (tools/heart/README.md § Budget and browsers).
+	checkNoAnimals(page, await meadowFiles(page, "the theme's subresources recorded"), "#seance");
 
 	const anim = await page.evaluate(
 		`getComputedStyle(document.querySelector("#chat .msg")).animationName`
@@ -364,15 +357,6 @@ export default async function run(page) {
 
 	await page.screenshot("ps-seance");
 
-	// #seance is scene 3: puppy (slot A), frog (slot B), a bunny on the
-	// plateau. Each file's visit is timed from when it loaded, and the three
-	// windows only overlap between 15 s and 21.9 s — puppy 15–38.4 s, frog
-	// 12–25.5 s, bunny-far 8–21.9 s — so wait out that clock rather than a
-	// fixed pause, which the checks above may already have outrun.
-	const VISITOR_AT = 20000;
-	await page.sleep(Math.max(500, VISITOR_AT - (Date.now() - meadowSince)));
-	await page.screenshot("ps-visitor");
-
 	await page.click(`.channel-list-item[data-name="#kittens"]`);
 	await page.waitFor(`document.querySelector("#input")`, {label: "in #kittens"});
 	await page.sleep(300);
@@ -384,22 +368,30 @@ export default async function run(page) {
 		seedB[0] !== seedA[0] || seedB[1] !== seedA[1]
 	);
 
-	// A second scene adds its own cast and nothing else: over the whole run
-	// the browser has fetched the union of the conversations opened, never
-	// the directory.
-	const meadowB = await meadowFiles(page, "#kittens' animals fetched");
-
-	for (const f of meadowB.cast) {
-		seen.add(f);
-	}
-
-	const union = [...seen].sort();
-	page.check(
-		`two scenes have fetched ${meadowB.fetched.length} files, the union of their casts ` +
-			`(${union.join(" ")})`,
-		meadowB.fetched.join(" ") === union.join(" ")
-	);
+	// A second scene casts other animals in its table; the override empties
+	// its slots all the same, so over the whole run nothing has been fetched.
+	checkNoAnimals(page, await meadowFiles(page, "#kittens' meadow settled"), "#kittens");
 	await page.screenshot("ps-kittens");
+
+	// Reduced motion repoints every animal token at its still. The slots stay
+	// empty, so no still is painted or fetched either. The repointing itself
+	// is the control that the emulation took: without it this leg would be a
+	// second look at the animated tokens.
+	await page.send("Emulation.setEmulatedMedia", {
+		features: [{name: "prefers-reduced-motion", value: "reduce"}],
+	});
+	await page.click(`.channel-list-item[data-name="#seance"]`);
+	await page.waitFor(`document.querySelector("#input")`, {label: "back in #seance, reduced"});
+	const still = await page.evaluate(
+		`getComputedStyle(document.documentElement).getPropertyValue("--ps-horse").trim()`
+	);
+	page.check(
+		`reduced motion points the animals at their stills (${still})`,
+		/-still\.svg/.test(still)
+	);
+	checkNoAnimals(page, await meadowFiles(page, "the reduced meadow settled"), "reduced motion");
+	await page.screenshot("ps-reduced");
+	await page.send("Emulation.setEmulatedMedia", {features: []});
 
 	await page.click(`.channel-list-item[data-type="lobby"]`);
 	await page.sleep(300);

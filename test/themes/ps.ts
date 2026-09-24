@@ -454,6 +454,47 @@ describe("the ps theme's animals", function () {
 		}
 	});
 
+	it("switches every animal off with one override after the scene table, which nothing undoes", function () {
+		// ps disables the animals without removing them: the scene table
+		// above is intact (the tests around this one hold it to that), and
+		// one block after it empties all three slots in every scene.
+		const selector = "\n#chat-container,\n#chat-container[data-scene] {";
+		const at = css.indexOf(selector);
+		expect(at, "the override block").to.be.greaterThan(-1);
+		expect(css.indexOf(selector, at + 1), "exactly one override block").to.equal(-1);
+
+		const body = css.slice(at, css.indexOf("\n}", at));
+
+		for (const slot of ["a", "b", "f"]) {
+			expect(body, `the override empties slot ${slot}`).to.include(
+				`--ps-slot-${slot}: none;`
+			);
+		}
+
+		for (const n of [0, 1, 2, 3, 4, 5]) {
+			expect(
+				css.lastIndexOf(`#chat-container[data-scene="${n}"]`),
+				`scene ${n} comes before the override`
+			).to.be.lessThan(at);
+		}
+
+		const comment = css.slice(css.lastIndexOf("/*", at), at);
+		expect(comment, "the comment says why").to.match(/disabled in ps, not removed/);
+		expect(comment, "and how to undo it").to.match(
+			/Delete this block and the animals come back/
+		);
+
+		// Later rules (the phones' slot B, reduced motion's stills) may empty
+		// a slot, never fill one: the stills would otherwise be painted.
+		const after = css.slice(css.indexOf("\n}", at));
+		const later = [...after.matchAll(/--ps-slot-([abf]):\s*([^;]*);/g)];
+		expect(later, "the phones' rule still empties slot b").to.not.be.empty;
+
+		for (const [, slot, value] of later) {
+			expect(value, `slot ${slot} after the override`).to.equal("none");
+		}
+	});
+
 	it("moves only x in the cloud keyframes, fourteen entries", function () {
 		const start = css.indexOf("@keyframes ps-clouds");
 		const block = css.slice(start, css.indexOf("\n}", start));
