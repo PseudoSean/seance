@@ -75,8 +75,8 @@
 // - the swatch and its twin agree exactly more than 2 device px from the core
 //   (the twin changed the glyphs and nothing else);
 // - every swatch has a core and a ring of at least MIN_RING pixels;
-// - the shadow over grass measures clearly above 0, and DPR 2 lands within
-//   0.15 of DPR 1 on every pair.
+// - the shadow over grass measures clearly above 0, and every higher DPR
+//   lands within 0.15 of DPR 1 on every pair.
 //
 // **Skipped pairs.** Where G lies within MIN_SPAN of S (Euclidean distance in
 // 0–255 sRGB), the projection divides by almost nothing and means nothing:
@@ -715,20 +715,22 @@ export default async function run(page) {
 		);
 	}
 
-	for (const r1 of results.filter((x) => x.dpr === 1 && !x.skipped)) {
-		const r2 = results.find(
-			(x) =>
-				x.dpr === 2 &&
-				x.treatment === r1.treatment &&
-				x.face === r1.face &&
-				x.ground === r1.ground
-		);
-		page.check(
-			`${r1.treatment} ${r1.face} ${r1.ground}: DPR 2 within ${DPR_SPREAD} of DPR 1 (${f3(
-				r1.p10
-			)} → ${f3(r2.p10)})`,
-			Math.abs(r2.p10 - r1.p10) <= DPR_SPREAD
-		);
+	for (const dpr of DPRS.filter((d) => d !== 1)) {
+		for (const r1 of results.filter((x) => x.dpr === 1 && !x.skipped)) {
+			const r2 = results.find(
+				(x) =>
+					x.dpr === dpr &&
+					x.treatment === r1.treatment &&
+					x.face === r1.face &&
+					x.ground === r1.ground
+			);
+			page.check(
+				`${r1.treatment} ${r1.face} ${
+					r1.ground
+				}: DPR ${dpr} within ${DPR_SPREAD} of DPR 1 (${f3(r1.p10)} → ${f3(r2.p10)})`,
+				Math.abs(r2.p10 - r1.p10) <= DPR_SPREAD
+			);
+		}
 	}
 
 	const out = join(page.outDir, "ps-calibration.json");
