@@ -373,10 +373,10 @@ const config: webpack.Configuration = {
 					to: "themes/[name][ext]",
 				},
 				{
-					// The <3 theme's fonts and licences, referenced relative to
-					// the stylesheet as heart/<file>.
-					from: path.resolve(__dirname, "./client/themes/heart/*").replace(/\\/g, "/"),
-					to: "themes/heart/[name][ext]",
+					// The ps theme's fonts, licences and animal files,
+					// referenced relative to the stylesheet as ps/<file>.
+					from: path.resolve(__dirname, "./client/themes/ps/*").replace(/\\/g, "/"),
+					to: "themes/ps/[name][ext]",
 				},
 			],
 		}),

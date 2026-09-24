@@ -216,7 +216,7 @@ export const rig = {
 	// a hop. The sit's own burial is fixed in the pose above, not here; what
 	// is left is a box that was simply too small. Extremes now reach
 	// y -14.4…105.6 and x 3.3…129.7, so this clears them by 3 (above), 2.4
-	// (below) and 3.3 (right). The theme's `--heart-bunny-h` is scaled by
+	// (below) and 3.3 (right). The theme's `--ps-bunny-h` is scaled by
 	// 126/92 and `stage.aspect` by 92/126 to match, so the bunny is the same
 	// size on screen and crosses the same distance.
 	viewBox: {x: 0, y: -18, w: 133, h: 126},
@@ -285,11 +285,11 @@ export default {
 	colours: {near: "#9b82dc", far: "#cbbfee"},
 	budget: 160 * 1024,
 	/**
-	 * What `client/themes/heart.css` has to say about this animal — the half of
-	 * the box coupling no audit can reach, checked by `test/themes/heart.ts`
+	 * What `client/themes/ps.css` has to say about this animal — the half of
+	 * the box coupling no audit can reach, checked by `test/themes/ps.ts`
 	 * (tools/heart/README.md § The audit):
 	 *
-	 * - `height` is `--heart-bunny-h`, the on-screen height of the *box*, in
+	 * - `height` is `--ps-bunny-h`, the on-screen height of the *box*, in
 	 *   strips;
 	 * - `box` is the `viewBox.h` it was picked against, so a box that grows
 	 *   without its token growing by the same ratio fails there instead of

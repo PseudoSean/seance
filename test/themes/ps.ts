@@ -10,9 +10,9 @@ import kitten from "../../tools/heart/rigs/kitten.mjs";
 import ladybug from "../../tools/heart/rigs/ladybug.mjs";
 import puppy from "../../tools/heart/rigs/puppy.mjs";
 
-const css = fs.readFileSync(path.resolve(__dirname, "../../client/themes/heart.css"), "utf8");
+const css = fs.readFileSync(path.resolve(__dirname, "../../client/themes/ps.css"), "utf8");
 
-describe("the <3 theme (client/themes/heart.css)", function () {
+describe("the ps theme (client/themes/ps.css)", function () {
 	it("is coffee's rules with its own tokens", function () {
 		expect(css.startsWith("/*")).to.be.true;
 		expect(css).to.include('@import "coffee.css";');
@@ -35,7 +35,7 @@ function contrast(a: string, b: string): number {
 	return (l1 + 0.05) / (l2 + 0.05);
 }
 
-describe("the <3 theme's colours", function () {
+describe("the ps theme's colours", function () {
 	const SKY = "#dbeeff";
 	const BLUSH = "#ffd6e6";
 
@@ -155,12 +155,12 @@ describe("the <3 theme's colours", function () {
 	});
 });
 
-describe("the <3 theme's type", function () {
+describe("the ps theme's type", function () {
 	it("bundles Nunito and Baloo 2 as variable fonts and sets them at the chosen weights", function () {
 		for (const file of [
-			"heart/nunito-variable.woff2",
-			"heart/nunito-variable-italic.woff2",
-			"heart/baloo2-variable.woff2",
+			"ps/nunito-variable.woff2",
+			"ps/nunito-variable-italic.woff2",
+			"ps/baloo2-variable.woff2",
 		]) {
 			expect(css).to.include(`url("${file}")`);
 		}
@@ -177,7 +177,7 @@ describe("the <3 theme's type", function () {
 			/#chat \.content \{\s*border-left-color: transparent;/
 		);
 		expect(css, "the header is paper like the composer").to.match(
-			/#chat \.header \{\s*background: var\(--heart-paper\);/
+			/#chat \.header \{\s*background: var\(--ps-paper\);/
 		);
 		expect(css).to.match(
 			/body,[\s\S]{0,200}font-family:\s*Nunito[\s\S]{0,80}font-weight:\s*600/
@@ -195,23 +195,23 @@ describe("the <3 theme's type", function () {
 	});
 });
 
-describe("the <3 theme's motion", function () {
+describe("the ps theme's motion", function () {
 	it("fades messages in, raises the chrome, glows a mention, and stands down under reduced motion", function () {
-		expect(css).to.include("@keyframes heart-fade");
-		expect(css).to.match(/#chat \.msg \{[^}]*animation: heart-fade 340ms ease-out backwards/);
+		expect(css).to.include("@keyframes ps-fade");
+		expect(css).to.match(/#chat \.msg \{[^}]*animation: ps-fade 340ms ease-out backwards/);
 		expect(css).to.match(/#chat \.msg\.pending \{[^}]*animation-name: none/);
-		expect(css).to.include("@keyframes heart-rise");
-		expect(css).to.include("@keyframes heart-glow");
+		expect(css).to.include("@keyframes ps-rise");
+		expect(css).to.include("@keyframes ps-glow");
 		expect(css).to.match(
 			/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*animation: none !important/
 		);
 	});
 });
 
-describe("the <3 theme's glitter", function () {
+describe("the ps theme's glitter", function () {
 	it("has four bursts, cycled on send, and fires on reactions; nothing on hover", function () {
 		for (const n of [1, 2, 3, 4]) {
-			expect(css).to.include(`--heart-burst-${n}:`);
+			expect(css).to.include(`--ps-burst-${n}:`);
 		}
 
 		for (const n of [1, 2, 3, 4]) {
@@ -222,7 +222,7 @@ describe("the <3 theme's glitter", function () {
 
 		expect(css, "no hover glitter").to.not.include(":hover::");
 		expect(css, "the send burst hangs off the text column").to.match(
-			/#chat \.msg\.self:last-child::before,\s*#chat \.msg\.self:last-child::after \{[^}]*left: calc\(var\(--heart-text-x\) - 0\.4em\)/
+			/#chat \.msg\.self:last-child::before,\s*#chat \.msg\.self:last-child::after \{[^}]*left: calc\(var\(--ps-text-x\) - 0\.4em\)/
 		);
 
 		for (const [cls, x] of [
@@ -232,17 +232,17 @@ describe("the <3 theme's glitter", function () {
 			[".time-seconds.time-12h", "17rem"],
 		]) {
 			expect(css, `text start with ${cls || "the default clock"}`).to.match(
-				new RegExp(`#chat${cls.replace(/\./g, "\\.")} \\{\\s*--heart-text-x: ${x};`)
+				new RegExp(`#chat${cls.replace(/\./g, "\\.")} \\{\\s*--ps-text-x: ${x};`)
 			);
 		}
 
-		expect(css).to.match(/@media \(max-width: 479px\) \{\s*#chat \{\s*--heart-text-x: 0\.4em;/);
+		expect(css).to.match(/@media \(max-width: 479px\) \{\s*#chat \{\s*--ps-text-x: 0\.4em;/);
 		expect(css).to.include(".reaction-enter-active::before");
 		expect(css, "the first reaction's group bursts too").to.include(
 			".reactions-enter-active .msg-reaction:not(.msg-reaction-add)::before"
 		);
 		expect(css, "the enter class is held open for the burst").to.match(
-			/#chat \.reaction-enter-active,\s*#chat \.reactions-enter-active \{[^}]*heart-hold 0\.9s/
+			/#chat \.reaction-enter-active,\s*#chat \.reactions-enter-active \{[^}]*ps-hold 0\.9s/
 		);
 	});
 
@@ -263,7 +263,7 @@ describe("the <3 theme's glitter", function () {
 	});
 });
 
-describe("the <3 theme's meadow", function () {
+describe("the ps theme's meadow", function () {
 	it("paints sky, hills and clouds behind channels and queries, seeded per conversation", function () {
 		expect(css).to.match(
 			/#chat \.chat-view\[data-type="channel"\] \.chat,\s*#chat \.chat-view\[data-type="query"\] \.chat \{/
@@ -276,14 +276,14 @@ describe("the <3 theme's meadow", function () {
 
 		const scene1Start = css.indexOf('#chat-container[data-scene="1"]');
 		const scene1Body = css.slice(scene1Start, css.indexOf("}", scene1Start));
-		expect(scene1Body, "scene 1 hides the second cloud").to.include("--heart-cloud-2");
+		expect(scene1Body, "scene 1 hides the second cloud").to.include("--ps-cloud-2");
 
-		expect(css).to.include("@keyframes heart-clouds");
+		expect(css).to.include("@keyframes ps-clouds");
 		expect(css, "the meadow never pauses while typing").to.not.include(
 			"animation-play-state: paused"
 		);
 		expect(css).to.match(/@media \(max-width: 600px\)[\s\S]*--strip: 6\.5rem/);
-		expect(css).to.match(/text-shadow: 0 0 6px var\(--heart-sky\)/);
+		expect(css).to.match(/text-shadow: 0 0 6px var\(--ps-sky\)/);
 		expect(css, "spoilers keep no halo").to.match(
 			/\.md-spoiler:not\(\.md-spoiler-shown\) \{[^}]*text-shadow: none/
 		);
@@ -298,11 +298,11 @@ describe("the <3 theme's meadow", function () {
 		const bodyEnd = meadowSection.indexOf("}", bodyStart);
 		const chatContainerRule = meadowSection.slice(bodyStart, bodyEnd);
 
-		expect(chatContainerRule).to.include("--heart-hill-hue:");
+		expect(chatContainerRule).to.include("--ps-hill-hue:");
 		expect(chatContainerRule).to.include("var(--channel-seed, 0.5)");
 
 		for (const match of meadowSection.matchAll(/:root\s*\{([^}]*)\}/g)) {
-			expect(match[1]).to.not.include("--heart-hill-hue:");
+			expect(match[1]).to.not.include("--ps-hill-hue:");
 		}
 	});
 
@@ -317,7 +317,7 @@ describe("the <3 theme's meadow", function () {
 	});
 });
 
-describe("the <3 theme's animals", function () {
+describe("the ps theme's animals", function () {
 	/** The cast (tools/heart/README.md); the teddy and the dolphin are held. */
 	const CAST = ["horse", "deer", "puppy", "bunny", "kitten", "frog", "ladybug", "bird"];
 
@@ -337,7 +337,7 @@ describe("the <3 theme's animals", function () {
 		return css.slice(start, css.indexOf("\n}", start));
 	};
 
-	/** Top-level comma-separated entries of a declaration's value, var(--heart-cloud-2) counted as two. */
+	/** Top-level comma-separated entries of a declaration's value, var(--ps-cloud-2) counted as two. */
 	const entries = (block: string, prop: string) => {
 		const m = block.match(new RegExp(`\\n\\t${prop}:([^;]*);`));
 		expect(m, prop).to.not.be.null;
@@ -355,7 +355,7 @@ describe("the <3 theme's animals", function () {
 			}
 		}
 
-		return count + (value.includes("var(--heart-cloud-2)") ? 1 : 0);
+		return count + (value.includes("var(--ps-cloud-2)") ? 1 : 0);
 	};
 
 	it("paints three animal slots and a rainbow slot as layers, fourteen deep in every list", function () {
@@ -367,14 +367,14 @@ describe("the <3 theme's animals", function () {
 
 		const image = rule.match(/\n\tbackground-image:([^;]*);/)![1];
 		const order = [
-			"var(--heart-cloud-2)",
-			"var(--heart-slot-b)",
-			"var(--heart-slot-a)",
-			"var(--heart-ground)",
-			"var(--heart-slot-f)",
-			"var(--heart-hill-far)",
-			"var(--heart-rainbow)",
-			"var(--heart-sky-deep)",
+			"var(--ps-cloud-2)",
+			"var(--ps-slot-b)",
+			"var(--ps-slot-a)",
+			"var(--ps-ground)",
+			"var(--ps-slot-f)",
+			"var(--ps-hill-far)",
+			"var(--ps-rainbow)",
+			"var(--ps-sky-deep)",
 		];
 		let at = -1;
 
@@ -384,20 +384,18 @@ describe("the <3 theme's animals", function () {
 			at = next;
 		}
 
-		expect(rule).to.include("auto calc(var(--strip) * var(--heart-slot-a-h))");
+		expect(rule).to.include("auto calc(var(--strip) * var(--ps-slot-a-h))");
 		expect(rule).to.include("calc(100% - var(--strip) * 0.295)"); // the visitor stands on the plateau
 	});
 
 	it("declares the eight animals' files, and every file it names exists", function () {
 		for (const animal of CAST) {
-			expect(css).to.include(`--heart-${animal}: url("heart/${animal}.svg");`);
-			expect(css).to.include(`--heart-${animal}-far: url("heart/${animal}-far.svg");`);
-			expect(css, `--heart-${animal}-h`).to.match(
-				new RegExp(`--heart-${animal}-h: \\d*\\.\\d+;`)
-			);
+			expect(css).to.include(`--ps-${animal}: url("ps/${animal}.svg");`);
+			expect(css).to.include(`--ps-${animal}-far: url("ps/${animal}-far.svg");`);
+			expect(css, `--ps-${animal}-h`).to.match(new RegExp(`--ps-${animal}-h: \\d*\\.\\d+;`));
 		}
 
-		for (const [, file] of css.matchAll(/url\("(heart\/[^"]+\.svg)"\)/g)) {
+		for (const [, file] of css.matchAll(/url\("(ps\/[^"]+\.svg)"\)/g)) {
 			expect(
 				fs.existsSync(path.resolve(__dirname, "../../client/themes/", file)),
 				`${file} exists`
@@ -407,25 +405,23 @@ describe("the <3 theme's animals", function () {
 
 	it("casts all eight, every scene, and holds no animal the user set aside", function () {
 		const cast = new Map(CAST.map((animal) => [animal, [] as number[]]));
-		const near = `var\\(--heart-(${CAST.join("|")})\\)`;
+		const near = `var\\(--ps-(${CAST.join("|")})\\)`;
 
 		for (const n of [0, 1, 2, 3, 4, 5]) {
 			const body = sceneBody(n);
-			expect(body, `scene ${n} casts slot a`).to.match(
-				new RegExp(`--heart-slot-a: ${near};`)
-			);
+			expect(body, `scene ${n} casts slot a`).to.match(new RegExp(`--ps-slot-a: ${near};`));
 			expect(body, `scene ${n} sizes slot a`).to.match(
-				new RegExp(`--heart-slot-a-h: var\\(--heart-(${CAST.join("|")})-h\\);`)
+				new RegExp(`--ps-slot-a-h: var\\(--ps-(${CAST.join("|")})-h\\);`)
 			);
 			expect(body, `scene ${n} decides slot b`).to.match(
-				new RegExp(`--heart-slot-b: (none|${near});`)
+				new RegExp(`--ps-slot-b: (none|${near});`)
 			);
 			expect(body, `scene ${n} decides slot f`).to.match(
-				new RegExp(`--heart-slot-f: (none|var\\(--heart-(${CAST.join("|")})-far\\));`)
+				new RegExp(`--ps-slot-f: (none|var\\(--ps-(${CAST.join("|")})-far\\));`)
 			);
 
 			for (const [, animal] of body.matchAll(
-				/--heart-slot-[abf]: var\(--heart-([a-z]+?)(?:-far)?\);/g
+				/--ps-slot-[abf]: var\(--ps-([a-z]+?)(?:-far)?\);/g
 			)) {
 				cast.get(animal)!.push(n);
 			}
@@ -440,8 +436,8 @@ describe("the <3 theme's animals", function () {
 		// reach for either. Tokens and urls, not the bare word — the docs may
 		// well end up explaining in a comment here why neither is cast.
 		for (const held of ["teddy", "dolphin"]) {
-			expect(css, `no --heart-${held} token`).to.not.include(`--heart-${held}`);
-			expect(css, `no heart/${held} file`).to.not.include(`url("heart/${held}`);
+			expect(css, `no --ps-${held} token`).to.not.include(`--ps-${held}`);
+			expect(css, `no ps/${held} file`).to.not.include(`url("ps/${held}`);
 		}
 	});
 
@@ -453,13 +449,13 @@ describe("the <3 theme's animals", function () {
 
 		for (const n of [0, 1, 2, 3, 4, 5]) {
 			const body = sceneBody(n);
-			const a = body.match(/--heart-slot-a: var\(--heart-([a-z]+)\);/)![1];
+			const a = body.match(/--ps-slot-a: var\(--ps-([a-z]+)\);/)![1];
 			expect(small, `scene ${n}'s near animal on a phone`).to.not.include(a);
 		}
 	});
 
 	it("moves only x in the cloud keyframes, fourteen entries", function () {
-		const start = css.indexOf("@keyframes heart-clouds");
+		const start = css.indexOf("@keyframes ps-clouds");
 		const block = css.slice(start, css.indexOf("\n}", start));
 		expect(block).to.include("background-position-x:");
 		expect(block).to.not.include("background-position-y");
@@ -472,46 +468,42 @@ describe("the <3 theme's animals", function () {
 			css.indexOf("@media (max-width: 600px)"),
 			css.indexOf("@media (prefers-reduced-motion: reduce)")
 		);
-		expect(phones).to.match(/#chat-container\[data-scene\] \{[^}]*--heart-slot-b: none;/);
+		expect(phones).to.match(/#chat-container\[data-scene\] \{[^}]*--ps-slot-b: none;/);
 		const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
 
 		for (const animal of CAST) {
-			expect(reduced).to.include(`--heart-${animal}: url("heart/${animal}-still.svg");`);
-			expect(reduced).to.include(
-				`--heart-${animal}-far: url("heart/${animal}-far-still.svg");`
-			);
+			expect(reduced).to.include(`--ps-${animal}: url("ps/${animal}-still.svg");`);
+			expect(reduced).to.include(`--ps-${animal}-far: url("ps/${animal}-far-still.svg");`);
 		}
 
 		expect(entries(reduced.replace(/\n\t\t/g, "\n\t"), "background-position")).to.equal(14);
 	});
 
 	it("raises a rainbow in scenes 2 and 5 on y alone", function () {
-		expect(css).to.match(
-			/--heart-rainbow-arc: radial-gradient\(circle farthest-side at 50% 100%/
-		);
+		expect(css).to.match(/--ps-rainbow-arc: radial-gradient\(circle farthest-side at 50% 100%/);
 
 		for (const n of [2, 5]) {
 			const start = css.indexOf(`#chat-container[data-scene="${n}"]`);
 			expect(css.slice(start, css.indexOf("}", start)), `scene ${n}`).to.include(
-				"--heart-rainbow: var(--heart-rainbow-arc);"
+				"--ps-rainbow: var(--ps-rainbow-arc);"
 			);
 		}
 
 		const rule = meadowRule();
 		expect(rule).to.match(
-			/animation:\s*heart-clouds 90s linear infinite,\s*heart-rainbow 300s ease-in-out infinite;/
+			/animation:\s*ps-clouds 90s linear infinite,\s*ps-rainbow 300s ease-in-out infinite;/
 		);
-		const start = css.indexOf("@keyframes heart-rainbow");
+		const start = css.indexOf("@keyframes ps-rainbow");
 		const block = css.slice(start, css.indexOf("\n}", start));
 		expect(block).to.include("background-position-y:");
 		expect(block).to.not.include("background-position-x");
 		expect(block).to.include("calc(100% - var(--strip) * 0.3)");
 		const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
-		expect(reduced).to.include("--heart-rainbow-y: calc(100% - var(--strip) * 0.3);");
+		expect(reduced).to.include("--ps-rainbow-y: calc(100% - var(--strip) * 0.3);");
 	});
 
 	it("keeps fourteen background-position-y entries in each of the rainbow's three keyframe groups", function () {
-		const start = css.indexOf("@keyframes heart-rainbow");
+		const start = css.indexOf("@keyframes ps-rainbow");
 		const block = css.slice(start, css.indexOf("\n}", start)).replace(/\n\t\t/g, "\n\t");
 		let from = 0;
 
@@ -530,7 +522,7 @@ describe("the <3 theme's animals", function () {
  *
  * An animal's size and travel on screen are four numbers that have to move
  * together: the rig's `viewBox.h` and `stage.aspect`, the theme's
- * `--heart-<animal>-h`, and the far slot the scenes give it. The generator's
+ * `--ps-<animal>-h`, and the far slot the scenes give it. The generator's
  * audit can see the two in the rig and nothing at all in the stylesheet, and
  * that gap has already cost a round — four boxes grew to stop clipping their
  * animals (`lib/build.mjs` `boxOverflow`) and every one of them needed a
@@ -541,11 +533,11 @@ describe("the <3 theme's animals", function () {
  * from it rather than restating it: grow a box, forget the token, and the
  * failure names the number to write.
  */
-describe("the <3 theme's animals are the size their rigs say", function () {
+describe("the ps theme's animals are the size their rigs say", function () {
 	/** The cast, by the name its tokens and files use. */
 	const RIGS: Record<string, any> = {horse, deer, puppy, bunny, kitten, frog, ladybug, bird};
 
-	/** A distant visitor is 0.7 of its animal (the meadow's comment in heart.css). */
+	/** A distant visitor is 0.7 of its animal (the meadow's comment in ps.css). */
 	const FAR_RATIO = 0.7;
 
 	/** One scene rule's body. */
@@ -563,17 +555,15 @@ describe("the <3 theme's animals are the size their rigs say", function () {
 				const now = def.rig.viewBox.h;
 				expect(
 					box,
-					`${name}'s box is ${now} but --heart-${name}-h (${height}) was picked ` +
+					`${name}'s box is ${now} but --ps-${name}-h (${height}) was picked ` +
 						`against ${box}: scale the token by ${now}/${box} to ` +
 						`${Number(((height * now) / box).toFixed(4))}, scale stage.aspect by ` +
 						`${box}/${now}, and set theme.box to ${now}`
 				).to.equal(now);
 			});
 
-			it("is the height in heart.css that its rig says it is", function () {
-				expect(css, `--heart-${name}-h`).to.include(
-					`--heart-${name}-h: ${def.theme.height};`
-				);
+			it("is the height in ps.css that its rig says it is", function () {
+				expect(css, `--ps-${name}-h`).to.include(`--ps-${name}-h: ${def.theme.height};`);
 			});
 
 			it("crosses the stage width its rig says it does", function () {
@@ -594,16 +584,14 @@ describe("the <3 theme's animals are the size their rigs say", function () {
 			const body = sceneBody(n);
 
 			for (const slot of ["a", "b"]) {
-				const animal = body.match(
-					new RegExp(`--heart-slot-${slot}: var\\(--heart-([a-z]+)\\);`)
-				);
+				const animal = body.match(new RegExp(`--ps-slot-${slot}: var\\(--ps-([a-z]+)\\);`));
 
 				if (!animal) {
 					continue; // an empty slot: `none`, and its height sizes nothing
 				}
 
 				expect(body, `scene ${n}'s slot ${slot} is a ${animal[1]}`).to.include(
-					`--heart-slot-${slot}-h: var(--heart-${animal[1]}-h);`
+					`--ps-slot-${slot}-h: var(--ps-${animal[1]}-h);`
 				);
 			}
 		}
@@ -614,7 +602,7 @@ describe("the <3 theme's animals are the size their rigs say", function () {
 
 		for (const n of [0, 1, 2, 3, 4, 5]) {
 			const body = sceneBody(n);
-			const animal = body.match(/--heart-slot-f: var\(--heart-([a-z]+)-far\);/);
+			const animal = body.match(/--ps-slot-f: var\(--ps-([a-z]+)-far\);/);
 
 			if (!animal) {
 				continue; // no visitor on that scene's plateau
@@ -622,7 +610,7 @@ describe("the <3 theme's animals are the size their rigs say", function () {
 
 			visitors++;
 			expect(body, `scene ${n}'s visitor is a ${animal[1]}`).to.include(
-				`--heart-slot-f-h: calc(${FAR_RATIO} * var(--heart-${animal[1]}-h));`
+				`--ps-slot-f-h: calc(${FAR_RATIO} * var(--ps-${animal[1]}-h));`
 			);
 		}
 

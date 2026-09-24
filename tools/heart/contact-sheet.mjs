@@ -34,7 +34,7 @@
 //                    and the default cell would then be enormous and almost
 //                    entirely sky. Narrow the cell instead: the bird reads at
 //                    `--height=520 --cell=0.5,1.35 --cols=6`.
-//   --slot=<token>   the animal's `--heart-<animal>-h` from the theme, which is
+//   --slot=<token>   the animal's `--ps-<animal>-h` from the theme, which is
 //                    what the ground band and the box's rest height are shares
 //                    of. The default is the animal's own token, read from its
 //                    rig's `theme` block, so footing is right without passing
@@ -74,10 +74,10 @@ import {basename, join, resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 
 const ROOT = resolve(import.meta.dirname, "../..");
-const THEME = join(ROOT, "client/themes/heart");
+const THEME = join(ROOT, "client/themes/ps");
 const DRIVER = join(ROOT, "tools/browser-drive.mjs");
 
-/** The theme's sky and ground (client/themes/heart.css `--heart-sky`, `--heart-ground`). */
+/** The theme's sky and ground (client/themes/ps.css `--ps-sky`, `--ps-ground`). */
 const SKY = "#dbeeff";
 const GROUND = "#b7dcc2";
 /** The cell's proportions, as shares of the animal's rendered height, from
@@ -85,17 +85,17 @@ const GROUND = "#b7dcc2";
  * animal whose box bottom sits 0.12 strip above the foot of the meadow.
  *
  * Both are shares of a *strip*, so turning them into shares of the rendered
- * height needs the animal's own `--heart-<animal>-h` — which is not in the
+ * height needs the animal's own `--ps-<animal>-h` — which is not in the
  * SVG, but is in the rig: every cast rig carries a `theme` block holding the
  * token the stylesheet must use (`tools/heart/rigs/<animal>.mjs`, checked by
- * `test/themes/heart.ts`). `slotOf` reads it from there, so the band under an
+ * `test/themes/ps.ts`). `slotOf` reads it from there, so the band under an
  * animal is the band it actually gets. This was a hardcoded 0.44 until the
  * cast grew and four boxes with it, and a wrong band reads as an animal
  * floating above the grass or sunk into it. A rig with no `theme` block — a
  * held animal, cast in no scene — falls back to it. */
 const SLOT = 0.44;
 
-/** The animal's own `--heart-<animal>-h`, from its rig. */
+/** The animal's own `--ps-<animal>-h`, from its rig. */
 async function slotOf(name) {
 	try {
 		const def = (await import(`./rigs/${name}.mjs`)).default;
@@ -201,7 +201,7 @@ function readAnimal(name, far) {
 	const file = far || !existsSync(near) ? join(THEME, `${name}-far.svg`) : near;
 
 	if (!existsSync(file)) {
-		throw new Error(`no ${basename(file)} in client/themes/heart — generate it first`);
+		throw new Error(`no ${basename(file)} in client/themes/ps — generate it first`);
 	}
 
 	const svg = readFileSync(file, "utf8");

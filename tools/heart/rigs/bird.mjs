@@ -625,11 +625,11 @@ export default {
 	colours: {near: "#5b7fa6", far: "#a9c0d8"},
 	budget: 120 * 1024,
 	/**
-	 * What `client/themes/heart.css` has to say about this animal — the half of
-	 * the box coupling no audit can reach, checked by `test/themes/heart.ts`
+	 * What `client/themes/ps.css` has to say about this animal — the half of
+	 * the box coupling no audit can reach, checked by `test/themes/ps.ts`
 	 * (tools/heart/README.md § The audit):
 	 *
-	 * - `height` is `--heart-bird-h`, the on-screen height of the *box*, in
+	 * - `height` is `--ps-bird-h`, the on-screen height of the *box*, in
 	 *   strips;
 	 * - `box` is the `viewBox.h` it was picked against, so a box that grows
 	 *   without its token growing by the same ratio fails there instead of

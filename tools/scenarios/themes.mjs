@@ -1,7 +1,7 @@
 // The themes end to end in a real browser (docs/resources/themes.md): every
 // theme in the Appearance dropdown swaps the stylesheet link, is stored by
 // name, and sets the browser chrome colour — its own for the four handoff
-// themes (coffee, creama, cobalt, frost) and heart, the deploy's (whatever
+// themes (coffee, creama, cobalt, frost) and ps, the deploy's (whatever
 // the tag held at boot) for day and morning, which carry none. On those
 // five the colour pairs the design was checked against are measured from
 // computed styles: text, timestamps, links, the join line and a nick on a
@@ -36,7 +36,7 @@ const THEMES = [
 	"keeki",
 	"day",
 	"morning",
-	"heart",
+	"ps",
 	"coffee",
 ];
 const OWN_COLOR = {
@@ -48,7 +48,7 @@ const OWN_COLOR = {
 	princess: "#f2f7fc",
 	princess_: "#000000",
 	keeki: "#22143a",
-	heart: "#f4f9ff",
+	ps: "#f4f9ff",
 };
 
 export const url =

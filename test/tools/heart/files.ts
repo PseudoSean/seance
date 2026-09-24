@@ -2,7 +2,7 @@ import {expect} from "chai";
 import fs from "fs";
 import path from "path";
 
-const DIR = path.resolve(__dirname, "../../../client/themes/heart");
+const DIR = path.resolve(__dirname, "../../../client/themes/ps");
 
 type Animal = {
 	name: string;
@@ -16,7 +16,7 @@ type Animal = {
 	 * not four: the far tint and its still, and no near tint at all. */
 	farOnly?: boolean;
 	/** Built and reviewed, but cast in no scene, so its files are not
-	 * generated and must not be in the directory: `client/themes/heart/` is
+	 * generated and must not be in the directory: `client/themes/ps/` is
 	 * copied into `public/` whole, so anything here ships to every deploy
 	 * whether a scene paints it or not. The rig stays in `tools/heart/rigs/`
 	 * and `HELD` in `tools/heart/generate.mjs` says why. */
@@ -33,7 +33,7 @@ type Animal = {
  * three animals, and a `url()` sitting in a CSS custom property that no
  * resolved `background-image` substitutes is never fetched. A page therefore
  * pulls three animal files out of this directory, not twenty — the scenario
- * check in `tools/scenarios/theme-heart.mjs` pins that claim against a real
+ * check in `tools/scenarios/theme-ps.mjs` pins that claim against a real
  * browser's network log.
  */
 const ANIMALS: Animal[] = [
@@ -49,7 +49,7 @@ const ANIMALS: Animal[] = [
 	{name: "dolphin", budget: 120, farOnly: true, held: true},
 ];
 
-describe("the <3 theme's generated animals (client/themes/heart/*.svg)", function () {
+describe("the generated animals (client/themes/ps/*.svg)", function () {
 	const read = (f: string) => fs.readFileSync(path.join(DIR, f), "utf8");
 	const has = (f: string) => fs.existsSync(path.join(DIR, f));
 

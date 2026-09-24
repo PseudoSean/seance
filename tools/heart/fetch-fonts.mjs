@@ -1,6 +1,6 @@
 // Downloads the <3 theme's fonts — Nunito and Baloo 2 as the variable woff2
 // files Google Fonts serves (one file per style carrying a weight range),
-// SIL OFL — from Google Fonts' CSS endpoint into client/themes/heart/, plus
+// SIL OFL — from Google Fonts' CSS endpoint into client/themes/ps/, plus
 // the licence texts from the google/fonts repository. Run once; the files
 // are committed.
 //
@@ -15,7 +15,7 @@
 import {mkdir, writeFile} from "node:fs/promises";
 import path from "node:path";
 
-const OUT = path.resolve("client/themes/heart");
+const OUT = path.resolve("client/themes/ps");
 // A modern UA makes the endpoint answer with woff2 URLs; Windows, Linux and
 // Firefox UAs all get the same build.
 const UA =

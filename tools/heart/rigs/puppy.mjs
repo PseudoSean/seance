@@ -231,7 +231,7 @@ export const rig = {
 	// that stopped at the head clipped it away entirely (it left the box one
 	// unit into a 1.4 s rise and was wholly outside by 0.46 s, still fully
 	// opaque — the hearts had never been visible). `stage.aspect` and the
-	// theme's `--heart-puppy-h` are scaled by 82/109 and 109/82 to match, so
+	// theme's `--ps-puppy-h` are scaled by 82/109 and 109/82 to match, so
 	// the puppy is the same size on screen and crosses the same distance.
 	//
 	// The same arithmetic again, for the same reason at the other three
@@ -283,11 +283,11 @@ export default {
 	colours: {near: "#e39a5a", far: "#f1cba6"},
 	budget: 160 * 1024,
 	/**
-	 * What `client/themes/heart.css` has to say about this animal — the half of
-	 * the box coupling no audit can reach, checked by `test/themes/heart.ts`
+	 * What `client/themes/ps.css` has to say about this animal — the half of
+	 * the box coupling no audit can reach, checked by `test/themes/ps.ts`
 	 * (tools/heart/README.md § The audit):
 	 *
-	 * - `height` is `--heart-puppy-h`, the on-screen height of the *box*, in
+	 * - `height` is `--ps-puppy-h`, the on-screen height of the *box*, in
 	 *   strips;
 	 * - `box` is the `viewBox.h` it was picked against, so a box that grows
 	 *   without its token growing by the same ratio fails there instead of
