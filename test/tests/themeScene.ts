@@ -92,6 +92,39 @@ describe("the theme-scene hook (client/js/themeScene.ts)", function () {
 		expect(warnings).to.have.length(1);
 	});
 
+	it('treats a theme name that collides with an inherited key ("toString") as having no scene: mounts nothing, warns nothing, and does not throw', async function () {
+		const warnings: string[] = [];
+		const h = host({ps: () => Promise.resolve(fakeScene().mod)}, (m) => warnings.push(m));
+		await h.setTheme("toString");
+		expect(h.mounted).to.equal(null);
+		expect(warnings).to.have.length(0);
+	});
+
+	it("leaves nothing mounted, warns once and empties the root when a scene's mount throws synchronously", async function () {
+		const warnings: string[] = [];
+		let replaceCalls = 0;
+		const throwing: SceneModule = {
+			mount(): SceneHandle {
+				throw new Error("boom");
+			},
+		};
+		const fakeRoot = {
+			replaceChildren() {
+				replaceCalls += 1;
+			},
+		} as unknown as HTMLElement;
+		const h = createSceneHost({
+			root: () => fakeRoot,
+			loaders: {ps: () => Promise.resolve(throwing)},
+			state: {visible: true, view: "channel"},
+			warn: (m) => warnings.push(m),
+		});
+		await h.setTheme("ps");
+		expect(h.mounted).to.equal(null);
+		expect(warnings).to.have.length(1);
+		expect(replaceCalls).to.equal(1);
+	});
+
 	it("forwards visibility and view to the mounted scene, only when they change", async function () {
 		const {log, mod} = fakeScene();
 		const h = host({ps: () => Promise.resolve(mod)});
