@@ -2,11 +2,14 @@ import {expect} from "chai";
 import fs from "fs";
 import path from "path";
 import {contrast, luminance, mix} from "../../../client/js/scenes/ps/colour";
-import {paletteAt, publishedFor} from "../../../client/js/scenes/ps/palette";
+import {type Moment} from "../../../client/js/scenes/ps/engine";
+import {paletteAt, publishedFor, type Palette} from "../../../client/js/scenes/ps/palette";
 import {
 	bodyGrounds,
 	checkedGrounds,
 	CODE_BOX,
+	eachChecked,
+	effectiveGround,
 	GLASS,
 	glassGround,
 	groundsAt,
@@ -18,6 +21,7 @@ import {
 	lightSweepFloors,
 	momentAt,
 	pinnedMoments,
+	sceneGrounds,
 	SMALL_STEPS_ROOT,
 	smallStepSweep,
 	withPinned,
@@ -223,6 +227,43 @@ function heldColours(): {held: Held[]; unread: string[]} {
 	}
 
 	return {held, unread};
+}
+
+/** `rgb(r g b / n%)` as its hex and its strength; null in any other form. */
+function rgbPercent(value: string): {hex: string; strength: number} | null {
+	const m = /^rgb\((\d+) (\d+) (\d+) \/ (\d+)%\)$/.exec(value);
+
+	if (!m) {
+		return null;
+	}
+
+	const hex = `#${m
+		.slice(1, 4)
+		.map((c) => Number(c).toString(16).padStart(2, "0"))
+		.join("")}`;
+	return {hex, strength: Number(m[4]) / 100};
+}
+
+/** The washes ps.css paints on a mentioned row, by treatment. */
+function mentionWashes(): Array<{text: Text; hex: string; strength: number}> {
+	return rulesOf(css)
+		.filter((r) => r.selector.includes(".msg.highlight"))
+		.flatMap((r) =>
+			r.decls
+				.filter(([name]) => name === "background")
+				.map(([, value]) => {
+					const wash = rgbPercent(value);
+
+					if (!wash) {
+						throw new Error(`a mention wash this test cannot read: ${value}`);
+					}
+
+					const text: Text = r.selector.includes('data-ps-text="light"')
+						? "light"
+						: "ink";
+					return {text, ...wash};
+				})
+		);
 }
 
 const groundsFor = (h: Held, list: CheckedGround[]) =>
@@ -460,28 +501,7 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 	});
 
 	it("holds every colour on a mentioned row, under the washes ps.css paints by day and by night", function () {
-		const washes = rulesOf(css)
-			.filter((r) => r.selector.includes(".msg.highlight"))
-			.flatMap((r) =>
-				r.decls
-					.filter(([name]) => name === "background")
-					.map(([, value]) => {
-						const m = /^rgb\((\d+) (\d+) (\d+) \/ (\d+)%\)$/.exec(value);
-
-						if (!m) {
-							throw new Error(`a mention wash this test cannot read: ${value}`);
-						}
-
-						const hex = `#${m
-							.slice(1, 4)
-							.map((c) => Number(c).toString(16).padStart(2, "0"))
-							.join("")}`;
-						const text: Text = r.selector.includes('data-ps-text="light"')
-							? "light"
-							: "ink";
-						return {text, hex, strength: Number(m[4]) / 100};
-					})
-			);
+		const washes = mentionWashes();
 		expect(washes.map((w) => w.text).sort()).to.deep.equal(["ink", "light"]);
 
 		for (const wash of washes) {
@@ -501,6 +521,102 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 					h.floor
 				);
 			}
+		}
+	});
+
+	it("holds the reaction row's \"+\" to 4.5:1 at rest and hovered, in both treatments, over the sky, the bodies and a mention's wash", function () {
+		// The "+" (.msg-reaction-add) is not glass (its chip keeps style.css's
+		// grey tint) and it is the button's only label: text, at 4.5. style.css
+		// draws it in --body-color-muted at an opacity (hovered: --body-color at
+		// 1), over the chips' tint, under the column's layer. An element's
+		// opacity composites the whole chip over the ground it stands on, so
+		// the glyph is mix(ground, colour, opacity) and the pixels round it
+		// mix(ground, layer over chip over ground, opacity).
+		const style = fs.readFileSync(
+			path.resolve(__dirname, "../../../client/css/style.css"),
+			"utf8"
+		);
+		const last = (text: string, selector: string, name: string) =>
+			rulesOf(text)
+				.filter((r) => r.selector === selector)
+				.flatMap((r) => r.decls)
+				.filter(([n]) => n === name)
+				.at(-1)?.[1];
+		const opacity = Number(
+			last(css, "#chat .msg-reaction-add", "opacity") ??
+				last(style, "#chat .msg-reaction-add", "opacity")
+		);
+		const tint = rgbPercent(last(style, "#chat .msg-reaction", "background") ?? "");
+		expect(opacity, "the +'s opacity").to.be.within(0, 1);
+		expect(tint, "the chips' tint").to.not.equal(null);
+		const token = (selector: string, name: string) =>
+			rulesOf(messageBlock)
+				.find((r) => r.selector === selector)!
+				.decls.find(([n]) => n === name)![1];
+		const COLOUR: Record<Text, {rest: string; hover: string}> = {
+			ink: {
+				rest: token("#chat .chat", "--body-color-muted"),
+				hover: token("#chat .chat", "--body-color"),
+			},
+			light: {
+				rest: token(LIGHT_ROOT, "--body-color-muted"),
+				hover: token(LIGHT_ROOT, "--body-color"),
+			},
+		};
+		const washes = mentionWashes();
+		const worstOf: Record<string, {ratio: number; where: string}> = {};
+
+		const visit = (m: Moment, p: Palette, where: string) => {
+			const {text, halo} = publishedFor(p);
+
+			for (const g of sceneGrounds(m, p)) {
+				const unders = [
+					{hex: g.hex, on: ""},
+					...washes
+						.filter((w) => w.text === text)
+						.map((w) => ({hex: mix(g.hex, w.hex, w.strength), on: ", a mention"})),
+				];
+
+				for (const under of unders) {
+					const chip = mix(under.hex, tint!.hex, tint!.strength);
+					const layered = effectiveGround(chip, text, halo);
+
+					for (const [state, colour, op] of [
+						["rest", COLOUR[text].rest, opacity],
+						["hover", COLOUR[text].hover, 1],
+					] as const) {
+						const ratio = contrast(
+							mix(under.hex, colour, op),
+							mix(under.hex, layered, op)
+						);
+						const key = `${text} ${state}`;
+
+						if (!worstOf[key] || ratio < worstOf[key].ratio) {
+							worstOf[key] = {ratio, where: `${where}, ${g.name}${under.on}`};
+						}
+					}
+				}
+			}
+		};
+
+		eachChecked(visit, "sparse");
+
+		for (const where of pinned()) {
+			const m = momentAt(where);
+			visit(m, paletteAt(m), where);
+		}
+
+		expect(Object.keys(worstOf).sort()).to.deep.equal([
+			"ink hover",
+			"ink rest",
+			"light hover",
+			"light rest",
+		]);
+
+		for (const [key, w] of Object.entries(worstOf)) {
+			expect(w.ratio, `the "+" (${key}, opacity ${opacity}) at ${w.where}`).to.be.at.least(
+				4.5
+			);
 		}
 	});
 

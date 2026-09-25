@@ -1240,6 +1240,11 @@ body {
 	border-color: var(--ps-g-accent-text);
 }
 
+/* The add chip's "+" is its only label: style.css's 0.55 left it near 2:1 over the plains; at 1 it holds 4.5. */
+#chat .msg-reaction-add {
+	opacity: 1;
+}
+
 /* The lobby's connecting icon draws in the rail's accent (coffee.css), which
  * is also the open row's marker; the icon is a mark that has to read, so it
  * takes the text accent. */
