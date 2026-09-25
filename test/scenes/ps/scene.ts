@@ -6,7 +6,8 @@ import {
 	WEATHERS,
 	type Weather,
 } from "../../../client/js/scenes/ps/engine";
-import {paletteAt, publishedFor} from "../../../client/js/scenes/ps/palette";
+import {publishedFor} from "../../../client/js/scenes/ps/grounds";
+import {paletteAt} from "../../../client/js/scenes/ps/palette";
 import {clouds, FIREFLIES, smoke, yurtSvg} from "../../../client/js/scenes/ps/plains";
 import {
 	moonShape,
@@ -89,7 +90,7 @@ describe("ps scene: what it writes", function () {
 				epochDays: 20626,
 				weather: "clear",
 			});
-			const published = publishedFor(paletteAt(m));
+			const published = publishedFor(paletteAt(m), m);
 			expect(themeColorFor(published)).to.equal(published.canvas);
 			expect(themeColorFor(published)).to.equal(paletteAt(m).skyTop);
 		}

@@ -3,7 +3,8 @@ import fs from "fs";
 import path from "path";
 import {contrast, luminance, mix} from "../../../client/js/scenes/ps/colour";
 import {type Moment} from "../../../client/js/scenes/ps/engine";
-import {paletteAt, publishedFor, type Palette} from "../../../client/js/scenes/ps/palette";
+import {AREAS, publishedFor} from "../../../client/js/scenes/ps/grounds";
+import {paletteAt, type Palette} from "../../../client/js/scenes/ps/palette";
 import {
 	bodyGrounds,
 	checkedGrounds,
@@ -267,7 +268,7 @@ function mentionWashes(): Array<{text: Text; hex: string; strength: number}> {
 }
 
 const groundsFor = (h: Held, list: CheckedGround[]) =>
-	h.bodies ? list : list.filter((g) => g.body === "sky");
+	h.bodies ? list : list.filter((g) => g.body !== "moon" && g.body !== "sun");
 
 /** A colour drawn in a code box, against the box. */
 const onBox = (h: Held) => ({ratio: contrast(h.value, h.box!), where: `the code box ${h.box}`});
@@ -316,6 +317,66 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 		}
 
 		expect(contrast(INK, "#ffffff")).to.be.greaterThan(4.5);
+	});
+
+	it("checks the plains' areas as well as the sky and the bodies, through the treatment in force (plan 3, the rulings table)", function () {
+		for (const where of [
+			"doy 172 750 min clear",
+			"doy 172 0 min clear",
+			"doy 32 750 min snow",
+		]) {
+			const m = momentAt(where);
+			const at = groundsAt(m, paletteAt(m), where);
+			const names = [...at.column.ink, ...at.column.light].map((g) => g.name);
+
+			for (const area of ["skyTop", ...AREAS]) {
+				expect(
+					names.some((n) => n === area || n.startsWith(`${area} `)),
+					`${where}: ${area}`
+				).to.equal(true);
+			}
+		}
+	});
+
+	it("never counts the sun under the horizon line: the land hides it", function () {
+		const g = grounds();
+
+		for (const list of [g.column.ink, g.column.light, g.glass.day, g.glass.night]) {
+			expect(
+				list.filter((x) => x.body === "sun" && x.below).map((x) => x.where)
+			).to.deep.equal([]);
+		}
+	});
+
+	it("pins the stormy noon, the golden hour, a clear noon and a snowy noon, and holds every column colour of the treatment in force there", function () {
+		const PINS = {
+			"stormy noon": {where: "doy 121 750 min storm", text: "light"},
+			"golden hour": {where: "doy 295 1010 min clear", text: "light"},
+			"clear noon": {where: "doy 172 750 min clear", text: "light"},
+			"snowy noon": {where: "doy 32 750 min snow", text: "ink"},
+		} as const;
+
+		for (const [name, pin] of Object.entries(PINS)) {
+			expect(headerOf(messageBlock), `the message block pins the ${name}`).to.include(
+				pin.where
+			);
+			const m = momentAt(pin.where);
+			const p = paletteAt(m);
+			expect(publishedFor(p, m).text, name).to.equal(pin.text);
+			const list = groundsAt(m, p, pin.where).column[pin.text];
+			expect(list.length, name).to.be.greaterThan(20);
+
+			for (const h of heldColours().held.filter((x) => x.text === pin.text)) {
+				const w = h.box
+					? onBox(h)
+					: h.faintWhite
+					? worstFaintWhite(groundsFor(h, list))
+					: worst(h.value, groundsFor(h, list));
+				expect(w.ratio, `${name}: ${h.what} ${h.value} at ${w.where}`).to.be.at.least(
+					h.floor
+				);
+			}
+		}
 	});
 
 	it("holds the spec's own ink by day, and white and faint white while the light changes and all night, over the sky and the bodies (a failure here is reported, not tuned)", function () {
@@ -567,7 +628,7 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 		const worstOf: Record<string, {ratio: number; where: string}> = {};
 
 		const visit = (m: Moment, p: Palette, where: string) => {
-			const {text, halo} = publishedFor(p);
+			const {text, halo} = publishedFor(p, m);
 
 			for (const g of sceneGrounds(m, p)) {
 				const unders = [
@@ -684,7 +745,7 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 	it("Review Focus 1, dusk: at the darkest moment still under day glass, the glass ink and soft ink hold over the dusk sky", function () {
 		const {where, moment} = pin("dusk");
 		const p = paletteAt(moment);
-		expect(publishedFor(p).light, where).to.equal("day");
+		expect(publishedFor(p, moment).light, where).to.equal("day");
 		expect(p.dark, where).to.be.above(0.49);
 		const list = underGlass("day", groundsAt(moment, p, where).glass.day);
 		expect(list.length).to.be.at.least(3);
@@ -698,7 +759,7 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 	it("Review Focus 2, moon: the moon's disc at full strength behind night glass, the glass ink and soft ink hold", function () {
 		const {where, moment} = pin("moon");
 		const p = paletteAt(moment);
-		expect(publishedFor(p).light, where).to.equal("night");
+		expect(publishedFor(p, moment).light, where).to.equal("night");
 		const discs = bodyGrounds(moment, p).filter((g) => g.body === "moon");
 		expect(discs.map((g) => g.name).join()).to.include("#fdfaf0 at 1.00");
 		const list = underGlass(

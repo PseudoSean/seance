@@ -17,7 +17,8 @@
 import {isPhoneLayout} from "../../helpers/device";
 import type {SceneHandle, SceneHostState} from "../../themeScene";
 import {momentAt, rng, type Moment, type MoonPhase, type Weather} from "./engine";
-import {levelsAt, paletteAt, publishedFor, WEATHER, type Palette, type Published} from "./palette";
+import {bodyOpacity, publishedFor, type Published} from "./grounds";
+import {levelsAt, paletteAt, WEATHER, type Palette} from "./palette";
 import {
 	clouds,
 	FIREFLIES,
@@ -38,8 +39,7 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 	const wx = WEATHER[m.weather];
 	const heat = 1 - Math.max(0, m.sun.alt);
 	const glowX = m.sun.up ? Math.min(92, Math.max(8, m.sun.x)) : m.minute < 720 ? 10 : 90;
-	const moonOpacity =
-		m.moon.up && m.phase.present ? Math.min(1, p.dark * 1.25) * (1 - wx.hide * 0.85) : 0;
+	const bodies = bodyOpacity(m, p);
 	const l = levelsAt(m, p);
 	return {
 		"--ps-sky-top": p.skyTop,
@@ -53,14 +53,14 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 		"--ps-sun-x": `${m.sun.x.toFixed(2)}%`,
 		"--ps-sun-y": `${m.sun.y.toFixed(2)}%`,
 		"--ps-sun-scale": (1 + 0.45 * heat).toFixed(3),
-		"--ps-sun-op": m.sun.up ? (1 - wx.hide).toFixed(2) : "0",
+		"--ps-sun-op": m.sun.up ? bodies.sun.toFixed(2) : "0",
 		"--ps-sun-mid": p.sunMid,
 		"--ps-sun-edge": p.sunEdge,
 		"--ps-sun-flame": p.sunFlame,
 		"--ps-sun-bloom": p.sunBloom,
 		"--ps-moon-x": `${m.moon.x.toFixed(2)}%`,
 		"--ps-moon-y": `${m.moon.y.toFixed(2)}%`,
-		"--ps-moon-op": moonOpacity.toFixed(3),
+		"--ps-moon-op": bodies.moon.toFixed(3),
 		// The land bands (Palette already carries these; plan 1 never published them).
 		"--ps-mount": p.mount,
 		"--ps-far": p.far,
@@ -401,7 +401,7 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 		shape.setAttribute("transform", lit.mirror ? "scale(-1,1)" : "");
 		root.dataset.weather = m.weather;
 		root.dataset.season = m.season.main;
-		const out = publishedFor(p);
+		const out = publishedFor(p, m);
 		html.dataset.psLight = out.light;
 		html.dataset.psText = out.text;
 		html.style.setProperty("--ps-halo", out.halo);

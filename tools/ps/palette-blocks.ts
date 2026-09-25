@@ -61,7 +61,8 @@ import {resolve} from "node:path";
 import {pathToFileURL} from "node:url";
 import {contrast, luminance, mix} from "../../client/js/scenes/ps/colour";
 import {SOLAR_NOON} from "../../client/js/scenes/ps/engine";
-import {paletteAt, publishedFor} from "../../client/js/scenes/ps/palette";
+import {publishedFor} from "../../client/js/scenes/ps/grounds";
+import {paletteAt} from "../../client/js/scenes/ps/palette";
 import {
 	ALPHA_HALO,
 	ALPHA_SHADOW,
@@ -71,6 +72,7 @@ import {
 	glassGround,
 	INK,
 	INK_FAINT,
+	isBody,
 	LIGHT_ROOT,
 	LIGHT_SWEEP,
 	lightSweepFloors,
@@ -94,6 +96,17 @@ const MESSAGE = {
 const GLASS_MARKERS = {start: "/* ps:glass-palette:start", end: "/* ps:glass-palette:end */"};
 /** Where the message block goes the first time: the end of the scene section. */
 const FIRST_ANCHOR = "/* ---- animals ---- */";
+
+/**
+ * The moments the floors test pins by name (Review Focus 1 and the words'
+ * rule): a stormy noon, the golden hour, a clear noon and a snowy noon.
+ */
+const PINS = [
+	"the stormy noon doy 121 750 min storm",
+	"the golden hour doy 295 1010 min clear",
+	"a clear noon doy 172 750 min clear",
+	"a snowy noon doy 32 750 min snow",
+];
 
 /** 4.5:1 and 0.1 of margin, so rounding to a hex byte never lands under the floor. */
 const FLOOR = 4.6;
@@ -456,9 +469,10 @@ function duskPin(): {where: string; dark: number} {
 	// Darkness is the canonical stop's own and does not depend on the weather.
 	for (const doy of days) {
 		for (let minute = noon; minute < 1440; minute += step) {
-			const p = paletteAt(momentOf(doy, minute, "clear"));
+			const m = momentOf(doy, minute, "clear");
+			const p = paletteAt(m);
 
-			if (publishedFor(p).light === "day" && p.dark > best.dark) {
+			if (publishedFor(p, m).light === "day" && p.dark > best.dark) {
 				best = {where: `doy ${doy} ${minute} min clear`, dark: p.dark};
 			}
 		}
@@ -478,7 +492,7 @@ export function solvePalettes(options: Partial<Options> = {}): Solved {
 	};
 	const floors = lightSweepFloors(sweep);
 	const lightFor = (bodies: boolean) =>
-		bodies ? g.column.light : g.column.light.filter((x) => x.body === "sky");
+		bodies ? g.column.light : g.column.light.filter((x) => !isBody(x));
 
 	// The spec's own colours, which no rule moves.
 	hold(INK, g.column.ink, TEXT, "message ink");
@@ -590,7 +604,7 @@ const moveLines = (what: string, m: Move) =>
 
 const SWEEP_TEXT: Record<LightSweep, string> = {
 	strict: "every coloured light colour over the sky and the bodies",
-	sky: "coloured light colours over the sky alone; white and faint white over the bodies too",
+	sky: "coloured light colours over the sky and the plains, not the bodies; white and faint white over the bodies too",
 	"names-large":
 		"the nicks at 3.1 (large text) over the sky and the bodies; every other colour at 4.6",
 };
@@ -606,10 +620,15 @@ export function messageBlock(s: Solved): string {
 		" * `npx tsx tools/ps/palette-blocks.ts --write`; edit the generator, not",
 		" * this block. Each colour clears its floor (4.5:1; faint ink 3:1; the light",
 		" * nicks as the light sweep below says) on every ground its treatment meets in",
-		" * the dense sweep (every day, every 5 minutes, all six weathers): the sky and",
-		" * the moon's disc and the sun's core, through the",
-		` * halo at α ${ALPHA_HALO} by day or the shadow and outline at α ${ALPHA_SHADOW} otherwise`,
-		" * (docs/projects/ps-theme.md §11). Generated colours are solved to 4.6.",
+		" * the dense sweep (every day, every 5 minutes, all six weathers): the sky, the",
+		" * moon's disc and the sun's core (above the horizon line), and the plains'",
+		" * areas (client/js/scenes/ps/grounds.ts), under the veil on a veiled day,",
+		` * through the halo at α ${ALPHA_HALO} where the words are ink or the shadow and`,
+		` * outline at α ${ALPHA_SHADOW} where they are light (docs/projects/ps-theme.md §11).`,
+		" * The words are ink only where ink holds (the user's white sooner): the ink",
+		" * colours are solved over those moments alone. Generated colours are solved",
+		" * to 4.6.",
+		...PINS.map((p) => ` * Pinned for the floors test: ${p}.`),
 		` * Light sweep "${s.sweep}" (tools/ps/legibility.ts LIGHT_SWEEP${
 			s.sweep === "names-large" ? ", the user's choice, 2026-09-24" : ""
 		}):`,
@@ -700,8 +719,8 @@ export function glassBlock(s: Solved): string {
 		" * `npx tsx tools/ps/palette-blocks.ts --write`; edit the generator, not",
 		" * this block. The glass (docs/projects/ps-theme.md §6): its tint's opacity,",
 		" * raised from the spec's toward its cap until the glass ink and soft ink",
-		" * hold 4.5:1 on every ground behind it in the dense sweep (the sky and the",
-		" * bodies, the tint composited over them, the blur left out); the soft ink,",
+		" * hold 4.5:1 on every ground behind it in the dense sweep (the sky, the",
+		" * plains and the bodies, the tint over them, the blur left out); the soft ink,",
 		" * moved under rule 2 where the cap was not enough; the badge's fill, the",
 		" * accent solved so its white numeral holds 4.5:1; the text accent, the",
 		" * accent's hue and chroma solved like a nick for the chrome's links, button",

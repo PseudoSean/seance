@@ -1,8 +1,8 @@
 /**
  * The ps theme's colours through the day and the year (docs/projects/ps-theme.md
  * §5.2). The mockup's tables, verbatim, and their interpolation. The scene paints
- * with them, and the chrome reads the four values `publishedFor` gives. Pure:
- * mocha loads it and holds the contrast floors against it (§11).
+ * with them, and the chrome reads the four values grounds.ts's `publishedFor`
+ * gives. Pure: mocha loads it and holds the contrast floors against it (§11).
  */
 import {mix, mixOklab, shift} from "./colour";
 import type {Moment, Season, Weather} from "./engine";
@@ -113,7 +113,7 @@ export const WEATHER: Record<Weather, WeatherLook> = {
 	heat: {dim: 0, dimc: "#5a6478", grey: 0, hide: 0, rain: 0, snow: 0, wind: 0, sway: 1.4, storm: 0, heat: 1},
 };
 
-/** The words turn light once it is darker than this (spec §7). */
+/** The words turn light once it is darker than this (spec §7); grounds.ts's white-sooner rule is the other trigger. */
 export const TEXT_LIGHT_AT = 0.05;
 /** The glass turns to night once it is darker than this (spec §6). */
 export const GLASS_NIGHT_AT = 0.5;
@@ -297,27 +297,6 @@ export function paletteAt(m: Moment): Palette {
 		pipe,
 		stone,
 		wood,
-	};
-}
-
-/** What the chrome reads off `<html>` (spec §3): two states and two colours. */
-export interface Published {
-	/** The glass panels' palette. */
-	light: "day" | "night";
-	/** The words over the open scene: dark ink with a halo, or white with a shadow. */
-	text: "ink" | "light";
-	/** The daytime text halo: the horizon of the hour, lifted 55 % toward white. */
-	halo: string;
-	/** The page canvas and the iOS status bar: the sky-top of the hour. */
-	canvas: string;
-}
-
-export function publishedFor(p: Palette): Published {
-	return {
-		light: p.dark > GLASS_NIGHT_AT ? "night" : "day",
-		text: p.dark > TEXT_LIGHT_AT ? "light" : "ink",
-		halo: mix(p.skyHorizon, "#ffffff", 0.55),
-		canvas: p.skyTop,
 	};
 }
 

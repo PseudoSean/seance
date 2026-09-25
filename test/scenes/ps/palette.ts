@@ -13,7 +13,6 @@ import {
 	LAND,
 	levelsAt,
 	paletteAt,
-	publishedFor,
 	REF,
 	SEASON_LAND,
 	STOPS,
@@ -21,6 +20,7 @@ import {
 	TEXT_LIGHT_AT,
 	WEATHER,
 } from "../../../client/js/scenes/ps/palette";
+import {publishedFor} from "../../../client/js/scenes/ps/grounds";
 
 const COLOURS = [
 	"top",
@@ -185,17 +185,19 @@ describe("ps palette: a moment", function () {
 });
 
 describe("ps palette: what the chrome reads", function () {
-	it("turns the words light from darkness 0.05, and the glass at 0.5", function () {
-		const base = paletteAt(at(780, 213));
-		expect(publishedFor({...base, dark: TEXT_LIGHT_AT}).text).to.equal("ink");
-		expect(publishedFor({...base, dark: TEXT_LIGHT_AT + 0.01}).text).to.equal("light");
-		expect(publishedFor({...base, dark: GLASS_NIGHT_AT}).light).to.equal("day");
-		expect(publishedFor({...base, dark: GLASS_NIGHT_AT + 0.01}).light).to.equal("night");
+	it("turns the words light from darkness 0.05 (on a snowy noon, where dark ink holds), and the glass at 0.5", function () {
+		const m = at(780, 32, "snow");
+		const base = paletteAt(m);
+		expect(publishedFor({...base, dark: TEXT_LIGHT_AT}, m).text).to.equal("ink");
+		expect(publishedFor({...base, dark: TEXT_LIGHT_AT + 0.01}, m).text).to.equal("light");
+		expect(publishedFor({...base, dark: GLASS_NIGHT_AT}, m).light).to.equal("day");
+		expect(publishedFor({...base, dark: GLASS_NIGHT_AT + 0.01}, m).light).to.equal("night");
 	});
 
 	it("haloes daytime ink in the horizon's colour, lifted toward white, and gives the canvas the sky-top", function () {
-		const p = paletteAt(at(780, 213));
-		const out = publishedFor(p);
+		const m = at(780, 213);
+		const p = paletteAt(m);
+		const out = publishedFor(p, m);
 		expect(out.halo).to.equal(mix(p.skyHorizon, "#ffffff", 0.55));
 		expect(out.canvas).to.equal(p.skyTop);
 	});

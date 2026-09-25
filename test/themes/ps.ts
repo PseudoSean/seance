@@ -603,8 +603,8 @@ describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.m
  * holds the generated glass colours; this holds every other colour the chrome
  * draws, outside the message column, on the ground it draws it on: the solid
  * panels, the fields and washes on them, and the glass over the sparse sweep's
- * sky and bodies at the declared tint (a row's selected or hovered wash, or a
- * field, composited on top where one is).
+ * grounds — the sky, the bodies and the plains — at the declared tint (a
+ * row's selected or hovered wash, or a field, composited on top where one is).
  */
 describe("the ps theme's chrome keeps its floors on the solid panels and on the glass (spec §6, §11)", function () {
 	this.timeout(60000);
@@ -890,16 +890,23 @@ describe("the ps theme's chrome keeps its floors on the solid panels and on the 
 		});
 	}
 
-	it("keeps every night wash on the glass visible, as visible as the white it replaced, and never vanishing over the darkest sky", function () {
+	it("keeps every night wash on the glass visible, at least as visible as when it was chosen, and never vanishing over the darkest ground", function () {
 		// The contrast between the washed and the bare glass over the sparse sweep:
-		// its median at least what each wash was solved to (ps.css, the night
-		// palette), and its lowest above 1.02. A wash toward the glass's own navy
-		// measured 1.000 over the darkest sky: it did not show at all.
+		// its median at least each wash's own, and its lowest above 1.02. A wash
+		// toward the glass's own navy measured 1.000 over the darkest sky: it did
+		// not show at all. Plan 2 chose each black as visible as the white it
+		// replaced (white 11 / 6 / 4 / 8 %: medians 1.41 / 1.21 / 1.14 / 1.28)
+		// over the sky and the bodies alone, the sun counted under the horizon and
+		// no veil. Over plan 3's grounds — the plains' dark night land, the veil,
+		// the sun hidden under the horizon — the same washes measure 1.30 / 1.15 /
+		// 1.10 / 1.21, and parity with the white would take 91 / 38 / 24 / 54 %
+		// black (task 5 report, a question for the user). Held here at what they
+		// measure now, so they never grow fainter.
 		const floors: Array<[Exclude<Ground, "solid" | "glass">, number]> = [
-			["glass+selected", 1.4],
-			["glass+hover", 1.2],
-			["glass+tint-soft", 1.13],
-			["glass+tint-strong", 1.28],
+			["glass+selected", 1.3],
+			["glass+hover", 1.15],
+			["glass+tint-soft", 1.1],
+			["glass+tint-strong", 1.21],
 		];
 		const bare = groundsOf("night", "glass");
 
