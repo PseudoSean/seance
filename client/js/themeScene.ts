@@ -35,6 +35,13 @@ export interface SceneHost {
 	setTheme(name: string): Promise<void>;
 	setVisible(visible: boolean): void;
 	setView(view: SceneView): void;
+	/**
+	 * Re-attempts the load of the currently-asked theme's scene, if its last
+	 * load failed and nothing has replaced it since. A no-op otherwise (nothing
+	 * failed, or a later `setTheme` moved on). Callers that do not need to wait
+	 * for it just call it and let the promise settle on its own.
+	 */
+	retry(): Promise<void>;
 	readonly mounted: string | null;
 }
 
@@ -49,11 +56,83 @@ export function createSceneHost(opts: {
 	let mounted: string | null = null;
 	let handle: SceneHandle | null = null;
 	let ticket = 0;
+	// The asked-for theme whose scene last failed to load, while nothing since
+	// has superseded that attempt. Cleared by any `setTheme` (win or lose) and
+	// by a successful mount; `retry()` reads it and nothing else sets it.
+	let failed: string | null = null;
 
 	const unmount = () => {
 		handle?.destroy();
 		handle = null;
 		mounted = null;
+	};
+
+	// Shared by setTheme and retry(): load `name`'s module and mount it, unless
+	// `mine` has been superseded by a later ticket by the time either the import
+	// or the mount would land.
+	const attempt = async (name: string, mine: number): Promise<void> => {
+		// Object.hasOwn: a stored theme name of "toString" or the like must not
+		// resolve to an inherited Object.prototype member.
+		const load = Object.hasOwn(opts.loaders, name) ? opts.loaders[name] : undefined;
+
+		if (!load) {
+			return;
+		}
+
+		let mod: SceneModule;
+
+		try {
+			mod = await load();
+		} catch (error) {
+			if (mine === ticket) {
+				// A retry that fails again is still the same failure: warn once for
+				// it, not once per retry.
+				if (failed !== name) {
+					failed = name;
+					opts.warn?.(
+						`The ${name} theme's scene did not load; its daylight fallback stays.`,
+						error
+					);
+				}
+			}
+
+			return;
+		}
+
+		// Another theme was applied (or a retry re-raced this one) while this
+		// one loaded: it wins.
+		const root = opts.root();
+
+		if (mine !== ticket || !root) {
+			return;
+		}
+
+		failed = null;
+
+		// A scene's mount can throw synchronously (bad markup, a bad measurement);
+		// caught here so it never becomes an unhandled rejection through the
+		// `void` call in settings.ts, and never leaves a half-built scene.
+		try {
+			handle = mod.mount(root, {...state});
+			mounted = name;
+		} catch (error) {
+			opts.warn?.(
+				`The ${name} theme's scene failed to mount; its daylight fallback stays.`,
+				error
+			);
+			root.replaceChildren();
+		}
+	};
+
+	const retry = (): Promise<void> => {
+		if (!failed) {
+			return Promise.resolve();
+		}
+
+		const name = failed;
+		const mine = ++ticket;
+
+		return attempt(name, mine);
 	};
 
 	return {
@@ -67,60 +146,21 @@ export function createSceneHost(opts: {
 			}
 
 			asked = name;
+			failed = null;
 			const mine = ++ticket;
 			unmount();
-			// Object.hasOwn: a stored theme name of "toString" or the like must not
-			// resolve to an inherited Object.prototype member.
-			const load = Object.hasOwn(opts.loaders, name) ? opts.loaders[name] : undefined;
-
-			if (!load) {
-				return;
-			}
-
-			let mod: SceneModule;
-
-			try {
-				mod = await load();
-			} catch (error) {
-				if (mine === ticket) {
-					opts.warn?.(
-						`The ${name} theme's scene did not load; its daylight fallback stays.`,
-						error
-					);
-				}
-
-				return;
-			}
-
-			// Another theme was applied while this one loaded: it wins.
-			const root = opts.root();
-
-			if (mine !== ticket || !root) {
-				return;
-			}
-
-			// A scene's mount can throw synchronously (bad markup, a bad measurement);
-			// caught here so it never becomes an unhandled rejection through the
-			// `void` call in settings.ts, and never leaves a half-built scene.
-			try {
-				handle = mod.mount(root, {...state});
-				mounted = name;
-			} catch (error) {
-				opts.warn?.(
-					`The ${name} theme's scene failed to mount; its daylight fallback stays.`,
-					error
-				);
-				root.replaceChildren();
-			}
+			await attempt(name, mine);
 		},
 
 		setVisible(visible: boolean): void {
-			if (state.visible === visible) {
-				return;
+			if (state.visible !== visible) {
+				state.visible = visible;
+				handle?.update({...state});
 			}
 
-			state.visible = visible;
-			handle?.update({...state});
+			if (visible) {
+				void retry();
+			}
 		},
 
 		setView(view: SceneView): void {
@@ -131,6 +171,8 @@ export function createSceneHost(opts: {
 			state.view = view;
 			handle?.update({...state});
 		},
+
+		retry,
 	};
 }
 
@@ -142,9 +184,21 @@ export const themeScene: SceneHost = createSceneHost({
 	warn: (message, error) => console.warn(message, error), // eslint-disable-line no-console
 });
 
-/** Follow the page's visibility: a hidden page's scene stops, and catches up on return. */
+/**
+ * Follow the page's visibility and connectivity: a hidden page's scene stops
+ * and catches up on return (also on a bfcache restore, which fires no
+ * `visibilitychange`), and a scene that failed to load — offline, a failed
+ * chunk — is retried once the network is back, so it does not wait for a
+ * reload.
+ */
 export function installThemeSceneHooks(): void {
 	const sync = () => themeScene.setVisible(document.visibilityState !== "hidden");
 	document.addEventListener("visibilitychange", sync);
+	window.addEventListener("online", () => void themeScene.retry());
+	window.addEventListener("pageshow", (event: PageTransitionEvent) => {
+		if (event.persisted) {
+			themeScene.setVisible(true);
+		}
+	});
 	sync();
 }

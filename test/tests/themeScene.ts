@@ -32,6 +32,46 @@ function deferred(mod: SceneModule) {
 	return {loader, release: () => release()};
 }
 
+/** A loader that rejects on its first call, then resolves on every call after. */
+function rejectOnceThenResolve(mod: SceneModule): SceneLoader {
+	let calls = 0;
+
+	return () => {
+		calls += 1;
+		return calls === 1 ? Promise.reject(new Error("offline")) : Promise.resolve(mod);
+	};
+}
+
+/** A loader that rejects on its first `failures` calls, then resolves. Exposes how many times it was called. */
+function rejectNTimesThenResolve(mod: SceneModule, failures: number) {
+	let calls = 0;
+
+	const loader: SceneLoader = () => {
+		calls += 1;
+		return calls <= failures ? Promise.reject(new Error("offline")) : Promise.resolve(mod);
+	};
+
+	return {loader, calls: () => calls};
+}
+
+/** A loader that rejects on its first call, then hangs until told to resolve. Exposes how many times it was called. */
+function rejectOnceThenHang(mod: SceneModule) {
+	let calls = 0;
+	let release: () => void = () => undefined;
+
+	const loader: SceneLoader = () => {
+		calls += 1;
+
+		if (calls === 1) {
+			return Promise.reject(new Error("offline"));
+		}
+
+		return new Promise((resolve) => (release = () => resolve(mod)));
+	};
+
+	return {loader, release: () => release(), calls: () => calls};
+}
+
 const host = (loaders: Record<string, SceneLoader>, warn?: (m: string, e: unknown) => void) =>
 	createSceneHost({root: () => ROOT, loaders, state: {visible: true, view: "channel"}, warn});
 
@@ -139,5 +179,109 @@ describe("the theme-scene hook (client/js/themeScene.ts)", function () {
 			"update false query",
 			"update false channel",
 		]);
+	});
+
+	describe("retrying a failed scene", function () {
+		it("mounts the scene when retry() is called after a failed load", async function () {
+			const {log, mod} = fakeScene();
+			const warnings: string[] = [];
+			const h = host({ps: rejectOnceThenResolve(mod)}, (m) => warnings.push(m));
+			await h.setTheme("ps");
+			expect(h.mounted).to.equal(null);
+			expect(warnings).to.have.length(1);
+
+			await h.retry();
+
+			expect(h.mounted).to.equal("ps");
+			expect(log).to.deep.equal(["mount true true channel"]);
+			expect(warnings).to.have.length(1);
+		});
+
+		it("mounts a failed scene once the page becomes visible again", async function () {
+			const {log, mod} = fakeScene();
+			const warnings: string[] = [];
+			const h = createSceneHost({
+				root: () => ROOT,
+				loaders: {ps: rejectOnceThenResolve(mod)},
+				state: {visible: false, view: "channel"},
+				warn: (m) => warnings.push(m),
+			});
+			await h.setTheme("ps");
+			expect(h.mounted).to.equal(null);
+			expect(warnings).to.have.length(1);
+
+			h.setVisible(true);
+			await new Promise((resolve) => setImmediate(resolve));
+
+			expect(h.mounted).to.equal("ps");
+			expect(log).to.deep.equal(["mount true true channel"]);
+			expect(warnings).to.have.length(1);
+		});
+
+		it("cancels a pending retry when the theme is switched before it resolves", async function () {
+			const {log, mod} = fakeScene();
+			const warnings: string[] = [];
+			const {loader, release, calls} = rejectOnceThenHang(mod);
+			const h = host({ps: loader}, (m) => warnings.push(m));
+			await h.setTheme("ps");
+			expect(h.mounted).to.equal(null);
+			expect(warnings).to.have.length(1);
+
+			const retrying = h.retry();
+			// The retry's own load has actually started (not a no-op retry that
+			// would also leave `mounted` null and the log empty).
+			expect(calls()).to.equal(2);
+
+			await h.setTheme("coffee");
+			release();
+			await retrying;
+
+			expect(h.mounted).to.equal(null);
+			expect(log).to.deep.equal([]);
+			expect(warnings).to.have.length(1);
+		});
+
+		it("warns once even when a retry fails again, and mounts once it stops failing", async function () {
+			const {log, mod} = fakeScene();
+			const warnings: string[] = [];
+			const {loader} = rejectNTimesThenResolve(mod, 2);
+			const h = host({ps: loader}, (m) => warnings.push(m));
+			await h.setTheme("ps");
+			expect(h.mounted).to.equal(null);
+			expect(warnings).to.have.length(1);
+
+			await h.retry();
+			expect(h.mounted).to.equal(null);
+			expect(warnings).to.have.length(1);
+
+			await h.retry();
+			expect(h.mounted).to.equal("ps");
+			expect(log).to.deep.equal(["mount true true channel"]);
+			expect(warnings).to.have.length(1);
+		});
+
+		it("does nothing when retried for a theme that is no longer asked", async function () {
+			const {log, mod} = fakeScene();
+			const warnings: string[] = [];
+			const h = host({ps: rejectOnceThenResolve(mod)}, (m) => warnings.push(m));
+			await h.setTheme("ps");
+			expect(h.mounted).to.equal(null);
+			expect(warnings).to.have.length(1);
+
+			await h.setTheme("coffee");
+			await h.retry();
+
+			expect(h.mounted).to.equal(null);
+			expect(log).to.deep.equal([]);
+			expect(warnings).to.have.length(1);
+		});
+
+		it("does nothing when nothing has failed", async function () {
+			const {log, mod} = fakeScene();
+			const h = host({ps: () => Promise.resolve(mod)});
+			await h.retry();
+			expect(h.mounted).to.equal(null);
+			expect(log).to.deep.equal([]);
+		});
 	});
 });
