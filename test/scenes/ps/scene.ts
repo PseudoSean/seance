@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {momentFor, sunTimes} from "../../../client/js/scenes/ps/engine";
 import {paletteAt, publishedFor} from "../../../client/js/scenes/ps/palette";
-import {FIREFLIES} from "../../../client/js/scenes/ps/plains";
+import {FIREFLIES, smoke, yurtSvg} from "../../../client/js/scenes/ps/plains";
 import {moonShape, sceneMarkup, sceneVars, themeColorFor} from "../../../client/js/scenes/ps/scene";
 
 const days = (iso: string) => Date.parse(iso) / 86400000;
@@ -228,9 +228,23 @@ describe("ps scene: the layers it builds (sceneMarkup)", function () {
 		]);
 	});
 
-	it("holds the land, the fireflies and the animal layer in the ground group, in that order", function () {
+	it("holds the land, the fireflies, the yurt, its smoke and the animal layer in the ground group, in that order", function () {
+		// The yurt after the fireflies, as the mockup's ground has it; the smoke
+		// inside the group too (the plan's ruling), so the heat haze bends it.
 		const ground = inside(sceneMarkup(false), "ps-ground");
-		expect(topLevel(ground)).to.deep.equal(["ps-land", "ps-fireflies", "ps-animals"]);
+		expect(topLevel(ground)).to.deep.equal([
+			"ps-land",
+			"ps-fireflies",
+			"ps-yurt",
+			"ps-smoke",
+			"ps-animals",
+		]);
+	});
+
+	it("builds the yurt from plains.ts and the smoke's five puffs", function () {
+		const markup = sceneMarkup(false);
+		expect(inside(markup, "ps-yurt")).to.equal(yurtSvg());
+		expect(inside(markup, "ps-smoke")).to.equal(smoke());
 	});
 
 	it("halves the fireflies on a phone", function () {

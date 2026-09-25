@@ -1207,6 +1207,118 @@ describe("the ps theme's plains (plan 3: the land, the river, the near grass, th
 	});
 });
 
+describe("the ps theme's yurt and its smoke (plan 3, spec §5.3)", function () {
+	const S = "#theme-scene";
+	const YURT = `${S} .ps-yurt`;
+	const SMOKE = `${S} .ps-smoke`;
+
+	it("stands on the ground band at the place the scene measures, 70 % before it has one", function () {
+		expect(valueOf(YURT, "left")).to.equal("var(--ps-yurt-left, 70%)");
+		expect(valueOf(YURT, "bottom")).to.equal("17%");
+		expect(valueOf(YURT, "height")).to.equal("21%");
+		expect(valueOf(YURT, "aspect-ratio")).to.equal("240 / 170");
+		expect(valueOf(YURT, "transform")).to.equal("translateX(-50%)");
+	});
+
+	it("puts the smoke at the pipe, on the same place: the yurt's top plus 22/170 of its height", function () {
+		expect(valueOf(SMOKE, "left")).to.equal("var(--ps-yurt-left, 70%)");
+		expect(valueOf(SMOKE, "bottom")).to.equal("calc(17% + 21% * 148 / 170)");
+		expect(valueOf(SMOKE, "opacity")).to.match(/^var\(--ps-smoke-op(, 0)?\)$/);
+	});
+
+	it("never transitions its place: the yurt and the smoke transition opacity only", function () {
+		for (const sel of [YURT, SMOKE]) {
+			const all = rules.filter((r) => r.selectors.some((s) => s.startsWith(sel)));
+			const transitions = all.flatMap((r) =>
+				r.decls.filter(([p]) => p.startsWith("transition")).map(([p, v]) => `${p}: ${v}`)
+			);
+			expect(valueOf(sel, "transition"), sel).to.match(/^opacity [\d.]+s/);
+
+			for (const t of transitions) {
+				if (t === "transition: none !important") {
+					continue; // reduced motion
+				}
+
+				expect(t, sel).to.not.match(/\b(left|transform|inset|all|bottom|translate)\b/);
+				expect(t, sel).to.match(/^transition: opacity\b/);
+			}
+
+			// Nor may an animation carry it.
+			expect(valueOf(sel, "animation"), sel).to.equal(undefined);
+		}
+	});
+
+	it("hides the yurt and its smoke while it moves (ps-yurt-moving)", function () {
+		expect(valueOf(`${S}.ps-yurt-moving .ps-yurt`, "opacity")).to.equal("0");
+		expect(valueOf(`${S}.ps-yurt-moving .ps-smoke`, "opacity")).to.equal("0");
+	});
+
+	it("fills the felt, roof, band, door and the rest from the colours the palette publishes", function () {
+		const PAINT: Array<[string, string, string]> = [
+			["ps-y-felt-l", "stop-color", "var(--ps-felt-shade)"],
+			["ps-y-felt-c", "stop-color", "var(--ps-felt)"],
+			["ps-y-roof-t", "stop-color", "var(--ps-roof-top)"],
+			["ps-y-roof-b", "stop-color", "var(--ps-roof-bottom)"],
+			["ps-y-band", "fill", "var(--ps-band)"],
+			["ps-y-roof", "stroke", "var(--ps-roof-stroke)"],
+			["ps-y-band-mark", "fill", "var(--ps-band-mark)"],
+			["ps-y-rope", "stroke", "var(--ps-rope)"],
+			["ps-y-rib", "stroke", "var(--ps-rib)"],
+			["ps-y-door", "fill", "var(--ps-door)"],
+			["ps-y-door-orn", "stroke", "var(--ps-door-orn)"],
+			["ps-y-crown", "fill", "var(--ps-crown)"],
+			["ps-y-pipe", "fill", "var(--ps-pipe)"],
+			["ps-y-stone", "fill", "var(--ps-stone)"],
+			["ps-y-wood", "fill", "var(--ps-wood)"],
+			["ps-y-path", "fill", "var(--ps-path)"],
+		];
+
+		for (const [name, property, value] of PAINT) {
+			expect(valueOf(`${S} .${name}`, property), name).to.equal(value);
+		}
+	});
+
+	it("mixes no colour in CSS: every yurt and smoke colour is published", function () {
+		const own = rules.filter((r) =>
+			r.selectors.some((sel) =>
+				/^#theme-scene(\.ps-yurt-moving)? \.(ps-yurt|ps-y-|ps-smoke)/.test(sel)
+			)
+		);
+		expect(own.length, "the yurt's rules").to.be.at.least(18);
+
+		for (const r of own) {
+			for (const [p, v] of r.decls) {
+				expect(v, `${r.selectors.join(", ")} { ${p} }`).to.not.include("color-mix");
+			}
+		}
+	});
+
+	it("snows on the roof by --ps-snowcap and glows at night by --ps-night-glow", function () {
+		expect(valueOf(`${S} .ps-y-snow`, "opacity")).to.match(/^var\(--ps-snowcap(, 0)?\)$/);
+		expect(valueOf(`${S} .ps-y-lit`, "opacity")).to.match(/^var\(--ps-night-glow(, 0)?\)$/);
+		expect(valueOf(`${S} .ps-y-spill`, "opacity")).to.match(
+			/^calc\(var\(--ps-night-glow(, 0)?\) \* 0\.85\)$/
+		);
+	});
+
+	it("raises the smoke in rem from the published smoke colour", function () {
+		const puff = declsOf(`${S} .ps-smoke i`);
+		expect(puff.length).to.be.greaterThan(0);
+		expect(valueOf(`${S} .ps-smoke i`, "background")).to.include("var(--ps-smoke)");
+		// Its own name: the chrome's message entrance is already ps-rise.
+		expect(valueOf(`${S} .ps-smoke i`, "animation")).to.match(/^ps-smoke-rise /);
+		expect(css.match(/@keyframes ps-smoke-rise\b/g), "one ps-smoke-rise").to.have.length(1);
+
+		for (const [p, v] of puff) {
+			expect(v, `.ps-smoke i { ${p} }`).to.not.match(/\dpx/);
+		}
+
+		const frames = css.match(/@keyframes ps-smoke-rise\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+		expect(frames).to.include("translate(calc(-50% + 2.125rem), -6rem) scale(3.1)");
+		expect(frames).to.not.match(/\dpx/);
+	});
+});
+
 describe("the ps theme's animals", function () {
 	/** The cast (tools/heart/README.md); the teddy and the dolphin are held. */
 	const CAST = ["horse", "deer", "puppy", "bunny", "kitten", "frog", "ladybug", "bird"];

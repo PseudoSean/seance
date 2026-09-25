@@ -1,10 +1,17 @@
 import {expect} from "chai";
-import {FIREFLIES, fireflies, landSvg, nearGrass} from "../../../client/js/scenes/ps/plains";
+import {
+	FIREFLIES,
+	fireflies,
+	landSvg,
+	nearGrass,
+	smoke,
+	yurtSvg,
+} from "../../../client/js/scenes/ps/plains";
 
 /** How many times `class="<name>"` appears: the whole attribute, so `ps-l-mount` is not `ps-l-mount2`. */
 const classCount = (markup: string, name: string) => markup.split(`class="${name}"`).length - 1;
 
-describe("ps plains: the land, the near grass and the fireflies (plains.ts)", function () {
+describe("ps plains: the land, the near grass, the yurt, its smoke and the fireflies (plains.ts)", function () {
 	describe("landSvg", function () {
 		const land = landSvg();
 
@@ -167,6 +174,130 @@ describe("ps plains: the land, the near grass and the fireflies (plains.ts)", fu
 
 		it("names no ids", function () {
 			expect(grass).to.not.match(/\bid="/);
+		});
+	});
+
+	describe("yurtSvg", function () {
+		const yurt = yurtSvg();
+
+		it("is the same drawing every time", function () {
+			expect(yurtSvg()).to.equal(yurt);
+		});
+
+		it("is one svg on the mockup's 240 × 170 viewBox", function () {
+			expect(yurt.startsWith('<svg viewBox="0 0 240 170" aria-hidden="true">')).to.equal(
+				true
+			);
+			expect(yurt.trim().endsWith("</svg>")).to.equal(true);
+			expect(yurt.match(/<svg\b/g)).to.have.length(1);
+		});
+
+		it("names only ps-y- ids, and every url(#…) it uses is one of them", function () {
+			const ids = [...yurt.matchAll(/\bid="([^"]*)"/g)].map((m) => m[1]);
+			expect(ids).to.have.members([
+				"ps-y-wall",
+				"ps-y-roof",
+				"ps-y-inner",
+				"ps-y-spill",
+				"ps-y-crown-glow",
+				"ps-y-blur",
+			]);
+
+			for (const id of ids) {
+				expect(id).to.match(/^ps-y-/);
+			}
+
+			const used = [...yurt.matchAll(/url\(#([^)]*)\)/g)].map((m) => m[1]);
+			expect(used.length).to.be.at.least(8);
+
+			for (const id of used) {
+				expect(ids, id).to.include(id);
+			}
+		});
+
+		it("names its parts with ps-y- classes, the mockup's own", function () {
+			for (const name of [
+				"ps-y-felt-l",
+				"ps-y-felt-c",
+				"ps-y-roof-t",
+				"ps-y-roof-b",
+				"ps-y-path",
+				"ps-y-spill",
+				"ps-y-wood",
+				"ps-y-stone",
+				"ps-y-lit",
+				"ps-y-rope",
+				"ps-y-band",
+				"ps-y-band-mark",
+				"ps-y-roof",
+				"ps-y-snow",
+				"ps-y-rib",
+				"ps-y-crown",
+				"ps-y-pipe",
+				"ps-y-door",
+				"ps-y-door-orn",
+			]) {
+				expect(yurt, name).to.include(`class="${name}"`);
+			}
+
+			for (const [, cls] of yurt.matchAll(/class="([^"]*)"/g)) {
+				expect(cls).to.match(/^ps-y-[a-z-]+$/);
+			}
+		});
+
+		it("paints its patterned band with 16 marks along the band's curve", function () {
+			const band = yurt.match(/<g class="ps-y-band-mark">([\s\S]*?)<\/g>/)?.[1] ?? "";
+			const marks = [
+				...band.matchAll(/<path d="M([\d.]+),([\d.]+) l3,-2\.4 l3,2\.4 l-3,2\.4 Z"\/>/g),
+			];
+			expect(marks).to.have.length(16);
+			expect(band.match(/<path /g)).to.have.length(16);
+
+			marks.forEach((m, i) => {
+				const x = 44 + i * 10.2;
+				expect(Number(m[1])).to.be.closeTo(x, 0.01);
+				expect(Number(m[2])).to.be.closeTo(
+					101.5 - Math.sin(((x - 38) / 164) * Math.PI) * 4,
+					0.01
+				);
+			});
+		});
+
+		it("lights the wall, the crown, the door and its seams, and snows on the roof", function () {
+			expect(classCount(yurt, "ps-y-lit")).to.equal(4);
+			expect(classCount(yurt, "ps-y-spill")).to.equal(1);
+			expect(classCount(yurt, "ps-y-snow")).to.equal(1);
+			expect(classCount(yurt, "ps-y-pipe")).to.equal(2);
+		});
+
+		it("holds no text and no style strings", function () {
+			expect(yurt).to.not.match(/<text\b/);
+			expect(yurt).to.not.include("style=");
+		});
+	});
+
+	describe("smoke", function () {
+		const puffs = smoke();
+
+		it("rises in five puffs, the mockup's", function () {
+			expect(puffs.match(/<i /g)).to.have.length(5);
+			expect(smoke()).to.equal(puffs);
+		});
+
+		it("gives each its own rise and delay, sized in rem, never px", function () {
+			expect(puffs).to.not.include("px");
+			const got = [
+				...puffs.matchAll(
+					/<i style="--sd:([\d.]+)s;--sdl:([\d.]+)s;width:([\d.]+)rem;height:([\d.]+)rem"><\/i>/g
+				),
+			].map((m) => m.slice(1).map(Number));
+			expect(got).to.deep.equal([
+				[6.2, 0, 9 / 16, 9 / 16],
+				[7.1, 1.5, 11 / 16, 11 / 16],
+				[6.6, 3, 8 / 16, 8 / 16],
+				[7.6, 4.4, 12 / 16, 12 / 16],
+				[6.9, 5.6, 9 / 16, 9 / 16],
+			]);
 		});
 	});
 

@@ -728,6 +728,110 @@ strong,
 	100% { opacity: 0; }
 }
 
+/* The yurt (plains.ts `yurtSvg`) on the ground band, centred on the place
+ * scene.ts measures in the message column's far third (--ps-yurt-left; 70 %
+ * of the scene before any column was measured). It never slides: nothing here
+ * may transition or animate its place. A large move fades it out
+ * (ps-yurt-moving), jumps it while unseen and fades it back in; the fade is
+ * a hair shorter than scene.ts's 0.4 s wait, so the jump is never seen. */
+#theme-scene .ps-yurt {
+	left: var(--ps-yurt-left, 70%);
+	bottom: 17%;
+	height: 21%;
+	aspect-ratio: 240 / 170;
+	transform: translateX(-50%);
+	transition: opacity 0.38s ease;
+}
+
+#theme-scene.ps-yurt-moving .ps-yurt,
+#theme-scene.ps-yurt-moving .ps-smoke {
+	opacity: 0;
+}
+
+#theme-scene .ps-yurt svg {
+	width: 100%;
+	height: 100%;
+	overflow: visible;
+}
+
+/* Every part in the colour the palette publishes for it; the glows are the
+ * drawing's own warm colours, lit by --ps-night-glow. */
+#theme-scene .ps-y-felt-l { stop-color: var(--ps-felt-shade); }
+#theme-scene .ps-y-felt-c { stop-color: var(--ps-felt); }
+#theme-scene .ps-y-roof-t { stop-color: var(--ps-roof-top); }
+#theme-scene .ps-y-roof-b { stop-color: var(--ps-roof-bottom); }
+#theme-scene .ps-y-band { fill: var(--ps-band); }
+
+#theme-scene .ps-y-roof {
+	stroke: var(--ps-roof-stroke);
+	stroke-width: 0.9;
+	stroke-opacity: 0.6;
+	stroke-linejoin: round;
+}
+
+#theme-scene .ps-y-band-mark { fill: var(--ps-band-mark); }
+#theme-scene .ps-y-rope { stroke: var(--ps-rope); }
+#theme-scene .ps-y-rib { stroke: var(--ps-rib); }
+#theme-scene .ps-y-door { fill: var(--ps-door); }
+#theme-scene .ps-y-door-orn { stroke: var(--ps-door-orn); }
+#theme-scene .ps-y-crown { fill: var(--ps-crown); }
+#theme-scene .ps-y-pipe { fill: var(--ps-pipe); }
+#theme-scene .ps-y-stone { fill: var(--ps-stone); }
+#theme-scene .ps-y-wood { fill: var(--ps-wood); }
+
+#theme-scene .ps-y-path {
+	fill: var(--ps-path);
+	opacity: 0.6;
+}
+
+/* At night the door, its seams, the wall and the crown glow from inside and a
+ * soft spill of light falls on the path; by day none of it shows. */
+#theme-scene .ps-y-lit { opacity: var(--ps-night-glow, 0); }
+#theme-scene .ps-y-spill { opacity: calc(var(--ps-night-glow, 0) * 0.85); }
+
+/* Snow on the roof in winter and on snowy days. */
+#theme-scene .ps-y-snow {
+	fill: #f5f8fc;
+	opacity: var(--ps-snowcap, 0);
+}
+
+/* The smoke rises from the pipe at night, on the yurt's own place: the yurt's
+ * top plus 22/170 of its height (the pipe's top in its drawing), so it goes
+ * wherever the yurt goes and fades with it. Inside the ground group, so the
+ * heat haze bends it with the yurt. */
+#theme-scene .ps-smoke {
+	left: var(--ps-yurt-left, 70%);
+	bottom: calc(17% + 21% * 148 / 170);
+	width: 0;
+	height: 0;
+	opacity: var(--ps-smoke-op, 0);
+	transition: opacity 0.38s ease;
+}
+
+#theme-scene .ps-smoke i {
+	position: absolute;
+	left: 0;
+	bottom: 0;
+	border-radius: 50%;
+	background: radial-gradient(closest-side, var(--ps-smoke) 0%, transparent 100%);
+	animation: ps-smoke-rise var(--sd) linear var(--sdl) infinite;
+	opacity: 0;
+}
+
+@keyframes ps-smoke-rise {
+	0% {
+		transform: translate(-50%, 0) scale(0.45);
+		opacity: 0;
+	}
+
+	12% { opacity: 0.9; }
+
+	100% {
+		transform: translate(calc(-50% + 2.125rem), -6rem) scale(3.1);
+		opacity: 0;
+	}
+}
+
 /* The near grass, in front of the ground and outside the haze: blades along
  * the window's lower 19 % that lean by the weather's angle, and small flowers
  * in spring and summer that fade at night. */

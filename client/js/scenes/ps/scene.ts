@@ -5,16 +5,18 @@
  * (and whenever the page becomes visible) writes the engine's and the
  * palette's answer as custom properties on its root, and publishes on <html>
  * the four values the chrome reads, and the hour's sky as the browser's
- * `theme-color`. All motion is CSS or SVG animation; no script runs per
- * frame. A hidden page's scene is stopped outright. No Vue, no store; the
- * markup below (and plains.ts's land, near grass and fireflies) is constant,
- * and nothing user-supplied is ever written into it.
+ * `theme-color`. It keeps the yurt in the message column's far third
+ * (placeYurt). All motion is CSS or SVG animation; no script runs per frame.
+ * A hidden page's scene is stopped outright. No Vue, no store; the markup
+ * below (and plains.ts's land, near grass, fireflies, yurt and smoke) is
+ * constant, and nothing user-supplied is ever written into it.
  */
 import {isPhoneLayout} from "../../helpers/device";
 import type {SceneHandle, SceneHostState} from "../../themeScene";
 import {momentAt, rng, type Moment, type MoonPhase} from "./engine";
 import {levelsAt, paletteAt, publishedFor, WEATHER, type Palette, type Published} from "./palette";
-import {FIREFLIES, fireflies, landSvg, nearGrass} from "./plains";
+import {FIREFLIES, fireflies, landSvg, nearGrass, smoke, yurtSvg} from "./plains";
+import {yurtFollower} from "./yurt";
 
 const STAR_COUNT = 190;
 const RAD = Math.PI / 180;
@@ -188,9 +190,10 @@ function stars(): string {
  * The scene's layers, back to front (docs/projects/ps-theme.md §5.1): the sky
  * is the root's own background; then the Milky Way, the stars, the horizon
  * glow, the moon and the sun; the ground group — the land and river, the
- * fireflies, the animal layer (switched off in ps.css) — which the heat haze
- * bends as one; and the near grass in front of it, outside the haze. A phone
- * (the phone layout at mount) gets half the fireflies.
+ * fireflies, the yurt and its smoke, the animal layer (switched off in
+ * ps.css) — which the heat haze bends as one; and the near grass in front of
+ * it, outside the haze. A phone (the phone layout at mount) gets half the
+ * fireflies.
  */
 export function sceneMarkup(phone: boolean): string {
 	return (
@@ -200,10 +203,105 @@ export function sceneMarkup(phone: boolean): string {
 		`<div class="ps-ground">` +
 		landSvg() +
 		`<div class="ps-fireflies">${fireflies(phone ? FIREFLIES / 2 : FIREFLIES)}</div>` +
+		`<div class="ps-yurt">${yurtSvg()}</div>` +
+		`<div class="ps-smoke">${smoke()}</div>` +
 		`<div class="ps-animals"></div>` +
 		`</div>` +
 		nearGrass()
 	);
+}
+
+/**
+ * Keeps the yurt in the message column's far third (yurt.ts, spec §5.3). It
+ * observes `#chat .chat` — MessageList.vue's scroll container; not `#chat`,
+ * which holds the user list too — and hands each measurement to the
+ * follow-or-fade rule, which writes `--ps-yurt-left` on the root and toggles
+ * `ps-yurt-moving`. A conversation switch can replace the column, so it is
+ * looked for again on every host update and whenever the one observed leaves
+ * the page; with no column on screen (Settings, Help, the connect form) the
+ * yurt keeps its place.
+ */
+function placeYurt(root: HTMLElement): {refind(): void; destroy(): void} {
+	const follower = yurtFollower({
+		place: (px) => root.style.setProperty("--ps-yurt-left", `${Math.round(px)}px`),
+		hide: (on) => root.classList.toggle("ps-yurt-moving", on),
+		after(ms, fn) {
+			const id = window.setTimeout(fn, ms);
+			return () => window.clearTimeout(id);
+		},
+		nextFrame(fn) {
+			const id = window.requestAnimationFrame(fn);
+			return () => window.cancelAnimationFrame(id);
+		},
+	});
+	let column: Element | null = null;
+	let frame: number | undefined;
+
+	const measure = () => {
+		const scene = root.getBoundingClientRect();
+		const box = column?.isConnected ? column.getBoundingClientRect() : null;
+		const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+		follower.measure(
+			box && box.width > 0 ? {left: box.left - scene.left, width: box.width} : null,
+			scene.width,
+			rem
+		);
+	};
+
+	const observer = new ResizeObserver(() => {
+		if (column?.isConnected) {
+			measure();
+		} else {
+			findSoon(); // it left the page; its replacement, if any, is there by the next frame
+		}
+	});
+
+	function find() {
+		const found = document.querySelector("#chat .chat");
+
+		if (found === column) {
+			return;
+		}
+
+		if (column) {
+			observer.unobserve(column);
+		}
+
+		column = found;
+
+		if (column) {
+			observer.observe(column); // its first observation measures it
+		}
+	}
+
+	// Also on the next frame: the host's update comes before Vue has patched
+	// the page, and a ResizeObserver callback must not start observing itself.
+	function findSoon() {
+		if (frame === undefined) {
+			frame = window.requestAnimationFrame(() => {
+				frame = undefined;
+				find();
+			});
+		}
+	}
+
+	return {
+		refind() {
+			find();
+			findSoon();
+		},
+		destroy() {
+			observer.disconnect();
+			follower.stop();
+
+			if (frame !== undefined) {
+				window.cancelAnimationFrame(frame);
+				frame = undefined;
+			}
+
+			root.classList.remove("ps-yurt-moving");
+		},
+	};
 }
 
 export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
@@ -271,9 +369,11 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 
 	const onReduced = () => motion(visible && !reduced.matches);
 	reduced.addEventListener("change", onReduced);
+	const yurt = placeYurt(root);
 
 	const update = (state: SceneHostState) => {
 		root.dataset.view = state.view;
+		yurt.refind();
 
 		if (state.visible && !visible) {
 			visible = true;
@@ -297,6 +397,7 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 			window.clearTimeout(timer);
 			timer = undefined;
 			reduced.removeEventListener("change", onReduced);
+			yurt.destroy();
 			root.replaceChildren();
 			root.removeAttribute("style");
 			root.classList.remove("ps-paused");
