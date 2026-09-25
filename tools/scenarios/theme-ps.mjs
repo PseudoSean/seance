@@ -29,8 +29,9 @@
 // - follows the open conversation: channel, query, none (Settings);
 // - switches to coffee (the scene goes and leaves nothing on <html>) and
 //   back to ps (one scene again, not two);
-// - on a phone, at night, opens the drawer: night glass, on top of the
-//   scrim, not under it;
+// - on a phone: the glass unblurred on the generated tint (the measured
+//   budget's fallback, ps-theme.md §10), the header and composer at noon,
+//   and at night the open drawer, on top of the scrim, not under it;
 // - and last blocks the scene's chunk and reloads: the daylight fallback
 //   stays, ink over it, and the console complains of the blocked request and
 //   nothing else — the hook's one warning, naming it.
@@ -56,7 +57,8 @@
 //   hidden element having no animations).
 // The chrome's checks were watched failing on 2026-09-25 the same way, with
 // - `#sidebar{backdrop-filter:none!important}` — the sidebar's glass checks
-//   fail, at noon, at 22:00 and on the phone.
+//   fail, at noon and at 22:00 (the phone's glass has had no filter since
+//   the budget's fallback, 2026-09-25, so its checks read it unblurred).
 //
 //   NODE_ENV=production corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/theme-ps.mjs
@@ -648,6 +650,12 @@ function hexRgb(hex) {
 function isGlass(surface, rgb) {
 	const c = rgba(surface?.bg);
 	return !!c && c.rgb === rgb && c.a < 1 && /blur\(/.test(surface.blur);
+}
+
+/** The phone's glass: the `rgb` tint at `alpha`, with no backdrop filter. */
+function isUnblurredTint(surface, rgb, alpha) {
+	const c = rgba(surface?.bg);
+	return !!c && c.rgb === rgb && Math.abs(c.a - alpha) < 0.005 && surface.blur === "none";
 }
 
 /** Every glass surface is glass of the `rgb` tint. */
@@ -1276,10 +1284,26 @@ export default async function run(page) {
 	await page.sleep(800);
 	await page.screenshot("ps-phone-noon");
 
-	// ---- the phone at night, the drawer open: night glass over the plains
+	// On the phone layout the glass has no backdrop filter and keeps the
+	// generated tint (ps.css, the phones section: the measured budget's
+	// fallback, ps-theme.md §10): the header and the composer at noon.
+	await atHour(page, 12);
+	const phoneNoon = await page.evaluate(CHROME);
+
+	for (const selector of ["#chat .header", "#form"]) {
+		const s = phoneNoon.glass[selector];
+		page.check(
+			`a phone at noon: ${selector} is the day tint at 78 %, unblurred (${
+				s ? `${s.bg}, ${s.blur}` : "missing"
+			})`,
+			isUnblurredTint(s, DAY_GLASS, 0.78)
+		);
+	}
+
+	// ---- the phone at night, the drawer open: the night tint over the plains
 
 	// The scrim starts at the drawer's edge (ps.css, the phone block), so the
-	// drawer frosts the plains themselves, not a dimmed grey.
+	// drawer lies over the plains themselves, not a dimmed grey.
 	await atHour(page, 22);
 	await page.click(`#chat .header .lt`);
 	await page.waitFor(`document.getElementById("viewport").classList.contains("menu-open")`, {
@@ -1288,8 +1312,8 @@ export default async function run(page) {
 	await page.sleep(700); // the drawer's slide
 	const drawer = await page.evaluate(DRAWER);
 	page.check(
-		`a phone at night: the open drawer is night glass (${drawer.bg}, ${drawer.blur})`,
-		isGlass(drawer, NIGHT_GLASS)
+		`a phone at night: the open drawer is the night tint at 74 %, unblurred (${drawer.bg}, ${drawer.blur})`,
+		isUnblurredTint(drawer, NIGHT_GLASS, 0.74)
 	);
 	page.check(
 		`a phone at night: the drawer is on top, not under the scrim (${drawer.hit})`,

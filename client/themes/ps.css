@@ -1862,7 +1862,9 @@ body {
  * 0.625rem; its chips had 6px, the spec gives all glass one) and saturation.
  * Never on #status-bar-tint or an ancestor of it (html, body): iOS does not
  * sample a fixed element that carries a backdrop filter (CLAUDE.md, "The iOS
- * status bar"). The flip between day and night glass takes --ps-flip.
+ * status bar"). The flip between day and night glass takes --ps-flip. On the
+ * phone layout the glass has no backdrop filter at all (the phones section:
+ * the measured budget's fallback, spec §10).
  *
  * By day the glass is luminous (the user's pick, 2026-09-25): while the scene
  * runs, the backdrop is brightened (--ps-g-lift) before the saturation, and
@@ -1904,8 +1906,9 @@ body {
  * header the sky; the composer the near grass; a docked sidebar or user list
  * every ground but the yurt, which stands in the message column; the chips,
  * anywhere, every ground), or the generated tint while the scene has not
- * published one. The phone's drawer and a user list laid over the chat take
- * the chips' (the phones section, and the overlaid list below). */
+ * published one. A user list laid over the chat takes the chips' (below). On
+ * the phone layout none of these apply: the glass there is unfiltered, on the
+ * generated tint (the phones section). */
 /* stylelint-disable no-duplicate-selectors -- the glass rules above, with their tints */
 #chat .header {
 	--ps-g-tint: var(--ps-g-tint-header, var(--ps-g-tint-a));
@@ -2266,22 +2269,36 @@ body {
 
 /* The phone layout (style.css's list, verbatim; PHONE_LAYOUT_QUERY in
  * client/js/helpers/device.ts) opens the sidebar as a drawer over the chat,
- * and style.css dims the whole viewport under it. Under glass the dimming is
- * what the glass would frost, a grey drawer whose soft ink falls under its
- * floor: the scrim starts at the drawer's inner edge instead, so the drawer
- * frosts the undimmed plains as it does on the desktop. The strip beside it
- * still takes the tap that closes the drawer, and still fades. The drawer and
- * the user list lie over the chat there, the yurt included, so by day they
- * take the chips' tint (the chrome section). */
+ * and style.css dims the whole viewport under it. Under a translucent drawer
+ * the dimming is what shows through, a grey drawer whose soft ink falls under
+ * its floor: the scrim starts at the drawer's inner edge instead, so the
+ * drawer lies over the undimmed plains, whose grounds the tint is held over.
+ * The strip beside it still takes the tap that closes the drawer, and still
+ * fades. */
 @media (max-width: 768px), (max-height: 500px) and (hover: none) and (pointer: coarse) {
 	/* Physical, as style.css places the drawer (right: 100% and a translate). */
 	#sidebar-overlay {
 		left: var(--sidebar-width);
 	}
 
+	/* The measured budget's pre-decided fallback (spec §10): on the phone
+	 * layout the glass carries no backdrop filter, neither the blur nor the
+	 * day's brightening, and so it takes the generated tint (--ps-g-tint-a,
+	 * 0.78 by day and 0.74 at night), which the legibility model holds over
+	 * every ground with no filter. The scene's per-surface day tints are solved
+	 * through the brightened backdrop and are not proven without it. The risen
+	 * composer is named for its rule's specificity; the user list's sticky
+	 * headings inherit the list's tint. */
 	#sidebar,
-	#chat .userlist {
-		--ps-g-tint: var(--ps-g-tint-float, var(--ps-g-tint-a));
+	#chat .header,
+	#chat .userlist,
+	#form,
+	:root.ps-form-tall #form,
+	#chat .msg-reaction:not(.self, .msg-reaction-add) {
+		--ps-g-tint: var(--ps-g-tint-a);
+		/* stylelint-disable-next-line property-no-vendor-prefix -- the glass's prefixed blur, undone */
+		-webkit-backdrop-filter: none;
+		backdrop-filter: none;
 	}
 }
 

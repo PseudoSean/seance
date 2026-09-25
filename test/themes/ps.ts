@@ -534,14 +534,11 @@ describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.m
 			expect(valueOf(selector, "--ps-g-tint"), selector).to.equal(readsTint(surface));
 		}
 
-		// The phone's drawer and its user list lie over the chat, the yurt included.
-		for (const selector of ["#sidebar", "#chat .userlist"]) {
-			expect(valueOf(selector, "--ps-g-tint", PHONE), `${selector} on a phone`).to.equal(
-				readsTint("float")
-			);
-		}
+		// (On the phone layout no surface reads the scene's tints: the budget's
+		// fallback, the next test.)
 
-		// So does a user list laid over a narrow pane, under style.css's own condition.
+		// A user list laid over a narrow pane, under style.css's own condition,
+		// stands over the chat, the yurt included.
 		const style = rulesIn(
 			fs.readFileSync(path.resolve(__dirname, "../../client/css/style.css"), "utf8")
 		);
@@ -557,8 +554,8 @@ describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.m
 			rules
 				.filter((r) => r.selectors.some((s) => s.includes("ps-form-tall")))
 				.map((r) => r.at),
-			"at the top level, after #form's own"
-		).to.deep.equal([""]);
+			"at the top level, after #form's own; and restated by the phone's fallback"
+		).to.deep.equal(["", PHONE]);
 		// The band's top the scene measures against is the land's (plains.ts LAND_SHARE, ps.css .ps-land).
 		const land = /^([\d.]+)%$/.exec(valueOf("#theme-scene .ps-land", "height") ?? "");
 		expect(Number(land?.[1]) / 100, "the land's height").to.be.closeTo(LAND_SHARE, 1e-9);
@@ -567,6 +564,58 @@ describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.m
 		const names = Object.keys(glassVars({doy: 172, minute: 750, weather: "clear"}, "day"));
 		expect(names.sort()).to.deep.equal(TINTED.map((s) => `--ps-g-tint-${s}`).sort());
 		expect(resolve(paletteOf("day"), "var(--ps-g-tint-a)")).to.equal(String(TINT_CAP));
+	});
+
+	it("drops the glass's backdrop filter on the phone layout, the measured budget's fallback (spec §10): no blur and no brightening, and the generated tint, never the scene's", function () {
+		// The composer risen above the grass is named too: its top-level rule outranks a bare #form.
+		const surfaces = [...GLASS_SURFACES, ":root.ps-form-tall #form"];
+
+		for (const selector of surfaces) {
+			for (const property of ["backdrop-filter", "-webkit-backdrop-filter"]) {
+				expect(valueOf(selector, property, PHONE), `${selector} ${property}`).to.equal(
+					"none"
+				);
+			}
+
+			// The scene's tints are solved through brightness(1.3), so without it
+			// only the generated tint is proven (--ps-g-tint-a: the legibility
+			// model's, which counts no filter); the night glass reads it already.
+			expect(valueOf(selector, "--ps-g-tint", PHONE), selector).to.equal(
+				"var(--ps-g-tint-a)"
+			);
+		}
+
+		expect(
+			rules
+				.filter((r) => r.at === PHONE)
+				.flatMap((r) => r.decls)
+				.filter(([, v]) => v.includes("--ps-g-tint-") && !v.includes("--ps-g-tint-a")),
+			"nothing on the phone reads a scene tint"
+		).to.deep.equal([]);
+		expect(resolve(paletteOf("day"), "var(--ps-g-tint-a)")).to.equal(String(TINT_CAP));
+		expect(resolve(paletteOf("night"), "var(--ps-g-tint-a)")).to.equal("0.74");
+
+		// It wins by coming last: every other rule that gives one of these
+		// selectors a tint or a filter (the glass, its tints, the overlaid user
+		// list, the risen composer) is written before it, with the same selector.
+		// Reduced transparency's solid comes after it and still wins.
+		for (const property of ["--ps-g-tint", "backdrop-filter", "-webkit-backdrop-filter"]) {
+			const sets = (r: Rule) =>
+				r.decls.some(([p]) => p === property) &&
+				r.selectors.some((s) => surfaces.includes(s));
+			const fallback = rules.findIndex((r) => r.at === PHONE && sets(r));
+			const others = rules.filter(
+				(r) => r.at !== PHONE && r.at !== REDUCED_TRANSPARENCY && sets(r)
+			);
+			expect(fallback, `${property}: the fallback sets it`).to.be.at.least(0);
+			expect(others.length, `${property}: the rules it overrides`).to.be.at.least(1);
+
+			for (const r of others) {
+				expect(rules.indexOf(r), `${property}: ${r.selectors.join(", ")}`).to.be.below(
+					fallback
+				);
+			}
+		}
 	});
 
 	it("brightens the backdrop by day, only while the scene runs: brightness(1.3) before the saturation, and nowhere else", function () {

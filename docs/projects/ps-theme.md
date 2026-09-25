@@ -209,7 +209,7 @@ Two palettes, both in `ps.css`, switched by `data-ps-light` with a 0.8 s transit
 - **The text accent** (1A, §2). The spec's accent reads 2.97 : 1 on the day glass and 2.63 : 1 on the night glass, short of the floor wherever the chrome writes or marks with it. `--ps-g-accent-text` keeps the accent's hue and chroma, and its lightness is solved against the worst glass ground like a nick's: `#9a3a10` (4.63 : 1 on the glass, 6.63 : 1 on the solid) and `#fbb291` (4.64 : 1, 10.02 : 1). Links, button labels, the send and connecting icons, the reply bar's rule and a chip's hover and focus border take it; text on it is white by day and the night solid at night. The spec's accent stays for the open row's marker, the caret, the focus glow and the accent's tints.
 - **One badge**, as the mockup draws it: unread and mention alike, the generated fill (the accent, darkened until its white numeral holds 4.5 : 1) and a white numeral. A mentioned row still stands out by its name in the full ink.
 - **The washes move away from the text** (§2). By day every wash on the glass lightens toward the paper: the spec's selected row and its hover, and in place of creama's grey tints the composer's bars at white 30 % and a hovered user at white 60 %. At night they deepen toward black: the selected row 60 %, a hover 29 %, the bars 19 %, a hovered user 40 %. Each night strength is the weakest black as visible as the white it replaces (the median contrast between the washed and the bare glass over the checked grounds), and `test/themes/ps.ts` holds each at that visibility and never below 1.02 : 1 over the darkest sky. The solid panels keep creama's and coffee's tints.
-- **The phone's drawer stays glass.** `style.css` dims the whole viewport under the open drawer, and the glass frosted that dimming into a grey drawer whose soft ink fell to 4.20 : 1. The scrim starts at the drawer's inner edge instead (`left: var(--sidebar-width)`, physical like the drawer), so the drawer frosts the undimmed plains as on the desktop, and the strip beside it still dims and still takes the tap that closes it.
+- **The phone's drawer stays glass.** `style.css` dims the whole viewport under the open drawer, and the glass frosted that dimming into a grey drawer whose soft ink fell to 4.20 : 1. The scrim starts at the drawer's inner edge instead (`left: var(--sidebar-width)`, physical like the drawer), so the drawer frosts the undimmed plains as on the desktop, and the strip beside it still dims and still takes the tap that closes it. Since the measured budget (§10) the phone's glass has no backdrop filter at all and keeps the generated tint; the scrim rule still keeps the drawer over the undimmed plains.
 - **A conversation on a network that is down** fades its messages and the jump-to-recent disc's arrow rather than `.chat-content`: an opacity under 1 makes an element a backdrop root, and the user list inside it lost its blur. The fade's transition is on the base rules, so it eases back on reconnect as well as out.
 - **Reduced transparency** (`prefers-reduced-transparency: reduce`) makes every glass surface solid, `--ps-g-solid` with no blur, by day and at night.
 
@@ -267,6 +267,75 @@ Rules:
 - Under the phone layout (`PHONE_LAYOUT_QUERY`), particle counts are halved.
 
 Budget: a plan task measures the idle cost of the scene in Chromium (a 10-second performance trace of a quiet channel at midday on a clear day and on a rainy one, desktop and phone layouts, with and without 4× CPU throttling) and records the numbers in this document as the baseline. If the phone layout measures badly, the **pre-decided fallback** is glass without backdrop blur on the phone layout, with the tint made more opaque to keep the contrast floors.
+
+### 10.1 The measured budget (plan 3, 2026-09-25)
+
+**The fallback applies.** On the phone layout at 4× throttling the main thread was busy 87–99 % of every trace, against the 50 % threshold. The mean frame interval stayed under its 33 ms threshold in every weather, the hot day closest at 32.9 ms. Under `PHONE_LAYOUT_QUERY` the glass surfaces (the sidebar, the header, the user list, the composer, the risen composer and the chips) now carry no `backdrop-filter`: no blur and no day brightening. They take the generated tint, `--ps-g-tint-a` (0.78 by day, 0.74 at night), instead of the scene's per-surface day tints. Those tints are solved through `brightness(1.3)`, so without it they are not proven. The generated tint is the legibility model's, which counts no filter: over the sparse sweep and the pinned moments, the day glass's soft ink reads 4.50 : 1 at worst and its join-green marks 3.11 : 1, and the night soft ink 4.52 : 1. `test/themes/ps.ts` pins both halves and that the phone rule comes after every rule it overrides. Reduced transparency's solid still wins over it. `#status-bar-tint`, `html` and `body` carry no filter, as before. The desktop is unchanged.
+
+**What the fallback shows: the conversation through the drawer.** Without the blur, the conversation's own words show through the phone's open drawer and through a user list laid over the chat. They show at 22 % by day and 26 % at night; `tools/scenarios/theme-ps.mjs`'s `ps-phone-night-sidebar` screenshot is the plainest case. The legibility model counts the scene's grounds, not the words' outline and shadow. Where a drawer glyph in the soft ink crosses a word's dark outline by day, the local contrast is about 4.06 : 1 (the outline taken as black under the 78 % tint). At night, the soft ink over a white word behind reads 4.45 : 1; the full inks hold (8.28 and 7.03). Whether those two overlays should instead be solid on the phone, as the dense panels are, is the user's call.
+
+**The fallback does not bring the phone under budget.** After it, the phone at 4× is still 91–99 % busy. It took the compositor's share down (the GPU process's compositor thread on a clear day from 24 % to 15 %, rain 56 → 45 %, dusk 41 → 30 %, heat 93 → 88 %) but not the main thread's. The main thread's cost is the scene's animation, not the glass (below).
+
+**How it was measured.** The machine was a production build served statically, driven by `tools/browser-drive.mjs` in headless Chrome for Testing 153 (Playwright's build). It ran with `--disable-gpu`, so **software compositing, no GPU**, on a shared Intel Xeon E5-2680 v4 (2.4 GHz) host at `nice 19`. The numbers are pessimistic: the backdrop blur and the scene's SVG filters are rasterized on the CPU, where a phone's GPU would do them. **iOS Safari cannot be measured here**; nothing here says what WebKit's compositor or an iPhone's GPU makes of it. The page was an idle `#seance` on the dev ircd with about 55 messages of history on screen, the user list open on the desktop and closed on the phone, and the drawer closed. The desktop layout was 1280 × 900. The phone layout was 390 × 844 with mobile and touch emulation at a device scale factor of 1; a real phone draws 3× the pixels each way. Each run pinned the scene's clock with a `Date` shim under a GMT time zone, flipped the page hidden and visible so the scene ticked, and settled for 5 s. It then traced 10 s with `devtools.timeline` and `disabled-by-default-devtools.timeline.frame`, plus `disabled-by-default-devtools.timeline`, `toplevel` and `blink.user_timing`, which give the top-level tasks and the window's marks. Each trace opened about 3 s before a minute boundary that starts a new 5-minute tint step, so the scene's own tick and its day-glass solve fall inside it. The traces ran one at a time. 4× is `Emulation.setCPUThrottlingRate`, which slows the renderer's main thread only.
+
+- **busy**: the union of the page renderer's main-thread top-level tasks over the window;
+- **frame**: the interval between consecutive `DrawFrame` events on the page's compositor thread, which is what reaches the screen, compositor-driven animations included;
+- **main frame**: the interval between `BeginMainThreadFrame` events, which is how often SMIL and every animation the compositor cannot run advance;
+- **style, layout, paint**: `UpdateLayoutTree`, `Layout` and `Paint` events per second on the main thread (layout counts equal style counts in every run: one of each per main frame);
+- **viz**: the GPU process's compositor thread busy, where software compositing draws.
+
+The days: 25 September is clear and 26 September rainy. 1 July is hot, with the heat haze. Dusk is 25 September at 18:30: sunset is 18:23, the day glass is still up, and the three autumn skeins fly (the moon rises between 18:30 and 18:45, so they are not yet moonlit). "Birds" names what was on screen when the trace opened. The skeins cross during the trace.
+
+| Layout  | Run             |   × | Birds on screen             | Busy % | Frame mean / p95 (ms) | Main frame mean / p95 (ms) | Style/s | Layout/s | Paint/s | Viz % |
+| ------- | --------------- | --: | --------------------------- | -----: | --------------------: | -------------------------: | ------: | -------: | ------: | ----: |
+| desktop | clear           |   1 | buzzard                     |   72.7 |           31.1 / 38.7 |                38.6 / 67.2 |    51.8 |     51.8 |    1114 |    91 |
+| desktop | clear           |   4 | buzzard                     |   92.1 |           32.5 / 38.6 |              117.1 / 167.9 |    17.1 |     17.1 |     369 |    85 |
+| desktop | rain            |   1 | none                        |   67.9 |           43.8 / 78.1 |                47.7 / 81.9 |    41.9 |     41.9 |     902 |    97 |
+| desktop | rain            |   4 | none                        |   92.2 |           47.5 / 73.9 |              139.9 / 196.3 |    14.4 |     14.4 |     309 |    88 |
+| desktop | heat            |   1 | buzzard, 3 larks            |   20.1 |         117.4 / 222.6 |              124.5 / 222.1 |    16.1 |     16.1 |     352 |    99 |
+| desktop | heat            |   4 | buzzard, 3 larks            |   72.3 |         117.3 / 223.2 |              132.5 / 236.2 |    15.1 |     15.1 |     333 |    99 |
+| desktop | dusk            |   1 | 3 skeins (38 geese)         |   58.7 |           39.2 / 71.7 |                44.1 / 73.2 |    45.3 |     45.3 |     971 |    97 |
+| desktop | dusk            |   4 | 2 skeins (26 geese) in view |   88.7 |           41.9 / 70.8 |              105.8 / 149.5 |    18.9 |     18.9 |     403 |    91 |
+| phone   | clear           |   1 | buzzard                     |   99.3 |           16.7 / 29.7 |                30.8 / 49.3 |    32.5 |     32.5 |    1398 |    25 |
+| phone   | clear           |   4 | buzzard                     |   98.9 |           16.7 / 29.7 |               92.6 / 128.8 |    10.8 |     10.8 |     464 |    24 |
+| phone   | rain            |   1 | none                        |   98.2 |           16.7 / 30.3 |                28.6 / 48.5 |    35.0 |     35.0 |    1503 |    56 |
+| phone   | rain            |   4 | none                        |   99.2 |           16.6 / 29.3 |               98.7 / 126.8 |    10.1 |     10.1 |     435 |    56 |
+| phone   | heat            |   1 | buzzard, 3 larks            |   70.4 |           32.4 / 38.5 |                37.9 / 65.3 |    26.4 |     26.4 |    1160 |    95 |
+| phone   | heat            |   4 | buzzard, 3 larks            |   87.3 |           32.9 / 42.5 |              107.1 / 134.9 |     9.3 |      9.3 |     411 |    93 |
+| phone   | dusk            |   1 | 3 skeins (20 geese in view) |   98.4 |           16.7 / 29.9 |                29.3 / 42.8 |    34.0 |     34.0 |    1460 |    40 |
+| phone   | dusk            |   4 | 3 skeins (15 geese in view) |   99.2 |           16.7 / 29.5 |               85.2 / 104.7 |    11.7 |     11.7 |     501 |    41 |
+| phone   | fallback: clear |   1 | buzzard                     |   99.3 |           16.7 / 29.8 |                31.7 / 47.5 |    31.5 |     31.5 |    1357 |    15 |
+| phone   | fallback: clear |   4 | buzzard                     |   99.2 |           16.7 / 28.0 |               98.8 / 135.1 |    10.1 |     10.1 |     434 |    15 |
+| phone   | fallback: rain  |   1 | none                        |   98.9 |           16.7 / 30.3 |                31.3 / 43.3 |    31.9 |     31.9 |    1374 |    44 |
+| phone   | fallback: rain  |   4 | none                        |   99.2 |           16.6 / 28.3 |              108.5 / 157.8 |     9.1 |      9.1 |     394 |    45 |
+| phone   | fallback: heat  |   1 | buzzard, 3 larks            |   76.8 |           29.7 / 40.8 |                34.8 / 57.8 |    28.7 |     28.7 |    1263 |    93 |
+| phone   | fallback: heat  |   4 | buzzard, 3 larks            |   90.9 |           32.4 / 38.1 |              101.6 / 134.1 |     9.8 |      9.8 |     433 |    88 |
+| phone   | fallback: dusk  |   1 | 3 skeins (20 geese in view) |   98.8 |           16.7 / 29.6 |                29.3 / 44.4 |    34.1 |     34.1 |    1463 |    30 |
+| phone   | fallback: dusk  |   4 | 3 skeins (13 geese in view) |   99.2 |           16.7 / 28.2 |               96.8 / 131.0 |    10.3 |     10.3 |     441 |    30 |
+
+**Where the main thread goes: style recalculation for the scene's animations.** It takes 48–74 % of the phone's main thread. On the desktop it takes 37–56 %, except on the hot day, when the compositor holds the frames back. Every main frame restyles about 610 elements, or 770 on a rainy day with its drops. Each costs 30–45 µs, some 20–23 ms per frame on this CPU unthrottled. Two attribution runs, on the phone with the fallback on a clear noon at 1×, split it:
+
+- with the scene's SMIL paused and its CSS running, 350 elements are restyled per frame and the thread is 89 % busy, with almost no painting (4 paints/s);
+- with its CSS paused and its SMIL running, 250–300 elements are restyled per frame (78 µs each) and the thread is 96 % busy, painting 1427 times a second.
+
+Either half alone keeps the thread near full. Part of it animates unseen. By day the three skeins are laid out at opacity 0 with their wingbeats (SMIL) and flight (CSS) still running. The larks do the same out of season, and the skeins on a day with none (count 0). Nothing here was changed; it is a candidate for its own task.
+
+**The heat haze is the compositor's heaviest item.** On a hot day the GPU process's compositor thread is 88–99 % busy on both layouts. The desktop draws 8.6 frames a second (a 117 ms mean) even unthrottled, which is why its main thread idles at 20 %: it is waiting on frames. That is software compositing's worst case, and the one to recheck on a device.
+
+**A hidden page does no scene work.** On the hot day, the haze's SMIL included, all 49 of the scene's SVGs report their animations paused and none of its 162–196 CSS animations is running. The 10 s trace, which spans the minute boundary the scene's timer was set for, holds no timer firing, no animation frame, no style, layout or paint, and no drawn frame, on both layouts. The page renderer used 0.1 % of a core.
+
+**The day glass's solve (task 7b) is cheap.** The scene's tick at a new 5-minute step, with the solve included, took 2.3–3.9 ms unthrottled and 3.1–6.7 ms at 4× across the runs. Timed alone around the visibility flip on one clear day, 15 new steps against the same 15 steps again, the medians were 2.6 against 0.9 ms (the solve about 1.7 ms) and at 4× 9.2 against 3.2 ms (about 6 ms; the throttle works in time slices, so short spans at 4× are noisy). It runs once per 5 minutes.
+
+**`brightness(1.3)` costs nothing measurable.** A clear noon with the shipped filter against the same noon with `--ps-g-lift` overridden to nothing:
+
+| Layout  |   × | Busy % (shipped / no lift) | Frame mean ms | Viz %   |
+| ------- | --: | -------------------------- | ------------- | ------- |
+| desktop |   1 | 72.7 / 74.7                | 31.1 / 30.2   | 91 / 91 |
+| desktop |   4 | 92.1 / 92.9                | 32.5 / 31.9   | 85 / 85 |
+| phone   |   1 | 99.3 / 98.5                | 16.7 / 16.6   | 25 / 24 |
+| phone   |   4 | 98.9 / 99.2                | 16.7 / 16.7   | 24 / 24 |
+
+The differences are within the run-to-run noise.
 
 ## 11. Legibility floors
 
@@ -369,7 +438,7 @@ One spec, four plans, each shippable on its own:
 - **The iPhone status-bar check** (§6, §12): still the user's to do, on a device.
 - **The land and the weather veil** join the checked grounds when plan 3 draws them, and plan 3 designs the land under the message column with its words in mind (§11).
 - **The low sun counted under the horizon line** is the worst ground for the light treatment and the night glass alike (§11), because with no land drawn nothing hides it. Plan 3's land ends that.
-- **The phone's blur fallback** (§10) waits for plan 3's measured budget.
+- **The phone's blur fallback** (§10) waits for plan 3's measured budget. (Plan 3 measured it, and the fallback applies: §10.)
 
 ## 14. The groundwork (done 2026-09-24)
 
