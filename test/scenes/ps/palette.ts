@@ -318,35 +318,13 @@ describe("ps palette: plan 3's levels", function () {
 		expect(levelsAt(midnight, p).tuftLit).to.be.closeTo(Math.max(0, 0.5 - 0.45 * p.dark), 1e-9);
 	});
 
-	it("sends the skeins over at night and around sunset in spring and autumn, never in high summer", function () {
-		expect(levelsAt(at(780, 121), paletteAt(at(780, 121))).skeins).to.equal(0);
-
-		const may23 = localAt(23 * 60, 121);
-		expect(levelsAt(may23, paletteAt(may23)).skeins).to.be.greaterThan(0.9);
-		expect(levelsAt(may23, paletteAt(may23)).skeinsWest).to.equal(false);
-
-		const nov23 = localAt(23 * 60, 305);
-		expect(levelsAt(nov23, paletteAt(nov23)).skeins).to.be.greaterThan(0.9);
-		expect(levelsAt(nov23, paletteAt(nov23)).skeinsWest).to.equal(true);
-
-		const beforeSunset = localAt(sunTimes(121).set - 30, 121);
-		expect(levelsAt(beforeSunset, paletteAt(beforeSunset)).skeins).to.be.greaterThan(0.9);
-
-		const midsummerNight = localAt(23 * 60, 213);
-		expect(levelsAt(midsummerNight, paletteAt(midsummerNight)).skeins).to.equal(0);
-	});
-
-	it("shows resident birds mostly by day, none at night", function () {
-		const noon = at(780, 172);
-		expect(levelsAt(noon, paletteAt(noon)).residents).to.be.greaterThan(0.8);
-		const midnight = localAt(0, 172);
-		expect(levelsAt(midnight, paletteAt(midnight)).residents).to.be.closeTo(0, 1e-9);
-	});
-
-	it("inks the birds darker once it is well past twilight", function () {
-		const day = at(780, 172);
-		expect(levelsAt(day, paletteAt(day)).birdInk).to.equal("rgb(44 50 66 / 72%)");
-		const night = localAt(0, 172);
-		expect(levelsAt(night, paletteAt(night)).birdInk).to.equal("rgb(24 22 34 / 85%)");
+	it("leaves the birds to birds.ts: the approved mockup's timing replaced plan 3's provisional levels", function () {
+		const m = localAt(23 * 60, 121);
+		expect(levelsAt(m, paletteAt(m))).to.not.have.any.keys(
+			"skeins",
+			"skeinsWest",
+			"residents",
+			"birdInk"
+		);
 	});
 });

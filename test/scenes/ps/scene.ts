@@ -7,6 +7,7 @@ import {
 	type Weather,
 } from "../../../client/js/scenes/ps/engine";
 import {publishedFor} from "../../../client/js/scenes/ps/grounds";
+import {birdsAt, dayBirdsMarkup, skeinsMarkup} from "../../../client/js/scenes/ps/birds";
 import {paletteAt} from "../../../client/js/scenes/ps/palette";
 import {clouds, FIREFLIES, smoke, yurtSvg} from "../../../client/js/scenes/ps/plains";
 import {
@@ -161,7 +162,7 @@ describe("ps scene: plan 3's land, yurt and level vars", function () {
 		expect(v).to.not.have.property("--ps-path");
 	});
 
-	it("writes the day's levels as numbers, sway in degrees, and the veil and bird-ink as their own strings", function () {
+	it("writes the day's levels as numbers, sway in degrees, and the veil's colour as its own string", function () {
 		const m = moment();
 		const p = paletteAt(m);
 		const v = sceneVars(m, p);
@@ -170,8 +171,6 @@ describe("ps scene: plan 3's land, yurt and level vars", function () {
 			"--ps-flowers",
 			"--ps-snowcap",
 			"--ps-ff-op",
-			"--ps-skeins-op",
-			"--ps-residents-op",
 			"--ps-wind-op",
 			"--ps-heat-op",
 			"--ps-veil",
@@ -187,9 +186,60 @@ describe("ps scene: plan 3's land, yurt and level vars", function () {
 
 		expect(v["--ps-sway"]).to.match(/^-?[\d.]+deg$/);
 		expect(v["--ps-veil-c"]).to.match(/^#[0-9a-f]{6}$/);
-		expect(v["--ps-bird-ink"]).to.match(/^rgb\(/);
 		expect(v["--ps-smoke"]).to.match(/^rgb\(/);
 		expect(v["--ps-dark"]).to.equal(p.dark.toFixed(3));
+	});
+});
+
+describe("ps scene: the birds' vars and the flight's direction (plan 3 task 6)", function () {
+	const HEX = /^#[0-9a-f]{6}$/;
+	const night = (doy: number, weather: Weather = "clear") =>
+		momentFor({minute: 1380, doy, dayNumber: 20574, epochDays: 20574.9, weather});
+
+	it("writes what birds.ts says: the skeins' layer and count, the moonlit inks and alpha, the day birds and their ink", function () {
+		for (const m of [night(121), night(305, "storm"), night(213)]) {
+			const p = paletteAt(m);
+			const b = birdsAt(m, p);
+			const v = sceneVars(m, p);
+			expect(v["--ps-skeins-op"]).to.equal(b.skeinsOpacity.toFixed(2));
+			expect(v["--ps-skein-count"]).to.equal(String(b.skeins));
+			expect(v["--ps-bird-ink"]).to.equal(b.ink);
+			expect(v["--ps-bird-wing"]).to.equal(b.wing);
+			expect(v["--ps-bird-belly"]).to.equal(b.belly);
+			expect(v["--ps-bird-alpha"]).to.equal(b.alpha.toFixed(3));
+			expect(v["--ps-buzzard-op"]).to.equal(b.buzzard ? "1" : "0");
+			expect(v["--ps-lark-op"]).to.equal(b.larks ? "1" : "0");
+			expect(v["--ps-db-ink"]).to.equal(b.dayInk);
+
+			for (const name of [
+				"--ps-bird-ink",
+				"--ps-bird-wing",
+				"--ps-bird-belly",
+				"--ps-db-ink",
+			]) {
+				expect(v[name], name).to.match(HEX);
+			}
+		}
+
+		expect(sceneVars(night(121), paletteAt(night(121)))["--ps-skeins-op"]).to.equal("1.00");
+		expect(sceneVars(night(121), paletteAt(night(121)))["--ps-skein-count"]).to.equal("3");
+		expect(
+			sceneVars(night(305, "storm"), paletteAt(night(305, "storm")))["--ps-skeins-op"]
+		).to.equal("0.60");
+		expect(sceneVars(night(213), paletteAt(night(213)))["--ps-skeins-op"]).to.equal("0.00");
+	});
+
+	it("no longer writes plan 3's provisional residents level: each day bird has its own", function () {
+		const v = sceneVars(night(121), paletteAt(night(121)));
+		expect(v).to.not.have.property("--ps-residents-op");
+	});
+
+	it("flies west from midsummer on (ps-west), east before", function () {
+		const west = (doy: number) => sceneClasses(night(doy), paletteAt(night(doy)))["ps-west"];
+		expect(west(121)).to.equal(false);
+		expect(west(189)).to.equal(false);
+		expect(west(190)).to.equal(true);
+		expect(west(305)).to.equal(true);
 	});
 });
 
@@ -240,6 +290,7 @@ describe("ps scene: the day's weather (plan 3 task 4)", function () {
 			"ps-windy": false,
 			"ps-storm": false,
 			"ps-hot": false,
+			"ps-west": true,
 		});
 		expect(classes("wind")).to.deep.include({"ps-windy": true, "ps-storm": false});
 		// A storm blows too (its wind is 0.6, over the 0.5 line), as the mockup's.
@@ -303,7 +354,7 @@ describe("ps scene: the layers it builds (sceneMarkup)", function () {
 		throw new Error(`${name} is not closed`);
 	}
 
-	it("puts the layers in the spec's order (§5.1): sky things, the bodies, the clouds, the ground, the near grass, the veil, the weather", function () {
+	it("puts the layers in the spec's order (§5.1): sky things, the bodies, the clouds, the ground, the near grass, the birds, the veil, the weather", function () {
 		expect(topLevel(sceneMarkup(false))).to.deep.equal([
 			"ps-milky",
 			"ps-stars",
@@ -313,9 +364,44 @@ describe("ps scene: the layers it builds (sceneMarkup)", function () {
 			"ps-cloud-field",
 			"ps-ground",
 			"ps-blades",
+			"ps-skeins",
+			"ps-daybirds",
 			"ps-veil",
 			"ps-weather",
 		]);
+	});
+
+	it("flies birds.ts's skeins and the steppe's own birds in their layers, the same on a phone", function () {
+		for (const phone of [false, true]) {
+			const markup = sceneMarkup(phone);
+			expect(inside(markup, "ps-skeins")).to.equal(skeinsMarkup());
+			expect(inside(markup, "ps-daybirds")).to.equal(dayBirdsMarkup());
+		}
+	});
+
+	it("builds every bird at mount as an <svg> of its own in the root, so the pause holds every wingbeat", function () {
+		// mount's motion() calls pauseAnimations() on every <svg> in the root,
+		// and sceneMarkup is the root's whole content at mount: a SMIL
+		// animation anywhere but inside an <svg> of the markup would escape it.
+		const markup = sceneMarkup(false);
+		let svgDepth = 0;
+		let smil = 0;
+
+		for (const m of markup.matchAll(
+			/<(\/?)(svg|animate|animateTransform|animateMotion)\b[^>]*?(\/?)>/g
+		)) {
+			if (m[2] === "svg") {
+				svgDepth += m[1] ? -1 : m[3] ? 0 : 1;
+			} else if (!m[1]) {
+				smil++;
+				expect(svgDepth, m[0].slice(0, 60)).to.be.greaterThan(0);
+			}
+		}
+
+		expect(svgDepth).to.equal(0);
+		// The sun's fire (1), the skeins' 38 birds (3 each), the buzzard (2) and three larks (2 each).
+		expect(smil).to.equal(1 + 38 * 3 + 2 + 3 * 2);
+		expect(inside(markup, "ps-skeins").match(/<svg viewBox="0 0 32 20"/g)).to.have.length(38);
 	});
 
 	it("drifts plains.ts's five clouds in the cloud field", function () {

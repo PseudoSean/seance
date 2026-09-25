@@ -302,11 +302,10 @@ export function paletteAt(m: Moment): Palette {
 
 /**
  * Every level the plains draw with, at one moment (plan 3, the mockup's
- * `apply()` lines 1055–1071, and the skeins' timing, the user's words
- * 2026-09-25: at night and around sunset in spring and autumn, by daylight
- * for resident birds). `hot`, `windy`, `storm` and `skeinsWest` are booleans
- * the scene turns into classes (Tasks 4 and 6); nothing here is written to a
- * custom property under those names.
+ * `apply()` lines 1055–1071). `hot`, `windy` and `storm` are booleans the
+ * scene turns into classes; nothing here is written to a custom property
+ * under those names. The birds' timing and colours are birds.ts's
+ * (`birdsAt`, the approved birds mockup's `applyBirds`).
  */
 export interface Levels {
 	/** The river: dry in high summer, full the rest of the year. */
@@ -314,12 +313,6 @@ export interface Levels {
 	flowers: number;
 	snowcap: number;
 	fireflies: number;
-	/** Migrating flocks: night and the window around sunset, spring and autumn. */
-	skeins: number;
-	/** Migrating west (autumn) rather than east (spring). */
-	skeinsWest: boolean;
-	/** Resident birds: by daylight. */
-	residents: number;
 	wind: number;
 	/** The grass blades' sway, in degrees. */
 	sway: number;
@@ -332,7 +325,6 @@ export interface Levels {
 	veilColour: string;
 	/** How lit the near tufts are: brightest by day. */
 	tuftLit: number;
-	birdInk: string;
 }
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
@@ -343,13 +335,6 @@ export function levelsAt(m: Moment, p: Palette): Levels {
 	const dark = p.dark;
 	const day = 1 - dark;
 	const rainOrSnowOrStorm = wx.rain > 0 || wx.snow > 0 || wx.storm > 0;
-	const rainOrStorm = wx.rain > 0 || wx.storm > 0;
-
-	const migrating = Math.min(1, spring + autumn + 0.3 * winter);
-	const night = clamp01((dark - 0.25) / 0.4);
-	const sunsetWindow = clamp01(
-		1 - Math.max(0, m.sunset - 60 - m.minute, m.minute - (m.sunset + 105)) / 20
-	);
 
 	return {
 		water: clamp01(1 - 1.35 * summer),
@@ -360,9 +345,6 @@ export function levelsAt(m: Moment, p: Palette): Levels {
 			clamp01((dark - 0.25) / 0.4) *
 			(m.canonical > 1100 || m.canonical < 120 ? 1 : 0.35) *
 			(rainOrSnowOrStorm ? 0 : 1),
-		skeins: migrating * Math.max(night, sunsetWindow) * (rainOrStorm ? 0.3 : 1),
-		skeinsWest: autumn > spring,
-		residents: clamp01(day - 0.15) * (rainOrStorm ? 0.3 : 1),
 		wind: wx.wind * (1 - 0.6 * dark) * (autumn + 0.6 * summer + 0.8 * spring),
 		sway: wx.sway,
 		heat: (wx.heat * Math.max(0, day - 0.7)) / 0.3,
@@ -372,6 +354,5 @@ export function levelsAt(m: Moment, p: Palette): Levels {
 		veil: wx.dim,
 		veilColour: wx.dimc,
 		tuftLit: Math.max(0, 0.5 - 0.45 * dark),
-		birdInk: dark > 0.2 ? "rgb(24 22 34 / 85%)" : "rgb(44 50 66 / 72%)",
 	};
 }

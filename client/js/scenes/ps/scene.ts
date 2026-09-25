@@ -7,15 +7,17 @@
  * the four values the chrome reads, and the hour's sky as the browser's
  * `theme-color`. The weather layer holds the day's weather alone, rebuilt
  * when the day's weather changes, and the root carries its classes
- * (`ps-windy`, `ps-storm`, `ps-hot`). It keeps the yurt in the message
- * column's far third (placeYurt). All motion is CSS or SVG animation; no
- * script runs per frame. A hidden page's scene is stopped outright. No Vue,
- * no store; the markup below (and plains.ts's land, near grass, fireflies,
- * yurt, smoke, clouds and weather) is constant for a day's weather, and
+ * (`ps-windy`, `ps-storm`, `ps-hot`) and the skeins' direction (`ps-west`).
+ * It keeps the yurt in the message column's far third (placeYurt). All
+ * motion is CSS or SVG animation; no script runs per frame. A hidden page's
+ * scene is stopped outright. No Vue, no store; the markup below (and
+ * plains.ts's land, near grass, fireflies, yurt, smoke, clouds and weather,
+ * and birds.ts's skeins and day birds) is constant for a day's weather, and
  * nothing user-supplied is ever written into it.
  */
 import {isPhoneLayout} from "../../helpers/device";
 import type {SceneHandle, SceneHostState} from "../../themeScene";
+import {birdsAt, dayBirdsMarkup, skeinsMarkup} from "./birds";
 import {momentAt, rng, type Moment, type MoonPhase, type Weather} from "./engine";
 import {bodyOpacity, publishedFor, type Published} from "./grounds";
 import {levelsAt, paletteAt, WEATHER, type Palette} from "./palette";
@@ -41,6 +43,7 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 	const glowX = m.sun.up ? Math.min(92, Math.max(8, m.sun.x)) : m.minute < 720 ? 10 : 90;
 	const bodies = bodyOpacity(m, p);
 	const l = levelsAt(m, p);
+	const b = birdsAt(m, p);
 	return {
 		"--ps-sky-top": p.skyTop,
 		"--ps-sky-mid": p.skyMid,
@@ -103,8 +106,6 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 		"--ps-flowers": l.flowers.toFixed(2),
 		"--ps-snowcap": l.snowcap.toFixed(2),
 		"--ps-ff-op": l.fireflies.toFixed(2),
-		"--ps-skeins-op": l.skeins.toFixed(2),
-		"--ps-residents-op": l.residents.toFixed(2),
 		"--ps-wind-op": l.wind.toFixed(2),
 		"--ps-sway": `${l.sway}deg`,
 		"--ps-heat-op": l.heat.toFixed(2),
@@ -113,11 +114,22 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 		"--ps-rain-op": wx.rain.toFixed(2),
 		"--ps-snow-op": wx.snow.toFixed(2),
 		"--ps-tuft-lit-op": l.tuftLit.toFixed(2),
-		"--ps-bird-ink": l.birdInk,
 		"--ps-night-glow": p.nightGlow.toFixed(3),
 		"--ps-smoke-op": p.smokeOpacity.toFixed(3),
 		"--ps-smoke": p.smoke,
 		"--ps-dark": p.dark.toFixed(3),
+		// The birds (birds.ts): the skeins' layer and how many of its flocks
+		// fly, their moonlit inks (N2) and alpha; each day bird's switch and
+		// their ink.
+		"--ps-skeins-op": b.skeinsOpacity.toFixed(2),
+		"--ps-skein-count": String(b.skeins),
+		"--ps-bird-ink": b.ink,
+		"--ps-bird-wing": b.wing,
+		"--ps-bird-belly": b.belly,
+		"--ps-bird-alpha": b.alpha.toFixed(3),
+		"--ps-buzzard-op": b.buzzard ? "1" : "0",
+		"--ps-lark-op": b.larks ? "1" : "0",
+		"--ps-db-ink": b.dayInk,
 	};
 }
 
@@ -131,13 +143,22 @@ export function weatherChanged(prev: Weather | null, next: Weather): boolean {
 	return prev !== next;
 }
 
-/** The root's weather classes, from the day's levels: what ps.css keys the wind, the lightning and the haze on. */
+/**
+ * The root's classes: the weather's, from the day's levels (what ps.css keys
+ * the wind, the lightning and the haze on), and the skeins' direction
+ * (birds.ts: south-west from midsummer on).
+ */
 export function sceneClasses(
 	m: Moment,
 	p: Palette
-): {"ps-windy": boolean; "ps-storm": boolean; "ps-hot": boolean} {
+): {"ps-windy": boolean; "ps-storm": boolean; "ps-hot": boolean; "ps-west": boolean} {
 	const l = levelsAt(m, p);
-	return {"ps-windy": l.windy, "ps-storm": l.storm, "ps-hot": l.hot};
+	return {
+		"ps-windy": l.windy,
+		"ps-storm": l.storm,
+		"ps-hot": l.hot,
+		"ps-west": birdsAt(m, p).west,
+	};
 }
 
 /**
@@ -224,10 +245,12 @@ function stars(): string {
  * glow, the moon and the sun; the clouds; the ground group — the land and
  * river, the fireflies, the yurt and its smoke, the animal layer (switched off
  * in ps.css) — which the heat haze bends as one; the near grass in front of
- * it, outside the haze; then the weather's veil, and the weather layer, left
- * empty here: the first tick builds the day's weather into it (mount's
- * `apply`), and a new day's weather replaces it. A phone (the phone layout at
- * mount) gets half the fireflies.
+ * it, outside the haze; the birds (birds.ts: the skeins, then the steppe's
+ * own by day), each an <svg> of its own, so mount's pause holds their
+ * wingbeats; then the weather's veil, and the weather layer, left empty
+ * here: the first tick builds the day's weather into it (mount's `apply`),
+ * and a new day's weather replaces it. A phone (the phone layout at mount)
+ * gets half the fireflies.
  */
 export function sceneMarkup(phone: boolean): string {
 	return (
@@ -243,6 +266,8 @@ export function sceneMarkup(phone: boolean): string {
 		`<div class="ps-animals"></div>` +
 		`</div>` +
 		nearGrass() +
+		`<div class="ps-skeins">${skeinsMarkup()}</div>` +
+		`<div class="ps-daybirds">${dayBirdsMarkup()}</div>` +
 		`<div class="ps-veil"></div>` +
 		`<div class="ps-weather"></div>`
 	);
@@ -469,7 +494,7 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 			yurt.destroy();
 			root.replaceChildren();
 			root.removeAttribute("style");
-			root.classList.remove("ps-paused", "ps-windy", "ps-storm", "ps-hot");
+			root.classList.remove("ps-paused", "ps-windy", "ps-storm", "ps-hot", "ps-west");
 			delete root.dataset.view;
 			delete root.dataset.weather;
 			delete root.dataset.season;

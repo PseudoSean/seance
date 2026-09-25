@@ -1542,6 +1542,168 @@ describe("the ps theme's clouds and weather (plan 3 task 4, spec §5.1, §5.5)",
 	});
 });
 
+describe("the ps theme's birds (plan 3 task 6, spec §5.4: the user's N2, D1 buzzard and D2 larks)", function () {
+	const S = "#theme-scene";
+	/** Every rule of the birds, plain or under a root class. */
+	const BIRD_RULE =
+		/^#theme-scene(\.ps-west)? \.(ps-skeins|ps-bird-defs|ps-flock|ps-skein|ps-skein-sway|ps-bird|ps-daybirds|ps-buzzard|ps-lark|ps-lark-track|ps-lark-bird)\b/;
+	const own = rules.filter((r) => r.selectors.some((sel) => BIRD_RULE.test(sel)));
+	const FRAMES = [
+		"ps-skein-fly",
+		"ps-skein-west",
+		"ps-skein-sway",
+		"ps-bird-wander",
+		"ps-buzz-drift",
+		"ps-lark-fly",
+		"ps-lark-fl",
+		"ps-lark-ch",
+		"ps-lark-cl",
+	];
+	const frames = (name: string) =>
+		css.match(new RegExp(`@keyframes ${name}\\s*\\{([\\s\\S]*?)\\n\\}`))?.[1] ?? "";
+
+	it("shows the skeins' layer at the published level, on the sky above the land, fading over 1.4 s", function () {
+		expect(valueOf(`${S} .ps-skeins`, "inset")).to.equal("0 0 45%");
+		expect(valueOf(`${S} .ps-skeins`, "opacity")).to.equal("var(--ps-skeins-op, 0)");
+		expect(valueOf(`${S} .ps-skeins`, "transition")).to.equal("opacity 1.4s ease");
+	});
+
+	it("keeps the belly gradient's svg in the page but of no size, never display: none", function () {
+		expect(valueOf(`${S} .ps-bird-defs`, "width")).to.equal("0");
+		expect(valueOf(`${S} .ps-bird-defs`, "height")).to.equal("0");
+		expect(declsOf(`${S} .ps-bird-defs`).filter(([p]) => p === "display")).to.deep.equal([]);
+	});
+
+	it("flies the first --ps-skein-count flocks, a rem box each, across the scene in cqw", function () {
+		expect(valueOf(`${S} .ps-flock`, "top")).to.equal("var(--fy)");
+		expect(valueOf(`${S} .ps-flock`, "width")).to.equal("12.5rem");
+		expect(valueOf(`${S} .ps-flock`, "height")).to.equal("5.625rem");
+		expect(valueOf(`${S} .ps-flock`, "opacity")).to.equal(
+			"clamp(0, var(--ps-skein-count, 0) - var(--fi), 1)"
+		);
+		expect(valueOf(`${S} .ps-flock`, "transition")).to.equal("opacity 1.8s ease");
+		expect(valueOf(`${S} .ps-flock`, "animation")).to.equal(
+			"ps-skein-fly var(--fd) linear var(--fdl) infinite"
+		);
+		// The mockup's −240 → 1340 px of its 1180 px window: its 200 px box
+		// and 40 px (3.4cqw) more off the left edge, 160 px (13.6cqw) past the right.
+		const fly = frames("ps-skein-fly");
+		expect(fly).to.match(/from\s*\{\s*transform:\s*translateX\(calc\(-100% - 3\.4cqw\)\);/);
+		expect(fly).to.match(/to\s*\{\s*transform:\s*translateX\(113\.6cqw\);/);
+	});
+
+	it("mirrors the whole flock to fly west under ps-west, over the same track the other way", function () {
+		expect(valueOf(`${S}.ps-west .ps-flock`, "animation-name")).to.equal("ps-skein-west");
+		const west = frames("ps-skein-west");
+		expect(west).to.match(/from\s*\{\s*transform:\s*translateX\(113\.6cqw\) scaleX\(-1\);/);
+		expect(west).to.match(
+			/to\s*\{\s*transform:\s*translateX\(calc\(-100% - 3\.4cqw\)\) scaleX\(-1\);/
+		);
+	});
+
+	it("rests a flock where its flight starts, off the scene's edge, so a stopped flock is never parked on the sky", function () {
+		expect(valueOf(`${S} .ps-flock`, "transform")).to.equal("translateX(calc(-100% - 3.4cqw))");
+		expect(valueOf(`${S}.ps-west .ps-flock`, "transform")).to.equal(
+			"translateX(113.6cqw) scaleX(-1)"
+		);
+	});
+
+	it("scales and pales each skein from its leader's end, and sways it with keyframes of its own", function () {
+		expect(valueOf(`${S} .ps-skein`, "transform")).to.equal("scale(var(--fs, 1))");
+		expect(valueOf(`${S} .ps-skein`, "transform-origin")).to.equal("100% 50%");
+		expect(valueOf(`${S} .ps-skein`, "opacity")).to.equal("var(--fo, 1)");
+		expect(valueOf(`${S} .ps-skein-sway`, "animation")).to.equal(
+			"ps-skein-sway var(--sd) ease-in-out var(--sdl) infinite alternate"
+		);
+		expect(frames("ps-skein-sway")).to.include("translateY(-0.3125rem) rotate(-1.4deg)");
+		expect(frames("ps-skein-sway")).to.include("translateY(0.375rem) rotate(1.2deg)");
+		// Not the grass's: the approved mockup named these `sway` and the later one won.
+		expect(own.flatMap((r) => r.decls).filter(([, v]) => /\bps-sway\b/.test(v))).to.deep.equal(
+			[]
+		);
+	});
+
+	it("paints the skeins in the moonlit colours scene.ts publishes, the alpha on the whole bird", function () {
+		expect(valueOf(`${S} .ps-bird svg`, "opacity")).to.equal("var(--ps-bird-alpha, 0.8)");
+		expect(valueOf(`${S} .ps-bird svg`, "overflow")).to.equal("visible");
+		expect(valueOf(`${S} .ps-bird .ps-b-far`, "fill")).to.equal("var(--ps-bird-wing)");
+		expect(valueOf(`${S} .ps-bird .ps-b-far`, "opacity")).to.equal("0.55");
+		expect(valueOf(`${S} .ps-bird .ps-b-near`, "fill")).to.equal("var(--ps-bird-wing)");
+		expect(valueOf(`${S} .ps-bird .ps-b-body`, "fill")).to.equal('url("#ps-b-belly")');
+		expect(valueOf(`${S} .ps-bird`, "animation")).to.equal(
+			"ps-bird-wander var(--wd) ease-in-out var(--wdl) infinite alternate"
+		);
+	});
+
+	it("inks the day birds from --ps-db-ink, each shown by its own published switch", function () {
+		expect(valueOf(`${S} .ps-daybirds svg`, "fill")).to.equal("var(--ps-db-ink)");
+		expect(valueOf(`${S} .ps-daybirds .ps-b-far`, "opacity")).to.equal("0.55");
+		expect(valueOf(`${S} .ps-daybirds > div`, "transition")).to.equal("opacity 1.4s ease");
+		expect(valueOf(`${S} .ps-buzzard`, "opacity")).to.equal("var(--ps-buzzard-op, 0)");
+		expect(valueOf(`${S} .ps-lark`, "opacity")).to.equal("var(--ps-lark-op, 0)");
+	});
+
+	it("circles the buzzard at the mockup's place and size, drifting with the wind in cqw/cqh", function () {
+		expect(valueOf(`${S} .ps-buzzard`, "left")).to.equal("29%");
+		expect(valueOf(`${S} .ps-buzzard`, "top")).to.equal("17%");
+		expect(valueOf(`${S} .ps-buzzard`, "width")).to.equal("8.125rem");
+		expect(valueOf(`${S} .ps-buzzard`, "height")).to.equal("4.375rem");
+		expect(valueOf(`${S} .ps-buzzard`, "animation")).to.equal(
+			"ps-buzz-drift 170s ease-in-out -70s infinite alternate"
+		);
+		expect(frames("ps-buzz-drift")).to.include("translate(-5.08cqw, 1.14cqh)");
+		expect(frames("ps-buzz-drift")).to.include("translate(5.93cqw, -1.43cqh)");
+	});
+
+	it("raises the larks up their own track and rests them hidden, so a stopped lark is never left in the grass", function () {
+		expect(valueOf(`${S} .ps-lark`, "top")).to.equal("24%");
+		expect(valueOf(`${S} .ps-lark`, "height")).to.equal("62%");
+		expect(valueOf(`${S} .ps-lark`, "width")).to.equal("0.75rem");
+		expect(valueOf(`${S} .ps-lark-track`, "opacity")).to.equal("0");
+		expect(valueOf(`${S} .ps-lark-track`, "animation")).to.equal(
+			"ps-lark-fly var(--ld) ease-in-out var(--ldl) infinite"
+		);
+		expect(valueOf(`${S} .ps-lark-bird`, "width")).to.equal("0.8125rem");
+		expect(valueOf(`${S} .ps-lark-bird`, "height")).to.equal("0.5688rem");
+		const fly = frames("ps-lark-fly");
+		expect(fly).to.include("translate(0.375rem, -24%)");
+		expect(fly).to.include("translate(-0.6875rem, -94%)");
+
+		for (const set of ["fl", "ch", "cl"]) {
+			expect(valueOf(`${S} .ps-lark .ps-lark-${set}`, "animation"), set).to.equal(
+				`ps-lark-${set} var(--ld) steps(1, end) var(--ldl) infinite`
+			);
+		}
+	});
+
+	it("puts no px in the birds' rules or their keyframes: travel in cqw/cqh or %, marks in rem", function () {
+		expect(own.length, "the birds' rules").to.be.at.least(18);
+
+		for (const r of own) {
+			for (const [p, v] of r.decls) {
+				expect(v, `${r.selectors.join(", ")} { ${p} }`).to.not.match(/\dpx/);
+				expect(v, `${r.selectors.join(", ")} { ${p} }`).to.not.include("color-mix");
+			}
+		}
+
+		for (const name of FRAMES) {
+			const body = frames(name);
+			expect(body, name).to.not.equal("");
+			expect(body, name).to.not.match(/\dpx/);
+
+			for (const t of body.match(/translate[XY]?\([^;]*\)/g) ?? []) {
+				expect(t, name).to.match(/cq[wh]|%|rem|\b0\b|var\(/);
+			}
+		}
+	});
+
+	it("keeps its keyframes' names its own, once each", function () {
+		for (const name of FRAMES) {
+			expect(css.match(new RegExp(`@keyframes ${name}\\b`, "g")), name).to.have.length(1);
+		}
+	});
+});
+
 describe("the ps theme's animals", function () {
 	/** The cast (tools/heart/README.md); the teddy and the dolphin are held. */
 	const CAST = ["horse", "deer", "puppy", "bunny", "kitten", "frog", "ladybug", "bird"];
