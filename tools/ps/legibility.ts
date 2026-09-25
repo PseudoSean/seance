@@ -63,9 +63,27 @@ import {sceneVars} from "../../client/js/scenes/ps/scene";
  * only the swept DPR range did); shadow 0.5457 (Mulish, DPR 1, over #fffef6),
  * median 0.87 — the outline more than quadruples the shadow's floor. Both
  * are written rounded down.
+ *
+ * **2026-09-25, third pass (real chat phrases, the controller's ruling).**
+ * The sample sentence has no thin marks and overstated both treatments: α is
+ * now the lowest over the phrases "it,", "ok", "yes", "tea's ready", "wind's
+ * dropped" and "good night, plains", each in Mulish 500 and Fraunces 700,
+ * DPR 1–3, over every ground (calibrate.mjs PHRASES; the samples are still
+ * drawn, as the pipeline's control). Measured on today's B alone, the light
+ * treatment read 0.4000 (Fraunces "it,", DPR 1, over a white daytime cloud
+ * #ffffff), and white would have read 2.85:1 there. **The user took the
+ * recommendation** (2026-09-25, "I take your recommendation on the rim under
+ * white words"): a faint second ring under B, eight 2px offsets at 28% black
+ * (client/themes/ps.css). With it: **the shadow 0.5882** (Fraunces "it,", DPR
+ * 1, over #ffffff; the samples alone 0.7046). The halo on the same phrases
+ * reads 0.1560 (Mulish "it,", DPR 3, over #ffc478; the samples alone 0.2120):
+ * not recorded yet — at that strength dark ink holds over the yurt's band and
+ * door at no hour of any clear day, so the words would be white all day on
+ * every day but a snowy one; the task stopped for the user's call, and
+ * ALPHA_HALO keeps the second pass's figure until then.
  */
 export const ALPHA_HALO = Math.min(0.6, 0.2119);
-export const ALPHA_SHADOW = Math.min(0.6, 0.5457);
+export const ALPHA_SHADOW = Math.min(0.6, 0.5882);
 export const INK = "#1b2638";
 export const INK_FAINT = "#4c5a72";
 

@@ -1100,6 +1100,41 @@ describe("the ps theme's scene", function () {
 	});
 });
 
+describe("the ps theme's words over the plains (spec §7)", function () {
+	/** The eight-way ring of offsets `o` (rem) at `pct` % black, blurred 0.0625rem. */
+	const ring = (o: string, pct: number) =>
+		[
+			[o, "0"],
+			[`-${o}`, "0"],
+			["0", o],
+			["0", `-${o}`],
+			[o, o],
+			[`-${o}`, o],
+			[o, `-${o}`],
+			[`-${o}`, `-${o}`],
+		].map(([x, y]) => `${x} ${y} 0.0625rem rgb(0 0 0 / ${pct}%)`);
+
+	it("draws white words over the soft shadow, the user's B (eight 1px offsets at 78 %) and under it the faint wider ring (eight 2px offsets at 28 %, the user's pick 2026-09-25), in that order: the first shadow paints on top", function () {
+		const shadow = valueOf(':root[data-ps-text="light"] #chat .chat .msg', "text-shadow");
+		expect(shadow, "the light treatment's text-shadow").to.not.equal(undefined);
+		expect(shadow!.split(/,\s*(?![^()]*\))/)).to.deep.equal([
+			"0 0.0625rem 0.094rem rgb(0 0 0 / 70%)",
+			"0 0 0.1875rem rgb(0 0 0 / 45%)",
+			"0 0.0625rem 0.625rem rgb(0 0 0 / 35%)",
+			...ring("0.0625rem", 78),
+			...ring("0.125rem", 28),
+		]);
+
+		for (const other of [
+			':root[data-ps-text="light"] #chat .chat .show-more',
+			':root[data-ps-text="light"] #chat .chat .search-status',
+			':root[data-ps-text="light"] #chat .chat .search-scope-note',
+		]) {
+			expect(valueOf(other, "text-shadow"), other).to.equal(shadow);
+		}
+	});
+});
+
 describe("the ps theme's plains (plan 3: the land, the river, the near grass, the fireflies)", function () {
 	const S = "#theme-scene";
 

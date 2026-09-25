@@ -20,15 +20,20 @@
 // flip returns the state being left.
 //
 // **The swatches.** A fixed overlay, #808080, covers the app, with one row per
-// (face, ground). Each row is a swatch of 360 × 48 CSS px with a flat ground G
-// and one line of text in the computed font and shadow: Mulish at the message
-// size with "The quick brown fox 0123", Fraunces at the nick size with
-// "Marigold Ősz". The light treatment draws white over the dusk amber, the
-// moon's disc, the sun's core, snow, sky and grass, and (plan 3's white
-// sooner) over the brightest grounds it now meets by day; ink draws #1b2638
-// over sky, grass, amber and snow. The viewport is made tall enough for
-// every row. Beside each swatch is its twin: the same
-// swatch at an integer offset, with the text in #ff00ff.
+// (face, phrase, ground). Each row is a swatch of 360 × 48 CSS px with a flat
+// ground G and one line of text in the computed font and shadow, Mulish at the
+// message size (the words) or Fraunces at the nick size. **The text is real
+// chat** (PHRASES: short words, apostrophes, commas — the controller's ruling,
+// 2026-09-25): the sample sentence the first passes used ("The quick brown fox
+// 0123", "Marigold Ősz") has no thin marks, and overstated the light
+// treatment by a third round them. The samples are still drawn, as the
+// pipeline's control, but α is not taken from them. The light treatment draws
+// white over the dusk amber, the moon's disc, the sun's core, snow, sky and
+// grass, and (plan 3's white sooner) over the brightest grounds it now meets
+// by day; ink draws #1b2638 over sky, grass, amber and snow. The rows are
+// measured CHUNK at a time, one overlay and one screenshot each. Beside each
+// swatch is its twin: the same swatch at an integer offset, with the text in
+// #ff00ff.
 //
 // **The measurement**, at device scale factors 1, 2 and then 3 (a phone), at
 // the default font-size step:
@@ -48,8 +53,8 @@
 //    rank, index ⌊0.1 (n − 1)⌋). The median and the ring's size are printed
 //    beside it.
 //
-// The recorded α per treatment is the lowest 10th percentile over every face,
-// ground and DPR.
+// The recorded α per treatment is the lowest 10th percentile over every
+// phrase, face, ground and DPR (the samples left out).
 //
 // **Why a twin, and not the colour rule the plan first wrote down.** That
 // rule called a pixel core when it lay within 40 (max channel) of the text
@@ -77,8 +82,14 @@
 // - the swatch and its twin agree exactly more than 2 device px from the core
 //   (the twin changed the glyphs and nothing else);
 // - every swatch has a core and a ring of at least MIN_RING pixels;
-// - the shadow over grass measures clearly above 0, and every higher DPR
-//   lands within 0.15 of DPR 1 on every pair.
+// - the shadow over grass measures clearly above 0;
+// - **the DPR gate.** On the samples (long lines, whose ring hardly moves with
+//   the DPR), every higher DPR lands within 0.15 of DPR 1. On the phrases it
+//   cannot: a thin mark is a pixel or two wide at DPR 1 and several at DPR 3,
+//   so the ring round it strengthens with the DPR by up to 0.2 (measured
+//   2026-09-25). A phrase's higher DPR may read stronger than its DPR 1, but
+//   never weaker by more than 0.15: a broken ring at some DPR shows as a
+//   collapse there, which is what the gate is for.
 //
 // **Skipped pairs.** Where G lies within MIN_SPAN of S (Euclidean distance in
 // 0–255 sRGB), the projection divides by almost nothing and means nothing:
@@ -136,10 +147,16 @@ const TREATMENTS = {
 		},
 	},
 };
-const FACES = {
-	words: "The quick brown fox 0123",
-	nick: "Marigold Ősz",
-};
+/**
+ * The real chat phrases α is measured on, each in both faces: the shortest
+ * words, an apostrophe, commas (the controller's ruling, 2026-09-25). The
+ * sample lines of the first passes stay as the pipeline's control.
+ */
+const PHRASES = ["it,", "ok", "yes", "tea's ready", "wind's dropped", "good night, plains"];
+const SAMPLES = {words: "The quick brown fox 0123", nick: "Marigold Ősz"};
+const FACES = ["words", "nick"];
+/** Rows per overlay, each overlay measured from one screenshot. */
+const CHUNK = 24;
 /** The twin's text colour: far from every ground and every treatment colour. */
 const TWIN_TEXT = "#ff00ff";
 const DPRS = [1, 2, 3];
@@ -154,16 +171,9 @@ const TWIN_DX = SWATCH_W + 16;
 /** The strip at each swatch's right end that must decode as G exactly. */
 const FAR_STRIP = 24;
 const OVERLAY_GREY = 128;
-/** The measuring viewport: tall enough that every treatment's rows are on screen at once. */
+/** The measuring viewport: tall enough for one overlay of CHUNK rows. */
 const VIEW_W = 1280;
-const VIEW_H = Math.max(
-	900,
-	...Object.values(TREATMENTS).map(
-		(t) =>
-			MARGIN * 2 +
-			Object.keys(t.grounds).length * Object.keys(FACES).length * (SWATCH_H + ROW_GAP)
-	)
-);
+const VIEW_H = Math.max(900, MARGIN * 2 + CHUNK * (SWATCH_H + ROW_GAP));
 
 /** Real and twin differing by more than this, in some channel, is glyph paint. */
 const CORE_DIFF = 2;
@@ -295,21 +305,29 @@ const READ_TREATMENTS = `(() => {
 /** Wait until the page has painted what was just changed. */
 const PAINTED = `new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))`;
 
-/**
- * One overlay per treatment: a row per (face, ground), the swatch at MARGIN
- * and its twin TWIN_DX to the right. Returns the layout and the text's own
- * extent, so the far strip can be proved clear of it.
- */
-function buildOverlay(treatment, style) {
-	const t = TREATMENTS[treatment];
+/** Every row a treatment draws: each face, over each ground, the sample (the control) and then every phrase. */
+function rowsOf(t) {
 	const rows = [];
 
-	for (const face of Object.keys(FACES)) {
+	for (const face of FACES) {
 		for (const [name, ground] of Object.entries(t.grounds)) {
-			rows.push({face, name, ground});
+			rows.push({face, sample: SAMPLES[face], reference: true, name, ground});
+
+			for (const sample of PHRASES) {
+				rows.push({face, sample, reference: false, name, ground});
+			}
 		}
 	}
 
+	return rows;
+}
+
+/**
+ * One overlay of `rows`: the swatch at MARGIN and its twin TWIN_DX to the
+ * right. Returns the layout and the text's own extent, so the far strip can
+ * be proved clear of it.
+ */
+function buildOverlay(t, rows, style) {
 	/** The swatch's text colour at its own x, the twin's at TWIN_DX. */
 	const inks = JSON.stringify([
 		[0, t.text],
@@ -321,10 +339,9 @@ function buildOverlay(treatment, style) {
 		document.getElementById("ps-calibrate")?.remove();
 		const rows = ${JSON.stringify(rows)};
 		const style = ${JSON.stringify(style)};
-		const samples = ${JSON.stringify(FACES)};
 		const fontOf = (f) => [f["font-style"], f["font-weight"], f["font-size"], f["font-family"]].join(" ");
-		for (const face of Object.keys(samples)) {
-			await document.fonts.load(fontOf(style[face].font), samples[face]);
+		for (const row of rows) {
+			await document.fonts.load(fontOf(style[row.face].font), row.sample);
 		}
 		const overlay = document.createElement("div");
 		overlay.id = "ps-calibrate";
@@ -345,7 +362,7 @@ function buildOverlay(treatment, style) {
 				for (const [p, v] of Object.entries(style[row.face].font)) span.style.setProperty(p, v);
 				span.style.color = colour;
 				span.style.textShadow = style[row.face].textShadow;
-				span.textContent = samples[row.face];
+				span.textContent = row.sample;
 				sw.append(span);
 				overlay.append(sw);
 				spans.push(span);
@@ -355,7 +372,7 @@ function buildOverlay(treatment, style) {
 		document.body.append(overlay);
 		await ${PAINTED};
 		const rightmost = Math.max(...layout.map((r) => r.spans[0].getBoundingClientRect().right));
-		const fontsReady = Object.keys(samples).map((face) => [face, document.fonts.check(fontOf(style[face].font), samples[face])]);
+		const fontsReady = rows.map((row) => [row.face + " " + row.sample, document.fonts.check(fontOf(style[row.face].font), row.sample)]);
 		return {
 			width: ${MARGIN} * 2 + ${TWIN_DX + SWATCH_W},
 			height: ${MARGIN} * 2 + rows.length * (${SWATCH_H} + ${ROW_GAP}) - ${ROW_GAP},
@@ -499,6 +516,8 @@ function measure(b64, overlay, dpr, t) {
 
 			return {
 				face: row.face,
+				sample: row.sample,
+				reference: row.reference,
 				name: row.name,
 				ground: row.ground,
 				span: Math.round(span * 10) / 10,
@@ -562,7 +581,7 @@ export default async function run(page) {
 	console.log(`html font-size ${read.htmlFontSize} (step ${read.fontSizeStep ?? "default"})`);
 
 	for (const state of ["ink", "light"]) {
-		for (const face of Object.keys(FACES)) {
+		for (const face of FACES) {
 			const r = read[state][face];
 			console.log(
 				`${state} ${face}: ${r.font["font-weight"]} ${r.font["font-size"]}/${r.font["line-height"]} ` +
@@ -586,6 +605,14 @@ export default async function run(page) {
 			read.light.words.textShadow.split("0.78)").length - 1
 		} found)`,
 		read.light.words.textShadow.split("0.78)").length - 1 === 8
+	);
+	page.check(
+		`under it, the faint second ring is eight 2px offsets at 28 % black (${
+			read.light.words.textShadow.split("0.28)").length - 1
+		} found)`,
+		read.light.words.textShadow.split("0.28)").length - 1 === 8 &&
+			read.light.words.textShadow.indexOf("0.28)") >
+				read.light.words.textShadow.lastIndexOf("0.78)")
 	);
 	page.check(
 		`ink text is #1b2638 (${read.ink.words.color})`,
@@ -621,56 +648,63 @@ export default async function run(page) {
 		await page.sleep(300);
 
 		for (const [treatment, t] of Object.entries(TREATMENTS)) {
-			const overlay = await page.evaluate(buildOverlay(treatment, read[treatment]));
-			page.check(
-				`${treatment} dpr ${dpr}: the fonts are loaded (${JSON.stringify(
-					overlay.fontsReady
-				)})`,
-				overlay.fontsReady.every(([, ok]) => ok)
-			);
-			page.check(
-				`${treatment} dpr ${dpr}: the text ends ${Math.round(
-					SWATCH_W + MARGIN - overlay.rightmost
-				)}px before the swatch's right edge, clear of the far strip`,
-				overlay.rightmost < MARGIN + SWATCH_W - FAR_STRIP - 4 - 24
-			);
-			await page.evaluate(PAINTED);
-			await page.sleep(200);
+			const all = rowsOf(t);
 
-			const shot = await page.send("Page.captureScreenshot", {
-				format: "png",
-				clip: {x: 0, y: 0, width: overlay.width, height: overlay.height, scale: 1},
-			});
-			const file = join(page.outDir, `ps-calibration-${treatment}-dpr${dpr}.png`);
-			writeFileSync(file, Buffer.from(shot.data, "base64"));
-			console.log(`shot ${file}`);
-
-			const m = await page.evaluate(measure(shot.data, overlay, dpr, t));
-			page.check(
-				`${treatment} dpr ${dpr}: the decoded image is the clip times the DPR (${m.W}×${m.H})`,
-				m.W === overlay.width * dpr && m.H === overlay.height * dpr
-			);
-			page.check(
-				`${treatment} dpr ${dpr}: the overlay's grey decodes as ${OVERLAY_GREY} (${m.grey})`,
-				m.grey.every((c) => c === OVERLAY_GREY)
-			);
-
-			for (const r of m.rows) {
-				const where = `${treatment} ${r.face} dpr ${dpr} ${r.ground} (${r.name})`;
+			for (let k = 0; k * CHUNK < all.length; k++) {
+				const rows = all.slice(k * CHUNK, (k + 1) * CHUNK);
+				const where = `${treatment} dpr ${dpr} overlay ${k + 1}`;
+				const overlay = await page.evaluate(buildOverlay(t, rows, read[treatment]));
 				page.check(
-					`${where}: the far strip is G exactly (${r.farOff} px off, by up to ${r.farMaxDiff})`,
-					r.farOff === 0
+					`${where}: the fonts are loaded`,
+					overlay.fontsReady.every(([, ok]) => ok)
 				);
 				page.check(
-					`${where}: the twin agrees beyond 2 px of the core (${r.twinMismatch} px off, by up to ${r.twinMaxDiff})`,
-					r.twinMismatch === 0
+					`${where}: the text ends ${Math.round(
+						SWATCH_W + MARGIN - overlay.rightmost
+					)}px before the swatch's right edge, clear of the far strip`,
+					overlay.rightmost < MARGIN + SWATCH_W - FAR_STRIP - 4 - 24
 				);
-				page.check(`${where}: a core is found (${r.core} px)`, r.core > 0);
+				await page.evaluate(PAINTED);
+				await page.sleep(200);
+
+				const shot = await page.send("Page.captureScreenshot", {
+					format: "png",
+					clip: {x: 0, y: 0, width: overlay.width, height: overlay.height, scale: 1},
+				});
+				const file = join(
+					page.outDir,
+					`ps-calibration-${treatment}-dpr${dpr}-${k + 1}.png`
+				);
+				writeFileSync(file, Buffer.from(shot.data, "base64"));
+				console.log(`shot ${file}`);
+
+				const m = await page.evaluate(measure(shot.data, overlay, dpr, t));
 				page.check(
-					`${where}: the ring has at least ${MIN_RING} px (${r.ring})`,
-					r.ring >= MIN_RING
+					`${where}: the decoded image is the clip times the DPR (${m.W}×${m.H})`,
+					m.W === overlay.width * dpr && m.H === overlay.height * dpr
 				);
-				results.push({treatment, dpr, ...r});
+				page.check(
+					`${where}: the overlay's grey decodes as ${OVERLAY_GREY} (${m.grey})`,
+					m.grey.every((c) => c === OVERLAY_GREY)
+				);
+
+				for (const r of m.rows) {
+					const at = `${treatment} ${r.face} "${r.sample}" dpr ${dpr} ${r.ground} (${r.name})`;
+					page.check(
+						`${at}: the far strip is G exactly (${r.farOff} px off, by up to ${r.farMaxDiff})`,
+						r.farOff === 0
+					);
+					page.check(
+						`${at}: the twin agrees beyond 2 px of the core (${r.twinMismatch} px off, by up to ${r.twinMaxDiff})`,
+						r.twinMismatch === 0
+					);
+					page.check(`${at}: a core is found (${r.core} px)`, r.core > 0);
+					page.check(
+						`${at}: the ring has at least ${MIN_RING} px (${r.ring})`,
+						r.ring >= MIN_RING
+					);
+					results.push({treatment, dpr, ...r});
+				}
 			}
 		}
 
@@ -689,7 +723,7 @@ export default async function run(page) {
 	console.log(
 		"\nThe ring one CSS px out. Diagnostics: the first device pixel out (d1), and the" +
 			"\nplan's first rule (core within 40 of the text colour, its 8-adjacent ring)." +
-			"\n\ntreatment face  dpr ground   name          p10    median  ring   d1 p10   literal p10 / median / ring"
+			"\n\ntreatment face  dpr ground   name          sample               p10    median  ring   d1 p10   literal p10 / median / ring"
 	);
 
 	for (const r of results) {
@@ -702,7 +736,7 @@ export default async function run(page) {
 		console.log(
 			`${r.treatment.padEnd(9)} ${r.face.padEnd(5)} ${r.dpr}   ${r.ground}  ${r.name.padEnd(
 				12
-			)}  ${main}    ${lit}`
+			)}  ${JSON.stringify(r.sample).padEnd(20)} ${main}    ${lit}`
 		);
 	}
 
@@ -710,7 +744,9 @@ export default async function run(page) {
 
 	for (const r of results.filter((x) => !x.skipped)) {
 		console.log(
-			`${r.treatment.padEnd(6)} ${r.face.padEnd(5)} dpr ${r.dpr} ${r.name.padEnd(11)} ` +
+			`${r.treatment.padEnd(6)} ${r.face.padEnd(5)} dpr ${r.dpr} ${r.name.padEnd(
+				11
+			)} ${JSON.stringify(r.sample).padEnd(20)} ` +
 				r.layers.map((l) => `d${l.d} ${f3(l.p10)} / ${f3(l.median)}`).join("   ")
 		);
 	}
@@ -719,21 +755,27 @@ export default async function run(page) {
 
 	for (const treatment of Object.keys(TREATMENTS)) {
 		const kept = results.filter((r) => r.treatment === treatment && !r.skipped);
-		const low = kept.reduce((m, r) => (r.p10 < m.p10 ? r : m));
+		const lowest = (list) => list.reduce((m, r) => (r.p10 < m.p10 ? r : m));
+		const low = lowest(kept.filter((r) => !r.reference));
+		const sample = lowest(kept.filter((r) => r.reference));
 		minima[treatment] = {
 			p10: low.p10,
-			at: `${low.face} dpr ${low.dpr} ${low.ground} (${low.name})`,
+			at: `${low.face} "${low.sample}" dpr ${low.dpr} ${low.ground} (${low.name})`,
 			records: Math.min(0.6, low.p10),
+			sample: {p10: sample.p10, at: `${sample.face} dpr ${sample.dpr} ${sample.ground}`},
 		};
 		console.log(
 			`\nminimum ${treatment}: ${low.p10.toFixed(4)} at ${minima[treatment].at}; ` +
-				`min(0.6, measured) = ${minima[treatment].records.toFixed(4)}`
+				`min(0.6, measured) = ${minima[treatment].records.toFixed(4)}` +
+				` (the samples alone: ${sample.p10.toFixed(4)} at ${minima[treatment].sample.at})`
 		);
 	}
 
 	// ---- the sanity gates
 
-	for (const r of results.filter((x) => x.treatment === "light" && x.name === "grass")) {
+	for (const r of results.filter(
+		(x) => x.treatment === "light" && x.name === "grass" && x.reference
+	)) {
 		page.check(
 			`the shadow over grass measures clearly above 0 (${r.face} dpr ${r.dpr}: ${f3(r.p10)})`,
 			r.p10 > GRASS_FLOOR
@@ -747,14 +789,26 @@ export default async function run(page) {
 					x.dpr === dpr &&
 					x.treatment === r1.treatment &&
 					x.face === r1.face &&
+					x.sample === r1.sample &&
 					x.ground === r1.ground
 			);
-			page.check(
-				`${r1.treatment} ${r1.face} ${
-					r1.ground
-				}: DPR ${dpr} within ${DPR_SPREAD} of DPR 1 (${f3(r1.p10)} → ${f3(r2.p10)})`,
-				Math.abs(r2.p10 - r1.p10) <= DPR_SPREAD
-			);
+			const what = `${r1.treatment} ${r1.face} "${r1.sample}" ${r1.ground}`;
+
+			if (r1.reference) {
+				page.check(
+					`${what}: DPR ${dpr} within ${DPR_SPREAD} of DPR 1 (${f3(r1.p10)} → ${f3(
+						r2.p10
+					)})`,
+					Math.abs(r2.p10 - r1.p10) <= DPR_SPREAD
+				);
+			} else {
+				page.check(
+					`${what}: DPR ${dpr} no weaker than DPR 1 by more than ${DPR_SPREAD} (${f3(
+						r1.p10
+					)} → ${f3(r2.p10)})`,
+					r2.p10 >= r1.p10 - DPR_SPREAD
+				);
+			}
 		}
 	}
 
@@ -772,6 +826,8 @@ export default async function run(page) {
 					skip: `|S − G| < ${MIN_SPAN}, Euclidean in 0–255 sRGB`,
 					literal: `diagnostic only: core within ${LITERAL_CORE} (max channel) of the text colour`,
 				},
+				phrases: PHRASES,
+				samples: SAMPLES,
 				read,
 				results,
 				minima,
