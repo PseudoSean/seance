@@ -35,7 +35,7 @@ import {sceneVars} from "../../client/js/scenes/ps/scene";
  * the measurement could only make the check stricter (docs/projects/ps-theme.md
  * §11):
  *
- *   node tools/browser-drive.mjs tools/ps/calibrate.mjs --out=<dir>
+ *   node tools/browser-drive.mjs tools/ps/calibrate.mjs --chrome=… --out=<dir>
  *
  * against a production build. Headless Chromium drew swatches of 360 × 48 CSS
  * px at the default font-size step (html 20px), in the treatments computed off
