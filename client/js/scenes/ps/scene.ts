@@ -4,9 +4,10 @@
  * (client/js/themeScene.ts). It builds its elements once, then once a minute
  * (and whenever the page becomes visible) writes the engine's and the
  * palette's answer as custom properties on its root, and publishes on <html>
- * the four values the chrome reads, and the hour's sky as the browser's
- * `theme-color`. The weather layer holds the day's weather alone, rebuilt
- * when the day's weather changes, and the root carries its classes
+ * the four values the chrome reads, the day glass's four tints (glass.ts;
+ * none at night), and the hour's sky as the browser's `theme-color`. The
+ * weather layer holds the day's weather alone, rebuilt when the day's
+ * weather changes, and the root carries its classes
  * (`ps-windy`, `ps-storm`, `ps-hot`) and the skeins' direction (`ps-west`).
  * It keeps the yurt in the message column's far third (placeYurt). All
  * motion is CSS or SVG animation; no script runs per frame. A hidden page's
@@ -19,6 +20,7 @@ import {isPhoneLayout} from "../../helpers/device";
 import type {SceneHandle, SceneHostState} from "../../themeScene";
 import {birdsAt, dayBirdsMarkup, skeinsMarkup} from "./birds";
 import {momentAt, rng, type Moment, type MoonPhase, type Weather} from "./engine";
+import {GLASS_TINT_VARS, glassVars} from "./glass";
 import {bodyOpacity, publishedFor, type Published} from "./grounds";
 import {levelsAt, paletteAt, WEATHER, type Palette} from "./palette";
 import {
@@ -432,6 +434,15 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 		html.style.setProperty("--ps-halo", out.halo);
 		html.style.setProperty("--canvas-bg-color", out.canvas);
 
+		// The luminous day glass's tints, one per surface (glass.ts); none at night.
+		for (const [name, value] of Object.entries(glassVars(m, out.light))) {
+			if (value === null) {
+				html.style.removeProperty(name);
+			} else {
+				html.style.setProperty(name, value);
+			}
+		}
+
 		if (meta instanceof HTMLMetaElement) {
 			wrote = themeColorFor(out);
 			meta.content = wrote;
@@ -502,6 +513,10 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 			delete html.dataset.psText;
 			html.style.removeProperty("--ps-halo");
 			html.style.removeProperty("--canvas-bg-color");
+
+			for (const name of GLASS_TINT_VARS) {
+				html.style.removeProperty(name);
+			}
 
 			if (meta instanceof HTMLMetaElement && themeColor !== null && meta.content === wrote) {
 				meta.content = themeColor;

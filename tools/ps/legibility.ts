@@ -19,7 +19,11 @@
  *   ALPHA_HALO or ALPHA_SHADOW;
  * - `glass`: the chrome, the glass tint (GLASS) composited over the scene,
  *   with no layer under the text. The backdrop blur is left out: it only
- *   averages neighbouring grounds, so leaving it out is conservative.
+ *   averages neighbouring grounds, so leaving it out is conservative. At the
+ *   declared tint (glassGround) this is the night glass, and the day glass
+ *   without the scene; with the scene by day, the luminous glass
+ *   (dayGlassGrounds): each surface's own tint over a backdrop brightened as
+ *   Chromium draws it (client/js/scenes/ps/glass.ts).
  *
  * **What is sampled.** Moments, not a continuum: SAMPLING lists the days, the
  * minute step and the weathers of the two sweeps (eachChecked). A floor this
@@ -29,13 +33,20 @@ import {defaultFontSize, fontSizes, type FontSize} from "../../client/js/helpers
 import {luminance, mix} from "../../client/js/scenes/ps/colour";
 import {momentFor, WEATHERS, type Moment, type Weather} from "../../client/js/scenes/ps/engine";
 import {
+	GLASS_SURFACES,
+	isBehind,
+	throughDayGlass,
+	tintsOver,
+	type GlassSurface,
+} from "../../client/js/scenes/ps/glass";
+import {
 	ALPHA_HALO,
 	INK,
 	publishedFor,
 	SCHEDULE_STEP,
 	sceneGrounds as paintedGrounds,
 } from "../../client/js/scenes/ps/grounds";
-import {paletteAt, type Palette} from "../../client/js/scenes/ps/palette";
+import {GLASS_NIGHT_AT, paletteAt, stopsAt, type Palette} from "../../client/js/scenes/ps/palette";
 
 /** The halo's strength and the day's ink live with the page's rule (grounds.ts); their record is kept here. */
 export {ALPHA_HALO, INK};
@@ -465,5 +476,88 @@ export function checkedGrounds(days: Days): Checked {
 		}
 	}, days);
 	cache[days] = out;
+	return out;
+}
+
+export interface DayGlassGround extends CheckedGround {
+	/** The glass surface it was seen through, and that surface's tint at the moment. */
+	surface: GlassSurface;
+	tint: number;
+}
+
+const dayGlassCache = new Map<string, DayGlassGround[]>();
+
+/**
+ * The day glass as the page draws it (the user's luminous glass,
+ * client/js/scenes/ps/glass.ts): at every moment of a sweep, and every moment
+ * `pinned` names, that is under day glass, each surface's grounds through the
+ * day backdrop filter at the tint that surface takes over that minute's own
+ * grounds — the lowest the page could show then: the tint it publishes is
+ * solved over the minute's whole step, so it is never lower — one per
+ * colour, at the first moment that meets it. The sparse sweep's day half is
+ * about 27,000 moments.
+ */
+export function dayGlassGrounds(days: Days, pinned = ""): DayGlassGround[] {
+	const key = `${days}\n${pinned}`;
+	const hit = dayGlassCache.get(key);
+
+	if (hit) {
+		return hit;
+	}
+
+	const out: DayGlassGround[] = [];
+	const seen = new Set<string>();
+
+	const visit = (m: Moment, where: string) => {
+		// The palette's darkness is its stop's (palette.ts): night moments are left before the palette is made.
+		if (stopsAt(m.canonical).dark > GLASS_NIGHT_AT) {
+			return;
+		}
+
+		const grounds = paintedGrounds(m, paletteAt(m));
+		const tints = tintsOver(grounds);
+
+		for (const surface of GLASS_SURFACES) {
+			const tint = tints[surface];
+
+			for (const g of grounds) {
+				if (!isBehind(surface, g)) {
+					continue;
+				}
+
+				const hex = throughDayGlass(g.hex, tint);
+
+				if (!seen.has(hex)) {
+					seen.add(hex);
+					out.push({
+						hex,
+						name: g.name,
+						body: g.body,
+						below: g.below,
+						lum: luminance(hex),
+						where: `${where}, the ${surface} at ${tint.toFixed(2)}`,
+						surface,
+						tint,
+					});
+				}
+			}
+		}
+	};
+
+	const {days: list, step} = SAMPLING[days];
+
+	for (const doy of list) {
+		for (let minute = 0; minute < 1440; minute += step) {
+			for (const weather of WEATHERS) {
+				visit(momentOf(doy, minute, weather), `doy ${doy} ${minute} min ${weather}`);
+			}
+		}
+	}
+
+	for (const where of pinnedMoments(pinned)) {
+		visit(momentAt(where), where);
+	}
+
+	dayGlassCache.set(key, out);
 	return out;
 }

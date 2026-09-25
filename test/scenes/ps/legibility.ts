@@ -9,6 +9,7 @@ import {
 	bodyGrounds,
 	checkedGrounds,
 	CODE_BOX,
+	dayGlassGrounds,
 	eachChecked,
 	effectiveGround,
 	GLASS,
@@ -713,8 +714,29 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 		}
 	});
 
+	it("holds the luminous day glass at the tints the scene computes: ink, soft ink, the text accent and every nick at 4.5:1 over each surface's grounds through the brightened backdrop, the soft ink at 4.6", function () {
+		const g = glassDeclared().day;
+		const list = dayGlassGrounds("sparse", headers);
+		expect(list.length).to.be.greaterThan(1000);
+		expect(new Set(list.map((x) => x.surface))).to.have.lengthOf(4);
+
+		for (const [what, colour] of [
+			["ink", GLASS.day.ink],
+			["--ps-g-soft", g.tokens["--ps-g-soft"]],
+			["--ps-g-accent-text", g.tokens["--ps-g-accent-text"]],
+			...g.nicks.map((n) => [n.selector, n.decls[0][1]]),
+		]) {
+			const w = worst(colour, list);
+			expect(w.ratio, `day glass ${what} ${colour} at ${w.where}`).to.be.at.least(4.5);
+		}
+
+		// What the tint is solved to (glass.ts TEXT_SOLVE): the page's "worst glass text over the year, 4.60".
+		const soft = worst(g.tokens["--ps-g-soft"], list);
+		expect(Number(soft.ratio.toFixed(4)), soft.where).to.be.at.least(4.6);
+	});
+
 	for (const light of ["day", "night"] as const) {
-		it(`holds the ${light} glass at its declared opacity: ink, soft ink, the text accent and every nick at 4.5:1, the badge's white numeral at 4.5:1; and the text accent on the solid panel`, function () {
+		it(`holds the ${light} glass at its declared opacity (by day the fallback without the scene): ink, soft ink, the text accent and every nick at 4.5:1, the badge's white numeral at 4.5:1; and the text accent on the solid panel`, function () {
 			const g = glassDeclared()[light];
 			const list = underGlass(light);
 

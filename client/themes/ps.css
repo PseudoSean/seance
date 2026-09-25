@@ -1860,22 +1860,30 @@ body {
  * own children, so none takes a second blur — and the reaction chips float
  * over the plains as a translucent tint with the mockup's panel blur (10px,
  * 0.625rem; its chips had 6px, the spec gives all glass one) and saturation.
- * The tint's opacity is generated
- * (--ps-g-tint-a) so the glass's ink keeps its floor over every sky behind
- * it. Never on #status-bar-tint or an ancestor of it (html, body): iOS does
- * not sample a fixed element that carries a backdrop filter (CLAUDE.md, "The
- * iOS status bar"). The flip between day and night glass takes --ps-flip. */
+ * Never on #status-bar-tint or an ancestor of it (html, body): iOS does not
+ * sample a fixed element that carries a backdrop filter (CLAUDE.md, "The iOS
+ * status bar"). The flip between day and night glass takes --ps-flip.
+ *
+ * By day the glass is luminous (the user's pick, 2026-09-25): while the scene
+ * runs, the backdrop is brightened (--ps-g-lift) before the saturation, and
+ * each surface reads its own tint (--ps-g-tint), the lowest the scene finds
+ * holding every colour on that surface over whatever can be behind it this
+ * minute, 0.40 to 0.78 (client/js/scenes/ps/glass.ts). Without the scene it
+ * is the generated --ps-g-tint-a with no brightening; at night it is the
+ * generated night tint, unbrightened. The backdrop filter is not in the
+ * transition: the brightening goes off in one step at the flip, when the
+ * tint is already near its cap. */
 #sidebar,
 #chat .header,
 #chat .userlist,
 #form,
 #chat .msg-reaction:not(.self, .msg-reaction-add) {
-	background-color: rgb(255 251 244 / var(--ps-g-tint-a));
+	background-color: rgb(255 251 244 / var(--ps-g-tint));
 
 	/* Safari before 18 knows only the prefixed one, and theme files are copied, not autoprefixed. */
 	/* stylelint-disable-next-line property-no-vendor-prefix -- see above */
-	-webkit-backdrop-filter: blur(0.625rem) saturate(1.12);
-	backdrop-filter: blur(0.625rem) saturate(1.12);
+	-webkit-backdrop-filter: blur(0.625rem) var(--ps-g-lift,) saturate(1.12);
+	backdrop-filter: blur(0.625rem) var(--ps-g-lift,) saturate(1.12);
 	transition: background-color var(--ps-flip), color var(--ps-flip), border-color var(--ps-flip);
 }
 
@@ -1885,6 +1893,45 @@ body {
 :root[data-ps-light="night"] #form,
 :root[data-ps-light="night"] #chat .msg-reaction:not(.self, .msg-reaction-add) {
 	background-color: rgb(12 17 32 / var(--ps-g-tint-a));
+}
+
+/* The luminous day glass's brightening, only where the scene has said it is day. */
+:root[data-ps-light="day"] {
+	--ps-g-lift: brightness(1.3);
+}
+
+/* Each surface's day tint: the scene's for what can stand behind it (the
+ * header the sky; the composer the near grass; a docked sidebar or user list
+ * every ground but the yurt, which stands in the message column; the chips,
+ * anywhere, every ground), or the generated tint while the scene has not
+ * published one. The phone's drawer and a user list laid over the chat take
+ * the chips' (the phones section, and the overlaid list below). */
+/* stylelint-disable no-duplicate-selectors -- the glass rules above, with their tints */
+#chat .header {
+	--ps-g-tint: var(--ps-g-tint-header, var(--ps-g-tint-a));
+}
+
+#form {
+	--ps-g-tint: var(--ps-g-tint-composer, var(--ps-g-tint-a));
+}
+
+#sidebar,
+#chat .userlist {
+	--ps-g-tint: var(--ps-g-tint-side, var(--ps-g-tint-a));
+}
+
+#chat .msg-reaction:not(.self, .msg-reaction-add) {
+	--ps-g-tint: var(--ps-g-tint-float, var(--ps-g-tint-a));
+}
+/* stylelint-enable no-duplicate-selectors */
+
+/* A user list laid over a narrow chat pane (style.css's condition, verbatim)
+ * stands over the yurt too. */
+/* stylelint-disable-next-line at-rule-no-unknown */
+@container chat (max-width: calc(50ch + 8.5rem + 84px)) {
+	#chat .userlist {
+		--ps-g-tint: var(--ps-g-tint-float, var(--ps-g-tint-a));
+	}
 }
 
 /* The phone's sliding sidebar and user list keep style.css's slide
@@ -1938,13 +1985,14 @@ body {
 /* The user list's count row painted --composer-bg (coffee.css), an opaque slab
  * across the top of the glass: clear. Its sticky mode headings ("Operators",
  * "Users") painted the window's colour; they still need a fill to veil the
- * names scrolled under them, so they take the tint, without a second blur. */
+ * names scrolled under them, so they take the tint (by day the list's own),
+ * without a second blur. */
 #chat .userlist .count {
 	background-color: transparent;
 }
 
 #chat .userlist .user-mode::before {
-	background-color: rgb(255 251 244 / var(--ps-g-tint-a));
+	background-color: rgb(255 251 244 / var(--ps-g-tint));
 }
 
 :root[data-ps-light="night"] #chat .userlist .user-mode::before {
@@ -2213,11 +2261,18 @@ body {
  * what the glass would frost, a grey drawer whose soft ink falls under its
  * floor: the scrim starts at the drawer's inner edge instead, so the drawer
  * frosts the undimmed plains as it does on the desktop. The strip beside it
- * still takes the tap that closes the drawer, and still fades. */
+ * still takes the tap that closes the drawer, and still fades. The drawer and
+ * the user list lie over the chat there, the yurt included, so by day they
+ * take the chips' tint (the chrome section). */
 @media (max-width: 768px), (max-height: 500px) and (hover: none) and (pointer: coarse) {
 	/* Physical, as style.css places the drawer (right: 100% and a translate). */
 	#sidebar-overlay {
 		left: var(--sidebar-width);
+	}
+
+	#sidebar,
+	#chat .userlist {
+		--ps-g-tint: var(--ps-g-tint-float, var(--ps-g-tint-a));
 	}
 }
 

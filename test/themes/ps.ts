@@ -1,11 +1,29 @@
 import {expect} from "chai";
 import fs from "fs";
 import path from "path";
-import {contrast, hexRgb, rgbHex} from "../../client/js/scenes/ps/colour";
+import {contrast, hexRgb, luminance, rgbHex} from "../../client/js/scenes/ps/colour";
 import {momentFor, sunTimes} from "../../client/js/scenes/ps/engine";
+import {
+	DAY_BRIGHTNESS,
+	DAY_GLASS_MARK,
+	DAY_GLASS_TEXT,
+	glassVars,
+	GLASS_SURFACES as TINTED,
+	MARK_SOLVE,
+	SATURATE,
+	TEXT_SOLVE,
+	TINT_CAP,
+	type GlassSurface,
+} from "../../client/js/scenes/ps/glass";
 import {paletteAt} from "../../client/js/scenes/ps/palette";
 import {sceneVars} from "../../client/js/scenes/ps/scene";
-import {checkedGrounds, glassGround, withPinned, type Light} from "../../tools/ps/legibility";
+import {
+	checkedGrounds,
+	dayGlassGrounds,
+	glassGround,
+	withPinned,
+	type Light,
+} from "../../tools/ps/legibility";
 import bird from "../../tools/heart/rigs/bird.mjs";
 import bunny from "../../tools/heart/rigs/bunny.mjs";
 import deer from "../../tools/heart/rigs/deer.mjs";
@@ -292,8 +310,26 @@ const SOLID_SURFACES = [
 /** The dialogs whose .vue files hardcode white text, fine on coffee's dark body and not on paper. */
 const WHITE_TEXT_DIALOGS = ["#confirm-dialog", "#upload-preview", "#push-prompt"];
 
-const TINT_DAY = "rgb(255 251 244 / var(--ps-g-tint-a))";
+/** By day each surface reads its own tint (--ps-g-tint: the scene's for that surface, or the generated one); at night the generated one. */
+const TINT_DAY = "rgb(255 251 244 / var(--ps-g-tint))";
 const TINT_NIGHT = "rgb(12 17 32 / var(--ps-g-tint-a))";
+/** The glass's backdrop: brightened (--ps-g-lift) by day while the scene runs, never at night or without it. */
+const GLASS_FILTER = `blur(0.625rem) var(--ps-g-lift,) saturate(${SATURATE})`;
+/** Where the scene is running and it is day: the one place the backdrop is brightened. */
+const DAY_SCENE = ':root[data-ps-light="day"]';
+const PHONE =
+	"@media (max-width: 768px), (max-height: 500px) and (hover: none) and (pointer: coarse)";
+/** style.css's user list laid over a narrow chat pane, the condition verbatim. */
+const OVERLAID = "@container chat (max-width: calc(50ch + 8.5rem + 84px))";
+/** Which of the scene's day tints each glass surface reads (client/js/scenes/ps/glass.ts). */
+const TINT_OF: Record<string, GlassSurface> = {
+	"#chat .header": "header",
+	"#form": "composer",
+	"#sidebar": "side",
+	"#chat .userlist": "side",
+	"#chat .msg-reaction:not(.self, .msg-reaction-add)": "float",
+};
+const readsTint = (s: GlassSurface) => `var(--ps-g-tint-${s}, var(--ps-g-tint-a))`;
 
 describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.md §6)", function () {
 	it("defines every token coffee.css reads twice: the day palette on :root, the night one under :root[data-ps-light=night]", function () {
@@ -392,8 +428,6 @@ describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.m
 	});
 
 	it("starts the phone's scrim at the drawer's inner edge, so the drawer frosts the plains, not the scrim", function () {
-		const PHONE =
-			"@media (max-width: 768px), (max-height: 500px) and (hover: none) and (pointer: coarse)";
 		const style = fs.readFileSync(
 			path.resolve(__dirname, "../../client/css/style.css"),
 			"utf8"
@@ -487,10 +521,55 @@ describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.m
 			);
 
 			for (const property of ["backdrop-filter", "-webkit-backdrop-filter"]) {
-				expect(valueOf(selector, property), property).to.include("blur(0.625rem)");
+				expect(valueOf(selector, property), property).to.equal(GLASS_FILTER);
 			}
 		});
 	}
+
+	it("gives each glass surface its day tint: the scene's for that surface (glass.ts), the generated one without the scene", function () {
+		expect(Object.keys(TINT_OF)).to.have.members(GLASS_SURFACES);
+
+		for (const [selector, surface] of Object.entries(TINT_OF)) {
+			expect(valueOf(selector, "--ps-g-tint"), selector).to.equal(readsTint(surface));
+		}
+
+		// The phone's drawer and its user list lie over the chat, the yurt included.
+		for (const selector of ["#sidebar", "#chat .userlist"]) {
+			expect(valueOf(selector, "--ps-g-tint", PHONE), `${selector} on a phone`).to.equal(
+				readsTint("float")
+			);
+		}
+
+		// So does a user list laid over a narrow pane, under style.css's own condition.
+		const style = rulesIn(
+			fs.readFileSync(path.resolve(__dirname, "../../client/css/style.css"), "utf8")
+		);
+		expect(
+			declsOf("#chat .userlist", OVERLAID, style),
+			"style.css lays the list over the pane under the same condition"
+		).to.deep.include(["position", "absolute"]);
+		expect(valueOf("#chat .userlist", "--ps-g-tint", OVERLAID)).to.equal(readsTint("float"));
+
+		// The names the scene publishes are the ones read, and the fallback is the solver's cap.
+		const names = Object.keys(glassVars({doy: 172, minute: 750, weather: "clear"}, "day"));
+		expect(names.sort()).to.deep.equal(TINTED.map((s) => `--ps-g-tint-${s}`).sort());
+		expect(resolve(paletteOf("day"), "var(--ps-g-tint-a)")).to.equal(String(TINT_CAP));
+	});
+
+	it("brightens the backdrop by day, only while the scene runs: brightness(1.3) before the saturation, and nowhere else", function () {
+		expect(valueOf(DAY_SCENE, "--ps-g-lift")).to.equal(`brightness(${DAY_BRIGHTNESS})`);
+		const lifts = rules.filter((r) => r.decls.some(([p]) => p === "--ps-g-lift"));
+		expect(
+			lifts.map((r) => ({at: r.at, selectors: r.selectors})),
+			"no other rule lifts it: not :root (the fallback), not the night"
+		).to.deep.equal([{at: "", selectors: [DAY_SCENE]}]);
+		// Every blur on the page reads the lift the same way, so none is brightened but by day.
+		const filters = rules.flatMap((r) =>
+			r.decls.filter(([p, v]) => /backdrop-filter$/.test(p) && v !== "none").map(([, v]) => v)
+		);
+		expect(filters.length).to.be.at.least(2);
+		expect([...new Set(filters)]).to.deep.equal([GLASS_FILTER]);
+	});
 
 	for (const selector of SOLID_SURFACES) {
 		it(`makes ${selector} solid: --ps-g-solid`, function () {
@@ -567,7 +646,7 @@ describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.m
 		expect(valueOf("#chat .header", "background")).to.equal(undefined);
 	});
 
-	it("clears the user list's count row, and veils its sticky headings with the tint instead of the window colour", function () {
+	it("clears the user list's count row, and veils its sticky headings with the list's own tint instead of the window colour", function () {
 		expect(valueOf("#chat .userlist .count", "background-color")).to.equal("transparent");
 		expect(valueOf("#chat .userlist .user-mode::before", "background-color")).to.equal(
 			TINT_DAY
@@ -603,8 +682,10 @@ describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.m
  * holds the generated glass colours; this holds every other colour the chrome
  * draws, outside the message column, on the ground it draws it on: the solid
  * panels, the fields and washes on them, and the glass over the sparse sweep's
- * grounds — the sky, the bodies and the plains — at the declared tint (a
- * row's selected or hovered wash, or a field, composited on top where one is).
+ * grounds — the sky, the bodies and the plains — by day at each surface's
+ * computed tint over the brightened backdrop (the luminous glass,
+ * client/js/scenes/ps/glass.ts), at night at the declared tint (a row's
+ * selected or hovered wash, or a field, composited on top where one is).
  */
 describe("the ps theme's chrome keeps its floors on the solid panels and on the glass (spec §6, §11)", function () {
 	this.timeout(60000);
@@ -673,13 +754,23 @@ describe("the ps theme's chrome keeps its floors on the solid panels and on the 
 		.map((block) => block.slice(0, block.indexOf("*/")))
 		.join("\n");
 
-	/** The glass's grounds in one light: the sparse sweep and the pinned moments under the declared tint, one per colour. */
+	/**
+	 * The glass's grounds in one light over the sparse sweep and the pinned
+	 * moments, one per colour. By day, the luminous glass as the scene draws
+	 * it: each surface's grounds through the brightened backdrop at the tint
+	 * that surface takes then (dayGlassGrounds; the declared tint is only the
+	 * fallback without the scene, which the legibility test holds). At night,
+	 * the declared tint.
+	 */
 	function glassGrounds(light: Light): string[] {
 		if (!glassCache.has(light)) {
 			const alpha = Number(resolve(paletteOf(light), "var(--ps-g-tint-a)"));
-			const hexes = withPinned(checkedGrounds("sparse"), headers).glass[light].map((g) =>
-				glassGround(g.hex, light, alpha)
-			);
+			const hexes =
+				light === "day"
+					? dayGlassGrounds("sparse", headers).map((g) => g.hex)
+					: withPinned(checkedGrounds("sparse"), headers).glass[light].map((g) =>
+							glassGround(g.hex, light, alpha)
+					  );
 			glassCache.set(light, [...new Set(hexes)]);
 		}
 
@@ -889,6 +980,43 @@ describe("the ps theme's chrome keeps its floors on the solid panels and on the 
 			expect(failures, failures.join("\n")).to.deep.equal([]);
 		});
 	}
+
+	it("solves the day glass's tint for the lightest colours written on it: the soft ink at 4.6, the join green's marks at 3.1, and nothing on the glass lighter", function () {
+		const p = paletteOf("day");
+		expect(
+			resolve(p, "var(--ps-g-soft)"),
+			"glass.ts's text is the generated soft ink"
+		).to.equal(DAY_GLASS_TEXT);
+		expect(resolve(p, "var(--event-join)"), "glass.ts's mark is the join green").to.equal(
+			DAY_GLASS_MARK
+		);
+
+		/** The lowest ground luminance at which `hex` clears `solve` over a lighter ground. */
+		const need = (hex: string, solve: number) => solve * (luminance(hex) + 0.05) - 0.05;
+		const solved = Math.max(need(DAY_GLASS_TEXT, TEXT_SOLVE), need(DAY_GLASS_MARK, MARK_SOLVE));
+		const block = css.slice(
+			css.indexOf("/* ps:glass-palette:start"),
+			css.indexOf("/* ps:glass-palette:end */")
+		);
+		const written: Array<[string, string, number]> = [
+			...USES.filter((u) => u.on.some((g) => g.startsWith("glass"))).map(
+				(u): [string, string, number] => [
+					u.token,
+					resolve(p, `var(${u.token})`),
+					u.floor === TEXT ? TEXT_SOLVE : MARK_SOLVE,
+				]
+			),
+			["the chips' ink", resolve(p, "var(--ps-g-ink)"), TEXT_SOLVE],
+			...[...block.matchAll(/^\.user\.color-(\d+) \{ color: (#[0-9a-f]{6}); \}/gm)].map(
+				([, n, hex]): [string, string, number] => [`nick color-${n}`, hex, TEXT_SOLVE]
+			),
+		];
+		expect(written.length).to.be.at.least(32 + 10);
+
+		for (const [what, hex, solve] of written) {
+			expect(need(hex, solve), `${what} ${hex} at ${solve}`).to.be.at.most(solved);
+		}
+	});
 
 	it("keeps every night wash on the glass at least as visible as it measures over plan 3's grounds, and never under 1.02 over the darkest ground", function () {
 		// The contrast between the washed and the bare glass over the sparse sweep:
