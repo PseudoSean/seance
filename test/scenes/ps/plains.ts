@@ -414,44 +414,61 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 			}
 		});
 
-		it("rains 130 drops, 65 on a phone, and nothing else", function () {
+		it("rains 130 drops, 65 on a phone, with the rain's wind's seeds and nothing else", function () {
 			const rain = weatherLayers("rain", false);
 			expect(drops(rain)).to.equal(130);
 			expect(drops(weatherLayers("rain", true))).to.equal(65);
-			expect([flakes(rain), seeds(rain), flash(rain), band(rain), haze(rain)]).to.deep.equal([
-				0, 0, 0, 0, 0,
-			]);
-			expect(rain.match(/<i /g)).to.have.length(130);
+			expect(seeds(rain)).to.equal(26);
+			expect([flakes(rain), flash(rain), band(rain), haze(rain)]).to.deep.equal([0, 0, 0, 0]);
+			expect(rain.match(/<i /g)).to.have.length(130 + 26);
 		});
 
-		it("storms: the rain's drops and the lightning", function () {
+		it("storms: the rain's drops, the wind's seeds and the lightning", function () {
 			const storm = weatherLayers("storm", false);
 			expect(drops(storm)).to.equal(130);
+			expect(seeds(storm)).to.equal(26);
 			expect(flash(storm)).to.equal(1);
 			const phone = weatherLayers("storm", true);
 			expect(drops(phone)).to.equal(65);
+			expect(seeds(phone)).to.equal(13);
 			expect(flash(phone)).to.equal(1);
-			expect([flakes(storm), seeds(storm), band(storm), haze(storm)]).to.deep.equal([
-				0, 0, 0, 0,
-			]);
+			expect([flakes(storm), band(storm), haze(storm)]).to.deep.equal([0, 0, 0]);
 		});
 
-		it("snows 120 flakes, 60 on a phone", function () {
+		it("snows 120 flakes, 60 on a phone, with the snow's wind's seeds", function () {
 			const snow = weatherLayers("snow", false);
 			expect(flakes(snow)).to.equal(120);
 			expect(flakes(weatherLayers("snow", true))).to.equal(60);
-			expect([drops(snow), seeds(snow), flash(snow), band(snow), haze(snow)]).to.deep.equal([
-				0, 0, 0, 0, 0,
-			]);
+			expect(seeds(snow)).to.equal(26);
+			expect([drops(snow), flash(snow), band(snow), haze(snow)]).to.deep.equal([0, 0, 0, 0]);
 		});
 
-		it("blows 26 seeds on a windy day, 13 on a phone", function () {
+		it("blows 26 seeds on a windy day, 13 on a phone, and nothing else", function () {
 			const wind = weatherLayers("wind", false);
 			expect(seeds(wind)).to.equal(26);
 			expect(seeds(weatherLayers("wind", true))).to.equal(13);
 			expect([drops(wind), flakes(wind), flash(wind), band(wind), haze(wind)]).to.deep.equal([
 				0, 0, 0, 0, 0,
 			]);
+		});
+
+		it("builds the seeds whenever the weather has wind (the mockup's; their level is --ps-wind-op), never on a still day", function () {
+			// rain .3, storm .6, wind 1, snow .15; clear and heat are still.
+			const WINDY = {clear: 0, rain: 26, storm: 26, wind: 26, snow: 26, heat: 0};
+
+			for (const weather of WEATHERS) {
+				expect(seeds(weatherLayers(weather, false)), weather).to.equal(WINDY[weather]);
+				expect(seeds(weatherLayers(weather, true)), `${weather} on a phone`).to.equal(
+					WINDY[weather] / 2
+				);
+			}
+		});
+
+		it("puts the seeds first, behind the rain and the snow, as the mockup's layers are", function () {
+			for (const weather of ["rain", "storm", "snow"] as const) {
+				const markup = weatherLayers(weather, false);
+				expect(markup.startsWith('<div class="ps-seeds">'), weather).to.equal(true);
+			}
 		});
 
 		it("on a hot day holds the heat band and the haze, and no particles", function () {
@@ -495,15 +512,22 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 		});
 
 		it("is seeded: the same every time, and a phone's particles are the first half of the window's", function () {
-			const dots = (markup: string) => markup.match(/<i [^>]*><\/i>/g) ?? [];
+			/** The `<i>` of one kind's layer, in order. */
+			const dots = (markup: string, layer: string) =>
+				new RegExp(`<div class="${layer}">([\\s\\S]*?)</div>`)
+					.exec(markup)?.[1]
+					.match(/<i [^>]*><\/i>/g) ?? [];
 
 			for (const weather of ["rain", "storm", "snow", "wind"] as const) {
 				expect(weatherLayers(weather, false), weather).to.equal(
 					weatherLayers(weather, false)
 				);
-				const all = dots(weatherLayers(weather, false));
-				const half = dots(weatherLayers(weather, true));
-				expect(half, weather).to.deep.equal(all.slice(0, all.length / 2));
+
+				for (const layer of ["ps-rain", "ps-snow", "ps-seeds"]) {
+					const all = dots(weatherLayers(weather, false), layer);
+					const half = dots(weatherLayers(weather, true), layer);
+					expect(half, `${weather} ${layer}`).to.deep.equal(all.slice(0, all.length / 2));
+				}
 			}
 		});
 

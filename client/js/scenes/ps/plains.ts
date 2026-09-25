@@ -16,6 +16,7 @@
  * written into this markup.
  */
 import {rng, type Weather} from "./engine";
+import {WEATHER} from "./palette";
 
 /** Fireflies over the far fields: the mockup's 34. A phone gets half (scene.ts). */
 export const FIREFLIES = 34;
@@ -399,11 +400,14 @@ const HEAT_HAZE =
 
 /**
  * What the day's weather shows over the scene (spec §5.1 layer 10, §10: only
- * the weather that is happening exists in the page): rain drops in rain and
- * storm, and the storm's lightning; snowflakes in snow; seeds on a windy day;
- * the heat band and the haze on a hot one; nothing on a clear day. (The veil
- * is the scene's own layer, there in every weather at the weather's level.)
- * A phone (the phone layout) gets half the particles. Seeded, one stream per
+ * the weather that is happening exists in the page), from the weather's own
+ * levels (palette.ts `WEATHER`): seeds whenever it has wind — a windy day, and
+ * the lesser winds of rain, storm and snow, the mockup's, shown at
+ * --ps-wind-op; rain drops in rain and storm, and the storm's lightning;
+ * snowflakes in snow; the heat band and the haze on a hot day; nothing on a
+ * clear day. (The veil is the scene's own layer, there in every weather at
+ * the weather's level.) A phone (the phone layout) gets half the particles.
+ * Seeded, one stream per
  * kind, so the phone's half are the first half of the window's; the mockup
  * drew all three from the one stream its birds had used, which cannot be
  * reproduced without them, so the scatter differs from the mockup's and the
@@ -411,20 +415,30 @@ const HEAT_HAZE =
  * (scene.ts `weatherChanged`).
  */
 export function weatherLayers(weather: Weather, phone: boolean): string {
+	const wx = WEATHER[weather];
 	const part = (count: number) => (phone ? count / 2 : count);
+	// Back to front, as the mockup's: seeds, rain, snow, the flash; then the heat's.
+	let out = "";
 
-	switch (weather) {
-		case "rain":
-			return rain(part(RAIN_DROPS));
-		case "storm":
-			return rain(part(RAIN_DROPS)) + `<div class="ps-flash"></div>`;
-		case "snow":
-			return snow(part(SNOWFLAKES));
-		case "wind":
-			return seeds(part(SEEDS));
-		case "heat":
-			return `<div class="ps-heatband"></div>` + HEAT_HAZE;
-		case "clear":
-			return "";
+	if (wx.wind > 0) {
+		out += seeds(part(SEEDS));
 	}
+
+	if (wx.rain > 0) {
+		out += rain(part(RAIN_DROPS));
+	}
+
+	if (wx.snow > 0) {
+		out += snow(part(SNOWFLAKES));
+	}
+
+	if (wx.storm > 0) {
+		out += `<div class="ps-flash"></div>`;
+	}
+
+	if (wx.heat > 0) {
+		out += `<div class="ps-heatband"></div>` + HEAT_HAZE;
+	}
+
+	return out;
 }
