@@ -1,9 +1,17 @@
 import {expect} from "chai";
-import {contrast, hexRgb, luminance, mix, shift} from "../../../client/js/scenes/ps/colour";
+import {
+	contrast,
+	hexRgb,
+	luminance,
+	mix,
+	mixOklab,
+	shift,
+} from "../../../client/js/scenes/ps/colour";
 import {momentFor, sunTimes} from "../../../client/js/scenes/ps/engine";
 import {
 	GLASS_NIGHT_AT,
 	LAND,
+	levelsAt,
 	paletteAt,
 	publishedFor,
 	REF,
@@ -32,7 +40,7 @@ const COLOURS = [
 	"glow",
 ] as const;
 
-/** A moment at a given canonical position on a given day. */
+/** A moment at a given canonical position on a given day. Only valid for `canon` in [390, 1155] (daytime): outside it, `canonical()`'s night branch is not linear, so the inverse used here does not land where it says. */
 function at(
 	canon: number,
 	doy: number,
@@ -40,6 +48,15 @@ function at(
 ) {
 	const {rise, set} = sunTimes(doy);
 	const minute = rise + ((canon - 390) / (1155 - 390)) * (set - rise);
+	return momentFor({minute, doy, dayNumber: 20000, epochDays: 20000, weather});
+}
+
+/** A moment at a real local minute on a given day (for night and dusk moments `at()` cannot reach). */
+function localAt(
+	minute: number,
+	doy: number,
+	weather: "clear" | "rain" | "storm" | "wind" | "snow" | "heat" = "clear"
+) {
 	return momentFor({minute, doy, dayNumber: 20000, epochDays: 20000, weather});
 }
 
@@ -55,6 +72,20 @@ describe("ps colour arithmetic", function () {
 	it("measures WCAG contrast", function () {
 		expect(contrast("#000000", "#ffffff")).to.be.closeTo(21, 1e-9);
 		expect(luminance("#ffffff")).to.be.closeTo(1, 1e-9);
+	});
+
+	it("mixes in OKLab the way CSS color-mix(in oklab, …) does, gamut-clamped", function () {
+		expect(mixOklab("#ffffff", "#000000", 0.5)).to.equal("#636363");
+		expect(mixOklab("#3a2a1c", "#1f3a24", 1)).to.equal("#3a2a1c");
+		expect(mixOklab("#3a2a1c", "#1f3a24", 0)).to.equal("#1f3a24");
+
+		for (const [a, b, w] of [
+			["#a4b9d6", "#c6dc9c", 0.72],
+			["#99cc72", "#1f3a24", 0.55],
+			["#152033", "#fff6c8", 0.7],
+		] as const) {
+			expect(mixOklab(a, b, w)).to.match(/^#[0-9a-f]{6}$/);
+		}
 	});
 });
 
@@ -143,5 +174,155 @@ describe("ps palette: what the chrome reads", function () {
 		const out = publishedFor(p);
 		expect(out.halo).to.equal(mix(p.skyHorizon, "#ffffff", 0.55));
 		expect(out.canvas).to.equal(p.skyTop);
+	});
+});
+
+describe("ps palette: plan 3's derived land and yurt colours", function () {
+	const MOMENTS = {
+		"noon, midsummer": at(780, 213),
+		"dusk, full autumn": localAt(sunTimes(305).set + 20, 305),
+		"midnight, full winter": localAt(0, 32),
+	};
+
+	for (const [name, m] of Object.entries(MOMENTS)) {
+		it(`ports the mockup's color-mix recipes verbatim at ${name}`, function () {
+			const p = paletteAt(m);
+			expect(p.mount2).to.equal(mixOklab(p.mount, p.far, 0.72));
+			expect(p.tree).to.equal(mixOklab(p.hill2, "#1f3a24", 0.55));
+			expect(p.trunk).to.equal(mixOklab(p.hill2, "#3a2a1c", 0.4));
+			expect(p.shrub).to.equal(mixOklab(p.far, "#28402c", 0.55));
+			expect(p.tuft2).to.equal(mixOklab(p.hill2, p.blade, 0.72));
+			expect(p.tuft1).to.equal(mixOklab(p.hill1, p.blade, 0.7));
+			expect(p.tuftLit).to.equal(mixOklab(p.hill1, "#fff6c8", 0.7));
+			expect(p.riverbed).to.equal(mixOklab(p.hill1, "#dcc9a0", 0.42));
+			expect(p.bedstone).to.equal(mixOklab(p.hill1, "#a99c80", 0.3));
+			expect(p.riverHi).to.equal(mixOklab(p.skyHorizon, "#ffffff", 0.6));
+			expect(p.riverSkyTop).to.equal(p.skyHorizon);
+			expect(p.riverSkyBottom).to.equal(p.skyMid);
+			expect(p.feltShade).to.equal(mixOklab(p.felt, "#3a3040", 0.8));
+			expect(p.roofTop).to.equal(mixOklab(p.felt, "#ffffff", 0.92));
+			expect(p.roofBottom).to.equal(mixOklab(p.felt, "#4a3c3c", 0.78));
+			expect(p.roofStroke).to.equal(mixOklab(p.felt, "#5a4a3e", 0.55));
+			expect(p.bandMark).to.equal(mixOklab(p.band, "#f3e3c6", 0.45));
+			expect(p.rope).to.equal(mixOklab(p.felt, "#5a4636", 0.55));
+			expect(p.rib).to.equal(mixOklab(p.felt, "#6a5a4a", 0.72));
+			expect(p.doorOrn).to.equal(mixOklab(p.door, "#f3c66a", 0.35));
+			expect(p.crown).to.equal(mixOklab(p.felt, "#5a4a3e", 0.6));
+			expect(p.pipe).to.equal(mixOklab(p.felt, "#4d4640", 0.3));
+			expect(p.stone).to.equal(mixOklab(p.grass, "#a8a39a", 0.45));
+			expect(p.wood).to.equal(mixOklab(p.hill1, "#7a5638", 0.3));
+			expect(p.path).to.equal(mixOklab(p.grass, "#d8c9a0", 0.68));
+		});
+	}
+});
+
+describe("ps palette: plan 3's levels", function () {
+	it("dries the river in high summer and runs it full in winter", function () {
+		expect(levelsAt(at(780, 213), paletteAt(at(780, 213))).water).to.equal(0);
+		expect(levelsAt(localAt(0, 32), paletteAt(localAt(0, 32))).water).to.equal(1);
+	});
+
+	it("blooms flowers in spring, half as much from summer alone", function () {
+		expect(levelsAt(at(780, 121), paletteAt(at(780, 121))).flowers).to.equal(1);
+		expect(levelsAt(at(780, 213), paletteAt(at(780, 213))).flowers).to.be.closeTo(0.55, 1e-9);
+	});
+
+	it("caps the snowline in deep winter, or shows it whenever it is snowing", function () {
+		const winter = localAt(0, 32);
+		expect(levelsAt(winter, paletteAt(winter)).snowcap).to.be.closeTo(1, 1e-9);
+		const summer = at(780, 213);
+		expect(levelsAt(summer, paletteAt(summer)).snowcap).to.equal(0);
+		const snowing = at(780, 213, "snow");
+		expect(levelsAt(snowing, paletteAt(snowing)).snowcap).to.be.closeTo(0.9, 1e-9);
+	});
+
+	it("lights fireflies on a warm dark evening, never at noon or in the rain", function () {
+		const noon = at(780, 213);
+		expect(levelsAt(noon, paletteAt(noon)).fireflies).to.equal(0);
+		const evening = localAt(22 * 60, 213, "clear");
+		expect(levelsAt(evening, paletteAt(evening)).fireflies).to.be.greaterThan(0);
+		const rainy = localAt(22 * 60, 213, "rain");
+		expect(levelsAt(rainy, paletteAt(rainy)).fireflies).to.equal(0);
+	});
+
+	it("blows and sways more in the wind, and settles the weather's own booleans", function () {
+		const m = at(780, 213, "wind");
+		const p = paletteAt(m);
+		const l = levelsAt(m, p);
+		expect(l.wind).to.be.closeTo(
+			WEATHER.wind.wind *
+				(1 - 0.6 * p.dark) *
+				(m.season.weights.autumn +
+					0.6 * m.season.weights.summer +
+					0.8 * m.season.weights.spring),
+			1e-9
+		);
+		expect(l.sway).to.equal(WEATHER.wind.sway);
+		expect(l.windy).to.equal(true);
+		expect(l.storm).to.equal(false);
+		const storm = paletteAt(at(780, 213, "storm"));
+		expect(levelsAt(at(780, 213, "storm"), storm).storm).to.equal(true);
+	});
+
+	it("bakes the day at noon under a heat weather, and only then", function () {
+		const noon = at(780, 213, "heat");
+		const pNoon = paletteAt(noon);
+		const lNoon = levelsAt(noon, pNoon);
+		expect(lNoon.heat).to.be.closeTo(
+			(WEATHER.heat.heat * Math.max(0, 1 - pNoon.dark - 0.7)) / 0.3,
+			1e-9
+		);
+		expect(lNoon.hot).to.equal(true);
+		const night = localAt(0, 213, "heat");
+		const pNight = paletteAt(night);
+		expect(levelsAt(night, pNight).hot).to.equal(false);
+	});
+
+	it("carries the weather's own dim and its colour as the veil", function () {
+		const m = at(780, 121, "rain");
+		const p = paletteAt(m);
+		const l = levelsAt(m, p);
+		expect(l.veil).to.equal(WEATHER.rain.dim);
+		expect(l.veilColour).to.equal(WEATHER.rain.dimc);
+	});
+
+	it("lights the tufts most by day, least at full night", function () {
+		const noon = at(780, 213);
+		expect(levelsAt(noon, paletteAt(noon)).tuftLit).to.be.closeTo(0.5, 1e-9);
+		const midnight = localAt(0, 32);
+		const p = paletteAt(midnight);
+		expect(levelsAt(midnight, p).tuftLit).to.be.closeTo(Math.max(0, 0.5 - 0.45 * p.dark), 1e-9);
+	});
+
+	it("sends the skeins over at night and around sunset in spring and autumn, never in high summer", function () {
+		expect(levelsAt(at(780, 121), paletteAt(at(780, 121))).skeins).to.equal(0);
+
+		const may23 = localAt(23 * 60, 121);
+		expect(levelsAt(may23, paletteAt(may23)).skeins).to.be.greaterThan(0.9);
+		expect(levelsAt(may23, paletteAt(may23)).skeinsWest).to.equal(false);
+
+		const nov23 = localAt(23 * 60, 305);
+		expect(levelsAt(nov23, paletteAt(nov23)).skeins).to.be.greaterThan(0.9);
+		expect(levelsAt(nov23, paletteAt(nov23)).skeinsWest).to.equal(true);
+
+		const beforeSunset = localAt(sunTimes(121).set - 30, 121);
+		expect(levelsAt(beforeSunset, paletteAt(beforeSunset)).skeins).to.be.greaterThan(0.9);
+
+		const midsummerNight = localAt(23 * 60, 213);
+		expect(levelsAt(midsummerNight, paletteAt(midsummerNight)).skeins).to.equal(0);
+	});
+
+	it("shows resident birds mostly by day, none at night", function () {
+		const noon = at(780, 172);
+		expect(levelsAt(noon, paletteAt(noon)).residents).to.be.greaterThan(0.8);
+		const midnight = localAt(0, 172);
+		expect(levelsAt(midnight, paletteAt(midnight)).residents).to.be.closeTo(0, 1e-9);
+	});
+
+	it("inks the birds darker once it is well past twilight", function () {
+		const day = at(780, 172);
+		expect(levelsAt(day, paletteAt(day)).birdInk).to.equal("rgb(44 50 66 / 72%)");
+		const night = localAt(0, 172);
+		expect(levelsAt(night, paletteAt(night)).birdInk).to.equal("rgb(24 22 34 / 85%)");
 	});
 });

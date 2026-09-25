@@ -4,7 +4,7 @@
  * with them, and the chrome reads the four values `publishedFor` gives. Pure:
  * mocha loads it and holds the contrast floors against it (§11).
  */
-import {mix, shift} from "./colour";
+import {mix, mixOklab, shift} from "./colour";
 import type {Moment, Season, Weather} from "./engine";
 
 /** One stop of the canonical day. `t` is its canonical minute. */
@@ -171,6 +171,33 @@ export interface Palette {
 	sunEdge: string;
 	sunFlame: string;
 	sunBloom: string;
+	/** Derived land and yurt colours (plan 3, docs/resources/themes/ps-plains/mockup.html lines 75–122), each ported verbatim from the mockup's `color-mix(in oklab, …)`. */
+	mount2: string;
+	tree: string;
+	trunk: string;
+	shrub: string;
+	tuft2: string;
+	tuft1: string;
+	tuftLit: string;
+	riverbed: string;
+	bedstone: string;
+	riverHi: string;
+	/** The river's own gradient stops: skyHorizon → skyMid. */
+	riverSkyTop: string;
+	riverSkyBottom: string;
+	feltShade: string;
+	roofTop: string;
+	roofBottom: string;
+	roofStroke: string;
+	bandMark: string;
+	rope: string;
+	rib: string;
+	doorOrn: string;
+	crown: string;
+	pipe: string;
+	stone: string;
+	wood: string;
+	path: string;
 }
 
 export function paletteAt(m: Moment): Palette {
@@ -198,6 +225,32 @@ export function paletteAt(m: Moment): Palette {
 	const nightGlow = Math.max(0, (s.dark - 0.38) / 0.62);
 	const lift = 1 - s.dark;
 	const heat = 1 - Math.max(0, m.sun.alt);
+
+	// The land and yurt colours the mockup mixed in CSS (lines 75–122), ported verbatim.
+	const mount2 = mixOklab(land.mount, land.far, 0.72);
+	const tree = mixOklab(land.hill2, "#1f3a24", 0.55);
+	const trunk = mixOklab(land.hill2, "#3a2a1c", 0.4);
+	const shrub = mixOklab(land.far, "#28402c", 0.55);
+	const tuft2 = mixOklab(land.hill2, land.blade, 0.72);
+	const tuft1 = mixOklab(land.hill1, land.blade, 0.7);
+	const tuftLit = mixOklab(land.hill1, "#fff6c8", 0.7);
+	const riverbed = mixOklab(land.hill1, "#dcc9a0", 0.42);
+	const bedstone = mixOklab(land.hill1, "#a99c80", 0.3);
+	const riverHi = mixOklab(s.hor, "#ffffff", 0.6);
+	const feltShade = mixOklab(s.felt, "#3a3040", 0.8);
+	const roofTop = mixOklab(s.felt, "#ffffff", 0.92);
+	const roofBottom = mixOklab(s.felt, "#4a3c3c", 0.78);
+	const roofStroke = mixOklab(s.felt, "#5a4a3e", 0.55);
+	const bandMark = mixOklab(s.band, "#f3e3c6", 0.45);
+	const rope = mixOklab(s.felt, "#5a4636", 0.55);
+	const rib = mixOklab(s.felt, "#6a5a4a", 0.72);
+	const doorOrn = mixOklab(s.door, "#f3c66a", 0.35);
+	const crown = mixOklab(s.felt, "#5a4a3e", 0.6);
+	const pipe = mixOklab(s.felt, "#4d4640", 0.3);
+	const stone = mixOklab(land.grass, "#a8a39a", 0.45);
+	const wood = mixOklab(land.hill1, "#7a5638", 0.3);
+	const path = mixOklab(land.grass, "#d8c9a0", 0.68);
+
 	return {
 		skyTop: s.top,
 		skyMid: s.mid,
@@ -222,6 +275,31 @@ export function paletteAt(m: Moment): Palette {
 		sunEdge: mix("#ffb23c", "#ff5424", heat),
 		sunFlame: mix("#ffcf5a", "#ff6e2c", heat),
 		sunBloom: mix("#fff2b8", "#ff9a5a", heat),
+		mount2,
+		tree,
+		trunk,
+		shrub,
+		tuft2,
+		tuft1,
+		tuftLit,
+		riverbed,
+		bedstone,
+		riverHi,
+		riverSkyTop: s.hor,
+		riverSkyBottom: s.mid,
+		feltShade,
+		roofTop,
+		roofBottom,
+		roofStroke,
+		bandMark,
+		rope,
+		rib,
+		doorOrn,
+		crown,
+		pipe,
+		stone,
+		wood,
+		path,
 	};
 }
 
@@ -243,5 +321,81 @@ export function publishedFor(p: Palette): Published {
 		text: p.dark > TEXT_LIGHT_AT ? "light" : "ink",
 		halo: mix(p.skyHorizon, "#ffffff", 0.55),
 		canvas: p.skyTop,
+	};
+}
+
+/**
+ * Every level the plains draw with, at one moment (plan 3, the mockup's
+ * `apply()` lines 1055–1071, and the skeins' timing, the user's words
+ * 2026-09-25: at night and around sunset in spring and autumn, by daylight
+ * for resident birds). `hot`, `windy`, `storm` and `skeinsWest` are booleans
+ * the scene turns into classes (Tasks 4 and 6); nothing here is written to a
+ * custom property under those names.
+ */
+export interface Levels {
+	/** The river: dry in high summer, full the rest of the year. */
+	water: number;
+	flowers: number;
+	snowcap: number;
+	fireflies: number;
+	/** Migrating flocks: night and the window around sunset, spring and autumn. */
+	skeins: number;
+	/** Migrating west (autumn) rather than east (spring). */
+	skeinsWest: boolean;
+	/** Resident birds: by daylight. */
+	residents: number;
+	wind: number;
+	/** The grass blades' sway, in degrees. */
+	sway: number;
+	heat: number;
+	hot: boolean;
+	windy: boolean;
+	storm: boolean;
+	/** The weather's dim over the scene, and its colour. */
+	veil: number;
+	veilColour: string;
+	/** How lit the near tufts are: brightest by day. */
+	tuftLit: number;
+	birdInk: string;
+}
+
+const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+
+export function levelsAt(m: Moment, p: Palette): Levels {
+	const wx = WEATHER[m.weather];
+	const {spring, summer, autumn, winter} = m.season.weights;
+	const dark = p.dark;
+	const day = 1 - dark;
+	const rainOrSnowOrStorm = wx.rain > 0 || wx.snow > 0 || wx.storm > 0;
+	const rainOrStorm = wx.rain > 0 || wx.storm > 0;
+
+	const migrating = Math.min(1, spring + autumn + 0.3 * winter);
+	const night = clamp01((dark - 0.25) / 0.4);
+	const sunsetWindow = clamp01(
+		1 - Math.max(0, m.sunset - 60 - m.minute, m.minute - (m.sunset + 105)) / 20
+	);
+
+	return {
+		water: clamp01(1 - 1.35 * summer),
+		flowers: Math.min(1, spring + 0.55 * summer),
+		snowcap: Math.max(winter > 0.5 ? (winter - 0.4) / 0.6 : 0, m.weather === "snow" ? 0.9 : 0),
+		fireflies:
+			(summer + 0.45 * spring) *
+			clamp01((dark - 0.25) / 0.4) *
+			(m.canonical > 1100 || m.canonical < 120 ? 1 : 0.35) *
+			(rainOrSnowOrStorm ? 0 : 1),
+		skeins: migrating * Math.max(night, sunsetWindow) * (rainOrStorm ? 0.3 : 1),
+		skeinsWest: autumn > spring,
+		residents: clamp01(day - 0.15) * (rainOrStorm ? 0.3 : 1),
+		wind: wx.wind * (1 - 0.6 * dark) * (autumn + 0.6 * summer + 0.8 * spring),
+		sway: wx.sway,
+		heat: (wx.heat * Math.max(0, day - 0.7)) / 0.3,
+		hot: wx.heat > 0 && dark < 0.1,
+		windy: wx.wind > 0.5,
+		storm: wx.storm > 0,
+		veil: wx.dim,
+		veilColour: wx.dimc,
+		tuftLit: Math.max(0, 0.5 - 0.45 * dark),
+		birdInk: dark > 0.2 ? "rgb(24 22 34 / 85%)" : "rgb(44 50 66 / 72%)",
 	};
 }

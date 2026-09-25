@@ -81,3 +81,97 @@ describe("ps scene: what it writes", function () {
 		}
 	});
 });
+
+describe("ps scene: plan 3's land, yurt and level vars", function () {
+	const HEX = /^#[0-9a-f]{6}$/;
+
+	function moment() {
+		const doy = 213;
+		const {rise, set} = sunTimes(doy);
+		return momentFor({
+			minute: (rise + set) / 2,
+			doy,
+			dayNumber: 20626,
+			epochDays: 20626,
+			weather: "clear",
+		});
+	}
+
+	it("writes every land band, derived colour and river-sky stop as a hex custom property", function () {
+		const m = moment();
+		const v = sceneVars(m, paletteAt(m));
+		const HEX_NAMES = [
+			"--ps-mount",
+			"--ps-far",
+			"--ps-hill2",
+			"--ps-hill1",
+			"--ps-grass",
+			"--ps-blade",
+			"--ps-felt",
+			"--ps-band",
+			"--ps-door",
+			"--ps-cloud",
+			"--ps-cloud-under",
+			"--ps-mount2",
+			"--ps-tree",
+			"--ps-trunk",
+			"--ps-shrub",
+			"--ps-tuft2",
+			"--ps-tuft1",
+			"--ps-tuft-lit",
+			"--ps-riverbed",
+			"--ps-bedstone",
+			"--ps-river-hi",
+			"--ps-river-sky-top",
+			"--ps-river-sky-bottom",
+			"--ps-felt-shade",
+			"--ps-roof-top",
+			"--ps-roof-bottom",
+			"--ps-roof-stroke",
+			"--ps-band-mark",
+			"--ps-rope",
+			"--ps-rib",
+			"--ps-door-orn",
+			"--ps-crown",
+			"--ps-pipe",
+			"--ps-stone",
+			"--ps-wood",
+			"--ps-path",
+		];
+
+		for (const name of HEX_NAMES) {
+			expect(v[name], name).to.match(HEX);
+		}
+	});
+
+	it("writes the day's levels as numbers, sway in degrees, and the veil and bird-ink as their own strings", function () {
+		const m = moment();
+		const p = paletteAt(m);
+		const v = sceneVars(m, p);
+		const NUMERIC_NAMES = [
+			"--ps-water",
+			"--ps-flowers",
+			"--ps-snowcap",
+			"--ps-ff-op",
+			"--ps-skeins-op",
+			"--ps-residents-op",
+			"--ps-wind-op",
+			"--ps-heat-op",
+			"--ps-veil",
+			"--ps-tuft-lit-op",
+			"--ps-night-glow",
+			"--ps-smoke-op",
+			"--ps-dark",
+		];
+
+		for (const name of NUMERIC_NAMES) {
+			expect(Number.isNaN(Number(v[name])), name).to.equal(false);
+		}
+
+		expect(v["--ps-sway"]).to.match(/^-?[\d.]+deg$/);
+		expect(v["--ps-veil-c"]).to.match(/^#[0-9a-f]{6}$/);
+		expect(v["--ps-bird-ink"]).to.match(/^rgb\(/);
+		expect(v["--ps-smoke"]).to.match(/^rgb\(/);
+		expect(v["--ps-dark"]).to.equal(p.dark.toFixed(3));
+	});
+});

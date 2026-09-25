@@ -11,7 +11,7 @@
  */
 import type {SceneHandle, SceneHostState} from "../../themeScene";
 import {momentAt, rng, type Moment, type MoonPhase} from "./engine";
-import {paletteAt, publishedFor, WEATHER, type Palette, type Published} from "./palette";
+import {levelsAt, paletteAt, publishedFor, WEATHER, type Palette, type Published} from "./palette";
 
 const STAR_COUNT = 190;
 const RAD = Math.PI / 180;
@@ -23,6 +23,7 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 	const glowX = m.sun.up ? Math.min(92, Math.max(8, m.sun.x)) : m.minute < 720 ? 10 : 90;
 	const moonOpacity =
 		m.moon.up && m.phase.present ? Math.min(1, p.dark * 1.25) * (1 - wx.hide * 0.85) : 0;
+	const l = levelsAt(m, p);
 	return {
 		"--ps-sky-top": p.skyTop,
 		"--ps-sky-mid": p.skyMid,
@@ -43,6 +44,62 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 		"--ps-moon-x": `${m.moon.x.toFixed(2)}%`,
 		"--ps-moon-y": `${m.moon.y.toFixed(2)}%`,
 		"--ps-moon-op": moonOpacity.toFixed(3),
+		// The land bands (Palette already carries these; plan 1 never published them).
+		"--ps-mount": p.mount,
+		"--ps-far": p.far,
+		"--ps-hill2": p.hill2,
+		"--ps-hill1": p.hill1,
+		"--ps-grass": p.grass,
+		"--ps-blade": p.blade,
+		"--ps-felt": p.felt,
+		"--ps-band": p.band,
+		"--ps-door": p.door,
+		"--ps-cloud": p.cloud,
+		"--ps-cloud-under": p.cloudUnder,
+		// The derived land and yurt colours (plan 3, palette.ts's mixOklab recipes).
+		"--ps-mount2": p.mount2,
+		"--ps-tree": p.tree,
+		"--ps-trunk": p.trunk,
+		"--ps-shrub": p.shrub,
+		"--ps-tuft2": p.tuft2,
+		"--ps-tuft1": p.tuft1,
+		"--ps-tuft-lit": p.tuftLit,
+		"--ps-riverbed": p.riverbed,
+		"--ps-bedstone": p.bedstone,
+		"--ps-river-hi": p.riverHi,
+		"--ps-river-sky-top": p.riverSkyTop,
+		"--ps-river-sky-bottom": p.riverSkyBottom,
+		"--ps-felt-shade": p.feltShade,
+		"--ps-roof-top": p.roofTop,
+		"--ps-roof-bottom": p.roofBottom,
+		"--ps-roof-stroke": p.roofStroke,
+		"--ps-band-mark": p.bandMark,
+		"--ps-rope": p.rope,
+		"--ps-rib": p.rib,
+		"--ps-door-orn": p.doorOrn,
+		"--ps-crown": p.crown,
+		"--ps-pipe": p.pipe,
+		"--ps-stone": p.stone,
+		"--ps-wood": p.wood,
+		"--ps-path": p.path,
+		// The day's levels.
+		"--ps-water": l.water.toFixed(2),
+		"--ps-flowers": l.flowers.toFixed(2),
+		"--ps-snowcap": l.snowcap.toFixed(2),
+		"--ps-ff-op": l.fireflies.toFixed(2),
+		"--ps-skeins-op": l.skeins.toFixed(2),
+		"--ps-residents-op": l.residents.toFixed(2),
+		"--ps-wind-op": l.wind.toFixed(2),
+		"--ps-sway": `${l.sway}deg`,
+		"--ps-heat-op": l.heat.toFixed(2),
+		"--ps-veil": l.veil.toFixed(2),
+		"--ps-veil-c": l.veilColour,
+		"--ps-tuft-lit-op": l.tuftLit.toFixed(2),
+		"--ps-bird-ink": l.birdInk,
+		"--ps-night-glow": p.nightGlow.toFixed(3),
+		"--ps-smoke-op": p.smokeOpacity.toFixed(3),
+		"--ps-smoke": p.smoke,
+		"--ps-dark": p.dark.toFixed(3),
 	};
 }
 
