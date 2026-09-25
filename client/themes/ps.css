@@ -818,15 +818,20 @@ strong,
 #theme-scene .ps-y-stone { fill: var(--ps-stone); }
 #theme-scene .ps-y-wood { fill: var(--ps-wood); }
 
+/* The worn path to the door, as it shows by day. It is gone by the time the
+ * door's light is a fifth of the way up, so at dusk and before dawn, as at
+ * night, the pool alone lies before the door and no faint hard-edged track
+ * runs into the dark beside it. */
 #theme-scene .ps-y-path {
 	fill: var(--ps-path);
-	opacity: 0.6;
+	opacity: calc(0.6 * max(0, 1 - var(--ps-night-glow, 0) * 5));
 }
 
 /* At night the door, its seams, the wall and the crown glow from inside and a
- * soft spill of light falls on the path; by day none of it shows. */
+ * soft pool of light lies on the ground before the door (the user's pick over
+ * the mockup's cone down the path, 2026-09-25); by day none of it shows. */
 #theme-scene .ps-y-lit { opacity: var(--ps-night-glow, 0); }
-#theme-scene .ps-y-spill { opacity: calc(var(--ps-night-glow, 0) * 0.85); }
+#theme-scene .ps-y-pool { opacity: var(--ps-night-glow, 0); }
 
 /* Snow on the roof in winter and on snowy days. */
 #theme-scene .ps-y-snow {

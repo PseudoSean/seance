@@ -2,6 +2,9 @@ import {expect} from "chai";
 import fs from "fs";
 import path from "path";
 import {contrast, hexRgb, rgbHex} from "../../client/js/scenes/ps/colour";
+import {momentFor, sunTimes} from "../../client/js/scenes/ps/engine";
+import {paletteAt} from "../../client/js/scenes/ps/palette";
+import {sceneVars} from "../../client/js/scenes/ps/scene";
 import {checkedGrounds, glassGround, withPinned, type Light} from "../../tools/ps/legibility";
 import bird from "../../tools/heart/rigs/bird.mjs";
 import bunny from "../../tools/heart/rigs/bunny.mjs";
@@ -1304,9 +1307,44 @@ describe("the ps theme's yurt and its smoke (plan 3, spec §5.3)", function () {
 	it("snows on the roof by --ps-snowcap and glows at night by --ps-night-glow", function () {
 		expect(valueOf(`${S} .ps-y-snow`, "opacity")).to.match(/^var\(--ps-snowcap(, 0)?\)$/);
 		expect(valueOf(`${S} .ps-y-lit`, "opacity")).to.match(/^var\(--ps-night-glow(, 0)?\)$/);
-		expect(valueOf(`${S} .ps-y-spill`, "opacity")).to.match(
-			/^calc\(var\(--ps-night-glow(, 0)?\) \* 0\.85\)$/
+		expect(valueOf(`${S} .ps-y-spill`, "opacity")).to.equal(undefined);
+	});
+
+	it("lights a pool at the door by --ps-night-glow, and fades the worn path out as the light comes on (the user's pick, 2026-09-25)", function () {
+		expect(valueOf(`${S} .ps-y-pool`, "opacity")).to.match(/^var\(--ps-night-glow(, 0)?\)$/);
+		expect(valueOf(`${S} .ps-y-path`, "fill")).to.equal("var(--ps-path)");
+		expect(valueOf(`${S} .ps-y-path`, "opacity")).to.match(
+			/^calc\(0\.6 \* max\(0, 1 - var\(--ps-night-glow(, 0)?\) \* [\d.]+\)\)$/
 		);
+	});
+
+	it("shows no path at late dusk or before dawn: only the pool, never a faint hard-edged track beside it", function () {
+		// The path's opacity as ps.css computes it from the published glow.
+		const k = Number(
+			/\* ([\d.]+)\)\)$/.exec(valueOf(`${S} .ps-y-path`, "opacity") ?? "")?.[1] ?? NaN
+		);
+		const pathOp = (glow: number) => 0.6 * Math.max(0, 1 - glow * k);
+
+		const glowAt = (minute: number) => {
+			const m = momentFor({
+				minute,
+				doy: 270,
+				dayNumber: 20723,
+				epochDays: 20723,
+				weather: "clear",
+			});
+			return Number(sceneVars(m, paletteAt(m))["--ps-night-glow"]);
+		};
+
+		const {rise, set} = sunTimes(270);
+		// The moments the comparison showed the user: 55 min after sunset, 45 before sunrise.
+		expect(pathOp(glowAt(set + 55)), "late dusk").to.equal(0);
+		expect(pathOp(glowAt(rise - 45)), "before dawn").to.equal(0);
+		expect(pathOp(glowAt(30)), "midnight").to.equal(0);
+		// By day the path is the worn track it always was.
+		expect(pathOp(glowAt((rise + set) / 2)), "noon").to.equal(0.6);
+		// And it is gone once the door's light is a fifth of the way up.
+		expect(pathOp(0.2)).to.equal(0);
 	});
 
 	it("raises the smoke in rem from the published smoke colour", function () {

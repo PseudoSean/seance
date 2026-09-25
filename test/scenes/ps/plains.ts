@@ -192,9 +192,10 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 				"ps-y-wall",
 				"ps-y-roof",
 				"ps-y-inner",
-				"ps-y-spill",
+				"ps-y-pool",
 				"ps-y-crown-glow",
 				"ps-y-blur",
+				"ps-y-soft",
 			]);
 
 			for (const id of ids) {
@@ -216,7 +217,7 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 				"ps-y-roof-t",
 				"ps-y-roof-b",
 				"ps-y-path",
-				"ps-y-spill",
+				"ps-y-pool",
 				"ps-y-wood",
 				"ps-y-stone",
 				"ps-y-lit",
@@ -259,9 +260,27 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 
 		it("lights the wall, the crown, the door and its seams, and snows on the roof", function () {
 			expect(classCount(yurt, "ps-y-lit")).to.equal(4);
-			expect(classCount(yurt, "ps-y-spill")).to.equal(1);
+			expect(classCount(yurt, "ps-y-pool")).to.equal(1);
 			expect(classCount(yurt, "ps-y-snow")).to.equal(1);
 			expect(classCount(yurt, "ps-y-pipe")).to.equal(2);
+		});
+
+		it("lays a soft pool of light on the ground at the door at night, and no cone down the path (the user's pick, 2026-09-25)", function () {
+			expect(yurt).to.not.include("ps-y-spill");
+			const pool =
+				'<ellipse class="ps-y-pool" cx="120" cy="157" rx="58" ry="15" fill="url(#ps-y-pool)" filter="url(#ps-y-soft)"/>';
+			expect(yurt).to.include(pool);
+			expect(yurt).to.include(
+				'<radialGradient id="ps-y-pool" cx=".5" cy=".42" r=".58"><stop offset="0" stop-color="#ffc47a" stop-opacity=".78"/><stop offset=".55" stop-color="#ffb060" stop-opacity=".3"/><stop offset="1" stop-color="#ffb060" stop-opacity="0"/></radialGradient>'
+			);
+			expect(yurt).to.include(
+				'<filter id="ps-y-soft" x="-80%" y="-120%" width="260%" height="340%"><feGaussianBlur stdDeviation="5"/></filter>'
+			);
+			// Over the yurt's shadow, under the stones it lights and the woodpile.
+			const at = (s: string) => yurt.indexOf(s);
+			expect(at(pool)).to.be.greaterThan(at('fill="#000" opacity=".16"'));
+			expect(at(pool)).to.be.lessThan(at('class="ps-y-wood"'));
+			expect(at(pool)).to.be.lessThan(at('class="ps-y-stone"'));
 		});
 
 		it("holds no text and no style strings", function () {

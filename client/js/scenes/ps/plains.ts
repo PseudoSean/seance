@@ -207,8 +207,10 @@ const WALL = "M38,150 L38,98 Q120,90 202,98 L202,150 Q120,158 38,150 Z";
  * band and ribs, the patterned band, the carved door, the crown ring and its
  * stove pipe, stones and a woodpile beside it, the worn path to the door. On
  * the mockup's 240 × 170 box; ps.css sizes it on the ground band and scene.ts
- * decides where it stands. The `ps-y-lit` parts glow at night and the path
- * takes the door's spill; `ps-y-snow` is the winter roof. The warm glows and
+ * decides where it stands. The `ps-y-lit` parts glow at night, and the door's
+ * light falls as a soft pool on the ground before it (`ps-y-pool`; the user's
+ * pick over the mockup's cone down the path, 2026-09-25), while the worn path
+ * fades out into the dark; `ps-y-snow` is the winter roof. The warm glows and
  * the shadow are the mockup's fixed colours; every other part is a class that
  * ps.css paints from the palette.
  */
@@ -219,13 +221,14 @@ export function yurtSvg(): string {
 		`<linearGradient id="ps-y-wall" x1="0" x2="1"><stop offset="0" class="ps-y-felt-l"/><stop offset=".48" class="ps-y-felt-c"/><stop offset="1" class="ps-y-felt-l"/></linearGradient>` +
 		`<linearGradient id="ps-y-roof" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ps-y-roof-t"/><stop offset="1" class="ps-y-roof-b"/></linearGradient>` +
 		`<radialGradient id="ps-y-inner" cx=".5" cy=".62" r=".6"><stop offset="0" stop-color="#ffd48c" stop-opacity=".62"/><stop offset=".6" stop-color="#ffb86a" stop-opacity=".2"/><stop offset="1" stop-color="#ffb86a" stop-opacity="0"/></radialGradient>` +
-		`<radialGradient id="ps-y-spill" cx=".5" cy=".3" r=".7"><stop offset="0" stop-color="#ffc47a" stop-opacity=".8"/><stop offset="1" stop-color="#ffb060" stop-opacity="0"/></radialGradient>` +
+		`<radialGradient id="ps-y-pool" cx=".5" cy=".42" r=".58"><stop offset="0" stop-color="#ffc47a" stop-opacity=".78"/><stop offset=".55" stop-color="#ffb060" stop-opacity=".3"/><stop offset="1" stop-color="#ffb060" stop-opacity="0"/></radialGradient>` +
 		`<radialGradient id="ps-y-crown-glow"><stop offset="0" stop-color="#ffd08a" stop-opacity=".95"/><stop offset="1" stop-color="#ff9f4a" stop-opacity="0"/></radialGradient>` +
 		`<filter id="ps-y-blur" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.4"/></filter>` +
+		`<filter id="ps-y-soft" x="-80%" y="-120%" width="260%" height="340%"><feGaussianBlur stdDeviation="5"/></filter>` +
 		`</defs>` +
 		`<path class="ps-y-path" d="M112,152 C108,172 96,198 80,240 L140,240 C134,200 130,172 128,152 Z"/>` +
-		`<path class="ps-y-spill" d="M104,150 C98,172 88,196 76,236 L146,236 C138,196 134,172 136,150 Z" fill="url(#ps-y-spill)" filter="url(#ps-y-blur)"/>` +
 		`<ellipse cx="120" cy="152" rx="96" ry="7" fill="#000" opacity=".16"/>` +
+		`<ellipse class="ps-y-pool" cx="120" cy="157" rx="58" ry="15" fill="url(#ps-y-pool)" filter="url(#ps-y-soft)"/>` +
 		`<g class="ps-y-wood"><rect x="20" y="136" width="22" height="5" rx="2.5"/><rect x="22" y="131" width="19" height="5" rx="2.5"/><rect x="25" y="126" width="13" height="5" rx="2.5"/></g>` +
 		`<g class="ps-y-stone"><ellipse cx="100" cy="160" rx="5" ry="2.2"/><ellipse cx="140" cy="164" rx="5.5" ry="2.4"/></g>` +
 		`<path d="${WALL}" fill="url(#ps-y-wall)"/>` +
