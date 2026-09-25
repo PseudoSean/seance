@@ -1097,6 +1097,116 @@ describe("the ps theme's scene", function () {
 	});
 });
 
+describe("the ps theme's plains (plan 3: the land, the river, the near grass, the fireflies)", function () {
+	const S = "#theme-scene";
+
+	it("makes the scene a size container, so what travels across it moves in cqw/cqh", function () {
+		expect(valueOf(S, "container-type")).to.equal("size");
+	});
+
+	it("fills every land area from the colour the palette publishes for it", function () {
+		const AREAS: Record<string, string> = {
+			"ps-l-mount2": "var(--ps-mount2)",
+			"ps-l-mount": "var(--ps-mount)",
+			"ps-l-far": "var(--ps-far)",
+			"ps-l-shrub": "var(--ps-shrub)",
+			"ps-l-riverbed": "var(--ps-riverbed)",
+			"ps-l-bedstone": "var(--ps-bedstone)",
+			"ps-l-hill2": "var(--ps-hill2)",
+			"ps-l-tuft2": "var(--ps-tuft2)",
+			"ps-l-tree": "var(--ps-tree)",
+			"ps-l-trunk": "var(--ps-trunk)",
+			"ps-l-hill1": "var(--ps-hill1)",
+			"ps-l-tuft1": "var(--ps-tuft1)",
+			"ps-l-tuft-lit": "var(--ps-tuft-lit)",
+			"ps-l-grass": "var(--ps-grass)",
+		};
+
+		for (const [name, fill] of Object.entries(AREAS)) {
+			expect(valueOf(`${S} .${name}`, "fill"), name).to.equal(fill);
+		}
+
+		expect(valueOf(`${S} .ps-blades path`, "fill")).to.equal("var(--ps-blade)");
+		// The river's sky is its own fill attribute (plains.ts); a class fill would cover it.
+		expect(valueOf(`${S} .ps-l-river`, "fill")).to.equal(undefined);
+	});
+
+	it("mixes no area colour in CSS: color-mix is left to the lines (the rims, the river's glint)", function () {
+		const LINES = [`${S} .ps-l-rim`, `${S} .ps-l-river-hi`];
+		const areas = rules.filter((r) =>
+			r.selectors.some(
+				(sel) =>
+					/^#theme-scene \.(ps-l-|ps-blades|ps-ground|ps-fireflies)/.test(sel) &&
+					!LINES.includes(sel)
+			)
+		);
+		expect(areas.length, "the land's rules").to.be.at.least(15);
+
+		for (const r of areas) {
+			for (const [p, v] of r.decls) {
+				expect(v, `${r.selectors.join(", ")} { ${p} }`).to.not.include("color-mix");
+			}
+		}
+	});
+
+	it("runs the river by the season: the water's opacity is --ps-water and the stones' its complement", function () {
+		expect(valueOf(`${S} .ps-l-river`, "opacity")).to.match(/^var\(--ps-water(, 1)?\)$/);
+		expect(valueOf(`${S} .ps-l-bedstone`, "opacity")).to.match(
+			/^calc\(1 - var\(--ps-water(, 1)?\)\)$/
+		);
+		expect(valueOf(`${S} .ps-l-river-hi`, "opacity")).to.include("var(--ps-water");
+		expect(valueOf(`${S} .ps-l-river-hi`, "stroke")).to.equal("var(--ps-river-hi)");
+	});
+
+	it("lights the far tufts and the rims from the published levels", function () {
+		expect(valueOf(`${S} .ps-l-tuft-lit`, "opacity")).to.equal("var(--ps-tuft-lit-op)");
+		expect(valueOf(`${S} .ps-l-rim`, "stroke")).to.equal("var(--ps-glow)");
+		expect(valueOf(`${S} .ps-l-rim`, "opacity")).to.include("var(--ps-glow-op");
+	});
+
+	it("puts the land on the window's lower 56 % and the near grass on its lower 19 %", function () {
+		expect(valueOf(`${S} .ps-land`, "bottom")).to.equal("0");
+		expect(valueOf(`${S} .ps-land`, "height")).to.equal("56%");
+		expect(valueOf(`${S} .ps-land`, "width")).to.equal("100%");
+		expect(valueOf(`${S} .ps-blades`, "bottom")).to.equal("0");
+		expect(valueOf(`${S} .ps-blades`, "height")).to.equal("19%");
+		expect(valueOf(`${S} .ps-blades`, "width")).to.equal("100%");
+	});
+
+	it("keeps the ground group whole and positions what is inside it", function () {
+		expect(valueOf(`${S} .ps-ground`, "inset")).to.equal("0");
+		expect(valueOf(`${S} .ps-ground > *`, "position")).to.equal("absolute");
+	});
+
+	it("fades the flowers by the season and the dark", function () {
+		const opacity = valueOf(`${S} .ps-blades circle`, "opacity") ?? "";
+		expect(opacity).to.match(/var\(--ps-flowers(, 1)?\)/);
+		expect(opacity).to.include("var(--ps-dark)");
+	});
+
+	it("sways the blades by the weather's angle with its own keyframes", function () {
+		expect(valueOf(`${S} .ps-blades .ps-sway`, "animation")).to.match(/^ps-sway /);
+		const frames = css.match(/@keyframes ps-sway\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+		expect(frames).to.include("skewX(");
+		expect(frames).to.include("var(--ps-sway");
+		expect(css.match(/@keyframes ps-sway\b/g), "one ps-sway").to.have.length(1);
+		expect(css, "no bare sway keyframes").to.not.match(/@keyframes sway\b/);
+	});
+
+	it("shows the fireflies by the published level, small and drifting in rem", function () {
+		expect(valueOf(`${S} .ps-fireflies`, "opacity")).to.match(/^var\(--ps-ff-op(, 0)?\)$/);
+		const fly = declsOf(`${S} .ps-fireflies i`);
+		expect(fly.length).to.be.greaterThan(0);
+
+		for (const [p, v] of fly) {
+			expect(v, `.ps-fireflies i { ${p} }`).to.not.match(/\d px|\dpx/);
+		}
+
+		expect(css).to.match(/@keyframes ps-ffdrift\b/);
+		expect(css).to.match(/@keyframes ps-ffblink\b/);
+	});
+});
+
 describe("the ps theme's animals", function () {
 	/** The cast (tools/heart/README.md); the teddy and the dolphin are held. */
 	const CAST = ["horse", "deer", "puppy", "bunny", "kitten", "frog", "ladybug", "bird"];

@@ -7,11 +7,14 @@
  * the four values the chrome reads, and the hour's sky as the browser's
  * `theme-color`. All motion is CSS or SVG animation; no script runs per
  * frame. A hidden page's scene is stopped outright. No Vue, no store; the
- * markup below is constant, and nothing user-supplied is ever written into it.
+ * markup below (and plains.ts's land, near grass and fireflies) is constant,
+ * and nothing user-supplied is ever written into it.
  */
+import {isPhoneLayout} from "../../helpers/device";
 import type {SceneHandle, SceneHostState} from "../../themeScene";
 import {momentAt, rng, type Moment, type MoonPhase} from "./engine";
 import {levelsAt, paletteAt, publishedFor, WEATHER, type Palette, type Published} from "./palette";
+import {FIREFLIES, fireflies, landSvg, nearGrass} from "./plains";
 
 const STAR_COUNT = 190;
 const RAD = Math.PI / 180;
@@ -181,14 +184,32 @@ function stars(): string {
 	return out;
 }
 
-export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
-	const html = document.documentElement;
-	const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-	root.innerHTML =
+/**
+ * The scene's layers, back to front (docs/projects/ps-theme.md §5.1): the sky
+ * is the root's own background; then the Milky Way, the stars, the horizon
+ * glow, the moon and the sun; the ground group — the land and river, the
+ * fireflies, the animal layer (switched off in ps.css) — which the heat haze
+ * bends as one; and the near grass in front of it, outside the haze. A phone
+ * (the phone layout at mount) gets half the fireflies.
+ */
+export function sceneMarkup(phone: boolean): string {
+	return (
 		`<div class="ps-milky"></div><div class="ps-stars">${stars()}</div><div class="ps-glow"></div>` +
 		MOON +
 		SUN +
-		`<div class="ps-animals"></div>`;
+		`<div class="ps-ground">` +
+		landSvg() +
+		`<div class="ps-fireflies">${fireflies(phone ? FIREFLIES / 2 : FIREFLIES)}</div>` +
+		`<div class="ps-animals"></div>` +
+		`</div>` +
+		nearGrass()
+	);
+}
+
+export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
+	const html = document.documentElement;
+	const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+	root.innerHTML = sceneMarkup(isPhoneLayout());
 	const ellipse = root.querySelector(".ps-m-ell") as SVGEllipseElement;
 	const shape = root.querySelector(".ps-m-shape") as SVGGElement;
 	// The theme's own theme-color, kept to hand back on destroy; and the last

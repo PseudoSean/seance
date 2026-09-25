@@ -1,7 +1,8 @@
 import {expect} from "chai";
 import {momentFor, sunTimes} from "../../../client/js/scenes/ps/engine";
 import {paletteAt, publishedFor} from "../../../client/js/scenes/ps/palette";
-import {moonShape, sceneVars, themeColorFor} from "../../../client/js/scenes/ps/scene";
+import {FIREFLIES} from "../../../client/js/scenes/ps/plains";
+import {moonShape, sceneMarkup, sceneVars, themeColorFor} from "../../../client/js/scenes/ps/scene";
 
 const days = (iso: string) => Date.parse(iso) / 86400000;
 
@@ -173,5 +174,77 @@ describe("ps scene: plan 3's land, yurt and level vars", function () {
 		expect(v["--ps-bird-ink"]).to.match(/^rgb\(/);
 		expect(v["--ps-smoke"]).to.match(/^rgb\(/);
 		expect(v["--ps-dark"]).to.equal(p.dark.toFixed(3));
+	});
+});
+
+describe("ps scene: the layers it builds (sceneMarkup)", function () {
+	/** The class of every top-level element in `markup`, in order. */
+	function topLevel(markup: string): string[] {
+		const out: string[] = [];
+		let depth = 0;
+
+		for (const m of markup.matchAll(/<(\/?)(div|svg)\b([^>]*)>/g)) {
+			if (m[1]) {
+				depth--;
+			} else {
+				if (depth === 0) {
+					out.push(/class="([^"]*)"/.exec(m[3])?.[1] ?? "");
+				}
+
+				depth++;
+			}
+		}
+
+		return out;
+	}
+
+	/** The inside of the first `<div class="${name}">…</div>` in `markup`, nested divs included. */
+	function inside(markup: string, name: string): string {
+		const open = `<div class="${name}">`;
+		const start = markup.indexOf(open);
+		expect(start, name).to.be.at.least(0);
+		let depth = 0;
+
+		for (const m of markup.slice(start).matchAll(/<(\/?)div\b[^>]*>/g)) {
+			depth += m[1] ? -1 : 1;
+
+			if (depth === 0) {
+				return markup.slice(start + open.length, start + m.index!);
+			}
+		}
+
+		throw new Error(`${name} is not closed`);
+	}
+
+	it("puts the layers in the spec's order (§5.1): sky things, the bodies, the ground, the near grass", function () {
+		expect(topLevel(sceneMarkup(false))).to.deep.equal([
+			"ps-milky",
+			"ps-stars",
+			"ps-glow",
+			"ps-moon",
+			"ps-sun",
+			"ps-ground",
+			"ps-blades",
+		]);
+	});
+
+	it("holds the land, the fireflies and the animal layer in the ground group, in that order", function () {
+		const ground = inside(sceneMarkup(false), "ps-ground");
+		expect(topLevel(ground)).to.deep.equal(["ps-land", "ps-fireflies", "ps-animals"]);
+	});
+
+	it("halves the fireflies on a phone", function () {
+		const count = (phone: boolean) =>
+			inside(sceneMarkup(phone), "ps-fireflies").match(/<i /g)?.length ?? 0;
+		expect(count(false)).to.equal(FIREFLIES);
+		expect(count(true)).to.equal(FIREFLIES / 2);
+	});
+
+	it("keeps plan 1's 190 stars", function () {
+		expect(inside(sceneMarkup(false), "ps-stars").match(/<i /g)).to.have.length(190);
+	});
+
+	it("builds the same markup every time", function () {
+		expect(sceneMarkup(false)).to.equal(sceneMarkup(false));
 	});
 });

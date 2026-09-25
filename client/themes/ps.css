@@ -516,6 +516,10 @@ strong,
 	z-index: -1;
 	overflow: hidden;
 	pointer-events: none;
+
+	/* What travels across the scene moves in cqw/cqh of it (plan 3). */
+	/* stylelint-disable-next-line property-no-unknown */
+	container-type: size;
 	background-color: var(--canvas-bg-color);
 	/* stylelint-disable-next-line max-line-length -- one flat gradient list reads better than a wrap mid-value */
 	background-image: linear-gradient(180deg, var(--ps-sky-top, #3f8fe6) 0%, var(--ps-sky-mid, #8cc2f4) 50%, var(--ps-sky-hor, #d2e9fb) 62%, var(--ps-sky-hor, #d2e9fb) 100%);
@@ -619,6 +623,140 @@ strong,
 
 @keyframes ps-spin {
 	to { transform: rotate(360deg); }
+}
+
+/* The ground (plains.ts): one group, so the heat haze bends the land, the
+ * fireflies and the yurt together and leaves the near grass crisp. The land
+ * is the mockup's 1200 × 400 drawing stretched over the window's lower 56 %.
+ * Every area is filled with the colour the palette publishes for it (scene.ts
+ * `sceneVars`), never mixed here; only the lines — the rims, the river's
+ * glint — take a glow or a level of their own. */
+#theme-scene .ps-ground {
+	inset: 0;
+}
+
+#theme-scene .ps-ground > * {
+	position: absolute;
+}
+
+#theme-scene .ps-land {
+	left: 0;
+	right: 0;
+	bottom: 0;
+	width: 100%;
+	height: 56%;
+}
+
+#theme-scene .ps-l-mount2 { fill: var(--ps-mount2); }
+#theme-scene .ps-l-mount { fill: var(--ps-mount); }
+#theme-scene .ps-l-far { fill: var(--ps-far); }
+#theme-scene .ps-l-shrub { fill: var(--ps-shrub); }
+#theme-scene .ps-l-hill2 { fill: var(--ps-hill2); }
+#theme-scene .ps-l-tuft2 { fill: var(--ps-tuft2); }
+#theme-scene .ps-l-tree { fill: var(--ps-tree); }
+#theme-scene .ps-l-trunk { fill: var(--ps-trunk); }
+#theme-scene .ps-l-hill1 { fill: var(--ps-hill1); }
+#theme-scene .ps-l-tuft1 { fill: var(--ps-tuft1); }
+#theme-scene .ps-l-grass { fill: var(--ps-grass); }
+
+/* A few near tufts catch the light by day. */
+#theme-scene .ps-l-tuft-lit {
+	fill: var(--ps-tuft-lit);
+	opacity: var(--ps-tuft-lit-op);
+}
+
+/* The river runs in spring, autumn and winter and dries to a stony bed in
+ * high summer: the water (its sky, a fill attribute in plains.ts) fades by
+ * --ps-water and the stones show through as it goes. */
+#theme-scene .ps-l-riverbed { fill: var(--ps-riverbed); }
+
+#theme-scene .ps-l-bedstone {
+	fill: var(--ps-bedstone);
+	opacity: calc(1 - var(--ps-water, 1));
+}
+
+#theme-scene .ps-l-river {
+	opacity: var(--ps-water, 1);
+}
+
+#theme-scene .ps-l-river-hi {
+	fill: none;
+	stroke: var(--ps-river-hi);
+	stroke-width: 1.4;
+	opacity: calc((0.55 - var(--ps-dark) * 0.35) * var(--ps-water, 1));
+}
+
+/* A rim of light along each hill at sunrise and sunset. */
+#theme-scene .ps-l-rim {
+	fill: none;
+	stroke: var(--ps-glow);
+	stroke-width: 2.2;
+	opacity: calc(var(--ps-glow-op) * 0.85);
+}
+
+/* Fireflies in the far fields on summer and late-spring evenings (--ps-ff-op
+ * is 0 the rest of the time), each drifting and blinking on its own clock. */
+#theme-scene .ps-fireflies {
+	left: 0;
+	right: 0;
+	top: 62%;
+	bottom: 16%;
+	opacity: var(--ps-ff-op, 0);
+}
+
+#theme-scene .ps-fireflies i {
+	position: absolute;
+	width: 0.1875rem;
+	height: 0.1875rem;
+	border-radius: 50%;
+	background: #eaff9e;
+	box-shadow: 0 0 0.375rem 0.125rem rgb(212 255 120 / 75%);
+	animation:
+		ps-ffdrift var(--d) ease-in-out var(--dl) infinite alternate,
+		ps-ffblink var(--b) ease-in-out var(--bl) infinite;
+}
+
+@keyframes ps-ffdrift {
+	from { transform: translate(0, 0); }
+	to { transform: translate(var(--dx), var(--dy)); }
+}
+
+@keyframes ps-ffblink {
+	0% { opacity: 0; }
+	35% { opacity: 1; }
+	55% { opacity: 1; }
+	100% { opacity: 0; }
+}
+
+/* The near grass, in front of the ground and outside the haze: blades along
+ * the window's lower 19 % that lean by the weather's angle, and small flowers
+ * in spring and summer that fade at night. */
+#theme-scene .ps-blades {
+	left: 0;
+	right: 0;
+	bottom: 0;
+	width: 100%;
+	height: 19%;
+}
+
+#theme-scene .ps-blades path {
+	fill: var(--ps-blade);
+}
+
+#theme-scene .ps-blades .ps-sway {
+	transform-origin: 50% 100%;
+	animation: ps-sway 7s ease-in-out infinite alternate;
+}
+
+/* The blades' own name: the mockup gave its birds' drift the same keyframes
+ * name, and the later one won — the birds must not take this one. */
+@keyframes ps-sway {
+	from { transform: skewX(calc(var(--ps-sway, 2.2deg) * -1)); }
+	to { transform: skewX(var(--ps-sway, 2.2deg)); }
+}
+
+#theme-scene .ps-blades circle {
+	opacity: calc(var(--ps-flowers, 1) * (0.85 - var(--ps-dark) * 0.7));
 }
 
 /* A hidden page's scene is stopped (scene.ts pauses the SVG animations too). */
