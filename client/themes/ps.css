@@ -482,6 +482,18 @@ strong,
 	animation-name: none;
 }
 
+/* The echo that replaces it is a new row, and a fade from nothing blinked
+ * every sent line out and back; an own message settles up from where its
+ * pending copy stood instead (style.css's 0.55), so it only brightens. */
+@keyframes ps-settle {
+	from { opacity: 0.55; }
+	to { opacity: 1; }
+}
+
+#chat .msg.self:not(.pending) {
+	animation-name: ps-settle;
+}
+
 #chat .chat-view[data-type="channel"] .msg.highlight,
 #chat .chat-view[data-type="query"] .msg.highlight {
 	animation: ps-fade 340ms ease-out backwards, ps-glow 1.8s ease-out 2;

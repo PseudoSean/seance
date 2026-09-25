@@ -1230,6 +1230,24 @@ describe("the ps theme's motion", function () {
 		expect(css).to.match(/#chat \.msg\.pending \{[^}]*animation-name: none/);
 		expect(css).to.include("@keyframes ps-rise");
 		expect(css).to.include("@keyframes ps-glow");
+	});
+
+	it("settles an own message up from where its pending copy stood, never through nothing", function () {
+		// The echo replaces the pending copy as a new row; fading it in from 0
+		// blinked every sent line out and back. It starts at style.css's
+		// pending opacity instead, so the row only brightens.
+		const style = fs.readFileSync(path.resolve(__dirname, "../../client/css/style.css"), "utf8");
+		const pending = /#chat \.msg\.pending \{[^}]*opacity: ([\d.]+);/.exec(style)?.[1];
+		expect(pending, "style.css's pending opacity").to.equal("0.55");
+		const settle = /@keyframes ps-settle \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "";
+		expect(settle).to.include(`from { opacity: ${pending}; }`);
+		expect(settle).to.include("to { opacity: 1; }");
+		expect(css).to.match(/#chat \.msg\.self:not\(\.pending\) \{[^}]*animation-name: ps-settle;/);
+	});
+
+	it("keeps the rest of its motion", function () {
+		expect(css).to.include("@keyframes ps-rise");
+		expect(css).to.include("@keyframes ps-glow");
 		expect(css).to.match(
 			/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*animation: none !important/
 		);
