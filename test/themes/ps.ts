@@ -447,6 +447,16 @@ describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.m
 		);
 	});
 
+	it("sets the windows flush with the sidebar, square and flat: none of day.css's floating card", function () {
+		// The user, 2026-09-25: "I don't like the pop-out look (the 3d look) of the channel frame,
+		// the way it separates from the network panel; … I don't like the round corners".
+		expect(valueOf("#viewport", "padding")).to.equal("0");
+		expect(valueOf("#viewport.menu-open", "padding")).to.equal("0");
+		expect(valueOf(".window", "border-radius")).to.equal("0");
+		expect(valueOf(".window", "box-shadow")).to.equal("none");
+		expect(valueOf("#loading .window", "margin")).to.equal("0");
+	});
+
 	it("gives ps the daylight fallback's canvas as its theme-color before the scene loads", function () {
 		const config = fs.readFileSync(
 			path.resolve(__dirname, "../../client/js/configuration.ts"),
