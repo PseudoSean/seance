@@ -24,8 +24,10 @@
 // and one line of text in the computed font and shadow: Mulish at the message
 // size with "The quick brown fox 0123", Fraunces at the nick size with
 // "Marigold Ősz". The light treatment draws white over the dusk amber, the
-// moon's disc, the sun's core, snow, sky and grass; ink draws #1b2638 over
-// sky, grass, amber and snow. Beside each swatch is its twin: the same
+// moon's disc, the sun's core, snow, sky and grass, and (plan 3's white
+// sooner) over the brightest grounds it now meets by day; ink draws #1b2638
+// over sky, grass, amber and snow. The viewport is made tall enough for
+// every row. Beside each swatch is its twin: the same
 // swatch at an integer offset, with the text in #ff00ff.
 //
 // **The measurement**, at device scale factors 1, 2 and then 3 (a phone), at
@@ -108,6 +110,19 @@ const TREATMENTS = {
 			snow: "#eef2f7",
 			sky: "#9ccaf5",
 			grass: "#69b04a",
+			// Plan 3 (white sooner, 2026-09-25): the brightest grounds the light
+			// treatment now meets by day (tools/ps/legibility.ts, the moments where
+			// dark ink would not hold): a cloud on a clear afternoon, the yurt's
+			// roof and felt, the snowy far fields and the river's pale far end on a
+			// winter afternoon, the yurt's roof under the rain's veil and the noon
+			// horizon under the storm's.
+			"cloud by day": "#ffffff",
+			"roof by day": "#f5f8fb",
+			"felt by day": "#f7f0e3",
+			"snowy fields": "#fceaf2",
+			"river far end": "#e4e7de",
+			"rain-veiled roof": "#c7ccd5",
+			"storm-veiled horizon": "#8797a9",
 		},
 	},
 	ink: {
@@ -139,6 +154,16 @@ const TWIN_DX = SWATCH_W + 16;
 /** The strip at each swatch's right end that must decode as G exactly. */
 const FAR_STRIP = 24;
 const OVERLAY_GREY = 128;
+/** The measuring viewport: tall enough that every treatment's rows are on screen at once. */
+const VIEW_W = 1280;
+const VIEW_H = Math.max(
+	900,
+	...Object.values(TREATMENTS).map(
+		(t) =>
+			MARGIN * 2 +
+			Object.keys(t.grounds).length * Object.keys(FACES).length * (SWATCH_H + ROW_GAP)
+	)
+);
 
 /** Real and twin differing by more than this, in some channel, is glyph paint. */
 const CORE_DIFF = 2;
@@ -587,8 +612,8 @@ export default async function run(page) {
 
 	for (const dpr of DPRS) {
 		await page.send("Emulation.setDeviceMetricsOverride", {
-			width: 1280,
-			height: 900,
+			width: VIEW_W,
+			height: VIEW_H,
 			deviceScaleFactor: dpr,
 			mobile: false,
 		});
