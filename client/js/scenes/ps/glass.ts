@@ -31,7 +31,7 @@ import {hexRgb, luminance, rgbHex} from "./colour";
 import {momentFor, type Moment} from "./engine";
 import {sceneGrounds, type SceneGround} from "./grounds";
 import {paletteAt} from "./palette";
-import {GRASS_TOP} from "./plains";
+import {GRASS_EDGE_LOWEST} from "./plains";
 
 export type GlassSurface = "header" | "composer" | "side" | "float";
 export const GLASS_SURFACES: readonly GlassSurface[] = ["header", "composer", "side", "float"];
@@ -254,22 +254,22 @@ export function dayTints(
 }
 
 /**
- * Whether the composer's top edge stands above the grass band's top
- * (plains.ts GRASS_TOP) on the scene's box: a reply bar and a longer draft on
- * a short window, a large font step, or a touch keyboard that lifts it mid-
- * scene (#viewport follows the visible band, the scene the layout viewport).
- * Its own grounds, the near grass, then no longer cover what is behind it —
- * hill1, the yurt, the sky — so the scene marks it (`ps-form-tall`) and
- * ps.css gives it the float tint, which holds over every ground (the
- * controller's ruling, fix round 1). Exactly on the band's top is still on
- * the grass.
+ * Whether the composer's top edge stands above the grass band's edge at its
+ * lowest (plains.ts GRASS_EDGE_LOWEST) on the scene's box: a reply bar and a
+ * longer draft on a short window, a large font step, or a touch keyboard that
+ * lifts it mid-scene (#viewport follows the visible band, the scene the
+ * layout viewport). Its own grounds, the near grass, then no longer cover
+ * everything behind it — hill1, the yurt, the sky — so the scene marks it
+ * (`ps-form-tall`) and ps.css gives it the float tint, which holds over every
+ * ground (the controller's rulings, fix rounds 1 and 2). Exactly on the edge
+ * is still on the grass.
  */
 export function composerAboveGrass(
 	form: {top: number},
 	scene: {top: number; height: number},
-	grassTop = GRASS_TOP
+	grassEdge = GRASS_EDGE_LOWEST
 ): boolean {
-	return form.top < scene.top + scene.height * grassTop;
+	return form.top < scene.top + scene.height * grassEdge;
 }
 
 /** The custom properties the scene publishes the tints as, one per surface (ps.css reads them). */

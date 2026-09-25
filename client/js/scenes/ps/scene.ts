@@ -379,24 +379,29 @@ function placeYurt(root: HTMLElement): {seen(): void; refind(): void; destroy():
 /**
  * Marks <html> `ps-form-tall` while the composer's top edge stands above the
  * near grass (glass.ts composerAboveGrass), so ps.css gives it the float tint
- * (the controller's ruling, task 7b fix round 1). It observes #form (a reply
- * bar, a longer draft, a font step) and #viewport (a touch keyboard:
- * #viewport follows --viewport-height while the scene stays on the layout
- * viewport), and reads the scene's box again when the window resizes; each
- * observation reads #form's box once. #form is looked for again on every
- * host update and whenever the one observed leaves the page; with none on the
- * page (the connect form) there is no class.
+ * (the controller's ruling, task 7b fix round 1). One ResizeObserver
+ * watches #form (a reply bar, a longer draft, a font step), #viewport (a
+ * touch keyboard: #viewport follows --viewport-height while the scene stays
+ * on the layout viewport) and the scene itself: the theme switch mounts the
+ * scene before ps.css applies (settings.ts calls setTheme before it swaps the
+ * link), while #theme-scene is still display: none and measures 0 × 0, and
+ * its display then fires an observation. A new #form also rises into place
+ * (ps.css ps-rise: 8 px, a transform no observer sees), so the end of its
+ * own animation checks again. Each check reads both boxes afresh, as
+ * placeYurt's measure does; the window's resize checks too. #form is looked
+ * for again on every host update and whenever the one observed leaves the
+ * page; with none on the page (the connect form) there is no class.
  */
 function watchComposer(root: HTMLElement, html: HTMLElement): {refind(): void; destroy(): void} {
 	let form: Element | null = null;
 	let viewport: Element | null = null;
-	let scene = root.getBoundingClientRect();
 	let frame: number | undefined;
 
 	const check = () => {
 		html.classList.toggle(
 			"ps-form-tall",
-			!!form?.isConnected && composerAboveGrass(form.getBoundingClientRect(), scene)
+			!!form?.isConnected &&
+				composerAboveGrass(form.getBoundingClientRect(), root.getBoundingClientRect())
 		);
 	};
 
@@ -408,9 +413,24 @@ function watchComposer(root: HTMLElement, html: HTMLElement): {refind(): void; d
 		}
 	});
 
-	const onResize = () => {
-		scene = root.getBoundingClientRect();
-		check();
+	observer.observe(root);
+	const onResize = () => check();
+
+	// Its own entrance only: animations inside it bubble here too.
+	const onSettled = (event: Event) => {
+		if (event.target === form) {
+			check();
+		}
+	};
+
+	const listen = (el: Element, on: boolean) => {
+		for (const type of ["animationend", "animationcancel"]) {
+			if (on) {
+				el.addEventListener(type, onSettled);
+			} else {
+				el.removeEventListener(type, onSettled);
+			}
+		}
 	};
 
 	function find() {
@@ -420,12 +440,14 @@ function watchComposer(root: HTMLElement, html: HTMLElement): {refind(): void; d
 		if (nextForm !== form) {
 			if (form) {
 				observer.unobserve(form);
+				listen(form, false);
 			}
 
 			form = nextForm;
 
 			if (form) {
 				observer.observe(form); // its first observation checks it
+				listen(form, true);
 			} else {
 				html.classList.remove("ps-form-tall");
 			}
@@ -464,6 +486,10 @@ function watchComposer(root: HTMLElement, html: HTMLElement): {refind(): void; d
 		destroy() {
 			observer.disconnect();
 			window.removeEventListener("resize", onResize);
+
+			if (form) {
+				listen(form, false);
+			}
 
 			if (frame !== undefined) {
 				window.cancelAnimationFrame(frame);

@@ -41,16 +41,18 @@ export const LAND_SHARE = 0.56;
 const LAND_VIEW_HEIGHT = 400;
 
 /**
- * The grass band's top as a share of the scene's height from its top, at its
- * highest: a cubic Bézier stays inside its control points' hull, so the least
- * y among them bounds the edge from above (288 of 400, so 0.8432). Above it
- * the composer's glass stands over hill1 and the yurt (glass.ts
- * composerAboveGrass).
+ * The grass band's top edge at its lowest, as a share of the scene's height
+ * from its top: below it the scene is near grass all the way across. A cubic
+ * Bézier stays inside its control points' hull, so the largest y among them
+ * bounds the edge from below, and the edge's own start (0,300) reaches it:
+ * 300 of 400, so 0.86. A composer whose top rises above it may stand over
+ * hill1 or the yurt somewhere along its width (glass.ts composerAboveGrass;
+ * the cautious reading, the controller's ruling in fix round 2).
  */
-export const GRASS_TOP =
+export const GRASS_EDGE_LOWEST =
 	1 -
 	LAND_SHARE +
-	(LAND_SHARE * Math.min(...[...GRASS_EDGE.matchAll(/,(-?[\d.]+)/g)].map((m) => Number(m[1])))) /
+	(LAND_SHARE * Math.max(...[...GRASS_EDGE.matchAll(/,(-?[\d.]+)/g)].map((m) => Number(m[1])))) /
 		LAND_VIEW_HEIGHT;
 
 /** One tuft: two blades from one root, the mockup's `tuft`. */

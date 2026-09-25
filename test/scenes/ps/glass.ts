@@ -18,6 +18,7 @@ import {
 	surfaceTints,
 	TEXT_SOLVE,
 	throughDayGlass,
+	tintsOver,
 	TINT_CAP,
 	TINT_FLOOR,
 	TINT_STEP,
@@ -25,7 +26,7 @@ import {
 } from "../../../client/js/scenes/ps/glass";
 import {sceneGrounds} from "../../../client/js/scenes/ps/grounds";
 import {paletteAt} from "../../../client/js/scenes/ps/palette";
-import {GRASS_TOP} from "../../../client/js/scenes/ps/plains";
+import {GRASS_EDGE_LOWEST} from "../../../client/js/scenes/ps/plains";
 
 /** A moment at a local minute on a day of the year; the moon's phase does not matter to the grounds. */
 const at = (minute: number, doy: number, weather: Weather = "clear"): Moment =>
@@ -218,13 +219,13 @@ describe("ps glass: the luminous day glass (plan 3 task 7b, the user's pick)", f
 		expect(start).to.deep.equal(window);
 	});
 
-	describe("the composer above the near grass (fix round 1, the controller's ruling)", function () {
-		// A 900 px scene at the top of the page: the band's top is 0.8432 × 900 = 758.9 px.
+	describe("the composer above the near grass (fix rounds 1 and 2, the controller's rulings)", function () {
+		// A 900 px scene at the top of the page: the grass edge's lowest point is 0.86 × 900 = 774 px.
 		const scene = {top: 0, height: 900};
-		const edge = scene.top + scene.height * GRASS_TOP;
+		const edge = scene.top + scene.height * GRASS_EDGE_LOWEST;
 
-		it("takes the grass band's top from the land's own geometry: the edge's highest point, 0.8432 of the scene", function () {
-			expect(GRASS_TOP).to.be.closeTo(0.44 + (0.56 * 288) / 400, 1e-12);
+		it("takes the threshold from the land's own geometry: the grass edge's lowest point, 0.86 of the scene", function () {
+			expect(GRASS_EDGE_LOWEST).to.be.closeTo(0.44 + (0.56 * 300) / 400, 1e-12);
 		});
 
 		it("is not above the grass with its top exactly on the band's top, and is 1 px above it", function () {
@@ -241,27 +242,33 @@ describe("ps glass: the luminous day glass (plan 3 task 7b, the user's pick)", f
 
 		it("measures against the scene's own box, wherever it sits on the page", function () {
 			const lower = {top: 120, height: 600};
-			const lowerEdge = 120 + 600 * GRASS_TOP;
+			const lowerEdge = 120 + 600 * GRASS_EDGE_LOWEST;
 			expect(composerAboveGrass({top: lowerEdge}, lower)).to.equal(false);
 			expect(composerAboveGrass({top: lowerEdge - 1}, lower)).to.equal(true);
 			// A composer lifted mid-scene (a touch keyboard: #viewport follows the visible band, the scene the layout viewport).
 			expect(composerAboveGrass({top: 400}, {top: 0, height: 844})).to.equal(true);
 		});
 
-		it("then reads the float tint, whose grounds are every ground the composer's are and the yurt's", function () {
-			const m = at(750, JUNE);
-			const all = sceneGrounds(m, paletteAt(m));
-			const composer = all.filter((g) => isBehind("composer", g));
-			expect(composer.length).to.be.greaterThan(0);
-			expect(composer.every((g) => isBehind("float", g))).to.equal(true);
-			expect(all.filter((g) => isBehind("float", g)).map((g) => g.area)).to.include.members([
-				"felt",
-				"door",
-				"band",
-				"hill1",
-				"tree",
-				"skyTop",
-			]);
+		it("needs the float tint over the yurt: at the composer's own tint the soft ink falls under 4.5 on the door, at the float tint every yurt ground holds 4.6", function () {
+			// A clear noon, and the worst moment the composer model found (a veiled door, stormy 1 Feb 08:30).
+			for (const m of [at(750, JUNE), at(510, 32, "storm")]) {
+				const all = sceneGrounds(m, paletteAt(m));
+				const tints = tintsOver(all);
+				const yurt = all.filter((g) => /^(felt|door|roof|crown|band|pool)/.test(g.area));
+				const door = yurt.find((g) => g.area === "door")!;
+				const where = `doy ${m.doy} ${m.minute} min ${m.weather}`;
+				expect(
+					contrast(DAY_GLASS_TEXT, throughDayGlass(door.hex, tints.composer)),
+					`${where}: the composer's ${tints.composer} over ${door.name}`
+				).to.be.below(4.5);
+
+				for (const g of yurt) {
+					expect(
+						contrast(DAY_GLASS_TEXT, throughDayGlass(g.hex, tints.float)),
+						`${where}: the float ${tints.float} over ${g.name}`
+					).to.be.at.least(TEXT_SOLVE);
+				}
+			}
 		});
 	});
 
