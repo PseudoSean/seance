@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import {contrast, luminance, mix} from "../../../client/js/scenes/ps/colour";
 import {type Moment} from "../../../client/js/scenes/ps/engine";
-import {AREAS, publishedFor} from "../../../client/js/scenes/ps/grounds";
+import {AREAS, INK_FAINT_HELD, publishedFor} from "../../../client/js/scenes/ps/grounds";
 import {paletteAt, type Palette} from "../../../client/js/scenes/ps/palette";
 import {
 	bodyGrounds,
@@ -461,6 +461,13 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 		const rule = rulesOf(css).find((r) => r.selector === `${LIGHT_ROOT} a`);
 		expect(rule, "the light treatment's link rule").to.not.equal(undefined);
 		expect(Object.fromEntries(rule!.decls)).to.include({"text-decoration": "underline"});
+	});
+
+	it("rules the words' treatment on the faint ink the column draws: grounds.ts's INK_FAINT_HELD is the generated --chat-fg-faint", function () {
+		const faint = rulesOf(messageBlock)
+			.find((r) => r.selector === "#chat .chat")!
+			.decls.find(([name]) => name === "--chat-fg-faint")![1];
+		expect(INK_FAINT_HELD).to.equal(faint);
 	});
 
 	it("keeps every rule-2 colour within 0.08 OKLCH lightness of the spec's", function () {

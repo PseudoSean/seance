@@ -52,7 +52,7 @@ export const INK_FAINT_HELD = "#38455c";
  * a clear day, so the words are white all day but on snowy days (the user's
  * pick "A", 2026-09-25).
  */
-export const ALPHA_HALO = Math.min(0.6, 0.156);
+export const ALPHA_HALO = Math.min(0.6, 0.1559);
 
 /** The grid the day's treatment is decided on: the generator's dense sweep's step, so every dense sample is a decision point. */
 export const SCHEDULE_STEP = 5;

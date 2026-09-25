@@ -54,7 +54,8 @@
 //    beside it.
 //
 // The recorded α per treatment is the lowest 10th percentile over every
-// phrase, face, ground and DPR (the samples left out).
+// phrase, face, ground and DPR (the samples left out), min(0.6, …), floored
+// to four decimals: a measurement may only make the check stricter.
 //
 // **Why a twin, and not the colour rule the plan first wrote down.** That
 // rule called a pixel core when it lay within 40 (max channel) of the text
@@ -761,13 +762,14 @@ export default async function run(page) {
 		minima[treatment] = {
 			p10: low.p10,
 			at: `${low.face} "${low.sample}" dpr ${low.dpr} ${low.ground} (${low.name})`,
-			records: Math.min(0.6, low.p10),
+			// Floored, never rounded up: the recorded strength may only understate the measured.
+			records: Math.floor(Math.min(0.6, low.p10) * 10000) / 10000,
 			sample: {p10: sample.p10, at: `${sample.face} dpr ${sample.dpr} ${sample.ground}`},
 		};
 		console.log(
-			`\nminimum ${treatment}: ${low.p10.toFixed(4)} at ${minima[treatment].at}; ` +
-				`min(0.6, measured) = ${minima[treatment].records.toFixed(4)}` +
-				` (the samples alone: ${sample.p10.toFixed(4)} at ${minima[treatment].sample.at})`
+			`\nminimum ${treatment}: ${low.p10.toFixed(6)} at ${minima[treatment].at}; ` +
+				`min(0.6, measured), floored = ${minima[treatment].records.toFixed(4)}` +
+				` (the samples alone: ${sample.p10.toFixed(6)} at ${minima[treatment].sample.at})`
 		);
 	}
 

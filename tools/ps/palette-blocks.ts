@@ -643,8 +643,8 @@ export function messageBlock(s: Solved): string {
 			: []),
 		" * The worst grounds by day, darkest first, through the halo:",
 		...c.worst.ink.map(groundLine),
-		" * The worst while the light changes and all night, brightest first, through",
-		" * the shadow:",
+		" * The worst in the light treatment (at any hour: dark ink holds only on",
+		" * snowy days), brightest first, through the shadow:",
 		...c.worst.light.map(groundLine),
 		...(c.lightColours === c.lightNicks && floors.nicks.solveTo === floors.colours.solveTo
 			? [

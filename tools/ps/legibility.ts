@@ -14,7 +14,8 @@
  * **The surfaces.** A word sits on one of two:
  * - `column`: the message column, straight on the scene, through its
  *   treatment's own layer (the halo by day; the shadow and outline while the
- *   light changes and all night) at the strength measured in rendered pixels,
+ *   light treatment, all day but where dark ink holds) at the strength
+ *   measured in rendered pixels,
  *   ALPHA_HALO or ALPHA_SHADOW;
  * - `glass`: the chrome, the glass tint (GLASS) composited over the scene,
  *   with no layer under the text. The backdrop blur is left out: it only
@@ -86,11 +87,11 @@ export {ALPHA_HALO, INK};
  * white words"): a faint second ring under B, eight 2px offsets at 28% black
  * (client/themes/ps.css). With it: **the shadow 0.5882** (Fraunces "it,", DPR
  * 1, over #ffffff; the samples alone 0.7046). The halo on the same phrases
- * reads 0.1560 (Mulish "it,", DPR 3, over #ffc478; the samples alone 0.2120):
+ * reads 0.1559 (Mulish "it,", DPR 3, over #ffc478; the samples alone 0.2119):
  * at that strength dark ink holds over the yurt's band and door at no hour
  * of any clear day. **The user chose "A"** (2026-09-25): record it, and let
  * the words be white all day wherever dark ink does not hold, which by this
- * measure is every day but a snowy one. ALPHA_HALO = min(0.6, 0.1560) lives
+ * measure is every day but a snowy one. ALPHA_HALO = min(0.6, 0.1559) lives
  * in client/js/scenes/ps/grounds.ts, beside the rule that runs on it.
  */
 export const ALPHA_SHADOW = Math.min(0.6, 0.5882);
@@ -182,7 +183,8 @@ export const LIGHT_ROOT = ':root[data-ps-text="light"] #chat .chat';
  * The message column's code boxes (code, pre, the monospace block, inline
  * monospace), which paint their own opaque surface, --ps-code-bg, rather than
  * the plains: by day :root's paper (#f4f9ff, what the box painted through
- * --composer-bg until now), while the light changes and all night the night
+ * --composer-bg until now), in the light treatment (all day but where dark
+ * ink holds, in practice snowy days) the night
  * glass's solid surface (spec §6). The --tok-* colours and --md-code-color
  * are held against this box, not the sky.
  */

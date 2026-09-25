@@ -890,7 +890,7 @@ describe("the ps theme's chrome keeps its floors on the solid panels and on the 
 		});
 	}
 
-	it("keeps every night wash on the glass visible, at least as visible as when it was chosen, and never vanishing over the darkest ground", function () {
+	it("keeps every night wash on the glass at least as visible as it measures over plan 3's grounds, and never under 1.02 over the darkest ground", function () {
 		// The contrast between the washed and the bare glass over the sparse sweep:
 		// its median at least each wash's own, and its lowest above 1.02. A wash
 		// toward the glass's own navy measured 1.000 over the darkest sky: it did
