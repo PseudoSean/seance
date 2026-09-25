@@ -3,17 +3,33 @@
 // app — sky, sun, moon and 190 stars (client/js/scenes/ps/scene.ts, through
 // the hook in client/js/themeScene.ts). The run then:
 //
+// - reads the type: all six font files (Mulish upright and italic, Fraunces;
+//   Latin and Latin Extended each) loaded, each drawing its text rather than
+//   leaving it to the fallback (the latin-ext trap, ps-theme.md §8) — the
+//   canvas widths the fonts were bundled with, and the fonts Chromium
+//   reports it drew the neighbour's italic join, its Latin Extended realname
+//   and line, and a Latin Extended query name in;
 // - walks the clock with a time-zone override — noon, 22:00, midnight and
 //   dusk (about 45 minutes after today's sunset) — and reads what the scene
 //   publishes on <html>: the light (day/night), the text over the plains
 //   (ink by day, white from dusk), the canvas colour, and the real colour of
 //   another user's message;
+// - reads the chrome (§6): the sidebar, header, user list and composer are
+//   glass — a blur over the day tint at noon, the night tint at 22:00 — and
+//   #status-bar-tint never blurs; the send glyph is the generated text
+//   accent; at 22:00 the idle channel names are the night soft ink and the
+//   open one the night ink; under reduced transparency the glass turns solid
+//   (a SKIP line, never a pass, where Chromium cannot emulate it); and the
+//   browser's theme-color is the sky's canvas, coffee's own colour after a
+//   switch, and the sky again after the switch back;
 // - hides and shows the page: the scene stops (its class, its SVG clocks and
 //   every CSS animation in it) and starts again, stays stopped under reduced
 //   motion, and a scene mounted into a hidden page starts stopped;
 // - follows the open conversation: channel, query, none (Settings);
 // - switches to coffee (the scene goes and leaves nothing on <html>) and
 //   back to ps (one scene again, not two);
+// - on a phone, at night, opens the drawer: night glass, on top of the
+//   scrim, not under it;
 // - and last blocks the scene's chunk and reloads: the daylight fallback
 //   stays, ink over it, and the console complains of the blocked request and
 //   nothing else — the hook's one warning, naming it.
@@ -37,6 +53,9 @@
 // - `#theme-scene{display:none!important}` — the mount check, the switch
 //   back to ps and the fallback check fail (and every "the scene runs", a
 //   hidden element having no animations).
+// The chrome's checks were watched failing on 2026-09-25 the same way, with
+// - `#sidebar{backdrop-filter:none!important}` — the sidebar's glass checks
+//   fail, at noon, at 22:00 and on the phone.
 //
 //   NODE_ENV=production corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/theme-ps.mjs
@@ -53,6 +72,16 @@
 
 const RUN = Date.now().toString(36);
 const NICK = `ps${RUN}`;
+/** The neighbour (see `neighbour`). */
+const PEER = `${NICK}n`;
+/**
+ * A name in Latin Extended, for the fonts' second files (the latin-ext trap:
+ * a face can load and still draw in the fallback). The ircd refuses it as a
+ * nick (432 Erroneous Nickname), so the neighbour carries it as its realname,
+ * which its join shows in italic, and says it in its line (upright); and a
+ * query of that name puts it in Fraunces in the sidebar.
+ */
+const EXT_NAME = "Łucja";
 const BASE = `http://localhost:${process.env.SEANCE_HTTP_PORT ?? "8021"}/`;
 const PORT = process.env.SEANCE_IRC_PORT ?? "8067";
 
@@ -289,9 +318,10 @@ const hhmm = (minute) =>
  * WebSocket, one line per frame, as tools/irc-ws-probe.mjs speaks it), so the
  * message column has another user's line to read the text colour off — our
  * own lines are dimmed by style.css's `.self` rule, and the rig keeps no
- * history of a channel nobody is in.
+ * history of a channel nobody is in. Its realname, when it differs from the
+ * nick, is shown in its join (extended-join), in italic.
  */
-async function neighbour(nick) {
+async function neighbour(nick, realname = nick) {
 	const ws = new WebSocket(`ws://127.0.0.1:${PORT}/`, ["text.ircv3.net"]);
 	ws.binaryType = "arraybuffer";
 	const text = (data) => (typeof data === "string" ? data : new TextDecoder().decode(data));
@@ -315,7 +345,7 @@ async function neighbour(nick) {
 			}
 		};
 		ws.send(`NICK ${nick}`);
-		ws.send(`USER ${nick} 0 * :${nick}`);
+		ws.send(`USER ${nick} 0 * :${realname}`);
 	});
 	ws.send("JOIN #seance");
 	return {
@@ -355,8 +385,9 @@ const VISIBILITY = (state) => `(() => {
 /**
  * The scene and what it publishes, in one read. `ink` is the colour of
  * someone else's message text (the neighbour's), null when there is none;
- * `running` counts the CSS animations in the scene that are playing; the
- * clock is the page's own, under whatever time zone is emulated.
+ * `running` counts the CSS animations in the scene that are playing; `meta`
+ * is the browser's theme-color; the clock is the page's own, under whatever
+ * time zone is emulated.
  */
 const SCENE_STATE = `(() => {
 	const s = document.getElementById("theme-scene"), h = document.documentElement;
@@ -378,6 +409,7 @@ const SCENE_STATE = `(() => {
 		text: h.dataset.psText,
 		canvas: h.style.getPropertyValue("--canvas-bg-color"),
 		skyTop: s.style.getPropertyValue("--ps-sky-top"),
+		meta: document.querySelector('meta[name="theme-color"]').content,
 		ink: content ? getComputedStyle(content).color : null,
 		minute: d.getHours() * 60 + d.getMinutes(),
 		doy: (Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(d.getFullYear(), 0, 0)) / 86400000,
@@ -430,6 +462,270 @@ function checkMounted(page, s, where) {
 			s.moon
 	);
 }
+
+/** The neighbour's join line, shown on its own (not condensed). */
+const PEER_JOIN = `#chat .msg[data-type="join"][data-from="${PEER}"]`;
+/** The query named EXT_NAME in the sidebar. */
+const EXT_QUERY_ROW = `.channel-list-item[data-type="query"][data-name="${EXT_NAME}"]`;
+
+/**
+ * The theme's six font files as `document.fonts` has them: family, style,
+ * which block (Latin, U+0000-00FF first; Latin Extended, U+0100-02BA first)
+ * and status.
+ */
+const FONT_FACES = `[...document.fonts]
+	.filter((f) => /^"?(Mulish|Fraunces)"?$/.test(f.family))
+	.map((f) => {
+		const first = f.unicodeRange.split(",")[0].trim();
+		return {
+			family: f.family.replace(/"/g, ""),
+			style: f.style,
+			block: /^U\\+0+-0*FF$/i.test(first) ? "latin" : /^U\\+0*100-/i.test(first) ? "latin-ext" : first,
+			status: f.status,
+		};
+	})`;
+
+/**
+ * The rendered proof the fonts were bundled with (tools/ps/fetch-fonts.mjs),
+ * as it was first run: each face against a fallback the same text would
+ * otherwise draw in, on a canvas. A pair of equal widths means the bundled
+ * face did not draw the text.
+ */
+const FONT_WIDTHS = `(async () => {
+	await document.fonts.ready;
+	const c = document.createElement("canvas").getContext("2d");
+	const w = (font, s) => ((c.font = font), c.measureText(s).width);
+	const probe = {latin: "Handgloves 0123", ext: "Łucja Ősz ăĕ şţ"};
+	return {
+		mulish: [w("500 20px Mulish", probe.latin), w("500 20px serif", probe.latin)],
+		mulishExt: [w("500 20px Mulish", probe.ext), w("500 20px serif", probe.ext)],
+		mulishItalic: [w("italic 500 20px Mulish", probe.ext), w("italic 500 20px serif", probe.ext)],
+		fraunces: [w("700 20px Fraunces", probe.latin), w("700 20px monospace", probe.latin)],
+		frauncesExt: [w("700 20px Fraunces", probe.ext), w("700 20px monospace", probe.ext)],
+	};
+})()`;
+
+/** The element whose own text (a direct text child) first contains
+ * `needle`, under the elements `scope` selects; null when there is none. */
+const TEXT_HOLDER = (scope, needle) => `(() => {
+	for (const root of document.querySelectorAll(${JSON.stringify(scope)})) {
+		const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+		for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+			if (n.data.includes(${JSON.stringify(needle)})) return n.parentElement;
+		}
+	}
+	return null;
+})()`;
+
+/**
+ * The fonts Chromium drew an element's own text in (CSS.getPlatformFontsForNode,
+ * which counts the element's direct text children): `document.fonts` can say
+ * a face has loaded while these glyphs went to the fallback, which shows here.
+ * Needs the DOM and CSS domains enabled; null when `expression` finds nothing.
+ */
+async function drawnFonts(page, expression) {
+	const {result} = await page.send("Runtime.evaluate", {expression, returnByValue: false});
+
+	if (!result.objectId) {
+		return null;
+	}
+
+	const {nodeId} = await page.send("DOM.requestNode", {objectId: result.objectId});
+	const {fonts} = await page.send("CSS.getPlatformFontsForNode", {nodeId});
+	return fonts;
+}
+
+const describeFonts = (fonts) =>
+	fonts
+		? fonts
+				.map(
+					(f) =>
+						`${f.familyName} ${f.postScriptName}${f.isCustomFont ? "" : " (system)"} ×${
+							f.glyphCount
+						}`
+				)
+				.join(", ")
+		: "nothing";
+
+/**
+ * Some text of the page is set in the family `family` (italic or not), and
+ * drawn by that bundled face: its computed style says so, and so does every
+ * font Chromium drew it in. A missing italic file would draw the upright one
+ * slanted, whose name says no italic.
+ */
+async function checkDrawnIn(page, label, holder, family, italic) {
+	const css = await page.evaluate(`(() => {
+		const e = ${holder};
+		if (!e) return null;
+		const cs = getComputedStyle(e);
+		return {style: cs.fontStyle, family: cs.fontFamily};
+	})()`);
+	const fonts = await drawnFonts(page, holder);
+	const re = new RegExp(`^${family}\\b`);
+	page.check(
+		`fonts: ${label} (font-style ${css?.style}, font-family ${
+			css?.family
+		}; drawn in ${describeFonts(fonts)})`,
+		css !== null &&
+			css.style === (italic ? "italic" : "normal") &&
+			re.test(css.family) &&
+			fonts !== null &&
+			fonts.length > 0 &&
+			fonts.every(
+				(f) =>
+					f.isCustomFont &&
+					re.test(f.familyName) &&
+					/italic/i.test(f.postScriptName) === italic
+			)
+	);
+}
+
+/** The chrome's glass surfaces (docs/projects/ps-theme.md §6). */
+const GLASS = ["#sidebar", "#chat .header", "#chat .userlist", "#form"];
+/** The glass tints' colours, day and night (ps.css, the chrome section). */
+const DAY_GLASS = "255, 251, 244";
+const NIGHT_GLASS = "12, 17, 32";
+
+/**
+ * The chrome in one read: each glass surface's background and backdrop
+ * filter, #status-bar-tint's, whether reduced transparency is in force, and
+ * the send glyph's colour beside the generated text accent it should be.
+ */
+const CHROME = `(() => {
+	const read = (el) => {
+		if (!el) return null;
+		const cs = getComputedStyle(el);
+		return {bg: cs.backgroundColor, blur: cs.backdropFilter};
+	};
+	return {
+		glass: Object.fromEntries(${JSON.stringify(
+			GLASS
+		)}.map((s) => [s, read(document.querySelector(s))])),
+		tint: read(document.getElementById("status-bar-tint")),
+		reducedTransparency: matchMedia("(prefers-reduced-transparency: reduce)").matches,
+		accent: getComputedStyle(document.getElementById("form")).getPropertyValue("--ps-g-accent-text").trim(),
+		send: getComputedStyle(document.querySelector("#form #submit"), "::before").color,
+	};
+})()`;
+
+/** `rgb(r, g, b)` / `rgba(r, g, b, a)` as {rgb: "r, g, b", a}; null otherwise. */
+function rgba(s) {
+	const m = /^rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)$/.exec(s ?? "");
+	return m ? {rgb: `${m[1]}, ${m[2]}, ${m[3]}`, a: m[4] === undefined ? 1 : Number(m[4])} : null;
+}
+
+/** `#rrggbb` as the `rgb(r, g, b)` a computed colour is written in. */
+function hexRgb(hex) {
+	const m = /^#([0-9a-f]{6})$/i.exec(hex);
+
+	if (!m) {
+		return `not a #rrggbb colour: ${hex}`;
+	}
+
+	const n = parseInt(m[1], 16);
+	return `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`;
+}
+
+/** Glass: a blur, over a tint of `rgb` that lets the plains through. */
+function isGlass(surface, rgb) {
+	const c = rgba(surface?.bg);
+	return !!c && c.rgb === rgb && c.a < 1 && /blur\(/.test(surface.blur);
+}
+
+/** Every glass surface is glass of the `rgb` tint. */
+function checkGlass(page, chrome, where, rgb) {
+	for (const selector of GLASS) {
+		const s = chrome.glass[selector];
+		page.check(
+			`${where}: ${selector} is glass over rgb(${rgb}) (${
+				s ? `${s.bg}, ${s.blur}` : "missing"
+			})`,
+			isGlass(s, rgb)
+		);
+	}
+}
+
+/** The send glyph is the generated text accent (ps.css's glass palette). */
+function checkAccent(page, chrome, where) {
+	page.check(
+		`${where}: the send glyph is the text accent ${chrome.accent} (${chrome.send})`,
+		chrome.send === hexRgb(chrome.accent)
+	);
+}
+
+/**
+ * The sidebar's channel names: an idle one (a connected channel, not open,
+ * highlighted, muted or under the pointer) and the open one, with the soft
+ * ink the idle one should be in.
+ */
+const RAIL_NAMES = `(() => {
+	const rows = [...document.querySelectorAll('#sidebar .channel-list-item[data-type="channel"]')];
+	const name = (row) => row && {row: row.dataset.name, color: getComputedStyle(row.querySelector(".name")).color};
+	return {
+		soft: getComputedStyle(document.getElementById("sidebar")).getPropertyValue("--ps-g-soft").trim(),
+		idle: name(rows.find((r) => !r.matches(".active, .has-highlight, .is-muted, .not-connected, .parted-channel, :hover"))),
+		open: name(rows.find((r) => r.matches(".active"))),
+	};
+})()`;
+
+/** The night glass's ink (spec §6), which the open row's name is written in. */
+const NIGHT_INK = "rgb(233, 238, 247)";
+
+/**
+ * Under reduced transparency the glass is solid: no blur, an opaque fill.
+ * Chromium may not emulate the feature; then the check is skipped, loudly,
+ * rather than passed. Lifted again at the end, and the glass of the `rgb`
+ * tint must be back.
+ */
+async function checkReducedTransparency(page, where, rgb) {
+	await page.send("Emulation.setEmulatedMedia", {
+		features: [{name: "prefers-reduced-transparency", value: "reduce"}],
+	});
+	await page.sleep(TEXT_EASE_MS); // the glass's colour flips over --ps-flip
+	const reduced = await page.evaluate(CHROME);
+
+	if (!reduced.reducedTransparency) {
+		console.log(
+			`  SKIP ${where}, reduced transparency: matchMedia("(prefers-reduced-transparency: reduce)") ` +
+				`stays false under Emulation.setEmulatedMedia — this Chromium does not emulate the feature`
+		);
+	} else {
+		for (const selector of GLASS) {
+			const s = reduced.glass[selector];
+			const c = rgba(s?.bg);
+			page.check(
+				`${where}, reduced transparency: ${selector} is solid (${
+					s ? `${s.bg}, ${s.blur}` : "missing"
+				})`,
+				!!c && c.a === 1 && s.blur === "none"
+			);
+		}
+	}
+
+	await page.send("Emulation.setEmulatedMedia", {features: []});
+	await page.sleep(TEXT_EASE_MS);
+	const back = await page.evaluate(CHROME);
+	page.check(
+		`${where}: reduced transparency lifted, the glass is back (${GLASS.map(
+			(s) => back.glass[s]?.blur
+		).join(" | ")})`,
+		GLASS.every((s) => isGlass(back.glass[s], rgb))
+	);
+}
+
+/** The phone's sidebar: its glass, and whether it is on top at its centre. */
+const DRAWER = `(() => {
+	const s = document.getElementById("sidebar");
+	const r = s.getBoundingClientRect();
+	const cs = getComputedStyle(s);
+	const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+	return {
+		bg: cs.backgroundColor,
+		blur: cs.backdropFilter,
+		onTop: !!hit && s.contains(hit),
+		hit: hit ? hit.tagName.toLowerCase() + (hit.id ? "#" + hit.id : "") + [...hit.classList].map((c) => "." + c).join("") : "nothing",
+	};
+})()`;
 
 async function openAppearance(page) {
 	await page.click(`#footer button.settings`);
@@ -499,9 +795,21 @@ export default async function run(page) {
 	await page.waitFor(`document.querySelector("#chat .msg")`, {label: "the join burst"});
 	await page.sleep(1000); // let the join burst and the catch-up settle
 
-	const peer = await neighbour(`${NICK}n`);
+	// A line of our own first: joins are condensed by default, and the
+	// neighbour's must stand alone to show its hostmask and realname, not
+	// fold into the join burst's last event.
+	await sendLine(page, `waiting on the plains ${RUN}`);
+	await page.waitFor(`!document.querySelector("#chat .msg.pending")`, {
+		label: "our line before the neighbour",
+	});
+
+	const peer = await neighbour(PEER, EXT_NAME);
 	peer.say(`hello from the neighbour ${RUN}`);
+	peer.say(`${EXT_NAME} says hello too ${RUN}`);
 	await page.waitFor(OTHERS_LINE, {label: "the neighbour's line"});
+	await page.waitFor(`document.querySelector('${PEER_JOIN} .realname')`, {
+		label: "the neighbour's join, on its own, with its realname",
+	});
 
 	// ---- pick ps from Appearance
 
@@ -536,6 +844,87 @@ export default async function run(page) {
 	// browsers).
 	checkNoAnimals(page, await animalFiles(page, "the theme's subresources recorded"), "#seance");
 
+	// ---- the fonts
+	//
+	// Every one of the six files has text of its own on the page: the
+	// neighbour's join (its hostmask and its realname, EXT_NAME, in italic),
+	// its line (EXT_NAME upright), and a query called EXT_NAME, whose name the
+	// sidebar sets in Fraunces. Each face must have loaded, and — the latin-ext
+	// trap — each must have drawn that text.
+
+	await sendLine(page, `/query ${EXT_NAME}`);
+	await page.waitFor(`document.querySelector('${EXT_QUERY_ROW}')`, {
+		label: `the query ${EXT_NAME} in the sidebar`,
+	});
+	await openSeance(page, `back in #seance from ${EXT_NAME}`);
+	await page.evaluate(`document.fonts.ready.then(() => true)`);
+	await page.sleep(500);
+
+	const faces = await page.evaluate(FONT_FACES);
+
+	for (const [family, style] of [
+		["Mulish", "normal"],
+		["Mulish", "italic"],
+		["Fraunces", "normal"],
+	]) {
+		for (const block of ["latin", "latin-ext"]) {
+			const face = faces.filter(
+				(f) => f.family === family && f.style === style && f.block === block
+			);
+			page.check(
+				`fonts: ${family} ${style}, ${block}, is loaded (${
+					face.map((f) => f.status).join(", ") || "not declared"
+				})`,
+				face.length === 1 && face[0].status === "loaded"
+			);
+		}
+	}
+
+	const widths = await page.evaluate(FONT_WIDTHS);
+
+	for (const [probe, [own, fallback]] of Object.entries(widths)) {
+		page.check(
+			`fonts: ${probe} measures unlike its fallback (${own.toFixed(2)} vs ${fallback.toFixed(
+				2
+			)})`,
+			own !== fallback
+		);
+	}
+
+	await page.send("DOM.enable");
+	await page.send("DOM.getDocument", {depth: 0});
+	await page.send("CSS.enable");
+	await checkDrawnIn(
+		page,
+		"the neighbour's join shows its hostmask in Mulish italic",
+		TEXT_HOLDER(`${PEER_JOIN} .hostmask`, "@"),
+		"Mulish",
+		true
+	);
+	await checkDrawnIn(
+		page,
+		`the neighbour's join shows its realname, ${EXT_NAME}, in Mulish italic`,
+		TEXT_HOLDER(`${PEER_JOIN} .realname`, EXT_NAME),
+		"Mulish",
+		true
+	);
+	await checkDrawnIn(
+		page,
+		`the neighbour's line says ${EXT_NAME} in Mulish`,
+		TEXT_HOLDER(`#chat .msg[data-type="message"][data-from="${PEER}"] .content`, EXT_NAME),
+		"Mulish",
+		false
+	);
+	await checkDrawnIn(
+		page,
+		`the sidebar names the query ${EXT_NAME} in Fraunces`,
+		TEXT_HOLDER(`${EXT_QUERY_ROW} .name`, EXT_NAME),
+		"Fraunces",
+		false
+	);
+	await page.send("CSS.disable");
+	await page.send("DOM.disable");
+
 	// ---- messages: the fade, no glitter, the reaction's pop
 
 	const anim = await page.evaluate(
@@ -543,9 +932,12 @@ export default async function run(page) {
 	);
 	page.check(`messages fade in (${anim})`, anim.includes("ps-fade"));
 
+	// The neighbour's own line, not the first .time in the log: that can be a
+	// condensed group's empty one, stretched to a two-line summary beside it
+	// (the rig's #seance history is whatever earlier runs left).
 	const timeMetrics = await page.evaluate(
 		`(() => {
-			const el = document.querySelector("#chat .msg .time");
+			const el = document.querySelector('#chat .msg[data-type="message"][data-from="${PEER}"] .time');
 			const cs = getComputedStyle(el);
 			return [el.getBoundingClientRect().height, parseFloat(cs.lineHeight)];
 		})()`
@@ -656,6 +1048,22 @@ export default async function run(page) {
 		`noon: the canvas is the sky's top (${noon.canvas} = ${noon.skyTop})`,
 		noon.canvas !== "" && noon.canvas === noon.skyTop
 	);
+	// The browser's own bar runs on into the sky (scene.ts themeColorFor).
+	page.check(
+		`noon: theme-color is the canvas (${noon.meta} = ${noon.canvas})`,
+		noon.canvas !== "" && noon.meta === noon.canvas
+	);
+
+	// The chrome floats over the plains as day glass; the iOS status bar's
+	// tint is never blurred (iOS would not sample it: CLAUDE.md, "The iOS
+	// status bar").
+	const noonChrome = await page.evaluate(CHROME);
+	checkGlass(page, noonChrome, "noon", DAY_GLASS);
+	page.check(
+		`noon: #status-bar-tint has no backdrop filter (${noonChrome.tint?.blur})`,
+		noonChrome.tint?.blur === "none"
+	);
+	checkAccent(page, noonChrome, "noon");
 	await page.screenshot("ps-noon");
 
 	for (const hour of [22, 0]) {
@@ -668,7 +1076,33 @@ export default async function run(page) {
 			`${hhmm(s.minute)}: the canvas is the sky's top (${s.canvas} = ${s.skyTop})`,
 			s.canvas !== "" && s.canvas === s.skyTop
 		);
+
+		if (hour === 22) {
+			// Night glass, and the chrome's words in the night glass's inks.
+			const at = hhmm(s.minute);
+			const night = await page.evaluate(CHROME);
+			checkGlass(page, night, at, NIGHT_GLASS);
+			checkAccent(page, night, at);
+			const rail = await page.evaluate(RAIL_NAMES);
+			page.check(
+				`${at}: an idle channel name is the night soft ink ${rail.soft} (${
+					rail.idle ? `${rail.idle.row} ${rail.idle.color}` : "no idle channel row"
+				})`,
+				!!rail.idle && rail.idle.color === hexRgb(rail.soft)
+			);
+			page.check(
+				`${at}: the open channel's name is the night ink ${NIGHT_INK} (${
+					rail.open ? `${rail.open.row} ${rail.open.color}` : "no open channel row"
+				})`,
+				!!rail.open && rail.open.color === NIGHT_INK
+			);
+		}
+
 		await page.screenshot(`ps-${String(hour).padStart(2, "0")}00`);
+
+		if (hour === 22) {
+			await checkReducedTransparency(page, hhmm(s.minute), NIGHT_GLASS);
+		}
 	}
 
 	// Dusk: 45 minutes after today's sunset, by the engine's own formula. A
@@ -707,11 +1141,13 @@ export default async function run(page) {
 
 	// ---- the view follows the conversation
 
+	// Its own query: EXT_NAME's is in the sidebar too.
+	const QUERY_ROW = `.channel-list-item[data-type="query"][data-name="${NICK}x"]`;
 	await sendLine(page, `/query ${NICK}x`);
-	await page.waitFor(`document.querySelector('.channel-list-item[data-type="query"]')`, {
+	await page.waitFor(`document.querySelector('${QUERY_ROW}')`, {
 		label: "the query in the sidebar",
 	});
-	await page.click(`.channel-list-item[data-type="query"]`);
+	await page.click(QUERY_ROW);
 	await page.sleep(300);
 	const inQuery = await page.evaluate(SCENE_STATE);
 	page.check(`a query: the scene's view is query (${inQuery.view})`, inQuery.view === "query");
@@ -740,6 +1176,11 @@ export default async function run(page) {
 		`coffee: nothing left on <html> (light ${coffee.light}, text ${coffee.text}, canvas "${coffee.canvas}")`,
 		coffee.light === undefined && coffee.text === undefined && coffee.canvas === ""
 	);
+	// coffee's own themeColor (client/js/configuration.ts), not the sky's.
+	page.check(
+		`coffee: theme-color is coffee's own #1a1816 (${coffee.meta})`,
+		coffee.meta.toLowerCase() === "#1a1816"
+	);
 
 	// A scene mounted into a hidden page starts stopped; showing the page
 	// starts it.
@@ -750,7 +1191,13 @@ export default async function run(page) {
 	checkStopped(page, back, "ps again, applied while hidden");
 	await page.evaluate(VISIBILITY("visible"));
 	await page.sleep(300);
-	checkRunning(page, await page.evaluate(SCENE_STATE), "ps again, shown");
+	const shown = await page.evaluate(SCENE_STATE);
+	checkRunning(page, shown, "ps again, shown");
+	// Only a visible scene ticks, so only now is theme-color the sky again.
+	page.check(
+		`ps again, shown: theme-color follows the sky again (${shown.meta} = ${shown.canvas})`,
+		shown.canvas !== "" && shown.meta === shown.canvas
+	);
 	await closeSettings(page);
 	await openSeance(page, "back in #seance after the switches");
 
@@ -782,6 +1229,32 @@ export default async function run(page) {
 
 	await page.sleep(800);
 	await page.screenshot("ps-phone-noon");
+
+	// ---- the phone at night, the drawer open: night glass over the plains
+
+	// The scrim starts at the drawer's edge (ps.css, the phone block), so the
+	// drawer frosts the plains themselves, not a dimmed grey.
+	await atHour(page, 22);
+	await page.click(`#chat .header .lt`);
+	await page.waitFor(`document.getElementById("viewport").classList.contains("menu-open")`, {
+		label: "the phone's sidebar open",
+	});
+	await page.sleep(700); // the drawer's slide
+	const drawer = await page.evaluate(DRAWER);
+	page.check(
+		`a phone at night: the open drawer is night glass (${drawer.bg}, ${drawer.blur})`,
+		isGlass(drawer, NIGHT_GLASS)
+	);
+	page.check(
+		`a phone at night: the drawer is on top, not under the scrim (${drawer.hit})`,
+		drawer.onTop
+	);
+	await page.screenshot("ps-phone-night-sidebar");
+	await page.evaluate(`document.getElementById("sidebar-overlay").click()`);
+	await page.waitFor(`!document.getElementById("viewport").classList.contains("menu-open")`, {
+		label: "the phone's sidebar closed",
+	});
+
 	await page.send("Emulation.setDeviceMetricsOverride", {
 		width: Number(page.opt("width", 1280)),
 		height: Number(page.opt("height", 900)),
