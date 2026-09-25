@@ -77,8 +77,9 @@ export type Light = "day" | "night";
 
 /**
  * The glass (spec §6): its tint, the spec's opacity and the most the
- * generator may raise it to (Global Constraints, pre-ruled fix 1), and the
- * spec-fixed colours drawn on it.
+ * generator may raise it to (Global Constraints, pre-ruled fix 1), the
+ * spec-fixed colours drawn on it, and its solid surface (the opaque panels,
+ * which draw the same colours).
  */
 export const GLASS = {
 	day: {
@@ -88,6 +89,7 @@ export const GLASS = {
 		ink: "#1f2a3d",
 		soft: "#55627a",
 		accent: "#c2562b",
+		solid: "#fbf8f2",
 	},
 	night: {
 		tint: "#0c1120",
@@ -96,6 +98,7 @@ export const GLASS = {
 		ink: "#e9eef7",
 		soft: "#a7b3c8",
 		accent: "#d9784a",
+		solid: "#121827",
 	},
 } as const;
 

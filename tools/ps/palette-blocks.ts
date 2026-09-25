@@ -5,8 +5,8 @@
  * clears its floor on the worst ground of its surface.
  * - `ps:message-palette`: every text colour the message column reads, in
  *   both treatments.
- * - `ps:glass-palette`: the glass tint's opacity, its soft ink and badge fill,
- *   and the chrome's two nick sweeps.
+ * - `ps:glass-palette`: the glass tint's opacity, its soft ink, badge fill and
+ *   text accent, and the chrome's two nick sweeps.
  *
  *   npx tsx tools/ps/palette-blocks.ts            print both blocks
  *   npx tsx tools/ps/palette-blocks.ts --write    write them into client/themes/ps.css
@@ -42,6 +42,15 @@
  * - The badge is text on a fill. Its white numeral is held at 4.5:1 on
  *   --ps-g-badge, the accent solved darker where it must be. The fill itself
  *   has no mark floor.
+ * - **The user chose the text accent** (2026-09-24, decision 1A: "i will
+ *   accept your recommendations on these"). The spec accent reads 2.97:1 by
+ *   day and 2.63:1 at night on the glass, short of the floor for text and
+ *   for the marks that must read. The chrome writes and marks with
+ *   --ps-g-accent-text instead: the accent's hue and chroma, its lightness
+ *   solved like a nick's against the worst glass ground, held at 4.5:1 over
+ *   every glass ground and on the solid panel. It is past rule 2's 0.08 on
+ *   purpose, by the user's decision; the spec accent stays for the open row's
+ *   marker, the caret, the focus glow and the tints.
  * - **The user chose LIGHT_SWEEP "names-large"** (2026-09-24, "names-large is
  *   easiest to read"). **Its guard:** below the default font-size step the
  *   names are not large text, so the block also writes the `sky` set there,
@@ -150,23 +159,22 @@ export function nickBases(): string[] {
 /**
  * The code highlighter's tokens, solved in both treatments against the code
  * box they are drawn in (CODE_BOX, written as --ps-code-bg), never the plains:
- * the box is opaque. Their bases are :root's own values, read from the tokens
- * section.
+ * the box is opaque. Their bases are plan 1's :root values, fixed here like
+ * SEMANTIC's: ps.css's tokens section now holds the chrome's own code colours
+ * (creama.css's by day, coffee.css's at night, for code outside the column),
+ * which are not the column's.
  */
-function codeTokens(css: string): Array<{names: string[]; base: string}> {
-	const from = css.indexOf("/* ---- tokens ---- */");
-	const tokens = css.slice(from, css.indexOf("/* ---- ", from + 1));
-	const out = [...tokens.matchAll(/^\t(--tok-[a-z]+): (#[0-9a-f]{6});$/gm)].map((m) => ({
-		names: [m[1]],
-		base: m[2],
-	}));
-
-	if (from < 0 || out.length === 0) {
-		throw new Error("no --tok-* tokens in ps.css's tokens section");
-	}
-
-	return out;
-}
+const CODE: Array<{names: string[]; base: string}> = [
+	{names: ["--tok-comment"], base: "#6b7fa0"},
+	{names: ["--tok-keyword"], base: "#b9376b"},
+	{names: ["--tok-string"], base: "#1f7354"},
+	{names: ["--tok-number"], base: "#2160c8"},
+	{names: ["--tok-function"], base: "#6f4fc9"},
+	{names: ["--tok-operator"], base: "#b9376b"},
+	{names: ["--tok-punctuation"], base: "#4d6187"},
+	{names: ["--tok-tag"], base: "#1f7354"},
+	{names: ["--tok-attr"], base: "#7040c8"},
+];
 
 /** The colour at OKLCH lightness L, pulling chroma in until it fits sRGB. */
 function at(L: number, C: number, h: number): string {
@@ -317,6 +325,8 @@ export interface GlassSolved {
 	alpha: number;
 	soft: Move;
 	badge: {was: string; now: string; ratio: number};
+	/** The text accent; `ratio` is its lowest on the glass, `solid` its ratio on the solid panel. */
+	accentText: Move & {solid: number};
 	nicks: string[];
 	/** The worst five grounds under the glass at `alpha`, worst first. */
 	worst: CheckedGround[];
@@ -396,10 +406,33 @@ function solveGlass(light: Light, raw: CheckedGround[]): GlassSolved {
 		contrast(spec.accent, "#ffffff") >= FLOOR
 			? spec.accent
 			: solve(spec.accent, "ink", "#ffffff");
+
+	// The text accent (the user's decision 1A): the accent solved as a nick is.
+	const accent = solve(spec.accent, text, worst.hex);
+	hold(accent, grounds, TEXT, `${light} glass text accent`);
+	const onSolid = contrast(accent, spec.solid);
+
+	if (onSolid < TEXT) {
+		throw new Error(
+			`rule 3: the ${light} text accent ${accent} is ${onSolid.toFixed(3)}:1 on the solid ${
+				spec.solid
+			}`
+		);
+	}
+
+	const onGlass = lowest(accent, grounds);
 	return {
 		alpha,
 		soft,
 		badge: {was: spec.accent, now: badge, ratio: contrast(badge, "#ffffff")},
+		accentText: {
+			was: spec.accent,
+			now: accent,
+			dL: hexToOklch(accent)[0] - hexToOklch(spec.accent)[0],
+			ratio: onGlass.ratio,
+			ground: onGlass.ground,
+			solid: onSolid,
+		},
 		nicks,
 		worst: worstFive(text, grounds),
 	};
@@ -431,7 +464,7 @@ function duskPin(): {where: string; dark: number} {
 }
 
 /** Solve both blocks against the dense sweep. */
-export function solvePalettes(css: string, options: Partial<Options> = {}): Solved {
+export function solvePalettes(options: Partial<Options> = {}): Solved {
 	const sweep = options.sweep ?? LIGHT_SWEEP;
 	const keep = options.keep ?? (() => true);
 	const all = checkedGrounds("dense");
@@ -475,13 +508,13 @@ export function solvePalettes(css: string, options: Partial<Options> = {}): Solv
 		"--chat-fg-faint": faint.now,
 		"--ps-code-bg": CODE_BOX.ink,
 		...solveAll(SEMANTIC, "ink", inkWorst.hex),
-		...solveAll(codeTokens(css), "ink", CODE_BOX.ink),
+		...solveAll(CODE, "ink", CODE_BOX.ink),
 	};
 	const light = {
 		...FIXED.light,
 		"--ps-code-bg": CODE_BOX.light,
 		...solveAll(SEMANTIC, "light", lightColours.hex, floors.colours.solveTo),
-		...solveAll(codeTokens(css), "light", CODE_BOX.light),
+		...solveAll(CODE, "light", CODE_BOX.light),
 	};
 	const bases = nickBases();
 	const nicks = {
@@ -650,6 +683,11 @@ export function glassBlock(s: Solved): string {
 			` *     badge ${
 				x.badge.was === x.badge.now ? x.badge.now : `${x.badge.was} → ${x.badge.now}`
 			} (white on it ${x.badge.ratio.toFixed(2)}:1)`,
+			` *     text accent ${x.accentText.was} → ${x.accentText.now} (OKLCH L ${signed(
+				x.accentText.dL
+			)}; ${x.accentText.ratio.toFixed(2)}:1 on the glass, ${x.accentText.solid.toFixed(
+				2
+			)}:1 on the solid)`,
 		];
 	};
 
@@ -661,11 +699,14 @@ export function glassBlock(s: Solved): string {
 		" * hold 4.5:1 on every ground behind it in the dense sweep (the sky and the",
 		" * bodies, the tint composited over them, the blur left out); the soft ink,",
 		" * moved under rule 2 where the cap was not enough; the badge's fill, the",
-		" * accent solved so its white numeral holds 4.5:1; and the chrome's two nick",
-		" * sweeps, solved to 4.6 (the message column's own nick rules, in the block",
-		" * above, are more specific and win inside the column). The active-row",
-		" * marker keeps the spec accent and has no 3:1 floor (ruling 2026-09-24: a",
-		" * redundant cue beside the selected fill and the full ink).",
+		" * accent solved so its white numeral holds 4.5:1; the text accent, the",
+		" * accent's hue and chroma solved like a nick for the chrome's links, button",
+		" * labels and the marks that must read, held on the glass and the solid (the",
+		" * user's decision, 2026-09-24); and the chrome's two nick sweeps, solved to",
+		" * 4.6 (the message column's own nick rules, in the block above, are more",
+		" * specific and win inside the column). The active-row marker keeps the spec",
+		" * accent and has no 3:1 floor (ruling 2026-09-24: a redundant cue beside",
+		" * the selected fill and the full ink).",
 		...state("day"),
 		...state("night"),
 		" * Pinned for the floors test (plan 2's Review Focus 1 and 2):",
@@ -683,12 +724,14 @@ export function glassBlock(s: Solved): string {
 		`\t--ps-g-tint-a: ${s.glass.day.alpha};`,
 		`\t--ps-g-soft: ${s.glass.day.soft.now};`,
 		`\t--ps-g-badge: ${s.glass.day.badge.now};`,
+		`\t--ps-g-accent-text: ${s.glass.day.accentText.now};`,
 		"}",
 		"",
 		':root[data-ps-light="night"] {',
 		`\t--ps-g-tint-a: ${s.glass.night.alpha};`,
 		`\t--ps-g-soft: ${s.glass.night.soft.now};`,
 		`\t--ps-g-badge: ${s.glass.night.badge.now};`,
+		`\t--ps-g-accent-text: ${s.glass.night.accentText.now};`,
 		"}",
 		"",
 		...s.glass.day.nicks.map((hex, i) => `.user.color-${i + 1} { color: ${hex}; }`),
@@ -755,7 +798,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
 	}
 
 	const css = readFileSync(CSS_PATH, "utf8");
-	const solved = solvePalettes(css, {sweep});
+	const solved = solvePalettes({sweep});
 	const next = withBlocks(css, solved);
 
 	if (out) {

@@ -4,14 +4,14 @@
  * (client/js/themeScene.ts). It builds its elements once, then once a minute
  * (and whenever the page becomes visible) writes the engine's and the
  * palette's answer as custom properties on its root, and publishes on <html>
- * the four values the chrome reads. All motion is CSS or SVG animation; no
- * script runs per frame. A hidden page's scene is stopped outright. No Vue,
- * no store; the markup below is constant, and nothing user-supplied is ever
- * written into it.
+ * the four values the chrome reads, and the hour's sky as the browser's
+ * `theme-color`. All motion is CSS or SVG animation; no script runs per
+ * frame. A hidden page's scene is stopped outright. No Vue, no store; the
+ * markup below is constant, and nothing user-supplied is ever written into it.
  */
 import type {SceneHandle, SceneHostState} from "../../themeScene";
 import {momentAt, rng, type Moment, type MoonPhase} from "./engine";
-import {paletteAt, publishedFor, WEATHER, type Palette} from "./palette";
+import {paletteAt, publishedFor, WEATHER, type Palette, type Published} from "./palette";
 
 const STAR_COUNT = 190;
 const RAD = Math.PI / 180;
@@ -44,6 +44,15 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 		"--ps-moon-y": `${m.moon.y.toFixed(2)}%`,
 		"--ps-moon-op": moonOpacity.toFixed(3),
 	};
+}
+
+/**
+ * The browser's chrome colour (`<meta name="theme-color">`) for the hour: the
+ * sky-top the scene publishes as the page canvas, so the browser's bar runs
+ * on into the sky under it (docs/projects/ps-theme.md §6).
+ */
+export function themeColorFor(published: Published): string {
+	return published.canvas;
 }
 
 /**
@@ -125,6 +134,12 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 		`<div class="ps-animals"></div>`;
 	const ellipse = root.querySelector(".ps-m-ell") as SVGEllipseElement;
 	const shape = root.querySelector(".ps-m-shape") as SVGGElement;
+	// The theme's own theme-color, kept to hand back on destroy; and the last
+	// colour the scene wrote, so a destroy after something else has written the
+	// tag (the next theme's colour, the deploy's) leaves that alone.
+	const meta = document.querySelector('meta[name="theme-color"]');
+	const themeColor = meta instanceof HTMLMetaElement ? meta.content : null;
+	let wrote: string | null = null;
 	let timer: number | undefined;
 	let visible = false;
 
@@ -147,6 +162,11 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 		html.dataset.psText = out.text;
 		html.style.setProperty("--ps-halo", out.halo);
 		html.style.setProperty("--canvas-bg-color", out.canvas);
+
+		if (meta instanceof HTMLMetaElement) {
+			wrote = themeColorFor(out);
+			meta.content = wrote;
+		}
 	};
 
 	// Once now, then on each minute boundary.
@@ -209,6 +229,10 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 			delete html.dataset.psText;
 			html.style.removeProperty("--ps-halo");
 			html.style.removeProperty("--canvas-bg-color");
+
+			if (meta instanceof HTMLMetaElement && themeColor !== null && meta.content === wrote) {
+				meta.content = themeColor;
+			}
 		},
 	};
 }

@@ -482,6 +482,7 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 
 		for (const light of ["day", "night"] as const) {
 			expect(Object.keys(g[light].tokens).sort()).to.deep.equal([
+				"--ps-g-accent-text",
 				"--ps-g-badge",
 				"--ps-g-soft",
 				"--ps-g-tint-a",
@@ -490,6 +491,7 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 			expect(alpha).to.be.within(GLASS[light].base, GLASS[light].cap);
 			expect(g[light].tokens["--ps-g-soft"]).to.match(HEX);
 			expect(g[light].tokens["--ps-g-badge"]).to.match(HEX);
+			expect(g[light].tokens["--ps-g-accent-text"]).to.match(HEX);
 			expect(g[light].nicks.map((n) => n.decls.length)).to.deep.equal(Array(32).fill(1));
 
 			for (const n of g[light].nicks) {
@@ -500,13 +502,14 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 	});
 
 	for (const light of ["day", "night"] as const) {
-		it(`holds the ${light} glass at its declared opacity: ink, soft ink and every nick at 4.5:1, the badge's white numeral at 4.5:1`, function () {
+		it(`holds the ${light} glass at its declared opacity: ink, soft ink, the text accent and every nick at 4.5:1, the badge's white numeral at 4.5:1; and the text accent on the solid panel`, function () {
 			const g = glassDeclared()[light];
 			const list = underGlass(light);
 
 			for (const [what, colour] of [
 				["ink", GLASS[light].ink],
 				["--ps-g-soft", g.tokens["--ps-g-soft"]],
+				["--ps-g-accent-text", g.tokens["--ps-g-accent-text"]],
 				...g.nicks.map((n) => [n.selector, n.decls[0][1]]),
 			]) {
 				const w = worst(colour, list);
@@ -516,6 +519,10 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 			}
 
 			expect(contrast("#ffffff", g.tokens["--ps-g-badge"])).to.be.at.least(4.5);
+			expect(
+				contrast(g.tokens["--ps-g-accent-text"], GLASS[light].solid),
+				`${light} --ps-g-accent-text on the solid ${GLASS[light].solid}`
+			).to.be.at.least(4.5);
 		});
 	}
 

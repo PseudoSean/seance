@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {momentFor, sunTimes} from "../../../client/js/scenes/ps/engine";
-import {paletteAt} from "../../../client/js/scenes/ps/palette";
-import {moonShape, sceneVars} from "../../../client/js/scenes/ps/scene";
+import {paletteAt, publishedFor} from "../../../client/js/scenes/ps/palette";
+import {moonShape, sceneVars, themeColorFor} from "../../../client/js/scenes/ps/scene";
 
 const days = (iso: string) => Date.parse(iso) / 86400000;
 
@@ -62,5 +62,22 @@ describe("ps scene: what it writes", function () {
 		expect(
 			moonShape({elongation: 300, illumination: 0.25, waning: true, present: true})
 		).to.deep.include({mirror: true, fill: "#000"});
+	});
+
+	it("gives the browser's theme-color the hour's sky-top, the colour it publishes as the canvas", function () {
+		const {rise, set} = sunTimes(172);
+
+		for (const minute of [0, rise, (rise + set) / 2, set, 1380]) {
+			const m = momentFor({
+				minute,
+				doy: 172,
+				dayNumber: 20626,
+				epochDays: 20626,
+				weather: "clear",
+			});
+			const published = publishedFor(paletteAt(m));
+			expect(themeColorFor(published)).to.equal(published.canvas);
+			expect(themeColorFor(published)).to.equal(paletteAt(m).skyTop);
+		}
 	});
 });
