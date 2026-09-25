@@ -1631,9 +1631,13 @@ describe("the ps theme's clouds and weather (plan 3 task 4, spec §5.1, §5.5)",
 		expect(valueOf(`${S} .ps-cloud`, "animation")).to.equal(
 			"ps-drift var(--cd) linear var(--cdl) infinite"
 		);
+		// A cloud stands at left: 0, so it enters and leaves out of sight only
+		// if the loop starts a whole cloud (and its blur) past the left edge
+		// and ends past the right one: starting at -30% put 70% of it on the
+		// screen at once, and every loop popped it in.
 		const drift = frames("ps-drift");
-		expect(drift).to.include("translateX(-30%)");
-		expect(drift).to.include("translateX(calc(100cqw + 60%))");
+		expect(drift).to.include("from { transform: translateX(calc(-100% - 0.25rem)); }");
+		expect(drift).to.include("to { transform: translateX(calc(100cqw + 0.25rem)); }");
 	});
 
 	it("paints the clouds from the published cloud colours, greyed by the weather in the palette", function () {

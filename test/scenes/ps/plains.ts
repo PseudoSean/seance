@@ -401,6 +401,19 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 			});
 		});
 
+		it("keeps every blob inside its cloud's box, so a cloud one width off the edge is out of sight", function () {
+			const blobs = [
+				...sky.matchAll(
+					/<i style="left:([\d.]+)%;top:[\d.]+%;width:([\d.]+)%;height:[\d.]+%"><\/i>/g
+				),
+			].map((m) => m.slice(1).map(Number));
+			expect(blobs).to.have.length(25);
+			blobs.forEach(([left, width], i) => {
+				expect(left, `blob ${i}`).to.be.at.least(0);
+				expect(left + width, `blob ${i}`).to.be.at.most(100);
+			});
+		});
+
 		it("places each blob in % of its own cloud, the mockup's five, never px", function () {
 			expect(sky).to.not.include("px");
 			const first = sky.slice(0, sky.indexOf("</div>"));

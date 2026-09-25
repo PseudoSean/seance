@@ -659,10 +659,13 @@ strong,
 	animation-duration: calc(var(--cd) * 0.4);
 }
 
+/* A cloud stands at left: 0 and its blobs stay inside its box, so the loop
+ * starts one whole cloud (and a hair for its blur) past the left edge and ends
+ * past the right one: it drifts in and out of sight, never popping in. */
 @keyframes ps-drift {
-	from { transform: translateX(-30%); }
+	from { transform: translateX(calc(-100% - 0.25rem)); }
 	/* stylelint-disable-next-line unit-no-unknown -- cqw: #theme-scene is a size container; stylelint predates it */
-	to { transform: translateX(calc(100cqw + 60%)); }
+	to { transform: translateX(calc(100cqw + 0.25rem)); }
 }
 
 /* The ground (plains.ts): one group, so the heat haze bends the land, the
