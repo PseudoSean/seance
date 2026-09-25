@@ -3,6 +3,8 @@ import {
 	clouds,
 	FIREFLIES,
 	fireflies,
+	GRASS_TOP,
+	LAND_SHARE,
 	landSvg,
 	nearGrass,
 	smoke,
@@ -27,6 +29,18 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 			expect(land).to.include('preserveAspectRatio="none"');
 			expect(land.trim().endsWith("</svg>")).to.equal(true);
 			expect(land.match(/<svg\b/g)).to.have.length(1);
+		});
+
+		it("gives GRASS_TOP from the grass band it draws: its edge's highest control point, on the land's share of the scene", function () {
+			const d = /class="ps-l-grass" d="([^"]*)"/.exec(land)?.[1] ?? "";
+			const edge = d.slice(0, d.indexOf(" L1200,400"));
+			expect(edge.startsWith("M0,")).to.equal(true);
+			// A cubic Bézier stays inside its control points' hull: the least y bounds the edge from above.
+			const highest = Math.min(
+				...[...edge.matchAll(/,(-?[\d.]+)/g)].map((m) => Number(m[1]))
+			);
+			expect(highest).to.equal(288);
+			expect(GRASS_TOP).to.equal(1 - LAND_SHARE + (LAND_SHARE * highest) / 400);
 		});
 
 		it("names one id, the river's sky: the heat haze is the weather layer's, on hot days only", function () {

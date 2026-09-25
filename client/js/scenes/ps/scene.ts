@@ -20,7 +20,7 @@ import {isPhoneLayout} from "../../helpers/device";
 import type {SceneHandle, SceneHostState} from "../../themeScene";
 import {birdsAt, dayBirdsMarkup, skeinsMarkup} from "./birds";
 import {momentAt, rng, type Moment, type MoonPhase, type Weather} from "./engine";
-import {GLASS_TINT_VARS, glassVars} from "./glass";
+import {composerAboveGrass, GLASS_TINT_VARS, glassVars} from "./glass";
 import {bodyOpacity, publishedFor, type Published} from "./grounds";
 import {levelsAt, paletteAt, WEATHER, type Palette} from "./palette";
 import {
@@ -376,6 +376,105 @@ function placeYurt(root: HTMLElement): {seen(): void; refind(): void; destroy():
 	};
 }
 
+/**
+ * Marks <html> `ps-form-tall` while the composer's top edge stands above the
+ * near grass (glass.ts composerAboveGrass), so ps.css gives it the float tint
+ * (the controller's ruling, task 7b fix round 1). It observes #form (a reply
+ * bar, a longer draft, a font step) and #viewport (a touch keyboard:
+ * #viewport follows --viewport-height while the scene stays on the layout
+ * viewport), and reads the scene's box again when the window resizes; each
+ * observation reads #form's box once. #form is looked for again on every
+ * host update and whenever the one observed leaves the page; with none on the
+ * page (the connect form) there is no class.
+ */
+function watchComposer(root: HTMLElement, html: HTMLElement): {refind(): void; destroy(): void} {
+	let form: Element | null = null;
+	let viewport: Element | null = null;
+	let scene = root.getBoundingClientRect();
+	let frame: number | undefined;
+
+	const check = () => {
+		html.classList.toggle(
+			"ps-form-tall",
+			!!form?.isConnected && composerAboveGrass(form.getBoundingClientRect(), scene)
+		);
+	};
+
+	const observer = new ResizeObserver(() => {
+		if (form?.isConnected) {
+			check();
+		} else {
+			findSoon(); // it left the page; its replacement, if any, is there by the next frame
+		}
+	});
+
+	const onResize = () => {
+		scene = root.getBoundingClientRect();
+		check();
+	};
+
+	function find() {
+		const nextForm = document.getElementById("form");
+		const nextViewport = document.getElementById("viewport");
+
+		if (nextForm !== form) {
+			if (form) {
+				observer.unobserve(form);
+			}
+
+			form = nextForm;
+
+			if (form) {
+				observer.observe(form); // its first observation checks it
+			} else {
+				html.classList.remove("ps-form-tall");
+			}
+		}
+
+		if (nextViewport !== viewport) {
+			if (viewport) {
+				observer.unobserve(viewport);
+			}
+
+			viewport = nextViewport;
+
+			if (viewport) {
+				observer.observe(viewport);
+			}
+		}
+	}
+
+	// Also on the next frame, as placeYurt does: the host's update comes before Vue has patched the page.
+	function findSoon() {
+		if (frame === undefined) {
+			frame = window.requestAnimationFrame(() => {
+				frame = undefined;
+				find();
+			});
+		}
+	}
+
+	window.addEventListener("resize", onResize);
+
+	return {
+		refind() {
+			find();
+			findSoon();
+		},
+		destroy() {
+			observer.disconnect();
+			window.removeEventListener("resize", onResize);
+
+			if (frame !== undefined) {
+				window.cancelAnimationFrame(frame);
+				frame = undefined;
+			}
+
+			html.classList.remove("ps-form-tall");
+		},
+	};
+}
+
 export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 	const html = document.documentElement;
 	const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -474,10 +573,12 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 	const onReduced = () => motion(visible && !reduced.matches);
 	reduced.addEventListener("change", onReduced);
 	const yurt = placeYurt(root);
+	const composer = watchComposer(root, html);
 
 	const update = (state: SceneHostState) => {
 		root.dataset.view = state.view;
 		yurt.refind();
+		composer.refind();
 
 		if (state.visible && !visible) {
 			visible = true;
@@ -503,6 +604,7 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 			timer = undefined;
 			reduced.removeEventListener("change", onReduced);
 			yurt.destroy();
+			composer.destroy();
 			root.replaceChildren();
 			root.removeAttribute("style");
 			root.classList.remove("ps-paused", "ps-windy", "ps-storm", "ps-hot", "ps-west");

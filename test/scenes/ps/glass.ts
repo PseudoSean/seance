@@ -3,6 +3,7 @@ import {contrast, luminance} from "../../../client/js/scenes/ps/colour";
 import {momentFor, type Moment, type Weather} from "../../../client/js/scenes/ps/engine";
 import {
 	backdropFiltered,
+	composerAboveGrass,
 	DAY_BRIGHTNESS,
 	DAY_GLASS_MARK,
 	DAY_GLASS_TEXT,
@@ -24,6 +25,7 @@ import {
 } from "../../../client/js/scenes/ps/glass";
 import {sceneGrounds} from "../../../client/js/scenes/ps/grounds";
 import {paletteAt} from "../../../client/js/scenes/ps/palette";
+import {GRASS_TOP} from "../../../client/js/scenes/ps/plains";
 
 /** A moment at a local minute on a day of the year; the moon's phase does not matter to the grounds. */
 const at = (minute: number, doy: number, weather: Weather = "clear"): Moment =>
@@ -214,6 +216,53 @@ describe("ps glass: the luminous day glass (plan 3 task 7b, the user's pick)", f
 		// Each minute of the step and the next step's first (the tint must hold through the 0.8 s ease into the next).
 		const window = surfaceTints([1160, 1161, 1162, 1163, 1164, 1165].map((t) => at(t, JUNE)));
 		expect(start).to.deep.equal(window);
+	});
+
+	describe("the composer above the near grass (fix round 1, the controller's ruling)", function () {
+		// A 900 px scene at the top of the page: the band's top is 0.8432 × 900 = 758.9 px.
+		const scene = {top: 0, height: 900};
+		const edge = scene.top + scene.height * GRASS_TOP;
+
+		it("takes the grass band's top from the land's own geometry: the edge's highest point, 0.8432 of the scene", function () {
+			expect(GRASS_TOP).to.be.closeTo(0.44 + (0.56 * 288) / 400, 1e-12);
+		});
+
+		it("is not above the grass with its top exactly on the band's top, and is 1 px above it", function () {
+			expect(composerAboveGrass({top: edge}, scene)).to.equal(false);
+			expect(composerAboveGrass({top: edge - 1}, scene)).to.equal(true);
+			expect(
+				composerAboveGrass({top: 839}, scene),
+				"a plain composer at 1280 × 900"
+			).to.equal(false);
+			expect(composerAboveGrass({top: 754}, scene), "a reply bar and three lines").to.equal(
+				true
+			);
+		});
+
+		it("measures against the scene's own box, wherever it sits on the page", function () {
+			const lower = {top: 120, height: 600};
+			const lowerEdge = 120 + 600 * GRASS_TOP;
+			expect(composerAboveGrass({top: lowerEdge}, lower)).to.equal(false);
+			expect(composerAboveGrass({top: lowerEdge - 1}, lower)).to.equal(true);
+			// A composer lifted mid-scene (a touch keyboard: #viewport follows the visible band, the scene the layout viewport).
+			expect(composerAboveGrass({top: 400}, {top: 0, height: 844})).to.equal(true);
+		});
+
+		it("then reads the float tint, whose grounds are every ground the composer's are and the yurt's", function () {
+			const m = at(750, JUNE);
+			const all = sceneGrounds(m, paletteAt(m));
+			const composer = all.filter((g) => isBehind("composer", g));
+			expect(composer.length).to.be.greaterThan(0);
+			expect(composer.every((g) => isBehind("float", g))).to.equal(true);
+			expect(all.filter((g) => isBehind("float", g)).map((g) => g.area)).to.include.members([
+				"felt",
+				"door",
+				"band",
+				"hill1",
+				"tree",
+				"skyTop",
+			]);
+		});
 	});
 
 	it("publishes the four day tints on <html> by day, and takes them off at night so the night glass keeps its own", function () {

@@ -16,6 +16,7 @@ import {
 	type GlassSurface,
 } from "../../client/js/scenes/ps/glass";
 import {paletteAt} from "../../client/js/scenes/ps/palette";
+import {LAND_SHARE} from "../../client/js/scenes/ps/plains";
 import {sceneVars} from "../../client/js/scenes/ps/scene";
 import {
 	checkedGrounds,
@@ -549,6 +550,18 @@ describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.m
 			"style.css lays the list over the pane under the same condition"
 		).to.deep.include(["position", "absolute"]);
 		expect(valueOf("#chat .userlist", "--ps-g-tint", OVERLAID)).to.equal(readsTint("float"));
+
+		// A composer risen above the near grass (the scene's ps-form-tall on <html>) stands over the yurt too.
+		expect(valueOf(":root.ps-form-tall #form", "--ps-g-tint")).to.equal(readsTint("float"));
+		expect(
+			rules
+				.filter((r) => r.selectors.some((s) => s.includes("ps-form-tall")))
+				.map((r) => r.at),
+			"at the top level, after #form's own"
+		).to.deep.equal([""]);
+		// The band's top the scene measures against is the land's (plains.ts LAND_SHARE, ps.css .ps-land).
+		const land = /^([\d.]+)%$/.exec(valueOf("#theme-scene .ps-land", "height") ?? "");
+		expect(Number(land?.[1]) / 100, "the land's height").to.be.closeTo(LAND_SHARE, 1e-9);
 
 		// The names the scene publishes are the ones read, and the fallback is the solver's cap.
 		const names = Object.keys(glassVars({doy: 172, minute: 750, weather: "clear"}, "day"));

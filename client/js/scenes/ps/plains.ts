@@ -33,6 +33,25 @@ const HILL1_EDGE =
 const RIVER =
 	"M318,127 C350,132 370,138 350,146 C320,156 290,164 340,176 C400,190 500,196 530,214 C552,228 500,238 450,250 L530,250 C580,238 630,226 604,210 C578,194 470,186 414,172 C370,161 390,152 422,144 C446,137 406,131 350,127 Z";
 const TO_FOOT = " L1200,400 L0,400 Z";
+/** The grass band's top edge: the near grass the composer stands on (glass.ts). */
+const GRASS_EDGE = "M0,300 C200,290 400,296 600,292 C800,288 1000,296 1200,290";
+
+/** The land's share of the scene's height, from its foot (ps.css `#theme-scene .ps-land`, 56 %), on its 400-high viewBox. */
+export const LAND_SHARE = 0.56;
+const LAND_VIEW_HEIGHT = 400;
+
+/**
+ * The grass band's top as a share of the scene's height from its top, at its
+ * highest: a cubic Bézier stays inside its control points' hull, so the least
+ * y among them bounds the edge from above (288 of 400, so 0.8432). Above it
+ * the composer's glass stands over hill1 and the yurt (glass.ts
+ * composerAboveGrass).
+ */
+export const GRASS_TOP =
+	1 -
+	LAND_SHARE +
+	(LAND_SHARE * Math.min(...[...GRASS_EDGE.matchAll(/,(-?[\d.]+)/g)].map((m) => Number(m[1])))) /
+		LAND_VIEW_HEIGHT;
 
 /** One tuft: two blades from one root, the mockup's `tuft`. */
 function tuft(x: number, y: number, h: number, cls: string): string {
@@ -111,7 +130,7 @@ export function landSvg(): string {
 		`<path class="ps-l-hill1" d="${HILL1_EDGE}${TO_FOOT}"/>` +
 		`<path class="ps-l-rim" d="${HILL1_EDGE}"/>` +
 		near +
-		`<path class="ps-l-grass" d="M0,300 C200,290 400,296 600,292 C800,288 1000,296 1200,290${TO_FOOT}"/>` +
+		`<path class="ps-l-grass" d="${GRASS_EDGE}${TO_FOOT}"/>` +
 		`</svg>`
 	);
 }

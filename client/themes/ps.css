@@ -1925,6 +1925,15 @@ body {
 }
 /* stylelint-enable no-duplicate-selectors */
 
+/* A composer whose top has risen above the near grass (a reply bar and a
+ * longer draft on a short window, a large font step, a touch keyboard lifting
+ * it mid-scene) stands over hill1, the yurt and the sky: the scene marks it on
+ * <html> (ps-form-tall, glass.ts composerAboveGrass), and it takes the chips'
+ * tint, which holds over every ground. */
+:root.ps-form-tall #form {
+	--ps-g-tint: var(--ps-g-tint-float, var(--ps-g-tint-a));
+}
+
 /* A user list laid over a narrow chat pane (style.css's condition, verbatim)
  * stands over the yurt too. */
 /* stylelint-disable-next-line at-rule-no-unknown */
