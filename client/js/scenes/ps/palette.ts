@@ -197,7 +197,6 @@ export interface Palette {
 	pipe: string;
 	stone: string;
 	wood: string;
-	path: string;
 }
 
 export function paletteAt(m: Moment): Palette {
@@ -249,7 +248,6 @@ export function paletteAt(m: Moment): Palette {
 	const pipe = mixOklab(s.felt, "#4d4640", 0.3);
 	const stone = mixOklab(land.grass, "#a8a39a", 0.45);
 	const wood = mixOklab(land.hill1, "#7a5638", 0.3);
-	const path = mixOklab(land.grass, "#d8c9a0", 0.68);
 
 	return {
 		skyTop: s.top,
@@ -299,7 +297,6 @@ export function paletteAt(m: Moment): Palette {
 		pipe,
 		stone,
 		wood,
-		path,
 	};
 }
 

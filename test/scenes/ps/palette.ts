@@ -235,7 +235,7 @@ describe("ps palette: plan 3's derived land and yurt colours", function () {
 			expect(p.pipe).to.equal(mixOklab(p.felt, "#4d4640", 0.3));
 			expect(p.stone).to.equal(mixOklab(p.grass, "#a8a39a", 0.45));
 			expect(p.wood).to.equal(mixOklab(p.hill1, "#7a5638", 0.3));
-			expect(p.path).to.equal(mixOklab(p.grass, "#d8c9a0", 0.68));
+			expect(p).to.not.have.property("path");
 		});
 	}
 });

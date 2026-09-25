@@ -1281,7 +1281,6 @@ describe("the ps theme's yurt and its smoke (plan 3, spec §5.3)", function () {
 			["ps-y-pipe", "fill", "var(--ps-pipe)"],
 			["ps-y-stone", "fill", "var(--ps-stone)"],
 			["ps-y-wood", "fill", "var(--ps-wood)"],
-			["ps-y-path", "fill", "var(--ps-path)"],
 		];
 
 		for (const [name, property, value] of PAINT) {
@@ -1310,21 +1309,18 @@ describe("the ps theme's yurt and its smoke (plan 3, spec §5.3)", function () {
 		expect(valueOf(`${S} .ps-y-spill`, "opacity")).to.equal(undefined);
 	});
 
-	it("lights a pool at the door by --ps-night-glow, and fades the worn path out as the light comes on (the user's pick, 2026-09-25)", function () {
+	it("lights a pool at the door by --ps-night-glow, the only light before the door (the user's pick, 2026-09-25)", function () {
 		expect(valueOf(`${S} .ps-y-pool`, "opacity")).to.match(/^var\(--ps-night-glow(, 0)?\)$/);
-		expect(valueOf(`${S} .ps-y-path`, "fill")).to.equal("var(--ps-path)");
-		expect(valueOf(`${S} .ps-y-path`, "opacity")).to.match(
-			/^calc\(0\.6 \* max\(0, 1 - var\(--ps-night-glow(, 0)?\) \* [\d.]+\)\)$/
-		);
 	});
 
-	it("shows no path at late dusk or before dawn: only the pool, never a faint hard-edged track beside it", function () {
-		// The path's opacity as ps.css computes it from the published glow.
-		const k = Number(
-			/\* ([\d.]+)\)\)$/.exec(valueOf(`${S} .ps-y-path`, "opacity") ?? "")?.[1] ?? NaN
-		);
-		const pathOp = (glow: number) => 0.6 * Math.max(0, 1 - glow * k);
+	it("draws no worn path to the door, by day or night: nothing reads as a beam (the user, 2026-09-25)", function () {
+		// "there is still a beam of light visible from the door, even in the day. there
+		// shouldnt be a hard beam, I want the soft glow at the door, and not in the day."
+		expect(css).to.not.include("ps-y-path");
+		expect(css).to.not.include("--ps-path");
+	});
 
+	it("keeps the pool dark by day and lit at night", function () {
 		const glowAt = (minute: number) => {
 			const m = momentFor({
 				minute,
@@ -1337,14 +1333,9 @@ describe("the ps theme's yurt and its smoke (plan 3, spec §5.3)", function () {
 		};
 
 		const {rise, set} = sunTimes(270);
-		// The moments the comparison showed the user: 55 min after sunset, 45 before sunrise.
-		expect(pathOp(glowAt(set + 55)), "late dusk").to.equal(0);
-		expect(pathOp(glowAt(rise - 45)), "before dawn").to.equal(0);
-		expect(pathOp(glowAt(30)), "midnight").to.equal(0);
-		// By day the path is the worn track it always was.
-		expect(pathOp(glowAt((rise + set) / 2)), "noon").to.equal(0.6);
-		// And it is gone once the door's light is a fifth of the way up.
-		expect(pathOp(0.2)).to.equal(0);
+		// The pool's opacity is the published glow itself.
+		expect(glowAt((rise + set) / 2), "noon").to.equal(0);
+		expect(glowAt(30), "midnight").to.be.greaterThan(0.9);
 	});
 
 	it("raises the smoke in rem from the published smoke colour", function () {

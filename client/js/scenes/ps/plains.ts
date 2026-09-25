@@ -226,7 +226,6 @@ export function yurtSvg(): string {
 		`<filter id="ps-y-blur" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.4"/></filter>` +
 		`<filter id="ps-y-soft" x="-80%" y="-120%" width="260%" height="340%"><feGaussianBlur stdDeviation="5"/></filter>` +
 		`</defs>` +
-		`<path class="ps-y-path" d="M112,152 C108,172 96,198 80,240 L140,240 C134,200 130,172 128,152 Z"/>` +
 		`<ellipse cx="120" cy="152" rx="96" ry="7" fill="#000" opacity=".16"/>` +
 		`<ellipse class="ps-y-pool" cx="120" cy="157" rx="58" ry="15" fill="url(#ps-y-pool)" filter="url(#ps-y-soft)"/>` +
 		`<g class="ps-y-wood"><rect x="20" y="136" width="22" height="5" rx="2.5"/><rect x="22" y="131" width="19" height="5" rx="2.5"/><rect x="25" y="126" width="13" height="5" rx="2.5"/></g>` +

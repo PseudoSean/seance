@@ -98,7 +98,6 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 		"--ps-pipe": p.pipe,
 		"--ps-stone": p.stone,
 		"--ps-wood": p.wood,
-		"--ps-path": p.path,
 		// The day's levels.
 		"--ps-water": l.water.toFixed(2),
 		"--ps-flowers": l.flowers.toFixed(2),

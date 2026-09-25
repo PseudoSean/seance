@@ -216,7 +216,6 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 				"ps-y-felt-c",
 				"ps-y-roof-t",
 				"ps-y-roof-b",
-				"ps-y-path",
 				"ps-y-pool",
 				"ps-y-wood",
 				"ps-y-stone",
@@ -238,6 +237,9 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 			for (const [, cls] of yurt.matchAll(/class="([^"]*)"/g)) {
 				expect(cls).to.match(/^ps-y-[a-z-]+$/);
 			}
+
+			// No worn path to the door: by day it read as a hard beam (the user, 2026-09-25).
+			expect(yurt).to.not.include("ps-y-path");
 		});
 
 		it("paints its patterned band with 16 marks along the band's curve", function () {

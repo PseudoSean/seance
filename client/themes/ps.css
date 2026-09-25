@@ -818,18 +818,12 @@ strong,
 #theme-scene .ps-y-stone { fill: var(--ps-stone); }
 #theme-scene .ps-y-wood { fill: var(--ps-wood); }
 
-/* The worn path to the door, as it shows by day. It is gone by the time the
- * door's light is a fifth of the way up, so at dusk and before dawn, as at
- * night, the pool alone lies before the door and no faint hard-edged track
- * runs into the dark beside it. */
-#theme-scene .ps-y-path {
-	fill: var(--ps-path);
-	opacity: calc(0.6 * max(0, 1 - var(--ps-night-glow, 0) * 5));
-}
-
 /* At night the door, its seams, the wall and the crown glow from inside and a
  * soft pool of light lies on the ground before the door (the user's pick over
- * the mockup's cone down the path, 2026-09-25); by day none of it shows. */
+ * the mockup's cone down the path, 2026-09-25); by day none of it shows. The
+ * mockup's worn path to the door is not drawn at all: by day its pale,
+ * hard-edged track read as a beam from the door ("there shouldnt be a hard
+ * beam, I want the soft glow at the door, and not in the day", 2026-09-25). */
 #theme-scene .ps-y-lit { opacity: var(--ps-night-glow, 0); }
 #theme-scene .ps-y-pool { opacity: var(--ps-night-glow, 0); }
 

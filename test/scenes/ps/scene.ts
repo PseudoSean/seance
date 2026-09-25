@@ -150,12 +150,14 @@ describe("ps scene: plan 3's land, yurt and level vars", function () {
 			"--ps-pipe",
 			"--ps-stone",
 			"--ps-wood",
-			"--ps-path",
 		];
 
 		for (const name of HEX_NAMES) {
 			expect(v[name], name).to.match(HEX);
 		}
+
+		// The worn path is gone (the user, 2026-09-25), and so is its colour.
+		expect(v).to.not.have.property("--ps-path");
 	});
 
 	it("writes the day's levels as numbers, sway in degrees, and the veil and bird-ink as their own strings", function () {
