@@ -2,6 +2,7 @@ import {expect} from "chai";
 import {
 	FADE_MS,
 	FOLLOW_REM,
+	SETTLE_MS,
 	YURT_AT,
 	YURT_DEFAULT,
 	yurtFollower,
@@ -16,23 +17,40 @@ describe("ps yurt: where it stands (yurt.ts)", function () {
 		expect(YURT_DEFAULT).to.equal(0.7);
 		expect(FADE_MS).to.equal(400);
 		expect(FOLLOW_REM).to.equal(1.5);
+		expect(SETTLE_MS).to.equal(1000);
 	});
 
 	describe("yurtPlace", function () {
 		it("stands at 72 % of the message column, from the column's left", function () {
-			expect(yurtPlace({left: 300, width: 800}, null, 1200)).to.equal(876);
+			expect(yurtPlace({left: 300, width: 800}, null, 1200, 267)).to.equal(876);
 			expect(
-				yurtPlace({left: 300, width: 800}, 500, 1200),
+				yurtPlace({left: 300, width: 800}, 500, 1200, 267),
 				"a column wins over the last place"
 			).to.equal(876);
 		});
 
 		it("keeps its last place with no column on screen", function () {
-			expect(yurtPlace(null, 500, 1200)).to.equal(500);
+			expect(yurtPlace(null, 500, 1200, 267)).to.equal(500);
 		});
 
 		it("stands at 70 % of the scene before any column was measured", function () {
-			expect(yurtPlace(null, null, 1200)).to.equal(840);
+			expect(yurtPlace(null, null, 1200, 267)).to.equal(840);
+		});
+
+		it("keeps the whole yurt inside the scene", function () {
+			// A phone: a 390-wide scene, a 250-wide yurt, a column that would put it at 406.
+			const column = {left: 0, width: 406 / YURT_AT};
+			expect(yurtPlace(column, null, 390, 250)).to.equal(265);
+			expect(yurtPlace({left: -200, width: 100}, null, 390, 250), "the left edge").to.equal(
+				125
+			);
+			expect(yurtPlace(null, 380, 390, 250), "a last place").to.equal(265);
+			expect(yurtPlace(null, null, 390, 250), "the default: 273 → 265").to.equal(265);
+			expect(yurtPlace(null, null, 1200, 267), "room to spare: untouched").to.equal(840);
+		});
+
+		it("stands in the middle when the yurt is wider than the scene", function () {
+			expect(yurtPlace({left: 0, width: 300}, null, 200, 250)).to.equal(100);
 		});
 	});
 
@@ -75,6 +93,7 @@ function harness() {
 	const fx: YurtEffects = {
 		place: (px) => log.push(`place ${px}`),
 		hide: (on) => log.push(on ? "hide" : "show"),
+		now: () => now,
 		after(ms, fn) {
 			const t = {at: now + ms, fn, live: true};
 			timers.push(t);
@@ -123,19 +142,27 @@ function harness() {
 }
 
 describe("ps yurt: following the column (yurtFollower)", function () {
-	const W = 1280;
-	const REM = 20;
+	/** A desktop window: 1280 wide, 20 px rem, a 267 px yurt. */
+	const S = {width: 1280, rem: 20, yurtWidth: 267};
 	/** The column beside a sidebar of 250 px, the user list open (850 wide) or closed (1030). */
 	const OPEN = {left: 250, width: 850};
 	const CLOSED = {left: 250, width: 1030};
-	const AT_OPEN = yurtPlace(OPEN, null, W); // 862
-	const AT_CLOSED = yurtPlace(CLOSED, null, W); // 991.6
+	const AT_OPEN = yurtPlace(OPEN, null, S.width, S.yurtWidth); // 862
+	const AT_CLOSED = yurtPlace(CLOSED, null, S.width, S.yurtWidth); // 991.6
 
-	/** A follower already standing where the open list puts it. */
-	function standing() {
+	/** A follower seen long ago, with nothing measured yet (the page opened on Settings). */
+	function settled() {
 		const h = harness();
 		const f = yurtFollower(h.fx);
-		f.measure(OPEN, W, REM);
+		f.seen();
+		h.advance(SETTLE_MS * 5);
+		return {h, f};
+	}
+
+	/** A follower already standing where the open list puts it, its load window long gone. */
+	function standing() {
+		const {h, f} = settled();
+		f.measure(OPEN, S);
 		h.advance(FADE_MS);
 		h.frame();
 		h.log.length = 0;
@@ -147,26 +174,77 @@ describe("ps yurt: following the column (yurtFollower)", function () {
 	it("leaves ps.css's 70 % standing until a column is measured", function () {
 		const h = harness();
 		const f = yurtFollower(h.fx);
-		f.measure(null, W, REM);
-		f.measure({left: 250, width: 0}, W, REM); // a column not laid out is no column
+		f.seen();
+		f.measure(null, S);
+		f.measure({left: 250, width: 0}, S); // a column not laid out is no column
 		expect(h.log).to.deep.equal([]);
 		expect(f.place).to.equal(null);
 	});
 
-	it("follows at once when the first column puts it within 1.5 rem of 70 %", function () {
-		const h = harness();
-		const f = yurtFollower(h.fx);
-		const near = {left: 0, width: (W * YURT_DEFAULT + 10) / YURT_AT};
-		f.measure(near, W, REM);
-		expect(h.log).to.deep.equal([`place ${yurtPlace(near, null, W)}`]);
+	describe("the load: the first measured place, within 1 s of first being seen", function () {
+		it("is taken at once, with no fade (an ordinary load onto a channel)", function () {
+			const h = harness();
+			const f = yurtFollower(h.fx);
+			f.seen();
+			h.advance(300);
+			f.measure(OPEN, S); // 862 is 34 px from 896: past the threshold, still no fade
+			expect(h.log).to.deep.equal([`place ${AT_OPEN}`]);
+			expect(f.fading).to.equal(false);
+			expect(h.pending()).to.equal(0);
+		});
+
+		it("is taken at once up to 1 s after, and faded to after that", function () {
+			const at = (ms: number) => {
+				const h = harness();
+				const f = yurtFollower(h.fx);
+				f.seen();
+				h.advance(ms);
+				f.measure(OPEN, S);
+				return h.log;
+			};
+
+			expect(at(SETTLE_MS)).to.deep.equal([`place ${AT_OPEN}`]);
+			expect(at(SETTLE_MS + 1)).to.deep.equal(["hide"]);
+		});
+
+		it("is taken at once before the scene has been seen at all (mounted into a hidden page)", function () {
+			const h = harness();
+			const f = yurtFollower(h.fx);
+			h.advance(60000);
+			f.measure(OPEN, S);
+			expect(h.log).to.deep.equal([`place ${AT_OPEN}`]);
+		});
+
+		it("counts from the first time it is seen only: a later return to the page opens no window", function () {
+			const {h, f} = settled();
+			f.seen(); // hidden and shown again
+			f.measure(OPEN, S);
+			expect(h.log).to.deep.equal(["hide"]);
+		});
+
+		it("covers the first place only: a large change inside the window still fades", function () {
+			const h = harness();
+			const f = yurtFollower(h.fx);
+			f.seen();
+			f.measure(OPEN, S);
+			h.advance(200);
+			f.measure(CLOSED, S);
+			expect(h.log).to.deep.equal([`place ${AT_OPEN}`, "hide"]);
+		});
+	});
+
+	it("follows at once when the first column, after the load, puts it within 1.5 rem of 70 %", function () {
+		const {h, f} = settled();
+		const near = {left: 0, width: (S.width * YURT_DEFAULT + 10) / YURT_AT};
+		f.measure(near, S);
+		expect(h.log).to.deep.equal([`place ${yurtPlace(near, null, S.width, S.yurtWidth)}`]);
 		expect(f.fading).to.equal(false);
 	});
 
-	it("fades from 70 % to the first column's far third (the page opened on Settings)", function () {
-		const h = harness();
-		const f = yurtFollower(h.fx);
-		f.measure(null, W, REM); // Settings: no column
-		f.measure(OPEN, W, REM); // a channel opens: 862 is 34 px from 896
+	it("fades from 70 % to the first column's far third when the page opened on Settings (review focus 4)", function () {
+		const {h, f} = settled();
+		f.measure(null, S); // Settings: no column
+		f.measure(OPEN, S); // a channel opens: 862 is 34 px from 896
 		expect(h.log).to.deep.equal(["hide"]);
 		h.advance(FADE_MS - 1);
 		expect(h.log, "unmoved while it fades out").to.deep.equal(["hide"]);
@@ -182,15 +260,26 @@ describe("ps yurt: following the column (yurtFollower)", function () {
 		expect(h.pending()).to.equal(0);
 	});
 
+	it("measures the move from the clamped default on a narrow scene", function () {
+		// A phone: 70 % of 390 is 273, clamped to 265 for a 250 px yurt; a column
+		// putting it at 281 is 16 px away (under 1.5 rem), then clamped to 265 too.
+		const h = harness();
+		const f = yurtFollower(h.fx);
+		f.seen();
+		h.advance(SETTLE_MS * 5);
+		f.measure({left: 0, width: 390}, {width: 390, rem: 20, yurtWidth: 250});
+		expect(h.log).to.deep.equal(["place 265"]);
+	});
+
 	it("follows a small change at once, with no fade", function () {
 		const {h, f} = standing();
-		f.measure({left: 250, width: 870}, W, REM);
+		f.measure({left: 250, width: 870}, S);
 		expect(h.log).to.deep.equal([`place ${250 + 0.72 * 870}`]);
 	});
 
 	it("fades out, jumps unseen and fades in for a large change", function () {
 		const {h, f} = standing();
-		f.measure(CLOSED, W, REM);
+		f.measure(CLOSED, S);
 		expect(h.log).to.deep.equal(["hide"]);
 		expect(f.fading).to.equal(true);
 		h.advance(FADE_MS);
@@ -202,13 +291,13 @@ describe("ps yurt: following the column (yurtFollower)", function () {
 	it("ends where the last of two quick toggles puts it, placed once, while hidden (review focus 2)", function () {
 		const {h, f} = standing();
 		// close, open, close, open inside one fade: back where it started.
-		f.measure(CLOSED, W, REM);
+		f.measure(CLOSED, S);
 		h.advance(100);
-		f.measure(OPEN, W, REM);
+		f.measure(OPEN, S);
 		h.advance(100);
-		f.measure(CLOSED, W, REM);
+		f.measure(CLOSED, S);
 		h.advance(100);
-		f.measure(OPEN, W, REM);
+		f.measure(OPEN, S);
 		h.advance(100);
 		h.frame();
 		expect(h.log).to.deep.equal(["hide", `place ${AT_OPEN}`, "show"]);
@@ -218,11 +307,11 @@ describe("ps yurt: following the column (yurtFollower)", function () {
 
 	it("ends at the far place when the toggles stop there", function () {
 		const {h, f} = standing();
-		f.measure(CLOSED, W, REM);
+		f.measure(CLOSED, S);
 		h.advance(100);
-		f.measure(OPEN, W, REM);
+		f.measure(OPEN, S);
 		h.advance(100);
-		f.measure(CLOSED, W, REM);
+		f.measure(CLOSED, S);
 		h.advance(200);
 		h.frame();
 		expect(h.log).to.deep.equal(["hide", `place ${AT_CLOSED}`, "show"]);
@@ -230,9 +319,9 @@ describe("ps yurt: following the column (yurtFollower)", function () {
 
 	it("takes a change between the jump and the next frame before it shows the yurt", function () {
 		const {h, f} = standing();
-		f.measure(CLOSED, W, REM);
+		f.measure(CLOSED, S);
 		h.advance(FADE_MS);
-		f.measure(OPEN, W, REM); // the timer has fired; the class is still on
+		f.measure(OPEN, S); // the timer has fired; the class is still on
 		expect(f.fading).to.equal(true);
 		h.frame();
 		expect(h.log).to.deep.equal(["hide", `place ${AT_CLOSED}`, `place ${AT_OPEN}`, "show"]);
@@ -241,10 +330,10 @@ describe("ps yurt: following the column (yurtFollower)", function () {
 
 	it("keeps its place when the column goes, and a pending jump still lands", function () {
 		const {h, f} = standing();
-		f.measure(null, W, REM);
+		f.measure(null, S);
 		expect(h.log, "no column: nothing moves").to.deep.equal([]);
-		f.measure(CLOSED, W, REM);
-		f.measure(null, W, REM);
+		f.measure(CLOSED, S);
+		f.measure(null, S);
 		h.advance(FADE_MS);
 		h.frame();
 		expect(h.log).to.deep.equal(["hide", `place ${AT_CLOSED}`, "show"]);
@@ -252,17 +341,17 @@ describe("ps yurt: following the column (yurtFollower)", function () {
 
 	it("follows again once a fade has ended", function () {
 		const {h, f} = standing();
-		f.measure(CLOSED, W, REM);
+		f.measure(CLOSED, S);
 		h.advance(FADE_MS);
 		h.frame();
 		h.log.length = 0;
-		f.measure({left: 250, width: 1020}, W, REM);
+		f.measure({left: 250, width: 1020}, S);
 		expect(h.log).to.deep.equal([`place ${250 + 0.72 * 1020}`]);
 	});
 
 	it("leaves no timer or frame behind when stopped mid-fade", function () {
 		const {h, f} = standing();
-		f.measure(CLOSED, W, REM);
+		f.measure(CLOSED, S);
 		f.stop();
 		expect(h.pending()).to.equal(0);
 		h.advance(FADE_MS * 2);
@@ -270,7 +359,7 @@ describe("ps yurt: following the column (yurtFollower)", function () {
 		expect(h.log).to.deep.equal(["hide"]);
 
 		const g = standing();
-		g.f.measure(CLOSED, W, REM);
+		g.f.measure(CLOSED, S);
 		g.h.advance(FADE_MS); // between the jump and the frame
 		g.f.stop();
 		expect(g.h.pending()).to.equal(0);

@@ -2,17 +2,23 @@
  * Where the ps theme's yurt stands (docs/projects/ps-theme.md §5.3): in the
  * far third of the message column, 72 % of its width from its left edge; with
  * no column on screen, where it last stood; before any column was measured,
- * at 70 % of the scene (ps.css's own default).
+ * at 70 % of the scene (ps.css's own default). Wherever that is, the whole
+ * yurt stays inside the scene: a narrow phone would otherwise cut its eave.
  *
  * It never slides. A change under 1.5 rem (a window being dragged wider)
  * is followed at once; a larger one (the user list opens, a private
  * conversation opens) fades the yurt and its smoke out where they stood,
  * jumps while unseen and fades them in where they now stand. A change that
  * comes while a fade is running retargets that fade's jump; there is never a
- * second fade, so two quick toggles end where the last one put it.
+ * second fade, so two quick toggles end where the last one put it. The one
+ * exception is the page's load: the first place measured within 1 s of the
+ * scene first being seen is taken at once, so an ordinary load onto a
+ * channel shows no move; a page opened on Settings still fades to the
+ * column when a conversation opens later.
  *
  * Pure and DOM-free: scene.ts measures the column and carries out the effects
- * (a custom property, a class, a timer and a frame), so mocha drives all of it.
+ * (a custom property, a class, a clock, a timer and a frame), so mocha drives
+ * all of it.
  */
 
 /** The yurt's centre, as a fraction of the message column's width from its left edge. */
@@ -23,6 +29,8 @@ export const YURT_DEFAULT = 0.7;
 export const FADE_MS = 400;
 /** A change of place under this many rem is followed at once, without a fade. */
 export const FOLLOW_REM = 1.5;
+/** The load: the first place measured this soon after the scene is first seen is taken at once. */
+export const SETTLE_MS = 1000;
 
 /** The message column's box, in px from the scene's left. */
 export interface Column {
@@ -32,14 +40,24 @@ export interface Column {
 
 /**
  * The yurt's centre in px from the scene's left: 72 % across the column; with
- * no column, `last`; with neither, 70 % of the scene.
+ * no column, `last`; with neither, 70 % of the scene. Clamped so the whole
+ * yurt (`yurtWidth`, its rendered width) is inside the scene; one wider than
+ * the scene stands in its middle.
  */
-export function yurtPlace(column: Column | null, last: number | null, sceneWidth: number): number {
-	if (column) {
-		return column.left + YURT_AT * column.width;
+export function yurtPlace(
+	column: Column | null,
+	last: number | null,
+	sceneWidth: number,
+	yurtWidth: number
+): number {
+	const place = column ? column.left + YURT_AT * column.width : last ?? YURT_DEFAULT * sceneWidth;
+	const half = yurtWidth / 2;
+
+	if (sceneWidth <= yurtWidth) {
+		return sceneWidth / 2;
 	}
 
-	return last ?? YURT_DEFAULT * sceneWidth;
+	return Math.min(sceneWidth - half, Math.max(half, place));
 }
 
 /**
@@ -66,13 +84,24 @@ export interface YurtEffects {
 	place(px: number): void;
 	/** Fade the yurt and its smoke out (true) or back in (false). */
 	hide(on: boolean): void;
+	/** A monotonic clock, in ms. */
+	now(): number;
 	after(ms: number, fn: () => void): () => void;
 	nextFrame(fn: () => void): () => void;
 }
 
+/** The scene at a measurement: its width, the page's rem, and the yurt's rendered width, in px. */
+export interface YurtScene {
+	width: number;
+	rem: number;
+	yurtWidth: number;
+}
+
 export interface YurtFollower {
+	/** The scene has become visible. Only the first call counts: it opens the load's window. */
+	seen(): void;
 	/** One measurement of the column (null: none on screen, or one not laid out). */
-	measure(column: Column | null, sceneWidth: number, remPx: number): void;
+	measure(column: Column | null, scene: YurtScene): void;
 	/** Where the yurt stands, in px; null while ps.css's 70 % stands. */
 	readonly place: number | null;
 	readonly fading: boolean;
@@ -84,12 +113,15 @@ export interface YurtFollower {
  * The yurt's follow-or-fade rule over time: each measurement is followed at
  * once, faded to, or taken as a running fade's new target. A fade hides the
  * yurt, waits FADE_MS, places it at the latest target, and shows it on the
- * next frame (re-placing it first if the target moved in between).
+ * next frame (re-placing it first if the target moved in between). The first
+ * place measured before the scene has been seen, or within SETTLE_MS of the
+ * first time it was, is taken at once.
  */
 export function yurtFollower(fx: YurtEffects): YurtFollower {
 	let shown: number | null = null;
 	let target = 0;
 	let fading = false;
+	let firstSeen: number | null = null;
 	let cancelTimer: (() => void) | null = null;
 	let cancelFrame: (() => void) | null = null;
 
@@ -115,6 +147,10 @@ export function yurtFollower(fx: YurtEffects): YurtFollower {
 		cancelFrame = fx.nextFrame(reveal);
 	};
 
+	/** Nothing placed yet, and the load is still settling (or nobody has seen the scene). */
+	const loading = () =>
+		shown === null && !fading && (firstSeen === null || fx.now() - firstSeen <= SETTLE_MS);
+
 	return {
 		get place() {
 			return shown;
@@ -124,17 +160,27 @@ export function yurtFollower(fx: YurtEffects): YurtFollower {
 			return fading;
 		},
 
-		measure(column, sceneWidth, remPx) {
+		seen() {
+			firstSeen ??= fx.now();
+		},
+
+		measure(column, scene) {
 			// No column (Settings, Help, the connect form) keeps the place, and a
 			// fade in flight still lands where it was going.
 			if (!column || column.width <= 0) {
 				return;
 			}
 
-			const next = yurtPlace(column, shown, sceneWidth);
-			const current = shown ?? yurtPlace(null, null, sceneWidth);
+			const next = yurtPlace(column, shown, scene.width, scene.yurtWidth);
 
-			switch (yurtMove(current, next, remPx, fading)) {
+			if (loading()) {
+				put(next);
+				return;
+			}
+
+			const current = shown ?? yurtPlace(null, null, scene.width, scene.yurtWidth);
+
+			switch (yurtMove(current, next, scene.rem, fading)) {
 				case "follow":
 					if (next !== shown) {
 						put(next);

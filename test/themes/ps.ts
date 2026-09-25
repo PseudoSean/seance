@@ -1211,9 +1211,17 @@ describe("the ps theme's yurt and its smoke (plan 3, spec §5.3)", function () {
 	const S = "#theme-scene";
 	const YURT = `${S} .ps-yurt`;
 	const SMOKE = `${S} .ps-smoke`;
+	/**
+	 * The place: what scene.ts measured (yurt.ts clamps it so the whole yurt
+	 * is on screen); before that, 70 % of the scene clamped the same way. The
+	 * yurt is 21 % of the scene's height tall, so half its width is
+	 * 21cqh × 120/170.
+	 */
+	const PLACE =
+		"var(--ps-yurt-left, clamp(calc(21cqh * 120 / 170), 70%, calc(100% - 21cqh * 120 / 170)))";
 
 	it("stands on the ground band at the place the scene measures, 70 % before it has one", function () {
-		expect(valueOf(YURT, "left")).to.equal("var(--ps-yurt-left, 70%)");
+		expect(valueOf(YURT, "left")).to.equal(PLACE);
 		expect(valueOf(YURT, "bottom")).to.equal("17%");
 		expect(valueOf(YURT, "height")).to.equal("21%");
 		expect(valueOf(YURT, "aspect-ratio")).to.equal("240 / 170");
@@ -1221,7 +1229,7 @@ describe("the ps theme's yurt and its smoke (plan 3, spec §5.3)", function () {
 	});
 
 	it("puts the smoke at the pipe, on the same place: the yurt's top plus 22/170 of its height", function () {
-		expect(valueOf(SMOKE, "left")).to.equal("var(--ps-yurt-left, 70%)");
+		expect(valueOf(SMOKE, "left")).to.equal(PLACE);
 		expect(valueOf(SMOKE, "bottom")).to.equal("calc(17% + 21% * 148 / 170)");
 		expect(valueOf(SMOKE, "opacity")).to.match(/^var\(--ps-smoke-op(, 0)?\)$/);
 	});

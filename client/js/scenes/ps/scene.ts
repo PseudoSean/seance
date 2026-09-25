@@ -219,12 +219,17 @@ export function sceneMarkup(phone: boolean): string {
  * `ps-yurt-moving`. A conversation switch can replace the column, so it is
  * looked for again on every host update and whenever the one observed leaves
  * the page; with no column on screen (Settings, Help, the connect form) the
- * yurt keeps its place.
+ * yurt keeps its place. Each measurement carries the yurt's rendered width,
+ * so the place is clamped with the whole yurt on screen, and `seen()` (the
+ * scene's first visible update) starts the load's window, in which the first
+ * place measured is taken without a fade.
  */
-function placeYurt(root: HTMLElement): {refind(): void; destroy(): void} {
+function placeYurt(root: HTMLElement): {seen(): void; refind(): void; destroy(): void} {
+	const yurt = root.querySelector(".ps-yurt") as HTMLElement;
 	const follower = yurtFollower({
-		place: (px) => root.style.setProperty("--ps-yurt-left", `${Math.round(px)}px`),
+		place: (px) => root.style.setProperty("--ps-yurt-left", `${px.toFixed(2)}px`),
 		hide: (on) => root.classList.toggle("ps-yurt-moving", on),
+		now: () => performance.now(),
 		after(ms, fn) {
 			const id = window.setTimeout(fn, ms);
 			return () => window.clearTimeout(id);
@@ -240,11 +245,13 @@ function placeYurt(root: HTMLElement): {refind(): void; destroy(): void} {
 	const measure = () => {
 		const scene = root.getBoundingClientRect();
 		const box = column?.isConnected ? column.getBoundingClientRect() : null;
-		const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
 		follower.measure(
 			box && box.width > 0 ? {left: box.left - scene.left, width: box.width} : null,
-			scene.width,
-			rem
+			{
+				width: scene.width,
+				rem: parseFloat(getComputedStyle(document.documentElement).fontSize) || 16,
+				yurtWidth: yurt.getBoundingClientRect().width,
+			}
 		);
 	};
 
@@ -286,6 +293,7 @@ function placeYurt(root: HTMLElement): {refind(): void; destroy(): void} {
 	}
 
 	return {
+		seen: () => follower.seen(),
 		refind() {
 			find();
 			findSoon();
@@ -377,6 +385,7 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 
 		if (state.visible && !visible) {
 			visible = true;
+			yurt.seen(); // the first time opens the load's window (yurt.ts SETTLE_MS)
 			motion(!reduced.matches);
 			tick(); // catch up at once: a laptop that slept shows the right sky
 		} else if (!state.visible && visible) {

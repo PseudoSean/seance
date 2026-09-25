@@ -730,12 +730,16 @@ strong,
 
 /* The yurt (plains.ts `yurtSvg`) on the ground band, centred on the place
  * scene.ts measures in the message column's far third (--ps-yurt-left; 70 %
- * of the scene before any column was measured). It never slides: nothing here
- * may transition or animate its place. A large move fades it out
- * (ps-yurt-moving), jumps it while unseen and fades it back in; the fade is
- * a hair shorter than scene.ts's 0.4 s wait, so the jump is never seen. */
+ * of the scene before any column was measured). Both keep the whole yurt on
+ * screen: yurt.ts clamps the measured place, and the default is clamped here
+ * by half the yurt's width (it is 21cqh tall and 240/170 as wide). It never
+ * slides: nothing here may transition or animate its place. A large move
+ * fades it out (ps-yurt-moving), jumps it while unseen and fades it back in;
+ * the fade is a hair shorter than scene.ts's 0.4 s wait, so the jump is never
+ * seen. */
 #theme-scene .ps-yurt {
-	left: var(--ps-yurt-left, 70%);
+	/* stylelint-disable-next-line unit-no-unknown -- cqh: #theme-scene is a size container; stylelint predates it */
+	left: var(--ps-yurt-left, clamp(calc(21cqh * 120 / 170), 70%, calc(100% - 21cqh * 120 / 170)));
 	bottom: 17%;
 	height: 21%;
 	aspect-ratio: 240 / 170;
@@ -800,7 +804,8 @@ strong,
  * wherever the yurt goes and fades with it. Inside the ground group, so the
  * heat haze bends it with the yurt. */
 #theme-scene .ps-smoke {
-	left: var(--ps-yurt-left, 70%);
+	/* stylelint-disable-next-line unit-no-unknown -- cqh, as the yurt's */
+	left: var(--ps-yurt-left, clamp(calc(21cqh * 120 / 170), 70%, calc(100% - 21cqh * 120 / 170)));
 	bottom: calc(17% + 21% * 148 / 170);
 	width: 0;
 	height: 0;
