@@ -1,12 +1,15 @@
 import {expect} from "chai";
 import {
+	clouds,
 	FIREFLIES,
 	fireflies,
 	landSvg,
 	nearGrass,
 	smoke,
+	weatherLayers,
 	yurtSvg,
 } from "../../../client/js/scenes/ps/plains";
+import {WEATHERS} from "../../../client/js/scenes/ps/engine";
 
 /** How many times `class="<name>"` appears: the whole attribute, so `ps-l-mount` is not `ps-l-mount2`. */
 const classCount = (markup: string, name: string) => markup.split(`class="${name}"`).length - 1;
@@ -26,13 +29,11 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 			expect(land.match(/<svg\b/g)).to.have.length(1);
 		});
 
-		it("names only ps- ids: the river's sky and the heat haze", function () {
+		it("names one id, the river's sky: the heat haze is the weather layer's, on hot days only", function () {
 			const ids = [...land.matchAll(/\bid="([^"]*)"/g)].map((m) => m[1]);
-			expect(ids).to.have.members(["ps-heat", "ps-river-sky"]);
-
-			for (const id of ids) {
-				expect(id).to.match(/^ps-/);
-			}
+			expect(ids).to.deep.equal(["ps-river-sky"]);
+			expect(land).to.not.include("<filter");
+			expect(land).to.not.include("ps-heat");
 		});
 
 		it("draws the eight land paths, once each", function () {
@@ -85,13 +86,6 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 			);
 			expect(land).to.include("var(--ps-river-sky-top)");
 			expect(land).to.include("var(--ps-river-sky-bottom)");
-		});
-
-		it("keeps the heat haze's final values (a 0.007 × 0.05 turbulence, displacement 2, 9 s)", function () {
-			expect(land).to.include('<filter id="ps-heat"');
-			expect(land).to.include('baseFrequency="0.007 0.05"');
-			expect(land).to.include('scale="2"');
-			expect(land).to.include('dur="9s"');
 		});
 
 		it("scatters 40 shrubs, 160 far tufts and 240 near tufts, a quarter or so of them lit", function () {
@@ -334,6 +328,245 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 					/<i style="left:[\d.]+%;top:[\d.]+%;--d:[\d.]+s;--dl:-?[\d.]+s;--dx:-?[\d.]+rem;--dy:-?[\d.]+rem;--b:[\d.]+s;--bl:-?[\d.]+s"><\/i>/g
 				),
 			]).to.have.length(34);
+		});
+	});
+
+	describe("clouds", function () {
+		const sky = clouds();
+
+		it("is the same drawing every time", function () {
+			expect(clouds()).to.equal(sky);
+		});
+
+		it("draws the mockup's five clouds, each of five blobs", function () {
+			expect(classCount(sky, "ps-cloud")).to.equal(5);
+			expect(sky.match(/<div\b/g)).to.have.length(5);
+			expect(sky.match(/<i /g)).to.have.length(25);
+		});
+
+		it("sizes each in cqw from the mockup's px at its 1180 px window, with its own height, speed and delay", function () {
+			const got = [
+				...sky.matchAll(
+					/<div class="ps-cloud" style="--cw:([\d.]+)cqw;--cy:(\d+)%;--cd:(\d+)s;--cdl:(-\d+)s">/g
+				),
+			].map((m) => m.slice(1).map(Number));
+			const MOCKUP = [
+				[170, 9, 230, -40],
+				[104, 21, 280, -160],
+				[210, 30, 320, -100],
+				[80, 14, 200, -70],
+				[130, 24, 260, -215],
+			];
+			expect(got).to.have.length(5);
+
+			got.forEach(([cw, cy, cd, cdl], i) => {
+				const [w, y, d, dl] = MOCKUP[i];
+				expect(cw, `cloud ${i}`).to.be.closeTo(w / 11.8, 0.005);
+				expect([cy, cd, cdl], `cloud ${i}`).to.deep.equal([y, d, dl]);
+			});
+		});
+
+		it("places each blob in % of its own cloud, the mockup's five, never px", function () {
+			expect(sky).to.not.include("px");
+			const first = sky.slice(0, sky.indexOf("</div>"));
+			const blobs = [
+				...first.matchAll(
+					/<i style="left:([\d.]+)%;top:([\d.]+)%;width:([\d.]+)%;height:([\d.]+)%"><\/i>/g
+				),
+			].map((m) => m.slice(1).map(Number));
+			expect(blobs).to.deep.equal([
+				[0, 45, 55, 55],
+				[18, 12, 44, 80],
+				[45, 20, 40, 72],
+				[64, 42, 36, 56],
+				[28, 50, 50, 50],
+			]);
+			expect(
+				sky.match(/<i style="left:[\d.]+%;top:[\d.]+%;width:[\d.]+%;height:[\d.]+%"><\/i>/g)
+			).to.have.length(25);
+		});
+
+		it("names no ids and holds no text", function () {
+			expect(sky).to.not.match(/\bid="/);
+			expect(sky.replace(/<[^>]*>/g, "")).to.equal("");
+		});
+	});
+
+	describe("weatherLayers", function () {
+		/** The `<i>` inside `<div class="${layer}">…</div>`, or 0 when there is no such layer. */
+		const count = (markup: string, layer: string) => {
+			const m = new RegExp(`<div class="${layer}">([\\s\\S]*?)</div>`).exec(markup);
+			return m ? m[1].split("<i ").length - 1 : 0;
+		};
+
+		const drops = (markup: string) => count(markup, "ps-rain");
+		const flakes = (markup: string) => count(markup, "ps-snow");
+		const seeds = (markup: string) => count(markup, "ps-seeds");
+		const flash = (markup: string) => classCount(markup, "ps-flash");
+		const band = (markup: string) => classCount(markup, "ps-heatband");
+		const haze = (markup: string) => markup.split('id="ps-heat"').length - 1;
+
+		it("builds nothing on a clear day: no drops, flakes or seeds, no flash, no heat", function () {
+			for (const phone of [false, true]) {
+				const clear = weatherLayers("clear", phone);
+				expect(clear).to.equal("");
+				expect([drops(clear), flakes(clear), seeds(clear)]).to.deep.equal([0, 0, 0]);
+			}
+		});
+
+		it("rains 130 drops, 65 on a phone, and nothing else", function () {
+			const rain = weatherLayers("rain", false);
+			expect(drops(rain)).to.equal(130);
+			expect(drops(weatherLayers("rain", true))).to.equal(65);
+			expect([flakes(rain), seeds(rain), flash(rain), band(rain), haze(rain)]).to.deep.equal([
+				0, 0, 0, 0, 0,
+			]);
+			expect(rain.match(/<i /g)).to.have.length(130);
+		});
+
+		it("storms: the rain's drops and the lightning", function () {
+			const storm = weatherLayers("storm", false);
+			expect(drops(storm)).to.equal(130);
+			expect(flash(storm)).to.equal(1);
+			const phone = weatherLayers("storm", true);
+			expect(drops(phone)).to.equal(65);
+			expect(flash(phone)).to.equal(1);
+			expect([flakes(storm), seeds(storm), band(storm), haze(storm)]).to.deep.equal([
+				0, 0, 0, 0,
+			]);
+		});
+
+		it("snows 120 flakes, 60 on a phone", function () {
+			const snow = weatherLayers("snow", false);
+			expect(flakes(snow)).to.equal(120);
+			expect(flakes(weatherLayers("snow", true))).to.equal(60);
+			expect([drops(snow), seeds(snow), flash(snow), band(snow), haze(snow)]).to.deep.equal([
+				0, 0, 0, 0, 0,
+			]);
+		});
+
+		it("blows 26 seeds on a windy day, 13 on a phone", function () {
+			const wind = weatherLayers("wind", false);
+			expect(seeds(wind)).to.equal(26);
+			expect(seeds(weatherLayers("wind", true))).to.equal(13);
+			expect([drops(wind), flakes(wind), flash(wind), band(wind), haze(wind)]).to.deep.equal([
+				0, 0, 0, 0, 0,
+			]);
+		});
+
+		it("on a hot day holds the heat band and the haze, and no particles", function () {
+			for (const phone of [false, true]) {
+				const heat = weatherLayers("heat", phone);
+				expect(band(heat)).to.equal(1);
+				expect(haze(heat)).to.equal(1);
+				expect(heat).to.not.include("<i ");
+				expect(flash(heat)).to.equal(0);
+			}
+		});
+
+		it("keeps the heat haze's final values (a 0.007 × 0.05 turbulence, displacement 2, 9 s)", function () {
+			const heat = weatherLayers("heat", false);
+			expect(heat).to.include(
+				'<filter id="ps-heat" x="0" y="-5%" width="100%" height="110%"'
+			);
+			expect(heat).to.include('baseFrequency="0.007 0.05"');
+			expect(heat).to.include('values="0.007 0.05;0.009 0.038;0.007 0.05"');
+			expect(heat).to.include('scale="2"');
+			expect(heat).to.include('dur="9s"');
+		});
+
+		it("hosts the haze in its own empty svg, never display: none (a filter there may not resolve)", function () {
+			const svg = /<svg class="ps-heat-haze"[^>]*>/.exec(weatherLayers("heat", false))?.[0];
+			expect(svg, "the haze's svg").to.not.equal(undefined);
+			expect(svg).to.include('width="0"');
+			expect(svg).to.include('height="0"');
+			expect(svg).to.include('aria-hidden="true"');
+			expect(weatherLayers("heat", false)).to.not.include("display");
+		});
+
+		it("builds the haze on hot days only", function () {
+			for (const weather of WEATHERS) {
+				for (const phone of [false, true]) {
+					expect(haze(weatherLayers(weather, phone)), weather).to.equal(
+						weather === "heat" ? 1 : 0
+					);
+				}
+			}
+		});
+
+		it("is seeded: the same every time, and a phone's particles are the first half of the window's", function () {
+			const dots = (markup: string) => markup.match(/<i [^>]*><\/i>/g) ?? [];
+
+			for (const weather of ["rain", "storm", "snow", "wind"] as const) {
+				expect(weatherLayers(weather, false), weather).to.equal(
+					weatherLayers(weather, false)
+				);
+				const all = dots(weatherLayers(weather, false));
+				const half = dots(weatherLayers(weather, true));
+				expect(half, weather).to.deep.equal(all.slice(0, all.length / 2));
+			}
+		});
+
+		it("moves nothing in px: the marks' sizes in rem, their travel in cqw/cqh", function () {
+			for (const weather of WEATHERS) {
+				expect(weatherLayers(weather, false), weather).to.not.match(/\dpx/);
+			}
+
+			const rain = [
+				...weatherLayers("rain", false).matchAll(
+					/<i style="left:([\d.]+)%;--rd:([\d.]+)s;--rdl:(-?[\d.]+)s;opacity:([\d.]+)"><\/i>/g
+				),
+			];
+			expect(rain).to.have.length(130);
+
+			for (const [, left, rd, rdl, opacity] of rain.map((m) => m.map(Number))) {
+				expect(left).to.be.within(0, 110);
+				expect(rd).to.be.within(0.55, 0.9);
+				expect(rdl).to.be.within(-1.2, 0);
+				expect(opacity).to.be.within(0.4, 1);
+			}
+
+			const snow = [
+				...weatherLayers("snow", false).matchAll(
+					/<i style="left:([\d.]+)%;--fs:([\d.]+)rem;--fd:([\d.]+)s;--fdl:(-?[\d.]+)s;--fx:(-?[\d.]+)cqw;opacity:([\d.]+)"><\/i>/g
+				),
+			];
+			expect(snow).to.have.length(120);
+
+			for (const [, left, fs, fd, fdl, fx, opacity] of snow.map((m) => m.map(Number))) {
+				expect(left).to.be.within(0, 105);
+				expect(fs).to.be.within(2 / 16, 5.4 / 16);
+				expect(fd).to.be.within(7, 14);
+				expect(fdl).to.be.within(-14, 0);
+				expect(fx).to.be.within(-50 / 11.8 - 0.01, 30 / 11.8 + 0.01);
+				expect(opacity).to.be.within(0.5, 1);
+			}
+
+			const wind = [
+				...weatherLayers("wind", false).matchAll(
+					/<i style="--y:(\d+)%;--sd:([\d.]+)s;--sdl:(-?[\d.]+)s;--sy:(-?[\d.]+)cqh"><\/i>/g
+				),
+			];
+			expect(wind).to.have.length(26);
+
+			for (const [, y, sd, sdl, sy] of wind.map((m) => m.map(Number))) {
+				expect(y).to.be.within(0, 100);
+				expect(sd).to.be.within(3.5, 6.5);
+				expect(sdl).to.be.within(-6, 0);
+				expect(sy).to.be.within(-30 / 7 - 0.01, 30 / 7 + 0.01);
+			}
+		});
+
+		it("names only ps- ids and holds no text", function () {
+			for (const weather of WEATHERS) {
+				const markup = weatherLayers(weather, false);
+
+				for (const m of markup.matchAll(/\bid="([^"]*)"/g)) {
+					expect(m[1]).to.match(/^ps-/);
+				}
+
+				expect(markup.replace(/<[^>]*>/g, ""), weather).to.equal("");
+			}
 		});
 	});
 });

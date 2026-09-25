@@ -1327,6 +1327,150 @@ describe("the ps theme's yurt and its smoke (plan 3, spec §5.3)", function () {
 	});
 });
 
+describe("the ps theme's clouds and weather (plan 3 task 4, spec §5.1, §5.5)", function () {
+	const S = "#theme-scene";
+	/** Every rule of the clouds, the veil and the weather layer, plain or under a root class. */
+	const WEATHER_RULE =
+		/^#theme-scene(\.ps-(windy|storm|hot))? \.(ps-cloud|ps-veil|ps-weather|ps-rain|ps-snow|ps-seeds|ps-flash|ps-heatband|ps-heat-haze)\b/;
+	const own = rules.filter((r) => r.selectors.some((sel) => WEATHER_RULE.test(sel)));
+	const frames = (name: string) =>
+		css.match(new RegExp(`@keyframes ${name}\\s*\\{([\\s\\S]*?)\\n\\}`))?.[1] ?? "";
+
+	it("bends the ground with the heat haze only on a hot day, and leaves the near grass out of it", function () {
+		expect(valueOf(`${S}.ps-hot .ps-ground`, "filter")).to.equal('url("#ps-heat")');
+		expect(valueOf(`${S} .ps-ground`, "filter")).to.equal(undefined);
+		// Nothing else takes the haze, and nothing filters the blades.
+		const hazed = rules.filter((r) => r.decls.some(([, v]) => v.includes("#ps-heat")));
+		expect(hazed.map((r) => r.selectors)).to.deep.equal([[`${S}.ps-hot .ps-ground`]]);
+		const blades = rules.filter((r) => r.selectors.some((sel) => sel.includes(".ps-blades")));
+		expect(blades.flatMap((r) => r.decls).filter(([p]) => p === "filter")).to.deep.equal([]);
+	});
+
+	it("keeps the haze's svg in the page but out of sight: no size, never display: none", function () {
+		const decls = declsOf(`${S} .ps-heat-haze`);
+		expect(decls.length).to.be.greaterThan(0);
+		expect(valueOf(`${S} .ps-heat-haze`, "width")).to.equal("0");
+		expect(valueOf(`${S} .ps-heat-haze`, "height")).to.equal("0");
+		expect(decls.filter(([p]) => p === "display")).to.deep.equal([]);
+	});
+
+	it("speeds the blades to 2.4 s and the clouds to 0.4 of their time on a windy day", function () {
+		expect(valueOf(`${S}.ps-windy .ps-blades .ps-sway`, "animation-duration")).to.equal("2.4s");
+		expect(valueOf(`${S}.ps-windy .ps-cloud`, "animation-duration")).to.equal(
+			"calc(var(--cd) * 0.4)"
+		);
+	});
+
+	it("drifts each cloud across the scene at its own height, in cqw", function () {
+		expect(valueOf(`${S} .ps-cloud-field`, "inset")).to.equal("0");
+		expect(valueOf(`${S} .ps-cloud`, "position")).to.equal("absolute");
+		expect(valueOf(`${S} .ps-cloud`, "top")).to.equal("var(--cy)");
+		expect(valueOf(`${S} .ps-cloud`, "width")).to.equal("var(--cw)");
+		expect(valueOf(`${S} .ps-cloud`, "height")).to.equal("calc(var(--cw) * 0.42)");
+		expect(valueOf(`${S} .ps-cloud`, "animation")).to.equal(
+			"ps-drift var(--cd) linear var(--cdl) infinite"
+		);
+		const drift = frames("ps-drift");
+		expect(drift).to.include("translateX(-30%)");
+		expect(drift).to.include("translateX(calc(100cqw + 60%))");
+	});
+
+	it("paints the clouds from the published cloud colours, greyed by the weather in the palette", function () {
+		expect(valueOf(`${S} .ps-cloud i`, "background")).to.equal(
+			"linear-gradient(180deg, var(--ps-cloud) 40%, var(--ps-cloud-under) 100%)"
+		);
+	});
+
+	it("veils the scene in the weather's colour and opacity, --ps-veil-c and --ps-veil", function () {
+		expect(valueOf(`${S} .ps-veil`, "inset")).to.equal("0");
+		expect(valueOf(`${S} .ps-veil`, "background")).to.match(/^var\(--ps-veil-c(, #5a6478)?\)$/);
+		expect(valueOf(`${S} .ps-veil`, "opacity")).to.match(/^var\(--ps-veil(, 0)?\)$/);
+	});
+
+	it("shows each weather's particles at the weather's own level", function () {
+		expect(valueOf(`${S} .ps-rain`, "opacity")).to.match(/^var\(--ps-rain-op(, 0)?\)$/);
+		expect(valueOf(`${S} .ps-snow`, "opacity")).to.match(/^var\(--ps-snow-op(, 0)?\)$/);
+		expect(valueOf(`${S} .ps-seeds`, "opacity")).to.match(/^var\(--ps-wind-op(, 0)?\)$/);
+		expect(valueOf(`${S} .ps-heatband`, "opacity")).to.match(/^var\(--ps-heat-op(, 0)?\)$/);
+	});
+
+	it("flashes the lightning only under .ps-storm, the mockup's 9 s", function () {
+		expect(valueOf(`${S} .ps-flash`, "animation")).to.equal(undefined);
+		expect(valueOf(`${S} .ps-flash`, "opacity")).to.equal("0");
+		expect(valueOf(`${S}.ps-storm .ps-flash`, "animation")).to.equal(
+			"ps-flash 9s linear infinite"
+		);
+		const flash = frames("ps-flash");
+		expect(flash).to.match(/0%,\s*90%,\s*100%\s*\{\s*opacity:\s*0;/);
+		expect(flash).to.match(/91%\s*\{\s*opacity:\s*0\.5;/);
+	});
+
+	it("moves the rain, the snow and the seeds in cqw/cqh from the mockup's 1180 × 700 window", function () {
+		expect(valueOf(`${S} .ps-rain i`, "animation")).to.equal(
+			"ps-drop var(--rd) linear var(--rdl) infinite"
+		);
+		expect(frames("ps-drop")).to.include("translate(-3.9cqw, 118cqh)");
+		expect(valueOf(`${S} .ps-snow i`, "animation")).to.equal(
+			"ps-flake var(--fd) linear var(--fdl) infinite"
+		);
+		expect(frames("ps-flake")).to.include("translate(var(--fx), 114.3cqh)");
+		expect(valueOf(`${S} .ps-seeds i`, "animation")).to.equal(
+			"ps-seed var(--sd) linear var(--sdl) infinite"
+		);
+		expect(frames("ps-seed")).to.include("translate(111.9cqw, var(--sy))");
+	});
+
+	it("puts no px in a translate of these rules or their keyframes: travel in cqw/cqh, marks in rem", function () {
+		expect(own.length, "the clouds' and the weather's rules").to.be.at.least(14);
+
+		for (const r of own) {
+			for (const [p, v] of r.decls) {
+				expect(v, `${r.selectors.join(", ")} { ${p} }`).to.not.match(/\dpx/);
+			}
+		}
+
+		for (const name of [
+			"ps-drift",
+			"ps-drop",
+			"ps-flake",
+			"ps-seed",
+			"ps-shimmer",
+			"ps-flash",
+		]) {
+			const body = frames(name);
+			expect(body, name).to.not.equal("");
+			expect(body, name).to.not.match(/\dpx/);
+
+			for (const t of body.match(/translate[XY]?\([^;]*\)/g) ?? []) {
+				expect(t, name).to.match(/cq[wh]|%|\b0\b|var\(/);
+			}
+		}
+	});
+
+	it("mixes no area colour in CSS: the clouds and the veil are published colours", function () {
+		expect(own.length, "the clouds' and the weather's rules").to.be.at.least(14);
+
+		for (const r of own) {
+			for (const [p, v] of r.decls) {
+				expect(v, `${r.selectors.join(", ")} { ${p} }`).to.not.include("color-mix");
+			}
+		}
+	});
+
+	it("keeps its keyframes' names its own, once each", function () {
+		for (const name of [
+			"ps-drift",
+			"ps-drop",
+			"ps-flake",
+			"ps-seed",
+			"ps-shimmer",
+			"ps-flash",
+		]) {
+			expect(css.match(new RegExp(`@keyframes ${name}\\b`, "g")), name).to.have.length(1);
+		}
+	});
+});
+
 describe("the ps theme's animals", function () {
 	/** The cast (tools/heart/README.md); the teddy and the dolphin are held. */
 	const CAST = ["horse", "deer", "puppy", "bunny", "kitten", "frog", "ladybug", "bird"];

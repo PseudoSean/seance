@@ -1,8 +1,21 @@
 import {expect} from "chai";
-import {momentFor, sunTimes} from "../../../client/js/scenes/ps/engine";
+import {
+	momentAt,
+	momentFor,
+	sunTimes,
+	WEATHERS,
+	type Weather,
+} from "../../../client/js/scenes/ps/engine";
 import {paletteAt, publishedFor} from "../../../client/js/scenes/ps/palette";
-import {FIREFLIES, smoke, yurtSvg} from "../../../client/js/scenes/ps/plains";
-import {moonShape, sceneMarkup, sceneVars, themeColorFor} from "../../../client/js/scenes/ps/scene";
+import {clouds, FIREFLIES, smoke, yurtSvg} from "../../../client/js/scenes/ps/plains";
+import {
+	moonShape,
+	sceneClasses,
+	sceneMarkup,
+	sceneVars,
+	themeColorFor,
+	weatherChanged,
+} from "../../../client/js/scenes/ps/scene";
 
 const days = (iso: string) => Date.parse(iso) / 86400000;
 
@@ -177,6 +190,77 @@ describe("ps scene: plan 3's land, yurt and level vars", function () {
 	});
 });
 
+describe("ps scene: the day's weather (plan 3 task 4)", function () {
+	function at(weather: Weather, minute?: number) {
+		const doy = 200;
+		const {rise, set} = sunTimes(doy);
+		return momentFor({
+			minute: minute ?? (rise + set) / 2,
+			doy,
+			dayNumber: 20653,
+			epochDays: 20653,
+			weather,
+		});
+	}
+
+	it("rebuilds the weather layer when the day's weather is new: first, or changed", function () {
+		expect(weatherChanged(null, "rain")).to.equal(true);
+		expect(weatherChanged(null, "clear")).to.equal(true);
+		expect(weatherChanged("clear", "rain")).to.equal(true);
+		expect(weatherChanged("rain", "clear")).to.equal(true);
+		expect(weatherChanged("rain", "rain")).to.equal(false);
+
+		for (const w of WEATHERS) {
+			expect(weatherChanged(w, w), w).to.equal(false);
+		}
+	});
+
+	it("sees the change at local midnight with the page open: a rainy 26 September, a clear 27th", function () {
+		// Local dates, so the day is the same in any timezone the suite runs in.
+		const before = momentAt(new Date(2026, 8, 26, 23, 59, 50));
+		const after = momentAt(new Date(2026, 8, 27, 0, 0, 10));
+		expect(before.weather).to.equal("rain");
+		expect(after.weather).to.equal("clear");
+		expect(weatherChanged(before.weather, after.weather)).to.equal(true);
+		// And within the day the layer is left alone.
+		const noon = momentAt(new Date(2026, 8, 26, 12, 0));
+		expect(weatherChanged(noon.weather, before.weather)).to.equal(false);
+	});
+
+	it("turns the day's booleans into the root's classes: windy, storm, hot", function () {
+		const classes = (weather: Weather, minute?: number) => {
+			const m = at(weather, minute);
+			return sceneClasses(m, paletteAt(m));
+		};
+
+		expect(classes("clear")).to.deep.equal({
+			"ps-windy": false,
+			"ps-storm": false,
+			"ps-hot": false,
+		});
+		expect(classes("wind")).to.deep.include({"ps-windy": true, "ps-storm": false});
+		// A storm blows too (its wind is 0.6, over the 0.5 line), as the mockup's.
+		expect(classes("storm")).to.deep.include({"ps-windy": true, "ps-storm": true});
+		expect(classes("rain")).to.deep.include({"ps-windy": false, "ps-storm": false});
+		expect(classes("heat")).to.deep.include({"ps-hot": true});
+		// Hot only while the day is light: a heat day's midnight is not.
+		expect(classes("heat", 0)).to.deep.include({"ps-hot": false});
+	});
+
+	it("writes the rain's and the snow's opacity, the mockup's --rain-op and --snow-op", function () {
+		const vars = (weather: Weather) => {
+			const m = at(weather);
+			return sceneVars(m, paletteAt(m));
+		};
+
+		expect(vars("rain")["--ps-rain-op"]).to.equal("0.90");
+		expect(vars("storm")["--ps-rain-op"]).to.equal("1.00");
+		expect(vars("clear")["--ps-rain-op"]).to.equal("0.00");
+		expect(vars("snow")["--ps-snow-op"]).to.equal("0.95");
+		expect(vars("rain")["--ps-snow-op"]).to.equal("0.00");
+	});
+});
+
 describe("ps scene: the layers it builds (sceneMarkup)", function () {
 	/** The class of every top-level element in `markup`, in order. */
 	function topLevel(markup: string): string[] {
@@ -216,16 +300,36 @@ describe("ps scene: the layers it builds (sceneMarkup)", function () {
 		throw new Error(`${name} is not closed`);
 	}
 
-	it("puts the layers in the spec's order (§5.1): sky things, the bodies, the ground, the near grass", function () {
+	it("puts the layers in the spec's order (§5.1): sky things, the bodies, the clouds, the ground, the near grass, the veil, the weather", function () {
 		expect(topLevel(sceneMarkup(false))).to.deep.equal([
 			"ps-milky",
 			"ps-stars",
 			"ps-glow",
 			"ps-moon",
 			"ps-sun",
+			"ps-cloud-field",
 			"ps-ground",
 			"ps-blades",
+			"ps-veil",
+			"ps-weather",
 		]);
+	});
+
+	it("drifts plains.ts's five clouds in the cloud field", function () {
+		expect(inside(sceneMarkup(false), "ps-cloud-field")).to.equal(clouds());
+	});
+
+	it("leaves the veil and the weather layer empty: the first tick builds the day's weather", function () {
+		for (const phone of [false, true]) {
+			const markup = sceneMarkup(phone);
+			expect(inside(markup, "ps-veil")).to.equal("");
+			expect(inside(markup, "ps-weather")).to.equal("");
+			expect(markup).to.not.include('id="ps-heat"');
+
+			for (const layer of ["ps-rain", "ps-snow", "ps-seeds", "ps-flash", "ps-heatband"]) {
+				expect(markup, layer).to.not.include(`class="${layer}"`);
+			}
+		}
 	});
 
 	it("holds the land, the fireflies, the yurt, its smoke and the animal layer in the ground group, in that order", function () {

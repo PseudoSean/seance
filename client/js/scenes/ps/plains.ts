@@ -1,19 +1,21 @@
 /**
  * The ps theme's plains (docs/projects/ps-theme.md §5.1, §5.3, §5.5): the land
  * with its river, the near grass along the foot of the window, the fireflies
- * in the far fields, and the yurt with its smoke. The approved mockup is the
- * drawing (docs/resources/themes/ps-plains/mockup.html): its land and yurt
- * SVGs, its blade and flower generator, its firefly generator and its smoke,
- * ported with their geometry and counts, `ps-` names, and engine.ts's `rng` at
- * the mockup's seeds in place of its LCG (so the scatter differs from the
- * mockup's; the drawing does not).
+ * in the far fields, the yurt with its smoke, the clouds, and the day's
+ * weather. The approved mockup is the drawing
+ * (docs/resources/themes/ps-plains/mockup.html): its land and yurt SVGs, its
+ * blade and flower generator, its firefly generator, its smoke, its clouds
+ * and its rain, snow and seed generators, ported with their geometry and
+ * counts, `ps-` names, travel in cqw/cqh of the scene and small marks in rem,
+ * and engine.ts's `rng` at the mockup's seeds in place of its LCG (so the
+ * scatter differs from the mockup's; the drawing does not).
  *
  * Pure: strings in, strings out, the same every call. No colour lives here:
  * every fill is a class that ps.css paints from the palette's published
  * custom properties (scene.ts `sceneVars`). Nothing user-supplied is ever
  * written into this markup.
  */
-import {rng} from "./engine";
+import {rng, type Weather} from "./engine";
 
 /** Fireflies over the far fields: the mockup's 34. A phone gets half (scene.ts). */
 export const FIREFLIES = 34;
@@ -47,8 +49,8 @@ function tuft(x: number, y: number, h: number, cls: string): string {
  * The land: mountains, the far plain with its shrubs, the river (or its dry
  * bed), two hills with their rims, tufts and trees, and the grass band, back
  * to front on the mockup's 1200 × 400 box, stretched to whatever box ps.css
- * gives it. Also the defs the ground uses: the river's sky gradient and the
- * heat haze (applied to the ground group on hot days).
+ * gives it, with the river's sky gradient in its defs. (The heat haze that
+ * bends the ground on hot days is the weather layer's: `weatherLayers`.)
  */
 export function landSvg(): string {
 	// One stream, as the mockup's: the shrubs, then the far tufts, then the near.
@@ -85,12 +87,6 @@ export function landSvg(): string {
 	return (
 		`<svg class="ps-land" viewBox="0 0 1200 400" preserveAspectRatio="none" aria-hidden="true">` +
 		`<defs>` +
-		`<filter id="ps-heat" x="0" y="-5%" width="100%" height="110%">` +
-		`<feTurbulence type="turbulence" baseFrequency="0.007 0.05" numOctaves="2" seed="4" result="h">` +
-		`<animate attributeName="baseFrequency" dur="9s" repeatCount="indefinite" values="0.007 0.05;0.009 0.038;0.007 0.05"/>` +
-		`</feTurbulence>` +
-		`<feDisplacementMap in="SourceGraphic" in2="h" scale="2" xChannelSelector="R" yChannelSelector="G"/>` +
-		`</filter>` +
 		`<linearGradient id="ps-river-sky" x1="0" y1="0" x2="0" y2="1">` +
 		`<stop offset="0" style="stop-color: var(--ps-river-sky-top)"/><stop offset="1" style="stop-color: var(--ps-river-sky-bottom)"/>` +
 		`</linearGradient>` +
@@ -276,4 +272,159 @@ export function smoke(): string {
 		(p) =>
 			`<i style="--sd:${p.d}s;--sdl:${p.dl}s;width:${p.w / 16}rem;height:${p.w / 16}rem"></i>`
 	).join("");
+}
+
+/**
+ * The mockup's five clouds: width in its px (at its 1180 px window), height
+ * as % of the scene, and the drift's length and delay in seconds.
+ */
+const CLOUDS = [
+	{w: 170, y: 9, d: 230, dl: -40},
+	{w: 104, y: 21, d: 280, dl: -160},
+	{w: 210, y: 30, d: 320, dl: -100},
+	{w: 80, y: 14, d: 200, dl: -70},
+	{w: 130, y: 24, d: 260, dl: -215},
+];
+
+/** Each cloud's five blobs, as fractions of its box: left, top, width, height. */
+const BLOBS = [
+	[0, 0.45, 0.55, 0.55],
+	[0.18, 0.12, 0.44, 0.8],
+	[0.45, 0.2, 0.4, 0.72],
+	[0.64, 0.42, 0.36, 0.56],
+	[0.28, 0.5, 0.5, 0.5],
+];
+
+/** The mockup's window, which its px travel and sizes were drawn against. */
+const WINDOW_W = 11.8; // px per cqw at its 1180 px width
+const WINDOW_H = 7; // px per cqh at its 700 px height
+
+/** A px length of the mockup's in cqw / cqh / rem (at its 16 px rem). */
+const cqw = (px: number) => `${n(px / WINDOW_W)}cqw`;
+const cqh = (px: number) => `${n(px / WINDOW_H)}cqh`;
+
+/**
+ * The sky's clouds (spec §5.1), the mockup's five of five blobs each: sized
+ * in cqw of the scene, placed at their own heights, each drifting across it
+ * on its own clock (ps.css `ps-drift`, faster on a windy day); the blobs in %
+ * of their cloud. Their colours are the palette's, which greys them by the
+ * weather. There in every weather, so built once.
+ */
+export function clouds(): string {
+	return CLOUDS.map(
+		(c) =>
+			`<div class="ps-cloud" style="--cw:${cqw(c.w)};--cy:${c.y}%;--cd:${c.d}s;--cdl:${
+				c.dl
+			}s">` +
+			BLOBS.map(
+				([x, y, w, h]) =>
+					`<i style="left:${n(x * 100)}%;top:${n(y * 100)}%;width:${n(
+						w * 100
+					)}%;height:${n(h * 100)}%"></i>`
+			).join("") +
+			`</div>`
+	).join("");
+}
+
+/** The mockup's particle counts; a phone gets half. */
+const RAIN_DROPS = 130;
+const SNOWFLAKES = 120;
+const SEEDS = 26;
+
+/** `count` rain drops, each falling on its own clock (ps.css `ps-drop`). */
+function rain(count: number): string {
+	const r = rng(1301);
+	let out = "";
+
+	for (let i = 0; i < count; i++) {
+		const left = (r() * 110).toFixed(1);
+		const d = (0.55 + r() * 0.35).toFixed(2);
+		const dl = (-r() * 1.2).toFixed(2);
+		const opacity = (0.4 + r() * 0.6).toFixed(2);
+		out += `<i style="left:${left}%;--rd:${d}s;--rdl:${dl}s;opacity:${opacity}"></i>`;
+	}
+
+	return `<div class="ps-rain">${out}</div>`;
+}
+
+/** `count` snowflakes, each sized in rem and drifting sideways in cqw as it falls (ps.css `ps-flake`). */
+function snow(count: number): string {
+	const r = rng(1201);
+	let out = "";
+
+	for (let i = 0; i < count; i++) {
+		const left = (r() * 105).toFixed(1);
+		const size = Number((2 + r() * 3.4).toFixed(1)) / 16;
+		const d = (7 + r() * 7).toFixed(1);
+		const dl = (-r() * 14).toFixed(1);
+		const fx = cqw(Number((r() * 80 - 50).toFixed(0)));
+		const opacity = (0.5 + r() * 0.5).toFixed(2);
+		out += `<i style="left:${left}%;--fs:${size}rem;--fd:${d}s;--fdl:${dl}s;--fx:${fx};opacity:${opacity}"></i>`;
+	}
+
+	return `<div class="ps-snow">${out}</div>`;
+}
+
+/** `count` seeds blown across on the wind, each at its own height, rising or sinking in cqh (ps.css `ps-seed`). */
+function seeds(count: number): string {
+	const r = rng(2601);
+	let out = "";
+
+	for (let i = 0; i < count; i++) {
+		const y = (r() * 100).toFixed(0);
+		const d = (3.5 + r() * 3).toFixed(1);
+		const dl = (-r() * 6).toFixed(1);
+		const sy = cqh(Number((r() * 60 - 30).toFixed(0)));
+		out += `<i style="--y:${y}%;--sd:${d}s;--sdl:${dl}s;--sy:${sy}"></i>`;
+	}
+
+	return `<div class="ps-seeds">${out}</div>`;
+}
+
+/**
+ * The heat haze (spec §5.5, the mockup's final values: a 0.007 × 0.05
+ * turbulence, displacement 2, a 9 s cycle), alone in an svg of no size — not
+ * `display: none`, where a reference to the filter may not resolve. ps.css
+ * applies it to the ground group, and only by day (`ps-hot`).
+ */
+const HEAT_HAZE =
+	`<svg class="ps-heat-haze" width="0" height="0" aria-hidden="true" focusable="false">` +
+	`<filter id="ps-heat" x="0" y="-5%" width="100%" height="110%">` +
+	`<feTurbulence type="turbulence" baseFrequency="0.007 0.05" numOctaves="2" seed="4" result="h">` +
+	`<animate attributeName="baseFrequency" dur="9s" repeatCount="indefinite" values="0.007 0.05;0.009 0.038;0.007 0.05"/>` +
+	`</feTurbulence>` +
+	`<feDisplacementMap in="SourceGraphic" in2="h" scale="2" xChannelSelector="R" yChannelSelector="G"/>` +
+	`</filter>` +
+	`</svg>`;
+
+/**
+ * What the day's weather shows over the scene (spec §5.1 layer 10, §10: only
+ * the weather that is happening exists in the page): rain drops in rain and
+ * storm, and the storm's lightning; snowflakes in snow; seeds on a windy day;
+ * the heat band and the haze on a hot one; nothing on a clear day. (The veil
+ * is the scene's own layer, there in every weather at the weather's level.)
+ * A phone (the phone layout) gets half the particles. Seeded, one stream per
+ * kind, so the phone's half are the first half of the window's; the mockup
+ * drew all three from the one stream its birds had used, which cannot be
+ * reproduced without them, so the scatter differs from the mockup's and the
+ * drawing does not. The scene rebuilds this when the weather changes
+ * (scene.ts `weatherChanged`).
+ */
+export function weatherLayers(weather: Weather, phone: boolean): string {
+	const part = (count: number) => (phone ? count / 2 : count);
+
+	switch (weather) {
+		case "rain":
+			return rain(part(RAIN_DROPS));
+		case "storm":
+			return rain(part(RAIN_DROPS)) + `<div class="ps-flash"></div>`;
+		case "snow":
+			return snow(part(SNOWFLAKES));
+		case "wind":
+			return seeds(part(SEEDS));
+		case "heat":
+			return `<div class="ps-heatband"></div>` + HEAT_HAZE;
+		case "clear":
+			return "";
+	}
 }

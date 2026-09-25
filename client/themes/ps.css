@@ -625,6 +625,41 @@ strong,
 	to { transform: rotate(360deg); }
 }
 
+/* The clouds (plains.ts `clouds`): the mockup's five, each at its own height
+ * and drifting across the scene in cqw on its own clock, faster on a windy
+ * day. Their colours are the palette's, greyed there by the weather. (The
+ * mockup left its clouds unpositioned, so they stacked from the top of its
+ * window and their heights went unused; here each stands at its own.) */
+#theme-scene .ps-cloud-field {
+	inset: 0;
+}
+
+#theme-scene .ps-cloud {
+	position: absolute;
+	top: var(--cy);
+	left: 0;
+	width: var(--cw);
+	height: calc(var(--cw) * 0.42);
+	animation: ps-drift var(--cd) linear var(--cdl) infinite;
+	filter: blur(0.025rem);
+}
+
+#theme-scene .ps-cloud i {
+	position: absolute;
+	border-radius: 50%;
+	background: linear-gradient(180deg, var(--ps-cloud) 40%, var(--ps-cloud-under) 100%);
+}
+
+#theme-scene.ps-windy .ps-cloud {
+	animation-duration: calc(var(--cd) * 0.4);
+}
+
+@keyframes ps-drift {
+	from { transform: translateX(-30%); }
+	/* stylelint-disable-next-line unit-no-unknown -- cqw: #theme-scene is a size container; stylelint predates it */
+	to { transform: translateX(calc(100cqw + 60%)); }
+}
+
 /* The ground (plains.ts): one group, so the heat haze bends the land, the
  * fireflies and the yurt together and leaves the near grass crisp. The land
  * is the mockup's 1200 × 400 drawing stretched over the window's lower 56 %.
@@ -857,6 +892,11 @@ strong,
 	animation: ps-sway 7s ease-in-out infinite alternate;
 }
 
+/* In the wind (a windy day, and a storm) the blades bend faster. */
+#theme-scene.ps-windy .ps-blades .ps-sway {
+	animation-duration: 2.4s;
+}
+
 /* The blades' own name: the mockup gave its birds' drift the same keyframes
  * name, and the later one won — the birds must not take this one. */
 @keyframes ps-sway {
@@ -866,6 +906,149 @@ strong,
 
 #theme-scene .ps-blades circle {
 	opacity: calc(var(--ps-flowers, 1) * (0.85 - var(--ps-dark) * 0.7));
+}
+
+/* On a hot day, while the sun is well up (ps-hot), the heat haze bends the
+ * ground group — the land, the fireflies, the yurt and its smoke together —
+ * and leaves the near grass, outside the group, crisp (spec §5.5). The haze
+ * is the weather layer's (plains.ts `weatherLayers`): on any other day there
+ * is no #ps-heat in the page to point at. */
+#theme-scene.ps-hot .ps-ground {
+	filter: url("#ps-heat");
+}
+
+/* The weather, over everything, the near grass included (spec §5.1 layer 10).
+ * The veil is there in every weather at the weather's own dim and colour (0
+ * on a clear day); everything else in the weather layer is built only on the
+ * day it shows. Travel is in cqw/cqh of the scene, from the mockup's
+ * 1180 × 700 window; the marks are sized in rem. */
+#theme-scene .ps-veil {
+	inset: 0;
+	background: var(--ps-veil-c, #5a6478);
+	opacity: var(--ps-veil, 0);
+	transition: opacity 0.6s;
+}
+
+#theme-scene .ps-weather {
+	inset: 0;
+}
+
+#theme-scene .ps-weather > * {
+	position: absolute;
+}
+
+#theme-scene .ps-rain {
+	inset: 0;
+	opacity: var(--ps-rain-op, 0);
+}
+
+#theme-scene .ps-rain i {
+	position: absolute;
+	top: -8%;
+	width: 0.0813rem;
+	height: 1.25rem;
+	background: linear-gradient(transparent, rgb(214 226 244 / 75%));
+	animation: ps-drop var(--rd) linear var(--rdl) infinite;
+}
+
+@keyframes ps-drop {
+	/* stylelint-disable-next-line unit-no-unknown -- cqw/cqh: #theme-scene is a size container; stylelint predates them */
+	to { transform: translate(-3.9cqw, 118cqh); }
+}
+
+#theme-scene .ps-snow {
+	inset: 0;
+	opacity: var(--ps-snow-op, 0);
+}
+
+#theme-scene .ps-snow i {
+	position: absolute;
+	top: -6%;
+	width: var(--fs);
+	height: var(--fs);
+	border-radius: 50%;
+	background: rgb(255 255 255 / 88%);
+	animation: ps-flake var(--fd) linear var(--fdl) infinite;
+}
+
+@keyframes ps-flake {
+	/* stylelint-disable-next-line unit-no-unknown -- cqw/cqh, as ps-drop's */
+	50% { transform: translate(calc(var(--fx) * 0.5 + 1.02cqw), 57.1cqh); }
+	/* stylelint-disable-next-line unit-no-unknown -- cqh, as ps-drop's */
+	100% { transform: translate(var(--fx), 114.3cqh); }
+}
+
+/* Seeds on the wind. A seed at rest waits where its flight starts, off the
+ * scene's left edge, so a stopped seed is never a dot on the page. */
+#theme-scene .ps-seeds {
+	inset: 0;
+	opacity: var(--ps-wind-op, 0);
+}
+
+#theme-scene .ps-seeds i {
+	position: absolute;
+	top: var(--y);
+	left: 0;
+	width: 0.1875rem;
+	height: 0.1875rem;
+	border-radius: 50%;
+	background: rgb(255 248 226 / 80%);
+	/* stylelint-disable-next-line unit-no-unknown -- cqw, as ps-drop's */
+	transform: translateX(-6.8cqw);
+	animation: ps-seed var(--sd) linear var(--sdl) infinite;
+}
+
+@keyframes ps-seed {
+	/* stylelint-disable-next-line unit-no-unknown -- cqw, as ps-drop's */
+	from { transform: translate(-6.8cqw, 0); }
+	/* stylelint-disable-next-line unit-no-unknown -- cqw, as ps-drop's */
+	to { transform: translate(111.9cqw, var(--sy)); }
+}
+
+/* The storm's lightning: a flicker every 9 s, only under ps-storm. */
+#theme-scene .ps-flash {
+	inset: 0;
+	background: rgb(236 241 255);
+	opacity: 0;
+}
+
+#theme-scene.ps-storm .ps-flash {
+	animation: ps-flash 9s linear infinite;
+}
+
+@keyframes ps-flash {
+	0%,
+	90%,
+	100% { opacity: 0; }
+	91% { opacity: 0.5; }
+	92% { opacity: 0.08; }
+	93.5% { opacity: 0.42; }
+	95.5% { opacity: 0; }
+}
+
+/* The heat band: a faint warm shimmer over the horizon on a hot day. */
+#theme-scene .ps-heatband {
+	left: 0;
+	right: 0;
+	top: 52%;
+	height: 10%;
+	opacity: var(--ps-heat-op, 0);
+	background: linear-gradient(transparent, rgb(255 244 214 / 13%), transparent);
+	animation: ps-shimmer 5s ease-in-out infinite alternate;
+}
+
+@keyframes ps-shimmer {
+	/* stylelint-disable-next-line unit-no-unknown -- cqh, as ps-drop's */
+	from { transform: translateY(-0.21cqh) scaleY(0.95); }
+	/* stylelint-disable-next-line unit-no-unknown -- cqh, as ps-drop's */
+	to { transform: translateY(0.21cqh) scaleY(1.05); }
+}
+
+/* The haze's own svg: in the page, so #ps-heat resolves, and of no size. */
+#theme-scene .ps-heat-haze {
+	width: 0;
+	height: 0;
+	overflow: hidden;
 }
 
 /* A hidden page's scene is stopped (scene.ts pauses the SVG animations too). */

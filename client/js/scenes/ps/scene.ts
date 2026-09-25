@@ -5,17 +5,29 @@
  * (and whenever the page becomes visible) writes the engine's and the
  * palette's answer as custom properties on its root, and publishes on <html>
  * the four values the chrome reads, and the hour's sky as the browser's
- * `theme-color`. It keeps the yurt in the message column's far third
- * (placeYurt). All motion is CSS or SVG animation; no script runs per frame.
- * A hidden page's scene is stopped outright. No Vue, no store; the markup
- * below (and plains.ts's land, near grass, fireflies, yurt and smoke) is
- * constant, and nothing user-supplied is ever written into it.
+ * `theme-color`. The weather layer holds the day's weather alone, rebuilt
+ * when the day's weather changes, and the root carries its classes
+ * (`ps-windy`, `ps-storm`, `ps-hot`). It keeps the yurt in the message
+ * column's far third (placeYurt). All motion is CSS or SVG animation; no
+ * script runs per frame. A hidden page's scene is stopped outright. No Vue,
+ * no store; the markup below (and plains.ts's land, near grass, fireflies,
+ * yurt, smoke, clouds and weather) is constant for a day's weather, and
+ * nothing user-supplied is ever written into it.
  */
 import {isPhoneLayout} from "../../helpers/device";
 import type {SceneHandle, SceneHostState} from "../../themeScene";
-import {momentAt, rng, type Moment, type MoonPhase} from "./engine";
+import {momentAt, rng, type Moment, type MoonPhase, type Weather} from "./engine";
 import {levelsAt, paletteAt, publishedFor, WEATHER, type Palette, type Published} from "./palette";
-import {FIREFLIES, fireflies, landSvg, nearGrass, smoke, yurtSvg} from "./plains";
+import {
+	clouds,
+	FIREFLIES,
+	fireflies,
+	landSvg,
+	nearGrass,
+	smoke,
+	weatherLayers,
+	yurtSvg,
+} from "./plains";
 import {yurtFollower} from "./yurt";
 
 const STAR_COUNT = 190;
@@ -99,6 +111,8 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 		"--ps-heat-op": l.heat.toFixed(2),
 		"--ps-veil": l.veil.toFixed(2),
 		"--ps-veil-c": l.veilColour,
+		"--ps-rain-op": wx.rain.toFixed(2),
+		"--ps-snow-op": wx.snow.toFixed(2),
 		"--ps-tuft-lit-op": l.tuftLit.toFixed(2),
 		"--ps-bird-ink": l.birdInk,
 		"--ps-night-glow": p.nightGlow.toFixed(3),
@@ -106,6 +120,25 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 		"--ps-smoke": p.smoke,
 		"--ps-dark": p.dark.toFixed(3),
 	};
+}
+
+/**
+ * Whether the weather layer must be rebuilt: on the first tick (nothing built
+ * yet) and whenever the day's weather is not the one built — at local
+ * midnight with the page open, or on waking into another day. Only the
+ * weather that is happening exists in the page (spec §10).
+ */
+export function weatherChanged(prev: Weather | null, next: Weather): boolean {
+	return prev !== next;
+}
+
+/** The root's weather classes, from the day's levels: what ps.css keys the wind, the lightning and the haze on. */
+export function sceneClasses(
+	m: Moment,
+	p: Palette
+): {"ps-windy": boolean; "ps-storm": boolean; "ps-hot": boolean} {
+	const l = levelsAt(m, p);
+	return {"ps-windy": l.windy, "ps-storm": l.storm, "ps-hot": l.hot};
 }
 
 /**
@@ -189,17 +222,20 @@ function stars(): string {
 /**
  * The scene's layers, back to front (docs/projects/ps-theme.md §5.1): the sky
  * is the root's own background; then the Milky Way, the stars, the horizon
- * glow, the moon and the sun; the ground group — the land and river, the
- * fireflies, the yurt and its smoke, the animal layer (switched off in
- * ps.css) — which the heat haze bends as one; and the near grass in front of
- * it, outside the haze. A phone (the phone layout at mount) gets half the
- * fireflies.
+ * glow, the moon and the sun; the clouds; the ground group — the land and
+ * river, the fireflies, the yurt and its smoke, the animal layer (switched off
+ * in ps.css) — which the heat haze bends as one; the near grass in front of
+ * it, outside the haze; then the weather's veil, and the weather layer, left
+ * empty here: the first tick builds the day's weather into it (mount's
+ * `apply`), and a new day's weather replaces it. A phone (the phone layout at
+ * mount) gets half the fireflies.
  */
 export function sceneMarkup(phone: boolean): string {
 	return (
 		`<div class="ps-milky"></div><div class="ps-stars">${stars()}</div><div class="ps-glow"></div>` +
 		MOON +
 		SUN +
+		`<div class="ps-cloud-field">${clouds()}</div>` +
 		`<div class="ps-ground">` +
 		landSvg() +
 		`<div class="ps-fireflies">${fireflies(phone ? FIREFLIES / 2 : FIREFLIES)}</div>` +
@@ -207,7 +243,9 @@ export function sceneMarkup(phone: boolean): string {
 		`<div class="ps-smoke">${smoke()}</div>` +
 		`<div class="ps-animals"></div>` +
 		`</div>` +
-		nearGrass()
+		nearGrass() +
+		`<div class="ps-veil"></div>` +
+		`<div class="ps-weather"></div>`
 	);
 }
 
@@ -318,6 +356,9 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 	root.innerHTML = sceneMarkup(isPhoneLayout());
 	const ellipse = root.querySelector(".ps-m-ell") as SVGEllipseElement;
 	const shape = root.querySelector(".ps-m-shape") as SVGGElement;
+	const weatherLayer = root.querySelector(".ps-weather") as HTMLElement;
+	// The weather the layer holds: none until the first tick builds the day's.
+	let built: Weather | null = null;
 	// The theme's own theme-color, kept to hand back on destroy; and the last
 	// colour the scene wrote, so a destroy after something else has written the
 	// tag (the next theme's colour, the deploy's) leaves that alone.
@@ -333,6 +374,26 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 
 		for (const [name, value] of Object.entries(sceneVars(m, p))) {
 			root.style.setProperty(name, value);
+		}
+
+		// Only the day's weather exists in the page (spec §10): a new day's
+		// replaces yesterday's, built for the layout as it is now. A layer
+		// built while the scene is stopped (reduced motion) starts stopped:
+		// motion() paused only the svgs that were there.
+		if (weatherChanged(built, m.weather)) {
+			weatherLayer.innerHTML = weatherLayers(m.weather, isPhoneLayout());
+			built = m.weather;
+
+			if (root.classList.contains("ps-paused")) {
+				for (const svg of weatherLayer.querySelectorAll("svg")) {
+					svg.pauseAnimations();
+				}
+			}
+		}
+
+		// After the rebuild, so the haze exists before ps-hot asks for it.
+		for (const [name, on] of Object.entries(sceneClasses(m, p))) {
+			root.classList.toggle(name, on);
 		}
 
 		const lit = moonShape(m.phase);
@@ -409,7 +470,7 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 			yurt.destroy();
 			root.replaceChildren();
 			root.removeAttribute("style");
-			root.classList.remove("ps-paused");
+			root.classList.remove("ps-paused", "ps-windy", "ps-storm", "ps-hot");
 			delete root.dataset.view;
 			delete root.dataset.weather;
 			delete root.dataset.season;
