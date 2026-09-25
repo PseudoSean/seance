@@ -42,7 +42,7 @@
  * - The badge is text on a fill. Its white numeral is held at 4.5:1 on
  *   --ps-g-badge, the accent solved darker where it must be. The fill itself
  *   has no mark floor.
- * - **The user chose the text accent** (2026-09-24, decision 1A: "i will
+ * - **The user chose the text accent** (2026-09-25, decision 1A: "i will
  *   accept your recommendations on these"). The spec accent reads 2.97:1 by
  *   day and 2.63:1 at night on the glass, short of the floor for text and
  *   for the marks that must read. The chrome writes and marks with
@@ -253,7 +253,10 @@ function worstFive(text: Text, grounds: CheckedGround[], n = 5): CheckedGround[]
 export interface Move {
 	was: string;
 	now: string;
-	/** The OKLCH lightness change, signed. */
+	/**
+	 * The OKLCH lightness change, signed, as written: `now`'s against `was`'s,
+	 * not the solver's step (rounding to hex lands a little past the step).
+	 */
 	dL: number;
 	ratio: number;
 	ground: CheckedGround;
@@ -262,7 +265,8 @@ export interface Move {
 /**
  * Rule 2: `colour` moved darker (ink) or lighter (light) in OKLCH lightness,
  * hue and chroma kept, by the smallest step (of 0.0001) that clears `floor`
- * over `grounds`. Throws past RULE_TWO_MAX.
+ * over `grounds`. Throws when the step passes RULE_TWO_MAX; the move it
+ * reports is the written colour's (Move.dL).
  */
 export function ruleTwo(
 	colour: string,
@@ -288,7 +292,7 @@ export function ruleTwo(
 			return {
 				was: colour,
 				now: hex,
-				dL: (sign * i) / 10000,
+				dL: hexToOklch(hex)[0] - L,
 				ratio: now.ratio,
 				ground: now.ground,
 			};
@@ -702,7 +706,7 @@ export function glassBlock(s: Solved): string {
 		" * accent solved so its white numeral holds 4.5:1; the text accent, the",
 		" * accent's hue and chroma solved like a nick for the chrome's links, button",
 		" * labels and the marks that must read, held on the glass and the solid (the",
-		" * user's decision, 2026-09-24); and the chrome's two nick sweeps, solved to",
+		" * user's decision, 2026-09-25); and the chrome's two nick sweeps, solved to",
 		" * 4.6 (the message column's own nick rules, in the block above, are more",
 		" * specific and win inside the column). The active-row marker keeps the spec",
 		" * accent and has no 3:1 floor (ruling 2026-09-24: a redundant cue beside",

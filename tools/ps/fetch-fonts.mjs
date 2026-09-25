@@ -2,8 +2,8 @@
 // (docs/projects/ps-theme.md §8) — as Google Fonts' variable woff2 files
 // (one file per style carrying a weight range, the same builds the mockup
 // loaded from Google — a single-weight instance cut from them renders
-// visibly differently in some browsers), Latin and Latin Extended as
-// separate files, SIL OFL, from Google Fonts' CSS endpoint into
+// visibly differently in some browsers), Latin, Latin Extended and
+// Vietnamese as separate files, SIL OFL, from Google Fonts' CSS endpoint into
 // client/themes/ps/, then writes their @font-face rules into
 // client/themes/ps.css between the `/* ps:fonts:start` and
 // `/* ps:fonts:end */` markers. Run once; the files and the block are
@@ -19,13 +19,23 @@
 // (or the reverse) loads fine and then draws the *other* half of the text
 // in the fallback font — the latin-ext trap docs/projects/ps-theme.md §8
 // calls out, proven by rendering rather than by FontFace status in Step 5 of
-// the task that wrote this tool. Google's endpoint answers one stylesheet
-// per request with one @font-face block per script subset, the subset named
-// in a comment immediately before its block; this tool keeps only the latin
-// and latin-ext blocks for each face and discards the rest (cyrillic,
-// vietnamese, …), so Cyrillic, Greek and every other script this theme does
-// not bundle fall back to the system stack mid-line — Fraunces ships no
-// Cyrillic or Greek at all, and Mulish's is left unbundled here.
+// the task that wrote this tool. Vietnamese is the same trap one step on: its
+// stacked letters (ệ, ễ, U+1EA0-1EF9) are in neither of those files, so
+// "Nguyễn" drew partly in the fallback until the vietnamese subset shipped
+// too. Google's endpoint answers one stylesheet per request with one
+// @font-face block per script subset, the subset named in a comment
+// immediately before its block; this tool keeps the latin, latin-ext and
+// vietnamese blocks for each face and discards the rest (cyrillic, greek, …),
+// so Cyrillic, Greek and every other script this theme does not bundle fall
+// back to the system stack mid-line — Fraunces ships no Cyrillic or Greek at
+// all, and Mulish's is left unbundled here.
+//
+// The rules are written vietnamese first, then latin, then latin-ext. Where
+// unicode-ranges overlap (ă, đ, ơ, ư, ₫ and a few combining marks are in the
+// vietnamese block and in latin-ext; U+0304, U+0308 and U+0329 in all three),
+// the face defined last is tried first, so every codepoint the latin and
+// latin-ext files drew before the vietnamese file arrived is still drawn by
+// them, and the vietnamese file draws only what they lack.
 import {mkdir, readFile, writeFile} from "node:fs/promises";
 import path from "node:path";
 
@@ -36,8 +46,8 @@ const CSS_FILE = path.resolve("client/themes/ps.css");
 const UA =
 	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
 
-// One entry per style; each is fetched once from the endpoint and yields two
-// files (latin, latin-ext) and two @font-face rules.
+// One entry per style; each is fetched once from the endpoint and yields three
+// files (latin, latin-ext, vietnamese) and three @font-face rules.
 const FACES = [
 	{
 		family: "Mulish",
@@ -70,8 +80,21 @@ const LICENCES = [
 	],
 ];
 
+/** The script subsets kept, in the order their rules are written (see above). */
+const SUBSETS = ["vietnamese", "latin", "latin-ext"];
+
 /**
- * The latin and latin-ext @font-face blocks out of the endpoint's
+ * `fetch`, refusing anything but a 2xx answer: a 404 or a rate-limit page
+ * would otherwise be written into a .woff2 or an OFL text as if it were one.
+ */
+async function get(url, init) {
+	const res = await fetch(url, init);
+	if (!res.ok) throw new Error(`${url}: ${res.status} ${res.statusText}`);
+	return res;
+}
+
+/**
+ * The latin, latin-ext and vietnamese @font-face blocks out of the endpoint's
  * stylesheet. Each subset's comment (cyrillic, latin-ext, latin, …) stands
  * BEFORE its @font-face block, so the pair has to be matched as a unit:
  * splitting on "@font-face" and looking for the comment inside a block finds
@@ -83,7 +106,7 @@ function subsets(css) {
 	const pair = /\/\* (\S+) \*\/\s*@font-face \{([^}]*)\}/g;
 	const found = {};
 	for (const m of css.matchAll(pair)) {
-		if (m[1] !== "latin" && m[1] !== "latin-ext") continue;
+		if (!SUBSETS.includes(m[1])) continue;
 		const url = m[2].match(/url\((https:[^)]+\.woff2)\)/)?.[1];
 		const unicodeRange = m[2].match(/unicode-range:\s*([^;]+);/)?.[1]?.trim();
 		if (!url || !unicodeRange) continue;
@@ -94,6 +117,11 @@ function subsets(css) {
 		throw new Error("the latin block does not start at U+0000: the picker is off");
 	}
 	if (!found["latin-ext"]) throw new Error("no latin-ext block in the endpoint's answer");
+	if (!found.vietnamese) throw new Error("no vietnamese block in the endpoint's answer");
+	// The stacked letters (ạ … ỹ) are what the vietnamese file is bundled for.
+	if (!found.vietnamese.unicodeRange.split(/,\s*/).includes("U+1EA0-1EF9")) {
+		throw new Error("the vietnamese block does not carry U+1EA0-1EF9: the picker is off");
+	}
 	return found;
 }
 
@@ -121,17 +149,17 @@ await mkdir(THEMES, {recursive: true});
 const rules = [];
 for (const face of FACES) {
 	const stylesheet = await (
-		await fetch(`https://fonts.googleapis.com/css2?${face.query}&display=swap`, {
+		await get(`https://fonts.googleapis.com/css2?${face.query}&display=swap`, {
 			headers: {"User-Agent": UA},
 		})
 	).text();
 	const found = subsets(stylesheet);
 
-	// Latin before latin-ext, in both the files fetched and the rules written.
-	for (const subset of ["latin", "latin-ext"]) {
+	// In SUBSETS' order, in both the files fetched and the rules written.
+	for (const subset of SUBSETS) {
 		const {url, unicodeRange} = found[subset];
 		const file = `${face.base}-${subset}.woff2`;
-		const bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
+		const bytes = new Uint8Array(await (await get(url)).arrayBuffer());
 		await writeFile(path.join(THEMES, file), bytes);
 		console.log(`${file} ${bytes.length} bytes ← ${url}`);
 		rules.push(faceRule(face.family, face.style, face.weight, file, unicodeRange));
@@ -139,16 +167,18 @@ for (const face of FACES) {
 }
 
 for (const [file, url] of LICENCES) {
-	await writeFile(path.join(THEMES, file), await (await fetch(url)).text());
+	await writeFile(path.join(THEMES, file), await (await get(url)).text());
 	console.log(file);
 }
 
 const header = `/* ps:fonts:start — Mulish and Fraunces, fetched by \`node tools/ps/fetch-fonts.mjs\`:
  * Google Fonts' variable woff2 files, one file per style carrying a weight
- * range, Latin and Latin Extended as separate files (a face needs both, or
- * plain or accented text draws in the fallback font — the latin-ext trap,
- * docs/projects/ps-theme.md §8). Cyrillic, Greek and every other script
- * this theme does not bundle fall back to the system stack mid-line. */`;
+ * range, Latin, Latin Extended and Vietnamese as separate files (a face needs
+ * all of them, or plain, accented or Vietnamese text draws partly in the
+ * fallback font — the latin-ext trap, docs/projects/ps-theme.md §8).
+ * Vietnamese is written first, so where the ranges overlap the Latin files
+ * still draw what they drew before it came. Cyrillic, Greek and every other
+ * script this theme does not bundle fall back to the system stack mid-line. */`;
 const block = `${header}\n\n${rules.join("\n\n")}\n\n/* ps:fonts:end */`;
 
 const cssText = await readFile(CSS_FILE, "utf8");

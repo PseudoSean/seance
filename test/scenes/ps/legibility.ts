@@ -2,7 +2,6 @@ import {expect} from "chai";
 import fs from "fs";
 import path from "path";
 import {contrast, luminance, mix} from "../../../client/js/scenes/ps/colour";
-import {WEATHERS, type Weather} from "../../../client/js/scenes/ps/engine";
 import {paletteAt, publishedFor} from "../../../client/js/scenes/ps/palette";
 import {
 	bodyGrounds,
@@ -17,9 +16,11 @@ import {
 	LIGHT_ROOT,
 	LIGHT_SWEEP,
 	lightSweepFloors,
-	momentOf,
+	momentAt,
+	pinnedMoments,
 	SMALL_STEPS_ROOT,
 	smallStepSweep,
+	withPinned,
 	type Checked,
 	type CheckedGround,
 	type Light,
@@ -56,49 +57,17 @@ function rulesOf(text: string): Rule[] {
 	}));
 }
 
-/** The moments the block headers name (their worst grounds and the Review Focus pins), as `doy D M min W`. */
-function pinned(): string[] {
-	const found = [
-		...(headerOf(messageBlock) + headerOf(glassBlock)).matchAll(
-			/doy (\d+) (\d+) min ([a-z]+)/g
-		),
-	];
-	return [...new Set(found.map((m) => m[0]))];
-}
+/** Both block headers: their worst grounds and the Review Focus pins. */
+const headers = headerOf(messageBlock) + headerOf(glassBlock);
 
-function momentAt(where: string) {
-	const [, doy, minute, weather] = /doy (\d+) (\d+) min ([a-z]+)/.exec(where)!;
-
-	if (!(WEATHERS as readonly string[]).includes(weather)) {
-		throw new Error(`a header pins an unknown weather: ${where}`);
-	}
-
-	return momentOf(Number(doy), Number(minute), weather as Weather);
-}
+/** The moments the block headers name, as `doy D M min W`. */
+const pinned = () => pinnedMoments(headers);
 
 let merged: Checked | undefined;
 
 /** The sparse sweep's grounds and every pinned moment's. */
 function grounds(): Checked {
-	if (!merged) {
-		const sparse = checkedGrounds("sparse");
-		const out: Checked = {
-			column: {ink: [...sparse.column.ink], light: [...sparse.column.light]},
-			glass: {day: [...sparse.glass.day], night: [...sparse.glass.night]},
-		};
-
-		for (const where of pinned()) {
-			const m = momentAt(where);
-			const at = groundsAt(m, paletteAt(m), where);
-			out.column.ink.push(...at.column.ink);
-			out.column.light.push(...at.column.light);
-			out.glass.day.push(...at.glass.day);
-			out.glass.night.push(...at.glass.night);
-		}
-
-		merged = out;
-	}
-
+	merged ??= withPinned(checkedGrounds("sparse"), headers);
 	return merged;
 }
 
@@ -409,6 +378,65 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 				Math.abs(L(now) - L(spec)),
 				`${what} ${now} against the spec's ${spec}`
 			).to.be.at.most(0.08);
+		}
+	});
+
+	it("keeps the chrome's hand-moved secondaries within 0.08 OKLCH lightness of creama's (by day) and coffee's (at night)", function () {
+		const L = (hex: string) => hexToOklch(hex)[0];
+		/**
+		 * The last value a top-level rule of exactly `selector` in `text` gives
+		 * `name` (an `@import` before the first rule is not part of its selector).
+		 */
+		const token = (text: string, selector: string, name: string) =>
+			rulesOf(text)
+				.filter((r) => r.selector.split(";").at(-1)!.trim() === selector)
+				.flatMap((r) => r.decls)
+				.filter(([n]) => n === name)
+				.at(-1)?.[1];
+		const theme = (file: string) =>
+			fs.readFileSync(path.resolve(__dirname, "../../../client/themes", file), "utf8");
+		const SOURCE = {
+			day: {text: theme("creama.css"), selector: ":root", palette: ":root"},
+			night: {
+				text: theme("coffee.css"),
+				selector: ":root",
+				palette: ':root[data-ps-light="night"]',
+			},
+		};
+		// ps.css's two palettes, the chrome section: each moved under rule 2 by hand.
+		const MOVED: Array<[Light, string]> = [
+			["day", "--event-join"],
+			["day", "--event-quit"],
+			["day", "--nick-default"],
+			["day", "--tok-comment"],
+			["night", "--nick-default"],
+			["night", "--tok-comment"],
+		];
+		// Past rule 2 on purpose: a disconnected or parted row's name read 3.15:1 over
+		// the brightest night glass in coffee's #e08a72, and the smallest move that
+		// holds 4.5, +0.106, is past the 0.08; the user's decision 2A (2026-09-25).
+		// Pinned to the value decided, so no other move slips through with it.
+		const DECIDED: Array<[Light, string, string]> = [["night", "--event-quit", "#feaf98"]];
+
+		const moved = (light: Light, name: string) => {
+			const source = SOURCE[light];
+			const was = token(source.text, source.selector, name);
+			const now = token(css, source.palette, name);
+			expect(was, `${light} ${name} in its source theme`).to.match(HEX);
+			expect(now, `${light} ${name} in ps.css`).to.match(HEX);
+			expect(now, `${light} ${name} moved`).to.not.equal(was);
+			return {was: was!, now: now!, dL: Math.abs(L(now!) - L(was!))};
+		};
+
+		for (const [light, name] of MOVED) {
+			const {was, now, dL} = moved(light, name);
+			expect(dL, `${light} ${name} ${now} against ${was}`).to.be.at.most(0.08);
+		}
+
+		for (const [light, name, decided] of DECIDED) {
+			expect(moved(light, name).now, `${light} ${name}, the user's decision`).to.equal(
+				decided
+			);
 		}
 	});
 

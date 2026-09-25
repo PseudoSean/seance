@@ -394,6 +394,47 @@ export function groundsAt(m: Moment, p: Palette, where: string): Checked {
 	return out;
 }
 
+const PIN = /doy (\d+) (\d+) min ([a-z]+)/g;
+
+/**
+ * The moments `text` names as `doy D M min W`, each once: fed the generated
+ * blocks' headers, their worst grounds and the Review Focus pins, which the
+ * dense sweep found and the sparse one may step over.
+ */
+export function pinnedMoments(text: string): string[] {
+	return [...new Set([...text.matchAll(PIN)].map((m) => m[0]))];
+}
+
+/** The moment a `doy D M min W` label names. */
+export function momentAt(where: string): Moment {
+	const [, doy, minute, weather] = new RegExp(PIN.source).exec(where) ?? [];
+
+	if (!(WEATHERS as readonly string[]).includes(weather)) {
+		throw new Error(`a header pins an unknown weather: ${where}`);
+	}
+
+	return momentOf(Number(doy), Number(minute), weather as Weather);
+}
+
+/** `checked`'s grounds and every moment `text` pins (pinnedMoments), in a new set. */
+export function withPinned(checked: Checked, text: string): Checked {
+	const out: Checked = {
+		column: {ink: [...checked.column.ink], light: [...checked.column.light]},
+		glass: {day: [...checked.glass.day], night: [...checked.glass.night]},
+	};
+
+	for (const where of pinnedMoments(text)) {
+		const m = momentAt(where);
+		const at = groundsAt(m, paletteAt(m), where);
+		out.column.ink.push(...at.column.ink);
+		out.column.light.push(...at.column.light);
+		out.glass.day.push(...at.glass.day);
+		out.glass.night.push(...at.glass.night);
+	}
+
+	return out;
+}
+
 const cache: Partial<Record<Days, Checked>> = {};
 
 /**

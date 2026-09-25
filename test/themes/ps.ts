@@ -2,7 +2,7 @@ import {expect} from "chai";
 import fs from "fs";
 import path from "path";
 import {contrast, hexRgb, rgbHex} from "../../client/js/scenes/ps/colour";
-import {checkedGrounds, glassGround, type Light} from "../../tools/ps/legibility";
+import {checkedGrounds, glassGround, withPinned, type Light} from "../../tools/ps/legibility";
 import bird from "../../tools/heart/rigs/bird.mjs";
 import bunny from "../../tools/heart/rigs/bunny.mjs";
 import deer from "../../tools/heart/rigs/deer.mjs";
@@ -419,9 +419,23 @@ describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.m
 		expect(resolve(night, "var(--tint-strong)")).to.equal("rgb(255 255 255 / 8%)");
 	});
 
-	it("keeps the user list's blur while a disconnected conversation fades: the fade is on the messages", function () {
+	it("keeps the user list's blur while a disconnected conversation fades: the fade is on the messages and the jump-to-recent disc, and eases both ways", function () {
 		expect(valueOf("#chat.disconnected .chat-content", "opacity")).to.equal("1");
 		expect(valueOf("#chat.disconnected .chat-content > .chat", "opacity")).to.equal("0.55");
+		// The transition on the base rule, as style.css puts it on .chat-content's:
+		// under .disconnected alone it would fade out and snap back on reconnect.
+		expect(valueOf("#chat .chat-content > .chat", "transition")).to.equal("opacity 0.3s ease");
+		expect(valueOf("#chat.disconnected .chat-content > .chat", "transition")).to.equal(
+			undefined
+		);
+		// The disc fades with the conversation it jumps in: the arrow, since
+		// .scroll-down's own opacity is what shows and hides it. Its transition
+		// keeps style.css's background and colour ones beside the fade.
+		expect(valueOf("#chat.disconnected .scroll-down-arrow", "opacity")).to.equal("0.55");
+		expect(valueOf("#chat.disconnected .scroll-down", "opacity")).to.equal(undefined);
+		expect(valueOf("#chat .scroll-down-arrow", "transition")).to.equal(
+			"background 0.2s, color 0.2s, opacity 0.3s ease"
+		);
 	});
 
 	it("tints the upload preview's rows and thumbnail backing instead of greying them", function () {
@@ -636,11 +650,21 @@ describe("the ps theme's chrome keeps its floors on the solid panels and on the 
 
 	const glassCache = new Map<Light, string[]>();
 
-	/** The glass's grounds in one light: the sparse sweep under the declared tint, one per colour. */
+	/**
+	 * The generated blocks' headers, whose pinned moments (their worst grounds,
+	 * found by the dense sweep, and the Review Focus pins) join the sparse sweep,
+	 * so the worst ground is always among the grounds checked.
+	 */
+	const headers = ["message-palette", "glass-palette"]
+		.map((name) => css.slice(css.indexOf(`/* ps:${name}:start`)))
+		.map((block) => block.slice(0, block.indexOf("*/")))
+		.join("\n");
+
+	/** The glass's grounds in one light: the sparse sweep and the pinned moments under the declared tint, one per colour. */
 	function glassGrounds(light: Light): string[] {
 		if (!glassCache.has(light)) {
 			const alpha = Number(resolve(paletteOf(light), "var(--ps-g-tint-a)"));
-			const hexes = checkedGrounds("sparse").glass[light].map((g) =>
+			const hexes = withPinned(checkedGrounds("sparse"), headers).glass[light].map((g) =>
 				glassGround(g.hex, light, alpha)
 			);
 			glassCache.set(light, [...new Set(hexes)]);
@@ -916,12 +940,25 @@ describe("the ps theme's type", function () {
 		css.indexOf("/* ps:fonts:end */")
 	);
 
-	it("bundles Mulish (upright and italic) and Fraunces, Latin and Latin Extended, as files that exist", function () {
+	it("bundles Mulish (upright and italic) and Fraunces, Latin, Latin Extended and Vietnamese, as files that exist", function () {
 		const faces = [...fontsBlock.matchAll(/@font-face\s*\{([^}]*)\}/g)].map((m) => m[1]);
 		const has = (family: string, style: string) =>
 			faces.filter(
 				(f) => f.includes(`font-family: ${family}`) && f.includes(`font-style: ${style}`)
 			);
+
+		/** Which subset a face is, by its unicode-range as Google serves it. */
+		const subsetOf = (face: string) => {
+			const range = face.match(/unicode-range:\s*([^;]+);/)?.[1].split(/,\s*/) ?? [];
+
+			return range[0] === "U+0000-00FF"
+				? "latin"
+				: range[0] === "U+0100-02BA"
+				? "latin-ext"
+				: range.includes("U+1EA0-1EF9") // ạ … ỹ: "Nguyễn" needs this file
+				? "vietnamese"
+				: `unknown (${range[0]})`;
+		};
 
 		for (const [family, style] of [
 			["Mulish", "normal"],
@@ -929,12 +966,20 @@ describe("the ps theme's type", function () {
 			["Fraunces", "normal"],
 		]) {
 			const set = has(family, style);
-			expect(set, `${family} ${style}`).to.have.length(2); // latin + latin-ext
+			// Vietnamese first: where the ranges overlap, the face defined last is
+			// tried first, so the Latin files keep drawing what they drew before.
+			expect(set.map(subsetOf), `${family} ${style}`).to.deep.equal([
+				"vietnamese",
+				"latin",
+				"latin-ext",
+			]);
 
 			for (const face of set) {
-				expect(face).to.match(/unicode-range:\s*U\+/);
 				const file = face.match(/url\("ps\/([^"]+\.woff2)"\)/)?.[1];
 				expect(file, `${family} ${style} src`).to.be.a("string");
+				expect(file, `${family} ${style} file name`).to.match(
+					new RegExp(`-${subsetOf(face)}\\.woff2$`)
+				);
 				expect(fs.existsSync(path.resolve(__dirname, "../../client/themes/ps", file!))).to
 					.be.true;
 			}

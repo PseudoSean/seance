@@ -3,12 +3,13 @@
 // app — sky, sun, moon and 190 stars (client/js/scenes/ps/scene.ts, through
 // the hook in client/js/themeScene.ts). The run then:
 //
-// - reads the type: all six font files (Mulish upright and italic, Fraunces;
-//   Latin and Latin Extended each) loaded, each drawing its text rather than
-//   leaving it to the fallback (the latin-ext trap, ps-theme.md §8) — the
-//   canvas widths the fonts were bundled with, and the fonts Chromium
-//   reports it drew the neighbour's italic join, its Latin Extended realname
-//   and line, and a Latin Extended query name in;
+// - reads the type: all nine font files (Mulish upright and italic, Fraunces;
+//   Latin, Latin Extended and Vietnamese each) loaded, each drawing its text
+//   rather than leaving it to the fallback (the latin-ext trap, ps-theme.md
+//   §8) — the canvas widths the fonts were bundled with, and the fonts
+//   Chromium reports it drew the neighbour's italic join, its Latin Extended
+//   realname and line, a Latin Extended query name, and a Vietnamese name
+//   upright, in italic and as a query in;
 // - walks the clock with a time-zone override — noon, 22:00, midnight and
 //   dusk (about 45 minutes after today's sunset) — and reads what the scene
 //   publishes on <html>: the light (day/night), the text over the plains
@@ -82,6 +83,13 @@ const PEER = `${NICK}n`;
  * query of that name puts it in Fraunces in the sidebar.
  */
 const EXT_NAME = "Łucja";
+/**
+ * A Vietnamese name, for the fonts' third files: ễ (U+1EC5) is in neither the
+ * Latin nor the Latin Extended file, so without the vietnamese subset the
+ * name drew partly in the fallback. The neighbour says it upright and in
+ * italic (IRC's ^], U+001D), and a query of that name sets it in Fraunces.
+ */
+const VI_NAME = "Nguyễn";
 const BASE = `http://localhost:${process.env.SEANCE_HTTP_PORT ?? "8021"}/`;
 const PORT = process.env.SEANCE_IRC_PORT ?? "8067";
 
@@ -467,11 +475,15 @@ function checkMounted(page, s, where) {
 const PEER_JOIN = `#chat .msg[data-type="join"][data-from="${PEER}"]`;
 /** The query named EXT_NAME in the sidebar. */
 const EXT_QUERY_ROW = `.channel-list-item[data-type="query"][data-name="${EXT_NAME}"]`;
+/** The query named VI_NAME in the sidebar. */
+const VI_QUERY_ROW = `.channel-list-item[data-type="query"][data-name="${VI_NAME}"]`;
+/** The neighbour's lines. */
+const PEER_LINES = `#chat .msg[data-type="message"][data-from="${PEER}"] .content`;
 
 /**
- * The theme's six font files as `document.fonts` has them: family, style,
- * which block (Latin, U+0000-00FF first; Latin Extended, U+0100-02BA first)
- * and status.
+ * The theme's nine font files as `document.fonts` has them: family, style,
+ * which block (Latin, U+0000-00FF first; Latin Extended, U+0100-02BA first;
+ * Vietnamese, U+0102-0103 first) and status.
  */
 const FONT_FACES = `[...document.fonts]
 	.filter((f) => /^"?(Mulish|Fraunces)"?$/.test(f.family))
@@ -480,7 +492,13 @@ const FONT_FACES = `[...document.fonts]
 		return {
 			family: f.family.replace(/"/g, ""),
 			style: f.style,
-			block: /^U\\+0+-0*FF$/i.test(first) ? "latin" : /^U\\+0*100-/i.test(first) ? "latin-ext" : first,
+			block: /^U\\+0+-0*FF$/i.test(first)
+				? "latin"
+				: /^U\\+0*100-/i.test(first)
+				? "latin-ext"
+				: /^U\\+0*102-/i.test(first)
+				? "vietnamese"
+				: first,
 			status: f.status,
 		};
 	})`;
@@ -806,6 +824,8 @@ export default async function run(page) {
 	const peer = await neighbour(PEER, EXT_NAME);
 	peer.say(`hello from the neighbour ${RUN}`);
 	peer.say(`${EXT_NAME} says hello too ${RUN}`);
+	peer.say(`${VI_NAME} says xin chào ${RUN}`);
+	peer.say(`\x1d${VI_NAME}\x1d, in italic ${RUN}`);
 	await page.waitFor(OTHERS_LINE, {label: "the neighbour's line"});
 	await page.waitFor(`document.querySelector('${PEER_JOIN} .realname')`, {
 		label: "the neighbour's join, on its own, with its realname",
@@ -846,15 +866,20 @@ export default async function run(page) {
 
 	// ---- the fonts
 	//
-	// Every one of the six files has text of its own on the page: the
+	// Every one of the nine files has text of its own on the page: the
 	// neighbour's join (its hostmask and its realname, EXT_NAME, in italic),
-	// its line (EXT_NAME upright), and a query called EXT_NAME, whose name the
-	// sidebar sets in Fraunces. Each face must have loaded, and — the latin-ext
-	// trap — each must have drawn that text.
+	// its lines (EXT_NAME upright, VI_NAME upright and in italic), and queries
+	// called EXT_NAME and VI_NAME, whose names the sidebar sets in Fraunces.
+	// Each face must have loaded, and — the latin-ext trap — each must have
+	// drawn that text.
 
 	await sendLine(page, `/query ${EXT_NAME}`);
 	await page.waitFor(`document.querySelector('${EXT_QUERY_ROW}')`, {
 		label: `the query ${EXT_NAME} in the sidebar`,
+	});
+	await sendLine(page, `/query ${VI_NAME}`);
+	await page.waitFor(`document.querySelector('${VI_QUERY_ROW}')`, {
+		label: `the query ${VI_NAME} in the sidebar`,
 	});
 	await openSeance(page, `back in #seance from ${EXT_NAME}`);
 	await page.evaluate(`document.fonts.ready.then(() => true)`);
@@ -867,7 +892,7 @@ export default async function run(page) {
 		["Mulish", "italic"],
 		["Fraunces", "normal"],
 	]) {
-		for (const block of ["latin", "latin-ext"]) {
+		for (const block of ["latin", "latin-ext", "vietnamese"]) {
 			const face = faces.filter(
 				(f) => f.family === family && f.style === style && f.block === block
 			);
@@ -911,7 +936,7 @@ export default async function run(page) {
 	await checkDrawnIn(
 		page,
 		`the neighbour's line says ${EXT_NAME} in Mulish`,
-		TEXT_HOLDER(`#chat .msg[data-type="message"][data-from="${PEER}"] .content`, EXT_NAME),
+		TEXT_HOLDER(PEER_LINES, EXT_NAME),
 		"Mulish",
 		false
 	);
@@ -919,6 +944,27 @@ export default async function run(page) {
 		page,
 		`the sidebar names the query ${EXT_NAME} in Fraunces`,
 		TEXT_HOLDER(`${EXT_QUERY_ROW} .name`, EXT_NAME),
+		"Fraunces",
+		false
+	);
+	await checkDrawnIn(
+		page,
+		`the neighbour's line says ${VI_NAME} in Mulish`,
+		TEXT_HOLDER(PEER_LINES, `${VI_NAME} says`),
+		"Mulish",
+		false
+	);
+	await checkDrawnIn(
+		page,
+		`the neighbour's line says ${VI_NAME} in Mulish italic`,
+		TEXT_HOLDER(`${PEER_LINES} .irc-italic`, VI_NAME),
+		"Mulish",
+		true
+	);
+	await checkDrawnIn(
+		page,
+		`the sidebar names the query ${VI_NAME} in Fraunces`,
+		TEXT_HOLDER(`${VI_QUERY_ROW} .name`, VI_NAME),
 		"Fraunces",
 		false
 	);

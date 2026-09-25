@@ -96,10 +96,13 @@ describe("public folder", function () {
 		for (const file of [
 			"mulish-latin.woff2",
 			"mulish-latin-ext.woff2",
+			"mulish-vietnamese.woff2",
 			"mulish-italic-latin.woff2",
 			"mulish-italic-latin-ext.woff2",
+			"mulish-italic-vietnamese.woff2",
 			"fraunces-latin.woff2",
 			"fraunces-latin-ext.woff2",
+			"fraunces-vietnamese.woff2",
 			"OFL-Mulish.txt",
 			"OFL-Fraunces.txt",
 			"horse.svg",
