@@ -128,6 +128,14 @@
 	--ps-g-selected: rgb(255 255 255 / 60%);
 	--ps-g-accent: #c2562b;
 
+	/* The washes on the glass (the composer's bars, a hovered user in the
+	 * list; the chrome section scopes them): every wash on the glass moves
+	 * its ground away from the text on it, so by day it lightens, as the
+	 * spec's selected row does. The strong one is the selected row's white,
+	 * the soft one its hover's half. */
+	--ps-g-wash-soft: rgb(255 255 255 / 30%);
+	--ps-g-wash-strong: rgb(255 255 255 / 60%);
+
 	/* Chat surface, from the glass: text in the ink and the soft ink (faint
 	 * text too: the glass has no fainter ink, and the soft one holds 4.5:1
 	 * where faint needs 3), hairlines and field edges in the edge, fields in
@@ -233,8 +241,21 @@
 	--ps-g-ink: #e9eef7;
 	--ps-g-edge: rgb(255 255 255 / 9%);
 	--ps-g-field: rgb(255 255 255 / 7%);
-	--ps-g-selected: rgb(255 255 255 / 11%);
 	--ps-g-accent: #d9784a;
+
+	/* The washes on the glass deepen toward black instead of adding white,
+	 * which lifted the ground toward the light text on it: the spec's selected
+	 * row (white 11 %) left the lobby's nick at 3.35:1 and a parted row at
+	 * 3.43 over the moonlit glass. Toward black, not the night solid: the
+	 * glass's own navy does not show over a dark sky (the user's pick,
+	 * 2026-09-25). Each is the weakest black as visible as the white it
+	 * replaces, over the sparse sweep's glass grounds (the median contrast
+	 * between the washed and the bare ground): the selected row 60 % (1.41),
+	 * the hover 29 % (1.21), the soft wash 19 % (1.14), the strong 40 % (1.28).
+	 * test/themes/ps.ts holds each at that visibility. */
+	--ps-g-selected: rgb(0 0 0 / 60%);
+	--ps-g-wash-soft: rgb(0 0 0 / 19%);
+	--ps-g-wash-strong: rgb(0 0 0 / 40%);
 
 	/* Chat surface. Text on the text accent is the solid (10:1): white would
 	 * be 1.8. */
@@ -264,7 +285,7 @@
 	--rail-fg-active: var(--ps-g-ink);
 	--rail-fg-muted: var(--ps-g-soft);
 	--rail-item-active-bg: var(--ps-g-selected);
-	--rail-item-hover-bg: rgb(255 255 255 / 6%);
+	--rail-item-hover-bg: rgb(0 0 0 / 29%);
 	--rail-accent: var(--ps-g-accent);
 	--rail-accent-fg: #121827;
 	--rail-badge-bg: var(--ps-g-badge);
@@ -1133,6 +1154,19 @@ body {
 }
 /* stylelint-enable no-duplicate-selectors */
 
+/* On the glass the two tints coffee.css washes with (the composer's reply,
+ * upload and connection bars; a hovered or keyboard-selected user in the
+ * list) are the glass's own washes, which move the ground away from the text
+ * (the tokens section): lighter by day, toward black at night. The solid
+ * panels keep creama's and coffee's. */
+#sidebar,
+#chat .header,
+#chat .userlist,
+#form {
+	--tint-soft: var(--ps-g-wash-soft);
+	--tint-strong: var(--ps-g-wash-strong);
+}
+
 /* The user list's count row painted --composer-bg (coffee.css), an opaque slab
  * across the top of the glass: clear. Its sticky mode headings ("Operators",
  * "Users") painted the window's colour; they still need a fill to veil the
@@ -1254,6 +1288,30 @@ body {
 	background: var(--tint-soft);
 }
 
+/* The upload preview's file rows and the backing behind a thumbnail
+ * (UploadPreview.vue: 20 % and 30 % black) are grey bands on the paper too:
+ * the tints. */
+#upload-preview .upload-preview-item {
+	background: var(--tint-soft);
+}
+
+#upload-preview .upload-preview-media {
+	background: var(--tint-strong);
+}
+
+/* A conversation on a network that is down fades (style.css #chat.disconnected
+ * .chat-content, opacity 0.55); an opacity under 1 makes an element a backdrop
+ * root, and the user list inside it lost its blur. The fade moves onto the
+ * messages, and the user list keeps its glass. */
+#chat.disconnected .chat-content {
+	opacity: 1;
+}
+
+#chat.disconnected .chat-content > .chat {
+	opacity: 0.55;
+	transition: opacity 0.3s ease;
+}
+
 /* ---- animals ---- */
 
 /* stylelint-disable-next-line no-duplicate-selectors -- the animals' files and the scene's fixed cast */
@@ -1372,8 +1430,9 @@ body {
  * frosts the undimmed plains as it does on the desktop. The strip beside it
  * still takes the tap that closes the drawer, and still fades. */
 @media (max-width: 768px), (max-height: 500px) and (hover: none) and (pointer: coarse) {
+	/* Physical, as style.css places the drawer (right: 100% and a translate). */
 	#sidebar-overlay {
-		inset-inline-start: var(--sidebar-width);
+		left: var(--sidebar-width);
 	}
 }
 

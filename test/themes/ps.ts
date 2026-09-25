@@ -318,7 +318,9 @@ describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.m
 				"--ps-g-ink": "#e9eef7",
 				"--ps-g-edge": "rgb(255 255 255 / 9%)",
 				"--ps-g-field": "rgb(255 255 255 / 7%)",
-				"--ps-g-selected": "rgb(255 255 255 / 11%)",
+				// The spec's white 11 % lifted the ground toward the light text on it;
+				// on the glass every wash deepens toward black at night (the user's pick, 2026-09-25).
+				"--ps-g-selected": "rgb(0 0 0 / 60%)",
 				"--ps-g-accent": "#d9784a",
 			},
 		};
@@ -394,9 +396,51 @@ describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.m
 			"utf8"
 		);
 		expect(style, "style.css's phone block, the same list").to.include(`${PHONE} {`);
-		expect(valueOf("#sidebar-overlay", "inset-inline-start", PHONE)).to.equal(
-			"var(--sidebar-width)"
+		// Physical, as style.css places the drawer (right: 100% and a translate).
+		expect(valueOf("#sidebar-overlay", "left", PHONE)).to.equal("var(--sidebar-width)");
+	});
+
+	it("washes the glass away from its text: lighter by day, toward black at night, the solid panels keeping their tints", function () {
+		for (const s of ["#sidebar", "#chat .header", "#chat .userlist", "#form"]) {
+			expect(valueOf(s, "--tint-soft"), s).to.equal("var(--ps-g-wash-soft)");
+			expect(valueOf(s, "--tint-strong"), s).to.equal("var(--ps-g-wash-strong)");
+		}
+
+		const [day, night] = [paletteOf("day"), paletteOf("night")];
+
+		for (const token of ["--ps-g-wash-soft", "--ps-g-wash-strong", "--rail-item-hover-bg"]) {
+			expect(resolve(day, `var(${token})`), `day ${token}`).to.match(/^rgb\(255 255 255 \//);
+			expect(resolve(night, `var(${token})`), `night ${token}`).to.match(/^rgb\(0 0 0 \//);
+		}
+
+		expect(resolve(night, "var(--rail-item-active-bg)")).to.match(/^rgb\(0 0 0 \//);
+		// The solid panels' tints stay creama's and coffee's.
+		expect(resolve(day, "var(--tint-strong)")).to.equal("rgb(0 0 0 / 8%)");
+		expect(resolve(night, "var(--tint-strong)")).to.equal("rgb(255 255 255 / 8%)");
+	});
+
+	it("keeps the user list's blur while a disconnected conversation fades: the fade is on the messages", function () {
+		expect(valueOf("#chat.disconnected .chat-content", "opacity")).to.equal("1");
+		expect(valueOf("#chat.disconnected .chat-content > .chat", "opacity")).to.equal("0.55");
+	});
+
+	it("tints the upload preview's rows and thumbnail backing instead of greying them", function () {
+		expect(valueOf("#upload-preview .upload-preview-item", "background")).to.equal(
+			"var(--tint-soft)"
 		);
+		expect(valueOf("#upload-preview .upload-preview-media", "background")).to.equal(
+			"var(--tint-strong)"
+		);
+	});
+
+	it("gives ps the daylight fallback's canvas as its theme-color before the scene loads", function () {
+		const config = fs.readFileSync(
+			path.resolve(__dirname, "../../client/js/configuration.ts"),
+			"utf8"
+		);
+		const canvas = valueOf(DAY, "--canvas-bg-color");
+		expect(canvas).to.equal("#3f8fe6");
+		expect(config).to.include(`{name: "ps", displayName: "ps", themeColor: "${canvas}"}`);
 	});
 
 	it("draws both badges alike, the generated fill and a white numeral: the mockup's one badge", function () {
@@ -548,16 +592,47 @@ describe("the ps theme's chrome keeps its floors on the solid panels and on the 
 		| "glass"
 		| "glass+selected"
 		| "glass+hover"
-		| "glass+field";
+		| "glass+field"
+		| "glass+tint-soft"
+		| "glass+tint-strong";
 
-	/** Where each ground's colour comes from, over what. */
-	const WASH: Record<Exclude<Ground, "solid" | "glass">, string> = {
-		field: "--composer-bg",
-		highlight: "--highlight-bg-color",
-		"glass+selected": "--rail-item-active-bg",
-		"glass+hover": "--rail-item-hover-bg",
-		"glass+field": "--rail-input-bg",
+	/**
+	 * Where each wash's colour comes from: the token, read on the surface that
+	 * paints it (a glass surface may restate a token for itself; the solid
+	 * panels read the palette's).
+	 */
+	const WASH: Record<Exclude<Ground, "solid" | "glass">, [string, string]> = {
+		field: ["", "--composer-bg"],
+		highlight: ["", "--highlight-bg-color"],
+		"glass+selected": ["#sidebar", "--rail-item-active-bg"],
+		"glass+hover": ["#sidebar", "--rail-item-hover-bg"],
+		"glass+field": ["#sidebar", "--rail-input-bg"],
+		// The composer's reply, upload and connection bars (coffee.css #form .compose-bar…).
+		"glass+tint-soft": ["#form", "--tint-soft"],
+		// A hovered or keyboard-selected user in the list (coffee.css #chat .userlist .user.active).
+		"glass+tint-strong": ["#chat .userlist", "--tint-strong"],
 	};
+
+	/** `value` resolved on `surface`: the palette, then what the surface's own rules restate. */
+	function resolveOn(light: Light, surface: string, value: string): string {
+		const p = paletteOf(light);
+
+		if (surface) {
+			const own = [...declsOf(surface)];
+
+			if (light === "night") {
+				own.push(...declsOf(`${NIGHT} ${surface}`));
+			}
+
+			for (const [name, v] of own) {
+				if (name.startsWith("--")) {
+					p.set(name, v);
+				}
+			}
+		}
+
+		return resolve(p, value);
+	}
 
 	const glassCache = new Map<Light, string[]>();
 
@@ -575,20 +650,21 @@ describe("the ps theme's chrome keeps its floors on the solid panels and on the 
 	}
 
 	function groundsOf(light: Light, ground: Ground): string[] {
-		const p = paletteOf(light);
-		const solid = resolve(p, "var(--ps-g-solid)");
+		const solid = resolve(paletteOf(light), "var(--ps-g-solid)");
 
-		switch (ground) {
-			case "solid":
-				return [solid];
-			case "field":
-			case "highlight":
-				return [over(resolve(p, `var(${WASH[ground]})`), solid)];
-			case "glass":
-				return glassGrounds(light);
-			default:
-				return glassGrounds(light).map((g) => over(resolve(p, `var(${WASH[ground]})`), g));
+		if (ground === "solid") {
+			return [solid];
 		}
+
+		if (ground === "glass") {
+			return glassGrounds(light);
+		}
+
+		const [surface, token] = WASH[ground];
+		const wash = resolveOn(light, surface, `var(${token})`);
+		return ground === "field" || ground === "highlight"
+			? [over(wash, solid)]
+			: glassGrounds(light).map((g) => over(wash, g));
 	}
 
 	/** What the chrome draws in each token, and on what; coffee.css and style.css name the rules. */
@@ -601,42 +677,52 @@ describe("the ps theme's chrome keeps its floors on the solid panels and on the 
 			floor: TEXT,
 			what: "the open row, a hovered one, the jump-to search",
 		},
-		{token: "--rail-fg-muted", on: ["glass"], floor: MARK, what: "the footer's icons"},
+		{
+			token: "--rail-fg-muted",
+			on: ["glass", "glass+selected", "glass+hover"],
+			floor: TEXT,
+			what: "the lobby's nick (style.css .lobby-nick), also the footer's icons",
+		},
 		// The spec's accent itself (--ps-g-accent, --rail-accent) draws only what no
 		// floor covers: the open row's marker, exempt as a redundant cue beside the
 		// selected wash and the full ink (ruling, 2026-09-24), the caret and the
 		// focus ring's glow. Every accent that has to read is the text accent.
 		{
 			token: "--ps-g-accent-text",
-			on: ["glass"],
+			on: ["glass", "glass+selected", "glass+hover"],
 			floor: MARK,
-			what: "the connecting icon, a chip's hover and focus border",
+			what: "the connecting icon (also on the open or hovered lobby row), a chip's focus border",
 		},
 		{
 			token: "--event-quit",
-			on: ["glass", "solid"],
+			on: ["glass", "glass+selected", "glass+hover", "solid"],
 			floor: TEXT,
-			what: "a disconnected or parted row; a settings error",
+			what: "a disconnected or parted row (also open or hovered); a settings error",
 		},
-		{token: "--event-join", on: ["glass"], floor: MARK, what: "the connected and typing icons"},
+		{
+			token: "--event-join",
+			on: ["glass", "glass+selected", "glass+hover"],
+			floor: MARK,
+			what: "the connected icon and the subscribed bell (also on the open lobby row), the typing pulse",
+		},
 		{token: "--event-join", on: ["solid"], floor: TEXT, what: "settings' success note"},
 		{
 			token: "--nick-default",
-			on: ["glass", "solid", "highlight"],
+			on: ["glass", "glass+tint-strong", "solid", "highlight"],
 			floor: TEXT,
-			what: "a nick with no colour class",
+			what: "a nick with no colour class (also a hovered one in the list)",
 		},
 		{
 			token: "--body-color",
-			on: ["glass", "solid", "field"],
+			on: ["glass", "glass+tint-soft", "solid", "field"],
 			floor: TEXT,
-			what: "the title, the composer, panel text, a field",
+			what: "the title, the composer and its bars, panel text, a field",
 		},
 		{
 			token: "--body-color-muted",
-			on: ["glass", "solid"],
+			on: ["glass", "glass+tint-soft", "solid"],
 			floor: TEXT,
-			what: "the topic, the mode headings, the typing strip, panel notes",
+			what: "the topic, the mode headings, the typing strip, the composer's bars, panel notes",
 		},
 		{token: "--chat-fg", on: ["highlight"], floor: TEXT, what: "a mention in the popover"},
 		{
@@ -658,7 +744,12 @@ describe("the ps theme's chrome keeps its floors on the solid panels and on the 
 			floor: TEXT,
 			what: "a button's label: the sidebar's Join, the panels' buttons",
 		},
-		{token: "--chat-accent", on: ["glass"], floor: MARK, what: "the send button"},
+		{
+			token: "--chat-accent",
+			on: ["glass", "glass+tint-soft"],
+			floor: MARK,
+			what: "the send button, the reply bar's rule",
+		},
 		...[
 			"--tok-comment",
 			"--tok-keyword",
@@ -718,6 +809,35 @@ describe("the ps theme's chrome keeps its floors on the solid panels and on the 
 				}
 			}
 
+			// The glass block's nick sweep, on a hovered or keyboard-selected user in the list.
+			const block = css.slice(
+				css.indexOf("/* ps:glass-palette:start"),
+				css.indexOf("/* ps:glass-palette:end */")
+			);
+			const prefix = light === "day" ? "" : `${NIGHT} `.replace(/[[\]]/g, "\\$&");
+			const sweep = [
+				...block.matchAll(
+					new RegExp(
+						`^${prefix}\\.user\\.color-(\\d+) \\{ color: (#[0-9a-f]{6}); \\}`,
+						"gm"
+					)
+				),
+			];
+			expect(sweep, `the ${light} glass sweep`).to.have.length(32);
+			const hovered = groundsOf(light, "glass+tint-strong");
+
+			for (const [, n, hex] of sweep) {
+				const ratio = Math.min(...hovered.map((g) => contrast(hex, g)));
+
+				if (ratio < TEXT) {
+					failures.push(
+						`glass nick color-${n} ${hex} on glass+tint-strong (a hovered user): ${ratio.toFixed(
+							2
+						)} < ${TEXT}`
+					);
+				}
+			}
+
 			for (const [fg, bg, what] of FILLS) {
 				const [f, b] = [resolve(p, `var(${fg})`), resolve(p, `var(${bg})`)];
 				const ratio = contrast(f, b);
@@ -732,6 +852,29 @@ describe("the ps theme's chrome keeps its floors on the solid panels and on the 
 			expect(failures, failures.join("\n")).to.deep.equal([]);
 		});
 	}
+
+	it("keeps every night wash on the glass visible, as visible as the white it replaced, and never vanishing over the darkest sky", function () {
+		// The contrast between the washed and the bare glass over the sparse sweep:
+		// its median at least what each wash was solved to (ps.css, the night
+		// palette), and its lowest above 1.02. A wash toward the glass's own navy
+		// measured 1.000 over the darkest sky: it did not show at all.
+		const floors: Array<[Exclude<Ground, "solid" | "glass">, number]> = [
+			["glass+selected", 1.4],
+			["glass+hover", 1.2],
+			["glass+tint-soft", 1.13],
+			["glass+tint-strong", 1.28],
+		];
+		const bare = groundsOf("night", "glass");
+
+		for (const [ground, median] of floors) {
+			const washed = groundsOf("night", ground);
+			const seen = bare.map((g, i) => contrast(g, washed[i])).sort((a, b) => a - b);
+			expect(seen[Math.floor(seen.length / 2)], `${ground}, the median`).to.be.at.least(
+				median
+			);
+			expect(seen[0], `${ground}, over the darkest ground`).to.be.at.least(1.02);
+		}
+	});
 
 	it("carries the glass block's two nick sweeps, 32 each, and they read on the solid and on the Mentions popover's wash", function () {
 		const block = css.slice(

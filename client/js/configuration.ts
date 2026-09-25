@@ -48,7 +48,7 @@ const configuration: SharedConfiguration = {
 		{name: "panasync", displayName: "Panasync", themeColor: "#000000"},
 		{name: "day", displayName: "Day", themeColor: null},
 		{name: "morning", displayName: "Morning", themeColor: null},
-		{name: "ps", displayName: "ps", themeColor: "#f4f9ff"},
+		{name: "ps", displayName: "ps", themeColor: "#3f8fe6"},
 	],
 	defaultTheme: "coffee",
 	lockNetwork: false,
