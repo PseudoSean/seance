@@ -87,6 +87,30 @@ describe("ps colour arithmetic", function () {
 			expect(mixOklab(a, b, w)).to.match(/^#[0-9a-f]{6}$/);
 		}
 	});
+
+	/**
+	 * White/black (above) is achromatic in every colour space -- it cannot
+	 * tell Cartesian OKLab mixing from polar OKLCH mixing, and a weight of 0
+	 * or 1 only exercises mixOklab's early return. These three come from an
+	 * INDEPENDENT source: headless Chromium's own `color-mix(in oklab, …)`,
+	 * read off a 1×1 canvas with getImageData (review fix round 1, 2026-09-25;
+	 * recipe at /claude-settings/jobs/819200df/tmp/oklab-golden.html, run via
+	 * tools/browser-drive.mjs --chrome=/seance/tmp/chrome-pw.sh). Re-run twice
+	 * and byte-identical both times; alpha was 255 (opaque) throughout, so no
+	 * premultiplied-alpha rounding entered the readback. A `color-mix(in
+	 * srgb, …)` of pair 1 at the same weight read back #716345 -- different
+	 * from oklab's #81694a below, confirming the canvas really interpolated
+	 * in OKLab and did not silently fall back to sRGB.
+	 *
+	 * A polar OKLCH mix of pair 1 (lightness and chroma linear, hue by the
+	 * short arc) gives #747202 -- nowhere near Chromium's #81694a -- so this
+	 * would catch mixOklab mixing in OKLCH instead of Cartesian OKLab.
+	 */
+	it("matches Chromium's own color-mix(in oklab, …), read off a canvas", function () {
+		expect(mixOklab("#c2562b", "#1f6f5e", 0.5)).to.equal("#81694a");
+		expect(mixOklab("#579b3b", "#1f3a24", 0.72)).to.equal("#467e36");
+		expect(mixOklab("#b5634b", "#f3e3c6", 0.45)).to.equal("#d9a98d");
+	});
 });
 
 describe("ps palette: the stops", function () {
@@ -246,17 +270,15 @@ describe("ps palette: plan 3's levels", function () {
 	});
 
 	it("blows and sways more in the wind, and settles the weather's own booleans", function () {
+		// Midsummer noon: dark 0, season weights all in summer (verified
+		// against engine.ts directly). wind × (1 − .6×0) × (0 + .6×1 + .8×0)
+		// = 1 × 1 × .6 = .6.
 		const m = at(780, 213, "wind");
 		const p = paletteAt(m);
 		const l = levelsAt(m, p);
-		expect(l.wind).to.be.closeTo(
-			WEATHER.wind.wind *
-				(1 - 0.6 * p.dark) *
-				(m.season.weights.autumn +
-					0.6 * m.season.weights.summer +
-					0.8 * m.season.weights.spring),
-			1e-9
-		);
+		expect(p.dark).to.equal(0);
+		expect(m.season.weights).to.deep.equal({winter: 0, spring: 0, summer: 1, autumn: 0});
+		expect(l.wind).to.be.closeTo(0.6, 1e-9);
 		expect(l.sway).to.equal(WEATHER.wind.sway);
 		expect(l.windy).to.equal(true);
 		expect(l.storm).to.equal(false);
@@ -265,13 +287,13 @@ describe("ps palette: plan 3's levels", function () {
 	});
 
 	it("bakes the day at noon under a heat weather, and only then", function () {
+		// Midsummer noon: dark 0, so day = 1. heat × max(0, 1 − .7) / .3 =
+		// 1 × .3 / .3 = 1 exactly.
 		const noon = at(780, 213, "heat");
 		const pNoon = paletteAt(noon);
 		const lNoon = levelsAt(noon, pNoon);
-		expect(lNoon.heat).to.be.closeTo(
-			(WEATHER.heat.heat * Math.max(0, 1 - pNoon.dark - 0.7)) / 0.3,
-			1e-9
-		);
+		expect(pNoon.dark).to.equal(0);
+		expect(lNoon.heat).to.be.closeTo(1, 1e-9);
 		expect(lNoon.hot).to.equal(true);
 		const night = localAt(0, 213, "heat");
 		const pNight = paletteAt(night);
