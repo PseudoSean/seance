@@ -486,10 +486,10 @@ const FONT_FACES = `[...document.fonts]
 	})`;
 
 /**
- * The rendered proof the fonts were bundled with (tools/ps/fetch-fonts.mjs),
- * as it was first run: each face against a fallback the same text would
- * otherwise draw in, on a canvas. A pair of equal widths means the bundled
- * face did not draw the text.
+ * The rendered proof the fonts were bundled with (the latin-ext trap,
+ * docs/projects/ps-theme.md §8), as it was first run: each face against a
+ * fallback the same text would otherwise draw in, on a canvas. A pair of
+ * equal widths means the bundled face did not draw the text.
  */
 const FONT_WIDTHS = `(async () => {
 	await document.fonts.ready;
