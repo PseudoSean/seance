@@ -1687,6 +1687,9 @@ export default async function run(page) {
 	peer.say(`${EXT_NAME} says hello too ${RUN}`);
 	peer.say(`${VI_NAME} says xin chào ${RUN}`);
 	peer.say(`\x1d${VI_NAME}\x1d, in italic ${RUN}`);
+	// A nick inside the text: the client links it (findNames) as a .user
+	// span in .content, which the words' face sets, not the names' (I2).
+	peer.say(`${PEER} is my name ${RUN}`);
 	await page.waitFor(OTHERS_LINE, {label: "the neighbour's line"});
 	await page.waitFor(`document.querySelector('${PEER_JOIN} .realname')`, {
 		label: "the neighbour's join, on its own, with its realname",
@@ -1829,6 +1832,38 @@ export default async function run(page) {
 		TEXT_HOLDER(`${VI_QUERY_ROW} .name`, VI_NAME),
 		"Newsreader",
 		false
+	);
+
+	// The nick column keeps the names' face; the same nick named inside the
+	// text takes the text's face, bold, in the same colour (the user's I2).
+	await page.waitFor(`document.querySelector('${PEER_LINES} .user')`, {
+		label: `the neighbour's line naming ${PEER}, linked`,
+	});
+	await checkDrawnIn(
+		page,
+		`the nick column names ${PEER} in Newsreader`,
+		TEXT_HOLDER(`#chat .msg[data-type="message"][data-from="${PEER}"] .from .user`, PEER),
+		"Newsreader",
+		false
+	);
+	await checkDrawnIn(
+		page,
+		`the neighbour's line names ${PEER} in Source Sans 3, not Newsreader`,
+		TEXT_HOLDER(`${PEER_LINES} .user`, PEER),
+		"Source Sans 3",
+		false
+	);
+	const inTextNick = await page.evaluate(`(() => {
+		const inText = document.querySelector('${PEER_LINES} .user');
+		const column = inText.closest(".msg").querySelector(".from .user");
+		const a = getComputedStyle(inText), b = getComputedStyle(column);
+		return {weight: a.fontWeight, color: a.color, columnColor: b.color, textWeight: getComputedStyle(inText.closest(".content")).fontWeight};
+	})()`);
+	page.check(
+		`the in-text nick is bold, 700 against the text's ${inTextNick.textWeight}, in the nick column's colour (${inTextNick.color} vs ${inTextNick.columnColor})`,
+		inTextNick.weight === "700" &&
+			inTextNick.textWeight === "500" &&
+			inTextNick.color === inTextNick.columnColor
 	);
 	await page.send("CSS.disable");
 	await page.send("DOM.disable");

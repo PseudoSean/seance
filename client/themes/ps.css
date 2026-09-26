@@ -399,12 +399,13 @@
 /* Source Sans 3 500 everywhere text is read (docs/projects/ps-theme.md §8,
  * the user's pick of 2026-09-26); 700 is its bold, the heaviest weight the
  * theme asks of it (the face goes to 900; 700 is the bold the user saw it
- * picked at). Newsreader 700 for the names the eye jumps to: nicks, channel
- * and network names, the header title. Both ship Latin, Latin Extended and
- * Vietnamese only (the ps:fonts block above); every other script, Cyrillic
- * and Greek included, falls back mid-line — a name to the system serif, the
- * words to the system sans. .context-menu substituted for #context-menu:
- * ContextMenu.vue renders <ul id="context-menu">, not a class. */
+ * picked at). Newsreader 700 for the names the eye jumps to: the nick
+ * column's nicks, channel and network names, the header title. Both ship
+ * Latin, Latin Extended and Vietnamese only (the ps:fonts block above);
+ * every other script, Cyrillic and Greek included, falls back mid-line — a
+ * name to the system serif, the words to the system sans. .context-menu
+ * substituted for #context-menu: ContextMenu.vue renders
+ * <ul id="context-menu">, not a class. */
 body,
 #chat .msg,
 #form #input,
@@ -423,12 +424,24 @@ strong,
 	font-weight: 700;
 }
 
-#chat .msg .user,
+#chat .msg .from .user,
 #chat .header .title,
 .channel-list-item .name,
 .network .lobby-title .name,
 #sidebar .lobby-title {
 	font-family: Newsreader, Georgia, serif;
+	font-weight: 700;
+}
+
+/* A nick named inside a message's text — a mention, an action's actor, the
+ * nick of a join or a quit (Message.vue puts all of them in .content) — is
+ * set in the text's own face, not the names': a second face mid-line read
+ * oddly (the user's I2, 2026-09-26). It keeps the nick's colour (the sweeps
+ * below) and is bold, the words' 700; the bold is load-bearing, since the
+ * names-large set's 3:1 (§7) rests on a nick being bold text at 20 px, which
+ * WCAG counts as large. */
+#chat .msg .content .user {
+	font-family: inherit;
 	font-weight: 700;
 }
 

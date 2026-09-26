@@ -1717,6 +1717,63 @@ describe("the ps theme's type", function () {
 			}
 		}
 	});
+
+	/** The rules that set the names' face (Newsreader) and their selectors. */
+	const namesSelectors = () =>
+		rules
+			.filter((r) => r.decls.some(([p, v]) => p === "font-family" && /^Newsreader\b/.test(v)))
+			.flatMap((r) => r.selectors);
+
+	it("sets a nick named inside a message's text in the text's own face, bold, in the nick's colour (the user's I2, 2026-09-26): the nick column keeps the names' face", function () {
+		const IN_TEXT = "#chat .msg .content .user";
+		const inText = rules.filter((r) => r.selectors.includes(IN_TEXT));
+		expect(inText, IN_TEXT).to.have.length.greaterThan(0);
+
+		for (const rule of inText) {
+			// Only the in-text nick: nothing else is in its selector list.
+			expect(rule.selectors, "the in-text nick rule's selectors").to.deep.equal([IN_TEXT]);
+			expect(rule.at, "the in-text nick rule is top-level").to.equal("");
+			// The nick's own colour stays the nick sweeps' (#chat .chat .user.color-N).
+			expect(rule.decls.map(([p]) => p)).to.not.include("color");
+		}
+
+		// The text's face — whatever the text is set in (a monospace block's
+		// monospace too) — and the words' bold.
+		expect(valueOf(IN_TEXT, "font-family")).to.equal("inherit");
+		expect(valueOf(IN_TEXT, "font-weight")).to.equal("700");
+
+		// The names' face reaches the nick column, never a nick in the text.
+		const names = namesSelectors();
+		expect(names).to.include("#chat .msg .from .user");
+		expect(names, "the bare #chat .msg .user reached the text too").to.not.include(
+			"#chat .msg .user"
+		);
+
+		for (const selector of names) {
+			expect(selector, "a names' face selector reaching the text").to.not.match(
+				/\.content(?![\w-])/
+			);
+		}
+	});
+
+	it("keeps the in-text nick's style in the message text: it reaches no nick column, user list, sidebar or header", function () {
+		const styled = rules
+			.filter((r) => r.decls.some(([p, v]) => p === "font-family" && v === "inherit"))
+			.flatMap((r) => r.selectors)
+			.filter((s) => /\.user(?![\w-])/.test(s));
+		expect(styled).to.deep.equal(["#chat .msg .content .user"]);
+
+		for (const selector of styled) {
+			expect(selector).to.not.match(/\.from(?![\w-])|\.userlist|#sidebar|\.header/);
+		}
+
+		// And the chrome's names keep theirs.
+		expect(namesSelectors()).to.include.members([
+			"#chat .msg .from .user",
+			"#chat .header .title",
+			".channel-list-item .name",
+		]);
+	});
 });
 
 describe("the ps theme's motion", function () {
