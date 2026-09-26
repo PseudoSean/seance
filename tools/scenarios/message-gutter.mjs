@@ -28,6 +28,15 @@ const SETTINGS = {
 	showSeconds: CLOCK.endsWith("+s"),
 	...(process.env.SEANCE_THEME ? {theme: process.env.SEANCE_THEME} : {}),
 };
+// The widest times of each format (every figure is as wide as a 0 with
+// tabular-nums; the hour's first figure and am or pm are what vary), so the
+// fit is checked whatever the clock says during the run.
+const WIDEST = {
+	"12h": ["12:00am", "12:00pm"],
+	"12h+s": ["12:00:00am", "12:00:00pm"],
+	"24h": ["00:00"],
+	"24h+s": ["00:00:00"],
+}[CLOCK];
 
 // Text width against column width for the last own message, in px.
 const MEASURE = `(() => {
@@ -39,6 +48,15 @@ const MEASURE = `(() => {
 	const ch = (() => { const e = document.createElement("span"); e.textContent = "0"; e.style.cssText = "position:absolute;visibility:hidden;white-space:pre"; c.appendChild(e); const w = e.getBoundingClientRect().width; e.remove(); return w; })();
 	const ul = document.querySelector("#chat .userlist");
 	const messages = document.querySelector("#chat .messages");
+	const px = (el, p) => parseFloat(getComputedStyle(el)[p]);
+	const tBox = t.getBoundingClientRect(), fBox = f.getBoundingClientRect();
+	const widest = Math.max(...${JSON.stringify(WIDEST)}.map((s) => { const e = document.createElement("span"); e.textContent = s; e.style.cssText = "position:absolute;visibility:hidden;white-space:pre"; t.appendChild(e); const w = e.getBoundingClientRect().width; e.remove(); return w; }));
+	// The gutter's two gaps: after the widest time to the nick column's text
+	// box, and from that box to the message text.
+	const fLeft = fBox.left + px(f, "paddingLeft"), fRight = fBox.right - px(f, "paddingRight");
+	const text = document.createTreeWalker(c, NodeFilter.SHOW_TEXT);
+	let n; while ((n = text.nextNode()) && !n.data.trim());
+	const textLeft = (() => { const r = document.createRange(); r.selectNodeContents(n); return r.getClientRects()[0].left; })();
 	return {
 		ch,
 		contentCh: (c.clientWidth - parseFloat(getComputedStyle(c).paddingLeft) - parseFloat(getComputedStyle(c).paddingRight)) / ch,
@@ -47,6 +65,8 @@ const MEASURE = `(() => {
 		layout: getComputedStyle(msg).display === "flex" ? "columns" : "inline",
 		rowOverflow: messages.scrollWidth > messages.clientWidth,
 		time: t.textContent.trim(), timeCol: t.getBoundingClientRect().width, timeText: textW(t),
+		timeBox: tBox.width - px(t, "paddingLeft") - px(t, "paddingRight"), widest,
+		gapAfterWidest: fLeft - (tBox.left + px(t, "paddingLeft") + widest), nameToText: textLeft - fRight,
 		timeLines: (() => { const r = document.createRange(); r.selectNodeContents(t); return r.getClientRects().length; })(),
 		fromCol: f.getBoundingClientRect().width, fromText: textW(f),
 		gutter: c.getBoundingClientRect().left - msg.getBoundingClientRect().left,
@@ -82,6 +102,11 @@ export default async function run(page) {
 		const m = await page.evaluate(MEASURE);
 		rows.push({step, clock: CLOCK, ...m});
 		page.check(`${step} ${CLOCK}: time fits its column`, m.timeText <= m.timeCol + 0.5);
+		if (m.layout === "columns")
+			page.check(
+				`${step} ${CLOCK}: the widest time fits its column (${m.widest.toFixed(1)} in ${m.timeBox.toFixed(1)}px)`,
+				m.widest <= m.timeBox + 0.5
+			);
 		page.check(`${step} ${CLOCK}: time on one line`, m.timeLines === 1);
 		// The own messages, wherever the bots have scrolled them to: the
 		// measured row, scrolled into view, and its neighbours.
@@ -114,6 +139,14 @@ export default async function run(page) {
 			squeeze.push({step, width, ...m});
 			const tag = `${step} @${width}`;
 			if (m.layout === "columns") page.check(`${tag}: nick column >= 9ch`, m.fromCh >= 8.9);
+			// The step loop runs at 1280px, where the largest step is inline
+			// flow; a wide window keeps it in columns, and the widest time must
+			// fit there too.
+			if (m.layout === "columns")
+				page.check(
+					`${tag}: the widest time fits its column (${m.widest.toFixed(1)} in ${m.timeBox.toFixed(1)}px)`,
+					m.widest <= m.timeBox + 0.5
+				);
 			// Inline flow can still overflow on an unbreakable word (a long URL
 			// at a big step in a phone-width pane); that is the word, not the
 			// columns.
@@ -154,6 +187,10 @@ export default async function run(page) {
 			fromCol: Math.round(r.fromCol),
 			fromText: Math.round(r.fromText),
 			gutter: Math.round(r.gutter),
+			timeBox: Math.round(r.timeBox),
+			widest: Math.round(r.widest),
+			gapAfterWidest: `${(r.gapAfterWidest / r.root).toFixed(2)}rem`,
+			nameToText: `${(r.nameToText / r.root).toFixed(2)}rem`,
 		}))
 	);
 	page.check("no console errors", page.consoleErrors.length === 0);

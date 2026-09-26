@@ -445,19 +445,48 @@ strong,
 	font-weight: 700;
 }
 
-/* No rule between the nick column and the text: style.css draws a 1px
- * border-left on the content column and coffee.css colours it with
- * --chat-rule; transparent keeps the pixel so nothing shifts. */
-#chat .content {
-	border-left-color: transparent;
+/* The gutter (plan 4 task 5; the user: "too much margin between the time
+ * stamp and the username"). In Source Sans 3 every tabular figure is 1ch and
+ * a colon about 0.51ch, so style.css's ch widths leave the time column this
+ * much after the widest time: 12h ("12:00pm", 7.28ch) 0.22ch, 24h ("00:00",
+ * 4.52ch) 0.98ch, and the seconds formats 1.46ch (24h+s, "00:00:00", 7.04ch
+ * in 8.5ch) and 0.7ch (12h+s, "12:00:00pm", 9.8ch in 10.5ch). With the nick
+ * column's left padding (0.5rem net) the gap after the usual time was 1.12,
+ * 0.99, 1.24 and 1.36rem at every step, against the nick's 1.05rem to the
+ * text (a 12-hour clock's usual hour, 1 to 9, is a figure short of its
+ * widest). The seconds formats come in to 8ch and 10ch: 0.99 and 1.11rem,
+ * like the other two, the widest time still held with 0.96ch and 0.2ch to
+ * spare at every step (huge included, in columns on a wide window). Still in
+ * ch, so a step scales them. The widest column is now 10ch, half a figure
+ * inside the 10.5ch style.css's two thresholds count (the user list's
+ * overlay, the inline flow), which covers a classic scrollbar (about 10px in
+ * Chromium on Linux) that neither sum counts. Measured with
+ * tools/scenarios/message-gutter.mjs, SEANCE_THEME=ps. */
+#chat.time-seconds .time {
+	width: 8ch;
 }
 
-/* Source Sans 3's tabular-nums numerals fit style.css's own ch-based
- * #chat.time-12h/#chat.time-seconds widths: every clock format (12h, 12h+s,
- * 24h, 24h+s) at every font-size step holds its column on one line
- * (measured with SEANCE_THEME=ps tools/scenarios/message-gutter.mjs,
- * 2026-09-26; the widest case, 12h+s at xlarge, is 129px of text in a
- * 154px column) — so nothing is restated here. */
+#chat.time-seconds.time-12h .time {
+	width: 10ch;
+}
+
+/* The text column. No rule between it and the nick column: style.css draws
+ * a 1px border-left and coffee.css colours it with --chat-rule; transparent
+ * keeps the pixel so nothing shifts.
+ *
+ * Its 30ch basis (style.css `flex: 1 1 30ch`) is the text's, as the
+ * thresholds' arithmetic counts it and as .time and .from already are: html
+ * is border-box, so the basis held the column's padding and rule too, and
+ * between the user list's threshold and the width where the text outgrows
+ * its basis nothing asked the nick column to give way; the text sat at
+ * 30ch − 0.875rem − 1px, about 28.2ch, beside the panel (the gutter check's
+ * failure at 12h+s, medium, 860px, once Source Sans 3's narrower ch moved
+ * that threshold under 860). Content-box, the nick column shrinks first,
+ * down to its 9ch, as style.css intends. Inline flow ignores it. */
+#chat .content {
+	box-sizing: content-box;
+	border-left-color: transparent;
+}
 
 /* ---- motion ---- */
 

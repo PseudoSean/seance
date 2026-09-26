@@ -1776,6 +1776,118 @@ describe("the ps theme's type", function () {
 	});
 });
 
+describe("the ps theme's message gutter: the time column and the text's 30 characters", function () {
+	const style = rulesIn(
+		fs.readFileSync(path.resolve(__dirname, "../../client/css/style.css"), "utf8")
+	);
+	/** The last value style.css gives `selector`'s `property` at the top level. */
+	const styleValue = (selector: string, property: string) =>
+		declsOf(selector, "", style)
+			.filter(([p]) => p === property)
+			.at(-1)?.[1];
+
+	/**
+	 * The widest time of each clock format in Source Sans 3 500 with
+	 * tabular-nums, in the time column's own ch, the most over the six font
+	 * steps (the step's rounding moves it by a few thousandths): "12:00pm",
+	 * "12:00:00pm", "00:00", "00:00:00" (every figure is 1ch; a colon about
+	 * 0.51ch). Measured in Chromium, 2026-09-26, by the plan 4 task 5 probe
+	 * (the gutter scenario's measure, over each format's widest strings).
+	 */
+	const WIDEST: Record<string, number> = {
+		"12h": 7.281,
+		"12h+s": 9.799,
+		"24h": 4.519,
+		"24h+s": 7.037,
+	};
+	/** The usual time of each format, in ch: a 12-hour clock's usual hour (1 to 9) is one figure (1ch) short of its widest (10 to 12); a 24-hour clock's hour is always two. */
+	const COMMON: Record<string, number> = {
+		"12h": WIDEST["12h"] - 1,
+		"12h+s": WIDEST["12h+s"] - 1,
+		"24h": WIDEST["24h"],
+		"24h+s": WIDEST["24h+s"],
+	};
+	/** Source Sans 3's ch in rem: its "0" is 0.5051–0.5063 of the font size over the six steps. */
+	const CH_REM = 0.5055;
+	const SELECTOR: Record<string, string> = {
+		"24h": "#chat .time",
+		"12h": "#chat.time-12h .time",
+		"24h+s": "#chat.time-seconds .time",
+		"12h+s": "#chat.time-seconds.time-12h .time",
+	};
+
+	/** A time column's width in ch: ps.css's own, or style.css's where ps restates none. */
+	const widthOf = (clock: string) => {
+		const value = valueOf(SELECTOR[clock], "width") ?? styleValue(SELECTOR[clock], "width");
+		expect(value, `${clock} width`).to.match(/^\d+(\.\d+)?ch$/);
+		return parseFloat(value!);
+	};
+
+	it("gives the text column's 30ch basis to the text: content-box, as style.css does for the time and the nick", function () {
+		// The cause (plan 4 task 5): html is border-box, so style.css's 30ch
+		// basis held the text column's padding and rule too, 30ch − 0.875rem −
+		// 1px of text; between the user list's threshold and the width where
+		// the text outgrows its basis nothing asked the nick column to give
+		// way, and the text sat at about 28.2ch beside the panel.
+		expect(styleValue("#chat .content", "flex")).to.equal("1 1 30ch");
+		expect(styleValue("#chat .time", "box-sizing")).to.equal("content-box");
+		expect(styleValue("#chat .from", "box-sizing")).to.equal("content-box");
+		expect(valueOf("#chat .content", "box-sizing")).to.equal("content-box");
+
+		// Nothing else in ps.css sets a text column's box-sizing (a state, a
+		// query or a media block putting border-box back).
+		const others = rules.filter(
+			(r) =>
+				r.decls.some(([p]) => p === "box-sizing") &&
+				r.selectors.some((s) => /\.content(?![\w-])/.test(s) && !s.includes("::")) &&
+				!(r.at === "" && r.selectors.length === 1 && r.selectors[0] === "#chat .content")
+		);
+		expect(others.map((r) => `${r.at} ${r.selectors.join(", ")}`)).to.deep.equal([]);
+	});
+
+	it("sizes each clock's time column to hold its widest time, with the gap to the nick about the nick's gap to the text", function () {
+		// The nick's gap to the text: the nick column's right padding (0.5rem
+		// net of the shadow's room), the text's left padding (0.5rem) and its
+		// 1px rule — 1.05rem at the default step.
+		const nameToText = 1.05;
+
+		for (const clock of ["12h", "12h+s", "24h", "24h+s"]) {
+			const width = widthOf(clock);
+			// Holds the widest time at every step, with room for rounding.
+			expect(
+				width - WIDEST[clock],
+				`${clock}: ${width}ch holds ${WIDEST[clock]}ch`
+			).to.be.at.least(0.1);
+			// The gap after the usual time: the column's slack and the nick
+			// column's left padding (0.5rem net).
+			const gap = (width - COMMON[clock]) * CH_REM + 0.5;
+			expect(gap, `${clock}: the gap after the usual time, rem`).to.be.within(
+				nameToText - 0.1,
+				nameToText + 0.1
+			);
+		}
+	});
+
+	it("tightens the seconds formats (style.css's 8.5ch and 10.5ch left 1.24 and 1.36rem) and restates no other", function () {
+		expect(valueOf(SELECTOR["24h+s"], "width")).to.equal("8ch");
+		expect(valueOf(SELECTOR["12h+s"], "width")).to.equal("10ch");
+		expect(valueOf(SELECTOR["24h"], "width")).to.equal(undefined);
+		expect(valueOf(SELECTOR["12h"], "width")).to.equal(undefined);
+	});
+
+	it("keeps every time column at 10ch or under, half a figure inside the 10.5ch style.css's two thresholds reserve, so the text keeps its 30 characters at the thresholds themselves", function () {
+		// style.css: the user list overlays under 50ch + 8.5rem + 84px, and the
+		// row turns to inline flow under 50ch + 2.5rem, both counting 10.5ch
+		// of time, 9ch of nick, 30ch of text and 0.5ch spare. A classic
+		// scrollbar (about 10px in Chromium on Linux) is not in either sum:
+		// with the 12-hour seconds column at 10ch the spare is 1ch, which
+		// covers it from the medium step up (29.8ch at the threshold, measured).
+		for (const clock of ["12h", "12h+s", "24h", "24h+s"]) {
+			expect(widthOf(clock), clock).to.be.at.most(10);
+		}
+	});
+});
+
 describe("the ps theme's motion", function () {
 	it("fades messages in, raises the chrome, glows a mention, and stands down under reduced motion", function () {
 		expect(css).to.include("@keyframes ps-fade");
