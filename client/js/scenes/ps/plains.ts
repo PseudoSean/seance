@@ -378,24 +378,42 @@ const RAIN_CLOUDS = [
 	{w: 230, y: 22, d: 290, dl: -265},
 ];
 
+/** The deck's height, in % of the scene's (ps.css `.ps-deck`). */
+export const DECK_HEIGHT = 34;
+
 /** The share of the deck's height its band covers from the top (ps.css `.ps-deck`'s background size). */
 export const DECK_BAND = 58;
 
 /**
- * The deck's billows along the foot of its band, as fractions of the deck:
- * left, top, width, height. Each hangs across the band's lower edge and
- * together they close it all the way across, so the band never ends in a
- * straight line (plains' test measures it).
+ * The deck's billows along the foot of its band: left and width as fractions
+ * of the deck, whose width is the scene's, and depth, each one's height over
+ * its width. A billow's height is tied to its width, both following the
+ * scene's width, and its centre sits on the band's lower edge, so every
+ * window's shape draws the same wide ellipses and the band stays closed: at
+ * the edge each billow is its whole width, and each overlaps the next (plains'
+ * test measures it). Sized in % of the deck on both axes, as they were first,
+ * a billow was a tall drip on a portrait phone, 78 × 143 px at 390 × 844.
  */
 const DECK_BILLOWS = [
-	[-0.04, 0.38, 0.2, 0.52],
-	[0.1, 0.44, 0.22, 0.5],
-	[0.26, 0.36, 0.19, 0.48],
-	[0.39, 0.42, 0.24, 0.56],
-	[0.57, 0.38, 0.2, 0.5],
-	[0.71, 0.44, 0.21, 0.52],
-	[0.86, 0.36, 0.2, 0.5],
+	[-0.04, 0.2, 0.5],
+	[0.1, 0.22, 0.46],
+	[0.26, 0.19, 0.5],
+	[0.39, 0.24, 0.47],
+	[0.57, 0.2, 0.5],
+	[0.71, 0.21, 0.48],
+	[0.86, 0.2, 0.5],
 ];
+
+/** The deck's billows: left and width in % of the deck, top and height in cqw of the scene's width, each centred on the band's edge. */
+const billows = (list: number[][]) =>
+	list
+		.map(([x, w, depth]) => {
+			const lift = Number(((w * 100 * depth) / 2).toFixed(2));
+			return `<i style="left:${n(x * 100)}%;top:calc(${DECK_BAND}% - ${n(lift)}cqw);width:${n(
+				w * 100
+			)}%;height:${n(lift * 2)}cqw"></i>`;
+		})
+		.join("");
 
 /**
  * The day's own clouds, over and above the five (spec §5.1 layer 6), built
@@ -412,7 +430,7 @@ export function weatherClouds(weather: Weather): string {
 	let out = "";
 
 	if (wx.storm > 0) {
-		out += `<div class="ps-deck">${blobs(DECK_BILLOWS)}</div>`;
+		out += `<div class="ps-deck">${billows(DECK_BILLOWS)}</div>`;
 	}
 
 	if (wx.rain > 0) {

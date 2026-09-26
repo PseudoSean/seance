@@ -961,9 +961,12 @@ strong,
  * more, bigger and lower, are .ps-cloud: they drift, rest under reduced
  * motion and speed up in the wind by the rules around this one. The storm's
  * deck stands still behind them: a band of cloud over the top of the sky, a
- * third of the way down, the underside's colour at the top lightening to the
- * cloud's own at its foot, where a row of billows drawn as the clouds' blobs
- * are hangs across the band's edge, so it ends in cloud and not in a line.
+ * third of the way down (plains.ts DECK_HEIGHT), the underside's colour at the
+ * top lightening to the cloud's own at its foot, where a row of billows drawn
+ * as the clouds' blobs are hangs across the band's edge, so it ends in cloud
+ * and not in a line. Each billow is centred on that edge with its height tied
+ * to its width (plains.ts `billows`, in cqw), so a portrait phone draws the
+ * same wide ellipses as a desktop and the edge stays closed on every shape.
  * Both colours are the palette's, greyed by the weather, and nothing is
  * translucent: the deck puts nothing behind the words that the five do not
  * (spec §11). */

@@ -898,6 +898,52 @@ const FIREFLIES = 34;
  */
 const cloudsFor = (weather) => (weather === "rain" || weather === "storm" ? 9 : 5);
 
+/**
+ * The storm's deck as drawn: each billow's box, and at the band's lower edge
+ * (the deck's top 58 %, plains.ts DECK_BAND) the chord each billow's ellipse
+ * has there, joined across the scene; `gap` is the first x no billow covers.
+ */
+const DECK_GEOMETRY = `(() => {
+	const s = document.getElementById("theme-scene");
+	const deck = s.querySelector(".ps-deck");
+	if (!deck) return null;
+	const sb = s.getBoundingClientRect(), db = deck.getBoundingClientRect();
+	const edge = db.top + db.height * 0.58;
+	const boxes = [...deck.querySelectorAll("i")].map((i) => i.getBoundingClientRect());
+	const spans = boxes.map((b) => {
+		const ry = b.height / 2, dy = (edge - (b.top + ry)) / ry;
+		const half = Math.abs(dy) < 1 ? (b.width / 2) * Math.sqrt(1 - dy * dy) : 0;
+		return [b.left + b.width / 2 - half, b.left + b.width / 2 + half];
+	}).sort((a, b) => a[0] - b[0]);
+	let reach = sb.left, gap = null;
+	for (const [from, to] of spans) { if (gap === null && from > reach + 0.5) gap = Math.round(reach); reach = Math.max(reach, to); }
+	if (gap === null && reach < sb.right - 0.5) gap = Math.round(reach);
+	return {
+		n: boxes.length,
+		sizes: boxes.map((b) => [Math.round(b.width), Math.round(b.height)]),
+		wide: boxes.every((b) => b.width > 1.5 * b.height),
+		gap,
+		width: Math.round(sb.width),
+		height: Math.round(sb.height),
+	};
+})()`;
+
+/** The storm's deck on this window: its billows wide ellipses, and the band's edge closed all the way across (plans' final fix, item 3). */
+function checkDeck(page, d, where) {
+	page.check(
+		`${where}: the deck's ${d?.n} billows are wide, not tall drips, on the ${d?.width} × ${
+			d?.height
+		} scene (${d?.sizes.map(([w, h]) => `${w}×${h}`).join(", ")})`,
+		!!d && d.n >= 6 && d.wide
+	);
+	page.check(
+		`${where}: the band's edge is closed all the way across${
+			d?.gap === null ? "" : ` (a gap at ${d?.gap}px)`
+		}`,
+		!!d && d.gap === null
+	);
+}
+
 /** The scene is stopped: its class, every SVG clock and every CSS animation. */
 function checkStopped(page, s, where) {
 	const going = s.svgs.filter((v) => !v.paused).length;
@@ -2909,6 +2955,24 @@ export default async function run(page) {
 		stormBirds.skeins + stormBirds.buzzard + stormBirds.larks === 0
 	);
 	await page.screenshot("ps-storm-jul19-1230");
+	checkDeck(page, await page.evaluate(DECK_GEOMETRY), "a stormy noon");
+	// And on a 16:9 desktop, to read beside the portrait phone's (below).
+	await page.send("Emulation.setDeviceMetricsOverride", {
+		width: 1280,
+		height: 720,
+		deviceScaleFactor: 1,
+		mobile: false,
+	});
+	await page.sleep(400);
+	checkDeck(page, await page.evaluate(DECK_GEOMETRY), "a stormy noon at 1280 × 720");
+	await page.screenshot("ps-storm-jul19-1230-1280x720");
+	await page.send("Emulation.setDeviceMetricsOverride", {
+		width: Number(page.opt("width", 1280)),
+		height: Number(page.opt("height", 900)),
+		deviceScaleFactor: 1,
+		mobile: page.flags.has("--mobile"),
+	});
+	await page.sleep(400);
 
 	// Dark ink where it holds: a snowy day, the one weather it does.
 	const snow = await at(page, noonOn(1, 8));
@@ -3638,6 +3702,15 @@ export default async function run(page) {
 		label: "the phone's sidebar closed again",
 	});
 	await page.sleep(500);
+	// A stormy noon on the portrait phone: the deck's billows as wide as the
+	// desktop's (sized in % of the deck, they hung as tall drips here).
+	const phoneStorm = await at(page, noonOn(7, 19));
+	checkDeck(
+		page,
+		phoneStorm.weather === "storm" ? await page.evaluate(DECK_GEOMETRY) : null,
+		`a phone on a stormy noon (${phoneStorm.weather})`
+	);
+	await page.screenshot("ps-phone-storm-jul19-1230");
 	await realClock(page);
 
 	await page.screenshot("ps-phone-noon");

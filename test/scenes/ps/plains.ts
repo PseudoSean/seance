@@ -2,6 +2,7 @@ import {expect} from "chai";
 import {
 	clouds,
 	DECK_BAND,
+	DECK_HEIGHT,
 	FIREFLIES,
 	fireflies,
 	GRASS_EDGE_LOWEST,
@@ -551,45 +552,89 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 			expect(storm.slice(storm.indexOf("</div>") + 6)).to.equal(rain);
 		});
 
-		it("draws the deck's base as billows, in % of the deck, that close its band's edge all the way across", function () {
-			const deck = deckOf(storm) ?? "";
+		describe("the deck's billows: wide at every window's shape, and the band's edge closed", function () {
+			/**
+			 * Each billow as the markup writes it: left and width in % of the
+			 * deck (whose width is the scene's, so a % of it is a cqw), and its
+			 * top and height tied to its width, in cqw: top = the band's edge
+			 * less half the height.
+			 */
 			const billows = [
-				...deck.matchAll(
-					/<i style="left:(-?[\d.]+)%;top:([\d.]+)%;width:([\d.]+)%;height:([\d.]+)%"><\/i>/g
+				...(deckOf(storm) ?? "").matchAll(
+					/<i style="left:(-?[\d.]+)%;top:calc\(([\d.]+)% - ([\d.]+)cqw\);width:([\d.]+)%;height:([\d.]+)cqw"><\/i>/g
 				),
-			].map((m) => m.slice(1).map(Number));
-			expect(billows.length).to.be.at.least(6);
-			expect(deck.replace(/<i style="[^"]*"><\/i>/g, "")).to.equal("");
-			// ps.css paints the band over the deck's top DECK_BAND % and the
-			// billows hang from it: at the band's lower edge, every x across
-			// the deck is inside a billow (each an ellipse in the deck's %), so
-			// the band never ends in a straight line.
-			const edge = DECK_BAND;
-			const spans = billows
-				.map(([left, top, width, height]) => {
-					const ry = height / 2;
-					const dy = (edge - (top + ry)) / ry;
-					const half = Math.abs(dy) < 1 ? (width / 2) * Math.sqrt(1 - dy * dy) : 0;
-					return [left + width / 2 - half, left + width / 2 + half];
-				})
-				.sort((a, b) => a[0] - b[0]);
-			let reach = 0;
+			].map((m) => {
+				const [left, edge, lift, width, height] = m.slice(1).map(Number);
+				return {left, edge, lift, width, height};
+			});
+			/** A billow's box in px on a window W × H: the deck is DECK_HEIGHT % of the height. */
+			const boxOn = (b: typeof billows[number], W: number, H: number) => {
+				const deck = (DECK_HEIGHT / 100) * H;
+				const width = (b.width / 100) * W;
+				const height = (b.height / 100) * W;
+				const top = (b.edge / 100) * deck - (b.lift / 100) * W;
+				return {width, height, top, centre: top + height / 2, bottom: top + height, deck};
+			};
+			const WINDOWS: Array<[string, number, number]> = [
+				["a portrait phone", 390, 844],
+				["the mockup's window", 1180, 700],
+				["a 16:9 desktop", 1280, 720],
+				["a tall tablet", 834, 1194],
+			];
 
-			for (const [from, to] of spans) {
-				expect(from, `a gap in the band's edge at ${reach.toFixed(1)} %`).to.be.below(
-					reach
-				);
-				reach = Math.max(reach, to);
-			}
+			it("draws only billows, at least six", function () {
+				expect(billows.length).to.be.at.least(6);
+				expect((deckOf(storm) ?? "").replace(/<i style="[^"]*"><\/i>/g, "")).to.equal("");
+			});
 
-			expect(reach, "to the deck's right edge").to.be.above(100);
+			it("centres every billow on the band's lower edge (ps.css paints the band over the deck's top DECK_BAND %)", function () {
+				for (const b of billows) {
+					expect(b.edge).to.equal(DECK_BAND);
+					expect(b.lift * 2, "half its height above the edge").to.equal(b.height);
+				}
+			});
 
-			// And each billow hangs below the band, within the deck.
-			for (const [, top, , height] of billows) {
-				expect(top).to.be.below(edge);
-				expect(top + height).to.be.above(edge);
-				expect(top + height).to.be.at.most(100);
-			}
+			it("ties each billow's height to its width: wider than tall on every window, a portrait phone's too", function () {
+				// Sized in % of the deck on both axes, a billow was about 78 ×
+				// 143 px on a 390 × 844 phone: a tall drip, not a wide ellipse.
+				for (const [name, W, H] of WINDOWS) {
+					for (const b of billows) {
+						const box = boxOn(b, W, H);
+						expect(
+							box.width / box.height,
+							`${name}: ${box.width} × ${box.height}`
+						).to.be.within(1.6, 2.4);
+					}
+				}
+			});
+
+			it("closes the band's edge all the way across: at the edge each billow is its full width, and each overlaps the next", function () {
+				// The centre is on the edge on every window, so the chord there
+				// is the billow's whole width, whatever the window's shape.
+				const spans = billows
+					.map((b) => [b.left, b.left + b.width])
+					.sort((a, c) => a[0] - c[0]);
+				let reach = 0;
+
+				for (const [from, to] of spans) {
+					expect(from, `a gap in the band's edge at ${reach.toFixed(1)} %`).to.be.below(
+						reach - 2
+					);
+					reach = Math.max(reach, to);
+				}
+
+				expect(reach, "to the deck's right edge").to.be.above(100);
+			});
+
+			it("hangs each billow below the band and within the deck on the mockup's window, a 16:9 desktop and a phone", function () {
+				for (const [name, W, H] of WINDOWS) {
+					for (const b of billows) {
+						const box = boxOn(b, W, H);
+						expect(box.centre, name).to.be.closeTo((DECK_BAND / 100) * box.deck, 1e-9);
+						expect(box.bottom, `${name}: within the deck`).to.be.at.most(box.deck);
+					}
+				}
+			});
 		});
 
 		it("names no ids, holds no text and no px", function () {
