@@ -132,7 +132,7 @@ export function historyLimit(client: IrcClient, wanted: number): number {
 function canRequest(client: IrcClient, chan: Channel): boolean {
 	return (
 		historyEnabled(client) &&
-		client.transport.state === "open" &&
+		client.isWelcomed && // before 001 it is `451 Register first.`
 		(chan.type === ChanType.CHANNEL || chan.type === ChanType.QUERY)
 	);
 }

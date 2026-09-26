@@ -43,7 +43,12 @@ import {
 	resetMultiline,
 	sendMultiline,
 } from "./multiline";
-import {cancelMarkRead, markReadAt, scheduleMarkRead} from "./handlers/markread";
+import {
+	cancelMarkRead,
+	flushDeferredMarkRead,
+	markReadAt,
+	scheduleMarkRead,
+} from "./handlers/markread";
 import {PresenceState, initialPresence, presenceRegistered, setAttended} from "./presence";
 import {abortHistory, retryLostHistory} from "./history";
 import {
@@ -282,6 +287,8 @@ export class IrcClient {
 	private networkName: string;
 	private _state: IrcClientState = "disconnected";
 	private connected = false;
+	/** 001 seen on this connection: the server takes commands (`isWelcomed`). */
+	private welcomed = false;
 	private announced = false;
 	private quitting = false;
 	/** Last transport error text for the close report; browsers say nothing useful. */
@@ -336,6 +343,24 @@ export class IrcClient {
 	/** Registered with the server (001 and end of MOTD seen). */
 	get isConnected(): boolean {
 		return this.connected;
+	}
+
+	/**
+	 * The server has welcomed this connection (001): from here on it takes
+	 * commands. Before it, anything but the registration exchange (CAP,
+	 * AUTHENTICATE, NICK/USER, PING, PERSISTENCE, QUIT) is answered with
+	 * `451 Register first.` — so a sender that may fire while a reconnect
+	 * is still registering (a debounced MARKREAD, a history page) checks
+	 * this, not the transport. Earlier than {@link isConnected}, which waits
+	 * for the end of the MOTD.
+	 */
+	get isWelcomed(): boolean {
+		return this.welcomed && this.transport.state === "open";
+	}
+
+	/** The 001 handler: see {@link isWelcomed}. */
+	markWelcomed(): void {
+		this.welcomed = true;
 	}
 
 	get name(): string {
@@ -706,6 +731,7 @@ export class IrcClient {
 	private onOpen(): void {
 		this._state = "registering";
 		this.connected = false;
+		this.welcomed = false;
 		this.retryAt = undefined;
 		this.closeHintShown = false;
 		this.isupport.reset();
@@ -990,6 +1016,7 @@ export class IrcClient {
 		const wasUp = phase !== "disconnected";
 		this._state = "disconnected";
 		this.connected = false;
+		this.welcomed = false;
 		// The wait before the transport's retry, for the UI to count down;
 		// an immediate retry has nothing worth counting.
 		this.retryAt =
@@ -1020,6 +1047,12 @@ export class IrcClient {
 		for (const chan of this.channels) {
 			chan.users.clear();
 			chan.namesBuffer = null;
+
+			// A marker the socket died holding goes out once we are back.
+			if (chan.markReadTimer !== null) {
+				chan.markReadDeferred = true;
+			}
+
 			cancelMarkRead(chan);
 
 			if (chan.type === ChanType.CHANNEL) {
@@ -1099,6 +1132,7 @@ export class IrcClient {
 		});
 		this.bus.dispatch("commands", commandNames());
 		presenceRegistered(this);
+		flushDeferredMarkRead(this);
 
 		if (this.caps.enabled.size > 0) {
 			this.pushMessage(
