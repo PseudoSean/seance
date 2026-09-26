@@ -1923,6 +1923,80 @@ describe("the ps theme's message gutter: the time column and the text's 30 chara
 			expect(widthOf(clock), clock).to.be.at.most(10);
 		}
 	});
+
+	describe("the nick column holds what it held before the type review (plan 4 final fix)", function () {
+		/**
+		 * The old column: style.css's 12ch in Mulish 500, whose "0" is 0.600
+		 * of the font size (72, 93.6, 115.2, 144, 187.2 and 244.8px over the
+		 * six steps). Source Sans 3's "0" is 0.505 of it, so the same 12ch
+		 * came to 121.2px at the default step: 16 % less.
+		 */
+		const OLD_COLUMN_EM = 12 * 0.6;
+		const NEW_CH_EM = 0.505;
+		/**
+		 * The widest of the scenarios' nick forms (theme-ps.mjs's `ps${RUN}`
+		 * and `ps${RUN}n`, message-gutter.mjs's `gut${RUN}`, over a year of
+		 * runs, 12,000 strings) that Fraunces 700 fitted in the old column,
+		 * drawn in Newsreader 700 and taken in Source Sans 3's ch: the most
+		 * over the six steps. And the two the review found cut at 1280px.
+		 * Measured in Chromium, 2026-09-26, in the served builds' own CSS
+		 * (50115548's for the old faces, fd0647c9's for the new).
+		 */
+		const WORST = {nick: "gutn73mm57a", ch: 13.781};
+		const NAMED: Record<string, number> = {psmuigvwpw: 12.09, psmuihe71bn: 12.61};
+		/** And what shows that the unit is the loss, not the face: Newsreader 700 over Fraunces 700 on the same string, at most, over every string the old column held. */
+		const NEWSREADER_OVER_FRAUNCES = 1.034;
+
+		it("restates the nick column's basis in the words' ch, wide enough for every nick the old column held", function () {
+			const basis = valueOf("#chat .from", "flex-basis");
+			expect(basis, "a top-level #chat .from { flex-basis }").to.match(/^\d+(\.\d+)?ch$/);
+			const n = parseFloat(basis!);
+			// Holds the widest form, and each of the two the review named,
+			// with room for rounding (as the time columns hold their widest).
+			expect(n - WORST.ch, `${n}ch holds ${WORST.nick}, ${WORST.ch}ch`).to.be.at.least(0.1);
+
+			for (const [nick, ch] of Object.entries(NAMED)) {
+				expect(n - ch, `${n}ch holds ${nick}, ${ch}ch`).to.be.at.least(0.1);
+			}
+
+			// A small margin, not a new look: under a figure more than the worst.
+			expect(n - WORST.ch).to.be.below(1);
+			// And no wider than the old column plus what the face adds at most.
+			expect(n * NEW_CH_EM).to.be.at.most(OLD_COLUMN_EM * NEWSREADER_OVER_FRAUNCES);
+			// style.css's 12ch is what it restates.
+			expect(styleValue("#chat .from", "flex")).to.equal("0 1000 12ch");
+		});
+
+		it("leaves the rest of style.css's nick column alone: the shrink weight, the 9ch floor, the words' face, the shadow's clip", function () {
+			expect(styleValue("#chat .from", "min-width")).to.equal("9ch");
+			const own = rules.filter((r) => r.selectors.includes("#chat .from"));
+			expect(own.map((r) => r.at)).to.deep.equal([""]);
+			expect(own.flatMap((r) => r.decls.map(([p]) => p))).to.deep.equal(["flex-basis"]);
+
+			// No rule in ps.css sets the column's flex, floor or face: its ch is
+			// the one the thresholds count (the words'), and Newsreader stays on
+			// the nick inside it (.from .user).
+			for (const r of rules) {
+				for (const sel of r.selectors) {
+					if (
+						!/\.from(?![\w-])/.test(sel) ||
+						/\.from\s+\S|\.from::|\.font-size-sample/.test(sel)
+					) {
+						continue;
+					}
+
+					for (const [p] of r.decls) {
+						expect(p, `${r.at} ${sel}`).to.not.match(
+							/^(flex|flex-shrink|flex-grow|min-width|max-width|width|font|font-family)$/
+						);
+					}
+				}
+			}
+
+			expect(valueOf("#chat .chat .from", "padding")).to.equal("0.6em 0.75rem");
+			expect(valueOf("#chat .chat .from", "margin")).to.equal("-0.4em -0.25rem");
+		});
+	});
 });
 
 describe("the ps theme's motion", function () {

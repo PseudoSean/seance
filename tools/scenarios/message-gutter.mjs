@@ -77,6 +77,22 @@ const MEASURE = `(() => {
 	};
 })()`;
 
+// theme-ps.mjs's run nicks the review found cut (`ps${RUN}`, `${NICK}n`), and
+// each one's .from: scrollWidth over clientWidth means an ellipsis.
+const NICKS_WHOLE = `(() => {
+	const row = [...document.querySelectorAll('#chat .msg.self[data-type="message"]')].pop();
+	return ["psmuigvwpw", "psmuihe71bn"].map((nick) => {
+		const copy = row.cloneNode(true);
+		copy.classList.remove("self");
+		copy.querySelector(".from .user").textContent = nick;
+		row.after(copy);
+		const f = copy.querySelector(".from");
+		const out = {nick, scroll: f.scrollWidth, client: f.clientWidth, layout: getComputedStyle(copy).display === "flex" ? "columns" : "inline"};
+		copy.remove();
+		return out;
+	});
+})()`;
+
 export default async function run(page) {
 	await page.addInitScript(
 		`localStorage.setItem("settings", JSON.stringify(${JSON.stringify(SETTINGS)}))`
@@ -118,6 +134,21 @@ export default async function run(page) {
 			`(() => { const r = [...document.querySelectorAll('#chat .msg.self[data-type="message"]')].pop().getBoundingClientRect(); return {x: r.left - 4, y: r.top - 3 * r.height, width: Math.min(r.width, 700), height: r.height * 6}; })()`
 		);
 		await page.screenshot(`gutter-${CLOCK}-${step}`, {clip: box});
+	}
+	// The ps theme's nick column holds the nicks it held before its type
+	// review (docs/projects/ps-theme.md §8): the two found cut at 1280px, at
+	// the default step, in columns, each drawn in a copy of the own row that
+	// is not .self (so MEASURE never reads it) and is gone again at once.
+	if (process.env.SEANCE_THEME === "ps") {
+		await page.evaluate(`document.documentElement.dataset.fontSize = "large"`);
+		await page.sleep(80);
+
+		for (const n of await page.evaluate(NICKS_WHOLE)) {
+			page.check(
+				`large @1280: ${n.nick} draws whole in the nick column (${n.scroll} in ${n.client}px, ${n.layout})`,
+				n.layout === "columns" && n.scroll <= n.client
+			);
+		}
 	}
 	// Now the squeeze: the user list open, the window narrowed step by step.
 	// The text column keeps 30 characters while the list is a side panel,
