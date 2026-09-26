@@ -1909,9 +1909,31 @@ describe("the ps theme's embers (spec §9)", function () {
 		expect(hold.map((r) => r.decls)).to.deep.equal([[["visibility", "visible"]]]);
 	});
 
-	it("unclips the text column while a chip's burst runs (style.css clips .content), so its sparks rise past the line", function () {
+	it("widens the text column's clip while a chip's burst runs by just the sparks' rise and glow, never lifting style.css's anti-Zalgo clip", function () {
 		expect(style).to.match(/#chat \.content \{[^}]*overflow: hidden;/);
-		expect(valueOf(UNCLIP, "overflow", MOTION_OK)).to.equal("visible");
+		// clip, not visible: combining marks stacked past the margin stay cut
+		// off, and clip makes no scroll container, as hidden did not need to be.
+		expect(valueOf(UNCLIP, "overflow", MOTION_OK)).to.equal("clip");
+		// The margin is the chip sparks' highest rise plus the glow's blur and
+		// spread (their box-shadow): a spark starts inside the column, so that
+		// is as far past its edge as any of it is drawn.
+		const rise = Math.max(
+			...[...CHIP, ...GROUP].map((s) => -rem(spark(s).get("--ps-ember-y")))
+		);
+		const [blur, spread] = (spark(CHIP[0]).get("box-shadow") ?? "")
+			.split(" ")
+			.slice(2, 4)
+			.map((v) => rem(v));
+		expect(valueOf(UNCLIP, "overflow-clip-margin", MOTION_OK)).to.equal(
+			`${rise + blur + spread}rem`
+		);
+		const unclipped = rules.filter((r) =>
+			r.decls.some(([p, v]) => /^overflow(-[xy])?$/.test(p) && v === "visible")
+		);
+		expect(
+			unclipped.flatMap((r) => r.selectors).filter((s) => /\.content(?![\w-])/.test(s)),
+			"nothing makes the text column overflow visibly"
+		).to.deep.equal([]);
 	});
 
 	it("draws every spark as the mockup's ember: a 0.25rem dot of #ffc46e glowing, out of the flow and the pointer's way, filled both ways", function () {

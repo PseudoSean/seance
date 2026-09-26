@@ -553,8 +553,16 @@ strong,
  * as long as the latest spark keeps it; the pop is restated because the
  * shorthand replaces it. The chip is positioned (the tooltip's `position:
  * relative`; the glass's backdrop filter too), so it is its sparks'
- * containing block, and it sits inside .content: the text column is
- * unclipped for as long as the burst runs, or they would be cut at its top.
+ * containing block, and it sits inside .content, whose `overflow: hidden`
+ * (style.css) keeps Zalgo text's stacked marks off the rows around it. The
+ * sparks would be cut at its top, so for as long as the burst runs the clip
+ * is `overflow: clip` with an `overflow-clip-margin` of the sparks' rise and
+ * glow: the trade-off is that for those ~2.2 s a message's marks can spill
+ * that far (3.25rem) and no further, where `visible` would lift the clip
+ * altogether. A browser without overflow-clip-margin cuts the sparks at the
+ * column's edge instead, which only shortens their rise. .content is always
+ * a flex item or inline, so clip changes no layout: it is only not a scroll
+ * container, which nothing scrolls.
  *
  * No z-index: a spark paints with its row, over the rows above it, and under
  * whatever floats over the column (the message toolbar, the jump-to-recent
@@ -665,8 +673,11 @@ strong,
 		animation: reaction-pop 160ms ease-out, ps-ember-hold 2.2s linear;
 	}
 
+	/* The margin: the chip sparks' highest rise (2.75rem) plus the glow's blur
+	 * and spread (0.375rem + 0.125rem). */
 	#chat .chat-view[data-type="channel"] .content:has(.reaction-enter-active, .reactions-enter-active) {
-		overflow: visible;
+		overflow: clip;
+		overflow-clip-margin: 3.25rem;
 	}
 }
 /* stylelint-enable max-line-length */

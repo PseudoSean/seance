@@ -103,7 +103,7 @@
 // one send lights one burst, four sparks on the echo and none on its pending
 // copy; a reaction lights two over its chip, as the first chip enters with
 // its group and as a second enters alone, both still rising 0.9 s in (the
-// enter class held open) with the text column unclipped meanwhile; a query
+// enter class held open) with the text column's clip widened meanwhile; a query
 // and reduced motion light none; and a send's burst is shot still, mid-rise,
 // at noon and at dusk.
 //
@@ -326,6 +326,52 @@ const FREEZE_EMBERS = (ms, within = null) => `(() => {
 	return window.__frozen.length;
 })()`;
 const FINISH_EMBERS = `(() => { for (const a of window.__frozen ?? []) a.finish(); window.__frozen = []; })()`;
+
+/**
+ * Every reaction group or chip as it enters, read by a MutationObserver the
+ * moment it is inserted: Vue puts the enter class on before it inserts the
+ * element and takes it off a frame or more later, so it is certainly there.
+ * For each: its classes, its chip's text, its own animation-name and the
+ * animation-name the chip text's ::before and ::after resolve to. These are
+ * computed styles at a fixed moment, where an animationstart event depends
+ * on frames arriving: the query check once missed style.css's 160 ms pop
+ * that way (plan 4, Task 1's fix round 1).
+ */
+const WATCH_ENTERS = `(() => {
+	window.__enters = [];
+	window.__entersObserver?.disconnect();
+	const read = (el) => {
+		const text = el.querySelector(".msg-reaction-text");
+		window.__enters.push({
+			cls: String(el.className),
+			text: text ? text.textContent : "",
+			own: getComputedStyle(el).animationName,
+			sparks: text ? ["::before", "::after"].map((p) => getComputedStyle(text, p).animationName) : [],
+		});
+	};
+	window.__entersObserver = new MutationObserver((records) => {
+		for (const r of records) {
+			for (const n of r.addedNodes) {
+				if (!(n instanceof Element)) continue;
+				for (const el of [n, ...n.querySelectorAll(".msg-reactions, .msg-reaction")]) {
+					if (el.matches(".reactions-enter-active, .reaction-enter-active")) read(el);
+				}
+			}
+		}
+	});
+	window.__entersObserver.observe(document.getElementById("chat"), {childList: true, subtree: true});
+	return true;
+})()`;
+
+/** The animation-name each of a row's four spark pseudo-elements resolves to, and the row's own. */
+const ROW_SPARKS = (row) => `(() => {
+	const r = document.querySelector(${JSON.stringify(row)});
+	const c = r.querySelector(":scope > .content");
+	return {
+		own: getComputedStyle(r).animationName,
+		sparks: [[r, "::before"], [r, "::after"], [c, "::before"], [c, "::after"]].map(([e, p]) => getComputedStyle(e, p).animationName),
+	};
+})()`;
 
 /** The newest row, when it is an own message's echo (not its pending copy). */
 const LAST_OWN = `#chat .messages > .msg.self:not(.pending):last-child`;
@@ -1828,16 +1874,20 @@ export default async function run(page) {
 	// The first on a message enters with its whole group
 	// (.reactions-enter-active), a later one on its own
 	// (.reaction-enter-active); style.css pops either in over 160 ms, ps.css
-	// holds the class open for the burst (ps-ember-hold) and unclips the text
-	// column while it runs. About a second in, both sparks must still be
-	// rising: Vue would have taken the class, and them, at 160 ms.
+	// holds the class open for the burst (ps-ember-hold) and widens the text
+	// column's clip by the sparks' rise and glow while it runs (overflow:
+	// clip with a margin; style.css's anti-Zalgo clip otherwise). About a
+	// second in, both sparks must still be rising: Vue would have taken the
+	// class, and them, at 160 ms. The group is read as it lands
+	// (WATCH_ENTERS), which is also the control for the query's check below.
 	const RUNNING_ON_CHIPS = `document.getAnimations().filter((a) => a.animationName === "ps-ember" && a.playState === "running" && a.effect.target.closest(".msg-reaction")).map((a) => a.effect.target.textContent)`;
-	const TEXT_CLIP = `getComputedStyle(document.querySelector("${LAST_OWN} > .content")).overflow`;
+	const TEXT_CLIP = `(() => { const c = getComputedStyle(document.querySelector("${LAST_OWN} > .content")); return c.overflow + (c.overflow === "clip" ? " " + c.overflowClipMargin : ""); })()`;
 	await page.evaluate(`window.__animLog.length = 0`);
+	await page.evaluate(WATCH_ENTERS);
 	await sendLine(page, "/react 💖");
-	await page.waitFor(`window.__animLog.some((e) => e.name === "reaction-pop")`, {
+	await page.waitFor(`window.__enters.length > 0`, {
 		timeout: 20000,
-		label: "the reaction's pop",
+		label: "the reaction's group entering",
 	});
 	await page.sleep(900);
 	const firstHeld = await page.evaluate(RUNNING_ON_CHIPS);
@@ -1845,9 +1895,15 @@ export default async function run(page) {
 	await page.sleep(2000);
 	const reactLog = await page.evaluate(`window.__animLog.slice()`);
 	const afterClip = await page.evaluate(TEXT_CLIP);
+	const firstEnter = await page.evaluate(`window.__enters.slice()`);
 	page.check(
-		`a reaction still pops in, with its group (${describeLog(reactLog)})`,
-		reactLog.some((e) => e.name === "reaction-pop" && !e.pseudo && /msg-reactions/.test(e.cls))
+		`the first reaction enters with its group, which pops and holds, and its chip's text lights both sparks, read as it lands (${JSON.stringify(
+			firstEnter
+		)})`,
+		firstEnter.length === 1 &&
+			/(^|\s)reactions-enter-active(\s|$)/.test(firstEnter[0].cls) &&
+			firstEnter[0].own === "reaction-pop, ps-ember-hold" &&
+			firstEnter[0].sparks.join() === "ps-ember,ps-ember"
 	);
 	page.check(
 		`the first reaction: one burst, two sparks off the chip's text, none on the row (${describeLog(
@@ -1859,16 +1915,17 @@ export default async function run(page) {
 	page.check(
 		`the group's class is held for the burst: both sparks rising 0.9 s in (${JSON.stringify(
 			firstHeld
-		)}), the text column unclipped then (${firstClip}) and clipped again after (${afterClip})`,
-		firstHeld.length === 2 && firstClip === "visible" && afterClip === "hidden"
+		)}), the text column's clip widened then (${firstClip}) and back to style.css's after (${afterClip})`,
+		firstHeld.length === 2 && /^clip \S+px$/.test(firstClip) && afterClip === "hidden"
 	);
 
 	await page.evaluate(`window.__animLog.length = 0`);
+	await page.evaluate(WATCH_ENTERS);
 	await sendLine(page, "/react 🌾");
-	await page.waitFor(
-		`window.__animLog.some((e) => e.name === "reaction-pop" && e.text.includes("🌾"))`,
-		{timeout: 20000, label: "the second reaction's pop"}
-	);
+	await page.waitFor(`window.__enters.some((e) => e.text.includes("🌾"))`, {
+		timeout: 20000,
+		label: "the second reaction's chip entering",
+	});
 	await page.sleep(900);
 	const secondHeld = await page.evaluate(RUNNING_ON_CHIPS);
 	await page.sleep(2000);
@@ -1889,8 +1946,14 @@ export default async function run(page) {
 
 	// ---- no embers in a query: the plains stand still there (spec §5.7)
 
-	// A query with the neighbour, so a line and a reaction have their echoes;
-	// the settle and the pop are the controls that the log is live.
+	// A query with the neighbour, so a line and a reaction have their echoes.
+	// Read at fixed moments, not from animation events alone (the check once
+	// lost style.css's 160 ms pop from the log and failed on its control):
+	// the echo's four spark pseudo-elements once it is the newest row, whose
+	// own ps-settle is the control that the stylesheet and the row are live;
+	// and the reaction's group as it is inserted, its enter class on, whose
+	// pop is the control that it entered, the same reading that lit both
+	// sparks in #seance above. And no ember or hold in the event log.
 	const PEER_ROW = `.channel-list-item[data-type="query"][data-name="${PEER}"]`;
 	await sendLine(page, `/query ${PEER}`);
 	await page.waitFor(
@@ -1907,22 +1970,33 @@ export default async function run(page) {
 		)}); })()`,
 		{label: "the query's own line"}
 	);
+	const queryRow = await page.evaluate(ROW_SPARKS(LAST_OWN));
 	await page.sleep(300);
+	await page.evaluate(WATCH_ENTERS);
 	await sendLine(page, "/react 💖");
-	await page.waitFor(`document.querySelector("${LAST_OWN} .msg-reaction")`, {
+	await page.waitFor(`window.__enters.length > 0`, {
 		timeout: 20000,
-		label: "the query's reaction",
+		label: "the query's reaction entering",
 	});
 	await page.sleep(1200);
 	const queryLog = await page.evaluate(`window.__animLog.slice()`);
+	const queryEnter = await page.evaluate(`window.__enters.slice()`);
 	page.check(
-		`a query lights no ember, on a send or a reaction, and holds nothing (${describeLog(
-			queryLog
-		)})`,
-		embersIn(queryLog).length === 0 &&
-			!queryLog.some((e) => e.name === "ps-ember-hold") &&
-			queryLog.some((e) => e.name === "ps-settle") &&
-			queryLog.some((e) => e.name === "reaction-pop")
+		`a query lights no ember, on a send or a reaction, and holds nothing: the echo settles (${
+			queryRow.own
+		}) with no spark (${queryRow.sparks.join(
+			", "
+		)}), its reaction's group pops in with none (${JSON.stringify(
+			queryEnter
+		)}), and no ember or hold in the log (${describeLog(queryLog)})`,
+		queryRow.own === "ps-settle" &&
+			queryRow.sparks.every((n) => n === "none") &&
+			queryEnter.length === 1 &&
+			/(^|\s)reactions-enter-active(\s|$)/.test(queryEnter[0].cls) &&
+			queryEnter[0].own === "reaction-pop" &&
+			queryEnter[0].sparks.join() === "none,none" &&
+			embersIn(queryLog).length === 0 &&
+			!queryLog.some((e) => e.name === "ps-ember-hold")
 	);
 
 	// ---- a second channel, the same place
