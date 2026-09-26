@@ -89,6 +89,8 @@ class FakeElement extends Listeners {
 	markup = "";
 	/** What querySelector has handed out since the markup was last set, by selector. */
 	found = new Map<string, FakeElement>();
+	/** What querySelector hands out whatever the markup: an element a test prepared. */
+	planted = new Map<string, FakeElement>();
 	/** Thrown from setAttribute while set: an apply that fails. */
 	failing: Error | null = null;
 
@@ -106,7 +108,7 @@ class FakeElement extends Listeners {
 	}
 
 	querySelector(selector: string): FakeElement {
-		let el = this.found.get(selector);
+		let el = this.planted.get(selector) ?? this.found.get(selector);
 
 		if (!el) {
 			el = new FakeElement(selector);
@@ -202,8 +204,8 @@ function fakePage() {
 	let frames = new Map<number, () => void>();
 	let nextFrame = 1;
 	let columnShown = true;
-	/** Thrown from document.querySelector while set: a failing measurement. */
-	let queryFails: Error | null = null;
+	/** Thrown from the column's lookup while set: a failing measurement. */
+	let columnFails: Error | null = null;
 	FakeResizeObserver.all = [];
 
 	const globals: Record<string, unknown> = {
@@ -226,11 +228,15 @@ function fakePage() {
 		document: {
 			documentElement: html,
 			querySelector(selector: string) {
-				if (queryFails) {
-					throw queryFails;
+				if (selector !== "#chat .chat") {
+					return null; // no theme-color meta
 				}
 
-				return selector === "#chat .chat" && columnShown ? column : null;
+				if (columnFails) {
+					throw columnFails;
+				}
+
+				return columnShown ? column : null;
 			},
 			getElementById: () => null,
 		},
@@ -255,8 +261,8 @@ function fakePage() {
 			columnShown = false;
 			column.isConnected = false;
 		},
-		failQueries(error: Error | null) {
-			queryFails = error;
+		failColumnLookup(error: Error | null) {
+			columnFails = error;
 		},
 		/** What the browser does when `target` changes size: each observer watching it is called once. */
 		resize(target: unknown) {
@@ -306,6 +312,39 @@ function withPage(fn: (page: Page, clock: sinon.SinonFakeTimers) => void) {
 const mountOn = (page: Page, visible = true): SceneHandle =>
 	mount(page.root as unknown as HTMLElement, {visible, view: "channel"});
 
+/** What a scene has left running and written, read off the stand-in page. */
+function leftBehind(page: Page, clock: sinon.SinonFakeTimers) {
+	return {
+		observers: page.observers().filter((o) => !o.disconnected).length,
+		windowListeners: page.win.all.map(([type]) => type),
+		mediaListeners: page.media.flatMap((m) => m.all.map(([type]) => `${m.media} ${type}`)),
+		frames: page.pendingFrames(),
+		timers: clock.countTimers(),
+		rootMarkup: page.root.markup.length,
+		rootData: Object.keys(page.root.dataset),
+		rootStyle: [...page.root.style.props.keys()],
+		rootClasses: [...page.root.classList.names],
+		htmlData: Object.keys(page.html.dataset),
+		htmlStyle: [...page.html.style.props.keys()],
+		htmlClasses: [...page.html.classList.names],
+	};
+}
+
+const NOTHING = {
+	observers: 0,
+	windowListeners: [],
+	mediaListeners: [],
+	frames: 0,
+	timers: 0,
+	rootMarkup: 0,
+	rootData: [],
+	rootStyle: [],
+	rootClasses: [],
+	htmlData: [],
+	htmlStyle: [],
+	htmlClasses: [],
+};
+
 describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 	describe("the yurt waits for the scene to be laid out (the boot race)", function () {
 		it("places nothing while the scene has no box, and the yurt's first place once it has one", function () {
@@ -339,6 +378,46 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 				page.resize(page.root);
 				expect(page.root.style.getPropertyValue("--ps-yurt-left")).to.equal("856.50px");
 				scene.destroy();
+			});
+		});
+	});
+
+	describe("a mount that throws leaves nothing running", function () {
+		it("runs, and a destroy leaves nothing behind (the control)", function () {
+			withPage((page, clock) => {
+				const scene = mountOn(page);
+				const running = leftBehind(page, clock);
+				expect(running.observers, "the yurt's and the composer's").to.equal(2);
+				expect(running.windowListeners).to.deep.equal(["resize"]);
+				expect(running.mediaListeners).to.deep.equal([
+					"(prefers-reduced-motion: reduce) change",
+				]);
+				expect(running.timers, "the minute's tick").to.equal(1);
+				expect(running.htmlData).to.have.members(["psLight", "psText"]);
+				scene.destroy();
+				expect(leftBehind(page, clock)).to.deep.equal(NOTHING);
+			});
+		});
+
+		it("destroys what it built and rethrows when the first tick throws", function () {
+			withPage((page, clock) => {
+				const bad = new Error("a bad moment");
+				// The moon's ellipse is written late in apply, after the observers,
+				// the listeners, the gates and the weather.
+				const ellipse = new FakeElement(".ps-m-ell");
+				ellipse.failing = bad;
+				page.root.planted.set(".ps-m-ell", ellipse);
+				expect(() => mountOn(page)).to.throw(bad);
+				expect(leftBehind(page, clock)).to.deep.equal(NOTHING);
+			});
+		});
+
+		it("destroys what it built and rethrows when looking for the column throws", function () {
+			withPage((page, clock) => {
+				const bad = new Error("a bad measurement");
+				page.failColumnLookup(bad);
+				expect(() => mountOn(page)).to.throw(bad);
+				expect(leftBehind(page, clock)).to.deep.equal(NOTHING);
 			});
 		});
 	});

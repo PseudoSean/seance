@@ -654,18 +654,18 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 	};
 
 	const onReduced = () => motion(visible && !reduced.matches);
-	reduced.addEventListener("change", onReduced);
-	const yurt = placeYurt(root);
-	const composer = watchComposer(root, html);
+	// Built in mount's try below; a half-built mount's destroy skips what is missing.
+	let yurt: ReturnType<typeof placeYurt> | undefined;
+	let composer: ReturnType<typeof watchComposer> | undefined;
 
 	const update = (state: SceneHostState) => {
 		root.dataset.view = state.view;
-		yurt.refind();
-		composer.refind();
+		yurt?.refind();
+		composer?.refind();
 
 		if (state.visible && !visible) {
 			visible = true;
-			yurt.seen(); // the first time opens the load's window (yurt.ts SETTLE_MS)
+			yurt?.seen(); // the first time opens the load's window (yurt.ts SETTLE_MS)
 			motion(!reduced.matches);
 			tick(); // catch up at once: a laptop that slept shows the right sky
 		} else if (!state.visible && visible) {
@@ -677,19 +677,15 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 		}
 	};
 
-	// A scene mounted into a hidden page starts stopped; the first visible update starts it.
-	motion(false);
-	update(initial);
-
-	return {
+	const handle: SceneHandle = {
 		update,
 		destroy() {
 			window.clearTimeout(timer);
 			timer = undefined;
 			gates.stop();
 			reduced.removeEventListener("change", onReduced);
-			yurt.destroy();
-			composer.destroy();
+			yurt?.destroy();
+			composer?.destroy();
 			root.replaceChildren();
 			root.removeAttribute("style");
 			root.classList.remove("ps-paused", "ps-windy", "ps-storm", "ps-hot", "ps-west");
@@ -710,4 +706,28 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 			}
 		},
 	};
+
+	// From the first listener on, a throw (a bad moment in the first tick, a
+	// failed measurement) takes down everything already built (observers,
+	// listeners, frames, the minute's timer, what was written on <html>)
+	// before it reaches the host, whose daylight fallback would otherwise
+	// stand over a scene still running. The first error is the one reported.
+	try {
+		reduced.addEventListener("change", onReduced);
+		yurt = placeYurt(root);
+		composer = watchComposer(root, html);
+		// A scene mounted into a hidden page starts stopped; the first visible update starts it.
+		motion(false);
+		update(initial);
+	} catch (error) {
+		try {
+			handle.destroy();
+		} catch {
+			// the mount's own error is the one to rethrow
+		}
+
+		throw error;
+	}
+
+	return handle;
 }
