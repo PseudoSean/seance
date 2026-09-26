@@ -61,8 +61,10 @@ export {ALPHA_HALO, INK};
  *
  * against a production build. Headless Chromium drew swatches of 360 × 48 CSS
  * px at the default font-size step (html 20px), in the treatments computed off
- * a real message: Mulish 500 20px ("The quick brown fox 0123") and Fraunces
- * 700 20px ("Marigold Ősz"), at device scale factor 1, 2 and 3. White with the
+ * a real message: the words' face at 500 ("The quick brown fox 0123") and the
+ * names' at 700 ("Marigold Ősz"), both at 20px — Mulish and Fraunces until
+ * plan 4, Source Sans 3 and Newsreader since — at device scale factor 1, 2
+ * and 3. White with the
  * shadow was drawn over #ffb96f, #fdfaf0, #fffef6, #eef2f7, #9ccaf5 and
  * #69b04a; #1b2638 with the halo (#ebf5fd) over #9ccaf5, #69b04a and #ffc478
  * (over #eef2f7 the halo is too close to the ground to measure). The ring is
@@ -102,10 +104,22 @@ export {ALPHA_HALO, INK};
  * at that strength dark ink holds over the yurt's band and door at no hour
  * of any clear day. **The user chose "A"** (2026-09-25): record it, and let
  * the words be white all day wherever dark ink does not hold, which by this
- * measure is every day but a snowy one. ALPHA_HALO = min(0.6, 0.1559) lives
- * in client/js/scenes/ps/grounds.ts, beside the rule that runs on it.
+ * measure is every day but a snowy one.
+ *
+ * **2026-09-26, fourth pass (the user's new faces, plan 4).** The same
+ * phrases, grounds and DPRs, with the words in Source Sans 3 500 and the nick
+ * in Newsreader 700 (the user's pick, "M1, N2"). Both treatments read
+ * stronger than on Mulish and Fraunces: **the shadow 0.6039** (Newsreader
+ * "ok", DPR 1, over the white daytime cloud #ffffff; it was 0.5882 on
+ * Fraunces "it,"; the samples alone 0.7433), recorded at the model's cap,
+ * 0.6; **the halo 0.1614** (0.16149, Source Sans 3 "it,", DPR 3, over
+ * #ffc478 again; it was 0.1559; the samples alone 0.2225). The halo's rise
+ * changes no day's treatment: dark ink still holds on snowy days alone, from
+ * before 08:50 to after 15:45 on every one (it was 15:40). ALPHA_HALO =
+ * min(0.6, 0.1614) lives in client/js/scenes/ps/grounds.ts, beside the rule
+ * that runs on it.
  */
-export const ALPHA_SHADOW = Math.min(0.6, 0.5882);
+export const ALPHA_SHADOW = Math.min(0.6, 0.6039);
 export const INK_FAINT = "#4c5a72";
 
 export type Surface = "column" | "glass";

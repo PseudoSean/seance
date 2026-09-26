@@ -47,12 +47,13 @@ export const INK_FAINT_HELD = "#38455c";
 /**
  * How far the halo moves the ground right around a dark word toward its own
  * colour, measured in rendered pixels on real chat phrases and used as
- * min(0.6, measured): tools/ps/legibility.ts keeps the measurements' record.
- * At this strength dark ink holds over the yurt's band and door at no hour of
- * a clear day, so the words are white all day but on snowy days (the user's
- * pick "A", 2026-09-25).
+ * min(0.6, measured): tools/ps/legibility.ts keeps the measurements' record
+ * (last taken 2026-09-26, on Source Sans 3 and Newsreader). At this strength
+ * dark ink holds over the yurt's band and door at no hour of a clear day, so
+ * the words are white all day but on snowy days (the user's pick "A",
+ * 2026-09-25).
  */
-export const ALPHA_HALO = Math.min(0.6, 0.1559);
+export const ALPHA_HALO = Math.min(0.6, 0.1614);
 
 /** The grid the day's treatment is decided on: the generator's dense sweep's step, so every dense sample is a decision point. */
 export const SCHEDULE_STEP = 5;

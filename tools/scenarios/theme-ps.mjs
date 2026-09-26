@@ -2150,7 +2150,7 @@ export default async function run(page) {
 
 	// The words are white all day, and dark ink only where it holds over
 	// every ground of the moment (the user's "A", 2026-09-25): over the year
-	// that is a snowy day, from before 08:50 to after 15:40 on every one
+	// that is a snowy day, from before 08:50 to after 15:45 on every one
 	// (grounds.ts inkWindow). Today's weather decides which.
 	const noon = await atHour(page, 12);
 	const noonInk = noon.weather === "snow";
