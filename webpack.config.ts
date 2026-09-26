@@ -427,6 +427,12 @@ const config: webpack.Configuration = {
 						ignore: isProduction ? ["**/qqx.json"] : [],
 					},
 				},
+				{
+					// The ps theme's fonts, licences and animal files,
+					// referenced relative to the stylesheet as ps/<file>.
+					from: path.resolve(__dirname, "./client/themes/ps/*").replace(/\\/g, "/"),
+					to: "themes/ps/[name][ext]",
+				},
 			],
 		}),
 		// socket.io uses debug, we don't need it

@@ -5,6 +5,7 @@ import {normalizeFontSize} from "./helpers/fontSize";
 import {normalizeOwnMessageStyle} from "./helpers/ownMessages";
 import {prefersTwelveHourClock} from "./helpers/hourCycle";
 import storage from "./localStorage";
+import {themeScene} from "./themeScene";
 
 const defaultSettingConfig = {
 	apply() {},
@@ -146,6 +147,9 @@ const defaultConfig = {
 		// One-time note of the tag's build-time colour, before boot applies
 		// anything: the fallback for themes that carry no colour of their own.
 		apply(store: TypedStore, value: string) {
+			// A theme's own scene, if it has one (client/js/themeScene.ts).
+			void themeScene.setTheme(value);
+
 			const themeEl = document.getElementById("theme");
 			const themeUrl = `themes/${value}.css`;
 

@@ -7,6 +7,11 @@
 //
 //   corepack yarn build && python3 -m http.server -d public 8000 &
 //   node tools/browser-drive.mjs tools/scenarios/message-gutter.mjs
+//
+// SEANCE_THEME=<name> picks the Appearance theme the run boots into (a
+// bundled font's own metrics can widen or narrow the gutter past
+// style.css's numbers, as the ps theme's fonts do — docs/projects/ps-theme.md
+// §8); left unset, the run boots into the default theme.
 
 const RUN = Date.now().toString(36);
 const NICK = `gut${RUN}`;
@@ -18,7 +23,23 @@ const STEPS = ["tiny", "small", "medium", "large", "xlarge", "huge"];
 // SEANCE_CLOCK=24h|12h|24h+s|12h+s picks the clock setting for the run; the
 // format the DOM shows follows the setting, so it is set before boot.
 const CLOCK = process.env.SEANCE_CLOCK ?? "12h";
-const SETTINGS = {use12hClock: CLOCK.startsWith("12"), showSeconds: CLOCK.endsWith("+s")};
+const SETTINGS = {
+	use12hClock: CLOCK.startsWith("12"),
+	showSeconds: CLOCK.endsWith("+s"),
+	...(process.env.SEANCE_THEME ? {theme: process.env.SEANCE_THEME} : {}),
+};
+// The widest times of each format (every figure is as wide as a 0 with
+// tabular-nums; the hour's first figure and am or pm are what vary), so the
+// fit is checked whatever the clock says during the run.
+const WIDEST = {
+	"12h": ["12:00am", "12:00pm"],
+	"12h+s": ["12:00:00am", "12:00:00pm"],
+	"24h": ["00:00"],
+	"24h+s": ["00:00:00"],
+}[CLOCK];
+const WIDEST_JSON = JSON.stringify(WIDEST);
+const fitLabel = (m) =>
+	`the widest time fits its column (${m.widest.toFixed(1)} in ${m.timeBox.toFixed(1)}px)`;
 
 // Text width against column width for the last own message, in px.
 const MEASURE = `(() => {
@@ -30,6 +51,15 @@ const MEASURE = `(() => {
 	const ch = (() => { const e = document.createElement("span"); e.textContent = "0"; e.style.cssText = "position:absolute;visibility:hidden;white-space:pre"; c.appendChild(e); const w = e.getBoundingClientRect().width; e.remove(); return w; })();
 	const ul = document.querySelector("#chat .userlist");
 	const messages = document.querySelector("#chat .messages");
+	const px = (el, p) => parseFloat(getComputedStyle(el)[p]);
+	const tBox = t.getBoundingClientRect(), fBox = f.getBoundingClientRect();
+	const widest = Math.max(...${WIDEST_JSON}.map((s) => { const e = document.createElement("span"); e.textContent = s; e.style.cssText = "position:absolute;visibility:hidden;white-space:pre"; t.appendChild(e); const w = e.getBoundingClientRect().width; e.remove(); return w; }));
+	// The gutter's two gaps: after the widest time to the nick column's text
+	// box, and from that box to the message text.
+	const fLeft = fBox.left + px(f, "paddingLeft"), fRight = fBox.right - px(f, "paddingRight");
+	const text = document.createTreeWalker(c, NodeFilter.SHOW_TEXT);
+	let n; while ((n = text.nextNode()) && !n.data.trim());
+	const textLeft = (() => { const r = document.createRange(); r.selectNodeContents(n); return r.getClientRects()[0].left; })();
 	return {
 		ch,
 		contentCh: (c.clientWidth - parseFloat(getComputedStyle(c).paddingLeft) - parseFloat(getComputedStyle(c).paddingRight)) / ch,
@@ -38,11 +68,41 @@ const MEASURE = `(() => {
 		layout: getComputedStyle(msg).display === "flex" ? "columns" : "inline",
 		rowOverflow: messages.scrollWidth > messages.clientWidth,
 		time: t.textContent.trim(), timeCol: t.getBoundingClientRect().width, timeText: textW(t),
+		timeBox: tBox.width - px(t, "paddingLeft") - px(t, "paddingRight"), widest,
+		gapAfterWidest: fLeft - (tBox.left + px(t, "paddingLeft") + widest), nameToText: textLeft - fRight,
 		timeLines: (() => { const r = document.createRange(); r.selectNodeContents(t); return r.getClientRects().length; })(),
 		fromCol: f.getBoundingClientRect().width, fromText: textW(f),
 		gutter: c.getBoundingClientRect().left - msg.getBoundingClientRect().left,
 		root: parseFloat(getComputedStyle(document.documentElement).fontSize),
 	};
+})()`;
+
+// The ps theme's nick column is the user's N, 9ch (docs/projects/ps-theme.md
+// §8): two nicks of about 8 letters and under, and two longer ones — the
+// scenario's 11-letter peer (`${NICK}n` in theme-ps.mjs) and the options
+// page's tumbleweed_42 — each drawn in a copy of the own row, measured, and
+// gone again. scrollWidth over clientWidth means the nick ends in the
+// column's ellipsis; `inside` is the column's box ending before the text's.
+const NICK_COLUMN = `(() => {
+	const row = [...document.querySelectorAll('#chat .msg.self[data-type="message"]')].pop();
+	return ["campfire", "sparrow", "psmuihe71bn", "tumbleweed_42"].map((nick) => {
+		const copy = row.cloneNode(true);
+		copy.classList.remove("self");
+		copy.querySelector(".from .user").textContent = nick;
+		row.after(copy);
+		const f = copy.querySelector(".from"), c = copy.querySelector(".content");
+		const cs = getComputedStyle(f);
+		const z = document.createElement("span"); z.textContent = "0"; z.style.cssText = "position:absolute;visibility:hidden"; c.appendChild(z);
+		const ch = z.getBoundingClientRect().width; z.remove();
+		const out = {
+			nick, scroll: f.scrollWidth, client: f.clientWidth,
+			ch: (f.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)) / ch,
+			ellipsis: cs.textOverflow, inside: f.getBoundingClientRect().right + parseFloat(cs.marginRight) <= c.getBoundingClientRect().left + 0.5,
+			layout: getComputedStyle(copy).display === "flex" ? "columns" : "inline",
+		};
+		copy.remove();
+		return out;
+	});
 })()`;
 
 export default async function run(page) {
@@ -73,6 +133,8 @@ export default async function run(page) {
 		const m = await page.evaluate(MEASURE);
 		rows.push({step, clock: CLOCK, ...m});
 		page.check(`${step} ${CLOCK}: time fits its column`, m.timeText <= m.timeCol + 0.5);
+		if (m.layout === "columns")
+			page.check(`${step} ${CLOCK}: ${fitLabel(m)}`, m.widest <= m.timeBox + 0.5);
 		page.check(`${step} ${CLOCK}: time on one line`, m.timeLines === 1);
 		// The own messages, wherever the bots have scrolled them to: the
 		// measured row, scrolled into view, and its neighbours.
@@ -84,6 +146,32 @@ export default async function run(page) {
 			`(() => { const r = [...document.querySelectorAll('#chat .msg.self[data-type="message"]')].pop().getBoundingClientRect(); return {x: r.left - 4, y: r.top - 3 * r.height, width: Math.min(r.width, 700), height: r.height * 6}; })()`
 		);
 		await page.screenshot(`gutter-${CLOCK}-${step}`, {clip: box});
+	}
+	// The ps theme's nick column is the user's N (docs/projects/ps-theme.md
+	// §8), at 1280px and the default step, in columns: 9ch wide; a nick of
+	// about 8 letters or fewer drawn whole, a longer one ending in the
+	// column's ellipsis inside the column. Each in a copy of the own row that
+	// is not .self (so MEASURE never reads it) and is gone again at once.
+	if (process.env.SEANCE_THEME === "ps") {
+		await page.evaluate(`document.documentElement.dataset.fontSize = "large"`);
+		await page.sleep(80);
+
+		for (const n of await page.evaluate(NICK_COLUMN)) {
+			const long = n.nick.length > 8;
+			const tail = `${n.scroll} in ${n.client}px, the column ${n.ch.toFixed(2)}ch, ${
+				n.layout
+			}`;
+			page.check(
+				long
+					? `large @1280: ${n.nick} ends in an ellipsis inside the 9ch nick column (${tail}, ${n.ellipsis}, inside ${n.inside})`
+					: `large @1280: ${n.nick} draws whole in the 9ch nick column (${tail})`,
+				n.layout === "columns" &&
+					Math.abs(n.ch - 9) < 0.1 &&
+					(long
+						? n.scroll > n.client && n.ellipsis === "ellipsis" && n.inside
+						: n.scroll <= n.client)
+			);
+		}
 	}
 	// Now the squeeze: the user list open, the window narrowed step by step.
 	// The text column keeps 30 characters while the list is a side panel,
@@ -105,6 +193,11 @@ export default async function run(page) {
 			squeeze.push({step, width, ...m});
 			const tag = `${step} @${width}`;
 			if (m.layout === "columns") page.check(`${tag}: nick column >= 9ch`, m.fromCh >= 8.9);
+			// The step loop runs at 1280px, where the largest step is inline
+			// flow; a wide window keeps it in columns, and the widest time must
+			// fit there too.
+			if (m.layout === "columns")
+				page.check(`${tag}: ${fitLabel(m)}`, m.widest <= m.timeBox + 0.5);
 			// Inline flow can still overflow on an unbreakable word (a long URL
 			// at a big step in a phone-width pane); that is the word, not the
 			// columns.
@@ -145,6 +238,10 @@ export default async function run(page) {
 			fromCol: Math.round(r.fromCol),
 			fromText: Math.round(r.fromText),
 			gutter: Math.round(r.gutter),
+			timeBox: Math.round(r.timeBox),
+			widest: Math.round(r.widest),
+			gapAfterWidest: `${(r.gapAfterWidest / r.root).toFixed(2)}rem`,
+			nameToText: `${(r.nameToText / r.root).toFixed(2)}rem`,
 		}))
 	);
 	page.check("no console errors", page.consoleErrors.length === 0);

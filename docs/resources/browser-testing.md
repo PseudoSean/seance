@@ -144,6 +144,7 @@ export default async function run(page) {
 | `check(label, ok)`                         | records a failure instead of throwing                                                  |
 | `sleep(ms)`                                |                                                                                        |
 | `consoleLogs`, `consoleErrors`, `wsFrames` | collected since launch; a frame has `dir`, `requestId` (one per socket), `payloadData` |
+| `logEntries`                               | the browser's own console lines (a failed load): `{source, level, text, url}`          |
 | `send(method, params)`                     | raw CDP, for anything not wrapped                                                      |
 | `expectWsErrors`                           | set true while dials are refused on purpose (a failed dial is otherwise a failure)     |
 
@@ -197,6 +198,20 @@ to every cap-notify client on the rig, so keep the window short.
    idle, browser-side calls answered, `Runtime.evaluate` never). Poll with a
    marker set on the old window and tolerate `evaluate` errors while the
    document is being replaced.
+9. **A page that keeps repainting large animated layers can crash the
+   renderer on `/dev/shm`**, not just slow it down. Chromium puts raster and
+   shared-memory buffers there, a container's `/dev/shm` is commonly 64 MB,
+   and a page that repaints many big animated layers every frame — the `<3`
+   theme's meadow, fourteen background layers of SMIL-animated SVG, is what
+   surfaced this — fills it and the renderer dies. The symptom looks exactly
+   like rule 8's hang: the driver's next `Runtime.evaluate` never returns
+   (`send` has no timeout), CPU on every Chromium process drops to idle, and
+   nothing else in the log explains it — the only tell is a fresh, roughly
+   1 GB `core` file in the worktree root at the exact moment the run stalled
+   (`ulimit -c 0` only hides the dump, it does not stop the crash). The
+   driver now passes `--disable-dev-shm-usage`, which moves those buffers to
+   `/tmp` — what Playwright does by default, which is why a Playwright-driven
+   probe of the same page never crashed.
 
 ### Seeding
 

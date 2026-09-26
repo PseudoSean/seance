@@ -13,6 +13,7 @@ docs/superpowers/
 *.svg
 *.ico
 *.wav
+*.woff2
 *.tpl
 *.sh
 *.py
@@ -81,3 +82,6 @@ tools/i18n/fixtures/
 
 # Generated measurement tables (tools/translate-eval/roundtrip.ts); column padding would multiply their size.
 tools/translate-eval/results/
+
+# A design handoff kept byte-for-byte as the user approved it (its README says why).
+docs/resources/themes/ps-plains/mockup.html

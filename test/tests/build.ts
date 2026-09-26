@@ -135,8 +135,39 @@ describe("public folder", function () {
 			"panasync",
 			"day",
 			"morning",
+			"ps",
 		]) {
 			expect(fs.existsSync(path.join(publicFolder, "themes", `${theme}.css`))).to.be.true;
+		}
+	});
+
+	it("the ps theme's fonts and animals are copied beside it", function () {
+		for (const file of [
+			"source-sans-3-latin.woff2",
+			"source-sans-3-latin-ext.woff2",
+			"source-sans-3-vietnamese.woff2",
+			"source-sans-3-italic-latin.woff2",
+			"source-sans-3-italic-latin-ext.woff2",
+			"source-sans-3-italic-vietnamese.woff2",
+			"newsreader-latin.woff2",
+			"newsreader-latin-ext.woff2",
+			"newsreader-vietnamese.woff2",
+			"OFL-SourceSans3.txt",
+			"OFL-Newsreader.txt",
+			"horse.svg",
+			"horse-far.svg",
+			"horse-still.svg",
+			"horse-far-still.svg",
+			"puppy.svg",
+			"puppy-far.svg",
+			"puppy-still.svg",
+			"puppy-far-still.svg",
+			"bunny.svg",
+			"bunny-far.svg",
+			"bunny-still.svg",
+			"bunny-far-still.svg",
+		]) {
+			expect(fs.existsSync(path.join(publicFolder, "themes", "ps", file))).to.be.true;
 		}
 	});
 
