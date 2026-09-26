@@ -2369,6 +2369,41 @@ body {
 		-webkit-backdrop-filter: blur(0.625rem) var(--ps-g-lift,) saturate(1.12);
 		backdrop-filter: blur(0.625rem) var(--ps-g-lift,) saturate(1.12);
 	}
+
+	/* The drawer keeps its blur until it is off screen. Dropped as it began
+	 * to close, the words behind it showed through for the whole slide out
+	 * (style.css's transform 160ms): so closing, the filter changes only once
+	 * the slide is over (a 0 s change 160 ms late), and opening, at once. The
+	 * rest of each list is the glass's own, the slide and the flip. The user
+	 * list needs neither: style.css shows it with display, so it never
+	 * slides. */
+	/* stylelint-disable no-duplicate-selectors -- the bare drawer above, with its timing */
+	#sidebar {
+		transition:
+			transform 160ms,
+			background-color var(--ps-flip),
+			color var(--ps-flip),
+			border-color var(--ps-flip),
+			-webkit-backdrop-filter 0s linear 160ms,
+			backdrop-filter 0s linear 160ms;
+	}
+
+	#viewport.menu-open #sidebar {
+		transition:
+			transform 160ms,
+			background-color var(--ps-flip),
+			color var(--ps-flip),
+			border-color var(--ps-flip),
+			-webkit-backdrop-filter 0s,
+			backdrop-filter 0s;
+	}
+
+	/* A drag follows the finger (style.css's none, restated: the open rule
+	 * above is as specific and later, and an open drawer is dragged shut). */
+	#viewport.menu-dragging #sidebar {
+		transition: none;
+	}
+	/* stylelint-enable no-duplicate-selectors */
 }
 
 /* A shorter strip for the animal layer on a small screen. */

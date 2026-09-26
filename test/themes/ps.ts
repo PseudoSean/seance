@@ -735,8 +735,10 @@ describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.m
 
 		for (const selector of PHONE_OVERLAYS) {
 			expect(
-				declsOf(selector, PHONE).map(([p]) => p),
-				`${selector} sets the filter alone`
+				declsOf(selector, PHONE)
+					.map(([p]) => p)
+					.filter((p) => p !== "transition"),
+				`${selector} sets the filter alone (and the drawer's states its timing: the next test)`
 			).to.deep.equal(["-webkit-backdrop-filter", "backdrop-filter"]);
 
 			for (const property of ["backdrop-filter", "-webkit-backdrop-filter"]) {
@@ -841,6 +843,60 @@ describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.m
 				"var(--ps-g-solid)"
 			);
 		}
+	});
+
+	it("keeps the phone drawer's blur until it has slid off screen, and blurs it at once when it opens", function () {
+		// The slide is style.css's: the phone block moves the drawer with a
+		// transform over this long.
+		const style = rulesIn(
+			fs.readFileSync(path.resolve(__dirname, "../../client/css/style.css"), "utf8")
+		);
+		const styleValue = (selector: string, property: string, at = "") =>
+			declsOf(selector, at, style)
+				.filter(([p]) => p === property)
+				.at(-1)?.[1];
+		const slide = styleValue("#sidebar", "transition", PHONE);
+		const ms = /^transform (\d+)ms$/.exec(slide ?? "")?.[1];
+		expect(ms, `style.css's slide (${slide})`).to.not.equal(undefined);
+
+		// Both states keep the glass's own list (the slide, and the flip), and
+		// add the filter's: closing, it changes only once the slide is over (a
+		// 0 s change that late); opening, at once. Dropped with the slide's
+		// start, the words behind the drawer showed through it all the way out.
+		const flat = (value?: string) => value?.replace(/\s+/g, " ");
+		const glass = flat(valueOf("#sidebar", "transition"));
+		expect(glass, "the glass's list, the slide first").to.match(/^transform (\d+)ms, /);
+		expect(glass).to.include(`transform ${ms}ms`);
+		expect(flat(valueOf("#sidebar", "transition", PHONE)), "closed").to.equal(
+			`${glass}, -webkit-backdrop-filter 0s linear ${ms}ms, backdrop-filter 0s linear ${ms}ms`
+		);
+		expect(flat(valueOf("#viewport.menu-open #sidebar", "transition", PHONE)), "open").to.equal(
+			`${glass}, -webkit-backdrop-filter 0s, backdrop-filter 0s`
+		);
+
+		// A drag follows the finger with no transition at all (style.css's
+		// none), the open drawer's too: restated after the open rule, which is
+		// as specific.
+		expect(styleValue("#viewport.menu-dragging #sidebar", "transition", PHONE)).to.equal(
+			"none"
+		);
+		const timed = (selector: string) =>
+			rules.findIndex(
+				(r) =>
+					r.at === PHONE &&
+					r.selectors.includes(selector) &&
+					r.decls.some(([p]) => p === "transition")
+			);
+		expect(timed("#viewport.menu-dragging #sidebar")).to.be.above(
+			timed("#viewport.menu-open #sidebar")
+		);
+		expect(valueOf("#viewport.menu-dragging #sidebar", "transition", PHONE)).to.equal("none");
+
+		// The user list never slides: style.css shows it with display (none
+		// until userlist-open), and a transition never runs from display: none.
+		expect(styleValue("#chat .userlist", "display")).to.equal("none");
+		expect(styleValue("#viewport.userlist-open #chat .userlist", "display")).to.equal("flex");
+		expect(valueOf("#chat .userlist", "transition", PHONE)).to.equal(undefined);
 	});
 
 	it("brightens the backdrop by day, only while the scene runs: brightness(1.3) before the saturation, and nowhere else", function () {
