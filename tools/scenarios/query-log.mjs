@@ -27,6 +27,8 @@ export const url =
 	`&tls=${ircd.protocol === "wss:"}&nick=${NICK}&join=%23seance`;
 
 const item = (name) => `.channel-list-item[data-name="${name}"]`;
+/** Name of the conversation the chat window shows, or null. */
+const ACTIVE = `(document.querySelector("#chat-container")?.dataset.currentChannel ?? null)`;
 /** Texts of the rows the open conversation shows. */
 const TEXTS = `JSON.stringify(Array.from(document.querySelectorAll("#chat .msg .content")).map((c) => c.textContent.trim()))`;
 
@@ -121,6 +123,18 @@ export default async function run(page) {
 	//    are its lines, once each.
 	await coldLoad(`document.querySelector('${item(TALKER)}')`);
 	await page.check("the query window is back after the reload", true);
+	// It was the conversation on screen: the page lands on it by itself,
+	// and registration (`init`) does not move the view off it.
+	await page.sleep(300);
+	const landed = await page.evaluate(ACTIVE);
+	await page.check(`the reload lands on the restored query (${landed})`, landed === TALKER);
+	await page.waitFor(`!!document.querySelector('${item("#seance")}:not(.parted-channel)')`, {
+		timeout: 20000,
+		label: "registered and rejoined",
+	});
+	await page.sleep(1500);
+	const stayed = await page.evaluate(ACTIVE);
+	await page.check(`and stays there once registered (${stayed})`, stayed === TALKER);
 	await page.click(item(TALKER));
 	await page.sleep(500);
 	const texts = JSON.parse(await page.evaluate(TEXTS));
@@ -144,7 +158,20 @@ export default async function run(page) {
 			JSON.stringify(["first private line", "second private line", "third private line"])
 	);
 
-	// 3. Close it: the next reload does not bring it back.
+	// 3. With nothing remembered, a reload lands on the last channel of the
+	//    join list, not on the restored query that sorts after it.
+	await page.evaluate(`localStorage.removeItem("thelounge.state.lastChannel")`);
+	await coldLoad(`document.querySelector('${item(TALKER)}')`);
+	await page.sleep(500);
+	const fresh = await page.evaluate(ACTIVE);
+	await page.check(`no memory: lands on #seance, not the query (${fresh})`, fresh === "#seance");
+	await page.click(item(TALKER));
+	await page.waitFor(`${TEXTS}.includes("third private line")`, {
+		timeout: 10000,
+		label: "the query open again",
+	});
+
+	// 4. Close it: the next reload does not bring it back.
 	await page.fill("#input", "/close");
 	await page.click("#submit");
 	await page.waitFor(`!document.querySelector('${item(TALKER)}')`, {
