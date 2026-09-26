@@ -209,8 +209,9 @@
 // the served ps.css: 11 of the 12 moments' floor checks failed (the words
 // 1.33–3.94, the nicks down to 1.01 at a clear noon); the snowy noon's held,
 // dark ink over snow needing no halo. On the build as it is, every moment
-// holds with room: the words 7.9 at worst (dark ink at the snowy noon), the
-// nicks 5.7 (a snowy golden hour, against 3), the faint colour 5.1 (3).
+// holds with room: the tightest, as a ratio to its floor, the nick at the
+// snowy noon under dark ink (6.7 against 4.5), and by margin the faint
+// colour at the same moment (5.1 against 3).
 // With them, the select, the status bar's value and the reply quote: 304 of
 // 304 on a rainy real day (26 September).
 //
