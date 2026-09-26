@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import {
 	clouds,
+	DECK_BAND,
 	FIREFLIES,
 	fireflies,
 	GRASS_EDGE_LOWEST,
@@ -8,6 +9,7 @@ import {
 	landSvg,
 	nearGrass,
 	smoke,
+	weatherClouds,
 	weatherLayers,
 	yurtSvg,
 } from "../../../client/js/scenes/ps/plains";
@@ -464,6 +466,138 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 		it("names no ids and holds no text", function () {
 			expect(sky).to.not.match(/\bid="/);
 			expect(sky.replace(/<[^>]*>/g, "")).to.equal("");
+		});
+	});
+
+	describe("weatherClouds: rain and storms are cloudier (the user, 2026-09-26)", function () {
+		const rain = weatherClouds("rain");
+		const storm = weatherClouds("storm");
+		/** A cloud's own attributes, as clouds() writes them: width (cqw), top (%), drift, delay, rest. */
+		const CLOUD =
+			/<div class="ps-cloud" style="--cw:([\d.]+)cqw;--cy:(\d+)%;--cd:(\d+)s;--cdl:(-\d+)s;--cp:([\d.]+)">/g;
+		const cloudsOf = (markup: string) =>
+			[...markup.matchAll(CLOUD)].map((m) => m.slice(1).map(Number));
+		/** The deck's markup, from its opening tag to the end of its blobs. */
+		const deckOf = (markup: string) => /<div class="ps-deck">(.*?)<\/div>/.exec(markup)?.[1];
+
+		it("is the same drawing every time", function () {
+			for (const weather of WEATHERS) {
+				expect(weatherClouds(weather), weather).to.equal(weatherClouds(weather));
+			}
+		});
+
+		it("adds nothing in any other weather: the clear day's five stand alone", function () {
+			for (const weather of WEATHERS.filter((w) => w !== "rain" && w !== "storm")) {
+				expect(weatherClouds(weather), weather).to.equal("");
+			}
+		});
+
+		it("adds four more clouds in rain, each of the five blobs, and no deck", function () {
+			expect(classCount(rain, "ps-cloud")).to.equal(4);
+			expect(cloudsOf(rain)).to.have.length(4);
+			expect(rain.match(/<i /g)).to.have.length(20);
+			expect(rain).to.not.include("ps-deck");
+			// The same blobs as the five, in % of their own cloud.
+			const five = clouds().slice(0, clouds().indexOf("</div>"));
+			const blobs = (markup: string) => markup.slice(markup.indexOf("<i "));
+			expect(blobs(rain.slice(0, rain.indexOf("</div>")))).to.equal(blobs(five));
+		});
+
+		it("makes the four bigger than any of the five, sitting at 5 to 25 % of the height", function () {
+			const five = cloudsOf(clouds());
+			const biggest = Math.max(...five.map(([cw]) => cw));
+
+			for (const [cw, cy] of cloudsOf(rain)) {
+				expect(cw, "wider than the five").to.be.above(biggest);
+				expect(cy).to.be.within(5, 25);
+			}
+		});
+
+		it("gives each of the four a rest place for reduced motion: nine places across the sky with the five", function () {
+			// As the five's test: ps.css's frozen drift at the mockup's 1180 ×
+			// 700 window stands a cloud's left edge from −(width + 4 px) at 0 to
+			// 1180 + 4 px at 1.
+			const W = 1180;
+			const lefts = [...cloudsOf(clouds()), ...cloudsOf(rain)].map(
+				([cw, , cd, cdl, cp], i) => {
+					expect(cp, `cloud ${i}`).to.be.closeTo(-cdl / cd, 0.00005);
+					expect(cp, `cloud ${i}`).to.be.within(0, 1);
+					const width = (cw / 100) * W;
+					const left = (W + width + 8) * cp - width - 4;
+					expect(left + width, `cloud ${i} on the sky, at least partly`).to.be.above(0);
+					expect(left, `cloud ${i} on the sky, at least partly`).to.be.below(W);
+					return left;
+				}
+			);
+			expect(lefts).to.have.length(9);
+			const apart = [...lefts].sort((a, b) => a - b);
+
+			for (let i = 1; i < apart.length; i++) {
+				expect(apart[i] - apart[i - 1], "no two clouds at one place").to.be.above(W / 20);
+			}
+		});
+
+		it("drifts the four as slowly as the five or slower: heavy cloud", function () {
+			const slowest = Math.min(...cloudsOf(clouds()).map(([, , cd]) => cd));
+
+			for (const [, , cd] of cloudsOf(rain)) {
+				expect(cd).to.be.at.least(slowest);
+			}
+		});
+
+		it("lays a low overcast deck across the top of the sky on a stormy day, behind the rain's four", function () {
+			expect(classCount(storm, "ps-deck")).to.equal(1);
+			expect(storm.startsWith('<div class="ps-deck">')).to.equal(true);
+			expect(storm.slice(storm.indexOf("</div>") + 6)).to.equal(rain);
+		});
+
+		it("draws the deck's base as billows, in % of the deck, that close its band's edge all the way across", function () {
+			const deck = deckOf(storm) ?? "";
+			const billows = [
+				...deck.matchAll(
+					/<i style="left:(-?[\d.]+)%;top:([\d.]+)%;width:([\d.]+)%;height:([\d.]+)%"><\/i>/g
+				),
+			].map((m) => m.slice(1).map(Number));
+			expect(billows.length).to.be.at.least(6);
+			expect(deck.replace(/<i style="[^"]*"><\/i>/g, "")).to.equal("");
+			// ps.css paints the band over the deck's top DECK_BAND % and the
+			// billows hang from it: at the band's lower edge, every x across
+			// the deck is inside a billow (each an ellipse in the deck's %), so
+			// the band never ends in a straight line.
+			const edge = DECK_BAND;
+			const spans = billows
+				.map(([left, top, width, height]) => {
+					const ry = height / 2;
+					const dy = (edge - (top + ry)) / ry;
+					const half = Math.abs(dy) < 1 ? (width / 2) * Math.sqrt(1 - dy * dy) : 0;
+					return [left + width / 2 - half, left + width / 2 + half];
+				})
+				.sort((a, b) => a[0] - b[0]);
+			let reach = 0;
+
+			for (const [from, to] of spans) {
+				expect(from, `a gap in the band's edge at ${reach.toFixed(1)} %`).to.be.below(
+					reach
+				);
+				reach = Math.max(reach, to);
+			}
+
+			expect(reach, "to the deck's right edge").to.be.above(100);
+
+			// And each billow hangs below the band, within the deck.
+			for (const [, top, , height] of billows) {
+				expect(top).to.be.below(edge);
+				expect(top + height).to.be.above(edge);
+				expect(top + height).to.be.at.most(100);
+			}
+		});
+
+		it("names no ids, holds no text and no px", function () {
+			for (const markup of [rain, storm]) {
+				expect(markup).to.not.match(/\bid="/);
+				expect(markup).to.not.include("px");
+				expect(markup.replace(/<[^>]*>/g, "")).to.equal("");
+			}
 		});
 	});
 

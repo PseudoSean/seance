@@ -58,7 +58,7 @@ export function larkSeason(doy: number): number {
 export interface Birds {
 	/** How many of the three skeins are on the wing (0–3): the first `skeins` of SKEINS. */
 	skeins: number;
-	/** The skeins' layer: 1 while they fly (0.6 in a storm), 0 by day or with none tonight. */
+	/** The skeins' layer: 1 while they fly, 0 by day or with none tonight (none in rain or a storm). */
 	skeinsOpacity: number;
 	/** Flying south-west (ps.css mirrors the flocks under `ps-west`). */
 	west: boolean;
@@ -80,17 +80,20 @@ export interface Birds {
  * `applyBirds`, N2's moonlight, the buzzard and the larks). The skeins: from
  * a little before sunset (canonical 1105, about 50 minutes before it) through
  * the night until first light (canonical 330). Fewer skeins, never fainter
- * ones: the passage's edges, rain and snow thin them to one, a storm leaves
- * one at 0.6; and one winter night in four brings a skein on a cold-weather
- * move. Their ink is slate by day and near-black from sunset on; the moon's
- * light on them is how much of it is lit, while it is up and not behind
- * cloud, once the sky is dark enough. The buzzard rides the thermals from
- * mid-morning to late afternoon; the larks sing from first light to the
- * evening, in season; neither flies in rain, snow or storm.
+ * ones: the passage's edges, and snow thins them to one; and one winter
+ * night in four brings a skein on a cold-weather move. None flies in rain or
+ * a storm (the user, 2026-09-26: "usually birds don't fly in rainstorms"),
+ * so their layer leaves the render tree then (layers.ts). Their ink is slate
+ * by day and near-black from sunset on; the moon's light on them is how much
+ * of it is lit, while it is up and not behind cloud, once the sky is dark
+ * enough. The buzzard rides the thermals from mid-morning to late afternoon;
+ * the larks sing from first light to the evening, in season; neither flies
+ * in rain, snow or storm.
  */
 export function birdsAt(m: Moment, p: Palette): Birds {
 	const wx = WEATHER[m.weather];
 	const wet = m.weather === "rain" || m.weather === "snow" || m.weather === "storm";
+	const rainstorm = m.weather === "rain" || m.weather === "storm";
 	const cm = m.canonical;
 
 	const pass = passageOf(m.doy);
@@ -106,7 +109,9 @@ export function birdsAt(m: Moment, p: Palette): Birds {
 			? 1
 			: 0;
 
-	if (wet) {
+	if (rainstorm) {
+		count = 0;
+	} else if (wet) {
 		count = Math.min(count, 1);
 	}
 
@@ -122,7 +127,7 @@ export function birdsAt(m: Moment, p: Palette): Birds {
 
 	return {
 		skeins: count,
-		skeinsOpacity: flying && count > 0 ? (m.weather === "storm" ? 0.6 : 1) : 0,
+		skeinsOpacity: flying && count > 0 ? 1 : 0,
 		west: pass.west,
 		alpha: 0.74 + 0.14 * dk,
 		ink: mix(ink, "#b9c4d8", 0.22 * L),

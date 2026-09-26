@@ -1,5 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
+import {weatherClouds} from "../../../client/js/scenes/ps/plains";
 import {mount} from "../../../client/js/scenes/ps/scene";
 import type {SceneHandle} from "../../../client/js/themeScene";
 
@@ -505,6 +506,52 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 	});
 
 	describe("the day's weather, rebuilt", function () {
+		it("rebuilds the weather's own clouds with the day's weather, and never the five (the user, 2026-09-26)", function () {
+			withPage((page, clock) => {
+				const overcast = new FakeElement(".ps-overcast");
+				const field = new FakeElement(".ps-cloud-field");
+				let builds = 0;
+				Object.defineProperty(overcast, "innerHTML", {
+					set(value: string) {
+						overcast.markup = value;
+						builds++;
+					},
+				});
+				page.root.planted.set(".ps-overcast", overcast);
+				page.root.planted.set(".ps-cloud-field", field);
+				const scene = mountOn(page); // 25 September: clear
+
+				// Waking into another day.
+				const shownOn = (date: Date) => {
+					scene.update({visible: false, view: "channel"});
+					clock.setSystemTime(date);
+					scene.update({visible: true, view: "channel"});
+				};
+
+				expect(page.root.dataset.weather).to.equal("clear");
+				expect(overcast.markup, "a clear day adds nothing").to.equal("");
+
+				shownOn(new Date(2026, 8, 26, 12, 30));
+				expect(page.root.dataset.weather).to.equal("rain");
+				expect(overcast.markup, "rain's four").to.equal(weatherClouds("rain"));
+				const rainBuilds = builds;
+
+				clock.tick(60000); // the next minute, the same day: nothing rebuilt
+				expect(builds).to.equal(rainBuilds);
+
+				shownOn(new Date(2026, 6, 19, 12, 30));
+				expect(page.root.dataset.weather).to.equal("storm");
+				expect(overcast.markup, "the storm's deck and four").to.equal(
+					weatherClouds("storm")
+				);
+
+				shownOn(new Date(2026, 8, 25, 12, 30));
+				expect(overcast.markup, "clear again").to.equal("");
+				expect(field.markup, "the five are the mount's, never rebuilt").to.equal("");
+				scene.destroy();
+			});
+		});
+
 		it("takes out the seeds a new day's weather built when its wind shows none (a clear 30 January, a snowy 31st)", function () {
 			withPage((page, clock) => {
 				// The weather layer's seeds, as its latest build made them.

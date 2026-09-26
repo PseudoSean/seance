@@ -1,9 +1,10 @@
 // The ps theme in a real browser (docs/projects/ps-theme.md §12). Picking it
 // in Appearance swaps the stylesheet and mounts the scene behind the whole
-// app — the sky, 190 stars, the sun and the moon, five clouds, the plains
-// (the land and river, the fireflies, the yurt and its smoke, the near
-// grass), the birds and the day's weather (client/js/scenes/ps/scene.ts,
-// through the hook in client/js/themeScene.ts). The run then:
+// app — the sky, 190 stars, the sun and the moon, five clouds (nine in rain
+// and a storm, and the storm's deck), the plains (the land and river, the
+// fireflies, the yurt and its smoke, the near grass), the birds and the
+// day's weather (client/js/scenes/ps/scene.ts, through the hook in
+// client/js/themeScene.ts). The run then:
 //
 // - reads the type: all nine font files (Mulish upright and italic, Fraunces;
 //   Latin, Latin Extended and Vietnamese each) loaded, each drawing its text
@@ -30,27 +31,33 @@
 //   — 48, and 49 on a hot day with the haze — and every CSS animation in it)
 //   and starts again, every SVG running but those in a layer outside its
 //   window (ps-off, layers.ts) and the haze while it bends nothing; stays
-//   stopped under reduced motion, its five clouds resting in five places
-//   across the sky (--cp, on ps-drift's path) rather than piled at the left
-//   edge; and a scene mounted into a hidden page starts stopped;
+//   stopped under reduced motion, its clouds (five, or nine on a wet day)
+//   resting in as many places across the sky (--cp, on ps-drift's path)
+//   rather than piled at the left edge; and a scene mounted into a hidden
+//   page starts stopped;
 // - under reduced motion, on a clear, a rainy, a hot, a snowy and a stormy
 //   noon and at dusk with the skeins up (spec §9): the scene is stopped,
 //   nothing in flight is rendered — no bird, drop, flake, seed, lightning or
 //   smoke, out of the render tree rather than parked mid-flight — and no
 //   animation on it runs; the veil stays at the weather's level, the
 //   fireflies stand still where they are, the near grass upright, the heat
-//   band still; and the colours are the hour's, the same as without reduced
-//   motion at the same minute;
+//   band still; on the rainy and the stormy noon all nine clouds rest in
+//   nine places on the sky and the storm's deck stands; and the colours are
+//   the hour's, the same as without reduced motion at the same minute;
 // - pins the clock (a Date shim, in UTC) to fixed days, and reads the plains:
 //   a clear noon (no drop, flake or seed in the page, no haze, white words,
 //   the stars, the skeins, the fireflies and the smoke out of the render
-//   tree), a rainy one (130 drops and the rain's 26 seeds, no flake), a hot
-//   one (the haze on the ground group and not on the near grass), a snowy one
-//   (120 flakes, dark ink words, snow on the roof) and a stormy one; a clear
-//   day at dawn, noon, golden hour, dusk and midnight; spring's flowers,
-//   summer's dry river and autumn's running one; and a rainy evening across
-//   local midnight into a clear day, the weather layer rebuilt by the
-//   minute's own timer (Review Focus 3);
+//   tree, the five clouds alone), a rainy one (130 drops and the rain's 26
+//   seeds, no flake; nine clouds, four of them the rain's, and no bird in
+//   the render tree), a hot one (the haze on the ground group and not on the
+//   near grass), a snowy one (120 flakes, dark ink words, snow on the roof,
+//   five clouds) and a stormy one (nine clouds and the deck, no bird); a
+//   rainy and a stormy dusk in the autumn passage fly no skein where a clear
+//   one flies three (the user, 2026-09-26: birds don't fly in rainstorms); a
+//   clear day at dawn, noon, golden hour, dusk and midnight; spring's
+//   flowers, summer's dry river and autumn's running one; and a rainy
+//   evening across local midnight into a clear day, the weather layer and
+//   the rain's clouds rebuilt by the minute's own timer (Review Focus 3);
 // - toggles the user list twice inside the yurt's 0.4 s fade and samples the
 //   yurt every frame: it is never seen anywhere but where it stood and where
 //   it ends, and ends fully shown at 72 % of the column (Review Focus 2);
@@ -76,10 +83,10 @@
 //   (the drawer blurred the moment it opens, and closing, still blurred as
 //   it slides and until the slide has taken it off screen), and at 22:00 the
 //   open drawer blurred on the night tint, on top of the scrim, not under it;
-// - drifts each of the five clouds: its loop starts wholly off the scene's
-//   left edge and ends wholly off its right, never popping in (each drift is
-//   paused at its loop's two ends; late in the run, since an animation paused
-//   from script no longer follows animation-play-state);
+// - drifts each cloud (five, or nine on a wet day): its loop starts wholly
+//   off the scene's left edge and ends wholly off its right, never popping
+//   in (each drift is paused at its loop's two ends; late in the run, since
+//   an animation paused from script no longer follows animation-play-state);
 // - reloads onto Settings: with no message column the yurt stands at 70 % of
 //   the scene, and fades to the column's far third once a conversation opens
 //   (Review Focus 4);
@@ -156,6 +163,18 @@
 // and the seeds off an edge, the drops and flakes just above the top, the
 // lightning at 0, the smoke's puffs at 0 — all in the render tree), the rest
 // passed. With the layers hidden: 245 of 245.
+// Rain and storms' checks (plan 4 task 3, 2026-09-26: cloudier, and no bird)
+// were first run against 2f5f744b's build, which has five clouds in every
+// weather and flies a skein in rain and a storm: 13 failed — nine clouds and
+// the deck missing at the rainy and stormy noons, on the phone, on the
+// rainy real-clock day, at 23:59 before the midnight crossing, in the
+// drift and in the reduced-motion rests; the wet dusks flying a skein (42
+// and 15 bird elements in the render tree); and the two noons' birds, read
+// then inside the previous moment's fade (the buzzard's, the larks'). Those
+// two now wait the fades out, and on that build the buzzard and the larks
+// never flew in the wet: the dusks are the bird checks that tell.
+// With the change: 268 of 268 on a rainy real day (26 September), where the
+// drift's three checks a cloud cover nine clouds; 256 on a dry one.
 //
 //   NODE_ENV=production corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/theme-ps.mjs
@@ -701,6 +720,14 @@ const SCENE_STATE = `(() => {
 		sun: !!s.querySelector(".ps-sun"),
 		moon: !!s.querySelector(".ps-moon"),
 		clouds: n(".ps-cloud-field .ps-cloud"),
+		overcast: n(".ps-cloud-field > .ps-overcast > .ps-cloud"),
+		deck: n(".ps-cloud-field > .ps-overcast > .ps-deck"),
+		deckBottom: (() => { const e = s.querySelector(".ps-deck"); return e ? +(e.getBoundingClientRect().bottom / s.getBoundingClientRect().height * 100).toFixed(1) : null; })(),
+		birds: {
+			skeins: [...s.querySelectorAll(".ps-skeins, .ps-flock, .ps-bird")].filter((e) => e.checkVisibility()).length,
+			buzzard: [...s.querySelectorAll(".ps-buzzard")].filter((e) => e.checkVisibility()).length,
+			larks: [...s.querySelectorAll(".ps-lark")].filter((e) => e.checkVisibility()).length,
+		},
 		ground: shown(".ps-ground"),
 		land: shown(".ps-ground > .ps-land"),
 		yurt: shown(".ps-ground > .ps-yurt"),
@@ -820,6 +847,14 @@ const LAYERS = [
 
 /** Fireflies over the far fields (plains.ts FIREFLIES); a scene mounted on a phone gets half. */
 const FIREFLIES = 34;
+
+/**
+ * The clouds a scene holds on a day of `weather` (plains.ts): the five, and
+ * rain's four more in rain and a storm (plan 4 task 3). Keyed on the
+ * weather the scene reports at that moment, never on the date: the real
+ * clock's day is whatever day the run falls on.
+ */
+const cloudsFor = (weather) => (weather === "rain" || weather === "storm" ? 9 : 5);
 
 /** The scene is stopped: its class, every SVG clock and every CSS animation. */
 function checkStopped(page, s, where) {
@@ -943,7 +978,8 @@ function checkUnfrosted(page, s, f, where) {
 
 /**
  * One scene, whole: shown, its twelve layers in order in its one wrapper
- * (.ps-frost), one field of 190 stars, a sun, a moon and five clouds; and
+ * (.ps-frost), one field of 190 stars, a sun, a moon and the day's clouds
+ * (five, nine on a wet day: cloudsFor); and
  * the plains drawn, the land, the near grass and the yurt rendered, the
  * fireflies in the ground group.
  */
@@ -961,7 +997,7 @@ function checkMounted(page, s, where, fireflies = FIREFLIES) {
 			s.stars === 190 &&
 			s.sun &&
 			s.moon &&
-			s.clouds === 5
+			s.clouds === cloudsFor(s.weather)
 	);
 	page.check(
 		`${where}: the plains are drawn (ground ${s.ground}, land ${s.land}, near grass ${s.blades}, yurt ${s.yurt}; ${s.fireflies} fireflies, ${fireflies} due)`,
@@ -979,6 +1015,16 @@ async function at(page, ms) {
 	await page.evaluate(VISIBILITY("visible"));
 	await page.sleep(TEXT_EASE_MS);
 	return page.evaluate(SCENE_STATE);
+}
+
+/**
+ * The birds in the render tree once every gate's fade is over: a layer that
+ * was up at the moment before leaves the tree only after its fade (layers.ts:
+ * a flock's 1.8 s and the margin, 1.9 s), and `at` has waited 1.2 s of it.
+ */
+async function birdsSettled(page) {
+	await page.sleep(1000);
+	return (await page.evaluate(SCENE_STATE)).birds;
 }
 
 /** The real clock again, and a tick on it. */
@@ -2037,11 +2083,16 @@ export default async function run(page) {
 	// stood at left: 0, piled up at the scene's left edge.
 	const rests = await page.evaluate(CLOUD_RESTS);
 	const restLefts = rests.map((c) => c.left).sort((a, b) => a - b);
+	const restWeather = await page.evaluate(
+		`document.getElementById("theme-scene").dataset.weather`
+	);
 	page.check(
-		`reduced motion: the five clouds rest in five places, not animating (${rests
+		`reduced motion (${restWeather}): the ${cloudsFor(
+			restWeather
+		)} clouds rest in as many places, not animating (${rests
 			.map((c) => c.left.toFixed(1))
 			.join(", ")} of ${rests[0]?.width}; ${[...new Set(rests.map((c) => c.animation))]})`,
-		rests.length === 5 &&
+		rests.length === cloudsFor(restWeather) &&
 			rests.every((c) => c.animation === "none") &&
 			restLefts.every((x, i) => i === 0 || x - restLefts[i - 1] > 20)
 	);
@@ -2232,6 +2283,10 @@ export default async function run(page) {
 		clear.groundFilter === "none" && clear.haze === 0 && !clear.hot
 	);
 	page.check(
+		`a clear noon: the five clouds alone, no deck (${clear.clouds} clouds, ${clear.overcast} of the weather's, ${clear.deck} deck)`,
+		clear.clouds === 5 && clear.overcast === 0 && clear.deck === 0
+	);
+	page.check(
 		`a clear noon: day glass and white words ${clear.ink} (light ${clear.light}, text ${clear.text})`,
 		clear.light === "day" && clear.text === "light" && clear.ink === WHITE
 	);
@@ -2255,6 +2310,16 @@ export default async function run(page) {
 	page.check(
 		`a rainy noon: no heat haze (the ground's filter ${rain.groundFilter}, ${rain.haze} haze)`,
 		rain.groundFilter === "none" && rain.haze === 0
+	);
+	// Cloudier, and no bird (the user, 2026-09-26).
+	page.check(
+		`a rainy noon: nine clouds, four of them the rain's, and no deck (${rain.clouds}, ${rain.overcast}, ${rain.deck})`,
+		rain.clouds === 9 && rain.overcast === 4 && rain.deck === 0
+	);
+	const rainBirds = await birdsSettled(page);
+	page.check(
+		`a rainy noon: no bird in the render tree (${JSON.stringify(rainBirds)})`,
+		rainBirds.skeins + rainBirds.buzzard + rainBirds.larks === 0
 	);
 	checkRunning(page, rain, "a rainy noon");
 	await page.screenshot("ps-rain-sep26-1230");
@@ -2289,6 +2354,19 @@ export default async function run(page) {
 			storm.text === "light" &&
 			storm.ink === WHITE
 	);
+	page.check(
+		`a stormy noon: nine clouds and the low deck across the top of the sky, down to ${storm.deckBottom} % (${storm.clouds}, ${storm.overcast} of the rain's, ${storm.deck} deck)`,
+		storm.clouds === 9 &&
+			storm.overcast === 4 &&
+			storm.deck === 1 &&
+			storm.deckBottom > 30 &&
+			storm.deckBottom < 37
+	);
+	const stormBirds = await birdsSettled(page);
+	page.check(
+		`a stormy noon: no bird in the render tree (${JSON.stringify(stormBirds)})`,
+		stormBirds.skeins + stormBirds.buzzard + stormBirds.larks === 0
+	);
 	await page.screenshot("ps-storm-jul19-1230");
 
 	// Dark ink where it holds: a snowy day, the one weather it does.
@@ -2296,6 +2374,10 @@ export default async function run(page) {
 	page.check(
 		`a snowy noon (${snow.weather}): 120 flakes and the snow's 26 seeds, no drop (${snow.flakes}, ${snow.seeds}, ${snow.drops})`,
 		snow.weather === "snow" && snow.flakes === 120 && snow.seeds === 26 && snow.drops === 0
+	);
+	page.check(
+		`a snowy noon: the five clouds, no deck (${snow.clouds}, ${snow.deck})`,
+		snow.clouds === 5 && snow.deck === 0
 	);
 	page.check(
 		`a snowy noon: dark ink words ${snow.ink} (text ${snow.text}), snow on the roof (--ps-snowcap ${snow.snowcap}), no flowers (${snow.flowers})`,
@@ -2361,6 +2443,39 @@ export default async function run(page) {
 		await page.screenshot(`ps-day-sep25-${name}`);
 	}
 
+	// No bird flies in rain or a storm (the user, 2026-09-26). At dusk in
+	// the autumn passage, when a clear evening flies the skeins (the
+	// control: 25 September, above), a rainy one (26 September) and a stormy
+	// one (17 September) fly none: the skeins' layer, every flock and bird,
+	// the buzzard and the larks out of the render tree.
+	page.check(
+		`25 September at dusk, the control: the skeins fly (${JSON.stringify(
+			sep25States.dusk.birds
+		)})`,
+		sep25States.dusk.birds.skeins > 0
+	);
+
+	for (const [name, doy, day, want] of [
+		["a rainy dusk, 26 September", 269, 26, "rain"],
+		["a stormy dusk, 17 September", 260, 17, "storm"],
+	]) {
+		const s = await at(page, Date.UTC(2026, 8, day, 0, Math.round(sunTimes(doy).set + 45)));
+		const birds = await birdsSettled(page);
+		page.check(
+			`${name} (${hhmm(s.minute)}, ${
+				s.weather
+			}): no bird in the render tree (${JSON.stringify(birds)}); ${s.clouds} clouds, ${
+				s.deck
+			} deck`,
+			s.doy === doy &&
+				s.weather === want &&
+				birds.skeins + birds.buzzard + birds.larks === 0 &&
+				s.clouds === 9 &&
+				s.deck === (want === "storm" ? 1 : 0)
+		);
+		await page.screenshot(`ps-${want}-dusk-sep${day}`);
+	}
+
 	// ---- reduced motion on fixed days (spec §9)
 
 	// Nothing moves, in any weather, and the hour still shows. What exists
@@ -2406,6 +2521,24 @@ export default async function run(page) {
 				(name.startsWith("dusk") ? r.fireflies > 0 : true) &&
 				r.heatband === (s.weather === "heat" ? 1 : 0)
 		);
+		if (s.weather === "rain" || s.weather === "storm") {
+			// The rain's four rest by the five's rule (--cp), nine places on the
+			// sky; the storm's deck never moved, so it stands as it was.
+			const rests = await page.evaluate(CLOUD_RESTS);
+			const lefts = rests.map((c) => c.left).sort((a, b) => a - b);
+			page.check(
+				`${where}: the nine clouds rest in nine places on the sky (${rests
+					.map((c) => c.left.toFixed(0))
+					.join(", ")} of ${rests[0]?.width})${
+					s.weather === "storm" ? `, and the deck stands (${s.deck})` : ""
+				}`,
+				rests.length === 9 &&
+					rests.every((c) => c.animation === "none" && c.right > 0 && c.left < c.width) &&
+					lefts.every((x, i) => i === 0 || x - lefts[i - 1] > 20) &&
+					s.deck === (s.weather === "storm" ? 1 : 0)
+			);
+		}
+
 		page.check(
 			`${where}: the colours are the hour's (${s.weather}, light ${s.light}, canvas ${s.canvas} = sky-top ${s.skyTop}; without reduced motion: ${motion.weather}, ${motion.light}, ${motion.canvas})`,
 			s.canvas === s.skyTop &&
@@ -2459,18 +2592,22 @@ export default async function run(page) {
 	// no visibility poke once the clock is set. The tick is due at 00:00:00.02.
 	const eve = await at(page, Date.UTC(2026, 8, 26, 23, 59, 45));
 	page.check(
-		`26 September at ${hhmm(eve.minute)}: rain, ${eve.drops} drops`,
-		eve.weather === "rain" && eve.drops === 130
+		`26 September at ${hhmm(eve.minute)}: rain, ${eve.drops} drops, ${eve.clouds} clouds (${
+			eve.overcast
+		} of the rain's)`,
+		eve.weather === "rain" && eve.drops === 130 && eve.clouds === 9 && eve.overcast === 4
 	);
 	await settle(page, `document.getElementById("theme-scene").dataset.weather !== "rain"`, 25000);
 	await page.sleep(500);
 	const morning = await page.evaluate(SCENE_STATE);
 	page.check(
-		`after local midnight (${morning.date}): 27 September is clear and the rain is gone (${morning.weather}, ${morning.drops} drops, ${morning.seeds} seeds, the weather layer holds ${morning.weatherLayer})`,
+		`after local midnight (${morning.date}): 27 September is clear and the rain is gone (${morning.weather}, ${morning.drops} drops, ${morning.seeds} seeds, the weather layer holds ${morning.weatherLayer}; ${morning.clouds} clouds, ${morning.overcast} of the rain's)`,
 		morning.doy === 270 &&
 			morning.weather === "clear" &&
 			morning.drops + morning.flakes + morning.seeds === 0 &&
-			morning.weatherLayer === 0
+			morning.weatherLayer === 0 &&
+			morning.clouds === 5 &&
+			morning.overcast === 0
 	);
 	await page.screenshot("ps-midnight-sep27-0000");
 	await realClock(page);
@@ -2851,12 +2988,17 @@ export default async function run(page) {
 			};
 		});
 	})()`;
+	const driftWeather = await page.evaluate(
+		`document.getElementById("theme-scene").dataset.weather`
+	);
 	const loopStart = await page.evaluate(DRIFT(0));
 	const loopMid = await page.evaluate(DRIFT(0.5));
 	const loopEnd = await page.evaluate(DRIFT(1));
 	page.check(
-		`five clouds drift (${loopStart.filter(Boolean).length} with ps-drift)`,
-		loopStart.length === 5 && loopStart.every(Boolean)
+		`${cloudsFor(driftWeather)} clouds drift on a ${driftWeather} day (${
+			loopStart.filter(Boolean).length
+		} with ps-drift)`,
+		loopStart.length === cloudsFor(driftWeather) && loopStart.every(Boolean)
 	);
 	loopStart.forEach((c, i) =>
 		page.check(

@@ -50,15 +50,34 @@ describe("ps layers: what is in the render tree (layers.ts, spec §10)", functio
 			expect(on(liveAt(268, 1325, "clear"))).to.not.include("sun");
 		});
 
-		it("flies only the first flock on a rainy night: the others leave the tree", function () {
-			// And the rain's seeds blow: autumn's wind shows them at night too.
-			expect(on(liveAt(268, 1325, "rain"))).to.deep.equal([
+		it("flies only the first flock on a snowy night: the others leave the tree", function () {
+			// And the snow's seeds blow: autumn's wind shows them at night too.
+			expect(on(liveAt(268, 1325, "snow"))).to.deep.equal([
 				"flock0",
 				"seeds",
 				"skeins",
 				"smoke",
 				"stars",
 			]);
+		});
+
+		it("takes every bird out of the tree in rain and in a storm, at every hour (the user, 2026-09-26)", function () {
+			// A rainy or stormy night in the passage: no skein, no flock.
+			expect(on(liveAt(268, 1325, "rain"))).to.deep.equal(["seeds", "smoke", "stars"]);
+			expect(on(liveAt(268, 1325, "storm"))).to.deep.equal(["seeds", "smoke", "stars"]);
+			const BIRDS: Gate[] = ["skeins", "flock0", "flock1", "flock2", "buzzard", "larks"];
+
+			for (const weather of ["rain", "storm"] as const) {
+				for (const doy of [15, 60, 100, 121, 182, 268, 300, 340]) {
+					for (let minute = 0; minute < 1440; minute += 10) {
+						const live = liveAt(doy, minute, weather);
+						expect(
+							BIRDS.filter((g) => live[g]),
+							`day ${doy} ${minute} ${weather}`
+						).to.deep.equal([]);
+					}
+				}
+			}
 		});
 
 		it("flies no skein on a night with none (1 July: no passage)", function () {

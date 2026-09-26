@@ -882,6 +882,36 @@ strong,
 	animation-duration: calc(var(--cd) * 0.4);
 }
 
+/* The day's own clouds (plains.ts `weatherClouds`), rebuilt with the day's
+ * weather, in the cloud field behind the five and on its box. Rain's four
+ * more, bigger and lower, are .ps-cloud: they drift, rest under reduced
+ * motion and speed up in the wind by the rules around this one. The storm's
+ * deck stands still behind them: a band of cloud over the top of the sky, a
+ * third of the way down, the underside's colour at the top lightening to the
+ * cloud's own at its foot, where a row of billows drawn as the clouds' blobs
+ * are hangs across the band's edge, so it ends in cloud and not in a line.
+ * Both colours are the palette's, greyed by the weather, and nothing is
+ * translucent: the deck puts nothing behind the words that the five do not
+ * (spec §11). */
+#theme-scene .ps-overcast {
+	position: absolute;
+	inset: 0;
+}
+
+#theme-scene .ps-deck {
+	position: absolute;
+	inset: 0 0 auto;
+	height: 34%;
+	background: linear-gradient(180deg, var(--ps-cloud-under), var(--ps-cloud)) top / 100% 58% no-repeat;
+	filter: blur(0.025rem);
+}
+
+#theme-scene .ps-deck i {
+	position: absolute;
+	border-radius: 50%;
+	background: linear-gradient(180deg, var(--ps-cloud) 40%, var(--ps-cloud-under) 100%);
+}
+
 /* A cloud stands at left: 0 and its blobs stay inside its box, so the loop
  * starts one whole cloud (and a hair for its blur) past the left edge and ends
  * past the right one: it drifts in and out of sight, never popping in. */

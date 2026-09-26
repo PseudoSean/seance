@@ -327,6 +327,28 @@ const WINDOW_H = 7; // px per cqh at its 700 px height
 const cqw = (px: number) => `${n(px / WINDOW_W)}cqw`;
 const cqh = (px: number) => `${n(px / WINDOW_H)}cqh`;
 
+/** A box's blobs, each [left, top, width, height] as fractions of it, in % of it. */
+const blobs = (list: number[][]) =>
+	list
+		.map(
+			([x, y, w, h]) =>
+				`<i style="left:${n(x * 100)}%;top:${n(y * 100)}%;width:${n(w * 100)}%;height:${n(
+					h * 100
+				)}%"></i>`
+		)
+		.join("");
+
+/**
+ * One cloud of five blobs, sized in cqw of the scene at its own height and
+ * drifting across it on its own clock (ps.css `ps-drift`); `--cp`, the
+ * fraction of its loop its negative delay puts it at, is where reduced
+ * motion rests it on the same path.
+ */
+const cloud = (c: {w: number; y: number; d: number; dl: number}) =>
+	`<div class="ps-cloud" style="--cw:${cqw(c.w)};--cy:${c.y}%;--cd:${c.d}s;--cdl:${
+		c.dl
+	}s;--cp:${Number((-c.dl / c.d).toFixed(4))}">${blobs(BLOBS)}</div>`;
+
 /**
  * The sky's clouds (spec §5.1), the mockup's five of five blobs each: sized
  * in cqw of the scene, placed at their own heights, each drifting across it
@@ -335,22 +357,69 @@ const cqh = (px: number) => `${n(px / WINDOW_H)}cqh`;
  * delay puts it at, where reduced motion rests it on the same path (spread
  * across the sky, rather than all at the left edge). Their colours are the
  * palette's, which greys them by the weather. There in every weather, so
- * built once.
+ * built once; rain and storms add their own (`weatherClouds`).
  */
 export function clouds(): string {
-	return CLOUDS.map(
-		(c) =>
-			`<div class="ps-cloud" style="--cw:${cqw(c.w)};--cy:${c.y}%;--cd:${c.d}s;--cdl:${
-				c.dl
-			}s;--cp:${Number((-c.dl / c.d).toFixed(4))}">` +
-			BLOBS.map(
-				([x, y, w, h]) =>
-					`<i style="left:${n(x * 100)}%;top:${n(y * 100)}%;width:${n(
-						w * 100
-					)}%;height:${n(h * 100)}%"></i>`
-			).join("") +
-			`</div>`
-	).join("");
+	return CLOUDS.map(cloud).join("");
+}
+
+/**
+ * Rain's four more clouds (the user, 2026-09-26: "rainstorms should be
+ * cloudier"): bigger than any of the five (230 to 300 of the mockup's px
+ * against its 80 to 210), sitting at 5 to 25 % of the height so they hang
+ * lower, and slower. Their delays rest them, with the five, at nine places
+ * across the sky (plains' test holds them apart), which is also where a
+ * rainy day's page opens with them.
+ */
+const RAIN_CLOUDS = [
+	{w: 280, y: 18, d: 360, dl: -50},
+	{w: 300, y: 5, d: 340, dl: -170},
+	{w: 250, y: 12, d: 300, dl: -214},
+	{w: 230, y: 22, d: 290, dl: -265},
+];
+
+/** The share of the deck's height its band covers from the top (ps.css `.ps-deck`'s background size). */
+export const DECK_BAND = 58;
+
+/**
+ * The deck's billows along the foot of its band, as fractions of the deck:
+ * left, top, width, height. Each hangs across the band's lower edge and
+ * together they close it all the way across, so the band never ends in a
+ * straight line (plains' test measures it).
+ */
+const DECK_BILLOWS = [
+	[-0.04, 0.38, 0.2, 0.52],
+	[0.1, 0.44, 0.22, 0.5],
+	[0.26, 0.36, 0.19, 0.48],
+	[0.39, 0.42, 0.24, 0.56],
+	[0.57, 0.38, 0.2, 0.5],
+	[0.71, 0.44, 0.21, 0.52],
+	[0.86, 0.36, 0.2, 0.5],
+];
+
+/**
+ * The day's own clouds, over and above the five (spec §5.1 layer 6), built
+ * with the weather layer and rebuilt when the day's weather changes
+ * (scene.ts), so a clear day's page holds none of them. Rain and storms get
+ * four more, bigger and lower (RAIN_CLOUDS); a storm lays a low overcast
+ * deck across the top of the sky behind them first: a band of cloud a third
+ * of the way down whose foot is a row of billows, still. Everything is
+ * drawn in the palette's cloud colours, greyed by the weather, as the five
+ * are. Nothing in any other weather.
+ */
+export function weatherClouds(weather: Weather): string {
+	const wx = WEATHER[weather];
+	let out = "";
+
+	if (wx.storm > 0) {
+		out += `<div class="ps-deck">${blobs(DECK_BILLOWS)}</div>`;
+	}
+
+	if (wx.rain > 0) {
+		out += RAIN_CLOUDS.map(cloud).join("");
+	}
+
+	return out;
 }
 
 /** The mockup's particle counts; a phone gets half. */

@@ -107,14 +107,29 @@ describe("ps birds: when they fly (birds.ts, the approved mockup's applyBirds)",
 			expect(birds(at(1300, 57)).skeinsOpacity).to.equal(1);
 		});
 
-		it("thins them to one in rain, snow and storm, and dims the storm's to 0.6", function () {
-			for (const weather of ["rain", "snow", "storm"] as const) {
-				expect(birds(at(1300, 121, weather)).skeins, weather).to.equal(1);
+		it("flies none in rain or a storm (the user, 2026-09-26: birds don't fly in rainstorms), and thins them to one in snow", function () {
+			for (const weather of ["rain", "storm"] as const) {
+				expect(birds(at(1300, 121, weather)).skeins, weather).to.equal(0);
+				expect(birds(at(1300, 121, weather)).skeinsOpacity, weather).to.equal(0);
 			}
 
+			expect(birds(at(1300, 121, "snow")).skeins).to.equal(1);
+			expect(birds(at(1300, 121, "snow")).skeinsOpacity).to.equal(1);
 			expect(birds(at(1300, 121, "wind")).skeins).to.equal(3);
-			expect(birds(at(1300, 121, "rain")).skeinsOpacity).to.equal(1);
-			expect(birds(at(1300, 121, "storm")).skeinsOpacity).to.equal(0.6);
+		});
+
+		it("flies none in rain or a storm on a rare winter night either, at any hour of any day", function () {
+			for (const weather of ["rain", "storm"] as const) {
+				for (let doy = 1; doy <= 365; doy += 4) {
+					for (const canon of [150, 250, 320, 1106, 1200, 1300]) {
+						const b = birds(at(canon, doy, weather, 20000 + doy));
+						expect(
+							[b.skeins, b.skeinsOpacity],
+							`${weather} day ${doy} ${canon}`
+						).to.deep.equal([0, 0]);
+					}
+				}
+			}
 		});
 
 		it("flies from canonical 1105, through the night, until canonical 330: never by day", function () {
@@ -223,8 +238,9 @@ describe("ps birds: when they fly (birds.ts, the approved mockup's applyBirds)",
 		});
 
 		it("lets the cloud hide the moon's light by the weather's hide", function () {
-			const m = utc("2026-05-01T23:00:00Z", "rain");
-			const L = m.phase.illumination * (1 - 0.65);
+			// Snow: the one wet weather the skeins still fly in.
+			const m = utc("2026-05-01T23:00:00Z", "snow");
+			const L = m.phase.illumination * (1 - 0.55);
 			expect(birds(m).belly).to.equal(mix("#15141f", "#c6d0e2", 0.5 * L));
 		});
 

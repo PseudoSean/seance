@@ -223,9 +223,11 @@ describe("ps scene: the birds' vars and the flight's direction (plan 3 task 6)",
 
 		expect(sceneVars(night(121), paletteAt(night(121)))["--ps-skeins-op"]).to.equal("1.00");
 		expect(sceneVars(night(121), paletteAt(night(121)))["--ps-skein-count"]).to.equal("3");
-		expect(
-			sceneVars(night(305, "storm"), paletteAt(night(305, "storm")))["--ps-skeins-op"]
-		).to.equal("0.60");
+		// No skein in a storm (the user, 2026-09-26); snow still flies one.
+		const storm = sceneVars(night(305, "storm"), paletteAt(night(305, "storm")));
+		expect([storm["--ps-skeins-op"], storm["--ps-skein-count"]]).to.deep.equal(["0.00", "0"]);
+		const snow = sceneVars(night(305, "snow"), paletteAt(night(305, "snow")));
+		expect([snow["--ps-skeins-op"], snow["--ps-skein-count"]]).to.deep.equal(["1.00", "1"]);
 		expect(sceneVars(night(213), paletteAt(night(213)))["--ps-skeins-op"]).to.equal("0.00");
 	});
 
@@ -414,8 +416,19 @@ describe("ps scene: the layers it builds (sceneMarkup)", function () {
 		expect(inside(markup, "ps-skeins").match(/<svg viewBox="0 0 32 20"/g)).to.have.length(38);
 	});
 
-	it("drifts plains.ts's five clouds in the cloud field", function () {
-		expect(inside(sceneMarkup(false), "ps-cloud-field")).to.equal(clouds());
+	it("drifts plains.ts's five clouds in the cloud field, behind the weather's own, left empty: the first tick builds the day's", function () {
+		for (const phone of [false, true]) {
+			const field = inside(sceneMarkup(phone), "ps-cloud-field");
+			expect(field).to.equal(`<div class="ps-overcast"></div>${clouds()}`);
+			expect(topLevel(field)).to.deep.equal([
+				"ps-overcast",
+				"ps-cloud",
+				"ps-cloud",
+				"ps-cloud",
+				"ps-cloud",
+				"ps-cloud",
+			]);
+		}
 	});
 
 	it("leaves the veil and the weather layer empty: the first tick builds the day's weather", function () {

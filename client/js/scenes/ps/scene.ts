@@ -7,7 +7,8 @@
  * the four values the chrome reads, the day glass's four tints (glass.ts;
  * none at night), and the hour's sky as the browser's `theme-color`. The
  * weather layer holds the day's weather alone, rebuilt when the day's
- * weather changes, and the root carries its classes
+ * weather changes with the day's own clouds (rain's four, the storm's
+ * deck: plains.ts `weatherClouds`), and the root carries its classes
  * (`ps-windy`, `ps-storm`, `ps-hot`) and the skeins' direction (`ps-west`).
  * It keeps the yurt in the message column's far third (placeYurt). All
  * motion is CSS or SVG animation; no script runs per frame. A layer outside
@@ -36,6 +37,7 @@ import {
 	landSvg,
 	nearGrass,
 	smoke,
+	weatherClouds,
 	weatherLayers,
 	yurtSvg,
 } from "./plains";
@@ -250,14 +252,16 @@ function stars(): string {
 /**
  * The scene's layers, back to front (docs/projects/ps-theme.md §5.1): the sky
  * is the root's own background; then the Milky Way, the stars, the horizon
- * glow, the moon and the sun; the clouds; the ground group — the land and
- * river, the fireflies, the yurt and its smoke, the animal layer (switched off
- * in ps.css) — which the heat haze bends as one; the near grass in front of
- * it, outside the haze; the birds (birds.ts: the skeins, then the steppe's
- * own by day), each an <svg> of its own, so mount's pause holds their
- * wingbeats; then the weather's veil, and the weather layer, left empty
- * here: the first tick builds the day's weather into it (mount's `apply`),
- * and a new day's weather replaces it. A phone (the phone layout at mount)
+ * glow, the moon and the sun; the clouds (the weather's own, left empty
+ * here for the first tick to build, behind the five); the ground group —
+ * the land and river, the fireflies, the yurt and its smoke, the animal
+ * layer (switched off in ps.css) — which the heat haze bends as one; the
+ * near grass in front of it, outside the haze; the birds (birds.ts: the
+ * skeins, then the steppe's own by day), each an <svg> of its own, so
+ * mount's pause holds their wingbeats; then the weather's veil, and the
+ * weather layer, left empty here: the first tick builds the day's weather
+ * into it (mount's `apply`), and a new day's weather replaces it (and the
+ * weather's own clouds with it). A phone (the phone layout at mount)
  * gets half the fireflies. All of them sit in one wrapper, `.ps-frost`, the
  * one group the private view blurs (spec §5.7: one filtered group is one
  * raster); the sky stays the root's own.
@@ -268,7 +272,7 @@ export function sceneMarkup(phone: boolean): string {
 		`<div class="ps-milky"></div><div class="ps-stars">${stars()}</div><div class="ps-glow"></div>` +
 		MOON +
 		SUN +
-		`<div class="ps-cloud-field">${clouds()}</div>` +
+		`<div class="ps-cloud-field"><div class="ps-overcast"></div>${clouds()}</div>` +
 		`<div class="ps-ground">` +
 		landSvg() +
 		`<div class="ps-fireflies">${fireflies(phone ? FIREFLIES / 2 : FIREFLIES)}</div>` +
@@ -528,6 +532,7 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 	const ellipse = root.querySelector(".ps-m-ell") as SVGEllipseElement;
 	const shape = root.querySelector(".ps-m-shape") as SVGGElement;
 	const weatherLayer = root.querySelector(".ps-weather") as HTMLElement;
+	const overcast = root.querySelector(".ps-overcast") as HTMLElement;
 	// The weather the layer holds: none until the first tick builds the day's.
 	let built: Weather | null = null;
 	// The theme's own theme-color, kept to hand back on destroy; and the last
@@ -588,12 +593,14 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 		const vars = sceneVars(m, p);
 
 		// Only the day's weather exists in the page (spec §10): a new day's
-		// replaces yesterday's, built for the layout as it is now. Before the
+		// replaces yesterday's, built for the layout as it is now, and so do
+		// its own clouds (the five drift on, never rebuilt). Before the
 		// gates, so a new heat band is gated with the rest; nothing in the
-		// weather layer transitions, so the style the gates may compute first
-		// changes nothing there.
+		// weather layer or the overcast transitions, so the style the gates
+		// may compute first changes nothing there.
 		if (weatherChanged(built, m.weather)) {
 			weatherLayer.innerHTML = weatherLayers(m.weather, isPhoneLayout());
+			overcast.innerHTML = weatherClouds(m.weather);
 			built = m.weather;
 			// The weather layer's gated elements are new: the gates decide them afresh.
 			gates.forget("seeds");

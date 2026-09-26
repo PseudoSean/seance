@@ -17,7 +17,7 @@ import {
 } from "../../client/js/scenes/ps/glass";
 import {GATES, liveLayers, type Gate} from "../../client/js/scenes/ps/layers";
 import {paletteAt} from "../../client/js/scenes/ps/palette";
-import {LAND_SHARE, weatherLayers} from "../../client/js/scenes/ps/plains";
+import {DECK_BAND, LAND_SHARE, weatherLayers} from "../../client/js/scenes/ps/plains";
 import {sceneMarkup, sceneVars} from "../../client/js/scenes/ps/scene";
 import {
 	checkedGrounds,
@@ -2584,7 +2584,7 @@ describe("the ps theme's clouds and weather (plan 3 task 4, spec §5.1, §5.5)",
 	const S = "#theme-scene";
 	/** Every rule of the clouds, the veil and the weather layer, plain or under a root class. */
 	const WEATHER_RULE =
-		/^#theme-scene(\.ps-(windy|storm|hot))? \.(ps-cloud|ps-veil|ps-weather|ps-rain|ps-snow|ps-seeds|ps-flash|ps-heatband|ps-heat-haze)\b/;
+		/^#theme-scene(\.ps-(windy|storm|hot))? \.(ps-cloud|ps-overcast|ps-deck|ps-veil|ps-weather|ps-rain|ps-snow|ps-seeds|ps-flash|ps-heatband|ps-heat-haze)\b/;
 	const own = rules.filter((r) => r.selectors.some((sel) => WEATHER_RULE.test(sel)));
 	const frames = (name: string) =>
 		css.match(new RegExp(`@keyframes ${name}\\s*\\{([\\s\\S]*?)\\n\\}`))?.[1] ?? "";
@@ -2704,6 +2704,71 @@ describe("the ps theme's clouds and weather (plan 3 task 4, spec §5.1, §5.5)",
 		expect(valueOf(`${S} .ps-cloud i`, "background")).to.equal(
 			"linear-gradient(180deg, var(--ps-cloud) 40%, var(--ps-cloud-under) 100%)"
 		);
+	});
+
+	describe("the weather's own clouds (plan 4 task 3: rain and storms are cloudier)", function () {
+		/** Every rule of the overcast and its deck. */
+		const overcast = rules.filter((r) =>
+			r.selectors.some((sel) => /\.ps-(overcast|deck)\b/.test(sel))
+		);
+
+		it("lays the overcast over the cloud field's own box, so its clouds drift on the five's geometry", function () {
+			expect(valueOf(`${S} .ps-overcast`, "position")).to.equal("absolute");
+			expect(valueOf(`${S} .ps-overcast`, "inset")).to.equal("0");
+			// Its clouds are .ps-cloud, drawn, drifted and rested by the five's rules.
+			expect(
+				overcast.flatMap((r) => r.selectors).filter((s) => s.includes(".ps-cloud"))
+			).to.deep.equal([]);
+		});
+
+		it("stretches the storm's deck across the top of the sky, about a third of the way down, its band over the top DECK_BAND %", function () {
+			expect(valueOf(`${S} .ps-deck`, "position")).to.equal("absolute");
+			expect(valueOf(`${S} .ps-deck`, "inset")).to.equal("0 0 auto");
+			const height = valueOf(`${S} .ps-deck`, "height") ?? "";
+			expect(height).to.match(/^\d+%$/);
+			expect(parseFloat(height)).to.be.within(30, 36);
+			expect(valueOf(`${S} .ps-deck`, "background")).to.equal(
+				`linear-gradient(180deg, var(--ps-cloud-under), var(--ps-cloud)) top / 100% ${DECK_BAND}% no-repeat`
+			);
+			expect(valueOf(`${S} .ps-deck i`, "position")).to.equal("absolute");
+			expect(valueOf(`${S} .ps-deck i`, "border-radius")).to.equal("50%");
+			// Its billows are drawn as the clouds' blobs are: light over, the underside below.
+			expect(valueOf(`${S} .ps-deck i`, "background")).to.equal(
+				valueOf(`${S} .ps-cloud i`, "background")
+			);
+			expect(valueOf(`${S} .ps-deck`, "filter")).to.equal(
+				valueOf(`${S} .ps-cloud`, "filter")
+			);
+		});
+
+		it("paints only the two cloud colours, opaque: no new ground for the words (spec §11)", function () {
+			for (const r of overcast) {
+				for (const [p, v] of r.decls) {
+					const where = `${r.selectors.join(", ")} { ${p}: ${v} }`;
+					expect(p, where).to.not.match(/^(opacity|mask|mix-blend-mode|backdrop-filter)/);
+					expect(v, where).to.not.match(
+						/transparent|#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(|color-mix/i
+					);
+					const colours = [...v.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]);
+					expect(
+						colours.filter((c) => !/^--ps-cloud(-under)?$/.test(c)),
+						where
+					).to.deep.equal([]);
+				}
+			}
+		});
+
+		it("holds the deck still: it neither drifts nor animates, so reduced motion has nothing to rest", function () {
+			for (const r of overcast) {
+				for (const [p] of r.decls) {
+					expect(p, r.selectors.join(", ")).to.not.match(
+						/^(animation|transition|transform|translate|will-change)/
+					);
+				}
+			}
+
+			expect(overcast.filter((r) => r.at !== "").map((r) => r.selectors)).to.deep.equal([]);
+		});
 	});
 
 	it("veils the scene in the weather's colour and opacity, --ps-veil-c and --ps-veil", function () {
