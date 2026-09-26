@@ -118,8 +118,11 @@ class FakeElement extends Listeners {
 		return el;
 	}
 
-	querySelectorAll(): FakeElement[] {
-		return []; // no svg and no gated layer: nothing for syncSvgs or the gates to touch
+	/** What querySelectorAll finds, by selector: nothing unless a test says (no svg for syncSvgs). */
+	lists = new Map<string, () => FakeElement[]>();
+
+	querySelectorAll(selector: string): FakeElement[] {
+		return this.lists.get(selector)?.() ?? [];
 	}
 
 	setAttribute(name: string, value: string) {
@@ -454,6 +457,42 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 				const writes = sinon.spy(ellipse, "setAttribute");
 				clock.tick(61000);
 				expect(writes.calledWith("rx")).to.equal(true);
+				scene.destroy();
+			});
+		});
+	});
+
+	describe("the day's weather, rebuilt", function () {
+		it("takes out the seeds a new day's weather built when its wind shows none (a clear 30 January, a snowy 31st)", function () {
+			withPage((page, clock) => {
+				// The weather layer's seeds, as its latest build made them.
+				const weather = new FakeElement(".ps-weather");
+				let seeds: FakeElement | null = null;
+				Object.defineProperty(weather, "innerHTML", {
+					set(value: string) {
+						weather.markup = value;
+						seeds = value.includes('class="ps-seeds"')
+							? new FakeElement(".ps-seeds")
+							: null;
+					},
+				});
+				page.root.planted.set(".ps-weather", weather);
+				page.root.lists.set(".ps-seeds", () => (seeds ? [seeds] : []));
+
+				clock.setSystemTime(new Date(2026, 0, 30, 12, 30));
+				const scene = mountOn(page);
+				expect(page.root.dataset.weather).to.equal("clear");
+				expect(seeds, "no seeds on a day without wind").to.equal(null);
+
+				scene.update({visible: false, view: "channel"});
+				clock.setSystemTime(new Date(2026, 0, 31, 12, 30));
+				scene.update({visible: true, view: "channel"}); // waking into the next day
+				expect(page.root.dataset.weather).to.equal("snow");
+				expect(page.root.style.getPropertyValue("--ps-wind-op")).to.equal("0.00");
+				expect(seeds, "the snow's seeds are built").to.not.equal(null);
+				expect(seeds!.classList.contains("ps-off"), "and out of the render tree").to.equal(
+					true
+				);
 				scene.destroy();
 			});
 		});

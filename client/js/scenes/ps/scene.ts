@@ -588,6 +588,8 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 		if (weatherChanged(built, m.weather)) {
 			weatherLayer.innerHTML = weatherLayers(m.weather, isPhoneLayout());
 			built = m.weather;
+			// The weather layer's gated elements are new: the gates decide them afresh.
+			gates.forget("seeds");
 			gates.forget("heatband");
 		}
 

@@ -51,8 +51,10 @@ describe("ps layers: what is in the render tree (layers.ts, spec §10)", functio
 		});
 
 		it("flies only the first flock on a rainy night: the others leave the tree", function () {
+			// And the rain's seeds blow: autumn's wind shows them at night too.
 			expect(on(liveAt(268, 1325, "rain"))).to.deep.equal([
 				"flock0",
+				"seeds",
 				"skeins",
 				"smoke",
 				"stars",
@@ -75,6 +77,17 @@ describe("ps layers: what is in the render tree (layers.ts, spec §10)", functio
 				"larks",
 				"sun",
 			]);
+		});
+
+		it("blows the seeds while the wind shows them, and takes them out when it shows none (a snowy 1 February)", function () {
+			expect(liveAt(268, 725, "rain").seeds, "a rainy autumn noon").to.equal(true);
+			expect(liveAt(288, 725, "wind").seeds, "a windy one").to.equal(true);
+			expect(liveAt(268, 725, "clear").seeds, "no wind at all").to.equal(false);
+			// The weather layer builds seeds whenever the weather has wind, but
+			// deep in winter the wind's level, and --ps-wind-op, is 0.
+			const m = at(32, 725, "snow");
+			expect(sceneVars(m, paletteAt(m))["--ps-wind-op"]).to.equal("0.00");
+			expect(liveAt(32, 725, "snow").seeds).to.equal(false);
 		});
 
 		it("follows the model at every moment: live exactly when what ps.css paints the layer with is above 0", function () {
@@ -111,6 +124,9 @@ describe("ps layers: what is in the render tree (layers.ts, spec §10)", functio
 						expect(live.heatband, `${where} heat band`).to.equal(
 							Number(l.heat.toFixed(2)) > 0
 						);
+						expect(live.seeds, `${where} seeds`).to.equal(
+							Number(l.wind.toFixed(2)) > 0
+						);
 						expect(live.sun, `${where} sun`).to.equal(
 							m.sun.up && Number(bodyOpacity(m, p).sun.toFixed(2)) > 0
 						);
@@ -133,6 +149,7 @@ describe("ps layers: what is in the render tree (layers.ts, spec §10)", functio
 				"flock2",
 				"buzzard",
 				"larks",
+				"seeds",
 				"heatband",
 			]);
 		});
@@ -152,6 +169,7 @@ describe("ps layers: what is in the render tree (layers.ts, spec §10)", functio
 				flock2: 1800,
 				buzzard: 1400,
 				larks: 1400,
+				seeds: 0,
 				heatband: 0,
 			});
 			expect(FADE_MARGIN_MS).to.be.within(1, 200);
@@ -225,6 +243,7 @@ describe("ps layers: the gates over time (layerGates)", function () {
 			"off flock1",
 			"off flock2",
 			"off larks",
+			"off seeds",
 			"off heatband",
 		]);
 		expect(h.pending()).to.equal(0);

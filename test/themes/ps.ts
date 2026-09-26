@@ -1634,6 +1634,7 @@ describe("the ps theme's scene", function () {
 			flock2: "#theme-scene .ps-flock",
 			buzzard: "#theme-scene .ps-daybirds > div",
 			larks: "#theme-scene .ps-daybirds > div",
+			seeds: "#theme-scene .ps-seeds",
 			heatband: "#theme-scene .ps-heatband",
 		};
 

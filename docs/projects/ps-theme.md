@@ -300,7 +300,7 @@ Rules:
 - No script per frame. The scene updates once a minute and when the page becomes visible.
 - Only the weather that is happening exists in the page: rain drops are built on rainy days, not hidden on clear ones.
 - The page hidden means the scene stopped: all its animations paused, SVG animations paused, no timer.
-- Nothing animates unseen: a layer with a window (the stars, the fireflies and the smoke by day, the sun once it is down, the skeins by day, a flock past the night's count, the buzzard, the larks, the heat band) is out of the render tree outside it, its SMIL paused, rather than animating at opacity 0. It goes once its fade is over and comes back before it fades in (`layers.ts`, §10.1).
+- Nothing animates unseen: a layer with a window (the stars, the fireflies and the smoke by day, the sun once it is down, the skeins by day, a flock past the night's count, the buzzard, the larks, the seeds while the wind shows none, the heat band) is out of the render tree outside it, its SMIL paused, rather than animating at opacity 0. It goes once its fade is over and comes back before it fades in (`layers.ts`, §10.1).
 - Backdrop blur only on the chrome's glass panels and chips, never on the scene or on `#status-bar-tint`.
 - Under the phone layout (`PHONE_LAYOUT_QUERY`), particle and firefly counts are halved.
 

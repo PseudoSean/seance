@@ -4,7 +4,9 @@
  * has a window: the stars, the fireflies and the smoke come up with the
  * dark, the sun goes down, the skeins fly around sunset and at night (only
  * as many flocks as the night's count), the buzzard rides the thermals, the
- * larks sing in season, and the heat band shimmers over a hot midday. The
+ * larks sing in season, the seeds blow while the wind shows them (the
+ * weather layer builds them on any day with wind, but deep in winter its
+ * level is 0), and the heat band shimmers over a hot midday. The
  * scene publishes each as an opacity (scene.ts `sceneVars`); a layer at 0 is
  * not painted, but its animations, CSS and SMIL alike, would still run and
  * be restyled every frame. So outside its window a layer leaves the render
@@ -34,6 +36,7 @@ export type Gate =
 	| "flock2"
 	| "buzzard"
 	| "larks"
+	| "seeds"
 	| "heatband";
 
 /** A gate's elements (the `index`th match alone, for one flock) and its fade out in ps.css, in ms. */
@@ -57,6 +60,7 @@ export const GATES: Readonly<Record<Gate, GateSpec>> = {
 	flock2: {selector: ".ps-flock", index: 2, fadeMs: 1800},
 	buzzard: {selector: ".ps-buzzard", fadeMs: 1400},
 	larks: {selector: ".ps-lark", fadeMs: 1400},
+	seeds: {selector: ".ps-seeds", fadeMs: 0},
 	heatband: {selector: ".ps-heatband", fadeMs: 0},
 };
 
@@ -83,6 +87,7 @@ export function liveLayers(vars: Readonly<Record<string, string>>): Record<Gate,
 		flock2: skeins && count > 2,
 		buzzard: shown("--ps-buzzard-op"),
 		larks: shown("--ps-lark-op"),
+		seeds: shown("--ps-wind-op"),
 		heatband: shown("--ps-heat-op"),
 	};
 }
