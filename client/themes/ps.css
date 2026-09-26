@@ -2386,6 +2386,30 @@ body {
 	opacity: 0.55;
 }
 
+/* Native controls follow the hour (the user's report, 2026-09-26: "the
+ * select boxes in the ps theme are a light text on a light background …
+ * right now it's night"). The page's colour scheme is already the hour's
+ * (the palettes: light by day and under the fallback, dark at night), and
+ * the checkboxes, radios, the range slider, the number fields' spinners and
+ * the scrollbars follow it. A select's option list is drawn by the browser
+ * from the select's and the options' own colours: the select wore the
+ * field's wash, translucent (white 7 % at night), and the options nothing,
+ * so the list fell back to a light default under the night's light ink.
+ * Both take the solid and its ink, opaque by day and at night; the select
+ * keeps the field's wash as an image over the solid, so on the pane it
+ * still reads as a field. `select.input` outranks the `.input` rules. */
+select,
+select.input {
+	background-color: var(--ps-g-solid);
+	background-image: linear-gradient(var(--composer-bg), var(--composer-bg));
+	color: var(--ps-g-ink);
+}
+
+select option {
+	background-color: var(--ps-g-solid);
+	color: var(--ps-g-ink);
+}
+
 /* ---- animals ---- */
 
 /* stylelint-disable-next-line no-duplicate-selectors -- the animals' files and the scene's fixed cast */

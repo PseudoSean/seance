@@ -1282,8 +1282,8 @@ describe("the ps theme's chrome keeps its floors on the solid panels and on the 
 		{
 			token: "--chat-fg-faint",
 			on: ["glass", "field"],
-			floor: MARK,
-			what: "placeholders, the user count's icon",
+			floor: TEXT,
+			what: "placeholders, which are text (the user list's search and the composer on the glass, a panel's field), and the user count's icon",
 		},
 		{token: "--window-heading-color", on: ["solid"], floor: TEXT, what: "a window's headings"},
 		{
@@ -1504,6 +1504,87 @@ describe("the ps theme's chrome keeps its floors on the solid panels and on the 
 					);
 				}
 			}
+		}
+	});
+});
+
+describe("the ps theme's native controls follow day and night (the user's report, 2026-09-26)", function () {
+	// "the select boxes in the ps theme are a light text on a light background
+	// … right now it's night". The browser draws a select's option list itself,
+	// from the select's and the options' own colours, in the page's colour
+	// scheme.
+	const SELECT = "select.input";
+	const OPTION = "select option";
+	const sheets = [
+		["style.css", "../../client/css/style.css"],
+		["coffee.css", "../../client/themes/coffee.css"],
+	].map(([name, file]) => ({
+		name,
+		rules: rulesIn(fs.readFileSync(path.resolve(__dirname, file), "utf8")),
+	}));
+
+	it("declares the page's colour scheme by the hour: light by day and under the daylight fallback, dark at night, and nowhere else", function () {
+		expect(valueOf(DAY, "color-scheme")).to.equal("light");
+		expect(valueOf(NIGHT, "color-scheme")).to.equal("dark");
+		const elsewhere = rules.filter(
+			(r) =>
+				r.decls.some(([p]) => p === "color-scheme") &&
+				!(r.at === "" && (r.selectors.includes(DAY) || r.selectors.includes(NIGHT)))
+		);
+		expect(elsewhere.map((r) => [r.at, r.selectors])).to.deep.equal([]);
+	});
+
+	it("gives a select and its options an opaque ground and the ink, from the solid palette", function () {
+		// The select wore the field's wash (white 7 % at night) and the options
+		// nothing, so the list fell back to the platform's light default under
+		// the night's light ink. The solid is opaque in both lights; the select
+		// keeps the field as an image over it, so it still reads as a field.
+		expect(valueOf(SELECT, "background-color")).to.equal("var(--ps-g-solid)");
+		expect(valueOf(SELECT, "background-image")).to.equal(
+			"linear-gradient(var(--composer-bg), var(--composer-bg))"
+		);
+		expect(valueOf(SELECT, "color")).to.equal("var(--ps-g-ink)");
+		expect(valueOf(OPTION, "background-color")).to.equal("var(--ps-g-solid)");
+		expect(valueOf(OPTION, "color")).to.equal("var(--ps-g-ink)");
+
+		for (const light of ["day", "night"] as const) {
+			const solid = resolve(paletteOf(light), "var(--ps-g-solid)");
+			expect(rgba(solid)[3], `${light}: the solid is opaque`).to.equal(1);
+		}
+	});
+
+	it("outranks every rule that paints an .input's field or its text, in style.css, coffee.css and ps.css", function () {
+		const painting = [...sheets, {name: "ps.css", rules}].flatMap(({name, rules: list}) =>
+			list
+				.filter(
+					(r) =>
+						r.at === "" &&
+						r.decls.some(([p]) =>
+							["background", "background-color", "color"].includes(p)
+						)
+				)
+				.flatMap((r) =>
+					r.selectors.filter((s) => s === ".input").map((s) => `${name} ${s}`)
+				)
+		);
+		expect(painting.length, "the .input rules").to.be.at.least(2);
+
+		for (const rule of painting) {
+			expect(
+				compareSpecificity(specificity(SELECT), specificity(rule.split(" ")[1])),
+				rule
+			).to.be.above(0);
+		}
+	});
+
+	it("holds the ink at 4.5 over the options' solid and the select's field on it, by day and at night", function () {
+		for (const light of ["day", "night"] as const) {
+			const p = paletteOf(light);
+			const solid = resolve(p, "var(--ps-g-solid)");
+			const ink = resolve(p, "var(--ps-g-ink)");
+			const face = over(resolve(p, "var(--composer-bg)"), solid);
+			expect(contrast(ink, solid), `${light}: an option`).to.be.at.least(4.5);
+			expect(contrast(ink, face), `${light}: the select's face`).to.be.at.least(4.5);
 		}
 	});
 });
