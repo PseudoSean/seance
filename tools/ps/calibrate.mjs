@@ -13,16 +13,16 @@
 //
 // **The treatment is read, not retyped.** The run connects to the dev ircd,
 // picks ps in Appearance and has a second connection post one line into
-// #seance. That line's `.content` (Mulish, the words) and its nick (Fraunces)
-// are then read with `data-ps-text` forced to `ink` and to `light` and
+// #seance. That line's `.content` (Source Sans 3, the words) and its nick in
+// the nick column (Newsreader) are then read with `data-ps-text` forced to `ink` and to `light` and
 // `--ps-halo` set to #ebf5fd: their computed font longhands, `text-shadow`
 // and `color`. Transitions are switched off first, or a read right after the
 // flip returns the state being left.
 //
 // **The swatches.** A fixed overlay, #808080, covers the app, with one row per
 // (face, phrase, ground). Each row is a swatch of 360 × 48 CSS px with a flat
-// ground G and one line of text in the computed font and shadow, Mulish at the
-// message size (the words) or Fraunces at the nick size. **The text is real
+// ground G and one line of text in the computed font and shadow, Source Sans 3
+// at the message size (the words) or Newsreader at the nick size. **The text is real
 // chat** (PHRASES: short words, apostrophes, commas — the controller's ruling,
 // 2026-09-25): the sample sentence the first passes used ("The quick brown fox
 // 0123", "Marigold Ősz") has no thin marks, and overstated the light
@@ -623,14 +623,17 @@ export default async function run(page) {
 		`light text is white (${read.light.words.color})`,
 		read.light.words.color === "rgb(255, 255, 255)"
 	);
+	// The computed family list quotes a name with a space or a figure
+	// ("Source Sans 3"), so the first entry is read with its quotes off.
+	const firstFamily = (font) => font["font-family"].split(",")[0].trim().replace(/^"|"$/g, "");
 	page.check(
-		`the words are Mulish 500 (${read.ink.words.font["font-family"]} ${read.ink.words.font["font-weight"]})`,
-		/^Mulish\b/.test(read.ink.words.font["font-family"]) &&
+		`the words are Source Sans 3 500 (${read.ink.words.font["font-family"]} ${read.ink.words.font["font-weight"]})`,
+		firstFamily(read.ink.words.font) === "Source Sans 3" &&
 			read.ink.words.font["font-weight"] === "500"
 	);
 	page.check(
-		`the nick is Fraunces 700 (${read.ink.nick.font["font-family"]} ${read.ink.nick.font["font-weight"]})`,
-		/^Fraunces\b/.test(read.ink.nick.font["font-family"]) &&
+		`the nick is Newsreader 700 (${read.ink.nick.font["font-family"]} ${read.ink.nick.font["font-weight"]})`,
+		firstFamily(read.ink.nick.font) === "Newsreader" &&
 			read.ink.nick.font["font-weight"] === "700"
 	);
 

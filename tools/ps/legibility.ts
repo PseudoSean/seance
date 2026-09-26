@@ -150,7 +150,7 @@ export const GLASS = {
  *   bodies;
  * - `sky`: solved and held over the sky and the plains, not the bodies;
  * - `names-large`: the 32 nick colours solved to 3.1 and held at 3 over the
- *   sky and the bodies (bold Fraunces 700 at the default step is WCAG large
+ *   sky and the bodies (bold Newsreader 700 at the default step is WCAG large
  *   text; at the medium step, 16px, it is not), everything else strict.
  * The generator and the floors test both read it.
  *
@@ -162,7 +162,7 @@ export const LIGHT_SWEEP: LightSweep = "names-large";
 
 /**
  * The font-size steps at or above the default (client/js/helpers/fontSize.ts),
- * where bold Fraunces 700 nicks are WCAG large text: the default, `large`,
+ * where bold Newsreader 700 nicks are WCAG large text: the default, `large`,
  * sets them at 20px, 15pt bold, over the 14pt bold line. Every step below it
  * (tiny, small, medium), and an <html> that carries no step yet (the root at
  * 100 %, medium's size), sets them smaller.

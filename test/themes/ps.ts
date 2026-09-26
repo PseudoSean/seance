@@ -1595,11 +1595,16 @@ describe("the ps theme's type", function () {
 		css.indexOf("/* ps:fonts:end */")
 	);
 
-	it("bundles Mulish (upright and italic) and Fraunces, Latin, Latin Extended and Vietnamese, as files that exist", function () {
+	/** A family as a font-family value names it: quoted where the name has a space or a figure (stylelint's always-where-recommended; `Source Sans 3` unquoted is not a valid family name at all, and the rule would be dropped). */
+	const named = (family: string) => (/[\s\d]/.test(family) ? `"${family}"` : family);
+
+	it("bundles Source Sans 3 (upright and italic) and Newsreader, Latin, Latin Extended and Vietnamese, as files that exist", function () {
 		const faces = [...fontsBlock.matchAll(/@font-face\s*\{([^}]*)\}/g)].map((m) => m[1]);
 		const has = (family: string, style: string) =>
 			faces.filter(
-				(f) => f.includes(`font-family: ${family}`) && f.includes(`font-style: ${style}`)
+				(f) =>
+					f.includes(`font-family: ${named(family)};`) &&
+					f.includes(`font-style: ${style}`)
 			);
 
 		/** Which subset a face is, by its unicode-range as Google serves it. */
@@ -1615,10 +1620,13 @@ describe("the ps theme's type", function () {
 				: `unknown (${range[0]})`;
 		};
 
+		// Three styles of three files each, and nothing else.
+		expect(faces, "the @font-face rules").to.have.length(9);
+
 		for (const [family, style] of [
-			["Mulish", "normal"],
-			["Mulish", "italic"],
-			["Fraunces", "normal"],
+			["Source Sans 3", "normal"],
+			["Source Sans 3", "italic"],
+			["Newsreader", "normal"],
 		]) {
 			const set = has(family, style);
 			// Vietnamese first: where the ranges overlap, the face defined last is
@@ -1640,14 +1648,16 @@ describe("the ps theme's type", function () {
 			}
 		}
 
-		expect(fs.existsSync(path.resolve(__dirname, "../../client/themes/ps/OFL-Mulish.txt"))).to
-			.be.true;
-		expect(fs.existsSync(path.resolve(__dirname, "../../client/themes/ps/OFL-Fraunces.txt"))).to
-			.be.true;
+		for (const licence of ["OFL-SourceSans3.txt", "OFL-Newsreader.txt"]) {
+			expect(
+				fs.existsSync(path.resolve(__dirname, "../../client/themes/ps", licence)),
+				licence
+			).to.be.true;
+		}
 	});
 
-	it("no longer carries Nunito or Baloo 2", function () {
-		expect(css).to.not.match(/Nunito|Baloo/);
+	it("no longer carries Nunito, Baloo 2, Mulish or Fraunces", function () {
+		expect(css).to.not.match(/Nunito|Baloo|Mulish|Fraunces/);
 
 		for (const f of [
 			"nunito-variable.woff2",
@@ -1655,16 +1665,57 @@ describe("the ps theme's type", function () {
 			"baloo2-variable.woff2",
 			"OFL-Nunito.txt",
 			"OFL-Baloo2.txt",
+			...["latin", "latin-ext", "vietnamese"].flatMap((subset) => [
+				`mulish-${subset}.woff2`,
+				`mulish-italic-${subset}.woff2`,
+				`fraunces-${subset}.woff2`,
+			]),
+			"OFL-Mulish.txt",
+			"OFL-Fraunces.txt",
 		]) {
 			expect(fs.existsSync(path.resolve(__dirname, "../../client/themes/ps", f)), f).to.be
 				.false;
 		}
 	});
 
-	it("sets words in Mulish 500 with 800 for bold, and names in Fraunces 700", function () {
-		expect(css).to.match(/font-family:\s*Mulish,[^;]*;\s*font-weight:\s*500;/);
-		expect(css).to.match(/font-weight:\s*800;/);
-		expect(css).to.match(/font-family:\s*Fraunces,[^;]*;\s*font-weight:\s*700;/);
+	it("sets words in Source Sans 3 500 with 700 for bold, and names in Newsreader 700, each weight inside its face's files", function () {
+		expect(css).to.match(/font-family:\s*"Source Sans 3",[^;]*;\s*font-weight:\s*500;/);
+		expect(css).to.match(
+			/b,\s*strong,\s*\.msg \.content b,\s*#chat \.msg\.highlight \.content \{\s*font-weight:\s*700;\s*\}/
+		);
+		// Bold is the words' heaviest weight in use: nothing asks for more.
+		expect(css).to.not.match(/font-weight:\s*(800|900|bolder)\b/);
+		expect(css).to.match(/font-family:\s*Newsreader,[^;]*;\s*font-weight:\s*700;/);
+
+		/** Every weight range a family's @font-face rules declare, as [low, high]. */
+		const ranges = (family: string) =>
+			[...fontsBlock.matchAll(/@font-face\s*\{([^}]*)\}/g)]
+				.map((m) => m[1])
+				.filter((f) => f.includes(`font-family: ${named(family)};`))
+				.map((f) => {
+					const [low, high = low] = f
+						.match(/font-weight:\s*([^;]+);/)![1]
+						.trim()
+						.split(/\s+/)
+						.map(Number);
+					return [low, high];
+				});
+
+		// No synthesised bold, and no weight snapped to a neighbour: every file
+		// carries the weights the rules ask of it.
+		for (const [family, weights] of [
+			["Source Sans 3", [400, 500, 600, 700]],
+			["Newsreader", [700]],
+		] as const) {
+			const declared = ranges(family);
+			expect(declared, family).to.have.length.greaterThan(0);
+
+			for (const [low, high] of declared) {
+				for (const w of weights) {
+					expect(w, `${family} ${low}–${high}`).to.be.within(low, high);
+				}
+			}
+		}
 	});
 });
 

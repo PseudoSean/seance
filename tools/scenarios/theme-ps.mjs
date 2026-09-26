@@ -6,8 +6,8 @@
 // day's weather (client/js/scenes/ps/scene.ts, through the hook in
 // client/js/themeScene.ts). The run then:
 //
-// - reads the type: all nine font files (Mulish upright and italic, Fraunces;
-//   Latin, Latin Extended and Vietnamese each) loaded, each drawing its text
+// - reads the type: all nine font files (Source Sans 3 upright and italic,
+//   Newsreader; Latin, Latin Extended and Vietnamese each) loaded, each drawing its text
 //   rather than leaving it to the fallback (the latin-ext trap, ps-theme.md
 //   §8) — the canvas widths the fonts were bundled with, and the fonts
 //   Chromium reports it drew the neighbour's italic join, its Latin Extended
@@ -198,14 +198,14 @@ const PEER = `${NICK}n`;
  * a face can load and still draw in the fallback). The ircd refuses it as a
  * nick (432 Erroneous Nickname), so the neighbour carries it as its realname,
  * which its join shows in italic, and says it in its line (upright); and a
- * query of that name puts it in Fraunces in the sidebar.
+ * query of that name puts it in Newsreader in the sidebar.
  */
 const EXT_NAME = "Łucja";
 /**
  * A Vietnamese name, for the fonts' third files: ễ (U+1EC5) is in neither the
  * Latin nor the Latin Extended file, so without the vietnamese subset the
  * name drew partly in the fallback. The neighbour says it upright and in
- * italic (IRC's ^], U+001D), and a query of that name sets it in Fraunces.
+ * italic (IRC's ^], U+001D), and a query of that name sets it in Newsreader.
  */
 const VI_NAME = "Nguyễn";
 const BASE = `http://localhost:${process.env.SEANCE_HTTP_PORT ?? "8021"}/`;
@@ -1053,7 +1053,7 @@ const PEER_LINES = `#chat .msg[data-type="message"][data-from="${PEER}"] .conten
  * Vietnamese, U+0102-0103 first) and status.
  */
 const FONT_FACES = `[...document.fonts]
-	.filter((f) => /^"?(Mulish|Fraunces)"?$/.test(f.family))
+	.filter((f) => /^"?(Source Sans 3|Newsreader)"?$/.test(f.family))
 	.map((f) => {
 		const first = f.unicodeRange.split(",")[0].trim();
 		return {
@@ -1074,19 +1074,25 @@ const FONT_FACES = `[...document.fonts]
  * The rendered proof the fonts were bundled with (the latin-ext trap,
  * docs/projects/ps-theme.md §8), as it was first run: each face against a
  * fallback the same text would otherwise draw in, on a canvas. A pair of
- * equal widths means the bundled face did not draw the text.
+ * equal widths means the bundled face did not draw the text. "Source Sans
+ * 3" is quoted in each font string: unquoted, the figure makes the whole
+ * string invalid, the canvas keeps the font it had and the pair compares
+ * two other fonts. The names are measured against serif, not monospace (as
+ * they were until plan 4): a family the canvas cannot find draws in its
+ * default, which is the serif, so a monospace pair differed with the face
+ * missing (seen on the previous build: Newsreader, absent there, "passed").
  */
 const FONT_WIDTHS = `(async () => {
 	await document.fonts.ready;
 	const c = document.createElement("canvas").getContext("2d");
-	const w = (font, s) => ((c.font = font), c.measureText(s).width);
+	const w = (font, s) => ((c.font = "10px monospace"), (c.font = font), c.font === "10px monospace" ? NaN : c.measureText(s).width);
 	const probe = {latin: "Handgloves 0123", ext: "Łucja Ősz ăĕ şţ"};
 	return {
-		mulish: [w("500 20px Mulish", probe.latin), w("500 20px serif", probe.latin)],
-		mulishExt: [w("500 20px Mulish", probe.ext), w("500 20px serif", probe.ext)],
-		mulishItalic: [w("italic 500 20px Mulish", probe.ext), w("italic 500 20px serif", probe.ext)],
-		fraunces: [w("700 20px Fraunces", probe.latin), w("700 20px monospace", probe.latin)],
-		frauncesExt: [w("700 20px Fraunces", probe.ext), w("700 20px monospace", probe.ext)],
+		sourceSans: [w('500 20px "Source Sans 3"', probe.latin), w("500 20px serif", probe.latin)],
+		sourceSansExt: [w('500 20px "Source Sans 3"', probe.ext), w("500 20px serif", probe.ext)],
+		sourceSansItalic: [w('italic 500 20px "Source Sans 3"', probe.ext), w("italic 500 20px serif", probe.ext)],
+		newsreader: [w("700 20px Newsreader", probe.latin), w("700 20px serif", probe.latin)],
+		newsreaderExt: [w("700 20px Newsreader", probe.ext), w("700 20px serif", probe.ext)],
 	};
 })()`;
 
@@ -1147,13 +1153,15 @@ async function checkDrawnIn(page, label, holder, family, italic) {
 	})()`);
 	const fonts = await drawnFonts(page, holder);
 	const re = new RegExp(`^${family}\\b`);
+	// The computed list quotes a name with a space or a figure ("Source Sans 3").
+	const first = css?.family.split(",")[0].trim().replace(/^"|"$/g, "");
 	page.check(
 		`fonts: ${label} (font-style ${css?.style}, font-family ${
 			css?.family
 		}; drawn in ${describeFonts(fonts)})`,
 		css !== null &&
 			css.style === (italic ? "italic" : "normal") &&
-			re.test(css.family) &&
+			re.test(first) &&
 			fonts !== null &&
 			fonts.length > 0 &&
 			fonts.every(
@@ -1714,7 +1722,7 @@ export default async function run(page) {
 	// Every one of the nine files has text of its own on the page: the
 	// neighbour's join (its hostmask and its realname, EXT_NAME, in italic),
 	// its lines (EXT_NAME upright, VI_NAME upright and in italic), and queries
-	// called EXT_NAME and VI_NAME, whose names the sidebar sets in Fraunces.
+	// called EXT_NAME and VI_NAME, whose names the sidebar sets in Newsreader.
 	// Each face must have loaded, and — the latin-ext trap — each must have
 	// drawn that text.
 
@@ -1733,9 +1741,9 @@ export default async function run(page) {
 	const faces = await page.evaluate(FONT_FACES);
 
 	for (const [family, style] of [
-		["Mulish", "normal"],
-		["Mulish", "italic"],
-		["Fraunces", "normal"],
+		["Source Sans 3", "normal"],
+		["Source Sans 3", "italic"],
+		["Newsreader", "normal"],
 	]) {
 		for (const block of ["latin", "latin-ext", "vietnamese"]) {
 			const face = faces.filter(
@@ -1753,11 +1761,12 @@ export default async function run(page) {
 	const widths = await page.evaluate(FONT_WIDTHS);
 
 	for (const [probe, [own, fallback]] of Object.entries(widths)) {
+		// NaN is a font string the canvas refused (FONT_WIDTHS).
 		page.check(
 			`fonts: ${probe} measures unlike its fallback (${own.toFixed(2)} vs ${fallback.toFixed(
 				2
 			)})`,
-			own !== fallback
+			Number.isFinite(own) && Number.isFinite(fallback) && own !== fallback
 		);
 	}
 
@@ -1766,51 +1775,51 @@ export default async function run(page) {
 	await page.send("CSS.enable");
 	await checkDrawnIn(
 		page,
-		"the neighbour's join shows its hostmask in Mulish italic",
+		"the neighbour's join shows its hostmask in Source Sans 3 italic",
 		TEXT_HOLDER(`${PEER_JOIN} .hostmask`, "@"),
-		"Mulish",
+		"Source Sans 3",
 		true
 	);
 	await checkDrawnIn(
 		page,
-		`the neighbour's join shows its realname, ${EXT_NAME}, in Mulish italic`,
+		`the neighbour's join shows its realname, ${EXT_NAME}, in Source Sans 3 italic`,
 		TEXT_HOLDER(`${PEER_JOIN} .realname`, EXT_NAME),
-		"Mulish",
+		"Source Sans 3",
 		true
 	);
 	await checkDrawnIn(
 		page,
-		`the neighbour's line says ${EXT_NAME} in Mulish`,
+		`the neighbour's line says ${EXT_NAME} in Source Sans 3`,
 		TEXT_HOLDER(PEER_LINES, EXT_NAME),
-		"Mulish",
+		"Source Sans 3",
 		false
 	);
 	await checkDrawnIn(
 		page,
-		`the sidebar names the query ${EXT_NAME} in Fraunces`,
+		`the sidebar names the query ${EXT_NAME} in Newsreader`,
 		TEXT_HOLDER(`${EXT_QUERY_ROW} .name`, EXT_NAME),
-		"Fraunces",
+		"Newsreader",
 		false
 	);
 	await checkDrawnIn(
 		page,
-		`the neighbour's line says ${VI_NAME} in Mulish`,
+		`the neighbour's line says ${VI_NAME} in Source Sans 3`,
 		TEXT_HOLDER(PEER_LINES, `${VI_NAME} says`),
-		"Mulish",
+		"Source Sans 3",
 		false
 	);
 	await checkDrawnIn(
 		page,
-		`the neighbour's line says ${VI_NAME} in Mulish italic`,
+		`the neighbour's line says ${VI_NAME} in Source Sans 3 italic`,
 		TEXT_HOLDER(`${PEER_LINES} .irc-italic`, VI_NAME),
-		"Mulish",
+		"Source Sans 3",
 		true
 	);
 	await checkDrawnIn(
 		page,
-		`the sidebar names the query ${VI_NAME} in Fraunces`,
+		`the sidebar names the query ${VI_NAME} in Newsreader`,
 		TEXT_HOLDER(`${VI_QUERY_ROW} .name`, VI_NAME),
-		"Fraunces",
+		"Newsreader",
 		false
 	);
 	await page.send("CSS.disable");

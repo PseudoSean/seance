@@ -1,15 +1,25 @@
-// Downloads Mulish and Fraunces — the ps theme's bundled type
-// (docs/projects/ps-theme.md §8) — as Google Fonts' variable woff2 files
-// (one file per style carrying a weight range, the same builds the mockup
-// loaded from Google — a single-weight instance cut from them renders
-// visibly differently in some browsers), Latin, Latin Extended and
-// Vietnamese as separate files, SIL OFL, from Google Fonts' CSS endpoint into
-// client/themes/ps/, then writes their @font-face rules into
-// client/themes/ps.css between the `/* ps:fonts:start` and
-// `/* ps:fonts:end */` markers. Run once; the files and the block are
-// committed.
+// Downloads Source Sans 3 and Newsreader — the ps theme's bundled type, the
+// user's pick of 2026-09-26 ("M1, N2", docs/projects/ps-theme.md §8) — as
+// Google Fonts' woff2 files, Latin, Latin Extended and Vietnamese as separate
+// files, SIL OFL, from Google Fonts' CSS endpoint into client/themes/ps/,
+// then writes their @font-face rules into client/themes/ps.css between the
+// `/* ps:fonts:start` and `/* ps:fonts:end */` markers. Run once; the files
+// and the block are committed.
 //
 //   node tools/ps/fetch-fonts.mjs
+//
+// Each face is fetched as the type review's options page loaded it
+// (tmp/ps-type/build.mjs), so the theme draws the bytes the user picked by
+// eye. The words' face, Source Sans 3, is one variable file per style
+// (upright and italic) carrying the face's whole weight range, 200 to 900:
+// the endpoint answers every weight range of it with the same file, so the
+// range only sets the rules' font-weight descriptor. The names' face,
+// Newsreader, is fetched at the one weight the theme sets it in,
+// `family=Newsreader:wght@700`, which the endpoint answers with a static
+// instance, "Newsreader 16pt Bold" (its optical-size axis pinned at 16): the
+// file that keeps that axis (6 to 72) is nearly three times the size, and at
+// the name's 20px its opsz-20 instance is about 5 % narrower than what the
+// user saw.
 //
 // The endpoint hands Mac browsers a different build from Windows and Linux
 // ones; the Windows/Linux build (also what Firefox gets) is the one
@@ -27,8 +37,8 @@
 // immediately before its block; this tool keeps the latin, latin-ext and
 // vietnamese blocks for each face and discards the rest (cyrillic, greek, …),
 // so Cyrillic, Greek and every other script this theme does not bundle fall
-// back to the system stack mid-line — Fraunces ships no Cyrillic or Greek at
-// all, and Mulish's is left unbundled here.
+// back to the system stack mid-line — Newsreader ships no Cyrillic or Greek
+// at all, and Source Sans 3's is left unbundled here.
 //
 // The rules are written vietnamese first, then latin, then latin-ext. Where
 // unicode-ranges overlap (ă, đ, ơ, ư, ₫ and a few combining marks are in the
@@ -50,33 +60,36 @@ const UA =
 // files (latin, latin-ext, vietnamese) and three @font-face rules.
 const FACES = [
 	{
-		family: "Mulish",
+		family: "Source Sans 3",
 		style: "normal",
-		weight: "400 800",
-		query: "family=Mulish:ital,wght@0,400..800",
-		base: "mulish",
+		weight: "200 900",
+		query: "family=Source+Sans+3:ital,wght@0,200..900",
+		base: "source-sans-3",
 	},
 	{
-		family: "Mulish",
+		family: "Source Sans 3",
 		style: "italic",
-		weight: "400 800",
-		query: "family=Mulish:ital,wght@1,400..800",
-		base: "mulish-italic",
+		weight: "200 900",
+		query: "family=Source+Sans+3:ital,wght@1,200..900",
+		base: "source-sans-3-italic",
 	},
 	{
-		family: "Fraunces",
+		family: "Newsreader",
 		style: "normal",
-		weight: "600 700",
-		query: "family=Fraunces:wght@600..700",
-		base: "fraunces",
+		weight: "700",
+		query: "family=Newsreader:wght@700",
+		base: "newsreader",
 	},
 ];
 
 const LICENCES = [
-	["OFL-Mulish.txt", "https://raw.githubusercontent.com/google/fonts/main/ofl/mulish/OFL.txt"],
 	[
-		"OFL-Fraunces.txt",
-		"https://raw.githubusercontent.com/google/fonts/main/ofl/fraunces/OFL.txt",
+		"OFL-SourceSans3.txt",
+		"https://raw.githubusercontent.com/google/fonts/main/ofl/sourcesans3/OFL.txt",
+	],
+	[
+		"OFL-Newsreader.txt",
+		"https://raw.githubusercontent.com/google/fonts/main/ofl/newsreader/OFL.txt",
 	],
 ];
 
@@ -126,15 +139,24 @@ function subsets(css) {
 }
 
 /**
- * One @font-face rule, unquoted font-family (the tests match it that way).
- * unicode-range is left exactly as Google served it, on one line — stylelint's
- * max-line-length is disabled for it, same as the scene's other generated
- * gradient lists, since config-standard's multi-line list rules would force
- * one codepoint per line rather than a narrower wrap.
+ * A family as a font-family value names it: quoted where the name has a
+ * space or a figure (stylelint's font-family-name-quotes,
+ * always-where-recommended), bare otherwise. Unquoted, `Source Sans 3` is no
+ * family name at all (an identifier cannot start with a figure), and the
+ * browser drops the whole rule.
+ */
+const familyName = (family) => (/[\s\d]/.test(family) ? `"${family}"` : family);
+
+/**
+ * One @font-face rule, the family as familyName writes it (the tests match
+ * it that way). unicode-range is left exactly as Google served it, on one
+ * line — stylelint's max-line-length is disabled for it, same as the scene's
+ * other generated gradient lists, since config-standard's multi-line list
+ * rules would force one codepoint per line rather than a narrower wrap.
  */
 function faceRule(family, style, weight, file, unicodeRange) {
 	return `@font-face {
-	font-family: ${family};
+	font-family: ${familyName(family)};
 	font-style: ${style};
 	font-weight: ${weight};
 	font-display: swap;
@@ -171,10 +193,11 @@ for (const [file, url] of LICENCES) {
 	console.log(file);
 }
 
-const header = `/* ps:fonts:start — Mulish and Fraunces, fetched by \`node tools/ps/fetch-fonts.mjs\`:
- * Google Fonts' variable woff2 files, one file per style carrying a weight
- * range, Latin, Latin Extended and Vietnamese as separate files (a face needs
- * all of them, or plain, accented or Vietnamese text draws partly in the
+const header = `/* ps:fonts:start — Source Sans 3 and Newsreader, fetched by
+ * \`node tools/ps/fetch-fonts.mjs\`: Google Fonts' woff2 files (Source Sans 3
+ * variable, 200 to 900, upright and italic; Newsreader's static 700), Latin,
+ * Latin Extended and Vietnamese as separate files (a face needs all of
+ * them, or plain, accented or Vietnamese text draws partly in the
  * fallback font — the latin-ext trap, docs/projects/ps-theme.md §8).
  * Vietnamese is written first, so where the ranges overlap the Latin files
  * still draw what they drew before it came. Cyrillic, Greek and every other
