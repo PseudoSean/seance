@@ -478,16 +478,22 @@ strong,
  * keeps the pixel so nothing shifts.
  *
  * Its 30ch basis (style.css `flex: 1 1 30ch`) is the text's, as the
- * thresholds' arithmetic counts it and as .time and .from already are: html
- * is border-box, so the basis held the column's padding and rule too, and
- * between the user list's threshold and the width where the text outgrows
- * its basis nothing asked the nick column to give way; the text sat at
- * 30ch − 0.875rem − 1px, about 28.2ch, beside the panel (the gutter check's
- * failure at 12h+s, medium, 860px, once Source Sans 3's narrower ch moved
- * that threshold under 860). Content-box, the nick column shrinks first,
- * down to its 9ch, as style.css intends. Inline flow ignores it. */
+ * thresholds' arithmetic counts it: html is border-box, so the basis held
+ * the column's padding and rule too, and between the user list's threshold
+ * and the width where the text outgrows its basis nothing asked the nick
+ * column to give way; the text sat at 30ch − 0.875rem − 1px, about 28.2ch,
+ * beside the panel (the gutter check's failure at 12h+s, medium, 860px,
+ * once Source Sans 3's narrower ch moved that threshold under 860). The
+ * basis is restated with style.css's padding (0.5rem + 0.375rem) and its
+ * 1px rule added, so the nick column shrinks first, down to its 9ch, as
+ * style.css intends. The column stays border-box: style.css's `*,
+ * *::before, *::after { box-sizing: inherit }` would hand content-box to
+ * everything in it, and a reply quote (a `max-width: 100%` button with its
+ * own padding and rule) overflowed the column by both (plan 4 task 5, fix
+ * round 1). Nothing inherits a flex-basis, and the inline flow's `display:
+ * inline` takes the column out of flex layout by itself. */
 #chat .content {
-	box-sizing: content-box;
+	flex-basis: calc(30ch + 0.875rem + 1px);
 	border-left-color: transparent;
 }
 

@@ -1845,26 +1845,41 @@ describe("the ps theme's message gutter: the time column and the text's 30 chara
 		return parseFloat(value!);
 	};
 
-	it("gives the text column's 30ch basis to the text: content-box, as style.css does for the time and the nick", function () {
+	it("gives the text column's 30ch basis to the text: the basis restated to hold its padding and rule, border-box kept", function () {
 		// The cause (plan 4 task 5): html is border-box, so style.css's 30ch
 		// basis held the text column's padding and rule too, 30ch − 0.875rem −
 		// 1px of text; between the user list's threshold and the width where
 		// the text outgrows its basis nothing asked the nick column to give
 		// way, and the text sat at about 28.2ch beside the panel.
 		expect(styleValue("#chat .content", "flex")).to.equal("1 1 30ch");
-		expect(styleValue("#chat .time", "box-sizing")).to.equal("content-box");
-		expect(styleValue("#chat .from", "box-sizing")).to.equal("content-box");
-		expect(valueOf("#chat .content", "box-sizing")).to.equal("content-box");
+		const padLeft = styleValue("#chat .content", "padding-left");
+		const padRight = styleValue("#chat .content", "padding-right");
+		const rule = styleValue("#chat .content", "border-left");
+		expect(padLeft).to.match(/^[\d.]+rem$/);
+		expect(padRight).to.match(/^[\d.]+rem$/);
+		const ruleWidth = /^(\d+px)\s/.exec(rule ?? "")?.[1];
+		expect(ruleWidth, `style.css's rule: ${rule}`).to.be.a("string");
+		const padding = parseFloat(padLeft!) + parseFloat(padRight!);
 
-		// Nothing else in ps.css sets a text column's box-sizing (a state, a
-		// query or a media block putting border-box back).
-		const others = rules.filter(
+		// The basis holds 30ch of text plus the column's own padding and rule
+		// (style.css's, read above), top level: the inline flow's display:
+		// inline takes the column out of flex layout by itself.
+		expect(valueOf("#chat .content", "flex-basis")).to.equal(
+			`calc(30ch + ${padding}rem + ${ruleWidth})`
+		);
+
+		// And border-box stays: style.css's `*, *::before, *::after {
+		// box-sizing: inherit }` hands a content-box column to everything in
+		// it, and a reply quote (a `max-width: 100%` button with its own
+		// padding and rule) then overflowed its column by both (fix round 1).
+		// Nothing in ps.css sets the box-sizing of a text column or of
+		// anything inside one.
+		const boxed = rules.filter(
 			(r) =>
 				r.decls.some(([p]) => p === "box-sizing") &&
-				r.selectors.some((s) => /\.content(?![\w-])/.test(s) && !s.includes("::")) &&
-				!(r.at === "" && r.selectors.length === 1 && r.selectors[0] === "#chat .content")
+				r.selectors.some((s) => /\.content(?![\w-])/.test(s))
 		);
-		expect(others.map((r) => `${r.at} ${r.selectors.join(", ")}`)).to.deep.equal([]);
+		expect(boxed.map((r) => `${r.at} ${r.selectors.join(", ")}`)).to.deep.equal([]);
 	});
 
 	it("sizes each clock's time column to hold its widest time, with the gap to the nick about the nick's gap to the text", function () {

@@ -183,6 +183,12 @@
 // monospace, which is why they are measured against serif now. With the
 // faces, the α measured on them and the palette regenerated: 268 of 268 on
 // the same rainy real day.
+// The reply quote's two checks (plan 4 task 5, fix round 1: a long quote
+// stays in its text column, and on the phone in its row) were first run as
+// a scratch port against c82ce398's build, whose text column is content-box:
+// both failed, the quote's box 14px past the column's content box (its own
+// padding and rule, inherited content-box). With the basis restated and the
+// column border-box both pass.
 //
 //   NODE_ENV=production corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/theme-ps.mjs
@@ -1641,6 +1647,33 @@ async function openSeance(page, label) {
 	await page.sleep(300);
 }
 
+/**
+ * The reply quote under the neighbour's long line (plan 4 task 5, fix round
+ * 1): its box, the text column's content box and the row's, whether the
+ * column is inline (the phone's flow), the quote's box-sizing, and whether
+ * its text is clamped (an ellipsis).
+ */
+const QUOTE_BOX = (run) => `(() => {
+	const q = [...document.querySelectorAll("#chat .msg:not(.pending) .msg-reply-quote")].find((e) =>
+		e.closest(".msg").textContent.includes(${JSON.stringify(`a reply ${run}`)})
+	);
+	if (!q) return null;
+	const c = q.closest(".content"), m = q.closest(".msg");
+	const cs = getComputedStyle(c), ms = getComputedStyle(m);
+	const qr = q.getBoundingClientRect(), cr = c.getBoundingClientRect(), mr = m.getBoundingClientRect();
+	return {
+		quote: [qr.left, qr.right],
+		content: [cr.left + parseFloat(cs.borderLeftWidth) + parseFloat(cs.paddingLeft), cr.right - parseFloat(cs.paddingRight)],
+		row: [mr.left + parseFloat(ms.paddingLeft), mr.right - parseFloat(ms.paddingRight)],
+		display: cs.display,
+		sizing: getComputedStyle(q).boxSizing,
+		clamped: q.scrollWidth > q.clientWidth,
+	};
+})()`;
+
+/** `box` [left, right] lies within `within` [left, right], to half a pixel. */
+const insideOf = (box, within) => box[0] >= within[0] - 0.5 && box[1] <= within[1] + 0.5;
+
 /** Type a line into the composer and send it. */
 async function sendLine(page, text) {
 	await page.evaluate(
@@ -2823,6 +2856,44 @@ export default async function run(page) {
 	await closeSettings(page);
 	await openSeance(page, "back in #seance after the switches");
 
+	// ---- a reply quote stays in its column (plan 4 task 5, fix round 1)
+
+	// A long line from the neighbour, replied to through the toolbar. The
+	// quote under the reply is a `max-width: 100%` button with its own padding
+	// and rule, clamped with an ellipsis: in columns its box stays inside the
+	// text column's content box, and on the phone (below) inside the row's.
+	// With the text column content-box (Task 5's first squeeze fix) the quote
+	// inherited it and overflowed by its padding and rule.
+	peer.say(
+		`a long line to reply to: ${"the wind over the plains, the smoke from the yurt, ".repeat(
+			4
+		)}${RUN}`
+	);
+	const LONG_ROW = `[...document.querySelectorAll("#chat .msg")].find((m) => m.querySelector(".content")?.textContent.includes(${JSON.stringify(
+		`from the yurt, ${RUN}`
+	)}))`;
+	await page.waitFor(`${LONG_ROW} !== undefined`, {label: "the neighbour's long line"});
+	const longId = await page.evaluate(`${LONG_ROW}.id`);
+	await page.hover(`#${longId} .content`);
+	await page.sleep(150);
+	await page.click(`#${longId} .msg-action-reply`);
+	await page.waitFor(`document.querySelector("#form .compose-bar")`, {label: "the reply bar"});
+	await sendLine(page, `a reply ${RUN}`);
+	await page.waitFor(`${QUOTE_BOX(RUN)} !== null`, {timeout: 20000, label: "the echoed reply"});
+	await page.sleep(300);
+	const quoteCols = await page.evaluate(QUOTE_BOX(RUN));
+	page.check(
+		`a long reply quote in columns stays in the text column (quote ${quoteCols.quote.map((v) =>
+			v.toFixed(1)
+		)}, the column's content box ${quoteCols.content.map((v) => v.toFixed(1))}; ${
+			quoteCols.sizing
+		}, clamped ${quoteCols.clamped}, the column ${quoteCols.display})`,
+		quoteCols.display !== "inline" &&
+			quoteCols.sizing === "border-box" &&
+			quoteCols.clamped &&
+			insideOf(quoteCols.quote, quoteCols.content)
+	);
+
 	// ---- a phone, at noon: the scene behind the conversation alone
 
 	const viewportHas = (cls) =>
@@ -2880,6 +2951,20 @@ export default async function run(page) {
 	await page.sleep(1500); // the first place, and the column's rise into place
 	const phone = await page.evaluate(SCENE_STATE);
 	checkMounted(page, phone, "a phone, mounted there", FIREFLIES / 2);
+	// The reply quote on the phone's inline flow: inside the row.
+	const quotePhone = await page.evaluate(QUOTE_BOX(RUN));
+	page.check(
+		`a phone: the long reply quote stays in its row (quote ${quotePhone?.quote.map((v) =>
+			v.toFixed(1)
+		)}, the row's content box ${quotePhone?.row.map((v) => v.toFixed(1))}; ${
+			quotePhone?.sizing
+		}, clamped ${quotePhone?.clamped}, the column ${quotePhone?.display})`,
+		!!quotePhone &&
+			quotePhone.display === "inline" &&
+			quotePhone.sizing === "border-box" &&
+			quotePhone.clamped &&
+			insideOf(quotePhone.quote, quotePhone.row)
+	);
 	page.check(
 		`a phone on a rainy noon (${phone.weather}): half the drops and seeds, 65 and 13 (${phone.drops}, ${phone.seeds}; ${phone.flakes} flakes)`,
 		phone.weather === "rain" && phone.drops === 65 && phone.seeds === 13 && phone.flakes === 0
