@@ -638,14 +638,20 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 		}
 	};
 
-	// Once now, then on each minute boundary.
+	// Once now, then on each minute boundary. The next minute is scheduled
+	// whatever this one's apply does: one bad minute throws (and is reported),
+	// and the scene still draws the next rather than freezing.
 	const tick = () => {
 		const now = new Date();
-		apply(now);
-		timer = window.setTimeout(
-			tick,
-			60000 - (now.getSeconds() * 1000 + now.getMilliseconds()) + 20
-		);
+
+		try {
+			apply(now);
+		} finally {
+			timer = window.setTimeout(
+				tick,
+				60000 - (now.getSeconds() * 1000 + now.getMilliseconds()) + 20
+			);
+		}
 	};
 
 	const motion = (run: boolean) => {

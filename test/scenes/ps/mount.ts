@@ -421,4 +421,41 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 			});
 		});
 	});
+
+	describe("the minute's tick", function () {
+		it("draws the next minute after one whose apply threw", function () {
+			withPage((page, clock) => {
+				const scene = mountOn(page);
+				const ellipse = page.root.querySelector(".ps-m-ell");
+				const writes = sinon.spy(ellipse, "setAttribute");
+				ellipse.failing = new Error("a bad minute");
+				expect(() => clock.tick(61000)).to.throw("a bad minute");
+				expect(clock.countTimers(), "the next minute is still due").to.equal(1);
+				ellipse.failing = null;
+				writes.resetHistory();
+				clock.tick(61000);
+				expect(writes.calledWith("rx"), "the next minute was drawn").to.equal(true);
+				expect(clock.countTimers()).to.equal(1);
+				scene.destroy();
+			});
+		});
+
+		it("keeps ticking after a visible page's catch-up throws", function () {
+			withPage((page, clock) => {
+				const scene = mountOn(page, false); // mounted into a hidden page: no tick yet
+				expect(clock.countTimers()).to.equal(0);
+				const ellipse = page.root.querySelector(".ps-m-ell");
+				ellipse.failing = new Error("a bad minute");
+				expect(() => scene.update({visible: true, view: "channel"})).to.throw(
+					"a bad minute"
+				);
+				expect(clock.countTimers(), "the next minute is still due").to.equal(1);
+				ellipse.failing = null;
+				const writes = sinon.spy(ellipse, "setAttribute");
+				clock.tick(61000);
+				expect(writes.calledWith("rx")).to.equal(true);
+				scene.destroy();
+			});
+		});
+	});
 });
