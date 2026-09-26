@@ -1347,6 +1347,29 @@ describe("the ps theme's scene", function () {
 		expect(displays.map((r) => r.selectors)).to.deep.equal([]);
 	});
 
+	it("gives every scene element its own box-sizing, the border-box html gives it, so none inherits it explicitly (task 8b)", function () {
+		// style.css's `*, *::before, *::after { box-sizing: inherit }` marks every
+		// element as explicitly inheriting, and Chromium then restyles an
+		// element's children whenever it is restyled, and at several times the
+		// cost: each animated element dragged its subtree into every frame.
+		expect(style).to.match(/html\s*\{[^}]*box-sizing:\s*border-box;/);
+		expect(style).to.match(/\*,\s*\*::before,\s*\*::after\s*\{\s*box-sizing:\s*inherit;/);
+		const own = rules.filter(
+			(r) =>
+				r.at === "" &&
+				r.selectors.join(", ") === "#theme-scene, #theme-scene *" &&
+				r.decls.some(([p, v]) => p === "box-sizing" && v === "border-box")
+		);
+		expect(own, "one rule for the scene and everything in it").to.have.length(1);
+		// And nothing in the scene asks for another box.
+		const other = rules.filter(
+			(r) =>
+				r.selectors.some((sel) => sel.startsWith("#theme-scene")) &&
+				r.decls.some(([p, v]) => p === "box-sizing" && v !== "border-box")
+		);
+		expect(other.map((r) => r.selectors)).to.deep.equal([]);
+	});
+
 	it("no longer paints a meadow on the message area or reads the channel seed", function () {
 		expect(css).to.not.include("--channel-seed");
 		expect(css).to.not.include("data-scene");

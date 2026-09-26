@@ -546,6 +546,17 @@ strong,
 	position: absolute;
 }
 
+/* The box html gives everything, stated rather than inherited. style.css's
+ * `*, *::before, *::after { box-sizing: inherit }` marks every element as
+ * inheriting explicitly, and Chromium then restyles an element's children
+ * each time it restyles the element, at several times the cost: every
+ * animated element in the scene dragged its subtree into every frame. The
+ * value is the one each of them already had (task 8b). */
+#theme-scene,
+#theme-scene * {
+	box-sizing: border-box;
+}
+
 #theme-scene .ps-milky {
 	left: -10%;
 	top: 2%;
