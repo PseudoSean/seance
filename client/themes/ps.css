@@ -2428,6 +2428,34 @@ body {
 	margin-block-end: 0.5875rem;
 }
 
+/* Compose mode on a landscape phone (style.css's condition, verbatim: the band
+ * the keyboard leaves, while the field has the caret): the field above is
+ * 84.5px of strip where the bare textarea was 61, a scrollback row of the two
+ * the band had. Here the strip is one line again: its padding cut, the field
+ * one line with a thinner frame (0.4em a side, still over half a line with the
+ * edges, so ChatInput.vue's rounding keeps the strip at rest's N + 1 and the
+ * height is right when the caret leaves), and the buttons on its row. The box
+ * is capped at that line, since the rounding only gives whole lines: a longer
+ * draft scrolls in it while the band is this short. Rounded, edged, and in the
+ * focus edge, the caret being in it. */
+/* stylelint-disable-next-line at-rule-no-unknown */
+@container viewport (max-height: 18rem) {
+	body:has(#form #input:focus) #form {
+		padding-block: 0.25rem;
+	}
+
+	body:has(#form #input:focus) #form #input {
+		min-height: calc(2.2em + 2px);
+		max-height: calc(2.2em + 2px);
+		margin-block: 0;
+		padding-block: 0.4em;
+	}
+
+	body:has(#form #input:focus) #form > .tooltipped {
+		margin-block-end: 0;
+	}
+}
+
 /* On the glass the two tints coffee.css washes with (the composer's reply,
  * upload and connection bars; a hovered or keyboard-selected user in the
  * list) are the glass's own washes, which move the ground away from the text

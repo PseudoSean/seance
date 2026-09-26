@@ -1870,6 +1870,33 @@ describe("the ps theme's composer (the user's 'a single thin line' and 'a rounde
 		).to.equal("8.4em");
 	});
 
+	it("tightens the composer in compose mode on a landscape phone: a one-line field, the strip's padding cut, and ChatInput.vue's rounding kept", function () {
+		// style.css's compose mode: the band a landscape phone's keyboard
+		// leaves, while the field has the caret (the header goes there).
+		const COMPOSE = "@container viewport (max-height: 18rem)";
+		const ON = "body:has(#form #input:focus)";
+		expect(
+			style.some((r) => r.at === COMPOSE && r.selectors.includes(`${ON} #chat .header`)),
+			"style.css's compose mode"
+		).to.equal(true);
+		expect(valueOf(`${ON} #form`, "padding-block", COMPOSE)).to.equal("0.25rem");
+		// One line and a thinner frame, fixed: ChatInput.vue sets the box to a
+		// whole number of lines, so a one-line box shorter than two lines is
+		// only reachable as a cap, and the cap keeps a longer draft to one
+		// line, scrolling in the field.
+		const I = `${ON} #form #input`;
+		expect(valueOf(I, "padding-block", COMPOSE)).to.equal("0.4em");
+		expect(valueOf(I, "margin-block", COMPOSE)).to.equal("0");
+		expect(valueOf(I, "min-height", COMPOSE)).to.equal("calc(2.2em + 2px)");
+		expect(valueOf(I, "max-height", COMPOSE)).to.equal("calc(2.2em + 2px)");
+		// The padding is over half a line, with half a pixel to spare at the
+		// smallest step's 14px line, so the rounding still gives a draft of N
+		// lines N + 1: the strip at rest gets the height it expects when the
+		// caret leaves.
+		expect((2 * 0.4) / 1.4 - 0.5).to.be.above(0.5 / 14);
+		expect(valueOf(`${ON} #form > .tooltipped`, "margin-block-end", COMPOSE)).to.equal("0");
+	});
+
 	it("moves the focus signal onto the field: its edge takes the text accent, the caret the accent, and the strip's line stays the edge", function () {
 		expect(valueOf("#form #input:focus", "border-color")).to.equal("var(--ps-g-accent-text)");
 		expect(valueOf("#form #input", "caret-color")).to.equal("var(--ps-g-accent)");
