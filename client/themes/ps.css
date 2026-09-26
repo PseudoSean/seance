@@ -9,7 +9,8 @@
  * made solid: pale paper by day, deep blue at night (§6). Without the scene
  * this file alone paints a daylight sky under the day glass. The animals are
  * switched off, not removed (the block after the animal layer), and the `<3`
- * theme's glitter bursts on send and on reactions are gone.
+ * theme's glitter bursts on send and on reactions are embers now (the
+ * motion section).
  *
  * Sections, in order: fonts · tokens (the day palette, then the night one) ·
  * type · motion · scene (ending in the two generated blocks, the message
@@ -516,6 +517,159 @@ strong,
 .channel-list-item:nth-child(n + 9) { animation-delay: 400ms; }
 #form { animation-delay: 150ms; }
 #form #input { caret-color: var(--ps-g-accent); }
+
+/* ---- embers ----
+ *
+ * The <3 theme's glitter, replaced (spec §9): on an own message arriving and
+ * on a reaction arriving, a few small glowing sparks rise and fade, CSS only.
+ * The mockup's `.ember` and `effect("embers")` drew four sparks a burst at
+ * random offsets; with no script these are four fixed sets inside its ranges
+ * (a rise of 2.125–4.625rem, a drift of −0.5–1.375rem, 1.9–2.8 s each, 0.18 s
+ * apart, from 40 % of the row's height across its first 60 %).
+ *
+ * A send's sparks are four real dots, the row's ::before/::after and its
+ * text's (.content's), rather than two gradient dots on each of two
+ * pseudo-elements: each spark then has the mockup's own glow (a box-shadow)
+ * and rises, drifts and fades on its own clock. .content is static, so its
+ * sparks are placed on the row too (top and left are the row's) and its
+ * `overflow: hidden` (style.css) does not clip them.
+ *
+ * A send fires on the echo (`:not(.pending)`), as it settles up from the
+ * pending copy (ps-settle); the pending copy fires nothing, and with no
+ * echo-message the row is inserted as it is and fires once. `:last-child`
+ * keeps a later redraw from firing again: the burst runs while the row is the
+ * newest, and a pseudo-element runs its animation once, when it appears. So
+ * an own message that is the last row when a channel opens fires too, the
+ * <3 theme's accepted behaviour. Only messages and actions: own joins and
+ * modes are `.self` as well.
+ *
+ * A reaction fires on a chip arriving (MessageReactions.vue): a chip entering
+ * on its own takes .reaction-enter-active, and the first chip of a message
+ * comes in with its whole group, .reactions-enter-active. Not on `.self` or
+ * any class a chip keeps: that would fire again on every redraw. A smaller
+ * burst, two sparks, off the chip's text, since the chip's own pseudo-
+ * elements are its tooltip. Vue keeps an enter class only as long as the
+ * element's own animations run (style.css's 160 ms pop), so a do-nothing hold
+ * as long as the latest spark keeps it; the pop is restated because the
+ * shorthand replaces it. The chip is positioned (the tooltip's `position:
+ * relative`; the glass's backdrop filter too), so it is its sparks'
+ * containing block, and it sits inside .content: the text column is
+ * unclipped for as long as the burst runs, or they would be cut at its top.
+ *
+ * No z-index: a spark paints with its row, over the rows above it, and under
+ * whatever floats over the column (the message toolbar, the jump-to-recent
+ * disc, the overlaid user list). Channels only: a query stands still behind
+ * frosted glass (spec §5.7), and .chat-view's data-type is the view the scene
+ * is told (App.vue), set in the same render as the rows. Nothing of this
+ * exists under reduced motion. */
+@keyframes ps-ember {
+	0% {
+		opacity: 0;
+		transform: translate(0, 0) scale(0.6);
+	}
+
+	15% { opacity: 1; }
+
+	100% {
+		opacity: 0;
+		transform: translate(var(--ps-ember-x), var(--ps-ember-y)) scale(0.2);
+	}
+}
+
+@keyframes ps-ember-hold {
+	to { visibility: visible; }
+}
+
+/* stylelint-disable max-line-length -- a spark's selector names its row in full */
+@media (prefers-reduced-motion: no-preference) {
+	#chat .chat-view[data-type="channel"] .msg.self:is([data-type="message"], [data-type="action"]):not(.pending):last-child::before,
+	#chat .chat-view[data-type="channel"] .msg.self:is([data-type="message"], [data-type="action"]):not(.pending):last-child::after,
+	#chat .chat-view[data-type="channel"] .msg.self:is([data-type="message"], [data-type="action"]):not(.pending):last-child > .content::before,
+	#chat .chat-view[data-type="channel"] .msg.self:is([data-type="message"], [data-type="action"]):not(.pending):last-child > .content::after,
+	#chat .chat-view[data-type="channel"] .reaction-enter-active .msg-reaction-text::before,
+	#chat .chat-view[data-type="channel"] .reaction-enter-active .msg-reaction-text::after,
+	#chat .chat-view[data-type="channel"] .reactions-enter-active .msg-reaction-text::before,
+	#chat .chat-view[data-type="channel"] .reactions-enter-active .msg-reaction-text::after {
+		content: "";
+		position: absolute;
+		top: 40%;
+		width: 0.25rem;
+		height: 0.25rem;
+		border-radius: 50%;
+		background: #ffc46e;
+		box-shadow: 0 0 0.375rem 0.125rem rgb(255 160 70 / 65%);
+		pointer-events: none;
+		animation: ps-ember 2s cubic-bezier(0.25, 0.6, 0.35, 1) both;
+	}
+
+	#chat .chat-view[data-type="channel"] .msg.self:is([data-type="message"], [data-type="action"]):not(.pending):last-child::before {
+		--ps-ember-x: 0.625rem;
+		--ps-ember-y: -3.25rem;
+
+		left: 12%;
+		animation-duration: 2.4s;
+		animation-delay: 0s;
+	}
+
+	#chat .chat-view[data-type="channel"] .msg.self:is([data-type="message"], [data-type="action"]):not(.pending):last-child::after {
+		--ps-ember-x: -0.375rem;
+		--ps-ember-y: -4.25rem;
+
+		left: 27%;
+		animation-duration: 2.1s;
+		animation-delay: 0.18s;
+	}
+
+	#chat .chat-view[data-type="channel"] .msg.self:is([data-type="message"], [data-type="action"]):not(.pending):last-child > .content::before {
+		--ps-ember-x: 1.125rem;
+		--ps-ember-y: -2.5rem;
+
+		left: 43%;
+		animation-duration: 2.6s;
+		animation-delay: 0.36s;
+	}
+
+	#chat .chat-view[data-type="channel"] .msg.self:is([data-type="message"], [data-type="action"]):not(.pending):last-child > .content::after {
+		--ps-ember-x: 0.25rem;
+		--ps-ember-y: -3.75rem;
+
+		left: 58%;
+		animation-duration: 1.95s;
+		animation-delay: 0.54s;
+	}
+
+	/* A chip's two, over the chip (left and top are the chip's). */
+	#chat .chat-view[data-type="channel"] .reaction-enter-active .msg-reaction-text::before,
+	#chat .chat-view[data-type="channel"] .reactions-enter-active .msg-reaction-text::before {
+		--ps-ember-x: 0.375rem;
+		--ps-ember-y: -2.25rem;
+
+		left: 18%;
+		animation-duration: 2.2s;
+		animation-delay: 0s;
+	}
+
+	#chat .chat-view[data-type="channel"] .reaction-enter-active .msg-reaction-text::after,
+	#chat .chat-view[data-type="channel"] .reactions-enter-active .msg-reaction-text::after {
+		--ps-ember-x: -0.25rem;
+		--ps-ember-y: -2.75rem;
+
+		left: 52%;
+		animation-duration: 1.9s;
+		animation-delay: 0.18s;
+	}
+
+	/* The hold: 2.2 s, the chip's latest spark (0 s + 2.2 s; 0.18 s + 1.9 s). */
+	#chat .chat-view[data-type="channel"] .reaction-enter-active,
+	#chat .chat-view[data-type="channel"] .reactions-enter-active {
+		animation: reaction-pop 160ms ease-out, ps-ember-hold 2.2s linear;
+	}
+
+	#chat .chat-view[data-type="channel"] .content:has(.reaction-enter-active, .reactions-enter-active) {
+		overflow: visible;
+	}
+}
+/* stylelint-enable max-line-length */
 
 /* ---- scene ---- */
 

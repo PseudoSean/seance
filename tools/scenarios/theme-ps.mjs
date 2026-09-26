@@ -88,9 +88,16 @@
 // file at all** — not in #seance, not in #kittens, not as a still under
 // reduced motion — though the stylesheet still names every one; a message
 // fades in, and an own message's echo settles up from its pending copy's
-// 0.55 (ps-settle) while the pending copy runs no animation; sending and
-// reacting show no glitter while the reaction still pops in; the timestamp
+// 0.55 (ps-settle) while the pending copy runs no animation; the timestamp
 // stays one line; nothing says "ps <3".
+//
+// And the embers (plan 4, spec §9), which replaced the <3 theme's glitter:
+// one send lights one burst, four sparks on the echo and none on its pending
+// copy; a reaction lights two over its chip, as the first chip enters with
+// its group and as a second enters alone, both still rising 0.9 s in (the
+// enter class held open) with the text column unclipped meanwhile; a query
+// and reduced motion light none; and a send's burst is shot still, mid-rise,
+// at noon and at dusk.
 //
 // The animals are switched off, not removed (client/themes/ps.css, the block
 // after `#theme-scene .ps-animals`). The checks must stay able to fail, and
@@ -100,7 +107,7 @@
 //   layer paints and fetches horse.svg (horse-still.svg under reduced
 //   motion) and every animal check names it;
 // - `#chat .msg.self:last-child::before{content:"";animation:ps-fade .9s}` —
-//   the send's glitter check fails;
+//   the send's glitter check failed (the embers have replaced that check);
 // and another, on its own because a hidden scene fetches nothing,
 // - `#theme-scene{display:none!important}` — the mount check, the switch
 //   back to ps and the fallback check fail (and every "the scene runs", a
@@ -128,6 +135,12 @@
 // 20 failed, every one of them the query not frosted or not still, or the
 // layers read through the wrapper that build lacks. With the frost: 214 of
 // 214.
+// The embers' 9 checks (plan 4, 2026-09-26: a send, the pending copy, two
+// reactions, a query, reduced motion, the frames at noon and dusk) were first
+// run against the same build serving 462ac945's ps.css, which has none: 215
+// of 221, the six that light something failing (the send, both reactions,
+// the hold, the two frames) and the three that light nothing passing. With
+// the embers: 221 of 221.
 //
 //   NODE_ENV=production corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/theme-ps.mjs
@@ -245,11 +258,12 @@ const CLOCK_SHIM = `(() => {
 
 /**
  * Every CSS animation that starts inside #chat, pseudo-elements included
- * (`animationstart` carries `pseudoElement`), logged into `window.__animLog`.
- * An event log rather than a poll of computed styles: the reaction's enter
- * class now lives only as long as style.css's 160 ms pop, which a poll across
- * CDP round trips can miss, and a burst on a `::before` is exactly what a
- * poll of the element itself would never see.
+ * (`animationstart` carries `pseudoElement`), logged into `window.__animLog`
+ * with the id and classes of the message row it is in. An event log rather
+ * than a poll of computed styles: the reaction's enter class lives only as
+ * long as its animations, which a poll across CDP round trips can miss, and
+ * an ember on a `::before` is exactly what a poll of the element itself would
+ * never see.
  */
 const INSTALL_ANIMATION_LOG = `(() => {
 	if (window.__animLog) return true;
@@ -259,17 +273,85 @@ const INSTALL_ANIMATION_LOG = `(() => {
 		(e) => {
 			const t = e.target;
 			if (!(t instanceof Element) || !t.closest("#chat")) return;
+			const row = t.closest(".msg");
 			window.__animLog.push({
 				name: e.animationName,
 				pseudo: e.pseudoElement || "",
 				cls: String(t.className),
 				reaction: !!t.closest(".msg-reactions"),
+				row: row ? row.id : null,
+				rowCls: row ? String(row.className) : "",
+				text: t.textContent.slice(0, 40),
 			});
 		},
 		true
 	);
 	return true;
 })()`;
+
+/** The embers (ps.css, spec §9) in an animation log. */
+const embersIn = (log) => log.filter((e) => e.name === "ps-ember");
+
+/**
+ * Pause every running ember (or those under `within`) `ms` into its own
+ * timeline, its delay included, for a still frame of a burst; FINISH_EMBERS
+ * ends the ones it paused. An animation paused from script stays paused,
+ * so only these are touched.
+ */
+const FREEZE_EMBERS = (ms, within = null) => `(() => {
+	window.__frozen = [];
+	for (const a of document.getAnimations()) {
+		const t = a.effect && a.effect.target;
+		if (a.animationName !== "ps-ember" || a.playState !== "running") continue;
+		if (${JSON.stringify(within)} && !t.closest(${JSON.stringify(within ?? "")})) continue;
+		a.pause();
+		a.currentTime = ${ms};
+		window.__frozen.push(a);
+	}
+	return window.__frozen.length;
+})()`;
+const FINISH_EMBERS = `(() => { for (const a of window.__frozen ?? []) a.finish(); window.__frozen = []; })()`;
+
+/** The newest row, when it is an own message's echo (not its pending copy). */
+const LAST_OWN = `#chat .messages > .msg.self:not(.pending):last-child`;
+
+/**
+ * A still frame of a send's burst: send `text`, wait for its row, freeze its
+ * four sparks 0.9 s in (the last has been rising 0.36 s, the first 0.9 s)
+ * and shoot the row and the rows above it at three device pixels a CSS
+ * pixel, since a spark is a 0.25rem dot. Says how many sparks it froze.
+ */
+async function emberFrame(page, text, name) {
+	await sendLine(page, text);
+	await page.waitFor(
+		`(() => { const r = document.querySelector("${LAST_OWN}"); return !!r && r.textContent.includes(${JSON.stringify(
+			text
+		)}); })()`,
+		{label: `${name}: the own row`}
+	);
+	await page.sleep(300);
+	const frozen = await page.evaluate(FREEZE_EMBERS(900));
+	const box = await page.evaluate(
+		`document.querySelector("${LAST_OWN}").getBoundingClientRect().toJSON()`
+	);
+	await page.send("Emulation.setDeviceMetricsOverride", {
+		width: 1280,
+		height: 900,
+		deviceScaleFactor: 3,
+		mobile: false,
+	});
+	await page.screenshot(name, {
+		clip: {x: box.x, y: Math.max(0, box.y - 100), width: box.width, height: box.height + 108},
+	});
+	await page.send("Emulation.setDeviceMetricsOverride", {
+		width: 1280,
+		height: 900,
+		deviceScaleFactor: 1,
+		mobile: false,
+	});
+	await page.evaluate(FINISH_EMBERS);
+	return frozen;
+}
 
 /**
  * The first pending copy of OWN_TEXT and the first echo row of it, each read
@@ -1612,15 +1694,17 @@ export default async function run(page) {
 		timeMetrics[0] < timeMetrics[1] * 1.6
 	);
 
-	// No glitter on a send, and no flash as the echo lands. The echo of this
-	// line is held back by INSTALL_SHIM, so the pending copy — where the <3
-	// theme's burst began — is on screen for a while before the echo replaces
-	// it; every animation that starts in #chat meanwhile is logged, and both
-	// rows are read the moment they land (WATCH_OWN). The pending copy stands
-	// at style.css's 0.55 with no animation; the echo is a new row, and it
-	// settles up from that 0.55 (ps.css ps-settle) rather than fading in from
-	// nothing, which blinked every sent line out and back (the user,
-	// 2026-09-25). The settle is also the control that the log is live.
+	// One send, one burst of embers (ps.css, spec §9), and no flash as the
+	// echo lands. The echo of this line is held back by INSTALL_SHIM, so the
+	// pending copy is on screen for a while before the echo replaces it; every
+	// animation that starts in #chat meanwhile is logged, and both rows are
+	// read the moment they land (WATCH_OWN). The pending copy stands at
+	// style.css's 0.55 with no animation and lights nothing; the echo is a new
+	// row, and it settles up from that 0.55 (ps.css ps-settle) rather than
+	// fading in from nothing, which blinked every sent line out and back (the
+	// user, 2026-09-25), and lights the embers: four sparks, on its own
+	// ::before/::after and its text's. The settle is also the control that the
+	// log is live.
 	await page.evaluate(INSTALL_ANIMATION_LOG);
 	await page.evaluate(`window.__animLog.length = 0`);
 	await page.evaluate(WATCH_OWN);
@@ -1632,11 +1716,12 @@ export default async function run(page) {
 	const heldAnims = await page.evaluate(
 		`(() => { const p = document.querySelector("#chat .msg.self.pending"); return p ? p.getAnimations().length : null; })()`
 	);
+	const heldLog = await page.evaluate(`window.__animLog.slice()`);
 	await page.waitFor(`!document.querySelector("#chat .msg.pending")`, {
 		timeout: HOLD_MS + 10000,
 		label: "the held-back echo",
 	});
-	await page.sleep(1500); // the <3 theme's longest burst ran 1.4 s
+	await page.sleep(1500); // the last spark starts 0.54 s in
 	const sendLog = await page.evaluate(`window.__animLog.slice()`);
 	const own = await page.evaluate(`window.__own`);
 	page.check(
@@ -1670,31 +1755,121 @@ export default async function run(page) {
 		sendLog.some((e) => e.name === "ps-settle" && !e.pseudo)
 	);
 	page.check(
-		`sending shows no glitter: nothing animates on a pseudo-element`,
-		sendLog.every((e) => !e.pseudo)
+		`the pending copy lights no ember while it is held (${describeLog(embersIn(heldLog))})`,
+		embersIn(heldLog).length === 0
+	);
+	const echoId = await page.evaluate(`document.querySelector("${LAST_OWN}")?.id`);
+	const sparks = embersIn(sendLog);
+	page.check(
+		`one send, one burst: four sparks on the echo ${echoId}, its ::before/::after and its text's (${describeLog(
+			sparks
+		)})`,
+		sparks.length === 4 &&
+			sparks.every((e) => e.row === echoId && !/(^|\s)pending(\s|$)/.test(e.rowCls)) &&
+			new Set(sparks.map((e) => `${e.cls.split(/\s+/)[0]}${e.pseudo}`)).size === 4 &&
+			sparks.filter((e) => e.cls === "content").length === 2
 	);
 
-	// The first reaction on a message enters the whole group
-	// (.reactions-enter-active); style.css pops it in over 160 ms, and that
-	// pop is every theme's. The pop must still happen, and nothing else.
+	// A reaction lights a smaller burst over its chip, as the chip arrives.
+	// The first on a message enters with its whole group
+	// (.reactions-enter-active), a later one on its own
+	// (.reaction-enter-active); style.css pops either in over 160 ms, ps.css
+	// holds the class open for the burst (ps-ember-hold) and unclips the text
+	// column while it runs. About a second in, both sparks must still be
+	// rising: Vue would have taken the class, and them, at 160 ms.
+	const RUNNING_ON_CHIPS = `document.getAnimations().filter((a) => a.animationName === "ps-ember" && a.playState === "running" && a.effect.target.closest(".msg-reaction")).map((a) => a.effect.target.textContent)`;
+	const TEXT_CLIP = `getComputedStyle(document.querySelector("${LAST_OWN} > .content")).overflow`;
 	await page.evaluate(`window.__animLog.length = 0`);
 	await sendLine(page, "/react 💖");
 	await page.waitFor(`window.__animLog.some((e) => e.name === "reaction-pop")`, {
-		timeout: 8000,
+		timeout: 20000,
 		label: "the reaction's pop",
 	});
-	await page.sleep(1500);
+	await page.sleep(900);
+	const firstHeld = await page.evaluate(RUNNING_ON_CHIPS);
+	const firstClip = await page.evaluate(TEXT_CLIP);
+	await page.sleep(2000);
 	const reactLog = await page.evaluate(`window.__animLog.slice()`);
+	const afterClip = await page.evaluate(TEXT_CLIP);
 	page.check(
-		`a reaction still pops in (${describeLog(reactLog)})`,
-		reactLog.some((e) => e.name === "reaction-pop" && !e.pseudo)
+		`a reaction still pops in, with its group (${describeLog(reactLog)})`,
+		reactLog.some((e) => e.name === "reaction-pop" && !e.pseudo && /msg-reactions/.test(e.cls))
 	);
 	page.check(
-		`a reaction shows no glitter: nothing on a pseudo-element, only the pop on the reaction`,
-		reactLog.every((e) => !e.pseudo && (!e.reaction || e.name === "reaction-pop"))
+		`the first reaction: one burst, two sparks off the chip's text, none on the row (${describeLog(
+			embersIn(reactLog)
+		)})`,
+		embersIn(reactLog).length === 2 &&
+			embersIn(reactLog).every((e) => e.cls === "msg-reaction-text" && e.text.includes("💖"))
+	);
+	page.check(
+		`the group's class is held for the burst: both sparks rising 0.9 s in (${JSON.stringify(
+			firstHeld
+		)}), the text column unclipped then (${firstClip}) and clipped again after (${afterClip})`,
+		firstHeld.length === 2 && firstClip === "visible" && afterClip === "hidden"
+	);
+
+	await page.evaluate(`window.__animLog.length = 0`);
+	await sendLine(page, "/react 🌾");
+	await page.waitFor(
+		`window.__animLog.some((e) => e.name === "reaction-pop" && e.text.includes("🌾"))`,
+		{timeout: 20000, label: "the second reaction's pop"}
+	);
+	await page.sleep(900);
+	const secondHeld = await page.evaluate(RUNNING_ON_CHIPS);
+	await page.sleep(2000);
+	const secondLog = await page.evaluate(`window.__animLog.slice()`);
+	page.check(
+		`a second reaction: one burst on the new chip alone, held 0.9 s in (${describeLog(
+			embersIn(secondLog)
+		)}; rising ${JSON.stringify(secondHeld)})`,
+		embersIn(secondLog).length === 2 &&
+			embersIn(secondLog).every(
+				(e) => e.cls === "msg-reaction-text" && e.text.includes("🌾")
+			) &&
+			secondHeld.length === 2 &&
+			secondHeld.every((t) => t.includes("🌾"))
 	);
 
 	await page.screenshot("ps-seance");
+
+	// ---- no embers in a query: the plains stand still there (spec §5.7)
+
+	// A query with the neighbour, so a line and a reaction have their echoes;
+	// the settle and the pop are the controls that the log is live.
+	const PEER_ROW = `.channel-list-item[data-type="query"][data-name="${PEER}"]`;
+	await sendLine(page, `/query ${PEER}`);
+	await page.waitFor(
+		`document.querySelector('${PEER_ROW}.active') && document.querySelector('#chat .chat-view[data-type="query"] #input, #chat .chat-view[data-type="query"]')`,
+		{label: `the query with ${PEER}`}
+	);
+	await page.sleep(500);
+	await page.evaluate(`window.__animLog.length = 0`);
+	const QUERY_TEXT = `in a query ${RUN}`;
+	await sendLine(page, QUERY_TEXT);
+	await page.waitFor(
+		`(() => { const r = document.querySelector("${LAST_OWN}"); return !!r && r.textContent.includes(${JSON.stringify(
+			QUERY_TEXT
+		)}); })()`,
+		{label: "the query's own line"}
+	);
+	await page.sleep(300);
+	await sendLine(page, "/react 💖");
+	await page.waitFor(`document.querySelector("${LAST_OWN} .msg-reaction")`, {
+		timeout: 20000,
+		label: "the query's reaction",
+	});
+	await page.sleep(1200);
+	const queryLog = await page.evaluate(`window.__animLog.slice()`);
+	page.check(
+		`a query lights no ember, on a send or a reaction, and holds nothing (${describeLog(
+			queryLog
+		)})`,
+		embersIn(queryLog).length === 0 &&
+			!queryLog.some((e) => e.name === "ps-ember-hold") &&
+			queryLog.some((e) => e.name === "ps-settle") &&
+			queryLog.some((e) => e.name === "reaction-pop")
+	);
 
 	// ---- a second channel, the same place
 
@@ -1748,6 +1923,36 @@ export default async function run(page) {
 			.join(" | ")})`,
 		rests.every((c) => c.right > 0 && c.left < c.width)
 	);
+	// No embers either: a send and a reaction light nothing, and nothing
+	// holds the reaction's class open (style.css's own stand-down applies).
+	await page.evaluate(`window.__animLog.length = 0`);
+	const REDUCED_TEXT = `reduced ${RUN}`;
+	await sendLine(page, REDUCED_TEXT);
+	await page.waitFor(
+		`(() => { const r = document.querySelector("${LAST_OWN}"); return !!r && r.textContent.includes(${JSON.stringify(
+			REDUCED_TEXT
+		)}); })()`,
+		{label: "the reduced own line"}
+	);
+	await page.sleep(300);
+	await sendLine(page, "/react 💖");
+	await page.waitFor(`document.querySelector("${LAST_OWN} .msg-reaction")`, {
+		timeout: 20000,
+		label: "the reduced reaction",
+	});
+	await page.sleep(1200);
+	const reducedLog = await page.evaluate(`window.__animLog.slice()`);
+	const reducedEmbers = await page.evaluate(
+		`document.getAnimations().filter((a) => /^ps-ember/.test(a.animationName)).length`
+	);
+	page.check(
+		`reduced motion lights no ember on a send or a reaction, and holds nothing (${describeLog(
+			reducedLog
+		)}; ${reducedEmbers} ember animations)`,
+		embersIn(reducedLog).length === 0 &&
+			!reducedLog.some((e) => e.name === "ps-ember-hold") &&
+			reducedEmbers === 0
+	);
 	await page.screenshot("ps-reduced");
 	await page.send("Emulation.setEmulatedMedia", {features: []});
 	await page.sleep(300);
@@ -1790,6 +1995,12 @@ export default async function run(page) {
 	);
 	checkAccent(page, noonChrome, "noon");
 	await page.screenshot("ps-noon");
+	// A send's embers at noon, still, over the row and the rows above it.
+	const noonSparks = await emberFrame(page, `embers at noon ${RUN}`, "ps-embers-noon");
+	page.check(
+		`noon: a send's four sparks, held mid-burst for the frame (${noonSparks})`,
+		noonSparks === 4
+	);
 
 	for (const hour of [22, 0]) {
 		const s = await atHour(page, hour);
@@ -1857,6 +2068,11 @@ export default async function run(page) {
 		dusk.text === "light" && dusk.ink === WHITE
 	);
 	await page.screenshot("ps-dusk");
+	const duskSparks = await emberFrame(page, `embers at dusk ${RUN}`, "ps-embers-dusk");
+	page.check(
+		`dusk: a send's four sparks, held mid-burst for the frame (${duskSparks})`,
+		duskSparks === 4
+	);
 
 	// ---- a hidden page stops the scene
 

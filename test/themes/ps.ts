@@ -1623,32 +1623,218 @@ describe("the ps theme's motion", function () {
 	});
 });
 
-describe("the ps theme has no glitter", function () {
-	// The <3 theme burst sparks, hearts and stars off an own message and a
-	// reaction's arrival. ps is peace on the plains: the bursts are gone and
-	// nothing has replaced them yet (docs/projects/ps-theme.md).
-	it("hangs nothing off a message, a reaction or an enter class", function () {
+describe("the ps theme's embers (spec §9)", function () {
+	// The <3 theme's glitter is gone; embers take its two moments (an own
+	// message arriving, a reaction arriving): a few small glowing sparks rise
+	// and fade, CSS only, on pseudo-elements. The mockup's `.ember` and
+	// `effect("embers")` (docs/resources/themes/ps-plains/mockup.html) are
+	// the reference; its random offsets are fixed here, four sets for a send
+	// and two for a reaction's chip.
+	const MOTION_OK = "@media (prefers-reduced-motion: no-preference)";
+	const CH = '#chat .chat-view[data-type="channel"]';
+	const OWN = `${CH} .msg.self:is([data-type="message"], [data-type="action"]):not(.pending):last-child`;
+	/** A send's four sparks, in the order they rise. */
+	const SEND = [
+		`${OWN}::before`,
+		`${OWN}::after`,
+		`${OWN} > .content::before`,
+		`${OWN} > .content::after`,
+	];
+	/** A chip entering on its own (TransitionGroup), and the first chip of a group entering (Transition). */
+	const CHIP = [
+		`${CH} .reaction-enter-active .msg-reaction-text::before`,
+		`${CH} .reaction-enter-active .msg-reaction-text::after`,
+	];
+	const GROUP = [
+		`${CH} .reactions-enter-active .msg-reaction-text::before`,
+		`${CH} .reactions-enter-active .msg-reaction-text::after`,
+	];
+	const SPARKS = [...SEND, ...CHIP, ...GROUP];
+	const ENTER = [`${CH} .reaction-enter-active`, `${CH} .reactions-enter-active`];
+	const UNCLIP = `${CH} .content:has(.reaction-enter-active, .reactions-enter-active)`;
+	const style = fs.readFileSync(path.resolve(__dirname, "../../client/css/style.css"), "utf8");
+
+	/** Every declaration `selector` gets under no-preference, folded in source order. */
+	const spark = (selector: string) => new Map(declsOf(selector, MOTION_OK));
+	const seconds = (v: string) => (v.endsWith("ms") ? parseFloat(v) / 1000 : parseFloat(v));
+
+	const rem = (v: string | undefined) => {
+		expect(v, "an offset in rem").to.match(/^-?\d*\.?\d+rem$/);
+		return parseFloat(v as string);
+	};
+
+	const pseudoSelectors = rules
+		.flatMap((r) => r.selectors)
+		.filter((s) => /::(before|after)$/.test(s));
+	const withoutNot = (s: string) => s.replace(/:not\((?:[^()]|\([^()]*\))*\)/g, "");
+
+	it("keeps the <3 theme's glitter gone: no burst tokens, no sparkle keyframes", function () {
 		expect(css, "no burst tokens").to.not.match(/--ps-burst-/);
 		expect(css, "no sparkle keyframes").to.not.match(/@keyframes [\w-]*sparkle/);
-		expect(css, "no send burst").to.not.match(/\.msg\.self:last-child/);
-		expect(css, "no pseudo-element on a message").to.not.match(
-			/\.msg\b[^{},]*::(before|after)/
-		);
-		expect(css, "no pseudo-element on a reaction").to.not.match(
-			/msg-reaction[^{},]*::(before|after)/
-		);
-		expect(css, "no pseudo-element on an enter class").to.not.match(
-			/enter-active[^{},]*::(before|after)/
-		);
 	});
 
-	it("leaves the reaction pop to style.css, restating neither enter class", function () {
-		// MessageReactions.vue's Transition wrappers and style.css's 160 ms
-		// reaction-pop serve every theme; the <3 theme restated them to hold the
-		// class open for its burst (heart-hold), which ps does not need.
-		expect(css).to.not.include(".reaction-enter-active");
-		expect(css).to.not.include(".reactions-enter-active");
-		expect(css, "no do-nothing hold animation").to.not.match(/@keyframes [\w-]*hold\b/);
+	it("lights an own message's echo, never its pending copy: four sparks, on the row's and its text's pseudo-elements", function () {
+		const onRows = pseudoSelectors.filter((s) => /\.msg(?![\w-])/.test(s));
+		expect([...new Set(onRows)]).to.have.members(SEND);
+		const onPending = pseudoSelectors.filter((s) => /\.pending(?![\w-])/.test(withoutNot(s)));
+		expect(onPending, "no pseudo-element on a pending copy").to.deep.equal([]);
+
+		for (const s of onRows) {
+			expect(s, "the echo, not the pending copy").to.include(":not(.pending)");
+			expect(s, "while it is the newest row").to.include(":last-child");
+		}
+	});
+
+	it("lights a smaller burst as a reaction arrives: two sparks over the chip, off its text, for a chip entering alone and for the first of a group", function () {
+		const onChips = pseudoSelectors.filter((s) => /msg-reaction|enter-active/.test(s));
+		expect([...new Set(onChips)]).to.have.members([...CHIP, ...GROUP]);
+		// Never the chip's own pseudo-elements: they are its tooltip (primer-tooltips).
+		expect(onChips.filter((s) => /\.msg-reaction(?![\w-])[^ ]*::/.test(s))).to.deep.equal([]);
+
+		for (const [a, b] of [
+			[CHIP[0], GROUP[0]],
+			[CHIP[1], GROUP[1]],
+		]) {
+			expect([...spark(b)], `${b} is ${a}`).to.deep.equal([...spark(a)]);
+		}
+	});
+
+	it("holds the enter classes open for the chip's burst: style.css's pop restated, then a do-nothing hold as long as the latest spark", function () {
+		const pop = /#chat \.reaction-enter-active \{\s*animation: ([^;]+);/.exec(style)?.[1];
+		expect(pop, "style.css's pop").to.equal("reaction-pop 160ms ease-out");
+		const latest = Math.max(
+			...[...CHIP, ...GROUP].map((s) => {
+				const d = spark(s);
+				return (
+					seconds(d.get("animation-delay") ?? "0s") +
+					seconds(d.get("animation-duration") ?? "0s")
+				);
+			})
+		);
+
+		for (const s of ENTER) {
+			const value = valueOf(s, "animation", MOTION_OK);
+			const hold = /^reaction-pop 160ms ease-out, ps-ember-hold ([\d.]+m?s) linear$/.exec(
+				value ?? ""
+			);
+			expect(hold, `${s}: ${value}`).to.not.equal(null);
+			expect(seconds(hold![1]), `${s} holds past the latest spark`).to.be.at.least(latest);
+			// It must outrank style.css's own enter rule, or the hold never applies.
+			expect(
+				compareSpecificity(specificity(s), specificity("#chat .reaction-enter-active"))
+			).to.be.above(0);
+		}
+
+		const hold = rules.filter((r) => r.at === "@keyframes ps-ember-hold");
+		expect(hold.map((r) => r.decls)).to.deep.equal([[["visibility", "visible"]]]);
+	});
+
+	it("unclips the text column while a chip's burst runs (style.css clips .content), so its sparks rise past the line", function () {
+		expect(style).to.match(/#chat \.content \{[^}]*overflow: hidden;/);
+		expect(valueOf(UNCLIP, "overflow", MOTION_OK)).to.equal("visible");
+	});
+
+	it("draws every spark as the mockup's ember: a 0.25rem dot of #ffc46e glowing, out of the flow and the pointer's way, filled both ways", function () {
+		for (const s of SPARKS) {
+			const d = spark(s);
+			expect(d.get("content"), s).to.equal('""');
+			expect(d.get("position"), s).to.equal("absolute");
+			expect(d.get("width"), s).to.equal("0.25rem");
+			expect(d.get("height"), s).to.equal("0.25rem");
+			expect(d.get("border-radius"), s).to.equal("50%");
+			expect(d.get("background"), s).to.equal("#ffc46e");
+			expect(d.get("box-shadow"), s).to.equal("0 0 0.375rem 0.125rem rgb(255 160 70 / 65%)");
+			expect(d.get("pointer-events"), s).to.equal("none");
+			expect(d.get("top"), s).to.equal("40%");
+			expect(d.get("animation"), s).to.match(
+				/^ps-ember [\d.]+m?s cubic-bezier\(0\.25, 0\.6, 0\.35, 1\) both$/
+			);
+			expect(d.has("z-index"), `${s} paints with its row: an overlay above it stays above`).to
+				.be.false;
+		}
+	});
+
+	it("rises, drifts and fades as the mockup's keyframes: from translate(0, 0) scale(0.6) unseen, full at 15 %, to its own offsets at scale(0.2) unseen", function () {
+		const frames = rules.filter((r) => r.at === "@keyframes ps-ember");
+		const at = (key: string) => new Map(frames.find((r) => r.selectors.includes(key))?.decls);
+		expect(frames.map((r) => r.selectors.join())).to.deep.equal(["0%", "15%", "100%"]);
+		expect([...at("0%")]).to.have.deep.members([
+			["opacity", "0"],
+			["transform", "translate(0, 0) scale(0.6)"],
+		]);
+		expect([...at("15%")]).to.deep.equal([["opacity", "1"]]);
+		expect([...at("100%")]).to.have.deep.members([
+			["opacity", "0"],
+			["transform", "translate(var(--ps-ember-x), var(--ps-ember-y)) scale(0.2)"],
+		]);
+	});
+
+	it("gives each spark offsets of its own in rem, inside the mockup's ranges, a life of 1.9–2.8 s, 0.18 s apart, from 40 % of the height and the first 60 % of the width", function () {
+		for (const [set, count] of [
+			[SEND, 4],
+			[CHIP, 2],
+			[GROUP, 2],
+		] as const) {
+			expect(set).to.have.length(count);
+			const seen = new Set<string>();
+
+			set.forEach((s, i) => {
+				const d = spark(s);
+				// Rise 34–74 px and drift −8–22 px at 16 px (the mockup's), as rem.
+				const x = rem(d.get("--ps-ember-x"));
+				const y = rem(d.get("--ps-ember-y"));
+				expect(x, `${s} drifts`).to.be.within(-0.5, 1.375);
+				expect(y, `${s} rises`).to.be.within(-4.625, -2.125);
+				expect(seconds(d.get("animation-duration") ?? ""), `${s} lives`).to.be.within(
+					1.9,
+					2.8
+				);
+				expect(seconds(d.get("animation-delay") ?? ""), `${s} is staggered`).to.be.closeTo(
+					i * 0.18,
+					1e-9
+				);
+				const left = d.get("left") ?? "";
+				expect(left, s).to.match(/^\d+(\.\d+)?%$/);
+				expect(parseFloat(left), `${s} starts in the first 60 %`).to.be.within(0, 60);
+				seen.add(`${x} ${y} ${left}`);
+			});
+
+			expect(seen.size, "no two sparks alike").to.equal(count);
+		}
+	});
+
+	it("exists only where motion is welcome: every ember rule under prefers-reduced-motion: no-preference, and nothing of it in the reduced-motion block", function () {
+		const ours = rules.filter(
+			(r) =>
+				!r.at.startsWith("@keyframes") &&
+				(r.selectors.some(
+					(s) => s.startsWith(CH) && /enter-active|::(before|after)$/.test(s)
+				) ||
+					r.decls.some(([p, v]) => /ember/.test(`${p}:${v}`)))
+		);
+		expect(ours.length).to.be.at.least(SPARKS.length);
+
+		for (const r of ours) {
+			expect(r.at, r.selectors.join(", ")).to.equal(MOTION_OK);
+		}
+
+		const reduced = rules.filter((r) => r.at.includes("prefers-reduced-motion: reduce"));
+		expect(
+			reduced.filter((r) =>
+				/ember|enter-active/.test(r.selectors.join() + JSON.stringify(r.decls))
+			)
+		).to.deep.equal([]);
+	});
+
+	it("stays out of a query, where the plains stand still (spec §5.7): every ember rule is a channel's", function () {
+		const ours = rules.filter((r) => r.at === MOTION_OK);
+		expect(ours.length).to.be.above(0);
+
+		for (const r of ours) {
+			for (const s of r.selectors) {
+				expect(s.startsWith(`${CH} `), `${s}: a channel's conversation`).to.be.true;
+			}
+		}
 	});
 });
 
