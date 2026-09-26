@@ -2947,6 +2947,15 @@ export default async function run(page) {
 	// ---- a hidden page stops the scene
 
 	await atHour(page, 12);
+	// Late in the UTC day the noon zone is already on the next date, whose
+	// weather can differ from the dusk leg's: a layer then fades in or out
+	// (the buzzard's opacity, 1.4–1.8 s). ps-paused holds animations, not
+	// transitions, so a fade still in flight read as running. Wait the fades
+	// out first, as the plains' checks below wait out theirs.
+	await page.waitFor(
+		`!document.getElementById("theme-scene").getAnimations({subtree: true}).some((a) => a instanceof CSSTransition && a.playState === "running")`,
+		{timeout: 5000, label: "the scene's fades settled"}
+	);
 	checkRunning(page, await page.evaluate(SCENE_STATE), "shown");
 	await page.evaluate(VISIBILITY("hidden"));
 	checkStopped(page, await page.evaluate(SCENE_STATE), "hidden");
