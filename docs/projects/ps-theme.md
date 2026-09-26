@@ -606,7 +606,7 @@ Six moments are pinned by name. Plan 2's two, where the floors test checks the g
   - screenshots across a day (dawn, noon, golden hour, dusk, midnight) and the seasons (spring, a dry summer, autumn, a snowy winter), and a rainy, a hot and a stormy noon, read by a person (plan 3);
   - the glyph contrast samples (plan 4);
   - a query is frosted and still: the wrapper blurred and scaled while the root and `#status-bar-tint` are not, every animation on the scene and every SVG clock paused, the published values a channel's, the colours following the hour an hour on, the sun still in the window, and a channel running again (plan 3);
-  - under RTL the yurt is in the far third (plan 4);
+  - under RTL the yurt is in the far third (plan 5);
   - reduced motion leaves no running scene animations and keeps the right colours;
   - a hidden page pauses the scene, every SVG clock included;
   - `#status-bar-tint` paints the sky colour;
@@ -615,12 +615,13 @@ Six moments are pinned by name. Plan 2's two, where the floors test checks the g
 
 ## 13. Plans
 
-One spec, four plans, each shippable on its own:
+One spec, five plans, each shippable on its own:
 
 1. **The seam.** The hook, the empty mount element and the scene chunk. The engine and palette modules with their tests. A minimal scene (sky, sun, moon, stars) driven by the real clock. `data-ps-light`, `data-ps-text` and `--ps-halo` published. The daylight fallback. This proves the risky parts end to end before any detail is drawn.
 2. **The chrome.** Glass over the scene: both palettes, the nick sweeps and the contrast floors in mocha for glass surfaces (landed for the message column in plan 1 — §7, §11), the shadow-safe clipping everywhere else text is clipped (channel names), Mulish and Fraunces, and the α calibration. (The two text treatments and `--canvas-bg-color` by the hour also landed in plan 1 — §3, §7.)
 3. **The plains.** Land, river, yurt (placement and fade), smoke, grass, clouds, fireflies, birds, weather, seasons, plus the performance rules and the measured budget. (The animal layer and its off switch landed early, in plan 1 — §5.6.)
-4. **The rest.** Embers, right-to-left, reduced motion's remaining stand-down (§9: grass, weather particles and embers, once they exist; the clouds' rest landed with plan 3's final fix wave), the full browser check, and the documentation (`docs/resources/themes.md`, `CLAUDE.md`). (A hidden page pausing the scene, and reduced motion stopping every scene animation plan 1 built — stars twinkling, the sun's fire and rays — landed early, in plan 1; the message fade-in, chrome rise and mention glow already stood down before plan 1, from the groundwork. The frosted still private view was on this list by mistake until 2026-09-26, and landed with plan 3: §5.7.)
+4. **The rest.** Embers, the type review (the user reconsidering both faces on 2026-09-26: the message face "a little too round (with the outlining)", the name face "a little too folksy"; the style of a nick named inside a message; the gap between the timestamp and the name), reduced motion's remaining stand-down (§9: grass, weather particles and embers, once they exist; the clouds' rest landed with plan 3's final fix wave), the full browser check, and the documentation (`docs/resources/themes.md`, `CLAUDE.md`). (A hidden page pausing the scene, and reduced motion stopping every scene animation plan 1 built — stars twinkling, the sun's fire and rays — landed early, in plan 1; the message fade-in, chrome rise and mention glow already stood down before plan 1, from the groundwork. The frosted still private view was on this list by mistake until 2026-09-26, and landed with plan 3: §5.7.)
+5. **Right-to-left** (§5.8), moved out of plan 4 at the user's request (2026-09-26): the whole scene mirrored under `dir="rtl"`, the chrome on the app's own RTL rules, and its browser check (the yurt in the far third). It needs an RTL locale to test against; `ps-theme` has none yet.
 
 **Plan 1, landed 2026-09-24** (the plan-1 commits — the same span the status line above names by subject): everything the seam promised, built to the letter — the hook (`client/js/themeScene.ts`), the engine and palette (`client/js/scenes/ps/{engine,colour,palette}.ts`), a minimal scene (sky, sun, moon, stars) on the real clock, `data-ps-light`/`data-ps-text`/`--ps-halo`/`--canvas-bg-color` published, the scene stopping outright while the page is hidden and picking back up when it returns, the same stop under reduced motion, and the daylight fallback for a chunk that never loads.
 
