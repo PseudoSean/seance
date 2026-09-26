@@ -30,8 +30,9 @@
 //   — 48, and 49 on a hot day with the haze — and every CSS animation in it)
 //   and starts again, every SVG running but those in a layer outside its
 //   window (ps-off, layers.ts) and the haze while it bends nothing; stays
-//   stopped under reduced motion; and a scene mounted into a hidden page
-//   starts stopped;
+//   stopped under reduced motion, its five clouds resting in five places
+//   across the sky (--cp, on ps-drift's path) rather than piled at the left
+//   edge; and a scene mounted into a hidden page starts stopped;
 // - pins the clock (a Date shim, in UTC) to fixed days, and reads the plains:
 //   a clear noon (no drop, flake or seed in the page, no haze, white words,
 //   the stars, the skeins, the fireflies and the smoke out of the render
@@ -55,9 +56,10 @@
 //   unblurred on the generated tint (the measured budget's fallback,
 //   ps-theme.md §10), the header and composer at noon; the two overlays
 //   glass again (Task 8c, §10.1): at noon the open drawer and the overlaid
-//   user list blurred and brightened on the chips' tint the scene publishes,
-//   and at 22:00 the open drawer blurred on the night tint, on top of the
-//   scrim, not under it;
+//   user list blurred and brightened on the chips' tint the scene publishes
+//   (the drawer blurred the moment it opens, and closing, still blurred as
+//   it slides and until the slide has taken it off screen), and at 22:00 the
+//   open drawer blurred on the night tint, on top of the scrim, not under it;
 // - drifts each of the five clouds: its loop starts wholly off the scene's
 //   left edge and ends wholly off its right, never popping in (each drift is
 //   paused at its loop's two ends; late in the run, since an animation paused
@@ -65,9 +67,14 @@
 // - reloads onto Settings: with no message column the yurt stands at 70 % of
 //   the scene, and fades to the column's far third once a conversation opens
 //   (Review Focus 4);
-// - and last blocks the scene's chunk and reloads: the daylight fallback
-//   stays, ink over it, and the console complains of the blocked request and
-//   nothing else — the hook's one warning, naming it.
+// - blocks the scene's chunk and reloads: the daylight fallback stays, ink
+//   over it, and the console complains of the blocked request and nothing
+//   else — the hook's one warning, naming it;
+// - and last boots cold with ps saved, straight onto #seance at 4× CPU,
+//   four times, three of them with ps.css held back until the scene has
+//   mounted (the yurt's boot race, the final review): the place in the
+//   first frame the scene is laid out is where the yurt ends, nothing is
+//   written at 0, and nothing fades.
 //
 // Along the way it keeps the older promises: **the browser fetches no animal
 // file at all** — not in #seance, not in #kittens, not as a still under
@@ -101,6 +108,12 @@
 //   the plains are not drawn (at #seance, a clear noon, a hidden mount and
 //   on the phone), and the yurt stands nowhere the design puts it (each
 //   toggle, the phone, both halves of the load onto Settings).
+// The final fix wave's 17 checks (2026-09-26: the clouds at rest under
+// reduced motion, the drawer's blur through its slide, the four cold boots)
+// were first run as a scratch port against 894aea43's build, where they
+// failed as the bugs said: the five clouds all at 0, the drawer unblurred
+// 80 ms into its close, and every held boot writing 0.00px and fading across.
+// With the fixes: 196 of 196.
 //
 //   NODE_ENV=production corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/theme-ps.mjs
@@ -983,6 +996,164 @@ const DRAWER = `(() => {
 })()`;
 
 /**
+ * The phone's drawer through one slide, opening (`open`) or closing: its
+ * backdrop filter and right edge the moment #viewport's menu-open class
+ * changes, 80 ms and 500 ms after, and as each of its transitions ends (the
+ * slide's transform, the filter's own delayed change), all timed from the
+ * class change, which the click reaches only after Vue has rendered it.
+ */
+const DRAWER_SLIDE = (open) => `new Promise((done) => {
+	const v = document.getElementById("viewport");
+	const s = document.getElementById("sidebar");
+	const read = () => ({blur: getComputedStyle(s).backdropFilter, right: Math.round(s.getBoundingClientRect().right)});
+	const out = {ended: {}};
+	let t0 = 0;
+	const since = () => Math.round(performance.now() - t0);
+	const onEnd = (e) => {
+		if (e.target === s && t0) out.ended[e.propertyName] = {t: since(), ...read()};
+	};
+	s.addEventListener("transitionend", onEnd);
+	const watch = new MutationObserver(() => {
+		if (t0 || v.classList.contains("menu-open") !== ${open}) return;
+		watch.disconnect();
+		t0 = performance.now();
+		out.at0 = read();
+		setTimeout(() => (out.at80 = {t: since(), ...read()}), 80);
+		setTimeout(() => {
+			out.at500 = {t: since(), ...read()};
+			s.removeEventListener("transitionend", onEnd);
+			done(out);
+		}, 500);
+	});
+	watch.observe(v, {attributes: true, attributeFilter: ["class"]});
+	setTimeout(() => t0 || (watch.disconnect(), done({missed: true})), 5000);
+	(${open} ? document.querySelector("#chat .header .lt") : document.getElementById("sidebar-overlay")).click();
+})`;
+
+/** Each cloud's box, its blobs included, against the scene's, and its animation. */
+const CLOUD_RESTS = `(() => {
+	const scene = document.getElementById("theme-scene").getBoundingClientRect();
+	return [...document.querySelectorAll("#theme-scene .ps-cloud")].map((el) => {
+		const boxes = [el, ...el.querySelectorAll("i")].map((e) => e.getBoundingClientRect());
+		return {
+			left: Math.min(...boxes.map((b) => b.left)) - scene.left,
+			right: Math.max(...boxes.map((b) => b.right)) - scene.left,
+			width: scene.width,
+			animation: getComputedStyle(el).animationName,
+		};
+	});
+})()`;
+
+/**
+ * For the cold boots (the yurt's boot race), from the first line of every
+ * document: each --ps-yurt-left the scene writes; whether the yurt ever
+ * fades (ps-yurt-moving); and, from an observer of the scene made after the
+ * scene's own (once it has mounted), the place in the rendering update where
+ * the scene is first laid out with a box, which runs after the scene's
+ * observers and just before that frame is painted.
+ */
+const BOOT_SAMPLER = `(() => {
+	const T0 = performance.now();
+	const rec = (window.__boot = {writes: [], moved: false, laidOut: null});
+	const now = () => Math.round(performance.now() - T0);
+	const start = () => {
+		const root = document.getElementById("theme-scene");
+		if (!root) return requestAnimationFrame(start);
+		new MutationObserver(() => {
+			const v = root.style.getPropertyValue("--ps-yurt-left");
+			if (v && rec.writes.at(-1)?.v !== v) rec.writes.push({t: now(), v});
+			rec.moved ||= root.classList.contains("ps-yurt-moving");
+		}).observe(root, {attributes: true, attributeFilter: ["style", "class"]});
+		const mounted = new MutationObserver(() => {
+			if (!root.querySelector(".ps-yurt")) return;
+			mounted.disconnect();
+			new ResizeObserver((entries) => {
+				if (rec.laidOut || !entries.some((e) => e.contentRect.width > 0)) return;
+				rec.laidOut = {
+					t: now(),
+					left: root.style.getPropertyValue("--ps-yurt-left") || "(unset: 70 %)",
+					moving: root.classList.contains("ps-yurt-moving"),
+				};
+			}).observe(root);
+		});
+		mounted.observe(root, {childList: true});
+	};
+	start();
+})()`;
+
+/**
+ * Forces the race: every write of ps.css to #theme's href (the early one in
+ * loading-error-handlers.js, by setAttribute, and settings.ts's, through the
+ * Attr) is held until the scene has mounted and the message column exists,
+ * and two frames more, so the column's first observation lands while
+ * #theme-scene is still display: none; then the last one is let through.
+ */
+const HOLD_THEME = `(() => {
+	const T0 = performance.now();
+	const value = Object.getOwnPropertyDescriptor(Attr.prototype, "value");
+	const setAttribute = Element.prototype.setAttribute;
+	const ps = (v) => /(^|\\/)ps\\.css$/.test(String(v));
+	let pending = null;
+	const wait = () => {
+		if (!document.querySelector("#theme-scene .ps-yurt") || !document.querySelector("#chat .chat")) {
+			return requestAnimationFrame(wait);
+		}
+		window.__held.ready = Math.round(performance.now() - T0);
+		requestAnimationFrame(() => requestAnimationFrame(() => {
+			window.__held.released = Math.round(performance.now() - T0);
+			Object.defineProperty(Attr.prototype, "value", value);
+			Element.prototype.setAttribute = setAttribute;
+			pending();
+		}));
+	};
+	const hold = (write) => {
+		pending = write;
+		if (!window.__held) {
+			window.__held = {at: Math.round(performance.now() - T0)};
+			wait();
+		}
+	};
+	Object.defineProperty(Attr.prototype, "value", {
+		configurable: true,
+		get() { return value.get.call(this); },
+		set(v) {
+			if (this.ownerElement?.id === "theme" && ps(v)) return hold(() => value.set.call(this, v));
+			value.set.call(this, v);
+		},
+	});
+	Element.prototype.setAttribute = function (name, v) {
+		if (this.id === "theme" && name === "href" && ps(v)) return hold(() => setAttribute.call(this, name, v));
+		return setAttribute.call(this, name, v);
+	};
+})()`;
+
+/** Reload the page, its address first put at `path`, and wait for the new document to show `expression`. */
+async function coldReload(page, path, expression, label) {
+	await page.evaluate(
+		`(() => { window.__coldLoad = true; history.replaceState(null, "", ${JSON.stringify(
+			path
+		)}); })()`
+	);
+	await page.send("Page.reload");
+
+	for (const until = Date.now() + 45000; ; ) {
+		try {
+			if (await page.evaluate(`!window.__coldLoad && !!(${expression})`)) {
+				return;
+			}
+		} catch {
+			// the page is between documents
+		}
+
+		if (Date.now() > until) {
+			throw new Error(`${label} did not come up`);
+		}
+
+		await page.sleep(200);
+	}
+}
+
+/**
  * The yurt against the message column (docs/projects/ps-theme.md §5.3):
  * its centre, opacity and whether it is moving, the place the scene wrote
  * (--ps-yurt-left, unset before it has measured a column), the column's box
@@ -1451,6 +1622,25 @@ export default async function run(page) {
 	await page.evaluate(VISIBILITY("visible"));
 	await page.sleep(300);
 	checkStopped(page, await page.evaluate(SCENE_STATE), "reduced motion, shown again");
+	// Still, each cloud rests where its delay puts it in its drift (--cp,
+	// plains.ts), on ps-drift's own path: with the animation gone they all
+	// stood at left: 0, piled up at the scene's left edge.
+	const rests = await page.evaluate(CLOUD_RESTS);
+	const restLefts = rests.map((c) => c.left).sort((a, b) => a - b);
+	page.check(
+		`reduced motion: the five clouds rest in five places, not animating (${rests
+			.map((c) => c.left.toFixed(1))
+			.join(", ")} of ${rests[0]?.width}; ${[...new Set(rests.map((c) => c.animation))]})`,
+		rests.length === 5 &&
+			rests.every((c) => c.animation === "none") &&
+			restLefts.every((x, i) => i === 0 || x - restLefts[i - 1] > 20)
+	);
+	page.check(
+		`reduced motion: each cloud on the sky, at least partly (${rests
+			.map((c) => `${c.left.toFixed(0)}..${c.right.toFixed(0)}`)
+			.join(" | ")})`,
+		rests.every((c) => c.right > 0 && c.left < c.width)
+	);
 	await page.screenshot("ps-reduced");
 	await page.send("Emulation.setEmulatedMedia", {features: []});
 	await page.sleep(300);
@@ -1977,10 +2167,12 @@ export default async function run(page) {
 	const floatTint = Number(
 		await page.evaluate(`document.documentElement.style.getPropertyValue("--ps-g-tint-float")`)
 	);
-	await page.click(`#chat .header .lt`);
-	await page.waitFor(`document.getElementById("viewport").classList.contains("menu-open")`, {
-		label: "the phone's sidebar open at noon",
-	});
+	// Opening, the blur comes at once (the open drawer's own 0 s change).
+	const opening = await page.evaluate(DRAWER_SLIDE(true));
+	page.check(
+		`a phone at noon: opening, the drawer is blurred at once (${opening.at0?.blur}; 80 ms in, ${opening.at80?.blur})`,
+		!opening.missed && opening.at0.blur !== "none" && opening.at80.blur !== "none"
+	);
 	await page.sleep(1000); // the drawer's slide, and the tint's flip from the fallback's
 	const noonDrawer = await page.evaluate(DRAWER);
 	page.check(
@@ -1988,11 +2180,29 @@ export default async function run(page) {
 		isOverlayGlass(noonDrawer, DAY_GLASS, floatTint, true)
 	);
 	await page.screenshot("ps-phone-noon-sidebar");
-	await page.evaluate(`document.getElementById("sidebar-overlay").click()`);
-	await page.waitFor(`!document.getElementById("viewport").classList.contains("menu-open")`, {
-		label: "the phone's sidebar closed at noon",
-	});
-	await page.sleep(500);
+	// Closing, it keeps its blur until it has slid off screen (the final
+	// review, 2026-09-26): dropped at the slide's start, the words behind it
+	// showed through all the way out. The filter changes 160 ms late, as the
+	// slide ends.
+	const closing = await page.evaluate(DRAWER_SLIDE(false));
+	const slid = closing.ended?.transform;
+	const unblurred = closing.ended?.["backdrop-filter"];
+	page.check(
+		`a phone at noon: closing, the drawer is still blurred as it starts and 80 ms in, on screen to ${closing.at80?.right} px (${closing.at0?.blur}; ${closing.at80?.blur})`,
+		!closing.missed &&
+			closing.at0.blur !== "none" &&
+			closing.at80.blur !== "none" &&
+			closing.at80.right > 0
+	);
+	page.check(
+		`a phone at noon: the blur goes as the slide ends, the drawer off screen (the slide ended at ${slid?.t} ms, the blur at ${unblurred?.t} ms, the drawer to ${unblurred?.right} px, ${unblurred?.blur}; at ${closing.at500?.t} ms ${closing.at500?.blur})`,
+		!!slid &&
+			!!unblurred &&
+			unblurred.blur === "none" &&
+			unblurred.right <= 0 &&
+			Math.abs(unblurred.t - slid.t) < 50 &&
+			closing.at500.blur === "none"
+	);
 	await page.evaluate(`document.querySelector("#chat .header button.rt").click()`);
 	await page.waitFor(`document.getElementById("viewport").classList.contains("userlist-open")`, {
 		label: "the phone's user list open",
@@ -2283,7 +2493,84 @@ export default async function run(page) {
 	);
 	console.log(`   set aside: ${setAside.map(firstLine).join(" | ") || "nothing"}`);
 
-	peer.quit();
 	await page.send("Network.setBlockedURLs", {urls: []});
+	await page.send("Network.setBypassServiceWorker", {bypass: false});
+	await page.send("Network.setCacheDisabled", {cacheDisabled: false});
+
+	// ---- a cold boot with ps saved, straight onto #seance, at 4× (the yurt's boot race)
+
+	// The scene can mount before ps.css shows #theme-scene (display: none,
+	// 0 × 0 until then). The column's first observation used to put the yurt
+	// at 0 and spend the load's first second on it: painted cut in half at
+	// the left edge, then faded across to its place (the final review,
+	// 2026-09-26). Here the network autoconnects and each reload lands
+	// straight on #seance with the CPU at 4×; in the first three ps.css is
+	// held until the scene has mounted and the column exists (HOLD_THEME), so
+	// each is the race, and the fourth boots as it comes. In every one the
+	// place in the first frame the scene is laid out is where the yurt ends,
+	// nothing is written at 0, and nothing fades.
+	await page.evaluate(`(() => {
+		const nets = JSON.parse(localStorage.getItem("thelounge.networks") || "[]");
+		for (const n of nets) n.autoconnect = true;
+		localStorage.setItem("thelounge.networks", JSON.stringify(nets));
+	})()`);
+	const sampler = await page.send("Page.addScriptToEvaluateOnNewDocument", {
+		source: BOOT_SAMPLER,
+	});
+	let holding = await page.send("Page.addScriptToEvaluateOnNewDocument", {source: HOLD_THEME});
+
+	for (const boot of ["held 1", "held 2", "held 3", "as it comes"]) {
+		if (boot === "as it comes") {
+			await page.send("Page.removeScriptToEvaluateOnNewDocument", holding);
+			holding = null;
+		}
+
+		await page.send("Emulation.setCPUThrottlingRate", {rate: 4});
+		await coldReload(
+			page,
+			"/",
+			`window.__boot && window.__boot.laidOut && document.querySelector("#chat .chat")`,
+			`the cold boot (${boot})`
+		);
+		await page.sleep(4000); // the load's second and a fade's worth, at 4×
+		const b = await page.evaluate(
+			`({boot: window.__boot, held: window.__held ?? null, route: location.hash})`
+		);
+		const end = await page.evaluate(YURT);
+		await page.send("Emulation.setCPUThrottlingRate", {rate: 1});
+		const label = `a cold boot onto ${b.route} at 4×, ${boot}`;
+		page.check(
+			`${label}: ${
+				b.held
+					? `ps.css held until the scene had mounted (${b.held.at} → ${b.held.released} ms)`
+					: "ps.css as it comes"
+			}, and no place written at 0 (${b.boot.writes
+				.map((w) => `${w.t} ms ${w.v}`)
+				.join(", ")})`,
+			(boot === "as it comes") === (b.held === null) &&
+				b.boot.writes.length > 0 &&
+				!b.boot.writes.some((w) => parseFloat(w.v) === 0)
+		);
+		page.check(
+			`${label}: the place in the first frame the scene is laid out is where it ends (${
+				b.boot.laidOut.left
+			} at ${b.boot.laidOut.t} ms, then ${end.left}; centre ${end.cx.toFixed(
+				1
+			)}, due ${end.due.toFixed(1)})`,
+			b.boot.laidOut.left === end.left &&
+				!!end.column &&
+				end.op > 0.99 &&
+				Math.abs(end.cx - end.due) <= 1
+		);
+		page.check(
+			`${label}: and it never fades across (moving ${b.boot.moved || b.boot.laidOut.moving})`,
+			!b.boot.moved && !b.boot.laidOut.moving && !end.moving
+		);
+	}
+
+	await page.screenshot("ps-cold-boot");
+	await page.send("Page.removeScriptToEvaluateOnNewDocument", sampler);
+
+	peer.quit();
 	await page.send("Emulation.setTimezoneOverride", {timezoneId: ""});
 }
