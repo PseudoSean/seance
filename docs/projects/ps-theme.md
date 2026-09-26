@@ -263,6 +263,7 @@ Rules:
 - No script per frame. The scene updates once a minute and when the page becomes visible.
 - Only the weather that is happening exists in the page: rain drops are built on rainy days, not hidden on clear ones.
 - The page hidden means the scene stopped: all its animations paused, SVG animations paused, no timer.
+- Nothing animates unseen: a layer with a window (the stars, the fireflies and the smoke by day, the sun once it is down, the skeins by day, a flock past the night's count, the buzzard, the larks, the heat band) is out of the render tree outside it, its SMIL paused, rather than animating at opacity 0. It goes once its fade is over and comes back before it fades in (`layers.ts`, §10.1).
 - Backdrop blur only on the chrome's glass panels and chips, never on the scene or on `#status-bar-tint`.
 - Under the phone layout (`PHONE_LAYOUT_QUERY`), particle counts are halved.
 
@@ -336,6 +337,83 @@ Either half alone keeps the thread near full. Part of it animates unseen. By day
 | phone   |   4 | 98.9 / 99.2                | 16.7 / 16.7   | 24 / 24 |
 
 The differences are within the run-to-run noise.
+
+#### After Task 8b (2026-09-26)
+
+**Two invisible changes took most of the scene's cost out. The phone at 4× is now under budget on a clear day (36–44 % busy over three runs), and over it in rain (80 %), heat (62–69 %) and at dusk (99 %).** The fallback stays (below).
+
+**Why it cost so much.** Chromium restyles the element of every running animation on every main frame, composited or not. The scene's SMIL keeps main frames at 60 Hz all day: the sun's fire by day, the wingbeats around sunset and at night. So every animation in the scene paid a restyle 60 times a second, the unseen ones included. Each restyle was also far dearer than it needed to be, and dragged the element's children along.
+
+- **Candidate 1: a layer outside its window leaves the render tree** (`layers.ts`, §10's rule above). By day that removes about 150 of the 160 CSS animations and 120 of the 123 SMIL ones: the skeins, the stars, the fireflies, the smoke and, out of season, the larks. The heat haze's SMIL is paused while it bends nothing.
+- **Candidate 3: the scene states its `box-sizing`** (`#theme-scene, #theme-scene * { box-sizing: border-box }`). `style.css`'s `*, *::before, *::after { box-sizing: inherit }` marks every element as explicitly inheriting a non-inherited property. Chromium then recalculates an element's children with it, and each recalculation cost about 4× as much (26–36 µs per element unthrottled before, 7–8 µs after). The value is the one `html` already gave every scene element.
+  - It was found by elimination: turning the app's stylesheet off took a frame's style recalc from 3.3 to 0.27 ms, and this one rule takes it to 0.28 ms.
+  - The hypothesis Task 8 left, the per-element custom properties, was tested and is not the lever. `@property { inherits: false }` on them made each element slower (64 → 278 µs). Writing the timing values inline saves 8–14 % of the style time, which is within the run-to-run spread per frame, so it was not made.
+
+**Which helped by how much.** Phone, 4×, main-thread ms per main frame (busy % ÷ main frames per second). At 60 frames a second, 50 % busy is 8.3 ms.
+
+| Run   | Before | + candidate 1 | + candidate 3 |
+| ----- | -----: | ------------: | ------------: |
+| clear |   93.6 |          14.4 |           7.4 |
+| rain  |  109.0 |          21.7 |          13.5 |
+| heat  |   98.2 |          22.2 |          10.4 |
+| dusk  |  105.5 |          86.1 |          45.6 |
+| night |   96.4 |          86.4 |          47.7 |
+
+**The measurements.** The method is §10.1's, on a production build served from 127.0.0.1:8054. The baseline was re-measured at `a95e9a2c` (the shipped scene with the fallback) and is within a point of Task 8's table. The traces ran one at a time, without `nice`. Main frames are `BeginMainThreadFrame`; "ms/frame" is the main thread's work per main frame; frame is `DrawFrame` on the compositor.
+
+| Layout | Run   |   × | Busy % before → after | Frame mean / p95 ms (after) | Main frame mean / p95 ms (after) | Main frames/s | ms/frame before → after | Viz % before → after |
+| ------ | ----- | --: | --------------------: | --------------------------: | -------------------------------: | ------------: | ----------------------: | -------------------: |
+| phone  | clear |   1 |           99.1 → 11.6 |                 16.7 / 16.8 |                      16.7 / 16.8 |            60 |              31.7 → 1.9 |              20 → 19 |
+| phone  | clear |   4 |           99.2 → 43.9 |                 16.7 / 16.8 |                      16.7 / 17.3 |          59.7 |              93.6 → 7.4 |              15 → 17 |
+| phone  | rain  |   1 |           98.9 → 20.4 |                 16.7 / 16.9 |                      16.7 / 16.8 |            60 |              29.6 → 3.4 |              44 → 48 |
+| phone  | rain  |   4 |           99.2 → 79.5 |                 16.7 / 19.7 |                      16.9 / 19.5 |          59.1 |            109.0 → 13.5 |              44 → 48 |
+| phone  | heat  |   1 |           75.8 → 16.8 |                 16.7 / 16.8 |                      16.7 / 16.8 |            60 |              27.0 → 2.8 |              93 → 23 |
+| phone  | heat  |   4 |           91.3 → 61.9 |                 16.7 / 18.5 |                      16.9 / 17.2 |          59.3 |             98.2 → 10.4 |              88 → 22 |
+| phone  | dusk  |   1 |           98.5 → 55.6 |                 16.7 / 17.1 |                      16.7 / 16.9 |          59.9 |              27.3 → 9.3 |              30 → 34 |
+| phone  | dusk  |   4 |           99.2 → 99.0 |                 16.7 / 30.9 |                      46.0 / 53.2 |          21.7 |            105.5 → 45.6 |              29 → 34 |
+| phone  | night |   1 |           98.9 → 61.0 |                 16.7 / 16.9 |                      16.7 / 16.8 |          59.9 |             30.5 → 10.2 |              29 → 35 |
+| phone  | night |   4 |           99.3 → 98.8 |                 16.7 / 30.7 |                      48.3 / 54.8 |          20.7 |             96.4 → 47.7 |              23 → 29 |
+| desk   | clear |   1 |            72.2 → 8.2 |                 34.1 / 42.2 |                      34.1 / 42.2 |          29.4 |              29.5 → 2.8 |              96 → 98 |
+| desk   | clear |   4 |           92.5 → 39.6 |                 27.9 / 30.1 |                      28.6 / 30.3 |          34.9 |             94.4 → 11.3 |              84 → 97 |
+| desk   | rain  |   1 |           53.5 → 17.8 |                 45.0 / 83.2 |                      45.2 / 83.1 |          22.0 |              29.2 → 8.1 |              95 → 96 |
+| desk   | rain  |   4 |           85.8 → 61.7 |                 44.9 / 84.2 |                      49.1 / 85.5 |          20.4 |            112.9 → 30.2 |              89 → 96 |
+| desk   | heat  |   1 |           19.8 → 13.6 |                 30.3 / 31.7 |                      30.7 / 31.8 |          32.6 |              25.4 → 4.2 |              99 → 97 |
+| desk   | heat  |   4 |           79.0 → 51.5 |                 30.3 / 33.7 |                      31.5 / 36.7 |          31.8 |             98.8 → 16.2 |             100 → 97 |
+| desk   | dusk  |   1 |           66.2 → 29.7 |                 39.3 / 73.5 |                      41.5 / 73.7 |          24.0 |             29.3 → 12.4 |              96 → 96 |
+| desk   | dusk  |   4 |           89.6 → 68.2 |                 40.7 / 68.0 |                     80.7 / 108.9 |          12.4 |            103.0 → 55.0 |              93 → 91 |
+| desk   | night |   1 |           65.5 → 32.4 |                 35.8 / 66.8 |                      36.7 / 66.8 |          27.2 |             27.6 → 11.9 |              98 → 97 |
+| desk   | night |   4 |           92.7 → 74.5 |                 35.2 / 46.4 |                     71.5 / 100.9 |          14.0 |             93.6 → 53.2 |              98 → 97 |
+
+- **Where busy % stays high, the frames got cheap and more frequent.** On the phone at 4× the main thread now runs 59–60 frames a second in every daytime weather, where it ran 9–11. At dusk it runs 22 frames a second, where it ran 9.
+- **The phone's clear day was repeated** because it sits within reach of the line: 43.9, 36.3 and 41.5 %. The hot day read 61.9, 65.3 and 69.0 %.
+- **The hot day's compositor load was not the haze.** It was the invisible fireflies and smoke animating inside the filtered ground group: every frame they changed the group's content and made the filter run again over the whole ground. With them out of the tree by day, the phone's GPU compositor thread on the hot day went from 88 to 22 %, and the desktop's hot-day frames from 119 to 30 ms apart. Turning the haze off altogether takes the phone to 17 %.
+- **The desktop is now held back by its compositor, not by the scene.** The desktop's compositor thread is 91–98 % busy in every weather: the glass's backdrop blur under software compositing, with the user list open. Its frames come 28–45 ms apart. That needs a device with a GPU to judge.
+- **The hidden page still does no work**, on both layouts: 49 of 49 SVGs paused, no CSS animation running, and no call into the scene's script over a 10 s trace that crosses its minute. The one timer in the phone's hidden trace is the app's own (`helpers/expirySweep.ts`).
+
+**The fallback stays.** It was re-decided by its own rule with the blur and the day's brightening back, reverted locally on the phone at 4×. Busy was clear 43.1 %, rain 90.0 %, heat 66.7 % and dusk 99.0 %, with frames 16.7 ms apart in all four. Rain, heat and dusk are over 50 %, so the fallback holds. Its show-through question (above) is still open.
+
+**Proof that nothing changed on screen.** The scene was shot alone, with every CSS animation paused at the same `currentTime` and every SVG at the same `setCurrentTime`. That covers ten moments (every weather here, dawn, a hot evening and night, a May noon) at two animation times each, on both layouts.
+
+- **Candidate 3 against candidate 1:** identical.
+- **Candidate 1 against the baseline:** the same drawing. Without the invisible animations beside them, the yurt, the flowers, the moon's halo and the hazed land are drawn on different compositor layers, which rounds their edges differently: up to 8 levels on a few thousand pixels, and up to 71 levels on 300 pixels of hazed land. With every static object pinned to a layer of its own in both builds, the difference goes to 0 on the desktop and to the base's own noise (2 pixels at 1 level) on the phone.
+- **The fades:** sampled at each window's edge, they run the same curves before and after (for example the skeins at 0.30, 0.80, 0.99 and 1 at 0.3, 0.7, 1.2 and 2.5 s). A layer goes only once it has reached 0.
+
+**Tested and not made:**
+
+- **Moving each SMIL element out of the element it animates** (targeting it by `href`) saves about 8 % of a dusk frame.
+- **Moving the blades' sway onto the SVG element**, where the compositor could run it, saves nothing: every animation is restyled each frame anyway. It also moves pixels by up to 6 levels.
+- **Registering the per-element variables with `@property`** made each element slower.
+- **Writing the timing values inline** (above) saves within the noise.
+
+**What is left, and only a visible change would take it.** Measured on the phone at 4× after Task 8b, as ms per main frame, against 7.4 for a clear day and 45.6 for dusk:
+
+- **The skeins:** 29 of the 45.6 ms at dusk. Most of it is the wingbeats: with the wings held still and the birds still flying, a dusk frame is 23.0 ms. Even with no skeins at all, dusk is 17 ms (95 %).
+- **The fireflies:** 6 ms at dusk.
+- **The stars' twinkling:** 3 ms at dusk.
+- **The rain:** half the drops and seeds would take rain from 13.5 to 10.7 ms (63 %).
+- **By day:** the blades' sway costs 1.0 ms and the sun's fire 0.8 ms. With everything that moves on the main thread by day held still (the fire, the rays, the blades, the buzzard, the larks), a clear day would be 1.8 ms (11 %).
+
+None of these has been made. They are the user's call.
 
 ## 11. Legibility floors
 
@@ -438,7 +516,7 @@ One spec, four plans, each shippable on its own:
 - **The iPhone status-bar check** (§6, §12): still the user's to do, on a device.
 - **The land and the weather veil** join the checked grounds when plan 3 draws them, and plan 3 designs the land under the message column with its words in mind (§11).
 - **The low sun counted under the horizon line** is the worst ground for the light treatment and the night glass alike (§11), because with no land drawn nothing hides it. Plan 3's land ends that.
-- **The phone's blur fallback** (§10) waits for plan 3's measured budget. (Plan 3 measured it, and the fallback applies: §10.)
+- **The phone's blur fallback** (§10) waits for plan 3's measured budget. (Plan 3 measured it, and the fallback applies: §10. Task 8b re-measured it once the scene's own cost came down, and it still applies: §10.1, "After Task 8b".)
 
 ## 14. The groundwork (done 2026-09-24)
 
