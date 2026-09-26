@@ -1334,6 +1334,17 @@ strong,
 	overflow: hidden;
 }
 
+/* A layer outside its window is out of the render tree (layers.ts): the
+ * stars, the fireflies and the smoke by day, the sun once it is down, the
+ * skeins by day or on a night with none, a flock past the night's count, the
+ * buzzard off the thermals, the larks out of season, the heat band off a hot
+ * midday. Its animations stop with it, and scene.ts pauses the SMIL in its
+ * svgs, instead of running every frame at opacity 0 (spec §10). A layer that
+ * fades goes only once its fade is over. */
+#theme-scene .ps-off {
+	display: none;
+}
+
 /* A hidden page's scene is stopped (scene.ts pauses the SVG animations too). */
 #theme-scene.ps-paused * {
 	animation-play-state: paused !important;

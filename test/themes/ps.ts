@@ -15,6 +15,7 @@ import {
 	TINT_CAP,
 	type GlassSurface,
 } from "../../client/js/scenes/ps/glass";
+import {GATES, type Gate} from "../../client/js/scenes/ps/layers";
 import {paletteAt} from "../../client/js/scenes/ps/palette";
 import {LAND_SHARE} from "../../client/js/scenes/ps/plains";
 import {sceneVars} from "../../client/js/scenes/ps/scene";
@@ -1236,13 +1237,18 @@ describe("the ps theme's motion", function () {
 		// The echo replaces the pending copy as a new row; fading it in from 0
 		// blinked every sent line out and back. It starts at style.css's
 		// pending opacity instead, so the row only brightens.
-		const style = fs.readFileSync(path.resolve(__dirname, "../../client/css/style.css"), "utf8");
+		const style = fs.readFileSync(
+			path.resolve(__dirname, "../../client/css/style.css"),
+			"utf8"
+		);
 		const pending = /#chat \.msg\.pending \{[^}]*opacity: ([\d.]+);/.exec(style)?.[1];
 		expect(pending, "style.css's pending opacity").to.equal("0.55");
 		const settle = /@keyframes ps-settle \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "";
 		expect(settle).to.include(`from { opacity: ${pending}; }`);
 		expect(settle).to.include("to { opacity: 1; }");
-		expect(css).to.match(/#chat \.msg\.self:not\(\.pending\) \{[^}]*animation-name: ps-settle;/);
+		expect(css).to.match(
+			/#chat \.msg\.self:not\(\.pending\) \{[^}]*animation-name: ps-settle;/
+		);
 	});
 
 	it("keeps the rest of its motion", function () {
@@ -1305,6 +1311,40 @@ describe("the ps theme's scene", function () {
 		);
 		const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
 		expect(reduced).to.match(/#theme-scene \*[^{]*\{\s*animation:\s*none !important;/);
+	});
+
+	it("takes a layer outside its window out of the render tree, and waits out exactly the fade ps.css gives it (layers.ts, spec §10)", function () {
+		expect(valueOf("#theme-scene .ps-off", "display")).to.equal("none");
+		// Where each gated layer's opacity transition is declared: the day birds share theirs.
+		const fadeRule: Record<Gate, string> = {
+			stars: "#theme-scene .ps-stars",
+			sun: "#theme-scene .ps-sun",
+			fireflies: "#theme-scene .ps-fireflies",
+			smoke: "#theme-scene .ps-smoke",
+			skeins: "#theme-scene .ps-skeins",
+			flock0: "#theme-scene .ps-flock",
+			flock1: "#theme-scene .ps-flock",
+			flock2: "#theme-scene .ps-flock",
+			buzzard: "#theme-scene .ps-daybirds > div",
+			larks: "#theme-scene .ps-daybirds > div",
+			heatband: "#theme-scene .ps-heatband",
+		};
+
+		for (const gate of Object.keys(GATES) as Gate[]) {
+			const {fadeMs} = GATES[gate];
+			expect(valueOf(fadeRule[gate], "transition"), gate).to.equal(
+				fadeMs > 0 ? `opacity ${fadeMs / 1000}s ease` : undefined
+			);
+		}
+
+		// Nothing gives a gated layer a display of its own that could outrank the gate.
+		const gated = new Set(Object.values(GATES).map((g) => g.selector));
+		const displays = rules.filter(
+			(r) =>
+				r.selectors.some((sel) => [...gated].some((g) => sel.endsWith(g))) &&
+				r.decls.some(([p]) => p === "display")
+		);
+		expect(displays.map((r) => r.selectors)).to.deep.equal([]);
 	});
 
 	it("no longer paints a meadow on the message area or reads the channel seed", function () {

@@ -10,7 +10,10 @@
  * weather changes, and the root carries its classes
  * (`ps-windy`, `ps-storm`, `ps-hot`) and the skeins' direction (`ps-west`).
  * It keeps the yurt in the message column's far third (placeYurt). All
- * motion is CSS or SVG animation; no script runs per frame. A hidden page's
+ * motion is CSS or SVG animation; no script runs per frame. A layer outside
+ * its window (the stars by day, the skeins by day, the larks out of season…)
+ * is out of the render tree with its SMIL paused, rather than animating at
+ * opacity 0 (layers.ts). A hidden page's
  * scene is stopped outright. No Vue, no store; the markup below (and
  * plains.ts's land, near grass, fireflies, yurt, smoke, clouds and weather,
  * and birds.ts's skeins and day birds) is constant for a day's weather, and
@@ -22,6 +25,7 @@ import {birdsAt, dayBirdsMarkup, skeinsMarkup} from "./birds";
 import {momentAt, rng, type Moment, type MoonPhase, type Weather} from "./engine";
 import {composerAboveGrass, GLASS_TINT_VARS, glassVars} from "./glass";
 import {bodyOpacity, publishedFor, type Published} from "./grounds";
+import {GATES, layerGates, liveLayers} from "./layers";
 import {levelsAt, paletteAt, WEATHER, type Palette} from "./palette";
 import {
 	clouds,
@@ -519,33 +523,84 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 	let timer: number | undefined;
 	let visible = false;
 
-	const apply = (now: Date) => {
-		const m = momentAt(now);
-		const p = paletteAt(m);
+	// Whose SMIL runs while the scene does: nothing in a layer out of the
+	// render tree (layers.ts), and the heat haze only while it bends the
+	// ground (ps-hot). Only the svgs whose state differs are touched.
+	const syncSvgs = () => {
+		const run = !root.classList.contains("ps-paused");
+		const hot = root.classList.contains("ps-hot");
 
-		for (const [name, value] of Object.entries(sceneVars(m, p))) {
-			root.style.setProperty(name, value);
-		}
+		for (const svg of root.querySelectorAll("svg")) {
+			const live =
+				run && !svg.closest(".ps-off") && (hot || !svg.classList.contains("ps-heat-haze"));
 
-		// Only the day's weather exists in the page (spec §10): a new day's
-		// replaces yesterday's, built for the layout as it is now. A layer
-		// built while the scene is stopped (reduced motion) starts stopped:
-		// motion() paused only the svgs that were there.
-		if (weatherChanged(built, m.weather)) {
-			weatherLayer.innerHTML = weatherLayers(m.weather, isPhoneLayout());
-			built = m.weather;
-
-			if (root.classList.contains("ps-paused")) {
-				for (const svg of weatherLayer.querySelectorAll("svg")) {
+			if (live === svg.animationsPaused()) {
+				if (live) {
+					svg.unpauseAnimations();
+				} else {
 					svg.pauseAnimations();
 				}
 			}
 		}
+	};
+
+	// The layers with a window (layers.ts): out of the render tree outside it.
+	const gates = layerGates({
+		set(gate, off) {
+			const {selector, index} = GATES[gate];
+			const all = root.querySelectorAll(selector);
+
+			for (const el of index === undefined ? [...all] : [all[index]]) {
+				el?.classList.toggle("ps-off", off);
+			}
+
+			syncSvgs();
+		},
+		flush() {
+			return getComputedStyle(root).opacity; // reading it computes the page's style
+		},
+		after(ms, fn) {
+			const id = window.setTimeout(fn, ms);
+			return () => window.clearTimeout(id);
+		},
+	});
+	let applied = false;
+
+	const apply = (now: Date) => {
+		const m = momentAt(now);
+		const p = paletteAt(m);
+		const vars = sceneVars(m, p);
+
+		// Only the day's weather exists in the page (spec §10): a new day's
+		// replaces yesterday's, built for the layout as it is now. Before the
+		// gates, so a new heat band is gated with the rest; nothing in the
+		// weather layer transitions, so the style the gates may compute first
+		// changes nothing there.
+		if (weatherChanged(built, m.weather)) {
+			weatherLayer.innerHTML = weatherLayers(m.weather, isPhoneLayout());
+			built = m.weather;
+			gates.forget("heatband");
+		}
+
+		gates.apply(
+			liveLayers(vars),
+			() => {
+				for (const [name, value] of Object.entries(vars)) {
+					root.style.setProperty(name, value);
+				}
+			},
+			!applied
+		);
+		applied = true;
 
 		// After the rebuild, so the haze exists before ps-hot asks for it.
 		for (const [name, on] of Object.entries(sceneClasses(m, p))) {
 			root.classList.toggle(name, on);
 		}
+
+		// The new weather's SMIL, and the haze's with ps-hot. A layer built
+		// while the scene is stopped (reduced motion) starts stopped.
+		syncSvgs();
 
 		const lit = moonShape(m.phase);
 		ellipse.setAttribute("rx", lit.rx.toFixed(2));
@@ -586,14 +641,7 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 
 	const motion = (run: boolean) => {
 		root.classList.toggle("ps-paused", !run);
-
-		for (const svg of root.querySelectorAll("svg")) {
-			if (run) {
-				svg.unpauseAnimations();
-			} else {
-				svg.pauseAnimations();
-			}
-		}
+		syncSvgs();
 	};
 
 	const onReduced = () => motion(visible && !reduced.matches);
@@ -615,6 +663,7 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 			visible = false;
 			window.clearTimeout(timer);
 			timer = undefined;
+			gates.settle(); // no fade is seen on a hidden page, and no timer runs there
 			motion(false);
 		}
 	};
@@ -628,6 +677,7 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 		destroy() {
 			window.clearTimeout(timer);
 			timer = undefined;
+			gates.stop();
 			reduced.removeEventListener("change", onReduced);
 			yurt.destroy();
 			composer.destroy();
