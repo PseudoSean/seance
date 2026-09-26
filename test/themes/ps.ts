@@ -15,10 +15,10 @@ import {
 	TINT_CAP,
 	type GlassSurface,
 } from "../../client/js/scenes/ps/glass";
-import {GATES, type Gate} from "../../client/js/scenes/ps/layers";
+import {GATES, liveLayers, type Gate} from "../../client/js/scenes/ps/layers";
 import {paletteAt} from "../../client/js/scenes/ps/palette";
 import {LAND_SHARE} from "../../client/js/scenes/ps/plains";
-import {sceneVars} from "../../client/js/scenes/ps/scene";
+import {sceneMarkup, sceneVars} from "../../client/js/scenes/ps/scene";
 import {
 	checkedGrounds,
 	dayGlassGrounds,
@@ -1652,6 +1652,86 @@ describe("the ps theme's scene", function () {
 				r.decls.some(([p]) => p === "display")
 		);
 		expect(displays.map((r) => r.selectors)).to.deep.equal([]);
+	});
+
+	it("paints each gated layer's opacity from the custom properties its gate reads (layers.ts liveLayers ↔ ps.css)", function () {
+		// Every value the scene writes, each shown; then each alone at 0, to see
+		// which gates it takes out: those are the properties liveLayers reads for
+		// a gate.
+		const m = momentFor({
+			minute: 720,
+			doy: 268,
+			dayNumber: 20721,
+			epochDays: 20721.5,
+			weather: "clear",
+		});
+		const written = Object.keys(sceneVars(m, paletteAt(m)));
+		const shown = Object.fromEntries(written.map((name) => [name, "3"]));
+		const gates = Object.keys(GATES) as Gate[];
+		expect(
+			gates.filter((g) => !liveLayers(shown)[g]),
+			"every gate live with every value shown"
+		).to.deep.equal([]);
+		const reads = new Map<Gate, string[]>(gates.map((g) => [g, []]));
+
+		for (const name of written) {
+			const live = liveLayers({...shown, [name]: "0"});
+
+			for (const g of gates.filter((gate) => !live[gate])) {
+				reads.get(g)!.push(name);
+			}
+		}
+
+		// What each gated layer's opacity reads in ps.css, of the values the scene writes.
+		const painted = (gate: Gate) => {
+			const selector = `#theme-scene ${GATES[gate].selector}`;
+			const values = rules
+				.filter((r) => r.selectors.includes(selector))
+				.flatMap((r) => r.decls)
+				.filter(([p]) => p === "opacity")
+				.map(([, v]) => v);
+			expect(values, `${selector} has an opacity of its own`).to.not.deep.equal([]);
+			return values.map((v) => ({
+				value: v,
+				vars: [...v.matchAll(/var\((--[\w-]+)/g)]
+					.map((x) => x[1])
+					.filter((n) => written.includes(n)),
+			}));
+		};
+
+		// A flock is inside the skeins' layer (birds.ts skeinsMarkup), whose opacity fades it too.
+		const WITHIN: Partial<Record<Gate, Gate>> = {
+			flock0: "skeins",
+			flock1: "skeins",
+			flock2: "skeins",
+		};
+		expect(sceneMarkup(false)).to.match(
+			/<div class="ps-skeins">(?:(?!<div class="ps-daybirds">)[\s\S])*class="ps-flock"/
+		);
+
+		for (const gate of gates) {
+			const own = painted(gate);
+			const theirs = reads.get(gate)!;
+			expect(theirs, `${gate}: liveLayers reads the scene's values`).to.not.deep.equal([]);
+
+			for (const {value, vars} of own) {
+				expect(
+					vars,
+					`${gate}: opacity: ${value} reads a value the scene writes`
+				).to.not.deep.equal([]);
+				expect(
+					theirs,
+					`${gate}: opacity: ${value} reads what its gate reads`
+				).to.include.members(vars);
+			}
+
+			const outer = WITHIN[gate];
+			const shownBy = [...own, ...(outer ? painted(outer) : [])].flatMap((o) => o.vars);
+			expect(
+				shownBy,
+				`${gate}: every value its gate reads fades it in ps.css`
+			).to.include.members(theirs);
+		}
 	});
 
 	it("gives every scene element its own box-sizing, the border-box html gives it, so none inherits it explicitly (task 8b)", function () {
