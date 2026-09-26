@@ -17,7 +17,7 @@ import {
 } from "../../client/js/scenes/ps/glass";
 import {GATES, liveLayers, type Gate} from "../../client/js/scenes/ps/layers";
 import {paletteAt} from "../../client/js/scenes/ps/palette";
-import {LAND_SHARE} from "../../client/js/scenes/ps/plains";
+import {LAND_SHARE, weatherLayers} from "../../client/js/scenes/ps/plains";
 import {sceneMarkup, sceneVars} from "../../client/js/scenes/ps/scene";
 import {
 	checkedGrounds,
@@ -1623,6 +1623,105 @@ describe("the ps theme's motion", function () {
 	});
 });
 
+describe("the ps theme under reduced motion (spec §9): nothing moves, and the hour still shows", function () {
+	const REDUCED_MOTION = "@media (prefers-reduced-motion: reduce)";
+	const S = "#theme-scene";
+	/**
+	 * What exists only in flight. With every scene animation gone (the block's
+	 * `animation: none !important`) each would stand parked where its box
+	 * puts it — the buzzard on the sky, a skein and the seeds off an edge,
+	 * the drops and flakes just above the top, a smoke puff at 0 — so each
+	 * leaves the render tree instead.
+	 */
+	const HIDDEN = [
+		".ps-skeins",
+		".ps-daybirds",
+		".ps-rain",
+		".ps-snow",
+		".ps-seeds",
+		".ps-flash",
+		".ps-smoke",
+	];
+
+	it("hides what only exists in flight: the birds, the rain, snow and seeds, the lightning and the smoke", function () {
+		for (const layer of HIDDEN) {
+			expect(valueOf(`${S} ${layer}`, "display", REDUCED_MOTION), layer).to.equal("none");
+		}
+
+		// Those are the layers the scene builds them in: every bird in the
+		// skeins or the day birds, the smoke's puffs in theirs, and each of the
+		// weather's particles and the flash in its own.
+		const scene = sceneMarkup(false);
+		expect(scene).to.match(
+			/<div class="ps-skeins">(?:(?!<div class="ps-daybirds">)[\s\S])*class="ps-flock"/
+		);
+		expect(scene).to.match(
+			/<div class="ps-daybirds">[\s\S]*class="ps-buzzard"[\s\S]*class="ps-lark"/
+		);
+		expect(scene).to.match(/<div class="ps-smoke"><i /);
+		expect(weatherLayers("storm", false)).to.match(
+			/class="ps-seeds"[\s\S]*class="ps-rain"[\s\S]*class="ps-flash"/
+		);
+		expect(weatherLayers("snow", false)).to.include('class="ps-snow"');
+	});
+
+	it("keeps the veil, the fireflies as still dots where they are, the grass at rest and the heat band: nothing else is hidden or moved", function () {
+		// The veil stays, so a rainy day still looks rainy; a firefly is a
+		// point of light like a star, and a still one still reads as one.
+		const hiding = rules.filter(
+			(r) => r.at === REDUCED_MOTION && r.decls.some(([p]) => p === "display")
+		);
+		expect(hiding.flatMap((r) => r.selectors).sort()).to.deep.equal(
+			HIDDEN.map((layer) => `${S} ${layer}`).sort()
+		);
+		// Nothing under reduced motion places anything but a cloud's rest.
+		const placing = rules.filter(
+			(r) =>
+				r.at === REDUCED_MOTION &&
+				r.decls.some(([p]) => ["transform", "translate", "left", "top"].includes(p))
+		);
+		expect(placing.flatMap((r) => r.selectors)).to.deep.equal([`${S} .ps-cloud`]);
+		// With the drift and the sway gone, each stands where its own rule puts
+		// it: the fireflies where their drift starts, the blades upright.
+		expect(valueOf(`${S} .ps-fireflies i`, "transform")).to.equal(undefined);
+		expect(css).to.match(/@keyframes ps-ffdrift \{\s*from \{ transform: translate\(0, 0\); \}/);
+		expect(valueOf(`${S} .ps-blades .ps-sway`, "transform")).to.equal(undefined);
+	});
+
+	it("lets no other rule show a hidden layer again", function () {
+		const showing = rules.filter(
+			(r) =>
+				r.selectors.some((sel) => HIDDEN.some((layer) => sel.endsWith(layer))) &&
+				r.decls.some(([p, v]) => p === "display" && v !== "none")
+		);
+		expect(showing.map((r) => [r.at, r.selectors])).to.deep.equal([]);
+	});
+
+	it("flips the words' treatment at once: every rule that eases their colour over 0.8 s stands down", function () {
+		const eased = rules.filter(
+			(r) =>
+				r.at === "" &&
+				r.decls.some(([p, v]) => p === "transition" && /\bcolor 0\.8s/.test(v))
+		);
+		expect(eased.length, "the words' ease").to.be.at.least(1);
+		const stood = rules
+			.filter(
+				(r) =>
+					r.at === REDUCED_MOTION &&
+					r.decls.some(([p, v]) => p === "transition" && v === "none !important")
+			)
+			.flatMap((r) => r.selectors);
+
+		for (const selector of eased.flatMap((r) => r.selectors)) {
+			// `#chat .msg` covers every message row, `#chat .chat .msg` included.
+			const covered =
+				stood.includes(selector) ||
+				(stood.includes("#chat .msg") && /^#chat( .+)? \.msg$/.test(selector));
+			expect(covered, selector).to.equal(true);
+		}
+	});
+});
+
 describe("the ps theme's embers (spec §9)", function () {
 	// The <3 theme's glitter is gone; embers take its two moments (an own
 	// message arriving, a reaction arriving): a few small glowing sparks rise
@@ -1887,12 +1986,14 @@ describe("the ps theme's scene", function () {
 			);
 		}
 
-		// Nothing gives a gated layer a display of its own that could outrank the gate.
+		// Nothing gives a gated layer a display of its own that could outrank the
+		// gate and show it. Reduced motion's `display: none` (the layers that
+		// exist only in flight) takes out more, never less.
 		const gated = new Set(Object.values(GATES).map((g) => g.selector));
 		const displays = rules.filter(
 			(r) =>
 				r.selectors.some((sel) => [...gated].some((g) => sel.endsWith(g))) &&
-				r.decls.some(([p]) => p === "display")
+				r.decls.some(([p, v]) => p === "display" && v !== "none")
 		);
 		expect(displays.map((r) => r.selectors)).to.deep.equal([]);
 	});

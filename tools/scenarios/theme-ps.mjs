@@ -33,6 +33,14 @@
 //   stopped under reduced motion, its five clouds resting in five places
 //   across the sky (--cp, on ps-drift's path) rather than piled at the left
 //   edge; and a scene mounted into a hidden page starts stopped;
+// - under reduced motion, on a clear, a rainy, a hot, a snowy and a stormy
+//   noon and at dusk with the skeins up (spec §9): the scene is stopped,
+//   nothing in flight is rendered — no bird, drop, flake, seed, lightning or
+//   smoke, out of the render tree rather than parked mid-flight — and no
+//   animation on it runs; the veil stays at the weather's level, the
+//   fireflies stand still where they are, the near grass upright, the heat
+//   band still; and the colours are the hour's, the same as without reduced
+//   motion at the same minute;
 // - pins the clock (a Date shim, in UTC) to fixed days, and reads the plains:
 //   a clear noon (no drop, flake or seed in the page, no haze, white words,
 //   the stars, the skeins, the fireflies and the smoke out of the render
@@ -141,6 +149,13 @@
 // of 221, the six that light something failing (the send, both reactions,
 // the hold, the two frames) and the three that light nothing passing. With
 // the embers: 221 of 221.
+// Reduced motion's 24 checks on fixed days (plan 4 task 2, 2026-09-26) were
+// first run against 2335d4ab's build, whose reduced-motion block stops every
+// animation but hides nothing: each of the six "nothing in flight is
+// rendered" checks failed (the buzzard parked on the noon sky, the skeins
+// and the seeds off an edge, the drops and flakes just above the top, the
+// lightning at 0, the smoke's puffs at 0 — all in the render tree), the rest
+// passed. With the layers hidden: 245 of 245.
 //
 //   NODE_ENV=production corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/theme-ps.mjs
@@ -677,6 +692,45 @@ const SCENE_STATE = `(() => {
 		minute: d.getHours() * 60 + d.getMinutes(),
 		doy: (Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(d.getFullYear(), 0, 0)) / 86400000,
 		date: d.toISOString(),
+	};
+})()`;
+
+/**
+ * Under reduced motion (spec §9): every animation document.getAnimations()
+ * holds on the scene that is running (CSS animations and transitions alike);
+ * how many of what exists only in flight are rendered — checkVisibility(),
+ * the render tree and not the screen, so a drop parked just above the top
+ * or a skein waiting off the edge counts; and what stays: the veil's opacity
+ * beside the one the scene wrote, the near grass's lean, the fireflies
+ * rendered and where the first stands, the heat band.
+ */
+const REDUCED_STATE = `(() => {
+	const s = document.getElementById("theme-scene");
+	const rendered = (sel) => [...s.querySelectorAll(sel)].filter((e) => e.checkVisibility()).length;
+	const veil = s.querySelector(".ps-veil");
+	const ff = s.querySelector(".ps-fireflies i");
+	const sway = s.querySelector(".ps-blades .ps-sway");
+	return {
+		running: document
+			.getAnimations()
+			.filter((a) => a.playState === "running" && a.effect && a.effect.target && s.contains(a.effect.target))
+			.map((a) => a.animationName || a.transitionProperty || "?"),
+		flight: {
+			skeins: rendered(".ps-skeins, .ps-bird"),
+			buzzard: rendered(".ps-buzzard"),
+			larks: rendered(".ps-lark"),
+			rain: rendered(".ps-rain, .ps-rain i"),
+			snow: rendered(".ps-snow, .ps-snow i"),
+			seeds: rendered(".ps-seeds, .ps-seeds i"),
+			lightning: rendered(".ps-flash"),
+			smoke: rendered(".ps-smoke, .ps-smoke i"),
+		},
+		veil: veil.checkVisibility() ? getComputedStyle(veil).opacity : null,
+		veilVar: s.style.getPropertyValue("--ps-veil"),
+		blades: sway.checkVisibility() ? getComputedStyle(sway).transform : null,
+		fireflies: rendered(".ps-fireflies i"),
+		fireflyTransform: ff ? getComputedStyle(ff).transform : null,
+		heatband: rendered(".ps-heatband"),
 	};
 })()`;
 
@@ -2202,6 +2256,8 @@ export default async function run(page) {
 	// formula): the words stay white at every hour of it.
 	const sep25 = sunTimes(268);
 	const sep25At = (minute) => Date.UTC(2026, 8, 25, 0, Math.round(minute));
+	/** Each hour's scene, for the same minutes under reduced motion (below). */
+	const sep25States = {};
 
 	for (const [name, minute] of [
 		["dawn", sep25.rise - 30],
@@ -2210,6 +2266,7 @@ export default async function run(page) {
 		["midnight", 0],
 	]) {
 		const s = await at(page, sep25At(minute));
+		sep25States[name] = s;
 		page.check(
 			`25 September, ${name} (${hhmm(s.minute)}, ${s.weather}): white words ${s.ink} (light ${
 				s.light
@@ -2229,6 +2286,66 @@ export default async function run(page) {
 
 		await page.screenshot(`ps-day-sep25-${name}`);
 	}
+
+	// ---- reduced motion on fixed days (spec §9)
+
+	// Nothing moves, in any weather, and the hour still shows. What exists
+	// only in flight (the birds, the rain, snow and seeds, the lightning, the
+	// smoke) is out of the render tree, not parked mid-flight (the buzzard
+	// stood on the noon sky, a drop just above the top); the veil, the
+	// fireflies, the near grass and the heat band stay, still; and the
+	// colours are the hour's, the same as without reduced motion at the same
+	// minute. In #seance: a query stops the scene by itself.
+	await page.send("Emulation.setEmulatedMedia", {
+		features: [{name: "prefers-reduced-motion", value: "reduce"}],
+	});
+
+	for (const {name, ms, motion} of [
+		{name: "a clear noon", ms: noonOn(9, 25), motion: clear},
+		{name: "a rainy noon", ms: noonOn(9, 26), motion: rain},
+		{name: "a hot noon", ms: noonOn(7, 1), motion: heat},
+		{name: "a snowy noon", ms: noonOn(1, 8), motion: snow},
+		{name: "a stormy noon", ms: noonOn(7, 19), motion: storm},
+		{name: "dusk on 25 September", ms: sep25At(sep25.set + 45), motion: sep25States.dusk},
+	]) {
+		const where = `${name}, reduced motion`;
+		const s = await at(page, ms);
+		const r = await page.evaluate(REDUCED_STATE);
+		checkStopped(page, s, where);
+		const flying = Object.entries(r.flight).filter(([, n]) => n > 0);
+		page.check(
+			`${where}: nothing in flight is rendered (${
+				flying.map(([k, n]) => `${k} ${n}`).join(", ") || "none"
+			}) and nothing on the scene runs (document.getAnimations(): ${
+				r.running.join(", ") || "none"
+			})`,
+			flying.length === 0 && r.running.length === 0
+		);
+		const wet = ["rain", "storm", "snow"].includes(s.weather);
+		page.check(
+			`${where}: what stays stands still (the veil at ${r.veil}, the scene's --ps-veil ${r.veilVar}; the near grass ${r.blades}; ${r.fireflies} fireflies at ${r.fireflyTransform}; the heat band ${r.heatband})`,
+			r.veil !== null &&
+				Math.abs(Number(r.veil) - Number(r.veilVar)) < 0.001 &&
+				Number(r.veil) > 0 === wet &&
+				r.blades === "none" &&
+				(r.fireflies === 0 || r.fireflyTransform === "none") &&
+				(name.startsWith("dusk") ? r.fireflies > 0 : true) &&
+				r.heatband === (s.weather === "heat" ? 1 : 0)
+		);
+		page.check(
+			`${where}: the colours are the hour's (${s.weather}, light ${s.light}, canvas ${s.canvas} = sky-top ${s.skyTop}; without reduced motion: ${motion.weather}, ${motion.light}, ${motion.canvas})`,
+			s.canvas === s.skyTop &&
+				s.canvas === motion.canvas &&
+				s.light === motion.light &&
+				s.weather === motion.weather
+		);
+		await page.screenshot(
+			`ps-reduced-${name.replace(/^an? /, "").replace(/ on /, "-").replace(/\s+/g, "-")}`
+		);
+	}
+
+	await page.send("Emulation.setEmulatedMedia", {features: []});
+	await page.sleep(300);
 
 	// ---- the yurt never slides (Review Focus 2)
 

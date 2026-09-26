@@ -2604,13 +2604,39 @@ body {
 
 /* ---- reduced motion ---- */
 @media (prefers-reduced-motion: reduce) {
+	/* The words' treatment flips at once with the glass: the column's notes
+	 * ease their colour over 0.8 s beside the messages, and stand down with
+	 * them. */
 	#chat .msg,
+	#chat .chat .show-more,
+	#chat .chat .search-status,
+	#chat .chat .search-scope-note,
 	.channel-list-item,
 	#chat .header,
 	#form,
 	#theme-scene * {
 		animation: none !important;
 		transition: none !important;
+	}
+
+	/* What exists only in flight leaves the render tree rather than standing
+	 * parked mid-flight (spec §9): the birds (the skeins, the buzzard, which
+	 * stopped on the sky, and the larks), the rain, snow and seeds, the
+	 * lightning, and the smoke, which is smoke only as it rises (the lit
+	 * door and its pool still say someone is home). The veil stays, so a
+	 * rainy day still looks rainy. The fireflies stay as still dots where
+	 * they are: a point of light, like a star, still reads as one, and they
+	 * are what a summer evening looks like. The grass stands at rest and the
+	 * heat band still; the heat haze's SMIL is paused with every other SVG's
+	 * (scene.ts). */
+	#theme-scene .ps-skeins,
+	#theme-scene .ps-daybirds,
+	#theme-scene .ps-rain,
+	#theme-scene .ps-snow,
+	#theme-scene .ps-seeds,
+	#theme-scene .ps-flash,
+	#theme-scene .ps-smoke {
+		display: none;
 	}
 
 	/* A cloud still, where its delay puts it in its loop (--cp, plains.ts),
