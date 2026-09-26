@@ -462,23 +462,6 @@ The differences are within the run-to-run noise.
 
 None of these has been made. They are the user's call.
 
-#### Plan 4 Task 3: cloudier rain and storms (2026-09-26)
-
-**Rain and storms cost the phone at 4× about +1.9 busy points in rain and +0.9 in a storm, within the ~3 points the task allowed.** The four extra clouds are HTML drifting on transform animations, the same as the five; the storm's deck has no animation of its own, so there was no deck motion to drop.
-
-- **The method** is §10.1's, with Task 8b's tools (`budget.mjs`, `analyze.mjs`, `perframe.mjs`), plus a storm run (19 July at 12:05) beside the rain (26 September at 12:05). The phone layout was 390 × 844 at 4×, the drawer closed, with a 10 s trace each, at `nice 19` as this host's rules now require.
-- **The builds.** The base is `2f5f744b`'s production build, snapshotted from `public/` before any change. The new build is the same tree with this task. They were served side by side and the runs were interleaved in three rounds (base, new; base, new; new, base) in one session. Each run read its weather, its cloud count and its deck from the scene root.
-- **The figures:**
-
-| Run       | Busy % base (a, b, c → mean) | Busy % new (a, b, c → mean) |    Δ | ms/frame base → new (means) | Main frames/s | Viz % base → new (means) |
-| --------- | ---------------------------: | --------------------------: | ---: | --------------------------: | ------------: | -----------------------: |
-| rain, 4×  |      91.2, 88.9, 92.6 → 90.9 |     93.5, 92.7, 92.1 → 92.8 | +1.9 |               15.46 → 16.08 |   58.8 → 57.7 |              49.1 → 49.6 |
-| storm, 4× |      90.0, 88.0, 94.6 → 90.9 |     91.6, 91.2, 92.4 → 91.7 | +0.9 |               15.48 → 15.89 |   58.7 → 57.8 |              38.5 → 40.3 |
-
-- **Per round**, the new build read +2.3, +3.8 and −0.5 points in rain, and +1.6, +3.2 and −2.2 in a storm. The base alone spread 3.7 points in rain and 6.6 in a storm, so a single pair decides nothing; the means and ms per frame (+0.62 in rain, +0.41 in a storm) are the figures. The frames still reached the screen 16.6–16.7 ms apart.
-- **Where it goes**, on the three rounds' means in rain: style recalculation +0.18 ms a frame, layerizing +0.18 and the rest of the frame +0.19, for four more animated elements. The static deck costs nothing measurable: the storm, with the same four and the deck, moved less than the rain (+0.13, +0.06 and +0.13).
-- **The base is not Task 8b's.** Task 8b measured rain at 79.5 % without `nice`; today's base reads 88.9–92.6 % at `nice 19` on the tree after plan 3's final fixes, Task 8c, the private view and plan 4's Tasks 1–2. Against 8b's figure the new build is +13 points, all but about 2 of them already in the base. That drift is not this task's; which of the tree and the conditions carries it was not measured.
-
 #### Task 8c: the phone's overlays keep their glass (2026-09-26)
 
 **The open drawer and the user list laid over the chat have their glass back on the phone. The header, the composer and the chips keep the fallback.** The show-through above was the overlays', and every trace behind the fallback was taken with both closed. The fallback's measured saving is therefore the always-on glass's; an overlay is open for moments.
@@ -562,6 +545,23 @@ The user list reads the same within 0.3 over words and alike over the boxes, whi
 Against the unblurred build the three overlay checks failed, and nothing else new did. Against the shipped build they pass. The run's other 13 failures are the stale checks Task 9 fixes: the SVG clock and layer counts, ink text at noon, and the settle animation. (Task 9 fixed them: §13.)
 
 **The private view** (§5.7, 2026-09-26) costs almost nothing between ticks: the phone at 4× in a query at dusk (25 September at 18:30, the three skeins up, frosted and still), traced for 10 s by §10.1's method, was 3.8 % busy against dusk's 99 % in a channel, and 0.2 % between the scene's ticks (14.5 ms in 8.3 s) with no frame drawn at all, so there is no frame interval to take: the one frame of the 10 s is the tick's (its task 167 ms at 4×, 381 ms of main-thread work in the 2 s after it). Unthrottled it was 0.8 % busy.
+
+#### Plan 4 Task 3: cloudier rain and storms (2026-09-26)
+
+**Rain and storms cost the phone at 4× +1.9 busy points in rain and +0.9 in a storm against the same build without them. The task's gate as written, no more than about 3 points over Task 8b's 79.5 %, is not met: the new rain reads 92.8 %. The base it was built on reads 90.9 % in the same runs, and Task 8b's own build reads 92–97 % today, so 79.5 % is no longer this host's figure (below).** Whether the gate is judged on this task's own cost is the controller's call. The four extra clouds are HTML drifting on transform animations, the same as the five; the storm's deck has no animation of its own, so there was no deck motion to drop.
+
+- **The method** is §10.1's, with Task 8b's tools (`budget.mjs`, `analyze.mjs`, `perframe.mjs`), plus a storm run (19 July at 12:05) beside the rain (26 September at 12:05). The phone layout was 390 × 844 at 4×, the drawer closed, with a 10 s trace each, at `nice 19` as this host's rules now require.
+- **The builds.** The base is `2f5f744b`'s production build, snapshotted from `public/` before any change. The new build is the same tree with this task. They were served side by side and the runs were interleaved in three rounds (base, new; base, new; new, base) in one session. Each run read its weather, its cloud count and its deck from the scene root.
+- **The figures:**
+
+| Run       | Busy % base (a, b, c → mean) | Busy % new (a, b, c → mean) |    Δ | ms/frame base → new (means) | Main frames/s | Viz % base → new (means) |
+| --------- | ---------------------------: | --------------------------: | ---: | --------------------------: | ------------: | -----------------------: |
+| rain, 4×  |      91.2, 88.9, 92.6 → 90.9 |     93.5, 92.7, 92.1 → 92.8 | +1.9 |               15.46 → 16.08 |   58.8 → 57.7 |              49.1 → 49.6 |
+| storm, 4× |      90.0, 88.0, 94.6 → 90.9 |     91.6, 91.2, 92.4 → 91.7 | +0.9 |               15.48 → 15.89 |   58.7 → 57.8 |              38.5 → 40.3 |
+
+- **Per round**, the new build read +2.3, +3.8 and −0.5 points in rain, and +1.6, +3.2 and −2.2 in a storm. The base alone spread 3.7 points in rain and 6.6 in a storm, so a single pair decides nothing; the means and ms per frame (+0.62 in rain, +0.41 in a storm) are the figures. The frames still reached the screen 16.6–16.7 ms apart.
+- **Where it goes**, on the three rounds' means in rain: style recalculation +0.18 ms a frame, layerizing +0.18 and the rest of the frame +0.19, for four more animated elements. The static deck costs nothing measurable: the storm, with the same four and the deck, moved less than the rain (+0.13, +0.06 and +0.13).
+- **The drift since Task 8b is the host, not the tree.** Task 8b measured rain at 79.5 % without `nice`. Today, at `nice 19`, the base (2f5f744b) reads 88.9–92.6 %. To tell a regression in the tree from a change in the conditions, 8b's own final build (its `c3` snapshot, the one that read 79.5 %) was served again and interleaved with the base in two more rain rounds. It read 96.6 and 92.0 %, against the base's 89.7 and 89.9 % (17.0 and 15.8 against 15.3 and 16.1 ms a frame). So the tree has not lost ground since 8b. The same scene costs more busy time on this host now, under `nice 19` and whatever else the shared host runs, and every figure above is relative to that.
 
 ## 11. Legibility floors
 
