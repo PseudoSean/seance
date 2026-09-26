@@ -175,6 +175,14 @@
 // never flew in the wet: the dusks are the bird checks that tell.
 // With the change: 268 of 268 on a rainy real day (26 September), where the
 // drift's three checks a cloud cover nine clouds; 256 on a dry one.
+// The faces' checks (plan 4 task 4, 2026-09-26: Source Sans 3 and
+// Newsreader) were first run against 50115548's build, which still carries
+// Mulish and Fraunces: 19 failed — the nine files not declared, the three
+// Source Sans 3 canvas pairs equal to their serif, and the seven texts drawn
+// in the old faces; the two Newsreader pairs passed, measured then against
+// monospace, which is why they are measured against serif now. With the
+// faces, the α measured on them and the palette regenerated: 268 of 268 on
+// the same rainy real day.
 //
 //   NODE_ENV=production corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/theme-ps.mjs

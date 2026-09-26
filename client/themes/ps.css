@@ -1639,8 +1639,8 @@ body {
  * the dense sweep (every day, every 5 minutes, all six weathers): the sky, the
  * moon's disc and the sun's core (above the horizon line), and the plains'
  * areas (client/js/scenes/ps/grounds.ts), under the veil on a veiled day,
- * through the halo at α 0.1559 where the words are ink or the shadow and
- * outline at α 0.5882 where they are light (docs/projects/ps-theme.md §11).
+ * through the halo at α 0.1614 where the words are ink or the shadow and
+ * outline at α 0.6 where they are light (docs/projects/ps-theme.md §11).
  * The words are ink only where ink holds (the user's white sooner): the ink
  * colours are solved over those moments alone. Generated colours are solved
  * to 4.6.
@@ -1653,26 +1653,26 @@ body {
  * Its guard: below the default font-size step the names are not large
  * text, so there they take the "sky" set (the last 32 rules),
  * solved to 4.6 against:
- *   #696969  doy 1 530 min clear  cloud #fffffe
+ *   #666666  doy 1 530 min clear  cloud #fffffe
  * The worst grounds by day, darkest first, through the halo:
- *   #c27f6b  doy 1 935 min snow  band under the veil #b76b59
- *   #c27f6c  doy 1 930 min snow  band under the veil #b76b59
- *   #c27f6d  doy 1 925 min snow  band under the veil #b76b5a
- *   #c08070  doy 4 915 min snow  band under the veil #b66c5c
- *   #c1806d  doy 11 925 min snow  band under the veil #b76c5a
+ *   #c27f6a  doy 6 945 min snow  band under the veil #b76b58
+ *   #c27f6b  doy 7 945 min snow  band under the veil #b76b58
+ *   #c27f6c  doy 1 935 min snow  band under the veil #b76b59
+ *   #c27f6d  doy 1 930 min snow  band under the veil #b76b59
+ *   #c27f6e  doy 8 930 min snow  band under the veil #b76b5a
  * The worst in the light treatment (at any hour: dark ink holds only on
  * snowy days), brightest first, through the shadow:
- *   #696969  doy 1 530 min clear  cloud #fffffe
- *   #696968  doy 1 885 min clear  cloud #fffefc
- *   #696967  doy 14 890 min clear  cloud #fffefb
- *   #696965  doy 1 495 min clear  sun #fffef6 at 1.00 over skyMid #ecb99b
- *   #696868  doy 6 525 min clear  cloud #fffdfc
+ *   #666666  doy 1 530 min clear  cloud #fffffe
+ *   #666665  doy 1 885 min clear  cloud #fffefc
+ *   #666664  doy 14 890 min clear  cloud #fffefb
+ *   #666662  doy 1 495 min clear  sun #fffef6 at 1.00 over skyMid #ecb99b
+ *   #666565  doy 6 525 min clear  cloud #fffdfc
  * The light nicks are solved to 3.1 against:
- *   #696969  doy 1 530 min clear  cloud #fffffe
+ *   #666666  doy 1 530 min clear  cloud #fffffe
  * the other coloured light colours to 4.6 against:
- *   #696969  doy 1 530 min clear  cloud #fffffe
+ *   #666666  doy 1 530 min clear  cloud #fffffe
  * Faint ink, rule 2: #4c5a72 → #38455c, OKLCH L −0.0764;
- *   3.01:1 on #c27f6b at doy 1 935 min snow.
+ *   3.01:1 on #c27f6a at doy 6 945 min snow.
  * Code boxes paint --ps-code-bg, opaque (ps.css, after the block): the --tok-*
  * colours are solved against it, #f4f9ff by day and #121827 otherwise.
  * Six-digit hex throughout: the floors test reads every colour in that form. */
@@ -1696,8 +1696,8 @@ body {
 	--channel-typing-color: #002e1e;
 	--event-quit: #550603;
 	--notice-color: #042d2d;
-	--nick-default: #002460;
-	--channel-activity-color: #002460;
+	--nick-default: #002360;
+	--channel-activity-color: #002360;
 	--tok-comment: #5f7292;
 	--tok-keyword: #c34073;
 	--tok-string: #2d7f5f;
@@ -1717,21 +1717,21 @@ body {
 	--md-code-color: #ffffff;
 	--chat-fg-faint: rgb(255 255 255 / 80%);
 	--ps-code-bg: #121827;
-	--chat-fg-muted: #e0ecfe;
-	--body-color-muted: #e0ecfe;
-	--date-marker-color: #e0ecfe;
-	--chat-accent: #fee7de;
-	--link-color: #fee7de;
-	--unread-marker-color: #fee7de;
-	--highlight-border-color: #fee7de;
-	--button-color: #fee7de;
-	--action-color: #fee7de;
-	--event-join: #abfcd7;
-	--channel-typing-color: #abfcd7;
-	--event-quit: #fee6e1;
-	--notice-color: #a2fbf9;
-	--nick-default: #e0ecfe;
-	--channel-activity-color: #e0ecfe;
+	--chat-fg-muted: #d9e7ff;
+	--body-color-muted: #d9e7ff;
+	--date-marker-color: #d9e7ff;
+	--chat-accent: #fee0d5;
+	--link-color: #fee0d5;
+	--unread-marker-color: #fee0d5;
+	--highlight-border-color: #fee0d5;
+	--button-color: #fee0d5;
+	--action-color: #fee0d5;
+	--event-join: #a7f7d2;
+	--channel-typing-color: #a7f7d2;
+	--event-quit: #fee0da;
+	--notice-color: #9ef6f4;
+	--nick-default: #d9e7ff;
+	--channel-activity-color: #d9e7ff;
 	--tok-comment: #6f83a4;
 	--tok-keyword: #d75384;
 	--tok-string: #419170;
@@ -1743,17 +1743,17 @@ body {
 	--tok-attr: #9367f2;
 }
 
-#chat .chat .user.color-1 { color: #530529; }
-#chat .chat .user.color-2 { color: #540522; }
+#chat .chat .user.color-1 { color: #520529; }
+#chat .chat .user.color-2 { color: #540521; }
 #chat .chat .user.color-3 { color: #550518; }
 #chat .chat .user.color-4 { color: #55060d; }
 #chat .chat .user.color-5 { color: #550800; }
 #chat .chat .user.color-6 { color: #4b1602; }
 #chat .chat .user.color-7 { color: #451c03; }
-#chat .chat .user.color-8 { color: #411f02; }
+#chat .chat .user.color-8 { color: #411f01; }
 #chat .chat .user.color-9 { color: #3d2102; }
-#chat .chat .user.color-10 { color: #3a2303; }
-#chat .chat .user.color-11 { color: #362501; }
+#chat .chat .user.color-10 { color: #392303; }
+#chat .chat .user.color-11 { color: #362401; }
 #chat .chat .user.color-12 { color: #332600; }
 #chat .chat .user.color-13 { color: #312701; }
 #chat .chat .user.color-14 { color: #2c2801; }
@@ -1761,87 +1761,87 @@ body {
 #chat .chat .user.color-16 { color: #182d01; }
 #chat .chat .user.color-17 { color: #022f0a; }
 #chat .chat .user.color-18 { color: #052e1c; }
-#chat .chat .user.color-19 { color: #042e24; }
+#chat .chat .user.color-19 { color: #042d24; }
 #chat .chat .user.color-20 { color: #042d2b; }
-#chat .chat .user.color-21 { color: #032d30; }
+#chat .chat .user.color-21 { color: #032d2f; }
 #chat .chat .user.color-22 { color: #012c36; }
 #chat .chat .user.color-23 { color: #022b3b; }
 #chat .chat .user.color-24 { color: #012a46; }
-#chat .chat .user.color-25 { color: #002659; }
+#chat .chat .user.color-25 { color: #002559; }
 #chat .chat .user.color-26 { color: #19205f; }
-#chat .chat .user.color-27 { color: #291c5e; }
+#chat .chat .user.color-27 { color: #291c5d; }
 #chat .chat .user.color-28 { color: #341858; }
 #chat .chat .user.color-29 { color: #3e1351; }
 #chat .chat .user.color-30 { color: #460f46; }
-#chat .chat .user.color-31 { color: #4d0a3b; }
+#chat .chat .user.color-31 { color: #4d093b; }
 #chat .chat .user.color-32 { color: #500731; }
 
-:root[data-ps-text="light"] #chat .chat .user.color-1 { color: #ffabc4; }
-:root[data-ps-text="light"] #chat .chat .user.color-2 { color: #fcaebc; }
-:root[data-ps-text="light"] #chat .chat .user.color-3 { color: #fdaeb2; }
-:root[data-ps-text="light"] #chat .chat .user.color-4 { color: #fdafa9; }
-:root[data-ps-text="light"] #chat .chat .user.color-5 { color: #fcb0a1; }
-:root[data-ps-text="light"] #chat .chat .user.color-6 { color: #ffb094; }
-:root[data-ps-text="light"] #chat .chat .user.color-7 { color: #fcb28b; }
-:root[data-ps-text="light"] #chat .chat .user.color-8 { color: #fdb37e; }
-:root[data-ps-text="light"] #chat .chat .user.color-9 { color: #f6b677; }
-:root[data-ps-text="light"] #chat .chat .user.color-10 { color: #f0b971; }
-:root[data-ps-text="light"] #chat .chat .user.color-11 { color: #e9bc6d; }
-:root[data-ps-text="light"] #chat .chat .user.color-12 { color: #e1bf6b; }
-:root[data-ps-text="light"] #chat .chat .user.color-13 { color: #d8c36c; }
-:root[data-ps-text="light"] #chat .chat .user.color-14 { color: #cdc66e; }
-:root[data-ps-text="light"] #chat .chat .user.color-15 { color: #bacb76; }
-:root[data-ps-text="light"] #chat .chat .user.color-16 { color: #a5d084; }
-:root[data-ps-text="light"] #chat .chat .user.color-17 { color: #8fd394; }
-:root[data-ps-text="light"] #chat .chat .user.color-18 { color: #7bd5a6; }
-:root[data-ps-text="light"] #chat .chat .user.color-19 { color: #68d6b9; }
-:root[data-ps-text="light"] #chat .chat .user.color-20 { color: #68d4cb; }
-:root[data-ps-text="light"] #chat .chat .user.color-21 { color: #64d3da; }
-:root[data-ps-text="light"] #chat .chat .user.color-22 { color: #6ad1ea; }
-:root[data-ps-text="light"] #chat .chat .user.color-23 { color: #6dcefa; }
-:root[data-ps-text="light"] #chat .chat .user.color-24 { color: #87caff; }
-:root[data-ps-text="light"] #chat .chat .user.color-25 { color: #9dc5ff; }
-:root[data-ps-text="light"] #chat .chat .user.color-26 { color: #b0c1fc; }
-:root[data-ps-text="light"] #chat .chat .user.color-27 { color: #bfbdfa; }
-:root[data-ps-text="light"] #chat .chat .user.color-28 { color: #cfb7ff; }
-:root[data-ps-text="light"] #chat .chat .user.color-29 { color: #e1b2f9; }
-:root[data-ps-text="light"] #chat .chat .user.color-30 { color: #eeaeeb; }
-:root[data-ps-text="light"] #chat .chat .user.color-31 { color: #faabdc; }
-:root[data-ps-text="light"] #chat .chat .user.color-32 { color: #fbacce; }
+:root[data-ps-text="light"] #chat .chat .user.color-1 { color: #ffa5c0; }
+:root[data-ps-text="light"] #chat .chat .user.color-2 { color: #fca7b6; }
+:root[data-ps-text="light"] #chat .chat .user.color-3 { color: #fca8ad; }
+:root[data-ps-text="light"] #chat .chat .user.color-4 { color: #fda9a3; }
+:root[data-ps-text="light"] #chat .chat .user.color-5 { color: #fcaa99; }
+:root[data-ps-text="light"] #chat .chat .user.color-6 { color: #ffaa8c; }
+:root[data-ps-text="light"] #chat .chat .user.color-7 { color: #fcac82; }
+:root[data-ps-text="light"] #chat .chat .user.color-8 { color: #f9ae7a; }
+:root[data-ps-text="light"] #chat .chat .user.color-9 { color: #f2b273; }
+:root[data-ps-text="light"] #chat .chat .user.color-10 { color: #ecb56e; }
+:root[data-ps-text="light"] #chat .chat .user.color-11 { color: #e4b869; }
+:root[data-ps-text="light"] #chat .chat .user.color-12 { color: #dcbb66; }
+:root[data-ps-text="light"] #chat .chat .user.color-13 { color: #d4be68; }
+:root[data-ps-text="light"] #chat .chat .user.color-14 { color: #c9c26a; }
+:root[data-ps-text="light"] #chat .chat .user.color-15 { color: #b6c772; }
+:root[data-ps-text="light"] #chat .chat .user.color-16 { color: #a1cb7f; }
+:root[data-ps-text="light"] #chat .chat .user.color-17 { color: #8cce90; }
+:root[data-ps-text="light"] #chat .chat .user.color-18 { color: #77d1a2; }
+:root[data-ps-text="light"] #chat .chat .user.color-19 { color: #64d2b5; }
+:root[data-ps-text="light"] #chat .chat .user.color-20 { color: #63d0c6; }
+:root[data-ps-text="light"] #chat .chat .user.color-21 { color: #60cfd6; }
+:root[data-ps-text="light"] #chat .chat .user.color-22 { color: #66cce6; }
+:root[data-ps-text="light"] #chat .chat .user.color-23 { color: #69caf5; }
+:root[data-ps-text="light"] #chat .chat .user.color-24 { color: #83c6fa; }
+:root[data-ps-text="light"] #chat .chat .user.color-25 { color: #99c1fa; }
+:root[data-ps-text="light"] #chat .chat .user.color-26 { color: #aabdfd; }
+:root[data-ps-text="light"] #chat .chat .user.color-27 { color: #bbb8fb; }
+:root[data-ps-text="light"] #chat .chat .user.color-28 { color: #ccb2ff; }
+:root[data-ps-text="light"] #chat .chat .user.color-29 { color: #ddadf4; }
+:root[data-ps-text="light"] #chat .chat .user.color-30 { color: #eaaae7; }
+:root[data-ps-text="light"] #chat .chat .user.color-31 { color: #f5a7d8; }
+:root[data-ps-text="light"] #chat .chat .user.color-32 { color: #fba5cb; }
 
 /* stylelint-disable max-line-length -- one line per nick like the rest; the step test is long */
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-1 { color: #fee5eb; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-2 { color: #ffe5e8; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-3 { color: #fee6e6; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-4 { color: #fee6e3; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-5 { color: #ffe6e0; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-6 { color: #ffe6de; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-7 { color: #fee7dc; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-8 { color: #ffe7d6; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-9 { color: #fee8d3; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-10 { color: #fee8cc; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-11 { color: #fee9c5; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-12 { color: #feeab8; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-13 { color: #ffeb9b; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-14 { color: #f6ef96; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-15 { color: #e2f49e; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-16 { color: #cdf8ab; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-17 { color: #b7fcbb; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-18 { color: #a3fecd; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-19 { color: #92ffe1; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-20 { color: #92fef4; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-21 { color: #a8f9fe; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-22 { color: #c7f3fe; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-23 { color: #d2f0fe; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-24 { color: #d9eeff; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-25 { color: #e0ecfe; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-26 { color: #e4ebfe; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-27 { color: #eaeafe; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-28 { color: #efe8fe; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-29 { color: #f6e6fe; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-30 { color: #fee3fc; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-31 { color: #fee4f3; }
-:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-32 { color: #ffe5ef; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-1 { color: #ffdee7; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-2 { color: #fddfe3; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-3 { color: #fedfe0; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-4 { color: #fee0dd; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-5 { color: #fde0d9; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-6 { color: #fee0d5; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-7 { color: #fde1d2; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-8 { color: #fde1ce; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-9 { color: #ffe1c7; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-10 { color: #ffe2be; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-11 { color: #fee3b5; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-12 { color: #fee4a4; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-13 { color: #fce68f; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-14 { color: #f1ea91; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-15 { color: #ddef99; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-16 { color: #c8f3a6; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-17 { color: #b2f7b6; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-18 { color: #9ef9c8; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-19 { color: #8dfadc; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-20 { color: #8df9ef; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-21 { color: #8af7ff; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-22 { color: #b6f0ff; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-23 { color: #c8ecfd; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-24 { color: #d2e9fe; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-25 { color: #d8e8fe; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-26 { color: #dee6fe; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-27 { color: #e4e4fe; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-28 { color: #ebe2ff; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-29 { color: #f4dfff; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-30 { color: #fedcfc; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-31 { color: #feddf1; }
+:root:where(:not([data-font-size="large"], [data-font-size="xlarge"], [data-font-size="huge"]))[data-ps-text="light"] #chat .chat .user.color-32 { color: #ffdeeb; }
 /* stylelint-enable max-line-length */
 /* stylelint-enable color-hex-length */
 
