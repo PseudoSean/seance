@@ -28,6 +28,7 @@ import type {PushSession} from "../../../shared/types/socket-events";
 import {CapNegotiator, SEANCE_CAPS, webpushVapidOf, WEBPUSH_CAP} from "./caps";
 import {casefold, namesEqual} from "./casemap";
 import {Channel, MsgRef} from "./channel";
+import {QueryLog} from "./querylog";
 import {commandNames, dispatchInput} from "./commands";
 import {describeClose} from "./disconnect";
 import {handlers, unhandled} from "./handlers";
@@ -235,6 +236,10 @@ export class IrcClient {
 	readonly authtoken = new TokenRequests();
 	readonly channels: Channel[] = [];
 	readonly lobby: Channel;
+	/** Private conversations kept on this device (querylog.ts). */
+	readonly queryLog: QueryLog;
+	/** Query windows brought back from the log, filled on the first announce. */
+	private restoredQueries: Channel[] = [];
 	caps = new CapNegotiator(SEANCE_CAPS);
 
 	/** Our current nick as the server knows it (or the one we asked for). */
@@ -331,6 +336,20 @@ export class IrcClient {
 		for (const {name, key} of parseJoinList(options.join)) {
 			const {channel} = this.createChannel(name, ChanType.CHANNEL, {key});
 			channel.autoJoin = true;
+		}
+
+		// The private conversations of the last page come back as windows,
+		// as the autojoin channels do; their lines follow the announce.
+		this.queryLog = new QueryLog(
+			this.uuid,
+			(s) => this.casefold(s),
+			() => getSavedNetwork(this.uuid) !== undefined
+		);
+
+		for (const name of this.queryLog.names()) {
+			if (!this.findChannel(name) && !this.isChannelName(name)) {
+				this.restoredQueries.push(this.createChannel(name, ChanType.QUERY).channel);
+			}
 		}
 	}
 
@@ -473,6 +492,7 @@ export class IrcClient {
 		if (!this.announced) {
 			this.announced = true;
 			this.bus.dispatch("network", {network: this.network});
+			this.restoreQueryLines();
 		}
 
 		if (this.transport.state === "open" || this.transport.state === "connecting") {
@@ -1037,6 +1057,7 @@ export class IrcClient {
 		cancelCatchup(this);
 		cancelRestoration(this);
 		this.saveCursor(); // the newest one must not die with the connection
+		this.queryLog.flush();
 		this.serverReplay = false;
 		this.clearPendingEdits();
 		// Before resetMultiline: a queued batch's copy is reported here, with
@@ -1976,7 +1997,43 @@ export class IrcClient {
 
 	// -------------------------------------------------------------- helpers
 
-	dispatch: EventBus["dispatch"] = (event, ...args) => this.bus.dispatch(event, ...args);
+	dispatch: EventBus["dispatch"] = (event, ...args) => {
+		this.followInQueryLog(event, args[0]);
+		return this.bus.dispatch(event, ...args);
+	};
+
+	/**
+	 * An edit, a redaction or a reaction in a query reaches the log the way
+	 * it reaches the UI — through the one dispatch every handler uses — so
+	 * no handler has to know the log exists. Ids are the UI's; the log keys
+	 * by msgid, which `msgRefs` holds for every loaded line.
+	 */
+	private followInQueryLog(event: string, payload: unknown): void {
+		if (event !== "msg:edit" && event !== "msg:redact" && event !== "msg:react") {
+			return;
+		}
+
+		const data = payload as {chan: number; id: number};
+		const chan = this.channelById(data.chan);
+		const msgid = chan?.msgRefs.get(data.id)?.msgid;
+
+		if (!chan || chan.type !== ChanType.QUERY || !msgid) {
+			return;
+		}
+
+		if (event === "msg:edit") {
+			const original = chan.msgRefs.get((payload as {replaces: number}).replaces)?.msgid;
+
+			if (original) {
+				this.queryLog.edit(chan.name, original, msgid);
+			}
+		} else if (event === "msg:redact") {
+			this.queryLog.redact(chan.name, msgid);
+		} else {
+			const {text, nick, remove} = payload as {text: string; nick: string; remove: boolean};
+			this.queryLog.react(chan.name, msgid, text, nick, remove);
+		}
+	}
 
 	casefold(s: string): string {
 		return casefold(s, this.isupport.casemapping);
@@ -2127,8 +2184,55 @@ export class IrcClient {
 		return channel;
 	}
 
+	/**
+	 * Hand the restored query windows their logged lines, as one history
+	 * page each (`more`, negative ids, no unread): remembered by msgid like
+	 * any page, so the server's own replay of the same lines — the ATTACH
+	 * cursor's, a CHATHISTORY page — is deduplicated against them.
+	 */
+	private restoreQueryLines(): void {
+		for (const chan of this.restoredQueries.splice(0)) {
+			if (!this.channels.includes(chan)) {
+				continue;
+			}
+
+			const messages = this.queryLog.messages(chan.name);
+
+			if (messages.length === 0) {
+				continue;
+			}
+
+			const ids = this.historyIds(messages.length);
+			let lastRef: MsgRef | undefined;
+
+			messages.forEach((msg, i) => {
+				msg.id = ids[i];
+				lastRef = chan.remember(msg);
+			});
+
+			for (const [msgid, index] of this.queryLog.aliases(chan.name)) {
+				if (!chan.idByMsgid.has(msgid)) {
+					chan.idByMsgid.set(msgid, messages[index].id);
+				}
+			}
+
+			chan.newestRef ??= lastRef;
+			chan.shared.totalMessages += messages.length;
+			this.bus.dispatch("more", {
+				chan: chan.id,
+				messages,
+				totalMessages: chan.shared.totalMessages,
+				moreAvailable: false,
+			});
+		}
+	}
+
 	/** Drop a channel from the model and the UI (`part` event). */
 	removeChannel(chan: Channel): void {
+		if (chan.type === ChanType.QUERY) {
+			this.queryLog.forget(chan.name); // closed: not brought back
+		}
+
 		const idx = this.channels.indexOf(chan);
 
 		if (idx > 0) {
@@ -2217,6 +2321,11 @@ export class IrcClient {
 			highlight: shared.highlight,
 			...(replay ? {replay: true} : {}),
 		});
+
+		if (chan.type === ChanType.QUERY) {
+			this.queryLog.append(chan.name, msg);
+		}
+
 		return msg;
 	}
 

@@ -440,6 +440,10 @@ function deliverPrepend(
 		// Older by definition, but a LATEST fill can still hold the newest
 		// line we have seen; noteCursor only ever moves forward.
 		client.noteCursor(msg);
+
+		if (chan.type === ChanType.QUERY) {
+			client.queryLog.append(chan.name, msg); // by time, deduplicated
+		}
 	});
 
 	if (!chan.newestRef && lastRef) {

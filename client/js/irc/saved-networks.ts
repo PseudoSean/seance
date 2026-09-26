@@ -15,6 +15,7 @@
  */
 
 import storage from "../localStorage";
+import {forgetNetworkLog} from "./querylog";
 import type {ConnectOptions} from "./types";
 
 export const STORAGE_KEY = "thelounge.networks";
@@ -390,6 +391,8 @@ export function remove(uuid: string): void {
 	if (remaining.length !== all.length) {
 		write(remaining);
 	}
+
+	forgetNetworkLog(uuid); // its private conversations go with it
 }
 
 /** Mark an entry as the most recently used one. */
