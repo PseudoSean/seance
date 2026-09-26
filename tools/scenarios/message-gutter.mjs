@@ -37,6 +37,9 @@ const WIDEST = {
 	"24h": ["00:00"],
 	"24h+s": ["00:00:00"],
 }[CLOCK];
+const WIDEST_JSON = JSON.stringify(WIDEST);
+const fitLabel = (m) =>
+	`the widest time fits its column (${m.widest.toFixed(1)} in ${m.timeBox.toFixed(1)}px)`;
 
 // Text width against column width for the last own message, in px.
 const MEASURE = `(() => {
@@ -50,7 +53,7 @@ const MEASURE = `(() => {
 	const messages = document.querySelector("#chat .messages");
 	const px = (el, p) => parseFloat(getComputedStyle(el)[p]);
 	const tBox = t.getBoundingClientRect(), fBox = f.getBoundingClientRect();
-	const widest = Math.max(...${JSON.stringify(WIDEST)}.map((s) => { const e = document.createElement("span"); e.textContent = s; e.style.cssText = "position:absolute;visibility:hidden;white-space:pre"; t.appendChild(e); const w = e.getBoundingClientRect().width; e.remove(); return w; }));
+	const widest = Math.max(...${WIDEST_JSON}.map((s) => { const e = document.createElement("span"); e.textContent = s; e.style.cssText = "position:absolute;visibility:hidden;white-space:pre"; t.appendChild(e); const w = e.getBoundingClientRect().width; e.remove(); return w; }));
 	// The gutter's two gaps: after the widest time to the nick column's text
 	// box, and from that box to the message text.
 	const fLeft = fBox.left + px(f, "paddingLeft"), fRight = fBox.right - px(f, "paddingRight");
@@ -103,10 +106,7 @@ export default async function run(page) {
 		rows.push({step, clock: CLOCK, ...m});
 		page.check(`${step} ${CLOCK}: time fits its column`, m.timeText <= m.timeCol + 0.5);
 		if (m.layout === "columns")
-			page.check(
-				`${step} ${CLOCK}: the widest time fits its column (${m.widest.toFixed(1)} in ${m.timeBox.toFixed(1)}px)`,
-				m.widest <= m.timeBox + 0.5
-			);
+			page.check(`${step} ${CLOCK}: ${fitLabel(m)}`, m.widest <= m.timeBox + 0.5);
 		page.check(`${step} ${CLOCK}: time on one line`, m.timeLines === 1);
 		// The own messages, wherever the bots have scrolled them to: the
 		// measured row, scrolled into view, and its neighbours.
@@ -143,10 +143,7 @@ export default async function run(page) {
 			// flow; a wide window keeps it in columns, and the widest time must
 			// fit there too.
 			if (m.layout === "columns")
-				page.check(
-					`${tag}: the widest time fits its column (${m.widest.toFixed(1)} in ${m.timeBox.toFixed(1)}px)`,
-					m.widest <= m.timeBox + 0.5
-				);
+				page.check(`${tag}: ${fitLabel(m)}`, m.widest <= m.timeBox + 0.5);
 			// Inline flow can still overflow on an unbreakable word (a long URL
 			// at a big step in a phone-width pane); that is the word, not the
 			// columns.
