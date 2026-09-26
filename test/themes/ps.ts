@@ -1968,7 +1968,7 @@ describe("the ps theme's message gutter: the time column and the text's 30 chara
 			// the scenario's 11-letter peer the 14ch column held.
 			expect(MEDIAN[10]).to.be.above(n);
 			expect(FITS_9CH[10]).to.be.below(0.1);
-			expect(NAMED["tumbleweed_42"]).to.be.above(n);
+			expect(NAMED.tumbleweed_42).to.be.above(n);
 			expect(NAMED.psmuihe71bn).to.be.above(n);
 			// The ellipsis is style.css's own, in the column's box, and leaves
 			// about 7ch of the nick before it.
