@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import {contrast, luminance, mix} from "../../../client/js/scenes/ps/colour";
 import {type Moment} from "../../../client/js/scenes/ps/engine";
+import {DAY_GLASS_MARK} from "../../../client/js/scenes/ps/glass";
 import {AREAS, INK_FAINT_HELD, publishedFor} from "../../../client/js/scenes/ps/grounds";
 import {paletteAt, type Palette} from "../../../client/js/scenes/ps/palette";
 import {
@@ -304,7 +305,7 @@ function underGlass(light: Light, list = grounds().glass[light]): CheckedGround[
 	});
 }
 
-describe("ps: the words over the plains and on the glass keep their floors: every 7th day and the season anchors, every 10 minutes, all six weathers, and every moment the generated blocks pin; against the sky and the bodies", function () {
+describe("ps: the words over the plains and on the glass keep their floors: every 7th day and the season anchors, every 10 minutes, all six weathers, and every moment the generated blocks pin; against the sky, the bodies and the plains", function () {
 	this.timeout(60000);
 
 	it("finds both generated blocks, and grounds for every surface and state", function () {
@@ -380,7 +381,7 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 		}
 	});
 
-	it("holds the spec's own ink by day, and white and faint white while the light changes and all night, over the sky and the bodies (a failure here is reported, not tuned)", function () {
+	it("holds the spec's own ink wherever the words are ink (only where it holds: in practice snowy days), and white and faint white wherever they are light (every other moment, day and night), over every checked ground (a failure here is reported, not tuned)", function () {
 		const g = grounds();
 		expect(worst(INK, g.column.ink).ratio).to.be.at.least(4.5);
 		expect(worst("#ffffff", g.column.light).ratio).to.be.at.least(4.5);
@@ -393,8 +394,8 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 		const rules = rulesOf(messageBlock);
 		const count = (selector: string) =>
 			rules.find((r) => r.selector === selector)!.decls.length;
-		// 19 tokens, the code box, nine code tokens and `color` by day; the same 19, the box
-		// and the nine tokens while the light changes.
+		// 19 tokens, the code box, nine code tokens and `color` for the ink treatment; the
+		// same 19, the box and the nine tokens for the light one.
 		expect(count("#chat .chat")).to.equal(30);
 		expect(count(LIGHT_ROOT)).to.equal(29);
 		const nicks = (prefix: string) =>
@@ -458,7 +459,7 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 		expect(rule!.decls).to.deep.equal([["background", "var(--ps-code-bg)"]]);
 	});
 
-	it("underlines links in the column while the light changes and all night, when their colour no longer marks them", function () {
+	it("underlines links in the column under the light treatment (all day but on snowy days, and all night), when their colour no longer marks them", function () {
 		const rule = rulesOf(css).find((r) => r.selector === `${LIGHT_ROOT} a`);
 		expect(rule, "the light treatment's link rule").to.not.equal(undefined);
 		expect(Object.fromEntries(rule!.decls)).to.include({"text-decoration": "underline"});
@@ -550,14 +551,14 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 		}
 	});
 
-	it("holds every daytime colour at 4.5:1, and faint ink at 3:1", function () {
+	it("holds every ink-treatment colour at 4.5:1, and faint ink at 3:1, over the moments the words are ink", function () {
 		for (const h of heldColours().held.filter((x) => x.text === "ink")) {
 			const w = h.box ? onBox(h) : worst(h.value, grounds().column.ink);
 			expect(w.ratio, `${h.what} ${h.value} at ${w.where}`).to.be.at.least(h.floor);
 		}
 	});
 
-	it(`holds every dusk-and-night colour to its floor under LIGHT_SWEEP "${SWEEP}"`, function () {
+	it(`holds every light-treatment colour to its floor under LIGHT_SWEEP "${SWEEP}", over the moments the words are light`, function () {
 		for (const h of heldColours().held.filter((x) => x.text === "light")) {
 			const list = groundsFor(h, grounds().column.light);
 			const w = h.box
@@ -759,6 +760,16 @@ describe("ps: the words over the plains and on the glass keep their floors: ever
 			).to.be.at.least(4.5);
 		});
 	}
+
+	it("holds the join green's marks at 3:1 on the day glass at its declared opacity, unfiltered: the phone's always-on glass (the header, the composer, the chips: no backdrop filter, the generated tint, spec §10.1)", function () {
+		// The day glass's lightest mark (glass.ts DAY_GLASS_MARK, ps.css's day
+		// --event-join: the connected icon, the subscribed bell, the typing
+		// pulse). Through the luminous glass the tint is solved for it
+		// (test/themes/ps.ts); without the filter only this tint carries it. At
+		// night the chrome's floors test holds it on the declared tint already.
+		const w = worst(DAY_GLASS_MARK, underGlass("day"));
+		expect(w.ratio, `${DAY_GLASS_MARK} at ${w.where}`).to.be.at.least(3);
+	});
 
 	/** The moment a header pins by name, e.g. `dusk: doy 29 445 min clear`. */
 	const pin = (name: string) => {

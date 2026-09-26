@@ -121,6 +121,79 @@ function rulesIn(text: string): Rule[] {
 	return out;
 }
 
+/** A selector's specificity: ids, classes (attributes and pseudo-classes too), types. */
+type Specificity = [number, number, number];
+
+function compareSpecificity(a: Specificity, b: Specificity): number {
+	return a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
+}
+
+/** Enough of Selectors 4 for the selectors these stylesheets write: :where() weighs nothing, :not()/:is()/:has() their heaviest argument. */
+function specificity(selector: string): Specificity {
+	const out: Specificity = [0, 0, 0];
+	const rest = selector
+		.replace(/:where\((?:[^()]|\([^()]*\))*\)/g, "")
+		.replace(/:(?:not|is|has)\(((?:[^()]|\([^()]*\))*)\)/g, (_, args: string) => {
+			const heaviest = splitSelectors(args).map(specificity).sort(compareSpecificity).at(-1);
+			heaviest?.forEach((n, i) => (out[i] += n));
+			return "";
+		})
+		.replace(/\[[^\]]*\]/g, () => {
+			out[1]++;
+			return "";
+		})
+		.replace(/::[\w-]+/g, () => {
+			out[2]++;
+			return "";
+		});
+	out[0] += (rest.match(/#[\w-]+/g) ?? []).length;
+	out[1] += (rest.match(/\.[\w-]+|:[\w-]+/g) ?? []).length;
+	out[2] += (rest.match(/(?:^|[\s>+~])[a-z][\w-]*/gi) ?? []).length;
+	return out;
+}
+
+/**
+ * Which glass surface (GLASS_SURFACES) a selector's subject is, in any state
+ * (:hover, a state class of #viewport or <html> around it), or null: the last
+ * compound names it, and is not a pseudo-element of it or a chip the glass
+ * leaves out (the pressed one, the "+").
+ */
+function subjectOf(selector: string): string | null {
+	const compounds = selector.replace(/\((?:[^()]|\([^()]*\))*\)/g, "()").split(/\s*[\s>+~]\s*/);
+	const last = compounds.at(-1) ?? "";
+	const bare = (selector.split(/\s*[\s>+~]\s*(?![^(]*\))/).at(-1) ?? "").replace(
+		/:not\((?:[^()]|\([^()]*\))*\)/g,
+		""
+	);
+	const inChat = /(^|\s)#chat(?![\w-])/.test(selector);
+
+	if (last.includes("::")) {
+		return null;
+	}
+
+	if (/#sidebar(?![\w-])/.test(last)) {
+		return "#sidebar";
+	}
+
+	if (/#form(?![\w-])/.test(last)) {
+		return "#form";
+	}
+
+	if (inChat && /\.header(?![\w-])/.test(last)) {
+		return "#chat .header";
+	}
+
+	if (inChat && /\.userlist(?![\w-])/.test(last)) {
+		return "#chat .userlist";
+	}
+
+	if (inChat && /\.msg-reaction(?![\w-])/.test(bare) && !/\.self(?![\w-])/.test(bare)) {
+		return "#chat .msg-reaction:not(.self, .msg-reaction-add)";
+	}
+
+	return null;
+}
+
 const rules = rulesIn(css);
 const DAY = ":root";
 const NIGHT = ':root[data-ps-light="night"]';
@@ -849,6 +922,89 @@ describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.m
 				);
 			}
 		}
+	});
+
+	it("keeps reduced transparency's solid winning in every state: no rule that paints a glass surface, in style.css, coffee.css or ps.css (the phone's fallback and overlays, the risen composer, the night glass), outranks its selector there or comes after it", function () {
+		// The cascade, in order: style.css, then the theme (coffee.css, which
+		// ps.css imports first, then ps.css). Reduced transparency's block is
+		// the last thing in ps.css, so it wins every rule it at least equals in
+		// specificity for the same element, in every state that rule is in.
+		const read = (file: string) =>
+			rulesIn(fs.readFileSync(path.resolve(__dirname, file), "utf8"));
+		const cascade = [
+			...read("../../client/css/style.css").map((r) => ({...r, file: "style.css"})),
+			...rulesIn(coffee).map((r) => ({...r, file: "coffee.css"})),
+			...rules.map((r) => ({...r, file: "ps.css"})),
+		];
+		const SOLID: Record<string, string> = {
+			"background-color": "var(--ps-g-solid)",
+			"backdrop-filter": "none",
+			"-webkit-backdrop-filter": "none",
+		};
+		// A shorthand sets the colour too; only the solid itself agrees with the solid.
+		const PAINTS = [...Object.keys(SOLID), "background"];
+		const solid = rules.filter((r) => r.at === REDUCED_TRANSPARENCY);
+		expect(solid.length, "one reduced-transparency rule").to.equal(1);
+		const last = rules.indexOf(solid[0]);
+		expect(last, "the reduced-transparency rule is ps.css's last").to.equal(rules.length - 1);
+
+		for (const [property, value] of Object.entries(SOLID)) {
+			for (const selector of GLASS_SURFACES) {
+				expect(
+					valueOf(selector, property, REDUCED_TRANSPARENCY),
+					`${selector} ${property}`
+				).to.equal(value);
+			}
+		}
+
+		const painted: string[] = [];
+		const losing: string[] = [];
+
+		for (const r of cascade) {
+			if (r.at === REDUCED_TRANSPARENCY) {
+				continue;
+			}
+
+			const paints = r.decls.filter(
+				([p, v]) => PAINTS.includes(p) && (SOLID[p] === undefined || v !== SOLID[p])
+			);
+
+			if (paints.length === 0) {
+				continue;
+			}
+
+			for (const selector of r.selectors) {
+				const surface = subjectOf(selector);
+
+				if (!surface) {
+					continue;
+				}
+
+				const where = `${r.file} ${r.at ? `${r.at} ` : ""}${selector} { ${paints
+					.map(([p, v]) => `${p}: ${v}`)
+					.join("; ")} }`;
+				painted.push(where);
+				expect(
+					paints.every(([, v]) => !v.includes("!important")),
+					`${where}: !important`
+				).to.equal(true);
+				// Reduced transparency's selector for the same element that applies
+				// whenever this one does: this selector itself, or the bare surface.
+				const beats = solid[0].selectors.some(
+					(s) =>
+						(s === selector || s === surface) &&
+						compareSpecificity(specificity(s), specificity(selector)) >= 0
+				);
+
+				if (!beats) {
+					losing.push(where);
+				}
+			}
+		}
+
+		// The glass itself, and every state and layout of it that paints.
+		expect(painted.length, painted.join("\n")).to.be.at.least(GLASS_SURFACES.length * 2);
+		expect(losing, losing.join("\n")).to.deep.equal([]);
 	});
 
 	it("no longer carries plan 1's chrome: the <3 rail, the paper header, the opaque user list", function () {
