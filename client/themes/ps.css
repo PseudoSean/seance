@@ -2424,6 +2424,14 @@ body {
 		transition: none !important;
 	}
 
+	/* A cloud still, where its delay puts it in its loop (--cp, plains.ts),
+	 * on ps-drift's own path: with no animation it stood at its box's place,
+	 * left: 0, and all five piled up at the left edge. */
+	#theme-scene .ps-cloud {
+		/* stylelint-disable-next-line unit-no-unknown -- cqw, as ps-drift's */
+		transform: translateX(calc((100cqw + 100% + 0.5rem) * var(--cp) - 100% - 0.25rem));
+	}
+
 	/* The day/night flip happens at once. A token rather than `transition:
 	 * none`, so the phone's sidebar and user list keep their slide. */
 	/* stylelint-disable-next-line no-duplicate-selectors -- the flip's duration, apart from the stills */

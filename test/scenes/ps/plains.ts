@@ -382,7 +382,7 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 		it("sizes each in cqw from the mockup's px at its 1180 px window, with its own height, speed and delay", function () {
 			const got = [
 				...sky.matchAll(
-					/<div class="ps-cloud" style="--cw:([\d.]+)cqw;--cy:(\d+)%;--cd:(\d+)s;--cdl:(-\d+)s">/g
+					/<div class="ps-cloud" style="--cw:([\d.]+)cqw;--cy:(\d+)%;--cd:(\d+)s;--cdl:(-\d+)s;/g
 				),
 			].map((m) => m.slice(1).map(Number));
 			const MOCKUP = [
@@ -399,6 +399,33 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 				expect(cw, `cloud ${i}`).to.be.closeTo(w / 11.8, 0.005);
 				expect([cy, cd, cdl], `cloud ${i}`).to.deep.equal([y, d, dl]);
 			});
+		});
+
+		it("gives each a rest place for reduced motion, --cp: where its delay puts it in its loop, five places across the sky", function () {
+			const got = [
+				...sky.matchAll(
+					/--cw:([\d.]+)cqw;--cy:\d+%;--cd:(\d+)s;--cdl:(-\d+)s;--cp:([\d.]+)">/g
+				),
+			].map((m) => m.slice(1).map(Number));
+			expect(got).to.have.length(5);
+			// Where ps.css's frozen drift stands each at the mockup's 1180 × 700
+			// window, 16 px rem: its left edge from −(width + 4 px) at 0 to
+			// 1180 + 4 px at 1.
+			const W = 1180;
+			const lefts = got.map(([cw, cd, cdl, cp], i) => {
+				expect(cp, `cloud ${i}`).to.be.closeTo(-cdl / cd, 0.00005);
+				expect(cp, `cloud ${i}`).to.be.within(0, 1);
+				const width = (cw / 100) * W;
+				const left = (W + width + 8) * cp - width - 4;
+				expect(left + width, `cloud ${i} on the sky, at least partly`).to.be.above(0);
+				expect(left, `cloud ${i} on the sky, at least partly`).to.be.below(W);
+				return left;
+			});
+			const apart = [...lefts].sort((a, b) => a - b);
+
+			for (let i = 1; i < apart.length; i++) {
+				expect(apart[i] - apart[i - 1], "no two clouds at one place").to.be.above(W / 20);
+			}
 		});
 
 		it("keeps every blob inside its cloud's box, so a cloud one width off the edge is out of sight", function () {

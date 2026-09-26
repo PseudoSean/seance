@@ -331,15 +331,18 @@ const cqh = (px: number) => `${n(px / WINDOW_H)}cqh`;
  * The sky's clouds (spec §5.1), the mockup's five of five blobs each: sized
  * in cqw of the scene, placed at their own heights, each drifting across it
  * on its own clock (ps.css `ps-drift`, faster on a windy day); the blobs in %
- * of their cloud. Their colours are the palette's, which greys them by the
- * weather. There in every weather, so built once.
+ * of their cloud. Each carries `--cp`, the fraction of its loop its negative
+ * delay puts it at, where reduced motion rests it on the same path (spread
+ * across the sky, rather than all at the left edge). Their colours are the
+ * palette's, which greys them by the weather. There in every weather, so
+ * built once.
  */
 export function clouds(): string {
 	return CLOUDS.map(
 		(c) =>
 			`<div class="ps-cloud" style="--cw:${cqw(c.w)};--cy:${c.y}%;--cd:${c.d}s;--cdl:${
 				c.dl
-			}s">` +
+			}s;--cp:${Number((-c.dl / c.d).toFixed(4))}">` +
 			BLOBS.map(
 				([x, y, w, h]) =>
 					`<i style="left:${n(x * 100)}%;top:${n(y * 100)}%;width:${n(

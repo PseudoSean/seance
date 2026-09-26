@@ -2165,6 +2165,74 @@ describe("the ps theme's clouds and weather (plan 3 task 4, spec §5.1, §5.5)",
 		expect(drift).to.include("to { transform: translateX(calc(100cqw + 0.25rem)); }");
 	});
 
+	it("rests each cloud under reduced motion where its delay puts it in its drift, not piled at the left edge", function () {
+		// With `animation: none` a cloud stood at its box's place, left: 0 with
+		// no transform, all five at the left edge. Frozen instead on ps-drift's
+		// own path at --cp (plains.ts), the fraction of its loop it would be at.
+		const REDUCED_MOTION = "@media (prefers-reduced-motion: reduce)";
+
+		/** A sum of lengths ("-100% - 0.25rem") as its coefficient for each unit, all of it read. */
+		const linear = (expr: string) => {
+			const flat = expr.replace(/\s+/g, "");
+			const terms = [...flat.matchAll(/([+-]?)([\d.]+)(cqw|%|rem)/g)];
+			expect(terms.map((t) => t[0]).join(""), expr).to.equal(flat);
+			const out: Record<string, number> = {};
+
+			for (const [, sign, n, unit] of terms) {
+				out[unit] = (out[unit] ?? 0) + (sign === "-" ? -1 : 1) * Number(n);
+			}
+
+			return out;
+		};
+
+		const minus = (a: Record<string, number>, b: Record<string, number>) => {
+			const out: Record<string, number> = {};
+
+			for (const unit of new Set([...Object.keys(a), ...Object.keys(b)])) {
+				const v = (a[unit] ?? 0) - (b[unit] ?? 0);
+
+				if (v !== 0) {
+					out[unit] = v;
+				}
+			}
+
+			return out;
+		};
+
+		const end = (which: string) =>
+			new RegExp(`${which} \\{ transform: translateX\\(calc\\((.+?)\\)\\); \\}`).exec(
+				frames("ps-drift")
+			)?.[1] ?? "";
+		const from = linear(end("from"));
+		const to = linear(end("to"));
+		const rest = valueOf(`${S} .ps-cloud`, "transform", REDUCED_MOTION) ?? "";
+		const frozen = /^translateX\(calc\(\((.+)\) \* var\(--cp\) ([+-] .+)\)\)$/.exec(rest);
+		expect(frozen, `the rest place (${rest})`).to.not.equal(null);
+		expect(linear(frozen![1]), "the drift's length").to.deep.equal(minus(to, from));
+		expect(linear(frozen![2]), "from the drift's start").to.deep.equal(from);
+
+		// Nothing else places a cloud: the drift moves it by its animation
+		// alone, and reduced motion's `animation: none !important` on every
+		// scene element leaves the transform to this rule.
+		const placing = rules.filter(
+			(r) =>
+				r.selectors.some((s) => /\.ps-cloud$/.test(s)) &&
+				r.decls.some(([p]) => p === "transform" || p === "translate" || p === "left")
+		);
+		expect(placing.map((r) => [r.at, r.selectors, r.decls])).to.deep.equal([
+			["", [`${S} .ps-cloud`], declsOf(`${S} .ps-cloud`)],
+			[REDUCED_MOTION, [`${S} .ps-cloud`], [["transform", rest]]],
+		]);
+		expect(valueOf(`${S} .ps-cloud`, "transform"), "moving, no transform of its own").to.equal(
+			undefined
+		);
+		expect(
+			rules
+				.filter((r) => r.at === REDUCED_MOTION && r.selectors.includes(`${S} *`))
+				.flatMap((r) => r.decls.map(([p]) => p))
+		).to.deep.equal(["animation", "transition"]);
+	});
+
 	it("paints the clouds from the published cloud colours, greyed by the weather in the palette", function () {
 		expect(valueOf(`${S} .ps-cloud i`, "background")).to.equal(
 			"linear-gradient(180deg, var(--ps-cloud) 40%, var(--ps-cloud-under) 100%)"
