@@ -378,8 +378,18 @@ const RAIN_CLOUDS = [
 	{w: 230, y: 22, d: 290, dl: -265},
 ];
 
-/** The deck's height, in % of the scene's (ps.css `.ps-deck`). */
+/** The storm deck's height, in % of the scene's (ps.css `.ps-deck`). */
 export const DECK_HEIGHT = 34;
+
+/** Rain's lighter deck's height, in % of the scene's (ps.css `.ps-deck.ps-deck-rain`). */
+export const RAIN_DECK_HEIGHT = 22;
+
+/**
+ * Rain's billows' depth against the storm's: shallower, so the lighter deck's
+ * foot is flatter and every billow hangs within its shallower band on the
+ * mockup's window and a 16:9 desktop (plains' test holds it).
+ */
+const RAIN_DEPTH = 0.8;
 
 /** The share of the deck's height its band covers from the top (ps.css `.ps-deck`'s background size). */
 export const DECK_BAND = 58;
@@ -404,11 +414,11 @@ const DECK_BILLOWS = [
 	[0.86, 0.2, 0.5],
 ];
 
-/** The deck's billows: left and width in % of the deck, top and height in cqw of the scene's width, each centred on the band's edge. */
-const billows = (list: number[][]) =>
+/** The deck's billows: left and width in % of the deck, top and height in cqw of the scene's width, each centred on the band's edge; `scale` their depth. */
+const billows = (list: number[][], scale = 1) =>
 	list
 		.map(([x, w, depth]) => {
-			const lift = Number(((w * 100 * depth) / 2).toFixed(2));
+			const lift = Number(((w * 100 * depth * scale) / 2).toFixed(2));
 			return `<i style="left:${n(x * 100)}%;top:calc(${DECK_BAND}% - ${n(lift)}cqw);width:${n(
 				w * 100
 			)}%;height:${n(lift * 2)}cqw"></i>`;
@@ -419,9 +429,11 @@ const billows = (list: number[][]) =>
  * The day's own clouds, over and above the five (spec §5.1 layer 6), built
  * with the weather layer and rebuilt when the day's weather changes
  * (scene.ts), so a clear day's page holds none of them. Rain and storms get
- * four more, bigger and lower (RAIN_CLOUDS); a storm lays a low overcast
- * deck across the top of the sky behind them first: a band of cloud a third
- * of the way down whose foot is a row of billows, still. Everything is
+ * four more, bigger and lower (RAIN_CLOUDS); behind them first, a storm lays
+ * a low overcast deck across the top of the sky, a band of cloud a third of
+ * the way down whose foot is a row of billows, still, and rain a lighter one,
+ * a shallower band with flatter billows (the user: "yes to the rain deck").
+ * Everything is
  * drawn in the palette's cloud colours, greyed by the weather, as the five
  * are. Nothing in any other weather.
  */
@@ -431,6 +443,8 @@ export function weatherClouds(weather: Weather): string {
 
 	if (wx.storm > 0) {
 		out += `<div class="ps-deck">${billows(DECK_BILLOWS)}</div>`;
+	} else if (wx.rain > 0) {
+		out += `<div class="ps-deck ps-deck-rain">${billows(DECK_BILLOWS, RAIN_DEPTH)}</div>`;
 	}
 
 	if (wx.rain > 0) {

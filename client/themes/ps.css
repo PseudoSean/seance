@@ -998,6 +998,13 @@ strong,
 	filter: blur(0.025rem);
 }
 
+/* Rain's lighter deck (the user, 2026-09-26: "yes to the rain deck"): the
+ * storm's band and billows, a shallower band (plains.ts RAIN_DECK_HEIGHT) and
+ * flatter billows along its edge, in the same two colours. */
+#theme-scene .ps-deck.ps-deck-rain {
+	height: 22%;
+}
+
 #theme-scene .ps-deck i {
 	position: absolute;
 	border-radius: 50%;

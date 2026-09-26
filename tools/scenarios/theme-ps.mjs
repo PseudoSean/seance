@@ -1,7 +1,7 @@
 // The ps theme in a real browser (docs/projects/ps-theme.md §12). Picking it
 // in Appearance swaps the stylesheet and mounts the scene behind the whole
 // app — the sky, 190 stars, the sun and the moon, five clouds (nine in rain
-// and a storm, and the storm's deck), the plains (the land and river, the
+// and a storm, each wet day's under a still deck, rain's the lighter), the plains (the land and river, the
 // fireflies, the yurt and its smoke, the near grass), the birds and the
 // day's weather (client/js/scenes/ps/scene.ts, through the hook in
 // client/js/themeScene.ts). The run then:
@@ -62,7 +62,8 @@
 //   across local midnight into a rainy day and a rainy one into a clear
 //   day, the weather layer and the rain's clouds rebuilt by the minute's
 //   own timer (Review Focus 3), the rain's four fading in and out over 2 s
-//   rather than popping (plan 4's final fix); and the storm's deck measured
+//   rather than popping (plan 4's final fix); and the storm's deck and
+//   rain's lighter one (the user: "yes to the rain deck") measured
 //   and shot at 1280 × 720 and on a 390 × 844 phone, its billows wide and
 //   its band's edge closed on both;
 // - samples rendered glyphs against the pixels around them (plan 4, spec
@@ -780,6 +781,7 @@ const SCENE_STATE = `(() => {
 			cls: e.className, op: +(+getComputedStyle(e).opacity).toFixed(3), clouds: e.querySelectorAll(".ps-cloud").length,
 		})),
 		deckBottom: (() => { const e = s.querySelector(".ps-deck"); return e ? +(e.getBoundingClientRect().bottom / s.getBoundingClientRect().height * 100).toFixed(1) : null; })(),
+		rainDeck: n(".ps-overcast-set:not(.ps-leaving) > .ps-deck.ps-deck-rain"),
 		birds: {
 			skeins: [...s.querySelectorAll(".ps-skeins, .ps-flock, .ps-bird")].filter((e) => e.checkVisibility()).length,
 			buzzard: [...s.querySelectorAll(".ps-buzzard")].filter((e) => e.checkVisibility()).length,
@@ -914,7 +916,7 @@ const FIREFLIES = 34;
 const cloudsFor = (weather) => (weather === "rain" || weather === "storm" ? 9 : 5);
 
 /**
- * The storm's deck as drawn: each billow's box, and at the band's lower edge
+ * The day's deck as drawn (the storm's, or rain's lighter one): each billow's box, and at the band's lower edge
  * (the deck's top 58 %, plains.ts DECK_BAND) the chord each billow's ellipse
  * has there, joined across the scene; `gap` is the first x no billow covers.
  */
@@ -943,7 +945,7 @@ const DECK_GEOMETRY = `(() => {
 	};
 })()`;
 
-/** The storm's deck on this window: its billows wide ellipses, and the band's edge closed all the way across (plans' final fix, item 3). */
+/** The day's deck on this window: its billows wide ellipses, and the band's edge closed all the way across (plans' final fix, item 3). */
 function checkDeck(page, d, where) {
 	page.check(
 		`${where}: the deck's ${d?.n} billows are wide, not tall drips, on the ${d?.width} × ${
@@ -2915,9 +2917,15 @@ export default async function run(page) {
 	);
 	// Cloudier, and no bird (the user, 2026-09-26).
 	page.check(
-		`a rainy noon: nine clouds, four of them the rain's, and no deck (${rain.clouds}, ${rain.overcast}, ${rain.deck})`,
-		rain.clouds === 9 && rain.overcast === 4 && rain.deck === 0
+		`a rainy noon: nine clouds, four of them the rain's, in front of rain's lighter deck, down to ${rain.deckBottom} % (${rain.clouds}, ${rain.overcast}, ${rain.deck} deck, ${rain.rainDeck} the rain's)`,
+		rain.clouds === 9 &&
+			rain.overcast === 4 &&
+			rain.deck === 1 &&
+			rain.rainDeck === 1 &&
+			rain.deckBottom > 19 &&
+			rain.deckBottom < 25
 	);
+	checkDeck(page, await page.evaluate(DECK_GEOMETRY), "a rainy noon");
 	const rainBirds = await birdsSettled(page);
 	page.check(
 		`a rainy noon: no bird in the render tree (${JSON.stringify(rainBirds)})`,
@@ -2925,6 +2933,23 @@ export default async function run(page) {
 	);
 	checkRunning(page, rain, "a rainy noon");
 	await page.screenshot("ps-rain-sep26-1230");
+	// And on a 16:9 desktop, beside the storm's (below) and the phone's.
+	await page.send("Emulation.setDeviceMetricsOverride", {
+		width: 1280,
+		height: 720,
+		deviceScaleFactor: 1,
+		mobile: false,
+	});
+	await page.sleep(400);
+	checkDeck(page, await page.evaluate(DECK_GEOMETRY), "a rainy noon at 1280 × 720");
+	await page.screenshot("ps-rain-sep26-1230-1280x720");
+	await page.send("Emulation.setDeviceMetricsOverride", {
+		width: Number(page.opt("width", 1280)),
+		height: Number(page.opt("height", 900)),
+		deviceScaleFactor: 1,
+		mobile: page.flags.has("--mobile"),
+	});
+	await page.sleep(400);
 
 	const heat = await at(page, noonOn(7, 1));
 	// The haze bends the ground group (land, river, fireflies, yurt, smoke)
@@ -3091,7 +3116,8 @@ export default async function run(page) {
 				s.weather === want &&
 				birds.skeins + birds.buzzard + birds.larks === 0 &&
 				s.clouds === 9 &&
-				s.deck === (want === "storm" ? 1 : 0)
+				s.deck === 1 &&
+				s.rainDeck === (want === "rain" ? 1 : 0)
 		);
 		await page.screenshot(`ps-${want}-dusk-sep${day}`);
 	}
@@ -3285,19 +3311,18 @@ export default async function run(page) {
 		);
 		if (s.weather === "rain" || s.weather === "storm") {
 			// The rain's four rest by the five's rule (--cp), nine places on the
-			// sky; the storm's deck never moved, so it stands as it was.
+			// sky; the deck (the storm's, or rain's lighter one) never moved, so
+			// it stands as it was.
 			const rests = await page.evaluate(CLOUD_RESTS);
 			const lefts = rests.map((c) => c.left).sort((a, b) => a - b);
 			page.check(
 				`${where}: the nine clouds rest in nine places on the sky (${rests
 					.map((c) => c.left.toFixed(0))
-					.join(", ")} of ${rests[0]?.width})${
-					s.weather === "storm" ? `, and the deck stands (${s.deck})` : ""
-				}`,
+					.join(", ")} of ${rests[0]?.width})${`, and the deck stands (${s.deck})`}`,
 				rests.length === 9 &&
 					rests.every((c) => c.animation === "none" && c.right > 0 && c.left < c.width) &&
 					lefts.every((x, i) => i === 0 || x - lefts[i - 1] > 20) &&
-					s.deck === (s.weather === "storm" ? 1 : 0)
+					s.deck === 1
 			);
 		}
 
@@ -3729,6 +3754,8 @@ export default async function run(page) {
 		`a phone on a rainy noon (${phone.weather}): half the drops and seeds, 65 and 13 (${phone.drops}, ${phone.seeds}; ${phone.flakes} flakes)`,
 		phone.weather === "rain" && phone.drops === 65 && phone.seeds === 13 && phone.flakes === 0
 	);
+	checkDeck(page, await page.evaluate(DECK_GEOMETRY), "a phone on a rainy noon");
+	await page.screenshot("ps-phone-rain-sep26-1230");
 	const phoneYurt = await page.evaluate(YURT);
 	page.check(
 		`a phone: the yurt at 72 % of the column, kept whole on the screen (centre ${phoneYurt.cx.toFixed(

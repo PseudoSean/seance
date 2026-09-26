@@ -17,7 +17,13 @@ import {
 } from "../../client/js/scenes/ps/glass";
 import {GATES, liveLayers, type Gate} from "../../client/js/scenes/ps/layers";
 import {paletteAt} from "../../client/js/scenes/ps/palette";
-import {DECK_BAND, DECK_HEIGHT, LAND_SHARE, weatherLayers} from "../../client/js/scenes/ps/plains";
+import {
+	DECK_BAND,
+	DECK_HEIGHT,
+	LAND_SHARE,
+	RAIN_DECK_HEIGHT,
+	weatherLayers,
+} from "../../client/js/scenes/ps/plains";
 import {OVERCAST_FADE_MS, sceneMarkup, sceneVars} from "../../client/js/scenes/ps/scene";
 import {
 	checkedGrounds,
@@ -3080,9 +3086,13 @@ describe("the ps theme's clouds and weather (plan 3 task 4, spec §5.1, §5.5)",
 		it("stretches the storm's deck across the top of the sky, about a third of the way down, its band over the top DECK_BAND %", function () {
 			expect(valueOf(`${S} .ps-deck`, "position")).to.equal("absolute");
 			expect(valueOf(`${S} .ps-deck`, "inset")).to.equal("0 0 auto");
-			// DECK_HEIGHT %, the figure plains' test hangs the billows within.
+			// DECK_HEIGHT %, the figure plains' test hangs the billows within;
+			// rain's lighter deck is RAIN_DECK_HEIGHT %, shallower.
 			expect(valueOf(`${S} .ps-deck`, "height")).to.equal(`${DECK_HEIGHT}%`);
 			expect(DECK_HEIGHT).to.be.within(30, 36);
+			expect(declsOf(`${S} .ps-deck.ps-deck-rain`)).to.deep.equal([
+				["height", `${RAIN_DECK_HEIGHT}%`],
+			]);
 			expect(valueOf(`${S} .ps-deck`, "background")).to.equal(
 				`linear-gradient(180deg, var(--ps-cloud-under), var(--ps-cloud)) top / 100% ${DECK_BAND}% no-repeat`
 			);
