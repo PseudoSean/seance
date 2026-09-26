@@ -1,7 +1,14 @@
 import {expect} from "chai";
 import fs from "fs";
 import path from "path";
-import {contrast, hexRgb, luminance, rgbHex} from "../../client/js/scenes/ps/colour";
+import {
+	contrast,
+	hexRgb,
+	hexToOklch,
+	luminance,
+	oklchToHex,
+	rgbHex,
+} from "../../client/js/scenes/ps/colour";
 import {momentFor, sunTimes} from "../../client/js/scenes/ps/engine";
 import {
 	DAY_BRIGHTNESS,
@@ -1288,8 +1295,16 @@ describe("the ps theme's chrome keeps its floors on the solid panels and on the 
 		{
 			token: "--chat-fg-faint",
 			on: ["glass", "field"],
+			floor: MARK,
+			what: "the user count's icon (the placeholders have their own, --ps-g-placeholder)",
+		},
+		// Placeholders are text. Every one reads --ps-g-placeholder under ps (the
+		// placeholders describe, below), on every ground an input stands on.
+		{
+			token: "--ps-g-placeholder",
+			on: ["glass", "glass+field", "field", "solid"],
 			floor: TEXT,
-			what: "placeholders, which are text (the user list's search and the composer on the glass, a panel's field), and the user count's icon",
+			what: "every placeholder: the composer, the user list's search and the topic on the glass; the jump-to search, the message search and the join form on the glass's field; the settings, connect and network forms on a panel's field; the emoji picker's search on the solid",
 		},
 		{token: "--window-heading-color", on: ["solid"], floor: TEXT, what: "a window's headings"},
 		{
@@ -1450,6 +1465,36 @@ describe("the ps theme's chrome keeps its floors on the solid panels and on the 
 		}
 	});
 
+	it("solves the night placeholder to 4.6 over its worst ground, the soft ink moved in OKLCH lightness alone, and leaves the day's the soft ink (the user's 'fix the night placeholder contrast too', 2026-09-26)", function () {
+		// The glass is at its cap and rule 2 could not reach 4.5 on the glass's
+		// field at night (the full moon behind); the user took the move past
+		// rule 2 for the placeholders alone, so the soft ink's other uses stay.
+		const soft = {
+			day: resolve(paletteOf("day"), "var(--ps-g-soft)"),
+			night: resolve(paletteOf("night"), "var(--ps-g-soft)"),
+		};
+		expect(resolve(paletteOf("day"), "var(--ps-g-placeholder)"), "by day").to.equal(soft.day);
+		const night = resolve(paletteOf("night"), "var(--ps-g-placeholder)");
+		expect(night, "at night, a colour of its own").to.match(/^#[0-9a-f]{6}$/);
+		const [L, C, h] = hexToOklch(soft.night);
+		const [L2, C2, h2] = hexToOklch(night);
+		// Hue and chroma are the soft ink's; the six-digit hex rounds a chroma
+		// this low (0.033) to within about 2° of hue (radians here).
+		expect(Math.abs(h2 - h), "the soft ink's hue").to.be.below(0.035);
+		expect(Math.abs(C2 - C), "the soft ink's chroma").to.be.below(0.001);
+		// The move recorded in the spec (§2) and in ps.css: +0.0645 OKLCH L.
+		expect(L2 - L, "the lightness move").to.be.closeTo(0.0645, 0.00005);
+
+		const grounds = (["glass", "glass+field", "field", "solid"] as const).flatMap((g) =>
+			groundsOf("night", g)
+		);
+		const lowest = (hex: string) => Math.min(...grounds.map((g) => contrast(hex, g)));
+		expect(lowest(night), "solved to 4.6").to.be.at.least(TEXT_SOLVE);
+		// The smallest such move (the generator's 0.0001 steps, hue and chroma kept).
+		const less = oklchToHex(L + 0.0635, C, h)!;
+		expect(lowest(less), `a step less, ${less}`).to.be.below(TEXT_SOLVE);
+	});
+
 	it("keeps every night wash on the glass at least as visible as it measures over plan 3's grounds, and never under 1.02 over the darkest ground", function () {
 		// The contrast between the washed and the bare glass over the sparse sweep:
 		// its median at least each wash's own, and its lowest above 1.02. A wash
@@ -1592,6 +1637,56 @@ describe("the ps theme's native controls follow day and night (the user's report
 			expect(contrast(ink, solid), `${light}: an option`).to.be.at.least(4.5);
 			expect(contrast(ink, face), `${light}: the select's face`).to.be.at.least(4.5);
 		}
+	});
+});
+
+describe("the ps theme's placeholders (the user's 'fix the night placeholder contrast too', 2026-09-26)", function () {
+	// Every placeholder rule the app loads, in style.css, coffee.css and the
+	// components' own styles, is restated in ps.css in --ps-g-placeholder:
+	// the same selector, later in the cascade, so it wins at equal weight.
+	const vue = (dir: string): string[] =>
+		fs
+			.readdirSync(dir, {withFileTypes: true})
+			.flatMap((e) =>
+				e.isDirectory()
+					? vue(path.join(dir, e.name))
+					: e.name.endsWith(".vue")
+					? [path.join(dir, e.name)]
+					: []
+			);
+	const sources = [
+		path.resolve(__dirname, "../../client/css/style.css"),
+		path.resolve(__dirname, "../../client/themes/coffee.css"),
+		...vue(path.resolve(__dirname, "../../client/components")),
+	].map((file) => {
+		const text = fs.readFileSync(file, "utf8");
+		const styles = file.endsWith(".vue")
+			? [...text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join("\n")
+			: text;
+		return {file: path.basename(file), rules: rulesIn(styles)};
+	});
+	const placeholders = (list: Rule[]) =>
+		list.flatMap((r) => r.selectors.filter((s) => s.endsWith("::placeholder")));
+
+	it("restates every placeholder rule the app loads, and colours each one --ps-g-placeholder", function () {
+		const theirs = [...new Set(sources.flatMap((s) => placeholders(s.rules)))];
+		expect(theirs, "the app's placeholder rules").to.include.members([
+			"::placeholder",
+			".jump-to-input .input::placeholder",
+			"form.message-search input::placeholder",
+			".reaction-picker-input::placeholder",
+		]);
+
+		for (const selector of theirs) {
+			expect(valueOf(selector, "color"), selector).to.equal("var(--ps-g-placeholder)");
+		}
+
+		// And no rule of ps.css colours a placeholder anything else.
+		const colours = rules
+			.filter((r) => placeholders([r]).length > 0)
+			.flatMap((r) => r.decls.filter(([p]) => p === "color").map(([, v]) => v));
+		expect(colours.length, "ps.css's placeholder rules").to.be.at.least(1);
+		expect(colours.filter((v) => v !== "var(--ps-g-placeholder)")).to.deep.equal([]);
 	});
 });
 

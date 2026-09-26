@@ -184,6 +184,10 @@
 	--chat-rule: var(--ps-g-edge);
 	--chat-accent: var(--ps-g-accent-text);
 	--chat-accent-fg: #fff;
+
+	/* Every placeholder (the chrome section's placeholder rule): by day the
+	 * soft ink, which holds on every ground an input stands on. */
+	--ps-g-placeholder: var(--ps-g-soft);
 	--chat-accent-rule: rgb(194 86 43 / 50%);
 	--chat-highlight-bg: #f8f0e6;
 	--chat-selection: #eeddca;
@@ -306,6 +310,15 @@
 	--chat-rule: var(--ps-g-edge);
 	--chat-accent: var(--ps-g-accent-text);
 	--chat-accent-fg: #121827;
+
+	/* Every placeholder at night: the soft ink #b3c0d5 moved +0.0645 in
+	 * OKLCH L, hue and chroma kept, solved to 4.6 over the worst ground an
+	 * input stands on, the glass's field with the full moon behind (4.63;
+	 * the soft ink read 3.74 there). Past rule 2 (+0.105 from the spec's
+	 * #a7b3c8) at the user's word, "fix the night placeholder contrast too"
+	 * (2026-09-26, spec §2), and for the placeholders alone: the soft ink's
+	 * other uses keep it. */
+	--ps-g-placeholder: #c7d5ea;
 	--chat-accent-rule: rgb(217 120 74 / 50%);
 	--chat-highlight-bg: #29241c;
 	--chat-selection: #413524;
@@ -2548,6 +2561,18 @@ select.input {
 select option {
 	background-color: var(--ps-g-solid);
 	color: var(--ps-g-ink);
+}
+
+/* Every placeholder the app loads, restated at its own weight so this one
+ * wins (style.css's and the components' black and white smudges, coffee's
+ * faint and muted tokens): --ps-g-placeholder, the soft ink by day and a
+ * lighter one at night, where the soft ink read 3.74 on the glass's field
+ * (the jump-to search, the message search, the join form). */
+::placeholder,
+.jump-to-input .input::placeholder,
+form.message-search input::placeholder,
+.reaction-picker-input::placeholder {
+	color: var(--ps-g-placeholder);
 }
 
 /* ---- animals ---- */
