@@ -188,8 +188,11 @@ for (const face of FACES) {
 	}
 }
 
+// GitHub serves some of these with CRLF line ends and the committed copies
+// are LF, so a re-fetch would show every line changed: written LF.
 for (const [file, url] of LICENCES) {
-	await writeFile(path.join(THEMES, file), await (await get(url)).text());
+	const text = (await (await get(url)).text()).replace(/\r\n/g, "\n");
+	await writeFile(path.join(THEMES, file), text);
 	console.log(file);
 }
 
