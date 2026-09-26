@@ -18,7 +18,7 @@ import {
 import {GATES, liveLayers, type Gate} from "../../client/js/scenes/ps/layers";
 import {paletteAt} from "../../client/js/scenes/ps/palette";
 import {DECK_BAND, DECK_HEIGHT, LAND_SHARE, weatherLayers} from "../../client/js/scenes/ps/plains";
-import {sceneMarkup, sceneVars} from "../../client/js/scenes/ps/scene";
+import {OVERCAST_FADE_MS, sceneMarkup, sceneVars} from "../../client/js/scenes/ps/scene";
 import {
 	checkedGrounds,
 	dayGlassGrounds,
@@ -3042,6 +3042,11 @@ describe("the ps theme's clouds and weather (plan 3 task 4, spec §5.1, §5.5)",
 		const overcast = rules.filter((r) =>
 			r.selectors.some((sel) => /\.ps-(overcast|deck)\b/.test(sel))
 		);
+		/** The rules of the day's sets, which fade in and out at local midnight (scene.ts). */
+		const SET = /\.ps-overcast-set\b/;
+		const sets = overcast.filter((r) => r.selectors.some((sel) => SET.test(sel)));
+		/** And the rules that draw: the overcast's box, the deck and its billows. */
+		const drawn = overcast.filter((r) => !sets.includes(r));
 
 		it("lays the overcast over the cloud field's own box, so its clouds drift on the five's geometry", function () {
 			expect(valueOf(`${S} .ps-overcast`, "position")).to.equal("absolute");
@@ -3073,7 +3078,9 @@ describe("the ps theme's clouds and weather (plan 3 task 4, spec §5.1, §5.5)",
 		});
 
 		it("paints only the two cloud colours, opaque: no new ground for the words (spec §11)", function () {
-			for (const r of overcast) {
+			expect(drawn.length).to.be.at.least(3);
+
+			for (const r of drawn) {
 				for (const [p, v] of r.decls) {
 					const where = `${r.selectors.join(", ")} { ${p}: ${v} }`;
 					expect(p, where).to.not.match(/^(opacity|mask|mix-blend-mode|backdrop-filter)/);
@@ -3090,7 +3097,7 @@ describe("the ps theme's clouds and weather (plan 3 task 4, spec §5.1, §5.5)",
 		});
 
 		it("holds the deck still: it neither drifts nor animates, so reduced motion has nothing to rest", function () {
-			for (const r of overcast) {
+			for (const r of drawn) {
 				for (const [p] of r.decls) {
 					expect(p, r.selectors.join(", ")).to.not.match(
 						/^(animation|transition|transform|translate|will-change)/
@@ -3099,6 +3106,28 @@ describe("the ps theme's clouds and weather (plan 3 task 4, spec §5.1, §5.5)",
 			}
 
 			expect(overcast.filter((r) => r.at !== "").map((r) => r.selectors)).to.deep.equal([]);
+		});
+
+		it("fades a day's set out and the next one in over OVERCAST_FADE_MS, and nothing else in the overcast is ever translucent", function () {
+			// Each day's clouds are one set on the overcast's box (scene.ts
+			// puts them there); at local midnight in view the outgoing takes
+			// .ps-leaving and the incoming comes in with .ps-arriving, both at 0,
+			// and the opacity eases between. That fade is the overcast's one
+			// translucency: 2 s, at midnight, under the night treatment (spec §11).
+			expect(declsOf(`${S} .ps-overcast-set`)).to.deep.equal([
+				["position", "absolute"],
+				["inset", "0"],
+				["transition", `opacity ${OVERCAST_FADE_MS / 1000}s ease`],
+			]);
+			expect(declsOf(`${S} .ps-overcast-set.ps-arriving`)).to.deep.equal([["opacity", "0"]]);
+			expect(declsOf(`${S} .ps-overcast-set.ps-leaving`)).to.deep.equal([["opacity", "0"]]);
+			expect(sets.flatMap((r) => r.selectors).sort()).to.deep.equal(
+				[
+					`${S} .ps-overcast-set`,
+					`${S} .ps-overcast-set.ps-arriving`,
+					`${S} .ps-overcast-set.ps-leaving`,
+				].sort()
+			);
 		});
 	});
 

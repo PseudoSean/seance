@@ -28,7 +28,7 @@ import {birdsAt, dayBirdsMarkup, skeinsMarkup} from "./birds";
 import {momentAt, rng, type Moment, type MoonPhase, type Weather} from "./engine";
 import {composerAboveGrass, GLASS_TINT_VARS, glassVars} from "./glass";
 import {bodyOpacity, publishedFor, type Published} from "./grounds";
-import {GATES, layerGates, liveLayers} from "./layers";
+import {FADE_MARGIN_MS, GATES, layerGates, liveLayers} from "./layers";
 import {levelsAt, paletteAt, WEATHER, type Palette} from "./palette";
 import {
 	clouds,
@@ -152,6 +152,12 @@ export function sceneVars(m: Moment, p: Palette): Record<string, string> {
 export function weatherChanged(prev: Weather | null, next: Weather): boolean {
 	return prev !== next;
 }
+
+/**
+ * How long the day's own clouds take to fade out and in when the day's
+ * weather changes in view (ps.css `.ps-overcast-set`'s transition), in ms.
+ */
+export const OVERCAST_FADE_MS = 2000;
 
 /**
  * The root's classes: the weather's, from the day's levels (what ps.css keys
@@ -535,6 +541,8 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 	const overcast = root.querySelector(".ps-overcast") as HTMLElement;
 	// The weather the layer holds: none until the first tick builds the day's.
 	let built: Weather | null = null;
+	// A fade of the weather's own clouds under way: ends it now (the outgoing out of the page).
+	let endFade: (() => void) | undefined;
 	// The theme's own theme-color, kept to hand back on destroy; and the last
 	// colour the scene wrote, so a destroy after something else has written the
 	// tag (the next theme's colour, the deploy's) leaves that alone.
@@ -587,7 +595,52 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 	});
 	let applied = false;
 
-	const apply = (now: Date) => {
+	// The day's own clouds (plains.ts `weatherClouds`) are one set in the
+	// overcast, `.ps-overcast-set`. A new day's replaces the old at once, or,
+	// when `fade` (the minute's tick crossing midnight on a page in view, the
+	// scene running), cross-fades with it (the user dislikes clouds popping):
+	// the incoming set is put in at 0 and its style computed there, so its
+	// transition runs as the class comes off; the outgoing fades to 0 and
+	// leaves the page once its fade is over, as a gated layer does.
+	const buildOvercast = (weather: Weather, fade: boolean) => {
+		endFade?.();
+		const markup = weatherClouds(weather);
+		const leaving = [...overcast.children];
+		const set = markup ? document.createElement("div") : null;
+
+		if (set) {
+			set.className = "ps-overcast-set";
+			set.innerHTML = markup;
+		}
+
+		if (!fade) {
+			overcast.replaceChildren(...(set ? [set] : []));
+			return;
+		}
+
+		for (const el of leaving) {
+			el.classList.add("ps-leaving");
+		}
+
+		if (set) {
+			set.classList.add("ps-arriving");
+			overcast.prepend(set); // behind the outgoing, which fades off it
+			void getComputedStyle(set).opacity;
+			set.classList.remove("ps-arriving");
+		}
+
+		if (leaving.length > 0) {
+			const wait = window.setTimeout(() => endFade?.(), OVERCAST_FADE_MS + FADE_MARGIN_MS);
+
+			endFade = () => {
+				window.clearTimeout(wait);
+				endFade = undefined;
+				leaving.forEach((el) => el.remove());
+			};
+		}
+	};
+
+	const apply = (now: Date, fade: boolean) => {
 		const m = momentAt(now);
 		const p = paletteAt(m);
 		const vars = sceneVars(m, p);
@@ -596,11 +649,12 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 		// replaces yesterday's, built for the layout as it is now, and so do
 		// its own clouds (the five drift on, never rebuilt). Before the
 		// gates, so a new heat band is gated with the rest; nothing in the
-		// weather layer or the overcast transitions, so the style the gates
-		// may compute first changes nothing there.
+		// weather layer transitions, and the overcast's fade computes its own
+		// start, so the style the gates may compute first changes nothing
+		// there.
 		if (weatherChanged(built, m.weather)) {
 			weatherLayer.innerHTML = weatherLayers(m.weather, isPhoneLayout());
-			overcast.innerHTML = weatherClouds(m.weather);
+			buildOvercast(m.weather, fade && built !== null);
 			built = m.weather;
 			// The weather layer's gated elements are new: the gates decide them afresh.
 			gates.forget("seeds");
@@ -654,22 +708,6 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 		}
 	};
 
-	// Once now, then on each minute boundary. The next minute is scheduled
-	// whatever this one's apply does: one bad minute throws (and is reported),
-	// and the scene still draws the next rather than freezing.
-	const tick = () => {
-		const now = new Date();
-
-		try {
-			apply(now);
-		} finally {
-			timer = window.setTimeout(
-				tick,
-				60000 - (now.getSeconds() * 1000 + now.getMilliseconds()) + 20
-			);
-		}
-	};
-
 	const motion = (run: boolean) => {
 		root.classList.toggle("ps-paused", !run);
 		syncSvgs();
@@ -683,6 +721,26 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 	let privateView = false;
 	const running = () => visible && !reduced.matches && !privateView;
 	const onReduced = () => motion(running());
+
+	// Once now, then on each minute boundary. The next minute is scheduled
+	// whatever this one's apply does: one bad minute throws (and is reported),
+	// and the scene still draws the next rather than freezing. Only the
+	// minute's own tick on a running scene fades the day's clouds: the catch-up
+	// of a page coming into view (the day changed while it was hidden) draws
+	// the day as it is.
+	const tick = (live: boolean) => {
+		const now = new Date();
+
+		try {
+			apply(now, live && running());
+		} finally {
+			timer = window.setTimeout(
+				() => tick(true),
+				60000 - (now.getSeconds() * 1000 + now.getMilliseconds()) + 20
+			);
+		}
+	};
+
 	// Built in mount's try below; a half-built mount's destroy skips what is missing.
 	let yurt: ReturnType<typeof placeYurt> | undefined;
 	let composer: ReturnType<typeof watchComposer> | undefined;
@@ -698,12 +756,13 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 			visible = true;
 			yurt?.seen(); // the first time opens the load's window (yurt.ts SETTLE_MS)
 			motion(running());
-			tick(); // catch up at once: a laptop that slept shows the right sky
+			tick(false); // catch up at once: a laptop that slept shows the right sky
 		} else if (!state.visible && visible) {
 			visible = false;
 			window.clearTimeout(timer);
 			timer = undefined;
 			gates.settle(); // no fade is seen on a hidden page, and no timer runs there
+			endFade?.();
 			motion(false);
 		} else {
 			motion(running()); // a query opened or left: still or running again
@@ -716,6 +775,7 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 			window.clearTimeout(timer);
 			timer = undefined;
 			gates.stop();
+			endFade?.();
 			reduced.removeEventListener("change", onReduced);
 			yurt?.destroy();
 			composer?.destroy();

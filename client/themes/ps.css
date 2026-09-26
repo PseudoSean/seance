@@ -975,6 +975,26 @@ strong,
 	inset: 0;
 }
 
+/* Each day's own clouds are one set on the overcast's box (scene.ts). When
+ * the day's weather changes on a page in view, at the minute's tick past
+ * local midnight, the outgoing set fades out and the incoming one in, both
+ * over OVERCAST_FADE_MS (the user dislikes clouds popping), and the outgoing
+ * leaves the page once its fade is over. A change found as the page comes
+ * back into view, under reduced motion or in a query takes neither class and
+ * is at once. That fade is the overcast's one translucency: 2 s at local
+ * midnight, under the night treatment, the cloud colours mixing with the
+ * night sky they already stand on (spec §11). */
+#theme-scene .ps-overcast-set {
+	position: absolute;
+	inset: 0;
+	transition: opacity 2s ease;
+}
+
+#theme-scene .ps-overcast-set.ps-arriving,
+#theme-scene .ps-overcast-set.ps-leaving {
+	opacity: 0;
+}
+
 #theme-scene .ps-deck {
 	position: absolute;
 	inset: 0 0 auto;

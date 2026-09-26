@@ -1,7 +1,8 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {weatherClouds} from "../../../client/js/scenes/ps/plains";
-import {mount} from "../../../client/js/scenes/ps/scene";
+import {FADE_MARGIN_MS} from "../../../client/js/scenes/ps/layers";
+import {mount, OVERCAST_FADE_MS} from "../../../client/js/scenes/ps/scene";
 import type {SceneHandle} from "../../../client/js/themeScene";
 
 /*
@@ -144,9 +145,39 @@ class FakeElement extends Listeners {
 		}
 	}
 
-	replaceChildren() {
+	/** Its element children: only what was put there with prepend or replaceChildren (markup is not parsed). */
+	children = new Array<FakeElement>();
+	parent = null as FakeElement | null;
+
+	set className(value: string) {
+		this.classList.names = new Set(value.split(/\s+/).filter(Boolean));
+	}
+
+	get className() {
+		return [...this.classList.names].join(" ");
+	}
+
+	prepend(...nodes: FakeElement[]) {
+		nodes.forEach((node) => node.remove());
+		nodes.forEach((node) => (node.parent = this));
+		this.children.unshift(...nodes);
+	}
+
+	remove() {
+		if (this.parent) {
+			this.parent.children = this.parent.children.filter((c) => c !== this);
+			this.parent = null;
+		}
+	}
+
+	replaceChildren(...nodes: FakeElement[]) {
 		this.markup = "";
 		this.found.clear();
+		this.children.forEach((c) => (c.parent = null));
+		this.children = [];
+		nodes.forEach((node) => node.remove());
+		nodes.forEach((node) => (node.parent = this));
+		this.children.push(...nodes);
 	}
 
 	getBoundingClientRect() {
@@ -240,6 +271,8 @@ function fakePage() {
 	let columnShown = true;
 	/** Thrown from the column's lookup while set: a failing measurement. */
 	let columnFails: Error | null = null;
+	/** Each style computation asked for: the element, and its classes at that moment. */
+	const computed: Array<{el: FakeElement; classes: string}> = [];
 	FakeResizeObserver.all = [];
 
 	const globals: Record<string, unknown> = {
@@ -273,14 +306,18 @@ function fakePage() {
 				return columnShown ? column : null;
 			},
 			getElementById: () => null,
+			createElement: (tag: string) => new FakeElement(tag),
 		},
 		ResizeObserver: FakeResizeObserver,
 		HTMLMetaElement: class {},
-		getComputedStyle: (el: FakeElement) => ({
-			opacity: "1",
-			fontSize: "20px",
-			width: `${el.layoutWidth ?? el.box.width}px`,
-		}),
+		getComputedStyle(el: FakeElement) {
+			computed.push({el, classes: el.className});
+			return {
+				opacity: "1",
+				fontSize: "20px",
+				width: `${el.layoutWidth ?? el.box.width}px`,
+			};
+		},
 	};
 
 	return {
@@ -290,6 +327,7 @@ function fakePage() {
 		win,
 		media,
 		globals,
+		computed,
 		/** The scene laid out (ps.css applied): the root's box and the yurt's. */
 		layOut(width: number) {
 			root.box = {left: 0, top: 0, width, height: 900};
@@ -506,22 +544,25 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 	});
 
 	describe("the day's weather, rebuilt", function () {
+		/** The overcast's sets, each as its classes and its markup. */
+		const setsOf = (overcast: FakeElement) =>
+			overcast.children.map((c) => ({classes: c.className, markup: c.markup}));
+
+		/** The scene on a stand-in page whose .ps-overcast (and cloud field) the test holds. */
+		const withOvercast = (page: Page) => {
+			const overcast = new FakeElement(".ps-overcast");
+			const field = new FakeElement(".ps-cloud-field");
+			page.root.planted.set(".ps-overcast", overcast);
+			page.root.planted.set(".ps-cloud-field", field);
+			return {overcast, field};
+		};
+
 		it("rebuilds the weather's own clouds with the day's weather, and never the five (the user, 2026-09-26)", function () {
 			withPage((page, clock) => {
-				const overcast = new FakeElement(".ps-overcast");
-				const field = new FakeElement(".ps-cloud-field");
-				let builds = 0;
-				Object.defineProperty(overcast, "innerHTML", {
-					set(value: string) {
-						overcast.markup = value;
-						builds++;
-					},
-				});
-				page.root.planted.set(".ps-overcast", overcast);
-				page.root.planted.set(".ps-cloud-field", field);
+				const {overcast, field} = withOvercast(page);
 				const scene = mountOn(page); // 25 September: clear
 
-				// Waking into another day.
+				// Waking into another day: found on a page coming back into view, so at once.
 				const shownOn = (date: Date) => {
 					scene.update({visible: false, view: "channel"});
 					clock.setSystemTime(date);
@@ -529,26 +570,141 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 				};
 
 				expect(page.root.dataset.weather).to.equal("clear");
-				expect(overcast.markup, "a clear day adds nothing").to.equal("");
+				expect(setsOf(overcast), "a clear day adds nothing").to.deep.equal([]);
 
 				shownOn(new Date(2026, 8, 26, 12, 30));
 				expect(page.root.dataset.weather).to.equal("rain");
-				expect(overcast.markup, "rain's four").to.equal(weatherClouds("rain"));
-				const rainBuilds = builds;
+				expect(setsOf(overcast), "rain's four").to.deep.equal([
+					{classes: "ps-overcast-set", markup: weatherClouds("rain")},
+				]);
+				const rainSet = overcast.children[0];
 
 				clock.tick(60000); // the next minute, the same day: nothing rebuilt
-				expect(builds).to.equal(rainBuilds);
+				expect(overcast.children).to.deep.equal([rainSet]);
 
 				shownOn(new Date(2026, 6, 19, 12, 30));
 				expect(page.root.dataset.weather).to.equal("storm");
-				expect(overcast.markup, "the storm's deck and four").to.equal(
-					weatherClouds("storm")
-				);
+				expect(setsOf(overcast), "the storm's deck and four").to.deep.equal([
+					{classes: "ps-overcast-set", markup: weatherClouds("storm")},
+				]);
 
 				shownOn(new Date(2026, 8, 25, 12, 30));
-				expect(overcast.markup, "clear again").to.equal("");
+				expect(setsOf(overcast), "clear again").to.deep.equal([]);
 				expect(field.markup, "the five are the mount's, never rebuilt").to.equal("");
+				expect(clock.countTimers(), "the minute's tick alone: no fade waits").to.equal(1);
 				scene.destroy();
+			});
+		});
+
+		describe("across local midnight in view: the weather's own clouds fade (the user dislikes clouds popping)", function () {
+			it("fades the incoming set in over OVERCAST_FADE_MS: in at 0, its start computed, then the class off", function () {
+				withPage((page, clock) => {
+					const {overcast} = withOvercast(page);
+					clock.setSystemTime(new Date(2026, 8, 25, 23, 59, 30)); // clear, before a rainy 26th
+					const scene = mountOn(page);
+					expect(setsOf(overcast)).to.deep.equal([]);
+					page.computed.length = 0;
+
+					clock.tick(31000); // the minute's tick at 00:00, by its own timer
+					expect(page.root.dataset.weather).to.equal("rain");
+					expect(setsOf(overcast)).to.deep.equal([
+						{classes: "ps-overcast-set", markup: weatherClouds("rain")},
+					]);
+					// Its style was computed while it stood at 0, so the transition runs.
+					const set = overcast.children[0];
+					expect(
+						page.computed.filter((c) => c.el === set).map((c) => c.classes)
+					).to.deep.equal(["ps-overcast-set ps-arriving"]);
+					// Nothing leaves, so nothing waits on the overcast: once the
+					// gates' own fades are over (the night's skeins, grounded by the
+					// rain), the minute's tick alone, and the set as it was.
+					clock.tick(OVERCAST_FADE_MS + FADE_MARGIN_MS);
+					expect(clock.countTimers()).to.equal(1);
+					expect(overcast.children).to.deep.equal([set]);
+					expect(set.className).to.equal("ps-overcast-set");
+					scene.destroy();
+				});
+			});
+
+			it("fades the outgoing set out and takes it out of the page once the fade is over", function () {
+				withPage((page, clock) => {
+					const {overcast} = withOvercast(page);
+					clock.setSystemTime(new Date(2026, 8, 26, 23, 59, 30)); // rain, before a clear 27th
+					const scene = mountOn(page);
+					const rain = overcast.children[0];
+					expect(setsOf(overcast), "the first build is at once").to.deep.equal([
+						{classes: "ps-overcast-set", markup: weatherClouds("rain")},
+					]);
+
+					clock.tick(31000); // 00:00:01; the fade began at the tick, 00:00:00.020
+					expect(page.root.dataset.weather).to.equal("clear");
+					expect(overcast.children, "still in the page, fading").to.deep.equal([rain]);
+					expect(rain.className).to.equal("ps-overcast-set ps-leaving");
+
+					clock.tick(OVERCAST_FADE_MS + FADE_MARGIN_MS - 980 - 1);
+					expect(overcast.children, "until the fade is over").to.deep.equal([rain]);
+					clock.tick(2);
+					expect(overcast.children, "then out of the render tree").to.deep.equal([]);
+					expect(clock.countTimers(), "the minute's tick alone").to.equal(1);
+					scene.destroy();
+				});
+			});
+
+			it("fades nothing under reduced motion or in a query: the new day's clouds replace the old at once", function () {
+				for (const setUp of ["reduced motion", "a query"]) {
+					withPage((page, clock) => {
+						const {overcast} = withOvercast(page);
+						clock.setSystemTime(new Date(2026, 8, 26, 23, 59, 30));
+						const scene = mountOn(page);
+
+						if (setUp === "reduced motion") {
+							page.reducedMotion().set(true);
+						} else {
+							scene.update({visible: true, view: "query"});
+						}
+
+						clock.tick(31000);
+						expect(page.root.dataset.weather, setUp).to.equal("clear");
+						expect(setsOf(overcast), setUp).to.deep.equal([]);
+						expect(clock.countTimers(), setUp).to.equal(1);
+
+						clock.setSystemTime(new Date(2026, 8, 25, 23, 59, 30));
+						scene.update({visible: false, view: "channel"});
+						scene.update({
+							visible: true,
+							view: setUp === "a query" ? "query" : "channel",
+						});
+						clock.tick(31000); // into the rainy 26th
+						expect(setsOf(overcast), setUp).to.deep.equal([
+							{classes: "ps-overcast-set", markup: weatherClouds("rain")},
+						]);
+						scene.destroy();
+					});
+				}
+			});
+
+			it("settles a fade under way when the page is hidden, and a destroy mid-fade leaves nothing running", function () {
+				withPage((page, clock) => {
+					const {overcast} = withOvercast(page);
+					clock.setSystemTime(new Date(2026, 8, 26, 23, 59, 30));
+					const scene = mountOn(page);
+					clock.tick(31000);
+					expect(overcast.children).to.have.length(1);
+
+					scene.update({visible: false, view: "channel"});
+					expect(overcast.children, "the leaving set, out at once").to.deep.equal([]);
+					expect(clock.countTimers(), "nothing waits on a hidden page").to.equal(0);
+					scene.destroy();
+				});
+
+				withPage((page, clock) => {
+					withOvercast(page);
+					clock.setSystemTime(new Date(2026, 8, 26, 23, 59, 30));
+					const scene = mountOn(page);
+					clock.tick(31000);
+					scene.destroy();
+					expect(leftBehind(page, clock)).to.deep.equal(NOTHING);
+				});
 			});
 		});
 

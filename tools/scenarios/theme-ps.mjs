@@ -58,9 +58,13 @@
 //   rainy and a stormy dusk in the autumn passage fly no skein where a clear
 //   one flies three (the user, 2026-09-26: birds don't fly in rainstorms); a
 //   clear day at dawn, noon, golden hour, dusk and midnight; spring's
-//   flowers, summer's dry river and autumn's running one; and a rainy
-//   evening across local midnight into a clear day, the weather layer and
-//   the rain's clouds rebuilt by the minute's own timer (Review Focus 3);
+//   flowers, summer's dry river and autumn's running one; a clear evening
+//   across local midnight into a rainy day and a rainy one into a clear
+//   day, the weather layer and the rain's clouds rebuilt by the minute's
+//   own timer (Review Focus 3), the rain's four fading in and out over 2 s
+//   rather than popping (plan 4's final fix); and the storm's deck measured
+//   and shot at 1280 × 720 and on a 390 × 844 phone, its billows wide and
+//   its band's edge closed on both;
 // - samples rendered glyphs against the pixels around them (plan 4, spec
 //   §11) at noon, golden hour, sunset, dusk, midnight and first light, on a
 //   clear 4 August and a snowy 8 January: every message row's words, time
@@ -761,9 +765,12 @@ const SCENE_STATE = `(() => {
 		stars: n(".ps-stars i"),
 		sun: !!s.querySelector(".ps-sun"),
 		moon: !!s.querySelector(".ps-moon"),
-		clouds: n(".ps-cloud-field .ps-cloud"),
-		overcast: n(".ps-cloud-field > .ps-overcast > .ps-cloud"),
-		deck: n(".ps-cloud-field > .ps-overcast > .ps-deck"),
+		clouds: n(".ps-cloud-field .ps-cloud") - n(".ps-overcast-set.ps-leaving .ps-cloud"),
+		overcast: n(".ps-cloud-field > .ps-overcast > .ps-overcast-set:not(.ps-leaving) > .ps-cloud"),
+		deck: n(".ps-cloud-field > .ps-overcast > .ps-overcast-set:not(.ps-leaving) > .ps-deck"),
+		sets: [...s.querySelectorAll(".ps-cloud-field > .ps-overcast > *")].map((e) => ({
+			cls: e.className, op: +(+getComputedStyle(e).opacity).toFixed(3), clouds: e.querySelectorAll(".ps-cloud").length,
+		})),
 		deckBottom: (() => { const e = s.querySelector(".ps-deck"); return e ? +(e.getBoundingClientRect().bottom / s.getBoundingClientRect().height * 100).toFixed(1) : null; })(),
 		birds: {
 			skeins: [...s.querySelectorAll(".ps-skeins, .ps-flock, .ps-bird")].filter((e) => e.checkVisibility()).length,
@@ -3335,6 +3342,39 @@ export default async function run(page) {
 
 	// ---- across local midnight with the page open (Review Focus 3)
 
+	// A clear 25 September into a rainy 26th, by the scene's own minute
+	// timer: the rain's four fade in over 2 s rather than popping in (plan
+	// 4's final fix, item 5; the user dislikes clouds popping).
+	const clearEve = await at(page, Date.UTC(2026, 8, 25, 23, 59, 52));
+	page.check(
+		`25 September at ${hhmm(clearEve.minute)}: clear, no set in the overcast (${JSON.stringify(
+			clearEve.sets
+		)})`,
+		clearEve.weather === "clear" && clearEve.sets.length === 0
+	);
+	await settle(page, `document.getElementById("theme-scene").dataset.weather === "rain"`, 15000);
+	await page.sleep(500); // into the fade: it starts at 0 on the frame after the flip
+	const fadingIn = await page.evaluate(SCENE_STATE);
+	page.check(
+		`past local midnight into a rainy 26th: the rain's four fade in, not pop (${JSON.stringify(
+			fadingIn.sets
+		)})`,
+		fadingIn.sets.length === 1 &&
+			fadingIn.sets[0].cls === "ps-overcast-set" &&
+			fadingIn.sets[0].clouds === 4 &&
+			fadingIn.sets[0].op > 0 &&
+			fadingIn.sets[0].op < 0.95
+	);
+	await page.screenshot("ps-midnight-sep26-fade-in");
+	await page.sleep(1800);
+	const inRain = await page.evaluate(SCENE_STATE);
+	page.check(
+		`and 2 s on, the four are in whole (${JSON.stringify(inRain.sets)}; ${
+			inRain.clouds
+		} clouds)`,
+		inRain.sets.length === 1 && inRain.sets[0].op === 1 && inRain.clouds === 9
+	);
+
 	// A rainy 26 September into a clear 27th, by the scene's own minute timer:
 	// no visibility poke once the clock is set. The tick is due at 00:00:00.02.
 	const eve = await at(page, Date.UTC(2026, 8, 26, 23, 59, 45));
@@ -3345,16 +3385,32 @@ export default async function run(page) {
 		eve.weather === "rain" && eve.drops === 130 && eve.clouds === 9 && eve.overcast === 4
 	);
 	await settle(page, `document.getElementById("theme-scene").dataset.weather !== "rain"`, 25000);
+	// The rain's four fade out over 2 s (plan 4's final fix, item 5), still
+	// in the page, and then leave it.
 	await page.sleep(500);
+	const fadingOut = await page.evaluate(SCENE_STATE);
+	page.check(
+		`past local midnight into a clear 27th: the rain's four fade out, not pop (${JSON.stringify(
+			fadingOut.sets
+		)})`,
+		fadingOut.sets.length === 1 &&
+			fadingOut.sets[0].cls === "ps-overcast-set ps-leaving" &&
+			fadingOut.sets[0].clouds === 4 &&
+			fadingOut.sets[0].op > 0.05 &&
+			fadingOut.sets[0].op < 1
+	);
+	await page.screenshot("ps-midnight-sep27-fade-out");
+	await page.sleep(1800);
 	const morning = await page.evaluate(SCENE_STATE);
 	page.check(
-		`after local midnight (${morning.date}): 27 September is clear and the rain is gone (${morning.weather}, ${morning.drops} drops, ${morning.seeds} seeds, the weather layer holds ${morning.weatherLayer}; ${morning.clouds} clouds, ${morning.overcast} of the rain's)`,
+		`after local midnight (${morning.date}): 27 September is clear and the rain is gone (${morning.weather}, ${morning.drops} drops, ${morning.seeds} seeds, the weather layer holds ${morning.weatherLayer}; ${morning.clouds} clouds, ${morning.overcast} of the rain's, ${morning.sets.length} sets left)`,
 		morning.doy === 270 &&
 			morning.weather === "clear" &&
 			morning.drops + morning.flakes + morning.seeds === 0 &&
 			morning.weatherLayer === 0 &&
 			morning.clouds === 5 &&
-			morning.overcast === 0
+			morning.overcast === 0 &&
+			morning.sets.length === 0
 	);
 	await page.screenshot("ps-midnight-sep27-0000");
 	await realClock(page);
