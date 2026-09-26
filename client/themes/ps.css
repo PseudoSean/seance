@@ -400,11 +400,13 @@
  * the user's pick of 2026-09-26); 700 is its bold, the heaviest weight the
  * theme asks of it (the face goes to 900; 700 is the bold the user saw it
  * picked at). Newsreader 700 for the names the eye jumps to: the nick
- * column's nicks, channel and network names, the header title. Both ship
- * Latin, Latin Extended and Vietnamese only (the ps:fonts block above);
- * every other script, Cyrillic and Greek included, falls back mid-line — a
- * name to the system serif, the words to the system sans. .context-menu
- * substituted for #context-menu: ContextMenu.vue renders
+ * column's nicks, channel and network names, the header title, and the
+ * names in Settings → Appearance's font-size sample, which shows a few chat
+ * lines (Appearance.vue; its times and lines are #settings', the words'
+ * face). Both ship Latin, Latin Extended and Vietnamese only (the ps:fonts
+ * block above); every other script, Cyrillic and Greek included, falls back
+ * mid-line — a name to the system serif, the words to the system sans.
+ * .context-menu substituted for #context-menu: ContextMenu.vue renders
  * <ul id="context-menu">, not a class. */
 body,
 #chat .msg,
@@ -428,7 +430,8 @@ strong,
 #chat .header .title,
 .channel-list-item .name,
 .network .lobby-title .name,
-#sidebar .lobby-title {
+#sidebar .lobby-title,
+.font-size-sample .from {
 	font-family: Newsreader, Georgia, serif;
 	font-weight: 700;
 }

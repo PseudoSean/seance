@@ -1774,6 +1774,28 @@ describe("the ps theme's type", function () {
 			".channel-list-item .name",
 		]);
 	});
+
+	it("shows the theme's own faces in Settings → Appearance's font-size sample: its names in the names' face, its times and lines in the words' (the user's report, 2026-09-26)", function () {
+		// Appearance.vue: <div class="font-size-sample"> of lines of
+		// <span class="time">, <span class="from user"> and <span class="text">,
+		// inside #settings, which the words' rule sets; the names' rule
+		// named only the chat's and the sidebar's names, so the sample's drew
+		// in the words' face at the component's bold.
+		expect(namesSelectors()).to.include(".font-size-sample .from");
+
+		const wordsRule = rules.find(
+			(r) =>
+				r.at === "" &&
+				r.decls.some(([p, v]) => p === "font-family" && v.startsWith('"Source Sans 3"'))
+		);
+		expect(wordsRule?.selectors).to.include("#settings");
+
+		for (const selector of namesSelectors()) {
+			expect(selector, "the names' face on the sample's time or line").to.not.match(
+				/\.font-size-sample\b.*\.(time|text)(?![\w-])/
+			);
+		}
+	});
 });
 
 describe("the ps theme's message gutter: the time column and the text's 30 characters", function () {

@@ -2735,6 +2735,42 @@ export default async function run(page) {
 		`no conversation (Settings): the scene's view is other (${inSettings.view})`,
 		inSettings.view === "other"
 	);
+
+	// The font-size sample under the slider shows chat lines in the theme's
+	// own faces: the names in Newsreader, the times and lines in Source Sans 3
+	// (the user's report, 2026-09-26: it "does not use the theme fonts
+	// properly" — its names drew in the words' face).
+	await page.send("DOM.enable");
+	await page.send("DOM.getDocument", {depth: 0});
+	await page.send("CSS.enable");
+	await checkDrawnIn(
+		page,
+		"the font-size sample's name in Newsreader",
+		`document.querySelector(".font-size-sample .line .from")`,
+		"Newsreader",
+		false
+	);
+	await checkDrawnIn(
+		page,
+		"the font-size sample's line in Source Sans 3",
+		`document.querySelector(".font-size-sample .line .text")`,
+		"Source Sans 3",
+		false
+	);
+	await checkDrawnIn(
+		page,
+		"the font-size sample's time in Source Sans 3",
+		`document.querySelector(".font-size-sample .line .time")`,
+		"Source Sans 3",
+		false
+	);
+	await page.send("CSS.disable");
+	await page.send("DOM.disable");
+	await page.evaluate(
+		`document.querySelector(".font-size-sample").scrollIntoView({block: "center"})`
+	);
+	await page.sleep(200);
+	await page.screenshot("ps-settings-font-size-sample");
 	await chooseTheme(page, "coffee");
 	const coffee = await page.evaluate(SCENE_STATE);
 	page.check(
