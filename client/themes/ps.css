@@ -473,25 +473,20 @@ strong,
 	width: 10ch;
 }
 
-/* The nick column's basis (plan 4's final fix). style.css gives it `flex: 0
- * 1000 12ch`, and a ch is the width of a "0" in the column's own face, the
- * words': plan 2's words' face had a 0.600 "0" and Source Sans 3 has a
- * 0.505 one, so the same 12ch lost 16 % (144px became 121px at the default
- * step) and nicks of ten and eleven letters the column used to hold
- * (psmuigvwpw, psmuihe71bn) ended in an ellipsis even on a wide window. The
- * unit is the whole loss: Newsreader 700 draws the scenarios' nicks
- * narrower than plan 2's names' face did, 3.4 % wider at most on any one.
- * Restated in the same ch, measured (spec §8): of the scenarios' nick forms
- * (12,000 over a year of runs), the widest the old column held is 13.78ch
- * of Newsreader at every step (gutn73mm57a), so 14ch holds them all with
- * 0.22ch to spare.
- * The 9ch floor and the shrink weight stay style.css's, so the column still
- * gives way first, and the two thresholds count that floor, not the basis,
- * so the text keeps its 30ch there. The column stays in the words' face:
- * its ch is the one those thresholds count; Newsreader is the nick's inside
- * it. Checked by tools/scenarios/message-gutter.mjs, SEANCE_THEME=ps. */
+/* The nick column is 9ch, right-aligned (the user's N, 2026-09-26: "N seems
+ * fine"; spec §2, §8). style.css gives it `flex: 0 1000 12ch; min-width:
+ * 9ch`, and the basis comes down to that floor, in the same words' ch, so a
+ * short nick sits nearer the time. In Newsreader 700 a nick of about 8
+ * letters is 7.9ch (95 % of 8-letter nicks fit, half of 9-letter ones); a
+ * longer one ends in style.css's ellipsis, Source Sans 3's "…" (1.9ch), after
+ * about 7ch of the nick (tumbleweed_42 draws "tumble…"): the user accepts
+ * longer nicks cut sooner. The shrink weight, the floor, the right
+ * alignment, the words' face and the shadow's clip (#chat .chat .from,
+ * below) stay as they were; the thresholds count the 9ch floor, so the text
+ * keeps its 30ch at both. Checked by tools/scenarios/message-gutter.mjs,
+ * SEANCE_THEME=ps. */
 #chat .from {
-	flex-basis: 14ch;
+	flex-basis: 9ch;
 }
 
 /* The text column. No rule between it and the nick column: style.css draws

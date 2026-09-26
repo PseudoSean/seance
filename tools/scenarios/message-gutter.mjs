@@ -77,17 +77,29 @@ const MEASURE = `(() => {
 	};
 })()`;
 
-// theme-ps.mjs's run nicks the review found cut (`ps${RUN}`, `${NICK}n`), and
-// each one's .from: scrollWidth over clientWidth means an ellipsis.
-const NICKS_WHOLE = `(() => {
+// The ps theme's nick column is the user's N, 9ch (docs/projects/ps-theme.md
+// §8): two nicks of about 8 letters and under, and two longer ones — the
+// scenario's 11-letter peer (`${NICK}n` in theme-ps.mjs) and the options
+// page's tumbleweed_42 — each drawn in a copy of the own row, measured, and
+// gone again. scrollWidth over clientWidth means the nick ends in the
+// column's ellipsis; `inside` is the column's box ending before the text's.
+const NICK_COLUMN = `(() => {
 	const row = [...document.querySelectorAll('#chat .msg.self[data-type="message"]')].pop();
-	return ["psmuigvwpw", "psmuihe71bn"].map((nick) => {
+	return ["campfire", "sparrow", "psmuihe71bn", "tumbleweed_42"].map((nick) => {
 		const copy = row.cloneNode(true);
 		copy.classList.remove("self");
 		copy.querySelector(".from .user").textContent = nick;
 		row.after(copy);
-		const f = copy.querySelector(".from");
-		const out = {nick, scroll: f.scrollWidth, client: f.clientWidth, layout: getComputedStyle(copy).display === "flex" ? "columns" : "inline"};
+		const f = copy.querySelector(".from"), c = copy.querySelector(".content");
+		const cs = getComputedStyle(f);
+		const z = document.createElement("span"); z.textContent = "0"; z.style.cssText = "position:absolute;visibility:hidden"; c.appendChild(z);
+		const ch = z.getBoundingClientRect().width; z.remove();
+		const out = {
+			nick, scroll: f.scrollWidth, client: f.clientWidth,
+			ch: (f.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)) / ch,
+			ellipsis: cs.textOverflow, inside: f.getBoundingClientRect().right + parseFloat(cs.marginRight) <= c.getBoundingClientRect().left + 0.5,
+			layout: getComputedStyle(copy).display === "flex" ? "columns" : "inline",
+		};
 		copy.remove();
 		return out;
 	});
@@ -135,18 +147,29 @@ export default async function run(page) {
 		);
 		await page.screenshot(`gutter-${CLOCK}-${step}`, {clip: box});
 	}
-	// The ps theme's nick column holds the nicks it held before its type
-	// review (docs/projects/ps-theme.md §8): the two found cut at 1280px, at
-	// the default step, in columns, each drawn in a copy of the own row that
+	// The ps theme's nick column is the user's N (docs/projects/ps-theme.md
+	// §8), at 1280px and the default step, in columns: 9ch wide; a nick of
+	// about 8 letters or fewer drawn whole, a longer one ending in the
+	// column's ellipsis inside the column. Each in a copy of the own row that
 	// is not .self (so MEASURE never reads it) and is gone again at once.
 	if (process.env.SEANCE_THEME === "ps") {
 		await page.evaluate(`document.documentElement.dataset.fontSize = "large"`);
 		await page.sleep(80);
 
-		for (const n of await page.evaluate(NICKS_WHOLE)) {
+		for (const n of await page.evaluate(NICK_COLUMN)) {
+			const long = n.nick.length > 8;
+			const tail = `${n.scroll} in ${n.client}px, the column ${n.ch.toFixed(2)}ch, ${
+				n.layout
+			}`;
 			page.check(
-				`large @1280: ${n.nick} draws whole in the nick column (${n.scroll} in ${n.client}px, ${n.layout})`,
-				n.layout === "columns" && n.scroll <= n.client
+				long
+					? `large @1280: ${n.nick} ends in an ellipsis inside the 9ch nick column (${tail}, ${n.ellipsis}, inside ${n.inside})`
+					: `large @1280: ${n.nick} draws whole in the 9ch nick column (${tail})`,
+				n.layout === "columns" &&
+					Math.abs(n.ch - 9) < 0.1 &&
+					(long
+						? n.scroll > n.client && n.ellipsis === "ellipsis" && n.inside
+						: n.scroll <= n.client)
 			);
 		}
 	}
