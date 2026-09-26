@@ -2232,6 +2232,15 @@ html[data-own-messages="band"] #chat .msg.self[data-type="action"]:not(.highligh
 	cursor: zoom-in;
 }
 
+/* The still an animation holds after its one play (LinkPreview.vue); it is
+ * drawn at the image's measured size, so it takes the image's box exactly. */
+#chat .toggle-content .media-still {
+	display: block;
+	max-width: 100%;
+	height: auto;
+	cursor: zoom-in;
+}
+
 #chat .toggle-content pre.prefetch-error {
 	padding: 0;
 	margin: 0;

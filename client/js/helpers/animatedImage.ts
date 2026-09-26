@@ -152,3 +152,167 @@ export async function isAnimatedImage(file: Blob): Promise<boolean> {
 		return false;
 	}
 }
+
+// ------------------------------------------------------------ one play
+
+/** How long one play of an animation lasts, and how many frames it has. */
+export interface AnimationInfo {
+	frames: number;
+	durationMs: number;
+}
+
+/**
+ * A frame delay as browsers play it: GIF, WebP and APNG files made to "run
+ * as fast as possible" (10 ms or less, 0 included) are shown at 100 ms a
+ * frame by Chrome and Firefox alike, so a sum of the raw delays would end
+ * the play early.
+ */
+function playedDelay(ms: number): number {
+	return ms <= 10 ? 100 : ms;
+}
+
+function readLE16(bytes: Uint8Array, at: number): number {
+	return bytes[at] | (bytes[at + 1] << 8);
+}
+
+function readLE24(bytes: Uint8Array, at: number): number {
+	return bytes[at] | (bytes[at + 1] << 8) | (bytes[at + 2] << 16);
+}
+
+function readLE32(bytes: Uint8Array, at: number): number {
+	return (readLE24(bytes, at) | (bytes[at + 3] << 24)) >>> 0;
+}
+
+/** Skip a run of GIF data sub-blocks (length byte, data, …, 0); returns the offset after it. */
+function skipSubBlocks(bytes: Uint8Array, at: number): number {
+	while (at < bytes.length) {
+		const size = bytes[at];
+		at += 1;
+
+		if (size === 0) {
+			return at;
+		}
+
+		at += size;
+	}
+
+	return at;
+}
+
+/** GIF: a Graphic Control Extension (0x21 0xF9) ahead of each image carries its delay in 1/100 s. */
+function gifInfo(bytes: Uint8Array): AnimationInfo | undefined {
+	const signature = String.fromCharCode(...bytes.subarray(0, 6));
+
+	if (signature !== "GIF87a" && signature !== "GIF89a") {
+		return undefined;
+	}
+
+	let at = 13;
+	const screenFlags = bytes[10];
+
+	if (screenFlags & 0x80) {
+		at += 3 * (1 << ((screenFlags & 0x07) + 1));
+	}
+
+	let frames = 0;
+	let durationMs = 0;
+	let delay = 0;
+
+	while (at < bytes.length) {
+		const block = bytes[at];
+
+		if (block === 0x3b) {
+			break; // trailer
+		}
+
+		if (block === 0x21) {
+			if (bytes[at + 1] === 0xf9 && at + 6 < bytes.length) {
+				delay = readLE16(bytes, at + 4) * 10;
+			}
+
+			at = skipSubBlocks(bytes, at + 2);
+		} else if (block === 0x2c) {
+			const flags = bytes[at + 9];
+			at += 10;
+
+			if (flags & 0x80) {
+				at += 3 * (1 << ((flags & 0x07) + 1));
+			}
+
+			at = skipSubBlocks(bytes, at + 1); // LZW minimum code size, then the data
+			frames++;
+			durationMs += playedDelay(delay);
+			delay = 0;
+		} else {
+			break; // not a block we know: stop at what we have
+		}
+	}
+
+	return frames > 0 ? {frames, durationMs} : undefined;
+}
+
+/** WebP: each `ANMF` chunk is a frame; its duration is 24 bits at payload offset 12, in ms. */
+function webpInfo(bytes: Uint8Array): AnimationInfo | undefined {
+	if (!isAnimatedWebp(bytes)) {
+		return undefined;
+	}
+
+	let frames = 0;
+	let durationMs = 0;
+	let at = 12;
+
+	while (at + 8 <= bytes.length) {
+		const type = fourcc(bytes, at);
+		const size = readLE32(bytes, at + 4);
+
+		if (type === "ANMF" && at + 8 + 15 <= bytes.length) {
+			frames++;
+			durationMs += playedDelay(readLE24(bytes, at + 8 + 12));
+		}
+
+		at += 8 + size + (size & 1);
+	}
+
+	return frames > 0 ? {frames, durationMs} : undefined;
+}
+
+/** APNG: each `fcTL` chunk is a frame; its delay is `delay_num / delay_den` seconds (den 0 = 100). */
+function apngInfo(bytes: Uint8Array): AnimationInfo | undefined {
+	if (isAnimatedPng(bytes) !== true) {
+		return undefined;
+	}
+
+	let frames = 0;
+	let durationMs = 0;
+	let at = PNG_SIGNATURE.length;
+
+	while (at + 8 <= bytes.length) {
+		const length = readBE32(bytes, at);
+		const type = fourcc(bytes, at + 4);
+
+		if (type === "fcTL" && at + 8 + 24 <= bytes.length) {
+			const num = (bytes[at + 8 + 20] << 8) | bytes[at + 8 + 21];
+			const den = (bytes[at + 8 + 22] << 8) | bytes[at + 8 + 23] || 100;
+			frames++;
+			durationMs += playedDelay((num / den) * 1000);
+		}
+
+		if (type === "IEND") {
+			break;
+		}
+
+		at += 12 + length;
+	}
+
+	return frames > 0 ? {frames, durationMs} : undefined;
+}
+
+/**
+ * Frames and the length of one play of an animated GIF, WebP or APNG,
+ * read from the whole file. `undefined` for anything else — a still, an
+ * AVIF sequence (its timing lives deep in ISOBMFF boxes), bytes that are
+ * not an image. A single-frame GIF is `{frames: 1}`: a still.
+ */
+export function animationInfo(bytes: Uint8Array): AnimationInfo | undefined {
+	return gifInfo(bytes) ?? webpInfo(bytes) ?? apngInfo(bytes);
+}
