@@ -21,12 +21,15 @@
 //   message;
 // - reads the chrome (§6): the sidebar, header, user list and composer are
 //   glass — a blur over the day tint at noon, the night tint at 22:00 — and
-//   #status-bar-tint never blurs; the send glyph is the generated text
-//   accent; at 22:00 the idle channel names are the night soft ink and the
+//   #status-bar-tint never blurs and paints the canvas (style.css's touch
+//   rule resolved on it: Chromium never paints it, the rule being WebKit's
+//   alone); the send glyph is the generated text accent; at 22:00 the idle channel names are the night soft ink and the
 //   open one the night ink; under reduced transparency the glass turns solid
 //   (a SKIP line, never a pass, where Chromium cannot emulate it); and the
 //   browser's theme-color is the sky's canvas, coffee's own colour after a
-//   switch, and the sky again after the switch back;
+//   switch, and the sky again after the switch back; in Settings the theme
+//   select and its options are the solid in its ink at 22:00 and at noon
+//   (the user's report, 2026-09-26: light text on a light list at night);
 // - hides and shows the page: the scene stops (its class, all its SVG clocks
 //   — 48, and 49 on a hot day with the haze — and every CSS animation in it)
 //   and starts again, every SVG running but those in a layer outside its
@@ -58,6 +61,17 @@
 //   flowers, summer's dry river and autumn's running one; and a rainy
 //   evening across local midnight into a clear day, the weather layer and
 //   the rain's clouds rebuilt by the minute's own timer (Review Focus 3);
+// - samples rendered glyphs against the pixels around them (plan 4, spec
+//   §11) at noon, golden hour, sunset, dusk, midnight and first light, on a
+//   clear 4 August and a snowy 8 January: every message row's words, time
+//   and nick in the column, shot as it is and as its twin in magenta
+//   (calibrate.mjs's method), each held at the 10th percentile of its ring
+//   one CSS px out — the words and times 4.5, the nicks 3 as large text
+//   under the light treatment (4.5 otherwise), and the faint colour,
+//   composited over the words' ring since nothing in the column paints it,
+//   3 — with the scene stopped and the frame shot twice alike;
+// - replies to a long line: the quote under the reply stays inside its text
+//   column, and on the phone inside its row;
 // - toggles the user list twice inside the yurt's 0.4 s fade and samples the
 //   yurt every frame: it is never seen anywhere but where it stood and where
 //   it ends, and ends fully shown at 72 % of the column (Review Focus 2);
@@ -189,6 +203,16 @@
 // both failed, the quote's box 14px past the column's content box (its own
 // padding and rule, inherited content-box). With the basis restated and the
 // column border-box both pass.
+// The glyph samples (plan 4 task 6, 2026-09-26) were first run as a scratch
+// port of their leg against 45356f39's build with
+// `#chat .chat, #chat .chat * { text-shadow: none !important }` appended to
+// the served ps.css: 11 of the 12 moments' floor checks failed (the words
+// 1.33–3.94, the nicks down to 1.01 at a clear noon); the snowy noon's held,
+// dark ink over snow needing no halo. On the build as it is, every moment
+// holds with room: the words 7.9 at worst (dark ink at the snowy noon), the
+// nicks 5.7 (a snowy golden hour, against 3), the faint colour 5.1 (3).
+// With them, the select, the status bar's value and the reply quote: 304 of
+// 304 on a rainy real day (26 September).
 //
 //   NODE_ENV=production corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/theme-ps.mjs
@@ -202,6 +226,9 @@
 // SEANCE_HTTP_PORT the port the built `public/` is served on — worth setting
 // deliberately, since a stale server already squatting on the default serves
 // a *different* build and every check below then reports on that one.
+
+import {mkdirSync, writeFileSync} from "node:fs";
+import {join} from "node:path";
 
 const RUN = Date.now().toString(36);
 const NICK = `ps${RUN}`;
@@ -1158,31 +1185,45 @@ const describeFonts = (fonts) =>
  * font Chromium drew it in. A missing italic file would draw the upright one
  * slanted, whose name says no italic.
  */
-async function checkDrawnIn(page, label, holder, family, italic) {
+async function checkDrawnIn(page, label, holder, family, italic, {clippedBy = null} = {}) {
 	const css = await page.evaluate(`(() => {
 		const e = ${holder};
 		if (!e) return null;
 		const cs = getComputedStyle(e);
-		return {style: cs.fontStyle, family: cs.fontFamily};
+		const clip = ${JSON.stringify(clippedBy)} && e.closest(${JSON.stringify(clippedBy ?? "")});
+		return {
+			style: cs.fontStyle,
+			family: cs.fontFamily,
+			clipped: !!clip && clip.scrollWidth > clip.clientWidth,
+			clipFamily: clip ? getComputedStyle(clip).fontFamily : null,
+		};
 	})()`);
 	const fonts = await drawnFonts(page, holder);
 	const re = new RegExp(`^${family}\\b`);
 	// The computed list quotes a name with a space or a figure ("Source Sans 3").
 	const first = css?.family.split(",")[0].trim().replace(/^"|"$/g, "");
+	// A clipped column draws its ellipsis in the column's own face, one glyph
+	// that CSS.getPlatformFontsForNode counts with the text it ends.
+	const clipFirst = css?.clipFamily?.split(",")[0].trim().replace(/^"|"$/g, "");
+	const ellipsis = (f) =>
+		css?.clipped && f.isCustomFont && f.glyphCount === 1 && f.familyName.startsWith(clipFirst);
 	page.check(
 		`fonts: ${label} (font-style ${css?.style}, font-family ${
 			css?.family
-		}; drawn in ${describeFonts(fonts)})`,
+		}; drawn in ${describeFonts(fonts)}${
+			css?.clipped ? `; clipped, its ellipsis in ${clipFirst}` : ""
+		})`,
 		css !== null &&
 			css.style === (italic ? "italic" : "normal") &&
 			re.test(first) &&
 			fonts !== null &&
-			fonts.length > 0 &&
+			fonts.some((f) => re.test(f.familyName)) &&
 			fonts.every(
 				(f) =>
-					f.isCustomFont &&
-					re.test(f.familyName) &&
-					/italic/i.test(f.postScriptName) === italic
+					ellipsis(f) ||
+					(f.isCustomFont &&
+						re.test(f.familyName) &&
+						/italic/i.test(f.postScriptName) === italic)
 			)
 	);
 }
@@ -1647,6 +1688,400 @@ async function openSeance(page, label) {
 	await page.sleep(300);
 }
 
+// ---- the glyph samples (plan 4: docs/projects/ps-theme.md §11, §12)
+
+/**
+ * The glyph samples read rendered words off the page, over the real scene,
+ * with calibrate.mjs's method (tools/ps/calibrate.mjs): a frame of the
+ * message column as it is, and its twin, the same frame with every glyph in
+ * the column drawn in TWIN_COLOUR (the text shadows are explicit colours, so
+ * they do not change). Core pixels are where the two differ; the ring is the
+ * non-core pixels one CSS px out (Chebyshev distance DPR device px from the
+ * core). Each ring pixel is the ground the treatment leaves right around a
+ * glyph — the scene, the shadow and its rings or the halo, all as painted —
+ * and each element's figure is the 10th percentile (calibrate's rank) of its
+ * text colour's contrast against those pixels. The kinds: the words of every
+ * message row (their own colour, 4.5), the times (4.5), the nicks in the nick
+ * column (3 as large text under the light treatment at the default step and
+ * above, the user's names-large; 4.5 otherwise), and the words' ring again
+ * against the faint colour composited over it (3): nothing in the column
+ * paints --chat-fg-faint, so that figure is derived, not rendered.
+ */
+const GLYPH_STILL = "ps-glyph-still";
+const GLYPH_TWIN = "ps-glyph-twin";
+const TWIN_COLOUR = "#ff00ff";
+/** calibrate.mjs's: real and twin differing by more than this is glyph paint. */
+const GLYPH_CORE_DIFF = 2;
+/** An element whose ring holds fewer pixels than this is not measured. */
+const GLYPH_MIN_RING = 40;
+/** At least this many elements of each kind, or the sample is vacuous. */
+const GLYPH_MIN_ELEMENTS = 4;
+/** How far past an element's text boxes its ring is gathered, in CSS px. */
+const GLYPH_REACH = 3;
+/** The wait after the last change before a frame is shot. */
+const GLYPH_SETTLE_MS = 300;
+
+/** What still eases on the scene (a transition) or in the column (anything). */
+const EASING = `document.getAnimations().filter((a) => {
+	const t = a.effect && a.effect.target;
+	if (a.playState !== "running" || !(t instanceof Element)) return false;
+	return (a instanceof CSSTransition && !!t.closest("#theme-scene")) || !!t.closest("#chat .chat");
+}).length`;
+
+/** Add or take away one of the samples' style elements. */
+const glyphStyle = (id, css) => `(() => {
+	document.getElementById(${JSON.stringify(id)})?.remove();
+	const css = ${JSON.stringify(css)};
+	if (css) {
+		const s = document.createElement("style");
+		s.id = ${JSON.stringify(id)};
+		s.textContent = css;
+		document.head.append(s);
+	}
+	return true;
+})()`;
+const STILL_CSS =
+	"#chat .chat *, #chat .chat *::before, #chat .chat *::after { transition: none !important; }";
+const TWIN_CSS = `#chat .chat *, #chat .chat *::before, #chat .chat *::after { color: ${TWIN_COLOUR} !important; -webkit-text-fill-color: ${TWIN_COLOUR} !important; }`;
+
+/**
+ * The column's visible band as a whole-px clip, and every element to
+ * measure in it, with its text colour and its text boxes relative to the
+ * clip. An element is measured only if every box lies inside the band, clear
+ * of its edges (the header above, the composer below) and of the
+ * jump-to-recent disc. A message row's words are the text inside .content
+ * in .content's own colour, outside links, nicks, code, buttons and chips.
+ */
+const GLYPH_TARGETS = `(() => {
+	const col = document.querySelector("#chat .chat");
+	const r = col.getBoundingClientRect();
+	const clip = {x: Math.ceil(r.left), y: Math.ceil(r.top)};
+	clip.width = Math.floor(r.right) - clip.x;
+	clip.height = Math.floor(r.bottom) - clip.y;
+	const INSET = 6;
+	const disc = document.querySelector("#chat .scroll-down-shown");
+	const d = disc ? disc.getBoundingClientRect() : null;
+	const inside = (b) =>
+		b.left >= clip.x + INSET && b.top >= clip.y + INSET &&
+		b.right <= clip.x + clip.width - INSET && b.bottom <= clip.y + clip.height - INSET &&
+		!(d && b.right > d.left - INSET && b.left < d.right + INSET && b.bottom > d.top - INSET && b.top < d.bottom + INSET);
+	const boxesOf = (nodes) => {
+		const out = [];
+		for (const n of nodes) {
+			const range = document.createRange();
+			range.selectNodeContents(n);
+			for (const b of range.getClientRects()) if (b.width > 0 && b.height > 0) out.push(b);
+		}
+		return out;
+	};
+	const targets = [];
+	let cut = 0;
+	const add = (kind, el, nodes, color) => {
+		const boxes = boxesOf(nodes);
+		if (!boxes.length) return;
+		if (!boxes.every(inside)) { cut++; return; }
+		targets.push({
+			kind,
+			label: el.textContent.replace(/\\s+/g, " ").trim().slice(0, 40),
+			color,
+			boxes: boxes.map((b) => [b.left - clip.x, b.top - clip.y, b.width, b.height]),
+		});
+	};
+	const SKIP = "a, .user, code, pre, button, .msg-reactions, .msg-edited, .preview, .msg-shown-in-active";
+	for (const row of col.querySelectorAll('.msg[data-type="message"]')) {
+		const content = row.querySelector(":scope > .content");
+		if (!content) continue;
+		const color = getComputedStyle(content).color;
+		const nodes = [];
+		const walk = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+		for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+			if (!n.data.trim()) continue;
+			const p = n.parentElement;
+			if (p.closest(SKIP) || getComputedStyle(p).color !== color) continue;
+			nodes.push(n);
+		}
+		add("words", content, nodes, color);
+	}
+	for (const t of col.querySelectorAll(".msg > .time")) add("time", t, [t], getComputedStyle(t).color);
+	for (const u of col.querySelectorAll(".msg > .from .user")) add("nick", u, [u], getComputedStyle(u).color);
+	const h = document.documentElement;
+	return {
+		clip,
+		targets,
+		cut,
+		text: h.dataset.psText,
+		step: h.dataset.fontSize ?? null,
+		dpr: devicePixelRatio,
+	};
+})()`;
+
+/**
+ * The column's faint colour as a computed colour: a probe span in the
+ * column, read and taken away again — before the frames are shot, since it
+ * changes the page.
+ */
+const FAINT_PROBE = `(() => {
+	const col = document.querySelector("#chat .chat");
+	const p = document.createElement("span");
+	p.style.color = "var(--chat-fg-faint)";
+	col.append(p);
+	const c = getComputedStyle(p).color;
+	p.remove();
+	return c;
+})()`;
+
+/**
+ * Decode the two frames in the page and measure every element (the page
+ * has the decoder; node has none). Runs in the page; everything arrives as
+ * JSON.
+ */
+function glyphMeasure(a64, b64, sample, again64) {
+	return `(async () => {
+		const load = async (b64) => {
+			const img = new Image();
+			img.src = "data:image/png;base64," + b64;
+			await img.decode();
+			const c = document.createElement("canvas");
+			c.width = img.naturalWidth;
+			c.height = img.naturalHeight;
+			const ctx = c.getContext("2d", {willReadFrequently: true});
+			ctx.drawImage(img, 0, 0);
+			return {W: c.width, H: c.height, d: ctx.getImageData(0, 0, c.width, c.height).data};
+		};
+		const A = await load(${JSON.stringify(a64)});
+		const B = await load(${JSON.stringify(b64)});
+		const A2 = await load(${JSON.stringify(again64)});
+		const sample = ${JSON.stringify(sample)};
+		const dpr = sample.dpr, W = A.W, H = A.H, n = W * H;
+		const out = {W, H, BW: B.W, BH: B.H};
+		if (B.W !== W || B.H !== H || A2.W !== W || A2.H !== H) return out;
+
+		// The frame is still: shot twice, no pixel differs by more than the
+		// core's threshold. A layer the freeze paused mid-animation (the near
+		// grass's sway) can be rastered again a moment later, a level apart
+		// here and there: that rounding is counted, not held, since it could
+		// never pass for glyph paint.
+		let moved = 0, rounding = 0;
+		const movedAt = [];
+		for (let i = 0; i < n; i++) {
+			const k = i * 4;
+			const diff = Math.max(Math.abs(A.d[k] - A2.d[k]), Math.abs(A.d[k + 1] - A2.d[k + 1]), Math.abs(A.d[k + 2] - A2.d[k + 2]));
+			if (!diff) continue;
+			if (diff <= ${GLYPH_CORE_DIFF}) { rounding++; continue; }
+			moved++;
+			if (movedAt.length < 8) movedAt.push([i % W, (i - (i % W)) / W, diff]);
+		}
+		out.moved = moved;
+		out.rounding = rounding;
+		out.movedAt = movedAt;
+
+		// The core, and every pixel's Chebyshev distance from it (a
+		// multi-source breadth-first search over the 8-neighbourhood).
+		const MAXD = Math.max(3, dpr + 1);
+		const dist = new Uint8Array(n).fill(255);
+		const queue = new Int32Array(n);
+		let head = 0, tail = 0, coreCount = 0;
+		for (let i = 0; i < n; i++) {
+			const k = i * 4;
+			const diff = Math.max(Math.abs(A.d[k] - B.d[k]), Math.abs(A.d[k + 1] - B.d[k + 1]), Math.abs(A.d[k + 2] - B.d[k + 2]));
+			if (diff > ${GLYPH_CORE_DIFF}) { dist[i] = 0; queue[tail++] = i; coreCount++; }
+		}
+		while (head < tail) {
+			const i = queue[head++];
+			const dd = dist[i];
+			if (dd >= MAXD) continue;
+			const x = i % W, y = (i - x) / W;
+			for (let dy = -1; dy <= 1; dy++) {
+				for (let dx = -1; dx <= 1; dx++) {
+					const nx = x + dx, ny = y + dy;
+					if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+					const j = ny * W + nx;
+					if (dist[j] === 255) { dist[j] = dd + 1; queue[tail++] = j; }
+				}
+			}
+		}
+		out.core = coreCount;
+
+		// Where else the twin differs, more than 2 device px from any glyph:
+		// by at most the core's threshold, by construction (anything more is
+		// core) — the raster's rounding again. Reported, not held.
+		let off = 0, offMax = 0;
+		for (let i = 0; i < n; i++) {
+			if (dist[i] <= 2) continue;
+			const k = i * 4;
+			const diff = Math.max(Math.abs(A.d[k] - B.d[k]), Math.abs(A.d[k + 1] - B.d[k + 1]), Math.abs(A.d[k + 2] - B.d[k + 2]));
+			if (diff > 0) { off++; offMax = Math.max(offMax, diff); }
+		}
+		out.off = off;
+		out.offMax = offMax;
+
+		const LIN = new Float64Array(256);
+		for (let v = 0; v < 256; v++) { const c = v / 255; LIN[v] = c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }
+		const lum = (r, g, b) => 0.2126 * LIN[r] + 0.7152 * LIN[g] + 0.0722 * LIN[b];
+		const ratio = (p, q) => (Math.max(p, q) + 0.05) / (Math.min(p, q) + 0.05);
+		const parse = (s) => {
+			const m = /rgba?\\(([\\d.]+),? ([\\d.]+),? ([\\d.]+)(?:,? \\/? ?([\\d.]+%?))?\\)/.exec(s);
+			if (!m) return null;
+			let a = m[4] === undefined ? 1 : parseFloat(m[4]);
+			if (m[4] && m[4].endsWith("%")) a /= 100;
+			return [+m[1], +m[2], +m[3], a];
+		};
+		/** A colour at alpha a over the ground pixel, as the browser composites it (sRGB, 8 bit). */
+		const over = (c, R) => c[3] >= 1 ? c : [0, 1, 2].map((k) => Math.round(R[k] + (c[k] - R[k]) * c[3]));
+		const faint = parse(sample.faintProbe);
+		const pct = (v, q) => v[Math.floor(q * (v.length - 1))];
+		const stamp = new Int32Array(n).fill(-1);
+		const results = [];
+		sample.targets.forEach((t, ti) => {
+			const colour = parse(t.color);
+			const main = [], dim = [];
+			for (const [bx, by, bw, bh] of t.boxes) {
+				const x0 = Math.max(0, Math.floor((bx - ${GLYPH_REACH}) * dpr)), y0 = Math.max(0, Math.floor((by - ${GLYPH_REACH}) * dpr));
+				const x1 = Math.min(W, Math.ceil((bx + bw + ${GLYPH_REACH}) * dpr)), y1 = Math.min(H, Math.ceil((by + bh + ${GLYPH_REACH}) * dpr));
+				for (let y = y0; y < y1; y++) {
+					for (let x = x0; x < x1; x++) {
+						const i = y * W + x;
+						if (dist[i] !== dpr || stamp[i] === ti) continue;
+						stamp[i] = ti;
+						const k = i * 4, R = [A.d[k], A.d[k + 1], A.d[k + 2]];
+						const lR = lum(R[0], R[1], R[2]);
+						const T = over(colour, R);
+						main.push(ratio(lum(T[0], T[1], T[2]), lR));
+						if (t.kind === "words" && faint) {
+							const F = over(faint, R);
+							dim.push(ratio(lum(F[0], F[1], F[2]), lR));
+						}
+					}
+				}
+			}
+			if (main.length < ${GLYPH_MIN_RING}) {
+				results.push({kind: t.kind, label: t.label, ring: main.length, skipped: true});
+				return;
+			}
+			main.sort((p, q) => p - q);
+			const r = {kind: t.kind, label: t.label, color: t.color, ring: main.length, p10: pct(main, 0.1), min: main[0], median: pct(main, 0.5)};
+			results.push(r);
+			if (dim.length) {
+				dim.sort((p, q) => p - q);
+				results.push({kind: "faint", label: t.label, color: sample.faintProbe, ring: dim.length, p10: pct(dim, 0.1), min: dim[0], median: pct(dim, 0.5)});
+			}
+		});
+		out.results = results;
+		return out;
+	})()`;
+}
+
+/**
+ * One glyph sample: the page at the instant `ms`, settled, frozen (the
+ * scene stops for a hidden page), shot as it is and as its twin, then shown
+ * again. Returns the scene's state, the sample's elements and the measure.
+ */
+async function glyphSample(page, ms, slug) {
+	const s = await at(page, ms);
+	// A layer's fade and a weather rebuild outlast at()'s wait: let
+	// everything that eases on the scene or in the column finish first.
+	for (const until = Date.now() + 8000; Date.now() < until; ) {
+		if ((await page.evaluate(EASING)) === 0) break;
+		await page.sleep(250);
+	}
+	const faintProbe = await page.evaluate(FAINT_PROBE);
+	await page.evaluate(VISIBILITY("hidden"));
+	await page.evaluate(glyphStyle(GLYPH_STILL, STILL_CSS));
+	await page.evaluate(PAINTED);
+	const frozen = await page.evaluate(SCENE_STATE);
+	const easing = await page.evaluate(EASING);
+	const sample = {...(await page.evaluate(GLYPH_TARGETS)), faintProbe};
+	const clip = {...sample.clip, scale: 1};
+	// Every change is made: let the page finish painting it before the
+	// first frame (a frame shot straight after a change can still hold
+	// tiles rastered a level or two apart).
+	await page.evaluate(PAINTED);
+	await page.sleep(GLYPH_SETTLE_MS);
+	const a = await page.send("Page.captureScreenshot", {format: "png", clip});
+	// The same frame again: it must come back identical, or something moved.
+	await page.evaluate(PAINTED);
+	await page.sleep(GLYPH_SETTLE_MS);
+	const a2 = await page.send("Page.captureScreenshot", {format: "png", clip});
+	await page.evaluate(glyphStyle(GLYPH_TWIN, TWIN_CSS));
+	await page.evaluate(PAINTED);
+	await page.sleep(GLYPH_SETTLE_MS);
+	const b = await page.send("Page.captureScreenshot", {format: "png", clip});
+	await page.evaluate(glyphStyle(GLYPH_TWIN, ""));
+	await page.evaluate(PAINTED);
+	await page.evaluate(glyphStyle(GLYPH_STILL, ""));
+	await page.evaluate(VISIBILITY("visible"));
+	mkdirSync(page.outDir, {recursive: true});
+	writeFileSync(join(page.outDir, `ps-glyphs-${slug}.png`), Buffer.from(a.data, "base64"));
+	writeFileSync(join(page.outDir, `ps-glyphs-${slug}-twin.png`), Buffer.from(b.data, "base64"));
+	const m = await page.evaluate(glyphMeasure(a.data, b.data, sample, a2.data));
+	return {s, frozen, easing, sample, m};
+}
+
+/** Two frames painted since the last change. */
+const PAINTED = `new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))`;
+
+/**
+ * What style.css's touch rule paints #status-bar-tint with, resolved on the
+ * element. Chromium never paints the tint — the rule sits behind WebKit's
+ * `@supports (-webkit-touch-callout: none)` — so the scenario reads the value
+ * the rule declares, applies it to the tint for the length of one read, and
+ * returns the colour it resolves to (null if the rule is not found).
+ */
+const TINT_PAINT = `(() => {
+	const find = (rules) => {
+		for (const r of rules) {
+			if (r.selectorText === "#status-bar-tint" && r.style.getPropertyValue("background-color")) return r.style.getPropertyValue("background-color");
+			if (r.cssRules) { const v = find(r.cssRules); if (v) return v; }
+		}
+		return null;
+	};
+	let declared = null;
+	for (const sheet of document.styleSheets) {
+		try { declared = find(sheet.cssRules); } catch { continue; }
+		if (declared) break;
+	}
+	if (!declared) return null;
+	const tint = document.getElementById("status-bar-tint");
+	const was = tint.style.getPropertyValue("background-color");
+	tint.style.setProperty("background-color", declared);
+	const painted = getComputedStyle(tint).backgroundColor;
+	tint.style.setProperty("background-color", was);
+	return {declared, painted};
+})()`;
+
+/**
+ * The native select's colours (the user's report, 2026-09-26: at night its
+ * list drew light text on a light ground): the theme select's own fill and
+ * text, every option's, and the solid and ink they should be.
+ */
+const SELECT_COLOURS = `(() => {
+	const sel = document.querySelector("#theme-select");
+	const cs = getComputedStyle(sel);
+	const root = getComputedStyle(document.documentElement);
+	return {
+		light: document.documentElement.dataset.psLight,
+		scheme: cs.colorScheme,
+		select: {bg: cs.backgroundColor, color: cs.color},
+		options: [...sel.options].map((o) => { const c = getComputedStyle(o); return {bg: c.backgroundColor, color: c.color}; }),
+		solid: root.getPropertyValue("--ps-g-solid").trim(),
+		ink: root.getPropertyValue("--ps-g-ink").trim(),
+	};
+})()`;
+
+/** WCAG contrast between two `rgb(r, g, b)` colours. */
+function contrastRgb(p, q) {
+	const lin = (v) => {
+		const c = v / 255;
+		return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+	};
+	const lum = (s) => {
+		const [r, g, b] = rgba(s).rgb.split(", ").map(Number);
+		return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+	};
+	const [hi, lo] = [lum(p), lum(q)].sort((x, y) => y - x);
+	return (hi + 0.05) / (lo + 0.05);
+}
+
 /**
  * The reply quote under the neighbour's long line (plan 4 task 5, fix round
  * 1): its box, the text column's content box and the row's, whether the
@@ -1877,7 +2312,10 @@ export default async function run(page) {
 		`the nick column names ${PEER} in Newsreader`,
 		TEXT_HOLDER(`#chat .msg[data-type="message"][data-from="${PEER}"] .from .user`, PEER),
 		"Newsreader",
-		false
+		false,
+		// A nick wider than the column's 12ch (a run id with a w or two) ends
+		// in the column's ellipsis, which is .from's, the words' face.
+		{clippedBy: ".from"}
 	);
 	await checkDrawnIn(
 		page,
@@ -2257,6 +2695,16 @@ export default async function run(page) {
 		`noon: #status-bar-tint has no backdrop filter (${noonChrome.tint?.blur})`,
 		noonChrome.tint?.blur === "none"
 	);
+	// And it paints the sky's top: style.css's touch rule, resolved on the
+	// tint (Chromium never paints it; the rule is WebKit's alone, and the
+	// device check is the user's: spec §12).
+	const noonTint = await page.evaluate(TINT_PAINT);
+	page.check(
+		`noon: #status-bar-tint paints the canvas, the sky's top (style.css's rule: ${
+			noonTint?.declared
+		}, resolved ${noonTint?.painted} = ${hexRgb(noon.canvas)})`,
+		!!noonTint && noonTint.painted === hexRgb(noon.canvas)
+	);
 	checkAccent(page, noonChrome, "noon");
 	await page.screenshot("ps-noon");
 	// A send's embers at noon, still, over the row and the rows above it.
@@ -2285,6 +2733,13 @@ export default async function run(page) {
 			page.check(
 				`${at}: #status-bar-tint has no backdrop filter (${night.tint?.blur})`,
 				night.tint?.blur === "none"
+			);
+			const nightTint = await page.evaluate(TINT_PAINT);
+			page.check(
+				`${at}: #status-bar-tint paints the canvas, the night sky's top (style.css's rule: ${
+					nightTint?.declared
+				}, resolved ${nightTint?.painted} = ${hexRgb(s.canvas)})`,
+				!!nightTint && nightTint.painted === hexRgb(s.canvas)
 			);
 			checkAccent(page, night, at);
 			const rail = await page.evaluate(RAIL_NAMES);
@@ -2561,6 +3016,148 @@ export default async function run(page) {
 		await page.screenshot(`ps-${want}-dusk-sep${day}`);
 	}
 
+	// ---- the glyph samples (plan 4, spec §11)
+
+	// Rendered words against the pixels around them, over the real scene, at
+	// noon, golden hour, sunset, dusk, midnight and first light (an hour
+	// before sunrise, the skeins' "first light"), on a clear summer day and
+	// a snowy winter one: dusk is where a palette that is fine at both ends
+	// goes wrong. Every message row's words, time and nick in the column is
+	// measured (GLYPH_TARGETS, glyphMeasure), and each kind holds its floor
+	// at its worst element's 10th percentile — the rank calibrate.mjs's α is
+	// defined on; the minimum over the ring is printed, not held, since
+	// the scene's own marks (a star, a flake, a blade's edge) sit in rings
+	// too. The neighbour says one line of calibrate's real phrases first.
+	peer.say(`tea's ready, it's ok — yes, the wind's dropped. good night, plains ${RUN}`);
+	await page.waitFor(
+		`[...document.querySelectorAll('${PEER_LINES}')].some((c) => c.textContent.includes("good night, plains ${RUN}"))`,
+		{label: "the neighbour's phrase"}
+	);
+
+	for (const [season, month, day, doy, want] of [
+		["summer, 4 August", 8, 4, 216, "clear"],
+		["snowy winter, 8 January", 1, 8, 8, "snow"],
+	]) {
+		const sun = sunTimes(doy);
+
+		for (const [moment, minute] of [
+			["noon", 750],
+			["golden hour", sun.set - 60],
+			["sunset", sun.set],
+			["dusk", sun.set + 45],
+			["midnight", 0],
+			["first light", sun.rise - 60],
+		]) {
+			const slug = `${month === 8 ? "summer" : "winter"}-${moment.replace(" ", "-")}`;
+			const {s, frozen, easing, sample, m} = await glyphSample(
+				page,
+				Date.UTC(2026, month - 1, day, 0, Math.round(minute)),
+				slug
+			);
+			const where = `glyphs, ${season}, ${moment} (${hhmm(s.minute)}, ${s.weather}, ${
+				s.text
+			} words, ${s.light} glass)`;
+			const measured = (m.results ?? []).filter((r) => !r.skipped);
+			const kinds = {words: [], time: [], nick: [], faint: []};
+
+			for (const r of measured) {
+				kinds[r.kind].push(r);
+			}
+
+			const worst = (list) => list.reduce((w, r) => (!w || r.p10 < w.p10 ? r : w), null);
+			const large = ["large", "xlarge", "huge"].includes(sample.step);
+			const floors = {
+				words: 4.5,
+				time: 4.5,
+				nick: sample.text === "light" && large ? 3 : 4.5,
+				faint: 3,
+			};
+			page.check(
+				`${where}: the sample stands — the day's weather, the scene stopped (${
+					frozen.running
+				} running, ${
+					frozen.svgs.filter((v) => !v.paused).length
+				} SVG clocks going, ${easing} easing), the frames ${m.W}×${m.H} and ${m.BW}×${
+					m.BH
+				} for a ${sample.clip.width}×${sample.clip.height} clip at DPR ${
+					sample.dpr
+				}, the frame still (shot twice, ${
+					m.moved
+				} px apart by more than ${GLYPH_CORE_DIFF} levels${
+					m.moved ? ` at ${JSON.stringify(m.movedAt)}` : ""
+				}; ${
+					m.rounding
+				} by the raster's rounding), the twin elsewhere within the raster's rounding (${
+					m.off
+				} px more than 2 px from a glyph, by up to ${m.offMax}), ${Object.entries(kinds)
+					.map(([k, v]) => `${v.length} ${k}`)
+					.join(", ")} measured (${sample.cut} outside the band or cut by its edges)`,
+				s.doy === doy &&
+					s.weather === want &&
+					frozen.paused &&
+					frozen.running === 0 &&
+					frozen.svgs.every((v) => v.paused) &&
+					easing === 0 &&
+					m.W === sample.clip.width * sample.dpr &&
+					m.H === sample.clip.height * sample.dpr &&
+					m.BW === m.W &&
+					m.BH === m.H &&
+					m.moved === 0 &&
+					m.offMax <= GLYPH_CORE_DIFF &&
+					Object.values(kinds).every((v) => v.length >= GLYPH_MIN_ELEMENTS)
+			);
+			const figure = (k) => {
+				const w = worst(kinds[k]);
+				return w
+					? `${k} ${w.p10.toFixed(2)} (floor ${floors[k]}; min ${w.min.toFixed(
+							2
+					  )}, median ${w.median.toFixed(2)}, "${w.label}")`
+					: `${k} none`;
+			};
+			page.check(
+				`${where}: every glyph holds its floor at the 10th percentile of its ring, worst element each — ${[
+					"words",
+					"time",
+					"nick",
+					"faint",
+				]
+					.map(figure)
+					.join("; ")} (faint: ${sample.faintProbe} composited over the words' ring)`,
+				Object.entries(kinds).every(
+					([k, v]) => v.length > 0 && v.every((r) => r.p10 >= floors[k])
+				)
+			);
+			console.log(
+				`glyphs ${JSON.stringify({
+					season,
+					moment,
+					at: hhmm(s.minute),
+					weather: s.weather,
+					text: s.text,
+					light: s.light,
+					step: sample.step,
+					dpr: sample.dpr,
+					kinds: Object.fromEntries(
+						Object.entries(kinds).map(([k, v]) => {
+							const w = worst(v);
+							const all = v.map((r) => r.min);
+							return [
+								k,
+								{
+									n: v.length,
+									worstP10: w && +w.p10.toFixed(3),
+									worstLabel: w && w.label,
+									worstMedian: w && +w.median.toFixed(3),
+									minOverAll: all.length ? +Math.min(...all).toFixed(3) : null,
+								},
+							];
+						})
+					),
+				})}`
+			);
+		}
+	}
+
 	// ---- reduced motion on fixed days (spec §9)
 
 	// Nothing moves, in any weather, and the hour still shows. What exists
@@ -2804,6 +3401,40 @@ export default async function run(page) {
 	);
 	await page.sleep(200);
 	await page.screenshot("ps-settings-font-size-sample");
+
+	// The native select by the hour (the user's report, 2026-09-26: at night
+	// its list drew light text on a light ground). Its fill and every
+	// option's are the solid, opaque, in the ink, at night and by day.
+	for (const hour of [22, 12]) {
+		const at = hhmm((await atHour(page, hour)).minute);
+		const c = await page.evaluate(SELECT_COLOURS);
+		const solid = hexRgb(c.solid);
+		const ink = hexRgb(c.ink);
+		const worst = Math.min(
+			contrastRgb(c.select.color, c.select.bg),
+			...c.options.map((o) => contrastRgb(o.color, o.bg))
+		);
+		page.check(
+			`${at}, Settings: the theme select and its ${c.options.length} options are the ${
+				c.light
+			} solid ${solid} in its ink ${ink}, opaque (select ${c.select.bg} / ${
+				c.select.color
+			}, scheme ${c.scheme}; worst contrast ${worst.toFixed(2)})`,
+			c.light === (hour === 22 ? "night" : "day") &&
+				c.options.length > 1 &&
+				[c.select, ...c.options].every((o) => o.bg === solid && o.color === ink) &&
+				worst >= 4.5
+		);
+
+		if (hour === 22) {
+			await page.evaluate(
+				`document.querySelector("#theme-select").scrollIntoView({block: "center"})`
+			);
+			await page.sleep(200);
+			await page.screenshot("ps-settings-select-night");
+		}
+	}
+
 	await chooseTheme(page, "coffee");
 	const coffee = await page.evaluate(SCENE_STATE);
 	page.check(
