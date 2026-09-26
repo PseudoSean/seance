@@ -226,14 +226,14 @@ const WALL = "M38,150 L38,98 Q120,90 202,98 L202,150 Q120,158 38,150 Z";
 /**
  * The yurt (docs/projects/ps-theme.md §5.3): felt walls and roof with a rope
  * band and ribs, the patterned band, the carved door, the crown ring and its
- * stove pipe, stones and a woodpile beside it, the worn path to the door. On
+ * stove pipe, stones and a woodpile beside it, and the pool at the door. On
  * the mockup's 240 × 170 box; ps.css sizes it on the ground band and scene.ts
  * decides where it stands. The `ps-y-lit` parts glow at night, and the door's
- * light falls as a soft pool on the ground before it (`ps-y-pool`; the user's
- * pick over the mockup's cone down the path, 2026-09-25), while the worn path
- * fades out into the dark; `ps-y-snow` is the winter roof. The warm glows and
- * the shadow are the mockup's fixed colours; every other part is a class that
- * ps.css paints from the palette.
+ * light falls as a soft pool on the ground before it (`ps-y-pool`), only at
+ * night: the user's pick over the mockup's cone down a worn path, and the
+ * path itself is not drawn, by day or at night (2026-09-25); `ps-y-snow` is
+ * the winter roof. The warm glows and the shadow are the mockup's fixed
+ * colours; every other part is a class that ps.css paints from the palette.
  */
 export function yurtSvg(): string {
 	return (
