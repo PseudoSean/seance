@@ -46,7 +46,15 @@
 // - toggles the user list twice inside the yurt's 0.4 s fade and samples the
 //   yurt every frame: it is never seen anywhere but where it stood and where
 //   it ends, and ends fully shown at 72 % of the column (Review Focus 2);
-// - follows the open conversation: channel, query, none (Settings);
+// - follows the open conversation: channel, query, none (Settings); and a
+//   query is frosted and still (spec §5.7): at a clear noon the root takes
+//   ps-private, the scene's one wrapper (.ps-frost) is blurred, desaturated
+//   and scaled while the root and #status-bar-tint are not, every animation
+//   document.getAnimations() has on the scene is paused and every SVG
+//   reports animationsPaused(), the published values are #seance's at the
+//   same minute and the sun keeps its centre in the window; an hour on,
+//   inside the query and shown again, the canvas has moved and the scene is
+//   still; so at golden hour; and back in #seance it runs, unfrosted;
 // - switches to coffee (the scene and its plains go and leave nothing on
 //   <html>) and back to ps (one scene again, not two);
 // - on a phone: a scene mounted there builds half the fireflies (17) and,
@@ -114,6 +122,12 @@
 // failed as the bugs said: the five clouds all at 0, the drawer unblurred
 // 80 ms into its close, and every held boot writing 0.00px and fading across.
 // With the fixes: 196 of 196.
+// The private view's 18 checks (2026-09-26: #seance and the query at a clear
+// noon, the query an hour on and at golden hour, #seance again) were first
+// run against 4cb7f7c3's build, which has neither the frost nor its wrapper:
+// 20 failed, every one of them the query not frosted or not still, or the
+// layers read through the wrapper that build lacks. With the frost: 214 of
+// 214.
 //
 //   NODE_ENV=production corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/theme-ps.mjs
@@ -511,7 +525,8 @@ const VISIBILITY = (state) => `(() => {
 
 /**
  * The scene and what it publishes, in one read. `layers` are the scene's
- * top-level layers by class and `off` every layer out of the render tree
+ * layers by class (the children of its one wrapper, `.ps-frost`, which
+ * `children` counts as the root's one child) and `off` every layer out of the render tree
  * outside its window (layers.ts), both without the `ps-off` class itself;
  * `land`, `blades`, `yurt` and `ground` say whether those are rendered
  * (checkVisibility: in the page is not enough, a hidden ground holds them
@@ -531,11 +546,12 @@ const SCENE_STATE = `(() => {
 	const style = (sel, p) => { const e = s.querySelector(sel); return e ? getComputedStyle(e)[p] : null; };
 	const named = (e) => [...e.classList].filter((c) => c !== "ps-off").join(" ");
 	const weather = s.querySelector(".ps-weather");
+	const frost = s.querySelector(":scope > .ps-frost");
 	return {
 		display: getComputedStyle(s).display,
 		background: getComputedStyle(s).backgroundImage,
 		children: s.children.length,
-		layers: [...s.children].map(named),
+		layers: frost ? [...frost.children].map(named) : [],
 		off: [...s.querySelectorAll(".ps-off")].map(named),
 		starFields: n(".ps-stars"),
 		stars: n(".ps-stars i"),
@@ -545,7 +561,7 @@ const SCENE_STATE = `(() => {
 		ground: shown(".ps-ground"),
 		land: shown(".ps-ground > .ps-land"),
 		yurt: shown(".ps-ground > .ps-yurt"),
-		blades: shown(":scope > .ps-blades"),
+		blades: shown(":scope > .ps-frost > .ps-blades"),
 		fireflies: n(".ps-ground > .ps-fireflies i"),
 		drops: n(".ps-rain i"),
 		flakes: n(".ps-snow i"),
@@ -555,7 +571,7 @@ const SCENE_STATE = `(() => {
 		haze: n(".ps-heat-haze"),
 		weatherLayer: weather ? weather.children.length : null,
 		groundFilter: style(".ps-ground", "filter"),
-		bladesFilter: style(":scope > .ps-blades", "filter"),
+		bladesFilter: style(":scope > .ps-frost > .ps-blades", "filter"),
 		weather: s.dataset.weather,
 		season: s.dataset.season,
 		hot: s.classList.contains("ps-hot"),
@@ -655,18 +671,109 @@ function checkRunning(page, s, where) {
 }
 
 /**
- * One scene, whole: shown, its twelve layers in order, one field of 190
- * stars, a sun, a moon and five clouds; and the plains drawn, the land, the
- * near grass and the yurt rendered, the fireflies in the ground group.
+ * The private view's frost (spec §5.7): whether the root carries ps-private,
+ * the wrapper's computed filter and transform and the frost it should be at
+ * this font step, the root's own filter and #status-bar-tint's (neither is
+ * frosted), the halo on <html>, every animation `document.getAnimations()`
+ * holds on the scene (CSS animations and transitions, pseudo-elements
+ * included) by play state, whether every SVG's clock is paused, and the
+ * sun's centre on the screen while it is shown.
+ */
+const FROST_STATE = `(() => {
+	const s = document.getElementById("theme-scene");
+	const f = s.querySelector(":scope > .ps-frost");
+	const cs = f ? getComputedStyle(f) : null;
+	const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+	const mine = document.getAnimations().filter((a) => a.effect && a.effect.target && s.contains(a.effect.target));
+	const sun = s.querySelector(".ps-sun");
+	const b = sun.getBoundingClientRect();
+	const svgs = [...s.querySelectorAll("svg")];
+	return {
+		private: s.classList.contains("ps-private"),
+		filter: cs ? cs.filter : null,
+		transform: cs ? cs.transform : null,
+		frost: "blur(" + 1.125 * rem + "px) saturate(0.85)",
+		rootFilter: getComputedStyle(s).filter,
+		tint: getComputedStyle(document.getElementById("status-bar-tint")).filter,
+		halo: document.documentElement.style.getPropertyValue("--ps-halo"),
+		paused: mine.filter((a) => a.playState === "paused").length,
+		running: mine.filter((a) => a.playState === "running").map((a) => a.animationName || a.transitionProperty || "?"),
+		svgs: svgs.length,
+		svgsPaused: svgs.filter((v) => v.animationsPaused()).length,
+		sun: {
+			shown: !sun.closest(".ps-off") && Number(getComputedStyle(sun).opacity) > 0,
+			cx: Math.round(b.left + b.width / 2),
+			cy: Math.round(b.top + b.height / 2),
+		},
+		width: innerWidth,
+		height: innerHeight,
+	};
+})()`;
+
+/** The frost's ease (--ps-flip, 0.8 s) and the yurt's fade to its new place (0.4 s, then 0.38 s), over. */
+const FROST_SETTLE_MS = 1500;
+
+/** A layer's fade at the tick that comes with a new hour (layers.ts: 1.8 s at most), over. */
+const FADE_SETTLE_MS = 1000;
+
+/**
+ * A query's scene: frosted — the wrapper blurred 1.125rem and desaturated
+ * to 0.85, scaled 1.2, the root and #status-bar-tint unfiltered — and
+ * completely still: stopped as a hidden page's is (its class, every SVG
+ * clock, no CSS animation running), every animation document.getAnimations()
+ * has on it paused, and the sun, when up, still centred in the window.
+ */
+function checkFrosted(page, s, f, where) {
+	page.check(
+		`${where}: frosted (ps-private ${f.private}; the wrapper's filter ${f.filter}, transform ${f.transform}; the root's own filter ${f.rootFilter}, #status-bar-tint's ${f.tint})`,
+		f.private &&
+			f.filter === f.frost &&
+			f.transform === "matrix(1.2, 0, 0, 1.2, 0, 0)" &&
+			f.rootFilter === "none" &&
+			f.tint === "none"
+	);
+	checkStopped(page, s, where);
+	page.check(
+		`${where}: every animation on the scene paused (document.getAnimations(): ${
+			f.paused
+		} paused, ${f.running.length} running${
+			f.running.length ? ` — ${f.running.slice(0, 4).join(", ")}` : ""
+		}; ${f.svgsPaused} of ${f.svgs} SVGs report animationsPaused())`,
+		f.paused > 0 && f.running.length === 0 && f.svgs > 0 && f.svgsPaused === f.svgs
+	);
+
+	if (f.sun.shown) {
+		page.check(
+			`${where}: the sun keeps its centre in the window under the frost's scale (${f.sun.cx}, ${f.sun.cy} in ${f.width} × ${f.height})`,
+			f.sun.cx > 0 && f.sun.cx < f.width && f.sun.cy > 0 && f.sun.cy < f.height
+		);
+	}
+}
+
+/** A channel's scene: no frost on the wrapper, and the scene runs. */
+function checkUnfrosted(page, s, f, where) {
+	page.check(
+		`${where}: not frosted (ps-private ${f.private}; the wrapper's filter ${f.filter}, transform ${f.transform})`,
+		!f.private && f.filter === "none" && f.transform === "none"
+	);
+	checkRunning(page, s, where);
+}
+
+/**
+ * One scene, whole: shown, its twelve layers in order in its one wrapper
+ * (.ps-frost), one field of 190 stars, a sun, a moon and five clouds; and
+ * the plains drawn, the land, the near grass and the yurt rendered, the
+ * fireflies in the ground group.
  */
 function checkMounted(page, s, where, fireflies = FIREFLIES) {
 	page.check(
-		`${where}: the scene is mounted and shown (display ${s.display}; ${
-			s.children
+		`${where}: the scene is mounted and shown (display ${s.display}; ${s.children} wrapper of ${
+			s.layers.length
 		} layers: ${s.layers.join(" ")}; ${s.starFields} star field of ${s.stars}, sun ${
 			s.sun
 		}, moon ${s.moon}, ${s.clouds} clouds)`,
 		s.display === "block" &&
+			s.children === 1 &&
 			s.layers.join() === LAYERS.join() &&
 			s.starFields === 1 &&
 			s.stars === 190 &&
@@ -1961,24 +2068,68 @@ export default async function run(page) {
 	await page.screenshot("ps-midnight-sep27-0000");
 	await realClock(page);
 
-	// ---- the view follows the conversation
+	// ---- the view follows the conversation; a query is frosted and still (spec §5.7)
 
-	// Its own query: EXT_NAME's is in the sidebar too.
+	// Its own query: EXT_NAME's is in the sidebar too. A clear noon, pinned,
+	// in #seance first: what a channel shows and publishes at that minute.
 	const QUERY_ROW = `.channel-list-item[data-type="query"][data-name="${NICK}x"]`;
 	await sendLine(page, `/query ${NICK}x`);
 	await page.waitFor(`document.querySelector('${QUERY_ROW}')`, {
 		label: "the query in the sidebar",
 	});
+	await openSeance(page, "#seance, before the query");
+	const noonChannel = await at(page, noonOn(9, 25));
+	const noonChannelFrost = await page.evaluate(FROST_STATE);
+	checkUnfrosted(page, noonChannel, noonChannelFrost, "#seance at a clear noon");
+	await page.screenshot("ps-channel-noon");
+
 	await page.click(QUERY_ROW);
-	await page.sleep(300);
+	await page.sleep(FROST_SETTLE_MS);
 	const inQuery = await page.evaluate(SCENE_STATE);
 	page.check(`a query: the scene's view is query (${inQuery.view})`, inQuery.view === "query");
+	checkFrosted(page, inQuery, await page.evaluate(FROST_STATE), "a query at a clear noon");
+	page.check(
+		`a query at a clear noon publishes what #seance did (canvas ${inQuery.canvas}, light ${inQuery.light}, text ${inQuery.text}, theme-color ${inQuery.meta}, halo ${noonChannelFrost.halo})`,
+		inQuery.minute === noonChannel.minute &&
+			inQuery.canvas === noonChannel.canvas &&
+			inQuery.light === noonChannel.light &&
+			inQuery.text === noonChannel.text &&
+			inQuery.meta === noonChannel.meta &&
+			(await page.evaluate(FROST_STATE)).halo === noonChannelFrost.halo
+	);
+	await page.screenshot("ps-private-noon");
+
+	// The colours still follow the hour: an hour on inside the query (the
+	// page hidden and shown again, which leaves it still).
+	await at(page, noonOn(9, 25) + 3600000);
+	await page.sleep(FADE_SETTLE_MS);
+	const hourOn = await page.evaluate(SCENE_STATE);
+	page.check(
+		`a query an hour on: the canvas followed the hour (${inQuery.canvas} → ${
+			hourOn.canvas
+		}, ${hhmm(hourOn.minute)})`,
+		hourOn.view === "query" &&
+			hourOn.minute === inQuery.minute + 60 &&
+			hourOn.canvas !== inQuery.canvas
+	);
+	checkFrosted(page, hourOn, await page.evaluate(FROST_STATE), "a query an hour on, shown again");
+
+	await at(page, sep25At(sep25.set - 60));
+	await page.sleep(FADE_SETTLE_MS);
+	const goldenQuery = await page.evaluate(SCENE_STATE);
+	checkFrosted(page, goldenQuery, await page.evaluate(FROST_STATE), "a query at golden hour");
+	await page.screenshot("ps-private-golden-hour");
+
 	await openSeance(page, "back in #seance from the query");
+	await page.sleep(FROST_SETTLE_MS);
 	const inChannel = await page.evaluate(SCENE_STATE);
 	page.check(
 		`a channel: the scene's view is channel (${inChannel.view})`,
 		inChannel.view === "channel"
 	);
+	checkUnfrosted(page, inChannel, await page.evaluate(FROST_STATE), "#seance at golden hour");
+	await page.screenshot("ps-channel-golden-hour");
+	await realClock(page);
 
 	// ---- theme switches
 

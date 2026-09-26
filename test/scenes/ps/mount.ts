@@ -85,6 +85,8 @@ class FakeElement extends Listeners {
 	classList = new FakeClassList();
 	attrs = new Map<string, string>();
 	box: Box = {left: 0, top: 0, width: 0, height: 0};
+	/** Its own width, as its computed style has it, where that differs from its box (a transform on the way up). */
+	layoutWidth: number | null = null;
 	isConnected = true;
 	markup = "";
 	/** What querySelector has handed out since the markup was last set, by selector. */
@@ -194,6 +196,34 @@ class FakeMediaQueryList extends Listeners {
 	constructor(public media: string, public matches = false) {
 		super();
 	}
+
+	/** The system's setting changing: `matches` becomes `on` and the change listeners hear of it. */
+	set(on: boolean) {
+		this.matches = on;
+		this.all.filter(([type]) => type === "change").forEach(([, fn]) => fn());
+	}
+}
+
+/** One of the scene's <svg>s, for syncSvgs: its SMIL clock, in no layer that is out. */
+class FakeSvg {
+	classList = new FakeClassList();
+	paused = false;
+
+	closest() {
+		return null;
+	}
+
+	animationsPaused() {
+		return this.paused;
+	}
+
+	pauseAnimations() {
+		this.paused = true;
+	}
+
+	unpauseAnimations() {
+		this.paused = false;
+	}
 }
 
 /** The page mount() runs in, and the handles a test needs on it. */
@@ -245,7 +275,11 @@ function fakePage() {
 		},
 		ResizeObserver: FakeResizeObserver,
 		HTMLMetaElement: class {},
-		getComputedStyle: () => ({opacity: "1", fontSize: "20px"}),
+		getComputedStyle: (el: FakeElement) => ({
+			opacity: "1",
+			fontSize: "20px",
+			width: `${el.layoutWidth ?? el.box.width}px`,
+		}),
 	};
 
 	return {
@@ -283,6 +317,14 @@ function fakePage() {
 		},
 		pendingFrames: () => frames.size,
 		observers: () => FakeResizeObserver.all,
+		/** The prefers-reduced-motion list the scene asked for. */
+		reducedMotion: () => media.find((m) => m.media === "(prefers-reduced-motion: reduce)")!,
+		/** An <svg> in the scene, for syncSvgs to pause and run. */
+		plantSvg() {
+			const svg = new FakeSvg();
+			root.lists.set("svg", () => [svg as unknown as FakeElement]);
+			return svg;
+		},
 	};
 }
 
@@ -493,6 +535,198 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 				expect(seeds!.classList.contains("ps-off"), "and out of the render tree").to.equal(
 					true
 				);
+				scene.destroy();
+			});
+		});
+	});
+
+	describe("the private view: frosted and still in a query (spec §5.7)", function () {
+		/** The two classes the private view is made of, on the root. */
+		const state = (page: Page) =>
+			["ps-private", "ps-paused"].filter((name) => page.root.classList.contains(name));
+
+		it("frosts and stills the scene while a query is open, and a channel and every other view show it as usual", function () {
+			withPage((page, clock) => {
+				const svg = page.plantSvg();
+				const scene = mountOn(page);
+				expect(state(page), "a channel").to.deep.equal([]);
+				expect(svg.paused).to.equal(false);
+
+				scene.update({visible: true, view: "query"});
+				expect(state(page), "a query").to.deep.equal(["ps-private", "ps-paused"]);
+				expect(svg.paused, "its SVG clocks too").to.equal(true);
+				expect(clock.countTimers(), "the minute's tick keeps running").to.equal(1);
+
+				scene.update({visible: true, view: "channel"});
+				expect(state(page), "back in a channel").to.deep.equal([]);
+				expect(svg.paused).to.equal(false);
+
+				scene.update({visible: true, view: "query"});
+				scene.update({visible: true, view: "other"});
+				expect(state(page), "Settings, Help, the connect form").to.deep.equal([]);
+				expect(svg.paused).to.equal(false);
+				scene.destroy();
+			});
+		});
+
+		it("keeps the colours on the hour in a query: the next minute is drawn, and the scene stays still", function () {
+			withPage((page, clock) => {
+				const scene = mount(page.root as unknown as HTMLElement, {
+					visible: true,
+					view: "query",
+				});
+				expect(state(page)).to.deep.equal(["ps-private", "ps-paused"]);
+				const writes = sinon.spy(page.root.querySelector(".ps-m-ell"), "setAttribute");
+				clock.tick(61000);
+				expect(writes.calledWith("rx"), "the next minute was drawn").to.equal(true);
+				expect(state(page)).to.deep.equal(["ps-private", "ps-paused"]);
+				scene.destroy();
+			});
+		});
+
+		it("composes with a hidden page: hidden stops it and its minute, shown again in the query it stays still, and leaving the query runs it", function () {
+			withPage((page, clock) => {
+				const svg = page.plantSvg();
+				const scene = mountOn(page);
+				scene.update({visible: true, view: "query"});
+
+				scene.update({visible: false, view: "query"});
+				expect(state(page), "hidden, in a query").to.deep.equal([
+					"ps-private",
+					"ps-paused",
+				]);
+				expect(svg.paused).to.equal(true);
+				expect(clock.countTimers(), "no tick on a hidden page").to.equal(0);
+
+				scene.update({visible: true, view: "query"});
+				expect(state(page), "shown again, still in the query").to.deep.equal([
+					"ps-private",
+					"ps-paused",
+				]);
+				expect(svg.paused).to.equal(true);
+				expect(clock.countTimers(), "the minute's tick again").to.equal(1);
+
+				scene.update({visible: true, view: "channel"});
+				expect(state(page), "the query left").to.deep.equal([]);
+				expect(svg.paused).to.equal(false);
+
+				// Hidden wins over a channel as well, and a view changed while hidden is the one shown.
+				scene.update({visible: false, view: "channel"});
+				scene.update({visible: false, view: "query"});
+				expect(state(page), "a query opened on a hidden page").to.deep.equal([
+					"ps-private",
+					"ps-paused",
+				]);
+				scene.update({visible: false, view: "channel"});
+				expect(state(page), "hidden, in a channel").to.deep.equal(["ps-paused"]);
+				expect(svg.paused).to.equal(true);
+				scene.update({visible: true, view: "channel"});
+				expect(state(page)).to.deep.equal([]);
+				expect(svg.paused).to.equal(false);
+				scene.destroy();
+			});
+		});
+
+		it("starts frosted and still when mounted into a query, hidden or shown", function () {
+			for (const visible of [false, true]) {
+				withPage((page, clock) => {
+					const svg = page.plantSvg();
+					const scene = mount(page.root as unknown as HTMLElement, {
+						visible,
+						view: "query",
+					});
+					expect(state(page), `visible ${visible}`).to.deep.equal([
+						"ps-private",
+						"ps-paused",
+					]);
+					expect(svg.paused).to.equal(true);
+					expect(clock.countTimers()).to.equal(visible ? 1 : 0);
+					scene.destroy();
+				});
+			}
+		});
+
+		it("stays still in a query when reduced motion is lifted, and reduced motion still holds a channel", function () {
+			withPage((page) => {
+				const svg = page.plantSvg();
+				const scene = mountOn(page);
+				const reduced = page.reducedMotion();
+				scene.update({visible: true, view: "query"});
+				reduced.set(true);
+				expect(state(page)).to.deep.equal(["ps-private", "ps-paused"]);
+				reduced.set(false);
+				expect(state(page), "lifted, in a query").to.deep.equal([
+					"ps-private",
+					"ps-paused",
+				]);
+				expect(svg.paused).to.equal(true);
+
+				scene.update({visible: true, view: "channel"});
+				expect(state(page)).to.deep.equal([]);
+				reduced.set(true);
+				expect(state(page), "reduced motion, in a channel").to.deep.equal(["ps-paused"]);
+				scene.update({visible: true, view: "query"});
+				scene.update({visible: true, view: "channel"});
+				expect(state(page), "reduced motion, back in a channel").to.deep.equal([
+					"ps-paused",
+				]);
+				expect(svg.paused).to.equal(true);
+				scene.destroy();
+			});
+		});
+
+		it("leaves nothing behind when destroyed in a query", function () {
+			withPage((page, clock) => {
+				const scene = mountOn(page);
+				scene.update({visible: true, view: "query"});
+				scene.destroy();
+				expect(leftBehind(page, clock)).to.deep.equal(NOTHING);
+			});
+		});
+
+		it("publishes the same values in a query as in a channel: the frost is the stylesheet's alone", function () {
+			withPage((page, clock) => {
+				/** What the chrome and the scene's CSS read: <html>'s and the root's values. */
+				const published = () => ({
+					htmlData: {...page.html.dataset},
+					htmlStyle: Object.fromEntries(page.html.style.props),
+					htmlClasses: [...page.html.classList.names],
+					rootStyle: Object.fromEntries(page.root.style.props),
+					rootData: {...page.root.dataset, view: undefined},
+				});
+
+				let scene = mountOn(page);
+				const inChannel = published();
+				scene.update({visible: true, view: "query"});
+				expect(published(), "opening the query").to.deep.equal(inChannel);
+
+				clock.tick(60 * 60000 + 1000); // an hour on, every minute of it drawn in the query
+				const inQuery = published();
+				expect(inQuery.htmlStyle, "the hour's own values").to.not.deep.equal(
+					inChannel.htmlStyle
+				);
+				scene.destroy();
+				scene = mountOn(page); // the same minute, drawn in a channel
+				expect(published()).to.deep.equal(inQuery);
+				scene.destroy();
+			});
+		});
+
+		it("clamps the yurt by its own width, not by the box the frost's scale draws it in", function () {
+			withPage((page) => {
+				const scene = mountOn(page);
+				page.layOut(1280);
+				page.resize(page.column);
+				expect(page.root.style.getPropertyValue("--ps-yurt-left")).to.equal("862.00px");
+				scene.update({visible: true, view: "query"});
+				page.hideColumn();
+				page.layOut(990);
+				const yurt = page.root.querySelector(".ps-yurt");
+				yurt.layoutWidth = 267;
+				yurt.box = {...yurt.box, width: 267 * 1.2}; // under the frost's scale(1.2)
+				page.resize(page.root);
+				expect(page.root.style.getPropertyValue("--ps-yurt-left")).to.equal("856.50px");
+				expect(page.root.classList.contains("ps-yurt-moving"), "no fade").to.equal(false);
 				scene.destroy();
 			});
 		});

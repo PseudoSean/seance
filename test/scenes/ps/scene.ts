@@ -354,8 +354,18 @@ describe("ps scene: the layers it builds (sceneMarkup)", function () {
 		throw new Error(`${name} is not closed`);
 	}
 
+	it("wraps every layer in one .ps-frost, the one group the private view blurs (spec §5.7)", function () {
+		for (const phone of [false, true]) {
+			const markup = sceneMarkup(phone);
+			expect(topLevel(markup)).to.deep.equal(["ps-frost"]);
+			expect(markup.startsWith('<div class="ps-frost">')).to.equal(true);
+			expect(markup.endsWith("</div>")).to.equal(true);
+			expect(`<div class="ps-frost">${inside(markup, "ps-frost")}</div>`).to.equal(markup);
+		}
+	});
+
 	it("puts the layers in the spec's order (§5.1): sky things, the bodies, the clouds, the ground, the near grass, the birds, the veil, the weather", function () {
-		expect(topLevel(sceneMarkup(false))).to.deep.equal([
+		expect(topLevel(inside(sceneMarkup(false), "ps-frost"))).to.deep.equal([
 			"ps-milky",
 			"ps-stars",
 			"ps-glow",

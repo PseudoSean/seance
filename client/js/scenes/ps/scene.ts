@@ -14,7 +14,9 @@
  * its window (the stars by day, the skeins by day, the larks out of season…)
  * is out of the render tree with its SMIL paused, rather than animating at
  * opacity 0 (layers.ts). A hidden page's
- * scene is stopped outright. No Vue, no store; the markup below (and
+ * scene is stopped outright; in a query it is frosted (`ps-private`, ps.css)
+ * and completely still, its colours still on the hour (spec §5.7). No Vue,
+ * no store; the markup below (and
  * plains.ts's land, near grass, fireflies, yurt, smoke, clouds and weather,
  * and birds.ts's skeins and day birds) is constant for a day's weather, and
  * nothing user-supplied is ever written into it.
@@ -256,10 +258,13 @@ function stars(): string {
  * wingbeats; then the weather's veil, and the weather layer, left empty
  * here: the first tick builds the day's weather into it (mount's `apply`),
  * and a new day's weather replaces it. A phone (the phone layout at mount)
- * gets half the fireflies.
+ * gets half the fireflies. All of them sit in one wrapper, `.ps-frost`, the
+ * one group the private view blurs (spec §5.7: one filtered group is one
+ * raster); the sky stays the root's own.
  */
 export function sceneMarkup(phone: boolean): string {
 	return (
+		`<div class="ps-frost">` +
 		`<div class="ps-milky"></div><div class="ps-stars">${stars()}</div><div class="ps-glow"></div>` +
 		MOON +
 		SUN +
@@ -275,7 +280,8 @@ export function sceneMarkup(phone: boolean): string {
 		`<div class="ps-skeins">${skeinsMarkup()}</div>` +
 		`<div class="ps-daybirds">${dayBirdsMarkup()}</div>` +
 		`<div class="ps-veil"></div>` +
-		`<div class="ps-weather"></div>`
+		`<div class="ps-weather"></div>` +
+		`</div>`
 	);
 }
 
@@ -289,8 +295,9 @@ export function sceneMarkup(phone: boolean): string {
  * the column, so it is looked for again on every host update and whenever
  * the one observed leaves the page; with no column on screen (Settings,
  * Help, the connect form) the yurt keeps its place, clamped to the scene as
- * it is. Each measurement carries the yurt's rendered width,
- * so the place is clamped with the whole yurt on screen, and `seen()` (the
+ * it is. Each measurement carries the yurt's own width (its computed width,
+ * not its box on screen, which the private view's frost scales), so the
+ * place is clamped with the whole yurt in the scene, and `seen()` (the
  * scene's first visible update) starts the load's window, in which the first
  * place measured is taken without a fade.
  */
@@ -320,7 +327,7 @@ function placeYurt(root: HTMLElement): {seen(): void; refind(): void; destroy():
 			{
 				width: scene.width,
 				rem: parseFloat(getComputedStyle(document.documentElement).fontSize) || 16,
-				yurtWidth: yurt.getBoundingClientRect().width,
+				yurtWidth: parseFloat(getComputedStyle(yurt).width) || 0,
 			}
 		);
 	};
@@ -661,20 +668,29 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 		syncSvgs();
 	};
 
-	const onReduced = () => motion(visible && !reduced.matches);
+	// A query's scene is frosted and completely still (spec §5.7): ps.css
+	// blurs it under ps-private, and it is paused as a hidden page's is, its
+	// SVG clocks too; the minute's tick keeps running while the page is
+	// visible, so its colours still follow the hour. A hidden page stops it
+	// whatever the view.
+	let privateView = false;
+	const running = () => visible && !reduced.matches && !privateView;
+	const onReduced = () => motion(running());
 	// Built in mount's try below; a half-built mount's destroy skips what is missing.
 	let yurt: ReturnType<typeof placeYurt> | undefined;
 	let composer: ReturnType<typeof watchComposer> | undefined;
 
 	const update = (state: SceneHostState) => {
 		root.dataset.view = state.view;
+		privateView = state.view === "query";
+		root.classList.toggle("ps-private", privateView);
 		yurt?.refind();
 		composer?.refind();
 
 		if (state.visible && !visible) {
 			visible = true;
 			yurt?.seen(); // the first time opens the load's window (yurt.ts SETTLE_MS)
-			motion(!reduced.matches);
+			motion(running());
 			tick(); // catch up at once: a laptop that slept shows the right sky
 		} else if (!state.visible && visible) {
 			visible = false;
@@ -682,6 +698,8 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 			timer = undefined;
 			gates.settle(); // no fade is seen on a hidden page, and no timer runs there
 			motion(false);
+		} else {
+			motion(running()); // a query opened or left: still or running again
 		}
 	};
 
@@ -696,7 +714,14 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 			composer?.destroy();
 			root.replaceChildren();
 			root.removeAttribute("style");
-			root.classList.remove("ps-paused", "ps-windy", "ps-storm", "ps-hot", "ps-west");
+			root.classList.remove(
+				"ps-paused",
+				"ps-private",
+				"ps-windy",
+				"ps-storm",
+				"ps-hot",
+				"ps-west"
+			);
 			delete root.dataset.view;
 			delete root.dataset.weather;
 			delete root.dataset.season;
