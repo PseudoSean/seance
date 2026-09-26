@@ -218,6 +218,14 @@
 // colour at the same moment (5.1 against 3).
 // With them, the select, the status bar's value and the reply quote: 304 of
 // 304 on a rainy real day (26 September).
+// Plan 4's final fix wave (2026-09-26): the storm deck's six checks and the
+// midnight fade's four were first run as scratch ports of their legs
+// against a build with fd0647c9's client. The deck's billows, sized in % of
+// the deck, were tall on the phone (78×149 … 94×161: "wide" failed there,
+// held at 1280 × 720); the rain's four were at opacity 1 the instant the day
+// turned rainy and gone the instant it turned clear (both fades failed).
+// With the billows tied to their width and the sets cross-faded: 314 of 314
+// on a rainy real day (26 September).
 //
 //   NODE_ENV=production corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/theme-ps.mjs

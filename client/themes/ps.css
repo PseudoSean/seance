@@ -764,7 +764,7 @@ strong,
  * it and the message column must be clear (the rules after this block).
  * Without the scene, the element still paints this daylight gradient on
  * --canvas-bg-color: the fallback. Inside the scene, left and top are the
- * picture's own coordinates; right-to-left mirrors the whole of it (plan 4). */
+ * picture's own coordinates; right-to-left mirrors the whole of it (plan 5). */
 #theme-scene {
 	display: block;
 	position: fixed;
