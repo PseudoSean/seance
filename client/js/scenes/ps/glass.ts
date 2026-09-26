@@ -19,9 +19,11 @@
  * (and the door's pool on it); a docked sidebar or user list over every
  * ground but the yurt's, which stands in the message column; a user list laid
  * over a narrow window and the reaction chips over every ground. On the phone
- * layout no surface reads these tints: its glass has no backdrop filter and
- * keeps the generated --ps-g-tint-a (ps.css's phones section, the measured
- * budget's fallback, docs/projects/ps-theme.md §10).
+ * layout the always-on glass (the header, the composer, the chips) reads none
+ * of these: it has no backdrop filter and keeps the generated --ps-g-tint-a
+ * (ps.css's phones section, the measured budget's fallback,
+ * docs/projects/ps-theme.md §10). The open drawer and the user list laid over
+ * the chat keep their glass there and read the float tint (§10.1, Task 8c).
  *
  * **The model** is the legibility model's (grounds as flat colours, the blur
  * left out) with the backdrop filter added as Chromium applies it:

@@ -29,9 +29,12 @@
 // - follows the open conversation: channel, query, none (Settings);
 // - switches to coffee (the scene goes and leaves nothing on <html>) and
 //   back to ps (one scene again, not two);
-// - on a phone: the glass unblurred on the generated tint (the measured
-//   budget's fallback, ps-theme.md §10), the header and composer at noon,
-//   and at night the open drawer, on top of the scrim, not under it;
+// - on a phone: the always-on glass unblurred on the generated tint (the
+//   measured budget's fallback, ps-theme.md §10), the header and composer
+//   at noon; the two overlays glass again (Task 8c, §10.1): at noon the open
+//   drawer and the overlaid user list blurred and brightened on the chips'
+//   tint the scene publishes, and at 22:00 the open drawer blurred on the
+//   night tint, on top of the scrim, not under it;
 // - and last blocks the scene's chunk and reloads: the daylight fallback
 //   stays, ink over it, and the console complains of the blocked request and
 //   nothing else — the hook's one warning, naming it.
@@ -59,6 +62,8 @@
 // - `#sidebar{backdrop-filter:none!important}` — the sidebar's glass checks
 //   fail, at noon and at 22:00 (the phone's glass has had no filter since
 //   the budget's fallback, 2026-09-25, so its checks read it unblurred).
+// The phone's overlay checks (Task 8c) were watched failing on 2026-09-26
+// against 7b4b521a's ps.css, the fallback's unblurred drawer and list.
 //
 //   NODE_ENV=production corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/theme-ps.mjs
@@ -656,6 +661,18 @@ function isGlass(surface, rgb) {
 function isUnblurredTint(surface, rgb, alpha) {
 	const c = rgba(surface?.bg);
 	return !!c && c.rgb === rgb && Math.abs(c.a - alpha) < 0.005 && surface.blur === "none";
+}
+
+/** The phone's overlays: glass of the `rgb` tint at `alpha`, blurred, and brightened or not. */
+function isOverlayGlass(surface, rgb, alpha, brightened) {
+	const c = rgba(surface?.bg);
+	return (
+		!!c &&
+		c.rgb === rgb &&
+		Math.abs(c.a - alpha) < 0.005 &&
+		/blur\(/.test(surface.blur) &&
+		/brightness\(/.test(surface.blur) === brightened
+	);
 }
 
 /** Every glass surface is glass of the `rgb` tint. */
@@ -1300,7 +1317,50 @@ export default async function run(page) {
 		);
 	}
 
-	// ---- the phone at night, the drawer open: the night tint over the plains
+	// ---- the phone at noon, the overlays open: glass again (Task 8c)
+
+	// The open drawer and the user list laid over the chat keep their glass
+	// (ps.css, the phones section, after the fallback): blurred, brightened by
+	// day, on the chips' tint the scene publishes, so the conversation's words
+	// behind them are frosted away rather than showing through.
+	const floatTint = Number(
+		await page.evaluate(`document.documentElement.style.getPropertyValue("--ps-g-tint-float")`)
+	);
+	await page.click(`#chat .header .lt`);
+	await page.waitFor(`document.getElementById("viewport").classList.contains("menu-open")`, {
+		label: "the phone's sidebar open at noon",
+	});
+	await page.sleep(1000); // the drawer's slide, and the tint's flip from the fallback's
+	const noonDrawer = await page.evaluate(DRAWER);
+	page.check(
+		`a phone at noon: the open drawer is glass, blurred and brightened, on the chips' tint ${floatTint} (${noonDrawer.bg}, ${noonDrawer.blur})`,
+		isOverlayGlass(noonDrawer, DAY_GLASS, floatTint, true)
+	);
+	await page.screenshot("ps-phone-noon-sidebar");
+	await page.evaluate(`document.getElementById("sidebar-overlay").click()`);
+	await page.waitFor(`!document.getElementById("viewport").classList.contains("menu-open")`, {
+		label: "the phone's sidebar closed at noon",
+	});
+	await page.sleep(500);
+	await page.evaluate(`document.querySelector("#chat .header button.rt").click()`);
+	await page.waitFor(`document.getElementById("viewport").classList.contains("userlist-open")`, {
+		label: "the phone's user list open",
+	});
+	await page.sleep(1000);
+	const noonList = await page.evaluate(
+		`(() => { const cs = getComputedStyle(document.querySelector("#chat .userlist")); return {bg: cs.backgroundColor, blur: cs.backdropFilter}; })()`
+	);
+	page.check(
+		`a phone at noon: the user list laid over the chat is glass, blurred and brightened, on the chips' tint ${floatTint} (${noonList.bg}, ${noonList.blur})`,
+		isOverlayGlass(noonList, DAY_GLASS, floatTint, true)
+	);
+	await page.screenshot("ps-phone-noon-userlist");
+	await page.evaluate(`document.querySelector("#chat .header button.rt").click()`);
+	await page.waitFor(`!document.getElementById("viewport").classList.contains("userlist-open")`, {
+		label: "the phone's user list closed",
+	});
+
+	// ---- the phone at night, the drawer open: the night glass over the plains
 
 	// The scrim starts at the drawer's edge (ps.css, the phone block), so the
 	// drawer lies over the plains themselves, not a dimmed grey.
@@ -1312,8 +1372,8 @@ export default async function run(page) {
 	await page.sleep(700); // the drawer's slide
 	const drawer = await page.evaluate(DRAWER);
 	page.check(
-		`a phone at night: the open drawer is the night tint at 74 %, unblurred (${drawer.bg}, ${drawer.blur})`,
-		isUnblurredTint(drawer, NIGHT_GLASS, 0.74)
+		`a phone at night: the open drawer is glass on the night tint at 74 %, blurred and not brightened (${drawer.bg}, ${drawer.blur})`,
+		isOverlayGlass(drawer, NIGHT_GLASS, 0.74, false)
 	);
 	page.check(
 		`a phone at night: the drawer is on top, not under the scrim (${drawer.hit})`,

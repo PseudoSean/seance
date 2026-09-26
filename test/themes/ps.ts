@@ -323,6 +323,24 @@ const PHONE =
 	"@media (max-width: 768px), (max-height: 500px) and (hover: none) and (pointer: coarse)";
 /** style.css's user list laid over a narrow chat pane, the condition verbatim. */
 const OVERLAID = "@container chat (max-width: calc(50ch + 8.5rem + 84px))";
+/**
+ * The phone's two overlays (Task 8c), by style.css's own state classes: the
+ * drawer while it is on screen (open, or following a swipe) and the user
+ * list, which on the phone is laid over the chat whenever it is shown.
+ */
+const PHONE_OVERLAYS = [
+	"#viewport.menu-open #sidebar",
+	"#viewport.menu-dragging #sidebar",
+	"#viewport.userlist-open #chat .userlist",
+];
+/** The same two overlays in any state, and the glass always on the phone's screen. */
+const PHONE_OVERLAID = ["#sidebar", "#chat .userlist"];
+const ALWAYS_ON = [
+	"#chat .header",
+	"#form",
+	":root.ps-form-tall #form",
+	"#chat .msg-reaction:not(.self, .msg-reaction-add)",
+];
 /** Which of the scene's day tints each glass surface reads (client/js/scenes/ps/glass.ts). */
 const TINT_OF: Record<string, GlassSurface> = {
 	"#chat .header": "header",
@@ -535,8 +553,9 @@ describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.m
 			expect(valueOf(selector, "--ps-g-tint"), selector).to.equal(readsTint(surface));
 		}
 
-		// (On the phone layout no surface reads the scene's tints: the budget's
-		// fallback, the next test.)
+		// (On the phone layout the always-on glass reads no scene tint, the
+		// budget's fallback, and the two overlays read the chips': the next two
+		// tests.)
 
 		// A user list laid over a narrow pane, under style.css's own condition,
 		// stands over the chat, the yurt included.
@@ -567,8 +586,11 @@ describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.m
 		expect(resolve(paletteOf("day"), "var(--ps-g-tint-a)")).to.equal(String(TINT_CAP));
 	});
 
-	it("drops the glass's backdrop filter on the phone layout, the measured budget's fallback (spec §10): no blur and no brightening, and the generated tint, never the scene's", function () {
-		// The composer risen above the grass is named too: its top-level rule outranks a bare #form.
+	it("drops the glass's backdrop filter on the phone layout, the measured budget's fallback (spec §10): no blur and no brightening, and the always-on glass on the generated tint, never the scene's (the two overlays shown: the next test)", function () {
+		// The composer risen above the grass is named too: its top-level rule
+		// outranks a bare #form. The drawer and the user list are named bare:
+		// put away they carry no filter either, and the next test's state
+		// selectors give them their glass while they are shown.
 		const surfaces = [...GLASS_SURFACES, ":root.ps-form-tall #form"];
 
 		for (const selector of surfaces) {
@@ -581,18 +603,15 @@ describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.m
 			// The scene's tints are solved through brightness(1.3), so without it
 			// only the generated tint is proven (--ps-g-tint-a: the legibility
 			// model's, which counts no filter); the night glass reads it already.
-			expect(valueOf(selector, "--ps-g-tint", PHONE), selector).to.equal(
-				"var(--ps-g-tint-a)"
-			);
+			// The drawer and the list keep the chips' in every state (the next test).
+			if (!PHONE_OVERLAID.includes(selector)) {
+				expect(valueOf(selector, "--ps-g-tint", PHONE), selector).to.equal(
+					"var(--ps-g-tint-a)"
+				);
+			}
 		}
 
-		expect(
-			rules
-				.filter((r) => r.at === PHONE)
-				.flatMap((r) => r.decls)
-				.filter(([, v]) => v.includes("--ps-g-tint-") && !v.includes("--ps-g-tint-a")),
-			"nothing on the phone reads a scene tint"
-		).to.deep.equal([]);
+		// (Which rules on the phone read a scene tint at all: the next test.)
 		expect(resolve(paletteOf("day"), "var(--ps-g-tint-a)")).to.equal(String(TINT_CAP));
 		expect(resolve(paletteOf("night"), "var(--ps-g-tint-a)")).to.equal("0.74");
 
@@ -616,6 +635,138 @@ describe("the ps theme's chrome: glass over the plains (docs/projects/ps-theme.m
 					fallback
 				);
 			}
+		}
+	});
+
+	it("gives the phone's two overlays their glass back (Task 8c, spec §10.1): the drawer on screen and the overlaid user list take the chips' tint and the blur, brightened by day, while the always-on glass keeps the fallback", function () {
+		// The state classes are the app's own: style.css's phone block moves the
+		// drawer and shows the list by them.
+		const style = rulesIn(
+			fs.readFileSync(path.resolve(__dirname, "../../client/css/style.css"), "utf8")
+		);
+
+		for (const selector of PHONE_OVERLAYS) {
+			expect(
+				style.some((r) => r.at === PHONE && r.selectors.includes(selector)),
+				`style.css's phone block names ${selector}`
+			).to.equal(true);
+		}
+
+		// As before the fallback (8077585b): the chips' tint, which holds over
+		// every ground, since both lie over the chat, the yurt included, in
+		// every state (a tint that changed on opening would ease over --ps-flip
+		// while the drawer slid in); and, shown, the glass's one filter.
+		for (const selector of PHONE_OVERLAID) {
+			expect(valueOf(selector, "--ps-g-tint", PHONE), selector).to.equal(readsTint("float"));
+		}
+
+		for (const selector of PHONE_OVERLAYS) {
+			expect(
+				declsOf(selector, PHONE).map(([p]) => p),
+				`${selector} sets the filter alone`
+			).to.deep.equal(["-webkit-backdrop-filter", "backdrop-filter"]);
+
+			for (const property of ["backdrop-filter", "-webkit-backdrop-filter"]) {
+				expect(valueOf(selector, property, PHONE), `${selector} ${property}`).to.equal(
+					GLASS_FILTER
+				);
+			}
+		}
+
+		// Brightened by day, blur and saturation alone at night: the lift is the day scene's only.
+		const filterIn = (palette: Map<string, string>) =>
+			resolve(palette, GLASS_FILTER).replace(/\s+/g, " ");
+		const day = paletteOf("day");
+
+		for (const [p, v] of declsOf(DAY_SCENE)) {
+			day.set(p, v);
+		}
+
+		expect(filterIn(day), "by day").to.equal(
+			`blur(0.625rem) brightness(${DAY_BRIGHTNESS}) saturate(${SATURATE})`
+		);
+		expect(filterIn(paletteOf("night")), "at night").to.equal(
+			`blur(0.625rem) saturate(${SATURATE})`
+		);
+
+		// The shown overlays are the only glass on the phone, and the drawer and
+		// the list the only surfaces there reading a scene tint, the chips' alone:
+		// the header, the composer (risen or not) and the chips keep the fallback.
+		for (const selector of ALWAYS_ON) {
+			for (const property of ["backdrop-filter", "-webkit-backdrop-filter"]) {
+				expect(valueOf(selector, property, PHONE), `${selector} ${property}`).to.equal(
+					"none"
+				);
+			}
+
+			expect(valueOf(selector, "--ps-g-tint", PHONE), selector).to.equal(
+				"var(--ps-g-tint-a)"
+			);
+		}
+
+		expect(
+			rules
+				.filter(
+					(r) =>
+						r.at === PHONE &&
+						r.decls.some(([p, v]) => /backdrop-filter$/.test(p) && v !== "none")
+				)
+				.map((r) => r.selectors),
+			"the glass on the phone"
+		).to.deep.equal([PHONE_OVERLAYS]);
+		const sceneTints = (r: Rule) =>
+			r.decls.flatMap(([, v]) =>
+				[...v.matchAll(new RegExp(`--ps-g-tint-(${TINTED.join("|")})\\b`, "g"))].map(
+					(m) => m[1]
+				)
+			);
+		expect(
+			rules
+				.filter((r) => r.at === PHONE && sceneTints(r).length > 0)
+				.map((r) => ({selectors: r.selectors, tints: sceneTints(r)})),
+			"the scene's tints read on the phone"
+		).to.deep.equal([{selectors: PHONE_OVERLAID, tints: ["float"]}]);
+
+		// Each shown state is a bare overlay under a state class of #viewport, an
+		// id and a class more, so it outranks the bare rule's none; it is
+		// written after it too.
+		const bare = rules.findIndex(
+			(r) => r.at === PHONE && r.selectors.join() === PHONE_OVERLAID.join()
+		);
+		const overlays = rules.findIndex(
+			(r) => r.at === PHONE && r.selectors.includes(PHONE_OVERLAYS[0])
+		);
+		expect(bare, "the bare overlays' rule").to.be.at.least(0);
+		expect(overlays, "after the bare rule").to.be.above(bare);
+
+		for (const selector of PHONE_OVERLAYS) {
+			const surface = /^#viewport\.[\w-]+ (.+)$/.exec(selector)?.[1] ?? "";
+			expect(PHONE_OVERLAID, `${selector} is a bare overlay's state`).to.include(surface);
+		}
+
+		// The user list's sticky mode headings take the list's tint: nothing on the phone gives them their own.
+		expect(declsOf("#chat .userlist .user-mode::before", PHONE)).to.deep.equal([]);
+
+		// Reduced transparency still wins. A bare #sidebar there would lose to the
+		// state selector on specificity, so it names each one itself, later.
+		for (const selector of PHONE_OVERLAYS) {
+			const at = rules.findIndex(
+				(r) => r.at === REDUCED_TRANSPARENCY && r.selectors.includes(selector)
+			);
+			expect(at, `${selector} under reduced transparency, after the overlays`).to.be.above(
+				overlays
+			);
+
+			for (const property of ["backdrop-filter", "-webkit-backdrop-filter"]) {
+				expect(
+					valueOf(selector, property, REDUCED_TRANSPARENCY),
+					`${selector} ${property}`
+				).to.equal("none");
+			}
+
+			expect(valueOf(selector, "background-color", REDUCED_TRANSPARENCY)).to.equal(
+				"var(--ps-g-solid)"
+			);
 		}
 	});
 

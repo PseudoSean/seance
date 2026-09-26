@@ -1900,8 +1900,9 @@ body {
  * Never on #status-bar-tint or an ancestor of it (html, body): iOS does not
  * sample a fixed element that carries a backdrop filter (CLAUDE.md, "The iOS
  * status bar"). The flip between day and night glass takes --ps-flip. On the
- * phone layout the glass has no backdrop filter at all (the phones section:
- * the measured budget's fallback, spec §10).
+ * phone layout the always-on glass (the header, the composer, the chips) has
+ * no backdrop filter (the phones section: the measured budget's fallback,
+ * spec §10); the open drawer and the overlaid user list keep it (Task 8c).
  *
  * By day the glass is luminous (the user's pick, 2026-09-25): while the scene
  * runs, the backdrop is brightened (--ps-g-lift) before the saturation, and
@@ -1944,8 +1945,9 @@ body {
  * every ground but the yurt, which stands in the message column; the chips,
  * anywhere, every ground), or the generated tint while the scene has not
  * published one. A user list laid over the chat takes the chips' (below). On
- * the phone layout none of these apply: the glass there is unfiltered, on the
- * generated tint (the phones section). */
+ * the phone layout the always-on glass is unfiltered, on the generated tint,
+ * and only the open drawer and the overlaid user list read one of these, the
+ * chips' (the phones section). */
 /* stylelint-disable no-duplicate-selectors -- the glass rules above, with their tints */
 #chat .header {
 	--ps-g-tint: var(--ps-g-tint-header, var(--ps-g-tint-a));
@@ -2324,11 +2326,9 @@ body {
 	 * 0.78 by day and 0.74 at night), which the legibility model holds over
 	 * every ground with no filter. The scene's per-surface day tints are solved
 	 * through the brightened backdrop and are not proven without it. The risen
-	 * composer is named for its rule's specificity; the user list's sticky
-	 * headings inherit the list's tint. */
-	#sidebar,
+	 * composer is named for its rule's specificity. This is the always-on
+	 * glass's; the drawer and the user list are the next two rules. */
 	#chat .header,
-	#chat .userlist,
 	#form,
 	:root.ps-form-tall #form,
 	#chat .msg-reaction:not(.self, .msg-reaction-add) {
@@ -2336,6 +2336,37 @@ body {
 		/* stylelint-disable-next-line property-no-vendor-prefix -- the glass's prefixed blur, undone */
 		-webkit-backdrop-filter: none;
 		backdrop-filter: none;
+	}
+
+	/* The two overlays keep their glass (Task 8c, spec §10.1): unblurred, the
+	 * conversation's words showed through the open drawer and the list laid
+	 * over the chat, and the soft ink crossing them fell under its floor. The
+	 * fallback's saving was the always-on glass's; an overlay is open for
+	 * moments, and measured open it held the budget's frame interval. Both lie
+	 * over the chat, the yurt included, so they take the chips' tint, as
+	 * before the fallback, in every state: a tint that changed on opening
+	 * would ease over --ps-flip while the drawer slid in. Put away they carry
+	 * no filter (the drawer waits off screen, the list is not displayed); the
+	 * user list's sticky headings inherit the list's tint. */
+	#sidebar,
+	#chat .userlist {
+		--ps-g-tint: var(--ps-g-tint-float, var(--ps-g-tint-a));
+		/* stylelint-disable-next-line property-no-vendor-prefix -- the glass's prefixed blur, undone */
+		-webkit-backdrop-filter: none;
+		backdrop-filter: none;
+	}
+
+	/* Shown, they are blurred again, brightened by day: the drawer while it is
+	 * on screen (open, or following a swipe, style.css's own pair) and the
+	 * list, which on the phone is only displayed laid over the chat. The state
+	 * selectors outrank the bare ones; reduced transparency names them
+	 * itself. */
+	#viewport.menu-open #sidebar,
+	#viewport.menu-dragging #sidebar,
+	#viewport.userlist-open #chat .userlist {
+		/* stylelint-disable-next-line property-no-vendor-prefix -- Safari before 18 knows only the prefixed one */
+		-webkit-backdrop-filter: blur(0.625rem) var(--ps-g-lift,) saturate(1.12);
+		backdrop-filter: blur(0.625rem) var(--ps-g-lift,) saturate(1.12);
 	}
 }
 
@@ -2391,13 +2422,17 @@ body {
 /* ---- reduced transparency ---- */
 
 /* A system that asks for less transparency gets the chrome solid: no blur, the
- * solid colour, by day and at night. */
+ * solid colour, by day and at night. The phone's overlays are named by their
+ * state selectors too, which a bare #sidebar would lose to on specificity. */
 @media (prefers-reduced-transparency: reduce) {
 	#sidebar,
 	#chat .header,
 	#chat .userlist,
 	#form,
 	#chat .msg-reaction:not(.self, .msg-reaction-add),
+	#viewport.menu-open #sidebar,
+	#viewport.menu-dragging #sidebar,
+	#viewport.userlist-open #chat .userlist,
 	:root[data-ps-light="night"] #sidebar,
 	:root[data-ps-light="night"] #chat .header,
 	:root[data-ps-light="night"] #chat .userlist,
