@@ -209,7 +209,7 @@ Two palettes, both in `ps.css`, switched by `data-ps-light` with a 0.8 s transit
 - **The text accent** (1A, §2). The spec's accent reads 2.97 : 1 on the day glass and 2.63 : 1 on the night glass, short of the floor wherever the chrome writes or marks with it. `--ps-g-accent-text` keeps the accent's hue and chroma, and its lightness is solved against the worst glass ground like a nick's: `#9a3a10` (4.63 : 1 on the glass, 6.63 : 1 on the solid) and `#fbb291` (4.64 : 1, 10.02 : 1). Links, button labels, the send and connecting icons, the reply bar's rule and a chip's hover and focus border take it; text on it is white by day and the night solid at night. The spec's accent stays for the open row's marker, the caret, the focus glow and the accent's tints.
 - **One badge**, as the mockup draws it: unread and mention alike, the generated fill (the accent, darkened until its white numeral holds 4.5 : 1) and a white numeral. A mentioned row still stands out by its name in the full ink.
 - **The washes move away from the text** (§2). By day every wash on the glass lightens toward the paper: the spec's selected row and its hover, and in place of creama's grey tints the composer's bars at white 30 % and a hovered user at white 60 %. At night they deepen toward black: the selected row 60 %, a hover 29 %, the bars 19 %, a hovered user 40 %. Each night strength is the weakest black as visible as the white it replaces (the median contrast between the washed and the bare glass over the checked grounds), and `test/themes/ps.ts` holds each at that visibility and never below 1.02 : 1 over the darkest sky. The solid panels keep creama's and coffee's tints.
-- **The phone's drawer stays glass.** `style.css` dims the whole viewport under the open drawer, and the glass frosted that dimming into a grey drawer whose soft ink fell to 4.20 : 1. The scrim starts at the drawer's inner edge instead (`left: var(--sidebar-width)`, physical like the drawer), so the drawer frosts the undimmed plains as on the desktop, and the strip beside it still dims and still takes the tap that closes it. Since the measured budget (§10) the phone's glass has no backdrop filter at all and keeps the generated tint; the scrim rule still keeps the drawer over the undimmed plains.
+- **The phone's drawer stays glass.** `style.css` dims the whole viewport under the open drawer, and the glass frosted that dimming into a grey drawer whose soft ink fell to 4.20 : 1. The scrim starts at the drawer's inner edge instead (`left: var(--sidebar-width)`, physical like the drawer), so the drawer frosts the undimmed plains as on the desktop, and the strip beside it still dims and still takes the tap that closes it. Since the measured budget (§10) the phone's always-on glass (the header, the composer, the chips) has no backdrop filter and keeps the generated tint. The drawer and the user list, which lie over the chat, keep their glass (§10.1, "Task 8c"): shown, they are blurred and brightened by day, on the chips' tint in every state, so the drawer frosts the undimmed plains again.
 - **A conversation on a network that is down** fades its messages and the jump-to-recent disc's arrow rather than `.chat-content`: an opacity under 1 makes an element a backdrop root, and the user list inside it lost its blur. The fade's transition is on the base rules, so it eases back on reconnect as well as out.
 - **Reduced transparency** (`prefers-reduced-transparency: reduce`) makes every glass surface solid, `--ps-g-solid` with no blur, by day and at night.
 
@@ -271,9 +271,9 @@ Budget: a plan task measures the idle cost of the scene in Chromium (a 10-second
 
 ### 10.1 The measured budget (plan 3, 2026-09-25)
 
-**The fallback applies.** On the phone layout at 4× throttling the main thread was busy 87–99 % of every trace, against the 50 % threshold. The frame interval passed only as the compositor counts it. Frames reaching the screen came 16.6–32.9 ms apart on average, under the 33 ms threshold in every weather, with the hot day closest. The main thread's own frames came 85–107 ms apart, and those frames are what advance the SMIL and every animation the compositor cannot run. Under `PHONE_LAYOUT_QUERY` the glass surfaces (the sidebar, the header, the user list, the composer, the risen composer and the chips) now carry no `backdrop-filter`: no blur and no day brightening. They take the generated tint, `--ps-g-tint-a` (0.78 by day, 0.74 at night), instead of the scene's per-surface day tints. Those tints are solved through `brightness(1.3)`, so without it they are not proven. The generated tint is the legibility model's, which counts no filter: over the sparse sweep and the pinned moments, the day glass's soft ink reads 4.50 : 1 at worst and its join-green marks 3.11 : 1, and the night soft ink 4.52 : 1. The suite holds the text at this opacity (`test/scenes/ps/legibility.ts`, the declared opacity); the marks' 3.11 was checked outside it, with a scratch script, when this was measured. `test/themes/ps.ts` pins both halves and that the phone rule comes after every rule it overrides. Reduced transparency's solid still wins over it. `#status-bar-tint`, `html` and `body` carry no filter, as before. The desktop is unchanged.
+**The fallback applies.** On the phone layout at 4× throttling the main thread was busy 87–99 % of every trace, against the 50 % threshold. The frame interval passed only as the compositor counts it. Frames reaching the screen came 16.6–32.9 ms apart on average, under the 33 ms threshold in every weather, with the hot day closest. The main thread's own frames came 85–107 ms apart, and those frames are what advance the SMIL and every animation the compositor cannot run. Under `PHONE_LAYOUT_QUERY` the glass surfaces (the sidebar, the header, the user list, the composer, the risen composer and the chips) now carry no `backdrop-filter`: no blur and no day brightening. They take the generated tint, `--ps-g-tint-a` (0.78 by day, 0.74 at night), instead of the scene's per-surface day tints. Those tints are solved through `brightness(1.3)`, so without it they are not proven. The generated tint is the legibility model's, which counts no filter: over the sparse sweep and the pinned moments, the day glass's soft ink reads 4.50 : 1 at worst and its join-green marks 3.11 : 1, and the night soft ink 4.52 : 1. The suite holds the text at this opacity (`test/scenes/ps/legibility.ts`, the declared opacity); the marks' 3.11 was checked outside it, with a scratch script, when this was measured. `test/themes/ps.ts` pins both halves and that the phone rule comes after every rule it overrides. Reduced transparency's solid still wins over it. `#status-bar-tint`, `html` and `body` carry no filter, as before. The desktop is unchanged. (Task 8c, below, gave the drawer and the user list their glass back while they are shown.)
 
-**What the fallback shows: the conversation through the drawer.** Without the blur, the conversation's own words show through the phone's open drawer and through a user list laid over the chat. They show at 22 % by day and 26 % at night; `tools/scenarios/theme-ps.mjs`'s `ps-phone-night-sidebar` screenshot is the plainest case. The legibility model counts the scene's grounds, not the words' outline and shadow. Where a drawer glyph in the soft ink crosses a word's dark outline by day, the local contrast is about 4.06 : 1 (the outline taken as black under the 78 % tint). At night, the soft ink over a white word behind reads 4.45 : 1; the full inks hold (8.28 and 7.03). Whether those two overlays should instead be solid on the phone, as the dense panels are, is the user's call.
+**What the fallback shows: the conversation through the drawer.** Without the blur, the conversation's own words show through the phone's open drawer and through a user list laid over the chat. They show at 22 % by day and 26 % at night; `tools/scenarios/theme-ps.mjs`'s `ps-phone-night-sidebar` screenshot is the plainest case. The legibility model counts the scene's grounds, not the words' outline and shadow. Where a drawer glyph in the soft ink crosses a word's dark outline by day, the local contrast is about 4.06 : 1 (the outline taken as black under the 78 % tint). At night, the soft ink over a white word behind reads 4.45 : 1; the full inks hold (8.28 and 7.03). Whether those two overlays should instead be solid on the phone, as the dense panels are, is the user's call. Task 8c (below) gave them their glass back, which blurs the words away, and measured what it leaves.
 
 **The fallback does not bring the phone under budget.** After it, the phone at 4× is still 91–99 % busy. It took the compositor's share down (the GPU process's compositor thread on a clear day from 24 % to 15 %, rain 56 → 45 %, dusk 41 → 30 %, heat 93 → 88 %) but not the main thread's. The main thread's cost is the scene's animation, not the glass (below).
 
@@ -415,6 +415,78 @@ The differences are within the run-to-run noise.
 
 None of these has been made. They are the user's call.
 
+#### Task 8c: the phone's overlays keep their glass (2026-09-26)
+
+**The open drawer and the user list laid over the chat have their glass back on the phone. The header, the composer and the chips keep the fallback.** The show-through above was the overlays', and every trace behind the fallback was taken with both closed. The fallback's measured saving is therefore the always-on glass's; an overlay is open for moments.
+
+- **Shown, they carry the glass's filter again**, brightened by day. The selectors are `#viewport.menu-open #sidebar` and `#viewport.menu-dragging #sidebar` (the drawer on screen, open or following a swipe: `style.css`'s own pair), and `#viewport.userlist-open #chat .userlist` (on the phone the list is only displayed laid over the chat).
+- **Both take the chips' tint in every state**, as at 8077585b: `--ps-g-tint-float`, falling back to `--ps-g-tint-a`. A tint that changed on opening would ease over `--ps-flip` while the drawer slid in.
+- **Put away, they carry no filter.** The drawer waits off screen, and the list is not displayed. On closing, the blur goes at the start of the drawer's 160 ms slide out.
+- **Reduced transparency names the state selectors itself**, since they outrank its bare ones. `test/themes/ps.ts` holds that, as well as the tint, the filter, the header, composer and chips keeping the fallback, and that no other rule on the phone blurs or reads a scene tint.
+
+**The gate: the frame interval with the drawer open. It holds.**
+
+- **The method** is §10.1's, on the phone at 4×.
+- **The runs.** The drawer was open for the whole 10 s trace, at dusk and in rain, the two heaviest weathers after Task 8b. The opening itself was traced three times per weather, in 1 s windows around a touch tap on the header's menu button. Mark to mark, the windows ran 1.4–1.9 s, because each includes the tap's round trip.
+- **The builds.** Both sides were one production build: "unblurred" is it with 7b4b521a's `ps.css` (the fallback's drawer), and "blurred" is the shipped one. Each run checked the drawer's computed filter.
+- **These traces ran at `nice 19`**, as Task 8's did and 8b's did not. Both sides ran the same way.
+
+| Run            | Drawer    | Frame mean / p95 / max (ms)       | Frames drawn /s | Dropped (10 s or window) | Viz %     | Busy %    |
+| -------------- | --------- | --------------------------------- | --------------: | -----------------------: | --------- | --------- |
+| dusk, open     | unblurred | 16.7 / 30.8 / 32.3                |            59.9 |                        0 | 35.8      | 98.9      |
+| dusk, open     | blurred   | 16.8 / 29.1 / 53.5                |            59.5 |                        5 | 92.4      | 98.7      |
+| rain, open     | unblurred | 16.7 / 21.3 / 28.3                |            60.0 |                        0 | 53.4      | 93.0      |
+| rain, open     | blurred   | 19.5 / 27.6 / 36.8                |            51.3 |                       91 | 94.9      | 82.6      |
+| dusk, tap (×3) | unblurred | 16.7–16.8 / 30.7–31.3 / 31.6–33.0 |       59.8–60.3 |                      0–1 | 32.9–40.1 | 98.0–98.8 |
+| dusk, tap (×3) | blurred   | 16.7–16.9 / 29.3–31.1 / 31.8–44.5 |       59.6–60.0 |                      0–2 | 61.9–63.8 | 98.3–99.0 |
+| rain, tap (×3) | unblurred | 16.7–16.8 / 22.3–24.6 / 26.6–29.3 |       59.6–60.0 |                      0–1 | 51.7–54.3 | 93.0–96.5 |
+| rain, tap (×3) | blurred   | 17.9–18.5 / 24.1–27.8 / 31.8–38.9 |       54.0–55.8 |                      7–9 | 75.0–78.4 | 86.5–93.2 |
+
+- **The mean frame interval is 16.7–19.5 ms blurred**, against the 33 ms threshold. An earlier build, which differed only in the put-away drawer's tint, read 16.9 and 18.6 ms open, and 16.8 and 17.5–18.8 ms on the taps.
+- **The cost falls on the compositor.** With the drawer open and blurred, the GPU process's compositor thread is 92–95 % busy, against 36–53 % unblurred. In rain it draws 51 frames a second instead of 60 (91 dropped in 10 s), and the longest gap between frames grows from 28 to 37 ms. At dusk it grows from 32 to 54 ms.
+- **The main thread is not charged.** In rain it is less busy with the blur, because it waits on frames.
+- **This is software compositing** on a shared Xeon, at DPR 1: the blur is rasterised on the CPU here, where a phone's GPU would do it. Read the relative cost, not the absolute one.
+
+**The show-through, measured in pixels.**
+
+- **Method.** Task 8 modelled it; this measures it.
+  - The overlay was opened over a busy `#seance` (55 messages), and its own contents hidden (`visibility`, so its glass stays).
+  - The soft ink's contrast was read against every pixel of the overlay in the message band, below the header and above the composer. That was done with the conversation behind it, with its marker labels hidden, and with all of it hidden.
+  - The unblurred side reproduces Task 8's model exactly (4.06 by day, 4.45 at night), which checks the method.
+- **Moments.**
+  - 1 January at 08:45: the year's lowest day float tint (0.52), with snow and ink words.
+  - A clear noon on 25 September: tint 0.60, the commonest, with light words.
+  - 22:05 that night.
+
+| Moment            | Overlay | Unblurred: min, pixels under 4.5 | Blurred: min, pixels under 4.5 | Blurred, marker labels hidden |
+| ----------------- | ------- | -------------------------------- | ------------------------------ | ----------------------------- |
+| lowest float, ink | drawer  | 4.37, 10,502                     | 5.70, 0                        | 5.71                          |
+| lowest float, ink | list    | 4.37, 2,828                      | 5.37, 0                        | 5.37                          |
+| clear noon, light | drawer  | 4.06, 25,271                     | 4.29, 1,952                    | 4.60                          |
+| clear noon, light | list    | 4.06, 9,733                      | 4.34, 1,064                    | 4.55                          |
+| night             | drawer  | 4.45, 1,443                      | 6.59, 0                        | 6.57                          |
+| night             | list    | 4.45, 1,669                      | 7.30, 0                        | 7.30                          |
+
+- **The words are blurred away.** The soft ink reads 4.55 or more over them in every case.
+- **What the blur cannot take away is an opaque box larger than itself.** The column draws three kinds:
+  - the "New messages" and date labels, whose ground is the column's `--window-bg-color`: the night solid `#121827` under the light treatment, 20 px tall;
+  - code boxes: `--ps-code-bg`, `#121827` under the light treatment;
+  - media thumbnails, up to 104 × 58 px on the phone.
+- **The label is partly dissolved**: 4.29 and 4.34 at noon, the only pixels under the floor in the table.
+- **A code box and a black thumbnail are not.** Injected under the drawer at the same noon (275 × 70 and 104 × 58 px), they read 2.80 and 2.42 at their centres. The unblurred fallback reads 4.28 and 4.06 over the same boxes.
+- **Why.** The chips' tint (0.52–0.62 by day) was solved over the scene's grounds, not over the conversation's content. It lets 38–48 % of a dark box through, where the fallback's 0.78 let 22 % through.
+- **No tint under the 0.78 cap holds 4.5 over them.** With the blur and the brightening, a code box needs 0.795 and a black box 0.82. The label alone needs 0.64.
+- **The same overlays at 0.78 with the blur** would read, modelled from the measured pixels: 5.55 over the words, 5.35 over the label, 4.36 over a code box and 4.06 over a black thumbnail. That is at or above the fallback everywhere.
+- **Which of these ships is the user's call (§11, rule 3):** the chips' tint as now, 0.78 with the blur, or solid overlays.
+
+**In the browser.** `tools/scenarios/theme-ps.mjs` checks three things on the phone:
+
+- at noon, the open drawer and the overlaid user list are glass, blurred and brightened, at the tint the scene publishes;
+- at 22:00, the open drawer is blurred night glass at 74 %, not brightened;
+- the header and the composer stay the unblurred 78 % tint.
+
+Against the unblurred build the three overlay checks failed, and nothing else new did. Against the shipped build they pass. The run's other 13 failures are the stale checks Task 9 fixes: the SVG clock and layer counts, ink text at noon, and the settle animation.
+
 ## 11. Legibility floors
 
 Held at **every sampled minute of every season and every weather** (what is sampled, below), and checked in mocha from the palette module:
@@ -516,7 +588,7 @@ One spec, four plans, each shippable on its own:
 - **The iPhone status-bar check** (§6, §12): still the user's to do, on a device.
 - **The land and the weather veil** join the checked grounds when plan 3 draws them, and plan 3 designs the land under the message column with its words in mind (§11).
 - **The low sun counted under the horizon line** is the worst ground for the light treatment and the night glass alike (§11), because with no land drawn nothing hides it. Plan 3's land ends that.
-- **The phone's blur fallback** (§10) waits for plan 3's measured budget. (Plan 3 measured it, and the fallback applies: §10. Task 8b re-measured it once the scene's own cost came down, and it still applies: §10.1, "After Task 8b".)
+- **The phone's blur fallback** (§10) waits for plan 3's measured budget. (Plan 3 measured it, and the fallback applies: §10. Task 8b re-measured it once the scene's own cost came down, and it still applies: §10.1, "After Task 8b". Task 8c took the open drawer and the overlaid user list out of it: §10.1, "Task 8c".)
 
 ## 14. The groundwork (done 2026-09-24)
 
