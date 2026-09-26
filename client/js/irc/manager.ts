@@ -19,6 +19,7 @@ import {parseKeywordList} from "../highlight";
 import {setMuteStatus} from "../mute";
 import {registerBusHandlers} from "./bus";
 import {IrcClient} from "./client";
+import {flushQueryLogs} from "./querylog";
 import * as saved from "./saved-networks";
 import type {SavedNetwork} from "./saved-networks";
 import type {ConnectOptions} from "./types";
@@ -201,6 +202,16 @@ export function allClients(): IrcClient[] {
  * more than the deterministic hold. Nothing is sent for those.
  */
 if (typeof window !== "undefined") {
+	// The private conversations' log writes on a trailing throttle: write
+	// it out whenever the page may not come back — a phone kills a hidden
+	// page without a pagehide.
+	window.addEventListener("pagehide", flushQueryLogs);
+	document.addEventListener("visibilitychange", () => {
+		if (document.visibilityState === "hidden") {
+			flushQueryLogs();
+		}
+	});
+
 	window.addEventListener("pagehide", (ev: PageTransitionEvent) => {
 		if (ev.persisted) {
 			return;
@@ -277,7 +288,10 @@ registerBusHandlers(socket, {
 	clientForNetwork,
 	allClients,
 	createNetwork,
-	remove: (uuid) => void clients.delete(uuid),
+	remove(uuid) {
+		clients.get(uuid)?.queryLog.dispose();
+		clients.delete(uuid);
+	},
 });
 
 // Saved-network policies layered on top of the client's own events.

@@ -132,7 +132,7 @@ export function historyLimit(client: IrcClient, wanted: number): number {
 function canRequest(client: IrcClient, chan: Channel): boolean {
 	return (
 		historyEnabled(client) &&
-		client.transport.state === "open" &&
+		client.isWelcomed && // before 001 it is `451 Register first.`
 		(chan.type === ChanType.CHANNEL || chan.type === ChanType.QUERY)
 	);
 }
@@ -440,6 +440,10 @@ function deliverPrepend(
 		// Older by definition, but a LATEST fill can still hold the newest
 		// line we have seen; noteCursor only ever moves forward.
 		client.noteCursor(msg);
+
+		if (chan.type === ChanType.QUERY) {
+			client.queryLog.append(chan.name, msg); // by time, deduplicated
+		}
 	});
 
 	if (!chan.newestRef && lastRef) {

@@ -20,6 +20,7 @@ function textOf(params: string[]): string {
 
 const welcome: Handler = (client, msg) => {
 	const nick = msg.params[0];
+	client.markWelcomed();
 
 	if (nick && nick !== "*") {
 		client.setNick(nick);

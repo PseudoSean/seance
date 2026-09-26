@@ -29,6 +29,7 @@ import {loadMentions} from "./mentions";
 import storage from "./localStorage";
 import {installNativeHooks} from "./native";
 import {installForegroundHooks} from "./foreground";
+import {installExternalLinks} from "./helpers/externalLinks";
 import {installViewportHooks} from "./helpers/viewport";
 import {onLaunch} from "./pwa";
 import {DEV_I18N} from "./i18n/core";
@@ -105,6 +106,7 @@ export async function boot(): Promise<void> {
 	installNativeHooks();
 	installForegroundHooks();
 	installViewportHooks();
+	installExternalLinks();
 
 	// Development only: the bundler folds DEV_I18N (core.ts), so a
 	// production bundle never ships the diagnostics.

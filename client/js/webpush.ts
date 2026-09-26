@@ -509,6 +509,17 @@ socket.on("webpush:available", ({network, vapid, sasl}) => {
 /** Networks with a subscribe() run in flight (a burst of connects). */
 const subscribing = new Set<string>();
 
+/** Prompts answered "not now" in this page, by `declineKey`: a reconnect
+ * (every registration announces `webpush:available`) must not ask again.
+ * Page-lived on purpose — a reload asks once more, "never" is the lasting
+ * answer — and keyed by kind and key, so declining to subscribe does not
+ * silence the renew prompt a later key rotation brings. */
+const declined = new Set<string>();
+
+function declineKey(kind: PromptKind, uuid: string, vapid: string): string {
+	return `${kind} ${uuid} ${vapid}`;
+}
+
 /** Offer the prompt once per connection that logged in with SASL on a
  * push-capable network: the server can push only for accounts, so an
  * anonymous connect has nothing to offer. Skipped when this browser cannot
@@ -555,7 +566,7 @@ function maybePrompt(uuid: string): void {
 			return;
 		}
 
-		openPrompt("renew", uuid, vapid);
+		askOnce("renew", uuid, vapid);
 		return;
 	}
 
@@ -572,7 +583,15 @@ function maybePrompt(uuid: string): void {
 		return;
 	}
 
-	openPrompt("subscribe", uuid, vapid);
+	askOnce("subscribe", uuid, vapid);
+}
+
+/** Open the prompt unless the user already said "not now" to this very
+ * question in this page. */
+function askOnce(kind: PromptKind, network: string, vapid: string): void {
+	if (!declined.has(declineKey(kind, network, vapid))) {
+		openPrompt(kind, network, vapid);
+	}
 }
 
 function openPrompt(kind: PromptKind, network: string, vapid: string): void {
@@ -592,9 +611,14 @@ function acceptPrompt(): void {
 	}
 }
 
-/** Prompt answer: not now — asked again on the next connect. */
+/** Prompt answer: not now — not asked again until the page is reloaded
+ * (or the network's push option is switched back on). */
 function declinePrompt(): void {
 	pushPrompt.visible = false;
+
+	if (pushPrompt.network !== undefined && pushPrompt.vapid !== undefined) {
+		declined.add(declineKey(pushPrompt.kind, pushPrompt.network, pushPrompt.vapid));
+	}
 }
 
 /** Prompt answer: never ask this question again on this device. For the
@@ -842,6 +866,13 @@ function onNetworkSaved(next: SavedNetwork, wasEnabled: boolean): void {
 	if (!enabled) {
 		void unsubscribe(next.uuid);
 	} else {
+		// Switching push on is asking for it: an earlier "not now" is over.
+		for (const key of [...declined]) {
+			if (key.split(" ")[1] === next.uuid) {
+				declined.delete(key);
+			}
+		}
+
 		autoRegister(next.uuid, announcedKey(next.uuid));
 		refreshState();
 		maybePrompt(next.uuid);

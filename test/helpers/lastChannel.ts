@@ -5,6 +5,7 @@ import {
 	beginLanding,
 	cancelLanding,
 	channelOpened,
+	forgetIfLastChannel,
 	forgetLastChannel,
 	getLastChannel,
 	matchesLanding,
@@ -52,6 +53,17 @@ describe("last opened channel (helpers/lastChannel.ts)", function () {
 		forgetLastChannel();
 		expect(getLastChannel()).to.equal(null);
 		expect(store.has(STORAGE_KEY)).to.equal(false);
+	});
+
+	it("forgets the remembered conversation when it is closed, and only that one", function () {
+		rememberLastChannel("net-1", "Bob");
+
+		forgetIfLastChannel("net-2", "bob");
+		forgetIfLastChannel("net-1", "carol");
+		expect(getLastChannel()).to.deep.equal({network: "net-1", target: "Bob"});
+
+		forgetIfLastChannel("net-1", "bob");
+		expect(getLastChannel()).to.equal(null);
 	});
 
 	it("ignores an empty network or target, and a stored value it cannot read", function () {

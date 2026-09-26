@@ -90,6 +90,16 @@ const VISIBLE_BARS = `Array.from(document.querySelectorAll("#chat .msg-actions")
 const visibleBars = async (page) =>
 	JSON.parse(await page.evaluate(`JSON.stringify(${VISIBLE_BARS})`));
 
+/** The ids of the rows tinted as the one a toolbar acts on. */
+const tinted = async (page) =>
+	JSON.parse(
+		await page.evaluate(
+			`JSON.stringify(Array.from(document.querySelectorAll("#chat .msg"))
+				.filter((m) => getComputedStyle(m).boxShadow.includes("inset"))
+				.map((m) => m.id))`
+		)
+	);
+
 const overlaps = (a, b) =>
 	a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 
@@ -149,6 +159,11 @@ export default async function run(page) {
 		`hovering a row shows its toolbar (${JSON.stringify(bar)})`,
 		bar && bar.width > 0 && bar.height > 0
 	);
+	const hoveredTint = await tinted(page);
+	await page.check(
+		`the hovered row, and only it, is tinted (${JSON.stringify(hoveredTint)})`,
+		hoveredTint.length === 1 && hoveredTint[0] === ids[LINES - 4]
+	);
 	await page.check(
 		`the toolbar sits above the row (bar bottom ${
 			bar && (bar.y + bar.height).toFixed(1)
@@ -180,6 +195,12 @@ export default async function run(page) {
 	await page.check(
 		"moving the pointer onto the toolbar keeps it open",
 		(await visibleBars(page)).length === 1
+	);
+	// The toolbar floats over the row above; the tint stays on its own row.
+	const barTint = await tinted(page);
+	await page.check(
+		`on the toolbar, the tint stays on the row it acts on (${JSON.stringify(barTint)})`,
+		barTint.length === 1 && barTint[0] === ids[LINES - 4]
 	);
 	await page.screenshot("1-toolbar-above-row", {selector: target, pad: 60});
 

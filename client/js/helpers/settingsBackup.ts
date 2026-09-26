@@ -13,8 +13,8 @@
  *
  * Left out on purpose: `thelounge.sts` (a cache), `thelounge.push*` (this
  * device's push subscriptions, bound to its service worker),
- * `thelounge.mentions` (a log) and `thelounge.state.*` (where the UI was
- * last). Restoring replaces every covered entry, so a key the file lacks is
+ * `thelounge.mentions` and `thelounge.querylog.*` (logs: conversation, not
+ * preference) and `thelounge.state.*` (where the UI was last). Restoring replaces every covered entry, so a key the file lacks is
  * removed — the file *is* the state afterwards — and the caller reloads the
  * page, which is how every module re-reads its storage.
  *

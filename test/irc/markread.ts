@@ -44,6 +44,12 @@ class FakeTransport implements Transport {
 		this.emit({type: "open", subprotocol: "text.ircv3.net"});
 	}
 
+	/** The socket is lost; the transport will redial. */
+	drop(): void {
+		this.state = "closed";
+		this.emit({type: "close", code: 1006, reason: "", wasClean: false, willReconnect: true});
+	}
+
 	line(line: string): void {
 		this.emit({type: "line", line});
 	}
@@ -354,6 +360,82 @@ describe("Read markers (handlers/markread.ts)", function () {
 		live(h, 12);
 		clock.tick(1);
 		expect(h.sent()).to.deep.equal(["MARKREAD #seance timestamp=2026-08-25T12:12:00.000Z"]);
+	});
+
+	describe("across a reconnect (nothing before 001: the server answers `451 Register first.`)", function () {
+		/** Redial and negotiate caps, stopping short of 001. */
+		function reopen(h: Harness): void {
+			h.transport.open();
+			h.transport.line(`:irc.test CAP * LS :${BASE_CAPS} draft/read-marker`);
+			const req = h.transport.sent.filter((l) => l.startsWith("CAP REQ :")).pop();
+			h.transport.line(`:irc.test CAP alice ACK :${req!.slice("CAP REQ :".length)}`);
+		}
+
+		function welcome(h: Harness): void {
+			h.transport.lines(
+				":irc.test 001 alice :Welcome to the SeanceDev IRC Network, alice",
+				":irc.test 422 alice :MOTD File is missing"
+			);
+		}
+
+		const markreads = (lines: string[]) => lines.filter((l) => l.startsWith("MARKREAD"));
+
+		it("holds a marker that comes due while registering and sends it once registered", function () {
+			const h = setup();
+			const chanId = joined(h);
+			live(h, 1); // unread: the channel is not open
+
+			h.transport.drop();
+			reopen(h);
+			h.sent();
+
+			// The page comes back and shows the channel while the new
+			// connection is still registering.
+			socket.emit("open", chanId);
+			clock.tick(MARKREAD_DEBOUNCE_MS);
+			expect(markreads(h.sent())).to.deep.equal([]);
+
+			welcome(h);
+			expect(markreads(h.sent())).to.deep.equal([
+				"MARKREAD #seance timestamp=2026-08-25T12:01:00.000Z",
+			]);
+			clock.tick(MARKREAD_DEBOUNCE_MS);
+			expect(markreads(h.sent())).to.deep.equal([]);
+		});
+
+		it("sends a marker the lost socket was holding once registered again", function () {
+			const h = setup();
+			const chanId = joined(h);
+			socket.emit("open", chanId);
+			live(h, 2);
+			h.sent();
+
+			h.transport.drop(); // inside the debounce
+			clock.tick(MARKREAD_DEBOUNCE_MS);
+			reopen(h);
+			expect(markreads(h.sent())).to.deep.equal([]);
+
+			welcome(h);
+			expect(markreads(h.sent())).to.deep.equal([
+				"MARKREAD #seance timestamp=2026-08-25T12:02:00.000Z",
+			]);
+		});
+
+		it("asks for no marker or history page before 001", function () {
+			const h = setup();
+			joined(h);
+			h.transport.drop();
+			reopen(h);
+			h.sent();
+
+			socket.emit("markread", {
+				network: h.client.uuid,
+				target: "#seance",
+				time: "2026-08-25T12:02:00.000Z",
+			});
+			socket.emit("more", {target: h.chan(), lastId: -1});
+			expect(h.sent().filter((l) => /MARKREAD|CHATHISTORY/.test(l))).to.deep.equal([]);
+		});
 	});
 
 	it("sends a marker for our own messages but not for our JOIN", function () {

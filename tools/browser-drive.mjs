@@ -202,8 +202,15 @@ function frameLine(dir, requestId, response) {
 	)} bytes=${bytes} ${JSON.stringify(shown)}`;
 }
 
+/** Scenario subscriptions to DevTools events (`page.on`), by method. */
+const eventListeners = new Map();
+
 function onEvent(msg) {
 	const {method, params} = msg;
+
+	for (const fn of eventListeners.get(method) ?? []) {
+		fn(params);
+	}
 
 	if (method === "Runtime.consoleAPICalled") {
 		const text = (params.args ?? []).map((a) => a.value ?? a.description ?? a.type).join(" ");
@@ -488,6 +495,10 @@ function check(label, ok) {
 
 const page = {
 	send,
+	/** Call `fn(params)` for every DevTools event `method` (enable its domain first). */
+	on(method, fn) {
+		eventListeners.set(method, [...(eventListeners.get(method) ?? []), fn]);
+	},
 	evaluate,
 	goto,
 	waitFor,

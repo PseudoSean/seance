@@ -44,7 +44,15 @@
 					<span class="media-veil-caret" aria-hidden="true"></span>
 				</button>
 			</div>
-			<div v-if="revealed" v-show="link.sourceLoaded" class="media-frame">
+			<!-- Hover is the frame's, not the image's: the preview's tools float
+			over the image, and pointing at them must not stop it. -->
+			<div
+				v-if="revealed"
+				v-show="link.sourceLoaded"
+				class="media-frame"
+				@mouseenter="hovered = true"
+				@mouseleave="hovered = false"
+			>
 				<template v-if="link.type === 'image'">
 					<a
 						:href="link.link"
@@ -53,11 +61,22 @@
 						rel="noopener noreferrer"
 						@click="onThumbnailClick"
 					>
+						<!-- An animation plays once, then this still of it stands in
+						until the pointer is over it (or it is the newest message):
+						see `shouldPlay`. Drawing a cross-origin image taints the
+						canvas, which only forbids reading it back; it shows. -->
+						<canvas
+							v-show="frozen"
+							ref="still"
+							class="media-still"
+							aria-hidden="true"
+						/>
 						<!-- No loading="lazy" here: v-show hides the element until it
 						has loaded, and a lazy image with no box never becomes
 						eligible to load, so @load would never fire. -->
 						<img
-							v-show="link.sourceLoaded"
+							v-show="link.sourceLoaded && !frozen"
+							ref="image"
 							:src="link.thumb"
 							decoding="async"
 							referrerpolicy="no-referrer"
@@ -134,7 +153,7 @@
 </template>
 
 <script lang="ts">
-import {computed, defineComponent, inject, onUnmounted, PropType, ref, watch} from "vue";
+import {computed, defineComponent, inject, nextTick, onUnmounted, PropType, ref, watch} from "vue";
 import {onBeforeRouteUpdate} from "vue-router";
 import {useI18n} from "../js/i18n";
 import {useStore} from "../js/store";
@@ -147,7 +166,61 @@ import {
 	trustedScopesOf,
 } from "../js/helpers/mediaTrust";
 import {mediaScopesOf, mediaTrustMenu} from "../js/helpers/mediaTrustMenu";
+import {animationInfo, isAnimatedImageBytes} from "../js/helpers/animatedImage";
 import {imageViewerKey} from "./App.vue";
+
+/** Extensions an image preview may animate in: GIF and WebP usually do, PNG (APNG) and AVIF rarely. */
+const ANIMATABLE = /\.(gif|webp|png|apng|avif)$/i;
+const USUALLY_ANIMATED = /\.(gif|webp)$/i;
+/** One play when the file cannot be read (its host sends no CORS headers). */
+const FALLBACK_PLAY_MS = 6000;
+/** Bounds on a measured play: a 0-frame oddity, a 10-minute GIF. */
+const MIN_PLAY_MS = 1000;
+const MAX_PLAY_MS = 60000;
+/** Past this the file is not read again for its timing: the fallback applies. */
+const MAX_PROBE_BYTES = 16 * 1024 * 1024;
+
+function pathOf(url: string): string {
+	try {
+		return new URL(url).pathname;
+	} catch {
+		return url.split(/[?#]/)[0];
+	}
+}
+
+/**
+ * How long one play of the animation at `url` lasts: read from the file
+ * (`animationInfo`) when its host allows a CORS read — mostly a cache hit,
+ * the `<img>` has just fetched it — `null` when the file is a still, and
+ * undefined when it could not be read.
+ */
+async function probePlay(url: string): Promise<number | null | undefined> {
+	try {
+		const response = await fetch(url, {
+			mode: "cors",
+			credentials: "omit",
+			referrerPolicy: "no-referrer",
+			cache: "force-cache",
+		});
+		const length = Number(response.headers.get("content-length") ?? 0);
+
+		if (!response.ok || length > MAX_PROBE_BYTES) {
+			return undefined;
+		}
+
+		const bytes = new Uint8Array(await response.arrayBuffer());
+		const info = animationInfo(bytes);
+
+		if (info) {
+			return info.frames > 1 ? info.durationMs : null;
+		}
+
+		// An AVIF sequence animates, but its timing is not read here.
+		return isAnimatedImageBytes(bytes) ? FALLBACK_PLAY_MS : null;
+	} catch {
+		return undefined;
+	}
+}
 
 // Renders one preview built by `client/js/helpers/mediaPreview.ts`. Only
 // direct media (image/video/audio) is supported: there is no server to fetch
@@ -263,11 +336,134 @@ export default defineComponent({
 				: t("link.trustTitleEmpty");
 		});
 
+		// ---- An animation plays once, then holds still ----------------
+		// It plays on while the pointer is over it, and keeps looping while
+		// its message is the newest in the conversation; the image viewer
+		// always animates. With reduced motion asked for, it only ever
+		// plays under the pointer.
+		const image = ref<HTMLImageElement | null>(null);
+		const still = ref<HTMLCanvasElement | null>(null);
+		const hovered = ref(false);
+		/** The file animates (or is presumed to): it has a still to hold. */
+		const animates = ref(false);
+		const playedOnce = ref(false);
+		const frozen = ref(false);
+		let playTimer: ReturnType<typeof setTimeout> | null = null;
+		const reducedMotion =
+			typeof window !== "undefined" &&
+			window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+
+		const isNewest = computed(() => {
+			const last = props.channel.messages[props.channel.messages.length - 1];
+			return last?.previews?.some((p) => p.link === props.link.link) ?? false;
+		});
+		const shouldPlay = computed(
+			() =>
+				!animates.value ||
+				hovered.value ||
+				(!reducedMotion && (isNewest.value || !playedOnce.value))
+		);
+
+		/** Hold the frame on screen now, in the box the image has. */
+		const freeze = () => {
+			const img = image.value;
+			const canvas = still.value;
+
+			if (!img || !canvas || frozen.value || !props.link.sourceLoaded) {
+				return;
+			}
+
+			const box = img.getBoundingClientRect();
+
+			if (box.width === 0 || box.height === 0) {
+				return;
+			}
+
+			const scale = window.devicePixelRatio || 1;
+			canvas.width = Math.round(box.width * scale);
+			canvas.height = Math.round(box.height * scale);
+			// Height follows from the width attributes' ratio (style.css).
+			canvas.style.width = `${box.width}px`;
+			canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
+			frozen.value = true;
+		};
+
+		watch(shouldPlay, (play) => {
+			if (play) {
+				frozen.value = false;
+			} else {
+				freeze();
+			}
+		});
+
+		const clearPlay = () => {
+			if (playTimer !== null) {
+				clearTimeout(playTimer);
+				playTimer = null;
+			}
+		};
+
+		/** The image is on screen: learn whether it animates and for how long one play is. */
+		const watchPlayback = async () => {
+			clearPlay();
+			animates.value = false;
+			playedOnce.value = false;
+			frozen.value = false;
+
+			const path = pathOf(props.link.thumb);
+
+			if (props.link.type !== "image" || !ANIMATABLE.test(path)) {
+				return;
+			}
+
+			// Reduced motion: hold the first frame from the start, not from
+			// whenever the file has been read.
+			if (reducedMotion && USUALLY_ANIMATED.test(path)) {
+				animates.value = true;
+				await nextTick();
+				freeze();
+			}
+
+			const started = Date.now();
+			const probed = await probePlay(props.link.thumb);
+
+			if (probed === null) {
+				animates.value = false; // a still after all
+				return;
+			}
+
+			const playMs =
+				probed === undefined && USUALLY_ANIMATED.test(path) ? FALLBACK_PLAY_MS : probed;
+
+			if (!props.link.sourceLoaded || playMs === null || playMs === undefined) {
+				animates.value = false;
+				return;
+			}
+
+			animates.value = true;
+			const left =
+				Math.min(MAX_PLAY_MS, Math.max(MIN_PLAY_MS, playMs)) - (Date.now() - started);
+			playTimer = setTimeout(() => {
+				playTimer = null;
+				playedOnce.value = true;
+			}, Math.max(0, left));
+
+			// Reduced motion: hold the first frame from the start.
+			if (!shouldPlay.value) {
+				await nextTick();
+				freeze();
+			}
+		};
+
 		const onPreviewReady = () => {
 			failed.value = false;
 			props.link.sourceLoaded = true;
 
 			props.keepScrollPosition();
+
+			if (props.link.type === "image") {
+				void watchPlayback();
+			}
 		};
 
 		const onPreviewError = () => {
@@ -285,6 +481,9 @@ export default defineComponent({
 		};
 
 		const hide = () => {
+			clearPlay();
+			animates.value = false;
+			frozen.value = false;
 			props.link.revealed = false;
 			props.link.sourceLoaded = false;
 			props.keepScrollPosition();
@@ -357,6 +556,7 @@ export default defineComponent({
 		);
 
 		onUnmounted(() => {
+			clearPlay();
 			// Let this preview go through load/loadedmetadata events again,
 			// Otherwise the browser can cause a resize on video elements
 			props.link.sourceLoaded = false;
@@ -380,6 +580,10 @@ export default defineComponent({
 			trustTitle,
 			onPreviewReady,
 			onPreviewError,
+			image,
+			still,
+			hovered,
+			frozen,
 			reveal,
 			hide,
 			openTrustMenu,

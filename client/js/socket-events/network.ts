@@ -5,7 +5,7 @@ import {store} from "../store";
 import {findChannelByName, onStandalonePage, switchToChannel} from "../router";
 import {toClientChan} from "../chan";
 import {ClientNetwork} from "../types";
-import {ChanState} from "../../../shared/types/chan";
+import {ChanState, ChanType} from "../../../shared/types/chan";
 import {applyStoredChannelOrder, applyStoredNetworkOrder} from "../sort";
 import {collator} from "../i18n/collation";
 import {applyStoredMuteStatus} from "../mute";
@@ -55,7 +55,10 @@ function openOnAnnounce(network: ClientNetwork): void {
 	const waitingFor = fromDeepLink ? pending : beginLanding(network.uuid);
 
 	if (!waitingFor) {
-		switchToChannel(network.channels[network.channels.length - 1]);
+		// The last of the join list — not a private conversation the query
+		// log brought back, which sorts in among them (irc/querylog.ts).
+		const joinList = network.channels.filter((c) => c.type === ChanType.CHANNEL);
+		switchToChannel(joinList[joinList.length - 1] ?? network.channels[0]);
 		return;
 	}
 
