@@ -567,6 +567,7 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 				const [left, edge, lift, width, height] = m.slice(1).map(Number);
 				return {left, edge, lift, width, height};
 			});
+
 			/** A billow's box in px on a window W × H: the deck is DECK_HEIGHT % of the height. */
 			const boxOn = (b: typeof billows[number], W: number, H: number) => {
 				const deck = (DECK_HEIGHT / 100) * H;
@@ -575,6 +576,7 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 				const top = (b.edge / 100) * deck - (b.lift / 100) * W;
 				return {width, height, top, centre: top + height / 2, bottom: top + height, deck};
 			};
+
 			const WINDOWS: Array<[string, number, number]> = [
 				["a portrait phone", 390, 844],
 				["the mockup's window", 1180, 700],
