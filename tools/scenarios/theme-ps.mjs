@@ -1,7 +1,9 @@
 // The ps theme in a real browser (docs/projects/ps-theme.md §12). Picking it
 // in Appearance swaps the stylesheet and mounts the scene behind the whole
-// app — sky, sun, moon and 190 stars (client/js/scenes/ps/scene.ts, through
-// the hook in client/js/themeScene.ts). The run then:
+// app — the sky, 190 stars, the sun and the moon, five clouds, the plains
+// (the land and river, the fireflies, the yurt and its smoke, the near
+// grass), the birds and the day's weather (client/js/scenes/ps/scene.ts,
+// through the hook in client/js/themeScene.ts). The run then:
 //
 // - reads the type: all nine font files (Mulish upright and italic, Fraunces;
 //   Latin, Latin Extended and Vietnamese each) loaded, each drawing its text
@@ -12,9 +14,10 @@
 //   upright, in italic and as a query in;
 // - walks the clock with a time-zone override — noon, 22:00, midnight and
 //   dusk (about 45 minutes after today's sunset) — and reads what the scene
-//   publishes on <html>: the light (day/night), the text over the plains
-//   (ink by day, white from dusk), the canvas colour, and the real colour of
-//   another user's message;
+//   publishes on <html>: the light (day/night), the words over the plains
+//   (white all day and all night; dark ink only where it holds, which is a
+//   snowy day), the canvas colour, and the real colour of another user's
+//   message;
 // - reads the chrome (§6): the sidebar, header, user list and composer are
 //   glass — a blur over the day tint at noon, the night tint at 22:00 — and
 //   #status-bar-tint never blurs; the send glyph is the generated text
@@ -23,18 +26,45 @@
 //   (a SKIP line, never a pass, where Chromium cannot emulate it); and the
 //   browser's theme-color is the sky's canvas, coffee's own colour after a
 //   switch, and the sky again after the switch back;
-// - hides and shows the page: the scene stops (its class, its SVG clocks and
-//   every CSS animation in it) and starts again, stays stopped under reduced
-//   motion, and a scene mounted into a hidden page starts stopped;
+// - hides and shows the page: the scene stops (its class, all its SVG clocks
+//   — 48, and 49 on a hot day with the haze — and every CSS animation in it)
+//   and starts again, every SVG running but those in a layer outside its
+//   window (ps-off, layers.ts) and the haze while it bends nothing; stays
+//   stopped under reduced motion; and a scene mounted into a hidden page
+//   starts stopped;
+// - pins the clock (a Date shim, in UTC) to fixed days, and reads the plains:
+//   a clear noon (no drop, flake or seed in the page, no haze, white words,
+//   the stars, the skeins, the fireflies and the smoke out of the render
+//   tree), a rainy one (130 drops and the rain's 26 seeds, no flake), a hot
+//   one (the haze on the ground group and not on the near grass), a snowy one
+//   (120 flakes, dark ink words, snow on the roof) and a stormy one; a clear
+//   day at dawn, noon, golden hour, dusk and midnight; spring's flowers,
+//   summer's dry river and autumn's running one; and a rainy evening across
+//   local midnight into a clear day, the weather layer rebuilt by the
+//   minute's own timer (Review Focus 3);
+// - toggles the user list twice inside the yurt's 0.4 s fade and samples the
+//   yurt every frame: it is never seen anywhere but where it stood and where
+//   it ends, and ends fully shown at 72 % of the column (Review Focus 2);
 // - follows the open conversation: channel, query, none (Settings);
-// - switches to coffee (the scene goes and leaves nothing on <html>) and
-//   back to ps (one scene again, not two);
-// - on a phone: the always-on glass unblurred on the generated tint (the
-//   measured budget's fallback, ps-theme.md §10), the header and composer
-//   at noon; the two overlays glass again (Task 8c, §10.1): at noon the open
-//   drawer and the overlaid user list blurred and brightened on the chips'
-//   tint the scene publishes, and at 22:00 the open drawer blurred on the
-//   night tint, on top of the scrim, not under it;
+// - switches to coffee (the scene and its plains go and leave nothing on
+//   <html>) and back to ps (one scene again, not two);
+// - on a phone: a scene mounted there builds half the fireflies (17) and,
+//   on a rainy day, half the drops and seeds (65 and 13); the yurt stands at
+//   72 % of the column, kept whole on the screen, and the drawer opening
+//   over the chat does not move it (Review Focus 5); the always-on glass
+//   unblurred on the generated tint (the measured budget's fallback,
+//   ps-theme.md §10), the header and composer at noon; the two overlays
+//   glass again (Task 8c, §10.1): at noon the open drawer and the overlaid
+//   user list blurred and brightened on the chips' tint the scene publishes,
+//   and at 22:00 the open drawer blurred on the night tint, on top of the
+//   scrim, not under it;
+// - drifts each of the five clouds: its loop starts wholly off the scene's
+//   left edge and ends wholly off its right, never popping in (each drift is
+//   paused at its loop's two ends; late in the run, since an animation paused
+//   from script no longer follows animation-play-state);
+// - reloads onto Settings: with no message column the yurt stands at 70 % of
+//   the scene, and fades to the column's far third once a conversation opens
+//   (Review Focus 4);
 // - and last blocks the scene's chunk and reloads: the daylight fallback
 //   stays, ink over it, and the console complains of the blocked request and
 //   nothing else — the hook's one warning, naming it.
@@ -42,8 +72,10 @@
 // Along the way it keeps the older promises: **the browser fetches no animal
 // file at all** — not in #seance, not in #kittens, not as a still under
 // reduced motion — though the stylesheet still names every one; a message
-// fades in; sending and reacting show no glitter while the reaction still
-// pops in; the timestamp stays one line; nothing says "ps <3".
+// fades in, and an own message's echo settles up from its pending copy's
+// 0.55 (ps-settle) while the pending copy runs no animation; sending and
+// reacting show no glitter while the reaction still pops in; the timestamp
+// stays one line; nothing says "ps <3".
 //
 // The animals are switched off, not removed (client/themes/ps.css, the block
 // after `#theme-scene .ps-animals`). The checks must stay able to fail, and
@@ -64,6 +96,11 @@
 //   the budget's fallback, 2026-09-25, so its checks read it unblurred).
 // The phone's overlay checks (Task 8c) were watched failing on 2026-09-26
 // against 7b4b521a's ps.css, the fallback's unblurred drawer and list.
+// Plan 3's checks were watched failing on 2026-09-26 with
+// - `#theme-scene .ps-ground{display:none!important}` appended — 169 of 179:
+//   the plains are not drawn (at #seance, a clear noon, a hidden mount and
+//   on the phone), and the yurt stands nowhere the design puts it (each
+//   toggle, the phone, both halves of the load onto Settings).
 //
 //   NODE_ENV=production corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/theme-ps.mjs
@@ -155,6 +192,31 @@ const INSTALL_SHIM = `(() => {
 })()`;
 
 /**
+ * The page's clock, movable (the Date shim plan 3's own browser runs used):
+ * `window.__setClock(ms)` puts the page at the
+ * instant `ms`, running on from there, and `__setClock(null)` gives it back
+ * the real time. Until then it is the real clock, so the rest of the run is
+ * unchanged. Installed for every document before any page script, since the
+ * scene reads `new Date()` when it mounts. It seeds no setting: the run picks
+ * the theme itself.
+ */
+const CLOCK_SHIM = `(() => {
+	const RealDate = Date;
+	const realNow = RealDate.now.bind(RealDate);
+	let offset = 0;
+	function ShimDate(...a) {
+		if (!new.target) return RealDate();
+		return a.length ? new RealDate(...a) : new RealDate(realNow() + offset);
+	}
+	ShimDate.prototype = RealDate.prototype;
+	ShimDate.now = () => realNow() + offset;
+	ShimDate.UTC = RealDate.UTC;
+	ShimDate.parse = RealDate.parse;
+	window.Date = ShimDate;
+	window.__setClock = (ms) => { offset = ms === null ? 0 : ms - realNow(); };
+})()`;
+
+/**
  * Every CSS animation that starts inside #chat, pseudo-elements included
  * (`animationstart` carries `pseudoElement`), logged into `window.__animLog`.
  * An event log rather than a poll of computed styles: the reaction's enter
@@ -179,6 +241,43 @@ const INSTALL_ANIMATION_LOG = `(() => {
 		},
 		true
 	);
+	return true;
+})()`;
+
+/**
+ * The first pending copy of OWN_TEXT and the first echo row of it, each read
+ * the moment it lands (a MutationObserver runs before the next frame): its
+ * animation-name and opacity, and the animations it runs with their first and
+ * last keyframes' opacity. Read at once, because the echo's settle is over in
+ * 340 ms and a finished animation leaves getAnimations().
+ */
+const WATCH_OWN = `(() => {
+	window.__own = {pending: null, echo: null};
+	const text = ${JSON.stringify(OWN_TEXT)};
+	const read = (el) => {
+		const anims = el.getAnimations().map((a) => {
+			const k = a.effect ? a.effect.getKeyframes() : [];
+			return {name: a.animationName, from: k.length ? k[0].opacity : null, to: k.length ? k[k.length - 1].opacity : null};
+		});
+		const cs = getComputedStyle(el);
+		return {name: cs.animationName, opacity: cs.opacity, anims};
+	};
+	const seen = (el) => {
+		if (!el.matches("#chat .msg.self") || !el.textContent.includes(text)) return;
+		if (el.classList.contains("pending")) window.__own.pending ??= read(el);
+		else window.__own.echo ??= read(el);
+	};
+	new MutationObserver((records) => {
+		for (const r of records) {
+			if (r.type === "attributes" && r.target instanceof Element) seen(r.target);
+			for (const node of r.addedNodes) {
+				if (node instanceof Element) {
+					seen(node);
+					node.querySelectorAll("#chat .msg.self").forEach(seen);
+				}
+			}
+		}
+	}).observe(document.getElementById("chat"), {childList: true, subtree: true, attributes: true, attributeFilter: ["class"]});
 	return true;
 })()`;
 
@@ -398,26 +497,64 @@ const VISIBILITY = (state) => `(() => {
 })()`;
 
 /**
- * The scene and what it publishes, in one read. `ink` is the colour of
- * someone else's message text (the neighbour's), null when there is none;
- * `running` counts the CSS animations in the scene that are playing; `meta`
- * is the browser's theme-color; the clock is the page's own, under whatever
- * time zone is emulated.
+ * The scene and what it publishes, in one read. `layers` are the scene's
+ * top-level layers by class and `off` every layer out of the render tree
+ * outside its window (layers.ts), both without the `ps-off` class itself;
+ * `land`, `blades`, `yurt` and `ground` say whether those are rendered
+ * (checkVisibility: in the page is not enough, a hidden ground holds them
+ * too); `svgs` is each SVG's clock and whether it sits in a layer that is
+ * out, or is the heat haze; `ink` is the colour of someone else's message
+ * text (the neighbour's), null when there is none; `running` counts the CSS
+ * animations in the scene that are playing; `meta` is the browser's
+ * theme-color; the clock is the page's own, under whatever time zone is
+ * emulated.
  */
 const SCENE_STATE = `(() => {
 	const s = document.getElementById("theme-scene"), h = document.documentElement;
 	const content = ${OTHERS_LINE};
 	const d = new Date();
+	const n = (sel) => s.querySelectorAll(sel).length;
+	const shown = (sel) => { const e = s.querySelector(sel); return !!e && e.checkVisibility(); };
+	const style = (sel, p) => { const e = s.querySelector(sel); return e ? getComputedStyle(e)[p] : null; };
+	const named = (e) => [...e.classList].filter((c) => c !== "ps-off").join(" ");
+	const weather = s.querySelector(".ps-weather");
 	return {
 		display: getComputedStyle(s).display,
 		background: getComputedStyle(s).backgroundImage,
 		children: s.children.length,
-		starFields: s.querySelectorAll(".ps-stars").length,
-		stars: s.querySelectorAll(".ps-stars i").length,
+		layers: [...s.children].map(named),
+		off: [...s.querySelectorAll(".ps-off")].map(named),
+		starFields: n(".ps-stars"),
+		stars: n(".ps-stars i"),
 		sun: !!s.querySelector(".ps-sun"),
 		moon: !!s.querySelector(".ps-moon"),
+		clouds: n(".ps-cloud-field .ps-cloud"),
+		ground: shown(".ps-ground"),
+		land: shown(".ps-ground > .ps-land"),
+		yurt: shown(".ps-ground > .ps-yurt"),
+		blades: shown(":scope > .ps-blades"),
+		fireflies: n(".ps-ground > .ps-fireflies i"),
+		drops: n(".ps-rain i"),
+		flakes: n(".ps-snow i"),
+		seeds: n(".ps-seeds i"),
+		flash: n(".ps-flash"),
+		heatband: shown(".ps-heatband"),
+		haze: n(".ps-heat-haze"),
+		weatherLayer: weather ? weather.children.length : null,
+		groundFilter: style(".ps-ground", "filter"),
+		bladesFilter: style(":scope > .ps-blades", "filter"),
+		weather: s.dataset.weather,
+		season: s.dataset.season,
+		hot: s.classList.contains("ps-hot"),
+		water: s.style.getPropertyValue("--ps-water"),
+		flowers: s.style.getPropertyValue("--ps-flowers"),
+		snowcap: s.style.getPropertyValue("--ps-snowcap"),
 		paused: s.classList.contains("ps-paused"),
-		svgPaused: [...s.querySelectorAll("svg")].map((v) => v.animationsPaused()),
+		svgs: [...s.querySelectorAll("svg")].map((v) => ({
+			paused: v.animationsPaused(),
+			off: !!v.closest(".ps-off"),
+			haze: v.classList.contains("ps-heat-haze"),
+		})),
 		running: s.getAnimations({subtree: true}).filter((a) => a.playState === "running").length,
 		view: s.dataset.view,
 		light: h.dataset.psLight,
@@ -428,6 +565,7 @@ const SCENE_STATE = `(() => {
 		ink: content ? getComputedStyle(content).color : null,
 		minute: d.getHours() * 60 + d.getMinutes(),
 		doy: (Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(d.getFullYear(), 0, 0)) / 86400000,
+		date: d.toISOString(),
 	};
 })()`;
 
@@ -444,39 +582,113 @@ async function atHour(page, hour) {
 	return page.evaluate(SCENE_STATE);
 }
 
-/** The scene is stopped: its class, both SVG clocks and every CSS animation. */
+/**
+ * The scene's SVGs (scene.ts sceneMarkup): the moon, the sun, the land, the
+ * near grass and the yurt; the skeins' 38 birds (geese and cranes) and the
+ * one holding their belly gradient; the buzzard and the three larks. A hot day's weather layer
+ * adds the heat haze.
+ */
+const SVGS = 48;
+const svgsOn = (s) => SVGS + (s.weather === "heat" ? 1 : 0);
+
+/** The scene's layers, back to front (scene.ts sceneMarkup, docs/projects/ps-theme.md §5.1). */
+const LAYERS = [
+	"ps-milky",
+	"ps-stars",
+	"ps-glow",
+	"ps-moon",
+	"ps-sun",
+	"ps-cloud-field",
+	"ps-ground",
+	"ps-blades",
+	"ps-skeins",
+	"ps-daybirds",
+	"ps-veil",
+	"ps-weather",
+];
+
+/** Fireflies over the far fields (plains.ts FIREFLIES); a scene mounted on a phone gets half. */
+const FIREFLIES = 34;
+
+/** The scene is stopped: its class, every SVG clock and every CSS animation. */
 function checkStopped(page, s, where) {
+	const going = s.svgs.filter((v) => !v.paused).length;
 	page.check(
-		`${where}: the scene is stopped (ps-paused ${s.paused}, SVG clocks ${JSON.stringify(
-			s.svgPaused
-		)}, ${s.running} CSS animations running)`,
-		s.paused && s.svgPaused.length === 2 && s.svgPaused.every(Boolean) && s.running === 0
+		`${where}: the scene is stopped (ps-paused ${s.paused}; ${s.svgs.length} of ${svgsOn(
+			s
+		)} SVG clocks, ${going} going; ${s.running} CSS animations running)`,
+		s.paused && s.svgs.length === svgsOn(s) && going === 0 && s.running === 0
 	);
 }
 
-/** The scene runs: no pause class, both SVG clocks going, CSS animations playing. */
+/**
+ * The scene runs: no pause class, CSS animations playing, and every SVG
+ * clock going but those in a layer outside its window (ps-off) and the heat
+ * haze's while the day is not hot (scene.ts syncSvgs, layers.ts: nothing
+ * animates unseen).
+ */
 function checkRunning(page, s, where) {
+	const live = (v) => !v.off && (s.hot || !v.haze);
+	const wrong = s.svgs.filter((v) => v.paused === live(v));
+	const going = s.svgs.filter((v) => !v.paused).length;
 	page.check(
-		`${where}: the scene runs (ps-paused ${s.paused}, SVG clocks ${JSON.stringify(
-			s.svgPaused
-		)}, ${s.running} CSS animations running)`,
-		!s.paused && s.svgPaused.length === 2 && s.svgPaused.every((p) => !p) && s.running > 0
+		`${where}: the scene runs (ps-paused ${s.paused}; ${s.svgs.length} of ${svgsOn(
+			s
+		)} SVG clocks, ${going} going, ${s.svgs.length - going} held in layers out of their window${
+			wrong.length ? `, ${wrong.length} the wrong way` : ""
+		}; ${s.running} CSS animations running)`,
+		!s.paused && s.svgs.length === svgsOn(s) && wrong.length === 0 && going > 0 && s.running > 0
 	);
 }
 
-/** One scene, whole: shown, six layers, one field of 190 stars, a sun and a moon. */
-function checkMounted(page, s, where) {
+/**
+ * One scene, whole: shown, its twelve layers in order, one field of 190
+ * stars, a sun, a moon and five clouds; and the plains drawn, the land, the
+ * near grass and the yurt rendered, the fireflies in the ground group.
+ */
+function checkMounted(page, s, where, fireflies = FIREFLIES) {
 	page.check(
-		`${where}: the scene is mounted and shown (display ${s.display}, ${s.children} layers, ` +
-			`${s.starFields} star field of ${s.stars}, sun ${s.sun}, moon ${s.moon})`,
+		`${where}: the scene is mounted and shown (display ${s.display}; ${
+			s.children
+		} layers: ${s.layers.join(" ")}; ${s.starFields} star field of ${s.stars}, sun ${
+			s.sun
+		}, moon ${s.moon}, ${s.clouds} clouds)`,
 		s.display === "block" &&
-			s.children === 6 &&
+			s.layers.join() === LAYERS.join() &&
 			s.starFields === 1 &&
 			s.stars === 190 &&
 			s.sun &&
-			s.moon
+			s.moon &&
+			s.clouds === 5
+	);
+	page.check(
+		`${where}: the plains are drawn (ground ${s.ground}, land ${s.land}, near grass ${s.blades}, yurt ${s.yurt}; ${s.fireflies} fireflies, ${fireflies} due)`,
+		s.ground && s.land && s.blades && s.yurt && s.fireflies === fireflies
 	);
 }
+
+/**
+ * Put the page's clock at the instant `ms` (UTC; the run sets the time zone
+ * to Etc/GMT first), then hide and show the page so the scene ticks at once.
+ */
+async function at(page, ms) {
+	await page.evaluate(`window.__setClock(${ms})`);
+	await page.evaluate(VISIBILITY("hidden"));
+	await page.evaluate(VISIBILITY("visible"));
+	await page.sleep(TEXT_EASE_MS);
+	return page.evaluate(SCENE_STATE);
+}
+
+/** The real clock again, and a tick on it. */
+async function realClock(page) {
+	await page.evaluate(`window.__setClock(null)`);
+	await page.evaluate(VISIBILITY("hidden"));
+	await page.evaluate(VISIBILITY("visible"));
+	await page.sleep(300);
+}
+
+/** 12:30 local on a day of 2026 (month from 1), as the UTC instant the shim takes under Etc/GMT. */
+const noonOn = (month, day) => Date.UTC(2026, month - 1, day, 12, 30);
 
 /** The neighbour's join line, shown on its own (not condensed). */
 const PEER_JOIN = `#chat .msg[data-type="join"][data-from="${PEER}"]`;
@@ -770,6 +982,106 @@ const DRAWER = `(() => {
 	};
 })()`;
 
+/**
+ * The yurt against the message column (docs/projects/ps-theme.md §5.3):
+ * its centre, opacity and whether it is moving, the place the scene wrote
+ * (--ps-yurt-left, unset before it has measured a column), the column's box
+ * and the scene's width, all in the viewport's pixels. `due` is where the
+ * design puts it: 72 % of the column, kept whole on the scene; with no
+ * column, 70 % of the scene.
+ */
+const YURT = `(() => {
+	const s = document.getElementById("theme-scene");
+	const y = s.querySelector(".ps-yurt");
+	const b = y.getBoundingClientRect(), sc = s.getBoundingClientRect();
+	const c = document.querySelector("#chat .chat");
+	const cb = c && c.getBoundingClientRect().width > 0 ? c.getBoundingClientRect() : null;
+	const half = b.width / 2;
+	const at = cb ? cb.left - sc.left + 0.72 * cb.width : 0.7 * sc.width;
+	return {
+		cx: b.left - sc.left + half,
+		op: Number(getComputedStyle(y).opacity),
+		moving: s.classList.contains("ps-yurt-moving"),
+		left: s.style.getPropertyValue("--ps-yurt-left"),
+		column: cb && {left: Math.round(cb.left), width: Math.round(cb.width)},
+		sceneWidth: sc.width,
+		due: Math.min(Math.max(at, half), sc.width - half),
+	};
+})()`;
+
+/**
+ * Sample the yurt every animation frame (its centre, opacity, whether it is
+ * moving, and the place written) until YURT_STOP; its smoke goes with it.
+ */
+const YURT_START = `(() => {
+	const s = document.getElementById("theme-scene");
+	const y = s.querySelector(".ps-yurt"), sm = s.querySelector(".ps-smoke");
+	window.__yurt = [];
+	const take = () => {
+		const b = y.getBoundingClientRect(), k = sm.getBoundingClientRect(), sc = s.getBoundingClientRect();
+		window.__yurt.push({
+			cx: Math.round((b.left - sc.left + b.width / 2) * 10) / 10,
+			op: Number(getComputedStyle(y).opacity),
+			smokeX: Math.round((k.left - sc.left) * 10) / 10,
+			smokeOp: Number(getComputedStyle(sm).opacity),
+			left: s.style.getPropertyValue("--ps-yurt-left") || "(unset)",
+			moving: s.classList.contains("ps-yurt-moving"),
+		});
+		window.__yurtFrame = requestAnimationFrame(take);
+	};
+	take();
+	return true;
+})()`;
+const YURT_STOP = `(() => { cancelAnimationFrame(window.__yurtFrame); return window.__yurt; })()`;
+
+/**
+ * Across `action`, the yurt is never seen anywhere but where it stood and
+ * where it ends (its smoke likewise, at the pipe above either), and it ends
+ * fully shown, still, where the design puts it. Returns the trace.
+ */
+async function checkYurtMove(page, label, action, settleMs = 1600) {
+	const before = await page.evaluate(YURT);
+	const smokeBefore = await page.evaluate(
+		`document.querySelector("#theme-scene .ps-smoke").getBoundingClientRect().left - document.getElementById("theme-scene").getBoundingClientRect().left`
+	);
+	await page.evaluate(YURT_START);
+	await action();
+	await page.sleep(settleMs);
+	const trace = await page.evaluate(YURT_STOP);
+	const after = await page.evaluate(YURT);
+	const smokeAfter = trace.at(-1).smokeX;
+	const near = (x, a, b) => Math.min(Math.abs(x - a), Math.abs(x - b)) <= 1;
+	const elsewhere = trace.filter((p) => p.op > 0.01 && !near(p.cx, before.cx, after.cx));
+	const smokeElsewhere = trace.filter(
+		(p) => p.smokeOp > 0.01 && !near(p.smokeX, smokeBefore, smokeAfter)
+	);
+	const last = trace.at(-1);
+	page.check(
+		`${label}: the yurt is never seen between its places (${elsewhere.length} of ${
+			trace.length
+		} frames elsewhere than ${before.cx.toFixed(1)} or ${after.cx.toFixed(1)}${
+			elsewhere.length ? `: ${JSON.stringify(elsewhere.slice(0, 2))}` : ""
+		}; its smoke ${smokeElsewhere.length})`,
+		trace.length > 10 && elsewhere.length === 0 && smokeElsewhere.length === 0
+	);
+	page.check(
+		`${label}: it ends fully shown and still, where the design puts it (opacity ${
+			last.op
+		}, moving ${last.moving}, centre ${after.cx.toFixed(1)}, due ${after.due.toFixed(1)}${
+			after.column ? ` in the column ${JSON.stringify(after.column)}` : ", no column"
+		})`,
+		last.op > 0.99 && !last.moving && Math.abs(after.cx - after.due) <= 1
+	);
+	return {before, after, trace, minOp: Math.min(...trace.map((p) => p.op))};
+}
+
+/** Toggle the user list `times` times, 100 ms apart, from the header's button. */
+const toggleUserlist = (page, times) =>
+	page.evaluate(`(() => {
+		for (let i = 0; i < ${times}; i++) setTimeout(() => document.querySelector("#chat .header .rt").click(), i * 100);
+		return true;
+	})()`);
+
 async function openAppearance(page) {
 	await page.click(`#footer button.settings`);
 	await page.waitFor(`document.querySelector(".settings-menu button.appearance")`, {
@@ -820,6 +1132,8 @@ async function sendLine(page, text) {
 }
 
 export default async function run(page) {
+	// The real clock until the plains' fixed days move it.
+	await page.addInitScript(CLOCK_SHIM);
 	// A ?host link only pre-fills the connect form (a link is a suggestion,
 	// boot.ts handleQueryParams); connect for real.
 	await page.goto(page.url, {waitForSelector: "#connect form"});
@@ -1020,26 +1334,62 @@ export default async function run(page) {
 		timeMetrics[0] < timeMetrics[1] * 1.6
 	);
 
-	// No glitter on a send. The echo of this line is held back by
-	// INSTALL_SHIM, so the pending copy — where the <3 theme's burst began —
-	// is on screen for a while before the echo replaces it; every animation
-	// that starts in #chat meanwhile is logged. The echo's own fade is the
-	// control that the log is live.
+	// No glitter on a send, and no flash as the echo lands. The echo of this
+	// line is held back by INSTALL_SHIM, so the pending copy — where the <3
+	// theme's burst began — is on screen for a while before the echo replaces
+	// it; every animation that starts in #chat meanwhile is logged, and both
+	// rows are read the moment they land (WATCH_OWN). The pending copy stands
+	// at style.css's 0.55 with no animation; the echo is a new row, and it
+	// settles up from that 0.55 (ps.css ps-settle) rather than fading in from
+	// nothing, which blinked every sent line out and back (the user,
+	// 2026-09-25). The settle is also the control that the log is live.
 	await page.evaluate(INSTALL_ANIMATION_LOG);
 	await page.evaluate(`window.__animLog.length = 0`);
+	await page.evaluate(WATCH_OWN);
 	await sendLine(page, OWN_TEXT);
 	await page.waitFor(`document.querySelector("#chat .msg.self.pending")`, {
 		label: "the pending own message",
 	});
+	await page.sleep(HOLD_MS / 3);
+	const heldAnims = await page.evaluate(
+		`(() => { const p = document.querySelector("#chat .msg.self.pending"); return p ? p.getAnimations().length : null; })()`
+	);
 	await page.waitFor(`!document.querySelector("#chat .msg.pending")`, {
 		timeout: HOLD_MS + 10000,
 		label: "the held-back echo",
 	});
 	await page.sleep(1500); // the <3 theme's longest burst ran 1.4 s
 	const sendLog = await page.evaluate(`window.__animLog.slice()`);
+	const own = await page.evaluate(`window.__own`);
 	page.check(
-		`the echo fades in (${describeLog(sendLog)})`,
-		sendLog.some((e) => e.name === "ps-fade" && !e.pseudo)
+		`the pending copy runs no animation, at 0.55 (landed: animation-name ${
+			own.pending?.name
+		}, opacity ${own.pending?.opacity}, ${JSON.stringify(
+			own.pending?.anims
+		)}; ${heldAnims} animations while held)`,
+		!!own.pending &&
+			own.pending.name === "none" &&
+			own.pending.anims.length === 0 &&
+			Number(own.pending.opacity) === 0.55 &&
+			heldAnims === 0
+	);
+	const settleAnim = own.echo?.anims.find((a) => a.name === "ps-settle");
+	page.check(
+		`the echo settles up from its pending copy's 0.55: ps-settle alone, keyframes ${
+			settleAnim?.from
+		} → ${settleAnim?.to}, opacity ${own.echo?.opacity} as it lands (${JSON.stringify(
+			own.echo?.anims
+		)})`,
+		!!own.echo &&
+			own.echo.anims.length === 1 &&
+			!!settleAnim &&
+			Number(settleAnim.from) === 0.55 &&
+			Number(settleAnim.to) === 1 &&
+			Number(own.echo.opacity) === 0.55
+	);
+	page.check(
+		`the echo's settle is logged as it starts (${describeLog(sendLog)})`,
+		sendLog.some((e) => e.name === "ps-settle" && !e.pseudo)
 	);
 	page.check(
 		`sending shows no glitter: nothing animates on a pseudo-element`,
@@ -1108,12 +1458,19 @@ export default async function run(page) {
 
 	// ---- the hours
 
+	// The words are white all day, and dark ink only where it holds over
+	// every ground of the moment (the user's "A", 2026-09-25): over the year
+	// that is a snowy day, from before 08:50 to after 15:40 on every one
+	// (grounds.ts inkWindow). Today's weather decides which.
 	const noon = await atHour(page, 12);
+	const noonInk = noon.weather === "snow";
 	page.check(
-		`noon (${hhmm(noon.minute)}): daylight, ink text ${noon.ink} (light ${noon.light}, text ${
-			noon.text
-		})`,
-		noon.light === "day" && noon.text === "ink" && noon.ink === INK
+		`noon (${hhmm(noon.minute)}, ${noon.weather}): daylight, ${
+			noonInk ? "dark ink on a snowy day" : "white words"
+		} ${noon.ink} (light ${noon.light}, text ${noon.text})`,
+		noon.light === "day" &&
+			noon.text === (noonInk ? "ink" : "light") &&
+			noon.ink === (noonInk ? INK : WHITE)
 	);
 	page.check(
 		`noon: the canvas is the sky's top (${noon.canvas} = ${noon.skyTop})`,
@@ -1153,6 +1510,10 @@ export default async function run(page) {
 			const at = hhmm(s.minute);
 			const night = await page.evaluate(CHROME);
 			checkGlass(page, night, at, NIGHT_GLASS);
+			page.check(
+				`${at}: #status-bar-tint has no backdrop filter (${night.tint?.blur})`,
+				night.tint?.blur === "none"
+			);
 			checkAccent(page, night, at);
 			const rail = await page.evaluate(RAIL_NAMES);
 			page.check(
@@ -1193,9 +1554,9 @@ export default async function run(page) {
 		dusk.minute > set && dusk.minute <= set + DUSK
 	);
 	page.check(
-		`dusk (${hhmm(dusk.minute)}): white text while the light changes ${dusk.ink} (light ${
-			dusk.light
-		}, text ${dusk.text})`,
+		`dusk (${hhmm(dusk.minute)}): white words ${dusk.ink} (light ${dusk.light}, text ${
+			dusk.text
+		})`,
 		dusk.text === "light" && dusk.ink === WHITE
 	);
 	await page.screenshot("ps-dusk");
@@ -1209,6 +1570,206 @@ export default async function run(page) {
 	await page.evaluate(VISIBILITY("visible"));
 	await page.sleep(300);
 	checkRunning(page, await page.evaluate(SCENE_STATE), "shown again");
+
+	// ---- the plains on fixed days (docs/projects/ps-theme.md §5)
+
+	// The clock pinned (CLOCK_SHIM) in UTC, so each moment is a known day of
+	// 2026 and its weather the engine's for that day: 25 September clear,
+	// 26 September rain, 1 July heat, 19 July storm, 8 January snow.
+	await page.send("Emulation.setTimezoneOverride", {timezoneId: "Etc/GMT"});
+
+	const clear = await at(page, noonOn(9, 25));
+	page.check(`25 September at 12:30 is clear (${clear.weather})`, clear.weather === "clear");
+	checkMounted(page, clear, "a clear noon");
+	// Only the weather that is happening exists in the page (spec §10).
+	page.check(
+		`a clear noon: no rain drop, snowflake or seed in the page (${clear.drops}, ${clear.flakes}, ${clear.seeds}; the weather layer holds ${clear.weatherLayer})`,
+		clear.drops + clear.flakes + clear.seeds === 0 && clear.weatherLayer === 0
+	);
+	page.check(
+		`a clear noon: no heat haze (the ground's filter ${clear.groundFilter}; ${clear.haze} haze, ps-hot ${clear.hot})`,
+		clear.groundFilter === "none" && clear.haze === 0 && !clear.hot
+	);
+	page.check(
+		`a clear noon: day glass and white words ${clear.ink} (light ${clear.light}, text ${clear.text})`,
+		clear.light === "day" && clear.text === "light" && clear.ink === WHITE
+	);
+	// Nothing animates unseen (layers.ts): the night's layers are out of the
+	// render tree by day, the sun in it.
+	page.check(
+		`a clear noon: the stars, the skeins, the fireflies and the smoke out of the render tree, the sun in it (out: ${clear.off.join(
+			", "
+		)})`,
+		["ps-stars", "ps-skeins", "ps-fireflies", "ps-smoke"].every((k) => clear.off.includes(k)) &&
+			!clear.off.includes("ps-sun")
+	);
+	checkRunning(page, clear, "a clear noon");
+	await page.screenshot("ps-day-sep25-1230");
+
+	const rain = await at(page, noonOn(9, 26));
+	page.check(
+		`a rainy noon (${rain.weather}): 130 drops and the rain's wind's 26 seeds, no snowflake (${rain.drops}, ${rain.seeds}, ${rain.flakes})`,
+		rain.weather === "rain" && rain.drops === 130 && rain.seeds === 26 && rain.flakes === 0
+	);
+	page.check(
+		`a rainy noon: no heat haze (the ground's filter ${rain.groundFilter}, ${rain.haze} haze)`,
+		rain.groundFilter === "none" && rain.haze === 0
+	);
+	checkRunning(page, rain, "a rainy noon");
+	await page.screenshot("ps-rain-sep26-1230");
+
+	const heat = await at(page, noonOn(7, 1));
+	// The haze bends the ground group (land, river, fireflies, yurt, smoke)
+	// as one and leaves the near grass crisp (spec §5.5).
+	page.check(
+		`a hot noon (${heat.weather}): the haze on the ground group and not on the near grass (ground ${heat.groundFilter}, near grass ${heat.bladesFilter}; ${heat.haze} haze, ps-hot ${heat.hot}, the heat band shown ${heat.heatband})`,
+		heat.weather === "heat" &&
+			heat.hot &&
+			heat.groundFilter === 'url("#ps-heat")' &&
+			heat.bladesFilter === "none" &&
+			heat.haze === 1 &&
+			heat.heatband
+	);
+	page.check(
+		`a hot noon: no drop, flake or seed (${heat.drops}, ${heat.flakes}, ${heat.seeds})`,
+		heat.drops + heat.flakes + heat.seeds === 0
+	);
+	checkRunning(page, heat, "a hot noon");
+	await page.screenshot("ps-heat-jul01-1230");
+
+	// Review Focus 1: the stormy noon, whose veil made dark words fail before
+	// the user's "A"; the words are white over it.
+	const storm = await at(page, noonOn(7, 19));
+	page.check(
+		`a stormy noon (${storm.weather}): 130 drops, the lightning, white words ${storm.ink} (text ${storm.text})`,
+		storm.weather === "storm" &&
+			storm.drops === 130 &&
+			storm.flash === 1 &&
+			storm.text === "light" &&
+			storm.ink === WHITE
+	);
+	await page.screenshot("ps-storm-jul19-1230");
+
+	// Dark ink where it holds: a snowy day, the one weather it does.
+	const snow = await at(page, noonOn(1, 8));
+	page.check(
+		`a snowy noon (${snow.weather}): 120 flakes and the snow's 26 seeds, no drop (${snow.flakes}, ${snow.seeds}, ${snow.drops})`,
+		snow.weather === "snow" && snow.flakes === 120 && snow.seeds === 26 && snow.drops === 0
+	);
+	page.check(
+		`a snowy noon: dark ink words ${snow.ink} (text ${snow.text}), snow on the roof (--ps-snowcap ${snow.snowcap}), no flowers (${snow.flowers})`,
+		snow.text === "ink" &&
+			snow.ink === INK &&
+			Number(snow.snowcap) > 0.5 &&
+			Number(snow.flowers) === 0
+	);
+	await page.screenshot("ps-winter-snow-jan08-1230");
+
+	// The seasons at noon: spring's flowers, summer's dry river, autumn's running one.
+	const spring = await at(page, noonOn(5, 12));
+	page.check(
+		`spring, 12 May at noon (${spring.weather}): the flowers out (--ps-flowers ${spring.flowers}), the river running (--ps-water ${spring.water})`,
+		spring.weather === "clear" && Number(spring.flowers) > 0.5 && Number(spring.water) > 0.5
+	);
+	await page.screenshot("ps-spring-may12-1230");
+	const summer = await at(page, noonOn(8, 4));
+	page.check(
+		`summer, 4 August at noon (${summer.weather}): the river dry (--ps-water ${summer.water})`,
+		summer.weather === "clear" && Number(summer.water) === 0
+	);
+	await page.screenshot("ps-summer-aug04-1230");
+	const autumn = await at(page, noonOn(10, 22));
+	page.check(
+		`autumn, 22 October at noon (${autumn.weather}): the river running again (--ps-water ${autumn.water}), the flowers nearly over (${autumn.flowers})`,
+		autumn.weather === "clear" && Number(autumn.water) > 0.5 && Number(autumn.flowers) < 0.1
+	);
+	await page.screenshot("ps-autumn-oct22-1230");
+
+	// A clear day through (25 September, sunrise and sunset from the engine's
+	// formula): the words stay white at every hour of it.
+	const sep25 = sunTimes(268);
+	const sep25At = (minute) => Date.UTC(2026, 8, 25, 0, Math.round(minute));
+
+	for (const [name, minute] of [
+		["dawn", sep25.rise - 30],
+		["golden-hour", sep25.set - 60],
+		["dusk", sep25.set + 45],
+		["midnight", 0],
+	]) {
+		const s = await at(page, sep25At(minute));
+		page.check(
+			`25 September, ${name} (${hhmm(s.minute)}, ${s.weather}): white words ${s.ink} (light ${
+				s.light
+			}, text ${s.text})`,
+			s.doy === 268 && s.weather === "clear" && s.text === "light" && s.ink === WHITE
+		);
+
+		if (name === "midnight") {
+			page.check(
+				`25 September at midnight: the sun out of the render tree, the stars in it (out: ${s.off.join(
+					", "
+				)})`,
+				s.off.includes("ps-sun") && !s.off.includes("ps-stars") && s.light === "night"
+			);
+			checkRunning(page, s, "25 September at midnight");
+		}
+
+		await page.screenshot(`ps-day-sep25-${name}`);
+	}
+
+	// ---- the yurt never slides (Review Focus 2)
+
+	// At night, so its smoke is up and goes with it. One toggle first, the
+	// control: the column changes width and the yurt fades out and back in
+	// at its new place. Then the brief's case: the user list toggled twice,
+	// 100 ms apart, inside one 0.4 s fade.
+	await at(page, Date.UTC(2026, 8, 25, 22, 0));
+	const one = await checkYurtMove(page, "the user list toggled once", () =>
+		toggleUserlist(page, 1)
+	);
+	page.check(
+		`the user list toggled once: the column changed (${JSON.stringify(
+			one.before.column
+		)} → ${JSON.stringify(one.after.column)}) and the yurt faded (lowest opacity ${one.minOp})`,
+		one.before.column?.width !== one.after.column?.width && one.minOp < 0.05
+	);
+	await checkYurtMove(page, "the user list toggled back", () => toggleUserlist(page, 1));
+	const twice = await checkYurtMove(page, "the user list toggled twice inside the fade", () =>
+		toggleUserlist(page, 2)
+	);
+	// The first toggle started a fade (the second came inside it and only
+	// retargeted it), and only the place it stood at was ever written.
+	const lefts = [...new Set(twice.trace.map((p) => p.left))];
+	page.check(
+		`the user list toggled twice: the yurt faded and ends where it stood (lowest opacity ${
+			twice.minOp
+		}; ${twice.before.cx.toFixed(1)} → ${twice.after.cx.toFixed(
+			1
+		)}; places written ${JSON.stringify(lefts)})`,
+		twice.minOp < 0.05 && Math.abs(twice.before.cx - twice.after.cx) <= 1 && lefts.length === 1
+	);
+
+	// ---- across local midnight with the page open (Review Focus 3)
+
+	// A rainy 26 September into a clear 27th, by the scene's own minute timer:
+	// no visibility poke once the clock is set. The tick is due at 00:00:00.02.
+	const eve = await at(page, Date.UTC(2026, 8, 26, 23, 59, 45));
+	page.check(
+		`26 September at ${hhmm(eve.minute)}: rain, ${eve.drops} drops`,
+		eve.weather === "rain" && eve.drops === 130
+	);
+	await settle(page, `document.getElementById("theme-scene").dataset.weather !== "rain"`, 25000);
+	await page.sleep(500);
+	const morning = await page.evaluate(SCENE_STATE);
+	page.check(
+		`after local midnight (${morning.date}): 27 September is clear and the rain is gone (${morning.weather}, ${morning.drops} drops, ${morning.seeds} seeds, the weather layer holds ${morning.weatherLayer})`,
+		morning.doy === 270 &&
+			morning.weather === "clear" &&
+			morning.drops + morning.flakes + morning.seeds === 0 &&
+			morning.weatherLayer === 0
+	);
+	await page.screenshot("ps-midnight-sep27-0000");
+	await realClock(page);
 
 	// ---- the view follows the conversation
 
@@ -1242,6 +1803,23 @@ export default async function run(page) {
 	page.check(
 		`coffee: no scene (display ${coffee.display}, ${coffee.children} children)`,
 		coffee.display === "none" && coffee.children === 0
+	);
+	const leftovers = await page.evaluate(
+		`document.querySelectorAll(".ps-land, .ps-blades, .ps-yurt, .ps-fireflies, .ps-weather, .ps-skeins").length`
+	);
+	page.check(
+		`coffee: the plains are gone with it (land ${coffee.land}, near grass ${
+			coffee.blades
+		}, yurt ${coffee.yurt}, ${coffee.fireflies} fireflies, ${coffee.svgs.length} SVGs, ${
+			coffee.drops + coffee.flakes + coffee.seeds
+		} particles; ${leftovers} of their elements anywhere in the page)`,
+		!coffee.land &&
+			!coffee.blades &&
+			!coffee.yurt &&
+			coffee.fireflies === 0 &&
+			coffee.svgs.length === 0 &&
+			coffee.drops + coffee.flakes + coffee.seeds === 0 &&
+			leftovers === 0
 	);
 	page.check(
 		`coffee: nothing left on <html> (light ${coffee.light}, text ${coffee.text}, canvas "${coffee.canvas}")`,
@@ -1299,6 +1877,79 @@ export default async function run(page) {
 	}
 
 	await page.sleep(800);
+
+	// ---- a phone: half the particles, the yurt in the column (Review Focus 5)
+
+	// The fireflies are built when the scene mounts and the weather when a day
+	// begins, each for the layout of the moment, so the scene is mounted
+	// afresh here (coffee and back, from Settings: the drawer that holds its
+	// button is shut, so the button is clicked in the page) on a rainy noon.
+	await page.send("Emulation.setTimezoneOverride", {timezoneId: "Etc/GMT"});
+	await page.evaluate(`window.__setClock(${noonOn(9, 26)})`);
+	await page.evaluate(`document.querySelector("#footer button.settings").click()`);
+	await page.waitFor(`document.querySelector(".settings-menu button.appearance")`, {
+		label: "settings open on the phone",
+	});
+	await page.evaluate(`document.querySelector(".settings-menu button.appearance").click()`);
+	await page.waitFor(`document.querySelector("#theme-select")`, {
+		label: "the theme select on the phone",
+	});
+	await chooseTheme(page, "coffee");
+	await chooseTheme(page, "ps");
+	await closeSettings(page);
+	await page.evaluate(
+		`document.querySelector('.channel-list-item[data-name="#seance"]').click()`
+	);
+	await page.waitFor(
+		`document.querySelector("#chat .chat") && document.querySelector('#chat .chat-view[data-type="channel"]')`,
+		{label: "back in #seance on the phone"}
+	);
+	await page.sleep(1500); // the first place, and the column's rise into place
+	const phone = await page.evaluate(SCENE_STATE);
+	checkMounted(page, phone, "a phone, mounted there", FIREFLIES / 2);
+	page.check(
+		`a phone on a rainy noon (${phone.weather}): half the drops and seeds, 65 and 13 (${phone.drops}, ${phone.seeds}; ${phone.flakes} flakes)`,
+		phone.weather === "rain" && phone.drops === 65 && phone.seeds === 13 && phone.flakes === 0
+	);
+	const phoneYurt = await page.evaluate(YURT);
+	page.check(
+		`a phone: the yurt at 72 % of the column, kept whole on the screen (centre ${phoneYurt.cx.toFixed(
+			1
+		)}, due ${phoneYurt.due.toFixed(1)}, column ${JSON.stringify(phoneYurt.column)}, place ${
+			phoneYurt.left
+		})`,
+		!!phoneYurt.column &&
+			phoneYurt.left !== "" &&
+			phoneYurt.op > 0.99 &&
+			Math.abs(phoneYurt.cx - phoneYurt.due) <= 1
+	);
+	// The drawer lies over the chat: the column does not resize under it, so
+	// the yurt stays where it stands.
+	await page.click(`#chat .header .lt`);
+	await page.waitFor(`document.getElementById("viewport").classList.contains("menu-open")`, {
+		label: "the phone's sidebar open over the yurt",
+	});
+	await page.sleep(1000);
+	const drawnOver = await page.evaluate(YURT);
+	page.check(
+		`a phone: opening the drawer does not move the yurt (place ${phoneYurt.left} → ${
+			drawnOver.left
+		}, centre ${phoneYurt.cx.toFixed(1)} → ${drawnOver.cx.toFixed(1)}, moving ${
+			drawnOver.moving
+		})`,
+		drawnOver.left === phoneYurt.left &&
+			Math.abs(drawnOver.cx - phoneYurt.cx) < 0.5 &&
+			!drawnOver.moving &&
+			drawnOver.op > 0.99
+	);
+	await page.screenshot("ps-phone-rain-sidebar");
+	await page.evaluate(`document.getElementById("sidebar-overlay").click()`);
+	await page.waitFor(`!document.getElementById("viewport").classList.contains("menu-open")`, {
+		label: "the phone's sidebar closed again",
+	});
+	await page.sleep(500);
+	await realClock(page);
+
 	await page.screenshot("ps-phone-noon");
 
 	// On the phone layout the glass has no backdrop filter and keeps the
@@ -1403,6 +2054,142 @@ export default async function run(page) {
 	page.check(`the page says "ps <3" nowhere`, oldName === false);
 
 	page.check(`no console errors (${page.consoleErrors.length})`, page.consoleErrors.length === 0);
+
+	// ---- the clouds drift in and out of sight
+
+	// The user saw them "pop in on the left side" (2026-09-25): each loop
+	// began with the cloud already mostly on screen. Now a cloud, its blobs
+	// and its blur included, starts wholly past the scene's left edge and
+	// ends wholly past its right one. Each drift is paused and put at its
+	// loop's start, middle and end (a millisecond before the end), in its
+	// second iteration so a negative delay is behind it. Pausing an animation
+	// from script leaves it deaf to animation-play-state for good, which is
+	// why this comes after every stopped-and-running check; the reloads below
+	// build the scene afresh.
+	const DRIFT = (p) => `(() => {
+		const scene = document.getElementById("theme-scene").getBoundingClientRect();
+		return [...document.querySelectorAll("#theme-scene .ps-cloud")].map((el) => {
+			const a = el.getAnimations().find((x) => x.animationName === "ps-drift");
+			if (!a) return null;
+			const t = a.effect.getTiming();
+			a.pause();
+			a.currentTime = t.delay + t.duration * (1 + ${p}) - (${p} === 1 ? 1 : 0);
+			const boxes = [el, ...el.querySelectorAll("i")].map((e) => e.getBoundingClientRect());
+			const blur = 0.025 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+			return {
+				left: Math.min(...boxes.map((b) => b.left)) - blur - scene.left,
+				right: Math.max(...boxes.map((b) => b.right)) + blur - scene.left,
+				width: scene.width,
+			};
+		});
+	})()`;
+	const loopStart = await page.evaluate(DRIFT(0));
+	const loopMid = await page.evaluate(DRIFT(0.5));
+	const loopEnd = await page.evaluate(DRIFT(1));
+	page.check(
+		`five clouds drift (${loopStart.filter(Boolean).length} with ps-drift)`,
+		loopStart.length === 5 && loopStart.every(Boolean)
+	);
+	loopStart.forEach((c, i) =>
+		page.check(
+			`cloud ${
+				i + 1
+			}: its loop starts wholly left of the scene (its right edge at ${c?.right.toFixed(1)})`,
+			!!c && c.right <= 0
+		)
+	);
+	loopMid.forEach((c, i) =>
+		page.check(
+			`cloud ${i + 1}: in mid-loop it is on the scene (${c?.left.toFixed(
+				1
+			)} to ${c?.right.toFixed(1)} of ${c?.width})`,
+			!!c && c.left > 0 && c.right < c.width
+		)
+	);
+	loopEnd.forEach((c, i) =>
+		page.check(
+			`cloud ${
+				i + 1
+			}: its loop ends wholly right of the scene (its left edge at ${c?.left.toFixed(1)} of ${
+				c?.width
+			})`,
+			!!c && c.left >= c.width
+		)
+	);
+
+	// ---- a load straight onto Settings (Review Focus 4)
+
+	// No message column: the yurt stands at the scene's 70 % (ps.css, before
+	// the scene has measured a column), and when a conversation opens it
+	// fades out and back in at the column's 72 %, never sliding there.
+	await page.evaluate(
+		`(() => { window.__coldLoad = true; history.replaceState(null, "", "/#/settings/appearance"); })()`
+	);
+	await page.send("Page.reload");
+
+	for (const until = Date.now() + 30000; ; ) {
+		try {
+			if (
+				await page.evaluate(
+					`!window.__coldLoad && !!document.querySelector("#theme-scene .ps-yurt") && !!document.querySelector(".settings-modal-done")`
+				)
+			) {
+				break;
+			}
+		} catch {
+			// the page is between documents
+		}
+
+		if (Date.now() > until) {
+			throw new Error("the load onto Settings did not come up");
+		}
+
+		await page.sleep(200);
+	}
+
+	await page.sleep(1500);
+	const cold = await page.evaluate(YURT);
+	page.check(
+		`a load onto Settings: no column, the yurt at 70 % of the scene (centre ${cold.cx.toFixed(
+			1
+		)}, due ${cold.due.toFixed(1)} of ${cold.sceneWidth}; place "${cold.left}", opacity ${
+			cold.op
+		})`,
+		cold.column === null &&
+			cold.left === "" &&
+			cold.op > 0.99 &&
+			Math.abs(cold.cx - cold.due) <= 1
+	);
+	await page.screenshot("ps-settings-first");
+	await closeSettings(page);
+	await page.waitFor(`document.querySelector("#connect form")`, {
+		label: "the connect form, after Settings",
+	});
+	const opened = await checkYurtMove(
+		page,
+		"a load onto Settings, then a conversation",
+		async () => {
+			await page.fill(`[id="connect:nick"]`, `${NICK}c`);
+			await page.evaluate(`document.querySelector("#connect form").requestSubmit()`);
+			await page.waitFor(
+				`document.querySelector('.channel-list-item[data-name="#seance"]')`,
+				{
+					timeout: 30000,
+					label: "#seance in the sidebar, after Settings",
+				}
+			);
+			await page.waitFor(`document.querySelector("#chat .chat")`, {
+				label: "a message column",
+			});
+		},
+		2500
+	);
+	// Long after the load's first second, so it fades rather than jumping in sight.
+	page.check(
+		`a load onto Settings, then a conversation: the yurt faded on its way (lowest opacity ${opened.minOp})`,
+		opened.minOp < 0.05
+	);
+	await page.screenshot("ps-settings-first-then-seance");
 
 	// ---- last: the scene's chunk does not load
 
