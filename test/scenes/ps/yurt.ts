@@ -233,6 +233,79 @@ describe("ps yurt: following the column (yurtFollower)", function () {
 		});
 	});
 
+	describe("a scene not laid out yet (display: none until ps.css applies)", function () {
+		/** #theme-scene before ps.css shows it: no box, and so no yurt box either. */
+		const HIDDEN = {width: 0, rem: 20, yurtWidth: 0};
+
+		it("places nothing against a scene of no width, and leaves the load's window unspent", function () {
+			const h = harness();
+			const f = yurtFollower(h.fx);
+			f.seen();
+			f.measure(OPEN, HIDDEN); // the column's first observation, the scene not shown yet
+			expect(h.log).to.deep.equal([]);
+			expect(f.place).to.equal(null);
+			expect(f.fading).to.equal(false);
+			expect(h.pending()).to.equal(0);
+			h.advance(300);
+			f.measure(OPEN, S); // ps.css applied: the scene's own observation
+			expect(h.log, "the first place, taken at once").to.deep.equal([`place ${AT_OPEN}`]);
+			expect(f.fading).to.equal(false);
+		});
+
+		it("ignores a scene of no width at any time: the place kept, no fade started", function () {
+			const {h, f} = standing();
+			f.measure(CLOSED, HIDDEN);
+			f.measure(null, HIDDEN);
+			expect(h.log).to.deep.equal([]);
+			expect(f.place).to.equal(AT_OPEN);
+			expect(f.fading).to.equal(false);
+		});
+	});
+
+	describe("no column and a narrower scene (a window narrowed on Settings)", function () {
+		// The yurt is 267 px wide, so its centre stays 133.5 px inside the far edge.
+
+		it("follows the clamp at once when it moves the yurt under 1.5 rem", function () {
+			const {h, f} = standing(); // at 862
+			f.measure(null, {...S, width: 990}); // 990 − 133.5 = 856.5: 5.5 px
+			expect(h.log).to.deep.equal(["place 856.5"]);
+			expect(f.place).to.equal(856.5);
+		});
+
+		it("fades to the clamped place when the clamp moves it further", function () {
+			const {h, f} = standing();
+			f.measure(null, {...S, width: 800}); // 666.5: 195.5 px
+			expect(h.log).to.deep.equal(["hide"]);
+			h.advance(FADE_MS);
+			h.frame();
+			expect(h.log).to.deep.equal(["hide", "place 666.5", "show"]);
+			expect(f.place).to.equal(666.5);
+		});
+
+		it("clamps a running fade's landing instead", function () {
+			const {h, f} = standing();
+			f.measure(CLOSED, S); // fading to 991.6
+			f.measure(null, {...S, width: 1100}); // the column goes and the scene narrows: 966.5
+			h.advance(FADE_MS);
+			h.frame();
+			expect(h.log).to.deep.equal(["hide", "place 966.5", "show"]);
+		});
+
+		it("keeps its place when the scene grows", function () {
+			const {h, f} = standing();
+			f.measure(null, {...S, width: 1600});
+			expect(h.log).to.deep.equal([]);
+			expect(f.place).to.equal(AT_OPEN);
+		});
+
+		it("leaves ps.css's 70 % to clamp itself while nothing is placed", function () {
+			const {h, f} = settled();
+			f.measure(null, {...S, width: 400});
+			expect(h.log).to.deep.equal([]);
+			expect(f.place).to.equal(null);
+		});
+	});
+
 	it("follows at once when the first column, after the load, puts it within 1.5 rem of 70 %", function () {
 		const {h, f} = settled();
 		const near = {left: 0, width: (S.width * YURT_DEFAULT + 10) / YURT_AT};

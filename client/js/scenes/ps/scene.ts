@@ -282,12 +282,14 @@ export function sceneMarkup(phone: boolean): string {
 /**
  * Keeps the yurt in the message column's far third (yurt.ts, spec §5.3). It
  * observes `#chat .chat` — MessageList.vue's scroll container; not `#chat`,
- * which holds the user list too — and hands each measurement to the
- * follow-or-fade rule, which writes `--ps-yurt-left` on the root and toggles
- * `ps-yurt-moving`. A conversation switch can replace the column, so it is
- * looked for again on every host update and whenever the one observed leaves
- * the page; with no column on screen (Settings, Help, the connect form) the
- * yurt keeps its place. Each measurement carries the yurt's rendered width,
+ * which holds the user list too — and the scene itself, and hands each
+ * measurement to the follow-or-fade rule, which writes `--ps-yurt-left` on
+ * the root and toggles `ps-yurt-moving`; a scene not laid out yet (no box
+ * until ps.css shows it) places nothing. A conversation switch can replace
+ * the column, so it is looked for again on every host update and whenever
+ * the one observed leaves the page; with no column on screen (Settings,
+ * Help, the connect form) the yurt keeps its place, clamped to the scene as
+ * it is. Each measurement carries the yurt's rendered width,
  * so the place is clamped with the whole yurt on screen, and `seen()` (the
  * scene's first visible update) starts the load's window, in which the first
  * place measured is taken without a fade.
@@ -323,13 +325,20 @@ function placeYurt(root: HTMLElement): {seen(): void; refind(): void; destroy():
 		);
 	};
 
+	// The column and the scene itself: the theme switch mounts the scene
+	// before ps.css applies, while #theme-scene is still display: none and
+	// measures 0 × 0 (the column's first observation then places nothing), and
+	// its display fires an observation of its own; so does the window
+	// narrowing with no column, which clamps the kept place again.
 	const observer = new ResizeObserver(() => {
-		if (column?.isConnected) {
-			measure();
-		} else {
+		measure();
+
+		if (!column?.isConnected) {
 			findSoon(); // it left the page; its replacement, if any, is there by the next frame
 		}
 	});
+
+	observer.observe(root);
 
 	function find() {
 		const found = document.querySelector("#chat .chat");

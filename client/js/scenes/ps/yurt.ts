@@ -14,7 +14,10 @@
  * exception is the page's load: the first place measured within 1 s of the
  * scene first being seen is taken at once, so an ordinary load onto a
  * channel shows no move; a page opened on Settings still fades to the
- * column when a conversation opens later.
+ * column when a conversation opens later. A measurement against a scene not
+ * laid out yet (no width: ps.css has not shown it) places nothing and leaves
+ * that window unspent; with no column, the last place is clamped again to
+ * the scene as it now is.
  *
  * Pure and DOM-free: scene.ts measures the column and carries out the effects
  * (a custom property, a class, a clock, a timer and a frame), so mocha drives
@@ -165,17 +168,41 @@ export function yurtFollower(fx: YurtEffects): YurtFollower {
 		},
 
 		measure(column, scene) {
-			// No column (Settings, Help, the connect form) keeps the place, and a
-			// fade in flight still lands where it was going.
-			if (!column || column.width <= 0) {
+			// A scene not laid out yet (display: none until ps.css applies, and a
+			// theme switch mounts the scene first) has nothing to stand the yurt
+			// on: nothing is placed, so the load's window is not spent on it.
+			if (scene.width <= 0) {
 				return;
 			}
 
-			const next = yurtPlace(column, shown, scene.width, scene.yurtWidth);
+			let next: number;
 
-			if (loading()) {
-				put(next);
-				return;
+			if (!column || column.width <= 0) {
+				// No column (Settings, Help, the connect form) keeps the place, and
+				// a fade in flight still lands where it was going, each clamped to
+				// the scene as it is now (a window narrowed there). Before any
+				// place, ps.css's 70 % clamps itself.
+				if (fading) {
+					target = yurtPlace(null, target, scene.width, scene.yurtWidth);
+					return;
+				}
+
+				if (shown === null) {
+					return;
+				}
+
+				next = yurtPlace(null, shown, scene.width, scene.yurtWidth);
+
+				if (next === shown) {
+					return;
+				}
+			} else {
+				next = yurtPlace(column, shown, scene.width, scene.yurtWidth);
+
+				if (loading()) {
+					put(next);
+					return;
+				}
 			}
 
 			const current = shown ?? yurtPlace(null, null, scene.width, scene.yurtWidth);
