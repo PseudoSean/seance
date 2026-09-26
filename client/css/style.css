@@ -1847,6 +1847,9 @@ textarea.input {
 	display: flex;
 	align-items: flex-start;
 	position: relative;
+
+	/* The tint of the row a toolbar acts on (see `.msg-actions`). */
+	--msg-acting-bg: var(--msg-hover-bg, color-mix(in srgb, currentcolor 8%, transparent));
 }
 
 #chat .unread-marker {
@@ -4609,6 +4612,26 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 #chat .msg:focus-within .msg-actions,
 #chat .msg-actions.active {
 	display: flex;
+}
+
+/* The row whose toolbar is up is tinted, so it is plain which message the
+ * buttons act on — the toolbar floats over the row above. Hover counts only
+ * where there is a real pointer (a touch device's fake hover is not ours;
+ * there the long press's `actions-open` says it), and not while the
+ * scrollback is being selected, when no toolbar shows. An inset shadow, not
+ * a background: a mention's highlight or our own band stays under it.
+ * `--msg-hover-bg` lets a theme pick the tint (`--msg-acting-bg` on
+ * `#chat .msg`). */
+@media (hover: hover) {
+	#chat .chat:not(.selecting, .selection-live) .msg.has-actions:hover {
+		box-shadow: inset 0 0 0 100vmax var(--msg-acting-bg);
+	}
+}
+
+#chat .chat:not(.selecting, .selection-live) .msg.has-actions:focus-within,
+#chat .chat:not(.selecting, .selection-live) .msg.actions-open,
+#chat .chat:not(.selecting, .selection-live) .msg:has(.msg-actions.active) {
+	box-shadow: inset 0 0 0 100vmax var(--msg-acting-bg);
 }
 
 /* A drag across the scrollback is a text selection (MessageList.vue sets
