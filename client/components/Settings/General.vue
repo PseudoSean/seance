@@ -57,6 +57,25 @@
 				</label>
 			</div>
 		</div>
+		<div>
+			<h2>{{ t("settings.general.privateHeading") }}</h2>
+			<div>
+				<label class="opt">
+					<input
+						:checked="store.state.settings.keepPrivateConversations"
+						type="checkbox"
+						name="keepPrivateConversations"
+					/>
+					{{ t("settings.general.keepPrivate") }}
+					<span
+						class="tooltipped tooltipped-n tooltipped-no-delay"
+						:aria-label="keepPrivateHelp"
+					>
+						<button class="extra-help" />
+					</span>
+				</label>
+			</div>
+		</div>
 		<div v-if="!store.state.serverConfiguration?.public">
 			<h2>{{ t("settings.general.awayHeading") }}</h2>
 
@@ -127,6 +146,7 @@ import {computed, defineComponent, onMounted, ref} from "vue";
 import {useStore} from "../../js/store";
 import {useI18n} from "../../js/i18n";
 import {promptInstall} from "../../js/pwa";
+import {MAX_MESSAGES, MAX_QUERIES} from "../../js/irc/querylog";
 import eventbus from "../../js/eventbus";
 import {
 	applyBackup,
@@ -150,6 +170,9 @@ export default defineComponent({
 		const appName = computed(() => store.state.branding.appName);
 		const uploadCanvasHelp = computed(() => t("settings.general.uploadCanvasHelp"));
 		const sendTypingHelp = computed(() => t("settings.general.sendTypingHelp"));
+		const keepPrivateHelp = computed(() =>
+			t("settings.general.keepPrivateHelp", {lines: MAX_MESSAGES, queries: MAX_QUERIES})
+		);
 		const awayPlaceholder = computed(() =>
 			t("settings.general.awayPlaceholder", {appName: appName.value})
 		);
@@ -336,6 +359,7 @@ export default defineComponent({
 			t,
 			uploadCanvasHelp,
 			sendTypingHelp,
+			keepPrivateHelp,
 			awayPlaceholder,
 			includePasswordsHelp,
 			fileAriaLabel,

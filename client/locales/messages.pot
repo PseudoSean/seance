@@ -4233,6 +4233,18 @@ msgctxt "settings.general.installApp"
 msgid "Install {appName} as an app"
 msgstr ""
 
+#. Checkbox in Settings > General; when ticked, the recent lines of private (one-to-one) conversations are stored in this browser so they come back after the page is reloaded.
+#: client/components/Settings/General.vue
+msgctxt "settings.general.keepPrivate"
+msgid "Keep private conversations on this device"
+msgstr ""
+
+#. Tooltip on the keep-private-conversations checkbox in Settings > General. {lines} and {queries} are numbers (200 and 30 today). Make clear that turning the setting off deletes what is stored.
+#: client/components/Settings/General.vue
+msgctxt "settings.general.keepPrivateHelp"
+msgid "Private conversations come back after a reload: the newest {lines} lines of your {queries} most recent ones, stored in this browser. Turning this off deletes them from this device."
+msgstr ""
+
 #. Heading of the Native app section in Settings > General; groups the install and link-handler options for using the chat app as an installed application.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.nativeApp"
@@ -4243,6 +4255,12 @@ msgstr ""
 #: client/components/Settings/General.vue
 msgctxt "settings.general.openLinks"
 msgid "Open web+irc:// links with {appName}"
+msgstr ""
+
+#. Section heading in Settings > General for whether private (one-to-one) conversations are kept in this browser between visits.
+#: client/components/Settings/General.vue
+msgctxt "settings.general.privateHeading"
+msgid "Private conversations"
 msgstr ""
 
 #. Checkbox in Settings > General; when ticked, other people in the channel are told while you are typing a message.

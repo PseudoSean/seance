@@ -189,6 +189,46 @@ export default async function run(page) {
 		(await page.count(item(TALKER))) === 0
 	);
 
+	// 5. Settings → General → "Keep private conversations on this device"
+	//    off: what is kept is deleted, nothing more is kept, and a reload
+	//    brings no query back.
+	const LOGS = `Object.keys(localStorage).filter((k) => k.startsWith("thelounge.querylog.")).length`;
+	bob.say("a line before the switch");
+	await page.waitFor(`document.querySelector('${item(TALKER)}')`, {
+		timeout: 10000,
+		label: "the query reopened by a new line",
+	});
+	await page.sleep(1500);
+	await page.check("kept again before the switch", (await page.evaluate(LOGS)) === 1);
+	await page.evaluate(`location.hash = "#/settings"`);
+	await page.waitFor(`!!document.querySelector('input[name="keepPrivateConversations"]')`, {
+		timeout: 10000,
+		label: "the setting in Settings",
+	});
+	await page.check(
+		"the setting is on by default",
+		await page.evaluate(
+			`document.querySelector('input[name="keepPrivateConversations"]').checked`
+		)
+	);
+	await page.click('input[name="keepPrivateConversations"]');
+	await page.sleep(300);
+	await page.check(
+		"switched off, the kept conversations are deleted",
+		(await page.evaluate(LOGS)) === 0
+	);
+	await page.screenshot("3-setting-off", {selector: ".settings-modal, #settings"});
+	await page.click(".settings-modal-done");
+	bob.say("a line after the switch");
+	await page.sleep(2000);
+	await page.check("nothing is kept while it is off", (await page.evaluate(LOGS)) === 0);
+	await coldLoad(`document.querySelector('${item("#seance")}')`);
+	await page.sleep(1500);
+	await page.check(
+		"with it off, a reload brings no query back",
+		(await page.count(item(TALKER))) === 0
+	);
+
 	bob.quit();
 	await page.check(
 		`no console errors (${page.consoleErrors.join(" | ")})`,
