@@ -28,7 +28,6 @@ import {loadMentions} from "./mentions";
 import storage from "./localStorage";
 import {installNativeHooks} from "./native";
 import {installForegroundHooks} from "./foreground";
-import {installExternalLinks} from "./helpers/externalLinks";
 import {installViewportHooks} from "./helpers/viewport";
 import {onLaunch} from "./pwa";
 // Also registers the IRC layer's bus handlers (input, names, more, network:*).
@@ -101,7 +100,6 @@ export async function boot(): Promise<void> {
 	installNativeHooks();
 	installForegroundHooks();
 	installViewportHooks();
-	installExternalLinks();
 
 	store.commit("appLoaded");
 
