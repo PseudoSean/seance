@@ -23,7 +23,11 @@
 //   glass — a blur over the day tint at noon, the night tint at 22:00 — and
 //   #status-bar-tint never blurs and paints the canvas (style.css's touch
 //   rule resolved on it: Chromium never paints it, the rule being WebKit's
-//   alone); the send glyph is the generated text accent; at 22:00 the idle channel names are the night soft ink and the
+//   alone); the send glyph is the generated text accent; the composer's top
+//   is one 1px line in the edge, with the caret in it or not, and no band
+//   under it, and its field is rounded, edged in its own colour and in the
+//   text accent with the caret (the user's, 2026-09-26: at noon, at 22:00,
+//   with the reply bar open and on a phone at noon); at 22:00 the idle channel names are the night soft ink and the
 //   open one the night ink; under reduced transparency the glass turns solid
 //   (a SKIP line, never a pass, where Chromium cannot emulate it); and the
 //   browser's theme-color is the sky's canvas, coffee's own colour after a
@@ -227,6 +231,13 @@
 // turned rainy and gone the instant it turned clear (both fades failed).
 // With the billows tied to their width and the sets cross-faded: 314 of 314
 // on a rainy real day (26 September).
+// The composer's 16 checks (2026-09-26, the user's "a single thin line" and
+// "a rounded box inside the frame") were first run as a scratch port against
+// the build serving 5bf444d6's ps.css: 15 failed — the strip's top in the
+// accent (still easing back 100 ms after the caret left) with a 2px inset
+// band under it while the caret was in, a square field with no edge — and
+// the phone's no-caret edge, which that build already drew plain, passed.
+// With the field: 16 of 16.
 //
 //   NODE_ENV=production corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/theme-ps.mjs
@@ -1380,6 +1391,80 @@ function checkAccent(page, chrome, where) {
 	page.check(
 		`${where}: the send glyph is the text accent ${chrome.accent} (${chrome.send})`,
 		chrome.send === hexRgb(chrome.accent)
+	);
+}
+
+/**
+ * The composer (the user's "a single thin line" and "a rounded box inside the
+ * frame", 2026-09-26): the strip's top edge and shadow, the field's radius and
+ * edge, and the three tokens they should resolve to, read through a probe in
+ * #form (a computed colour in the form the borders' are).
+ */
+const COMPOSER = `(() => {
+	const form = document.getElementById("form");
+	const input = document.getElementById("input");
+	const fs = getComputedStyle(form);
+	const is = getComputedStyle(input);
+	const probe = document.createElement("span");
+	form.appendChild(probe);
+	const token = (name) => {
+		probe.style.color = "var(" + name + ")";
+		return getComputedStyle(probe).color;
+	};
+	const out = {
+		edge: token("--ps-g-edge"),
+		fieldEdge: token("--ps-g-field-edge"),
+		focusEdge: token("--ps-g-accent-text"),
+		top: fs.borderTopWidth + " " + fs.borderTopStyle + " " + fs.borderTopColor,
+		shadow: fs.boxShadow,
+		radius: is.borderTopLeftRadius,
+		field: is.borderTopWidth + " " + is.borderTopStyle + " " + is.borderTopColor,
+		focused: document.activeElement === input,
+	};
+	probe.remove();
+	return out;
+})()`;
+
+/**
+ * The composer, unfocused and then with the caret: the strip's top is one 1px
+ * line in the edge and no band, either way; the field is rounded, its edge the
+ * field's own and the text accent once it has the caret. The caret is put
+ * back where it was.
+ */
+async function checkComposer(page, where) {
+	const had = await page.evaluate(`document.activeElement === document.getElementById("input")`);
+	await page.evaluate(`document.getElementById("input").blur()`);
+	await page.sleep(100);
+	const idle = await page.evaluate(COMPOSER);
+	await page.evaluate(`document.getElementById("input").focus()`);
+	await page.sleep(100);
+	const lit = await page.evaluate(COMPOSER);
+
+	if (!had) {
+		await page.evaluate(`document.getElementById("input").blur()`);
+	}
+
+	for (const [state, c] of [
+		["no caret", idle],
+		["the caret in it", lit],
+	]) {
+		page.check(
+			`${where}, ${state}: #form's top is one 1px line in the edge ${c.edge}, no band (${c.top}; shadow ${c.shadow})`,
+			c.focused === (state !== "no caret") &&
+				c.top === `1px solid ${c.edge}` &&
+				c.shadow === "none"
+		);
+	}
+
+	page.check(
+		`${where}: #input is a rounded field (radius ${idle.radius})`,
+		parseFloat(idle.radius) > 0
+	);
+	page.check(
+		`${where}: the field's edge is its own ${idle.fieldEdge} (${idle.field}), the text accent ${lit.focusEdge} with the caret (${lit.field})`,
+		idle.field === `1px solid ${idle.fieldEdge}` &&
+			lit.field === `1px solid ${lit.focusEdge}` &&
+			idle.fieldEdge !== lit.focusEdge
 	);
 }
 
@@ -2770,6 +2855,7 @@ export default async function run(page) {
 		!!noonTint && noonTint.painted === hexRgb(noon.canvas)
 	);
 	checkAccent(page, noonChrome, "noon");
+	await checkComposer(page, "noon");
 	await page.screenshot("ps-noon");
 	// A send's embers at noon, still, over the row and the rows above it.
 	const noonSparks = await emberFrame(page, `embers at noon ${RUN}`, "ps-embers-noon");
@@ -2806,6 +2892,7 @@ export default async function run(page) {
 				!!nightTint && nightTint.painted === hexRgb(s.canvas)
 			);
 			checkAccent(page, night, at);
+			await checkComposer(page, at);
 			const rail = await page.evaluate(RAIL_NAMES);
 			page.check(
 				`${at}: an idle channel name is the night soft ink ${rail.soft} (${
@@ -2860,6 +2947,15 @@ export default async function run(page) {
 	// ---- a hidden page stops the scene
 
 	await atHour(page, 12);
+	// Late in the UTC day the noon zone is already on the next date, whose
+	// weather can differ from the dusk leg's: a layer then fades in or out
+	// (the buzzard's opacity, 1.4–1.8 s). ps-paused holds animations, not
+	// transitions, so a fade still in flight read as running. Wait the fades
+	// out first, as the plains' checks below wait out theirs.
+	await page.waitFor(
+		`!document.getElementById("theme-scene").getAnimations({subtree: true}).some((a) => a instanceof CSSTransition && a.playState === "running")`,
+		{timeout: 5000, label: "the scene's fades settled"}
+	);
 	checkRunning(page, await page.evaluate(SCENE_STATE), "shown");
 	await page.evaluate(VISIBILITY("hidden"));
 	checkStopped(page, await page.evaluate(SCENE_STATE), "hidden");
@@ -3663,6 +3759,8 @@ export default async function run(page) {
 	await page.sleep(150);
 	await page.click(`#${longId} .msg-action-reply`);
 	await page.waitFor(`document.querySelector("#form .compose-bar")`, {label: "the reply bar"});
+	// The reply bar is the strip's own row: no second line comes with it.
+	await checkComposer(page, "the reply bar open");
 	await sendLine(page, `a reply ${RUN}`);
 	await page.waitFor(`${QUOTE_BOX(RUN)} !== null`, {timeout: 20000, label: "the echoed reply"});
 	await page.sleep(300);
@@ -3821,6 +3919,8 @@ export default async function run(page) {
 			isUnblurredTint(s, DAY_GLASS, 0.78)
 		);
 	}
+
+	await checkComposer(page, "a phone at noon");
 
 	// ---- the phone at noon, the overlays open: glass again (Task 8c)
 

@@ -1140,6 +1140,7 @@ describe("the ps theme's chrome keeps its floors on the solid panels and on the 
 		| "glass+selected"
 		| "glass+hover"
 		| "glass+field"
+		| "glass+composer-field"
 		| "glass+tint-soft"
 		| "glass+tint-strong";
 
@@ -1154,6 +1155,8 @@ describe("the ps theme's chrome keeps its floors on the solid panels and on the 
 		"glass+selected": ["#sidebar", "--rail-item-active-bg"],
 		"glass+hover": ["#sidebar", "--rail-item-hover-bg"],
 		"glass+field": ["#sidebar", "--rail-input-bg"],
+		// The composer's rounded field (ps.css #form #input, the user's, 2026-09-26).
+		"glass+composer-field": ["#form", "--ps-g-field"],
 		// The composer's reply, upload and connection bars (coffee.css #form .compose-bar…).
 		"glass+tint-soft": ["#form", "--tint-soft"],
 		// A hovered or keyboard-selected user in the list (coffee.css #chat .userlist .user.active).
@@ -1256,9 +1259,25 @@ describe("the ps theme's chrome keeps its floors on the solid panels and on the 
 		// focus ring's glow. Every accent that has to read is the text accent.
 		{
 			token: "--ps-g-accent-text",
-			on: ["glass", "glass+selected", "glass+hover"],
+			on: ["glass", "glass+selected", "glass+hover", "solid"],
 			floor: MARK,
-			what: "the connecting icon (also on the open or hovered lobby row), a chip's focus border",
+			what: "the connecting icon (also on the open or hovered lobby row), a chip's focus border, the composer field's focus border (on the solid under reduced transparency)",
+		},
+		// The composer's field is a box you can see (the user's "a rounded box
+		// inside the frame", 2026-09-26): its edge holds a mark's floor where the
+		// mockup's hairline read 1.007 : 1 (its solve, below, adds the phone's
+		// unfiltered glass).
+		{
+			token: "--ps-g-field-edge",
+			on: ["glass", "solid"],
+			floor: MARK,
+			what: "the composer field's edge, on the glass and on the solid under reduced transparency",
+		},
+		{
+			token: "--chat-fg",
+			on: ["glass+composer-field"],
+			floor: TEXT,
+			what: "the draft in the composer's field",
 		},
 		{
 			token: "--event-quit",
@@ -1302,9 +1321,9 @@ describe("the ps theme's chrome keeps its floors on the solid panels and on the 
 		// placeholders describe, below), on every ground an input stands on.
 		{
 			token: "--ps-g-placeholder",
-			on: ["glass", "glass+field", "field", "solid"],
+			on: ["glass", "glass+field", "glass+composer-field", "field", "solid"],
 			floor: TEXT,
-			what: "every placeholder: the composer, the user list's search and the topic on the glass; the jump-to search, the message search and the join form on the glass's field; the settings, connect and network forms on a panel's field; the emoji picker's search on the solid",
+			what: "every placeholder: the composer on its field; the user list's search and the topic on the glass; the jump-to search, the message search and the join form on the glass's field; the settings, connect and network forms on a panel's field; the emoji picker's search on the solid",
 		},
 		{token: "--window-heading-color", on: ["solid"], floor: TEXT, what: "a window's headings"},
 		{
@@ -1493,6 +1512,55 @@ describe("the ps theme's chrome keeps its floors on the solid panels and on the 
 		// The smallest such move (the generator's 0.0001 steps, hue and chroma kept).
 		const less = oklchToHex(L + 0.0635, C, h)!;
 		expect(lowest(less), `a step less, ${less}`).to.be.below(TEXT_SOLVE);
+	});
+
+	it("solves the composer field's edge to 3.1 over every glass ground, the phone's unfiltered glass and the solid, the soft ink moved in OKLCH lightness alone (the user's 'a rounded box inside the frame', 2026-09-26)", function () {
+		// The mockup's edge (--ps-g-edge) read 1.007 : 1 on the day glass, so the
+		// box it drew would not show: the field has an edge of its own (the
+		// controller's ruling, spec §2), the least visible colour in the soft
+		// ink's hue and chroma that holds a mark's floor with the generator's
+		// 0.1 margin, lighter than the soft ink by day and darker at night.
+		const solid = (light: Light) => resolve(paletteOf(light), "var(--ps-g-solid)");
+		const alpha = Number(resolve(paletteOf("day"), "var(--ps-g-tint-a)"));
+		const phone = [
+			...new Set(
+				withPinned(checkedGrounds("sparse"), headers).glass.day.map((g) =>
+					glassGround(g.hex, "day", alpha)
+				)
+			),
+		];
+		const grounds = {
+			day: [...groundsOf("day", "glass"), ...phone, solid("day")],
+			night: [...groundsOf("night", "glass"), solid("night")],
+		};
+		// The move in OKLCH L from the soft ink, as ps.css records it (the hex's
+		// own; the solve's 0.0001 steps landed at +0.0859 and −0.1067, and six
+		// hex digits round them).
+		const moves = {day: 0.0847, night: -0.1056};
+
+		for (const light of ["day", "night"] as const) {
+			const soft = resolve(paletteOf(light), "var(--ps-g-soft)");
+			const edge = resolve(paletteOf(light), "var(--ps-g-field-edge)");
+			expect(edge, `${light}: a colour of its own`).to.match(/^#[0-9a-f]{6}$/);
+			const [L, C, h] = hexToOklch(soft);
+			const [L2, C2, h2] = hexToOklch(edge);
+			expect(Math.abs(h2 - h), `${light}: the soft ink's hue`).to.be.below(0.035);
+			expect(Math.abs(C2 - C), `${light}: the soft ink's chroma`).to.be.below(0.001);
+			expect(L2 - L, `${light}: the lightness move`).to.be.closeTo(moves[light], 0.00005);
+
+			const lowest = (hex: string) =>
+				Math.min(...grounds[light].map((g) => contrast(hex, g)));
+			expect(lowest(edge), `${light}: solved to 3.1`).to.be.at.least(MARK_SOLVE);
+			// The least visible such colour: the next hex further toward the glass,
+			// on the soft ink's line, misses.
+			let further = edge;
+
+			for (let d = 0.0001; further === edge; d += 0.0001) {
+				further = oklchToHex(L2 + Math.sign(moves[light]) * d, C, h)!;
+			}
+
+			expect(lowest(further), `${light}: a step further, ${further}`).to.be.below(MARK_SOLVE);
+		}
 	});
 
 	it("keeps every night wash on the glass at least as visible as it measures over plan 3's grounds, and never under 1.02 over the darkest ground", function () {
@@ -1687,6 +1755,154 @@ describe("the ps theme's placeholders (the user's 'fix the night placeholder con
 			.flatMap((r) => r.decls.filter(([p]) => p === "color").map(([, v]) => v));
 		expect(colours.length, "ps.css's placeholder rules").to.be.at.least(1);
 		expect(colours.filter((v) => v !== "var(--ps-g-placeholder)")).to.deep.equal([]);
+	});
+});
+
+describe("the ps theme's composer (the user's 'a single thin line' and 'a rounded box inside the frame', 2026-09-26)", function () {
+	const style = rulesIn(
+		fs.readFileSync(path.resolve(__dirname, "../../client/css/style.css"), "utf8")
+	);
+	const theirs = [...style, ...rulesIn(coffee)];
+	/** The last value `selector` gets for `property` at the top level of `list`. */
+	const lastIn = (list: Rule[], selector: string, property: string) =>
+		list
+			.filter((r) => r.at === "" && r.selectors.includes(selector))
+			.flatMap((r) => r.decls)
+			.filter(([p]) => p === property)
+			.at(-1)?.[1];
+
+	it("draws the line between the messages and the composer once: #form's 1px top edge, in the edge, focused or not", function () {
+		// style.css's 1px top border is the one line; ps.css colours it the
+		// edge, as the header's foot and the side panels' edges.
+		expect(lastIn(style, "#form", "border-top")).to.match(/^1px solid /);
+		expect(valueOf("#form", "border-block-start-color")).to.equal("var(--ps-g-edge)");
+
+		// style.css and coffee.css mark focus on the strip: the top edge in a
+		// colour and a 2px inset band under it. ps.css takes both back at the
+		// same weight, later in the cascade.
+		expect(
+			lastIn(theirs, "#form:focus-within", "box-shadow"),
+			"the band ps.css undoes"
+		).to.match(/^inset /);
+		expect(valueOf("#form:focus-within", "border-block-start-color")).to.equal(
+			"var(--ps-g-edge)"
+		);
+		expect(valueOf("#form:focus-within", "box-shadow")).to.equal("none");
+
+		// Nothing in ps.css draws the strip's top edge otherwise, in any state.
+		const widths = [
+			"border",
+			"border-width",
+			"border-style",
+			"border-top",
+			"border-top-width",
+			"border-top-style",
+			"border-block",
+			"border-block-width",
+			"border-block-style",
+			"border-block-start",
+			"border-block-start-width",
+			"border-block-start-style",
+		];
+		const edges = rules
+			.filter((r) => r.selectors.some((s) => /#form(?![\w-])[^ ]*$/.test(s)))
+			.flatMap((r) => r.decls)
+			.filter(([p]) => widths.includes(p));
+		expect(edges, "ps.css's widths or styles on #form's edge").to.deep.equal([]);
+		const shadows = rules
+			.filter((r) => r.selectors.some((s) => /#form(?![\w-])[^ ]*$/.test(s)))
+			.flatMap((r) => r.decls)
+			.filter(([p, v]) => p === "box-shadow" && v !== "none");
+		expect(shadows, "ps.css's shadows on #form").to.deep.equal([]);
+	});
+
+	it("draws no second line with a bar open: the typing strip and the reply, upload and connection bars have no rule above or below them, nor a shadow", function () {
+		const bars = [".typing-indicator", ".compose-bar", ".upload-bar", ".connection-bar"];
+		const lines = [...theirs, ...rules]
+			.filter((r) =>
+				r.selectors.some((s) => bars.some((b) => s.endsWith(b) || s.includes(`${b}:`)))
+			)
+			.flatMap((r) => r.decls)
+			.filter(
+				([p]) =>
+					/^border-(top|bottom|block)|^border$|^box-shadow$|^outline$/.test(p) &&
+					!/-(left|right|inline)/.test(p)
+			);
+		expect(lines).to.deep.equal([]);
+	});
+
+	it("makes #input a rounded field inset in the strip: the mockup's radius, a 1px edge, the field's wash and padding", function () {
+		expect(valueOf("#form #input", "border-radius"), "the mockup's 11px").to.equal("0.6875rem");
+		expect(valueOf("#form #input", "border")).to.equal("1px solid var(--ps-g-field-edge)");
+		expect(valueOf("#form #input", "background-color")).to.equal("var(--ps-g-field)");
+		// Inset in the strip: the mockup's 14px from the strip's side (with
+		// style.css's 0.375rem padding) and its 11px above and below.
+		expect(valueOf("#form #input", "margin")).to.equal("0.3125rem 0.5rem");
+		expect(valueOf("#form #input", "padding")).to.equal("calc(0.7em - 1px) 0.8125rem");
+	});
+
+	it("keeps the paperclip and the send button on the field's row, centred on its last line", function () {
+		// style.css aligns the row's items at its foot (flex-end) and makes the
+		// buttons 2.25rem; the field is 2.8rem a line and 0.3125rem off the
+		// strip's floor, so a button's foot sits 0.3125 + (2.8 − 2.25) / 2 up.
+		expect(lastIn(style, "#form", "align-items")).to.equal("flex-end");
+		expect(lastIn(style, "#form #upload", "height")).to.equal("2.25rem");
+		expect(valueOf("#form > .tooltipped", "margin-block-end")).to.equal("0.5875rem");
+		expect(0.3125 + (2.8 - 2.25) / 2).to.be.closeTo(0.5875, 1e-9);
+	});
+
+	it("sizes the field so ChatInput.vue's rounding lands on its lines: padding and edge make one line, one line of text is two, five are six", function () {
+		// ChatInput.vue setInputSize sets the height to scrollHeight rounded to a
+		// whole line (style.css's line-height, 1.4). scrollHeight counts the
+		// padding: with the padding and the 1px edges making exactly one line,
+		// N lines of text round to N + 1, which is the border box of N lines.
+		expect(lastIn(style, "#form #input", "line-height")).to.equal("1.4");
+		expect(lastIn(style, "#form #input", "height")).to.equal("1.4em");
+		expect(lastIn(style, "#form #input", "max-height")).to.equal("7em");
+		const padding = /^(calc\([^)]*\)|\S+)/.exec(valueOf("#form #input", "padding") ?? "")?.[1];
+		expect(padding, "half a line less the edge").to.equal("calc(0.7em - 1px)");
+		expect(valueOf("#form #input", "border")).to.match(/^1px /);
+		expect(valueOf("#form #input", "height"), "one line and its frame").to.equal("2.8em");
+		expect(valueOf("#form #input", "min-height")).to.equal("2.8em");
+		expect(
+			valueOf("#form #input", "max-height"),
+			"style.css's five lines and the frame"
+		).to.equal("8.4em");
+	});
+
+	it("tightens the composer in compose mode on a landscape phone: a one-line field, the strip's padding cut, and ChatInput.vue's rounding kept", function () {
+		// style.css's compose mode: the band a landscape phone's keyboard
+		// leaves, while the field has the caret (the header goes there).
+		const COMPOSE = "@container viewport (max-height: 18rem)";
+		const ON = "body:has(#form #input:focus)";
+		expect(
+			style.some((r) => r.at === COMPOSE && r.selectors.includes(`${ON} #chat .header`)),
+			"style.css's compose mode"
+		).to.equal(true);
+		expect(valueOf(`${ON} #form`, "padding-block", COMPOSE)).to.equal("0.25rem");
+		// One line and a thinner frame, fixed: ChatInput.vue sets the box to a
+		// whole number of lines, so a one-line box shorter than two lines is
+		// only reachable as a cap, and the cap keeps a longer draft to one
+		// line, scrolling in the field.
+		const I = `${ON} #form #input`;
+		expect(valueOf(I, "padding-block", COMPOSE)).to.equal("0.4em");
+		expect(valueOf(I, "margin-block", COMPOSE)).to.equal("0");
+		expect(valueOf(I, "min-height", COMPOSE)).to.equal("calc(2.2em + 2px)");
+		expect(valueOf(I, "max-height", COMPOSE)).to.equal("calc(2.2em + 2px)");
+		// The padding is over half a line, with half a pixel to spare at the
+		// smallest step's 14px line, so the rounding still gives a draft of N
+		// lines N + 1: the strip at rest gets the height it expects when the
+		// caret leaves.
+		expect((2 * 0.4) / 1.4 - 0.5).to.be.above(0.5 / 14);
+		expect(valueOf(`${ON} #form > .tooltipped`, "margin-block-end", COMPOSE)).to.equal("0");
+	});
+
+	it("moves the focus signal onto the field: its edge takes the text accent, the caret the accent, and the strip's line stays the edge", function () {
+		expect(valueOf("#form #input:focus", "border-color")).to.equal("var(--ps-g-accent-text)");
+		expect(valueOf("#form #input", "caret-color")).to.equal("var(--ps-g-accent)");
+		expect(valueOf("#form:focus-within", "border-block-start-color")).to.equal(
+			"var(--ps-g-edge)"
+		);
 	});
 });
 
