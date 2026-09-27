@@ -11,6 +11,7 @@ import {
 	QUERY_LOG_PREFIX,
 	QueryLog,
 	SAVE_DELAY_MS,
+	setQueryLogEnabled,
 	StorageBackend,
 	useStorageBackend,
 } from "../../client/js/irc/querylog";
@@ -33,6 +34,10 @@ class MemoryBackend implements StorageBackend {
 
 	remove(key: string): void {
 		this.data.delete(key);
+	}
+
+	keys(): string[] {
+		return [...this.data.keys()];
 	}
 }
 
@@ -128,6 +133,7 @@ describe("Query log (irc/querylog.ts)", function () {
 
 	afterEach(function () {
 		clock.restore();
+		setQueryLogEnabled(true);
 		useStorageBackend(null);
 		saved.useStorageBackend(null);
 	});
@@ -286,6 +292,36 @@ describe("Query log (irc/querylog.ts)", function () {
 			saved.remove(UUID);
 			expect(stored()).to.equal(null);
 			expect(log.names()).to.deep.equal([]);
+			log.dispose();
+		});
+
+		it("switched off: deletes every kept conversation and keeps nothing more", function () {
+			const log = new QueryLog(UUID, fold);
+			log.append("bob", line({msgid: "a"}));
+			log.flush();
+			// A network no client holds right now: its log goes too.
+			const other = `${QUERY_LOG_PREFIX}33333333-3333-4333-8333-333333333333`;
+			backend.set(other, JSON.stringify({v: 1, queries: []}));
+			backend.set("thelounge.networks", "[]");
+
+			setQueryLogEnabled(false);
+			expect(stored()).to.equal(null);
+			expect(backend.get(other)).to.equal(null);
+			expect(backend.get("thelounge.networks")).to.equal("[]"); // nothing else touched
+			expect(log.names()).to.deep.equal([]);
+
+			log.append("bob", line({msgid: "b"}));
+			clock.tick(SAVE_DELAY_MS);
+			expect(stored()).to.equal(null);
+			expect(new QueryLog(UUID, fold).names()).to.deep.equal([]);
+
+			// On again: kept from then on, nothing from while it was off.
+			setQueryLogEnabled(true);
+			log.append("bob", line({msgid: "c"}));
+			clock.tick(SAVE_DELAY_MS);
+			expect(new QueryLog(UUID, fold).messages("bob").map((m) => m.msgid)).to.deep.equal([
+				"c",
+			]);
 			log.dispose();
 		});
 

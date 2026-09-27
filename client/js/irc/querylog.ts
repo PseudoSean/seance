@@ -17,6 +17,11 @@
  * actions and notices are kept, never a pending copy; an edit rewrites the
  * line it replaces, a redaction removes the line, reactions follow.
  *
+ * The user can switch it off (Settings → General, `keepPrivateConversations`,
+ * applied through {@link setQueryLogEnabled}): nothing is kept or restored
+ * then, and switching it off deletes what was kept — on a shared machine
+ * the conversations must not outlive the choice.
+ *
  * Kept free of store/DOM imports so it runs under mocha; tests swap the
  * storage backend with {@link useStorageBackend}. Not carried by the
  * settings backup (settingsBackup.ts): it is conversation, not preference.
@@ -42,6 +47,8 @@ export interface StorageBackend {
 	get(key: string): string | null;
 	set(key: string, value: string): void;
 	remove(key: string): void;
+	/** Every key stored (to delete logs of networks no client holds). */
+	keys?(): string[];
 }
 
 let backend: StorageBackend = storage;
@@ -82,6 +89,31 @@ const live = new Set<{readonly uuid: string; flush(): void; clear(): void}>();
 export function flushQueryLogs(): void {
 	for (const log of live) {
 		log.flush();
+	}
+}
+
+let enabled = true;
+
+/**
+ * The user's choice (`keepPrivateConversations`). Off: nothing is logged,
+ * written or restored from here on, and every log already kept — in
+ * memory and on disk, for every network, open or not — is deleted.
+ */
+export function setQueryLogEnabled(on: boolean): void {
+	enabled = on;
+
+	if (on) {
+		return;
+	}
+
+	for (const log of live) {
+		log.clear();
+	}
+
+	for (const key of backend.keys?.() ?? []) {
+		if (key.startsWith(QUERY_LOG_PREFIX)) {
+			backend.remove(key);
+		}
 	}
 }
 
@@ -264,7 +296,7 @@ export class QueryLog {
 
 	/** Names of the logged queries, most recently active first. */
 	names(): string[] {
-		return this.load().map((q) => q.name);
+		return enabled ? this.load().map((q) => q.name) : [];
 	}
 
 	/** The logged lines of `name`, oldest first, as messages without ids. */
@@ -284,7 +316,7 @@ export class QueryLog {
 
 	/** Keep `msg` (a line shown in query `name`); anything not a message is ignored. */
 	append(name: string, msg: SharedMsg): void {
-		const entry = toLogged(msg);
+		const entry = enabled ? toLogged(msg) : undefined;
 
 		if (!entry) {
 			return;
@@ -460,7 +492,7 @@ export class QueryLog {
 	}
 
 	private save(): void {
-		if (!this.persist()) {
+		if (!enabled || !this.persist()) {
 			return;
 		}
 
