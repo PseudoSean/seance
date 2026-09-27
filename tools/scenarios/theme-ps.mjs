@@ -25,8 +25,7 @@
 //   rule resolved on it: Chromium never paints it, the rule being WebKit's
 //   alone); the send glyph is the generated text accent; the composer's top
 //   is one 1px line in the edge, with the caret in it or not, and no band
-//   under it, and its field is rounded, edged in its own colour and in the
-//   text accent with the caret (the user's, 2026-09-26: at noon, at 22:00,
+//   under it (the user's, 2026-09-26 and 2026-09-27: at noon, at 22:00,
 //   with the reply bar open and on a phone at noon); at 22:00 the idle channel names are the night soft ink and the
 //   open one the night ink; under reduced transparency the glass turns solid
 //   (a SKIP line, never a pass, where Chromium cannot emulate it); and the
@@ -237,7 +236,9 @@
 // accent (still easing back 100 ms after the caret left) with a 2px inset
 // band under it while the caret was in, a square field with no edge — and
 // the phone's no-caret edge, which that build already drew plain, passed.
-// With the field: 16 of 16.
+// With the field: 16 of 16. The field went at the user's word (2026-09-27,
+// "nah i don't like the new input box. but the thin divider is good"), and
+// its eight checks with it; the divider's eight stay.
 //
 //   NODE_ENV=production corepack yarn build && python3 -m http.server -d public 8021 &
 //   node tools/browser-drive.mjs tools/scenarios/theme-ps.mjs
@@ -1395,30 +1396,22 @@ function checkAccent(page, chrome, where) {
 }
 
 /**
- * The composer (the user's "a single thin line" and "a rounded box inside the
- * frame", 2026-09-26): the strip's top edge and shadow, the field's radius and
- * edge, and the three tokens they should resolve to, read through a probe in
- * #form (a computed colour in the form the borders' are).
+ * The composer's divider (the user's "a single thin line", 2026-09-26, and
+ * "the thin divider is good", 2026-09-27): the strip's top edge and shadow,
+ * and the edge token, read through a probe in #form (a computed colour in the
+ * form the border's is).
  */
 const COMPOSER = `(() => {
 	const form = document.getElementById("form");
 	const input = document.getElementById("input");
 	const fs = getComputedStyle(form);
-	const is = getComputedStyle(input);
 	const probe = document.createElement("span");
 	form.appendChild(probe);
-	const token = (name) => {
-		probe.style.color = "var(" + name + ")";
-		return getComputedStyle(probe).color;
-	};
+	probe.style.color = "var(--ps-g-edge)";
 	const out = {
-		edge: token("--ps-g-edge"),
-		fieldEdge: token("--ps-g-field-edge"),
-		focusEdge: token("--ps-g-accent-text"),
+		edge: getComputedStyle(probe).color,
 		top: fs.borderTopWidth + " " + fs.borderTopStyle + " " + fs.borderTopColor,
 		shadow: fs.boxShadow,
-		radius: is.borderTopLeftRadius,
-		field: is.borderTopWidth + " " + is.borderTopStyle + " " + is.borderTopColor,
 		focused: document.activeElement === input,
 	};
 	probe.remove();
@@ -1427,9 +1420,8 @@ const COMPOSER = `(() => {
 
 /**
  * The composer, unfocused and then with the caret: the strip's top is one 1px
- * line in the edge and no band, either way; the field is rounded, its edge the
- * field's own and the text accent once it has the caret. The caret is put
- * back where it was.
+ * line in the edge and no band, either way. The caret is put back where it
+ * was.
  */
 async function checkComposer(page, where) {
 	const had = await page.evaluate(`document.activeElement === document.getElementById("input")`);
@@ -1455,17 +1447,6 @@ async function checkComposer(page, where) {
 				c.shadow === "none"
 		);
 	}
-
-	page.check(
-		`${where}: #input is a rounded field (radius ${idle.radius})`,
-		parseFloat(idle.radius) > 0
-	);
-	page.check(
-		`${where}: the field's edge is its own ${idle.fieldEdge} (${idle.field}), the text accent ${lit.focusEdge} with the caret (${lit.field})`,
-		idle.field === `1px solid ${idle.fieldEdge}` &&
-			lit.field === `1px solid ${lit.focusEdge}` &&
-			idle.fieldEdge !== lit.focusEdge
-	);
 }
 
 /**
