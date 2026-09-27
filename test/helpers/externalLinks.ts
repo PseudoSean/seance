@@ -1,6 +1,5 @@
 import {expect} from "chai";
 import {
-	androidIntentUrl,
 	iosVersion,
 	isWebLink,
 	linkPlatform,
@@ -47,15 +46,6 @@ describe("external links from an installed app (helpers/externalLinks.ts)", func
 		expect(isWebLink("#/settings")).to.equal(false);
 	});
 
-	it("builds an Android intent that views the link, fragment and query kept", function () {
-		expect(androidIntentUrl("https://example.org/a/b?x=1&y=2#L10")).to.equal(
-			"intent://example.org/a/b?x=1&y=2#L10#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end"
-		);
-		expect(androidIntentUrl("http://example.org:8080/")).to.match(
-			/^intent:\/\/example\.org:8080\/#Intent;scheme=http;/
-		);
-	});
-
 	it("builds Safari's scheme for iOS", function () {
 		expect(safariUrl("https://example.org/x")).to.equal("x-safari-https://example.org/x");
 	});
@@ -69,7 +59,9 @@ describe("external links from an installed app (helpers/externalLinks.ts)", func
 
 	it("picks the way out by platform", function () {
 		const href = "https://example.org/page";
-		expect(wayOut(href, "android")).to.deep.equal({navigate: androidIntentUrl(href)});
+		// Chrome loads an intent for a web page in the tab that asked — the
+		// app's own — so Android keeps its Custom Tab.
+		expect(wayOut(href, "android")).to.equal(null);
 		expect(wayOut(href, "ios", {iosVersion: 17})).to.deep.equal({navigate: safariUrl(href)});
 		expect(wayOut(href, "ios", {iosVersion: 16})).to.equal(null);
 		expect(wayOut(href, "desktop", {availWidth: 1000, availHeight: 1000})).to.deep.equal({

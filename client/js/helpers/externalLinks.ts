@@ -6,15 +6,20 @@
 // link opens *inside* the app: Chrome on Android lays a Custom Tab over the
 // app (the chat is gone until Back), iOS a Safari sheet, desktop Chrome a
 // tab somewhere in another window. So an installed app hands the link to a
-// real browser window instead:
+// real browser window where the platform lets a page do that:
 //
-//  - Android: an `intent:` URL for the link's own https URL, which Android
-//    resolves to the default browser (a window of its own, the app stays as
-//    it is). No `window.open` can do that from an installed app.
 //  - iOS 17 and later: the `x-safari-https:` scheme, which opens Safari.
-//    Older iOS has neither, and keeps its in-app sheet.
+//    Older iOS has no way out, and keeps its in-app sheet.
 //  - Desktop: `window.open` with window features, which is a new browser
 //    window rather than a tab.
+//  - Android: nothing — Chrome's Custom Tab over the app stays. Chrome
+//    forbids the way out on purpose: an `intent:` URL for an http(s) page
+//    that only a browser answers is loaded in the tab that asked
+//    (ExternalNavigationHandler `isNavigationToSelf` / "fall back to
+//    handling in app") — in an installed app that is the app's own tab, so
+//    the chat was replaced by the page and the connection dropped. Tried
+//    and taken out; the native shell (shells/capacitor) is the way to a
+//    real browser there.
 //
 // The native shells route links themselves (shells/electron `openExternal`,
 // Capacitor's WebView hands them to the system) and report the `browser`
@@ -51,22 +56,6 @@ export function isWebLink(href: string): boolean {
 	return /^https?:\/\//i.test(href);
 }
 
-/**
- * The `intent:` URL that asks Android to view `href` in the default
- * browser: `intent://<host><path>?<query>#<fragment>#Intent;scheme=…;end`.
- * Android parses from the last `#Intent;`, so the link's own fragment
- * survives, and `scheme` puts `http`/`https` back.
- */
-export function androidIntentUrl(href: string): string {
-	const url = new URL(href);
-	const rest = href.slice(url.protocol.length + 2); // after "https://"
-	const scheme = url.protocol.slice(0, -1);
-	return (
-		`intent://${rest}#Intent;scheme=${scheme};action=android.intent.action.VIEW;` +
-		"category=android.intent.category.BROWSABLE;end"
-	);
-}
-
 /** `x-safari-https://…`: opens `href` in Safari from an iOS 17+ home-screen app. */
 export function safariUrl(href: string): string {
 	return `x-safari-${href}`;
@@ -84,7 +73,7 @@ export type WayOut = {navigate: string} | {open: string; features: string} | nul
 
 /**
  * The way out of the app for `href` on `platform`; null leaves the link
- * to the browser (not a web link, or an iOS without `x-safari-`).
+ * to the browser (not a web link, Android, or an iOS without `x-safari-`).
  */
 export function wayOut(
 	href: string,
@@ -97,7 +86,7 @@ export function wayOut(
 
 	switch (platform) {
 		case "android":
-			return {navigate: androidIntentUrl(href)};
+			return null; // no way out a page may take: see the header
 		case "ios":
 			return (env.iosVersion ?? 0) >= 17 ? {navigate: safariUrl(href)} : null;
 		default:

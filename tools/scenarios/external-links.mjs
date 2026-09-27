@@ -5,10 +5,9 @@
 //   corepack yarn build && python3 -m http.server -d public 8000 &
 //   node tools/browser-drive.mjs tools/scenarios/external-links.mjs
 //
-// The installed app is emulated by answering `(display-mode: standalone)`; the
-// Android and iOS ways out are checked by the URL the page navigates to,
-// which is refused here (no app answers `intent:` or `x-safari-https:` on a
-// Linux box), and window.open is recorded, not run.
+// The installed app is emulated by answering `(display-mode: standalone)`;
+// window.open is recorded, not run, and Android is checked to be left to
+// Chrome (no way out a page may take there — see externalLinks.ts).
 
 const PORT = process.env.SEANCE_PORT ?? "8000";
 const TARGET = "https://example.org/page?x=1#frag";
@@ -94,7 +93,9 @@ export default async function run(page) {
 	const modified = JSON.parse(await page.evaluate(`JSON.stringify(window.__opened)`));
 	await page.check("a ctrl-click is left to the browser", modified.length === 0);
 
-	// 4. Installed on Android: the intent for the default browser.
+	// 4. Installed on Android: left to Chrome (its Custom Tab over the app).
+	//    An `intent:` URL for a web page is loaded by Chrome in the tab that
+	//    asked — the app's own — so the page must never navigate itself.
 	await page.send("Emulation.setUserAgentOverride", {
 		userAgent: ANDROID_UA,
 		platform: "Linux armv8l",
@@ -102,15 +103,12 @@ export default async function run(page) {
 	navigations.length = 0;
 	const android = await clickLink();
 	await page.sleep(300);
-	const intent = navigations.find((u) => u.startsWith("intent:"));
 	await page.check(
-		`installed on Android: navigates to an intent, no window.open (${
-			intent ?? JSON.stringify(navigations)
-		})`,
-		android.taken === true &&
-			android.opened.length === 0 &&
-			intent ===
-				"intent://example.org/page?x=1#frag#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end"
+		`installed on Android: the click is left alone, the page goes nowhere (${JSON.stringify({
+			...android,
+			navigations,
+		})})`,
+		android.taken === false && android.opened.length === 0 && navigations.length === 0
 	);
 	await page.check("the app is still there", (await page.count("#connect form")) === 1);
 
