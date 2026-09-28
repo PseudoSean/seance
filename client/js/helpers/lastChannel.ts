@@ -85,6 +85,20 @@ export function forgetLastChannel(): void {
 	backend.remove(STORAGE_KEY);
 }
 
+/**
+ * The conversation `target` on `network` was closed (or parted): if it is
+ * the remembered one, forget it — the next page would otherwise reopen a
+ * query the user just closed. The lobby it moves to is never remembered,
+ * so nothing else would replace it.
+ */
+export function forgetIfLastChannel(network: string, target: string): void {
+	const last = getLastChannel();
+
+	if (last && last.network === network && last.target.toLowerCase() === target.toLowerCase()) {
+		forgetLastChannel();
+	}
+}
+
 // --------------------------------------------------------------- landing
 
 let landing: LastChannel | null = null;

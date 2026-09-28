@@ -3,6 +3,7 @@ import {mirrorPushPrefs} from "./push-prefs";
 import {normalizeFontSize} from "./helpers/fontSize";
 import {normalizeOwnMessageStyle} from "./helpers/ownMessages";
 import {prefersTwelveHourClock} from "./helpers/hourCycle";
+import {setQueryLogEnabled} from "./irc/querylog";
 
 const defaultSettingConfig = {
 	apply() {},
@@ -158,6 +159,16 @@ const defaultConfig = {
 	// Report own input activity as `+typing` TAGMSGs (IRCv3 typing client tag).
 	sendTypingNotifications: {
 		default: true,
+	},
+	// Keep the recent lines of private conversations in this browser so they
+	// come back after a reload (irc/querylog.ts). Off deletes what is kept
+	// and keeps nothing more; applyAll runs this at boot too, before any
+	// network is created, so a page with it off restores nothing.
+	keepPrivateConversations: {
+		default: true,
+		apply(store: TypedStore, value: boolean) {
+			setQueryLogEnabled(value);
+		},
 	},
 	userStyles: {
 		default: "",

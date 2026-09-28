@@ -58,6 +58,25 @@
 				</label>
 			</div>
 		</div>
+		<div>
+			<h2>Private conversations</h2>
+			<div>
+				<label class="opt">
+					<input
+						:checked="store.state.settings.keepPrivateConversations"
+						type="checkbox"
+						name="keepPrivateConversations"
+					/>
+					Keep private conversations on this device
+					<span
+						class="tooltipped tooltipped-n tooltipped-no-delay"
+						aria-label="Private conversations come back after a reload: the newest 200 lines of your 30 most recent ones, stored in this browser. Turning this off deletes them from this device."
+					>
+						<button class="extra-help" />
+					</span>
+				</label>
+			</div>
+		</div>
 		<div v-if="!store.state.serverConfiguration?.public">
 			<h2>Automatic away message</h2>
 

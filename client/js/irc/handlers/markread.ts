@@ -142,7 +142,22 @@ export function scheduleMarkRead(client: IrcClient, chan: Channel): void {
 }
 
 function sendMarkRead(client: IrcClient, chan: Channel): void {
-	if (!chan.readMarker || !markReadEnabled(client) || client.transport.state !== "open") {
+	if (!chan.readMarker) {
+		return;
+	}
+
+	// Came due while a reconnect is still registering (the page returning
+	// to the foreground marks the open channel and redials at once): the
+	// server would answer `451 Register first.` Keep it for registration —
+	// the other devices' notifications close on it.
+	if (!client.isWelcomed) {
+		chan.markReadDeferred = true;
+		return;
+	}
+
+	chan.markReadDeferred = false;
+
+	if (!markReadEnabled(client)) {
 		return;
 	}
 
@@ -163,11 +178,7 @@ function sendMarkRead(client: IrcClient, chan: Channel): void {
  * path does not follow with an older one, and a pending send is dropped.
  */
 export function markReadAt(client: IrcClient, target: string, time: Date): void {
-	if (
-		Number.isNaN(time.getTime()) ||
-		!markReadEnabled(client) ||
-		client.transport.state !== "open"
-	) {
+	if (Number.isNaN(time.getTime()) || !markReadEnabled(client) || !client.isWelcomed) {
 		return;
 	}
 
@@ -183,6 +194,7 @@ export function markReadAt(client: IrcClient, target: string, time: Date): void 
 		}
 
 		cancelMarkRead(chan);
+		chan.markReadDeferred = false;
 		chan.readMarker = time;
 	}
 
@@ -196,11 +208,21 @@ export function markReadAt(client: IrcClient, target: string, time: Date): void 
 
 /** Ask the server for the stored marker (`MARKREAD <target>`), e.g. after JOIN. */
 export function fetchReadMarker(client: IrcClient, chan: Channel): void {
-	if (!markable(chan) || !markReadEnabled(client) || client.transport.state !== "open") {
+	if (!markable(chan) || !markReadEnabled(client) || !client.isWelcomed) {
 		return;
 	}
 
 	client.send(formatLine({command: "MARKREAD", params: [chan.name]}));
+}
+
+/** Registration is complete: send the markers that came due before it
+ * ({@link sendMarkRead}, and a debounce the last socket died holding). */
+export function flushDeferredMarkRead(client: IrcClient): void {
+	for (const chan of client.channels) {
+		if (chan.markReadDeferred && chan.markReadTimer === null) {
+			sendMarkRead(client, chan);
+		}
+	}
 }
 
 /** Cancel a pending send (transport closed). */

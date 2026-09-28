@@ -85,6 +85,9 @@ export class Channel {
 	readMarker: Date | undefined = undefined;
 	/** Pending debounced `MARKREAD` send (handlers/markread.ts). */
 	markReadTimer: ReturnType<typeof setTimeout> | null = null;
+	/** A debounced `MARKREAD` came due while the connection was not
+	 * registered; sent once it is (`flushDeferredMarkRead`). */
+	markReadDeferred = false;
 	private readonly fold: Casefold;
 
 	constructor(
