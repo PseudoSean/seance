@@ -45,6 +45,10 @@ describe("settings backup (helpers/settingsBackup.ts)", function () {
 			JSON.stringify([{nick: "spam", ident: "*", hostname: "*", when: 1}])
 		);
 		store.set("thelounge.muted", JSON.stringify(["a/#x"]));
+		store.set(
+			"thelounge.translate",
+			JSON.stringify({"a/#x": {read: true, languages: ["de"], terms: {}}})
+		);
 		store.set("thelounge.sts", JSON.stringify({}));
 		store.set("thelounge.push", JSON.stringify({a: {}}));
 		store.set("thelounge.state.lastChannel", JSON.stringify({}));
@@ -63,6 +67,7 @@ describe("settings backup (helpers/settingsBackup.ts)", function () {
 
 	it("knows which keys are preferences", function () {
 		expect(isBackupKey("settings")).to.equal(true);
+		expect(isBackupKey("thelounge.translate")).to.equal(true);
 		expect(isBackupKey("thelounge.ignore.some-uuid")).to.equal(true);
 		expect(isBackupKey("thelounge.sts")).to.equal(false);
 		expect(isBackupKey("thelounge.push")).to.equal(false);
@@ -83,7 +88,13 @@ describe("settings backup (helpers/settingsBackup.ts)", function () {
 			"thelounge.ignore.a",
 			"thelounge.muted",
 			"thelounge.networks",
+			"thelounge.translate",
 		]);
+		// The per-channel translation state travels with the rest: which
+		// channels read, into what, and their term memory.
+		expect(backup.entries["thelounge.translate"]).to.deep.equal({
+			"a/#x": {read: true, languages: ["de"], terms: {}},
+		});
 		expect(backup.entries.settings).to.deep.equal({theme: "creama", coloredNicks: false});
 	});
 
@@ -131,6 +142,17 @@ describe("settings backup (helpers/settingsBackup.ts)", function () {
 		expect(await decodeBackup(bytes)).to.deep.equal(backup);
 	});
 
+	it("carries the per-channel translation state through a whole round trip", async function () {
+		seed();
+		const bytes = await encodeBackup(collectBackup());
+
+		store.set("thelounge.translate", JSON.stringify({"a/#x": {read: false}}));
+		applyBackup(await decodeBackup(bytes));
+		expect(JSON.parse(store.get("thelounge.translate") as string)).to.deep.equal({
+			"a/#x": {read: true, languages: ["de"], terms: {}},
+		});
+	});
+
 	it("reads a plain JSON file too", async function () {
 		seed();
 		const backup = collectBackup();
@@ -149,7 +171,9 @@ describe("settings backup (helpers/settingsBackup.ts)", function () {
 			encode(JSON.stringify({format: FORMAT, version: VERSION + 1, entries: {}}))
 		);
 		expect(newer).to.be.instanceOf(BackupFormatError);
-		expect((newer as Error).message).to.match(/newer version/);
+		// The Vue-free module carries stable codes; the render site
+		// (Settings/General.vue) translates them.
+		expect((newer as BackupFormatError).code).to.equal("newer-version");
 
 		const damaged = await failure(new Uint8Array([0x1f, 0x8b, 1, 2, 3, 4]));
 		expect(damaged).to.be.instanceOf(BackupFormatError);
@@ -179,6 +203,26 @@ describe("settings backup (helpers/settingsBackup.ts)", function () {
 		expect(store.get("thelounge.push")).to.equal(JSON.stringify({a: {}}));
 		expect(store.has("thelounge.state.sidebar")).to.equal(false);
 		expect(store.get("thelounge.mentions")).to.equal("[]");
+	});
+
+	it("an older file leaves a key its version never carried alone", function () {
+		// thelounge.translate joined the format in version 2: a v1 file says
+		// nothing about it, so a restore must not read its absence as "this
+		// device had no translation state".
+		seed();
+		applyBackup({
+			format: FORMAT,
+			version: 1,
+			exportedAt: "",
+			entries: {settings: {theme: "day"}},
+		});
+
+		expect(JSON.parse(store.get("thelounge.translate") as string)).to.deep.equal({
+			"a/#x": {read: true, languages: ["de"], terms: {}},
+		});
+		// Everything version 1 did carry is still replaced by the file.
+		expect(store.has("thelounge.muted")).to.equal(false);
+		expect(store.get("settings")).to.equal(JSON.stringify({theme: "day"}));
 	});
 
 	it("names the file after the deploy and the day", function () {

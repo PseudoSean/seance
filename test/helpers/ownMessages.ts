@@ -2,7 +2,6 @@ import {expect} from "chai";
 import {
 	defaultOwnMessageStyle,
 	normalizeOwnMessageStyle,
-	ownMessageStyleLabels,
 	ownMessageStyles,
 } from "../../client/js/helpers/ownMessages";
 
@@ -13,12 +12,6 @@ describe("ownMessages", () => {
 	it("offers greyed text, a band and nothing, greyed being the default", () => {
 		expect(ownMessageStyles).to.deep.equal(["muted", "band", "plain"]);
 		expect(defaultOwnMessageStyle).to.equal("muted");
-	});
-
-	it("labels every style", () => {
-		for (const style of ownMessageStyles) {
-			expect(ownMessageStyleLabels[style]).to.be.a("string").and.not.equal("");
-		}
 	});
 
 	it("passes the three names through", () => {

@@ -1,12 +1,9 @@
 <template>
 	<div>
-		<h2>Push Notifications</h2>
+		<h2>{{ t("settings.notifications.pushHeading") }}</h2>
 		<div>
 			<div class="push-networks-hint">
-				Push is set up per network — turn it on or off in each network's settings (Edit
-				network → “Push notifications for this network”), where the enrollment status is
-				also shown. The browser delivers the notifications; each push-capable server decides
-				whether to wake this app.
+				{{ t("settings.notifications.pushPerNetwork") }}
 			</div>
 			<div
 				id="label-push-key-change"
@@ -14,8 +11,7 @@
 				role="heading"
 				aria-level="3"
 			>
-				When a server's push identity (its key) changes, this device's subscription for it
-				stops working. Then:
+				{{ t("settings.notifications.keyChangeIntro") }}
 			</div>
 			<div role="group" aria-labelledby="label-push-key-change">
 				<label class="opt">
@@ -25,7 +21,7 @@
 						name="pushKeyChange"
 						value="ask"
 					/>
-					Wary — ask before renewing the subscription
+					{{ t("settings.notifications.keyChangeAsk") }}
 				</label>
 				<label class="opt">
 					<input
@@ -34,7 +30,7 @@
 						name="pushKeyChange"
 						value="trust"
 					/>
-					Naive — renew it on the spot, without asking
+					{{ t("settings.notifications.keyChangeTrust") }}
 				</label>
 				<label class="opt">
 					<input
@@ -43,67 +39,73 @@
 						name="pushKeyChange"
 						value="ignore"
 					/>
-					Suspicious — leave it alone; push from that server stays off until you renew
-					from the network settings
+					{{ t("settings.notifications.keyChangeIgnore") }}
 				</label>
 			</div>
 			<div v-if="store.state.pushNotificationState === 'subscribed'" class="opt">
-				<div>Snooze pushes everywhere:</div>
+				<div>{{ t("settings.notifications.snoozeIntro") }}</div>
 				<div class="push-snooze">
 					<button type="button" class="btn" @click.prevent="snooze(15 * 60 * 1000)">
-						15 min
+						{{ t("settings.notifications.snooze15") }}
 					</button>
 					<button type="button" class="btn" @click.prevent="snooze(60 * 60 * 1000)">
-						1 hour
+						{{ t("settings.notifications.snooze60") }}
 					</button>
 					<button type="button" class="btn" @click.prevent="snooze(8 * 60 * 60 * 1000)">
-						8 hours
+						{{ t("settings.notifications.snooze480") }}
 					</button>
-					<button type="button" class="btn" @click.prevent="snooze(0)">Off</button>
+					<button type="button" class="btn" @click.prevent="snooze(0)">
+						{{ t("settings.notifications.snoozeOff") }}
+					</button>
 				</div>
 			</div>
 			<div v-if="store.state.pushNotificationState === 'stale'" id="pushStale" class="error">
-				<strong>Warning</strong>: A server's push identity (its key) changed, so this
-				device's push subscription for it no longer works. Renew it from that network's
-				settings (Edit network → “Renew push notifications”) to keep being notified while
-				the app is closed.
+				<strong>{{ t("settings.notifications.warning") }}</strong
+				>:
+				{{ t("settings.notifications.stale") }}
 			</div>
 			<div v-if="store.state.pushNotificationState === 'unsupported'" class="error">
-				Push notifications are not supported by this browser (they need the Push API, a
-				service worker and a secure context).
+				{{ t("settings.notifications.unsupported") }}
 			</div>
 			<div v-if="store.state.pushNotificationState === 'not-installed'" class="error">
-				<strong>Warning</strong>: On iOS, push notifications are only available after
-				installing the app to the Home Screen (Share → Add to Home Screen).
+				<strong>{{ t("settings.notifications.warning") }}</strong
+				>:
+				{{ t("settings.notifications.iosNotInstalled") }}
 			</div>
 			<div v-if="store.state.pushNotificationState === 'denied'" class="error">
-				<strong>Warning</strong>: Notifications are blocked by your browser. Allow them in
-				the browser's site settings, then try again.
+				<strong>{{ t("settings.notifications.warning") }}</strong
+				>:
+				{{ t("settings.notifications.pushDenied") }}
 			</div>
 			<div v-if="store.state.pushNotificationState === 'server-unsupported'" class="error">
-				Push notifications need a connected server that supports the draft/webpush
-				capability and you to be logged in to an account.
+				{{ t("settings.notifications.serverUnsupported") }}
 			</div>
 			<div v-if="store.state.pushNotificationState === 'blocked'" class="error">
-				<strong>Warning</strong>: The server refused the push subscription. It may require
-				logging in (SASL) before subscribing.
+				<strong>{{ t("settings.notifications.warning") }}</strong
+				>:
+				{{ t("settings.notifications.pushBlocked") }}
 			</div>
 		</div>
 
-		<h2>Browser Notifications</h2>
+		<h2>{{ t("settings.notifications.browserHeading") }}</h2>
 		<div>
 			<div class="push-networks-hint">
-				Browser notifications are also per network — enabled by default, toggled in each
-				network's settings (Edit network → “Browser notifications for this network”).
+				{{ t("settings.notifications.browserPerNetwork") }}
 			</div>
 			<div v-if="store.state.desktopNotificationState === 'unsupported'" class="error">
-				<strong>Warning</strong>: Notifications are not supported by your browser.
+				<strong>{{ t("settings.notifications.warning") }}</strong
+				>:
+				{{ t("settings.notifications.browserUnsupported") }}
 			</div>
 			<div v-if="store.state.desktopNotificationState === 'nohttps'" class="error">
-				<strong>Warning</strong>: Notifications are only supported over HTTPS connections.
+				<strong>{{ t("settings.notifications.warning") }}</strong
+				>:
+				{{ t("settings.notifications.noHttps") }}
 			</div>
 			<div v-if="store.state.desktopNotificationState === 'blocked'" class="error">
-				<strong>Warning</strong>: Notifications are blocked by your browser.
+				<strong>{{ t("settings.notifications.warning") }}</strong
+				>:
+				{{ t("settings.notifications.browserBlocked") }}
 			</div>
 		</div>
 		<div>
@@ -113,12 +115,14 @@
 					type="checkbox"
 					name="notification"
 				/>
-				Enable notification sound
+				{{ t("settings.notifications.sound") }}
 			</label>
 		</div>
 		<div>
 			<div class="opt">
-				<button id="play" @click.prevent="playNotification">Play sound</button>
+				<button id="play" @click.prevent="playNotification">
+					{{ t("settings.notifications.playSound") }}
+				</button>
 			</div>
 		</div>
 
@@ -129,7 +133,7 @@
 					type="checkbox"
 					name="notifyAllMessages"
 				/>
-				Enable notification for all messages
+				{{ t("settings.notifications.notifyAll") }}
 			</label>
 		</div>
 
@@ -140,11 +144,10 @@
 					type="checkbox"
 					name="highlightMessages"
 				/>
-				Highlight messages that mention you
+				{{ t("settings.notifications.highlight") }}
 				<span
 					class="tooltipped tooltipped-n tooltipped-no-delay"
-					aria-label="Messages that mention you or match a custom highlight get a
-colored background and border in the channel."
+					:aria-label="highlightHelp"
 				>
 					<button class="extra-help" />
 				</span>
@@ -154,23 +157,23 @@ colored background and border in the channel."
 		<div v-if="!store.state.serverConfiguration?.public">
 			<label class="opt">
 				<label for="highlights" class="opt">
-					Custom highlights
+					{{ t("settings.notifications.highlights") }}
 					<span
 						class="tooltipped tooltipped-n tooltipped-no-delay"
-						aria-label="If a message contains any of these comma-separated
-expressions, it will trigger a highlight."
+						:aria-label="highlightsHelp"
 					>
 						<button class="extra-help" />
 					</span>
 				</label>
 				<input
 					id="highlights"
+					dir="auto"
 					:value="store.state.settings.highlights"
 					type="text"
 					name="highlights"
 					class="input"
 					autocomplete="off"
-					placeholder="Comma-separated, e.g.: word, some more words, anotherword"
+					:placeholder="commaListPlaceholder"
 				/>
 			</label>
 		</div>
@@ -178,24 +181,23 @@ expressions, it will trigger a highlight."
 		<div v-if="!store.state.serverConfiguration?.public">
 			<label class="opt">
 				<label for="highlightExceptions" class="opt">
-					Highlight exceptions
+					{{ t("settings.notifications.highlightExceptions") }}
 					<span
 						class="tooltipped tooltipped-n tooltipped-no-delay"
-						aria-label="If a message contains any of these comma-separated
-expressions, it will not trigger a highlight even if it contains
-your nickname or expressions defined in custom highlights."
+						:aria-label="highlightExceptionsHelp"
 					>
 						<button class="extra-help" />
 					</span>
 				</label>
 				<input
 					id="highlightExceptions"
+					dir="auto"
 					:value="store.state.settings.highlightExceptions"
 					type="text"
 					name="highlightExceptions"
 					class="input"
 					autocomplete="off"
-					placeholder="Comma-separated, e.g.: word, some more words, anotherword"
+					:placeholder="commaListPlaceholder"
 				/>
 			</label>
 		</div>
@@ -203,14 +205,23 @@ your nickname or expressions defined in custom highlights."
 </template>
 
 <script lang="ts">
-import {defineComponent, onMounted} from "vue";
+import {computed, defineComponent, onMounted} from "vue";
 import {useStore} from "../../js/store";
+import {useI18n} from "../../js/i18n";
 import webpush from "../../js/webpush";
 
 export default defineComponent({
 	name: "NotificationSettings",
 	setup() {
 		const store = useStore();
+		const {t} = useI18n();
+
+		const highlightHelp = computed(() => t("settings.notifications.highlightHelp"));
+		const highlightsHelp = computed(() => t("settings.notifications.highlightsHelp"));
+		const highlightExceptionsHelp = computed(() =>
+			t("settings.notifications.highlightExceptionsHelp")
+		);
+		const commaListPlaceholder = computed(() => t("settings.notifications.commaList"));
 
 		const snooze = (ms: number) => {
 			webpush.setSnooze(ms);
@@ -230,6 +241,11 @@ export default defineComponent({
 
 		return {
 			store,
+			t,
+			highlightHelp,
+			highlightsHelp,
+			highlightExceptionsHelp,
+			commaListPlaceholder,
 			playNotification,
 			snooze,
 		};

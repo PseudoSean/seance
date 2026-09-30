@@ -4,7 +4,6 @@ import {
 	expireTyping,
 	removeTyping,
 	renameTyping,
-	typingSummary,
 	TYPING_ACTIVE_TTL,
 	TYPING_PAUSED_TTL,
 	TypingEntry,
@@ -73,18 +72,5 @@ describe("typing state (server→client `typing`)", function () {
 			"bob",
 		]);
 		expect(expireTyping(list, T0 + TYPING_PAUSED_TTL)).to.deep.equal([]);
-	});
-
-	it("summarises who is typing", function () {
-		const e = (nick: string): TypingEntry => ({nick, state: "active", expiresAt: 0});
-		expect(typingSummary([])).to.equal("");
-		expect(typingSummary([e("alice")])).to.equal("alice is typing…");
-		expect(typingSummary([e("alice"), e("bob")])).to.equal("alice and bob are typing…");
-		expect(typingSummary([e("alice"), e("bob"), e("carol")])).to.equal(
-			"alice, bob and carol are typing…"
-		);
-		expect(typingSummary([e("alice"), e("bob"), e("carol"), e("dave")])).to.equal(
-			"alice, bob and 2 others are typing…"
-		);
 	});
 });

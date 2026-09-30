@@ -1,53 +1,61 @@
 <template>
-	<span v-if="badges.length" class="msg-reactions" role="group" aria-label="Reactions">
-		<!-- A badge that arrives while you are looking pops in; the ones already
-		     there when the channel is drawn do not (`appear` is off). -->
-		<TransitionGroup name="reaction" tag="span" class="msg-reactions-list">
+	<!-- The group pops in when the first reaction lands on a message you are
+	     looking at (a Transition without `appear`: nothing on the channel's
+	     first draw), and a badge that arrives after that pops in on its own.
+	     A badge is keyed on its text alone, so toggling yours on and off
+	     never remounts it — it keeps its identity (and a keyboard user's
+	     focus) across the toggle. A theme can hang its own flourish on the
+	     same enter classes. -->
+	<Transition name="reactions">
+		<span v-if="badges.length" class="msg-reactions" role="group" :aria-label="groupAria">
+			<TransitionGroup name="reaction" tag="span" class="msg-reactions-list">
+				<button
+					v-for="badge in badges"
+					:key="badge.text"
+					type="button"
+					class="msg-reaction tooltipped tooltipped-n"
+					:class="{self: badge.self, word: !badge.emoji}"
+					:disabled="!canToggle"
+					:aria-pressed="badge.self"
+					:aria-label="badge.label"
+					:data-tooltip="badge.title"
+					@click="toggle(badge)"
+				>
+					<span class="msg-reaction-text">{{ badge.text }}</span
+					><span v-if="badge.nicks.length > 1" class="msg-reaction-count">{{
+						badge.nicks.length
+					}}</span>
+				</button>
+			</TransitionGroup>
 			<button
-				v-for="badge in badges"
-				:key="badge.text"
+				v-if="canToggle"
+				ref="addButton"
 				type="button"
-				class="msg-reaction tooltipped tooltipped-n"
-				:class="{self: badge.self, word: !badge.emoji}"
-				:disabled="!canToggle"
-				:aria-pressed="badge.self"
-				:aria-label="badge.label"
-				:data-tooltip="badge.title"
-				@click="toggle(badge)"
+				class="msg-reaction msg-reaction-add tooltipped tooltipped-n"
+				:aria-label="addAria"
+				:data-tooltip="addAria"
+				:aria-expanded="pickerOpen"
+				@mouseenter="preloadEmoji"
+				@mousedown.stop
+				@click="pickerOpen = !pickerOpen"
 			>
-				<span class="msg-reaction-text">{{ badge.text }}</span
-				><span v-if="badge.nicks.length > 1" class="msg-reaction-count">{{
-					badge.nicks.length
-				}}</span>
+				<span aria-hidden="true">+</span>
 			</button>
-		</TransitionGroup>
-		<button
-			v-if="canToggle"
-			ref="addButton"
-			type="button"
-			class="msg-reaction msg-reaction-add tooltipped tooltipped-n"
-			aria-label="Add a reaction"
-			data-tooltip="Add a reaction"
-			:aria-expanded="pickerOpen"
-			@mouseenter="preloadEmoji"
-			@mousedown.stop
-			@click="pickerOpen = !pickerOpen"
-		>
-			<span aria-hidden="true">+</span>
-		</button>
-		<ReactionPicker
-			v-if="pickerOpen"
-			:anchor="addButton"
-			:selected="mine"
-			@pick="pick"
-			@close="pickerOpen = false"
-		/>
-	</span>
+			<ReactionPicker
+				v-if="pickerOpen"
+				:anchor="addButton"
+				:selected="mine"
+				@pick="pick"
+				@close="pickerOpen = false"
+			/>
+		</span>
+	</Transition>
 </template>
 
 <script lang="ts">
 import {computed, defineComponent, PropType, ref, watch} from "vue";
 import socket from "../js/socket";
+import {useI18n} from "../js/i18n";
 import {isEmojiOnly, loadEmojiCatalog} from "../js/helpers/emoji";
 import {myReactions} from "../js/helpers/messageUpdates";
 import {rememberReaction} from "../js/helpers/reactionRecents";
@@ -73,6 +81,9 @@ export default defineComponent({
 		network: {type: Object as PropType<ClientNetwork>, required: true},
 	},
 	setup(props) {
+		const {t} = useI18n();
+		const groupAria = computed(() => t("reactions.groupAria"));
+		const addAria = computed(() => t("reactions.add"));
 		const pickerOpen = ref(false);
 		const addButton = ref<HTMLButtonElement | null>(null);
 
@@ -89,7 +100,11 @@ export default defineComponent({
 					nicks: r.nicks,
 					self,
 					emoji,
-					label: `${r.text} by ${who}${self ? " (click to remove yours)" : ""}`,
+					label:
+						t("reactions.by", {
+							reaction: r.text,
+							users: who,
+						}) + (self ? t("reactions.clickToRemoveSuffix") : ""),
 					// A long word reaction is cut off by the badge, so the
 					// tooltip carries it in full next to who sent it.
 					title: emoji ? who : `${r.text} — ${who}`,
@@ -135,7 +150,19 @@ export default defineComponent({
 			}
 		);
 
-		return {badges, canToggle, mine, pickerOpen, addButton, toggle, pick, preloadEmoji};
+		return {
+			t,
+			groupAria,
+			addAria,
+			badges,
+			canToggle,
+			mine,
+			pickerOpen,
+			addButton,
+			toggle,
+			pick,
+			preloadEmoji,
+		};
 	},
 });
 </script>

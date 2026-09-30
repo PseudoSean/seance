@@ -41,12 +41,12 @@
 						<span :class="['notify-status-icon', notifyState.cls]" />
 					</span>
 					<span
-						aria-label="Edit this network…"
+						:aria-label="editLabel"
 						class="edit-network-tooltip tooltipped tooltipped-e tooltipped-no-touch"
 					>
 						<button
 							class="edit-network"
-							aria-label="Edit this network…"
+							:aria-label="editLabel"
 							@click.stop="editNetwork"
 						/>
 					</span>
@@ -63,7 +63,8 @@
 					</span>
 				</div>
 				<span v-if="network.nick" :title="nickLabel" class="lobby-nick"
-					><span class="sr-only">Nickname: </span>{{ network.nick }}</span
+					><span class="sr-only">{{ t("lobby.nickname") }}</span
+					><bdi>{{ network.nick }}</bdi></span
 				>
 			</div>
 		</div>
@@ -77,6 +78,7 @@ import collapseNetwork from "../js/helpers/collapseNetwork";
 import roundBadgeNumber from "../js/helpers/roundBadgeNumber";
 import socket from "../js/socket";
 import webpush from "../js/webpush";
+import {useI18n} from "../js/i18n";
 import ChannelWrapper from "./ChannelWrapper.vue";
 
 import type {ClientChan, ClientNetwork} from "../js/types";
@@ -98,6 +100,7 @@ export default defineComponent({
 	emits: ["toggle-join-channel"],
 	setup(props) {
 		const router = useRouter();
+		const {t} = useI18n();
 
 		const channel = computed(() => {
 			return props.network.channels[0];
@@ -115,14 +118,14 @@ export default defineComponent({
 			const enabled = webpush.notifyOn(props.network.uuid);
 
 			if (!enabled) {
-				return {cls: "off", label: "Notifications off for this network"};
+				return {cls: "off", label: t("lobby.notificationsOff")};
 			}
 
 			if (info.enabled && info.subscribed) {
-				return {cls: "on", label: "Notifications: subscribed to push"};
+				return {cls: "on", label: t("lobby.notificationsSubscribed")};
 			}
 
-			return {cls: "enabled", label: "Notifications on"};
+			return {cls: "enabled", label: t("lobby.notificationsOn")};
 		});
 
 		const statusClass = computed(() =>
@@ -135,10 +138,10 @@ export default defineComponent({
 
 		const statusLabel = computed(() =>
 			props.network.status.connected
-				? "Connected"
+				? t("lobby.connected")
 				: props.network.status.connecting
-				? "Connecting… (click to cancel)"
-				: "Disconnected (click to connect)"
+				? t("lobby.connectingCancel")
+				: t("lobby.disconnectedConnect")
 		);
 
 		const onStatusClick = () => {
@@ -153,15 +156,15 @@ export default defineComponent({
 		};
 
 		const joinChannelLabel = computed(() => {
-			return props.isJoinChannelShown ? "Cancel" : "Join a channel…";
+			return props.isJoinChannelShown ? t("lobby.cancel") : t("lobby.joinChannel");
 		});
 
 		// The nick under the network name is the one this connection uses;
 		// before the first connect it is the configured one.
 		const nickLabel = computed(() =>
 			props.network.status.connected
-				? `Your nickname on ${props.network.name}`
-				: `Your nickname for ${props.network.name} (not connected)`
+				? t("lobby.nickOn", {network: props.network.name})
+				: t("lobby.nickOffline", {network: props.network.name})
 		);
 
 		const unreadCount = computed(() => {
@@ -173,13 +176,17 @@ export default defineComponent({
 		};
 
 		const getExpandLabel = (network: ClientNetwork) => {
-			return network.isCollapsed ? "Expand" : "Collapse";
+			return network.isCollapsed ? t("lobby.expand") : t("lobby.collapse");
 		};
 
+		const editLabel = computed(() => t("lobby.edit"));
+
 		return {
+			t,
 			notifyState,
 			channel,
 			editNetwork,
+			editLabel,
 			statusClass,
 			statusLabel,
 			onStatusClick,

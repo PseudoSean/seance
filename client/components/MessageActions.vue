@@ -1,9 +1,9 @@
 <template>
 	<span
 		class="msg-actions"
-		:class="{active: pickerOpen}"
+		:class="{active: pickerOpen || sourcePickerOpen}"
 		role="toolbar"
-		aria-label="Message actions"
+		:aria-label="toolbarLabel"
 	>
 		<span class="msg-actions-quick">
 			<button
@@ -24,8 +24,8 @@
 			ref="reactButton"
 			type="button"
 			class="msg-action msg-action-react"
-			aria-label="React"
-			title="React"
+			:aria-label="reactLabel"
+			:title="reactLabel"
 			:aria-expanded="pickerOpen"
 			@mouseenter="preloadEmoji"
 			@mousedown.stop
@@ -35,32 +35,42 @@
 		<button
 			type="button"
 			class="msg-action msg-action-reply"
-			aria-label="Reply"
-			title="Reply"
+			:aria-label="replyLabel"
+			:title="replyLabel"
 			@click="reply"
 		/>
 		<button
 			v-if="canCopyText"
 			type="button"
 			class="msg-action msg-action-copy-text"
-			aria-label="Copy text"
-			title="Copy text"
+			:aria-label="copyTextLabel"
+			:title="copyTextLabel"
 			@click.stop="copyText"
 		/>
 		<button
 			v-if="codeBlocks.length > 0"
 			type="button"
 			class="msg-action msg-action-copy"
-			aria-label="Copy code"
-			title="Copy code"
+			:aria-label="copyCodeLabel"
+			:title="copyCodeLabel"
 			@click.stop="copyCode"
+		/>
+		<button
+			v-if="canTranslate"
+			ref="translateButton"
+			type="button"
+			class="msg-action msg-action-translate"
+			:aria-label="translateLabel"
+			:title="translateLabel"
+			:aria-haspopup="hiddenTranslation ? undefined : 'menu'"
+			@click.stop="translate"
 		/>
 		<button
 			v-if="canEdit"
 			type="button"
 			class="msg-action msg-action-edit"
-			aria-label="Edit"
-			title="Edit"
+			:aria-label="editLabel"
+			:title="editLabel"
 			@click="edit"
 		/>
 		<template v-if="canDelete">
@@ -68,8 +78,8 @@
 			<button
 				type="button"
 				class="msg-action msg-action-delete"
-				aria-label="Delete message"
-				title="Delete message"
+				:aria-label="deleteLabel"
+				:title="deleteLabel"
 				@click="remove"
 			/>
 		</template>
@@ -80,10 +90,17 @@
 			@pick="react"
 			@close="pickerOpen = false"
 		/>
+		<SourceLanguagePicker
+			v-if="sourcePickerOpen"
+			:anchor="translateButton"
+			:candidates="channelLanguages"
+			@pick="translateFrom"
+			@close="sourcePickerOpen = false"
+		/>
 	</span>
 	<!-- The word a copy leaves behind, where the toolbar was. Inert: it is a
 	label, not a control, so a finger on its way elsewhere goes through it. -->
-	<span v-if="copied" class="msg-copied" role="status">Copied</span>
+	<span v-if="copied" class="msg-copied" role="status">{{ t("message.copied") }}</span>
 </template>
 
 <script lang="ts">
@@ -96,12 +113,20 @@ import {useStore} from "../js/store";
 import {startEdit, startReply} from "../js/helpers/compose";
 import {myReactions} from "../js/helpers/messageUpdates";
 import {loadEmojiCatalog} from "../js/helpers/emoji";
+import {
+	channelTranslation,
+	retranslate,
+	showOriginal,
+	translationAvailable,
+} from "../js/translate/reader";
 import {quickReactions, RECENTS_CHANGED, rememberReaction} from "../js/helpers/reactionRecents";
 import {hasVirtualKeyboard} from "../js/helpers/device";
 import {ChanType} from "../../shared/types/chan";
 import {MessageType} from "../../shared/types/msg";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../js/types";
 import ReactionPicker from "./ReactionPicker.vue";
+import SourceLanguagePicker from "./SourceLanguagePicker.vue";
+import {useI18n} from "../js/i18n";
 
 // How long the "Copied" label stays over the row (its fade in style.css
 // takes as long)
@@ -126,7 +151,7 @@ const sharedQuick = () => {
 
 export default defineComponent({
 	name: "MessageActions",
-	components: {ReactionPicker},
+	components: {ReactionPicker, SourceLanguagePicker},
 	props: {
 		message: {type: Object as PropType<ClientMessage>, required: true},
 		channel: {type: Object as PropType<ClientChan>, required: true},
@@ -139,8 +164,11 @@ export default defineComponent({
 	emits: ["done"],
 	setup(props, {emit}) {
 		const store = useStore();
+		const {t} = useI18n();
 		const pickerOpen = ref(false);
 		const reactButton = ref<HTMLButtonElement | null>(null);
+		const sourcePickerOpen = ref(false);
+		const translateButton = ref<HTMLButtonElement | null>(null);
 
 		// What we have already reacted with: the picker ticks these, and
 		// picking one again takes it back off (bus-contract §1.4 `remove`).
@@ -152,7 +180,13 @@ export default defineComponent({
 			sharedQuick().value.map((text) => {
 				const on = mine.value.includes(text);
 
-				return {text, on, label: on ? `Remove ${text}` : `React with ${text}`};
+				return {
+					text,
+					on,
+					label: on
+						? t("message.quickRemove", {reaction: text})
+						: t("message.quickReact", {reaction: text}),
+				};
 			})
 		);
 
@@ -187,6 +221,15 @@ export default defineComponent({
 		};
 
 		onUnmounted(clearCopied);
+
+		// Toolbar labels.
+		const toolbarLabel = computed(() => t("message.actionsToolbar"));
+		const replyLabel = computed(() => t("message.reply"));
+		const reactLabel = computed(() => t("message.react"));
+		const editLabel = computed(() => t("message.edit"));
+		const deleteLabel = computed(() => t("message.deleteTitle"));
+		const copyCodeLabel = computed(() => t("message.copyCode"));
+		const copyTextLabel = computed(() => t("message.copyText"));
 
 		// A copy that did not happen says nothing and changes nothing. One
 		// that did is the end of the toolbar (a pointer's stays with the
@@ -225,6 +268,44 @@ export default defineComponent({
 			() => !!props.message.self || props.channel.type === ChanType.CHANNEL
 		);
 
+		// "Show original only" hides the line, chip included, so the toolbar
+		// is the only way back to it.
+		const hiddenTranslation = computed(() => {
+			const entry = store.state.translations[props.message.id];
+
+			return !!entry && entry.status === "done" && entry.hidden;
+		});
+
+		const translateLabel = computed(() =>
+			hiddenTranslation.value
+				? t("translate.action.showTranslation")
+				: t("translate.action.translate")
+		);
+
+		const canTranslate = computed(() => {
+			if (!translationAvailable() || props.message.self) {
+				return false;
+			}
+
+			if (
+				props.message.type !== MessageType.MESSAGE &&
+				props.message.type !== MessageType.ACTION
+			) {
+				return false;
+			}
+
+			const entry = store.state.translations[props.message.id];
+
+			return (
+				!entry ||
+				entry.status === "failed" ||
+				entry.status === "dropped" ||
+				// A line detection left alone: the mark's "Translate anyway".
+				entry.status === "skipped" ||
+				hiddenTranslation.value
+			);
+		});
+
 		// Fetch the catalog chunk while the pointer is on its way to the button,
 		// so the grid is there the moment the picker opens.
 		const preloadEmoji = () => void loadEmojiCatalog().catch(() => undefined);
@@ -232,6 +313,69 @@ export default defineComponent({
 		const reply = () => {
 			startReply(props.channel, props.message);
 			emit("done");
+		};
+
+		// Nothing has placed this line, so the dialog opens on what the
+		// channel is known to speak (the panel's declared languages) rather
+		// than on whatever sorts first; with none declared it opens on the
+		// list, as the chip's picker does for a line with no source.
+		const channelLanguages = computed(
+			() => channelTranslation(props.network, props.channel).languages
+		);
+
+		const translateFrom = (from?: string) =>
+			retranslate(props.network, props.channel, props.message, from);
+
+		/**
+		 * The action's menu: translate now, with the line's language left to
+		 * the detector, or name that language first. Nothing detected this
+		 * line yet -- that is what the action is for -- so the detector's
+		 * runners-up are not on offer the way the chip's menu has them
+		 * (`TranslationLine.vue`); after the translation the chip carries
+		 * them. A keyboard activation gives the menu no pointer to open at,
+		 * so it is anchored under the button, as the chip's is.
+		 */
+		const openMenu = (mouseEvent: MouseEvent) => {
+			const target = mouseEvent.currentTarget as HTMLElement | null;
+			const rect = target?.getBoundingClientRect();
+			const event = rect
+				? new MouseEvent("click", {
+						clientX: rect.left,
+						clientY: rect.bottom,
+						bubbles: false,
+				  })
+				: mouseEvent;
+
+			eventbus.emit("contextmenu:items", {
+				event,
+				items: [
+					{
+						label: t("translate.menu.translateNow"),
+						type: "item",
+						class: "translate-now",
+						action: () => translateFrom(),
+					},
+					{
+						label: t("translate.menu.translateFromPicker"),
+						type: "item",
+						class: "translate-from-pick",
+						action() {
+							sourcePickerOpen.value = true;
+						},
+					},
+				],
+			});
+		};
+
+		const translate = (event: MouseEvent) => {
+			if (hiddenTranslation.value) {
+				// Showing it again must not cost a new translation, and there
+				// is nothing to choose: no menu on this one.
+				showOriginal(props.message.id, false);
+				return;
+			}
+
+			openMenu(event);
 		};
 
 		const edit = () => {
@@ -271,16 +415,16 @@ export default defineComponent({
 
 			const preview = (props.message.text ?? "").slice(0, 120);
 			const who = props.message.self
-				? "your message"
-				: `${props.message.from?.nick}'s message`;
+				? t("message.deleteWhoSelf")
+				: t("message.deleteWhoOther", {nick: props.message.from?.nick ?? ""});
 
 			emit("done");
 			eventbus.emit(
 				"confirm-dialog",
 				{
-					title: "Delete message",
-					text: `Delete ${who}? "${preview}"`,
-					button: "Delete",
+					title: t("message.deleteTitle"),
+					text: t("message.deleteConfirm", {who, preview}),
+					button: t("message.delete"),
 				},
 				(confirmed: boolean) => {
 					if (confirmed) {
@@ -295,21 +439,38 @@ export default defineComponent({
 			() => props.channel.id,
 			() => {
 				pickerOpen.value = false;
+				sourcePickerOpen.value = false;
 			}
 		);
 
 		return {
+			t,
 			pickerOpen,
 			reactButton,
+			sourcePickerOpen,
+			translateButton,
+			channelLanguages,
+			hiddenTranslation,
 			mine,
 			canEdit,
 			canDelete,
+			canTranslate,
 			codeBlocks,
 			copied,
+			toolbarLabel,
+			replyLabel,
+			reactLabel,
+			editLabel,
+			deleteLabel,
+			copyCodeLabel,
+			copyTextLabel,
 			canCopyText,
 			quickButtons,
 			reply,
 			edit,
+			translate,
+			translateFrom,
+			translateLabel,
 			react,
 			preloadEmoji,
 			remove,

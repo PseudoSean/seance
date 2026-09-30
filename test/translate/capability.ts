@@ -1,0 +1,147 @@
+import {expect} from "chai";
+import {
+	GPU_MIN_BUFFER_BYTES,
+	probe,
+	probeOnce,
+	resetProbe,
+	type AdapterLike,
+	type ProbeEnv,
+} from "../../client/js/translate/capability";
+
+function adapter(overrides: Partial<{f16: boolean; maxBuffer: number}> = {}): AdapterLike {
+	const f16 = overrides.f16 ?? true;
+	const maxBuffer = overrides.maxBuffer ?? 4 * 1024 * 1024 * 1024;
+
+	return {
+		features: {has: (name: string) => name === "shader-f16" && f16},
+		limits: {maxBufferSize: maxBuffer, maxStorageBufferBindingSize: maxBuffer},
+	};
+}
+
+function env(overrides: Partial<ProbeEnv> = {}): ProbeEnv {
+	return {
+		gpu: {requestAdapter: () => Promise.resolve(adapter())},
+		deviceMemory: 8,
+		storage: {estimate: () => Promise.resolve({quota: 50 * 1024 * 1024 * 1024})},
+		wasmSimd: true,
+		...overrides,
+	};
+}
+
+describe("translate/capability", () => {
+	afterEach(() => resetProbe());
+
+	it("rates a capable device gpu with no reasons", async () => {
+		const cap = await probe(env());
+
+		expect(cap.tier).to.equal("gpu");
+		expect(cap.reasons).to.deep.equal([]);
+		expect(cap.f16).to.equal(true);
+		expect(cap.deviceMemoryGiB).to.equal(8);
+		expect(cap.storageQuotaBytes).to.equal(50 * 1024 * 1024 * 1024);
+	});
+
+	it("is cpu without WebGPU and reports the code why", async () => {
+		const cap = await probe(env({gpu: null}));
+
+		expect(cap.tier).to.equal("cpu");
+		expect(cap.reasons).to.deep.equal(["NO_WEBGPU"]);
+	});
+
+	it("names the insecure origin as the reason there is no WebGPU", async () => {
+		// Plain HTTP away from localhost: isSecureContext is false and
+		// navigator.gpu does not exist at all. The reason says what to do
+		// about it, not just that the API is missing.
+		const cap = await probe(env({gpu: null, secureContext: false}));
+
+		expect(cap.tier).to.equal("cpu");
+		expect(cap.reasons).to.deep.equal(["INSECURE_ORIGIN"]);
+	});
+
+	it("a secure context without WebGPU still says plain no WebGPU", async () => {
+		expect((await probe(env({gpu: null, secureContext: true}))).reasons).to.deep.equal([
+			"NO_WEBGPU",
+		]);
+		// Unknown (tests, odd embeddings) behaves as today.
+		expect((await probe(env({gpu: null, secureContext: undefined}))).reasons).to.deep.equal([
+			"NO_WEBGPU",
+		]);
+	});
+
+	it("is cpu when the adapter is missing, has no f16 or too small a buffer", async () => {
+		expect(
+			(await probe(env({gpu: {requestAdapter: () => Promise.resolve(null)}}))).reasons
+		).to.deep.equal(["NO_ADAPTER"]);
+		expect(
+			(
+				await probe(
+					env({gpu: {requestAdapter: () => Promise.resolve(adapter({f16: false}))}})
+				)
+			).reasons
+		).to.deep.equal(["NO_F16"]);
+		expect(
+			(
+				await probe(
+					env({
+						gpu: {
+							requestAdapter: () =>
+								Promise.resolve(adapter({maxBuffer: GPU_MIN_BUFFER_BYTES - 1})),
+						},
+					})
+				)
+			).reasons
+		).to.deep.equal(["SMALL_BUFFER"]);
+	});
+
+	it("rates gpu an adapter whose binding limit is 2 GiB minus the alignment slack", async () => {
+		// Chrome reports maxStorageBufferBindingSize as 2147483644 on most desktop GPUs.
+		const cap = await probe(
+			env({gpu: {requestAdapter: () => Promise.resolve(adapter({maxBuffer: 2147483644}))}})
+		);
+
+		expect(cap.tier).to.equal("gpu");
+		expect(cap.reasons).to.deep.equal([]);
+	});
+
+	it("is none without WebAssembly SIMD, with every reason listed", async () => {
+		const cap = await probe(env({gpu: null, wasmSimd: false}));
+
+		expect(cap.tier).to.equal("none");
+		expect(cap.reasons).to.deep.equal(["NO_WEBGPU", "NO_WASM_SIMD"]);
+	});
+
+	it("survives a throwing adapter request and missing optional APIs", async () => {
+		const cap = await probe(
+			env({
+				gpu: {
+					requestAdapter() {
+						throw new Error("boom");
+					},
+				},
+				deviceMemory: null,
+				storage: null,
+			})
+		);
+
+		expect(cap.tier).to.equal("cpu");
+		expect(cap.reasons).to.deep.equal(["NO_ADAPTER"]);
+		expect(cap.deviceMemoryGiB).to.equal(null);
+		expect(cap.storageQuotaBytes).to.equal(null);
+	});
+
+	it("probeOnce runs the probe a single time per page", async () => {
+		let calls = 0;
+		const e = env({
+			gpu: {
+				requestAdapter() {
+					calls++;
+					return Promise.resolve(adapter());
+				},
+			},
+		});
+
+		await probeOnce(e);
+		await probeOnce(e);
+		expect(calls).to.equal(1);
+	});
+});
