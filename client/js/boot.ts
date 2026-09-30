@@ -31,7 +31,7 @@ import {installNativeHooks} from "./native";
 import {installForegroundHooks} from "./foreground";
 import {installViewportHooks} from "./helpers/viewport";
 import {installThemeSceneHooks} from "./themeScene";
-import {onLaunch} from "./pwa";
+import {onLaunch, openInstallGuideAtStart} from "./pwa";
 import {DEV_I18N} from "./i18n/core";
 // Also registers the IRC layer's bus handlers (input, names, more, network:*).
 import {autoconnectSavedNetworks, clientForNetwork, createNetwork} from "./irc/manager";
@@ -157,6 +157,10 @@ export async function boot(): Promise<void> {
 			await navigate("Connect");
 		}
 	}
+
+	// The install guide, over whatever page opened: it is a modal, so it
+	// goes up before a network's announce can move the view under it.
+	openInstallGuideAtStart();
 
 	// Startup owns autoconnect. Navigating to a screen must never create a
 	// connection as a side effect (the old Connect-screen hook did exactly

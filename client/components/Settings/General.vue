@@ -1,6 +1,6 @@
 <template>
 	<div>
-		<div v-if="canRegisterProtocol || store.state.installPromptAvailable">
+		<div v-if="canRegisterProtocol || store.state.installPromptAvailable || canShowGuide">
 			<h2>{{ t("settings.general.nativeApp") }}</h2>
 			<button
 				v-if="store.state.installPromptAvailable"
@@ -17,6 +17,15 @@
 				@click.prevent="registerProtocol"
 			>
 				{{ t("settings.general.openLinks", {appName}) }}
+			</button>
+			<button
+				v-if="canShowGuide"
+				id="show-install-guide"
+				type="button"
+				class="btn"
+				@click.prevent="showInstallGuide"
+			>
+				How to install {{ appName }}
 			</button>
 		</div>
 		<div v-if="store.state.serverConfiguration?.fileUpload">
@@ -145,7 +154,7 @@
 import {computed, defineComponent, onMounted, ref} from "vue";
 import {useStore} from "../../js/store";
 import {useI18n} from "../../js/i18n";
-import {promptInstall} from "../../js/pwa";
+import {canDescribeInstall, openInstallGuide, promptInstall} from "../../js/pwa";
 import {MAX_MESSAGES, MAX_QUERIES} from "../../js/irc/querylog";
 import eventbus from "../../js/eventbus";
 import {
@@ -187,6 +196,17 @@ export default defineComponent({
 				!!window.navigator.registerProtocolHandler &&
 				!store.state.serverConfiguration?.lockNetwork;
 		});
+
+		// The guide re-opens from here after "don't show this again".
+		const canShowGuide = ref(false);
+
+		onMounted(() => {
+			canShowGuide.value = canDescribeInstall();
+		});
+
+		const showInstallGuide = () => {
+			openInstallGuide();
+		};
 
 		const nativeInstallPrompt = () => {
 			// The store flag (and so the button) clears as soon as the prompt
@@ -364,6 +384,8 @@ export default defineComponent({
 			includePasswordsHelp,
 			fileAriaLabel,
 			canRegisterProtocol,
+			canShowGuide,
+			showInstallGuide,
 			nativeInstallPrompt,
 			registerProtocol,
 			includePasswords,

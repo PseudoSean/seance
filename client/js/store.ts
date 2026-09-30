@@ -123,6 +123,8 @@ export type State = {
 	hasServiceWorker: boolean;
 	/** Chrome offered `beforeinstallprompt` and the app is not installed yet. */
 	installPromptAvailable: boolean;
+	/** The install guide (InstallGuide.vue) is open. */
+	installGuideOpen: boolean;
 	pushNotificationState: string;
 	serverConfiguration: SharedConfiguration | LockedSharedConfiguration | null;
 	sidebarOpen: boolean;
@@ -161,6 +163,7 @@ const state = (): State => ({
 	mentions: [],
 	hasServiceWorker: false,
 	installPromptAvailable: false,
+	installGuideOpen: false,
 	pushNotificationState: "unsupported",
 	serverConfiguration: null,
 	sidebarOpen: false,
@@ -279,6 +282,7 @@ type Mutations = {
 	): void;
 	hasServiceWorker(state: State): void;
 	installPromptAvailable(state: State, available: boolean): void;
+	installGuideOpen(state: State, open: boolean): void;
 	/** A newer build's service worker took over; a reload picks it up. */
 	updateAvailable(state: State): void;
 	pushNotificationState(
@@ -359,6 +363,9 @@ const mutations: Mutations = {
 	},
 	installPromptAvailable(state, available) {
 		state.installPromptAvailable = available;
+	},
+	installGuideOpen(state, open) {
+		state.installGuideOpen = open;
 	},
 	updateAvailable(state) {
 		if (state.serverConfiguration) {
