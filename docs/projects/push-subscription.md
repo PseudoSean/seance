@@ -484,6 +484,48 @@ bell = subscribed; **muted** bell = enabled, not subscribed (the shipped
 font is FA5 solid-only, so the outline variant does not exist — the colour
 separates the states); **bell-slash** = notifications off for the network.
 
+### The dropped duplicate is a silent push (2026-10-01)
+
+"FCM duplicate silently dropped" above was the bug. Chrome enforces
+`userVisibleOnly` per **service-worker registration**: when a push event
+ends, it counts the visible notifications of the registration the push
+arrived on, and a push that leaves none (and has no visible tab of the
+site) spends silent-push budget; once that is gone Chrome shows its own
+"This site has been updated in the background"
+(`push_messaging_notification_manager.cc` `DidCountVisibleNotifications`;
+hiding one does not count either). Since pushes moved to one registration
+per network (`push/<uuid>/`, 2026-09-05) the page's own notification sat on
+the **root** registration, so every push the seen ring dropped was silent —
+and with `AWAY *` for an unfocused or hidden page (2026-09-11) the server
+pushes exactly while a desktop page keeps running in the background. Seen on
+Windows, not Android: a hidden Android page freezes, records nothing, and
+its pushes show.
+
+The fix: for a network this device is subscribed on, the page hands its
+notification to that network's push worker with the message itself
+(`socket-events/msg.ts` → `webpush.pushWorkerFor(uuid)`, the `notification`
+message gaining `message: {msgid, from, text, time, notice}`), and the
+worker shows it exactly as the push would be shown (`showMessage`, the
+push path's own code: tag `push-<target>`, merged by msgid, Mark read and
+Reply, in the same queue as the pushes). The push for the same message
+then finds a notification on its own registration; one that lands first is
+merged into rather than shown twice. Invites, messages without a msgid and
+networks without a subscription keep the root path. A push-only worker
+from before this shows such a payload the per-channel way — still on its
+own registration. The page also closes what it put there: the server's read
+push only follows a message it pushed, so a notification the page showed
+while the account was attended would otherwise outlive the read and come
+back counted in the next push. Opening a conversation, the window coming
+back to an open one, and another session reading one to the end
+(`markread` with nothing unread) send `{type: "read", target}` to the
+network's push worker (`webpush.ts` `readOnWorker`), which closes through
+`closeForTarget` — a message, not a push, so it costs no budget. Left as
+it was: a read relay that closes the last notification is still silent (the gate in nefarious2 2f51539 keeps that to
+one per pushed conversation, as on Android). Harness: "service worker page
+notifications on a push worker"; browser check:
+`tools/scenarios/push-page-notification.mjs` (seeded subscription on the
+faked Push API, a bot's PM over a real ircd).
+
 ## Replying from a notification, and opening it (2026-09-04)
 
 Reported from a phone: a reply typed into a push notification never went
