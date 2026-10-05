@@ -14,6 +14,7 @@ import {
 	nativeListen,
 	nativePlatform,
 	isAndroidShell,
+	isIOSShell,
 } from "./helpers/capacitor";
 import eventbus from "./eventbus";
 import {store} from "./store";
@@ -21,8 +22,32 @@ import {store} from "./store";
 // A link the OS handed the app — `irc:`, `ircs:` or `web+irc:`, the schemes
 // Info.plist claims. Cold, it is the launch URL (`getLaunchUrl`), which
 // boot.ts awaits before it routes, the way a browser page reads `?uri=`.
-// While running it comes through `appUrlOpen`; iOS can report the launch
-// URL that way too, so that one is delivered once.
+// While running it comes through `appUrlOpen`; iOS reports the launch URL
+// that way too, so that one is delivered once (Android never does).
+//
+// The bridge outlives a reload (Settings' restore reloads the page): Android
+// keeps answering `getLaunchUrl` with the intent the activity started with,
+// iOS with the newest link it was handed. The links this page has acted on
+// are noted in sessionStorage, which a reload keeps and a cold start does
+// not, so the next boot does not act on them again.
+const HANDLED_LINK_KEY = "thelounge.launchLink";
+
+function linkHandled(href: string): boolean {
+	try {
+		return window.sessionStorage.getItem(HANDLED_LINK_KEY) === href;
+	} catch {
+		return false;
+	}
+}
+
+function noteLinkHandled(href: string): void {
+	try {
+		window.sessionStorage.setItem(HANDLED_LINK_KEY, href);
+	} catch {
+		// Storage refused: a reload acts on the link again, nothing worse.
+	}
+}
+
 let launchUrl: Promise<string | null> = Promise.resolve(null);
 let launchHref: string | null = null;
 let urlHandler: ((href: string) => void) | null = null;
@@ -96,8 +121,17 @@ export function installNativeHooks(): void {
 	}
 
 	launchUrl = nativeCall<{url?: string}>("App", "getLaunchUrl").then((result) => {
-		launchHref = result?.url || null;
-		return launchHref;
+		const href = result?.url || null;
+
+		if (!href || linkHandled(href)) {
+			return null;
+		}
+
+		noteLinkHandled(href);
+		// Only iOS echoes the launch link through `appUrlOpen`; kept on
+		// Android, the token would swallow a later opening of the same link.
+		launchHref = isIOSShell() ? href : null;
+		return href;
 	});
 
 	nativeListen("App", "appUrlOpen", ({url}: {url?: string}) => {
@@ -113,6 +147,8 @@ export function installNativeHooks(): void {
 				launchHref = null;
 				return;
 			}
+
+			noteLinkHandled(url);
 
 			if (urlHandler) {
 				urlHandler(url);

@@ -25,6 +25,7 @@ import {parseJoinList} from "./irc/client";
 import {ChanState} from "../../shared/types/chan";
 import socket from "./socket";
 import {loadMentions} from "./mentions";
+import {cancelLanding} from "./helpers/lastChannel";
 import storage from "./localStorage";
 import {installNativeHooks, nativeAppReady, nativeLaunchUrl, onNativeUrl} from "./native";
 import {installForegroundHooks} from "./foreground";
@@ -244,6 +245,10 @@ async function handleQueryParams(
 		}
 
 		openSavedTarget(entry, suggestion.join);
+		// The link named one saved network; the others flagged autoconnect
+		// come up as they would have without it (Connect.vue does the same
+		// after its form). The target already exists, so it is skipped.
+		autoconnectSavedNetworks();
 		return true;
 	}
 
@@ -312,6 +317,10 @@ function openSavedTarget(entry: SavedNetwork, join: string): void {
 			wanted.map((chan) => client.findChannel(chan.name)).find((chan) => chan) ??
 			(wanted.length === 0 ? client.lobby : undefined);
 		const stored = focus && store.getters.findChannel(focus.id);
+
+		// The link is where the user asked to go: a remembered conversation
+		// on another network that has not joined yet must not land later.
+		cancelLanding();
 
 		if (stored) {
 			switchToChannel(stored.channel);
