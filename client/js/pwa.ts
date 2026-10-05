@@ -180,7 +180,7 @@ function watchInstallPrompt(): void {
 
 /** True in a Capacitor or Electron shell: there is nothing to install. */
 function isNativeShell(): boolean {
-	return window.Capacitor !== undefined || /Electron\//.test(navigator.userAgent);
+	return isCapacitorShell() || /Electron\//.test(navigator.userAgent);
 }
 
 /**
