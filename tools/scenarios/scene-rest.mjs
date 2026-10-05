@@ -51,6 +51,9 @@ const pct = (x) => `${(x * 100).toFixed(1)} %`;
 
 export default async function run(page) {
 	await page.send("Performance.enable");
+	// A headless page has no focus of its own; this one holds it until the
+	// run blurs it (browser-drive leaves focus alone for every scenario).
+	await page.send("Emulation.setFocusEmulationEnabled", {enabled: true});
 	await page.addInitScript(
 		`try { localStorage.setItem("settings", JSON.stringify({theme: "ps"})); } catch (e) {}`
 	);
@@ -100,6 +103,24 @@ export default async function run(page) {
 		resting(s)
 	);
 
+	// Back on its tab (a tab switch fires no focus): visible again is attended.
+	await page.evaluate(`window.dispatchEvent(new Event("blur"))`);
+	await page.sleep(UNFOCUSED_REST_MS + 1000);
+	s = await page.evaluate(STATE);
+	page.check(`rested before the tab switch (${describe(s)})`, resting(s));
+	await page.evaluate(`(() => {
+		Object.defineProperty(document, "visibilityState", {configurable: true, get: () => "hidden"});
+		document.dispatchEvent(new Event("visibilitychange"));
+		Object.defineProperty(document, "visibilityState", {configurable: true, get: () => "visible"});
+		document.dispatchEvent(new Event("visibilitychange"));
+		delete document.visibilityState;
+	})()`);
+	s = await page.evaluate(STATE);
+	page.check(`hidden and shown again, no input: the scene runs (${describe(s)})`, running(s));
+
+	await page.sleep(UNFOCUSED_REST_MS + 1000);
+	s = await page.evaluate(STATE);
+	page.check(`still without the focus: rested again (${describe(s)})`, resting(s));
 	await page.send("Input.dispatchMouseEvent", {type: "mouseMoved", x: 400, y: 300});
 	s = await page.evaluate(STATE);
 	page.check(`a pointer move: the scene runs again (${describe(s)})`, running(s));

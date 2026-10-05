@@ -300,16 +300,6 @@ export function createAttention(opts: {
  * the browser and would animate, and repaint the glass over it, all day.
  */
 export function installThemeSceneHooks(): void {
-	const sync = () => themeScene.setVisible(document.visibilityState !== "hidden");
-	document.addEventListener("visibilitychange", sync);
-	window.addEventListener("online", () => void themeScene.retry());
-	window.addEventListener("pageshow", (event: PageTransitionEvent) => {
-		if (event.persisted) {
-			themeScene.setVisible(true);
-		}
-	});
-	sync();
-
 	const attention = createAttention({
 		focused: document.hasFocus(),
 		set: (attended) => themeScene.setAttended(attended),
@@ -326,4 +316,27 @@ export function installThemeSceneHooks(): void {
 	for (const type of ["pointermove", "pointerdown", "keydown", "wheel", "touchstart"]) {
 		window.addEventListener(type, onInput, {capture: true, passive: true});
 	}
+
+	const sync = () => {
+		const visible = document.visibilityState !== "hidden";
+
+		// Back on its tab: someone is looking. A tab switch inside a window
+		// fires no focus, so without this a scene that rested while hidden
+		// would stay still until the pointer moved.
+		if (visible) {
+			attention.input();
+		}
+
+		themeScene.setVisible(visible);
+	};
+
+	document.addEventListener("visibilitychange", sync);
+	window.addEventListener("online", () => void themeScene.retry());
+	window.addEventListener("pageshow", (event: PageTransitionEvent) => {
+		if (event.persisted) {
+			attention.input();
+			themeScene.setVisible(true);
+		}
+	});
+	sync();
 }

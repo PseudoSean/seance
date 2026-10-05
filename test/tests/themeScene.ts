@@ -269,6 +269,15 @@ describe("the theme-scene hook (client/js/themeScene.ts)", function () {
 			a.stop();
 		});
 
+		it("counts a page coming back on its tab as input: no focus event needed", function () {
+			const {a, log} = attention(true);
+			clock.tick(IDLE_REST_MS);
+			expect(log).to.deep.equal([false]);
+			a.input(); // installThemeSceneHooks's visibility sync, on a page shown again
+			expect(log).to.deep.equal([false, true]);
+			a.stop();
+		});
+
 		it("leaves no timer once stopped", function () {
 			const {a} = attention(true);
 			a.blur();

@@ -511,11 +511,13 @@ const DISMISS_INSTALL_GUIDE =
 
 /**
  * Keeps a page attended (themeScene.ts createAttention): a theme's scene
- * rests after two minutes without input, and a scenario reads it running. A
- * synthetic pointermove every 30 s is input to that tracker and nothing else
- * listens for a bare Event.
+ * rests 15 s into a window without the focus — which a headless page is —
+ * and a scenario reads it running. A synthetic pointermove every 10 s is
+ * input to that tracker and nothing else listens for a bare Event. Focus
+ * emulation would do it too, but would change what document.hasFocus()
+ * tells every other scenario (notifications, AWAY).
  */
-const KEEP_ATTENDED = 'setInterval(() => window.dispatchEvent(new Event("pointermove")), 30000);';
+const KEEP_ATTENDED = 'setInterval(() => window.dispatchEvent(new Event("pointermove")), 10000);';
 
 /** Browser.grantPermissions, for testing notification-driven flows. */
 async function grantPermissions(permissions, origin) {
@@ -620,11 +622,6 @@ try {
 	if (flags.has("--mobile")) {
 		await send("Emulation.setTouchEmulationEnabled", {enabled: true, maxTouchPoints: 5});
 	}
-
-	// A headless page need not hold the focus, and one without it rests its
-	// scene (themeScene.ts createAttention); a scenario about that rest
-	// exports `sceneRest = true` and drives focus and input itself.
-	await send("Emulation.setFocusEmulationEnabled", {enabled: true});
 
 	if (scenarioPath) {
 		const file = isAbsolute(scenarioPath) ? scenarioPath : resolve(scenarioPath);
