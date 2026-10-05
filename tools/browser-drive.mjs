@@ -509,6 +509,14 @@ async function addInitScript(source) {
 const DISMISS_INSTALL_GUIDE =
 	'try { localStorage.setItem("thelounge.state.installGuide", "dismissed"); } catch (e) {}';
 
+/**
+ * Keeps a page attended (themeScene.ts createAttention): a theme's scene
+ * rests after two minutes without input, and a scenario reads it running. A
+ * synthetic pointermove every 30 s is input to that tracker and nothing else
+ * listens for a bare Event.
+ */
+const KEEP_ATTENDED = 'setInterval(() => window.dispatchEvent(new Event("pointermove")), 30000);';
+
 /** Browser.grantPermissions, for testing notification-driven flows. */
 async function grantPermissions(permissions, origin) {
 	await send("Browser.grantPermissions", {
@@ -613,6 +621,11 @@ try {
 		await send("Emulation.setTouchEmulationEnabled", {enabled: true, maxTouchPoints: 5});
 	}
 
+	// A headless page need not hold the focus, and one without it rests its
+	// scene (themeScene.ts createAttention); a scenario about that rest
+	// exports `sceneRest = true` and drives focus and input itself.
+	await send("Emulation.setFocusEmulationEnabled", {enabled: true});
+
 	if (scenarioPath) {
 		const file = isAbsolute(scenarioPath) ? scenarioPath : resolve(scenarioPath);
 		const scenario = await import(pathToFileURL(file).href);
@@ -637,6 +650,10 @@ try {
 			await addInitScript(DISMISS_INSTALL_GUIDE);
 		}
 
+		if (scenario.sceneRest !== true) {
+			await addInitScript(KEEP_ATTENDED);
+		}
+
 		note(`scenario ${scenarioPath}${page.url ? ` on ${page.url}` : ""}`);
 		await run(page);
 	} else {
@@ -645,6 +662,7 @@ try {
 		}
 
 		await addInitScript(DISMISS_INSTALL_GUIDE);
+		await addInitScript(KEEP_ATTENDED);
 		await goto(page.url);
 		note(`watching ${page.url} for ${stayMs}ms (Ctrl-C to stop)`);
 		await sleep(stayMs);

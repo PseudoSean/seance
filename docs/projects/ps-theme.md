@@ -350,6 +350,7 @@ Rules:
 - No script per frame. The scene updates once a minute and when the page becomes visible.
 - Only the weather that is happening exists in the page: rain drops are built on rainy days, not hidden on clear ones.
 - The page hidden means the scene stopped: all its animations paused, SVG animations paused, no timer.
+- A visible page nobody attends to rests the scene: still as a query's (all its animations paused, SVG animations paused), the minute's tick kept so the colours stay on the hour. Nobody attends 15 s after the window loses the focus, or after 2 minutes without pointer, key, wheel or touch input; the focus or any input runs it again from where it stood (`themeScene.ts` `createAttention`, §10.2).
 - Nothing animates unseen: a layer with a window (the stars, the fireflies and the smoke by day, the sun once it is down, the skeins by day, a flock past the night's count, the buzzard, the larks, the seeds while the wind shows none, the heat band) is out of the render tree outside it, its SMIL paused, rather than animating at opacity 0. It goes once its fade is over and comes back before it fades in (`layers.ts`, §10.1).
 - Backdrop blur only on the chrome's glass panels and chips, never on the scene or on `#status-bar-tint`.
 - Under the phone layout (`PHONE_LAYOUT_QUERY`), particle and firefly counts are halved.
@@ -617,6 +618,18 @@ Against the unblurred build the three overlay checks failed, and nothing else ne
 
 - **Per round** the new build read −5.7, −1.5 and −9.7 points, a direction a static layer cannot explain by its own work; the main thread's time per frame, +0.1 ms, is the figure. The frames reached the screen 16.7 ms apart in every run.
 - **The host moved again**: the base reads 95.5 % today where Task 3's new build read 92.8 % on the same scene; every figure here is relative to its own interleaved base.
+
+### 10.2 The rest on a page nobody attends to (2026-10-05)
+
+**Why.** The user, on 2026-10-05: the scene is "relatively fine on a mobile device as they stop animating when in the background, but it's not always caught on a desktop machine", with the frame rate and the battery use noticeable on desktops and laptops. A phone switching apps hides the page; a desktop window behind other windows, on a second screen or simply left alone stays `visible` to the browser (Chromium's occlusion tracking reports some cases, not all, and none on Linux), so the scene ran at full rate, and every frame moved what the glass blurs, so the backdrop filter ran again too.
+
+**What.** The theme-scene hook carries a third fact beside visibility and the view: `attended` (`SceneHostState`). `createAttention` sets it false 15 s after the window loses the focus (`UNFOCUSED_REST_MS`) or after 2 minutes with the focus and no input (`IDLE_REST_MS`), and true at once on the focus or any input (a pointer over a window without the focus counts: someone is looking at it). The scene treats a page nobody attends to as it treats a query: `ps-paused` and every SVG clock paused, its minute's tick still running. It is not frosted, and it resumes from where it stood, so nothing jumps. The constants are the scene's own, not presence.ts's `UNFOCUSED_AWAY_MS`, which is timed against `AWAY *` flapping.
+
+**Measured.** `tools/scenarios/scene-rest.mjs` on a production build (headless Chromium, software compositing, 1280 × 900, the connect form at 20:44 local time): the main thread's task time (CDP `Performance.getMetrics` `TaskDuration` over 5 s) was 32.7 % running and 0.0 % resting, with 0 of 43 SVG clocks going and 0 of 201 CSS animations running. The run also holds the 15 s grace (still running 10 s after a blur), the focus resuming at once, the idle rest at 2 minutes and a pointer move resuming it.
+
+**Automation.** Headless pages need not hold the focus and a long scenario goes minutes without input, so `tools/browser-drive.mjs` turns focus emulation on and dispatches a synthetic `pointermove` every 30 s, unless a scenario exports `sceneRest = true` (only `scene-rest.mjs` does).
+
+**What this does not change.** The scene's cost while someone watches is §10.1's: the visible cuts listed there (the wingbeats, the fireflies, the stars' twinkling, the sun's fire keeping main frames at 60 Hz by day) are still the user's call.
 
 ## 11. Legibility floors
 

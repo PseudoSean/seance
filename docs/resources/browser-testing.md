@@ -103,6 +103,13 @@ all of them); matching errors are still printed, marked `(expected)`, but do
 not fail the run. `sign-in.mjs`, whose subject is a refused login, is the
 example.
 
+A page under the driver is kept **attended**: focus emulation is on and a
+synthetic `pointermove` is dispatched every 30 s, because a theme's scene rests
+on a window without the focus or without input for two minutes
+(`themeScene.ts` `createAttention`) and most scenarios read it running. A
+scenario about that rest exports `sceneRest = true` and drives the focus and
+input itself (`scene-rest.mjs`).
+
 ```js
 export const url = "http://localhost:8000/";
 // export const allowWsFrameErrors = /after close/;  // only if it disconnects
