@@ -3416,6 +3416,10 @@ describe("the ps theme's clouds and weather (plan 3 task 4, spec §5.1, §5.5)",
 		expect(flash).to.match(/91%\s*\{\s*opacity:\s*0\.5;/);
 	});
 
+	it("never holds the lightning lit: a stopped scene does not show it", function () {
+		expect(valueOf(`${S}.ps-paused .ps-flash`, "visibility")).to.equal("hidden");
+	});
+
 	it("moves the rain, the snow and the seeds in cqw/cqh from the mockup's 1180 × 700 window", function () {
 		expect(valueOf(`${S} .ps-rain i`, "animation")).to.equal(
 			"ps-drop var(--rd) linear var(--rdl) infinite"

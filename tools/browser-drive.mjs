@@ -500,6 +500,16 @@ async function addInitScript(source) {
 const DISMISS_INSTALL_GUIDE =
 	'try { localStorage.setItem("thelounge.state.installGuide", "dismissed"); } catch (e) {}';
 
+/**
+ * Keeps a page attended (themeScene.ts createAttention): a theme's scene
+ * rests 15 s into a window without the focus — which a headless page is —
+ * and a scenario reads it running. A synthetic pointermove every 10 s is
+ * input to that tracker and nothing else listens for a bare Event. Focus
+ * emulation would do it too, but would change what document.hasFocus()
+ * tells every other scenario (notifications, AWAY).
+ */
+const KEEP_ATTENDED = 'setInterval(() => window.dispatchEvent(new Event("pointermove")), 10000);';
+
 /** Browser.grantPermissions, for testing notification-driven flows. */
 async function grantPermissions(permissions, origin) {
 	await send("Browser.grantPermissions", {
@@ -628,6 +638,10 @@ try {
 			await addInitScript(DISMISS_INSTALL_GUIDE);
 		}
 
+		if (scenario.sceneRest !== true) {
+			await addInitScript(KEEP_ATTENDED);
+		}
+
 		note(`scenario ${scenarioPath}${page.url ? ` on ${page.url}` : ""}`);
 		await run(page);
 	} else {
@@ -636,6 +650,7 @@ try {
 		}
 
 		await addInitScript(DISMISS_INSTALL_GUIDE);
+		await addInitScript(KEEP_ATTENDED);
 		await goto(page.url);
 		note(`watching ${page.url} for ${stayMs}ms (Ctrl-C to stop)`);
 		await sleep(stayMs);

@@ -1,7 +1,11 @@
 import {expect} from "chai";
+import sinon from "sinon";
 import {
+	createAttention,
 	createSceneHost,
+	IDLE_REST_MS,
 	SCENES,
+	UNFOCUSED_REST_MS,
 	type SceneHandle,
 	type SceneHostState,
 	type SceneLoader,
@@ -17,7 +21,8 @@ function fakeScene() {
 		mount(root, state): SceneHandle {
 			log.push(`mount ${root === ROOT} ${state.visible} ${state.view}`);
 			return {
-				update: (s: SceneHostState) => log.push(`update ${s.visible} ${s.view}`),
+				update: (s: SceneHostState) =>
+					log.push(`update ${s.visible}${s.attended ? "" : " resting"} ${s.view}`),
 				destroy: () => log.push("destroy"),
 			};
 		},
@@ -73,7 +78,12 @@ function rejectOnceThenHang(mod: SceneModule) {
 }
 
 const host = (loaders: Record<string, SceneLoader>, warn?: (m: string, e: unknown) => void) =>
-	createSceneHost({root: () => ROOT, loaders, state: {visible: true, view: "channel"}, warn});
+	createSceneHost({
+		root: () => ROOT,
+		loaders,
+		state: {visible: true, attended: true, view: "channel"},
+		warn,
+	});
 
 describe("the theme-scene hook (client/js/themeScene.ts)", function () {
 	it("has a scene for ps and for no other theme", function () {
@@ -156,7 +166,7 @@ describe("the theme-scene hook (client/js/themeScene.ts)", function () {
 		const h = createSceneHost({
 			root: () => fakeRoot,
 			loaders: {ps: () => Promise.resolve(throwing)},
-			state: {visible: true, view: "channel"},
+			state: {visible: true, attended: true, view: "channel"},
 			warn: (m) => warnings.push(m),
 		});
 		await h.setTheme("ps");
@@ -181,6 +191,101 @@ describe("the theme-scene hook (client/js/themeScene.ts)", function () {
 		]);
 	});
 
+	it("forwards attention to the mounted scene, only when it changes", async function () {
+		const {log, mod} = fakeScene();
+		const h = host({ps: () => Promise.resolve(mod)});
+		h.setAttended(false);
+		await h.setTheme("ps");
+		h.setAttended(false);
+		h.setAttended(true);
+		h.setAttended(true);
+		expect(log).to.deep.equal(["mount true true channel", "update true channel"]);
+	});
+
+	describe("attention (createAttention)", function () {
+		let clock: sinon.SinonFakeTimers;
+
+		beforeEach(function () {
+			clock = sinon.useFakeTimers();
+		});
+
+		afterEach(function () {
+			clock.restore();
+		});
+
+		const attention = (focused: boolean) => {
+			const log: boolean[] = [];
+			const a = createAttention({
+				focused,
+				set: (attended) => log.push(attended),
+				now: () => Date.now(),
+				after(ms, fn) {
+					const id = setTimeout(fn, ms);
+					return () => clearTimeout(id);
+				},
+			});
+			return {a, log};
+		};
+
+		it("rests a focused page after IDLE_REST_MS without input, and any input wakes it", function () {
+			const {a, log} = attention(true);
+			clock.tick(IDLE_REST_MS - 1000);
+			a.input(); // counts the rest from here
+			clock.tick(IDLE_REST_MS - 1);
+			expect(log).to.deep.equal([]);
+			clock.tick(1);
+			expect(log).to.deep.equal([false]);
+			a.input();
+			a.input();
+			expect(log).to.deep.equal([false, true]);
+			clock.tick(IDLE_REST_MS);
+			expect(log).to.deep.equal([false, true, false]);
+			a.stop();
+		});
+
+		it("rests UNFOCUSED_REST_MS after the window loses the focus, and the focus wakes it at once", function () {
+			const {a, log} = attention(true);
+			clock.tick(5000);
+			a.blur();
+			clock.tick(UNFOCUSED_REST_MS - 1);
+			expect(log).to.deep.equal([]);
+			clock.tick(1);
+			expect(log).to.deep.equal([false]);
+			a.focus();
+			expect(log).to.deep.equal([false, true]);
+			clock.tick(UNFOCUSED_REST_MS);
+			expect(log, "focused again: the long delay").to.deep.equal([false, true]);
+			a.stop();
+		});
+
+		it("counts a pointer over a window without the focus as attending, for the short delay", function () {
+			const {a, log} = attention(false);
+			clock.tick(UNFOCUSED_REST_MS);
+			expect(log).to.deep.equal([false]);
+			a.input();
+			expect(log).to.deep.equal([false, true]);
+			clock.tick(UNFOCUSED_REST_MS);
+			expect(log).to.deep.equal([false, true, false]);
+			a.stop();
+		});
+
+		it("counts a page coming back on its tab as input: no focus event needed", function () {
+			const {a, log} = attention(true);
+			clock.tick(IDLE_REST_MS);
+			expect(log).to.deep.equal([false]);
+			a.input(); // installThemeSceneHooks's visibility sync, on a page shown again
+			expect(log).to.deep.equal([false, true]);
+			a.stop();
+		});
+
+		it("leaves no timer once stopped", function () {
+			const {a} = attention(true);
+			a.blur();
+			a.stop();
+			expect(clock.countTimers()).to.equal(0);
+		});
+	});
+
 	describe("retrying a failed scene", function () {
 		it("mounts the scene when retry() is called after a failed load", async function () {
 			const {log, mod} = fakeScene();
@@ -203,7 +308,7 @@ describe("the theme-scene hook (client/js/themeScene.ts)", function () {
 			const h = createSceneHost({
 				root: () => ROOT,
 				loaders: {ps: rejectOnceThenResolve(mod)},
-				state: {visible: false, view: "channel"},
+				state: {visible: false, attended: true, view: "channel"},
 				warn: (m) => warnings.push(m),
 			});
 			await h.setTheme("ps");

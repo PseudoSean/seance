@@ -4,7 +4,8 @@
  * scene module mounted into #theme-scene (client/index.html) when it is applied,
  * and destroyed when another theme is; every other theme loads nothing. The
  * hook tells a scene only what any theme could want: whether the page is
- * visible, and what kind of conversation is open. It never reads a colour or a
+ * visible, whether anyone is attending to it (createAttention), and what kind
+ * of conversation is open. It never reads a colour or a
  * time. It touches the document only inside functions, so mocha loads it.
  */
 
@@ -12,6 +13,13 @@ export type SceneView = "channel" | "query" | "other";
 
 export interface SceneHostState {
 	visible: boolean;
+	/**
+	 * Someone is attending to the page: it has the focus or was used lately
+	 * (createAttention). A visible page nobody attends to is a desktop window
+	 * left behind others or on a second screen, which no `visibilitychange`
+	 * reports; a scene keeps it still.
+	 */
+	attended: boolean;
 	view: SceneView;
 }
 
@@ -34,6 +42,7 @@ export const SCENES: Readonly<Record<string, SceneLoader>> = {
 export interface SceneHost {
 	setTheme(name: string): Promise<void>;
 	setVisible(visible: boolean): void;
+	setAttended(attended: boolean): void;
 	setView(view: SceneView): void;
 	/**
 	 * Re-attempts the load of the currently-asked theme's scene, if its last
@@ -163,6 +172,13 @@ export function createSceneHost(opts: {
 			}
 		},
 
+		setAttended(attended: boolean): void {
+			if (state.attended !== attended) {
+				state.attended = attended;
+				handle?.update({...state});
+			}
+		},
+
 		setView(view: SceneView): void {
 			if (state.view === view) {
 				return;
@@ -180,23 +196,145 @@ export function createSceneHost(opts: {
 export const themeScene: SceneHost = createSceneHost({
 	root: () => document.getElementById("theme-scene"),
 	loaders: SCENES,
-	state: {visible: true, view: "other"},
+	state: {visible: true, attended: true, view: "other"},
 	warn: (message, error) => console.warn(message, error), // eslint-disable-line no-console
 });
+
+/** A window without the focus rests its scene after this long (a visible window behind others, on another screen). */
+export const UNFOCUSED_REST_MS = 15_000;
+
+/** A focused window with no input (pointer, key, wheel, touch) rests its scene after this long. */
+export const IDLE_REST_MS = 120_000;
+
+export interface Attention {
+	/** The window took the focus: attended at once. */
+	focus(): void;
+	/** The window lost the focus: unattended after UNFOCUSED_REST_MS without input. */
+	blur(): void;
+	/** Any input: attended at once, and the rest is counted from now. */
+	input(): void;
+	stop(): void;
+}
+
+/**
+ * Whether anyone is attending to a visible page, for the scene's sake (not the
+ * IRC presence's, whose own timing is about `AWAY *` flapping). Attended while
+ * the last input — or the focus changing — is newer than the rest delay: two
+ * minutes with the focus, fifteen seconds without. Input over a window without
+ * the focus counts too: a pointer over it is someone looking at it. One timer,
+ * re-armed by its own expiry rather than by every pointer move. `now` must be
+ * monotonic (performance.now), not the wall clock a scene may be shown.
+ */
+export function createAttention(opts: {
+	focused: boolean;
+	set(attended: boolean): void;
+	now(): number;
+	after(ms: number, fn: () => void): () => void;
+}): Attention {
+	let focused = opts.focused;
+	let last = opts.now();
+	let attended = true;
+	let cancel: (() => void) | undefined;
+
+	const delay = () => (focused ? IDLE_REST_MS : UNFOCUSED_REST_MS);
+
+	// The one timer, at the moment the rest is due; it re-arms itself while
+	// input has moved that moment on.
+	const arm = (): void => {
+		cancel?.();
+		cancel = opts.after(Math.max(0, last + delay() - opts.now()), () => {
+			cancel = undefined;
+
+			if (last + delay() > opts.now()) {
+				arm();
+			} else if (attended) {
+				attended = false;
+				opts.set(false);
+			}
+		});
+	};
+
+	const touch = () => {
+		last = opts.now();
+
+		if (!attended) {
+			attended = true;
+			opts.set(true);
+		}
+	};
+
+	arm();
+
+	return {
+		focus() {
+			focused = true;
+			touch();
+			arm();
+		},
+		blur() {
+			focused = false;
+			last = opts.now();
+			arm(); // the shorter delay, counted from the blur
+		},
+		input() {
+			touch();
+
+			if (!cancel) {
+				arm();
+			}
+		},
+		stop() {
+			cancel?.();
+			cancel = undefined;
+		},
+	};
+}
 
 /**
  * Follow the page's visibility and connectivity: a hidden page's scene stops
  * and catches up on return (also on a bfcache restore, which fires no
  * `visibilitychange`), and a scene that failed to load — offline, a failed
  * chunk — is retried once the network is back, so it does not wait for a
- * reload.
+ * reload. A visible page nobody attends to (createAttention) rests its scene
+ * too: a desktop window behind others or on another screen stays visible to
+ * the browser and would animate, and repaint the glass over it, all day.
  */
 export function installThemeSceneHooks(): void {
-	const sync = () => themeScene.setVisible(document.visibilityState !== "hidden");
+	const attention = createAttention({
+		focused: document.hasFocus(),
+		set: (attended) => themeScene.setAttended(attended),
+		now: () => performance.now(),
+		after(ms, fn) {
+			const id = window.setTimeout(fn, ms);
+			return () => window.clearTimeout(id);
+		},
+	});
+	const onInput = () => attention.input();
+	window.addEventListener("focus", () => attention.focus());
+	window.addEventListener("blur", () => attention.blur());
+
+	for (const type of ["pointermove", "pointerdown", "keydown", "wheel", "touchstart"]) {
+		window.addEventListener(type, onInput, {capture: true, passive: true});
+	}
+
+	const sync = () => {
+		const visible = document.visibilityState !== "hidden";
+
+		// Back on its tab: someone is looking. A tab switch inside a window
+		// fires no focus, so without this a scene that rested while hidden
+		// would stay still until the pointer moved.
+		if (visible) {
+			attention.input();
+		}
+
+		themeScene.setVisible(visible);
+	};
+
 	document.addEventListener("visibilitychange", sync);
 	window.addEventListener("online", () => void themeScene.retry());
 	window.addEventListener("pageshow", (event: PageTransitionEvent) => {
 		if (event.persisted) {
+			attention.input();
 			themeScene.setVisible(true);
 		}
 	});
