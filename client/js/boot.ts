@@ -31,6 +31,8 @@ import {installNativeHooks} from "./native";
 import {installForegroundHooks} from "./foreground";
 import {installViewportHooks} from "./helpers/viewport";
 import {installThemeSceneHooks} from "./themeScene";
+import {installInputModality} from "./helpers/inputModality";
+import {hasVirtualKeyboard} from "./helpers/device";
 import {onLaunch, openInstallGuideAtStart} from "./pwa";
 import {DEV_I18N} from "./i18n/core";
 // Also registers the IRC layer's bus handlers (input, names, more, network:*).
@@ -106,6 +108,7 @@ export async function boot(): Promise<void> {
 	installNativeHooks();
 	installForegroundHooks();
 	installThemeSceneHooks();
+	installInputModality(document.documentElement, hasVirtualKeyboard() ? "touch" : "pointer");
 	installViewportHooks();
 
 	// Development only: the bundler folds DEV_I18N (core.ts), so a
