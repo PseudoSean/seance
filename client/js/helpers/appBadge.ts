@@ -17,8 +17,20 @@ interface BadgePermission {
 
 let nativeGranted: boolean | null = null;
 
-async function setNativeBadge(count: number): Promise<void> {
-	if (count <= 0) {
+// The count the store wants shown, and the bridge calls that show it, one at
+// a time: a set held up by the iOS permission sheet must not land after a
+// clear that came later. Each turn reads the count when it runs, so a turn
+// that has been overtaken writes the newer count, never its own.
+let wantedCount = 0;
+let nativeQueue: Promise<void> = Promise.resolve();
+
+function setNativeBadge(count: number): void {
+	wantedCount = count;
+	nativeQueue = nativeQueue.then(applyNativeBadge).catch(() => {});
+}
+
+async function applyNativeBadge(): Promise<void> {
+	if (wantedCount <= 0) {
 		// Harmless without the permission: there is no badge to clear.
 		await nativeCall("Badge", "clear");
 		return;
@@ -28,8 +40,9 @@ async function setNativeBadge(count: number): Promise<void> {
 		nativeGranted = await askBadgePermission();
 	}
 
-	if (nativeGranted) {
-		await nativeCall("Badge", "set", {count});
+	// Zero by now means a clear is queued behind this turn.
+	if (nativeGranted && wantedCount > 0) {
+		await nativeCall("Badge", "set", {count: wantedCount});
 	}
 }
 
@@ -47,7 +60,7 @@ async function askBadgePermission(): Promise<boolean | null> {
 
 export function setAppBadge(count: number): void {
 	if (isNativeShell()) {
-		void setNativeBadge(count);
+		setNativeBadge(count);
 		return;
 	}
 

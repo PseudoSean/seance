@@ -53,13 +53,16 @@ store.watch(
 	}
 );
 
-// Toggles the favicon to red when there are unread notifications
+// Toggles the favicon to red when there are unread notifications. Immediate:
+// the shell's badge plugin keeps the last count across a restart, and the
+// count it kept is not this page's until the page has said so.
 store.watch(
 	(_, getters: CallableGetters) => getters.highlightCount,
 	(highlightCount) => {
 		favicon?.setAttribute("href", highlightCount > 0 ? faviconAlerted : faviconNormal);
 		setAppBadge(highlightCount);
-	}
+	},
+	{immediate: true}
 );
 
 VueApp.config.errorHandler = function (e) {
