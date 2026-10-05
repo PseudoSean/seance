@@ -247,6 +247,66 @@ export default async function run(page) {
 		Number.isFinite(ios.sheet) && android.sheet - ios.sheet === BOTTOM
 	);
 
+	// 3. Landscape: the notch is a side inset and the top one is 0. The
+	// sidebar and its dimmer are the phone layout's, so the page goes narrow.
+	await page.send("Emulation.setDeviceMetricsOverride", {
+		width: 390,
+		height: 844,
+		deviceScaleFactor: 1,
+		mobile: true,
+	});
+	const webSidebar = await page.evaluate(px("#sidebar", "width"));
+	await page.evaluate(setShell("ios"));
+	await page.evaluate(`(() => {
+		const root = document.documentElement.style;
+		root.setProperty("--safe-area-inset-top", "0px");
+		root.setProperty("--safe-area-inset-left", "${TOP}px");
+		root.setProperty("--safe-area-inset-right", "${TOP}px");
+	})()`);
+	const side = {
+		sidebarPad: await page.evaluate(px("#sidebar", "paddingLeft")),
+		sidebarWidth: await page.evaluate(px("#sidebar", "width")),
+		overlayLeft: await page.evaluate(px("#sidebar-overlay", "left")),
+		overlayRight: await page.evaluate(px("#sidebar-overlay", "right")),
+	};
+	// The viewer's controls exist only while an image is open: probe each.
+	const viewerControl = (cls, property) => `(() => {
+		const el = document.createElement("button");
+		el.className = ${JSON.stringify(cls)};
+		document.querySelector("#image-viewer").append(el);
+		const value = parseFloat(getComputedStyle(el)[${JSON.stringify(property)}]);
+		el.remove();
+		return value;
+	})()`;
+	const viewer = {
+		closeRight: await page.evaluate(viewerControl("close-btn", "right")),
+		openBottom: await page.evaluate(viewerControl("open-btn", "bottom")),
+		previousLeft: await page.evaluate(viewerControl("previous-image-btn", "left")),
+		nextRight: await page.evaluate(viewerControl("next-image-btn", "right")),
+	};
+	await page.send("Emulation.clearDeviceMetricsOverride");
+	await page.evaluate(`(() => {
+		const root = document.documentElement.style;
+		root.removeProperty("--safe-area-inset-left");
+		root.removeProperty("--safe-area-inset-right");
+	})()`);
+
+	page.check(
+		`the sidebar pads the notch and keeps its width (${side.sidebarPad}px, ${side.sidebarWidth} vs ${webSidebar})`,
+		side.sidebarPad === TOP && side.sidebarWidth - TOP === webSidebar
+	);
+	page.check(
+		`the dimmer starts beside the notch (${side.overlayLeft}/${side.overlayRight}px)`,
+		side.overlayLeft === TOP && side.overlayRight === TOP
+	);
+	page.check(
+		`the image viewer's controls clear the insets (${JSON.stringify(viewer)})`,
+		viewer.closeRight === TOP &&
+			viewer.openBottom === BOTTOM &&
+			viewer.previousLeft === TOP &&
+			viewer.nextRight === TOP
+	);
+
 	await page.evaluate(setShell(null));
 	page.check(
 		"the page is itself again with the shell off",

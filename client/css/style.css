@@ -194,6 +194,14 @@ html {
 	}
 }
 
+/* The native shell is not a home-screen web app: its status bar is the
+ * StatusBar plugin's (native.ts) and #viewport starts below it, so there is
+ * nothing for the tint to colour — and in landscape, where the top inset is
+ * 0, it would paint over the sidebar's logo and the chat header. */
+html[data-shell="native"] #status-bar-tint {
+	display: none;
+}
+
 /* The native shell (shells/capacitor, native.ts): its WebView runs under the
  * system bars, so the page keeps clear of them itself. The insets are named
  * once here and every rule below spends them — the inset is env() on iOS,
@@ -4227,24 +4235,32 @@ html[data-shell="native"] #footer {
 	 * absolute child's `height: 100%` is the padding box while its static
 	 * position starts below the padding: the sidebar ran off the bottom by
 	 * the status bar's height and its footer with it. Pin both edges and pad
-	 * the sidebar itself instead, so its logo sits below the clock. */
+	 * the sidebar itself instead, so its logo sits below the clock. In
+	 * landscape the notch is a side inset, and the open sidebar's left edge is
+	 * the screen's: it grows by the inset and pads it, so its background runs
+	 * under the notch and its contents keep their width beside it. */
 	html[data-shell="native"] #sidebar {
 		top: 0;
 		bottom: 0;
 		height: auto;
+		width: calc(var(--sidebar-width) + var(--inset-left));
 		padding-top: var(--inset-top);
 		padding-bottom: var(--inset-outer-bottom);
+		padding-left: var(--inset-left);
 	}
 
 	/* The settings modal and the sidebar's dimmer pin all four edges to
 	 * #viewport the same way, so they too span the padding box: the pane's
 	 * title sat under the clock and its Done button under Android's buttons.
 	 * Both start at the insets instead (the dimmer would only dim the bars'
-	 * bands, which are not the page's to dim). */
+	 * bands, which are not the page's to dim) — the side ones too, which are
+	 * the notch's in landscape. */
 	html[data-shell="native"] #settings.window,
 	html[data-shell="native"] #sidebar-overlay {
 		top: var(--inset-top);
 		bottom: var(--inset-outer-bottom);
+		left: var(--inset-left);
+		right: var(--inset-right);
 
 		/* `.window` is `height: 100%`, which with a moved top runs past the
 		 * bottom edge by the same amount; the two pinned edges size it. */
@@ -4561,6 +4577,33 @@ html[data-shell="native"] #footer {
 
 #image-viewer .next-image-btn {
 	right: 0;
+}
+
+/* The viewer is fixed over the whole screen, the shell's bars and notch
+ * included: its controls keep clear of them. The full bottom inset, not the
+ * outer one — a button under iOS's home indicator loses its taps to it. */
+html[data-shell="native"] #image-viewer .close-btn {
+	top: var(--inset-top);
+	right: var(--inset-right);
+}
+
+html[data-shell="native"] #image-viewer .open-btn {
+	right: var(--inset-right);
+	bottom: var(--inset-bottom);
+}
+
+html[data-shell="native"] #image-viewer .previous-image-btn,
+html[data-shell="native"] #image-viewer .next-image-btn {
+	top: var(--inset-top);
+	bottom: var(--inset-bottom);
+}
+
+html[data-shell="native"] #image-viewer .previous-image-btn {
+	left: var(--inset-left);
+}
+
+html[data-shell="native"] #image-viewer .next-image-btn {
+	right: var(--inset-right);
 }
 
 #image-viewer .close-btn:hover,
