@@ -91,8 +91,12 @@ const config: CapacitorConfig = {
 		// and the app. Its colour is the logo's tile (tools/make-assets.sh
 		// bakes the same into the image), not the theme colour: iOS draws it
 		// before any code runs and cannot know which theme the user picked.
+		// Both hides live in the app bundle, so the plugin's own timer is the
+		// fallback for a bundle that never gets that far: the app is never left
+		// on the launch image.
 		SplashScreen: {
-			launchAutoHide: false,
+			launchAutoHide: true,
+			launchShowDuration: 10000,
 			backgroundColor: "#0D0E14",
 		},
 		// The icon badge is the store's highlight count (helpers/appBadge.ts);
