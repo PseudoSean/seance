@@ -11,15 +11,21 @@
 //   major * 10_000_000 + minor * 100_000 + patch * 1_000 + commits since the tag
 //
 // The last term only separates the builds between two tags (TestFlight wants
-// a fresh number per upload) and is bounded so it can never reach the next
-// patch. Runs before every `cap sync` (`presync` in package.json); a checkout
-// without a matching tag keeps what the projects already say.
+// a fresh number per upload) and is capped at 999 so it can never reach the
+// next patch; past that every build repeats 999, which a store refuses, so
+// the script says so — tag a release. Runs before every `cap sync` (`presync`
+// in package.json); a checkout without a matching tag writes nothing, and the
+// projects fall back to 0.0.0 (1).
 //
-//   ios/App/App.xcodeproj/project.pbxproj   MARKETING_VERSION / CURRENT_PROJECT_VERSION
-//   android/app/build.gradle                versionName / versionCode
+// It writes two untracked files the projects read, never the projects
+// themselves, so a sync leaves the tree as it was:
+//
+//   ios/version.xcconfig         MARKETING_VERSION / CURRENT_PROJECT_VERSION
+//                                (#include?d by debug.xcconfig / release.xcconfig)
+//   android/version.properties   versionName / versionCode (app/build.gradle)
 
 import {execFileSync} from "node:child_process";
-import {readFileSync, writeFileSync} from "node:fs";
+import {existsSync, readFileSync, writeFileSync} from "node:fs";
 import {dirname, resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 
@@ -49,7 +55,15 @@ if (!parts) {
 const [, major, minor, patch, ahead] = parts.map(Number);
 const version = `${major}.${minor}.${patch}`;
 const tag = `v${version}`;
-const since = ahead || 0;
+const SINCE_MAX = 999;
+const since = Math.min(ahead || 0, SINCE_MAX);
+
+if ((ahead || 0) > SINCE_MAX) {
+	console.warn(
+		`stamp-version: ${ahead} commits past ${tag}, counted as ${SINCE_MAX}: ` +
+			"every build repeats this number until the next tag, and a store refuses a repeat"
+	);
+}
 
 // One row per field: its value, what it is worth, and the largest it may be
 // before it would carry into the field above. PLAY_MAX is Play's ceiling on a
@@ -58,7 +72,7 @@ const FIELDS = [
 	{name: "major", value: major, worth: 10_000_000, max: 209},
 	{name: "minor", value: minor, worth: 100_000, max: 99},
 	{name: "patch", value: patch, worth: 1_000, max: 99},
-	{name: "commits since the tag", value: since, worth: 1, max: 999},
+	{name: "commits since the tag", value: since, worth: 1, max: SINCE_MAX},
 ];
 const PLAY_MAX = 2_100_000_000;
 
@@ -78,35 +92,23 @@ if (build > PLAY_MAX) {
 	);
 }
 
-function stamp(file, replacements) {
+/** Write `text` to `file` under the shell, only when it changed. */
+function write(file, text) {
 	const path = resolve(root, file);
-	const original = readFileSync(path, "utf8");
-	let text = original;
 
-	for (const [pattern, replacement] of replacements) {
-		// The stamp target vanishing means the generator changed shape, which
-		// is worth stopping for rather than silently shipping a stale version.
-		if (!pattern.test(text)) {
-			throw new Error(`${file}: ${pattern} not found`);
-		}
-
-		text = text.replace(pattern, replacement);
-	}
-
-	// Only when it actually moved: an identical rewrite still bumps the mtime,
-	// and Xcode regenerates its build description off the project file's stat.
-	if (text !== original) {
+	// An identical rewrite still bumps the mtime, and Xcode regenerates its
+	// build description off the stat of what it reads.
+	if (!existsSync(path) || readFileSync(path, "utf8") !== text) {
 		writeFileSync(path, text);
 	}
 }
 
-stamp("ios/App/App.xcodeproj/project.pbxproj", [
-	[/MARKETING_VERSION = [^;]+;/g, `MARKETING_VERSION = ${version};`],
-	[/CURRENT_PROJECT_VERSION = [^;]+;/g, `CURRENT_PROJECT_VERSION = ${build};`],
-]);
-stamp("android/app/build.gradle", [
-	[/versionName "[^"]*"/, `versionName "${version}"`],
-	[/versionCode \d+/, `versionCode ${build}`],
-]);
+const header = "Written by tools/stamp-version.mjs from `git describe`; untracked.";
+
+write(
+	"ios/version.xcconfig",
+	`// ${header}\nMARKETING_VERSION = ${version}\nCURRENT_PROJECT_VERSION = ${build}\n`
+);
+write("android/version.properties", `# ${header}\nversionName=${version}\nversionCode=${build}\n`);
 
 console.log(`stamp-version: ${version} (${build}), ${tag} +${since}`);

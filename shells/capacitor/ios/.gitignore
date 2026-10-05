@@ -14,3 +14,6 @@ App/App/config.xml
 
 # The local signing identity (see signing.xcconfig.example)
 signing.xcconfig
+
+# The version, written by tools/stamp-version.mjs
+version.xcconfig
