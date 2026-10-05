@@ -4,7 +4,7 @@
 			:id="uid"
 			ref="root"
 			class="reaction-picker"
-			data-escape-close
+			data-escape-close="reaction-picker"
 			:class="{sheet, flipped}"
 			:style="style"
 			role="dialog"
@@ -904,6 +904,12 @@ export default defineComponent({
 
 		const close = () => emit("close");
 
+		const onEscape = (layer: string | null) => {
+			if (layer === "reaction-picker") {
+				close();
+			}
+		};
+
 		// Bubble-phase so the opener can `@mousedown.stop` and toggle instead.
 		const onDocumentMouseDown = (e: MouseEvent) => {
 			if (root.value && !root.value.contains(e.target as Node)) {
@@ -946,7 +952,7 @@ export default defineComponent({
 			window.addEventListener("resize", repositionSettled);
 			window.visualViewport?.addEventListener("resize", repositionSettled);
 			sheetQuery.addEventListener("change", onSheetChange);
-			eventbus.on("escapekey", close);
+			eventbus.on("escapekey", onEscape);
 
 			void nextTick(layoutChanged);
 
@@ -965,7 +971,7 @@ export default defineComponent({
 			window.visualViewport?.removeEventListener("resize", repositionSettled);
 			cancelSettle();
 			sheetQuery.removeEventListener("change", onSheetChange);
-			eventbus.off("escapekey", close);
+			eventbus.off("escapekey", onEscape);
 
 			// Give the keyboard back to where it came from.
 			if (root.value?.contains(document.activeElement)) {

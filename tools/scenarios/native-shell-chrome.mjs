@@ -160,6 +160,38 @@ export default async function run(page) {
 	});
 	page.check("the marker goes with the picker", (await page.evaluate(OPEN_OVERLAYS)) === 0);
 
+	// One press closes one layer: a context menu over the search results goes
+	// and the search stays; the next press leaves the search.
+	const SEARCHING = `!!document.querySelector("#chat .header .title")?.textContent.includes("Searching in")`;
+	await page.fill("#input", "/search inset");
+	await page.evaluate(
+		`document.querySelector("#form").dispatchEvent(new Event("submit", {cancelable: true}))`
+	);
+	await page.waitFor(SEARCHING, {label: "the search results"});
+	await page.waitFor(`document.querySelector("#chat .messages .user")`, {
+		label: "a nick in the results",
+	});
+	// A click on a result jumps to it; the nick's menu is a right-click here.
+	await page.evaluate(`(() => {
+		const nick = document.querySelector("#chat .messages .user");
+		const box = nick.getBoundingClientRect();
+		nick.dispatchEvent(new MouseEvent("contextmenu", {
+			bubbles: true, cancelable: true, clientX: box.left + 2, clientY: box.top + 2,
+		}));
+	})()`);
+	await page.waitFor(`document.querySelector("#context-menu-container")`, {
+		label: "the context menu over the search",
+	});
+	page.check("the search is open under the menu", await page.evaluate(SEARCHING));
+	await pressEscape(page);
+	await page.waitFor(`!document.querySelector("#context-menu-container")`, {
+		label: "the menu to close",
+	});
+	page.check("Escape over the search closes the menu only", await page.evaluate(SEARCHING));
+	await pressEscape(page);
+	await page.waitFor(`!(${SEARCHING})`, {label: "the search to close"});
+	page.check("the next Escape leaves the search", !(await page.evaluate(SEARCHING)));
+
 	// 2. The insets, in the shell, on each platform. What the same page is
 	// without one is the baseline every check below is read against.
 	const webForm = await page.evaluate(px("#form", "paddingBottom"));

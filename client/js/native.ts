@@ -16,7 +16,7 @@ import {
 	isAndroidShell,
 	isIOSShell,
 } from "./helpers/capacitor";
-import eventbus from "./eventbus";
+import {emitEscape, topEscapeLayer} from "./helpers/escapeLayer";
 import {store} from "./store";
 
 // A link the OS handed the app — `irc:`, `ircs:` or `web+irc:`, the schemes
@@ -232,8 +232,9 @@ export function installNativeHooks(): void {
 			return;
 		}
 
-		if (document.querySelector("[data-escape-close]")) {
-			eventbus.emit("escapekey");
+		// The topmost one only (helpers/escapeLayer.ts).
+		if (topEscapeLayer() !== null) {
+			emitEscape();
 			return;
 		}
 

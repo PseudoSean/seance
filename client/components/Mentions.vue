@@ -2,7 +2,7 @@
 	<div
 		v-if="isOpen"
 		id="mentions-popup-container"
-		data-escape-close
+		data-escape-close="mentions"
 		@click="containerClick"
 		@contextmenu="containerClick"
 	>
@@ -226,14 +226,20 @@ export default defineComponent({
 			isOpen.value = false;
 		};
 
+		const onEscape = (layer: string | null) => {
+			if (layer === "mentions") {
+				closePopup();
+			}
+		};
+
 		onMounted(() => {
 			eventbus.on("mentions:toggle", togglePopup);
-			eventbus.on("escapekey", closePopup);
+			eventbus.on("escapekey", onEscape);
 		});
 
 		onUnmounted(() => {
 			eventbus.off("mentions:toggle", togglePopup);
-			eventbus.off("escapekey", closePopup);
+			eventbus.off("escapekey", onEscape);
 		});
 
 		return {
