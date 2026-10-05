@@ -1699,9 +1699,16 @@ strong,
 	display: none;
 }
 
-/* A hidden page's scene is stopped (scene.ts pauses the SVG animations too). */
+/* A stopped scene — a hidden page, a query, a page nobody attends to
+ * (themeScene.ts createAttention) — holds every animation where it stands
+ * (scene.ts pauses the SVG animations too). The lightning alone would be
+ * wrong held: a flicker caught lit would stay lit, so it is not shown. */
 #theme-scene.ps-paused * {
 	animation-play-state: paused !important;
+}
+
+#theme-scene.ps-paused .ps-flash {
+	visibility: hidden;
 }
 
 /* Clear from the message column down to the scene: nothing between them paints.
