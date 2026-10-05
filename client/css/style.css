@@ -4220,6 +4220,7 @@ html[data-shell="native"] #footer {
 		right: 100%; /* its own width off screen, whatever that width is */
 		z-index: 10;
 		transition: transform 160ms;
+		transform: translateZ(0);
 	}
 
 	/* In the native shell #viewport pads its top by the safe area, and an
@@ -4233,7 +4234,6 @@ html[data-shell="native"] #footer {
 		height: auto;
 		padding-top: var(--inset-top);
 		padding-bottom: var(--inset-outer-bottom);
-		transform: translateZ(0);
 	}
 
 	/* The settings modal and the sidebar's dimmer pin all four edges to
