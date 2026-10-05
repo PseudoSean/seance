@@ -11,7 +11,9 @@
  * deck: plains.ts `weatherClouds`), and the root carries its classes
  * (`ps-windy`, `ps-storm`, `ps-hot`) and the skeins' direction (`ps-west`).
  * It keeps the yurt in the message column's far third (placeYurt). All
- * motion is CSS or SVG animation; no script runs per frame. A layer outside
+ * motion is CSS or SVG animation, held paused and advanced together
+ * SCENE_FPS times a second by one timer (stepper.ts) rather than at the
+ * screen's rate. A layer outside
  * its window (the stars by day, the skeins by day, the larks out of season…)
  * is out of the render tree with its SMIL paused, rather than animating at
  * opacity 0 (layers.ts). A hidden page's
@@ -28,6 +30,7 @@ import type {SceneHandle, SceneHostState} from "../../themeScene";
 import {birdsAt, dayBirdsMarkup, skeinsMarkup} from "./birds";
 import {momentAt, rng, type Moment, type MoonPhase, type Weather} from "./engine";
 import {composerAboveGrass, GLASS_TINT_VARS, glassVars} from "./glass";
+import {createStepper} from "./stepper";
 import {bodyOpacity, publishedFor, type Published} from "./grounds";
 import {FADE_MARGIN_MS, GATES, layerGates, liveLayers} from "./layers";
 import {levelsAt, paletteAt, WEATHER, type Palette} from "./palette";
@@ -553,25 +556,38 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 	let timer: number | undefined;
 	let visible = false;
 
-	// Whose SMIL runs while the scene does: nothing in a layer out of the
-	// render tree (layers.ts), and the heat haze only while it bends the
-	// ground (ps-hot). Only the svgs whose state differs are touched.
+	// Every SVG clock stays paused and every CSS animation in the scene is
+	// held: the stepper advances them SCENE_FPS times a second while the
+	// scene runs (stepper.ts). Of the SMIL it steps none in a layer out of
+	// the render tree (layers.ts), and the heat haze's only while it bends
+	// the ground (ps-hot). syncSvgs is called whenever those change.
+	const stepper = createStepper({
+		animations: () =>
+			root
+				.getAnimations({subtree: true})
+				// CSS animations only (a CSSTransition has no animationName).
+				.filter((a): a is CSSAnimation => "animationName" in a),
+		svgs() {
+			const hot = root.classList.contains("ps-hot");
+			return [...root.querySelectorAll("svg")].filter(
+				(svg) => !svg.closest(".ps-off") && (hot || !svg.classList.contains("ps-heat-haze"))
+			);
+		},
+		now: () => performance.now(),
+		after(ms, fn) {
+			const id = window.setTimeout(fn, ms);
+			return () => window.clearTimeout(id);
+		},
+	});
+
 	const syncSvgs = () => {
-		const run = !root.classList.contains("ps-paused");
-		const hot = root.classList.contains("ps-hot");
-
 		for (const svg of root.querySelectorAll("svg")) {
-			const live =
-				run && !svg.closest(".ps-off") && (hot || !svg.classList.contains("ps-heat-haze"));
-
-			if (live === svg.animationsPaused()) {
-				if (live) {
-					svg.unpauseAnimations();
-				} else {
-					svg.pauseAnimations();
-				}
+			if (!svg.animationsPaused()) {
+				svg.pauseAnimations();
 			}
 		}
+
+		stepper.refresh();
 	};
 
 	// The layers with a window (layers.ts): out of the render tree outside it.
@@ -712,6 +728,12 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 	const motion = (run: boolean) => {
 		root.classList.toggle("ps-paused", !run);
 		syncSvgs();
+
+		if (run) {
+			stepper.start();
+		} else {
+			stepper.stop();
+		}
 	};
 
 	// A query's scene is frosted and completely still (spec §5.7): ps.css
@@ -778,6 +800,7 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 	const handle: SceneHandle = {
 		update,
 		destroy() {
+			stepper.stop();
 			window.clearTimeout(timer);
 			timer = undefined;
 			gates.stop();

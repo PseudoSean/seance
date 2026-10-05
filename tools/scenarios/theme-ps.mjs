@@ -752,6 +752,9 @@ const VISIBILITY = (state) => `(() => {
 	document.dispatchEvent(new Event("visibilitychange"));
 })()`;
 
+/** How far apart SCENE_STATE samples the scene's clocks to tell what moves: several of the stepper's 24 frames a second. */
+const MOTION_SAMPLE_MS = 250;
+
 /**
  * The scene and what it publishes, in one read. `layers` are the scene's
  * layers by class (the children of its one wrapper, `.ps-frost`, which
@@ -760,14 +763,26 @@ const VISIBILITY = (state) => `(() => {
  * `land`, `blades`, `yurt` and `ground` say whether those are rendered
  * (checkVisibility: in the page is not enough, a hidden ground holds them
  * too); `svgs` is each SVG's clock and whether it sits in a layer that is
- * out, or is the heat haze; `ink` is the colour of someone else's message
- * text (the neighbour's), null when there is none; `running` counts the CSS
- * animations in the scene that are playing; `meta` is the browser's
+ * out, or is the heat haze, `paused` there meaning its clock did not move
+ * over MOTION_SAMPLE_MS; `ink` is the colour of someone else's message
+ * text (the neighbour's), null when there is none; `running` counts the
+ * animations in the scene whose clock moved over the same span; `meta` is the browser's
  * theme-color; the clock is the page's own, under whatever time zone is
  * emulated.
  */
-const SCENE_STATE = `(() => {
+const SCENE_STATE = `(async () => {
 	const s = document.getElementById("theme-scene"), h = document.documentElement;
+	// What moves (stepper.ts): every animation and SVG clock is held and
+	// stepped 24 times a second, so playState and animationsPaused() say
+	// nothing; a clock moving between two samples ${MOTION_SAMPLE_MS} ms apart does.
+	const anims = s.getAnimations({subtree: true});
+	const animAt = anims.map((a) => a.currentTime);
+	const allSvgs = [...s.querySelectorAll("svg")];
+	const svgAt = allSvgs.map((v) => v.getCurrentTime());
+	// Where each SVG stands, read with its first sample: a layer may leave
+	// the page inside the window (its fade's clean-up), after it moved.
+	const svgOff = allSvgs.map((v) => !!v.closest(".ps-off"));
+	await new Promise((r) => setTimeout(r, ${MOTION_SAMPLE_MS}));
 	const content = ${OTHERS_LINE};
 	const d = new Date();
 	const n = (sel) => s.querySelectorAll(sel).length;
@@ -820,12 +835,12 @@ const SCENE_STATE = `(() => {
 		flowers: s.style.getPropertyValue("--ps-flowers"),
 		snowcap: s.style.getPropertyValue("--ps-snowcap"),
 		paused: s.classList.contains("ps-paused"),
-		svgs: [...s.querySelectorAll("svg")].map((v) => ({
-			paused: v.animationsPaused(),
-			off: !!v.closest(".ps-off"),
+		svgs: allSvgs.map((v, i) => ({
+			paused: v.getCurrentTime() === svgAt[i],
+			off: svgOff[i],
 			haze: v.classList.contains("ps-heat-haze"),
 		})),
-		running: s.getAnimations({subtree: true}).filter((a) => a.playState === "running").length,
+		running: anims.filter((a, i) => a.playState !== "idle" && a.currentTime !== animAt[i]).length,
 		view: s.dataset.view,
 		light: h.dataset.psLight,
 		text: h.dataset.psText,
