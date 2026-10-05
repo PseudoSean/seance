@@ -49,6 +49,18 @@ public class ConnectionService extends Service {
     static Runnable onStoppedByUser = null;
 
     /**
+     * A service started with startForegroundService must reach startForeground
+     * before it goes: stopped first, the system kills the app ("did not then
+     * call Service.startForeground()"). `promoted` says the last start got
+     * there; a stop() that comes before it only leaves `stopWanted`, and
+     * onStartCommand stops right after promoting. The plugin calls in from its
+     * own thread and the activity from the main one, hence the lock.
+     */
+    private static final Object lock = new Object();
+    private static boolean promoted = false;
+    private static boolean stopWanted = false;
+
+    /**
      * Ask for the service. `running` is set here rather than in
      * {@link #onStartCommand}, which the framework delivers on a later
      * main-thread message: the plugin resolves the page's `enable()` before
@@ -57,9 +69,22 @@ public class ConnectionService extends Service {
     static void start(Context context) {
         Intent intent = new Intent(context, ConnectionService.class).setAction(ACTION_START);
 
+        boolean wasPromoted;
+
+        synchronized (lock) {
+            // This start has its own promotion to wait for.
+            wasPromoted = promoted;
+            promoted = false;
+            stopWanted = false;
+        }
+
         try {
             ContextCompat.startForegroundService(context, intent);
         } catch (RuntimeException e) {
+            synchronized (lock) {
+                // Refused: whatever ran before is still what runs.
+                promoted = wasPromoted;
+            }
             // Android 12+ refuses a foreground service started from the
             // background (ForegroundServiceStartNotAllowedException). Nothing
             // is running and the page should hear exactly that.
@@ -73,6 +98,16 @@ public class ConnectionService extends Service {
     static void stop(Context context) {
         // Same reason as start(): onDestroy runs later.
         running = false;
+
+        synchronized (lock) {
+            if (!promoted) {
+                // A start is still on its way to startForeground (or none
+                // was made, and this is harmless): let it get there first.
+                stopWanted = true;
+                return;
+            }
+        }
+
         context.stopService(new Intent(context, ConnectionService.class));
     }
 
@@ -105,6 +140,15 @@ public class ConnectionService extends Service {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
         );
 
+        synchronized (lock) {
+            promoted = true;
+
+            if (stopWanted) {
+                stopWanted = false;
+                stopSelf();
+            }
+        }
+
         // Not sticky: if the OS ever kills the process anyway the WebView is
         // gone with it, and a service restarted alone would keep nothing.
         return START_NOT_STICKY;
@@ -120,6 +164,11 @@ public class ConnectionService extends Service {
     @Override
     public void onDestroy() {
         running = false;
+
+        synchronized (lock) {
+            promoted = false;
+        }
+
         stopForeground(STOP_FOREGROUND_REMOVE);
         super.onDestroy();
     }
