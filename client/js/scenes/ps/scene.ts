@@ -15,7 +15,8 @@
  * its window (the stars by day, the skeins by day, the larks out of season…)
  * is out of the render tree with its SMIL paused, rather than animating at
  * opacity 0 (layers.ts). A hidden page's
- * scene is stopped outright; in a query it is frosted (`ps-private`, ps.css)
+ * scene is stopped outright; one nobody attends to rests, still, as a query's
+ * does; in a query it is frosted (`ps-private`, ps.css)
  * and completely still, its colours still on the hour (spec §5.7). No Vue,
  * no store; the markup below (and
  * plains.ts's land, near grass, fireflies, yurt, smoke, clouds and weather,
@@ -717,9 +718,13 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 	// blurs it under ps-private, and it is paused as a hidden page's is, its
 	// SVG clocks too; the minute's tick keeps running while the page is
 	// visible, so its colours still follow the hour. A hidden page stops it
-	// whatever the view.
+	// whatever the view. A page nobody attends to (themeScene.ts
+	// createAttention: a desktop window without the focus, or left without
+	// input) rests the same way, so neither the scene nor the glass over it
+	// is redrawn while no one looks; it moves on from where it stood.
 	let privateView = false;
-	const running = () => visible && !reduced.matches && !privateView;
+	let attended = initial.attended;
+	const running = () => visible && attended && !reduced.matches && !privateView;
 	const onReduced = () => motion(running());
 
 	// Once now, then on each minute boundary. The next minute is scheduled
@@ -748,6 +753,7 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 	const update = (state: SceneHostState) => {
 		root.dataset.view = state.view;
 		privateView = state.view === "query";
+		attended = state.attended;
 		root.classList.toggle("ps-private", privateView);
 		yurt?.refind();
 		composer?.refind();
