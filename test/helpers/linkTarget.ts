@@ -98,11 +98,30 @@ describe("linkTarget helper", function () {
 
 		it("matches a saved network on the host alone when the link names no port", function () {
 			const decision = decideLinkTarget(suggested({portGiven: false}), {
-				saved: [net({port: 8443, tls: false})],
+				saved: [net({port: 6697})],
 			});
 
 			expect(decision.kind).to.equal("saved");
-			expect(decision.kind === "saved" && decision.network.port).to.equal(8443);
+			expect(decision.kind === "saved" && decision.network.port).to.equal(6697);
+		});
+
+		it("never matches a cleartext network when the link names no port", function () {
+			const plain = net({
+				uuid: "22222222-2222-4222-8222-222222222222",
+				port: 8067,
+				tls: false,
+			});
+			const secure = net({port: 6697});
+
+			expect(decideLinkTarget(suggested({portGiven: false}), {saved: [plain]}).kind).to.equal(
+				"new"
+			);
+
+			const decision = decideLinkTarget(suggested({portGiven: false}), {
+				saved: [plain, secure],
+			});
+
+			expect(decision.kind === "saved" && decision.network.uuid).to.equal(secure.uuid);
 		});
 
 		it("matches a saved network by casefolded host and port", function () {

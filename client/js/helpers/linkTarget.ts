@@ -9,8 +9,9 @@
  *
  *  - the host + port (casefolded, TLS included) match a saved network →
  *    that server was approved before; connect to / focus it. A link that
- *    names no port means the host: a saved network there matches whatever
- *    port it uses (a network's direct servers rarely sit on 443);
+ *    names no port means the host: a saved TLS network there matches
+ *    whatever port it uses (a network's direct servers rarely sit on 443),
+ *    a cleartext one never does — a link never means cleartext;
  *  - a locked deploy (`lockHost` / `allowCustomServer: false`) and the link
  *    names some other host → refuse it, with a message;
  *  - anything else → the connect form, pre-filled, for the user to approve.
@@ -110,7 +111,8 @@ export function decideLinkTarget(suggestion: LinkSuggestion, policy: LinkPolicy)
 	const network = policy.saved.find(
 		(net) =>
 			hostnameOf(net.host).toLowerCase() === host &&
-			(!suggestion.portGiven || (net.port === suggestion.port && net.tls === suggestion.tls))
+			net.tls === suggestion.tls &&
+			(!suggestion.portGiven || net.port === suggestion.port)
 	);
 
 	return network ? {kind: "saved", network, suggestion} : {kind: "new", suggestion};
