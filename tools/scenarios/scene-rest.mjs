@@ -22,29 +22,35 @@ export const sceneRest = true;
 const UNFOCUSED_REST_MS = 15_000;
 const IDLE_REST_MS = 120_000;
 
-const STATE = `(() => {
+/** What moves: every clock is held and stepped (stepper.ts), so a clock that moved over 250 ms is what runs. */
+const STATE = `(async () => {
 	const s = document.querySelector("#theme-scene");
 	const svgs = [...s.querySelectorAll("svg")].filter((v) => !v.closest(".ps-off"));
+	const anims = s.getAnimations({subtree: true}).filter((a) => "animationName" in a);
+	const svgAt = svgs.map((v) => v.getCurrentTime());
+	const animAt = anims.map((a) => a.currentTime);
+	await new Promise((r) => setTimeout(r, 250));
 	return {
 		mounted: s.children.length > 0,
 		paused: s.classList.contains("ps-paused"),
 		svgs: svgs.length,
-		svgsGoing: svgs.filter((v) => !v.animationsPaused()).length,
-		running: s.getAnimations({subtree: true}).filter((a) => a.playState === "running").length,
+		svgsGoing: svgs.filter((v, i) => v.getCurrentTime() !== svgAt[i]).length,
+		anims: anims.length,
+		running: anims.filter((a, i) => a.currentTime !== animAt[i]).length,
 	};
 })()`;
 
-/** Main-thread task time per second of wall clock, over `ms` (CDP Performance metrics). */
+/** Main-thread task time and style recalculations per second of wall clock, over `ms` (CDP Performance metrics). */
 async function taskLoad(page, ms) {
 	const read = async () => {
 		const {metrics} = await page.send("Performance.getMetrics");
 		const get = (name) => metrics.find((m) => m.name === name).value;
-		return {task: get("TaskDuration"), at: get("Timestamp")};
+		return {task: get("TaskDuration"), styles: get("RecalcStyleCount"), at: get("Timestamp")};
 	};
 	const a = await read();
 	await page.sleep(ms);
 	const b = await read();
-	return (b.task - a.task) / (b.at - a.at);
+	return {load: (b.task - a.task) / (b.at - a.at), styles: (b.styles - a.styles) / (b.at - a.at)};
 }
 
 const pct = (x) => `${(x * 100).toFixed(1)} %`;
@@ -64,11 +70,17 @@ export default async function run(page) {
 	const running = (s) => !s.paused && s.svgsGoing > 0 && s.running > 0;
 	const resting = (s) => s.paused && s.svgsGoing === 0 && s.running === 0;
 	const describe = (s) =>
-		`ps-paused ${s.paused}; ${s.svgsGoing} of ${s.svgs} SVG clocks going; ${s.running} CSS animations running`;
+		`ps-paused ${s.paused}; ${s.svgsGoing} of ${s.svgs} SVG clocks going; ${s.running} of ${s.anims} CSS animations moving`;
 
 	let s = await page.evaluate(STATE);
 	page.check(`attended at load: the scene runs (${describe(s)})`, s.mounted && running(s));
 	const busy = await taskLoad(page, 5000);
+	page.check(
+		`attended, the scene is drawn at about 24 frames a second, not the screen's 60: ${busy.styles.toFixed(
+			1
+		)} style recalculations a second`,
+		busy.styles > 18 && busy.styles < 30
+	);
 
 	// The window loses the focus: still running inside the grace, resting after it.
 	await page.evaluate(`window.dispatchEvent(new Event("blur"))`);
@@ -80,8 +92,12 @@ export default async function run(page) {
 	page.check(`16 s after a blur: the scene rests (${describe(s)})`, resting(s));
 	const still = await taskLoad(page, 5000);
 	page.check(
-		`resting, the main thread's task time falls: ${pct(busy)} running → ${pct(still)} resting`,
-		still < busy / 4
+		`resting, nothing is drawn: ${busy.styles.toFixed(1)} → ${still.styles.toFixed(
+			1
+		)} style recalculations a second (the minute's tick may land in the window), task time ${pct(
+			busy.load
+		)} → ${pct(still.load)}`,
+		still.styles < 1 && still.load < busy.load
 	);
 	await page.screenshot("scene-rest-resting");
 

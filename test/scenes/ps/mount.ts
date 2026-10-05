@@ -82,6 +82,13 @@ class Listeners {
 }
 
 class FakeElement extends Listeners {
+	/** What getAnimations({subtree}) hands the stepper: none unless a test plants some. */
+	animations: Array<{
+		animationName?: string;
+		playState: string;
+		currentTime: number | null;
+		pause(): void;
+	}> = [];
 	dataset: Record<string, string> = {};
 	style = new FakeStyle();
 	classList = new FakeClassList();
@@ -100,6 +107,10 @@ class FakeElement extends Listeners {
 
 	constructor(public name = "") {
 		super();
+	}
+
+	getAnimations() {
+		return this.animations;
 	}
 
 	set innerHTML(value: string) {
@@ -240,6 +251,16 @@ class FakeMediaQueryList extends Listeners {
 class FakeSvg {
 	classList = new FakeClassList();
 	paused = false;
+	/** Its clock, in seconds: the stepper advances it while the scene runs. */
+	time = 0;
+
+	getCurrentTime() {
+		return this.time;
+	}
+
+	setCurrentTime(seconds: number) {
+		this.time = seconds;
+	}
 
 	closest() {
 		return null;
@@ -393,6 +414,13 @@ function withPage(fn: (page: Page, clock: sinon.SinonFakeTimers) => void) {
 	}
 }
 
+/** Whether the scene's stepper advances the svg's clock: one tenth of a second of the fake clock. */
+function moving(svg: FakeSvg, clock: sinon.SinonFakeTimers): boolean {
+	const before = svg.time;
+	clock.tick(100);
+	return svg.time > before;
+}
+
 const mountOn = (page: Page, visible = true): SceneHandle =>
 	mount(page.root as unknown as HTMLElement, {visible, attended: true, view: "channel"});
 
@@ -476,7 +504,7 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 				expect(running.mediaListeners).to.deep.equal([
 					"(prefers-reduced-motion: reduce) change",
 				]);
-				expect(running.timers, "the minute's tick").to.equal(1);
+				expect(running.timers, "the minute's tick and the stepper's frame").to.equal(2);
 				expect(running.htmlData).to.have.members(["psLight", "psText"]);
 				scene.destroy();
 				expect(leftBehind(page, clock)).to.deep.equal(NOTHING);
@@ -514,12 +542,15 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 				const writes = sinon.spy(ellipse, "setAttribute");
 				ellipse.failing = new Error("a bad minute");
 				expect(() => clock.tick(61000)).to.throw("a bad minute");
-				expect(clock.countTimers(), "the next minute is still due").to.equal(1);
+				expect(
+					clock.countTimers(),
+					"the next minute is still due, and the next frame"
+				).to.equal(2);
 				ellipse.failing = null;
 				writes.resetHistory();
 				clock.tick(61000);
 				expect(writes.calledWith("rx"), "the next minute was drawn").to.equal(true);
-				expect(clock.countTimers()).to.equal(1);
+				expect(clock.countTimers(), "the minute's tick and the frame").to.equal(2);
 				scene.destroy();
 			});
 		});
@@ -533,7 +564,10 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 				expect(() =>
 					scene.update({visible: true, attended: true, view: "channel"})
 				).to.throw("a bad minute");
-				expect(clock.countTimers(), "the next minute is still due").to.equal(1);
+				expect(
+					clock.countTimers(),
+					"the next minute is still due, and the next frame"
+				).to.equal(2);
 				ellipse.failing = null;
 				const writes = sinon.spy(ellipse, "setAttribute");
 				clock.tick(61000);
@@ -591,7 +625,10 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 				shownOn(new Date(2026, 8, 25, 12, 30));
 				expect(setsOf(overcast), "clear again").to.deep.equal([]);
 				expect(field.markup, "the five are the mount's, never rebuilt").to.equal("");
-				expect(clock.countTimers(), "the minute's tick alone: no fade waits").to.equal(1);
+				expect(
+					clock.countTimers(),
+					"the minute's tick and the frame: no fade waits"
+				).to.equal(2);
 				scene.destroy();
 			});
 		});
@@ -619,7 +656,7 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 					// gates' own fades are over (the night's skeins, grounded by the
 					// rain), the minute's tick alone, and the set as it was.
 					clock.tick(OVERCAST_FADE_MS + FADE_MARGIN_MS);
-					expect(clock.countTimers()).to.equal(1);
+					expect(clock.countTimers(), "the minute's tick and the frame").to.equal(2);
 					expect(overcast.children).to.deep.equal([set]);
 					expect(set.className).to.equal("ps-overcast-set");
 					scene.destroy();
@@ -645,7 +682,7 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 					expect(overcast.children, "until the fade is over").to.deep.equal([rain]);
 					clock.tick(2);
 					expect(overcast.children, "then out of the render tree").to.deep.equal([]);
-					expect(clock.countTimers(), "the minute's tick alone").to.equal(1);
+					expect(clock.countTimers(), "the minute's tick and the frame").to.equal(2);
 					scene.destroy();
 				});
 			});
@@ -754,7 +791,7 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 				scene.update({visible: true, attended: false, view: "channel"});
 				expect(page.root.classList.contains("ps-paused"), "resting").to.equal(true);
 				expect(page.root.classList.contains("ps-private"), "not frosted").to.equal(false);
-				expect(svg.paused, "its SVG clocks too").to.equal(true);
+				expect(!moving(svg, clock), "its SVG clocks too").to.equal(true);
 				expect(clock.countTimers(), "the minute's tick keeps running").to.equal(1);
 				const writes = sinon.spy(page.root.querySelector(".ps-m-ell"), "setAttribute");
 				clock.tick(61000);
@@ -763,19 +800,42 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 
 				scene.update({visible: true, attended: true, view: "channel"});
 				expect(page.root.classList.contains("ps-paused"), "attended again").to.equal(false);
-				expect(svg.paused).to.equal(false);
+				expect(!moving(svg, clock)).to.equal(false);
 
 				// Attended in a query is still a query's stillness.
 				scene.update({visible: true, attended: false, view: "query"});
 				scene.update({visible: true, attended: true, view: "query"});
 				expect(page.root.classList.contains("ps-paused")).to.equal(true);
-				expect(svg.paused).to.equal(true);
+				expect(!moving(svg, clock)).to.equal(true);
+				scene.destroy();
+			});
+		});
+
+		it("steps the scene's CSS animations while it runs, and holds them while it rests", function () {
+			withPage((page, clock) => {
+				const anim = {
+					animationName: "ps-drift", // a CSSAnimation; a CSSTransition has none
+					playState: "running",
+					currentTime: 0 as number | null,
+					pause() {
+						this.playState = "paused";
+					},
+				};
+				page.root.animations = [anim];
+				const scene = mountOn(page);
+				expect(anim.playState, "held: the stepper moves it").to.equal("paused");
+				clock.tick(1000);
+				expect(anim.currentTime).to.be.closeTo(1000, 1000 / 24);
+				scene.update({visible: true, attended: false, view: "channel"});
+				const held = anim.currentTime;
+				clock.tick(1000);
+				expect(anim.currentTime, "resting").to.equal(held);
 				scene.destroy();
 			});
 		});
 
 		it("starts resting when mounted into a page nobody attends to", function () {
-			withPage((page) => {
+			withPage((page, clock) => {
 				const svg = page.plantSvg();
 				const scene = mount(page.root as unknown as HTMLElement, {
 					visible: true,
@@ -783,7 +843,7 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 					view: "channel",
 				});
 				expect(page.root.classList.contains("ps-paused")).to.equal(true);
-				expect(svg.paused).to.equal(true);
+				expect(!moving(svg, clock)).to.equal(true);
 				scene.destroy();
 			});
 		});
@@ -799,21 +859,21 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 				const svg = page.plantSvg();
 				const scene = mountOn(page);
 				expect(state(page), "a channel").to.deep.equal([]);
-				expect(svg.paused).to.equal(false);
+				expect(!moving(svg, clock)).to.equal(false);
 
 				scene.update({visible: true, attended: true, view: "query"});
 				expect(state(page), "a query").to.deep.equal(["ps-private", "ps-paused"]);
-				expect(svg.paused, "its SVG clocks too").to.equal(true);
+				expect(!moving(svg, clock), "its SVG clocks too").to.equal(true);
 				expect(clock.countTimers(), "the minute's tick keeps running").to.equal(1);
 
 				scene.update({visible: true, attended: true, view: "channel"});
 				expect(state(page), "back in a channel").to.deep.equal([]);
-				expect(svg.paused).to.equal(false);
+				expect(!moving(svg, clock)).to.equal(false);
 
 				scene.update({visible: true, attended: true, view: "query"});
 				scene.update({visible: true, attended: true, view: "other"});
 				expect(state(page), "Settings, Help, the connect form").to.deep.equal([]);
-				expect(svg.paused).to.equal(false);
+				expect(!moving(svg, clock)).to.equal(false);
 				scene.destroy();
 			});
 		});
@@ -845,7 +905,7 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 					"ps-private",
 					"ps-paused",
 				]);
-				expect(svg.paused).to.equal(true);
+				expect(!moving(svg, clock)).to.equal(true);
 				expect(clock.countTimers(), "no tick on a hidden page").to.equal(0);
 
 				scene.update({visible: true, attended: true, view: "query"});
@@ -853,12 +913,12 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 					"ps-private",
 					"ps-paused",
 				]);
-				expect(svg.paused).to.equal(true);
+				expect(!moving(svg, clock)).to.equal(true);
 				expect(clock.countTimers(), "the minute's tick again").to.equal(1);
 
 				scene.update({visible: true, attended: true, view: "channel"});
 				expect(state(page), "the query left").to.deep.equal([]);
-				expect(svg.paused).to.equal(false);
+				expect(!moving(svg, clock)).to.equal(false);
 
 				// Hidden wins over a channel as well, and a view changed while hidden is the one shown.
 				scene.update({visible: false, attended: true, view: "channel"});
@@ -869,10 +929,10 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 				]);
 				scene.update({visible: false, attended: true, view: "channel"});
 				expect(state(page), "hidden, in a channel").to.deep.equal(["ps-paused"]);
-				expect(svg.paused).to.equal(true);
+				expect(!moving(svg, clock)).to.equal(true);
 				scene.update({visible: true, attended: true, view: "channel"});
 				expect(state(page)).to.deep.equal([]);
-				expect(svg.paused).to.equal(false);
+				expect(!moving(svg, clock)).to.equal(false);
 				scene.destroy();
 			});
 		});
@@ -889,7 +949,7 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 						"ps-private",
 						"ps-paused",
 					]);
-					expect(svg.paused).to.equal(true);
+					expect(!moving(svg, clock)).to.equal(true);
 					expect(clock.countTimers()).to.equal(visible ? 1 : 0);
 					scene.destroy();
 				});
@@ -897,7 +957,7 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 		});
 
 		it("stays still in a query when reduced motion is lifted, and reduced motion still holds a channel", function () {
-			withPage((page) => {
+			withPage((page, clock) => {
 				const svg = page.plantSvg();
 				const scene = mountOn(page);
 				const reduced = page.reducedMotion();
@@ -909,7 +969,7 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 					"ps-private",
 					"ps-paused",
 				]);
-				expect(svg.paused).to.equal(true);
+				expect(!moving(svg, clock)).to.equal(true);
 
 				scene.update({visible: true, attended: true, view: "channel"});
 				expect(state(page)).to.deep.equal([]);
@@ -920,7 +980,7 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 				expect(state(page), "reduced motion, back in a channel").to.deep.equal([
 					"ps-paused",
 				]);
-				expect(svg.paused).to.equal(true);
+				expect(!moving(svg, clock)).to.equal(true);
 				scene.destroy();
 			});
 		});
