@@ -78,8 +78,8 @@ public class UploadChooserClient extends BridgeWebChromeClient {
         List<String> accept = Arrays.asList(params.getAcceptTypes());
         pendingCaptures.clear();
         sweepStaleCaptures();
-        offer(accept, "image/", MediaStore.ACTION_IMAGE_CAPTURE, "jpg");
-        offer(accept, "video/", MediaStore.ACTION_VIDEO_CAPTURE, "mp4");
+        offer(accept, "image/jpeg", MediaStore.ACTION_IMAGE_CAPTURE, "jpg", ".jpg", ".jpeg");
+        offer(accept, "video/mp4", MediaStore.ACTION_VIDEO_CAPTURE, "mp4", ".mp4");
 
         Intent chooser = pick;
 
@@ -118,12 +118,16 @@ public class UploadChooserClient extends BridgeWebChromeClient {
             return;
         }
 
-        Intent data = result.getResultCode() == Activity.RESULT_OK ? result.getData() : null;
-        List<Uri> uris = picked(data);
+        boolean ok = result.getResultCode() == Activity.RESULT_OK;
+        List<Uri> uris = picked(ok ? result.getData() : null);
 
-        if (uris.isEmpty() && data != null) {
-            // A capture app answers OK with no data: the shot is in the file it
-            // was handed. Whichever placeholder has content is the one that ran.
+        // A capture app answers OK with no Intent at all (AOSP Camera2 and
+        // most OEM cameras, given EXTRA_OUTPUT), with an empty one, or with
+        // the output URI echoed back: in every case the shot is in the file
+        // it was handed, and whichever placeholder has content is the one
+        // that ran. Anything else picked is a file from the picker.
+        if (ok && (uris.isEmpty() || isCapture(uris, captures))) {
+            uris.clear();
             Uri taken = takeCapture(captures);
             if (taken != null) {
                 uris.add(taken);
@@ -160,6 +164,16 @@ public class UploadChooserClient extends BridgeWebChromeClient {
         return uris;
     }
 
+    /** Does the result name one of the placeholders (a camera echoing EXTRA_OUTPUT)? */
+    private boolean isCapture(List<Uri> uris, List<Capture> captures) {
+        for (Capture capture : captures) {
+            if (uris.contains(uriFor(capture.file))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** The capture that ran -- the one placeholder with bytes in it. The spares go. */
     private Uri takeCapture(List<Capture> captures) {
         Uri taken = null;
@@ -181,12 +195,25 @@ public class UploadChooserClient extends BridgeWebChromeClient {
         }
     }
 
-    /** Does this accept list admit `prefix` -- or anything at all? */
-    private static boolean accepts(List<String> accept, String prefix) {
+    /**
+     * Does this accept list admit a file of type `mime` (or one of its
+     * `extensions`) -- or anything at all? A capture is one fixed format, so
+     * `image/png` alone does not admit the camera's JPEG; `image/*` does.
+     */
+    private static boolean accepts(List<String> accept, String mime, String... extensions) {
+        String family = mime.substring(0, mime.indexOf('/') + 1) + "*";
+        List<String> suffixes = Arrays.asList(extensions);
+
         for (String type : accept) {
             String wanted = type.trim().toLowerCase(Locale.ROOT);
 
-            if (wanted.isEmpty() || wanted.equals("*/*") || wanted.startsWith(prefix)) {
+            if (
+                wanted.isEmpty() ||
+                wanted.equals("*/*") ||
+                wanted.equals(family) ||
+                wanted.equals(mime) ||
+                suffixes.contains(wanted)
+            ) {
                 return true;
             }
         }
@@ -194,8 +221,8 @@ public class UploadChooserClient extends BridgeWebChromeClient {
     }
 
     /** Add a capture placeholder to the chooser where the accept list admits it. */
-    private void offer(List<String> accept, String prefix, String action, String extension) {
-        if (!accepts(accept, prefix)) {
+    private void offer(List<String> accept, String mime, String action, String extension, String... suffixes) {
+        if (!accepts(accept, mime, suffixes)) {
             return;
         }
 
