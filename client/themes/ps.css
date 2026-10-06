@@ -531,6 +531,23 @@ strong,
 	display: none;
 }
 
+/* A line inside a run shows no time of its own; pointing at it, or the long
+ * press that opens its toolbar on a phone, shows it at the end of its first
+ * line, as a small solid chip in the chrome's ink so it reads over the
+ * plains and over the end of a long line. */
+#chat .chat .msg.previous-source:is(:hover, .actions-open) .time {
+	display: block;
+	position: absolute;
+	grid-area: auto; /* or its collapsed grid cell would be its containing block, not the row */
+	inset-block-start: 0;
+	inset-inline-end: 0.625rem;
+	padding: 0.0625rem 0.375rem;
+	border-radius: 0.25rem;
+	background: var(--ps-g-solid);
+	color: var(--body-color-muted);
+	text-shadow: none;
+}
+
 /* A mention keeps style.css's bar at its start (5px, in px there) and
  * nothing else: its nick and text are moved back by the bar so they line up
  * with the rows around it, and style.css's highlight padding (the time's,

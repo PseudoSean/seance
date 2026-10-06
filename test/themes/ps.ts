@@ -2077,6 +2077,20 @@ describe("the ps theme's stacked message rows (the user's B, 2026-10-06)", funct
 	it("shows a run of one sender's lines with the nick and time once", function () {
 		const rest = `#chat .chat .msg.previous-source:is(${M}) :is(.from, .time)`;
 		expect(valueOf(rest, "display")).to.equal("none");
+		// pointing at one, or its long press, shows its time as a chip at the line's end
+		const shown = "#chat .chat .msg.previous-source:is(:hover, .actions-open) .time";
+		expect(valueOf(shown, "display")).to.equal("block");
+		expect(valueOf(shown, "position")).to.equal("absolute");
+		expect(valueOf(shown, "grid-area"), "the row, not its collapsed cell, holds it").to.equal(
+			"auto"
+		);
+		expect(valueOf(shown, "inset-inline-end")).to.equal("0.625rem");
+		expect(valueOf(shown, "background")).to.equal("var(--ps-g-solid)");
+		expect(
+			rules.findIndex((r) => r.selectors.includes(shown)) -
+				rules.findIndex((r) => r.selectors.includes(rest)),
+			"after the rule that hides it"
+		).to.be.above(0);
 		// a day's divider or the unread line between two of them starts a new run
 		const after =
 			"#chat .chat :is(.date-marker-container, .unread-marker) + .msg.previous-source :is(.from, .time)";
