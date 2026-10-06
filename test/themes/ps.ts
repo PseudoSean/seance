@@ -2024,235 +2024,85 @@ describe("the ps theme's type", function () {
 	});
 });
 
-describe("the ps theme's message gutter: the time column and the text's 30 characters", function () {
+describe("the ps theme's stacked message rows (the user's B, 2026-10-06)", function () {
+	const M = '[data-type="message"], [data-type="notice"]';
+	const ROW = `#chat .chat .msg:is(${M})`;
+	const SYS =
+		'#chat .chat .msg:not([data-type="message"], [data-type="notice"], [data-type="condensed"])';
 	const style = rulesIn(
 		fs.readFileSync(path.resolve(__dirname, "../../client/css/style.css"), "utf8")
 	);
-	/** The last value style.css gives `selector`'s `property` at the top level. */
-	const styleValue = (selector: string, property: string) =>
-		declsOf(selector, "", style)
-			.filter(([p]) => p === property)
-			.at(-1)?.[1];
 
-	/**
-	 * The widest time of each clock format in Source Sans 3 500 with
-	 * tabular-nums, in the time column's own ch, the most over the six font
-	 * steps (the step's rounding moves it by a few thousandths): "12:00pm",
-	 * "12:00:00pm", "00:00", "00:00:00" (every figure is 1ch; a colon about
-	 * 0.51ch). Measured in Chromium, 2026-09-26, by the plan 4 task 5 probe
-	 * (the gutter scenario's measure, over each format's widest strings).
-	 */
-	const WIDEST: Record<string, number> = {
-		"12h": 7.281,
-		"12h+s": 9.799,
-		"24h": 4.519,
-		"24h+s": 7.037,
-	};
-	/** The usual time of each format, in ch: a 12-hour clock's usual hour (1 to 9) is one figure (1ch) short of its widest (10 to 12); a 24-hour clock's hour is always two. */
-	const COMMON: Record<string, number> = {
-		"12h": WIDEST["12h"] - 1,
-		"12h+s": WIDEST["12h+s"] - 1,
-		"24h": WIDEST["24h"],
-		"24h+s": WIDEST["24h+s"],
-	};
-	/** Source Sans 3's ch in rem: its "0" is 0.5051–0.5063 of the font size over the six steps. */
-	const CH_REM = 0.5055;
-	const SELECTOR: Record<string, string> = {
-		"24h": "#chat .time",
-		"12h": "#chat.time-12h .time",
-		"24h+s": "#chat.time-seconds .time",
-		"12h+s": "#chat.time-seconds.time-12h .time",
-	};
-
-	/** A time column's width in ch: ps.css's own, or style.css's where ps restates none. */
-	const widthOf = (clock: string) => {
-		const value = valueOf(SELECTOR[clock], "width") ?? styleValue(SELECTOR[clock], "width");
-		expect(value, `${clock} width`).to.match(/^\d+(\.\d+)?ch$/);
-		return parseFloat(value!);
-	};
-
-	it("gives the text column's 30ch basis to the text: the basis restated to hold its padding and rule, border-box kept", function () {
-		// The cause (plan 4 task 5): html is border-box, so style.css's 30ch
-		// basis held the text column's padding and rule too, 30ch − 0.875rem −
-		// 1px of text; between the user list's threshold and the width where
-		// the text outgrows its basis nothing asked the nick column to give
-		// way, and the text sat at about 28.2ch beside the panel.
-		expect(styleValue("#chat .content", "flex")).to.equal("1 1 30ch");
-		// style.css may name the sides physically or logically (the
-		// localization work moved it to the inline-start/-end forms): the
-		// column is laid out left to right either way.
-		const padLeft =
-			styleValue("#chat .content", "padding-inline-start") ??
-			styleValue("#chat .content", "padding-left");
-		const padRight =
-			styleValue("#chat .content", "padding-inline-end") ??
-			styleValue("#chat .content", "padding-right");
-		const rule =
-			styleValue("#chat .content", "border-inline-start") ??
-			styleValue("#chat .content", "border-left");
-		expect(padLeft).to.match(/^[\d.]+rem$/);
-		expect(padRight).to.match(/^[\d.]+rem$/);
-		const ruleWidth = /^(\d+px)\s/.exec(rule ?? "")?.[1];
-		expect(ruleWidth, `style.css's rule: ${rule}`).to.be.a("string");
-		const padding = parseFloat(padLeft!) + parseFloat(padRight!);
-
-		// The basis holds 30ch of text plus the column's own padding and rule
-		// (style.css's, read above), top level: the inline flow's display:
-		// inline takes the column out of flex layout by itself.
-		expect(valueOf("#chat .content", "flex-basis")).to.equal(
-			`calc(30ch + ${padding}rem + ${ruleWidth})`
+	it("lays a message out as the nick, then its time, and the text on the next line, indented", function () {
+		expect(valueOf(ROW, "display")).to.equal("grid");
+		expect(valueOf(ROW, "grid-template-areas")?.replace(/\s+/g, " ")).to.equal(
+			'"from time ." "content content content"'
 		);
+		expect(valueOf(`${ROW} .from`, "grid-area")).to.equal("from");
+		expect(valueOf(`${ROW} .time`, "grid-area")).to.equal("time");
+		expect(valueOf(`${ROW} .content`, "grid-area")).to.equal("content");
+		// the indent: the text starts 1.5rem in, the nick 0.625rem
+		expect(valueOf(`${ROW} .content`, "padding")).to.match(/ 1\.5rem$/);
+		expect(valueOf(`${ROW} .from`, "padding-inline-start")).to.equal("0.625rem");
+	});
 
-		// And border-box stays: style.css's `*, *::before, *::after {
-		// box-sizing: inherit }` hands a content-box column to everything in
-		// it, and a reply quote (a `max-width: 100%` button with its own
-		// padding and rule) then overflowed its column by both (fix round 1).
-		// Nothing in ps.css sets the box-sizing of a text column or of
-		// anything inside one.
-		const boxed = rules.filter(
+	it("never cuts a nick: it wraps rather than ending in an ellipsis", function () {
+		expect(valueOf(`${ROW} .from`, "overflow")).to.equal("visible");
+		expect(valueOf(`${ROW} .from`, "white-space")).to.equal("normal");
+		expect(valueOf(`${ROW} .from`, "overflow-wrap")).to.equal("anywhere");
+		// none of the shipped column's sizing is left in ps.css
+		expect(valueOf("#chat .from", "flex-basis")).to.equal(undefined);
+		expect(valueOf("#chat .content", "flex-basis")).to.equal(undefined);
+		expect(valueOf("#chat.time-seconds .time", "width")).to.equal(undefined);
+		expect(valueOf("#chat .chat .from", "margin")).to.equal(undefined);
+	});
+
+	it("shows a run of one sender's lines with the nick and time once", function () {
+		const rest = `#chat .chat .msg.previous-source:is(${M}) :is(.from, .time)`;
+		expect(valueOf(rest, "display")).to.equal("none");
+	});
+
+	it("runs every other row from the same edge: its icon, then the time, then the text", function () {
+		expect(valueOf(SYS, "display")).to.equal("flex");
+		expect(valueOf("#chat .chat .condensed-summary", "display")).to.equal("flex");
+		expect(valueOf(`${SYS} .from`, "order")).to.equal("-1");
+		expect(valueOf("#chat .chat .condensed-summary .from", "order")).to.equal("-1");
+		// the time stays after the icon: no order of its own
+		expect(valueOf(`${SYS} .time`, "order")).to.equal(undefined);
+		expect(valueOf(`${SYS} .content`, "flex")).to.equal("1 1 auto");
+		expect(
+			valueOf("#chat .chat .condensed-summary :is(.time, .from):empty", "display")
+		).to.equal("none");
+	});
+
+	it("wins over style.css's narrow inline flow on the same elements, so the row is alike at every width", function () {
+		const narrow = style.filter(
 			(r) =>
-				r.decls.some(([p]) => p === "box-sizing") &&
-				r.selectors.some((s) => /\.content(?![\w-])/.test(s))
+				r.at.includes("@container chat (max-width: calc(50ch + 2.5rem))") &&
+				r.selectors.some((sel) =>
+					/^#chat \.(msg|time|from|content|condensed-summary)\b/.test(sel)
+				)
 		);
-		expect(boxed.map((r) => `${r.at} ${r.selectors.join(", ")}`)).to.deep.equal([]);
-	});
-
-	it("sizes each clock's time column to hold its widest time, with the gap to the nick about the nick's gap to the text", function () {
-		// The nick's gap to the text: the nick column's right padding (0.5rem
-		// net of the shadow's room), the text's left padding (0.5rem) and its
-		// 1px rule — 1.05rem at the default step.
-		const nameToText = 1.05;
-
-		for (const clock of ["12h", "12h+s", "24h", "24h+s"]) {
-			const width = widthOf(clock);
-			// Holds the widest time at every step, with room for rounding.
-			expect(
-				width - WIDEST[clock],
-				`${clock}: ${width}ch holds ${WIDEST[clock]}ch`
-			).to.be.at.least(0.1);
-			// The gap after the usual time: the column's slack and the nick
-			// column's left padding (0.5rem net).
-			const gap = (width - COMMON[clock]) * CH_REM + 0.5;
-			expect(gap, `${clock}: the gap after the usual time, rem`).to.be.within(
-				nameToText - 0.1,
-				nameToText + 0.1
-			);
-		}
-	});
-
-	it("tightens the seconds formats (style.css's 8.5ch and 10.5ch left 1.24 and 1.36rem) and restates no other", function () {
-		expect(valueOf(SELECTOR["24h+s"], "width")).to.equal("8ch");
-		expect(valueOf(SELECTOR["12h+s"], "width")).to.equal("10ch");
-		expect(valueOf(SELECTOR["24h"], "width")).to.equal(undefined);
-		expect(valueOf(SELECTOR["12h"], "width")).to.equal(undefined);
-	});
-
-	it("keeps every time column at 10ch or under, half a figure inside the 10.5ch style.css's two thresholds reserve, so the text keeps its 30 characters at the thresholds themselves", function () {
-		// style.css: the user list overlays under 50ch + 8.5rem + 84px, and the
-		// row turns to inline flow under 50ch + 2.5rem, both counting 10.5ch
-		// of time, 9ch of nick, 30ch of text and 0.5ch spare. A classic
-		// scrollbar (about 10px in Chromium on Linux) is not in either sum:
-		// with the 12-hour seconds column at 10ch the spare is 1ch, which
-		// covers it from the medium step up (29.8ch at the threshold, measured).
-		for (const clock of ["12h", "12h+s", "24h", "24h+s"]) {
-			expect(widthOf(clock), clock).to.be.at.most(10);
-		}
-	});
-
-	describe('the nick column is 9ch, the user\'s N (2026-09-26: "N seems fine")', function () {
-		/**
-		 * Nicks in Newsreader 700, in the words' ch (Source Sans 3's "0"), at
-		 * each of the six font steps (the most over them; they agree to about
-		 * 0.01ch). Random lowercase strings drawn with English letter
-		 * frequencies, 1,500 of each length, stand for "a nick of n letters":
-		 * the median of each length, and the share that fits in 9ch. And a few
-		 * named ones: the options page's "tumbleweed_42", and the two short
-		 * nicks the gutter scenario draws whole. Measured in Chromium,
-		 * 2026-09-26, in the served build's own CSS (6da2ccae).
-		 */
-		const MEDIAN: Record<number, number> = {7: 6.96, 8: 7.94, 9: 8.97, 10: 9.95};
-		const FITS_9CH: Record<number, number> = {7: 1, 8: 0.95, 9: 0.52, 10: 0.09};
-		const NAMED: Record<string, number> = {
-			campfire: 7.98,
-			sparrow: 7.41,
-			psmuihe71bn: 12.61,
-			tumbleweed_42: 14.4,
-		};
-		/** Source Sans 3's "…", which an ellipsised nick ends in, in the same ch. */
-		const ELLIPSIS = 1.89;
-
-		it("sets the nick column's basis to 9ch, style.css's floor, in the words' ch", function () {
-			// style.css: `flex: 0 1000 12ch; min-width: 9ch`. The user picked the
-			// narrow column over the right-aligned 12ch (K), the nick beside the
-			// time (L) and plan 4's 14ch capacity fix.
-			expect(styleValue("#chat .from", "flex")).to.equal("0 1000 12ch");
-			expect(styleValue("#chat .from", "min-width")).to.equal("9ch");
-			expect(valueOf("#chat .from", "flex-basis")).to.equal("9ch");
-		});
-
-		it("draws a nick of about 8 letters whole, and ends a longer one in an ellipsis inside the column", function () {
-			const n = parseFloat(valueOf("#chat .from", "flex-basis") ?? "NaN");
-			// Up to about 8 letters: the median 8-letter nick fits with room for
-			// rounding, and 95 % of them fit.
-			expect(n - MEDIAN[8], `${n}ch holds the median 8-letter nick`).to.be.at.least(0.1);
-			expect(FITS_9CH[8]).to.be.at.least(0.9);
-			expect(n - NAMED.campfire).to.be.at.least(0.1);
-			expect(n - NAMED.sparrow).to.be.at.least(0.1);
-			// Longer is cut sooner (the user accepts it): the median 10-letter
-			// nick does not fit, nor does the options page's tumbleweed_42, nor
-			// the scenario's 11-letter peer the 14ch column held.
-			expect(MEDIAN[10]).to.be.above(n);
-			expect(FITS_9CH[10]).to.be.below(0.1);
-			expect(NAMED.tumbleweed_42).to.be.above(n);
-			expect(NAMED.psmuihe71bn).to.be.above(n);
-			// The ellipsis is style.css's own, in the column's box, and leaves
-			// about 7ch of the nick before it.
-			expect(styleValue("#chat .from", "text-overflow")).to.equal("ellipsis");
-			expect(styleValue("#chat .from", "overflow")).to.equal("hidden");
-			expect(n - ELLIPSIS).to.be.within(6.5, 7.5);
-		});
-
-		it("keeps the text's 30ch at the thresholds: they count the column's 9ch floor, which the basis now equals", function () {
-			// The user list overlays under 50ch + 8.5rem + 84px and the row turns
-			// to inline flow under 50ch + 2.5rem, both counting 10.5ch of time,
-			// 9ch of nick and 30ch of text; a basis at the floor leaves the nick
-			// column nothing to give way, and the text its 30ch at both.
-			expect(parseFloat(valueOf("#chat .from", "flex-basis")!)).to.be.at.most(
-				parseFloat(styleValue("#chat .from", "min-width")!)
-			);
-		});
-
-		it("leaves the rest of style.css's nick column alone: the shrink weight, the 9ch floor, the words' face, the right alignment, the shadow's clip", function () {
-			const own = rules.filter((r) => r.selectors.includes("#chat .from"));
-			expect(own.map((r) => r.at)).to.deep.equal([""]);
-			expect(own.flatMap((r) => r.decls.map(([p]) => p))).to.deep.equal(["flex-basis"]);
-			// Right-aligned in a left-to-right window: "right", or the logical
-			// "end" style.css now uses so a right-to-left window mirrors it.
-			expect(styleValue("#chat .from", "text-align")).to.be.oneOf(["right", "end"]);
-
-			// No rule in ps.css sets the column's flex, floor, alignment or face:
-			// its ch is the one the thresholds count (the words'), and Newsreader
-			// stays on the nick inside it (.from .user).
-			for (const r of rules) {
-				for (const sel of r.selectors) {
-					if (
-						!/\.from(?![\w-])/.test(sel) ||
-						/\.from\s+\S|\.from::|\.font-size-sample/.test(sel)
-					) {
-						continue;
-					}
-
-					for (const [p] of r.decls) {
-						expect(p, `${r.at} ${sel}`).to.not.match(
-							/^(flex|flex-shrink|flex-grow|min-width|max-width|width|font|font-family|text-align)$/
-						);
-					}
-				}
-			}
-
-			expect(valueOf("#chat .chat .from", "padding")).to.equal("0.6em 0.75rem");
-			expect(valueOf("#chat .chat .from", "margin")).to.equal("-0.4em -0.25rem");
-		});
+		expect(narrow.length, "style.css's narrow rules for the row").to.be.greaterThan(0);
+		const theirs = narrow
+			.flatMap((r) => r.selectors)
+			.filter((sel) => !/highlight|who|table|condensed"\] \.msg/.test(sel))
+			.map(specificity)
+			.sort(compareSpecificity)
+			.at(-1)!;
+		const stacked = /^#chat \.chat \.(msg(?=[:.[])|condensed-summary)/;
+		const ours = rules
+			.filter((r) => r.at === "" && r.selectors.some((sel) => stacked.test(sel)))
+			.flatMap((r) => r.selectors)
+			.filter((sel) => stacked.test(sel))
+			.map(specificity)
+			.sort(compareSpecificity)[0];
+		// At least as heavy: ps.css is linked after style.css, so at equal
+		// weight the later rule wins.
+		expect(
+			compareSpecificity(ours, theirs),
+			`ours ${ours.join()} against theirs ${theirs.join()}`
+		).to.be.at.least(0);
 	});
 });
 
@@ -2431,7 +2281,13 @@ describe("the ps theme's embers (spec §9)", function () {
 		return parseFloat(v as string);
 	};
 
+	// A rule that only takes a pseudo-element away (`content: none`, the
+	// stacked rows' undoing of style.css's spacer) draws nothing.
 	const pseudoSelectors = rules
+		.filter(
+			(r) =>
+				!(r.decls.length === 1 && r.decls[0][0] === "content" && r.decls[0][1] === "none")
+		)
 		.flatMap((r) => r.selectors)
 		.filter((s) => /::(before|after)$/.test(s));
 	const withoutNot = (s: string) => s.replace(/:not\((?:[^()]|\([^()]*\))*\)/g, "");

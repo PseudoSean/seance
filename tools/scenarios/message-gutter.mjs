@@ -10,8 +10,10 @@
 //
 // SEANCE_THEME=<name> picks the Appearance theme the run boots into (a
 // bundled font's own metrics can widen or narrow the gutter past
-// style.css's numbers, as the ps theme's fonts do — docs/projects/ps-theme.md
-// §8); left unset, the run boots into the default theme.
+// style.css's numbers); left unset, the run boots into the default theme.
+// The ps theme has no gutter: it stacks its rows (docs/projects/ps-theme.md
+// §8), and tools/scenarios/theme-ps.mjs checks them; the run says so and
+// stops.
 
 const RUN = Date.now().toString(36);
 const NICK = `gut${RUN}`;
@@ -77,35 +79,15 @@ const MEASURE = `(() => {
 	};
 })()`;
 
-// The ps theme's nick column is the user's N, 9ch (docs/projects/ps-theme.md
-// §8): two nicks of about 8 letters and under, and two longer ones — the
-// scenario's 11-letter peer (`${NICK}n` in theme-ps.mjs) and the options
-// page's tumbleweed_42 — each drawn in a copy of the own row, measured, and
-// gone again. scrollWidth over clientWidth means the nick ends in the
-// column's ellipsis; `inside` is the column's box ending before the text's.
-const NICK_COLUMN = `(() => {
-	const row = [...document.querySelectorAll('#chat .msg.self[data-type="message"]')].pop();
-	return ["campfire", "sparrow", "psmuihe71bn", "tumbleweed_42"].map((nick) => {
-		const copy = row.cloneNode(true);
-		copy.classList.remove("self");
-		copy.querySelector(".from .user").textContent = nick;
-		row.after(copy);
-		const f = copy.querySelector(".from"), c = copy.querySelector(".content");
-		const cs = getComputedStyle(f);
-		const z = document.createElement("span"); z.textContent = "0"; z.style.cssText = "position:absolute;visibility:hidden"; c.appendChild(z);
-		const ch = z.getBoundingClientRect().width; z.remove();
-		const out = {
-			nick, scroll: f.scrollWidth, client: f.clientWidth,
-			ch: (f.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)) / ch,
-			ellipsis: cs.textOverflow, inside: f.getBoundingClientRect().right + parseFloat(cs.marginRight) <= c.getBoundingClientRect().left + 0.5,
-			layout: getComputedStyle(copy).display === "flex" ? "columns" : "inline",
-		};
-		copy.remove();
-		return out;
-	});
-})()`;
-
 export default async function run(page) {
+	if (process.env.SEANCE_THEME === "ps") {
+		page.check(
+			"ps stacks its message rows and has no gutter to measure (spec §8): tools/scenarios/theme-ps.mjs checks them",
+			true
+		);
+		return;
+	}
+
 	await page.addInitScript(
 		`localStorage.setItem("settings", JSON.stringify(${JSON.stringify(SETTINGS)}))`
 	);
@@ -146,32 +128,6 @@ export default async function run(page) {
 			`(() => { const r = [...document.querySelectorAll('#chat .msg.self[data-type="message"]')].pop().getBoundingClientRect(); return {x: r.left - 4, y: r.top - 3 * r.height, width: Math.min(r.width, 700), height: r.height * 6}; })()`
 		);
 		await page.screenshot(`gutter-${CLOCK}-${step}`, {clip: box});
-	}
-	// The ps theme's nick column is the user's N (docs/projects/ps-theme.md
-	// §8), at 1280px and the default step, in columns: 9ch wide; a nick of
-	// about 8 letters or fewer drawn whole, a longer one ending in the
-	// column's ellipsis inside the column. Each in a copy of the own row that
-	// is not .self (so MEASURE never reads it) and is gone again at once.
-	if (process.env.SEANCE_THEME === "ps") {
-		await page.evaluate(`document.documentElement.dataset.fontSize = "large"`);
-		await page.sleep(80);
-
-		for (const n of await page.evaluate(NICK_COLUMN)) {
-			const long = n.nick.length > 8;
-			const tail = `${n.scroll} in ${n.client}px, the column ${n.ch.toFixed(2)}ch, ${
-				n.layout
-			}`;
-			page.check(
-				long
-					? `large @1280: ${n.nick} ends in an ellipsis inside the 9ch nick column (${tail}, ${n.ellipsis}, inside ${n.inside})`
-					: `large @1280: ${n.nick} draws whole in the 9ch nick column (${tail})`,
-				n.layout === "columns" &&
-					Math.abs(n.ch - 9) < 0.1 &&
-					(long
-						? n.scroll > n.client && n.ellipsis === "ellipsis" && n.inside
-						: n.scroll <= n.client)
-			);
-		}
 	}
 	// Now the squeeze: the user list open, the window narrowed step by step.
 	// The text column keeps 30 characters while the list is a side panel,
