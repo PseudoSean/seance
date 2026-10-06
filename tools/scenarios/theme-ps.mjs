@@ -3851,6 +3851,29 @@ export default async function run(page) {
 			stacked.hidden.every((d) => d === "none") &&
 			Math.abs(stacked.secondText - stacked.text.l) < 2
 	);
+	// Pointing at the second line shows its time, as a chip at its end.
+	const secondId = await page.evaluate(`${ROW_OF(`two of two ${RUN}`)}.id`);
+	await page.hover(`#${secondId} .content`);
+	await page.sleep(150);
+	const chip = await page.evaluate(`(() => {
+		const m = document.getElementById(${JSON.stringify(secondId)}), t = m.querySelector(".time");
+		const tr = t.getBoundingClientRect(), mr = m.getBoundingClientRect(), cs = getComputedStyle(t);
+		return {display: cs.display, text: t.textContent.trim(), inside: tr.left >= mr.left && tr.right <= mr.right && tr.top >= mr.top - 1 && tr.bottom <= mr.bottom + 1, right: Math.round(mr.right - tr.right), bg: cs.backgroundColor};
+	})()`);
+	page.check(
+		`stacked: pointing at the second line shows its time at the line's end (${chip.display}, "${chip.text}", ${chip.right}px from the row's end, inside ${chip.inside}, on ${chip.bg})`,
+		chip.display === "block" && chip.text !== "" && chip.inside && chip.right < 20
+	);
+	await page.hover(`#${await page.evaluate(`${ROW_OF(`one of two ${RUN}`)}.id`)} .content`);
+	await page.sleep(100);
+	page.check(
+		"stacked: and hides it when the pointer leaves",
+		(await page.evaluate(
+			`getComputedStyle(document.getElementById(${JSON.stringify(
+				secondId
+			)}).querySelector(".time")).display`
+		)) === "none"
+	);
 	page.check(
 		`stacked: after the unread line the second shows its nick and time again (${stacked.afterMarker.join(
 			", "

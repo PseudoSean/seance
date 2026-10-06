@@ -68,6 +68,7 @@ import {condensedTypes} from "../../shared/irc";
 import {ChanState, ChanType} from "../../shared/types/chan";
 import {MessageType, SharedMsg} from "../../shared/types/msg";
 import clipboard from "../js/clipboard";
+import {continuesRun} from "../js/helpers/messageRuns";
 import {noteScroll, noteTouch} from "../js/helpers/scrollSettle";
 import {selectionActive, unwatchSelection, watchSelection} from "../js/helpers/touchSelection";
 import socket from "../js/socket";
@@ -398,17 +399,8 @@ export default defineComponent({
 			return true;
 		};
 
-		const isPreviousSource = (currentMessage: ClientMessage, id: number) => {
-			const previousMessage = condensedMessages.value[id - 1];
-			return (
-				previousMessage &&
-				currentMessage.type === MessageType.MESSAGE &&
-				previousMessage.type === MessageType.MESSAGE &&
-				currentMessage.from &&
-				previousMessage.from &&
-				currentMessage.from.nick === previousMessage.from.nick
-			);
-		};
+		const isPreviousSource = (currentMessage: ClientMessage, id: number) =>
+			continuesRun(condensedMessages.value[id - 1], currentMessage);
 
 		const onCopy = () => {
 			if (chat.value) {
