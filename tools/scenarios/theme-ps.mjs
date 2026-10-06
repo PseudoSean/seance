@@ -3808,6 +3808,14 @@ export default async function run(page) {
 			whole: f.scrollWidth <= f.clientWidth + 1,
 			continuation: second.classList.contains("previous-source"),
 			hidden: [".from", ".time"].map((s) => getComputedStyle(second.querySelector(s)).display),
+			afterMarker: (() => {
+				const marker = document.createElement("div");
+				marker.className = "unread-marker";
+				second.before(marker);
+				const shown = [".from", ".time"].map((s) => getComputedStyle(second.querySelector(s)).display);
+				marker.remove();
+				return shown;
+			})(),
 			secondText: (() => { const r = document.createRange(); r.selectNodeContents(second.querySelector(".content")); return r.getClientRects()[0].left; })(),
 			iconRow,
 			rem: parseFloat(getComputedStyle(document.documentElement).fontSize),
@@ -3842,6 +3850,12 @@ export default async function run(page) {
 		stacked.continuation &&
 			stacked.hidden.every((d) => d === "none") &&
 			Math.abs(stacked.secondText - stacked.text.l) < 2
+	);
+	page.check(
+		`stacked: after the unread line the second shows its nick and time again (${stacked.afterMarker.join(
+			", "
+		)})`,
+		stacked.afterMarker.every((d) => d === "block")
 	);
 	page.check(
 		`stacked: a ${
