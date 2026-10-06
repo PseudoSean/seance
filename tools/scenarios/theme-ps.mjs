@@ -775,14 +775,19 @@ const SCENE_STATE = `(async () => {
 	// What moves (stepper.ts): every animation and SVG clock is held and
 	// stepped 24 times a second, so playState and animationsPaused() say
 	// nothing; a clock moving between two samples ${MOTION_SAMPLE_MS} ms apart does.
-	const anims = s.getAnimations({subtree: true});
-	const animAt = anims.map((a) => a.currentTime);
-	const allSvgs = [...s.querySelectorAll("svg")];
-	const svgAt = allSvgs.map((v) => v.getCurrentTime());
-	// Where each SVG stands, read with its first sample: a layer may leave
-	// the page inside the window (its fade's clean-up), after it moved.
-	const svgOff = allSvgs.map((v) => !!v.closest(".ps-off"));
-	await new Promise((r) => setTimeout(r, ${MOTION_SAMPLE_MS}));
+	// A layer that leaves or joins the page inside the window (its fade's
+	// clean-up, layers.ts) moved for part of it only: such a sample says
+	// nothing, so it is taken again (three tries).
+	let anims, animAt, allSvgs, svgAt, svgOff;
+	for (let tries = 0; tries < 3; tries++) {
+		anims = s.getAnimations({subtree: true});
+		animAt = anims.map((a) => a.currentTime);
+		allSvgs = [...s.querySelectorAll("svg")];
+		svgAt = allSvgs.map((v) => v.getCurrentTime());
+		svgOff = allSvgs.map((v) => !!v.closest(".ps-off"));
+		await new Promise((r) => setTimeout(r, ${MOTION_SAMPLE_MS}));
+		if (allSvgs.every((v, i) => !!v.closest(".ps-off") === svgOff[i])) break;
+	}
 	const content = ${OTHERS_LINE};
 	const d = new Date();
 	const n = (sel) => s.querySelectorAll(sel).length;
@@ -3762,15 +3767,89 @@ export default async function run(page) {
 	await page.sleep(300);
 	const quoteCols = await page.evaluate(QUOTE_BOX(RUN));
 	page.check(
-		`a long reply quote in columns stays in the text column (quote ${quoteCols.quote.map((v) =>
-			v.toFixed(1)
+		`a long reply quote stays in the message's text, under the nick (quote ${quoteCols.quote.map(
+			(v) => v.toFixed(1)
 		)}, the column's content box ${quoteCols.content.map((v) => v.toFixed(1))}; ${
 			quoteCols.sizing
 		}, clamped ${quoteCols.clamped}, the column ${quoteCols.display})`,
-		quoteCols.display !== "inline" &&
+		// Stacked rows (spec §8): the text is a block under the nick at every
+		// width. The quote is cut at 80 characters (quoteLayout), so on a wide
+		// pane it may not need its ellipsis; clamped or not, it stays inside.
+		quoteCols.display === "block" &&
 			quoteCols.sizing === "border-box" &&
-			quoteCols.clamped &&
 			insideOf(quoteCols.quote, quoteCols.content)
+	);
+
+	// ---- stacked rows (spec §8, the user's B): the nick, then the time, and
+	// the text under them, indented; the second of two lines from one sender
+	// shows neither; a row with an icon puts it before the time.
+	peer.say(`one of two ${RUN}`);
+	peer.say(`two of two ${RUN}`);
+	const ROW_OF = (text) =>
+		`[...document.querySelectorAll("#chat .msg")].find((m) => m.querySelector(".content")?.textContent.includes(${JSON.stringify(
+			text
+		)}))`;
+	await page.waitFor(`${ROW_OF(`two of two ${RUN}`)} !== undefined`, {
+		label: "the neighbour's two lines",
+	});
+	await page.sleep(300);
+	const stacked = await page.evaluate(`(() => {
+		const box = (e) => { const r = e.getBoundingClientRect(); return {l: r.left, r: r.right, t: r.top, b: r.bottom}; };
+		const first = ${ROW_OF(`one of two ${RUN}`)}, second = ${ROW_OF(`two of two ${RUN}`)};
+		const f = first.querySelector(".from"), t = first.querySelector(".time"), c = first.querySelector(".content");
+		const range = document.createRange();
+		range.selectNodeContents(c);
+		const text = range.getClientRects()[0];
+		const icon = [...document.querySelectorAll('#chat .msg:not([data-type="message"], [data-type="notice"], [data-type="condensed"])')]
+			.find((m) => getComputedStyle(m.querySelector(".from"), "::before").content !== "none" && m.querySelector(".time")?.textContent.trim());
+		const iconRow = icon && {type: icon.dataset.type, from: box(icon.querySelector(".from")), time: box(icon.querySelector(".time"))};
+		return {
+			from: box(f), time: box(t), text: {l: text.left, t: text.top},
+			whole: f.scrollWidth <= f.clientWidth + 1,
+			continuation: second.classList.contains("previous-source"),
+			hidden: [".from", ".time"].map((s) => getComputedStyle(second.querySelector(s)).display),
+			secondText: (() => { const r = document.createRange(); r.selectNodeContents(second.querySelector(".content")); return r.getClientRects()[0].left; })(),
+			iconRow,
+			rem: parseFloat(getComputedStyle(document.documentElement).fontSize),
+		};
+	})()`);
+	page.check(
+		`stacked: the nick, then its time on the same line (nick ${stacked.from.l.toFixed(
+			0
+		)}–${stacked.from.r.toFixed(0)}, time from ${stacked.time.l.toFixed(
+			0
+		)}; tops ${stacked.from.t.toFixed(0)}, ${stacked.time.t.toFixed(0)})`,
+		stacked.from.r <= stacked.time.l &&
+			stacked.time.t < stacked.from.b &&
+			stacked.time.b > stacked.from.t
+	);
+	page.check(
+		`stacked: the text on the next line, indented (text at ${stacked.text.l.toFixed(
+			0
+		)},${stacked.text.t.toFixed(0)}; the nick from ${stacked.from.l.toFixed(
+			0
+		)}, its bottom ${stacked.from.b.toFixed(0)})`,
+		stacked.text.t >= stacked.from.b - 2 &&
+			stacked.text.l - stacked.from.l >= 0.75 * stacked.rem
+	);
+	page.check(`stacked: the nick is drawn whole, never cut`, stacked.whole);
+	page.check(
+		`stacked: the second of two lines shows no nick or time (previous-source ${
+			stacked.continuation
+		}; ${stacked.hidden.join(", ")}), its text under the first's (${stacked.secondText.toFixed(
+			0
+		)})`,
+		stacked.continuation &&
+			stacked.hidden.every((d) => d === "none") &&
+			Math.abs(stacked.secondText - stacked.text.l) < 2
+	);
+	page.check(
+		`stacked: a ${
+			stacked.iconRow?.type
+		} row puts its icon before its time (icon ${stacked.iconRow?.from.l.toFixed(
+			0
+		)}–${stacked.iconRow?.from.r.toFixed(0)}, time from ${stacked.iconRow?.time.l.toFixed(0)})`,
+		!!stacked.iconRow && stacked.iconRow.from.r <= stacked.iconRow.time.l
 	);
 
 	// ---- a phone, at noon: the scene behind the conversation alone
@@ -3830,19 +3909,19 @@ export default async function run(page) {
 	await page.sleep(1500); // the first place, and the column's rise into place
 	const phone = await page.evaluate(SCENE_STATE);
 	checkMounted(page, phone, "a phone, mounted there", FIREFLIES / 2);
-	// The reply quote on the phone's inline flow: inside the row.
+	// The reply quote on the phone: the same stacked row, inside the text.
 	const quotePhone = await page.evaluate(QUOTE_BOX(RUN));
 	page.check(
-		`a phone: the long reply quote stays in its row (quote ${quotePhone?.quote.map((v) =>
-			v.toFixed(1)
-		)}, the row's content box ${quotePhone?.row.map((v) => v.toFixed(1))}; ${
+		`a phone: the long reply quote stays in the message's text, clamped (quote ${quotePhone?.quote.map(
+			(v) => v.toFixed(1)
+		)}, the text's content box ${quotePhone?.content.map((v) => v.toFixed(1))}; ${
 			quotePhone?.sizing
 		}, clamped ${quotePhone?.clamped}, the column ${quotePhone?.display})`,
 		!!quotePhone &&
-			quotePhone.display === "inline" &&
+			quotePhone.display === "block" &&
 			quotePhone.sizing === "border-box" &&
 			quotePhone.clamped &&
-			insideOf(quotePhone.quote, quotePhone.row)
+			insideOf(quotePhone.quote, quotePhone.content)
 	);
 	page.check(
 		`a phone on a rainy noon (${phone.weather}): half the drops and seeds, 65 and 13 (${phone.drops}, ${phone.seeds}; ${phone.flakes} flakes)`,

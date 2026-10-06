@@ -461,69 +461,124 @@ strong,
 	font-weight: 700;
 }
 
-/* The gutter (plan 4 task 5; the user: "too much margin between the time
- * stamp and the username"). In Source Sans 3 every tabular figure is 1ch and
- * a colon about 0.51ch, so style.css's ch widths leave the time column this
- * much after the widest time: 12h ("12:00pm", 7.28ch) 0.22ch, 24h ("00:00",
- * 4.52ch) 0.98ch, and the seconds formats 1.46ch (24h+s, "00:00:00", 7.04ch
- * in 8.5ch) and 0.7ch (12h+s, "12:00:00pm", 9.8ch in 10.5ch). With the nick
- * column's left padding (0.5rem net) the gap after the usual time was 1.12,
- * 0.99, 1.24 and 1.36rem at every step, against the nick's 1.05rem to the
- * text (a 12-hour clock's usual hour, 1 to 9, is a figure short of its
- * widest). The seconds formats come in to 8ch and 10ch: 0.99 and 1.11rem,
- * like the other two, the widest time still held with 0.96ch and 0.2ch to
- * spare at every step (huge included, in columns on a wide window). Still in
- * ch, so a step scales them. The widest column is now 10ch, half a figure
- * inside the 10.5ch style.css's two thresholds count (the user list's
- * overlay, the inline flow), which covers a classic scrollbar (about 10px in
- * Chromium on Linux) that neither sum counts. Measured with
- * tools/scenarios/message-gutter.mjs, SEANCE_THEME=ps. */
-#chat.time-seconds .time {
-	width: 8ch;
+/* Stacked rows (the user's B, 2026-10-06: "go with B"; spec §8). A message
+ * is the nick first, then its time, and the text on the next line, indented
+ * 1.5rem; a run of one sender's lines (Message.vue's `previous-source`: the
+ * same nick, a plain message, the same day) shows the nick and time once and
+ * the lines after it as the indented text alone. A long nick is never cut,
+ * and the phone reads the same way as the desktop: the row is laid out alike
+ * at every pane width, style.css's columns and its narrow inline flow
+ * included. Every other row (a join, a mode, a topic, an action, a
+ * condensed group's summary) is one line from the same edge: its icon first
+ * (the `.from::before` glyph), then the time, then the text, which wraps
+ * under itself. Only the CSS changes: the markup is style.css's. The
+ * selectors carry `.chat` so they outrank style.css's narrow @container
+ * rules on the same elements. */
+#chat .chat .msg:is([data-type="message"], [data-type="notice"]) {
+	display: grid;
+	grid-template-columns: auto auto minmax(0, 1fr);
+	grid-template-areas:
+		"from time ."
+		"content content content";
+	column-gap: 0.5rem;
+	align-items: baseline;
+	padding-block: 0.25rem 0.125rem;
+	padding-inline: 0;
 }
 
-#chat.time-seconds.time-12h .time {
-	width: 10ch;
+#chat .chat .msg:is([data-type="message"], [data-type="notice"]) .from {
+	grid-area: from;
+	display: block;
+	width: auto;
+	min-width: 0;
+	max-width: 100%;
+	padding: 0;
+	padding-inline-start: 0.625rem;
+	text-align: start;
+	white-space: normal;
+	overflow: visible;
+	overflow-wrap: anywhere;
 }
 
-/* The nick column is 9ch, right-aligned (the user's N, 2026-09-26: "N seems
- * fine"; spec §2, §8). style.css gives it `flex: 0 1000 12ch; min-width:
- * 9ch`, and the basis comes down to that floor, in the same words' ch, so a
- * short nick sits nearer the time. In Newsreader 700 a nick of about 8
- * letters is 7.9ch (95 % of 8-letter nicks fit, half of 9-letter ones); a
- * longer one ends in style.css's ellipsis, Source Sans 3's "…" (1.9ch), after
- * about 7ch of the nick (tumbleweed_42 draws "tumble…"): the user accepts
- * longer nicks cut sooner. The shrink weight, the floor, the right
- * alignment, the words' face and the shadow's clip (#chat .chat .from,
- * below) stay as they were; the thresholds count the 9ch floor, so the text
- * keeps its 30ch at both. Checked by tools/scenarios/message-gutter.mjs,
- * SEANCE_THEME=ps. */
-#chat .from {
-	flex-basis: 9ch;
+/* style.css's inline flow puts a space after the nick */
+#chat .chat .msg:is([data-type="message"], [data-type="notice"]) .from::after {
+	content: none;
 }
 
-/* The text column. No rule between it and the nick column: style.css draws
- * a 1px border-left and coffee.css colours it with --chat-rule; transparent
- * keeps the pixel so nothing shifts.
- *
- * Its 30ch basis (style.css `flex: 1 1 30ch`) is the text's, as the
- * thresholds' arithmetic counts it: html is border-box, so the basis held
- * the column's padding and rule too, and between the user list's threshold
- * and the width where the text outgrows its basis nothing asked the nick
- * column to give way; the text sat at 30ch − 0.875rem − 1px, about 28.2ch,
- * beside the panel (the gutter check's failure at 12h+s, medium, 860px,
- * once Source Sans 3's narrower ch moved that threshold under 860). The
- * basis is restated with style.css's padding (0.5rem + 0.375rem) and its
- * 1px rule added, so the nick column shrinks first, down to its 9ch, as
- * style.css intends. The column stays border-box: style.css's `*,
- * *::before, *::after { box-sizing: inherit }` would hand content-box to
- * everything in it, and a reply quote (a `max-width: 100%` button with its
- * own padding and rule) overflowed the column by both (plan 4 task 5, fix
- * round 1). Nothing inherits a flex-basis, and the inline flow's `display:
- * inline` takes the column out of flex layout by itself. */
-#chat .content {
-	flex-basis: calc(30ch + 0.875rem + 1px);
-	border-left-color: transparent;
+#chat .chat .msg:is([data-type="message"], [data-type="notice"]) .time {
+	grid-area: time;
+	display: block;
+	width: auto;
+	padding: 0;
+	font-size: 0.8em;
+}
+
+#chat .chat .msg:is([data-type="message"], [data-type="notice"]) .content {
+	grid-area: content;
+	display: block;
+	padding: 0.0625rem 0.625rem 0.125rem 1.5rem;
+	border: 0;
+}
+
+#chat .chat .msg.previous-source:is([data-type="message"], [data-type="notice"]) {
+	padding-block-start: 0;
+}
+
+#chat .chat .msg.previous-source:is([data-type="message"], [data-type="notice"]) :is(.from, .time) {
+	display: none;
+}
+
+#chat .chat .msg:not([data-type="message"], [data-type="notice"], [data-type="condensed"]),
+#chat .chat .condensed-summary {
+	display: flex;
+	align-items: baseline;
+	column-gap: 0.5rem;
+	padding-block: 0.125rem;
+	padding-inline: 0.625rem;
+}
+
+#chat .chat .msg[data-type="condensed"] {
+	display: block;
+	padding-inline: 0;
+}
+
+#chat .chat .msg:not([data-type="message"], [data-type="notice"], [data-type="condensed"]) :is(.time, .from, .content),
+#chat .chat .condensed-summary :is(.time, .from, .content) {
+	display: block;
+	width: auto;
+	min-width: 0;
+	flex: none;
+	padding: 0;
+	border: 0;
+	text-align: start;
+}
+
+/* The icon first. Its column no longer clips (style.css's ellipsis); the text
+ * keeps style.css's anti-Zalgo clip. */
+#chat .chat .msg:not([data-type="message"], [data-type="notice"], [data-type="condensed"]) .from,
+#chat .chat .condensed-summary .from {
+	order: -1;
+	overflow: visible;
+}
+
+#chat .chat .msg:not([data-type="message"], [data-type="notice"], [data-type="condensed"]) .from::after,
+#chat .chat .condensed-summary .from::after {
+	content: none;
+}
+
+#chat .chat .msg:not([data-type="message"], [data-type="notice"], [data-type="condensed"]) .time,
+#chat .chat .condensed-summary .time {
+	font-size: 0.8em;
+}
+
+#chat .chat .msg:not([data-type="message"], [data-type="notice"], [data-type="condensed"]) .content,
+#chat .chat .condensed-summary .content {
+	flex: 1 1 auto;
+}
+
+/* a condensed group's summary has no time or icon of its own */
+#chat .chat .condensed-summary :is(.time, .from):empty {
+	display: none;
 }
 
 /* ---- motion ---- */
@@ -2211,33 +2266,6 @@ body {
 	--tint-strong: rgb(255 255 255 / 8%);
 	--chat-accent-fg: #1b2638;
 	--button-text-color-hover: #1b2638;
-}
-
-/* The nick column clips for its ellipsis (style.css #chat .from: content-box,
- * padding 0.2em 0.5rem, overflow hidden), and the clip cut the shadow short.
- * More padding gives the shadow room; the same amount taken back as negative
- * margin keeps the box, the row height and the column alignment exactly as
- * they were. The padding now reaches 0.4em into the row above, over the
- * bottom of its nick, so the column itself takes no pointer: what is in it
- * (the nick, its mode prefix) still does. */
-#chat .chat .from {
-	padding: 0.6em 0.75rem;
-	margin: -0.4em -0.25rem;
-	pointer-events: none;
-}
-
-#chat .chat .from > * {
-	pointer-events: auto;
-}
-
-/* The inline flow (style.css's narrow @container chat) sets the columns'
- * padding to 0; an inline nick is never clipped, so it keeps that. */
-/* stylelint-disable-next-line at-rule-no-unknown */
-@container chat (max-width: calc(50ch + 2.5rem)) {
-	#chat .chat .from {
-		padding: 0;
-		margin: 0;
-	}
 }
 
 /* ---- the chrome: glass and solid (docs/projects/ps-theme.md §6) ---- */
