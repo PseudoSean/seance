@@ -2042,8 +2042,25 @@ describe("the ps theme's stacked message rows (the user's B, 2026-10-06)", funct
 		expect(valueOf(`${ROW} .time`, "grid-area")).to.equal("time");
 		expect(valueOf(`${ROW} .content`, "grid-area")).to.equal("content");
 		// the indent: the text starts 1.5rem in, the nick 0.625rem
-		expect(valueOf(`${ROW} .content`, "padding")).to.match(/ 1\.5rem$/);
+		// logical, so a right-to-left page indents from its own start
+		expect(valueOf(`${ROW} .content`, "padding-inline")).to.equal("1.5rem 0.625rem");
+		expect(valueOf(`${ROW} .content`, "padding")).to.equal(undefined);
 		expect(valueOf(`${ROW} .from`, "padding-inline-start")).to.equal("0.625rem");
+	});
+
+	it("lines a mention's nick and text up with the rows around it: its 5px bar is taken off their indents", function () {
+		const H = `#chat .chat .msg.highlight:is(${M})`;
+		// style.css's bar, which this takes off
+		expect(
+			declsOf('#chat .chat-view[data-type="channel"] .msg.highlight', "", style).find(
+				([p]) => p === "border-inline-start"
+			)?.[1]
+		).to.match(/^5px /);
+		expect(valueOf(H, "padding-inline-start")).to.equal("0");
+		expect(valueOf(`${H} .from`, "padding-inline-start")).to.equal("calc(0.625rem - 5px)");
+		expect(valueOf(`${H} .content`, "padding-inline-start")).to.equal("calc(1.5rem - 5px)");
+		expect(valueOf(`${H} .content`, "border")).to.equal("0");
+		expect(valueOf(`${H} .time`, "padding")).to.equal("0");
 	});
 
 	it("never cuts a nick: it wraps rather than ending in an ellipsis", function () {
@@ -2060,6 +2077,15 @@ describe("the ps theme's stacked message rows (the user's B, 2026-10-06)", funct
 	it("shows a run of one sender's lines with the nick and time once", function () {
 		const rest = `#chat .chat .msg.previous-source:is(${M}) :is(.from, .time)`;
 		expect(valueOf(rest, "display")).to.equal("none");
+		// a day's divider or the unread line between two of them starts a new run
+		const after =
+			"#chat .chat :is(.date-marker-container, .unread-marker) + .msg.previous-source :is(.from, .time)";
+		expect(valueOf(after, "display")).to.equal("block");
+		expect(compareSpecificity(specificity(after), specificity(rest))).to.be.at.least(0);
+		const order =
+			rules.findIndex((r) => r.selectors.includes(after)) -
+			rules.findIndex((r) => r.selectors.includes(rest));
+		expect(order, "after the rule that hides them").to.be.above(0);
 	});
 
 	it("runs every other row from the same edge: its icon, then the time, then the text", function () {

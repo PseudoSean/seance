@@ -463,9 +463,11 @@ strong,
 
 /* Stacked rows (the user's B, 2026-10-06: "go with B"; spec §8). A message
  * is the nick first, then its time, and the text on the next line, indented
- * 1.5rem; a run of one sender's lines (Message.vue's `previous-source`: the
- * same nick, a plain message, the same day) shows the nick and time once and
- * the lines after it as the indented text alone. A long nick is never cut,
+ * 1.5rem; a run of one sender's lines (MessageList.vue's `previous-source`: a
+ * plain message from the same nick as the plain message before it, however
+ * long ago) shows the nick and time once and the lines after it as the
+ * indented text alone; a day's divider or the unread line between them
+ * starts a new run. A long nick is never cut,
  * and the phone reads the same way as the desktop: the row is laid out alike
  * at every pane width, style.css's columns and its narrow inline flow
  * included. Every other row (a join, a mode, a topic, an action, a
@@ -516,7 +518,8 @@ strong,
 #chat .chat .msg:is([data-type="message"], [data-type="notice"]) .content {
 	grid-area: content;
 	display: block;
-	padding: 0.0625rem 0.625rem 0.125rem 1.5rem;
+	padding-block: 0.0625rem 0.125rem;
+	padding-inline: 1.5rem 0.625rem;
 	border: 0;
 }
 
@@ -526,6 +529,38 @@ strong,
 
 #chat .chat .msg.previous-source:is([data-type="message"], [data-type="notice"]) :is(.from, .time) {
 	display: none;
+}
+
+/* A mention keeps style.css's bar at its start (5px, in px there) and
+ * nothing else: its nick and text are moved back by the bar so they line up
+ * with the rows around it, and style.css's highlight padding (the time's,
+ * the narrow row's) and the text's 1px rule go. */
+#chat .chat .msg.highlight:is([data-type="message"], [data-type="notice"]) {
+	padding-inline-start: 0;
+}
+
+#chat .chat .msg.highlight:is([data-type="message"], [data-type="notice"]) .from {
+	padding-inline-start: calc(0.625rem - 5px);
+}
+
+#chat .chat .msg.highlight:is([data-type="message"], [data-type="notice"]) .time {
+	padding: 0;
+}
+
+#chat .chat .msg.highlight:is([data-type="message"], [data-type="notice"]) .content {
+	border: 0;
+	padding-inline-start: calc(1.5rem - 5px);
+}
+
+/* A day's divider or the "New messages" line starts a run afresh: the line
+ * after it says who is speaking, as the first of a run does. (Only a plain
+ * message is ever `previous-source`.) */
+#chat .chat :is(.date-marker-container, .unread-marker) + .msg.previous-source {
+	padding-block-start: 0.25rem;
+}
+
+#chat .chat :is(.date-marker-container, .unread-marker) + .msg.previous-source :is(.from, .time) {
+	display: block;
 }
 
 #chat .chat .msg:not([data-type="message"], [data-type="notice"], [data-type="condensed"]),
