@@ -11,6 +11,20 @@
 
 export type SceneView = "channel" | "query" | "other";
 
+/**
+ * How much a scene moves (the ps theme's Scene animation setting): not at
+ * all, once every five minutes and on coming back, once a second, 24 frames a
+ * second, or the browser's own rate.
+ */
+export type SceneMotion = "off" | "sparse" | "1s" | "24" | "60";
+
+export const SCENE_MOTIONS: readonly SceneMotion[] = ["off", "sparse", "1s", "24", "60"];
+
+/** A stored value the list does not hold is the default. */
+export function normalizeSceneMotion(value: unknown): SceneMotion {
+	return SCENE_MOTIONS.includes(value as SceneMotion) ? (value as SceneMotion) : "24";
+}
+
 export interface SceneHostState {
 	visible: boolean;
 	/**
@@ -21,6 +35,7 @@ export interface SceneHostState {
 	 */
 	attended: boolean;
 	view: SceneView;
+	motion: SceneMotion;
 }
 
 export interface SceneHandle {
@@ -43,6 +58,9 @@ export interface SceneHost {
 	setTheme(name: string): Promise<void>;
 	setVisible(visible: boolean): void;
 	setAttended(attended: boolean): void;
+	/** Whether a page nobody attends to rests its scene (default yes); no, and it counts as attended. */
+	setPauseWhenAway(pause: boolean): void;
+	setMotion(motion: SceneMotion): void;
 	setView(view: SceneView): void;
 	/**
 	 * Re-attempts the load of the currently-asked theme's scene, if its last
@@ -61,6 +79,10 @@ export function createSceneHost(opts: {
 	warn?: (message: string, error: unknown) => void;
 }): SceneHost {
 	const state: SceneHostState = {...opts.state};
+	// What attention says, and whether the scene listens to it: state.attended
+	// is the one the scene is given.
+	let attention = state.attended;
+	let pauseWhenAway = true;
 	let asked: string | null = null;
 	let mounted: string | null = null;
 	let handle: SceneHandle | null = null;
@@ -133,6 +155,16 @@ export function createSceneHost(opts: {
 		}
 	};
 
+	const setAttended = (attended: boolean): void => {
+		attention = attended;
+		const given = attention || !pauseWhenAway;
+
+		if (state.attended !== given) {
+			state.attended = given;
+			handle?.update({...state});
+		}
+	};
+
 	const retry = (): Promise<void> => {
 		if (!failed) {
 			return Promise.resolve();
@@ -172,9 +204,16 @@ export function createSceneHost(opts: {
 			}
 		},
 
-		setAttended(attended: boolean): void {
-			if (state.attended !== attended) {
-				state.attended = attended;
+		setAttended,
+
+		setPauseWhenAway(pause: boolean): void {
+			pauseWhenAway = pause;
+			setAttended(attention);
+		},
+
+		setMotion(motion: SceneMotion): void {
+			if (state.motion !== motion) {
+				state.motion = motion;
 				handle?.update({...state});
 			}
 		},
@@ -196,7 +235,7 @@ export function createSceneHost(opts: {
 export const themeScene: SceneHost = createSceneHost({
 	root: () => document.getElementById("theme-scene"),
 	loaders: SCENES,
-	state: {visible: true, attended: true, view: "other"},
+	state: {visible: true, attended: true, view: "other", motion: "24"},
 	warn: (message, error) => console.warn(message, error), // eslint-disable-line no-console
 });
 

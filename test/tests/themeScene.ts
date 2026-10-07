@@ -4,6 +4,7 @@ import {
 	createAttention,
 	createSceneHost,
 	IDLE_REST_MS,
+	normalizeSceneMotion,
 	SCENES,
 	UNFOCUSED_REST_MS,
 	type SceneHandle,
@@ -81,7 +82,7 @@ const host = (loaders: Record<string, SceneLoader>, warn?: (m: string, e: unknow
 	createSceneHost({
 		root: () => ROOT,
 		loaders,
-		state: {visible: true, attended: true, view: "channel"},
+		state: {visible: true, attended: true, view: "channel", motion: "24"},
 		warn,
 	});
 
@@ -166,7 +167,7 @@ describe("the theme-scene hook (client/js/themeScene.ts)", function () {
 		const h = createSceneHost({
 			root: () => fakeRoot,
 			loaders: {ps: () => Promise.resolve(throwing)},
-			state: {visible: true, attended: true, view: "channel"},
+			state: {visible: true, attended: true, view: "channel", motion: "24"},
 			warn: (m) => warnings.push(m),
 		});
 		await h.setTheme("ps");
@@ -200,6 +201,41 @@ describe("the theme-scene hook (client/js/themeScene.ts)", function () {
 		h.setAttended(true);
 		h.setAttended(true);
 		expect(log).to.deep.equal(["mount true true channel", "update true channel"]);
+	});
+
+	it("forwards the motion level, and with pause-when-away off counts the page as attended", async function () {
+		const seen: string[] = [];
+		const mod: SceneModule = {
+			mount(_root, state) {
+				seen.push(`mount ${state.attended} ${state.motion}`);
+				return {
+					update: (st: SceneHostState) => seen.push(`update ${st.attended} ${st.motion}`),
+					destroy: () => undefined,
+				};
+			},
+		};
+		const h = host({ps: () => Promise.resolve(mod)});
+		h.setMotion("1s");
+		await h.setTheme("ps");
+		h.setAttended(false);
+		h.setPauseWhenAway(false); // attended again, whatever attention says
+		h.setAttended(false);
+		h.setPauseWhenAway(true); // and resting again
+		h.setMotion("60");
+		h.setMotion("60");
+		expect(seen).to.deep.equal([
+			"mount true 1s",
+			"update false 1s",
+			"update true 1s",
+			"update false 1s",
+			"update false 60",
+		]);
+	});
+
+	it("reads an unknown stored motion level as the default", function () {
+		expect(normalizeSceneMotion("60")).to.equal("60");
+		expect(normalizeSceneMotion("fast")).to.equal("24");
+		expect(normalizeSceneMotion(undefined)).to.equal("24");
 	});
 
 	describe("attention (createAttention)", function () {
@@ -308,7 +344,7 @@ describe("the theme-scene hook (client/js/themeScene.ts)", function () {
 			const h = createSceneHost({
 				root: () => ROOT,
 				loaders: {ps: rejectOnceThenResolve(mod)},
-				state: {visible: false, attended: true, view: "channel"},
+				state: {visible: false, attended: true, view: "channel", motion: "24"},
 				warn: (m) => warnings.push(m),
 			});
 			await h.setTheme("ps");

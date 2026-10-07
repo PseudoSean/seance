@@ -401,7 +401,10 @@ export default defineComponent({
 			return true;
 		};
 
+		// The ps theme's setting (Combine messages): off, and no line is a
+		// continuation, so every message shows its nick and time.
 		const isPreviousSource = (currentMessage: ClientMessage, id: number) =>
+			store.state.settings.psGroupMessages !== false &&
 			continuesRun(condensedMessages.value[id - 1], currentMessage);
 
 		const onCopy = () => {

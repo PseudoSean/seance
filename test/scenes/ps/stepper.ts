@@ -1,6 +1,13 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {createStepper, SCENE_FPS, type StepAnimation} from "../../../client/js/scenes/ps/stepper";
+import {
+	createStepper,
+	SCENE_FPS,
+	SPARSE_INTERVAL_MS,
+	stepModeFor,
+	type StepAnimation,
+	type StepMode,
+} from "../../../client/js/scenes/ps/stepper";
 
 class FakeAnimation implements StepAnimation {
 	playState = "running";
@@ -12,6 +19,10 @@ class FakeAnimation implements StepAnimation {
 
 	pause() {
 		this.playState = "paused";
+	}
+
+	play() {
+		this.playState = "running";
 	}
 }
 
@@ -25,6 +36,10 @@ class FakeSvg {
 
 	pauseAnimations() {
 		this.paused = true;
+	}
+
+	unpauseAnimations() {
+		this.paused = false;
 	}
 
 	getCurrentTime() {
@@ -47,8 +62,9 @@ describe("ps scene: the stepper (stepper.ts)", function () {
 		clock.restore();
 	});
 
-	const stepper = (anims: FakeAnimation[], svgs: FakeSvg[]) =>
+	const stepper = (anims: FakeAnimation[], svgs: FakeSvg[], mode?: StepMode) =>
 		createStepper({
+			mode,
 			animations: () => anims,
 			svgs: () => svgs,
 			now: () => Date.now(),
@@ -150,5 +166,76 @@ describe("ps scene: the stepper (stepper.ts)", function () {
 		s.start();
 		expect(clock.countTimers()).to.equal(1);
 		s.stop();
+	});
+
+	describe("the Scene animation setting's paces (stepModeFor)", function () {
+		it("maps each level: off never runs, sparse every five minutes catching up, 1s, 24, and 60 the browser's own", function () {
+			expect(stepModeFor("off")).to.equal(null);
+			expect(stepModeFor("sparse")).to.deep.equal({
+				kind: "step",
+				interval: SPARSE_INTERVAL_MS,
+				catchUp: true,
+			});
+			expect(SPARSE_INTERVAL_MS).to.equal(5 * 60 * 1000);
+			expect(stepModeFor("1s")).to.deep.equal({kind: "step", interval: 1000, catchUp: false});
+			expect(stepModeFor("24")).to.deep.equal({
+				kind: "step",
+				interval: 1000 / 24,
+				catchUp: false,
+			});
+			expect(stepModeFor("60")).to.deep.equal({kind: "native"});
+		});
+
+		it("60: hands playback to the browser, with no timer, and holds everything again when stopped", function () {
+			const a = new FakeAnimation();
+			const svg = new FakeSvg();
+			const s = stepper([a], [svg], {kind: "native"});
+			s.start();
+			expect(a.playState).to.equal("running");
+			expect(svg.paused).to.equal(false);
+			expect(clock.countTimers()).to.equal(0);
+			s.stop();
+			expect(a.playState, "a script's play() outlasts the CSS pause").to.equal("paused");
+			expect(svg.paused).to.equal(true);
+		});
+
+		it("1s: one step a second", function () {
+			const a = new FakeAnimation();
+			const s = stepper([a], [], stepModeFor("1s")!);
+			s.start();
+			clock.tick(999);
+			expect(a.currentTime).to.equal(0);
+			clock.tick(1);
+			expect(a.currentTime).to.equal(1000);
+			s.stop();
+		});
+
+		it("sparse: moves on every five minutes, and at once on a start, by all the time since its last step", function () {
+			const a = new FakeAnimation();
+			const s = stepper([a], [], stepModeFor("sparse")!);
+			s.start();
+			clock.tick(SPARSE_INTERVAL_MS);
+			expect(a.currentTime).to.equal(SPARSE_INTERVAL_MS);
+			s.stop();
+			clock.tick(30 * 60 * 1000); // half an hour away
+			s.start(); // coming back
+			expect(a.currentTime, "up to date the moment it is looked at").to.equal(
+				SPARSE_INTERVAL_MS + 30 * 60 * 1000
+			);
+			s.stop();
+		});
+
+		it("carries on from where the animations stand after another pace moved them: no jump back", function () {
+			const a = new FakeAnimation();
+			const s = stepper([a], [], {kind: "native"});
+			s.start();
+			a.currentTime = 9000; // the browser played it on
+			s.setMode(stepModeFor("24")!);
+			expect(s.running).to.equal(true);
+			expect(a.playState).to.equal("paused");
+			clock.tick(1000);
+			expect(a.currentTime).to.be.closeTo(10000, 1000 / 24);
+			s.stop();
+		});
 	});
 });

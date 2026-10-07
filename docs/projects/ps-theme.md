@@ -119,6 +119,7 @@ Decided while plan 4 was built, all on 2026-09-26. The type was picked on an opt
 | 2026-10-05 | The frame rate            | the scene is drawn at 24 frames a second (§10.3): "can you lower frame rates? 24 fps would be sufficient rather then 60fps"                                                                                                                                                                                                                                                                                                                                                                                                              |
 | 2026-10-06 | Runs break on a pause     | a run of one sender's lines breaks after ten minutes, and a line inside a run shows its time on hover or long press (§8): "yes to both"                                                                                                                                                                                                                                                                                                                                                                                                  |
 | 2026-10-06 | Stacked rows              | the nick first, then the time, and the text on the next line, indented, grouped by sender; an icon row puts its icon before the time (§8): "go with B", "the icon should go before the timestamp", "all of these changes should only affect the ps theme"                                                                                                                                                                                                                                                                                |
+| 2026-10-07 | The theme's settings      | Scene animation (off, sparse, once a second, 24 by default, 60), pause when away (on), combine messages (on), in Settings → Appearance under ps (§10.4): "theme-specific settings, one of which being the animation level", "an option for combining messages or not (default yes)"                                                                                                                                                                                                                                                      |
 
 ## 3. Architecture
 
@@ -347,7 +348,7 @@ Both are bundled in `client/themes/ps/` with their OFL licences, Google Fonts' w
 
 Rules:
 
-- The scene is drawn at 24 frames a second, not the screen's rate (the user, 2026-10-05; §10.3): every CSS animation and SMIL clock in it is held and one timer steps them together (`stepper.ts`). Beside that timer, the scene's script updates once a minute and when the page becomes visible.
+- The scene is drawn at 24 frames a second by default (the user, 2026-10-05; §10.3), and the user can pick another pace in Settings → Appearance (§10.4): every CSS animation and SMIL clock in it is held and one timer steps them together (`stepper.ts`). Beside that timer, the scene's script updates once a minute and when the page becomes visible.
 - Only the weather that is happening exists in the page: rain drops are built on rainy days, not hidden on clear ones.
 - The page hidden means the scene stopped: all its animations paused, SVG animations paused, no timer.
 - A visible page nobody attends to rests the scene: still as a query's (all its animations paused, SVG animations paused), the minute's tick kept so the colours stay on the hour. Nobody attends 15 s after the window loses the focus, or after 2 minutes without pointer, key, wheel or touch input; the focus or any input runs it again from where it stood (`themeScene.ts` `createAttention`, §10.2).
@@ -648,6 +649,20 @@ Against the unblurred build the three overlay checks failed, and nothing else ne
 Natively this machine reached only 31–39 frames a second at dusk and in rain; a desktop with a GPU draws those at 60, so its saving is larger than the table's. The compositor's share (the glass's blur, redrawn each frame the scene moves) falls with the frame count; it was not measured here.
 
 **What it changes for the checks.** A held animation's `playState` is `paused` and every SVG's `animationsPaused()` is true whether the scene runs or not, so `theme-ps.mjs`'s `SCENE_STATE` and `scene-rest.mjs` tell what moves by sampling the clocks twice, 250 ms apart. `scene-rest.mjs` also holds the scene at about 24 style recalculations a second (24.2 and 24.6 in two runs). `test/scenes/ps/stepper.ts` holds the stepper (real-time advance, 24 writes a second, no read in a step, no timer when stopped, no jump on resume, refresh), and `test/scenes/ps/mount.ts` a running scene's clocks moving and a stopped one's not.
+
+### 10.4 The theme's own settings (2026-10-07)
+
+The user, 2026-10-07: "theme-specific settings, one of which being the animation level; off, sparse (maybe only updates once every 5 minutes or when coming into focus), every 1 second, 24 fps (default), and 60 fps, an option whether to disable animation when backgrounded (this is default on)", and "an option for combining messages or not (default yes)".
+
+Settings → Appearance shows them under the theme select while ps is the theme (`Appearance.vue`, a block keyed by the theme's name, so another theme could add its own); they are ordinary settings (`settings.ts`), so the settings backup carries them:
+
+- **`psAnimation`**, Scene animation: `off` (still, as a rest is; the minute's tick keeps the colours on the hour), `sparse` (a step every five minutes, `SPARSE_INTERVAL_MS`, and one at once on every start by all the time since the last, so coming back to the window brings the scene up to date), `1s`, `24` (the default) and `60` (the browser's own playback at the screen's rate, handed back to it rather than stepped on a timer no vsync aligns; on a faster screen it runs faster). `themeScene.ts` `SceneMotion` reaches the scene as the host's `motion`; `stepper.ts` `stepModeFor` turns it into a pace, and a switch re-reads every animation's time, so nothing jumps back.
+- **`psPauseWhenAway`**, Pause the scene when the window isn't in use (default on): off, the host gives the scene `attended: true` whatever `createAttention` says.
+- **`psGroupMessages`**, Combine messages from the same person (default on): off, `MessageList.vue` marks no line `previous-source`, so every message shows its nick and time.
+
+Two rules stay whatever the settings say: a hidden page draws nothing (a hidden tab's animation is pure cost), and reduced motion stops the scene.
+
+Measured by `tools/scenarios/ps-scene-settings.mjs` (headless, no GPU, a clear noon, the composer blurred, since a focused text field restyles about twice a second under every theme): restyles a second at off 0.2, once a second 1.0, 24 at 24.6, 60 at 65.7; sparse 0.0 between its steps, and coming back after a rest moved the SVG clocks on by 130 s at once; with Pause off, a window without the focus kept 24.2.
 
 ## 11. Legibility floors
 
