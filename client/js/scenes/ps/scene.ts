@@ -13,7 +13,9 @@
  * It keeps the yurt in the message column's far third (placeYurt). All
  * motion is CSS or SVG animation, held paused and advanced together
  * SCENE_FPS times a second by one timer (stepper.ts) rather than at the
- * screen's rate. A layer outside
+ * screen's rate, or at the pace the Scene animation setting picks (the
+ * host's `motion`: off, every five minutes, once a second, 24, or the
+ * browser's own). A layer outside
  * its window (the stars by day, the skeins by day, the larks out of season…)
  * is out of the render tree with its SMIL paused, rather than animating at
  * opacity 0 (layers.ts). A hidden page's
@@ -30,7 +32,7 @@ import type {SceneHandle, SceneHostState} from "../../themeScene";
 import {birdsAt, dayBirdsMarkup, skeinsMarkup} from "./birds";
 import {momentAt, rng, type Moment, type MoonPhase, type Weather} from "./engine";
 import {composerAboveGrass, GLASS_TINT_VARS, glassVars} from "./glass";
-import {createStepper} from "./stepper";
+import {createStepper, stepModeFor} from "./stepper";
 import {bodyOpacity, publishedFor, type Published} from "./grounds";
 import {FADE_MARGIN_MS, GATES, layerGates, liveLayers} from "./layers";
 import {levelsAt, paletteAt, WEATHER, type Palette} from "./palette";
@@ -561,7 +563,9 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 	// scene runs (stepper.ts). Of the SMIL it steps none in a layer out of
 	// the render tree (layers.ts), and the heat haze's only while it bends
 	// the ground (ps-hot). syncSvgs is called whenever those change.
+	let sceneMotion = initial.motion;
 	const stepper = createStepper({
+		mode: stepModeFor(sceneMotion) ?? undefined,
 		animations: () =>
 			root
 				.getAnimations({subtree: true})
@@ -746,7 +750,8 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 	// is redrawn while no one looks; it moves on from where it stood.
 	let privateView = false;
 	let attended = initial.attended;
-	const running = () => visible && attended && !reduced.matches && !privateView;
+	const running = () =>
+		visible && attended && sceneMotion !== "off" && !reduced.matches && !privateView;
 	const onReduced = () => motion(running());
 
 	// Once now, then on each minute boundary. The next minute is scheduled
@@ -776,6 +781,18 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 		root.dataset.view = state.view;
 		privateView = state.view === "query";
 		attended = state.attended;
+
+		// The Scene animation setting: a new pace (stepper.ts), or off, which
+		// holds the scene as a rest does.
+		if (state.motion !== sceneMotion) {
+			sceneMotion = state.motion;
+			const mode = stepModeFor(sceneMotion);
+
+			if (mode) {
+				stepper.setMode(mode);
+			}
+		}
+
 		root.classList.toggle("ps-private", privateView);
 		yurt?.refind();
 		composer?.refind();

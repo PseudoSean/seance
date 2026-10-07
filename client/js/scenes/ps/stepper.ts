@@ -1,3 +1,5 @@
+import type {SceneMotion} from "../../themeScene";
+
 /**
  * The scene's frame rate (docs/projects/ps-theme.md §10.3). Left to the
  * browser, every running animation restyles its element on every main frame,
@@ -6,6 +8,10 @@
  * 2026-10-05). So the scene's own CSS animations and SMIL clocks are held
  * paused, and one timer advances them all together by the real time elapsed,
  * SCENE_FPS times a second: the browser draws a frame only when they move.
+ * The ps theme's Scene animation setting picks another pace (stepModeFor):
+ * once a second, once every five minutes, or the browser's own playback at
+ * the screen's rate, which this hands back to it rather than stepping on a
+ * timer that no vsync aligns.
  *
  * Only CSS animations are stepped. Transitions (a layer's fade, the day/night
  * flip, the overcast's cross-fade) run natively, since the scene times its
@@ -16,31 +22,62 @@
  * its animations and its SVGs, so mocha drives it.
  */
 
-/** Frames a second the scene is drawn at. 24 divides 120 and 144 Hz screens evenly; on 60 Hz it lands on two vsyncs out of five. */
+/** Frames a second the scene is drawn at by default. 24 divides 120 and 144 Hz screens evenly; on 60 Hz it lands on two vsyncs out of five. */
 export const SCENE_FPS = 24;
+
+/** The sparse level's pace: the scene moves on once every five minutes (and on coming back, StepMode.catchUp). */
+export const SPARSE_INTERVAL_MS = 5 * 60 * 1000;
+
+/**
+ * How the stepper moves the scene: the browser's own playback at the screen's
+ * rate (`native`), or held and advanced every `interval` ms; `catchUp` steps
+ * at once on every start by all the time since the last step, so a scene
+ * that moves only now and then is up to date the moment it is looked at.
+ */
+export type StepMode = {kind: "native"} | {kind: "step"; interval: number; catchUp: boolean};
+
+/** The step mode for a motion level (the ps theme's Scene animation setting); null for off, which never runs. */
+export function stepModeFor(motion: SceneMotion): StepMode | null {
+	switch (motion) {
+		case "off":
+			return null;
+		case "sparse":
+			return {kind: "step", interval: SPARSE_INTERVAL_MS, catchUp: true};
+		case "1s":
+			return {kind: "step", interval: 1000, catchUp: false};
+		case "60":
+			return {kind: "native"};
+		default:
+			return {kind: "step", interval: 1000 / SCENE_FPS, catchUp: false};
+	}
+}
 
 /** The part of a CSSAnimation the stepper uses. */
 export interface StepAnimation {
 	readonly playState: string;
 	currentTime: number | null | CSSNumberish;
 	pause(): void;
+	play(): void;
 }
 
 /** The part of an SVG root element the stepper uses. */
 export interface StepSvg {
 	animationsPaused(): boolean;
 	pauseAnimations(): void;
+	unpauseAnimations(): void;
 	getCurrentTime(): number;
 	setCurrentTime(seconds: number): void;
 }
 
 export interface Stepper {
-	/** Advance from now on (a resume starts from where it stood: no jump). */
+	/** Move from now on (a resume starts from where it stood, unless the mode catches up). */
 	start(): void;
 	/** Hold everything where it stands; no timer is left. */
 	stop(): void;
-	/** Collect what to step again: the scene's animations and SVGs changed. Pauses whatever is newly running. */
+	/** Collect what to move again: the scene's animations and SVGs changed. Holds, or plays, whatever is new. */
 	refresh(): void;
+	/** Change the pace; a running stepper carries on at the new one. */
+	setMode(mode: StepMode): void;
 	readonly running: boolean;
 }
 
@@ -51,14 +88,18 @@ export function createStepper(deps: {
 	svgs(): StepSvg[];
 	now(): number;
 	after(ms: number, fn: () => void): () => void;
-	fps?: number;
+	mode?: StepMode;
 }): Stepper {
-	const interval = 1000 / (deps.fps ?? SCENE_FPS);
+	let mode: StepMode = deps.mode ?? {kind: "step", interval: 1000 / SCENE_FPS, catchUp: false};
+	let running = false;
 	// Each animation's scene time, kept here so a step never reads one back.
 	let times = new Map<StepAnimation, number>();
 	let svgs: StepSvg[] = [];
-	let last = 0;
+	// When the last step was taken (a catching-up mode measures from it).
+	let last: number | null = null;
 	let cancel: (() => void) | undefined;
+
+	const playing = () => running && mode.kind === "native";
 
 	const refresh = () => {
 		const next = new Map<StepAnimation, number>();
@@ -68,8 +109,13 @@ export function createStepper(deps: {
 			next.set(a, times.get(a) ?? Number(a.currentTime ?? 0));
 		}
 
+		// Native playback plays what it finds; every other state holds it.
 		for (const a of found) {
-			if (a.playState === "running") {
+			if (playing()) {
+				if (a.playState !== "running") {
+					a.play();
+				}
+			} else if (a.playState === "running") {
 				a.pause();
 			}
 		}
@@ -78,15 +124,23 @@ export function createStepper(deps: {
 		svgs = deps.svgs();
 
 		for (const svg of svgs) {
-			if (!svg.animationsPaused()) {
+			if (playing()) {
+				if (svg.animationsPaused()) {
+					svg.unpauseAnimations();
+				}
+			} else if (!svg.animationsPaused()) {
 				svg.pauseAnimations();
 			}
 		}
 	};
 
 	const step = () => {
+		if (mode.kind !== "step") {
+			return;
+		}
+
 		const now = deps.now();
-		const dt = now - last;
+		const dt = last === null ? 0 : now - last;
 		last = now;
 
 		for (const [a, t] of times) {
@@ -99,26 +153,62 @@ export function createStepper(deps: {
 			svg.setCurrentTime(svg.getCurrentTime() + dt / 1000);
 		}
 
-		cancel = deps.after(interval, step);
+		cancel = deps.after(mode.interval, step);
+	};
+
+	const start = () => {
+		if (running) {
+			return;
+		}
+
+		running = true;
+		// What the animations hold now is the truth: native playback, or
+		// another mode, may have moved them since this map was written.
+		times = new Map();
+		refresh();
+
+		if (mode.kind === "native") {
+			return;
+		}
+
+		if (mode.catchUp && last !== null) {
+			step(); // by all the time since the last step: up to date at once
+		} else {
+			last = deps.now();
+			cancel = deps.after(mode.interval, step);
+		}
+	};
+
+	const stop = () => {
+		if (!running) {
+			return;
+		}
+
+		cancel?.();
+		cancel = undefined;
+		running = false;
+
+		if (mode.kind === "native") {
+			// A script's play() outlasts animation-play-state: hold them by hand.
+			refresh();
+		}
 	};
 
 	return {
 		get running() {
-			return cancel !== undefined;
+			return running;
 		},
-		start() {
-			if (cancel) {
-				return;
-			}
-
-			refresh();
-			last = deps.now();
-			cancel = deps.after(interval, step);
-		},
-		stop() {
-			cancel?.();
-			cancel = undefined;
-		},
+		start,
+		stop,
 		refresh,
+		setMode(next: StepMode) {
+			const was = running;
+			stop();
+			mode = next;
+
+			if (was) {
+				start();
+			}
+		},
 	};
 }
