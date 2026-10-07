@@ -4147,8 +4147,12 @@ export default async function run(page) {
 	// began with the cloud already mostly on screen. Now a cloud, its blobs
 	// and its blur included, starts wholly past the scene's left edge and
 	// ends wholly past its right one. Each drift is paused and put at its
-	// loop's start, middle and end (a millisecond before the end), in its
-	// second iteration so a negative delay is behind it. Pausing an animation
+	// loop's start, middle and end (a millisecond before the end), in the
+	// first whole loop after its delay: the delays are negative, and in the
+	// wind (ps-windy, the duration at 0.4) a delay can run past a whole loop,
+	// so "the second iteration" would seek before the animation's start, where
+	// no fill draws it and the cloud sits untransformed at the left edge (the
+	// 2026-10-06 failures, on a windy pinned day). Pausing an animation
 	// from script leaves it deaf to animation-play-state for good, which is
 	// why this comes after every stopped-and-running check; the reloads below
 	// build the scene afresh.
@@ -4159,7 +4163,8 @@ export default async function run(page) {
 			if (!a) return null;
 			const t = a.effect.getTiming();
 			a.pause();
-			a.currentTime = t.delay + t.duration * (1 + ${p}) - (${p} === 1 ? 1 : 0);
+			const loop = Math.max(1, Math.ceil(-t.delay / t.duration));
+			a.currentTime = t.delay + t.duration * (loop + ${p}) - (${p} === 1 ? 1 : 0);
 			const boxes = [el, ...el.querySelectorAll("i")].map((e) => e.getBoundingClientRect());
 			const blur = 0.025 * parseFloat(getComputedStyle(document.documentElement).fontSize);
 			return {
