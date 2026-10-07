@@ -58,6 +58,8 @@ export interface StepAnimation {
 	currentTime: number | null | CSSNumberish;
 	pause(): void;
 	play(): void;
+	cancel(): void;
+	addEventListener(type: "cancel", listener: () => void): void;
 }
 
 /** The part of an SVG root element the stepper uses. */
@@ -76,6 +78,8 @@ export interface Stepper {
 	stop(): void;
 	/** Collect what to move again: the scene's animations and SVGs changed. Holds, or plays, whatever is new. */
 	refresh(): void;
+	/** Read every animation's time again: something other than a step moved them (keepPhase). */
+	reread(): void;
 	/** Change the pace; a running stepper carries on at the new one. */
 	setMode(mode: StepMode): void;
 	readonly running: boolean;
@@ -101,12 +105,34 @@ export function createStepper(deps: {
 
 	const playing = () => running && mode.kind === "native";
 
+	// An animation its element's style cancels between two refreshes
+	// (reduced motion switched on, a layer gone from the render tree) must
+	// not be stepped: a time written to a cancelled animation brings it back,
+	// held where it was. Its own cancel event drops it, and cancels it again
+	// if a step got to it first; a step itself never reads, which would cost
+	// a style recalculation each (measured: 48 a second at 24, not 24).
+	const watched = new WeakSet<StepAnimation>();
+
+	const watch = (a: StepAnimation) => {
+		if (watched.has(a)) {
+			return;
+		}
+
+		watched.add(a);
+		a.addEventListener("cancel", () => {
+			if (times.delete(a) && a.playState !== "idle") {
+				a.cancel();
+			}
+		});
+	};
+
 	const refresh = () => {
 		const next = new Map<StepAnimation, number>();
 		const found = deps.animations();
 
 		for (const a of found) {
 			next.set(a, times.get(a) ?? Number(a.currentTime ?? 0));
+			watch(a);
 		}
 
 		// Native playback plays what it finds; every other state holds it.
@@ -201,6 +227,10 @@ export function createStepper(deps: {
 		start,
 		stop,
 		refresh,
+		reread() {
+			times = new Map();
+			refresh();
+		},
 		setMode(next: StepMode) {
 			const was = running;
 			stop();
@@ -211,4 +241,16 @@ export function createStepper(deps: {
 			}
 		},
 	};
+}
+
+/**
+ * The time that puts an infinite animation at `progress` (0 to 1) of a loop
+ * under its present timing: in the first whole loop after its delay, which
+ * may be negative and longer than a loop. The ps scene's clouds keep their
+ * place with it when the wind changes their drift's duration (scene.ts):
+ * the same time under a shorter loop is another place, and they jumped.
+ */
+export function keepPhase(progress: number, delay: number, duration: number): number {
+	const loop = Math.max(1, Math.ceil(-delay / duration));
+	return delay + duration * (loop + progress);
 }

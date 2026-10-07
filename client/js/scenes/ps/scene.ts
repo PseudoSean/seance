@@ -32,7 +32,7 @@ import type {SceneHandle, SceneHostState} from "../../themeScene";
 import {birdsAt, dayBirdsMarkup, skeinsMarkup} from "./birds";
 import {momentAt, rng, type Moment, type MoonPhase, type Weather} from "./engine";
 import {composerAboveGrass, GLASS_TINT_VARS, glassVars} from "./glass";
-import {createStepper, stepModeFor} from "./stepper";
+import {createStepper, keepPhase, stepModeFor} from "./stepper";
 import {bodyOpacity, publishedFor, type Published} from "./grounds";
 import {FADE_MARGIN_MS, GATES, layerGates, liveLayers} from "./layers";
 import {levelsAt, paletteAt, WEATHER, type Palette} from "./palette";
@@ -181,6 +181,13 @@ export function sceneClasses(
 		"ps-hot": l.hot,
 		"ps-west": birdsAt(m, p).west,
 	};
+}
+
+/** The clouds' drift animations, the wind's to keep in place (apply). */
+function driftsOf(root: HTMLElement): Animation[] {
+	return [...root.querySelectorAll(".ps-cloud")].flatMap((el) =>
+		el.getAnimations().filter((a) => (a as CSSAnimation).animationName === "ps-drift")
+	);
 }
 
 /**
@@ -693,9 +700,29 @@ export function mount(root: HTMLElement, initial: SceneHostState): SceneHandle {
 		);
 		applied = true;
 
-		// After the rebuild, so the haze exists before ps-hot asks for it.
-		for (const [name, on] of Object.entries(sceneClasses(m, p))) {
+		// After the rebuild, so the haze exists before ps-hot asks for it. The
+		// wind changes the clouds' drift's duration (ps.css ps-windy), and the
+		// same time under another loop length is another place: each cloud is
+		// put back at its place in its loop under the new one.
+		const classes = sceneClasses(m, p);
+		const windChanges = classes["ps-windy"] !== root.classList.contains("ps-windy");
+		const drifts = windChanges ? driftsOf(root) : [];
+		const places = drifts.map((a) => a.effect?.getComputedTiming().progress ?? null);
+
+		for (const [name, on] of Object.entries(classes)) {
 			root.classList.toggle(name, on);
+		}
+
+		if (drifts.length > 0) {
+			drifts.forEach((a, i) => {
+				const place = places[i];
+				const timing = a.effect?.getTiming();
+
+				if (place !== null && timing) {
+					a.currentTime = keepPhase(place, Number(timing.delay), Number(timing.duration));
+				}
+			});
+			stepper.reread();
 		}
 
 		// The new weather's SMIL, and the haze's with ps-hot. A layer built

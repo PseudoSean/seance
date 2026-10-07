@@ -89,6 +89,8 @@ class FakeElement extends Listeners {
 		currentTime: number | null;
 		pause(): void;
 		play(): void;
+		cancel?(): void;
+		addEventListener?(type: "cancel", listener: () => void): void;
 	}> = [];
 	dataset: Record<string, string> = {};
 	style = new FakeStyle();
@@ -840,6 +842,10 @@ describe("ps scene: mount (scene.ts, on a stand-in page)", function () {
 					play() {
 						this.playState = "running";
 					},
+					cancel() {
+						this.playState = "idle";
+					},
+					addEventListener() {},
 				};
 				page.root.animations = [anim];
 				const scene = mountOn(page);
