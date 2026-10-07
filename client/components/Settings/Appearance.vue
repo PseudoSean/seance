@@ -263,6 +263,45 @@
 			</select>
 		</div>
 
+		<!-- A theme's own settings, shown while it is the theme. Only ps has
+		     any; another theme would add its block here, keyed by its name. -->
+		<template v-if="store.state.settings.theme === 'ps'">
+			<h2 id="label-ps-animation">{{ t("settings.appearance.psAnimationHeading") }}</h2>
+			<div role="group" aria-labelledby="label-ps-animation" class="scene-motion-options">
+				<label v-for="level in sceneMotions" :key="level" class="opt">
+					<input
+						:checked="psAnimation === level"
+						type="radio"
+						name="psAnimation"
+						:value="level"
+					/>
+					{{ sceneMotionLabels[level] }}
+					<span class="opt-hint">{{ sceneMotionHints[level] }}</span>
+				</label>
+				<label class="opt">
+					<input
+						:checked="store.state.settings.psPauseWhenAway"
+						type="checkbox"
+						name="psPauseWhenAway"
+					/>
+					{{ t("settings.appearance.psPauseWhenAway") }}
+					<span class="opt-hint">{{ t("settings.appearance.psPauseWhenAwayHint") }}</span>
+				</label>
+			</div>
+			<h2 id="label-ps-layout">{{ t("settings.appearance.psLayoutHeading") }}</h2>
+			<div role="group" aria-labelledby="label-ps-layout" class="scene-motion-options">
+				<label class="opt">
+					<input
+						:checked="store.state.settings.psGroupMessages"
+						type="checkbox"
+						name="psGroupMessages"
+					/>
+					{{ t("settings.appearance.psGroupMessages") }}
+					<span class="opt-hint">{{ t("settings.appearance.psGroupMessagesHint") }}</span>
+				</label>
+			</div>
+		</template>
+
 		<div>
 			<h2>{{ t("settings.appearance.customStylesheet") }}</h2>
 			<label for="user-specified-css-input" class="sr-only">
@@ -285,11 +324,13 @@ textarea#user-specified-css-input {
 	height: 100px;
 }
 
-.own-messages-options .own-messages-hint {
+.own-messages-options .own-messages-hint,
+.scene-motion-options .opt-hint {
 	color: var(--body-color-muted);
 }
 
-.own-messages-options .own-messages-hint::before {
+.own-messages-options .own-messages-hint::before,
+.scene-motion-options .opt-hint::before {
 	content: " — ";
 }
 
@@ -367,6 +408,7 @@ textarea#user-specified-css-input {
 import {computed, defineComponent, ref} from "vue";
 import {useStore} from "../../js/store";
 import {useI18n} from "../../js/i18n";
+import {normalizeSceneMotion, SCENE_MOTIONS, type SceneMotion} from "../../js/themeScene";
 import {
 	fontSizeScale,
 	fontSizes,
@@ -467,6 +509,23 @@ export default defineComponent({
 			plain: t("settings.appearance.ownMessagesPlainHint"),
 		}));
 
+		// The ps theme's Scene animation levels (themeScene.ts SceneMotion).
+		const psAnimation = computed(() => normalizeSceneMotion(store.state.settings.psAnimation));
+		const sceneMotionLabels = computed<Record<SceneMotion, string>>(() => ({
+			off: t("settings.appearance.psAnimationOff"),
+			sparse: t("settings.appearance.psAnimationSparse"),
+			"1s": t("settings.appearance.psAnimationSecond"),
+			"24": t("settings.appearance.psAnimation24"),
+			"60": t("settings.appearance.psAnimation60"),
+		}));
+		const sceneMotionHints = computed<Record<SceneMotion, string>>(() => ({
+			off: t("settings.appearance.psAnimationOffHint"),
+			sparse: t("settings.appearance.psAnimationSparseHint"),
+			"1s": t("settings.appearance.psAnimationSecondHint"),
+			"24": t("settings.appearance.psAnimation24Hint"),
+			"60": t("settings.appearance.psAnimation60Hint"),
+		}));
+
 		// The step under the slider while it is being dragged. Applying every
 		// step live re-laid out the whole page (rem chrome) under the pointer
 		// and moved the slider with it, so a drag only renders the sample
@@ -532,6 +591,10 @@ export default defineComponent({
 		};
 
 		return {
+			sceneMotions: SCENE_MOTIONS,
+			psAnimation,
+			sceneMotionLabels,
+			sceneMotionHints,
 			store,
 			t,
 			motdTitle,

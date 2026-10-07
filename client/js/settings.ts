@@ -5,7 +5,7 @@ import {normalizeFontSize} from "./helpers/fontSize";
 import {normalizeOwnMessageStyle} from "./helpers/ownMessages";
 import {prefersTwelveHourClock} from "./helpers/hourCycle";
 import storage from "./localStorage";
-import {themeScene} from "./themeScene";
+import {normalizeSceneMotion, themeScene} from "./themeScene";
 import {setQueryLogEnabled} from "./irc/querylog";
 
 const defaultSettingConfig = {
@@ -190,6 +190,31 @@ const defaultConfig = {
 			metaSelector.content =
 				newTheme?.themeColor || store.state.branding.themeColor || buildThemeColor;
 		},
+	},
+	// The ps theme's own settings (Settings → Appearance shows them under the
+	// theme while ps is the theme). How much its scene moves: "off", "sparse"
+	// (every five minutes and on coming back), "1s", "24" (frames a second) or
+	// "60" (the browser's own rate) — themeScene.ts SceneMotion, the scene's
+	// stepper.ts. A hidden page and reduced motion still stop it whatever this
+	// says.
+	psAnimation: {
+		default: "24",
+		apply(store: TypedStore, value: string) {
+			themeScene.setMotion(normalizeSceneMotion(value));
+		},
+	},
+	// Whether the ps scene rests on a window nobody attends to (themeScene.ts
+	// createAttention: 15 s without the focus, 2 minutes without input).
+	psPauseWhenAway: {
+		default: true,
+		apply(store: TypedStore, value: boolean) {
+			themeScene.setPauseWhenAway(value !== false);
+		},
+	},
+	// Whether the ps theme combines a run of one sender's lines under one nick
+	// and time (MessageList.vue, helpers/messageRuns.ts).
+	psGroupMessages: {
+		default: true,
 	},
 	media: {
 		default: true,

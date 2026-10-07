@@ -3943,6 +3943,102 @@ msgctxt "settings.appearance.ownMessagesPlainHint"
 msgid "nothing marks them"
 msgstr ""
 
+#. Radio option under Scene animation (ps theme): the landscape is drawn 24 times a second, like film.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimation24"
+msgid "24 frames a second"
+msgstr ""
+
+#. Hint after the 24 frames a second option under Scene animation (ps theme).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimation24Hint"
+msgid "smooth and light on the battery; the default"
+msgstr ""
+
+#. Radio option under Scene animation (ps theme): the landscape moves at the screen's own refresh rate.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimation60"
+msgid "60 frames a second"
+msgstr ""
+
+#. Hint after the 60 frames a second option under Scene animation (ps theme); on a faster screen it runs faster still.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimation60Hint"
+msgid "your screen's own rate: the smoothest, and the most power"
+msgstr ""
+
+#. Heading in Settings > Appearance, shown only under the ps theme: how much the live landscape behind the chat (sky, clouds, birds, rain) moves.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimationHeading"
+msgid "Scene animation"
+msgstr ""
+
+#. Radio option under Scene animation (ps theme): the landscape behind the chat does not move at all.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimationOff"
+msgid "Off"
+msgstr ""
+
+#. Hint after the Off option under Scene animation (ps theme); the colours of the sky still change with the hour.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimationOffHint"
+msgid "a still picture; the sky still follows the time of day"
+msgstr ""
+
+#. Radio option under Scene animation (ps theme): the landscape moves on one step each second.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimationSecond"
+msgid "Once a second"
+msgstr ""
+
+#. Hint after the Once a second option under Scene animation (ps theme); a warning that motion looks jerky.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimationSecondHint"
+msgid "the birds and the rain move in visible jumps"
+msgstr ""
+
+#. Radio option under Scene animation (ps theme): the landscape moves on only now and then.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimationSparse"
+msgid "Sparse"
+msgstr ""
+
+#. Hint after the Sparse option under Scene animation (ps theme).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimationSparseHint"
+msgid "moves on every five minutes, and when you come back to the window"
+msgstr ""
+
+#. Checkbox under Message layout (ps theme): consecutive messages from one sender share one name and time.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psGroupMessages"
+msgid "Combine messages from the same person"
+msgstr ""
+
+#. Hint after the Combine messages checkbox (ps theme).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psGroupMessagesHint"
+msgid "their name and time once, for lines sent within ten minutes of each other"
+msgstr ""
+
+#. Heading in Settings > Appearance, shown only under the ps theme: how chat messages are laid out.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psLayoutHeading"
+msgid "Message layout"
+msgstr ""
+
+#. Checkbox under Scene animation (ps theme): stop the landscape moving when the user is not looking at the app.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psPauseWhenAway"
+msgid "Pause the scene when the window isn't in use"
+msgstr ""
+
+#. Hint after the Pause the scene checkbox (ps theme); a hidden browser tab stops the landscape whatever this says.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psPauseWhenAwayHint"
+msgid "after 15 seconds without the focus, or 2 minutes without input; a hidden tab never moves it"
+msgstr ""
+
 #. Third line of the sample chat under the font-size slider in Settings → Appearance: the extreme steps are intentionally unusable.
 #: client/components/Settings/Appearance.vue:486
 msgctxt "settings.appearance.sampleEnds"
