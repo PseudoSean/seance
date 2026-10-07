@@ -3470,6 +3470,36 @@ export default async function run(page) {
 		twice.minOp < 0.05 && Math.abs(twice.before.cx - twice.after.cx) <= 1 && lefts.length === 1
 	);
 
+	// ---- the wind rises at midnight and the clouds stay where they are
+
+	// A clear 4 October into a windy 5th, by the scene's own minute timer.
+	// The wind shortens the clouds' drift (ps.css ps-windy); the same time
+	// under a shorter loop is another place, and the clouds jumped hundreds of
+	// pixels (measured 126 to 1006 px before scene.ts kept their place).
+	// Sampled every 100 ms across the flip: they move only as they drift.
+	const CLOUD_X = `JSON.stringify({windy: document.getElementById("theme-scene").classList.contains("ps-windy"), x: [...document.querySelectorAll("#theme-scene .ps-cloud-field > .ps-cloud")].map((e) => e.getBoundingClientRect().left)})`;
+	await at(page, Date.UTC(2026, 9, 4, 23, 59, 52));
+	let lastClouds = JSON.parse(await page.evaluate(CLOUD_X));
+	let windMoved = null;
+
+	for (const until = Date.now() + 15000; Date.now() < until && !windMoved; ) {
+		await page.sleep(100);
+		const now = JSON.parse(await page.evaluate(CLOUD_X));
+
+		if (now.windy !== lastClouds.windy) {
+			windMoved = now.x.map((x, i) => Math.abs(x - lastClouds.x[i]));
+		}
+
+		lastClouds = now;
+	}
+
+	page.check(
+		`the wind rising at midnight leaves every cloud where it was (moved ${
+			windMoved ? windMoved.map((v) => v.toFixed(0)).join(", ") : "—"
+		} px across the flip)`,
+		!!windMoved && windMoved.length === 5 && windMoved.every((v) => v < 20)
+	);
+
 	// ---- across local midnight with the page open (Review Focus 3)
 
 	// A clear 25 September into a rainy 26th, by the scene's own minute
