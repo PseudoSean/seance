@@ -4,6 +4,7 @@ import {
 	createStepper,
 	SCENE_FPS,
 	SPARSE_INTERVAL_MS,
+	keepPhase,
 	stepModeFor,
 	type StepAnimation,
 	type StepMode,
@@ -11,10 +12,23 @@ import {
 
 class FakeAnimation implements StepAnimation {
 	playState = "running";
-	currentTime: number | null;
+	private time: number | null;
 
 	constructor(start = 0) {
-		this.currentTime = start;
+		this.time = start;
+	}
+
+	get currentTime(): number | null {
+		return this.time;
+	}
+
+	/** As the browser does: a time written to a cancelled animation brings it back, held. */
+	set currentTime(value: number | null) {
+		this.time = value;
+
+		if (this.playState === "idle") {
+			this.playState = "paused";
+		}
 	}
 
 	pause() {
@@ -23,6 +37,25 @@ class FakeAnimation implements StepAnimation {
 
 	play() {
 		this.playState = "running";
+	}
+
+	listeners: Array<() => void> = [];
+
+	addEventListener(_type: "cancel", listener: () => void) {
+		this.listeners.push(listener);
+	}
+
+	cancel() {
+		this.playState = "idle";
+	}
+
+	/** What the browser does when the element's style drops the animation: idle, and a cancel event after. */
+	cancelledByStyle() {
+		this.playState = "idle";
+	}
+
+	fireCancel() {
+		this.listeners.forEach((l) => l());
 	}
 }
 
@@ -237,5 +270,57 @@ describe("ps scene: the stepper (stepper.ts)", function () {
 			expect(a.currentTime).to.be.closeTo(10000, 1000 / 24);
 			s.stop();
 		});
+	});
+
+	describe("keeping a cloud's place when the wind changes its loop (keepPhase)", function () {
+		const place = (time: number, delay: number, duration: number) =>
+			((((time - delay) % duration) + duration) % duration) / duration;
+
+		it("puts the animation at the same place in its loop under the new timing", function () {
+			const delay = -170_000;
+			const calm = 200_000;
+			const windy = calm * 0.4;
+
+			for (const p of [0, 0.25, 0.5, 0.999]) {
+				const t = keepPhase(p, delay, windy);
+				expect(t, "after the start, where it is drawn").to.be.at.least(0);
+				expect(place(t, delay, windy)).to.be.closeTo(p, 1e-9);
+			}
+		});
+
+		it("lands in the first whole loop after a delay longer than a loop, and in the second for a short one", function () {
+			expect(keepPhase(0, -170_000, 80_000)).to.equal(-170_000 + 80_000 * 3);
+			expect(keepPhase(0.5, -10_000, 80_000)).to.equal(-10_000 + 80_000 * 1.5);
+			expect(keepPhase(0, 0, 80_000)).to.equal(80_000);
+		});
+
+		it("rereads every animation's time after something else moved them", function () {
+			const a = new FakeAnimation(0);
+			const s = stepper([a], []);
+			s.start();
+			clock.tick(1000);
+			a.currentTime = 50_000; // the wind kept its place
+			s.reread();
+			clock.tick(1000);
+			expect(a.currentTime).to.be.closeTo(51_000, 1000 / 24);
+			s.stop();
+		});
+	});
+
+	it("forgets an animation its style cancelled, and undoes a step that got to it before the cancel event", function () {
+		const live = new FakeAnimation(0);
+		const gone = new FakeAnimation(0);
+		const s = stepper([live, gone], []);
+		s.start();
+		gone.cancelledByStyle(); // reduced motion: animation: none
+		clock.tick(1000 / 24); // a step before the event: the write brings it back, held
+		expect(gone.playState).to.not.equal("idle");
+		gone.fireCancel();
+		expect(gone.playState, "cancelled again").to.equal("idle");
+		const at = gone.currentTime;
+		clock.tick(1000);
+		expect(gone.currentTime, "no longer stepped").to.equal(at);
+		expect(live.currentTime).to.be.closeTo(1000 + 1000 / 24, 1000 / 24);
+		s.stop();
 	});
 });
