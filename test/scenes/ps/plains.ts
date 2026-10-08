@@ -1,5 +1,6 @@
 import {expect} from "chai";
 import {
+	BAND_MARKS,
 	clouds,
 	DECK_BAND,
 	DECK_HEIGHT,
@@ -260,22 +261,42 @@ describe("ps plains: the land, the near grass, the yurt, its smoke and the firef
 			expect(yurt).to.not.include("ps-y-path");
 		});
 
-		it("paints its patterned band with 16 marks along the band's curve", function () {
+		it("paints its patterned band with 16 marks, centred on the yurt and in the band that shows under the roof", function () {
 			const band = yurt.match(/<g class="ps-y-band-mark">([\s\S]*?)<\/g>/)?.[1] ?? "";
 			const marks = [
 				...band.matchAll(/<path d="M([\d.]+),([\d.]+) l3,-2\.4 l3,2\.4 l-3,2\.4 Z"\/>/g),
-			];
-			expect(marks).to.have.length(16);
+			].map((m) => ({left: Number(m[1]), y: Number(m[2])}));
+			expect(marks).to.have.length(BAND_MARKS);
 			expect(band.match(/<path /g)).to.have.length(16);
 
-			marks.forEach((m, i) => {
-				const x = 44 + i * 10.2;
-				expect(Number(m[1])).to.be.closeTo(x, 0.01);
-				expect(Number(m[2])).to.be.closeTo(
-					101.5 - Math.sin(((x - 38) / 164) * Math.PI) * 4,
-					0.01
-				);
+			const centres = marks.map((m) => m.left + 3);
+			// symmetric about the yurt's middle, evenly spaced, wholly on the band (38 → 202)
+			centres.forEach((x, i) => {
+				expect(
+					x + centres[centres.length - 1 - i],
+					`mark ${i} mirrors its partner`
+				).to.be.closeTo(240, 0.02);
 			});
+			const steps = centres.slice(1).map((x, i) => x - centres[i]);
+			steps.forEach((d) => expect(d).to.be.closeTo(steps[0], 0.02));
+			expect(marks[0].left).to.be.at.least(38);
+			expect(marks[marks.length - 1].left + 6).to.be.at.most(202);
+
+			// each halfway down the strip that shows: under the roof's edge, above the band's foot
+			const q = (a: number, b: number, c: number, t: number) =>
+				(1 - t) ** 2 * a + 2 * t * (1 - t) * b + t * t * c;
+			marks.forEach((m, i) => {
+				const x = centres[i];
+				const roof = q(101, 86, 101, (x - 24) / 192);
+				const top = q(98, 90, 98, (x - 38) / 164);
+				const foot = q(107, 99, 107, (x - 38) / 164);
+				const visible = Math.max(roof, top);
+				expect(m.y, `mark ${i} centred`).to.be.closeTo((visible + foot) / 2, 0.02);
+				expect(m.y - 2.4, `mark ${i} clear of the roof`).to.be.above(visible);
+				expect(m.y + 2.4, `mark ${i} above the foot`).to.be.below(foot);
+			});
+			// and symmetric in height too
+			marks.forEach((m, i) => expect(m.y).to.be.closeTo(marks[marks.length - 1 - i].y, 0.02));
 		});
 
 		it("lights the wall, the crown, the door and its seams, and snows on the roof", function () {
