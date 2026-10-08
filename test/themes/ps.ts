@@ -2067,7 +2067,7 @@ describe("the ps theme's stacked message rows (the user's B, 2026-10-06; the tim
 		// style.css's bar, which this takes off
 		expect(
 			declsOf('#chat .chat-view[data-type="channel"] .msg.highlight', "", style).find(
-				([p]) => p === "border-inline-start"
+				([p]) => p === "border-inline-start" || p === "border-left"
 			)?.[1]
 		).to.match(/^5px /);
 		expect(valueOf(H, "padding-inline-start")).to.equal("calc(0.625rem - 5px)");
