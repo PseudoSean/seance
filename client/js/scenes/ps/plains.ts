@@ -207,17 +207,41 @@ export function fireflies(count: number): string {
 	return out;
 }
 
-/** The patterned band's 16 marks, along the band's curve (the mockup's `bandMarks`). */
+/** A point on a quadratic curve whose control point sits midway across, so x runs linearly with t. */
+function onCurve(y0: number, y1: number, y2: number, t: number): number {
+	return (1 - t) ** 2 * y0 + 2 * t * (1 - t) * y1 + t * t * y2;
+}
+
+/**
+ * The patterned band's 16 marks. The band runs 38 → 202 under the roof's
+ * edge; what shows of it is the strip between that edge (`M24,101 Q120,86
+ * 216,101`) and the band's foot (`M38,107 Q120,99 202,107`). The marks are
+ * spread evenly across the band, symmetric about the yurt's middle (x = 120),
+ * and each sits halfway down the strip at its own centre. (The mockup's
+ * `bandMarks` stepped from x = 44 by 10.2 and took each mark's height off a
+ * sine at its left point: the row stood 3.5 units right of centre, its last
+ * mark past the band's end, tilted, and up against the roof — the user saw
+ * them "offset", 2026-10-08.)
+ */
+export const BAND_MARKS = 16;
+const BAND_FROM = 38;
+const BAND_TO = 202;
+
+export function bandMarkCentres(): Array<{x: number; y: number}> {
+	const step = (BAND_TO - BAND_FROM) / BAND_MARKS;
+	return Array.from({length: BAND_MARKS}, (_, i) => {
+		const x = BAND_FROM + step * (i + 0.5);
+		const roof = onCurve(101, 86, 101, (x - 24) / 192);
+		const top = onCurve(98, 90, 98, (x - BAND_FROM) / (BAND_TO - BAND_FROM));
+		const foot = onCurve(107, 99, 107, (x - BAND_FROM) / (BAND_TO - BAND_FROM));
+		return {x, y: (Math.max(roof, top) + foot) / 2};
+	});
+}
+
 function bandMarks(): string {
-	let out = "";
-
-	for (let i = 0; i < 16; i++) {
-		const x = 44 + i * 10.2;
-		const y = 101.5 - Math.sin(((x - 38) / 164) * Math.PI) * 4;
-		out += `<path d="M${n(x)},${n(y)} l3,-2.4 l3,2.4 l-3,2.4 Z"/>`;
-	}
-
-	return out;
+	return bandMarkCentres()
+		.map(({x, y}) => `<path d="M${n(x - 3)},${n(y)} l3,-2.4 l3,2.4 l-3,2.4 Z"/>`)
+		.join("");
 }
 
 /** The wall's outline: the felt, and over it the inner glow at night. */
