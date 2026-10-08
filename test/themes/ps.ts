@@ -2024,7 +2024,7 @@ describe("the ps theme's type", function () {
 	});
 });
 
-describe("the ps theme's stacked message rows (the user's B, 2026-10-06)", function () {
+describe("the ps theme's stacked message rows (the user's B, 2026-10-06; the time first, 2026-10-08)", function () {
 	const M = '[data-type="message"], [data-type="notice"]';
 	const ROW = `#chat .chat .msg:is(${M})`;
 	const SYS =
@@ -2033,22 +2033,36 @@ describe("the ps theme's stacked message rows (the user's B, 2026-10-06)", funct
 		fs.readFileSync(path.resolve(__dirname, "../../client/css/style.css"), "utf8")
 	);
 
-	it("lays a message out as the nick, then its time, and the text on the next line, indented", function () {
+	it("starts every row with its time, in a column as wide in every row as the clock setting's widest time", function () {
+		// the widest English time of each setting, 0.8em tabular figures, in the
+		// text's ch (measured 2026-10-08: 3.62, 6.01, 5.63 and 8.02), with slack
+		expect(valueOf("#chat", "--ps-time-w")).to.equal("4ch");
+		expect(valueOf("#chat.time-12h", "--ps-time-w")).to.equal("6.5ch");
+		expect(valueOf("#chat.time-seconds", "--ps-time-w")).to.equal("6ch");
+		expect(valueOf("#chat.time-seconds.time-12h", "--ps-time-w")).to.equal("8.5ch");
+		const column = "minmax(var(--ps-time-w), max-content)";
+		expect(valueOf(ROW, "grid-template-columns")).to.match(
+			new RegExp(`^${column.replace(/[()]/g, "\\$&")} `)
+		);
+		expect(valueOf(SYS, "grid-template-columns")).to.match(
+			new RegExp(`^${column.replace(/[()]/g, "\\$&")} `)
+		);
+	});
+
+	it("lays a message out as its time, then the nick, and the text on the next line under the nick", function () {
 		expect(valueOf(ROW, "display")).to.equal("grid");
 		expect(valueOf(ROW, "grid-template-areas")?.replace(/\s+/g, " ")).to.equal(
-			'"from time ." "content content content"'
+			'"time from" ". content"'
 		);
 		expect(valueOf(`${ROW} .from`, "grid-area")).to.equal("from");
 		expect(valueOf(`${ROW} .time`, "grid-area")).to.equal("time");
 		expect(valueOf(`${ROW} .content`, "grid-area")).to.equal("content");
-		// the indent: the text starts 1.5rem in, the nick 0.625rem
-		// logical, so a right-to-left page indents from its own start
-		expect(valueOf(`${ROW} .content`, "padding-inline")).to.equal("1.5rem 0.625rem");
-		expect(valueOf(`${ROW} .content`, "padding")).to.equal(undefined);
-		expect(valueOf(`${ROW} .from`, "padding-inline-start")).to.equal("0.625rem");
+		// logical, so a right-to-left page has its time at its own start
+		expect(valueOf(ROW, "padding-inline")).to.equal("0.625rem");
+		expect(valueOf(`${ROW} .content`, "padding-inline")).to.equal("0");
 	});
 
-	it("lines a mention's nick and text up with the rows around it: its 5px bar is taken off their indents", function () {
+	it("lines a mention up with the rows around it: its 5px bar is taken off the row's start", function () {
 		const H = `#chat .chat .msg.highlight:is(${M})`;
 		// style.css's bar, which this takes off
 		expect(
@@ -2056,9 +2070,7 @@ describe("the ps theme's stacked message rows (the user's B, 2026-10-06)", funct
 				([p]) => p === "border-inline-start"
 			)?.[1]
 		).to.match(/^5px /);
-		expect(valueOf(H, "padding-inline-start")).to.equal("0");
-		expect(valueOf(`${H} .from`, "padding-inline-start")).to.equal("calc(0.625rem - 5px)");
-		expect(valueOf(`${H} .content`, "padding-inline-start")).to.equal("calc(1.5rem - 5px)");
+		expect(valueOf(H, "padding-inline-start")).to.equal("calc(0.625rem - 5px)");
 		expect(valueOf(`${H} .content`, "border")).to.equal("0");
 		expect(valueOf(`${H} .time`, "padding")).to.equal("0");
 	});
@@ -2074,45 +2086,50 @@ describe("the ps theme's stacked message rows (the user's B, 2026-10-06)", funct
 		expect(valueOf("#chat .chat .from", "margin")).to.equal(undefined);
 	});
 
-	it("shows a run of one sender's lines with the nick and time once", function () {
-		const rest = `#chat .chat .msg.previous-source:is(${M}) :is(.from, .time)`;
-		expect(valueOf(rest, "display")).to.equal("none");
-		// pointing at one, or its long press, shows its time as a chip at the line's end
+	it("shows a run of one sender's lines with the nick once, each line's time in its column when pointed at", function () {
+		const run = `#chat .chat .msg.previous-source:is(${M})`;
+		expect(valueOf(run, "grid-template-areas")).to.equal('"time content"');
+		expect(valueOf(`${run} .from`, "display")).to.equal("none");
+		const hidden = `${run} .time`;
+		expect(valueOf(hidden, "visibility"), "kept in place, so nothing moves").to.equal("hidden");
 		const shown = "#chat .chat .msg.previous-source:is(:hover, .actions-open) .time";
-		expect(valueOf(shown, "display")).to.equal("block");
-		expect(valueOf(shown, "position")).to.equal("absolute");
-		expect(valueOf(shown, "grid-area"), "the row, not its collapsed cell, holds it").to.equal(
-			"auto"
-		);
-		expect(valueOf(shown, "inset-inline-end")).to.equal("0.625rem");
-		expect(valueOf(shown, "background")).to.equal("var(--ps-g-solid)");
+		expect(valueOf(shown, "visibility")).to.equal("visible");
 		expect(
 			rules.findIndex((r) => r.selectors.includes(shown)) -
-				rules.findIndex((r) => r.selectors.includes(rest)),
+				rules.findIndex((r) => r.selectors.includes(hidden)),
 			"after the rule that hides it"
 		).to.be.above(0);
 		// a day's divider or the unread line between two of them starts a new run
 		const after =
-			"#chat .chat :is(.date-marker-container, .unread-marker) + .msg.previous-source :is(.from, .time)";
-		expect(valueOf(after, "display")).to.equal("block");
-		expect(compareSpecificity(specificity(after), specificity(rest))).to.be.at.least(0);
-		const order =
-			rules.findIndex((r) => r.selectors.includes(after)) -
-			rules.findIndex((r) => r.selectors.includes(rest));
-		expect(order, "after the rule that hides them").to.be.above(0);
+			"#chat .chat :is(.date-marker-container, .unread-marker) + .msg.previous-source";
+		expect(valueOf(after, "grid-template-areas")?.replace(/\s+/g, " ")).to.equal(
+			'"time from" ". content"'
+		);
+		expect(valueOf(`${after} .from`, "display")).to.equal("block");
+		expect(valueOf(`${after} .time`, "visibility")).to.equal("visible");
+		expect(
+			compareSpecificity(specificity(`${after} .from`), specificity(`${run} .from`))
+		).to.be.at.least(0);
+		expect(
+			rules.findIndex((r) => r.selectors.includes(`${after} .from`)) -
+				rules.findIndex((r) => r.selectors.includes(`${run} .from`)),
+			"after the rule that hides them"
+		).to.be.above(0);
 	});
 
-	it("runs every other row from the same edge: its icon, then the time, then the text", function () {
-		expect(valueOf(SYS, "display")).to.equal("flex");
-		expect(valueOf("#chat .chat .condensed-summary", "display")).to.equal("flex");
-		expect(valueOf(`${SYS} .from`, "order")).to.equal("-1");
-		expect(valueOf("#chat .chat .condensed-summary .from", "order")).to.equal("-1");
-		// the time stays after the icon: no order of its own
-		expect(valueOf(`${SYS} .time`, "order")).to.equal(undefined);
-		expect(valueOf(`${SYS} .content`, "flex")).to.equal("1 1 auto");
-		expect(
-			valueOf("#chat .chat .condensed-summary :is(.time, .from):empty", "display")
-		).to.equal("none");
+	it("runs every other row as its time, its icon, then the text; a condensed summary's text stands with the nicks", function () {
+		expect(valueOf(SYS, "display")).to.equal("grid");
+		expect(valueOf(SYS, "grid-template-areas")).to.equal('"time from content"');
+		expect(valueOf(`${SYS} .time`, "grid-area")).to.equal("time");
+		expect(valueOf(`${SYS} .from`, "grid-area")).to.equal("from");
+		expect(valueOf(`${SYS} .content`, "grid-area")).to.equal("content");
+		expect(valueOf(`${SYS} .from`, "order"), "no reordering: the grid places it").to.equal(
+			undefined
+		);
+		expect(valueOf("#chat .chat .condensed-summary", "grid-template-areas")).to.equal(
+			'"time content"'
+		);
+		expect(valueOf("#chat .chat .condensed-summary .from", "display")).to.equal("none");
 	});
 
 	it("wins over style.css's narrow inline flow on the same elements, so the row is alike at every width", function () {
