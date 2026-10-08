@@ -2614,6 +2614,9 @@ export default async function run(page) {
 	await page.sleep(2000);
 	const reactLog = await page.evaluate(`window.__animLog.slice()`);
 	const afterClip = await page.evaluate(TEXT_CLIP);
+	const rootPx = await page.evaluate(
+		`parseFloat(getComputedStyle(document.documentElement).fontSize)`
+	);
 	const firstEnter = await page.evaluate(`window.__enters.slice()`);
 	page.check(
 		`the first reaction enters with its group, which pops and holds, and its chip's text lights both sparks, read as it lands (${JSON.stringify(
@@ -2634,8 +2637,11 @@ export default async function run(page) {
 	page.check(
 		`the group's class is held for the burst: both sparks rising 0.9 s in (${JSON.stringify(
 			firstHeld
-		)}), the text column's clip widened then (${firstClip}) and back to style.css's after (${afterClip})`,
-		firstHeld.length === 2 && /^clip \S+px$/.test(firstClip) && afterClip === "hidden"
+		)}), the text column's clip widened then (${firstClip}) and back to its own, 0.75rem out, after (${afterClip})`,
+		firstHeld.length === 2 &&
+			/^clip \S+px$/.test(firstClip) &&
+			// back to the column's own clip, 0.75rem out for the text's outline
+			afterClip === `clip ${0.75 * rootPx}px`
 	);
 
 	await page.evaluate(`window.__animLog.length = 0`);
