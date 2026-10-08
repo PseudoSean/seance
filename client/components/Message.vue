@@ -226,6 +226,7 @@ import {isTouchInput} from "../js/helpers/inputModality";
 import {formatDateTime, formatTime} from "../js/i18n/dates";
 import {useI18n} from "../js/i18n";
 import {selectionActive} from "../js/helpers/touchSelection";
+import {nudge} from "../js/helpers/haptics";
 
 MessageTypes.ParsedMessage = ParsedMessage;
 MessageTypes.LinkPreview = LinkPreview;
@@ -364,10 +365,8 @@ export default defineComponent({
 				swallowClick = true;
 				openActions.value = props.message.id;
 
-				// A nudge says the press was taken; nothing where the API is missing (iOS).
-				if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-					navigator.vibrate(15);
-				}
+				// A nudge says the press was taken (helpers/haptics.ts).
+				nudge();
 			}, LONG_PRESS_MS);
 		};
 

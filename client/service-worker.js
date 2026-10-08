@@ -1372,6 +1372,21 @@ async function showSafely(title, options) {
 	}
 }
 
+/** rfc1459 case folding, ASCII only — client/js/irc/casemap.ts `casefold`,
+ * which the worker cannot import. */
+function foldName(name) {
+	return name.replace(/[A-Z[\\\]~]/g, (c) =>
+		c === "~" ? "^" : String.fromCharCode(c.charCodeAt(0) + 0x20)
+	);
+}
+
+/** Whether two channel names or nicks are the same one: IRC compares them
+ * case-insensitively, and a read (the page's open conversation, a read
+ * relay) need not spell the target as the notification it closes does. */
+function sameName(a, b) {
+	return typeof a === "string" && typeof b === "string" && foldName(a) === foldName(b);
+}
+
 /** Close push notifications for `target` whose message predates `ts`. */
 async function closeForTarget(target, ts) {
 	const cutoff = ts ? Date.parse(ts) : Infinity;
@@ -1382,7 +1397,7 @@ async function closeForTarget(target, ts) {
 			continue;
 		}
 
-		const sameTarget = n.data && n.data.target === target;
+		const sameTarget = n.data && sameName(n.data.target, target);
 		const mine = !target && n.tag.startsWith("push-");
 
 		if (

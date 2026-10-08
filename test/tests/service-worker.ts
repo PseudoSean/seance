@@ -1986,6 +1986,19 @@ describe("service worker page notifications on a push worker", function () {
 		expect(open.map((n) => n.tag)).to.deep.equal(["push-alice"]);
 	});
 
+	it("the page's read closes a conversation however either side spells it", async function () {
+		const sw = makeSW({scope: NET_SCOPE});
+
+		// IRC folds case (rfc1459: `[]\~` are `{}|^`), and the page's open
+		// conversation need not be spelled as the notification it closes.
+		await fireMessage(sw, pageNote("#Seance", "bob", "b", "pm-13"));
+		await fireMessage(sw, pageNote("[Alice]", "[Alice]", "a", "pm-14"));
+		await fireMessage(sw, {type: "read", target: "#seance"});
+		await fireMessage(sw, {type: "read", target: "{alice}"});
+
+		expect(sw.records.filter((n) => !n.closed)).to.have.lengthOf(0);
+	});
+
 	it("a page notification without a message keeps the per-channel shape", async function () {
 		const sw = makeSW({scope: NET_SCOPE});
 

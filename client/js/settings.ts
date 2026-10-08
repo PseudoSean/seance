@@ -7,6 +7,7 @@ import {prefersTwelveHourClock} from "./helpers/hourCycle";
 import storage from "./localStorage";
 import {normalizeSceneMotion, themeScene} from "./themeScene";
 import {setQueryLogEnabled} from "./irc/querylog";
+import {setKeepAlive} from "./helpers/keepAlive";
 
 const defaultSettingConfig = {
 	apply() {},
@@ -44,6 +45,16 @@ const defaultConfig = {
 	awayMessage: {
 		default: "",
 		sync: "always",
+	},
+	// Android shell only (Settings → General → Background connection): the
+	// foreground service that keeps the connections through Doze. applyAll
+	// re-applies it at every launch — quietly, the permission prompt is the
+	// toggle's.
+	keepConnected: {
+		default: false,
+		apply(store: TypedStore, value: boolean, auto?: boolean) {
+			void setKeepAlive(value, auto === true);
+		},
 	},
 	links: {
 		default: true,

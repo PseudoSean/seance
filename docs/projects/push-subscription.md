@@ -519,12 +519,36 @@ back counted in the next push. Opening a conversation, the window coming
 back to an open one, and another session reading one to the end
 (`markread` with nothing unread) send `{type: "read", target}` to the
 network's push worker (`webpush.ts` `readOnWorker`), which closes through
-`closeForTarget` — a message, not a push, so it costs no budget. Left as
-it was: a read relay that closes the last notification is still silent (the gate in nefarious2 2f51539 keeps that to
-one per pushed conversation, as on Android). Harness: "service worker page
-notifications on a push worker"; browser check:
-`tools/scenarios/push-page-notification.mjs` (seeded subscription on the
-faked Push API, a bot's PM over a real ircd).
+`closeForTarget` — a message, not a push, so it costs no budget. It
+compares targets the way IRC does (rfc1459 folding, ASCII only — the
+worker's `sameName`), since the open conversation and the notification
+need not spell the target alike; read relays get the same comparison.
+
+The page's copy takes the push's shape whatever the message, so the two
+merge by msgid: a private NOTICE that highlights (shown in the lobby) is
+keyed on its sender like the pushed one — a click opens a query with them,
+Reply answers them — no longer on the lobby.
+
+Left as it was:
+
+- A read relay that closes the last notification is still silent (the gate
+  in nefarious2 2f51539 keeps that to one per pushed conversation, as on
+  Android).
+- **A muted conversation is still silent.** `socket-events/msg.ts` records
+  every highlight and query message as seen, muted or not, while
+  `notifyMessage` shows nothing for a muted channel; the ircd does not know
+  about the client's mutes (`thelounge.muted`), pushes anyway, and the
+  worker drops the push as seen. Letting it through would notify a muted
+  channel whenever a desktop page is in the background, so the follow-up is
+  on the server's side: write the mutes into the account's
+  `draft/webpush/mute` metadata (`target:until;…`, which the ircd already
+  enforces, `ircd/webpush_mute.c`). That makes a mute account-wide (the
+  phone stops too), and has to merge with `setSnooze`, which today writes
+  the whole key as `*:<until>`, and with mutes set on other devices.
+
+Harness: "service worker page notifications on a push worker"; browser
+check: `tools/scenarios/push-page-notification.mjs` (seeded subscription on
+the faked Push API, a bot's PM over a real ircd).
 
 ## Replying from a notification, and opening it (2026-09-04)
 

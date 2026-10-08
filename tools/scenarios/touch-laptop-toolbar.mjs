@@ -1,9 +1,10 @@
 // The message toolbar on a laptop with a touchscreen whose browser calls the
 // touchscreen its primary input: `(hover: none) and (pointer: coarse)`, with
 // a trackpad there too. The trackpad's hover must show the toolbar and its
-// clicks must react and reply; a finger's long press must open it. What
-// decides is the last pointer (helpers/inputModality.ts, `data-input` on
-// <html>), not the device's primary input.
+// clicks must react and reply; a finger's long press must open it, with Copy
+// text, which the mouse's toolbar does not have. What decides is the last
+// pointer (helpers/inputModality.ts, `data-input` on <html>), not the
+// device's primary input.
 //
 //   NODE_ENV=production corepack yarn build && python3 -m http.server -d public 8000 &
 //   tools/nefarious-dev/run.sh -d
@@ -153,6 +154,10 @@ export default async function run(page) {
 		`hovering a row with the mouse shows its toolbar (${JSON.stringify(bar)})`,
 		!!bar && bar.width > 0 && bar.height > 0
 	);
+	page.check(
+		"the mouse's toolbar has no Copy text: the text is selectable",
+		(await page.count(`${last} .msg-action-copy-text`)) === 0
+	);
 	await page.click(`${last} .msg-action-quick`);
 	await page.waitFor(`document.querySelector(${JSON.stringify(`${last} .msg-reaction`)})`, {
 		timeout: 10000,
@@ -204,6 +209,10 @@ export default async function run(page) {
 	);
 	const pressed = await page.rect(`${other} .msg-actions`);
 	page.check(`its toolbar shows (${JSON.stringify(pressed)})`, !!pressed && pressed.width > 0);
+	page.check(
+		"the finger's toolbar offers Copy text, since the text cannot be selected",
+		(await page.count(`${other} .msg-action-copy-text`)) === 1
+	);
 	await page.screenshot("touch-laptop-long-press");
 
 	// 3. Back to the trackpad: hover is trusted again.
@@ -225,6 +234,43 @@ export default async function run(page) {
 	page.check(
 		`and hover shows the toolbar (${JSON.stringify(again)})`,
 		!!again && again.width > 0
+	);
+	page.check(
+		"without Copy text again",
+		(await page.count(`#${ids[0]} .msg-action-copy-text`)) === 0
+	);
+
+	// 4. A pen: its tap is a finger's on an iPad and a mouse's on a Surface, so
+	// it changes nothing; a pen that hovers is a mouse.
+	await page.send("Emulation.setTouchEmulationEnabled", {enabled: true, maxTouchPoints: 5});
+	const tapAt = await fingerAt(page, `#${ids[0]} .content`);
+	await page.send("Input.dispatchTouchEvent", {type: "touchStart", touchPoints: tapAt});
+	await page.send("Input.dispatchTouchEvent", {type: "touchEnd", touchPoints: []});
+	await page.send("Emulation.setTouchEmulationEnabled", {enabled: false});
+	await page.sleep(200);
+	page.check(
+		`a finger tapped: data-input is "touch" (${await page.evaluate(INPUT)})`,
+		(await page.evaluate(INPUT)) === "touch"
+	);
+	const pen = {...tapAt[0], pointerType: "pen", clickCount: 1, button: "left"};
+	await page.send("Input.dispatchMouseEvent", {type: "mousePressed", buttons: 1, ...pen});
+	await page.send("Input.dispatchMouseEvent", {type: "mouseReleased", buttons: 0, ...pen});
+	await page.sleep(200);
+	page.check(
+		`a pen's tap changes nothing: data-input is "touch" (${await page.evaluate(INPUT)})`,
+		(await page.evaluate(INPUT)) === "touch"
+	);
+	await page.send("Input.dispatchMouseEvent", {
+		type: "mouseMoved",
+		buttons: 0,
+		x: pen.x + 5,
+		y: pen.y,
+		pointerType: "pen",
+	});
+	await page.sleep(200);
+	page.check(
+		`a pen hovering: data-input is "pointer" (${await page.evaluate(INPUT)})`,
+		(await page.evaluate(INPUT)) === "pointer"
 	);
 
 	talker.quit();
