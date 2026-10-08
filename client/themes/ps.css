@@ -461,31 +461,49 @@ strong,
 	font-weight: 700;
 }
 
-/* Stacked rows (the user's B, 2026-10-06: "go with B"; spec §8). A message
- * is the nick first, then its time, and the text on the next line, indented
- * 1.5rem; a run of one sender's lines (MessageList.vue's `previous-source`: a
- * plain message from the same nick as the plain message before it, however
- * long ago) shows the nick and time once and the lines after it as the
- * indented text alone; a day's divider or the unread line between them
- * starts a new run. A long nick is never cut,
- * and the phone reads the same way as the desktop: the row is laid out alike
- * at every pane width, style.css's columns and its narrow inline flow
- * included. Every other row (a join, a mode, a topic, an action, a
- * condensed group's summary) is one line from the same edge: its icon first
- * (the `.from::before` glyph), then the time, then the text, which wraps
- * under itself. Only the CSS changes: the markup is style.css's. The
- * selectors carry `.chat` so they outrank style.css's narrow @container
- * rules on the same elements. */
+/* Stacked rows (the user's B, 2026-10-06, and the time first, 2026-10-08;
+ * spec §8). Every row starts with its time, in a column of the same width in
+ * every row (--ps-time-w: the widest English time of the clock setting, 0.8em
+ * tabular figures, measured in the text's ch; a longer locale's time widens
+ * its own row's column). A message is its time, then the nick, and the text
+ * on the next line under the nick, so the text is indented by the time
+ * column; a run of one sender's lines (MessageList.vue's `previous-source`,
+ * helpers/messageRuns.ts: the same nick, plain messages, ten minutes at
+ * most) shows the nick once and its later lines as the text alone, each
+ * line's time in its column, shown when the line is pointed at or opened by
+ * a long press; a day's divider or the unread line between two of them
+ * starts a new run. Every other row (a join, a mode, a topic, an action) is
+ * its time, its icon (the `.from::before` glyph), then the text, which wraps
+ * under itself; a condensed group's summary lines its text up with the nicks.
+ * A long nick is never cut, and the row is laid out alike at every pane
+ * width. Only the CSS changes: the markup is style.css's. The selectors carry
+ * `.chat` so they outrank style.css's narrow @container rules. */
+#chat {
+	--ps-time-w: 4ch;
+}
+
+#chat.time-12h {
+	--ps-time-w: 6.5ch;
+}
+
+#chat.time-seconds {
+	--ps-time-w: 6ch;
+}
+
+#chat.time-seconds.time-12h {
+	--ps-time-w: 8.5ch;
+}
+
 #chat .chat .msg:is([data-type="message"], [data-type="notice"]) {
 	display: grid;
-	grid-template-columns: auto auto minmax(0, 1fr);
+	grid-template-columns: minmax(var(--ps-time-w), max-content) minmax(0, 1fr);
 	grid-template-areas:
-		"from time ."
-		"content content content";
+		"time from"
+		". content";
 	column-gap: 0.5rem;
 	align-items: baseline;
 	padding-block: 0.25rem 0.125rem;
-	padding-inline: 0;
+	padding-inline: 0.625rem;
 }
 
 #chat .chat .msg:is([data-type="message"], [data-type="notice"]) .from {
@@ -495,7 +513,6 @@ strong,
 	min-width: 0;
 	max-width: 100%;
 	padding: 0;
-	padding-inline-start: 0.625rem;
 	text-align: start;
 	white-space: normal;
 	overflow: visible;
@@ -513,50 +530,41 @@ strong,
 	width: auto;
 	padding: 0;
 	font-size: 0.8em;
+	white-space: nowrap;
 }
 
 #chat .chat .msg:is([data-type="message"], [data-type="notice"]) .content {
 	grid-area: content;
 	display: block;
 	padding-block: 0.0625rem 0.125rem;
-	padding-inline: 1.5rem 0.625rem;
+	padding-inline: 0;
 	border: 0;
 }
 
+/* A line inside a run: one row, its time in the column beside the text,
+ * kept in place but not drawn until the line is pointed at or opened. */
 #chat .chat .msg.previous-source:is([data-type="message"], [data-type="notice"]) {
+	grid-template-areas: "time content";
 	padding-block-start: 0;
 }
 
-#chat .chat .msg.previous-source:is([data-type="message"], [data-type="notice"]) :is(.from, .time) {
+#chat .chat .msg.previous-source:is([data-type="message"], [data-type="notice"]) .from {
 	display: none;
 }
 
-/* A line inside a run shows no time of its own; pointing at it, or the long
- * press that opens its toolbar on a phone, shows it at the end of its first
- * line, as a small solid chip in the chrome's ink so it reads over the
- * plains and over the end of a long line. */
+#chat .chat .msg.previous-source:is([data-type="message"], [data-type="notice"]) .time {
+	visibility: hidden;
+}
+
 #chat .chat .msg.previous-source:is(:hover, .actions-open) .time {
-	display: block;
-	position: absolute;
-	grid-area: auto; /* or its collapsed grid cell would be its containing block, not the row */
-	inset-block-start: 0;
-	inset-inline-end: 0.625rem;
-	padding: 0.0625rem 0.375rem;
-	border-radius: 0.25rem;
-	background: var(--ps-g-solid);
-	color: var(--body-color-muted);
-	text-shadow: none;
+	visibility: visible;
 }
 
 /* A mention keeps style.css's bar at its start (5px, in px there) and
- * nothing else: its nick and text are moved back by the bar so they line up
- * with the rows around it, and style.css's highlight padding (the time's,
- * the narrow row's) and the text's 1px rule go. */
+ * nothing else: the row's own start is moved back by the bar so its time,
+ * nick and text line up with the rows around it, and style.css's highlight
+ * padding (the time's, the narrow row's) and the text's 1px rule go. */
 #chat .chat .msg.highlight:is([data-type="message"], [data-type="notice"]) {
-	padding-inline-start: 0;
-}
-
-#chat .chat .msg.highlight:is([data-type="message"], [data-type="notice"]) .from {
 	padding-inline-start: calc(0.625rem - 5px);
 }
 
@@ -566,25 +574,33 @@ strong,
 
 #chat .chat .msg.highlight:is([data-type="message"], [data-type="notice"]) .content {
 	border: 0;
-	padding-inline-start: calc(1.5rem - 5px);
 }
 
 /* A day's divider or the "New messages" line starts a run afresh: the line
  * after it says who is speaking, as the first of a run does. (Only a plain
  * message is ever `previous-source`.) */
 #chat .chat :is(.date-marker-container, .unread-marker) + .msg.previous-source {
+	grid-template-areas:
+		"time from"
+		". content";
 	padding-block-start: 0.25rem;
 }
 
-#chat .chat :is(.date-marker-container, .unread-marker) + .msg.previous-source :is(.from, .time) {
+#chat .chat :is(.date-marker-container, .unread-marker) + .msg.previous-source .from {
 	display: block;
+}
+
+#chat .chat :is(.date-marker-container, .unread-marker) + .msg.previous-source .time {
+	visibility: visible;
 }
 
 #chat .chat .msg:not([data-type="message"], [data-type="notice"], [data-type="condensed"]),
 #chat .chat .condensed-summary {
-	display: flex;
-	align-items: baseline;
+	display: grid;
+	grid-template-columns: minmax(var(--ps-time-w), max-content) auto minmax(0, 1fr);
+	grid-template-areas: "time from content";
 	column-gap: 0.5rem;
+	align-items: baseline;
 	padding-block: 0.125rem;
 	padding-inline: 0.625rem;
 }
@@ -605,31 +621,37 @@ strong,
 	text-align: start;
 }
 
-/* The icon first. Its column no longer clips (style.css's ellipsis); the text
- * keeps style.css's anti-Zalgo clip. */
-#chat .chat .msg:not([data-type="message"], [data-type="notice"], [data-type="condensed"]) .from,
-#chat .chat .condensed-summary .from {
-	order: -1;
+#chat .chat .msg:not([data-type="message"], [data-type="notice"], [data-type="condensed"]) .time,
+#chat .chat .condensed-summary .time {
+	grid-area: time;
+	font-size: 0.8em;
+	white-space: nowrap;
+}
+
+/* The icon, after the time. Its column no longer clips (style.css's
+ * ellipsis); the text keeps style.css's anti-Zalgo clip. */
+#chat .chat .msg:not([data-type="message"], [data-type="notice"], [data-type="condensed"]) .from {
+	grid-area: from;
 	overflow: visible;
 }
 
-#chat .chat .msg:not([data-type="message"], [data-type="notice"], [data-type="condensed"]) .from::after,
-#chat .chat .condensed-summary .from::after {
+#chat .chat .msg:not([data-type="message"], [data-type="notice"], [data-type="condensed"]) .from::after {
 	content: none;
-}
-
-#chat .chat .msg:not([data-type="message"], [data-type="notice"], [data-type="condensed"]) .time,
-#chat .chat .condensed-summary .time {
-	font-size: 0.8em;
 }
 
 #chat .chat .msg:not([data-type="message"], [data-type="notice"], [data-type="condensed"]) .content,
 #chat .chat .condensed-summary .content {
-	flex: 1 1 auto;
+	grid-area: content;
 }
 
-/* a condensed group's summary has no time or icon of its own */
-#chat .chat .condensed-summary :is(.time, .from):empty {
+/* A condensed group's summary has no time or icon of its own: its text
+ * stands where the nicks do. */
+#chat .chat .condensed-summary {
+	grid-template-columns: minmax(var(--ps-time-w), max-content) minmax(0, 1fr);
+	grid-template-areas: "time content";
+}
+
+#chat .chat .condensed-summary .from {
 	display: none;
 }
 
