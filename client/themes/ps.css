@@ -1204,6 +1204,17 @@ strong,
 #theme-scene .ps-l-tuft2 { fill: var(--ps-tuft2); }
 #theme-scene .ps-l-tree { fill: var(--ps-tree); }
 #theme-scene .ps-l-trunk { fill: var(--ps-trunk); }
+
+/* The land's box is stretched to the window (plains.ts landSvg): the round
+ * things on it are put back in proportion about their own middles, their
+ * area kept (scene.ts watchLand), so a narrow window keeps them round. */
+#theme-scene .ps-l-shrub,
+#theme-scene .ps-l-bedstone ellipse,
+#theme-scene .ps-l-grove {
+	transform-box: fill-box;
+	transform-origin: center;
+	transform: scale(var(--ps-land-round-x, 1), var(--ps-land-round-y, 1));
+}
 #theme-scene .ps-l-hill1 { fill: var(--ps-hill1); }
 #theme-scene .ps-l-tuft1 { fill: var(--ps-tuft1); }
 #theme-scene .ps-l-grass { fill: var(--ps-grass); }
