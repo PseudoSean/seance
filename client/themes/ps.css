@@ -656,6 +656,34 @@ strong,
 	grid-area: content;
 }
 
+/* A row with an icon (style.css's `.from::before` glyph: an action, a join,
+ * a part, a mode…) keeps its text where every message's text stands, under
+ * the nicks (the user, 2026-10-09: the icon had pushed the whole block
+ * further in): the icon shares the text's cell, at its start, and only the
+ * text's first line steps past it. */
+/* stylelint-disable max-line-length */
+#chat .chat .msg:is([data-type="action"], [data-type="away"], [data-type="back"], [data-type="chghost"], [data-type="ctcp"], [data-type="ctcp_request"], [data-type="invite"], [data-type="join"], [data-type="kick"], [data-type="login"], [data-type="logout"], [data-type="mode"], [data-type="mode_channel"], [data-type="mode_user"], [data-type="nick"], [data-type="part"], [data-type="plugin"], [data-type="quit"], [data-type="raw"], [data-type="topic"], [data-type="who"], [data-type="whois"]) {
+	grid-template-columns: minmax(var(--ps-time-w), max-content) minmax(0, 1fr);
+	grid-template-areas: "time content";
+}
+
+#chat .chat .msg:is([data-type="action"], [data-type="away"], [data-type="back"], [data-type="chghost"], [data-type="ctcp"], [data-type="ctcp_request"], [data-type="invite"], [data-type="join"], [data-type="kick"], [data-type="login"], [data-type="logout"], [data-type="mode"], [data-type="mode_channel"], [data-type="mode_user"], [data-type="nick"], [data-type="part"], [data-type="plugin"], [data-type="quit"], [data-type="raw"], [data-type="topic"], [data-type="who"], [data-type="whois"]) .from {
+	grid-area: content;
+	justify-self: start;
+	inline-size: 1.25em;
+}
+
+#chat .chat .msg:is([data-type="action"], [data-type="away"], [data-type="back"], [data-type="chghost"], [data-type="ctcp"], [data-type="ctcp_request"], [data-type="invite"], [data-type="join"], [data-type="kick"], [data-type="login"], [data-type="logout"], [data-type="mode"], [data-type="mode_channel"], [data-type="mode_user"], [data-type="nick"], [data-type="part"], [data-type="plugin"], [data-type="quit"], [data-type="raw"], [data-type="topic"], [data-type="who"], [data-type="whois"]) .content {
+	text-indent: calc(1.25em + 0.375rem);
+}
+
+/* text-indent is inherited: a block inside the text (a preview, a table,
+ * the reactions) starts at its own edge. */
+#chat .chat .msg:is([data-type="action"], [data-type="away"], [data-type="back"], [data-type="chghost"], [data-type="ctcp"], [data-type="ctcp_request"], [data-type="invite"], [data-type="join"], [data-type="kick"], [data-type="login"], [data-type="logout"], [data-type="mode"], [data-type="mode_channel"], [data-type="mode_user"], [data-type="nick"], [data-type="part"], [data-type="plugin"], [data-type="quit"], [data-type="raw"], [data-type="topic"], [data-type="who"], [data-type="whois"]) .content * {
+	text-indent: 0;
+}
+/* stylelint-enable max-line-length */
+
 /* A condensed group's summary has no time or icon of its own: its text
  * stands where the nicks do. */
 #chat .chat .condensed-summary {

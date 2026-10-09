@@ -2132,6 +2132,37 @@ describe("the ps theme's stacked message rows (the user's B, 2026-10-06; the tim
 		expect(valueOf("#chat .chat .condensed-summary .from", "display")).to.equal("none");
 	});
 
+	it("starts an icon row's text where every message's text starts: the icon shares the text's cell, and only the first line steps past it", function () {
+		const types = ["action", "join", "part", "quit", "nick", "mode", "topic", "kick"];
+		// the rule whose one selector is the row itself, `#chat .chat .msg:is(…)` with nothing after it
+		const iconRule = rules.find(
+			(r) =>
+				r.at === "" &&
+				r.selectors.some((sel) =>
+					/^#chat \.chat \.msg:is\(\[data-type="action"\][^)]*\)$/.test(sel)
+				)
+		);
+		expect(iconRule, "the icon rows' rule").to.not.equal(undefined);
+		const ROW_SEL = iconRule!.selectors[0];
+
+		for (const type of types) {
+			expect(ROW_SEL, type).to.include(`[data-type="${type}"]`);
+		}
+
+		expect(valueOf(ROW_SEL, "grid-template-areas")).to.equal('"time content"');
+		expect(valueOf(`${ROW_SEL} .from`, "grid-area")).to.equal("content");
+		expect(valueOf(`${ROW_SEL} .from`, "inline-size")).to.equal("1.25em");
+		expect(valueOf(`${ROW_SEL} .content`, "text-indent")).to.equal("calc(1.25em + 0.375rem)");
+		expect(
+			valueOf(`${ROW_SEL} .content *`, "text-indent"),
+			"a block inside starts at its own edge"
+		).to.equal("0");
+		// after the generic system rows, which put the icon in a column of its own
+		expect(rules.indexOf(iconRule!)).to.be.above(
+			rules.findIndex((r) => r.selectors.includes(SYS))
+		);
+	});
+
 	it("wins over style.css's narrow inline flow on the same elements, so the row is alike at every width", function () {
 		const narrow = style.filter(
 			(r) =>
