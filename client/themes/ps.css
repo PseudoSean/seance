@@ -439,13 +439,20 @@ strong,
 	font-weight: 700;
 }
 
-#chat .msg .from .user,
 #chat .header .title,
 .channel-list-item .name,
 .network .lobby-title .name,
-#sidebar .lobby-title,
-.font-size-sample .from {
+#sidebar .lobby-title {
 	font-family: Newsreader, Georgia, serif;
+	font-weight: 700;
+}
+
+/* A sender's nick over its message is in the words' face too, bold (the
+ * user, 2026-10-09: the names' face is for the chrome's names — the header,
+ * the channels and networks — not for the conversation). The bold is
+ * load-bearing, as below. The Appearance sample's nick follows. */
+#chat .msg .from .user,
+.font-size-sample .from {
 	font-weight: 700;
 }
 
