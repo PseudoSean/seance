@@ -2491,8 +2491,11 @@ export default async function run(page) {
 
 	// ---- messages: the fade, no glitter, the reaction's pop
 
+	// Someone else's line: the first row in the log can be the run's own
+	// echo, which settles from its pending copy instead (ps-settle, checked
+	// below), and on a freshly started ircd it is.
 	const anim = await page.evaluate(
-		`getComputedStyle(document.querySelector("#chat .msg")).animationName`
+		`getComputedStyle(document.querySelector('#chat .msg[data-type="message"]:not(.self)')).animationName`
 	);
 	page.check(`messages fade in (${anim})`, anim.includes("ps-fade"));
 
