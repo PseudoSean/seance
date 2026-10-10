@@ -4,6 +4,7 @@
 
 import {t} from "../../i18n/core";
 import {MessageType} from "../../../../shared/types/msg";
+import {msgidOf} from "../message";
 import type {Handler} from "../types";
 
 const nick: Handler = (client, msg) => {
@@ -26,6 +27,7 @@ const nick: Handler = (client, msg) => {
 				time,
 				from: chan.userRef(oldNick),
 				new_nick: newNick,
+				...msgidOf(msg),
 			});
 		}
 
@@ -49,6 +51,7 @@ const nick: Handler = (client, msg) => {
 			time,
 			from: {nick: oldNick, mode: user.mode},
 			new_nick: newNick,
+			...msgidOf(msg),
 		});
 		chan.renameUser(oldNick, newNick);
 		client.usersChanged(chan);
