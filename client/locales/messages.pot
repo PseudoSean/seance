@@ -3841,6 +3841,18 @@ msgctxt "settings.appearance.markdown"
 msgid "Render Markdown formatting (bold, code, spoilers…)"
 msgstr ""
 
+#. Settings → Appearance, switch above the theme picker: when on, a theme that has a light and a dark version shows the one matching the device's light or dark mode.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.matchSystemAppearance"
+msgid "Match the system's light or dark mode"
+msgstr ""
+
+#. Settings → Appearance, switch under the Font size heading, in the native apps only: when on, the app's text size follows the phone's own text-size setting and the slider is hidden.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.matchSystemTextSize"
+msgid "Match the system text size"
+msgstr ""
+
 #. Checkbox in Settings > Appearance; when ticked, links to media are shown as an inline playable preview inside the chat instead of a plain link.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.media"
@@ -4609,6 +4621,12 @@ msgstr ""
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushDenied"
 msgid "Notifications are blocked by your browser. Allow them in the browser's site settings, then try again."
+msgstr ""
+
+#. Settings → Notifications, after "Warning:", in the Android app when the system has notifications switched off for it. "Android's settings for the app" is the system's per-app settings page.
+#: client/components/Settings/Notifications.vue
+msgctxt "settings.notifications.pushDeniedAndroid"
+msgid "Notifications are turned off for this app. Allow them in Android's settings for the app, then try again."
 msgstr ""
 
 #. Heading of the push notification section in Settings > Notifications; push wakes the app on new messages while it is closed.

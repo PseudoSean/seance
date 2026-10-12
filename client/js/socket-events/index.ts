@@ -28,6 +28,7 @@ import "./names";
 import "./network";
 import "./nick";
 import "./open";
+import "./oper";
 import "./part";
 import "./quit";
 import "./topic";

@@ -40,7 +40,12 @@
 				</select>
 			</label>
 			<label v-if="purpose === 'target' && onceOffered" class="source-language-picker-once">
-				<input v-model="once" type="checkbox" class="source-language-picker-once-box" />
+				<input
+					v-model="once"
+					v-switch
+					type="checkbox"
+					class="source-language-picker-once-box"
+				/>
 				{{ t("translate.picker.thisMessageOnly") }}
 			</label>
 			<p v-if="sameLanguage" class="source-language-picker-hint">

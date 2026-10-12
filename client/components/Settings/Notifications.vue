@@ -75,7 +75,11 @@
 			<div v-if="store.state.pushNotificationState === 'denied'" class="error">
 				<strong>{{ t("settings.notifications.warning") }}</strong
 				>:
-				{{ t("settings.notifications.pushDenied") }}
+				{{
+					androidShell
+						? t("settings.notifications.pushDeniedAndroid")
+						: t("settings.notifications.pushDenied")
+				}}
 			</div>
 			<div v-if="store.state.pushNotificationState === 'server-unsupported'" class="error">
 				{{ t("settings.notifications.serverUnsupported") }}
@@ -111,6 +115,7 @@
 		<div>
 			<label class="opt">
 				<input
+					v-switch
 					:checked="store.state.settings.notification"
 					type="checkbox"
 					name="notification"
@@ -129,6 +134,7 @@
 		<div>
 			<label class="opt">
 				<input
+					v-switch
 					:checked="store.state.settings.notifyAllMessages"
 					type="checkbox"
 					name="notifyAllMessages"
@@ -140,6 +146,7 @@
 		<div>
 			<label class="opt">
 				<input
+					v-switch
 					:checked="store.state.settings.highlightMessages"
 					type="checkbox"
 					name="highlightMessages"
@@ -209,6 +216,7 @@ import {computed, defineComponent, onMounted} from "vue";
 import {useStore} from "../../js/store";
 import {useI18n} from "../../js/i18n";
 import webpush from "../../js/webpush";
+import {isAndroidShell} from "../../js/helpers/capacitor";
 
 export default defineComponent({
 	name: "NotificationSettings",
@@ -246,6 +254,7 @@ export default defineComponent({
 			highlightsHelp,
 			highlightExceptionsHelp,
 			commaListPlaceholder,
+			androidShell: isAndroidShell(),
 			playNotification,
 			snooze,
 		};

@@ -81,6 +81,7 @@
 			</div>
 			<label class="opt">
 				<input
+					v-switch
 					:checked="store.state.settings.translateLlm"
 					type="checkbox"
 					name="translateLlm"
@@ -89,6 +90,7 @@
 			</label>
 			<label class="opt">
 				<input
+					v-switch
 					:checked="store.state.settings.translateCpu"
 					type="checkbox"
 					name="translateCpu"
