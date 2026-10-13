@@ -1071,6 +1071,7 @@
   "whois.actualHost": "Actual host:",
   "whois.actualUsername": "Actual username:",
   "whois.awayLabel": "Away:",
+  "whois.awayNoMessage": "(no message)",
   "whois.awayNoReason": "is away",
   "whois.bot": "Is a bot:",
   "whois.cert": "Certificate:",

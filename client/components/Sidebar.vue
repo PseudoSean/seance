@@ -55,6 +55,7 @@
 						@change="onLocalePick"
 					/>
 				</div>
+				<PresencePill />
 			</div>
 			<NetworkList />
 		</div>
@@ -101,6 +102,7 @@ import {useI18n} from "../js/i18n";
 import NetworkList from "./NetworkList.vue";
 import LanguageSelect from "./LanguageSelect.vue";
 import eventbus from "../js/eventbus";
+import PresencePill from "./PresencePill.vue";
 import {devtoolsAvailable, toggleDevtools} from "../js/devtools";
 
 export default defineComponent({
@@ -108,6 +110,7 @@ export default defineComponent({
 	components: {
 		NetworkList,
 		LanguageSelect,
+		PresencePill,
 	},
 	props: {
 		overlay: {type: Object as PropType<HTMLElement | null>, required: true},

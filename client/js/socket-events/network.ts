@@ -113,6 +113,14 @@ socket.on("network:aborted", function (data) {
 	switchToChannel(network.channels[0]);
 });
 
+socket.on("network:presence", function (data) {
+	const network = store.getters.findNetwork(data.network);
+
+	if (network) {
+		network.presence = data.presence;
+	}
+});
+
 socket.on("network:status", function (data) {
 	const network = store.getters.findNetwork(data.network);
 

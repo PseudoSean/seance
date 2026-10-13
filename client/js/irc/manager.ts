@@ -20,9 +20,15 @@ import {setMuteStatus} from "../mute";
 import {registerBusHandlers} from "./bus";
 import {IrcClient} from "./client";
 import {flushQueryLogs} from "./querylog";
+import {pruneUserAway} from "./userAwayStore";
+import {leavesAwayToWorker, syncPresence} from "./presence";
+import {claimMute, clearRemoteDnd} from "./pushMute";
 import * as saved from "./saved-networks";
 import type {SavedNetwork} from "./saved-networks";
 import type {ConnectOptions} from "./types";
+
+/** The global do-not-disturb as client/js/dnd.ts last set it; new clients start with it. */
+const globalDnd: {active: boolean; until: number | null} = {active: false, until: null};
 
 const clients = new Map<string, IrcClient>();
 
@@ -116,6 +122,8 @@ export function createNetwork(options: CreateNetworkOptions): IrcClient {
 			},
 		});
 		clients.set(entry.uuid, client);
+		client.setPresenceMode(saved.presenceModeOf(entry));
+		client.setGlobalDnd(globalDnd.active, globalDnd.until);
 
 		if (entry.name) {
 			client.setNetworkName(entry.name);
@@ -152,6 +160,8 @@ export function autoconnectSavedNetworks(): IrcClient[] {
 
 	autoconnectDone = true;
 	const started: IrcClient[] = [];
+	// Once per page: the `/away` memory of networks that are gone.
+	pruneUserAway([...saved.list().map((entry) => entry.uuid), ...clients.keys()]);
 
 	for (const entry of saved.list()) {
 		if (!entry.autoconnect || clients.has(entry.uuid)) {
@@ -233,6 +243,65 @@ const FOREGROUND_PROBE_MS = 4_000;
 const STALE_DIAL_MS = 3_000;
 let lastPokeAt = 0;
 
+/** The page's attention changed: every connection tells its server (presence.ts). */
+export function setAttendedAll(attended: boolean, except?: ReadonlySet<string>): void {
+	for (const client of clients.values()) {
+		if (!except?.has(client.uuid)) {
+			client.setAttended(attended);
+		}
+	}
+}
+
+/** The page is unloading: the networks whose `AWAY *` the service worker takes over (presence.ts). */
+export function networksLeavingAwayToWorker(stashed: (uuid: string) => boolean): string[] {
+	return allClients()
+		.filter((client) => leavesAwayToWorker(client, stashed))
+		.map((client) => client.uuid);
+}
+
+/**
+ * The page's do not disturb (client/js/dnd.ts) changed: remember it for
+ * networks created later and hand it to every client, which says it to its
+ * server (`AWAY *`, the push mute) through syncPresence. `until` is a
+ * Date.now() time for a timed DND, null for an indefinite one or none.
+ */
+export function setGlobalDndAll(active: boolean, until: number | null): void {
+	globalDnd.active = active;
+	globalDnd.until = until;
+
+	for (const client of clients.values()) {
+		client.setGlobalDnd(active, until);
+	}
+}
+
+/**
+ * The pill's Off: remove every network's `*` entry, whoever wrote it. A
+ * network in mode dnd keeps its own (removing it would only have the next
+ * sync write it again).
+ */
+export function clearRemoteDndAll(): void {
+	for (const client of clients.values()) {
+		if (client.presenceMode !== "dnd") {
+			clearRemoteDnd(client);
+		}
+	}
+}
+
+/** The user changed the do not disturb by hand: see pushMute.ts `claimMute`. */
+export function claimMuteAll(): void {
+	for (const client of clients.values()) {
+		claimMute(client);
+	}
+}
+
+/** Re-judge every client's presence (the do-not-disturb minute tick): timed
+ * mute entries expire without a word from the server. */
+export function syncPresenceAll(): void {
+	for (const client of clients.values()) {
+		syncPresence(client);
+	}
+}
+
 /**
  * Poke every live connection: networks waiting out reconnect backoff retry
  * now, open ones probe the socket (PING; silence means the OS killed it, and
@@ -240,13 +309,6 @@ let lastPokeAt = 0;
  * to the foreground — browsers from foreground.ts, native shells from
  * native.ts; deliberately disconnected networks are left alone.
  */
-/** The page's attention changed: every connection tells its server (presence.ts). */
-export function setAttendedAll(attended: boolean): void {
-	for (const client of clients.values()) {
-		client.setAttended(attended);
-	}
-}
-
 export function reconnectAll(): void {
 	const now = Date.now();
 

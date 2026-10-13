@@ -37,6 +37,7 @@ import {hasVirtualKeyboard} from "./helpers/device";
 import {followSystemAccessibility} from "./helpers/systemAccessibility";
 import {onLaunch, openInstallGuideAtStart} from "./pwa";
 import {DEV_I18N} from "./i18n/core";
+import dnd from "./dnd";
 // Also registers the IRC layer's bus handlers (input, names, more, network:*).
 import {autoconnectSavedNetworks, clientForNetwork, createNetwork} from "./irc/manager";
 
@@ -125,6 +126,10 @@ export async function boot(): Promise<void> {
 		);
 		/* eslint-enable no-console */
 	}
+
+	// After the stored settings, before any network dials: the first AWAY *
+	// decision already knows about do-not-disturb.
+	dnd.start();
 
 	store.commit("appLoaded");
 

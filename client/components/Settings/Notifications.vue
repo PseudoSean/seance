@@ -42,22 +42,58 @@
 					{{ t("settings.notifications.keyChangeIgnore") }}
 				</label>
 			</div>
-			<div v-if="store.state.pushNotificationState === 'subscribed'" class="opt">
-				<div>{{ t("settings.notifications.snoozeIntro") }}</div>
-				<div class="push-snooze">
-					<button type="button" class="btn" @click.prevent="snooze(15 * 60 * 1000)">
-						{{ t("settings.notifications.snooze15") }}
-					</button>
-					<button type="button" class="btn" @click.prevent="snooze(60 * 60 * 1000)">
-						{{ t("settings.notifications.snooze60") }}
-					</button>
-					<button type="button" class="btn" @click.prevent="snooze(8 * 60 * 60 * 1000)">
-						{{ t("settings.notifications.snooze480") }}
-					</button>
-					<button type="button" class="btn" @click.prevent="snooze(0)">
-						{{ t("settings.notifications.snoozeOff") }}
-					</button>
-				</div>
+			<div class="dnd-schedule">
+				<label class="opt">
+					<input
+						v-switch
+						type="checkbox"
+						:checked="schedule.enabled"
+						@change="update({enabled: ($event.target as HTMLInputElement).checked})"
+					/>
+					Do not disturb on a schedule
+				</label>
+				<!-- Inactive while the schedule is off: dimmed and disabled. -->
+				<fieldset
+					:class="['dnd-schedule-fields', {disabled: !schedule.enabled}]"
+					:disabled="!schedule.enabled"
+				>
+					<div class="dnd-times">
+						<label
+							>From
+							<input
+								type="time"
+								aria-label="Do not disturb from"
+								:value="schedule.start"
+								@change="setTime('start', $event)"
+						/></label>
+						<label
+							>until
+							<input
+								type="time"
+								aria-label="Do not disturb until"
+								:value="schedule.end"
+								@change="setTime('end', $event)"
+						/></label>
+					</div>
+					<div class="dnd-days" role="group" aria-label="Days">
+						<label v-for="(name, day) in DAYS" :key="day">
+							<input
+								v-switch
+								type="checkbox"
+								:aria-label="DAY_FULL_NAMES[day]"
+								:checked="schedule.days.includes(day)"
+								@change="toggleDay(day)"
+							/>
+							{{ name }}
+						</label>
+					</div>
+				</fieldset>
+				<p class="dnd-schedule-hint">
+					While do not disturb is on, you show as away and nothing alerts you here or
+					through push. Push stops on all your devices signed in to the same account. If
+					no {{ appName }} is open when a scheduled window starts, push stops once one
+					opens. Same start and end: all day.
+				</p>
 			</div>
 			<div v-if="store.state.pushNotificationState === 'stale'" id="pushStale" class="error">
 				<strong>{{ t("settings.notifications.warning") }}</strong
@@ -216,6 +252,8 @@ import {computed, defineComponent, onMounted} from "vue";
 import {useStore} from "../../js/store";
 import {useI18n} from "../../js/i18n";
 import webpush from "../../js/webpush";
+import dnd from "../../js/dnd";
+import {DAYS, DAY_FULL_NAMES, HHMM, type DndSchedule} from "../../js/helpers/dnd";
 import {isAndroidShell} from "../../js/helpers/capacitor";
 
 export default defineComponent({
@@ -231,8 +269,28 @@ export default defineComponent({
 		);
 		const commaListPlaceholder = computed(() => t("settings.notifications.commaList"));
 
-		const snooze = (ms: number) => {
-			webpush.setSnooze(ms);
+		// The do-not-disturb schedule (client/js/dnd.ts); every edit saves at once.
+		const schedule = computed(() => dnd.state.schedule);
+		const update = (patch: Partial<DndSchedule>) =>
+			dnd.setSchedule({...dnd.state.schedule, ...patch});
+
+		// A cleared time field reports "": keep the stored time and show it again.
+		const setTime = (field: "start" | "end", event: Event) => {
+			const input = event.target as HTMLInputElement;
+
+			if (!HHMM.test(input.value)) {
+				input.value = schedule.value[field];
+				return;
+			}
+
+			update(field === "start" ? {start: input.value} : {end: input.value});
+		};
+
+		const toggleDay = (day: number) => {
+			const days = schedule.value.days.includes(day)
+				? schedule.value.days.filter((d) => d !== day)
+				: [...schedule.value.days, day].sort((a, b) => a - b);
+			update({days});
 		};
 
 		onMounted(() => {
@@ -256,7 +314,14 @@ export default defineComponent({
 			commaListPlaceholder,
 			androidShell: isAndroidShell(),
 			playNotification,
-			snooze,
+			// Sunday = 0, the day a window starts on (helpers/dnd.ts DndSchedule.days).
+			DAYS,
+			DAY_FULL_NAMES,
+			appName: computed(() => store.state.branding.appName),
+			schedule,
+			update,
+			setTime,
+			toggleDay,
 		};
 	},
 });

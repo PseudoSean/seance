@@ -3829,6 +3829,18 @@ msgctxt "settings.appearance.markdown"
 msgid "Render Markdown formatting (bold, code, spoilers…)"
 msgstr "Hiển thị định dạng Markdown (cường độ, mã, thông báo... )"
 
+#. Settings → Appearance, switch above the theme picker: when on, a theme that has a light and a dark version shows the one matching the device's light or dark mode.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.matchSystemAppearance"
+msgid "Match the system's light or dark mode"
+msgstr ""
+
+#. Settings → Appearance, switch under the Font size heading, in the native apps only: when on, the app's text size follows the phone's own text-size setting and the slider is hidden.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.matchSystemTextSize"
+msgid "Match the system text size"
+msgstr ""
+
 #. Checkbox in Settings > Appearance; when ticked, links to media are shown as an inline playable preview inside the chat instead of a plain link.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.media"
@@ -3929,6 +3941,102 @@ msgstr ""
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.ownMessagesPlainHint"
 msgid "nothing marks them"
+msgstr ""
+
+#. Radio option under Scene animation (ps theme): the landscape is drawn 24 times a second, like film.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimation24"
+msgid "24 frames a second"
+msgstr ""
+
+#. Hint after the 24 frames a second option under Scene animation (ps theme).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimation24Hint"
+msgid "smooth and light on the battery; the default"
+msgstr ""
+
+#. Radio option under Scene animation (ps theme): the landscape moves at the screen's own refresh rate.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimation60"
+msgid "60 frames a second"
+msgstr ""
+
+#. Hint after the 60 frames a second option under Scene animation (ps theme); on a faster screen it runs faster still.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimation60Hint"
+msgid "your screen's own rate: the smoothest, and the most power"
+msgstr ""
+
+#. Heading in Settings > Appearance, shown only under the ps theme: how much the live landscape behind the chat (sky, clouds, birds, rain) moves.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimationHeading"
+msgid "Scene animation"
+msgstr ""
+
+#. Radio option under Scene animation (ps theme): the landscape behind the chat does not move at all.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimationOff"
+msgid "Off"
+msgstr ""
+
+#. Hint after the Off option under Scene animation (ps theme); the colours of the sky still change with the hour.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimationOffHint"
+msgid "a still picture; the sky still follows the time of day"
+msgstr ""
+
+#. Radio option under Scene animation (ps theme): the landscape moves on one step each second.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimationSecond"
+msgid "Once a second"
+msgstr ""
+
+#. Hint after the Once a second option under Scene animation (ps theme); a warning that motion looks jerky.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimationSecondHint"
+msgid "the birds and the rain move in visible jumps"
+msgstr ""
+
+#. Radio option under Scene animation (ps theme): the landscape moves on only now and then.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimationSparse"
+msgid "Sparse"
+msgstr ""
+
+#. Hint after the Sparse option under Scene animation (ps theme).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimationSparseHint"
+msgid "moves on every five minutes, and when you come back to the window"
+msgstr ""
+
+#. Checkbox under Message layout (ps theme): consecutive messages from one sender share one name and time.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psGroupMessages"
+msgid "Combine messages from the same person"
+msgstr ""
+
+#. Hint after the Combine messages checkbox (ps theme).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psGroupMessagesHint"
+msgid "their name and time once, for lines sent within ten minutes of each other"
+msgstr ""
+
+#. Heading in Settings > Appearance, shown only under the ps theme: how chat messages are laid out.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psLayoutHeading"
+msgid "Message layout"
+msgstr ""
+
+#. Checkbox under Scene animation (ps theme): stop the landscape moving when the user is not looking at the app.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psPauseWhenAway"
+msgid "Pause the scene when the window isn't in use"
+msgstr ""
+
+#. Hint after the Pause the scene checkbox (ps theme); a hidden browser tab stops the landscape whatever this says.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psPauseWhenAwayHint"
+msgid "after 15 seconds without the focus, or 2 minutes without input; a hidden tab never moves it"
 msgstr ""
 
 #. Third line of the sample chat under the font-size slider in Settings → Appearance: the extreme steps are intentionally unusable.
@@ -4220,6 +4328,18 @@ msgctxt "settings.general.installApp"
 msgid "Install {appName} as an app"
 msgstr "Cài đặt {appName} như một ứng dụng"
 
+#. Checkbox in Settings > General; when ticked, the recent lines of private (one-to-one) conversations are stored in this browser so they come back after the page is reloaded.
+#: client/components/Settings/General.vue
+msgctxt "settings.general.keepPrivate"
+msgid "Keep private conversations on this device"
+msgstr ""
+
+#. Tooltip on the keep-private-conversations checkbox in Settings > General. {lines} and {queries} are numbers (200 and 30 today). Make clear that turning the setting off deletes what is stored.
+#: client/components/Settings/General.vue
+msgctxt "settings.general.keepPrivateHelp"
+msgid "Private conversations come back after a reload: the newest {lines} lines of your {queries} most recent ones, stored in this browser. Turning this off deletes them from this device."
+msgstr ""
+
 #. Heading of the Native app section in Settings > General; groups the install and link-handler options for using the chat app as an installed application.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.nativeApp"
@@ -4231,6 +4351,12 @@ msgstr "Ứng dụng nguyên bản"
 msgctxt "settings.general.openLinks"
 msgid "Open web+irc:// links with {appName}"
 msgstr "Mở các liên kết web+irc:// bằng {appName}"
+
+#. Section heading in Settings > General for whether private (one-to-one) conversations are kept in this browser between visits.
+#: client/components/Settings/General.vue
+msgctxt "settings.general.privateHeading"
+msgid "Private conversations"
+msgstr ""
 
 #. Checkbox in Settings > General; when ticked, other people in the channel are told while you are typing a message.
 #: client/components/Settings/General.vue
@@ -4484,6 +4610,12 @@ msgctxt "settings.notifications.pushDenied"
 msgid "Notifications are blocked by your browser. Allow them in the browser's site settings, then try again."
 msgstr "Thông báo bị chặn bởi trình duyệt. Cho phép chúng trong cài đặt trang web của trình duyệt, rồi thử lại."
 
+#. Settings → Notifications, after "Warning:", in the Android app when the system has notifications switched off for it. "Android's settings for the app" is the system's per-app settings page.
+#: client/components/Settings/Notifications.vue
+msgctxt "settings.notifications.pushDeniedAndroid"
+msgid "Notifications are turned off for this app. Allow them in Android's settings for the app, then try again."
+msgstr ""
+
 #. Heading of the push notification section in Settings > Notifications; push wakes the app on new messages while it is closed.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushHeading"
@@ -4501,36 +4633,6 @@ msgstr "Đẩy được thiết lập theo mạng — bật hoặc tắt trong c
 msgctxt "settings.notifications.serverUnsupported"
 msgid "Push notifications need a connected server that supports the draft/webpush capability and you to be logged in to an account."
 msgstr "Thông báo đẩy cần một máy chủ kết nối hỗ trợ tính năng draft/webpush và bạn phải đăng nhập vào tài khoản."
-
-#. Snooze button in Settings > Notifications; pauses push notifications for fifteen minutes.
-#: client/components/Settings/Notifications.vue
-msgctxt "settings.notifications.snooze15"
-msgid "15 min"
-msgstr "15 phút"
-
-#. Snooze button in Settings > Notifications; pauses push notifications for eight hours.
-#: client/components/Settings/Notifications.vue
-msgctxt "settings.notifications.snooze480"
-msgid "8 hours"
-msgstr "8 giờ"
-
-#. Snooze button in Settings > Notifications; pauses push notifications for one hour.
-#: client/components/Settings/Notifications.vue
-msgctxt "settings.notifications.snooze60"
-msgid "1 hour"
-msgstr "1 giờ"
-
-#. Lead-in above the snooze buttons in Settings > Notifications, shown while push is enabled; the buttons pause push notifications for all networks. Keep the trailing colon.
-#: client/components/Settings/Notifications.vue
-msgctxt "settings.notifications.snoozeIntro"
-msgid "Snooze pushes everywhere:"
-msgstr "Dừng báo thức mọi nơi:"
-
-#. Snooze button in Settings > Notifications; ends the pause and resumes push notifications immediately.
-#: client/components/Settings/Notifications.vue
-msgctxt "settings.notifications.snoozeOff"
-msgid "Off"
-msgstr "Tắt"
 
 #. Checkbox in Settings > Notifications; when ticked, a sound plays alongside a notification.
 #: client/components/Settings/Notifications.vue
@@ -6041,6 +6143,12 @@ msgstr "Tên người dùng thực tế:"
 msgctxt "whois.awayLabel"
 msgid "Away:"
 msgstr "Bỏ cuộc:"
+
+#. Whois row value when the user is away but gave no away message (draft/pre-away). Shown in parentheses, italic.
+#: client/components/MessageTypes/whois.vue
+msgctxt "whois.awayNoMessage"
+msgid "(no message)"
+msgstr ""
 
 #. Fallback away reason for a query contact whose RPL_AWAY carries no text; it lands in the reason slot of the away system message ('<name> is away (<reason>)') and in the query's away state. Lowercase mid-sentence by position.
 #: client/js/irc/handlers/whois.ts

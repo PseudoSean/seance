@@ -24,10 +24,11 @@ import {MessageType, SharedMsg, TypingState} from "../../../shared/types/msg";
 import type {
 	ServicesConfig,
 	SharedNetwork,
+	SharedNetworkPresence,
 	SharedNetworkStatus,
 	SharedServerOptions,
 } from "../../../shared/types/network";
-import type {PushSession} from "../../../shared/types/socket-events";
+import type {PushSession, ServerToClientEvents} from "../../../shared/types/socket-events";
 import {CapNegotiator, SEANCE_CAPS, webpushVapidOf, WEBPUSH_CAP} from "./caps";
 import {casefold, namesEqual} from "./casemap";
 import {Channel, MsgRef} from "./channel";
@@ -53,8 +54,21 @@ import {
 	markReadAt,
 	scheduleMarkRead,
 } from "./handlers/markread";
-import {PresenceState, initialPresence, presenceRegistered, setAttended} from "./presence";
+import type {PresenceMode} from "../helpers/dnd";
+import {
+	PresenceState,
+	initialPresence,
+	presenceClosed,
+	presenceRegistered,
+	registrationAwayLine,
+	presenceSnapshot,
+	setAttended,
+	syncPresence,
+} from "./presence";
 import {abortHistory, retryLostHistory} from "./history";
+import {globalUntil, MUTE_KEY, MUTE_READ_DELAY_MS, type PendingMute, releaseMute} from "./pushMute";
+import {getMuteMemory, setMuteMemory, type MuteMemory} from "./muteMemory";
+import {getUserAway} from "./userAwayStore";
 import {
 	cancelCatchup,
 	dropFromCatchup,
@@ -239,6 +253,65 @@ export class IrcClient {
 	readonly isupport = new ISupport();
 	/** Attention and away bookkeeping (presence.ts). */
 	readonly presence: PresenceState = initialPresence();
+	/** Online / Auto / Away / Do not disturb (docs/projects/do-not-disturb.md). */
+	presenceMode: PresenceMode = "auto";
+	/** The global do-not-disturb, fed by client/js/dnd.ts. */
+	globalDnd: {active: boolean; until: number | null} = {active: false, until: null};
+	/** The account's push mute list as last read or written (irc/pushMute.ts). */
+	muteValue = "";
+	/** `muteValue` has been read on this connection (GET answered). */
+	muteKnown = false;
+	/**
+	 * The `*` end (unix seconds) this client last wrote, null once cleared or
+	 * taken over, and the last of those the server echoed back. Both are kept
+	 * across a reconnect and, per device, a reload (irc/muteMemory.ts), so
+	 * the next GET can tell our own entry from another device's.
+	 */
+	private muteMemory: MuteMemory = {ownedUntil: null, confirmedUntil: null};
+	get muteOwnedUntil(): number | null {
+		return this.muteMemory.ownedUntil;
+	}
+	set muteOwnedUntil(until: number | null) {
+		this.rememberMute({...this.muteMemory, ownedUntil: until});
+	}
+	get muteConfirmedUntil(): number | null {
+		return this.muteMemory.confirmedUntil;
+	}
+	set muteConfirmedUntil(until: number | null) {
+		this.rememberMute({...this.muteMemory, confirmedUntil: until});
+	}
+	/** The user changed DND by hand: the next sync takes the live `*` entry as ours (pushMute.ts `claimMute`). */
+	muteClaim = false;
+	/** Another device cleared our entry: write nothing until local DND ends and starts again. */
+	muteSuppressed = false;
+	/** Our writes awaiting their echoes (pushMute.ts `ownEcho`). */
+	readonly mutePending: PendingMute[] = [];
+	private muteReadTimer: ReturnType<typeof setTimeout> | null = null;
+
+	private rememberMute(next: MuteMemory): void {
+		if (
+			next.ownedUntil !== this.muteMemory.ownedUntil ||
+			next.confirmedUntil !== this.muteMemory.confirmedUntil
+		) {
+			this.muteMemory = next;
+			setMuteMemory(this.uuid, next, Math.floor(Date.now() / 1000));
+		}
+	}
+
+	/** The live `*` entry is the one this client wrote. */
+	get muteOwned(): boolean {
+		return (
+			this.muteOwnedUntil !== null &&
+			globalUntil(this.muteValue, Math.floor(Date.now() / 1000)) === this.muteOwnedUntil
+		);
+	}
+
+	/** A live `*` entry in the account's push mute list (another device's DND, or ours). */
+	get remoteDnd(): boolean {
+		return (
+			this.muteKnown && globalUntil(this.muteValue, Math.floor(Date.now() / 1000)) !== null
+		);
+	}
 	/** Outstanding `TOKEN GENERATE` requests (draft/authtoken). */
 	readonly authtoken = new TokenRequests();
 	readonly channels: Channel[] = [];
@@ -281,6 +354,13 @@ export class IrcClient {
 	account = "";
 	/** The server holds our session across disconnects (`PERSISTENCE STATUS ON`, see persistence.ts). */
 	persistenceHold = false;
+	/** The user's setting from the last `PERSISTENCE STATUS` line (`ON`,
+	 * `OFF`, `DEFAULT`), undefined before one. An alias of another device's
+	 * session reads `ON OFF`: not held itself, though the session is. */
+	persistenceSetting: string | undefined = undefined;
+	/** `NOTE BOUNCER ALIAS_ATTACHED` on this connection: it joined another
+	 * device's live session as an alias (presence.ts `heldByBouncer`). */
+	bouncerAlias = false;
 	/** Our registration-time `PERSISTENCE SET ON` ack is pending (swallowed
 	 * by handlers/persistence.ts until the STATUS echo lands). */
 	persistenceAutoSetPending = false;
@@ -349,6 +429,15 @@ export class IrcClient {
 		this.unsubscribeTransport = this.transport.on((ev) => this.onTransportEvent(ev));
 
 		this.cursor = savedCursor(this.uuid);
+		this.muteMemory = getMuteMemory(this.uuid);
+		// A `/away` set before the reload is declared again at registration.
+		const away = getUserAway(this.uuid);
+
+		if (away !== null) {
+			this.presence.userAway = true;
+			this.presence.userAwayText = away;
+		}
+
 		this.services = getSavedNetwork(this.uuid)?.services;
 		this.lobby = new Channel(this.ids.chanId(), this.networkName, ChanType.LOBBY, (s) =>
 			this.casefold(s)
@@ -481,6 +570,7 @@ export class IrcClient {
 			nick: this.nick,
 			serverOptions: this.serverOptions,
 			status: this.status,
+			presence: presenceSnapshot(this),
 			channels: this.channels.map((chan) => chan.snapshot()),
 			...(this.services ? {services: this.services} : {}),
 		};
@@ -576,6 +666,8 @@ export class IrcClient {
 
 	/** `/quit`: remove the network from the UI, then disconnect for good. */
 	quit(reason?: string): void {
+		// Before the QUIT, on the same socket: our do not disturb goes too.
+		releaseMute(this);
 		this.bus.dispatch("quit", {network: this.uuid});
 		this.disconnect(reason);
 	}
@@ -790,6 +882,8 @@ export class IrcClient {
 		this.host = "";
 		this.account = "";
 		this.persistenceHold = false;
+		this.persistenceSetting = undefined;
+		this.bouncerAlias = false;
 		this.attachCursor = undefined;
 		this.serverReplay = false;
 		this.endSasl();
@@ -952,6 +1046,12 @@ export class IrcClient {
 			caps.beforeEnd = () => this.startSasl(mechanism);
 		}
 
+		// The away state, declared right before `CAP END` (presence.ts).
+		caps.finalLines = () => {
+			const line = registrationAwayLine(this);
+			return line ? [line] : [];
+		};
+
 		return caps;
 	}
 
@@ -1067,6 +1167,11 @@ export class IrcClient {
 		this._state = "disconnected";
 		this.connected = false;
 		this.welcomed = false;
+		this.clearMuteRead();
+		// Unknown until read again: the snapshot below stops counting it.
+		this.muteKnown = false;
+		this.mutePending.length = 0;
+		presenceClosed(this);
 		// The wait before the transport's retry, for the UI to count down;
 		// an immediate retry has nothing worth counting.
 		this.retryAt =
@@ -1187,6 +1292,7 @@ export class IrcClient {
 		});
 		this.bus.dispatch("commands", commandNames());
 		presenceRegistered(this);
+		this.scheduleMuteRead();
 		flushDeferredMarkRead(this);
 		operRegistered(this);
 
@@ -1905,6 +2011,65 @@ export class IrcClient {
 	/** Attention changed (foreground.ts); see presence.ts. */
 	setAttended(attended: boolean): void {
 		setAttended(this, attended);
+	}
+
+	setPresenceMode(mode: PresenceMode): void {
+		if (this.presenceMode !== mode) {
+			this.presenceMode = mode;
+			syncPresence(this);
+		}
+	}
+
+	setGlobalDnd(active: boolean, until: number | null): void {
+		if (this.globalDnd.active !== active || this.globalDnd.until !== until) {
+			this.globalDnd = {active, until};
+			syncPresence(this);
+		}
+	}
+
+	presenceSnapshot(): SharedNetworkPresence {
+		return presenceSnapshot(this);
+	}
+
+	/**
+	 * The push mute list (do not disturb), read once the connect burst is
+	 * over: every command costs fake lag and the server stops reading at
+	 * 10 s (docs/resources/nefarious2-websocket.md § Fake lag). The account
+	 * comes from SASL's 900, before 001; without one the list is neither
+	 * read nor written (push needs an account anyway).
+	 */
+	private scheduleMuteRead(): void {
+		this.clearMuteRead();
+
+		if (!this.caps.hasCapability("draft/metadata-2") || !this.account) {
+			return;
+		}
+
+		this.muteReadTimer = setTimeout(() => {
+			this.muteReadTimer = null;
+
+			if (this.isWelcomed && this.transport.state === "open") {
+				this.send(`METADATA * SUB ${MUTE_KEY}`);
+				this.send(`METADATA * GET ${MUTE_KEY}`);
+			}
+		}, MUTE_READ_DELAY_MS);
+		// Never what keeps a process (mocha) alive.
+		(this.muteReadTimer as {unref?: () => void}).unref?.();
+	}
+
+	private clearMuteRead(): void {
+		if (this.muteReadTimer !== null) {
+			clearTimeout(this.muteReadTimer);
+			this.muteReadTimer = null;
+		}
+	}
+
+	/** Dispatch on the bus this client was given (presence.ts reports through it). */
+	dispatchBus<E extends keyof ServerToClientEvents>(
+		event: E,
+		...args: Parameters<ServerToClientEvents[E]>
+	): void {
+		this.bus.dispatch(event, ...args);
 	}
 
 	open(chanId: number): void {

@@ -13,6 +13,7 @@ import {request} from "./request";
 import * as saved from "./saved-networks";
 import {checkServices, servicesBan} from "./services";
 import type {ConnectOptions} from "./types";
+import type {PresenceMode} from "../helpers/dnd";
 import {REPLY_TAG} from "./wire";
 
 export interface ClientRegistry {
@@ -134,8 +135,9 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 		}
 	});
 
-	// Account metadata writes for webpush settings (payload tier, mute/
-	// snooze list). SET with an empty value deletes the key.
+	// Account metadata writes for webpush settings (the payload tier; the
+	// mute list is pushMute.ts's, written private). SET with an empty value
+	// deletes the key.
 	bus.handle("webpush:metadata", ({network, key, value}) => {
 		const client = registry.clientForNetwork(network);
 
@@ -288,8 +290,15 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 			return;
 		}
 
-		// Unsaved live network (e.g. `/connect host`): seed from its options.
-		const base = existing ?? saved.normalize({...(client?.editableInfo ?? {}), uuid});
+		// Unsaved live network (e.g. `/connect host`): seed from its options,
+		// and the mode the lobby dot set (the form posts none it was not given).
+		const base =
+			existing ??
+			saved.normalize({
+				...(client?.editableInfo ?? {}),
+				uuid,
+				presenceMode: client?.presenceMode,
+			});
 		const next = saved.fromForm(data, base);
 		saved.save(next);
 
@@ -310,12 +319,38 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 
 			// Services support applies at once: the feed and the ban path read it live.
 			client.setServices(next.services);
+			client.setPresenceMode(saved.presenceModeOf(next));
 		}
 
 		const info = networkInfo(registry, uuid);
 
 		if (info) {
 			bus.dispatch("network:info", info);
+		}
+	});
+
+	// The lobby row's presence dot (NetworkLobby.vue): applied at once, and
+	// saved when the network is a saved one.
+	const setPresenceMode = (network: string, mode: PresenceMode): void => {
+		const client = registry.clientForNetwork(network);
+		const existing = saved.get(network);
+
+		if (existing) {
+			saved.save({...existing, presenceMode: mode === "auto" ? undefined : mode});
+		}
+
+		client?.setPresenceMode(mode);
+	};
+
+	bus.handle("network:presence-mode", ({network, mode}) => setPresenceMode(network, mode));
+
+	// Another device turned the account's do not disturb off
+	// (irc/pushMute.ts): a network in mode dnd here goes back to auto too,
+	// saved, or it would stay away and silent with push unmuted, and write
+	// the mute again on the next load.
+	bus.on("dnd:cleared", ({network}) => {
+		if (registry.clientForNetwork(network)?.presenceMode === "dnd") {
+			setPresenceMode(network, "auto");
 		}
 	});
 

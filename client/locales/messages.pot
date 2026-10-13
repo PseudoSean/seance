@@ -4647,36 +4647,6 @@ msgctxt "settings.notifications.serverUnsupported"
 msgid "Push notifications need a connected server that supports the draft/webpush capability and you to be logged in to an account."
 msgstr ""
 
-#. Snooze button in Settings > Notifications; pauses push notifications for fifteen minutes.
-#: client/components/Settings/Notifications.vue
-msgctxt "settings.notifications.snooze15"
-msgid "15 min"
-msgstr ""
-
-#. Snooze button in Settings > Notifications; pauses push notifications for eight hours.
-#: client/components/Settings/Notifications.vue
-msgctxt "settings.notifications.snooze480"
-msgid "8 hours"
-msgstr ""
-
-#. Snooze button in Settings > Notifications; pauses push notifications for one hour.
-#: client/components/Settings/Notifications.vue
-msgctxt "settings.notifications.snooze60"
-msgid "1 hour"
-msgstr ""
-
-#. Lead-in above the snooze buttons in Settings > Notifications, shown while push is enabled; the buttons pause push notifications for all networks. Keep the trailing colon.
-#: client/components/Settings/Notifications.vue
-msgctxt "settings.notifications.snoozeIntro"
-msgid "Snooze pushes everywhere:"
-msgstr ""
-
-#. Snooze button in Settings > Notifications; ends the pause and resumes push notifications immediately.
-#: client/components/Settings/Notifications.vue
-msgctxt "settings.notifications.snoozeOff"
-msgid "Off"
-msgstr ""
-
 #. Checkbox in Settings > Notifications; when ticked, a sound plays alongside a notification.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.sound"
@@ -6189,6 +6159,12 @@ msgstr ""
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.awayLabel"
 msgid "Away:"
+msgstr ""
+
+#. Whois row value when the user is away but gave no away message (draft/pre-away). Shown in parentheses, italic.
+#: client/components/MessageTypes/whois.vue
+msgctxt "whois.awayNoMessage"
+msgid "(no message)"
 msgstr ""
 
 #. Fallback away reason for a query contact whose RPL_AWAY carries no text; it lands in the reason slot of the away system message ('<name> is away (<reason>)') and in the query's away state. Lowercase mid-sentence by position.

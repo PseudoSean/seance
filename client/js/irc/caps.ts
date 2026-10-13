@@ -58,7 +58,11 @@ export interface CapResult {
  * see multiline.ts), `draft/webpush` likewise needs a `vapid=` value — a
  * server without its VAPID key cannot send pushes (see webpush.ts and
  * docs/projects/push-subscription.md) — and `draft/metadata-2` carries the
- * account settings push needs (payload tier, mute/snooze). Deliberately
+ * account settings push needs (payload tier, the push mute list (do not
+ * disturb)), and
+ * `draft/pre-away` lets the away state be declared before `CAP END`, so a
+ * resumed bouncer session is never announced as back (presence.ts
+ * `registrationAwayLine`). Deliberately
  * absent: `draft/bouncer`, `no-implicit-names`.
  */
 export const SEANCE_CAPS: CapNegotiatorOptions = {
@@ -89,6 +93,7 @@ export const SEANCE_CAPS: CapNegotiatorOptions = {
 		"draft/authtoken",
 		"draft/metadata-2",
 		"draft/persistence",
+		"draft/pre-away",
 	],
 };
 
@@ -159,6 +164,13 @@ export class CapNegotiator {
 	 */
 	beforeEnd?: () => string[];
 
+	/**
+	 * Lines sent immediately before `CAP END`, in the same flush, whichever
+	 * way negotiation ends (pipelined, after a late ACK/NAK, or after SASL):
+	 * the `draft/pre-away` declaration of the away state (presence.ts).
+	 */
+	finalLines?: () => string[];
+
 	private readonly required: string[];
 	private readonly wanted: string[];
 	private readonly accept?: (name: string, value: string) => boolean;
@@ -187,7 +199,7 @@ export class CapNegotiator {
 
 		this.ended = true;
 		this.pendingEnd = false;
-		return ["CAP END"];
+		return this.endLines();
 	}
 
 	/** True once `CAP END` has been emitted. */
@@ -212,6 +224,15 @@ export class CapNegotiator {
 	/** True while `cap` is in a `CAP REQ` the server has not answered yet. */
 	isRequesting(cap: string): boolean {
 		return this.outstanding.has(cap);
+	}
+
+	/**
+	 * True once a multi-cap REQ carrying `cap` was NAKed and `cap` was asked
+	 * for again on its own. A line pipelined behind the NAKed REQ was read by
+	 * the server while the cap was off, whatever the retry's answer.
+	 */
+	wasNakRetried(cap: string): boolean {
+		return this.nakRetried.has(cap);
 	}
 
 	/** Process one incoming message. Non-CAP messages are ignored. */
@@ -319,7 +340,11 @@ export class CapNegotiator {
 		}
 
 		this.ended = true;
-		result.send.push("CAP END");
+		result.send.push(...this.endLines());
+	}
+
+	private endLines(): string[] {
+		return [...(this.finalLines?.() ?? []), "CAP END"];
 	}
 
 	private onAck(caps: [string, string][]): void {
@@ -451,6 +476,6 @@ export class CapNegotiator {
 		}
 
 		this.ended = true;
-		result.send.push("CAP END");
+		result.send.push(...this.endLines());
 	}
 }

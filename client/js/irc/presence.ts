@@ -17,16 +17,39 @@
  * there — `IrcClient.pushMessage` only schedules a MARKREAD for the open
  * channel while attended, and the return of attention marks it then.
  *
+ * Presence modes and do not disturb (docs/projects/do-not-disturb.md):
+ * each network has a mode (`auto`, `online`, `away`, `dnd`), and do not
+ * disturb is in force when the page's global switch, the network's mode or
+ * another device's push mute (`remoteDnd`) says so. `syncPresence` is the
+ * one place that turns all of that, and attention, into `AWAY *` or `AWAY`
+ * (`wantsStar`), reports the snapshot to the store and keeps the push mute
+ * in step (pushMute.ts).
+ *
+ * The away state is declared before `CAP END` (`registrationAwayLine`,
+ * `draft/pre-away`), so a held bouncer session is never counted present
+ * while a reload or a reconnect registers. A connection that resumes such
+ * a session says `AWAY` once it knows it is present (`armResumeCheck`), and
+ * a page that closes leaves its networks' `AWAY *` to the service worker
+ * (`leavesAwayToWorker`).
+ *
  * Vue-free and DOM-free: foreground.ts translates visibility and focus
  * into `setAttended`, tests call it directly.
  */
 
 import type {IrcClient} from "./client";
 import {formatLine} from "./message";
+import {trailingLine} from "./wire";
+import {forgetUserAway, setUserAway} from "./userAwayStore";
 import {scheduleMarkRead} from "./handlers/markread";
+import {MUTE_KEY, MUTE_READ_DELAY_MS, syncPushMute} from "./pushMute";
+import {PERSISTENCE_CAP} from "./persistence";
+import type {SharedNetworkPresence} from "../../../shared/types/network";
 
 /** `draft/pre-away`: away for an unspecified reason. */
 export const AWAY_STAR = "*";
+
+/** The cap that lets `AWAY` be sent before registration completes. */
+export const PRE_AWAY_CAP = "draft/pre-away";
 
 /**
  * How long a visible-but-unfocused page waits before saying `AWAY *`. A
@@ -40,8 +63,28 @@ export interface PresenceState {
 	attended: boolean;
 	/** `/away` is in force; automatic `AWAY *` keeps its hands off. */
 	userAway: boolean;
+	/**
+	 * The text that `/away` sent (`" "` for a bare one), declared again at
+	 * every registration; null while `userAway` is false. Kept across
+	 * reloads by userAwayStore.ts.
+	 */
+	userAwayText: string | null;
 	/** This client sent `AWAY *` and has not cleared it. */
 	starSent: boolean;
+	/** A held session's away state is still to be confirmed (armResumeCheck). */
+	resumeUnsure: boolean;
+	/** The mute read did not land in time: go on as if no other device were in DND. */
+	muteReadTimedOut: boolean;
+	/** Arms {@link muteReadTimedOut}. */
+	resumeTimer: ReturnType<typeof setTimeout> | null;
+	/**
+	 * The away state was declared before `CAP END` on this connection
+	 * ({@link registrationAwayLine}); `safe` when `draft/pre-away` was then
+	 * already ACKed, or asked for again on its own after a NAK — the REQ
+	 * the server read before the line is one it can still accept. Null when
+	 * nothing was declared.
+	 */
+	declaration: {safe: boolean} | null;
 	/**
 	 * Automatic AWAY commands whose replies (RPL_NOWAWAY / RPL_UNAWAY) are
 	 * still to come and should not be shown: switching apps is not news.
@@ -49,14 +92,92 @@ export interface PresenceState {
 	 * `/away` sent after ours is still acknowledged.
 	 */
 	quietReplies: number;
+	/** The last `network:presence` payload dispatched, as JSON. */
+	lastReported: string;
 }
 
 export function initialPresence(): PresenceState {
-	return {attended: true, userAway: false, starSent: false, quietReplies: 0};
+	return {
+		attended: true,
+		userAway: false,
+		userAwayText: null,
+		starSent: false,
+		resumeUnsure: false,
+		muteReadTimedOut: false,
+		resumeTimer: null,
+		declaration: null,
+		quietReplies: 0,
+		lastReported: "",
+	};
 }
 
+/** Registration is over (end of MOTD): before it, only registrationAwayLine speaks. */
 function canSend(client: IrcClient): boolean {
 	return client.transport.state === "open" && client.isConnected;
+}
+
+/** Do not disturb in force on this network. */
+export function effectiveDnd(client: IrcClient): boolean {
+	return client.globalDnd.active || client.presenceMode === "dnd" || client.remoteDnd;
+}
+
+/** Whether this connection should be `AWAY *` (ignoring `/away`). */
+export function wantsStar(client: IrcClient): boolean {
+	const mode = client.presenceMode;
+
+	return (
+		effectiveDnd(client) || mode === "away" || (mode === "auto" && !client.presence.attended)
+	);
+}
+
+export function presenceSnapshot(client: IrcClient): SharedNetworkPresence {
+	const p = client.presence;
+
+	return {
+		mode: client.presenceMode,
+		dnd: effectiveDnd(client),
+		away: p.userAway || p.starSent,
+	};
+}
+
+/**
+ * Bring the server in line with what this client wants: `AWAY *` or `AWAY`,
+ * unless the user's own `/away` is in force; then report the presence to the
+ * store and keep the push mute in step.
+ */
+export function syncPresence(client: IrcClient): void {
+	const p = client.presence;
+	confirmResumed(client);
+
+	if (!p.userAway && canSend(client)) {
+		const want = wantsStar(client);
+
+		if (want && !p.starSent) {
+			p.starSent = true;
+			p.quietReplies++;
+			client.send(formatLine({command: "AWAY", params: [AWAY_STAR]}));
+		} else if (!want && p.starSent) {
+			p.starSent = false;
+			p.quietReplies++;
+			client.send(formatLine({command: "AWAY", params: []}));
+		}
+	}
+
+	reportPresence(client);
+}
+
+/** Tell the store the presence if it changed, and keep the push mute in step. */
+export function reportPresence(client: IrcClient): void {
+	const p = client.presence;
+	const snapshot = presenceSnapshot(client);
+	const json = JSON.stringify(snapshot);
+
+	if (json !== p.lastReported) {
+		p.lastReported = json;
+		client.dispatchBus("network:presence", {network: client.uuid, presence: snapshot});
+	}
+
+	syncPushMute(client);
 }
 
 /**
@@ -72,40 +193,15 @@ export function setAttended(client: IrcClient, attended: boolean): void {
 	}
 
 	p.attended = attended;
+	syncPresence(client);
 
 	if (attended) {
-		if (p.starSent) {
-			p.starSent = false;
-
-			if (canSend(client)) {
-				p.quietReplies++;
-				client.send(formatLine({command: "AWAY", params: []}));
-			}
-		}
-
 		const chan = client.activeChannel();
 
 		if (chan) {
 			scheduleMarkRead(client, chan);
 		}
-
-		return;
 	}
-
-	sendStar(client);
-}
-
-/** `AWAY *` now, if the state calls for it and nothing else owns away. */
-export function sendStar(client: IrcClient): void {
-	const p = client.presence;
-
-	if (p.attended || p.userAway || p.starSent || !canSend(client)) {
-		return;
-	}
-
-	p.starSent = true;
-	p.quietReplies++;
-	client.send(formatLine({command: "AWAY", params: [AWAY_STAR]}));
 }
 
 /**
@@ -123,17 +219,284 @@ export function takeQuietAwayReply(client: IrcClient): boolean {
 	return false;
 }
 
-/** The user ran `/away` (`away` true) or `/back`. */
-export function userAwayChanged(client: IrcClient, away: boolean): void {
+/**
+ * The user ran `/away <text>` (`away` true) or `/back`. State only: the
+ * command sends its own line (`/away` its message, `/back` through
+ * `sendBack`). The text is remembered for the network across reloads.
+ */
+export function userAwayChanged(client: IrcClient, away: boolean, text: string | null): void {
 	const p = client.presence;
 	p.userAway = away;
-	// Whatever the user said replaces ours; a later `/back` while hidden
-	// stays "present" until the next attention change, as they asked.
+	p.userAwayText = away ? text ?? " " : null;
+
+	if (away) {
+		setUserAway(client.uuid, p.userAwayText as string);
+	} else {
+		forgetUserAway(client.uuid);
+	}
+
+	// Whatever the user said replaces ours.
 	p.starSent = false;
+	reportPresence(client);
 }
 
-/** Registration done: a page that is hidden while it connects says so. */
-export function presenceRegistered(client: IrcClient): void {
+/**
+ * `/back`: one line, whichever state the client wants — `AWAY *` while a
+ * mode, do not disturb or a hidden page calls for it, else `AWAY`. Its reply
+ * is the user's acknowledgement, so it is not counted as quiet.
+ */
+export function sendBack(client: IrcClient): void {
+	const p = client.presence;
+	const star = wantsStar(client);
+	p.starSent = star;
+	client.send(formatLine({command: "AWAY", params: star ? [AWAY_STAR] : []}));
+	reportPresence(client);
+}
+
+/** The connection closed: whatever we told that server is gone with it. */
+export function presenceClosed(client: IrcClient): void {
 	client.presence.starSent = false;
-	sendStar(client);
+	client.presence.declaration = null;
+	client.presence.resumeUnsure = false;
+	client.presence.muteReadTimedOut = false;
+	clearResumeTimer(client);
+	client.presence.quietReplies = 0;
+	reportPresence(client);
+}
+
+/**
+ * The away state to declare during registration, sent immediately before
+ * `CAP END` in the same flush (caps.ts `finalLines`; the plain path and the
+ * SASL path alike). With `draft/pre-away` nefarious2 stores it and applies
+ * it at registration, so a held bouncer session that this connection
+ * attaches to is never counted present, and nobody sees the user come back
+ * and leave again. No 305/306 answers it, so nothing is counted quiet.
+ *
+ * When the pipelined `CAP END` goes out the cap is only requested, not yet
+ * ACKed; the server reads the REQ first, so being requested is enough. A
+ * NAK is caught by {@link presenceRegistered}, which is why the line
+ * records whether the REQ it rides on can still be refused.
+ *
+ * Nothing when the client is quitting: handlers/cap.ts then drops the
+ * `CAP END` flush (a required SASL login failed inside `beforeEnd`, which
+ * runs first), so the state is only changed for a line that goes out.
+ */
+export function registrationAwayLine(client: IrcClient): string | null {
+	const p = client.presence;
+	const caps = client.caps;
+
+	if (client.isQuitting) {
+		return null;
+	}
+
+	if (!caps.hasCapability(PRE_AWAY_CAP) && !caps.isRequesting(PRE_AWAY_CAP)) {
+		return null;
+	}
+
+	let line: string | null = null;
+
+	if (p.userAway) {
+		line = trailingLine("AWAY", [p.userAwayText ?? " "]);
+	} else if (wantsStar(client)) {
+		p.starSent = true;
+		line = formatLine({command: "AWAY", params: [AWAY_STAR]});
+	}
+
+	if (line !== null) {
+		p.declaration = {
+			safe: caps.hasCapability(PRE_AWAY_CAP) || caps.wasNakRetried(PRE_AWAY_CAP),
+		};
+	}
+
+	return line;
+}
+
+/**
+ * Whether the server took the away state declared before `CAP END`: the
+ * cap is on now, and the REQ the line rode on was not the one that was
+ * NAKed. A multi-cap REQ refused and its per-cap retry ACKed before 001
+ * leaves the cap on although the server read the line with it off.
+ */
+function declarationTaken(client: IrcClient): boolean {
+	const d = client.presence.declaration;
+	const caps = client.caps;
+
+	return (
+		d !== null &&
+		caps.hasCapability(PRE_AWAY_CAP) &&
+		(d.safe || !caps.wasNakRetried(PRE_AWAY_CAP))
+	);
+}
+
+/**
+ * Registration done. With `draft/pre-away` the away state was declared
+ * before `CAP END` and stands (a star sent then counts); without it the
+ * user's `/away` is said again now, its 306 kept quiet, and a page that is
+ * hidden while it connects (or a mode, or do not disturb) says `AWAY *`.
+ */
+export function presenceRegistered(client: IrcClient): void {
+	const p = client.presence;
+	const taken = declarationTaken(client);
+	p.declaration = null;
+
+	if (!taken) {
+		// Nothing was declared, or the server read it without the cap.
+		p.starSent = false;
+
+		if (p.userAway && canSend(client)) {
+			p.quietReplies++;
+			client.send(trailingLine("AWAY", [p.userAwayText ?? " "]));
+		}
+	}
+
+	armResumeCheck(client);
+	syncPresence(client);
+}
+
+/**
+ * How long after registration the held session's `AWAY` waits for the mute
+ * read before going ahead without it (a `FAIL METADATA` for our GET, a rate
+ * limit, a lost reply); the read itself goes out at MUTE_READ_DELAY_MS.
+ */
+export const MUTE_READ_FALLBACK_MS = MUTE_READ_DELAY_MS + 10_000;
+
+function clearResumeTimer(client: IrcClient): void {
+	const p = client.presence;
+
+	if (p.resumeTimer !== null) {
+		clearTimeout(p.resumeTimer);
+		p.resumeTimer = null;
+	}
+}
+
+/**
+ * Registration done. A bouncer session this connection holds as its
+ * primary keeps the away state it was left with — the `AWAY *` the service
+ * worker said for a closed page (`leavesAwayToWorker`), or a star a dying
+ * socket got out — and a present client that declared nothing would
+ * inherit it. A batch cannot tell a resume (nefarious2 sends no restoration
+ * batch for a session with no channels, and no replay batch when nothing
+ * was missed), so every such connection says `AWAY` once (a fresh session
+ * just gets a quiet 305), but only when it knows it is present: after the
+ * account's mute list was read (another device's do not disturb,
+ * `remoteDnd`, comes from it 10 s after registration), at once where the
+ * list cannot be read (no `draft/metadata-2`), or after
+ * {@link MUTE_READ_FALLBACK_MS} without a read. Until then a reopen after a
+ * worker's star stays away to others. Never on an alias of another
+ * device's session, or a connection with no account.
+ */
+function armResumeCheck(client: IrcClient): void {
+	const p = client.presence;
+	clearResumeTimer(client);
+	p.muteReadTimedOut = false;
+
+	if (client.account === "") {
+		return;
+	}
+
+	p.resumeUnsure = true;
+
+	if (client.caps.hasCapability("draft/metadata-2")) {
+		const timer = setTimeout(() => {
+			p.resumeTimer = null;
+			p.muteReadTimedOut = true;
+
+			// The read was refused (a rate limit) or its reply lost: ask once
+			// more, or this connection would never mute push for this
+			// device's DND, nor show another device's.
+			if (!client.muteKnown && canSend(client)) {
+				client.send(`METADATA * GET ${MUTE_KEY}`);
+			}
+
+			syncPresence(client);
+		}, MUTE_READ_FALLBACK_MS);
+		// Never what keeps a process (mocha) alive.
+		(timer as {unref?: () => void}).unref?.();
+		p.resumeTimer = timer;
+	}
+}
+
+/** The restoration or replay batch closed: look again (armResumeCheck). */
+export function presenceResumed(client: IrcClient): void {
+	syncPresence(client);
+}
+
+/** {@link armResumeCheck}'s `AWAY`, once remote DND is known. */
+function confirmResumed(client: IrcClient): void {
+	const p = client.presence;
+
+	if (!p.resumeUnsure || !canSend(client)) {
+		return;
+	}
+
+	if (client.bouncerAlias || client.account === "" || !heldByBouncer(client)) {
+		// Another device's live session, where this connection counts
+		// present; no account, so no held session to inherit from; or a
+		// session the bouncer does not hold.
+		p.resumeUnsure = false;
+		clearResumeTimer(client);
+		return;
+	}
+
+	if (client.caps.hasCapability("draft/metadata-2") && !client.muteKnown && !p.muteReadTimedOut) {
+		return;
+	}
+
+	p.resumeUnsure = false;
+	clearResumeTimer(client);
+
+	if (!p.userAway && !p.starSent && !wantsStar(client)) {
+		// The server answers 305 even when the session was present: quiet.
+		p.quietReplies++;
+		client.send(formatLine({command: "AWAY", params: []}));
+	}
+}
+
+/**
+ * The account's session outlives this connection: `PERSISTENCE STATUS`
+ * says ON as the effective state, or as the user's setting on a connection
+ * attached as another device's alias (`NOTE BOUNCER ALIAS_ATTACHED`): it
+ * reads `ON OFF` — the alias is not held, the session is, and closing the
+ * last connection leaves it held — while a primary reading `ON OFF` was
+ * told not to hold (`BOUNCER SET SESSION … HOLD off`). Before any STATUS
+ * line, `draft/persistence` on a SASL login counts, since the client asks
+ * for `PERSISTENCE SET ON` itself (client.ts). `OFF OFF` is believed.
+ */
+function heldByBouncer(client: IrcClient): boolean {
+	return (
+		client.persistenceHold ||
+		(client.bouncerAlias && client.persistenceSetting === "ON") ||
+		(client.persistenceSetting === undefined &&
+			client.caps.hasCapability(PERSISTENCE_CAP) &&
+			client.saslOk)
+	);
+}
+
+/**
+ * The page is unloading (`pagehide`, not into the back/forward cache):
+ * whether this network's `AWAY *` should be left to the service worker
+ * rather than sent now. A reload looks exactly like a close at that point,
+ * and the star sent then makes a present user blink away and back to
+ * everyone; the worker waits `AWAY_ON_CLOSE_DELAY_MS`, sends nothing if a
+ * window of the app is open again, and otherwise logs in with the stashed
+ * credentials and says `AWAY *` to the held session itself.
+ *
+ * Only a present connection on Auto qualifies (anything else is already
+ * away, or never automatic), only while nefarious2's bouncer holds the
+ * session ({@link heldByBouncer}; without it the close is a QUIT), and
+ * only when the worker can log in for it (`stashed`, webpush.ts).
+ */
+export function leavesAwayToWorker(client: IrcClient, stashed: (uuid: string) => boolean): boolean {
+	const p = client.presence;
+
+	return (
+		client.presenceMode === "auto" &&
+		client.isConnected &&
+		client.transport.state === "open" &&
+		heldByBouncer(client) &&
+		!p.starSent &&
+		!p.userAway &&
+		!effectiveDnd(client) &&
+		stashed(client.uuid)
+	);
 }

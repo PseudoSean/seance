@@ -35,7 +35,8 @@ An **older** file is applied as far as it goes: a key added after its version
 (`KEY_SINCE` in `settingsBackup.ts` — `thelounge.translate` arrived in
 version 2) is left as it is on the device rather than cleared, since that file
 could never have carried it. `thelounge.oper` was added upstream without a
-bump and counts from version 1, as it does there.
+bump and counts from version 1, as it does there; so does `thelounge.dnd`,
+which came from the do-not-disturb branch.
 
 ## What is in it
 
@@ -52,6 +53,7 @@ bump and counts from version 1, as it does there.
 | `thelounge.aliases`            | command aliases (Settings → Aliases)                                                                            |
 | `thelounge.translate`          | per-channel translation state (what each channel reads and writes, its formality, variant, languages and terms) |
 | `thelounge.oper`               | oper notice routing and snomask                                                                                 |
+| `thelounge.dnd`                | do not disturb: the switch and its window                                                                       |
 | `thelounge.ignore.<uuid>`      | ignore list per network                                                                                         |
 
 Left out on purpose: `thelounge.sts` (a cache), `thelounge.push*` (this
