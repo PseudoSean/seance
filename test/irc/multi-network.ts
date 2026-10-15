@@ -635,12 +635,19 @@ describe("multiple networks", function () {
 			expect(saved.get("net-a")?.presenceMode).to.equal("away");
 		});
 
-		it("another device's Off sets a network in mode dnd back to auto, saved (probe C)", function () {
+		it("another device's mute clear leaves a shared mode dnd as it is (probe C)", function () {
+			// The mode is the shared choice (irc/presenceShare.ts): a device that
+			// leaves dnd sends its new mode through seance/presence. Resetting it
+			// to auto here would stamp a newer choice than the one that cleared
+			// the mute, and every device would adopt auto instead.
 			stored();
 			const a = manager.createNetwork({uuid: "net-a", nick: "alice"});
 			const t = registerWithMute(a);
 			socket.emit("network:presence-mode", {network: "net-a", mode: "dnd"});
-			const set = t.sent.find((l) => l.startsWith("METADATA * SET")) as string;
+			const at = a.presenceAt;
+			const set = t.sent.find((l) =>
+				l.startsWith("METADATA * SET draft/webpush/mute")
+			) as string;
 			const value = set.split("private :")[1];
 			t.lines(
 				`:irc.test 761 alice alice draft/webpush/mute private :${value}`,
@@ -648,13 +655,12 @@ describe("multiple networks", function () {
 			);
 			const mark = t.sent.length;
 			t.lines(":irc.test METADATA alice draft/webpush/mute *");
-			expect(a.presenceMode).to.equal("auto");
-			expect(saved.get("net-a")).to.not.have.property("presenceMode");
-			expect(a.presenceSnapshot()).to.include({mode: "auto", dnd: false});
-			expect(a.muteSuppressed).to.equal(false);
+			expect(a.presenceMode).to.equal("dnd");
+			expect(a.presenceAt).to.equal(at);
+			expect(saved.get("net-a")?.presenceMode).to.equal("dnd");
 			const after = t.sent.slice(mark);
-			expect(after.filter((l) => l.includes("METADATA"))).to.deep.equal([]);
-			expect(after).to.include("AWAY");
+			expect(after.filter((l) => l.includes("seance/presence"))).to.deep.equal([]);
+			expect(after).to.not.include("AWAY");
 		});
 
 		it("dnd:cleared leaves a network in another mode as it is", function () {
@@ -664,6 +670,78 @@ describe("multiple networks", function () {
 			socket.dispatch("dnd:cleared", {network: "net-a"});
 			expect(a.presenceMode).to.equal("away");
 			expect(saved.get("net-a")?.presenceMode).to.equal("away");
+		});
+
+		it("a choice on the dot is stamped, on the client and the saved entry", function () {
+			stored();
+			const a = manager.createNetwork({uuid: "net-a", nick: "alice"});
+			const before = Date.now();
+			socket.emit("network:presence-mode", {network: "net-a", mode: "away"});
+			expect(saved.get("net-a")?.presenceAt).to.be.at.least(before);
+			expect(a.presenceAt).to.equal(saved.get("net-a")?.presenceAt);
+		});
+
+		it("network:presence-shared saves the adopted mode and its time", function () {
+			stored();
+			manager.createNetwork({uuid: "net-a", nick: "alice"});
+			socket.dispatch("network:presence-shared", {
+				network: "net-a",
+				mode: "dnd",
+				at: 1792000000000,
+			});
+			expect(saved.get("net-a")?.presenceMode).to.equal("dnd");
+			expect(saved.get("net-a")?.presenceAt).to.equal(1792000000000);
+		});
+
+		it("network:edit never takes the mode's time from the form (its defaults may be stale)", function () {
+			saved.save({...stored(), presenceMode: "away", presenceAt: 1000});
+			const a = manager.createNetwork({uuid: "net-a", nick: "alice"});
+			a.setPresenceMode("away", 1000);
+			// Adopted from another device while the form was open:
+			socket.dispatch("network:presence-shared", {network: "net-a", mode: "away", at: 2000});
+			a.setPresenceMode("away", 2000);
+			// The form posts its defaults back, the old time among them.
+			socket.emit("network:edit", {
+				uuid: "net-a",
+				nick: "alice2",
+				host: "net-a.test",
+				presenceMode: "away",
+				presenceAt: 1000,
+			});
+			expect(saved.get("net-a")?.presenceAt).to.equal(2000);
+			expect(a.presenceAt).to.equal(2000);
+		});
+
+		it("network:edit of an unsaved network keeps the dot's time", function () {
+			const a = manager.createNetwork({uuid: "net-a", nick: "alice"});
+			socket.emit("network:presence-mode", {network: "net-a", mode: "dnd"});
+			const at = a.presenceAt;
+			socket.emit("network:edit", {uuid: "net-a", nick: "alice", host: "net-a.test"});
+			expect(saved.get("net-a")?.presenceAt).to.equal(at);
+		});
+
+		it("network:edit with a new mode stamps it; with the same mode stamps nothing", function () {
+			saved.save({...stored(), presenceMode: "away", presenceAt: 1000});
+			const a = manager.createNetwork({uuid: "net-a", nick: "alice"});
+			a.setPresenceMode("away", 1000);
+			socket.emit("network:edit", {
+				uuid: "net-a",
+				nick: "alice",
+				host: "net-a.test",
+				presenceMode: "away",
+			});
+			expect(saved.get("net-a")?.presenceAt).to.equal(1000);
+			expect(a.presenceAt).to.equal(1000);
+
+			socket.emit("network:edit", {
+				uuid: "net-a",
+				nick: "alice",
+				host: "net-a.test",
+				presenceMode: "online",
+			});
+			expect(saved.get("net-a")?.presenceAt).to.be.greaterThan(1000);
+			expect(a.presenceMode).to.equal("online");
+			expect(a.presenceAt).to.equal(saved.get("net-a")?.presenceAt);
 		});
 	});
 });

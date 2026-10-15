@@ -54,7 +54,7 @@ import {
 	markReadAt,
 	scheduleMarkRead,
 } from "./handlers/markread";
-import type {PresenceMode} from "../helpers/dnd";
+import type {GlobalAway, PresenceMode} from "../helpers/dnd";
 import {
 	PresenceState,
 	initialPresence,
@@ -67,6 +67,7 @@ import {
 } from "./presence";
 import {abortHistory, retryLostHistory} from "./history";
 import {globalUntil, MUTE_KEY, MUTE_READ_DELAY_MS, type PendingMute, releaseMute} from "./pushMute";
+import {AWAY_KEY, PRESENCE_KEY, syncShared, type Stamped} from "./presenceShare";
 import {getMuteMemory, setMuteMemory, type MuteMemory} from "./muteMemory";
 import {getUserAway} from "./userAwayStore";
 import {
@@ -255,6 +256,24 @@ export class IrcClient {
 	readonly presence: PresenceState = initialPresence();
 	/** Online / Auto / Away / Do not disturb (docs/projects/do-not-disturb.md). */
 	presenceMode: PresenceMode = "auto";
+	/** When `presenceMode` was chosen (Unix ms); undefined = never (presenceShare.ts). */
+	presenceAt: number | undefined = undefined;
+	/** The device's global away switch (client/js/dnd.ts, manager.setGlobalAwayAll). */
+	globalAway: GlobalAway = {on: false, at: null};
+	/** The shared mode / switch was read on this connection, and the server's last value. */
+	presenceKnown = false;
+	presenceServer: Stamped | null = null;
+	awayKnown = false;
+	awayServer: Stamped | null = null;
+	/**
+	 * The mute and the shared keys are subscribed on this connection: before
+	 * `CAP END` when the server offers `draft/metadata-2=before-connect` and
+	 * a SASL login succeeded, so a change another device makes the moment we
+	 * register is not missed (nefarious2 answers a later GET from this
+	 * connection's own copy, which a missed change leaves stale); else with
+	 * the login read.
+	 */
+	metadataSubscribed = false;
 	/** The global do-not-disturb, fed by client/js/dnd.ts. */
 	globalDnd: {active: boolean; until: number | null} = {active: false, until: null};
 	/** The account's push mute list as last read or written (irc/pushMute.ts). */
@@ -1046,10 +1065,26 @@ export class IrcClient {
 			caps.beforeEnd = () => this.startSasl(mechanism);
 		}
 
-		// The away state, declared right before `CAP END` (presence.ts).
+		// The shared metadata, subscribed before registration where the server
+		// allows it, and the away state, declared right before `CAP END`
+		// (presence.ts).
 		caps.finalLines = () => {
+			const lines: string[] = [];
+			const metadata = caps.value("draft/metadata-2");
+
+			if (
+				!this.isQuitting &&
+				this.saslOk &&
+				metadata !== undefined &&
+				metadata.split(",").includes("before-connect") &&
+				(caps.hasCapability("draft/metadata-2") || caps.isRequesting("draft/metadata-2"))
+			) {
+				this.metadataSubscribed = true;
+				lines.push(`METADATA * SUB ${MUTE_KEY} ${PRESENCE_KEY} ${AWAY_KEY}`);
+			}
+
 			const line = registrationAwayLine(this);
-			return line ? [line] : [];
+			return line ? [...lines, line] : lines;
 		};
 
 		return caps;
@@ -1170,6 +1205,11 @@ export class IrcClient {
 		this.clearMuteRead();
 		// Unknown until read again: the snapshot below stops counting it.
 		this.muteKnown = false;
+		this.presenceKnown = false;
+		this.presenceServer = null;
+		this.awayKnown = false;
+		this.awayServer = null;
+		this.metadataSubscribed = false;
 		this.mutePending.length = 0;
 		presenceClosed(this);
 		// The wait before the transport's retry, for the UI to count down;
@@ -2013,11 +2053,40 @@ export class IrcClient {
 		setAttended(this, attended);
 	}
 
-	setPresenceMode(mode: PresenceMode): void {
+	/**
+	 * Apply a presence mode. `at` stamps it as a choice (made here: now;
+	 * adopted from the server: its time) and shares it (presenceShare.ts);
+	 * without one the time is left as it is.
+	 */
+	setPresenceMode(mode: PresenceMode, at?: number): void {
+		if (at !== undefined) {
+			this.presenceAt = at;
+		}
+
 		if (this.presenceMode !== mode) {
 			this.presenceMode = mode;
 			syncPresence(this);
 		}
+
+		if (at !== undefined) {
+			syncShared(this);
+		}
+	}
+
+	/** The device's global away switch (docs/projects/shared-presence-modes.md § 2). */
+	setGlobalAway(away: GlobalAway): void {
+		if (this.globalAway.on === away.on && this.globalAway.at === away.at) {
+			return;
+		}
+
+		const changed = this.globalAway.on !== away.on;
+		this.globalAway = {on: away.on, at: away.at};
+
+		if (changed) {
+			syncPresence(this);
+		}
+
+		syncShared(this);
 	}
 
 	setGlobalDnd(active: boolean, until: number | null): void {
@@ -2049,8 +2118,12 @@ export class IrcClient {
 			this.muteReadTimer = null;
 
 			if (this.isWelcomed && this.transport.state === "open") {
-				this.send(`METADATA * SUB ${MUTE_KEY}`);
-				this.send(`METADATA * GET ${MUTE_KEY}`);
+				if (!this.metadataSubscribed) {
+					this.metadataSubscribed = true;
+					this.send(`METADATA * SUB ${MUTE_KEY} ${PRESENCE_KEY} ${AWAY_KEY}`);
+				}
+
+				this.send(`METADATA * GET ${MUTE_KEY} ${PRESENCE_KEY} ${AWAY_KEY}`);
 			}
 		}, MUTE_READ_DELAY_MS);
 		// Never what keeps a process (mocha) alive.
