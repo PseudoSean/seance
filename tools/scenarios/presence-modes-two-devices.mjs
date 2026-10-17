@@ -162,7 +162,7 @@ export default async function run(page) {
 
 		// Clean start: the mute read lands, DND off, no /away.
 		await page.sleep(11000);
-		await menu(page, PILL, "status-available");
+		await menu(page, PILL, "status-auto");
 		await command(page, "/back");
 		await page.evaluate(SHOW);
 
@@ -238,10 +238,10 @@ export default async function run(page) {
 		r = await record("8. B reopened alone (A closed)", {aOpen: false});
 
 		// Leave the account as found: B back to Auto, A back to Auto.
-		await menu(b, DOT, "presence-auto");
+		await menu(b, DOT, "presence-global");
 		await reopen(page);
 		await page.sleep(SETTLE);
-		await menu(page, DOT, "presence-auto");
+		await menu(page, DOT, "presence-global");
 	} finally {
 		console.log("\n  RESULTS");
 		for (const row of results) {
