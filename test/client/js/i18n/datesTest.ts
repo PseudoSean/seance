@@ -58,4 +58,13 @@ describe("i18n date formatters", () => {
 	it("should render relative time in the active language", () => {
 		expect(formatRelativeTime(time)).to.match(/year/);
 	});
+
+	it("steps up from days to months and years, as dayjs's fromNow did", () => {
+		const day = 86_400_000;
+		expect(formatRelativeTime(Date.now() - 3 * day)).to.equal("3 days ago");
+		expect(formatRelativeTime(Date.now() - 45 * day)).to.equal("last month");
+		expect(formatRelativeTime(Date.now() - 100 * day)).to.equal("3 months ago");
+		expect(formatRelativeTime(Date.now() - 400 * day)).to.equal("last year");
+		expect(formatRelativeTime(Date.now() - 1000 * day)).to.equal("3 years ago");
+	});
 });
