@@ -574,18 +574,16 @@ export default defineComponent({
 		// The ps theme's Scene animation levels (themeScene.ts SceneMotion).
 		const psAnimation = computed(() => normalizeSceneMotion(store.state.settings.psAnimation));
 		const sceneMotionLabels = computed<Record<SceneMotion, string>>(() => ({
-			off: t("settings.appearance.psAnimationOff"),
-			sparse: t("settings.appearance.psAnimationSparse"),
-			"1s": t("settings.appearance.psAnimationSecond"),
-			"24": t("settings.appearance.psAnimation24"),
-			"60": t("settings.appearance.psAnimation60"),
+			auto: t("settings.appearance.psMotionAuto"),
+			full: t("settings.appearance.psMotionFull"),
+			calm: t("settings.appearance.psMotionCalm"),
+			still: t("settings.appearance.psMotionStill"),
 		}));
 		const sceneMotionHints = computed<Record<SceneMotion, string>>(() => ({
-			off: t("settings.appearance.psAnimationOffHint"),
-			sparse: t("settings.appearance.psAnimationSparseHint"),
-			"1s": t("settings.appearance.psAnimationSecondHint"),
-			"24": t("settings.appearance.psAnimation24Hint"),
-			"60": t("settings.appearance.psAnimation60Hint"),
+			auto: t("settings.appearance.psMotionAutoHint"),
+			full: t("settings.appearance.psMotionFullHint"),
+			calm: t("settings.appearance.psMotionCalmHint"),
+			still: t("settings.appearance.psMotionStillHint"),
 		}));
 
 		// The step under the slider while it is being dragged. Applying every

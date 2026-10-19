@@ -69,6 +69,8 @@ interface PendingToken {
 	resolve: (token: string) => void;
 	reject: (error: Error) => void;
 	timer: ReturnType<typeof setTimeout>;
+	/** Rejected for taking too long, but still in line for its late reply. */
+	timedOut?: boolean;
 }
 
 /**
@@ -86,7 +88,7 @@ export class TokenRequests {
 	}
 
 	get size(): number {
-		return this.pending.length;
+		return this.pending.filter((entry) => !entry.timedOut).length;
 	}
 
 	/** Enqueue a request; `send` puts the line on the wire. */
@@ -97,8 +99,12 @@ export class TokenRequests {
 				resolve,
 				reject,
 				timer: setTimeout(() => {
-					this.remove(entry);
 					reject(new TokenError(t("token.timeout"), "TIMEOUT"));
+					// The server answers in order: its late reply is this request's,
+					// and must not go to the next one (a token scoped to another
+					// channel, or another request's FAIL). Keep the place a while.
+					entry.timedOut = true;
+					entry.timer = setTimeout(() => this.remove(entry), this.timeoutMs * 4);
 				}, this.timeoutMs),
 			};
 			this.pending.push(entry);
