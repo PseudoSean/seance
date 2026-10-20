@@ -127,6 +127,7 @@ describe("public folder", function () {
 			"princess",
 			"princess_",
 			"keeki",
+			"keekiblush",
 			"sandrof",
 			"oikarinen",
 			"bourbaki",
