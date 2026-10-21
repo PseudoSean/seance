@@ -335,6 +335,14 @@
 					<span class="opt-hint">{{ t("settings.appearance.psPauseWhenAwayHint") }}</span>
 				</label>
 			</div>
+			<h2 id="label-ps-words">{{ t("settings.appearance.psWordsHeading") }}</h2>
+			<div role="group" aria-labelledby="label-ps-words" class="scene-motion-options">
+				<label v-for="w in psWords" :key="w" class="opt">
+					<input :checked="psWordsValue === w" type="radio" name="psWords" :value="w" />
+					{{ psWordsLabels[w] }}
+					<span class="opt-hint">{{ psWordsHints[w] }}</span>
+				</label>
+			</div>
 			<h2 id="label-ps-layout">{{ t("settings.appearance.psLayoutHeading") }}</h2>
 			<div role="group" aria-labelledby="label-ps-layout" class="scene-motion-options">
 				<label class="opt">
@@ -463,6 +471,7 @@ import {computed, defineComponent, ref} from "vue";
 import {useStore} from "../../js/store";
 import {useI18n} from "../../js/i18n";
 import {normalizeSceneMotion, SCENE_MOTIONS, type SceneMotion} from "../../js/themeScene";
+import {normalizePsWords, psWords, type PsWords} from "../../js/helpers/psWords";
 import {
 	describeThemePairs,
 	effectiveTheme,
@@ -585,6 +594,24 @@ export default defineComponent({
 			calm: t("settings.appearance.psMotionCalmHint"),
 			still: t("settings.appearance.psMotionStillHint"),
 		}));
+		// The ps theme's Words over the plains (helpers/psWords.ts; docs/projects/ps-words.md).
+		const psWordsValue = computed(() => normalizePsWords(store.state.settings.psWords));
+		const psWordsLabels = computed<Record<PsWords, string>>(() => ({
+			bubbles: t("settings.appearance.psWordsBubbles"),
+			glass: t("settings.appearance.psWordsGlass"),
+			scrim: t("settings.appearance.psWordsScrim"),
+			outline: t("settings.appearance.psWordsOutline"),
+			rim: t("settings.appearance.psWordsRim"),
+			glow: t("settings.appearance.psWordsGlow"),
+		}));
+		const psWordsHints = computed<Record<PsWords, string>>(() => ({
+			bubbles: t("settings.appearance.psWordsBubblesHint"),
+			glass: t("settings.appearance.psWordsGlassHint"),
+			scrim: t("settings.appearance.psWordsScrimHint"),
+			outline: t("settings.appearance.psWordsOutlineHint"),
+			rim: t("settings.appearance.psWordsRimHint"),
+			glow: t("settings.appearance.psWordsGlowHint"),
+		}));
 
 		// The step under the slider while it is being dragged. Applying every
 		// step live re-laid out the whole page (rem chrome) under the pointer
@@ -704,6 +731,10 @@ export default defineComponent({
 			psAnimation,
 			sceneMotionLabels,
 			sceneMotionHints,
+			psWords,
+			psWordsValue,
+			psWordsLabels,
+			psWordsHints,
 			store,
 			t,
 			motdTitle,

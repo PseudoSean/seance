@@ -4039,6 +4039,84 @@ msgctxt "settings.appearance.psPauseWhenAwayHint"
 msgid "after 15 seconds without the focus, or 2 minutes without input; a hidden tab never moves it"
 msgstr ""
 
+#. Radio label under Words over the plains (ps theme): every message on a translucent card.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsBubbles"
+msgid "Bubbles"
+msgstr ""
+
+#. Hint after the Bubbles radio (ps theme).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsBubblesHint"
+msgid "each message on a translucent card: paper by day, dark at night"
+msgstr ""
+
+#. Radio label under Words over the plains (ps theme): the whole message column on frosted glass.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsGlass"
+msgid "Glass"
+msgstr ""
+
+#. Hint after the Glass radio (ps theme).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsGlassHint"
+msgid "the whole column on frosted glass, the plains a wash behind it"
+msgstr ""
+
+#. Radio label under Words over the plains (ps theme): a soft dark glow and no outline.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsGlow"
+msgid "Soft glow"
+msgstr ""
+
+#. Hint after the Soft glow radio (ps theme); 'floor' is the theme's legibility floor (a contrast ratio).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsGlowHint"
+msgid "a soft dark glow and nothing else; by day it reads well under the usual floor"
+msgstr ""
+
+#. Heading in Settings > Appearance, shown only under the ps theme: how the chat text is drawn over the live scene (six treatments).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsHeading"
+msgid "Words over the plains"
+msgstr ""
+
+#. Radio label under Words over the plains (ps theme): white words in a dark outline, the look before the setting existed.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsOutline"
+msgid "Outline"
+msgstr ""
+
+#. Hint after the Outline radio (ps theme).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsOutlineHint"
+msgid "white words in a dark outline; ink on snowy days"
+msgstr ""
+
+#. Radio label under Words over the plains (ps theme): a thinner outline in the sky's colour.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsRim"
+msgid "Tinted rim"
+msgstr ""
+
+#. Hint after the Tinted rim radio (ps theme); 'floor' is the theme's legibility floor (a contrast ratio).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsRimHint"
+msgid "a thinner rim in the sky's own colour; by day it reads under the usual floor"
+msgstr ""
+
+#. Radio label under Words over the plains (ps theme): a graded wash across the column.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsScrim"
+msgid "Scrim"
+msgstr ""
+
+#. Hint after the Scrim radio (ps theme).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsScrimHint"
+msgid "a soft wash across the column, stronger near the edge, no blur"
+msgstr ""
+
 #. Third line of the sample chat under the font-size slider in Settings → Appearance: the extreme steps are intentionally unusable.
 #: client/components/Settings/Appearance.vue:486
 msgctxt "settings.appearance.sampleEnds"

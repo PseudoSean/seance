@@ -3,6 +3,7 @@ import {mirrorPushPrefs} from "./push-prefs";
 import {activate} from "./i18n";
 import {normalizeFontSize} from "./helpers/fontSize";
 import {normalizeOwnMessageStyle} from "./helpers/ownMessages";
+import {normalizePsWords} from "./helpers/psWords";
 import {prefersTwelveHourClock} from "./helpers/hourCycle";
 import storage from "./localStorage";
 import {normalizeSceneMotion, themeScene} from "./themeScene";
@@ -293,6 +294,15 @@ const defaultConfig = {
 	// and time (MessageList.vue, helpers/messageRuns.ts).
 	psGroupMessages: {
 		default: true,
+	},
+	// Which treatment the words in the message column get over the plains
+	// (helpers/psWords.ts; ps.css reads html[data-ps-words], a missing
+	// attribute is Bubbles). Reflected like fontSize and ownMessages.
+	psWords: {
+		default: "bubbles",
+		apply(store: TypedStore, value: string) {
+			document.documentElement.dataset.psWords = normalizePsWords(value);
+		},
 	},
 	media: {
 		default: true,
