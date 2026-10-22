@@ -1,4 +1,5 @@
 import {findLinks} from "../../../../shared/linkify";
+import {judgeLink, type LinkVerdict} from "../linkSafety";
 import anyIntersection from "./anyIntersection";
 import findChannels from "./findChannels";
 import findEmoji from "./findEmoji";
@@ -50,7 +51,9 @@ export type LayoutNode =
 	// `table` is one alignment letter (`l`, `r`, `c`) per column, the
 	// separator row's word on how each column sits
 	| {kind: "wrap"; wrap: "table"; table: string; children: LayoutNode[]}
-	| {kind: "wrap"; wrap: "href"; href: string; children: LayoutNode[]};
+	// A masked link; `verdict` compares its visible text with where it goes
+	// (helpers/linkSafety.ts): parse.ts shows the host or asks before opening
+	| {kind: "wrap"; wrap: "href"; href: string; verdict: LinkVerdict; children: LayoutNode[]};
 
 // Flags that wrap a run of neighbouring nodes in one element, outermost first:
 // a header sits inside the quote it was written in, never the other way round.
@@ -90,18 +93,37 @@ export function layout(text: string, options: LayoutOptions = {}): LayoutNode[] 
 	// Nicks, channels and emoji are not looked up inside code
 	const outsideVerbatim = (part: Part) => !verbatim.some((range) => anyIntersection(range, part));
 
+	// Nor links, channels or nicks inside a masked link's label: an anchor
+	// nested in its anchor would open the label's own address on a click,
+	// and on a hover or long press show it, not where the link goes
+	// (helpers/linkSafety.ts judges the label as text).
+	const masked: Range[] = [];
+	let offset = 0;
+
+	for (const fragment of fragments) {
+		if (fragment.href !== undefined) {
+			masked.push({start: offset, end: offset + fragment.text.length});
+		}
+
+		offset += fragment.text.length;
+	}
+
+	const outsideMasked = (part: Part) => !masked.some((range) => anyIntersection(range, part));
+
 	// On the plain text, find channels and URLs, returned as "parts". Parts are
 	// objects containing start and end markers, as well as metadata depending on
 	// what was found (channel or link).
 	const channelPrefixes = options.channelPrefixes ?? ["#", "&"];
 	const userModes = options.userModes ?? ["!", "@", "%", "+"];
-	const channelParts = findChannels(cleanText, channelPrefixes, userModes).filter(
-		outsideVerbatim
-	);
-	const linkParts = findLinks(cleanText);
+	const channelParts = findChannels(cleanText, channelPrefixes, userModes)
+		.filter(outsideVerbatim)
+		.filter(outsideMasked);
+	const linkParts = findLinks(cleanText).filter(outsideMasked);
 	const emojiParts = findEmoji(cleanText).filter(outsideVerbatim);
 	const shortcodeParts = findShortcode(cleanText).filter(outsideVerbatim);
-	const nameParts = findNames(cleanText, options.users ?? []).filter(outsideVerbatim);
+	const nameParts = findNames(cleanText, options.users ?? [])
+		.filter(outsideVerbatim)
+		.filter(outsideMasked);
 
 	const parts = (channelParts as MergedParts)
 		.concat(linkParts)
@@ -391,7 +413,14 @@ function sameWrap(a: Wrap, b: Wrap) {
 
 function wrapNode(key: WrapKey, wrap: Wrap, children: LayoutNode[]): LayoutNode {
 	if (key === "href") {
-		return {kind: "wrap", wrap: "href", href: String(wrap.href), children};
+		const target = String(wrap.href);
+		return {
+			kind: "wrap",
+			wrap: "href",
+			href: target,
+			verdict: judgeLink(toPlainText(children), target),
+			children,
+		};
 	}
 
 	if (key === "header") {

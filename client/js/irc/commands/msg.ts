@@ -41,6 +41,9 @@ function openQuery({client, chan}: CommandContext, targetName: string): boolean 
 		return false;
 	}
 
+	// The user asked for it back: a reopen, here and on the other devices.
+	client.closed.reopen(targetName);
+	client.writeClosed();
 	client.announceChannel(targetName, ChanType.QUERY, {shouldOpen: true});
 	return true;
 }

@@ -75,7 +75,29 @@ link, monospace block — is defined in `CONTEXT.md`; use those words.
   window-title `title` attribute.
 
 A masked link is an `<a class="md-link" title="<url>">`; the class is what
-tells it apart from a linkified anchor. CSS for the wrapped elements
+tells it apart from a linkified anchor.
+
+**Masked links can lie, so they say where they go** (2026-10-22). The label is
+free text, so `[paypal.com](https://evil.example)` shows one address and opens
+another. `client/js/helpers/linkSafety.ts` `judgeLink(label, href)` compares
+hosts, never strings: the destination is `new URL(href).hostname`, which sees
+through userinfo (`https://bank.com@evil.example`) and shows an IDN host in
+punycode; the label's addresses are what the linkifier finds in it, and two
+hosts match when equal or one is a subdomain of the other, after one `www.`. An e-mail address in the label counts by its domain. A schemeless source-file name (`setup.py`, `readme.md`, `main.rs`: extensions that are also TLDs and rarely anyone's site) is not an address, so such a link shows its host without the warning; nothing else is exempt (a label matching the link's own path proves nothing: the attacker writes the path), so `notion.so`, `claude.ai` or `backup.zip` naming another site still warns. A label naming only a parent of the real host (`github.io` for attacker.github.io) shows the host, since a shared host is everyone's parent.
+`layout()` puts the verdict on the `href` node and `parse.ts` renders it:
+
+- `honest` (the label is the URL, or URLs on the same host): unchanged;
+- `masked` (prose label): the real host follows the label, in
+  `<span class="md-link-host">` inside the anchor — a phone shows no title;
+- `mismatch` (the label names another address): the host in the error colour,
+  a warning glyph, and a click, Ctrl/Cmd-click or middle click raises the
+  confirm dialog ("Check this link"), whose Open anyway opens it
+  (`helpers/openLink.ts`).
+
+Limits: a long press's own menu, a right click's "Open in new tab" or a drag cannot be intercepted, so there the host after the label is the only warning; the label holds no link of its own (layout.ts finds no link, channel or nick inside an `href` wrap), so those menus name the real destination. Enter never reaches a chat link (`keybinds.ts` sends keys outside a field to the composer). Tests
+`test/helpers/linkSafety.ts`, `test/helpers/layout.ts`; browser check
+`tools/scenarios/masked-links.mjs` (also `--mobile --width=390 --height=844`,
+and `SEANCE_THEME=ps`). CSS for the wrapped elements
 (`.md-quote`, `.md-header`/`.md-h1`…`.md-h6`, `.md-code-block`,
 `.md-code-toggle`, `.md-spoiler`/`.md-spoiler-shown`) lives in
 `client/css/style.css`, after `.irc-italic`. The channel header's topic is one

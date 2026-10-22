@@ -18,6 +18,7 @@ import socket, {EventBus} from "../socket";
 import {t} from "../i18n/core";
 import {collator} from "../i18n/collation";
 import {brandingFeatures} from "../branding";
+import {dialGateFor} from "./dialLedger";
 import {createHighlightTester} from "../highlight";
 import {ChanState, ChanType} from "../../../shared/types/chan";
 import {MessageType, SharedMsg, TypingState} from "../../../shared/types/msg";
@@ -38,6 +39,8 @@ import {describeClose} from "./disconnect";
 import {handlers, unhandled} from "./handlers";
 import {FILEHOST_SERVICE, TokenRequests, filehostUrlOf} from "./authtoken";
 import {interceptBatchLine, resetBatches} from "./handlers/batch";
+import {PAYLOAD_KEY} from "./handlers/metadata";
+import {CLOSED_KEY, ClosedQueries, closedQueriesKept, encodeClosed} from "./closedQueries";
 import {
 	CONCAT_LINE_TAG_BYTES,
 	MULTILINE_CAP,
@@ -354,6 +357,12 @@ export class IrcClient {
 	readonly lobby: Channel;
 	/** Private conversations kept on this device (querylog.ts). */
 	readonly queryLog: QueryLog;
+	/** The queries the user closed: a line from before the close never reopens one. */
+	readonly closed: ClosedQueries;
+	/** This connection's GET of the shared closes answered (irc/closedQueries.ts). */
+	closedKnown = false;
+	/** A close waits for that answer before it is written. */
+	closedPending = false;
 	/** Server notices and WALLOPS kept on the device (noticelog.ts). */
 	readonly noticeLog: NoticeLog;
 	/** Being an oper here (oper.ts): level, privileges, snomask. */
@@ -441,6 +450,8 @@ export class IrcClient {
 	private closeExplained = false;
 	/** When the transport's next automatic dial is due; only while waiting for a retry. */
 	private retryAt: number | undefined;
+	/** That wait is the server's connection throttle, not the backoff (irc/dialLedger.ts). */
+	private retryThrottled = false;
 	private activeChanId = 0;
 	/** Set while a history batch is replayed through the handlers (see `collectReplay`). */
 	private replayContext: {target: Channel; collected: ReplayCollection} | null = null;
@@ -494,10 +505,25 @@ export class IrcClient {
 		);
 
 		this.noticeLog = new NoticeLog(this.uuid, () => getSavedNetwork(this.uuid) !== undefined);
+		this.closed = new ClosedQueries(
+			this.uuid,
+			(s) => this.casefold(s),
+			() => this.unshareClosed()
+		);
 
 		for (const name of this.queryLog.names()) {
+			const newest = this.queryLog.newestAt(name);
+
+			// Closed in another tab since this log was written.
+			if (newest !== undefined && this.closed.suppresses(name, new Date(newest))) {
+				this.queryLog.forget(name);
+				continue;
+			}
+
 			if (!this.findChannel(name) && !this.isChannelName(name)) {
-				this.restoredQueries.push(this.createChannel(name, ChanType.QUERY).channel);
+				const {channel} = this.createChannel(name, ChanType.QUERY);
+				channel.autoOpened = true;
+				this.restoredQueries.push(channel);
 			}
 		}
 	}
@@ -590,6 +616,7 @@ export class IrcClient {
 			connecting: this._state === "connecting" || this._state === "registering",
 			secure: this.options.tls,
 			...(this.retryAt !== undefined ? {retryAt: this.retryAt} : {}),
+			...(this.retryAt !== undefined && this.retryThrottled ? {retryThrottled: true} : {}),
 		};
 	}
 
@@ -791,6 +818,9 @@ export class IrcClient {
 			transportOptions.reconnect = this.options.reconnect;
 		}
 
+		// Never dial into the server's connection throttle (irc/dialLedger.ts).
+		transportOptions.gate = dialGateFor(this.options.host);
+
 		return this.options.transportFactory
 			? this.options.transportFactory(transportOptions)
 			: new WsTransport(transportOptions);
@@ -872,16 +902,30 @@ export class IrcClient {
 			case "reconnecting":
 				this._state = "connecting";
 				this.bus.dispatch("connecting");
+
+				// The server's throttle, waited out (irc/dialLedger.ts): a
+				// connect() that never dialled has no close to carry its due time.
+				if (ev.throttled) {
+					this.retryAt = Date.now() + ev.delayMs;
+					this.retryThrottled = true;
+					this.announceStatus();
+				}
+
 				this.pushMessage(
 					this.lobby,
 					{
 						// A stable connection's loss retries at once (transport.ts).
-						text:
-							ev.delayMs < 500
-								? `Reconnecting now (attempt ${ev.attempt})…`
-								: `Reconnecting in ${Math.round(ev.delayMs / 1000)}s (attempt ${
-										ev.attempt
-								  })…`,
+						text: ev.throttled
+							? t("connect.reconnectWaitThrottled", {
+									seconds: Math.round(ev.delayMs / 1000),
+									attempt: ev.attempt,
+							  })
+							: ev.delayMs < 500
+							? t("connect.reconnectNow", {attempt: ev.attempt})
+							: t("connect.reconnectIn", {
+									seconds: Math.round(ev.delayMs / 1000),
+									attempt: ev.attempt,
+							  }),
 					},
 					true
 				);
@@ -890,6 +934,7 @@ export class IrcClient {
 				// The scheduled retry is dialling now: no due time any more.
 				this._state = "connecting";
 				this.retryAt = undefined;
+				this.retryThrottled = false;
 				this.announceStatus();
 				this.pushMessage(
 					this.lobby,
@@ -1108,7 +1153,7 @@ export class IrcClient {
 					Math.max(this.syncLineAt ?? -Infinity, lastInSync(this.uuid) ?? -Infinity),
 					Date.now()
 				);
-				lines.push(`METADATA * SUB ${MUTE_KEY} ${PRESENCE_KEY} ${MODE_KEY}`);
+				lines.push(`METADATA * SUB ${MUTE_KEY} ${PRESENCE_KEY} ${MODE_KEY} ${CLOSED_KEY}`);
 			}
 
 			const line = registrationAwayLine(this);
@@ -1242,12 +1287,15 @@ export class IrcClient {
 		this.presenceServer = null;
 		this.globalKnown = false;
 		this.globalServer = null;
+		this.closedKnown = false;
 		this.metadataSubscribed = false;
 		this.metadataBeforeConnect = false;
 		this.mutePending.length = 0;
 		presenceClosed(this);
 		// The wait before the transport's retry, for the UI to count down;
-		// an immediate retry has nothing worth counting.
+		// an immediate retry has nothing worth counting. Whether it is the
+		// server's throttle comes with the `reconnecting` that follows.
+		this.retryThrottled = false;
 		this.retryAt =
 			willReconnect && delayMs !== undefined && delayMs > 0
 				? Date.now() + delayMs
@@ -1302,6 +1350,7 @@ export class IrcClient {
 			connecting: willReconnect,
 			secure: this.options.tls,
 			...(this.retryAt !== undefined ? {retryAt: this.retryAt} : {}),
+			...(this.retryAt !== undefined && this.retryThrottled ? {retryThrottled: true} : {}),
 		});
 
 		if (wasUp) {
@@ -1535,6 +1584,12 @@ export class IrcClient {
 		// The message itself ends the typing session on the receiver's side:
 		// forget ours (no `done`), and let the next `active` go out at once.
 		this.resetTyping(target);
+		const written = this.findChannel(target);
+
+		if (written) {
+			written.autoOpened = false; // the user wrote in it
+		}
+
 		const command = opts.notice ? "NOTICE" : "PRIVMSG";
 		const firstTags: ClientTags | undefined =
 			opts.tags || opts.firstTags ? {...opts.firstTags, ...opts.tags} : undefined;
@@ -2165,10 +2220,17 @@ export class IrcClient {
 			if (this.isWelcomed && this.transport.state === "open") {
 				if (!this.metadataSubscribed) {
 					this.metadataSubscribed = true;
-					this.send(`METADATA * SUB ${MUTE_KEY} ${PRESENCE_KEY} ${MODE_KEY}`);
+					this.send(
+						`METADATA * SUB ${MUTE_KEY} ${PRESENCE_KEY} ${MODE_KEY} ${CLOSED_KEY}`
+					);
 				}
 
-				this.send(`METADATA * GET ${MUTE_KEY} ${PRESENCE_KEY} ${MODE_KEY}`);
+				// The payload tier rides along: an account that wrote it public
+				// before it was written private (WHOIS listed it) is told so in
+				// the answer, and handlers/metadata.ts rewrites it private.
+				this.send(
+					`METADATA * GET ${MUTE_KEY} ${PRESENCE_KEY} ${MODE_KEY} ${PAYLOAD_KEY} ${CLOSED_KEY}`
+				);
 			}
 		}, MUTE_READ_DELAY_MS);
 		// Never what keeps a process (mocha) alive.
@@ -2216,6 +2278,8 @@ export class IrcClient {
 		const chan = this.channelById(chanId);
 
 		if (chan) {
+			chan.autoOpened = false; // the user has it now
+
 			// Only a person looking reads it: a page that lands here hidden
 			// (a cold start, a deep link) leaves that to attention returning
 			// (presence.ts).
@@ -2534,6 +2598,83 @@ export class IrcClient {
 
 		this.channels.splice(index, 0, channel);
 		return {channel, index};
+	}
+
+	/**
+	 * Open the query with `nick` for a line it did not ask for (a message, a
+	 * catch-up), unless the user closed that conversation after `time`:
+	 * then nothing opens (irc/closedQueries.ts).
+	 */
+	openAutoQuery(nick: string, time: Date): Channel | undefined {
+		if (this.closed.suppresses(nick, time)) {
+			return undefined;
+		}
+
+		const chan = this.announceChannel(nick, ChanType.QUERY);
+		chan.autoOpened = true;
+		return chan;
+	}
+
+	/**
+	 * Write the closes this device knows to the account's private
+	 * {@link CLOSED_KEY} (irc/closedQueries.ts), once this connection's read
+	 * of it has answered; until then the write waits for it.
+	 */
+	writeClosed(): void {
+		// Private conversations not kept: nothing is shared (closedQueries.ts).
+		if (!closedQueriesKept()) {
+			this.closedPending = false;
+			return;
+		}
+
+		if (!this.closedKnown) {
+			this.closedPending = true;
+			return;
+		}
+
+		this.closedPending = false;
+
+		if (!this.isWelcomed || this.transport.state !== "open") {
+			return;
+		}
+
+		// What the server keeps, and what fits one line after the command
+		// (MAX_LINE_BYTES): a server allowing more must not get an unsendable line.
+		const prefix = `METADATA * SET ${CLOSED_KEY} private :`;
+		const room = MAX_LINE_BYTES - new TextEncoder().encode(prefix).length;
+		const value = encodeClosed(
+			this.closed.entries(),
+			Math.min(this.metadataMaxValueBytes(), room),
+			Date.now()
+		);
+		this.send(value ? `${prefix}${value}` : `METADATA * SET ${CLOSED_KEY}`);
+	}
+
+	/**
+	 * Sharing stopped (closedQueries.ts setClosedQueriesKept): delete the
+	 * account's list of closed conversations, which the network's operators
+	 * can read, if this connection can.
+	 */
+	private unshareClosed(): void {
+		this.closedPending = false;
+
+		if (
+			this.isWelcomed &&
+			this.transport.state === "open" &&
+			this.account &&
+			this.caps.hasCapability("draft/metadata-2")
+		) {
+			this.send(`METADATA * SET ${CLOSED_KEY}`);
+		}
+	}
+
+	/** The server's `max-value-bytes` (draft/metadata-2): a plain number, else nefarious2's 300. */
+	private metadataMaxValueBytes(): number {
+		const token = (this.caps.value("draft/metadata-2") ?? "")
+			.split(",")
+			.find((entry) => entry.startsWith("max-value-bytes="));
+		const value = token?.slice("max-value-bytes=".length) ?? "";
+		return /^[1-9]\d*$/.test(value) ? Number(value) : 300;
 	}
 
 	/** Create + announce (`join` event) a channel or query. */

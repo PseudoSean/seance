@@ -8,6 +8,7 @@ import {
 	toPlainText,
 } from "../../client/js/helpers/ircmessageparser/layout";
 import {HeaderLevel} from "../../client/js/helpers/ircmessageparser/parseStyle";
+import {judgeLink} from "../../client/js/helpers/linkSafety";
 
 // Builders, so the assertions read as the tree they describe.
 const text = (value: string, style: Style = {}): LayoutNode => ({
@@ -38,6 +39,7 @@ const href = (url: string, children: LayoutNode[]): LayoutNode => ({
 	kind: "wrap",
 	wrap: "href",
 	href: url,
+	verdict: judgeLink(toPlainText(children), url),
 	children,
 });
 
@@ -136,6 +138,42 @@ describe("layout — wraps", () => {
 		expect(layout("[c](https://example.com/)", markdown)).to.deep.equal([
 			href("https://example.com/", [text("c")]),
 		]);
+	});
+
+	it("finds no link, channel or nick inside a masked link's label", () => {
+		const kinds = (nodes: LayoutNode[]): string[] =>
+			nodes.flatMap((n) => [n.kind, ...("children" in n ? kinds(n.children) : [])]);
+		const [node] = layout("[paypal.com #help alice](https://evil.example)", {
+			markdown: true,
+			users: ["alice"],
+		});
+		expect(node.kind === "wrap" && node.wrap).to.equal("href");
+		expect(
+			kinds([node]).filter((k) => k === "link" || k === "channel" || k === "nick")
+		).to.deep.equal([]);
+		expect(toPlainText([node])).to.equal("paypal.com #help alice");
+	});
+
+	it("still finds links outside a masked link", () => {
+		const nodes = layout("see https://x.org and [docs](https://example.org)", {markdown: true});
+		expect(nodes.some((n) => n.kind === "link")).to.equal(true);
+	});
+
+	it("judges a masked link by its visible text", () => {
+		const [node] = layout("[paypal.com](https://evil.example)", markdown);
+		expect(node.kind === "wrap" && node.wrap === "href" && node.verdict).to.deep.equal({
+			kind: "mismatch",
+			host: "evil.example",
+			shown: "paypal.com",
+		});
+	});
+
+	it("judges a styled label by its text, not its markers", () => {
+		const [node] = layout("[**click** here](https://example.org)", markdown);
+		expect(node.kind === "wrap" && node.wrap === "href" && node.verdict).to.deep.equal({
+			kind: "masked",
+			host: "example.org",
+		});
 	});
 
 	it("splits a run of text that crosses a wrap boundary", () => {

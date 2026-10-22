@@ -17,6 +17,7 @@
 import storage from "../localStorage";
 import {collator} from "../i18n/collation";
 import {forgetNetworkLog} from "./querylog";
+import {forgetClosedQueries} from "./closedQueries";
 import {forgetNoticeLog} from "./noticelog";
 import {forgetOperPrefs} from "./operprefs";
 import {forgetMuteMemory} from "./muteMemory";
@@ -470,6 +471,7 @@ export function remove(uuid: string): void {
 	}
 
 	forgetNetworkLog(uuid); // its private conversations go with it
+	forgetClosedQueries(uuid); // and the ones it closed
 	forgetNoticeLog(uuid); // and its server notices
 	forgetOperPrefs(uuid);
 	forgetMuteMemory(uuid); // and what this device wrote to its push mute list
