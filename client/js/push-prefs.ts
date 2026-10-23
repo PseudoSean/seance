@@ -1,14 +1,17 @@
 /**
  * Reader preferences the service worker needs (it cannot read
  * localStorage), mirrored into the IndexedDB store it already uses
- * (seance-push/kv, key "prefs"). Today: whether Markdown renders, so a
- * push notification strips markers exactly when the page does, and the
- * UI language tag (client/js/i18n) for the worker's own copy.
- * Written at boot and on every change (settings.ts apply()).
+ * (seance-push/kv, key "prefs"): whether Markdown renders, so a push
+ * notification strips markers exactly when the page does (settings.ts
+ * `markdown.apply`, at boot and on every change), the UI language tag
+ * (client/js/i18n) for the worker's own copy, and the conversations muted on
+ * this device (mute.ts, at load and on every change).
  */
 import {idbGet, idbSet} from "./idb";
 
-export type PushPrefs = {markdown: boolean; locale?: string};
+/** `muted`: the conversations muted on this device (`<network uuid>/<name
+ * lowercased>`, client/js/mute.ts), which a push under WebKit shows quietly. */
+export type PushPrefs = {markdown: boolean; locale?: string; muted: string[]};
 
 export const PREFS_KEY = "prefs";
 

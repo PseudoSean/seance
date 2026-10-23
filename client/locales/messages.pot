@@ -2331,10 +2331,10 @@ msgctxt "link.cannotLoad"
 msgid "Couldn't load this {kind}"
 msgstr ""
 
-#. Body of the masked-link dialog. {shown} is the host name the link's text displays and {href} the web address the link really opens — both verbatim user content, never translated.
+#. Body of the masked-link dialog. {shown} is the address the link's text displays and {host} the host name of the site the link really goes to — both verbatim user content, never translated.
 #: client/js/helpers/openLink.ts:24
 msgctxt "link.checkText"
-msgid "The link text shows {shown}, but it opens {href}."
+msgid "The link text shows {shown}, but it goes to {host}."
 msgstr ""
 
 #. Title of the dialog shown when the user clicks a link whose text names a different web address than the one it opens (a masked link).

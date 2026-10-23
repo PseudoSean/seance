@@ -413,7 +413,7 @@
   "join.passwordPlaceholder": "Password (optional)",
   "join.submit": "Join",
   "link.cannotLoad": "Couldn't load this {kind}",
-  "link.checkText": "The link text shows {shown}, but it opens {href}.",
+  "link.checkText": "The link text shows {shown}, but it goes to {host}.",
   "link.checkTitle": "Check this link",
   "link.clickToShow": "Click to show",
   "link.clickToShowFile": "{file} · Click to show",

@@ -412,7 +412,7 @@
   "join.passwordPlaceholder": "‫ṗàśśẃöŕḋ )öṗţïöñàľ(ṗàśśẃöŕḋ )öṗţïöñàľ(‬",
   "join.submit": "‫ĵöïñĵöïñ‬",
   "link.cannotLoad": "‫ċöüľḋñ'ţ ľöàḋ ţḣïś {kind}ċöüľḋñ'ţ ľöàḋ ţḣïś {kind}‬",
-  "link.checkText": "‫ţḣé ľïñķ ţéx́ţ śḣöẃś {shown}, ḃüţ ïţ öṗéñś {href}.ţḣé ľïñķ ţéx́ţ śḣöẃś {shown}, ḃüţ ïţ öṗéñś {href}.‬",
+  "link.checkText": "‫ţḣé ľïñķ ţéx́ţ śḣöẃś {shown}, ḃüţ ïţ ġöéś ţö {host}.ţḣé ľïñķ ţéx́ţ śḣöẃś {shown}, ḃüţ ïţ ġöéś ţö {host}.‬",
   "link.checkTitle": "‫ċḣéċķ ţḣïś ľïñķċḣéċķ ţḣïś ľïñķ‬",
   "link.clickToShow": "‫ċľïċķ ţö śḣöẃċľïċķ ţö śḣöẃ‬",
   "link.clickToShowFile": "‫{file} · ċľïċķ ţö śḣöẃ{file} · ċľïċķ ţö śḣöẃ‬",

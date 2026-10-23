@@ -18,7 +18,7 @@ import socket, {EventBus} from "../socket";
 import {t} from "../i18n/core";
 import {collator} from "../i18n/collation";
 import {brandingFeatures} from "../branding";
-import {dialGateFor} from "./dialLedger";
+import {dialGateFor, type DialGate} from "./dialLedger";
 import {createHighlightTester} from "../highlight";
 import {ChanState, ChanType} from "../../../shared/types/chan";
 import {MessageType, SharedMsg, TypingState} from "../../../shared/types/msg";
@@ -40,7 +40,13 @@ import {handlers, unhandled} from "./handlers";
 import {FILEHOST_SERVICE, TokenRequests, filehostUrlOf} from "./authtoken";
 import {interceptBatchLine, resetBatches} from "./handlers/batch";
 import {PAYLOAD_KEY} from "./handlers/metadata";
-import {CLOSED_KEY, ClosedQueries, closedQueriesKept, encodeClosed} from "./closedQueries";
+import {
+	CLOSED_KEY,
+	ClosedQueries,
+	closedQueriesKept,
+	encodeClosed,
+	markClosedUnshared,
+} from "./closedQueries";
 import {
 	CONCAT_LINE_TAG_BYTES,
 	MULTILINE_CAP,
@@ -363,6 +369,11 @@ export class IrcClient {
 	closedKnown = false;
 	/** A close waits for that answer before it is written. */
 	closedPending = false;
+
+	/** This connection will read the account's closed queries but has not yet. */
+	get closedReadAhead(): boolean {
+		return !this.closedKnown && !!this.account && this.caps.hasCapability("draft/metadata-2");
+	}
 	/** Server notices and WALLOPS kept on the device (noticelog.ts). */
 	readonly noticeLog: NoticeLog;
 	/** Being an oper here (oper.ts): level, privileges, snomask. */
@@ -399,6 +410,8 @@ export class IrcClient {
 	account = "";
 	/** The server holds our session across disconnects (`PERSISTENCE STATUS ON`, see persistence.ts). */
 	persistenceHold = false;
+	/** This network's host in the dial ledger (irc/dialLedger.ts). */
+	private dialLedger: DialGate | null = null;
 	/** The user's setting from the last `PERSISTENCE STATUS` line (`ON`,
 	 * `OFF`, `DEFAULT`), undefined before one. An alias of another device's
 	 * session reads `ON OFF`: not held itself, though the session is. */
@@ -505,11 +518,7 @@ export class IrcClient {
 		);
 
 		this.noticeLog = new NoticeLog(this.uuid, () => getSavedNetwork(this.uuid) !== undefined);
-		this.closed = new ClosedQueries(
-			this.uuid,
-			(s) => this.casefold(s),
-			() => this.unshareClosed()
-		);
+		this.closed = new ClosedQueries(this.uuid, (s) => this.casefold(s));
 
 		for (const name of this.queryLog.names()) {
 			const newest = this.queryLog.newestAt(name);
@@ -616,7 +625,7 @@ export class IrcClient {
 			connecting: this._state === "connecting" || this._state === "registering",
 			secure: this.options.tls,
 			...(this.retryAt !== undefined ? {retryAt: this.retryAt} : {}),
-			...(this.retryAt !== undefined && this.retryThrottled ? {retryThrottled: true} : {}),
+			...(this.retryThrottled ? {retryThrottled: true} : {}),
 		};
 	}
 
@@ -693,6 +702,7 @@ export class IrcClient {
 		this.quitting = false;
 		this.closeHintShown = false;
 		this.retryAt = undefined;
+		this.retryThrottled = false;
 		this._state = "connecting";
 		this.bus.dispatch("connecting");
 		this.announceStatus();
@@ -722,6 +732,7 @@ export class IrcClient {
 
 		this.transport.close();
 		this.retryAt = undefined;
+		this.retryThrottled = false;
 
 		if (state === "reconnect-wait") {
 			// The socket is already gone, so no close event follows: settle here.
@@ -819,7 +830,20 @@ export class IrcClient {
 		}
 
 		// Never dial into the server's connection throttle (irc/dialLedger.ts).
-		transportOptions.gate = dialGateFor(this.options.host);
+		// A drop counts there only when the server lets the connection go: a
+		// session the bouncer holds stays counted (bounce_hold_client never
+		// calls IPcheck_disconnect), so its drop restarts nothing.
+		const ledger = dialGateFor(this.options.host);
+		this.dialLedger = ledger;
+		transportOptions.gate = {
+			waitMs: (now) => ledger.waitMs(now),
+			record: (at) => ledger.record(at),
+			closed: (at) => {
+				if (!this.persistenceHold) {
+					ledger.closed(at);
+				}
+			},
+		};
 
 		return this.options.transportFactory
 			? this.options.transportFactory(transportOptions)
@@ -961,6 +985,7 @@ export class IrcClient {
 		this.connected = false;
 		this.welcomed = false;
 		this.retryAt = undefined;
+		this.retryThrottled = false;
 		this.closeHintShown = false;
 		this.isupport.reset();
 		this.learnedNickLen = undefined;
@@ -1350,7 +1375,7 @@ export class IrcClient {
 			connecting: willReconnect,
 			secure: this.options.tls,
 			...(this.retryAt !== undefined ? {retryAt: this.retryAt} : {}),
-			...(this.retryAt !== undefined && this.retryThrottled ? {retryThrottled: true} : {}),
+			...(this.retryThrottled ? {retryThrottled: true} : {}),
 		});
 
 		if (wasUp) {
@@ -2651,11 +2676,12 @@ export class IrcClient {
 	}
 
 	/**
-	 * Sharing stopped (closedQueries.ts setClosedQueriesKept): delete the
-	 * account's list of closed conversations, which the network's operators
-	 * can read, if this connection can.
+	 * Sharing stopped (closedQueries.ts setClosedQueriesKept, or a login read
+	 * that finds a list while it is off): delete the account's list of closed
+	 * conversations, which the network's operators can read, if this
+	 * connection can — and remember it, so it happens once per network.
 	 */
-	private unshareClosed(): void {
+	unshareClosed(): void {
 		this.closedPending = false;
 
 		if (
@@ -2665,6 +2691,19 @@ export class IrcClient {
 			this.caps.hasCapability("draft/metadata-2")
 		) {
 			this.send(`METADATA * SET ${CLOSED_KEY}`);
+			markClosedUnshared(this.uuid);
+		}
+	}
+
+	/**
+	 * The page is going away with this connection open (manager.ts sends its
+	 * QUIT): the socket drops without a close the transport would see, so
+	 * the drop goes into the dial ledger here — unless the bouncer holds the
+	 * session, which the server keeps counted.
+	 */
+	noteUnload(): void {
+		if (!this.persistenceHold) {
+			this.dialLedger?.closed(Date.now());
 		}
 	}
 

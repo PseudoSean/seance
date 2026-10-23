@@ -459,6 +459,14 @@ msgid_plural "Reconnecting to {network} in {seconds}s…"
 msgstr[0] "Reconectando a {network} em {seconds}s…"
 msgstr[1] "Reconectando a {network} em {seconds}s…"
 
+#. Text of the connection bar shown above the message input while the wait before the retry is the chat server's connection throttle (dialling sooner would be refused and prolong it). {network} is the display name of the chat network; {seconds} is the whole number of seconds until the retry starts, updating every half second. The singular form shows when one second remains, the plural for any other number.
+#: client/components/ChatInput.vue:524
+msgctxt "composer.reconnectInThrottled"
+msgid "Reconnecting to {network} in {seconds}s: the server limits quick reconnects."
+msgid_plural "Reconnecting to {network} in {seconds}s: the server limits quick reconnects."
+msgstr[0] ""
+msgstr[1] ""
+
 #. Label at the left of the compose bar shown while a reply is being written. {nick} is the name of the user being replied to, shown emphasized; the quoted message preview follows it. Keep the trailing colon.
 #: client/components/ChatInput.vue:60
 msgctxt "composer.replyingTo"
@@ -738,6 +746,24 @@ msgstr "Notificações de push (registra quando o servidor as suporta)"
 msgctxt "connect.reconnectCancelled"
 msgid "Reconnect cancelled."
 msgstr "Reconexão cancelada."
+
+#. Lobby status line while an automatic retry waits out its backoff before dialling the chat network again. {seconds} is the whole number of seconds until it dials; {attempt} counts the retries this connection has seen.
+#: client/js/irc/client.ts
+msgctxt "connect.reconnectIn"
+msgid "Reconnecting in {seconds}s (attempt {attempt})…"
+msgstr ""
+
+#. Lobby status line when a connection that had been stable dropped and is retried at once. {attempt} counts the retries this connection has seen.
+#: client/js/irc/client.ts
+msgctxt "connect.reconnectNow"
+msgid "Reconnecting now (attempt {attempt})…"
+msgstr ""
+
+#. Lobby status line while the client waits out the chat server's connection throttle before an automatic retry (irc/dialLedger.ts): dialling sooner would be refused and prolong the wait. {seconds} is the whole number of seconds to wait; {attempt} counts the retries this connection has seen.
+#: client/js/irc/client.ts
+msgctxt "connect.reconnectWaitThrottled"
+msgid "Waiting {seconds}s: the server limits how often a device can reconnect (attempt {attempt})…"
+msgstr ""
 
 #. Checkbox on the sign-in form: remember the account and reconnect on the next load.
 #: client/js/branding.ts
@@ -2304,6 +2330,18 @@ msgctxt "link.cannotLoad"
 msgid "Couldn't load this {kind}"
 msgstr "Não foi possível carregar este {kind}"
 
+#. Body of the masked-link dialog. {shown} is the address the link's text displays and {host} the host name of the site the link really goes to — both verbatim user content, never translated.
+#: client/js/helpers/openLink.ts:24
+msgctxt "link.checkText"
+msgid "The link text shows {shown}, but it goes to {host}."
+msgstr ""
+
+#. Title of the dialog shown when the user clicks a link whose text names a different web address than the one it opens (a masked link).
+#: client/js/helpers/openLink.ts:23
+msgctxt "link.checkTitle"
+msgid "Check this link"
+msgstr ""
+
 #. Hint on the placeholder of a media preview with no file name to show; clicking reveals the media.
 #: client/components/LinkPreview.vue
 msgctxt "link.clickToShow"
@@ -2369,6 +2407,12 @@ msgstr "vídeo"
 msgctxt "link.loadingKind"
 msgid "Loading {kind}…"
 msgstr "Carregando {kind}…"
+
+#. Label of the masked-link dialog's confirm button: opens the link's real address in a new tab despite the mismatch.
+#: client/js/helpers/openLink.ts:25
+msgctxt "link.openAnyway"
+msgid "Open anyway"
+msgstr ""
 
 #. Tooltip and aria-label of the button that opens the media file in a new browser tab.
 #: client/components/LinkPreview.vue
@@ -4038,6 +4082,84 @@ msgctxt "settings.appearance.psPauseWhenAwayHint"
 msgid "after 15 seconds without the focus, or 2 minutes without input; a hidden tab never moves it"
 msgstr ""
 
+#. Radio label under Words over the plains (ps theme): every message on a translucent card.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsBubbles"
+msgid "Bubbles"
+msgstr ""
+
+#. Hint after the Bubbles radio (ps theme).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsBubblesHint"
+msgid "each message on a translucent card: paper by day, dark at night"
+msgstr ""
+
+#. Radio label under Words over the plains (ps theme): the whole message column on frosted glass.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsGlass"
+msgid "Glass"
+msgstr ""
+
+#. Hint after the Glass radio (ps theme).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsGlassHint"
+msgid "the whole column on frosted glass, the plains a wash behind it"
+msgstr ""
+
+#. Radio label under Words over the plains (ps theme): a soft dark glow and no outline.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsGlow"
+msgid "Soft glow"
+msgstr ""
+
+#. Hint after the Soft glow radio (ps theme); 'floor' is the theme's legibility floor (a contrast ratio).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsGlowHint"
+msgid "a soft dark glow and nothing else; by day it reads well under the usual floor"
+msgstr ""
+
+#. Heading in Settings > Appearance, shown only under the ps theme: how the chat text is drawn over the live scene (six treatments).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsHeading"
+msgid "Words over the plains"
+msgstr ""
+
+#. Radio label under Words over the plains (ps theme): white words in a dark outline, the look before the setting existed.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsOutline"
+msgid "Outline"
+msgstr ""
+
+#. Hint after the Outline radio (ps theme).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsOutlineHint"
+msgid "white words in a dark outline; ink on snowy days"
+msgstr ""
+
+#. Radio label under Words over the plains (ps theme): a thinner outline in the sky's colour.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsRim"
+msgid "Tinted rim"
+msgstr ""
+
+#. Hint after the Tinted rim radio (ps theme); 'floor' is the theme's legibility floor (a contrast ratio).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsRimHint"
+msgid "a thinner rim in the sky's own colour; by day it reads under the usual floor"
+msgstr ""
+
+#. Radio label under Words over the plains (ps theme): a graded wash across the column.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsScrim"
+msgid "Scrim"
+msgstr ""
+
+#. Hint after the Scrim radio (ps theme).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsScrimHint"
+msgid "a soft wash across the column, stronger near the edge, no blur"
+msgstr ""
+
 #. Third line of the sample chat under the font-size slider in Settings → Appearance: the extreme steps are intentionally unusable.
 #: client/components/Settings/Appearance.vue:486
 msgctxt "settings.appearance.sampleEnds"
@@ -4979,6 +5101,12 @@ msgstr "Essa mensagem é muito antiga para ser excluída."
 msgctxt "sw.markRead"
 msgid "Mark read"
 msgstr "Marcar como lido"
+
+#. Body of the silent stub notification the worker shows under WebKit (an iPhone's Home Screen web app) when another device, or this one, read a pushed conversation: it replaces that conversation's notification for about 30 seconds, because WebKit counts a push that shows nothing toward unsubscribing the app. The title is the conversation's name.
+#: client/service-worker.js:1416
+msgctxt "sw.markedRead"
+msgid "Marked as read"
+msgstr ""
 
 #. Body of the fallback notification shown when a push payload cannot be parsed into a conversation message, or the worker hit an error: something happened, but there is nothing to show. The title is the app name and is never translated.
 #: client/service-worker.js:1194
