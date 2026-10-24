@@ -308,6 +308,9 @@ export default async function run(page) {
 			const fg = cs.color;
 			const r = el.getBoundingClientRect();
 			const inset = parseFloat(cs.borderTopWidth) + 2;
+			// Left and right, past the rounded ends too: no text sits there,
+			// and the curve of the border reaches into a plain inset.
+			const insetX = Math.max(inset, Math.min(parseFloat(cs.borderTopLeftRadius) || 0, r.height / 2));
 			const style = document.createElement("style");
 			style.id = "__contrast";
 			style.textContent = ${JSON.stringify(
@@ -317,8 +320,8 @@ export default async function run(page) {
 			return {
 				fg,
 				clip: (() => {
-					const x = Math.max(0, r.left + inset), y = Math.max(0, r.top + inset);
-					const x1 = Math.min(innerWidth, r.right - inset), y1 = Math.min(innerHeight, r.bottom - inset);
+					const x = Math.max(0, r.left + insetX), y = Math.max(0, r.top + inset);
+					const x1 = Math.min(innerWidth, r.right - insetX), y1 = Math.min(innerHeight, r.bottom - inset);
 					return {x, y, width: Math.max(1, x1 - x), height: Math.max(1, y1 - y)};
 				})(),
 			};
