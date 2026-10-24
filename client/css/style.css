@@ -1215,10 +1215,13 @@ p {
 }
 
 #sidebar .presence-pill {
+	/* Part of the side padding, moved inside the label's clip (below). */
+	--presence-clip-room: max(2px, 0.125rem);
+
 	display: inline-block;
 	max-inline-size: calc(100% - 0.5rem);
 	padding-block: 0.125rem;
-	padding-inline: 0.5rem;
+	padding-inline: calc(0.5rem - var(--presence-clip-room));
 
 	/* A field's quiet edge at rest: --rail-badge-bg is an accent fill in some
 	 * themes (ps, princess), which made Online look like do not disturb. */
@@ -1244,21 +1247,32 @@ p {
 }
 
 /* The label always says the state, the end time included: up to two centred
- * lines, clamped only past that. */
+ * lines, clamped only past that. It clips (the clamp needs overflow: hidden)
+ * and the dot and the caret float at its edges, so its inline padding keeps
+ * them clear of the clip: the dot's ring is a box-shadow drawn outside its
+ * box, and a ring or a glyph flush against a clip loses its edge to rounding
+ * at a fractional device pixel ratio. A word wider than the label (a long
+ * translation) wraps inside it rather than running out of it. */
 #sidebar .presence-pill-text {
 	/* -webkit-line-clamp only works on this display. */
 	/* stylelint-disable-next-line value-no-vendor-prefix */
 	display: -webkit-box;
 	overflow: hidden;
+	padding-inline: var(--presence-clip-room);
 	white-space: normal;
+	overflow-wrap: anywhere;
+	hyphens: auto;
 	text-align: center;
 	-webkit-box-orient: vertical;
 	-webkit-line-clamp: 2;
 	line-clamp: 2;
 }
 
+/* The last part moves to the next line whole, and breaks inside only when it
+ * alone is wider than the label. */
 #sidebar .presence-pill-part {
-	white-space: nowrap;
+	display: inline-block;
+	max-inline-size: 100%;
 }
 
 /* Centred on the first line's 1.25rem. The label clips (overflow: hidden,
