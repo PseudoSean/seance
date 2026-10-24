@@ -11,7 +11,9 @@
 		>
 			<!-- The dot and the caret float on the first line, so a second line
 			     gets the pill's whole width; a long label breaks after its
-			     separator only ("Do not disturb ·" over "until 10:36 AM"). -->
+			     separator ("Do not disturb ·" over "until 10:36 AM"), and inside
+			     the last part only when it alone is wider than the label (a long
+			     translation). -->
 			<span class="presence-pill-text"
 				><span :class="['presence-dot', `is-${dotState}`]" aria-hidden="true" /><span
 					class="presence-pill-caret"
