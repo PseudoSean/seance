@@ -26,13 +26,29 @@
  * lockout of a minute or more. With the ledger the transport waits out the
  * gap instead: one wait of at most 42 s (docs/projects/reconnect-throttle.md).
  *
- * Kept in `thelounge.state.dials` (`{host: {d: [dial ms…], c: [drop ms…]}}`),
- * so a reloaded or reopened app and another tab see the same record.
- * Vue-free and DOM-free; tests: test/irc/dialLedger.ts.
+ * A server with nefarious2's `IPCHECK_SASL_REFUND` gives a connection that
+ * logged in with SASL its attempt back when it registers (`attempts` down by
+ * one, never below one, the window untouched), at most `limit` times per
+ * account in a period. The deploy says so for its own server
+ * (`defaultNetwork.ipcheckRefund`, `ThrottleRule.refund`), and the client
+ * records a refund at 001 when this connection's SASL succeeded
+ * (`DialLedger.refunded`); the replay mirrors the cap over this device's own
+ * refunds (another device's draw on the account's budget is not seen). Under
+ * a rule without `refund` a refund is neither kept nor counted.
+ *
+ * Kept in `thelounge.state.dials` (`{host: {d: [dial ms…], c: [drop ms…],
+ * r: [refund ms…]}}`), so a reloaded or reopened app and another tab see the
+ * same record. Vue-free and DOM-free; tests: test/irc/dialLedger.ts.
  */
 
 import storage from "../localStorage";
 import {recordReader} from "../helpers/jsonRecord";
+
+/** nefarious2's `IPCHECK_SASL_REFUND` and `_PERIOD`: refunds per account per period. */
+export interface RefundRule {
+	limit: number;
+	periodMs: number;
+}
 
 export interface ThrottleRule {
 	/** The connection that brings the count to this is refused. */
@@ -41,9 +57,14 @@ export interface ThrottleRule {
 	periodMs: number;
 	/** Added to a wait: the dial takes a while to reach the server. */
 	marginMs: number;
+	/**
+	 * The server gives a SASL login its attempt back (`IPCHECK_SASL_REFUND`):
+	 * at most `limit` refunds per account in `periodMs`. Absent: it does not.
+	 */
+	refund?: RefundRule;
 }
 
-/** nefarious2's defaults (`ircd_features.c`). */
+/** nefarious2's defaults (`ircd_features.c`); refunds are off there. */
 export const NEFARIOUS_RULE: ThrottleRule = {limit: 4, periodMs: 40_000, marginMs: 1_000};
 
 export interface DialGate {
@@ -55,6 +76,15 @@ export interface DialGate {
 	closed(at: number): void;
 }
 
+/** The gate, and what only the client above the transport knows. */
+export interface DialLedger extends DialGate {
+	/**
+	 * The connection registered at `at` after a SASL login: the server gave
+	 * the dial's attempt back. Kept only under a rule with `refund`.
+	 */
+	refunded(at: number): void;
+}
+
 export interface StorageBackend {
 	get(key: string): string | null;
 	set(key: string, value: string): void;
@@ -64,6 +94,7 @@ export interface StorageBackend {
 interface HostRecord {
 	d: number[];
 	c: number[];
+	r: number[];
 }
 
 const STORAGE_KEY = "thelounge.state.dials";
@@ -77,32 +108,60 @@ export function useStorageBackend(next: StorageBackend | null): void {
 
 /**
  * Replay the server's count over this device's dials (and the drops of its
- * sockets): the wait before a dial at `now` would get in. IPcheck compares
- * whole seconds, and the two clocks are a fraction of a second apart, so the
- * replay is conservative in milliseconds: a gap restarts the count only when
- * it is at least a whole second past the window plus the margin (42 s; 162 s
- * after a drop), and a dial waits for the same. Events dated after `now` (a
- * clock that has since gone back) say nothing about now.
+ * sockets, and the refunds its logins earned): the wait before a dial at
+ * `now` would get in. IPcheck compares whole seconds, and the two clocks are
+ * a fraction of a second apart, so the replay is conservative in
+ * milliseconds: a gap restarts the count only when it is at least a whole
+ * second past the window plus the margin (42 s; 162 s after a drop), and a
+ * dial waits for the same. Events dated after `now` (a clock that has since
+ * gone back) say nothing about now. A refund lowers the count by one, never
+ * below one, and moves nothing else, as `ip_registry_connect_fail` does; past
+ * the rule's `refund.limit` in a period from the first one it is not
+ * honoured, as the server's per-account cap would not.
  */
 export function throttleWaitMs(
 	dials: readonly number[],
 	now: number,
 	rule: ThrottleRule,
-	closes: readonly number[] = []
+	closes: readonly number[] = [],
+	refunds: readonly number[] = []
 ): number {
 	const gap = rule.periodMs + 1000 + rule.marginMs;
 	const dropGap = rule.limit * rule.periodMs + 1000 + rule.marginMs;
+	// At one instant a close comes first, then the dial, then its refund.
 	const events = [
-		...dials.filter((at) => at <= now).map((at) => ({at, dial: true})),
-		...closes.filter((at) => at <= now).map((at) => ({at, dial: false})),
-	].sort((a, b) => a.at - b.at || Number(a.dial) - Number(b.dial));
+		...closes.filter((at) => at <= now).map((at) => ({at, kind: 0})),
+		...dials.filter((at) => at <= now).map((at) => ({at, kind: 1})),
+		...(rule.refund ? refunds.filter((at) => at <= now).map((at) => ({at, kind: 2})) : []),
+	].sort((a, b) => a.at - b.at || a.kind - b.kind);
 	let attempts = 0;
 	let last: number | undefined;
+	let refundWindow: number | undefined;
+	let refunded = 0;
 
-	for (const {at, dial} of events) {
+	for (const {at, kind} of events) {
+		if (kind === 2) {
+			const refund = rule.refund as RefundRule;
+
+			if (refundWindow === undefined || at - refundWindow >= refund.periodMs) {
+				refundWindow = at;
+				refunded = 0;
+			}
+
+			if (refunded < refund.limit) {
+				refunded++;
+
+				if (attempts > 1) {
+					attempts--;
+				}
+			}
+
+			continue;
+		}
+
 		const since = last === undefined ? Infinity : at - last;
 
-		if (dial) {
+		if (kind === 1) {
 			if (since >= gap) {
 				attempts = 0;
 			}
@@ -126,31 +185,40 @@ function hostRecord(value: unknown): HostRecord {
 	const numbers = (list: unknown): number[] =>
 		Array.isArray(list) ? list.filter((t): t is number => typeof t === "number") : [];
 	const record = value as Partial<HostRecord> | null;
-	return {d: numbers(record?.d), c: numbers(record?.c)};
+	return {d: numbers(record?.d), c: numbers(record?.c), r: numbers(record?.r)};
 }
 
-/** The gate for one server host, over the shared record. */
-export function dialGateFor(host: string): DialGate {
-	const rule = NEFARIOUS_RULE;
+/** The ledger for one server host, over the shared record. */
+export function dialGateFor(host: string, rule: ThrottleRule = NEFARIOUS_RULE): DialLedger {
 	const key = host.toLowerCase();
 	const read = () => hostRecord(readRecord(backend.get(STORAGE_KEY))[key]);
 
 	const add = (at: number, field: keyof HostRecord) => {
-		// Older than a whole refused chain can reach: it no longer counts.
-		const horizon = at - rule.limit * rule.periodMs;
+		// Older than a whole refused chain can reach — or than the refund
+		// period, whose count the refunds have to be kept for: it no longer counts.
+		const horizon = at - Math.max(rule.limit * rule.periodMs, rule.refund?.periodMs ?? 0);
 		const record = read();
 		record[field] = [...record[field], at];
 		const all = {...readRecord(backend.get(STORAGE_KEY))};
-		all[key] = {d: record.d.filter((t) => t > horizon), c: record.c.filter((t) => t > horizon)};
+		all[key] = {
+			d: record.d.filter((t) => t > horizon),
+			c: record.c.filter((t) => t > horizon),
+			r: record.r.filter((t) => t > horizon),
+		};
 		backend.set(STORAGE_KEY, JSON.stringify(all));
 	};
 
 	return {
 		waitMs(now) {
 			const record = read();
-			return throttleWaitMs(record.d, now, rule, record.c);
+			return throttleWaitMs(record.d, now, rule, record.c, record.r);
 		},
 		record: (at) => add(at, "d"),
 		closed: (at) => add(at, "c"),
+		refunded(at) {
+			if (rule.refund) {
+				add(at, "r");
+			}
+		},
 	};
 }

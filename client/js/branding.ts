@@ -10,6 +10,12 @@
 // `index.html` that must exist before any JavaScript runs (`<title>`,
 // `theme-color`, the loading splash). See docs/resources/branding.md.
 
+/** `defaultNetwork.ipcheckRefund`: the server's `IPCHECK_SASL_REFUND` cap, per account. */
+export interface BrandingIpcheckRefund {
+	limit: number;
+	periodSeconds: number;
+}
+
 export interface BrandingNetwork {
 	/** Display name for the network (defaults to the host name). */
 	name?: string;
@@ -21,6 +27,14 @@ export interface BrandingNetwork {
 	nick?: string;
 	/** Hide the host/port/TLS fields on the connect form. */
 	lockHost?: boolean;
+	/**
+	 * This server gives a SASL login its connection attempt back when it
+	 * registers (nefarious2 `IPCHECK_SASL_REFUND` = `limit` refunds per
+	 * account every `periodSeconds`), so the client's dial ledger need not
+	 * wait out the throttle for a dial that logged in
+	 * (irc/dialLedger.ts). Absent: the server refunds nothing.
+	 */
+	ipcheckRefund?: BrandingIpcheckRefund;
 }
 
 export interface BrandingLinks {
@@ -403,6 +417,7 @@ function normalizeNetwork(value: unknown): BrandingNetwork | undefined {
 	const channels = normalizeChannels(value.channels ?? value.join);
 	const nick = optionalString(value.nick);
 	const lockHost = optionalBoolean(value.lockHost);
+	const ipcheckRefund = normalizeIpcheckRefund(value.ipcheckRefund);
 
 	if (name !== undefined) {
 		network.name = name;
@@ -428,7 +443,31 @@ function normalizeNetwork(value: unknown): BrandingNetwork | undefined {
 		network.lockHost = lockHost;
 	}
 
+	if (ipcheckRefund !== undefined) {
+		network.ipcheckRefund = ipcheckRefund;
+	}
+
 	return network;
+}
+
+/** `{limit, periodSeconds}`, both whole and positive; the period defaults to the server's 600. */
+function normalizeIpcheckRefund(value: unknown): BrandingIpcheckRefund | undefined {
+	if (!isRecord(value)) {
+		return undefined;
+	}
+
+	const whole = (v: unknown): number | undefined => {
+		const n = typeof v === "string" ? Number(v) : v;
+		return typeof n === "number" && Number.isInteger(n) && n > 0 ? n : undefined;
+	};
+
+	const limit = whole(value.limit);
+
+	if (limit === undefined) {
+		return undefined;
+	}
+
+	return {limit, periodSeconds: whole(value.periodSeconds) ?? 600};
 }
 
 function normalizeHeaders(value: unknown): Record<string, string> | undefined {

@@ -80,6 +80,59 @@ describe("dial ledger (irc/dialLedger.ts)", function () {
 		it("does not care about the order dials were recorded in", function () {
 			expect(throttleWaitMs([20 * S, 0, 10 * S], 30 * S, NEFARIOUS_RULE)).to.equal(32 * S);
 		});
+
+		describe("on a server that gives a login its attempt back (rule.refund)", function () {
+			const rule = {...NEFARIOUS_RULE, refund: {limit: 10, periodMs: 600 * S}};
+
+			it("does not grow the chain by a dial whose connection logged in", function () {
+				// Three returns 30 s apart, each registered with SASL: the fourth gets in.
+				const refunds = [1 * S, 31 * S, 61 * S];
+				expect(throttleWaitMs([0, 30 * S, 60 * S], 90 * S, rule, [], refunds)).to.equal(0);
+			});
+
+			it("still counts the dials that did not log in", function () {
+				expect(throttleWaitMs([0, 30 * S, 60 * S], 90 * S, rule, [], [1 * S])).to.equal(
+					12 * S
+				);
+			});
+
+			it("never takes the count below one, as the server does", function () {
+				// Two refunds on the first dial change nothing: the chain still counts 3.
+				expect(
+					throttleWaitMs([0, 30 * S, 60 * S], 90 * S, rule, [], [1 * S, 2 * S])
+				).to.equal(12 * S);
+			});
+
+			it("moves nothing but the count: the gap still runs from the last dial", function () {
+				expect(
+					throttleWaitMs([0, 30 * S, 60 * S], 90 * S, rule, [], [1 * S, 31 * S])
+				).to.equal(0);
+				// Without the second refund the fourth dial would wait.
+				expect(throttleWaitMs([0, 30 * S, 60 * S], 90 * S, rule, [], [1 * S])).to.equal(
+					12 * S
+				);
+			});
+
+			it("mirrors the per-account cap: past `limit` refunds in a period the dials count again", function () {
+				const capped = {...rule, refund: {limit: 2, periodMs: 600 * S}};
+				const dials = [0, 30 * S, 60 * S, 90 * S];
+				const refunds = [1 * S, 31 * S, 61 * S, 91 * S];
+				// The third and fourth refunds are not honoured: the chain is 1, 1, 2, 3.
+				expect(throttleWaitMs(dials, 120 * S, capped, [], refunds)).to.equal(12 * S);
+				// A new period from the first refund: the budget is back.
+				const later = [...dials, 601 * S];
+				expect(throttleWaitMs(later, 630 * S, capped, [], [...refunds, 602 * S])).to.equal(
+					0
+				);
+			});
+
+			it("ignores refunds under a rule without them", function () {
+				const refunds = [1 * S, 31 * S, 61 * S];
+				expect(
+					throttleWaitMs([0, 30 * S, 60 * S], 90 * S, NEFARIOUS_RULE, [], refunds)
+				).to.equal(12 * S);
+			});
+		});
 	});
 
 	describe("dialGateFor", function () {
@@ -120,7 +173,41 @@ describe("dial ledger (irc/dialLedger.ts)", function () {
 			gate.record(0);
 			gate.record(1000 * S);
 			const stored = JSON.parse(data.get("thelounge.state.dials") ?? "{}");
-			expect(stored["irc.example"]).to.deep.equal({d: [1000 * S], c: []});
+			expect(stored["irc.example"]).to.deep.equal({d: [1000 * S], c: [], r: []});
+		});
+
+		it("keeps the refunds it is told of, under a rule with them", function () {
+			const rule = {...NEFARIOUS_RULE, refund: {limit: 10, periodMs: 600 * S}};
+			const gate = dialGateFor("irc.example", rule);
+			gate.record(0);
+			gate.refunded(1 * S);
+			gate.record(30 * S);
+			gate.refunded(31 * S);
+			gate.record(60 * S);
+			gate.refunded(61 * S);
+			expect(gate.waitMs(90 * S)).to.equal(0);
+			const stored = JSON.parse(data.get("thelounge.state.dials") ?? "{}");
+			expect(stored["irc.example"].r).to.deep.equal([1 * S, 31 * S, 61 * S]);
+		});
+
+		it("records no refund for a server that gives none", function () {
+			const gate = dialGateFor("irc.example");
+			gate.record(0);
+			gate.refunded(1 * S);
+			const stored = JSON.parse(data.get("thelounge.state.dials") ?? "{}");
+			expect(stored["irc.example"]).to.deep.equal({d: [0], c: [], r: []});
+		});
+
+		it("keeps refunds for the refund period, which outlasts a chain", function () {
+			const rule = {...NEFARIOUS_RULE, refund: {limit: 2, periodMs: 600 * S}};
+			const gate = dialGateFor("irc.example", rule);
+			gate.refunded(0);
+			gate.record(300 * S);
+			let stored = JSON.parse(data.get("thelounge.state.dials") ?? "{}");
+			expect(stored["irc.example"].r).to.deep.equal([0]);
+			gate.record(700 * S);
+			stored = JSON.parse(data.get("thelounge.state.dials") ?? "{}");
+			expect(stored["irc.example"].r).to.deep.equal([]);
 		});
 
 		it("ignores dials recorded in the future (a clock that ran ahead)", function () {
