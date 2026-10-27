@@ -244,7 +244,7 @@ function notifyMessage(
 					from: nick,
 					text:
 						msg.type === MessageType.INVITE
-							? `invited you to ${msg.channel ?? ""}`
+							? t("notify.inviteText", {channel: msg.channel ?? ""})
 							: msg.type === MessageType.ACTION
 							? `\x01ACTION ${msg.text ?? ""}\x01`
 							: msg.text ?? "",

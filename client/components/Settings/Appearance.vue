@@ -697,22 +697,24 @@ export default defineComponent({
 			const partner = chosen ? themePartner(chosen) : null;
 
 			if (!store.state.settings.matchSystemAppearance) {
-				return "When on, each light/dark pair is one entry that shows the half matching the system.";
+				return t("settings.appearance.themePairOff");
 			}
 
 			if (!partner) {
-				return `${label(
-					chosen
-				)} looks the same in light and dark mode; ${describeThemePairs(
-					label
-				)} follow the system.`;
+				return t("settings.appearance.themePairNone", {
+					theme: label(chosen),
+					pairs: describeThemePairs(label),
+				});
 			}
 
 			const [dark, light] =
 				effectiveTheme(chosen, true, true) === chosen
 					? [chosen, partner]
 					: [partner, chosen];
-			return `${label(dark)} in dark mode, ${label(light)} in light mode.`;
+			return t("settings.appearance.themePairHalves", {
+				dark: label(dark),
+				light: label(light),
+			});
 		});
 
 		// In the native shells the system's text size can stand in for the
@@ -722,9 +724,12 @@ export default defineComponent({
 		const matchingSystemTextSize = computed(
 			() => systemTextSize && store.state.settings.matchSystemTextSize
 		);
-		const systemTextSizeHint = isIOSShell()
-			? "Set it in iOS Settings → Display & Brightness → Text Size, or Accessibility → Display & Text Size for larger sizes."
-			: "Set it in Android Settings → Display → Display size and text.";
+		const iosShell = isIOSShell();
+		const systemTextSizeHint = computed(() =>
+			iosShell
+				? t("settings.appearance.systemTextSizeIos")
+				: t("settings.appearance.systemTextSizeAndroid")
+		);
 
 		return {
 			sceneMotions: SCENE_MOTIONS,

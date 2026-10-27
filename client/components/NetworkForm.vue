@@ -281,7 +281,7 @@
 			</div>
 
 			<div class="connect-row">
-				<label for="connect:presenceMode">Presence</label>
+				<label for="connect:presenceMode">{{ t("form.presence") }}</label>
 				<div class="input-wrap">
 					<!-- The dot menu's four words; what each means is the hint. -->
 					<select
@@ -291,11 +291,11 @@
 						name="presenceMode"
 						aria-describedby="connect-presence-hint"
 					>
-						<option value="global">Same as global</option>
-						<option value="online">Online</option>
-						<option value="auto">Auto</option>
-						<option value="away">Away</option>
-						<option value="dnd">Do not disturb</option>
+						<option value="global">{{ t("presence.mode.global") }}</option>
+						<option value="online">{{ t("presence.mode.online") }}</option>
+						<option value="auto">{{ t("presence.mode.auto") }}</option>
+						<option value="away">{{ t("presence.mode.away") }}</option>
+						<option value="dnd">{{ t("presence.mode.dnd") }}</option>
 					</select>
 					<div id="connect-presence-hint" class="presence-mode-hint">
 						{{ presenceHint }}
@@ -310,9 +310,9 @@
 				WHOISed as the fields change so the oper sees they are there.
 			-->
 			<template v-if="showServices">
-				<h2 id="label-services">Services support</h2>
+				<h2 id="label-services">{{ t("form.servicesHeading") }}</h2>
 				<div class="connect-row">
-					<label for="connect:servicesPackage">Services package</label>
+					<label for="connect:servicesPackage">{{ t("form.servicesPackage") }}</label>
 					<select
 						id="connect:servicesPackage"
 						v-model="servicesPackage"
@@ -320,14 +320,14 @@
 						name="servicesPackage"
 						@change="onServicesPackage"
 					>
-						<option value="">None</option>
+						<option value="">{{ t("form.servicesNone") }}</option>
 						<option v-for="p in SERVICES_PROFILES" :key="p.id" :value="p.id">
 							{{ p.name }}
 						</option>
 					</select>
 				</div>
 				<template v-if="servicesPackage">
-					<div v-for="role in SERVICE_ROLE_FIELDS" :key="role.id" class="connect-row">
+					<div v-for="role in serviceRoleFields" :key="role.id" class="connect-row">
 						<label :for="'connect:services-' + role.id">{{ role.label }}</label>
 						<input
 							:id="'connect:services-' + role.id"
@@ -345,9 +345,7 @@
 						<label></label>
 						<div class="input-wrap services-notes">
 							<p class="services-help">
-								Prefilled with {{ servicesName }}'s usual names; change them if this
-								network renamed its bots. Leave a channel blank if the network
-								doesn't run it.
+								{{ t("form.servicesHelp", {package: servicesName}) }}
 							</p>
 							<p
 								:class="['services-check', {ok: checkOk, pending: checkPending}]"
@@ -504,31 +502,12 @@ import {useStore} from "../js/store";
 import webpush from "../js/webpush";
 import {useI18n} from "../js/i18n";
 import type {ServicesConfig, SharedNetworkStatus} from "../../shared/types/network";
-// What each presence mode means, under the select (the dot menu's words).
-const PRESENCE_HINTS: Record<NetworkMode, string> = {
-	global: "Follows the global mode under the logo.",
-	online: "Never away.",
-	auto: "Away when you're not looking.",
-	away: "Always away.",
-	dnd: "Away and silenced.",
-};
-
 /** The services roles as the form shows them, in order. */
-const SERVICE_ROLE_FIELDS: {
+type ServiceRoleField = {
 	id: typeof SERVICE_ROLES[number];
 	label: string;
 	placeholder: string;
-}[] = [
-	{id: "oper", label: "Oper service", placeholder: "The bot that takes G-lines"},
-	{id: "account", label: "Account service", placeholder: "The bot that holds accounts"},
-	{id: "channel", label: "Channel service", placeholder: "The bot that holds channels"},
-	{
-		id: "report",
-		label: "Oper report channel",
-		placeholder: "Where services report oper commands",
-	},
-	{id: "snoop", label: "Snoop channel", placeholder: "The connect and join feed"},
-];
+};
 
 /** How long the bots' fields rest before they are checked again. */
 const CHECK_DELAY_MS = 600;
@@ -611,14 +590,53 @@ export default defineComponent({
 				props.defaults.presenceMode = mode;
 			},
 		});
-		// Same as global names what the global mode is now.
-		const presenceHint = computed(() =>
-			presenceMode.value === "global"
-				? `Follows the global mode under the logo, now ${
-						{online: "Online", auto: "Auto", away: "Away"}[dnd.state.mode.value]
-				  }.`
-				: PRESENCE_HINTS[presenceMode.value]
-		);
+		// What each presence mode means, under the select (the dot menu's
+		// words); Same as global names what the global mode is now.
+		const presenceHint = computed(() => {
+			switch (presenceMode.value) {
+				case "global":
+					return dnd.state.mode.value === "online"
+						? t("form.presenceHintGlobalOnline")
+						: dnd.state.mode.value === "away"
+						? t("form.presenceHintGlobalAway")
+						: t("form.presenceHintGlobalAuto");
+				case "online":
+					return t("form.presenceHintOnline");
+				case "auto":
+					return t("form.presenceHintAuto");
+				case "away":
+					return t("form.presenceHintAway");
+				default:
+					return t("form.presenceHintDnd");
+			}
+		});
+		const serviceRoleFields = computed((): ServiceRoleField[] => [
+			{
+				id: "oper",
+				label: t("form.servicesOper"),
+				placeholder: t("form.servicesOperPlaceholder"),
+			},
+			{
+				id: "account",
+				label: t("form.servicesAccount"),
+				placeholder: t("form.servicesAccountPlaceholder"),
+			},
+			{
+				id: "channel",
+				label: t("form.servicesChannel"),
+				placeholder: t("form.servicesChannelPlaceholder"),
+			},
+			{
+				id: "report",
+				label: t("form.servicesReport"),
+				placeholder: t("form.servicesReportPlaceholder"),
+			},
+			{
+				id: "snoop",
+				label: t("form.servicesSnoop"),
+				placeholder: t("form.servicesSnoopPlaceholder"),
+			},
+		]);
 		// Another network (or a fresh copy of this one) is a fresh form.
 		watch(
 			() => props.defaults,
@@ -635,7 +653,9 @@ export default defineComponent({
 			...(props.defaults.services?.bots ?? {}),
 		});
 		const servicesName = computed(
-			() => servicesProfileById(servicesPackage.value)?.name ?? "the package"
+			() =>
+				servicesProfileById(servicesPackage.value)?.name ??
+				t("form.servicesPackageFallback")
 		);
 		const checkText = ref("");
 		const checkOk = ref(false);
@@ -676,7 +696,7 @@ export default defineComponent({
 
 			const seq = ++checkSeq;
 			checkPending.value = true;
-			checkText.value = "Checking that the bots are online…";
+			checkText.value = t("form.servicesChecking");
 			const reply = await servicesCheck(uuid, services);
 
 			if (seq !== checkSeq) {
@@ -865,7 +885,7 @@ export default defineComponent({
 			renewPush,
 			onNotifyToggle,
 			SERVICES_PROFILES,
-			SERVICE_ROLE_FIELDS,
+			serviceRoleFields,
 			showServices,
 			servicesPackage,
 			serviceBots,

@@ -63,12 +63,12 @@
 					</span>
 					<span
 						v-if="opered"
-						aria-label="Oper panel…"
+						:aria-label="operPanelLabel"
 						class="oper-panel-tooltip tooltipped tooltipped-e tooltipped-no-touch"
 					>
 						<button
 							class="oper-panel"
-							aria-label="Oper panel…"
+							:aria-label="operPanelLabel"
 							@click.stop="openOperPanel"
 						/>
 					</span>
@@ -79,7 +79,7 @@
 					><button
 						type="button"
 						:class="['presence-dot', presenceClass]"
-						:aria-label="`Presence on ${network.name}: ${presenceText}`"
+						:aria-label="presenceAria"
 						:title="presenceText"
 						aria-haspopup="menu"
 						:aria-expanded="presenceMenuOpen ? 'true' : 'false'"
@@ -112,17 +112,9 @@ import {useI18n} from "../js/i18n";
 import ChannelWrapper from "./ChannelWrapper.vue";
 
 import type {ClientChan, ClientNetwork} from "../js/types";
-import {NETWORK_MODES, type NetworkMode} from "../js/helpers/dnd";
+import {modeLabel, NETWORK_MODES} from "../js/helpers/dnd";
 import dnd from "../js/dnd";
 import type {ContextMenuItem} from "../js/helpers/contextMenu";
-
-const MODE_LABELS: Record<NetworkMode, string> = {
-	global: "Same as global",
-	online: "Online",
-	auto: "Auto",
-	away: "Away",
-	dnd: "Do not disturb",
-};
 
 export default defineComponent({
 	name: "Channel",
@@ -248,29 +240,39 @@ export default defineComponent({
 		);
 		const presenceText = computed(() => {
 			const p = presence.value;
-			const effective = MODE_LABELS[p?.effective ?? "auto"];
+			const mode = modeLabel(p?.effective ?? "auto", t);
 			// A network following the pill says so; one set on its own does not.
-			const mode = p?.mode === "global" ? `${effective} · global` : effective;
+			const global = p?.mode === "global";
 
 			if (offline.value) {
-				return `${mode} · not connected`;
+				return global ? t("presence.globalOffline", {mode}) : t("presence.offline", {mode});
 			}
 
 			if (p?.dnd) {
-				return "Do not disturb";
+				return modeLabel("dnd", t);
 			}
 
 			// Away mode is away already: "Away", never "Away · away".
-			return p?.away && p.effective !== "away" ? `${mode} · away` : mode;
+			if (p?.away && p.effective !== "away") {
+				return global ? t("presence.globalAway", {mode}) : t("presence.away", {mode});
+			}
+
+			return global ? t("presence.global", {mode}) : mode;
 		});
+		const presenceAria = computed(() =>
+			t("presence.networkAria", {network: props.network.name, state: presenceText.value})
+		);
+		const operPanelLabel = computed(() => t("lobby.operPanel"));
 
 		const openPresenceMenu = (event: MouseEvent) => {
 			const current = presence.value?.mode ?? "global";
 			// "Same as global (Away)": what following the pill means right now.
-			const globalLabel = `Same as global (${MODE_LABELS[dnd.state.mode.value]})`;
+			const globalLabel = t("presence.sameAsGlobalNow", {
+				mode: modeLabel(dnd.state.mode.value, t),
+			});
 			const items: ContextMenuItem[] = NETWORK_MODES.flatMap((mode): ContextMenuItem[] => {
 				const item: ContextMenuItem = {
-					label: mode === "global" ? globalLabel : MODE_LABELS[mode],
+					label: mode === "global" ? globalLabel : modeLabel(mode, t),
 					type: "item",
 					class: `presence-${mode}`,
 					checked: mode === current,
@@ -306,6 +308,8 @@ export default defineComponent({
 			presenceMenuOpen,
 			presenceClass,
 			presenceText,
+			presenceAria,
+			operPanelLabel,
 			openPresenceMenu,
 			notifyState,
 			channel,

@@ -18,7 +18,7 @@
 			v-else-if="one.t === 'ip' || one.t === 'host' || one.t === 'mask'"
 			type="button"
 			:class="['oper-chip', 'oper-chip-' + one.t]"
-			:title="chipTitle"
+			:title="t('oper.chip.title')"
 			@click.stop="openMenu($event, one.t, one.v)"
 		>
 			{{ one.v }}
@@ -35,13 +35,16 @@
 		<time
 			v-else-if="one.t === 'expiry'"
 			:class="['oper-expiry', {expired: one.v > 0 && one.v <= now}]"
-			:title="one.v ? absolute(one.v) : 'Never expires'"
+			:title="one.v ? absolute(one.v) : t('oper.report.neverExpires')"
 			>{{ expiry(one.v) }}</time
 		>
 		<span v-else-if="one.t === 'duration'" class="oper-duration">{{ duration(one.v) }}</span>
-		<span v-else-if="one.t === 'bytes'" class="oper-bytes" :title="`${one.v} bytes`">{{
-			bytes(one.v)
-		}}</span>
+		<span
+			v-else-if="one.t === 'bytes'"
+			class="oper-bytes"
+			:title="tCount('oper.report.bytes', one.v)"
+			>{{ bytes(one.v) }}</span
+		>
 		<span v-else-if="one.t === 'number'" class="oper-number">{{ one.v.toLocaleString() }}</span>
 		<span v-else-if="one.t === 'chips'" class="oper-chips"
 			><span v-for="chip in one.v" :key="chip" class="oper-chip-static">{{
@@ -65,6 +68,7 @@ import {openOperTargetMenu} from "../../js/helpers/operMenu";
 import {formatDateTime} from "../../js/i18n/dates";
 import useNow from "../../js/hooks/use-now";
 import {useStore} from "../../js/store";
+import {useI18n} from "../../js/i18n";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
 
@@ -84,6 +88,7 @@ export default defineComponent({
 	setup(props) {
 		const store = useStore();
 		const now = useNow();
+		const {t, tCount} = useI18n();
 		const values = computed<ReportValue[]>(() =>
 			props.value === undefined
 				? []
@@ -104,7 +109,8 @@ export default defineComponent({
 			one,
 			now,
 			openMenu,
-			chipTitle: "Oper actions",
+			t,
+			tCount,
 			absolute: (ms: number) => formatDateTime(new Date(ms)),
 			relative: (ms: number) => relativeTime(ms, now.value),
 			expiry: (ms: number) => formatExpiry(ms, now.value),

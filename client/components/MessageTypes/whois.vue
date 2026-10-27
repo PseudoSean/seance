@@ -77,7 +77,7 @@
 			</div>
 
 			<div v-if="message.whois.marks && message.whois.marks.length">
-				<dt>Marks:</dt>
+				<dt>{{ t("whois.marks") }}</dt>
 				<dd class="oper-chips">
 					<span
 						v-for="mark in message.whois.marks"
@@ -89,7 +89,7 @@
 			</div>
 
 			<div v-if="message.whois.killListed">
-				<dt>Kill listed:</dt>
+				<dt>{{ t("whois.killListed") }}</dt>
 				<dd>{{ message.whois.killListed }}</dd>
 			</div>
 
@@ -130,17 +130,17 @@
 			</template>
 
 			<div v-if="message.whois.websocket">
-				<dt>WebSocket from:</dt>
+				<dt>{{ t("whois.websocket") }}</dt>
 				<dd>{{ message.whois.websocket }}</dd>
 			</div>
 
 			<div v-if="message.whois.webirc">
-				<dt>Via gateway:</dt>
+				<dt>{{ t("whois.webirc") }}</dt>
 				<dd>{{ message.whois.webirc }}</dd>
 			</div>
 
 			<div v-if="message.whois.bouncer">
-				<dt>Bouncer:</dt>
+				<dt>{{ t("whois.bouncer") }}</dt>
 				<dd>{{ message.whois.bouncer }}</dd>
 			</div>
 
@@ -163,7 +163,8 @@
 		</dl>
 		<p v-if="canCheck && !message.whois.whowas" class="whois-oper-actions">
 			<button type="button" class="btn btn-small" @click="check">
-				Check {{ message.whois.nick }}
+				{{ checkParts[0] }}<bdi>{{ message.whois.nick }}</bdi
+				>{{ checkParts[1] }}
 			</button>
 		</p>
 	</span>
@@ -179,6 +180,7 @@ import {ClientNetwork, ClientMessage} from "../../js/types";
 import ParsedMessage from "../ParsedMessage.vue";
 import Username from "../Username.vue";
 import {useI18n} from "../../js/i18n";
+import {frameSegments, KEEP} from "../../js/i18n/core";
 
 export default defineComponent({
 	name: "MessageTypeWhois",
@@ -203,6 +205,11 @@ export default defineComponent({
 		// An oper with CHECK gets the full picture one click away.
 		const canCheck = computed(() => isOperOn(props.network) && hasPriv(props.network, "CHECK"));
 
+		// "Check <nick>", cut around the nick.
+		const checkParts = computed(() =>
+			frameSegments(t("whois.checkNick", {nick: KEEP}), ["nick"])
+		);
+
 		const check = () => {
 			const target = store.state.activeChannel?.channel.id ?? props.network.channels[0].id;
 			socket.emit("input", {target, text: `/check ${String(props.message.whois.nick)}`});
@@ -213,6 +220,7 @@ export default defineComponent({
 			fullTime: (date: number | Date) => formatDateTime(date),
 			canCheck,
 			check,
+			checkParts,
 		};
 	},
 });

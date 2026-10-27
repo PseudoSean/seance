@@ -872,11 +872,7 @@
 					<code>/who [mask] [flags]</code>
 				</div>
 				<div class="description">
-					<p>
-						List who matches the mask (a channel, a nick or a wildcard
-						<code>nick!user@host</code>), as a table. Without a mask, the users of the
-						current channel.
-					</p>
+					<p>{{ whoParts[0] }}<code>nick!user@host</code>{{ whoParts[1] }}</p>
 				</div>
 			</div>
 
@@ -896,6 +892,7 @@
 import {computed, defineComponent, ref} from "vue";
 import {useStore} from "../../js/store";
 import {useI18n} from "../../js/i18n";
+import {frameSegments, KEEP} from "../../js/i18n/core";
 import {buildIdentityOf, isPastRelease, sourceLinks} from "../../js/helpers/sourceLinks";
 import SidebarToggle from "../SidebarToggle.vue";
 
@@ -909,6 +906,10 @@ export default defineComponent({
 		const {t} = useI18n();
 		const title = computed(() => t("help.title"));
 		const ctcpTitle = computed(() => t("help.commands.ctcpTitle"));
+		// /who's description, cut around its example mask.
+		const whoParts = computed(() =>
+			frameSegments(t("help.commands.who", {mask: KEEP}), ["mask"])
+		);
 		const isApple = navigator.platform.match(/(Mac|iPhone|iPod|iPad)/i) || false;
 		const isTouch = navigator.maxTouchPoints > 0;
 		const appName = computed(() => store.state.branding.appName);
@@ -927,6 +928,7 @@ export default defineComponent({
 		return {
 			title,
 			ctcpTitle,
+			whoParts,
 			appName,
 			build,
 			isApple,

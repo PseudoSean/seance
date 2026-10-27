@@ -25,11 +25,11 @@
 				class="btn"
 				@click.prevent="showInstallGuide"
 			>
-				How to install {{ appName }}
+				{{ t("settings.general.installGuide", {appName}) }}
 			</button>
 		</div>
 		<div v-if="keepAliveAvailable">
-			<h2>Background connection</h2>
+			<h2>{{ t("settings.general.keepAliveHeading") }}</h2>
 			<div>
 				<label class="opt">
 					<input
@@ -38,10 +38,10 @@
 						type="checkbox"
 						name="keepConnected"
 					/>
-					Stay connected in the background
+					{{ t("settings.general.keepAlive") }}
 					<span
 						class="tooltipped tooltipped-n tooltipped-no-delay"
-						aria-label="Keeps your connections open while the app is not on screen, with a notification Android shows the whole time. Uses more battery."
+						:aria-label="keepAliveHelp"
 					>
 						<button class="extra-help" />
 					</span>
@@ -53,8 +53,7 @@
 					"
 					class="keepalive-hint"
 				>
-					Notifications are off for {{ appName }} in Android's settings, so the connection
-					notification is hidden. Android may still stop the app.
+					{{ t("settings.general.keepAliveNotificationsOff", {appName}) }}
 				</p>
 			</div>
 		</div>
@@ -220,6 +219,7 @@ export default defineComponent({
 		const {t, tCount, locale} = useI18n();
 		const appName = computed(() => store.state.branding.appName);
 		const uploadCanvasHelp = computed(() => t("settings.general.uploadCanvasHelp"));
+		const keepAliveHelp = computed(() => t("settings.general.keepAliveHelp"));
 		const sendTypingHelp = computed(() => t("settings.general.sendTypingHelp"));
 		const keepPrivateHelp = computed(() =>
 			t("settings.general.keepPrivateHelp", {lines: MAX_MESSAGES, queries: MAX_QUERIES})
@@ -454,6 +454,7 @@ export default defineComponent({
 			store,
 			t,
 			uploadCanvasHelp,
+			keepAliveHelp,
 			sendTypingHelp,
 			keepPrivateHelp,
 			awayPlaceholder,

@@ -106,15 +106,15 @@ msgstr "Öffnen Sie Ihre Erwähnungen"
 #: client/components/Chat.vue:384
 msgctxt "chat.mentionsBadgeOver"
 msgid "{count}+"
-msgstr ""
+msgstr "{count}+"
 
 #. Accessible name of the @ button in the channel header while there are unread mentions; it opens the mentions popup. {count} is the number of unread mentions. The singular form shows for one, the plural for any other number.
 #: client/components/Chat.vue:389
 msgctxt "chat.mentionsUnread"
 msgid "Open your mentions, {count} unread"
 msgid_plural "Open your mentions, {count} unread"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Erwähnungen öffnen, {count} ungelesen"
+msgstr[1] "Erwähnungen öffnen, {count} ungelesen"
 
 #. aria-label of the save control at the right end of the topic editor, shown while the channel topic is being edited; clicking saves the new topic.
 #: client/components/Chat.vue:35

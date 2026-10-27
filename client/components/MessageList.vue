@@ -36,7 +36,7 @@
 					:key="message.id + '-unread'"
 					class="unread-marker"
 				>
-					<span class="unread-marker-text" />
+					<span class="unread-marker-text" :data-label="t('chat.unreadMarker')" />
 				</div>
 
 				<MessageCondensed

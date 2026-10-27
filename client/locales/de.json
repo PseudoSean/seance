@@ -15,6 +15,11 @@
   "chat.historyLoading": "Laden...",
   "chat.jumpToRecent": "Zu den aktuellen Nachrichten springen",
   "chat.mentions": "Öffnen Sie Ihre Erwähnungen",
+  "chat.mentionsBadgeOver": "{count}+",
+  "chat.mentionsUnread": {
+    "one": "Erwähnungen öffnen, {count} ungelesen",
+    "other": "Erwähnungen öffnen, {count} ungelesen"
+  },
   "chat.saveTopic": "Thema speichern",
   "chat.showOlder": "Ältere Nachrichten anzeigen",
   "chat.toggleUserlist": "Benutzerliste umschalten",

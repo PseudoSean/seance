@@ -92,7 +92,7 @@ export function generateChannelContextMenu(
 			...(isOperOn(network)
 				? [
 						{
-							label: "Oper panel…",
+							label: t("menu.operPanel"),
 							type: "item",
 							class: "oper-panel",
 							link: `/oper/${network.uuid}/notices`,
