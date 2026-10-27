@@ -21,6 +21,8 @@ import {setMuteStatus} from "../mute";
 import {registerBusHandlers} from "./bus";
 import {IrcClient} from "./client";
 import {flushQueryLogs} from "./querylog";
+import {forgetLogin} from "./saslTrust";
+import {pokeAll} from "./foregroundPoke";
 import {pruneUserAway} from "./userAwayStore";
 import {leavesAwayToWorker, syncPresence} from "./presence";
 import {claimMute, clearRemoteDnd} from "./pushMute";
@@ -266,14 +268,6 @@ if (typeof window !== "undefined") {
 	});
 }
 
-/** Foreground signals arrive in clusters (visibility + focus + native); one poke per second is plenty. */
-const POKE_INTERVAL_MS = 1000;
-/** probe() deadline for the foreground poke (the default is 10 s). */
-const FOREGROUND_PROBE_MS = 4_000;
-/** A dial older than this at foreground time is presumed stuck. */
-const STALE_DIAL_MS = 3_000;
-let lastPokeAt = 0;
-
 /** The page's attention changed: every connection tells its server (presence.ts). */
 export function setAttendedAll(attended: boolean, except?: ReadonlySet<string>): void {
 	for (const client of clients.values()) {
@@ -344,46 +338,12 @@ export function syncPresenceAll(): void {
 }
 
 /**
- * Poke every live connection: networks waiting out reconnect backoff retry
- * now, open ones probe the socket (PING; silence means the OS killed it, and
- * the transport then closes it and reconnects). Called when the app returns
- * to the foreground — browsers from foreground.ts, native shells from
- * native.ts; deliberately disconnected networks are left alone.
+ * The app is back in front of the user: every connection is asked to be up
+ * now (irc/foregroundPoke.ts). `force` is for `online`, which is news rather
+ * than part of the foreground cluster the de-bounce is for.
  */
-export function reconnectAll(): void {
-	const now = Date.now();
-
-	if (now - lastPokeAt < POKE_INTERVAL_MS) {
-		return;
-	}
-
-	lastPokeAt = now;
-
-	for (const client of clients.values()) {
-		const transport = client.transport;
-
-		if (transport.state === "reconnect-wait") {
-			client.connect();
-		} else if (transport.state === "connecting") {
-			// A dial started while the OS had the radio off can sit in
-			// CONNECTING for a long time; past the grace, start over now.
-			if (
-				transport.connectingForMs &&
-				transport.redial &&
-				transport.connectingForMs() > STALE_DIAL_MS
-			) {
-				transport.redial();
-			}
-		} else if (transport.state === "open") {
-			if (transport.probe) {
-				// Shorter than the background probe: the user is looking at the
-				// screen, and a live server answers a PING well within this.
-				transport.probe(FOREGROUND_PROBE_MS);
-			} else {
-				transport.send("PING :resume");
-			}
-		}
-	}
+export function reconnectAll(force = false): void {
+	pokeAll(clients.values(), Date.now(), force);
 }
 
 registerBusHandlers(socket, {
@@ -394,6 +354,7 @@ registerBusHandlers(socket, {
 	remove(uuid) {
 		clients.get(uuid)?.queryLog.dispose();
 		clients.delete(uuid);
+		forgetLogin(uuid);
 	},
 });
 

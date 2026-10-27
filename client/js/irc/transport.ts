@@ -96,6 +96,8 @@ export class WsTransport {
 	private openedAt: number | null = null; // null = not open (0 is a real fake-clock time)
 	/** A dial the ledger recorded and has not yet seen end (irc/dialLedger.ts). */
 	private dialing = false;
+	/** When that dial was recorded. */
+	private dialedAt = 0;
 	private connectingSince = 0;
 	private connectTimer: ReturnType<typeof setTimeout> | null = null;
 	private probeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -161,8 +163,9 @@ export class WsTransport {
 		}
 
 		// A dial made with the radio off never reached the server.
-		if ((globalThis.navigator as {onLine?: boolean} | undefined)?.onLine !== false) {
-			this.opts.gate?.record(Date.now());
+		if (!offline()) {
+			this.dialedAt = Date.now();
+			this.opts.gate?.record(this.dialedAt);
 			this.dialing = true;
 		}
 
@@ -250,6 +253,16 @@ export class WsTransport {
 		}, timeoutMs);
 	}
 
+	/**
+	 * Someone is at the screen: whatever the automatic retries had worked
+	 * up to, a failure of the dial now in flight waits the first delay. For
+	 * the foreground poke, which leaves a young dial running (a retry the
+	 * thawing page fired just before it) rather than starting another.
+	 */
+	restartSchedule(): void {
+		this.attempt = 0;
+	}
+
 	/** How long the current dial has been in flight (0 unless connecting). */
 	connectingForMs(): number {
 		return this._state === "connecting" ? Date.now() - this.connectingSince : 0;
@@ -264,10 +277,22 @@ export class WsTransport {
 	 * makes the ledger wait a little longer, never too little.
 	 */
 	private dialEnded(): void {
-		if (this.dialing) {
-			this.dialing = false;
-			this.opts.gate?.closed(Date.now());
+		if (!this.dialing) {
+			return;
 		}
+
+		this.dialing = false;
+
+		// Failed without opening, and the device says it is offline: the
+		// radio was not back (a phone thawing from the background), and the
+		// dial never reached the server to be counted. Kept, three of those
+		// in a row made the next dial wait out the server's whole window.
+		if (this.openedAt === null && offline() && this.opts.gate?.forget) {
+			this.opts.gate.forget(this.dialedAt);
+			return;
+		}
+
+		this.opts.gate?.closed(Date.now());
 	}
 
 	/**
@@ -482,6 +507,11 @@ export class WsTransport {
 			listener(ev);
 		}
 	}
+}
+
+/** The device says it has no network (`navigator.onLine`); unknown counts as online. */
+function offline(): boolean {
+	return (globalThis.navigator as {onLine?: boolean} | undefined)?.onLine === false;
 }
 
 /** Browser error events carry no message; `ws`/undici ones do. */

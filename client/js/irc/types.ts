@@ -23,6 +23,8 @@ export interface Transport {
 	connectingForMs?(): number;
 	/** Foreground poke: abandon a stuck dial and start over now. */
 	redial?(): void;
+	/** Foreground poke: if the dial in flight fails, retry on the first delay, not the built-up one. */
+	restartSchedule?(): void;
 	/** Drop the current socket as lost (close 1006, `reason`) and reconnect on the usual schedule. */
 	abandon?(reason: string): void;
 }

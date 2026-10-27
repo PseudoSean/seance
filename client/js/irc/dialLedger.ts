@@ -53,6 +53,11 @@ export interface DialGate {
 	record(at: number): void;
 	/** A socket that had opened closed at `at`. */
 	closed(at: number): void;
+	/**
+	 * The dial made at `at` never reached the server after all (it failed
+	 * while the device was offline): it does not count. Optional.
+	 */
+	forget?(at: number): void;
 }
 
 export interface StorageBackend {
@@ -152,5 +157,18 @@ export function dialGateFor(host: string): DialGate {
 		},
 		record: (at) => add(at, "d"),
 		closed: (at) => add(at, "c"),
+		forget(at) {
+			const all = {...readRecord(backend.get(STORAGE_KEY))};
+			const record = hostRecord(all[key]);
+			const index = record.d.lastIndexOf(at);
+
+			if (index === -1) {
+				return;
+			}
+
+			record.d.splice(index, 1);
+			all[key] = record;
+			backend.set(STORAGE_KEY, JSON.stringify(all));
+		},
 	};
 }

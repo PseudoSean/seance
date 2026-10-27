@@ -66,7 +66,10 @@ The cost: a dial that fails looks the same whether IPcheck refused it or the
 server is simply down (connection refused, DNS failure, both close with 1006),
 and only a radio that is off is told apart (`navigator.onLine`). So after three
 quick failures against a server that is down, the next try waits up to 42 s
-instead of the schedule's next step. The wait is never longer than one window,
+instead of the schedule's next step. A dial that fails without opening while
+the device says it is offline (`navigator.onLine`) is the exception: it never
+reached the server, and the ledger forgets it (`DialGate.forget`, 2026-10-27),
+so a phone whose radio is still coming back does not run up the wait. The wait is never longer than one window,
 whatever the record says: a clock that ran ahead and was put back cannot hold
 a network. The service worker's own short connections (away on close, mark
 read, a reply) count on the server but are not in the record.

@@ -102,7 +102,12 @@ export function installForegroundHooks(): void {
 	// the socket almost certainly died while it was frozen.
 	document.addEventListener("resume", () => wake());
 
-	window.addEventListener("online", () => wake());
+	// The radio is back: news, not part of the foreground cluster, so it
+	// gets through the poke's de-bounce (irc/foregroundPoke.ts).
+	window.addEventListener("online", () => {
+		reconnectAll(true);
+		checkForUpdate();
+	});
 	window.addEventListener("focus", () => {
 		wake();
 		attend();

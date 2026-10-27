@@ -781,6 +781,24 @@ describe("WsTransport: a request to connect restarts the schedule", function () 
 		});
 	});
 
+	it("restartSchedule() makes a failure of the dial in flight wait the first delay", function () {
+		// The foreground poke finds a dial the thawing page's overdue retry
+		// timer started a moment before: it lets it run, and if it fails the
+		// user does not wait out the backoff that built up in the background.
+		const {t, events} = make({reconnect: fastReconnect});
+		t.connect();
+		clock.tick(failTimes(events, 5));
+		expect(t.state).to.equal("connecting");
+
+		t.restartSchedule();
+		last().closed(1006, "", false);
+		expect(events[events.length - 1]).to.deep.equal({
+			type: "reconnecting",
+			attempt: 1,
+			delayMs: 100,
+		});
+	});
+
 	it("a socket lost during a probe retries at once whatever the attempt count", function () {
 		// A phone whose connections are each shorter than the stable mark
 		// never resets the counter by staying up; the poke's probe does.
@@ -1009,6 +1027,65 @@ describe("WsTransport: the dial gate (irc/dialLedger.ts)", function () {
 		clock.tick(1_000);
 		t.redial(); // the foreground poke drops the stuck dial
 		expect(g.closed.args).to.deep.equal([[CONNECT_TIMEOUT_MS], [CONNECT_TIMEOUT_MS + 1_000]]);
+	});
+
+	/** Run `fn` with `navigator.onLine` reading `online`. */
+	function withOnline(online: () => boolean, fn: () => void): void {
+		const nav = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+		Object.defineProperty(globalThis, "navigator", {
+			get: () => ({onLine: online()}),
+			configurable: true,
+		});
+
+		try {
+			fn();
+		} finally {
+			if (nav) {
+				Object.defineProperty(globalThis, "navigator", nav);
+			} else {
+				delete (globalThis as {navigator?: unknown}).navigator;
+			}
+		}
+	}
+
+	it("forgets a dial that failed with the device offline: it never reached the server", function () {
+		// A phone thawing from the background dials before its radio is back.
+		let online = true;
+		withOnline(
+			() => online,
+			() => {
+				const g = {...gate(0), forget: sinon.spy()};
+				const {t} = make({reconnect: fastReconnect, gate: g});
+				t.connect();
+				expect(g.record.args).to.deep.equal([[0]]);
+				clock.tick(40);
+				online = false;
+				last().closed(1006, "", false);
+				expect(g.forget.args).to.deep.equal([[0]]);
+				expect(g.closed.called).to.equal(false);
+			}
+		);
+	});
+
+	it("keeps a dial that failed online, and the drop of a socket that had opened", function () {
+		let online = true;
+		withOnline(
+			() => online,
+			() => {
+				const g = {...gate(0), forget: sinon.spy()};
+				const {t} = make({reconnect: fastReconnect, gate: g});
+				t.connect();
+				last().closed(1006, "", false); // online: may have been refused at the accept
+				expect(g.closed.args).to.deep.equal([[0]]);
+				clock.tick(100);
+				last().open();
+				clock.tick(1_000);
+				online = false;
+				last().closed(1006, "", false); // it was accepted: the server counted it
+				expect(g.forget.called).to.equal(false);
+				expect(g.closed.args).to.deep.equal([[0], [1_100]]);
+			}
+		);
 	});
 
 	it("does not record a dial made offline", function () {

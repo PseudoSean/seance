@@ -142,6 +142,22 @@ describe("dial ledger (irc/dialLedger.ts)", function () {
 			expect(dialGateFor("irc.example").waitMs(180 * S)).to.equal(12 * S);
 		});
 
+		it("forgets a dial that never reached the server", function () {
+			const gate = dialGateFor("irc.example");
+			gate.record(0);
+			gate.record(10 * S);
+			gate.record(20 * S);
+			expect(gate.waitMs(30 * S)).to.equal(32 * S);
+
+			gate.forget?.(20 * S);
+			expect(gate.waitMs(30 * S)).to.equal(0);
+			const stored = JSON.parse(data.get("thelounge.state.dials") ?? "{}");
+			expect(stored["irc.example"]).to.deep.equal({d: [0, 10 * S], c: []});
+
+			gate.forget?.(99 * S); // not recorded: nothing changes
+			expect(JSON.parse(data.get("thelounge.state.dials") ?? "{}")).to.deep.equal(stored);
+		});
+
 		it("survives a broken record", function () {
 			data.set("thelounge.state.dials", "{not json");
 			expect(dialGateFor("irc.example").waitMs(0)).to.equal(0);

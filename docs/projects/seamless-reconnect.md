@@ -523,3 +523,73 @@ Run it on the phone layout as well:
 node tools/browser-drive.mjs tools/scenarios/disconnected-channel.mjs --chrome=…
 node tools/browser-drive.mjs tools/scenarios/disconnected-channel.mjs --chrome=… --mobile --width=390 --height=844
 ```
+
+## Round nine: still no reconnect after a long absence (2026-10-27)
+
+Reported again: on a phone, after a long time away, bringing the app back
+does not reconnect; and every app switch costs a reconnect, where a grace of
+15 s or so would do. Found by reading the code and nefarious2's source, not
+on a device; the fixes are pinned by unit tests.
+
+**The server's SASL timeout read as a wrong password.** Round seven made our
+12 s SASL timeout retry instead of giving up. But nefarious2 gives up first,
+at 10 s (`SASL_TIMEOUT`, `m_sasl.c` `abort_sasl`), and says so with
+`904 :SASL authentication failed: request timed out`, and the client took
+every 904 as a refusal: QUIT, the network down for good, and autoconnect
+turned off — so a later cold start (iOS discards a home-screen app after a
+long time in the background) did not even dial. Services unreachable
+(`904 :… service unavailable`), services splitting mid-exchange (906) and
+services not linked at all (nefarious2 then leaves `sasl` out of `CAP LS`)
+ended the same way. A phone coming back after a long time meets exactly the
+slow path: a cold Keycloak, a lagging services link. Now
+(`SaslFailureCause` in `client.ts`, `isServerSideFailure` in `sasl.ts`):
+
+- the server's own timeout, `unavailable`, and a 906 it sent mid-exchange
+  are the server's problem: QUIT, `transport.abandon()`, the usual schedule;
+- a missing cap or a NAK is the server's problem on a network where this
+  account has logged in before (`irc/saslTrust.ts`), a server without SASL
+  anywhere else;
+- a bare 904 — nefarious2 sends it for a wrong password and for a Keycloak
+  it cannot reach alike — gets three more connections in a row for a login
+  that has worked here, then counts as a refusal;
+- missing credentials, 902, 905, 907 stay final.
+
+What this does not undo: a network whose autoconnect a past 904 already
+turned off stays off. Switch it back on in the network's settings.
+
+**The poke left the thawing page's own retry alone.** After a long
+suspension the retry timer that was due fires the moment the page thaws,
+often just before `visibilitychange` and before the radio is back. The poke
+then found a dial under 3 s old and did nothing, and when that dial failed
+the next wait was the one the background retries had built up — the 60 s
+cap. The poke now restarts the schedule on a young dial too
+(`WsTransport.restartSchedule`), so its failure waits 1 s. The poke's
+decision moved to `irc/foregroundPoke.ts` so mocha can drive it, and
+`online` gets through its one-per-second de-bounce: it is news, not part of
+the visibility/focus cluster, and the moment a dial can get through.
+
+**Dials made before the radio was back ran up the throttle.** The dial
+ledger (`reconnect-throttle.md`) counts every dial, since IPcheck counts at
+the TCP accept. Three dials failing in a row while the radio comes back made
+the fourth wait ~42 s although none reached the server. A dial that fails
+without opening while `navigator.onLine` says offline is now forgotten
+(`DialGate.forget`); one that fails online is kept, since a refusal at the
+accept looks the same.
+
+**The grace period.** Nothing in the client drops the socket on hide:
+`pagehide`'s QUIT is for a real unload, and an app switch fires only `blur`
+and `visibilitychange` (WebKit bug 206213's report). The OS suspends the page
+and kills its sockets. A web page cannot ask for more time — not in Safari,
+not as a home-screen app — so there the answer is reconnecting fast, above.
+The iOS shell can: `BackgroundGrace` (`shells/capacitor/ios/App/App/ SceneDelegate.swift`) holds a background task for 25 s after the app leaves
+the screen (iOS grants about 30) and ends it when the app returns. Not yet
+checked on a device: whether WebKit keeps the WebView's process running for
+the task's length. The Android shell already has "Stay connected in the
+background"; without it Android freezes the app's process but leaves its
+sockets open, so a quick return finds them alive.
+
+Tests: `test/irc/client-sasl.ts` "the server could not check the login",
+`test/irc/sasl.ts` "isServerSideFailure", `test/irc/foregroundPoke.ts` (a
+thaw over a real transport and ledger on sinon's clock),
+`test/irc/transport.ts` "restartSchedule" and the offline dials,
+`test/irc/dialLedger.ts` "forgets a dial".
