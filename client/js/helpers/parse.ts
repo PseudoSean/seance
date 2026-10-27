@@ -1,5 +1,7 @@
 import {h as createElement, VNode} from "vue";
-import {layout, LayoutNode, Style, toPlainText} from "./ircmessageparser/layout";
+import {layout, LayoutNode, toPlainText} from "./ircmessageparser/layout";
+import {createFragment} from "./fragment";
+import {confirmMismatch} from "./openLink";
 import emojiMap from "./fullnamemap.json";
 import LinkPreviewToggle from "../../components/LinkPreviewToggle.vue";
 import LinkPreviewFileSize from "../../components/LinkPreviewFileSize.vue";
@@ -16,7 +18,6 @@ export type ParseOptions = {
 };
 
 type Rendered = VNode | string | undefined | Rendered[];
-type TextNode = Extract<LayoutNode, {kind: "text"}>;
 type WrapNode = Extract<LayoutNode, {kind: "wrap"}>;
 type PartNode = Extract<LayoutNode, {kind: "link" | "channel" | "emoji" | "nick"}>;
 
@@ -146,85 +147,54 @@ function wrapNode(node: WrapNode, children: Rendered[], message?: ClientMessage)
 				},
 				children
 			);
-		case "href":
+
+		case "href": {
 			// A masked link carries the destination in its title and the
 			// `md-link` class, which is what tells it apart from a linkified
-			// anchor (`test/e2e/markdown.spec.ts` picks it out that way).
+			// anchor (`test/e2e/markdown.spec.ts` picks it out that way). Its
+			// text is free, so unless it is the destination the real host
+			// follows it (a phone shows no title), and one whose text names
+			// another address asks before opening (helpers/linkSafety.ts).
+			// A long press's own "Open in new tab" cannot be intercepted: the
+			// host is the warning there.
+			const verdict = node.verdict;
+			const ask =
+				verdict.kind === "mismatch"
+					? (ev: MouseEvent) => {
+							ev.preventDefault();
+							confirmMismatch(node.href, verdict.shown, verdict.host);
+					  }
+					: undefined;
+
 			return createElement(
 				"a",
 				{
-					class: ["md-link"],
+					class: ask ? ["md-link", "mismatch"] : ["md-link"],
 					href: node.href,
 					title: node.href,
 					dir: "auto",
 					target: "_blank",
 					rel: "noopener",
+					// A Ctrl/Cmd or Shift click arrives as a click, the middle
+					// button as an auxclick. (Enter never reaches a chat link:
+					// keybinds.ts sends it to the composer.)
+					...(ask
+						? {
+								onClick: ask,
+								onAuxclick(ev: MouseEvent) {
+									if (ev.button === 1) {
+										ask(ev);
+									}
+								},
+						  }
+						: {}),
 				},
-				children
+				verdict.kind === "honest"
+					? children
+					: [...children, createElement("span", {class: "md-link-host"}, verdict.host)]
 			);
-	}
-}
-
-// Create an HTML `span` with styling information for a given text node
-function createFragment(node: TextNode): VNode | string {
-	const style: Style = node.style;
-	const classes: string[] = [];
-
-	if (style.bold) {
-		classes.push("irc-bold");
-	}
-
-	if (style.textColor !== undefined) {
-		classes.push("irc-fg" + style.textColor);
-	}
-
-	if (style.bgColor !== undefined) {
-		classes.push("irc-bg" + style.bgColor);
-	}
-
-	if (style.italic) {
-		classes.push("irc-italic");
-	}
-
-	if (style.underline) {
-		classes.push("irc-underline");
-	}
-
-	if (style.strikethrough) {
-		classes.push("irc-strikethrough");
-	}
-
-	if (style.monospace) {
-		classes.push("irc-monospace");
-	}
-
-	const data: {
-		class?: string[];
-		style?: Record<string, string>;
-	} = {
-		class: undefined,
-		style: undefined,
-	};
-
-	let hasData = false;
-
-	if (classes.length > 0) {
-		hasData = true;
-		data.class = classes;
-	}
-
-	if (style.hexColor) {
-		hasData = true;
-		data.style = {
-			color: `#${style.hexColor}`,
-		};
-
-		if (style.hexBgColor) {
-			data.style["background-color"] = `#${style.hexBgColor}`;
 		}
 	}
-
-	return hasData ? createElement("span", data, node.text) : node.text;
 }
 
 // Transform an IRC message potentially filled with styling control codes, URLs,

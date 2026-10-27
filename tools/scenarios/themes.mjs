@@ -1,13 +1,14 @@
 // The themes end to end in a real browser (docs/resources/themes.md): every
 // theme in the Appearance dropdown swaps the stylesheet link, is stored by
 // name, and sets the browser chrome colour — its own for the four handoff
-// themes (coffee, creama, cobalt, frost), the deploy's (whatever the tag held
-// at boot) for day and morning, which carry none. On those four the colour
-// pairs the design was checked against are measured from computed styles:
-// text, timestamps, links, the join line and a nick on a highlighted row at
-// ≥ 4.5:1, the header and footer icons at ≥ 3:1, the input placeholder — the
-// one deliberate exception — at ≥ 3:1. Day and morning are only exercised for the
-// switching; their open contrast items are docs/projects/accessibility.md's.
+// themes (coffee, creama, cobalt, frost) and ps, the deploy's (whatever
+// the tag held at boot) for day and morning, which carry none. On those
+// five the colour pairs the design was checked against are measured from
+// computed styles: text, timestamps, links, the join line and a nick on a
+// highlighted row at ≥ 4.5:1, the header and footer icons at ≥ 3:1, the
+// input placeholder — the one deliberate exception — at ≥ 3:1. Day and
+// morning are only exercised for the switching; their open contrast items
+// are docs/projects/accessibility.md's.
 // A screenshot of the chat under each theme lands in the output directory.
 //
 //   corepack yarn build && python3 -m http.server -d public 8021 &
@@ -32,8 +33,11 @@ const THEMES = [
 	"molokai",
 	"princess",
 	"princess_",
+	"keeki",
+	"keekiblush",
 	"day",
 	"morning",
+	"ps",
 	"coffee",
 ];
 const OWN_COLOR = {
@@ -44,6 +48,9 @@ const OWN_COLOR = {
 	molokai: "#1b1d1e",
 	princess: "#f2f7fc",
 	princess_: "#000000",
+	keeki: "#22143a",
+	keekiblush: "#f1d6e4",
+	ps: "#f4f9ff",
 };
 
 export const url =
@@ -197,6 +204,13 @@ function speaker(nick) {
 	};
 }
 
+/** A real Enter keystroke in the focused input (keydown with text → keypress). */
+async function pressEnter(page) {
+	const key = {key: "Enter", code: "Enter", windowsVirtualKeyCode: 13};
+	await page.send("Input.dispatchKeyEvent", {type: "keyDown", text: "\r", ...key});
+	await page.send("Input.dispatchKeyEvent", {type: "keyUp", ...key});
+}
+
 export default async function run(page) {
 	// A ?host link only pre-fills the connect form (a link is a suggestion,
 	// boot.ts handleQueryParams); connect for real.
@@ -224,6 +238,17 @@ export default async function run(page) {
 	await page.waitFor(`!!document.querySelector("#chat .msg.highlight .user")`, {
 		label: "the mention is highlighted",
 	});
+	// One message of our own, so every screenshot shows an own row and a theme
+	// that bands them (keeki) is seen doing it.
+	await page.click("#input");
+	await page.fill("#input", "on it, give me five");
+	await pressEnter(page);
+	await page.waitFor(
+		`!!document.querySelector('#chat .msg.self[data-type="message"]:not(.pending) .content')`,
+		{
+			label: "our own message is echoed",
+		}
+	);
 	await page.evaluate(INSTALL_CONTRAST);
 
 	const setTheme = async (name) => {

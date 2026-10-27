@@ -9,6 +9,7 @@
 // helpers/mediaPreview.ts).
 import "./connection";
 import "./commands";
+import "./inbox";
 import "./init";
 import "./join";
 import "./markread";
@@ -28,6 +29,7 @@ import "./names";
 import "./network";
 import "./nick";
 import "./open";
+import "./oper";
 import "./part";
 import "./quit";
 import "./topic";

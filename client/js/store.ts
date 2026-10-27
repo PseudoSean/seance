@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-shadow */
 
-import {ActionContext, createStore, Store, useStore as baseUseStore} from "vuex";
+import {createStore, Store, useStore as baseUseStore} from "vuex";
 import {createSettingsStore} from "./store-settings";
 import storage from "./localStorage";
-import type {ClientChan, ClientNetwork, NetChan, ClientMention} from "./types";
+import type {ClientChan, ClientNetwork, NetChan} from "./types";
+import type {InboxEntry} from "../../shared/types/mention";
 import type {InjectionKey} from "vue";
 
 import {SettingsState} from "./settings";
@@ -14,6 +15,7 @@ import type {Capability} from "./translate/capability";
 import type {ModelView} from "./translate/service";
 import type {ChannelTranslation} from "./translate/channelStore";
 import type {EngineName} from "./translate/engine";
+import {conversationKey} from "./helpers/inbox";
 
 enum DesktopNotificationState {
 	Unsupported = "unsupported",
@@ -119,10 +121,12 @@ export type State = {
 	isConnected: boolean;
 	networks: ClientNetwork[];
 	// TODO: type
-	mentions: ClientMention[];
+	mentions: InboxEntry[];
 	hasServiceWorker: boolean;
 	/** Chrome offered `beforeinstallprompt` and the app is not installed yet. */
 	installPromptAvailable: boolean;
+	/** The install guide (InstallGuide.vue) is open. */
+	installGuideOpen: boolean;
 	pushNotificationState: string;
 	serverConfiguration: SharedConfiguration | LockedSharedConfiguration | null;
 	sidebarOpen: boolean;
@@ -161,6 +165,7 @@ const state = (): State => ({
 	mentions: [],
 	hasServiceWorker: false,
 	installPromptAvailable: false,
+	installGuideOpen: false,
 	pushNotificationState: "unsupported",
 	serverConfiguration: null,
 	sidebarOpen: false,
@@ -187,7 +192,15 @@ type Getters = {
 		channel: ClientChan;
 	} | null;
 	findNetwork: (state: State) => (uuid: string) => ClientNetwork | null;
-	highlightCount(state: State): number;
+	/** The conversation an inbox entry belongs to, when this page has it. */
+	findConversation: (state: State) => (network: string, target: string) => NetChan | null;
+	/** What the inbox shows: every entry but those of muted conversations. */
+	visibleMentions: (
+		state: State,
+		getters: {findConversation: (network: string, target: string) => NetChan | null}
+	) => InboxEntry[];
+	/** Unread mentions as the inbox shows them (docs/projects/inbox.md). */
+	mentionCount(state: State, getters: {visibleMentions: InboxEntry[]}): number;
 	title(state: State, getters: Omit<Getters, "title">): string;
 };
 
@@ -227,6 +240,14 @@ const getters: Getters = {
 
 		return null;
 	},
+	findConversation: (state) => (network: string, target: string) => {
+		const key = conversationKey(network, target);
+		const net = state.networks.find((n) => n.uuid === network);
+		const channel = net?.channels.find((c) => conversationKey(network, c.name) === key);
+		return net && channel ? {network: net, channel} : null;
+	},
+	visibleMentions: (state, getters) =>
+		state.mentions.filter((e) => !getters.findConversation(e.network, e.target)?.channel.muted),
 	findNetwork: (state) => (uuid: string) => {
 		for (const network of state.networks) {
 			if (network.uuid === uuid) {
@@ -236,25 +257,11 @@ const getters: Getters = {
 
 		return null;
 	},
-	highlightCount(state) {
-		let highlightCount = 0;
-
-		for (const network of state.networks) {
-			for (const channel of network.channels) {
-				if (channel.muted) {
-					continue;
-				}
-
-				highlightCount += channel.highlight;
-			}
-		}
-
-		return highlightCount;
-	},
+	// The one count of unread mentions: the @ button, the title, the
+	// favicon and the app icon all read it.
+	mentionCount: (state, getters) => getters.visibleMentions.length,
 	title(state, getters) {
-		const alertEventCount = getters.highlightCount
-			? `(${getters.highlightCount.toString()}) `
-			: "";
+		const alertEventCount = getters.mentionCount ? `(${getters.mentionCount.toString()}) ` : "";
 		const channelname = state.activeChannel ? `${state.activeChannel.channel.name} — ` : "";
 
 		return alertEventCount + channelname + state.branding.appName;
@@ -279,6 +286,7 @@ type Mutations = {
 	): void;
 	hasServiceWorker(state: State): void;
 	installPromptAvailable(state: State, available: boolean): void;
+	installGuideOpen(state: State, open: boolean): void;
 	/** A newer build's service worker took over; a reload picks it up. */
 	updateAvailable(state: State): void;
 	pushNotificationState(
@@ -346,6 +354,7 @@ const mutations: Mutations = {
 		state.mentions = mentions;
 	},
 	removeNetwork(state, networkId) {
+		state.mentions = state.mentions.filter((e) => e.network !== networkId);
 		state.networks.splice(
 			state.networks.findIndex((n) => n.uuid === networkId),
 			1
@@ -359,6 +368,9 @@ const mutations: Mutations = {
 	},
 	installPromptAvailable(state, available) {
 		state.installPromptAvailable = available;
+	},
+	installGuideOpen(state, open) {
+		state.installGuideOpen = open;
 	},
 	updateAvailable(state) {
 		if (state.serverConfiguration) {
@@ -451,25 +463,10 @@ export type TypedCommit = <T extends keyof Mutations>(
 	payload?: Parameters<Mutations[T]>[1] | null,
 	options?: {root?: boolean}
 ) => ReturnType<Mutations[T]>;
-type TypedActionContext = Omit<ActionContext<State, State>, "commit"> & {
-	commit: TypedCommit;
-};
-
-type Actions = {
-	partChannel(context: TypedActionContext, payload: NetChan): void;
-};
-
-const actions: Actions = {
-	partChannel({commit, state}, netChan) {
-		const mentions = state.mentions.filter((msg) => !(msg.chanId === netChan.channel.id));
-		commit("mentions", mentions);
-	},
-};
 
 const storePattern = {
 	state,
 	mutations,
-	actions,
 	getters,
 };
 

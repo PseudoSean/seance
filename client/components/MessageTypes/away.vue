@@ -3,7 +3,9 @@
 		<ParsedMessage v-if="message.self" :network="network" :message="message" />
 		<template v-else>
 			{{ parts[0] }}<bdi><Username :user="message.from" /></bdi>{{ parts[1] }}
-			<i class="away-message">(<ParsedMessage :network="network" :message="message" />)</i>
+			<i v-if="message.text" class="away-message"
+				>(<ParsedMessage :network="network" :message="message" />)</i
+			>
 		</template>
 	</span>
 </template>

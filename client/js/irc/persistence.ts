@@ -17,7 +17,9 @@
  *   `BEFORE` back to the newest line we held; history.ts)
  *   (catchup.ts), which is what actually fills the gap — unless the server
  *   is filling it itself, see {@link serverReplayCovers};
- * - after `STATUS ON` the autojoin `JOIN` waits for that batch (or
+ * - after `STATUS ON` (or a setting of ON not in force, `ON OFF`: an alias
+ *   of another device's session reads so, and only learns it is one from
+ *   the NOTE after the MOTD) the autojoin `JOIN` waits for that batch (or
  *   {@link RESTORE_WAIT_MS}, whichever is first) and then covers only the
  *   channels the server did not restore. JOINing a channel the server is
  *   restoring anyway is ignored at best and, while another client of the
@@ -38,6 +40,7 @@ import type {Channel, MsgRef} from "./channel";
 import type {IrcClient} from "./client";
 import type {BatchHandler, OpenBatch} from "./handlers/batch";
 import {formatLine, IrcMessage, utf8ByteLength} from "./message";
+import {presenceResumed} from "./presence";
 
 /** The persistence cap, and the profile every account has implicitly. */
 export const PERSISTENCE_CAP = "draft/persistence";
@@ -106,10 +109,10 @@ export function beginSettling(client: IrcClient): void {
 /**
  * Registration completed and a session is being restored (`PERSISTENCE
  * STATUS ON`, or a cursor the server took): hold the autojoin until the
- * server's restoration has been applied, or until RESTORE_WAIT_MS pass
- * without a sign of one (nothing was held after all).
+ * server's restoration has been applied, or until `wait` (RESTORE_WAIT_MS)
+ * passes without a sign of one (nothing was held after all).
  */
-export function awaitRestoration(client: IrcClient): void {
+export function awaitRestoration(client: IrcClient, wait = RESTORE_WAIT_MS): void {
 	const state = stateOf(client);
 
 	if (state.timer !== null) {
@@ -117,7 +120,7 @@ export function awaitRestoration(client: IrcClient): void {
 	}
 
 	beginSettling(client);
-	arm(client, state, RESTORE_WAIT_MS);
+	arm(client, state, wait);
 }
 
 /**
@@ -146,7 +149,7 @@ function arm(client: IrcClient, state: RestoreState, delay: number): void {
 	const wait = Math.max(0, Math.min(delay, state.deadline - Date.now()));
 	state.timer = setTimeout(() => {
 		state.timer = null;
-		client.autojoin();
+		client.restorationSettled();
 	}, wait);
 }
 
@@ -185,8 +188,10 @@ export const persistenceBatch: BatchHandler = (client, batch) => {
 	}
 
 	if (waiting) {
-		client.autojoin();
+		client.restorationSettled();
 	}
+
+	presenceResumed(client);
 };
 
 // ------------------------------------------------------- the ATTACH cursor
@@ -311,6 +316,8 @@ export const bouncerReplayBatch: BatchHandler = (client, batch) => {
 	for (const msg of batch.messages) {
 		client.handleMessage(msg);
 	}
+
+	presenceResumed(client);
 };
 
 /**

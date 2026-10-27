@@ -14,7 +14,9 @@
 //
 // Claims:
 //   1. connected: send enabled, no strip, nothing faded;
-//   2. the socket cut and dials refused: the strip says "Connecting to …",
+//   2. the socket cut and dials refused: no strip for the first seconds (a
+//      quick reconnect says nothing), then, once the network has been down
+//      for 10 s, the strip says "Connecting to …" or counts the retry down;
 //      the send button is disabled, the view and the sidebar rows fade;
 //   3. Enter with plain text keeps the draft (nothing is sent); a slash
 //      command re-enables the button;
@@ -93,7 +95,20 @@ export default async function run(page) {
 	}
 }
 
+// These claims are about the back-off schedule as such. Against a proxy that
+// refuses every dial, the dial ledger (irc/dialLedger.ts) would rightly turn
+// the third quick failure into the server-throttle wait, which has its own
+// scenario (reconnect-throttle.mjs); so the ledger is kept empty here.
+const NO_DIAL_LEDGER = `(() => {
+	const set = Storage.prototype.setItem;
+	Storage.prototype.setItem = function (key, value) {
+		if (key === "thelounge.state.dials") return;
+		return set.call(this, key, value);
+	};
+})()`;
+
 async function check(page, proxy) {
+	await page.addInitScript(NO_DIAL_LEDGER);
 	// 1. Connected through the proxy, in #seance. On a phone the form's
 	// submit is below the fold; a real click needs it on screen.
 	await page.goto(page.url, {waitForSelector: "#connect form"});
@@ -125,8 +140,10 @@ async function check(page, proxy) {
 	proxy.refuse();
 	page.expectWsErrors = true;
 	proxy.cut();
+	await page.sleep(3000);
+	page.check("2. no strip while a reconnect may still be quick", (await page.count(BAR)) === 0);
 	await page.waitFor(`document.querySelector(${JSON.stringify(BAR)})`, {
-		timeout: 10000,
+		timeout: 15000,
 		label: "the connection strip",
 	});
 	await page.sleep(FADE_MS);

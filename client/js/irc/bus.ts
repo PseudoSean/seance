@@ -8,8 +8,12 @@
 import type {EventBus} from "../socket";
 import type {IrcClient} from "./client";
 import {requestMore} from "./history";
+import {refreshOper, setSnomask} from "./oper";
+import {request} from "./request";
 import * as saved from "./saved-networks";
+import {checkServices, servicesBan} from "./services";
 import type {ConnectOptions} from "./types";
+import type {NetworkMode} from "../helpers/dnd";
 import {REPLY_TAG} from "./wire";
 
 export interface ClientRegistry {
@@ -43,6 +47,8 @@ export function networkInfo(
 		name: stored?.name || client?.name || "",
 		nick: client?.nick ?? stored?.nick ?? "",
 		connected: client?.isConnected ?? false,
+		// Always present, so a store network set back to None loses it too.
+		services: stored?.services,
 	};
 }
 
@@ -113,11 +119,11 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 	// Web Push (draft/webpush): the browser subscription lives in
 	// client/js/webpush.ts; these hand it to the network's server. The
 	// echoes / FAILs come back as `webpush:state` (handlers/webpush.ts).
-	bus.handle("webpush:register", ({network, endpoint, keys}) => {
+	bus.handle("webpush:register", ({network, endpoint, keys, renewal}) => {
 		const client = registry.clientForNetwork(network);
 
 		if (client) {
-			client.webpushRegister(endpoint, keys);
+			client.webpushRegister(endpoint, keys, {renewal});
 		}
 	});
 
@@ -129,13 +135,18 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 		}
 	});
 
-	// Account metadata writes for webpush settings (payload tier, mute/
-	// snooze list). SET with an empty value deletes the key.
+	// Account metadata writes for webpush settings (the payload tier; the
+	// mute list is pushMute.ts's). Written private: a public key is listed in
+	// everyone's WHOIS of us (nefarious2 m_whois.c), which told the world we
+	// are subscribed to push. The server reads the tier whatever its
+	// visibility. SET with an empty value deletes the key.
 	bus.handle("webpush:metadata", ({network, key, value}) => {
 		const client = registry.clientForNetwork(network);
 
 		if (client) {
-			client.send(value ? `METADATA * SET ${key} * :${value}` : `METADATA * SET ${key}`);
+			client.send(
+				value ? `METADATA * SET ${key} private :${value}` : `METADATA * SET ${key}`
+			);
 		}
 	});
 
@@ -153,6 +164,77 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 
 	bus.handle("persistence:sessions:logout", (params) => {
 		persistenceClient(params)?.send("PERSISTENCE DETACH");
+	});
+
+	// Oper tools (oper.ts, request.ts): a labeled request whose whole answer
+	// comes back raw as `oper:reply` (the UI parses it with the profile), the
+	// snomask, a refresh of what OperState holds, and the notice log.
+	bus.handle("oper:request", ({network, id, line, untagged, end}) => {
+		const client = registry.clientForNetwork(network);
+
+		if (!client) {
+			bus.dispatch("oper:reply", {network, id, lines: [], outcome: "closed"});
+			return;
+		}
+
+		void request(client, line, {untagged, end}).then((reply) => {
+			bus.dispatch("oper:reply", {
+				network,
+				id,
+				lines: reply.lines.map((msg) => msg.raw),
+				outcome: reply.outcome,
+			});
+		});
+	});
+
+	bus.handle("oper:snomask", ({network, mask}) => {
+		const client = registry.clientForNetwork(network);
+
+		if (client) {
+			void setSnomask(client, mask);
+		}
+	});
+
+	bus.handle("oper:refresh", ({network}) => {
+		const client = registry.clientForNetwork(network);
+
+		if (client) {
+			void refreshOper(client);
+		}
+	});
+
+	bus.handle("oper:notices:get", ({network}) => {
+		const client = registry.clientForNetwork(network);
+
+		bus.dispatch("oper:notices", {network, entries: client ? client.noticeLog.all() : []});
+	});
+
+	// Services support (services.ts): the edit form's liveness check on the
+	// bots, and a G-line or shun asked of the oper service.
+	bus.handle("services:check", ({network, id, services}) => {
+		const client = registry.clientForNetwork(network);
+
+		if (!client) {
+			bus.dispatch("services:checked", {network, id, results: [], failure: "closed"});
+			return;
+		}
+
+		void checkServices(client, services).then((result) => {
+			bus.dispatch("services:checked", {network, id, ...result});
+		});
+	});
+
+	bus.handle("services:ban", ({network, id, type, mask, seconds, reason}) => {
+		const client = registry.clientForNetwork(network);
+
+		if (!client) {
+			bus.dispatch("services:banned", {network, id, outcome: "closed"});
+			return;
+		}
+
+		void servicesBan(client, {type, mask, seconds, reason}).then((reply) => {
+			bus.dispatch("services:banned", {network, id, ...reply});
+		});
 	});
 
 	bus.handle("open", (id) => {
@@ -212,9 +294,26 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 			return;
 		}
 
-		// Unsaved live network (e.g. `/connect host`): seed from its options.
-		const base = existing ?? saved.normalize({...(client?.editableInfo ?? {}), uuid});
+		// Unsaved live network (e.g. `/connect host`): seed from its options,
+		// and the mode the lobby dot set (the form posts none it was not given).
+		const base =
+			existing ??
+			saved.normalize({
+				...(client?.editableInfo ?? {}),
+				uuid,
+				presenceMode: client?.presenceMode,
+			});
 		const next = saved.fromForm(data, base);
+		// A different mode from the form is a choice made now (shared,
+		// irc/presenceShare.ts); the same mode posted again is not.
+		const was = client?.presenceMode ?? saved.presenceModeOf(existing);
+		const modeChosen = saved.presenceModeOf(next) !== was;
+
+		// The time is never the form's: its defaults may be from before a
+		// choice made since (another device's, adopted, or the dot's).
+		const kept = client?.presenceAt ?? existing?.presenceAt;
+		next.presenceAt = modeChosen ? Date.now() : kept;
+
 		saved.save(next);
 
 		if (client) {
@@ -231,12 +330,62 @@ export function registerBusHandlers(bus: EventBus, registry: ClientRegistry): vo
 			if (next.name && next.name !== client.name) {
 				client.setNetworkName(next.name);
 			}
+
+			// Services support applies at once: the feed and the ban path read it live.
+			client.setServices(next.services);
+			client.setPresenceMode(
+				saved.presenceModeOf(next),
+				modeChosen ? next.presenceAt : undefined
+			);
 		}
 
 		const info = networkInfo(registry, uuid);
 
 		if (info) {
 			bus.dispatch("network:info", info);
+		}
+	});
+
+	// The lobby row's presence dot (NetworkLobby.vue), the network form and
+	// another device's DND Off: a choice made on this device, applied at
+	// once, stamped with its time and shared (irc/presenceShare.ts), and
+	// saved when the network is a saved one.
+	const setPresenceMode = (network: string, mode: NetworkMode): void => {
+		const client = registry.clientForNetwork(network);
+		const existing = saved.get(network);
+		const at = Date.now();
+
+		if (existing) {
+			saved.save({
+				...existing,
+				presenceMode: mode === "global" ? undefined : mode,
+				presenceAt: at,
+			});
+		}
+
+		client?.setPresenceMode(mode, at);
+	};
+
+	bus.handle("network:presence-mode", ({network, mode}) => setPresenceMode(network, mode));
+
+	// `dnd:cleared` (another device's DND Off, irc/pushMute.ts) leaves the
+	// network modes alone: a mode is the shared choice (irc/presenceShare.ts),
+	// and a device that leaves mode dnd sends its new mode itself. Turning it
+	// to auto here stamped a newer choice than the one that cleared the mute,
+	// and every device adopted auto. client/js/dnd.ts turns this device's own
+	// DND off on it.
+
+	// A newer choice from another device, adopted (irc/presenceShare.ts):
+	// saved, so the next load declares it.
+	bus.on("network:presence-shared", ({network, mode, at}) => {
+		const existing = saved.get(network);
+
+		if (existing) {
+			saved.save({
+				...existing,
+				presenceMode: mode === "global" ? undefined : mode,
+				presenceAt: at,
+			});
 		}
 	});
 

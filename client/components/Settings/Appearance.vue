@@ -3,20 +3,26 @@
 		<h2>{{ t("settings.appearance.messagesHeading") }}</h2>
 		<div>
 			<label class="opt">
-				<input :checked="store.state.settings.motd" type="checkbox" name="motd" />
+				<input v-switch :checked="store.state.settings.motd" type="checkbox" name="motd" />
 				{{ t("settings.appearance.showMotd") }}
 				<abbr :title="motdTitle">MOTD</abbr>
 			</label>
 		</div>
 		<div>
 			<label class="opt">
-				<input :checked="store.state.settings.markdown" type="checkbox" name="markdown" />
+				<input
+					v-switch
+					:checked="store.state.settings.markdown"
+					type="checkbox"
+					name="markdown"
+				/>
 				{{ t("settings.appearance.markdown") }}
 			</label>
 		</div>
 		<div>
 			<label class="opt">
 				<input
+					v-switch
 					:checked="store.state.settings.showSeconds"
 					type="checkbox"
 					name="showSeconds"
@@ -27,6 +33,7 @@
 		<div>
 			<label class="opt">
 				<input
+					v-switch
 					:checked="store.state.settings.use12hClock"
 					type="checkbox"
 					name="use12hClock"
@@ -34,10 +41,28 @@
 				{{ t("settings.appearance.use12hClock") }}
 			</label>
 		</div>
+		<h2 id="label-own-messages">{{ t("settings.appearance.ownMessagesHeading") }}</h2>
+		<div role="group" aria-labelledby="label-own-messages" class="own-messages-options">
+			<label v-for="style in ownMessageStyles" :key="style" class="opt">
+				<input
+					:checked="ownMessages === style"
+					type="radio"
+					name="ownMessages"
+					:value="style"
+				/>
+				{{ ownMessageStyleLabels[style] }}
+				<span class="own-messages-hint">{{ ownMessageHints[style] }}</span>
+			</label>
+		</div>
 		<h2 id="label-media-previews">{{ t("settings.appearance.mediaHeading") }}</h2>
 		<div role="group" aria-labelledby="label-media-previews">
 			<label class="opt">
-				<input :checked="store.state.settings.media" type="checkbox" name="media" />
+				<input
+					v-switch
+					:checked="store.state.settings.media"
+					type="checkbox"
+					name="media"
+				/>
 				{{ t("settings.appearance.media") }}
 			</label>
 			<div
@@ -156,6 +181,7 @@
 		<div>
 			<label class="opt">
 				<input
+					v-switch
 					:checked="store.state.settings.coloredNicks"
 					type="checkbox"
 					name="coloredNicks"
@@ -164,6 +190,7 @@
 			</label>
 			<label class="opt">
 				<input
+					v-switch
 					:checked="store.state.settings.autocomplete"
 					type="checkbox"
 					name="autocomplete"
@@ -195,7 +222,26 @@
 		</div>
 
 		<h2 id="label-font-size">{{ t("settings.appearance.fontSizeHeading") }}</h2>
-		<div role="group" aria-labelledby="label-font-size" class="font-size-setting">
+		<div v-if="systemTextSize">
+			<label class="opt">
+				<input
+					v-switch
+					:checked="store.state.settings.matchSystemTextSize"
+					type="checkbox"
+					name="matchSystemTextSize"
+				/>
+				{{ t("settings.appearance.matchSystemTextSize") }}
+			</label>
+			<p v-if="store.state.settings.matchSystemTextSize" class="theme-pair-hint">
+				{{ systemTextSizeHint }}
+			</p>
+		</div>
+		<div
+			v-if="!matchingSystemTextSize"
+			role="group"
+			aria-labelledby="label-font-size"
+			class="font-size-setting"
+		>
 			<!-- No `name`: the window's generic @change handler would store the
 			     raw slider index. While the slider moves only the sample below
 			     follows it; the setting is applied when it is let go. -->
@@ -223,7 +269,12 @@
 			</datalist>
 			<span class="font-size-value" aria-hidden="true">{{ shownLabel }}</span>
 		</div>
-		<div class="font-size-sample" :style="{fontSize: sampleFontSize}" aria-hidden="true">
+		<div
+			v-if="!matchingSystemTextSize"
+			class="font-size-sample"
+			:style="{fontSize: sampleFontSize}"
+			aria-hidden="true"
+		>
 			<div v-for="line in sampleLines" :key="line.from" class="line">
 				<span class="time">{{ line.time }}</span>
 				<span class="from user" :class="line.color">{{ line.from }}</span>
@@ -233,6 +284,17 @@
 
 		<h2>{{ t("settings.appearance.theme") }}</h2>
 		<div>
+			<label class="opt">
+				<input
+					v-switch
+					:checked="store.state.settings.matchSystemAppearance"
+					type="checkbox"
+					name="matchSystemAppearance"
+				/>
+				{{ t("settings.appearance.matchSystemAppearance") }}
+			</label>
+		</div>
+		<div>
 			<label for="theme-select" class="sr-only">{{ t("settings.appearance.theme") }}</label>
 			<select
 				id="theme-select"
@@ -240,15 +302,61 @@
 				name="theme"
 				class="input"
 			>
-				<option
-					v-for="theme in store.state.serverConfiguration?.themes"
-					:key="theme.name"
-					:value="theme.name"
-				>
-					{{ theme.displayName }}
+				<option v-for="choice in themeChoiceList" :key="choice.value" :value="choice.value">
+					{{ choice.label }}
 				</option>
 			</select>
+			<p class="theme-pair-hint">{{ themePairHint }}</p>
 		</div>
+
+		<!-- A theme's own settings, shown while it is the theme. Only ps has
+		     any; another theme would add its block here, keyed by its name. -->
+		<template v-if="store.state.settings.theme === 'ps'">
+			<h2 id="label-ps-animation">{{ t("settings.appearance.psAnimationHeading") }}</h2>
+			<div role="group" aria-labelledby="label-ps-animation" class="scene-motion-options">
+				<label v-for="level in sceneMotions" :key="level" class="opt">
+					<input
+						:checked="psAnimation === level"
+						type="radio"
+						name="psAnimation"
+						:value="level"
+					/>
+					{{ sceneMotionLabels[level] }}
+					<span class="opt-hint">{{ sceneMotionHints[level] }}</span>
+				</label>
+				<label class="opt">
+					<input
+						v-switch
+						:checked="store.state.settings.psPauseWhenAway"
+						type="checkbox"
+						name="psPauseWhenAway"
+					/>
+					{{ t("settings.appearance.psPauseWhenAway") }}
+					<span class="opt-hint">{{ t("settings.appearance.psPauseWhenAwayHint") }}</span>
+				</label>
+			</div>
+			<h2 id="label-ps-words">{{ t("settings.appearance.psWordsHeading") }}</h2>
+			<div role="group" aria-labelledby="label-ps-words" class="scene-motion-options">
+				<label v-for="w in psWords" :key="w" class="opt">
+					<input :checked="psWordsValue === w" type="radio" name="psWords" :value="w" />
+					{{ psWordsLabels[w] }}
+					<span class="opt-hint">{{ psWordsHints[w] }}</span>
+				</label>
+			</div>
+			<h2 id="label-ps-layout">{{ t("settings.appearance.psLayoutHeading") }}</h2>
+			<div role="group" aria-labelledby="label-ps-layout" class="scene-motion-options">
+				<label class="opt">
+					<input
+						v-switch
+						:checked="store.state.settings.psGroupMessages"
+						type="checkbox"
+						name="psGroupMessages"
+					/>
+					{{ t("settings.appearance.psGroupMessages") }}
+					<span class="opt-hint">{{ t("settings.appearance.psGroupMessagesHint") }}</span>
+				</label>
+			</div>
+		</template>
 
 		<div>
 			<h2>{{ t("settings.appearance.customStylesheet") }}</h2>
@@ -272,6 +380,21 @@ textarea#user-specified-css-input {
 	height: 100px;
 }
 
+.own-messages-options .own-messages-hint,
+.scene-motion-options .opt-hint {
+	color: var(--body-color-muted);
+}
+
+.theme-pair-hint {
+	color: var(--body-color-muted);
+	margin: 0.25rem 0 0;
+}
+
+.own-messages-options .own-messages-hint::before,
+.scene-motion-options .opt-hint::before {
+	content: " — ";
+}
+
 .font-size-setting {
 	display: flex;
 	flex-wrap: wrap;
@@ -293,6 +416,7 @@ textarea#user-specified-css-input {
 
 .font-size-setting input[type="range"] {
 	display: block;
+	accent-color: var(--button-color);
 	width: 100%;
 	height: 100%;
 	margin: 0;
@@ -346,12 +470,27 @@ textarea#user-specified-css-input {
 import {computed, defineComponent, ref} from "vue";
 import {useStore} from "../../js/store";
 import {useI18n} from "../../js/i18n";
+import {normalizeSceneMotion, SCENE_MOTIONS, type SceneMotion} from "../../js/themeScene";
+import {normalizePsWords, psWords, type PsWords} from "../../js/helpers/psWords";
+import {
+	describeThemePairs,
+	effectiveTheme,
+	themeChoices,
+	themePartner,
+} from "../../js/helpers/themeAppearance";
+import {isIOSShell} from "../../js/helpers/capacitor";
+import {systemTextSizeAvailable} from "../../js/helpers/systemTextSize";
 import {
 	fontSizeScale,
 	fontSizes,
 	normalizeFontSize,
 	type FontSize,
 } from "../../js/helpers/fontSize";
+import {
+	normalizeOwnMessageStyle,
+	ownMessageStyles,
+	OwnMessageStyle,
+} from "../../js/helpers/ownMessages";
 import {
 	clearTrusted,
 	splitKey,
@@ -425,6 +564,55 @@ export default defineComponent({
 
 		const fontSize = computed(() => normalizeFontSize(store.state.settings.fontSize));
 
+		const ownMessages = computed(() =>
+			normalizeOwnMessageStyle(store.state.settings.ownMessages)
+		);
+		// Labels and hints translate here, at the render site, like the font
+		// size steps below: the module is Vue-free.
+		const ownMessageStyleLabels = computed<Record<OwnMessageStyle, string>>(() => ({
+			muted: t("settings.appearance.ownMessagesMuted"),
+			band: t("settings.appearance.ownMessagesBand"),
+			plain: t("settings.appearance.ownMessagesPlain"),
+		}));
+		const ownMessageHints = computed<Record<OwnMessageStyle, string>>(() => ({
+			muted: t("settings.appearance.ownMessagesMutedHint"),
+			band: t("settings.appearance.ownMessagesBandHint"),
+			plain: t("settings.appearance.ownMessagesPlainHint"),
+		}));
+
+		// The ps theme's Scene animation levels (themeScene.ts SceneMotion).
+		const psAnimation = computed(() => normalizeSceneMotion(store.state.settings.psAnimation));
+		const sceneMotionLabels = computed<Record<SceneMotion, string>>(() => ({
+			auto: t("settings.appearance.psMotionAuto"),
+			full: t("settings.appearance.psMotionFull"),
+			calm: t("settings.appearance.psMotionCalm"),
+			still: t("settings.appearance.psMotionStill"),
+		}));
+		const sceneMotionHints = computed<Record<SceneMotion, string>>(() => ({
+			auto: t("settings.appearance.psMotionAutoHint"),
+			full: t("settings.appearance.psMotionFullHint"),
+			calm: t("settings.appearance.psMotionCalmHint"),
+			still: t("settings.appearance.psMotionStillHint"),
+		}));
+		// The ps theme's Words over the plains (helpers/psWords.ts; docs/projects/ps-words.md).
+		const psWordsValue = computed(() => normalizePsWords(store.state.settings.psWords));
+		const psWordsLabels = computed<Record<PsWords, string>>(() => ({
+			bubbles: t("settings.appearance.psWordsBubbles"),
+			glass: t("settings.appearance.psWordsGlass"),
+			scrim: t("settings.appearance.psWordsScrim"),
+			outline: t("settings.appearance.psWordsOutline"),
+			rim: t("settings.appearance.psWordsRim"),
+			glow: t("settings.appearance.psWordsGlow"),
+		}));
+		const psWordsHints = computed<Record<PsWords, string>>(() => ({
+			bubbles: t("settings.appearance.psWordsBubblesHint"),
+			glass: t("settings.appearance.psWordsGlassHint"),
+			scrim: t("settings.appearance.psWordsScrimHint"),
+			outline: t("settings.appearance.psWordsOutlineHint"),
+			rim: t("settings.appearance.psWordsRimHint"),
+			glow: t("settings.appearance.psWordsGlowHint"),
+		}));
+
 		// The step under the slider while it is being dragged. Applying every
 		// step live re-laid out the whole page (rem chrome) under the pointer
 		// and moved the slider with it, so a drag only renders the sample
@@ -489,7 +677,64 @@ export default defineComponent({
 			}
 		};
 
+		// The list: one entry per light/dark pair while following the system,
+		// every theme on its own otherwise (helpers/themeAppearance.ts).
+		const themeChoiceList = computed(() =>
+			themeChoices(
+				store.state.serverConfiguration?.themes ?? [],
+				store.state.settings.matchSystemAppearance,
+				store.state.settings.theme
+			)
+		);
+
+		// What the toggle does for the theme picked: which half of its pair
+		// shows when, or that it has none.
+		const themePairHint = computed(() => {
+			const themes = store.state.serverConfiguration?.themes ?? [];
+			const label = (name: string) =>
+				themes.find((theme) => theme.name === name)?.displayName ?? name;
+			const chosen = store.state.settings.theme;
+			const partner = chosen ? themePartner(chosen) : null;
+
+			if (!store.state.settings.matchSystemAppearance) {
+				return "When on, each light/dark pair is one entry that shows the half matching the system.";
+			}
+
+			if (!partner) {
+				return `${label(
+					chosen
+				)} looks the same in light and dark mode; ${describeThemePairs(
+					label
+				)} follow the system.`;
+			}
+
+			const [dark, light] =
+				effectiveTheme(chosen, true, true) === chosen
+					? [chosen, partner]
+					: [partner, chosen];
+			return `${label(dark)} in dark mode, ${label(light)} in light mode.`;
+		});
+
+		// In the native shells the system's text size can stand in for the
+		// slider (helpers/systemTextSize.ts); while it does, the slider and
+		// its sample are hidden and the hint says where the size is set.
+		const systemTextSize = systemTextSizeAvailable();
+		const matchingSystemTextSize = computed(
+			() => systemTextSize && store.state.settings.matchSystemTextSize
+		);
+		const systemTextSizeHint = isIOSShell()
+			? "Set it in iOS Settings → Display & Brightness → Text Size, or Accessibility → Display & Text Size for larger sizes."
+			: "Set it in Android Settings → Display → Display size and text.";
+
 		return {
+			sceneMotions: SCENE_MOTIONS,
+			psAnimation,
+			sceneMotionLabels,
+			sceneMotionHints,
+			psWords,
+			psWordsValue,
+			psWordsLabels,
+			psWordsHints,
 			store,
 			t,
 			motdTitle,
@@ -500,12 +745,21 @@ export default defineComponent({
 			fontSizeAriaLabel,
 			customStylesheetPlaceholder,
 			untrustLabel,
+			systemTextSize,
+			matchingSystemTextSize,
+			systemTextSizeHint,
+			themePairHint,
+			themeChoiceList,
 			trustedGroups,
 			trustedCount,
 			untrust,
 			clearTrusted,
 			fontSizes,
 			fontSizeLabels,
+			ownMessages,
+			ownMessageStyles,
+			ownMessageStyleLabels,
+			ownMessageHints,
 			shownIndex,
 			shownLabel,
 			sampleFontSize,

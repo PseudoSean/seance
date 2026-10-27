@@ -1,6 +1,6 @@
 <template>
 	<div>
-		<div v-if="canRegisterProtocol || store.state.installPromptAvailable">
+		<div v-if="canRegisterProtocol || store.state.installPromptAvailable || canShowGuide">
 			<h2>{{ t("settings.general.nativeApp") }}</h2>
 			<button
 				v-if="store.state.installPromptAvailable"
@@ -18,12 +18,52 @@
 			>
 				{{ t("settings.general.openLinks", {appName}) }}
 			</button>
+			<button
+				v-if="canShowGuide"
+				id="show-install-guide"
+				type="button"
+				class="btn"
+				@click.prevent="showInstallGuide"
+			>
+				How to install {{ appName }}
+			</button>
+		</div>
+		<div v-if="keepAliveAvailable">
+			<h2>Background connection</h2>
+			<div>
+				<label class="opt">
+					<input
+						v-switch
+						:checked="store.state.settings.keepConnected"
+						type="checkbox"
+						name="keepConnected"
+					/>
+					Stay connected in the background
+					<span
+						class="tooltipped tooltipped-n tooltipped-no-delay"
+						aria-label="Keeps your connections open while the app is not on screen, with a notification Android shows the whole time. Uses more battery."
+					>
+						<button class="extra-help" />
+					</span>
+				</label>
+				<p
+					v-if="
+						store.state.settings.keepConnected &&
+						keepAliveStatus?.notifications === false
+					"
+					class="keepalive-hint"
+				>
+					Notifications are off for {{ appName }} in Android's settings, so the connection
+					notification is hidden. Android may still stop the app.
+				</p>
+			</div>
 		</div>
 		<div v-if="store.state.serverConfiguration?.fileUpload">
 			<h2>{{ t("settings.general.uploadsHeading") }}</h2>
 			<div>
 				<label class="opt">
 					<input
+						v-switch
 						:checked="store.state.settings.uploadCanvas"
 						type="checkbox"
 						name="uploadCanvas"
@@ -43,6 +83,7 @@
 			<div>
 				<label class="opt">
 					<input
+						v-switch
 						:checked="store.state.settings.sendTypingNotifications"
 						type="checkbox"
 						name="sendTypingNotifications"
@@ -51,6 +92,26 @@
 					<span
 						class="tooltipped tooltipped-n tooltipped-no-delay"
 						:aria-label="sendTypingHelp"
+					>
+						<button class="extra-help" />
+					</span>
+				</label>
+			</div>
+		</div>
+		<div>
+			<h2>{{ t("settings.general.privateHeading") }}</h2>
+			<div>
+				<label class="opt">
+					<input
+						v-switch
+						:checked="store.state.settings.keepPrivateConversations"
+						type="checkbox"
+						name="keepPrivateConversations"
+					/>
+					{{ t("settings.general.keepPrivate") }}
+					<span
+						class="tooltipped tooltipped-n tooltipped-no-delay"
+						:aria-label="keepPrivateHelp"
 					>
 						<button class="extra-help" />
 					</span>
@@ -79,7 +140,7 @@
 			<h2>{{ t("settings.general.backupHeading") }}</h2>
 			<p>{{ t("settings.general.backupIntro") }}</p>
 			<label class="opt">
-				<input v-model="includePasswords" type="checkbox" />
+				<input v-model="includePasswords" v-switch type="checkbox" />
 				{{ t("settings.general.includePasswords") }}
 				<span
 					class="tooltipped tooltipped-n tooltipped-no-delay"
@@ -123,14 +184,24 @@
 </style>
 
 <script lang="ts">
-import {computed, defineComponent, onMounted, ref} from "vue";
+import {computed, defineComponent, onMounted, onUnmounted, ref} from "vue";
 import {useStore} from "../../js/store";
 import {useI18n} from "../../js/i18n";
-import {promptInstall} from "../../js/pwa";
+import {canDescribeInstall, openInstallGuide, promptInstall} from "../../js/pwa";
+import {MAX_MESSAGES, MAX_QUERIES} from "../../js/irc/querylog";
+import {
+	keepAliveAvailable as isKeepAliveAvailable,
+	keepAliveStatus as fetchKeepAliveStatus,
+	onKeepAliveStatus,
+	type KeepAliveStatus,
+} from "../../js/helpers/keepAlive";
 import eventbus from "../../js/eventbus";
+import {currentPlatform} from "../../js/helpers/platformDefaults";
+import {createState} from "../../js/settings";
 import {
 	applyBackup,
 	BackupFormatError,
+	BackupStorageError,
 	BackupFormatErrorCode,
 	collectBackup,
 	decodeBackup,
@@ -150,19 +221,51 @@ export default defineComponent({
 		const appName = computed(() => store.state.branding.appName);
 		const uploadCanvasHelp = computed(() => t("settings.general.uploadCanvasHelp"));
 		const sendTypingHelp = computed(() => t("settings.general.sendTypingHelp"));
+		const keepPrivateHelp = computed(() =>
+			t("settings.general.keepPrivateHelp", {lines: MAX_MESSAGES, queries: MAX_QUERIES})
+		);
 		const awayPlaceholder = computed(() =>
 			t("settings.general.awayPlaceholder", {appName: appName.value})
 		);
 		const includePasswordsHelp = computed(() => t("settings.general.includePasswordsHelp"));
 		const fileAriaLabel = computed(() => t("settings.general.fileAria"));
 		const canRegisterProtocol = ref(false);
+		const keepAliveAvailable = isKeepAliveAvailable();
+		const keepAliveStatus = ref<KeepAliveStatus | null>(null);
+
+		// The status follows every call the shell answers — the toggle's
+		// enable resolves only once Android's permission prompt is answered,
+		// so the hint below keeps up without polling.
+		let stopKeepAlive: (() => void) | null = null;
 
 		onMounted(() => {
+			if (keepAliveAvailable) {
+				stopKeepAlive = onKeepAliveStatus((status) => {
+					keepAliveStatus.value = status;
+				});
+				void fetchKeepAliveStatus();
+			}
+
 			// Enable protocol handler registration if supported,
 			// and the network configuration is not locked
 			canRegisterProtocol.value =
 				!!window.navigator.registerProtocolHandler &&
 				!store.state.serverConfiguration?.lockNetwork;
+		});
+
+		// The guide re-opens from here after "don't show this again".
+		const canShowGuide = ref(false);
+
+		onMounted(() => {
+			canShowGuide.value = canDescribeInstall();
+		});
+
+		const showInstallGuide = () => {
+			openInstallGuide();
+		};
+
+		onUnmounted(() => {
+			stopKeepAlive?.();
 		});
 
 		const nativeInstallPrompt = () => {
@@ -198,6 +301,7 @@ export default defineComponent({
 					includePasswords: includePasswords.value,
 					settings: {...store.state.settings},
 					app: appName.value,
+					platform: currentPlatform(),
 				});
 				const bytes = await encodeBackup(backup);
 				const blob = new Blob([bytes as BlobPart], {type: "application/octet-stream"});
@@ -285,7 +389,22 @@ export default defineComponent({
 
 					// Nothing runs between the write and the reload, so no
 					// in-memory state can overwrite the file's entries.
-					applyBackup(backup);
+					// Measured against this deploy's defaults, as the
+					// migration does (store-settings.ts `migrate`).
+					try {
+						applyBackup(backup, currentPlatform(), {
+							...createState(),
+							theme: store.state.serverConfiguration?.defaultTheme,
+						});
+					} catch (e) {
+						// A full device: nothing was changed (settingsBackup.ts).
+						error.value =
+							e instanceof BackupStorageError
+								? t("settings.general.importNoRoom")
+								: t("settings.general.importFailed");
+						return;
+					}
+
 					window.location.reload();
 				}
 			);
@@ -336,10 +455,15 @@ export default defineComponent({
 			t,
 			uploadCanvasHelp,
 			sendTypingHelp,
+			keepPrivateHelp,
 			awayPlaceholder,
 			includePasswordsHelp,
 			fileAriaLabel,
 			canRegisterProtocol,
+			canShowGuide,
+			showInstallGuide,
+			keepAliveAvailable,
+			keepAliveStatus,
 			nativeInstallPrompt,
 			registerProtocol,
 			includePasswords,

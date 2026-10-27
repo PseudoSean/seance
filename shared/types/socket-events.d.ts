@@ -1,11 +1,19 @@
-import {SharedMention} from "./mention";
+import {InboxEntry} from "./mention";
 import {ChanState, SharedChan} from "./chan";
-import {SharedNetwork, SharedServerOptions} from "./network";
+import {
+	ServicesConfig,
+	SharedNetwork,
+	SharedNetworkPresence,
+	SharedNetworkMode,
+	SharedPresenceMode,
+	SharedServerOptions,
+} from "./network";
 import {SharedMsg, LinkPreview, TypingState} from "./msg";
 import {SharedUser} from "./user";
 import {SharedChangelogData} from "./changelog";
 import {SharedConfiguration, LockedSharedConfiguration} from "./config";
 import {SearchResponse, SearchQuery} from "./storage";
+import {SharedOperState, SnoticeInfo} from "./oper";
 
 type Session = {
 	current: boolean;
@@ -53,8 +61,6 @@ interface ServerToClientEvents {
 
 	"sessions:list": EventHandler<Session[]>;
 
-	"mentions:list": EventHandler<SharedMention[]>;
-
 	"setting:new": EventHandler<{name: string; value: any}>;
 	"setting:all": EventHandler<{[key: string]: any}>;
 
@@ -66,6 +72,15 @@ interface ServerToClientEvents {
 
 	network: EventHandler<{network: SharedNetwork}>;
 	"network:options": EventHandler<{network: string; serverOptions: SharedServerOptions}>;
+	"network:presence": EventHandler<{network: string; presence: SharedNetworkPresence}>;
+	"network:presence-shared": EventHandler<{
+		network: string;
+		mode: SharedNetworkMode;
+		at: number;
+	}>;
+	"mode:shared": EventHandler<{network: string; mode: "online" | "auto" | "away"; at: number}>;
+	/** Another device removed the shared do-not-disturb entry while this one wanted it. */
+	"dnd:cleared": EventHandler<{network: string}>;
 	"network:status": EventHandler<{
 		network: string;
 		connected: boolean;
@@ -73,6 +88,8 @@ interface ServerToClientEvents {
 		secure: boolean;
 		/** Epoch ms of the next automatic dial, only while waiting for a retry. */
 		retryAt?: number;
+		/** That wait is the server's connection throttle, not the backoff. */
+		retryThrottled?: boolean;
 	}>;
 	/**
 	 * A connect was dropped before it registered, for a reason the user has
@@ -144,6 +161,41 @@ interface ServerToClientEvents {
 		code?: string;
 		reason?: string;
 	}>;
+	/** Being an oper on `network` changed: level, privileges, snomask, features (irc/oper.ts). */
+	"oper:state": EventHandler<{network: string; state: SharedOperState}>;
+	/**
+	 * The answer to an `oper:request`: every line of the labeled reply, raw,
+	 * in order. `outcome` says how it ended (`batch`, `lines`, `ack`,
+	 * `timeout`, `closed`).
+	 */
+	"oper:reply": EventHandler<{network: string; id: string; lines: string[]; outcome: string}>;
+	/** The notice log of `network` (oldest first), for the oper panel's Notices tab. */
+	"oper:notices": EventHandler<{
+		network: string;
+		entries: {time: number; type: string; text: string; from?: string; snotice: SnoticeInfo}[];
+	}>;
+	/**
+	 * The answer to a `services:check` (irc/services.ts `checkServices`):
+	 * each configured bot, whether it is online and whether it looks like
+	 * the package; `failure` when none could be asked.
+	 */
+	"services:checked": EventHandler<{
+		network: string;
+		id: string;
+		results: {role: string; bot: string; online: boolean; looksLikeX3: boolean}[];
+		failure?: "closed" | "timeout";
+	}>;
+	/**
+	 * The oper service's verdict on a `services:ban`: `ok` or `refused` with
+	 * its words in `text`, `timeout` when it never answered, `closed` when
+	 * the network is down.
+	 */
+	"services:banned": EventHandler<{
+		network: string;
+		id: string;
+		outcome: "ok" | "refused" | "timeout" | "closed";
+		text?: string;
+	}>;
 	/** One `PushSession` per `PERSISTENCE LIST` row, dispatched when the list closes (Settings → session panel). */
 	"persistence:sessions": EventHandler<{sessions: PushSession[]}>;
 	"msg:special": EventHandler<{chan: number; data?: Record<string, any>}>;
@@ -154,10 +206,24 @@ interface ServerToClientEvents {
 		unread?: number;
 		/**
 		 * History catch-up replay: show the message (highlight included)
-		 * but do not notify, play a sound or record a mention.
+		 * but do not notify or play a sound.
 		 */
 		replay?: boolean;
 	}>;
+	/**
+	 * Unread mentions for the inbox (docs/projects/inbox.md): a live or
+	 * catch-up highlight that counted as unread, or the highlights past the
+	 * read marker in a history page.
+	 */
+	"inbox:add": EventHandler<{entries: InboxEntry[]}>;
+	/** `target` on network `network` (uuid) is read up to `time` (ISO 8601). */
+	"inbox:read": EventHandler<{network: string; target: string; time: string}>;
+	/**
+	 * The message `msgid` in `target` on network `network` was deleted, or replaced by
+	 * an edit from `by` (whom the inbox checks against the entry's sender),
+	 * whether or not it is loaded.
+	 */
+	"inbox:drop": EventHandler<{network: string; target: string; msgid: string; by?: string}>;
 
 	init: EventHandler<{active: number; networks: SharedNetwork[]; token?: string}>;
 
@@ -229,14 +295,48 @@ interface ClientToServerEvents {
 		network: string;
 		endpoint: string;
 		keys: {p256dh: string; auth: string};
+		/** The connect-time renewal of a stored subscription: nobody is waiting, so it waits for room in the fake-lag budget. */
+		renewal?: boolean;
 	}>;
 	"webpush:unregister": EventHandler<{network: string; endpoint: string}>;
-	/** Account metadata write for webpush settings (payload tier, mute/snooze). An empty value deletes the key. */
+	/** Account metadata write for webpush settings (payload tier; the mute list is irc/pushMute.ts's). An empty value deletes the key. */
 	"webpush:metadata": EventHandler<{network: string; key: string; value: string}>;
 	/** Ask the server for the account's bouncer session(s) (`PERSISTENCE LIST`); the reply arrives as `persistence:sessions`. The network is optional — any connected client sees the same session. */
 	"persistence:sessions:list": EventHandler<{network?: string}>;
 	/** End the current device's bouncer session (`PERSISTENCE DETACH`): the hold preference clears and the session is destroyed. */
 	"persistence:sessions:logout": EventHandler<{network?: string}>;
+
+	/**
+	 * Oper tools (irc/oper.ts, irc/request.ts): send `line` to `network`
+	 * labeled and answer with `oper:reply` carrying the same `id`.
+	 * `untagged` names numerics the server sends without the label
+	 * (evilnet/nefarious2#120), `end` the numerics that end an unbatched
+	 * answer.
+	 */
+	"oper:request": EventHandler<{
+		network: string;
+		id: string;
+		line: string;
+		untagged?: string[];
+		end?: string[];
+	}>;
+	/** Set the server notice mask (decimal; 0 turns +s off) and remember it for the next oper-up. */
+	"oper:snomask": EventHandler<{network: string; mask: number}>;
+	/** Ask again for privileges, snomask and features; answered by `oper:state`. */
+	"oper:refresh": EventHandler<{network: string}>;
+	/** Ask for the notice log; answered by `oper:notices`. */
+	"oper:notices:get": EventHandler<{network: string}>;
+	/** WHOIS the services bots named in `services` (the edit form's liveness check); answered by `services:checked`. */
+	"services:check": EventHandler<{network: string; id: string; services: ServicesConfig}>;
+	/** Ask the oper service for a G-line or shun (irc/services.ts); answered by `services:banned`. */
+	"services:ban": EventHandler<{
+		network: string;
+		id: string;
+		type: "gline" | "shun";
+		mask: string;
+		seconds: number;
+		reason: string;
+	}>;
 
 	"upload:auth": NoPayloadEventHandler;
 	"upload:ping": (token: string) => void;
@@ -257,10 +357,6 @@ interface ClientToServerEvents {
 		order: SharedChan["id"][];
 	}>;
 
-	"mentions:dismiss": (msgId: number) => void;
-	"mentions:dismiss_all": NoPayloadEventHandler;
-	"mentions:get": NoPayloadEventHandler;
-
 	more: EventHandler<{target: number; lastId: number; condensed: boolean}>;
 	/** The UI dropped these messages from a channel's buffer (see bus-contract § 2). */
 	"history:trim": EventHandler<{target: number; ids: number[]}>;
@@ -276,6 +372,7 @@ interface ClientToServerEvents {
 	"network:get": (uuid: string) => void;
 	// TODO typing
 	"network:edit": (data: Record<string, any>) => void;
+	"network:presence-mode": (data: {network: string; mode: SharedNetworkMode}) => void;
 	"network:new": (data: Record<string, any>) => void;
 
 	"sign-out": (token?: string) => void;

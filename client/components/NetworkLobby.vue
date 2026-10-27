@@ -61,10 +61,37 @@
 							@click.stop="$emit('toggle-join-channel')"
 						/>
 					</span>
+					<span
+						v-if="opered"
+						aria-label="Oper panel…"
+						class="oper-panel-tooltip tooltipped tooltipped-e tooltipped-no-touch"
+					>
+						<button
+							class="oper-panel"
+							aria-label="Oper panel…"
+							@click.stop="openOperPanel"
+						/>
+					</span>
 				</div>
-				<span v-if="network.nick" :title="nickLabel" class="lobby-nick"
-					><span class="sr-only">{{ t("lobby.nickname") }}</span
-					><bdi>{{ network.nick }}</bdi></span
+				<!-- The presence dot stands before the nick, and alone when there
+				     is none; it never opens the row or starts a drag. -->
+				<span class="lobby-presence"
+					><button
+						type="button"
+						:class="['presence-dot', presenceClass]"
+						:aria-label="`Presence on ${network.name}: ${presenceText}`"
+						:title="presenceText"
+						aria-haspopup="menu"
+						:aria-expanded="presenceMenuOpen ? 'true' : 'false'"
+						@click.stop="openPresenceMenu"
+						@contextmenu.stop.prevent="openPresenceMenu"
+						@pointerdown.stop
+						@mousedown.stop
+						@touchstart.stop
+					/><span v-if="network.nick" :title="nickLabel" class="lobby-nick"
+						><span class="sr-only">{{ t("lobby.nickname") }}</span
+						><bdi>{{ network.nick }}</bdi></span
+					></span
 				>
 			</div>
 		</div>
@@ -77,11 +104,25 @@ import {useRouter} from "vue-router";
 import collapseNetwork from "../js/helpers/collapseNetwork";
 import roundBadgeNumber from "../js/helpers/roundBadgeNumber";
 import socket from "../js/socket";
+import eventbus from "../js/eventbus";
+import useMenuTrigger from "../js/hooks/use-menu-trigger";
+import {isOperOn} from "../js/helpers/operMenu";
 import webpush from "../js/webpush";
 import {useI18n} from "../js/i18n";
 import ChannelWrapper from "./ChannelWrapper.vue";
 
 import type {ClientChan, ClientNetwork} from "../js/types";
+import {NETWORK_MODES, type NetworkMode} from "../js/helpers/dnd";
+import dnd from "../js/dnd";
+import type {ContextMenuItem} from "../js/helpers/contextMenu";
+
+const MODE_LABELS: Record<NetworkMode, string> = {
+	global: "Same as global",
+	online: "Online",
+	auto: "Auto",
+	away: "Away",
+	dnd: "Do not disturb",
+};
 
 export default defineComponent({
 	name: "Channel",
@@ -110,6 +151,13 @@ export default defineComponent({
 			void router.push(`/settings/networks/${props.network.uuid}`);
 		};
 
+		// The oper panel (Windows/OperPanel.vue): only while opered here.
+		const opered = computed(() => isOperOn(props.network));
+
+		const openOperPanel = () => {
+			void router.push(`/oper/${props.network.uuid}/opers`);
+		};
+
 		// Notification state for this network (bell icon): subscribed,
 		// enabled-but-not-yet, or off. Reactive over webpush's maps + the
 		// notify flag it mirrors from storage on saves.
@@ -128,6 +176,14 @@ export default defineComponent({
 			return {cls: "enabled", label: t("lobby.notificationsOn")};
 		});
 
+		// Waiting for a retry (the backoff or the server's throttle), not
+		// dialling: there is nothing to cancel, and a click dials now.
+		const retryPending = computed(
+			() =>
+				props.network.status.connecting === true &&
+				props.network.status.retryAt !== undefined
+		);
+
 		const statusClass = computed(() =>
 			props.network.status.connected
 				? "is-connected"
@@ -139,6 +195,8 @@ export default defineComponent({
 		const statusLabel = computed(() =>
 			props.network.status.connected
 				? t("lobby.connected")
+				: retryPending.value
+				? t("lobby.reconnectingSoon")
 				: props.network.status.connecting
 				? t("lobby.connectingCancel")
 				: t("lobby.disconnectedConnect")
@@ -149,9 +207,14 @@ export default defineComponent({
 				return; // no accidental disconnects; that lives on the edit page
 			}
 
+			// A retry waiting its turn is not a dial to cancel: the click
+			// dials now, as the strip's Connect now does.
 			socket.emit("input", {
 				target: channel.value.id,
-				text: props.network.status.connecting ? "/disconnect" : "/connect",
+				text:
+					props.network.status.connecting && !retryPending.value
+						? "/disconnect"
+						: "/connect",
 			});
 		};
 
@@ -166,6 +229,63 @@ export default defineComponent({
 				? t("lobby.nickOn", {network: props.network.name})
 				: t("lobby.nickOffline", {network: props.network.name})
 		);
+
+		// The presence dot before the nick: what this network shows now, and
+		// a menu of the four modes (network:presence-mode, irc/bus.ts).
+		const presence = computed(() => props.network.presence);
+		const {expanded: presenceMenuOpen, opened: presenceMenuOpened} = useMenuTrigger();
+		// A network that is not connected tells its server nothing: grey,
+		// whatever was last said (starSent resets on close).
+		const offline = computed(() => !props.network.status.connected);
+		const presenceClass = computed(() =>
+			offline.value
+				? "is-offline"
+				: presence.value?.dnd
+				? "is-dnd"
+				: presence.value?.away
+				? "is-away"
+				: "is-online"
+		);
+		const presenceText = computed(() => {
+			const p = presence.value;
+			const effective = MODE_LABELS[p?.effective ?? "auto"];
+			// A network following the pill says so; one set on its own does not.
+			const mode = p?.mode === "global" ? `${effective} · global` : effective;
+
+			if (offline.value) {
+				return `${mode} · not connected`;
+			}
+
+			if (p?.dnd) {
+				return "Do not disturb";
+			}
+
+			// Away mode is away already: "Away", never "Away · away".
+			return p?.away && p.effective !== "away" ? `${mode} · away` : mode;
+		});
+
+		const openPresenceMenu = (event: MouseEvent) => {
+			const current = presence.value?.mode ?? "global";
+			// "Same as global (Away)": what following the pill means right now.
+			const globalLabel = `Same as global (${MODE_LABELS[dnd.state.mode.value]})`;
+			const items: ContextMenuItem[] = NETWORK_MODES.flatMap((mode): ContextMenuItem[] => {
+				const item: ContextMenuItem = {
+					label: mode === "global" ? globalLabel : MODE_LABELS[mode],
+					type: "item",
+					class: `presence-${mode}`,
+					checked: mode === current,
+					action: () =>
+						socket.emit("network:presence-mode", {
+							network: props.network.uuid,
+							mode,
+						}),
+				};
+				return mode === "global" ? [item, {type: "divider"}] : [item];
+			});
+			eventbus.emit("contextmenu:items", {event, items});
+			// After the emit: opening it closed any other menu first.
+			presenceMenuOpened();
+		};
 
 		const unreadCount = computed(() => {
 			return roundBadgeNumber(channel.value.unread);
@@ -183,10 +303,16 @@ export default defineComponent({
 
 		return {
 			t,
+			presenceMenuOpen,
+			presenceClass,
+			presenceText,
+			openPresenceMenu,
 			notifyState,
 			channel,
 			editNetwork,
 			editLabel,
+			opered,
+			openOperPanel,
 			statusClass,
 			statusLabel,
 			onStatusClick,

@@ -27,6 +27,7 @@
  */
 
 import {hasVirtualKeyboard} from "./device";
+import {isIOSShell, nativeCall, nativeListen} from "./capacitor";
 
 /** When a measurement is re-read after its event, in ms. The keyboard animates for ~250 ms. */
 export const SETTLE_DELAYS_MS = [50, 150, 300, 600];
@@ -56,6 +57,35 @@ function isTextField(el: Element | null): el is HTMLElement {
 	return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
 }
 
+/**
+ * The height of the band the user can see, in CSS px — what `--viewport-height`
+ * is set to, read live for code that positions against the viewport
+ * (`position: fixed` popovers): on iOS `innerHeight` still counts the part
+ * under the keyboard. `innerHeight` where the hooks do not apply.
+ */
+export function visibleHeight(): number {
+	const viewport = window.visualViewport;
+
+	if (!viewport || !hasVirtualKeyboard()) {
+		return window.innerHeight;
+	}
+
+	return effectiveHeight(
+		viewport.height,
+		window.innerHeight,
+		isTextField(document.activeElement)
+	);
+}
+
+/**
+ * The keyboard's height as the native shell reports it (Capacitor's
+ * keyboardWillShow/WillHide, subscribed below), or null where no shell says.
+ * When set it outranks the visual-viewport guess: the number is the
+ * keyboard's frame, form bar included, announced before the animation, so no
+ * settle re-reads and no mid-animation height.
+ */
+let nativeKeyboard: number | null = null;
+
 export function installViewportHooks(): void {
 	const viewport = window.visualViewport;
 
@@ -68,12 +98,24 @@ export function installViewportHooks(): void {
 
 	const apply = () => {
 		const focused = isTextField(document.activeElement);
-		const height = effectiveHeight(viewport.height, window.innerHeight, focused);
 		const root = document.documentElement;
+		let height: number;
+		let up: boolean;
+
+		if (nativeKeyboard !== null) {
+			// The window keeps its size in the shell (Keyboard resize: none),
+			// so the band is what the keyboard leaves of it.
+			const full = Math.max(viewport.height, window.innerHeight);
+			height = nativeKeyboard > 0 ? full - nativeKeyboard : full;
+			up = nativeKeyboard > 0;
+		} else {
+			height = effectiveHeight(viewport.height, window.innerHeight, focused);
+			up = keyboardUp(viewport.height, window.innerHeight, focused);
+		}
 
 		root.style.setProperty("--viewport-height", `${Math.round(height)}px`);
 
-		if (keyboardUp(viewport.height, window.innerHeight, focused)) {
+		if (up) {
 			root.dataset.keyboard = "up";
 		} else {
 			delete root.dataset.keyboard;
@@ -92,6 +134,35 @@ export function installViewportHooks(): void {
 		cancel();
 		cancel = settle(apply);
 	};
+
+	// The shell's keyboard, rather than the visual viewport's: the plugin says
+	// its height before the animation, form bar included, and says when it
+	// goes — the two things iOS never tells a page straight.
+	// iOS's form accessory bar (˄ ˅ Done) above the keyboard goes with it:
+	// nothing in the app for it to step between, and it is the floating pill
+	// that covered the composer in the PWA. The keyboard's own Done key does
+	// the job.
+	// iOS only, both: Android's WebView shrinks for the keyboard like a
+	// browser's (Capacitor pads its parent by the IME inset), so the visual
+	// viewport already says everything and the plugin's height on top of it
+	// took the keyboard off twice; and the accessory-bar call is not
+	// implemented there.
+	if (isIOSShell()) {
+		void nativeCall("Keyboard", "setAccessoryBarVisible", {isVisible: false});
+
+		nativeListen(
+			"Keyboard",
+			"keyboardWillShow",
+			({keyboardHeight}: {keyboardHeight: number}) => {
+				nativeKeyboard = keyboardHeight;
+				apply();
+			}
+		);
+		nativeListen("Keyboard", "keyboardWillHide", () => {
+			nativeKeyboard = 0;
+			apply();
+		});
+	}
 
 	viewport.addEventListener("resize", applySettled);
 	viewport.addEventListener("scroll", apply);

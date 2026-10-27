@@ -102,6 +102,19 @@ msgctxt "chat.mentions"
 msgid "Open your mentions"
 msgstr "เปิดการแจ้งเตือน"
 
+#. Badge on the @ button in the channel header when there are more unread mentions than it shows; {count} is the largest number shown (99), so it reads "99+".
+#: client/components/Chat.vue:384
+msgctxt "chat.mentionsBadgeOver"
+msgid "{count}+"
+msgstr ""
+
+#. Accessible name of the @ button in the channel header while there are unread mentions; it opens the mentions popup. {count} is the number of unread mentions. The singular form shows for one, the plural for any other number.
+#: client/components/Chat.vue:389
+msgctxt "chat.mentionsUnread"
+msgid "Open your mentions, {count} unread"
+msgid_plural "Open your mentions, {count} unread"
+msgstr[0] ""
+
 #. aria-label of the save control at the right end of the topic editor, shown while the channel topic is being edited; clicking saves the new topic.
 #: client/components/Chat.vue:35
 msgctxt "chat.saveTopic"
@@ -457,6 +470,13 @@ msgid "Reconnecting to {network} in {seconds}s…"
 msgid_plural "Reconnecting to {network} in {seconds}s…"
 msgstr[0] "กำลังเชื่อมต่อใหม่ไปยัง {network} ใน {seconds}s…"
 
+#. Text of the connection bar shown above the message input while the wait before the retry is the chat server's connection throttle (dialling sooner would be refused and prolong it). {network} is the display name of the chat network; {seconds} is the whole number of seconds until the retry starts, updating every half second. The singular form shows when one second remains, the plural for any other number.
+#: client/components/ChatInput.vue:524
+msgctxt "composer.reconnectInThrottled"
+msgid "Reconnecting to {network} in {seconds}s: the server limits quick reconnects."
+msgid_plural "Reconnecting to {network} in {seconds}s: the server limits quick reconnects."
+msgstr[0] ""
+
 #. Label at the left of the compose bar shown while a reply is being written. {nick} is the name of the user being replied to, shown emphasized; the quoted message preview follows it. Keep the trailing colon.
 #: client/components/ChatInput.vue:60
 msgctxt "composer.replyingTo"
@@ -728,6 +748,24 @@ msgstr "การแจ้งเตือนแบบ Push (แจ้งเต�
 msgctxt "connect.reconnectCancelled"
 msgid "Reconnect cancelled."
 msgstr "การเชื่อมต่อถูกยกเลิก"
+
+#. Lobby status line while an automatic retry waits out its backoff before dialling the chat network again. {seconds} is the whole number of seconds until it dials; {attempt} counts the retries this connection has seen.
+#: client/js/irc/client.ts
+msgctxt "connect.reconnectIn"
+msgid "Reconnecting in {seconds}s (attempt {attempt})…"
+msgstr ""
+
+#. Lobby status line when a connection that had been stable dropped and is retried at once. {attempt} counts the retries this connection has seen.
+#: client/js/irc/client.ts
+msgctxt "connect.reconnectNow"
+msgid "Reconnecting now (attempt {attempt})…"
+msgstr ""
+
+#. Lobby status line while the client waits out the chat server's connection throttle before an automatic retry (irc/dialLedger.ts): dialling sooner would be refused and prolong the wait. {seconds} is the whole number of seconds to wait; {attempt} counts the retries this connection has seen.
+#: client/js/irc/client.ts
+msgctxt "connect.reconnectWaitThrottled"
+msgid "Waiting {seconds}s: the server limits how often a device can reconnect (attempt {attempt})…"
+msgstr ""
 
 #. Checkbox on the sign-in form: remember the account and reconnect on the next load.
 #: client/js/branding.ts
@@ -2089,10 +2127,11 @@ msgctxt "help.shortcuts.toggleMarkdown"
 msgid "Toggle Markdown rendering."
 msgstr "ตั้งค่าการเรnder Markdown"
 
-#. Description of the Alt+M keyboard shortcut in the help window; it opens or closes the popup listing messages that mention you.
+#. Help page, keyboard shortcuts table: what the shortcut does — opens or closes the popup listing the unread messages that mention you.
 #: client/components/Windows/Help.vue
+#, fuzzy
 msgctxt "help.shortcuts.toggleMentions"
-msgid "Toggle recent mentions popup."
+msgid "Toggle unread mentions popup."
 msgstr "กระตุ้นการเปิดตัวการแจ้งเตือนการกล่าวถึงล่าสุด"
 
 #. Description of the Alt+S keyboard shortcut in the help window; it shows or hides the sidebar network list.
@@ -2294,6 +2333,18 @@ msgctxt "link.cannotLoad"
 msgid "Couldn't load this {kind}"
 msgstr "ไม่สามารถโหลด {kind} ได้"
 
+#. Body of the masked-link dialog. {shown} is the address the link's text displays and {host} the host name of the site the link really goes to — both verbatim user content, never translated.
+#: client/js/helpers/openLink.ts:24
+msgctxt "link.checkText"
+msgid "The link text shows {shown}, but it goes to {host}."
+msgstr ""
+
+#. Title of the dialog shown when the user clicks a link whose text names a different web address than the one it opens (a masked link).
+#: client/js/helpers/openLink.ts:23
+msgctxt "link.checkTitle"
+msgid "Check this link"
+msgstr ""
+
 #. Hint on the placeholder of a media preview with no file name to show; clicking reveals the media.
 #: client/components/LinkPreview.vue
 msgctxt "link.clickToShow"
@@ -2359,6 +2410,12 @@ msgstr "วิดีโอ"
 msgctxt "link.loadingKind"
 msgid "Loading {kind}…"
 msgstr "การโหลด {kind}…"
+
+#. Label of the masked-link dialog's confirm button: opens the link's real address in a new tab despite the mismatch.
+#: client/js/helpers/openLink.ts:25
+msgctxt "link.openAnyway"
+msgid "Open anyway"
+msgstr ""
 
 #. Tooltip and aria-label of the button that opens the media file in a new browser tab.
 #: client/components/LinkPreview.vue
@@ -2626,6 +2683,12 @@ msgctxt "lobby.notificationsSubscribed"
 msgid "Notifications: subscribed to push"
 msgstr "การแจ้งเตือน: สมัครสมาชิกผ่านการแจ้งเตือน"
 
+#. Tooltip and accessible name of the connection-state icon in a network's sidebar header while a reconnect is scheduled; clicking it connects at once.
+#: client/components/NetworkLobby.vue:199
+msgctxt "lobby.reconnectingSoon"
+msgid "Reconnecting soon (click to connect now)"
+msgstr ""
+
 #. Confirmation button of the remove-network dialog in the sidebar.
 #: client/js/hooks/use-close-channel.ts:14
 msgctxt "lobby.removeButton"
@@ -2644,47 +2707,102 @@ msgctxt "lobby.removeTitle"
 msgid "Remove network"
 msgstr "ลบเครือข่าย"
 
+#. Accessible name of the ✕ button in the mentions popup's title bar; it closes the popup (on a phone the popup fills the screen).
+#: client/components/Mentions.vue:30
+msgctxt "mentions.close"
+msgid "Close mentions"
+msgstr ""
+
 #. Button at the right of the mentions popup's title; clicking clears every entry from the list.
 #: client/components/Mentions.vue:16
 msgctxt "mentions.dismissAll"
 msgid "Dismiss all"
 msgstr "ปิดทั้งหมด"
 
-#. Tooltip and aria-label of the ✕ button on an entry of the mentions popup; clicking removes that entry from the list.
+#. Button beside a conversation in the mentions popup that this page no longer has (so reading it cannot clear its mentions); clicking removes that conversation's entries from the list.
+#: client/components/Mentions.vue:76
+msgctxt "mentions.dismissGroup"
+msgid "Dismiss"
+msgstr ""
+
+#. Tooltip and accessible name of the × button on an entry of the mentions popup; clicking removes that entry from the list on this device only.
 #: client/components/Mentions.vue:42
+#: client/components/Mentions.vue:104
+#, fuzzy
 msgctxt "mentions.dismissOne"
-msgid "Dismiss this mention"
+msgid "Dismiss on this device"
 msgstr "ปิดการแจ้งเตือนนี้"
 
-#. Shown in the mentions popup when there is nothing to list: nobody mentioned you recently.
+#. Title shown in the mentions popup when no unread message mentions you.
 #: client/components/Mentions.vue:21
+#: client/components/Mentions.vue:39
+#, fuzzy
 msgctxt "mentions.empty"
-msgid "You have no recent mentions."
+msgid "You're all caught up"
 msgstr "คุณไม่มีการแจ้งเตือนล่าสุด"
 
-#. Line under each entry of the mentions popup saying where the mentioned message was posted. {channel} is the channel's name, {network} the display name of the chat network it belongs to.
-#: client/components/Mentions.vue:30
-msgctxt "mentions.inOn"
-msgid "in {channel} on {network}"
-msgstr "ใน {channel} บน {network}"
+#. Hint under the empty mentions popup's title, explaining what clears the list.
+#: client/components/Mentions.vue:41
+msgctxt "mentions.emptyHint"
+msgid "A mention leaves this list once you read it, here or on any other device."
+msgstr ""
 
-#. Line under an entry of the mentions popup when the channel the mentioned message was posted in no longer exists in this client.
-#: client/components/Mentions.vue:33
-msgctxt "mentions.inUnknown"
-msgid "in unknown channel"
-msgstr "ในช่องที่ไม่ทราบ"
+#. Shown under a channel in the mentions popup that you are no longer in. {target} is the channel name, shown verbatim.
+#: client/components/Mentions.vue:509
+msgctxt "mentions.missingChannel"
+msgid "Not in {target}: join it to read these, or dismiss them."
+msgstr ""
 
-#. Shown in the mentions popup while its list is being fetched.
-#: client/components/Mentions.vue:20
-msgctxt "mentions.loading"
-msgid "Loading…"
-msgstr "การโหลด..."
+#. As mentions.missingChannel, when several chat networks are set up. {target} is the channel name, {network} the chat network's display name.
+#: client/components/Mentions.vue:508
+msgctxt "mentions.missingChannelOn"
+msgid "Not in {target} on {network}: join it to read these, or dismiss them."
+msgstr ""
 
-#. Title of the popup that lists the messages in which you were mentioned recently.
+#. Shown under a conversation in the mentions popup whose chat network is no longer set up in this client, so its mentions can only be dismissed.
+#: client/components/Mentions.vue:502
+msgctxt "mentions.missingNetwork"
+msgid "Its network isn't on this page: dismiss these."
+msgstr ""
+
+#. Shown under a private conversation in the mentions popup that is not open in this client. {target} is the other person's nick, shown verbatim.
+#: client/components/Mentions.vue:506
+msgctxt "mentions.missingQuery"
+msgid "No conversation with {target} open: open one to read these, or dismiss them."
+msgstr ""
+
+#. As mentions.missingQuery, when several chat networks are set up. {target} is the other person's nick, {network} the chat network's display name.
+#: client/components/Mentions.vue:505
+msgctxt "mentions.missingQueryOn"
+msgid "No conversation with {target} on {network} open: open one to read these, or dismiss them."
+msgstr ""
+
+#. Tooltip of a conversation's header in the mentions popup; clicking opens that conversation. {target} is a channel name or a nick, shown verbatim.
+#: client/components/Mentions.vue:56
+msgctxt "mentions.open"
+msgid "Open {target}"
+msgstr ""
+
+#. Accessible name of a conversation's section in the mentions popup when several chat networks are set up. {target} is a channel name or nick, {network} the chat network's display name.
+#: client/components/Mentions.vue:517
+msgctxt "mentions.targetOn"
+msgid "{target} on {network}"
+msgstr ""
+
+#. Heading of the popup (the inbox) that lists the unread messages mentioning you, grouped by conversation.
 #: client/components/Mentions.vue:10
+#: client/components/Mentions.vue:18
+#, fuzzy
 msgctxt "mentions.title"
-msgid "Recent mentions"
+msgid "Mentions"
 msgstr "การแจ้งเตือนล่าสุด"
+
+#. Count of unread messages: the accessible name of the total beside the mentions popup's heading, and the label on a private conversation's row when more than one of its lines is unread. {count} is the number. The singular form shows for one, the plural for any other number.
+#: client/components/Mentions.vue:522
+msgctxt "mentions.unread"
+msgid "{count} unread"
+msgid_plural "{count} unread"
+msgstr[0] ""
 
 #. The word for a group chat room, filling {type} in the context-menu mute items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
@@ -2890,8 +3008,9 @@ msgctxt "message.actionsToolbar"
 msgid "Message actions"
 msgstr "การกระทำของข้อความ"
 
-#. Tooltip and aria-label of a chat message's copy-code button for a moment after the copy succeeded.
+#. Short label shown for a moment over a chat message after its text or code was copied to the clipboard from the message toolbar.
 #: client/components/MessageActions.vue:34
+#: client/components/MessageActions.vue
 msgctxt "message.copied"
 msgid "Copied"
 msgstr "ถูกคัดลอก"
@@ -2975,6 +3094,18 @@ msgstr "แก้ไข {time}"
 msgctxt "message.editedBadge"
 msgid "(edited)"
 msgstr "(แก้ไข)"
+
+#. Tooltip and aria-label of a one-tap reaction button on a chat message's toolbar. {reaction} is the emoji (or word) it sends.
+#: client/components/MessageActions.vue
+msgctxt "message.quickReact"
+msgid "React with {reaction}"
+msgstr ""
+
+#. Tooltip and aria-label of a one-tap reaction button on a chat message's toolbar when you already reacted with it; tapping takes your reaction off. {reaction} is the emoji (or word).
+#: client/components/MessageActions.vue
+msgctxt "message.quickRemove"
+msgid "Remove {reaction}"
+msgstr ""
 
 #. Tooltip and aria-label of the smiley button in a chat message's hover toolbar; clicking opens the emoji picker to add a reaction to that message.
 #: client/components/MessageActions.vue:21
@@ -3815,6 +3946,18 @@ msgctxt "settings.appearance.markdown"
 msgid "Render Markdown formatting (bold, code, spoilers…)"
 msgstr "แสดงการจัดรูปแบบ Markdown (ความแข็งแรง, โค้ด, ความลับ…)"
 
+#. Settings → Appearance, switch above the theme picker: when on, a theme that has a light and a dark version shows the one matching the device's light or dark mode.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.matchSystemAppearance"
+msgid "Match the system's light or dark mode"
+msgstr ""
+
+#. Settings → Appearance, switch under the Font size heading, in the native apps only: when on, the app's text size follows the phone's own text-size setting and the slider is hidden.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.matchSystemTextSize"
+msgid "Match the system text size"
+msgstr ""
+
 #. Checkbox in Settings > Appearance; when ticked, links to media are shown as an inline playable preview inside the chat instead of a plain link.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.media"
@@ -3874,6 +4017,210 @@ msgstr "การเติมต่อชื่อ (เช่น เครื่
 msgctxt "settings.appearance.nickPostfixPlaceholder"
 msgid "Nick autocomplete postfix (e.g. ', ')"
 msgstr "การเติมต่อชื่อ (เช่น ', ')"
+
+#. Settings → Appearance → Your own messages, radio option: your own messages sit on a lighter or darker background band.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.ownMessagesBand"
+msgid "Highlighted row"
+msgstr ""
+
+#. Settings → Appearance → Your own messages, lowercase hint after the 'Highlighted row' option (a dash is drawn before it).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.ownMessagesBandHint"
+msgid "the row on a lighter or darker band, the text like everyone else's"
+msgstr ""
+
+#. Settings → Appearance, heading of the radio group choosing how the user's own chat messages are told apart from everyone else's.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.ownMessagesHeading"
+msgid "Your own messages"
+msgstr ""
+
+#. Settings → Appearance → Your own messages, radio option: your own messages' text is drawn in the muted grey colour.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.ownMessagesMuted"
+msgid "Greyed text"
+msgstr ""
+
+#. Settings → Appearance → Your own messages, lowercase hint after the 'Greyed text' option (a dash is drawn before it). 'as before' = this is how the app always looked.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.ownMessagesMutedHint"
+msgid "the text in the muted colour, as before"
+msgstr ""
+
+#. Settings → Appearance → Your own messages, radio option: your own messages look exactly like other people's.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.ownMessagesPlain"
+msgid "Same as everyone else's"
+msgstr ""
+
+#. Settings → Appearance → Your own messages, lowercase hint after the 'Same as everyone else's' option (a dash is drawn before it); 'them' = your own messages.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.ownMessagesPlainHint"
+msgid "nothing marks them"
+msgstr ""
+
+#. Heading in Settings > Appearance, shown only under the ps theme: how much the live landscape behind the chat (sky, clouds, birds, rain) moves.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psAnimationHeading"
+msgid "Scene animation"
+msgstr ""
+
+#. Checkbox under Message layout (ps theme): consecutive messages from one sender share one name and time.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psGroupMessages"
+msgid "Combine messages from the same person"
+msgstr ""
+
+#. Hint after the Combine messages checkbox (ps theme).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psGroupMessagesHint"
+msgid "their name and time once, for lines sent within ten minutes of each other"
+msgstr ""
+
+#. Heading in Settings > Appearance, shown only under the ps theme: how chat messages are laid out.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psLayoutHeading"
+msgid "Message layout"
+msgstr ""
+
+#. Radio option under Scene animation (ps theme): the scene's motion follows the device.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psMotionAuto"
+msgid "Auto"
+msgstr ""
+
+#. Hint after the Auto option under Scene animation (ps theme); lowercase, it continues the option's label.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psMotionAutoHint"
+msgid "follows your device: Full on a computer or tablet, Calm on a phone, one step less on low power"
+msgstr ""
+
+#. Radio option under Scene animation (ps theme): only the clouds move.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psMotionCalm"
+msgid "Calm"
+msgstr ""
+
+#. Hint after the Calm option under Scene animation (ps theme); lowercase, it continues the option's label.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psMotionCalmHint"
+msgid "the clouds drift; the rest holds still"
+msgstr ""
+
+#. Radio option under Scene animation (ps theme): everything in the landscape moves.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psMotionFull"
+msgid "Full"
+msgstr ""
+
+#. Hint after the Full option under Scene animation (ps theme); lowercase, it continues the option's label.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psMotionFullHint"
+msgid "everything moves, at your screen's rate"
+msgstr ""
+
+#. Radio option under Scene animation (ps theme): the landscape does not move.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psMotionStill"
+msgid "Still"
+msgstr ""
+
+#. Hint after the Still option under Scene animation (ps theme); lowercase, it continues the option's label.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psMotionStillHint"
+msgid "a still picture; the sky still follows the time of day"
+msgstr ""
+
+#. Checkbox under Scene animation (ps theme): stop the landscape moving when the user is not looking at the app.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psPauseWhenAway"
+msgid "Pause the scene when the window isn't in use"
+msgstr ""
+
+#. Hint after the Pause the scene checkbox (ps theme); a hidden browser tab stops the landscape whatever this says.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psPauseWhenAwayHint"
+msgid "after 15 seconds without the focus, or 2 minutes without input; a hidden tab never moves it"
+msgstr ""
+
+#. Radio label under Words over the plains (ps theme): every message on a translucent card.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsBubbles"
+msgid "Bubbles"
+msgstr ""
+
+#. Hint after the Bubbles radio (ps theme).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsBubblesHint"
+msgid "each message on a translucent card: paper by day, dark at night"
+msgstr ""
+
+#. Radio label under Words over the plains (ps theme): the whole message column on frosted glass.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsGlass"
+msgid "Glass"
+msgstr ""
+
+#. Hint after the Glass radio (ps theme).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsGlassHint"
+msgid "the whole column on frosted glass, the plains a wash behind it"
+msgstr ""
+
+#. Radio label under Words over the plains (ps theme): a soft dark glow and no outline.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsGlow"
+msgid "Soft glow"
+msgstr ""
+
+#. Hint after the Soft glow radio (ps theme); 'floor' is the theme's legibility floor (a contrast ratio).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsGlowHint"
+msgid "a soft dark glow and nothing else; by day it reads well under the usual floor"
+msgstr ""
+
+#. Heading in Settings > Appearance, shown only under the ps theme: how the chat text is drawn over the live scene (six treatments).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsHeading"
+msgid "Words over the plains"
+msgstr ""
+
+#. Radio label under Words over the plains (ps theme): white words in a dark outline, the look before the setting existed.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsOutline"
+msgid "Outline"
+msgstr ""
+
+#. Hint after the Outline radio (ps theme).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsOutlineHint"
+msgid "white words in a dark outline; ink on snowy days"
+msgstr ""
+
+#. Radio label under Words over the plains (ps theme): a thinner outline in the sky's colour.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsRim"
+msgid "Tinted rim"
+msgstr ""
+
+#. Hint after the Tinted rim radio (ps theme); 'floor' is the theme's legibility floor (a contrast ratio).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsRimHint"
+msgid "a thinner rim in the sky's own colour; by day it reads under the usual floor"
+msgstr ""
+
+#. Radio label under Words over the plains (ps theme): a graded wash across the column.
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsScrim"
+msgid "Scrim"
+msgstr ""
+
+#. Hint after the Scrim radio (ps theme).
+#: client/components/Settings/Appearance.vue
+msgctxt "settings.appearance.psWordsScrimHint"
+msgid "a soft wash across the column, stronger near the edge, no blur"
+msgstr ""
 
 #. Third line of the sample chat under the font-size slider in Settings → Appearance: the extreme steps are intentionally unusable.
 #: client/components/Settings/Appearance.vue:486
@@ -4134,6 +4481,12 @@ msgctxt "settings.general.importNoDecompression"
 msgid "This browser can't read compressed files."
 msgstr "เบราว์เซอร์นี้ไม่สามารถอ่านไฟล์ที่ถูกบีบอัดได้"
 
+#. Settings → General → Backup and restore: the error shown when restoring a settings file fails because the device's storage is full; the restore was undone, so the device keeps its old settings.
+#: client/components/Settings/General.vue
+msgctxt "settings.general.importNoRoom"
+msgid "There isn't room on this device to import that file. Nothing was changed."
+msgstr ""
+
 #. Error notice under the import control in Settings → General when the chosen file is not a settings backup (wrong shape, unparseable). Starts a short sentence.
 #: client/components/Settings/General.vue:259
 msgctxt "settings.general.importNotSettings"
@@ -4164,6 +4517,18 @@ msgctxt "settings.general.installApp"
 msgid "Install {appName} as an app"
 msgstr "ติดตั้ง {appName} เป็นแอป"
 
+#. Checkbox in Settings > General; when ticked, the recent lines of private (one-to-one) conversations are stored in this browser so they come back after the page is reloaded.
+#: client/components/Settings/General.vue
+msgctxt "settings.general.keepPrivate"
+msgid "Keep private conversations on this device"
+msgstr ""
+
+#. Tooltip on the keep-private-conversations checkbox in Settings > General. {lines} and {queries} are numbers (200 and 30 today). Make clear that turning the setting off deletes what is stored.
+#: client/components/Settings/General.vue
+msgctxt "settings.general.keepPrivateHelp"
+msgid "Private conversations come back after a reload: the newest {lines} lines of your {queries} most recent ones, stored in this browser. Turning this off deletes them from this device."
+msgstr ""
+
 #. Heading of the Native app section in Settings > General; groups the install and link-handler options for using the chat app as an installed application.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.nativeApp"
@@ -4175,6 +4540,12 @@ msgstr "แอปที่เป็นตัวตน"
 msgctxt "settings.general.openLinks"
 msgid "Open web+irc:// links with {appName}"
 msgstr "เปิดลิงก์ web+irc:// ด้วย {appName}"
+
+#. Section heading in Settings > General for whether private (one-to-one) conversations are kept in this browser between visits.
+#: client/components/Settings/General.vue
+msgctxt "settings.general.privateHeading"
+msgid "Private conversations"
+msgstr ""
 
 #. Checkbox in Settings > General; when ticked, other people in the channel are told while you are typing a message.
 #: client/components/Settings/General.vue
@@ -4428,6 +4799,12 @@ msgctxt "settings.notifications.pushDenied"
 msgid "Notifications are blocked by your browser. Allow them in the browser's site settings, then try again."
 msgstr "แจ้งเตือนถูกปิดโดยเบราว์เซอร์ของคุณ อนุญาตให้ใช้งานในตั้งต้นของเบราว์เซอร์ แล้วลองใหม่"
 
+#. Settings → Notifications, after "Warning:", in the Android app when the system has notifications switched off for it. "Android's settings for the app" is the system's per-app settings page.
+#: client/components/Settings/Notifications.vue
+msgctxt "settings.notifications.pushDeniedAndroid"
+msgid "Notifications are turned off for this app. Allow them in Android's settings for the app, then try again."
+msgstr ""
+
 #. Heading of the push notification section in Settings > Notifications; push wakes the app on new messages while it is closed.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushHeading"
@@ -4445,36 +4822,6 @@ msgstr "แจ้งเตือนแบบ Push ตั้งค่าแยก
 msgctxt "settings.notifications.serverUnsupported"
 msgid "Push notifications need a connected server that supports the draft/webpush capability and you to be logged in to an account."
 msgstr "แจ้งเตือนแบบ Push ต้องมีเซิร์ฟเวอร์ที่เชื่อมต่อกับเครือข่ายที่รองรับความสามารถ draft/webpush และคุณต้องเข้าสู่บัญชี"
-
-#. Snooze button in Settings > Notifications; pauses push notifications for fifteen minutes.
-#: client/components/Settings/Notifications.vue
-msgctxt "settings.notifications.snooze15"
-msgid "15 min"
-msgstr "15 นาที"
-
-#. Snooze button in Settings > Notifications; pauses push notifications for eight hours.
-#: client/components/Settings/Notifications.vue
-msgctxt "settings.notifications.snooze480"
-msgid "8 hours"
-msgstr "8 ชั่วโมง"
-
-#. Snooze button in Settings > Notifications; pauses push notifications for one hour.
-#: client/components/Settings/Notifications.vue
-msgctxt "settings.notifications.snooze60"
-msgid "1 hour"
-msgstr "1 ชั่วโมง"
-
-#. Lead-in above the snooze buttons in Settings > Notifications, shown while push is enabled; the buttons pause push notifications for all networks. Keep the trailing colon.
-#: client/components/Settings/Notifications.vue
-msgctxt "settings.notifications.snoozeIntro"
-msgid "Snooze pushes everywhere:"
-msgstr "การแจ้งเตือนดึงดูดทุกที่:"
-
-#. Snooze button in Settings > Notifications; ends the pause and resumes push notifications immediately.
-#: client/components/Settings/Notifications.vue
-msgctxt "settings.notifications.snoozeOff"
-msgid "Off"
-msgstr "ปิด"
 
 #. Checkbox in Settings > Notifications; when ticked, a sound plays alongside a notification.
 #: client/components/Settings/Notifications.vue
@@ -4813,6 +5160,12 @@ msgstr "ข้อความนั้นเก่าเกินไปที่
 msgctxt "sw.markRead"
 msgid "Mark read"
 msgstr "ระบุเป็นอ่านแล้ว"
+
+#. Body of the silent stub notification the worker shows under WebKit (an iPhone's Home Screen web app) when another device, or this one, read a pushed conversation: it replaces that conversation's notification for about 30 seconds, because WebKit counts a push that shows nothing toward unsubscribing the app. The title is the conversation's name.
+#: client/service-worker.js:1416
+msgctxt "sw.markedRead"
+msgid "Marked as read"
+msgstr ""
 
 #. Body of the fallback notification shown when a push payload cannot be parsed into a conversation message, or the worker hit an error: something happened, but there is nothing to show. The title is the app name and is never translated.
 #: client/service-worker.js:1194
@@ -5985,6 +6338,12 @@ msgstr "ชื่อผู้ใช้จริง:"
 msgctxt "whois.awayLabel"
 msgid "Away:"
 msgstr "กำลังอยู่นอกหน้าจอ:"
+
+#. Whois row value when the user is away but gave no away message (draft/pre-away). Shown in parentheses, italic.
+#: client/components/MessageTypes/whois.vue
+msgctxt "whois.awayNoMessage"
+msgid "(no message)"
+msgstr ""
 
 #. Fallback away reason for a query contact whose RPL_AWAY carries no text; it lands in the reason slot of the away system message ('<name> is away (<reason>)') and in the query's away state. Lowercase mid-sentence by position.
 #: client/js/irc/handlers/whois.ts

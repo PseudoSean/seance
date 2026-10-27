@@ -22,6 +22,10 @@
 // reopen the app.
 
 const cacheName = "__HASH__";
+// The deploy's name (config.json `appName`), written in at build time like
+// the hash; a worker run from source (the test harness) says "Seance".
+const STAMPED_APP_NAME = "__APP_NAME__";
+const appName = STAMPED_APP_NAME.startsWith("__") ? "Seance" : STAMPED_APP_NAME;
 const isDevBuild = cacheName === "dev";
 
 // Cache Storage the translation engines own (client/js/translate/): the
@@ -300,8 +304,59 @@ async function networkOrCache(event) {
 // Notifications requested by the page. Routing them through the worker (rather
 // than `new Notification()` in the page) is what makes them work on Android and
 // lets "notificationclick" below reopen the app when the tab is gone.
+//
+// A message the page took live, on a network this device is subscribed to,
+// comes to that network's push-only worker with the message itself
+// (`message`): it is shown exactly as its push would be — same tag, data
+// and actions, merged by msgid — so the push the server may send for it
+// finds it already on this registration. Chrome counts visible
+// notifications per registration, and a push this worker drops as a
+// duplicate while the page's copy sits on the root worker counts as
+// silent: enough of those and Chrome shows its generic "This site has been
+// updated in the background". A worker from before this shows `message`
+// payloads the per-channel way, still on the push registration.
+//
+// The page read a conversation (opened it, came back to it, or another
+// session moved its marker): `{type: "read", target, ts?}` closes what this
+// worker shows for it. The server's read push only follows a message it
+// pushed, so a notification the page put here is closed by the page.
 self.addEventListener("message", function (event) {
+	if (event.data && event.data.type === "away-on-close" && Array.isArray(event.data.networks)) {
+		const networks = event.data.networks.filter((uuid) => typeof uuid === "string");
+		event.waitUntil(awayOnClose(networks));
+		return;
+	}
+
+	if (event.data && event.data.type === "read" && typeof event.data.target === "string") {
+		const {target, ts} = event.data;
+
+		event.waitUntil(
+			enqueuePush(async () => {
+				await closeForTarget(target, typeof ts === "string" ? ts : undefined);
+
+				if (strictUserVisible()) {
+					await tidy();
+				}
+
+				await updateBadge();
+			})
+		);
+		return;
+	}
+
+	// The page, a while after a push for a message it took: what WebKit
+	// refused to close then can go now.
+	if (event.data && event.data.type === "tidy") {
+		event.waitUntil(enqueuePush(tidy).catch(() => undefined));
+		return;
+	}
+
 	if (!event.data || event.data.type !== "notification") {
+		return;
+	}
+
+	if (event.data.message && typeof event.data.message === "object") {
+		event.waitUntil(handlePageMessage(event.data));
 		return;
 	}
 
@@ -326,6 +381,8 @@ function showPageNotification(event, payload) {
 					icon: "img/icon-192.png",
 					body: payload.body,
 					timestamp: payload.timestamp,
+					// The page's sound setting; the OS plays the sound otherwise.
+					silent: payload.silent === true,
 					data: {
 						kind: "page",
 						network: payload.network,
@@ -370,6 +427,157 @@ function showPageNotification(event, payload) {
 //     survives the page and its session-local channel ids,
 //   - `pushsubscriptionchange` re-subscribes with the stashed VAPID key and
 //     re-registers, so expiry self-heals.
+//
+// WebKit (an iPhone's Home Screen web app, Safari) enforces `userVisibleOnly`
+// its own way, and it is the way push used to die there: when a push is
+// handed to the worker, webpushd starts a 30 s clock and waits for a
+// `showNotification` on that registration (WebPushDaemon.mm
+// `m_potentialSilentPushes`, `silentPushTimeoutForProduction`); none in
+// time is one silent push, the count only ever goes up (PushDatabase
+// `incrementSilentPushCount`, no reset), and at the third (`maxSilentPushCount`
+// in WebPushDaemonConstants.h) it removes EVERY subscription of the origin —
+// every network's — without telling the worker (no `pushsubscriptionchange`).
+// Chrome instead counts the notifications visible on the registration when
+// the event ends, which the page's hand-off above satisfies. So the paths
+// below that end a push event without showing — a push the live page already
+// took, a redelivery, a read relay that only closes — are exactly what
+// revoked the subscription on iOS, three at a time, and the next app launch
+// quietly subscribed again (webpush.ts `syncStoredWithBrowser`): push that
+// works for a few notifications after each launch. On WebKit
+// (`strictUserVisible`) every push event therefore shows something: a
+// message push shows (or re-shows, same tag and count) its notification
+// rather than being dropped, a read relay replaces the target's notification
+// with a silent "Marked as read" stub — WebKit also refuses a `close()`
+// within 30 s of a show (bug 309940), so a stub closed at once would stay
+// anyway — that the worker closes once that lifetime is over, and a handler
+// that has shown nothing after STRICT_SHOW_DEADLINE_MS (a stalled
+// IndexedDB) shows the generic notification before WebKit's clock runs out.
+
+/** WebKit's `silentPushTimeoutForProduction`: how long webpushd waits for a
+ * `showNotification` after handing a push over, and the age below which it
+ * refuses to close a persistent notification. */
+const WEBKIT_SILENT_PUSH_TIMEOUT_MS = 30000;
+/** A strict push event that has shown nothing by then shows the generic
+ * notification: inside WebKit's clock, with room for the show itself. */
+const STRICT_SHOW_DEADLINE_MS = 20000;
+/** How long the read stub stays before the worker closes it: just past the
+ * minimum lifetime, since an earlier close is refused. */
+const READ_STUB_LIFETIME_MS = WEBKIT_SILENT_PUSH_TIMEOUT_MS + 1000;
+
+/** Whether this worker runs under WebKit, where a push event that shows no
+ * notification counts toward unsubscribing the whole origin. Every WebKit
+ * browser carries `AppleWebKit/` (Chromium does too, with `Chrome/` after it;
+ * Firefox carries neither). */
+function strictUserVisible() {
+	const ua = (self.navigator && self.navigator.userAgent) || "";
+
+	return /AppleWebKit\//.test(ua) && !/Chrome\//.test(ua);
+}
+
+/** A notification's tag: per network, since tags are per origin and the
+ * networks' push workers would otherwise replace each other's same-named
+ * conversations. */
+function tagFor(network, name) {
+	return "push-" + (network ? network + "/" : "") + name;
+}
+
+/** The read stub and the quiet show: notifications that say nothing is
+ * unread, closed by the worker once WebKit lets it. */
+function isStub(n) {
+	return Boolean(n.data && (n.data.kind === "read" || n.data.kind === "quiet"));
+}
+
+// WebKit never replaces a notification by its tag: webpushd files each one
+// under its own UUID (WebPushDaemon.mm `showNotification`,
+// `requestWithIdentifier: notificationID`) and reads the tag only to filter
+// `getNotifications()`. So under WebKit a show under a tag that is up adds a
+// second notification beside the first, and a close within 30 s of a show
+// is refused (above) — a read stub stood beside the message it was meant to
+// replace, and the message, read, stayed. `tidy` closes by hand what a tag
+// would have replaced and what a refused close left: every notification but
+// the newest under a tag, and a stub past its lifetime. It runs after every
+// push and every read (a close refused now succeeds on a later wake) and
+// when the page asks (`{type: "tidy"}`); the page also sends its reads
+// again once the 30 s have passed (webpush.ts `again`).
+
+/** When a notification was shown (showSafely stamps it); 0 for one an older
+ * worker showed, which is older than any this one did. */
+function shownAt(n) {
+	return (n.data && Number(n.data.shownAt)) || 0;
+}
+
+/** The newest of notifications sharing a tag: under WebKit the older ones
+ * are still listed (and on screen) until `tidy` closes them. */
+function newest(list) {
+	let best;
+
+	for (const n of list) {
+		if (!best || shownAt(n) >= shownAt(best)) {
+			best = n;
+		}
+	}
+
+	return best;
+}
+
+/** The notifications a tag-replacing browser would show: the newest per tag. */
+function current(all) {
+	const byTag = new Map();
+
+	for (const n of all) {
+		const key = n.tag || n;
+
+		if (!byTag.has(key) || shownAt(n) >= shownAt(byTag.get(key))) {
+			byTag.set(key, n);
+		}
+	}
+
+	return all.filter((n) => byTag.get(n.tag || n) === n);
+}
+
+/** Under WebKit, close what a tag would have replaced and a stub whose
+ * lifetime is over (see above). A close WebKit refuses (the notification is
+ * under 30 s old) is simply tried again on the next run. */
+async function tidy() {
+	if (!strictUserVisible()) {
+		return;
+	}
+
+	const now = Date.now();
+	const all = (await self.registration.getNotifications()).filter(
+		(n) => n.tag && n.tag.startsWith("push-")
+	);
+	const live = current(all);
+
+	for (const n of all) {
+		if (!live.includes(n) || (isStub(n) && now - shownAt(n) >= WEBKIT_SILENT_PUSH_TIMEOUT_MS)) {
+			n.close();
+		}
+	}
+
+	await updateBadge();
+}
+
+/** `tidy` once WebKit lets a close through, if the worker is still alive by
+ * then (outside `waitUntil`, like the stub's own close). */
+function tidyLater() {
+	setTimeout(() => {
+		void enqueuePush(tidy).catch(() => undefined);
+	}, READ_STUB_LIFETIME_MS);
+}
+
+/** This worker's network: its scope's, or (the root worker) the first one
+ * the page stashed, remembered for the push whose storage has stalled. */
+let knownNetwork = scopeNetwork;
+
+async function networkOf() {
+	if (!knownNetwork) {
+		const stash = await getStash();
+		knownNetwork = stash.networks[0] ? stash.networks[0].uuid : undefined;
+	}
+
+	return knownNetwork;
+}
 
 const IDB_NAME = "seance-push";
 const IDB_STORE = "kv";
@@ -451,8 +659,10 @@ function randomNick() {
  * `onReady(ws, done, ctx)` at 001.  `pre` lines go out after SASL completes
  * but before CAP END.  `ctx.nick` is what the server calls us after
  * registration (the account's session nick when the bouncer attached us to
- * it); `ctx.onLine(fn)` sees every later line.  Resolves through done(ok):
- * false on any SASL/registration failure, a close, or the timeout.
+ * it); `ctx.onLine(fn)` sees every later line.  `pre` may be a function of
+ * `ctx`, called at 903 once the optional caps' answer is known.  Resolves
+ * through done(ok): false on any SASL/registration failure, a close, or the
+ * timeout.
  */
 function swIrcOpen(net, pre, onReady, optional = []) {
 	return new Promise((resolve) => {
@@ -594,7 +804,7 @@ function swIrcOpen(net, pre, onReady, optional = []) {
 			if (stage === 3 && / 903 /.test(l)) {
 				stage = 4;
 
-				for (const line of pre) {
+				for (const line of typeof pre === "function" ? pre(ctx) : pre) {
 					ws.send(line);
 				}
 
@@ -858,6 +1068,144 @@ function swMarkRead(net, target, time) {
 	);
 }
 
+// --- the away state of a closed page ---------------------------------------
+// A page that unloads cannot tell a reload from a close, and the `AWAY *` it
+// would send then makes a present user blink away and back to everyone on
+// every reload. So a page on Auto whose session nefarious2's bouncer holds
+// hands its networks here instead (client/js/foreground.ts, presence.ts
+// `leavesAwayToWorker`): after a few seconds, if no window of the app is
+// open (a reload's new document is one at once), log in as the account and
+// say `AWAY *` to the held session — before CAP END for the alias path, and
+// again after 001, since resuming a held session as its primary connection
+// drops the pre-registration one — then QUIT, which the bouncer holds.
+
+const AWAY_ON_CLOSE_DELAY_MS = 5000;
+/** After the post-001 AWAY: how long to wait for its 306 before QUIT. */
+const AWAY_REPLY_MS = 2000;
+/** Mirrors PRE_AWAY_CAP in client/js/irc/presence.ts. */
+const PRE_AWAY_CAP = "draft/pre-away";
+
+/** Windows of this app: `includeUncontrolled` reports every window on the
+ * origin, and a github.io origin holds other projects' pages too. */
+async function appWindows() {
+	const all = await self.clients.matchAll({type: "window", includeUncontrolled: true});
+	return all.filter((c) => typeof c.url === "string" && c.url.startsWith(appUrl));
+}
+
+/**
+ * The one pending run: a close, a reopen and a close again inside the delay
+ * restart its timer instead of logging in twice. A close that arrives while
+ * the run is logging in (SASL, then up to AWAY_REPLY_MS) is queued for one
+ * more run after it, and the run's promise waits for that one too.
+ */
+let closeRun = null;
+
+function awayOnClose(uuids) {
+	if (closeRun && closeRun.running) {
+		for (const uuid of uuids) {
+			closeRun.queued.add(uuid);
+		}
+
+		return closeRun.promise;
+	}
+
+	if (closeRun) {
+		for (const uuid of uuids) {
+			closeRun.networks.add(uuid);
+		}
+
+		clearTimeout(closeRun.timer);
+		closeRun.timer = setTimeout(closeRun.fire, AWAY_ON_CLOSE_DELAY_MS);
+		return closeRun.promise;
+	}
+
+	const run = {
+		networks: new Set(uuids),
+		queued: new Set(),
+		running: false,
+		timer: null,
+		fire: null,
+		promise: null,
+	};
+	run.promise = new Promise((resolve) => {
+		run.fire = () => {
+			run.running = true;
+			awayOnCloseNow([...run.networks])
+				.catch(() => undefined)
+				.finally(() => {
+					closeRun = null;
+					// Resolving with the next run's promise waits for it too.
+					resolve(run.queued.size > 0 ? awayOnClose([...run.queued]) : undefined);
+				});
+		};
+
+		run.timer = setTimeout(run.fire, AWAY_ON_CLOSE_DELAY_MS);
+	});
+	closeRun = run;
+	return run.promise;
+}
+
+async function awayOnCloseNow(uuids) {
+	const windows = await appWindows();
+
+	if (windows.length > 0) {
+		return; // a reload, or the app was opened again: that page speaks for itself
+	}
+
+	const stash = await getStash();
+
+	for (const uuid of uuids) {
+		// By uuid only: stashNetwork's fallback to the first network would
+		// mark another network away.
+		const net = stash.networks.find((n) => n && n.uuid === uuid);
+
+		if (canLogin(net)) {
+			await swAway(net);
+		}
+	}
+}
+
+/** `AWAY *` over a throwaway connection; resolves true once it was sent. */
+function swAway(net) {
+	return swIrcOpen(
+		net,
+		(ctx) => (ctx.caps.has(PRE_AWAY_CAP) ? ["AWAY *"] : []),
+		(ws, done, ctx) => {
+			let finished = false;
+			let timer = null;
+
+			const finish = () => {
+				if (finished) {
+					return;
+				}
+
+				finished = true;
+				clearTimeout(timer);
+
+				try {
+					ws.send("QUIT :done");
+				} catch (e) {
+					//
+				}
+
+				done(true);
+			};
+
+			// Armed first: a server that answers inside send() finishes at once.
+			timer = setTimeout(finish, AWAY_REPLY_MS);
+
+			ctx.onLine((l) => {
+				if (/^(@\S+ )?:\S+ 306 /.test(l)) {
+					finish();
+				}
+			});
+
+			ws.send("AWAY *");
+		},
+		[PRE_AWAY_CAP]
+	);
+}
+
 /** The stash the page writes when push is enabled: our VAPID key and the
  * networks that are push-capable AND remember their SASL password. */
 async function getStash() {
@@ -875,8 +1223,11 @@ async function getStash() {
  * (`badge`) and the badge shows the sum; the page resets the document when
  * the app opens. */
 async function updateBadge() {
-	const all = await self.registration.getNotifications();
-	const mine = all.reduce((sum, n) => sum + ((n.data && n.data.count) || 1), 0);
+	// Under WebKit an older copy under the same tag is still listed until
+	// `tidy` closes it: only the newest counts.
+	const all = current(await self.registration.getNotifications());
+	// A read stub or a quiet show (showStub) says nothing is unread.
+	const mine = all.reduce((sum, n) => sum + (isStub(n) ? 0 : (n.data && n.data.count) || 1), 0);
 	let total = mine;
 
 	try {
@@ -902,6 +1253,18 @@ self.addEventListener("push", function (event) {
 	event.waitUntil(handlePush(raw));
 });
 
+/** The generic notification: what a push shows when nothing better can be
+ * made of it, and what a strict push event shows when its handler has not
+ * shown anything in time. */
+function showGeneric(tag = "push-activity", target = undefined) {
+	return showSafely(appName, {
+		tag,
+		icon: "img/icon-192.png",
+		body: t("sw.newActivity"),
+		data: target ? {kind: "generic", target} : undefined,
+	});
+}
+
 // The lines of a multiline message reach the worker together (FCM hands
 // them over at once) and a service worker runs push handlers concurrently.
 // Each handler reads the notification's stored message list, awaits a few
@@ -909,9 +1272,133 @@ self.addEventListener("push", function (event) {
 // each other's line, leaving `…` placeholders. Pushes are therefore handled
 // one at a time, in arrival order; a failed one never blocks the next.
 let pushChain = Promise.resolve();
+/** The strict push the queue is running (handlePush): showSafely marks it
+ * shown, so its deadline knows it has answered WebKit. */
+let activePush = null;
 
 function handlePush(raw) {
-	const run = pushChain.then(() => handlePushNow(raw));
+	if (!strictUserVisible()) {
+		return enqueuePush(() => handlePushNow(raw));
+	}
+
+	// WebKit's clock runs from the moment the push was handed over, so the
+	// deadline is timed from here, ahead of the queue — a push waiting
+	// behind a stalled one is just as silent. Each push has its own: one
+	// push's show does not answer for another's.
+	const state = {settled: false, shown: false, fellBack: false};
+	let deadline = null;
+	const run = enqueuePush(async () => {
+		activePush = state;
+
+		try {
+			return await handlePushNow(raw, state);
+		} finally {
+			activePush = null;
+			await tidy().catch(() => undefined);
+		}
+	}).finally(() => {
+		state.settled = true;
+		clearTimeout(deadline);
+	});
+
+	// Only a push that has shown nothing yet: one stuck after its show (on
+	// the badge's store, say) has answered WebKit already.
+	deadline = setTimeout(() => {
+		if (!state.settled && !state.shown) {
+			state.fellBack = true;
+			void showFallback(raw);
+		}
+	}, STRICT_SHOW_DEADLINE_MS);
+
+	return run;
+}
+
+/** A push's payload as text, without the trailing padding delimiter some
+ * browsers leave (see handlePushNow). */
+function cleanPayload(raw) {
+	return raw.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]+$/, "");
+}
+
+/** What a push is about, read without IndexedDB: its conversation and
+ * whether it is a read relay (the stalled-push fallback, below). */
+function pushTarget(raw) {
+	const clean = cleanPayload(raw);
+	let json = null;
+
+	try {
+		json = JSON.parse(clean);
+	} catch (e) {
+		// the raw IRC line
+	}
+
+	if (json && json.t === "read") {
+		return {target: json.target, read: true};
+	}
+
+	const parsed = json ? fromJson(json) : push().parsePushLine(clean);
+
+	if (!parsed) {
+		return {target: undefined, read: false};
+	}
+
+	if (parsed.command === "MARKREAD") {
+		return {target: parsed.target, read: true};
+	}
+
+	if (parsed.command === "PRIVMSG" || parsed.command === "NOTICE") {
+		return {target: conversationOf(parsed), read: false};
+	}
+
+	return {target: undefined, read: false};
+}
+
+/** The conversation a message belongs to: its channel, or the sender's query. */
+function conversationOf(parsed) {
+	return isChannelName(parsed.target) ? parsed.target : parsed.nick;
+}
+
+/**
+ * A strict push whose handler has not finished by the deadline (storage
+ * stalled): show something now, silently, under a tag of its own
+ * (`push-<network>/fallback/<conversation>`) — never the conversation's, so
+ * it cannot overwrite the real notification should that land meanwhile.
+ * The real notification, or the quiet stub of a push that should not alert,
+ * closes it once it is shown (closeFallbacks); a read relay's is a stub that
+ * closes itself. A store that never answers leaves the silent "New activity".
+ */
+async function showFallback(raw) {
+	let about = {target: undefined, read: false};
+
+	try {
+		about = pushTarget(raw);
+	} catch (e) {
+		// shown as the generic notification
+	}
+
+	const tag = tagFor(knownNetwork, "fallback/" + foldName(about.target || "activity"));
+
+	if (about.read) {
+		await showStub(tag, "read", about.target, knownNetwork, true);
+		return;
+	}
+
+	await showSafely(appName, {
+		tag,
+		silent: true,
+		icon: "img/icon-192.png",
+		body: t("sw.newActivity"),
+		data: {kind: "generic", target: about.target, fallback: true},
+	});
+}
+
+/** A page's message (see the "message" listener), in the same queue as the
+ * pushes: it merges into the same notifications they do. */
+function handlePageMessage(payload) {
+	return enqueuePush(() => handlePageMessageNow(payload));
+}
+
+function enqueuePush(task) {
+	const run = pushChain.then(task);
 
 	pushChain = run.catch(() => undefined);
 
@@ -973,6 +1460,7 @@ const SW_COPY_FALLBACK = {
 	"sw.reply": "Reply",
 	"sw.replyPlaceholder": "Reply…",
 	"sw.newActivity": "New activity while you were away.",
+	"sw.markedRead": "Marked as read",
 	"sw.newMessage": "New message",
 	"sw.titleChannel": "{nick} in {target}",
 	"sw.titleChannelCount": "{nick} in {target} ({count})",
@@ -1027,7 +1515,7 @@ function fromJson(json) {
 	};
 }
 
-async function handlePushNow(raw) {
+async function handlePushNow(raw, state = {fellBack: false}) {
 	let json = null;
 
 	// RFC 8188 says the decrypter strips the aes128gcm padding delimiter
@@ -1035,7 +1523,10 @@ async function handlePushNow(raw) {
 	// ever delivers it unstripped, JSON.parse would throw and the push
 	// would degrade to the generic fallback. Trim trailing control bytes
 	// before parsing so the payload is always clean.
-	const clean = raw.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]+$/, "");
+	const clean = cleanPayload(raw);
+	// Under WebKit this event must end in a showNotification (above): the
+	// seen ring is not consulted and a read relay leaves a stub.
+	const strict = strictUserVisible();
 
 	// Everything below reads IndexedDB (idbGet, getStash) and the
 	// Notifications API — a rejection there (private mode, IndexedDB
@@ -1050,8 +1541,7 @@ async function handlePushNow(raw) {
 
 		// Another device read a channel (JSON opt-down tier): close what we show for it.
 		if (json && json.t === "read") {
-			await closeForTarget(json.target, json.ts);
-			await updateBadge();
+			await readRelay(json.target, json.ts, strict);
 			return;
 		}
 
@@ -1070,7 +1560,6 @@ async function handlePushNow(raw) {
 		// from one flurry can mix locales. Tolerated — one reader, and the
 		// next push re-applies the prefs' choice.
 		const prefs = (await idbGet("prefs")) || {};
-		const markdown = prefs.markdown !== false;
 
 		if (typeof P.applyLocale === "function") {
 			await P.applyLocale(appUrl, prefs.locale);
@@ -1080,166 +1569,17 @@ async function handlePushNow(raw) {
 
 		// The same relay as a MARKREAD line (the full tier).
 		if (parsed && parsed.command === "MARKREAD") {
-			await closeForTarget(parsed.target, parsed.timestamp);
-			await updateBadge();
+			await readRelay(parsed.target, parsed.timestamp, strict);
 			return;
 		}
 
 		if (parsed && (parsed.command === "PRIVMSG" || parsed.command === "NOTICE")) {
-			const msgid = typeof parsed.tags.msgid === "string" ? parsed.tags.msgid : undefined;
-
-			const line = P.lineIndexOf(parsed.tags);
-
-			// A multiline message is one push per line: `batch=<base msgid>` on
-			// every line is what the lines share, while the msgid itself rides
-			// the first line only (draft/multiline's fallback form).
-			const batch = line
-				? typeof parsed.tags.batch === "string"
-					? parsed.tags.batch
-					: msgid
-				: undefined;
-
-			// Dedup against the "seen" ring (client/js/push-seen.ts): what this
-			// device has already surfaced. The live page records every pushable
-			// message it received over its own WebSocket — it owns that
-			// notification, and the server pushes to attached-but-idle sessions
-			// too (FEAT_WEBPUSH_IDLE), so without this every highlight would
-			// notify twice; a frozen page writes nothing, which is exactly when
-			// the push must show. This worker records what it showed (below), so
-			// the same push delivered again — push services promise at least
-			// once, and a notification the user already answered has no data
-			// left to merge into — shows nothing. A batch's reference is the
-			// msgid the page recorded from the BATCH opener, so the page blocks
-			// every line by it though only the first carries a msgid; the worker
-			// remembers lines one by one (`<batch>#<index>`) so the rest of a
-			// batch still lands.
-			const seenId = batch || msgid;
-			const seenKey = line ? seenId + "#" + line.index : msgid;
-
-			if (seenId) {
-				const seen = await idbGet("seen");
-
-				if (
-					Array.isArray(seen) &&
-					((msgid && seen.includes(msgid)) ||
-						seen.includes(seenId) ||
-						seen.includes(seenKey))
-				) {
-					return;
-				}
-			}
-
-			const isChannel = isChannelName(parsed.target);
-			const replyTo = isChannel ? parsed.target : parsed.nick;
-			const tag = "push-" + (replyTo || "activity");
-
-			// Merge per target (the markdown preference was read with the
-			// locale, above): the message list rides on the notification's
-			// data so it survives the worker being killed between pushes, and
-			// a multiline message grows in place, one line per push.
-			const existing = await self.registration.getNotifications({tag});
-			const prev = existing[0] && existing[0].data;
-			const added = P.addMessage(
-				(prev && prev.messages) || [],
-				{
-					from: parsed.nick,
-					text: parsed.text,
-					msgid,
-					batch: batch || undefined,
-					line: line || undefined,
-					concat: parsed.tags[P.CONCAT_TAG] === true,
-				},
-				P.MERGE_KEEP
-			);
-
-			// The ring lost this msgid but the notification still holds it: a
-			// plain message pushed again adds nothing, so show nothing again.
-			if (!added.isNew && !line) {
-				return;
-			}
-
-			const count = ((prev && prev.count) || 0) + (added.isNew ? 1 : 0);
-			const body = P.renderMergedBody(added.entries, isChannel, (text) =>
-				P.notificationText(text, {markdown})
-			);
-
-			// Titles resolve as whole sentences — the unread count is inside
-			// the phrase, never glued on: a translation is free to reorder
-			// (or drop) the count. The worker has no plural rules, so the
-			// count > 1 shape is its own key; a query title below two
-			// messages is the nick alone: nothing to translate.
-			const title = isChannel
-				? count > 1
-					? t("sw.titleChannelCount", {
-							nick: parsed.nick,
-							target: parsed.target,
-							count,
-					  })
-					: t("sw.titleChannel", {nick: parsed.nick, target: parsed.target})
-				: count > 1
-				? t("sw.titleNickCount", {nick: parsed.nick, count})
-				: parsed.nick;
-
-			// Inline reply renders as a text field where the browser supports
-			// it (desktop Chrome) and degrades to a button that deep-links the
-			// chat where it does not — the click handler falls back to openApp
-			// when no reply text arrives.  showSafely guards the whole call if
-			// a browser rejects the actions outright.  Reply goes last, on the
-			// right: that is where a thumb lands on a phone held in one hand.
-			// Mark read is "seen, no answer needed": the account's read marker
-			// at this notification's newest message, on every device.
-			const actions = [
-				{action: "markread", title: t("sw.markRead")},
-				{
-					action: "reply",
-					type: "text",
-					title: t("sw.reply"),
-					placeholder: t("sw.replyPlaceholder"),
-				},
-			];
-
-			// The payload names no network: a push-only worker serves exactly
-			// one (its scope says which); the root worker, which only ever
-			// held the pre-per-network subscription, falls back to the first
-			// stashed network.
-			const stash = await getStash();
-			const network =
-				scopeNetwork || (stash.networks[0] ? stash.networks[0].uuid : undefined);
-			const time = typeof parsed.tags.time === "string" ? parsed.tags.time : undefined;
-
-			await showSafely(title, {
-				tag,
-				renotify: added.isNew,
-				icon: "img/icon-192.png",
-				body,
-				timestamp: time ? Date.parse(time) : undefined,
-				data: {
-					kind: "push",
-					count,
-					from: parsed.nick,
-					target: replyTo,
-					network,
-					time,
-					messages: added.entries,
-				},
-				actions,
-			});
-
-			if (seenId) {
-				await idbAppend("seen", seenKey, SEEN_CAP);
-			}
-
-			await updateBadge();
+			await showMessage(P, parsed, true, strict);
 			return;
 		}
 
 		// userVisibleOnly means every push should surface something.
-		await showSafely("Seance", {
-			tag: "push-activity",
-			icon: "img/icon-192.png",
-			body: t("sw.newActivity"),
-		});
-
+		await showGeneric();
 		await updateBadge();
 	} catch (e) {
 		// Whatever failed above, the prefs' locale may or may not have been
@@ -1252,13 +1592,373 @@ async function handlePushNow(raw) {
 			await surface.applyLocale(appUrl, undefined);
 		}
 
-		await showSafely("Seance", {
-			tag: "push-activity",
-			icon: "img/icon-192.png",
-			body: t("sw.newActivity"),
-		});
-		await updateBadge();
+		// The deadline's fallback already stands for this push: a second
+		// generic would be a second alert for it.
+		if (!state.fellBack) {
+			await showGeneric();
+		}
+
+		await updateBadge().catch(() => undefined);
 	}
+}
+
+/** A read relay (`:server MARKREAD target timestamp=…`, or the JSON tier's
+ * `t:"read"`): close what this worker shows for the target up to the
+ * marker. Under WebKit (`strict`) that alone is a silent push, so a silent
+ * "Marked as read" stub takes the place of the target's notification (its
+ * tag, found by name whatever the relay's spelling, so a close WebKit
+ * refused within 30 s is replaced as well). A notification the marker
+ * leaves standing (it postdates the marker) keeps its place and the stub
+ * goes beside it, under a tag of its own the conversation's next message
+ * closes. The worker closes a stub once WebKit lets it
+ * (READ_STUB_LIFETIME_MS); one killed before then leaves it to the next
+ * message or the page's app-opened sweep. Not inside `waitUntil`: the event
+ * must not outlive WebKit's handler lifetime. */
+async function readRelay(target, ts, strict) {
+	await closeForTarget(target, ts);
+
+	if (strict) {
+		await showReadStub(target, ts);
+	}
+
+	await updateBadge();
+}
+
+async function showReadStub(target, ts) {
+	const cutoff = ts ? Date.parse(ts) : Infinity;
+	const network = await networkOf();
+	const all = await self.registration.getNotifications();
+	const shown = all.filter(
+		(n) =>
+			n.tag &&
+			n.tag.startsWith("push-") &&
+			!isStub(n) &&
+			n.data &&
+			sameName(n.data.target, target)
+	);
+	const kept = shown.some((n) => n.data.time && Date.parse(n.data.time) > cutoff);
+	const tag = kept
+		? tagFor(network, "read/" + foldName(target || ""))
+		: shown.length
+		? newest(shown).tag
+		: tagFor(network, target || "read");
+
+	await showStub(tag, "read", target, network);
+}
+
+/** A silent notification that says nothing is unread and carries no message
+ * text — "Marked as read" (a read relay) or "New message" (a push shown only
+ * because WebKit must see one) — closed once WebKit lets it. Its title names
+ * no conversation: it sits on a lock screen. A tap still opens the
+ * conversation (`data`, routeFor). */
+async function showStub(tag, kind, target, network, fallback = false) {
+	await showSafely(appName, {
+		tag,
+		silent: true,
+		icon: "img/icon-192.png",
+		body: kind === "read" ? t("sw.markedRead") : t("sw.newMessage"),
+		data: {kind, target, network: network || undefined, fallback: fallback || undefined},
+	});
+
+	setTimeout(() => {
+		void closeStub(tag);
+	}, READ_STUB_LIFETIME_MS);
+	tidyLater();
+}
+
+async function closeStub(tag) {
+	try {
+		for (const n of await self.registration.getNotifications({tag})) {
+			if (isStub(n)) {
+				n.close();
+			}
+		}
+
+		await updateBadge();
+	} catch (e) {
+		// the next message on the target, or the page's sweep, takes it
+	}
+}
+
+/** Show a notification again exactly as it stands, silently: what WebKit
+ * needs to see, without a second alert for something already on screen. */
+function reshowQuietly(n) {
+	return showSafely(n.title, {
+		tag: n.tag,
+		silent: true,
+		renotify: false,
+		icon: "img/icon-192.png",
+		body: n.body,
+		data: n.data,
+		actions: n.actions,
+	});
+}
+
+/** Show (or merge) one message's notification: a pushed PRIVMSG/NOTICE, or
+ * a page's message (`checkSeen` false — the page recorded it as seen
+ * itself, and is asking for it to be shown). `mustShow` (a push under
+ * WebKit, above) shows the notification even when the message adds nothing
+ * to it: same tag, same count, so a redelivery or a message the page took
+ * first is one notification, re-shown, and never a silent push. `silent`
+ * (the page's own alert, with its sound setting off) shows it without one. */
+async function showMessage(P, parsed, checkSeen, mustShow = false, silent = false) {
+	const msgid = typeof parsed.tags.msgid === "string" ? parsed.tags.msgid : undefined;
+
+	const line = P.lineIndexOf(parsed.tags);
+
+	// A multiline message is one push per line: `batch=<base msgid>` on
+	// every line is what the lines share, while the msgid itself rides
+	// the first line only (draft/multiline's fallback form).
+	const batch = line
+		? typeof parsed.tags.batch === "string"
+			? parsed.tags.batch
+			: msgid
+		: undefined;
+
+	// Dedup against the "seen" ring (client/js/push-seen.ts): what this
+	// device has already surfaced. The live page records every pushable
+	// message it received over its own WebSocket — it owns that
+	// notification, and the server pushes to attached-but-idle sessions
+	// too (FEAT_WEBPUSH_IDLE), so without this every highlight would
+	// notify twice; a frozen page writes nothing, which is exactly when
+	// the push must show. This worker records what it showed (below), so
+	// the same push delivered again — push services promise at least
+	// once, and a notification the user already answered has no data
+	// left to merge into — shows nothing. A batch's reference is the
+	// msgid the page recorded from the BATCH opener, so the page blocks
+	// every line by it though only the first carries a msgid; the worker
+	// remembers lines one by one (`<batch>#<index>`) so the rest of a
+	// batch still lands.
+	const seenId = batch || msgid;
+	const seenKey = line ? seenId + "#" + line.index : msgid;
+
+	const isChannel = isChannelName(parsed.target);
+	const replyTo = conversationOf(parsed);
+	// The payload names no network: a push-only worker serves exactly
+	// one (its scope says which); the root worker, which only ever
+	// held the pre-per-network subscription, falls back to the first
+	// stashed network.
+	const network = await networkOf();
+	const tag = tagFor(network, replyTo || "activity");
+
+	// The page mirrors the reader's markdown setting and its muted
+	// conversations here (client/js/push-prefs.ts); absent means the app
+	// default (markdown on, nothing muted).
+	const prefs = (await idbGet("prefs")) || {};
+	const markdown = prefs.markdown !== false;
+	const muteKey = typeof replyTo === "string" ? foldName(network + "/" + replyTo) : undefined;
+	const muted =
+		Array.isArray(prefs.muted) &&
+		muteKey !== undefined &&
+		prefs.muted.some((key) => typeof key === "string" && foldName(key) === muteKey);
+
+	if (checkSeen && seenId) {
+		const seen = await idbGet("seen");
+
+		if (
+			Array.isArray(seen) &&
+			((msgid && seen.includes(msgid)) || seen.includes(seenId) || seen.includes(seenKey))
+		) {
+			// Under WebKit even this must show: quietly, never a second alert
+			// (the page took it, or the user already dismissed it).
+			if (mustShow) {
+				await showQuiet(tag, replyTo, network);
+			}
+
+			return;
+		}
+	}
+
+	// A conversation muted on this device alerts nothing, here as on the
+	// page; a push still shows (WebKit counts one that does not), quietly
+	// and without its text. The page never hands a muted message over.
+	if (muted) {
+		await showQuiet(tag, replyTo, network);
+		return;
+	}
+
+	// Merge per target: the message list rides on the notification's
+	// data so it survives the worker being killed between pushes, and
+	// a multiline message grows in place, one line per push.
+	const existing = await self.registration.getNotifications({tag});
+	// An older worker showed it under the tag without the network: carry
+	// its messages and count over, and close it once this one is up.
+	const legacyTag = "push-" + (replyTo || "activity");
+	const legacy =
+		legacyTag === tag ? [] : await self.registration.getNotifications({tag: legacyTag});
+	// Under WebKit the older copies under a tag are still listed: merge into
+	// the newest.
+	const prevShown = newest(existing) || newest(legacy);
+	const prev = prevShown && prevShown.data;
+	const added = P.addMessage(
+		(prev && prev.messages) || [],
+		{
+			from: parsed.nick,
+			text: parsed.text,
+			msgid,
+			batch: batch || undefined,
+			line: line || undefined,
+			concat: parsed.tags[P.CONCAT_TAG] === true,
+		},
+		P.MERGE_KEEP
+	);
+
+	// The ring lost this msgid but the notification still holds it: a
+	// plain message pushed again adds nothing, so show nothing again —
+	// except where showing nothing is what loses the subscription.
+	if (!added.isNew && !line && !mustShow) {
+		return;
+	}
+
+	const count = ((prev && prev.count) || 0) + (added.isNew ? 1 : 0);
+	const body = P.renderMergedBody(added.entries, isChannel, (text) =>
+		P.notificationText(text, {markdown})
+	);
+
+	// Titles resolve as whole sentences — the unread count is inside
+	// the phrase, never glued on: a translation is free to reorder
+	// (or drop) the count. The worker has no plural rules, so the
+	// count > 1 shape is its own key; a query title below two
+	// messages is the nick alone: nothing to translate.
+	const title = isChannel
+		? count > 1
+			? t("sw.titleChannelCount", {
+					nick: parsed.nick,
+					target: parsed.target,
+					count,
+			  })
+			: t("sw.titleChannel", {nick: parsed.nick, target: parsed.target})
+		: count > 1
+		? t("sw.titleNickCount", {nick: parsed.nick, count})
+		: parsed.nick;
+
+	// Inline reply renders as a text field where the browser supports
+	// it (desktop Chrome) and degrades to a button that deep-links the
+	// chat where it does not — the click handler falls back to openApp
+	// when no reply text arrives.  showSafely guards the whole call if
+	// a browser rejects the actions outright.  Reply goes last, on the
+	// right: that is where a thumb lands on a phone held in one hand.
+	// Mark read is "seen, no answer needed": the account's read marker
+	// at this notification's newest message, on every device.
+	const actions = [
+		{action: "markread", title: t("sw.markRead")},
+		{
+			action: "reply",
+			type: "text",
+			title: t("sw.reply"),
+			placeholder: t("sw.replyPlaceholder"),
+		},
+	];
+
+	const time = typeof parsed.tags.time === "string" ? parsed.tags.time : undefined;
+
+	await showSafely(title, {
+		tag,
+		renotify: added.isNew,
+		silent,
+		icon: "img/icon-192.png",
+		body,
+		timestamp: time ? Date.parse(time) : undefined,
+		data: {
+			kind: "push",
+			count,
+			from: parsed.nick,
+			target: replyTo,
+			network,
+			time,
+			messages: added.entries,
+		},
+		actions,
+	});
+
+	// Under WebKit the copy merged from is still up beside this one.
+	if (prevShown && strictUserVisible()) {
+		tidyLater();
+	}
+
+	if (seenId) {
+		await idbAppend("seen", seenKey, SEEN_CAP);
+	}
+
+	// Shown by an older worker, before tags carried the network: merged in
+	// above, and gone now.
+	for (const n of legacy) {
+		n.close();
+	}
+
+	await closeFallbacks(tag, replyTo);
+	await updateBadge();
+}
+
+/**
+ * The conversation's notification is up under `tag`: a stub for it under a
+ * tag of its own (a read relay that kept a newer notification) or a stalled
+ * push's fallback has had its say. WebKit refuses a close within 30 s of the
+ * show, so it is tried again once that has passed — outside `waitUntil`,
+ * like a stub's own close: a worker stopped before then leaves it to the
+ * next message or the app-opened sweep.
+ */
+async function closeFallbacks(tag, target) {
+	for (const n of await self.registration.getNotifications()) {
+		if (
+			(isStub(n) || (n.data && n.data.kind === "generic")) &&
+			n.tag !== tag &&
+			sameName(n.data.target, target)
+		) {
+			n.close();
+			setTimeout(() => n.close(), READ_STUB_LIFETIME_MS);
+		}
+	}
+}
+
+/** A push WebKit must see shown but that should not alert (see showMessage):
+ * the conversation's notification again, silently and unchanged, or — with
+ * nothing up for it — a silent stub with no message text. */
+async function showQuiet(tag, target, network) {
+	const up = newest(await self.registration.getNotifications({tag}));
+
+	if (up && !isStub(up)) {
+		await reshowQuietly(up);
+	} else {
+		await showStub(tag, "quiet", target, network);
+	}
+
+	await closeFallbacks(tag, target);
+	await updateBadge();
+}
+
+/** The page's message as a parsed push line, shown by showMessage. */
+async function handlePageMessageNow(payload) {
+	const m = payload.message;
+
+	if (typeof m.from !== "string" || typeof payload.target !== "string") {
+		return;
+	}
+
+	// The reader's language, as handlePushNow applies it for a push.
+	const P = push();
+	const prefs = (await idbGet("prefs")) || {};
+
+	if (typeof P.applyLocale === "function") {
+		await P.applyLocale(appUrl, prefs.locale);
+	}
+
+	await showMessage(
+		P,
+		{
+			tags: {
+				msgid: typeof m.msgid === "string" ? m.msgid : undefined,
+				time: typeof m.time === "string" ? m.time : undefined,
+			},
+			nick: m.from,
+			command: m.notice ? "NOTICE" : "PRIVMSG",
+			target: payload.target,
+			text: typeof m.text === "string" ? m.text : "",
+		},
+		false,
+		false,
+		payload.silent === true
+	);
 }
 
 /** showNotification that cannot silently fail: if Chrome rejects any
@@ -1266,6 +1966,14 @@ async function handlePushNow(raw) {
  * then bare.  A delivered push that renders nothing is the worst outcome
  * there is, so every path here ends in a visible notification. */
 async function showSafely(title, options) {
+	// A fallback runs beside the queue, for another push than the one in it.
+	if (activePush && !(options.data && options.data.fallback)) {
+		activePush.shown = true;
+	}
+
+	// Which copy under a tag is the newest (WebKit keeps them all; `tidy`).
+	options = {...options, data: {...(options.data || {}), shownAt: Date.now()}};
+
 	try {
 		await self.registration.showNotification(title, options);
 		return;
@@ -1277,6 +1985,8 @@ async function showSafely(title, options) {
 		await self.registration.showNotification(title, {
 			tag: options.tag,
 			body: options.body,
+			silent: options.silent === true,
+			data: {shownAt: options.data.shownAt},
 		});
 		return;
 	} catch (e) {
@@ -1290,6 +2000,21 @@ async function showSafely(title, options) {
 	}
 }
 
+/** rfc1459 case folding, ASCII only — client/js/irc/casemap.ts `casefold`,
+ * which the worker cannot import. */
+function foldName(name) {
+	return name.replace(/[A-Z[\\\]~]/g, (c) =>
+		c === "~" ? "^" : String.fromCharCode(c.charCodeAt(0) + 0x20)
+	);
+}
+
+/** Whether two channel names or nicks are the same one: IRC compares them
+ * case-insensitively, and a read (the page's open conversation, a read
+ * relay) need not spell the target as the notification it closes does. */
+function sameName(a, b) {
+	return typeof a === "string" && typeof b === "string" && foldName(a) === foldName(b);
+}
+
 /** Close push notifications for `target` whose message predates `ts`. */
 async function closeForTarget(target, ts) {
 	const cutoff = ts ? Date.parse(ts) : Infinity;
@@ -1300,7 +2025,7 @@ async function closeForTarget(target, ts) {
 			continue;
 		}
 
-		const sameTarget = n.data && n.data.target === target;
+		const sameTarget = n.data && sameName(n.data.target, target);
 		const mine = !target && n.tag.startsWith("push-");
 
 		if (
@@ -1500,7 +2225,9 @@ function askPage(client, message) {
  * first — until one does. Asking them all at once would post a reply
  * once per window. Resolves true when a page sent it. */
 async function viaPage(message) {
-	const cs = await self.clients.matchAll({includeUncontrolled: true, type: "window"});
+	// Only this app's windows answer; another project's on the origin
+	// would only cost its timeout.
+	const cs = await appWindows();
 
 	if (cs.length === 0 || typeof MessageChannel !== "function") {
 		return false;

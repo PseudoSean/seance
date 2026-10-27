@@ -166,7 +166,9 @@ export default async function run(page) {
 		timeout: 30000,
 		label: `${CHANNEL} in the sidebar`,
 	});
-	await page.click(`.channel-list-item[data-name="${CHANNEL}"]`);
+	// A tap, as on a phone: a mouse click would tell the app a mouse is in
+	// use (helpers/inputModality.ts) and give it the hover toolbar.
+	await tap(page, `.channel-list-item[data-name="${CHANNEL}"] .name`);
 
 	// The channel has history, so previous runs are on screen too: mark this
 	// run's messages and work only on the elements carrying the mark.
@@ -235,6 +237,30 @@ export default async function run(page) {
 		(await page.count(`${first} .msg-action-copy-text`)) === 1
 	);
 	await page.screenshot("1-first-open");
+
+	// 2b. Copy is the end of it: the bar closes on the tap — the next thing
+	//     is a paste somewhere else — and the one word it leaves takes no
+	//     tap and is gone within the second.
+	await page.grantPermissions(["clipboardReadWrite", "clipboardSanitizedWrite"]);
+	await tap(page, `${first} .msg-action-copy-text`);
+	await page.check("a tap on Copy closes the toolbar", (await openIds()).length === 0);
+	await page.check(
+		"and leaves a Copied label over the row",
+		(await page.evaluate(`document.querySelector("${first} .msg-copied")?.textContent`)) ===
+			"Copied"
+	);
+	await page.check(
+		"the label takes no tap",
+		(await page.evaluate(
+			`getComputedStyle(document.querySelector("${first} .msg-copied")).pointerEvents`
+		)) === "none"
+	);
+	await page.screenshot("2b-copied");
+	await page.sleep(1100);
+	await page.check(
+		"the label is gone within the second",
+		(await page.count(`${first} .msg-copied`)) === 0
+	);
 
 	// 3. A long press on a second message moves the toolbar rather than
 	//    adding one: a phone must never accumulate one per message.

@@ -13,13 +13,18 @@
 		<ContextMenu ref="contextMenu" />
 		<ConfirmDialog ref="confirmDialog" />
 		<UploadPreview />
+		<InvestigateCard />
+		<AlertBuilder />
+		<OperActionDialog />
 		<PushPrompt />
+		<InstallGuide />
 		<div id="upload-overlay"></div>
 	</div>
 </template>
 
 <script lang="ts">
 import {isPhoneLayout} from "../js/helpers/device";
+import {emitEscape} from "../js/helpers/escapeLayer";
 import eventbus from "../js/eventbus";
 import Mousetrap, {ExtendedKeyboardEvent} from "mousetrap";
 import throttle from "lodash/throttle";
@@ -31,8 +36,12 @@ import ImageViewer from "./ImageViewer.vue";
 import ContextMenu from "./ContextMenu.vue";
 import ConfirmDialog from "./ConfirmDialog.vue";
 import UploadPreview from "./UploadPreview.vue";
+import OperActionDialog from "./Oper/ActionDialog.vue";
+import InvestigateCard from "./Oper/InvestigateCard.vue";
+import AlertBuilder from "./Oper/AlertBuilder.vue";
 import Mentions from "./Mentions.vue";
 import PushPrompt from "./PushPrompt.vue";
+import InstallGuide from "./InstallGuide.vue";
 import {
 	computed,
 	provide,
@@ -40,10 +49,13 @@ import {
 	onBeforeUnmount,
 	onMounted,
 	ref,
+	watch,
 	Ref,
 	InjectionKey,
 } from "vue";
 import {useStore} from "../js/store";
+import {themeScene} from "../js/themeScene";
+import {ChanType} from "../../shared/types/chan";
 import type {DebouncedFunc} from "lodash";
 
 export const imageViewerKey = Symbol() as InjectionKey<Ref<typeof ImageViewer | null>>;
@@ -58,8 +70,12 @@ export default defineComponent({
 		ContextMenu,
 		ConfirmDialog,
 		UploadPreview,
+		OperActionDialog,
+		InvestigateCard,
+		AlertBuilder,
 		Mentions,
 		PushPrompt,
+		InstallGuide,
 	},
 	setup() {
 		const store = useStore();
@@ -75,7 +91,7 @@ export default defineComponent({
 
 		const viewportClasses = computed(() => {
 			return {
-				notified: store.getters.highlightCount > 0,
+				notified: store.getters.mentionCount > 0,
 				"menu-open": store.state.appLoaded && store.state.sidebarOpen,
 				"menu-dragging": store.state.sidebarDragging,
 				"userlist-open": store.state.userlistOpen,
@@ -85,8 +101,8 @@ export default defineComponent({
 		const debouncedResize = ref<DebouncedFunc<() => void>>();
 		const dayChangeTimeout = ref<any>();
 
-		const escapeKey = () => {
-			eventbus.emit("escapekey");
+		const escapeKey = (e: ExtendedKeyboardEvent) => {
+			emitEscape(e.repeat);
 		};
 
 		const toggleSidebar = (e: ExtendedKeyboardEvent) => {
@@ -160,6 +176,14 @@ export default defineComponent({
 		};
 
 		prepareOpenStates();
+
+		// What kind of conversation a theme's scene sits behind (client/js/themeScene.ts).
+		watch(
+			() => store.state.activeChannel?.channel.type,
+			(type) =>
+				themeScene.setView(type === ChanType.QUERY ? "query" : type ? "channel" : "other"),
+			{immediate: true}
+		);
 
 		onMounted(() => {
 			Mousetrap.bind("esc", escapeKey);

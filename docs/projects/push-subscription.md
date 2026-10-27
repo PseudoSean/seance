@@ -49,6 +49,15 @@ _Live-cycle findings 2026-09-02 (first real trigger attempt, testnet ircd):_
     accounts can still opt down with `METADATA \* SET draft/webpush/payload
     - :route|ping`under`draft/metadata-2`), falling back to the spec's
       raw IRC line.
+  - The client writes the tier itself (`full`, at subscribe) and writes it
+    **private** (`METADATA * SET draft/webpush/payload private :full`,
+    `irc/bus.ts`): nefarious2's WHOIS lists every public metadata key, so the
+    public write it used to make told anyone who looked that the account had
+    push on (2026-10-22). The server reads the tier whatever its visibility.
+    An account whose key is still public from before is rewritten private by
+    the login read (`client.ts` `scheduleMuteRead` asks for the key with the
+    mute and shared keys; `handlers/metadata.ts` answers a public 761 with
+    the private SET). Operators still see private metadata.
   - the spec-shaped raw line (the `full` tier now): parsed by
     `client/js/push/line.ts`, stripped by `push/strip.ts` (IRC formatting
     always, Markdown when the mirrored setting is on), merged and
@@ -410,7 +419,7 @@ decide _who gets told about it_:
   touchpoint: `autoRegister` (no REGISTER on connect), `subscribe` (no
   registration loop membership, and the "at least one account" guard only
   counts enabled networks), `setSnooze` (mute metadata only to enabled
-  networks), the connect-time prompt (only offered for enabled networks),
+  networks; (superseded: the snooze is gone, do not disturb replaced it — docs/projects/do-not-disturb.md §4)), the connect-time prompt (only offered for enabled networks),
   and the SW stash (`writeStash` — a disabled network's credentials are
   dropped from quick-reply/renewal). `webpush.onNetworkSaved()` — called
   from NetworkEdit after `network:edit` — reacts to toggles: off sends
@@ -420,7 +429,7 @@ decide _who gets told about it_:
   connected, else via the next `webpush:available`).
 - **Settings → Notifications** keeps only what is genuinely browser-global:
   the diagnostics (permission, iOS install hint, unsupported browser,
-  server-refused) and the account-wide snooze, plus a hint pointing at the
+  server-refused) and the account-wide snooze (superseded: the snooze is gone, do not disturb replaced it — docs/projects/do-not-disturb.md §4), plus a hint pointing at the
   network settings (2026-09-03: the read-only Settings list and the status
   dot were removed; an editor status line was added the same day and then
   dropped as redundant — the **sidebar bell** is the per-network status
@@ -431,7 +440,9 @@ decide _who gets told about it_:
 - **Scenarios.** `tools/scenarios/push-network-setting.mjs` drives the
   checkbox ↔ storage ↔ editor-status round-trip headlessly;
   `tools/scenarios/ui-cleanup.mjs` asserts the Settings panel keeps only
-  the hint/snooze/warnings (no rows, no status dot, no global toggle).
+  the hint/snooze/warnings (no rows, no status dot, no global toggle;
+  the snooze row is gone since, do not disturb replaced it —
+  docs/projects/do-not-disturb.md §4).
 
 The register/unregister, subscription map and stash behaviour are unchanged
 for every network that does not explicitly opt out — the flag gates
@@ -483,6 +494,74 @@ Sidebar bell states (the per-network status indicator): solid **green**
 bell = subscribed; **muted** bell = enabled, not subscribed (the shipped
 font is FA5 solid-only, so the outline variant does not exist — the colour
 separates the states); **bell-slash** = notifications off for the network.
+
+### The dropped duplicate is a silent push (2026-10-01)
+
+"FCM duplicate silently dropped" above was the bug. Chrome enforces
+`userVisibleOnly` per **service-worker registration**: when a push event
+ends, it counts the visible notifications of the registration the push
+arrived on, and a push that leaves none (and has no visible tab of the
+site) spends silent-push budget; once that is gone Chrome shows its own
+"This site has been updated in the background"
+(`push_messaging_notification_manager.cc` `DidCountVisibleNotifications`;
+hiding one does not count either). Since pushes moved to one registration
+per network (`push/<uuid>/`, 2026-09-05) the page's own notification sat on
+the **root** registration, so every push the seen ring dropped was silent —
+and with `AWAY *` for an unfocused or hidden page (2026-09-11) the server
+pushes exactly while a desktop page keeps running in the background. Seen on
+Windows, not Android: a hidden Android page freezes, records nothing, and
+its pushes show.
+
+The fix: for a network this device is subscribed on, the page hands its
+notification to that network's push worker with the message itself
+(`socket-events/msg.ts` → `webpush.pushWorkerFor(uuid)`, the `notification`
+message gaining `message: {msgid, from, text, time, notice}`), and the
+worker shows it exactly as the push would be shown (`showMessage`, the
+push path's own code: tag `push-<target>`, merged by msgid, Mark read and
+Reply, in the same queue as the pushes). The push for the same message
+then finds a notification on its own registration; one that lands first is
+merged into rather than shown twice. Invites, messages without a msgid and
+networks without a subscription keep the root path. A push-only worker
+from before this shows such a payload the per-channel way — still on its
+own registration. The page also closes what it put there: the server's read
+push only follows a message it pushed, so a notification the page showed
+while the account was attended would otherwise outlive the read and come
+back counted in the next push. Opening a conversation, the window coming
+back to an open one, and another session reading one to the end
+(`markread` with nothing unread) send `{type: "read", target}` to the
+network's push worker (`webpush.ts` `readOnWorker`), which closes through
+`closeForTarget` — a message, not a push, so it costs no budget. It
+compares targets the way IRC does (rfc1459 folding, ASCII only — the
+worker's `sameName`), since the open conversation and the notification
+need not spell the target alike; read relays get the same comparison.
+
+The page's copy takes the push's shape whatever the message, so the two
+merge by msgid: a private NOTICE that highlights (shown in the lobby) is
+keyed on its sender like the pushed one — a click opens a query with them,
+Reply answers them — no longer on the lobby.
+
+Left as it was:
+
+- A read relay that closes the last notification is still silent (the gate
+  in nefarious2 2f51539 keeps that to one per pushed conversation, as on
+  Android).
+- **A muted conversation is still silent.** `socket-events/msg.ts` records
+  every highlight and query message as seen, muted or not, while
+  `notifyMessage` shows nothing for a muted channel; the ircd does not know
+  about the client's mutes (`thelounge.muted`), pushes anyway, and the
+  worker drops the push as seen. Letting it through would notify a muted
+  channel whenever a desktop page is in the background, so the follow-up is
+  on the server's side: write the mutes into the account's
+  `draft/webpush/mute` metadata (`target:until;…`, which the ircd already
+  enforces, `ircd/webpush_mute.c`). That makes a mute account-wide (the
+  phone stops too), and has to merge with `setSnooze`, which today writes
+  the whole key as `*:<until>`, and with mutes set on other devices.
+  (Superseded: `setSnooze` is gone; do not disturb owns the `*` entry and
+  keeps every other one, docs/projects/do-not-disturb.md §4.)
+
+Harness: "service worker page notifications on a push worker"; browser
+check: `tools/scenarios/push-page-notification.mjs` (seeded subscription on
+the faked Push API, a bot's PM over a real ircd).
 
 ## Replying from a notification, and opening it (2026-09-04)
 
@@ -689,7 +768,8 @@ natural complement of Reply: "seen, no answer needed".
   recounted: the tap is never a no-op.
 - **Removed:** `swMute`, `mergeMuteEntry`, the `mute30` action and the
   harness's mute-list scripting. Settings' account-wide snooze
-  (`webpush.setSnooze`, page-side metadata) is untouched.
+  (`webpush.setSnooze`, page-side metadata) is untouched. (Since replaced
+  by do not disturb, docs/projects/do-not-disturb.md §4.)
 - **What the OS cannot do instead:** an OS mute is per site or app, never
   per channel across devices — the one thing Mute 30m did that nothing else
   does. Judged not worth the slot.
@@ -842,7 +922,7 @@ Settings still said subscribed — a silent failure. Now:
 - **Visible in Settings, renewed per network.** `refreshState` reports
   **`stale`** (before the "stored means subscribed" rule) whenever any
   connected network's entry is stale; Settings → Notifications shows the explanation
-  instead of the snooze row and points at the network's settings, so the
+  instead of the snooze row (superseded: the snooze is gone, do not disturb replaced it — docs/projects/do-not-disturb.md §4) and points at the network's settings, so the
   problem stays visible after _Never_ and has a way out. The **Renew** button
   is in the Edit-network form (`#pushRenew` → `webpush.renew(uuid)` →
   `subscribe(<that network's key>)`), shown when `networkPushInfo(uuid).stale`
@@ -872,3 +952,174 @@ on every connect (confirmed in use on 2026-09-05: two connections, both
 subscribed, the prompt swapping between them). Subscriptions are now per
 network — one service-worker registration per network, each with its own
 subscription and key — see `docs/projects/push-per-network.md`.
+
+## iOS: every push has to show something (2026-10-22)
+
+Reported: push on an iPhone (the Home Screen web app) is flaky or stops
+altogether; nobody on the project owns an Apple device. Investigated from
+the WebKit source rather than a device, with the facts pinned to the files
+they come from:
+
+- **WebKit counts silent pushes per origin and revokes at three.** When
+  webpushd hands a push to the worker it queues it as a potential silent
+  push with a 30 s expiry (`Source/WebKit/webpushd/WebPushDaemon.mm`
+  `m_potentialSilentPushes`, `silentPushTimeoutForProduction`); a
+  `showNotification` on that registration inside the window removes the
+  entry (`didShowNotification`), and expiry calls
+  `PushService::incrementSilentPushCount`. The count starts at 0 when the
+  record is made and is only ever incremented
+  (`Source/WebCore/Modules/push-api/PushDatabase.cpp`: no reset path). At
+  `maxSilentPushCount = 3` (`Source/WebKit/Shared/WebPushDaemonConstants.h`:
+  "If an origin processes more than this many silent pushes, then it will be
+  unsubscribed from push") `PushService.mm` logs "Removing all subscriptions
+  associated with … since it processed N silent pushes" and removes **every
+  subscription of the origin** — every network's registration, since they
+  share the origin — and nothing tells the worker (no
+  `pushsubscriptionchange`). Chrome's rule is different: it counts the
+  notifications visible on the registration when the event ends, which the
+  page-handoff design above satisfies.
+- **The worker ended push events silently in three places.** A push for a
+  message the live page already took (the seen ring); a redelivery whose
+  message the notification already holds (`addMessage` idempotent, nothing
+  new, nothing shown); and every read relay (`MARKREAD`, `t:"read"`), which
+  only closes. All three happen in ordinary use on a phone: the ircd pushes
+  to an account whose connections are held, away, or idle — and a
+  connection that has not spoken this session counts as idle at once
+  (`webpush_attention.c`: `last_msg <= 0` is idle; `WEBPUSH_IDLE` 900 s
+  otherwise), so with the app open and being read every PM and highlight is
+  pushed, reaches the page over the WebSocket first, and was dropped by the
+  worker as seen. And the relay for a conversation that was pushed is sent
+  to every subscription of the account, the reading device's included. Three
+  of any of these and the phone lost push; the next launch found no
+  subscription (`syncStoredWithBrowser`), deleted the entry, and
+  `maybePrompt` subscribed again in silence (permission granted) — push that
+  works for a few notifications after each launch, which reads as flaky.
+- **A notification shown and closed at once is not a way out.** WebKit
+  commit 7ab26d3 (bug 309940, "Don't let ServiceWorkers handling push events
+  call showNotification but then immediately close that notification")
+  refuses a script `close()` of a persistent notification younger than the
+  same 30 s ("Persistent notifications cannot be closed shortly after they
+  are shown"), so a show-and-close stub is a 30 s banner either way.
+- **The POST itself is fine for Apple.** `webpush.c` sends
+  `Authorization: vapid t=…, k=…` (RFC 8292 §3, which Apple requires),
+  `Content-Encoding: aes128gcm`, a `TTL`, and a JWT with the endpoint's
+  origin as `aud`, a 24 h `exp` and a `mailto:` subject — the shape Apple's
+  push service accepts; the encryption was verified against reference
+  crypto earlier in this document.
+
+What ships (`client/service-worker.js`, `client/js/webpush.ts`,
+`test/tests/service-worker.ts` § under WebKit):
+
+- **Under WebKit every push event shows.** `strictUserVisible()` reads the
+  worker's user agent (`AppleWebKit/` without `Chrome/`: WebKit on iOS and
+  macOS, Chromium carries both, Firefox neither). A new message is shown as
+  on every browser. A push the page already took or the user already
+  dismissed (a seen-ring hit, a redelivery) is shown **quietly**
+  (`showQuiet`): the conversation's notification again, silently and
+  unchanged (its text and count with it), or, with nothing up for it, a
+  silent "New message" stub with no message text — never a second alert, a
+  sound or a badge count. A push for a conversation muted on this device
+  (the page mirrors `thelounge.muted` into the worker's `prefs`,
+  `client/js/mute.ts`, one update at a time, compared under IRC's case
+  folding) is shown the same quiet way on every browser. A read relay closes what
+  it would have closed and puts a silent "Marked as read" stub in the
+  target's notification's place (found by name whatever the relay's
+  spelling, so a close WebKit refused is replaced too); a notification the
+  marker leaves standing keeps its place and the stub goes beside it under a
+  tag of its own, which the conversation's next message closes. Stubs carry
+  no count (`updateBadge` skips them), their title names no conversation
+  (they sit on a lock screen) and a tap opens the conversation; the worker
+  closes one itself 31 s later — outside `waitUntil`, since the event must
+  not outlive WebKit's handler lifetime — and a worker killed before then
+  leaves it to the next message or the page's app-opened sweep. **That "place"
+  is the tag, and WebKit never replaces by tag** (webpushd files each
+  notification under its own UUID and reads the tag only to filter
+  `getNotifications()`), so on an iPhone the stub went _beside_ the message,
+  and a message read within 30 s of arriving stayed (its close refused). The
+  worker therefore stamps every show (`data.shownAt`), merges from and
+  re-shows the newest copy under a tag, counts only that one on the badge,
+  and `tidy` closes every older copy under a tag and every stub past 30 s —
+  after every push and page read, 31 s after a merge (if the worker lives
+  that long), and when the page sends `{type: "tidy"}`
+  60 s after a quiet push for a message it took. A read relayed by push needs
+  nothing more: its stub is the newest under the message's tag. A read on the
+  page is sent again 32 s later, up to the newest message it read then (a
+  server time, so a message since stays), and the app opening closes again
+  32 s later what was shown before it; a page backgrounded inside those 30 s
+  leaves the notification up until it is next opened. The harness's
+  `webkitNotifications` option models this. A push that has
+  shown nothing `STRICT_SHOW_DEADLINE_MS` (20 s) after it arrived — a
+  stalled IndexedDB, a push stuck behind one — shows a fallback, silently,
+  under a tag of its own (`push-<uuid>/fallback/<conversation>`, read from
+  the payload without IndexedDB): the generic notification, or for a read
+  relay a stub that closes itself. Never the conversation's own tag, so it
+  cannot overwrite the real notification should that land meanwhile; the
+  real notification, or the quiet stub of a push that should not alert,
+  closes it (`closeFallbacks`), and a store that fails after the deadline
+  adds no second generic. Each push has its own deadline, timed from the
+  event ahead of the push queue, because WebKit's clock is. Other browsers
+  keep the lenient paths: no deadline, and a seen push shows nothing.
+- **Tags carry the network** (`push-<uuid>/<conversation>`), on every
+  browser: tags are per origin, so the networks' push workers would
+  otherwise replace each other's same-named channels. A notification an
+  older worker showed under `push-<conversation>` is merged into the next one
+  for that conversation and closed.
+- **Every notification that names no conversation is titled with the
+  deploy's name** (the generic notification, the stubs): `config.json`
+  `appName`, written into the worker at build time (`webpack.config.ts`).
+- **A subscription the browser dropped is unregistered from the server.**
+  `syncStoredWithBrowser` queues the lost entry's endpoint
+  (`queueUnregister`, as the Android shell's reconciliation does) and the
+  next connect sends `WEBPUSH UNREGISTER` for it (`unregisterLegacy`) — only
+  when this build's registration exists without a subscription: no
+  registration at all may be another build on the origin (a Pages preview
+  under `/pr<N>/` shares `thelounge.push` with the release app), whose live
+  endpoint must not be unregistered. Before,
+  each revoke-and-resubscribe cycle left a dead endpoint on the account:
+  `WEBPUSH_MAX_REGISTRATIONS` (30) would eventually refuse the phone for
+  good, and Apple's answer for a revoked endpoint is not documented as the
+  410 the ircd reaps on.
+
+What this costs on an iPhone, and the server-side options (not taken, by
+the rule that push problems are fixed in the client): a message the page
+already shows gets its banner anyway (the page's own copy, re-presented, or
+a banner for the conversation on screen), and reading a pushed
+conversation anywhere — the phone itself included — shows the 30 s "Marked
+as read" stub. Both come from the server pushing to a device whose page is
+alive, and from relaying reads to Apple endpoints; a server that stopped
+pushing to attending connections, or sent Apple endpoints no read relays,
+or spoke Declarative Web Push to them (iOS 18.4+: a JSON notification
+payload webpushd shows itself, outside the silent-push accounting —
+`WebPushDaemon.mm` `supportsBuiltinNotifications`), would remove them.
+
+Verification: the harness drives the real worker under an iPhone user
+agent (a seen push shown, a redelivery re-shown at the same count, the
+relay's stub and its close, the stub beside a kept notification, a stub
+with nothing to close, the next push replacing the stub, the stalled
+handler's generic notification, and a Chromium user agent keeping the
+drops). The iPhone itself remains unverified: nobody here has one, and
+`getSubscription()` on the device after three pushes is the check.
+
+### A revoked subscription was never made again (2026-10-24)
+
+Reported after the above shipped: iPhones still get no push. Found in
+WebKit's `Notification.cpp`: `Notification.requestPermission()` called
+without a user gesture resolves `"denied"` whatever the stored permission —
+the gesture check (`consumeTransientActivation`) comes first and the
+permission is never consulted — while `PushManager::subscribe` needs no
+gesture once the permission is granted. `subscribeNow` opened every
+subscribe with `await Notification.requestPermission()`, so the silent
+subscribes (`maybePrompt` with the permission granted: the subscription the
+browser dropped, a second network; a `trust` renewal; the worker's
+`resubscribe` message) all ended as `"denied"` on WebKit, with Settings →
+Notifications reporting notifications blocked while iOS allowed them — and
+the recovery after WebKit's revocation never happened: a device revoked
+before the fix above stayed without push after it. Now the permission is
+asked for only while it is `default` (the prompt's button and the Renew
+button are gestures), a refusal with the permission still undecided leaves
+the state unsubscribed for the next connect's prompt rather than "denied",
+and a granted permission subscribes at once. Nothing to test under mocha
+(`webpush.ts` is Vue + store); type-checked and reviewed against the two
+WebKit functions. On a device: open the app once with notifications
+allowed — the lobby's `WEBPUSH REGISTER` echo, and Settings → Notifications
+no longer saying blocked, are the signs.

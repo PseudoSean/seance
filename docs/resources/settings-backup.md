@@ -17,6 +17,7 @@ to a friend who wants the same setup. Code: `client/js/helpers/settingsBackup.ts
   "version": 2,
   "exportedAt": "2026-09-09T10:00:00.000Z",
   "app": "Seance",
+  "platform": "web",
   "entries": {
     "settings": {"theme": "creama", "...": "..."},
     "thelounge.networks": [{"uuid": "…", "host": "…", "...": "..."}],
@@ -33,7 +34,9 @@ would need a migration; a file from a newer version is refused with a message.
 An **older** file is applied as far as it goes: a key added after its version
 (`KEY_SINCE` in `settingsBackup.ts` — `thelounge.translate` arrived in
 version 2) is left as it is on the device rather than cleared, since that file
-could never have carried it.
+could never have carried it. `thelounge.oper` was added upstream without a
+bump and counts from version 1, as it does there; so does `thelounge.dnd`,
+which came from the do-not-disturb branch.
 
 ## What is in it
 
@@ -49,6 +52,8 @@ could never have carried it.
 | `thelounge.reactions.recent`   | the reaction picker's recents                                                                                   |
 | `thelounge.aliases`            | command aliases (Settings → Aliases)                                                                            |
 | `thelounge.translate`          | per-channel translation state (what each channel reads and writes, its formality, variant, languages and terms) |
+| `thelounge.oper`               | oper notice routing and snomask                                                                                 |
+| `thelounge.dnd`                | do not disturb: the switch and its window                                                                       |
 | `thelounge.ignore.<uuid>`      | ignore list per network                                                                                         |
 
 Left out on purpose: `thelounge.sts` (a cache), `thelounge.push*` (this
@@ -63,6 +68,28 @@ holds.
 encrypted; the checkbox's tooltip says so. The restore dialog says when the
 file it is about to apply carries passwords.
 
+**Where it was made.** `platform` is `web`, `ios` or `android`
+(`helpers/platformDefaults.ts` `currentPlatform`). Two settings default
+differently by platform — `matchSystemTextSize` and `matchSystemAppearance`
+are on in the native shells and off on the web — and the file carries the
+live settings, defaults included, so without it a web backup restored in a
+shell would switch following the system off there. A restore on another
+platform gives such a setting that platform's default when the file's value
+is just the default of the platform it was made on, and keeps it when it
+differs (the person chose it). Turning one on follows the upgrade
+migration's rule (`overridesChoice` in `helpers/settingsMigration.ts`): a
+`fontSize` other than the default keeps `matchSystemTextSize` off, and a
+theme other than the restoring deploy's default that has a light/dark
+partner keeps `matchSystemAppearance` off, since following the system would
+override what the person picked; an unpaired theme changes nothing, so
+appearance follows the system. Between two shells, where both defaults are
+on, the file's value is kept as it is. The key is written either way: a settings
+object without it reads as one saved before the setting existed, and the
+upgrade migration (`helpers/settingsMigration.ts`) would decide instead. A
+file without `platform` (made before it was recorded) is restored as it is.
+Adding the field did not bump `version`: an older build reads the file as
+before and ignores it.
+
 **Settings are always complete.** `store-settings.ts` writes the `settings`
 key only once a setting has been changed, so the tab passes the store's live
 settings object in (`collectBackup({settings})`) and a fresh profile's backup
@@ -72,10 +99,14 @@ still carries every setting.
 
 Choosing a file decodes and validates it, then asks through the app's confirm
 dialog (naming the file, the number of networks and whether it carries
-passwords). On confirm, `applyBackup` removes every key the file's version
-covers and writes the file's entries, and the page reloads — that is how
-every module re-reads its storage (the settings store, `saved-networks.ts`,
-`sort.ts`, `mute.ts`, `ignore.ts`, `mediaTrust.ts` all load at boot). Nothing
-runs between the writes and the reload, so in-memory state cannot overwrite
-the file's entries. A reload on Settings stays on Settings (`router.ts`
+passwords). On confirm, `applyBackup` writes the file's keys (the
+platform-dependent settings rebased as above), then removes every covered key
+the file does not carry, and the page reloads — that is how every module
+re-reads its storage (the settings store, `saved-networks.ts`, `sort.ts`,
+`mute.ts`, `ignore.ts`, `mediaTrust.ts` all load at boot). Nothing runs
+between the writes and the reload, so in-memory state cannot overwrite the
+file's entries. Writes come first because `localStorage.ts` swallows a full
+quota: each write is read back, and one that did not land undoes the ones
+before it and throws `BackupStorageError`, which the form shows instead of
+reloading, so a full device keeps what it had. A reload on Settings stays on Settings (`router.ts`
 `onStandalonePage`); autoconnect networks come back on their own.

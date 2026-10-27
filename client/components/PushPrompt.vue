@@ -1,9 +1,16 @@
 <template>
-	<div id="push-prompt-overlay" :class="{opened: webpush.pushPrompt.visible}">
+	<div
+		id="push-prompt-overlay"
+		:class="{opened: webpush.pushPrompt.visible}"
+		:data-escape-close="webpush.pushPrompt.visible ? 'push-prompt' : null"
+	>
 		<div
 			v-if="webpush.pushPrompt.visible"
 			id="push-prompt"
+			ref="dialog"
 			:class="webpush.pushPrompt.kind"
+			:data-network="webpush.pushPrompt.network"
+			:data-armed="webpush.pushPrompt.armed ? '' : null"
 			role="dialog"
 			aria-modal="true"
 		>
@@ -87,7 +94,7 @@
 </style>
 
 <script lang="ts">
-import {computed, defineComponent, onMounted, onUnmounted} from "vue";
+import {computed, defineComponent, onMounted, onUnmounted, ref} from "vue";
 import eventbus from "../js/eventbus";
 import {useI18n} from "../js/i18n";
 import {useStore} from "../js/store";
@@ -129,13 +136,25 @@ export default defineComponent({
 			};
 		});
 
-		const no = () => webpush.declinePrompt();
-		const never = () => webpush.neverPrompt();
-		const yes = () => webpush.acceptPrompt();
+		const dialog = ref<HTMLElement | null>(null);
 
-		const onEscape = () => {
-			if (webpush.pushPrompt.visible) {
-				no();
+		// An answer is for the prompt on screen: the network its rendered
+		// dialog names, not whatever the state says by the time the event is
+		// handled. webpush.ts ignores it when that is no longer the open one,
+		// and in the prompt's first moments (a double-click's second click,
+		// a tap aimed at what was there before: PROMPT_ARM_MS).
+		const answer = (kind: "yes" | "no" | "never") =>
+			webpush.answerPrompt(kind, dialog.value?.dataset.network);
+
+		const no = () => answer("no");
+		const never = () => answer("never");
+		const yes = () => answer("yes");
+
+		// One press answers one prompt: a held Escape's auto-repeats would
+		// decline each network's prompt as it comes up, unseen.
+		const onEscape = (layer: string | null, repeat?: boolean) => {
+			if (layer === "push-prompt" && webpush.pushPrompt.visible && !repeat) {
+				answer("no");
 			}
 		};
 
@@ -150,6 +169,7 @@ export default defineComponent({
 		return {
 			t,
 			webpush,
+			dialog,
 			target,
 			no,
 			never,

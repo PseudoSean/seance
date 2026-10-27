@@ -16,16 +16,19 @@ import history, {chathistoryBatch} from "../history";
 import {AUTHTOKEN_BATCH} from "../authtoken";
 import {MULTILINE_CAP, multilineBatch} from "../multiline";
 import {BOUNCER_REPLAY_BATCH, bouncerReplayBatch, persistenceBatch} from "../persistence";
+import {labeledBatch} from "../request";
 import type {Handler} from "../types";
 import account from "./account";
 import away from "./away";
 import batch, {registerBatchHandler} from "./batch";
+import {targetsBatch} from "../catchup";
 import cap from "./cap";
 import chghost from "./chghost";
 import error from "./error";
 import invite from "./invite";
 import join from "./join";
 import kick from "./kick";
+import kill from "./kill";
 import list from "./list";
 import lists from "./lists";
 import markread from "./markread";
@@ -34,7 +37,7 @@ import names from "./names";
 import nick from "./nick";
 import numerics, {numericError} from "./numerics";
 import part from "./part";
-import metadata from "./metadata";
+import metadata, {metadataBatch} from "./metadata";
 import persistence from "./persistence";
 import webpush from "./webpush";
 import privmsg from "./privmsg";
@@ -45,6 +48,7 @@ import standardReplies from "./standard-replies";
 import tagmsg from "./tagmsg";
 import token, {authtokenBatch} from "./token";
 import topic from "./topic";
+import who from "./who";
 import whois from "./whois";
 
 const modules: Record<string, Handler>[] = [
@@ -58,6 +62,7 @@ const modules: Record<string, Handler>[] = [
 	invite,
 	join,
 	kick,
+	kill,
 	list,
 	lists,
 	markread,
@@ -77,6 +82,7 @@ const modules: Record<string, Handler>[] = [
 	token,
 	topic,
 	webpush,
+	who,
 	whois,
 ];
 
@@ -84,10 +90,15 @@ export const handlers = new Map<string, Handler>();
 
 // Batch types delivered as a unit (everything else is unwrapped in order).
 registerBatchHandler("chathistory", chathistoryBatch);
+registerBatchHandler("draft/chathistory-targets", targetsBatch);
 registerBatchHandler(MULTILINE_CAP, multilineBatch);
 registerBatchHandler(AUTHTOKEN_BATCH, authtokenBatch);
 registerBatchHandler("draft/persistence", persistenceBatch);
 registerBatchHandler(BOUNCER_REPLAY_BATCH, bouncerReplayBatch);
+// Ours resolve their request (../request.ts); anyone else's are unwrapped.
+registerBatchHandler("labeled-response", labeledBatch);
+// The registration burst ends presence.ts's wait for the shared presence.
+registerBatchHandler("metadata", metadataBatch);
 
 for (const mod of modules) {
 	for (const [command, handler] of Object.entries(mod)) {

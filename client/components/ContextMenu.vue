@@ -2,6 +2,7 @@
 	<div
 		v-if="isOpen"
 		id="context-menu-container"
+		data-escape-close="context-menu"
 		:class="{passthrough}"
 		@click="containerClick"
 		@contextmenu.prevent="containerClick"
@@ -30,9 +31,16 @@
 					:class="[
 						'context-menu-' + item.type,
 						item.class ? 'context-menu-' + item.class : null,
-						{active: id === activeItem},
+						{active: id === activeItem, 'context-menu-checked': item.checked === true},
 					]"
-					role="menuitem"
+					:role="
+						item.checked === undefined
+							? 'menuitem'
+							: item.toggle
+							? 'menuitemcheckbox'
+							: 'menuitemradio'
+					"
+					:aria-checked="item.checked === undefined ? undefined : String(item.checked)"
 					@mouseenter="hoverItem(id)"
 					@click="clickItem(item)"
 				>
@@ -87,6 +95,8 @@ export default defineComponent({
 
 			isOpen.value = false;
 			items.value = [];
+			// A trigger's aria-expanded follows this (hooks/use-menu-trigger.ts).
+			eventbus.emit("contextmenu:closed");
 
 			if (previousActiveElement.value) {
 				previousActiveElement.value.focus();
@@ -134,12 +144,14 @@ export default defineComponent({
 
 			const offset = {left: event.pageX, top: event.pageY};
 
+			// Never off the left or top edge: a menu as wide as a phone's
+			// screen (the presence pill's at the large step) began 2px off it.
 			if (window.innerWidth - offset.left < menuWidth) {
-				offset.left = window.innerWidth - menuWidth;
+				offset.left = Math.max(0, window.innerWidth - menuWidth);
 			}
 
 			if (window.innerHeight - offset.top < menuHeight) {
-				offset.top = window.innerHeight - menuHeight;
+				offset.top = Math.max(0, window.innerHeight - menuHeight);
 			}
 
 			return offset;
@@ -171,9 +183,19 @@ export default defineComponent({
 		const open = (event: MouseEvent, newItems: ContextMenuItem[]) => {
 			event.preventDefault();
 
+			// Replacing an open menu: its trigger hears it closed
+			// (hooks/use-menu-trigger.ts), before the new one's opened().
+			if (isOpen.value) {
+				eventbus.emit("contextmenu:closed");
+			}
+
 			previousActiveElement.value = document.activeElement as HTMLElement;
 			items.value = newItems;
 			activeItem.value = 0;
+			// Measured at the left edge, so the width is the menu's own and
+			// not what the last menu's place left of the window.
+			style.value.left = 0;
+			style.value.top = 0;
 			isOpen.value = true;
 
 			// Position the menu and set the focus on the first item after it's size has updated
@@ -264,8 +286,14 @@ export default defineComponent({
 			activeItem.value = currentIndex;
 		};
 
+		const onEscape = (layer: string | null) => {
+			if (layer === "context-menu") {
+				close();
+			}
+		};
+
 		onMounted(() => {
-			eventbus.on("escapekey", close);
+			eventbus.on("escapekey", onEscape);
 			eventbus.on("contextmenu:cancel", close);
 			eventbus.on("contextmenu:user", openUserContextMenu);
 			eventbus.on("contextmenu:channel", openChannelContextMenu);
@@ -274,7 +302,7 @@ export default defineComponent({
 		});
 
 		onUnmounted(() => {
-			eventbus.off("escapekey", close);
+			eventbus.off("escapekey", onEscape);
 			eventbus.off("contextmenu:cancel", close);
 			eventbus.off("contextmenu:user", openUserContextMenu);
 			eventbus.off("contextmenu:channel", openChannelContextMenu);

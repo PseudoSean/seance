@@ -1,8 +1,10 @@
 /**
- * `/join #chan[,#chan2] [key[,key2]]`. With no argument, re-joins the current
- * channel. Keys are remembered on the placeholder so a reconnect can re-JOIN.
+ * `/join #chan[,#chan2] [key[,key2]]` (also `/j`). With no argument, re-joins
+ * the current channel. Keys are remembered on the placeholder so a reconnect
+ * can re-JOIN.
  */
 
+import {noteJoinsSent} from "../catchup";
 import {ChanType} from "../../../../shared/types/chan";
 import {MessageType} from "../../../../shared/types/msg";
 import {formatLine} from "../message";
@@ -10,7 +12,7 @@ import {t} from "../../i18n/core";
 import type {Command} from "../types";
 
 const join: Command = {
-	commands: ["join"],
+	commands: ["join", "j"],
 	input({client, chan, args}) {
 		let names: string[];
 		let keys: string[];
@@ -52,6 +54,7 @@ const join: Command = {
 		});
 
 		const keyList = keys.join(",").replace(/,+$/, "");
+		noteJoinsSent(client, names);
 		client.send(
 			formatLine({
 				command: "JOIN",

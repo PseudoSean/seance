@@ -119,5 +119,19 @@ export function formatRelativeTime(ms: number): string {
 		return rtf.format(hours, "hour");
 	}
 
-	return rtf.format(Math.round(hours / 24), "day");
+	const days = Math.round(hours / 24);
+
+	if (Math.abs(days) < 30) {
+		return rtf.format(days, "day");
+	}
+
+	// Months and years as dayjs's fromNow() had them: a mention from last
+	// spring is not "400 days ago".
+	const months = Math.round(days / 30.44);
+
+	if (Math.abs(months) < 12) {
+		return rtf.format(months, "month");
+	}
+
+	return rtf.format(Math.round(days / 365.25), "year");
 }

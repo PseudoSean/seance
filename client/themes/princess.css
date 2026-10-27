@@ -73,6 +73,7 @@
 	--rail-fg-strong: #0f2ab0;
 	--rail-fg-active: #fff; /* the selected channel label */
 	--rail-fg-muted: #516989; /* a parted or idle channel, darkened */
+	--own-bg: #e2edff; /* the own-message band, also what the "Highlighted row" setting uses */
 	--rail-item-active-bg: #1d6ef8; /* a shade down from the source blue so its
 		* white label clears 4.5:1 (#1e72ff is 4.28) */
 	--rail-item-hover-bg: rgb(30 114 255 / 12%);
@@ -159,7 +160,7 @@
 }
 
 #chat .msg.self {
-	background-color: #e2edff; /* your own messages */
+	background-color: var(--own-bg); /* your own messages */
 }
 
 /* A condensed wrapper holds its own `.msg` children, which carry the band
@@ -247,3 +248,9 @@
 .irc-bg13 { background: #f0f; }
 .irc-bg14 { background: #808080; }
 .irc-bg15 { background: silver; }
+
+/* The ✕ on the selected row sits on the blue pill, so it takes the pill's
+ * text colour: the rail's dark-blue glyph at 40% was lost on it. */
+.channel-list-item.active .close::before {
+	color: var(--rail-fg-active);
+}

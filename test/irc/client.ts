@@ -3,10 +3,12 @@ import sinon from "ts-sinon";
 import socket from "../../client/js/socket";
 import {IrcClient, IrcClientOptions, parseJoinList, buildUrl} from "../../client/js/irc/client";
 import {IdAllocator} from "../../client/js/irc/ids";
+import * as saved from "../../client/js/irc/saved-networks";
 import {registerBusHandlers} from "../../client/js/irc/bus";
 import {utf8ByteLength} from "../../client/js/irc/message";
 import type {Transport} from "../../client/js/irc/types";
 import type {TransportEvent, TransportState} from "../../client/js/irc/transport";
+import {CTCP_REPLY_INTERVAL_MS} from "../../client/js/irc/handlers/privmsg";
 import {ChanState, ChanType} from "../../shared/types/chan";
 import {MessageType, SharedMsg} from "../../shared/types/msg";
 import type {SharedNetwork, SharedNetworkChan} from "../../shared/types/network";
@@ -332,6 +334,58 @@ describe("IrcClient", function () {
 			expect(lastMessage(1).text).to.equal("alice: Nickname is already in use.");
 		});
 
+		it("learns NICKLEN from a nick the server cut back, instead of looping", function () {
+			const h = setup({nick: "abcdefghijklmno"});
+			h.client.connect();
+			h.transport.open();
+			const nicks = () => h.transport.sent.filter((l) => l.startsWith("NICK ")).slice(1);
+
+			// nefarious2 cuts `abcdefghijklmno_` to its 15, which is taken
+			h.transport.line(":irc.test 433 * abcdefghijklmno :Nickname is already in use.");
+			expect(nicks()).to.deep.equal(["NICK abcdefghijklmno_"]);
+			h.transport.line(":irc.test 433 * abcdefghijklmno :Nickname is already in use.");
+			expect(nicks()[1]).to.equal("NICK abcdefghijklmn_");
+
+			// that one is taken too: the end changes, still 15 long
+			h.transport.line(":irc.test 433 * abcdefghijklmn_ :Nickname is already in use.");
+			expect(nicks()[2]).to.match(/^NICK abcdefghijk\d{4}$/);
+		});
+
+		it("learns NICKLEN from a fallback refused as too long (Ergo)", function () {
+			const h = setup({nick: "abcdefghijklmno"});
+			h.client.connect();
+			h.transport.open();
+			const nicks = () => h.transport.sent.filter((l) => l.startsWith("NICK ")).slice(1);
+
+			h.transport.line(":irc.test 433 * abcdefghijklmno :Nickname is already in use.");
+			expect(nicks()).to.deep.equal(["NICK abcdefghijklmno_"]);
+			h.transport.line(":irc.test 432 * abcdefghijklmno_ :Erroneous Nickname");
+			expect(nicks()[1]).to.equal("NICK abcdefghijklmn_");
+
+			h.transport.line(":irc.test 433 * abcdefghijklmn_ :Nickname is already in use.");
+			expect(nicks()[2]).to.match(/^NICK abcdefghijk\d{4}$/);
+		});
+
+		it("forgets a learned NICKLEN on the next connection", function () {
+			const h = setup({nick: "abcdefghijklmno"});
+			h.client.connect();
+			h.transport.open();
+			h.transport.line(":irc.test 433 * abcdefghijklmno :Nickname is already in use.");
+			h.transport.line(":irc.test 433 * abcdefghijklmno :Nickname is already in use.");
+			expect(h.client.learnedNickLen).to.equal(15);
+
+			h.transport.open();
+			expect(h.client.learnedNickLen).to.equal(undefined);
+		});
+
+		it("still picks a random nick when the nick asked for is refused", function () {
+			const h = setup({nick: "bad*nick"});
+			h.client.connect();
+			h.transport.open();
+			h.transport.line(":irc.test 432 * bad*nick :Erroneous Nickname");
+			expect(h.client.nick).to.match(/^seance\d{4}$/);
+		});
+
 		it("only reports a nick collision after registration", function () {
 			const h = setup();
 			register(h);
@@ -438,6 +492,17 @@ describe("IrcClient", function () {
 			expect(msg.account).to.equal("daveacct");
 			expect(msg.self).to.equal(false);
 			expect(h.client.findChannel("#seance")!.findUser("dave")!.nick).to.equal("dave");
+		});
+
+		it("drops a realname that is only the nick again", function () {
+			const h = setup();
+			const id = joined(h);
+			h.transport.line(":dave!dave@host JOIN #seance * :Dave");
+
+			const msg = lastMessage(id);
+			expect(msg.type).to.equal(MessageType.JOIN);
+			expect(msg.gecos).to.equal(undefined);
+			expect(msg.account).to.equal(undefined);
 		});
 	});
 
@@ -620,6 +685,38 @@ describe("IrcClient", function () {
 
 			expect(h.sentAfter()).to.deep.equal(["NOTICE bob :\x01VERSION Seance\x01"]);
 			expect(lastMessage(1).type).to.equal(MessageType.CTCP_REQUEST);
+		});
+
+		it("answers one CTCP request per interval, so a burst cannot flood us off", function () {
+			const clock = sinon.useFakeTimers({now: 1_700_000_000_000, toFake: ["Date"]});
+
+			try {
+				const h = setup();
+				joined(h);
+
+				for (let i = 0; i < 5; i++) {
+					h.transport.line(`:bob!bob@host PRIVMSG #seance :\x01PING ${i}\x01`);
+				}
+
+				expect(h.sentAfter()).to.deep.equal(["NOTICE bob :\x01PING 0\x01"]);
+				expect(
+					messages(1).filter((m) => m.type === MessageType.CTCP_REQUEST)
+				).to.have.length(5);
+
+				clock.tick(CTCP_REPLY_INTERVAL_MS);
+				h.transport.line(":bob!bob@host PRIVMSG alice :\x01VERSION\x01");
+				expect(h.sentAfter()).to.deep.equal(["NOTICE bob :\x01VERSION Seance\x01"]);
+			} finally {
+				clock.restore();
+			}
+		});
+
+		it("does not echo a long PING argument, so each reply costs the same fake lag", function () {
+			const h = setup();
+			joined(h);
+			h.transport.line(`:bob!bob@host PRIVMSG alice :\x01PING ${"x".repeat(450)}\x01`);
+
+			expect(h.sentAfter()).to.deep.equal(["NOTICE bob :\x01PING\x01"]);
 		});
 	});
 
@@ -1269,5 +1366,58 @@ describe("IrcClient", function () {
 			]);
 			expect(parseJoinList("")).to.deep.equal([]);
 		});
+	});
+});
+
+describe("IrcClient channel order", function () {
+	const data = new Map<string, string>();
+
+	beforeEach(function () {
+		data.clear();
+		saved.useStorageBackend({
+			get: (key) => data.get(key) ?? null,
+			set: (key, value) => void data.set(key, value),
+			remove: (key) => void data.delete(key),
+		});
+	});
+
+	afterEach(function () {
+		saved.useStorageBackend(null);
+	});
+
+	it("inserts alphabetically when nothing is remembered", function () {
+		const {client} = setup({join: "#zeta,#alpha,#mid"});
+		expect(client.channels.map((c) => c.name)).to.deep.equal([
+			"irc.test",
+			"#alpha",
+			"#mid",
+			"#zeta",
+		]);
+	});
+
+	it("places channels in the remembered order, unknown names after, alphabetically", function () {
+		saved.setChannelOrder("net-1", ["#zeta", "#Mid"]);
+		const h = setup({uuid: "net-1", join: "#alpha,#mid,#zeta"});
+		const {client, transport} = h;
+
+		expect(client.channels.map((c) => c.name)).to.deep.equal([
+			"irc.test",
+			"#zeta",
+			"#mid",
+			"#alpha",
+		]);
+
+		// A JOIN nobody listed (a held session's restore) lands by the same rule.
+		register(h);
+		transport.line(":alice!a@h JOIN #beta");
+		transport.line(":alice!a@h JOIN #aaa");
+
+		expect(client.channels.map((c) => c.name).slice(1)).to.deep.equal([
+			"#zeta",
+			"#mid",
+			"#aaa",
+			"#alpha",
+			"#beta",
+		]);
 	});
 });

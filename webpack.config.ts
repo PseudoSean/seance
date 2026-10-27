@@ -133,6 +133,23 @@ function brandHtml(content: string): string {
 	);
 }
 
+// The light/dark theme pairs (client/js/helpers/themeAppearance.ts), for the
+// early loader, which cannot import them.
+const themePairs = readFileSync(
+	path.resolve(__dirname, "client/js/helpers/themePairs.json"),
+	"utf8"
+);
+
+function withThemePairs(content: string): string {
+	const marker = '"__THEME_PAIRS__"';
+
+	if (!content.includes(marker)) {
+		throw new Error(`loading-error-handlers.js has lost its ${marker} marker`);
+	}
+
+	return content.replace(marker, JSON.stringify(JSON.parse(themePairs)));
+}
+
 function brandManifest(content: string): string {
 	const manifest = JSON.parse(content);
 	manifest.name = branding.appName;
@@ -362,6 +379,10 @@ const config: webpack.Configuration = {
 				{
 					from: path.resolve(__dirname, "./client/js/loading-error-handlers.js"),
 					to: "js/[name][ext]",
+					// Copied rather than bundled (it runs before the bundle
+					// loads), so the light/dark pairs it needs to pick the
+					// theme are written in here from the list the app reads.
+					transform: (content: Buffer) => withThemePairs(content.toString()),
 				},
 				{
 					from: path.resolve(__dirname, "./client/*").replace(/\\/g, "/"),
@@ -394,7 +415,10 @@ const config: webpack.Configuration = {
 					from: path.resolve(__dirname, "./client/service-worker.js"),
 					to: "[name][ext]",
 					transform(content) {
-						return content.toString().replace("__HASH__", buildToken);
+						return content
+							.toString()
+							.replace("__HASH__", buildToken)
+							.replace('"__APP_NAME__"', JSON.stringify(branding.appName));
 					},
 				},
 				{
@@ -426,6 +450,12 @@ const config: webpack.Configuration = {
 					globOptions: {
 						ignore: isProduction ? ["**/qqx.json"] : [],
 					},
+				},
+				{
+					// The ps theme's fonts, licences and animal files,
+					// referenced relative to the stylesheet as ps/<file>.
+					from: path.resolve(__dirname, "./client/themes/ps/*").replace(/\\/g, "/"),
+					to: "themes/ps/[name][ext]",
 				},
 			],
 		}),
@@ -567,7 +597,6 @@ export default (env: any, argv: any) => {
 		config.devtool = "eval";
 		config.stats = "errors-only";
 		config.output!.path = path.resolve(__dirname, "test/public");
-		config.entry!["testclient.js"] = [path.resolve(__dirname, "test/client/index.ts")];
 
 		// Add the istanbul plugin to babel-loader options. Rules may carry
 		// their loader at the top level (the i18n instrument-loader) or use

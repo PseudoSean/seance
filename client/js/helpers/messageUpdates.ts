@@ -137,25 +137,20 @@ export function applyEdit<T extends SharedMsg>(
 }
 
 /**
- * Text and nick for a reply quote, from the parent message. Returns
- * `undefined` when the parent is not loaded (the UI shows "(unknown message)").
+ * Nick and raw text for a reply quote, from the parent message; the quote
+ * renders it through `QuotePreview.vue` (`quoteLayout`), which does the
+ * styling and the cut. Returns `undefined` when the parent is not loaded
+ * (the UI shows "(unknown message)").
  */
 export function replyQuote(
 	messages: SharedMsg[],
-	msgid: string,
-	maxLength = 80
+	msgid: string
 ): {nick: string; text: string; id: number} | undefined {
 	for (let i = messages.length - 1; i >= 0; i--) {
 		const m = messages[i];
 
 		if (m.msgid === msgid && m.supersededBy === undefined) {
-			const text = (m.text ?? "").replace(/\s+/g, " ").trim();
-
-			return {
-				id: m.id,
-				nick: m.from?.nick ?? "",
-				text: text.length > maxLength ? text.slice(0, maxLength - 1) + "…" : text,
-			};
+			return {id: m.id, nick: m.from?.nick ?? "", text: m.text ?? ""};
 		}
 	}
 

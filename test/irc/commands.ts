@@ -18,6 +18,7 @@ class FakeTransport implements Transport {
 	state: TransportState = "closed";
 	sent: string[] = [];
 	connectCalls = 0;
+	connectOpts: ({force?: boolean} | undefined)[] = [];
 	closeCalls: {code: number; reason: string}[] = [];
 	private listeners: ((ev: TransportEvent) => void)[] = [];
 
@@ -29,8 +30,9 @@ class FakeTransport implements Transport {
 		};
 	}
 
-	connect(): void {
+	connect(opts?: {force?: boolean}): void {
 		this.connectCalls++;
+		this.connectOpts.push(opts);
 		this.state = "connecting";
 	}
 
@@ -210,6 +212,8 @@ describe("irc commands", function () {
 			"/invite",
 			"/invitelist",
 			"/kill",
+			"/join",
+			"/j",
 			"/rejoin",
 			"/cycle",
 			"/ignore",
@@ -673,6 +677,21 @@ describe("irc commands", function () {
 		});
 	});
 
+	describe("/join", function () {
+		it("takes /j as the same command", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.input(id, "/j #other secret");
+			expect(h.sentAfter()).to.deep.equal(["JOIN #other secret"]);
+
+			h.client.input(id, "/j other");
+			expect(h.sentAfter()).to.deep.equal(["JOIN #other"]);
+
+			h.client.input(id, "/j");
+			expect(h.sentAfter()).to.deep.equal(["JOIN #seance key"]);
+		});
+	});
+
 	describe("/rejoin", function () {
 		it("parts and re-joins with the channel key", function () {
 			const h = setup();
@@ -822,6 +841,22 @@ describe("irc commands", function () {
 			expect(h.transport.closeCalls).to.have.length(2);
 		});
 
+		it("still closes when the reason holds a line break or runs long", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.input(id, "/disconnect one\rtwo");
+			expect(h.sentAfter()).to.deep.equal(["QUIT :one two"]);
+			expect(h.transport.closeCalls).to.have.length(1);
+
+			const h2 = setup();
+			const id2 = joined(h2);
+			h2.client.input(id2, `/quit ${"word ".repeat(200)}`);
+			const [quit] = h2.sentAfter();
+			expect(quit).to.match(/^QUIT :word word/);
+			expect(new TextEncoder().encode(quit).length).to.be.at.most(500);
+			expect(h2.transport.closeCalls).to.have.length(1);
+		});
+
 		it("reconnects the current network with no arguments", function () {
 			const h = setup();
 			const id = joined(h);
@@ -834,6 +869,18 @@ describe("irc commands", function () {
 			h.client.input(1, "/connect");
 			expect(h.transport.connectCalls).to.equal(2);
 			expect(h.client.state).to.equal("connecting");
+			expect(h.transport.connectOpts[1], "typed: the user asked").to.deep.equal({
+				force: true,
+			});
+		});
+
+		it("a saved command's /connect does not force past the throttle gate", function () {
+			const h = setup();
+			const id = joined(h);
+			h.client.input(id, "/disconnect");
+			h.transport.closed(1000);
+			h.client.input(1, "/connect", {auto: true});
+			expect(h.transport.connectOpts[1]).to.deep.equal({force: false});
 		});
 
 		it("asks the manager for a new network via network:new", function () {

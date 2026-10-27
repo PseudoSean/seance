@@ -48,6 +48,32 @@ export function loadEmojiCatalog(): Promise<EmojiGroup[]> {
 	return pending;
 }
 
+/** How long a busy page may put the prefetch off before it goes anyway. */
+const PREFETCH_TIMEOUT_MS = 10000;
+
+/**
+ * Fetch the catalog when the page has nothing better to do, so the first
+ * picker opens on a grid and not on "Loading emoji…". Hover preloads it on a
+ * desktop, but that gives a slow phone on a slow network well under a
+ * second; the first conversation opening gives it the whole idle period
+ * after connecting. `loadEmojiCatalog` is the memo: a second call while a
+ * load is pending or done schedules nothing.
+ */
+export function prefetchEmojiCatalog(): void {
+	if (pending) {
+		return;
+	}
+
+	const go = () => void loadEmojiCatalog().catch(() => undefined);
+
+	if (typeof requestIdleCallback === "function") {
+		requestIdleCallback(go, {timeout: PREFETCH_TIMEOUT_MS});
+	} else {
+		// Safari: no idle callback, so a pause is what stands in for one.
+		setTimeout(go, 3000);
+	}
+}
+
 const aliases = shortcodes as Record<string, string>;
 
 /**
@@ -143,6 +169,18 @@ export function isEmojiOnly(text: string): boolean {
 	const trimmed = text.trim();
 
 	return trimmed.length > 0 && trimmed.replace(emojiRx, "").trim().length === 0;
+}
+
+/**
+ * True when `text` is exactly one emoji — a flag, a keycap or a ZWJ family
+ * counts as one, `🎉🎉🎉` and `👍 ❤️` do not. What fits in a toolbar button
+ * the width of a glyph.
+ */
+export function isSingleEmoji(text: string): boolean {
+	const trimmed = text.trim();
+	const found = Array.from(trimmed.matchAll(emojiRx));
+
+	return found.length === 1 && found[0][0] === trimmed;
 }
 
 // A query is split on whitespace and the separators shortcodes use, so

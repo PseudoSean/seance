@@ -23,10 +23,12 @@
  */
 
 import {ChanType} from "../../../../shared/types/chan";
-import type {Channel, MsgRef} from "../channel";
+import {MessageType, type SharedMsg} from "../../../../shared/types/msg";
+import {SAID_TYPES, countsAsUnread, type Channel, type MsgRef} from "../channel";
 import type {IrcClient} from "../client";
 import {formatLine} from "../message";
 import type {Handler} from "../types";
+import type {InboxEntry} from "../../../../shared/types/mention";
 
 export const MARKREAD_CAP = "draft/read-marker";
 /** Delay between the user reading a channel and the `MARKREAD` going out. */
@@ -36,7 +38,8 @@ export function markReadEnabled(client: IrcClient): boolean {
 	return client.caps.hasCapability(MARKREAD_CAP);
 }
 
-function markable(chan: Channel): boolean {
+/** A channel or a query: what has a read point (the lobby has none). */
+export function markable(chan: Channel): boolean {
 	return chan.type === ChanType.CHANNEL || chan.type === ChanType.QUERY;
 }
 
@@ -56,6 +59,22 @@ export function parseMarker(param: string | undefined): Date | undefined {
 	return Number.isNaN(time.getTime()) ? undefined : time;
 }
 
+/** `chan` is read up to `time`; a query's read point is kept with its log. */
+function moveReadMarker(client: IrcClient, chan: Channel, time: Date): void {
+	chan.readMarker = time;
+	// Whoever read it (this device, another session's MARKREAD, a line of
+	// ours in a history page), the inbox drops what it covers.
+	client.dispatch("inbox:read", {
+		network: client.uuid,
+		target: chan.name,
+		time: time.toISOString(),
+	});
+
+	if (chan.type === ChanType.QUERY) {
+		client.queryLog.setRead(chan.name, time);
+	}
+}
+
 /**
  * The account read `chan` up to `time`: move `firstUnread`, recount the
  * counters and tell the UI. No-op when the marker is not newer than the one
@@ -66,7 +85,7 @@ export function applyReadMarker(client: IrcClient, chan: Channel, time: Date): v
 		return;
 	}
 
-	chan.readMarker = time;
+	moveReadMarker(client, chan, time);
 
 	let lastRead: [number, MsgRef] | undefined;
 	let unread = 0;
@@ -115,13 +134,105 @@ export function applyReadMarker(client: IrcClient, chan: Channel, time: Date): v
 }
 
 /**
+ * A page of older lines was handed to the UI (`more`, which carries no
+ * counters): what in it is past `marker` and would have counted live is
+ * unread. Flag those refs, add them to the counters and tell the UI with
+ * `markread`, moving `firstUnread` to `lastRead` when there is one. A line
+ * of ours past `marker` read everything before it (as in `pushMessage`):
+ * the count starts after it and the read point moves to it.
+ */
+export function countPageUnread(
+	client: IrcClient,
+	chan: Channel,
+	page: Array<[SharedMsg, MsgRef]>,
+	marker: Date,
+	lastRead = 0
+): void {
+	let readTo = marker.getTime();
+
+	for (const [msg, ref] of page) {
+		if (
+			msg.self &&
+			SAID_TYPES.has(msg.type ?? MessageType.MESSAGE) &&
+			ref.time.getTime() > readTo
+		) {
+			readTo = ref.time.getTime();
+			lastRead = msg.id;
+		}
+	}
+
+	if (readTo > marker.getTime()) {
+		moveReadMarker(client, chan, new Date(readTo));
+	}
+
+	let unread = 0;
+	let highlight = 0;
+	const mentions: InboxEntry[] = [];
+
+	for (const [msg, ref] of page) {
+		if (ref.time.getTime() <= readTo || !countsAsUnread(msg)) {
+			continue;
+		}
+
+		ref.unread = true;
+		unread++;
+
+		if (msg.highlight) {
+			ref.highlight = true;
+			highlight++;
+			const entry = client.inboxEntry(chan, msg);
+
+			if (entry) {
+				mentions.push(entry);
+			}
+		}
+	}
+
+	if (mentions.length > 0) {
+		client.dispatch("inbox:add", {entries: mentions});
+	}
+
+	if (unread === 0) {
+		return;
+	}
+
+	const shared = chan.shared;
+	shared.unread += unread;
+	shared.highlight += highlight;
+	shared.firstUnread = lastRead || shared.firstUnread;
+	client.dispatch("markread", {
+		chan: chan.id,
+		firstUnread: shared.firstUnread,
+		unread: shared.unread,
+		highlight: shared.highlight,
+	});
+}
+
+/**
+ * Someone is looking at `chan` (opened, or attention returned to it): it is
+ * read. Zero its counters, tell the UI, and mark it on the server.
+ */
+export function readNow(client: IrcClient, chan: Channel): void {
+	chan.shared.unread = 0;
+	chan.shared.highlight = 0;
+	// The counters only (`firstUnread: 0`): the page may not have made the
+	// conversation its active one yet (Chat mounts before RoutedChat), and
+	// the new-messages line it shows is its own to keep.
+	client.dispatch("markread", {chan: chan.id, firstUnread: 0, unread: 0, highlight: 0});
+	scheduleMarkRead(client, chan);
+}
+
+/**
  * The user read `chan` up to its newest message: send a `MARKREAD` after
- * {@link MARKREAD_DEBOUNCE_MS}, carrying whatever is newest by then.
+ * {@link MARKREAD_DEBOUNCE_MS}, carrying whatever is newest by then. The
+ * read point moves whether or not the server keeps markers (or has said
+ * yet that it does): a query's is kept with its log, and a send that comes
+ * due before registration waits for it.
  */
 export function scheduleMarkRead(client: IrcClient, chan: Channel): void {
 	const newest = chan.newestRef;
 
-	if (!newest || !markable(chan) || !markReadEnabled(client)) {
+	if (!newest || !markable(chan)) {
 		return;
 	}
 
@@ -129,7 +240,7 @@ export function scheduleMarkRead(client: IrcClient, chan: Channel): void {
 		return;
 	}
 
-	chan.readMarker = newest.time;
+	moveReadMarker(client, chan, newest.time);
 
 	if (chan.markReadTimer !== null) {
 		return; // the pending send picks up the newer marker
@@ -141,16 +252,66 @@ export function scheduleMarkRead(client: IrcClient, chan: Channel): void {
 	}, MARKREAD_DEBOUNCE_MS);
 }
 
+/** One command: what a background marker send is reckoned to cost. */
+const MARKREAD_COST_MS = 2000;
+/** A channel's marker goes ahead of the catch-up at most this often. */
+export const MARKREAD_JUMP_GAP_MS = 10_000;
+
 function sendMarkRead(client: IrcClient, chan: Channel): void {
-	if (!chan.readMarker || !markReadEnabled(client) || client.transport.state !== "open") {
+	if (!chan.readMarker) {
 		return;
 	}
 
-	client.send(
-		formatLine({
-			command: "MARKREAD",
-			params: [chan.name, `timestamp=${chan.readMarker.toISOString()}`],
-		})
+	// Came due while a reconnect is still registering (the page returning
+	// to the foreground marks the open channel and redials at once): the
+	// server would answer `451 Register first.` Keep it for registration —
+	// the other devices' notifications close on it.
+	if (!client.isWelcomed) {
+		chan.markReadDeferred = true;
+		return;
+	}
+
+	if (!markReadEnabled(client)) {
+		chan.markReadDeferred = false;
+		return;
+	}
+
+	// Nobody waits on the marker the moment it moves: it is background work
+	// (fakelag.ts), sent with whatever is newest when the clock has room —
+	// ahead of the catch-up, since the account's other devices close their
+	// notifications on it, but at most once per MARKREAD_JUMP_GAP_MS for a
+	// channel: in an open channel where a line arrives (or is typed) every
+	// few seconds, each line's marker at the front would take all the
+	// clock's room and the catch-up would never run. Deferred until sent,
+	// so a socket that closes first hands it to flushDeferredMarkRead on
+	// the next registration.
+	const key = `markread:${chan.id}`;
+	const front = Date.now() - chan.markReadJumpedAt >= MARKREAD_JUMP_GAP_MS;
+
+	if (front) {
+		client.background.take(key); // one queued at the back moves up
+		chan.markReadJumpedAt = Date.now();
+	}
+
+	chan.markReadDeferred = true;
+	client.background.add(
+		{
+			key,
+			cost: MARKREAD_COST_MS,
+			run() {
+				chan.markReadDeferred = false;
+
+				if (chan.readMarker && markReadEnabled(client)) {
+					client.send(
+						formatLine({
+							command: "MARKREAD",
+							params: [chan.name, `timestamp=${chan.readMarker.toISOString()}`],
+						})
+					);
+				}
+			},
+		},
+		{front}
 	);
 }
 
@@ -163,11 +324,7 @@ function sendMarkRead(client: IrcClient, chan: Channel): void {
  * path does not follow with an older one, and a pending send is dropped.
  */
 export function markReadAt(client: IrcClient, target: string, time: Date): void {
-	if (
-		Number.isNaN(time.getTime()) ||
-		!markReadEnabled(client) ||
-		client.transport.state !== "open"
-	) {
+	if (Number.isNaN(time.getTime()) || !markReadEnabled(client) || !client.isWelcomed) {
 		return;
 	}
 
@@ -183,7 +340,11 @@ export function markReadAt(client: IrcClient, target: string, time: Date): void 
 		}
 
 		cancelMarkRead(chan);
-		chan.readMarker = time;
+		client.background.take(`markread:${chan.id}`);
+		chan.markReadDeferred = false;
+		// Moves the badge too: the server's echo of this same marker is
+		// not newer, so applyReadMarker would ignore it.
+		applyReadMarker(client, chan, time);
 	}
 
 	client.send(
@@ -196,11 +357,21 @@ export function markReadAt(client: IrcClient, target: string, time: Date): void 
 
 /** Ask the server for the stored marker (`MARKREAD <target>`), e.g. after JOIN. */
 export function fetchReadMarker(client: IrcClient, chan: Channel): void {
-	if (!markable(chan) || !markReadEnabled(client) || client.transport.state !== "open") {
+	if (!markable(chan) || !markReadEnabled(client) || !client.isWelcomed) {
 		return;
 	}
 
 	client.send(formatLine({command: "MARKREAD", params: [chan.name]}));
+}
+
+/** Registration is complete: send the markers that came due before it
+ * ({@link sendMarkRead}, and a debounce the last socket died holding). */
+export function flushDeferredMarkRead(client: IrcClient): void {
+	for (const chan of client.channels) {
+		if (chan.markReadDeferred && chan.markReadTimer === null) {
+			sendMarkRead(client, chan);
+		}
+	}
 }
 
 /** Cancel a pending send (transport closed). */
@@ -219,6 +390,7 @@ const markread: Handler = (client, msg) => {
 		return;
 	}
 
+	chan.markerAnswered = true;
 	const time = parseMarker(param);
 
 	if (time) {

@@ -25,6 +25,15 @@
 import {store} from "./store";
 import {BeforeInstallPromptEvent} from "./types";
 import {isOtherBuild} from "./build";
+import storage from "./localStorage";
+import {
+	DISMISSED,
+	STORAGE_KEY as INSTALL_GUIDE_KEY,
+	currentEnvironment,
+	detectInstallTarget,
+	shouldShowInstallGuide,
+} from "./helpers/installGuide";
+import {isNativeShell as isCapacitorShell} from "./helpers/capacitor";
 
 /** A window that stays open re-checks the worker script this often. */
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
@@ -76,7 +85,11 @@ function isSecureContext(): boolean {
 }
 
 function registerServiceWorker(): void {
-	if (!("serviceWorker" in navigator) || !isSecureContext()) {
+	// The native shell (shells/capacitor) loads the bundle from the app
+	// itself: nothing to cache for offline, and a new build is a new app from
+	// the store, not a worker update. WKWebView would refuse the worker on
+	// the app's custom scheme anyway.
+	if (!("serviceWorker" in navigator) || !isSecureContext() || isCapacitorShell()) {
 		return;
 	}
 
@@ -159,7 +172,50 @@ function watchInstallPrompt(): void {
 	window.addEventListener("appinstalled", () => {
 		installPromptEvent = null;
 		store.commit("installPromptAvailable", false);
+		// The tab that did the installing has no more use for the guide.
+		dismissInstallGuide();
+		store.commit("installGuideOpen", false);
 	});
+}
+
+/** True in a Capacitor or Electron shell: there is nothing to install. */
+function isNativeShell(): boolean {
+	return isCapacitorShell() || /Electron\//.test(navigator.userAgent);
+}
+
+/**
+ * Open the install guide at start when it applies: the browser can install
+ * the app, the page is not already an installed one, and the user has not
+ * ticked "don't show this again" (helpers/installGuide.ts). Called from
+ * boot once the page has its route, so the guide lands over the connect
+ * form or the remembered conversation, never over a link approval.
+ */
+export function openInstallGuideAtStart(): void {
+	const env = currentEnvironment({standalone: isStandalone(), native: isNativeShell()});
+
+	if (shouldShowInstallGuide(env, storage.get(INSTALL_GUIDE_KEY))) {
+		store.commit("installGuideOpen", true);
+	}
+}
+
+/** Open the guide on request (Settings), clearing an earlier "don't show again". */
+export function openInstallGuide(): void {
+	storage.remove(INSTALL_GUIDE_KEY);
+	store.commit("installGuideOpen", true);
+}
+
+/** Whether this browser has an install route the guide can describe. */
+export function canDescribeInstall(): boolean {
+	return (
+		!isStandalone() &&
+		!isNativeShell() &&
+		detectInstallTarget(currentEnvironment()).platform !== null
+	);
+}
+
+/** Remember "don't show this again". */
+export function dismissInstallGuide(): void {
+	storage.set(INSTALL_GUIDE_KEY, DISMISSED);
 }
 
 /**

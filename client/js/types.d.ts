@@ -3,9 +3,9 @@ import {defineComponent} from "vue";
 import {SharedChan} from "../../shared/types/chan";
 import {SharedNetwork} from "../../shared/types/network";
 import {SharedUser} from "../../shared/types/user";
-import {SharedMention} from "../../shared/types/mention";
 import {SharedConfiguration, LockedSharedConfiguration} from "../../shared/types/config";
 import {LinkPreview, SharedMsg} from "../../shared/types/msg";
+import {SharedOperState} from "../../shared/types/oper";
 import {TypingEntry} from "./helpers/typingState";
 
 interface LoungeWindow extends Window {
@@ -66,14 +66,14 @@ type ClientNetwork = Omit<SharedNetwork, "channels"> & {
 	isJoinChannelShown: boolean;
 	isCollapsed: boolean;
 	channels: ClientChan[];
+	/** Being an oper here (`oper:state`, irc/oper.ts); absent until the first one. */
+	oper?: SharedOperState;
 };
 
 type NetChan = {
 	channel: ClientChan;
 	network: ClientNetwork;
 };
-
-type ClientMention = SharedMention;
 
 type ClientLinkPreview = LinkPreview & {
 	sourceLoaded?: boolean;

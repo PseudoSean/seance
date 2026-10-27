@@ -8,8 +8,8 @@
  *
  * To add a command, create a file exporting a {@link Command} and list it in
  * `modules`. UI-only commands (`/collapse`, `/expand`, `/search`, and `/join`
- * for channels already in the list) are intercepted in `client/js/commands/`
- * before the bus ever sees them.
+ * or `/j` for channels already in the list) are intercepted in
+ * `client/js/commands/` before the bus ever sees them.
  */
 
 import {t} from "../../i18n/core";
@@ -26,6 +26,7 @@ import ctcp from "./ctcp";
 import disconnect from "./disconnect";
 import ignore from "./ignore";
 import ignorelist from "./ignorelist";
+import investigate from "./investigate";
 import invite from "./invite";
 import join from "./join";
 import kick from "./kick";
@@ -37,6 +38,7 @@ import msg from "./msg";
 import mute from "./mute";
 import nick from "./nick";
 import notice from "./notice";
+import oper from "./oper";
 import part from "./part";
 import quit from "./quit";
 import raw from "./raw";
@@ -44,6 +46,7 @@ import react from "./react";
 import redact from "./redact";
 import rejoin from "./rejoin";
 import topic from "./topic";
+import who from "./who";
 import whois from "./whois";
 
 const modules: Command[] = [
@@ -55,6 +58,7 @@ const modules: Command[] = [
 	disconnect,
 	ignore,
 	ignorelist,
+	investigate,
 	invite,
 	join,
 	kick,
@@ -66,6 +70,7 @@ const modules: Command[] = [
 	mute,
 	nick,
 	notice,
+	oper,
 	part,
 	quit,
 	raw,
@@ -73,6 +78,7 @@ const modules: Command[] = [
 	redact,
 	rejoin,
 	topic,
+	who,
 	whois,
 ];
 

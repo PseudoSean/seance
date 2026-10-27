@@ -16,9 +16,21 @@
 
 import storage from "../localStorage";
 import {collator} from "../i18n/collation";
+import {forgetNetworkLog} from "./querylog";
+import {forgetClosedQueries} from "./closedQueries";
+import {forgetNoticeLog} from "./noticelog";
+import {forgetOperPrefs} from "./operprefs";
+import {forgetMuteMemory} from "./muteMemory";
+import {forgetPresenceSync} from "./presenceSync";
+import {forgetUserAway} from "./userAwayStore";
 import type {ConnectOptions} from "./types";
+import {PRESENCE_MODES, type NetworkMode, type PresenceMode} from "../helpers/dnd";
+import type {ServicesConfig} from "../../../shared/types/network";
 
 export const STORAGE_KEY = "thelounge.networks";
+
+/** Channel names per network uuid, in the order the sidebar shows them. */
+export const CHANNEL_ORDER_KEY = "thelounge.sort.channels";
 
 /**
  * The newest message the client has shown on a network: the catch-up
@@ -54,6 +66,19 @@ export type SavedNetwork = ConnectOptions & {
 	lastUsed?: number;
 	/** Newest message seen on this network (see {@link NetworkCursor}). */
 	cursor?: NetworkCursor;
+	/**
+	 * Services support (docs/projects/oper-tools.md): the package and its
+	 * bots by role, set in the edit form once opered. Absent means none.
+	 */
+	services?: ServicesConfig;
+	/** Online / Auto / Away / Do not disturb; absent = Same as global (docs/projects/shared-presence-modes.md §2). */
+	presenceMode?: PresenceMode;
+	/**
+	 * When the user chose `presenceMode` (Unix ms, on the device that chose
+	 * it); absent for a mode never chosen. Shared between devices, the most
+	 * recent choice winning (docs/projects/shared-presence-modes.md).
+	 */
+	presenceAt?: number;
 };
 
 /** The subset of the localStorage wrapper this module needs. */
@@ -152,6 +177,32 @@ function asCursor(value: unknown): NetworkCursor | undefined {
 	return {msgid, time};
 }
 
+/** The services roles, in the order the form shows them. */
+export const SERVICE_ROLES = ["oper", "account", "channel", "report", "snoop"] as const;
+
+/** A stored / incoming services block, or undefined when it names no known package. */
+export function asServices(value: unknown): ServicesConfig | undefined {
+	if (!value || typeof value !== "object") {
+		return undefined;
+	}
+
+	const raw = value as {package?: unknown; bots?: unknown};
+
+	if (asString(raw.package).toLowerCase() !== "x3") {
+		return undefined;
+	}
+
+	const bots =
+		raw.bots && typeof raw.bots === "object" ? (raw.bots as Record<string, unknown>) : {};
+	const out = {} as ServicesConfig["bots"];
+
+	for (const role of SERVICE_ROLES) {
+		out[role] = asString(bots[role]);
+	}
+
+	return {package: "x3", bots: out};
+}
+
 /** Accepts a newline-separated string (textarea) or an array. */
 export function parseCommands(value: unknown): string[] {
 	const lines: string[] = Array.isArray(value)
@@ -204,7 +255,30 @@ export function normalize(raw: Record<string, unknown>): SavedNetwork | undefine
 		net.cursor = cursor;
 	}
 
+	const services = asServices(raw.services);
+
+	if (services) {
+		net.services = services;
+	}
+
+	const mode = raw.presenceMode;
+
+	if (typeof mode === "string" && PRESENCE_MODES.includes(mode as PresenceMode)) {
+		net.presenceMode = mode as PresenceMode;
+	}
+
+	const at = raw.presenceAt;
+
+	if (typeof at === "number" && Number.isSafeInteger(at) && at > 0) {
+		net.presenceAt = at;
+	}
+
 	return net;
+}
+
+/** The network's own presence mode; absent or unknown is Same as global. */
+export function presenceModeOf(net: Pick<SavedNetwork, "presenceMode"> | undefined): NetworkMode {
+	return net?.presenceMode ?? "global";
 }
 
 /** Whether a network takes part in Web Push (`draft/webpush`): the saved
@@ -274,6 +348,12 @@ export function fromForm(data: Record<string, unknown>, existing?: SavedNetwork)
 	// A blank password field in the edit form means "keep what I had".
 	if (existing && asString(data.saslPassword) === "" && existing.saslPassword) {
 		base.saslPassword = existing.saslPassword;
+	}
+
+	// The services block travels whole: the key present with nothing in it
+	// is "None" (the loop above keeps the stored one for a missing key).
+	if ("services" in data) {
+		base.services = data.services;
 	}
 
 	const net = normalize(base);
@@ -389,6 +469,14 @@ export function remove(uuid: string): void {
 	if (remaining.length !== all.length) {
 		write(remaining);
 	}
+
+	forgetNetworkLog(uuid); // its private conversations go with it
+	forgetClosedQueries(uuid); // and the ones it closed
+	forgetNoticeLog(uuid); // and its server notices
+	forgetOperPrefs(uuid);
+	forgetMuteMemory(uuid); // and what this device wrote to its push mute list
+	forgetPresenceSync(uuid); // and when it was last in sync with the shared presence
+	forgetUserAway(uuid); // and the /away it would declare at the next registration
 }
 
 /** Mark an entry as the most recently used one. */
@@ -418,6 +506,32 @@ export function setCursor(uuid: string, cursor: NetworkCursor): void {
 }
 
 /** The entry to pre-fill the connect form with, if any. */
+/**
+ * The order the user gave a network's channels (drag-and-drop in the
+ * sidebar), by name. `IrcClient.createChannel` places a channel by it, so
+ * the order holds across reloads whichever way the channel arrives —
+ * autojoin placeholder, a held session's restore, `/join`.
+ */
+export function channelOrder(uuid: string): string[] {
+	const order = readOrders()[uuid];
+	return Array.isArray(order) ? order.filter((n): n is string => typeof n === "string") : [];
+}
+
+export function setChannelOrder(uuid: string, names: string[]): void {
+	backend.set(CHANNEL_ORDER_KEY, JSON.stringify({...readOrders(), [uuid]: names}));
+}
+
+function readOrders(): Record<string, unknown> {
+	try {
+		const raw = backend.get(CHANNEL_ORDER_KEY);
+		const parsed: unknown = raw ? JSON.parse(raw) : {};
+		return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
+	} catch (e) {
+		backend.remove(CHANNEL_ORDER_KEY);
+		return {};
+	}
+}
+
 export function lastUsed(): SavedNetwork | undefined {
 	return list().find((net) => net.lastUsed !== undefined);
 }

@@ -13,15 +13,26 @@
  * successful `createNetwork` saves/updates the entry and marks it last used.
  */
 
+import {CLOSED_STORAGE_KEY, closedStorageChanged, onClosedSharingStopped} from "./closedQueries";
 import socket from "../socket";
 import {store} from "../store";
 import {parseKeywordList} from "../highlight";
 import {setMuteStatus} from "../mute";
 import {registerBusHandlers} from "./bus";
 import {IrcClient} from "./client";
+import {flushQueryLogs} from "./querylog";
+import {pruneUserAway} from "./userAwayStore";
+import {leavesAwayToWorker, syncPresence} from "./presence";
+import {claimMute, clearRemoteDnd} from "./pushMute";
 import * as saved from "./saved-networks";
 import type {SavedNetwork} from "./saved-networks";
 import type {ConnectOptions} from "./types";
+import type {GlobalModeState} from "../helpers/dnd";
+
+/** The global do-not-disturb as client/js/dnd.ts last set it; new clients start with it. */
+const globalDnd: {active: boolean; until: number | null} = {active: false, until: null};
+/** The page's global mode (client/js/dnd.ts), given to every client. */
+const globalMode: GlobalModeState = {value: "auto", at: null};
 
 const clients = new Map<string, IrcClient>();
 
@@ -115,6 +126,17 @@ export function createNetwork(options: CreateNetworkOptions): IrcClient {
 			},
 		});
 		clients.set(entry.uuid, client);
+		// A mode never chosen has no time, which leaves the client's alone.
+		client.setPresenceMode(saved.presenceModeOf(entry), entry.presenceAt);
+		client.setGlobalMode(globalMode);
+		client.setGlobalDnd(globalDnd.active, globalDnd.until);
+
+		// A client starts attended and foreground.ts only reports changes:
+		// a page that boots hidden (a shell relaunched in the background,
+		// a background tab) would otherwise read whatever it opens.
+		if (document.visibilityState === "hidden") {
+			client.setAttended(false);
+		}
 
 		if (entry.name) {
 			client.setNetworkName(entry.name);
@@ -151,6 +173,8 @@ export function autoconnectSavedNetworks(): IrcClient[] {
 
 	autoconnectDone = true;
 	const started: IrcClient[] = [];
+	// Once per page: the `/away` memory of networks that are gone.
+	pruneUserAway([...saved.list().map((entry) => entry.uuid), ...clients.keys()]);
 
 	for (const entry of saved.list()) {
 		if (!entry.autoconnect || clients.has(entry.uuid)) {
@@ -201,6 +225,31 @@ export function allClients(): IrcClient[] {
  * more than the deterministic hold. Nothing is sent for those.
  */
 if (typeof window !== "undefined") {
+	// The private conversations' log writes on a trailing throttle: write
+	// it out whenever the page may not come back — a phone kills a hidden
+	// page without a pagehide.
+	window.addEventListener("pagehide", flushQueryLogs);
+	// Private conversations no longer kept: every connected network deletes
+	// the account's list of closed ones (a network down meanwhile does so at
+	// its next login read).
+	onClosedSharingStopped(() => {
+		for (const client of allClients()) {
+			client.unshareClosed();
+		}
+	});
+	// Another tab closed a query: a window this one opened by itself for
+	// that conversation goes too (irc/closedQueries.ts).
+	window.addEventListener("storage", (ev: StorageEvent) => {
+		if (ev.key === CLOSED_STORAGE_KEY) {
+			closedStorageChanged(allClients());
+		}
+	});
+	document.addEventListener("visibilitychange", () => {
+		if (document.visibilityState === "hidden") {
+			flushQueryLogs();
+		}
+	});
+
 	window.addEventListener("pagehide", (ev: PageTransitionEvent) => {
 		if (ev.persisted) {
 			return;
@@ -210,6 +259,9 @@ if (typeof window !== "undefined") {
 			if (client.isConnected) {
 				client.send("QUIT :page closed");
 			}
+
+			// Registering or still dialling, the server has counted it too.
+			client.noteUnload();
 		}
 	});
 }
@@ -221,6 +273,75 @@ const FOREGROUND_PROBE_MS = 4_000;
 /** A dial older than this at foreground time is presumed stuck. */
 const STALE_DIAL_MS = 3_000;
 let lastPokeAt = 0;
+
+/** The page's attention changed: every connection tells its server (presence.ts). */
+export function setAttendedAll(attended: boolean, except?: ReadonlySet<string>): void {
+	for (const client of clients.values()) {
+		if (!except?.has(client.uuid)) {
+			client.setAttended(attended);
+		}
+	}
+}
+
+/** The page is unloading: the networks whose `AWAY *` the service worker takes over (presence.ts). */
+export function networksLeavingAwayToWorker(stashed: (uuid: string) => boolean): string[] {
+	return allClients()
+		.filter((client) => leavesAwayToWorker(client, stashed))
+		.map((client) => client.uuid);
+}
+
+/** The page's global mode, given to every network (docs/projects/shared-presence-modes.md § 2). */
+export function setGlobalModeAll(mode: GlobalModeState): void {
+	globalMode.value = mode.value;
+	globalMode.at = mode.at;
+
+	for (const client of clients.values()) {
+		client.setGlobalMode(mode);
+	}
+}
+
+/**
+ * The page's do not disturb (client/js/dnd.ts) changed: remember it for
+ * networks created later and hand it to every client, which says it to its
+ * server (`AWAY *`, the push mute) through syncPresence. `until` is a
+ * Date.now() time for a timed DND, null for an indefinite one or none.
+ */
+export function setGlobalDndAll(active: boolean, until: number | null): void {
+	globalDnd.active = active;
+	globalDnd.until = until;
+
+	for (const client of clients.values()) {
+		client.setGlobalDnd(active, until);
+	}
+}
+
+/**
+ * The pill's Off: remove every network's `*` entry, whoever wrote it. A
+ * network in mode dnd keeps its own (removing it would only have the next
+ * sync write it again).
+ */
+export function clearRemoteDndAll(): void {
+	for (const client of clients.values()) {
+		if (client.presenceMode !== "dnd") {
+			clearRemoteDnd(client);
+		}
+	}
+}
+
+/** The user changed the do not disturb by hand: see pushMute.ts `claimMute`. */
+export function claimMuteAll(): void {
+	for (const client of clients.values()) {
+		claimMute(client);
+	}
+}
+
+/** Re-judge every client's presence (the do-not-disturb minute tick): timed
+ * mute entries expire without a word from the server. */
+export function syncPresenceAll(): void {
+	for (const client of clients.values()) {
+		syncPresence(client);
+	}
+}
 
 /**
  * Poke every live connection: networks waiting out reconnect backoff retry
@@ -270,7 +391,10 @@ registerBusHandlers(socket, {
 	clientForNetwork,
 	allClients,
 	createNetwork,
-	remove: (uuid) => void clients.delete(uuid),
+	remove(uuid) {
+		clients.get(uuid)?.queryLog.dispose();
+		clients.delete(uuid);
+	},
 });
 
 // Saved-network policies layered on top of the client's own events.
@@ -299,7 +423,7 @@ socket.on("network:status", ({network, connected}) => {
 
 	if (client && client.isConnected) {
 		for (const command of commands) {
-			client.input(client.lobby.id, command);
+			client.input(client.lobby.id, command, {auto: true});
 		}
 	}
 });

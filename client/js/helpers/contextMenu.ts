@@ -9,11 +9,19 @@ import {requestTranslationPanel, translationAvailable} from "../translate/reader
 import {TypedStore} from "../store";
 import useCloseChannel from "../hooks/use-close-channel";
 import {ChanType} from "../../../shared/types/chan";
+import {isOperOn, operChannelItems, operUserItems} from "./operMenu";
 
 type BaseContextMenuItem = {
 	label: string;
 	type: string;
 	class: string;
+	/**
+	 * A choice that can be the current one: rendered as `menuitemradio`
+	 * (`menuitemcheckbox` with `toggle`) with `aria-checked`, the check mark
+	 * drawn by CSS. Left out for a plain action.
+	 */
+	checked?: boolean;
+	toggle?: boolean;
 };
 
 type ContextMenuItemWithAction = BaseContextMenuItem & {
@@ -81,6 +89,16 @@ export function generateChannelContextMenu(
 				class: "join",
 				action: () => (network.isJoinChannelShown = true),
 			},
+			...(isOperOn(network)
+				? [
+						{
+							label: "Oper panel…",
+							type: "item",
+							class: "oper-panel",
+							link: `/oper/${network.uuid}/notices`,
+						},
+				  ]
+				: []),
 			{
 				label: t("menu.listChannels"),
 				type: "item",
@@ -127,6 +145,7 @@ export function generateChannelContextMenu(
 
 	// Add menu items for channels
 	if (channel.type === ChanType.CHANNEL) {
+		items.push(...operChannelItems(network, channel.name));
 		items.push({
 			label: t("menu.editTopic"),
 			type: "item",
@@ -291,6 +310,7 @@ export function generateInlineChannelContextMenu(
 				class: "chan",
 				link: `/chan-${channel.id}`,
 			},
+			...operChannelItems(network, chan),
 		];
 	}
 
@@ -301,6 +321,7 @@ export function generateInlineChannelContextMenu(
 			class: "join",
 			action: join,
 		},
+		...operChannelItems(network, chan),
 	];
 }
 
@@ -373,9 +394,12 @@ export function generateUserContextMenu(
 		},
 	];
 
+	// An opered network's oper actions close every user menu.
+	const operItems = operUserItems(network, channel.id, user.nick);
+
 	// Bail because we're in a query or we don't have a special mode.
 	if (!currentChannelUser.modes || currentChannelUser.modes.length < 1) {
-		return items;
+		return [...items, ...operItems];
 	}
 
 	// Names of the standard modes we are able to change
@@ -488,5 +512,5 @@ export function generateUserContextMenu(
 		}
 	}
 
-	return items;
+	return [...items, ...operItems];
 }

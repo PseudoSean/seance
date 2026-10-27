@@ -9,7 +9,9 @@
 				]"
 				aria-hidden="true"
 			></span>
-			<span class="connection-bar-label">{{ connectionLabel }}</span>
+			<span :class="['connection-bar-label', {throttled: throttledWait}]">{{
+				connectionLabel
+			}}</span>
 			<button
 				v-if="canConnectNow"
 				type="button"
@@ -53,7 +55,9 @@
 			<span v-if="channel.editing" class="compose-bar-label">
 				<span class="compose-bar-icon" aria-hidden="true">✎</span>
 				{{ t("composer.editing") }}
-				<span class="compose-bar-preview">{{ composePreview }}</span>
+				<span class="compose-bar-preview"
+					><QuotePreview :text="composeTarget?.text ?? ''"
+				/></span>
 			</span>
 			<span v-else class="compose-bar-label">
 				<span class="compose-bar-icon" aria-hidden="true">↩</span>
@@ -62,7 +66,9 @@
 					replyingParts.nick
 				}}</strong
 				>{{ replyingParts.suffix }}
-				<span class="compose-bar-preview">{{ composePreview }}</span>
+				<span class="compose-bar-preview"
+					><QuotePreview :text="composeTarget?.text ?? ''"
+				/></span>
 			</span>
 			<button
 				type="button"
@@ -256,6 +262,7 @@
 
 <script lang="ts">
 import Mousetrap from "mousetrap";
+import getCaretCoordinates from "textarea-caret";
 import {wrapCursor} from "undate";
 import autocompletion from "../js/autocompletion";
 import {commands} from "../js/commands/index";
@@ -314,6 +321,11 @@ const REASON_MAX = 120;
 const COPIED_LABEL_MS = 2000;
 import {TypingReporter} from "../js/helpers/typingReporter";
 import TypingIndicator from "./TypingIndicator.vue";
+import QuotePreview from "./QuotePreview.vue";
+
+// How long a conversation's network has to be down before the strip above
+// the composer says so.
+const CONNECTION_BAR_GRACE_MS = 10_000;
 
 const formattingHotkeys = {
 	"mod+k": "\x03",
@@ -342,7 +354,7 @@ const bracketWraps = {
 
 export default defineComponent({
 	name: "ChatInput",
-	components: {SourceLanguagePicker, TypingIndicator},
+	components: {SourceLanguagePicker, TypingIndicator, QuotePreview},
 	props: {
 		network: {type: Object as PropType<ClientNetwork>, required: true},
 		channel: {type: Object as PropType<ClientChan>, required: true},
@@ -472,9 +484,30 @@ export default defineComponent({
 			() => props.channel.type === ChanType.CHANNEL || props.channel.type === ChanType.QUERY
 		);
 
-		const showConnectionBar = computed(
-			() => isConversation.value && !props.network.status.connected
-		);
+		const isDown = computed(() => isConversation.value && !props.network.status.connected);
+
+		// The strip waits until the network has been down for
+		// CONNECTION_BAR_GRACE_MS: a resume or a dropped socket usually
+		// reconnects within seconds, and a strip for that is noise. With
+		// nothing retrying (a /disconnect, a failed SASL login) there is no
+		// quick reconnect to wait for, and a message the composer kept
+		// because the network is down shows it at once too.
+		const now = ref(Date.now());
+		const sendRefused = ref(false);
+
+		const showConnectionBar = computed(() => {
+			if (!isDown.value) {
+				return false;
+			}
+
+			const {downSince: since, connecting, retryAt} = props.network.status;
+
+			return (
+				sendRefused.value ||
+				(!connecting && retryAt === undefined) ||
+				(since !== undefined && now.value - since >= CONNECTION_BAR_GRACE_MS)
+			);
+		});
 
 		const canSend = computed(
 			() =>
@@ -484,9 +517,8 @@ export default defineComponent({
 		);
 
 		// The wait before the transport's next retry (`status.retryAt`) counts
-		// down here — a tick every half second while the strip shows — and
+		// down here — a tick every half second while the network is down — and
 		// "Connect now" skips it (`/connect` restarts the schedule).
-		const now = ref(Date.now());
 		let ticker: ReturnType<typeof setInterval> | null = null;
 
 		const retryInSeconds = computed(() => {
@@ -499,11 +531,24 @@ export default defineComponent({
 			return Math.max(0, Math.ceil((at - now.value) / 1000));
 		});
 
+		// The wait is the server's connection throttle (irc/dialLedger.ts).
+		const throttledWait = computed(
+			() => retryInSeconds.value > 0 && props.network.status.retryThrottled === true
+		);
+
 		const connectionLabel = computed(() => {
 			const name = props.network.name || t("composer.fallbackNetwork");
 
 			if (!props.network.status.connecting) {
 				return t("composer.disconnectedFrom", {network: name});
+			}
+
+			if (throttledWait.value) {
+				// irc/dialLedger.ts: dialling now would be refused and renew it.
+				return tCount("composer.reconnectInThrottled", retryInSeconds.value, {
+					network: name,
+					seconds: retryInSeconds.value,
+				});
 			}
 
 			return retryInSeconds.value > 0
@@ -520,14 +565,18 @@ export default defineComponent({
 		);
 
 		watch(
-			showConnectionBar,
-			(shown) => {
-				if (shown && ticker === null) {
+			isDown,
+			(down) => {
+				if (!down) {
+					sendRefused.value = false;
+				}
+
+				if (down && ticker === null) {
 					now.value = Date.now();
 					ticker = setInterval(() => {
 						now.value = Date.now();
 					}, 500);
-				} else if (!shown && ticker !== null) {
+				} else if (!down && ticker !== null) {
 					clearInterval(ticker);
 					ticker = null;
 				}
@@ -539,6 +588,15 @@ export default defineComponent({
 			() => props.network.status.retryAt,
 			() => {
 				now.value = Date.now();
+			}
+		);
+
+		// A refused send speaks for the conversation it was typed in, not for
+		// the next one opened in this composer.
+		watch(
+			() => props.channel.id,
+			() => {
+				sendRefused.value = false;
 			}
 		);
 
@@ -570,11 +628,6 @@ export default defineComponent({
 				nick,
 				suffix: label.slice(at + nick.length),
 			};
-		});
-
-		const composePreview = computed(() => {
-			const text = (composeTarget.value?.text ?? "").replace(/\s+/g, " ").trim();
-			return text.length > 80 ? text.slice(0, 79) + "…" : text;
 		});
 
 		// The outgoing translation (spec § Composer): the strip above the
@@ -870,6 +923,10 @@ export default defineComponent({
 				if (text.length === 0 && fromEnterKey) {
 					clearInput();
 					setInputSize();
+				}
+
+				if (text.length > 0) {
+					sendRefused.value = true;
 				}
 
 				return false;
@@ -1340,12 +1397,37 @@ export default defineComponent({
 				return false;
 			});
 
+			// Whether the caret is on the textarea's top row (ArrowUp) or bottom
+			// row (ArrowDown) as it is drawn — a long line that wraps is several
+			// rows, which counting "\n" never saw, so ArrowUp anywhere in one
+			// went to history. The mirror-div measure is the one the
+			// autocomplete already takes of this element.
+			const onEdgeRow = (el: HTMLTextAreaElement, key: string) => {
+				const rowOf = (position: number) => getCaretCoordinates(el, position).top;
+
+				return rowOf(el.selectionStart) === rowOf(key === "up" ? 0 : el.value.length);
+			};
+
+			// Text the arrows bring in — a history entry, an own message to edit —
+			// gets the caret on the edge it was reached from: at the start after
+			// ArrowUp, at the end after ArrowDown, so holding either key keeps
+			// stepping instead of climbing through every row of a long entry.
+			const showStepped = (el: HTMLTextAreaElement, text: string, key: string) => {
+				const caret = key === "up" ? 0 : text.length;
+
+				el.value = text;
+				el.setSelectionRange(caret, caret);
+				setInputSize();
+			};
+
 			inputTrap.bind(["up", "down"], (e, key) => {
+				const el = input.value;
+
 				if (
 					store.state.isAutoCompleting ||
 					(e.target as HTMLTextAreaElement).selectionStart !==
 						(e.target as HTMLTextAreaElement).selectionEnd ||
-					!input.value
+					!el
 				) {
 					return;
 				}
@@ -1369,17 +1451,10 @@ export default defineComponent({
 
 					if (last) {
 						startEdit(props.channel, last);
-						input.value.value = props.channel.pendingMessage;
-						setInputSize();
+						showStepped(el, props.channel.pendingMessage, key);
 						return false;
 					}
 				}
-
-				const onRow = (
-					input.value.value.slice(undefined, input.value.selectionStart).match(/\n/g) ||
-					[]
-				).length;
-				const totalRows = (input.value.value.match(/\n/g) || []).length;
 
 				const {channel} = props;
 
@@ -1393,7 +1468,7 @@ export default defineComponent({
 						return; // a modified edit: the arrows just move the caret
 					}
 
-					if (key === "up" ? onRow !== 0 : onRow !== totalRows) {
+					if (!onEdgeRow(el, key)) {
 						return;
 					}
 
@@ -1411,8 +1486,7 @@ export default defineComponent({
 						return; // already at the oldest own message
 					}
 
-					input.value.value = channel.pendingMessage;
-					setInputSize();
+					showStepped(el, channel.pendingMessage, key);
 
 					return false;
 				}
@@ -1421,7 +1495,7 @@ export default defineComponent({
 					channel.inputHistory[channel.inputHistoryPosition] = channel.pendingMessage;
 				}
 
-				if (key === "up" && onRow === 0) {
+				if (key === "up" && onEdgeRow(el, key)) {
 					if (channel.inputHistoryPosition < channel.inputHistory.length - 1) {
 						channel.inputHistoryPosition++;
 					} else {
@@ -1430,7 +1504,7 @@ export default defineComponent({
 				} else if (
 					key === "down" &&
 					channel.inputHistoryPosition > 0 &&
-					onRow === totalRows
+					onEdgeRow(el, key)
 				) {
 					channel.inputHistoryPosition--;
 				} else {
@@ -1438,8 +1512,7 @@ export default defineComponent({
 				}
 
 				channel.pendingMessage = channel.inputHistory[channel.inputHistoryPosition];
-				input.value.value = channel.pendingMessage;
-				setInputSize();
+				showStepped(el, channel.pendingMessage, key);
 
 				return false;
 			});
@@ -1501,10 +1574,11 @@ export default defineComponent({
 			setPendingMessage,
 			cancelCompose,
 			replyingParts,
-			composePreview,
+			composeTarget,
 			showConnectionBar,
 			canSend,
 			connectionLabel,
+			throttledWait,
 			retryInSeconds,
 			canConnectNow,
 			connectNetwork,

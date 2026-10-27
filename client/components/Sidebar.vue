@@ -55,32 +55,31 @@
 						@change="onLocalePick"
 					/>
 				</div>
+				<PresencePill />
 			</div>
 			<NetworkList />
 		</div>
 		<footer id="footer">
+			<!-- `custom`: no <a> around the button, so the button is the one
+			     control and carries the name (the tooltip span's aria-label is
+			     only the tooltip's text). -->
 			<span class="tooltipped tooltipped-n tooltipped-no-touch" :aria-label="settingsLabel"
-				><router-link
-					v-slot:default="{navigate, isActive}"
-					to="/settings"
-					role="tab"
-					aria-controls="settings"
-				>
+				><router-link v-slot:default="{navigate, isActive}" to="/settings" custom>
 					<button
 						:class="['icon', 'settings', {active: isActive}]"
+						role="tab"
+						aria-controls="settings"
+						:aria-label="settingsLabel"
 						:aria-selected="isActive"
 						@click="navigate"
-						@keypress.enter="navigate"
 					></button> </router-link
 			></span>
 			<span class="tooltipped tooltipped-n tooltipped-no-touch" :aria-label="helpLabel"
-				><router-link
-					v-slot:default="{navigate, isActive}"
-					to="/help"
-					role="tab"
-					aria-controls="help"
-				>
+				><router-link v-slot:default="{navigate, isActive}" to="/help" custom>
 					<button
+						role="tab"
+						aria-controls="help"
+						:aria-label="helpLabel"
 						:aria-selected="route.name === 'Help'"
 						:class="[
 							'icon',
@@ -89,7 +88,6 @@
 							{active: isActive},
 						]"
 						@click="navigate"
-						@keypress.enter="navigate"
 					></button> </router-link
 			></span>
 		</footer>
@@ -104,6 +102,7 @@ import {useI18n} from "../js/i18n";
 import NetworkList from "./NetworkList.vue";
 import LanguageSelect from "./LanguageSelect.vue";
 import eventbus from "../js/eventbus";
+import PresencePill from "./PresencePill.vue";
 import {devtoolsAvailable, toggleDevtools} from "../js/devtools";
 
 export default defineComponent({
@@ -111,6 +110,7 @@ export default defineComponent({
 	components: {
 		NetworkList,
 		LanguageSelect,
+		PresencePill,
 	},
 	props: {
 		overlay: {type: Object as PropType<HTMLElement | null>, required: true},

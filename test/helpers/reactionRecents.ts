@@ -3,11 +3,15 @@ import {
 	DEFAULT_REACTIONS,
 	MAX_RECENT,
 	mergeRecent,
+	QUICK_REACTIONS,
+	quickReactions,
+	RECENTS_CHANGED,
 	recentReactions,
 	rememberReaction,
 	STORAGE_KEY,
 	useStorageBackend,
 } from "../../client/js/helpers/reactionRecents";
+import eventbus from "../../client/js/eventbus";
 
 describe("recently used reactions (helpers/reactionRecents.ts)", function () {
 	let store: Map<string, string>;
@@ -69,5 +73,36 @@ describe("recently used reactions (helpers/reactionRecents.ts)", function () {
 	it("skips entries that are not usable reactions", function () {
 		store.set(STORAGE_KEY, JSON.stringify(["👍", 42, "", null, "🎉".repeat(500)]));
 		expect(recentReactions()).to.deep.equal(["👍"]);
+	});
+
+	it("offers the newest single emoji as quick reactions, topped up from the defaults", function () {
+		expect(quickReactions([])).to.deep.equal(DEFAULT_REACTIONS.slice(0, QUICK_REACTIONS));
+
+		rememberReaction("🔥");
+		rememberReaction("lol");
+		rememberReaction("🎉🎉🎉");
+		rememberReaction("👀");
+
+		expect(quickReactions()).to.deep.equal(["👀", "🔥", "👍"]);
+	});
+
+	it("never repeats a quick reaction that is also a default", function () {
+		expect(quickReactions(["👍", "❤️"])).to.deep.equal(["👍", "❤️", "😂"]);
+	});
+
+	it("announces the new list on the event bus", function () {
+		const seen: string[][] = [];
+		const handler = (list: string[]) => void seen.push(list);
+		eventbus.on(RECENTS_CHANGED, handler);
+
+		try {
+			rememberReaction("👍");
+			rememberReaction("");
+			rememberReaction("❤️");
+		} finally {
+			eventbus.off(RECENTS_CHANGED, handler);
+		}
+
+		expect(seen).to.deep.equal([["👍"], ["❤️", "👍"]]);
 	});
 });

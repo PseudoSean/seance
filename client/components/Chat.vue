@@ -87,7 +87,11 @@
 							@contextmenu.prevent="openTranslationPanel"
 						/>
 					</span>
-					<button class="mentions" :aria-label="mentionsLabel" @click="openMentions" />
+					<button class="mentions" :aria-label="mentionsLabel" @click="openMentions">
+						<span v-if="mentionCount" class="mentions-badge" aria-hidden="true">{{
+							mentionBadge
+						}}</span>
+					</button>
 					<button class="menu" :aria-label="contextMenuLabel" @click="openContextMenu" />
 					<span
 						v-if="channel.type === 'channel'"
@@ -169,11 +173,13 @@ import ListIgnored from "./Special/ListIgnored.vue";
 import TranslationPanel from "./TranslationPanel.vue";
 import {defineComponent, PropType, ref, computed, watch, nextTick, onMounted, Component} from "vue";
 import {channelOpened} from "../js/helpers/lastChannel";
+import {prefetchEmojiCatalog} from "../js/helpers/emoji";
 import type {ClientNetwork, ClientChan} from "../js/types";
 import {useStore} from "../js/store";
 import {SpecialChanType, ChanType} from "../../shared/types/chan";
 import {layout, toPlainText} from "../js/helpers/ircmessageparser/layout";
 import {useI18n} from "../js/i18n";
+import {formatNumber} from "../js/i18n/numbers";
 import {
 	channelTranslation,
 	readTopic,
@@ -202,10 +208,9 @@ export default defineComponent({
 		channel: {type: Object as PropType<ClientChan>, required: true},
 		focused: Number,
 	},
-	emits: ["channel-changed"],
-	setup(props, {emit}) {
+	setup(props) {
 		const store = useStore();
-		const {t} = useI18n();
+		const {t, tCount} = useI18n();
 
 		const messageList = ref<typeof MessageList>();
 		const topicInput = ref<HTMLInputElement | null>(null);
@@ -277,7 +282,6 @@ export default defineComponent({
 			() => void readTopic(props.network, props.channel),
 			{immediate: true}
 		);
-		const mentionsLabel = computed(() => t("chat.mentions"));
 		const contextMenuLabel = computed(() => t("chat.contextMenu"));
 		const toggleUserlistLabel = computed(() => t("chat.toggleUserlist"));
 		const jumpToRecentLabel = computed(() => t("chat.jumpToRecent"));
@@ -316,14 +320,19 @@ export default defineComponent({
 
 		const channelChanged = () => {
 			// Triggered when active channel is set or changed
-			emit("channel-changed", props.channel);
-
 			socket.emit("open", props.channel.id);
 
 			// Where the user is, for the next page load to come back to
 			// (helpers/lastChannel.ts); the lobby and special windows do
 			// not count, and this calls off a restore the user got ahead of.
 			channelOpened(props.network.uuid, props.channel.name, props.channel.type);
+
+			// A conversation is where reactions happen: the emoji catalog
+			// chunk is fetched now, at idle, so the picker never waits for it
+			// (helpers/emoji.ts). Not from the lobby — nothing there reacts.
+			if (props.channel.type !== ChanType.LOBBY) {
+				prefetchEmojiCatalog();
+			}
 
 			if (props.channel.usersOutdated) {
 				props.channel.usersOutdated = false;
@@ -367,6 +376,19 @@ export default defineComponent({
 				network: props.network,
 			});
 		};
+
+		// Unread mentions on every network: the @ button's badge.
+		const mentionCount = computed(() => store.getters.mentionCount);
+		const mentionBadge = computed(() =>
+			mentionCount.value > 99
+				? t("chat.mentionsBadgeOver", {count: 99})
+				: formatNumber(mentionCount.value)
+		);
+		const mentionsLabel = computed(() =>
+			mentionCount.value
+				? tCount("chat.mentionsUnread", mentionCount.value, {count: mentionCount.value})
+				: t("chat.mentions")
+		);
 
 		const openMentions = (event: any) => {
 			eventbus.emit("mentions:toggle", {
@@ -538,6 +560,8 @@ export default defineComponent({
 			touch,
 			onTranslateClick,
 			openTranslationPanel,
+			mentionCount,
+			mentionBadge,
 		};
 	},
 });

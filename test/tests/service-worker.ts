@@ -36,6 +36,7 @@ interface Rec {
 	tag: string;
 	title: string;
 	body: string;
+	silent?: boolean;
 	data: {
 		kind?: string;
 		count?: number;
@@ -50,6 +51,9 @@ interface Rec {
 		title: string;
 		placeholder?: string;
 	}>;
+	silent?: boolean;
+	renotify?: boolean;
+	shownAt?: number;
 	closed: boolean;
 	close(): void;
 }
@@ -104,7 +108,14 @@ interface ServerScript {
 	noReadMarker?: boolean;
 	/** Refuse MARKREAD with a FAIL (read-marker storage unavailable). */
 	failMarkRead?: boolean;
+	/** Offer `draft/pre-away` (the testnet's ircv3.2-upgrade build does). */
+	preAway?: boolean;
+	/** Hold the first login's 900/903 until `release` resolves (a slow SASL). */
+	holdLogin?: {release: Promise<void>; used?: boolean};
 }
+
+/** A clock of events across every socket: when each opened and sent QUIT. */
+let socketSeq = 0;
 
 /** What the scripted ircd advertises in CAP LS. */
 function capsOffered(script: ServerScript): string[] {
@@ -115,6 +126,7 @@ function capsOffered(script: ServerScript): string[] {
 		"draft/webpush",
 		...(script.noMessageTags ? [] : ["message-tags"]),
 		...(script.noReadMarker ? [] : ["draft/read-marker"]),
+		...(script.preAway ? ["draft/pre-away"] : []),
 	];
 }
 
@@ -172,8 +184,17 @@ function serve(ws: any, line: string): void {
 	} else if (line === "AUTHENTICATE PLAIN") {
 		reply("AUTHENTICATE +");
 	} else if (line.startsWith("AUTHENTICATE ")) {
-		reply(":irc.testnet.local 900 * :logged in");
-		reply(":irc.testnet.local 903 * :SASL authentication successful");
+		const answer = (): void => {
+			reply(":irc.testnet.local 900 * :logged in");
+			reply(":irc.testnet.local 903 * :SASL authentication successful");
+		};
+
+		if (script.holdLogin && !script.holdLogin.used) {
+			script.holdLogin.used = true;
+			void script.holdLogin.release.then(answer);
+		} else {
+			answer();
+		}
 	} else if (line === "CAP END") {
 		ws.capEnded = true;
 		tryRegister();
@@ -181,6 +202,16 @@ function serve(ws: any, line: string): void {
 		if (script.refuseFirst && !ws.refused) {
 			ws.refused = true;
 			reply(`:irc.testnet.local 404 ${me()} ${bare.split(" ")[1]} :Cannot send to channel`);
+		}
+	} else if (line.startsWith("AWAY")) {
+		// m_away.c: stored without a word before registration (pre-away),
+		// RPL_NOWAWAY / RPL_UNAWAY after it.
+		if (ws.registered) {
+			reply(
+				line === "AWAY"
+					? `:irc.testnet.local 305 ${me()} :You are no longer marked as being away`
+					: `:irc.testnet.local 306 ${me()} :You have been marked as being away`
+			);
 		}
 	} else if (line.startsWith("WEBPUSH REGISTER ")) {
 		reply(`:irc.testnet.local WEBPUSH REGISTER ${line.split(" ")[2]}`);
@@ -204,7 +235,13 @@ function serve(ws: any, line: string): void {
 /** Every FakeWS the harness created, newest last.  Typed structurally:
  * declaring it as FakeWS[] after the class (or before it) trips
  * no-use-before-define either way. */
-const wsInstances: Array<{sent: string[]; closed: boolean; nicks: string[]}> = [];
+const wsInstances: Array<{
+	sent: string[];
+	closed: boolean;
+	nicks: string[];
+	bornAt: number;
+	quitAt: number | null;
+}> = [];
 
 class FakeWS {
 	sent: string[] = [];
@@ -215,6 +252,8 @@ class FakeWS {
 	registered = false;
 	refused = false;
 	closed = false;
+	bornAt = socketSeq++;
+	quitAt: number | null = null;
 	onopen: () => void = () => {};
 	onmessage: (e: {data: string}) => void = () => {};
 	onclose: () => void = () => {};
@@ -231,6 +270,11 @@ class FakeWS {
 
 	send(line: string): void {
 		this.sent.push(line);
+
+		if (line.startsWith("QUIT")) {
+			this.quitAt = socketSeq++;
+		}
+
 		serve(this, line);
 	}
 
@@ -243,6 +287,7 @@ class FakeWS {
  * `ack` is given, answers a reply request through its MessageChannel port
  * (no `ack` = a frozen page that never answers). */
 interface FakeClient {
+	url: string;
 	focused: boolean;
 	visibilityState: string;
 	posted: any[];
@@ -252,8 +297,9 @@ interface FakeClient {
 	focus(): void;
 }
 
-function makeClient(ack?: (msg: any) => boolean): FakeClient {
+function makeClient(ack?: (msg: any) => boolean, url = "https://app.test/#/chan-1"): FakeClient {
 	const client: FakeClient = {
+		url,
 		focused: true,
 		visibilityState: "visible",
 		posted: [],
@@ -294,6 +340,12 @@ interface SWHarness {
 	kv: Map<string, unknown>;
 	socketsOpened(): number;
 	lastSent(): string[];
+	/** What each socket opened since the harness was made sent, in order. */
+	sentBySocket(): string[][];
+	/** When each socket opened and sent its QUIT, on one clock. */
+	socketTimeline(): {bornAt: number; quitAt: number | null}[];
+	/** Move the worker's and the notifications' clock forward. */
+	advance(ms: number): void;
 }
 
 interface HarnessOptions {
@@ -305,8 +357,28 @@ interface HarnessOptions {
 	/** Make `indexedDB.open` throw synchronously — the worker must still
 	 * show something rather than let handlePush reject silently. */
 	failIndexedDB?: boolean;
+	/** Make `indexedDB.open` never answer — a worker stalled on storage,
+	 * which under WebKit's 30 s clock is a silent push. */
+	hangIndexedDB?: boolean;
+	/** The worker's `navigator.userAgent` (default a browser that is neither
+	 * WebKit nor Chromium: the lenient path). */
+	userAgent?: string;
 	/** The registration's scope (default the app root; `push/<uuid>/` for a push-only worker). */
 	scope?: string;
+	/** Run the worker's timers a hundred times faster (its delays are seconds long). */
+	fastTimers?: boolean;
+	/** Replace the stash the page wrote. */
+	stash?: Stash;
+	/** Refuse `close()` on a notification shown under 30 s ago, as WebKit does
+	 * (bug 309940). */
+	refuseYoungClose?: boolean;
+	/** WebKit's notifications as they are: a show never replaces one under
+	 * the same tag (webpushd files each under its own UUID), and a close
+	 * within 30 s of the show is refused. */
+	webkitNotifications?: boolean;
+	/** Hold every `indexedDB.open` until this settles: storage that is slow,
+	 * not stalled (or, if it rejects, that fails once it answers). */
+	idbGate?: Promise<void>;
 }
 
 const SCOPE = "https://app.test/";
@@ -316,8 +388,26 @@ function makeSW(options: HarnessOptions = {}): SWHarness {
 	const records: Rec[] = [];
 	const shown: Rec[] = [];
 	const opened: string[] = [];
-	const kv = new Map<string, unknown>([["stash", STASH]]);
+	const kv = new Map<string, unknown>([["stash", options.stash ?? STASH]]);
 	const socketsBefore = wsInstances.length;
+	let offset = 0;
+	const now = (): number => Date.now() + offset;
+
+	class ShiftedDate extends Date {
+		constructor(...args: any[]) {
+			if (args.length) {
+				super(...(args as [number]));
+			} else {
+				super(now());
+			}
+		}
+
+		static now(): number {
+			return now();
+		}
+	}
+
+	const webkit = options.webkitNotifications === true;
 
 	class HarnessWS extends FakeWS {
 		constructor(url: string, protocol?: string) {
@@ -327,13 +417,16 @@ function makeSW(options: HarnessOptions = {}): SWHarness {
 
 	const sandbox: any = {
 		console,
-		setTimeout,
+		Date: ShiftedDate,
+		setTimeout: options.fastTimers
+			? (fn: () => void, ms = 0) => setTimeout(fn, ms / 100)
+			: setTimeout,
 		clearTimeout,
 		MessageChannel,
 		TextEncoder,
 		btoa: (s: string) => Buffer.from(s, "binary").toString("base64"),
 		navigator: {
-			userAgent: "Mozilla/5.0 (X11; Linux x86_64)",
+			userAgent: options.userAgent ?? "Mozilla/5.0 (X11; Linux x86_64)",
 			setAppBadge() {},
 			clearAppBadge() {},
 		},
@@ -359,7 +452,7 @@ function makeSW(options: HarnessOptions = {}): SWHarness {
 				// silently rather than showing a second one; mirror that here
 				// so the worker's tag-based merge (no explicit close-then-show)
 				// behaves the same under test as in a browser.
-				if (opts.tag) {
+				if (opts.tag && !webkit) {
 					for (const n of records) {
 						if (!n.closed && n.tag === opts.tag) {
 							n.closed = true;
@@ -371,10 +464,18 @@ function makeSW(options: HarnessOptions = {}): SWHarness {
 					tag: opts.tag || "",
 					title,
 					body: opts.body,
+					silent: opts.silent,
 					data: opts.data,
 					actions: opts.actions,
+					silent: opts.silent,
+					renotify: opts.renotify,
+					shownAt: now(),
 					closed: false,
 					close() {
+						if ((options.refuseYoungClose || webkit) && now() - rec.shownAt! < 30000) {
+							return;
+						}
+
 						rec.closed = true;
 					},
 				};
@@ -428,7 +529,19 @@ function makeSW(options: HarnessOptions = {}): SWHarness {
 				}
 
 				const req: FakeReq = {};
-				queueMicrotask(() => {
+
+				if (options.hangIndexedDB) {
+					return req; // neither onsuccess nor onerror, ever
+				}
+
+				const gate = options.idbGate ?? Promise.resolve();
+
+				// A gate that rejects is storage that stalled, then failed.
+				gate.catch(() => {
+					(req as {error?: Error}).error = new Error("connection lost");
+					req.onerror?.();
+				});
+				void gate.then(() => {
 					req.result = {
 						transaction() {
 							// The worker awaits the TRANSACTION's oncomplete
@@ -527,6 +640,12 @@ function makeSW(options: HarnessOptions = {}): SWHarness {
 		kv,
 		socketsOpened: (): number => wsInstances.length - socketsBefore,
 		lastSent: (): string[] => wsInstances[wsInstances.length - 1].sent,
+		sentBySocket: (): string[][] => wsInstances.slice(socketsBefore).map((w) => w.sent),
+		socketTimeline: () =>
+			wsInstances.slice(socketsBefore).map((w) => ({bornAt: w.bornAt, quitAt: w.quitAt})),
+		advance(ms: number): void {
+			offset += ms;
+		},
 	};
 }
 
@@ -1059,7 +1178,7 @@ describe("service worker push notifications", function () {
 
 		expect(sw.shown).to.have.lengthOf(1);
 		expect(sw.shown[0].title).to.equal("bob in &local");
-		expect(sw.shown[0].tag).to.equal("push-&local");
+		expect(sw.shown[0].tag).to.equal("push-net-1/&local");
 	});
 
 	it("shows the generic notification when IndexedDB rejects", async function () {
@@ -1070,6 +1189,510 @@ describe("service worker push notifications", function () {
 		expect(sw.shown).to.have.lengthOf(1);
 		expect(sw.shown[0].tag).to.equal("push-activity");
 		expect(sw.shown[0].body).to.equal("New activity while you were away.");
+	});
+});
+
+describe("service worker push notifications under WebKit (every push shows)", function () {
+	// WebKit (an iPhone's Home Screen web app, Safari) counts a push event
+	// that ends without a showNotification on its registration as silent,
+	// never resets the count, and at the third removes every subscription of
+	// the origin without a word — so the paths that drop a push (the seen
+	// ring, a redelivery, a read relay) must show something there; the
+	// lenient browsers keep their behaviour (service-worker.js § WebKit).
+	const IOS_UA =
+		"Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
+	const CHROME_UA =
+		"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36";
+
+	/** Fire a push without waiting for its handler (one that will never finish). */
+	function firePushUnawaited(sw: SWHarness, raw: string): void {
+		const ev = {data: {text: () => raw}, waitUntil: () => undefined};
+
+		for (const h of sw.handlers.push) {
+			h(ev);
+		}
+	}
+
+	it("re-shows, same tag and count, a message its notification already holds", async function () {
+		const sw = makeSW({userAgent: IOS_UA});
+
+		await firePush(sw, msgPayload("alice", "pushtest", "hello there", "m1"));
+		await firePush(sw, msgPayload("alice", "pushtest", "hello there", "m1"));
+
+		expect(sw.shown, "shown twice").to.have.lengthOf(2);
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live, "one notification").to.have.lengthOf(1);
+		expect(live[0].title).to.equal("alice");
+		expect(live[0].body).to.equal("hello there");
+		expect(live[0].data.count).to.equal(1);
+	});
+
+	it("a Chromium worker still drops what the page saw (AppleWebKit with Chrome/ is not WebKit)", async function () {
+		const sw = makeSW({userAgent: CHROME_UA});
+		const msgid = "BjAAAaBjzZ0";
+
+		sw.kv.set("seen", [msgid]);
+		await firePush(sw, msgPayload("alice", "pushtest", "hello there", msgid));
+
+		expect(sw.shown).to.have.lengthOf(0);
+	});
+
+	it("a read relay replaces the target's notification with a silent stub, closed once WebKit allows", async function () {
+		const sw = makeSW({userAgent: IOS_UA, fastTimers: true});
+
+		await firePush(sw, msgPayload("alice", "pushtest", "hello there"));
+
+		const ts = new Date(Date.now() + 5000).toISOString();
+		await firePush(sw, `{"t":"read","target":"alice","ts":"${ts}"}`);
+
+		expect(sw.shown, "the stub was shown").to.have.lengthOf(2);
+
+		const stub = sw.shown[1];
+		expect(stub.tag).to.equal("push-net-1/alice");
+		expect(stub.silent).to.be.true;
+		expect(stub.body).to.equal("Marked as read");
+		expect(stub.data.kind).to.equal("read");
+		expect(stub.data.target).to.equal("alice");
+		expect(
+			sw.records.filter((n) => !n.closed),
+			"the message's notification is gone, the stub stands"
+		).to.deep.equal([stub]);
+
+		// 31 s, a hundred times faster: the worker closes the stub itself.
+		await new Promise((r) => setTimeout(r, 450));
+		expect(stub.closed, "stub closed after the minimum lifetime").to.be.true;
+	});
+
+	it("a MARKREAD line is the same relay", async function () {
+		const sw = makeSW({userAgent: IOS_UA});
+
+		await firePush(sw, msgPayload("alice", "pushtest", "hello there"));
+		await firePush(
+			sw,
+			`:irc.testnet.local MARKREAD alice timestamp=${new Date(
+				Date.now() + 5000
+			).toISOString()}`
+		);
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live).to.have.lengthOf(1);
+		expect(live[0].data.kind).to.equal("read");
+		expect(live[0].tag).to.equal("push-net-1/alice");
+	});
+
+	it("a read relay that keeps a newer notification puts the stub beside it", async function () {
+		const sw = makeSW({userAgent: IOS_UA});
+
+		// the payload's time is fixed in the past; the read marker predates it
+		await firePush(sw, msgPayload("alice", "pushtest", "arrived later"));
+		await firePush(sw, `{"t":"read","target":"alice","ts":"2026-09-01T00:00:00.000Z"}`);
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live.map((n) => n.tag).sort()).to.deep.equal([
+			"push-net-1/alice",
+			"push-net-1/read/alice",
+		]);
+		expect(live.find((n) => n.tag === "push-net-1/alice")?.body).to.equal("arrived later");
+	});
+
+	it("a read relay with nothing to close still shows the stub", async function () {
+		const sw = makeSW({userAgent: IOS_UA});
+
+		await firePush(sw, `{"t":"read","target":"alice","ts":"${new Date().toISOString()}"}`);
+
+		expect(sw.shown).to.have.lengthOf(1);
+		expect(sw.shown[0].tag).to.equal("push-net-1/alice");
+		expect(sw.shown[0].silent).to.be.true;
+	});
+
+	it("the next push on the target replaces its stub", async function () {
+		const sw = makeSW({userAgent: IOS_UA});
+
+		await firePush(sw, msgPayload("alice", "pushtest", "hello there"));
+		await firePush(
+			sw,
+			`{"t":"read","target":"alice","ts":"${new Date(Date.now() + 5000).toISOString()}"}`
+		);
+		await firePush(sw, msgPayload("alice", "pushtest", "and again"));
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live).to.have.lengthOf(1);
+		expect(live[0].body).to.equal("and again");
+		expect(live[0].data.count, "the stub held no messages").to.equal(1);
+	});
+
+	it("a stalled handler shows the generic notification before WebKit's 30 s clock runs out", async function () {
+		const sw = makeSW({
+			userAgent: IOS_UA,
+			fastTimers: true,
+			hangIndexedDB: true,
+			scope: SCOPE + "push/net-1/",
+		});
+
+		firePushUnawaited(sw, msgPayload("alice", "pushtest", "hello there"));
+
+		// 20 s, a hundred times faster: silent, under a tag of its own, so
+		// it can never overwrite the real notification should that land.
+		await new Promise((r) => setTimeout(r, 350));
+		expect(sw.shown).to.have.lengthOf(1);
+		expect(sw.shown[0].tag).to.equal("push-net-1/fallback/alice");
+		expect(sw.shown[0].silent).to.equal(true);
+		expect(sw.shown[0].title).to.equal("Seance");
+		expect(sw.shown[0].body).to.not.include("hello there");
+	});
+
+	it("shows a push the page already took quietly: silent, no text, not counted, closed after 31 s", async function () {
+		const sw = makeSW({userAgent: IOS_UA, fastTimers: true});
+		const msgid = "BjAAAaBjzZq1";
+
+		sw.kv.set("seen", [msgid]);
+		await firePush(sw, msgPayload("alice", "pushtest", "hello there", msgid));
+
+		expect(sw.shown).to.have.lengthOf(1);
+		const quiet = sw.shown[0];
+		expect(quiet.silent).to.equal(true);
+		expect(quiet.renotify).to.not.equal(true);
+		expect(quiet.body).to.not.include("hello there");
+		expect(quiet.data.kind).to.equal("quiet");
+		await new Promise((r) => setTimeout(r, 450));
+		expect(quiet.closed).to.equal(true);
+	});
+
+	it("re-shows the notification the page already put up, silently and unchanged", async function () {
+		const sw = makeSW({userAgent: IOS_UA});
+
+		await firePush(sw, msgPayload("alice", "pushtest", "hello there", "m-seen"));
+		sw.kv.set("seen", ["m-seen"]);
+		await firePush(sw, msgPayload("alice", "pushtest", "hello there", "m-seen"));
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live).to.have.lengthOf(1);
+		expect(live[0].body).to.equal("hello there");
+		expect(sw.shown[1].silent).to.equal(true);
+		expect(sw.shown[1].renotify).to.not.equal(true);
+	});
+
+	it("a redelivery after the user dismissed the notification comes back quiet, without its text", async function () {
+		const sw = makeSW({userAgent: IOS_UA});
+		const payload = msgPayload("alice", "pushtest", "secret text", "m-again");
+
+		await firePush(sw, payload);
+		sw.records.forEach((n) => n.close());
+		await firePush(sw, payload);
+
+		expect(sw.shown).to.have.lengthOf(2);
+		expect(sw.shown[1].silent).to.equal(true);
+		expect(sw.shown[1].body).to.not.include("secret text");
+	});
+
+	it("a conversation muted on this device is shown quietly, without its text", async function () {
+		const sw = makeSW({userAgent: IOS_UA});
+
+		sw.kv.set("prefs", {muted: ["net-1/#help"]});
+		await firePush(sw, msgPayload("alice", "#help", "pushtest: secret", "m-mute"));
+
+		expect(sw.shown).to.have.lengthOf(1);
+		expect(sw.shown[0].silent).to.equal(true);
+		expect(sw.shown[0].body).to.not.include("secret");
+	});
+
+	it("each stalled push gets its own show, under its conversation's tag", async function () {
+		const sw = makeSW({
+			userAgent: IOS_UA,
+			fastTimers: true,
+			hangIndexedDB: true,
+			scope: SCOPE + "push/net-1/",
+		});
+
+		firePushUnawaited(sw, msgPayload("alice", "pushtest", "one"));
+		firePushUnawaited(sw, msgPayload("bob", "pushtest", "two"));
+
+		await new Promise((r) => setTimeout(r, 350));
+		expect(sw.shown.map((n) => n.tag).sort()).to.deep.equal([
+			"push-net-1/fallback/alice",
+			"push-net-1/fallback/bob",
+		]);
+		expect(sw.shown.every((n) => !n.body.includes("one") && !n.body.includes("two"))).to.equal(
+			true
+		);
+	});
+
+	it("a slow store's fallback goes once the real notification lands, on a root worker too", async function () {
+		let release!: () => void;
+		const gate = new Promise<void>((r) => (release = r));
+		const sw = makeSW({userAgent: IOS_UA, fastTimers: true, idbGate: gate});
+		const done = firePush(sw, msgPayload("alice", "pushtest", "hello"));
+
+		await new Promise((r) => setTimeout(r, 250)); // 25 s, a hundred times faster
+		expect(sw.shown, "the fallback went up").to.have.lengthOf(1);
+		release();
+		await done;
+
+		expect(sw.shown).to.have.lengthOf(2);
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live.map((n) => n.body)).to.deep.equal(["hello"]);
+	});
+
+	it("a store that stalls past the deadline and then fails alerts nobody twice", async function () {
+		let fail!: () => void;
+		const gate = new Promise<void>((resolve, reject) => (fail = () => reject(new Error("x"))));
+		const sw = makeSW({
+			userAgent: IOS_UA,
+			fastTimers: true,
+			idbGate: gate,
+			scope: SCOPE + "push/net-1/",
+		});
+		const done = firePush(sw, msgPayload("alice", "pushtest", "hello")).catch(() => undefined);
+
+		await new Promise((r) => setTimeout(r, 250));
+		fail();
+		await done;
+
+		expect(sw.shown).to.have.lengthOf(1);
+		expect(sw.shown.filter((n) => !n.silent)).to.deep.equal([]);
+	});
+
+	it("a muted push on a slow store leaves only a quiet stub, which goes", async function () {
+		let release!: () => void;
+		const gate = new Promise<void>((r) => (release = r));
+		const sw = makeSW({
+			userAgent: IOS_UA,
+			fastTimers: true,
+			idbGate: gate,
+			scope: SCOPE + "push/net-1/",
+		});
+
+		sw.kv.set("prefs", {muted: ["net-1/#help"]});
+		const done = firePush(sw, msgPayload("alice", "#help", "pushtest: secret", "m-slow"));
+		await new Promise((r) => setTimeout(r, 250));
+		release();
+		await done;
+
+		expect(
+			sw.shown.filter((n) => !n.silent),
+			"nothing alerted"
+		).to.deep.equal([]);
+		await new Promise((r) => setTimeout(r, 450)); // past 31 s
+		expect(sw.records.filter((n) => !n.closed)).to.deep.equal([]);
+	});
+
+	it("a stalled read relay's stub closes itself", async function () {
+		const sw = makeSW({
+			userAgent: IOS_UA,
+			fastTimers: true,
+			hangIndexedDB: true,
+			scope: SCOPE + "push/net-1/",
+		});
+
+		firePushUnawaited(sw, `{"t":"read","target":"alice"}`);
+		await new Promise((r) => setTimeout(r, 250));
+		expect(sw.shown).to.have.lengthOf(1);
+		expect(sw.shown[0].data.kind).to.equal("read");
+		await new Promise((r) => setTimeout(r, 450));
+		expect(sw.shown[0].closed).to.equal(true);
+	});
+
+	it("merges a notification an older worker showed without the network, and closes it", async function () {
+		const sw = makeSW({userAgent: IOS_UA, scope: SCOPE + "push/net-1/"});
+
+		await sw.sandbox.registration.showNotification("alice", {
+			tag: "push-alice",
+			body: "earlier",
+			data: {
+				kind: "push",
+				count: 1,
+				target: "alice",
+				messages: [{from: "alice", text: "earlier", msgid: "m-old"}],
+			},
+		});
+		await firePush(sw, msgPayload("alice", "pushtest", "later", "m-new"));
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live.map((n) => n.tag)).to.deep.equal(["push-net-1/alice"]);
+		expect(live[0].data.count).to.equal(2);
+		expect(live[0].body).to.include("earlier");
+	});
+
+	it("matches a muted conversation under IRC's case folding", async function () {
+		const sw = makeSW({userAgent: IOS_UA});
+
+		sw.kv.set("prefs", {muted: ["net-1/nick{x}"]});
+		await firePush(sw, msgPayload("Nick[x]", "pushtest", "secret", "m-fold"));
+
+		expect(sw.shown).to.have.lengthOf(1);
+		expect(sw.shown[0].silent).to.equal(true);
+		expect(sw.shown[0].body).to.not.include("secret");
+	});
+
+	it("shows a muted conversation quietly on Chrome too", async function () {
+		const sw = makeSW({userAgent: CHROME_UA});
+
+		sw.kv.set("prefs", {muted: ["net-1/#help"]});
+		await firePush(sw, msgPayload("alice", "#help", "pushtest: secret", "m-chrome"));
+
+		expect(sw.shown).to.have.lengthOf(1);
+		expect(sw.shown[0].silent).to.equal(true);
+		expect(sw.shown[0].body).to.not.include("secret");
+	});
+
+	it("a read relay spelled in another case still replaces the message, even when WebKit refuses the close", async function () {
+		const sw = makeSW({userAgent: IOS_UA, refuseYoungClose: true});
+
+		await firePush(sw, msgPayload("Alice", "pushtest", "hi"));
+		await firePush(
+			sw,
+			`{"t":"read","target":"alice","ts":"${new Date(Date.now() + 5000).toISOString()}"}`
+		);
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live).to.have.lengthOf(1);
+		expect(live[0].data.kind).to.equal("read");
+	});
+
+	it("the next message for a conversation closes a stub left beside a newer notification", async function () {
+		const sw = makeSW({userAgent: IOS_UA});
+
+		await firePush(sw, msgPayload("alice", "pushtest", "arrived later"));
+		await firePush(sw, `{"t":"read","target":"alice","ts":"2026-09-01T00:00:00.000Z"}`);
+		await firePush(sw, msgPayload("alice", "pushtest", "and more"));
+
+		const live = sw.records.filter((n) => !n.closed);
+		expect(live.map((n) => n.data.kind)).to.deep.equal(["push"]);
+	});
+
+	it("tags carry the network, and the stub's title names no conversation", async function () {
+		const sw = makeSW({userAgent: IOS_UA});
+
+		await firePush(sw, msgPayload("alice", "pushtest", "hello"));
+		await firePush(
+			sw,
+			`{"t":"read","target":"alice","ts":"${new Date(Date.now() + 5000).toISOString()}"}`
+		);
+
+		expect(sw.shown[0].tag).to.equal("push-net-1/alice");
+		expect(sw.shown[1].tag).to.equal("push-net-1/alice");
+		expect(sw.shown[1].title).to.not.include("alice");
+	});
+
+	describe("as WebKit shows them (no tag replacement, no close under 30 s)", function () {
+		const live = (sw: SWHarness): Rec[] => sw.records.filter((n) => !n.closed);
+		const soon = (): string => new Date(Date.now() + 5000).toISOString();
+		/** The message fixtures' time, which the page's second read names. */
+		const READ_UP_TO = "2026-09-02T19:59:00.000Z";
+
+		it("a conversation read on this phone within 30 s leaves nothing once the page reads it again", async function () {
+			const sw = makeSW({userAgent: IOS_UA, webkitNotifications: true});
+
+			await firePush(sw, msgPayload("keeki", "#linux", "push works too"));
+			// The page read it (its close refused: the message is seconds
+			// old), then the server's relay came back to this device.
+			await fireMessage(sw, {type: "read", target: "#linux"});
+			await firePush(sw, `{"t":"read","target":"#linux","ts":"${soon()}"}`);
+
+			expect(
+				live(sw).map((n) => n.data.kind),
+				"both up while WebKit refuses the closes (the screenshot)"
+			).to.have.members(["push", "read"]);
+
+			sw.advance(32000);
+			await fireMessage(sw, {type: "read", target: "#linux", ts: READ_UP_TO});
+
+			expect(live(sw), "the message and the stub are gone").to.deep.equal([]);
+		});
+
+		it("the page's second read leaves a message that came after the first", async function () {
+			const sw = makeSW({userAgent: IOS_UA, webkitNotifications: true});
+
+			await firePush(sw, msgPayload("alice", "pushtest", "read one"));
+			await fireMessage(sw, {type: "read", target: "alice"});
+			sw.advance(20000);
+			await firePush(
+				sw,
+				`{"t":"msg","from":"alice","target":"pushtest","msgid":"m2","time":"${soon()}","text":"unread"}`
+			);
+			sw.advance(32000);
+			await fireMessage(sw, {type: "read", target: "alice", ts: READ_UP_TO});
+
+			expect(live(sw)).to.have.lengthOf(1);
+			expect(live(sw)[0].body).to.include("unread");
+		});
+
+		it("a read on another device closes an old message at once and its stub on a later tidy", async function () {
+			const sw = makeSW({userAgent: IOS_UA, webkitNotifications: true});
+
+			await firePush(sw, msgPayload("keeki", "#linux", "hello"));
+			sw.advance(60000);
+			await firePush(sw, `{"t":"read","target":"#linux","ts":"${soon()}"}`);
+
+			expect(live(sw).map((n) => n.data.kind)).to.deep.equal(["read"]);
+
+			sw.advance(32000);
+			await fireMessage(sw, {type: "tidy"});
+			expect(live(sw)).to.deep.equal([]);
+		});
+
+		it("a read relayed within 30 s takes the message's place on the next tidy", async function () {
+			const sw = makeSW({userAgent: IOS_UA, webkitNotifications: true});
+
+			await firePush(sw, msgPayload("keeki", "#linux", "hello"));
+			await firePush(sw, `{"t":"read","target":"#linux","ts":"${soon()}"}`);
+			sw.advance(32000);
+			await firePush(sw, msgPayload("bob", "pushtest", "later"));
+
+			expect(live(sw).map((n) => n.data.from)).to.deep.equal(["bob"]);
+		});
+
+		it("a second message merges into the newest copy and the older one goes", async function () {
+			const sw = makeSW({userAgent: IOS_UA, webkitNotifications: true});
+
+			await firePush(sw, msgPayload("alice", "pushtest", "one", "m1"));
+			sw.advance(40000);
+			await firePush(sw, msgPayload("alice", "pushtest", "two", "m2"));
+			sw.advance(40000);
+			await firePush(sw, msgPayload("alice", "pushtest", "three", "m3"));
+
+			const up = live(sw);
+			expect(up).to.have.lengthOf(1);
+			expect(up[0].data.count).to.equal(3);
+			expect(up[0].data.messages!.map((m) => m.text)).to.deep.equal(["one", "two", "three"]);
+		});
+
+		it("a merge within 30 s counts once on the badge and closes the older copy later", async function () {
+			const badges: number[] = [];
+			const sw = makeSW({userAgent: IOS_UA, webkitNotifications: true, fastTimers: true});
+
+			sw.sandbox.navigator.setAppBadge = (n: number) => badges.push(n);
+			await firePush(sw, msgPayload("alice", "pushtest", "one", "m1"));
+			await firePush(sw, msgPayload("alice", "pushtest", "two", "m2"));
+
+			expect(live(sw), "the first copy is too young to close").to.have.lengthOf(2);
+			expect(badges[badges.length - 1]).to.equal(2);
+
+			sw.advance(32000);
+			// The worker's retry, 31 s on its (here hundredfold) timers.
+			await new Promise((resolve) => setTimeout(resolve, 400));
+
+			expect(live(sw).map((n) => n.data.count)).to.deep.equal([2]);
+		});
+
+		it("a Chromium worker ignores tidy", async function () {
+			const sw = makeSW({userAgent: CHROME_UA});
+
+			await firePush(sw, msgPayload("alice", "pushtest", "hi"));
+			await fireMessage(sw, {type: "tidy"});
+
+			expect(live(sw)).to.have.lengthOf(1);
+		});
+	});
+
+	it("a lenient worker shows nothing for a stalled handler (Chrome has its own budget)", async function () {
+		const sw = makeSW({fastTimers: true, hangIndexedDB: true});
+
+		firePushUnawaited(sw, msgPayload("alice", "pushtest", "hello there"));
+
+		await new Promise((r) => setTimeout(r, 350));
+		expect(sw.shown).to.have.lengthOf(0);
 	});
 });
 
@@ -1847,5 +2470,358 @@ describe("service worker shell cache", function () {
 		expect(await cached(sw, `${SCOPE}models/Xenova/nllb/onnx/x.onnx`, "1024")).to.deep.equal(
 			[]
 		);
+	});
+});
+
+describe("service worker page notifications on a push worker", function () {
+	// The page shows its own notification for a message it took live, and
+	// the server may push the same message to this device (an unattended
+	// session is pushed to). Chrome counts visible notifications per
+	// registration: if the page's notification lives on the root worker and
+	// the push worker drops the duplicate, the push counts as silent and
+	// Chrome eventually shows "This site has been updated in the
+	// background". So for a push-enabled network the page hands the message
+	// to that network's push worker, which shows it as it would a push.
+	const NET_SCOPE = `${SCOPE}push/net-1/`;
+	const T = "2026-09-02T19:59:00.000Z";
+
+	function pageNote(
+		target: string,
+		from: string,
+		text: string,
+		msgid: string
+	): Record<string, unknown> {
+		return {
+			type: "notification",
+			chanId: 7,
+			network: "net-1",
+			target,
+			timestamp: Date.parse(T),
+			title: `${from} says:`,
+			body: text,
+			message: {msgid, from, text, time: T},
+		};
+	}
+
+	it("shows the page's message as the push would: same tag, data and actions", async function () {
+		const sw = makeSW({scope: NET_SCOPE});
+
+		await fireMessage(sw, pageNote("#seance", "alice", "hi seance", "pm-1"));
+
+		expect(sw.shown).to.have.lengthOf(1);
+		const rec = sw.shown[0];
+		expect(rec.tag).to.equal("push-net-1/#seance");
+		expect(rec.title).to.equal("alice in #seance");
+		expect(rec.body).to.equal("alice: hi seance");
+		expect(rec.data.kind).to.equal("push");
+		expect(rec.data.target).to.equal("#seance");
+		expect(rec.data.time).to.equal(T);
+		expect(rec.data.messages![0].msgid).to.equal("pm-1");
+		expect(rec.actions!.map((a) => a.action)).to.deep.equal(["markread", "reply"]);
+	});
+
+	it("shows the page's message silently when the page asks, actions kept", async function () {
+		const sw = makeSW({scope: NET_SCOPE});
+
+		await fireMessage(sw, {...pageNote("#seance", "alice", "hush", "pm-s"), silent: true});
+
+		expect(sw.shown).to.have.lengthOf(1);
+		expect(sw.shown[0].silent).to.equal(true);
+		expect(sw.shown[0].actions!.map((a) => a.action)).to.deep.equal(["markread", "reply"]);
+	});
+
+	it("leaves the page's message audible by default", async function () {
+		const sw = makeSW({scope: NET_SCOPE});
+
+		await fireMessage(sw, pageNote("#seance", "alice", "hey", "pm-a"));
+
+		expect(sw.shown[0].silent).to.equal(false);
+	});
+
+	it("a query's notification answers the sender", async function () {
+		const sw = makeSW({scope: NET_SCOPE});
+
+		await fireMessage(sw, pageNote("alice", "alice", "psst", "pm-2"));
+
+		expect(sw.shown[0].tag).to.equal("push-net-1/alice");
+		expect(sw.shown[0].title).to.equal("alice");
+		expect(sw.shown[0].data.target).to.equal("alice");
+	});
+
+	it("the push for a message the page showed leaves that notification visible and adds none", async function () {
+		const sw = makeSW({scope: NET_SCOPE});
+
+		await fireMessage(sw, pageNote("alice", "alice", "psst", "pm-3"));
+		sw.kv.set("seen", ["pm-3"]); // the page recorded it (push-seen.ts)
+		await firePush(sw, msgPayload("alice", "alice", "psst", "pm-3"));
+
+		expect(sw.shown, "no second notification").to.have.lengthOf(1);
+		expect(
+			sw.records.filter((n) => !n.closed),
+			"a notification of this registration is visible when the push ends"
+		).to.have.lengthOf(1);
+	});
+
+	it("a push that lands before the page's copy is not shown twice", async function () {
+		const sw = makeSW({scope: NET_SCOPE});
+
+		await firePush(sw, msgPayload("alice", "alice", "psst", "pm-4"));
+		await fireMessage(sw, pageNote("alice", "alice", "psst", "pm-4"));
+
+		expect(sw.shown).to.have.lengthOf(1);
+		expect(sw.records.filter((n) => !n.closed)[0].data.count).to.equal(1);
+	});
+
+	it("merges the page's message with pushed ones for the same conversation", async function () {
+		const sw = makeSW({scope: NET_SCOPE});
+
+		await firePush(sw, msgPayload("alice", "alice", "one", "pm-5"));
+		await fireMessage(sw, pageNote("alice", "alice", "two", "pm-6"));
+
+		const open = sw.records.filter((n) => !n.closed);
+		expect(open).to.have.lengthOf(1);
+		expect(open[0].data.count).to.equal(2);
+		expect(open[0].data.messages!.map((m) => m.msgid)).to.deep.equal(["pm-5", "pm-6"]);
+	});
+
+	it("an action from the page reads like its push", async function () {
+		const sw = makeSW({scope: NET_SCOPE});
+
+		await fireMessage(sw, pageNote("alice", "alice", "\x01ACTION waves\x01", "pm-7"));
+		await firePush(sw, "@msgid=pm-8 :alice!u@h PRIVMSG me :\x01ACTION nods\x01");
+
+		const open = sw.records.filter((n) => !n.closed);
+		expect(open).to.have.lengthOf(1);
+		expect(open[0].body, "both the push's shape").to.equal("*waves*\n*nods*");
+	});
+
+	it("the page reading a conversation closes it, so a later push does not bring it back", async function () {
+		const sw = makeSW({scope: NET_SCOPE});
+
+		// The page notified while the account was attended: nothing was
+		// pushed, so the server's read gate sends no read push to close it.
+		await fireMessage(sw, pageNote("alice", "alice", "old news", "pm-9"));
+		await fireMessage(sw, {type: "read", target: "alice"});
+
+		expect(
+			sw.records.filter((n) => !n.closed),
+			"closed by the page's read"
+		).to.have.lengthOf(0);
+
+		await firePush(sw, msgPayload("alice", "alice", "fresh", "pm-10"));
+
+		const open = sw.records.filter((n) => !n.closed);
+		expect(open).to.have.lengthOf(1);
+		expect(open[0].data.count, "the read message is not counted again").to.equal(1);
+		expect(open[0].body).to.equal("fresh");
+	});
+
+	it("the page's read leaves other conversations alone", async function () {
+		const sw = makeSW({scope: NET_SCOPE});
+
+		await fireMessage(sw, pageNote("alice", "alice", "a", "pm-11"));
+		await fireMessage(sw, pageNote("#seance", "bob", "b", "pm-12"));
+		await fireMessage(sw, {type: "read", target: "#seance"});
+
+		const open = sw.records.filter((n) => !n.closed);
+		expect(open.map((n) => n.tag)).to.deep.equal(["push-net-1/alice"]);
+	});
+
+	it("the page's read closes a conversation however either side spells it", async function () {
+		const sw = makeSW({scope: NET_SCOPE});
+
+		// IRC folds case (rfc1459: `[]\~` are `{}|^`), and the page's open
+		// conversation need not be spelled as the notification it closes.
+		await fireMessage(sw, pageNote("#Seance", "bob", "b", "pm-13"));
+		await fireMessage(sw, pageNote("[Alice]", "[Alice]", "a", "pm-14"));
+		await fireMessage(sw, {type: "read", target: "#seance"});
+		await fireMessage(sw, {type: "read", target: "{alice}"});
+
+		expect(sw.records.filter((n) => !n.closed)).to.have.lengthOf(0);
+	});
+
+	it("a page notification without a message keeps the per-channel shape", async function () {
+		const sw = makeSW({scope: NET_SCOPE});
+
+		await fireMessage(sw, {type: "notification", chanId: 7, title: "t", body: "b"});
+
+		expect(sw.shown[0].tag).to.equal("chan-7");
+	});
+});
+
+describe("service worker away on close", function () {
+	// The scripted ircd answers inside send(), so NICK/USER land late in
+	// the list; they are not what these tests are about.
+	const ircOnly = (lines: string[]): string[] =>
+		lines.filter((l) => !l.startsWith("NICK ") && !l.startsWith("USER "));
+
+	/** Post the page's `away-on-close` and wait for the worker to finish. */
+	async function closePage(sw: SWHarness, networks: string[]): Promise<void> {
+		const promises: Promise<unknown>[] = [];
+		const ev = {
+			data: {type: "away-on-close", networks},
+			waitUntil: (p: Promise<unknown>) => promises.push(p),
+		};
+
+		for (const h of sw.handlers.message) {
+			h(ev);
+		}
+
+		expect(promises, "kept alive with waitUntil").to.have.lengthOf(1);
+		await Promise.all(promises);
+	}
+
+	it("a close: no window after the delay, so it logs in, says AWAY * before CAP END and after 001, and QUITs", async function () {
+		const sw = makeSW({fastTimers: true, script: {preAway: true}});
+		await closePage(sw, ["net-1"]);
+
+		expect(sw.socketsOpened()).to.equal(1);
+		const sent = ircOnly(sw.lastSent());
+		expect(sent).to.include("CAP REQ :sasl draft/pre-away");
+		const tail = sent.slice(
+			sent.findIndex((l) => l.startsWith("AUTHENTICATE ") && l.length > 20) + 1
+		);
+		expect(tail).to.deep.equal(["AWAY *", "CAP END", "AWAY *", "QUIT :done"]);
+	});
+
+	it("without draft/pre-away says it after 001 only", async function () {
+		const sw = makeSW({fastTimers: true});
+		await closePage(sw, ["net-1"]);
+
+		const sent = ircOnly(sw.lastSent());
+		expect(sent).to.include("CAP REQ :sasl");
+		expect(sent.slice(sent.indexOf("CAP END"))).to.deep.equal([
+			"CAP END",
+			"AWAY *",
+			"QUIT :done",
+		]);
+	});
+
+	it("a reload: a window of the app is open again, so it does nothing", async function () {
+		// The reload's new document appears after the close was posted: the
+		// worker must look only once the delay is over.
+		const windows: FakeClient[] = [];
+		const sw = makeSW({fastTimers: true, script: {preAway: true}, clients: windows});
+		const done = closePage(sw, ["net-1"]);
+		await new Promise((r) => setTimeout(r, 10)); // 1 s of the worker's 5
+		windows.push(makeClient());
+		await done;
+		expect(sw.socketsOpened()).to.equal(0);
+	});
+
+	it("a window of another project on the origin does not stop it", async function () {
+		// A github.io origin: this app at /seance/, another project at /other/.
+		const other = makeClient(undefined, "https://app.test/other/");
+		const sw = makeSW({
+			fastTimers: true,
+			script: {preAway: true},
+			clients: [other],
+			scope: "https://app.test/seance/",
+		});
+		await closePage(sw, ["net-1"]);
+		expect(sw.socketsOpened()).to.equal(1);
+	});
+
+	const poster = (sw: SWHarness) => {
+		const promises: Promise<unknown>[] = [];
+
+		const post = (networks: string[]) => {
+			for (const h of sw.handlers.message) {
+				h({
+					data: {type: "away-on-close", networks},
+					waitUntil: (p: Promise<unknown>) => promises.push(p),
+				});
+			}
+		};
+
+		return {post, done: () => Promise.all(promises)};
+	};
+
+	const accountOf = (sent: string[]) => {
+		const auth = sent.find((l) => l.startsWith("AUTHENTICATE ") && l.length > 20) as string;
+		return Buffer.from(auth.slice(13), "base64").toString().split("\0")[1];
+	};
+
+	const NET_2 = {...STASH.networks[0], uuid: "net-2", saslAccount: "pushtest2"};
+
+	it("two closes inside the delay log in once, for both posts' networks", async function () {
+		const sw = makeSW({
+			fastTimers: true,
+			script: {preAway: true},
+			stash: {vapid: STASH.vapid, networks: [...STASH.networks, NET_2]},
+		});
+		const {post, done} = poster(sw);
+		post(["net-1"]);
+		await new Promise((r) => setTimeout(r, 10)); // 1 s of the worker's 5
+		post(["net-1", "net-2"]);
+		await done();
+		// One run: each network once, not net-1 twice.
+		expect(sw.sentBySocket().map(accountOf)).to.deep.equal([
+			STASH.networks[0].saslAccount,
+			"pushtest2",
+		]);
+	});
+
+	it("a close while the run is logging in is queued for one more run after it", async function () {
+		let release = (): void => undefined;
+		const held = new Promise<void>((r) => (release = r));
+		const sw = makeSW({
+			fastTimers: true,
+			script: {preAway: true, holdLogin: {release: held}},
+			stash: {vapid: STASH.vapid, networks: [...STASH.networks, NET_2]},
+		});
+		const {post, done} = poster(sw);
+		post(["net-1"]);
+		// Past the delay (50 ms here): the login has begun, its 903 held.
+		await new Promise((r) => setTimeout(r, 60));
+		expect(sw.socketsOpened(), "the first run is logging in").to.equal(1);
+		post(["net-2"]);
+		// Longer than another delay (a second run of its own would have
+		// dialled by now), shorter than the login's 150 ms timeout.
+		await new Promise((r) => setTimeout(r, 70));
+		expect(sw.socketsOpened(), "no second login beside the held one").to.equal(1);
+		release();
+		await done();
+		expect(sw.sentBySocket().map(accountOf)).to.deep.equal([
+			STASH.networks[0].saslAccount,
+			"pushtest2",
+		]);
+		const [first, second] = sw.socketTimeline();
+		expect(first.quitAt, "the first login QUIT").to.not.equal(null);
+		expect(second.bornAt, "the queued run dials after that QUIT").to.be.greaterThan(
+			first.quitAt as number
+		);
+	});
+
+	it("no stashed password: it does nothing", async function () {
+		const net = {...STASH.networks[0], saslPassword: undefined};
+		const sw = makeSW({fastTimers: true, stash: {vapid: STASH.vapid, networks: [net]}});
+		await closePage(sw, ["net-1"]);
+		expect(sw.socketsOpened()).to.equal(0);
+	});
+
+	it("only the networks it was given, by uuid", async function () {
+		const sw = makeSW({
+			fastTimers: true,
+			script: {preAway: true},
+			stash: {vapid: STASH.vapid, networks: [...STASH.networks, NET_2]},
+		});
+		await closePage(sw, ["net-2", "unknown"]);
+		expect(sw.sentBySocket().map(accountOf)).to.deep.equal(["pushtest2"]);
+	});
+
+	it("several networks one after another, in the order given", async function () {
+		const sw = makeSW({
+			fastTimers: true,
+			script: {preAway: true},
+			stash: {vapid: STASH.vapid, networks: [...STASH.networks, NET_2]},
+		});
+		await closePage(sw, ["net-2", "net-1"]);
+		const sockets = sw.sentBySocket();
+		expect(sockets.map(accountOf)).to.deep.equal(["pushtest2", STASH.networks[0].saslAccount]);
+		// One after another: the first had QUIT before the second was opened.
+		const [first, second] = sw.socketTimeline();
+		expect(first.quitAt).to.not.equal(null);
+		expect(second.bornAt).to.be.greaterThan(first.quitAt as number);
 	});
 });

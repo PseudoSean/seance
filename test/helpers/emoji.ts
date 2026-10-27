@@ -6,6 +6,7 @@ import {
 	expandShortcodes,
 	flatten,
 	isEmojiOnly,
+	isSingleEmoji,
 	loadEmojiCatalog,
 	MAX_REACTION_LENGTH,
 	normalizeReaction,
@@ -152,6 +153,17 @@ describe("emoji catalog and reaction text (helpers/emoji.ts)", function () {
 			expect(isEmojiOnly("lol")).to.equal(false);
 			expect(isEmojiOnly("👍 nice")).to.equal(false);
 			expect(isEmojiOnly("")).to.equal(false);
+		});
+
+		it("knows one emoji from several", function () {
+			expect(isSingleEmoji("👍")).to.equal(true);
+			expect(isSingleEmoji(" ❤️ ")).to.equal(true);
+			expect(isSingleEmoji("🇨🇦")).to.equal(true);
+			expect(isSingleEmoji("👨‍👩‍👧")).to.equal(true);
+			expect(isSingleEmoji("🎉🎉🎉")).to.equal(false);
+			expect(isSingleEmoji("👍 ❤️")).to.equal(false);
+			expect(isSingleEmoji("lol")).to.equal(false);
+			expect(isSingleEmoji("")).to.equal(false);
 		});
 	});
 });

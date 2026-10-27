@@ -8,6 +8,8 @@
 import {MessageType} from "../../../../shared/types/msg";
 import {Channel, setUserModes} from "../channel";
 import type {IrcClient} from "../client";
+import {msgidOf} from "../message";
+import {noteUserModes, setUserModes as setOwnModes} from "../oper";
 import type {Handler} from "../types";
 
 interface ModeChange {
@@ -92,6 +94,11 @@ const mode: Handler = (client, msg) => {
 	}
 
 	if (client.isSelf(target)) {
+		// Our own modes are the oper signal (oper.ts), whoever set them.
+		if (!client.replaying) {
+			noteUserModes(client, modes);
+		}
+
 		client.pushMessage(client.lobby, {
 			type: MessageType.MODE,
 			time: client.timeOf(msg),
@@ -115,6 +122,7 @@ const mode: Handler = (client, msg) => {
 		text,
 		users: params.filter((param) => chan.findUser(param) !== undefined),
 		self,
+		...msgidOf(msg),
 	});
 
 	if (client.replaying) {
@@ -172,6 +180,7 @@ const channelModeIs: Handler = (client, msg) => {
 
 // RPL_UMODEIS: <me> <modes>
 const umodeIs: Handler = (client, msg) => {
+	setOwnModes(client, msg.params[1] ?? "");
 	client.pushMessage(client.lobby, {
 		type: MessageType.MODE_USER,
 		time: client.timeOf(msg),

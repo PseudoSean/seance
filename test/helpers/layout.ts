@@ -3,10 +3,12 @@ import {
 	codeBlocksOf,
 	layout,
 	LayoutNode,
+	quoteLayout,
 	Style,
 	toPlainText,
 } from "../../client/js/helpers/ircmessageparser/layout";
 import {HeaderLevel} from "../../client/js/helpers/ircmessageparser/parseStyle";
+import type {LinkVerdict} from "../../client/js/helpers/linkSafety";
 
 // Builders, so the assertions read as the tree they describe.
 const text = (value: string, style: Style = {}): LayoutNode => ({
@@ -33,10 +35,11 @@ const codeBlock = (children: LayoutNode[], lang?: string, file?: string): Layout
 
 const spoiler = (children: LayoutNode[]): LayoutNode => ({kind: "wrap", wrap: "spoiler", children});
 
-const href = (url: string, children: LayoutNode[]): LayoutNode => ({
+const href = (url: string, children: LayoutNode[], verdict: LinkVerdict): LayoutNode => ({
 	kind: "wrap",
 	wrap: "href",
 	href: url,
+	verdict,
 	children,
 });
 
@@ -133,8 +136,117 @@ describe("layout — wraps", () => {
 
 	it("wraps a masked link around its children", () => {
 		expect(layout("[c](https://example.com/)", markdown)).to.deep.equal([
-			href("https://example.com/", [text("c")]),
+			href("https://example.com/", [text("c")], {kind: "masked", host: "example.com"}),
 		]);
+	});
+
+	it("finds no link, channel or nick inside a masked link's label", () => {
+		const kinds = (nodes: LayoutNode[]): string[] =>
+			nodes.flatMap((n) => [n.kind, ...("children" in n ? kinds(n.children) : [])]);
+		const [node] = layout("[paypal.com #help alice](https://evil.example)", {
+			markdown: true,
+			users: ["alice"],
+		});
+		expect(node.kind === "wrap" && node.wrap).to.equal("href");
+		expect(
+			kinds([node]).filter((k) => k === "link" || k === "channel" || k === "nick")
+		).to.deep.equal([]);
+		expect(toPlainText([node])).to.equal("paypal.com #help alice");
+	});
+
+	it("still finds links outside a masked link", () => {
+		const nodes = layout("see https://x.org and [docs](https://example.org)", {markdown: true});
+		expect(nodes.some((n) => n.kind === "link")).to.equal(true);
+	});
+
+	it("judges a label by what can be seen, not by text hidden in its own colours", () => {
+		const [node] = layout(
+			"[paypal.com\u200B \x0301,01evil.com\x03](https://evil.com/)",
+			markdown
+		);
+		expect(node.kind === "wrap" && node.wrap === "href" && node.verdict.kind).to.equal(
+			"mismatch"
+		);
+	});
+
+	/** Every href node's verdict kind, in order. */
+	const verdicts = (message: string) => {
+		const out: string[] = [];
+
+		const walk = (nodes: ReturnType<typeof layout>) => {
+			for (const node of nodes) {
+				if (node.kind === "wrap") {
+					if (node.wrap === "href") {
+						out.push(node.verdict.kind);
+					}
+
+					walk(node.children);
+				}
+			}
+		};
+
+		walk(layout(message, markdown));
+		return out;
+	};
+
+	it("never calls a link honest on a host only faint text names", () => {
+		for (const message of [
+			// Hidden next to a lie a hair space hides
+			"[paypal.c\u200Aom\x041C1A18,1C1A19 evil.com\x04](https://evil.com/login)",
+			// Hidden, no lie at all: the reader sees "click here" and nothing else
+			"[click here \x041C1A18,1C1A19evil.com\x04](https://evil.com/)",
+			"[click here \x0301,88evil.com\x03](https://evil.com/)",
+			"[click here \x0300,98evil.com\x03](https://evil.com/)",
+			"[click here \x0300,01\x04000000evil.com\x04\x03](https://evil.com/)",
+			// One colour: whether it reads depends on the theme
+			"[click here \x041C1A18evil.com\x04](https://evil.com/)",
+		]) {
+			expect(verdicts(message), JSON.stringify(message)).to.not.include("honest");
+		}
+	});
+
+	it("does not take faint text for a lie, nor a readable pair for a hidden one", () => {
+		expect(verdicts("[paypal.com \x0301,01x\x03](https://paypal.com/)")).to.deep.equal([
+			"honest",
+		]);
+		expect(verdicts("[\x0301,00paypal.com\x03](https://evil.example/)")).to.deep.equal([
+			"mismatch",
+		]);
+		expect(verdicts("[\x0304paypal.com\x03](https://evil.example/)")).to.deep.equal([
+			"mismatch",
+		]);
+	});
+
+	it("judges a label a spoiler splits as one", () => {
+		const kinds = verdicts("[paypal||.com||](https://evil.example/)");
+		expect(kinds).to.have.length.above(1);
+		expect(kinds.every((kind) => kind === "mismatch")).to.equal(true);
+	});
+
+	it("keeps an emoji shortcode from reaching across a label's edge", () => {
+		const nodes = layout("[paypal.com:](https://evil.example/login)lock: verify now", markdown);
+		const node = nodes[0];
+		expect(node.kind === "wrap" && node.wrap === "href" && node.verdict.kind).to.equal(
+			"mismatch"
+		);
+		expect(toPlainText([node])).to.equal("paypal.com:");
+	});
+
+	it("judges a masked link by its visible text", () => {
+		const [node] = layout("[paypal.com](https://evil.example)", markdown);
+		expect(node.kind === "wrap" && node.wrap === "href" && node.verdict).to.deep.equal({
+			kind: "mismatch",
+			host: "evil.example",
+			shown: "paypal.com",
+		});
+	});
+
+	it("judges a styled label by its text, not its markers", () => {
+		const [node] = layout("[**click** here](https://example.org)", markdown);
+		expect(node.kind === "wrap" && node.wrap === "href" && node.verdict).to.deep.equal({
+			kind: "masked",
+			host: "example.org",
+		});
 	});
 
 	it("splits a run of text that crosses a wrap boundary", () => {
@@ -393,5 +505,88 @@ describe("codeBlocksOf", () => {
 
 	it("reads a block out of the wrap it sits in", () => {
 		expect(codeBlocksOf(layout("> quoted ```inside```", markdown))).to.deep.equal(["inside"]);
+	});
+});
+
+// A quote of a message (the reply quote, the "Replying to" bar): one line of
+// styled text nodes, every wrap folded into a style, cut at N visible
+// characters.
+describe("quoteLayout", () => {
+	const md = {markdown: true};
+
+	it("keeps IRC and markdown styles as styles, the markers gone", () => {
+		expect(
+			quoteLayout("\x02bold\x02 **strong** `code` \x0304red\x03 ~~gone~~", 80, md)
+		).to.deep.equal([
+			text("bold", {bold: true}),
+			text(" "),
+			text("strong", {bold: true}),
+			text(" "),
+			text("code", {monospace: true}),
+			text(" "),
+			text("red", {textColor: 4}),
+			text(" "),
+			text("gone", {strikethrough: true}),
+		]);
+	});
+
+	it("leaves markdown markers alone when markdown is off", () => {
+		expect(quoteLayout("\x02b\x02 **s**", 80)).to.deep.equal([
+			text("b", {bold: true}),
+			text(" **s**"),
+		]);
+	});
+
+	it("folds a code block to monospace text and a header to bold, on one line", () => {
+		expect(quoteLayout("```js\nconst a = 1;\nconst b = 2;\n```", 80, md)).to.deep.equal([
+			text("const a = 1; const b = 2;", {monospace: true}),
+		]);
+		// the parser eats the newline after a block, a space stands in for it
+		expect(quoteLayout("# Title\nbody", 80, md)).to.deep.equal([
+			text("Title", {bold: true}),
+			text(" "),
+			text("body"),
+		]);
+		expect(toPlainText(quoteLayout("> quoted\n- a\n- b\ntail", 80, md))).to.equal(
+			"quoted a b tail"
+		);
+	});
+
+	it("renders links, channels, nicks and shortcodes as their text", () => {
+		const nodes = quoteLayout("see https://x.test/a and #chan :tada: nick1", 80, {
+			...md,
+			users: ["nick1"],
+		});
+		expect(toPlainText(nodes)).to.equal("see https://x.test/a and #chan 🎉 nick1");
+		expect(nodes.every((node) => node.kind === "text" && !Object.keys(node.style).length)).to.be
+			.true;
+	});
+
+	it("does not leak a spoiler", () => {
+		expect(quoteLayout("the ||secret|| is", 80, md)).to.deep.equal([
+			text("the "),
+			text("(spoiler)", {}),
+			text(" is"),
+		]);
+	});
+
+	it("collapses whitespace across nodes and trims the ends", () => {
+		// a space stays in the run the source put it in
+		expect(quoteLayout("  a \x02 b \x02\n\n c  ", 80)).to.deep.equal([
+			text("a "),
+			text("b ", {bold: true}),
+			text("c"),
+		]);
+	});
+
+	it("cuts at the visible length with an ellipsis, inside a styled run too", () => {
+		expect(quoteLayout("**" + "x".repeat(100) + "**", 80, md)).to.deep.equal([
+			text("x".repeat(79) + "…", {bold: true}),
+		]);
+		expect(quoteLayout("abc **def** ghi", 6, md)).to.deep.equal([
+			text("abc "),
+			text("d…", {bold: true}),
+		]);
+		expect(quoteLayout("abcdef", 6)).to.deep.equal([text("abcdef")]);
 	});
 });

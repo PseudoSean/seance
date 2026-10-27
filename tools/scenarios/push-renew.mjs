@@ -48,12 +48,33 @@ const ORIGIN = "http://127.0.0.1:8001";
 const ACCOUNT = "pushtest1";
 const PASSWORD = "pushtest1-pass";
 
+// A link never carries the password (link approval, helpers/linkTarget.ts):
+// the first load fills it into the connect form, remembered, as a user would.
 export const url =
 	`${ORIGIN}/?host=127.0.0.1&port=8067&tls=false` +
-	`&nick=pwren&join=%23seance&sasl=plain&saslAccount=${ACCOUNT}&saslPassword=${PASSWORD}` +
-	`&autoconnect=1`;
+	`&nick=pwren&join=%23seance&sasl=plain&saslAccount=${ACCOUNT}`;
+
+/** The link's connect form: the password typed in, remembered, autoconnect on. */
+async function fillConnectForm(page) {
+	await page.fill('#connect input[name="saslPassword"]', PASSWORD);
+
+	for (const name of ["rememberPassword", "autoconnect"]) {
+		if (
+			!(await page.evaluate(
+				`document.querySelector('#connect input[name="${name}"]')?.checked ?? true`
+			))
+		) {
+			await page.click(`#connect input[name="${name}"]`);
+		}
+	}
+
+	await page.click('#connect button[type="submit"]');
+}
 
 const promptOpened = `document.querySelector("#push-prompt-overlay")?.classList.contains("opened")`;
+// A prompt takes no answer in its first moments (webpush.ts PROMPT_ARM_MS);
+// `data-armed` marks it ready.
+const promptArmed = `document.querySelector("#push-prompt[data-armed]") !== null`;
 /** The overlay fades out over 0.2 s and swallows clicks until it is hidden. */
 const promptGone = `getComputedStyle(document.querySelector("#push-prompt-overlay")).visibility === "hidden"`;
 
@@ -75,6 +96,15 @@ async function waitRegistered(page, before) {
 async function connect(page, target) {
 	let before = page.wsFrames.length;
 	await page.goto(target);
+	await page.waitFor(
+		`!!document.querySelector("#chat") || !!document.querySelector('#connect input[name="saslPassword"]')`,
+		{label: "the chat or the link's connect form", timeout: 60000}
+	);
+
+	if (!(await page.evaluate(`!!document.querySelector("#chat")`))) {
+		await fillConnectForm(page);
+	}
+
 	await waitRegistered(page, before);
 
 	for (let i = 0; i < 3; i++) {
@@ -182,6 +212,7 @@ export default async function run(page) {
 	await page.screenshot("2-renew-prompt");
 
 	// --- 3. "No": closed, Settings says stale, Renew in Edit network works --
+	await page.waitFor(promptArmed, {label: "the prompt to take answers"});
 	await page.click("#pushPromptNo");
 	await page.waitFor(promptGone, {label: "the prompt to close on No"});
 	page.check("3. No sends nothing", webpushOut(page, before).length === 0);
@@ -190,10 +221,6 @@ export default async function run(page) {
 	await page.waitFor(`!!document.querySelector("#pushStale")`, {
 		label: "the stale warning in Settings",
 	});
-	page.check(
-		"3. Settings hides the snooze row while stale",
-		(await page.count(".push-snooze")) === 0
-	);
 	page.check(
 		"3. Settings points at the network settings instead of renewing itself",
 		(await page.count("#pushRenew")) === 0 &&
@@ -249,9 +276,12 @@ export default async function run(page) {
 		label: "the Renew row to leave the form",
 	});
 	await page.evaluate(`location.hash = "#/settings/notifications"`);
-	await page.waitFor(`!!document.querySelector(".push-snooze")`, {
-		label: "Settings back to subscribed",
-	});
+	await page.waitFor(
+		`!!document.querySelector(".dnd-schedule") && !document.querySelector("#pushStale") &&
+		document.querySelector("[data-v-app]").__vue_app__.config.globalProperties.$store.state
+			.pushNotificationState === "subscribed"`,
+		{label: "Settings back to subscribed"}
+	);
 	page.check("3. the stale warning is gone", (await page.count("#pushStale")) === 0);
 	await page.screenshot("4-settings-renewed");
 
@@ -261,6 +291,7 @@ export default async function run(page) {
 	page.check("3. No: asked again on the next connect", true);
 
 	// --- 4. "Never": the setting flips to ignore, no prompt on later connects
+	await page.waitFor(promptArmed, {label: "the prompt to take answers"});
 	await page.click("#pushPromptNever");
 	await page.waitFor(
 		`JSON.parse(localStorage.getItem("settings") || "{}").pushKeyChange === "ignore"`,
@@ -298,6 +329,7 @@ export default async function run(page) {
 	before = await connect(page, `${ORIGIN}/`);
 	await page.waitFor(promptOpened, {label: "the prompt once the flag is cleared"});
 	mark = page.wsFrames.length;
+	await page.waitFor(promptArmed, {label: "the prompt to take answers"});
 	await page.click("#pushPromptYes");
 	await waitFrame(
 		page,
