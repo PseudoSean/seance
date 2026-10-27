@@ -450,7 +450,11 @@ function normalizeNetwork(value: unknown): BrandingNetwork | undefined {
 	return network;
 }
 
-/** `{limit, periodSeconds}`, both whole and positive; the period defaults to the server's 600. */
+/**
+ * `{limit, periodSeconds}`, both whole and positive; a missing period is the
+ * server's default 600. A period that is there but not positive turns the
+ * refund off, as `IPCHECK_SASL_REFUND_PERIOD` = 0 does on the server.
+ */
 function normalizeIpcheckRefund(value: unknown): BrandingIpcheckRefund | undefined {
 	if (!isRecord(value)) {
 		return undefined;
@@ -467,7 +471,12 @@ function normalizeIpcheckRefund(value: unknown): BrandingIpcheckRefund | undefin
 		return undefined;
 	}
 
-	return {limit, periodSeconds: whole(value.periodSeconds) ?? 600};
+	if (value.periodSeconds === undefined) {
+		return {limit, periodSeconds: 600};
+	}
+
+	const periodSeconds = whole(value.periodSeconds);
+	return periodSeconds === undefined ? undefined : {limit, periodSeconds};
 }
 
 function normalizeHeaders(value: unknown): Record<string, string> | undefined {

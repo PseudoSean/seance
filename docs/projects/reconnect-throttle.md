@@ -118,13 +118,32 @@ The client learns of the refund from the deploy, not the server: `config.json`
 `defaultNetwork.ipcheckRefund: {limit, periodSeconds}` (branding.md) gives
 `ThrottleRule.refund` to the ledger for that host alone, `IrcClient` records a
 refund at 001 when this connection's SASL succeeded (`DialLedger.refunded`),
-and the replay lowers the count by one for it, never below one, honouring at
-most `limit` refunds per period — the server's cap mirrored over this device's
-own refunds. Another device drawing on the same account's budget is not seen,
-so a dial can still meet a refusal; with `IPCHECK_COUNT_REFUSALS` off that
-refusal renews nothing and the schedule's next try gets in once the window has
-passed, which is why the deploy should set both. A server that has not been
-told to refund (any other network) is replayed as before.
+and the replay lowers the count by one for it when the count is above one —
+the server gives nothing back below that and spends none of the account's
+budget on it. The budget is mirrored more strictly than the server keeps it:
+the server counts the refunds it granted in a fixed window from the first;
+the replay honours a refund only while fewer than `limit` refunds that would
+have lowered the count, honoured or not, fall in the period before it. This
+device's count never runs below the server's, so every refund the server
+granted is among those, and the replay never honours one the server refused
+(`test/irc/dialLedger.ts` checks this over random histories against a model
+of the server's rule).
+
+What the replay cannot see is another device on the same account drawing on
+the same budget, or on the same address: then this device thinks the count
+lower than it is, by at most the refunds the other device drew, and a dial can
+meet a refusal. The client records its own refused dial and its end like any
+other, so after a refusal it waits out the window itself — the lockout is one
+window, not a spiral, either way. `IPCHECK_COUNT_REFUSALS` off makes that
+window run from the last accepted connection rather than from the refused
+one, so it is the kinder setting to pair with the refund, not a requirement.
+A server that has not been told to refund (any other network) is replayed as
+before.
+
+The ledger keeps a host's events from where the replay last started the count
+over — a chain of short connections can run longer than four windows, since a
+drop restarts nothing within 162 s of the last connect, and a refund lets a
+dial in — and its refunds a refund period further back, at most 200 of each.
 
 The alternative that needs no server change is a native shell (E.4), which
 can hold its socket in the background for longer than a page can.

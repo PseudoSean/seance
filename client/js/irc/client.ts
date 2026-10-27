@@ -1287,6 +1287,7 @@ export class IrcClient {
 
 		if (!result.ok) {
 			this.saslOk = false;
+			this.loggedIn = false;
 
 			if (this.saslFailed(result.error ?? "unknown error", timedOut)) {
 				return;

@@ -134,6 +134,10 @@ describe("branding", function () {
 			expect(network({limit: 0})?.ipcheckRefund).to.equal(undefined);
 			expect(network({limit: 2.5})?.ipcheckRefund).to.equal(undefined);
 			expect(network({periodSeconds: 600})?.ipcheckRefund).to.equal(undefined);
+			// The server grants nothing with a period of 0 or less: neither does the client.
+			expect(network({limit: 10, periodSeconds: 0})?.ipcheckRefund).to.equal(undefined);
+			expect(network({limit: 10, periodSeconds: -5})?.ipcheckRefund).to.equal(undefined);
+			expect(network({limit: 10, periodSeconds: "x"})?.ipcheckRefund).to.equal(undefined);
 			expect(network(true)?.ipcheckRefund).to.equal(undefined);
 			expect(network(undefined)?.ipcheckRefund).to.equal(undefined);
 			expect(
