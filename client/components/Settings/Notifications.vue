@@ -132,17 +132,27 @@
 			<div class="push-networks-hint">
 				{{ t("settings.notifications.browserPerNetwork") }}
 			</div>
-			<div v-if="store.state.desktopNotificationState === 'unsupported'" class="error">
+			<!-- The shells notify through the OS (helpers/nativeAlerts.ts). -->
+			<div
+				v-if="!nativeShell && store.state.desktopNotificationState === 'unsupported'"
+				class="error"
+			>
 				<strong>{{ t("settings.notifications.warning") }}</strong
 				>:
 				{{ t("settings.notifications.browserUnsupported") }}
 			</div>
-			<div v-if="store.state.desktopNotificationState === 'nohttps'" class="error">
+			<div
+				v-if="!nativeShell && store.state.desktopNotificationState === 'nohttps'"
+				class="error"
+			>
 				<strong>{{ t("settings.notifications.warning") }}</strong
 				>:
 				{{ t("settings.notifications.noHttps") }}
 			</div>
-			<div v-if="store.state.desktopNotificationState === 'blocked'" class="error">
+			<div
+				v-if="!nativeShell && store.state.desktopNotificationState === 'blocked'"
+				class="error"
+			>
 				<strong>{{ t("settings.notifications.warning") }}</strong
 				>:
 				{{ t("settings.notifications.browserBlocked") }}
@@ -255,6 +265,8 @@ import webpush from "../../js/webpush";
 import dnd from "../../js/dnd";
 import {DAYS, DAY_FULL_NAMES, HHMM, type DndSchedule} from "../../js/helpers/dnd";
 import {isAndroidShell} from "../../js/helpers/capacitor";
+import {nativeAlertsAvailable} from "../../js/helpers/nativeAlerts";
+import {playNotificationSound} from "../../js/helpers/notificationSound";
 
 export default defineComponent({
 	name: "NotificationSettings",
@@ -298,11 +310,7 @@ export default defineComponent({
 		});
 
 		const playNotification = () => {
-			const pop = new Audio();
-			pop.src = "audio/pop.wav";
-
-			// eslint-disable-next-line
-			pop.play();
+			void playNotificationSound().catch(() => undefined);
 		};
 
 		return {
@@ -313,6 +321,7 @@ export default defineComponent({
 			highlightExceptionsHelp,
 			commaListPlaceholder,
 			androidShell: isAndroidShell(),
+			nativeShell: nativeAlertsAvailable(),
 			playNotification,
 			// Sunday = 0, the day a window starts on (helpers/dnd.ts DndSchedule.days).
 			DAYS,

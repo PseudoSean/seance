@@ -176,6 +176,14 @@ export default defineComponent({
 			return {cls: "enabled", label: t("lobby.notificationsOn")};
 		});
 
+		// Waiting for a retry (the backoff or the server's throttle), not
+		// dialling: there is nothing to cancel, and a click dials now.
+		const retryPending = computed(
+			() =>
+				props.network.status.connecting === true &&
+				props.network.status.retryAt !== undefined
+		);
+
 		const statusClass = computed(() =>
 			props.network.status.connected
 				? "is-connected"
@@ -187,6 +195,8 @@ export default defineComponent({
 		const statusLabel = computed(() =>
 			props.network.status.connected
 				? t("lobby.connected")
+				: retryPending.value
+				? t("lobby.reconnectingSoon")
 				: props.network.status.connecting
 				? t("lobby.connectingCancel")
 				: t("lobby.disconnectedConnect")
@@ -197,9 +207,14 @@ export default defineComponent({
 				return; // no accidental disconnects; that lives on the edit page
 			}
 
+			// A retry waiting its turn is not a dial to cancel: the click
+			// dials now, as the strip's Connect now does.
 			socket.emit("input", {
 				target: channel.value.id,
-				text: props.network.status.connecting ? "/disconnect" : "/connect",
+				text:
+					props.network.status.connecting && !retryPending.value
+						? "/disconnect"
+						: "/connect",
 			});
 		};
 

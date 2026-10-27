@@ -499,6 +499,7 @@ import {SERVICES_PROFILES, servicesProfileById} from "../js/irc/services/index";
 import {describeServiceCheck} from "../js/irc/services";
 import {servicesCheck} from "../js/helpers/operRequest";
 import {isOperOn} from "../js/helpers/operMenu";
+import {askNativeAlertPermission, nativeAlertsAvailable} from "../js/helpers/nativeAlerts";
 import {useStore} from "../js/store";
 import webpush from "../js/webpush";
 import {useI18n} from "../js/i18n";
@@ -735,6 +736,11 @@ export default defineComponent({
 		 * permission the first time a network's browser notifications are
 		 * switched on (only while the decision is still open). */
 		const onNotifyToggle = () => {
+			if (props.defaults.notifyEnabled && nativeAlertsAvailable()) {
+				void askNativeAlertPermission();
+				return;
+			}
+
 			if (
 				props.defaults.notifyEnabled &&
 				typeof Notification !== "undefined" &&

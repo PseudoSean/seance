@@ -414,6 +414,7 @@ import {autoconnectSavedNetworks, createNetwork} from "../../js/irc/manager";
 import * as saved from "../../js/irc/saved-networks";
 import {defaultPort, SavedNetwork} from "../../js/irc/saved-networks";
 import {mergeJoinLists} from "../../js/helpers/linkTarget";
+import {askNativeAlertPermission, nativeAlertsAvailable} from "../../js/helpers/nativeAlerts";
 import {router, switchToChannel} from "../../js/router";
 import {useI18n} from "../../js/i18n";
 import type {ConnectOptions} from "../../js/irc/types";
@@ -515,6 +516,11 @@ export default defineComponent({
 		/** The toggle itself is the user gesture for the Notification
 		 * permission ask (only while the decision is still open). */
 		const onNotifyToggle = () => {
+			if (notifyEnabled.value && nativeAlertsAvailable()) {
+				void askNativeAlertPermission();
+				return;
+			}
+
 			if (
 				notifyEnabled.value &&
 				typeof Notification !== "undefined" &&
