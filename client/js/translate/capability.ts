@@ -36,7 +36,12 @@ export interface Capability {
 	maxBufferBytes: number;
 	deviceMemoryGiB: number | null;
 	storageQuotaBytes: number | null;
-	/** A phone or tablet: models.ts never defaults one to the large GPU model. */
+	/**
+	 * A phone or tablet (`isMobile`): the page's memory is a phone's, so the
+	 * GPU model loads with a smaller context window, the large GPU model
+	 * cannot run (models.ts `modelBlock`) and one engine is in memory at a
+	 * time (service.ts).
+	 */
 	mobile: boolean;
 	/**
 	 * The test switch's cap (gpuTestLimit.ts), when set: `maxBufferBytes` is
@@ -198,12 +203,24 @@ export function browserEnv(): ProbeEnv {
 	};
 }
 
+/** The slice of `navigator` `isMobile` reads. */
+export interface MobileNavigator {
+	userAgent?: string;
+	maxTouchPoints?: number;
+	userAgentData?: {mobile?: boolean};
+}
+
 /**
  * A phone or tablet: Chromium says so outright (`userAgentData.mobile`); the
- * others by their user agent, and an iPad that asks for desktop sites by a
- * Mac with a touch screen.
+ * others by their user agent — iPhone, iPad, Android (a tablet's Chrome
+ * says `mobile: false` and has no "Mobile" in its agent, but still
+ * "Android"), and an iPad that asks for desktop sites (the default since
+ * iPadOS 13), which reads as a Mac with a touch screen: no Mac has one, so
+ * `maxTouchPoints > 1` there is an iPad. A device that runs out of page
+ * memory long before a computer does (models.ts `modelBlock`, the context
+ * window, one engine at a time in service.ts).
  */
-function isMobile(nav: Navigator & {userAgentData?: {mobile?: boolean}}): boolean {
+export function isMobile(nav: MobileNavigator): boolean {
 	if (typeof nav.userAgentData?.mobile === "boolean" && nav.userAgentData.mobile) {
 		return true;
 	}
@@ -212,7 +229,7 @@ function isMobile(nav: Navigator & {userAgentData?: {mobile?: boolean}}): boolea
 
 	return (
 		/Android|iPhone|iPad|iPod|Mobi/i.test(ua) ||
-		(/Macintosh/.test(ua) && nav.maxTouchPoints > 1)
+		(/Macintosh/.test(ua) && (nav.maxTouchPoints ?? 0) > 1)
 	);
 }
 

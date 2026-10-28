@@ -4,13 +4,14 @@
 
 import {
 	type AppConfig,
+	type ChatOptions,
 	MLCEngine,
 	deleteModelAllInfoInCache,
 	hasModelInCache,
 	prebuiltAppConfig,
 } from "@mlc-ai/web-llm";
 import {CacheApi, GpuBudget, ModelCatalog} from "../models";
-import {MlcLike, ModelRecord, WebLlmDeps} from "./webllm";
+import {MlcLike, ModelRecord, ReloadOptions, WebLlmDeps} from "./webllm";
 import {webllmCacheApi} from "./webllmCache";
 import {installBufferLimits} from "./gpuLimits";
 import {SeedDeps, seedSplitManifest} from "./splitManifest";
@@ -23,6 +24,15 @@ installBufferLimits(
 );
 
 const prebuilt = prebuiltAppConfig.model_list as ModelRecord[];
+
+// The engine reaches MLCEngine through `MlcLike` behind a cast (its chat API
+// is overloaded past what the interface spells out), so the reload options
+// are held to the library here: `reload(id, {context_window_size})` (a
+// phone's window, webllm.ts) is WebLLM's own `reload(modelId, chatOpts)`,
+// whose options override the record's `overrides` at load.
+const reloadOptionsFit: ReloadOptions extends ChatOptions ? true : never = true;
+
+void reloadOptionsFit;
 
 /**
  * The app's root: this worker is js/translate-worker.js under it, wherever

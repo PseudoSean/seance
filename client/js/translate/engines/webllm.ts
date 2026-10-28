@@ -25,7 +25,10 @@
 // engine keeps the model's own id: `isLoaded`, `loadedModels` and the
 // requests' `model` name the 1.7B whichever build runs.
 
+import {fitToWindow} from "../budget";
 import {
+	BATCH_REFUSED,
+	CONTEXT_OVERFLOW,
 	Engine,
 	EngineCapabilities,
 	EngineError,
@@ -36,7 +39,13 @@ import {
 	TranslateChunk,
 	TranslateRequest,
 } from "../engine";
-import {GpuBudget, ModelCatalog, smallBufferBuildFor} from "../models";
+import {
+	DEFAULT_CONTEXT_WINDOW,
+	GpuBudget,
+	ModelCatalog,
+	contextWindowFor,
+	smallBufferBuildFor,
+} from "../models";
 import {
 	ChatMessage,
 	END_SENTINEL,
@@ -61,9 +70,15 @@ export interface ChatDelta {
 	choices: {delta: {content?: string | null}}[];
 }
 
+/** The `chatOpts` a reload may carry: WebLLM's `ChatOptions`, the field used here. */
+export interface ReloadOptions {
+	/** Overrides the record's `overrides.context_window_size`: the KV cache is sized to it at load. */
+	context_window_size?: number;
+}
+
 /** The slice of MLCEngine the engine uses. */
 export interface MlcLike {
-	reload(modelId: string): Promise<void>;
+	reload(modelId: string, chatOpts?: ReloadOptions): Promise<void>;
 	unload(): Promise<void>;
 	interruptGenerate(): void;
 	chat: {completions: {create(request: ChatRequest): Promise<AsyncIterable<ChatDelta>>}};
@@ -177,6 +192,26 @@ export function smallBufferConfig(
 /** Qwen3-1.7B's token budget (prompts/qwen3-1.7b.ts); each profile has its own. */
 export function maxTokensFor(req: TranslateRequest): number {
 	return QWEN3_1_7B_PROMPT.maxTokensFor(req);
+}
+
+/**
+ * WebLLM's prompt-too-long error (`ContextWindowSizeExceededError`, thrown
+ * before prefill — nothing ran on the GPU): by its name, which WebLLM sets
+ * as a string and a minifier keeps, or by its message.
+ */
+export function isContextOverflow(e: unknown): boolean {
+	return (
+		e instanceof Error &&
+		(e.name === "ContextWindowSizeExceededError" ||
+			e.message.startsWith("Prompt tokens exceed context window size"))
+	);
+}
+
+/** The window a record loads with when the reload names none: its own override, else 4096. */
+function recordWindow(record: ModelRecord | undefined): number {
+	const own = record?.overrides?.context_window_size;
+
+	return typeof own === "number" && own > 0 ? own : DEFAULT_CONTEXT_WINDOW;
 }
 
 /** The empty thinking block, and the opener on its own while the rest streams in. */
@@ -351,6 +386,11 @@ export class WebLlmEngine implements Engine {
 	private catalog: ModelCatalog | null = null;
 	/** What the page's probe measured (protocol.ts `configure`); null before it. */
 	private gpu: GpuBudget | null = null;
+	/**
+	 * The context window the loaded model was given, in tokens: every
+	 * request is fitted to it (budget.ts `fitToWindow`).
+	 */
+	private window = DEFAULT_CONTEXT_WINDOW;
 	private deps: WebLlmDeps;
 	private languageName: (code: string) => string;
 	private failures = 0;
@@ -372,6 +412,11 @@ export class WebLlmEngine implements Engine {
 	/** Consecutive generation failures; a completed generation resets it. */
 	get generationFailures(): number {
 		return this.failures;
+	}
+
+	/** The loaded model's context window, in tokens (4096 until a model loads). */
+	get contextWindow(): number {
+		return this.window;
 	}
 
 	configure(catalog: ModelCatalog, gpu?: GpuBudget | null): void {
@@ -446,7 +491,19 @@ export class WebLlmEngine implements Engine {
 			);
 			// The build's own id is what WebLLM knows; this engine answers
 			// for the model's (isLoaded, loadedModels, the requests' model).
-			await this.engine.reload(build?.id ?? ref.id);
+			// A phone's window is smaller than the record's (models.ts
+			// `contextWindowFor`): the KV cache is the memory the window
+			// costs, allocated whole at load. Elsewhere the reload is the
+			// one it always was, and the record's own window holds.
+			const window = contextWindowFor(this.gpu);
+
+			if (window !== null) {
+				await this.engine.reload(build?.id ?? ref.id, {context_window_size: window});
+			} else {
+				await this.engine.reload(build?.id ?? ref.id);
+			}
+
+			this.window = window ?? recordWindow(appConfig.model_list[0]);
 			this.model = ref.id;
 			this.state = "ready";
 
@@ -545,15 +602,27 @@ export class WebLlmEngine implements Engine {
 		const profile = (this.deps.promptProfileFor ?? promptProfileFor)(this.model ?? req.model);
 
 		try {
+			// The prompt and the reply's budget inside the loaded window
+			// (budget.ts): the context trimmed when it must be. A batch
+			// that does not fit even bare is refused the way a batch the
+			// engine cannot take is, and its lines come one at a time
+			// (queue.ts `resplit`, outgoing.ts `translateDraft`); a single
+			// line that does not fit is too long for this window.
+			const fitted = fitToWindow(req, this.window, profile, this.languageName);
+
+			if (!fitted) {
+				throw new EngineError(req.lines ? BATCH_REFUSED : CONTEXT_OVERFLOW, "request");
+			}
+
 			const stream = await engine.chat.completions.create({
-				messages: profile.buildMessages(req, this.languageName),
+				messages: profile.buildMessages(fitted, this.languageName),
 				stream: true,
 				// A cleanup is decided greedily, as it was measured: on the web
 				// weights a correction can hinge on one token's narrow lead
 				// ("you" 50.4 % against "your" 47.3 %), and 0.1 turns that
 				// into a coin flip.
 				temperature: req.purpose === "polish" ? 0 : 0.1,
-				max_tokens: profile.maxTokensFor(req),
+				max_tokens: profile.maxTokensFor(fitted),
 				stop: req.lines ? [`\n${END_SENTINEL}`] : [],
 				extra_body: {enable_thinking: false},
 			});
@@ -635,6 +704,16 @@ export class WebLlmEngine implements Engine {
 
 			if (signal.aborted) {
 				return;
+			}
+
+			// WebLLM refused the prompt as longer than the window, before
+			// prefill: the bound under-counted (budget.ts). Nothing ran on
+			// the GPU, so the model stays loaded and no failure is counted —
+			// treating it as a lost device would reload a gigabyte, which on
+			// a phone is what gets the page killed. The queue retries the
+			// line bare and alone.
+			if (isContextOverflow(e)) {
+				throw new EngineError(CONTEXT_OVERFLOW, "request");
 			}
 
 			// A generation that threw is a device that may be gone (spec

@@ -23,6 +23,7 @@ import {WORKER_DISPOSED} from "./client";
 import {parseNeedsDownload} from "./consent";
 import {
 	BATCH_REFUSED,
+	CONTEXT_OVERFLOW,
 	EngineName,
 	type LineContext,
 	PromptContext,
@@ -683,6 +684,8 @@ export class TranslateQueue {
 				this.requeue(engine, batch);
 			} else if (!aborted && batch.length > 1 && message === BATCH_REFUSED) {
 				this.resplit(batch);
+			} else if (!aborted && message === CONTEXT_OVERFLOW) {
+				this.overflowed(batch);
 			} else if (aborted && !timedOut) {
 				for (const q of batch) {
 					this.deps.onUpdate(q.item.id, {status: "dropped"});
@@ -800,6 +803,8 @@ export class TranslateQueue {
 				this.deps.onUpdate(item.id, {status: "dropped"});
 			} else if (notAFailure(message)) {
 				this.requeue(engine, [queued]);
+			} else if (message === CONTEXT_OVERFLOW) {
+				this.overflowed([queued]);
 			} else {
 				this.fail(engine, [queued], message);
 			}
@@ -880,6 +885,26 @@ export class TranslateQueue {
 		this.deps.onUpdate(q.item.id, {status: "done", text, engine});
 	}
 
+	/**
+	 * The request did not fit the GPU model's context window (engine.ts
+	 * `CONTEXT_OVERFLOW`): every line again bare and alone, in its order —
+	 * the context is what made it long — and a line that was already bare
+	 * fails. The engine did nothing wrong, so nothing here goes through
+	 * `fail` and it counts toward no pause; and the line is never put back
+	 * as it was (`requeue`), which would overflow again.
+	 */
+	private overflowed(batch: Queued[]): void {
+		const base = (this.seq += batch.length);
+
+		batch.forEach((q, index) => {
+			if (q.item.bare) {
+				this.deps.onUpdate(q.item.id, {status: "failed", error: CONTEXT_OVERFLOW});
+			} else {
+				this.retryBare(q.item, CONTEXT_OVERFLOW, -(base - index));
+			}
+		});
+	}
+
 	/** A judged failure: the bare retry if the line has not had it, else failed. */
 	private failJudged(q: Queued, error: string): void {
 		if (q.item.bare) {
@@ -898,7 +923,7 @@ export class TranslateQueue {
 	 * to the front, like a user's retry, since the line is on screen now, and
 	 * is dropped by whatever drops a queued item; its status stays pending.
 	 */
-	private retryBare(item: QueueItem, error: string): void {
+	private retryBare(item: QueueItem, error: string, seq?: number): void {
 		const context = emptyContext();
 
 		context.formality = item.context.formality;
@@ -926,7 +951,8 @@ export class TranslateQueue {
 			},
 			true,
 			false,
-			error
+			error,
+			seq
 		);
 	}
 
@@ -946,7 +972,8 @@ export class TranslateQueue {
 
 		// A download the user said "not now" to (consent.ts) is their answer,
 		// not the engine failing: it counts toward no pause, or a channel of
-		// queued lines would take the engine out for a minute.
+		// queued lines would take the engine out for a minute. (A line too
+		// long for the context window never comes here: `overflowed`.)
 		if (parseNeedsDownload(message)) {
 			return;
 		}
