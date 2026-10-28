@@ -745,7 +745,7 @@ msgstr "Verbinden Sie sich mit einem neuen Server?"
 #: client/components/Windows/Connect.vue:173
 msgctxt "connect.nick"
 msgid "Nick"
-msgstr "- Nein."
+msgstr ""
 
 #. Dismiss button on the connect screen shown as a dialog when the user followed a web+irc:// link; declines the connection without disconnecting the app.
 #: client/components/Windows/Connect.vue:91
@@ -1420,7 +1420,7 @@ msgstr "Netzwerkeinstellungen"
 #: client/components/NetworkForm.vue:104
 msgctxt "form.nick"
 msgid "Nick"
-msgstr "- Nein."
+msgstr ""
 
 #. Radio option on the network edit form: connect without a services account.
 #: client/components/NetworkForm.vue:158

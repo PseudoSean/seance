@@ -2224,7 +2224,7 @@
   "settings.appearance.matchSystemAppearance": "مطابقة الوضع الفاتح أو الداكن للنظام",
   "settings.appearance.matchSystemTextSize": "مطابقة حجم نص النظام",
   "settings.appearance.media": "معاينة الصور، الفيديو والصوت مباشرة",
-  "settings.appearance.mediaAlways": "عرض تلقائي — يرى موقع الوسائط your address فور ظهور رابط",
+  "settings.appearance.mediaAlways": "عرض تلقائي — يرى موقع الوسائط عنوانك فور ظهور رابط",
   "settings.appearance.mediaClick": "النقر للإظهار — لا يتم جلب شيء من موقع الوسائط حتى تطلب ذلك",
   "settings.appearance.mediaHeading": "معاينات الوسائط",
   "settings.appearance.mediaRevealGroup": "متى تبدأ تحميل المعاينات",

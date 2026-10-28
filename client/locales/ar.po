@@ -11746,7 +11746,7 @@ msgstr "معاينة الصور، الفيديو والصوت مباشرة"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.mediaAlways"
 msgid "Show automatically — the media site sees your address as soon as a link appears"
-msgstr "عرض تلقائي — يرى موقع الوسائط your address فور ظهور رابط"
+msgstr "عرض تلقائي — يرى موقع الوسائط عنوانك فور ظهور رابط"
 
 #. Radio option in Settings > Appearance; media previews stay behind a placeholder until you click them, so nothing is loaded from the media site before that. Em dash is part of the copy.
 #: client/components/Settings/Appearance.vue

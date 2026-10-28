@@ -11551,7 +11551,7 @@ msgstr "Extra duży"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.markdown"
 msgid "Render Markdown formatting (bold, code, spoilers…)"
-msgstr "Renderowanie formatowania Markdown (cudo, kod, wskazówki…)"
+msgstr "Renderuj formatowanie Markdown (pogrubienie, kod, spoilery…)"
 
 #. Settings → Appearance, switch above the theme picker: when on, a theme that has a light and a dark version shows the one matching the device's light or dark mode.
 #: client/components/Settings/Appearance.vue
@@ -11569,7 +11569,7 @@ msgstr "Dopasuj do rozmiaru tekstu systemu"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.media"
 msgid "Preview images, video and audio links inline"
-msgstr "Previews obrazów, wideo i audio"
+msgstr "Pokaż podgląd obrazów, wideo i audio w czacie"
 
 #. Radio option in Settings > Appearance; media previews load on their own as soon as a message contains one, which exposes your address to the media site. Em dash is part of the copy.
 #: client/components/Settings/Appearance.vue
@@ -11587,7 +11587,7 @@ msgstr "Kliknij, aby zobaczyć — nic nie jest pobierane z strony medialnej, do
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.mediaHeading"
 msgid "Media previews"
-msgstr "Previews mediów"
+msgstr "Podgląd multimediów"
 
 #. Visually hidden group label of the two radio choices in Settings > Appearance that decide when media previews are fetched from their site.
 #: client/components/Settings/Appearance.vue
@@ -11857,7 +11857,7 @@ msgstr "Pokaż"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.showSeconds"
 msgid "Include seconds in timestamp"
-msgstr "Wczytaj sekundy w czasie wygałki"
+msgstr "Pokaż sekundy w znaczniku czasu"
 
 #. Radio option in Settings > Appearance; joins and parts are compressed into one summary line to keep the chat short.
 #: client/components/Settings/Appearance.vue
