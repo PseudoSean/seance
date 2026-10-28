@@ -12844,7 +12844,7 @@ msgstr "{nick} がモード {modes} を設定しました"
 #: client/components/MessageTypes/nick.vue:6
 msgctxt "system.nick"
 msgid "{nick} is now known as {newNick}"
-msgstr "{nick} が now known as {newNick} になりました"
+msgstr ""
 
 #. System line when a user parts a channel. {nick} is the parting user's nick, VERBATIM user content — never translate or inflect it; it renders as the interactive username element.
 #: client/components/MessageTypes/part.vue:6
@@ -13494,7 +13494,7 @@ msgstr "このメッセージのみ"
 #: client/components/TranslationLine.vue
 msgctxt "translate.reason.answered"
 msgid "answered the question instead of translating it"
-msgstr "質問に答えました instead of translating it"
+msgstr ""
 
 #. Failure reason after 'Couldn't translate': the model returned runs of symbols or punctuation with no usable words. Lowercase; reads as the tail of that sentence.
 #: client/components/TranslationLine.vue
@@ -13506,7 +13506,7 @@ msgstr "答えは記号のゴミでした"
 #: client/components/TranslationLine.vue
 msgctxt "translate.reason.narration"
 msgid "talked about the request instead of translating"
-msgstr "請求について話しました instead of translating"
+msgstr ""
 
 #. Tooltip and aria-label of the circular-arrow button that retries a failed translation.
 #: client/components/TranslationLine.vue

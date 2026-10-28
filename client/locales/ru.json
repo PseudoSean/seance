@@ -2512,7 +2512,6 @@
   "upload.confirmOne": "Загрузка..",
   "upload.confirmTitleMany": "Загрузить эти файлы?...",
   "upload.confirmTitleOne": "Загрузить файл?..",
-  "upload.disconnected": "Вы currently disconnected, unable to initiate upload process.",
   "upload.failed": "Ошибка загрузки: {reason}",
   "upload.failedHttp": "Ошибка загрузки: HTTP {status}",
   "upload.missingField": "Загрузка завершилась ошибкой: отправитель не вернул URL \"{field}\"",

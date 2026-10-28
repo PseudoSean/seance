@@ -13980,7 +13980,7 @@ msgstr "Загрузить файл?.."
 #: client/js/upload.ts:765
 msgctxt "upload.disconnected"
 msgid "You are currently disconnected, unable to initiate upload process."
-msgstr "Вы currently disconnected, unable to initiate upload process."
+msgstr ""
 
 #. Frame for a failed upload; the underlying reason follows the colon. {reason} is the browser's or endpoint's own message, kept verbatim — its content is not our copy.
 #: client/js/upload.ts:464

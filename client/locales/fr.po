@@ -573,7 +573,7 @@ msgctxt "condensed.kicked"
 msgid "{count} user was kicked"
 msgid_plural "{count} users were kicked"
 msgstr[0] "{count} utilisateur a été expulsé"
-msgstr[1] "{count} users have been kicked"
+msgstr[1] ""
 
 #. Condensed status block: {count} users left the channel (quits are counted as parts) while the block was collapsed.
 #: client/components/MessageCondensed.vue

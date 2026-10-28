@@ -2193,7 +2193,6 @@
   "settings.notifications.pushDenied": "Oznámení jsou zakázané procházením prohlížením. Uveďte je v nastavení prohlížením, pak zkuste znovu.",
   "settings.notifications.pushDeniedAndroid": "Oznámení jsou pro tuto aplikaci vypnutá. Povolte je v nastavení aplikace v Androidu a zkuste to znovu.",
   "settings.notifications.pushHeading": "Pushové oznámení",
-  "settings.notifications.pushPerNetwork": "Push je nastavený podle sítě — zapněte jej nebo vypněte v nastavení každé sítě (Edit network → „Push notifications for this network“), kde je také zobrazen status registrace. Prohlížeč doručuje upozornění; každý server schopný podpory push rozhoduje, zda budou vzbudit tuto aplikaci.",
   "settings.notifications.serverUnsupported": "Pushové oznámení vyžaduje připojený server, který podporuje funkci draft/webpush a to, aby jste byli přihlášení do účtu.",
   "settings.notifications.sound": "Povolit zvukové upozornění",
   "settings.notifications.stale": "Změnil se identifikátor serveru (jeho klíč), takže tento zařízení nemůže dál přijímat oznámení. Znovu nastavte oznámení z tohoto sítě (Editovat síť → „Znovuznovlat oznámení“), abyste mohli být upozorněni i když je aplikace uzavřená.",

@@ -573,7 +573,7 @@ msgctxt "condensed.kicked"
 msgid "{count} user was kicked"
 msgid_plural "{count} users were kicked"
 msgstr[0] "{count} user ay nagsalungat"
-msgstr[1] "{count} users have been kicked"
+msgstr[1] ""
 
 #. Condensed status block: {count} users left the channel (quits are counted as parts) while the block was collapsed.
 #: client/components/MessageCondensed.vue
@@ -12300,7 +12300,7 @@ msgstr "Notifikasyon ng Browser"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.browserPerNetwork"
 msgid "Browser notifications are also per network — enabled by default, toggled in each network's settings (Edit network → “Browser notifications for this network”)."
-msgstr "Browser notifications ay din naka-ayos per network — naka-activate default, tinatanggap sa bawat network's settings (Edit network → “Browser notifications for this network”)."
+msgstr ""
 
 #. Warning line in Settings > Notifications when the browser cannot show notifications at all.
 #: client/components/Settings/Notifications.vue
@@ -12426,7 +12426,7 @@ msgstr "Notifikasyon ng Push"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushPerNetwork"
 msgid "Push is set up per network — turn it on or off in each network's settings (Edit network → “Push notifications for this network”), where the enrollment status is also shown. The browser delivers the notifications; each push-capable server decides whether to wake this app."
-msgstr "Ang Push ay nakasulat per network — i-on o i-off sa bawat network's setting (Edit network → “Push notifications for this network”), kung saan ang estado ng pagsusubscribe ay nasaan. Ang browser ay nagbibigay ng mga notisasyon; bawat push-capable server ay nagpapahiwatay kung saan ang app ay mag-awit."
+msgstr ""
 
 #. Warning line in Settings > Notifications when the chat server itself does not offer web push; names the IRCv3 draft/webpush capability, which stays verbatim.
 #: client/components/Settings/Notifications.vue

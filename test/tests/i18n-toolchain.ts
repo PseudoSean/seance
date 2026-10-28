@@ -721,6 +721,36 @@ describe("i18n toolchain", () => {
 			// verdict the fill refuses a slot by lives in quality.ts and is
 			// tested here. The fill and the sweep MUST judge by the same one:
 			// a fill that writes back what the sweep empties is a loop.
+			it("refuses a run of English inside an answer, the old msgid's included", () => {
+				// The echo rule sees only an answer that is ALL its current
+				// English; these shipped through it.
+				expect(
+					slotVerdict(
+						"ja",
+						"{nick} is now known as {newNick}",
+						"{nick} が now known as {newNick} になりました"
+					)
+				).to.equal("english");
+				expect(
+					slotVerdict("fr", "{count} users were kicked", "{count} users have been kicked")
+				).to.equal("english");
+				// One quoted menu word, a command in capitals, a word the target
+				// writes itself: not English prose.
+				expect(
+					slotVerdict("fil", "Choose Add to Dock…", "Piliin ang Add to Dock…")
+				).to.equal(null);
+				expect(
+					slotVerdict("pl", "Nobody matches WHO {mask}", "Nikt nie pasuje do WHO {mask}")
+				).to.equal(null);
+				expect(
+					slotVerdict(
+						"de",
+						"{nick} has joined the channel",
+						"{nick} ist dem Kanal beigetreten"
+					)
+				).to.equal(null);
+			});
+
 			it("is what the fill refuses a filled slot by, and the sweep empties one by", () => {
 				expect(slotVerdict("de", "Password", "Passwort")).to.equal(null);
 				expect(slotVerdict("de", "Password", "पासवर्ड")).to.equal("foreign-script");

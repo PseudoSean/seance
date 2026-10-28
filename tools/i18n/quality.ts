@@ -16,6 +16,7 @@
  */
 import {isDegenerate} from "../../client/js/translate/outgoing";
 import {EXPECTED_SCRIPTS, OWN_SCRIPTS} from "./scripts";
+import stopwords from "../../client/js/translate/stopwords.json";
 
 export {isDegenerate};
 
@@ -198,6 +199,7 @@ export type SlotVerdict =
 	| "padding"
 	| "artifact"
 	| "mixed-script"
+	| "english"
 	| "sentences";
 
 /**
@@ -490,6 +492,61 @@ export function dropsSentences(tag: string, source: string, text: string): boole
 }
 
 /**
+ * English function words: two of them in a row are a sentence of English,
+ * not a protocol word or a quoted menu name ("Add to Dock" has one). A word
+ * the target itself uses (its own stopword table) never counts -- "in" is
+ * German, "do" Portuguese and Polish.
+ */
+const ENGLISH_FUNCTION_WORDS = new Set(
+	(
+		"the have has had been being is are was were will would could should cannot can't " +
+		"not now known currently instead of to from with without by for this that these " +
+		"those your you they their there here which who what when where it its an and or " +
+		"but if then than into unable does did do all any some only also already yet still " +
+		"please can be"
+	).split(" ")
+);
+
+const OWN_STOPWORDS = stopwords as Record<string, string[]>;
+
+/**
+ * True when a non-English answer carries a run of English: two English
+ * function words in a row, outside {placeholder}s and code spans. The echo
+ * rule (`isUnchanged`) only sees an answer that is ALL its current English;
+ * a model that gave up halfway ("{nick} が now known as {newNick} になりました",
+ * "Вы currently disconnected, unable to initiate upload process.") or the
+ * English of an OLDER msgid ("{count} users have been kicked" against "…were
+ * kicked") passed every rule. An all-capitals word is a command or an
+ * acronym (WHO, IRC) and breaks a run rather than joining one.
+ */
+export function hasEnglishRun(tag: string, text: string): boolean {
+	if (tag === "en") {
+		return false;
+	}
+
+	const own = new Set((OWN_STOPWORDS[tag] ?? []).map((word) => word.toLowerCase()));
+	let run = 0;
+
+	for (const raw of withoutIdentifiers(text).split(/\s+/)) {
+		const word = raw.replace(/^[^\p{L}]+|[^\p{L}']+$/gu, "");
+		const lower = word.toLowerCase();
+		const english =
+			lower !== "" &&
+			word !== word.toUpperCase() &&
+			ENGLISH_FUNCTION_WORDS.has(lower) &&
+			!own.has(lower);
+
+		run = english ? run + 1 : 0;
+
+		if (run >= 2) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
  * The one verdict the fill and the sweep both judge a filled slot by, so
  * that the fill refuses exactly what the sweep would empty: anything else
  * is a loop, each writing back what the other takes away. `source` is the
@@ -518,6 +575,10 @@ export function slotVerdict(tag: string, source: string, text: string): SlotVerd
 
 	if (isUnchanged(source, text)) {
 		return "unchanged";
+	}
+
+	if (hasEnglishRun(tag, text)) {
+		return "english";
 	}
 
 	// After `unchanged`: an answer that is the English again has every

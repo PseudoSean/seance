@@ -12484,7 +12484,7 @@ msgstr "Pushové oznámení"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushPerNetwork"
 msgid "Push is set up per network — turn it on or off in each network's settings (Edit network → “Push notifications for this network”), where the enrollment status is also shown. The browser delivers the notifications; each push-capable server decides whether to wake this app."
-msgstr "Push je nastavený podle sítě — zapněte jej nebo vypněte v nastavení každé sítě (Edit network → „Push notifications for this network“), kde je také zobrazen status registrace. Prohlížeč doručuje upozornění; každý server schopný podpory push rozhoduje, zda budou vzbudit tuto aplikaci."
+msgstr ""
 
 #. Warning line in Settings > Notifications when the chat server itself does not offer web push; names the IRCv3 draft/webpush capability, which stays verbatim.
 #: client/components/Settings/Notifications.vue
