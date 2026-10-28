@@ -37,21 +37,38 @@ const catalog = buildCatalog();
  * A service whose workers never answer: `dies` fires each one's `error`
  * (client.ts `workerError`) as a script that will not load does, shortly
  * after it is created; otherwise it is a worker that started and hangs.
+ * Workers from `healthyFrom` on (counting from 0) are served and answer.
  */
-function deadWorkerRig(dies: boolean) {
+function deadWorkerRig(dies: boolean, healthyFrom = Infinity) {
 	const clock = sinon.useFakeTimers();
 	const created: {client: TranslateClient; terminated: boolean}[] = [];
-	const errors: string[] = [];
+	const errors: (string | null)[] = [];
 	const service = new TranslateService(
 		{
 			createClient() {
-				const [mainPort] = createPortPair();
+				const [mainPort, workerPort] = createPortPair();
 				const client = new TranslateClient(mainPort);
 				const entry = {client, terminated: false};
+				const healthy = created.length >= healthyFrom;
 
 				created.push(entry);
 
-				if (dies) {
+				if (healthy) {
+					serveEngines(
+						workerPort,
+						{
+							llm: new FakeEngine("llm", (req) => [req.text]),
+							seq2seq: new FakeEngine("seq2seq", (req) => [req.text]),
+						},
+						{
+							cache: {
+								has: () => Promise.resolve(false),
+								delete: () => Promise.resolve(),
+							},
+							configure() {},
+						}
+					);
+				} else if (dies) {
 					setTimeout(() => client.workerError(""), 5);
 				}
 
@@ -1150,6 +1167,25 @@ describe("translate/service", () => {
 		expect(r.created.every((w) => w.terminated)).to.equal(true);
 		expect(r.errors[0]).to.equal(TRANSLATION_UNAVAILABLE);
 		queue.cancelAll();
+		r.service.dispose();
+	});
+
+	it("Settings' word about a worker that never started clears once a fresh one answers", async () => {
+		const r = deadWorkerRig(true, 1);
+		clock = r.clock;
+		const first = r.service.models().catch((e: Error) => e.message);
+
+		await r.clock.tickAsync(10);
+		expect(await first).to.equal(TRANSLATION_UNAVAILABLE);
+		expect(r.errors).to.deep.equal([TRANSLATION_UNAVAILABLE]);
+
+		await r.service.models();
+		expect(r.created.length).to.equal(2);
+		expect(r.errors).to.deep.equal([TRANSLATION_UNAVAILABLE, null]);
+
+		// Only once: a healthy worker's answers say nothing more.
+		await r.service.models();
+		expect(r.errors).to.deep.equal([TRANSLATION_UNAVAILABLE, null]);
 		r.service.dispose();
 	});
 

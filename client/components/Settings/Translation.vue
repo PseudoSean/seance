@@ -462,7 +462,7 @@ export default defineComponent({
 					return t("translate.model.downloaded");
 				case "failed":
 					return view.error
-						? t("translate.model.failed", {error: view.error})
+						? t("translate.model.failed", {error: translateErrorText(view.error)})
 						: t("translate.model.failedUnknown");
 				default:
 					return view.cached

@@ -29,8 +29,13 @@ export const GPU_IDLE_UNLOAD_MS = 3 * 60 * 1000;
 /** A loaded CPU model with no request for this long gives its memory back. */
 export const CPU_IDLE_UNLOAD_MS = 5 * 60 * 1000;
 export const TRANSLATION_UNAVAILABLE = "no translation engine can take this request";
-/** How long a route waits for the worker to say what is downloaded (`cacheOrDeadline`). */
-export const CACHE_WAIT_MS = 15 * 1000;
+/**
+ * How long a route waits for the worker to say what is downloaded
+ * (`cacheOrDeadline`). Generous on purpose: past it the router no longer
+ * prefers a downloaded model inside its class, and a first, uncached start
+ * of the multi-MiB worker on a slow phone line can take a while.
+ */
+export const CACHE_WAIT_MS = 60 * 1000;
 
 export interface ServiceDeps {
 	createClient(): {client: TranslateClient; terminate(): void};
@@ -108,7 +113,9 @@ export class TranslateService {
 	private nextId = 1;
 	private views = new Map<string, ModelView>();
 	private listeners = new Set<(views: ModelView[]) => void>();
-	private workerErrorListeners = new Set<(message: string) => void>();
+	private workerErrorListeners = new Set<(message: string | null) => void>();
+	/** `workerDied` reported a worker that never started; a later answer clears it. */
+	private deadReported = false;
 	private generation = 0;
 	private disposed = false;
 	/** Once per service: which models are downloaded, for the router's in-class preference. */
@@ -655,6 +662,14 @@ export class TranslateService {
 		try {
 			const states = await this.client().models();
 
+			// A fresh worker answered after one that never started (the deploy
+			// finished, the page came back online): what Settings says about
+			// the dead one is over. Null clears it.
+			if (this.deadReported) {
+				this.deadReported = false;
+				this.reportWorkerError(null);
+			}
+
 			for (const state of states) {
 				const view = this.views.get(state.ref.id);
 
@@ -728,8 +743,12 @@ export class TranslateService {
 		return () => this.listeners.delete(listener);
 	}
 
-	/** Errors the worker reports for itself: a configure that threw, a handler that did. */
-	onWorkerError(listener: (message: string) => void): () => void {
+	/**
+	 * Errors the worker reports for itself: a configure that threw, a
+	 * handler that did, a worker that never started. Null: the last of
+	 * those is over (a fresh worker answered).
+	 */
+	onWorkerError(listener: (message: string | null) => void): () => void {
 		this.workerErrorListeners.add(listener);
 
 		return () => this.workerErrorListeners.delete(listener);
@@ -963,7 +982,7 @@ export class TranslateService {
 		return this.worker.client;
 	}
 
-	private reportWorkerError(message: string): void {
+	private reportWorkerError(message: string | null): void {
 		for (const listener of this.workerErrorListeners) {
 			listener(message);
 		}
@@ -993,6 +1012,7 @@ export class TranslateService {
 		this.loadedEngines.clear();
 		worker.client.fail(new Error(message));
 		worker.terminate();
+		this.deadReported = true;
 		this.reportWorkerError(message);
 	}
 
