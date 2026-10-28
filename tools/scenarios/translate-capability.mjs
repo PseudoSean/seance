@@ -31,6 +31,18 @@
 // Translate with the reason as its description, and disables German in the
 // composer's dialog. On noWebgpu, the CPU models off is the one switch named.
 //
+// NLLB-200 (CC-BY-NC-4.0) is off until switched on: its row says "Switched
+// off above" on every device with its licence line under the switch, and on
+// noWebgpu English -> Japanese (no OPUS pair) is disabled in the composer's
+// dialog with "This needs NLLB-200, which is switched off …" until the switch
+// is turned on. The GPU model select greys a model this GPU cannot bind
+// (binds160: the 4B, with a hint naming it and the buffer numbers) and no
+// other. Last, on the desktop device, the download question: a channel with
+// several German lines switched to reading asks once ("Download <model>?",
+// its size, Download / Not now), Not now fails every line with "Needs
+// <model>, a <size> download: …" and pauses nothing, no model is fetched and
+// nothing is remembered; a Retry asks once more.
+//
 // Not on the fake engine: ?fakeTranslate replaces the probe with its own
 // answer. A production build is fine; no model is ever downloaded.
 //
@@ -441,11 +453,57 @@ export default async function run(page) {
 				: inUse === ""
 		);
 
-		const nllb = await page.evaluate(
-			`document.querySelector(${JSON.stringify(ROW(NLLB))}).dataset.runs`
+		const nllb = await page.evaluate(`(() => {
+			const row = document.querySelector(${JSON.stringify(ROW(NLLB))});
+			const input = document.querySelector('input[name="translateNllb"]');
+			return {
+				runs: row.dataset.runs,
+				verdict: row.querySelector(".translate-model-runs").textContent.trim(),
+				switchOn: input.checked,
+				licence: (document.getElementById(input.getAttribute("aria-describedby")) || {}).textContent?.trim() || "",
+			};
+		})()`);
+
+		page.check(
+			`${name}: NLLB-200 is off until switched on, its licence named (${nllb.verdict} / ${nllb.licence})`,
+			nllb.runs === "off" &&
+				nllb.verdict === EN["translate.model.switchedOff"] &&
+				!nllb.switchOn &&
+				nllb.licence === EN["translate.settings.nllbLicence"]
 		);
 
-		page.check(`${name}: NLLB runs here (${nllb})`, nllb === "runs");
+		// The GPU model select: a model this GPU cannot bind is greyed, with why.
+		const select = await page.evaluate(`(() => {
+			const s = document.querySelector('select[name="translateLlmModel"]');
+			const hint = document.getElementById("translate-llm-unfit");
+			return {
+				disabled: [...s.options].filter((o) => o.disabled).map((o) => o.value),
+				hint: hint ? hint.textContent.replace(/\\s+/g, " ").trim() : "",
+				described: s.getAttribute("aria-describedby"),
+			};
+		})()`);
+		const unfit = name === "binds160" ? [LARGE] : [];
+
+		page.check(
+			`${name}: the GPU model select greys ${unfit.join(", ") || "nothing"} (${
+				select.disabled.join(", ") || "nothing"
+			}${select.hint ? `: ${select.hint}` : ""})`,
+			JSON.stringify(select.disabled) === JSON.stringify(unfit) &&
+				(unfit.length
+					? select.hint.includes(
+							EN["translate.settings.gpuModelUnfit"].replace("{model}", "Qwen3 4B")
+					  ) &&
+					  select.hint.includes(device.why(LARGE)) &&
+					  select.described === "translate-llm-unfit"
+					: select.hint === "" && !select.described)
+		);
+
+		if (unfit.length) {
+			await page.evaluate(
+				`document.querySelector('select[name="translateLlmModel"]').scrollIntoView({block: "center"})`
+			);
+			await page.screenshot(`${name}-gpu-select`);
+		}
 		await page.evaluate(
 			`document.querySelector(".translate-models").scrollIntoView({block: "start"})`
 		);
@@ -600,6 +658,45 @@ export default async function run(page) {
 		);
 		await page.screenshot(`${name}-panel`);
 		await closePanel();
+
+		// NLLB-200's opt-in: English to Japanese has no OPUS pair, and this
+		// device runs no GPU model, so only NLLB could take it.
+		if (name === "noWebgpu") {
+			const japanese = EN["translate.pair.unavailable"]
+				.replace("{from}", "English")
+				.replace("{to}", "Japanese");
+
+			await openPicker();
+			await pickTarget("ja");
+
+			const off = await pickerState();
+
+			page.check(
+				`noWebgpu, NLLB off: Japanese is disabled, NLLB named (${off.lead} / ${off.why})`,
+				off.disabled && off.lead === japanese && off.why === EN["translate.why.nllbOff"]
+			);
+			await page.screenshot("noWebgpu-nllb-off-composer", {selector: PICKER, pad: 8});
+			await closePicker();
+			await openSettings();
+			await setSwitch("translateNllb", true);
+
+			const row = await page.evaluate(
+				`document.querySelector(${JSON.stringify(ROW(NLLB))}).dataset.runs`
+			);
+
+			page.check(`noWebgpu, NLLB on: its row runs (${row})`, row === "runs");
+			await closeSettings();
+			await openPicker();
+			await pickTarget("ja");
+
+			const on = await pickerState();
+
+			page.check(
+				`noWebgpu, NLLB on: Japanese is on offer (${on.lead || "enabled"})`,
+				!on.disabled && on.lead === ""
+			);
+			await closePicker();
+		}
 
 		// 4. The switches.
 		if (name === "noWebgpu") {
@@ -791,8 +888,171 @@ export default async function run(page) {
 		}
 	}
 
+	if (!only || only === "desktop") {
+		await consentStage(names.length);
+	}
+
 	page.check(
 		`no console errors (${page.consoleErrors.map((e) => e.text).join(" | ")})`,
 		page.consoleErrors.length === 0
 	);
+
+	/**
+	 * The download question, on the desktop device: nothing is downloaded,
+	 * so the first route of a channel's lines asks; Not now must fail them
+	 * all with the model named, once, and pause nothing.
+	 */
+	async function consentStage(index) {
+		page.check("--- consent", true);
+		await coldLoad("desktop", index);
+
+		const lines = [
+			"Guten Morgen, habt ihr den Bericht schon gelesen?",
+			"Ich finde, wir sollten das morgen besprechen.",
+			"Das Wetter ist heute wirklich schön.",
+			"Kann jemand mir bei der Konfiguration helfen?",
+		];
+		const speakers = [];
+
+		for (const [i, text] of lines.entries()) {
+			speakers.push(await speaker(`cq${RUN}${i}`, text));
+		}
+
+		await page.waitFor(
+			`${JSON.stringify(
+				lines
+			)}.every((line) => [...document.querySelectorAll("#chat .msg:not(.self)")].some((m) => m.textContent.includes(line)))`,
+			{label: "the German lines", timeout: 20000}
+		);
+		// Count every question the dialog is opened with, from now on.
+		// The overlay stays in the page and takes "opened" while a question
+		// is up (ConfirmDialog.vue): each time it does is one question.
+		await page.evaluate(`(() => {
+			window.__questions = [];
+			const overlay = document.getElementById("confirm-dialog-overlay");
+			let open = false;
+			new MutationObserver(() => {
+				const now = overlay.classList.contains("opened");
+				if (now && !open) { window.__questions.push(overlay.querySelector(".confirm-text-title").textContent.trim()); }
+				open = now;
+			}).observe(overlay, {attributes: true, attributeFilter: ["class"], childList: true, subtree: true});
+		})()`);
+
+		// Reading on: the header's click with a pointer, the panel's On under a finger.
+		if (MOBILE) {
+			await openPanel();
+			await page.evaluate(`${readOnSegment}.click()`);
+			await page.sleep(200);
+			await closePanel();
+		} else {
+			await page.click(GLOBE);
+		}
+
+		await page.waitFor(`!!document.querySelector("#confirm-dialog-overlay.opened")`, {
+			label: "the download question",
+			timeout: 30000,
+		});
+		// Every line is waiting on it by now: still one question.
+		await page.sleep(2000);
+
+		const question = await page.evaluate(`(() => {
+			const d = document.querySelector("#confirm-dialog");
+			return {
+				count: window.__questions.length,
+				title: d.querySelector(".confirm-text-title").textContent.trim(),
+				text: d.querySelector(".confirm-text p").textContent.trim(),
+				download: d.querySelector(".btn-confirm").textContent.trim(),
+				notNow: d.querySelector(".btn-cancel").textContent.trim(),
+			};
+		})()`);
+		// Which GPU model the device default picked: the 4B on a desktop with
+		// the memory for it, the 1.7B on a phone.
+		const model = /^Download (.+)\?$/.exec(question.title)?.[1] ?? "";
+		const sizeOf = {
+			[EN["translate.model.llm"].replace("{name}", "Qwen3 1.7B")]: 984_000_000,
+			[EN["translate.model.llm"].replace("{name}", "Qwen3 4B")]: 2_280_000_000,
+		};
+
+		page.check(
+			`consent: one question for ${lines.length} lines, naming the model and its size (${question.count}: ${question.title} / ${question.text})`,
+			question.count === 1 &&
+				model in sizeOf &&
+				question.title === EN["translate.consent.title"].replace("{model}", model) &&
+				question.text ===
+					EN["translate.consent.text"]
+						.replace("{model}", model)
+						.replace("{size}", size(sizeOf[model])) &&
+				question.download === EN["translate.model.download"] &&
+				question.notNow === EN["translate.consent.notNow"]
+		);
+		await page.screenshot("consent-question");
+		// Past the overlay's fade-in before the click.
+		await page.sleep(500);
+		await page.click("#confirm-dialog .btn-cancel");
+
+		const reason = EN["translate.why.needsDownload"]
+			.replace("{model}", model)
+			.replace("{size}", size(sizeOf[model]));
+		const FAILED = `${JSON.stringify(
+			lines
+		)}.map((line) => [...document.querySelectorAll("#chat .msg:not(.self)")].find((m) => m.textContent.includes(line))).map((m) => { const r = m && m.querySelector('.msg-translation[data-status="failed"] .msg-translation-reason'); return r ? {text: r.textContent.trim(), title: r.title} : null; })`;
+
+		await page.waitFor(`${FAILED}.every((r) => r)`, {
+			label: "every line failed",
+			timeout: 20000,
+		});
+		await page.sleep(1500);
+
+		const failed = await page.evaluate(FAILED);
+		const after = await page.evaluate(`(() => ({
+			count: window.__questions.length,
+			open: !!document.querySelector("#confirm-dialog-overlay.opened"),
+			label: document.querySelector(${JSON.stringify(GLOBE)}).getAttribute("aria-label"),
+			consent: localStorage.getItem("thelounge.state.translateConsent"),
+			fetched: performance.getEntriesByType("resource").filter((e) => /huggingface|\\.wasm$|mlc/.test(e.name) && !/js\\/ort\\//.test(e.name)).map((e) => e.name),
+		}))()`);
+
+		page.check(
+			`consent: Not now fails every line naming the model (${failed[0]?.text})`,
+			failed.every((r) => r && r.text === reason && r.title === reason)
+		);
+		page.check(
+			`consent: still one question, none open, nothing remembered (${after.count}, ${after.consent})`,
+			after.count === 1 && !after.open && after.consent === null
+		);
+		page.check(`consent: no pause (${after.label})`, !/paused/i.test(after.label || ""));
+		page.check(
+			`consent: no model was fetched (${after.fetched.join(", ") || "none"})`,
+			after.fetched.length === 0
+		);
+		await page.screenshot("consent-not-now");
+
+		// A Retry is someone asking: one more question.
+		await page.evaluate(`(() => {
+			const line = ${JSON.stringify(lines[0])};
+			const m = [...document.querySelectorAll("#chat .msg:not(.self)")].find((el) => el.textContent.includes(line));
+			m.setAttribute("data-consent-retry", "1");
+		})()`);
+		await page.evaluate(
+			`document.querySelector("[data-consent-retry] .msg-translation-retry").click()`
+		);
+		await page.waitFor(`!!document.querySelector("#confirm-dialog-overlay.opened")`, {
+			label: "the question again after a Retry",
+		});
+
+		const again = await page.evaluate(`window.__questions.length`);
+
+		page.check(`consent: a Retry asks once more (${again})`, again === 2);
+		// Past the overlay's fade-in before the click.
+		await page.sleep(500);
+		await page.click("#confirm-dialog .btn-cancel");
+		await page.waitFor(
+			`!!document.querySelector('[data-consent-retry] .msg-translation[data-status="failed"]')`,
+			{label: "the retried line failed again"}
+		);
+
+		for (const s of speakers) {
+			s.quit();
+		}
+	}
 }

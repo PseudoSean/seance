@@ -62,9 +62,12 @@
 					t("translate.unchangedReason")
 				}}</span>
 			</button>
+			<!-- The reason's tooltip is the reason in full (the line cuts it
+			     at REASON_MAX), in words: a declined download's raw error is
+			     a code and the model as JSON. -->
 			<template v-else>
 				{{ t("translate.failed") }}
-				<span v-if="entry.error" class="msg-translation-reason" :title="entry.error">{{
+				<span v-if="entry.error" class="msg-translation-reason" :title="reasonText">{{
 					shortReason(reasonText)
 				}}</span>
 				<button

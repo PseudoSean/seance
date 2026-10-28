@@ -8,12 +8,18 @@
 			<div class="confirm-text">
 				<div class="confirm-text-title">{{ data?.title }}</div>
 				<p>{{ data?.text }}</p>
+				<p v-if="data?.note" class="confirm-note">{{ data.note }}</p>
 			</div>
 			<div class="confirm-buttons">
 				<button class="btn btn-cancel" @click="close(false)">
-					{{ t("confirm.cancel") }}
+					{{ data?.cancel || t("confirm.cancel") }}
 				</button>
-				<button class="btn btn-danger" @click="close(true)">{{ data?.button }}</button>
+				<button
+					:class="['btn', data?.primary ? 'btn-confirm' : 'btn-danger']"
+					@click="close(true)"
+				>
+					{{ data?.button }}
+				</button>
 			</div>
 		</div>
 	</div>
@@ -54,6 +60,11 @@
 #confirm-dialog .confirm-buttons .btn-cancel {
 	border-color: transparent;
 }
+
+#confirm-dialog .confirm-note {
+	margin-top: 0.5rem;
+	font-weight: 700;
+}
 </style>
 
 <script lang="ts">
@@ -65,6 +76,12 @@ type ConfirmDialogData = {
 	title: string;
 	text: string;
 	button: string;
+	/** A second paragraph, said apart (the download question's metered connection). */
+	note?: string;
+	/** The answer that is not the button's ("Not now"); "Cancel" when absent. */
+	cancel?: string;
+	/** The button is an ordinary action, not a destructive one: no danger colour. */
+	primary?: boolean;
 };
 
 type ConfirmDialogCallback = {
@@ -79,8 +96,14 @@ export default defineComponent({
 		const callback = ref<ConfirmDialogCallback>();
 
 		const open = (incoming: ConfirmDialogData, cb: ConfirmDialogCallback) => {
+			// One dialog at a time: a question still open when another
+			// arrives is answered no, rather than left waiting for ever
+			// (a translation's download question holds requests on it).
+			const previous = data.value ? callback.value : undefined;
+
 			data.value = incoming;
 			callback.value = cb;
+			previous?.(false);
 		};
 
 		const close = (result: boolean) => {

@@ -7,8 +7,13 @@
 // session. Inside that class a candidate whose model is already downloaded
 // wins over the class's own order; a better class is never skipped for a
 // downloaded model in a worse one: its model is downloaded on demand
-// instead (service.ts). A seq2seq candidate needs a source language: the
-// request's `from`, or failing that its source hint.
+// instead (service.ts), once the user has agreed to that download
+// (consent.ts): a candidate the caller refuses to download (`refuse`) is
+// passed over like any other block. NLLB-200 runs only once the user has
+// switched it on (`allowNllb`; its licence is non-commercial), so the
+// OPUS-MT pairs and the GPU model serve without it. A seq2seq candidate
+// needs a source language: the request's `from`, or failing that its
+// source hint.
 
 import {Capability, Tier} from "./capability";
 import {ModelRef} from "./engine";
@@ -42,12 +47,21 @@ export interface RouteInput {
 	tier: Tier;
 	allowLlm: boolean;
 	allowCpu: boolean;
+	/** NLLB-200 switched on (`translateNllb`): off, the `nllb` candidate is passed over. */
+	allowNllb: boolean;
 	down: ReadonlySet<Candidate>;
 	/**
 	 * Is this model already downloaded? Optional: without it every candidate
 	 * counts as unknown and each class's order is the table's own.
 	 */
 	cached?: (ref: ModelRef) => boolean;
+	/**
+	 * A model this request must not download: the user said "not now" to an
+	 * implicit download this session (service.ts `resolve`, consent.ts). Such
+	 * a candidate is blocked as `download`, naming the model, and the walk
+	 * goes on to one that needs no download. Absent, nothing is refused.
+	 */
+	refuse?: (ref: ModelRef) => boolean;
 	/**
 	 * Whether WebAssembly SIMD is there for the CPU models. A gpu-tier device
 	 * can lack it (the tier only says the GPU is fine); absent means yes.
@@ -78,7 +92,13 @@ export interface Route {
  * a seq2seq model with no source to start from, or a pair the table and the
  * catalog have no model for at all.
  */
-export type RouteBlock = ModelBlock | {kind: "down"} | {kind: "source"} | {kind: "unserved"};
+export type RouteBlock =
+	| ModelBlock
+	| {kind: "down"}
+	| {kind: "source"}
+	| {kind: "unserved"}
+	/** The route's model is not on the device and its download was declined (consent.ts). */
+	| {kind: "download"; ref: ModelRef};
 
 /**
  * The router's answer with its reason: a route, or why there is none.
@@ -108,6 +128,7 @@ export function routeInput(
 		tier: capability?.tier ?? "none",
 		allowLlm: switches.llm,
 		allowCpu: switches.cpu,
+		allowNllb: switches.nllb,
 		down,
 		wasm: capability ? !capability.reasons.includes("NO_WASM_SIMD") : false,
 		sourceLater: pair.sourceLater,
@@ -155,7 +176,7 @@ function candidateBlock(
 		return {kind: "unserved"};
 	}
 
-	const switches = {llm: true, cpu: true};
+	const switches = {llm: true, cpu: true, nllb: true};
 
 	if (candidate === "llm") {
 		if (input.tier !== "gpu") {
@@ -186,19 +207,28 @@ function candidateBlock(
 			return {kind: "off", engine: "seq2seq"};
 		}
 
+		if (candidate === "nllb" && !input.allowNllb) {
+			return {kind: "off", engine: "nllb"};
+		}
+
 		if (source === null && !input.sourceLater) {
 			return {kind: "source"};
 		}
 	}
 
-	return input.down.has(candidate) ? {kind: "down"} : null;
+	if (input.down.has(candidate)) {
+		return {kind: "down"};
+	}
+
+	return input.refuse?.(ref) ? {kind: "download", ref} : null;
 }
 
 /**
  * Of the reasons each candidate gave, the one to tell the user: a switch
  * they turned off, when one would serve the pair (the fix is theirs to
- * make; both, when either would), else the best class's own reason, a
- * pair the catalog has no model for last.
+ * make; both, when either would), then a download they declined (the
+ * best class's model, which Settings can download), else the best class's
+ * own reason, a pair the catalog has no model for last.
  */
 function pickReason(blocks: RouteBlock[]): RouteBlock {
 	const off = (engine: string) =>
@@ -211,6 +241,7 @@ function pickReason(blocks: RouteBlock[]): RouteBlock {
 
 	return (
 		blocks.find((block) => block.kind === "off") ??
+		blocks.find((block) => block.kind === "download") ??
 		blocks.find((block) => block.kind !== "unserved") ??
 		blocks[0] ?? {kind: "unserved"}
 	);
@@ -237,7 +268,7 @@ export function explainRoute(
 	if (input.tier === "none") {
 		const why =
 			(input.capability
-				? modelBlock(catalog.nllb, input.capability, {llm: true, cpu: true})
+				? modelBlock(catalog.nllb, input.capability, {llm: true, cpu: true, nllb: true})
 				: null) ?? ({kind: "device", reason: "NO_WASM_SIMD"} as const);
 
 		return {route: null, why, polish};
@@ -294,6 +325,9 @@ export function resolveRoute(
 /**
  * Whether anything can translate here at all, and if not why: the GPU model
  * in use and the CPU models, each by `modelBlock`. Null once either runs.
+ * The CPU models count with NLLB-200 switched off: the OPUS-MT pairs still
+ * run on the CPU switch alone, so NLLB's opt-in never makes translation as
+ * a whole unavailable (a pair only NLLB serves says so in `explainRoute`).
  * Of two blocks, a switch the user turned off is the one named (turning it
  * on is the fix; both off is `engine: "all"`), else the CPU models' (they
  * are the floor every device that translates at all can reach).
@@ -305,7 +339,7 @@ export function translationBlock(
 	enabled = true
 ): ModelBlock | null {
 	const llm = modelBlock(catalog.llm, capability, switches, enabled);
-	const cpu = modelBlock(catalog.nllb, capability, switches, enabled);
+	const cpu = modelBlock(catalog.nllb, capability, {...switches, nllb: true}, enabled);
 
 	if (!llm || !cpu) {
 		return null;

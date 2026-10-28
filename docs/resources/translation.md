@@ -44,9 +44,15 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
   sites by its touch points) -- Chrome reports 8 GiB on many phones, where
   3.4 GB is most of the memory. Without a `deviceMemory` reading (Safari,
   Firefox) the default is the 1.7B: the adapter's limit is per buffer and
-  says nothing about the total. A chosen model this GPU cannot bind runs
-  the default instead (`llmChoice`), so a `gpu` tier always means the model
-  in use can load; its Settings row says why. The pick
+  says nothing about the total. A model this GPU cannot bind is greyed in
+  the "GPU model" select (a disabled option, a hint under the select
+  naming it with the buffer numbers: `Translation.vue` `llmUnfit`, the
+  `buffer` or `device` block of `modelBlock`, on a `gpu`-tier device only --
+  elsewhere the choice only keys the route table), so it cannot be chosen
+  and then quietly not run; a stored choice that does not fit (a restored
+  backup, another device) still runs the default instead (`llmChoice`),
+  so a `gpu` tier always means the model in use can load, and its Settings
+  row says why. The pick
   stands in for an unset setting **at read time and is never persisted as a
   choice**, and only on a `gpu`-tier device — the selected model also picks
   the route table, whose non-LLM entries differ between the two, so a device
@@ -222,14 +228,15 @@ nothing the router would take is hidden:
   NO_WASM_SIMD), `buffer` (`{needed, limit}`: the model's largest tensor
   against the adapter's binding, given to every GPU row, on a cpu-tier
   SMALL_BUFFER device too, and never when f16 is missing), then `off` (its
-  engine switched off in Settings). A model the device cannot run is never
-  reported as switched off.
+  engine switched off in Settings, or NLLB-200's own opt-in, `engine: "nllb"`). A model the device cannot run is never reported as switched
+  off.
 - **Per pair** -- `router.ts` `explainRoute(table, catalog, input)` is the
   router: `resolveRoute` is `explainRoute(...).route`. With no route it
   gives the reason (a candidate's `modelBlock`, `down` for one that failed
-  this session, `unserved`) and `polish` for a one-language request. Of
-  several candidates' reasons a switch the user turned off wins (both off
-  is `engine: "all"`), else the best class's. `routeInput(capability, switches, pair)` builds the input from the probe for the service and the
+  this session, `download` for a model whose download the user declined,
+  `unserved`) and `polish` for a one-language request. Of several
+  candidates' reasons a switch the user turned off wins (both off is
+  `engine: "all"`), then a declined download, else the best class's. `routeInput(capability, switches, pair)` builds the input from the probe for the service and the
   UI alike, including WebAssembly SIMD on a gpu-tier device; a UI question
   with no source yet (`sourceLater`) counts the CPU models as the detector
   will name one.
@@ -254,6 +261,54 @@ its tap opens the panel with the reason); and a line or strip that failed for
 want of an engine names why. Tests: `test/translate/availability.ts`;
 browser check `tools/scenarios/translate-capability.mjs` (five stubbed
 adapters, also `--mobile`).
+
+### A download asks first
+
+The router sends a request to the best class whether its model is
+downloaded or not, and the service downloads on demand, so one click on the
+header's translate button could start a 1-2 GB download. Before the first
+download of a model that is not on the device, not downloading already and
+never agreed to, the user is asked once (`consent.ts` `DownloadConsent`,
+held by the service): the app's confirm dialog (`ConfirmDialog.vue`, its
+`note`/`cancel`/`primary` options) titled "Download <model>?", the size from
+`ModelRef.sizeBytes` through `friendlysize`, a line about the connection
+when `navigator.connection` reports Save-Data or a cellular link, and
+Download / Not now. The question is asked **when the route is resolved**
+(`service.ts` `resolve`, which `route()` and `translate()`'s own walk go
+through), before the reading queue or the composer arms a request
+deadline, so a dialog left open times nothing out and the queue's engine
+and marker form are chosen with the answer known.
+
+- **Once.** Every request waiting on the same model shares one question,
+  and one dialog is open at a time across models; a channel with fifty
+  queued lines asks once.
+- **Download** is remembered per model in `thelounge.state.translateConsent`
+  (`storedConsent`; `thelounge.state.*` is never in the settings backup).
+  Settings' own Download button is consent already (it shows the size) and
+  records it; deleting a model in Settings takes it back.
+- **Not now** holds implicit downloads back for the rest of the session:
+  that walk, and every later one, takes only a model that needs no
+  download (on the device, agreed to, or downloading already), so the
+  fallback never pops a second dialog for NLLB or an OPUS pair. With none,
+  the request fails with `needsDownloadError(ref)` -- a code and the model
+  as JSON, which `helpers/translateErrors.ts` words as "Needs <model>, a
+  <size> download: get it in Settings → Translation." (the line's reason, in
+  full in its tooltip). The reading queue gets it as a rejected route
+  (`reader.ts`, through `enqueueAt`'s rejection path) or, should
+  `translate()` report it, through `fail()`, which counts it toward no
+  pause (`PAUSE_AFTER_FAILURES` never trips on a declined download). A
+  Retry on a line is a new question (`service.forgetDeclines`).
+- The UI's availability questions (`pairVerdict`) do not read declines:
+  the actions stay offered, and a line or strip says why it did not run.
+- Without a dialog wired (`ServiceDeps.askDownload` absent) every download
+  goes ahead unasked; the in-page fake (`?fakeTranslate`) asks only when
+  the URL also has `askDownloads`.
+
+Tests: `test/translate/consent.ts`, `test/translate/service.ts` "download
+consent"; browser check `tools/scenarios/translate-capability.mjs` (one
+question for a channel's lines, Not now naming the model on each line, no
+pause) and `tools/scenarios/translate-consent.mjs` (the fake: Not now
+falling back to a downloaded OPUS pair).
 
 ## Reading a channel
 
@@ -1506,11 +1561,26 @@ carries a NOTICE file; their builds carry no notice either, so
 The weights are fetched at run time from Hugging Face (or the deploy's
 `translation.modelBase` mirror), never bundled, and come under their own
 licences (the model cards, 2026-10-28): Qwen3 1.7B and 4B Apache-2.0,
-Helsinki-NLP's OPUS-MT pairs Apache-2.0, and **NLLB-200 (distilled 600M)
-CC-BY-NC-4.0** -- non-commercial. Seance only points the browser at it, but
-a deploy run as a commercial service should read that licence before
-leaving the default, and can point `translation.cpu.nllb` at a model it may
-use (`docs/resources/branding.md` § Translation).
+Helsinki-NLP's OPUS-MT pairs Apache-2.0 (the weights CC-BY-4.0 upstream),
+and **NLLB-200 (distilled 600M) CC-BY-NC-4.0** -- non-commercial.
+
+So NLLB-200 is **opt-in**: Settings → Translation's "Use NLLB-200 for
+languages the other models do not cover" (`translateNllb`, under the CPU
+models' switch, with a line naming the licence) is off by default, for new
+users and existing ones alike -- a stored settings object that never chose
+reads as off, and a settings backup made before the switch existed restores
+it off. Off, the router passes over every `nllb` candidate
+(`RouteInput.allowNllb`, `modelBlock`'s `{kind: "off", engine: "nllb"}`):
+the OPUS-MT pairs come before NLLB in every shipped row anyway
+(`test/translate/routes.ts`), the GPU model serves the rest where it runs,
+and a pair only NLLB could serve here -- a language without an OPUS pair on
+a device without the GPU model -- is unavailable with the reason "This needs
+NLLB-200, which is switched off in Settings → Translation." The NLLB row
+says "Switched off above" and can still be downloaded ahead of use.
+`translationBlock` counts the CPU models with NLLB on, so the opt-in never
+makes translation as a whole unavailable. A deploy can still point
+`translation.cpu.nllb` at a model it may use (`docs/resources/branding.md`
+§ Translation); the same switch governs it.
 
 ## Weights
 

@@ -9,6 +9,8 @@ import {t} from "../i18n/core";
 import {WORKER_DISPOSED} from "../translate/client";
 import {ABORTED, TIMED_OUT} from "../translate/outgoing";
 import {TRANSLATION_UNAVAILABLE} from "../translate/service";
+import {parseNeedsDownload} from "../translate/consent";
+import {needsDownloadText} from "./translateWhy";
 
 /**
  * `explain` answers a bare "no engine can take this request" with why, as
@@ -27,6 +29,14 @@ export function translateErrorText(error: string, explain?: () => string): strin
 
 	if (error === WORKER_DISPOSED) {
 		return t("translate.error.workerDisposed");
+	}
+
+	// A download the user said "not now" to: the model, its size, and
+	// where to download it (translate/consent.ts).
+	const need = parseNeedsDownload(error);
+
+	if (need) {
+		return needsDownloadText(need);
 	}
 
 	if (error === TRANSLATION_UNAVAILABLE) {

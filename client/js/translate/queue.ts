@@ -20,6 +20,7 @@
 // Vue-free; reader.ts feeds it and writes its updates to the store.
 
 import {WORKER_DISPOSED} from "./client";
+import {parseNeedsDownload} from "./consent";
 import {
 	BATCH_REFUSED,
 	EngineName,
@@ -127,7 +128,11 @@ export type QueueUpdate =
 	| {status: "dropped"};
 
 export interface QueueDeps {
-	/** `hint` is the item's `routeHint`: a seq2seq route takes it as the source. */
+	/**
+	 * `hint` is the item's `routeHint`: a seq2seq route takes it as the
+	 * source. A rejection fails the line with its message and counts toward
+	 * no pause (a download the user declined, consent.ts).
+	 */
 	route(from: string | null, to: string, hint: string | null): Promise<EngineName | null>;
 	translate(
 		req: Omit<TranslateRequest, "id" | "model">,
@@ -937,6 +942,13 @@ export class TranslateQueue {
 	private fail(engine: EngineName, batch: Queued[], message: string): void {
 		for (const q of batch) {
 			this.deps.onUpdate(q.item.id, {status: "failed", error: message});
+		}
+
+		// A download the user said "not now" to (consent.ts) is their answer,
+		// not the engine failing: it counts toward no pause, or a channel of
+		// queued lines would take the engine out for a minute.
+		if (parseNeedsDownload(message)) {
+			return;
 		}
 
 		const count = (this.failures.get(engine) ?? 0) + 1;

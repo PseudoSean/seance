@@ -16,6 +16,7 @@ import {
 	selectLlm,
 	type EngineSwitches,
 } from "../../client/js/translate/models";
+import {routesFor} from "../../client/js/translate/routes.default";
 import {
 	explainRoute,
 	resolveRoute,
@@ -56,7 +57,7 @@ const DEVICES: Record<string, Capability> = {
 	probeFailed: cap({tier: "none", reasons: ["PROBE_FAILED"], f16: false, maxBufferBytes: 0}),
 };
 
-const on: EngineSwitches = {llm: true, cpu: true};
+const on: EngineSwitches = {llm: true, cpu: true, nllb: true};
 const small = LLM_CHOICES.find((ref) => ref.id === QWEN3_1_7B_ID)!;
 const large = LLM_CHOICES.find((ref) => ref.id === QWEN3_4B_ID)!;
 const base = buildCatalog();
@@ -135,7 +136,7 @@ describe("translate availability", () => {
 		});
 
 		it("says switched off only for a model the device could run", () => {
-			const off = {llm: false, cpu: false};
+			const off = {llm: false, cpu: false, nllb: true};
 
 			expect(modelBlock(small, DEVICES.desktop, off)).to.deep.equal({
 				kind: "off",
@@ -182,10 +183,14 @@ describe("translate availability", () => {
 
 		it("agrees with resolveRoute everywhere, and gives a reason exactly when there is no route", () => {
 			const switchSets: EngineSwitches[] = [
-				{llm: true, cpu: true},
-				{llm: true, cpu: false},
-				{llm: false, cpu: true},
-				{llm: false, cpu: false},
+				{llm: true, cpu: true, nllb: true},
+				{llm: true, cpu: false, nllb: true},
+				{llm: false, cpu: true, nllb: true},
+				{llm: false, cpu: false, nllb: true},
+				// NLLB-200 off (the default): the OPUS pairs and the LLM only.
+				{llm: true, cpu: true, nllb: false},
+				{llm: false, cpu: true, nllb: false},
+				{llm: true, cpu: false, nllb: false},
 			];
 			const pairs: [string | null, string][] = [
 				["de", "en"],
@@ -219,6 +224,8 @@ describe("translate availability", () => {
 								const fixed =
 									verdict.why.engine === "llm"
 										? {...switches, llm: true}
+										: verdict.why.engine === "nllb"
+										? {...switches, nllb: true}
 										: {...switches, cpu: true};
 								const after = explainRoute(
 									table,
@@ -226,8 +233,12 @@ describe("translate availability", () => {
 									routeInput(capability, fixed, {from, to, sourceLater})
 								);
 
+								// Or it names the other switch the pair also needs (the CPU
+								// models and NLLB-200 both off: NLLB needs both on).
 								expect(
-									after.route !== null || after.why?.kind !== "off",
+									after.route !== null ||
+										after.why?.kind !== "off" ||
+										after.why.engine !== verdict.why.engine,
 									`${label} fixed`
 								).to.equal(true);
 							}
@@ -255,7 +266,9 @@ describe("translate availability", () => {
 				kind: "device",
 				reason: "NO_WEBGPU",
 			});
-			expect(ask(DEVICES.desktop, {llm: false, cpu: true}, "en", "en").why).to.deep.equal({
+			expect(
+				ask(DEVICES.desktop, {llm: false, cpu: true, nllb: true}, "en", "en").why
+			).to.deep.equal({
 				kind: "off",
 				engine: "llm",
 			});
@@ -266,19 +279,25 @@ describe("translate availability", () => {
 		it("names the switch the user can turn on over a device the GPU model cannot use", () => {
 			// CPU-only device, CPU models off: the LLM cannot run here anyway,
 			// so the fix is the CPU switch.
-			expect(ask(DEVICES.noWebgpu, {llm: true, cpu: false}, "de", "en").why).to.deep.equal({
+			expect(
+				ask(DEVICES.noWebgpu, {llm: true, cpu: false, nllb: true}, "de", "en").why
+			).to.deep.equal({
 				kind: "off",
 				engine: "seq2seq",
 			});
 		});
 
 		it("names both switches when either would serve the pair", () => {
-			expect(ask(DEVICES.desktop, {llm: false, cpu: false}, "de", "en").why).to.deep.equal({
+			expect(
+				ask(DEVICES.desktop, {llm: false, cpu: false, nllb: true}, "de", "en").why
+			).to.deep.equal({
 				kind: "off",
 				engine: "all",
 			});
 			// Only the LLM serves Filipino: its switch alone is named.
-			expect(ask(DEVICES.desktop, {llm: false, cpu: false}, "en", "fil").why).to.deep.equal({
+			expect(
+				ask(DEVICES.desktop, {llm: false, cpu: false, nllb: true}, "en", "fil").why
+			).to.deep.equal({
 				kind: "off",
 				engine: "llm",
 			});
@@ -302,8 +321,69 @@ describe("translate availability", () => {
 				reason: "NO_WEBGPU",
 			});
 			expect(
-				ask(DEVICES.noWebgpu, {llm: false, cpu: true}, null, "en", false).why
+				ask(DEVICES.noWebgpu, {llm: false, cpu: true, nllb: true}, null, "en", false).why
 			).to.deep.equal({kind: "device", reason: "NO_WEBGPU"});
+		});
+
+		describe("NLLB-200 switched off (the default; its licence is non-commercial)", () => {
+			const noNllb: EngineSwitches = {llm: true, cpu: true, nllb: false};
+			// The shipped table: the OPUS pairs ahead of NLLB everywhere.
+			const shipped = routesFor(QWEN3_1_7B_ID);
+			const askShipped = (capability: Capability, from: string | null, to: string) =>
+				explainRoute(
+					shipped,
+					catalogFor(capability),
+					routeInput(capability, noNllb, {from, to})
+				);
+
+			it("blocks the NLLB row as switched off, and only that one", () => {
+				expect(modelBlock(nllb, DEVICES.desktop, noNllb)).to.deep.equal({
+					kind: "off",
+					engine: "nllb",
+				});
+				expect(modelBlock(base.opus["de-en"], DEVICES.desktop, noNllb)).to.equal(null);
+				expect(modelBlock(small, DEVICES.desktop, noNllb)).to.equal(null);
+			});
+
+			it("gives a pair only NLLB serves here the NLLB reason", () => {
+				// No WebGPU, English to Filipino: no OPUS pair, the LLM cannot run.
+				expect(askShipped(DEVICES.noWebgpu, "en", "fil").why).to.deep.equal({
+					kind: "off",
+					engine: "nllb",
+				});
+				// And it is a real fix: switched on, NLLB takes it.
+				expect(
+					explainRoute(
+						shipped,
+						catalogFor(DEVICES.noWebgpu),
+						routeInput(
+							DEVICES.noWebgpu,
+							{...noNllb, nllb: true},
+							{from: "en", to: "fil"}
+						)
+					).route?.candidate
+				).to.equal("nllb");
+			});
+
+			it("sends an NLLB-first pair to the GPU model where it runs", () => {
+				// Serbian is NLLB-first for 1.7B (routes.default.ts).
+				expect(askShipped(DEVICES.desktop, "en", "sr").route?.candidate).to.equal("llm");
+			});
+
+			it("still translates the OPUS-MT pairs on a device without WebGPU", () => {
+				for (const pair of Object.keys(base.opus)) {
+					const [from, to] = pair.split("-");
+
+					expect(askShipped(DEVICES.noWebgpu, from, to).route?.candidate, pair).to.equal(
+						`opus:${pair}`
+					);
+				}
+			});
+
+			it("never makes translation as a whole unavailable", () => {
+				expect(translationBlock(base, DEVICES.noWebgpu, noNllb)).to.equal(null);
+				expect(translationBlock(base, DEVICES.desktop, noNllb)).to.equal(null);
+			});
 		});
 
 		it("explains a device that runs nothing by the CPU models' code", () => {
@@ -355,24 +435,24 @@ describe("translate availability", () => {
 
 		it("is null while either engine runs", () => {
 			expect(block(DEVICES.desktop, on)).to.equal(null);
-			expect(block(DEVICES.desktop, {llm: false, cpu: true})).to.equal(null);
-			expect(block(DEVICES.desktop, {llm: true, cpu: false})).to.equal(null);
-			expect(block(DEVICES.noWebgpu, {llm: true, cpu: true})).to.equal(null);
+			expect(block(DEVICES.desktop, {llm: false, cpu: true, nllb: true})).to.equal(null);
+			expect(block(DEVICES.desktop, {llm: true, cpu: false, nllb: true})).to.equal(null);
+			expect(block(DEVICES.noWebgpu, {llm: true, cpu: true, nllb: true})).to.equal(null);
 		});
 
 		it("says both switches are off as one reason", () => {
-			expect(block(DEVICES.desktop, {llm: false, cpu: false})).to.deep.equal({
+			expect(block(DEVICES.desktop, {llm: false, cpu: false, nllb: true})).to.deep.equal({
 				kind: "off",
 				engine: "all",
 			});
 		});
 
 		it("names the switch that would fix it on a device without the GPU model", () => {
-			expect(block(DEVICES.noWebgpu, {llm: true, cpu: false})).to.deep.equal({
+			expect(block(DEVICES.noWebgpu, {llm: true, cpu: false, nllb: true})).to.deep.equal({
 				kind: "off",
 				engine: "seq2seq",
 			});
-			expect(block(DEVICES.binds128, {llm: false, cpu: false})).to.deep.equal({
+			expect(block(DEVICES.binds128, {llm: false, cpu: false, nllb: true})).to.deep.equal({
 				kind: "off",
 				engine: "seq2seq",
 			});

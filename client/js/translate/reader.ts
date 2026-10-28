@@ -34,6 +34,7 @@ import {type Detection, LanguagePrior, detectLanguage, detectionSkip, sourceFor}
 import {ReplayBatches, historyQueueOrder, isChatLine, isEligible, plainTextOf} from "./eligibility";
 import {namesFor} from "./names";
 import {fromLocaleTag} from "./languages";
+import {needsDownloadError} from "./consent";
 import {type EngineSwitches, type ModelBlock, selectLlm} from "./models";
 import {type RouteVerdict, explainRoute, routeInput, translationBlock} from "./router";
 import {setTranslationUsage, translateService} from "./index";
@@ -177,7 +178,11 @@ function liveCatalog() {
 }
 
 function switches(): EngineSwitches {
-	return {llm: !!store.state.settings.translateLlm, cpu: !!store.state.settings.translateCpu};
+	return {
+		llm: !!store.state.settings.translateLlm,
+		cpu: !!store.state.settings.translateCpu,
+		nllb: !!store.state.settings.translateNllb,
+	};
 }
 
 /**
@@ -286,8 +291,17 @@ function queueFor(network: ClientNetwork): TranslateQueue {
 		const service = translateService();
 
 		queue = new TranslateQueue({
+			// A route a declined download left empty fails the line with the
+			// model named (consent.ts), through the queue's rejection path,
+			// which pauses nothing.
 			route: (from, to, hint) =>
-				service.route(from, to, hint).then((route) => route?.ref.engine ?? null),
+				service.resolve(from, to, hint).then(({route, refused}) => {
+					if (!route && refused) {
+						throw new Error(needsDownloadError(refused));
+					}
+
+					return route?.ref.engine ?? null;
+				}),
 			translate: (req, signal) => service.translate(req, signal),
 			loadTicks: () => service.loadTicks(),
 			priority(chanId) {
@@ -969,6 +983,9 @@ export function retryTranslation(
 	message: ClientMessage
 ): void {
 	resumePausedEngines();
+	// Someone asked for this line: a "not now" to a download is a question
+	// again (consent.ts), asked once however many lines are retried.
+	translateService().forgetDeclines();
 
 	const known = items.get(message.id);
 

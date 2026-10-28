@@ -110,15 +110,43 @@
 				/>
 				{{ t("translate.settings.useCpu") }}
 			</label>
+			<!-- NLLB-200 is opt-in: its licence is non-commercial, so it is
+			     off until the user switches it on; the OPUS-MT pairs and the
+			     GPU model serve without it. The licence line describes the
+			     switch, so a screen reader hears why it is off. -->
+			<label class="opt translate-nllb">
+				<input
+					v-switch
+					:checked="!!store.state.settings.translateNllb"
+					type="checkbox"
+					name="translateNllb"
+					aria-describedby="translate-nllb-licence"
+				/>
+				{{ t("translate.settings.useNllb") }}
+			</label>
+			<div id="translate-nllb-licence" class="translate-hint translate-nllb-licence">
+				{{ t("translate.settings.nllbLicence") }}
+			</div>
 			<label class="opt translate-llm-model">
 				<span>{{ t("translate.settings.gpuModel") }}</span>
 				<!-- The raw setting, not the resolved choice: "" is Automatic, and
 					     binding the resolved id would show the deploy's default as
 					     an explicit pick that Automatic could never win back. The
 					     "in use" tag below names what "" resolves to. -->
-				<select name="translateLlmModel" :value="store.state.settings.translateLlmModel">
+				<select
+					name="translateLlmModel"
+					:value="store.state.settings.translateLlmModel"
+					:aria-describedby="unfitLlms.length ? 'translate-llm-unfit' : undefined"
+				>
 					<option value="">{{ t("translate.settings.gpuAutomatic") }}</option>
-					<option v-for="choice in llmChoices" :key="choice.id" :value="choice.id">
+					<!-- A model this GPU cannot bind is greyed: chosen, it would
+					     not run, and the default would run in its place. -->
+					<option
+						v-for="choice in llmChoices"
+						:key="choice.id"
+						:value="choice.id"
+						:disabled="!!llmUnfit(choice)"
+					>
 						{{
 							t("translate.settings.modelOption", {
 								name: llmName(choice),
@@ -130,6 +158,12 @@
 			</label>
 			<div class="translate-hint translate-llm-hint">
 				{{ t("translate.settings.gpuModelHint") }}
+			</div>
+			<div v-if="unfitLlms.length" id="translate-llm-unfit" class="translate-hint">
+				<p v-for="choice in unfitLlms" :key="choice.id" class="translate-llm-unfit">
+					{{ t("translate.settings.gpuModelUnfit", {model: llmName(choice)}) }}
+					{{ whyText(llmUnfit(choice)!) }}
+				</p>
 			</div>
 			<ul class="translate-models">
 				<li
@@ -326,6 +360,10 @@
 	display: block;
 }
 
+.translate-llm-unfit {
+	margin: 0;
+}
+
 /* The device-tier reasons: each a phrase of its own, not a comma list. */
 .translate-device-reasons {
 	margin: 0.25rem 0 0;
@@ -513,9 +551,29 @@ export default defineComponent({
 				{
 					llm: !!store.state.settings.translateLlm,
 					cpu: !!store.state.settings.translateCpu,
+					nllb: !!store.state.settings.translateNllb,
 				},
 				enabled
 			);
+
+		// Why a GPU model cannot be chosen here: the device binds too little
+		// for it, or cannot run a GPU model at all, on a device the probe
+		// placed on the gpu tier -- where choosing it would quietly run the
+		// default instead (models.ts `llmChoice`). Not while probing, not
+		// for the switch (choosing ahead of switching on is fine), and not
+		// on a device without a GPU model at all, where the choice only
+		// keys the route table.
+		const llmUnfit = (choice: ModelRef) => {
+			if (capability.value?.tier !== "gpu") {
+				return null;
+			}
+
+			const block = modelBlock(choice, capability.value, {llm: true, cpu: true, nllb: true});
+
+			return block && (block.kind === "buffer" || block.kind === "device") ? block : null;
+		};
+
+		const unfitLlms = computed(() => llmChoices.filter((choice) => !!llmUnfit(choice)));
 
 		// `runs`, `off` (switched off above: it would run) or `cannot`.
 		const runsState = (modelRef: ModelRef) => {
@@ -602,6 +660,9 @@ export default defineComponent({
 			reasonText,
 			runsState,
 			runsLabel,
+			llmUnfit,
+			unfitLlms,
+			whyText: translateWhyText,
 			whyLabel,
 			store,
 			enabled,

@@ -5,8 +5,10 @@ import {setCatalog} from "../../client/js/i18n/core";
 import {translateWhyText} from "../../client/js/helpers/translateWhy";
 import {translateErrorText} from "../../client/js/helpers/translateErrors";
 import type {RouteBlock} from "../../client/js/translate/router";
-import type {DeviceReason} from "../../client/js/translate/models";
+import {buildCatalog, type DeviceReason} from "../../client/js/translate/models";
 import {TRANSLATION_UNAVAILABLE} from "../../client/js/translate/service";
+import {needsDownloadError} from "../../client/js/translate/consent";
+import friendlysize from "../../client/js/helpers/friendlysize";
 import {ABORTED, TIMED_OUT} from "../../client/js/translate/outgoing";
 
 // The rule reports codes (models.ts modelBlock, router.ts explainRoute and
@@ -30,6 +32,7 @@ describe("translateWhyText", () => {
 		[{kind: "off", engine: "all"}, "translate.why.allOff"],
 		[{kind: "down"}, "translate.why.down"],
 		[{kind: "unserved"}, "translate.why.unserved"],
+		[{kind: "off", engine: "nllb"}, "translate.why.nllbOff"],
 		[{kind: "source"}, "translate.why.unserved"],
 	];
 
@@ -98,6 +101,25 @@ describe("translateErrorText", () => {
 			"no translation engine can take this request: out of memory"
 		);
 		expect(translateErrorText("WebGPU device lost")).to.equal("WebGPU device lost");
+	});
+
+	it("words a declined download with the model and its size, as the router's reason does", () => {
+		const ref = buildCatalog().llm;
+		const expected = en["translate.why.needsDownload"]
+			.replace("{model}", en["translate.model.llm"].replace("{name}", "Qwen3 1.7B"))
+			.replace("{size}", friendlysize(ref.sizeBytes));
+
+		expect(translateErrorText(needsDownloadError(ref))).to.equal(expected);
+		expect(translateWhyText({kind: "download", ref})).to.equal(expected);
+		expect(expected).to.include("Qwen3 1.7B").and.include("MiB");
+	});
+
+	it("names an OPUS-MT pair by its languages", () => {
+		const ref = buildCatalog().opus["de-en"];
+
+		expect(translateErrorText(needsDownloadError(ref))).to.include(
+			en["translate.model.opus"].replace("{from}", "German").replace("{to}", "English")
+		);
 	});
 
 	it("words the queue's own codes", () => {

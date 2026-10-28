@@ -6,10 +6,14 @@
 // CPU_IDLE_UNLOAD_MS; a tier switched off in Settings unloads at once;
 // everything goes at once when translation is not in use anywhere
 // (`setInUse`) and nothing is in flight, and on pagehide. The last model
-// going takes the worker with it. Model views feed Settings. Vue-free:
-// index.ts wires the real worker, the store and the settings.
+// going takes the worker with it. Model views feed Settings. A model that
+// is not downloaded yet is downloaded only once the user has agreed to it
+// (consent.ts, asked through `ServiceDeps.askDownload` when the route is
+// resolved); Settings' own Download is that agreement. Vue-free: index.ts
+// wires the real worker, the store, the settings and the dialog.
 
 import {Capability} from "./capability";
+import {ConsentStore, DownloadConsent, memoryConsent, needsDownloadError} from "./consent";
 import {TranslateClient, TranslateError, WORKER_DISPOSED} from "./client";
 import {
 	BATCH_REFUSED,
@@ -21,7 +25,7 @@ import {
 } from "./engine";
 import {ABORTED} from "./outgoing";
 import {Candidate, ModelCatalog, candidateOf, catalogModels, selectLlm} from "./models";
-import {Route, RouteTable, mergeRoutes, resolveRoute, routeInput} from "./router";
+import {Route, RouteTable, explainRoute, mergeRoutes, routeInput} from "./router";
 import {routesFor as shippedRoutesFor} from "./routes.default";
 
 /** A loaded GPU model with no request for this long gives its memory back. */
@@ -42,6 +46,24 @@ export interface ServiceDeps {
 	probe(): Promise<Capability>;
 	setTimeout(fn: () => void, ms: number): unknown;
 	clearTimeout(handle: unknown): void;
+	/**
+	 * The question before a model nobody downloaded by name is downloaded
+	 * (consent.ts): true to download it, false for "not now". Absent, every
+	 * download goes ahead unasked (the tests that are not about consent).
+	 */
+	askDownload?(ref: ModelRef): Promise<boolean>;
+	/** Where the yeses are remembered; in memory when absent. */
+	consent?: ConsentStore;
+}
+
+/**
+ * A route, or why there is none that needs no declined download: `refused`
+ * is the model the best route would have downloaded, when "not now" is
+ * what left the request without one.
+ */
+export interface RouteResolution {
+	route: Route | null;
+	refused: ModelRef | null;
 }
 
 export interface ServiceOptions {
@@ -65,6 +87,8 @@ export interface ServiceOptions {
 export interface ServiceSettings {
 	llm: boolean;
 	cpu: boolean;
+	/** NLLB-200 switched on: its licence is non-commercial, so it is opt-in. */
+	nllb: boolean;
 }
 
 export type ModelStatus = "idle" | "downloading" | "ready" | "failed";
@@ -147,6 +171,8 @@ export class TranslateService {
 	/** Whether translation is wanted anywhere (reader.ts `translationInUse`); unset, it always is. */
 	private inUse: (() => boolean) | null = null;
 	private usageTimer: unknown = null;
+	/** The download question (consent.ts); null when no dialog was wired. */
+	private consent: DownloadConsent | null;
 
 	constructor(
 		private deps: ServiceDeps,
@@ -159,6 +185,9 @@ export class TranslateService {
 
 		this.selectedLlm = options.selectedLlm ?? null;
 		this.table = this.buildTable();
+		this.consent = deps.askDownload
+			? new DownloadConsent((ref) => deps.askDownload!(ref), deps.consent ?? memoryConsent())
+			: null;
 	}
 
 	get enabled(): boolean {
@@ -410,8 +439,28 @@ export class TranslateService {
 		to: string,
 		hint: string | null = null
 	): Promise<Route | null> {
+		return (await this.resolve(from, to, hint)).route;
+	}
+
+	/**
+	 * `route`, with the model a declined download left the request without
+	 * (`RouteResolution.refused`). A route whose model is not on the device
+	 * and was never agreed to asks first (`ServiceDeps.askDownload`), once
+	 * per model however many requests wait on it; after a "not now" the
+	 * walk takes only what needs no download -- a downloaded model, one
+	 * agreed to, one downloading already -- for this request and every
+	 * later one this session, so a channel's queued lines ask once and the
+	 * fallback never asks about a second model. Every caller routes through
+	 * here before its request deadline is armed (the queue's `enqueueAt`,
+	 * the composer's `route`), so an unanswered dialog times nothing out.
+	 */
+	async resolve(
+		from: string | null,
+		to: string,
+		hint: string | null = null
+	): Promise<RouteResolution> {
 		if (!this.options.enabled) {
-			return null;
+			return {route: null, refused: null};
 		}
 
 		const capability = await this.capabilities();
@@ -420,10 +469,68 @@ export class TranslateService {
 			await this.cacheOrDeadline();
 		}
 
-		return resolveRoute(this.table, this.options.catalog, {
+		const consent = this.consent;
+		let cachedOnly = !!consent?.anyDeclined;
+
+		const input = (refuse: boolean) => ({
 			...routeInput(capability, this.settings, {from, to, hint}, this.down),
 			cached: (ref: ModelRef) => this.views.get(ref.id)?.cached === true,
+			refuse: refuse ? (ref: ModelRef) => this.needsConsent(ref) : undefined,
 		});
+
+		for (;;) {
+			const route = explainRoute(this.table, this.options.catalog, input(cachedOnly)).route;
+
+			if (!route) {
+				// What the request was left without: the route it would have
+				// taken with the download allowed. Not the walk's own reason,
+				// which may name a switch further down (NLLB-200 off) while
+				// the model the user declined is what would have served.
+				return {
+					route: null,
+					refused: cachedOnly
+						? explainRoute(this.table, this.options.catalog, input(false)).route?.ref ??
+						  null
+						: null,
+				};
+			}
+
+			if (!consent || !this.needsConsent(route.ref)) {
+				return {route, refused: null};
+			}
+
+			const yes = await consent.ask(route.ref, () => this.needsConsent(route.ref));
+
+			// Yes: route again, the model now agreed to (the selection or the
+			// cache may have moved meanwhile). Not now: again, taking only
+			// what needs no download.
+			if (!yes) {
+				cachedOnly = true;
+			}
+		}
+	}
+
+	/**
+	 * Whether `ref`'s download needs the user's yes first: not on the device,
+	 * not downloading already (a Settings download in flight is joined, not
+	 * started), and never agreed to.
+	 */
+	private needsConsent(ref: ModelRef): boolean {
+		if (!this.consent) {
+			return false;
+		}
+
+		const view = this.views.get(ref.id);
+
+		return !view?.cached && view?.status !== "downloading" && !this.consent.granted(ref.id);
+	}
+
+	/**
+	 * A Retry on a line, an explicit act: the session's "not now" is over,
+	 * and the next route that needs a download asks again.
+	 */
+	forgetDeclines(): void {
+		this.consent?.forgetDeclines();
 	}
 
 	/**
@@ -503,7 +610,7 @@ export class TranslateService {
 
 		try {
 			for (;;) {
-				const route = await this.route(request.from, request.to, hint);
+				const {route, refused} = await this.resolve(request.from, request.to, hint);
 
 				// After the teardown check: a worker torn down while the route
 				// resolved is the truer report of the two.
@@ -512,6 +619,12 @@ export class TranslateService {
 				}
 
 				checkAborted();
+
+				// "Not now" to the download this request needed: the reason
+				// names the model and its size (helpers/translateErrors.ts).
+				if (!route && refused) {
+					throw new Error(needsDownloadError(refused));
+				}
 
 				if (!route) {
 					throw new Error(
@@ -774,6 +887,9 @@ export class TranslateService {
 	async download(ref: ModelRef): Promise<void> {
 		const view = this.view(ref);
 
+		// Settings' Download, which shows the size: the user's yes.
+		this.consent?.grant(ref.id);
+
 		view.status = "downloading";
 		view.fraction = 0;
 		view.error = null;
@@ -863,6 +979,8 @@ export class TranslateService {
 			}
 
 			await this.client().deleteModel(ref);
+			// Deleted on purpose: downloading it again is a new question.
+			this.consent?.revoke(ref.id);
 			view.cached = false;
 			view.status = "idle";
 			view.fraction = 0;

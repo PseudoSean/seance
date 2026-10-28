@@ -221,6 +221,14 @@ const defaultConfig = {
 	translateCpu: {
 		default: true,
 	},
+	/** NLLB-200 among the CPU models (translate/models.ts). Off until the
+	 * user switches it on, for new and existing users alike: its licence is
+	 * CC-BY-NC-4.0 (non-commercial use only), so a stored settings object
+	 * that never chose (one saved before the setting existed) reads as off.
+	 * The OPUS-MT pairs and the GPU model serve without it. */
+	translateNllb: {
+		default: false,
+	},
 	/** Which GPU model (translate/models.ts LLM_CHOICES, or the deploy's own) the
 	 * LLM candidate runs. "" until the user picks one, and a stored id that is no
 	 * longer a choice counts as unset: both resolve at read time (models.ts

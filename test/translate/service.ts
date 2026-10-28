@@ -29,6 +29,11 @@ import {
 	type QueueUpdate,
 } from "../../client/js/translate/queue";
 import {protect} from "../../client/js/translate/spans";
+import {
+	memoryConsent,
+	needsDownloadError,
+	parseNeedsDownload,
+} from "../../client/js/translate/consent";
 import {FakeEngine} from "./fakeEngine";
 
 const catalog = buildCatalog();
@@ -84,7 +89,7 @@ function deadWorkerRig(dies: boolean, healthyFrom = Infinity) {
 			clearTimeout: (handle) => clearTimeout(handle as NodeJS.Timeout),
 		},
 		{catalog, selectedLlm: QWEN3_1_7B_ID, ortBase: "https://app.test/js/ort/", enabled: true},
-		{llm: true, cpu: true}
+		{llm: true, cpu: true, nllb: true}
 	);
 
 	service.onWorkerError((message) => errors.push(message));
@@ -108,7 +113,8 @@ function capability(tier: Capability["tier"]): Capability {
 function rig(
 	tier: Capability["tier"] = "gpu",
 	enabled = true,
-	routes: RouteTable = DEFAULT_ROUTES
+	routes: RouteTable = DEFAULT_ROUTES,
+	consent: Pick<ServiceDeps, "askDownload" | "consent"> = {}
 ) {
 	const clock = sinon.useFakeTimers();
 	const workers: {terminated: boolean}[] = [];
@@ -178,6 +184,7 @@ function rig(
 		},
 		setTimeout: (fn, ms) => setTimeout(fn, ms),
 		clearTimeout: (handle) => clearTimeout(handle as NodeJS.Timeout),
+		...consent,
 	};
 	const service = new TranslateService(
 		deps,
@@ -190,7 +197,7 @@ function rig(
 			ortBase: "https://app.test/js/ort/",
 			enabled,
 		},
-		{llm: true, cpu: true}
+		{llm: true, cpu: true, nllb: true}
 	);
 
 	return {
@@ -529,7 +536,7 @@ describe("translate/service", () => {
 		expect(r.seq2seq.calls.load).to.deep.equal([]);
 		expect(r.seq2seq.calls.translate).to.deep.equal([]);
 
-		r.service.setSettings({llm: false, cpu: true});
+		r.service.setSettings({llm: false, cpu: true, nllb: true});
 		message = "";
 
 		try {
@@ -592,9 +599,9 @@ describe("translate/service", () => {
 	it("the engine settings narrow the route", async () => {
 		const r = rig("gpu");
 		clock = r.clock;
-		r.service.setSettings({llm: false, cpu: true});
+		r.service.setSettings({llm: false, cpu: true, nllb: true});
 		expect((await r.service.route("de", "en"))?.candidate).to.equal("opus:de-en");
-		r.service.setSettings({llm: false, cpu: false});
+		r.service.setSettings({llm: false, cpu: false, nllb: true});
 		expect(await r.service.route("de", "en")).to.equal(null);
 		r.service.dispose();
 	});
@@ -890,7 +897,7 @@ describe("translate/service", () => {
 				ortBase: "",
 				enabled: true,
 			},
-			{llm: true, cpu: true}
+			{llm: true, cpu: true, nllb: true}
 		);
 
 		expect((await service.route("fr", "ja"))?.candidate).to.equal("llm");
@@ -999,13 +1006,13 @@ describe("translate/service", () => {
 		await text(r.service.translate(base));
 		await text(r.service.translate({...base, from: "fr"}));
 
-		r.service.setSettings({llm: false, cpu: true});
+		r.service.setSettings({llm: false, cpu: true, nllb: true});
 		await r.clock.tickAsync(0);
 		expect(r.llm.calls.unload).to.equal(1);
 		expect(r.seq2seq.calls.unload).to.equal(0);
 		expect(r.workers[0].terminated).to.equal(false);
 
-		r.service.setSettings({llm: false, cpu: false});
+		r.service.setSettings({llm: false, cpu: false, nllb: true});
 		await r.clock.tickAsync(0);
 		// The last loaded tier going takes the worker with it.
 		expect(r.workers[0].terminated).to.equal(true);
@@ -1019,7 +1026,7 @@ describe("translate/service", () => {
 		const running = text(r.service.translate(base));
 
 		await r.clock.tickAsync(0);
-		r.service.setSettings({llm: false, cpu: true});
+		r.service.setSettings({llm: false, cpu: true, nllb: true});
 		await r.clock.tickAsync(0);
 		// Not under the running request.
 		expect(r.llm.calls.unload).to.equal(0);
@@ -1598,5 +1605,324 @@ describe("translate/service", () => {
 		expect(message).to.equal(ABORTED);
 		expect(r.llm.calls.translate).to.deep.equal([]);
 		r.service.dispose();
+	});
+
+	describe("download consent", () => {
+		/** A dialog the test answers: every question it was asked, and how to answer the next. */
+		function dialog() {
+			const asked: string[] = [];
+			const answers: ((yes: boolean) => void)[] = [];
+
+			const askDownload = (ref: ModelRef) => {
+				asked.push(ref.id);
+
+				return new Promise<boolean>((resolve) => answers.push(resolve));
+			};
+
+			const answer = (yes: boolean) => {
+				const next = answers.shift();
+
+				expect(next, "a question is open").to.not.equal(undefined);
+				next!(yes);
+			};
+
+			return {
+				asked,
+				askDownload,
+				answer,
+				get open() {
+					return answers.length;
+				},
+			};
+		}
+
+		function line(i: number, from = "de") {
+			const p = protect(`Zeile ${i}`);
+
+			return {
+				id: i,
+				chanId: 1,
+				text: p.text,
+				spans: p.spans,
+				meta: p.meta,
+				from,
+				to: "en",
+				context: emptyContext(),
+				arrivalsAtEnqueue: 0,
+				single: true,
+			};
+		}
+
+		/** The reading queue as reader.ts builds it: a declined download fails the line. */
+		function queueOn(service: TranslateService) {
+			const updates: [number, QueueUpdate][] = [];
+			const paused: string[] = [];
+			const queue = new TranslateQueue({
+				route: (from, to, hint) =>
+					service.resolve(from, to, hint).then(({route, refused}) => {
+						if (!route && refused) {
+							throw new Error(needsDownloadError(refused));
+						}
+
+						return route?.ref.engine ?? null;
+					}),
+				translate: (req, signal) => service.translate(req, signal),
+				priority: () => 0,
+				arrivals: () => 0,
+				onUpdate: (id, update) => updates.push([id, update]),
+				onPause: (engine) => paused.push(engine),
+			});
+
+			return {queue, updates, paused};
+		}
+
+		it("asks once for many requests waiting on the same model, and remembers the yes", async () => {
+			const ask = dialog();
+			const store = memoryConsent();
+			const r = rig("gpu", true, DEFAULT_ROUTES, {
+				askDownload: ask.askDownload,
+				consent: store,
+			});
+			clock = r.clock;
+			const routes = Array.from({length: 8}, () => r.service.route("de", "en"));
+
+			await r.clock.tickAsync(10);
+			expect(ask.asked).to.deep.equal([catalog.llm.id]);
+			ask.answer(true);
+
+			for (const route of await Promise.all(routes)) {
+				expect(route?.candidate).to.equal("llm");
+			}
+
+			expect(store.has(catalog.llm.id)).to.equal(true);
+			// Agreed to: the next request is not asked about it.
+			expect((await r.service.route("de", "en"))?.candidate).to.equal("llm");
+			expect(await text(r.service.translate(base))).to.equal("llm:Hallo");
+			expect(ask.asked).to.have.length(1);
+			r.service.dispose();
+		});
+
+		it("never asks about a model on the device, or one agreed to before", async () => {
+			const ask = dialog();
+			const store = memoryConsent();
+
+			store.grant(catalog.opus["en-fr"].id);
+
+			const r = rig("gpu", true, DEFAULT_ROUTES, {
+				askDownload: ask.askDownload,
+				consent: store,
+			});
+			clock = r.clock;
+			r.cached.add(catalog.llm.id);
+
+			expect((await r.service.route("de", "en"))?.candidate).to.equal("llm");
+			// The GPU model switched off: English to French falls to the OPUS pair.
+			r.service.setSettings({llm: false, cpu: true, nllb: true});
+			expect((await r.service.route("en", "fr"))?.candidate).to.equal("opus:en-fr");
+			expect(ask.asked).to.deep.equal([]);
+			r.service.dispose();
+		});
+
+		it("not now: a cached model takes the request, and no second model is asked about", async () => {
+			const ask = dialog();
+			const r = rig("gpu", true, DEFAULT_ROUTES, {askDownload: ask.askDownload});
+			clock = r.clock;
+			// Spanish to English: the LLM is a better class than the OPUS pair,
+			// which is the one on the device.
+			r.cached.add(catalog.opus["es-en"].id);
+
+			const routed = r.service.route("es", "en");
+
+			await r.clock.tickAsync(10);
+			expect(ask.asked).to.deep.equal([catalog.llm.id]);
+			ask.answer(false);
+			expect((await routed)?.candidate).to.equal("opus:es-en");
+			expect(await text(r.service.translate({...base, from: "es"}))).to.equal("seq:Hallo");
+			expect(r.llm.calls.load).to.deep.equal([]);
+			expect(ask.open).to.equal(0);
+			expect(ask.asked).to.have.length(1);
+			r.service.dispose();
+		});
+
+		it("not now with nothing on the device: the request fails naming the model, and nothing loads", async () => {
+			const ask = dialog();
+			const r = rig("gpu", true, DEFAULT_ROUTES, {askDownload: ask.askDownload});
+			clock = r.clock;
+			const failed = text(r.service.translate(base)).catch((e: Error) => e.message);
+
+			await r.clock.tickAsync(10);
+			ask.answer(false);
+
+			const message = await failed;
+
+			expect(parseNeedsDownload(message)).to.deep.equal({
+				id: catalog.llm.id,
+				sizeBytes: catalog.llm.sizeBytes,
+				label: catalog.llm.label,
+			});
+			// The rest of the session: no question, the same answer, for any pair.
+			expect(await r.service.resolve("fr", "en")).to.deep.include({route: null});
+			// Each names the model its best class would download: Swahili is NLLB-first.
+			expect((await r.service.resolve("en", "sw")).refused?.id).to.equal(catalog.nllb.id);
+			expect(ask.asked).to.have.length(1);
+			expect(r.llm.calls.load).to.deep.equal([]);
+			expect(r.seq2seq.calls.load).to.deep.equal([]);
+			r.service.dispose();
+		});
+
+		it("names the declined model even where a switch further down blocks the rest", async () => {
+			const ask = dialog();
+			const r = rig("gpu", true, DEFAULT_ROUTES, {askDownload: ask.askDownload});
+			clock = r.clock;
+			// NLLB-200 off, as it ships: the walk's own last reason is that switch.
+			r.service.setSettings({llm: true, cpu: true, nllb: false});
+
+			const resolved = r.service.resolve("de", "en");
+
+			await r.clock.tickAsync(10);
+			ask.answer(false);
+			expect((await resolved).refused?.id).to.equal(catalog.llm.id);
+			r.service.dispose();
+		});
+
+		it("a reading queue of many lines asks once, fails them all with the reason, and pauses nothing", async () => {
+			const ask = dialog();
+			const r = rig("gpu", true, DEFAULT_ROUTES, {askDownload: ask.askDownload});
+			clock = r.clock;
+			const {queue, updates, paused} = queueOn(r.service);
+
+			for (let i = 1; i <= 2 * PAUSE_AFTER_FAILURES + 2; i++) {
+				queue.enqueue(line(i, i % 2 ? "de" : "fr"));
+			}
+
+			await r.clock.tickAsync(10);
+			expect(ask.asked).to.deep.equal([catalog.llm.id]);
+			ask.answer(false);
+			await r.clock.tickAsync(10);
+
+			const failed = updates.filter(([, u]) => u.status === "failed");
+
+			expect(failed).to.have.length(2 * PAUSE_AFTER_FAILURES + 2);
+
+			for (const [, update] of failed) {
+				expect(
+					parseNeedsDownload(update.status === "failed" ? update.error : "")?.id
+				).to.equal(catalog.llm.id);
+			}
+
+			expect(paused).to.deep.equal([]);
+			expect(queue.paused("llm")).to.equal(false);
+			expect(queue.paused("seq2seq")).to.equal(false);
+			expect(ask.asked).to.have.length(1);
+			queue.cancelAll();
+			r.service.dispose();
+		});
+
+		it("a declined download reported by translate() counts toward no pause either", async () => {
+			const updates: [number, QueueUpdate][] = [];
+			const paused: string[] = [];
+			const refusal = needsDownloadError(catalog.llm);
+			const queue = new TranslateQueue({
+				route: () => Promise.resolve("llm"),
+				async *translate() {
+					await Promise.resolve();
+
+					if (refusal) {
+						throw new Error(refusal);
+					}
+
+					yield {id: 0, text: "", done: true};
+				},
+				priority: () => 0,
+				arrivals: () => 0,
+				onUpdate: (id, update) => updates.push([id, update]),
+				onPause: (engine) => paused.push(engine),
+			});
+
+			for (let i = 1; i <= PAUSE_AFTER_FAILURES + 1; i++) {
+				queue.enqueue(line(i));
+			}
+
+			await new Promise((resolve) => setTimeout(resolve, 20));
+			expect(updates.filter(([, u]) => u.status === "failed")).to.have.length(
+				PAUSE_AFTER_FAILURES + 1
+			);
+			expect(paused).to.deep.equal([]);
+			queue.cancelAll();
+		});
+
+		it("asks about one model at a time, and a no answers the one waiting behind it", async () => {
+			const ask = dialog();
+			const r = rig("gpu", true, DEFAULT_ROUTES, {askDownload: ask.askDownload});
+			clock = r.clock;
+			const llm = r.service.resolve("de", "en");
+			// Swahili is NLLB-first: a second model, asked about after the first.
+			const nllb = r.service.resolve("en", "sw");
+
+			await r.clock.tickAsync(10);
+			// One dialog open, the second question waiting its turn.
+			expect(ask.asked).to.deep.equal([catalog.llm.id]);
+			ask.answer(false);
+			await r.clock.tickAsync(10);
+			expect((await llm).route).to.equal(null);
+			expect((await nllb).refused?.id).to.equal(catalog.nllb.id);
+			expect(ask.asked).to.have.length(1);
+			r.service.dispose();
+		});
+
+		it("a Retry asks again; Settings' Download is a yes, and a delete takes it back", async () => {
+			const ask = dialog();
+			const store = memoryConsent();
+			const r = rig("gpu", true, DEFAULT_ROUTES, {
+				askDownload: ask.askDownload,
+				consent: store,
+			});
+			clock = r.clock;
+			const first = r.service.resolve("de", "en");
+
+			await r.clock.tickAsync(10);
+			ask.answer(false);
+			expect((await first).route).to.equal(null);
+
+			r.service.forgetDeclines();
+
+			const again = r.service.resolve("de", "en");
+
+			await r.clock.tickAsync(10);
+			expect(ask.asked).to.deep.equal([catalog.llm.id, catalog.llm.id]);
+			ask.answer(false);
+			await again;
+
+			// Settings' Download: agreed to, downloaded, and the decline is over.
+			await r.service.download(catalog.nllb);
+			expect(store.has(catalog.nllb.id)).to.equal(true);
+			await r.service.deleteModel(catalog.nllb);
+			expect(store.has(catalog.nllb.id)).to.equal(false);
+			r.service.dispose();
+		});
+
+		it("without a dialog wired, every download goes ahead unasked", async () => {
+			const r = rig("gpu");
+			clock = r.clock;
+
+			expect(await text(r.service.translate(base))).to.equal("llm:Hallo");
+			r.service.dispose();
+		});
+	});
+
+	describe("NLLB-200 opt-in", () => {
+		it("off: a pair NLLB would lead goes to the GPU model, and none goes to NLLB", async () => {
+			const r = rig("gpu", true, {en: {sw: ["nllb", "llm"]}, "*": {"*": ["nllb"]}});
+			clock = r.clock;
+			r.service.setSettings({llm: true, cpu: true, nllb: false});
+
+			expect(await text(r.service.translate({...base, from: "sw"}))).to.equal("llm:Hallo");
+			expect((await r.service.route("ja", "ko"))?.candidate ?? null).to.equal(null);
+			expect(r.seq2seq.calls.load).to.deep.equal([]);
+
+			r.service.setSettings({llm: true, cpu: true, nllb: true});
+			expect((await r.service.route("sw", "en"))?.candidate).to.equal("nllb");
+			r.service.dispose();
+		});
 	});
 });

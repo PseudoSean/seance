@@ -6844,6 +6844,14 @@ html[data-shell="native"] #footer {
 	user-select: none;
 }
 
+/* A question outranks every surface it can be asked over: the phone's
+   translation sheet (1001) is where reading is switched on there, and the
+   download question that follows (translate/consent.ts) must not open
+   behind it. */
+#confirm-dialog-overlay {
+	z-index: 1010;
+}
+
 #confirm-dialog-overlay.opened,
 #push-prompt-overlay.opened,
 #install-guide-overlay.opened,

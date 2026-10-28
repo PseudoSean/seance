@@ -75,6 +75,8 @@ describe("settings backup (helpers/settingsBackup.ts)", function () {
 		expect(isBackupKey("thelounge.push")).to.equal(false);
 		expect(isBackupKey("thelounge.state.sidebar")).to.equal(false);
 		expect(isBackupKey("thelounge.state.dndMute")).to.equal(false);
+		// The models the user agreed to download belong to this device's storage.
+		expect(isBackupKey("thelounge.state.translateConsent")).to.equal(false);
 		expect(isBackupKey("thelounge.mentions")).to.equal(false);
 	});
 

@@ -156,13 +156,22 @@ export type ModelBlock =
 	| {kind: "probing"}
 	| {kind: "device"; reason: DeviceReason}
 	| {kind: "buffer"; needed: number; limit: number}
-	/** `all`: both switches (router.ts `translationBlock`; never one model's). */
-	| {kind: "off"; engine: EngineName | "all"};
+	/**
+	 * `all`: both engine switches (router.ts `translationBlock`; never one
+	 * model's). `nllb`: NLLB-200 alone, which is off until the user opts in
+	 * (its licence is non-commercial, CC-BY-NC-4.0).
+	 */
+	| {kind: "off"; engine: EngineName | "nllb" | "all"};
 
-/** The user's two engine switches (`translateLlm`, `translateCpu`; service.ts `ServiceSettings`). */
+/**
+ * The user's engine switches (`translateLlm`, `translateCpu`,
+ * `translateNllb`; service.ts `ServiceSettings`). `nllb` is NLLB-200's own
+ * opt-in under the CPU switch: the OPUS-MT pairs run with `cpu` alone.
+ */
 export interface EngineSwitches {
 	llm: boolean;
 	cpu: boolean;
+	nllb: boolean;
 }
 
 /** The GPU codes, most fundamental first: the first one the probe lists is the one named. */
@@ -223,7 +232,11 @@ export function modelBlock(
 		return {kind: "device", reason: "NO_WASM_SIMD"};
 	}
 
-	return switches.cpu ? null : {kind: "off", engine: "seq2seq"};
+	if (!switches.cpu) {
+		return {kind: "off", engine: "seq2seq"};
+	}
+
+	return ref.family === "nllb" && !switches.nllb ? {kind: "off", engine: "nllb"} : null;
 }
 
 /** What the default GPU model is decided from (capability.ts `Capability`). */
