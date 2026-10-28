@@ -294,7 +294,7 @@ import {
 import {hasVirtualKeyboard} from "../js/helpers/device";
 import {useI18n} from "../js/i18n";
 import {languageName} from "../js/translate/languages";
-import {draftGate} from "../js/translate/outgoing";
+import {draftGate, sendableTranslation} from "../js/translate/outgoing";
 import {
 	pairVerdict,
 	readingLanguage,
@@ -970,18 +970,14 @@ export default defineComponent({
 				}
 
 				const translated = entry.status === "done" ? entry.text : null;
-				let line = translated ?? text;
-
-				if (translated !== null && gate.kind === "action") {
-					// The translation is the action's text: the command goes
-					// back on the front of it, never escaped.
-					line = `/me ${translated}`;
-				} else if (translated !== null && translated.startsWith("/")) {
-					// A translation that begins with "/" is text, not a command:
-					// the IRC layer sends `//x` as the text `/x`, and deliver's
-					// own slash intercept would otherwise take it for a UI one.
-					line = `/${translated}`;
-				}
+				// A translation is text, never a command, on every line of it
+				// (outgoing.ts sendableTranslation); an action's goes back
+				// behind its `/me `. Whether the later lines need escaping is
+				// the IRC layer's split: one message under draft/multiline.
+				const splitsLines =
+					clientForNetwork(props.network.uuid)?.multilineLimits() === undefined;
+				const line =
+					translated === null ? text : sendableTranslation(gate, translated, splitsLines);
 
 				// Before the send: the IRC layer puts the line in the store
 				// inside deliver's emit, and cancelOutgoing takes the strip.

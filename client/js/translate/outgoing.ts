@@ -136,6 +136,47 @@ export function draftGate(text: string, editing: boolean): DraftGate {
 }
 
 /**
+ * The composer's line for a translation the second Enter sends. A
+ * translation is text, never a command: the model wrote it, from a prompt
+ * that quotes the channel's topic and other people's lines, so a line of it
+ * that begins with "/" must not run (`/quit`, `/msg NickServ …`, or any raw
+ * line, since unknown commands go out as typed).
+ *
+ * The first line is the whole text's front, which the IRC layer reads as a
+ * command in every mode: it is escaped (`//x` is sent as the text `/x`), and
+ * an action's goes behind its `/me `. The later lines depend on the mode
+ * (irc/commands dispatchInput): under `draft/multiline` a multi-line say or
+ * action is one message and its lines go out verbatim, so they are left
+ * alone (an escape would be sent as `//x`); without it (`splitsLines`) every
+ * line is its own input and each one that begins with "/" is escaped.
+ * Except where the draft's own line at the same place began with "/" too:
+ * that one the user typed as a command (or escaped as text) themselves, and
+ * it goes as it would have untranslated.
+ */
+export function sendableTranslation(
+	gate: DraftGate,
+	translated: string,
+	splitsLines: boolean
+): string {
+	const lines = translated.split("\n");
+	const draftLines = gate.text.split("\n");
+	const aligned = draftLines.length === lines.length;
+	const out = lines.map((line, i) => {
+		if (i === 0 || !splitsLines || !line.startsWith("/")) {
+			return line;
+		}
+
+		return aligned && draftLines[i].startsWith("/") ? line : `/${line}`;
+	});
+
+	if (gate.kind === "action") {
+		return `/me ${out.join("\n")}`;
+	}
+
+	return out[0].startsWith("/") ? `/${out.join("\n")}` : out.join("\n");
+}
+
+/**
  * The source language sent with a write. A draft too short to place
  * (`detection.lang === null`) is taken as the user's reading language when
  * that differs from the target, else left to the LLM. A draft the detector
