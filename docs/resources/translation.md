@@ -9,25 +9,44 @@ design is `docs/projects/client-translation.md` and the deploy knobs are
 
 - **GPU: WebLLM.** An instruction LLM on WebGPU, prompted to translate with
   the channel's context. Greedy at temperature 0.1, thinking off, one line
-  of output. Needs an adapter with `shader-f16` and 1 GiB of buffer,
-  WebLLM's floor for a q4f16 model; adapters report 2 GiB minus alignment slack (`capability.ts`).
+  of output. Needs an adapter with `shader-f16` and a storage binding
+  (`capability.ts`: `min(maxBufferSize, maxStorageBufferBindingSize)`)
+  that holds the smallest GPU model's largest tensor -- `models.ts`
+  `LLM_MIN_BUFFER_BYTES`, the 1.7B's 148 MiB vocabulary embedding, since a
+  model binds each weight tensor whole. Which model fits is `llmFits(ref, maxBufferBytes)` against its `largestBufferBytes` (185 MiB for the 4B,
+  read from each model's `tensor-cache.json`). WebLLM 0.2.85 itself asks
+  the GPU for 1 GiB, or WebGPU's 128 MiB floor when the adapter cannot give
+  that -- nothing between -- so on a phone offering 512 MiB it got 128 MiB
+  and no model loaded; the worker wraps `GPUAdapter.prototype.requestDevice`
+  (`engines/gpuLimits.ts`, installed by `webllm.real.ts`) to ask for what
+  the adapter offers, capped at WebLLM's own 1 GiB so a desktop's device is
+  unchanged, and to make the original request should the raised one be
+  refused. A device whose binding is under 148 MiB (WebGPU's 128 MiB
+  minimum, which many phones report) runs no GPU model yet.
   There must be a `navigator.gpu` at all: away from localhost a plain-HTTP
   origin is not a secure context and the API does not exist, so the probe's
   reason says so — "insecure origin: WebGPU needs HTTPS or localhost —
   serve the app over HTTPS" — where a bare "no WebGPU" would send someone
   shopping for a GPU they already have. Settings' device note shows it.
 - **Two GPU models, one chosen.** `models.ts` `LLM_CHOICES`: `Qwen3-1.7B-q4f16_1-MLC`
-  (the default, ~1.1 GB download, ~2.0 GB of GPU memory) and
-  `Qwen3-4B-q4f16_1-MLC` (~2.3 GB, ~3.4 GB). On 45 casual chat lines into
+  (the default, 984 MB download, ~2.0 GB of GPU memory) and
+  `Qwen3-4B-q4f16_1-MLC` (2.28 GB, ~3.4 GB); NLLB is 912 MB with its
+  tokenizer and an OPUS-MT pair about 113 MB (Hugging Face's listings,
+  2026-10-27; Settings shows them). On 45 casual chat lines into
   French, German and Spanish they scored alike (41 and 40 clean), and 4B's
   phrasing read noticeably more natural; it is also slower and needs more
-  memory. It is nonetheless the **default** on a device with the memory for
-  it (`models.ts` `defaultLlmForAdapter`): where the probe read
-  `navigator.deviceMemory`, the 4B needs **6 GiB** of device memory
-  (`LARGE_LLM_MIN_MEMORY_GIB`), because Chrome clamps the adapter's
-  addressable buffer to ~2 GiB on most desktop GPUs and the buffer rule
-  would never reach the 4B there; without that reading (Safari, Firefox)
-  the adapter's addressable buffer must cover the model's ~3.4 GB. The pick
+  memory. It is nonetheless the **default** on a computer with the memory
+  for it (`models.ts` `defaultLlmForAdapter`): only a model the GPU can
+  bind (`llmFits`) is a candidate, and the 4B needs the probe to have read
+  **6 GiB** of `navigator.deviceMemory` (`LARGE_LLM_MIN_MEMORY_GIB`) on a
+  device that is not a phone or tablet (`Capability.mobile`:
+  `userAgentData.mobile`, else the user agent, an iPad asking for desktop
+  sites by its touch points) -- Chrome reports 8 GiB on many phones, where
+  3.4 GB is most of the memory. Without a `deviceMemory` reading (Safari,
+  Firefox) the default is the 1.7B: the adapter's limit is per buffer and
+  says nothing about the total. A chosen model this GPU cannot bind runs
+  the default instead (`llmChoice`), so a `gpu` tier always means the model
+  in use can load; its Settings row says why. The pick
   stands in for an unset setting **at read time and is never persisted as a
   choice**, and only on a `gpu`-tier device — the selected model also picks
   the route table, whose non-LLM entries differ between the two, so a device
@@ -1421,22 +1440,25 @@ only caller:
 packages the browser build never loads, and both make `yarn install` more
 than a download of JavaScript:
 
-- **`onnxruntime-node` (pinned 1.24.3)** runs a postinstall script that
-  fetches the native runtime for the host platform — about 371 MB under
-  `node_modules/onnxruntime-node/bin/napi-v6/`. The install needs network
-  access to that CDN, not only to the npm registry, and a machine behind a
-  proxy that allows only the registry fails there.
-- **`sharp` (^0.34.5)** installs a platform prebuilt; where none exists for
-  the platform/libc it falls back to a `node-gyp` build, which needs a
-  toolchain.
+- **`onnxruntime-node` (pinned 1.24.3)** ships its CPU runtime for every
+  platform in the npm tarball (~220 MB unpacked) and runs a postinstall
+  script that, on Linux x64 only, fetches the CUDA 12 and TensorRT
+  providers from NuGet (~316 MB under
+  `node_modules/onnxruntime-node/bin/napi-v6/linux/x64/`;
+  `script/install-metadata.js`). That fetch needs network access beyond
+  the npm registry. Nothing in the repository uses CUDA:
+  `ONNXRUNTIME_NODE_INSTALL=skip` skips it, and the Pages workflow's
+  install sets it.
+- **`sharp` (^0.34.5)** installs a platform prebuilt (`@img/sharp-*`
+  optional dependencies); its install script only checks for one and,
+  where none exists for the platform/libc, falls back to a `node-gyp`
+  build, which needs a toolchain.
 
-**`yarn install --ignore-scripts` is not a safe shortcut.** It skips the
-`onnxruntime-node` download, so the package is present but has no binary,
-and anything that loads it (`tools/i18n/fill.ts`, `tools/translate-llm.ts`,
-and any `require` of `@huggingface/transformers` under Node) throws at
-import. The browser bundle is unaffected — it only ever reaches
-`onnxruntime-web` — so a CI job that does nothing but `yarn build` can get
-away with it; a job that runs the Node-side translation tools cannot.
+`yarn install --ignore-scripts` skips both scripts. The browser bundle is
+unaffected -- it only ever reaches `onnxruntime-web` -- and the Node-side
+tools (`tools/i18n/fill.ts`, `tools/translate-llm.ts`) run on the CPU
+runtime the tarball carries; only a platform without a sharp prebuilt is
+left without sharp.
 
 **`onnxruntime-web` is a nightly pin** (`1.26.0-dev.20260416-b7804b056c`,
 transitively, from `@huggingface/transformers`): it is what ships in
@@ -1445,6 +1467,25 @@ the registry, and an upgrade of `@huggingface/transformers` moves it
 without notice — re-run the CPU-model browser check
 (`SEANCE_REAL_MODELS=1 node tools/browser-drive.mjs tools/scenarios/translate-cpu-real.mjs`)
 after any such bump.
+
+## Licences
+
+The code the build ships: `@huggingface/transformers` 4.2.0 and
+`@mlc-ai/web-llm` 0.2.85 are Apache-2.0, `onnxruntime-web` (and the
+`js/ort/` wasm it loads) MIT, `franc` and its three helpers (the `js/franc.js`
+chunk) MIT -- all compatible with Seance's MIT. Neither Apache-2.0 package
+carries a NOTICE file; their builds carry no notice either, so
+`webpack.config.ts` (`chunkNotices`) writes one into
+`js/translate-worker.js.LICENSE.txt`, as it does for the markdown chunks.
+
+The weights are fetched at run time from Hugging Face (or the deploy's
+`translation.modelBase` mirror), never bundled, and come under their own
+licences (the model cards, 2026-10-28): Qwen3 1.7B and 4B Apache-2.0,
+Helsinki-NLP's OPUS-MT pairs Apache-2.0, and **NLLB-200 (distilled 600M)
+CC-BY-NC-4.0** -- non-commercial. Seance only points the browser at it, but
+a deploy run as a commercial service should read that licence before
+leaving the default, and can point `translation.cpu.nllb` at a model it may
+use (`docs/resources/branding.md` § Translation).
 
 ## Weights
 

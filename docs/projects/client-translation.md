@@ -673,10 +673,17 @@ marks it down for the session and takes the next.
 The probe, run once per page and cached in memory only: `navigator.gpu`
 adapter present, `shader-f16` feature, adapter `maxBufferSize` and
 `maxStorageBufferBindingSize`, `navigator.deviceMemory` (where exposed) and
-`navigator.storage.estimate()`. Output: `{tier: "gpu" | "cpu" | "none", reasons: string[]}`. The `gpu` tier needs an adapter with f16 and at least
-1 GiB of addressable buffer (WebLLM's floor; adapters report their limits with alignment slack, so 2 GiB exactly refused real hardware); `none` means not even WASM SIMD, and the feature
-hides itself. The reasons are what Settings shows ("no WebGPU", "not enough
-GPU memory") instead of a missing row.
+`navigator.storage.estimate()`. Output: `{tier: "gpu" | "cpu" | "none", reasons: string[]}`. The `gpu` tier needs an adapter with f16 and a
+storage binding as large as the smallest GPU model's largest tensor
+(`models.ts` `LLM_MIN_BUFFER_BYTES`, the 1.7B's 148 MiB embedding;
+2026-10-27 — the spec's "1 GiB, WebLLM's floor" was WebLLM's request, not a
+model's need, and `engines/gpuLimits.ts` now raises that request to what the
+adapter offers); `none` means not even WASM SIMD, and the feature
+hides itself. The reasons are what Settings shows ("no WebGPU", "The GPU
+binds at most … in one buffer") instead of a missing row; since 2026-10-28
+each model row also says whether this device runs it and why not
+(`models.ts` `modelBlock`, `router.ts` `explainRoute`;
+`docs/resources/translation.md` § What runs here, and why not).
 
 ### `worker.ts` and `client.ts`: the worker and its protocol
 
