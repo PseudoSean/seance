@@ -30,6 +30,7 @@ import {
 	isRepetition,
 	isUnchanged,
 	reverseTarget,
+	onceTargetDefault,
 	sourceHintFor,
 	termPair,
 	translateDraft,
@@ -159,6 +160,44 @@ describe("translate/outgoing", () => {
 			expect(BARE_RETRY_ERRORS.has(DEGENERATE)).to.equal(true);
 			// Not a judged failure: nothing came back at all.
 			expect(BARE_RETRY_ERRORS.has(EMPTY_TRANSLATION)).to.equal(false);
+		});
+	});
+
+	describe("onceTargetDefault", () => {
+		const fallback = ["en", "de", "fr", "es"];
+		const pick = (
+			routes: (to: string) => boolean,
+			last = "",
+			declared: string[] = [],
+			reading = "en"
+		) => onceTargetDefault({reading, last, declared, fallback, routes});
+		// A device without the GPU model: every pair but the cleanup pass.
+		const cpuOnly = (to: string) => to !== "en";
+
+		it("never opens a device without the GPU model on the cleanup pass", () => {
+			// Reading English, no earlier pick: the dialog used to open on
+			// English -> English, disabled, "Correcting a message needs the
+			// GPU model".
+			expect(pick(cpuOnly)).to.equal("de");
+			expect(pick(cpuOnly, "", ["fr"])).to.equal("fr");
+		});
+
+		it("keeps the cleanup pass where it runs, after a language the channel speaks", () => {
+			const all = () => true;
+			expect(pick(all)).to.equal("en");
+			expect(pick(all, "", ["en", "es"])).to.equal("es");
+			expect(pick(all, "fr", ["es"])).to.equal("fr");
+		});
+
+		it("passes over a last pick the device can no longer serve", () => {
+			expect(pick(cpuOnly, "en")).to.equal("de");
+			expect(pick((to) => to === "es", "fr")).to.equal("es");
+		});
+
+		it("keeps the old preselection when nothing routes, so the dialog says why", () => {
+			const none = () => false;
+			expect(pick(none)).to.equal("en");
+			expect(pick(none, "fr")).to.equal("fr");
 		});
 	});
 

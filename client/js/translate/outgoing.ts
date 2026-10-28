@@ -232,6 +232,50 @@ export function reverseTarget(readingLanguage: string, writeTarget: string): str
 	return readingLanguage !== writeTarget ? readingLanguage : null;
 }
 
+/**
+ * The language the composer's translate dialog opens on (ChatInput.vue).
+ * Its source is the reading language, so a target equal to it is the
+ * cleanup pass, which only the GPU model runs: opening on it made every
+ * device without one -- most phones, Firefox -- open the dialog disabled,
+ * "Correcting a message needs the GPU model", as though translation did
+ * not work there at all. So a preselection the device cannot serve is
+ * passed over, in this order:
+ *
+ * - the channel's last pick (`once`, else its send target);
+ * - a language the channel declares, other than the reading language;
+ * - the reading language itself -- the cleanup pass, where it runs;
+ * - the first of `fallback` (the supported list, English first) that is
+ *   not the reading language.
+ *
+ * `routes(to)` is the router's verdict for reading → `to`. When nothing
+ * routes (the probe still running, both engines off) the old preselection
+ * stands -- the last pick, else the reading language -- and the dialog
+ * says why it cannot run.
+ */
+export function onceTargetDefault(options: {
+	reading: string;
+	last: string;
+	declared: readonly string[];
+	fallback: readonly string[];
+	routes: (to: string) => boolean;
+}): string {
+	const {reading, last, declared, fallback, routes} = options;
+	const candidates = [
+		last,
+		...declared.filter((code) => code !== reading),
+		reading,
+		...fallback.filter((code) => code !== reading),
+	];
+
+	for (const code of candidates) {
+		if (code && routes(code)) {
+			return code;
+		}
+	}
+
+	return last || reading;
+}
+
 /** What two texts are compared as by `isUnchanged`: the differences a model
  *  makes to a line it is handing back rather than translating. */
 function echoForm(text: string): string {

@@ -929,9 +929,14 @@ the panel's target moving; the strip comes up as it does for a write
 target and the next Enter sends what it holds. The dialog preselects the
 channel's last one-off language, else its write target (`lastOnceTarget`;
 the last pick is kept with the channel's record, `channelStore.ts` `once`,
-so it survives a reload and travels in the settings backup), and, with
-neither, **the language the interface is in** -- what the user reads and
-writes, rather than whatever the list happens to sort first. The dialog also asks what to translate **from**,
+so it survives a reload and travels in the settings backup), else a
+language the channel declares, else **the language the interface is in**
+(the cleanup pass), else the first supported language that is not it --
+each only where this device serves it from the reading language
+(`outgoing.ts` `onceTargetDefault`, the router's `pairVerdict`), so a
+device without the GPU model never opens on a disabled cleanup pass. When
+nothing routes at all the last pick, else the interface's language, stands
+and the dialog says why. The dialog also asks what to translate **from**,
 preselected to the language the user reads, with "Detect automatically"
 as the write target has it. **The same language twice is a cleanup**: a
 draft already in the language it is asked into is not sent as typed the

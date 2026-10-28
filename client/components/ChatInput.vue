@@ -293,9 +293,10 @@ import {
 } from "../js/helpers/compose";
 import {hasVirtualKeyboard} from "../js/helpers/device";
 import {useI18n} from "../js/i18n";
-import {languageName} from "../js/translate/languages";
-import {draftGate, sendableTranslation} from "../js/translate/outgoing";
+import {SUPPORTED_LANGUAGES, languageName} from "../js/translate/languages";
+import {draftGate, onceTargetDefault, sendableTranslation} from "../js/translate/outgoing";
 import {
+	channelTranslation,
 	pairVerdict,
 	readingLanguage,
 	setChannelOptions,
@@ -1223,11 +1224,19 @@ export default defineComponent({
 				return;
 			}
 
-			// The channel's last pick, else the language the interface is in:
-			// a first pick starts from what the user reads and writes, not
-			// from whatever sorts first in the list.
-			translateOncePreselected.value =
-				lastOnceTarget(props.network, props.channel) || readingLanguage();
+			// The channel's last pick, else a language the channel speaks,
+			// else the user's own (the cleanup pass) -- each only where this
+			// device can serve it from the reading language, so a device
+			// without the GPU model never opens on a disabled cleanup pass
+			// (outgoing.ts `onceTargetDefault`).
+			const reading = readingLanguage();
+			translateOncePreselected.value = onceTargetDefault({
+				reading,
+				last: lastOnceTarget(props.network, props.channel),
+				declared: channelTranslation(props.network, props.channel).languages,
+				fallback: SUPPORTED_LANGUAGES,
+				routes: (to) => !!pairVerdict(reading, to).route,
+			});
 			translateOncePickerOpen.value = !translateOncePickerOpen.value;
 		};
 
