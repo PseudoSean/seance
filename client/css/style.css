@@ -159,6 +159,15 @@
 	--slide-end-away: calc(-1 * var(--userlist-width));
 }
 
+/* A field that takes the user's text says dir="auto", and an empty one is
+ * left-to-right whatever its placeholder: under an RTL interface the
+ * translated placeholder then sat on the left, under the search glyph that
+ * inset-inline-end puts there (the user list's "1 مستخدم" lost its count).
+ * Until there is text to judge by, the field follows the page. */
+:root[dir="rtl"] :is(input, textarea)[dir="auto"]:placeholder-shown {
+	direction: rtl;
+}
+
 /* The font-size setting's scale (client/js/helpers/fontSize.ts); "medium" is
  * :root's own. */
 html[data-font-size="tiny"] {

@@ -297,7 +297,9 @@
 	grid-template-areas:
 		"name name name"
 		"size state action";
-	grid-template-columns: auto 1fr auto;
+	/* minmax(0, …): a long state ("Nicht heruntergeladen") wraps in its
+	   own cell instead of pushing the button out past the column. */
+	grid-template-columns: auto minmax(0, 1fr) auto;
 	gap: 0.25rem 0.75rem;
 	align-items: center;
 	padding: 0.5rem 0;
@@ -314,6 +316,7 @@
 
 .translate-model-state {
 	grid-area: state;
+	min-width: 0;
 }
 
 .translate-model-download,
@@ -334,6 +337,9 @@
 .translate-model-state {
 	color: var(--body-color-muted);
 	font-variant-numeric: tabular-nums;
+}
+
+.translate-model-size {
 	white-space: nowrap;
 }
 

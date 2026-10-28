@@ -16,7 +16,9 @@
 					<span class="collapse-network-icon" />
 				</button>
 				<span v-else class="collapse-network" />
-				<span :title="channel.name" class="name">{{ channel.name }}</span>
+				<span :title="channel.name" class="name"
+					><bdi>{{ channel.name }}</bdi></span
+				>
 				<span v-if="channel.unread" :class="{highlight: channel.highlight}" class="badge">{{
 					unreadCount
 				}}</span>
