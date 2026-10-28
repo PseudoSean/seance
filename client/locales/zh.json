@@ -2204,6 +2204,7 @@
   "translate.menu.translateAnyway": "无论如何翻译",
   "translate.menu.translateFromPicker": "从其他语言翻译…",
   "translate.menu.translateNow": "翻译",
+  "translate.model.announce": "{model}：{state}",
   "translate.model.cantRun": "无法在此设备上运行",
   "translate.model.delete": "删除",
   "translate.model.download": "下载",

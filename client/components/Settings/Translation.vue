@@ -140,7 +140,7 @@
 					:data-status="view.status"
 					:data-runs="runsState(view.ref)"
 				>
-					<span class="translate-model-name"
+					<span :id="'translate-model-name-' + index" class="translate-model-name"
 						>{{ modelLabel(view.ref) }}
 						<!-- No GPU model is in use on a device that can run none:
 						     the selection then only keys the route table. -->
@@ -167,16 +167,32 @@
 						class="translate-model-why"
 						>{{ whyLabel(view.ref) }}</span
 					>
-					<span v-if="view.status === 'downloading'" class="translate-model-track">
+					<span
+						v-if="view.status === 'downloading'"
+						class="translate-model-track"
+						role="progressbar"
+						aria-valuemin="0"
+						aria-valuemax="100"
+						:aria-valuenow="Math.round(view.fraction * 100)"
+						:aria-valuetext="stateLabel(view)"
+						:aria-labelledby="'translate-model-name-' + index"
+					>
 						<span
 							class="translate-model-fill"
 							:style="{width: Math.round(view.fraction * 100) + '%'}"
 						/>
 					</span>
+					<!-- Named "Download <model>" (the button, then the row's name):
+					     fifteen buttons that all read "Download" say nothing to a
+					     screen reader moving between them. -->
 					<button
 						v-if="!view.cached && view.status !== 'downloading'"
+						:id="'translate-model-action-' + index"
 						type="button"
 						class="btn translate-model-download"
+						:aria-labelledby="
+							'translate-model-action-' + index + ' translate-model-name-' + index
+						"
 						:disabled="!allowed(view.ref)"
 						:aria-describedby="
 							whyLabel(view.ref) ? 'translate-model-why-' + index : undefined
@@ -187,14 +203,21 @@
 					</button>
 					<button
 						v-else-if="view.cached"
+						:id="'translate-model-action-' + index"
 						type="button"
 						class="btn translate-model-delete"
+						:aria-labelledby="
+							'translate-model-action-' + index + ' translate-model-name-' + index
+						"
 						@click.prevent="remove(view.ref)"
 					>
 						{{ t("translate.model.delete") }}
 					</button>
 				</li>
 			</ul>
+			<!-- A download's end, said once: the rows' own percentages are not
+			     live, they would chatter for minutes. -->
+			<div class="sr-only" role="status" aria-live="polite">{{ announcement }}</div>
 		</template>
 	</div>
 </template>
@@ -347,7 +370,7 @@
 </style>
 
 <script lang="ts">
-import {computed, defineComponent, onMounted, ref, toRaw} from "vue";
+import {computed, defineComponent, onMounted, ref, toRaw, watch} from "vue";
 import {useI18n} from "../../js/i18n";
 import friendlysize from "../../js/helpers/friendlysize";
 import {modelLabel} from "../../js/helpers/modelLabel";
@@ -541,6 +564,30 @@ export default defineComponent({
 			});
 		};
 
+		// What the polite region says: a download (or a load of one already
+		// here) that has just finished or failed, by model name.
+		const announcement = ref("");
+		const lastStatus = new Map<string, ModelView["status"]>();
+
+		watch(
+			models,
+			(views) => {
+				for (const view of views) {
+					const before = lastStatus.get(view.ref.id);
+
+					lastStatus.set(view.ref.id, view.status);
+
+					if (before === "downloading" && view.status !== "downloading") {
+						announcement.value = t("translate.model.announce", {
+							model: modelLabel(view.ref),
+							state: stateLabel(view),
+						});
+					}
+				}
+			},
+			{deep: true, immediate: true}
+		);
+
 		const remove = (modelRef: ModelRef) => {
 			service.deleteModel(toRaw(modelRef)).catch((e: unknown) => {
 				loadError.value = errorMessage(e);
@@ -570,6 +617,7 @@ export default defineComponent({
 			allowed,
 			download,
 			remove,
+			announcement,
 		};
 	},
 });

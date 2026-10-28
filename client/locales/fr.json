@@ -2152,6 +2152,7 @@
   "translate.menu.translateAnyway": "Traduisez tout de même",
   "translate.menu.translateFromPicker": "Traduire depuis une autre langue…",
   "translate.menu.translateNow": "Traduire",
+  "translate.model.announce": "{model} : {state}",
   "translate.model.cantRun": "Ne fonctionne pas sur cet appareil",
   "translate.model.delete": "Supprimer",
   "translate.model.download": "Télécharger",

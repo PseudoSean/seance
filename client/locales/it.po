@@ -13062,6 +13062,12 @@ msgctxt "translate.menu.translateNow"
 msgid "Translate"
 msgstr "Traduci"
 
+#. Said once by a screen reader (a polite live region in Settings > Translation) when a model's download or load ends. {model} is the model's name as its row shows it, e.g. 'NLLB-200 600M (CPU, 200 languages)'; {state} is the row's new state, e.g. 'Downloaded' or 'Failed: …'.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.model.announce"
+msgid "{model}: {state}"
+msgstr ""
+
 #. Settings → Translation, a model's row: status line saying this translation model cannot work on the user's device; the reason follows on the next line as a sentence of its own. Short.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.cantRun"

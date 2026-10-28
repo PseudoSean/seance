@@ -2277,6 +2277,7 @@
   "translate.menu.translateAnyway": "Translate anyway",
   "translate.menu.translateFromPicker": "Translate from another language…",
   "translate.menu.translateNow": "Translate",
+  "translate.model.announce": "{model}: {state}",
   "translate.model.cantRun": "Can't run on this device",
   "translate.model.delete": "Delete",
   "translate.model.download": "Download",
