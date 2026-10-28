@@ -11,6 +11,8 @@
 //             runs as its small-buffer build, the 4B does not
 //   binds160  160 MiB: the 1.7B fits, the 4B does not
 //   desktop   2 GiB: everything runs
+//   phone     the desktop's adapter on a phone (`userAgentData.mobile`):
+//             the 1.7B runs, the 4B cannot -- too large for a phone's page
 //
 // For each, after a cold load with a fresh profile's storage: Settings →
 // Translation's model rows say "Can run on this device" / "Can't run on this
@@ -101,6 +103,15 @@ const DEVICES = {
 		why: (id) => needsBuffer(NEEDS[id], 160 * MiB),
 	},
 	desktop: {gpu: {f16: true, max: 2 * GiB}, runs: {[SMALL]: true, [LARGE]: true}, why: () => ""},
+	// The desktop's GPU on a phone (`userAgentData.mobile`): the 4B is too
+	// large for a phone's page whatever the GPU binds (models.ts
+	// tooLargeForPhone), the 1.7B runs and is the default.
+	phone: {
+		gpu: {f16: true, max: 2 * GiB},
+		mobile: true,
+		runs: {[SMALL]: true, [LARGE]: false},
+		why: () => EN["translate.why.phoneMemory"].replace("{needed}", size(3_400_000_000)),
+	},
 };
 
 /** friendlysize.ts under the English locale. */
@@ -136,6 +147,10 @@ const GPU_STUB = `(() => {
 		}),
 	};
 	Object.defineProperty(Navigator.prototype, "gpu", {configurable: true, get: () => gpu});
+	if (device.mobile) {
+		const data = {mobile: true, platform: "Android", brands: []};
+		Object.defineProperty(Navigator.prototype, "userAgentData", {configurable: true, get: () => data});
+	}
 })();`;
 
 const ROW = (id) => `.translate-model[data-model=${JSON.stringify(id)}]`;
@@ -185,7 +200,7 @@ export default async function run(page) {
 		const path = `/?host=127.0.0.1&port=8067&tls=false&nick=${nick}&join=${encodeURIComponent(
 			CHANNEL
 		)}`;
-		const device = JSON.stringify({gpu: DEVICES[name].gpu});
+		const device = JSON.stringify({gpu: DEVICES[name].gpu, mobile: !!DEVICES[name].mobile});
 
 		if (first) {
 			first = false;
@@ -441,7 +456,7 @@ export default async function run(page) {
 		const inUse = await page.evaluate(
 			`[...document.querySelectorAll(".translate-model-in-use")].map((el) => el.closest(".translate-model").dataset.model).join(",")`
 		);
-		const expectInUse = {binds128: SMALL, binds160: SMALL}[name];
+		const expectInUse = {binds128: SMALL, binds160: SMALL, phone: SMALL}[name];
 
 		page.check(
 			`${name}: "In use" is on ${
@@ -483,7 +498,7 @@ export default async function run(page) {
 				described: s.getAttribute("aria-describedby"),
 			};
 		})()`);
-		const unfit = name === "binds128" || name === "binds160" ? [LARGE] : [];
+		const unfit = name === "binds128" || name === "binds160" || name === "phone" ? [LARGE] : [];
 
 		page.check(
 			`${name}: the GPU model select greys ${unfit.join(", ") || "nothing"} (${
