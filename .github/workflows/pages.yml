@@ -12,7 +12,8 @@
 # restored from the cache when that commit was built before, so a push to
 # one PR rebuilds that PR alone), `assemble` puts them in their directories
 # (tools/pages-site.mjs; a failed build becomes a stub page that links to
-# the log) and `deploy` publishes. A merged or closed PR drops out of the
+# the log, and no build's source maps are copied: each build's own `public/`
+# and its cache keep them) and `deploy` publishes. A merged or closed PR drops out of the
 # plan and so off the site.
 #
 # PR builds run code from the PR (`yarn install`, webpack) under
