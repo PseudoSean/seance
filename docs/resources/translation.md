@@ -395,6 +395,100 @@ app served under a subpath; Download seeds the pinned manifest and fetches
 the library from the app's own URL, and stops at WebLLM's device check,
 before any weight).
 
+#### Memory: the window, the 4B, one engine at a time
+
+A phone binding enough is not a phone holding enough. On an iPhone,
+loading the 1.7B's small-buffer build got the page killed: WebKit counts GPU
+memory against the page's own WebContent process, kills it past about
+2.1 GB, and its GPU process then dropped a failed Metal command buffer. So
+a phone or tablet (`Capability.mobile`, capability.ts `isMobile`: Chromium's
+`userAgentData.mobile`, else iPhone/iPad/Android/"Mobi" in the agent, and
+an iPad asking for desktop sites, which reads as a Mac with
+`maxTouchPoints > 1`) is held to three rules.
+
+- **The window is memory.** WebLLM sizes the KV cache for the whole context
+  window at load, and the app never named one, so the record's 4096 held.
+  Measured on a SwiftShader bench (the f32 build; the shipped f16 KV is
+  half): 1,278 MiB at load with `context_window_size` 1024, 1,502 at 2048,
+  1,950 at 4096 -- about 1,050 / 1,160 / 1,390 MiB in f16. On a phone the
+  engine reloads with `{context_window_size: MOBILE_CONTEXT_WINDOW}` (2048,
+  `models.ts` `contextWindowFor`, told to the worker as
+  `GpuBudget.mobile`; WebLLM 0.2.85's `reload(modelId, chatOpts)` overrides
+  the record with it); a computer's reload is the one-argument call it
+  always was. 1024 would save ~110 MiB more and cannot hold a full line
+  with its context; the library's prefill chunk is 1k.
+- **What a prompt costs** (2026-10-28, the shipped prompt code tokenized
+  with Qwen3's own tokenizer, the chat frame and WebLLM's empty think block
+  included, plus the reply's `max_tokens`). The worst single read -- ten
+  earlier lines at IRC's full ~440 bytes each with their translations (the
+  profile's own 700-token trim lets them all through), a 250-byte topic
+  (TOPICLEN), 20 names (`NAMES_CAP` holds a 2,000-user channel to the
+  speakers and the mentioned), 20 terms, a reply target, a full line --
+  is 1,469–1,996 prompt tokens and 1,716–2,390 with the reply (Russian,
+  Arabic, Japanese, English source); a write with five voice lines
+  2,209–2,896; a batch of six full lines (`BATCH_MAX_LINES`) 2,430–3,549;
+  the cleanup pass about 300 + its reply. A typical channel (120-byte
+  lines, six terms, a short topic) is 1,305–1,586 for a single request and
+  fits 2048 whole; its batches drop four to seven earlier lines. And a
+  100-line `draft/multiline` message sent as one numbered batch is
+  4,515–5,737 prompt tokens -- over the desktop's 4096 too.
+- **Every request is fitted to the window** (`budget.ts`, in the engine,
+  so the reader, the composer and multi-line messages alike): the prompt's
+  bound and the reply's `max_tokens` must fit -- WebLLM checks only the
+  prompt, and a reply that runs into the end of the window just stops, a
+  batch with lines missing or a line cut short, both reading as answers.
+  Over it, the oldest earlier lines go first, then the terms (oldest
+  first, the deploy's glossary last), the names, the user's earlier lines,
+  each batched line's reply note, the topic and the reply target. A batch
+  that does not fit even bare is refused as `BATCH_REFUSED`, so its lines
+  go one at a time (queue.ts `resplit`, outgoing.ts `translateDraft`); a
+  single line that does not fit is `CONTEXT_OVERFLOW`, "too long to
+  translate on this device". There is no tokenizer before the model loads
+  and none under mocha, so the count is `tokenBound`, a per-class bound
+  calibrated on the real tokenizer (`test/translate/budget.ts` holds the
+  counts: 14 languages, URLs, digits -- Qwen3 splits numbers into single
+  digits --, hex, emoji, code, zalgo): it over-counts prose by 1.1–1.8× (Vietnamese 2×)
+  and under-counts only long random letter runs, rare ideographs and
+  archaic Cyrillic. At 2048 the worst single read above keeps one of its
+  ten earlier lines (none for an English source with Japanese
+  translations) and the worst write none, at 1,426–1,670 real tokens.
+- **The backstop.** When the bound under-counts, WebLLM throws
+  `ContextWindowSizeExceededError` before prefill (`isContextOverflow`, by
+  name or message). The engine keeps the model loaded and counts no
+  failure -- the generic path would have dropped the engine and reloaded a
+  gigabyte, which on a phone is what kills the page -- and reports
+  `CONTEXT_OVERFLOW` as the request's failure. The reading queue retries
+  each line bare and alone (a batch is taken apart, a multi-line message
+  retried whole and bare), fails one that overflowed bare, and counts none
+  of it toward `PAUSE_AFTER_FAILURES`. The composer shows the error.
+- **The 4B cannot run on a phone.** Its weights alone are 2.2 GB
+  (`vramBytes` 3.4 GB). `modelBlock` answers `{kind: "memory", needed}`
+  for a GPU model over `MOBILE_LLM_MAX_VRAM_BYTES` (2.5 GB) on a mobile
+  device, after the device and buffer reasons and before the switch -- "It
+  needs about 3.2 GiB of memory, more than a phone or tablet lets a web page
+  use." (`translate.why.phoneMemory`) -- so its Settings row cannot be
+  downloaded, the GPU select greys it (`llmUnfit`), and `llmRunsOn` keeps it
+  out of `defaultLlmForAdapter` and out of `llmChoice`, an explicit choice
+  and a deploy's `translation.llm.model` included (both run the 1.7B on a
+  phone); the router hears the same reason for a catalog that still names
+  it. The 1.7B stays allowed.
+- **One engine in memory at a time.** The CPU engine's ONNX Runtime heap
+  (NLLB-200 ~900 MB, an OPUS-MT pair ~110 MB) lives in the same worker,
+  so in the same page. On a mobile device `service.ts` `makeRoom` runs
+  before a request or a Settings download claims its engine: the other
+  engine running, it waits; the other loaded, it unloads it; and the GPU
+  model wanted in a worker the CPU engine has run in, it starts a fresh
+  worker (`recycleWorker`, without the teardown's generation step), since
+  a WebAssembly heap grows and never shrinks. A download now waits for the
+  probe first, which says whether this is a phone. The cost: a phone
+  whose channels route some lines to the GPU model and others to an
+  OPUS-MT pair reloads a model at every switch. A computer keeps both, side
+  by side.
+- **Not addressed.** The load-time peak: WebLLM reads each weight shard
+  into an `ArrayBuffer` before uploading it, so the page briefly holds a
+  shard twice. Only a run on an iPhone shows whether 2048 and the other
+  rules bring the load under the limit.
+
 ## Reading a channel
 
 The translate button in a channel's header switches translation on for that
