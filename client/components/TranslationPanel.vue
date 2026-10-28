@@ -51,6 +51,7 @@
 							class="translation-panel-segmented"
 							role="radiogroup"
 							:aria-label="readingLabel"
+							@keydown="onRadioKey"
 						>
 							<button
 								v-for="option in readingChoices"
@@ -59,6 +60,7 @@
 								role="radio"
 								class="translation-panel-segment"
 								:aria-checked="state.read === option.value"
+								:tabindex="state.read === option.value ? 0 : -1"
 								:disabled="option.value && !state.read && !!blockedWhy"
 								:aria-describedby="
 									option.value && blockedWhy
@@ -176,6 +178,7 @@
 							class="translation-panel-segmented"
 							role="radiogroup"
 							aria-labelledby="translation-panel-formality"
+							@keydown="onRadioKey"
 						>
 							<button
 								v-for="option in formalities"
@@ -185,6 +188,7 @@
 								name="translateFormality"
 								class="translation-panel-segment"
 								:aria-checked="state.formality === option.value"
+								:tabindex="state.formality === option.value ? 0 : -1"
 								@click="setFormality(option.value)"
 							>
 								{{ option.label }}
@@ -410,10 +414,87 @@ export default defineComponent({
 		const onVariant = (event: Event) =>
 			setChannelOptions(props.network, props.channel, {variant: valueOf(event).trim()});
 
+		// What Tab can reach inside the panel, in document order.
+		const tabbable = (): HTMLElement[] =>
+			Array.from(
+				panel.value?.querySelectorAll<HTMLElement>(
+					"button, select, input, textarea, a[href], [tabindex]"
+				) ?? []
+			).filter(
+				(el) =>
+					el.tabIndex >= 0 &&
+					!(el as HTMLButtonElement).disabled &&
+					el.getClientRects().length > 0
+			);
+
 		const onKey = (event: KeyboardEvent) => {
 			if (event.key === "Escape") {
 				emit("close");
+				return;
 			}
+
+			// The sheet is modal (aria-modal, the whole screen): Tab wraps
+			// inside it instead of walking out into the app hidden under it.
+			// The desktop panel is not modal and lets the focus go.
+			if (event.key !== "Tab" || !phone.value) {
+				return;
+			}
+
+			const items = tabbable();
+
+			if (items.length === 0) {
+				return;
+			}
+
+			const first = items[0];
+			const last = items[items.length - 1];
+			const active = document.activeElement;
+			const inside = !!panel.value && panel.value.contains(active);
+
+			if (event.shiftKey && (!inside || active === first)) {
+				event.preventDefault();
+				last.focus();
+			} else if (!event.shiftKey && (!inside || active === last)) {
+				event.preventDefault();
+				first.focus();
+			}
+		};
+
+		// A segmented radiogroup is one Tab stop (the checked radio, a roving
+		// tabindex) and the arrow keys move the choice, as the radiogroup
+		// pattern has it; a disabled choice is stepped over.
+		const onRadioKey = (event: KeyboardEvent) => {
+			const step =
+				event.key === "ArrowRight" || event.key === "ArrowDown"
+					? 1
+					: event.key === "ArrowLeft" || event.key === "ArrowUp"
+					? -1
+					: 0;
+
+			if (step === 0) {
+				return;
+			}
+
+			const group = event.currentTarget as HTMLElement;
+			const radios = Array.from(
+				group.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+			).filter((radio) => !radio.disabled);
+			const at = radios.indexOf(document.activeElement as HTMLButtonElement);
+
+			if (radios.length < 2 || at < 0) {
+				return;
+			}
+
+			event.preventDefault();
+			// The visual order follows the direction: under RTL the next
+			// choice is to the left.
+			const rtl = getComputedStyle(group).direction === "rtl";
+			const horizontal = event.key === "ArrowLeft" || event.key === "ArrowRight";
+			const delta = rtl && horizontal ? -step : step;
+			const next = radios[(at + delta + radios.length) % radios.length];
+
+			next.focus();
+			next.click();
 		};
 
 		const onPointer = (event: MouseEvent) => {
@@ -434,7 +515,9 @@ export default defineComponent({
 			narrowQuery?.addEventListener("change", onNarrow);
 			// Deferred so the click that opened the panel does not close it.
 			pointerTimer = setTimeout(() => document.addEventListener("mousedown", onPointer), 0);
-			panel.value?.querySelector("select")?.focus();
+			// The panel's main control first: the reading switch's checked
+			// choice (one Tab stop), not the second field's select.
+			panel.value?.querySelector<HTMLElement>('[role="radio"][aria-checked="true"]')?.focus();
 		});
 		onBeforeUnmount(() => {
 			document.removeEventListener("keydown", onKey);
@@ -483,6 +566,7 @@ export default defineComponent({
 			setFormality,
 			onFormality,
 			onVariant,
+			onRadioKey,
 		};
 	},
 });
