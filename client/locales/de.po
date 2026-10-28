@@ -13187,7 +13187,7 @@ msgstr "Läuft auf diesem Gerät"
 #: client/components/Settings/Translation.vue:213
 msgctxt "translate.model.smallBufferBuild"
 msgid "This GPU gets a build of the model made for small graphics buffers: its largest buffer is {size}."
-msgstr "Diese GPU erhält eine Fassung des Modells für kleine Grafikpuffer: Ihr größter Puffer ist {size}."
+msgstr "Diese GPU erhält eine Fassung des Modells für kleine Grafikpuffer: ihr größter Puffer ist {size}."
 
 #. Settings → Translation, a model's row: status line saying the device could run this model but the user turned off its engine with one of the switches higher on the same page. Short.
 #: client/components/Settings/Translation.vue
