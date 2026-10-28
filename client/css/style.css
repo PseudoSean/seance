@@ -6852,6 +6852,14 @@ html[data-shell="native"] #footer {
 	z-index: 1010;
 }
 
+/* Above everything, it must take no click while it fades out (its
+   visibility holds until the 0.2s transition ends, and a page whose
+   frames are throttled can hold it there), or it would swallow the
+   first click on whatever it closed over. */
+#confirm-dialog-overlay:not(.opened) {
+	pointer-events: none;
+}
+
 #confirm-dialog-overlay.opened,
 #push-prompt-overlay.opened,
 #install-guide-overlay.opened,

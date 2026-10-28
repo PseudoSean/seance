@@ -114,6 +114,13 @@ export function storedConsent(
 export class DownloadConsent {
 	/** Declined this session, by model id: never asked again until `forgetDeclines`. */
 	private declinedIds = new Set<string>();
+	/**
+	 * The yeses of this session, beside the store: a storage that cannot
+	 * write (blocked site data, a private window's full quota) would
+	 * otherwise forget a yes the moment it was given, and the route that
+	 * asked would ask again, for ever.
+	 */
+	private grantedIds = new Set<string>();
 	/** One question per model at a time: every request waiting on it shares the answer. */
 	private pending = new Map<string, Promise<boolean>>();
 	/** One dialog at a time across models: the next waits for the last to be answered. */
@@ -128,7 +135,7 @@ export class DownloadConsent {
 	}
 
 	granted(id: string): boolean {
-		return this.store.has(id);
+		return this.grantedIds.has(id) || this.store.has(id);
 	}
 
 	declined(id: string): boolean {
@@ -145,12 +152,14 @@ export class DownloadConsent {
 
 	/** An explicit act (Settings' Download): yes, and no decline stands. */
 	grant(id: string): void {
+		this.grantedIds.add(id);
 		this.store.grant(id);
 		this.declinedIds.delete(id);
 	}
 
 	/** The model was deleted: its next download is a new question. */
 	revoke(id: string): void {
+		this.grantedIds.delete(id);
 		this.store.revoke(id);
 	}
 
@@ -189,6 +198,7 @@ export class DownloadConsent {
 			const yes = await this.askUser(ref).catch(() => false);
 
 			if (yes) {
+				this.grantedIds.add(ref.id);
 				this.store.grant(ref.id);
 			} else {
 				this.declinedIds.add(ref.id);

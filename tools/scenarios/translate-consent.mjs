@@ -9,7 +9,8 @@
 // OPUS model and never the GPU model, and no second question is asked; a
 // German line then (the GPU model and the German pair, neither downloaded)
 // fails with "Needs <model>, a <size> download: get it in Settings →
-// Translation." without a question; its Retry asks again, Download is
+// Translation." without a question (the page's connection reports Save-Data,
+// and the question says so); its Retry asks again, Download is
 // remembered, and the line is translated on the GPU model. Under --mobile
 // reading is switched on in the full-screen sheet, and the question has to
 // come up over it (ConfirmDialog's overlay outranks the sheet). A real
@@ -78,7 +79,11 @@ const rowOf = (text) =>
 		text
 	)})).pop()`;
 
+// A connection in data-saver mode: the question says so.
+const SAVE_DATA = `Object.defineProperty(Navigator.prototype, "connection", {configurable: true, get: () => ({saveData: true, type: "wifi"})});`;
+
 export default async function run(page) {
+	await page.addInitScript(SAVE_DATA);
 	await page.goto(page.url, {waitForSelector: "#connect form"});
 	await page.click('#connect button[type="submit"]');
 	await page.waitFor(`!!document.querySelector("#form #input")`, {
@@ -171,12 +176,17 @@ export default async function run(page) {
 	const question = await page.evaluate(`({
 		count: window.__questions.length,
 		title: document.querySelector("#confirm-dialog .confirm-text-title").textContent.trim(),
+		note: (document.querySelector("#confirm-dialog .confirm-note") || {}).textContent?.trim() || "",
 	})`);
 	const model = /^Download (.+)\?$/.exec(question.title)?.[1] ?? "";
 
 	page.check(
 		`one question for the channel's lines, about the GPU model (${question.count}: ${question.title})`,
 		question.count === 1 && /\(GPU, all languages\)$/.test(model)
+	);
+	page.check(
+		`the question says the connection saves data (${question.note})`,
+		question.note === EN["translate.consent.metered"]
 	);
 	await page.screenshot("consent-fake-question");
 	// Past the overlay's fade-in before the click.

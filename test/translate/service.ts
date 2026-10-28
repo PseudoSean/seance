@@ -1702,6 +1702,24 @@ describe("translate/service", () => {
 			r.service.dispose();
 		});
 
+		it("a yes the storage cannot keep still routes, with one question", async () => {
+			const ask = dialog();
+			const deaf = {has: () => false, grant() {}, revoke() {}};
+			const r = rig("gpu", true, DEFAULT_ROUTES, {
+				askDownload: ask.askDownload,
+				consent: deaf,
+			});
+			clock = r.clock;
+			const routed = r.service.route("de", "en");
+
+			await r.clock.tickAsync(10);
+			ask.answer(true);
+			expect((await routed)?.candidate).to.equal("llm");
+			expect(ask.asked).to.have.length(1);
+			expect(ask.open).to.equal(0);
+			r.service.dispose();
+		});
+
 		it("never asks about a model on the device, or one agreed to before", async () => {
 			const ask = dialog();
 			const store = memoryConsent();

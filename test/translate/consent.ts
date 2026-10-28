@@ -99,6 +99,23 @@ describe("translate/consent", () => {
 		expect(consent.granted(catalog.llm.id)).to.equal(false);
 	});
 
+	it("keeps a yes for the session when the storage cannot write", async () => {
+		let asked = 0;
+		const deaf = {has: () => false, grant() {}, revoke() {}};
+		const consent = new DownloadConsent(() => {
+			asked++;
+
+			return Promise.resolve(true);
+		}, deaf);
+
+		expect(await consent.ask(catalog.llm, () => true)).to.equal(true);
+		expect(consent.granted(catalog.llm.id)).to.equal(true);
+		expect(await consent.ask(catalog.llm, () => true)).to.equal(true);
+		expect(asked).to.equal(1);
+		consent.revoke(catalog.llm.id);
+		expect(consent.granted(catalog.llm.id)).to.equal(false);
+	});
+
 	it("reads a dialog that fails as a no", async () => {
 		const consent = new DownloadConsent(
 			() => Promise.reject(new Error("gone")),

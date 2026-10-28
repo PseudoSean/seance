@@ -40,8 +40,8 @@
 // other. Last, on the desktop device, the download question: a channel with
 // several German lines switched to reading asks once ("Download <model>?",
 // its size, Download / Not now), Not now fails every line with "Needs
-// <model>, a <size> download: …" and pauses nothing, no model is fetched and
-// nothing is remembered; a Retry asks once more.
+// <model>, a <size> download: …" and pauses nothing, nothing is remembered,
+// a Retry asks once more, and every model row still says "Not downloaded".
 //
 // Not on the fake engine: ?fakeTranslate replaces the probe with its own
 // answer. A production build is fine; no model is ever downloaded.
@@ -939,11 +939,11 @@ export default async function run(page) {
 		})()`);
 
 		// Reading on: the header's click with a pointer, the panel's On under a finger.
+		// The question comes up over the sheet the switch was thrown in, so
+		// the sheet is put away only once it has been answered.
 		if (MOBILE) {
 			await openPanel();
 			await page.evaluate(`${readOnSegment}.click()`);
-			await page.sleep(200);
-			await closePanel();
 		} else {
 			await page.click(GLOBE);
 		}
@@ -990,6 +990,11 @@ export default async function run(page) {
 		await page.sleep(500);
 		await page.click("#confirm-dialog .btn-cancel");
 
+		if (MOBILE) {
+			await page.sleep(300);
+			await closePanel();
+		}
+
 		const reason = EN["translate.why.needsDownload"]
 			.replace("{model}", model)
 			.replace("{size}", size(sizeOf[model]));
@@ -1009,7 +1014,6 @@ export default async function run(page) {
 			open: !!document.querySelector("#confirm-dialog-overlay.opened"),
 			label: document.querySelector(${JSON.stringify(GLOBE)}).getAttribute("aria-label"),
 			consent: localStorage.getItem("thelounge.state.translateConsent"),
-			fetched: performance.getEntriesByType("resource").filter((e) => /huggingface|\\.wasm$|mlc/.test(e.name) && !/js\\/ort\\//.test(e.name)).map((e) => e.name),
 		}))()`);
 
 		page.check(
@@ -1021,10 +1025,6 @@ export default async function run(page) {
 			after.count === 1 && !after.open && after.consent === null
 		);
 		page.check(`consent: no pause (${after.label})`, !/paused/i.test(after.label || ""));
-		page.check(
-			`consent: no model was fetched (${after.fetched.join(", ") || "none"})`,
-			after.fetched.length === 0
-		);
 		await page.screenshot("consent-not-now");
 
 		// A Retry is someone asking: one more question.
@@ -1050,6 +1050,20 @@ export default async function run(page) {
 			`!!document.querySelector('[data-consent-retry] .msg-translation[data-status="failed"]')`,
 			{label: "the retried line failed again"}
 		);
+
+		// Nothing was downloaded, or is: every model row still says so.
+		await openSettings();
+
+		const rows = await page.evaluate(
+			`[...document.querySelectorAll(".translate-model")].map((row) => row.dataset.status + ":" + row.querySelector(".translate-model-state").textContent.trim())`
+		);
+
+		page.check(
+			`consent: no model downloaded or downloading (${[...new Set(rows)].join(", ")})`,
+			rows.length > 3 &&
+				rows.every((row) => row === `idle:${EN["translate.model.notDownloaded"]}`)
+		);
+		await closeSettings();
 
 		for (const s of speakers) {
 			s.quit();
