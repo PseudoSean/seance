@@ -311,6 +311,23 @@ export class TranslateService {
 	}
 
 	capabilities(): Promise<Capability> {
+		// A deploy that switched translation off never asks the GPU or the
+		// storage anything: the probe starts adapter enumeration in the GPU
+		// process, and a channel view reads availability on every load.
+		// Nothing shows the capability while disabled (Settings says so and
+		// stops there; models.ts `modelBlock` answers "disabled" first).
+		if (!this.capability && !this.options.enabled) {
+			this.capability = Promise.resolve({
+				tier: "none",
+				reasons: [],
+				f16: false,
+				maxBufferBytes: 0,
+				deviceMemoryGiB: null,
+				storageQuotaBytes: null,
+				mobile: false,
+			});
+		}
+
 		if (!this.capability) {
 			this.capability = this.deps
 				.probe()

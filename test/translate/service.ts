@@ -116,6 +116,7 @@ function rig(
 	let failDelete: Error | null = null;
 	let failConfigure: Error | null = null;
 	let hangDelete = false;
+	let probes = 0;
 	const cache: CacheApi = {
 		has(ref) {
 			return Promise.resolve(cached.has(ref.id));
@@ -172,6 +173,7 @@ function rig(
 			};
 		},
 		probe() {
+			probes += 1;
 			return Promise.resolve(capability(tier));
 		},
 		setTimeout: (fn, ms) => setTimeout(fn, ms),
@@ -198,6 +200,10 @@ function rig(
 		clock,
 		llm,
 		seq2seq,
+		/** How many times the device probe ran. */
+		get probes() {
+			return probes;
+		},
 		failNextDelete(error: Error) {
 			failDelete = error;
 		},
@@ -1210,6 +1216,21 @@ describe("translate/service", () => {
 		expect(await r.service.models()).to.deep.equal([]);
 		expect(r.workers.length).to.equal(0);
 		r.service.dispose();
+	});
+
+	it("a disabled deploy never probes the device", async () => {
+		const r = rig("gpu", false);
+		clock = r.clock;
+		expect(await r.service.capabilities()).to.include({tier: "none"});
+		expect(r.probes).to.equal(0);
+		r.service.dispose();
+		r.clock.restore();
+
+		const on = rig("gpu");
+		clock = on.clock;
+		expect(await on.service.capabilities()).to.include({tier: "gpu"});
+		expect(on.probes).to.equal(1);
+		on.service.dispose();
 	});
 
 	it("a teardown during a translation aborts it without marking the candidate down", async () => {

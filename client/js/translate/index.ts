@@ -1,7 +1,11 @@
 // The app's one TranslateService: the real worker (or the in-page fake on
 // a development build opened with ?fakeTranslate), the deploy's
 // config.json, the store's settings and the store's translation slice.
-// Created on first use, so a page that never translates never pays.
+// Created on first use, so a page that never translates starts no worker
+// and loads no model. The device probe does run once a channel shows,
+// since it decides whether the translate button is offered at all -- but
+// never on a deploy that switched translation off (service.ts
+// `capabilities`).
 
 import {getBranding} from "../branding";
 import {BUILD} from "../build";
