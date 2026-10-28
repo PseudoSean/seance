@@ -69,9 +69,12 @@ export const DEFAULT_OPUS_PAIRS: Record<string, string> = {
 	"en-ru": "Xenova/opus-mt-en-ru",
 };
 
-const LLM_SIZE_BYTES = 1_100_000_000;
-const NLLB_SIZE_BYTES = 620_000_000;
-const OPUS_SIZE_BYTES = 75_000_000;
+// The downloads as Hugging Face lists them (2026-10-27): the MLC repo's
+// files for the 1.7B; NLLB's and an OPUS pair's q8 encoder, merged decoder
+// and tokenizer (a pair varies by a few MB).
+const LLM_SIZE_BYTES = 984_000_000;
+const NLLB_SIZE_BYTES = 912_000_000;
+const OPUS_SIZE_BYTES = 113_000_000;
 
 function opusRef(pairKey: string, id: string): ModelRef {
 	const [from, to] = pairKey.split("-");
@@ -90,8 +93,12 @@ function opusRef(pairKey: string, id: string): ModelRef {
  * The GPU models Settings offers, both WebLLM prebuilt ids. `sizeBytes` is
  * the download; `vramBytes` is the graphics memory the model needs at
  * runtime (WebLLM's `vram_required_MB`, about 2.0 GB for 1.7B and 3.4 GB
- * for 4B) — what the capability probe's adapter limit is checked against
- * when the default is picked.
+ * for 4B); `largestBufferBytes` is the model's largest weight tensor, its
+ * vocabulary embedding (`model.embed_tokens.q_weight`, 151936 rows of u32:
+ * 256 per row for 1.7B, 320 for 4B, from each model's
+ * tensor-cache.json) — the single binding the device must allow. The KV
+ * cache's pages and the work buffers are smaller by estimate, not by
+ * measurement.
  */
 export const LLM_CHOICES: readonly ModelRef[] = [
 	{
@@ -101,21 +108,40 @@ export const LLM_CHOICES: readonly ModelRef[] = [
 		label: {kind: "llm", name: "Qwen3 1.7B"},
 		sizeBytes: LLM_SIZE_BYTES,
 		vramBytes: 2_000_000_000,
+		largestBufferBytes: 155_574_272,
 	},
 	{
 		engine: "llm",
 		family: "llm",
 		id: QWEN3_4B_ID,
 		label: {kind: "llm", name: "Qwen3 4B"},
-		sizeBytes: 2_300_000_000,
+		sizeBytes: 2_280_000_000,
 		vramBytes: 3_400_000_000,
+		largestBufferBytes: 194_478_080,
 	},
 ];
+
+/** The smallest binding any GPU model needs: the gpu tier's floor (capability.ts). */
+export const LLM_MIN_BUFFER_BYTES = Math.min(
+	...LLM_CHOICES.map((ref) => ref.largestBufferBytes ?? Infinity)
+);
+
+/**
+ * Whether `ref` can load on a device whose largest storage binding is
+ * `maxBufferBytes` (the probe's `min(maxBufferSize,
+ * maxStorageBufferBindingSize)`; the worker asks WebLLM's device for that
+ * much, engines/gpuLimits.ts). Anything but a GPU model fits.
+ */
+export function llmFits(ref: ModelRef, maxBufferBytes: number): boolean {
+	return ref.engine !== "llm" || (ref.largestBufferBytes ?? 0) <= maxBufferBytes;
+}
 
 /** What the default GPU model is decided from (capability.ts `Capability`). */
 export interface AdapterMemory {
 	maxBufferBytes: number;
 	deviceMemoryGiB: number | null;
+	/** A phone or tablet (capability.ts `browserEnv`): never the 4B by default. */
+	mobile?: boolean;
 	/**
 	 * The probe's verdict, when it is known. Only a `gpu` device gets a GPU
 	 * default: on a cpu-tier device the selected model still picks the route
@@ -130,28 +156,27 @@ export interface AdapterMemory {
 export const LARGE_LLM_MIN_MEMORY_GIB = 6;
 
 /**
- * The default GPU model for this device: the most capable choice its memory
- * holds. `navigator.deviceMemory` (`deviceMemoryGiB`) decides where the
- * probe has it — Chrome clamps `maxStorageBufferBindingSize` to ~2 GiB on
- * most desktop GPUs, so the addressable buffer alone would never reach the
- * 4B there. Without it (Safari, Firefox) the adapter's addressable buffer
- * is all there is, and the most capable choice whose requirement fits wins.
- * The gpu tier's own 1 GiB gate guarantees the first choice (1.7B) always
- * fits, so this never returns nothing. It answers for a gpu-tier device;
- * gating on the tier is the caller's (`llmChoice`).
+ * The default GPU model for this device: the most capable choice it can hold.
+ * Only a model whose largest buffer the device can bind is a candidate
+ * (`llmFits`). The 4B needs `navigator.deviceMemory` (`deviceMemoryGiB`) of
+ * LARGE_LLM_MIN_MEMORY_GIB and a computer: Chrome reports 8 GiB on many
+ * phones, where its 3.4 GB is most of the memory, and a browser without
+ * `deviceMemory` (Safari, Firefox) says nothing about it — the adapter's
+ * binding limit is per buffer, not the total. Falls back to the first choice
+ * when nothing fits (the gpu tier's floor makes that the smallest model's
+ * own need). It answers for a gpu-tier device; gating on the tier is the
+ * caller's (`llmChoice`).
  */
 export function defaultLlmForAdapter(memory: AdapterMemory | null | undefined): string {
-	if (memory && typeof memory.deviceMemoryGiB === "number") {
-		return memory.deviceMemoryGiB >= LARGE_LLM_MIN_MEMORY_GIB ? QWEN3_4B_ID : LLM_CHOICES[0].id;
-	}
+	const fitting = LLM_CHOICES.filter((ref) => llmFits(ref, memory?.maxBufferBytes ?? 0));
+	const large = fitting.find((ref) => ref.id === QWEN3_4B_ID);
+	const wantsLarge =
+		!!memory &&
+		!memory.mobile &&
+		typeof memory.deviceMemoryGiB === "number" &&
+		memory.deviceMemoryGiB >= LARGE_LLM_MIN_MEMORY_GIB;
 
-	for (const ref of [...LLM_CHOICES].reverse()) {
-		if ((ref.vramBytes ?? 0) <= (memory?.maxBufferBytes ?? 0)) {
-			return ref.id;
-		}
-	}
-
-	return LLM_CHOICES[0].id;
+	return (wantsLarge && large ? large : fitting[0] ?? LLM_CHOICES[0]).id;
 }
 
 /** A GPU model's own product name, for the model select. */
@@ -190,14 +215,17 @@ export function llmChoice(
 	selected: string | null | undefined,
 	memory?: AdapterMemory | null
 ): ModelRef {
+	// A probe that found no GPU names no GPU model (see AdapterMemory.tier).
+	const device = memory && (memory.tier ?? "gpu") === "gpu" ? memory : null;
 	const chosen = catalog.llmChoices.find((ref) => ref.id === selected);
 
-	if (chosen) {
+	// A choice this GPU cannot bind (llmFits) runs the default instead, so
+	// a gpu tier always means the model in use can load; Settings says why
+	// the chosen row cannot be downloaded.
+	if (chosen && (!device || llmFits(chosen, device.maxBufferBytes))) {
 		return chosen;
 	}
 
-	// A probe that found no GPU names no GPU model (see AdapterMemory.tier).
-	const device = memory && (memory.tier ?? "gpu") === "gpu" ? memory : null;
 	const unset = catalog.llmDeploy ?? (device ? defaultLlmForAdapter(device) : undefined);
 
 	return (

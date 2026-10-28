@@ -33,6 +33,7 @@ export const FAKE_CAPABILITY: Capability = {
 	maxBufferBytes: 4 * 1024 * 1024 * 1024,
 	deviceMemoryGiB: 8,
 	storageQuotaBytes: 50 * 1024 * 1024 * 1024,
+	mobile: false,
 };
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));

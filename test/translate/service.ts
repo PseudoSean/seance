@@ -31,9 +31,11 @@ function capability(tier: Capability["tier"]): Capability {
 		tier,
 		reasons: tier === "gpu" ? [] : ["NO_WEBGPU" as const],
 		f16: tier === "gpu",
-		maxBufferBytes: 0,
+		// A desktop Chrome adapter: Chrome clamps the binding to ~2 GiB.
+		maxBufferBytes: tier === "gpu" ? 2147483644 : 0,
 		deviceMemoryGiB: 8,
 		storageQuotaBytes: null,
+		mobile: false,
 	};
 }
 

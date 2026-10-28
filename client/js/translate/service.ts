@@ -298,6 +298,7 @@ export class TranslateService {
 						maxBufferBytes: 0,
 						deviceMemoryGiB: null,
 						storageQuotaBytes: null,
+						mobile: false,
 					})
 				)
 				.then((capability) => {

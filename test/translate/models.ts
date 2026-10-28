@@ -3,6 +3,8 @@ import {
 	DEFAULT_LLM_ID,
 	DEFAULT_NLLB_ID,
 	LLM_CHOICES,
+	LLM_MIN_BUFFER_BYTES,
+	llmFits,
 	QWEN3_1_7B_ID,
 	QWEN3_4B_ID,
 	buildCatalog,
@@ -83,8 +85,18 @@ describe("translate/models", () => {
 
 		const [small, large] = catalog.llmChoices;
 
-		expect(small).to.include({engine: "llm", family: "llm", sizeBytes: 1_100_000_000});
-		expect(large).to.include({engine: "llm", family: "llm", sizeBytes: 2_300_000_000});
+		expect(small).to.include({
+			engine: "llm",
+			family: "llm",
+			sizeBytes: 984_000_000,
+			largestBufferBytes: 155_574_272,
+		});
+		expect(large).to.include({
+			engine: "llm",
+			family: "llm",
+			sizeBytes: 2_280_000_000,
+			largestBufferBytes: 194_478_080,
+		});
 		expect(llmName(small)).to.equal("Qwen3 1.7B");
 		expect(llmName(large)).to.equal("Qwen3 4B");
 		expect(small.label).to.deep.equal({kind: "llm", name: "Qwen3 1.7B"});
@@ -112,21 +124,56 @@ describe("translate/models", () => {
 		).to.equal(QWEN3_1_7B_ID);
 	});
 
-	it("defaults to the 4B when the adapter fits it, else the 1.7B", () => {
-		// No `deviceMemory` (Safari, Firefox): the adapter's addressable
-		// buffer is all there is. A desktop-class adapter fits the 4B's
-		// ~3.4 GB of graphics memory with room to spare.
-		const mem = (maxBufferBytes: number) => ({maxBufferBytes, deviceMemoryGiB: null});
+	it("defaults to the 4B only on a computer with the memory, and only what the GPU can bind", () => {
+		const MiB = 1024 * 1024;
+		const mem = (maxBufferBytes: number, deviceMemoryGiB: number | null, mobile = false) => ({
+			maxBufferBytes,
+			deviceMemoryGiB,
+			mobile,
+		});
 
-		expect(defaultLlmForAdapter(mem(4 * 1024 * 1024 * 1024))).to.equal(QWEN3_4B_ID);
-		expect(defaultLlmForAdapter(mem(3_400_000_000))).to.equal(QWEN3_4B_ID);
-		// Under the 4B's requirement the 1.7B is the best that fits.
-		expect(defaultLlmForAdapter(mem(3_399_999_999))).to.equal(QWEN3_1_7B_ID);
-		expect(defaultLlmForAdapter(mem(2 * 1024 * 1024 * 1024))).to.equal(QWEN3_1_7B_ID);
-		// Even the smallest gpu-tier adapter (the 1 GiB floor) gets an answer.
-		expect(defaultLlmForAdapter(mem(1024 * 1024 * 1024))).to.equal(QWEN3_1_7B_ID);
-		// No probe at all: the shipped default.
+		// A desktop Chrome adapter (binding clamped near 2 GiB) with 8 GiB.
+		expect(defaultLlmForAdapter(mem(2147483644, 8))).to.equal(QWEN3_4B_ID);
+		// Not memory enough, or no `deviceMemory` at all (Safari, Firefox):
+		// the binding limit is per buffer and says nothing about the total.
+		expect(defaultLlmForAdapter(mem(2147483644, 4))).to.equal(QWEN3_1_7B_ID);
+		expect(defaultLlmForAdapter(mem(4096 * MiB, null))).to.equal(QWEN3_1_7B_ID);
+		// A phone reporting 8 GiB (Chrome's cap) never gets the 4B by default.
+		expect(defaultLlmForAdapter(mem(2147483644, 8, true))).to.equal(QWEN3_1_7B_ID);
+		// A GPU that binds the 1.7B's embedding but not the 4B's.
+		expect(defaultLlmForAdapter(mem(160 * MiB, 16))).to.equal(QWEN3_1_7B_ID);
+		// Nothing fits, or no probe at all: the shipped default.
+		expect(defaultLlmForAdapter(mem(128 * MiB, 16))).to.equal(QWEN3_1_7B_ID);
 		expect(defaultLlmForAdapter(null)).to.equal(QWEN3_1_7B_ID);
+	});
+
+	it("a model fits when the GPU binds its largest tensor", () => {
+		const MiB = 1024 * 1024;
+		const [small, large] = LLM_CHOICES;
+
+		expect(LLM_MIN_BUFFER_BYTES).to.equal(155_574_272);
+		expect(llmFits(small, 155_574_272)).to.equal(true);
+		expect(llmFits(small, 128 * MiB)).to.equal(false);
+		expect(llmFits(large, 180 * MiB)).to.equal(false);
+		expect(llmFits(large, 256 * MiB)).to.equal(true);
+		// Only a GPU model has a binding to fit.
+		expect(llmFits(buildCatalog().nllb, 0)).to.equal(true);
+	});
+
+	it("a choice the GPU cannot bind runs the default; a CPU-only device keeps it", () => {
+		const MiB = 1024 * 1024;
+		const shipped = buildCatalog();
+
+		expect(
+			llmChoice(shipped, QWEN3_4B_ID, {maxBufferBytes: 160 * MiB, deviceMemoryGiB: 16}).id
+		).to.equal(QWEN3_1_7B_ID);
+		expect(
+			llmChoice(shipped, QWEN3_4B_ID, {maxBufferBytes: 256 * MiB, deviceMemoryGiB: 4}).id
+		).to.equal(QWEN3_4B_ID);
+		// On a cpu-tier device the choice only picks the route table.
+		expect(
+			llmChoice(shipped, QWEN3_4B_ID, {maxBufferBytes: 0, deviceMemoryGiB: 4, tier: "cpu"}).id
+		).to.equal(QWEN3_4B_ID);
 	});
 
 	it("an unset choice resolves at read time: the deploy's model, else the adapter's pick", () => {
