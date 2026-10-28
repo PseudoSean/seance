@@ -10,6 +10,7 @@ import storage from "./localStorage";
 import {normalizeSceneMotion, themeScene} from "./themeScene";
 import {setQueryLogEnabled} from "./irc/querylog";
 import {setClosedQueriesKept} from "./irc/closedQueries";
+import {forgetPrivateTerms, loadAll} from "./translate/channelStore";
 import {setKeepAlive} from "./helpers/keepAlive";
 import {effectiveTheme} from "./helpers/themeAppearance";
 import {currentPlatform, PLATFORM_DEFAULTS} from "./helpers/platformDefaults";
@@ -328,13 +329,21 @@ const defaultConfig = {
 	},
 	// Keep the recent lines of private conversations in this browser so they
 	// come back after a reload (irc/querylog.ts). Off deletes what is kept
-	// and keeps nothing more; applyAll runs this at boot too, before any
+	// (the translation terms learnt in queries included) and keeps nothing
+	// more; applyAll runs this at boot too, before any
 	// network is created, so a page with it off restores nothing.
 	keepPrivateConversations: {
 		default: true,
 		apply(store: TypedStore, value: boolean) {
 			setQueryLogEnabled(value);
 			setClosedQueriesKept(value); // the closed ones' names too, here and shared
+
+			// And the translation terms learnt in queries: whole short lines
+			// the user sent in private (translate/writer.ts records none
+			// while this is off). The store's copy is what prompts read.
+			if (!value && forgetPrivateTerms()) {
+				store.commit("translateChannelsLoaded", loadAll());
+			}
 		},
 	},
 	userStyles: {

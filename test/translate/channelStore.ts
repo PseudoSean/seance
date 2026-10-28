@@ -8,13 +8,17 @@ import {
 	effectiveFormality,
 	forgetChannel,
 	forgetNetwork,
+	forgetPrivateTerms,
+	forgetTerms,
 	getChannelTranslation,
+	isPrivateKey,
 	loadAll,
 	rememberTerm,
 	setChannelTranslation,
 	splitKey,
 	termsFor,
 	useStorageBackend,
+	withoutPrivateTerms,
 	type ChannelTranslation,
 	type TermEntry,
 } from "../../client/js/translate/channelStore";
@@ -247,6 +251,62 @@ describe("translate/channelStore", () => {
 		expect(Object.keys(loadAll())).to.deep.equal(["n1/#b", "n2/#a"]);
 		forgetNetwork("n1");
 		expect(Object.keys(loadAll())).to.deep.equal(["n2/#a"]);
+	});
+
+	describe("private conversations' terms", () => {
+		const term = (source: string): TermEntry => ({
+			source,
+			target: `${source}!`,
+			from: "en",
+			to: "de",
+		});
+
+		it("a query's key is a nick, a channel's starts with its prefix", () => {
+			expect(isPrivateKey(channelKey("n1", "alice"))).to.equal(true);
+			expect(isPrivateKey(channelKey("n1", "[bot]"))).to.equal(true);
+
+			for (const name of ["#a", "&local", "!safe", "+modeless"]) {
+				expect(isPrivateKey(channelKey("n1", name)), name).to.equal(false);
+			}
+		});
+
+		it("closing a query drops its terms and keeps its switches", () => {
+			setChannelTranslation("n1", "alice", {read: true, write: "de"});
+			rememberTerm("n1", "alice", term("meet at 5"));
+			const kept = forgetTerms("n1", "Alice");
+			expect(kept?.terms).to.deep.equal([]);
+			expect(kept?.read).to.equal(true);
+			expect(getChannelTranslation("n1", "alice").write).to.equal("de");
+			expect(getChannelTranslation("n1", "alice").terms).to.deep.equal([]);
+			// Nothing left to drop: nothing written, nothing for the store.
+			expect(forgetTerms("n1", "alice")).to.equal(null);
+			expect(forgetTerms("n1", "nobody")).to.equal(null);
+		});
+
+		it("drops every query's terms on every network, and no channel's", () => {
+			rememberTerm("n1", "alice", term("meet at 5"));
+			rememberTerm("n2", "bob", term("I'm in hospital"));
+			rememberTerm("n1", "#a", term("good morning"));
+			expect(forgetPrivateTerms()).to.equal(true);
+			expect(getChannelTranslation("n1", "alice").terms).to.deep.equal([]);
+			expect(getChannelTranslation("n2", "bob").terms).to.deep.equal([]);
+			expect(getChannelTranslation("n1", "#a").terms).to.deep.equal([term("good morning")]);
+			expect(forgetPrivateTerms()).to.equal(false);
+		});
+
+		it("a copy without them leaves the original and other values alone", () => {
+			const all = {
+				"n1/alice": {read: true, terms: [term("hi")]},
+				"n1/#a": {read: true, terms: [term("yo")]},
+				"n1/bob": {read: false},
+			};
+			expect(withoutPrivateTerms(all)).to.deep.equal({
+				"n1/alice": {read: true, terms: []},
+				"n1/#a": {read: true, terms: [term("yo")]},
+				"n1/bob": {read: false},
+			});
+			expect(all["n1/alice"].terms).to.have.length(1);
+		});
 	});
 
 	it("survives unreadable storage", () => {

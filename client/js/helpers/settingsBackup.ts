@@ -25,6 +25,7 @@
 import storage from "../localStorage";
 import {isPlatform, PLATFORM_DEFAULTS, type Platform} from "./platformDefaults";
 import {overridesChoice} from "./settingsMigration";
+import {withoutPrivateTerms} from "../translate/channelStore";
 
 export const FILE_EXTENSION = ".seance-settings";
 export const FORMAT = "seance-settings";
@@ -145,6 +146,17 @@ export function collectBackup(options: CollectOptions = {}): SettingsBackup {
 			void saslPassword;
 			return {...rest, rememberPassword: false};
 		});
+	}
+
+	// Per-channel translation state travels, but not the terms learnt in
+	// private conversations: each is a whole short line the user sent in a
+	// query, and the queries' own logs (thelounge.querylog.*) never travel.
+	const translate = entries["thelounge.translate"];
+
+	if (typeof translate === "object" && translate !== null && !Array.isArray(translate)) {
+		entries["thelounge.translate"] = withoutPrivateTerms(
+			translate as Record<string, {terms?: unknown}>
+		);
 	}
 
 	return {

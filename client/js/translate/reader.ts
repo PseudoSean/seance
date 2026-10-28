@@ -17,12 +17,14 @@ import {userLanguageRef} from "../i18n";
 import socket from "../socket";
 import {store, type TranslationEntry} from "../store";
 import type {ClientChan, ClientMessage, ClientNetwork} from "../types";
+import {ChanType} from "../../../shared/types/chan";
 import {
 	type ChannelTranslation,
 	channelKey,
 	defaultChannelTranslation,
 	effectiveFormality,
 	forgetNetwork,
+	forgetTerms,
 	loadAll,
 	setChannelTranslation,
 	termsFor,
@@ -1066,6 +1068,19 @@ export function initReader(): void {
 		// message's: a rejoin is a new channel id, so nothing would ever
 		// show or drop this one.
 		forgetTopic(target.channel.id);
+
+		// A closed query takes its terms with it, as it does its log: they
+		// are whole lines said in private. A channel's stay with its setting.
+		if (target.channel.type === ChanType.QUERY) {
+			const kept = forgetTerms(target.network.uuid, target.channel.name);
+
+			if (kept) {
+				store.commit("translateChannelSet", {
+					key: channelKey(target.network.uuid, target.channel.name),
+					value: kept,
+				});
+			}
+		}
 	});
 
 	// Registered before socket-events/quit.ts (import order), so the

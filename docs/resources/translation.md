@@ -1055,7 +1055,18 @@ its reading target. Before this the memory was bare pairs: after a German
 session every French write, and every reading prompt, still told the model
 to render "thanks" as "danke". A stored legacy pair carries no language and
 is dropped on load (the memory starts over once), as is an entry whose `to`
-is not a supported language or whose `from` is neither `null` nor one. Typing again, walking input history, Escape, the strip's own Edit
+is not a supported language or whose `from` is neither `null` nor one.
+
+**A query's terms are private.** A term is a whole short line the user sent,
+so in a query (`channelStore.ts` `isPrivateKey`: the key's name is a nick,
+not a `#&!+` channel) it is what was said in private, and it follows the
+query log's rules: none is recorded while `keepPrivateConversations` is
+off, switching it off drops every query's terms (`forgetPrivateTerms`, the
+store's copy reloaded), closing a query drops its own (`forgetTerms` from
+the reader's `part` handler; the record's switches stay), and the settings
+backup carries channels' terms but never a query's (`withoutPrivateTerms`).
+
+Typing again, walking input history, Escape, the strip's own Edit
 button and parting the channel all invalidate the strip; the next Enter
 starts over.
 
