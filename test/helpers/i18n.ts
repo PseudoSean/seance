@@ -91,30 +91,34 @@ describe("i18n core", () => {
 	});
 
 	it("the pre-paint script and the core agree on RTL tags", () => {
-		const html = readFileSync("client/index.html", "utf8");
-		const inline = /\/\^\(([^)]*)\)\\b\//.exec(html)?.[1] ?? "";
+		const source = readFileSync("client/js/prepaint.js", "utf8");
+		const inline = /\/\^\(([^)]*)\)\\b\//.exec(source)?.[1] ?? "";
 		const fromHtml = new Set(inline.split("|"));
 		expect([...fromHtml].sort()).to.deep.equal([...RTL_TAGS].sort());
 	});
 
-	/** Execute the pre-paint script as the build would ship it: the first
-	 * inline `<script>` of client/index.html, with `__AVAILABLE_LOCALES__`
-	 * substituted from client/locales/tags.json (webpack bakes a
-	 * comma-joined tag list at the same spot). The sandbox stubs the three
-	 * globals the script touches; lang/dir start empty, so "still empty"
-	 * means the script left them untouched. */
+	/** Execute the pre-paint script as the build would ship it:
+	 * client/js/prepaint.js, with `__AVAILABLE_LOCALES__` substituted from
+	 * client/locales/tags.json (webpack bakes a comma-joined tag list at the
+	 * same spot as it copies the file). The sandbox stubs the three globals
+	 * the script touches; lang/dir start empty, so "still empty" means the
+	 * script left them untouched. */
 	function runPrePaint(stored: object, languages: string[]): {lang: string; dir: string} {
-		const html = readFileSync("client/index.html", "utf8");
-		const source = /<script>([\s\S]*?)<\/script>/.exec(html)?.[1];
+		const source = readFileSync("client/js/prepaint.js", "utf8");
 		const tags = JSON.parse(readFileSync("client/locales/tags.json", "utf8")) as string[];
 		const root = {lang: "", dir: ""};
 
-		expect(source, "the pre-paint script is index.html's first inline script").to.exist;
-		vm.runInNewContext(source!.replace("__AVAILABLE_LOCALES__", tags.join(",")), {
-			localStorage: {getItem: () => JSON.stringify(stored)},
-			navigator: {languages},
-			document: {documentElement: root},
-		});
+		expect(source, "the pre-paint script carries its locale marker").to.contain(
+			'"__AVAILABLE_LOCALES__"'
+		);
+		vm.runInNewContext(
+			source.replace('"__AVAILABLE_LOCALES__"', JSON.stringify(tags.join(","))),
+			{
+				localStorage: {getItem: () => JSON.stringify(stored)},
+				navigator: {languages},
+				document: {documentElement: root},
+			}
+		);
 
 		return root;
 	}

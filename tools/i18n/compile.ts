@@ -295,7 +295,7 @@ export function compileLocales(options: CompileOptions = {}): CompileResult {
 		...localeTags.map((tag) => ({tag})),
 		...DEV_ONLY_TAGS.map((tag) => ({tag, devOnly: true} as AvailableLocale)),
 	];
-	// The pre-paint script's list (webpack bakes it into index.html) carries
+	// The pre-paint script's list (webpack bakes it into js/prepaint.js) carries
 	// the dev-only tags too, so a stored qqx pick gets its lang/dir from the
 	// first paint like any other; webpack.config.ts drops them for a
 	// production build, which is the one consumer that cannot check at
@@ -329,7 +329,7 @@ export function compileLocales(options: CompileOptions = {}): CompileResult {
 	writeFileSync(availablePath, renderAvailable(available));
 	mkdirSync(dirname(tagsPath), {recursive: true});
 	// Bare list for the pre-paint script; webpack.config.ts substitutes it
-	// into client/index.html the way it fills __THEME_COLOR__ (Task 3). Both
+	// into client/js/prepaint.js as it copies it (Task 3). Both
 	// generated files are excluded from prettier — the generator owns their
 	// formatting — so regeneration is byte-stable.
 	writeFileSync(tagsPath, JSON.stringify(tags, null, "\t") + "\n");

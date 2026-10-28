@@ -4,7 +4,7 @@
 // build mode (F13): it lists every compiled catalog, the dev-only rig
 // included. Everything else filters the rig out at runtime through the
 // bundler's own NODE_ENV fold (`client/js/i18n/core.ts` DEV_I18N), but the
-// pre-paint script cannot — webpack substitutes the list into index.html as
+// pre-paint script cannot — webpack substitutes the list into client/js/prepaint.js as
 // a literal — so the filter happens here, where webpack.config.ts reads the
 // file and test/tests/i18n-toolchain.ts pins what it does.
 //

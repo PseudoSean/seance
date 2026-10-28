@@ -4,7 +4,7 @@
 // Vue-free catalog resolution — mocha loads this file, so: no Vue, no DOM,
 // no storage (test/helpers/i18n.ts). The Vue/activation side lives in
 // index.ts; the settings wiring in settings.ts; the pre-paint copy of the
-// RTL set in client/index.html is pinned by test/helpers/i18n.ts.
+// RTL set in client/js/prepaint.js is pinned by test/helpers/i18n.ts.
 
 import enCatalog from "../../locales/en.json";
 
@@ -26,7 +26,7 @@ let catalog: Catalog = enCatalog;
 let tag = "en";
 
 /** Tags whose writing systems flow right-to-left. The pre-paint script in
- * client/index.html carries the same list — test/helpers/i18n.ts pins them
+ * client/js/prepaint.js carries the same list — test/helpers/i18n.ts pins them
  * together. */
 export const RTL_TAGS = new Set(["ar", "fa", "he", "ur", "ps", "sd", "ug", "yi", "qqx"]);
 
