@@ -40,7 +40,7 @@ msgstr "{type}: {name} ({extra})"
 #: client/components/ChannelWrapper.vue
 msgctxt "channel.type.channel"
 msgid "Channel"
-msgstr "ช่องทาง"
+msgstr "ช่อง"
 
 #. Names the kind of window in a sidebar row's aria-label: the chat network's own window. Substituted as {type} in channel.rowLabel.
 #: client/components/ChannelWrapper.vue
@@ -64,19 +64,19 @@ msgstr "รายการ"
 #: client/components/Chat.vue:186
 msgctxt "chat.connecting"
 msgid "Connecting…"
-msgstr "กำลังเชื่อมต่อ..."
+msgstr "กำลังเชื่อมต่อ…"
 
 #. Tooltip and aria-label of the spinner in a chat window's header while that network's connection is being established. {network} is the display name of the chat network.
 #: client/components/Chat.vue:186
 msgctxt "chat.connectingTo"
 msgid "Connecting to {network}…"
-msgstr "กำลังเชื่อมต่อไปยัง {network}..."
+msgstr "กำลังเชื่อมต่อไปยัง {network}…"
 
 #. aria-label of the ☰ button in a chat window's header; clicking opens the menu of actions for the current conversation.
 #: client/components/Chat.vue:72
 msgctxt "chat.contextMenu"
 msgid "Open the context menu"
-msgstr "เปิดเมนูข้อความบริบท"
+msgstr "เปิดเมนูบริบท"
 
 #. aria-label of the conversation's name in the header of an open chat window (the visible text is the channel or conversation name itself). {type} is the kind of conversation, inserted as an English word by the app: 'channel' (a group chat), 'query' (a private one-on-one chat), 'lobby' (the network's home view) or 'special' (a list window such as the ban list).
 #: client/components/Chat.vue:22
@@ -88,13 +88,13 @@ msgstr "กำลังเปิด {type}"
 #: client/components/MessageList.vue:10
 msgctxt "chat.historyLoading"
 msgid "Loading…"
-msgstr "กำลังโหลด..."
+msgstr "กำลังโหลด…"
 
 #. aria-label of the downward-arrow button that appears above the message input when the scrollback is scrolled up; clicking scrolls down to the newest messages.
 #: client/components/Chat.vue:106
 msgctxt "chat.jumpToRecent"
 msgid "Jump to recent messages"
-msgstr "เลื่อนไปยังข้อความที่ผ่านมา"
+msgstr "ไปยังข้อความล่าสุด"
 
 #. aria-label of the @ button in a chat window's header; clicking opens the popup listing messages that mention you.
 #: client/components/Chat.vue:67
@@ -131,7 +131,7 @@ msgstr "ดูข้อความที่เก่ากว่านี้"
 #: client/components/Chat.vue:78
 msgctxt "chat.toggleUserlist"
 msgid "Toggle user list"
-msgstr "สลับรายการผู้ใช้"
+msgstr "แสดง/ซ่อนรายชื่อผู้ใช้"
 
 #. Placeholder of the input field shown while the channel topic is being edited (double-click the topic line to open it); Enter saves.
 #: client/components/Chat.vue:30
@@ -149,43 +149,43 @@ msgstr "ข้อความใหม่"
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.added"
 msgid "Alias /{name} added."
-msgstr "ชื่อเอลิส์ /{name} ถูกเพิ่มแล้ว"
+msgstr "เพิ่มนามแฝง /{name} แล้ว"
 
 #. Error when an /alias name is invalid. {max} is the length limit, a number.
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.badName"
 msgid "Alias names are letters, digits, _ and - (up to {max} characters)."
-msgstr "ชื่อเอลิส์ประกอบด้วยตัวอักษร ตัวเลข _ และ - (ไม่เกิน {max} ตัวอักษร)"
+msgstr "ชื่อนามแฝงใช้ได้เฉพาะตัวอักษร ตัวเลข _ และ - (ไม่เกิน {max} ตัวอักษร)"
 
 #. Reply to /alias <name> when that alias does not exist. {name} is the name as typed, user input, verbatim; the second '/alias …' part is command syntax.
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.missing"
 msgid "No alias /{name}. /alias {name} <commands> creates it."
-msgstr "ไม่มีชื่อเอลิส์ /{name} /alias {name} <commands> จะสร้างมัน"
+msgstr "ไม่มีนามแฝง /{name} ใช้ /alias {name} <commands> เพื่อสร้าง"
 
 #. Reply to a bare /alias when none are defined; the '/alias <name> <commands>' part is command syntax and stays verbatim.
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.none"
 msgid "No aliases defined. /alias <name> <commands> creates one."
-msgstr "ไม่มีชื่อเอลิส์ที่กำหนดไว้ /alias <name> <commands> จะสร้างมัน"
+msgstr "ยังไม่ได้กำหนดนามแฝง ใช้ /alias <name> <commands> เพื่อสร้าง"
 
 #. Error when an /alias body exceeds the size limit. {length} and {max} are byte counts.
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.tooLong"
 msgid "That alias is too long ({length} of at most {max} characters)."
-msgstr "ชื่อเอลิส์นี้ยาวเกินไป ({length} ของที่มากที่สุด {max} ตัวอักษร)"
+msgstr "นามแฝงนี้ยาวเกินไป ({length} จากสูงสุด {max} ตัวอักษร)"
 
 #. Error when a new alias would exceed the count limit. {max} is the limit, a number; 'Settings → Aliases' names the settings tab where aliases are edited.
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.tooMany"
 msgid "You already have {max} aliases; delete one in Settings → Aliases first."
-msgstr "คุณมี {max} ชื่อเอลิส์แล้ว โปรดลบหนึ่งใน Settings → Aliases ก่อน"
+msgstr "คุณมีนามแฝง {max} รายการแล้ว โปรดลบหนึ่งรายการใน การตั้งค่า → นามแฝง ก่อน"
 
 #. Confirmation after /alias <name> <commands> overwrote an existing alias. {name} is the alias name as typed, verbatim.
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.updated"
 msgid "Alias /{name} updated."
-msgstr "ชื่อผู้ใช้ /{name} ถูกอัปเดต"
+msgstr "อัปเดตนามแฝง /{name} แล้ว"
 
 #. Error when /connect is typed for a network that is already up.
 #: client/js/irc/commands/connect.ts
@@ -198,7 +198,7 @@ msgstr "คุณเชื่อมต่ออยู่แล้ว"
 #: client/js/irc/commands/react.ts
 msgctxt "cmd.channelsAndQueriesOnly"
 msgid "{cmd} command can only be used in channels and queries."
-msgstr "คำสั่ง {cmd} สามารถใช้ได้เฉพาะในช่องหรือการสอบถาม"
+msgstr "คำสั่ง {cmd} ใช้ได้เฉพาะในช่องและบทสนทนาส่วนตัว"
 
 #. Error when a channel-only command is typed in another window. {cmd} is the command as typed (its canonical lowercase name, e.g. 'ban', 'kickban', 'op'), user input, verbatim.
 #: client/js/irc/commands/ban.ts
@@ -214,49 +214,49 @@ msgstr "คำสั่ง {cmd} สามารถใช้ได้เฉพ�
 #: client/js/irc/commands/invite.ts
 msgctxt "cmd.channelsOrTargetOnly"
 msgid "{cmd} command can only be used in channels or by specifying a target."
-msgstr "คำสั่ง {cmd} สามารถใช้ได้เฉพาะในช่องหรือระบุเป้าหมาย"
+msgstr "คำสั่ง {cmd} ใช้ได้เฉพาะในช่อง หรือเมื่อระบุเป้าหมาย"
 
 #. Confirmation after /ignore. {mask} is the hostmask, user data, wrapped in bold formatting codes, verbatim.
 #: client/js/irc/commands/ignore.ts
 msgctxt "cmd.ignore.added"
 msgid "{mask} added to ignorelist"
-msgstr "{mask} ถูกเพิ่มในรายการที่ไม่ต้องการ"
+msgstr "เพิ่ม {mask} ในรายการละเว้นแล้ว"
 
 #. Error when /ignore names a hostmask that is already on the ignore list.
 #: client/js/irc/commands/ignore.ts
 msgctxt "cmd.ignore.already"
 msgid "The specified user/hostmask is already ignored"
-msgstr "ผู้ใช้/hostmask ที่ระบุถูกไม่ต้องการแล้ว"
+msgstr "ผู้ใช้/hostmask ที่ระบุถูกละเว้นอยู่แล้ว"
 
 #. Error when /unignore names a hostmask that is not on the ignore list.
 #: client/js/irc/commands/ignore.ts
 msgctxt "cmd.ignore.notIgnored"
 msgid "The specified user/hostmask is not ignored"
-msgstr "ผู้ใช้/hostmask ที่ระบุไม่ได้อยู่ในรายการที่ไม่ต้องการ"
+msgstr "ผู้ใช้/hostmask ที่ระบุไม่ได้ถูกละเว้น"
 
 #. Confirmation after /unignore. {mask} is the hostmask, user data, wrapped in bold formatting codes, verbatim.
 #: client/js/irc/commands/ignore.ts
 msgctxt "cmd.ignore.removed"
 msgid "Successfully removed {mask} from ignorelist"
-msgstr "ลบ {mask} ออกจากรายการที่ไม่ต้องการสำเร็จ"
+msgstr "ลบ {mask} ออกจากรายการละเว้นแล้ว"
 
 #. Error when /ignore names the user's own nick.
 #: client/js/irc/commands/ignore.ts
 msgctxt "cmd.ignore.self"
 msgid "You can't ignore yourself"
-msgstr "คุณไม่สามารถไม่ต้องการตัวเอง"
+msgstr "คุณไม่สามารถละเว้นตัวเองได้"
 
 #. Error shown instead of the ignore-list window when nothing is ignored.
 #: client/js/irc/commands/ignorelist.ts
 msgctxt "cmd.ignorelistEmpty"
 msgid "Ignorelist is empty"
-msgstr "รายการที่ไม่ต้องการว่าง"
+msgstr "รายการละเว้นว่างเปล่า"
 
 #. Title of the special window showing the network's ignore list, opened by /ignorelist. The name doubles as the window's lookup name, so it stays byte-stable per locale while the session lives.
 #: client/js/irc/commands/ignorelist.ts
 msgctxt "cmd.ignorelistTitle"
 msgid "Ignored users"
-msgstr "ผู้ใช้ที่ไม่ต้องการ"
+msgstr "ผู้ใช้ที่ถูกละเว้น"
 
 #. Error when a plain message is typed in a network's lobby instead of a channel or query; the lobby's input is for commands.
 #: client/js/irc/commands/index.ts
@@ -280,13 +280,13 @@ msgstr "ไม่พบช่องหรือผู้ใช้ที่เป
 #: client/js/irc/commands/nick.ts
 msgctxt "cmd.nickSpaces"
 msgid "Nicknames may not contain spaces."
-msgstr "ชื่อผู้ใช้ไม่สามารถมีช่องว่างได้"
+msgstr "นิคต้องไม่มีช่องว่าง"
 
 #. Error when /nick is given a new nick that exceeds the server's reported length limit.
 #: client/js/irc/commands/nick.ts
 msgctxt "cmd.nickTooLong"
 msgid "Nicknames may not be this long."
-msgstr "ชื่อผู้ใช้ไม่สามารถยาวถึงนี้ได้"
+msgstr "นิคยาวเกินไป"
 
 #. Error when /part is typed in a network's lobby; the '/quit' part is a command name, verbatim.
 #: client/js/irc/commands/part.ts
@@ -298,91 +298,91 @@ msgstr "คุณไม่สามารถออกจากเครือข
 #: client/js/irc/commands/msg.ts
 msgctxt "cmd.query.channel"
 msgid "You can not open query windows for channels, use /join instead."
-msgstr "คุณไม่สามารถเปิดหน้าต่างการสอบถามสำหรับช่องได้ ใช้ /join แทน"
+msgstr "ไม่สามารถเปิดหน้าต่างแชตส่วนตัวสำหรับช่องได้ ใช้ /join แทน"
 
 #. Error when /query is typed with no nick.
 #: client/js/irc/commands/msg.ts
 msgctxt "cmd.query.noArg"
 msgid "You cannot open a query window without an argument."
-msgstr "คุณไม่สามารถเปิดหน้าต่างการสอบถามโดยไม่มีพารามิเตอร์ได้"
+msgstr "ไม่สามารถเปิดหน้าต่างแชตส่วนตัวโดยไม่ระบุอาร์กิวเมนต์ได้"
 
 #. Error when /query is given a name starting with a channel membership prefix (~&@%+); a prefixed nick needs the prefix dropped.
 #: client/js/irc/commands/msg.ts
 msgctxt "cmd.query.prefix"
 msgid "You can not open query windows for names starting with a user prefix."
-msgstr "คุณไม่สามารถเปิดหน้าต่างคำสั่งสำหรับชื่อที่เริ่มต้นด้วยคำนำหน้าชื่อผู้ใช้"
+msgstr "ไม่สามารถเปิดหน้าต่างแชตส่วนตัวสำหรับชื่อที่ขึ้นต้นด้วยคำนำหน้าของผู้ใช้ได้"
 
 #. Error when /query is given a name with spaces; nicks cannot contain them.
 #: client/js/irc/commands/msg.ts
 msgctxt "cmd.query.spaces"
 msgid "You can not open query windows for names containing spaces."
-msgstr "คุณไม่สามารถเปิดหน้าต่างคำสั่งสำหรับชื่อที่มีช่องว่าง"
+msgstr "ไม่สามารถเปิดหน้าต่างแชตส่วนตัวสำหรับชื่อที่มีช่องว่างได้"
 
 #. Error when /react is typed where no recent message can carry a reaction (e.g. a window without message-tags history).
 #: client/js/irc/commands/react.ts
 msgctxt "cmd.reactNoTarget"
 msgid "No message to react to: none here carries a msgid."
-msgstr "ไม่มีข้อความที่ต้องตอบ: ไม่มีข้อความใดที่มีmsgid"
+msgstr "ไม่มีข้อความให้แสดงรีแอคชัน: ไม่มีข้อความใดที่นี่ที่มี msgid"
 
 #. Error when /rejoin is typed outside a channel window.
 #: client/js/irc/commands/rejoin.ts
 msgctxt "cmd.rejoinChannels"
 msgid "You can only rejoin channels."
-msgstr "คุณสามารถร่วมช่องได้เพียงครั้งเดียว"
+msgstr "คุณเข้าร่วมใหม่ได้เฉพาะช่องเท่านั้น"
 
 #. Usage line of /ctcp when arguments are missing; the placeholders are command syntax.
 #: client/js/irc/commands/ctcp.ts
 msgctxt "cmd.usageCtcp"
 msgid "Usage: /ctcp <nick> <ctcp_type>"
-msgstr "ใช้: /ctcp <nick> <ctcp_type>"
+msgstr "วิธีใช้: /ctcp <nick> <ctcp_type>"
 
 #. Usage line of /ignore and /unignore when no target is given. {cmd} is the command as typed, user input, verbatim; the rest is command syntax.
 #: client/js/irc/commands/ignore.ts
 msgctxt "cmd.usageIgnore"
 msgid "Usage: /{cmd} <nick>[!ident][@host]"
-msgstr "ใช้: /{cmd} <nick>[!ident][@host]"
+msgstr "วิธีใช้: /{cmd} <nick>[!ident][@host]"
 
 #. Usage line of /join when no channel is given; the placeholders are command syntax.
 #: client/js/irc/commands/join.ts
 msgctxt "cmd.usageJoin"
 msgid "Usage: /join <channel> [key]"
-msgstr "ใช้: /join <channel> [key]"
+msgstr "วิธีใช้: /join <channel> [key]"
 
 #. Usage line of the mode-list commands (/ban, /unban, …) when no nick is given. {cmd} is the command as typed, user input, verbatim; the '<nick>' placeholder is command syntax, not user data.
 #: client/js/irc/commands/ban.ts
 msgctxt "cmd.usageNick"
 msgid "Usage: /{cmd} <nick>"
-msgstr "ใช้: /{cmd} <nick>"
+msgstr "วิธีใช้: /{cmd} <nick>"
 
 #. Usage line of /nick when no new nick is given; the placeholder is command syntax.
 #: client/js/irc/commands/nick.ts
 msgctxt "cmd.usageNickChange"
 msgid "Usage: /nick <your new nick>"
-msgstr "ใช้: /nick <your new nick>"
+msgstr "วิธีใช้: /nick <your new nick>"
 
 #. Usage line of /op, /deop, /voice, /devoice when no nick is given. {cmd} is the command as typed, user input, verbatim; the rest is command syntax.
 #: client/js/irc/commands/mode.ts
 msgctxt "cmd.usageNickMulti"
 msgid "Usage: /{cmd} <nick> [...nick]"
-msgstr "ใช้: /{cmd} <nick> [...nick]"
+msgstr "วิธีใช้: /{cmd} <nick> [...nick]"
 
 #. Usage line of /react when no reaction text is given. {cmd} is the command as typed, user input, verbatim; the rest is command syntax.
 #: client/js/irc/commands/react.ts
 msgctxt "cmd.usageReact"
 msgid "Usage: /{cmd} <text> [msgid]"
-msgstr "ใช้: /{cmd} <text> [msgid]"
+msgstr "วิธีใช้: /{cmd} <text> [msgid]"
 
 #. Usage line of /redact when no msgid is given. {cmd} is the command as typed, user input, verbatim; the rest is command syntax.
 #: client/js/irc/commands/redact.ts
 msgctxt "cmd.usageRedact"
 msgid "Usage: /{cmd} <msgid> [reason]"
-msgstr "ใช้: /{cmd} <msgid> [reason]"
+msgstr "วิธีใช้: /{cmd} <msgid> [reason]"
 
 #. Usage line of /ver (a CTCP VERSION request) when it is not given exactly one nick; the rest is command syntax.
 #: client/js/irc/commands/ctcp.ts
 msgctxt "cmd.usageVer"
 msgid "Usage: /ver <nick>"
-msgstr "ใช้: /ver <nick>"
+msgstr "วิธีใช้: /ver <nick>"
 
 #. Error shown when /who is typed without a mask outside a channel. '/who [mask] [flags]' is command syntax: keep it as is.
 #: client/js/irc/commands/who.ts
@@ -467,7 +467,7 @@ msgstr "การป้อนข้อความ"
 #: client/components/ChatInput.vue:115
 msgctxt "composer.notConnected"
 msgid "Not connected"
-msgstr "ไม่เชื่อมต่อกับเครือข่าย"
+msgstr "ไม่ได้เชื่อมต่อ"
 
 #. Placeholder of the message input shown while it is empty. {name} is the name of the conversation being typed into: a channel's name, or the person's nick in a private one-on-one conversation.
 #: client/components/ChatInput.vue:293
@@ -511,7 +511,7 @@ msgstr "อัปโหลดไฟล์"
 #: client/components/ChatInput.vue:580
 msgctxt "composer.uploadIndex"
 msgid "{index} of {count}"
-msgstr "{index} ของ {count}"
+msgstr "{index} จาก {count}"
 
 #. Part of the upload progress bar, appended after the uploading text while the file is being prepared (re-encoded or stripped of metadata) before it is sent. Starts lowercase because it is joined with the other parts into one line.
 #: client/components/ChatInput.vue:584
@@ -585,7 +585,7 @@ msgstr[0] "ตั้งโหมด {count} รายการ"
 msgctxt "condensed.nick"
 msgid "{count} user has changed nick"
 msgid_plural "{count} users have changed nick"
-msgstr[0] "ผู้ใช้ {count} คนเปลี่ยนชื่อเล่น"
+msgstr[0] "ผู้ใช้ {count} คนเปลี่ยนนิค"
 
 #. aria-label of the small toggle button that expands or collapses the condensed status block in a channel's scrollback.
 #: client/components/MessageCondensed.vue
@@ -604,7 +604,7 @@ msgstr "ยกเลิก"
 #: client/components/Windows/Connect.vue:213
 msgctxt "connect.account"
 msgid "Account"
-msgstr "เอกสาร"
+msgstr "บัญชี"
 
 #. aria-label of the whole connect screen (the window/dialog element); announced by screen readers on arriving at the form.
 #: client/components/Windows/Connect.vue:7
@@ -616,7 +616,7 @@ msgstr "เชื่อมต่อ"
 #: client/components/Windows/Connect.vue:201
 msgctxt "connect.authentication"
 msgid "Authentication"
-msgstr "การตรวจสอบความถูกต้อง"
+msgstr "การยืนยันตัวตน"
 
 #. Checkbox on the connect form: dial this network every time the app opens.
 #: client/components/Windows/Connect.vue:290
@@ -640,32 +640,32 @@ msgstr "ช่อง"
 #: client/components/Windows/Connect.vue:194
 msgctxt "connect.channelsPlaceholder"
 msgid "#channel, #another (optional)"
-msgstr "#channel, #another (ต้องการ)"
+msgstr "#channel, #another (ไม่บังคับ)"
 
 #. Status line shown on the connect form right after submitting: the nick used and the network name (or host:port of the server) being dialled.
 #: client/components/Windows/Connect.vue:84
 #: client/components/Windows/Connect.vue:308
 msgctxt "connect.connectingAs"
 msgid "Connecting as {nick} to {network}…"
-msgstr "การเชื่อมต่อในฐานะ {nick} ไปยัง {network}…"
+msgstr "กำลังเชื่อมต่อในฐานะ {nick} ไปยัง {network}…"
 
 #. Lobby status line while a chat network is being dialled. {host} and {port} come from the saved network's settings.
 #: client/js/irc/client.ts
 msgctxt "connect.connectingTo"
 msgid "Connecting to {host}:{port}…"
-msgstr "การเชื่อมต่อไปยัง {host}:{port}…"
+msgstr "กำลังเชื่อมต่อไปยัง {host}:{port}…"
 
 #. Lobby status line while an automatic retry dials a chat network; {attempt} counts the retries this connection has seen.
 #: client/js/irc/client.ts
 msgctxt "connect.connectingToAttempt"
 msgid "Connecting to {host}:{port}… (attempt {attempt})"
-msgstr "การเชื่อมต่อไปยัง {host}:{port}… (รอบที่ {attempt})"
+msgstr "กำลังเชื่อมต่อไปยัง {host}:{port}… (ครั้งที่ {attempt})"
 
 #. Lobby status line when the user's own /quit closed the connection on purpose.
 #: client/js/irc/client.ts
 msgctxt "connect.disconnected"
 msgid "Disconnected."
-msgstr "แยกตัวออกแล้ว"
+msgstr "ตัดการเชื่อมต่อแล้ว"
 
 #. Lobby status line after registration naming the IRCv3 capabilities the server enabled; {caps} is a comma-separated list of protocol tokens, never translated.
 #: client/js/irc/client.ts
@@ -683,13 +683,13 @@ msgstr "ป้อนรหัสผ่านสำหรับ {account} เพ�
 #: client/components/Windows/Connect.vue:672
 msgctxt "connect.guestNickRequired"
 msgid "Choose a nick to connect as a guest."
-msgstr "เลือกชื่อผู้ใช้เพื่อเชื่อมต่อในฐานะผู้เยี่ยม"
+msgstr "เลือกนิคเพื่อเชื่อมต่อในฐานะผู้เยี่ยมชม"
 
 #. Button that connects with just a nick instead of an account.
 #: client/js/branding.ts
 msgctxt "connect.guestSubmit"
 msgid "Connect as guest"
-msgstr "เชื่อมต่อในฐานะผู้เยี่ยม"
+msgstr "เชื่อมต่อในฐานะผู้เยี่ยมชม"
 
 #. Heading of the guest half of the sign-in form (features.guestAccess on).
 #: client/js/branding.ts
@@ -701,7 +701,7 @@ msgstr "ไม่มีบัญชี?"
 #: client/components/Windows/Connect.vue:608
 msgctxt "connect.linkIgnored"
 msgid "This app only connects to {network}. The link to {host} was ignored."
-msgstr "แอปนี้เชื่อมต่อกับ {network} เท่านั้น การเชื่อมต่อกับ {host} ถูกมองข้าม"
+msgstr "แอปนี้เชื่อมต่อกับ {network} เท่านั้น ลิงก์ไปยัง {host} จึงไม่ถูกใช้"
 
 #. Notice on the connect approval dialog opened from a web+irc:// link without channels; {host}:{port} is the proposed server.
 #: client/components/Windows/Connect.vue:610
@@ -740,7 +740,7 @@ msgstr "นิค"
 #: client/components/Windows/Connect.vue:315
 msgctxt "connect.notNow"
 msgid "Not now"
-msgstr "ไม่ตอนนี้"
+msgstr "ไว้ทีหลัง"
 
 #. Label of the account password field on the connect form, sign-in panel and network edit form; the field has a show/hide eye toggle.
 #: client/components/Windows/Connect.vue:46
@@ -753,13 +753,13 @@ msgstr "รหัสผ่าน"
 #: client/components/Windows/Connect.vue:251
 msgctxt "connect.pushNotifications"
 msgid "Push notifications (registers when the server supports them)"
-msgstr "การแจ้งเตือนแบบ Push (แจ้งเตือนเมื่อเซิร์ฟเวอร์รองรับ)"
+msgstr "การแจ้งเตือนแบบพุช (ลงทะเบียนเมื่อเซิร์ฟเวอร์รองรับ)"
 
 #. Lobby status line when the network was disconnected while an automatic reconnect was still scheduled.
 #: client/js/irc/client.ts
 msgctxt "connect.reconnectCancelled"
 msgid "Reconnect cancelled."
-msgstr "การเชื่อมต่อถูกยกเลิก"
+msgstr "ยกเลิกการเชื่อมต่อใหม่แล้ว"
 
 #. Lobby status line while an automatic retry waits out its backoff before dialling the chat network again. {seconds} is the whole number of seconds until it dials; {attempt} counts the retries this connection has seen.
 #: client/js/irc/client.ts
@@ -783,7 +783,7 @@ msgstr "รอ {seconds} วินาที: เซิร์ฟเวอร์�
 #: client/js/branding.ts
 msgctxt "connect.rememberMe"
 msgid "Stay signed in on this device"
-msgstr "คงติดอยู่ในอุปกรณ์นี้"
+msgstr "คงอยู่ในระบบบนอุปกรณ์นี้"
 
 #. Checkbox under the SASL password field on the connect form: keep the password in this browser's storage so reconnects need no typing.
 #: client/components/Windows/Connect.vue:264
@@ -795,31 +795,31 @@ msgstr "จำรหัสผ่านในอุปกรณ์นี้"
 #: client/js/irc/client.ts
 msgctxt "connect.saslFailed"
 msgid "SASL authentication failed: {reason}"
-msgstr "การตรวจสอบ SASL ล้มเหลว: {reason}"
+msgstr "การยืนยันตัวตน SASL ล้มเหลว: {reason}"
 
 #. Lobby status line listing the SASL mechanisms the server offers (902-adjacent RPL_SASLMECHS). {mechanisms} is the server's comma-separated token list, verbatim.
 #: client/js/irc/sasl.ts
 msgctxt "connect.saslMechanisms"
 msgid "Available SASL mechanisms: {mechanisms}"
-msgstr "mechaanism SASL ที่มีอยู่: {mechanisms}"
+msgstr "กลไก SASL ที่มี: {mechanisms}"
 
 #. Lobby error after a failed required SASL login: the network was dropped instead of registering unauthenticated. {host} is the chat network's configured host name.
 #: client/js/irc/client.ts
 msgctxt "connect.saslQuitHint"
 msgid "Not connecting to {host} without the login you asked for."
-msgstr "ไม่เชื่อมต่อกับ {host} โดยไม่มีการเข้าสู่ระบบที่คุณตั้งใจ"
+msgstr "ไม่เชื่อมต่อกับ {host} หากไม่ได้เข้าสู่ระบบตามที่คุณขอ"
 
 #. Lobby error after a required SASL login that merely timed out (a slow login service, not a wrong password): the connection is redialled on the usual schedule. {host} is the configured host name.
 #: client/js/irc/client.ts
 msgctxt "connect.saslQuitHintRetry"
 msgid "Not connecting to {host} without the login you asked for; trying again."
-msgstr "ไม่เชื่อมต่อกับ {host} โดยไม่มีการเข้าสู่ระบบที่คุณตั้งใจ ลองอีกครั้ง"
+msgstr "ไม่เชื่อมต่อกับ {host} หากไม่ได้เข้าสู่ระบบตามที่คุณขอ กำลังลองอีกครั้ง"
 
 #. Reason fragment of 'SASL authentication failed: {reason}' when the server's AUTHENTICATE challenge is not the empty one PLAIN and EXTERNAL expect. {mechanism} is the mechanism token, verbatim. Lowercase mid-sentence by position.
 #: client/js/irc/sasl.ts
 msgctxt "connect.saslReason.badChallenge"
 msgid "unexpected challenge for {mechanism}"
-msgstr "ความท้าทายที่ไม่คาดคิดสำหรับ {mechanism}"
+msgstr "challenge ที่ไม่คาดคิดสำหรับ {mechanism}"
 
 #. Reason fragment of 'SASL authentication failed: {reason}' when the server rejected the client's request for the sasl capability (CAP NAK). Lowercase mid-sentence by position.
 #: client/js/irc/handlers/cap.ts
@@ -837,7 +837,7 @@ msgstr "ไม่มีชื่อบัญชีหรือรหัสผ่
 #: client/js/irc/sasl.ts
 msgctxt "connect.saslReason.numeric"
 msgid "numeric {code}"
-msgstr "ค่าตัวเลข {code}"
+msgstr "รหัสตอบกลับ {code}"
 
 #. Reason fragment of 'SASL authentication failed: {reason}' when the server took too long to answer the login. Lowercase mid-sentence by position.
 #: client/js/irc/client.ts
@@ -867,13 +867,13 @@ msgstr "เซิร์ฟเวอร์รองรับ SASL {offered}, แ�
 #: client/js/irc/client.ts
 msgctxt "connect.saslRequiredHint"
 msgid "Check the account name and password in this network's settings, or pick \"No authentication\" there to connect without logging in."
-msgstr "ตรวจสอบชื่อบัญชีและรหัสผ่านในตั้งค่าเครือข่ายนี้ หรือเลือก \"ไม่มีการตรวจสอบความถูกต้อง\" เพื่อเชื่อมต่อโดยไม่ต้องเข้าสู่ระบบ"
+msgstr "ตรวจสอบชื่อบัญชีและรหัสผ่านในการตั้งค่าของเครือข่ายนี้ หรือเลือก \"ไม่ใช้การยืนยันตัวตน\" ที่นั่นเพื่อเชื่อมต่อโดยไม่เข้าสู่ระบบ"
 
 #. Checkbox on the connect form: reveals the account name and password fields used to authenticate with network services (SASL).
 #: client/components/Windows/Connect.vue:207
 msgctxt "connect.saslToggle"
 msgid "I have a services account (SASL)"
-msgstr "มีบัญชีบริการ (SASL)"
+msgstr "ฉันมีบัญชีบริการ (SASL)"
 
 #. The IRC server section of the connect form: heading above the server fields, and the label of the server host field.
 #: client/components/Windows/Connect.vue:124
@@ -964,13 +964,13 @@ msgstr "วันนี้"
 #: client/components/DateMarker.vue:4
 msgctxt "dates.yesterday"
 msgid "Yesterday"
-msgstr "วันก่อนหน้า"
+msgstr "เมื่อวาน"
 
 #. Name of WebSocket close code 1001 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1001"
 msgid "server going away"
-msgstr "เซิร์ฟเวอร์กำลังถูกตั้งเครื่องหมายออกไป"
+msgstr "เซิร์ฟเวอร์กำลังปิดตัว"
 
 #. Name of WebSocket close code 1002 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
@@ -982,7 +982,7 @@ msgstr "ข้อผิดพลาดของโปรโตคอล WebSocke
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1006"
 msgid "connection lost"
-msgstr "ความเชื่อมต่อขาดหาย"
+msgstr "การเชื่อมต่อขาดหาย"
 
 #. Name of WebSocket close code 1008 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
@@ -1030,55 +1030,55 @@ msgstr "โค้ด {code}"
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.couldNotConnect"
 msgid "Could not connect to {url}{error}."
-msgstr "ไม่สามารถเชื่อมต่อกับ {url}{error}ได้"
+msgstr "ไม่สามารถเชื่อมต่อกับ {url} ได้{error}"
 
 #. Headline when a network the client is dialling never opened and the retry schedule is standing down (the browser refused or could not reach the address). {url} is the WebSocket URL that was dialled; {error} is the browser's error text in parentheses, or empty.
 #: client/js/irc/disconnect.ts:78
 msgctxt "disconnect.couldNotConnectNotReconnecting"
 msgid "Could not connect to {url}{error}. Not reconnecting."
-msgstr "ไม่สามารถเชื่อมต่อกับ {url}{error}ได้ ไม่พยายามเชื่อมต่อใหม่"
+msgstr "ไม่สามารถเชื่อมต่อกับ {url} ได้{error} จะไม่เชื่อมต่อใหม่"
 
 #. Connection-failure report once the network was registered. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.disconnected"
 msgid "Disconnected from {host}{detail}."
-msgstr "แยกตัวจาก {host}{detail}"
+msgstr "ตัดการเชื่อมต่อจาก {host} แล้ว{detail}"
 
 #. Headline when a registered connection closed and the retry schedule is standing down. {host} is the host as the user typed it; {detail} is the close detail in parentheses, or empty.
 #: client/js/irc/disconnect.ts:127
 msgctxt "disconnect.disconnectedNotReconnecting"
 msgid "Disconnected from {host}{detail}. Not reconnecting."
-msgstr "แยกตัวจาก {host}{detail} ไม่พยายามเชื่อมต่อใหม่"
+msgstr "ตัดการเชื่อมต่อจาก {host} แล้ว{detail} จะไม่เชื่อมต่อใหม่"
 
 #. Follow-up hint under a failed connection dialled with ws:// from an https:// page: the browser blocks mixed content, so the fix is on the network's settings.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.httpsBlocked"
 msgid "This page was loaded over HTTPS, so the browser blocks plain ws:// connections. Enable TLS for this network, or open the app over http://."
-msgstr "หน้าเว็บนี้ถูกโหลดผ่าน HTTPS ดังนั้นเบราว์เซอร์ตัดการเชื่อมต่อแบบ ws:// ปิดใช้ TLS สำหรับเครือข่ายนี้ หรือเปิดแอปผ่าน http://."
+msgstr "หน้านี้โหลดผ่าน HTTPS เบราว์เซอร์จึงบล็อกการเชื่อมต่อ ws:// แบบธรรมดา เปิดใช้ TLS สำหรับเครือข่ายนี้ หรือเปิดแอปผ่าน http://"
 
 #. Follow-up hint under a failed plain (ws://) dial from a non-secure page.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.plainCauses"
 msgid "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or it does not accept WebSocket connections on that port."
-msgstr "บราวเซอร์ไม่ได้ระบุเหตุผล สาเหตุที่อาจเกิดขึ้น: เซิร์ฟเวอร์ไม่ทำงาน พอร์ตผิด หรือไม่ยอมรับการเชื่อมต่อ WebSocket บนพอร์ตนั้น"
+msgstr "เบราว์เซอร์ไม่ได้บอกสาเหตุ สาเหตุที่เป็นไปได้: เซิร์ฟเวอร์ไม่ทำงาน พอร์ตผิด หรือพอร์ตนั้นไม่รับการเชื่อมต่อ WebSocket"
 
 #. Follow-up hint under a connection the server dropped during IRC registration, when the close reason named no live session.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.registration"
 msgid "The WebSocket opened but the server dropped it before registration finished - check that this port really speaks IRC over WebSocket, and look for a server notice above for the reason."
-msgstr "WebSocket เปิดต่อบริการแต่บริการดรอปมันก่อนที่จะลงทะเบียนเสร็จ - ตรวจสอบว่าพอร์ตนี้ใช้ IRC ผ่าน WebSocket จริง ๆ และดูข้อความแจ้งเตือนของบริการเพื่อหาเหตุผล"
+msgstr "WebSocket เปิดแล้ว แต่เซิร์ฟเวอร์ตัดการเชื่อมต่อก่อนการลงทะเบียนจะเสร็จ - ตรวจสอบว่าพอร์ตนี้รองรับ IRC ผ่าน WebSocket จริง และดูประกาศของเซิร์ฟเวอร์ด้านบนเพื่อหาสาเหตุ"
 
 #. Follow-up hint when the server's close reason names a live session: retrying alone cannot fix it, the other client has to go.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.sessionConflict"
 msgid "This account is already connected on this network - another tab, window or device is using it. Close that client; this tab then connects on its next retry (a dead connection is reclaimed within about a minute)."
-msgstr "เอกสารนี้เชื่อมต่อกับเครือข่ายนี้แล้ว - มีการเชื่อมต่อจากแท็บ หน้าต่าง หรืออุปกรณ์อื่นแล้ว ปิดคลิ้งนั้น แท็บนี้จะเชื่อมต่อใหม่ในภายหลัง (การเชื่อมต่อที่ตายแล้วจะถูกฟื้นคืนใช้ได้ประมาณหนึ่งชั่วโมง)"
+msgstr "บัญชีนี้เชื่อมต่อกับเครือข่ายนี้อยู่แล้ว - แท็บ หน้าต่าง หรืออุปกรณ์อื่นกำลังใช้อยู่ ปิดไคลเอนต์นั้น แล้วแท็บนี้จะเชื่อมต่อในการลองครั้งถัดไป (การเชื่อมต่อที่ค้างจะถูกเรียกคืนภายในประมาณหนึ่งนาที)"
 
 #. Follow-up hint under a failed secure (wss://) dial. {url} is the network's address with https: in place of wss:, for accepting a self-signed certificate once.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.wssCauses"
 msgid "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or its TLS certificate is not trusted — for a self-signed certificate, open {url} in a new tab, accept the warning, then reconnect."
-msgstr "บราวเซอร์ไม่ได้ระบุเหตุผล สาเหตุที่อาจเกิดขึ้น: เซิร์ฟเวอร์ไม่ทำงาน พอร์ตผิด หรือใบรับรอง TLS ไม่ได้รับการเชื่อถือ - สำหรับใบรับรองที่ลงชื่อเอง ให้เปิด {url} ในแท็บใหม่ ยอมรับคำเตือน แล้วเชื่อมต่อใหม่"
+msgstr "เบราว์เซอร์ไม่ได้บอกสาเหตุ สาเหตุที่เป็นไปได้: เซิร์ฟเวอร์ไม่ทำงาน พอร์ตผิด หรือใบรับรอง TLS ไม่ได้รับความเชื่อถือ - สำหรับใบรับรองที่ลงนามเอง ให้เปิด {url} ในแท็บใหม่ ยอมรับคำเตือน แล้วเชื่อมต่อใหม่"
 
 #. Connection-failure report when the server dropped the socket before registration finished. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
 #: client/js/irc/disconnect.ts
@@ -1156,7 +1156,7 @@ msgstr "ห้ามรบกวนถึง"
 #: client/components/Settings/Notifications.vue
 msgctxt "dnd.scheduleHint"
 msgid "While do not disturb is on, you show as away and nothing alerts you here or through push. Push stops on all your devices signed in to the same account. If no {appName} is open when a scheduled window starts, push stops once one opens. Same start and end: all day."
-msgstr "ขณะเปิดห้ามรบกวน คุณจะแสดงเป็นไม่อยู่ และจะไม่มีการแจ้งเตือนทั้งที่นี่และผ่าน push การแจ้งเตือน push จะหยุดในทุกอุปกรณ์ที่ลงชื่อเข้าใช้บัญชีเดียวกัน หากไม่มี {appName} เปิดอยู่เมื่อถึงช่วงเวลาที่กำหนด push จะหยุดเมื่อมีการเปิดขึ้นมา เวลาเริ่มและสิ้นสุดเท่ากัน: ทั้งวัน"
+msgstr "ขณะเปิดห้ามรบกวน คุณจะแสดงเป็นไม่อยู่ และจะไม่มีการแจ้งเตือนทั้งที่นี่และผ่านพุช พุชจะหยุดในทุกอุปกรณ์ที่ลงชื่อเข้าใช้บัญชีเดียวกัน หากไม่มี {appName} เปิดอยู่เมื่อถึงช่วงเวลาที่กำหนด พุชจะหยุดเมื่อมีการเปิดขึ้นมา เวลาเริ่มและสิ้นสุดเท่ากัน: ทั้งวัน"
 
 #. Screen-reader label of the do-not-disturb schedule's start time field.
 #: client/components/Settings/Notifications.vue
@@ -1216,13 +1216,13 @@ msgstr "ไม่สามารถเข้าร่วม {channel} - ช่�
 #: client/components/MessageTypes/error.vue
 msgctxt "error.chanopPrivsNeeded"
 msgid "Cannot perform action: You're not a channel operator."
-msgstr "ไม่สามารถดำเนินการ: คุณไม่ใช่ผู้ดำเนินการของช่อง."
+msgstr "ไม่สามารถดำเนินการ: คุณไม่ใช่ออปของช่อง"
 
 #. Join refusal (473) phrased by the client; {channel} is the refused channel name.
 #: client/components/MessageTypes/error.vue
 msgctxt "error.inviteOnlyChannel"
 msgid "Cannot join {channel} - Channel is invite only."
-msgstr "ไม่สามารถเข้าร่วม {channel} - ช่องเปิดเฉพาะผู้เชิญ."
+msgstr "ไม่สามารถเข้าร่วม {channel} - ช่องนี้เข้าได้เฉพาะผู้ที่ได้รับเชิญ"
 
 #. Error shown in a network's own window when the chat server does not offer a protocol capability the client requires. {caps} is the server's own list of capability names, space separated and never translated.
 #: client/js/irc/handlers/cap.ts
@@ -1234,7 +1234,7 @@ msgstr "ความสามารถที่จำเป็นขาดหา
 #: client/components/MessageTypes/error.vue
 msgctxt "error.noSuchNick"
 msgid "User {nick} hasn't logged in or does not exist."
-msgstr "ผู้ใช้ {nick} ยังไม่ได้เข้าสู่หรือไม่มีอยู่."
+msgstr "ผู้ใช้ {nick} ไม่ได้ออนไลน์หรือไม่มีอยู่"
 
 #. Refusal (442) phrased by the client, e.g. a topic change from outside.
 #: client/components/MessageTypes/error.vue
@@ -1258,7 +1258,7 @@ msgstr "ไม่สามารถเข้าร่วม {channel} - คุ�
 #: client/components/MessageTypes/error.vue
 msgctxt "error.unknownCommand"
 msgid "Unknown command: {command}"
-msgstr "คำสั่งไม่รู้จัก: {command}"
+msgstr "ไม่รู้จักคำสั่ง: {command}"
 
 #. Refusal (441) phrased by the client, e.g. a kick of a user who has left; {nick} is user data.
 #: client/components/MessageTypes/error.vue
@@ -1294,13 +1294,13 @@ msgstr "เชื่อมต่อ"
 #: client/components/NetworkForm.vue:505
 msgctxt "form.actionDisconnect"
 msgid "Disconnect"
-msgstr "แยกตัว"
+msgstr "ตัดการเชื่อมต่อ"
 
 #. Note on the network edit form, shown while the network is up: edits to these fields wait for the next connection.
 #: client/components/NetworkForm.vue:98
 msgctxt "form.applyNote"
 msgid "Server, port, TLS, channels and authentication changes apply the next time this network connects (a network that is waiting to reconnect retries right away)."
-msgstr "การตั้งค่าเซิร์ฟเวอร์ พอร์ต TLS ช่อง และการตรวจสอบความถูกต้องจะใช้ครั้งถัดไปเมื่อเชื่อมต่อเครือข่ายครั้งถัดไป (เครือข่ายที่รอการเชื่อมต่อใหม่จะพยายามเชื่อมต่อทันที)."
+msgstr "การเปลี่ยนเซิร์ฟเวอร์ พอร์ต TLS ช่อง และการยืนยันตัวตนจะมีผลเมื่อเครือข่ายนี้เชื่อมต่อครั้งถัดไป (เครือข่ายที่รอเชื่อมต่อใหม่จะลองใหม่ทันที)"
 
 #. aria-label of the network edit form window (Settings → Networks → a network).
 #: client/components/NetworkForm.vue:6
@@ -1312,7 +1312,7 @@ msgstr "แก้ไขเครือข่าย"
 #: client/components/NetworkForm.vue:154
 msgctxt "form.authentication"
 msgid "Authentication"
-msgstr "การตรวจสอบความถูกต้อง"
+msgstr "การยืนยันตัวตน"
 
 #. Checkbox on the network edit form: dial this network every time the app opens.
 #: client/components/NetworkForm.vue:90
@@ -1330,13 +1330,13 @@ msgstr "การแจ้งเตือนเบราว์เซอร์ส
 #: client/components/NetworkForm.vue:263
 msgctxt "form.browserNotificationsHelp"
 msgid "Show browser notifications for highlights and queries on this network. Needs the browser's permission; asks when first saved. Each network is set up independently."
-msgstr "แสดงการแจ้งเตือนเบราว์เซอร์สำหรับเนื้อหาและคำค้นหาในเครือข่ายนี้ ต้องการความยินยอมของเบราว์เซอร์ ถามเมื่อถูกบันทึกครั้งแรก แต่ละเครือข่ายตั้งค่าแยกต่างหาก"
+msgstr "แสดงการแจ้งเตือนเบราว์เซอร์สำหรับไฮไลต์และบทสนทนาส่วนตัวในเครือข่ายนี้ ต้องได้รับอนุญาตจากเบราว์เซอร์ โดยจะถามเมื่อบันทึกครั้งแรก แต่ละเครือข่ายตั้งค่าแยกกัน"
 
 #. Label of the field listing channels to join automatically after connecting, on the network edit form.
 #: client/components/NetworkForm.vue:119
 msgctxt "form.channels"
 msgid "Channels"
-msgstr "ช่องทาง"
+msgstr "ช่อง"
 
 #. Placeholder of the channels field on the network edit form: example channel names, where a name may be followed by its door key.
 #: client/components/NetworkForm.vue:125
@@ -1360,25 +1360,25 @@ msgstr "หนึ่ง /คำสั่ง ต่อบรรทัด\nแต�
 #: client/components/NetworkForm.vue:490
 msgctxt "form.connectedInsecure"
 msgid "Connected (not secure)"
-msgstr "ต่อสัญญาณ (ไม่ปลอดภัย)"
+msgstr "เชื่อมต่อแล้ว (ไม่ปลอดภัย)"
 
 #. Status line on the network edit form while the network is online over TLS.
 #: client/components/NetworkForm.vue:490
 msgctxt "form.connectedTls"
 msgid "Connected (TLS)"
-msgstr "ต่อสัญญาณ (TLS)"
+msgstr "เชื่อมต่อแล้ว (TLS)"
 
 #. Status line on the network edit form while the network is being dialled.
 #: client/components/NetworkForm.vue:493
 msgctxt "form.connecting"
 msgid "Connecting…"
-msgstr "การเชื่อมต่อ..."
+msgstr "กำลังเชื่อมต่อ…"
 
 #. Status line on the network edit form when the network is not connected.
 #: client/components/NetworkForm.vue:493
 msgctxt "form.disconnected"
 msgid "Disconnected"
-msgstr "ไม่ได้เชื่อมต่อกับ"
+msgstr "ไม่ได้เชื่อมต่อ"
 
 #. Heading of the network edit form; {name} is the network's current display name.
 #: client/components/NetworkForm.vue:14
@@ -1396,7 +1396,7 @@ msgstr "ชื่อ"
 #: client/components/NetworkForm.vue:49
 msgctxt "form.namePlaceholder"
 msgid "Optional, defaults to the server's network name"
-msgstr "ตั้งค่าเป็นตัวเลือก กำหนดค่าเริ่มต้นเป็นชื่อเครือข่ายของเซิร์ฟเวอร์"
+msgstr "ไม่บังคับ ค่าเริ่มต้นคือชื่อเครือข่ายของเซิร์ฟเวอร์"
 
 #. Heading of the server half of the network edit form (name, server, TLS, autoconnect).
 #: client/components/NetworkForm.vue:40
@@ -1414,7 +1414,7 @@ msgstr "นิค"
 #: client/components/NetworkForm.vue:158
 msgctxt "form.noAuth"
 msgid "No authentication"
-msgstr "ไม่มีการตรวจสอบความถูกต้อง"
+msgstr "ไม่ใช้การยืนยันตัวตน"
 
 #. Label of the services account password field on the network edit form, shown when SASL is on.
 #: client/components/NetworkForm.vue:183
@@ -1480,25 +1480,25 @@ msgstr "ไม่แสดงเป็นไม่อยู่เลย"
 #: client/components/NetworkForm.vue:225
 msgctxt "form.pushHelp"
 msgid "Register this device for push notifications on this network. The server must support the draft/webpush capability. Push needs authentication, so this only appears with SASL configured. Each network is set up independently."
-msgstr "ลงทะเบียนอุปกรณ์นี้สำหรับการแจ้งเตือนแบบ push ในเครือข่ายนี้ เซิร์ฟเวอร์ต้องรองรับความสามารถ draft/webpush แจ้งเตือนแบบ push ต้องมีการตรวจสอบความถูกต้อง ดังนั้น จะแสดงขึ้นเฉพาะเมื่อตั้งค่า SASL แล้ว แต่ละเครือข่ายตั้งค่าแยกต่างหาก"
+msgstr "ลงทะเบียนอุปกรณ์นี้สำหรับการแจ้งเตือนแบบพุชในเครือข่ายนี้ เซิร์ฟเวอร์ต้องรองรับความสามารถ draft/webpush พุชต้องใช้การยืนยันตัวตน จึงแสดงเฉพาะเมื่อตั้งค่า SASL แล้ว แต่ละเครือข่ายตั้งค่าแยกกัน"
 
 #. Checkbox on the network edit form: register this device for this network's push notifications.
 #: client/components/NetworkForm.vue:222
 msgctxt "form.pushNotifications"
 msgid "Push notifications for this network"
-msgstr "แจ้งเตือนแบบ push สำหรับเครือข่ายนี้"
+msgstr "การแจ้งเตือนแบบพุชสำหรับเครือข่ายนี้"
 
 #. Button on the network edit form next to the stale-push warning: re-subscribes this device for the network.
 #: client/components/NetworkForm.vue:244
 msgctxt "form.pushRenew"
 msgid "Renew push notifications"
-msgstr "รีเฟรชแจ้งเตือนแบบ push"
+msgstr "ต่ออายุการแจ้งเตือนแบบพุช"
 
 #. Warning on the network edit form when the server announced a new push key and this device's subscription must be renewed.
 #: client/components/NetworkForm.vue:240
 msgctxt "form.pushStaleHint"
 msgid "This server's push identity (its key) changed, so this device's push subscription for it no longer works."
-msgstr "บัญชี push ของเซิร์ฟเวอร์นี้ (คีย์ของมัน) เปลี่ยนไปแล้ว ดังนั้นการสมัครสมาชิกของอุปกรณ์นี้สำหรับมันไม่ทำงานอีกต่อไป"
+msgstr "ข้อมูลระบุตัวตนของพุช (คีย์) ของเซิร์ฟเวอร์นี้เปลี่ยนไป การสมัครรับพุชของอุปกรณ์นี้จึงใช้ไม่ได้อีกต่อไป"
 
 #. Checkbox on the network edit form: keep this network's SASL password in the browser's storage.
 #: client/components/NetworkForm.vue:209
@@ -1655,13 +1655,13 @@ msgstr "การตั้งค่าผู้ใช้"
 #: client/components/Windows/Help.vue
 msgctxt "help.about"
 msgid "About"
-msgstr "ข้อมูลเพิ่มเติม"
+msgstr "เกี่ยวกับ"
 
 #. Description of the # autocompletion trigger in the help window: typing # suggests channel names.
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.channel"
 msgid "Channel"
-msgstr "ช่องทาง"
+msgstr "ช่อง"
 
 #. Description of the / autocompletion trigger in the help window: typing / suggests slash commands; the parenthesized phrase points at the command list further down this page.
 #: client/components/Windows/Help.vue
@@ -1673,7 +1673,7 @@ msgstr "คำสั่ง (ดูรายการคำสั่งด้า�
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.disabled"
 msgid "Autocompletion can be disabled in settings."
-msgstr "การเติมเต็มอัตโนมัติสามารถปิดการใช้งานในตั้งค่าได้"
+msgstr "ปิดการเติมคำอัตโนมัติได้ในการตั้งค่า"
 
 #. Description of the : autocompletion trigger in the help window. {example} is a smiley shown as a code fragment (:) ), kept verbatim.
 #: client/components/Windows/Help.vue
@@ -1685,19 +1685,19 @@ msgstr "อีโมจิ (หมายเหตุ: ต้องพิมพ�
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.heading"
 msgid "Autocompletion"
-msgstr "การเติม"
+msgstr "การเติมคำอัตโนมัติ"
 
 #. Autocompletion intro in the help window, one paragraph. {up} and {down} are the arrow-key keycaps (↑ ↓), {tab} and {enter} the Tab and Enter keycaps, each rendered as a keycap element where its placeholder stands; order them as your language needs.
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.intro"
 msgid "To auto-complete nicknames, channels, commands, and emoji, type one of the characters below to open a suggestion list. Use the {up} and {down} keys to highlight an item, and insert it by pressing {tab} or {enter} (or by clicking the desired item)."
-msgstr "หากต้องการเติมชื่อเล่น ช่อง คำสั่ง และอีโมจิอัตโนมัติ ให้พิมพ์อักขระตัวใดตัวหนึ่งด้านล่างเพื่อเปิดรายการคำแนะนำ ใช้ปุ่ม {up} และ {down} เพื่อเลือกรายการ แล้วกด {tab} หรือ {enter} เพื่อแทรก (หรือคลิกรายการที่ต้องการ)"
+msgstr "หากต้องการเติมนิค ช่อง คำสั่ง และอีโมจิอัตโนมัติ ให้พิมพ์อักขระตัวใดตัวหนึ่งด้านล่างเพื่อเปิดรายการคำแนะนำ ใช้ปุ่ม {up} และ {down} เพื่อเลือกรายการ แล้วกด {tab} หรือ {enter} เพื่อแทรก (หรือคลิกรายการที่ต้องการ)"
 
 #. Description of the @ autocompletion trigger in the help window: typing @ suggests user names.
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.nick"
 msgid "Nickname"
-msgstr "ชื่อผู้ใช้"
+msgstr "นิค"
 
 #. Help window sentence shown when the running build is newer than its release. {app} is the app's name (verbatim); {commit} is a link whose text is help.commitHash ('commit 1a2b3c4'); {version} is the release number, kept after its v.
 #: client/components/Windows/Help.vue
@@ -1709,19 +1709,19 @@ msgstr "{app} สร้างจาก {commit} หลัง v{version}"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.alias"
 msgid "Alias:"
-msgstr "ชื่อเล่น:"
+msgstr "นามแฝง:"
 
 #. Lead-in of the alias line under a command description in the help window when the command has several alternative names; the alternatives follow as code fragments. Keep the trailing colon.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.aliases"
 msgid "Aliases:"
-msgstr "ชื่อเล่น:"
+msgstr "นามแฝง:"
 
 #. Description of the /away command in the help window; the command syntax (/away [message]) is shown beside it and stays untranslated.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.away"
 msgid "Mark yourself as away with an optional message."
-msgstr "ระบุตัวเองว่าอยู่นอกเครือด้วยข้อความที่เลือกได้"
+msgstr "ตั้งสถานะตัวเองเป็นไม่อยู่ พร้อมข้อความ (ไม่บังคับ)"
 
 #. Description of the /back command in the help window. {command} is the /away command, shown as a code fragment and never translated.
 #: client/components/Windows/Help.vue
@@ -1733,19 +1733,19 @@ msgstr "ยกเลิกสถานะไม่อยู่ของคุณ
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ban"
 msgid "Ban ({mode}) a user from the current channel. This can be a nickname or a hostmask."
-msgstr "แบน ({mode}) ผู้ใช้จากช่องปัจจุบัน ใช้ชื่อเล่นหรือมาสก์โฮสต์ก็ได้"
+msgstr "แบน ({mode}) ผู้ใช้จากช่องปัจจุบัน ใช้นิคหรือ hostmask ก็ได้"
 
 #. Description of the /banlist command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.banlist"
 msgid "Load the banlist for the current channel."
-msgstr "โหลดรายการแบนในช่องทางปัจจุบัน"
+msgstr "โหลดรายการแบนของช่องปัจจุบัน"
 
 #. Description of the /cleartopic command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.cleartopic"
 msgid "Clear the topic in the current channel."
-msgstr "ลบหัวข้อในช่องทางปัจจุบัน"
+msgstr "ลบหัวข้อในช่องปัจจุบัน"
 
 #. Description of the /collapse command in the help window. {command} is the /expand command, shown as a code fragment and never translated.
 #: client/components/Windows/Help.vue
@@ -1763,7 +1763,7 @@ msgstr "เชื่อมต่อกับเครือข่าย IRC ใ�
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcp"
 msgid "Send a {ctcp} request. Read more about this on {link}."
-msgstr "ส่งคำขอ {ctcp} อ่านเพิ่มเติมได้ที่{link}"
+msgstr "ส่งคำขอ {ctcp} อ่านเพิ่มเติมได้ที่ {link}"
 
 #. Text of the link at the end of the /ctcp command description in the help window (help.commands.ctcp, where it stands for {link}); it opens the Wikipedia article on CTCP. Use the form that fits that frame in your language.
 #: client/components/Windows/Help.vue
@@ -1775,7 +1775,7 @@ msgstr "บทความวิกิพีเดียที่เกี่ย
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ctcpTitle"
 msgid "Client-to-client protocol"
-msgstr "โปรโตคอลผู้ใช้ถึงผู้ใช้"
+msgstr "โปรโตคอลไคลเอนต์ถึงไคลเอนต์"
 
 #. Description of the /deop command in the help window. {mode} is the channel mode -o, rendered as a code element; 'op' is IRC channel-operator status (keep the catalog's usual term).
 #: client/components/Windows/Help.vue
@@ -1793,7 +1793,7 @@ msgstr "ถอนสิทธิ์ voice ({mode}) จากผู้ใช้�
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.disconnectLong"
 msgid "Disconnect from the current network with an optionally-provided message."
-msgstr "แยกตัวออกจากระดับเครือข่ายปัจจุบันด้วยข้อความที่ให้มาได้เลือก"
+msgstr "ตัดการเชื่อมต่อจากเครือข่ายปัจจุบัน โดยระบุข้อความได้ (ไม่บังคับ)"
 
 #. Description of the /expand command in the help window. {command} is the /collapse command, shown as a code fragment and never translated.
 #: client/components/Windows/Help.vue
@@ -1811,13 +1811,13 @@ msgstr "คำสั่ง"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ignore"
 msgid "Block any messages from the specified user on the current network. This can be a nickname or a hostmask."
-msgstr "ปิดการแจ้งเตือนจากผู้ใช้ที่ระบุไว้ในเครือข่ายปัจจุบัน สามารถเป็นชื่อผู้ใช้หรือการปิดเครื่องได้"
+msgstr "บล็อกข้อความทั้งหมดจากผู้ใช้ที่ระบุในเครือข่ายปัจจุบัน ใช้นิคหรือ hostmask ก็ได้"
 
 #. Description of the /ignorelist command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ignorelist"
 msgid "Load the list of ignored users for the current network."
-msgstr "โหลดรายการผู้ใช้ที่ถูกตัดการแจ้งเตือนในเครือข่ายปัจจุบัน"
+msgstr "โหลดรายการผู้ใช้ที่ถูกละเว้นในเครือข่ายปัจจุบัน"
 
 #. Description of the /invite command in the help window. {channel} is the command's channel parameter (the word 'channel' as a code element).
 #: client/components/Windows/Help.vue
@@ -1829,43 +1829,43 @@ msgstr "เชิญผู้ใช้เข้าช่องที่ระบ
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.join"
 msgid "Join a channel. Password is only needed in protected channels and can usually be omitted."
-msgstr "เข้าไปในช่อง รหัสผ่านจำเป็นเพียงในช่องที่มีการป้องกัน และสามารถเว้นได้โดยทั่วไป"
+msgstr "เข้าร่วมช่อง รหัสผ่านจำเป็นเฉพาะช่องที่มีการป้องกัน และโดยทั่วไปละไว้ได้"
 
 #. Description of the /kick command in the help window; it removes the user from the channel (they may rejoin).
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kick"
 msgid "Kick a user from the current channel."
-msgstr "ไล่ผู้ใช้ออกจากช่องปัจจุบัน"
+msgstr "เตะผู้ใช้ออกจากช่องปัจจุบัน"
 
 #. Description of the /kickban command in the help window. {mode} is the channel mode +b and {ban} the command /ban, each rendered as a code element.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kickban"
 msgid "Kick and ban ({mode}) a user from the current channel. Unlike {ban}, only nicknames (and not host masks) can be used."
-msgstr "เตะและแบน ({mode}) ผู้ใช้จากช่องปัจจุบัน ต่างจาก {ban} ตรงที่ใช้ได้เฉพาะชื่อเล่น (ใช้มาสก์โฮสต์ไม่ได้)"
+msgstr "เตะและแบน ({mode}) ผู้ใช้จากช่องปัจจุบัน ต่างจาก {ban} ตรงที่ใช้ได้เฉพาะนิค (ใช้ hostmask ไม่ได้)"
 
 #. Description of the /list command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.list"
 msgid "Retrieve a list of available channels on this network."
-msgstr "ดึงรายการช่องทางที่มีอยู่ในเครือข่ายนี้"
+msgstr "ดึงรายการช่องที่มีอยู่ในเครือข่ายนี้"
 
 #. Description of the /me command in the help window. {appName} is the chat app's display name.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.me"
 msgid "Send an action message to the current channel. {appName} will display it inline, as if the message was posted in the third person."
-msgstr "ส่งข้อความกระทำไปยังช่องทางปัจจุบันนี้。{appName} จะแสดงผลลัพธ์แบบตั้งแต่ต้นข้อความ ดังนั้นข้อความดังกล่าวจะดูเหมือนถูกโพสต์โดยผู้อื่น"
+msgstr "ส่งข้อความการกระทำไปยังช่องปัจจุบัน {appName} จะแสดงในบรรทัดเหมือนข้อความที่เขียนด้วยบุรุษที่สาม"
 
 #. Description of the /mode command in the help window; explains whose modes the flags apply to depending on the active window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.mode"
 msgid "Set the given flags to the current channel if the active window is a channel, another user if the active window is a private message window, or yourself if the current window is a server window."
-msgstr "ตั้งค่าธีมที่กำหนดให้กับช่องทางปัจจุบันหากหน้าต่างที่ใช้งานอยู่เป็นช่องทาง ผู้ใช้อื่นหากหน้าต่างที่ใช้งานอยู่เป็นหน้าต่างข้อความส่วนตัว หรือตัวคุณเองหากหน้าต่างปัจจุบันเป็นหน้าต่างเซิร์ฟเวอร์"
+msgstr "ตั้งแฟล็กที่ระบุให้กับช่องปัจจุบันหากหน้าต่างที่ใช้งานเป็นช่อง ให้กับผู้ใช้อื่นหากหน้าต่างที่ใช้งานเป็นหน้าต่างข้อความส่วนตัว หรือให้กับตัวคุณเองหากหน้าต่างปัจจุบันเป็นหน้าต่างเซิร์ฟเวอร์"
 
 #. Description of the /msg command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.msg"
 msgid "Send a message to the specified channel."
-msgstr "ส่งข้อความไปยังช่องทางที่กำหนด"
+msgstr "ส่งข้อความไปยังช่องที่ระบุ"
 
 #. Description of the /mute command in the help window. {command} is the /unmute command, shown as a code fragment and never translated.
 #: client/components/Windows/Help.vue
@@ -1877,13 +1877,13 @@ msgstr "ทำให้ข้อความในช่องไม่ก่อ
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.nick"
 msgid "Change your nickname on the current network."
-msgstr "เปลี่ยนชื่อผู้ใช้ของคุณบนเครือข่ายปัจจุบัน"
+msgstr "เปลี่ยนนิคของคุณบนเครือข่ายปัจจุบัน"
 
 #. Description of the /notice command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.notice"
 msgid "Sends a notice message to the specified channel."
-msgstr "ส่งข้อความแจ้งเตือนไปยังช่องทางที่กำหนด"
+msgstr "ส่งข้อความ notice ไปยังช่องที่ระบุ"
 
 #. Description of the /op command in the help window. {mode} is the channel mode +o, rendered as a code element; 'op' is IRC channel-operator status (keep the catalog's usual term).
 #: client/components/Windows/Help.vue
@@ -1907,7 +1907,7 @@ msgstr "ส่งข้อความส่วนตัวไปยังผู
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.quit"
 msgid "Disconnect from the current network with an optional message."
-msgstr "แยกตัวออกจากเครือข่ายปัจจุบันด้วยข้อความตัวเลือก"
+msgstr "ตัดการเชื่อมต่อจากเครือข่ายปัจจุบัน โดยระบุข้อความได้ (ไม่บังคับ)"
 
 #. Description of the /raw command in the help window.
 #: client/components/Windows/Help.vue
@@ -1919,19 +1919,19 @@ msgstr "ส่งข้อความดิบไปยังเครือข
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.rejoin"
 msgid "Leave and immediately rejoin the current channel. Useful to quickly get op from ChanServ in an empty channel, for example."
-msgstr "ออกจากห้องสนทนาและเข้ากลับมาทันทีในห้องเดิม ใช้ได้ดีเพื่อขอ op จาก ChanServ ในห้องที่ว่าง"
+msgstr "ออกจากช่องปัจจุบันแล้วเข้าร่วมใหม่ทันที มีประโยชน์ เช่น เพื่อรับ op จาก ChanServ อย่างรวดเร็วในช่องที่ว่าง"
 
 #. Description of the /search command in the help window. No trailing period in the source; keep it as is.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.search"
 msgid "Search for messages in the current channel / user"
-msgstr "ค้นหาข้อความในห้องสนทนา/ผู้ใช้"
+msgstr "ค้นหาข้อความในช่อง/ผู้ใช้ปัจจุบัน"
 
 #. Description of the /slap command in the help window; a playful IRC tradition. Keep the exclamation mark.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.slap"
 msgid "Slap someone in the current channel with a trout!"
-msgstr "ด่าใครสักคนในห้องสนทนาด้วย trout!"
+msgstr "ตบใครสักคนในช่องปัจจุบันด้วยปลาเทราต์!"
 
 #. Description of the /topic command in the help window. {newtopic} is the command's parameter (the word 'newtopic' as a code element).
 #: client/components/Windows/Help.vue
@@ -1943,13 +1943,13 @@ msgstr "แสดงหัวข้อของช่องปัจจุบั
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unban"
 msgid "Unban ({mode}) a user from the current channel. This can be a nickname or a hostmask."
-msgstr "ยกเลิกการแบน ({mode}) ผู้ใช้ในช่องปัจจุบัน ใช้ชื่อเล่นหรือมาสก์โฮสต์ก็ได้"
+msgstr "ยกเลิกการแบน ({mode}) ผู้ใช้ในช่องปัจจุบัน ใช้นิคหรือ hostmask ก็ได้"
 
 #. Description of the /unignore command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unignore"
 msgid "Unblock messages from the specified user on the current network. This can be a nickname or a hostmask."
-msgstr "ปิดการบล็อกข้อความจากผู้ใช้ที่ระบุไว้ในเครือข่ายที่ใช้อยู่ในตอนนี้ สามารถเป็นชื่อผู้ใช้หรือเครื่องมือโฮสต์ได้"
+msgstr "เลิกบล็อกข้อความจากผู้ใช้ที่ระบุในเครือข่ายปัจจุบัน ใช้นิคหรือ hostmask ก็ได้"
 
 #. Description of the /unmute command in the help window. {mute} is the command /mute as a code element.
 #: client/components/Windows/Help.vue
@@ -1979,7 +1979,7 @@ msgstr "แสดงผู้ที่ตรงกับ mask (ช่อง น�
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.whois"
 msgid "Retrieve information about the given user on the current network."
-msgstr "ดูข้อมูลผู้ใช้ที่กำหนดในเครือที่เชื่อมต่ออยู่"
+msgstr "ดึงข้อมูลของผู้ใช้ที่ระบุบนเครือข่ายปัจจุบัน"
 
 #. Text of the link naming the source commit a build was made from, in the help and changelog windows. {hash} is the commit hash (verbatim, a code element).
 #: client/components/Windows/Help.vue
@@ -1991,20 +1991,20 @@ msgstr "คอมมิต {hash}"
 #: client/components/Windows/Help.vue
 msgctxt "help.compareBehind"
 msgid "Compare {range} to see what you are missing"
-msgstr "เปรียบเทียบ{range} เพื่อดูสิ่งที่คุณยังไม่มี"
+msgstr "เปรียบเทียบ {range} เพื่อดูสิ่งที่คุณยังไม่มี"
 
 #. First item of the help window's past-release list. {range} is a link whose text is help.range ('between v5.2.0 and 1a2b3c4').
 #: client/components/Windows/Help.vue
 msgctxt "help.compareSince"
 msgid "Compare {range} to see what changed since the release"
-msgstr "เปรียบเทียบ{range} เพื่อดูสิ่งที่เปลี่ยนไปตั้งแต่รุ่นที่ออก"
+msgstr "เปรียบเทียบ {range} เพื่อดูสิ่งที่เปลี่ยนไปตั้งแต่รุ่นที่ออก"
 
 #. Label of the documentation link in the Help window.
 #: client/js/branding.ts
 #: client/components/Windows/Help.vue
 msgctxt "help.documentation"
 msgid "Documentation"
-msgstr "การสนับสนุนเอกสาร"
+msgstr "เอกสาร"
 
 #. The example word shown in bold lettering in the help window's Ctrl+B formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2040,7 +2040,7 @@ msgstr "ดูตารางสีได้{link}"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.heading"
 msgid "Formatting Shortcuts"
-msgstr "การจัดรูปแบบแบบเร็ว"
+msgstr "ทางลัดการจัดรูปแบบ"
 
 #. The example word shown in italics in the help window's Ctrl+I formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2064,7 +2064,7 @@ msgstr "ความกว้างคงที่"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.reset"
 msgid "Mark all text typed after this shortcut to be reset to its original formatting."
-msgstr "กำหนดให้เนื้อหาที่พิมพ์ต่อเนื่องจากคำสั่งนี้จะถูกตั้งค่ารูปแบบเริ่มต้นอีกครั้ง"
+msgstr "คืนค่ารูปแบบเดิมให้ข้อความทั้งหมดที่พิมพ์หลังทางลัดนี้"
 
 #. The example word shown with a line through it in the help window's Ctrl+S formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2082,43 +2082,43 @@ msgstr "ขีดเส้นใต้"
 #: client/components/Windows/Help.vue
 msgctxt "help.gestures.heading"
 msgid "Gestures"
-msgstr "การควบคุมด้วยมือ"
+msgstr "ท่าทางสัมผัส"
 
 #. Description of the single-finger swipe-left gesture in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.gestures.hideSidebar"
 msgid "Hide sidebar."
-msgstr "ซ่อนบาร์ด้านข้าง"
+msgstr "ซ่อนแถบด้านข้าง"
 
 #. Description of the single-finger swipe-right gesture in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.gestures.showSidebar"
 msgid "Show sidebar."
-msgstr "แสดงบาร์ด้านข้าง"
+msgstr "แสดงแถบด้านข้าง"
 
 #. Name of the touch gesture in the help window's gestures section: swiping the sidebar left with one finger. Its description follows.
 #: client/components/Windows/Help.vue
 msgctxt "help.gestures.swipeLeft"
 msgid "Single-Finger Swipe Left"
-msgstr "การลื่นซ้ายด้วยนิ้วเดียว"
+msgstr "ปัดซ้ายด้วยนิ้วเดียว"
 
 #. Name of the touch gesture in the help window's gestures section: swiping the sidebar right with one finger. Its description follows.
 #: client/components/Windows/Help.vue
 msgctxt "help.gestures.swipeRight"
 msgid "Single-Finger Swipe Right"
-msgstr "การลื่นขวาด้วยนิ้วเดียว"
+msgstr "ปัดขวาด้วยนิ้วเดียว"
 
 #. Name of the touch gesture in the help window's gestures section: swiping left with two fingers anywhere in the chat. Its description follows.
 #: client/components/Windows/Help.vue
 msgctxt "help.gestures.twoSwipeLeft"
 msgid "Two-Finger Swipe Left"
-msgstr "การลื่นซ้ายด้วยนิ้วสองข้าง"
+msgstr "ปัดซ้ายด้วยสองนิ้ว"
 
 #. Name of the touch gesture in the help window's gestures section: swiping right with two fingers anywhere in the chat. Its description follows.
 #: client/components/Windows/Help.vue
 msgctxt "help.gestures.twoSwipeRight"
 msgid "Two-Finger Swipe Right"
-msgstr "การลื่นขวาด้วยนิ้วสองข้าง"
+msgstr "ปัดขวาด้วยสองนิ้ว"
 
 #. Label of the privacy policy link in the Help window.
 #: client/js/branding.ts
@@ -2149,19 +2149,19 @@ msgstr "โหลดซ้ำ"
 #: client/components/Windows/Help.vue
 msgctxt "help.reportIssue"
 msgid "Report an issue…"
-msgstr "แจ้งปัญหา..."
+msgstr "แจ้งปัญหา…"
 
 #. Description of the Alt+Shift+Left keyboard shortcut in the help window; it folds the current network's channel list in the sidebar.
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.collapseNetwork"
 msgid "Collapse current network."
-msgstr "ซ้อนเครือข่ายปัจจุบัน"
+msgstr "ยุบเครือข่ายปัจจุบัน"
 
 #. Description of the Escape key in the help window; it dismisses whatever popup or editor is open, or leaves the input field.
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.escape"
 msgid "Close current contextual window (context menu, image viewer, topic edit, etc) and remove focus from input."
-msgstr "ปิดหน้าต่างบริบทปัจจุบัน (เมนูบริบท ผู้ดูภาพ แก้ไขหัวข้อ เป็นต้น) และลบโฟกัสจากการพิมพ์"
+msgstr "ปิดหน้าต่างบริบทปัจจุบัน (เมนูบริบท ตัวดูรูปภาพ การแก้ไขหัวข้อ ฯลฯ) และเอาโฟกัสออกจากช่องพิมพ์"
 
 #. Description of the Alt+Shift+Right keyboard shortcut in the help window; it unfolds the current network's channel list in the sidebar.
 #: client/components/Windows/Help.vue
@@ -2173,13 +2173,13 @@ msgstr "ขยายเครือข่ายปัจจุบัน"
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.firstUnread"
 msgid "Switch to the first window with unread messages."
-msgstr "ไปยังหน้าต่างแรกที่มีข้อความไม่ได้อ่านแล้ว"
+msgstr "ไปยังหน้าต่างแรกที่มีข้อความยังไม่ได้อ่าน"
 
 #. Heading of the keyboard shortcuts section of the help window; each row shows the key combination and what it does.
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.heading"
 msgid "Keyboard Shortcuts"
-msgstr "คำสั่งแป้นพิมพ์"
+msgstr "ทางลัดแป้นพิมพ์"
 
 #. Description of the Alt+/ keyboard shortcut in the help window; it opens this help page.
 #: client/components/Windows/Help.vue
@@ -2191,43 +2191,43 @@ msgstr "ไปยังเมนูช่วยเหลือ"
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.nextLobby"
 msgid "Switch to the next lobby in the channel list."
-msgstr "ไปยังห้องสนทนาถัดไปในรายการห้องสนทนา"
+msgstr "ไปยังล็อบบี้ถัดไปในรายการช่อง"
 
 #. Description of the Alt+Ctrl+Down keyboard shortcut in the help window; it jumps to the next conversation that has unread messages.
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.nextUnread"
 msgid "Switch to the next window with unread messages in the channel list."
-msgstr "ไปยังหน้าต่างถัดไปที่มีข้อความไม่ได้อ่านแล้วในรายการห้องสนทนา"
+msgstr "ไปยังหน้าต่างถัดไปที่มีข้อความยังไม่ได้อ่านในรายการช่อง"
 
 #. Description of the Alt+Down keyboard shortcut and of the two-finger swipe-left gesture in the help window; both move to the conversation after the current one in the sidebar.
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.nextWindow"
 msgid "Switch to the next window in the channel list."
-msgstr "ไปยังหน้าต่างถัดไปในรายการห้องสนทนา"
+msgstr "ไปยังหน้าต่างถัดไปในรายการช่อง"
 
 #. Description of the Alt+Shift+Up keyboard shortcut in the help window; it moves to the previous network's home view in the sidebar.
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.prevLobby"
 msgid "Switch to the previous lobby in the channel list."
-msgstr "ไปยังห้องสนทนาที่ผ่านมาในรายการห้องสนทนา"
+msgstr "ไปยังล็อบบี้ก่อนหน้าในรายการช่อง"
 
 #. Description of the Alt+Ctrl+Up keyboard shortcut in the help window; it jumps to the previous conversation that has unread messages.
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.prevUnread"
 msgid "Switch to the previous window with unread messages in the channel list."
-msgstr "ไปยังหน้าต่างที่ผ่านมาที่มีข้อความไม่ได้อ่านแล้วในรายการห้องสนทนา"
+msgstr "ไปยังหน้าต่างก่อนหน้าที่มีข้อความยังไม่ได้อ่านในรายการช่อง"
 
 #. Description of the Alt+Up keyboard shortcut and of the two-finger swipe-right gesture in the help window; both move to the conversation before the current one in the sidebar.
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.prevWindow"
 msgid "Switch to the previous window in the channel list."
-msgstr "ไปยังหน้าต่างที่ผ่านมาในรายการห้องสนทนา"
+msgstr "ไปยังหน้าต่างก่อนหน้าในรายการช่อง"
 
 #. Description of the Alt+J keyboard shortcut in the help window; it opens or closes the search field for jumping to a conversation.
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.toggleJump"
 msgid "Toggle jump to channel switcher."
-msgstr "กระตุ้นการเปิดตัวการดูช่องทาง"
+msgstr "เปิด/ปิดตัวสลับไปยังช่อง"
 
 #. Description of the Alt+K keyboard shortcut in the help window; it switches message formatting (bold, code, spoilers) on or off.
 #: client/components/Windows/Help.vue
@@ -2245,19 +2245,19 @@ msgstr "เปิดหรือปิดหน้าต่างการกล
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.toggleSidebar"
 msgid "Toggle sidebar."
-msgstr "กระตุ้นการเปิดตัวด้านข้าง"
+msgstr "แสดง/ซ่อนแถบด้านข้าง"
 
 #. Description of the Alt+U keyboard shortcut in the help window; it shows or hides the panel listing the channel's members.
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.toggleUserlist"
 msgid "Toggle channel user list."
-msgstr "กระตุ้นการเปิดตัวรายการผู้ใช้ในช่อง"
+msgstr "แสดง/ซ่อนรายชื่อผู้ใช้ในช่อง"
 
 #. Title of the help window: its heading, its dialog aria-label, and the accessible name of the whole page.
 #: client/components/Windows/Help.vue
 msgctxt "help.title"
 msgid "Help"
-msgstr "ช่วยเหลือ"
+msgstr "ความช่วยเหลือ"
 
 #. Text of the banner at the top of the help window shown when a newer build of the app was published; a Reload button follows it.
 #: client/components/Windows/Help.vue
@@ -2672,7 +2672,7 @@ msgstr "สีน้ำตาล"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorCyan"
 msgid "Cyan"
-msgstr "สีเขียวขุ่น"
+msgstr "สีฟ้าอมเขียว"
 
 #. Name of the mIRC colour with code 03 (green), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2696,7 +2696,7 @@ msgstr "น้ำเงินอ่อน"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorLightCyan"
 msgid "Light Cyan"
-msgstr "สีเขียวอ่อน"
+msgstr "สีฟ้าอมเขียวอ่อน"
 
 #. Name of the mIRC colour with code 09 (light green), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2714,13 +2714,13 @@ msgstr "เทาอ่อน"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorMagenta"
 msgid "Magenta"
-msgstr "มั่งมิตร"
+msgstr "สีม่วงแดง"
 
 #. Name of the mIRC colour with code 07 (orange), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorOrange"
 msgid "Orange"
-msgstr "สีอร์จี"
+msgstr "สีส้ม"
 
 #. Name of the mIRC colour with code 13 (pink), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2750,25 +2750,25 @@ msgstr "เหลือง"
 #: client/components/JoinChannel.vue:20
 msgctxt "join.channelHint"
 msgid "The channel name may not contain spaces"
-msgstr "ชื่อช่องอาจไม่มีช่องว่าง"
+msgstr "ชื่อช่องต้องไม่มีช่องว่าง"
 
 #. Placeholder of the channel name input in the join-channel form that opens under a network in the sidebar.
 #: client/components/JoinChannel.vue:17
 msgctxt "join.channelPlaceholder"
 msgid "Channel"
-msgstr "ช่องทาง"
+msgstr "ช่อง"
 
 #. Title (hover hint) of the channel key input in the sidebar's join-channel form, shown when the typed key is invalid.
 #: client/components/JoinChannel.vue:31
 msgctxt "join.passwordHint"
 msgid "The channel password may not contain spaces"
-msgstr "รหัสผ่านช่องทางอาจไม่สามารถมีช่องว่างได้"
+msgstr "รหัสผ่านช่องต้องไม่มีช่องว่าง"
 
 #. Placeholder of the channel key (password) input in the sidebar's join-channel form; private channels need one.
 #: client/components/JoinChannel.vue:28
 msgctxt "join.passwordPlaceholder"
 msgid "Password (optional)"
-msgstr "รหัสผ่าน (เลือกได้)"
+msgstr "รหัสผ่าน (ไม่บังคับ)"
 
 #. Submit button of the join-channel form under a network in the sidebar.
 #: client/components/JoinChannel.vue:34
@@ -2816,7 +2816,7 @@ msgstr "ยุบตัวอย่าง"
 #: client/components/LinkPreviewToggle.vue
 msgctxt "link.expand"
 msgid "Expand preview"
-msgstr "ขยายการดูตัวอย่าง"
+msgstr "ขยายตัวอย่าง"
 
 #. Title on the placeholder of a media preview before it is revealed. {Kind} is the media type capitalized ('Image', 'Video', 'Audio'), {host} the website the media comes from.
 #: client/components/LinkPreview.vue
@@ -2828,7 +2828,7 @@ msgstr "{Kind} จาก {host}"
 #: client/components/LinkPreview.vue
 msgctxt "link.hide"
 msgid "Hide this preview"
-msgstr "ซ่อนการดูตัวอย่างนี้"
+msgstr "ซ่อนตัวอย่างนี้"
 
 #. The word for a sound clip, filling {kind} in media-preview sentences such as 'Loading {kind}…'. Lowercase mid-sentence.
 #: client/components/LinkPreview.vue
@@ -2846,7 +2846,7 @@ msgstr "รูปภาพ"
 #: client/components/LinkPreview.vue
 msgctxt "link.kindMedia"
 msgid "media"
-msgstr "วัสดุ"
+msgstr "สื่อ"
 
 #. The word for a moving picture, filling {kind} in media-preview sentences such as 'Loading {kind}…'. Lowercase mid-sentence.
 #: client/components/LinkPreview.vue
@@ -2858,7 +2858,7 @@ msgstr "วิดีโอ"
 #: client/components/LinkPreview.vue
 msgctxt "link.loadingKind"
 msgid "Loading {kind}…"
-msgstr "การโหลด {kind}…"
+msgstr "กำลังโหลด {kind}…"
 
 #. Label of the masked-link dialog's confirm button: opens the link's real address in a new tab despite the mismatch.
 #: client/js/helpers/openLink.ts:25
@@ -2876,7 +2876,7 @@ msgstr "เปิดในแท็บใหม่"
 #: client/components/LinkPreview.vue
 msgctxt "link.previewActions"
 msgid "Preview actions"
-msgstr "การกระทำของการดูตัวอย่าง"
+msgstr "เครื่องมือตัวอย่าง"
 
 #. aria-label of the placeholder button standing in for a hidden media preview, when the hosting site is unknown. {kind} is 'image', 'video' or 'audio'.
 #: client/components/LinkPreview.vue
@@ -2900,13 +2900,13 @@ msgstr "แสดงเสมอ {scope}"
 #: client/components/LinkPreview.vue
 msgctxt "link.trustButtonShow"
 msgid "Always show"
-msgstr "แสดงตลอด"
+msgstr "แสดงเสมอ"
 
 #. Text of the trust button on a media preview when at least one rule already always allows this media; clicking opens the menu of rules. The caret follows it.
 #: client/components/LinkPreview.vue
 msgctxt "link.trustButtonShown"
 msgid "Always shown"
-msgstr "แสดงอยู่แล้ว"
+msgstr "แสดงเสมอแล้ว"
 
 #. Name of a media-trust scope in the trust menu of a media preview and in the toolbar tooltip summarizing active rules: always allowing media from the website or from the person it was posted by. {name} is that site's host or the person's account name. Starts lowercase; it follows the words 'Always show' or 'Stop always showing'.
 #: client/js/helpers/mediaTrustMenu.ts
@@ -2932,7 +2932,7 @@ msgstr "หยุดแสดงเสมอ {scope}"
 #: client/components/LinkPreview.vue
 msgctxt "link.trustTitleEmpty"
 msgid "Always show media from this site, this person or in this channel"
-msgstr "แสดงเนื้อหาจากเว็บไซต์ บุคคล หรือช่องนี้"
+msgstr "แสดงสื่อจากเว็บไซต์นี้ บุคคลนี้ หรือในช่องนี้เสมอ"
 
 #. Tooltip of the trust button on a media preview when rules already allow it. {scopes} is a comma-joined list of what is trusted ('from example.com', 'in #chat'). Em dash is part of the copy.
 #: client/components/LinkPreview.vue
@@ -2956,7 +2956,7 @@ msgstr "รายการช่อง"
 #: client/js/irc/handlers/lists.ts
 msgctxt "list.isEmpty"
 msgid "{kind} is empty"
-msgstr "{kind} เป็นว่าง"
+msgstr "{kind} ว่างเปล่า"
 
 #. Name of the channel-ban (+b) list, inserted into '{kind} is empty' and '{kind} for {channel}'.
 #: client/js/irc/handlers/lists.ts
@@ -2981,14 +2981,14 @@ msgstr "รายการเชิญ"
 msgctxt "list.loaded"
 msgid "Loaded {count} channel..."
 msgid_plural "Loaded {count} channels..."
-msgstr[0] "โหลด {count} ช่อง..."
+msgstr[0] "โหลดแล้ว {count} ช่อง..."
 msgstr[1] ""
 
 #. Status line in the 'Channel List' window while the server sends its channels.
 #: client/js/irc/handlers/list.ts
 msgctxt "list.loading"
 msgid "Loading channel list, this can take a moment..."
-msgstr "กำลังโหลดรายการช่อง อาจใช้เวลานาน..."
+msgstr "กำลังโหลดรายการช่อง อาจใช้เวลาสักครู่..."
 
 #. Title of a special window showing one channel's mode list. {kind} is the list's name ('Ban list' etc.), {channel} the channel name. Byte-stable per locale while the session lives: the title doubles as the window's lookup name.
 #: client/js/irc/handlers/lists.ts
@@ -3006,7 +3006,7 @@ msgstr "กำลังเชื่อมต่อ…"
 #: client/js/loading-error-handlers.js:38
 msgctxt "loading.error"
 msgid "An error has occurred that prevented the client from loading correctly."
-msgstr "เกิดข้อผิดพลาดที่ทำให้ไม่สามารถโหลดได้"
+msgstr "เกิดข้อผิดพลาดที่ทำให้ไคลเอนต์โหลดไม่สำเร็จ"
 
 #. Disclosure heading of the box listing the error details on the loading-failure screen.
 #: client/js/loading-error-handlers.js:41
@@ -3045,7 +3045,7 @@ msgstr "การโหลดใช้เวลานานกว่าที่
 #: client/js/loading-error-handlers.js:11
 msgctxt "loading.starting"
 msgid "Loading the app…"
-msgstr "การโหลดแอป..."
+msgstr "กำลังโหลดแอป…"
 
 #. aria-label of the plus button on a sidebar network row while the join-channel form is open: clicking closes it again.
 #: client/components/NetworkLobby.vue:156
@@ -3057,7 +3057,7 @@ msgstr "ยกเลิก"
 #: client/components/NetworkLobby.vue:176
 msgctxt "lobby.collapse"
 msgid "Collapse"
-msgstr "หดล่าง"
+msgstr "ยุบ"
 
 #. Tooltip and aria-label of the connection-state dot on a sidebar network row while the network is online.
 #: client/components/NetworkLobby.vue:138
@@ -3069,20 +3069,20 @@ msgstr "เชื่อมต่อแล้ว"
 #: client/components/NetworkLobby.vue:140
 msgctxt "lobby.connectingCancel"
 msgid "Connecting… (click to cancel)"
-msgstr "การเชื่อมต่อ... (คลิกเพื่อยกเลิก)"
+msgstr "กำลังเชื่อมต่อ… (คลิกเพื่อยกเลิก)"
 
 #. Tooltip and aria-label of the connection-state dot on a sidebar network row when the network is down; clicking dials it again.
 #: client/components/NetworkLobby.vue:141
 msgctxt "lobby.disconnectedConnect"
 msgid "Disconnected (click to connect)"
-msgstr "ไม่เชื่อมต่อ (คลิกเพื่อเชื่อมต่อ)"
+msgstr "ไม่ได้เชื่อมต่อ (คลิกเพื่อเชื่อมต่อ)"
 
 #. aria-label of the pencil button in the sidebar's network row (lobby): opens the network's edit form in Settings.
 #: client/components/NetworkLobby.vue:44
 #: client/components/NetworkLobby.vue:49
 msgctxt "lobby.edit"
 msgid "Edit this network…"
-msgstr "แก้ไขเครือข่าย..."
+msgstr "แก้ไขเครือข่ายนี้…"
 
 #. aria-label of the chevron that expands a collapsed network's channel list in the sidebar.
 #: client/components/NetworkLobby.vue:176
@@ -3094,43 +3094,43 @@ msgstr "ขยาย"
 #: client/components/NetworkLobby.vue:156
 msgctxt "lobby.joinChannel"
 msgid "Join a channel…"
-msgstr "เข้าร่วมช่อง..."
+msgstr "เข้าร่วมช่อง…"
 
 #. Tooltip of the nick shown at the right of a sidebar network row before the network is connected; {network} is the network's display name.
 #: client/components/NetworkLobby.vue:164
 msgctxt "lobby.nickOffline"
 msgid "Your nickname for {network} (not connected)"
-msgstr "ชื่อของคุณสำหรับ {network} (ไม่เชื่อมต่อ)"
+msgstr "นิคของคุณสำหรับ {network} (ไม่ได้เชื่อมต่อ)"
 
 #. Tooltip of the nick shown at the right of a sidebar network row while the network is connected; {network} is the network's display name.
 #: client/components/NetworkLobby.vue:163
 msgctxt "lobby.nickOn"
 msgid "Your nickname on {network}"
-msgstr "ชื่อของคุณบน {network}"
+msgstr "นิคของคุณบน {network}"
 
 #. Screen-reader-only prefix read before the current nick at the right of a sidebar network row (visually hidden).
 #: client/components/NetworkLobby.vue:66
 msgctxt "lobby.nickname"
 msgid "Nickname: "
-msgstr "ชื่อ: "
+msgstr "นิค: "
 
 #. Tooltip and aria-label of the crossed-out bell icon on a sidebar network row: push and browser notifications are switched off for this network.
 #: client/components/NetworkLobby.vue:118
 msgctxt "lobby.notificationsOff"
 msgid "Notifications off for this network"
-msgstr "การแจ้งเตือนปิดสำหรับเครือข่ายนี้"
+msgstr "ปิดการแจ้งเตือนสำหรับเครือข่ายนี้แล้ว"
 
 #. Tooltip and aria-label of the bell icon on a sidebar network row: notifications are enabled but this device is not yet registered for push.
 #: client/components/NetworkLobby.vue:125
 msgctxt "lobby.notificationsOn"
 msgid "Notifications on"
-msgstr "การแจ้งเตือนเปิด"
+msgstr "เปิดการแจ้งเตือนอยู่"
 
 #. Tooltip and aria-label of the bell icon on a sidebar network row when this device is subscribed to the network's push notifications.
 #: client/components/NetworkLobby.vue:122
 msgctxt "lobby.notificationsSubscribed"
 msgid "Notifications: subscribed to push"
-msgstr "การแจ้งเตือน: สมัครสมาชิกผ่านการแจ้งเตือน"
+msgstr "การแจ้งเตือน: สมัครรับพุชแล้ว"
 
 #. Tooltip and screen-reader label of the shield button by a network's name in the sidebar, shown while opered: opens the oper panel. 'Oper' is IRC jargon (operator).
 #: client/components/NetworkLobby.vue
@@ -3154,7 +3154,7 @@ msgstr "ลบเครือข่าย"
 #: client/js/hooks/use-close-channel.ts:13
 msgctxt "lobby.removeText"
 msgid "Are you sure you want to quit and remove {name}? This cannot be undone."
-msgstr "คุณแน่ใจหรือไม่ว่าต้องการออกจาก {name} และลบออก? ไม่สามารถทำได้โดยไม่สามารถกู้คืนได้"
+msgstr "คุณแน่ใจหรือไม่ว่าต้องการออกจาก {name} และลบออก? การดำเนินการนี้ไม่สามารถย้อนกลับได้"
 
 #. Title of the confirmation dialog shown from the sidebar when removing a whole chat network: the connection quits and the saved network is deleted from this browser.
 #: client/js/hooks/use-close-channel.ts:11
@@ -3172,20 +3172,20 @@ msgstr "ปิดการกล่าวถึง"
 #: client/components/Mentions.vue:16
 msgctxt "mentions.dismissAll"
 msgid "Dismiss all"
-msgstr "ปิดทั้งหมด"
+msgstr "ล้างทั้งหมด"
 
 #. Button beside a conversation in the mentions popup that this page no longer has (so reading it cannot clear its mentions); clicking removes that conversation's entries from the list.
 #: client/components/Mentions.vue:76
 msgctxt "mentions.dismissGroup"
 msgid "Dismiss"
-msgstr "ปิด"
+msgstr "ล้าง"
 
 #. Tooltip and accessible name of the × button on an entry of the mentions popup; clicking removes that entry from the list on this device only.
 #: client/components/Mentions.vue:42
 #: client/components/Mentions.vue:104
 msgctxt "mentions.dismissOne"
 msgid "Dismiss on this device"
-msgstr "ปิดบนอุปกรณ์นี้"
+msgstr "ล้างบนอุปกรณ์นี้"
 
 #. Title shown in the mentions popup when no unread message mentions you.
 #: client/components/Mentions.vue:21
@@ -3204,31 +3204,31 @@ msgstr "การกล่าวถึงจะออกจากรายกา
 #: client/components/Mentions.vue:509
 msgctxt "mentions.missingChannel"
 msgid "Not in {target}: join it to read these, or dismiss them."
-msgstr "ไม่ได้อยู่ใน {target}: เข้าร่วมเพื่ออ่าน หรือปิดรายการเหล่านี้"
+msgstr "ไม่ได้อยู่ใน {target}: เข้าร่วมเพื่ออ่าน หรือล้างรายการเหล่านี้"
 
 #. As mentions.missingChannel, when several chat networks are set up. {target} is the channel name, {network} the chat network's display name.
 #: client/components/Mentions.vue:508
 msgctxt "mentions.missingChannelOn"
 msgid "Not in {target} on {network}: join it to read these, or dismiss them."
-msgstr "ไม่ได้อยู่ใน {target} บน {network}: เข้าร่วมเพื่ออ่าน หรือปิดรายการเหล่านี้"
+msgstr "ไม่ได้อยู่ใน {target} บน {network}: เข้าร่วมเพื่ออ่าน หรือล้างรายการเหล่านี้"
 
 #. Shown under a conversation in the mentions popup whose chat network is no longer set up in this client, so its mentions can only be dismissed.
 #: client/components/Mentions.vue:502
 msgctxt "mentions.missingNetwork"
 msgid "Its network isn't on this page: dismiss these."
-msgstr "เครือข่ายของรายการนี้ไม่ได้อยู่ในหน้านี้: ปิดรายการเหล่านี้"
+msgstr "เครือข่ายของรายการนี้ไม่ได้อยู่ในหน้านี้: ล้างรายการเหล่านี้"
 
 #. Shown under a private conversation in the mentions popup that is not open in this client. {target} is the other person's nick, shown verbatim.
 #: client/components/Mentions.vue:506
 msgctxt "mentions.missingQuery"
 msgid "No conversation with {target} open: open one to read these, or dismiss them."
-msgstr "ไม่มีบทสนทนากับ {target} เปิดอยู่: เปิดบทสนทนาเพื่ออ่าน หรือปิดรายการเหล่านี้"
+msgstr "ไม่มีบทสนทนากับ {target} เปิดอยู่: เปิดบทสนทนาเพื่ออ่าน หรือล้างรายการเหล่านี้"
 
 #. As mentions.missingQuery, when several chat networks are set up. {target} is the other person's nick, {network} the chat network's display name.
 #: client/components/Mentions.vue:505
 msgctxt "mentions.missingQueryOn"
 msgid "No conversation with {target} on {network} open: open one to read these, or dismiss them."
-msgstr "ไม่มีบทสนทนากับ {target} บน {network} เปิดอยู่: เปิดบทสนทนาเพื่ออ่าน หรือปิดรายการเหล่านี้"
+msgstr "ไม่มีบทสนทนากับ {target} บน {network} เปิดอยู่: เปิดบทสนทนาเพื่ออ่าน หรือล้างรายการเหล่านี้"
 
 #. Tooltip of a conversation's header in the mentions popup; clicking opens that conversation. {target} is a channel name or a nick, shown verbatim.
 #: client/components/Mentions.vue:56
@@ -3284,7 +3284,7 @@ msgstr "ล้างประวัติ"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.clearHistoryText"
 msgid "Are you sure you want to clear history for {channel}? This cannot be undone."
-msgstr "คุณแน่ใจหรือไม่ว่าต้องการล้างประวัติสำหรับ {channel}? ไม่สามารถทำได้โดยไม่สามารถกู้คืนได้"
+msgstr "คุณแน่ใจหรือไม่ว่าต้องการล้างประวัติของ {channel}? การดำเนินการนี้ไม่สามารถย้อนกลับได้"
 
 #. Context-menu item on a channel in the sidebar network list; clicking leaves the channel (the app stops showing it and tells the server so).
 #: client/js/helpers/contextMenu.ts
@@ -3314,13 +3314,13 @@ msgstr "เชื่อมต่อ"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.directMessages"
 msgid "Direct messages"
-msgstr "การแจ้งเตือนโดยตรง"
+msgstr "ข้อความส่วนตัว"
 
 #. Context-menu item on a chat network's home row while the network is connected; clicking hangs up the connection to that network.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.disconnect"
 msgid "Disconnect"
-msgstr "แยกตัวออก"
+msgstr "ตัดการเชื่อมต่อ"
 
 #. Context-menu item on a chat network's home row; opens the form where the network's address and credentials are changed. Ellipsis is part of the copy.
 #: client/js/helpers/contextMenu.ts
@@ -3338,7 +3338,7 @@ msgstr "แก้ไขหัวข้อ"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.giveMode"
 msgid "Give {name} (+{mode})"
-msgstr "ให้ {name} (+{mode})"
+msgstr "ให้สิทธิ์ {name} (+{mode})"
 
 #. Context-menu item that grants an IRC mode whose role name is unknown; {mode} is the bare mode letter (e.g. z) — the + before it is part of the text, so the item reads Mode +z.
 #: client/js/helpers/contextMenu.ts
@@ -3356,7 +3356,7 @@ msgstr "ไปยังช่อง"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.ignore"
 msgid "Ignore user"
-msgstr "ไม่สนใจผู้ใช้"
+msgstr "ละเว้นผู้ใช้"
 
 #. Context-menu item on a chat network's home row; opens the field to join a channel on that network. Ellipsis is part of the copy.
 #: client/js/helpers/contextMenu.ts
@@ -3374,7 +3374,7 @@ msgstr "เข้าร่วมช่อง"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.kick"
 msgid "Kick"
-msgstr "ไล่ออก"
+msgstr "เตะ"
 
 #. Context-menu item on a chat channel in the sidebar; asks the server for the channel's ban list.
 #: client/js/helpers/contextMenu.ts
@@ -3392,7 +3392,7 @@ msgstr "แสดงรายการทุกช่อง"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.listIgnored"
 msgid "List ignored users"
-msgstr "แสดงรายการผู้ใช้ที่ไม่สนใจ"
+msgstr "แสดงรายการผู้ใช้ที่ถูกละเว้น"
 
 #. Name of the IRC channel administrator role (the & prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
@@ -3404,25 +3404,25 @@ msgstr "ผู้ดูแล"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeHalfOp"
 msgid "half-op"
-msgstr "ผู้ควบคุม"
+msgstr "ฮาล์ฟออป"
 
 #. Name of the IRC channel operator role (the @ prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOperator"
 msgid "operator"
-msgstr "ผู้ดำเนินการ"
+msgstr "ออป"
 
 #. Name of the highest IRC channel role (the ~ prefix), filling {name} in the mode menu items such as 'Revoke {name} (-a)'. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeOwner"
 msgid "owner"
-msgstr "ผู้เป็นเจ้าของ"
+msgstr "เจ้าของ"
 
 #. Name of the IRC voiced role (the + prefix; may speak in a moderated channel), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeVoice"
 msgid "voice"
-msgstr "นักพูด"
+msgstr "วอยซ์"
 
 #. Context-menu item on a conversation; clicking mutes it (no highlights, no notifications from it). {type} names the kind of conversation in lowercase: 'network', 'channel' or 'conversation'.
 #: client/js/helpers/contextMenu.ts
@@ -3440,7 +3440,7 @@ msgstr "แผงโอเปอร์…"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.revokeMode"
 msgid "Revoke {name} (-{mode})"
-msgstr "ยกเลิก {name} (-{mode})"
+msgstr "ถอนสิทธิ์ {name} (-{mode})"
 
 #. Context-menu item that removes an IRC mode whose role name is unknown; {mode} is the bare mode letter (e.g. z) — the - before it is part of the text, so the item reads Mode -z.
 #: client/js/helpers/contextMenu.ts
@@ -3452,7 +3452,7 @@ msgstr "โหมด -{mode}"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.unmuteType"
 msgid "Unmute {type}"
-msgstr "ไม่เปิดเสียง {type}"
+msgstr "เปิดเสียง {type}"
 
 #. Context-menu item on a user (in the user list, a message or a conversation); asks the server for that user's details (real name, account, idle time).
 #: client/js/helpers/contextMenu.ts
@@ -3464,14 +3464,14 @@ msgstr "ข้อมูลผู้ใช้"
 #: client/components/MessageActions.vue:6
 msgctxt "message.actionsToolbar"
 msgid "Message actions"
-msgstr "การกระทำของข้อความ"
+msgstr "การทำงานกับข้อความ"
 
 #. Short label shown for a moment over a chat message after its text or code was copied to the clipboard from the message toolbar.
 #: client/components/MessageActions.vue:34
 #: client/components/MessageActions.vue
 msgctxt "message.copied"
 msgid "Copied"
-msgstr "ถูกคัดลอก"
+msgstr "คัดลอกแล้ว"
 
 #. Tooltip and aria-label of the copy button that a chat message shows when it contains code blocks; clicking copies the code to the clipboard.
 #: client/components/MessageActions.vue:34
@@ -3521,13 +3521,13 @@ msgstr "ข้อความของคุณ"
 #: client/components/Message.vue:333
 msgctxt "message.deleted"
 msgid "[Message deleted by {nick}]"
-msgstr "[ข้อความถูกตัดโดย {nick}]"
+msgstr "[ข้อความถูกลบโดย {nick}]"
 
 #. Visible text standing in for a deleted chat message when the deletion gave a reason. {nick} is the name of the user who deleted it, {reason} the reason they gave. Square brackets are part of the copy.
 #: client/components/Message.vue:331
 msgctxt "message.deletedWithReason"
 msgid "[Message deleted by {nick}: {reason}]"
-msgstr "[ข้อความถูกตัดโดย {nick}: {reason}]"
+msgstr "[ข้อความถูกลบโดย {nick}: {reason}]"
 
 #. Tooltip and aria-label of the pencil button in a chat message's hover toolbar, shown on your own messages; clicking starts editing that message.
 #: client/components/MessageActions.vue:44
@@ -3545,13 +3545,13 @@ msgstr "ข้อความนี้ถูกแก้ไข"
 #: client/components/Message.vue:264
 msgctxt "message.editedAt"
 msgid "Edited {time}"
-msgstr "แก้ไข {time}"
+msgstr "แก้ไขเมื่อ {time}"
 
 #. Small marker shown after a chat message that was edited after being sent. Parenthesized; keep the lowercase form.
 #: client/components/Message.vue:77
 msgctxt "message.editedBadge"
 msgid "(edited)"
-msgstr "(แก้ไข)"
+msgstr "(แก้ไขแล้ว)"
 
 #. Drawn before the sender's nick of an IRC NOTICE message in the chat (a label, then the nick).
 #: client/components/Message.vue
@@ -3563,7 +3563,7 @@ msgstr "ประกาศ:"
 #: client/components/MessageActions.vue
 msgctxt "message.quickReact"
 msgid "React with {reaction}"
-msgstr "แสดงปฏิกิริยาด้วย {reaction}"
+msgstr "แสดงรีแอคชัน {reaction}"
 
 #. Tooltip and aria-label of a one-tap reaction button on a chat message's toolbar when you already reacted with it; tapping takes your reaction off. {reaction} is the emoji (or word).
 #: client/components/MessageActions.vue
@@ -3575,7 +3575,7 @@ msgstr "เอา {reaction} ออก"
 #: client/components/MessageActions.vue:21
 msgctxt "message.react"
 msgid "React"
-msgstr "ตอบกลับ"
+msgstr "แสดงรีแอคชัน"
 
 #. Tooltip on the revealed text of a deleted chat message; clicking hides the text again.
 #: client/components/Message.vue:72
@@ -3587,7 +3587,7 @@ msgstr "คลิกเพื่อซ่อนอีกครั้ง"
 #: client/components/Message.vue:65
 msgctxt "message.redactedReveal"
 msgid "Deleted message, click to reveal"
-msgstr "ข้อความที่ถูกตัด คลิกเพื่อแสดงใหม่"
+msgstr "ข้อความที่ถูกลบ คลิกเพื่อแสดง"
 
 #. Tooltip and aria-label of the reply button in a chat message's hover toolbar; clicking starts a reply quoting that message.
 #: client/components/MessageActions.vue:11
@@ -3599,37 +3599,37 @@ msgstr "ตอบกลับ"
 #: client/components/Message.vue:294
 msgctxt "message.replyMissing"
 msgid "Replying to a message that is not loaded"
-msgstr "ตอบต่อข้อความที่ไม่ได้โหลด"
+msgstr "ตอบกลับข้อความที่ยังไม่ได้โหลด"
 
 #. Visible text of the quoted-message button on a chat message when the message being replied to is not in the loaded scrollback; it stands in for the quoted text. Parenthesized.
 #: client/components/Message.vue:53
 msgctxt "message.replyUnknown"
 msgid "(unknown message)"
-msgstr "(ข้อความไม่รู้จัก)"
+msgstr "(ไม่ทราบข้อความ)"
 
 #. aria-label of the small quoted-message button on a chat message that is a reply; clicking scrolls to the message being replied to. {nick} is the name of the user who wrote the quoted message, {text} its content as plain text.
 #: client/components/Message.vue:291
 msgctxt "message.replyingTo"
 msgid "Replying to {nick}: {text}. Jump to that message."
-msgstr "ตอบต่อ {nick}: {text}. เลื่อนไปยังข้อความนี้"
+msgstr "ตอบกลับ {nick}: {text} ไปยังข้อความนั้น"
 
 #. Tooltip of the small marker on a chat message that arrived while you had another channel open; the server delivered it to the active window only.
 #: client/components/Message.vue:118
 msgctxt "message.shownInActive"
 msgid "This message was shown in your active channel"
-msgstr "ข้อความข้อนี้แสดงในช่องที่ใช้งานอยู่"
+msgstr "ข้อความนี้แสดงในช่องที่คุณเปิดอยู่"
 
 #. Tooltip of the small mode-prefix marker (a character such as + or @) shown before messages that the server delivered only to the part of the channel holding that status. {mode} is the mode character itself, inserted verbatim.
 #: client/components/StatusmsgMarker.vue:4
 msgctxt "message.statusmsg"
 msgid "This message was only shown to users with {mode} mode"
-msgstr "ข้อความข้อนี้แสดงให้ผู้ใช้ที่มีโหมด {mode} เท่านั้น"
+msgstr "ข้อความนี้แสดงเฉพาะผู้ใช้ที่มีโหมด {mode}"
 
 #. Tooltip of the 'CTCP' abbreviation inside the CTCP-request system message; the abbreviation itself is the protocol's name and stays verbatim.
 #: client/components/MessageTypes/ctcp_request.vue
 msgctxt "msg.ctcpTitle"
 msgid "Client-to-client protocol"
-msgstr "โปรโตคอลผู้ใช้ถึงผู้ใช้"
+msgstr "โปรโตคอลไคลเอนต์ถึงไคลเอนต์"
 
 #. System message announcing a channel's modes (324). {modes} is the mode string (e.g. +nt), shown in bold; protocol text, kept verbatim.
 #: client/components/MessageTypes/mode_channel.vue
@@ -3647,19 +3647,19 @@ msgstr "โหมดผู้ใช้ของคุณคือ {modes}"
 #: client/js/irc/handlers/numerics.ts
 msgctxt "msg.nickInUse"
 msgid "Nickname is already in use."
-msgstr "ชื่อผู้ใช้ถูกใช้แล้ว"
+msgstr "นิคนี้ถูกใช้อยู่แล้ว"
 
 #. Lobby error when the server refused a nick as malformed (432) and gave no reason of its own; shown as '<nick>: <reason>'. Lowercase mid-sentence by position.
 #: client/js/irc/handlers/numerics.ts
 msgctxt "msg.nickInvalid"
 msgid "Nickname is invalid."
-msgstr "ชื่อผู้ใช้ไม่ถูกต้อง"
+msgstr "นิคไม่ถูกต้อง"
 
 #. Lobby error when a whois/whowas named a nick the server does not know; {nick} is the nick as typed, user input.
 #: client/js/irc/handlers/whois.ts
 msgctxt "msg.noSuchNick"
 msgid "No such nick: {nick}"
-msgstr "ไม่มีชื่อผู้ใช้ดังกล่าว: {nick}"
+msgstr "ไม่มีนิคนี้: {nick}"
 
 #. Line in the server window after the server reports the IRC operator's server notice mask (snomask): {value} is the number, {hex} the same in hexadecimal. 'snomask' jargon.
 #: client/js/irc/handlers/numerics.ts
@@ -3695,31 +3695,31 @@ msgstr "{nick} ตั้งหัวข้อเมื่อ {time}"
 #: client/js/irc/handlers/topic.ts
 msgctxt "msg.topicUnset"
 msgid "No topic is set."
-msgstr "ไม่มีหัวข้อถูกตั้ง"
+msgstr "ยังไม่ได้ตั้งหัวข้อ"
 
 #. Reply to a topic request for a channel the client is not in that has no topic; {channel} is the channel name, verbatim.
 #: client/js/irc/handlers/topic.ts
 msgctxt "msg.topicUnsetFor"
 msgid "No topic is set for {channel}."
-msgstr "ไม่มีหัวข้อถูกตั้งสำหรับ {channel}."
+msgstr "ยังไม่ได้ตั้งหัวข้อสำหรับ {channel}"
 
 #. Lobby status line when your own nick change is confirmed. {nick} is the new nick, user content, never translated.
 #: client/js/irc/handlers/nick.ts
 msgctxt "msg.youAreKnownAs"
 msgid "You're now known as {nick}"
-msgstr "คุณตอนนี้มีชื่อเป็น {nick}"
+msgstr "ตอนนี้นิคของคุณคือ {nick}"
 
 #. Reason under 'Not sent: {message}' when a multi-line message's framing leaves no space for any text. {prefix} and {maxBytes} are byte counts.
 #: client/js/irc/multiline.ts
 msgctxt "multiline.noRoom"
 msgid "No room for message text: {prefix} bytes of line prefix, {maxBytes} bytes per message"
-msgstr "ไม่มีพื้นที่สำหรับเนื้อหาข้อความ: {prefix} ไบต์ของคำสั่งหัวข้อ, {maxBytes} ไบต์ต่อข้อความ"
+msgstr "ไม่มีพื้นที่สำหรับข้อความ: ส่วนนำหน้าบรรทัด {prefix} ไบต์ จาก {maxBytes} ไบต์ต่อข้อความ"
 
 #. Desktop notification title when another user invites the reader to a channel; the body names the inviter and channel.
 #: client/js/socket-events/msg.ts
 msgctxt "notify.channelInvite"
 msgid "New channel invite:"
-msgstr "การเชิญช่องใหม่:"
+msgstr "คำเชิญเข้าช่องใหม่:"
 
 #. Desktop notification body when another user invites the reader to a channel; {nick} and {channel} are the inviter's name and the channel name, both verbatim.
 #: client/js/socket-events/msg.ts
@@ -10564,25 +10564,25 @@ msgstr "ข้อผิดพลาด {code}"
 #: client/js/irc/handlers/persistence.ts
 msgctxt "persistence.echo"
 msgid "Persistence: {params}"
-msgstr "ความทนทาน: {params}"
+msgstr "การคงเซสชัน: {params}"
 
 #. Lobby status line confirming the state change the user asked for. {state} is the server's ON/OFF token, verbatim.
 #: client/js/irc/handlers/persistence.ts
 msgctxt "persistence.set"
 msgid "Session persistence set to: {state}"
-msgstr "การรักษาความต่อเนื่องของเซสชันตั้งเป็น: {state}"
+msgstr "ตั้งการคงเซสชันเป็น: {state}"
 
 #. Lobby status line reporting the bouncer session's state. {state} is the server's ON/OFF token, verbatim.
 #: client/js/irc/handlers/persistence.ts
 msgctxt "persistence.status"
 msgid "Session persistence (the server keeps you in your channels while disconnected): {state}"
-msgstr "การคงตัวของเซสชัน (เซิร์ฟเวอร์จะรักษาคุณในช่องทางของคุณขณะที่ขาดการเชื่อมต่อ): {state}"
+msgstr "การคงเซสชัน (เซิร์ฟเวอร์จะคงคุณไว้ในช่องของคุณขณะที่ไม่ได้เชื่อมต่อ): {state}"
 
 #. Lobby status line reporting the bouncer session's state when the client's own persistence setting differs from what the server reports. {state} is the server's ON/OFF token, verbatim; {setting} is the client setting's value.
 #: client/js/irc/handlers/persistence.ts:89
 msgctxt "persistence.statusClientSetting"
 msgid "Session persistence (the server keeps you in your channels while disconnected): {state} (your setting: {setting})"
-msgstr "การคงตัวของเซสชัน (เซิร์ฟเวอร์จะรักษาคุณในช่องทางของคุณขณะที่ขาดการเชื่อมต่อ): {state} (การตั้งค่าของคุณ: {setting})"
+msgstr "การคงเซสชัน (เซิร์ฟเวอร์จะคงคุณไว้ในช่องของคุณขณะที่ไม่ได้เชื่อมต่อ): {state} (การตั้งค่าของคุณ: {setting})"
 
 #. Tooltip and screen-reader text of the presence dot by a network's name in the sidebar. {mode} is a presence mode name (Online, Auto, Away). The ' · ' separator joins short qualifiers; keep it. The network is currently shown as away.
 #: client/components/NetworkLobby.vue
@@ -10666,25 +10666,25 @@ msgstr "เหมือนโหมดรวม ({mode})"
 #: client/components/PushPrompt.vue
 msgctxt "push.enableBody"
 msgid "This server can wake this app when it has messages for you while it is closed. You can change this per network, in each network's settings."
-msgstr "เซิร์ฟเวอร์นี้สามารถตื่นตัวแอปนี้ได้เมื่อมีข้อความสำหรับคุณขณะที่ปิดอยู่ คุณสามารถเปลี่ยนได้ต่อแต่เครือข่าย ในการตั้งค่าของแต่ละเครือข่าย"
+msgstr "เซิร์ฟเวอร์นี้ปลุกแอปนี้ได้เมื่อมีข้อความถึงคุณขณะที่แอปปิดอยู่ คุณเปลี่ยนได้แยกตามเครือข่ายในการตั้งค่าของแต่ละเครือข่าย"
 
 #. Title of the prompt shown at connect time asking whether to enable web push notifications for that chat network.
 #: client/components/PushPrompt.vue
 msgctxt "push.enableTitle"
 msgid "Enable push notifications?"
-msgstr "เปิดการแจ้งเตือนแบบ push?"
+msgstr "เปิดการแจ้งเตือนแบบพุชไหม"
 
 #. Fallback for the network name in the push prompt's target line when no name is known for the chat network being asked about.
 #: client/components/PushPrompt.vue
 msgctxt "push.fallbackNetwork"
 msgid "this network"
-msgstr "สำหรับเครือข่ายนี้"
+msgstr "เครือข่ายนี้"
 
 #. Button of the push opt-in prompt; declines and stops the app from ever asking again for that network.
 #: client/components/PushPrompt.vue
 msgctxt "push.never"
 msgid "Never"
-msgstr "ไม่เคย"
+msgstr "ไม่ต้องถามอีก"
 
 #. Button of the push opt-in prompt; declines for now without disabling future prompts.
 #: client/components/PushPrompt.vue
@@ -10696,13 +10696,13 @@ msgstr "ไม่"
 #: client/components/PushPrompt.vue
 msgctxt "push.renewBody"
 msgid "This server's push key changed, so this device's push subscription for it no longer works. Subscribe again to keep being notified while the app is closed. You can also do this later from this network's settings."
-msgstr "การกดปุ่มส่งของเซิร์ฟเวอร์นี้ได้เปลี่ยนไป ดังนั้นการสมัครสมาชิกการแจ้งเตือนของอุปกรณ์นี้สำหรับมันไม่ทำงานอีกต่อไป สมัครสมาชิกใหม่เพื่อให้ได้รับการแจ้งเตือนต่อไปแม้ว่าแอปจะปิดอยู่ คุณสามารถทำเช่นนี้ได้ในตัวเลือกของเครือข่ายนี้ในภายหลัง"
+msgstr "คีย์พุชของเซิร์ฟเวอร์นี้เปลี่ยนไป การสมัครรับพุชของอุปกรณ์นี้จึงใช้ไม่ได้อีกต่อไป สมัครใหม่เพื่อให้ได้รับการแจ้งเตือนต่อไปขณะที่แอปปิดอยู่ คุณยังทำได้ภายหลังในการตั้งค่าของเครือข่ายนี้"
 
 #. Title of the prompt shown at connect time when a chat server's push identity (its key) changed and the device's subscription must be renewed.
 #: client/components/PushPrompt.vue
 msgctxt "push.renewTitle"
 msgid "Renew push notifications?"
-msgstr "แจ้งเตือนการส่งใหม่?"
+msgstr "ต่ออายุการแจ้งเตือนแบบพุชไหม"
 
 #. Button of the push opt-in prompt; allows web push (the click doubles as the browser's permission gesture).
 #: client/components/PushPrompt.vue
@@ -10714,19 +10714,19 @@ msgstr "ใช่"
 #: client/components/MessageReactions.vue
 msgctxt "reactions.add"
 msgid "Add a reaction"
-msgstr "เพิ่มปฏิกิริยา"
+msgstr "เพิ่มรีแอคชัน"
 
 #. Preview-bar hint in the emoji picker while a reaction is being composed; shift-clicking an emoji appends it instead of sending.
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.buildingHint"
 msgid "Shift-click to add more emoji"
-msgstr "คลิกด้วยปุ่มซ้ายเพื่อเพิ่มอารมณ์เพิ่ม"
+msgstr "Shift-คลิกเพื่อเพิ่มอีโมจิ"
 
 #. Preview-bar title in the emoji picker while the user is composing a reaction out of several emoji or typing one.
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.buildingName"
 msgid "Building a reaction"
-msgstr "กำลังสร้างปฏิกิริยา"
+msgstr "กำลังสร้างรีแอคชัน"
 
 #. aria-label of a reaction badge under a chat message. {reaction} is the emoji or word reaction, {users} the comma-joined names of who sent it.
 #: client/components/MessageReactions.vue
@@ -10738,7 +10738,7 @@ msgstr "{reaction} โดย {users}"
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.clearSearch"
 msgid "Clear search"
-msgstr "ลบการค้นหา"
+msgstr "ล้างการค้นหา"
 
 #. Suffix appended to a reaction badge's aria-label when you took part in it, saying that clicking removes your reaction. Parenthesized.
 #: client/components/MessageReactions.vue
@@ -10750,25 +10750,25 @@ msgstr "(คลิกเพื่อลบของคุณ)"
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.dialogAria"
 msgid "Add a reaction"
-msgstr "เพิ่มปฏิกิริยา"
+msgstr "เพิ่มรีแอคชัน"
 
 #. Preview-bar hint of the emoji picker when nothing is highlighted or being composed; sums up the three ways to react.
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.emptyHint"
 msgid "Pick an emoji, type a word, or shift-click to combine several."
-msgstr "เลือกอารมณ์ ป้อนคำ หรือคลิกด้วยปุ่มซ้ายเพื่อรวมอารมณ์หลายอารมณ์"
+msgstr "เลือกอีโมจิ พิมพ์คำ หรือ Shift-คลิกเพื่อรวมหลายตัว"
 
 #. Label shown before the typed text on the emoji picker's free-text row, which sends what was typed as the reaction; the typed text follows it. Mid-sentence by position.
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.freePrefix"
 msgid "React with"
-msgstr "ปฏิกิริยาด้วย"
+msgstr "แสดงรีแอคชันด้วย"
 
 #. aria-label of the row of reaction badges under a chat message, listing who reacted with what.
 #: client/components/MessageReactions.vue
 msgctxt "reactions.groupAria"
 msgid "Reactions"
-msgstr "ปฏิกิริยา"
+msgstr "รีแอคชัน"
 
 #. Preview-bar hint in the emoji picker for a single emoji; shift-clicking another appends it to the reaction instead of sending. Keep the shift symbol.
 #: client/components/ReactionPicker.vue
@@ -10786,7 +10786,7 @@ msgstr "ลบ"
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.hintSend"
 msgid "Enter to send"
-msgstr "คลิกเพื่อส่ง"
+msgstr "Enter เพื่อส่ง"
 
 #. aria-label of the emoji picker's scrollable grid of emoji to pick from.
 #: client/components/ReactionPicker.vue
@@ -10798,7 +10798,7 @@ msgstr "อีโมจิ"
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.loadFailed"
 msgid "The emoji list could not be loaded. You can still type a reaction above."
-msgstr "รายการอีโมจิไม่สามารถโหลดได้ คุณยังสามารถป้อนปฏิกิริยาได้ข้างบน"
+msgstr "โหลดรายการอีโมจิไม่ได้ คุณยังพิมพ์รีแอคชันด้านบนได้"
 
 #. Note shown inside the emoji picker while its catalog is being fetched. Ellipsis is part of the copy.
 #: client/components/ReactionPicker.vue
@@ -10810,25 +10810,25 @@ msgstr "กำลังโหลดอีโมจิ…"
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.noMatch"
 msgid "No emoji match"
-msgstr "ไม่มีอารมณ์ที่ตรงกัน"
+msgstr "ไม่มีอีโมจิที่ตรงกัน"
 
 #. Heading of the emoji picker's section of suggested starter reactions, shown when nothing has been used recently, and the label of its tab.
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.quickReactions"
 msgid "Quick reactions"
-msgstr "ปฏิกิริยาเร็ว"
+msgstr "รีแอคชันด่วน"
 
 #. Heading of the emoji picker's section of recently sent reactions, and the label of its tab.
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.recentlyUsed"
 msgid "Recently used"
-msgstr "ปฏิกิริยาที่ใช้บ่อย"
+msgstr "ใช้ล่าสุด"
 
 #. Placeholder and aria-label of the emoji picker's search field; the same field doubles as the entry for a custom reaction (any text or emoji).
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.searchPlaceholder"
 msgid "Search emoji, or type any reaction"
-msgstr "ค้นหาอีโมจิ หรือพิมพ์ปฏิกิริยาใด ๆ"
+msgstr "ค้นหาอีโมจิ หรือพิมพ์รีแอคชันใดก็ได้"
 
 #. Heading of the emoji picker's list while a search is showing matches.
 #: client/components/ReactionPicker.vue
@@ -10858,13 +10858,13 @@ msgstr "กลุ่มอีโมจิ"
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.titleTemplate"
 msgid "React with {reaction}"
-msgstr "ตอบกลับด้วย {reaction}"
+msgstr "แสดงรีแอคชัน {reaction}"
 
 #. aria-label of the magnifier button in a chat window's header; clicking it opens the message-search field for the conversation.
 #: client/components/MessageSearchForm.vue:19
 msgctxt "search.openForm"
 msgid "Search messages in this channel"
-msgstr "ค้นหาข้อความในห้องนี้"
+msgstr "ค้นหาข้อความในช่องนี้"
 
 #. Placeholder of the message-search field that opens from the magnifier in a chat window's header; it filters this conversation's history.
 #: client/components/MessageSearchForm.vue:10
@@ -10894,7 +10894,7 @@ msgstr "ไม่พบผลการค้นหา"
 #: client/components/Windows/SearchResults.vue
 msgctxt "search.results.scopeNote"
 msgid "Only messages loaded in this session are searched — older history is not searched."
-msgstr "ตัวอย่างที่ค้นหาเป็นข้อความที่โหลดในเซสชันนี้เท่านั้น — ประวัติที่เก่ากว่านี้ไม่ได้ถูกค้นหา"
+msgstr "ค้นหาเฉพาะข้อความที่โหลดในเซสชันนี้ — ประวัติที่เก่ากว่าจะไม่ถูกค้นหา"
 
 #. Header of the search-results window. {channel} is the channel or conversation name (VERBATIM, a styled element); the search term itself is shown right after this text, in its own element, so the phrase ends where the term begins.
 #: client/components/Windows/SearchResults.vue
@@ -10918,13 +10918,13 @@ msgstr "พิมพ์สิ่งใดสิ่งหนึ่งเพื่
 #: client/js/irc/client.ts
 msgctxt "send.editNoReply"
 msgid "Edit not sent: no reply from the server."
-msgstr "แก้ไขไม่ได้ส่ง: ไม่มีการตอบกลับจากเซิร์ฟเวอร์"
+msgstr "ไม่ได้ส่งการแก้ไข: เซิร์ฟเวอร์ไม่ตอบกลับ"
 
 #. Lobby error when a second edit of the same message was sent before the first one settled.
 #: client/js/irc/client.ts
 msgctxt "send.editWaiting"
 msgid "Edit not sent: an edit of that message is already waiting for the server."
-msgstr "แก้ไขไม่ได้ส่ง: การแก้ไขข้อความนี้มีอยู่แล้วและกำลังรอเซิร์ฟเวอร์"
+msgstr "ไม่ได้ส่งการแก้ไข: มีการแก้ไขข้อความนี้ที่กำลังรอเซิร์ฟเวอร์อยู่แล้ว"
 
 #. Lobby error when a command or message was typed while the network is down; nothing was sent.
 #: client/js/irc/client.ts
@@ -10932,7 +10932,7 @@ msgstr "แก้ไขไม่ได้ส่ง: การแก้ไขข�
 #: client/js/irc/commands/index.ts:224
 msgctxt "send.notConnected"
 msgid "You are not connected to the IRC network, unable to send your command."
-msgstr "คุณไม่เชื่อมต่อกับเครือข่าย IRC ไม่สามารถส่งคำสั่งของคุณได้"
+msgstr "คุณไม่ได้เชื่อมต่อกับเครือข่าย IRC จึงส่งคำสั่งไม่ได้"
 
 #. Lobby error when an IRC line could not be written to the socket. {message} is a technical transport error, left verbatim.
 #: client/js/irc/client.ts
@@ -10944,31 +10944,31 @@ msgstr "ไม่ได้ส่ง: {message}"
 #: client/js/irc/client.ts
 msgctxt "send.pushTooLong"
 msgid "Not sent: the push subscription does not fit on one line"
-msgstr "ไม่ได้ส่ง: การสมัครสมาชิกการป้อนข้อมูลไม่สามารถใส่ในบรรทัดเดียวได้"
+msgstr "ไม่ได้ส่ง: การสมัครรับพุชยาวเกินหนึ่งบรรทัด"
 
 #. Lobby error when a reaction was sent on a server without message-tags.
 #: client/js/irc/client.ts
 msgctxt "send.reactNeedsTags"
 msgid "Reactions need the message-tags capability, which this server did not enable."
-msgstr "การตอบสนองต้องใช้ความสามารถของแท็กข้อความ ซึ่งเซิร์ฟเวอร์นี้ไม่ได้เปิดใช้งาน"
+msgstr "รีแอคชันต้องใช้ความสามารถ message-tags ซึ่งเซิร์ฟเวอร์นี้ไม่ได้เปิดใช้"
 
 #. Lobby error when a reaction was sent in a window that carries no messages.
 #: client/js/irc/client.ts
 msgctxt "send.reactTargets"
 msgid "Reactions can only be sent in channels and queries."
-msgstr "การตอบสนองสามารถส่งได้เฉพาะในช่องและคำสั่ง"
+msgstr "ส่งรีแอคชันได้เฉพาะในช่องและบทสนทนาส่วนตัว"
 
 #. Lobby error when deletion was tried outside a channel.
 #: client/js/irc/client.ts
 msgctxt "send.redactChannels"
 msgid "Messages can only be deleted in channels."
-msgstr "ข้อความสามารถลบได้เฉพาะในช่อง"
+msgstr "ลบข้อความได้เฉพาะในช่อง"
 
 #. Lobby error when deletion was tried on a server without the redaction capability.
 #: client/js/irc/client.ts
 msgctxt "send.redactUnavailable"
 msgid "Deleting messages is not available: the server did not enable draft/message-redaction."
-msgstr "การลบข้อความไม่ได้ส่ง: เซิร์ฟเวอร์ไม่ได้เปิดใช้งานการตัดต่อข้อความ/ร่าง"
+msgstr "ลบข้อความไม่ได้: เซิร์ฟเวอร์ไม่ได้เปิดใช้ draft/message-redaction"
 
 #. Lobby error when a message's client tags exceed the IRC line limit; nothing was sent.
 #: client/js/irc/client.ts
@@ -10980,43 +10980,43 @@ msgstr "ไม่ได้ส่ง: แท็กไม่สามารถใ�
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.add"
 msgid "Add alias"
-msgstr "เพิ่มชื่อเรียก"
+msgstr "เพิ่มนามแฝง"
 
 #. aria-label of an alias row's commands (body) input. {name} is the alias's name — or, while the name is empty, the row's number; verbatim user content either way, never translated.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.bodyAria"
 msgid "Commands for alias {name}"
-msgstr "คำสั่งสำหรับชื่อเรียก {name}"
+msgstr "คำสั่งของนามแฝง {name}"
 
 #. Example body shown in the alias-body input: an IRC action waving at the first argument. Keep the /me command and the $1 token verbatim; the action wording is an example and may be adapted.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.bodyPlaceholder"
 msgid "/me waves at $1"
-msgstr "/me กระพริบตาที่ $1"
+msgstr "/me โบกมือให้ $1"
 
 #. Shown in place of the alias table when no aliases are defined.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.empty"
 msgid "No aliases yet."
-msgstr "ไม่มีชื่อเรียกชั่วคราว"
+msgstr "ยังไม่มีนามแฝง"
 
 #. Row error: the alias has a name but no commands.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.errorBody"
 msgid "Say what the alias runs."
-msgstr "บอกว่าชื่อเรียกทำอะไร"
+msgstr "ระบุคำสั่งที่นามแฝงจะเรียกใช้"
 
 #. Row error: another row already defines this alias. {name} is the other alias's name, verbatim user content; the slash before it is the command prefix.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.errorDuplicate"
 msgid "There is already a /{name}."
-msgstr "มีชื่อเรียก /{name} อยู่แล้ว"
+msgstr "มี /{name} อยู่แล้ว"
 
 #. Row error under an alias row: the alias has no name.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.errorName"
 msgid "Give the alias a name."
-msgstr "ตั้งชื่อให้นามแฝงคำสั่ง"
+msgstr "ตั้งชื่อให้นามแฝง"
 
 #. Row error: the alias name contains characters other than letters, digits, hyphen and underscore. The - and _ are literal characters, keep them.
 #: client/components/Settings/Aliases.vue
@@ -11028,31 +11028,31 @@ msgstr "ชื่อสามารถใช้ตัวอักษร ตั�
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.errorTooLong"
 msgid "The body is too long (over {limit} characters)."
-msgstr "ร่างกายยาวเกินไป (มากกว่า {limit} ตัวอักษร)"
+msgstr "เนื้อหายาวเกินไป (เกิน {limit} ตัวอักษร)"
 
 #. Column heading of the alias editor table: the name of the slash command being defined. The header row is aria-hidden; each input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr "ชื่อเรียก"
+msgstr "นามแฝง"
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headRuns"
 msgid "Runs"
-msgstr "ทำงาน"
+msgstr "คำสั่งที่เรียกใช้"
 
 #. Intro paragraph of Settings → Aliases. {example} is an example alias invocation such as /wave (a code element); {first}, {rest} and {all} are the argument tokens $1, $2- and $*, each a code element.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.intro"
 msgid "An alias is a slash command of your own. Typing {example} runs what you define here — one command per line, with the arguments filled in where the body says {first}, {rest} or {all}."
-msgstr "นามแฝงคำสั่งคือคำสั่งทับของคุณเอง การพิมพ์ {example} จะเรียกใช้สิ่งที่คุณกำหนดไว้ที่นี่ บรรทัดละหนึ่งคำสั่ง โดยแทนอาร์กิวเมนต์ลงในตำแหน่งที่เนื้อหาเขียนว่า {first}, {rest} หรือ {all}"
+msgstr "นามแฝงคือคำสั่งทับของคุณเอง การพิมพ์ {example} จะเรียกใช้สิ่งที่คุณกำหนดไว้ที่นี่ บรรทัดละหนึ่งคำสั่ง โดยแทนอาร์กิวเมนต์ลงในตำแหน่งที่เนื้อหาเขียนว่า {first}, {rest} หรือ {all}"
 
 #. aria-label of an alias row's name input. {number} is the row's position, counting from 1.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.nameAria"
 msgid "Alias name {number}"
-msgstr "ชื่อผู้ใช้ {number}"
+msgstr "ชื่อนามแฝง {number}"
 
 #. Placeholder of the alias-name input: the alias's name goes here.
 #: client/components/Settings/Aliases.vue
@@ -11070,51 +11070,51 @@ msgstr "บรรทัดหนึ่งเรียกนามแฝงอื
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.paneAria"
 msgid "Command aliases"
-msgstr "คำสั่งชื่อผู้ใช้"
+msgstr "นามแฝงคำสั่ง"
 
 #. Live preview: the typed text matched no alias, so it would go to the server exactly as typed.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.previewMiss"
 msgid "Not an alias — this would be sent as typed."
-msgstr "ไม่ใช่ชื่อผู้ใช้ — ข้อความนี้จะถูกส่งเหมือนที่พิมพ์"
+msgstr "ไม่ใช่นามแฝง — ข้อความนี้จะถูกส่งตามที่พิมพ์"
 
 #. aria-label of an alias row's remove button (trash icon; no visible text). {name} is the alias's name — or the row's number while the name is empty; verbatim user content.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.removeAria"
 msgid "Remove alias {name}"
-msgstr "ลบชื่อผู้ใช้ {name}"
+msgstr "ลบนามแฝง {name}"
 
 #. Status line when some rows have errors and are not saved yet. {count} is the number of saved aliases; gettext plural, English index 0 is the singular.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.statusBroken"
 msgid "{count} alias saved — rows with errors are not saved."
 msgid_plural "{count} aliases saved — rows with errors are not saved."
-msgstr[0] "{count} ชื่อผู้ใช้ถูกบันทึก — แถวที่มีข้อผิดพลาดไม่ถูกบันทึก"
+msgstr[0] "บันทึกนามแฝงแล้ว {count} รายการ — แถวที่มีข้อผิดพลาดยังไม่ได้บันทึก"
 
 #. Status line under the alias table: how many aliases are saved. {count} is the number; gettext plural, English index 0 is the singular.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.statusSaved"
 msgid "{count} alias saved."
 msgid_plural "{count} aliases saved."
-msgstr[0] "{count} ชื่อผู้ใช้ถูกบันทึก"
+msgstr[0] "บันทึกนามแฝงแล้ว {count} รายการ"
 
 #. Heading of the command-aliases pane in Settings, where the user defines their own slash commands.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.titleHeading"
 msgid "Command aliases"
-msgstr "คำสั่งชื่อผู้ใช้"
+msgstr "นามแฝงคำสั่ง"
 
 #. aria-label of the try-it input: type an alias invocation to preview its expansion.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.tryAria"
 msgid "Try an alias"
-msgstr "ลองใช้ชื่อผู้ใช้"
+msgstr "ลองใช้นามแฝง"
 
 #. Try-it placeholder when at least one valid alias exists: an example invocation of that alias. {name} is the alias's name, verbatim; the rest is example prose.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.tryExample"
 msgid "/{name} some arguments"
-msgstr "/{name} บางค่า"
+msgstr "/{name} อาร์กิวเมนต์บางอย่าง"
 
 #. Heading of the live preview: type an alias invocation and see the commands it expands to.
 #: client/components/Settings/Aliases.vue
@@ -11126,7 +11126,7 @@ msgstr "ลองใช้"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.varChan"
 msgid "the current channel or query"
-msgstr "ห้องสนทนาหรือการเชื่อมต่อปัจจุบัน"
+msgstr "ช่องหรือบทสนทนาส่วนตัวปัจจุบัน"
 
 #. Settings > Aliases variable reference, describing the $$ escape: it expands to a single dollar sign. {character} is that dollar sign, shown in code style.
 #: client/components/Settings/Aliases.vue
@@ -11138,25 +11138,25 @@ msgstr "อักขระ {character} ตามตัวอักษร"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.varMe"
 msgid "your nick on that network"
-msgstr "ชื่อของคุณบนเครือข่ายนี้"
+msgstr "นิคของคุณบนเครือข่ายนั้น"
 
 #. Variable reference: what $1 expands to in an alias body.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.varOne"
 msgid "one argument (empty when not given)"
-msgstr "1 ค่า (ว่างเมื่อไม่ได้ให้)"
+msgstr "อาร์กิวเมนต์หนึ่งตัว (ว่างถ้าไม่ได้ระบุ)"
 
 #. Variable reference: what $2- expands to (everything from the second argument on).
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.varRest"
 msgid "arguments from the 2nd to the last"
-msgstr "ค่าจากตำแหน่งที่ 2 ถึงสุดท้าย"
+msgstr "อาร์กิวเมนต์ตั้งแต่ตัวที่ 2 ถึงตัวสุดท้าย"
 
 #. Variable reference: what $* expands to.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.varStar"
 msgid "everything after the alias name"
-msgstr "ทุกสิ่งหลังชื่อผู้ใช้"
+msgstr "ทุกอย่างหลังชื่อนามแฝง"
 
 #. Heading of the variables reference: the dollar placeholders an alias body can use.
 #: client/components/Settings/Aliases.vue
@@ -11168,25 +11168,25 @@ msgstr "ตัวแปร"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.autocomplete"
 msgid "Enable autocomplete"
-msgstr "เปิดการอัตโนมัติ"
+msgstr "เปิดใช้การเติมคำอัตโนมัติ"
 
 #. Checkbox in Settings > Appearance; when ticked, each user's name in chat is drawn in its own consistent color.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.coloredNicks"
 msgid "Enable colored nicknames"
-msgstr "เปิดชื่อผู้ใช้ที่มีสี"
+msgstr "เปิดใช้นิคหลากสี"
 
 #. Heading of the section in Settings > Appearance holding the user's own CSS. Keep the capitalization style of the source if possible.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.customStylesheet"
 msgid "Custom Stylesheet"
-msgstr "สไตล์เฉพาะตัว"
+msgstr "สไตล์ชีตที่กำหนดเอง"
 
 #. Visually hidden label of the custom stylesheet text area in Settings > Appearance, where CSS rules overriding the app's own styles can be entered.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.customStylesheetHelp"
 msgid "Custom stylesheet. You can override any style with CSS here."
-msgstr "สไตล์เฉพาะตัว. คุณสามารถแทนที่สไตล์ใดก็ตามด้วย CSS ที่นี่"
+msgstr "สไตล์ชีตที่กำหนดเอง คุณสามารถแทนที่สไตล์ใดก็ได้ด้วย CSS ที่นี่"
 
 #. Placeholder of the custom stylesheet text area in Settings > Appearance, written as a CSS comment. Keep the /* */ comment markers.
 #: client/components/Settings/Appearance.vue
@@ -11210,13 +11210,13 @@ msgstr "ขนาดตัวอักษร"
 #: client/components/Settings/Appearance.vue:458
 msgctxt "settings.appearance.fontSizeHuge"
 msgid "Huge"
-msgstr "ใหญ่"
+msgstr "ใหญ่ที่สุด"
 
 #. Label of the default step of the font-size slider in Settings → Appearance. One word.
 #: client/components/Settings/Appearance.vue:456
 msgctxt "settings.appearance.fontSizeLarge"
 msgid "Large"
-msgstr "ใหญ่จริง"
+msgstr "ใหญ่"
 
 #. Label of the middle step of the font-size slider in Settings → Appearance: the browser's default size. One word.
 #: client/components/Settings/Appearance.vue:455
@@ -11234,19 +11234,19 @@ msgstr "เล็ก"
 #: client/components/Settings/Appearance.vue:453
 msgctxt "settings.appearance.fontSizeTiny"
 msgid "Tiny"
-msgstr "น้อย"
+msgstr "เล็กมาก"
 
 #. Label of the second-largest step of the font-size slider in Settings → Appearance.
 #: client/components/Settings/Appearance.vue:457
 msgctxt "settings.appearance.fontSizeXlarge"
 msgid "Extra large"
-msgstr "ใหญ่เพิ่ม"
+msgstr "ใหญ่พิเศษ"
 
 #. Checkbox in Settings > Appearance; when ticked, chat messages are rendered with Markdown styling such as bold text, code blocks and spoiler marks. Ellipsis is part of the copy.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.markdown"
 msgid "Render Markdown formatting (bold, code, spoilers…)"
-msgstr "แสดงการจัดรูปแบบ Markdown (ความแข็งแรง, โค้ด, ความลับ…)"
+msgstr "แสดงการจัดรูปแบบ Markdown (ตัวหนา โค้ด สปอยเลอร์…)"
 
 #. Settings → Appearance, switch above the theme picker: when on, a theme that has a light and a dark version shows the one matching the device's light or dark mode.
 #: client/components/Settings/Appearance.vue
@@ -11264,31 +11264,31 @@ msgstr "ใช้ขนาดข้อความตามระบบ"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.media"
 msgid "Preview images, video and audio links inline"
-msgstr "ดูภาพ, วิดีโอ และลิงก์เสียงแบบในหน้าเดียวกัน"
+msgstr "แสดงตัวอย่างลิงก์รูปภาพ วิดีโอ และเสียงในบรรทัด"
 
 #. Radio option in Settings > Appearance; media previews load on their own as soon as a message contains one, which exposes your address to the media site. Em dash is part of the copy.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.mediaAlways"
 msgid "Show automatically — the media site sees your address as soon as a link appears"
-msgstr "แสดงโดยอัตโนมัติ — ไซต์มีดูเหมือนจะรู้ที่อยู่ของคุณทันทีที่ลิงก์ปรากฏ"
+msgstr "แสดงอัตโนมัติ — ไซต์สื่อจะเห็นที่อยู่ของคุณทันทีที่ลิงก์ปรากฏ"
 
 #. Radio option in Settings > Appearance; media previews stay behind a placeholder until you click them, so nothing is loaded from the media site before that. Em dash is part of the copy.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.mediaClick"
 msgid "Click to reveal — nothing is fetched from the media site until you ask to see it"
-msgstr "คลิกเพื่อเปิด — ไม่มีสิ่งใดถูกดึงมาจากไซต์มีดูเหมือนที่นี่จนกว่าคุณจะขอเห็น"
+msgstr "คลิกเพื่อแสดง — จะไม่ดึงข้อมูลใดจากไซต์สื่อจนกว่าคุณจะขอดู"
 
 #. Heading of the media preview section in Settings > Appearance, which controls how links to images, video and audio are shown in chat.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.mediaHeading"
 msgid "Media previews"
-msgstr "ดูตัวอย่าง"
+msgstr "ตัวอย่างสื่อ"
 
 #. Visually hidden group label of the two radio choices in Settings > Appearance that decide when media previews are fetched from their site.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.mediaRevealGroup"
 msgid "When to load previews"
-msgstr "โหลดเมื่อใด"
+msgstr "เมื่อใดที่จะโหลดตัวอย่าง"
 
 #. Heading of the message display section in Settings > Appearance.
 #: client/components/Settings/Appearance.vue
@@ -11300,25 +11300,25 @@ msgstr "ข้อความ"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.motdTitle"
 msgid "Message Of The Day"
-msgstr "ข้อความวันนี้"
+msgstr "ข้อความประจำวัน"
 
 #. Label of the text field in Settings > Appearance that sets the character(s) inserted after a completed user's name, for example a comma.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.nickPostfix"
 msgid "Nick autocomplete postfix"
-msgstr "การเติมต่อชื่อ"
+msgstr "ส่วนต่อท้ายเมื่อเติมนิคอัตโนมัติ"
 
 #. Tooltip on the nick autocomplete postfix field in Settings > Appearance; explains what the field sets.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.nickPostfixHelp"
 msgid "Nick autocomplete postfix (for example a comma)"
-msgstr "การเติมต่อชื่อ (เช่น เครื่องหมายจุดคอมม่า)"
+msgstr "ส่วนต่อท้ายเมื่อเติมนิคอัตโนมัติ (เช่น เครื่องหมายจุลภาค)"
 
 #. Placeholder of the nick autocomplete postfix field in Settings > Appearance; keep the example punctuation (the quoted comma) as it shows what would be typed.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.nickPostfixPlaceholder"
 msgid "Nick autocomplete postfix (e.g. ', ')"
-msgstr "การเติมต่อชื่อ (เช่น ', ')"
+msgstr "ส่วนต่อท้ายเมื่อเติมนิคอัตโนมัติ (เช่น ', ')"
 
 #. Settings → Appearance → Your own messages, radio option: your own messages sit on a lighter or darker background band.
 #: client/components/Settings/Appearance.vue
@@ -11528,25 +11528,25 @@ msgstr "ม่านจาง ๆ ทั่วคอลัมน์ เข้ม
 #: client/components/Settings/Appearance.vue:486
 msgctxt "settings.appearance.sampleEnds"
 msgid "The ends are meant to be too small and too big."
-msgstr "ด้านซ้ายและด้านขวาตั้งใจให้เล็กและใหญ่"
+msgstr "ระดับสุดทั้งสองข้างตั้งใจให้เล็กเกินไปและใหญ่เกินไป"
 
 #. First line of the sample chat under the font-size slider in Settings → Appearance, written by the sample nick grandma: it asks whether the text is comfortable to read.
 #: client/components/Settings/Appearance.vue:474
 msgctxt "settings.appearance.sampleGlasses"
 msgid "Can you read this without your glasses?"
-msgstr "คุณสามารถอ่านได้โดยไม่ต้องใช้แว่นตา?"
+msgstr "คุณอ่านข้อความนี้ได้โดยไม่ต้องใส่แว่นไหม"
 
 #. Second line of the sample chat under the font-size slider in Settings → Appearance, the reply telling the reader to drag the slider until the text is comfortable.
 #: client/components/Settings/Appearance.vue:480
 msgctxt "settings.appearance.sampleSlide"
 msgid "Yes! Slide it until this is comfortable."
-msgstr "ใช่! ดึงมันจนมันสบาย"
+msgstr "ได้! เลื่อนไปจนกว่าจะอ่านสบาย"
 
-#. First word of the checkbox label in Settings > Appearance that displays the server's Message Of The Day; the untranslated acronym 'MOTD' follows it as a marked abbreviation, so only this word is translated.
+#. Checkbox label in Settings > Appearance that displays the server's Message Of The Day when connecting. {motd} is the untranslated acronym 'MOTD', rendered as a marked abbreviation with a tooltip: put it where your grammar needs the object (for example 'MOTD anzeigen', 'MOTD を表示').
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.showMotd"
-msgid "Show"
-msgstr "แสดง"
+msgid "Show {motd}"
+msgstr "แสดง {motd}"
 
 #. Checkbox in Settings > Appearance; when ticked, message timestamps include the seconds as well as hours and minutes.
 #: client/components/Settings/Appearance.vue
@@ -11570,7 +11570,7 @@ msgstr "ข้อความสถานะ"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.statusHelp"
 msgid "Joins, parts, quits, kicks, nick changes, and mode changes"
-msgstr "การเข้ามา การออก การเปลี่ยนชื่อ การถูกไล่ออก การเปลี่ยนโหมด"
+msgstr "การเข้าร่วม การออก การออกจากเครือข่าย การเตะ การเปลี่ยนนิค และการเปลี่ยนโหมด"
 
 #. Radio option in Settings > Appearance; joins, parts and similar service notices are not shown at all.
 #: client/components/Settings/Appearance.vue
@@ -11600,7 +11600,7 @@ msgstr "ตั้งค่าได้ที่ การตั้งค่า i
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.theme"
 msgid "Theme"
-msgstr "เทม่า"
+msgstr "ธีม"
 
 #. Hint under the theme picker in Settings → Appearance, about the 'match the system's light/dark mode' switch. Theme names stay as they are. {dark} and {light} are the names of the pair's two themes.
 #: client/components/Settings/Appearance.vue
@@ -11624,7 +11624,7 @@ msgstr "เมื่อเปิด แต่ละคู่สว่าง/ม�
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.trustedButtonName"
 msgid "Always show"
-msgstr "แสดงตลอด"
+msgstr "แสดงเสมอ"
 
 #. Subheading in the always-shown media list of Settings > Appearance above the chat channel entries.
 #: client/components/Settings/Appearance.vue
@@ -11642,13 +11642,13 @@ msgstr "ล้างทั้งหมด"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.trustedEmpty"
 msgid "Nothing yet."
-msgstr "ยังไม่มีอะไรเลย。"
+msgstr "ยังไม่มี"
 
 #. Heading of the list in Settings > Appearance of sites, people and channels whose media always loads without asking.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.trustedHeading"
 msgid "Always shown"
-msgstr "แสดงตลอดเวลา"
+msgstr "แสดงเสมอ"
 
 #. Help line under the always-shown list in Settings > Appearance. {button} is the name of the preview button (settings.appearance.trustedButtonName, 'Always show'), rendered emphasized where the placeholder stands.
 #: client/components/Settings/Appearance.vue
@@ -11672,43 +11672,43 @@ msgstr "เว็บไซต์"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.untrustFrom"
 msgid "Stop always showing from {name}"
-msgstr "หยุดแสดงตลอดเวลาจาก {name}"
+msgstr "หยุดแสดงเสมอจาก {name}"
 
 #. Tooltip and aria-label of the remove button on an entry of the always-shown media list in Settings > Appearance, for a chat channel. {name} is that channel's name.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.untrustIn"
 msgid "Stop always showing in {name}"
-msgstr "หยุดแสดงตลอดเวลาใน {name}"
+msgstr "หยุดแสดงเสมอใน {name}"
 
 #. Checkbox in Settings > Appearance; when ticked, message timestamps use a 12-hour clock (am/pm) instead of a 24-hour clock.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.use12hClock"
 msgid "Use 12-hour timestamps"
-msgstr "ใช้เวลาที่แสดงเป็นรูปแบบ 12 ชั่วโมง"
+msgstr "ใช้เวลาแบบ 12 ชั่วโมง"
 
 #. Heading of the section in Settings > Appearance holding readability helpers such as nickname colors and autocomplete. Keep the capitalization style of the source if possible.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.visualAids"
 msgid "Visual Aids"
-msgstr "วิธีช่วยในการมองเห็น"
+msgstr "ตัวช่วยการมองเห็น"
 
 #. Heading of the away section in Settings > General, and the visually hidden label of the away-message input beneath it; names the setting that marks you away with a message when the app is closed.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.awayHeading"
 msgid "Automatic away message"
-msgstr "ข้อความแจ้งเตือนอัตโนมัติ"
+msgstr "ข้อความไม่อยู่อัตโนมัติ"
 
 #. Placeholder of the away-message field in Settings > General; shows the message that is sent automatically while the app is not open. {appName} is the chat app's display name.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.awayPlaceholder"
 msgid "Away message if {appName} is not open"
-msgstr "ข้อความแจ้งเตือนหาก {appName} ไม่เปิด"
+msgstr "ข้อความไม่อยู่เมื่อ {appName} ไม่ได้เปิดอยู่"
 
 #. Sentence shown in the restore-confirmation dialog in Settings > General, saying when the backup file was made. {date} is that day written out in the reader's language (e.g. 9 September 2026). A whole sentence: the dialog puts the separating space in.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.backupExported"
 msgid "Exported {date}."
-msgstr "ส่งออก {date}."
+msgstr "ส่งออกเมื่อ {date}"
 
 #. Body of the confirmation dialog before restoring a settings backup in Settings > General. {parts} is a comma-joined list ('your settings, 1 network, mutes and ignore lists'), {file} the chosen backup file's name.
 #: client/components/Settings/General.vue
@@ -11720,26 +11720,26 @@ msgstr "นี่จะแทนที่ {parts} ด้วยเนื้อห
 #: client/components/Settings/General.vue
 msgctxt "settings.general.backupHeading"
 msgid "Backup and restore"
-msgstr "สำรองข้อมูลและฟื้นฟู"
+msgstr "สำรองและกู้คืน"
 
 #. Intro line under the Backup and restore heading in Settings > General; says what exporting does.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.backupIntro"
 msgid "Save your settings to a file. You can restore here or on another device."
-msgstr "บันทึกการตั้งค่าของคุณลงในไฟล์ คุณสามารถฟื้นฟูได้ที่นี่หรืออุปกรณ์อื่น"
+msgstr "บันทึกการตั้งค่าของคุณลงไฟล์ คุณกู้คืนได้ที่นี่หรือบนอุปกรณ์อื่น"
 
 #. Part of the restore-confirmation sentence in Settings > General: fills the list of what the file replaces for muted users and ignored users. Comma-joined by position.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.backupMutes"
 msgid "mutes and ignore lists"
-msgstr "รายการปิดเสียงและตัดการตั้งค่า"
+msgstr "การปิดเสียงและรายการละเว้น"
 
 #. Part of the settings-restore confirmation in Settings > General; fills the list of what a restore replaces with how many saved chat networks the file carries. The singular shows with exactly one network, the plural otherwise.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.backupNetworks"
 msgid "{count} network"
 msgid_plural "{count} networks"
-msgstr[0] "{count} ระบบเครือข่าย"
+msgstr[0] "เครือข่าย {count} รายการ"
 
 #. Part of the restore-confirmation sentence in Settings > General: fills the list of what the file replaces for the app's own preferences. Comma-joined with the other parts by position.
 #: client/components/Settings/General.vue
@@ -11757,7 +11757,7 @@ msgstr "ไฟล์นี้มีรหัสผ่านเครือข่
 #: client/components/Settings/General.vue
 msgctxt "settings.general.export"
 msgid "Export settings…"
-msgstr "นำออกการตั้งค่า…"
+msgstr "ส่งออกการตั้งค่า…"
 
 #. Error message in Settings > General shown when exporting the settings backup failed and no file was produced.
 #: client/components/Settings/General.vue
@@ -11769,19 +11769,19 @@ msgstr "ไม่สามารถสร้างไฟล์ได้"
 #: client/components/Settings/General.vue
 msgctxt "settings.general.fileAria"
 msgid "Settings file to restore"
-msgstr "ไฟล์ตั้งค่าเพื่อฟื้นฟู"
+msgstr "ไฟล์การตั้งค่าที่จะกู้คืน"
 
 #. Button in Settings > General; opens a file picker to restore a previously exported settings backup file. Ellipsis is part of the copy.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.import"
 msgid "Import settings…"
-msgstr "เพิ่มตั้งค่า…"
+msgstr "นำเข้าการตั้งค่า…"
 
 #. Confirmation button of the settings-restore dialog in Settings > General; clicking restores the file and reloads the app.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.importButton"
 msgid "Import and reload"
-msgstr "เพิ่มและโหลดซ้ำ"
+msgstr "นำเข้าและโหลดใหม่"
 
 #. Error notice under the import control in Settings → General when the backup file is corrupt or truncated. Starts a short sentence.
 #: client/components/Settings/General.vue:259
@@ -11823,7 +11823,7 @@ msgstr "ไฟล์นี้ไม่ใช่ไฟล์ตั้งค่า
 #: client/components/Settings/General.vue
 msgctxt "settings.general.importTitle"
 msgid "Import settings?"
-msgstr "เพิ่มตั้งค่า?"
+msgstr "นำเข้าการตั้งค่าไหม"
 
 #. Checkbox in Settings > General's backup section; when ticked, the exported settings file also contains the saved chat network passwords.
 #: client/components/Settings/General.vue
@@ -11889,7 +11889,7 @@ msgstr "บทสนทนาส่วนตัวจะกลับมาหล
 #: client/components/Settings/General.vue
 msgctxt "settings.general.nativeApp"
 msgid "Native app"
-msgstr "แอปที่เป็นตัวตน"
+msgstr "แอปเนทีฟ"
 
 #. Button in Settings > General; registers this web app as the handler for web+irc:// chat links so clicking one anywhere opens it in the app. Keep the web+irc:// scheme verbatim. {appName} is the chat app's display name.
 #: client/components/Settings/General.vue
@@ -11913,7 +11913,7 @@ msgstr "ส่งการแจ้งเตือนการพิมพ์"
 #: client/components/Settings/General.vue
 msgctxt "settings.general.sendTypingHelp"
 msgid "Lets people in the channel see when you are typing (IRCv3 +typing)."
-msgstr "ทำให้ผู้ใช้ในช่องสามารถเห็นได้ว่าคุณกำลังพิมพ์ (IRCv3 + typing)"
+msgstr "ให้ผู้ใช้ในช่องเห็นว่าคุณกำลังพิมพ์ (IRCv3 +typing)"
 
 #. Heading of the typing indicator section in Settings > General.
 #: client/components/Settings/General.vue
@@ -11925,13 +11925,13 @@ msgstr "การแจ้งเตือนการพิมพ์"
 #: client/components/Settings/General.vue
 msgctxt "settings.general.uploadCanvas"
 msgid "Attempt to remove metadata from images before uploading"
-msgstr "ลองลบข้อมูลตัวตนจากภาพก่อนอัปโหลด"
+msgstr "พยายามลบเมตาดาตาออกจากรูปภาพก่อนอัปโหลด"
 
 #. Tooltip on the metadata-removal upload checkbox in Settings > General; explains how the option works and that it can mis-rotate photos in browsers without canvas orientation support.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.uploadCanvasHelp"
 msgid "This option renders the image into a canvas element to remove metadata from the image. This may break orientation if your browser does not support that."
-msgstr "ตัวเลือคนี้จะแปลงภาพให้เป็นองค์ประกอบของ canvas เพื่อลบข้อมูลตัวตนจากภาพ อาจทำให้การจัดทิศทางล้มเหลวหากเบราว์เซอร์ของคุณไม่รองรับ"
+msgstr "ตัวเลือกนี้จะวาดรูปภาพลงในองค์ประกอบ canvas เพื่อลบเมตาดาตา ซึ่งอาจทำให้การหมุนภาพผิดเพี้ยนหากเบราว์เซอร์ของคุณไม่รองรับ"
 
 #. Heading of the file upload options section in Settings > General.
 #: client/components/Settings/General.vue
@@ -11967,7 +11967,7 @@ msgstr "เชื่อมต่อแล้ว"
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.connecting"
 msgid "Connecting…"
-msgstr "การเชื่อมต่อ..."
+msgstr "กำลังเชื่อมต่อ…"
 
 #. Button on a saved network row in the networks settings page; opens a confirmation before the saved network is removed.
 #: client/components/Settings/Networks.vue
@@ -11985,19 +11985,19 @@ msgstr "ลบเครือข่าย"
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.deleteText"
 msgid "This removes the saved network and disconnects it if it is running."
-msgstr "ข้อมูลนี้จะลบเครือข่ายที่ถูกบันทึกและแยกต่อหากำลังดำเนินการ"
+msgstr "การดำเนินการนี้จะลบเครือข่ายที่บันทึกไว้ และตัดการเชื่อมต่อหากกำลังทำงานอยู่"
 
 #. Title of the confirmation dialog before removing a saved chat network. {name} is the network's display name.
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.deleteTitle"
 msgid "Delete {name}?"
-msgstr "ต้องการลบ {name}?"
+msgstr "ลบ {name} ไหม"
 
 #. Status label on a saved network row in the networks settings page; the connection to that chat network is down.
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.disconnected"
 msgid "Disconnected"
-msgstr "แยกต่อแล้ว"
+msgstr "ไม่ได้เชื่อมต่อ"
 
 #. Button on a saved network row in the networks settings page; opens the form where that network's address and credentials are changed.
 #: client/components/Settings/Networks.vue
@@ -12009,7 +12009,7 @@ msgstr "แก้ไข"
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.empty"
 msgid "No networks saved yet."
-msgstr "ยังไม่มีเครือข่ายถูกบันทึก"
+msgstr "ยังไม่มีเครือข่ายที่บันทึกไว้"
 
 #. Heading of the networks page in the chat app's settings, which lists the IRC network connections saved in this browser.
 #: client/components/Settings/Networks.vue
@@ -12033,7 +12033,7 @@ msgstr "เปิด"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.browserBlocked"
 msgid "Notifications are blocked by your browser."
-msgstr "การแจ้งเตือนถูกปิดโดยเบราว์เซอร์"
+msgstr "เบราว์เซอร์ของคุณบล็อกการแจ้งเตือน"
 
 #. Heading of the section in Settings > Notifications about the browser's own notifications while the app is open.
 #: client/components/Settings/Notifications.vue
@@ -12045,91 +12045,91 @@ msgstr "การแจ้งเตือนของเบราว์เซอ
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.browserPerNetwork"
 msgid "Browser notifications are also per network — enabled by default, toggled in each network's settings (Edit network → “Browser notifications for this network”)."
-msgstr "การแจ้งเตือนของเบราว์เซอร์ยังเป็นไปตามเครือข่าย — เปิดโดยค่าเริ่มต้น และสามารถสลับได้ในตัวตั้งแต่แต่ละเครือข่าย (แก้ไขเครือข่าย → “การแจ้งเตือนของเบราว์เซอร์สำหรับเครือข่ายนี้”)"
+msgstr "การแจ้งเตือนของเบราว์เซอร์ก็ตั้งค่าแยกตามเครือข่ายเช่นกัน — เปิดอยู่โดยค่าเริ่มต้น และเปิด/ปิดได้ในการตั้งค่าของแต่ละเครือข่าย (แก้ไขเครือข่าย → “การแจ้งเตือนเบราว์เซอร์สำหรับเครือข่ายนี้”)"
 
 #. Warning line in Settings > Notifications when the browser cannot show notifications at all.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.browserUnsupported"
 msgid "Notifications are not supported by your browser."
-msgstr "การแจ้งเตือนไม่ได้รองรับโดยเบราว์เซอร์"
+msgstr "เบราว์เซอร์ของคุณไม่รองรับการแจ้งเตือน"
 
 #. Placeholder of the custom-highlights and highlight-exceptions fields in Settings > Notifications; shows the expected input format.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.commaList"
 msgid "Comma-separated, e.g.: word, some more words, anotherword"
-msgstr "แยกด้วยเครื่องหมายจุดคอมม่า เช่น: คำศัพท์, คำศัพท์อื่นๆ, คำศัพท์อีกคำ"
+msgstr "คั่นด้วยจุลภาค เช่น: คำ, คำอื่นอีก, อีกคำ"
 
 #. Checkbox in Settings > Notifications; when ticked, messages mentioning you are drawn with a colored background and can notify.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlight"
 msgid "Highlight messages that mention you"
-msgstr "เน้นข้อความที่กล่าวถึงคุณ"
+msgstr "ไฮไลต์ข้อความที่กล่าวถึงคุณ"
 
 #. Label of the text field in Settings > Notifications for words that suppress highlights.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightExceptions"
 msgid "Highlight exceptions"
-msgstr "ข้อเว้นแต่"
+msgstr "ข้อยกเว้นของไฮไลต์"
 
 #. Tooltip on the highlight-exceptions field in Settings > Notifications; explains that these words suppress highlight treatment.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightExceptionsHelp"
 msgid "If a message contains any of these comma-separated expressions, it will not trigger a highlight even if it contains your nickname or expressions defined in custom highlights."
-msgstr "หากข้อความมีคำใดในรายการที่แยกด้วยเครื่องหมายจุดคอมม่า ข้อความนั้นจะไม่ถูกเน้นแม้จะมีชื่อคุณหรือคำที่กำหนดไว้ในความเน้นเฉพาะ"
+msgstr "หากข้อความมีคำใดในรายการที่คั่นด้วยจุลภาคนี้ ข้อความนั้นจะไม่ถูกไฮไลต์ แม้จะมีนิคของคุณหรือคำในไฮไลต์ที่กำหนดเอง"
 
 #. Tooltip on the highlight checkbox in Settings > Notifications; explains the visual effect of highlights.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightHelp"
 msgid "Messages that mention you or match a custom highlight get a colored background and border in the channel."
-msgstr "ข้อความที่กล่าวถึงคุณหรือตรงกับคำเน้นที่กำหนดเองจะมีพื้นหลังและขอบสีในช่อง"
+msgstr "ข้อความที่กล่าวถึงคุณหรือตรงกับไฮไลต์ที่กำหนดเองจะมีพื้นหลังและขอบสีในช่อง"
 
 #. Label of the text field in Settings > Notifications for extra words that count as mentions of you.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlights"
 msgid "Custom highlights"
-msgstr "ความเน้นเฉพาะ"
+msgstr "ไฮไลต์ที่กำหนดเอง"
 
 #. Tooltip on the custom highlights field in Settings > Notifications; explains the field's comma-separated format.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightsHelp"
 msgid "If a message contains any of these comma-separated expressions, it will trigger a highlight."
-msgstr "หากข้อความมีคำใดในรูปแบบด้วยเครื่องหมายจุดคอมม่า ข้อความนี้จะทำให้ต้องเน้น"
+msgstr "หากข้อความมีคำใดในรายการที่คั่นด้วยจุลภาคนี้ ข้อความนั้นจะถูกไฮไลต์"
 
 #. Warning line in Settings > Notifications, shown on an iPhone browsing the app without installing it; the parenthesized phrase is the iOS share menu's action.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.iosNotInstalled"
 msgid "On iOS, push notifications are only available after installing the app to the Home Screen (Share → Add to Home Screen)."
-msgstr "ใน iOS การแจ้งเตือนแบบ push จะมีได้เฉพาะหลังจากติดตั้งแอปไปยังหน้าจอหลัก (Share → Add to Home Screen)"
+msgstr "ใน iOS การแจ้งเตือนแบบพุชจะใช้ได้หลังติดตั้งแอปไว้บนหน้าจอโฮมเท่านั้น (แชร์ → เพิ่มไปยังหน้าจอโฮม)"
 
 #. Radio choice in Settings > Notifications for the server's push-identity change behaviour: show a confirmation prompt before the device re-subscribes. Em dash is part of the copy.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.keyChangeAsk"
 msgid "Wary — ask before renewing the subscription"
-msgstr "ต้องระมัดระวัง — แจ้งเตือนก่อนที่จะต่ออายุสมาชิก"
+msgstr "ระมัดระวัง — ถามก่อนต่ออายุการสมัครรับ"
 
 #. Radio choice in Settings > Notifications for the server's push-identity change behaviour: do nothing, so push stays off for that server until renewed from its network settings. Em dash is part of the copy.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.keyChangeIgnore"
 msgid "Suspicious — leave it alone; push from that server stays off until you renew from the network settings"
-msgstr "น่าสงสัย — ไม่ควรทำอะไร แจ้งเตือนจากเซิร์ฟเวอร์นั้นยังไม่เปิดจนกว่าคุณจะต่ออายุจากตั้งค่าเครือข่าย"
+msgstr "สงสัย — ไม่ต้องทำอะไร พุชจากเซิร์ฟเวอร์นั้นจะปิดอยู่จนกว่าคุณจะต่ออายุในการตั้งค่าเครือข่าย"
 
 #. Heading-like line in Settings > Notifications introducing the three radio choices for what to do when a chat server's push identity changes; the colon leads into the choices.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.keyChangeIntro"
 msgid "When a server's push identity (its key) changes, this device's subscription for it stops working. Then:"
-msgstr "เมื่อไอดี push ของเซิร์ฟเวอร์ (คีย์ของมัน) เปลี่ยนแปลง สมาชิกของอุปกรณ์นี้สำหรับมันจะหยุดทำงาน จากนั้น:"
+msgstr "เมื่อข้อมูลระบุตัวตนของพุช (คีย์) ของเซิร์ฟเวอร์เปลี่ยน การสมัครรับของอุปกรณ์นี้จะใช้ไม่ได้ จากนั้น:"
 
 #. Radio choice in Settings > Notifications for the server's push-identity change behaviour: re-subscribe immediately and silently. Em dash is part of the copy.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.keyChangeTrust"
 msgid "Naive — renew it on the spot, without asking"
-msgstr "ไม่ซับซ้อน — ให้รีเซ็ตมันที่ที่นี่โดยไม่ต้องถาม"
+msgstr "ไว้ใจ — ต่ออายุทันทีโดยไม่ถาม"
 
 #. Warning line in Settings > Notifications when the page is not served over a secure connection, which browsers require for notifications.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.noHttps"
 msgid "Notifications are only supported over HTTPS connections."
-msgstr "การแจ้งเตือนรองรับได้เฉพาะการเชื่อมต่อ HTTPS"
+msgstr "การแจ้งเตือนรองรับเฉพาะการเชื่อมต่อ HTTPS"
 
 #. Checkbox in Settings > Notifications; when ticked, every chat message notifies, not only mentions and highlights.
 #: client/components/Settings/Notifications.vue
@@ -12141,19 +12141,19 @@ msgstr "เปิดการแจ้งเตือนสำหรับข้
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.playSound"
 msgid "Play sound"
-msgstr "ดังเสียง"
+msgstr "เล่นเสียง"
 
 #. Warning line in Settings > Notifications when the chat server refused the push subscription; SASL (the IRC login mechanism) stays verbatim.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushBlocked"
 msgid "The server refused the push subscription. It may require logging in (SASL) before subscribing."
-msgstr "เซิร์ฟเวอร์ปฏิเสธการสมัครสมาชิกการแจ้งเตือน มันอาจต้องการการเข้าสู่ระบบ (SASL) ก่อนการสมัครสมาชิก"
+msgstr "เซิร์ฟเวอร์ปฏิเสธการสมัครรับพุช อาจต้องเข้าสู่ระบบ (SASL) ก่อนสมัคร"
 
 #. Warning line in Settings > Notifications when notification permission was denied; points at the browser's site settings to re-enable.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushDenied"
 msgid "Notifications are blocked by your browser. Allow them in the browser's site settings, then try again."
-msgstr "แจ้งเตือนถูกปิดโดยเบราว์เซอร์ของคุณ อนุญาตให้ใช้งานในตั้งต้นของเบราว์เซอร์ แล้วลองใหม่"
+msgstr "เบราว์เซอร์ของคุณบล็อกการแจ้งเตือน อนุญาตในการตั้งค่าเว็บไซต์ของเบราว์เซอร์ แล้วลองอีกครั้ง"
 
 #. Settings → Notifications, after "Warning:", in the Android app when the system has notifications switched off for it. "Android's settings for the app" is the system's per-app settings page.
 #: client/components/Settings/Notifications.vue
@@ -12165,19 +12165,19 @@ msgstr "การแจ้งเตือนของแอปนี้ปิด
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushHeading"
 msgid "Push Notifications"
-msgstr "แจ้งเตือนแบบ Push"
+msgstr "การแจ้งเตือนแบบพุช"
 
 #. Intro line of the push section in Settings > Notifications; explains that push is enabled per chat network from that network's edit form (the quoted phrase names that setting) and that each server decides whether to support it. Keep the curly quotes and the arrow.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushPerNetwork"
 msgid "Push is set up per network — turn it on or off in each network's settings (Edit network → “Push notifications for this network”), where the enrollment status is also shown. The browser delivers the notifications; each push-capable server decides whether to wake this app."
-msgstr "แจ้งเตือนแบบ Push ตั้งค่าแยกต่อแต่เครือข่าย — เปิดหรือปิดในตั้งต้นของเครือข่าย (แก้ไขเครือข่าย → “แจ้งเตือนแบบ Push สำหรับเครือข่ายนี้”) ซึ่งยังแสดงสถานะการลงทะเบียนด้วย เบราว์เซอร์จะส่งแจ้งเตือน แต่แต่ละเซิร์ฟเวอร์ที่รองรับการเชื่อมต่อจะตัดสินว่าควรตื่นตัวแอปนี้หรือไม่"
+msgstr "พุชตั้งค่าแยกตามเครือข่าย — เปิดหรือปิดได้ในการตั้งค่าของแต่ละเครือข่าย (แก้ไขเครือข่าย → “การแจ้งเตือนแบบพุชสำหรับเครือข่ายนี้”) ซึ่งแสดงสถานะการลงทะเบียนด้วย เบราว์เซอร์เป็นผู้ส่งการแจ้งเตือน ส่วนเซิร์ฟเวอร์ที่รองรับพุชแต่ละแห่งจะตัดสินว่าจะปลุกแอปนี้หรือไม่"
 
 #. Warning line in Settings > Notifications when the chat server itself does not offer web push; names the IRCv3 draft/webpush capability, which stays verbatim.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.serverUnsupported"
 msgid "Push notifications need a connected server that supports the draft/webpush capability and you to be logged in to an account."
-msgstr "แจ้งเตือนแบบ Push ต้องมีเซิร์ฟเวอร์ที่เชื่อมต่อกับเครือข่ายที่รองรับความสามารถ draft/webpush และคุณต้องเข้าสู่บัญชี"
+msgstr "การแจ้งเตือนแบบพุชต้องเชื่อมต่อกับเซิร์ฟเวอร์ที่รองรับความสามารถ draft/webpush และคุณต้องเข้าสู่ระบบด้วยบัญชี"
 
 #. Checkbox in Settings > Notifications; when ticked, a sound plays alongside a notification.
 #: client/components/Settings/Notifications.vue
@@ -12189,7 +12189,7 @@ msgstr "เปิดเสียงแจ้งเตือน"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.stale"
 msgid "A server's push identity (its key) changed, so this device's push subscription for it no longer works. Renew it from that network's settings (Edit network → “Renew push notifications”) to keep being notified while the app is closed."
-msgstr "คีย์ของเซิร์ฟเวอร์ได้เปลี่ยนไป ดังนั้นการสมัครสมาชิกการแจ้งเตือนของอุปกรณ์นี้สำหรับคีย์นี้ไม่ทำงานอีกต่อไป โปรดรีเฟิร์ชจากตั้งค่าเครือข่ายนั้น (แก้ไขเครือข่าย → \"รีเฟิร์ชการแจ้งเตือน\") เพื่อรักษาการแจ้งเตือนขณะที่แอปปิด"
+msgstr "ข้อมูลระบุตัวตนของพุช (คีย์) ของเซิร์ฟเวอร์เปลี่ยนไป การสมัครรับพุชของอุปกรณ์นี้จึงใช้ไม่ได้อีกต่อไป ต่ออายุได้ในการตั้งค่าของเครือข่ายนั้น (แก้ไขเครือข่าย → “ต่ออายุการแจ้งเตือนแบบพุช”) เพื่อให้ยังได้รับการแจ้งเตือนขณะที่แอปปิดอยู่"
 
 #. Warning line in Settings > Notifications when the browser cannot do web push; the parentheses name the browser features push requires.
 #: client/components/Settings/Notifications.vue
@@ -12254,7 +12254,7 @@ msgstr "การแปล"
 #: client/components/Sidebar.vue:8
 msgctxt "sidebar.devBuildTitle"
 msgid "{app} has been built in development mode"
-msgstr "{app} ถูกสร้างขึ้นในโหมดการพัฒนา"
+msgstr "{app} ถูกบิลด์ในโหมดพัฒนา"
 
 #. Small orange badge next to the sidebar logo, shown only in development builds so a dev build is never mistaken for a deploy.
 #: client/components/Sidebar.vue:16
@@ -12266,13 +12266,13 @@ msgstr "ผู้พัฒนา"
 #: client/components/NetworkList.vue:8
 msgctxt "sidebar.empty"
 msgid "You are not connected to any networks yet."
-msgstr "คุณยังไม่เชื่อมต่อกับเครือข่ายใดๆ ด้วย yet."
+msgstr "คุณยังไม่ได้เชื่อมต่อกับเครือข่ายใดเลย"
 
 #. aria-label of the question-mark button in the sidebar footer: opens the help window.
 #: client/components/Sidebar.vue:51
 msgctxt "sidebar.help"
 msgid "Help"
-msgstr "ช่วยเหลือ"
+msgstr "ความช่วยเหลือ"
 
 #. aria-label of the help button in the sidebar footer when a newer build is available; the parenthetical sits on its own line.
 #: client/components/Sidebar.vue:50
@@ -12284,7 +12284,7 @@ msgstr "ความช่วยเหลือ\n(มีอัปเดต)"
 #: client/components/NetworkList.vue:17
 msgctxt "sidebar.jumpTo"
 msgid "Jump to..."
-msgstr "เลื่อนไป..."
+msgstr "ไปยัง..."
 
 #. Tooltip and screen-reader label of the globe button beside the sidebar logo, which opens the language panel (the same selector the connect form and Settings → Appearance carry).
 #: client/components/Sidebar.vue:8
@@ -12328,13 +12328,13 @@ msgstr "การตั้งค่า"
 #: client/components/SidebarToggle.vue:2
 msgctxt "sidebar.toggle"
 msgid "Toggle channel list"
-msgstr "สลับรายการช่อง"
+msgstr "แสดง/ซ่อนรายการช่อง"
 
 #. Title and aria-label of the ladybird button in the sidebar, shown only in development builds: opens or closes the eruda in-page devtools.
 #: client/components/Sidebar.vue:22
 msgctxt "sidebar.toggleDevtools"
 msgid "Toggle eruda devtools"
-msgstr "สลับ eruda devtools"
+msgstr "แสดง/ซ่อนเครื่องมือนักพัฒนา eruda"
 
 #. Part of a sidebar channel row's aria-label and tooltip, after the channel name: how many unread messages it holds.
 #: client/components/ChannelWrapper.vue:89
@@ -12401,13 +12401,13 @@ msgstr "ถูกยกเว้นโดย"
 #: client/components/Special/ListIgnored.vue
 msgctxt "special.ignored.hostmask"
 msgid "Hostmask"
-msgstr "หัวข้อผู้ใช้"
+msgstr "โฮสต์มาสก์"
 
 #. Column header of the ignore list: when the ignore was set, locale-formatted.
 #: client/components/Special/ListIgnored.vue
 msgctxt "special.ignored.ignoredAt"
 msgid "Ignored At"
-msgstr "ถูกไม่สนใจเมื่อ"
+msgstr "ละเว้นเมื่อ"
 
 #. Column header of the channel-invite list: the invited hostmask, verbatim server data.
 #: client/components/Special/ListInvites.vue
@@ -12419,49 +12419,49 @@ msgstr "ได้รับเชิญ"
 #: client/components/Special/ListInvites.vue
 msgctxt "special.invites.invitedAt"
 msgid "Invited At"
-msgstr "ได้รับเชิญที่"
+msgstr "เชิญเมื่อ"
 
 #. Column header of the channel-invite list: who set the invite, verbatim.
 #: client/components/Special/ListInvites.vue
 msgctxt "special.invites.invitedBy"
 msgid "Invited By"
-msgstr "ได้รับเชิญจาก"
+msgstr "เชิญโดย"
 
 #. Why fragment of 'Message not sent: {why}' (FAIL BATCH MULTILINE_INVALID_TARGET). Lowercase mid-sentence by position.
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.multiline.invalidTarget"
 msgid "its lines did not all go to the same target."
-msgstr "บรรดาเส้นของมันไม่ได้ไปยังเป้าหมายเดียวกันทั้งหมด"
+msgstr "บรรทัดทั้งหมดไม่ได้ส่งไปยังเป้าหมายเดียวกัน"
 
 #. Why fragment of 'Message not sent: {why}' (FAIL BATCH MULTILINE_MAX_BYTES without a limit named). Lowercase mid-sentence by position.
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.multiline.maxBytes"
 msgid "it was too long for one multi-line message."
-msgstr "มันยาวเกินไปสำหรับข้อความหลายบรรทัด"
+msgstr "ยาวเกินไปสำหรับข้อความหลายบรรทัดหนึ่งข้อความ"
 
 #. Why fragment of 'Message not sent: {why}'; {limit} is the byte limit the server named.
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.multiline.maxBytesLimit"
 msgid "it was too long for one multi-line message (the server's limit is {limit} bytes)."
-msgstr "มันยาวเกินไปสำหรับข้อความหลายบรรทัด (ขีดจำกัดของเซิร์ฟเวอร์คือ {limit} ไบต์)"
+msgstr "ยาวเกินไปสำหรับข้อความหลายบรรทัดหนึ่งข้อความ (เซิร์ฟเวอร์จำกัดที่ {limit} ไบต์)"
 
 #. Why fragment of 'Message not sent: {why}' (FAIL BATCH MULTILINE_MAX_LINES without a limit named). Lowercase mid-sentence by position.
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.multiline.maxLines"
 msgid "it had too many lines for one multi-line message."
-msgstr "มันมีบรรทัดมากเกินไปสำหรับข้อความหลายบรรทัด"
+msgstr "มีบรรทัดมากเกินไปสำหรับข้อความหลายบรรทัดหนึ่งข้อความ"
 
 #. Why fragment of 'Message not sent: {why}'; {limit} is the line limit the server named.
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.multiline.maxLinesLimit"
 msgid "it had too many lines for one multi-line message (the server's limit is {limit})."
-msgstr "มันมีบรรทัดมากเกินไปสำหรับข้อความหลายบรรทัด (ขีดจำกัดของเซิร์ฟเวอร์คือ {limit})"
+msgstr "มีบรรทัดมากเกินไปสำหรับข้อความหลายบรรทัดหนึ่งข้อความ (เซิร์ฟเวอร์จำกัดที่ {limit})"
 
 #. Why fragment of 'Message not sent: {why}' when the server's rejection named no cause. Lowercase mid-sentence by position.
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.multiline.rejected"
 msgid "the server rejected the multi-line batch."
-msgstr "เซิร์ฟเวอร์ปฏิเสธการส่งข้อความหลายบรรทัด"
+msgstr "เซิร์ฟเวอร์ปฏิเสธชุดข้อความหลายบรรทัด"
 
 #. Channel error when the server threw away a whole multi-line message; {why} is one of the sr.multiline* copies or the server's own description, left verbatim.
 #: client/js/irc/handlers/standard-replies.ts
@@ -12479,7 +12479,7 @@ msgstr "การลบข้อความถูกปิดใช้งาน
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.redactEditPrefix"
 msgid "Edit not sent: {why}"
-msgstr "การแก้ไขไม่ได้ส่ง: {why}"
+msgstr "ไม่ได้ส่งการแก้ไข: {why}"
 
 #. Channel error for a refused deletion (FAIL REDACT REDACT_FORBIDDEN).
 #: client/js/irc/handlers/standard-replies.ts
@@ -12491,7 +12491,7 @@ msgstr "คุณไม่มีสิทธิ์ในการลบข้อ
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.redactInvalidTarget"
 msgid "Messages can only be deleted in channels."
-msgstr "ข้อความสามารถลบได้เฉพาะในช่องทาง"
+msgstr "ลบข้อความได้เฉพาะในช่อง"
 
 #. Channel error for a refused deletion; {why} is one of the sr.redact* copies or the server's own description, left verbatim.
 #: client/js/irc/handlers/standard-replies.ts
@@ -12503,7 +12503,7 @@ msgstr "ไม่สามารถลบข้อความได้: {why}"
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.redactUnknownMsgid"
 msgid "The server no longer has that message."
-msgstr "เซิร์ฟเวอร์ไม่มีข้อความนั้น anymore"
+msgstr "เซิร์ฟเวอร์ไม่มีข้อความนั้นแล้ว"
 
 #. Channel error for a deletion past the server's edit window (FAIL REDACT REDACT_WINDOW_EXPIRED).
 #: client/js/irc/handlers/standard-replies.ts
@@ -12515,7 +12515,7 @@ msgstr "ข้อความนั้นเก่าเกินไปที่
 #: client/service-worker.js:1146
 msgctxt "sw.markRead"
 msgid "Mark read"
-msgstr "ระบุเป็นอ่านแล้ว"
+msgstr "ทำเครื่องหมายว่าอ่านแล้ว"
 
 #. Body of the silent stub notification the worker shows under WebKit (an iPhone's Home Screen web app) when another device, or this one, read a pushed conversation: it replaces that conversation's notification for about 30 seconds, because WebKit counts a push that shows nothing toward unsubscribing the app. The title is the conversation's name.
 #: client/service-worker.js:1416
@@ -12540,13 +12540,13 @@ msgstr "ข้อความใหม่"
 #: client/service-worker.js:1150
 msgctxt "sw.reply"
 msgid "Reply"
-msgstr "ตอบ"
+msgstr "ตอบกลับ"
 
 #. Placeholder of the notification's inline reply text field (platforms that show one, e.g. desktop Chrome); what the reader types goes to the conversation as one IRC message.
 #: client/service-worker.js:1151
 msgctxt "sw.replyPlaceholder"
 msgid "Reply…"
-msgstr "ตอบ..."
+msgstr "ตอบกลับ…"
 
 #. Notification title for a message in a channel: {nick} is the sender's nickname, {target} the channel name. Translated as a whole so word order is free; the unread-count suffix is appended after it, never inside.
 #: client/service-worker.js:1134
@@ -12642,7 +12642,7 @@ msgstr "{nick} ตั้งโหมด {modes}"
 #: client/components/MessageTypes/nick.vue:6
 msgctxt "system.nick"
 msgid "{nick} is now known as {newNick}"
-msgstr "{nick} เปลี่ยนชื่อเป็น {newNick}"
+msgstr "{nick} เปลี่ยนนิคเป็น {newNick}"
 
 #. System line when a user parts a channel. {nick} is the parting user's nick, VERBATIM user content — never translate or inflect it; it renders as the interactive username element.
 #: client/components/MessageTypes/part.vue:6
@@ -12660,7 +12660,7 @@ msgstr "{nick} ตัดการเชื่อมต่อแล้ว"
 #: client/js/irc/authtoken.ts
 msgctxt "token.disconnected"
 msgid "Disconnected"
-msgstr "ไม่เชื่อมต่อ"
+msgstr "ไม่ได้เชื่อมต่อ"
 
 #. Reason given when the server answered a TOKEN GENERATE request with a FAIL that carried no text; shown inside the upload error notice. {code} is the server's error code, verbatim.
 #: client/js/irc/authtoken.ts
@@ -12708,7 +12708,7 @@ msgstr "อุปกรณ์นี้สามารถรันโมเดล
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.none"
 msgid "Translation cannot run on this device."
-msgstr "การแปลไม่สามารถดำเนินการบนอุปกรณ์นี้"
+msgstr "การแปลไม่สามารถทำงานบนอุปกรณ์นี้ได้"
 
 #. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: the graphics hardware allows too few storage buffers per shader, or too little workgroup memory, for the translation library. Lowercase start, short phrase like the other reasons in the list.
 #: client/components/Settings/Translation.vue
@@ -12726,13 +12726,13 @@ msgstr "แหล่งที่มาไม่ปลอดภัย: WebGPU ต
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.noAdapter"
 msgid "WebGPU adapter unavailable"
-msgstr "ไม่มี WebGPU adapter ใช้งานได้"
+msgstr "ไม่มี WebGPU adapter ที่ใช้ได้"
 
 #. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: the graphics hardware lacks half-precision arithmetic.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.noF16"
 msgid "no 16-bit float shaders"
-msgstr "ไม่มี shader ที่ใช้ float 16 บิต"
+msgstr "ไม่มีเชเดอร์ float 16 บิต"
 
 #. One reason no model can run, listed under the device verdict in Settings → Translation: the browser lacks the WebAssembly SIMD instructions. Both are technical names.
 #: client/components/Settings/Translation.vue
@@ -12762,7 +12762,7 @@ msgstr "GPU นี้ผูกบัฟเฟอร์เดียวได้�
 #: client/components/TranslationLine.vue
 msgctxt "translate.chip.alreadyIn"
 msgid "Already in {language}, not translated. Translation options"
-msgstr "อยู่ใน {language} แล้ว ไม่ได้แปล ตัวเลือกการแปล"
+msgstr "เป็น{language}อยู่แล้ว จึงไม่ได้แปล ตัวเลือกการแปล"
 
 #. Tooltip and aria-label of a translation line's chip: the languages it names, then the standard suffix.
 #: client/components/TranslationLine.vue
@@ -12774,25 +12774,25 @@ msgstr "{languages}. ตัวเลือกการแปล"
 #: client/components/TranslationLine.vue
 msgctxt "translate.chip.unsure"
 msgid "Language not told apart, not translated. Translation options"
-msgstr "ภาษาไม่สามารถแยกได้ ไม่ได้แปล ตัวเลือกการแปล"
+msgstr "แยกภาษาไม่ได้ จึงไม่ได้แปล ตัวเลือกการแปล"
 
 #. Placeholder of the message composer in a channel or private conversation whose outgoing messages are translated. {name} is the channel or nickname; {language} is the language messages are sent in.
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.placeholder"
 msgid "Write to {name} · sent in {language}"
-msgstr "เขียนไปที่ {name} · ส่งไปที่ {language}"
+msgstr "เขียนถึง {name} · ส่งเป็น {language}"
 
 #. Placeholder of the message input when the channel's write target is the language the user reads: every line is corrected (spelling and grammar) before it is sent. {name} is the channel or user name, verbatim; the middle dot is part of the copy.
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.placeholderCorrected"
 msgid "Write to {name} · sent corrected"
-msgstr "เขียนไปที่ {name} · ส่งข้อความถูกต้องแล้ว"
+msgstr "เขียนถึง {name} · ส่งแบบตรวจแก้แล้ว"
 
 #. Tooltip and aria-label of the composer's translate button while the channel corrects every message (spelling and grammar) in {language}, the user's own language, before sending; a click turns that off. The middle dot is part of the copy.
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.sendCorrectedOn"
 msgid "Sending corrected in {language} · click to stop"
-msgstr "ส่งข้อความที่ถูกต้องใน {language} · คลิกเพื่อหยุด"
+msgstr "กำลังส่งแบบตรวจแก้เป็น {language} · คลิกเพื่อหยุด"
 
 #. Tooltip and aria-label of the composer's translate button (the language mark beside the attachment and send buttons) while no send target is set; a click opens a dialog to pick the language every message is sent in, or a correction pass. Ends with an ellipsis.
 #: client/components/ChatInput.vue
@@ -12804,7 +12804,7 @@ msgstr "แปลสิ่งที่ฉันส่ง…"
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.sendOn"
 msgid "Sending in {language} · click to stop"
-msgstr "ส่ง {language} · คลิกเพื่อหยุด"
+msgstr "กำลังส่งเป็น {language} · คลิกเพื่อหยุด"
 
 #. Extra line in the dialog asking before a translation model is downloaded, shown only when the browser reports a cellular connection or Data Saver: a warning that the download may cost data.
 #: client/js/translate/index.ts
@@ -12816,7 +12816,7 @@ msgstr "การเชื่อมต่อของคุณเป็นแบ
 #: client/js/translate/index.ts
 msgctxt "translate.consent.notNow"
 msgid "Not now"
-msgstr "ไม่ใช่ตอนนี้"
+msgstr "ไว้ทีหลัง"
 
 #. Body of the dialog asking before a translation model is downloaded (title 'Download {model}?'). {model} is the model's name as Settings lists it; {size} its download size with its unit, e.g. '938.4 MiB' or '2.1 GiB'. The buttons are 'Not now' and 'Download'.
 #: client/js/translate/index.ts
@@ -12834,7 +12834,7 @@ msgstr "ดาวน์โหลด {model} ไหม"
 #: client/js/helpers/translateErrors.ts
 msgctxt "translate.error.aborted"
 msgid "aborted"
-msgstr "ยกเลิก"
+msgstr "ถูกยกเลิก"
 
 #. Why a translation failed, shown after 'Couldn't translate': the engine did not answer in time. Lowercase: it follows a colon or a dash.
 #: client/js/helpers/translateErrors.ts
@@ -12846,19 +12846,19 @@ msgstr "หมดเวลา"
 #: client/js/helpers/translateErrors.ts
 msgctxt "translate.error.unavailable"
 msgid "no translation engine can take this request"
-msgstr "ไม่มีเครื่องมือแปลใดสามารถรับคำขอได้"
+msgstr "ไม่มีเอนจินแปลใดรับคำขอนี้ได้"
 
 #. Why a translation failed, shown after 'Couldn't translate': no model on this device can handle that pair of languages. {detail} is the library's own untranslated error text. Lowercase: it follows a colon or a dash.
 #: client/js/helpers/translateErrors.ts
 msgctxt "translate.error.unavailableDetail"
 msgid "no translation engine can take this request: {detail}"
-msgstr "ไม่มีเครื่องมือแปลที่สามารถรับคำขอได้: {detail}"
+msgstr "ไม่มีเอนจินแปลใดรับคำขอนี้ได้: {detail}"
 
 #. Why a translation failed, shown after 'Couldn't translate': the background process doing the translating was shut down. Lowercase: it follows a colon or a dash.
 #: client/js/helpers/translateErrors.ts
 msgctxt "translate.error.workerDisposed"
 msgid "translation worker disposed"
-msgstr "ผู้แปลถูกกำจัด"
+msgstr "เวิร์กเกอร์การแปลถูกปิด"
 
 #. Text in front of the failure reason on a message whose translation failed (with a retry button beside it).
 #: client/components/TranslationLine.vue
@@ -12910,19 +12910,19 @@ msgstr "แปลข้อความเป็น {reading}"
 #: client/components/Chat.vue
 msgctxt "translate.header.offPaused"
 msgid "Translate messages into {reading}, paused: {reason}"
-msgstr "แปลข้อความเป็น {reading} ถูกหยุด: {reason}"
+msgstr "แปลข้อความเป็น {reading} หยุดชั่วคราว: {reason}"
 
 #. Tooltip of the translate button in a chat window's header while incoming messages are not translated but outgoing ones are. {reading} and {writing} are language names.
 #: client/components/Chat.vue
 msgctxt "translate.header.offWrite"
 msgid "Translate messages into {reading}, sending in {writing}"
-msgstr "แปลข้อความเป็น {reading} กำลังส่ง: {writing}"
+msgstr "แปลข้อความเป็น {reading} ส่งเป็น {writing}"
 
 #. Tooltip of the translate button in a chat window's header when only outgoing messages are translated and the engine has paused. {reading} and {writing} are language names; {reason} is the engine's own untranslated message.
 #: client/components/Chat.vue
 msgctxt "translate.header.offWritePaused"
 msgid "Translate messages into {reading}, sending in {writing}, paused: {reason}"
-msgstr "แปลข้อความเป็น {reading} กำลังส่ง: {writing} ถูกหยุด: {reason}"
+msgstr "แปลข้อความเป็น {reading} ส่งเป็น {writing} หยุดชั่วคราว: {reason}"
 
 #. Tooltip of the translate button in a chat window's header while incoming messages are being translated. {reading} is a language name.
 #: client/components/Chat.vue
@@ -12934,19 +12934,19 @@ msgstr "กำลังแปลเป็น {reading}"
 #: client/components/Chat.vue
 msgctxt "translate.header.readPaused"
 msgid "Translating into {reading}, paused: {reason}"
-msgstr "กำลังแปลเป็น {reading} ถูกหยุด: {reason}"
+msgstr "กำลังแปลเป็น {reading} หยุดชั่วคราว: {reason}"
 
 #. Tooltip of the translate button in a chat window's header while incoming messages are translated and outgoing ones are too. {reading} and {writing} are language names.
 #: client/components/Chat.vue
 msgctxt "translate.header.readWrite"
 msgid "Translating into {reading}, sending in {writing}"
-msgstr "กำลังแปลเป็น {reading} กำลังส่ง: {writing}"
+msgstr "กำลังแปลเป็น {reading} ส่งเป็น {writing}"
 
 #. Tooltip of the translate button in a chat window's header when reading and writing are both translated but the engine has paused. {reading} and {writing} are language names; {reason} is the engine's own untranslated message.
 #: client/components/Chat.vue
 msgctxt "translate.header.readWritePaused"
 msgid "Translating into {reading}, sending in {writing}, paused: {reason}"
-msgstr "กำลังแปลเป็น {reading} กำลังส่ง: {writing} ถูกหยุด: {reason}"
+msgstr "กำลังแปลเป็น {reading} ส่งเป็น {writing} หยุดชั่วคราว: {reason}"
 
 #. Tooltip and aria-label of the translate button in a chat window's header on a touch device, where tapping it opens the translation panel.
 #: client/components/Chat.vue
@@ -12959,7 +12959,7 @@ msgstr "การตั้งค่าการแปล"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.limitedLanguage"
 msgid "Translations into and out of this language are often wrong."
-msgstr "การแปลเข้าออกด้วยภาษานี้มักผิด"
+msgstr "การแปลเป็นหรือจากภาษานี้มักผิดพลาด"
 
 #. Note shown in the composer's translation strip or under a message while the model it needs is being fetched for the first time. {model} is the model's name, {percent} a number from 0 to 100.
 #: client/js/helpers/modelLabel.ts
@@ -12971,7 +12971,7 @@ msgstr "กำลังดาวน์โหลด {model}… {percent}%"
 #: client/js/helpers/modelLabel.ts
 msgctxt "translate.load.loading"
 msgid "Loading {model} into memory… {percent}%"
-msgstr "กำลังโหลด {model} ลงในความจำ… {percent}%"
+msgstr "กำลังโหลด {model} ลงในหน่วยความจำ… {percent}%"
 
 #. A translation chip's menu item.
 #: client/components/TranslationLine.vue
@@ -12983,7 +12983,7 @@ msgstr "คัดลอกการแปล"
 #: client/js/helpers/contextMenu.ts
 msgctxt "translate.menu.panel"
 msgid "Translation…"
-msgstr "การแปล..."
+msgstr "การแปล…"
 
 #. A translation chip's menu item.
 #: client/components/TranslationLine.vue
@@ -13001,19 +13001,19 @@ msgstr "แปลซ้ำจาก: {language}"
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.retranslateFromPicker"
 msgid "Retranslate from…"
-msgstr "แปลซ้ำจาก..."
+msgstr "แปลซ้ำจาก…"
 
 #. A translation chip's menu item.
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.showOriginal"
 msgid "Show original only"
-msgstr "แสดงต้นฉบับเพียงอย่างเดียว"
+msgstr "แสดงเฉพาะต้นฉบับ"
 
 #. A translation chip's menu item.
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.translateAnyway"
 msgid "Translate anyway"
-msgstr "แปลต่อไป"
+msgstr "แปลอยู่ดี"
 
 #. Item of the menu the message toolbar's Translate action opens: pick the language this line is in before translating it. Ends in an ellipsis because a dialog follows.
 #: client/components/MessageActions.vue
@@ -13067,7 +13067,7 @@ msgstr "ล้มเหลว: {error}"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.failedUnknown"
 msgid "Failed: unknown error"
-msgstr "ล้มเหลว: ข้อผิดพลาดไม่รู้จัก"
+msgstr "ล้มเหลว: ข้อผิดพลาดที่ไม่ทราบสาเหตุ"
 
 #. The name of a translation model in Settings → Translation: a large language model that runs on the graphics processor. {name} is the model's product name, never translated; GPU is the usual abbreviation for the graphics processor.
 #: client/js/helpers/modelLabel.ts
@@ -13079,7 +13079,7 @@ msgstr "{name} (GPU, ทุกภาษา)"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.loadingPercent"
 msgid "Loading… {percent}%"
-msgstr "การโหลด... {percent}%"
+msgstr "กำลังโหลด… {percent}%"
 
 #. Reason a GPU translation model cannot load here: {needed} is the model's largest piece, {limit} what this device's graphics processor can bind in one buffer; both are sizes such as "186 MiB" (binary units, kept as they are). Shown under the model's row in Settings → Translation (its Download button greyed out) and, after a lead sentence such as 'Correcting a message needs the GPU model.', wherever an action needing that model is unavailable.
 #: client/components/Settings/Translation.vue
@@ -13128,7 +13128,7 @@ msgstr "ปิดไว้ด้านบน"
 #: client/components/TranslationLine.vue
 msgctxt "translate.notTranslated"
 msgid "Not translated"
-msgstr "ยังไม่ได้แปล"
+msgstr "ไม่ได้แปล"
 
 #. Lead sentence when a translation is unavailable for a language pair (the composer's translate dialog, the translation panel's 'Send my messages in'); the reason follows as a sentence of its own. {from} and {to} are language names, already in the interface language.
 #: client/components/SourceLanguagePicker.vue
@@ -13165,7 +13165,7 @@ msgstr "การแปล"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.languagesHint"
 msgid "Lines in these languages are recognised even when they are short or look alike."
-msgstr "ประโยคในภาษาเหล่านี้ถูกยอมรับแม้จะสั้นหรือดูเหมือนกัน"
+msgstr "บรรทัดในภาษาเหล่านี้จะถูกจดจำได้แม้จะสั้นหรือดูคล้ายกัน"
 
 #. The off choice: the segmented switch for translating incoming messages, and the first option of the 'send my messages in' picker, both in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -13183,7 +13183,7 @@ msgstr "เปิด"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.ownLanguageNeedsGpu"
 msgid "{language} is greyed out: correcting a message needs the GPU model."
-msgstr "{language} แสดงเป็นสีเทา: การแก้ไขข้อความต้องใช้โมเดล GPU"
+msgstr "{language} แสดงเป็นสีเทา: การตรวจแก้ข้อความต้องใช้โมเดล GPU"
 
 #. Explanatory note under the reading switch in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -13225,7 +13225,7 @@ msgstr "รูปแบบภาษา"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.variantHint"
 msgid "A regional flavour the model should aim for."
-msgstr "ความชอบของภูมิภาคที่โมเดลควรพยายามให้ตรงกับ"
+msgstr "สำเนียงท้องถิ่นที่โมเดลควรมุ่งให้ตรง"
 
 #. Placeholder of the free-text field naming a regional variety of the target language, in the translation panel. Replace the example with one that suits the target language.
 #: client/components/TranslationPanel.vue
@@ -13237,7 +13237,7 @@ msgstr "ตัวอย่างเช่น ภาษาโปรตุเก�
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.writeHint"
 msgid "Enter shows the translation first; Enter again sends it."
-msgstr "ป้อนข้อมูลจะแสดงคำแปลก่อนแล้วป้อนซ้ำจะส่ง"
+msgstr "กด Enter เพื่อดูคำแปลก่อน กด Enter อีกครั้งเพื่อส่ง"
 
 #. Label of the picker that chooses the language the user's own messages are translated into before sending, in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -13291,14 +13291,14 @@ msgstr "แปลบรรทัดนี้จาก"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.sameLanguage"
 msgid "Same language: spelling and grammar are corrected instead."
-msgstr "ภาษาเดียวกัน: คำสะกดและไวยากรณ์ถูกแก้ไขแทน"
+msgstr "ภาษาเดียวกัน: จะตรวจแก้การสะกดและไวยากรณ์แทน"
 
 #. Lead sentence in the composer's translate dialog and the translation panel when the same language is picked as source and target (a spelling and grammar cleanup pass), which only the GPU model can do and which cannot run now; the reason (no WebGPU, buffer too small, switched off, …) follows as a sentence of its own.
 #: client/components/SourceLanguagePicker.vue
 #: client/components/TranslationPanel.vue
 msgctxt "translate.picker.sameLanguageNeedsGpu"
 msgid "Correcting a message needs the GPU model."
-msgstr "การแก้ไขข้อความต้องใช้โมเดล GPU"
+msgstr "การตรวจแก้ข้อความต้องใช้โมเดล GPU"
 
 #. Button that translates the draft into the language picked in the composer's translate-into dialog.
 #: client/components/SourceLanguagePicker.vue
@@ -13310,7 +13310,7 @@ msgstr "แปล"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.targetConfirmCorrect"
 msgid "Correct"
-msgstr "แก้ไข"
+msgstr "ตรวจแก้"
 
 #. aria-label of the small dialog the composer's translate button opens: pick the language the draft is translated into, this once.
 #: client/components/SourceLanguagePicker.vue
@@ -13340,7 +13340,7 @@ msgstr "ตอบคำถามแทนที่จะแปล"
 #: client/components/TranslationLine.vue
 msgctxt "translate.reason.degenerate"
 msgid "the answer was symbol garbage"
-msgstr "คำตอบเป็นข้อมูลสัญลักษณ์"
+msgstr "คำตอบเป็นสัญลักษณ์ที่ไม่มีความหมาย"
 
 #. Failure reason after 'Couldn't translate': the model replied to the message's request (acknowledging it, describing what it would do) rather than translating the message. Lowercase; reads as the tail of that sentence.
 #: client/components/TranslationLine.vue
@@ -13352,13 +13352,13 @@ msgstr "พูดถึงคำขอแทนที่จะแปล"
 #: client/components/TranslationLine.vue
 msgctxt "translate.retry"
 msgid "Retry the translation"
-msgstr "ลองแปลซ้ำ"
+msgstr "ลองแปลอีกครั้ง"
 
 #. Shown in place of the Translation settings when the site's operator has disabled the feature.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.disabled"
 msgid "Translation is turned off in this deployment."
-msgstr "การแปลถูกปิดใน deployment นี้"
+msgstr "การแปลถูกปิดในระบบที่ติดตั้งนี้"
 
 #. The first option of the GPU model picker in Settings → Translation: the client picks the largest model the device can run.
 #: client/components/Settings/Translation.vue
@@ -13376,7 +13376,7 @@ msgstr "โมเดล GPU"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.gpuModelHint"
 msgid "The larger model translates more naturally, needs about 3.4 GB of graphics memory and is slower."
-msgstr "โมเดลขนาดใหญ่แปลได้ดีกว่า แต่ต้องใช้หน่วยความจำกราฟิกประมาณ 3.4 GB และช้ากว่า"
+msgstr "โมเดลที่ใหญ่กว่าแปลได้เป็นธรรมชาติกว่า แต่ต้องใช้หน่วยความจำกราฟิกประมาณ 3.4 GB และช้ากว่า"
 
 #. Line under the GPU model select in Settings → Translation, for a model that is greyed out in the select because this device's GPU cannot hold it. {model} is the model's name, e.g. 'Qwen3 4B'. Followed by a sentence of its own giving the reason, e.g. 'It needs a GPU that binds 185.5 MiB in one buffer; this one binds 160 MiB.'
 #: client/components/Settings/Translation.vue
@@ -13406,13 +13406,13 @@ msgstr "ภาษาของอินเทอร์เฟซ"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.intro"
 msgid "Messages are translated on this device by a model it downloads once; nothing is sent to a translation service. Turn it on per channel from the translate button in the channel header."
-msgstr "ข้อความถูกแปลโดยโมเดลที่อุปกรณ์นี้ดาวน์โหลดไว้แล้ว ไม่มีข้อมูลถูกส่งไปยังบริการแปล ต้องเปิดใช้งานต่อเนื่องจากปุ่มแปลในหัวช่องทาง"
+msgstr "ข้อความจะถูกแปลบนอุปกรณ์นี้ด้วยโมเดลที่ดาวน์โหลดเพียงครั้งเดียว ไม่มีข้อมูลใดถูกส่งไปยังบริการแปล เปิดใช้ทีละช่องได้จากปุ่มแปลที่ส่วนหัวของช่อง"
 
 #. Explanatory note under the language picker in Settings → Translation.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.languageHint"
 msgid "The language the interface is written in and messages are translated into — one control. Automatic follows your browser's language."
-msgstr "ภาษาของอินเทอร์เฟซและภาษาที่ข้อความถูกแปลเป็น — ควบคุมเดียว โหมดอัตโนมัติตามภาษาระบบเบราว์เซอร์"
+msgstr "ภาษาของอินเทอร์เฟซและภาษาที่ข้อความจะถูกแปลเป็น — ตั้งค่าเดียวกัน อัตโนมัติจะใช้ภาษาของเบราว์เซอร์"
 
 #. Label of the picker in Settings → Translation that chooses one language for both the interface and the translations of incoming messages.
 #: client/components/Settings/Translation.vue
@@ -13460,7 +13460,7 @@ msgstr "ใช้ NLLB-200 กับภาษาที่โมเดลอื�
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.workerError"
 msgid "Could not reach the translation worker: {error}"
-msgstr "ไม่สามารถเชื่อมต่อกับผู้ให้บริการแปล: {error}"
+msgstr "ไม่สามารถเชื่อมต่อกับเวิร์กเกอร์การแปล: {error}"
 
 #. Text of the second row of the composer's translation strip when translating the translation back into the user's own language failed.
 #: client/components/ChatInput.vue
@@ -13484,19 +13484,19 @@ msgstr "คัดลอกการแปล"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.failed"
 msgid "couldn't translate, send as written?"
-msgstr "ไม่สามารถแปลได้ ให้ส่งเหมือนเดิม?"
+msgstr "แปลไม่ได้ ส่งตามที่เขียนไหม"
 
 #. Tooltip and aria-label of the button in the composer's translation strip that dismisses the translation and returns to the draft. Escape is the keyboard key of the same name.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.keepTyping"
 msgid "Keep typing (Escape)"
-msgstr "ต่อเนื่อง (กด Esc)"
+msgstr "พิมพ์ต่อ (Esc)"
 
 #. Chip at the start of the composer's translation strip when the draft was corrected in its own language rather than translated. {language} is that language's name, in the interface language.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.polishChip"
 msgid "{language}, corrected"
-msgstr "{language}, ถูกแก้ไขแล้ว"
+msgstr "{language}, ตรวจแก้แล้ว"
 
 #. Tooltip of the composer translation strip's direction chip, naming the route a translation took. {from} and {to} are language names (or the word from translate.strip.sourceAuto), {model} is the model's technical id. This one ran on the main processor.
 #: client/components/ChatInput.vue
@@ -13508,7 +13508,7 @@ msgstr "{from} → {to} · {model} (CPU)"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.routeCpuRetried"
 msgid "{from} → {to} · {model} (CPU) · retried without a source"
-msgstr "{from} → {to} · {model} (CPU) · ลองซ้ำโดยไม่มีแหล่งที่มา"
+msgstr "{from} → {to} · {model} (CPU) · ลองซ้ำโดยไม่ระบุภาษาต้นทาง"
 
 #. Tooltip of the composer translation strip's direction chip, naming the route a translation took. {from} and {to} are language names (or the word from translate.strip.sourceAuto), {model} is the model's technical id. This one ran on the graphics processor.
 #: client/components/ChatInput.vue
@@ -13520,19 +13520,19 @@ msgstr "{from} → {to} · {model} (GPU)"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.routeGpuRetried"
 msgid "{from} → {to} · {model} (GPU) · retried without a source"
-msgstr "{from} → {to} · {model} (GPU) · ลองซ้ำโดยไม่มีแหล่งที่มา"
+msgstr "{from} → {to} · {model} (GPU) · ลองซ้ำโดยไม่ระบุภาษาต้นทาง"
 
 #. Tooltip and aria-label of the send button in the composer's translation strip after the translation failed: the message goes out in the language the user typed it in.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sendAsWritten"
 msgid "Send as written"
-msgstr "ส่งเหมือนเดิม"
+msgstr "ส่งตามที่เขียน"
 
 #. Tooltip and aria-label of the send button in the composer's translation strip: the translated text is what gets sent.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sendTranslation"
 msgid "Send the translation"
-msgstr "ส่งการแปล"
+msgstr "ส่งคำแปล"
 
 #. Stands in for the source language in the composer translation strip's route tooltip when no source was named and the model was left to work it out. Substituted as {from} in translate.strip.routeGpu and its siblings.
 #: client/components/ChatInput.vue
@@ -13550,7 +13550,7 @@ msgstr "แสดงหัวข้อเดิม"
 #: client/components/Chat.vue
 msgctxt "translate.topic.showTranslation"
 msgid "Show the translated topic"
-msgstr "แสดงหัวข้อที่แปล"
+msgstr "แสดงหัวข้อที่แปลแล้ว"
 
 #. Lead sentence of the per-channel translation panel's notice, and the channel header translate button's label, when no translation engine can run (both switched off, or a device that runs neither); the reason follows as a sentence of its own.
 #: client/components/TranslationPanel.vue
@@ -13563,19 +13563,19 @@ msgstr "ขณะนี้ไม่สามารถแปลที่นี่
 #: client/components/TranslationLine.vue
 msgctxt "translate.unchangedReason"
 msgid "the line came back unchanged"
-msgstr "บรรทัดกลับมาไม่เปลี่ยน"
+msgstr "บรรทัดกลับมาโดยไม่เปลี่ยนแปลง"
 
 #. Reason nothing can translate: the user turned off both engine switches. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. 'Settings → Translation' names the settings tab.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.allOff"
 msgid "Both the GPU model and the CPU models are switched off in Settings → Translation."
-msgstr "ทั้งโมเดล GPU และโมเดล CPU ถูกปิดอยู่ใน ตั้งค่า → การแปล"
+msgstr "ทั้งโมเดล GPU และโมเดล CPU ถูกปิดอยู่ใน การตั้งค่า → การแปล"
 
 #. Reason a translation cannot run: the user turned off the 'Use the CPU models' switch. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. 'Settings → Translation' names the settings tab.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.cpuOff"
 msgid "The CPU models are switched off in Settings → Translation."
-msgstr "โมเดล CPU ถูกปิดอยู่ใน ตั้งค่า → การแปล"
+msgstr "โมเดล CPU ถูกปิดอยู่ใน การตั้งค่า → การแปล"
 
 #. Reason a translation cannot run: the one model that serves it failed to load earlier in this session and is skipped until the page is reloaded. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
 #: client/js/helpers/translateWhy.ts
@@ -13599,19 +13599,19 @@ msgstr "WebGPU ต้องให้แอปโหลดผ่าน HTTPS (ห
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.llmOff"
 msgid "The GPU model is switched off in Settings → Translation."
-msgstr "โมเดล GPU ถูกปิดอยู่ใน ตั้งค่า → การแปล"
+msgstr "โมเดล GPU ถูกปิดอยู่ใน การตั้งค่า → การแปล"
 
 #. Reason a translation did not run: the user answered 'Not now' when asked to download the model it needs, and it is not on this device yet. Shown under a translated line that failed (cut at about 120 characters there, so keep it short), in the composer's translation strip and in the translation controls. {model} is the model's name as Settings lists it, e.g. 'Qwen3 1.7B (GPU, all languages)'; {size} its download size with its unit, e.g. '938.4 MiB'. 'Settings → Translation' names the settings tab.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.needsDownload"
 msgid "Needs {model}, a {size} download: get it in Settings → Translation."
-msgstr "ต้องใช้ {model} ซึ่งต้องดาวน์โหลด {size}: ดาวน์โหลดได้ใน ตั้งค่า → การแปล"
+msgstr "ต้องใช้ {model} ซึ่งต้องดาวน์โหลด {size}: ดาวน์โหลดได้ใน การตั้งค่า → การแปล"
 
 #. Reason a translation cannot run: only the NLLB-200 model serves this language pair here, and the user has not switched it on (it is off by default because its licence is non-commercial). Shown wherever a translation action is unavailable, as a sentence of its own. NLLB-200 is a model name, never translated. 'Settings → Translation' names the settings tab.
 #: client/js/helpers/translateWhy.ts
 msgctxt "translate.why.nllbOff"
 msgid "This needs NLLB-200, which is switched off in Settings → Translation."
-msgstr "ต้องใช้ NLLB-200 ซึ่งถูกปิดอยู่ใน ตั้งค่า → การแปล"
+msgstr "ต้องใช้ NLLB-200 ซึ่งถูกปิดอยู่ใน การตั้งค่า → การแปล"
 
 #. Reason a GPU translation model cannot run: WebGPU exists but returned no graphics adapter. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'.
 #: client/js/helpers/translateWhy.ts
@@ -13673,25 +13673,25 @@ msgstr "ลบ {language}"
 msgctxt "typing.many"
 msgid "{nick1}, {nick2} and {count} other is typing…"
 msgid_plural "{nick1}, {nick2} and {count} others are typing…"
-msgstr[0] "{nick1}, {nick2} และ {count} คนอื่นกำลังพิมพ์..."
+msgstr[0] "{nick1}, {nick2} และอีก {count} คนกำลังพิมพ์…"
 
 #. Line above the message input saying that one user is writing a message right now. {nick} is that user's name.
 #: client/components/TypingIndicator.vue:31
 msgctxt "typing.one"
 msgid "{nick} is typing…"
-msgstr "{nick} กำลังพิมพ์..."
+msgstr "{nick} กำลังพิมพ์…"
 
 #. Line above the message input saying that three users are writing messages right now. {nick1}, {nick2} and {nick3} are their names, in the order they started typing.
 #: client/components/TypingIndicator.vue:31
 msgctxt "typing.three"
 msgid "{nick1}, {nick2} and {nick3} are typing…"
-msgstr "{nick1}, {nick2} และ {nick3} กำลังพิมพ์..."
+msgstr "{nick1}, {nick2} และ {nick3} กำลังพิมพ์…"
 
 #. Line above the message input saying that two users are writing messages right now. {nick1} and {nick2} are their names, in the order they started typing.
 #: client/components/TypingIndicator.vue:31
 msgctxt "typing.two"
 msgid "{nick1} and {nick2} are typing…"
-msgstr "{nick1} และ {nick2} กำลังพิมพ์..."
+msgstr "{nick1} และ {nick2} กำลังพิมพ์…"
 
 #. Error notice when the file's type is not on the uploader's accepted list. {file} is the file's name — user content, never translated; {types} is the accepted-type list from the deploy's config, kept verbatim.
 #: client/js/upload.ts:788
@@ -13709,7 +13709,7 @@ msgstr "ยกเลิก"
 #: client/js/upload.ts:460
 msgctxt "upload.cancelled"
 msgid "Upload cancelled"
-msgstr "ยกเลิกการอัปโหลด"
+msgstr "ยกเลิกการอัปโหลดแล้ว"
 
 #. Confirmation button of the upload dialog when several files are queued (so in practice the count is 2 or more); clicking sends them all to the chat server. {count} is the number of files.
 #: client/components/UploadPreview.vue
@@ -13734,19 +13734,19 @@ msgstr "อัปโหลด"
 #: client/components/UploadPreview.vue
 msgctxt "upload.confirmTitleMany"
 msgid "Upload these files?"
-msgstr "อัปโหลดไฟล์เหล่านี้?"
+msgstr "อัปโหลดไฟล์เหล่านี้ไหม"
 
 #. Title of the confirmation dialog shown before files are uploaded to the chat server, when one file was chosen.
 #: client/components/UploadPreview.vue
 msgctxt "upload.confirmTitleOne"
 msgid "Upload this file?"
-msgstr "อัปโหลดไฟล์นี้?"
+msgstr "อัปโหลดไฟล์นี้ไหม"
 
 #. Error notice when the user tries to send a file while the network is disconnected. Shown in the error strip above the message input.
 #: client/js/upload.ts:765
 msgctxt "upload.disconnected"
 msgid "You are currently disconnected, unable to initiate upload process."
-msgstr "คุณถูกตัดการเชื่อมต่ออยู่ ไม่สามารถเริ่มต้นการอัปโหลดได้"
+msgstr "คุณไม่ได้เชื่อมต่ออยู่ จึงเริ่มการอัปโหลดไม่ได้"
 
 #. Frame for a failed upload; the underlying reason follows the colon. {reason} is the browser's or endpoint's own message, kept verbatim — its content is not our copy.
 #: client/js/upload.ts:464
@@ -13770,7 +13770,7 @@ msgstr "การอัปโหลดล้มเหลว: ผู้อัป�
 #: client/js/upload.ts:447
 msgctxt "upload.noFetch"
 msgid "Upload failed: fetch is not available"
-msgstr "การอัปโหลดล้มเหลว: fetch ไม่ได้รับการสนับสนุน"
+msgstr "การอัปโหลดล้มเหลว: ไม่มี fetch ให้ใช้"
 
 #. Error notice when the upload endpoint's reply carries no usable link.
 #: client/js/upload.ts:365
@@ -13782,49 +13782,49 @@ msgstr "การอัปโหลดล้มเหลว: ผู้ให้�
 #: client/js/upload.ts:758
 msgctxt "upload.notConfigured"
 msgid "File uploads are not configured in this client."
-msgstr "การอัปโหลดไฟล์ไม่ได้ตั้งค่าในคลิเอนต์นี้"
+msgstr "ไคลเอนต์นี้ไม่ได้ตั้งค่าการอัปโหลดไฟล์"
 
 #. Note under an animated image in the upload confirmation dialog; it is not re-drawn, so its animation survives. Em dash is part of the copy.
 #: client/components/UploadPreview.vue
 msgctxt "upload.noteAnimated"
 msgid "Animated — sent as it is, so the animation is kept"
-msgstr "ไฟล์เคลื่อนไหว — ส่งมาโดยตรง ดังนั้นการเคลื่อนไหวถูกอนุญาตให้คงอยู่"
+msgstr "ภาพเคลื่อนไหว — ส่งตามต้นฉบับ จึงยังคงการเคลื่อนไหวไว้"
 
 #. Note under a file in the upload confirmation dialog when it will be sent unchanged, with its metadata. Starts the note.
 #: client/components/UploadPreview.vue
 msgctxt "upload.noteOff"
 msgid "Sent as it is, metadata included"
-msgstr "ส่งมาด้วยที่เป็นอยู่ รวมถึงข้อมูลตัวตน"
+msgstr "ส่งตามต้นฉบับ รวมเมตาดาตา"
 
 #. Note under a file in the upload confirmation dialog when the remove-metadata setting is on and the image will be re-drawn to strip its EXIF metadata. Capitalized; starts the note.
 #: client/components/UploadPreview.vue
 msgctxt "upload.noteStrip"
 msgid "Metadata (EXIF) will be removed before upload"
-msgstr "ข้อมูลตัวตน (EXIF) จะถูกนำออกก่อนการอัปโหลด"
+msgstr "เมตาดาตา (EXIF) จะถูกลบก่อนอัปโหลด"
 
 #. Note under a file in the upload confirmation dialog when the app cannot re-process it and it will be sent unchanged. Starts the note.
 #: client/components/UploadPreview.vue
 msgctxt "upload.noteUnsupported"
 msgid "Sent as it is"
-msgstr "ส่งมาด้วยที่เป็นอยู่"
+msgstr "ส่งตามต้นฉบับ"
 
 #. Error notice when the network's own upload host (IRCv3 FILEHOST) would not issue an upload token. {reason} is the server's text or a client-side reason, verbatim.
 #: client/js/upload.ts
 msgctxt "upload.refused"
 msgid "Upload refused by the network: {reason}"
-msgstr "ไฟล์ถูกปฏิเสธโดยเครือข่าย: {reason}"
+msgstr "เครือข่ายปฏิเสธการอัปโหลด: {reason}"
 
 #. aria-label of the ✕ button on a file in the upload confirmation dialog; clicking removes that file from the upload. {name} is the file's name.
 #: client/components/UploadPreview.vue
 msgctxt "upload.removeOne"
 msgid "Don't upload {name}"
-msgstr "ไม่ควรอัปโหลด {name}"
+msgstr "ไม่อัปโหลด {name}"
 
 #. Tooltip of the ✕ button on a file in the upload confirmation dialog; clicking removes the file from the upload.
 #: client/components/UploadPreview.vue
 msgctxt "upload.removeTitle"
 msgid "Don't upload this file"
-msgstr "ไม่ควรอัปโหลดไฟล์นี้"
+msgstr "ไม่อัปโหลดไฟล์นี้"
 
 #. Error notice when a file the user sent is larger than the uploader's size limit. {file} is the file's name — user content, never translated.
 #: client/js/upload.ts:779
@@ -13837,31 +13837,31 @@ msgstr "ไฟล์ {file} มีขนาดใหญ่เกินขีด�
 msgctxt "userlist.count"
 msgid "{count} user"
 msgid_plural "{count} users"
-msgstr[0] "{count} ผู้ใช้"
+msgstr[0] "ผู้ใช้ {count} คน"
 
 #. Heading of the channel administrators group in the user list (channel mode +a, the & prefix).
 #: client/components/ChatUserList.vue
 msgctxt "userlist.mode.admins"
 msgid "Administrators"
-msgstr "ผู้ดูแลระบบ"
+msgstr "ผู้ดูแล"
 
 #. Heading of the half-operators group in the user list (channel mode +h, the % prefix).
 #: client/components/ChatUserList.vue
 msgctxt "userlist.mode.halfOperators"
 msgid "Half-Operators"
-msgstr "ผู้ดำเนินการครึ่งทาง"
+msgstr "ฮาล์ฟออป"
 
 #. Heading of the channel operators group in the user list (channel mode +o, the @ prefix).
 #: client/components/ChatUserList.vue
 msgctxt "userlist.mode.operators"
 msgid "Operators"
-msgstr "ผู้ดำเนินการ"
+msgstr "ออป"
 
 #. Heading of the channel owners group in the user list (channel mode +q, the ~ prefix).
 #: client/components/ChatUserList.vue
 msgctxt "userlist.mode.owners"
 msgid "Owners"
-msgstr "ผู้เป็นเจ้าของ"
+msgstr "เจ้าของ"
 
 #. Heading of the group of users without a channel mode in the user list.
 #: client/components/ChatUserList.vue
@@ -13873,7 +13873,7 @@ msgstr "ผู้ใช้"
 #: client/components/ChatUserList.vue
 msgctxt "userlist.mode.voiced"
 msgid "Voiced"
-msgstr "ที่พูดเสียง"
+msgstr "วอยซ์"
 
 #. Visually hidden but screen-reader-spoken label of the search field at the top of the channel member panel, used to filter the member list by name.
 #: client/components/ChatUserList.vue:17
@@ -13976,7 +13976,7 @@ msgstr "ชื่อผู้ใช้จริง:"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.awayLabel"
 msgid "Away:"
-msgstr "กำลังอยู่นอกหน้าจอ:"
+msgstr "ไม่อยู่:"
 
 #. Whois row value when the user is away but gave no away message (draft/pre-away). Shown in parentheses, italic.
 #: client/components/MessageTypes/whois.vue
@@ -13988,13 +13988,13 @@ msgstr "(ไม่มีข้อความ)"
 #: client/js/irc/handlers/whois.ts
 msgctxt "whois.awayNoReason"
 msgid "is away"
-msgstr "กำลังอยู่นอกหน้าจอ"
+msgstr "ไม่อยู่"
 
 #. Whois row naming a user marked as a bot; the value is a Yes.
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.bot"
 msgid "Is a bot:"
-msgstr "เป็นบอท:"
+msgstr "เป็นบอต:"
 
 #. Row label of a WHOIS result card in the chat (a definition list: label, then value). The user's bouncer session (the server keeping their connection).
 #: client/components/MessageTypes/whois.vue
@@ -14012,7 +14012,7 @@ msgstr "ใบรับรอง:"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.channels"
 msgid "Channels:"
-msgstr "ช่องทาง:"
+msgstr "ช่อง:"
 
 #. Button under a WHOIS result, for IRC operators: runs the server's CHECK command on the user. {nick} is the nickname. 'CHECK' is the command name.
 #: client/components/MessageTypes/whois.vue
@@ -14042,13 +14042,13 @@ msgstr "พร้อมช่วยเหลือ:"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.hostmask"
 msgid "Host mask:"
-msgstr "แมสก์โฮสต์:"
+msgstr "มาสก์โฮสต์:"
 
 #. Whois row: when the user was last active, locale-formatted.
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.idleSince"
 msgid "Idle since:"
-msgstr "ไม่ได้ทำอะไร:"
+msgstr "ว่างตั้งแต่:"
 
 #. Row label of a WHOIS result card in the chat (a definition list: label, then value). The kill list (K-line style ban list) the user is on. Shown to IRC operators.
 #: client/components/MessageTypes/whois.vue
@@ -14078,13 +14078,13 @@ msgstr "โหมด:"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.offline"
 msgid "is offline, last information:"
-msgstr "อยู่นอกเครือ, ข้อมูลล่าสุด:"
+msgstr "ออฟไลน์อยู่ ข้อมูลล่าสุด:"
 
 #. Whois row: the user's IRC-operator status, verbatim server data.
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.operator"
 msgid "Operator:"
-msgstr "ผู้ดำเนินการ:"
+msgstr "โอเปอร์:"
 
 #. Whois row: the user's realname field, user content, verbatim.
 #: client/components/MessageTypes/whois.vue
@@ -14096,7 +14096,7 @@ msgstr "ชื่อจริง:"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.registeredNick"
 msgid "Registered nick:"
-msgstr "ชื่อผู้ใช้ที่ลงทะเบียน:"
+msgstr "นิคที่ลงทะเบียน:"
 
 #. Whois row naming a user connected over TLS; the value is a Yes.
 #: client/components/MessageTypes/whois.vue
@@ -14144,13 +14144,13 @@ msgstr "บันทึกการเปลี่ยนแปลง"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.back"
 msgid "« Help"
-msgstr "« ช่วยเหลือ"
+msgstr "« ความช่วยเหลือ"
 
 #. Changelog window paragraph. {readNotes} is a link whose text is windows.changelog.readNotesLink ('Read the notes for v5.2.0') and {allReleases} a link whose text is windows.changelog.allReleasesLink ('see all releases').
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.notBundledLine"
 msgid "Release notes are not bundled with the build. {readNotes} or {allReleases}."
-msgstr "บันทึกประจำรุ่นไม่ได้รวมอยู่ในบิลด์ {readNotes} หรือ{allReleases}"
+msgstr "บันทึกประจำรุ่นไม่ได้รวมอยู่ในบิลด์ {readNotes} หรือ {allReleases}"
 
 #. Changelog window sentence shown when the running build is newer than its release. {commit} is a link whose text is help.commitHash ('commit 1a2b3c4'); {version} is the release number, kept after its v; {since} is a link whose text is windows.changelog.sinceReleaseLink ('what changed since the release').
 #: client/components/Windows/Changelog.vue
@@ -14174,7 +14174,7 @@ msgstr "สิ่งที่เปลี่ยนไปตั้งแต่ร
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.title"
 msgid "Release notes for v{version}"
-msgstr "โน้ตการอัปเดตสำหรับเวอร์ชัน v{version}"
+msgstr "บันทึกประจำรุ่น v{version}"
 
 #. Link at the top of the network-editing form that goes back to the list of saved networks; the left arrow is part of the copy.
 #: client/components/Windows/NetworkEdit.vue
@@ -14186,7 +14186,7 @@ msgstr "← เครือข่าย"
 #: client/components/Windows/Settings.vue
 msgctxt "windows.settings.close"
 msgid "Close settings"
-msgstr "ปิดตั้งค่า"
+msgstr "ปิดการตั้งค่า"
 
 #. Button in the footer of the settings window; clicking closes the settings and returns to the chat.
 #: client/components/Windows/Settings.vue
@@ -14198,10 +14198,10 @@ msgstr "เสร็จสิ้น"
 #: client/components/Windows/Settings.vue
 msgctxt "windows.settings.note"
 msgid "Changes are saved as you make them."
-msgstr "การเปลี่ยนแปลงถูกบันทึกเมื่อคุณทำ"
+msgstr "การเปลี่ยนแปลงจะถูกบันทึกทันที"
 
 #. Title of the settings window: the heading of the modal, its dialog aria-label, and the accessible name of the whole settings pane.
 #: client/components/Windows/Settings.vue
 msgctxt "windows.settings.title"
 msgid "Settings"
-msgstr "ตั้งค่า"
+msgstr "การตั้งค่า"

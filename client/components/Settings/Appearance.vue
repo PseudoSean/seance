@@ -3,9 +3,17 @@
 		<h2>{{ t("settings.appearance.messagesHeading") }}</h2>
 		<div>
 			<label class="opt">
-				<input v-switch :checked="store.state.settings.motd" type="checkbox" name="motd" />
-				{{ t("settings.appearance.showMotd") }}
-				<abbr :title="motdTitle">MOTD</abbr>
+				<input
+					v-switch
+					:checked="store.state.settings.motd"
+					type="checkbox"
+					name="motd"
+				/>{{ " "
+				}}<I18nFrame :text="t('settings.appearance.showMotd', {motd: KEEP})"
+					><template v-slot:motd
+						><abbr :title="motdTitle">MOTD</abbr></template
+					></I18nFrame
+				>
 			</label>
 		</div>
 		<div>

@@ -2027,7 +2027,7 @@
   "settings.appearance.sampleEnds": "The ends are meant to be too small and too big.",
   "settings.appearance.sampleGlasses": "Can you read this without your glasses?",
   "settings.appearance.sampleSlide": "Yes! Slide it until this is comfortable.",
-  "settings.appearance.showMotd": "Show",
+  "settings.appearance.showMotd": "Show {motd}",
   "settings.appearance.showSeconds": "Include seconds in timestamp",
   "settings.appearance.statusCondensed": "Condense status messages together",
   "settings.appearance.statusHeading": "Status messages",

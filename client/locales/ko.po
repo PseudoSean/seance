@@ -16,7 +16,7 @@ msgstr "닫기"
 #: client/components/Channel.vue
 msgctxt "channel.leave"
 msgid "Leave"
-msgstr "떠나기"
+msgstr "나가기"
 
 #. Tooltip and aria-label of the small icon on a channel row in the sidebar network list while the client is not in that channel (it was left or the join failed); the row's history is still readable.
 #: client/components/Channel.vue
@@ -76,7 +76,7 @@ msgstr "{network}에 연결 중…"
 #: client/components/Chat.vue:72
 msgctxt "chat.contextMenu"
 msgid "Open the context menu"
-msgstr "맥락 메뉴 열기"
+msgstr "컨텍스트 메뉴 열기"
 
 #. aria-label of the conversation's name in the header of an open chat window (the visible text is the channel or conversation name itself). {type} is the kind of conversation, inserted as an English word by the app: 'channel' (a group chat), 'query' (a private one-on-one chat), 'lobby' (the network's home view) or 'special' (a list window such as the ban list).
 #: client/components/Chat.vue:22
@@ -131,7 +131,7 @@ msgstr "더 오래된 메시지 보기"
 #: client/components/Chat.vue:78
 msgctxt "chat.toggleUserlist"
 msgid "Toggle user list"
-msgstr "사용자 목록 전환"
+msgstr "사용자 목록 표시/숨기기"
 
 #. Placeholder of the input field shown while the channel topic is being edited (double-click the topic line to open it); Enter saves.
 #: client/components/Chat.vue:30
@@ -149,13 +149,13 @@ msgstr "새 메시지"
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.added"
 msgid "Alias /{name} added."
-msgstr "약어 /{name} 추가됨."
+msgstr "별칭 /{name}이(가) 추가되었습니다."
 
 #. Error when an /alias name is invalid. {max} is the length limit, a number.
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.badName"
 msgid "Alias names are letters, digits, _ and - (up to {max} characters)."
-msgstr "약어 이름은 문자, 숫자, _와 -만 사용 가능(최대 {max}자까지)."
+msgstr "별칭 이름에는 문자, 숫자, _, -만 사용할 수 있습니다(최대 {max}자)."
 
 #. Reply to /alias <name> when that alias does not exist. {name} is the name as typed, user input, verbatim; the second '/alias …' part is command syntax.
 #: client/js/irc/commands/alias.ts
@@ -173,19 +173,19 @@ msgstr "정의된 별칭이 없습니다. /alias <name> <commands>로 만들 수
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.tooLong"
 msgid "That alias is too long ({length} of at most {max} characters)."
-msgstr "해당 약어가 너무 길어요({length}자, 최대 {max}자까지)."
+msgstr "별칭이 너무 깁니다({length}자, 최대 {max}자)."
 
 #. Error when a new alias would exceed the count limit. {max} is the limit, a number; 'Settings → Aliases' names the settings tab where aliases are edited.
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.tooMany"
 msgid "You already have {max} aliases; delete one in Settings → Aliases first."
-msgstr "이미 {max}개의 약어가 있어요. 설정 → 약어에서 하나 삭제하세요."
+msgstr "이미 별칭이 {max}개 있습니다. 먼저 설정 → 별칭에서 하나를 삭제하세요."
 
 #. Confirmation after /alias <name> <commands> overwrote an existing alias. {name} is the alias name as typed, verbatim.
 #: client/js/irc/commands/alias.ts
 msgctxt "cmd.alias.updated"
 msgid "Alias /{name} updated."
-msgstr "{name} 암호가 업데이트되었습니다."
+msgstr "별칭 /{name}이(가) 업데이트되었습니다."
 
 #. Error when /connect is typed for a network that is already up.
 #: client/js/irc/commands/connect.ts
@@ -214,7 +214,7 @@ msgstr "{cmd} 명령은 채널에서만 사용할 수 있습니다."
 #: client/js/irc/commands/invite.ts
 msgctxt "cmd.channelsOrTargetOnly"
 msgid "{cmd} command can only be used in channels or by specifying a target."
-msgstr "{cmd} 명령은 채널이나 대상 지정을 통해 사용할 수 있습니다."
+msgstr "{cmd} 명령은 채널에서 사용하거나 대상을 지정해야 합니다."
 
 #. Confirmation after /ignore. {mask} is the hostmask, user data, wrapped in bold formatting codes, verbatim.
 #: client/js/irc/commands/ignore.ts
@@ -262,7 +262,7 @@ msgstr "무시된 사용자"
 #: client/js/irc/commands/index.ts
 msgctxt "cmd.lobbySend"
 msgid "Messages can not be sent to lobbies."
-msgstr "라이브러리로 메시지를 보내지 못합니다."
+msgstr "로비에는 메시지를 보낼 수 없습니다."
 
 #. Error when /mute or /unmute names several channels or users with no open window. {targets} is the comma-joined list of names as typed, user input, verbatim. Plural for more than one name.
 #: client/js/irc/commands/mute.ts
@@ -280,25 +280,25 @@ msgstr "{targets}에 대해 열린 채널이나 사용자가 없습니다"
 #: client/js/irc/commands/nick.ts
 msgctxt "cmd.nickSpaces"
 msgid "Nicknames may not contain spaces."
-msgstr "니크네임에 공백이 포함될 수 없습니다."
+msgstr "닉네임에는 공백을 넣을 수 없습니다."
 
 #. Error when /nick is given a new nick that exceeds the server's reported length limit.
 #: client/js/irc/commands/nick.ts
 msgctxt "cmd.nickTooLong"
 msgid "Nicknames may not be this long."
-msgstr "니크네임이 너무 길습니다."
+msgstr "닉네임이 너무 깁니다."
 
 #. Error when /part is typed in a network's lobby; the '/quit' part is a command name, verbatim.
 #: client/js/irc/commands/part.ts
 msgctxt "cmd.partLobby"
 msgid "You can not part from networks, use /quit instead."
-msgstr "네트워크에서 떠나갈 수 없습니다, /quit을 사용하세요."
+msgstr "네트워크에서는 나갈 수 없습니다. 대신 /quit을 사용하세요."
 
 #. Error when /query is given a channel name; the '/join' part is a command name, verbatim.
 #: client/js/irc/commands/msg.ts
 msgctxt "cmd.query.channel"
 msgid "You can not open query windows for channels, use /join instead."
-msgstr "채널의 쿼리 창을 열 수 없습니다, /join을 사용하세요."
+msgstr "채널은 쿼리 창으로 열 수 없습니다. 대신 /join을 사용하세요."
 
 #. Error when /query is typed with no nick.
 #: client/js/irc/commands/msg.ts
@@ -310,25 +310,25 @@ msgstr "인수 없이 쿼리 창을 열 수 없습니다."
 #: client/js/irc/commands/msg.ts
 msgctxt "cmd.query.prefix"
 msgid "You can not open query windows for names starting with a user prefix."
-msgstr "쿼리 윈도우를 사용자 접두사로 시작하는 이름을 열 수 없습니다."
+msgstr "사용자 접두사로 시작하는 이름으로는 쿼리 창을 열 수 없습니다."
 
 #. Error when /query is given a name with spaces; nicks cannot contain them.
 #: client/js/irc/commands/msg.ts
 msgctxt "cmd.query.spaces"
 msgid "You can not open query windows for names containing spaces."
-msgstr "쿼리 윈도우를 공백을 포함하는 이름을 열 수 없습니다."
+msgstr "공백이 포함된 이름으로는 쿼리 창을 열 수 없습니다."
 
 #. Error when /react is typed where no recent message can carry a reaction (e.g. a window without message-tags history).
 #: client/js/irc/commands/react.ts
 msgctxt "cmd.reactNoTarget"
 msgid "No message to react to: none here carries a msgid."
-msgstr "반응할 메시지가 없습니다: 여기서는 msgid가 포함되지 않습니다."
+msgstr "반응할 메시지가 없습니다. 여기에는 msgid가 있는 메시지가 없습니다."
 
 #. Error when /rejoin is typed outside a channel window.
 #: client/js/irc/commands/rejoin.ts
 msgctxt "cmd.rejoinChannels"
 msgid "You can only rejoin channels."
-msgstr "only channels에 재 참여할 수 있습니다."
+msgstr "채널에만 다시 참여할 수 있습니다."
 
 #. Usage line of /ctcp when arguments are missing; the placeholders are command syntax.
 #: client/js/irc/commands/ctcp.ts
@@ -401,7 +401,7 @@ msgstr[0] "{count} 줄 모두 표시"
 #: client/components/CodeBlock.vue
 msgctxt "code.showLess"
 msgid "Show less"
-msgstr "더 적은 수량 표시"
+msgstr "줄여 보기"
 
 #. aria-label of the ✕ button that leaves reply or edit mode in the compose bar above the message input; the keyboard key Escape does the same.
 #: client/components/ChatInput.vue:67
@@ -473,7 +473,7 @@ msgstr "연결되지 않음"
 #: client/components/ChatInput.vue:293
 msgctxt "composer.placeholder"
 msgid "Write to {name}"
-msgstr "{name}으로 메시지 전송"
+msgstr "{name}에 메시지 쓰기"
 
 #. Text of the connection bar shown above the message input while the client waits to reconnect to a chat network it lost. {network} is the display name of the chat network; {seconds} is the whole number of seconds until the retry starts, updating every half second. The singular form shows when one second remains, the plural for any other number.
 #: client/components/ChatInput.vue:343
@@ -493,7 +493,7 @@ msgstr[0] "{seconds}초 후 {network}에 다시 연결합니다. 서버가 빠�
 #: client/components/ChatInput.vue:60
 msgctxt "composer.replyingTo"
 msgid "Replying to {nick}:"
-msgstr "{nick}에게 대답 중:"
+msgstr "{nick}에게 답장 중:"
 
 #. Tooltip and aria-label of the send button beside the message input.
 #: client/components/ChatInput.vue:123
@@ -511,19 +511,19 @@ msgstr "파일 업로드"
 #: client/components/ChatInput.vue:580
 msgctxt "composer.uploadIndex"
 msgid "{index} of {count}"
-msgstr "{index} 중 {count}"
+msgstr "{count}개 중 {index}"
 
 #. Part of the upload progress bar, appended after the uploading text while the file is being prepared (re-encoded or stripped of metadata) before it is sent. Starts lowercase because it is joined with the other parts into one line.
 #: client/components/ChatInput.vue:584
 msgctxt "composer.uploadPreparing"
 msgid "preparing…"
-msgstr "준비 중..."
+msgstr "준비 중…"
 
 #. Part of the upload progress bar, appended after the uploading text while the file has been sent and the chat server has not confirmed it yet. Starts lowercase because it is joined with the other parts into one line.
 #: client/components/ChatInput.vue:586
 msgctxt "composer.uploadWaiting"
 msgid "waiting for the server…"
-msgstr "서버 기다리는 중..."
+msgstr "서버 응답을 기다리는 중…"
 
 #. First part of the upload progress bar shown above the message input while a file is being sent to the chat server. {file} is the name of the file currently going up.
 #: client/components/ChatInput.vue:577
@@ -564,7 +564,7 @@ msgstr[0] "사용자 {count}명이 들어옴"
 msgctxt "condensed.kicked"
 msgid "{count} user was kicked"
 msgid_plural "{count} users were kicked"
-msgstr[0] "사용자 {count}명이 내보내짐"
+msgstr[0] "사용자 {count}명이 추방됨"
 
 #. Condensed status block: {count} users left the channel (quits are counted as parts) while the block was collapsed.
 #: client/components/MessageCondensed.vue
@@ -640,14 +640,14 @@ msgstr "채널"
 #: client/components/Windows/Connect.vue:194
 msgctxt "connect.channelsPlaceholder"
 msgid "#channel, #another (optional)"
-msgstr "#채널, #또는 다른 (선택 사항)"
+msgstr "#채널, #다른채널 (선택 사항)"
 
 #. Status line shown on the connect form right after submitting: the nick used and the network name (or host:port of the server) being dialled.
 #: client/components/Windows/Connect.vue:84
 #: client/components/Windows/Connect.vue:308
 msgctxt "connect.connectingAs"
 msgid "Connecting as {nick} to {network}…"
-msgstr "{nick}으로 {network}에 연결 중…"
+msgstr "{nick}(으)로 {network}에 연결 중…"
 
 #. Lobby status line while a chat network is being dialled. {host} and {port} come from the saved network's settings.
 #: client/js/irc/client.ts
@@ -713,7 +713,7 @@ msgstr "이 링크는 {host}:{port}로 연결하려는 것을 나타냅니다. �
 #: client/components/Windows/Connect.vue:611
 msgctxt "connect.linkSuggestJoin"
 msgid "This link suggests connecting to {host}:{port} and joining {channels}. Nothing is saved until you choose to connect."
-msgstr "이 링크는 {host}:{port}로 연결하려는 것을 나타냅니다. {channels}에 참여하려는 것을 나타냅니다. 연결을 선택하지 않는 한 아무것도 저장되지 않습니다."
+msgstr "이 링크는 {host}:{port}에 연결하고 {channels}에 참여할 것을 제안합니다. 연결을 선택하기 전에는 아무것도 저장되지 않습니다."
 
 #. Read-only row label on the connect/sign-in form, above the name of the network being connected to (shown instead of an editable server field).
 #: client/components/Windows/Connect.vue:28
@@ -726,7 +726,7 @@ msgstr "네트워크"
 #: client/components/Windows/Connect.vue:118
 msgctxt "connect.newServerTitle"
 msgid "Connect to a new server?"
-msgstr "새로운 서버에 연결하려면?"
+msgstr "새 서버에 연결할까요?"
 
 #. Label of the nickname text field: on the connect form and in the guest half of the sign-in panel.
 #: client/components/Windows/Connect.vue:101
@@ -740,7 +740,7 @@ msgstr "닉네임"
 #: client/components/Windows/Connect.vue:315
 msgctxt "connect.notNow"
 msgid "Not now"
-msgstr "아니요"
+msgstr "나중에"
 
 #. Label of the account password field on the connect form, sign-in panel and network edit form; the field has a show/hide eye toggle.
 #: client/components/Windows/Connect.vue:46
@@ -807,19 +807,19 @@ msgstr "사용 가능한 SASL 메커니즘: {mechanisms}"
 #: client/js/irc/client.ts
 msgctxt "connect.saslQuitHint"
 msgid "Not connecting to {host} without the login you asked for."
-msgstr "로그인을 요청한 대로 로그인 정보가 없으면 {host}에 연결하지 않습니다."
+msgstr "요청한 로그인 없이는 {host}에 연결하지 않습니다."
 
 #. Lobby error after a required SASL login that merely timed out (a slow login service, not a wrong password): the connection is redialled on the usual schedule. {host} is the configured host name.
 #: client/js/irc/client.ts
 msgctxt "connect.saslQuitHintRetry"
 msgid "Not connecting to {host} without the login you asked for; trying again."
-msgstr "로그인을 요청한 대로 로그인 정보가 없으면 {host}에 연결하지 않습니다. 다시 시도중입니다."
+msgstr "요청한 로그인 없이는 {host}에 연결하지 않습니다. 다시 시도합니다."
 
 #. Reason fragment of 'SASL authentication failed: {reason}' when the server's AUTHENTICATE challenge is not the empty one PLAIN and EXTERNAL expect. {mechanism} is the mechanism token, verbatim. Lowercase mid-sentence by position.
 #: client/js/irc/sasl.ts
 msgctxt "connect.saslReason.badChallenge"
 msgid "unexpected challenge for {mechanism}"
-msgstr "{mechanism}에 대한 예상되지 않은 도전"
+msgstr "{mechanism}에 대한 예상치 못한 챌린지"
 
 #. Reason fragment of 'SASL authentication failed: {reason}' when the server rejected the client's request for the sasl capability (CAP NAK). Lowercase mid-sentence by position.
 #: client/js/irc/handlers/cap.ts
@@ -837,13 +837,13 @@ msgstr "계정 이름이나 비밀번호가 설정되지 않았습니다"
 #: client/js/irc/sasl.ts
 msgctxt "connect.saslReason.numeric"
 msgid "numeric {code}"
-msgstr "숫자 {code}"
+msgstr "응답 코드 {code}"
 
 #. Reason fragment of 'SASL authentication failed: {reason}' when the server took too long to answer the login. Lowercase mid-sentence by position.
 #: client/js/irc/client.ts
 msgctxt "connect.saslReason.timeout"
 msgid "timed out waiting for the server"
-msgstr "서버에 연결할 때 시간이 초과되었습니다"
+msgstr "서버 응답을 기다리다 시간이 초과되었습니다"
 
 #. Reason fragment of 'SASL authentication failed: {reason}' when the server announced no usable sasl capability. Lowercase mid-sentence by position.
 #: client/js/irc/client.ts
@@ -861,19 +861,19 @@ msgstr "알 수 없는 오류"
 #: client/js/irc/client.ts
 msgctxt "connect.saslReason.wrongMechanism"
 msgid "the server offers SASL {offered}, not {mechanism}"
-msgstr "서버는 SASL {offered}를 제공하며, {mechanism}는 아닙니다."
+msgstr "서버가 제공하는 SASL은 {mechanism}이(가) 아니라 {offered}입니다"
 
 #. Follow-up to a failed required SASL login, telling the reader where to fix or drop the credentials.
 #: client/js/irc/client.ts
 msgctxt "connect.saslRequiredHint"
 msgid "Check the account name and password in this network's settings, or pick \"No authentication\" there to connect without logging in."
-msgstr "이 네트워크의 설정에서 계정 이름과 비밀번호를 확인하거나, 여기서 \"인증되지 않음\"를 선택하여 로그인 없이 연결할 수 있습니다."
+msgstr "이 네트워크 설정에서 계정 이름과 비밀번호를 확인하거나, 로그인 없이 연결하려면 그곳에서 \"인증 안 함\"을 선택하세요."
 
 #. Checkbox on the connect form: reveals the account name and password fields used to authenticate with network services (SASL).
 #: client/components/Windows/Connect.vue:207
 msgctxt "connect.saslToggle"
 msgid "I have a services account (SASL)"
-msgstr "저는 서비스 계정이 있어요 (SASL)"
+msgstr "서비스 계정이 있습니다(SASL)"
 
 #. The IRC server section of the connect form: heading above the server fields, and the label of the server host field.
 #: client/components/Windows/Connect.vue:124
@@ -916,7 +916,7 @@ msgstr "로그인"
 #: client/js/irc/client.ts
 msgctxt "connect.stsReconnect"
 msgid "Server requires a secure connection (STS): reconnecting on port {port}…"
-msgstr "서버는 안전한 연결(STS)을 요구합니다: {port} 포트로 재연결 중..."
+msgstr "서버가 보안 연결(STS)을 요구합니다: {port} 포트로 재연결 중…"
 
 #. Lobby status line when the server's strict-transport-security policy upgrades a plain connection to TLS. {port} is the new TLS port.
 #: client/js/irc/client.ts
@@ -970,7 +970,7 @@ msgstr "어제"
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1001"
 msgid "server going away"
-msgstr "서버가 떠났습니다"
+msgstr "서버가 종료되는 중"
 
 #. Name of WebSocket close code 1002 in a connection-failure report. Lowercase mid-sentence by position.
 #: client/js/irc/disconnect.ts
@@ -1018,7 +1018,7 @@ msgstr "서버가 나중에 다시 시도하라고 요청했습니다"
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.code1015"
 msgid "TLS handshake failed"
-msgstr "TLS 핸드셰크 실패"
+msgstr "TLS 핸드셰이크 실패"
 
 #. Detail of a connection-failure report when the WebSocket closed with a code the app has no name for. {code} is the numeric close code, verbatim.
 #: client/js/irc/disconnect.ts
@@ -1030,67 +1030,67 @@ msgstr "코드 {code}"
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.couldNotConnect"
 msgid "Could not connect to {url}{error}."
-msgstr "{url}{error}로 연결할 수 없습니다."
+msgstr "{url}에 연결할 수 없습니다{error}."
 
 #. Headline when a network the client is dialling never opened and the retry schedule is standing down (the browser refused or could not reach the address). {url} is the WebSocket URL that was dialled; {error} is the browser's error text in parentheses, or empty.
 #: client/js/irc/disconnect.ts:78
 msgctxt "disconnect.couldNotConnectNotReconnecting"
 msgid "Could not connect to {url}{error}. Not reconnecting."
-msgstr "{url}{error}로 연결할 수 없습니다. 재연결하지 않습니다."
+msgstr "{url}에 연결할 수 없습니다{error}. 재연결하지 않습니다."
 
 #. Connection-failure report once the network was registered. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.disconnected"
 msgid "Disconnected from {host}{detail}."
-msgstr "{host}{detail}에서 연결이 끊어졌습니다."
+msgstr "{host}와(과)의 연결이 끊어졌습니다{detail}."
 
 #. Headline when a registered connection closed and the retry schedule is standing down. {host} is the host as the user typed it; {detail} is the close detail in parentheses, or empty.
 #: client/js/irc/disconnect.ts:127
 msgctxt "disconnect.disconnectedNotReconnecting"
 msgid "Disconnected from {host}{detail}. Not reconnecting."
-msgstr "{host}{detail}에서 연결이 끊어졌습니다. 재연결하지 않습니다."
+msgstr "{host}와(과)의 연결이 끊어졌습니다{detail}. 재연결하지 않습니다."
 
 #. Follow-up hint under a failed connection dialled with ws:// from an https:// page: the browser blocks mixed content, so the fix is on the network's settings.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.httpsBlocked"
 msgid "This page was loaded over HTTPS, so the browser blocks plain ws:// connections. Enable TLS for this network, or open the app over http://."
-msgstr "이 페이지는 HTTPS로 로드되었기 때문에 브라우저는 plain ws:// 연결을 차단합니다. 이 네트워크에 TLS를 사용하도록 설정하거나, http://.을 통해 앱을 열어주세요"
+msgstr "이 페이지는 HTTPS로 로드되었으므로 브라우저가 일반 ws:// 연결을 차단합니다. 이 네트워크에서 TLS를 켜거나 http://로 앱을 여세요."
 
 #. Follow-up hint under a failed plain (ws://) dial from a non-secure page.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.plainCauses"
 msgid "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or it does not accept WebSocket connections on that port."
-msgstr "브라우저는 이유를 안 보여줍니다. 가능한 원인: 서버가 다운되었거나, 포트가 잘못되었거나, 해당 포트에서 WebSocket 연결을 허용하지 않아요."
+msgstr "브라우저는 이유를 알려 주지 않습니다. 가능한 원인: 서버가 다운되었거나, 포트가 잘못되었거나, 그 포트에서 WebSocket 연결을 받지 않습니다."
 
 #. Follow-up hint under a connection the server dropped during IRC registration, when the close reason named no live session.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.registration"
 msgid "The WebSocket opened but the server dropped it before registration finished - check that this port really speaks IRC over WebSocket, and look for a server notice above for the reason."
-msgstr "WebSocket이 열렸지만 서버가 등록 완료 전에 연결을 끊었어요 - 이 포트가 WebSocket을 통해 IRC를 사용하는지 확인해 주세요. 그리고 서버 알림을 확인해 주세요."
+msgstr "WebSocket은 열렸지만 등록이 끝나기 전에 서버가 연결을 끊었습니다. 이 포트가 실제로 WebSocket을 통한 IRC를 지원하는지 확인하고, 위의 서버 공지에서 이유를 찾아보세요."
 
 #. Follow-up hint when the server's close reason names a live session: retrying alone cannot fix it, the other client has to go.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.sessionConflict"
 msgid "This account is already connected on this network - another tab, window or device is using it. Close that client; this tab then connects on its next retry (a dead connection is reclaimed within about a minute)."
-msgstr "이 계정이 이미 이 네트워크에서 연결되어 있습니다 - 다른 탭, 창 또는 기기에서 사용 중입니다. 해당 클라이언트를 닫고, 이 탭은 다음 재연결 시 연결을 재구성합니다 (사망한 연결은 약 1분 내에 회수됩니다)."
+msgstr "이 계정은 이미 이 네트워크에 연결되어 있습니다. 다른 탭, 창 또는 기기에서 사용 중입니다. 그 클라이언트를 닫으면 이 탭이 다음 재시도 때 연결됩니다(끊긴 연결은 약 1분 안에 회수됩니다)."
 
 #. Follow-up hint under a failed secure (wss://) dial. {url} is the network's address with https: in place of wss:, for accepting a self-signed certificate once.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.hint.wssCauses"
 msgid "The browser does not reveal why. Likely causes: the server is down, the port is wrong, or its TLS certificate is not trusted — for a self-signed certificate, open {url} in a new tab, accept the warning, then reconnect."
-msgstr "브라우저는 이유를 안내하지 않습니다. 가능한 원인: 서버가 다운되었거나, 포트가 잘못되었거나, TLS 인증서가 신뢰되지 않았습니다 - 자사 서명 인증서인 경우, 새 탭에서 {url}을 열고 경고를 수락한 후 재연결하세요."
+msgstr "브라우저는 이유를 알려 주지 않습니다. 가능한 원인: 서버가 다운되었거나, 포트가 잘못되었거나, TLS 인증서를 신뢰할 수 없습니다. 자체 서명 인증서라면 새 탭에서 {url}을(를) 열어 경고를 수락한 뒤 다시 연결하세요."
 
 #. Connection-failure report when the server dropped the socket before registration finished. {host} is the network's configured host name, verbatim. {detail} is ' (<server close reason>)', ' (<close-code name>)' or empty.
 #: client/js/irc/disconnect.ts
 msgctxt "disconnect.registeringClosed"
 msgid "Connection to {host} closed during IRC registration{detail}."
-msgstr "{host}에 대한 IRC 등록 중 연결이 종료되었습니다.{detail}"
+msgstr "IRC 등록 중 {host} 연결이 종료되었습니다{detail}."
 
 #. Headline when the connection was closed between connecting and completing IRC registration and the retry schedule is standing down. {host} is the host as the user typed it; {detail} is the close detail in parentheses (a server reason, a connection-lost note or the close code), or empty.
 #: client/js/irc/disconnect.ts:112
 msgctxt "disconnect.registeringClosedNotReconnecting"
 msgid "Connection to {host} closed during IRC registration{detail}. Not reconnecting."
-msgstr "{host}에 대한 IRC 등록 중 연결이 종료되었습니다.{detail}. 재연결하지 않습니다."
+msgstr "IRC 등록 중 {host} 연결이 종료되었습니다{detail}. 재연결하지 않습니다."
 
 #. Item of the presence menu under the logo (a list of choices). Opens the notification settings where the do-not-disturb schedule is set.
 #: client/components/PresencePill.vue
@@ -1198,13 +1198,13 @@ msgstr "{channel}에 참여할 수 없습니다 - 잘못된 채널 키입니다.
 #: client/components/MessageTypes/error.vue
 msgctxt "error.bannedFromChannel"
 msgid "Cannot join {channel} - You have been banned from the channel."
-msgstr "{channel}에 참여할 수 없습니다 - 채널에 블랙리스트에 있습니다."
+msgstr "{channel}에 참여할 수 없습니다 - 이 채널에서 차단되었습니다."
 
 #. Send refusal (404) phrased by the client; {channel} is the refused channel name.
 #: client/components/MessageTypes/error.vue
 msgctxt "error.cannotSendToChannel"
 msgid "Cannot send to channel {channel}"
-msgstr "채널 {channel}으로 메시지를 보낼 수 없습니다"
+msgstr "채널 {channel}에 메시지를 보낼 수 없습니다"
 
 #. Join refusal (471) phrased by the client; {channel} is the refused channel name.
 #: client/components/MessageTypes/error.vue
@@ -1216,7 +1216,7 @@ msgstr "{channel}에 참여할 수 없습니다 - 채널이 가득 찼습니다.
 #: client/components/MessageTypes/error.vue
 msgctxt "error.chanopPrivsNeeded"
 msgid "Cannot perform action: You're not a channel operator."
-msgstr "작업 수행 불가: 채널 운영자 아닙니다."
+msgstr "작업을 수행할 수 없습니다: 채널 운영자가 아닙니다."
 
 #. Join refusal (473) phrased by the client; {channel} is the refused channel name.
 #: client/components/MessageTypes/error.vue
@@ -1234,19 +1234,19 @@ msgstr "필요한 기능이 누락되었습니다: {caps}"
 #: client/components/MessageTypes/error.vue
 msgctxt "error.noSuchNick"
 msgid "User {nick} hasn't logged in or does not exist."
-msgstr "사용자 {nick}가 로그인하지 않았거나 존재하지 않습니다."
+msgstr "사용자 {nick}이(가) 로그인하지 않았거나 존재하지 않습니다."
 
 #. Refusal (442) phrased by the client, e.g. a topic change from outside.
 #: client/components/MessageTypes/error.vue
 msgctxt "error.notOnChannel"
 msgid "Cannot perform action: You're not on the channel."
-msgstr "작업 수행 불가: 채널에 없으십니다."
+msgstr "작업을 수행할 수 없습니다: 채널에 참여하고 있지 않습니다."
 
 #. Login refusal (464) phrased by the client.
 #: client/components/MessageTypes/error.vue
 msgctxt "error.passwordMismatch"
 msgid "Password mismatch."
-msgstr "패스워드 불일치입니다."
+msgstr "비밀번호가 일치하지 않습니다."
 
 #. Join refusal (405) phrased by the client; {channel} is the refused channel name.
 #: client/components/MessageTypes/error.vue
@@ -1258,19 +1258,19 @@ msgstr "{channel}에 참여할 수 없습니다 - 허용된 채널 수를 초과
 #: client/components/MessageTypes/error.vue
 msgctxt "error.unknownCommand"
 msgid "Unknown command: {command}"
-msgstr "알려지지 않은 명령: {command}"
+msgstr "알 수 없는 명령: {command}"
 
 #. Refusal (441) phrased by the client, e.g. a kick of a user who has left; {nick} is user data.
 #: client/components/MessageTypes/error.vue
 msgctxt "error.userNotInChannel"
 msgid "User {nick} is not on the channel."
-msgstr "사용자 {nick}가 채널에 없습니다."
+msgstr "사용자 {nick}이(가) 채널에 없습니다."
 
 #. Refusal (443) phrased by the client; {nick} is user data.
 #: client/components/MessageTypes/error.vue
 msgctxt "error.userOnChannel"
 msgid "User {nick} is already on the channel."
-msgstr "사용자 {nick}이 이미 채널에 있습니다."
+msgstr "사용자 {nick}이(가) 이미 채널에 있습니다."
 
 #. Label of the services account (login name) field on the network edit form, shown when SASL is on.
 #: client/components/NetworkForm.vue:168
@@ -1294,7 +1294,7 @@ msgstr "연결"
 #: client/components/NetworkForm.vue:505
 msgctxt "form.actionDisconnect"
 msgid "Disconnect"
-msgstr "분리"
+msgstr "연결 끊기"
 
 #. Note on the network edit form, shown while the network is up: edits to these fields wait for the next connection.
 #: client/components/NetworkForm.vue:98
@@ -1330,19 +1330,19 @@ msgstr "이 네트워크에 대한 브라우저 알림"
 #: client/components/NetworkForm.vue:263
 msgctxt "form.browserNotificationsHelp"
 msgid "Show browser notifications for highlights and queries on this network. Needs the browser's permission; asks when first saved. Each network is set up independently."
-msgstr "이 네트워크의 강조와 검색을 위한 브라우저 알림 표시. 브라우저의 허가 필요하며, 처음 저장할 때 묻습니다. 각 네트워크는 독립적으로 설정됩니다."
+msgstr "이 네트워크의 강조 메시지와 개인 대화에 대해 브라우저 알림을 표시합니다. 브라우저 권한이 필요하며 처음 저장할 때 묻습니다. 네트워크마다 따로 설정합니다."
 
 #. Label of the field listing channels to join automatically after connecting, on the network edit form.
 #: client/components/NetworkForm.vue:119
 msgctxt "form.channels"
 msgid "Channels"
-msgstr "채널들"
+msgstr "채널"
 
 #. Placeholder of the channels field on the network edit form: example channel names, where a name may be followed by its door key.
 #: client/components/NetworkForm.vue:125
 msgctxt "form.channelsPlaceholder"
 msgid "#channel, #another key (joined on connect)"
-msgstr "#채널, #또는 다른 키 (연결 시 참여)"
+msgstr "#채널, #다른채널 키 (연결 시 참여)"
 
 #. Label of the field holding IRC commands sent automatically when this network connects, on the network edit form.
 #: client/components/NetworkForm.vue:133
@@ -1360,7 +1360,7 @@ msgstr "한 줄에 /명령어 하나.\n각 명령어는 새로 연결할 때\n�
 #: client/components/NetworkForm.vue:490
 msgctxt "form.connectedInsecure"
 msgid "Connected (not secure)"
-msgstr "연결됨 (불안전)"
+msgstr "연결됨 (보안 연결 아님)"
 
 #. Status line on the network edit form while the network is online over TLS.
 #: client/components/NetworkForm.vue:490
@@ -1372,13 +1372,13 @@ msgstr "연결됨(TLS)"
 #: client/components/NetworkForm.vue:493
 msgctxt "form.connecting"
 msgid "Connecting…"
-msgstr "연결 중..."
+msgstr "연결 중…"
 
 #. Status line on the network edit form when the network is not connected.
 #: client/components/NetworkForm.vue:493
 msgctxt "form.disconnected"
 msgid "Disconnected"
-msgstr "연결 해제"
+msgstr "연결 끊김"
 
 #. Heading of the network edit form; {name} is the network's current display name.
 #: client/components/NetworkForm.vue:14
@@ -1414,7 +1414,7 @@ msgstr "닉네임"
 #: client/components/NetworkForm.vue:158
 msgctxt "form.noAuth"
 msgid "No authentication"
-msgstr "인증되지 않음"
+msgstr "인증 안 함"
 
 #. Label of the services account password field on the network edit form, shown when SASL is on.
 #: client/components/NetworkForm.vue:183
@@ -1480,7 +1480,7 @@ msgstr "자리 비움 없음."
 #: client/components/NetworkForm.vue:225
 msgctxt "form.pushHelp"
 msgid "Register this device for push notifications on this network. The server must support the draft/webpush capability. Push needs authentication, so this only appears with SASL configured. Each network is set up independently."
-msgstr "이 네트워크에서 푸시 알림을 등록하려면 이 기기의 푸시 알림을 등록해야 합니다. 서버는 draft/webpush 기능을 지원해야 합니다. 푸시는 인증이 필요하므로 SASL이 구성된 경우에만 나타납니다. 각 네트워크는 독립적으로 설정됩니다."
+msgstr "이 기기를 이 네트워크의 푸시 알림에 등록합니다. 서버가 draft/webpush 기능을 지원해야 합니다. 푸시에는 인증이 필요하므로 SASL이 설정된 경우에만 표시됩니다. 네트워크마다 따로 설정합니다."
 
 #. Checkbox on the network edit form: register this device for this network's push notifications.
 #: client/components/NetworkForm.vue:222
@@ -1697,7 +1697,7 @@ msgstr "닉네임, 채널, 명령, 이모지를 자동 완성하려면 아래 �
 #: client/components/Windows/Help.vue
 msgctxt "help.autocomplete.nick"
 msgid "Nickname"
-msgstr "니크네임"
+msgstr "닉네임"
 
 #. Help window sentence shown when the running build is newer than its release. {app} is the app's name (verbatim); {commit} is a link whose text is help.commitHash ('commit 1a2b3c4'); {version} is the release number, kept after its v.
 #: client/components/Windows/Help.vue
@@ -1709,19 +1709,19 @@ msgstr "{app}은(는) v{version} 이후의 {commit}에서 빌드되었습니다.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.alias"
 msgid "Alias:"
-msgstr "약어:"
+msgstr "별칭:"
 
 #. Lead-in of the alias line under a command description in the help window when the command has several alternative names; the alternatives follow as code fragments. Keep the trailing colon.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.aliases"
 msgid "Aliases:"
-msgstr "약어:"
+msgstr "별칭:"
 
 #. Description of the /away command in the help window; the command syntax (/away [message]) is shown beside it and stays untranslated.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.away"
 msgid "Mark yourself as away with an optional message."
-msgstr "선택적 메시지와 함께 자신을 어웨이 상태로 표시합니다."
+msgstr "자신을 자리 비움 상태로 표시합니다. 메시지를 함께 남길 수 있습니다."
 
 #. Description of the /back command in the help window. {command} is the /away command, shown as a code fragment and never translated.
 #: client/components/Windows/Help.vue
@@ -1811,7 +1811,7 @@ msgstr "명령어"
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.ignore"
 msgid "Block any messages from the specified user on the current network. This can be a nickname or a hostmask."
-msgstr "현재 네트워크의 지정된 사용자로부터 메시지를 차단합니다. 이는 니크네임이나 호스트마스크일 수 있습니다."
+msgstr "현재 네트워크에서 지정한 사용자의 모든 메시지를 차단합니다. 닉네임이나 호스트마스크를 쓸 수 있습니다."
 
 #. Description of the /ignorelist command in the help window.
 #: client/components/Windows/Help.vue
@@ -1841,7 +1841,7 @@ msgstr "현재 채널의 사용자를 추방합니다."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.kickban"
 msgid "Kick and ban ({mode}) a user from the current channel. Unlike {ban}, only nicknames (and not host masks) can be used."
-msgstr "현재 채널에서 사용자를 내보내고 차단합니다({mode}). {ban}과 달리 닉네임만 쓸 수 있습니다(호스트 마스크는 불가)."
+msgstr "현재 채널에서 사용자를 추방하고 차단합니다({mode}). {ban}과 달리 닉네임만 쓸 수 있습니다(호스트 마스크는 불가)."
 
 #. Description of the /list command in the help window.
 #: client/components/Windows/Help.vue
@@ -1853,7 +1853,7 @@ msgstr "이 네트워크에 있는 사용 가능한 채널 목록을 가져옵�
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.me"
 msgid "Send an action message to the current channel. {appName} will display it inline, as if the message was posted in the third person."
-msgstr "현재 채널에 액션 메시지를 보냅니다. {appName}는 inline으로 표시되며, 제3인칭으로 보이게 됩니다."
+msgstr "현재 채널에 액션 메시지를 보냅니다. {appName}은(는) 이 메시지를 3인칭으로 쓴 것처럼 줄 안에 표시합니다."
 
 #. Description of the /mode command in the help window; explains whose modes the flags apply to depending on the active window.
 #: client/components/Windows/Help.vue
@@ -1871,19 +1871,19 @@ msgstr "지정된 채널에 메시지를 보냅니다."
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.mute"
 msgid "Prevent messages from generating any feedback for a channel. This turns off the highlight indicator, hides mentions and inhibits push notifications. Muting a network lobby mutes the entire network. Not specifying any channel target mutes the current channel. Revert with {command}."
-msgstr "채널의 메시지가 어떤 알림도 일으키지 않게 합니다. 강조 표시를 끄고, 멘션을 숨기며, 푸시 알림을 막습니다. 네트워크 로비를 음소거하면 네트워크 전체가 음소거됩니다. 채널을 지정하지 않으면 현재 채널이 음소거됩니다. {command}(으)로 되돌립니다."
+msgstr "채널의 메시지가 어떤 알림도 일으키지 않게 합니다. 강조 표시를 끄고, 언급을 숨기며, 푸시 알림을 막습니다. 네트워크 로비를 음소거하면 네트워크 전체가 음소거됩니다. 채널을 지정하지 않으면 현재 채널이 음소거됩니다. {command}(으)로 되돌립니다."
 
 #. Description of the /nick command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.nick"
 msgid "Change your nickname on the current network."
-msgstr "현재 네트워크에서 닉네임을 변경하십시오."
+msgstr "현재 네트워크에서 닉네임을 변경합니다."
 
 #. Description of the /notice command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.notice"
 msgid "Sends a notice message to the specified channel."
-msgstr "지정된 채널로 메시지를 보내세요."
+msgstr "지정한 채널에 공지(notice) 메시지를 보냅니다."
 
 #. Description of the /op command in the help window. {mode} is the channel mode +o, rendered as a code element; 'op' is IRC channel-operator status (keep the catalog's usual term).
 #: client/components/Windows/Help.vue
@@ -1901,37 +1901,37 @@ msgstr "지정한 채널이나 개인 대화 창을 닫으며, {channel}을(를)
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.query"
 msgid "Send a private message to the specified user."
-msgstr "지정된 사용자에게 개인 메시지를 보내세요."
+msgstr "지정한 사용자에게 개인 메시지를 보냅니다."
 
 #. Description of the /quit command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.quit"
 msgid "Disconnect from the current network with an optional message."
-msgstr "현재 네트워크에서 선택적으로 메시지를 포함하여 연결을 끊으세요."
+msgstr "현재 네트워크에서 연결을 끊습니다. 메시지를 함께 남길 수 있습니다."
 
 #. Description of the /raw command in the help window.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.raw"
 msgid "Send a raw message to the current IRC network."
-msgstr "현재 IRC 네트워크로 원시 메시지를 보내세요."
+msgstr "현재 IRC 네트워크에 원시 메시지를 보냅니다."
 
 #. Description of the /rejoin command in the help window; ChanServ (the IRC channel service) stays verbatim.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.rejoin"
 msgid "Leave and immediately rejoin the current channel. Useful to quickly get op from ChanServ in an empty channel, for example."
-msgstr "현재 채널을 떠나고 즉시 다시 참여하세요. 예를 들어 빈 채널에서 ChanServ에서 op를 받을 수 있도록 도움이 됩니다."
+msgstr "현재 채널에서 나갔다가 즉시 다시 참여합니다. 예를 들어 빈 채널에서 ChanServ로부터 op를 빠르게 받을 때 유용합니다."
 
 #. Description of the /search command in the help window. No trailing period in the source; keep it as is.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.search"
 msgid "Search for messages in the current channel / user"
-msgstr "현재 채널 또는 사용자에서 메시지를 검색하세요."
+msgstr "현재 채널 또는 사용자에서 메시지를 검색합니다"
 
 #. Description of the /slap command in the help window; a playful IRC tradition. Keep the exclamation mark.
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.slap"
 msgid "Slap someone in the current channel with a trout!"
-msgstr "트로트로 누군가를 때리세요!"
+msgstr "현재 채널에서 누군가를 송어로 때립니다!"
 
 #. Description of the /topic command in the help window. {newtopic} is the command's parameter (the word 'newtopic' as a code element).
 #: client/components/Windows/Help.vue
@@ -1949,7 +1949,7 @@ msgstr "현재 채널에서 사용자의 차단을 해제합니다({mode}). 닉�
 #: client/components/Windows/Help.vue
 msgctxt "help.commands.unignore"
 msgid "Unblock messages from the specified user on the current network. This can be a nickname or a hostmask."
-msgstr "현재 네트워크의 지정된 사용자로부터 메시지를 해제합니다. 이는 닉네임이나 호스트마스크일 수 있습니다."
+msgstr "현재 네트워크에서 지정한 사용자의 메시지 차단을 해제합니다. 닉네임이나 호스트마스크를 쓸 수 있습니다."
 
 #. Description of the /unmute command in the help window. {mute} is the command /mute as a code element.
 #: client/components/Windows/Help.vue
@@ -2004,7 +2004,7 @@ msgstr "{range}을(를) 비교해 릴리스 이후 바뀐 점 보기"
 #: client/components/Windows/Help.vue
 msgctxt "help.documentation"
 msgid "Documentation"
-msgstr "문서화"
+msgstr "문서"
 
 #. The example word shown in bold lettering in the help window's Ctrl+B formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2040,7 +2040,7 @@ msgstr "색상표는 {link}에서 볼 수 있습니다."
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.heading"
 msgid "Formatting Shortcuts"
-msgstr "단축키 설정"
+msgstr "서식 단축키"
 
 #. The example word shown in italics in the help window's Ctrl+I formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2064,7 +2064,7 @@ msgstr "고정폭"
 #: client/components/Windows/Help.vue
 msgctxt "help.formatting.reset"
 msgid "Mark all text typed after this shortcut to be reset to its original formatting."
-msgstr "이 단축키 이후로 입력된 텍스트를 원래 포맷팅으로 되돌리세요."
+msgstr "이 단축키 다음에 입력한 모든 텍스트의 서식을 원래대로 되돌립니다."
 
 #. The example word shown with a line through it in the help window's Ctrl+S formatting description; it demonstrates the formatting. Lowercase mid-sentence.
 #: client/components/Windows/Help.vue
@@ -2082,7 +2082,7 @@ msgstr "밑줄"
 #: client/components/Windows/Help.vue
 msgctxt "help.gestures.heading"
 msgid "Gestures"
-msgstr "감각"
+msgstr "제스처"
 
 #. Description of the single-finger swipe-left gesture in the help window.
 #: client/components/Windows/Help.vue
@@ -2143,7 +2143,7 @@ msgstr "릴리스 노트"
 #: client/components/Windows/Help.vue
 msgctxt "help.reload"
 msgid "Reload"
-msgstr "재로드"
+msgstr "새로고침"
 
 #. Link in the help window's about section; opens the bug-report page of the app's source repository. Ellipsis is part of the copy.
 #: client/components/Windows/Help.vue
@@ -2155,25 +2155,25 @@ msgstr "문제 보고…"
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.collapseNetwork"
 msgid "Collapse current network."
-msgstr "현재 네트워크 축소"
+msgstr "현재 네트워크 접기"
 
 #. Description of the Escape key in the help window; it dismisses whatever popup or editor is open, or leaves the input field.
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.escape"
 msgid "Close current contextual window (context menu, image viewer, topic edit, etc) and remove focus from input."
-msgstr "현재 컨텍스트 윈도우(컨텍스트 메뉴, 이미지 뷰어, 주제 편집 등) 닫고 입력 포커스 제거"
+msgstr "현재 열린 창(컨텍스트 메뉴, 이미지 뷰어, 주제 편집 등)을 닫고 입력란 포커스 해제"
 
 #. Description of the Alt+Shift+Right keyboard shortcut in the help window; it unfolds the current network's channel list in the sidebar.
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.expandNetwork"
 msgid "Expand current network."
-msgstr "현재 네트워크 확대"
+msgstr "현재 네트워크 펼치기"
 
 #. Description of the Alt+A keyboard shortcut in the help window; it jumps to the earliest conversation with unread messages.
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.firstUnread"
 msgid "Switch to the first window with unread messages."
-msgstr "첫 번째 비읽은 메시지가 있는 창으로 전환"
+msgstr "읽지 않은 메시지가 있는 첫 번째 창으로 전환"
 
 #. Heading of the keyboard shortcuts section of the help window; each row shows the key combination and what it does.
 #: client/components/Windows/Help.vue
@@ -2191,13 +2191,13 @@ msgstr "도움말 메뉴로 전환"
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.nextLobby"
 msgid "Switch to the next lobby in the channel list."
-msgstr "채널 목록에서 다음 라이브러리로 전환"
+msgstr "채널 목록에서 다음 로비로 전환"
 
 #. Description of the Alt+Ctrl+Down keyboard shortcut in the help window; it jumps to the next conversation that has unread messages.
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.nextUnread"
 msgid "Switch to the next window with unread messages in the channel list."
-msgstr "채널 목록에서 비읽은 메시지가 있는 다음 창으로 전환"
+msgstr "채널 목록에서 읽지 않은 메시지가 있는 다음 창으로 전환"
 
 #. Description of the Alt+Down keyboard shortcut and of the two-finger swipe-left gesture in the help window; both move to the conversation after the current one in the sidebar.
 #: client/components/Windows/Help.vue
@@ -2209,13 +2209,13 @@ msgstr "채널 목록에서 다음 창으로 전환"
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.prevLobby"
 msgid "Switch to the previous lobby in the channel list."
-msgstr "채널 목록에서 이전 라이브러리로 전환"
+msgstr "채널 목록에서 이전 로비로 전환"
 
 #. Description of the Alt+Ctrl+Up keyboard shortcut in the help window; it jumps to the previous conversation that has unread messages.
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.prevUnread"
 msgid "Switch to the previous window with unread messages in the channel list."
-msgstr "채널 목록에서 비읽은 메시지가 있는 이전 창으로 전환"
+msgstr "채널 목록에서 읽지 않은 메시지가 있는 이전 창으로 전환"
 
 #. Description of the Alt+Up keyboard shortcut and of the two-finger swipe-right gesture in the help window; both move to the conversation before the current one in the sidebar.
 #: client/components/Windows/Help.vue
@@ -2227,7 +2227,7 @@ msgstr "채널 목록에서 이전 창으로 전환"
 #: client/components/Windows/Help.vue
 msgctxt "help.shortcuts.toggleJump"
 msgid "Toggle jump to channel switcher."
-msgstr "채널 스위퍼로 순간 이동 토글"
+msgstr "채널 바로 가기 검색 열기/닫기"
 
 #. Description of the Alt+K keyboard shortcut in the help window; it switches message formatting (bold, code, spoilers) on or off.
 #: client/components/Windows/Help.vue
@@ -2690,7 +2690,7 @@ msgstr "회색"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorLightBlue"
 msgid "Light Blue"
-msgstr "연분홍"
+msgstr "하늘색"
 
 #. Name of the mIRC colour with code 11 (light cyan), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2714,19 +2714,19 @@ msgstr "연회색"
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorMagenta"
 msgid "Magenta"
-msgstr "마젤크"
+msgstr "자홍색"
 
 #. Name of the mIRC colour with code 07 (orange), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorOrange"
 msgid "Orange"
-msgstr "오렌지"
+msgstr "주황색"
 
 #. Name of the mIRC colour with code 13 (pink), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
 msgctxt "irc.colorPink"
 msgid "Pink"
-msgstr "빨강"
+msgstr "분홍색"
 
 #. Name of the mIRC colour with code 04 (red), offered by the colour autocomplete in the message input after Ctrl+K.
 #: client/js/autocompletion.ts:92
@@ -2780,7 +2780,7 @@ msgstr "참여"
 #: client/components/LinkPreview.vue
 msgctxt "link.cannotLoad"
 msgid "Couldn't load this {kind}"
-msgstr "이 {kind}을 로드할 수 없습니다"
+msgstr "이 {kind}을(를) 불러올 수 없습니다"
 
 #. Body of the masked-link dialog. {shown} is the address the link's text displays and {host} the host name of the site the link really goes to — both verbatim user content, never translated.
 #: client/js/helpers/openLink.ts:24
@@ -2816,13 +2816,13 @@ msgstr "미리보기 접기"
 #: client/components/LinkPreviewToggle.vue
 msgctxt "link.expand"
 msgid "Expand preview"
-msgstr "미리보기 확장"
+msgstr "미리보기 펼치기"
 
 #. Title on the placeholder of a media preview before it is revealed. {Kind} is the media type capitalized ('Image', 'Video', 'Audio'), {host} the website the media comes from.
 #: client/components/LinkPreview.vue
 msgctxt "link.fromHost"
 msgid "{Kind} from {host}"
-msgstr "{Kind}에서 {host}로"
+msgstr "{host}의 {Kind}"
 
 #. Tooltip and aria-label of the hide button on a revealed media preview; clicking hides the media and restores the placeholder.
 #: client/components/LinkPreview.vue
@@ -2894,19 +2894,19 @@ msgstr "{host}에서 {kind} 표시"
 #: client/js/helpers/mediaTrustMenu.ts
 msgctxt "link.trustAdd"
 msgid "Always show {scope}"
-msgstr "항상 {scope}을 보여주세요"
+msgstr "{scope} 항상 표시"
 
 #. Text of the trust button on a media preview when nothing is trusted yet; clicking opens the menu that allows this media always. The caret follows it.
 #: client/components/LinkPreview.vue
 msgctxt "link.trustButtonShow"
 msgid "Always show"
-msgstr "항상 보여주세요"
+msgstr "항상 표시"
 
 #. Text of the trust button on a media preview when at least one rule already always allows this media; clicking opens the menu of rules. The caret follows it.
 #: client/components/LinkPreview.vue
 msgctxt "link.trustButtonShown"
 msgid "Always shown"
-msgstr "항상 보여짐"
+msgstr "항상 표시됨"
 
 #. Name of a media-trust scope in the trust menu of a media preview and in the toolbar tooltip summarizing active rules: always allowing media from the website or from the person it was posted by. {name} is that site's host or the person's account name. Starts lowercase; it follows the words 'Always show' or 'Stop always showing'.
 #: client/js/helpers/mediaTrustMenu.ts
@@ -2926,19 +2926,19 @@ msgstr "{name}에서"
 #: client/js/helpers/mediaTrustMenu.ts
 msgctxt "link.trustRemove"
 msgid "Stop always showing {scope}"
-msgstr "항상 {scope}을 보여주지 마세요"
+msgstr "{scope} 항상 표시 중지"
 
 #. Tooltip of the trust button on a media preview when nothing is trusted yet; names the three scopes a rule can cover.
 #: client/components/LinkPreview.vue
 msgctxt "link.trustTitleEmpty"
 msgid "Always show media from this site, this person or in this channel"
-msgstr "항상 이 사이트, 이 사람 또는 이 채널에서 미디어를 보여주세요"
+msgstr "이 사이트, 이 사람 또는 이 채널의 미디어를 항상 표시"
 
 #. Tooltip of the trust button on a media preview when rules already allow it. {scopes} is a comma-joined list of what is trusted ('from example.com', 'in #chat'). Em dash is part of the copy.
 #: client/components/LinkPreview.vue
 msgctxt "link.trustTitleShown"
 msgid "Always shown {scopes} — change"
-msgstr "항상 {scopes}을 보여짐 — 변경"
+msgstr "{scopes} 항상 표시됨 — 변경"
 
 #. Hint on the placeholder of a media preview that failed to load; clicking loads it again.
 #: client/components/LinkPreview.vue
@@ -2956,7 +2956,7 @@ msgstr "채널 목록"
 #: client/js/irc/handlers/lists.ts
 msgctxt "list.isEmpty"
 msgid "{kind} is empty"
-msgstr "{kind}이 비어 있습니다"
+msgstr "{kind}이(가) 비어 있습니다"
 
 #. Name of the channel-ban (+b) list, inserted into '{kind} is empty' and '{kind} for {channel}'.
 #: client/js/irc/handlers/lists.ts
@@ -2981,13 +2981,13 @@ msgstr "초대 목록"
 msgctxt "list.loaded"
 msgid "Loaded {count} channel..."
 msgid_plural "Loaded {count} channels..."
-msgstr[0] "{count}개의 채널이 로드 중..."
+msgstr[0] "채널 {count}개 로드됨..."
 
 #. Status line in the 'Channel List' window while the server sends its channels.
 #: client/js/irc/handlers/list.ts
 msgctxt "list.loading"
 msgid "Loading channel list, this can take a moment..."
-msgstr "채널 목록을 로드 중입니다. 이 작업은 순간이 될 수 있습니다..."
+msgstr "채널 목록을 불러오는 중입니다. 잠시 걸릴 수 있습니다..."
 
 #. Title of a special window showing one channel's mode list. {kind} is the list's name ('Ban list' etc.), {channel} the channel name. Byte-stable per locale while the session lives: the title doubles as the window's lookup name.
 #: client/js/irc/handlers/lists.ts
@@ -2999,19 +2999,19 @@ msgstr "{channel}의 {kind}"
 #: client/js/socket-events/connection.ts
 msgctxt "loading.connecting"
 msgid "Connecting…"
-msgstr "연결 중..."
+msgstr "연결 중…"
 
 #. Message shown in the loading splash when a script failed hard enough that the application cannot start.
 #: client/js/loading-error-handlers.js:38
 msgctxt "loading.error"
 msgid "An error has occurred that prevented the client from loading correctly."
-msgstr "클라이언트가 올바르게 로드되지 못한 오류가 발생했습니다."
+msgstr "오류가 발생하여 클라이언트를 제대로 불러오지 못했습니다."
 
 #. Disclosure heading of the box listing the error details on the loading-failure screen.
 #: client/js/loading-error-handlers.js:41
 msgctxt "loading.errorDetails"
 msgid "More details"
-msgstr "더 많은 세부 정보"
+msgstr "자세한 정보"
 
 #. Footer of the error details box on the loading-failure screen.
 #: client/js/loading-error-handlers.js:47
@@ -3024,21 +3024,21 @@ msgstr "브라우저 개발자 도구를 열어 더 많은 정보를 확인하�
 #: client/js/i18n/index.ts
 msgctxt "loading.reload"
 msgid "Reload page"
-msgstr "페이지 재로드"
+msgstr "페이지 새로고침"
 
 #. Loading splash: the message for a browser without JavaScript; the static HTML copy in index.html matches it, so the en boot-time swap is invisible.
 #: client/index.html
 #: client/js/i18n/index.ts
 msgctxt "loading.requiresJs"
 msgid "This application requires a modern browser with JavaScript enabled."
-msgstr "JavaScript이 활성화된 현대 브라우저가 필요합니다."
+msgstr "이 애플리케이션을 사용하려면 JavaScript가 활성화된 최신 브라우저가 필요합니다."
 
 #. Loading splash: the bundle is taking unusually long to arrive.
 #: client/index.html
 #: client/js/i18n/index.ts
 msgctxt "loading.slow"
 msgid "This is taking longer than it should, there might be connectivity issues."
-msgstr "이보다 더 오래 걸리고 있어, 연결 문제일 수 있습니다."
+msgstr "예상보다 오래 걸리고 있습니다. 연결에 문제가 있을 수 있습니다."
 
 #. Shown in the loading splash while the application code is loading, replacing the static splash text in index.html as soon as the first script runs. Resolved in the locale the pre-paint script picked, before the app's catalogs are available.
 #: client/js/loading-error-handlers.js:11
@@ -3056,7 +3056,7 @@ msgstr "취소"
 #: client/components/NetworkLobby.vue:176
 msgctxt "lobby.collapse"
 msgid "Collapse"
-msgstr "축소"
+msgstr "접기"
 
 #. Tooltip and aria-label of the connection-state dot on a sidebar network row while the network is online.
 #: client/components/NetworkLobby.vue:138
@@ -3087,13 +3087,13 @@ msgstr "네트워크 편집…"
 #: client/components/NetworkLobby.vue:176
 msgctxt "lobby.expand"
 msgid "Expand"
-msgstr "확장"
+msgstr "펼치기"
 
 #. aria-label of the plus button on a sidebar network row: opens the small join-channel form under the network.
 #: client/components/NetworkLobby.vue:156
 msgctxt "lobby.joinChannel"
 msgid "Join a channel…"
-msgstr "채널 가입…"
+msgstr "채널 참여…"
 
 #. Tooltip of the nick shown at the right of a sidebar network row before the network is connected; {network} is the network's display name.
 #: client/components/NetworkLobby.vue:164
@@ -3117,13 +3117,13 @@ msgstr "닉네임: "
 #: client/components/NetworkLobby.vue:118
 msgctxt "lobby.notificationsOff"
 msgid "Notifications off for this network"
-msgstr "이 네트워크에 대한 알림 비활성화"
+msgstr "이 네트워크 알림 꺼짐"
 
 #. Tooltip and aria-label of the bell icon on a sidebar network row: notifications are enabled but this device is not yet registered for push.
 #: client/components/NetworkLobby.vue:125
 msgctxt "lobby.notificationsOn"
 msgid "Notifications on"
-msgstr "알림 활성화"
+msgstr "알림 켜짐"
 
 #. Tooltip and aria-label of the bell icon on a sidebar network row when this device is subscribed to the network's push notifications.
 #: client/components/NetworkLobby.vue:122
@@ -3153,7 +3153,7 @@ msgstr "네트워크 제거"
 #: client/js/hooks/use-close-channel.ts:13
 msgctxt "lobby.removeText"
 msgid "Are you sure you want to quit and remove {name}? This cannot be undone."
-msgstr "{name}를 정말로 종료하고 제거하겠습니까? 이 작업은 되돌릴 수 없습니다."
+msgstr "{name} 연결을 종료하고 제거하시겠습니까? 이 작업은 되돌릴 수 없습니다."
 
 #. Title of the confirmation dialog shown from the sidebar when removing a whole chat network: the connection quits and the saved network is deleted from this browser.
 #: client/js/hooks/use-close-channel.ts:11
@@ -3171,7 +3171,7 @@ msgstr "언급 닫기"
 #: client/components/Mentions.vue:16
 msgctxt "mentions.dismissAll"
 msgid "Dismiss all"
-msgstr "모두 닫기"
+msgstr "모두 지우기"
 
 #. Button beside a conversation in the mentions popup that this page no longer has (so reading it cannot clear its mentions); clicking removes that conversation's entries from the list.
 #: client/components/Mentions.vue:76
@@ -3289,7 +3289,7 @@ msgstr "{channel}의 기록을 정말로 삭제하겠습니까? 이 작업은 �
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.closeChannel"
 msgid "Leave"
-msgstr "떠나기"
+msgstr "나가기"
 
 #. Context-menu item on a chat network's home row in the sidebar network list; clicking forgets the saved network connection. Shown instead of 'Close' because a network cannot be merely closed.
 #: client/js/helpers/contextMenu.ts
@@ -3337,7 +3337,7 @@ msgstr "주제 편집"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.giveMode"
 msgid "Give {name} (+{mode})"
-msgstr "{name} (+{mode})"
+msgstr "{name} 권한 부여 (+{mode})"
 
 #. Context-menu item that grants an IRC mode whose role name is unknown; {mode} is the bare mode letter (e.g. z) — the + before it is part of the text, so the item reads Mode +z.
 #: client/js/helpers/contextMenu.ts
@@ -3361,13 +3361,13 @@ msgstr "사용자 무시"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.joinChannel"
 msgid "Join a channel…"
-msgstr "채널 가입…"
+msgstr "채널 참여…"
 
 #. Context-menu item on a clickable channel name inside a chat message, when that channel is not open yet; clicking joins it.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.joinInline"
 msgid "Join channel"
-msgstr "채널 가입"
+msgstr "채널 참여"
 
 #. Context-menu item on a user in a channel you have permission in; removes that user from the channel (they may rejoin).
 #: client/js/helpers/contextMenu.ts
@@ -3379,7 +3379,7 @@ msgstr "강제 추방"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.listBanned"
 msgid "List banned users"
-msgstr "금지된 사용자 목록"
+msgstr "차단된 사용자 목록"
 
 #. Context-menu item on a chat network's home row; asks the server for the list of every public channel on that network.
 #: client/js/helpers/contextMenu.ts
@@ -3403,7 +3403,7 @@ msgstr "관리자"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeHalfOp"
 msgid "half-op"
-msgstr "반대 관리자"
+msgstr "하프옵"
 
 #. Name of the IRC channel operator role (the @ prefix), filling {name} in the mode menu items. Lowercase mid-sentence.
 #: client/js/helpers/contextMenu.ts
@@ -3421,13 +3421,13 @@ msgstr "소유자"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.modeVoice"
 msgid "voice"
-msgstr "음성"
+msgstr "보이스"
 
 #. Context-menu item on a conversation; clicking mutes it (no highlights, no notifications from it). {type} names the kind of conversation in lowercase: 'network', 'channel' or 'conversation'.
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.muteType"
 msgid "Mute {type}"
-msgstr "{type} 무시"
+msgstr "{type} 음소거"
 
 #. Item of a network's context menu, shown while the user is an IRC operator: opens the oper panel. 'Oper' is IRC jargon (operator).
 #: client/js/helpers/contextMenu.ts
@@ -3439,7 +3439,7 @@ msgstr "오퍼 패널…"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.revokeMode"
 msgid "Revoke {name} (-{mode})"
-msgstr "{name} (-{mode}) 철회"
+msgstr "{name} 권한 해제 (-{mode})"
 
 #. Context-menu item that removes an IRC mode whose role name is unknown; {mode} is the bare mode letter (e.g. z) — the - before it is part of the text, so the item reads Mode -z.
 #: client/js/helpers/contextMenu.ts
@@ -3451,7 +3451,7 @@ msgstr "모드 -{mode}"
 #: client/js/helpers/contextMenu.ts
 msgctxt "menu.unmuteType"
 msgid "Unmute {type}"
-msgstr "무음 해제 {type}"
+msgstr "{type} 음소거 해제"
 
 #. Context-menu item on a user (in the user list, a message or a conversation); asks the server for that user's details (real name, account, idle time).
 #: client/js/helpers/contextMenu.ts
@@ -3463,7 +3463,7 @@ msgstr "사용자 정보"
 #: client/components/MessageActions.vue:6
 msgctxt "message.actionsToolbar"
 msgid "Message actions"
-msgstr "메시지 액션"
+msgstr "메시지 작업"
 
 #. Short label shown for a moment over a chat message after its text or code was copied to the clipboard from the message toolbar.
 #: client/components/MessageActions.vue:34
@@ -3495,7 +3495,7 @@ msgstr "삭제"
 #: client/components/MessageActions.vue:196
 msgctxt "message.deleteConfirm"
 msgid "Delete {who}? \"{preview}\""
-msgstr "삭제 {who}? \"{preview}\""
+msgstr "{who}을(를) 삭제할까요? \"{preview}\""
 
 #. Title of the confirmation dialog shown before a chat message is deleted, and the tooltip and aria-label of the message toolbar's delete button (a trash can) that opens it.
 #: client/components/MessageActions.vue:195
@@ -3514,19 +3514,19 @@ msgstr "{nick}의 메시지"
 #: client/components/MessageActions.vue:189
 msgctxt "message.deleteWhoSelf"
 msgid "your message"
-msgstr "당신의 메시지"
+msgstr "내 메시지"
 
 #. Visible text standing in for a deleted chat message when the deletion gave no reason. {nick} is the name of the user who deleted it. Square brackets are part of the copy.
 #: client/components/Message.vue:333
 msgctxt "message.deleted"
 msgid "[Message deleted by {nick}]"
-msgstr "[사용자 {nick}가 삭제한 메시지]"
+msgstr "[{nick} 님이 삭제한 메시지]"
 
 #. Visible text standing in for a deleted chat message when the deletion gave a reason. {nick} is the name of the user who deleted it, {reason} the reason they gave. Square brackets are part of the copy.
 #: client/components/Message.vue:331
 msgctxt "message.deletedWithReason"
 msgid "[Message deleted by {nick}: {reason}]"
-msgstr "[사용자 {nick}가 삭제한 메시지: {reason}]"
+msgstr "[{nick} 님이 삭제한 메시지: {reason}]"
 
 #. Tooltip and aria-label of the pencil button in a chat message's hover toolbar, shown on your own messages; clicking starts editing that message.
 #: client/components/MessageActions.vue:44
@@ -3574,31 +3574,31 @@ msgstr "{reaction} 제거"
 #: client/components/MessageActions.vue:21
 msgctxt "message.react"
 msgid "React"
-msgstr "감정 반응"
+msgstr "반응하기"
 
 #. Tooltip on the revealed text of a deleted chat message; clicking hides the text again.
 #: client/components/Message.vue:72
 msgctxt "message.redactedHide"
 msgid "Click to hide again"
-msgstr "다시 숨기기 클릭"
+msgstr "클릭하여 다시 숨기기"
 
 #. aria-label of the placeholder button that replaces a deleted chat message; clicking shows the deleted text.
 #: client/components/Message.vue:65
 msgctxt "message.redactedReveal"
 msgid "Deleted message, click to reveal"
-msgstr "삭제된 메시지, 다시 보여주기 클릭"
+msgstr "삭제된 메시지, 클릭하여 보기"
 
 #. Tooltip and aria-label of the reply button in a chat message's hover toolbar; clicking starts a reply quoting that message.
 #: client/components/MessageActions.vue:11
 msgctxt "message.reply"
 msgid "Reply"
-msgstr "답변"
+msgstr "답장"
 
 #. aria-label of the quoted-message button on a chat message when the message being replied to is not in the loaded scrollback, so it cannot be jumped to.
 #: client/components/Message.vue:294
 msgctxt "message.replyMissing"
 msgid "Replying to a message that is not loaded"
-msgstr "대화가 로드되지 않은 메시지에 대한 답변"
+msgstr "로드되지 않은 메시지에 대한 답장"
 
 #. Visible text of the quoted-message button on a chat message when the message being replied to is not in the loaded scrollback; it stands in for the quoted text. Parenthesized.
 #: client/components/Message.vue:53
@@ -3610,7 +3610,7 @@ msgstr "(알 수 없는 메시지)"
 #: client/components/Message.vue:291
 msgctxt "message.replyingTo"
 msgid "Replying to {nick}: {text}. Jump to that message."
-msgstr "{nick}: {text}에 대한 답변. 해당 메시지로 이동"
+msgstr "{nick}의 메시지에 대한 답장: {text}. 해당 메시지로 이동합니다."
 
 #. Tooltip of the small marker on a chat message that arrived while you had another channel open; the server delivered it to the active window only.
 #: client/components/Message.vue:118
@@ -3670,7 +3670,7 @@ msgstr "서버 공지 마스크(snomask): {value} (0x{hex})"
 #: client/components/MessageTypes/topic.vue
 msgctxt "msg.topicChanged"
 msgid "has changed the topic to:"
-msgstr "가 주제를 다음과 같이 변경했습니다:"
+msgstr "님이 주제를 다음으로 변경했습니다:"
 
 #. Reply to a topic request for a channel the client is not in: the channel name and the topic itself are verbatim channel data.
 #: client/js/irc/handlers/topic.ts
@@ -3706,13 +3706,13 @@ msgstr "{channel}에 주제가 설정되지 않았습니다"
 #: client/js/irc/handlers/nick.ts
 msgctxt "msg.youAreKnownAs"
 msgid "You're now known as {nick}"
-msgstr "이제 {nick}로 알려졌습니다"
+msgstr "이제 닉네임이 {nick}입니다"
 
 #. Reason under 'Not sent: {message}' when a multi-line message's framing leaves no space for any text. {prefix} and {maxBytes} are byte counts.
 #: client/js/irc/multiline.ts
 msgctxt "multiline.noRoom"
 msgid "No room for message text: {prefix} bytes of line prefix, {maxBytes} bytes per message"
-msgstr "메시지 텍스트에 공간이 없습니다: {prefix} 바이트의 줄 접두사, {maxBytes} 바이트 매 메시지"
+msgstr "메시지 텍스트를 넣을 공간이 없습니다: 줄 접두사 {prefix}바이트, 메시지당 {maxBytes}바이트"
 
 #. Desktop notification title when another user invites the reader to a channel; the body names the inviter and channel.
 #: client/js/socket-events/msg.ts
@@ -3724,7 +3724,7 @@ msgstr "새 채널 초대:"
 #: client/js/socket-events/msg.ts
 msgctxt "notify.inviteBody"
 msgid "{nick} invited you to {channel}"
-msgstr "{nick}가 {channel}에 당신을 초대했습니다"
+msgstr "{nick} 님이 {channel}에 초대했습니다"
 
 #. Text of an invite notification in the Android app, shown in a chat-style notification under the inviter's nickname (the OS shows the nick as the sender above it, so it is not in the phrase). {channel} is the channel name.
 #: client/js/socket-events/msg.ts
@@ -4308,7 +4308,7 @@ msgstr "닉네임"
 #: client/js/helpers/alertBuilder.ts
 msgctxt "oper.alertBuilder.criterion.nickage"
 msgid "nick age"
-msgstr "닉네임 나이"
+msgstr "닉네임 사용 기간"
 
 #. Oper tools, alert builder: a criterion in plain words, the label of a criterion row and of an entry in the '+ add' list (the O3 keyword is shown as a tooltip). Lower case, short. How many channels the user is in. Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
 #: client/js/helpers/alertBuilder.ts
@@ -4845,7 +4845,7 @@ msgstr "시간 범위"
 #: client/js/helpers/alertBuilder.ts
 msgctxt "oper.alertBuilder.wide.nickage"
 msgid "a nick age"
-msgstr "닉네임 나이"
+msgstr "닉네임 사용 기간"
 
 #. Oper tools, alert builder: an amber tag on a criterion row that is 'wide' — on its own it would catch bystanders, so it arrives switched off. Lower case, a few words; read as 'wide: <this>'. Matching everyone on one IRC server. Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
 #: client/js/helpers/alertBuilder.ts
@@ -4899,7 +4899,7 @@ msgstr "모든 접속과 종료"
 #: client/js/irc/profiles/nefarious/alerts.ts
 msgctxt "oper.alerts.line.connexit.hint"
 msgid "noisy; what IP alerts would read"
-msgstr "많음; IP 알림이 읽는 내용"
+msgstr "알림 많음; IP 알림이 참조하는 내용"
 
 #. A line of the oper panel's Alerts tab: a family of IRC server notices routed together with one Here / Network / Off control. Short, ≤ 35 characters.
 #. Keep as is (IRC jargon): /oper, opers, G-line, jupe, WALLOPS.
@@ -5265,7 +5265,7 @@ msgstr "디버그"
 #: client/js/helpers/operFormat.ts
 msgctxt "oper.badge.desync"
 msgid "desync"
-msgstr "비동기"
+msgstr "불일치"
 
 #. Tooltip on the badge of a line from the services' report channel (oper tools). ≤ 40 characters.
 #: client/components/Oper/NoticeBadge.vue
@@ -5937,7 +5937,7 @@ msgstr ""
 #: client/js/irc/profiles/nefarious/check.ts
 msgctxt "oper.check.row.tlsCipher"
 msgid "TLS cipher"
-msgstr "TLS 암호"
+msgstr "TLS 암호 스위트"
 
 #. Row label in the report card of an oper's /check reply (a CHECK of a user, channel or server). Short, at most ~25 characters. Keep IRC jargon as is (CHECK, oper, opered, TLS, IP, TS, nick, SendQ, RecvQ, EOB, bouncer if no common word exists).
 #: client/js/irc/profiles/nefarious/check.ts
@@ -6254,7 +6254,7 @@ msgstr[0] "{count}초 전"
 #: client/components/Oper/InvestigateCard.vue
 msgctxt "oper.investigate.card.alertOnThis"
 msgid "Alert on this…"
-msgstr "이것으로 알림…"
+msgstr "이 정보로 알림 만들기…"
 
 #. Oper tools, investigation card (an overlay about one channel or user, for IRC operators). Muted, on a user's line: the other channels they are in; {channels} is a comma list of channel names, verbatim. Lower case. Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
 #: client/components/Oper/InvestigateCard.vue
@@ -7192,7 +7192,7 @@ msgstr "모드"
 #: client/components/Oper/InvestigateUser.vue
 msgctxt "oper.investigate.user.nickAge"
 msgid "nick age {age}"
-msgstr "닉네임 나이 {age}"
+msgstr "닉네임 사용 기간 {age}"
 
 #. Oper tools, user investigation card (also shown twice side by side by Compare). Muted line when no live ban covers the user and the stored server notices ('the kept feed') saw none set either. G-line, shun, Z-line are IRC jargon. Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
 #: client/components/Oper/InvestigateUser.vue
@@ -7644,7 +7644,7 @@ msgstr "{server}이(가) {channel}에서 +k 사용자를 디옵했습니다"
 #: client/js/irc/profiles/noticeText.ts
 msgctxt "oper.kind.desynch.label"
 msgid "Desync reports (+g)"
-msgstr "비동기 보고 (+g)"
+msgstr "불일치 보고 (+g)"
 
 #. Name of a kind of IRC server notice in the oper tools: a row of the Alerts tab (under 'Everything else') and the header of the menu a notice's badge opens. Short, ≤ 40 characters, a name or short phrase (most are plural noun phrases).
 #. Keep as is (IRC jargon): DNSBL.
@@ -8007,14 +8007,14 @@ msgstr "{nick} ({host})의 원격 OPER 시도 실패: {reason}"
 #: client/js/irc/profiles/noticeText.ts
 msgctxt "oper.kind.oper.join.label"
 msgid "Oper join overrides"
-msgstr "오퍼의 입장 무시"
+msgstr "오퍼의 입장 제한 우회"
 
 #. A nefarious2 server notice in plain words, shown in chat to an IRC operator (kind oper.join). Each {placeholder} is filled from the notice and rendered as a nick, chip or plain text: keep every placeholder exactly, reorder freely, and do not inflect around them. Similar length to the English.
 #. Placeholders: {nick} is the nick of the user it is about (a clickable nick); {channel} is a channel name; {mode} is a channel mode letter.
 #: client/js/irc/profiles/noticeText.ts
 msgctxt "oper.kind.oper.join.template"
 msgid "{nick} joined {channel} overriding +{mode}"
-msgstr "{nick}이(가) +{mode}을(를) 무시하고 {channel}에 입장했습니다"
+msgstr "{nick}이(가) +{mode}을(를) 우회하여 {channel}에 입장했습니다"
 
 #. Name of a kind of IRC server notice in the oper tools: a row of the Alerts tab (under 'Everything else') and the header of the menu a notice's badge opens. Short, ≤ 40 characters, a name or short phrase (most are plural noun phrases).
 #: client/js/irc/profiles/noticeText.ts
@@ -8551,7 +8551,7 @@ msgstr "채널 메시지를 받지 않습니다."
 #: client/components/Oper/OperMe.vue
 msgctxt "oper.me.mode.g"
 msgid "Desync reports"
-msgstr "비동기 보고"
+msgstr "불일치 보고"
 
 #. Oper panel, Me tab: the explanation of a user mode, shown on hover and read by screen readers. One sentence. Mode +g. DESYNCH is a server message name, keep it. Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
 #: client/components/Oper/OperMe.vue
@@ -8563,7 +8563,7 @@ msgstr "DESYNCH 보고(프로토콜 위반)를 받습니다."
 #: client/components/Oper/OperMe.vue
 msgctxt "oper.me.mode.i"
 msgid "Invisible"
-msgstr "투명"
+msgstr "숨김"
 
 #. Oper panel, Me tab: the explanation of a user mode, shown on hover and read by screen readers. One sentence. Mode +i (on servers other than nefarious2). Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
 #: client/components/Oper/OperMe.vue
@@ -8749,7 +8749,7 @@ msgstr "사용자 임시 shun"
 #: client/components/Oper/OperMe.vue
 msgctxt "oper.me.priv.WHOX"
 msgid "Use WHO's x flag (see invisible users)"
-msgstr "WHO의 x 플래그 사용 (투명 사용자 보기)"
+msgstr "WHO의 x 플래그 사용 (숨김 사용자 보기)"
 
 #. Oper panel, Me tab: tooltip on a privilege chip (the privilege's own name, e.g. GLINE, is shown and never translated): what it allows. Short; keep the IRC jargon. A wide mask matches very many users; the server refuses it unless forced. Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
 #: client/components/Oper/OperMe.vue
@@ -8960,7 +8960,7 @@ msgstr "알림"
 #: client/components/Windows/OperPanel.vue
 msgctxt "oper.panel.tab.alertsTitle"
 msgid "What reaches you, and how loudly"
-msgstr "무엇이 얼마나 눈에 띄게 오는지"
+msgstr "무엇을 얼마나 눈에 띄게 받을지"
 
 #. Oper panel (a modal of IRC-operator tools over the app, like Settings). Tab label: your own oper status. One short word. Keep IRC/oper jargon as is (G-line, shun, Z-line, K-line, oper, X3, O3, AuthServ, ChanServ) and every {placeholder} verbatim.
 #: client/components/Windows/OperPanel.vue
@@ -9320,7 +9320,7 @@ msgstr "차단 공지 받지 않기"
 #: client/js/irc/profiles/nefarious/snomask.ts
 msgctxt "oper.snomask.HACK2.label"
 msgid "Desyncs"
-msgstr "비동기"
+msgstr "불일치"
 
 #. Menu item on a server notice's badge (oper tools): asks the server to stop sending the 'Desyncs' family of server notices at all (clears its snomask bit). ≤ 50 characters.
 #. What the family carries: Bounced modes and kicks from users the server thinks are not ops.
@@ -9328,7 +9328,7 @@ msgstr "비동기"
 #: client/js/irc/profiles/nefarious/snomask.ts
 msgctxt "oper.snomask.HACK2.stop"
 msgid "Stop receiving desyncs notices"
-msgstr "비동기 공지 받지 않기"
+msgstr "불일치 공지 받지 않기"
 
 #. Name of a server notice mask (snomask) bit, a family of IRC server notices the oper can switch on or off: a switch label in the oper panel's Alerts tab ('Raw mask and presets') and, in 'Stop receiving {name} notices', the family's name. Short, ≤ 30 characters.
 #. What it carries: Channel modes set by servers (BOUNCE or HACK(3)).
@@ -10539,19 +10539,19 @@ msgstr "사용법: /investigate <닉네임|#채널>"
 #: client/js/irc/pending.ts
 msgctxt "pending.connectionLost"
 msgid "connection lost"
-msgstr "연결이 끊어졌습니다"
+msgstr "연결 끊김"
 
 #. Reason fragment of 'Not sent ({reason}): {text}' when the server stayed silent for a minute. Lowercase mid-sentence by position.
 #: client/js/irc/pending.ts
 msgctxt "pending.noAcknowledgement"
 msgid "no acknowledgement from the server"
-msgstr "서버에서 확인되지 않았습니다"
+msgstr "서버 확인 없음"
 
 #. Error under a message the server never confirmed. {reason} is a short cause (one of the pending.* fragments or the server's own rejection text, verbatim); {text} is the message as typed, user content, verbatim.
 #: client/js/irc/pending.ts
 msgctxt "pending.notSent"
 msgid "Not sent ({reason}): {text}"
-msgstr "전송되지 않았습니다 ({reason}): {text}"
+msgstr "전송되지 않음 ({reason}): {text}"
 
 #. Reason fragment of 'Not sent ({reason}): {text}' when a labelled rejection numeric names no text. {code} is the numeric, verbatim. Lowercase mid-sentence by position.
 #: client/js/irc/handlers/numerics.ts
@@ -10563,25 +10563,25 @@ msgstr "오류 {code}"
 #: client/js/irc/handlers/persistence.ts
 msgctxt "persistence.echo"
 msgid "Persistence: {params}"
-msgstr "끝까지 버티는 것: {params}"
+msgstr "세션 유지: {params}"
 
 #. Lobby status line confirming the state change the user asked for. {state} is the server's ON/OFF token, verbatim.
 #: client/js/irc/handlers/persistence.ts
 msgctxt "persistence.set"
 msgid "Session persistence set to: {state}"
-msgstr "세션 퍼시스턴스 설정: {state}"
+msgstr "세션 유지 설정: {state}"
 
 #. Lobby status line reporting the bouncer session's state. {state} is the server's ON/OFF token, verbatim.
 #: client/js/irc/handlers/persistence.ts
 msgctxt "persistence.status"
 msgid "Session persistence (the server keeps you in your channels while disconnected): {state}"
-msgstr "세션 퍼시스턴스 (서버가 연결 끊어졌을 때 채널 유지): {state}"
+msgstr "세션 유지(연결이 끊겨도 서버가 채널에 남겨 둠): {state}"
 
 #. Lobby status line reporting the bouncer session's state when the client's own persistence setting differs from what the server reports. {state} is the server's ON/OFF token, verbatim; {setting} is the client setting's value.
 #: client/js/irc/handlers/persistence.ts:89
 msgctxt "persistence.statusClientSetting"
 msgid "Session persistence (the server keeps you in your channels while disconnected): {state} (your setting: {setting})"
-msgstr "세션 퍼시스턴스 (서버가 연결 끊어졌을 때 채널 유지): {state} (설정: {setting})"
+msgstr "세션 유지(연결이 끊겨도 서버가 채널에 남겨 둠): {state} (내 설정: {setting})"
 
 #. Tooltip and screen-reader text of the presence dot by a network's name in the sidebar. {mode} is a presence mode name (Online, Auto, Away). The ' · ' separator joins short qualifiers; keep it. The network is currently shown as away.
 #: client/components/NetworkLobby.vue
@@ -10665,13 +10665,13 @@ msgstr "전체 설정과 동일 ({mode})"
 #: client/components/PushPrompt.vue
 msgctxt "push.enableBody"
 msgid "This server can wake this app when it has messages for you while it is closed. You can change this per network, in each network's settings."
-msgstr "이 서버는 앱이 닫혀 있을 때 메시지가 있을 경우 앱을 깨웁니다. 네트워크별로 설정에서 변경할 수 있습니다."
+msgstr "이 서버는 앱이 닫혀 있을 때 메시지가 오면 앱을 깨울 수 있습니다. 네트워크마다 각 네트워크 설정에서 변경할 수 있습니다."
 
 #. Title of the prompt shown at connect time asking whether to enable web push notifications for that chat network.
 #: client/components/PushPrompt.vue
 msgctxt "push.enableTitle"
 msgid "Enable push notifications?"
-msgstr "푸시 알림 활성화?"
+msgstr "푸시 알림을 켤까요?"
 
 #. Fallback for the network name in the push prompt's target line when no name is known for the chat network being asked about.
 #: client/components/PushPrompt.vue
@@ -10683,7 +10683,7 @@ msgstr "이 네트워크"
 #: client/components/PushPrompt.vue
 msgctxt "push.never"
 msgid "Never"
-msgstr "절대 안해요"
+msgstr "다시 묻지 않기"
 
 #. Button of the push opt-in prompt; declines for now without disabling future prompts.
 #: client/components/PushPrompt.vue
@@ -10701,37 +10701,37 @@ msgstr "이 서버의 푸시 키가 변경되어 이 기기의 푸시 구독이 
 #: client/components/PushPrompt.vue
 msgctxt "push.renewTitle"
 msgid "Renew push notifications?"
-msgstr "푸시 알림 재구성?"
+msgstr "푸시 알림을 다시 등록할까요?"
 
 #. Button of the push opt-in prompt; allows web push (the click doubles as the browser's permission gesture).
 #: client/components/PushPrompt.vue
 msgctxt "push.yes"
 msgid "Yes"
-msgstr "네요"
+msgstr "예"
 
 #. Tooltip and aria-label of the ➕ button at the end of a message's reaction row; clicking opens the emoji picker.
 #: client/components/MessageReactions.vue
 msgctxt "reactions.add"
 msgid "Add a reaction"
-msgstr "감정 추가"
+msgstr "반응 추가"
 
 #. Preview-bar hint in the emoji picker while a reaction is being composed; shift-clicking an emoji appends it instead of sending.
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.buildingHint"
 msgid "Shift-click to add more emoji"
-msgstr "쉬프트 클릭하여 더 많은 감정 추가"
+msgstr "Shift를 누른 채 클릭하여 이모지 더 추가"
 
 #. Preview-bar title in the emoji picker while the user is composing a reaction out of several emoji or typing one.
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.buildingName"
 msgid "Building a reaction"
-msgstr "감정 추가 중"
+msgstr "반응 만드는 중"
 
 #. aria-label of a reaction badge under a chat message. {reaction} is the emoji or word reaction, {users} the comma-joined names of who sent it.
 #: client/components/MessageReactions.vue
 msgctxt "reactions.by"
 msgid "{reaction} by {users}"
-msgstr "{reaction}에 의한 {users}"
+msgstr "{reaction}: {users}"
 
 #. Tooltip and aria-label of the ✕ button in the emoji picker's search field; clicking empties the field.
 #: client/components/ReactionPicker.vue
@@ -10743,31 +10743,31 @@ msgstr "검색 초기화"
 #: client/components/MessageReactions.vue
 msgctxt "reactions.clickToRemoveSuffix"
 msgid "(click to remove yours)"
-msgstr "(클릭하여 제 감정 제거)"
+msgstr "(클릭하여 내 반응 제거)"
 
 #. aria-label of the emoji picker popup that opens from a chat message to add a reaction to it.
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.dialogAria"
 msgid "Add a reaction"
-msgstr "감정 추가"
+msgstr "반응 추가"
 
 #. Preview-bar hint of the emoji picker when nothing is highlighted or being composed; sums up the three ways to react.
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.emptyHint"
 msgid "Pick an emoji, type a word, or shift-click to combine several."
-msgstr "감정을 선택하거나 단어를 입력하거나 쉬프트 클릭하여 여러 감정을 결합하세요."
+msgstr "이모지를 선택하거나, 단어를 입력하거나, Shift를 누른 채 클릭해 여러 개를 조합하세요."
 
 #. Label shown before the typed text on the emoji picker's free-text row, which sends what was typed as the reaction; the typed text follows it. Mid-sentence by position.
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.freePrefix"
 msgid "React with"
-msgstr "감정으로 반응"
+msgstr "반응 보내기"
 
 #. aria-label of the row of reaction badges under a chat message, listing who reacted with what.
 #: client/components/MessageReactions.vue
 msgctxt "reactions.groupAria"
 msgid "Reactions"
-msgstr "감정"
+msgstr "반응"
 
 #. Preview-bar hint in the emoji picker for a single emoji; shift-clicking another appends it to the reaction instead of sending. Keep the shift symbol.
 #: client/components/ReactionPicker.vue
@@ -10791,25 +10791,25 @@ msgstr "엔터로 전송"
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.listAria"
 msgid "Emoji"
-msgstr "감정"
+msgstr "이모지"
 
 #. Error note shown inside the emoji picker when the emoji catalog failed to download; the search field above still accepts any reaction as text.
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.loadFailed"
 msgid "The emoji list could not be loaded. You can still type a reaction above."
-msgstr "감정 목록을 로드할 수 없습니다. 위에서 감정을 입력할 수 있습니다."
+msgstr "이모지 목록을 불러올 수 없습니다. 위에 반응을 직접 입력할 수는 있습니다."
 
 #. Note shown inside the emoji picker while its catalog is being fetched. Ellipsis is part of the copy.
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.loading"
 msgid "Loading emoji…"
-msgstr "감정 로드 중..."
+msgstr "이모지 불러오는 중…"
 
 #. Heading of the emoji picker's list while a search matched nothing (what was typed can still be sent as a reaction).
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.noMatch"
 msgid "No emoji match"
-msgstr "감정 매칭 없음"
+msgstr "일치하는 이모지 없음"
 
 #. Heading of the emoji picker's section of suggested starter reactions, shown when nothing has been used recently, and the label of its tab.
 #: client/components/ReactionPicker.vue
@@ -10827,7 +10827,7 @@ msgstr "최근 사용"
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.searchPlaceholder"
 msgid "Search emoji, or type any reaction"
-msgstr "이모티콘 검색, 또는 어떤 반응도 입력하세요"
+msgstr "이모지 검색 또는 원하는 반응 입력"
 
 #. Heading of the emoji picker's list while a search is showing matches.
 #: client/components/ReactionPicker.vue
@@ -10839,7 +10839,7 @@ msgstr "검색 결과"
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.send"
 msgid "Send"
-msgstr "보냄"
+msgstr "보내기"
 
 #. Preview-bar note in the emoji picker for a remembered reaction that is not an emoji, saying it will be sent as words. Starts lowercase because it follows other text.
 #: client/components/ReactionPicker.vue
@@ -10851,13 +10851,13 @@ msgstr "텍스트로 보냄"
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.tabsAria"
 msgid "Emoji groups"
-msgstr "이모티콘 그룹"
+msgstr "이모지 그룹"
 
 #. Tooltip of the emoji picker's free-text row and its spoken form, offering to send what was typed as the reaction. {reaction} is that text.
 #: client/components/ReactionPicker.vue
 msgctxt "reactions.titleTemplate"
 msgid "React with {reaction}"
-msgstr "{reaction}으로 반응"
+msgstr "{reaction}(으)로 반응"
 
 #. aria-label of the magnifier button in a chat window's header; clicking it opens the message-search field for the conversation.
 #: client/components/MessageSearchForm.vue:19
@@ -10917,13 +10917,13 @@ msgstr "검색하려는 것을 입력하세요."
 #: client/js/irc/client.ts
 msgctxt "send.editNoReply"
 msgid "Edit not sent: no reply from the server."
-msgstr "수정되지 않음: 서버에서 답변이 없습니다."
+msgstr "편집이 전송되지 않음: 서버 응답이 없습니다."
 
 #. Lobby error when a second edit of the same message was sent before the first one settled.
 #: client/js/irc/client.ts
 msgctxt "send.editWaiting"
 msgid "Edit not sent: an edit of that message is already waiting for the server."
-msgstr "수정되지 않음: 해당 메시지의 수정이 서버에 이미 전송되어 있습니다."
+msgstr "편집이 전송되지 않음: 이 메시지의 다른 편집이 이미 서버 응답을 기다리고 있습니다."
 
 #. Lobby error when a command or message was typed while the network is down; nothing was sent.
 #: client/js/irc/client.ts
@@ -10949,13 +10949,13 @@ msgstr "전송되지 않음: 푸시 구독이 한 줄에 들어가지 않습니�
 #: client/js/irc/client.ts
 msgctxt "send.reactNeedsTags"
 msgid "Reactions need the message-tags capability, which this server did not enable."
-msgstr "감정 반응은 메시지 태그 기능이 필요합니다. 이 서버는 해당 기능을 활성화하지 않았습니다."
+msgstr "반응에는 message-tags 기능이 필요하지만 이 서버에서 활성화되지 않았습니다."
 
 #. Lobby error when a reaction was sent in a window that carries no messages.
 #: client/js/irc/client.ts
 msgctxt "send.reactTargets"
 msgid "Reactions can only be sent in channels and queries."
-msgstr "감정 반응은 채널과 쿼리 내에서만 전송할 수 있습니다."
+msgstr "반응은 채널과 개인 대화에서만 보낼 수 있습니다."
 
 #. Lobby error when deletion was tried outside a channel.
 #: client/js/irc/client.ts
@@ -10967,7 +10967,7 @@ msgstr "메시지 삭제는 채널 내에서만 가능합니다."
 #: client/js/irc/client.ts
 msgctxt "send.redactUnavailable"
 msgid "Deleting messages is not available: the server did not enable draft/message-redaction."
-msgstr "메시지 삭제는 불가능합니다: 서버가 편지/메시지 삭제 기능을 활성화하지 않았습니다."
+msgstr "메시지를 삭제할 수 없습니다: 서버가 draft/message-redaction을 활성화하지 않았습니다."
 
 #. Lobby error when a message's client tags exceed the IRC line limit; nothing was sent.
 #: client/js/irc/client.ts
@@ -10979,13 +10979,13 @@ msgstr "전송되지 않음: 태그가 한 줄에 들어가지 않습니다"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.add"
 msgid "Add alias"
-msgstr "앨리아스 추가"
+msgstr "별칭 추가"
 
 #. aria-label of an alias row's commands (body) input. {name} is the alias's name — or, while the name is empty, the row's number; verbatim user content either way, never translated.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.bodyAria"
 msgid "Commands for alias {name}"
-msgstr "앨리아스 명령 {name}"
+msgstr "별칭 {name}의 명령"
 
 #. Example body shown in the alias-body input: an IRC action waving at the first argument. Keep the /me command and the $1 token verbatim; the action wording is an example and may be adapted.
 #: client/components/Settings/Aliases.vue
@@ -10997,19 +10997,19 @@ msgstr "/me $1에게 인사합니다"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.empty"
 msgid "No aliases yet."
-msgstr "앨리아스가 없습니다."
+msgstr "아직 별칭이 없습니다."
 
 #. Row error: the alias has a name but no commands.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.errorBody"
 msgid "Say what the alias runs."
-msgstr "앨리아스가 실행하는 명령을 말해주세요."
+msgstr "별칭이 실행할 명령을 입력하세요."
 
 #. Row error: another row already defines this alias. {name} is the other alias's name, verbatim user content; the slash before it is the command prefix.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.errorDuplicate"
 msgid "There is already a /{name}."
-msgstr "이미 /{name}이 존재합니다."
+msgstr "이미 /{name}이(가) 있습니다."
 
 #. Row error under an alias row: the alias has no name.
 #: client/components/Settings/Aliases.vue
@@ -11027,13 +11027,13 @@ msgstr "이름은 알파벳, 숫자, -, _만 사용할 수 있습니다. 공백�
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.errorTooLong"
 msgid "The body is too long (over {limit} characters)."
-msgstr "본문이 너무 길습니다 (최대 {limit}자 이상입니다)."
+msgstr "본문이 너무 깁니다({limit}자 초과)."
 
 #. Column heading of the alias editor table: the name of the slash command being defined. The header row is aria-hidden; each input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.headName"
 msgid "Alias"
-msgstr "앨리아스"
+msgstr "별칭"
 
 #. Column heading of the alias editor table: the command lines the alias runs (its body). The header row is aria-hidden; the body input's own aria-label carries this meaning to screen readers.
 #: client/components/Settings/Aliases.vue
@@ -11119,7 +11119,7 @@ msgstr "/{name} 일부 인수"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.tryHeading"
 msgid "Try it"
-msgstr "시도해보세요"
+msgstr "시험해 보기"
 
 #. Variable reference: what $chan expands to.
 #: client/components/Settings/Aliases.vue
@@ -11137,19 +11137,19 @@ msgstr "문자 그대로의 {character}"
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.varMe"
 msgid "your nick on that network"
-msgstr "해당 네트워크의 your nick"
+msgstr "해당 네트워크에서의 내 닉네임"
 
 #. Variable reference: what $1 expands to in an alias body.
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.varOne"
 msgid "one argument (empty when not given)"
-msgstr "하나의 인수 (주어지지 않았을 경우 빈 문자열)"
+msgstr "인수 하나(없으면 빈 값)"
 
 #. Variable reference: what $2- expands to (everything from the second argument on).
 #: client/components/Settings/Aliases.vue
 msgctxt "settings.aliases.varRest"
 msgid "arguments from the 2nd to the last"
-msgstr "2nd부터 마지막까지의 인수"
+msgstr "두 번째부터 마지막까지의 인수"
 
 #. Variable reference: what $* expands to.
 #: client/components/Settings/Aliases.vue
@@ -11173,7 +11173,7 @@ msgstr "자동완성 활성화"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.coloredNicks"
 msgid "Enable colored nicknames"
-msgstr "색상된 닉네임 활성화"
+msgstr "닉네임 색상 사용"
 
 #. Heading of the section in Settings > Appearance holding the user's own CSS. Keep the capitalization style of the source if possible.
 #: client/components/Settings/Appearance.vue
@@ -11209,7 +11209,7 @@ msgstr "글자 크기"
 #: client/components/Settings/Appearance.vue:458
 msgctxt "settings.appearance.fontSizeHuge"
 msgid "Huge"
-msgstr "엄청나게 큽"
+msgstr "가장 큼"
 
 #. Label of the default step of the font-size slider in Settings → Appearance. One word.
 #: client/components/Settings/Appearance.vue:456
@@ -11239,13 +11239,13 @@ msgstr "매우 작음"
 #: client/components/Settings/Appearance.vue:457
 msgctxt "settings.appearance.fontSizeXlarge"
 msgid "Extra large"
-msgstr "특별히 큼"
+msgstr "매우 큼"
 
 #. Checkbox in Settings > Appearance; when ticked, chat messages are rendered with Markdown styling such as bold text, code blocks and spoiler marks. Ellipsis is part of the copy.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.markdown"
 msgid "Render Markdown formatting (bold, code, spoilers…)"
-msgstr "마크다운 포맷팅 렌더링 (강조, 코드, 스폰서... 등)"
+msgstr "마크다운 서식 표시 (굵게, 코드, 스포일러…)"
 
 #. Settings → Appearance, switch above the theme picker: when on, a theme that has a light and a dark version shows the one matching the device's light or dark mode.
 #: client/components/Settings/Appearance.vue
@@ -11269,13 +11269,13 @@ msgstr "이미지, 동영상 및 오디오 링크를 바로 표시"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.mediaAlways"
 msgid "Show automatically — the media site sees your address as soon as a link appears"
-msgstr "자동으로 표시 — 링크가 나타나는 즉시 미디어 사이트가 주소를 인식"
+msgstr "자동으로 표시 — 링크가 나타나는 즉시 미디어 사이트에 내 주소가 노출됩니다"
 
 #. Radio option in Settings > Appearance; media previews stay behind a placeholder until you click them, so nothing is loaded from the media site before that. Em dash is part of the copy.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.mediaClick"
 msgid "Click to reveal — nothing is fetched from the media site until you ask to see it"
-msgstr "클릭하여 표시 — 미디어 사이트에서 데이터를 가져오기 전에 아무것도 하지 않음"
+msgstr "클릭하여 표시 — 보기를 요청할 때까지 미디어 사이트에서 아무것도 가져오지 않습니다"
 
 #. Heading of the media preview section in Settings > Appearance, which controls how links to images, video and audio are shown in chat.
 #: client/components/Settings/Appearance.vue
@@ -11287,7 +11287,7 @@ msgstr "미디어 미리보기"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.mediaRevealGroup"
 msgid "When to load previews"
-msgstr "미리보기를 언제 로드할지"
+msgstr "미리보기를 불러올 시점"
 
 #. Heading of the message display section in Settings > Appearance.
 #: client/components/Settings/Appearance.vue
@@ -11299,7 +11299,7 @@ msgstr "메시지"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.motdTitle"
 msgid "Message Of The Day"
-msgstr "하루 메시지"
+msgstr "오늘의 메시지"
 
 #. Label of the text field in Settings > Appearance that sets the character(s) inserted after a completed user's name, for example a comma.
 #: client/components/Settings/Appearance.vue
@@ -11527,7 +11527,7 @@ msgstr "열 전체에 부드러운 음영, 가장자리 쪽이 더 진하고 흐
 #: client/components/Settings/Appearance.vue:486
 msgctxt "settings.appearance.sampleEnds"
 msgid "The ends are meant to be too small and too big."
-msgstr "시작과 끝은 너무 작고 너무 큰 것이어야 합니다."
+msgstr "양 끝은 일부러 너무 작고 너무 크게 만들었습니다."
 
 #. First line of the sample chat under the font-size slider in Settings → Appearance, written by the sample nick grandma: it asks whether the text is comfortable to read.
 #: client/components/Settings/Appearance.vue:474
@@ -11539,13 +11539,13 @@ msgstr "안경 없이 이걸 읽을 수 있나요?"
 #: client/components/Settings/Appearance.vue:480
 msgctxt "settings.appearance.sampleSlide"
 msgid "Yes! Slide it until this is comfortable."
-msgstr "네! 이걸 편하게 만들기 위해 슬라이드하세요."
+msgstr "네! 편해질 때까지 슬라이더를 움직이세요."
 
-#. First word of the checkbox label in Settings > Appearance that displays the server's Message Of The Day; the untranslated acronym 'MOTD' follows it as a marked abbreviation, so only this word is translated.
+#. Checkbox label in Settings > Appearance that displays the server's Message Of The Day when connecting. {motd} is the untranslated acronym 'MOTD', rendered as a marked abbreviation with a tooltip: put it where your grammar needs the object (for example 'MOTD anzeigen', 'MOTD を表示').
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.showMotd"
-msgid "Show"
-msgstr "보여주세요"
+msgid "Show {motd}"
+msgstr "{motd} 표시"
 
 #. Checkbox in Settings > Appearance; when ticked, message timestamps include the seconds as well as hours and minutes.
 #: client/components/Settings/Appearance.vue
@@ -11557,7 +11557,7 @@ msgstr "타임스탬프에 초 포함"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.statusCondensed"
 msgid "Condense status messages together"
-msgstr "상태 메시지들을 줄여서 보여주세요"
+msgstr "상태 메시지를 묶어서 표시"
 
 #. Heading of the section in Settings > Appearance that controls how join, part and similar service notices are shown in chat.
 #: client/components/Settings/Appearance.vue
@@ -11569,7 +11569,7 @@ msgstr "상태 메시지"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.statusHelp"
 msgid "Joins, parts, quits, kicks, nick changes, and mode changes"
-msgstr "참여, 떠남, 나가기, 추방, 니크 변경, 모드 변경"
+msgstr "참여, 나감, 종료, 추방, 닉네임 변경, 모드 변경"
 
 #. Radio option in Settings > Appearance; joins, parts and similar service notices are not shown at all.
 #: client/components/Settings/Appearance.vue
@@ -11581,7 +11581,7 @@ msgstr "모든 상태 메시지 숨기기"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.statusShown"
 msgid "Show all status messages individually"
-msgstr "모든 상태 메시지를 개별로 보여주세요"
+msgstr "모든 상태 메시지를 개별적으로 표시"
 
 #. Hint in Settings → Appearance (Android app) while the text size follows the system: where Android sets it. Use the names Android's own Settings app shows in this language.
 #: client/components/Settings/Appearance.vue
@@ -11623,7 +11623,7 @@ msgstr "켜면 각 라이트/다크 쌍이 하나의 항목이 되어 시스템�
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.trustedButtonName"
 msgid "Always show"
-msgstr "항상 보여주기"
+msgstr "항상 표시"
 
 #. Subheading in the always-shown media list of Settings > Appearance above the chat channel entries.
 #: client/components/Settings/Appearance.vue
@@ -11641,7 +11641,7 @@ msgstr "모두 삭제"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.trustedEmpty"
 msgid "Nothing yet."
-msgstr "아직 없어요."
+msgstr "아직 없습니다."
 
 #. Heading of the list in Settings > Appearance of sites, people and channels whose media always loads without asking.
 #: client/components/Settings/Appearance.vue
@@ -11671,13 +11671,13 @@ msgstr "사이트"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.untrustFrom"
 msgid "Stop always showing from {name}"
-msgstr "항상 표시 중지 {name}에서"
+msgstr "{name}의 미디어 항상 표시 중지"
 
 #. Tooltip and aria-label of the remove button on an entry of the always-shown media list in Settings > Appearance, for a chat channel. {name} is that channel's name.
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.untrustIn"
 msgid "Stop always showing in {name}"
-msgstr "항상 표시 중지 {name}에서"
+msgstr "{name}에서 항상 표시 중지"
 
 #. Checkbox in Settings > Appearance; when ticked, message timestamps use a 12-hour clock (am/pm) instead of a 24-hour clock.
 #: client/components/Settings/Appearance.vue
@@ -11689,7 +11689,7 @@ msgstr "12시간 형식 타임스탬프 사용"
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.visualAids"
 msgid "Visual Aids"
-msgstr "시각 도움"
+msgstr "시각 보조"
 
 #. Heading of the away section in Settings > General, and the visually hidden label of the away-message input beneath it; names the setting that marks you away with a message when the app is closed.
 #: client/components/Settings/General.vue
@@ -11707,13 +11707,13 @@ msgstr "{appName}이(가) 열려 있지 않을 때의 자리 비움 메시지"
 #: client/components/Settings/General.vue
 msgctxt "settings.general.backupExported"
 msgid "Exported {date}."
-msgstr "{date}가 수출되었습니다."
+msgstr "{date}에 내보냄."
 
 #. Body of the confirmation dialog before restoring a settings backup in Settings > General. {parts} is a comma-joined list ('your settings, 1 network, mutes and ignore lists'), {file} the chosen backup file's name.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.backupFrame"
 msgid "This replaces {parts} with the contents of {file}, then reloads."
-msgstr "이는 {parts}를 {file}의 내용으로 대체하고, 다시 로드합니다."
+msgstr "{parts}을(를) {file}의 내용으로 바꾼 뒤 다시 불러옵니다."
 
 #. Heading of the settings backup section in Settings > General, which exports preferences to a file and restores them.
 #: client/components/Settings/General.vue
@@ -11731,14 +11731,14 @@ msgstr "설정을 파일에 저장하세요. 여기서 복원하거나 다른 �
 #: client/components/Settings/General.vue
 msgctxt "settings.general.backupMutes"
 msgid "mutes and ignore lists"
-msgstr "무시 목록"
+msgstr "음소거 및 무시 목록"
 
 #. Part of the settings-restore confirmation in Settings > General; fills the list of what a restore replaces with how many saved chat networks the file carries. The singular shows with exactly one network, the plural otherwise.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.backupNetworks"
 msgid "{count} network"
 msgid_plural "{count} networks"
-msgstr[0] "{count} 네트워크"
+msgstr[0] "네트워크 {count}개"
 
 #. Part of the restore-confirmation sentence in Settings > General: fills the list of what the file replaces for the app's own preferences. Comma-joined with the other parts by position.
 #: client/components/Settings/General.vue
@@ -11756,31 +11756,31 @@ msgstr "파일에는 네트워크 비밀번호가 포함됩니다."
 #: client/components/Settings/General.vue
 msgctxt "settings.general.export"
 msgid "Export settings…"
-msgstr "설정 수출…"
+msgstr "설정 내보내기…"
 
 #. Error message in Settings > General shown when exporting the settings backup failed and no file was produced.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.exportFailed"
 msgid "Couldn't create the file."
-msgstr "파일 생성할 수 없었습니다."
+msgstr "파일을 만들 수 없습니다."
 
 #. Visually hidden but screen-reader-spoken label of the hidden file picker behind the Import settings button; it accepts a previously exported settings file.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.fileAria"
 msgid "Settings file to restore"
-msgstr "설정 파일을 복원합니다"
+msgstr "복원할 설정 파일"
 
 #. Button in Settings > General; opens a file picker to restore a previously exported settings backup file. Ellipsis is part of the copy.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.import"
 msgid "Import settings…"
-msgstr "설정을 가져옵니다…"
+msgstr "설정 가져오기…"
 
 #. Confirmation button of the settings-restore dialog in Settings > General; clicking restores the file and reloads the app.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.importButton"
 msgid "Import and reload"
-msgstr "설정을 가져오고 재로드합니다"
+msgstr "가져오고 새로고침"
 
 #. Error notice under the import control in Settings → General when the backup file is corrupt or truncated. Starts a short sentence.
 #: client/components/Settings/General.vue:259
@@ -11816,13 +11816,13 @@ msgstr "이 기기에 해당 파일을 가져올 공간이 없습니다. 아무�
 #: client/components/Settings/General.vue:259
 msgctxt "settings.general.importNotSettings"
 msgid "This isn't a settings file."
-msgstr "이는 설정 파일이 아닙니다."
+msgstr "설정 파일이 아닙니다."
 
 #. Title of the confirmation dialog shown before a settings backup file is restored from Settings > General.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.importTitle"
 msgid "Import settings?"
-msgstr "설정을 가져옵니다?"
+msgstr "설정을 가져올까요?"
 
 #. Checkbox in Settings > General's backup section; when ticked, the exported settings file also contains the saved chat network passwords.
 #: client/components/Settings/General.vue
@@ -11834,13 +11834,13 @@ msgstr "네트워크 비밀번호 포함"
 #: client/components/Settings/General.vue
 msgctxt "settings.general.includePasswordsHelp"
 msgid "Passwords are stored in the file unencrypted."
-msgstr "비밀번호는 파일에 암호화되지 않아 저장됩니다."
+msgstr "비밀번호는 암호화되지 않은 상태로 파일에 저장됩니다."
 
 #. Button in Settings > General; clicking shows the browser's prompt that installs this web app to the device's home screen or app list. {appName} is the chat app's display name.
 #: client/components/Settings/General.vue
 msgctxt "settings.general.installApp"
 msgid "Install {appName} as an app"
-msgstr "{appName}을 앱으로 설치합니다"
+msgstr "{appName}을(를) 앱으로 설치"
 
 #. Button in Settings → General: reopens the step-by-step guide to installing the app on this device. {appName} is the app's name.
 #: client/components/Settings/General.vue
@@ -11894,7 +11894,7 @@ msgstr "네이티브 앱"
 #: client/components/Settings/General.vue
 msgctxt "settings.general.openLinks"
 msgid "Open web+irc:// links with {appName}"
-msgstr "web+irc:// 링크는 {appName}으로 열립니다"
+msgstr "web+irc:// 링크를 {appName}(으)로 열기"
 
 #. Section heading in Settings > General for whether private (one-to-one) conversations are kept in this browser between visits.
 #: client/components/Settings/General.vue
@@ -11912,7 +11912,7 @@ msgstr "타이핑 알림 보내기"
 #: client/components/Settings/General.vue
 msgctxt "settings.general.sendTypingHelp"
 msgid "Lets people in the channel see when you are typing (IRCv3 +typing)."
-msgstr "채널의 사람들은 당신이 타이핑 중인지 보여줍니다 (IRCv3 +typing)."
+msgstr "채널 사람들이 내가 입력 중인지 볼 수 있게 합니다 (IRCv3 +typing)."
 
 #. Heading of the typing indicator section in Settings > General.
 #: client/components/Settings/General.vue
@@ -11924,7 +11924,7 @@ msgstr "타이핑 알림"
 #: client/components/Settings/General.vue
 msgctxt "settings.general.uploadCanvas"
 msgid "Attempt to remove metadata from images before uploading"
-msgstr "파일 업로드 전에 이미지의 메타데이터를 제거하려고 시도합니다"
+msgstr "업로드 전에 이미지의 메타데이터 제거 시도"
 
 #. Tooltip on the metadata-removal upload checkbox in Settings > General; explains how the option works and that it can mis-rotate photos in browsers without canvas orientation support.
 #: client/components/Settings/General.vue
@@ -11996,7 +11996,7 @@ msgstr "{name} 삭제?"
 #: client/components/Settings/Networks.vue
 msgctxt "settings.networks.disconnected"
 msgid "Disconnected"
-msgstr "연결 해제"
+msgstr "연결 끊김"
 
 #. Button on a saved network row in the networks settings page; opens the form where that network's address and credentials are changed.
 #: client/components/Settings/Networks.vue
@@ -12044,7 +12044,7 @@ msgstr "브라우저 알림"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.browserPerNetwork"
 msgid "Browser notifications are also per network — enabled by default, toggled in each network's settings (Edit network → “Browser notifications for this network”)."
-msgstr "브라우저 알림은 네트워크당 적용됩니다 — 기본적으로 활성화되어 있으며, 각 네트워크의 설정에서 토글할 수 있습니다 (네트워크 편집 → \"이 네트워크의 브라우저 알림\")."
+msgstr "브라우저 알림도 네트워크별로 설정됩니다 — 기본적으로 켜져 있으며, 각 네트워크 설정(네트워크 편집 → “이 네트워크에 대한 브라우저 알림”)에서 켜고 끌 수 있습니다."
 
 #. Warning line in Settings > Notifications when the browser cannot show notifications at all.
 #: client/components/Settings/Notifications.vue
@@ -12068,7 +12068,7 @@ msgstr "나를 언급한 메시지 강조"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightExceptions"
 msgid "Highlight exceptions"
-msgstr "예외 표시"
+msgstr "강조 예외"
 
 #. Tooltip on the highlight-exceptions field in Settings > Notifications; explains that these words suppress highlight treatment.
 #: client/components/Settings/Notifications.vue
@@ -12086,13 +12086,13 @@ msgstr "나를 언급하거나 사용자 지정 강조 단어와 일치하는 �
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlights"
 msgid "Custom highlights"
-msgstr "커스텀 강조"
+msgstr "사용자 지정 강조"
 
 #. Tooltip on the custom highlights field in Settings > Notifications; explains the field's comma-separated format.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.highlightsHelp"
 msgid "If a message contains any of these comma-separated expressions, it will trigger a highlight."
-msgstr "메시지에 이 표현들 중 하나라도 포함되어 있으면, highlight가 트리거됩니다."
+msgstr "메시지에 쉼표로 구분된 이 표현 중 하나라도 있으면 강조됩니다."
 
 #. Warning line in Settings > Notifications, shown on an iPhone browsing the app without installing it; the parenthesized phrase is the iOS share menu's action.
 #: client/components/Settings/Notifications.vue
@@ -12104,37 +12104,37 @@ msgstr "iOS에서는 앱을 홈 화면에 설치한 후(공유 → 홈 화면에
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.keyChangeAsk"
 msgid "Wary — ask before renewing the subscription"
-msgstr "주의 — 구독 재구독 전에 물어보세요"
+msgstr "신중 — 구독을 갱신하기 전에 묻기"
 
 #. Radio choice in Settings > Notifications for the server's push-identity change behaviour: do nothing, so push stays off for that server until renewed from its network settings. Em dash is part of the copy.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.keyChangeIgnore"
 msgid "Suspicious — leave it alone; push from that server stays off until you renew from the network settings"
-msgstr "의심스러운 — 그냥 두세요; 해당 서버에서 푸시가 계속 되지 until 네트워크 설정에서 재구독 하면 됩니다"
+msgstr "의심 — 그대로 두기. 네트워크 설정에서 갱신할 때까지 그 서버의 푸시는 꺼진 상태로 유지됩니다"
 
 #. Heading-like line in Settings > Notifications introducing the three radio choices for what to do when a chat server's push identity changes; the colon leads into the choices.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.keyChangeIntro"
 msgid "When a server's push identity (its key) changes, this device's subscription for it stops working. Then:"
-msgstr "서버의 푸시 식별 (키)이 변경되면 이 기기의 구독이 작동하지 않습니다. 그런 다음:"
+msgstr "서버의 푸시 식별자(키)가 바뀌면 이 기기의 구독이 더 이상 작동하지 않습니다. 이때:"
 
 #. Radio choice in Settings > Notifications for the server's push-identity change behaviour: re-subscribe immediately and silently. Em dash is part of the copy.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.keyChangeTrust"
 msgid "Naive — renew it on the spot, without asking"
-msgstr "무지한 — 즉시 재구독하세요, 물어보지 마세요"
+msgstr "단순 — 묻지 않고 즉시 갱신"
 
 #. Warning line in Settings > Notifications when the page is not served over a secure connection, which browsers require for notifications.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.noHttps"
 msgid "Notifications are only supported over HTTPS connections."
-msgstr "알림은 HTTPS 연결만 지원합니다."
+msgstr "알림은 HTTPS 연결에서만 지원됩니다."
 
 #. Checkbox in Settings > Notifications; when ticked, every chat message notifies, not only mentions and highlights.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.notifyAll"
 msgid "Enable notification for all messages"
-msgstr "모든 메시지에 대한 알림을 활성화하세요"
+msgstr "모든 메시지에 대해 알림 사용"
 
 #. Button in Settings > Notifications beside the notification-sound checkbox; clicking plays the notification sound once as a preview.
 #: client/components/Settings/Notifications.vue
@@ -12170,13 +12170,13 @@ msgstr "푸시 알림"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.pushPerNetwork"
 msgid "Push is set up per network — turn it on or off in each network's settings (Edit network → “Push notifications for this network”), where the enrollment status is also shown. The browser delivers the notifications; each push-capable server decides whether to wake this app."
-msgstr "푸시는 네트워크당 설정되어 있습니다 — 각 네트워크의 설정에서 켜거나 끌 수 있습니다 (편집 네트워크 → \"이 네트워크의 푸시 알림\"), 여기서 등록 상태도 표시됩니다. 브라우저가 알림을 전달하고, 푸시 기능을 지원하는 서버가 이 앱을 깨우는지 결정합니다."
+msgstr "푸시는 네트워크별로 설정합니다 — 각 네트워크 설정(네트워크 편집 → “이 네트워크의 푸시 알림”)에서 켜거나 끌 수 있으며, 그곳에 등록 상태도 표시됩니다. 알림은 브라우저가 전달하고, 이 앱을 깨울지는 푸시를 지원하는 각 서버가 결정합니다."
 
 #. Warning line in Settings > Notifications when the chat server itself does not offer web push; names the IRCv3 draft/webpush capability, which stays verbatim.
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.serverUnsupported"
 msgid "Push notifications need a connected server that supports the draft/webpush capability and you to be logged in to an account."
-msgstr "푸시 알림은 연결된 서버가 드래프트/webpush 기능을 지원하고, 계정에 로그인한 사용자에게 필요합니다."
+msgstr "푸시 알림을 사용하려면 draft/webpush 기능을 지원하는 서버에 연결되어 있고 계정에 로그인해 있어야 합니다."
 
 #. Checkbox in Settings > Notifications; when ticked, a sound plays alongside a notification.
 #: client/components/Settings/Notifications.vue
@@ -12188,7 +12188,7 @@ msgstr "알림 소리 활성화"
 #: client/components/Settings/Notifications.vue
 msgctxt "settings.notifications.stale"
 msgid "A server's push identity (its key) changed, so this device's push subscription for it no longer works. Renew it from that network's settings (Edit network → “Renew push notifications”) to keep being notified while the app is closed."
-msgstr "서버의 푸시 식별 (키)이 변경되었기 때문에, 이 기기의 푸시 구독이 더 이상 작동하지 않습니다. 해당 네트워크 설정에서 푸시 알림을 재등록(네트워크 편집 → \"푸시 알림 재등록\")하여 앱이 닫혀도 알림을 받을 수 있도록 해주세요."
+msgstr "서버의 푸시 식별자(키)가 바뀌어 이 기기의 푸시 구독이 더 이상 작동하지 않습니다. 앱이 닫혀 있을 때도 알림을 받으려면 해당 네트워크 설정(네트워크 편집 → “푸시 알림 재등록”)에서 갱신하세요."
 
 #. Warning line in Settings > Notifications when the browser cannot do web push; the parentheses name the browser features push requires.
 #: client/components/Settings/Notifications.vue
@@ -12253,7 +12253,7 @@ msgstr "번역"
 #: client/components/Sidebar.vue:8
 msgctxt "sidebar.devBuildTitle"
 msgid "{app} has been built in development mode"
-msgstr "{app}는 개발 모드로 구축되었습니다"
+msgstr "{app}은(는) 개발 모드로 빌드되었습니다"
 
 #. Small orange badge next to the sidebar logo, shown only in development builds so a dev build is never mistaken for a deploy.
 #: client/components/Sidebar.vue:16
@@ -12271,7 +12271,7 @@ msgstr "현재 연결된 네트워크가 없습니다."
 #: client/components/Sidebar.vue:51
 msgctxt "sidebar.help"
 msgid "Help"
-msgstr "도와주세요."
+msgstr "도움말"
 
 #. aria-label of the help button in the sidebar footer when a newer build is available; the parenthetical sits on its own line.
 #: client/components/Sidebar.vue:50
@@ -12283,7 +12283,7 @@ msgstr "도움말\n(업데이트 있음)"
 #: client/components/NetworkList.vue:17
 msgctxt "sidebar.jumpTo"
 msgid "Jump to..."
-msgstr "...로 이동"
+msgstr "바로 가기..."
 
 #. Tooltip and screen-reader label of the globe button beside the sidebar logo, which opens the language panel (the same selector the connect form and Settings → Appearance carry).
 #: client/components/Sidebar.vue:8
@@ -12333,7 +12333,7 @@ msgstr "채널 목록 토글"
 #: client/components/Sidebar.vue:22
 msgctxt "sidebar.toggleDevtools"
 msgid "Toggle eruda devtools"
-msgstr "에러다 디버그 도구 토글"
+msgstr "eruda 개발자 도구 열기/닫기"
 
 #. Part of a sidebar channel row's aria-label and tooltip, after the channel name: how many unread messages it holds.
 #: client/components/ChannelWrapper.vue:89
@@ -12418,67 +12418,67 @@ msgstr "초대"
 #: client/components/Special/ListInvites.vue
 msgctxt "special.invites.invitedAt"
 msgid "Invited At"
-msgstr "초대 장소"
+msgstr "초대 시간"
 
 #. Column header of the channel-invite list: who set the invite, verbatim.
 #: client/components/Special/ListInvites.vue
 msgctxt "special.invites.invitedBy"
 msgid "Invited By"
-msgstr "초대 사람"
+msgstr "초대한 사람"
 
 #. Why fragment of 'Message not sent: {why}' (FAIL BATCH MULTILINE_INVALID_TARGET). Lowercase mid-sentence by position.
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.multiline.invalidTarget"
 msgid "its lines did not all go to the same target."
-msgstr "그 문장들이 모두 같은 대상으로 보내지지 않았습니다."
+msgstr "줄이 모두 같은 대상으로 가지 않았습니다."
 
 #. Why fragment of 'Message not sent: {why}' (FAIL BATCH MULTILINE_MAX_BYTES without a limit named). Lowercase mid-sentence by position.
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.multiline.maxBytes"
 msgid "it was too long for one multi-line message."
-msgstr "한 줄 메시지로 너무 길었습니다."
+msgstr "여러 줄 메시지 하나로 보내기에는 너무 깁니다."
 
 #. Why fragment of 'Message not sent: {why}'; {limit} is the byte limit the server named.
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.multiline.maxBytesLimit"
 msgid "it was too long for one multi-line message (the server's limit is {limit} bytes)."
-msgstr "한 줄 메시지로 너무 길었습니다. (서버 제한은 {limit} 바이트입니다.)"
+msgstr "여러 줄 메시지 하나로 보내기에는 너무 깁니다(서버 제한: {limit}바이트)."
 
 #. Why fragment of 'Message not sent: {why}' (FAIL BATCH MULTILINE_MAX_LINES without a limit named). Lowercase mid-sentence by position.
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.multiline.maxLines"
 msgid "it had too many lines for one multi-line message."
-msgstr "한 줄 메시지로 너무 많은 줄이었습니다."
+msgstr "여러 줄 메시지 하나에 넣기에는 줄이 너무 많습니다."
 
 #. Why fragment of 'Message not sent: {why}'; {limit} is the line limit the server named.
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.multiline.maxLinesLimit"
 msgid "it had too many lines for one multi-line message (the server's limit is {limit})."
-msgstr "한 줄 메시지로 너무 많은 줄이었습니다. (서버 제한은 {limit}입니다.)"
+msgstr "여러 줄 메시지 하나에 넣기에는 줄이 너무 많습니다(서버 제한: {limit}줄)."
 
 #. Why fragment of 'Message not sent: {why}' when the server's rejection named no cause. Lowercase mid-sentence by position.
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.multiline.rejected"
 msgid "the server rejected the multi-line batch."
-msgstr "서버가 다중 줄 브래치를 거부했습니다."
+msgstr "서버가 여러 줄 배치를 거부했습니다."
 
 #. Channel error when the server threw away a whole multi-line message; {why} is one of the sr.multiline* copies or the server's own description, left verbatim.
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.multilineNotSent"
 msgid "Message not sent: {why}"
-msgstr "메시지가 보이지 않음: {why}"
+msgstr "메시지가 전송되지 않음: {why}"
 
 #. Channel error for a refused deletion (FAIL REDACT DISABLED); the server's own copy is replaced with this phrasing.
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.redactDisabled"
 msgid "Deleting messages is disabled on this server."
-msgstr "메시지 삭제가 비활성화되어 있습니다."
+msgstr "이 서버에서는 메시지 삭제가 비활성화되어 있습니다."
 
 #. Channel error when a message edit was dropped because its redaction was refused; {why} is one of the sr.redact* copies or the server's own description, left verbatim.
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.redactEditPrefix"
 msgid "Edit not sent: {why}"
-msgstr "수정되지 않음: {why}"
+msgstr "편집이 전송되지 않음: {why}"
 
 #. Channel error for a refused deletion (FAIL REDACT REDACT_FORBIDDEN).
 #: client/js/irc/handlers/standard-replies.ts
@@ -12508,13 +12508,13 @@ msgstr "서버는 더 이상 해당 메시지를 가지고 있지 않습니다."
 #: client/js/irc/handlers/standard-replies.ts
 msgctxt "sr.redactWindowExpired"
 msgid "That message is too old to delete."
-msgstr "해당 메시지는 삭제할 수 없습니다."
+msgstr "해당 메시지는 너무 오래되어 삭제할 수 없습니다."
 
 #. Title of the left action button on a push notification (shown on every platform): marks the conversation read on the server at this notification's newest message, which also closes the notification on the reader's other devices.
 #: client/service-worker.js:1146
 msgctxt "sw.markRead"
 msgid "Mark read"
-msgstr "확인 읽음"
+msgstr "읽음으로 표시"
 
 #. Body of the silent stub notification the worker shows under WebKit (an iPhone's Home Screen web app) when another device, or this one, read a pushed conversation: it replaces that conversation's notification for about 30 seconds, because WebKit counts a push that shows nothing toward unsubscribing the app. The title is the conversation's name.
 #: client/service-worker.js:1416
@@ -12527,7 +12527,7 @@ msgstr "읽음으로 표시됨"
 #: client/service-worker.js:1212
 msgctxt "sw.newActivity"
 msgid "New activity while you were away."
-msgstr "당신이 떠났을 때 활동이 생겼습니다."
+msgstr "자리를 비운 동안 새 활동이 있었습니다."
 
 #. Body of a notification for a push payload that named no message text (a degraded opt-down tier): the conversation saw activity whose content was not delivered.
 #: client/service-worker.js:992
@@ -12539,25 +12539,25 @@ msgstr "새 메시지"
 #: client/service-worker.js:1150
 msgctxt "sw.reply"
 msgid "Reply"
-msgstr "답변"
+msgstr "답장"
 
 #. Placeholder of the notification's inline reply text field (platforms that show one, e.g. desktop Chrome); what the reader types goes to the conversation as one IRC message.
 #: client/service-worker.js:1151
 msgctxt "sw.replyPlaceholder"
 msgid "Reply…"
-msgstr "답변..."
+msgstr "답장…"
 
 #. Notification title for a message in a channel: {nick} is the sender's nickname, {target} the channel name. Translated as a whole so word order is free; the unread-count suffix is appended after it, never inside.
 #: client/service-worker.js:1134
 msgctxt "sw.titleChannel"
 msgid "{nick} in {target}"
-msgstr "{nick}가 {target}에 있습니다"
+msgstr "{target}의 {nick}"
 
 #. Push-notification title for a channel conversation carrying more than one unread message. {nick} is the nick of the newest message's author and {target} is the channel name — both verbatim, never translate them; {count} is the number of unread messages the notification carries.
 #: client/service-worker.js:1137
 msgctxt "sw.titleChannelCount"
 msgid "{nick} in {target} ({count})"
-msgstr "{nick}가 {target}에 있습니다 ({count})"
+msgstr "{target}의 {nick} ({count})"
 
 #. Push-notification title for a query (direct-message) conversation carrying more than one unread message. {nick} is the other side's nick, verbatim — never translate it; {count} is the number of unread messages.
 #: client/service-worker.js:1141
@@ -12617,7 +12617,7 @@ msgstr "{nick} 님이 {target} 님을 {channel}에 초대했습니다"
 #: client/components/MessageTypes/invite.vue:7
 msgctxt "system.inviteYou"
 msgid "{nick} has invited you to {channel}"
-msgstr "{nick} 님이 회원님을 {channel}에 초대했습니다"
+msgstr "{nick} 님이 {channel}에 초대했습니다"
 
 #. System line when a user joins a channel. {nick} is the joining user's nick, VERBATIM user content — never translate or inflect it; it renders as the interactive username element inline where the placeholder stands, so word order around it is the translator's.
 #: client/components/MessageTypes/join.vue:8
@@ -12629,7 +12629,7 @@ msgstr "{nick} 님이 채널에 들어왔습니다"
 #: client/components/MessageTypes/kick.vue:6
 msgctxt "system.kick"
 msgid "{nick} has kicked {target}"
-msgstr "{nick} 님이 {target} 님을 채널에서 내보냈습니다"
+msgstr "{nick} 님이 {target} 님을 채널에서 추방했습니다"
 
 #. System line when a channel or user mode changes. {nick} is the nick that set the mode, VERBATIM user content; {modes} is the verbatim mode change (e.g. +o nick), rendered as-is.
 #: client/components/MessageTypes/mode.vue:6
@@ -12659,7 +12659,7 @@ msgstr "{nick} 님이 접속을 종료했습니다"
 #: client/js/irc/authtoken.ts
 msgctxt "token.disconnected"
 msgid "Disconnected"
-msgstr "연결 해제"
+msgstr "연결 끊김"
 
 #. Reason given when the server answered a TOKEN GENERATE request with a FAIL that carried no text; shown inside the upload error notice. {code} is the server's error code, verbatim.
 #: client/js/irc/authtoken.ts
@@ -12707,7 +12707,7 @@ msgstr "이 기기에서는 GPU 모델을 실행할 수 있습니다."
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.none"
 msgid "Translation cannot run on this device."
-msgstr "이 기기에서는 번역이 실행할 수 없습니다."
+msgstr "이 기기에서는 번역을 실행할 수 없습니다."
 
 #. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: the graphics hardware allows too few storage buffers per shader, or too little workgroup memory, for the translation library. Lowercase start, short phrase like the other reasons in the list.
 #: client/components/Settings/Translation.vue
@@ -12719,37 +12719,37 @@ msgstr "GPU 셰이더 한도가 너무 낮음"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.insecureOrigin"
 msgid "insecure origin: WebGPU needs HTTPS or localhost — serve the app over HTTPS"
-msgstr "불안전한 출처: WebGPU는 HTTPS 또는 localhost를 사용해야 합니다 — 앱을 HTTPS로 제공하세요"
+msgstr "안전하지 않은 출처: WebGPU에는 HTTPS 또는 localhost가 필요합니다 — 앱을 HTTPS로 제공하세요"
 
 #. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: the browser has WebGPU but gave out no device. WebGPU is a web standard's name.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.noAdapter"
 msgid "WebGPU adapter unavailable"
-msgstr "WebGPU 어댑터가 사용할 수 없습니다"
+msgstr "WebGPU 어댑터를 사용할 수 없음"
 
 #. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: the graphics hardware lacks half-precision arithmetic.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.noF16"
 msgid "no 16-bit float shaders"
-msgstr "16비트 플 oat 쉐더가 없습니다"
+msgstr "16비트 부동소수점 셰이더 없음"
 
 #. One reason no model can run, listed under the device verdict in Settings → Translation: the browser lacks the WebAssembly SIMD instructions. Both are technical names.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.noWasmSimd"
 msgid "no WebAssembly SIMD"
-msgstr "WebAssembly SIMD가 없습니다"
+msgstr "WebAssembly SIMD 없음"
 
 #. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: the browser offers no WebGPU. WebGPU is a web standard's name.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.noWebgpu"
 msgid "no WebGPU"
-msgstr "WebGPU가 없습니다"
+msgstr "WebGPU 없음"
 
 #. One reason listed under the device verdict in Settings → Translation: the check of what the device can do threw an error, so nothing could be measured.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.probeFailed"
 msgid "the device check itself failed"
-msgstr "장치 검사 자체가 실패했습니다"
+msgstr "기기 검사 자체가 실패함"
 
 #. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation. {limit} is what this device's graphics processor can bind in one buffer, {needed} what the smallest GPU model needs (its largest piece); both are sizes such as "128 MiB" (binary units, kept as they are). GPU is the usual abbreviation for the graphics processor.
 #: client/components/Settings/Translation.vue
@@ -12761,7 +12761,7 @@ msgstr "이 GPU는 버퍼 하나에 최대 {limit}까지 바인딩할 수 있습
 #: client/components/TranslationLine.vue
 msgctxt "translate.chip.alreadyIn"
 msgid "Already in {language}, not translated. Translation options"
-msgstr "이미 {language}에 있습니다. 번역 옵션"
+msgstr "이미 {language} 텍스트이므로 번역하지 않음. 번역 옵션"
 
 #. Tooltip and aria-label of a translation line's chip: the languages it names, then the standard suffix.
 #: client/components/TranslationLine.vue
@@ -12779,31 +12779,31 @@ msgstr "언어가 구분되지 않아 번역되지 않았습니다. 번역 옵�
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.placeholder"
 msgid "Write to {name} · sent in {language}"
-msgstr "{name}로 작성 · {language}에서 전송"
+msgstr "{name}에 메시지 쓰기 · {language}(으)로 전송"
 
 #. Placeholder of the message input when the channel's write target is the language the user reads: every line is corrected (spelling and grammar) before it is sent. {name} is the channel or user name, verbatim; the middle dot is part of the copy.
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.placeholderCorrected"
 msgid "Write to {name} · sent corrected"
-msgstr "{name}에게 쓰기 · 수정된 메시지 전송"
+msgstr "{name}에 메시지 쓰기 · 교정해서 전송"
 
 #. Tooltip and aria-label of the composer's translate button while the channel corrects every message (spelling and grammar) in {language}, the user's own language, before sending; a click turns that off. The middle dot is part of the copy.
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.sendCorrectedOn"
 msgid "Sending corrected in {language} · click to stop"
-msgstr "{language}에서 수정된 메시지 전송 중 · 중지하려면 클릭"
+msgstr "{language}(으)로 교정해서 전송 중 · 클릭하여 중지"
 
 #. Tooltip and aria-label of the composer's translate button (the language mark beside the attachment and send buttons) while no send target is set; a click opens a dialog to pick the language every message is sent in, or a correction pass. Ends with an ellipsis.
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.sendOff"
 msgid "Translate what I send…"
-msgstr "제가 보낼 메시지를 번역해요..."
+msgstr "보내는 메시지 번역…"
 
 #. Tooltip and aria-label of the composer's translate button while the channel sends every message translated into {language} (a language name in the interface language); a click turns that off. The middle dot is part of the copy.
 #: client/components/ChatInput.vue
 msgctxt "translate.composer.sendOn"
 msgid "Sending in {language} · click to stop"
-msgstr "{language} 전송 중 · 중지하려면 클릭하세요"
+msgstr "{language}(으)로 전송 중 · 클릭하여 중지"
 
 #. Extra line in the dialog asking before a translation model is downloaded, shown only when the browser reports a cellular connection or Data Saver: a warning that the download may cost data.
 #: client/js/translate/index.ts
@@ -12857,7 +12857,7 @@ msgstr "번역 엔진이 이 요청을 처리할 수 없습니다: {detail}"
 #: client/js/helpers/translateErrors.ts
 msgctxt "translate.error.workerDisposed"
 msgid "translation worker disposed"
-msgstr "번역 작업자가 처리되었습니다."
+msgstr "번역 워커가 종료됨"
 
 #. Text in front of the failure reason on a message whose translation failed (with a retry button beside it).
 #: client/components/TranslationLine.vue
@@ -12903,7 +12903,7 @@ msgstr "말투"
 #: client/components/Chat.vue
 msgctxt "translate.header.off"
 msgid "Translate messages into {reading}"
-msgstr "메시지를 {reading}로 번역하라"
+msgstr "메시지를 {reading}(으)로 번역"
 
 #. Tooltip of the translate button in a chat window's header when translation is off and the engine has paused. {reading} is a language name; {reason} is the engine's own untranslated message.
 #: client/components/Chat.vue
@@ -12915,13 +12915,13 @@ msgstr "{reading}로 메시지 번역, 일시 중지: {reason}"
 #: client/components/Chat.vue
 msgctxt "translate.header.offWrite"
 msgid "Translate messages into {reading}, sending in {writing}"
-msgstr "{reading}로 메시지 번역, {writing} 송신"
+msgstr "{reading}(으)로 메시지 번역, {writing}(으)로 전송"
 
 #. Tooltip of the translate button in a chat window's header when only outgoing messages are translated and the engine has paused. {reading} and {writing} are language names; {reason} is the engine's own untranslated message.
 #: client/components/Chat.vue
 msgctxt "translate.header.offWritePaused"
 msgid "Translate messages into {reading}, sending in {writing}, paused: {reason}"
-msgstr "{reading}로 메시지 번역, {writing} 송신, 일시 중지: {reason}"
+msgstr "{reading}(으)로 메시지 번역, {writing}(으)로 전송, 일시 중지: {reason}"
 
 #. Tooltip of the translate button in a chat window's header while incoming messages are being translated. {reading} is a language name.
 #: client/components/Chat.vue
@@ -12939,13 +12939,13 @@ msgstr "{reading}로 번역 중, 일시 중지: {reason}"
 #: client/components/Chat.vue
 msgctxt "translate.header.readWrite"
 msgid "Translating into {reading}, sending in {writing}"
-msgstr "{reading}로 번역 중, {writing} 전송 중"
+msgstr "{reading}(으)로 번역 중, {writing}(으)로 전송 중"
 
 #. Tooltip of the translate button in a chat window's header when reading and writing are both translated but the engine has paused. {reading} and {writing} are language names; {reason} is the engine's own untranslated message.
 #: client/components/Chat.vue
 msgctxt "translate.header.readWritePaused"
 msgid "Translating into {reading}, sending in {writing}, paused: {reason}"
-msgstr "{reading}로 번역 중, {writing} 전송 중, 일시 중지: {reason}"
+msgstr "{reading}(으)로 번역 중, {writing}(으)로 전송 중, 일시 중지: {reason}"
 
 #. Tooltip and aria-label of the translate button in a chat window's header on a touch device, where tapping it opens the translation panel.
 #: client/components/Chat.vue
@@ -12958,7 +12958,7 @@ msgstr "번역 설정"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.limitedLanguage"
 msgid "Translations into and out of this language are often wrong."
-msgstr "이 언어로의 번역과 이 언어에서의 번역은 종종 오류가 있습니다."
+msgstr "이 언어로 또는 이 언어에서 번역하면 자주 틀립니다."
 
 #. Note shown in the composer's translation strip or under a message while the model it needs is being fetched for the first time. {model} is the model's name, {percent} a number from 0 to 100.
 #: client/js/helpers/modelLabel.ts
@@ -13000,19 +13000,19 @@ msgstr "{language}에서 재번역"
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.retranslateFromPicker"
 msgid "Retranslate from…"
-msgstr "…에서 재번역"
+msgstr "다른 언어에서 재번역…"
 
 #. A translation chip's menu item.
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.showOriginal"
 msgid "Show original only"
-msgstr "원본만 보여주세요"
+msgstr "원문만 표시"
 
 #. A translation chip's menu item.
 #: client/components/TranslationLine.vue
 msgctxt "translate.menu.translateAnyway"
 msgid "Translate anyway"
-msgstr "번역을 계속하세요"
+msgstr "그래도 번역"
 
 #. Item of the menu the message toolbar's Translate action opens: pick the language this line is in before translating it. Ends in an ellipsis because a dialog follows.
 #: client/components/MessageActions.vue
@@ -13066,7 +13066,7 @@ msgstr "실패: {error}"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.model.failedUnknown"
 msgid "Failed: unknown error"
-msgstr "실패: 알려지지 않은 오류"
+msgstr "실패: 알 수 없는 오류"
 
 #. The name of a translation model in Settings → Translation: a large language model that runs on the graphics processor. {name} is the model's product name, never translated; GPU is the usual abbreviation for the graphics processor.
 #: client/js/helpers/modelLabel.ts
@@ -13091,7 +13091,7 @@ msgstr "{needed} 크기의 GPU 버퍼가 필요합니다. 이 기기는 최대 {
 #: client/js/helpers/modelLabel.ts
 msgctxt "translate.model.nllb"
 msgid "NLLB-200 600M (CPU, 200 languages)"
-msgstr "NLLB-200 600M (CPU, 200 언어)"
+msgstr "NLLB-200 600M (CPU, 200개 언어)"
 
 #. State of a model row in Settings → Translation: the model is not on this device yet.
 #: client/components/Settings/Translation.vue
@@ -13127,7 +13127,7 @@ msgstr "위에서 꺼짐"
 #: client/components/TranslationLine.vue
 msgctxt "translate.notTranslated"
 msgid "Not translated"
-msgstr "번역되지 않았습니다"
+msgstr "번역 안 됨"
 
 #. Lead sentence when a translation is unavailable for a language pair (the composer's translate dialog, the translation panel's 'Send my messages in'); the reason follows as a sentence of its own. {from} and {to} are language names, already in the interface language.
 #: client/components/SourceLanguagePicker.vue
@@ -13164,19 +13164,19 @@ msgstr "번역"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.languagesHint"
 msgid "Lines in these languages are recognised even when they are short or look alike."
-msgstr "이러한 언어의 줄들은 짧거나 유사해도 인식됩니다."
+msgstr "이 언어들로 된 줄은 짧거나 비슷해 보여도 인식됩니다."
 
 #. The off choice: the segmented switch for translating incoming messages, and the first option of the 'send my messages in' picker, both in the translation panel.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.off"
 msgid "Off"
-msgstr "끄기"
+msgstr "끔"
 
 #. The on choice of the segmented switch for translating incoming messages, in the translation panel.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.on"
 msgid "On"
-msgstr "켜기"
+msgstr "켬"
 
 #. Note under the 'Send my messages in' picker of the translation panel, on a device without the GPU model. {language} is the user's own language (the one they read), shown greyed in that picker: choosing it would mean correcting one's own messages, which only the GPU model does. A reason sentence follows on its own line.
 #: client/components/TranslationPanel.vue
@@ -13188,7 +13188,7 @@ msgstr "{language}은(는) 회색으로 표시됩니다: 메시지를 교정하�
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.readHint"
 msgid "Lines others send are shown with a translation underneath."
-msgstr "다른 사람의 줄은 번역이 있는 아래에 표시됩니다."
+msgstr "다른 사람이 보낸 줄 아래에 번역이 표시됩니다."
 
 #. Label of the on/off switch for translating incoming messages in the translation panel. {language} is the language name they would be translated into.
 #: client/components/TranslationPanel.vue
@@ -13218,25 +13218,25 @@ msgstr "{channel}의 번역"
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.variant"
 msgid "Variant"
-msgstr "변형"
+msgstr "지역 변형"
 
 #. Explanatory note under the regional variety field in the translation panel.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.variantHint"
 msgid "A regional flavour the model should aim for."
-msgstr "모델이 추구해야 할 지역적인 맛."
+msgstr "모델이 목표로 할 지역별 표현."
 
 #. Placeholder of the free-text field naming a regional variety of the target language, in the translation panel. Replace the example with one that suits the target language.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.variantPlaceholder"
 msgid "e.g. Brazilian Portuguese"
-msgstr "예: 경상도 방언"
+msgstr "예: 브라질 포르투갈어"
 
 #. Explanatory note under the 'send my messages in' picker in the translation panel. Enter is the keyboard key of that name.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.writeHint"
 msgid "Enter shows the translation first; Enter again sends it."
-msgstr "엔터는 번역을 먼저 보여주고, 다시 엔터를 누르면 보냅니다."
+msgstr "Enter를 누르면 번역이 먼저 표시되고, 한 번 더 누르면 전송됩니다."
 
 #. Label of the picker that chooses the language the user's own messages are translated into before sending, in the translation panel.
 #: client/components/TranslationPanel.vue
@@ -13290,7 +13290,7 @@ msgstr "이 줄의 원본 언어"
 #: client/components/SourceLanguagePicker.vue
 msgctxt "translate.picker.sameLanguage"
 msgid "Same language: spelling and grammar are corrected instead."
-msgstr "같은 언어: 오타와 문법은 수정됩니다."
+msgstr "같은 언어: 대신 맞춤법과 문법을 교정합니다."
 
 #. Lead sentence in the composer's translate dialog and the translation panel when the same language is picked as source and target (a spelling and grammar cleanup pass), which only the GPU model can do and which cannot run now; the reason (no WebGPU, buffer too small, switched off, …) follows as a sentence of its own.
 #: client/components/SourceLanguagePicker.vue
@@ -13351,7 +13351,7 @@ msgstr "번역하지 않고 요청에 대해 설명했습니다"
 #: client/components/TranslationLine.vue
 msgctxt "translate.retry"
 msgid "Retry the translation"
-msgstr "번역을 재시도하세요"
+msgstr "번역 다시 시도"
 
 #. Shown in place of the Translation settings when the site's operator has disabled the feature.
 #: client/components/Settings/Translation.vue
@@ -13375,7 +13375,7 @@ msgstr "GPU 모델"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.gpuModelHint"
 msgid "The larger model translates more naturally, needs about 3.4 GB of graphics memory and is slower."
-msgstr "더 큰 모델은 더 자연스럽게 번역되지만, 약 3.4GB의 그래픽 메모리가 필요하며 더 느리다."
+msgstr "더 큰 모델은 더 자연스럽게 번역하지만, 약 3.4GB의 그래픽 메모리가 필요하고 더 느립니다."
 
 #. Line under the GPU model select in Settings → Translation, for a model that is greyed out in the select because this device's GPU cannot hold it. {model} is the model's name, e.g. 'Qwen3 4B'. Followed by a sentence of its own giving the reason, e.g. 'It needs a GPU that binds 185.5 MiB in one buffer; this one binds 160 MiB.'
 #: client/components/Settings/Translation.vue
@@ -13405,13 +13405,13 @@ msgstr "인터페이스 언어"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.intro"
 msgid "Messages are translated on this device by a model it downloads once; nothing is sent to a translation service. Turn it on per channel from the translate button in the channel header."
-msgstr "이 기기에서 메시지가 다운로드한 모델을 사용하여 번역되며, 아무것도 번역 서비스에 전송되지 않는다. 번역 버튼을 클릭하여 채널 헤더에서 채널별로 활성화합니다."
+msgstr "메시지는 한 번 다운로드한 모델로 이 기기에서 번역되며, 번역 서비스로는 아무것도 보내지 않습니다. 채널 헤더의 번역 버튼으로 채널마다 켭니다."
 
 #. Explanatory note under the language picker in Settings → Translation.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.languageHint"
 msgid "The language the interface is written in and messages are translated into — one control. Automatic follows your browser's language."
-msgstr "인터페이스가 작성된 언어와 메시지가 번역되는 언어 — 하나의 제어입니다. 자동으로 브라우저 언어를 따라갑니다."
+msgstr "인터페이스 언어와 메시지를 번역할 언어를 함께 정하는 하나의 설정입니다. 자동은 브라우저 언어를 따릅니다."
 
 #. Label of the picker in Settings → Translation that chooses one language for both the interface and the translations of incoming messages.
 #: client/components/Settings/Translation.vue
@@ -13459,7 +13459,7 @@ msgstr "다른 모델이 지원하지 않는 언어에 NLLB-200 사용"
 #: client/components/Settings/Translation.vue
 msgctxt "translate.settings.workerError"
 msgid "Could not reach the translation worker: {error}"
-msgstr "번역 작업자에 도달할 수 없음: {error}"
+msgstr "번역 워커에 연결할 수 없음: {error}"
 
 #. Text of the second row of the composer's translation strip when translating the translation back into the user's own language failed.
 #: client/components/ChatInput.vue
@@ -13471,13 +13471,13 @@ msgstr "확인할 수 없음"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.copied"
 msgid "Copied"
-msgstr "복사"
+msgstr "복사됨"
 
 #. Tooltip and aria-label of the copy button in the composer's translation strip; it puts the translated text on the clipboard.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.copy"
 msgid "Copy the translation"
-msgstr "번역을 복사"
+msgstr "번역 복사"
 
 #. Text of the strip above the message composer when the outgoing translation failed; the user can press Enter again to send the message as they wrote it.
 #: client/components/ChatInput.vue
@@ -13495,7 +13495,7 @@ msgstr "계속 입력 (Escape)"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.polishChip"
 msgid "{language}, corrected"
-msgstr "{language}, 수정됨"
+msgstr "{language}, 교정됨"
 
 #. Tooltip of the composer translation strip's direction chip, naming the route a translation took. {from} and {to} are language names (or the word from translate.strip.sourceAuto), {model} is the model's technical id. This one ran on the main processor.
 #: client/components/ChatInput.vue
@@ -13507,7 +13507,7 @@ msgstr "{from} → {to} · {model} (CPU)"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.routeCpuRetried"
 msgid "{from} → {to} · {model} (CPU) · retried without a source"
-msgstr "{from} → {to} · {model} (CPU) · 원문 없이 재시도"
+msgstr "{from} → {to} · {model} (CPU) · 원문 언어 없이 재시도"
 
 #. Tooltip of the composer translation strip's direction chip, naming the route a translation took. {from} and {to} are language names (or the word from translate.strip.sourceAuto), {model} is the model's technical id. This one ran on the graphics processor.
 #: client/components/ChatInput.vue
@@ -13519,19 +13519,19 @@ msgstr "{from} → {to} · {model} (GPU)"
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.routeGpuRetried"
 msgid "{from} → {to} · {model} (GPU) · retried without a source"
-msgstr "{from} → {to} · {model} (GPU) · 원천이 없이 재시도"
+msgstr "{from} → {to} · {model} (GPU) · 원문 언어 없이 재시도"
 
 #. Tooltip and aria-label of the send button in the composer's translation strip after the translation failed: the message goes out in the language the user typed it in.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sendAsWritten"
 msgid "Send as written"
-msgstr "그대로 보내세요"
+msgstr "쓴 그대로 보내기"
 
 #. Tooltip and aria-label of the send button in the composer's translation strip: the translated text is what gets sent.
 #: client/components/ChatInput.vue
 msgctxt "translate.strip.sendTranslation"
 msgid "Send the translation"
-msgstr "번역을 보내세요"
+msgstr "번역 보내기"
 
 #. Stands in for the source language in the composer translation strip's route tooltip when no source was named and the model was left to work it out. Substituted as {from} in translate.strip.routeGpu and its siblings.
 #: client/components/ChatInput.vue
@@ -13543,13 +13543,13 @@ msgstr "자동"
 #: client/components/Chat.vue
 msgctxt "translate.topic.showOriginal"
 msgid "Show the original topic"
-msgstr "원래 주제를 보여주세요"
+msgstr "원래 주제 보기"
 
 #. Tooltip and aria-label of the small button before a channel topic in the chat header while the original is showing; pressing it shows the translation again.
 #: client/components/Chat.vue
 msgctxt "translate.topic.showTranslation"
 msgid "Show the translated topic"
-msgstr "번역된 주제를 보여주세요"
+msgstr "번역된 주제 보기"
 
 #. Lead sentence of the per-channel translation panel's notice, and the channel header translate button's label, when no translation engine can run (both switched off, or a device that runs neither); the reason follows as a sentence of its own.
 #: client/components/TranslationPanel.vue
@@ -13562,7 +13562,7 @@ msgstr "지금은 여기서 번역을 실행할 수 없습니다."
 #: client/components/TranslationLine.vue
 msgctxt "translate.unchangedReason"
 msgid "the line came back unchanged"
-msgstr "줄이 변하지 않았습니다"
+msgstr "줄이 바뀌지 않은 채 돌아왔습니다"
 
 #. Reason nothing can translate: the user turned off both engine switches. Shown wherever a translation action is unavailable (Settings → Translation's model rows, the composer's translate dialog, the per-channel translation panel, the message toolbar's tooltip), as a sentence of its own under a lead sentence such as 'Correcting a message needs the GPU model.'. 'Settings → Translation' names the settings tab.
 #: client/js/helpers/translateWhy.ts
@@ -13672,31 +13672,31 @@ msgstr "{language} 제거"
 msgctxt "typing.many"
 msgid "{nick1}, {nick2} and {count} other is typing…"
 msgid_plural "{nick1}, {nick2} and {count} others are typing…"
-msgstr[0] "{nick1}, {nick2} 및 {count} 명의 다른 사용자가 입력 중입니다…"
+msgstr[0] "{nick1}, {nick2} 외 {count}명이 입력 중입니다…"
 
 #. Line above the message input saying that one user is writing a message right now. {nick} is that user's name.
 #: client/components/TypingIndicator.vue:31
 msgctxt "typing.one"
 msgid "{nick} is typing…"
-msgstr "{nick}가 입력 중입니다…"
+msgstr "{nick} 님이 입력 중입니다…"
 
 #. Line above the message input saying that three users are writing messages right now. {nick1}, {nick2} and {nick3} are their names, in the order they started typing.
 #: client/components/TypingIndicator.vue:31
 msgctxt "typing.three"
 msgid "{nick1}, {nick2} and {nick3} are typing…"
-msgstr "{nick1}, {nick2} 및 {nick3}가 입력 중입니다…"
+msgstr "{nick1}, {nick2}, {nick3} 님이 입력 중입니다…"
 
 #. Line above the message input saying that two users are writing messages right now. {nick1} and {nick2} are their names, in the order they started typing.
 #: client/components/TypingIndicator.vue:31
 msgctxt "typing.two"
 msgid "{nick1} and {nick2} are typing…"
-msgstr "{nick1} 및 {nick2}가 입력 중입니다…"
+msgstr "{nick1}, {nick2} 님이 입력 중입니다…"
 
 #. Error notice when the file's type is not on the uploader's accepted list. {file} is the file's name — user content, never translated; {types} is the accepted-type list from the deploy's config, kept verbatim.
 #: client/js/upload.ts:788
 msgctxt "upload.badType"
 msgid "File {file} is not a type this uploader accepts ({types})"
-msgstr "파일 {file}은 이 업로더가 수용하지 않는 유형입니다 ({types})"
+msgstr "파일 {file}은(는) 이 업로더가 받지 않는 유형입니다 ({types})"
 
 #. Button of the upload confirmation dialog; clicking cancels the whole upload and sends nothing.
 #: client/components/UploadPreview.vue
@@ -13708,7 +13708,7 @@ msgstr "취소"
 #: client/js/upload.ts:460
 msgctxt "upload.cancelled"
 msgid "Upload cancelled"
-msgstr "업로드 취소"
+msgstr "업로드가 취소되었습니다"
 
 #. Confirmation button of the upload dialog when several files are queued (so in practice the count is 2 or more); clicking sends them all to the chat server. {count} is the number of files.
 #: client/components/UploadPreview.vue
@@ -13721,7 +13721,7 @@ msgstr[0] "파일 {count}개 업로드"
 #: client/components/UploadPreview.vue
 msgctxt "upload.confirmHint"
 msgid "Check that this is what you meant to share, then upload. Anyone who can open the link will be able to see it."
-msgstr "이 것이 실제로 공유하려는 것이었는지 확인한 후 업로드하세요. 누구든 링크를 열면 그것을 볼 수 있습니다."
+msgstr "공유하려던 것이 맞는지 확인한 뒤 업로드하세요. 링크를 열 수 있는 사람은 누구나 볼 수 있습니다."
 
 #. Confirmation button of the upload confirmation dialog when one file is queued; clicking sends it to the chat server.
 #: client/components/UploadPreview.vue
@@ -13745,7 +13745,7 @@ msgstr "이 파일을 업로드할까요?"
 #: client/js/upload.ts:765
 msgctxt "upload.disconnected"
 msgid "You are currently disconnected, unable to initiate upload process."
-msgstr "현재 연결이 해제되어 업로드 시작할 수 없습니다."
+msgstr "현재 연결이 끊어져 있어 업로드를 시작할 수 없습니다."
 
 #. Frame for a failed upload; the underlying reason follows the colon. {reason} is the browser's or endpoint's own message, kept verbatim — its content is not our copy.
 #: client/js/upload.ts:464
@@ -13769,7 +13769,7 @@ msgstr "업로드 실패: 업로더가 \"{field}\" URL을 반환하지 않았습
 #: client/js/upload.ts:447
 msgctxt "upload.noFetch"
 msgid "Upload failed: fetch is not available"
-msgstr "업로드 실패: fetch가 사용할 수 없습니다"
+msgstr "업로드 실패: fetch를 사용할 수 없습니다"
 
 #. Error notice when the upload endpoint's reply carries no usable link.
 #: client/js/upload.ts:365
@@ -13811,32 +13811,32 @@ msgstr "그대로 전송됩니다"
 #: client/js/upload.ts
 msgctxt "upload.refused"
 msgid "Upload refused by the network: {reason}"
-msgstr "네트워크가 거부한 업로드: {reason}"
+msgstr "네트워크가 업로드를 거부했습니다: {reason}"
 
 #. aria-label of the ✕ button on a file in the upload confirmation dialog; clicking removes that file from the upload. {name} is the file's name.
 #: client/components/UploadPreview.vue
 msgctxt "upload.removeOne"
 msgid "Don't upload {name}"
-msgstr "{name} 업로드하지 마세요"
+msgstr "{name} 업로드 안 함"
 
 #. Tooltip of the ✕ button on a file in the upload confirmation dialog; clicking removes the file from the upload.
 #: client/components/UploadPreview.vue
 msgctxt "upload.removeTitle"
 msgid "Don't upload this file"
-msgstr "이 파일을 업로드하지 마세요"
+msgstr "이 파일 업로드 안 함"
 
 #. Error notice when a file the user sent is larger than the uploader's size limit. {file} is the file's name — user content, never translated.
 #: client/js/upload.ts:779
 msgctxt "upload.tooLarge"
 msgid "File {file} is over the maximum allowed size"
-msgstr "파일 {file}은 최대 허용 크기 초과입니다"
+msgstr "파일 {file}이(가) 허용된 최대 크기를 초과합니다"
 
 #. Placeholder of the search field at the top of the user list panel: how many members the channel has while the list is being filtered. The singular shows with exactly one member, the plural otherwise.
 #: client/components/ChatUserList.vue:13
 msgctxt "userlist.count"
 msgid "{count} user"
 msgid_plural "{count} users"
-msgstr[0] "{count} 사용자"
+msgstr[0] "사용자 {count}명"
 
 #. Heading of the channel administrators group in the user list (channel mode +a, the & prefix).
 #: client/components/ChatUserList.vue
@@ -13848,7 +13848,7 @@ msgstr "관리자"
 #: client/components/ChatUserList.vue
 msgctxt "userlist.mode.halfOperators"
 msgid "Half-Operators"
-msgstr "반 관리자"
+msgstr "하프옵"
 
 #. Heading of the channel operators group in the user list (channel mode +o, the @ prefix).
 #: client/components/ChatUserList.vue
@@ -13872,7 +13872,7 @@ msgstr "사용자"
 #: client/components/ChatUserList.vue
 msgctxt "userlist.mode.voiced"
 msgid "Voiced"
-msgstr "구두로"
+msgstr "보이스"
 
 #. Visually hidden but screen-reader-spoken label of the search field at the top of the channel member panel, used to filter the member list by name.
 #: client/components/ChatUserList.vue:17
@@ -13993,7 +13993,7 @@ msgstr "자리 비움"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.bot"
 msgid "Is a bot:"
-msgstr "봇입니다:"
+msgstr "봇:"
 
 #. Row label of a WHOIS result card in the chat (a definition list: label, then value). The user's bouncer session (the server keeping their connection).
 #: client/components/MessageTypes/whois.vue
@@ -14047,7 +14047,7 @@ msgstr "호스트 마스크:"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.idleSince"
 msgid "Idle since:"
-msgstr "비어 있는 시간:"
+msgstr "유휴 시작:"
 
 #. Row label of a WHOIS result card in the chat (a definition list: label, then value). The kill list (K-line style ban list) the user is on. Shown to IRC operators.
 #: client/components/MessageTypes/whois.vue
@@ -14089,7 +14089,7 @@ msgstr "운영자:"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.realName"
 msgid "Real name:"
-msgstr "실제 이름:"
+msgstr "실명:"
 
 #. Whois row: the user's services-registered nick, verbatim.
 #: client/components/MessageTypes/whois.vue
@@ -14107,7 +14107,7 @@ msgstr "안전한 연결:"
 #: client/components/MessageTypes/whois.vue
 msgctxt "whois.special"
 msgid "Special:"
-msgstr "특별:"
+msgstr "기타:"
 
 #. Row label of a WHOIS result card in the chat (a definition list: label, then value). The WebIRC gateway the user connected through.
 #: client/components/MessageTypes/whois.vue
@@ -14137,13 +14137,13 @@ msgstr "모든 릴리스 보기"
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.aria"
 msgid "Changelog"
-msgstr "변경로그"
+msgstr "변경 기록"
 
 #. Link at the top of the changelog window that goes back to the help page; the left double angle quote is part of the copy.
 #: client/components/Windows/Changelog.vue
 msgctxt "windows.changelog.back"
 msgid "« Help"
-msgstr "« 도움"
+msgstr "« 도움말"
 
 #. Changelog window paragraph. {readNotes} is a link whose text is windows.changelog.readNotesLink ('Read the notes for v5.2.0') and {allReleases} a link whose text is windows.changelog.allReleasesLink ('see all releases').
 #: client/components/Windows/Changelog.vue
@@ -14197,7 +14197,7 @@ msgstr "완료"
 #: client/components/Windows/Settings.vue
 msgctxt "windows.settings.note"
 msgid "Changes are saved as you make them."
-msgstr "변경 사항을 저장합니다."
+msgstr "변경 사항은 바로 저장됩니다."
 
 #. Title of the settings window: the heading of the modal, its dialog aria-label, and the accessible name of the whole settings pane.
 #: client/components/Windows/Settings.vue

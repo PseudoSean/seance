@@ -11599,10 +11599,10 @@ msgctxt "settings.appearance.sampleSlide"
 msgid "Yes! Slide it until this is comfortable."
 msgstr ""
 
-#. First word of the checkbox label in Settings > Appearance that displays the server's Message Of The Day; the untranslated acronym 'MOTD' follows it as a marked abbreviation, so only this word is translated.
+#. Checkbox label in Settings > Appearance that displays the server's Message Of The Day when connecting. {motd} is the untranslated acronym 'MOTD', rendered as a marked abbreviation with a tooltip: put it where your grammar needs the object (for example 'MOTD anzeigen', 'MOTD を表示').
 #: client/components/Settings/Appearance.vue
 msgctxt "settings.appearance.showMotd"
-msgid "Show"
+msgid "Show {motd}"
 msgstr ""
 
 #. Checkbox in Settings > Appearance; when ticked, message timestamps include the seconds as well as hours and minutes.

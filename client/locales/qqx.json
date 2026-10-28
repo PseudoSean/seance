@@ -2026,7 +2026,7 @@
   "settings.appearance.sampleEnds": "‫ţḣé éñḋś àŕé ṁéàñţ ţö ḃé ţöö śṁàľľ àñḋ ţöö ḃïġ.ţḣé éñḋś àŕé ṁéàñţ ţö ḃé ţöö śṁàľľ àñḋ ţöö ḃïġ.‬",
   "settings.appearance.sampleGlasses": "‫ċàñ ýöü ŕéàḋ ţḣïś ẃïţḣöüţ ýöüŕ ġľàśśéś?ċàñ ýöü ŕéàḋ ţḣïś ẃïţḣöüţ ýöüŕ ġľàśśéś?‬",
   "settings.appearance.sampleSlide": "‫ýéś! śľïḋé ïţ üñţïľ ţḣïś ïś ċöṁḟöŕţàḃľé.ýéś! śľïḋé ïţ üñţïľ ţḣïś ïś ċöṁḟöŕţàḃľé.‬",
-  "settings.appearance.showMotd": "‫śḣöẃśḣöẃ‬",
+  "settings.appearance.showMotd": "‫śḣöẃ {motd}śḣöẃ {motd}‬",
   "settings.appearance.showSeconds": "‫ïñċľüḋé śéċöñḋś ïñ ţïṁéśţàṁṗïñċľüḋé śéċöñḋś ïñ ţïṁéśţàṁṗ‬",
   "settings.appearance.statusCondensed": "‫ċöñḋéñśé śţàţüś ṁéśśàġéś ţöġéţḣéŕċöñḋéñśé śţàţüś ṁéśśàġéś ţöġéţḣéŕ‬",
   "settings.appearance.statusHeading": "‫śţàţüś ṁéśśàġéśśţàţüś ṁéśśàġéś‬",
