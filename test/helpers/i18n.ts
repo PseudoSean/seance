@@ -12,6 +12,7 @@ import {
 	bestLocale,
 	interpolate,
 	isRTL,
+	isTraditionalChinese,
 	resolvableTags,
 	setCatalog,
 	setWarnMissing,
@@ -75,6 +76,43 @@ describe("i18n core", () => {
 		expect(bestLocale(["en-GB"], ["en", "de"])).to.equal("en");
 		expect(bestLocale(["fr-CA"], ["en", "de"])).to.equal("en");
 		expect(bestLocale(["xx-YY", "de-DE"], ["en", "de"])).to.equal("de"); // a later preference wins when an earlier has no match
+	});
+
+	it("never resolves Traditional Chinese to the Simplified catalog", () => {
+		const available = ["en", "ja", "pt", "zh"];
+		// What Chrome sends from Taiwan: the bare base appended after the
+		// regional tag must not reach zh either.
+		expect(bestLocale(["zh-TW", "zh", "en-US", "en"], available)).to.equal("en");
+		expect(bestLocale(["zh-TW"], available)).to.equal("en");
+		expect(bestLocale(["zh-HK", "zh"], available)).to.equal("en");
+		expect(bestLocale(["zh-MO"], available)).to.equal("en");
+		expect(bestLocale(["zh-Hant"], available)).to.equal("en");
+		expect(bestLocale(["zh-Hant-CN"], available), "the script beats the region").to.equal("en");
+		expect(bestLocale(["zh_TW"], available)).to.equal("en");
+		// A later preference still wins, an explicitly Simplified one included.
+		expect(bestLocale(["zh-TW", "zh", "ja"], available)).to.equal("ja");
+		expect(bestLocale(["zh-TW", "zh-CN"], available)).to.equal("zh");
+		expect(bestLocale(["zh-HK", "zh-Hans"], available)).to.equal("zh");
+		// Simplified readers keep zh.
+		expect(bestLocale(["zh"], available)).to.equal("zh");
+		expect(bestLocale(["zh-CN"], available)).to.equal("zh");
+		expect(bestLocale(["zh-SG"], available)).to.equal("zh");
+		expect(bestLocale(["zh-Hans-TW"], available), "the script beats the region").to.equal("zh");
+		expect(bestLocale(["zh-Hans-HK", "en"], available)).to.equal("zh");
+		// A Traditional catalog, were one shipped, would match its own tag.
+		expect(bestLocale(["zh-TW", "zh"], [...available, "zh-TW"])).to.equal("zh-TW");
+		// European Portuguese keeps the Brazilian catalog.
+		expect(bestLocale(["pt-PT"], available)).to.equal("pt");
+	});
+
+	it("tells Traditional Chinese tags from Simplified ones", () => {
+		for (const tag of ["zh-TW", "zh-hk", "zh-MO", "zh-Hant", "zh-Hant-TW", "zh-Hant-CN"]) {
+			expect(isTraditionalChinese(tag), tag).to.equal(true);
+		}
+
+		for (const tag of ["zh", "zh-CN", "zh-SG", "zh-Hans", "zh-Hans-TW", "ja-TW", "en-HK", ""]) {
+			expect(isTraditionalChinese(tag), tag).to.equal(false);
+		}
 	});
 
 	it("auto-resolution may pick a dev-only locale in development, never in production", () => {
@@ -143,6 +181,35 @@ describe("i18n core", () => {
 			dir: isRTL(tag) ? "rtl" : "ltr",
 		});
 		expect(runPrePaint({locale: "auto"}, ["en-GB"])).to.deep.equal({lang: "en", dir: "ltr"});
+	});
+
+	it("the pre-paint script and bestLocale agree on Traditional Chinese", () => {
+		// The pre-paint copy of the rule runs before the bundle: were it to
+		// claim zh where boot activates en, <html lang> would pick the wrong
+		// CJK fonts until boot. Both resolve the same lists the same way.
+		const tags = JSON.parse(readFileSync("client/locales/tags.json", "utf8")) as string[];
+		expect(tags, "the baked list ships the Simplified catalog").to.include("zh");
+
+		for (const languages of [
+			["zh-TW", "zh", "en-US", "en"],
+			["zh-HK", "zh"],
+			["zh-Hant-CN"],
+			["zh-TW", "zh", "ja"],
+			["zh-TW", "zh-CN"],
+			["zh-Hans-TW"],
+			["zh-SG"],
+			["zh"],
+			["pt-PT"],
+		]) {
+			// Nothing matched leaves lang as authored (en), which is
+			// bestLocale's own fallback.
+			const want = bestLocale(languages, tags);
+			expect(runPrePaint({}, languages).lang || "en", languages.join(",")).to.equal(want);
+		}
+
+		expect(runPrePaint({}, ["zh-TW", "zh"])).to.deep.equal({lang: "", dir: ""});
+		// An explicit pick of zh is the user's: it activates as chosen.
+		expect(runPrePaint({locale: "zh"}, ["zh-TW"])).to.deep.equal({lang: "zh", dir: "ltr"});
 	});
 
 	it("the pre-paint script leaves lang/dir untouched for an unavailable stored tag", () => {

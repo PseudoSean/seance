@@ -7,6 +7,9 @@
 // RTL set in client/js/prepaint.js is pinned by test/helpers/i18n.ts.
 
 import enCatalog from "../../locales/en.json";
+import {isTraditionalChinese} from "./traditionalChinese";
+
+export {isTraditionalChinese};
 
 /** Sentinel var value for frame-splitting call sites: "this placeholder is
  * known — leave it in the template". Components that split a translated
@@ -450,13 +453,36 @@ export function frameSegments(template: string, names: string[]): string[] {
 	return segments;
 }
 
-/** "auto" resolution: exact tag first, then base language, then en. */
+/** "auto" resolution: exact tag first, then base language, then en.
+ *
+ * The one exception to the base match: the only Chinese catalog is
+ * Simplified (`zh`), and a reader of Traditional is better served by
+ * English than by a script they did not ask for — so a Traditional tag
+ * (`zh-TW`, `zh-HK`, `zh-MO`, `zh-Hant-*`) never falls to `zh`, and
+ * neither does a bare `zh` after one (Chrome appends the base to every
+ * regional tag: `zh-TW, zh, en-US, en`). An explicitly Simplified tag
+ * later in the list (`zh-CN`, `zh-Hans`) still picks it. A Traditional
+ * catalog, should one ever ship, matches its own tag exactly. */
 export function bestLocale(preferred: readonly string[], available: readonly string[]): string {
+	let traditional = false;
+
 	for (const want of preferred) {
+		const isTraditional = isTraditionalChinese(want);
+
+		if (isTraditional) {
+			traditional = true;
+		} else if (traditional && want.toLowerCase() === "zh") {
+			continue;
+		}
+
 		const exact = available.find((candidate) => candidate.toLowerCase() === want.toLowerCase());
 
 		if (exact) {
 			return exact;
+		}
+
+		if (isTraditional) {
+			continue;
 		}
 
 		const base = want.split("-")[0].toLowerCase();

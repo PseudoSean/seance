@@ -44,13 +44,33 @@
 				}
 			}
 		} else {
+			// Traditional Chinese never falls to the Simplified "zh", and
+			// neither does the bare "zh" Chrome appends after it — the same
+			// rule as isTraditionalChinese()/bestLocale() in
+			// client/js/i18n/core.ts (test/helpers/i18n.ts runs both).
+			let traditional = false;
+
 			for (let i = 0; i < (navigator.languages || []).length && !tag; i++) {
 				const want = navigator.languages[i].toLowerCase();
+				const parts = want.split(/[-_]/);
+				const isTraditional =
+					parts[0] === "zh" &&
+					(parts.indexOf("hant") !== -1 ||
+						(parts.indexOf("hans") === -1 &&
+							(parts.indexOf("tw") !== -1 ||
+								parts.indexOf("hk") !== -1 ||
+								parts.indexOf("mo") !== -1)));
+
+				if (isTraditional) {
+					traditional = true;
+				} else if (traditional && want === "zh") {
+					continue;
+				}
 
 				for (let j = 0; j < available.length && !tag; j++) {
 					if (
 						want === available[j].toLowerCase() ||
-						want.split("-")[0] === available[j].toLowerCase()
+						(!isTraditional && want.split("-")[0] === available[j].toLowerCase())
 					) {
 						tag = available[j];
 					}
