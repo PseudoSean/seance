@@ -7637,12 +7637,14 @@ html[data-reduce-motion] #chat .msg-copied {
 
 /* Translate when nothing here can translate: on offer, dimmed, its reason
  * the tooltip and the button's description (MessageActions.vue). */
-#chat .msg-action:disabled {
+#chat .msg-action:disabled,
+#chat .msg-action[aria-disabled="true"] {
 	opacity: 0.45;
 	cursor: default;
 }
 
-#chat .msg-action:disabled:hover {
+#chat .msg-action:disabled:hover,
+#chat .msg-action[aria-disabled="true"]:hover {
 	background: transparent;
 	color: var(--body-color-muted);
 }

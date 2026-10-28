@@ -415,12 +415,15 @@ export default defineComponent({
 		// stays, says so, and opens the panel, whose banner gives the reason.
 		const translationBlocked = computed(() => !!currentTranslationBlock());
 		const translateLabel = computed(() => {
-			if (touch) {
-				return t("translate.header.settings");
-			}
-
+			// Before the touch label: a tap opens the panel either way, but
+			// the button's name should not promise settings when nothing
+			// here can translate.
 			if (translationBlocked.value) {
 				return t("translate.unavailable.lead");
+			}
+
+			if (touch) {
+				return t("translate.header.settings");
 			}
 
 			// Every language the tooltip names is named in the language the

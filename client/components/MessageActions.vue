@@ -63,7 +63,8 @@
 			:aria-label="translateLabel"
 			:title="translateBlocked || translateLabel"
 			:aria-haspopup="hiddenTranslation || translateBlocked ? undefined : 'menu'"
-			:disabled="!!translateBlocked"
+			:disabled="!!translateBlocked && !explainOnTap"
+			:aria-disabled="translateBlocked && explainOnTap ? 'true' : undefined"
 			:aria-describedby="translateBlocked ? translateWhyId : undefined"
 			@click.stop="translate"
 		/>
@@ -283,6 +284,9 @@ export default defineComponent({
 		// selects and copies as it always has, and does not get the button —
 		// on a touchscreen laptop, whichever was used last decides.
 		const canCopyText = computed(() => sharedTouch().value && !!props.message.text);
+		// A blocked Translate stays tappable under a finger (and says why);
+		// under a mouse it is disabled with the reason as its tooltip.
+		const explainOnTap = computed(() => sharedTouch().value);
 		const copyText = () => copy(props.message.text ?? "");
 
 		// Only plain text can be edited (the IRC layer resends it tagged).
@@ -411,6 +415,15 @@ export default defineComponent({
 		};
 
 		const translate = (event: MouseEvent) => {
+			// Blocked under a finger: the tooltip that says why never shows
+			// there, so the tap opens the channel's translation panel, whose
+			// notice gives the reason and the way to Settings.
+			if (translateBlocked.value) {
+				store.commit("translationPanelFor", props.channel.id);
+				emit("done");
+				return;
+			}
+
 			if (hiddenTranslation.value) {
 				// Showing it again must not cost a new translation, and there
 				// is nothing to choose: no menu on this one.
@@ -500,6 +513,7 @@ export default defineComponent({
 			canTranslate,
 			translateBlocked,
 			translateWhyId,
+			explainOnTap,
 			readingLanguage,
 			codeBlocks,
 			copied,
