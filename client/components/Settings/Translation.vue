@@ -71,6 +71,11 @@
 					t("translate.capability.cpu")
 				}}</template>
 				<template v-else>{{ t("translate.capability.none") }}</template>
+				<!-- What the GPU binds in one buffer: whether a GPU model can
+				     load is that number against its largest tensor. -->
+				<span v-if="capability.maxBufferBytes > 0" class="translate-device-limit">{{
+					t("translate.capability.bufferLimit", {size: size(capability.maxBufferBytes)})
+				}}</span>
 				<!-- Each reason is a phrase of its own: a translator is never
 				     handed a list glued together with a comma. -->
 				<ul v-if="capability.reasons.length" class="translate-device-reasons">
@@ -136,6 +141,12 @@
 					>
 					<span class="translate-model-size">{{ size(view.ref.sizeBytes) }}</span>
 					<span class="translate-model-state">{{ stateLabel(view) }}</span>
+					<span v-if="tooLarge(view.ref)" class="translate-model-needs">{{
+						t("translate.model.needsBuffer", {
+							needed: size(view.ref.largestBufferBytes ?? 0),
+							limit: size(capability?.maxBufferBytes ?? 0),
+						})
+					}}</span>
 					<span v-if="view.status === 'downloading'" class="translate-model-track">
 						<span
 							class="translate-model-fill"
@@ -240,6 +251,16 @@
 	color: var(--error-fg, #c33);
 }
 
+/* What a GPU model needs against what this GPU binds: a row of its own. */
+.translate-model-needs {
+	grid-column: 1 / -1;
+	color: var(--body-color-muted);
+}
+
+.translate-device-limit {
+	display: block;
+}
+
 /* The device-tier reasons: each a phrase of its own, not a comma list. */
 .translate-device-reasons {
 	margin: 0.25rem 0 0;
@@ -293,7 +314,7 @@ import {modelLabel} from "../../js/helpers/modelLabel";
 import {useStore} from "../../js/store";
 import {translateService} from "../../js/translate";
 import type {ModelRef} from "../../js/translate/engine";
-import {llmChoice, llmName} from "../../js/translate/models";
+import {LLM_MIN_BUFFER_BYTES, llmChoice, llmFits, llmName} from "../../js/translate/models";
 import {isLimitedLanguage} from "../../js/translate/routes.default";
 import {readingLanguage} from "../../js/translate/reader";
 import type {CapabilityReason} from "../../js/translate/capability";
@@ -366,7 +387,10 @@ export default defineComponent({
 				case "NO_F16":
 					return t("translate.capability.reason.noF16");
 				case "SMALL_BUFFER":
-					return t("translate.capability.reason.smallBuffer");
+					return t("translate.capability.reason.smallBuffer", {
+						limit: size(capability.value?.maxBufferBytes ?? 0),
+						needed: size(LLM_MIN_BUFFER_BYTES),
+					});
 				case "NO_WASM_SIMD":
 					return t("translate.capability.reason.noWasmSimd");
 				case "PROBE_FAILED":
@@ -411,7 +435,17 @@ export default defineComponent({
 				return false;
 			}
 
-			return modelRef.engine === "llm" ? cap.tier === "gpu" : cap.tier !== "none";
+			return modelRef.engine === "llm"
+				? cap.tier === "gpu" && llmFits(modelRef, cap.maxBufferBytes)
+				: cap.tier !== "none";
+		};
+
+		// A GPU model this device's GPU cannot bind (models.ts llmFits) says
+		// how much it needs; on a device with no GPU tier the verdict says it.
+		const tooLarge = (modelRef: ModelRef) => {
+			const cap = capability.value;
+
+			return !!cap && cap.tier === "gpu" && !llmFits(modelRef, cap.maxBufferBytes);
 		};
 
 		// The ref comes off a reactive `v-for` row (store.state.translation.models);
@@ -433,6 +467,7 @@ export default defineComponent({
 			t,
 			modelLabel,
 			reasonText,
+			tooLarge,
 			store,
 			enabled,
 			models,

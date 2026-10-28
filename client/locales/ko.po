@@ -12883,6 +12883,12 @@ msgctxt "translate.action.translate"
 msgid "Translate"
 msgstr "번역"
 
+#. Line under the device verdict in Settings → Translation: the largest buffer this device's graphics processor can bind in one piece, measured by the browser. {size} is a size such as "512 MiB" (binary units, kept as they are). A GPU model loads only if its largest piece fits.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.capability.bufferLimit"
+msgid "Largest GPU buffer: {size}"
+msgstr "최대 GPU 버퍼: {size}"
+
 #. Verdict of the device check in Settings → Translation: the large graphics-processor model cannot run, the smaller main-processor ones can. Any reasons follow as their own list.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.cpu"
@@ -12937,11 +12943,11 @@ msgctxt "translate.capability.reason.probeFailed"
 msgid "the device check itself failed"
 msgstr "장치 검사 자체가 실패했습니다"
 
-#. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation: too little addressable graphics memory. GiB is the binary gigabyte symbol and stays as it is.
+#. One reason the graphics-processor model cannot run, listed under the device verdict in Settings → Translation. {limit} is what this device's graphics processor can bind in one buffer, {needed} what the smallest GPU model needs (its largest piece); both are sizes such as "128 MiB" (binary units, kept as they are). GPU is the usual abbreviation for the graphics processor.
 #: client/components/Settings/Translation.vue
 msgctxt "translate.capability.reason.smallBuffer"
-msgid "GPU buffer limit under 1 GiB"
-msgstr "GPU 버퍼 제한이 1GiB 미만입니다"
+msgid "The GPU binds at most {limit} in one buffer; the smallest GPU model needs {needed}"
+msgstr "이 GPU는 버퍼 하나에 최대 {limit}까지 바인딩할 수 있습니다. 가장 작은 GPU 모델에는 {needed}이(가) 필요합니다"
 
 #. Tooltip and aria-label of a translation line's chip, skipped because the line is already in the reading language. {language} is its name in the reading language.
 #: client/components/TranslationLine.vue
@@ -13229,6 +13235,12 @@ msgstr "{name} (GPU, 모든 언어)"
 msgctxt "translate.model.loadingPercent"
 msgid "Loading… {percent}%"
 msgstr "로딩… {percent}%"
+
+#. Under one GPU model in the model list of Settings → Translation, when this device cannot load it: {needed} is the model's largest piece, {limit} what this device's graphics processor can bind in one buffer; both are sizes such as "186 MiB" (binary units, kept as they are). Its Download button is greyed out.
+#: client/components/Settings/Translation.vue
+msgctxt "translate.model.needsBuffer"
+msgid "Needs a GPU buffer of {needed}; this device binds at most {limit}"
+msgstr "{needed} 크기의 GPU 버퍼가 필요합니다. 이 기기는 최대 {limit}까지 바인딩할 수 있습니다"
 
 #. The name of a translation model in Settings → Translation. NLLB-200 600M is a product name; CPU is the usual abbreviation for the main processor; it covers 200 languages.
 #: client/js/helpers/modelLabel.ts

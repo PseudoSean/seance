@@ -134,7 +134,7 @@ export default async function run(page) {
 		)) ===
 			// The model names and their sizes are not copy: a product name and
 			// a formatted byte count, neither of which the catalog carries.
-			`${EN["translate.settings.gpuAutomatic"]}|Qwen3 1.7B · 1 GiB|Qwen3 4B · 2.1 GiB`
+			`${EN["translate.settings.gpuAutomatic"]}|Qwen3 1.7B · 938.4 MiB|Qwen3 4B · 2.1 GiB`
 	);
 	// The fake capability's 4 GiB adapter fits the 4B, so the
 	// capability-based default picks it over the 1.7B.
