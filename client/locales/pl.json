@@ -2383,6 +2383,7 @@
   "translate.panel.languagesHint": "Wiersze w językach te są rozpoznawane nawet jeśli są krótkie lub wyglądają podobnie.",
   "translate.panel.off": "Wyłącz",
   "translate.panel.on": "Włącz",
+  "translate.panel.ownLanguageNeedsGpu": "{language} jest wyszarzony: poprawianie wiadomości wymaga modelu GPU.",
   "translate.panel.readHint": "Wiersze wysyłane przez innych są wyświetlane z przetłumaczeniem pod nimi.",
   "translate.panel.readIn": "Czytaj wiadomości w języku: {language}",
   "translate.panel.reading": "Czytanie",

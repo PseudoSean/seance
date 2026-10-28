@@ -2328,6 +2328,7 @@
   "translate.panel.languagesHint": "Řady v těchto jazycích jsou poznávány i když jsou krátké nebo vypadají stejně.",
   "translate.panel.off": "Vypnuto",
   "translate.panel.on": "Zapnuto",
+  "translate.panel.ownLanguageNeedsGpu": "Jazyk {language} je zašedlý: oprava zprávy vyžaduje model GPU.",
   "translate.panel.readHint": "Řady, které odesílají jiní, jsou znázorněny s překladem pod nimi.",
   "translate.panel.readIn": "Číst zprávy v jazyce: {language}",
   "translate.panel.reading": "Přečtení",

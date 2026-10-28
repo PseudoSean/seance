@@ -2302,6 +2302,7 @@
   "translate.panel.languagesHint": "Lines in these languages are recognised even when they are short or look alike.",
   "translate.panel.off": "Off",
   "translate.panel.on": "On",
+  "translate.panel.ownLanguageNeedsGpu": "{language} is greyed out: correcting a message needs the GPU model.",
   "translate.panel.readHint": "Lines others send are shown with a translation underneath.",
   "translate.panel.readIn": "Read messages in {language}",
   "translate.panel.reading": "Reading",

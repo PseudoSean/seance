@@ -2229,6 +2229,7 @@
   "translate.panel.languagesHint": "这些语言中的句子即使简短或看起来相似也会被识别。",
   "translate.panel.off": "关闭",
   "translate.panel.on": "打开",
+  "translate.panel.ownLanguageNeedsGpu": "{language} 显示为灰色：校正消息需要 GPU 模型。",
   "translate.panel.readHint": "其他人的消息行会显示在下面带有翻译。",
   "translate.panel.readIn": "读取 {language} 的消息",
   "translate.panel.reading": "阅读",

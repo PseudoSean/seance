@@ -2329,6 +2329,7 @@
   "translate.panel.languagesHint": "Riadky v týchto jazykoch sú poznaté aj keď sú krátke alebo vyzeralo by ich stele.",
   "translate.panel.off": "Vypnútené",
   "translate.panel.on": "Zapnúte",
+  "translate.panel.ownLanguageNeedsGpu": "Jazyk {language} je sivý: oprava správy vyžaduje model GPU.",
   "translate.panel.readHint": "Štandardný režim",
   "translate.panel.readIn": "Čítať správy v jazyku: {language}",
   "translate.panel.reading": "Čítanie",

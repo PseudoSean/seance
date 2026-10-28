@@ -392,8 +392,15 @@ export default defineComponent({
 				return null;
 			}
 
+			// The greyed own language under a select that shows something
+			// else (Off, another language): the note names the option it is
+			// about, or it reads as an error about the current choice.
+			const aboutGreyedOption = verdict.polish && state.value.write !== code;
+
 			return {
-				lead: verdict.polish
+				lead: aboutGreyedOption
+					? t("translate.panel.ownLanguageNeedsGpu", {language: name(code)})
+					: verdict.polish
 					? t("translate.picker.sameLanguageNeedsGpu")
 					: t("translate.pair.unavailable", {from: name(reading), to: name(code)}),
 				why: translateWhyText(verdict.why),

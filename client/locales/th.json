@@ -2227,6 +2227,7 @@
   "translate.panel.languagesHint": "ประโยคในภาษาเหล่านี้ถูกยอมรับแม้จะสั้นหรือดูเหมือนกัน",
   "translate.panel.off": "ปิด",
   "translate.panel.on": "เปิด",
+  "translate.panel.ownLanguageNeedsGpu": "{language} แสดงเป็นสีเทา: การแก้ไขข้อความต้องใช้โมเดล GPU",
   "translate.panel.readHint": "ประโยคที่ผู้อื่นส่งมาจะแสดงคำแปลใต้ประโยคนั้น",
   "translate.panel.readIn": "อ่านข้อความใน {language}",
   "translate.panel.reading": "การอ่าน",

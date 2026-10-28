@@ -2135,6 +2135,7 @@
   "translate.panel.languagesHint": "Lijnen in deze talen worden ook herkend wanneer ze kort zijn of op elkaar lijken.",
   "translate.panel.off": "Uit",
   "translate.panel.on": "Aan",
+  "translate.panel.ownLanguageNeedsGpu": "{language} is grijs: voor het corrigeren van een bericht is het GPU-model nodig.",
   "translate.panel.readHint": "Lijnen die anderen versturen worden weergegeven met daaronder een vertaling.",
   "translate.panel.readIn": "Berichten lezen in {language}",
   "translate.panel.reading": "Lezen",

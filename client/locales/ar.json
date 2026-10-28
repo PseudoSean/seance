@@ -2524,6 +2524,7 @@
   "translate.panel.languagesHint": "يُتعرَّف على الأسطر المكتوبة بهذه اللغات حتى لو كانت قصيرة أو متشابهة.",
   "translate.panel.off": "إيقاف",
   "translate.panel.on": "تشغيل",
+  "translate.panel.ownLanguageNeedsGpu": "اللغة {language} معطّلة: يحتاج تصحيح الرسالة إلى نموذج GPU.",
   "translate.panel.readHint": "تظهر الأسطر التي يرسلها الآخرون مع ترجمة تحتها.",
   "translate.panel.readIn": "اقرأ الرسائل باللغة {language}",
   "translate.panel.reading": "قراءة",

@@ -13215,6 +13215,12 @@ msgctxt "translate.panel.on"
 msgid "On"
 msgstr ""
 
+#. Note under the 'Send my messages in' picker of the translation panel, on a device without the GPU model. {language} is the user's own language (the one they read), shown greyed in that picker: choosing it would mean correcting one's own messages, which only the GPU model does. A reason sentence follows on its own line.
+#: client/components/TranslationPanel.vue
+msgctxt "translate.panel.ownLanguageNeedsGpu"
+msgid "{language} is greyed out: correcting a message needs the GPU model."
+msgstr ""
+
 #. Explanatory note under the reading switch in the translation panel.
 #: client/components/TranslationPanel.vue
 msgctxt "translate.panel.readHint"

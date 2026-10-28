@@ -2155,6 +2155,7 @@
   "translate.panel.languagesHint": "Linien in diesen Sprachen werden auch dann erkannt, wenn sie kurz sind oder gleich aussehen.",
   "translate.panel.off": "Aus",
   "translate.panel.on": "An",
+  "translate.panel.ownLanguageNeedsGpu": "{language} ist ausgegraut: Zum Korrigieren einer Nachricht wird das GPU-Modell benötigt.",
   "translate.panel.readHint": "Zeilen, die andere senden, werden mit einer Übersetzung unten angezeigt.",
   "translate.panel.readIn": "Nachrichten lesen in {language}",
   "translate.panel.reading": "Lesen",

@@ -2402,6 +2402,7 @@
   "translate.panel.languagesHint": "Линии на этих языках признаются даже в тех случаях, когда они короткие или похожие.",
   "translate.panel.off": "Выключить",
   "translate.panel.on": "Включено",
+  "translate.panel.ownLanguageNeedsGpu": "Язык «{language}» неактивен: для исправления сообщения нужна GPU-модель.",
   "translate.panel.readHint": "Строки, которые другие отправляют, показываются с переводом под ними.",
   "translate.panel.readIn": "Читать сообщения на языке: {language}",
   "translate.panel.reading": "Чтение",

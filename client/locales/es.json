@@ -2194,6 +2194,7 @@
   "translate.panel.languagesHint": "Las líneas en estos idiomas se reconocen incluso cuando son cortas o parecen iguales.",
   "translate.panel.off": "Apagado",
   "translate.panel.on": "Encendido",
+  "translate.panel.ownLanguageNeedsGpu": "{language} aparece en gris: corregir un mensaje necesita el modelo de GPU.",
   "translate.panel.readHint": "Las líneas que otros envían se muestran con una traducción debajo.",
   "translate.panel.readIn": "Leer mensajes en {language}",
   "translate.panel.reading": "Leyendo",

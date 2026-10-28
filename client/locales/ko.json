@@ -2225,6 +2225,7 @@
   "translate.panel.languagesHint": "이러한 언어의 줄들은 짧거나 유사해도 인식됩니다.",
   "translate.panel.off": "꺼짐",
   "translate.panel.on": "켜짐",
+  "translate.panel.ownLanguageNeedsGpu": "{language}은(는) 회색으로 표시됩니다: 메시지를 교정하려면 GPU 모델이 필요합니다.",
   "translate.panel.readHint": "다른 사람의 줄은 번역이 있는 아래에 표시됩니다.",
   "translate.panel.readIn": "{language}를 읽는다",
   "translate.panel.reading": "읽기",

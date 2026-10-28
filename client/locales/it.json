@@ -2190,6 +2190,7 @@
   "translate.panel.languagesHint": "Le righe in questi linguaggi vengono riconosciute anche se sono corte o sembrano simili.",
   "translate.panel.off": "Spento",
   "translate.panel.on": "Acceso",
+  "translate.panel.ownLanguageNeedsGpu": "{language} è disattivato: per correggere un messaggio serve il modello GPU.",
   "translate.panel.readHint": "Le righe inviate da altri utenti vengono mostrate con una traduzione sottostante.",
   "translate.panel.readIn": "Leggi i messaggi in {language}",
   "translate.panel.reading": "Stesso",

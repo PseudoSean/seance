@@ -2197,6 +2197,7 @@
   "translate.panel.languagesHint": "Linjer i disse sprog er anerkendt selvom de er kort eller ser ens ud.",
   "translate.panel.off": "Af",
   "translate.panel.on": "Til",
+  "translate.panel.ownLanguageNeedsGpu": "{language} er nedtonet: at rette en besked kræver GPU-modellen.",
   "translate.panel.readHint": "Linjer, andre sender, vises med en oversættelse under.",
   "translate.panel.readIn": "læs beskeder i {language}",
   "translate.panel.reading": "Læser",

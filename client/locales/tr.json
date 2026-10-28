@@ -2258,6 +2258,7 @@
   "translate.panel.languagesHint": "Bu dillere ait satırlar kısa ya da benzer gibi görünse de tanınır.",
   "translate.panel.off": "Aşağı",
   "translate.panel.on": "Yukarı",
+  "translate.panel.ownLanguageNeedsGpu": "{language} soluk gösteriliyor: bir mesajı düzeltmek için GPU modeli gerekir.",
   "translate.panel.readHint": "Diğerlerin gönderdiği satırlar altına çeviriyle gösterilir.",
   "translate.panel.readIn": "{language} diliyle okunmuş mesajlar",
   "translate.panel.reading": "Okunuyor",

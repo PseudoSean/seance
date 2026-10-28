@@ -2276,6 +2276,7 @@
   "translate.panel.languagesHint": "Ezeknek a nyelveknek a sorok is felismerhetők, bár rövidek vagy hasonlóaknak tűnnek.",
   "translate.panel.off": "Kikapcsolt",
   "translate.panel.on": "Felvett",
+  "translate.panel.ownLanguageNeedsGpu": "A(z) {language} nyelv szürke: az üzenet javításához a GPU-modell szükséges.",
   "translate.panel.readHint": "Mások által küldött sorokhoz a fordítás kerül megjelenítésre.",
   "translate.panel.readIn": "Üzenetek olvasása ezen a nyelven: {language}",
   "translate.panel.reading": "Olvasás",

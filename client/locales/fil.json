@@ -2161,6 +2161,7 @@
   "translate.panel.languagesHint": "Ang mga linya sa mga wika na ito ay nakikilala kahit pa ito ay maliit o nasa wika na pareho.",
   "translate.panel.off": "Ibabaw",
   "translate.panel.on": "Ibabaw",
+  "translate.panel.ownLanguageNeedsGpu": "Naka-gray ang {language}: kailangan ng modelo ng GPU para iwasto ang isang mensahe.",
   "translate.panel.readHint": "Ang mga linya na ibinaba ng iba ay naka-translation sa ibaba.",
   "translate.panel.readIn": "Basahin ang mga mensahe sa {language}",
   "translate.panel.reading": "Nangungungo",

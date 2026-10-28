@@ -2228,6 +2228,7 @@
   "translate.panel.languagesHint": "これらの言語の行は、短くても似ていても認識されます。",
   "translate.panel.off": "オフ",
   "translate.panel.on": "オン",
+  "translate.panel.ownLanguageNeedsGpu": "{language} はグレー表示です: メッセージの校正にはGPUモデルが必要です。",
   "translate.panel.readHint": "他の人が送った行の下に翻訳が表示されます。",
   "translate.panel.readIn": "{language}のメッセージを読む",
   "translate.panel.reading": "読む",

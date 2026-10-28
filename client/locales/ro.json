@@ -2280,6 +2280,7 @@
   "translate.panel.languagesHint": "Linii în aceste limbi sunt recunoscute chiar dacă sunt scurte sau par identice.",
   "translate.panel.off": "Închide",
   "translate.panel.on": "Deschide",
+  "translate.panel.ownLanguageNeedsGpu": "Limba {language} apare estompată: corectarea unui mesaj necesită modelul GPU.",
   "translate.panel.readHint": "Linii pe care le trimite alți utilizatori sunt afișate cu o traducere sub.",
   "translate.panel.readIn": "Citeste mesajele în {language}",
   "translate.panel.reading": "Citire",

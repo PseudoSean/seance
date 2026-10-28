@@ -2402,6 +2402,7 @@
   "translate.panel.languagesHint": "Строки на цих мовах визнаються навіть якщо вони короткі або виглядають подібно.",
   "translate.panel.off": "Вимкнено",
   "translate.panel.on": "Включено",
+  "translate.panel.ownLanguageNeedsGpu": "Мова «{language}» неактивна: для виправлення повідомлення потрібна модель GPU.",
   "translate.panel.readHint": "Рядки, які відправляють інші, показуються з перекладом під ними.",
   "translate.panel.readIn": "Читати повідомлення мовою: {language}",
   "translate.panel.reading": "Читає",

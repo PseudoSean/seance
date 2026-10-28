@@ -2226,6 +2226,7 @@
   "translate.panel.languagesHint": "Các dòng trong các ngôn ngữ này được nhận diện ngay cả khi chúng ngắn hoặc trông giống nhau.",
   "translate.panel.off": "Tắt",
   "translate.panel.on": "Bật",
+  "translate.panel.ownLanguageNeedsGpu": "{language} bị làm mờ: sửa một tin nhắn cần mô hình GPU.",
   "translate.panel.readHint": "Các dòng mà người khác gửi được hiển thị với bản dịch dưới cùng.",
   "translate.panel.readIn": "Đọc tin nhắn trong {language}",
   "translate.panel.reading": "Đang đọc",

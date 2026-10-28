@@ -2121,6 +2121,7 @@ export const STATIC_CALL_SITES = new Set<string>([
 	"translate.panel.languagesHint",
 	"translate.panel.off",
 	"translate.panel.on",
+	"translate.panel.ownLanguageNeedsGpu",
 	"translate.panel.readHint",
 	"translate.panel.readIn",
 	"translate.panel.reading",
